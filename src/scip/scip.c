@@ -1378,7 +1378,7 @@ SCIP_RETCODE SCIPcopyVars(
 }
 
 /** returns copy of the source constraint; if there already is a copy of the source constraint in the constraint hash
- *  map, it is just returned as target constrint; elsewise a new constraint will be created in the target SCIP; this
+ *  map, it is just returned as target constraint; elsewise a new constraint will be created in the target SCIP; this
  *  created constraint is added to the constraint hash map and returned as target constraint; the variable map is used
  *  to map the variables of the source SCIP to the variables of the target SCIP;
  *

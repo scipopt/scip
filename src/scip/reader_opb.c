@@ -1144,7 +1144,7 @@ SCIP_RETCODE setObjective(
       if( ntermcoefs > 0 )
       {
 #if (LINEAROBJECTIVE == TRUE) 
-         /* all non-linear parts are created as and constraint, even if the same non-linear part was already part of the objective function */
+         /* all non-linear parts are created as and-constraints, even if the same non-linear part was already part of the objective function */
 
          SCIP_VAR** vars;
          int nvars;
@@ -1159,7 +1159,7 @@ SCIP_RETCODE setObjective(
             assert(nvars > 1);
          
             /* create auxiliary variable */
-            (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "andresultant_obj_%d", t);
+            (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, ARTIFICIALVARNAMEPREFIX"obj_%d", t);
             SCIP_CALL( SCIPcreateVar(scip, &var, name, 0.0, 1.0, termcoefs[t], SCIP_VARTYPE_BINARY, 
                   TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
 
@@ -1415,6 +1415,8 @@ SCIP_RETCODE readConstraints(
    else
       indvar = NULL;
 
+   if( ntermcoefs > 0 )
+   {
 #if GENCONSNAMES == TRUE
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "pseudoboolean%d", opbinput->consnumber);
       ++(opbinput->consnumber);
@@ -1424,13 +1426,26 @@ SCIP_RETCODE readConstraints(
       SCIP_CALL( SCIPcreateConsPseudoboolean(scip, &cons, name, linvars, nlincoefs, lincoefs, terms, ntermcoefs,
             ntermvars, termcoefs, indvar, weight, issoftcons, NULL, lhs, rhs, 
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
-      SCIP_CALL( SCIPaddCons(scip, cons) );
-      SCIPdebugMessage("(line %d) created constraint: ", opbinput->linenumber);
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-      
-      if( isNonlinear )
-         ++(*nNonlinearConss);
+   }
+   else
+   {
+#if GENCONSNAMES == TRUE
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "linear%d", opbinput->consnumber);
+      ++(opbinput->consnumber);
+#else
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "linear");
+#endif
+      SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, nlincoefs, linvars, lincoefs, lhs, rhs, 
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
+   }
+
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIPdebugMessage("(line %d) created constraint: ", opbinput->linenumber);
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   
+   if( isNonlinear )
+      ++(*nNonlinearConss);
 
  TERMINATE:
 
@@ -3208,27 +3223,52 @@ SCIP_RETCODE writeOpbConstraints(
          SCIP_VAR*** termvars;
          int* ntermvars;
          int termvarssize;
-
-         termvarssize = 0;
+         SCIP_CONS** andconss;
+         SCIP_Real* andcoefs ;
+         SCIP_VAR** linvars;
+         SCIP_Real* lincoefs ;
+         int nlinvars;
+         int t;
 
          /* get the required array size for the variables array and for the number of variables in each variable array */
-         SCIP_CALL( SCIPgetTermVarsDataPseudoboolean( scip, cons, NULL, NULL, &termvarssize) );
+         termvarssize = SCIPgetNAndsPseudoboolean(scip, cons);
+         assert(termvarssize >= 0);
 
          /* allocate temporary memory */
+         SCIP_CALL( SCIPallocBufferArray(scip, &andconss, termvarssize) );
          SCIP_CALL( SCIPallocBufferArray(scip, &termvars, termvarssize) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &andcoefs, termvarssize) );
          SCIP_CALL( SCIPallocBufferArray(scip, &ntermvars, termvarssize) );
 
-         /* get array of variables array and array of number of variables in each variable array */
-         SCIP_CALL( SCIPgetTermVarsDataPseudoboolean( scip, cons, termvars, ntermvars, &termvarssize) );
+         /* get all corresponding and-constraints and therefor all variables */
+         SCIP_CALL( SCIPgetAndDatasPseudoboolean(scip, cons, andconss, andcoefs, &termvarssize) );
+         for( t = termvarssize - 1; t >= 0; --t )
+         {
+            termvars[t] = SCIPgetVarsAnd(scip, andconss[t]);
+            ntermvars[t] = SCIPgetNVarsAnd(scip, andconss[t]);
+         }
 
-         SCIP_CALL( printPseudobooleanCons(scip, file,
-               SCIPgetLinearVarsPseudoboolean(scip, cons), SCIPgetLinearValsPseudoboolean(scip, cons), SCIPgetNLinearVarsPseudoboolean(scip, cons),
-               termvars, ntermvars, SCIPgetTermValsPseudoboolean(scip, cons), SCIPgetNTermValsPseudoboolean(scip, cons), SCIPgetIndVarPseudoboolean(scip, cons),
-               SCIPgetLhsPseudoboolean(scip, cons),  SCIPgetRhsPseudoboolean(scip, cons), transformed, multisymbol) );
+         /* gets number of linear variables without artificial terms variables of pseudoboolean constraint */
+         nlinvars = SCIPgetNLinVarsWithoutAndPseudoboolean(scip, cons);
+
+         /* allocate temporary memory */
+         SCIP_CALL( SCIPallocBufferArray(scip, &linvars, nlinvars) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs, nlinvars) );
+
+         /* gets linear constraint of pseudoboolean constraint */
+         SCIP_CALL( SCIPgetLinDatasWithoutAndPseudoboolean(scip, cons, linvars, lincoefs, &nlinvars) );
+
+         SCIP_CALL( printPseudobooleanCons(scip, file, linvars, lincoefs, nlinvars,
+               termvars, ntermvars, andcoefs, termvarssize, SCIPgetIndVarPseudoboolean(scip, cons),
+               SCIPgetLhsPseudoboolean(scip, cons), SCIPgetRhsPseudoboolean(scip, cons), transformed, multisymbol) );
 
          /* free temporary memory */
+         SCIPfreeBufferArray(scip, &lincoefs);
+         SCIPfreeBufferArray(scip, &linvars);
          SCIPfreeBufferArray(scip, &ntermvars);
+         SCIPfreeBufferArray(scip, &andcoefs);
          SCIPfreeBufferArray(scip, &termvars);
+         SCIPfreeBufferArray(scip, &andconss);
       }
       else if( strcmp(conshdlrname, "indicator") == 0 )
       {
@@ -3667,8 +3707,6 @@ SCIP_RETCODE SCIPreadOpb(
 #if GENCONSNAMES == TRUE
    opbinput.consnumber = 0;
 #endif
-
-   printf("starting reader opb\n");
 
    /* read the file */
    SCIP_CALL( readOPBFile(scip, &opbinput, filename) );

@@ -84,6 +84,7 @@ struct SCIP_ConsData
    unsigned int          opimpladded:1;      /**< was the implication for 2 operands with fixed resultant added? */
    unsigned int          sorted:1;           /**< are the constraint's variables sorted? */
    unsigned int          changed:1;          /**< was constraint changed since last pair preprocessing round? */
+   unsigned int          merged:1;           /**< are the constraint's equal variables already merged? */
 };
 
 /** constraint handler data */
@@ -412,6 +413,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->opimpladded = FALSE;
    (*consdata)->sorted = FALSE;
    (*consdata)->changed = TRUE;
+   (*consdata)->merged = FALSE;
 
    /* get transformed variables, if we are in the transformed problem */
    if( SCIPisTransformed(scip) )
@@ -544,6 +546,7 @@ SCIP_RETCODE addCoef(
    consdata->nvars++;
    consdata->sorted = (consdata->nvars == 1);
    consdata->changed = TRUE;
+   consdata->merged = FALSE;
 
    /* if we are in transformed problem, catch the variable's events */
    if( transformed )
@@ -652,16 +655,13 @@ SCIP_RETCODE consdataSort(
       consdata->sorted = TRUE;
    else if( !consdata->sorted )
    {
-      SCIP_VAR* varv;
       int* perm;
       int v;
-      int i;
-      int nexti;
 
       /* get temporary memory to store the sorted permutation */
       SCIP_CALL( SCIPallocBufferArray(scip, &perm, consdata->nvars) );
 
-      /* call bubble sort */
+      /* sort permutation array */
       SCIPsort(perm, consdataCompVar, (void*)consdata, consdata->nvars);
 
       /* permute the variables in the constraint according to the resulting permutation */
@@ -669,32 +669,45 @@ SCIP_RETCODE consdataSort(
       {
          if( perm[v] != v )
          {
+            SCIP_VAR* varv;
             SCIP_Bool iswatchedvar1;
             SCIP_Bool iswatchedvar2;
+            int i;
+            int nexti;
 
             varv = consdata->vars[v];
             iswatchedvar1 = (consdata->watchedvar1 == v);
             iswatchedvar2 = (consdata->watchedvar2 == v);
+
             i = v;
             do
             {
                assert(0 <= perm[i] && perm[i] < consdata->nvars);
                assert(perm[i] != i);
+
                consdata->vars[i] = consdata->vars[perm[i]];
+
+               /* correct watched variables if necessary */
                if( consdata->watchedvar1 == perm[i] )
                   consdata->watchedvar1 = i;
                if( consdata->watchedvar2 == perm[i] )
                   consdata->watchedvar2 = i;
+
+               /* get next switching position */
                nexti = perm[i];
                perm[i] = i;
                i = nexti;
             }
             while( perm[i] != v );
+
             consdata->vars[i] = varv;
+
+            /* correct watched variables if necessary */
             if( iswatchedvar1 )
                consdata->watchedvar1 = i;
             if( iswatchedvar2 )
                consdata->watchedvar2 = i;
+
             perm[i] = i;
          }
       }
@@ -723,23 +736,21 @@ SCIP_RETCODE applyFixings(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< and constraint */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
-   SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if the problem is infeasible */
-   int*                  nfixedvars,         /**< pointer to add up the number of found domain reductions */
    int*                  nchgcoefs           /**< pointer to add up the number of changed coefficients */
    )
 {
    SCIP_CONSDATA* consdata;
    SCIP_VAR* var;
-   SCIP_Bool* contained;
-   int nprobvars;
    int v;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(eventhdlr != NULL);
+   assert(nchgcoefs != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->nvars == 0 || consdata->vars != NULL);
-   assert(cutoff != NULL);
-   assert(nfixedvars != NULL);
-   assert(nchgcoefs != NULL);
 
    v = 0;
    while( v < consdata->nvars )
@@ -774,64 +785,6 @@ SCIP_RETCODE applyFixings(
             ++v;
       }
    }
-
-   /* sort the variables in the constraint */
-   SCIP_CALL( consdataSort(scip, consdata) );
-
-   /* search for multiple variables; scan from back to front because deletion doesn't affect the order of the front
-    * variables
-    */
-   nprobvars = SCIPgetNVars(scip);
-   SCIP_CALL( SCIPallocBufferArray(scip, &contained, nprobvars) );
-   BMSclearMemoryArray(contained, nprobvars);
-   var = NULL;
-   for( v = consdata->nvars-1; v >= 0; --v )
-   {
-      if( consdata->vars[v] == var )
-      {
-         /* delete the multiple variable */
-         SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
-         (*nchgcoefs)++;
-      }
-      else
-      {
-         SCIP_VAR* probvar;
-         int probidx;
-
-         /* we found a new variable */
-         var = consdata->vars[v];
-         probvar = SCIPvarGetProbvar(var);
-         probidx = SCIPvarGetProbindex(probvar);
-         assert(0 <= probidx && probidx < nprobvars);
-         if( contained[probidx] )
-         {
-            SCIP_Bool infeasible;
-            SCIP_Bool fixed;
-
-            SCIPdebugMessage("and constraint <%s>: variable <%s> and its negation are present -> fix <%s> = 0\n",
-               SCIPconsGetName(cons), SCIPvarGetName(var), SCIPvarGetName(consdata->resvar));
-
-            /* negation of the variable is already present in the constraint: fix resultant to zero */
-#ifndef NDEBUG
-            {
-               int i;
-               for( i = consdata->nvars - 1; i > v && var != SCIPvarGetNegatedVar(consdata->vars[i]); --i )
-               {}
-               assert(i > v);
-            }
-#endif
-            SCIP_CALL( SCIPfixVar(scip, consdata->resvar, 0.0, &infeasible, &fixed) );
-            *cutoff = *cutoff && infeasible;
-            if( fixed )
-               (*nfixedvars)++;
-
-            SCIP_CALL( SCIPdelCons(scip, cons) );
-            break;
-         }
-         contained[probidx] = TRUE;
-      }
-   }
-   SCIPfreeBufferArray(scip, &contained);
 
    SCIPdebugMessage("after fixings: ");
    SCIPdebug( SCIP_CALL(consdataPrint(scip, consdata, NULL)) );
@@ -1128,6 +1081,108 @@ SCIP_RETCODE analyzeConflictZero(
 
    /* analyze the conflict */
    SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
+
+   return SCIP_OKAY;
+}
+
+/** replaces multiple occurrences of variables */
+static
+SCIP_RETCODE mergeMultiples(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< and-constraint */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   int*                  nfixedvars,         /**< pointer to store number of fixed variables */
+   int*                  nchgcoefs,          /**< pointer to store number of changed coefficients */
+   int*                  ndelconss           /**< pointer to store number of deleted constraints */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars;
+   int nvars;
+   int v;
+   SCIP_VAR* var;
+   SCIP_Bool* contained;
+   int nprobvars;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(eventhdlr != NULL);
+   assert(nfixedvars != NULL);
+   assert(nchgcoefs != NULL);
+   assert(ndelconss != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* first merge nonlinear parts */ 
+   if( consdata->nvars <= 1 )
+   { 
+      consdata->merged = TRUE;
+      return SCIP_OKAY;
+   }
+
+   vars = consdata->vars;
+   nvars = consdata->nvars;
+
+   assert(vars != NULL);
+   assert(nvars >= 2);
+
+   /* search for multiple variables; scan from back to front because deletion doesn't affect the order of the front
+    * variables, 
+    * @Note: don't reorder variables because we would loose the watched variables and filter position inforamtion
+    */
+   nprobvars = SCIPgetNVars(scip);
+   SCIP_CALL( SCIPallocBufferArray(scip, &contained, nprobvars) );
+   BMSclearMemoryArray(contained, nprobvars);
+   var = NULL;
+   for( v = nvars - 1; v >= 0; --v )
+   {
+      assert(vars[v] != NULL);
+      if( vars[v] == var )
+      {
+         /* delete the multiple variable */
+         SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
+         (*nchgcoefs)++;
+      }
+      else
+      {
+         SCIP_VAR* probvar;
+         int probidx;
+ 
+         /* we found a new variable */
+         var = vars[v];
+         probvar = SCIPvarGetProbvar(var);
+         probidx = SCIPvarGetProbindex(probvar);
+         assert(0 <= probidx && probidx < nprobvars);
+         if( contained[probidx] )
+         {
+            SCIP_Bool infeasible;
+            SCIP_Bool fixed;
+ 
+            SCIPdebugMessage("and constraint <%s>: variable <%s> and its negation are present -> fix <%s> = 0\n",
+               SCIPconsGetName(cons), SCIPvarGetName(var), SCIPvarGetName(consdata->resvar));
+ 
+            /* negation of the variable is already present in the constraint: fix resultant to zero */
+#ifndef NDEBUG
+            {
+               int i;
+               for( i = consdata->nvars - 1; i > v && var != SCIPvarGetNegatedVar(vars[i]); --i )
+               {}
+               assert(i > v);
+            }
+#endif
+            SCIP_CALL( SCIPfixVar(scip, consdata->resvar, 0.0, &infeasible, &fixed) );
+            assert(fixed);
+            assert(!infeasible);
+            ++(*nfixedvars);
+ 
+            SCIP_CALL( SCIPdelCons(scip, cons) );
+            break;
+         }
+         contained[probidx] = TRUE;
+      }
+   }
+   SCIPfreeBufferArray(scip, &contained);
 
    return SCIP_OKAY;
 }
@@ -2415,7 +2470,10 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
        */
       if( !cutoff && !SCIPconsIsDeleted(cons) )
       {
-         SCIP_CALL( applyFixings(scip, cons, conshdlrdata->eventhdlr, &cutoff, nfixedvars, nchgcoefs) );
+         SCIP_CALL( applyFixings(scip, cons, conshdlrdata->eventhdlr, nchgcoefs) );
+         
+         /* merge multiple occurances of variables or variables with their negated variables */
+         SCIP_CALL( mergeMultiples(scip, cons, conshdlrdata->eventhdlr, nfixedvars, nchgcoefs, ndelconss) );
       }
 
       if( !cutoff && !SCIPconsIsDeleted(cons) && !SCIPconsIsModifiable(cons) )
@@ -2881,6 +2939,9 @@ int SCIPgetNVarsAnd(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not an and constraint\n");
@@ -2900,6 +2961,9 @@ SCIP_VAR** SCIPgetVarsAnd(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -2922,6 +2986,9 @@ SCIP_VAR* SCIPgetResultantAnd(
 {
    SCIP_CONSDATA* consdata;
    
+   assert(scip != NULL);
+   assert(cons != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not an and constraint\n");
@@ -2932,4 +2999,53 @@ SCIP_VAR* SCIPgetResultantAnd(
    assert(consdata != NULL);
    
    return consdata->resvar;
+}
+
+/* return if the variables of the and-constraint are sorted due to their indices */
+SCIP_Bool SCIPisAndConsSorted(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not an and constraint\n");
+      SCIPABORT();
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->sorted;
+}
+
+/* sort the variables of the and-constraint due to their indices */
+SCIP_RETCODE SCIPsortAndCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not an and constraint\n");
+      SCIPABORT();
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   SCIP_CALL( consdataSort(scip, consdata) );
+   assert(consdata->sorted);
+
+   return SCIP_OKAY;
 }

@@ -91,6 +91,20 @@ SCIP_VAR* SCIPgetResultantAnd(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
+/* return if the variables of the and-constraint are sorted due to their indices */
+extern
+SCIP_Bool SCIPisAndConsSorted(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< and-constraint */
+   );
+
+/* sort the variables of the and-constraint due to their indices */
+extern
+SCIP_RETCODE SCIPsortAndCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< and-constraint */
+   );
+
 #ifdef __cplusplus
 }
 #endif

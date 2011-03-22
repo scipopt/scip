@@ -3084,15 +3084,20 @@ SCIP_RETCODE chgLhs(
       }
    }
 
-   /* new left hand side */
+   /* check whether the left hand side is increased, if and only if that's the case we maybe can propagate, tighten and add more cliques */
+   if( SCIPisLT(scip, consdata->lhs, lhs) )
+   {
+      consdata->propagated = FALSE;
+      consdata->boundstightened = FALSE;
+      consdata->cliquesadded = FALSE;
+   }
+
+   /* set new left hand side and update constraint data */
    consdata->lhs = lhs;
-   consdata->propagated = FALSE;
-   consdata->boundstightened = FALSE;
    consdata->presolved = FALSE;
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
-   consdata->cliquesadded = FALSE;
 
    /* update the lhs of the LP row */
    if( consdata->row != NULL )
@@ -3194,15 +3199,20 @@ SCIP_RETCODE chgRhs(
       }
    }
 
-   /* set new right hand side */
+   /* check whether the right hand side is decreased, if and only if that's the case we maybe can propagate, tighten and add more cliques */
+   if( SCIPisGT(scip, consdata->rhs, rhs) )
+   {
+      consdata->propagated = FALSE;
+      consdata->boundstightened = FALSE;
+      consdata->cliquesadded = FALSE;
+   }
+
+   /* set new right hand side and update constraint data */
    consdata->rhs = rhs;
-   consdata->propagated = FALSE;
-   consdata->boundstightened = FALSE;
    consdata->presolved = FALSE;
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
-   consdata->cliquesadded = FALSE;
 
    /* update the rhs of the LP row */
    if( consdata->row != NULL )
@@ -3279,7 +3289,7 @@ SCIP_RETCODE addCoef(
 
    /* install rounding locks for new variable */
    SCIP_CALL( lockRounding(scip, cons, var, val) );
-
+   
    consdata->propagated = FALSE;
    consdata->boundstightened = FALSE;
    consdata->presolved = FALSE;
@@ -3298,7 +3308,7 @@ SCIP_RETCODE addCoef(
    else
    {
       consdata->sorted = consdata->sorted
-         && (SCIPvarCompare(consdata->vars[consdata->nvars-2], consdata->vars[consdata->nvars-1]) == -1);
+         && (SCIPvarCompare(consdata->vars[consdata->nvars-2], consdata->vars[consdata->nvars-1]) <= 0);
       consdata->merged = FALSE;
    }
 
@@ -3371,7 +3381,7 @@ SCIP_RETCODE delCoefPos(
          assert(consdata->eventdatas[pos] != NULL);
          consdata->eventdatas[pos]->varpos = pos;
       }
-      consdata->sorted = FALSE;
+      consdata->sorted = consdata->sorted && (pos + 2 >= consdata->nvars || (SCIPvarCompare(consdata->vars[pos], consdata->vars[pos + 1]) <= 0));
    }
    consdata->nvars--;
 
@@ -5757,6 +5767,7 @@ SCIP_RETCODE convertLongEquality(
 
       /* check, if variable is used in too many other constraints, even if this constraint could be deleted */
       nlocks = SCIPvarGetNLocksDown(var) + SCIPvarGetNLocksUp(var);
+
       if( nlocks > maxnlocksremove )
          continue;
 
@@ -10439,7 +10450,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
    SCIP_CALL( SCIPaddRealParam(scip,
          "constraints/linear/mingainpernmincomparisons",
          "minimal gain per minimal pairwise presolve comparisons to repeat pairwise comparison round",
-         &conshdlrdata->mingainpernmincomp, TRUE, DEFAULT_MINGAINPERNMINCOMP, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         &conshdlrdata->mingainpernmincomp, TRUE, DEFAULT_MINGAINPERNMINCOMP, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "constraints/linear/maxaggrnormscale",
          "maximal allowed relative gain in maximum norm for constraint aggregation (0.0: disable constraint aggregation)",
@@ -11237,6 +11248,8 @@ SCIP_RETCODE SCIPmarkDoNotUpgradeConsLinear(
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
 
+   assert(cons != NULL);
+
    /* get the constraint handler and check, if it's really a linear constraint */
    conshdlr = SCIPconsGetHdlr(cons);
    if ( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
@@ -11252,4 +11265,37 @@ SCIP_RETCODE SCIPmarkDoNotUpgradeConsLinear(
    consdata->donotupgrade = TRUE;
 
    return SCIP_OKAY;
+}
+
+/** sets upgrading flag of linear constraint */
+SCIP_RETCODE SCIPsetUpgradeConsLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< linear constraint to mark */
+   SCIP_Bool             upgradeallowed      /**< allow upgrading? */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+
+   /* get the constraint handler and check, if it's really a linear constraint */
+   conshdlr = SCIPconsGetHdlr(cons);
+   if ( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not linear\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   /* get data */
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( upgradeallowed && consdata->donotupgrade )
+      consdata->donotupgrade = FALSE;
+   else if( !upgradeallowed )
+      consdata->donotupgrade = TRUE;
+
+   return SCIP_OKAY;
+   
 }
