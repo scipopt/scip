@@ -288,6 +288,12 @@ int SCIPconshdlrGetNDelConss(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
+/** gets number of constraints added in presolving method of constraint handler */
+extern
+int SCIPconshdlrGetNAddConss(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
 /** gets number of constraints upgraded in presolving method of constraint handler */
 extern
 int SCIPconshdlrGetNUpgdConss(

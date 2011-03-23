@@ -285,6 +285,7 @@ SCIP_RETCODE SCIPconshdlrPresolve(
    int*                  nchgbds,            /**< pointer to total number of variable bounds tightend of all presolvers */
    int*                  naddholes,          /**< pointer to total number of domain holes added of all presolvers */
    int*                  ndelconss,          /**< pointer to total number of deleted constraints of all presolvers */
+   int*                  naddconss,          /**< pointer to total number of added constraints of all presolvers */
    int*                  nupgdconss,         /**< pointer to total number of upgraded constraints of all presolvers */
    int*                  nchgcoefs,          /**< pointer to total number of changed coefficients of all presolvers */
    int*                  nchgsides,          /**< pointer to total number of changed left/right hand sides of all presolvers */
