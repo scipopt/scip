@@ -54,6 +54,7 @@ struct SCIP_Presol
    int                   lastnchgbds;        /**< number of variable bounds tightend before the last call to the presolver */
    int                   lastnaddholes;      /**< number of domain holes added before the last call to the presolver */
    int                   lastndelconss;      /**< number of deleted constraints before the last call to the presolver */
+   int                   lastnaddconss;      /**< number of added constraints before the last call to the presolver */
    int                   lastnupgdconss;     /**< number of upgraded constraints before the last call to the presolver */
    int                   lastnchgcoefs;      /**< number of changed coefficients before the last call to the presolver */
    int                   lastnchgsides;      /**< number of changed left or right hand sides before the last call */
@@ -63,6 +64,7 @@ struct SCIP_Presol
    int                   nchgbds;            /**< total number of variable bounds tightend by this presolver */
    int                   naddholes;          /**< total number of domain holes added by this presolver */
    int                   ndelconss;          /**< total number of deleted constraints by this presolver */
+   int                   naddconss;          /**< total number of added constraints by this presolver */
    int                   nupgdconss;         /**< total number of upgraded constraints by this presolver */
    int                   nchgcoefs;          /**< total number of changed coefficients by this presolver */
    int                   nchgsides;          /**< total number of changed left or right hand sides by this presolver */

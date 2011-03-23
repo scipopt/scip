@@ -632,10 +632,9 @@ SCIP_Bool solOfInterest(
    obj = SCIPsolGetObj(sol, set, transprob);
    
    /* check if we are willing to check worse solution; a solution is better if the objective is small then the current
-    * best upper bound; in case of an integral objective value we can strengthen that in the way that the new solution
-    * is better if objective + 1.0 is better then the current upper bound
+    * cutoff bound 
     */
-   if( !set->misc_improvingsols || obj + 0.5 < primal->upperbound || (!SCIPprobIsObjIntegral(transprob) && obj < primal->upperbound) )
+   if( !set->misc_improvingsols || obj < primal->cutoffbound )
    {
       /* find insert position for the solution */
       (*insertpos) = primalSearchSolPos(primal, set, transprob, sol);

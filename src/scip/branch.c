@@ -201,6 +201,18 @@ SCIP_RETCODE branchcandCalcLPCands(
    SCIPdebugMessage("calculating LP branching candidates: validlp=%d, lpcount=%d\n",
       branchcand->validlpcandslp, stat->lpcount);
 
+   if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+   {
+      branchcand->lpmaxpriority = INT_MIN;
+      branchcand->nlpcands = 0;
+      branchcand->npriolpcands = 0;
+      branchcand->npriolpbins = 0;
+      branchcand->validlpcandslp = stat->lpcount;
+
+      SCIPdebugMessage(" LP is unbounded -> no branching candidates\n");
+      return SCIP_OKAY;
+   }
+
    /* check, if the current LP branching candidate array is invalid */
    if( branchcand->validlpcandslp < stat->lpcount )
    {
@@ -1902,7 +1914,7 @@ SCIP_Real SCIPbranchGetBranchingPoint(
    
    /* for a fixed variable, we cannot branch further */
    assert(!SCIPsetIsEQ(set, lb, ub));
-   
+
    if( !SCIPsetIsInfinity(set, REALABS(suggestion)) )
    {
       /* use user suggested branching point */
@@ -2021,12 +2033,18 @@ SCIP_Real SCIPbranchGetBranchingPoint(
             assert(SCIPsetIsRelLT(set, branchpoint, ub));
          }
       }
+      else if( SCIPsetIsRelEQ(set, lb, ub) )
+      {
+         /* variable is almost fixed at -/+ infinity, so suggest this infinity as branching point, what else could we do? */
+         branchpoint = lb < 0.0 ? -SCIPsetInfinity(set) : SCIPsetInfinity(set);
+      }
       else if( !SCIPsetIsRelLT(set, lb, branchpoint) )
       {
          SCIP_Real lbabs;
 
          /* if branching point is too close to the lower bound and there is no upper bound, then move it to somewhere above the lower bound, but not above infinity */
-         assert(SCIPsetIsInfinity(set,  ub));
+         assert(!SCIPsetIsInfinity(set, -lb));
+         assert( SCIPsetIsInfinity(set,  ub));
          lbabs = REALABS(lb);
          branchpoint = lb + MIN(MAX(0.5 * lbabs, 1000), 0.9*(SCIPsetInfinity(set)-lb));
       }
@@ -2035,7 +2053,8 @@ SCIP_Real SCIPbranchGetBranchingPoint(
          SCIP_Real ubabs;
 
          /* if branching point is too close to the upper bound and there is no lower bound, then move it to somewhere away from the upper bound, but not below infinity */
-         assert(SCIPsetIsInfinity(set, -lb));
+         assert( SCIPsetIsInfinity(set, -lb));
+         assert(!SCIPsetIsInfinity(set,  ub));
          ubabs = REALABS(ub);
          branchpoint = ub - MIN(MAX(0.5 * ubabs, 1000), 0.9*(ub+SCIPsetInfinity(set)));
       }

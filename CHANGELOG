@@ -38,6 +38,10 @@ interface:
   which value a given variable has in the primal ray, respectively
 - new method SCIPfindOrigCons() which return a original constraint with the given name or NULL
 - new method SCIPgetReadingTime() which returns the time for reading in seconds
+- new method SCIPconshdlrGetNAddConss() which returns the number of added constraints during presolving by a given constraint handler 
+- new method SCIPpresolGetNAddConss() which returns the number of added constraints during presolving by a given presolver
+- added two parameters to the callback methods SCIP_DECL_CONSPRESOL() and SCIP_DECL_PRESOLEXEC(), these are nnewaddconss and naddconss; these parameters
+  are also added to corresponding C++ wrapper class methods; these scip_presol() in objconshdlr.h and scip_exec() in objpresol.h 
 
 performance improvements:
 - performance improvements in prop_vbounds

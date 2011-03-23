@@ -370,9 +370,9 @@ SCIP_DECL_CONSPRESOL(consPresolObj)
    /* call virtual method of conshdlr object */
    SCIP_CALL( conshdlrdata->objconshdlr->scip_presol(scip, conshdlr, conss, nconss, nrounds,
          nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewholes,
-         nnewdelconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
+         nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
          nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
-         ndelconss, nupgdconss, nchgcoefs, nchgsides, result) );
+         ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result) );
 
    return SCIP_OKAY;
 }

@@ -834,12 +834,18 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    assert(weights != NULL);
    assert(profits != NULL);
    assert(capacity >= 0);
-   assert(capacity < INT_MAX);
    assert(items != NULL);
    assert(nitems >= 0);
    assert(success != NULL);
 
    *success = TRUE;
+
+   if( capacity > INT_MAX )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+   assert(capacity <= INT_MAX);
 
    if( capacity == 0 )
    {
@@ -1003,7 +1009,6 @@ SCIP_RETCODE SCIPsolveKnapsackApproximately(
    assert(weights != NULL);
    assert(profits != NULL);
    assert(capacity >= 0);
-   assert(capacity < INT_MAX);
    assert(items != NULL);
    assert(nitems >= 0);
 
@@ -5647,6 +5652,7 @@ SCIP_RETCODE tightenWeights(
    SCIP_CONS*            cons,               /**< knapsack constraint */
    int*                  nchgcoefs,          /**< pointer to count total number of changed coefficients */
    int*                  nchgsides,          /**< pointer to count number of side changes */
+   int*                  naddconss,          /**< pointer to count number of added constraints */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    )
 {
@@ -5885,7 +5891,8 @@ SCIP_RETCODE tightenWeights(
                      SCIP_CALL( SCIPaddCons(scip, cliquecons) );
                      SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
                      SCIPfreeBufferArray(scip, &cliquevars);
-                  }
+		     (*naddconss)++;
+		  }
                }
             }
          }
@@ -7507,6 +7514,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
    int oldnfixedvars;
    int oldnchgbds;
    int oldndelconss;
+   int oldnaddconss;
    int oldnchgcoefs;
    int oldnchgsides;
    int firstchange;
@@ -7517,6 +7525,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
    oldnfixedvars = *nfixedvars;
    oldnchgbds = *nchgbds;
    oldndelconss = *ndelconss;
+   oldnaddconss = *naddconss;
    oldnchgcoefs = *nchgcoefs;
    oldnchgsides = *nchgsides;
    firstchange = INT_MAX;
@@ -7598,7 +7607,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
          normalizeWeights(cons, nchgcoefs, nchgsides);
 
          /* tighten capacity and weights */
-         SCIP_CALL( tightenWeights(scip, cons, nchgcoefs, nchgsides, &cutoff) );
+         SCIP_CALL( tightenWeights(scip, cons, nchgcoefs, nchgsides, naddconss, &cutoff) );
          if( cutoff )
             break;
 
@@ -7630,7 +7639,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
       SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &cutoff, ndelconss) );
    }
 
-   if( (*ndelconss != oldndelconss) || (*nchgsides != oldnchgsides) || (*nchgcoefs != oldnchgcoefs) )
+   if( (*ndelconss != oldndelconss) || (*nchgsides != oldnchgsides) || (*nchgcoefs != oldnchgcoefs) || (*naddconss != oldnaddconss) )
       success = TRUE;
    else
       success = FALSE;

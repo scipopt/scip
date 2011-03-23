@@ -145,6 +145,7 @@ struct SCIP_Stat
    int                   npresolchgbds;      /**< number of presolving bound changes in current run */
    int                   npresoladdholes;    /**< number of presolving hole additions in current run */
    int                   npresoldelconss;    /**< number of presolving constraint deletions in current run */
+   int                   npresoladdconss;    /**< number of presolving constraint additions in current run */
    int                   npresolupgdconss;   /**< number of presolving constraint upgrades in current run */
    int                   npresolchgcoefs;    /**< number of presolving coefficient changes in current run */
    int                   npresolchgsides;    /**< number of presolving side changes in current run */
