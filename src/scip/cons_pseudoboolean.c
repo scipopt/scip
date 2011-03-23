@@ -124,6 +124,8 @@
 struct ConsAndData
 {
    SCIP_CONS*           cons;                /**< pointer to the and-constraint of this 'term' of variables */
+   SCIP_CONS*           origcons;            /**< pointer to the original and-constraint of this 'term' of variables
+                                              *   after problem was transformed, NULL otherwise */
    SCIP_VAR**           vars;                /**< all variables */
    int                  nvars;               /**< number of all variables */
    int                  svars;               /**< size of all variables */
@@ -1187,7 +1189,10 @@ SCIP_RETCODE consdataPrint(
       consanddata = (CONSANDDATA*) SCIPhashmapGetImage(conshdlrdata->hashmap, (void*)andress[v]);
       assert(consanddata != NULL);
 
-      andcons = consanddata->cons;
+      if( SCIPconsIsOriginal(cons) )
+         andcons = consanddata->origcons;
+      else
+         andcons = consanddata->cons;
       assert(andcons != NULL);
 
       andvars = SCIPgetVarsAnd(scip, andcons);
@@ -1196,7 +1201,7 @@ SCIP_RETCODE consdataPrint(
 
       if( nandvars > 0 )
       {
-         printed= TRUE;
+         printed = TRUE;
          SCIPinfoMessage(scip, file, " %+.15g ", andcoefs[v]);
 
          /* @todo: better write new method SCIPwriteProduct */
@@ -1287,6 +1292,7 @@ SCIP_RETCODE createAndAddAndCons(
    newdata->nuses = 0;
    newdata->deleted = FALSE;
    newdata->cons = NULL;
+   newdata->origcons = NULL;
 
    /* sort variables */
    SCIPsortPtr((void**)(newdata->vars), SCIPvarComp, nvars);
@@ -2606,6 +2612,7 @@ SCIP_RETCODE createAndAddLinearCons(
    return SCIP_OKAY;
 }
 
+#if 0
 /** checks pseudo boolean constraint for feasibility of given solution or current solution */
 static
 SCIP_RETCODE checkCons(
@@ -2678,6 +2685,185 @@ SCIP_RETCODE checkCons(
 
    return SCIP_OKAY;
 }
+#endif
+
+/** checks one original pseudoboolean constraint for feasibility of given solution */
+static
+SCIP_RETCODE checkOrigPbCons(
+   SCIP*const            scip,               /**< SCIP data structure */
+   SCIP_CONS*const       cons,               /**< pseudo boolean constraint */
+   SCIP_SOL*const        sol,                /**< solution to be checked, or NULL for current solution */
+   SCIP_Bool*const       violated,           /**< pointer to store whether the constraint is violated */
+   SCIP_Bool const       printreason         /**< should violation of constraint be printed */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   SCIP_VAR** vars;
+   SCIP_Real* coefs;
+   int nvars;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+
+   SCIP_VAR** linvars;
+   SCIP_Real* lincoefs;
+   int nlinvars;
+   int v;
+
+   SCIP_VAR** andress;
+   SCIP_Real* andcoefs;
+   int nandress;
+
+   SCIP_CONS* andcons;
+   SCIP_Real andvalue;
+   SCIP_Real activity;
+   int c;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(SCIPconsIsOriginal(cons));
+   assert(violated != NULL);
+
+   *violated = FALSE;
+
+   SCIPdebugMessage("checking original pseudo boolean constraint <%s>\n", SCIPconsGetName(cons));
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->lincons != NULL);
+   assert(consdata->linconstype > SCIP_INVALIDCONS);
+   assert(SCIPconsIsOriginal(consdata->lincons));
+   
+   /* gets number of variables in linear constraint */
+   SCIP_CALL( getLinearConsNVars(scip, consdata->lincons, consdata->linconstype, &nvars) );
+
+   /* allocate temporary memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &linvars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &andress, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &andcoefs, nvars) );
+
+   /* get sides of linear constraint */
+   SCIP_CALL( getLinearConsSides(scip, consdata->lincons, consdata->linconstype, &lhs, &rhs) );
+   assert(!SCIPisInfinity(scip, lhs));
+   assert(!SCIPisInfinity(scip, -rhs));
+   assert(SCIPisLE(scip, lhs, rhs));
+
+   /* get variables and coefficient of linear constraint */
+   SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, vars, coefs, &nvars) );
+   assert(nvars == 0 || (vars != NULL && coefs != NULL));
+
+   /* number of variables should be consistent, number of 'real' linear variables plus number of and-constraints should
+    * have to be equal to the number of variables in the linear constraint
+    */
+   assert(consdata->nlinvars + consdata->nconsanddatas == nvars);
+
+   nlinvars = 0;
+
+   conshdlr = SCIPconsGetHdlr(cons);
+   assert(conshdlr != NULL);
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->hashmap != NULL);
+   
+   nandress = 0;
+
+   activity = 0.0;
+
+   /* split variables into original and artificial variables and compute activity on normal linear variables(without
+    * terms)
+    */
+   for( v = 0; v < nvars; ++v )
+   { 
+      assert(vars[v] != NULL);
+
+      if( !SCIPhashmapExists(conshdlrdata->hashmap, (void*)(vars[v])) ) // ????????? strstr(SCIPvarGetName(vars[v]), ARTIFICIALVARNAMEPREFIX) == NULL )
+      {
+         activity += coefs[v] * SCIPgetSolVal(scip, sol, vars[v]);
+
+         linvars[nlinvars] = vars[v];
+         lincoefs[nlinvars] = coefs[v];
+         ++nlinvars;
+      }
+      else
+      {
+         andress[nandress] = vars[v];
+         andcoefs[nandress] = coefs[v];
+         ++nandress;
+      }
+   }
+   assert(nandress == consdata->nconsanddatas);
+
+   SCIPdebugMessage("nlinvars = %d, nandress = %d\n", nlinvars, nandress);
+   SCIPdebugMessage("linear activity = %g\n", activity);
+
+   /* compute and add solution values on terms */
+   for( c = consdata->nconsanddatas - 1; c >= 0; --c )
+   {
+      SCIP_VAR** andvars;
+      int nandvars;
+      SCIP_VAR* res;
+
+      andcons = consdata->consanddatas[c]->origcons;
+      assert(andcons != NULL);
+      
+      andvars = SCIPgetVarsAnd(scip, andcons);
+      nandvars = SCIPgetNVarsAnd(scip, andcons);
+      res = SCIPgetResultantAnd(scip, andcons);
+      assert(nandvars == 0 || (andvars != NULL && res != NULL));
+      assert(res == andress[c]);
+
+      andvalue = 1;
+      /* check if the and-constraint is violated */
+      for( v = nandvars - 1; v >= 0; --v )
+      {
+         andvalue *= SCIPgetSolVal(scip, sol, andvars[v]);
+         if( SCIPisFeasZero(scip, andvalue) )
+            break;
+      }
+      activity += andvalue * andcoefs[c];
+   }
+   SCIPdebugMessage("lhs = %g, overall activity = %g, rhs = %g\n", lhs, activity, rhs);
+
+   /* check left hand side for violation */
+   if( SCIPisFeasLT(scip, activity, lhs) )
+   {
+      if( printreason )
+      {
+         SCIP_CALL( SCIPprintCons(scip, cons, NULL ) );
+         SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g\n", lhs - activity);
+      }
+
+      *violated = TRUE;
+   }
+
+   /* check right hand side for violation */
+   if( SCIPisFeasGT(scip, activity, rhs) )
+   {
+      if( printreason )
+      {
+         SCIP_CALL( SCIPprintCons(scip, cons, NULL ) );
+         SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %.15g\n", activity - rhs);
+      }
+
+      *violated = TRUE;
+   }
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &andcoefs);
+   SCIPfreeBufferArray(scip, &andress);
+   SCIPfreeBufferArray(scip, &lincoefs);
+   SCIPfreeBufferArray(scip, &linvars);
+   SCIPfreeBufferArray(scip, &coefs);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
 
 /** checks all and-constraints inside the pseudoboolean constraint handler for feasibility of given solution or current solution */
 static
@@ -2708,6 +2894,9 @@ SCIP_RETCODE checkAndConss(
 
    for( c = conshdlrdata->nallconsanddatas - 1; c >= 0; --c )
    {
+      if( conshdlrdata->allconsanddatas[c]->deleted )
+         continue;
+
       andcons = conshdlrdata->allconsanddatas[c]->cons;
       
       if( andcons == NULL || !SCIPconsIsActive(andcons) )
@@ -5259,7 +5448,6 @@ SCIP_DECL_CONSINIT(consInitPseudoboolean)
       /* resort variables in transformed problem, because the order might change while tranforming */
       SCIPsortPtr((void**)vars, SCIPvarComp, nvars);
       
-#if 1
       /* do not capture after restart */
       if( SCIPgetNRuns(scip) < 1 )
       {
@@ -5269,10 +5457,11 @@ SCIP_DECL_CONSINIT(consInitPseudoboolean)
             SCIP_CALL( SCIPcaptureVar(scip, vars[v]) );
          }
       }
-#endif
 
       andcons = conshdlrdata->allconsanddatas[c]->cons;
       assert(andcons != NULL);
+
+      conshdlrdata->allconsanddatas[c]->origcons = andcons;
 
       /* in a restart the constraints might already be transformed */
       if( !SCIPconsIsTransformed(andcons) )
@@ -5324,6 +5513,10 @@ SCIP_DECL_CONSINIT(consInitPseudoboolean)
          SCIP_CONS* transcons;
 
          SCIP_CALL( SCIPgetTransformedCons(scip, consdata->lincons, &transcons) );
+
+         /* we want to check all tranformed constraints */
+         SCIP_CALL( SCIPsetConsChecked(scip, transcons, SCIPconsIsChecked(cons)) );
+
          assert( transcons != NULL );
          SCIP_CALL( SCIPcaptureCons(scip, transcons) );
          consdata->lincons = transcons;
@@ -5508,7 +5701,17 @@ SCIP_DECL_CONSEXIT(consExitPseudoboolean)
          assert(allconsanddatas[c]->cons != NULL);
          SCIP_CALL( SCIPreleaseCons(scip, &(allconsanddatas[c]->cons)) );
       }
+      if( allconsanddatas[c]->origcons != NULL )
+      { 
+         SCIP_CALL( SCIPreleaseCons(scip, &(allconsanddatas[c]->origcons)) );
+      }
    }
+
+   /* clear old conshdlrdata */
+   SCIP_CALL( conshdlrdataFree(scip, &conshdlrdata) );
+
+   /* recreate conshdlrdata */
+   SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
 
    return SCIP_OKAY;
 }
@@ -5848,7 +6051,6 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
 
                (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_rhs_ind", SCIPconsGetName(cons));
 
-                              
                SCIP_CALL( SCIPcreateConsIndicator(scip, &indcons, name, negindvar, nvars, vars, coefs, rhs,
                      initial, SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
                      SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), 
@@ -6098,6 +6300,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolPseudoboolean)
 
 
 /** constraint enforcing method of constraint handler for LP solutions */
+#if 0
 static
 SCIP_DECL_CONSENFOLP(consEnfolpPseudoboolean)
 {  /*lint --e{715}*/
@@ -6120,13 +6323,12 @@ SCIP_DECL_CONSENFOLP(consEnfolpPseudoboolean)
       SCIP_CALL( checkCons(scip, conss[c], NULL, &violated) );
    }
 #endif
-
    /* check all and-constraints */
    if( !violated )
    {
       SCIP_CALL( checkAndConss(scip, conshdlr, NULL, &violated) );
    }
-  
+   
    if( violated )
       *result = SCIP_INFEASIBLE;
    else
@@ -6134,15 +6336,20 @@ SCIP_DECL_CONSENFOLP(consEnfolpPseudoboolean)
    
    return SCIP_OKAY;
 }
+#else
+#define consEnfolpPseudoboolean NULL
+#endif
 
 
 /** constraint enforcing method of constraint handler for pseudo solutions */
+#if 0
 static
 SCIP_DECL_CONSENFOPS(consEnfopsPseudoboolean)
 {  /*lint --e{715}*/
    SCIP_Bool violated;
+#if 0 /* now linear constraint does it itself */
    int c;
-   
+#endif   
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -6150,11 +6357,13 @@ SCIP_DECL_CONSENFOPS(consEnfopsPseudoboolean)
 
    violated = FALSE;
    
+#if 0 /* now linear constraint does it itself */
    /* check all pseudo boolean constraints for feasibility */
    for( c = 0; c < nconss && !violated; ++c )
    {
       SCIP_CALL( checkCons(scip, conss[c], NULL, &violated) );
    }
+#endif
 
    /* check all and-constraints */
    if( !violated )
@@ -6169,6 +6378,9 @@ SCIP_DECL_CONSENFOPS(consEnfopsPseudoboolean)
    
    return SCIP_OKAY;
 }
+#else
+#define consEnfopsPseudoboolean NULL
+#endif
 
 
 /** feasibility check method of constraint handler for integral solutions */
@@ -6177,7 +6389,7 @@ SCIP_DECL_CONSCHECK(consCheckPseudoboolean)
 {  /*lint --e{715}*/
    SCIP_Bool violated;
    int c;
-   
+
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(sol != NULL);
@@ -6186,16 +6398,38 @@ SCIP_DECL_CONSCHECK(consCheckPseudoboolean)
 
    violated = FALSE;
    
+#if 0 /* now linear constraint does it itself */
    /* check all pseudo boolean constraints for feasibility */
    for( c = 0; c < nconss && !violated; ++c )
    {
       SCIP_CALL( checkCons(scip, conss[c], sol, &violated) );
    }
-
-   /* check all and-constraints */
-   if( !violated )
+#endif
+   if( nconss > 0 )
    {
-      SCIP_CALL( checkAndConss(scip, conshdlr, sol, &violated) );
+      if( SCIPconsIsOriginal(conss[0]) )
+      {
+#ifndef NDEBUG
+         for( c = nconss - 1; c > 0; --c )
+            assert(SCIPconsIsOriginal(conss[c]));
+#endif
+         for( c = nconss - 1; c >= 0 && !violated; --c )
+         {
+            SCIP_CALL( checkOrigPbCons(scip, conss[c], sol, &violated, printreason) );
+         }
+      }
+      else
+      {
+#ifndef NDEBUG
+         for( c = nconss - 1; c > 0; --c )
+            assert(SCIPconsIsTransformed(conss[c]));
+#endif
+         /* check all and-constraints */
+         if( !violated )
+         {
+            SCIP_CALL( checkAndConss(scip, conshdlr, sol, &violated) );
+         }
+      }
    }
 
    if( violated )
@@ -6836,6 +7070,7 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
          newdata->snewvars = 0;
          newdata->deleted = FALSE;
          newdata->nuses = 0;
+         newdata->origcons = NULL;
       }
       else
       {
@@ -7045,9 +7280,11 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
       rhs = -SCIPinfinity(scip);
 
    /* create and add linear constraint */
-   /* checking for linear constraint will be TRUE, we only will check all and-constraints in this constraint handler */
+   /* checking for original linear constraint will be FALSE, tranformed linear constraints get the check flag like this
+    * pseudoboolean constraint, in this constraint hanlder we only will check all and-constraints
+    */
    SCIP_CALL( createAndAddLinearCons(scip, conshdlr, linvars, nlinvars, linvals, andress, nandconss, andcoefs, lhs, rhs, 
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, 
+         initial, separate, enforce, FALSE/*check*/, propagate, local, modifiable, dynamic, removable, stickingatnode, 
          &lincons, &linconstype) );
    assert(lincons != NULL);
    assert(linconstype > SCIP_INVALIDCONS);

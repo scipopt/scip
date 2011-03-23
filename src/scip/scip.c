@@ -8773,7 +8773,7 @@ SCIP_RETCODE SCIPaddVarLocks(
    int                   nlocksup            /**< modification in number of rounding up locks */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPaddVarLocks", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPaddVarLocks", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE) );
 
    switch( scip->set->stage )
    {
@@ -8781,6 +8781,7 @@ SCIP_RETCODE SCIPaddVarLocks(
       assert(!SCIPvarIsTransformed(var));
       /*lint -fallthrough*/
    case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_INITSOLVE:
@@ -12395,7 +12396,7 @@ SCIP_RETCODE SCIPsetConsChecked(
    SCIP_Bool             check               /**< new value */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPsetConsChecked", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetConsChecked", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPconsSetChecked(cons, scip->set, check) );
 
