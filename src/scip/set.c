@@ -302,17 +302,33 @@ int calcGrowSize(
 
    assert(initsize >= 0);
    assert(growfac >= 1.0);
+   assert(num >= 0);
 
    if( growfac == 1.0 )
       size = MAX(initsize, num);
    else
    {
+      int oldsize;
+
       /* calculate the size with this loop, such that the resulting numbers are always the same (-> block memory) */
       initsize = MAX(initsize, 4);
       size = initsize;
-      while( size < num )
+      oldsize = size - 1;
+
+      /* second condition checks against overflow */
+      while( size < num && size > oldsize )
+      {
+         oldsize = size;
          size = (int)(growfac * size + initsize);
+      }
+
+      /* if an overflow happened, set the correct value */
+      if( size <= oldsize )
+         size = num;
    }
+
+   assert(size >= initsize);
+   assert(size >= num);
 
    return size;
 }
