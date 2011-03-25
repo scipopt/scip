@@ -20452,8 +20452,8 @@ void printTimingStatistics(
    
       SCIPmessageFPrintInfo(file, "Total Time         : %10.2f\n", totaltime);
       SCIPmessageFPrintInfo(file, "  solving          : %10.2f\n", solvingtime);
-      SCIPmessageFPrintInfo(file, "  presolving       : %10.2f (in solving included)\n", SCIPclockGetTime(scip->stat->presolvingtime));
-      SCIPmessageFPrintInfo(file, "  reading          : %10.2f%s\n", readingtime, scip->set->time_reading ? " (in solving included)" : "");
+      SCIPmessageFPrintInfo(file, "  presolving       : %10.2f (included in solving)\n", SCIPclockGetTime(scip->stat->presolvingtime));
+      SCIPmessageFPrintInfo(file, "  reading          : %10.2f%s\n", readingtime, scip->set->time_reading ? " (included in solving)" : "");
    }
 }
 
