@@ -1037,6 +1037,13 @@ SCIP_RETCODE readCoefficients(
             }
             /* add coefficient */
             (*termcoefs)[*ntermcoefs] = coefsign * coef;
+
+            /***********************/
+            if( !SCIPisIntegral(scip, (*termcoefs)[*ntermcoefs]) )
+            {
+               SCIPwarningMessage("coefficient not integral.\n");
+            }
+
             ++(*ntermcoefs);
          }
          
@@ -1067,6 +1074,13 @@ SCIP_RETCODE readCoefficients(
             /* add coefficient */
             (*linvars)[*nlincoefs] = tmpvars[0];
             (*lincoefs)[*nlincoefs] = coefsign * coef;
+
+            /***********************/
+            if( !SCIPisIntegral(scip, (*lincoefs)[*nlincoefs]) )
+            {
+               SCIPwarningMessage("coefficient not integral.\n");
+            }
+
             ++(*nlincoefs);
          }
          
@@ -1095,6 +1109,13 @@ SCIP_RETCODE readCoefficients(
    
          /* copy value */
          (*lincoefs)[*nlincoefs] = tmpcoefs[0];
+
+         /***********************/
+         if( !SCIPisIntegral(scip, (*lincoefs)[*nlincoefs]) )
+         {
+            SCIPwarningMessage("topcost not integral.\n");
+         }
+
          *nlincoefs = 1;
       }
    }
@@ -3025,6 +3046,7 @@ SCIP_RETCODE writeOpbConstraints(
    int nconsvars;
    int v, c;
    SCIP_HASHMAP* linconssofindicatorsmap;
+   SCIP_HASHMAP* linconssofpbsmap;
 
    assert(scip != NULL);
    assert(file != NULL);
@@ -3066,6 +3088,39 @@ SCIP_RETCODE writeOpbConstraints(
       }
    }
 
+   conshdlr = SCIPfindConshdlr(scip, "pseudoboolean");
+   linconssofpbsmap = NULL;
+
+   /* find artifical linear constraints which correspond to indicator constraints to avoid double printing */
+   if( conshdlr != NULL )
+   {
+      SCIP_CONS** pbconss;
+      int npbconss;
+
+      pbconss = SCIPconshdlrGetConss(conshdlr);
+      npbconss = SCIPconshdlrGetNConss(conshdlr);
+      assert(pbconss != NULL || npbconss == 0);
+
+      if( npbconss > 0 )
+      {
+         SCIP_CONS* lincons;
+
+         /* create the linear constraint of indicator constraints hash map */
+         SCIP_CALL( SCIPhashmapCreate(&linconssofpbsmap, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * npbconss)) );
+         
+         for( c = 0; c < npbconss; ++c )
+         {
+            assert(pbconss[c] != NULL);
+            lincons = SCIPgetLinearConsPseudoboolean(scip, pbconss[c]);
+            assert(lincons != NULL);
+
+            /* insert constraint into mapping between */
+            SCIP_CALL( SCIPhashmapInsert(linconssofpbsmap, (void*)lincons, (void*)lincons) );
+         }
+      }
+   }
+
+
    /* loop over all constraint for printing */
    for( c = 0; c < nconss; ++c )
    {
@@ -3085,8 +3140,13 @@ SCIP_RETCODE writeOpbConstraints(
       {
          SCIP_CONS* artcons;
 
-         artcons = (SCIP_CONS*) SCIPhashmapGetImage(linconssofindicatorsmap, (void*)cons);
+         artcons = NULL;
 
+         if( linconssofindicatorsmap != NULL )
+            artcons = (SCIP_CONS*) SCIPhashmapGetImage(linconssofindicatorsmap, (void*)cons);
+         if( artcons == NULL && linconssofpbsmap != NULL )
+            artcons = (SCIP_CONS*) SCIPhashmapGetImage(linconssofpbsmap, (void*)cons);
+         
          if( artcons == NULL )
          {
             if( existands )

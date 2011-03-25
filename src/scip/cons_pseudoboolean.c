@@ -1190,7 +1190,12 @@ SCIP_RETCODE consdataPrint(
       assert(consanddata != NULL);
 
       if( SCIPconsIsOriginal(cons) )
+      {
          andcons = consanddata->origcons;
+         /* if problem was not yet transformed, origcons is not yet initialized */
+         if( andcons == NULL )
+            andcons = consanddata->cons;
+      }
       else
          andcons = consanddata->cons;
       assert(andcons != NULL);
