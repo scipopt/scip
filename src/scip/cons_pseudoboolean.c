@@ -4732,9 +4732,9 @@ SCIP_RETCODE tryUpgradingLogicor(
 
          SCIPdebugMessage("created upgraded linear constraint:\n");
          SCIPdebugMessage("old -> ");
-         /*SCIPdebug(*/ SCIP_CALL( SCIPprintCons(scip, lincons, NULL) )/*)*/;
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, lincons, NULL) ) );
          SCIPdebugMessage("new -> ");
-         /*SCIPdebug(*/ SCIP_CALL( SCIPprintCons(scip, newcons, NULL) )/*)*/;
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
 
          SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
       }
@@ -5161,9 +5161,9 @@ SCIP_RETCODE tryUpgradingSetppc(
 
          SCIPdebugMessage("created upgraded linear constraint:\n");
          SCIPdebugMessage("old -> ");
-         /*SCIPdebug(*/ SCIP_CALL( SCIPprintCons(scip, lincons, NULL) )/*)*/;
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, lincons, NULL) ) );
          SCIPdebugMessage("new -> ");
-         /*SCIPdebug(*/ SCIP_CALL( SCIPprintCons(scip, newcons, NULL) )/*)*/;
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
 
          SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
       }

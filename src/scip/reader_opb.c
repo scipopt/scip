@@ -2340,6 +2340,11 @@ SCIP_RETCODE writeOpbObjective(
          
          assert( linecnt != 0 );
 
+         if( SCIPvarGetObj(var) * mult > SCIP_LONGINT_MAX )
+         {
+            SCIPerrorMessage("Integral objective value to big (mult = %"SCIP_LONGINT_FORMAT", value = %g, mult*value = %g, printingvalue = %"SCIP_LONGINT_FORMAT")for printing in opb format.\n", mult, SCIPvarGetObj(var), SCIPvarGetObj(var) * mult, (SCIP_Longint) SCIPround(scip, SCIPvarGetObj(var) * mult));
+         }
+         
          /* replace and-resultant with corresponding variables */
          if( existands && SCIPsortedvecFindPtr((void**)resvars, SCIPvarComp, var, nresvars, &pos) )
          {
@@ -2465,6 +2470,11 @@ SCIP_RETCODE printNLRow(
 	 assert(pos >= 0 && nandvars[pos] > 0 && andvars[pos] != NULL);
 	 
 	 negated = SCIPvarIsNegated(andvars[pos][nandvars[pos] - 1]);
+
+         if( vals[v] * (*mult) > SCIP_LONGINT_MAX )
+         {
+            SCIPerrorMessage("Integral coefficient to big (mult = %"SCIP_LONGINT_FORMAT", value = %g, mult*value = %g, printingvalue = %"SCIP_LONGINT_FORMAT")for printing in opb format.\n", *mult, vals[v], vals[v] * (*mult), (SCIP_Longint) SCIPround(scip, vals[v] * (*mult)));
+         }
 
 	 /* print and-vars */
 	 (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%+"SCIP_LONGINT_FORMAT"%s%s%s", 
@@ -2632,7 +2642,7 @@ void printRow(
    if( nvars > 0 && strstr(SCIPvarGetName(vars[0]), INDICATORVARNAME) != NULL )
       return;
 
-   /* check if all coefficients are internal; if not commentstart multiplier */
+   /* check if all coefficients are integral; if not commentstart multiplier */
    for( v = 0; v < nvars; ++v )
    {
       while( !SCIPisIntegral(scip, vals[v] * (*mult)) )
@@ -2668,6 +2678,11 @@ void printRow(
       assert( var != NULL );
 
       negated = SCIPvarIsNegated(var);
+
+      if( vals[v] * (*mult) > SCIP_LONGINT_MAX )
+      {
+         SCIPerrorMessage("Integral coefficient to big (mult = %"SCIP_LONGINT_FORMAT", value = %g, mult*value = %g, printingvalue = %"SCIP_LONGINT_FORMAT")for printing in opb format.\n", *mult, vals[v], vals[v] * (*mult), (SCIP_Longint) SCIPround(scip, vals[v] * (*mult)));
+      }
 
       (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%+"SCIP_LONGINT_FORMAT"%s%s%s ", 
          (SCIP_Longint) SCIPround(scip, vals[v] * (*mult)), multisymbol, negated ? "~" : "", strstr(SCIPvarGetName(negated ? SCIPvarGetNegationVar(var) : var), "x"));
