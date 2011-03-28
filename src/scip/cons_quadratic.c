@@ -2697,7 +2697,8 @@ SCIP_RETCODE mergeAndCleanQuadVarTerms(
          SCIP_CALL( delQuadVarTermPos(scip, cons, j) );
       }
 
-      /* for binary variables, x^2 = x */
+      /* for binary variables, x^2 = x
+       * @todo doing this reformulation may destroy possible convexity, see, e.g., isqp1 */
       if( quadvarterm->sqrcoef != 0.0 && SCIPvarIsBinary(quadvarterm->var) )
       {
          quadvarterm->lincoef += quadvarterm->sqrcoef;
