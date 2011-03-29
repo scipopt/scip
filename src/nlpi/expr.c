@@ -38,6 +38,7 @@
  */
 #define SIGN(x) ((x) >= 0.0 ? 1.0 : -1.0)
 
+#if 0
 /** signature of an expression (pointwise) evaluation function
  * The function should return nan, inf, or -inf in result if the function is undefined for the given arguments.
  *   
@@ -71,6 +72,7 @@ struct SCIPexprOpTableElement
    SCIP_DECL_EVAL        ((*eval));          /**< evaluation function */
    SCIP_DECL_INTEVAL     ((*inteval));       /**< interval evaluation function */
 };
+#endif
 
 /** creates SCIP_EXPRDATA_QUADRATIC data structure from given quadratic elements */
 static
@@ -1507,7 +1509,7 @@ void polynomialdataFree(
 
 /** adds an array of monomials to a polynomial */
 static
-SCIP_RETCODE polynomialdataAddMonoms(
+SCIP_RETCODE polynomialdataAddMonomials(
    BMS_BLKMEM*           blkmem,             /**< block memory of expression */
    SCIP_EXPRDATA_POLYNOMIAL* polynomialdata, /**< polynomial data */
    int                   nmonomials,         /**< number of monomials to add */
@@ -1654,7 +1656,8 @@ void SCIPexprFreeDeep(
    assert(expr   != NULL);
    assert(*expr  != NULL);
    
-   /* free data of more complex operands */
+   /* free data of more complex operands
+    * @todo move into expression table */
    switch( (*expr)->op )
    {
       case SCIP_EXPR_LINEAR:
@@ -2051,7 +2054,7 @@ SCIP_RETCODE SCIPexprAddMonomials(
    if( nmonomials == 0 )
       return SCIP_OKAY;
 
-   SCIP_CALL( polynomialdataAddMonoms(blkmem, (SCIP_EXPRDATA_POLYNOMIAL*)expr->data.data, nmonomials, monomials, copymonomials) );
+   SCIP_CALL( polynomialdataAddMonomials(blkmem, (SCIP_EXPRDATA_POLYNOMIAL*)expr->data.data, nmonomials, monomials, copymonomials) );
 
    return SCIP_OKAY;
 }

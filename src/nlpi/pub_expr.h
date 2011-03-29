@@ -36,6 +36,43 @@
 extern "C" {
 #endif
 
+
+/** signature of an expression (pointwise) evaluation function
+ * The function should return nan, inf, or -inf in result if the function is undefined for the given arguments.
+ *
+ * - opdata    operand data
+ * - nargs     number of arguments
+ * - argvals   values of arguments
+ * - varvals   values for variables
+ * - paramvals values for parameters
+ * - result    buffer where to store result of evaluation
+ */
+#define SCIP_DECL_EVAL(x) SCIP_RETCODE x (SCIP_EXPROPDATA opdata, int nargs, SCIP_Real* argvals, SCIP_Real* varvals, SCIP_Real* paramvals, SCIP_Real* result)
+
+/** signature of an expression (interval) evaluation function
+ * The function should return and empty interval if the function is undefined for the given arguments.
+ *
+ * - infinity  value for infinity
+ * - opdata    operand data
+ * - nargs     number of arguments
+ * - argvals   interval values of arguments
+ * - varvals   interval values for variables
+ * - paramvals values for parameters
+ * - result    buffer where to store result of evaluation
+ */
+#define SCIP_DECL_INTEVAL(x) SCIP_RETCODE x (SCIP_Real infinity, SCIP_EXPROPDATA opdata, int nargs, SCIP_INTERVAL* argvals, SCIP_INTERVAL* varvals, SCIP_Real* paramvals, SCIP_INTERVAL* result)
+
+/* element in table of expression operands */
+struct SCIPexprOpTableElement
+{
+  const char*           name;               /**< name of operand (used for printing) */
+  int                   nargs;              /**< number of arguments (negative if not fixed) */
+  SCIP_DECL_EVAL        ((*eval));          /**< evaluation function */
+  SCIP_DECL_INTEVAL     ((*inteval));       /**< interval evaluation function */
+};
+
+extern struct SCIPexprOpTableElement SCIPexprOpTable[];
+
 /**@name Expression operand methods */
 /**@{ */
 
