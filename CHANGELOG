@@ -161,6 +161,8 @@ fixed bugs:
 - fixed make/make.project 
 - fixed two bugs at nodes with unbounded LP relaxation: don't check lp rows of infinite solution; don't analyze conflict due to primal cutoff bound of -infinity
 - fixed bug w.r.t. setting wall clocks
+- implemented SCIPlpiGetPrimalRay() in SoPlex interface that has become available with SoPlex version 1.5.0.2
+- fixed bug concerning overflow in memsize calculation in set.c
 
 performance improvements:
 - fasten propagation in cons_knapsack.c due to negated clique partitions
