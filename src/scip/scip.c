@@ -13197,6 +13197,34 @@ SCIP_RETCODE SCIPgetLPBInvACol(
    return SCIP_OKAY;
 }
 
+/** gets primal ray of LP, if available */
+SCIP_RETCODE SCIPgetLPPrimalRay(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real*            ray,                /**< array for storing primal ray values, or NULL to check only for availability of ray
+                                              *   ray values are stored w.r.t. the problem index of the variables,
+                                              *   so the size of this array should be at least number of active variables */
+   SCIP_Bool*            success             /**< pointer to store whether a primal ray was available and has been stored in ray */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPgetLPPrimalRay", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   assert(scip != NULL);
+   assert(scip->lp != NULL);
+   assert(scip->lp->lpi != NULL);
+   assert(success != NULL);
+
+   *success = SCIPlpiHasPrimalRay(scip->lp->lpi);
+
+   if( ray != NULL && *success )
+   {
+      BMSclearMemoryArray(ray, SCIPgetNVars(scip));
+
+      SCIP_CALL( SCIPlpGetPrimalRay(scip->lp, scip->set, ray) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** calculates a weighted sum of all LP rows; for negative weights, the left and right hand side of the corresponding
  *  LP row are swapped in the summation
  */
