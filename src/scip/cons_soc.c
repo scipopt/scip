@@ -1755,7 +1755,8 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
    SCIP_Real             offset2,            /**< offset of x2 */
    SCIP_Real             offset3,            /**< offset of x3 */
    int                   N,                  /**< size of linear approximation, need to be >= 1 */
-   const char*           basename            /**< string to use for building variable and constraint names */
+   const char*           basename,           /**< string to use for building variable and constraint names */
+   int*                  naddconss           /**< buffer where to add the number of added constraints */
    )
 {
    SCIP_CONS*     lincons;
@@ -1777,6 +1778,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
    assert(SCIPisGE(scip, SCIPconsIsLocal(cons) ? SCIPvarGetLbLocal(x3) : SCIPvarGetLbGlobal(x3), -offset3));
    assert(basename != NULL);
    assert(N >= 1);
+   assert(naddconss != NULL);
    
    SCIPdebugMessage("Creating linear Glineur outer-approximation for <%s>.\n", basename);
    SCIPdebugMessage("sqr(%g(%s+%g)) + sqr(%g(%s+%g)) <= sqr(%g(%s+%g)).\n", 
@@ -1822,6 +1824,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
    SCIP_CALL( SCIPaddCons(scip, lincons) );
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, lincons, NULL) ) );
    SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+   ++*naddconss;
 
    if( x2 != NULL )
    {
@@ -1840,6 +1843,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
       SCIP_CALL( SCIPaddCons(scip, lincons) );
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, lincons, NULL) ) );
       SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+      ++*naddconss;
 
       vars[0] = x2;
       vals[0] = alpha2;
@@ -1856,6 +1860,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
       SCIP_CALL( SCIPaddCons(scip, lincons) );
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, lincons, NULL) ) );
       SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+      ++*naddconss;
    }
    else
    { /* x2 == NULL ->  b_1 >= |alpha2*offset2| */
@@ -1891,6 +1896,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
       SCIP_CALL( SCIPaddCons(scip, lincons) );
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, lincons, NULL) ) );
       SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+      ++*naddconss;
 
       vars[0] = avars[i];
       vals[0] = -sin(val);
@@ -1909,6 +1915,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
       SCIP_CALL( SCIPaddCons(scip, lincons) );
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, lincons, NULL) ) );
       SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+      ++*naddconss;
 
       vars[0] = avars[i];
       vals[0] = -sin(val);
@@ -1927,6 +1934,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
       SCIP_CALL( SCIPaddCons(scip, lincons) );
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, lincons, NULL) ) );
       SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+      ++*naddconss;
    }
 
    /* create last linear constraint */
@@ -1948,6 +1956,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
    SCIP_CALL( SCIPaddCons(scip, lincons) );
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, lincons, NULL) ) );
    SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+   ++*naddconss;
 
    for( i = 1; i <= N; ++i )
    {
@@ -1980,7 +1989,8 @@ SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
    SCIP_Real             offset2,            /**< offset of x2 */
    SCIP_Real             offset3,            /**< offset of x3 */
    int                   N,                  /**< size of linear approximation, need to be >= 1 */
-   const char*           basename            /**< string to use for building variable and constraint names */
+   const char*           basename,           /**< string to use for building variable and constraint names */
+   int*                  naddconss           /**< buffer where to add the number of added constraints */
    )
 {
    SCIP_CONS*     lincons;
@@ -2001,6 +2011,7 @@ SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
    assert(SCIPisGE(scip, SCIPconsIsLocal(cons) ? SCIPvarGetLbLocal(x3) : SCIPvarGetLbGlobal(x3), -offset3));
    assert(basename != NULL);
    assert(N >= 1);
+   assert(naddconss != NULL);
      
    SCIPdebugMessage("Creating linear Ben-Tal Nemirovski outer-approximation for <%s>.\n", basename);
 
@@ -2036,6 +2047,7 @@ SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
       TRUE /* removable */, SCIPconsIsStickingAtNode(cons)) );
    SCIP_CALL( SCIPaddCons(scip, lincons) );
    SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+   ++*naddconss;
 
    vars[0] = avars[0];
    vals[0] = 1.0;
@@ -2051,6 +2063,7 @@ SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
       TRUE /* removable */, SCIPconsIsStickingAtNode(cons)) );
    SCIP_CALL( SCIPaddCons(scip, lincons) );
    SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+   ++*naddconss;
 
    if( x2 != NULL )
    {
@@ -2068,6 +2081,7 @@ SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
          TRUE /* removable */, SCIPconsIsStickingAtNode(cons)) );
       SCIP_CALL( SCIPaddCons(scip, lincons) );
       SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+      ++*naddconss;
 
       vars[0] = bvars[0];
       vals[0] = 1.0;
@@ -2083,6 +2097,7 @@ SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
          TRUE /* removable */, SCIPconsIsStickingAtNode(cons)) );
       SCIP_CALL( SCIPaddCons(scip, lincons) );
       SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+      ++*naddconss;
    }
    else
    { /* second summand is just a constant */
@@ -2119,6 +2134,7 @@ SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
           TRUE /* removable */, SCIPconsIsStickingAtNode(cons)) );
       SCIP_CALL( SCIPaddCons(scip, lincons) );
       SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+      ++*naddconss;
 
       vars[0] = avars[i-1];
       vals[0] = sin(val);
@@ -2136,6 +2152,7 @@ SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
           TRUE /* removable */, SCIPconsIsStickingAtNode(cons)) );
       SCIP_CALL( SCIPaddCons(scip, lincons) );
       SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+      ++*naddconss;
 
       vars[0] = avars[i-1];
       vals[0] = -sin(val);
@@ -2153,6 +2170,7 @@ SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
           TRUE /* removable */, SCIPconsIsStickingAtNode(cons)) );
       SCIP_CALL( SCIPaddCons(scip, lincons) );
       SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+      ++*naddconss;
    }
 
    /* create last linear constraints */
@@ -2170,6 +2188,7 @@ SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
        SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
    SCIP_CALL( SCIPaddCons(scip, lincons) );
    SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+   ++*naddconss;
 
    vars[0] = avars[N];
    vals[0] = tan( M_PI / pow(2.0, (double) (N+1)) );
@@ -2185,6 +2204,7 @@ SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
        TRUE /* removable */, SCIPconsIsStickingAtNode(cons)) );
    SCIP_CALL( SCIPaddCons(scip, lincons) );
    SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+   ++*naddconss;
 
    for( i = 0; i <= N; ++i )
    {
@@ -2216,16 +2236,17 @@ SCIP_RETCODE presolveCreateOuterApproxDim3(
    SCIP_Real             offset3,            /**< offset of x3 */
    int                   N,                  /**< size of linear approximation, need to be >= 1 */
    SCIP_Bool             glineur,            /**< whether to prefer Glineur to Ben-Tal Nemirovski */
-   const char*           basename            /**< string to use for building variable and constraint names */
+   const char*           basename,           /**< string to use for building variable and constraint names */
+   int*                  naddconss           /**< buffer where to add the number of added constraints */
 )
 {
    if (glineur)
    {
-      SCIP_CALL( presolveCreateGlineurApproxDim3(scip, cons, x1, x2, x3, alpha1, alpha2, alpha3, offset1, offset2, offset3, N, basename) );
+      SCIP_CALL( presolveCreateGlineurApproxDim3(scip, cons, x1, x2, x3, alpha1, alpha2, alpha3, offset1, offset2, offset3, N, basename, naddconss) );
    }
    else
    {
-      SCIP_CALL( presolveCreateBenTalNemirovskiApproxDim3(scip, cons, x1, x2, x3, alpha1, alpha2, alpha3, offset1, offset2, offset3, N, basename) );
+      SCIP_CALL( presolveCreateBenTalNemirovskiApproxDim3(scip, cons, x1, x2, x3, alpha1, alpha2, alpha3, offset1, offset2, offset3, N, basename, naddconss) );
    }
    
    return SCIP_OKAY;
@@ -2250,7 +2271,8 @@ SCIP_RETCODE presolveCreateOuterApprox(
    const char*           basename,           /**< prefix for variable and constraint name */
    SCIP_CONS*            origcons,           /**< original constraint for which this SOC3 set is added */
    int                   soc3_nr_auxvars,    /**< number of auxiliary variables to use for a SOC3 constraint, or 0 if automatic */
-   SCIP_Bool             glineur             /**< whether Glineur should be prefered to Ben-Tal Nemirovski */
+   SCIP_Bool             glineur,            /**< whether Glineur should be prefered to Ben-Tal Nemirovski */
+   int*                  naddconss           /**< buffer where to add the number of added constraints */
    )
 {
    char       name[255];
@@ -2265,6 +2287,7 @@ SCIP_RETCODE presolveCreateOuterApprox(
    assert(rhsvar   != NULL);
    assert(basename != NULL);
    assert(!SCIPisNegative(scip, constant));
+   assert(naddconss != NULL);
    
    if( nlhsvars == 1 )
    { /* end of recursion */
@@ -2273,7 +2296,7 @@ SCIP_RETCODE presolveCreateOuterApprox(
          lhsvars[0],    NULL,           rhsvar,
          lhscoefs[0],   1.0,            rhscoeff,
          lhsoffsets[0], sqrt(constant), rhsoffset,
-         soc3_nr_auxvars, glineur, basename) );
+         soc3_nr_auxvars, glineur, basename, naddconss) );
       
       return SCIP_OKAY;
    }
@@ -2287,7 +2310,7 @@ SCIP_RETCODE presolveCreateOuterApprox(
          lhsvars[0],    lhsvars[1],    rhsvar,
          lhscoefs[0],   lhscoefs[1],   rhscoeff,
          lhsoffsets[0], lhsoffsets[1], rhsoffset,
-         soc3_nr_auxvars, glineur, basename) );
+         soc3_nr_auxvars, glineur, basename, naddconss) );
       
       return SCIP_OKAY;
    }
@@ -2306,7 +2329,7 @@ SCIP_RETCODE presolveCreateOuterApprox(
          lhsvars[0],    lhsvars[1],    auxvar1,
          lhscoefs[0],   lhscoefs[1],   1.0,
          lhsoffsets[0], lhsoffsets[1], 0.0,
-         soc3_nr_auxvars, glineur, name) );
+         soc3_nr_auxvars, glineur, name, naddconss) );
 
       (void) SCIPsnprintf(name, 255, "%s_soc3", basename);
       if( nlhsvars == 3 )
@@ -2315,7 +2338,7 @@ SCIP_RETCODE presolveCreateOuterApprox(
             lhsvars[2],    auxvar1, rhsvar,
             lhscoefs[2],   1.0,     rhscoeff,
             lhsoffsets[2], 0.0,     rhsoffset,
-            soc3_nr_auxvars, glineur, name) );
+            soc3_nr_auxvars, glineur, name, naddconss) );
       }
       else
       { /* create new constraint auxvar^2 + sqrt(constant)^2 <= (rhscoeff * (rhsvar+rhsoffset))^2 */
@@ -2323,7 +2346,7 @@ SCIP_RETCODE presolveCreateOuterApprox(
             auxvar1, NULL,           rhsvar,
             1.0,     1.0,            rhscoeff,
             0.0,     sqrt(constant), rhsoffset,
-            soc3_nr_auxvars, glineur, name) );
+            soc3_nr_auxvars, glineur, name, naddconss) );
       }
 
       SCIP_CALL( SCIPreleaseVar(scip, &auxvar1) );
@@ -2342,7 +2365,7 @@ SCIP_RETCODE presolveCreateOuterApprox(
    SCIP_CALL( presolveCreateOuterApprox(scip,
       nlhsvars/2, lhsvars, lhscoefs, lhsoffsets,
       auxvar1, 1.0, 0.0,
-      constant, name, origcons, soc3_nr_auxvars, glineur) );
+      constant, name, origcons, soc3_nr_auxvars, glineur, naddconss) );
 
    (void) SCIPsnprintf(name, 255, "%s#z2", basename);
    SCIP_CALL( SCIPcreateVar(scip, &auxvar2, name, 0., SCIPinfinity(scip), 0.0, 
@@ -2353,7 +2376,7 @@ SCIP_RETCODE presolveCreateOuterApprox(
    SCIP_CALL( presolveCreateOuterApprox(scip,
       nlhsvars-nlhsvars/2, &lhsvars[nlhsvars/2], &lhscoefs[nlhsvars/2], &lhsoffsets[nlhsvars/2],
       auxvar2, 1.0, 0.0,
-      0.0, name, origcons, soc3_nr_auxvars, glineur) );
+      0.0, name, origcons, soc3_nr_auxvars, glineur, naddconss) );
 
    /* SOC constraint binding both auxvar's */
    (void)SCIPsnprintf(name, 255, "%s_soc3", basename);
@@ -2361,7 +2384,7 @@ SCIP_RETCODE presolveCreateOuterApprox(
       auxvar1, auxvar2, rhsvar,
       1.0,     1.0,     rhscoeff,
       0.0,     0.0,     rhsoffset,
-      soc3_nr_auxvars, glineur, name) );
+      soc3_nr_auxvars, glineur, name, naddconss) );
 
    SCIP_CALL( SCIPreleaseVar(scip, &auxvar1) );
    SCIP_CALL( SCIPreleaseVar(scip, &auxvar2) );
@@ -3574,7 +3597,7 @@ SCIP_DECL_CONSPRESOL(consPresolSOC)
 
       if( conshdlrdata->nauxvars > 0 && !consdata->isapproxadded )
       {
-         SCIP_CALL( presolveCreateOuterApprox(scip, consdata->nvars, consdata->vars, consdata->coefs, consdata->offsets, consdata->rhsvar, consdata->rhscoeff, consdata->rhscoeff, consdata->constant, SCIPconsGetName(conss[c]), conss[c], conshdlrdata->nauxvars, conshdlrdata->glineur) );  /*lint !e613*/
+         SCIP_CALL( presolveCreateOuterApprox(scip, consdata->nvars, consdata->vars, consdata->coefs, consdata->offsets, consdata->rhsvar, consdata->rhscoeff, consdata->rhscoeff, consdata->constant, SCIPconsGetName(conss[c]), conss[c], conshdlrdata->nauxvars, conshdlrdata->glineur, naddconss) );  /*lint !e613*/
          consdata->isapproxadded = TRUE;
       }
       
