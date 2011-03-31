@@ -3309,7 +3309,7 @@ static
 SCIP_RETCODE presolveTryAddAND(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
-   int*                  nconsadded          /**< buffer where to add the number of AND constraints added */
+   int*                  naddconss           /**< buffer where to add the number of AND constraints added */
    )
 {
    SCIP_CONSDATA*     consdata;
@@ -3323,9 +3323,7 @@ SCIP_RETCODE presolveTryAddAND(
 
    assert(scip != NULL);
    assert(cons != NULL);
-   assert(nconsadded != NULL);
-   
-   *nconsadded = 0;
+   assert(naddconss != NULL);
    
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -3363,6 +3361,7 @@ SCIP_RETCODE presolveTryAddAND(
       SCIPdebugMessage("added AND constraint: ");
       SCIPdebug( SCIPprintCons(scip, andcons, NULL) );
       SCIP_CALL( SCIPreleaseCons(scip, &andcons) );
+      ++*naddconss;
       
       /* add bilincoef * auxvar to linear terms */
       SCIP_CALL( addLinearCoef(scip, cons, auxvar, consdata->bilinterms[i].coef) );
@@ -3371,8 +3370,6 @@ SCIP_RETCODE presolveTryAddAND(
       /* remember that we have to delete this bilinear term */
       assert(ntodelete < consdata->nbilinterms);
       todelete[ntodelete++] = i;
-
-      ++*nconsadded;
    }
 
    /* remove bilinear terms that have been replaced */
@@ -3396,7 +3393,7 @@ static
 SCIP_RETCODE presolveTryAddLinearReform(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
-   int*                  nvarsadded,         /**< buffer where to store the number of auxiliary variables added */
+   int*                  naddconss,          /**< buffer where to add the number of auxiliary constraints added */
    int                   maxnrvar,           /**< maximal number of variables in linear term to consider when replacing by one auxiliary variable */
    int                   empathy4and         /**< empathy for using AND constraint handler */
    )
@@ -3425,10 +3422,8 @@ SCIP_RETCODE presolveTryAddLinearReform(
 
    assert(scip != NULL);
    assert(cons != NULL);
-   assert(nvarsadded != NULL);
+   assert(naddconss != NULL);
    
-   *nvarsadded = 0;
-
    if( maxnrvar == 0 )
       return SCIP_OKAY;
    
@@ -3535,6 +3530,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
             SCIPdebugMessage("added AND constraint: ");
             SCIPdebug( SCIPprintCons(scip, auxcons, NULL) );
             SCIP_CALL( SCIPreleaseCons(scip, &auxcons) );
+            ++*naddconss;
             
             /* add linear term coef*auxvar */
             SCIP_CALL( addLinearCoef(scip, cons, auxvar, xcoef[0]) );
@@ -3582,6 +3578,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
                SCIPdebugMessage("added varbound constraint: ");
                SCIPdebug( SCIPprintCons(scip, auxcons, NULL) );
                SCIP_CALL( SCIPreleaseCons(scip, &auxcons) );
+               ++*naddconss;
             }
             if( !SCIPisZero(scip, SCIPintervalGetSup(xbnds)) )
             { /* add z - xbnds.sup * y <= 0 constraint (as varbound constraint) */
@@ -3593,6 +3590,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
                SCIP_CALL( SCIPaddCons(scip, auxcons) );
                SCIPdebug( SCIPdebugMessage("added varbound constraint: ") );
                SCIP_CALL( SCIPreleaseCons(scip, &auxcons) );
+               ++*naddconss;
             }
 
             /* add xbnds.inf <= sum_i a_i*x_i + xbnds.inf * y - z constraint */
@@ -3610,6 +3608,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
             SCIPdebugMessage("added linear constraint: ");
             SCIPdebug( SCIPprintCons(scip, auxcons, NULL) );
             SCIP_CALL( SCIPreleaseCons(scip, &auxcons) );
+            ++*naddconss;
 
             /* add sum_i a_i*x_i + xbnds.sup * y - z <= xbnds.sup constraint */
             xcoef[nxvars] = SCIPintervalGetSup(xbnds);
@@ -3623,6 +3622,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
             SCIPdebugMessage("added linear constraint: ");
             SCIPdebug( SCIPprintCons(scip, auxcons, NULL) );
             SCIP_CALL( SCIPreleaseCons(scip, &auxcons) );
+            ++*naddconss;
 
             /* add linear term scale*auxvar to this constraint */
             SCIP_CALL( addLinearCoef(scip, cons, auxvar, scale) );
@@ -3630,8 +3630,6 @@ SCIP_RETCODE presolveTryAddLinearReform(
             /* forget about auxvar */
             SCIP_CALL( SCIPreleaseVar(scip, &auxvar) );
          }
-         
-         ++*nvarsadded;         
       }
       while( j < nbilinterms );
     
@@ -3904,7 +3902,8 @@ SCIP_RETCODE presolveDisaggregate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler data structure */
    SCIP_CONS*            cons,               /**< source constraint to try to convert */
-   SCIP_Bool*            success             /**< buffer to store whether a disaggregation was done */
+   SCIP_Bool*            success,            /**< buffer to store whether a disaggregation was done */
+   int*                  naddconss           /**< pointer to counter of added constraints */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -3921,6 +3920,7 @@ SCIP_RETCODE presolveDisaggregate(
    assert(conshdlr != NULL);
    assert(cons != NULL);
    assert(success != NULL);
+   assert(naddconss != NULL);
    
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -4044,7 +4044,8 @@ SCIP_RETCODE presolveDisaggregate(
       
       SCIP_CALL( SCIPreleaseCons(scip, &auxconss[comp]) );
       SCIP_CALL( SCIPreleaseVar(scip, &auxvars[comp]) );
-   } 
+   }
+   *naddconss += ncomponents;
    
    SCIPdebug( SCIPprintCons(scip, cons, NULL) );
 
@@ -7309,7 +7310,7 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
    
    *result = SCIP_DIDNOTFIND;
    
-   if( nrounds > 0 && nnewfixedvars == 0 && nnewupgdconss == 0 && nnewchgbds == 0 && nnewaggrvars == 0 && nnewchgvartypes == 0 )
+   if( nrounds > 0 && nnewfixedvars == 0 && nnewupgdconss == 0 && nnewaddconss == 0 && nnewchgbds == 0 && nnewaggrvars == 0 && nnewchgvartypes == 0 )
       return SCIP_OKAY;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -7339,7 +7340,9 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
             SCIP_CALL( SCIPreleaseCons(scip, &myupgdconss[i]) ); /*lint !e613*/
          }
 
+         /* count the first upgrade constraint as constraint upgrade and the remaining ones as added constraints */
          (*nupgdconss)++;
+         *naddconss += mynupgdconss - 1;
          *result = SCIP_SUCCESS;
 
          /* delete upgraded constraint */
@@ -7362,28 +7365,26 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
       
       if( !consdata->ispresolved || (!consdata->ispropagated && conshdlrdata->replacebinaryprodlength) )
       {
-         int nconsadded;
+         int naddconss_old;
 
-         nconsadded = 0;
+         naddconss_old = *naddconss;
          if( conshdlrdata->empathy4and == 2 )
          {
             /* user really likes AND, so give him */
-            SCIP_CALL( presolveTryAddAND(scip, conss[c], &nconsadded) );
-            if( nconsadded != 0 )
-            { 
-               /* does this count as an upgrade? */
-               *result = SCIP_SUCCESS;
-               havechange = TRUE;
-               SCIP_CALL( mergeAndCleanBilinearTerms(scip, conss[c]) );
-               SCIP_CALL( mergeAndCleanQuadVarTerms(scip, conss[c]) );
-               SCIP_CALL( mergeAndCleanLinearVars(scip, conss[c]) );
-            }
+            SCIP_CALL( presolveTryAddAND(scip, conss[c], naddconss) );
+            assert(*naddconss >= naddconss_old);
          }
 
-         SCIP_CALL( presolveTryAddLinearReform(scip, conss[c], &nconsadded, conshdlrdata->replacebinaryprodlength, conshdlrdata->empathy4and) );
-         if( nconsadded != 0 )
+         if( *naddconss == naddconss_old )
          {
-            /* does this count as an upgrade? */
+            /* user not so empathic about AND, or we don't have products of two binaries, so try this more general reformulation */
+            SCIP_CALL( presolveTryAddLinearReform(scip, conss[c], naddconss, conshdlrdata->replacebinaryprodlength, conshdlrdata->empathy4and) );
+            assert(*naddconss >= naddconss_old);
+         }
+
+         if( *naddconss > naddconss_old )
+         {
+            /* if something happened, report success and cleanup constraint */
             *result = SCIP_SUCCESS;
             havechange = TRUE;
             SCIP_CALL( mergeAndCleanBilinearTerms(scip, conss[c]) );
@@ -7396,7 +7397,7 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
       {
          SCIP_Bool disaggrsuccess;
          
-         SCIP_CALL( presolveDisaggregate(scip, conshdlr, conss[c], &disaggrsuccess) );
+         SCIP_CALL( presolveDisaggregate(scip, conshdlr, conss[c], &disaggrsuccess, naddconss) );
       }
       
       if( consdata->nlinvars == 0 && consdata->nquadvars == 0 )
@@ -7407,6 +7408,7 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
          { /* left hand side positive or right hand side negative */
             SCIPdebugMessage("constraint <%s> is constant and infeasible\n", SCIPconsGetName(conss[c]));
             SCIP_CALL( SCIPdelCons(scip, conss[c]) );
+            ++*ndelconss;
             *result = SCIP_CUTOFF;
             break;
          }
