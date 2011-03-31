@@ -116,6 +116,7 @@ typedef struct SCIP_PresolData SCIP_PRESOLDATA;   /**< presolver specific data *
  *  - nnewchgbds      : number of variable bounds tightend since the last call to the presolver
  *  - nnewholes       : number of domain holes added since the last call to the presolver
  *  - nnewdelconss    : number of deleted constraints since the last call to the presolver
+ *  - nnewaddconss    : number of added constraints since the last call to the presolver
  *  - nnewupgdconss   : number of upgraded constraints since the last call to the presolver
  *  - nnewchgcoefs    : number of changed coefficients since the last call to the presolver
  *  - nnewchgsides    : number of changed left or right hand sides since the last call to the presolver
@@ -127,6 +128,7 @@ typedef struct SCIP_PresolData SCIP_PRESOLDATA;   /**< presolver specific data *
  *  - nchgbds         : pointer to total number of variable bounds tightend of all presolvers
  *  - naddholes       : pointer to total number of domain holes added of all presolvers
  *  - ndelconss       : pointer to total number of deleted constraints of all presolvers
+ *  - naddconss       : pointer to total number of added constraints of all presolvers
  *  - nupgdconss      : pointer to total number of upgraded constraints of all presolvers
  *  - nchgcoefs       : pointer to total number of changed coefficients of all presolvers
  *  - nchgsides       : pointer to total number of changed left/right hand sides of all presolvers
@@ -144,9 +146,9 @@ typedef struct SCIP_PresolData SCIP_PRESOLDATA;   /**< presolver specific data *
  */
 #define SCIP_DECL_PRESOLEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRESOL* presol, int nrounds,              \
    int nnewfixedvars, int nnewaggrvars, int nnewchgvartypes, int nnewchgbds, int nnewholes, \
-   int nnewdelconss, int nnewupgdconss, int nnewchgcoefs, int nnewchgsides,                 \
+      int nnewdelconss, int nnewaddconss, int nnewupgdconss, int nnewchgcoefs, int nnewchgsides, \
    int* nfixedvars, int* naggrvars, int* nchgvartypes, int* nchgbds, int* naddholes,        \
-   int* ndelconss, int* nupgdconss, int* nchgcoefs, int* nchgsides, SCIP_RESULT* result)
+      int* ndelconss, int* naddconss, int* nupgdconss, int* nchgcoefs, int* nchgsides, SCIP_RESULT* result)
 
 #ifdef __cplusplus
 }

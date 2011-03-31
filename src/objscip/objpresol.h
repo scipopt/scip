@@ -175,6 +175,7 @@ public:
       int                nnewchgbds,         /**< no. of variable bounds tightend since last call to presolver */
       int                nnewholes,          /**< no. of domain holes added since last call to presolver */
       int                nnewdelconss,       /**< no. of deleted constraints since last call to presolver */
+      int                nnewaddconss,       /**< no. of added constraints since last call to presolver */
       int                nnewupgdconss,      /**< no. of upgraded constraints since last call to presolver */
       int                nnewchgcoefs,       /**< no. of changed coefficients since last call to presolver */
       int                nnewchgsides,       /**< no. of changed left or right hand sides since last call to presolver */
@@ -184,6 +185,7 @@ public:
       int*               nchgbds,            /**< pointer to count total number of variable bounds tightend of all presolvers */
       int*               naddholes,          /**< pointer to count total number of domain holes added of all presolvers */
       int*               ndelconss,          /**< pointer to count total number of deleted constraints of all presolvers */
+      int*               naddconss,          /**< pointer to count total number of added constraints of all presolvers */
       int*               nupgdconss,         /**< pointer to count total number of upgraded constraints of all presolvers */
       int*               nchgcoefs,          /**< pointer to count total number of changed coefficients of all presolvers */
       int*               nchgsides,          /**< pointer to count total number of changed sides of all presolvers */
