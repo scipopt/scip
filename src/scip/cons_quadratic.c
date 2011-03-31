@@ -4810,64 +4810,70 @@ SCIP_RETCODE generateCut(
    { /* underestimate and linearize each term separately -> McCormick */
       for( j = 0; j < consdata->nquadvars; ++j )
       {
+         x = consdata->quadvarterms[j].var;
          rowcoef = consdata->quadvarterms[j].lincoef;
 
-         x = consdata->quadvarterms[j].var;
-         xval = SCIPgetSolVal(scip, sol, x);
-         xlb = SCIPvarGetLbLocal(x);
-         xub = SCIPvarGetUbLocal(x);
-         if( xval < xlb )
-            xval = xlb;
-         else if( xval > xub )
-            xval = xub;
-         if( SCIPisInfinity(scip, ABS(xval)) )
+         if( consdata->quadvarterms[j].sqrcoef != 0.0 )
          {
-            SCIPdebugMessage("skip underestimator of square term in constraint %s because var %s is at infinity\n", SCIPconsGetName(cons), SCIPvarGetName(x));
-            SCIP_CALL( SCIPreleaseRow(scip, row) );
-            return SCIP_OKAY;
-         }
-
-         /* linearization of square term */
-         coef = consdata->quadvarterms[j].sqrcoef;
-
-         if( (violbound == SCIP_BOUNDTYPE_LOWER && coef <= 0) ||
-             (violbound == SCIP_BOUNDTYPE_UPPER && coef >  0) )
-         { /* convex -> linearize */
-            if( SCIPvarGetType(x) == SCIP_VARTYPE_CONTINUOUS || SCIPisIntegral(scip, xval) )
+            xval = SCIPgetSolVal(scip, sol, x);
+            xlb = SCIPvarGetLbLocal(x);
+            xub = SCIPvarGetUbLocal(x);
+            if( xval < xlb )
+               xval = xlb;
+            else if( xval > xub )
+               xval = xub;
+            if( SCIPisInfinity(scip, ABS(xval)) )
             {
-               rowcoef += 2 * coef * xval;
-               bnd += coef * xval * xval;
-            }
-            else
-            { /* if variable is discrete but fractional, try to be more clever */
-               SCIP_Real f;
-               
-               f = SCIPfloor(scip, xval);
-               rowcoef += coef*(2*f+1);
-               bnd += coef*f*(f+1);
-            }
-         }
-         else
-         { /* not convex -> secand approximation */
-            if( SCIPisInfinity(scip, -xlb) || SCIPisInfinity(scip, xub) )
-            {
-               SCIPdebugMessage("skip secand approx of square term in constraint %s because var %s is at infinity\n", SCIPconsGetName(cons), SCIPvarGetName(x));
+               SCIPdebugMessage("skip underestimator of square term in constraint %s because var %s is at infinity\n", SCIPconsGetName(cons), SCIPvarGetName(x));
                SCIP_CALL( SCIPreleaseRow(scip, row) );
                return SCIP_OKAY;
             }
 
-            rowcoef += coef * (xlb+xub);
-            bnd += coef * xlb * xub;
-         }
+            /* linearization of square term */
+            coef = consdata->quadvarterms[j].sqrcoef;
 
-         if( SCIPisInfinity(scip, ABS(rowcoef)) )
-         {
-            SCIPdebugMessage("skip underestimator of square term in constraint %s because var %s is almost at infinity\n", SCIPconsGetName(cons), SCIPvarGetName(x));
-            SCIP_CALL( SCIPreleaseRow(scip, row) );
-            return SCIP_OKAY;
+            if( (violbound == SCIP_BOUNDTYPE_LOWER && coef <= 0) ||
+                (violbound == SCIP_BOUNDTYPE_UPPER && coef >  0) )
+            { /* convex -> linearize */
+               if( SCIPvarGetType(x) == SCIP_VARTYPE_CONTINUOUS || SCIPisIntegral(scip, xval) )
+               {
+                  rowcoef += 2 * coef * xval;
+                  bnd += coef * xval * xval;
+               }
+               else
+               { /* if variable is discrete but fractional, try to be more clever */
+                  SCIP_Real f;
+
+                  f = SCIPfloor(scip, xval);
+                  rowcoef += coef*(2*f+1);
+                  bnd += coef*f*(f+1);
+               }
+            }
+            else
+            { /* not convex -> secand approximation */
+               if( SCIPisInfinity(scip, -xlb) || SCIPisInfinity(scip, xub) )
+               {
+                  SCIPdebugMessage("skip secand approx of square term in constraint %s because var %s is at infinity\n", SCIPconsGetName(cons), SCIPvarGetName(x));
+                  SCIP_CALL( SCIPreleaseRow(scip, row) );
+                  return SCIP_OKAY;
+               }
+
+               rowcoef += coef * (xlb+xub);
+               bnd += coef * xlb * xub;
+            }
+
+            if( SCIPisInfinity(scip, ABS(rowcoef)) )
+            {
+               SCIPdebugMessage("skip underestimator of square term in constraint %s because var %s is almost at infinity\n", SCIPconsGetName(cons), SCIPvarGetName(x));
+               SCIP_CALL( SCIPreleaseRow(scip, row) );
+               return SCIP_OKAY;
+            }
          }
          
-         SCIP_CALL( SCIPaddVarToRow(scip, *row, x, rowcoef) );
+         if( rowcoef != 0.0 )
+         {
+            SCIP_CALL( SCIPaddVarToRow(scip, *row, x, rowcoef) );
+         }
       }
 
       for( j = 0; j < consdata->nbilinterms; ++j )
@@ -4880,12 +4886,6 @@ SCIP_RETCODE generateCut(
             xval = xlb;
          else if( xval > xub )
             xval = xub;
-         if( SCIPisInfinity(scip, ABS(xval)) )
-         {
-            SCIPdebugMessage("skip underestimator of bilinear term in constraint %s because var %s is at infinity\n", SCIPconsGetName(cons), SCIPvarGetName(x));
-            SCIP_CALL( SCIPreleaseRow(scip, row) );
-            return SCIP_OKAY;
-         }
 
          y = consdata->bilinterms[j].var2;
          yval = SCIPgetSolVal(scip, sol, y);
@@ -4895,68 +4895,95 @@ SCIP_RETCODE generateCut(
             yval = ylb;
          else if( yval > yub )
             yval = yub;
-         if( SCIPisInfinity(scip, ABS(xval)) )
+
+         if( SCIPisEQ(scip, xlb, xub) )
          {
-            SCIPdebugMessage("skip underestimator of bilinear term in constraint %s because var %s is at infinity\n", SCIPconsGetName(cons), SCIPvarGetName(y));
-            SCIP_CALL( SCIPreleaseRow(scip, row) );
-            return SCIP_OKAY;
+            /* x is fixed, so bilinear term is linear: bilincoef * xval * y */
+            xcoef = 0.0;
+            ycoef = xval * consdata->bilinterms[j].coef;
+            bnd_  = 0.0;
          }
-
-         coef = consdata->bilinterms[j].coef;
-         if( violbound == SCIP_BOUNDTYPE_LOWER )
-            coef = -coef;
-
-         if( coef > 0.0 )
+         else if( SCIPisEQ(scip, ylb, yub) )
          {
-            if( !SCIPisInfinity(scip, -xlb) && !SCIPisInfinity(scip, -ylb) &&
-                (SCIPisInfinity(scip,  xub) ||  SCIPisInfinity(scip,  yub) ||
-                  (xub-xlb)*yval + (yub-ylb)*xval <= xub*yub - xlb*ylb) )
-            {
-               xcoef = coef * ylb;
-               ycoef = coef * xlb;
-               bnd_  = coef * xlb * ylb;
-            }
-            else if( !SCIPisInfinity(scip, xub) && !SCIPisInfinity(scip, yub) )
-            {
-               xcoef = coef * yub;
-               ycoef = coef * xub;
-               bnd_  = coef * xub * yub;
-            }
-            else
-            {
-               SCIPdebugMessage("skip underestimator of bilinear term in constraint %s because var %s or %s is unbounded\n", SCIPconsGetName(cons), SCIPvarGetName(x), SCIPvarGetName(y));
-               SCIP_CALL( SCIPreleaseRow(scip, row) );
-               return SCIP_OKAY;
-            }
+            /* y is fixed, so bilinear term is linear: bilincoef * yval * x */
+            xcoef = yval * consdata->bilinterms[j].coef;
+            ycoef = 0.0;
+            bnd_  = 0.0;
          }
          else
-         { /* coef < 0 */
-            if( !SCIPisInfinity(scip,  xub) && !SCIPisInfinity(scip, -ylb) &&
-                (SCIPisInfinity(scip, -xlb) ||  SCIPisInfinity(scip,  yub) ||
-                  (xub-xlb)*yval - (yub-ylb)*xval <= xub*ylb - xlb*yub) )
+         {
+            /* x and y are not fixed, use McCormick */
+            if( SCIPisInfinity(scip, ABS(xval)) )
             {
-               xcoef = coef * ylb;
-               ycoef = coef * xub;
-               bnd_  = coef * xub * ylb;
-            }
-            else if( !SCIPisInfinity(scip, -xlb) && !SCIPisInfinity(scip, yub) )
-            {
-               xcoef = coef * yub;
-               ycoef = coef * xlb;
-               bnd_  = coef * xlb * yub;
-            }
-            else
-            {
-               SCIPdebugMessage("skip underestimator of bilinear term in constraint %s because var %s or %s is unbounded\n", SCIPconsGetName(cons), SCIPvarGetName(x), SCIPvarGetName(y));
+               SCIPdebugMessage("skip underestimator of bilinear term in constraint %s because var %s is at infinity\n", SCIPconsGetName(cons), SCIPvarGetName(x));
                SCIP_CALL( SCIPreleaseRow(scip, row) );
                return SCIP_OKAY;
             }
-         }
-         if( violbound == SCIP_BOUNDTYPE_LOWER )
-         {
-            xcoef = -xcoef;
-            ycoef = -ycoef;
-            bnd_  = -bnd_;
+
+            if( SCIPisInfinity(scip, ABS(xval)) )
+            {
+               SCIPdebugMessage("skip underestimator of bilinear term in constraint %s because var %s is at infinity\n", SCIPconsGetName(cons), SCIPvarGetName(y));
+               SCIP_CALL( SCIPreleaseRow(scip, row) );
+               return SCIP_OKAY;
+            }
+
+            coef = consdata->bilinterms[j].coef;
+            if( violbound == SCIP_BOUNDTYPE_LOWER )
+               coef = -coef;
+
+            if( coef > 0.0 )
+            {
+               if( !SCIPisInfinity(scip, -xlb) && !SCIPisInfinity(scip, -ylb) &&
+                  (SCIPisInfinity(scip,  xub) ||  SCIPisInfinity(scip,  yub) ||
+                     (xub-xlb)*yval + (yub-ylb)*xval <= xub*yub - xlb*ylb) )
+               {
+                  xcoef = coef * ylb;
+                  ycoef = coef * xlb;
+                  bnd_  = coef * xlb * ylb;
+               }
+               else if( !SCIPisInfinity(scip, xub) && !SCIPisInfinity(scip, yub) )
+               {
+                  xcoef = coef * yub;
+                  ycoef = coef * xub;
+                  bnd_  = coef * xub * yub;
+               }
+               else
+               {
+                  SCIPdebugMessage("skip underestimator of bilinear term in constraint %s because var %s or %s is unbounded\n", SCIPconsGetName(cons), SCIPvarGetName(x), SCIPvarGetName(y));
+                  SCIP_CALL( SCIPreleaseRow(scip, row) );
+                  return SCIP_OKAY;
+               }
+            }
+            else
+            { /* coef < 0 */
+               if( !SCIPisInfinity(scip,  xub) && !SCIPisInfinity(scip, -ylb) &&
+                  (SCIPisInfinity(scip, -xlb) ||  SCIPisInfinity(scip,  yub) ||
+                     (xub-xlb)*yval - (yub-ylb)*xval <= xub*ylb - xlb*yub) )
+               {
+                  xcoef = coef * ylb;
+                  ycoef = coef * xub;
+                  bnd_  = coef * xub * ylb;
+               }
+               else if( !SCIPisInfinity(scip, -xlb) && !SCIPisInfinity(scip, yub) )
+               {
+                  xcoef = coef * yub;
+                  ycoef = coef * xlb;
+                  bnd_  = coef * xlb * yub;
+               }
+               else
+               {
+                  SCIPdebugMessage("skip underestimator of bilinear term in constraint %s because var %s or %s is unbounded\n", SCIPconsGetName(cons), SCIPvarGetName(x), SCIPvarGetName(y));
+                  SCIP_CALL( SCIPreleaseRow(scip, row) );
+                  return SCIP_OKAY;
+               }
+            }
+
+            if( violbound == SCIP_BOUNDTYPE_LOWER )
+            {
+               xcoef = -xcoef;
+               ycoef = -ycoef;
+               bnd_  = -bnd_;
+            }
          }
          
          if( SCIPisInfinity(scip, ABS(xcoef)) || SCIPisInfinity(scip, ABS(ycoef)) )
@@ -5033,6 +5060,8 @@ SCIP_RETCODE separatePoint(
    SCIP_BOUNDTYPE     violbound;
    int                c;
    SCIP_ROW*          row;
+   SCIP_Bool          haveray;
+   SCIP_Real*         ray;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -5047,6 +5076,8 @@ SCIP_RETCODE separatePoint(
 
    if( bestefficacy != NULL )
       *bestefficacy = 0.0;
+
+   ray = NULL;
 
    for( c = 0; c < nconss; ++c )
    {
@@ -5080,7 +5111,68 @@ SCIP_RETCODE separatePoint(
             continue;
 
          if( sol == NULL )
-            feasibility = SCIPgetRowLPFeasibility(scip, row);
+         {
+            if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+            {
+               SCIP_Real rayprod;
+               SCIP_VAR* var;
+               int i;
+
+               /* if the LP is unbounded, then we accept only cuts that cut into the direction of a hopefully existing primal ray
+                * that is, assume a ray r is given such that p + t*r is feasible for the LP for all t >= t_0 and some p
+                * given a cut lhs <= <c,x> <= rhs, we check whether it imposes an upper bound on t and thus bounds the ray
+                * this is given if rhs < infinity and <c,r> > 0, since we then enforce <c,p+t*r> = <c,p> + t<c,r> <= rhs, i.e., t <= (rhs - <c,p>)/<c,r>
+                * similar, lhs > -infinity and <c,r> < 0 is good
+                *
+                * SCIP stored an unbounded solution p+t*r in the columns
+                * however, we need to know r, so we get it via SCIPgetLPPrimalRay
+                */
+
+               /* get primal ray */
+               if( ray == NULL )
+               {
+                  SCIP_CALL( SCIPallocBufferArray(scip, &ray, SCIPgetNVars(scip)) );
+                  SCIP_CALL( SCIPgetLPPrimalRay(scip, ray, &haveray) );
+               }
+
+               if( haveray )
+               {
+                  rayprod = 0.0;
+                  for( i = 0; i < SCIProwGetNNonz(row); ++i )
+                  {
+                     assert(SCIProwGetCols(row)[i] != NULL);
+                     var = SCIPcolGetVar(SCIProwGetCols(row)[i]);
+                     assert(var != NULL);
+                     assert(SCIPvarGetProbindex(var) >= 0);
+                     assert(SCIPvarGetProbindex(var) < SCIPgetNVars(scip));
+
+                     rayprod += SCIProwGetVals(row)[i] * ray[SCIPvarGetProbindex(var)];
+                  }
+                  if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPisPositive(scip, rayprod) )
+                  {
+                     feasibility = -rayprod;
+                  }
+                  else if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) && SCIPisNegative(scip, rayprod) )
+                  {
+                     feasibility = rayprod;
+                  }
+                  else
+                  {
+                     feasibility = 0.0;
+                  }
+               }
+               else
+               {
+                  SCIPdebugMessage("do not have ray from unbounded LP, cannot check if cut 'cuts off' unbounded ray, skip cut\n");
+                  SCIP_CALL( SCIPreleaseRow(scip, &row) );
+                  continue;
+               }
+            }
+            else
+            {
+               feasibility = SCIPgetRowLPFeasibility(scip, row);
+            }
+         }
          else
             feasibility = SCIPgetRowSolFeasibility(scip, row, sol);
          norm = SCIProwGetNorm(row);
@@ -5119,6 +5211,8 @@ SCIP_RETCODE separatePoint(
       if( c >= nusefulconss && *result == SCIP_SEPARATED )
          break;
    }
+
+   SCIPfreeBufferArrayNull(scip, &ray);
 
    return SCIP_OKAY;
 }
@@ -5276,21 +5370,36 @@ SCIP_RETCODE registerVariableInfeasibilities(
       }
 
       for( j = 0; j < consdata->nbilinterms; ++j )
-      { /* bilinear terms */
+      { /* bilinear terms
+           if any of the variables if fixed, then it actually behaves like a linear term, so we don't need to branch on it */
          xlb = SCIPvarGetLbLocal(consdata->bilinterms[j].var1);
          xub = SCIPvarGetUbLocal(consdata->bilinterms[j].var1);
+         if( SCIPisEQ(scip, xlb, xub) )
+            continue;
+
+         ylb = SCIPvarGetLbLocal(consdata->bilinterms[j].var2);
+         yub = SCIPvarGetUbLocal(consdata->bilinterms[j].var2);
+         if( SCIPisEQ(scip, ylb, yub) )
+            continue;
+
+         /* if x is unbounded but y is binary, then it's actually easier to branch on y, since the term will become linear this way */
          if( SCIPisInfinity(scip, -xlb) || SCIPisInfinity(scip, xub) )
          {
-            SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->bilinterms[j].var1, SCIPinfinity(scip), SCIP_INVALID) );
+            if( SCIPvarIsBinary(consdata->bilinterms[j].var2) )
+               SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->bilinterms[j].var2, SCIPinfinity(scip), SCIP_INVALID) );
+            else
+               SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->bilinterms[j].var1, SCIPinfinity(scip), SCIP_INVALID) );
             ++*nnotify;
             continue;
          }
 
-         ylb = SCIPvarGetLbLocal(consdata->bilinterms[j].var2);
-         yub = SCIPvarGetUbLocal(consdata->bilinterms[j].var2);
+         /* if y is unbounded but x is binary, then it's actually easier to branch on x, since the term will become linear this way */
          if( SCIPisInfinity(scip, -ylb) || SCIPisInfinity(scip, yub) )
          {
-            SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->bilinterms[j].var2, SCIPinfinity(scip), SCIP_INVALID) );
+            if( SCIPvarIsBinary(consdata->bilinterms[j].var1) )
+               SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->bilinterms[j].var1, SCIPinfinity(scip), SCIP_INVALID) );
+            else
+               SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->bilinterms[j].var2, SCIPinfinity(scip), SCIP_INVALID) );
             ++*nnotify;
             continue;
          }
@@ -5327,24 +5436,9 @@ SCIP_RETCODE registerVariableInfeasibilities(
          if( gap < 0.0 )
             gap = 0.0;
 
-         if( !SCIPisEQ(scip, xlb, xub) )
-         {
-            SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->bilinterms[j].var1, gap, SCIP_INVALID) );
-            ++*nnotify;
-         }
-         else
-         {
-            SCIPdebugMessage("ignore fixed variable <%s>[%g, %g], diff %g\n", SCIPvarGetName(consdata->bilinterms[j].var1), xlb, xub, xub-xlb);
-         }
-         if( !SCIPisEQ(scip, ylb, yub) )
-         {
-            SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->bilinterms[j].var2, gap, SCIP_INVALID) );
-            ++*nnotify;
-         }
-         else
-         {
-            SCIPdebugMessage("ignore fixed variable <%s>[%g, %g], diff %g\n", SCIPvarGetName(consdata->bilinterms[j].var2), ylb, yub, yub-ylb);
-         }
+         SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->bilinterms[j].var1, gap, SCIP_INVALID) );
+         SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->bilinterms[j].var2, gap, SCIP_INVALID) );
+         *nnotify += 2;
       }
    }
 
@@ -5861,9 +5955,17 @@ void propagateBoundsGetQuadActivity(
          {
             ++*maxactivityinf;
          }
+         else if( SCIPisInfinity(scip, -bnd) )
+         {
+            /* if maximal activity is below value for -infinity, let's take -1e10 as upper bound on maximal activity
+             * @todo something better?
+             */
+            bnd = -sqrt(SCIPinfinity(scip));
+            *maxquadactivity += bnd;
+            quadactcontr[i].sup = bnd;
+         }
          else
          {
-            assert(!SCIPisInfinity(scip, -bnd)); /* do not like variables that are fixed at -infinity */
             prevroundmode = SCIPintervalGetRoundingMode();
             SCIPintervalSetRoundingModeUpwards();
             *maxquadactivity += bnd;
@@ -5882,9 +5984,17 @@ void propagateBoundsGetQuadActivity(
          {
             ++*minactivityinf;
          }
+         else if( SCIPisInfinity(scip, bnd) )
+         {
+            /* if minimal activity is above value for infinity, let's take 1e10 as lower bound on minimal activity
+             * @todo something better?
+             */
+            bnd = sqrt(SCIPinfinity(scip));
+            *minquadactivity += bnd;
+            quadactcontr[i].inf = bnd;
+         }
          else
          {
-            assert(!SCIPisInfinity(scip, bnd)); /* do not like variables that are fixed at infinity */
             prevroundmode = SCIPintervalGetRoundingMode();
             SCIPintervalSetRoundingModeDownwards();
             *minquadactivity += bnd;
@@ -5967,6 +6077,11 @@ SCIP_RETCODE propagateBoundsCons(
    assert(consdata->maxlinactivity != SCIP_INVALID);
    assert(consdata->minlinactivityinf >= 0);
    assert(consdata->maxlinactivityinf >= 0);
+
+   SCIPdebugMessage("linear activity: [%g, %g]   quadratic activity: [%g, %g]\n",
+      consdata->minlinactivityinf > 0 ? -SCIPinfinity(scip) : consdata->minlinactivity,
+      consdata->maxlinactivityinf > 0 ?  SCIPinfinity(scip) : consdata->maxlinactivity,
+      consdata->quadactivitybounds.inf, consdata->quadactivitybounds.sup);
 
    /* compute activity of quad term part, if not up to date
     * in that case, we also collect the contribution of each quad var term for later */
@@ -6326,7 +6441,7 @@ SCIP_RETCODE propagateBoundsCons(
 
                   SCIPintervalSetBounds(&tmp,
                      -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(consdata->bilinterms[k].var2), SCIPvarGetUbLocal(consdata->bilinterms[k].var2))),
-                     infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(consdata->bilinterms[k].var2), SCIPvarGetUbLocal(consdata->bilinterms[k].var2))));
+                      infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(consdata->bilinterms[k].var2), SCIPvarGetUbLocal(consdata->bilinterms[k].var2))));
                   SCIPintervalMulScalar(intervalinfty, &tmp, tmp, consdata->bilinterms[k].coef);
                   SCIPintervalAdd(intervalinfty, &lincoef, lincoef, tmp);
                }
@@ -7161,7 +7276,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpQuadratic)
    /* we are not feasible, the whole node is not infeasible, and we cannot find a good cut
     * -> collect variables for branching
     */
-   
+
    SCIPdebugMessage("separation failed (bestefficacy = %g < %g = minefficacy ); max viol: %g\n", sepaefficacy, minefficacy, maxviol);
 
    /* find branching candidates */
