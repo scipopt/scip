@@ -237,6 +237,7 @@ void SCIPstatResetPresolving(
    stat->npresolchgbds = 0;
    stat->npresoladdholes = 0;
    stat->npresoldelconss = 0;
+   stat->npresoladdconss = 0;
    stat->npresolupgdconss = 0;
    stat->npresolchgcoefs = 0;
    stat->npresolchgsides = 0;

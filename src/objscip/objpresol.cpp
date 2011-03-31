@@ -181,9 +181,9 @@ SCIP_DECL_PRESOLEXEC(presolExecObj)
    /* call virtual method of presol object */
    SCIP_CALL( presoldata->objpresol->scip_exec(scip, presol, nrounds,
          nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewholes,
-         nnewdelconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
+         nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
          nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
-         ndelconss, nupgdconss, nchgcoefs, nchgsides, result) );
+         ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result) );
 
    return SCIP_OKAY;
 }

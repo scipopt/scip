@@ -420,6 +420,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - nnewchgbds      : number of variable bounds tightend since the last call to the presolving method
  *  - nnewholes       : number of domain holes added since the last call to the presolving method
  *  - nnewdelconss    : number of deleted constraints since the last call to the presolving method
+ *  - nnewaddconss    : number of added constraints since the last call to the presolving method
  *  - nnewupgdconss   : number of upgraded constraints since the last call to the presolving method
  *  - nnewchgcoefs    : number of changed coefficients since the last call to the presolving method
  *  - nnewchgsides    : number of changed left or right hand sides since the last call to the presolving method
@@ -431,6 +432,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - nchgbds         : pointer to count total number of variable bounds tightened of all presolvers
  *  - naddholes       : pointer to count total number of domain holes added of all presolvers
  *  - ndelconss       : pointer to count total number of deleted constraints of all presolvers
+ *  - naddconss       : pointer to count total number of added constraints of all presolvers
  *  - nupgdconss      : pointer to count total number of upgraded constraints of all presolvers
  *  - nchgcoefs       : pointer to count total number of changed coefficients of all presolvers
  *  - nchgsides       : pointer to count total number of changed left/right hand sides of all presolvers
@@ -448,9 +450,9 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  */
 #define SCIP_DECL_CONSPRESOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, int nrounds, \
       int nnewfixedvars, int nnewaggrvars, int nnewchgvartypes, int nnewchgbds, int nnewholes, \
-      int nnewdelconss, int nnewupgdconss, int nnewchgcoefs, int nnewchgsides, \
+      int nnewdelconss, int nnewaddconss, int nnewupgdconss, int nnewchgcoefs, int nnewchgsides, \
       int* nfixedvars, int* naggrvars, int* nchgvartypes, int* nchgbds, int* naddholes, \
-      int* ndelconss, int* nupgdconss, int* nchgcoefs, int* nchgsides, SCIP_RESULT* result)
+      int* ndelconss, int* naddconss, int* nupgdconss, int* nchgcoefs, int* nchgsides, SCIP_RESULT* result)
 
 /** propagation conflict resolving method of constraint handler
  *

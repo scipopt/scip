@@ -192,6 +192,7 @@ SCIP_RETCODE SCIPpresolInit(
       presol->lastnchgbds = 0;
       presol->lastnaddholes = 0;
       presol->lastndelconss = 0;
+      presol->lastnaddconss = 0;
       presol->lastnupgdconss = 0;
       presol->lastnchgcoefs = 0;
       presol->lastnchgsides = 0;
@@ -201,6 +202,7 @@ SCIP_RETCODE SCIPpresolInit(
       presol->nchgbds = 0;
       presol->naddholes = 0;
       presol->ndelconss = 0;
+      presol->naddconss = 0;
       presol->nupgdconss = 0;
       presol->nchgcoefs = 0;
       presol->nchgsides = 0;
@@ -261,6 +263,7 @@ SCIP_RETCODE SCIPpresolInitpre(
    presol->lastnchgbds = 0;
    presol->lastnaddholes = 0;
    presol->lastndelconss = 0;
+   presol->lastnaddconss = 0;
    presol->lastnupgdconss = 0;
    presol->lastnchgcoefs = 0;
    presol->lastnchgsides = 0;
@@ -329,6 +332,7 @@ SCIP_RETCODE SCIPpresolExec(
    int*                  nchgbds,            /**< pointer to total number of variable bounds tightend of all presolvers */
    int*                  naddholes,          /**< pointer to total number of domain holes added of all presolvers */
    int*                  ndelconss,          /**< pointer to total number of deleted constraints of all presolvers */
+   int*                  naddconss,          /**< pointer to total number of added constraints of all presolvers */
    int*                  nupgdconss,         /**< pointer to total number of upgraded constraints of all presolvers */
    int*                  nchgcoefs,          /**< pointer to total number of changed coefficients of all presolvers */
    int*                  nchgsides,          /**< pointer to total number of changed left/right hand sides of all presolvers */
@@ -341,6 +345,7 @@ SCIP_RETCODE SCIPpresolExec(
    int oldnchgbds;
    int oldnaddholes;
    int oldndelconss;
+   int oldnaddconss;
    int oldnupgdconss;
    int oldnchgcoefs;
    int oldnchgsides;
@@ -354,6 +359,7 @@ SCIP_RETCODE SCIPpresolExec(
    assert(nchgbds != NULL);
    assert(naddholes != NULL);
    assert(ndelconss != NULL);
+   assert(naddconss != NULL);
    assert(nupgdconss != NULL);
    assert(nchgcoefs != NULL);
    assert(nchgsides != NULL);
@@ -372,6 +378,7 @@ SCIP_RETCODE SCIPpresolExec(
    oldnchgbds = *nchgbds;
    oldnaddholes = *naddholes;
    oldndelconss = *ndelconss;
+   oldnaddconss = *naddconss;
    oldnupgdconss = *nupgdconss;
    oldnchgcoefs = *nchgcoefs;
    oldnchgsides = *nchgsides;
@@ -381,6 +388,7 @@ SCIP_RETCODE SCIPpresolExec(
    assert(oldnchgbds >= 0);
    assert(oldnaddholes >= 0);
    assert(oldndelconss >= 0);
+   assert(oldnaddconss >= 0);
    assert(oldnupgdconss >= 0);
    assert(oldnchgcoefs >= 0);
    assert(oldnchgsides >= 0);
@@ -396,10 +404,11 @@ SCIP_RETCODE SCIPpresolExec(
       /* call external method */
       SCIP_CALL( presol->presolexec(set->scip, presol, nrounds,
             *nfixedvars - presol->nfixedvars, *naggrvars - presol->naggrvars, *nchgvartypes - presol->nchgvartypes,
-            *nchgbds - presol->nchgbds, *naddholes - presol->naddholes, *ndelconss - presol->ndelconss,
-            *nupgdconss - presol->nupgdconss, *nchgcoefs - presol->nchgcoefs, *nchgsides - presol->nchgsides,
+            *nchgbds - presol->nchgbds, *naddholes - presol->naddholes, *ndelconss - presol->ndelconss, 
+            *naddconss - presol->naddconss, *nupgdconss - presol->nupgdconss, *nchgcoefs - presol->nchgcoefs, 
+            *nchgsides - presol->nchgsides,
             nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
-            ndelconss, nupgdconss, nchgcoefs, nchgsides, result) );
+            ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result) );
 
       /* stop timing */
       SCIPclockStop(presol->presolclock, set);
@@ -411,6 +420,7 @@ SCIP_RETCODE SCIPpresolExec(
       presol->nchgbds += *nchgbds - oldnchgbds;
       presol->naddholes += *naddholes - oldnaddholes;
       presol->ndelconss += *ndelconss - oldndelconss;
+      presol->naddconss += *naddconss - oldnaddconss;
       presol->nupgdconss += *nupgdconss - oldnupgdconss;
       presol->nchgcoefs += *nchgcoefs - oldnchgcoefs;
       presol->nchgsides += *nchgsides - oldnchgsides;
@@ -435,6 +445,7 @@ SCIP_RETCODE SCIPpresolExec(
          presol->lastnchgbds = oldnchgbds;
          presol->lastnaddholes = oldnaddholes;
          presol->lastndelconss = oldndelconss;
+         presol->lastnaddconss = oldnaddconss;
          presol->lastnupgdconss = oldnupgdconss;
          presol->lastnchgcoefs = oldnchgcoefs;
          presol->lastnchgsides = oldnchgsides;
@@ -615,6 +626,16 @@ int SCIPpresolGetNDelConss(
    assert(presol != NULL);
 
    return presol->ndelconss;
+}
+
+/** gets number of constraints added in presolver */
+int SCIPpresolGetNAddConss(
+   SCIP_PRESOL*          presol              /**< presolver */
+   )
+{
+   assert(presol != NULL);
+
+   return presol->naddconss;
 }
 
 /** gets number of constraints upgraded in presolver */
