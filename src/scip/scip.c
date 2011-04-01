@@ -18208,7 +18208,7 @@ SCIP_Bool SCIPhasPrimalRay(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPhasPrimalRay", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPhasPrimalRay", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    return scip->primal->primalray != NULL;
 }
@@ -18220,7 +18220,7 @@ SCIP_Real SCIPgetPrimalRayVal(
    SCIP_VAR*             var                 /**< variable to get value for */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetPrimalRayVal", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetPrimalRayVal", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    assert(var != NULL);
    assert(scip->primal->primalray != NULL);
