@@ -5060,8 +5060,6 @@ SCIP_RETCODE separatePoint(
    SCIP_BOUNDTYPE     violbound;
    int                c;
    SCIP_ROW*          row;
-   SCIP_Bool          haveray;
-   SCIP_Real*         ray;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -5076,8 +5074,6 @@ SCIP_RETCODE separatePoint(
 
    if( bestefficacy != NULL )
       *bestefficacy = 0.0;
-
-   ray = NULL;
 
    for( c = 0; c < nconss; ++c )
    {
@@ -5123,19 +5119,9 @@ SCIP_RETCODE separatePoint(
                 * given a cut lhs <= <c,x> <= rhs, we check whether it imposes an upper bound on t and thus bounds the ray
                 * this is given if rhs < infinity and <c,r> > 0, since we then enforce <c,p+t*r> = <c,p> + t<c,r> <= rhs, i.e., t <= (rhs - <c,p>)/<c,r>
                 * similar, lhs > -infinity and <c,r> < 0 is good
-                *
-                * SCIP stored an unbounded solution p+t*r in the columns
-                * however, we need to know r, so we get it via SCIPgetLPPrimalRay
                 */
 
-               /* get primal ray */
-               if( ray == NULL )
-               {
-                  SCIP_CALL( SCIPallocBufferArray(scip, &ray, SCIPgetNVars(scip)) );
-                  SCIP_CALL( SCIPgetLPPrimalRay(scip, ray, &haveray) );
-               }
-
-               if( haveray )
+               if( SCIPhasPrimalRay(scip) )
                {
                   rayprod = 0.0;
                   for( i = 0; i < SCIProwGetNNonz(row); ++i )
@@ -5143,10 +5129,8 @@ SCIP_RETCODE separatePoint(
                      assert(SCIProwGetCols(row)[i] != NULL);
                      var = SCIPcolGetVar(SCIProwGetCols(row)[i]);
                      assert(var != NULL);
-                     assert(SCIPvarGetProbindex(var) >= 0);
-                     assert(SCIPvarGetProbindex(var) < SCIPgetNVars(scip));
 
-                     rayprod += SCIProwGetVals(row)[i] * ray[SCIPvarGetProbindex(var)];
+                     rayprod += SCIProwGetVals(row)[i] * SCIPgetPrimalRayVal(scip, var);
                   }
                   if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPisPositive(scip, rayprod) )
                   {
@@ -5163,7 +5147,7 @@ SCIP_RETCODE separatePoint(
                }
                else
                {
-                  SCIPdebugMessage("do not have ray from unbounded LP, cannot check if cut 'cuts off' unbounded ray, skip cut\n");
+                  SCIPdebugMessage("do not have ray from unbounded LP, cannot check if cut intersects with unbounded ray, skip cut\n");
                   SCIP_CALL( SCIPreleaseRow(scip, &row) );
                   continue;
                }
@@ -5211,8 +5195,6 @@ SCIP_RETCODE separatePoint(
       if( c >= nusefulconss && *result == SCIP_SEPARATED )
          break;
    }
-
-   SCIPfreeBufferArrayNull(scip, &ray);
 
    return SCIP_OKAY;
 }
