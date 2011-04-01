@@ -46,7 +46,7 @@
 #define DEFAULT_MINFIXINGRATE 0.0       /* minimum percentage of integer variables that have to be fixed       */
 #define DEFAULT_NODESQUOT     0.1       /* subproblem nodes in relation to nodes of the original problem       */
 #define DEFAULT_NWAITINGNODES 200       /* number of nodes without incumbent change that heuristic should wait */
-#define DEFAULT_USELPROWS     TRUE      /* should subproblem be created out of the rows in the LP rows, 
+#define DEFAULT_USELPROWS     FALSE      /* should subproblem be created out of the rows in the LP rows, 
                                          * otherwise, the copy constructors of the constraints handlers are used 
 					 */
 

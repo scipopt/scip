@@ -46,7 +46,7 @@
 #define DEFAULT_NWAITINGNODES 0LL       /* number of nodes without incumbent change that heuristic should wait */
 #define DEFAULT_NEIGHBORHOODSIZE  18    /* radius of the incumbents neighborhood to be searched                */
 #define DEFAULT_SOLNUM        5         /* number of pool-solutions to be checked for flag array update        */
-#define DEFAULT_USELPROWS     TRUE      /* should subproblem be created out of the rows in the LP rows, 
+#define DEFAULT_USELPROWS     FALSE      /* should subproblem be created out of the rows in the LP rows, 
                                          * otherwise, the copy constructors of the constraints handlers are used 
 					 */
 

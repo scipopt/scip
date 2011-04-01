@@ -50,7 +50,7 @@
 #define DEFAULT_NWAITINGNODES 200LL          /* number of nodes without incumbent change heuristic should wait      */
 #define DEFAULT_RANDOMIZATION TRUE           /* should the choice which sols to take be randomized?                 */ 
 #define DEFAULT_DONTWAITATROOT FALSE         /* should the nwaitingnodes parameter be ignored at the root node?     */ 
-#define DEFAULT_USELPROWS     TRUE           /* should subproblem be created out of the rows in the LP rows, 
+#define DEFAULT_USELPROWS     FALSE           /* should subproblem be created out of the rows in the LP rows, 
                                               * otherwise, the copy constructors of the constraints handlers are used 
 					      */
                                             
