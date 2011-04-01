@@ -128,6 +128,12 @@ int SCIPpresolGetNDelConss(
    SCIP_PRESOL*          presol              /**< presolver */
    );
 
+/** gets number of constraints added in presolver */
+extern
+int SCIPpresolGetNAddConss(
+   SCIP_PRESOL*          presol              /**< presolver */
+   );
+
 /** gets number of constraints upgraded in presolver */
 extern
 int SCIPpresolGetNUpgdConss(

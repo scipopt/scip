@@ -5956,6 +5956,7 @@ SCIP_Bool isPresolveFinished(
    int                   lastnchgbds,        /**< number of changed bounds in last presolving round */
    int                   lastnaddholes,      /**< number of added holes in last presolving round */
    int                   lastndelconss,      /**< number of deleted constraints in last presolving round */
+   int                   lastnaddconss,      /**< number of added constraints in last presolving round */
    int                   lastnupgdconss,     /**< number of upgraded constraints in last presolving round */
    int                   lastnchgcoefs,      /**< number of changed coefficients in last presolving round */
    int                   lastnchgsides,      /**< number of changed sides in last presolving round */
@@ -5983,6 +5984,7 @@ SCIP_Bool isPresolveFinished(
    finished = finished
       && (scip->transprob->nconss == 0
          || (scip->stat->npresoldelconss - lastndelconss
+            + scip->stat->npresoladdconss - lastnaddconss
             + scip->stat->npresolupgdconss - lastnupgdconss
             + scip->stat->npresolchgsides - lastnchgsides
             <= abortfac * scip->transprob->nconss));
@@ -6048,7 +6050,8 @@ SCIP_RETCODE presolveRound(
       SCIP_CALL( SCIPpresolExec(scip->set->presols[i], scip->set, onlydelayed, scip->stat->npresolrounds,
             &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
             &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
-            &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, &scip->stat->npresolchgsides, &result) );
+            &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, 
+            &scip->stat->npresolchgsides, &result) );
       assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
       if( result == SCIP_CUTOFF )
       {
@@ -6088,7 +6091,8 @@ SCIP_RETCODE presolveRound(
             onlydelayed, scip->stat->npresolrounds,
             &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
             &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
-            &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, &scip->stat->npresolchgsides, &result) );
+            &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, 
+            &scip->stat->npresolchgsides, &result) );
       assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
       if( result == SCIP_CUTOFF )
       {
@@ -6129,8 +6133,9 @@ SCIP_RETCODE presolveRound(
       SCIPdebugMessage("executing presolver <%s>\n", SCIPpresolGetName(scip->set->presols[i]));
       SCIP_CALL( SCIPpresolExec(scip->set->presols[i], scip->set, onlydelayed, scip->stat->npresolrounds,
             &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
-            &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
-            &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, &scip->stat->npresolchgsides, &result) );
+            &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss, 
+            &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, 
+            &scip->stat->npresolchgsides, &result) );
       assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
       if( result == SCIP_CUTOFF )
       {
@@ -6173,34 +6178,34 @@ SCIP_RETCODE presolveRound(
          SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "clique table cleanup detected infeasibility\n");
       }
-   }
-
-   /* call primal heuristics that are applicable during presolving */
-   if( scip->set->nheurs > 0 )
-   {
-      SCIP_Bool foundsol;
-
-      SCIPdebugMessage("calling primal heuristics during presolving\n");
-
-      /* call primal heuristics */
-      SCIP_CALL( SCIPprimalHeuristics(scip->set, scip->stat, scip->primal, NULL, NULL, NULL, SCIP_HEURTIMING_DURINGPRESOLLOOP, &foundsol) );
-
-      /* output a message, if a solution was found */
-      if( foundsol )
+      else if( scip->set->nheurs > 0 )
       {
-         SCIP_SOL* sol;
-
-         assert(SCIPgetNSols(scip) > 0);         
-         sol = SCIPgetBestSol(scip);
-         assert(sol != NULL);           
-         assert(SCIPgetSolOrigObj(scip,sol) != SCIP_INVALID); /*lint !e777*/
+         /* call primal heuristics that are applicable during presolving */
+         SCIP_Bool foundsol;
          
-         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "feasible solution found by %s heuristic, objective value %13.6e\n",
-            SCIPheurGetName(SCIPsolGetHeur(sol)), SCIPgetSolOrigObj(scip,sol));                    
+         SCIPdebugMessage("calling primal heuristics during presolving\n");
+         
+         /* call primal heuristics */
+         SCIP_CALL( SCIPprimalHeuristics(scip->set, scip->stat, scip->primal, NULL, NULL, NULL, 
+               SCIP_HEURTIMING_DURINGPRESOLLOOP, &foundsol) );
+         
+         /* output a message, if a solution was found */
+         if( foundsol )
+         {
+            SCIP_SOL* sol;
+            
+            assert(SCIPgetNSols(scip) > 0);         
+            sol = SCIPgetBestSol(scip);
+            assert(sol != NULL);           
+            assert(SCIPgetSolOrigObj(scip,sol) != SCIP_INVALID); /*lint !e777*/
+            
+            SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+               "feasible solution found by %s heuristic, objective value %13.6e\n",
+               SCIPheurGetName(SCIPsolGetHeur(sol)), SCIPgetSolOrigObj(scip,sol));                    
+         }
       }
    }
-
-
+   
    /* issue PRESOLVEROUND event */
    SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_PRESOLVEROUND) );
    SCIP_CALL( SCIPeventProcess(&event, scip->set, NULL, NULL, NULL, scip->eventfilter) );
@@ -6307,6 +6312,7 @@ SCIP_RETCODE presolve(
       int lastnchgbds;
       int lastnaddholes;
       int lastndelconss;
+      int lastnaddconss;
       int lastnupgdconss;
       int lastnchgcoefs;
       int lastnchgsides;
@@ -6320,6 +6326,7 @@ SCIP_RETCODE presolve(
       lastnchgbds = scip->stat->npresolchgbds;
       lastnaddholes = scip->stat->npresoladdholes;
       lastndelconss = scip->stat->npresoldelconss;
+      lastnaddconss = scip->stat->npresoladdconss;
       lastnupgdconss = scip->stat->npresolupgdconss;
       lastnchgcoefs = scip->stat->npresolchgcoefs;
       lastnchgsides = scip->stat->npresolchgsides;
@@ -6336,7 +6343,7 @@ SCIP_RETCODE presolve(
 
       /* check, if we should abort presolving due to not enough changes in the last round */
       finished = isPresolveFinished(scip, abortfac, maxnrounds, lastnfixedvars, lastnaggrvars, lastnchgvartypes,
-         lastnchgbds, lastnaddholes, lastndelconss, lastnupgdconss, lastnchgcoefs, lastnchgsides,
+         lastnchgbds, lastnaddholes, lastndelconss, lastnaddconss, lastnupgdconss, lastnchgcoefs, lastnchgsides,
          /*lastnimplications, lastncliques,*/ *unbounded, *infeasible);
 
       /* if the presolving will be terminated, call the delayed presolvers */
@@ -6347,7 +6354,7 @@ SCIP_RETCODE presolve(
 
          /* check again, if we should abort presolving due to not enough changes in the last round */
          finished = isPresolveFinished(scip, abortfac, maxnrounds, lastnfixedvars, lastnaggrvars, lastnchgvartypes,
-            lastnchgbds, lastnaddholes, lastndelconss, lastnupgdconss, lastnchgcoefs, lastnchgsides,
+            lastnchgbds, lastnaddholes, lastndelconss, lastnaddconss, lastnupgdconss, lastnchgcoefs, lastnchgsides,
             /*lastnimplications, lastncliques,*/ *unbounded, *infeasible);
       }
 
@@ -6358,9 +6365,10 @@ SCIP_RETCODE presolve(
       {
          /* print presolving statistics */
          SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-            "(round %d) %d del vars, %d del conss, %d chg bounds, %d chg sides, %d chg coeffs, %d upgd conss, %d impls, %d clqs\n",
+            "(round %d) %d del vars, %d del conss, %d add conss, %d chg bounds, %d chg sides, %d chg coeffs, %d upgd conss, %d impls, %d clqs\n",
             scip->stat->npresolrounds, scip->stat->npresolfixedvars + scip->stat->npresolaggrvars,
-            scip->stat->npresoldelconss, scip->stat->npresolchgbds, scip->stat->npresolchgsides,
+            scip->stat->npresoldelconss, scip->stat->npresoladdconss, 
+            scip->stat->npresolchgbds, scip->stat->npresolchgsides,
             scip->stat->npresolchgcoefs, scip->stat->npresolupgdconss,
             scip->stat->nimplications, SCIPcliquetableGetNCliques(scip->cliquetable));
       }
@@ -6456,9 +6464,9 @@ SCIP_RETCODE presolve(
    SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
       "presolving (%d rounds):\n", scip->stat->npresolrounds);
    SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
-      " %d deleted vars, %d deleted constraints, %d tightened bounds, %d added holes, %d changed sides, %d changed coefficients\n",
-      scip->stat->npresolfixedvars + scip->stat->npresolaggrvars, scip->stat->npresoldelconss, scip->stat->npresolchgbds,
-      scip->stat->npresoladdholes, scip->stat->npresolchgsides, scip->stat->npresolchgcoefs);
+      " %d deleted vars, %d deleted constraints, %d added constraints, %d tightened bounds, %d added holes, %d changed sides, %d changed coefficients\n",
+      scip->stat->npresolfixedvars + scip->stat->npresolaggrvars, scip->stat->npresoldelconss, scip->stat->npresoladdconss,
+      scip->stat->npresolchgbds, scip->stat->npresoladdholes, scip->stat->npresolchgsides, scip->stat->npresolchgcoefs);
    SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
       " %d implications, %d cliques\n", scip->stat->nimplications, SCIPcliquetableGetNCliques(scip->cliquetable));
 
@@ -18201,7 +18209,7 @@ SCIP_Bool SCIPhasPrimalRay(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPhasPrimalRay", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPhasPrimalRay", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    return scip->primal->primalray != NULL;
 }
@@ -18213,7 +18221,7 @@ SCIP_Real SCIPgetPrimalRayVal(
    SCIP_VAR*             var                 /**< variable to get value for */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetPrimalRayVal", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetPrimalRayVal", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    assert(var != NULL);
    assert(scip->primal->primalray != NULL);
@@ -19758,16 +19766,15 @@ void printPresolverStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIPmessageFPrintInfo(file, "Presolvers         :       Time  FixedVars   AggrVars   ChgTypes  ChgBounds   AddHoles    DelCons   ChgSides   ChgCoefs\n");
+   SCIPmessageFPrintInfo(file, "Presolvers         :       Time  FixedVars   AggrVars   ChgTypes  ChgBounds   AddHoles    DelCons    AddCons   ChgSides   ChgCoefs\n");
 
    /* presolver statistics */
    for( i = 0; i < scip->set->npresols; ++i )
    {
       SCIP_PRESOL* presol;
-
       presol = scip->set->presols[i];
       SCIPmessageFPrintInfo(file, "  %-17.17s:", SCIPpresolGetName(presol));
-      SCIPmessageFPrintInfo(file, " %10.2f %10d %10d %10d %10d %10d %10d %10d %10d\n",
+      SCIPmessageFPrintInfo(file, " %10.2f %10d %10d %10d %10d %10d %10d %10d %10d %10d\n",
          SCIPpresolGetTime(presol),
          SCIPpresolGetNFixedVars(presol),
          SCIPpresolGetNAggrVars(presol),
@@ -19775,6 +19782,7 @@ void printPresolverStatistics(
          SCIPpresolGetNChgBds(presol),
          SCIPpresolGetNAddHoles(presol),
          SCIPpresolGetNDelConss(presol),
+         SCIPpresolGetNAddConss(presol),
          SCIPpresolGetNChgSides(presol),
          SCIPpresolGetNChgCoefs(presol));
    }
@@ -19795,12 +19803,13 @@ void printPresolverStatistics(
             || SCIPconshdlrGetNChgBds(conshdlr) > 0
             || SCIPconshdlrGetNAddHoles(conshdlr) > 0
             || SCIPconshdlrGetNDelConss(conshdlr) > 0
+            || SCIPconshdlrGetNAddConss(conshdlr) > 0
             || SCIPconshdlrGetNChgSides(conshdlr) > 0
             || SCIPconshdlrGetNChgCoefs(conshdlr) > 0
             || SCIPconshdlrGetNUpgdConss(conshdlr) > 0) )
       {
          SCIPmessageFPrintInfo(file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
-         SCIPmessageFPrintInfo(file, " %10.2f %10d %10d %10d %10d %10d %10d %10d %10d\n",
+         SCIPmessageFPrintInfo(file, " %10.2f %10d %10d %10d %10d %10d %10d %10d %10d %10d\n",
             SCIPconshdlrGetPresolTime(conshdlr),
             SCIPconshdlrGetNFixedVars(conshdlr),
             SCIPconshdlrGetNAggrVars(conshdlr),
@@ -19808,13 +19817,14 @@ void printPresolverStatistics(
             SCIPconshdlrGetNChgBds(conshdlr),
             SCIPconshdlrGetNAddHoles(conshdlr),
             SCIPconshdlrGetNDelConss(conshdlr),
+            SCIPconshdlrGetNAddConss(conshdlr),
             SCIPconshdlrGetNChgSides(conshdlr),
             SCIPconshdlrGetNChgCoefs(conshdlr));
       }
    }
 
    /* root node bound changes */
-   SCIPmessageFPrintInfo(file, "  root node        :          - %10d          -          - %10d          -          -          -          -\n",
+   SCIPmessageFPrintInfo(file, "  root node        :          - %10d          -          - %10d          -          -          -          -          -\n",
       scip->stat->nrootintfixings, scip->stat->nrootboundchgs);
 }
 
@@ -20443,8 +20453,8 @@ void printTimingStatistics(
    
       SCIPmessageFPrintInfo(file, "Total Time         : %10.2f\n", totaltime);
       SCIPmessageFPrintInfo(file, "  solving          : %10.2f\n", solvingtime);
-      SCIPmessageFPrintInfo(file, "  presolving       : %10.2f (in solving included)\n", SCIPclockGetTime(scip->stat->presolvingtime));
-      SCIPmessageFPrintInfo(file, "  reading          : %10.2f%s\n", readingtime, scip->set->time_reading ? " (in solving included)" : "");
+      SCIPmessageFPrintInfo(file, "  presolving       : %10.2f (included in solving)\n", SCIPclockGetTime(scip->stat->presolvingtime));
+      SCIPmessageFPrintInfo(file, "  reading          : %10.2f%s\n", readingtime, scip->set->time_reading ? " (included in solving)" : "");
    }
 }
 

@@ -5627,7 +5627,7 @@ void normalizeDemands(
 
 /** check if cumulative constraint is independently of all other constraints */
 static
-SCIP_RETCODE isConsIndependently(
+SCIP_Bool isConsIndependently(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< cumulative constraint */
    )

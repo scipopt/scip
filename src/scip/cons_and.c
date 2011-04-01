@@ -1203,7 +1203,8 @@ SCIP_RETCODE propagateCons(
    SCIP_CONS*            cons,               /**< and constraint to be processed */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
-   int*                  nfixedvars          /**< pointer to add up the number of found domain reductions */
+   int*                  nfixedvars,         /**< pointer to add up the number of found domain reductions */
+   int*                  nupgdconss          /**< pointer to add up the number of upgraded constraints */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -1456,6 +1457,8 @@ SCIP_RETCODE propagateCons(
 
          /* remove the "and" constraint globally */
          SCIP_CALL( SCIPdelCons(scip, cons) );
+
+	 (*nupgdconss)++;
 
          SCIPfreeBufferArray(scip, &consvars);
       }
@@ -2391,6 +2394,7 @@ SCIP_DECL_CONSPROP(consPropAnd)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool cutoff;
    int nfixedvars;
+   int nupgdconss;
    int c;
    
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -2398,17 +2402,18 @@ SCIP_DECL_CONSPROP(consPropAnd)
 
    cutoff = FALSE;
    nfixedvars = 0;
+   nupgdconss = 0;
 
    /* propagate all useful constraints */
    for( c = 0; c < nusefulconss && !cutoff; ++c )
    {
-      SCIP_CALL( propagateCons(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &nfixedvars) );
+      SCIP_CALL( propagateCons(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &nfixedvars, &nupgdconss) );
    }
 
    /* return the correct result */
    if( cutoff )
       *result = SCIP_CUTOFF;
-   else if( nfixedvars > 0 )
+   else if( nfixedvars > 0 || nupgdconss > 0 )
       *result = SCIP_REDUCEDDOM;
    else
       *result = SCIP_DIDNOTFIND;
@@ -2430,6 +2435,7 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
    int oldnaggrvars;
    int oldnchgbds;
    int oldndelconss;
+   int oldnupgdconss;
    int firstchange;
    int c;
 
@@ -2439,6 +2445,7 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
    oldnaggrvars = *naggrvars;
    oldnchgbds = *nchgbds;
    oldndelconss = *ndelconss;
+   oldnupgdconss = *nupgdconss;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -2463,7 +2470,7 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
          firstchange = c;
 
       /* propagate constraint */
-      SCIP_CALL( propagateCons(scip, cons, conshdlrdata->eventhdlr, &cutoff, nfixedvars) );
+      SCIP_CALL( propagateCons(scip, cons, conshdlrdata->eventhdlr, &cutoff, nfixedvars, nupgdconss) );
 
       /* remove all variables that are fixed to one; merge multiple entries of the same variable;
        * fix resuntant to zero if a pair of negated variables is contained in the operand variables
@@ -2592,7 +2599,7 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
    else if( delay )
       *result = SCIP_DELAYED;
    else if( *nfixedvars > oldnfixedvars || *naggrvars > oldnaggrvars || *nchgbds > oldnchgbds
-      || *ndelconss > oldndelconss )
+	    || *ndelconss > oldndelconss || *nupgdconss > oldnupgdconss )
       *result = SCIP_SUCCESS;
    else
       *result = SCIP_DIDNOTFIND;

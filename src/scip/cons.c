@@ -1890,6 +1890,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->lastnchgbds = 0;
    (*conshdlr)->lastnaddholes = 0;
    (*conshdlr)->lastndelconss = 0;
+   (*conshdlr)->lastnaddconss = 0;
    (*conshdlr)->lastnupgdconss = 0;
    (*conshdlr)->lastnchgcoefs = 0;
    (*conshdlr)->lastnchgsides = 0;
@@ -1899,6 +1900,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->nchgbds = 0;
    (*conshdlr)->naddholes = 0;
    (*conshdlr)->ndelconss = 0;
+   (*conshdlr)->naddconss = 0;
    (*conshdlr)->nupgdconss = 0;
    (*conshdlr)->nchgcoefs = 0;
    (*conshdlr)->nchgsides = 0;
@@ -2046,6 +2048,7 @@ SCIP_RETCODE SCIPconshdlrInit(
       conshdlr->lastnchgbds = 0;
       conshdlr->lastnaddholes = 0;
       conshdlr->lastndelconss = 0;
+      conshdlr->lastnaddconss = 0;
       conshdlr->lastnupgdconss = 0;
       conshdlr->lastnchgcoefs = 0;
       conshdlr->lastnchgsides = 0;
@@ -2055,6 +2058,7 @@ SCIP_RETCODE SCIPconshdlrInit(
       conshdlr->nchgbds = 0;
       conshdlr->naddholes = 0;
       conshdlr->ndelconss = 0;
+      conshdlr->naddconss = 0;
       conshdlr->nupgdconss = 0;
       conshdlr->nchgcoefs = 0;
       conshdlr->nchgsides = 0;
@@ -2153,6 +2157,7 @@ SCIP_RETCODE SCIPconshdlrInitpre(
    conshdlr->lastnchgbds = 0;
    conshdlr->lastnaddholes = 0;
    conshdlr->lastndelconss = 0;
+   conshdlr->lastnaddconss = 0;
    conshdlr->lastnupgdconss = 0;
    conshdlr->lastnchgcoefs = 0;
    conshdlr->lastnchgsides = 0;
@@ -3187,6 +3192,7 @@ SCIP_RETCODE SCIPconshdlrPresolve(
    int*                  nchgbds,            /**< pointer to total number of variable bounds tightend of all presolvers */
    int*                  naddholes,          /**< pointer to total number of domain holes added of all presolvers */
    int*                  ndelconss,          /**< pointer to total number of deleted constraints of all presolvers */
+   int*                  naddconss,          /**< pointer to total number of added constraints of all presolvers */
    int*                  nupgdconss,         /**< pointer to total number of upgraded constraints of all presolvers */
    int*                  nchgcoefs,          /**< pointer to total number of changed coefficients of all presolvers */
    int*                  nchgsides,          /**< pointer to total number of changed left/right hand sides of all presolvers */
@@ -3205,6 +3211,7 @@ SCIP_RETCODE SCIPconshdlrPresolve(
    assert(nchgbds != NULL);
    assert(naddholes != NULL);
    assert(ndelconss != NULL);
+   assert(naddconss != NULL);
    assert(nupgdconss != NULL);
    assert(nchgcoefs != NULL);
    assert(nchgsides != NULL);
@@ -3227,6 +3234,7 @@ SCIP_RETCODE SCIPconshdlrPresolve(
          int nnewchgbds;
          int nnewholes;
          int nnewdelconss;
+         int nnewaddconss;
          int nnewupgdconss;
          int nnewchgcoefs;
          int nnewchgsides;
@@ -3238,6 +3246,7 @@ SCIP_RETCODE SCIPconshdlrPresolve(
          nnewchgbds = *nchgbds - conshdlr->lastnchgbds;
          nnewholes = *naddholes - conshdlr->lastnaddholes;
          nnewdelconss = *ndelconss - conshdlr->lastndelconss;
+         nnewaddconss = *naddconss - conshdlr->lastnaddconss;
          nnewupgdconss = *nupgdconss - conshdlr->lastnupgdconss;
          nnewchgcoefs = *nchgcoefs - conshdlr->lastnchgcoefs;
          nnewchgsides = *nchgsides - conshdlr->lastnchgsides;
@@ -3249,6 +3258,7 @@ SCIP_RETCODE SCIPconshdlrPresolve(
          conshdlr->lastnchgbds = *nchgbds;
          conshdlr->lastnaddholes = *naddholes;
          conshdlr->lastndelconss = *ndelconss;
+         conshdlr->lastnaddconss = *naddconss;
          conshdlr->lastnupgdconss = *nupgdconss;
          conshdlr->lastnchgcoefs = *nchgcoefs;
          conshdlr->lastnchgsides = *nchgsides;
@@ -3265,9 +3275,9 @@ SCIP_RETCODE SCIPconshdlrPresolve(
          /* call external method */
          SCIP_CALL( conshdlr->conspresol(set->scip, conshdlr, conshdlr->conss, conshdlr->nactiveconss, nrounds,
                nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewholes,
-               nnewdelconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
+               nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
                nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
-               ndelconss, nupgdconss, nchgcoefs, nchgsides, result) );
+               ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result) );
          
          /* stop timing */
          SCIPclockStop(conshdlr->presoltime, set);
@@ -3282,6 +3292,7 @@ SCIP_RETCODE SCIPconshdlrPresolve(
          conshdlr->nchgbds += *nchgbds - conshdlr->lastnchgbds;
          conshdlr->naddholes += *naddholes - conshdlr->lastnaddholes;
          conshdlr->ndelconss += *ndelconss - conshdlr->lastndelconss;
+         conshdlr->naddconss += *naddconss - conshdlr->lastnaddconss;
          conshdlr->nupgdconss += *nupgdconss - conshdlr->lastnupgdconss;
          conshdlr->nchgcoefs += *nchgcoefs - conshdlr->lastnchgcoefs;
          conshdlr->nchgsides += *nchgsides - conshdlr->lastnchgsides;
@@ -3723,6 +3734,16 @@ int SCIPconshdlrGetNDelConss(
    assert(conshdlr != NULL);
 
    return conshdlr->ndelconss;
+}
+
+/** gets number of constraints added in presolving method of constraint handler */
+int SCIPconshdlrGetNAddConss(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->naddconss;
 }
 
 /** gets number of constraints upgraded in presolving method of constraint handler */
