@@ -6178,34 +6178,34 @@ SCIP_RETCODE presolveRound(
          SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "clique table cleanup detected infeasibility\n");
       }
-   }
-
-   /* call primal heuristics that are applicable during presolving */
-   if( scip->set->nheurs > 0 )
-   {
-      SCIP_Bool foundsol;
-
-      SCIPdebugMessage("calling primal heuristics during presolving\n");
-
-      /* call primal heuristics */
-      SCIP_CALL( SCIPprimalHeuristics(scip->set, scip->stat, scip->primal, NULL, NULL, NULL, SCIP_HEURTIMING_DURINGPRESOLLOOP, &foundsol) );
-
-      /* output a message, if a solution was found */
-      if( foundsol )
+      else if( scip->set->nheurs > 0 )
       {
-         SCIP_SOL* sol;
-
-         assert(SCIPgetNSols(scip) > 0);         
-         sol = SCIPgetBestSol(scip);
-         assert(sol != NULL);           
-         assert(SCIPgetSolOrigObj(scip,sol) != SCIP_INVALID); /*lint !e777*/
+         /* call primal heuristics that are applicable during presolving */
+         SCIP_Bool foundsol;
          
-         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "feasible solution found by %s heuristic, objective value %13.6e\n",
-            SCIPheurGetName(SCIPsolGetHeur(sol)), SCIPgetSolOrigObj(scip,sol));                    
+         SCIPdebugMessage("calling primal heuristics during presolving\n");
+         
+         /* call primal heuristics */
+         SCIP_CALL( SCIPprimalHeuristics(scip->set, scip->stat, scip->primal, NULL, NULL, NULL, 
+               SCIP_HEURTIMING_DURINGPRESOLLOOP, &foundsol) );
+         
+         /* output a message, if a solution was found */
+         if( foundsol )
+         {
+            SCIP_SOL* sol;
+            
+            assert(SCIPgetNSols(scip) > 0);         
+            sol = SCIPgetBestSol(scip);
+            assert(sol != NULL);           
+            assert(SCIPgetSolOrigObj(scip,sol) != SCIP_INVALID); /*lint !e777*/
+            
+            SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+               "feasible solution found by %s heuristic, objective value %13.6e\n",
+               SCIPheurGetName(SCIPsolGetHeur(sol)), SCIPgetSolOrigObj(scip,sol));                    
+         }
       }
    }
-
-
+   
    /* issue PRESOLVEROUND event */
    SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_PRESOLVEROUND) );
    SCIP_CALL( SCIPeventProcess(&event, scip->set, NULL, NULL, NULL, scip->eventfilter) );
@@ -18208,7 +18208,7 @@ SCIP_Bool SCIPhasPrimalRay(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPhasPrimalRay", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPhasPrimalRay", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    return scip->primal->primalray != NULL;
 }
@@ -18220,7 +18220,7 @@ SCIP_Real SCIPgetPrimalRayVal(
    SCIP_VAR*             var                 /**< variable to get value for */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetPrimalRayVal", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetPrimalRayVal", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    assert(var != NULL);
    assert(scip->primal->primalray != NULL);
