@@ -1496,6 +1496,14 @@ SCIP_RETCODE consdataCreate(
          /* get transformed variables and do NOT captures these */
          SCIP_CALL( SCIPgetTransformedVars(scip, (*consdata)->nvars, (*consdata)->vars, (*consdata)->vars) );
          
+         for( v = 0; v < nvars; ++v )
+         {
+            if( SCIPvarIsActive((*consdata)->vars[v]) )
+            {
+               SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, (*consdata)->vars[v]) );
+            }
+         }
+         
          if( linkingconss != NULL )
          {
             /* get transformed constraints and captures these */
@@ -5404,8 +5412,11 @@ SCIP_RETCODE removeIrrelevantJobs(
          SCIPdebugMessage("variable <%s> is irrelevant\n", SCIPvarGetName(consdata->vars[idx]));
 
          /* fix integer start time variable if possible */
-         SCIP_CALL( fixIntegerVariable(scip, var, nchgbds) );
-
+         if( SCIPconsIsChecked(cons) )
+         {
+            SCIP_CALL( fixIntegerVariable(scip, var, nchgbds) );
+         }
+         
          /* remove the variable and adjust the permutation array */
          SCIP_CALL( removeVariable(scip, cons, idx, consdata->nvars, nchgbds, perm) );
       }
@@ -5417,7 +5428,10 @@ SCIP_RETCODE removeIrrelevantJobs(
           */
          
          /* fix integer start time variable if possible to it lower bound */
-         SCIP_CALL( fixIntegerVariableLb(scip, var, nchgbds) );
+         if( SCIPconsIsChecked(cons) )
+         {
+            SCIP_CALL( fixIntegerVariableLb(scip, var, nchgbds) );
+         }
          
          if( SCIPvarGetLbGlobal(var) + 0.5 > SCIPvarGetUbGlobal(var) )
          {
@@ -5458,8 +5472,11 @@ SCIP_RETCODE removeIrrelevantJobs(
          if( t == ect )
          {
             /* fix integer start time variable if possible to it lower bound */
-            SCIP_CALL( fixIntegerVariableLb(scip, var, nchgbds) );
-
+            if( SCIPconsIsChecked(cons) )
+            {
+               SCIP_CALL( fixIntegerVariableLb(scip, var, nchgbds) );
+            }
+            
             if( SCIPvarGetLbGlobal(var) + 0.5 > SCIPvarGetUbGlobal(var) )
             {
                SCIP_VAR* newvar;
@@ -5524,7 +5541,10 @@ SCIP_RETCODE removeIrrelevantJobs(
          SCIPdebugMessage("variable <%s> is irrelevant\n", SCIPvarGetName(consdata->vars[idx]));
             
          /* fix integer start time variable if possible */
-         SCIP_CALL( fixIntegerVariable(scip, var, nchgbds) );
+         if( SCIPconsIsChecked(cons) )
+         {
+            SCIP_CALL( fixIntegerVariable(scip, var, nchgbds) );
+         }
          
          SCIP_CALL( removeVariable(scip, cons, idx, consdata->nvars, nchgbds, perm) );
       }
@@ -5535,7 +5555,10 @@ SCIP_RETCODE removeIrrelevantJobs(
           */
 
          /* fix integer start time variable if possible to its upper bound */
-         SCIP_CALL( fixIntegerVariableUb(scip, var, nchgbds) );
+         if( SCIPconsIsChecked(cons) )
+         {
+            SCIP_CALL( fixIntegerVariableUb(scip, var, nchgbds) );
+         }
          
          if( SCIPvarGetLbGlobal(var) + 0.5 > SCIPvarGetUbGlobal(var) )
          {
