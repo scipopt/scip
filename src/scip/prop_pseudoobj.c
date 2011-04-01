@@ -132,6 +132,71 @@ SCIP_RETCODE resolvePropagation(
    return SCIP_OKAY;
 }
 
+/** propagates the cutoff bound for the given variables */
+static
+SCIP_RETCODE propagateCutoffboundVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_VAR*             var,                /**< variables to propagate */
+   SCIP_Real             cutoffbound,        /**< cutoff bound to use */
+   SCIP_Real             pseudoobjval,       /**< pseudo objective value to use */
+   int*                  nchgbds             /**< pointer to store the number of changed bounds */
+   )
+{
+   SCIP_Real lb;
+   SCIP_Real ub;
+   SCIP_Real obj;
+   
+   assert(!SCIPisInfinity(scip, -pseudoobjval));
+   assert(!SCIPisInfinity(scip, cutoffbound));
+   assert(SCIPisLT(scip, pseudoobjval, cutoffbound) );
+   
+   lb = SCIPvarGetLbLocal(var);
+   ub = SCIPvarGetUbLocal(var);
+   
+   if( SCIPisFeasEQ(scip, lb, ub) )
+      return SCIP_OKAY;
+   
+   obj = SCIPvarGetObj(var);
+   assert(!SCIPisZero(scip, obj));
+
+   if( obj > 0.0 )
+   {
+      SCIP_Real newub;
+      SCIP_Bool infeasible;
+      SCIP_Bool tightened;
+
+      newub = lb + (cutoffbound - pseudoobjval)/obj;
+      if( SCIPisUbBetter(scip, newub, lb, ub) )
+      {
+         SCIPdebugMessage(" -> new upper bound of variable <%s>[%.10f,%.10f]: %.10f\n",
+            SCIPvarGetName(var), lb, ub, newub);
+         SCIP_CALL( SCIPinferVarUbProp(scip, var, newub, prop, 0, FALSE, &infeasible, &tightened) );
+         assert(!infeasible);
+         if( tightened ) /* might not be tightened due to numerical reasons */
+            (*nchgbds)++;
+      }
+   }
+   else
+   {
+      SCIP_Real newlb;
+      SCIP_Bool infeasible;
+      SCIP_Bool tightened;
+
+      newlb = ub + (cutoffbound - pseudoobjval)/obj;
+      if( SCIPisLbBetter(scip, newlb, lb, ub) )
+      {
+         SCIPdebugMessage(" -> new lower bound of variable <%s>[%g,%g]: %g\n", SCIPvarGetName(var), lb, ub, newlb);
+         SCIP_CALL( SCIPinferVarLbProp(scip, var, newlb, prop, 0, FALSE, &infeasible, &tightened) );
+         assert(!infeasible);
+         if( tightened ) /* might not be tightened due to numerical reasons */
+            (*nchgbds)++;
+      }
+   }
+   
+   return SCIP_OKAY;
+}
+
 /** propagates the cutoff bound c*x <= cutoff */
 static
 SCIP_RETCODE propagateCutoffbound(
@@ -143,12 +208,9 @@ SCIP_RETCODE propagateCutoffbound(
 {  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
    SCIP_VAR** objvars;
-   SCIP_VAR* var;
    SCIP_Real pseudoobjval;
    SCIP_Real cutoffbound;
-   SCIP_Real obj;
-   SCIP_Real lb;
-   SCIP_Real ub;
+   int nchgbds;
    int ncands;
    int nobjvars;
    int c;
@@ -195,7 +257,8 @@ SCIP_RETCODE propagateCutoffbound(
    SCIPdebugMessage("propagating pseudo objective function (pseudoobj: %g, cutoffbound: %g)\n", pseudoobjval, cutoffbound);
 
    *result = SCIP_DIDNOTFIND;
-
+   nchgbds = 0;
+   
    /* tighten domains, if they would increase the pseudo objective value above the upper bound */
    ncands = (propdata->maxcands >= 0 ? MIN(propdata->maxcands, nobjvars) : nobjvars);
    v = propdata->lastvarnum;
@@ -204,50 +267,14 @@ SCIP_RETCODE propagateCutoffbound(
       v++;
       if( v >= nobjvars )
          v = 0;
-      var = objvars[v];
-      lb = SCIPvarGetLbLocal(var);
-      ub = SCIPvarGetUbLocal(var);
-      if( SCIPisFeasEQ(scip, lb, ub) )
-         continue;
-      obj = SCIPvarGetObj(var);
-      assert(!SCIPisZero(scip, obj));
 
-      if( obj > 0.0 )
-      {
-         SCIP_Real newub;
-         SCIP_Bool infeasible;
-         SCIP_Bool tightened;
-
-         newub = lb + (cutoffbound - pseudoobjval)/obj;
-         if( SCIPisUbBetter(scip, newub, lb, ub) )
-         {
-            SCIPdebugMessage(" -> new upper bound of variable <%s>[%.10f,%.10f]: %.10f\n",
-               SCIPvarGetName(var), lb, ub, newub);
-            SCIP_CALL( SCIPinferVarUbProp(scip, var, newub, prop, 0, FALSE, &infeasible, &tightened) );
-            assert(!infeasible);
-            if( tightened ) /* might not be tightened due to numerical reasons */
-               *result = SCIP_REDUCEDDOM;
-         }
-      }
-      else
-      {
-         SCIP_Real newlb;
-         SCIP_Bool infeasible;
-         SCIP_Bool tightened;
-
-         newlb = ub + (cutoffbound - pseudoobjval)/obj;
-         if( SCIPisLbBetter(scip, newlb, lb, ub) )
-         {
-            SCIPdebugMessage(" -> new lower bound of variable <%s>[%g,%g]: %g\n", SCIPvarGetName(var), lb, ub, newlb);
-            SCIP_CALL( SCIPinferVarLbProp(scip, var, newlb, prop, 0, FALSE, &infeasible, &tightened) );
-            assert(!infeasible);
-            if( tightened ) /* might not be tightened due to numerical reasons */
-               *result = SCIP_REDUCEDDOM;
-         }
-      }
+      SCIP_CALL( propagateCutoffboundVar(scip, prop, objvars[v], cutoffbound, pseudoobjval, &nchgbds) );
    }
    propdata->lastvarnum = v;
 
+   if( nchgbds > 0 )
+      *result = SCIP_REDUCEDDOM;
+   
    return SCIP_OKAY;
 }
 
@@ -662,7 +689,7 @@ SCIP_DECL_PROPEXEC(propExecPseudoobj)
 {  /*lint --e{715}*/
 
    *result = SCIP_DIDNOTRUN;
-
+   
    /* propagate c*x <= cutoff */
    SCIP_CALL( propagateCutoffbound(scip, prop, result) );
 
@@ -767,6 +794,21 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
          "propagating/pseudoobj/maxcands", 
          "maximal number of variables to look at in a single propagation round (-1: process all variables)",
          &propdata->maxcands, TRUE, DEFAULT_MAXCANDS, -1, INT_MAX, NULL, NULL) );
+
+   return SCIP_OKAY;
+}
+
+/** propagates the cutoff bound for the given variables */
+SCIP_RETCODE SCIPpropagateCutoffboundVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator, or NULL */
+   SCIP_VAR*             var,                /**< variables to propagate */
+   SCIP_Real             cutoffbound,        /**< cutoff bound to use */
+   SCIP_Real             pseudoobjval,       /**< pseudo objective value to use */
+   int*                  nchgbds             /**< pointer to store the number of changed bounds */
+   )
+{
+   SCIP_CALL( propagateCutoffboundVar(scip, prop, var, cutoffbound, pseudoobjval, nchgbds) );
 
    return SCIP_OKAY;
 }

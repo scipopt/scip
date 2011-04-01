@@ -579,6 +579,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/presol_implics.o \
 			scip/presol_inttobinary.o \
 			scip/presol_probing.o \
+			scip/presol_pseudoobj.o \
 			scip/presol_trivial.o \
 			scip/prop_pseudoobj.o \
 			scip/prop_rootredcost.o \
