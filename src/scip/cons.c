@@ -3305,6 +3305,8 @@ SCIP_RETCODE SCIPconshdlrPresolve(
          *result = SCIP_DELAYED;
       }
 
+      SCIPdebugMessage("after presolving %d constraints left of handler <%s>\n", conshdlr->nactiveconss, conshdlr->name);
+
       /* remember whether presolving method was delayed */
       conshdlr->presolwasdelayed = (*result == SCIP_DELAYED);
    }

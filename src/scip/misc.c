@@ -512,7 +512,7 @@ void SCIPhashtableFree(
    for( i = table->nlists - 1; i >= 0; --i )
       hashtablelistFree(&lists[i], blkmem);
 
-   /* free main hast table data structure */
+   /* free main hash table data structure */
    BMSfreeMemoryArray(&table->lists);
    BMSfreeMemory(hashtable);
 }
@@ -679,6 +679,25 @@ SCIP_RETCODE SCIPhashtableRemove(
    SCIP_CALL( hashtablelistRemove(&hashtable->lists[hashval], hashtable->blkmem, element) );
    
    return SCIP_OKAY;
+}
+
+/** clears hash table */
+void SCIPhashtableRemoveAll(
+   SCIP_HASHTABLE*       hashtable           /**< hash table */
+   )
+{
+   BMS_BLKMEM* blkmem;
+   SCIP_HASHTABLELIST** lists;
+   int i;
+
+   assert(hashtable != NULL);
+
+   blkmem = hashtable->blkmem;
+   lists = hashtable->lists;
+
+   /* free hash lists */
+   for( i = hashtable->nlists - 1; i >= 0; --i )
+      hashtablelistFree(&lists[i], blkmem);
 }
 
 /** prints statistics about hash table usage */
@@ -4454,6 +4473,7 @@ void SCIPpermuteArray(
       /* get a random position into which the last entry should be shuffled */
       i = SCIPgetRandomInt(begin, end, randseed);
 
+      printf("i = %d\n", i);
       /* swap the last element and the random element */
       tmp = array[i];
       array[i] = array[end];

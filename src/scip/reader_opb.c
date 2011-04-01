@@ -1436,7 +1436,7 @@ SCIP_RETCODE readConstraints(
    else
       indvar = NULL;
 
-   if( ntermcoefs > 0 )
+   if( ntermcoefs > 0 || issoftcons )
    {
 #if GENCONSNAMES == TRUE
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "pseudoboolean%d", opbinput->consnumber);

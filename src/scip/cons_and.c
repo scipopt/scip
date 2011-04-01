@@ -1448,7 +1448,7 @@ SCIP_RETCODE propagateCons(
 
          /* create, add, and release the logicor constraint */
          SCIP_CALL( SCIPcreateConsLogicor(scip, &lincons, SCIPconsGetName(cons), nvars, consvars,
-               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
+               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), TRUE/*SCIPconsIsChecked(cons)*/,
                SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), 
                SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
          SCIP_CALL( SCIPaddCons(scip, lincons) );

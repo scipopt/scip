@@ -166,6 +166,12 @@ SCIP_RETCODE SCIPhashtableRemove(
    void*                 element             /**< element to remove from the table */
    );
 
+/** clears hash table */
+extern
+void SCIPhashtableRemoveAll(
+   SCIP_HASHTABLE*       hashtable           /**< hash table */
+   );
+
 /** prints statistics about hash table usage */
 extern
 void SCIPhashtablePrintStatistics(
