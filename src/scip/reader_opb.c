@@ -3668,8 +3668,6 @@ SCIP_RETCODE SCIPreadOpb(
    opbinput.consnumber = 0;
 #endif
 
-   printf("starting reader opb\n");
-
    /* read the file */
    SCIP_CALL( readOPBFile(scip, &opbinput, filename) );
 
