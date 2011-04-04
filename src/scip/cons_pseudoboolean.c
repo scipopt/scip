@@ -5591,6 +5591,13 @@ SCIP_DECL_CONSINIT(consInitPseudoboolean)
          SCIP_CONS* transcons;
          
          SCIP_CALL( SCIPgetTransformedCons(scip, andcons, &transcons) );
+
+         if( transcons == NULL )
+         {
+            conshdlrdata->allconsanddatas[c]->origcons = NULL;
+            continue;
+         }
+
          assert( transcons != NULL );
          conshdlrdata->allconsanddatas[c]->cons = transcons;
          
@@ -5635,11 +5642,11 @@ SCIP_DECL_CONSINIT(consInitPseudoboolean)
          SCIP_CONS* transcons;
 
          SCIP_CALL( SCIPgetTransformedCons(scip, consdata->lincons, &transcons) );
+         assert( transcons != NULL );
 
          /* we want to check all tranformed constraints */
          SCIP_CALL( SCIPsetConsChecked(scip, transcons, SCIPconsIsChecked(cons)) );
 
-         assert( transcons != NULL );
          SCIP_CALL( SCIPcaptureCons(scip, transcons) );
          consdata->lincons = transcons;
       }
@@ -5795,7 +5802,7 @@ SCIP_DECL_CONSEXIT(consExitPseudoboolean)
    allconsanddatas = conshdlrdata->allconsanddatas;
    nallconsanddatas = conshdlrdata->nallconsanddatas;
    sallconsanddatas = conshdlrdata->sallconsanddatas;
-
+ 
    /* release and-constraints */
    for( c = nallconsanddatas - 1; c >= 0; --c )
    {
