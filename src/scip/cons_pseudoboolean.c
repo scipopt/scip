@@ -2938,6 +2938,18 @@ SCIP_DECL_CONSCHECK(consCheckPseudoboolean)
    /* check all pseudo boolean constraints for feasibility */
    for( c = 0; c < nconss && !violated; ++c )
    {
+      SCIP_CONSDATA* consdata;
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      /* does not need to check indictor constraints which are switched off */
+      if( consdata->issoftcons )
+      {
+         assert(consdata->indvar != NULL);
+         if( SCIPisEQ(scip, SCIPgetSolVal(scip, sol, consdata->indvar), 1.0) )
+            continue;
+      }
       SCIP_CALL( checkCons(scip, conss[c], sol, &violated) );
    }
 
