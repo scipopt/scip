@@ -14512,7 +14512,7 @@ SCIP_RETCODE SCIPflushNLP(
    }
    else
    {
-      SCIPerrorMessage("NLP has not been not constructed.\n");
+      SCIPerrorMessage("NLP has not been constructed.\n");
       return SCIP_ERROR;
    }
 
