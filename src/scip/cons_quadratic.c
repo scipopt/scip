@@ -4872,7 +4872,7 @@ SCIP_RETCODE generateCut(
       {
          /* add linearization of square term */
          var = consdata->quadvarterms[j].var;
-         addSquareLinearization(scip, consdata->quadvarterms[j].sqrcoef, ref[j], consdata->nbilinterms == 0 && SCIPvarGetType(var) > SCIP_VARTYPE_CONTINUOUS, &coef[j], &constant, &linval, &success);
+         addSquareLinearization(scip, consdata->quadvarterms[j].sqrcoef, ref[j], consdata->nbilinterms == 0 && SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS, &coef[j], &constant, &linval, &success);
          
          /* add linearization of bilinear terms that have var as first variable */
          for( k = 0; k < consdata->quadvarterms[j].nadjbilin && success; ++k )
@@ -4908,7 +4908,7 @@ SCIP_RETCODE generateCut(
                 (violside == SCIP_SIDETYPE_RIGHT && sqrcoef >  0) )
             {
                /* convex -> linearize */
-               addSquareLinearization(scip, sqrcoef, ref[j], SCIPvarGetType(var) >= SCIP_VARTYPE_CONTINUOUS, &coef[j], &constant, &linval, &success);
+               addSquareLinearization(scip, sqrcoef, ref[j], SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS, &coef[j], &constant, &linval, &success);
             }
             else
             {
