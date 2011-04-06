@@ -19,8 +19,7 @@
  * @author Stefan Vigerske
  * 
  * @todo SCIP might fix linear variables on +/- infinity; remove them in presolve and take care later
- * @todo constraints that are always feasible w.r.t. local/global bounds should be enabled/disabled (see logicor, setppc)
- * @todo round constraint bounds to integers if all coefficients and variables are (impl.) integer
+ * @todo round constraint sides to integers if all coefficients and variables are (impl.) integer
  * @todo constraints in one variable should be replaced by linear variable or similar
  * @todo recognize and reformulate complementarity constraints (x*y = 0)
  * @todo check if some quadratic terms appear in several constraints and try to simplify (e.g., nous1)
@@ -4659,7 +4658,7 @@ SCIP_RETCODE generateCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SOL*             sol,                /**< solution to separate, or NULL if LP solution should be used */
-   SCIP_BOUNDTYPE        violbound,          /**< for which bound a cut should be generated */
+   SCIP_SIDETYPE         violside,           /**< for which side a cut should be generated */
    SCIP_ROW**            row,                /**< storage for cut */
    SCIP_Real             maxrange,           /**< maximal range allowed */
    SCIP_Bool             checkcurvmultivar   /**< are we allowed to check the curvature of a multivariate quadratic function, if not done yet */
@@ -4694,16 +4693,16 @@ SCIP_RETCODE generateCut(
 
    SCIP_CALL( checkCurvature(scip, cons, checkcurvmultivar ) );
 
-   isconvex = (violbound == SCIP_BOUNDTYPE_LOWER) ? consdata->isconcave : consdata->isconvex;
+   isconvex = (violside == SCIP_SIDETYPE_LEFT) ? consdata->isconcave : consdata->isconvex;
    isglobal = SCIPconsIsGlobal(cons) && isconvex;
 
    if( isconvex )
-      (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_side%d_linearization_%d", SCIPconsGetName(cons), violbound, SCIPgetNLPs(scip));
+      (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_side%d_linearization_%d", SCIPconsGetName(cons), violside, SCIPgetNLPs(scip));
    else
-      (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_side%d_mccormick_%d", SCIPconsGetName(cons), violbound, SCIPgetNLPs(scip));
+      (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_side%d_mccormick_%d", SCIPconsGetName(cons), violside, SCIPgetNLPs(scip));
 
    SCIP_CALL( SCIPcreateEmptyRow(scip, row, cutname, -SCIPinfinity(scip), SCIPinfinity(scip), !isglobal /* locally */, FALSE /* modifiable */, TRUE /* removable */ ) );
-   bnd = (violbound == SCIP_BOUNDTYPE_LOWER) ? consdata->lhs : consdata->rhs;
+   bnd = (violside == SCIP_SIDETYPE_LEFT) ? consdata->lhs : consdata->rhs;
    assert(!SCIPisInfinity(scip, ABS(bnd)));
 
    /* TODO should we buffer the coefficients of the quadratic variables before adding them to the row? */
@@ -4797,7 +4796,7 @@ SCIP_RETCODE generateCut(
          return SCIP_OKAY;
       }
      
-      if( violbound == SCIP_BOUNDTYPE_LOWER )
+      if( violside == SCIP_SIDETYPE_LEFT )
       {
          SCIP_CALL( SCIPchgRowLhs(scip, *row, bnd) );
       }
@@ -4832,8 +4831,8 @@ SCIP_RETCODE generateCut(
             /* linearization of square term */
             coef = consdata->quadvarterms[j].sqrcoef;
 
-            if( (violbound == SCIP_BOUNDTYPE_LOWER && coef <= 0) ||
-                (violbound == SCIP_BOUNDTYPE_UPPER && coef >  0) )
+            if( (violside == SCIP_SIDETYPE_LEFT  && coef <= 0) ||
+                (violside == SCIP_SIDETYPE_RIGHT && coef >  0) )
             { /* convex -> linearize */
                if( SCIPvarGetType(x) == SCIP_VARTYPE_CONTINUOUS || SCIPisIntegral(scip, xval) )
                {
@@ -4928,7 +4927,7 @@ SCIP_RETCODE generateCut(
             }
 
             coef = consdata->bilinterms[j].coef;
-            if( violbound == SCIP_BOUNDTYPE_LOWER )
+            if( violside == SCIP_SIDETYPE_LEFT )
                coef = -coef;
 
             if( coef > 0.0 )
@@ -4978,7 +4977,7 @@ SCIP_RETCODE generateCut(
                }
             }
 
-            if( violbound == SCIP_BOUNDTYPE_LOWER )
+            if( violside == SCIP_SIDETYPE_LEFT )
             {
                xcoef = -xcoef;
                ycoef = -ycoef;
@@ -4998,7 +4997,7 @@ SCIP_RETCODE generateCut(
          bnd += bnd_;
       }
       
-      if( violbound == SCIP_BOUNDTYPE_LOWER )
+      if( violside == SCIP_SIDETYPE_LEFT )
       {
          SCIP_CALL( SCIPchgRowLhs(scip, *row, bnd) );
       }
@@ -5057,7 +5056,7 @@ SCIP_RETCODE separatePoint(
    SCIP_Real          feasibility;
    SCIP_Real          norm;
    SCIP_Real          efficacy;
-   SCIP_BOUNDTYPE     violbound;
+   SCIP_SIDETYPE      violside;
    int                c;
    SCIP_ROW*          row;
 
@@ -5087,19 +5086,19 @@ SCIP_RETCODE separatePoint(
          if( *result == SCIP_FEASIBLE )
             *result = SCIP_DIDNOTFIND;
 
-         violbound = SCIPisFeasPositive(scip, consdata->lhsviol) ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER;
+         violside = SCIPisFeasPositive(scip, consdata->lhsviol) ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT;
 
          /* generate cut */
-         SCIP_CALL( generateCut(scip, conss[c], sol, violbound, &row, conshdlrdata->cutmaxrange, conshdlrdata->checkcurvature) );
+         SCIP_CALL( generateCut(scip, conss[c], sol, violside, &row, conshdlrdata->cutmaxrange, conshdlrdata->checkcurvature) );
 #if 0
          /* if generation failed, then probably because of numerical issues;
           * if the constraint is convex and we are desperate to get a cut, then we can try again with a better chosen reference point */
          if( row == NULL && !addweakcuts &&
-            ( (violbound == SCIP_BOUNDTYPE_UPPER && consdata->isconvex ) || /* convex  constraint, or */
-              (violbound == SCIP_BOUNDTYPE_LOWER && consdata->isconcave) )  /* concave constraint */
+            ( (violside == SCIP_SIDETYPE_RIGHT && consdata->isconvex ) || /* convex  constraint, or */
+              (violside == SCIP_SIDETYPE_LEFT  && consdata->isconcave) )  /* concave constraint */
            )
          {
-            SCIP_CALL( generateCutCareful(scip, conss[c], sol, violbound, &row, conshdlrdata->cutmaxrange) );
+            SCIP_CALL( generateCutCareful(scip, conss[c], sol, violside, &row, conshdlrdata->cutmaxrange) );
          }
 #endif
          
@@ -5172,7 +5171,7 @@ SCIP_RETCODE separatePoint(
 
          if( efficacy > minefficacy ||
             (convexalways &&
-             ((violbound == SCIP_BOUNDTYPE_UPPER && consdata->isconvex ) || (violbound == SCIP_BOUNDTYPE_LOWER && consdata->isconcave)) &&
+             ((violside == SCIP_SIDETYPE_RIGHT && consdata->isconvex ) || (violside == SCIP_SIDETYPE_LEFT && consdata->isconcave)) &&
              efficacy > SCIPfeastol(scip)
             )
            )
