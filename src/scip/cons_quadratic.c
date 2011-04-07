@@ -26,6 +26,7 @@
  * @todo skip separation in enfolp if for current LP (check LP id) was already separated
  * @todo watch unbounded variables to enable/disable propagation
  * @todo sort order in bilinvar1/bilinvar2 such that the var which is involved in more terms is in bilinvar1, and use this info propagate and AddLinearReform
+ * @todo catch/drop events in consEnable/consDisable, do initsol/exitsol stuff also when a constraint is enabled/disabled during solve
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -122,6 +123,9 @@ struct SCIP_ConsData
 
    int                   linvar_maydecrease; /**< index of a variable in linvars that may be decreased without making any other constraint infeasible, or -1 if none */
    int                   linvar_mayincrease; /**< index of a variable in linvars that may be increased without making any other constraint infeasible, or -1 if none */
+
+   SCIP_VAR**            sepaquadvars;       /**< variables corresponding to quadvarterms to use in separation, only available in solving stage */
+   int*                  sepabilinvar2pos;   /**< position of second variable in bilinear terms to use in separation, , only available in solving stage */
 };
 
 /** quadratic constraint update method */
@@ -1500,6 +1504,9 @@ SCIP_RETCODE consdataFree(
       SCIP_CALL( SCIPreleaseNlRow(scip, &(*consdata)->nlrow) );
    }
 
+   assert((*consdata)->sepaquadvars == NULL);
+   assert((*consdata)->sepabilinvar2pos == NULL);
+
    SCIPfreeBlockMemory(scip, consdata);
    *consdata = NULL;
    
@@ -2697,8 +2704,9 @@ SCIP_RETCODE mergeAndCleanQuadVarTerms(
       }
 
       /* for binary variables, x^2 = x
-       * @todo doing this reformulation may destroy possible convexity, see, e.g., isqp1 */
-      if( quadvarterm->sqrcoef != 0.0 && SCIPvarIsBinary(quadvarterm->var) )
+       * however, we may destroy convexity of a quadratic term that involves also bilinear terms
+       * thus, we do this step only if the variable does not appear in any bilinear term */
+      if( quadvarterm->sqrcoef != 0.0 && SCIPvarIsBinary(quadvarterm->var) && quadvarterm->nadjbilin == 0 )
       {
          quadvarterm->lincoef += quadvarterm->sqrcoef;
          quadvarterm->sqrcoef = 0.0;
@@ -2711,12 +2719,12 @@ SCIP_RETCODE mergeAndCleanQuadVarTerms(
       }
 
       /* if its 0.0 or linear, get rid of it */
-      if( SCIPisZero(scip, consdata->quadvarterms[i].sqrcoef) && consdata->quadvarterms[i].nadjbilin == 0 )
+      if( SCIPisZero(scip, quadvarterm->sqrcoef) && quadvarterm->nadjbilin == 0 )
       {
-         if( !SCIPisZero(scip, consdata->quadvarterms[i].lincoef) )
+         if( !SCIPisZero(scip, quadvarterm->lincoef) )
          {
             /* seem to be a linear term now, thus add as linear term */
-            SCIP_CALL( addLinearCoef(scip, cons, consdata->quadvarterms[i].var, consdata->quadvarterms[i].lincoef) );
+            SCIP_CALL( addLinearCoef(scip, cons, quadvarterm->var, quadvarterm->lincoef) );
          }
          /* remove term at pos i */
          SCIP_CALL( delQuadVarTermPos(scip, cons, i) );
@@ -4819,7 +4827,7 @@ SCIP_RETCODE generateCut(
    SCIP_VAR*      var;
    SCIP_Real      lb;
    SCIP_Real      ub;
-   int            varpos;
+   int            var2pos;
    int            j;
    int            k;
 
@@ -4831,9 +4839,6 @@ SCIP_RETCODE generateCut(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-
-   /* make sure, quadratic variable terms are sorted, so we can search later without accidently reorganizing them */
-   SCIP_CALL( consdataSortQuadVarTerms(scip, consdata) );
 
    SCIP_CALL( checkCurvature(scip, cons, checkcurvmultivar ) );
    isconvex = (violside == SCIP_SIDETYPE_LEFT) ? consdata->isconcave : consdata->isconvex;
@@ -4872,7 +4877,7 @@ SCIP_RETCODE generateCut(
       {
          /* add linearization of square term */
          var = consdata->quadvarterms[j].var;
-         addSquareLinearization(scip, consdata->quadvarterms[j].sqrcoef, ref[j], consdata->nbilinterms == 0 && SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS, &coef[j], &constant, &linval, &success);
+         addSquareLinearization(scip, consdata->quadvarterms[j].sqrcoef, ref[j], consdata->quadvarterms[j].nadjbilin == 0 && SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS, &coef[j], &constant, &linval, &success);
          
          /* add linearization of bilinear terms that have var as first variable */
          for( k = 0; k < consdata->quadvarterms[j].nadjbilin && success; ++k )
@@ -4881,14 +4886,14 @@ SCIP_RETCODE generateCut(
             if( bilinterm->var1 != var )
                continue;
             assert(bilinterm->var2 != var);
+            assert(consdata->sepabilinvar2pos != NULL);
 
-            /* find index of var2 */
-            varpos = -1;
-            SCIP_CALL( consdataFindQuadVarTerm(scip, consdata, bilinterm->var2, &varpos) );
-            assert(varpos >= 0);
-            assert(varpos < consdata->nquadvars);
+            var2pos = consdata->sepabilinvar2pos[consdata->quadvarterms[j].adjbilin[k]];
+            assert(var2pos >= 0);
+            assert(var2pos < consdata->nquadvars);
+            assert(consdata->quadvarterms[var2pos].var == bilinterm->var2);
 
-            addBilinLinearization(scip, bilinterm->coef, ref[j], ref[varpos], &coef[j], &coef[varpos], &constant, &linval, &success);
+            addBilinLinearization(scip, bilinterm->coef, ref[j], ref[var2pos], &coef[j], &coef[var2pos], &constant, &linval, &success);
          }
       }
    }
@@ -4923,17 +4928,17 @@ SCIP_RETCODE generateCut(
             if( bilinterm->var1 != var )
                continue;
             assert(bilinterm->var2 != var);
+            assert(consdata->sepabilinvar2pos != NULL);
 
-            /* find index of var2 */
-            varpos = -1;
-            SCIP_CALL( consdataFindQuadVarTerm(scip, consdata, bilinterm->var2, &varpos) );
-            assert(varpos >= 0);
-            assert(varpos < consdata->nquadvars);
+            var2pos = consdata->sepabilinvar2pos[consdata->quadvarterms[j].adjbilin[k]];
+            assert(var2pos >= 0);
+            assert(var2pos < consdata->nquadvars);
+            assert(consdata->quadvarterms[var2pos].var == bilinterm->var2);
 
             addBilinMcCormick(scip, bilinterm->coef,
                SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), ref[j],
-               SCIPvarGetLbLocal(bilinterm->var2), SCIPvarGetUbLocal(bilinterm->var2), ref[varpos],
-               violside == SCIP_SIDETYPE_LEFT, &coef[j], &coef[varpos], &constant, &linval, &success);
+               SCIPvarGetLbLocal(bilinterm->var2), SCIPvarGetUbLocal(bilinterm->var2), ref[var2pos],
+               violside == SCIP_SIDETYPE_LEFT, &coef[j], &coef[var2pos], &constant, &linval, &success);
          }
       }
    }
@@ -4947,7 +4952,7 @@ SCIP_RETCODE generateCut(
 #ifdef SCIP_DEBUG
    if( success )
    {
-      /* check if linval is correct */
+      /* check that linval is correct */
       SCIP_Real linvalcheck;
 
       linvalcheck = constant;
@@ -5048,7 +5053,6 @@ SCIP_RETCODE generateCut(
    if( success )
    {
       char cutname[SCIP_MAXSTRLEN];
-      SCIP_VAR** quadvars;
 
       if( isconvex )
          (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_side%d_linearization_%d", SCIPconsGetName(cons), violside, SCIPgetNLPs(scip));
@@ -5065,11 +5069,8 @@ SCIP_RETCODE generateCut(
       SCIP_CALL( SCIPaddVarsToRow(scip, *row, consdata->nlinvars, consdata->linvars, consdata->lincoefs) );
 
       /* add coefficients from quadratic part */
-      SCIP_CALL( SCIPallocBufferArray(scip, &quadvars, consdata->nquadvars) );  /* @todo create this array ones in initsol and keep around */
-      for( j = 0; j < consdata->nquadvars; ++j )
-         quadvars[j] = consdata->quadvarterms[j].var;
-      SCIP_CALL( SCIPaddVarsToRow(scip, *row, consdata->nquadvars, quadvars, coef) );
-      SCIPfreeBufferArray(scip, &quadvars);
+      assert(consdata->sepaquadvars != NULL || consdata->nquadvars == 0);
+      SCIP_CALL( SCIPaddVarsToRow(scip, *row, consdata->nquadvars, consdata->sepaquadvars, coef) );
 
       SCIPdebugMessage("found cut <%s>, constant=%g, min=%f, max=%f range=%g nnz=%d\n",
           SCIProwGetName(*row), constant,
@@ -6986,6 +6987,26 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
          }
          SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
       }
+
+      /* setup sepaquadvars and sepabilinvar2pos */
+      assert(consdata->sepaquadvars == NULL);
+      assert(consdata->sepabilinvar2pos == NULL);
+      if( consdata->nquadvars > 0 )
+      {
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->sepaquadvars,     consdata->nquadvars) );
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->sepabilinvar2pos, consdata->nbilinterms) );
+
+         /* make sure, quadratic variable terms are sorted */
+         SCIP_CALL( consdataSortQuadVarTerms(scip, consdata) );
+
+         for( i = 0; i < consdata->nquadvars; ++i )
+            consdata->sepaquadvars[i] = consdata->quadvarterms[i].var;
+
+         for( i = 0; i < consdata->nbilinterms; ++i )
+         {
+            SCIP_CALL( consdataFindQuadVarTerm(scip, consdata, consdata->bilinterms[i].var2, &consdata->sepabilinvar2pos[i]) );
+         }
+      }
    }
 
    conshdlrdata->newsoleventfilterpos = -1;
@@ -7047,6 +7068,11 @@ SCIP_DECL_CONSEXITSOL(consExitsolQuadratic)
       {
          SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
       }
+
+      assert(consdata->sepaquadvars     != NULL || consdata->nquadvars == 0);
+      assert(consdata->sepabilinvar2pos != NULL || consdata->nquadvars == 0);
+      SCIPfreeBlockMemoryArrayNull(scip, &consdata->sepaquadvars,     consdata->nquadvars);
+      SCIPfreeBlockMemoryArrayNull(scip, &consdata->sepabilinvar2pos, consdata->nbilinterms);
    }
 
    return SCIP_OKAY;
