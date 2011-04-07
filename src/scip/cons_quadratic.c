@@ -1470,6 +1470,10 @@ SCIP_RETCODE consdataFree(
    assert(consdata != NULL);
    assert(*consdata != NULL);
 
+   /* free sepa arrays, may exists if constraint is deleted in solving stage */
+   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->sepaquadvars,     (*consdata)->nquadvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->sepabilinvar2pos, (*consdata)->nbilinterms);
+
    /* release linear variables and free linear part */
    if( (*consdata)->linvarssize > 0 )
    {
@@ -1503,9 +1507,6 @@ SCIP_RETCODE consdataFree(
    {
       SCIP_CALL( SCIPreleaseNlRow(scip, &(*consdata)->nlrow) );
    }
-
-   assert((*consdata)->sepaquadvars == NULL);
-   assert((*consdata)->sepabilinvar2pos == NULL);
 
    SCIPfreeBlockMemory(scip, consdata);
    *consdata = NULL;
@@ -4799,75 +4800,62 @@ void addBilinMcCormick(
    *linval      += coefx * refpointx + coefy * refpointy + constant;
 }
 
-/** generates a cut based on linearization (if convex) or McCormick (if nonconvex)
+/** generates a cut based on linearization (if convex) or McCormick (if nonconvex) in a given reference point
  */
 static
 SCIP_RETCODE generateCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
-   SCIP_SOL*             sol,                /**< solution to separate, or NULL if LP solution should be used */
+   SCIP_Real*            ref,                /**< reference solution where to generate the cut */
    SCIP_SIDETYPE         violside,           /**< for which side a cut should be generated */
    SCIP_ROW**            row,                /**< storage for cut */
+   SCIP_Real*            feasibility,        /**< buffer to store feasibility of row in reference solution, or NULL if not of interest */
    SCIP_Real             maxrange,           /**< maximal range allowed */
    SCIP_Bool             checkcurvmultivar,  /**< are we allowed to check the curvature of a multivariate quadratic function, if not done yet */
-   SCIP_Real             minviol             /**< minimal required violation (unscaled) */
+   SCIP_Real             minviol,            /**< minimal required violation (unscaled) */
+   SCIP_Real             reflinpartval       /**< value of linear part in reference solution, only needed if minviol > -infinity or feasibility != NULL */
    )
 {
    SCIP_CONSDATA* consdata;
    SCIP_Bool      isconvex;
-   SCIP_Real*     ref;
    SCIP_Real*     coef;
    SCIP_Real      constant;
    SCIP_Bool      success;
-   SCIP_Real      linval;
+   SCIP_Real      refquadpartval;
    SCIP_Real      mincoef;
    SCIP_Real      maxcoef;
 
    SCIP_BILINTERM* bilinterm;
    SCIP_VAR*      var;
-   SCIP_Real      lb;
-   SCIP_Real      ub;
    int            var2pos;
    int            j;
    int            k;
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(ref != NULL);
    assert(row != NULL);
    
-   *row = NULL;
-
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+   assert(violside != SCIP_SIDETYPE_LEFT  || !SCIPisInfinity(scip, -consdata->lhs));
+   assert(violside != SCIP_SIDETYPE_RIGHT || !SCIPisInfinity(scip,  consdata->rhs));
 
-   SCIP_CALL( checkCurvature(scip, cons, checkcurvmultivar ) );
+   SCIP_CALL( checkCurvature(scip, cons, checkcurvmultivar) );
    isconvex = (violside == SCIP_SIDETYPE_LEFT) ? consdata->isconcave : consdata->isconvex;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &ref,  consdata->nquadvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &coef, consdata->nquadvars) );
-
    constant = 0.0;
-   linval = 0.0;
+   refquadpartval = 0.0;
 
-   /* get reference point
-    * initialize coef with linear coefficients of quadratic variables
-    */
+   /* setup initial coefficients with linear coefficients of quadratic variables */
+   SCIP_CALL( SCIPallocBufferArray(scip, &coef, consdata->nquadvars) );
    for( j = 0; j < consdata->nquadvars; ++j )
    {
       coef[j] = consdata->quadvarterms[j].lincoef;
-
-      var = consdata->quadvarterms[j].var;
-      lb  = SCIPvarGetLbLocal(var);
-      ub  = SCIPvarGetUbLocal(var);
-      /* do not like variables at infinity */
-      assert(!SCIPisInfinity(scip,  lb));
-      assert(!SCIPisInfinity(scip, -ub));
-
-      ref[j] = SCIPgetSolVal(scip, sol, var);
-      ref[j] = MIN(ub, MAX(lb, ref[j])); /* project value into bounds */
-
-      linval += coef[j] * ref[j];
+      refquadpartval += coef[j] * ref[j];
    }
+
+   *row = NULL;
 
    success = TRUE;
    if( isconvex )
@@ -4877,7 +4865,7 @@ SCIP_RETCODE generateCut(
       {
          /* add linearization of square term */
          var = consdata->quadvarterms[j].var;
-         addSquareLinearization(scip, consdata->quadvarterms[j].sqrcoef, ref[j], consdata->quadvarterms[j].nadjbilin == 0 && SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS, &coef[j], &constant, &linval, &success);
+         addSquareLinearization(scip, consdata->quadvarterms[j].sqrcoef, ref[j], consdata->quadvarterms[j].nadjbilin == 0 && SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS, &coef[j], &constant, &refquadpartval, &success);
          
          /* add linearization of bilinear terms that have var as first variable */
          for( k = 0; k < consdata->quadvarterms[j].nadjbilin && success; ++k )
@@ -4893,8 +4881,12 @@ SCIP_RETCODE generateCut(
             assert(var2pos < consdata->nquadvars);
             assert(consdata->quadvarterms[var2pos].var == bilinterm->var2);
 
-            addBilinLinearization(scip, bilinterm->coef, ref[j], ref[var2pos], &coef[j], &coef[var2pos], &constant, &linval, &success);
+            addBilinLinearization(scip, bilinterm->coef, ref[j], ref[var2pos], &coef[j], &coef[var2pos], &constant, &refquadpartval, &success);
          }
+      }
+      if( !success )
+      {
+         SCIPdebugMessage("no success in linearization of <%s> in reference point\n", SCIPconsGetName(cons));
       }
    }
    else
@@ -4913,12 +4905,12 @@ SCIP_RETCODE generateCut(
                 (violside == SCIP_SIDETYPE_RIGHT && sqrcoef >  0) )
             {
                /* convex -> linearize */
-               addSquareLinearization(scip, sqrcoef, ref[j], SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS, &coef[j], &constant, &linval, &success);
+               addSquareLinearization(scip, sqrcoef, ref[j], SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS, &coef[j], &constant, &refquadpartval, &success);
             }
             else
             {
                /* not convex -> secant approximation */
-               addSquareSecant(scip, sqrcoef, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), ref[j], &coef[j], &constant, &linval, &success);
+               addSquareSecant(scip, sqrcoef, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), ref[j], &coef[j], &constant, &refquadpartval, &success);
             }
          }
 
@@ -4938,8 +4930,12 @@ SCIP_RETCODE generateCut(
             addBilinMcCormick(scip, bilinterm->coef,
                SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), ref[j],
                SCIPvarGetLbLocal(bilinterm->var2), SCIPvarGetUbLocal(bilinterm->var2), ref[var2pos],
-               violside == SCIP_SIDETYPE_LEFT, &coef[j], &coef[var2pos], &constant, &linval, &success);
+               violside == SCIP_SIDETYPE_LEFT, &coef[j], &coef[var2pos], &constant, &refquadpartval, &success);
          }
+      }
+      if( !success )
+      {
+         SCIPdebugMessage("no success to find estimator for <%s>\n", SCIPconsGetName(cons));
       }
    }
 
@@ -4952,14 +4948,14 @@ SCIP_RETCODE generateCut(
 #ifdef SCIP_DEBUG
    if( success )
    {
-      /* check that linval is correct */
-      SCIP_Real linvalcheck;
+      /* check that refquadpartval is correct */
+      SCIP_Real refquadpartvalcheck;
 
-      linvalcheck = constant;
+      refquadpartvalcheck = constant;
       for( j = 0; j < consdata->nquadvars; ++j )
-         linvalcheck += coef[j] * ref[j];
+         refquadpartvalcheck += coef[j] * ref[j];
 
-      assert(SCIPisRelEQ(scip, linval, linvalcheck));
+      assert(SCIPisRelEQ(scip, refquadpartval, refquadpartvalcheck));
    }
 #endif
 
@@ -4976,9 +4972,6 @@ SCIP_RETCODE generateCut(
          if( SCIPisZero(scip, consdata->lincoefs[j]) )
             continue;
 
-         /* add linear term to linval */
-         linval += consdata->lincoefs[j] * SCIPgetSolVal(scip, sol, consdata->linvars[j]);
-
          abscoef = REALABS(consdata->lincoefs[j]);
          if( abscoef < mincoef )
             mincoef = abscoef;
@@ -4991,17 +4984,17 @@ SCIP_RETCODE generateCut(
       {
          if( violside == SCIP_SIDETYPE_LEFT )
          {
-            if( consdata->lhs - linval < minviol )
+            if( consdata->lhs - (reflinpartval + refquadpartval) < minviol )
             {
-               SCIPdebugMessage("skip cut for constraint <%s> because lhs violation %g too low\n", SCIPconsGetName(cons), consdata->lhs - linval);
+               SCIPdebugMessage("skip cut for constraint <%s> because lhs violation %g too low\n", SCIPconsGetName(cons), consdata->lhs - (reflinpartval + refquadpartval));
                success = FALSE;
             }
          }
          else
          {
-            if( linval - consdata->rhs < minviol )
+            if( reflinpartval + refquadpartval - consdata->rhs < minviol )
             {
-               SCIPdebugMessage("skip cut for constraint <%s> because rhs violation %g too low\n", SCIPconsGetName(cons), linval - consdata->rhs);
+               SCIPdebugMessage("skip cut for constraint <%s> because rhs violation %g too low\n", SCIPconsGetName(cons), reflinpartval + refquadpartval - consdata->rhs);
                success = FALSE;
             }
          }
@@ -5063,7 +5056,7 @@ SCIP_RETCODE generateCut(
       SCIP_CALL( SCIPcreateEmptyRow(scip, row, cutname,
          violside == SCIP_SIDETYPE_LEFT  ? consdata->lhs - constant : -SCIPinfinity(scip),
          violside == SCIP_SIDETYPE_RIGHT ? consdata->rhs - constant :  SCIPinfinity(scip),
-         !SCIPconsIsGlobal(cons) || !isconvex, FALSE, TRUE) );
+         SCIPconsIsLocal(cons) || !isconvex, FALSE, TRUE) );
 
       /* add coefficients from linear part */
       SCIP_CALL( SCIPaddVarsToRow(scip, *row, consdata->nlinvars, consdata->linvars, consdata->lincoefs) );
@@ -5076,10 +5069,213 @@ SCIP_RETCODE generateCut(
           SCIProwGetName(*row), constant,
           mincoef, maxcoef, maxcoef/mincoef,
           SCIProwGetNNonz(*row));
+
+      if( feasibility != NULL )
+         *feasibility = (violside == SCIP_SIDETYPE_LEFT  ? reflinpartval + refquadpartval - consdata->lhs : consdata->rhs - (reflinpartval + refquadpartval));
    }
 
-   SCIPfreeBufferArray(scip, &ref);
    SCIPfreeBufferArray(scip, &coef);
+
+   return SCIP_OKAY;
+}
+
+/** generates a cut based on linearization (if convex) or McCormick (if nonconvex) in a solution
+ */
+static
+SCIP_RETCODE generateCutSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SOL*             sol,                /**< solution where to generate cut, or NULL if LP solution should be used */
+   SCIP_SIDETYPE         violside,           /**< for which side a cut should be generated */
+   SCIP_ROW**            row,                /**< storage for cut */
+   SCIP_Real*            feasibility,        /**< buffer to store feasibility of row in sol, or NULL if not of interest */
+   SCIP_Real             maxrange,           /**< maximal range allowed */
+   SCIP_Bool             checkcurvmultivar,  /**< are we allowed to check the curvature of a multivariate quadratic function, if not done yet */
+   SCIP_Real             minviol             /**< minimal required violation (unscaled) */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR*  var;
+   SCIP_Real  lb;
+   SCIP_Real  ub;
+   SCIP_Real* ref;
+   SCIP_Real  reflinpartval;
+   int j;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* get reference point */
+   SCIP_CALL( SCIPallocBufferArray(scip, &ref, consdata->nquadvars) );
+   for( j = 0; j < consdata->nquadvars; ++j )
+   {
+      var = consdata->quadvarterms[j].var;
+      lb  = SCIPvarGetLbLocal(var);
+      ub  = SCIPvarGetUbLocal(var);
+      /* do not like variables at infinity */
+      assert(!SCIPisInfinity(scip,  lb));
+      assert(!SCIPisInfinity(scip, -ub));
+
+      ref[j] = SCIPgetSolVal(scip, sol, var);
+      ref[j] = MIN(ub, MAX(lb, ref[j])); /* project value into bounds */
+   }
+
+   /* compute value of linear part, if required */
+   reflinpartval = 0.0;
+   if( !SCIPisInfinity(scip, -minviol) || feasibility != NULL )
+      for( j = 0; j < consdata->nlinvars; ++j )
+         reflinpartval += consdata->lincoefs[j] * SCIPgetSolVal(scip, sol, consdata->linvars[j]);
+
+   SCIP_CALL( generateCut(scip, cons, ref, violside, row, feasibility, maxrange, checkcurvmultivar, minviol, reflinpartval) );
+
+   SCIPfreeBufferArray(scip, &ref);
+
+   return SCIP_OKAY;
+}
+
+/** tries to find a cut that intersects with an unbounded ray of the LP
+ * for convex functions, we do this by linearizing in the feasible solution of the LPI
+ * for nonconvex functions, we just call generateCutSol with the unbounded solution as reference point */
+static
+SCIP_RETCODE generateCutUnboundedLP(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SIDETYPE         violside,           /**< for which side a cut should be generated */
+   SCIP_ROW**            row,                /**< storage for cut */
+   SCIP_Real*            rowrayprod,         /**< buffer to store product of ray with row coefficients, or NULL if not of interest */
+   SCIP_Real             maxrange,           /**< maximal range allowed */
+   SCIP_Bool             checkcurvmultivar   /**< are we allowed to check the curvature of a multivariate quadratic function, if not done yet */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_BILINTERM* bilinterm;
+   SCIP_VAR*  var;
+   SCIP_Real* ref;
+   SCIP_Real  matrixrayprod;
+   SCIP_Real  linrayprod;
+   SCIP_Real  quadrayprod;
+   SCIP_Real  rayval;
+   int i;
+   int j;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(row  != NULL);
+   assert(SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   *row = NULL;
+
+   if( !SCIPhasPrimalRay(scip) )
+   {
+      SCIPdebugMessage("do not have primal ray, thus cannot resolve unboundedness\n");
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( checkCurvature(scip, cons, checkcurvmultivar) );
+   if( (!consdata->isconvex  && violside == SCIP_SIDETYPE_RIGHT) ||
+       (!consdata->isconcave && violside == SCIP_SIDETYPE_LEFT) )
+   {
+      /* if not convex, just call generateCut and hope it's getting something useful */
+      SCIP_CALL( generateCutSol(scip, cons, NULL, violside, row, NULL, maxrange, FALSE, -SCIPinfinity(scip)) );
+
+      /* compute product of cut coefficients with ray, if required */
+      if( *row != NULL && rowrayprod != NULL )
+      {
+         *rowrayprod = 0.0;
+         for( i = 0; i < SCIProwGetNNonz(*row); ++i )
+         {
+            assert(SCIProwGetCols(*row)[i] != NULL);
+            var = SCIPcolGetVar(SCIProwGetCols(*row)[i]);
+            assert(var != NULL);
+
+            *rowrayprod += SCIProwGetVals(*row)[i] * SCIPgetPrimalRayVal(scip, var);
+         }
+      }
+
+      return SCIP_OKAY;
+   }
+
+   /* we seek for a linearization of the quadratic function such that it intersects with the unbounded ray
+    * that is, we need a referencepoint ref such that for the gradient g of xAx+bx in ref, we have
+    *   <g, ray> > 0.0 if rhs is finite and <g, ray> < 0.0 if lhs is finite
+    * Since g = 2*A*ref + b, we have <g, ray> = <2*A*ref + b, ray> = <ref, 2*A*ray> + <b,ray>
+    * initially, for finite rhs, we set ref_i = 1.0 if (A*ray)_i > 0.0 and ref_i = -1.0 if (A*ray)_i < 0.0 (for finite lhs analog)
+    * <ref, 2*A*ray> + <b,ray> is sufficiently larger 0.0, we call generateCut for this point, otherwise, we scale up ref
+    */
+
+   quadrayprod = 0.0; /* <ref, 2*A*ray> */
+   linrayprod = 0.0;  /* <b, ray> */
+   SCIP_CALL( SCIPallocBufferArray(scip, &ref, consdata->nquadvars) );
+   for( i = 0; i < consdata->nquadvars; ++i )
+   {
+      var = consdata->quadvarterms[i].var;
+      rayval = SCIPgetPrimalRayVal(scip, var);
+
+      /* compute i-th entry of (2*A*ray) */
+      matrixrayprod = 2.0 * consdata->quadvarterms[i].sqrcoef * rayval;
+      for( j = 0; j < consdata->quadvarterms[i].nadjbilin; ++j )
+      {
+         bilinterm = &consdata->bilinterms[consdata->quadvarterms[i].adjbilin[j]];
+         matrixrayprod += bilinterm->coef * SCIPgetPrimalRayVal(scip, bilinterm->var1 == var ? bilinterm->var2 : bilinterm->var1);
+      }
+
+      if( SCIPisPositive(scip, matrixrayprod) )
+         ref[i] = (violside == SCIP_SIDETYPE_RIGHT ?  1.0 : -1.0);
+      else if( SCIPisNegative(scip, matrixrayprod) )
+         ref[i] = (violside == SCIP_SIDETYPE_RIGHT ? -1.0 :  1.0);
+      else
+         ref[i] = 0.0;
+
+      quadrayprod += matrixrayprod * ref[i];
+      linrayprod += consdata->quadvarterms[i].lincoef * rayval;
+   }
+   assert((violside == SCIP_SIDETYPE_RIGHT && quadrayprod >= 0.0) || (violside == SCIP_SIDETYPE_LEFT && quadrayprod <= 0.0));
+
+   if( SCIPisZero(scip, quadrayprod) )
+   {
+      SCIPdebugMessage("ray is zero along cons <%s>\n", SCIPconsGetName(cons));
+      SCIPfreeBufferArray(scip, &ref);
+      return SCIP_OKAY;
+   }
+
+   /* add linear part to linrayprod */
+   for( i = 0; i < consdata->nlinvars; ++i )
+      linrayprod += consdata->lincoefs[i] * SCIPgetPrimalRayVal(scip, consdata->linvars[i]);
+
+   SCIPdebugMessage("initially have <b,ray> = %g and <ref, 2*A*ref> = %g\n", linrayprod, quadrayprod);
+
+   /* we scale the refpoint up, such that <ref, 2*A*ray> >= -2*<b, ray> (rhs finite) or <ref, 2*A*ray> <= -2*<b, ray> (lhs finite), if <b,ray> is not zero
+    * if <b,ray> is zero, then we scale refpoint up if |<ref, 2*A*ray>| < 1.0 */
+   if( (!SCIPisZero(scip, linrayprod) && violside == SCIP_SIDETYPE_RIGHT && quadrayprod < -2*linrayprod) ||
+       (!SCIPisZero(scip, linrayprod) && violside == SCIP_SIDETYPE_LEFT  && quadrayprod > -2*linrayprod) ||
+       (SCIPisZero(scip, linrayprod) && REALABS(quadrayprod) < 1.0) )
+   {
+      SCIP_Real scale;
+
+      if( !SCIPisZero(scip, linrayprod) )
+         scale = 2*REALABS(linrayprod/quadrayprod);
+      else
+         scale = 1.0/REALABS(quadrayprod);
+
+      SCIPdebugMessage("scale refpoint by %g\n", scale);
+      for( i = 0; i < consdata->nquadvars; ++i )
+         ref[i] *= scale;
+      quadrayprod *= scale;
+   }
+
+   if( rowrayprod != NULL )
+      *rowrayprod = quadrayprod + linrayprod;
+
+   SCIPdebugMessage("calling generateCut, expecting ray product %g\n", quadrayprod + linrayprod);
+   SCIP_CALL( generateCut(scip, cons, ref, violside, row, NULL, maxrange, FALSE, -SCIPinfinity(scip), 0.0) );
+
+   SCIPfreeBufferArray(scip, &ref);
 
    return SCIP_OKAY;
 }
@@ -5140,73 +5336,49 @@ SCIP_RETCODE separatePoint(
          violside = SCIPisFeasPositive(scip, consdata->lhsviol) ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT;
 
          /* generate cut */
-         SCIP_CALL( generateCut(scip, conss[c], sol, violside, &row, conshdlrdata->cutmaxrange, conshdlrdata->checkcurvature, 0.0) );
-
-         /* @todo if generation failed, then probably because of numerical issues;
-          * if the constraint is convex and we are desperate to get a cut, then we may try again with a better chosen reference point */
-         
-         if( row == NULL ) /* failed to generate cut */
-            continue;
-
-         if( sol == NULL )
+         if( sol == NULL && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
          {
-            if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+            /* if the LP is unbounded, then we need a cut that cuts into the direction of a hopefully existing primal ray
+             * that is, assume a ray r is given such that p + t*r is feasible for the LP for all t >= t_0 and some p
+             * given a cut lhs <= <c,x> <= rhs, we check whether it imposes an upper bound on t and thus bounds the ray
+             * this is given if rhs < infinity and <c,r> > 0, since we then enforce <c,p+t*r> = <c,p> + t<c,r> <= rhs, i.e., t <= (rhs - <c,p>)/<c,r>
+             * similar, lhs > -infinity and <c,r> < 0 is good
+             */
+            SCIP_Real rayprod;
+
+            rayprod = 0.0; /* for compiler */
+            SCIP_CALL( generateCutUnboundedLP(scip, conss[c], violside, &row, &rayprod, conshdlrdata->cutmaxrange, conshdlrdata->checkcurvature) );
+
+            if( row != NULL )
             {
-               SCIP_Real rayprod;
-               SCIP_VAR* var;
-               int i;
-
-               /* if the LP is unbounded, then we accept only cuts that cut into the direction of a hopefully existing primal ray
-                * that is, assume a ray r is given such that p + t*r is feasible for the LP for all t >= t_0 and some p
-                * given a cut lhs <= <c,x> <= rhs, we check whether it imposes an upper bound on t and thus bounds the ray
-                * this is given if rhs < infinity and <c,r> > 0, since we then enforce <c,p+t*r> = <c,p> + t<c,r> <= rhs, i.e., t <= (rhs - <c,p>)/<c,r>
-                * similar, lhs > -infinity and <c,r> < 0 is good
-                */
-
-               if( SCIPhasPrimalRay(scip) )
-               {
-                  rayprod = 0.0;
-                  for( i = 0; i < SCIProwGetNNonz(row); ++i )
-                  {
-                     assert(SCIProwGetCols(row)[i] != NULL);
-                     var = SCIPcolGetVar(SCIProwGetCols(row)[i]);
-                     assert(var != NULL);
-
-                     rayprod += SCIProwGetVals(row)[i] * SCIPgetPrimalRayVal(scip, var);
-                  }
-                  if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPisPositive(scip, rayprod) )
-                  {
-                     feasibility = -rayprod;
-                  }
-                  else if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) && SCIPisNegative(scip, rayprod) )
-                  {
-                     feasibility = rayprod;
-                  }
-                  else
-                  {
-                     feasibility = 0.0;
-                  }
-               }
+               if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPisPositive(scip, rayprod) )
+                  feasibility = -rayprod;
+               else if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) && SCIPisNegative(scip, rayprod) )
+                  feasibility =  rayprod;
                else
-               {
-                  SCIPdebugMessage("do not have ray from unbounded LP, cannot check if cut intersects with unbounded ray, skip cut\n");
-                  SCIP_CALL( SCIPreleaseRow(scip, &row) );
-                  continue;
-               }
-            }
-            else
-            {
-               feasibility = SCIPgetRowLPFeasibility(scip, row);
+                  feasibility = 0.0;
             }
          }
          else
-            feasibility = SCIPgetRowSolFeasibility(scip, row, sol);
-         norm = SCIProwGetNorm(row);
+         {
+            /* @todo if convex, can we easily move the refpoint closer to the feasible region to get a stronger cut? */
+            SCIP_CALL( generateCutSol(scip, conss[c], sol, violside, &row, &feasibility, conshdlrdata->cutmaxrange, conshdlrdata->checkcurvature, 0.0) );
+            /* @todo if generation failed, then probably because of numerical issues;
+             * if the constraint is convex and we are desperate to get a cut, then we may try again with a better chosen reference point */
+
+            /* recompute feasibility to avoid numerical difficulties */
+            if( row != NULL )
+               feasibility = SCIPgetRowSolFeasibility(scip, row, sol);
+         }
+
+         if( row == NULL ) /* failed to generate cut */
+            continue;
 
          /* in difference to SCIPgetCutEfficacy, we scale by norm only if the norm is > 1.0
           * this avoid finding cuts efficiant which are only very slightly violated
           * CPLEX does not seem to scale row coefficients up too
           */
+         norm = SCIProwGetNorm(row);
          if( norm > 1.0 )
             efficacy = -feasibility / norm;
          else
@@ -5298,11 +5470,11 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
 
       if( consdata->isconvex && !SCIPisInfinity(scip, consdata->rhs) )
       {
-         SCIP_CALL( generateCut(scip, conss[c], sol, SCIP_SIDETYPE_RIGHT, &row, conshdlrdata->cutmaxrange, conshdlrdata->checkcurvature, -SCIPinfinity(scip)) );
+         SCIP_CALL( generateCutSol(scip, conss[c], sol, SCIP_SIDETYPE_RIGHT, &row, NULL, conshdlrdata->cutmaxrange, conshdlrdata->checkcurvature, -SCIPinfinity(scip)) );
       }
       else if( consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs) )
       {
-         SCIP_CALL( generateCut(scip, conss[c], sol, SCIP_SIDETYPE_LEFT, &row, conshdlrdata->cutmaxrange, conshdlrdata->checkcurvature, -SCIPinfinity(scip)) );
+         SCIP_CALL( generateCutSol(scip, conss[c], sol, SCIP_SIDETYPE_LEFT, &row, NULL, conshdlrdata->cutmaxrange, conshdlrdata->checkcurvature, -SCIPinfinity(scip)) );
       }
       else
          continue;
@@ -7160,7 +7332,10 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
 {  
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
+   SCIP_VAR*          var;
    SCIP_ROW*          row;
+   SCIP_Real*         x;
+   int                c;
    int                i;
 
    assert(scip != NULL);
@@ -7170,37 +7345,116 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   for( i = 0; i < nconss; ++i )
+   for( c = 0; c < nconss; ++c )
    {
-      assert(conss != NULL);
-      consdata = SCIPconsGetData(conss[i]);
+      SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkcurvature) );
+
+      consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
-      /* @todo generate cuts in some useful reference points instead of pseudo solution only */
+      row = NULL;
+
+      if( consdata->nquadvars == 0 )
+      {
+         /* if we are actually linear, add the constraint as row to the LP */
+         SCIP_CALL( SCIPcreateEmptyRow(scip, &row, SCIPconsGetName(conss[c]), consdata->lhs, consdata->rhs, SCIPconsIsLocal(conss[c]), FALSE , TRUE) );
+         SCIP_CALL( SCIPaddVarsToRow(scip, row, consdata->nlinvars, consdata->linvars, consdata->lincoefs) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+         SCIP_CALL( SCIPreleaseRow (scip, &row) );
+         continue;
+      }
+
+      /* setup reference point */
+      SCIP_CALL( SCIPallocBufferArray(scip, &x, consdata->nquadvars) );
+      for( i = 0; i < consdata->nquadvars; ++i )
+      {
+         var = consdata->quadvarterms[i].var;
+         assert(var != NULL);
+         /* use midpoint as reference value, if both bounds are finite
+          * otherwise use 0.0, projected on bounds
+          */
+         if( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) )
+         {
+            if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
+               x[i] = 0.0;
+            else
+               x[i] = MIN(0.0, SCIPvarGetUbGlobal(var));
+         }
+         else
+         {
+            if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
+               x[i] = MAX(0.0, SCIPvarGetLbGlobal(var));
+            else
+               x[i] = (SCIPvarGetLbGlobal(var) + SCIPvarGetUbGlobal(var)) / 2.0;
+         }
+      }
+
       if( !SCIPisInfinity(scip, -consdata->lhs) )
       {
-         SCIP_CALL( generateCut(scip, conss[i], NULL, SCIP_SIDETYPE_LEFT, &row, conshdlrdata->cutmaxrange, conshdlrdata->checkcurvature, -SCIPinfinity(scip)) );
+         SCIP_CALL( generateCut(scip, conss[c], x, SCIP_SIDETYPE_LEFT,  &row, NULL, conshdlrdata->cutmaxrange, conshdlrdata->checkcurvature, -SCIPinfinity(scip), 0.0) );
          if( row != NULL )
          {
             SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */) );
-#ifdef SCIP_DEBUG
-            SCIP_CALL( SCIPprintRow(scip, row, NULL) );
-#endif
+            SCIPdebugMessage("initlp adds row <%s> for lhs of conss <%s>\n", SCIProwGetName(row), SCIPconsGetName(conss[c]));
+            SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
             SCIP_CALL( SCIPreleaseRow (scip, &row) );
          }
       }
       if( !SCIPisInfinity(scip, consdata->rhs) )
       {
-         SCIP_CALL( generateCut(scip, conss[i], NULL, SCIP_SIDETYPE_RIGHT, &row, conshdlrdata->cutmaxrange, conshdlrdata->checkcurvature, -SCIPinfinity(scip)) );
+         SCIP_CALL( generateCut(scip, conss[c], x, SCIP_SIDETYPE_RIGHT, &row, NULL, conshdlrdata->cutmaxrange, conshdlrdata->checkcurvature, -SCIPinfinity(scip), 0.0) );
          if( row != NULL )
          {
             SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */) );
-#ifdef SCIP_DEBUG
-            SCIP_CALL( SCIPprintRow(scip, row, NULL) );
-#endif
+            SCIPdebugMessage("initlp adds row <%s> for rhs of conss <%s>\n", SCIProwGetName(row), SCIPconsGetName(conss[c]));
+            SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
             SCIP_CALL( SCIPreleaseRow (scip, &row) );
          }
       }
+
+      /* for convex parts, add further linearizations in 5 other reference points */
+      if( (consdata->isconvex  && !SCIPisInfinity(scip,  consdata->rhs)) ||
+          (consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs)) )
+      {
+         SCIP_Real lb;
+         SCIP_Real ub;
+         SCIP_Real lambda;
+         int k;
+
+         for( k = 0; k < 4; ++k )
+         {
+            lambda = 0.1 * (k+1); /* lambda = 0.1, 0.2, 0.3, ... */
+            for( i = 0; i < consdata->nquadvars; ++i )
+            {
+               var = consdata->quadvarterms[i].var;
+               lb = SCIPvarGetLbGlobal(var);
+               ub = SCIPvarGetUbGlobal(var);
+
+               /* make bounds finite */
+               if( SCIPisInfinity(scip, -lb) )
+                  lb = MIN(-10.0, ub - 0.1*REALABS(ub));
+               if( SCIPisInfinity(scip,  ub) )
+                  ub = MAX( 10.0, lb + 0.1*REALABS(lb));
+
+               /* linearization in points that are all in one line is a bit boring, so we occasionally swap lower and upper bound */
+               if( i+k % 2 == 0 )
+                  x[i] = lambda * lb + (1.0 - lambda) * ub;
+               else
+                  x[i] = lambda * ub + (1.0 - lambda) * lb;
+            }
+
+            SCIP_CALL( generateCut(scip, conss[c], x, consdata->isconvex ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT, &row, NULL, conshdlrdata->cutmaxrange, FALSE, -SCIPinfinity(scip), 0.0) );
+            if( row != NULL )
+            {
+               SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */) );
+               SCIPdebugMessage("initlp adds another row <%s> for lambda = %g of conss <%s>\n", SCIProwGetName(row), lambda, SCIPconsGetName(conss[c]));
+               SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
+               SCIP_CALL( SCIPreleaseRow (scip, &row) );
+            }
+         }
+      }
+
+      SCIPfreeBufferArray(scip, &x);
    }
 
    return SCIP_OKAY;
