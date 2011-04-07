@@ -300,8 +300,13 @@
 =opt= SLay10H             129579.884
 =opt= SLay10M             129579.884
 
+=opt= uflquad-15-60       1063.1931
 =opt= uflquad-15-80       1217.98941
-=opt= uflquad-20-150      550.112295
-=opt= uflquad-25-40       828.164519
-=opt= uflquad-30-100      361.916808
-=opt= uflquad-40-80       347.488613
+=opt= uflquad-20-40        860.960565
+=opt= uflquad-20-50        375.91869
+=opt= uflquad-20-150       550.112295
+=opt= uflquad-25-25        673.696888
+=opt= uflquad-25-30        669.839561
+=opt= uflquad-25-40        828.164519
+=opt= uflquad-30-100       361.916808
+=opt= uflquad-40-80        347.488613
