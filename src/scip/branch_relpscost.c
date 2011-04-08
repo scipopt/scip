@@ -12,6 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+//#define USESBGAIN /* ??????????? only for testing effect of sbgain (dom-red, cut-off, db improve). only supported in inexact mode */
 
 /**@file   branch_relpscost.c
  * @ingroup BRANCHINGRULES
@@ -233,6 +234,10 @@ SCIP_RETCODE execRelpscost(
     * for cutting off sub problems and improving lower bounds of children
     */
    exactsolve = SCIPisExactSolve(scip);
+
+#ifdef USESBGAIN /* ??????????? */
+   exactsolve = FALSE;
+#endif
 
    /* check, if all existing columns are in LP, and thus the strong branching results give lower bounds */
    allcolsinlp = SCIPallColsInLP(scip);

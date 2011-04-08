@@ -12,6 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+//#define USESBGAIN /* ??????????? only for testing effect of sbgain (dom-red, cut-off, db improve). only supported in inexact mode */
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6794,6 +6795,7 @@ SCIP_RETCODE SCIPgetVarStrongbranch(
    )
 {
    SCIP_COL* col;
+   SCIP_Bool exactsolve;
 
    assert(lperror != NULL);
 
@@ -6835,14 +6837,21 @@ SCIP_RETCODE SCIPgetVarStrongbranch(
       return SCIP_OKAY;
    }
 
+   /* check, if we want to solve the problem exactly, meaning that strong branching information is not useful
+    * for cutting off sub problems and improving lower bounds of children
+    */
+   exactsolve = SCIPisExactSolve(scip);
+
+#ifdef USESBGAIN /* ??????????? */
+   exactsolve = FALSE;
+#endif
+
    /* call strong branching for column */
    SCIP_CALL( SCIPcolGetStrongbranch(col, scip->set, scip->stat, scip->lp, itlim,
          down, up, downvalid, upvalid, lperror) );
 
-   /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough to
-    * declare the sub nodes infeasible
-    */
-   if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !scip->set->misc_exactsolve )
+   /* check, if the branchings are infeasible */
+   if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !exactsolve )
    {
       SCIP_Bool downcutoff;
       SCIP_Bool upcutoff;
