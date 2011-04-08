@@ -8817,56 +8817,20 @@ SCIP_DECL_CONSEXITSOL(consExitsolLinear)
    /* if this is a restart, convert cutpool rows into linear constraints */
    if( restart )
    {
-      SCIP_CUT** cuts;
-      int ncuts;
       int ncutsadded;
 
       ncutsadded = 0;
-      cuts = SCIPgetPoolCuts(scip);
-      ncuts = SCIPgetNPoolCuts(scip);
-      for( c = 0; c < ncuts; ++c )
-      {
-         SCIP_ROW* row;
 
-         row = SCIPcutGetRow(cuts[c]);
-         assert(!SCIProwIsLocal(row));
-         assert(!SCIProwIsModifiable(row));
-         if( SCIPcutGetAge(cuts[c]) == 0 && SCIProwIsInLP(row) )
-         {
-            char name[SCIP_MAXSTRLEN];
-            SCIP_CONS* cons;
-            SCIP_COL** cols;
-            SCIP_VAR** vars;
-            int ncols;
-            int i;
-
-            /* create a linear constraint out of the cut */
-            cols = SCIProwGetCols(row);
-            ncols = SCIProwGetNNonz(row);
-            
-            SCIP_CALL( SCIPallocBufferArray(scip, &vars, ncols) );
-            for( i = 0; i < ncols; ++i )
-               vars[i] = SCIPcolGetVar(cols[i]);
-            
-            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d", SCIProwGetName(row), SCIPgetNRuns(scip));
-            SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, ncols, vars, SCIProwGetVals(row),
-                  SCIProwGetLhs(row) - SCIProwGetConstant(row), SCIProwGetRhs(row) - SCIProwGetConstant(row),
-                  TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
-            SCIP_CALL( SCIPaddCons(scip, cons) );
-            SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
-            SCIPfreeBufferArray(scip, &vars);
-
-            ncutsadded++;
-         }
-      }
+      /* create out of all active cuts in cutpool linear constraints */
+      SCIP_CALL( SCIPconvertCutsToConss(scip, scip, NULL, NULL, TRUE, &ncutsadded) );
 
       if( ncutsadded > 0 )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
             "(restart) converted %d cuts from the global cut pool into linear constraints\n", ncutsadded);
          /* an extra blank line should be printed separately since the buffer message handler only handle up to one line
-          *  correctly */
+          * correctly 
+          */
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "\n");
       }
    }

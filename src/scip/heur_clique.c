@@ -39,17 +39,24 @@
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE
-#define HEUR_USESSUBSCIP      TRUE                            /**< does the heuristic use a secondary SCIP instance? */
+#define HEUR_USESSUBSCIP      TRUE                       /**< does the heuristic use a secondary SCIP instance? */
 
-#define DEFAULT_MAXNODES      5000LL                          /* maximum number of nodes to regard in the subproblem */
-#define DEFAULT_MINFIXINGRATE 0.5                             /* minimum percentage of integer variables that have to be fixed */
-#define DEFAULT_MINIMPROVE    0.01                            /* factor by which clique heuristic should at least improve the incumbent */
-#define DEFAULT_MINNODES      500LL                           /* minimum number of nodes to regard in the subproblem */
-#define DEFAULT_NODESOFS      500LL                           /* number of nodes added to the contingent of the total nodes */
-#define DEFAULT_NODESQUOT     0.1                             /* subproblem nodes in relation to nodes of the original problem */
-#define DEFAULT_MAXPROPROUNDS 2                               /* maximum number of propagation rounds during probing */
-#define DEFAULT_INITSEED      0                               /**< random seed value to initialize the rendom permutation value for variables */
-#define DEFAULT_MULTIPLIER    1.1                             /**< value to increase nodenumber to determine the next run */
+#define DEFAULT_MAXNODES      5000LL                     /* maximum number of nodes to regard in the subproblem */
+#define DEFAULT_MINFIXINGRATE 0.5                        /* minimum percentage of integer variables that have to be fixed */
+#define DEFAULT_MINIMPROVE    0.01                       /* factor by which clique heuristic should at least improve the
+                                                          * incumbent
+                                                          */
+#define DEFAULT_MINNODES      500LL                      /* minimum number of nodes to regard in the subproblem */
+#define DEFAULT_NODESOFS      500LL                      /* number of nodes added to the contingent of the total nodes */
+#define DEFAULT_NODESQUOT     0.1                        /* subproblem nodes in relation to nodes of the original problem */
+#define DEFAULT_MAXPROPROUNDS 2                          /* maximum number of propagation rounds during probing */
+#define DEFAULT_INITSEED      0                          /**< random seed value to initialize the rendom permutation
+                                                          * value for variables
+                                                          */
+#define DEFAULT_MULTIPLIER    1.1                        /**< value to increase nodenumber to determine the next run */
+#define DEFAULT_COPYCUTS      TRUE                       /**< should all active cuts from the cutpool of the
+                                                          *   original scip be copied to constraints of the subscip
+                                                          */
 
 
 /*
@@ -73,6 +80,9 @@ struct SCIP_HeurData
    SCIP_Real             multiplier;         /**< multiplier to determine next node number */
    int                   initseed;           /**< initial random seed value */
    unsigned int          seed;               /**< seed value for random number generator */
+   SCIP_Bool             copycuts;           /**< should all active cuts from cutpool be copied to constraints in
+                                              *   subproblem?
+                                              */
 };
 
 /*
@@ -806,6 +816,12 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
       SCIP_CALL( SCIPcopy(scip, subscip, varmap, NULL, "_clique", FALSE, FALSE, &valid) );
 
+      if( heurdata->copycuts )
+      {
+         /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmap, NULL, FALSE) );
+      }
+
       for( i = 0; i < nvars; i++ )
          subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, vars[i]);
             
@@ -1045,6 +1061,10 @@ SCIP_RETCODE SCIPincludeHeurClique(
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxproprounds",
          "maximum number of propagation rounds during probing (-1 infinity)",
          &heurdata->maxproprounds, TRUE, DEFAULT_MAXPROPROUNDS, -1, INT_MAX/4, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/copycuts",
+         "should all active cuts from cutpool be copied to constraints in subproblem?",
+         &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
