@@ -839,14 +839,16 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    assert(success != NULL);
 
    *success = TRUE;
-
-   if( capacity > INT_MAX )
+   
+   /* we can only handle integers */
+   if( capacity >= INT_MAX )
    {
       *success = FALSE;
       return SCIP_OKAY;
    }
-   assert(capacity <= INT_MAX);
+   assert(capacity < INT_MAX);
 
+   /* if capacity is 0 we do not need to do the expensive stuff later on */
    if( capacity == 0 )
    {
 #ifndef NDEBUG
@@ -884,13 +886,46 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
 
       return SCIP_OKAY;
    }
+   /* if only one item is given, we also do not need to do the expensive stuff later on */
+   else if( nitems == 1 )
+   {
+      assert(weights[0] >= 0);
+
+      if( solitems != NULL)
+      {
+         assert(nonsolitems != NULL);
+         assert(nnonsolitems != NULL);
+         assert(nonsolitems != NULL);
+
+         if( weights[0] <= capacity )
+         {
+            solitems[0] = items[0];
+            *nsolitems = 1;
+            *nnonsolitems = 0;
+            if( solval != NULL )
+               *solval = profits[0];
+         } 
+         else
+         {
+            nonsolitems[0] = items[0];
+            *nsolitems = 0;
+            *nnonsolitems = 1;
+            if( solval != NULL )
+               *solval = 0.0;
+         }
+      }
+      else if( solval != NULL )
+         *solval = 0.0;
+
+      return SCIP_OKAY;
+   }
 
    intcap = (int)capacity;
    assert(intcap >= 0);
 
    /* this condition is only to check if the size of memory which will be allocated is still positiv( so no error occurs ), which will be necessary after
     * this if condition */ 
-   if( (nitems+1) * (intcap+1) * ((int) sizeof(*optvalues)) < 0 )
+   if( (intcap+1) < 0 || (nitems+1) * (intcap+1) < 0 || (nitems+1) * (intcap+1) * ((int) sizeof(*optvalues)) < 0 )
    {
       *success = FALSE;
       return SCIP_OKAY;
