@@ -28,7 +28,7 @@ instances/PseudoBoolean/factor-mod-size=9-P0=67-P1=349-P2=67-P3=499-P4=79-P5=347
 instances/PseudoBoolean/normalized-bsg_10_4_5.opb
 instances/PseudoBoolean/normalized-mds_10_4_3.opb
 instances/PseudoBoolean/normalized-mds_50_25_5.opb
-instances/Semicontinuous/meanvarxsc.lp
+#instances/Semicontinuous/meanvarxsc.lp
 instances/Semicontinuous/semicon1.mps
 instances/SOS/findRoot.lp
 instances/SOS/pcu_0.01.lp
