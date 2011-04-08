@@ -51,6 +51,17 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
       SCIP_CALL( SCIPincludeNodeselBfs(scip) );
       SCIP_CALL( SCIPincludeNodeselDfs(scip) );
 
+#ifdef EXACTBRANCHPLGS
+      SCIP_CALL( SCIPincludeBranchruleAllfullstrong(scip) );
+      SCIP_CALL( SCIPincludeBranchruleFullstrong(scip) );
+      SCIP_CALL( SCIPincludeBranchruleInference(scip) );
+      SCIP_CALL( SCIPincludeBranchruleLeastinf(scip) );
+      SCIP_CALL( SCIPincludeBranchruleMostinf(scip) );
+      SCIP_CALL( SCIPincludeBranchrulePscost(scip) );
+      SCIP_CALL( SCIPincludeBranchruleRandom(scip) );
+      SCIP_CALL( SCIPincludeBranchruleRelpscost(scip) );
+#endif
+
       SCIP_CALL( SCIPincludeDispDefault(scip) );
       SCIP_CALL( SCIPincludeDialogDefault(scip) );
       /* load parameter settings needed to ensure correct behavior of EXACTSOLVE flag */
