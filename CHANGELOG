@@ -42,6 +42,7 @@ interface:
 - new method SCIPpresolGetNAddConss() which returns the number of added constraints during presolving by a given presolver
 - added two parameters to the callback methods SCIP_DECL_CONSPRESOL() and SCIP_DECL_PRESOLEXEC(), these are nnewaddconss and naddconss; these parameters
   are also added to corresponding C++ wrapper class methods; these scip_presol() in objconshdlr.h and scip_exec() in objpresol.h 
+- added method SCIPsortRealRealIntInt() and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines in misc.c
 
 performance improvements:
 - performance improvements in prop_vbounds
