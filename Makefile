@@ -167,8 +167,6 @@ ifeq ($(EXACTSOLVE),true)
 FLAGS		+=	-DEXACTSOLVE_OUT		# general info 
 FLAGS		+=	-DEXACTSOLVE			# flag for switching between exact and inexact version of code
 LDFLAGS		+=	$(LINKCC_l)mpfr$(LINKLIBSUFFIX)
-LDFLAGS		+=	-I/nfs/optimi/kombadon/bzfwolte/projects/gmp/gmp-4.3.1/lib/include
-LDFLAGS		+=	-L/nfs/optimi/kombadon/bzfwolte/projects/gmp/gmp-4.3.1/lib/lib
 LIBOBJSUBDIRS	+=	rectlu 
 endif
 
