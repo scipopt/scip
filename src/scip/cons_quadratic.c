@@ -4730,7 +4730,8 @@ void addBilinMcCormick(
              !SCIPisInfinity(scip, -lby) &&
              (SCIPisInfinity(scip,  ubx) ||
               SCIPisInfinity(scip,  uby) ||
-              (ubx - lbx) * refpointy + (uby - lby) * refpointx <= ubx * uby - lbx * lby
+              (uby - refpointy) * (ubx - refpointx) >= (refpointy - lby) * (refpointx - lbx)
+              /* (ubx - lbx) * refpointy + (uby - lby) * refpointx <= ubx * uby - lbx * lby */
              )
            )
          {
@@ -4756,7 +4757,8 @@ void addBilinMcCormick(
              !SCIPisInfinity(scip, -lby) &&
              (SCIPisInfinity(scip, -lbx) ||
               SCIPisInfinity(scip,  uby) ||
-              (ubx - lbx) * refpointy - (uby - lby) * refpointx <= ubx * lby - lbx * uby
+              (ubx - lbx) * (refpointy - lby) <= (uby - lby) * (refpointx - lbx)
+              /* (ubx - lbx) * refpointy - (uby - lby) * refpointx <= ubx * lby - lbx * uby */
              )
            )
          {
@@ -7364,55 +7366,10 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
          continue;
       }
 
-      /* setup reference point */
+      /* alloc memory for reference point */
       SCIP_CALL( SCIPallocBufferArray(scip, &x, consdata->nquadvars) );
-      for( i = 0; i < consdata->nquadvars; ++i )
-      {
-         var = consdata->quadvarterms[i].var;
-         assert(var != NULL);
-         /* use midpoint as reference value, if both bounds are finite
-          * otherwise use 0.0, projected on bounds
-          */
-         if( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) )
-         {
-            if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
-               x[i] = 0.0;
-            else
-               x[i] = MIN(0.0, SCIPvarGetUbGlobal(var));
-         }
-         else
-         {
-            if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
-               x[i] = MAX(0.0, SCIPvarGetLbGlobal(var));
-            else
-               x[i] = (SCIPvarGetLbGlobal(var) + SCIPvarGetUbGlobal(var)) / 2.0;
-         }
-      }
 
-      if( !SCIPisInfinity(scip, -consdata->lhs) )
-      {
-         SCIP_CALL( generateCut(scip, conss[c], x, SCIP_SIDETYPE_LEFT,  &row, NULL, conshdlrdata->cutmaxrange, conshdlrdata->checkcurvature, -SCIPinfinity(scip), 0.0) );
-         if( row != NULL )
-         {
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */) );
-            SCIPdebugMessage("initlp adds row <%s> for lhs of conss <%s>\n", SCIProwGetName(row), SCIPconsGetName(conss[c]));
-            SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
-            SCIP_CALL( SCIPreleaseRow (scip, &row) );
-         }
-      }
-      if( !SCIPisInfinity(scip, consdata->rhs) )
-      {
-         SCIP_CALL( generateCut(scip, conss[c], x, SCIP_SIDETYPE_RIGHT, &row, NULL, conshdlrdata->cutmaxrange, conshdlrdata->checkcurvature, -SCIPinfinity(scip), 0.0) );
-         if( row != NULL )
-         {
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */) );
-            SCIPdebugMessage("initlp adds row <%s> for rhs of conss <%s>\n", SCIProwGetName(row), SCIPconsGetName(conss[c]));
-            SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
-            SCIP_CALL( SCIPreleaseRow (scip, &row) );
-         }
-      }
-
-      /* for convex parts, add further linearizations in 5 other reference points */
+      /* for convex parts, add linearizations in 5 points */
       if( (consdata->isconvex  && !SCIPisInfinity(scip,  consdata->rhs)) ||
           (consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs)) )
       {
@@ -7421,9 +7378,9 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
          SCIP_Real lambda;
          int k;
 
-         for( k = 0; k < 4; ++k )
+         for( k = 0; k < 5; ++k )
          {
-            lambda = 0.1 * (k+1); /* lambda = 0.1, 0.2, 0.3, ... */
+            lambda = 0.1 * (k+1); /* lambda = 0.1, 0.2, 0.3, 0.4, 0.5 */
             for( i = 0; i < consdata->nquadvars; ++i )
             {
                var = consdata->quadvarterms[i].var;
@@ -7436,21 +7393,110 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
                if( SCIPisInfinity(scip,  ub) )
                   ub = MAX( 10.0, lb + 0.1*REALABS(lb));
 
-               /* linearization in points that are all in one line is a bit boring, so we occasionally swap lower and upper bound */
-               if( i+k % 2 == 0 )
-                  x[i] = lambda * lb + (1.0 - lambda) * ub;
-               else
+               if( SCIPvarGetBestBoundType(var) == SCIP_BOUNDTYPE_LOWER )
                   x[i] = lambda * ub + (1.0 - lambda) * lb;
+               else
+                  x[i] = lambda * lb + (1.0 - lambda) * ub;
             }
 
             SCIP_CALL( generateCut(scip, conss[c], x, consdata->isconvex ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT, &row, NULL, conshdlrdata->cutmaxrange, FALSE, -SCIPinfinity(scip), 0.0) );
             if( row != NULL )
             {
                SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */) );
-               SCIPdebugMessage("initlp adds another row <%s> for lambda = %g of conss <%s>\n", SCIProwGetName(row), lambda, SCIPconsGetName(conss[c]));
+               SCIPdebugMessage("initlp adds row <%s> for lambda = %g of conss <%s>\n", SCIProwGetName(row), lambda, SCIPconsGetName(conss[c]));
                SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
                SCIP_CALL( SCIPreleaseRow (scip, &row) );
             }
+         }
+      }
+
+      /* for concave parts, add underestimator w.r.t. at most 2 reference points */
+      if( (!consdata->isconvex  && !SCIPisInfinity(scip,  consdata->rhs)) ||
+          (!consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs)) )
+      {
+         SCIP_Bool unbounded;
+         SCIP_Bool possquare;
+         SCIP_Bool negsquare;
+         SCIP_Real lb;
+         SCIP_Real ub;
+         SCIP_Real lambda;
+         int k;
+
+         unbounded = FALSE; /* whether there are unbounded variables */
+         possquare = FALSE; /* whether there is a positive square term */
+         negsquare = FALSE; /* whether there is a negative square term */
+         lambda = 0.6; /* weight of prefered bound */
+         for( k = 0; k < 2; ++k )
+         {
+            /* set reference point to 0 projected on bounds for unbounded variables or in between lower and upper bound for bounded variables
+             * in the first round, we set it closer to the best bound, in the second closer to the worst bound
+             * the reason is, that for a bilinear term with bounded variables, there are always two linear underestimators
+             * if the reference point is set to the middle, then rounding and luck decides which underestimator is choosen
+             * we thus choose the reference point not to be the middle, so both McCormick terms are definitely choosen one time
+             * of course, the possible number of cuts is something in the order of 2^nquadvars, and we choose two of them here
+             */
+            for( i = 0; i < consdata->nquadvars; ++i )
+            {
+               var = consdata->quadvarterms[i].var;
+               lb = SCIPvarGetLbGlobal(var);
+               ub = SCIPvarGetUbGlobal(var);
+
+               if( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) )
+               {
+                  if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
+                     x[i] = 0.0;
+                  else
+                     x[i] = MIN(0.0, SCIPvarGetUbGlobal(var));
+                  unbounded = TRUE;
+               }
+               else
+               {
+                  if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
+                  {
+                     x[i] = MAX(0.0, SCIPvarGetLbGlobal(var));
+                     unbounded = TRUE;
+                  }
+                  else
+                     x[i] = lambda * SCIPvarGetBestBound(var) + (1.0-lambda) * SCIPvarGetWorstBound(var);
+               }
+
+               possquare |= consdata->quadvarterms[i].sqrcoef > 0.0;
+               negsquare |= consdata->quadvarterms[i].sqrcoef < 0.0;
+            }
+
+            if( !consdata->isconvex  && !SCIPisInfinity(scip,  consdata->rhs) )
+            {
+               SCIP_CALL( generateCut(scip, conss[c], x, SCIP_SIDETYPE_RIGHT,  &row, NULL, conshdlrdata->cutmaxrange, conshdlrdata->checkcurvature, -SCIPinfinity(scip), 0.0) );
+               if( row != NULL )
+               {
+                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */) );
+                  SCIPdebugMessage("initlp adds row <%s> for rhs of conss <%s>, round %d\n", SCIProwGetName(row), SCIPconsGetName(conss[c]), k);
+                  SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
+                  SCIP_CALL( SCIPreleaseRow (scip, &row) );
+               }
+            }
+            if( !consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs) )
+            {
+               SCIP_CALL( generateCut(scip, conss[c], x, SCIP_SIDETYPE_LEFT, &row, NULL, conshdlrdata->cutmaxrange, conshdlrdata->checkcurvature, -SCIPinfinity(scip), 0.0) );
+               if( row != NULL )
+               {
+                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */) );
+                  SCIPdebugMessage("initlp adds row <%s> for lhs of conss <%s>, round %d\n", SCIProwGetName(row), SCIPconsGetName(conss[c]), k);
+                  SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
+                  SCIP_CALL( SCIPreleaseRow (scip, &row) );
+               }
+            }
+
+            /* if there are unbounded variables, then there is typically only at most one possible underestimator, so don't try another round
+             * similar, if there are no bilinear terms and no linearizations of square terms, then the reference point does not matter, so don't do another round */
+            if( unbounded ||
+                (consdata->nbilinterms == 0 && (!possquare || SCIPisInfinity(scip,  consdata->rhs))) ||
+                (consdata->nbilinterms == 0 && (!negsquare || SCIPisInfinity(scip, -consdata->lhs)))
+              )
+               break;
+
+            /* invert lambda for second round */
+            lambda = 1.0 - lambda;
          }
       }
 
