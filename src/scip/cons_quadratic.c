@@ -5529,6 +5529,12 @@ SCIP_RETCODE registerVariableInfeasibilities(
    SCIP_CONSDATA*     consdata;
    int                c;
    int                j;
+   SCIP_Bool          xbinary;
+   SCIP_Bool          ybinary;
+   SCIP_Bool          xunbounded;
+   SCIP_Bool          yunbounded;
+   SCIP_VAR*          x;
+   SCIP_VAR*          y;
    SCIP_Real          xlb;
    SCIP_Real          xub;
    SCIP_Real          xval;
@@ -5561,103 +5567,151 @@ SCIP_RETCODE registerVariableInfeasibilities(
          continue;
       SCIPdebugMessage("con %s violation: %g %g  convex: %u %u\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol, consdata->isconvex, consdata->isconcave);
       
+      /* square terms */
       for( j = 0; j < consdata->nquadvars; ++j )
-      { /* square terms */
+      {
+         x = consdata->quadvarterms[j].var;
          if( (SCIPisFeasPositive(scip, consdata->rhsviol) && consdata->quadvarterms[j].sqrcoef < 0) ||
              (SCIPisFeasPositive(scip, consdata->lhsviol) && consdata->quadvarterms[j].sqrcoef > 0) )
          {
-            xlb = SCIPvarGetLbLocal(consdata->quadvarterms[j].var);
-            xub = SCIPvarGetUbLocal(consdata->quadvarterms[j].var);
+            xlb = SCIPvarGetLbLocal(x);
+            xub = SCIPvarGetUbLocal(x);
             if( SCIPisEQ(scip, xlb, xub) )
             {
-               SCIPdebugMessage("ignore fixed variable <%s>[%g, %g], diff %g\n", SCIPvarGetName(consdata->quadvarterms[j].var), xlb, xub, xub-xlb);
+               SCIPdebugMessage("ignore fixed variable <%s>[%g, %g], diff %g\n", SCIPvarGetName(x), xlb, xub, xub-xlb);
                continue;
             }
 
-            xval = SCIPgetSolVal(scip, NULL, consdata->quadvarterms[j].var);
+            xval = SCIPgetSolVal(scip, NULL, x);
+
+            /* if variable is at bounds, then no need to branch, since secant is exact there */
+            if( SCIPisLE(scip, xval, xlb) || SCIPisGE(scip, xval, xub) )
+               continue;
 
             if( SCIPisInfinity(scip, -xlb) || SCIPisInfinity(scip, xub) )
                gap = SCIPinfinity(scip);
-            else if( xval < xlb || xval > xub )
-               continue;
             else
                gap = (xval-xlb)*(xub-xval)/(1+2*ABS(xval));
             assert(!SCIPisNegative(scip, gap));
-            SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->quadvarterms[j].var, MAX(gap, 0.0), SCIP_INVALID) );
+            SCIP_CALL( SCIPaddExternBranchCand(scip, x, MAX(gap, 0.0), SCIP_INVALID) );
             ++*nnotify;
          }
       }
 
+      /* bilinear terms */
       for( j = 0; j < consdata->nbilinterms; ++j )
-      { /* bilinear terms
-           if any of the variables if fixed, then it actually behaves like a linear term, so we don't need to branch on it */
-         xlb = SCIPvarGetLbLocal(consdata->bilinterms[j].var1);
-         xub = SCIPvarGetUbLocal(consdata->bilinterms[j].var1);
+      {
+         /* if any of the variables if fixed, then it actually behaves like a linear term, so we don't need to branch on it */
+         x = consdata->bilinterms[j].var1;
+         xlb = SCIPvarGetLbLocal(x);
+         xub = SCIPvarGetUbLocal(x);
          if( SCIPisEQ(scip, xlb, xub) )
             continue;
 
-         ylb = SCIPvarGetLbLocal(consdata->bilinterms[j].var2);
-         yub = SCIPvarGetUbLocal(consdata->bilinterms[j].var2);
+         y = consdata->bilinterms[j].var2;
+         ylb = SCIPvarGetLbLocal(y);
+         yub = SCIPvarGetUbLocal(y);
          if( SCIPisEQ(scip, ylb, yub) )
             continue;
 
-         /* if x is unbounded but y is binary, then it's actually easier to branch on y, since the term will become linear this way */
-         if( SCIPisInfinity(scip, -xlb) || SCIPisInfinity(scip, xub) )
+         xunbounded = SCIPisInfinity(scip, -xlb) || SCIPisInfinity(scip, xub);
+         yunbounded = SCIPisInfinity(scip, -ylb) || SCIPisInfinity(scip, yub);
+
+         /* compute gap, if both variable are bounded */
+         gap = SCIPinfinity(scip);
+         if( !xunbounded && !yunbounded )
          {
-            if( SCIPvarIsBinary(consdata->bilinterms[j].var2) )
-               SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->bilinterms[j].var2, SCIPinfinity(scip), SCIP_INVALID) );
+            xval = SCIPgetSolVal(scip, NULL, x);
+            yval = SCIPgetSolVal(scip, NULL, y);
+
+            /* if both variables are at one of its bounds, then no need to branch, since McCormick is exact there */
+            if( (SCIPisLE(scip, xval, xlb) || SCIPisGE(scip, xval, xub)) &&
+                (SCIPisLE(scip, yval, ylb) || SCIPisGE(scip, yval, yub)) )
+               continue;
+
+            xval = MAX(xlb, MIN(xval, xub));
+            yval = MAX(ylb, MIN(yval, yub));
+
+            coef_ = SCIPisFeasPositive(scip, consdata->lhsviol) ? -consdata->bilinterms[j].coef : consdata->bilinterms[j].coef;
+            if( coef_ > 0.0 )
+            {
+               if( (xub-xlb)*yval + (yub-ylb)*xval <= xub*yub - xlb*ylb )
+                  gap = (xval*yval - xlb*yval - ylb*xval + xlb*ylb) / (1+sqrt(xval*xval + yval*yval));
+               else
+                  gap = (xval*yval - xval*yub - yval*xub + xub*yub) / (1+sqrt(xval*xval + yval*yval));
+            }
             else
-               SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->bilinterms[j].var1, SCIPinfinity(scip), SCIP_INVALID) );
+            { /* coef_ < 0 */
+               if( (xub-xlb)*yval - (yub-ylb)*xval <= xub*ylb - xlb*yub )
+                  gap = -(xval*yval - xval*ylb - yval*xub + xub*ylb) / (1+sqrt(xval*xval + yval*yval));
+               else
+                  gap = -(xval*yval - xval*yub - yval*xlb + xlb*yub) / (1+sqrt(xval*xval + yval*yval));
+            }
+
+            assert(!SCIPisNegative(scip, gap));
+            if( gap < 0.0 )
+               gap = 0.0;
+         }
+
+         /* if one of the variables is binary or integral with domain width 1, then branching on this makes the term linear, so prefer this */
+         xbinary = SCIPvarIsBinary(x) || (SCIPvarIsIntegral(x) && xub - xlb < 1.5);
+         ybinary = SCIPvarIsBinary(y) || (SCIPvarIsIntegral(y) && yub - ylb < 1.5);
+         if( xbinary )
+         {
+            SCIP_CALL( SCIPaddExternBranchCand(scip, x, gap, SCIP_INVALID) );
             ++*nnotify;
-            continue;
          }
-
-         /* if y is unbounded but x is binary, then it's actually easier to branch on x, since the term will become linear this way */
-         if( SCIPisInfinity(scip, -ylb) || SCIPisInfinity(scip, yub) )
+         if( ybinary )
          {
-            if( SCIPvarIsBinary(consdata->bilinterms[j].var1) )
-               SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->bilinterms[j].var1, SCIPinfinity(scip), SCIP_INVALID) );
-            else
-               SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->bilinterms[j].var2, SCIPinfinity(scip), SCIP_INVALID) );
+            SCIP_CALL( SCIPaddExternBranchCand(scip, y, gap, SCIP_INVALID) );
             ++*nnotify;
+         }
+         if( xbinary || ybinary )
             continue;
-         }
 
-         xval = SCIPgetSolVal(scip, NULL, consdata->bilinterms[j].var1);
-         if( xval < xlb )
-            xval = xlb;
-         else if( xval > xub )
-            xval = xub;
-
-         yval = SCIPgetSolVal(scip, NULL, consdata->bilinterms[j].var2);
-         if( yval < ylb )
-            yval = ylb;
-         else if( yval > yub )
-            yval = yub;
-
-         coef_ = SCIPisFeasPositive(scip, consdata->lhsviol) ? -consdata->bilinterms[j].coef : consdata->bilinterms[j].coef;
-         if( coef_ > 0.0 )
+         /* if one of the variables is unbounded, then branch on it first */
+         if( xunbounded )
          {
-            if( (xub-xlb)*yval + (yub-ylb)*xval <= xub*yub - xlb*ylb )
-               gap = (xval*yval - xlb*yval - ylb*xval + xlb*ylb) / (1+sqrt(xval*xval + yval*yval));
-            else
-               gap = (xval*yval - xval*yub - yval*xub + xub*yub) / (1+sqrt(xval*xval + yval*yval));
+            SCIP_CALL( SCIPaddExternBranchCand(scip, x, gap, SCIP_INVALID) );
+            ++*nnotify;
          }
-         else
-         { /* coef_ < 0 */
-            if( (xub-xlb)*yval - (yub-ylb)*xval <= xub*ylb - xlb*yub )
-               gap = -(xval*yval - xval*ylb - yval*xub + xub*ylb) / (1+sqrt(xval*xval + yval*yval));
-            else
-               gap = -(xval*yval - xval*yub - yval*xlb + xlb*yub) / (1+sqrt(xval*xval + yval*yval));
+         if( yunbounded )
+         {
+            SCIP_CALL( SCIPaddExternBranchCand(scip, y, gap, SCIP_INVALID) );
+            ++*nnotify;
+         }
+         if( xunbounded || yunbounded )
+            continue;
+
+         /* if both variables are integral, prefer the one with the smaller domain, so variable gets fixed soon */
+         if( SCIPvarIsIntegral(x) && SCIPvarIsIntegral(y) )
+         {
+            if( SCIPisLT(scip, xub-xlb, yub-ylb) )
+            {
+               SCIP_CALL( SCIPaddExternBranchCand(scip, x, gap, SCIP_INVALID) );
+               ++*nnotify;
+               continue;
+            }
+            if( SCIPisGT(scip, xub-xlb, yub-ylb) )
+            {
+               SCIP_CALL( SCIPaddExternBranchCand(scip, y, gap, SCIP_INVALID) );
+               ++*nnotify;
+               continue;
+            }
          }
 
-         assert(!SCIPisNegative(scip, gap));
-         if( gap < 0.0 )
-            gap = 0.0;
-
-         SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->bilinterms[j].var1, gap, SCIP_INVALID) );
-         SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->bilinterms[j].var2, gap, SCIP_INVALID) );
-         *nnotify += 2;
+         /* in the regular case, suggest those variables which are not at its bounds for branching
+          * this is, because after branching both variables will be one the bounds, and McCormick will be exact then */
+         if( !SCIPisLE(scip, xval, xlb) && !SCIPisGE(scip, xval, xub) )
+         {
+            SCIP_CALL( SCIPaddExternBranchCand(scip, x, gap, SCIP_INVALID) );
+            ++*nnotify;
+         }
+         if( !SCIPisLE(scip, yval, ylb) && !SCIPisGE(scip, yval, yub) )
+         {
+            SCIP_CALL( SCIPaddExternBranchCand(scip, y, gap, SCIP_INVALID) );
+            ++*nnotify;
+         }
       }
    }
 
