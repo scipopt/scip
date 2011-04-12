@@ -3591,7 +3591,6 @@ SCIP_RETCODE presolveTryAddLinearReform(
                   0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(scip, auxvar) );
 
-            /* TODO: what about making not all constraint initial here? */
             if( !SCIPisZero(scip, SCIPintervalGetInf(xbnds)) )
             { /* add 0 <= z - xbnds.inf * y constraint (as varbound constraint) */
                (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s_1", SCIPvarGetName(y));
@@ -7841,7 +7840,9 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
          assert(consdata->isremovedfixings);
          havechange = TRUE;
       }
-      
+
+      /* @todo divide constraint by gcd of coefficients if all are integral */
+
       if( doreformulations )
       {
          int naddconss_old;
@@ -7960,7 +7961,6 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
       if( (nnewchgvartypes != 0 || havechange || !consdata->ispresolved)
           && (SCIPisEQ(scip, consdata->lhs, consdata->rhs) && SCIPisIntegral(scip, consdata->lhs)) )
       {
-         /* @todo allow for coefficient != +/-1 in front of linear var */
          int       ncontvar;
          SCIP_VAR* candidate;
          SCIP_Bool fail;
