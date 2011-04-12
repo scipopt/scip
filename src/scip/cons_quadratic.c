@@ -7801,7 +7801,8 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
     * then try the reformulations (replacing products with binaries, disaggregation, setting default variable bounds)
     * otherwise, we wait with these
     */
-   doreformulations = nrounds > 0 && nnewfixedvars == 0 && nnewaggrvars == 0 && nnewchgvartypes == 0 && nnewchgbds == 0 &&
+   doreformulations = (nrounds > 0 || SCIPconshdlrWasPresolvingDelayed(conshdlr)) &&
+      nnewfixedvars == 0 && nnewaggrvars == 0 && nnewchgvartypes == 0 && nnewchgbds == 0 &&
       nnewholes == 0 && /* nnewdelconss == 0 && */ nnewaddconss == 0 && nnewupgdconss == 0 && nnewchgcoefs == 0 && nnewchgsides == 0;
    SCIPdebugMessage("presolving will %swait with reformulation", doreformulations ? "not " : "");
 
