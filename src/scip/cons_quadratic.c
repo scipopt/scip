@@ -8877,7 +8877,7 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/binreforminitial",
          "whether to make constraints added due to replacing products with binary variables initial",
-         &conshdlrdata->binreforminitial, TRUE, FALSE, NULL, NULL) );
+         &conshdlrdata->binreforminitial, TRUE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacysepa",
          "minimal efficacy for a cut to be added to the LP during separation; overwrites separating/efficacy",
