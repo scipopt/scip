@@ -3658,8 +3658,9 @@ SCIP_RETCODE presolveUpgrade(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler data structure */
    SCIP_CONS*            cons,               /**< source constraint to try to convert */
-   int*                  nupgdconss,         /**< number of constraints that are an upgrade of this quadratic constraint */
-   SCIP_CONS***          upgdconss           /**< array of constraints that are an upgrade of this quadratic constraint */
+   SCIP_Bool*            upgraded,           /**< buffer to store whether constraint was upgraded */
+   int*                  nupgdconss,         /**< buffer to increase if constraint was upgraded */
+   int*                  naddconss           /**< buffer to increase with number of additional constraints created during upgrade */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -3679,24 +3680,21 @@ SCIP_RETCODE presolveUpgrade(
    int ncontquad;
    SCIP_Bool integral;
    int i;
+   SCIP_CONS** upgdconss;
    int upgdconsssize;
+   int nupgdconss_;
 
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(cons != NULL);
+   assert(!SCIPconsIsModifiable(cons));
+   assert(upgraded   != NULL);
    assert(nupgdconss != NULL);
-   assert( upgdconss != NULL);
+   assert(naddconss  != NULL);
 
-   *nupgdconss = 0;
-   *upgdconss  = NULL;
+   *upgraded = FALSE;
 
-   /* we cannot upgrade a modifiable quadratic constraint, since we don't know what additional coefficients to expect */
-   if( SCIPconsIsModifiable(cons) )
-      return SCIP_OKAY;
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   
-   /* skip check for upgrades, if constraint has been checked already and there is no pending bound tightening */
-   if( consdata->ispresolved && consdata->ispropagated )
-      return SCIP_OKAY;
+   nupgdconss_ = 0;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -3706,7 +3704,10 @@ SCIP_RETCODE presolveUpgrade(
       return SCIP_OKAY;
 
    upgdconsssize = 2;
-   SCIP_CALL( SCIPallocBufferArray(scip, upgdconss, upgdconsssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &upgdconss, upgdconsssize) );
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
 
    /* calculate some statistics on quadratic constraint */
    nbinlin   = 0;
@@ -3810,49 +3811,57 @@ SCIP_RETCODE presolveUpgrade(
    /* try all upgrading methods in priority order in case the upgrading step is enable  */
    for( i = 0; i < conshdlrdata->nquadconsupgrades; ++i )
    {
-      if( conshdlrdata->quadconsupgrades[i]->active )
+      if( !conshdlrdata->quadconsupgrades[i]->active )
+         continue;
+
+      SCIP_CALL( conshdlrdata->quadconsupgrades[i]->quadconsupgd(scip, cons,
+         nbinlin, nbinquad, nintlin, nintquad, nimpllin, nimplquad, ncontlin, ncontquad, integral,
+         &nupgdconss_, upgdconss, upgdconsssize) );
+
+      while( nupgdconss_ < 0 )
       {
+         /* upgrade function requires more memory: resize upgdconss and call again */
+         assert(-nupgdconss_ > upgdconsssize);
+         upgdconsssize = -nupgdconss_;
+         SCIP_CALL( SCIPreallocBufferArray(scip, &upgdconss, -nupgdconss_) );
+
          SCIP_CALL( conshdlrdata->quadconsupgrades[i]->quadconsupgd(scip, cons,
             nbinlin, nbinquad, nintlin, nintquad, nimpllin, nimplquad, ncontlin, ncontquad, integral,
-            nupgdconss, *upgdconss, upgdconsssize) );
+            &nupgdconss_, upgdconss, upgdconsssize) );
 
-         while( *nupgdconss < 0 )
+         assert(nupgdconss_ != 0);
+      }
+
+      if( nupgdconss_ > 0 )
+      { /* got upgrade */
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+         SCIPdebugMessage(" -> upgraded to %d constraints:\n", nupgdconss_);
+
+         /* add the upgraded constraints to the problem and forget them */
+         for( i = 0; i < nupgdconss_; ++i )
          {
-            /* upgrade function requires more memory: resize upgdconss and call again */
-            assert(-*nupgdconss > upgdconsssize);
-            upgdconsssize = -*nupgdconss;
-            SCIP_CALL( SCIPreallocBufferArray(scip, upgdconss, -*nupgdconss) );
+            SCIPdebugPrintf("\t");
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[j], NULL) ) );
 
-            SCIP_CALL( conshdlrdata->quadconsupgrades[i]->quadconsupgd(scip, cons,
-               nbinlin, nbinquad, nintlin, nintquad, nimpllin, nimplquad, ncontlin, ncontquad, integral,
-               nupgdconss, *upgdconss, upgdconsssize) );
-
-            assert(*nupgdconss != 0);
+            SCIP_CALL( SCIPaddCons(scip, upgdconss[i]) );      /*lint !e613*/
+            SCIP_CALL( SCIPreleaseCons(scip, &upgdconss[i]) ); /*lint !e613*/
          }
 
-         if( *nupgdconss > 0 )
-         { /* got upgrade */
-#ifdef SCIP_DEBUG
-            int j;
+         /* count the first upgrade constraint as constraint upgrade and the remaining ones as added constraints */
+         *nupgdconss += 1;
+         *naddconss += nupgdconss_ - 1;
+         *upgraded = TRUE;
 
-            SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-            SCIPdebugMessage(" -> upgraded to %d constraints:\n", *nupgdconss);
-            for( j = 0; j < *nupgdconss; ++j )
-            {
-               SCIPdebugPrintf("\t");
-               SCIP_CALL( SCIPprintCons(scip, (*upgdconss)[j], NULL) );
-            }
-#endif
-            break;
-         }
+         /* delete upgraded constraint */
+         SCIPdebugMessage("delete constraint <%s> after upgrade\n", SCIPconsGetName(cons));
+         SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, cons) );
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+
+         break;
       }
    }
 
-   assert(*nupgdconss >= 0);
-   if( *nupgdconss == 0 )
-   {
-      SCIPfreeBufferArray(scip, upgdconss);
-   }
+   SCIPfreeBufferArray(scip, &upgdconss);
 
    return SCIP_OKAY;
 }
@@ -3910,7 +3919,6 @@ SCIP_RETCODE presolveDisaggregate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler data structure */
    SCIP_CONS*            cons,               /**< source constraint to try to convert */
-   SCIP_Bool*            success,            /**< buffer to store whether a disaggregation was done */
    int*                  naddconss           /**< pointer to counter of added constraints */
    )
 {
@@ -3927,13 +3935,10 @@ SCIP_RETCODE presolveDisaggregate(
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(cons != NULL);
-   assert(success != NULL);
    assert(naddconss != NULL);
    
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   
-   *success = FALSE;
    
    if( consdata->nquadvars <= 1 )
       return SCIP_OKAY;
@@ -4061,8 +4066,6 @@ SCIP_RETCODE presolveDisaggregate(
    SCIPfreeBufferArray(scip, &auxvars);
    SCIPfreeBufferArray(scip, &auxcoefs);
    SCIPhashmapFree(&var2component);
-   
-   *success = TRUE;
    
    return SCIP_OKAY;
 }
@@ -7763,10 +7766,10 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
 {  /*lint --e{715,788}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
-   int                c, i;
    SCIP_Bool          havechange;
-   int                mynupgdconss;
-   SCIP_CONS**        myupgdconss;
+   SCIP_Bool          doreformulations;
+   int                c;
+   int                i;
 
    assert(scip     != NULL);
    assert(conshdlr != NULL);
@@ -7775,8 +7778,13 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
    
    *result = SCIP_DIDNOTFIND;
    
-   if( nrounds > 0 && nnewfixedvars == 0 && nnewupgdconss == 0 && nnewaddconss == 0 && nnewchgbds == 0 && nnewaggrvars == 0 && nnewchgvartypes == 0 )
-      return SCIP_OKAY;
+   /* if other presolvers did not find any changes (except for deleted conss) since last call,
+    * then try the reformulations (replacing products with binaries, disaggregation, setting default variable bounds)
+    * otherwise, we wait with these
+    */
+   doreformulations = nrounds > 0 && nnewfixedvars == 0 && nnewaggrvars == 0 && nnewchgvartypes == 0 && nnewchgbds == 0 &&
+      nnewholes == 0 && /* nnewdelconss == 0 && */ nnewaddconss == 0 && nnewupgdconss == 0 && nnewchgcoefs == 0 && nnewchgsides == 0;
+   SCIPdebugMessage("presolving will %swait with reformulation", doreformulations ? "not " : "");
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -7789,37 +7797,24 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
 
       SCIPdebugMessage("process constraint <%s>\n", SCIPconsGetName(conss[c]));
       SCIPdebug( SCIPprintCons(scip, conss[c], NULL) );
-      
-      /** call upgrade methods before aggregated variables are replaced */
-      SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &mynupgdconss, &myupgdconss) );
-      assert(mynupgdconss >= 0);
-      assert((myupgdconss != NULL) == (mynupgdconss > 0));
-      if( mynupgdconss > 0 )
-      {
-         /* someone found an upgrade */
 
-         /* add the upgraded constraints to the problem and forget them */
-         for( i = 0; i < mynupgdconss; ++i )
-         {
-            SCIP_CALL( SCIPaddCons(scip, myupgdconss[i]) );      /*lint !e613*/
-            SCIP_CALL( SCIPreleaseCons(scip, &myupgdconss[i]) ); /*lint !e613*/
-         }
-
-         /* count the first upgrade constraint as constraint upgrade and the remaining ones as added constraints */
-         (*nupgdconss)++;
-         *naddconss += mynupgdconss - 1;
-         *result = SCIP_SUCCESS;
-
-         /* delete upgraded constraint */
-         SCIPdebugMessage("delete constraint <%s> after upgrade\n", SCIPconsGetName(conss[c]));
-         SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) );
-         SCIP_CALL( SCIPdelCons(scip, conss[c]) );
-
-         SCIPfreeBufferArray(scip, &myupgdconss);
-         continue;
-      }
-      
       havechange = FALSE;
+
+      /* call upgrade methods if the constraint has not been presolved yet or there has been a bound tightening or possibly be a change in variable type
+       * we want to do this before (multi)aggregated variables are replaced, since that may change structure, e.g., introduce bilinear terms
+       * @todo have a flag whether variable types have been changed in our constraint
+       */
+      if( !consdata->ispresolved || !consdata->ispropagated || nnewchgvartypes > 0 )
+      {
+         SCIP_Bool upgraded;
+
+         SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgraded, nupgdconss, naddconss) );
+         if( upgraded )
+         {
+            *result = SCIP_SUCCESS;
+            continue;
+         }
+      }
 
       if( !consdata->isremovedfixings )
       {
@@ -7828,7 +7823,7 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
          havechange = TRUE;
       }
       
-      if( !consdata->ispresolved || (!consdata->ispropagated && conshdlrdata->replacebinaryprodlength) )
+      if( doreformulations )
       {
          int naddconss_old;
 
@@ -7847,6 +7842,12 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
             assert(*naddconss >= naddconss_old);
          }
 
+         if( conshdlrdata->disaggregate )
+         {
+            /* try disaggregation, if enabled */
+            SCIP_CALL( presolveDisaggregate(scip, conshdlr, conss[c], naddconss) );
+         }
+
          if( *naddconss > naddconss_old )
          {
             /* if something happened, report success and cleanup constraint */
@@ -7858,15 +7859,9 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
          }
       }
       
-      if( !consdata->ispresolved && conshdlrdata->disaggregate )
-      {
-         SCIP_Bool disaggrsuccess;
-         
-         SCIP_CALL( presolveDisaggregate(scip, conshdlr, conss[c], &disaggrsuccess, naddconss) );
-      }
-      
       if( consdata->nlinvars == 0 && consdata->nquadvars == 0 )
-      { /* all variables fixed or removed, constraint function is 0.0 now */
+      {
+         /* all variables fixed or removed, constraint function is 0.0 now */
          SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) ); /* well, there shouldn't be any variables left anyway */
          if( (!SCIPisInfinity(scip, -consdata->lhs) && SCIPisFeasPositive(scip, consdata->lhs)) ||
              (!SCIPisInfinity(scip,  consdata->rhs) && SCIPisFeasNegative(scip, consdata->rhs)) )
@@ -7875,18 +7870,18 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
             SCIP_CALL( SCIPdelCons(scip, conss[c]) );
             ++*ndelconss;
             *result = SCIP_CUTOFF;
-            break;
+            return SCIP_OKAY;
          }
-         else
-         { /* left and right hand side are consistent */
-            SCIPdebugMessage("constraint <%s> is constant and feasible, deleting\n", SCIPconsGetName(conss[c]));
-            SCIP_CALL( SCIPdelCons(scip, conss[c]) );
-            ++*ndelconss;
-            *result = SCIP_SUCCESS;
-            continue;
-         }
+
+         /* left and right hand side are consistent */
+         SCIPdebugMessage("constraint <%s> is constant and feasible, deleting\n", SCIPconsGetName(conss[c]));
+         SCIP_CALL( SCIPdelCons(scip, conss[c]) );
+         ++*ndelconss;
+         *result = SCIP_SUCCESS;
+         continue;
       }
       
+      /* @todo put into upgrade methods */
       if( consdata->nquadvars == 0 )
       { /* all quadratic variables are fixed or removed, constraint is now linear */
          SCIP_CONS* lincons;
@@ -7914,7 +7909,8 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
       }
 
       if( !consdata->ispropagated )
-      { /* try domain propagation if there were bound changes or constraint has changed (in which case, processVarEvents may have set ispropagated to false) */
+      {
+         /* try domain propagation if there were bound changes or constraint has changed (in which case, processVarEvents may have set ispropagated to false) */
          SCIP_RESULT propresult;
          SCIP_Bool redundant;
          SCIP_CALL( propagateBoundsCons(scip, conshdlr, conss[c], &propresult, nchgbds, &redundant) );
@@ -7940,34 +7936,27 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
             *result = SCIP_SUCCESS;
             continue;
          }
+      }
 
-         if( propresult != SCIP_REDUCEDDOM && !SCIPisInfinity(scip, conshdlrdata->defaultbound) )
+      if( doreformulations && !SCIPisInfinity(scip, conshdlrdata->defaultbound) )
+      {
+         int nboundchanges;
+
+         nboundchanges = 0;
+         SCIP_CALL( boundUnboundedVars(scip, conss[c], conshdlrdata->defaultbound, &nboundchanges) );
+         if( nboundchanges != 0 )
          {
-            if( nrounds > 0 )
-            {
-               int nboundchanges;
-
-               nboundchanges = 0;
-
-               SCIP_CALL( boundUnboundedVars(scip, conss[c], conshdlrdata->defaultbound, &nboundchanges) );
-               if( nboundchanges != 0 )
-               {
-                  *nchgbds += nboundchanges;
-                  *result   = SCIP_SUCCESS;
-               }
-            }
-            else
-            { /* wait for next round (or do in exitpre if no next round) */
-               consdata->ispropagated = FALSE;
-            }
+            *nchgbds += nboundchanges;
+            *result   = SCIP_SUCCESS;
+            havechange = TRUE;
          }
       }
 
+      /* check if we have a single linear continuous variable that we can make implicit integer */
       if( (nnewchgvartypes != 0 || havechange || !consdata->ispresolved)
           && (SCIPisEQ(scip, consdata->lhs, consdata->rhs) && SCIPisIntegral(scip, consdata->lhs)) )
-      { /* check if we have a single linear continuous variable that we can make implicit integer 
-        *  TODO allow for coefficient != +/-1 in front of linear var
-        */
+      {
+         /* @todo allow for coefficient != +/-1 in front of linear var */
          int       ncontvar;
          SCIP_VAR* candidate;
          SCIP_Bool fail;
@@ -8015,11 +8004,29 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
 
             ++(*nchgvartypes);
             *result = SCIP_SUCCESS;
+            havechange = TRUE;
+         }
+      }
+
+      /* call upgrade methods again if constraint has been changed */
+      if( havechange )
+      {
+         SCIP_Bool upgraded;
+
+         SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgraded, nupgdconss, naddconss) );
+         if( upgraded )
+         {
+            *result = SCIP_SUCCESS;
+            continue;
          }
       }
 
       consdata->ispresolved = TRUE;
    }
+
+   /* if we did not try reformulations, ensure that presolving is called again even if there were only a few changes (< abortfac) */
+   if( !doreformulations )
+      *result = SCIP_DELAYED;
 
    return SCIP_OKAY;
 }
