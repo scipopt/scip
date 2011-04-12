@@ -148,16 +148,15 @@ struct SCIP_ConshdlrData
    SCIP_Bool             doscaling;                 /**< should constraints be scaled in the feasibility check ? */
    SCIP_Real             defaultbound;              /**< a bound to set for variables that are unbounded and in a nonconvex term after presolve */
    SCIP_Real             cutmaxrange;               /**< maximal range (maximal coef / minimal coef) of a cut in order to be added to LP */
-   SCIP_Bool             linearizenlpsol;           /**< whether convex quadratic constraints should be linearized in a solution found by the NLP or RENS heuristic */
+   SCIP_Bool             linearizeheursol;          /**< whether linearizations of convex quadratic constraints should be added to cutpool when some heuristics finds a new solution */
    SCIP_Bool             checkcurvature;            /**< whether functions should be checked for convexity/concavity */
    SCIP_Bool             linfeasshift;              /**< whether to make solutions in check feasible if possible */
    SCIP_Bool             disaggregate;              /**< whether to disaggregate quadratic constraints */
    int                   maxproprounds;             /**< limit on number of propagation rounds for a single constraint within one round of SCIP propagation during solve */
    int                   maxproproundspresolve;     /**< limit on number of propagation rounds for a single constraint within one presolving round */
 
-   SCIP_HEUR*            subnlpheur;                /**< a pointer to the subNLP heuristic, if available */
-   SCIP_HEUR*            rensheur;                  /**< a pointer to the RENS heuristic, if available */
-   SCIP_HEUR*            trysolheur;                /**< a pointer to the TRYSOL heuristic, if available */
+   SCIP_HEUR*            subnlpheur;                /**< a pointer to the subnlp heuristic, if available */
+   SCIP_HEUR*            trysolheur;                /**< a pointer to the trysol heuristic, if available */
    SCIP_EVENTHDLR*       eventhdlr;                 /**< our handler for variable bound change events */
    int                   newsoleventfilterpos;      /**< filter position of new solution event handler, if catched */
   
@@ -5474,17 +5473,14 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    sol = SCIPeventGetSol(event);
    assert(sol != NULL);
 
-   /* we are only interested in solution coming from the NLP or RENS heuristic (is that good?) */
+   /* we are only interested in solution coming from some heuristic, but not from the tree */
    if( SCIPsolGetHeur(sol) == NULL )
-      return SCIP_OKAY;
-   /* @todo maybe we should just linearize in every solution that is found, or in every improving solution? */
-   if( SCIPsolGetHeur(sol) != conshdlrdata->subnlpheur && SCIPsolGetHeur(sol) != conshdlrdata->rensheur)
       return SCIP_OKAY;
 
    conss = SCIPconshdlrGetConss(conshdlr);
    assert(conss != NULL);
 
-   SCIPdebugMessage("catched new sol event %x from heur %p; have %d conss\n", SCIPeventGetType(event), (void*)SCIPsolGetHeur(sol), nconss);
+   SCIPdebugMessage("catched new sol event %x from heur <%s>; have %d conss\n", SCIPeventGetType(event), SCIPheurGetName(SCIPsolGetHeur(sol)), nconss);
 
    for( c = 0; c < nconss; ++c )
    {
@@ -6973,7 +6969,6 @@ SCIP_DECL_CONSINIT(consInitQuadratic)
 #endif
    
    conshdlrdata->subnlpheur = SCIPfindHeur(scip, "subnlp");
-   conshdlrdata->rensheur   = SCIPfindHeur(scip, "rens");
    conshdlrdata->trysolheur = SCIPfindHeur(scip, "trysol");
 
    /* catch variable events */
@@ -7013,7 +7008,6 @@ SCIP_DECL_CONSEXIT(consExitQuadratic)
 #endif
    
    conshdlrdata->subnlpheur = NULL;
-   conshdlrdata->rensheur   = NULL;
    conshdlrdata->trysolheur = NULL;
 
    return SCIP_OKAY;
@@ -7216,13 +7210,14 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
    }
 
    conshdlrdata->newsoleventfilterpos = -1;
-   if( nconss != 0 && (conshdlrdata->subnlpheur != NULL || conshdlrdata->rensheur != NULL) && conshdlrdata->linearizenlpsol )
+   if( nconss != 0 && conshdlrdata->linearizeheursol )
    {
       SCIP_EVENTHDLR* eventhdlr;
 
       eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_newsolution");
       assert(eventhdlr != NULL);
 
+      /* @todo should be catch every new solution or only new *best* solutions */
       SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_SOLFOUND, eventhdlr, (SCIP_EVENTDATA*)conshdlr, &conshdlrdata->newsoleventfilterpos) );
    }
 
@@ -7252,10 +7247,6 @@ SCIP_DECL_CONSEXITSOL(consExitsolQuadratic)
    if( conshdlrdata->newsoleventfilterpos >= 0 )
    {
       SCIP_EVENTHDLR* eventhdlr;
-
-      /* failing of the following events mean that new solution events should not have been catched */
-      assert(conshdlrdata->subnlpheur != NULL || conshdlrdata->rensheur != NULL);
-      assert(conshdlrdata->linearizenlpsol);
 
       eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_newsolution");
       assert(eventhdlr != NULL);
@@ -8853,9 +8844,9 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          "maximal range of a cut (maximal coefficient divided by minimal coefficient) in order to be added to LP relaxation",
          &conshdlrdata->cutmaxrange, TRUE, 1e+10, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/linearizenlpsol",
-         "whether convex quadratic constraints should be linearized in a solution found by the NLP or RENS heuristic",
-         &conshdlrdata->linearizenlpsol, TRUE, TRUE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/linearizeheursol",
+         "whether linearizations of convex quadratic constraints should be added to cutpool in a solution found by some heuristic",
+         &conshdlrdata->linearizeheursol, TRUE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/checkcurvature",
          "whether multivariate quadratic functions should be checked for convexity/concavity",
