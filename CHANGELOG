@@ -104,6 +104,8 @@ parameters:
   -1 (no limit) for resolveiterfac and 1000 for resolveitermin
 - added parameter <constraints/indicator/genBilinear> to generate bilinear (quadratic) constraints instead of indicator constraints
 - added parameter <timing/reading> to add reading time to solving time
+- added parameter <constraints/quadratic/binreforminitial> to indicate whether constraints added due to reformulation of products with binary variables in
+  a quadratic constraints should be initial (if the quadratic constraint is initial), default is FALSE
 
 features:
 - flatzinc reader is now capable to read cumulative constraints

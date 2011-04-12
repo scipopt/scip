@@ -142,6 +142,7 @@ struct SCIP_ConshdlrData
 {
    int                   replacebinaryprodlength;   /**< length of linear term which when multiplied with a binary variable is replaced by an auxiliary variable and an equivalent linear formulation */
    int                   empathy4and;               /**< how much empathy we have for using the AND constraint handler: 0 avoid always; 1 use sometimes; 2 use as often as possible */
+   SCIP_Bool             binreforminitial;          /**< whether to make constraints added due to replacing products with binary variables initial */
    SCIP_Real             mincutefficacysepa;        /**< minimal efficacy of a cut in order to add it to relaxation during separation */
    SCIP_Real             mincutefficacyenfo;        /**< minimal target efficacy of a cut in order to add it to relaxation during enforcement (may be ignored) */
    SCIP_Bool             doscaling;                 /**< should constraints be scaled in the feasibility check ? */
@@ -3317,10 +3318,12 @@ SCIP_RETCODE createNlRow(
 static
 SCIP_RETCODE presolveTryAddAND(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS*            cons,               /**< constraint */
    int*                  naddconss           /**< buffer where to add the number of AND constraints added */
    )
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
    char               name[SCIP_MAXSTRLEN];
    SCIP_VAR*          vars[2];
@@ -3331,9 +3334,17 @@ SCIP_RETCODE presolveTryAddAND(
    int*               todelete;
 
    assert(scip != NULL);
+   assert(conshdlr != NULL);
    assert(cons != NULL);
    assert(naddconss != NULL);
    
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* if user does not like AND very much, then return */
+   if( conshdlrdata->empathy4and < 2 )
+      return SCIP_OKAY;
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    
@@ -3363,8 +3374,9 @@ SCIP_RETCODE presolveTryAddAND(
       /* create and constraint auxvar = x and y */
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%sAND%s", SCIPvarGetName(vars[0]), SCIPvarGetName(vars[1]));
       SCIP_CALL( SCIPcreateConsAnd(scip, &andcons, name, auxvar, 2, vars,
-         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
+         SCIPconsIsInitial(cons) && conshdlrdata->binreforminitial,
+         SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
+         SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
          SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
       SCIP_CALL( SCIPaddCons(scip, andcons) );
       SCIPdebugMessage("added AND constraint: ");
@@ -3401,12 +3413,12 @@ SCIP_RETCODE presolveTryAddAND(
 static
 SCIP_RETCODE presolveTryAddLinearReform(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS*            cons,               /**< constraint */
-   int*                  naddconss,          /**< buffer where to add the number of auxiliary constraints added */
-   int                   maxnrvar,           /**< maximal number of variables in linear term to consider when replacing by one auxiliary variable */
-   int                   empathy4and         /**< empathy for using AND constraint handler */
+   int*                  naddconss           /**< buffer where to add the number of auxiliary constraints added */
    )
 {  /*lint --e{666} */
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
    SCIP_VAR**         xvars;
    SCIP_Real*         xcoef;
@@ -3428,11 +3440,17 @@ SCIP_RETCODE presolveTryAddLinearReform(
    SCIP_Real          maxcoef;
    int*               todelete;
    int                ntodelete;
+   int                maxnrvar;
 
    assert(scip != NULL);
+   assert(conshdlr != NULL);
    assert(cons != NULL);
    assert(naddconss != NULL);
    
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   maxnrvar = conshdlrdata->replacebinaryprodlength;
    if( maxnrvar == 0 )
       return SCIP_OKAY;
    
@@ -3487,9 +3505,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
             
             /* skip products with unbounded variables */
             if( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(bvar)) || SCIPisInfinity(scip, SCIPvarGetUbGlobal(bvar)) )
-            {
                continue;
-            }
 
             bilincoef = consdata->bilinterms[bilinidx].coef;
 
@@ -3519,7 +3535,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
          assert(!SCIPisInfinity(scip, -SCIPintervalGetInf(xbnds)));
          assert(!SCIPisInfinity(scip,  SCIPintervalGetSup(xbnds)));
          
-         if( nxvars == 1 && empathy4and >= 1 && SCIPvarIsBinary(xvars[0]) )
+         if( nxvars == 1 && conshdlrdata->empathy4and >= 1 && SCIPvarIsBinary(xvars[0]) )
          {
             /* product of two binary variables, replace by auxvar and AND constraint */
             /* add auxiliary variable z */
@@ -3532,9 +3548,10 @@ SCIP_RETCODE presolveTryAddLinearReform(
             xvars[1] = y;
             (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%sAND%s", SCIPvarGetName(y), SCIPvarGetName(xvars[0]));
             SCIP_CALL( SCIPcreateConsAnd(scip, &auxcons, name, auxvar, 2, xvars,
-               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
-               SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),   SCIPconsIsStickingAtNode(cons)) );
+               SCIPconsIsInitial(cons) && conshdlrdata->binreforminitial,
+               SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
+               SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
+               SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
             SCIP_CALL( SCIPaddCons(scip, auxcons) );
             SCIPdebugMessage("added AND constraint: ");
             SCIPdebug( SCIPprintCons(scip, auxcons, NULL) );
@@ -3580,9 +3597,10 @@ SCIP_RETCODE presolveTryAddLinearReform(
             { /* add 0 <= z - xbnds.inf * y constraint (as varbound constraint) */
                (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s_1", SCIPvarGetName(y));
                SCIP_CALL( SCIPcreateConsVarbound(scip, &auxcons, name, auxvar, y, -SCIPintervalGetInf(xbnds), 0.0, SCIPinfinity(scip),
-                  SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-                  SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
-                  SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),   SCIPconsIsStickingAtNode(cons)) );
+                  SCIPconsIsInitial(cons) && conshdlrdata->binreforminitial,
+                  SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
+                  SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
+                  SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
                SCIP_CALL( SCIPaddCons(scip, auxcons) );
                SCIPdebugMessage("added varbound constraint: ");
                SCIPdebug( SCIPprintCons(scip, auxcons, NULL) );
@@ -3593,11 +3611,13 @@ SCIP_RETCODE presolveTryAddLinearReform(
             { /* add z - xbnds.sup * y <= 0 constraint (as varbound constraint) */
                (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s_2", SCIPvarGetName(y));
                SCIP_CALL( SCIPcreateConsVarbound(scip, &auxcons, name, auxvar, y, -SCIPintervalGetSup(xbnds), -SCIPinfinity(scip), 0.0,
-                  SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-                  SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
-                  SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),   SCIPconsIsStickingAtNode(cons)) );
+                  SCIPconsIsInitial(cons) && conshdlrdata->binreforminitial,
+                  SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
+                  SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
+                  SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
                SCIP_CALL( SCIPaddCons(scip, auxcons) );
                SCIPdebug( SCIPdebugMessage("added varbound constraint: ") );
+               SCIPdebug( SCIPprintCons(scip, auxcons, NULL) );
                SCIP_CALL( SCIPreleaseCons(scip, &auxcons) );
                ++*naddconss;
             }
@@ -3610,8 +3630,9 @@ SCIP_RETCODE presolveTryAddLinearReform(
 
             (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s_3", SCIPvarGetName(y));
             SCIP_CALL( SCIPcreateConsLinear(scip, &auxcons, name, nxvars+2, xvars, xcoef, SCIPintervalGetInf(xbnds), SCIPinfinity(scip),
-               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
+               SCIPconsIsInitial(cons) && conshdlrdata->binreforminitial,
+               SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
+               SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
                SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
             SCIP_CALL( SCIPaddCons(scip, auxcons) );
             SCIPdebugMessage("added linear constraint: ");
@@ -3624,8 +3645,9 @@ SCIP_RETCODE presolveTryAddLinearReform(
 
             (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s_4", SCIPvarGetName(y));
             SCIP_CALL( SCIPcreateConsLinear(scip, &auxcons, name, nxvars+2, xvars, xcoef, -SCIPinfinity(scip), SCIPintervalGetSup(xbnds),
-               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
+               SCIPconsIsInitial(cons) && conshdlrdata->binreforminitial,
+               SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
+               SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
                SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
             SCIP_CALL( SCIPaddCons(scip, auxcons) );
             SCIPdebugMessage("added linear constraint: ");
@@ -7834,17 +7856,14 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
          int naddconss_old;
 
          naddconss_old = *naddconss;
-         if( conshdlrdata->empathy4and == 2 )
-         {
-            /* user really likes AND, so give him */
-            SCIP_CALL( presolveTryAddAND(scip, conss[c], naddconss) );
-            assert(*naddconss >= naddconss_old);
-         }
+
+         SCIP_CALL( presolveTryAddAND(scip, conshdlr, conss[c], naddconss) );
+         assert(*naddconss >= naddconss_old);
 
          if( *naddconss == naddconss_old )
          {
             /* user not so empathic about AND, or we don't have products of two binaries, so try this more general reformulation */
-            SCIP_CALL( presolveTryAddLinearReform(scip, conss[c], naddconss, conshdlrdata->replacebinaryprodlength, conshdlrdata->empathy4and) );
+            SCIP_CALL( presolveTryAddLinearReform(scip, conshdlr, conss[c], naddconss) );
             assert(*naddconss >= naddconss_old);
          }
 
@@ -8810,17 +8829,21 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          "empathy level for using the AND constraint handler: 0 always avoid using AND; 1 use AND sometimes; 2 use AND as often as possible",
          &conshdlrdata->empathy4and, FALSE, 0, 0, 2, NULL, NULL) );
    
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/binreforminitial",
+         "whether to make constraints added due to replacing products with binary variables initial",
+         &conshdlrdata->binreforminitial, TRUE, FALSE, NULL, NULL) );
+
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacysepa",
          "minimal efficacy for a cut to be added to the LP during separation; overwrites separating/efficacy",
-         &conshdlrdata->mincutefficacysepa, FALSE, 0.0001, 0.0, SCIPinfinity(scip), NULL, NULL) );
+         &conshdlrdata->mincutefficacysepa, TRUE, 0.0001, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacyenfo",
          "minimal target efficacy of a cut in order to add it to relaxation during enforcement (may be ignored)",
-         &conshdlrdata->mincutefficacyenfo, FALSE, 2.0*SCIPfeastol(scip), 0.0, SCIPinfinity(scip), NULL, NULL) );
+         &conshdlrdata->mincutefficacyenfo, TRUE, 2.0*SCIPfeastol(scip), 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/scaling", 
          "whether a quadratic constraint should be scaled w.r.t. the current gradient norm when checking for feasibility",
-         &conshdlrdata->doscaling, FALSE, TRUE, NULL, NULL) );
+         &conshdlrdata->doscaling, TRUE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/defaultbound",
          "a default bound to impose on unbounded variables in quadratic terms (-defaultbound is used for missing lower bounds)",
@@ -8828,11 +8851,11 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/cutmaxrange",
          "maximal range of a cut (maximal coefficient divided by minimal coefficient) in order to be added to LP relaxation",
-         &conshdlrdata->cutmaxrange, FALSE, 1e+10, 0.0, SCIPinfinity(scip), NULL, NULL) );
+         &conshdlrdata->cutmaxrange, TRUE, 1e+10, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/linearizenlpsol",
          "whether convex quadratic constraints should be linearized in a solution found by the NLP or RENS heuristic",
-         &conshdlrdata->linearizenlpsol, FALSE, TRUE, NULL, NULL) );
+         &conshdlrdata->linearizenlpsol, TRUE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/checkcurvature",
          "whether multivariate quadratic functions should be checked for convexity/concavity",
@@ -8840,7 +8863,7 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/linfeasshift",
          "whether to try to make solutions in check function feasible by shifting a linear variable (esp. useful if constraint was actually objective function)",
-         &conshdlrdata->linfeasshift, FALSE, TRUE, NULL, NULL) );
+         &conshdlrdata->linfeasshift, TRUE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/disaggregate",
          "whether to disaggregate quadratic parts that decompose into a sum of non-overlapping quadratic terms",
@@ -8848,11 +8871,11 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxproprounds",
          "limit on number of propagation rounds for a single constraint within one round of SCIP propagation during solve",
-         &conshdlrdata->maxproprounds, FALSE, 1, 0, INT_MAX, NULL, NULL) );
+         &conshdlrdata->maxproprounds, TRUE, 1, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxproproundspresolve",
          "limit on number of propagation rounds for a single constraint within one round of SCIP presolve",
-         &conshdlrdata->maxproproundspresolve, FALSE, 10, 0, INT_MAX, NULL, NULL) );
+         &conshdlrdata->maxproproundspresolve, TRUE, 10, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_boundchange", "signals a bound change to a quadratic constraint",
          NULL,
