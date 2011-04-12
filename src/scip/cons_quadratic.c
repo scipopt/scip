@@ -3862,7 +3862,7 @@ SCIP_RETCODE presolveUpgrade(
          for( i = 0; i < nupgdconss_; ++i )
          {
             SCIPdebugPrintf("\t");
-            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[j], NULL) ) );
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[i], NULL) ) );
 
             SCIP_CALL( SCIPaddCons(scip, upgdconss[i]) );      /*lint !e613*/
             SCIP_CALL( SCIPreleaseCons(scip, &upgdconss[i]) ); /*lint !e613*/
@@ -4726,19 +4726,19 @@ void addBilinMcCormick(
          /* also y is fixed, so bilinear term is constant */
          coefx    = 0.0;
          coefy    = 0.0;
-         constant = refpointx * refpointy;
+         constant = bilincoef * refpointx * refpointy;
       }
       else
       {
          coefx    = 0.0;
-         coefy    = refpointx;
+         coefy    = bilincoef * refpointx;
          constant = 0.0;
       }
    }
    else if( SCIPisEQ(scip, lby, uby) )
    {
       /* y is fixed, so bilinear term is linear */
-      coefx    = refpointy;
+      coefx    = bilincoef * refpointy;
       coefy    = 0.0;
       constant = 0.0;
    }
