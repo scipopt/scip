@@ -151,7 +151,8 @@ struct SCIP_ConshdlrData
    SCIP_Bool             checkcurvature;            /**< whether functions should be checked for convexity/concavity */
    SCIP_Bool             linfeasshift;              /**< whether to make solutions in check feasible if possible */
    SCIP_Bool             disaggregate;              /**< whether to disaggregate quadratic constraints */
-   int                   maxproprounds;             /**< limit on number of propagation rounds for a single constraint within one round of SCIP propagation */
+   int                   maxproprounds;             /**< limit on number of propagation rounds for a single constraint within one round of SCIP propagation during solve */
+   int                   maxproproundspresolve;     /**< limit on number of propagation rounds for a single constraint within one presolving round */
 
    SCIP_HEUR*            subnlpheur;                /**< a pointer to the subNLP heuristic, if available */
    SCIP_HEUR*            rensheur;                  /**< a pointer to the RENS heuristic, if available */
@@ -6679,6 +6680,7 @@ SCIP_RETCODE propagateBounds(
    int         c;
    int         roundnr;
    SCIP_Bool   success;
+   int         maxproprounds;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -6691,12 +6693,17 @@ SCIP_RETCODE propagateBounds(
 
    *result = SCIP_DIDNOTFIND;
    roundnr = 0;
+   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
+      maxproprounds = conshdlrdata->maxproproundspresolve;
+   else
+      maxproprounds = conshdlrdata->maxproprounds;
 
    do
    {
       success = FALSE;
+      ++roundnr;
 
-      SCIPdebugMessage("starting domain propagation round %d for %d constraints\n", roundnr, nconss);
+      SCIPdebugMessage("starting domain propagation round %d of %d for %d constraints\n", roundnr, maxproprounds, nconss);
 
       for( c = 0; c < nconss && *result != SCIP_CUTOFF; ++c )
       {
@@ -6716,7 +6723,7 @@ SCIP_RETCODE propagateBounds(
          }
       }
 
-   } while( success && *result != SCIP_CUTOFF && ++roundnr < conshdlrdata->maxproprounds );
+   } while( success && *result != SCIP_CUTOFF && roundnr < maxproprounds );
 
    return SCIP_OKAY;
 }
@@ -7885,29 +7892,44 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
          /* try domain propagation if there were bound changes or constraint has changed (in which case, processVarEvents may have set ispropagated to false) */
          SCIP_RESULT propresult;
          SCIP_Bool redundant;
-         SCIP_CALL( propagateBoundsCons(scip, conshdlr, conss[c], &propresult, nchgbds, &redundant) );
-         switch( propresult )
+         int roundnr;
+
+         roundnr = 0;
+         do
          {
-            case SCIP_REDUCEDDOM:
-               *result = SCIP_SUCCESS;
-               break;
-            case SCIP_CUTOFF:
+            ++roundnr;
+
+            SCIPdebugMessage("starting domain propagation round %d of %d\n", roundnr, conshdlrdata->maxproproundspresolve);
+
+            SCIP_CALL( propagateBoundsCons(scip, conshdlr, conss[c], &propresult, nchgbds, &redundant) );
+
+            if( propresult == SCIP_CUTOFF )
+            {
                SCIPdebugMessage("propagation on constraint <%s> says problem is infeasible in presolve\n", SCIPconsGetName(conss[c]));
                *result = SCIP_CUTOFF;
                return SCIP_OKAY;
-            default:
-               assert(propresult == SCIP_DIDNOTFIND || propresult == SCIP_DIDNOTRUN);
-         }
+            }
 
-         /* delete constraint if found redundant by bound tightening */
+            /* delete constraint if found redundant by bound tightening */
+            if( redundant )
+            {
+               SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) );
+               SCIP_CALL( SCIPdelCons(scip, conss[c]) );
+               ++*ndelconss;
+               *result = SCIP_SUCCESS;
+               break;
+            }
+
+            if( propresult == SCIP_REDUCEDDOM )
+            {
+               *result = SCIP_SUCCESS;
+               havechange = TRUE;
+            }
+
+         } while( !consdata->ispropagated && roundnr < conshdlrdata->maxproproundspresolve );
+
          if( redundant )
-         {
-            SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) );
-            SCIP_CALL( SCIPdelCons(scip, conss[c]) );
-            ++*ndelconss;
-            *result = SCIP_SUCCESS;
             continue;
-         }
       }
 
       if( doreformulations && !SCIPisInfinity(scip, conshdlrdata->defaultbound) )
@@ -8825,8 +8847,12 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          &conshdlrdata->disaggregate, TRUE, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxproprounds",
-         "limit on number of propagation rounds for a single constraint within one round of SCIP propagation",
+         "limit on number of propagation rounds for a single constraint within one round of SCIP propagation during solve",
          &conshdlrdata->maxproprounds, FALSE, 1, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxproproundspresolve",
+         "limit on number of propagation rounds for a single constraint within one round of SCIP presolve",
+         &conshdlrdata->maxproproundspresolve, FALSE, 10, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_boundchange", "signals a bound change to a quadratic constraint",
          NULL,
