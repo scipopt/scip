@@ -7802,7 +7802,6 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
 
       /* call upgrade methods if the constraint has not been presolved yet or there has been a bound tightening or possibly be a change in variable type
        * we want to do this before (multi)aggregated variables are replaced, since that may change structure, e.g., introduce bilinear terms
-       * @todo have a flag whether variable types have been changed in our constraint
        */
       if( !consdata->ispresolved || !consdata->ispropagated || nnewchgvartypes > 0 )
       {
@@ -7877,33 +7876,6 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
          SCIPdebugMessage("constraint <%s> is constant and feasible, deleting\n", SCIPconsGetName(conss[c]));
          SCIP_CALL( SCIPdelCons(scip, conss[c]) );
          ++*ndelconss;
-         *result = SCIP_SUCCESS;
-         continue;
-      }
-      
-      /* @todo put into upgrade methods */
-      if( consdata->nquadvars == 0 )
-      { /* all quadratic variables are fixed or removed, constraint is now linear */
-         SCIP_CONS* lincons;
-         
-         SCIPdebugMessage("upgrade to linear constraint\n");
-         SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, SCIPconsGetName(conss[c]),
-            consdata->nlinvars, consdata->linvars, consdata->lincoefs,
-            consdata->lhs, consdata->rhs,
-            SCIPconsIsInitial(conss[c]), SCIPconsIsSeparated(conss[c]), SCIPconsIsEnforced(conss[c]),
-            SCIPconsIsChecked(conss[c]), SCIPconsIsPropagated(conss[c]),  SCIPconsIsLocal(conss[c]),
-            SCIPconsIsModifiable(conss[c]), SCIPconsIsDynamic(conss[c]), SCIPconsIsRemovable(conss[c]),
-            SCIPconsIsStickingAtNode(conss[c])) );
-
-#ifdef SCIP_DEBUG
-         SCIP_CALL( SCIPprintCons(scip, lincons, NULL) );
-#endif
-         SCIP_CALL( SCIPaddCons(scip, lincons) );
-         SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
-
-         SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) );
-         SCIP_CALL( SCIPdelCons(scip, conss[c]) );
-         ++*nupgdconss;
          *result = SCIP_SUCCESS;
          continue;
       }
