@@ -125,7 +125,9 @@ struct SCIP_ConsData
    int                   linvar_mayincrease; /**< index of a variable in linvars that may be increased without making any other constraint infeasible, or -1 if none */
 
    SCIP_VAR**            sepaquadvars;       /**< variables corresponding to quadvarterms to use in separation, only available in solving stage */
-   int*                  sepabilinvar2pos;   /**< position of second variable in bilinear terms to use in separation, , only available in solving stage */
+   int*                  sepabilinvar2pos;   /**< position of second variable in bilinear terms to use in separation, only available in solving stage */
+   SCIP_Real             lincoefsmin;        /**< maximal absolute value of coefficients in linear part, only available in solving stage */
+   SCIP_Real             lincoefsmax;        /**< minimal absolute value of coefficients in linear part, only available in solving stage */
 };
 
 /** quadratic constraint update method */
@@ -4353,8 +4355,6 @@ SCIP_Real getGradientNorm(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    
-   /* TODO allow also other norms than euclidean, maybe read separating/efficacynorm */
-   
    for( i = 0; i < consdata->nlinvars; ++i )
       norm += consdata->lincoefs[i] * consdata->lincoefs[i];
    
@@ -4377,6 +4377,60 @@ SCIP_Real getGradientNorm(
    }
    
    return sqrt(norm);
+}
+
+/** gets maximal absolute value in gradient of quadratic function */
+static
+SCIP_Real getGradientMaxElement(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SOL*             sol                 /**< solution or NULL if LP solution should be used */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Real      maxelem;
+   SCIP_Real      g;
+   int            i, j, k;
+   SCIP_VAR*      var;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   {
+      maxelem = 0.0;
+      for( i = 0; i < consdata->nlinvars; ++i )
+         if( REALABS(consdata->lincoefs[i]) > maxelem )
+            maxelem = REALABS(consdata->lincoefs[i]);
+   }
+   else
+   {
+      maxelem = consdata->lincoefsmax;
+   }
+
+   for( i = 0; i < consdata->nquadvars; ++i )
+   {
+      var = consdata->quadvarterms[i].var;
+      assert(!SCIPisInfinity(scip,  SCIPgetSolVal(scip, sol, var)));
+      assert(!SCIPisInfinity(scip, -SCIPgetSolVal(scip, sol, var)));
+      g  =     consdata->quadvarterms[i].lincoef;
+      g += 2 * consdata->quadvarterms[i].sqrcoef * SCIPgetSolVal(scip, sol, var);
+      for( j = 0; j < consdata->quadvarterms[i].nadjbilin; ++j )
+      {
+         k = consdata->quadvarterms[i].adjbilin[j];
+         if( consdata->bilinterms[k].var1 == var )
+            g += consdata->bilinterms[k].coef * SCIPgetSolVal(scip, sol, consdata->bilinterms[k].var2);
+         else
+            g += consdata->bilinterms[k].coef * SCIPgetSolVal(scip, sol, consdata->bilinterms[k].var1);
+      }
+      if( REALABS(g) > maxelem )
+         maxelem = REALABS(g);
+   }
+
+   return maxelem;
 }
 
 /** computes activity and violation of a constraint */
@@ -4447,9 +4501,11 @@ SCIP_RETCODE computeViolation(
    
    if( doscaling && (consdata->lhsviol || consdata->rhsviol) )
    {
-      SCIP_Real norm = getGradientNorm(scip, cons, sol);
+      SCIP_Real norm;
+      norm = getGradientMaxElement(scip, cons, sol);
       if( norm > 1.0 )
-      { /* scale only if > 1.0, since LP solvers may scale also only if cut norm is > 1 */
+      {
+         /* scale only if > 1.0, since LP solvers may scale also only if cut norm is > 1 */
          consdata->lhsviol /= norm;
          consdata->rhsviol /= norm;
       }
@@ -4985,51 +5041,35 @@ SCIP_RETCODE generateCut(
    }
 #endif
 
-   /* check if range of cut coefficients is ok
-    * check if reference point violates cut sufficiently */
-   if( success )
+   /* check if reference point violates cut sufficiently */
+   if( success && !SCIPisInfinity(scip, -minviol) )
    {
-      SCIP_Real abscoef;
-
-      mincoef = SCIPinfinity(scip);
-      maxcoef = 0.0;
-      for( j = 0; j < consdata->nlinvars; ++j )
+      if( violside == SCIP_SIDETYPE_LEFT )
       {
-         if( SCIPisZero(scip, consdata->lincoefs[j]) )
-            continue;
-
-         abscoef = REALABS(consdata->lincoefs[j]);
-         if( abscoef < mincoef )
-            mincoef = abscoef;
-         if( abscoef > maxcoef )
-            maxcoef = abscoef;
-      }
-
-      /* check if reference point violates cut sufficiently */
-      if( !SCIPisInfinity(scip, -minviol) )
-      {
-         if( violside == SCIP_SIDETYPE_LEFT )
+         if( consdata->lhs - (reflinpartval + refquadpartval) < minviol )
          {
-            if( consdata->lhs - (reflinpartval + refquadpartval) < minviol )
-            {
-               SCIPdebugMessage("skip cut for constraint <%s> because lhs violation %g too low\n", SCIPconsGetName(cons), consdata->lhs - (reflinpartval + refquadpartval));
-               success = FALSE;
-            }
+            SCIPdebugMessage("skip cut for constraint <%s> because lhs violation %g too low\n", SCIPconsGetName(cons), consdata->lhs - (reflinpartval + refquadpartval));
+            success = FALSE;
          }
-         else
+      }
+      else
+      {
+         if( reflinpartval + refquadpartval - consdata->rhs < minviol )
          {
-            if( reflinpartval + refquadpartval - consdata->rhs < minviol )
-            {
-               SCIPdebugMessage("skip cut for constraint <%s> because rhs violation %g too low\n", SCIPconsGetName(cons), reflinpartval + refquadpartval - consdata->rhs);
-               success = FALSE;
-            }
+            SCIPdebugMessage("skip cut for constraint <%s> because rhs violation %g too low\n", SCIPconsGetName(cons), reflinpartval + refquadpartval - consdata->rhs);
+            success = FALSE;
          }
       }
    }
+
+   /* check if range of cut coefficients is ok */
    if( success )
    {
       SCIP_Real abscoef;
 
+      assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
+      mincoef = consdata->lincoefsmin;
+      maxcoef = consdata->lincoefsmax;
       for( j = 0; j < consdata->nquadvars; ++j )
       {
          if( SCIPisZero(scip, coef[j]) )
@@ -5403,8 +5443,9 @@ SCIP_RETCODE separatePoint(
          /* in difference to SCIPgetCutEfficacy, we scale by norm only if the norm is > 1.0
           * this avoid finding cuts efficiant which are only very slightly violated
           * CPLEX does not seem to scale row coefficients up too
+          * also we now use infinity norm, since that seem to be the usual scaling strategy in LP solvers (equilibrium scaling)
           */
-         norm = SCIProwGetNorm(row);
+         norm = SCIPgetRowMaxCoef(scip, row);
          if( norm > 1.0 )
             efficacy = -feasibility / norm;
          else
@@ -5422,9 +5463,9 @@ SCIP_RETCODE separatePoint(
             SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
             SCIPdebugMessage("add cut with efficacy %g and feasibility %g for constraint <%s> violated by %g\n", efficacy, feasibility,
                SCIPconsGetName(conss[c]), consdata->lhsviol+consdata->rhsviol);
-            if( bestefficacy != NULL && efficacy > *bestefficacy )
-               *bestefficacy = efficacy;
          }
+         if( bestefficacy != NULL && efficacy > *bestefficacy )
+            *bestefficacy = efficacy;
 
          SCIP_CALL( SCIPreleaseRow (scip, &row) );
       }
@@ -6924,7 +6965,7 @@ SCIP_RETCODE proposeFeasibleSolution(
 
       /* still here... so maybe we could not make constraint feasible due to variable bounds
        * check if we are feasible w.r.t. (relative) feasibility tolerance */
-      norm = getGradientNorm(scip, conss[c], newsol);  /*lint !e613*/
+      norm = getGradientMaxElement(scip, conss[c], newsol);  /*lint !e613*/
       if( norm > 1.0 )
          viol /= norm;
       /* if still violated, we give up */
@@ -7184,10 +7225,14 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
-      /* check for a linear variable that can be increase or decreased without harming feasibility */
+      /* check for a linear variable that can be increase or decreased without harming feasibility#
+       * setup lincoefsmin, lincoefsmax */
+      consdata->lincoefsmin = SCIPinfinity(scip);
+      consdata->lincoefsmax = 0.0;
       for( i = 0; i < consdata->nlinvars; ++i )
       {
          /* compute locks of i'th linear variable */
+         assert(consdata->lincoefs[i] != 0.0);
          if( consdata->lincoefs[i] > 0.0 )
          {
             poslock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
@@ -7218,6 +7263,9 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
                  > SCIPvarGetObj(consdata->linvars[i]) / consdata->lincoefs[i]) )
                consdata->linvar_mayincrease = i;
          }
+
+         consdata->lincoefsmin = MIN(consdata->lincoefsmin, REALABS(consdata->lincoefs[i]));
+         consdata->lincoefsmax = MAX(consdata->lincoefsmax, REALABS(consdata->lincoefs[i]));
       }
 #ifdef SCIP_DEBUG
       if( consdata->linvar_mayincrease >= 0 )
@@ -7680,6 +7728,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpQuadratic)
    SCIP_CALL( propagateBounds(scip, conshdlr, conss, nconss, &propresult, &nchgbds) );
    if( propresult == SCIP_CUTOFF || propresult == SCIP_REDUCEDDOM )
    {
+      SCIPdebugMessage("propagation succeeded (%s)\n", propresult == SCIP_CUTOFF ? "cutoff" : "reduceddom");
       *result = propresult;
       return SCIP_OKAY;
    }
@@ -8476,8 +8525,6 @@ SCIP_DECL_CONSCOPY(consCopyQuadratic)
             assert(consdata->bilinterms[k].var2 != NULL);
             if( consdata->bilinterms[k].var1 == consdata->quadvarterms[i].var )
             {
-               if( consdata->bilinterms[k].var2 == consdata->quadvarterms[i].var )
-                  printf("%g %s %s in <%s>\n", consdata->bilinterms[k].coef, SCIPvarGetName(consdata->bilinterms[k].var1), SCIPvarGetName(consdata->bilinterms[k].var2), SCIPconsGetName(sourcecons));
                assert(consdata->bilinterms[k].var2 != consdata->quadvarterms[i].var);
                bilinterms[k].var1 = quadvarterms[i].var;
             }
