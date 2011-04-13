@@ -44,6 +44,7 @@ interface:
   are also added to corresponding C++ wrapper class methods; these scip_presol() in objconshdlr.h and scip_exec() in objpresol.h 
 - added method SCIPsortRealRealIntInt() and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines in misc.c
 - added SCIPconvertCutsToConss() and SCIPcopyCuts() to scip.{c,h} for copying cuts to linear constraints
+- new method SCIPnodeGetParent() to get parent node of a node
 
 performance improvements:
 - performance improvements in prop_vbounds
