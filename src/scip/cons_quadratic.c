@@ -4335,6 +4335,7 @@ SCIP_RETCODE boundUnboundedVars(
    return SCIP_OKAY;
 }
 
+#if 0
 /** gets euclidean norm of gradient of quadratic function */
 static
 SCIP_Real getGradientNorm(
@@ -4378,6 +4379,7 @@ SCIP_Real getGradientNorm(
    
    return sqrt(norm);
 }
+#endif
 
 /** gets maximal absolute value in gradient of quadratic function */
 static
