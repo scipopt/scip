@@ -4893,11 +4893,11 @@ SCIP_RETCODE generateCut(
    SCIP_Real*            ref,                /**< reference solution where to generate the cut */
    SCIP_SIDETYPE         violside,           /**< for which side a cut should be generated */
    SCIP_ROW**            row,                /**< storage for cut */
-   SCIP_Real*            feasibility,        /**< buffer to store feasibility of row in reference solution, or NULL if not of interest */
+   SCIP_Real*            efficacy,           /**< buffer to store efficacy of row in reference solution, or NULL if not of interest */
    SCIP_Real             maxrange,           /**< maximal range allowed */
    SCIP_Bool             checkcurvmultivar,  /**< are we allowed to check the curvature of a multivariate quadratic function, if not done yet */
-   SCIP_Real             minviol,            /**< minimal required violation (unscaled) */
-   SCIP_Real             reflinpartval       /**< value of linear part in reference solution, only needed if minviol > -infinity or feasibility != NULL */
+   SCIP_Real             minefficacy,        /**< minimal required efficacy (violation scaled by maximal absolute coefficient) */
+   SCIP_Real             reflinpartval       /**< value of linear part in reference solution, only needed if minefficacy > -infinity or feasibility != NULL */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -4908,6 +4908,7 @@ SCIP_RETCODE generateCut(
    SCIP_Real      refquadpartval;
    SCIP_Real      mincoef;
    SCIP_Real      maxcoef;
+   SCIP_Real      viol;
 
    SCIP_BILINTERM* bilinterm;
    SCIP_VAR*      var;
@@ -5043,28 +5044,8 @@ SCIP_RETCODE generateCut(
    }
 #endif
 
-   /* check if reference point violates cut sufficiently */
-   if( success && !SCIPisInfinity(scip, -minviol) )
-   {
-      if( violside == SCIP_SIDETYPE_LEFT )
-      {
-         if( consdata->lhs - (reflinpartval + refquadpartval) < minviol )
-         {
-            SCIPdebugMessage("skip cut for constraint <%s> because lhs violation %g too low\n", SCIPconsGetName(cons), consdata->lhs - (reflinpartval + refquadpartval));
-            success = FALSE;
-         }
-      }
-      else
-      {
-         if( reflinpartval + refquadpartval - consdata->rhs < minviol )
-         {
-            SCIPdebugMessage("skip cut for constraint <%s> because rhs violation %g too low\n", SCIPconsGetName(cons), reflinpartval + refquadpartval - consdata->rhs);
-            success = FALSE;
-         }
-      }
-   }
-
-   /* check if range of cut coefficients is ok */
+   /* check if range of cut coefficients is ok
+    * compute cut violation */
    if( success )
    {
       SCIP_Real abscoef;
@@ -5108,6 +5089,23 @@ SCIP_RETCODE generateCut(
          SCIPdebugMessage("skip cut for constraint <%s> because of very large range: %g\n", SCIPconsGetName(cons), maxcoef / mincoef);
          success = FALSE;
       }
+
+      if( violside == SCIP_SIDETYPE_LEFT )
+         viol = consdata->lhs - (reflinpartval + refquadpartval);
+      else
+         viol = reflinpartval + refquadpartval - consdata->rhs;
+   }
+
+   /* check if reference point violates cut sufficiently
+    * in difference to SCIPgetCutEfficacy, we scale by norm only if the norm is > 1.0
+    * this avoid finding cuts efficient which are only very slightly violated
+    * CPLEX does not seem to scale row coefficients up too
+    * also we use infinity norm, since that seem to be the usual scaling strategy in LP solvers (equilibrium scaling)
+    */
+   if( success && !SCIPisInfinity(scip, -minefficacy) && viol / MAX(1.0, maxcoef) < minefficacy )
+   {
+      SCIPdebugMessage("skip cut for constraint <%s> because efficacy %g/%g too low (< %g)\n", SCIPconsGetName(cons), viol, MAX(1.0, maxcoef), minefficacy);
+      success = FALSE;
    }
 
    /* generate row */
@@ -5133,13 +5131,13 @@ SCIP_RETCODE generateCut(
       assert(consdata->sepaquadvars != NULL || consdata->nquadvars == 0);
       SCIP_CALL( SCIPaddVarsToRow(scip, *row, consdata->nquadvars, consdata->sepaquadvars, coef) );
 
-      SCIPdebugMessage("found cut <%s>, constant=%g, min=%f, max=%f range=%g nnz=%d\n",
+      SCIPdebugMessage("found cut <%s>, constant=%g, mincoef=%g, maxcoef=%g, range=%g, nnz=%d, violation=%g, efficacy=%g\n",
           SCIProwGetName(*row), constant,
           mincoef, maxcoef, maxcoef/mincoef,
-          SCIProwGetNNonz(*row));
+          SCIProwGetNNonz(*row), viol, viol / MAX(1.0, maxcoef));
 
-      if( feasibility != NULL )
-         *feasibility = (violside == SCIP_SIDETYPE_LEFT  ? reflinpartval + refquadpartval - consdata->lhs : consdata->rhs - (reflinpartval + refquadpartval));
+      if( efficacy != NULL )
+         *efficacy = viol / MAX(1.0, maxcoef);
    }
 
    SCIPfreeBufferArray(scip, &coef);
@@ -5156,10 +5154,10 @@ SCIP_RETCODE generateCutSol(
    SCIP_SOL*             sol,                /**< solution where to generate cut, or NULL if LP solution should be used */
    SCIP_SIDETYPE         violside,           /**< for which side a cut should be generated */
    SCIP_ROW**            row,                /**< storage for cut */
-   SCIP_Real*            feasibility,        /**< buffer to store feasibility of row in sol, or NULL if not of interest */
+   SCIP_Real*            efficacy,           /**< buffer to store efficacy of row in reference solution, or NULL if not of interest */
    SCIP_Real             maxrange,           /**< maximal range allowed */
    SCIP_Bool             checkcurvmultivar,  /**< are we allowed to check the curvature of a multivariate quadratic function, if not done yet */
-   SCIP_Real             minviol             /**< minimal required violation (unscaled) */
+   SCIP_Real             minefficacy         /**< minimal required efficacy (violation scaled by maximal absolute coefficient) */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -5193,11 +5191,11 @@ SCIP_RETCODE generateCutSol(
 
    /* compute value of linear part, if required */
    reflinpartval = 0.0;
-   if( !SCIPisInfinity(scip, -minviol) || feasibility != NULL )
+   if( !SCIPisInfinity(scip, -minefficacy) || efficacy != NULL )
       for( j = 0; j < consdata->nlinvars; ++j )
          reflinpartval += consdata->lincoefs[j] * SCIPgetSolVal(scip, sol, consdata->linvars[j]);
 
-   SCIP_CALL( generateCut(scip, cons, ref, violside, row, feasibility, maxrange, checkcurvmultivar, minviol, reflinpartval) );
+   SCIP_CALL( generateCut(scip, cons, ref, violside, row, efficacy, maxrange, checkcurvmultivar, minefficacy, reflinpartval) );
 
    SCIPfreeBufferArray(scip, &ref);
 
@@ -5368,9 +5366,8 @@ SCIP_RETCODE separatePoint(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
-   SCIP_Real          feasibility;
-   SCIP_Real          norm;
    SCIP_Real          efficacy;
+   SCIP_Real          actminefficacy;
    SCIP_SIDETYPE      violside;
    int                c;
    SCIP_ROW*          row;
@@ -5403,6 +5400,9 @@ SCIP_RETCODE separatePoint(
 
          violside = SCIPisFeasPositive(scip, consdata->lhsviol) ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT;
 
+         /* actual minimal efficacy */
+         actminefficacy = convexalways && ((violside == SCIP_SIDETYPE_RIGHT && consdata->isconvex ) || (violside == SCIP_SIDETYPE_LEFT && consdata->isconcave)) ? SCIPfeastol(scip) : minefficacy;
+
          /* generate cut */
          if( sol == NULL && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
          {
@@ -5413,6 +5413,8 @@ SCIP_RETCODE separatePoint(
              * similar, lhs > -infinity and <c,r> < 0 is good
              */
             SCIP_Real rayprod;
+            SCIP_Real feasibility;
+            SCIP_Real norm;
 
             rayprod = 0.0; /* for compiler */
             SCIP_CALL( generateCutUnboundedLP(scip, conss[c], violside, &row, &rayprod, conshdlrdata->cutmaxrange, conshdlrdata->checkcurvature) );
@@ -5425,45 +5427,31 @@ SCIP_RETCODE separatePoint(
                   feasibility =  rayprod;
                else
                   feasibility = 0.0;
+
+               norm = SCIPgetRowMaxCoef(scip, row);
+               if( norm > 1.0 )
+                  efficacy = -feasibility / norm;
+               else
+                  efficacy = -feasibility;
             }
          }
          else
          {
             /* @todo if convex, can we easily move the refpoint closer to the feasible region to get a stronger cut? */
-            SCIP_CALL( generateCutSol(scip, conss[c], sol, violside, &row, &feasibility, conshdlrdata->cutmaxrange, conshdlrdata->checkcurvature, 0.0) );
-            /* @todo if generation failed, then probably because of numerical issues;
+            SCIP_CALL( generateCutSol(scip, conss[c], sol, violside, &row, &efficacy, conshdlrdata->cutmaxrange, conshdlrdata->checkcurvature, actminefficacy) );
+            /* @todo if generation failed not because of low efficacy, then probably because of numerical issues;
              * if the constraint is convex and we are desperate to get a cut, then we may try again with a better chosen reference point */
-
-            /* recompute feasibility to avoid numerical difficulties */
-            if( row != NULL )
-               feasibility = SCIPgetRowSolFeasibility(scip, row, sol);
          }
 
          if( row == NULL ) /* failed to generate cut */
             continue;
 
-         /* in difference to SCIPgetCutEfficacy, we scale by norm only if the norm is > 1.0
-          * this avoid finding cuts efficiant which are only very slightly violated
-          * CPLEX does not seem to scale row coefficients up too
-          * also we now use infinity norm, since that seem to be the usual scaling strategy in LP solvers (equilibrium scaling)
-          */
-         norm = SCIPgetRowMaxCoef(scip, row);
-         if( norm > 1.0 )
-            efficacy = -feasibility / norm;
-         else
-            efficacy = -feasibility;
-
-         if( efficacy > minefficacy ||
-            (convexalways &&
-             ((violside == SCIP_SIDETYPE_RIGHT && consdata->isconvex ) || (violside == SCIP_SIDETYPE_LEFT && consdata->isconcave)) &&
-             efficacy > SCIPfeastol(scip)
-            )
-           )
+         if( efficacy > actminefficacy )
          { /* cut cuts off solution */
             SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE /* forcecut */) );
             *result = SCIP_SEPARATED;
             SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
-            SCIPdebugMessage("add cut with efficacy %g and feasibility %g for constraint <%s> violated by %g\n", efficacy, feasibility,
+            SCIPdebugMessage("add cut with efficacy %g and for constraint <%s> violated by %g\n", efficacy,
                SCIPconsGetName(conss[c]), consdata->lhsviol+consdata->rhsviol);
          }
          if( bestefficacy != NULL && efficacy > *bestefficacy )
