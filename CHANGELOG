@@ -26,6 +26,7 @@ fixed bugs:
 - fixed bug w.r.t. setting wall clocks
 - implemented SCIPlpiGetPrimalRay() in SoPlex interface that has become available with SoPlex version 1.5.0.2
 - fixed bug concerning overflow in memsize calculation in set.c
+- fixed segmentation fault in heur_subnlp.c which occured if resolving the NLP with a tighter feasibility tolerance failed with a solver error
 
 performance improvements:
 - shiftandpropagate-heuristic uses optimized data structures and produces no memory overhead anymore
