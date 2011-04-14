@@ -67,6 +67,7 @@ fixed bugs:
 - fixed bug which occured when changing a bound in the solving stage when this variables got upgraded from continuous to a integer type, where the bounds of this variable were still not integral; due to that SCIPchgVarType has changed(see above)
 - fixed bug which occured when the dual farkas multipliers were not available in the lpi because the LP could
   only be solved with the primal simplex due to numerical problems
+- fixed segmentation fault in heur_subnlp.c which occured if resolving the NLP with a tighter feasibility tolerance failed with a solver error
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})
