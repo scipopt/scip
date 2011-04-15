@@ -1765,6 +1765,7 @@ SCIP_RETCODE priceAndCutLoop(
    SCIP_NODE* focusnode;
    SCIP_RESULT result;
    SCIP_EVENT event;
+   SCIP_LPSOLSTAT stalllpsolstat;
    SCIP_Real loclowerbound;
    SCIP_Real glblowerbound;
    SCIP_Real pricerlowerbound;
@@ -1840,6 +1841,7 @@ SCIP_RETCODE priceAndCutLoop(
    *cutoff = FALSE;
    *unbounded = (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
    nsepastallrounds = 0;
+   stalllpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    stalllpobjval = SCIP_REAL_MIN;
    stallnfracs = INT_MAX;
    lp->installing = FALSE;
@@ -2087,25 +2089,51 @@ SCIP_RETCODE priceAndCutLoop(
                   /* remove previous primal ray, store new one if LP is unbounded */
                   SCIP_CALL( updatePrimalRay(blkmem, set, stat, prob, primal, tree, lp, *lperror) );
 
-                  if( !(*lperror) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
+                  if( !(*lperror) )
                   {
-                     SCIP_Real objreldiff;
-                     int nfracs;
+                     SCIP_Bool stalling;
 
-                     SCIP_CALL( SCIPbranchcandGetLPCands(branchcand, set, stat, lp, NULL, NULL, NULL, &nfracs, NULL) );
-                     lpobjval = SCIPlpGetObjval(lp, set);
-                     objreldiff = SCIPrelDiff(lpobjval, stalllpobjval);
-                     SCIPdebugMessage(" -> LP bound moved from %g to %g (reldiff: %g)\n",
-                        stalllpobjval, lpobjval, objreldiff);
-                     if( objreldiff > 1e-04 || nfracs <= (0.9 - 0.1 * nsepastallrounds) * stallnfracs )
+                     /* check if we are stalling
+                      * If we have an LP solution, then we are stalling if
+                      *   we had an LP solution before and
+                      *   the LP value did not improve and
+                      *   the number of fractional variables did not decrease.
+                      * If we do not have an LP solution, then we are stalling if the solution status of the LP did not change.
+                      */
+                     if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
                      {
-                        nsepastallrounds = 0;
+                        SCIP_Real objreldiff;
+                        int nfracs;
+
+                        SCIP_CALL( SCIPbranchcandGetLPCands(branchcand, set, stat, lp, NULL, NULL, NULL, &nfracs, NULL) );
+                        lpobjval = SCIPlpGetObjval(lp, set);
+                        objreldiff = SCIPrelDiff(lpobjval, stalllpobjval);
+                        SCIPdebugMessage(" -> LP bound moved from %g to %g (reldiff: %g)\n",
+                           stalllpobjval, lpobjval, objreldiff);
+
+                        stalling = (stalllpsolstat == SCIP_LPSOLSTAT_OPTIMAL &&
+                            objreldiff <= 1e-04 &&
+                            nfracs >= (0.9 - 0.1 * nsepastallrounds) * stallnfracs);
+
                         stalllpobjval = lpobjval;
                         stallnfracs = nfracs;
+                     }
+                     else
+                     {
+                        stalling = (stalllpsolstat == SCIPlpGetSolstat(lp));
+                     }
+
+                     if( !stalling )
+                     {
+                        nsepastallrounds = 0;
                         lp->installing = FALSE;
                      }
                      else
+                     {
                         nsepastallrounds++;
+                     }
+                     stalllpsolstat = SCIPlpGetSolstat(lp);
+
                      /* tell LP that we are (close to) stalling */
                      if ( nsepastallrounds >= maxnsepastallrounds-2 )
                         lp->installing = TRUE;
