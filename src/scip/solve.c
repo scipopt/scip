@@ -2322,7 +2322,7 @@ SCIP_RETCODE solveNodeLP(
                checklprows, &stored) );
 #endif    
          /* if the solution was accepted, the root node can be cut off by bounding */
-         if( stored && set->nactivepricers == 0 && transprob->ncolvars == SCIPlpGetNCols(lp) )
+         if( stored && SCIPprobAllColsInLP(transprob, set, lp) )
          {
             SCIPdebugMessage("root node initial LP feasible --> cut off root node, stop solution process\n");
             SCIP_CALL( SCIPnodeUpdateLowerboundLP(SCIPtreeGetFocusNode(tree), set, stat, lp) );
