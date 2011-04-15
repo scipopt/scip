@@ -171,6 +171,7 @@ fixed bugs:
 - implemented SCIPlpiGetPrimalRay() in SoPlex interface that has become available with SoPlex version 1.5.0.2
 - fixed bug concerning overflow in memsize calculation in set.c
 - fixed segmentation fault in heur_subnlp.c which occured if resolving the NLP with a tighter feasibility tolerance failed with a solver error
+- fixed wrong assumption that an optimal LP solution in the root is optimal for the problem if there are no active pricers, need to check also whether all variables are in the LP
 
 performance improvements:
 - fasten propagation in cons_knapsack.c due to negated clique partitions
