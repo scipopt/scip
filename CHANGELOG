@@ -92,7 +92,8 @@ parameters:
 - added parameter <constraints/indicator/maxConditionAltLP> to enable a quality check for the solution of the alternative LP 
 - moved parameters for pseudoboolean constraints from opb-reader to pseudoboolean constraint handler
 - new parameter for pseudoboolean constraints <constraints/pseudoboolean/decompose>, to transform pseudoboolean constraints into linear- and and-constraints
-- added parameter <constraints/quadratic/maxproprounds> to limit the number of propagations rounds for quadratic constraints within one propagation round of SCIP
+- added parameters <constraints/quadratic/maxproprounds> and <constraints/quadratic/maxproproundspresolve> to limit the number of propagations rounds for
+  quadratic constraints within one propagation round of SCIP solve or during SCIP presolve
 - added parameter <branching/lpgainnormalize> to set the strategy how the LP gain for a continuous variable is normalized when updating the variables pseudocosts:
   default is to divide LP gain by reduction of variable's domain in sibling node
 - added parameter <branching/delaypscostupdate> to delay the update of pseudo costs for continuous variables behind the separation round: default is TRUE
@@ -104,6 +105,9 @@ parameters:
   -1 (no limit) for resolveiterfac and 1000 for resolveitermin
 - added parameter <constraints/indicator/genBilinear> to generate bilinear (quadratic) constraints instead of indicator constraints
 - added parameter <timing/reading> to add reading time to solving time
+- added parameter <constraints/quadratic/binreforminitial> to indicate whether constraints added due to reformulation of products with binary variables in
+  a quadratic constraints should be initial (if the quadratic constraint is initial), default is TRUE
+- renamed parameter <constraints/quadratic/linearizenlpsol> to <constraints/quadratic/linearizeheursol> and do linearizations in every solution found by some heuristic
 
 features:
 - flatzinc reader is now capable to read cumulative constraints
@@ -166,6 +170,7 @@ fixed bugs:
 - fixed bug w.r.t. setting wall clocks
 - implemented SCIPlpiGetPrimalRay() in SoPlex interface that has become available with SoPlex version 1.5.0.2
 - fixed bug concerning overflow in memsize calculation in set.c
+- fixed segmentation fault in heur_subnlp.c which occured if resolving the NLP with a tighter feasibility tolerance failed with a solver error
 
 performance improvements:
 - fasten propagation in cons_knapsack.c due to negated clique partitions
