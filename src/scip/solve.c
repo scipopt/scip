@@ -2189,10 +2189,10 @@ SCIP_RETCODE priceAndCutLoop(
       }
    }
    /* check for unboundedness */
-   if( !(*lperror) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+   if( !(*lperror) )
    {
-      /* assert(root); */ /* this can only happen in the root node; no, of course it can also happens in the tree if a branching did not help to resolve unboundedness */
-      *unbounded = TRUE;
+      *unbounded = (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+      /* assert(!(*unbounded) || root); */ /* unboundedness can only happen in the root node; no, of course it can also happens in the tree if a branching did not help to resolve unboundedness */
    }
 
    lp->installing = FALSE;
