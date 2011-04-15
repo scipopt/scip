@@ -16,7 +16,7 @@
 =opt= feedtray2      0.0
 =opt= fuel        8566.1190
 =opt= gbd            2.2000
-=best= lop97ic    4045.24221
+=best= lop97ic    4041.831512
 =opt= lop97icx    4099.0600
 =opt= meanvarx      14.3692321148754
 =opt= meanvarxsc    14.3692
@@ -283,8 +283,11 @@
 =best= shortfall_100_0        -1.11411232
 =best= shortfall_100_1        -1.10635001
 =best= shortfall_200_0        -1.12961506
-=best= shortfall_200_1        -1.12929201
+=best= shortfall_200_1        -1.13543713
 
+=opt= 10bar1A             1673.9995
+=opt= 10bar1B             1623.08782
+=opt= 10bar1C             1623.08782
 =opt= 10bar1D             1623.08782
 =opt= 10bar2              1954.23376
 =opt= 10bar3              5156.64366
@@ -293,6 +296,14 @@
 =opt= 72bar               75.9048516
 =best= 90bar              105.478654
 
+=opt= SLay04H             9859.65971
+=opt= SLay04M             9859.65971
+=opt= SLay05H             22664.6787
+=opt= SLay05M             22664.6787
+=opt= SLay06H             32757.0202
+=opt= SLay06M             32757.0202
+=opt= SLay07H             64748.8253
+=opt= SLay07M             64748.8253
 =opt= SLay08H             84960.2124
 =opt= SLay08M             84960.2124
 =opt= SLay09H             107805.753
@@ -310,3 +321,5 @@
 =opt= uflquad-25-40        828.164519
 =opt= uflquad-30-100       361.916808
 =opt= uflquad-40-80        347.488613
+
+=opt= bip_cross_min.10.10.10.1 1

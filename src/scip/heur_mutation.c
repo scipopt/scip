@@ -49,6 +49,9 @@
 #define DEFAULT_USELPROWS     FALSE          /* should subproblem be created out of the rows in the LP rows, 
                                              * otherwise, the copy constructors of the constraints handlers are used 
 					     */
+#define DEFAULT_COPYCUTS      TRUE          /* if DEFAULT_USELPROWS is FALSE, then should all active cuts from the
+                                             * cutpool of the original scip be copied to constraints of the subscip
+					     */
 
 
 
@@ -59,16 +62,19 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   int                   nodesofs;          /**< number of nodes added to the contingent of the total nodes          */
-   int                   maxnodes;          /**< maximum number of nodes to regard in the subproblem                 */
-   int                   minnodes;          /**< minimum number of nodes to regard in the subproblem                 */
-   SCIP_Real             minfixingrate;     /**< minimum percentage of integer variables that have to be fixed       */
-   int                   nwaitingnodes;     /**< number of nodes without incumbent change that heuristic should wait */
-   SCIP_Real             minimprove;        /**< factor by which Mutation should at least improve the incumbent      */
-   SCIP_Longint          usednodes;         /**< nodes already used by Mutation in earlier calls                     */
-   SCIP_Real             nodesquot;         /**< subproblem nodes in relation to nodes of the original problem       */
-   unsigned int          randseed;          /**< seed value for random number generator                              */
-   SCIP_Bool             uselprows;         /**< should subproblem be created out of the rows in the LP rows?        */
+   int                   nodesofs;           /**< number of nodes added to the contingent of the total nodes          */
+   int                   maxnodes;           /**< maximum number of nodes to regard in the subproblem                 */
+   int                   minnodes;           /**< minimum number of nodes to regard in the subproblem                 */
+   SCIP_Real             minfixingrate;      /**< minimum percentage of integer variables that have to be fixed       */
+   int                   nwaitingnodes;      /**< number of nodes without incumbent change that heuristic should wait */
+   SCIP_Real             minimprove;         /**< factor by which Mutation should at least improve the incumbent      */
+   SCIP_Longint          usednodes;          /**< nodes already used by Mutation in earlier calls                     */
+   SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem       */
+   unsigned int          randseed;           /**< seed value for random number generator                              */
+   SCIP_Bool             uselprows;          /**< should subproblem be created out of the rows in the LP rows?        */
+   SCIP_Bool             copycuts;           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
+                                              *   to constraints in subproblem?
+                                              */
 };
 
 
@@ -442,6 +448,13 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
       valid = FALSE;
 
       SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "rens", TRUE, FALSE, &valid) );
+
+      if( heurdata->copycuts )
+      {
+         /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, TRUE) );
+      }
+
       SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
    }
    
@@ -610,6 +623,10 @@ SCIP_RETCODE SCIPincludeHeurMutation(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/uselprows",
          "should subproblem be created out of the rows in the LP rows?",
          &heurdata->uselprows, TRUE, DEFAULT_USELPROWS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/copycuts",
+         "if uselprows == FALSE, should all active cuts from cutpool be copied to constraints in subproblem?",
+         &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
    
    return SCIP_OKAY;
 }

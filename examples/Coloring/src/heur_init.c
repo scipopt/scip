@@ -128,10 +128,10 @@ SCIP_Bool hasUncoloredNode(
 
    assert(colors != NULL);
 
-   for ( i = 0; i < nnodes; i++)
+   for( i = 0; i < nnodes; i++)
    {
       /* node not yet colored */
-      if (colors[i] == -1)
+      if(colors[i] == -1)
       {
 	return TRUE;
       }
@@ -175,7 +175,7 @@ SCIP_RETCODE greedyStableSet(
    /* set values to the nodes which are used for sorting them */
    /* value = degree of the node + number of nodes if the node is yet uncolored, 
       therefore the yet colored nodes have lower values than the not yet colored nodes */
-   for ( i = 0; i < nnodes; i++ )
+   for( i = 0; i < nnodes; i++ )
    {
       sortednodes[i] = i;
       values[i] = degrees[i] + ( colors[i] == -1 ? nnodes : 0);
@@ -187,29 +187,29 @@ SCIP_RETCODE greedyStableSet(
    /* insert first node */
    stablesetnodes[0] = sortednodes[0];
    nstablesetnodes = 1;
-   for ( i = 1; i < nnodes; i++)
+   for( i = 1; i < nnodes; i++)
    {
-      if ( colors[sortednodes[i]] != -1 )
+      if( colors[sortednodes[i]] != -1 )
       {
          break;
       }
       indNode = TRUE;
-      for ( j = 0; j < nstablesetnodes; j++ )
+      for( j = 0; j < nstablesetnodes; j++ )
       {
-         if ( tcliqueIsEdge(graph, sortednodes[i], stablesetnodes[j]) )
+         if( tcliqueIsEdge(graph, sortednodes[i], stablesetnodes[j]) )
          {
             indNode = FALSE;
             break;
          }
       }
-      if ( indNode == TRUE )
+      if( indNode == TRUE )
       {
          stablesetnodes[nstablesetnodes] = sortednodes[i];
          nstablesetnodes++;
       }
 
    }
-   for ( i = 0; i < nstablesetnodes; i++ )
+   for( i = 0; i < nstablesetnodes; i++ )
    {
       assert(colors[stablesetnodes[i]] == -1);
       colors[stablesetnodes[i]] = nextcolor;
@@ -242,14 +242,14 @@ SCIP_RETCODE greedyInitialColoring(
    nnodes = COLORprobGetNNodes(scip);
    assert(nnodes > 0);
 
-   for ( i = 0; i < nnodes; i++ )
+   for( i = 0; i < nnodes; i++ )
    {
       colors[i] = -1;
    }
 
    color = 0;
    /* create stable sets until all Nodes are covered */
-   while ( hasUncoloredNode(nnodes, colors) )
+   while( hasUncoloredNode(nnodes, colors) )
    {
       greedyStableSet(scip, graph, colors, color);
       color++;
@@ -282,11 +282,11 @@ int getNViolatedEdges(
    cnt = 0;
    
    /* count the number of violated edges, only consider edges (i,j) with i > j since the graph is undirected bu */
-   for ( i = 0; i < nnodes; i++ )
+   for( i = 0; i < nnodes; i++ )
    {
-      for ( j = tcliqueGetFirstAdjedge(graph,i);  j <= tcliqueGetLastAdjedge(graph,i) && *j < i; j++ )
+      for( j = tcliqueGetFirstAdjedge(graph,i);  j <= tcliqueGetLastAdjedge(graph,i) && *j < i; j++ )
       {
-         if ( colors[i] == colors[*j] )
+         if( colors[i] == colors[*j] )
             cnt++;
       }
    }
@@ -335,14 +335,16 @@ SCIP_Bool runTabuCol(
    assert(graph != NULL);
    assert(heurdata != NULL);
 
-   if ( heurdata->output >= 1 )
+   if( heurdata->output >= 1 )
       printf("Running tabu coloring with maxcolors = %d...\n", maxcolors);
 
    // get size
    nnodes = tcliqueGetNNodes(graph);
 
+   srand( seed );
+
    // init random coloring
-   for ( i = 0; i < nnodes; i++ )
+   for( i = 0; i < nnodes; i++ )
    {
       int rnd = rand();
       colors[i] = rnd % maxcolors;
@@ -353,11 +355,11 @@ SCIP_Bool runTabuCol(
    SCIP_CALL( SCIPallocMemoryArray(scip, &tabu, nnodes) );   // stores iteration at which tabu node/color pair will expire to be tabu
    SCIP_CALL( SCIPallocMemoryArray(scip, &adj, nnodes) );    // stores number of adjacent nodes using specified color
    
-   for ( i = 0; i < nnodes; i++ )
+   for( i = 0; i < nnodes; i++ )
    {
       SCIP_CALL( SCIPallocMemoryArray(scip, &(tabu[i]), maxcolors) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &(adj[i]), maxcolors) );
-      for ( j = 0; j < maxcolors; j++ )
+      for( j = 0; j < maxcolors; j++ )
       {
 	 tabu[i][j] = 0;
          adj[i][j] = 0;
@@ -368,18 +370,18 @@ SCIP_Bool runTabuCol(
    obj = 0;
 
    // init adj-matrix and objective
-   for ( node1 = 0; node1 < nnodes; node1++ )
+   for( node1 = 0; node1 < nnodes; node1++ )
    {
       color1 = colors[node1];
       firstedge = tcliqueGetFirstAdjedge(graph, node1);
       lastedge = tcliqueGetLastAdjedge(graph, node1);
-      while (  firstedge <= lastedge )
+      while(  firstedge <= lastedge )
       {
          node2 = *firstedge;
 	 color2 = colors[node2];
 	 assert( 0 <= color2 && color2 < maxcolors );
 	 (adj[node1][color2])++;
-	 if ( color1 == color2 )
+	 if( color1 == color2 )
 	    obj++;
          firstedge++;
       }
@@ -391,39 +393,39 @@ SCIP_Bool runTabuCol(
    bestobj = obj;
    restrictive = FALSE;
    iter = 0;
-   if ( obj > 0 )
+   if( obj > 0 )
    {
       // perform predefined number of iterations
-      for ( iter = 1; iter <= heurdata->maxiter; iter++ )
+      for( iter = 1; iter <= heurdata->maxiter; iter++ )
       {
 	 // find best 1-move among those with critical vertex
 	 minnode = -1;
 	 mincolor = -1;
 	 minvalue = nnodes * nnodes;
 	 ncritical = 0;
-	 for ( node1 = 0; node1 < nnodes; node1++ )
+	 for( node1 = 0; node1 < nnodes; node1++ )
 	 {
 	    aspiration = FALSE;
 	    color1 = colors[node1];
 	    assert( 0 <= color1 && color1 < maxcolors );
 
 	    // if node is critical (has incident violated edges)
-	    if ( adj[node1][color1] > 0 )
+	    if( adj[node1][color1] > 0 )
 	    {
 	       ncritical++;
 	       // check all colors
-	       for ( j = 0; j < maxcolors; j++ )
+	       for( j = 0; j < maxcolors; j++ )
 	       {
 		  // if color is new
-		  if ( j != color1 )
+		  if( j != color1 )
 		  {
 		     // change in the number of violated edges:
 		     d = adj[node1][j] - adj[node1][color1];
 
 		     // 'aspiration criterion': stop if we get feasible solution
-		     if ( obj + d == 0 )
+		     if( obj + d == 0 )
 		     {
-                        if ( heurdata->output >= 1 ) 
+                        if( heurdata->output >= 1 ) 
                            printf("   Feasible solution found after %d iterations!\n\n", iter);
 			minnode = node1;
 			mincolor = j;
@@ -433,7 +435,7 @@ SCIP_Bool runTabuCol(
 		     }
 
 		     // if not tabu and better value
-		     if ( tabu[node1][j] < iter &&  d < minvalue )
+		     if( tabu[node1][j] < iter &&  d < minvalue )
 		     {
 			minnode = node1;
 			mincolor = j;
@@ -442,12 +444,12 @@ SCIP_Bool runTabuCol(
 		  }
 	       }
 	    }
-	    if ( aspiration )
+	    if( aspiration )
 	       break;
 	 }
 
 	 // if no candidate could be found - tabu list is too restrictive: just skip current iteration
-	 if ( minnode == -1 )
+	 if( minnode == -1 )
 	 {
 	    restrictive = TRUE;
 	    continue;
@@ -461,17 +463,17 @@ SCIP_Bool runTabuCol(
 	 colors[minnode] = mincolor;
 	 obj += minvalue;
 	 assert( obj == getNViolatedEdges(graph, colors) );
-	 if ( obj < bestobj )
+	 if( obj < bestobj )
 	    bestobj = obj;
 
-	 if ( heurdata->output == 2 && (iter) % (heurdata->dispfreq) == 0 )
+	 if( heurdata->output == 2 && (iter) % (heurdata->dispfreq) == 0 )
 	 {
             printf("Iter: %d  obj: %d  critical: %d   node: %d  color: %d  delta: %d\n", 
                                         iter, obj, ncritical, minnode, mincolor, minvalue);
 	 }
 
 	 // terminate if valid coloring has been found
-	 if ( obj == 0 )
+	 if( obj == 0 )
 	    break;
 
 	 // update tabu list
@@ -479,28 +481,28 @@ SCIP_Bool runTabuCol(
 	 tabu[minnode][oldcolor] = iter + (heurdata->tabubase) + (int) (((double) ncritical) * (heurdata->tabugamma));
 
 	 // update adj matrix
-	 for ( firstedge = tcliqueGetFirstAdjedge(graph, minnode); firstedge <= tcliqueGetLastAdjedge(graph, minnode); firstedge++ )
+	 for( firstedge = tcliqueGetFirstAdjedge(graph, minnode); firstedge <= tcliqueGetLastAdjedge(graph, minnode); firstedge++ )
 	 {
 	    (adj[*firstedge][mincolor])++;
 	    (adj[*firstedge][oldcolor])--;
 	 }
       }
    }
-   if ( heurdata->output == 2 )
+   if( heurdata->output == 2 )
    {
       printf("Best objective: %d\n ", bestobj);
-      if ( restrictive )
+      if( restrictive )
       {
          printf("\nTabu list is probably too restrictive.\n");
       }
       printf("\n");
    }
-   if ( heurdata->output >= 1 && bestobj != 0 )
+   if( heurdata->output >= 1 && bestobj != 0 )
    {
       printf("   No feasible solution found after %d iterations!\n\n", iter-1);
    }
 
-   for ( i = 0; i < nnodes; i++ )
+   for( i = 0; i < nnodes; i++ )
    {
       SCIPfreeMemoryArray(scip, &(tabu[i]));
       SCIPfreeMemoryArray(scip, &(adj[i]));
@@ -509,7 +511,7 @@ SCIP_Bool runTabuCol(
    SCIPfreeMemoryArray(scip, &adj);
 
    // check whether valid coloring has been found
-   if ( obj == 0 )
+   if( obj == 0 )
       return TRUE;
    return FALSE;
 }
@@ -549,7 +551,6 @@ SCIP_DECL_HEURFREE(heurFreeInit)
 static
 SCIP_DECL_HEUREXEC(heurExecInit)
 {  
-
    int i;
    int j;
    int k;
@@ -575,7 +576,7 @@ SCIP_DECL_HEUREXEC(heurExecInit)
    nnodes = COLORprobGetNNodes(scip);
    graph = COLORprobGetGraph(scip);
    /* create stable sets if no solution was read */
-   if ( COLORprobGetNStableSets(scip) == 0 )
+   if( COLORprobGetNStableSets(scip) == 0 )
    {
       /* get memory for arrays */
       SCIP_CALL( SCIPallocMemoryArray(scip, &colors, nnodes) );
@@ -588,17 +589,17 @@ SCIP_DECL_HEUREXEC(heurExecInit)
       /* compute an initial coloring with a greedy method */
       SCIP_CALL( greedyInitialColoring(scip, graph, bestcolors, &ncolors) );
 
-      if ( heurdata->usetabu )
+      if( heurdata->usetabu )
       {
          /* try to find better colorings with tabu search method */
          success = TRUE;
-         while ( success )
+         while( success )
          {
             ncolors--;
             success = runTabuCol(graph, 0, ncolors, colors, heurdata);
-            if ( success )
+            if( success )
             {
-               for ( i = 0; i < nnodes; i++ )
+               for( i = 0; i < nnodes; i++ )
                {
                   bestcolors[i] = colors[i];
                }
@@ -608,31 +609,31 @@ SCIP_DECL_HEUREXEC(heurExecInit)
       }
 
       /* create vars for the computed coloring */
-      for ( i = 0; i <= ncolors; i++ )
+      for( i = 0; i <= ncolors; i++ )
       {
          /* save nodes with color i in the array colors and the number of such nodes in nstablesetnodes */
          nstablesetnodes = 0;
-         for ( j = 0; j < nnodes; j++ )
+         for( j = 0; j < nnodes; j++ )
          {
-            if ( bestcolors[j] == i )
+            if( bestcolors[j] == i )
             {
                colors[nstablesetnodes] = j;
                nstablesetnodes++;
             }
          }
          /* try to add more nodes to the stable set without violationg the stability */
-         for ( j = 0; j < nnodes; j++ )
+         for( j = 0; j < nnodes; j++ )
          {
             indnode = TRUE;
-            for ( k = 0; k < nstablesetnodes; k++ )
+            for( k = 0; k < nstablesetnodes; k++ )
             {
-               if ( j == colors[k] || tcliqueIsEdge(graph, j, colors[k]) )
+               if( j == colors[k] || tcliqueIsEdge(graph, j, colors[k]) )
                {
                   indnode = FALSE;
                   break;
                }
             }
-            if ( indnode == TRUE )
+            if( indnode == TRUE )
             {
                colors[nstablesetnodes] = j;
                nstablesetnodes++;
@@ -650,7 +651,7 @@ SCIP_DECL_HEUREXEC(heurExecInit)
          SCIP_CALL( SCIPaddVar(scip, var) );
          SCIP_CALL( SCIPchgVarUbLazy(scip, var, 1.0) );
          
-         for ( j = 0; j < nstablesetnodes; j++ )
+         for( j = 0; j < nstablesetnodes; j++ )
          {
             /* add variable to node constraints of nodes in the set */
             SCIP_CALL( SCIPaddCoefSetppc(scip, constraints[colors[j]], var) );
@@ -667,7 +668,7 @@ SCIP_DECL_HEUREXEC(heurExecInit)
       that means all sets of the solution given by the solution file or created by the greedy and tabu search */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
    assert(sol != NULL);
-   for ( i = 0; i < COLORprobGetNStableSets(scip); i++ )
+   for( i = 0; i < COLORprobGetNStableSets(scip); i++ )
    {
       SCIP_CALL( SCIPsetSolVal(scip, sol, COLORprobGetVarForStableSet(scip, i), 1.0) );
    }

@@ -5621,6 +5621,7 @@ SCIP_Real SCIPtreeGetAvgLowerbound(
 #undef SCIPnodeGetLowerbound
 #undef SCIPnodeGetEstimate
 #undef SCIPnodeGetDomchg
+#undef SCIPnodeGetParent
 #undef SCIPnodeIsActive
 #undef SCIPnodeIsPropagatedAgain
 #undef SCIPtreeGetNLeaves
@@ -5705,6 +5706,15 @@ SCIP_DOMCHG* SCIPnodeGetDomchg(
    return node->domchg;
 }
 
+/** gets the parent node of a node in the branch-and-bound tree, if any */
+SCIP_NODE* SCIPnodeGetParent(
+   SCIP_NODE*            node                /**< node */
+   )
+{
+   assert(node != NULL);
+
+   return node->parent;
+}
 
 /** returns the set of variable branchings that were performed in the parent node to create this node */
 void SCIPnodeGetParentBranchings(

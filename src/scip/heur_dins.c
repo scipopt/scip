@@ -49,6 +49,9 @@
 #define DEFAULT_USELPROWS     FALSE      /* should subproblem be created out of the rows in the LP rows, 
                                          * otherwise, the copy constructors of the constraints handlers are used 
 					 */
+#define DEFAULT_COPYCUTS      TRUE      /* if DEFAULT_USELPROWS is FALSE, then should all active cuts from the cutpool
+                                         * of the original scip be copied to constraints of the subscip
+					 */
 
 
 /*
@@ -58,19 +61,22 @@
 /** DINS primal heuristic data */
 struct SCIP_HeurData
 {
-   SCIP_Longint          nodesofs;            /**< number of nodes added to the contingent of the total nodes          */
-   SCIP_Longint          maxnodes;            /**< maximum number of nodes to regard in the subproblem                 */
-   SCIP_Longint          minnodes;            /**< minimum number of nodes to regard in the subproblem                 */
-   SCIP_Longint          nwaitingnodes;       /**< number of nodes without incumbent change that heuristic should wait */
-   SCIP_Real             minimprove;          /**< factor by which DINS should at least improve the incumbent          */
-   SCIP_Longint          usednodes;           /**< nodes already used by DINS in earlier calls                         */
-   SCIP_Real             nodesquot;           /**< subproblem nodes in relation to nodes of the original problem       */
-   int                   neighborhoodsize;    /**< radius of the incumbent's neighborhood to be searched               */
-   SCIP_Bool*            delta;               /**< stores whether a variable kept its value from rootLP all the time   */
-   int                   deltalength;         /**< if there are no binary variables, we need no flag array             */
-   SCIP_Longint          lastnsolsfound;      /**< solutions found until the last call of DINS                         */
-   int                   solnum;              /**< number of pool-solutions to be checked for flag array update        */
-   SCIP_Bool             uselprows;           /**< should subproblem be created out of the rows in the LP rows?        */
+   SCIP_Longint          nodesofs;           /**< number of nodes added to the contingent of the total nodes          */
+   SCIP_Longint          maxnodes;           /**< maximum number of nodes to regard in the subproblem                 */
+   SCIP_Longint          minnodes;           /**< minimum number of nodes to regard in the subproblem                 */
+   SCIP_Longint          nwaitingnodes;      /**< number of nodes without incumbent change that heuristic should wait */
+   SCIP_Real             minimprove;         /**< factor by which DINS should at least improve the incumbent          */
+   SCIP_Longint          usednodes;          /**< nodes already used by DINS in earlier calls                         */
+   SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem       */
+   int                   neighborhoodsize;   /**< radius of the incumbent's neighborhood to be searched               */
+   SCIP_Bool*            delta;              /**< stores whether a variable kept its value from rootLP all the time   */
+   int                   deltalength;        /**< if there are no binary variables, we need no flag array             */
+   SCIP_Longint          lastnsolsfound;     /**< solutions found until the last call of DINS                         */
+   int                   solnum;             /**< number of pool-solutions to be checked for flag array update        */
+   SCIP_Bool             uselprows;          /**< should subproblem be created out of the rows in the LP rows?        */
+   SCIP_Bool             copycuts;           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
+                                              *   to constraints in subproblem?
+                                              */
 };
 
 
@@ -582,6 +588,13 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    else
    {
       SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "dins", TRUE, FALSE, &success) );
+
+      if( heurdata->copycuts )
+      {
+         /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, TRUE) );
+      }
+
       SCIPdebugMessage("Copying the SCIP instance was %ssuccessful.\n", success ? "" : "not ");
    }
    
@@ -847,6 +860,10 @@ SCIP_RETCODE SCIPincludeHeurDins(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/uselprows",
          "should subproblem be created out of the rows in the LP rows?",
          &heurdata->uselprows, TRUE, DEFAULT_USELPROWS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/copycuts",
+         "if uselprows == FALSE, should all active cuts from cutpool be copied to constraints in subproblem?",
+         &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

@@ -49,6 +49,9 @@
 #define DEFAULT_NWAITINGNODES 200       /* number of nodes without incumbent change that heuristic should wait      */
 #define DEFAULT_USELPROWS     FALSE      /* should subproblem be created out of the rows in the LP rows, 
                                          * otherwise, the copy constructors of the constraints handlers are used    */
+#define DEFAULT_COPYCUTS      TRUE      /* if DEFAULT_USELPROWS is FALSE, then should all active cuts from the cutpool
+                                         * of the original scip be copied to constraints of the subscip
+					 */
 
 
 #define EXECUTE               0
@@ -78,6 +81,9 @@ struct SCIP_HeurData
    int                   curminnodes;        /**< current minimal number of nodes required to start the subproblem     */
    int                   emptyneighborhoodsize;/**< size of neighborhood that was proven to be empty                   */
    SCIP_Bool             uselprows;          /**< should subproblem be created out of the rows in the LP rows?         */
+   SCIP_Bool             copycuts;           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
+                                              *   to constraints in subproblem?
+                                              */
 };
 
 
@@ -471,6 +477,12 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    else
    {
       SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "localbranchsub", TRUE, FALSE, &success) );
+
+      if( heurdata->copycuts )
+      {
+         /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, TRUE) );
+      }
    }
    SCIPdebugMessage("Copying the plugins was %ssuccessful.\n", success ? "" : "not ");
 
@@ -678,37 +690,41 @@ SCIP_RETCODE SCIPincludeHeurLocalbranching(
          heurdata) );
 
    /* add localbranching primal heuristic parameters */
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/localbranching/nodesofs",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/nodesofs",
          "number of nodes added to the contingent of the total nodes",
          &heurdata->nodesofs, FALSE, DEFAULT_NODESOFS, 0, INT_MAX, NULL, NULL) );
    
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/localbranching/neighborhoodsize",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/neighborhoodsize",
          "radius (using Manhattan metric) of the incumbent's neighborhood to be searched",
          &heurdata->neighborhoodsize, FALSE, DEFAULT_NEIGHBORHOODSIZE, 1, INT_MAX, NULL, NULL) );
    
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/localbranching/nodesquot",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/nodesquot",
          "contingent of sub problem nodes in relation to the number of nodes of the original problem",
          &heurdata->nodesquot, FALSE, DEFAULT_NODESQUOT, 0.0, 1.0, NULL, NULL) );
    
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/localbranching/minnodes",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/minnodes",
          "minimum number of nodes required to start the subproblem",
          &heurdata->minnodes, TRUE, DEFAULT_MINNODES, 0, INT_MAX, NULL, NULL) );
    
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/localbranching/maxnodes",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxnodes",
          "maximum number of nodes to regard in the subproblem",
          &heurdata->maxnodes, TRUE, DEFAULT_MAXNODES, 0, INT_MAX, NULL, NULL) );
    
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/localbranching/nwaitingnodes",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/nwaitingnodes",
          "number of nodes without incumbent change that heuristic should wait",
          &heurdata->nwaitingnodes, TRUE, DEFAULT_NWAITINGNODES, 0, INT_MAX, NULL, NULL) );
    
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/localbranching/minimprove",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/minimprove",
          "factor by which localbranching should at least improve the incumbent  ",
          &heurdata->minimprove, TRUE, DEFAULT_MINIMPROVE, 0.0, 1.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/localbranching/uselprows",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/uselprows",
          "should subproblem be created out of the rows in the LP rows?",
          &heurdata->uselprows, TRUE, DEFAULT_USELPROWS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/copycuts",
+         "if uselprows == FALSE, should all active cuts from cutpool be copied to constraints in subproblem?",
+         &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

@@ -30,7 +30,8 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
 {
    SCIP_NLPI* nlpi;
 
-   SCIP_CALL( SCIPincludeConshdlrLinear(scip) ); /* linear must be first due to constraint upgrading */
+   SCIP_CALL( SCIPincludeConshdlrQuadratic(scip) ); /* quadratic must be before linear due to constraint upgrading */
+   SCIP_CALL( SCIPincludeConshdlrLinear(scip) ); /* linear must be before its specialisations due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrAnd(scip) );
    SCIP_CALL( SCIPincludeConshdlrBounddisjunction(scip) );
    SCIP_CALL( SCIPincludeConshdlrConjunction(scip) );
@@ -45,7 +46,6 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeConshdlrOr(scip) );
    SCIP_CALL( SCIPincludeConshdlrOrbitope(scip) );
    SCIP_CALL( SCIPincludeConshdlrPseudoboolean(scip) );
-   SCIP_CALL( SCIPincludeConshdlrQuadratic(scip) );
    SCIP_CALL( SCIPincludeConshdlrSetppc(scip) );
    SCIP_CALL( SCIPincludeConshdlrSOS1(scip) );
    SCIP_CALL( SCIPincludeConshdlrSOS2(scip) );

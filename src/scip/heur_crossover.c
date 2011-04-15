@@ -53,6 +53,9 @@
 #define DEFAULT_USELPROWS     FALSE           /* should subproblem be created out of the rows in the LP rows, 
                                               * otherwise, the copy constructors of the constraints handlers are used 
 					      */
+#define DEFAULT_COPYCUTS      TRUE           /* if DEFAULT_USELPROWS is FALSE, then should all active cuts from the
+                                              * cutpool of the original scip be copied to constraints of the subscip
+					      */
                                             
 #define HASHSIZE_SOLS         11113          /* size of hash table for solution tuples in crossover heuristic       */
 
@@ -66,28 +69,31 @@ typedef struct SolTuple SOLTUPLE;
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   SCIP_SOL*             prevlastsol;       /**< worst solution taken into account during the previous run         */
-   SCIP_SOL*             prevbestsol;       /**< best solution during the previous run                             */
-   int                   prevnsols;         /**< number of all solutions during the previous run                   */
+   SCIP_SOL*             prevlastsol;        /**< worst solution taken into account during the previous run         */
+   SCIP_SOL*             prevbestsol;        /**< best solution during the previous run                             */
+   int                   prevnsols;          /**< number of all solutions during the previous run                   */
 
-   SCIP_Longint          maxnodes;          /**< maximum number of nodes to regard in the subproblem               */
-   SCIP_Longint          minnodes;          /**< minimum number of nodes to regard in the subproblem               */
-   SCIP_Longint          nodesofs;          /**< number of nodes added to the contingent of the total nodes        */
-   SCIP_Longint          usednodes;         /**< nodes already used by crossover in earlier calls                  */
-   SCIP_Real             nodesquot;         /**< subproblem nodes in relation to nodes of the original problem     */
+   SCIP_Longint          maxnodes;           /**< maximum number of nodes to regard in the subproblem               */
+   SCIP_Longint          minnodes;           /**< minimum number of nodes to regard in the subproblem               */
+   SCIP_Longint          nodesofs;           /**< number of nodes added to the contingent of the total nodes        */
+   SCIP_Longint          usednodes;          /**< nodes already used by crossover in earlier calls                  */
+   SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem     */
 
-   int                   nusedsols;         /**< number of solutions that will be taken into account               */
-   SCIP_Longint          nwaitingnodes;     /**< number of nodes without incumbent change heuristic should wait    */
-   unsigned int          nfailures;         /**< number of failures since last successful call                     */
-   SCIP_Longint          nextnodenumber;    /**< number of BnB nodes at which crossover should be called next      */  
-   SCIP_Real             minfixingrate;     /**< minimum percentage of integer variables that have to be fixed     */
-   SCIP_Real             minimprove;        /**< factor by which Crossover should at least improve the incumbent   */
-   SCIP_Bool             randomization;     /**< should the choice which sols to take be randomized?               */ 
-   SCIP_Bool             dontwaitatroot;    /**< should the nwaitingnodes parameter be ignored at the root node?   */
-   unsigned int          randseed;          /**< seed value for random number generator                            */
-   SCIP_HASHTABLE* 	 hashtable;         /**< hashtable used to store the solution tuples already used          */
-   SOLTUPLE*             lasttuple;         /**< last tuple of solutions created by crossover                      */ 
-   SCIP_Bool             uselprows;         /**< should subproblem be created out of the rows in the LP rows?      */
+   int                   nusedsols;          /**< number of solutions that will be taken into account               */
+   SCIP_Longint          nwaitingnodes;      /**< number of nodes without incumbent change heuristic should wait    */
+   unsigned int          nfailures;          /**< number of failures since last successful call                     */
+   SCIP_Longint          nextnodenumber;     /**< number of BnB nodes at which crossover should be called next      */  
+   SCIP_Real             minfixingrate;      /**< minimum percentage of integer variables that have to be fixed     */
+   SCIP_Real             minimprove;         /**< factor by which Crossover should at least improve the incumbent   */
+   SCIP_Bool             randomization;      /**< should the choice which sols to take be randomized?               */ 
+   SCIP_Bool             dontwaitatroot;     /**< should the nwaitingnodes parameter be ignored at the root node?   */
+   unsigned int          randseed;           /**< seed value for random number generator                            */
+   SCIP_HASHTABLE* 	 hashtable;          /**< hashtable used to store the solution tuples already used          */
+   SOLTUPLE*             lasttuple;          /**< last tuple of solutions created by crossover                      */ 
+   SCIP_Bool             uselprows;          /**< should subproblem be created out of the rows in the LP rows?      */
+   SCIP_Bool             copycuts;           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
+                                              *   to constraints in subproblem?
+                                              */
 };
 
 /** n-tuple of solutions and their hashkey */
@@ -788,6 +794,12 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    else
    {
       SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "crossover", TRUE, FALSE, &success) );
+
+      if( heurdata->copycuts )
+      {
+         /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, TRUE) );
+      }
    }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) ); 
@@ -992,49 +1004,53 @@ SCIP_RETCODE SCIPincludeHeurCrossover(
   
    /* add crossover primal heuristic parameters */ 
 
-   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/crossover/nodesofs",
+   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/"HEUR_NAME"/nodesofs",
          "number of nodes added to the contingent of the total nodes",
          &heurdata->nodesofs, FALSE, DEFAULT_NODESOFS, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
    
-   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/crossover/maxnodes",
+   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/"HEUR_NAME"/maxnodes",
          "maximum number of nodes to regard in the subproblem",
          &heurdata->maxnodes, TRUE, DEFAULT_MAXNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/crossover/minnodes",
+   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/"HEUR_NAME"/minnodes",
          "minimum number of nodes required to start the subproblem",
          &heurdata->minnodes, TRUE, DEFAULT_MINNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
    
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/crossover/nusedsols",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/nusedsols",
          "number of solutions to be taken into account",
          &heurdata->nusedsols, FALSE, DEFAULT_NUSEDSOLS, 2, INT_MAX, NULL, NULL) );
    
-   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/crossover/nwaitingnodes",
+   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/"HEUR_NAME"/nwaitingnodes",
          "number of nodes without incumbent change that heuristic should wait",
          &heurdata->nwaitingnodes, TRUE, DEFAULT_NWAITINGNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/crossover/nodesquot",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/nodesquot",
          "contingent of sub problem nodes in relation to the number of nodes of the original problem",
          &heurdata->nodesquot, FALSE, DEFAULT_NODESQUOT, 0.0, 1.0, NULL, NULL) );
    
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/crossover/minfixingrate",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/minfixingrate",
          "minimum percentage of integer variables that have to be fixed ",
          &heurdata->minfixingrate, FALSE, DEFAULT_MINFIXINGRATE, 0.0, 1.0, NULL, NULL) );
    
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/crossover/minimprove",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/minimprove",
          "factor by which Crossover should at least improve the incumbent",
          &heurdata->minimprove, TRUE, DEFAULT_MINIMPROVE, 0.0, 1.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/crossover/randomization",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/randomization",
          "should the choice which sols to take be randomized?",
          &heurdata->randomization, TRUE, DEFAULT_RANDOMIZATION, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/crossover/dontwaitatroot",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/dontwaitatroot",
          "should the nwaitingnodes parameter be ignored at the root node?",
          &heurdata->dontwaitatroot, TRUE, DEFAULT_DONTWAITATROOT, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/crossover/uselprows",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/uselprows",
          "should subproblem be created out of the rows in the LP rows?",
          &heurdata->uselprows, TRUE, DEFAULT_USELPROWS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/copycuts",
+         "if uselprows == FALSE, should all active cuts from cutpool be copied to constraints in subproblem?",
+         &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

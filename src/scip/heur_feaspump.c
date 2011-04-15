@@ -56,6 +56,9 @@
 #define DEFAULT_PERTSOLFOUND     TRUE   /**< should a random perturbation be performed if a feasible solution was found? */
 #define DEFAULT_STAGE3          FALSE   /**< should we solve a local branching sub-MIP if no solution could be found? */
 #define DEFAULT_NEIGHBORHOODSIZE  18    /**< radius of the neighborhood to be searched in stage 3 */
+#define DEFAULT_COPYCUTS         TRUE   /**< should all active cuts from the cutpool of the original scip be copied to
+                                         *   constraints of the subscip
+                                         */
 
 #define MINLPITER                5000   /**< minimal number of LP iterations allowed in each LP solving call */
 
@@ -88,6 +91,9 @@ struct SCIP_HeurData
    SCIP_Bool             usefp20;            /**< should an iterative round-and-propagate scheme be used to find the integral points? */
    SCIP_Bool             pertsolfound;       /**< should a random perturbation be performed if a feasible solution was found? */
    SCIP_Bool             stage3;             /**< should we solve a local branching sub-MIP if no solution could be found? */
+   SCIP_Bool             copycuts;           /**< should all active cuts from cutpool be copied to constraints in
+                                              *   subproblem?
+                                              */
 };
 
 /* copies SCIP to probing SCIP and creates variable hashmap */
@@ -95,7 +101,8 @@ static
 SCIP_RETCODE setupProbingSCIP(
    SCIP*                 scip,                /**< SCIP data structure  */
    SCIP**                probingscip,         /**< subSCIP data structure  */
-   SCIP_HASHMAP**        varmapfw,            /**< mapping of SCIP variables to subSCIP variables */  
+   SCIP_HASHMAP**        varmapfw,            /**< mapping of SCIP variables to subSCIP variables */
+   SCIP_Bool             copycuts,            /**< should all active cuts from cutpool of scip copied to constraints in subscip */
    SCIP_Bool*            success              /**< was copying successful? */
    )
 {
@@ -108,6 +115,12 @@ SCIP_RETCODE setupProbingSCIP(
 
    /* copy SCIP instance */
    SCIP_CALL( SCIPcopy(scip, *probingscip, *varmapfw, NULL, "feaspump", FALSE, FALSE, success) );
+
+   if( copycuts )
+   {
+      /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+      SCIP_CALL( SCIPcopyCuts(scip, *probingscip, *varmapfw, NULL, FALSE) );
+   }
 
    return SCIP_OKAY;
 }
@@ -651,7 +664,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
    if( heurdata->usefp20 )
    {
-      SCIP_CALL( setupProbingSCIP(scip, &probingscip, &varmapfw, &success) );
+      SCIP_CALL( setupProbingSCIP(scip, &probingscip, &varmapfw, heurdata->copycuts, &success) );
       
       if( success )
       {
@@ -1048,7 +1061,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       else
       {
          assert(probingscip == NULL);
-         SCIP_CALL( setupProbingSCIP(scip, &probingscip, &varmapfw, &success) );
+         SCIP_CALL( setupProbingSCIP(scip, &probingscip, &varmapfw, heurdata->copycuts, &success) );
       }
 
       /* check whether there is enough time and memory left */
@@ -1211,66 +1224,69 @@ SCIP_RETCODE SCIPincludeHeurFeaspump(
 
    /* add feaspump primal heuristic parameters */
    SCIP_CALL( SCIPaddRealParam(scip,
-         "heuristics/feaspump/maxlpiterquot", 
+         "heuristics/"HEUR_NAME"/maxlpiterquot", 
          "maximal fraction of diving LP iterations compared to node LP iterations",
          &heurdata->maxlpiterquot, FALSE, DEFAULT_MAXLPITERQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "heuristics/feaspump/objfactor", 
+         "heuristics/"HEUR_NAME"/objfactor", 
          "factor by which the regard of the objective is decreased in each round, 1.0 for dynamic",
          &heurdata->objfactor, FALSE, DEFAULT_OBJFACTOR, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "heuristics/feaspump/alphadiff", 
+         "heuristics/"HEUR_NAME"/alphadiff", 
          "threshold difference for the convex parameter to perform perturbation",
          &heurdata->alphadiff, FALSE, DEFAULT_ALPHADIFF, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/feaspump/maxlpiterofs", 
+         "heuristics/"HEUR_NAME"/maxlpiterofs", 
          "additional number of allowed LP iterations",
          &heurdata->maxlpiterofs, FALSE, DEFAULT_MAXLPITEROFS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/feaspump/maxsols", 
+         "heuristics/"HEUR_NAME"/maxsols", 
          "total number of feasible solutions found up to which heuristic is called (-1: no limit)",
          &heurdata->maxsols, TRUE, DEFAULT_MAXSOLS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/feaspump/maxloops",
+         "heuristics/"HEUR_NAME"/maxloops",
          "maximal number of pumping loops (-1: no limit)",
          &heurdata->maxloops, TRUE, DEFAULT_MAXLOOPS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/feaspump/maxstallloops",
+         "heuristics/"HEUR_NAME"/maxstallloops",
          "maximal number of pumping rounds without fractionality improvement (-1: no limit)",
          &heurdata->maxstallloops, TRUE, DEFAULT_MAXSTALLLOOPS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/feaspump/minflips", 
+         "heuristics/"HEUR_NAME"/minflips", 
          "minimum number of random variables to flip, if a 1-cycle is encountered",
          &heurdata->minflips, TRUE, DEFAULT_MINFLIPS, 1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/feaspump/cyclelength", 
+         "heuristics/"HEUR_NAME"/cyclelength", 
          "maximum length of cycles to be checked explicitly in each round",
          &heurdata->cyclelength, TRUE, DEFAULT_CYCLELENGTH, 1, 100, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/feaspump/perturbfreq", 
+         "heuristics/"HEUR_NAME"/perturbfreq", 
          "number of iterations until a random perturbation is forced",
          &heurdata->perturbfreq, TRUE, DEFAULT_PERTURBFREQ, 1, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/feaspump/neighborhoodsize",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/neighborhoodsize",
          "radius (using Manhattan metric) of the neighborhood to be searched in stage 3",
          &heurdata->neighborhoodsize, FALSE, DEFAULT_NEIGHBORHOODSIZE, 1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "heuristics/feaspump/beforecuts", 
+         "heuristics/"HEUR_NAME"/beforecuts", 
          "should the feasibility pump be called at root node before cut separation?",
          &heurdata->beforecuts, FALSE, DEFAULT_BEFORECUTS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "heuristics/feaspump/usefp20", 
+         "heuristics/"HEUR_NAME"/usefp20", 
          "should an iterative round-and-propagate scheme be used to find the integral points?",
          &heurdata->usefp20, FALSE, DEFAULT_USEFP20, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "heuristics/feaspump/pertsolfound", 
+         "heuristics/"HEUR_NAME"/pertsolfound", 
          "should a random perturbation be performed if a feasible solution was found?",
          &heurdata->pertsolfound, FALSE, DEFAULT_PERTSOLFOUND, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "heuristics/feaspump/stage3", 
+         "heuristics/"HEUR_NAME"/stage3", 
          "should we solve a local branching sub-MIP if no solution could be found?",
          &heurdata->stage3, FALSE, DEFAULT_STAGE3, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/copycuts",
+         "should all active cuts from cutpool be copied to constraints in subproblem?",
+         &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

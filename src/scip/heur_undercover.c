@@ -60,6 +60,9 @@
 #define DEFAULT_MAXRECOVERS     1            /**< maximum number of re-coverings */
 #define DEFAULT_MAXREORDERS     1            /**< maximum number of reorderings of the fixing order */
 #define DEFAULT_COVERINGOBJ     'u'          /**< objective function of the covering problem */
+#define DEFAULT_COPYCUTS        TRUE         /**< should all active cuts from the cutpool of the original scip be copied
+                                              *   to constraints of the subscip
+					      */
 
 #define COVERINGOBJS            "cdlmtu"     /**< list of objective functions of the covering problem */
 #define MAXNLPFAILS             1            /**< maximum number of fails after which we give up solving the nlp relaxation */
@@ -104,6 +107,9 @@ struct SCIP_HeurData
    int                   npostnlpfails;      /**< number of fails of the nlp local search after last success */
    int                   nnlconshdlrs;       /**< number of nonlinear constraint handlers */
    char                  coveringobj;        /**< objective function of the covering problem */
+   SCIP_Bool             copycuts;           /**< should all active cuts from cutpool be copied to constraints in
+                                              *   subproblem?
+                                              */
 };
 
 
@@ -1698,6 +1704,13 @@ SCIP_RETCODE solveSubproblem(
 
    /* copy original problem to subproblem; do not copy pricers */
    SCIP_CALL( SCIPcopy(scip, subscip, varmap, NULL, "undercoversub", heurdata->globalbounds, FALSE, validsolved) );
+
+   if( heurdata->copycuts )
+   {
+      /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+      SCIP_CALL( SCIPcopyCuts(scip, subscip, varmap, NULL, heurdata->globalbounds) );
+   }
+
    SCIPdebugMessage("problem copied, copy %svalid\n", *validsolved ? "" : "in");
 
    /* store subproblem variables */
@@ -2850,6 +2863,10 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
    SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/coveringobj",
          "objective function of the covering problem ('b'ranching status, influenced nonlinear 'c'onstraints/'t'erms, 'd'omain size, 'l'ocks, 'm'in of up/down locks, 'u'nit penalties, constraint 'v'iolation)",
          &heurdata->coveringobj, TRUE, DEFAULT_COVERINGOBJ, COVERINGOBJS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/copycuts",
+         "should all active cuts from cutpool be copied to constraints in subproblem?",
+         &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

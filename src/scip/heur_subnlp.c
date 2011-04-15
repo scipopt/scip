@@ -901,7 +901,7 @@ SCIP_RETCODE createSolFromSubScipSol(
    assert(heurdata->nsubvars == SCIPgetNOrigVars(heurdata->subscip));
    for( i = 0; i < heurdata->nsubvars; ++i )
    {
-      if( heurdata->var_subscip2scip[i] == NULL )
+      if( heurdata->var_subscip2scip[i] == NULL || !SCIPvarIsActive(heurdata->var_subscip2scip[i]) )
          continue;
       SCIP_CALL( SCIPsetSolVal(scip, *sol, heurdata->var_subscip2scip[i],
          SCIPgetSolVal(heurdata->subscip, subsol, SCIPgetOrigVars(heurdata->subscip)[i])) );
@@ -1137,7 +1137,7 @@ SCIP_RETCODE solveSubNLP(
          "NLP solver returned with bad termination status %d. Will not run NLP heuristic again for this run.\n",  
          SCIPnlpGetTermstat(nlp));
       SCIP_CALL( freeSubSCIP(scip, heurdata) );
-      return SCIP_OKAY;
+      goto CLEANUP;
    }
 
    SCIP_CALL( SCIPnlpGetStatistics(nlp, heurdata->nlpstatistics) );
@@ -1197,13 +1197,16 @@ SCIP_RETCODE solveSubNLP(
    }
    
  CLEANUP:
-   SCIP_CALL( SCIPfreeTransform(heurdata->subscip) );
-   if( tighttolerances )
+   if( heurdata->subscip != NULL )
    {
-      /* reset feasibility tolerance of subSCIP and reset to normal presolve */
-      SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "numerics/feastol", SCIPfeastol(scip)) );
-      SCIP_CALL( SCIPsetPresolving(heurdata->subscip, SCIP_PARAMSETTING_DEFAULT, TRUE) );
-      SCIP_CALL( SCIPresetParam(heurdata->subscip, "constraints/linear/aggregatevariables") );
+      SCIP_CALL( SCIPfreeTransform(heurdata->subscip) );
+      if( tighttolerances )
+      {
+         /* reset feasibility tolerance of subSCIP and reset to normal presolve */
+         SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "numerics/feastol", SCIPfeastol(scip)) );
+         SCIP_CALL( SCIPsetPresolving(heurdata->subscip, SCIP_PARAMSETTING_DEFAULT, TRUE) );
+         SCIP_CALL( SCIPresetParam(heurdata->subscip, "constraints/linear/aggregatevariables") );
+      }
    }
    
    return SCIP_OKAY;

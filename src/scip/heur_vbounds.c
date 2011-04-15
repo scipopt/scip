@@ -48,6 +48,9 @@
 #define DEFAULT_NODESOFS      500LL     /* number of nodes added to the contingent of the total nodes          */
 #define DEFAULT_NODESQUOT     0.1       /* subproblem nodes in relation to nodes of the original problem       */
 #define DEFAULT_MAXPROPROUNDS 2         /* maximum number of propagation rounds during probing */
+#define DEFAULT_COPYCUTS      TRUE      /**< should all active cuts from the cutpool of the original scip be copied to
+                                         *   constraints of the subscip
+                                         */
 
 /* enable statistic output by defining macro STATISTIC_INFORMATION */
 #ifdef STATISTIC_INFORMATION
@@ -72,16 +75,19 @@ struct SCIP_HeurData
    int                   nlbimpvars;         /**< number of variables in variable improving lower bound array */
    int                   nubimpvars;         /**< number of variables in variable improving upper bound array */
 
-   SCIP_Longint          maxnodes;          /**< maximum number of nodes to regard in the subproblem                 */
-   SCIP_Longint          minnodes;          /**< minimum number of nodes to regard in the subproblem                 */
-   SCIP_Longint          nodesofs;          /**< number of nodes added to the contingent of the total nodes          */
-   SCIP_Longint          usednodes;         /**< nodes already used by vbounds heuristic in earlier calls                         */
-   SCIP_Real             minfixingrate;     /**< minimum percentage of integer variables that have to be fixed       */
-   SCIP_Real             minimprove;        /**< factor by which vbounds heuristic should at least improve the incumbent          */
-   SCIP_Real             nodesquot;         /**< subproblem nodes in relation to nodes of the original problem       */
-   int                   maxproprounds;     /**< maximum number of propagation rounds during probing */
-   SCIP_Bool             initialized;       /**< are the candidate list initialized? */
-   SCIP_Bool             applicable;        /**< is the heuristic applicable? */
+   SCIP_Longint          maxnodes;           /**< maximum number of nodes to regard in the subproblem                 */
+   SCIP_Longint          minnodes;           /**< minimum number of nodes to regard in the subproblem                 */
+   SCIP_Longint          nodesofs;           /**< number of nodes added to the contingent of the total nodes          */
+   SCIP_Longint          usednodes;          /**< nodes already used by vbounds heuristic in earlier calls                         */
+   SCIP_Real             minfixingrate;      /**< minimum percentage of integer variables that have to be fixed       */
+   SCIP_Real             minimprove;         /**< factor by which vbounds heuristic should at least improve the incumbent          */
+   SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem       */
+   int                   maxproprounds;      /**< maximum number of propagation rounds during probing */
+   SCIP_Bool             initialized;        /**< are the candidate list initialized? */
+   SCIP_Bool             applicable;         /**< is the heuristic applicable? */
+   SCIP_Bool             copycuts;           /**< should all active cuts from cutpool be copied to constraints in
+                                              *   subproblem?
+                                              */
 };
 
 /*
@@ -479,6 +485,12 @@ SCIP_RETCODE applyVbounds(
       SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
 
       SCIP_CALL( SCIPcopy(scip, subscip, varmap, NULL, "_vbounds", FALSE, FALSE, &valid) );
+
+      if( heurdata->copycuts )
+      {
+         /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmap, NULL, FALSE) );
+      }
       
       SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) ); 
 
@@ -791,6 +803,10 @@ SCIP_RETCODE SCIPincludeHeurVbounds(
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxproprounds",
          "maximum number of propagation rounds during probing (-1 infinity)",
          &heurdata->maxproprounds, TRUE, DEFAULT_MAXPROPROUNDS, -1, INT_MAX/4, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/copycuts",
+         "should all active cuts from cutpool be copied to constraints in subproblem?",
+         &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
    
    return SCIP_OKAY;
 }
