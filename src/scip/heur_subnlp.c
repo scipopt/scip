@@ -901,7 +901,7 @@ SCIP_RETCODE createSolFromSubScipSol(
    assert(heurdata->nsubvars == SCIPgetNOrigVars(heurdata->subscip));
    for( i = 0; i < heurdata->nsubvars; ++i )
    {
-      if( heurdata->var_subscip2scip[i] == NULL )
+      if( heurdata->var_subscip2scip[i] == NULL || !SCIPvarIsActive(heurdata->var_subscip2scip[i]) )
          continue;
       SCIP_CALL( SCIPsetSolVal(scip, *sol, heurdata->var_subscip2scip[i],
          SCIPgetSolVal(heurdata->subscip, subsol, SCIPgetOrigVars(heurdata->subscip)[i])) );
