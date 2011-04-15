@@ -5714,6 +5714,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
          if( xunbounded || yunbounded )
             continue;
 
+#if 0
          /* if both variables are integral, prefer the one with the smaller domain, so variable gets fixed soon */
          if( SCIPvarIsIntegral(x) && SCIPvarIsIntegral(y) )
          {
@@ -5730,6 +5731,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
                continue;
             }
          }
+#endif
 
          /* in the regular case, suggest those variables which are not at its bounds for branching
           * this is, because after branching both variables will be one the bounds, and McCormick will be exact then */
