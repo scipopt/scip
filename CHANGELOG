@@ -108,6 +108,7 @@ parameters:
 - added parameter <constraints/quadratic/binreforminitial> to indicate whether constraints added due to reformulation of products with binary variables in
   a quadratic constraints should be initial (if the quadratic constraint is initial), default is TRUE
 - renamed parameter <constraints/quadratic/linearizenlpsol> to <constraints/quadratic/linearizeheursol> and do linearizations in every solution found by some heuristic
+- renamed parameter <constraints/quadratic/mincutefficacyenfo> to <constraints/quadratic/mincutefficacyenfofac> and interpret it as a factor of the feasibility tolerance
 
 features:
 - flatzinc reader is now capable to read cumulative constraints
