@@ -8427,7 +8427,8 @@ SCIP_DECL_CONSCHECK(consCheckQuadratic)
    *result = SCIP_FEASIBLE;
 
    maxviol = 0.0;
-   maypropfeasible = conshdlrdata->linfeasshift && (conshdlrdata->trysolheur != NULL);
+   maypropfeasible = conshdlrdata->linfeasshift && (conshdlrdata->trysolheur != NULL) &&
+      SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED && SCIPgetStage(scip) <= SCIP_STAGE_SOLVING;
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL);
