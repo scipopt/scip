@@ -3196,8 +3196,8 @@ SCIP_RETCODE SCIPvarFix(
    SCIP_Real childfixedval;
 
    assert(var != NULL);
-   assert(var->glbdom.lb == var->locdom.lb); /*lint !e777*/
-   assert(var->glbdom.ub == var->locdom.ub); /*lint !e777*/
+   assert(SCIPsetIsEQ(set, var->glbdom.lb, var->locdom.lb));
+   assert(SCIPsetIsEQ(set, var->glbdom.ub, var->locdom.ub));
    assert(infeasible != NULL);
    assert(fixed != NULL);
 
