@@ -653,7 +653,7 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputLPObjval)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_LPOBJ) == 0);
    assert(scip != NULL);
 
-   if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNSOLVED )
+   if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_NOTSOLVED )
       lpobj = SCIP_INVALID;
    else
       lpobj = SCIPgetLPObjval(scip);
