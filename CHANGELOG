@@ -180,6 +180,7 @@ performance improvements:
 - calculation of node priority now also works when variable's relaxation value is equal to a bound
 - fasten knapsack separation by replacing SCIPallocBufer(Array) through SCIPallocBlockMemory(Array)
 - fixed issue w.r.t. calling primal heuristics after presolving detected infeasibility
+- improved runtime and memory consumption in SCIPsolveKnapsackExactly() in cons_knapsack.c
 
 SCIP version 2.0.1
 ==================
