@@ -801,7 +801,7 @@ SCIP_RETCODE checkCons(
 }
 
 /* IDX computes the integer index for the optimal solution array */
-#define IDX(j,d) ((j)*(intcap+1)+(d))
+#define IDX(j,d) ((j)*(intcap)+(d))
 
 /** solves knapsack problem in maximization form exactly using dynamic programming;
  *  if needed, one can provide arrays to store all selected items and all not selected items
@@ -828,8 +828,21 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    SCIP_Real* tempsort;
    SCIP_Real* optvalues;
    int intcap;
-   int d;
+   SCIP_Longint d;
    int j;
+   SCIP_Longint weightsum;
+   int* myitems;
+   SCIP_Longint* myweights;
+   SCIP_Real* myprofits;
+   int nmyitems;
+   SCIP_Longint gcd;
+   SCIP_Longint minweight;
+   SCIP_Longint currminweight;
+   SCIP_Longint greedycap;
+   SCIP_Longint greedysolweight;
+   SCIP_Real greedysolvalue;
+   SCIP_Bool eqweights;
+   SCIP_Bool isoptimal;
 
    assert(weights != NULL);
    assert(profits != NULL);
@@ -840,144 +853,16 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
 
    *success = TRUE;
    
-   /* we can only handle integers */
-   if( capacity >= INT_MAX )
-   {
-      *success = FALSE;
-      return SCIP_OKAY;
-   }
-   assert(capacity < INT_MAX);
-
-   /* if capacity is 0 we do not need to do the expensive stuff later on */
-   if( capacity == 0 )
-   {
 #ifndef NDEBUG
-      for( j = nitems - 1; j >= 0; --j )
-         assert(weights[j] >= 0);
-#endif
-      if( solitems != NULL)
-      {
-         assert(nonsolitems != NULL);
-         assert(nnonsolitems != NULL);
-         assert(nonsolitems != NULL);
-
-         *nsolitems = 0;
-         *nnonsolitems = 0;
-
-         for( j = 0; j < nitems; j++ )
-         {
-            if( weights[j] == 0 )
-            {
-               solitems[*nsolitems] = items[j];
-               (*nsolitems)++;
-            } 
-            else
-            {
-               assert(weights[j] > 0);
-               nonsolitems[*nnonsolitems] = items[j];
-               (*nnonsolitems)++;
-            }
-         }
-
-      }
-
-      if( solval != NULL )
-         *solval = 0.0;
-
-      return SCIP_OKAY;
-   }
-   /* if only one item is given, we also do not need to do the expensive stuff later on */
-   else if( nitems == 1 )
-   {
-      assert(weights[0] >= 0);
-
-      if( solitems != NULL)
-      {
-         assert(nonsolitems != NULL);
-         assert(nnonsolitems != NULL);
-         assert(nonsolitems != NULL);
-
-         if( weights[0] <= capacity )
-         {
-            solitems[0] = items[0];
-            *nsolitems = 1;
-            *nnonsolitems = 0;
-            if( solval != NULL )
-               *solval = profits[0];
-         } 
-         else
-         {
-            nonsolitems[0] = items[0];
-            *nsolitems = 0;
-            *nnonsolitems = 1;
-            if( solval != NULL )
-               *solval = 0.0;
-         }
-      }
-      else if( solval != NULL )
-         *solval = 0.0;
-
-      return SCIP_OKAY;
-   }
-
-   intcap = (int)capacity;
-   assert(intcap >= 0);
-
-   /* this condition is only to check if the size of memory which will be allocated is still positiv( so no error occurs ), which will be necessary after
-    * this if condition */ 
-   if( (intcap+1) < 0 || (nitems+1) * (intcap+1) < 0 || (nitems+1) * (intcap+1) * ((int) sizeof(*optvalues)) < 0 )
-   {
-      *success = FALSE;
-      return SCIP_OKAY;
-   }
-   /* allocate temporary memory and check for memory exceeding */ 
-   retcode = SCIPallocBufferArray(scip, &optvalues, (nitems+1)*(intcap+1));
-   if( retcode == SCIP_NOMEMORY )
-   {
-      *success = FALSE;
-      return SCIP_OKAY;
-   }
-   else
-   {
-      SCIP_CALL( retcode );
-   }
-   
-   /* sort items (plus corresponding arrays weights and profits) such that 
-    * p_1/w_1 >= p_2/w_2 >= ... >= p_n/w_n 
-    */
-   SCIP_CALL( SCIPallocBufferArray(scip, &tempsort, nitems) );
    for( j = nitems - 1; j >= 0; --j )
-      tempsort[j] = profits[j]/weights[j];
+      assert(weights[j] >= 0);
+#endif
 
-   SCIPsortDownRealLongRealInt(tempsort, weights, profits, items, nitems);
+   SCIPdebugMessage("Solving knapsack exactly.\n");
 
-   /* fills dynamic programming table with optimal values */
-   for( d = 0; d <= intcap; d++ )
-      optvalues[d] = 0.0; /* simpler as optvalues[IDX(0,d)] = 0.0; */
-   for( j = 1; j <= nitems; j++ )
-   {
-      int intweight;
-
-      assert(0 <= weights[j-1] && weights[j-1] < SCIP_LONGINT_MAX);
-      if( weights[j-1] >= INT_MAX )
-      {
-         assert(weights[j-1] > capacity);
-         intweight = INT_MAX;
-      }
-      else
-         intweight = (int)weights[j-1];
-      assert(intweight >= 0);
-
-      for( d = 0; d < intweight && d <= intcap; d++ )
-         optvalues[IDX(j,d)] = optvalues[IDX(j-1,d)];
-      for( d = intweight; d <= intcap; d++ )
-      {
-         SCIP_Real sumprofit;
-
-         sumprofit = optvalues[IDX(j-1,d-intweight)] + profits[j-1];
-         optvalues[IDX(j,d)] = MAX(sumprofit, optvalues[IDX(j-1,d)]);
-      } 
-   }
+   /* initializing solution value */
+   if( solval != NULL )
+      *solval = 0.0;
 
    /* produces optimal solution by following the table */
    if( solitems != NULL)
@@ -989,35 +874,420 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
 
       *nnonsolitems = 0;
       *nsolitems = 0;
-      d = intcap;
-      
-      for( j = nitems; j > 0; j-- )
+   }
+
+   /* allocate temporary memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &myweights, nitems) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &myprofits, nitems) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &myitems, nitems) );
+   nmyitems = 0;
+   weightsum = 0;
+   minweight = SCIP_LONGINT_MAX;
+
+   /* remove unnecessary items */
+   for( j = 0; j < nitems; ++j )
+   {
+      assert(0 <= weights[j] && weights[j] < SCIP_LONGINT_MAX);
+      /* items does not fit */
+      if( weights[j] > capacity )
       {
+         if( solitems != NULL)
+         {
+            nonsolitems[*nnonsolitems] = items[j];
+            ++(*nnonsolitems);
+         }
+      }
+      /* items we does not want */
+      else if( profits[j] <= 0.0 )
+      {
+         if( solitems != NULL)
+         {
+            nonsolitems[*nnonsolitems] = items[j];
+            ++(*nnonsolitems);
+         }
+      }
+      /* items which always fit */
+      else if( weights[j] == 0 )
+      {
+         if( solitems != NULL)
+         {
+            solitems[*nsolitems] = items[j];
+            ++(*nsolitems);
+         }
+         if( solval != NULL )
+            *solval += profits[j];
+      }
+      /* all important items */
+      else
+      {
+         myweights[nmyitems] = weights[j];
+         myprofits[nmyitems] = profits[j];
+         myitems[nmyitems] = items[j];
+
+         /* remember smallest item */
+         if( myweights[nmyitems] < minweight )
+            minweight = myweights[nmyitems];
+
+         weightsum += myweights[nmyitems];
+         ++nmyitems;
+      }
+   }
+
+   /* no item is left then goto end */
+   if( nmyitems == 0 )
+   {
+      SCIPdebugMessage("After preprocessing no items are left.\n");
+
+      goto TERMINATE;
+   }
+   /* if all items fit, we also do not need to do the expensive stuff later on */
+   else if( weightsum > 0 && weightsum <= capacity )
+   {
+      SCIPdebugMessage("After preprocessing all items fit into knapsack.\n");
+      
+      for( j = nmyitems - 1; j >= 0; --j )
+      {
+         if( solitems != NULL )
+         {
+            solitems[*nsolitems] = myitems[j];
+            ++(*nsolitems);
+         }
+         if( solval != NULL )
+            *solval += myprofits[j];
+      }
+      
+      goto TERMINATE;
+   }
+
+   /* determine greatest common divisor */
+   gcd = myweights[nmyitems - 1];
+   for( j = nmyitems - 2; j >= 0 && gcd >= 2; --j )
+      gcd = SCIPcalcGreComDiv(gcd, myweights[j]);
+
+   SCIPdebugMessage("Gcd is %"SCIP_LONGINT_FORMAT".\n", gcd);
+
+   /* divide by greatest common divisor */
+   if( gcd > 1 )
+   {
+      eqweights = TRUE;
+      for( j = nmyitems - 1; j >= 0; --j )
+      {
+         myweights[j] /= gcd;
+         eqweights &= (myweights[j] == 1);
+      }
+      capacity /= gcd;
+      minweight /= gcd;
+   }
+   else
+      eqweights = FALSE;
+
+   assert(minweight <= capacity);
+
+   /* only one item fits, than take the best */
+   if( minweight > capacity / 2 )
+   {
+      int p;
+
+      SCIPdebugMessage("Only one item fits into knapsack, so take the best.\n");
+
+      p = nmyitems - 1;
+
+      /* find best item */
+      for( j = nmyitems - 2; j >= 0; --j )
+         if( myprofits[j] > myprofits[p] )
+            p = j;
+
+      /* update solution information */
+      if( solitems != NULL)
+      {
+         solitems[*nsolitems] = myitems[p];
+         ++(*nsolitems);
+         for( j = nmyitems - 1; j >= 0; --j )
+            if( j != p )
+            {
+               nonsolitems[*nnonsolitems] = myitems[j];
+               ++(*nnonsolitems);
+            }
+      }
+      /* update solution value */
+      if( solval != NULL )
+         *solval += myprofits[p];
+      
+      goto TERMINATE;
+   }
+
+   /* all items have the same weight, than take the best */
+   if( eqweights )
+   {
+      SCIP_Real addval;
+
+      SCIPdebugMessage("All weights are equal, so take the best.\n");
+
+      SCIPsortDownRealIntLong(myprofits, myitems, myweights, nmyitems);
+
+      addval = 0.0;
+      /* update solution information */
+      if( solitems != NULL)
+      {
+         /* if all items would fit we had handled this case before */
+         assert(nmyitems > capacity);
+
+         /* take the first best items into the solution */
+         for( d = capacity - 1; d >= 0; --d )
+         {
+            solitems[*nsolitems] = myitems[d];
+            ++(*nsolitems);
+            addval += myprofits[d];
+         }
+
+         /* the rest are not in the solution */
+         for( j = nmyitems - 1; j >= capacity; --j )
+         {
+            nonsolitems[*nnonsolitems] = myitems[j];
+            ++(*nnonsolitems);
+         }
+      }
+      /* update solution value */
+      if( solval != NULL )
+      {
+         assert(addval > 0.0);
+         *solval += addval;
+      }
+
+      goto TERMINATE;
+   }
+
+   /* in the follwoing table we do not need the first minweight columns */
+   capacity -= (minweight - 1);
+
+   /* we can only handle integers */
+   if( capacity >= INT_MAX )
+   {
+      SCIPdebugMessage("Capacity is to big, so we cannot handle it here.\n");
+
+      *success = FALSE;
+      goto TERMINATE;
+   }
+   assert(capacity < INT_MAX);
+
+   intcap = (int)capacity;
+   assert(intcap >= 0);
+
+   /* this condition is only to check if the size of memory which will be allocated is still positiv( so no error occurs
+    * ), which will be necessary after this if condition
+    */ 
+   if( (intcap) < 0 || (nmyitems) * (intcap) < 0 || (nmyitems) * (intcap) * ((int) sizeof(*optvalues)) < 0 )
+   {
+      SCIPdebugMessage("Too much memory will be consumed.\n");
+
+      *success = FALSE;
+      goto TERMINATE;
+   }
+
+   /* allocate temporary memory and check for memory exceeding */ 
+   retcode = SCIPallocBufferArray(scip, &optvalues, (nmyitems)*(intcap));
+   if( retcode == SCIP_NOMEMORY )
+   {
+      SCIPdebugMessage("Did not get enough memory.\n");
+
+      *success = FALSE;
+      goto TERMINATE;
+   }
+   else
+   {
+      SCIP_CALL( retcode );
+   }
+
+   /* sort myitems (plus corresponding arrays myweights and myprofits) such that 
+    * p_1/w_1 >= p_2/w_2 >= ... >= p_n/w_n, this is only use for greedy solution
+    */
+   SCIP_CALL( SCIPallocBufferArray(scip, &tempsort, nmyitems) );
+   for( j = nmyitems - 1; j >= 0; --j )
+      tempsort[j] = myprofits[j]/myweights[j];
+
+   SCIPsortDownRealLongRealInt(tempsort, myweights, myprofits, myitems, nmyitems);
+
+   /* initialize values for greedy solution information */
+   greedysolweight = 0;
+   greedysolvalue = 0.0;
+   isoptimal = TRUE;
+   greedycap = capacity + (minweight - 1);
+
+   SCIPdebugMessage("Determine greedy solution.\n");
+
+   /* determine greedy solution */
+   for( j = 0; j < nmyitems; ++j )
+   {
+      assert(myweights[j] <= greedycap);
+
+      /* take all fitting items */
+      if( myweights[j] + greedysolweight <= greedycap )
+      {
+         /* update greedy solution weight and value */
+         greedysolweight += myweights[j];
+         greedysolvalue += myprofits[j];
+         continue;
+      }
+      else if( greedysolweight < greedycap )
+         isoptimal = FALSE;
+      break;
+   }
+   assert(greedysolweight > 0);
+   assert(greedysolvalue > 0.0);
+
+   /* greedy solution is optimal */
+   if( isoptimal )
+   {
+      assert(greedysolweight == greedycap);
+
+      SCIPdebugMessage("Greedy solution is optimal.\n");
+
+      greedysolweight = 0;
+
+      /* update solution information */
+      if( solitems != NULL)
+      {
+         /* take the first best items into the solution */
+         for( j = 0; j < nmyitems; ++j )
+         {
+            /* take all fitting items */
+            if( myweights[j] + greedysolweight <= greedycap )
+            {
+               solitems[*nsolitems] = myitems[j];
+               ++(*nsolitems);
+               greedysolweight += myweights[j];
+            }
+            else
+            {
+               nonsolitems[*nnonsolitems] = myitems[j];
+               ++(*nnonsolitems);
+            }
+         }
+      }
+      /* update solution value */
+      if( solval != NULL )
+      {
+         assert(greedysolvalue > 0.0);
+         *solval += greedysolvalue;
+      }
+
+      SCIPfreeBufferArray(scip, &tempsort);
+      SCIPfreeBufferArray(scip, &optvalues);
+
+      goto TERMINATE;
+   }
+
+   SCIPdebugMessage("Start real exact algorithm.\n");
+
+   currminweight = myweights[0] - minweight;
+   /* fills first row of dynamic programming table with optimal values */
+   for( d = currminweight; d < intcap; ++d )
+      optvalues[d] = myprofits[0];
+   /* fills dynamic programming table with optimal values */
+   for( j = 1; j < nmyitems; ++j )
+   {
+      int intweight;
+
+      /* compute important part of weight, which will be represented in the table */
+      intweight = (int)(myweights[j] - minweight);
+      assert(0 <= intweight && intweight < intcap);
+      
+      /* copy all nonzeros from row above */
+      for( d = currminweight; d < intweight && d < intcap; ++d )
+         optvalues[IDX(j,d)] = optvalues[IDX(j-1,d)];
+
+      /* initialize last line if we found a new smallest weight which becomes necessary for later use */
+      if( intweight < currminweight )
+      {
+         for( d = intweight; d < currminweight; ++d )
+            optvalues[IDX(j-1,d)] = 0.0;
+      }
+
+      /* update corresponding row */
+      for( d = intweight; d < intcap; ++d )
+      {
+         SCIP_Real sumprofit;
+
+         if( d - myweights[j] < currminweight )
+            sumprofit = myprofits[j];
+         else
+            sumprofit = optvalues[IDX(j-1,d-myweights[j])] + myprofits[j];
+         optvalues[IDX(j,d)] = MAX(sumprofit, optvalues[IDX(j-1,d)]);
+      }
+      /* update currminweight */
+      if( intweight < currminweight )
+         currminweight = intweight;
+   }
+
+   /* update optimal solution by following the table */
+   if( solitems != NULL)
+   {
+      d = intcap - 1;
+
+      SCIPdebugMessage("Fill the solution vector after solving exactly.\n");
+
+      /* insert all items in (non-) solution vector */
+      for( j = nmyitems - 1; j > 0; --j )
+      {
+         /* if we cannot find any item which is in our solution stop */
+         if( d < 0 || optvalues[IDX(j,d)] == 0.0 )
+         {
+            assert(d >= -minweight);
+            break;
+         }
+
+         /* collect solution items */
          if( optvalues[IDX(j,d)] > optvalues[IDX(j-1,d)] )
          {
-            assert(0 <= weights[j-1] && weights[j-1] < INT_MAX);
-            solitems[*nsolitems] = items[j-1];
-            (*nsolitems)++;
-            d -= (int)weights[j-1];
+            solitems[*nsolitems] = myitems[j];
+            ++(*nsolitems);
+            d -= myweights[j];
          } 
+         /* collect non-solution items */
          else
          { 
-            nonsolitems[*nnonsolitems] = items[j-1];
-            (*nnonsolitems)++;
+            nonsolitems[*nnonsolitems] = myitems[j];
+            ++(*nnonsolitems);
          }
-         assert(d >= 0);
       }
+
+      /* insert remaining items */
+      if( d >= 0 && optvalues[IDX(j,d)] > 0.0 )
+      {
+         assert(j == 0);
+         solitems[*nsolitems] = myitems[j];
+         ++(*nsolitems);
+      }
+      else
+      {
+         assert(j >= 0);
+         assert(d < 0 || optvalues[IDX(j,d)] == 0.0);
+         for( ; j >= 0; --j )
+         {
+            nonsolitems[*nnonsolitems] = myitems[j];
+            ++(*nnonsolitems);
+         }
+      }
+         
       assert(*nsolitems + *nnonsolitems == nitems);
    }
 
+   /* update solution value */
    if( solval != NULL )
-      *solval = optvalues[IDX(nitems,intcap)];
+      *solval += optvalues[IDX(nmyitems-1,intcap-1)];
 
+   /* free all temporary memory */
    SCIPfreeBufferArray(scip, &tempsort);
    SCIPfreeBufferArray(scip, &optvalues);
 
+ TERMINATE:
+   SCIPfreeBufferArray(scip, &myitems);
+   SCIPfreeBufferArray(scip, &myprofits);
+   SCIPfreeBufferArray(scip, &myweights);
+
    return SCIP_OKAY;
 }
+
 
 /** solves knapsack problem in maximization form approximately by solving the LP-relaxation of the problem using Dantzig's
  *  method and rounding down the solution; if needed, one can provide arrays to store all selected items and all not 
