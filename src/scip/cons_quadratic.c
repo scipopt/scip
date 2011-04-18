@@ -5099,7 +5099,7 @@ SCIP_RETCODE generateCut(
             SCIPdebugMessage("cut coefficients for constraint <%s> have very large range: mincoef = %g maxcoef = %g\n", SCIPconsGetName(cons), mincoef, maxcoef);
             if( mincoefidx >= 0 )
             {
-               var = consdata->quadvarterms[j].var;
+               var = consdata->quadvarterms[mincoefidx].var;
                /* try to eliminate coefficient with minimal absolute value by weakening cut and try again */
                if( ((coef[mincoefidx] > 0.0 && violside == SCIP_SIDETYPE_RIGHT) ||
                     (coef[mincoefidx] < 0.0 && violside == SCIP_SIDETYPE_LEFT )) &&
