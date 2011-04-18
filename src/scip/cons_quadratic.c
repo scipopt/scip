@@ -5049,46 +5049,85 @@ SCIP_RETCODE generateCut(
    if( success )
    {
       SCIP_Real abscoef;
+      int       mincoefidx;
 
       assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
-      mincoef = consdata->lincoefsmin;
-      maxcoef = consdata->lincoefsmax;
-      for( j = 0; j < consdata->nquadvars; ++j )
+
+      do
       {
-         if( SCIPisZero(scip, coef[j]) )
-            continue;
-
-         abscoef = REALABS(coef[j]);
-         if( abscoef < mincoef )
-            mincoef = abscoef;
-         if( abscoef > maxcoef )
-            maxcoef = abscoef;
-      }
-
-      assert(mincoef > 0.0);
-      if( maxcoef < mincoef )
-      {
-         /* if all coefficients are zero, then mincoef and maxcoef are still at their initial values
-          * skip cut generation if its boring */
-         assert(maxcoef == 0.0);
-         assert(mincoef == SCIPinfinity(scip));
-
-         if( (violside == SCIP_SIDETYPE_LEFT  && SCIPisLE(scip, consdata->lhs, constant)) ||
-             (violside == SCIP_SIDETYPE_RIGHT && SCIPisGE(scip, consdata->rhs, constant)) )
+         mincoefidx = -1;
+         mincoef = consdata->lincoefsmin;
+         maxcoef = consdata->lincoefsmax;
+         for( j = 0; j < consdata->nquadvars; ++j )
          {
-            SCIPdebugMessage("skip cut for constraint <%s> since all coefficients are zero and it's always satisfied\n", SCIPconsGetName(cons));
+            if( SCIPisZero(scip, coef[j]) )
+               continue;
+
+            abscoef = REALABS(coef[j]);
+            if( abscoef < mincoef )
+            {
+               mincoef = abscoef;
+               mincoefidx = j;
+            }
+            if( abscoef > maxcoef )
+               maxcoef = abscoef;
+         }
+
+         if( maxcoef < mincoef )
+         {
+            /* if all coefficients are zero, then mincoef and maxcoef are still at their initial values
+             * skip cut generation if its boring */
+            assert(maxcoef == 0.0);
+            assert(mincoef == SCIPinfinity(scip));
+
+            if( (violside == SCIP_SIDETYPE_LEFT  && SCIPisLE(scip, consdata->lhs, constant)) ||
+                (violside == SCIP_SIDETYPE_RIGHT && SCIPisGE(scip, consdata->rhs, constant)) )
+            {
+               SCIPdebugMessage("skip cut for constraint <%s> since all coefficients are zero and it's always satisfied\n", SCIPconsGetName(cons));
+               success = FALSE;
+            }
+            else
+            {
+               /* cut will cutoff node */
+            }
+
+            break;
+         }
+
+         if( maxcoef / mincoef > maxrange  )
+         {
+            SCIPdebugMessage("cut coefficients for constraint <%s> have very large range: mincoef = %g maxcoef = %g\n", SCIPconsGetName(cons), mincoef, maxcoef);
+            if( mincoefidx >= 0 )
+            {
+               var = consdata->quadvarterms[j].var;
+               /* try to eliminate coefficient with minimal absolute value by weakening cut and try again */
+               if( ((coef[mincoefidx] > 0.0 && violside == SCIP_SIDETYPE_RIGHT) ||
+                    (coef[mincoefidx] < 0.0 && violside == SCIP_SIDETYPE_LEFT )) &&
+                   !SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
+               {
+                  SCIPdebugMessage("eliminate coefficient %g for <%s> [%g, %g]\n", coef[mincoefidx], SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+                  constant += coef[mincoefidx] * SCIPvarGetLbLocal(var);
+                  coef[mincoefidx] = 0.0;
+                  refquadpartval += coef[mincoefidx] * (SCIPvarGetLbLocal(var) - ref[mincoefidx]);
+                  continue;
+               }
+               else if( ((coef[mincoefidx] < 0.0 && violside == SCIP_SIDETYPE_RIGHT) ||
+                         (coef[mincoefidx] > 0.0 && violside == SCIP_SIDETYPE_LEFT )) &&
+                        !SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
+               {
+                  SCIPdebugMessage("eliminate coefficient %g for <%s> [%g, %g]\n", coef[mincoefidx], SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+                  constant += coef[mincoefidx] * SCIPvarGetUbLocal(var);
+                  coef[mincoefidx] = 0.0;
+                  refquadpartval += coef[mincoefidx] * (SCIPvarGetUbLocal(var) - ref[mincoefidx]);
+                  continue;
+               }
+            }
+
+            SCIPdebugMessage("skip cut\n");
             success = FALSE;
          }
-         else
-         {
-            /* cut will cutoff node */
-         }
-      }
-      else if( maxcoef / mincoef > maxrange )
-      {
-         SCIPdebugMessage("skip cut for constraint <%s> because of very large range: %g\n", SCIPconsGetName(cons), maxcoef / mincoef);
-         success = FALSE;
-      }
+
+      } while( FALSE );
 
       if( violside == SCIP_SIDETYPE_LEFT )
          viol = consdata->lhs - (reflinpartval + refquadpartval);
@@ -7778,6 +7817,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpQuadratic)
       SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, SCIPfeastol(scip), TRUE, &separateresult, &sepaefficacy) );
       if( separateresult == SCIP_SEPARATED )
       {
+         SCIPdebugMessage("separation fallback succeeded, efficacy = %g\n", sepaefficacy);
          *result = SCIP_SEPARATED;
          return SCIP_OKAY;
       }
