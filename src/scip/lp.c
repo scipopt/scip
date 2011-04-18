@@ -970,7 +970,7 @@ void coefChanged(
    assert(row != NULL);
    assert(col != NULL);
    assert(lp != NULL);
-   assert(!lp->diving);
+   assert(!lp->diving || row->lppos == -1);
 
    if( row->lpipos >= 0 && col->lpipos >= 0 )
    {
@@ -4446,7 +4446,7 @@ SCIP_RETCODE SCIProwAddCoef(
    )
 {
    assert(lp != NULL);
-   assert(!lp->diving);
+   assert(!lp->diving || row->lppos == -1);
 
    SCIP_CALL( rowAddCoef(row, blkmem, set, eventqueue, lp, col, val, -1) );
 
@@ -4470,7 +4470,7 @@ SCIP_RETCODE SCIProwDelCoef(
    assert(row != NULL);
    assert(!row->delaysort);
    assert(lp != NULL);
-   assert(!lp->diving);
+   assert(!lp->diving || row->lppos == -1);
    assert(col != NULL);
    assert(col->var != NULL);
 
@@ -4517,7 +4517,7 @@ SCIP_RETCODE SCIProwChgCoef(
    assert(row != NULL);
    assert(!row->delaysort);
    assert(lp != NULL);
-   assert(!lp->diving);
+   assert(!lp->diving || row->lppos == -1);
    assert(col != NULL);
 
    /* search the position of the column in the row's col vector */
@@ -4568,7 +4568,7 @@ SCIP_RETCODE SCIProwIncCoef(
 
    assert(row != NULL);
    assert(lp != NULL);
-   assert(!lp->diving);
+   assert(!lp->diving || row->lppos == -1);
    assert(col != NULL);
 
    if( SCIPsetIsZero(set, incval) )
@@ -4623,7 +4623,7 @@ SCIP_RETCODE SCIProwChgConstant(
    assert(!SCIPsetIsInfinity(set, REALABS(constant)));
    assert(stat != NULL);
    assert(lp != NULL);
-   assert(!lp->diving);
+   assert(!lp->diving || row->lppos == -1);
 
    if( !SCIPsetIsEQ(set, constant, row->constant) )
    {
@@ -4678,7 +4678,7 @@ SCIP_RETCODE SCIProwAddConstant(
    assert(!SCIPsetIsInfinity(set, REALABS(addval)));
    assert(stat != NULL);
    assert(lp != NULL);
-   assert(!lp->diving);
+   assert(!lp->diving || row->lppos == -1);
 
    if( !SCIPsetIsZero(set, addval) )
    {
@@ -4700,7 +4700,7 @@ SCIP_RETCODE SCIProwChgLhs(
 {
    assert(row != NULL);
    assert(lp != NULL);
-   assert(!lp->diving);
+   assert(!lp->diving || row->lppos == -1);
 
    if( !SCIPsetIsEQ(set, row->lhs, lhs) )
    {
@@ -4730,7 +4730,7 @@ SCIP_RETCODE SCIProwChgRhs(
 {
    assert(row != NULL);
    assert(lp != NULL);
-   assert(!lp->diving);
+   assert(!lp->diving || row->lppos == -1);
 
    if( !SCIPsetIsEQ(set, row->rhs, rhs) )
    {

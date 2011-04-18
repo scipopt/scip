@@ -133,6 +133,11 @@ SCIP_DOMCHG* SCIPnodeGetDomchg(
    SCIP_NODE*            node                /**< node */
    );
 
+/** gets the parent node of a node in the branch-and-bound tree, if any */
+extern
+SCIP_NODE* SCIPnodeGetParent(
+   SCIP_NODE*            node                /**< node */
+   );
 
 /** returns whether node is in the path to the current node */
 extern
@@ -160,6 +165,7 @@ SCIP_Bool SCIPnodeIsPropagatedAgain(
 #define SCIPnodeGetLowerbound(node)     ((node)->lowerbound)
 #define SCIPnodeGetEstimate(node)       ((node)->estimate)
 #define SCIPnodeGetDomchg(node)         ((node)->domchg)
+#define SCIPnodeGetParent(node)         ((node)->parent)
 #define SCIPnodeIsActive(node)          ((node)->active)
 #define SCIPnodeIsPropagatedAgain(node) ((node)->reprop)
 
