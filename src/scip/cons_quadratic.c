@@ -6922,6 +6922,17 @@ void consdataFindUnlockedLinearVar(
             consdata->linvar_mayincrease = i;
       }
    }
+
+#ifdef SCIP_DEBUG
+   if( consdata->linvar_mayincrease >= 0 )
+   {
+      SCIPdebugMessage("may increase <%s> to become feasible\n", SCIPvarGetName(consdata->linvars[consdata->linvar_mayincrease]));
+   }
+   if( consdata->linvar_maydecrease >= 0 )
+   {
+      SCIPdebugMessage("may decrease <%s> to become feasible\n", SCIPvarGetName(consdata->linvars[consdata->linvar_maydecrease]));
+   }
+#endif
 }
 
 /** Given a solution where every quadratic constraint is either feasible or can be made feasible by
@@ -7194,6 +7205,7 @@ SCIP_DECL_CONSEXIT(consExitQuadratic)
 }
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
+#if 0
 static
 SCIP_DECL_CONSINITPRE(consInitpreQuadratic)
 {
@@ -7210,18 +7222,11 @@ SCIP_DECL_CONSINITPRE(consInitpreQuadratic)
    
    *result = SCIP_FEASIBLE;
 
-   for( c = 0; c < nconss; ++c )
-   {
-      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
-      assert(consdata != NULL);
-
-      /* reset linvar_may{in,de}crease to -1 in case some values are still set from a previous solve round */
-      consdata->linvar_mayincrease = -1;
-      consdata->linvar_maydecrease = -1;
-   }
-
    return SCIP_OKAY;
 }
+#else
+#define consInitpreQuadratic NULL
+#endif
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
 static
@@ -7312,16 +7317,6 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
 
       /* check for a linear variable that can be increase or decreased without harming feasibility */
       consdataFindUnlockedLinearVar(scip, consdata);
-#ifdef SCIP_DEBUG
-      if( consdata->linvar_mayincrease >= 0 )
-      {
-         SCIPdebugMessage("may increase <%s> to become feasible\n", SCIPvarGetName(consdata->linvars[consdata->linvar_mayincrease]));
-      }
-      if( consdata->linvar_maydecrease >= 0 )
-      {
-         SCIPdebugMessage("may decrease <%s> to become feasible\n", SCIPvarGetName(consdata->linvars[consdata->linvar_maydecrease]));
-      }
-#endif
 
       /* setup lincoefsmin, lincoefsmax */
       consdata->lincoefsmin = SCIPinfinity(scip);
