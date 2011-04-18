@@ -6832,6 +6832,59 @@ SCIP_RETCODE propagateBounds(
    return SCIP_OKAY;
 }
 
+/* checks for a linear variable that can be increase or decreased without harming feasibility */
+static
+void consdataFindUnlockedLinearVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata            /**< constraint data */
+)
+{
+   int i;
+   int poslock;
+   int neglock;
+
+   consdata->linvar_maydecrease = -1;
+   consdata->linvar_mayincrease = -1;
+
+   /* check for a linear variable that can be increase or decreased without harming feasibility
+    * setup lincoefsmin, lincoefsmax */
+   for( i = 0; i < consdata->nlinvars; ++i )
+   {
+      /* compute locks of i'th linear variable */
+      assert(consdata->lincoefs[i] != 0.0);
+      if( consdata->lincoefs[i] > 0.0 )
+      {
+         poslock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
+         neglock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;
+      }
+      else
+      {
+         poslock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;
+         neglock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
+      }
+
+      if( SCIPvarGetNLocksDown(consdata->linvars[i]) - neglock == 0 )
+      {
+         /* for a*x + q(y) \in [lhs, rhs], we can decrease x without harming other constraints */
+         /* if we have already one candidate, then take the one where the loss in the objective function is less */
+         if( (consdata->linvar_maydecrease < 0) ||
+             (SCIPvarGetObj(consdata->linvars[consdata->linvar_maydecrease]) / consdata->lincoefs[consdata->linvar_maydecrease] >
+              SCIPvarGetObj(consdata->linvars[i]) / consdata->lincoefs[i]) )
+            consdata->linvar_maydecrease = i;
+      }
+
+      if( SCIPvarGetNLocksDown(consdata->linvars[i]) - poslock == 0 )
+      {
+         /* for a*x + q(y) \in [lhs, rhs], we can increase x without harm */
+         /* if we have already one candidate, then take the one where the loss in the objective function is less */
+         if( (consdata->linvar_mayincrease < 0) ||
+             (SCIPvarGetObj(consdata->linvars[consdata->linvar_mayincrease]) / consdata->lincoefs[consdata->linvar_mayincrease] >
+              SCIPvarGetObj(consdata->linvars[i]) / consdata->lincoefs[i]) )
+            consdata->linvar_mayincrease = i;
+      }
+   }
+}
+
 /** Given a solution where every quadratic constraint is either feasible or can be made feasible by
  * moving a linear variable, construct the corresponding feasible solution and pass it to the trysol heuristic.
  * The method assumes that this is always possible and that not all constraints are feasible already.
@@ -6871,6 +6924,8 @@ SCIP_RETCODE proposeFeasibleSolution(
       SCIP_CALL( SCIPcreateLPSol(scip, &newsol, NULL) );
    }
    SCIP_CALL( SCIPunlinkSol(scip, newsol) );
+   SCIPdebugMessage("attempt to make solution from <%s> feasible by shifting linear variable\n",
+      sol != NULL ? (SCIPsolGetHeur(sol) != NULL ? SCIPheurGetName(SCIPsolGetHeur(sol)) : "tree") : "LP");
 
    for( c = 0; c < nconss; ++c )
    {
@@ -7200,9 +7255,8 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
-   int                c, i;
-   int                poslock;
-   int                neglock;
+   int                c;
+   int                i;
    
    assert(scip     != NULL);
    assert(conshdlr != NULL);
@@ -7217,48 +7271,8 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
-      /* check for a linear variable that can be increase or decreased without harming feasibility#
-       * setup lincoefsmin, lincoefsmax */
-      consdata->lincoefsmin = SCIPinfinity(scip);
-      consdata->lincoefsmax = 0.0;
-      for( i = 0; i < consdata->nlinvars; ++i )
-      {
-         /* compute locks of i'th linear variable */
-         assert(consdata->lincoefs[i] != 0.0);
-         if( consdata->lincoefs[i] > 0.0 )
-         {
-            poslock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
-            neglock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;
-         }
-         else
-         {
-            poslock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;
-            neglock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
-         }
-
-         if( SCIPvarGetNLocksDown(consdata->linvars[i]) - neglock == 0 )
-         {
-            /* for a*x + q(y) \in [lhs, rhs], we can decrease x without harming other constraints */
-            /* if we have already one candidate, then take the one where the loss in the objective function is less */
-            if( (consdata->linvar_maydecrease < 0) ||
-               (SCIPvarGetObj(consdata->linvars[consdata->linvar_maydecrease]) / consdata->lincoefs[consdata->linvar_maydecrease]
-                 > SCIPvarGetObj(consdata->linvars[i]) / consdata->lincoefs[i]) )
-               consdata->linvar_maydecrease = i;
-         }
-
-         if( SCIPvarGetNLocksDown(consdata->linvars[i]) - poslock == 0 )
-         {
-            /* for a*x + q(y) \in [lhs, rhs], we can increase x without harm */
-            /* if we have already one candidate, then take the one where the loss in the objective function is less */
-            if( (consdata->linvar_mayincrease < 0) ||
-               (SCIPvarGetObj(consdata->linvars[consdata->linvar_mayincrease]) / consdata->lincoefs[consdata->linvar_mayincrease]
-                 > SCIPvarGetObj(consdata->linvars[i]) / consdata->lincoefs[i]) )
-               consdata->linvar_mayincrease = i;
-         }
-
-         consdata->lincoefsmin = MIN(consdata->lincoefsmin, REALABS(consdata->lincoefs[i]));
-         consdata->lincoefsmax = MAX(consdata->lincoefsmax, REALABS(consdata->lincoefs[i]));
-      }
+      /* check for a linear variable that can be increase or decreased without harming feasibility */
+      consdataFindUnlockedLinearVar(scip, consdata);
 #ifdef SCIP_DEBUG
       if( consdata->linvar_mayincrease >= 0 )
       {
@@ -7269,6 +7283,15 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
          SCIPdebugMessage("may decrease <%s> to become feasible\n", SCIPvarGetName(consdata->linvars[consdata->linvar_maydecrease]));
       }
 #endif
+
+      /* setup lincoefsmin, lincoefsmax */
+      consdata->lincoefsmin = SCIPinfinity(scip);
+      consdata->lincoefsmax = 0.0;
+      for( i = 0; i < consdata->nlinvars; ++i )
+      {
+         consdata->lincoefsmin = MIN(consdata->lincoefsmin, REALABS(consdata->lincoefs[i]));
+         consdata->lincoefsmax = MAX(consdata->lincoefsmax, REALABS(consdata->lincoefs[i]));
+      }
 
       /* add nlrow respresentation to NLP, if NLP had been constructed */
       if( SCIPisNLPConstructed(scip) )
@@ -8399,6 +8422,10 @@ SCIP_DECL_CONSCHECK(consCheckQuadratic)
             maxviol = consdata->lhsviol + consdata->rhsviol;
          if( maypropfeasible )
          {
+            /* update information on linear variables that may be in- or decreased */
+            if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+               consdataFindUnlockedLinearVar(scip, consdata);
+
             if( SCIPisFeasPositive(scip, consdata->lhsviol) )
             {
                /* check if there is a variable which may help to get the left hand side satisfied
