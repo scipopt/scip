@@ -173,6 +173,7 @@ fixed bugs:
 - fixed bug concerning overflow in memsize calculation in set.c
 - fixed segmentation fault in heur_subnlp.c which occured if resolving the NLP with a tighter feasibility tolerance failed with a solver error
 - fixed wrong assumption that an optimal LP solution in the root is optimal for the problem if there are no active pricers, need to check also whether all variables are in the LP
+- fixed wrong assert in var.c (replaced '==' through 'SCIPsetIsEQ'), real values do not have to be exactly the same when computed in different function
 
 performance improvements:
 - fasten propagation in cons_knapsack.c due to negated clique partitions
