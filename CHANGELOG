@@ -47,7 +47,8 @@ interface:
 - new method SCIPnodeGetParent() to get parent node of a node
 - added method SCIPsortRealIntLong() and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines in misc.c
 - new method SCIPnodesSharePath() in pub_tree.h that determines whether two nodes are on the same leaf-root path
-- new method SCIPnodesGetCommonAncestor() in pub_tree.h that finds the common ancestor node for two given nodes 
+- new method SCIPnodesGetCommonAncestor() in pub_tree.h that finds the common ancestor node for two given nodes
+- new method SCIPgetNLPFracVars() to get the fractional variables in an NLP solution
 
 performance improvements:
 - performance improvements in prop_vbounds
