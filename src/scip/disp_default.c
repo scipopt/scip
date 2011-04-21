@@ -653,7 +653,10 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputLPObjval)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_LPOBJ) == 0);
    assert(scip != NULL);
 
-   lpobj = SCIPgetLPObjval(scip);
+   if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_NOTSOLVED )
+      lpobj = SCIP_INVALID;
+   else
+      lpobj = SCIPgetLPObjval(scip);
 
    if( SCIPisInfinity(scip, -lpobj ) || lpobj == SCIP_INVALID )
       SCIPinfoMessage(scip, file, "      --      ");

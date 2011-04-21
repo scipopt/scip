@@ -79,6 +79,8 @@
 /* We include the linear constraint handler to be able to copy a (multi)aggregation of variables (to a linear constraint).
  * The better way would be to handle the distinction between original and transformed variables via a flag 'isoriginal' 
  * in the variable data structure. This would allow to have (multi)aggregated variables in the original problem.
+ *
+ * A second reason for including the linear constraint handler is for copying cuts to linear constraints.
  */ 
 #include "scip/cons_linear.h"
 
@@ -1631,6 +1633,143 @@ SCIP_RETCODE SCIPcopyConss(
       SCIPhashmapFree(&localconsmap);
    }
    
+   return SCIP_OKAY;
+}
+
+
+/** convert all active cuts from cutpool of sourcescip to linear constraints in targetscip, sourcescip and targetscip
+ *  could be the same
+ */
+SCIP_RETCODE SCIPconvertCutsToConss(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   SCIP_Bool             global,             /**< create a global or a local copy? */
+   int*                  ncutsadded          /**< pointer to store number of added cuts */
+   )
+{
+   SCIP_CUT** cuts;
+   int ncuts;
+   int c;
+
+   assert(sourcescip != NULL);
+   assert(sourcescip->set != NULL);
+   assert(targetscip != NULL);
+   assert(ncutsadded != NULL);
+
+   /* check stages for both, the source and the target SCIP data structure */
+   SCIP_CALL( checkStage(sourcescip, "SCIPconvertCutsToConss", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL( checkStage(targetscip, "SCIPconvertCutsToConss", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE) );
+
+   /* if we do not have any cuts, nothing can be converted */
+   if( sourcescip->set->stage < SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
+
+   if( SCIPfindConshdlr(targetscip, "linear") == NULL )
+   {
+      SCIPdebugMessage("No linear constraint handler available. Cannot convert cuts.\n");
+      return SCIP_OKAY;
+   }
+
+   cuts = SCIPgetPoolCuts(sourcescip);
+   ncuts = SCIPgetNPoolCuts(sourcescip);
+
+   for( c = 0; c < ncuts; ++c )
+   {
+      SCIP_ROW* row;
+
+      row = SCIPcutGetRow(cuts[c]);
+      assert(!SCIProwIsLocal(row));
+      assert(!SCIProwIsModifiable(row));
+
+      /* create a linear constraint out of the cut */
+      if( SCIPcutGetAge(cuts[c]) == 0 && SCIProwIsInLP(row) )
+      {
+         char name[SCIP_MAXSTRLEN];
+         SCIP_CONS* cons;
+         SCIP_COL** cols;
+         SCIP_VAR** vars;
+         int ncols;
+         int i;
+         
+         cols = SCIProwGetCols(row);
+         ncols = SCIProwGetNNonz(row);
+         
+         /* get all variables of the row */
+         SCIP_CALL( SCIPallocBufferArray(sourcescip, &vars, ncols) );
+         for( i = 0; i < ncols; ++i )
+            vars[i] = SCIPcolGetVar(cols[i]);
+
+         /* get corresponding variables in targetscip if neccessary */
+         if( sourcescip != targetscip )
+         {
+            SCIP_Bool success;
+
+            for( i = 0; i < ncols; ++i )
+            {
+               SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, vars[i], &vars[i], varmap, consmap, global, &success) );
+
+               if( !success )
+               {
+                  SCIPdebugMessage("Converting cuts to constraints failed.\n");
+                  
+                  /* free temporary memory */
+                  SCIPfreeBufferArray(sourcescip, &vars);
+                  return SCIP_OKAY;
+               }
+            }
+         }
+         
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d", SCIProwGetName(row), SCIPgetNRuns(sourcescip));
+         SCIP_CALL( SCIPcreateConsLinear(targetscip, &cons, name, ncols, vars, SCIProwGetVals(row),
+               SCIProwGetLhs(row) - SCIProwGetConstant(row), SCIProwGetRhs(row) - SCIProwGetConstant(row),
+               TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
+         SCIP_CALL( SCIPaddCons(targetscip, cons) );
+
+         SCIPdebugMessage("Converted cut <%s> to constraint <%s>.\n", SCIProwGetName(row), SCIPconsGetName(cons));
+         SCIPdebug( SCIP_CALL( SCIPprintCons(targetscip, cons, NULL) ) );
+         SCIP_CALL( SCIPreleaseCons(targetscip, &cons) );
+
+         /* free temporary memory */
+         SCIPfreeBufferArray(sourcescip, &vars);
+
+         ++(*ncutsadded);
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** copies all active cuts from cutpool of sourcescip to constraints in targetscip */
+SCIP_RETCODE SCIPcopyCuts(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   SCIP_Bool             global              /**< create a global or a local copy? */
+   )
+{
+   int ncutsadded;
+
+   assert(sourcescip != NULL);
+   assert(targetscip != NULL);
+
+   /* check stages for both, the source and the target SCIP data structure */
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopyCuts", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL( checkStage(targetscip, "SCIPcopyCuts", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   ncutsadded = 0;
+
+   /* create out of all active cuts in cutpool linear constraints in targetscip */
+   SCIP_CALL( SCIPconvertCutsToConss(sourcescip, targetscip, varmap, consmap, global, &ncutsadded) );
+
+   SCIPdebugMessage("Converted %d active cuts to constraints.\n", ncutsadded);
+
    return SCIP_OKAY;
 }
 
@@ -6878,7 +7017,7 @@ SCIP_RETCODE SCIPsolve(
                "(run %d, node %lld) restarting after %d global fixings of integer variables\n",
                scip->stat->nruns, scip->stat->nnodes, scip->stat->nrootintfixingsrun);
          /* an extra blank line should be printed separately since the buffer message handler only handles up to one line
-          *  correctly */
+          * correctly */
          SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "\n");
          SCIP_CALL( freeSolve(scip, TRUE) );
          assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
@@ -14513,7 +14652,7 @@ SCIP_RETCODE SCIPflushNLP(
    }
    else
    {
-      SCIPerrorMessage("NLP has not been not constructed.\n");
+      SCIPerrorMessage("NLP has not been constructed.\n");
       return SCIP_ERROR;
    }
 
@@ -15926,7 +16065,7 @@ SCIP_RETCODE SCIPseparateSol(
    actdepth = (pretendroot ? 0 : SCIPtreeGetCurrentDepth(scip->tree));
 
    /* apply separation round */
-   SCIP_CALL( SCIPseparationRound(scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter, scip->transprob, scip->lp, scip->sepastore,
+   SCIP_CALL( SCIPseparationRound(scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter, scip->transprob, scip->primal, scip->tree, scip->lp, scip->sepastore,
          sol, actdepth, onlydelayed, delayed, cutoff) );
 
    return SCIP_OKAY;

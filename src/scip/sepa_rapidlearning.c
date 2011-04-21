@@ -56,6 +56,9 @@
 #define DEFAULT_CONTVARS          FALSE /**< should rapid learning be applied when there are continuous variables? */
 #define DEFAULT_CONTVARSQUOT        0.3 /**< maximal portion of continuous variables to apply rapid learning       */
 #define DEFAULT_LPITERQUOT          0.2 /**< maximal fraction of LP iterations compared to node LP iterations      */
+#define DEFAULT_COPYCUTS           TRUE /**< should all active cuts from the cutpool of the
+                                         *   original scip be copied to constraints of the subscip
+                                         */
 
 
 /*
@@ -78,6 +81,9 @@ struct SCIP_SepaData
    SCIP_Bool             contvars;           /**< should rapid learning be applied when there are continuous variables? */
    SCIP_Real             contvarsquot;       /**< maximal portion of continuous variables to apply rapid learning       */
    SCIP_Real             lpiterquot;         /**< maximal fraction of LP iterations compared to node LP iterations      */
+   SCIP_Bool             copycuts;           /**< should all active cuts from cutpool be copied to constraints in
+                                              *   subproblem?
+                                              */
 };
 
 /** creates a new solution for the original problem by copying the solution of the subproblem */
@@ -288,6 +294,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    /* copy the subproblem */
    SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "rapid", FALSE, FALSE, &success) );
    
+   if( sepadata->copycuts )
+   {
+      /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+      SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, FALSE) );
+   }
+
    for( i = 0; i < nvars; i++ )
       subvars[i] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmapfw, vars[i]);
    
@@ -710,6 +722,9 @@ SCIP_RETCODE SCIPincludeSepaRapidlearning(
          "minimum number of nodes considered in rapid learning run",
          &sepadata->minnodes, TRUE, DEFAULT_MINNODES, 0, INT_MAX, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/"SEPA_NAME"/copycuts",
+         "should all active cuts from cutpool be copied to constraints in subproblem?",
+         &sepadata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
    
    return SCIP_OKAY;
 }

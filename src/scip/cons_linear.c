@@ -51,6 +51,7 @@
 
 #include "scip/cons_linear.h"
 #include "scip/cons_knapsack.h"
+#include "scip/cons_quadratic.h"
 #include "scip/pub_misc.h"
 
 #define CONSHDLR_NAME          "linear"
@@ -102,6 +103,7 @@
 
 #define HASHSIZE_LINEARCONS        131101 /**< minimal size of hash table in linear constraint tables */
 
+#define QUADCONSUPGD_PRIORITY     1000000 /**< priority of the constraint handler for upgrading of quadratic constraints */
 
 
 /** constraint data for linear constraints */
@@ -8817,56 +8819,20 @@ SCIP_DECL_CONSEXITSOL(consExitsolLinear)
    /* if this is a restart, convert cutpool rows into linear constraints */
    if( restart )
    {
-      SCIP_CUT** cuts;
-      int ncuts;
       int ncutsadded;
 
       ncutsadded = 0;
-      cuts = SCIPgetPoolCuts(scip);
-      ncuts = SCIPgetNPoolCuts(scip);
-      for( c = 0; c < ncuts; ++c )
-      {
-         SCIP_ROW* row;
 
-         row = SCIPcutGetRow(cuts[c]);
-         assert(!SCIProwIsLocal(row));
-         assert(!SCIProwIsModifiable(row));
-         if( SCIPcutGetAge(cuts[c]) == 0 && SCIProwIsInLP(row) )
-         {
-            char name[SCIP_MAXSTRLEN];
-            SCIP_CONS* cons;
-            SCIP_COL** cols;
-            SCIP_VAR** vars;
-            int ncols;
-            int i;
-
-            /* create a linear constraint out of the cut */
-            cols = SCIProwGetCols(row);
-            ncols = SCIProwGetNNonz(row);
-            
-            SCIP_CALL( SCIPallocBufferArray(scip, &vars, ncols) );
-            for( i = 0; i < ncols; ++i )
-               vars[i] = SCIPcolGetVar(cols[i]);
-            
-            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d", SCIProwGetName(row), SCIPgetNRuns(scip));
-            SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, ncols, vars, SCIProwGetVals(row),
-                  SCIProwGetLhs(row) - SCIProwGetConstant(row), SCIProwGetRhs(row) - SCIProwGetConstant(row),
-                  TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
-            SCIP_CALL( SCIPaddCons(scip, cons) );
-            SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
-            SCIPfreeBufferArray(scip, &vars);
-
-            ncutsadded++;
-         }
-      }
+      /* create out of all active cuts in cutpool linear constraints */
+      SCIP_CALL( SCIPconvertCutsToConss(scip, scip, NULL, NULL, TRUE, &ncutsadded) );
 
       if( ncutsadded > 0 )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
             "(restart) converted %d cuts from the global cut pool into linear constraints\n", ncutsadded);
          /* an extra blank line should be printed separately since the buffer message handler only handle up to one line
-          *  correctly */
+          * correctly 
+          */
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "\n");
       }
    }
@@ -10364,6 +10330,56 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLinear)
 
 
 /*
+ * Quadratic constraint upgrading
+ */
+
+
+#ifdef QUADCONSUPGD_PRIORITY
+/** upgrades quadratic constraints with only and at least one linear variables into a linear constraint
+ */
+static
+SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
+{
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(nupgdconss != NULL);
+   assert(upgdconss  != NULL);
+
+   *nupgdconss = 0;
+
+   SCIPdebugMessage("upgradeConsQuadratic called for constraint <%s>\n", SCIPconsGetName(cons));
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+
+   if( SCIPgetNQuadVarTermsQuadratic(scip, cons) > 0 )
+      return SCIP_OKAY;
+   if( SCIPgetNLinearVarsQuadratic(scip, cons) == 0 )
+      return SCIP_OKAY;
+
+   if( upgdconsssize < 1 )
+   {
+      /* signal that we need more memory */
+      *nupgdconss = -1;
+      return SCIP_OKAY;
+   }
+
+   *nupgdconss = 1;
+   SCIP_CALL( SCIPcreateConsLinear(scip, &upgdconss[0], SCIPconsGetName(cons),
+      SCIPgetNLinearVarsQuadratic(scip, cons),
+      SCIPgetLinearVarsQuadratic(scip, cons),
+      SCIPgetCoefsLinearVarsQuadratic(scip, cons),
+      SCIPgetLhsQuadratic(scip, cons), SCIPgetRhsQuadratic(scip, cons),
+      SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+      SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
+      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+      SCIPconsIsStickingAtNode(cons)) );
+   SCIPdebugMessage("created linear constraint:\n");
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[0], NULL)) );
+
+   return SCIP_OKAY;
+}
+#endif
+
+/*
  * constraint specific interface methods
  */
 
@@ -10402,6 +10418,14 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          consEnableLinear, consDisableLinear,
          consPrintLinear, consCopyLinear, consParseLinear,
          conshdlrdata) );
+
+#ifdef QUADCONSUPGD_PRIORITY
+   if( SCIPfindConshdlr(scip, "quadratic") != NULL )
+   {
+      /* include function that upgrades quadratic constraint to linear constraints */
+      SCIP_CALL( SCIPincludeQuadconsUpgrade(scip, upgradeConsQuadratic, QUADCONSUPGD_PRIORITY, CONSHDLR_NAME) );
+   }
+#endif
 
    /* add linear constraint handler parameters */
    SCIP_CALL( SCIPaddIntParam(scip,

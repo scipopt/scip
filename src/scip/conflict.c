@@ -4156,7 +4156,7 @@ SCIP_RETCODE conflictAnalyzeLP(
    assert(conflict != NULL);
    assert(conflict->nconflictsets == 0);
    assert(set != NULL);
-   assert(set->nactivepricers == 0); /* conflict analysis is not possible with unknown variables */
+   assert(SCIPprobAllColsInLP(prob, set, lp)); /* conflict analysis is not possible with unknown variables */
    assert(stat != NULL);
    assert(prob != NULL);
    assert(lp != NULL);
@@ -4612,7 +4612,7 @@ SCIP_RETCODE conflictAnalyzeInfeasibleLP(
       return SCIP_OKAY;
 
    /* LP conflict analysis is only possible, if all variables are known */
-   if( set->nactivepricers > 0 )
+   if( !SCIPprobAllColsInLP(prob, set, lp) )
       return SCIP_OKAY;
 
    SCIPdebugMessage("analyzing conflict on infeasible LP in depth %d (solstat: %d, objchanged: %u)\n",
@@ -4681,7 +4681,7 @@ SCIP_RETCODE conflictAnalyzeBoundexceedingLP(
       return SCIP_OKAY;
 
    /* LP conflict analysis is only possible, if all variables are known */
-   if( set->nactivepricers > 0 )
+   if( !SCIPprobAllColsInLP(prob, set, lp) )
       return SCIP_OKAY;
 
    SCIPdebugMessage("analyzing conflict on bound exceeding LP in depth %d (solstat: %d)\n",
@@ -4959,7 +4959,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
       return SCIP_OKAY;
 
    /* LP conflict analysis is only possible, if all variables are known */
-   if( set->nactivepricers > 0 )
+   if( !SCIPprobAllColsInLP(prob, set, lp) )
       return SCIP_OKAY;
 
    /* start timing */
