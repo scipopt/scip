@@ -5863,18 +5863,51 @@ SCIP_Bool SCIPnodesSharePath(
 {
    assert(node1 != NULL);
    assert(node2 != NULL);
-   
+   assert(SCIPnodeGetDepth(node1) >= 0);
+   assert(SCIPnodeGetDepth(node2) >= 0);
+
    /* if node2 is deeper than node1, follow the path until the level of node2 */
    while( SCIPnodeGetDepth(node1) < SCIPnodeGetDepth(node2) )
       node2 = node2->parent;
 
-   /* if node1 is deeper than node1, follow the path until the level of node1 */
+   /* if node1 is deeper than node2, follow the path until the level of node1 */
    while( SCIPnodeGetDepth(node2) < SCIPnodeGetDepth(node1) )
       node1 = node1->parent;
 
    assert(SCIPnodeGetDepth(node2) == SCIPnodeGetDepth(node1));
 
    return (node1 == node2);
+}
+
+/** finds the common ancestor node of two given nodes */
+SCIP_NODE* SCIPnodesGetCommonAncestor(
+   SCIP_NODE*            node1,                /**< node data */
+   SCIP_NODE*            node2                 /**< node data */
+   )
+{
+   assert(node1 != NULL);
+   assert(node2 != NULL);
+   assert(SCIPnodeGetDepth(node1) >= 0);
+   assert(SCIPnodeGetDepth(node2) >= 0);
+   
+   /* if node2 is deeper than node1, follow the path until the level of node2 */
+   while( SCIPnodeGetDepth(node1) < SCIPnodeGetDepth(node2) )
+      node2 = node2->parent;
+
+   /* if node1 is deeper than node2, follow the path until the level of node1 */
+   while( SCIPnodeGetDepth(node2) < SCIPnodeGetDepth(node1) )
+      node1 = node1->parent;
+
+   /* move up level by level until you found a common ancestor */
+   while( node1 != node2 )
+   {
+      node1 = node1->parent;
+      node2 = node2->parent;
+      assert(SCIPnodeGetDepth(node1) == SCIPnodeGetDepth(node2));
+   }
+   assert(SCIPnodeGetDepth(node1) >= 0);
+
+   return node1;
 }
 
 /** returns whether node is in the path to the current node */

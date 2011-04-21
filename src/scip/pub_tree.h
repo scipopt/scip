@@ -96,6 +96,14 @@ SCIP_Bool SCIPnodesSharePath(
    SCIP_NODE*            node2                 /**< node data */
    );
 
+/** finds the common ancestor node of two given nodes */
+extern
+SCIP_NODE* SCIPnodesGetCommonAncestor(
+   SCIP_NODE*            node1,                /**< node data */
+   SCIP_NODE*            node2                 /**< node data */
+   );
+
+
 #ifndef NDEBUG
 
 /* In debug mode, the following methods are implemented as function calls to ensure
