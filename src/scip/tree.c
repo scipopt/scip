@@ -5855,6 +5855,28 @@ void SCIPnodeGetAncestorBranchingPath(
    }
 }
 
+/** checks for two nodes whether they share the same root path, i.e., whether one is an ancestor of the other */
+SCIP_Bool SCIPnodesSharePath(
+   SCIP_NODE*            node1,                /**< node data */
+   SCIP_NODE*            node2                 /**< node data */
+   )
+{
+   assert(node1 != NULL);
+   assert(node2 != NULL);
+   
+   /* if node2 is deeper than node1, follow the path until the level of node2 */
+   while( SCIPnodeGetDepth(node1) < SCIPnodeGetDepth(node2) )
+      node2 = node2->parent;
+
+   /* if node1 is deeper than node1, follow the path until the level of node1 */
+   while( SCIPnodeGetDepth(node2) < SCIPnodeGetDepth(node1) )
+      node1 = node1->parent;
+
+   assert(SCIPnodeGetDepth(node2) == SCIPnodeGetDepth(node1));
+
+   return (node1 == node2);
+}
+
 /** returns whether node is in the path to the current node */
 SCIP_Bool SCIPnodeIsActive(
    SCIP_NODE*            node                /**< node */

@@ -46,6 +46,7 @@ interface:
 - added SCIPconvertCutsToConss() and SCIPcopyCuts() to scip.{c,h} for copying cuts to linear constraints
 - new method SCIPnodeGetParent() to get parent node of a node
 - added method SCIPsortRealIntLong() and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines in misc.c
+- new method SCIPnodesSharePath() in pub_tree.h that determines whether two nodes are on the same leaf-root path
 
 performance improvements:
 - performance improvements in prop_vbounds

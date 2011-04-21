@@ -69,7 +69,7 @@ void SCIPnodeGetAncestorBranchings(
    int                   branchvarssize       /**< available slots in arrays */
    );
 
-/*  returns the set of variable branchings that were performed in all ancestor nodes (nodes on the path to the root) to create this node 
+/**  returns the set of variable branchings that were performed in all ancestor nodes (nodes on the path to the root) to create this node 
  *  sorted by the nodes, starting from the current node going up to the root */
 extern
 void SCIPnodeGetAncestorBranchingPath(
@@ -88,6 +88,13 @@ void SCIPnodeGetAncestorBranchingPath(
    int                   nodeswitchsize       /**< available slots in node switch array */   
    );
 
+
+/** checks for two nodes whether they share the same root path, i.e., whether one is an ancestor of the other */
+extern
+SCIP_Bool SCIPnodesSharePath(
+   SCIP_NODE*            node1,                /**< node data */
+   SCIP_NODE*            node2                 /**< node data */
+   );
 
 #ifndef NDEBUG
 
