@@ -247,6 +247,13 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
    /* allow at least a certain number of LP iterations in this dive */
    maxnlpiterations = MAX(maxnlpiterations, heurdata->nlpiterations + MINLPITER);
 
+   /* get number of fractional variables, that should be integral */
+   nlpcands = SCIPgetNLPBranchCands(scip);
+
+   /* don't try to dive, if there are no fractional variables */
+   if( nlpcands == 0 )
+      return SCIP_OKAY;
+
    /* calculate the maximal diving depth */
    nvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
    if( SCIPgetNSolsFound(scip) == 0 )
@@ -254,7 +261,6 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
    else
       maxdivedepth = (int)(heurdata->depthfac * nvars);
    maxdivedepth = MAX(maxdivedepth, 10);
-
 
    *result = SCIP_DIDNOTFIND;
 
@@ -283,9 +289,6 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
 
    /* start diving */
    SCIP_CALL( SCIPstartDive(scip) );
-
-   /* get number of fractional variables, that should be integral */
-   nlpcands = SCIPgetNLPBranchCands(scip);
 
    SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") executing rootsoldiving heuristic: depth=%d, %d fractionals, dualbound=%g, maxnlpiterations=%"SCIP_LONGINT_FORMAT", maxdivedepth=%d, LPobj=%g, objstep=%g\n",
       SCIPgetNNodes(scip), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), maxnlpiterations, maxdivedepth,
