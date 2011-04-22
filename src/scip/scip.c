@@ -14857,6 +14857,31 @@ SCIP_Real SCIPgetNLPObjval(
    }
 }
 
+/** gets fractional variables of last NLP solution along with solution values and fractionalities */
+SCIP_RETCODE SCIPgetNLPFracVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR***           fracvars,           /**< pointer to store the array of NLP fractional variables, or NULL */
+   SCIP_Real**           fracvarssol,        /**< pointer to store the array of NLP fractional variables solution values, or NULL */
+   SCIP_Real**           fracvarsfrac,       /**< pointer to store the array of NLP fractional variables fractionalities, or NULL */
+   int*                  nfracvars,          /**< pointer to store the number of NLP fractional variables , or NULL */
+   int*                  npriofracvars       /**< pointer to store the number of NLP fractional variables with maximal branching priority, or NULL */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPgetNLPFracVars", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( scip->nlp != NULL )
+   {
+      SCIP_CALL( SCIPnlpGetFracVars(scip->nlp, SCIPblkmem(scip), scip->set, scip->stat, fracvars, fracvarssol, fracvarsfrac, nfracvars, npriofracvars) );
+   }
+   else
+   {
+      SCIPerrorMessage("NLP has not been not constructed.\n");
+      return SCIP_ERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** writes current NLP to a file */
 SCIP_RETCODE SCIPwriteNLP(
    SCIP*                 scip,               /**< SCIP data structure */

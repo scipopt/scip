@@ -157,6 +157,15 @@ struct SCIP_Nlp
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
    int                   globalfilterpos;    /**< position of event handler in event handler filter */
 
+   /* fractional variables in last NLP solution */
+   SCIP_VAR**            fracvars;           /**< fractional variables */
+   SCIP_Real*            fracvarssol;        /**< values of the fractional variables */
+   SCIP_Real*            fracvarsfrac;       /**< fractionality of the fractional variables  */
+   int                   nfracvars;          /**< number of fractional variables */
+   int                   npriofracvars;      /**< number of fractional variables with hightest branching priority */
+   int                   fracvarssize;       /**< size of fracvars* arrays */
+   int                   validfracvars;      /**< the NLP solve for which the fractional variables are valid, or -1 if never setup */
+
    /* miscellaneous */
    char*                 name;               /**< problem name */
 };

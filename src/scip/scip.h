@@ -4980,6 +4980,17 @@ SCIP_Real SCIPgetNLPObjval(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** gets fractional variables of last NLP solution along with solution values and fractionalities */
+extern
+SCIP_RETCODE SCIPgetNLPFracVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR***           fracvars,           /**< pointer to store the array of NLP fractional variables, or NULL */
+   SCIP_Real**           fracvarssol,        /**< pointer to store the array of NLP fractional variables solution values, or NULL */
+   SCIP_Real**           fracvarsfrac,       /**< pointer to store the array of NLP fractional variables fractionalities, or NULL */
+   int*                  nfracvars,          /**< pointer to store the number of NLP fractional variables , or NULL */
+   int*                  npriofracvars       /**< pointer to store the number of NLP fractional variables with maximal branching priority, or NULL */
+   );
+
 /** writes current NLP to a file */
 extern
 SCIP_RETCODE SCIPwriteNLP(

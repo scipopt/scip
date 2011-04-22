@@ -1577,6 +1577,298 @@ SCIP_RETCODE addAltLPConstraint(
 }
 
 
+/** add column corresponding to row to alternative LP
+ *
+ *  See the description at the top of the file for more information.
+ */
+static
+SCIP_RETCODE addAltLPRow(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_ROW*             row,                /**< row to add */
+   SCIP_Real             objcoef,            /**< objective coefficient */
+   int*                  colIndex            /**< index of new column */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_VAR** newVars;
+   SCIP_COL** rowcols;
+   SCIP_Real* rowvals;
+   SCIP_Real rowrhs;
+   SCIP_Real rowlhs;
+   SCIP_Real val;
+   SCIP_Real sign;
+   int* matbeg;
+   int* matind;
+   SCIP_Real* matval;
+   SCIP_Bool* newRowsSlack;
+   SCIP_Real* obj;
+   SCIP_Real* lb;
+   SCIP_Real* ub;
+   int nrowcols;
+   int nNewVars;
+   int nNewCols;
+   int nNewRows;
+   int nCols;
+   int cnt;
+   int v;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( row != NULL );
+   assert( colIndex != NULL );
+
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   /* exit if row is not global */
+   if ( SCIProwIsLocal(row) )
+      return SCIP_OKAY;
+
+   /* init data */
+   *colIndex = -1;
+   sign = 1.0;
+   nNewVars = 0;
+   nNewRows = 0;
+   cnt = 0;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   /* get row data */
+   rowcols = SCIProwGetCols(row);
+   rowvals = SCIProwGetVals(row);
+   nrowcols = SCIProwGetNNonz(row);
+   rowlhs = SCIProwGetLhs(row) - SCIProwGetConstant(row);
+   rowrhs = SCIProwGetRhs(row) - SCIProwGetConstant(row);
+
+   if ( conshdlrdata->altLP == NULL )
+   {
+      SCIP_CALL( initAlternativeLP(scip, conshdlr) );
+   }
+   assert( conshdlrdata->varHash != NULL );
+   assert( conshdlrdata->lbHash != NULL );
+   assert( conshdlrdata->ubHash != NULL );
+   assert( conshdlrdata->slackHash != NULL );
+
+#ifndef NDEBUG
+   {
+      int nRows;
+      SCIP_CALL( SCIPlpiGetNRows(conshdlrdata->altLP, &nRows) );
+      assert( nRows == conshdlrdata->nRows );
+   }
+#endif
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &matbeg, nrowcols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matind, 4*nrowcols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matval, 4*nrowcols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &obj, 2*nrowcols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lb, 2*nrowcols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ub, 2*nrowcols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &newVars, nrowcols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &newRowsSlack, 2 * nrowcols) );
+
+   /* store index of column in constraint */
+   SCIP_CALL( SCIPlpiGetNCols(conshdlrdata->altLP, &nCols) );
+   *colIndex = nCols;
+
+   /* adapt rhs of linear constraint */
+   val = rowrhs;
+   if ( SCIPisInfinity(scip, val) )
+   {
+      val = rowlhs;
+      assert( val > -SCIPinfinity(scip) );
+      sign = -1.0;
+   }
+
+   /* handle first row in alternative LP */
+   if (! SCIPisFeasZero(scip, val) )
+   {
+      matind[cnt] = 0;
+      matval[cnt] = sign * val;
+      assert( ! SCIPisInfinity(scip, val) && ! SCIPisInfinity(scip, -val) );
+      ++cnt;
+   }
+
+   /* set up column (recognize new original variables) */
+   for (v = 0; v < nrowcols; ++v)
+   {
+      SCIP_VAR* var;
+      assert( rowcols[v] != NULL );
+      var = SCIPcolGetVar(rowcols[v]);
+      assert( var != NULL );
+
+      /* if variable is a slack variable */
+      if ( SCIPhashmapExists(conshdlrdata->slackHash, var) )
+      {
+         int ind = (int) (size_t) SCIPhashmapGetImage(conshdlrdata->slackHash, var);
+         if ( ind < INT_MAX )
+            matind[cnt] = ind;
+         else
+         {
+            /* add variable in map and array and remember to add a new row */
+            SCIP_CALL( SCIPhashmapInsert(conshdlrdata->slackHash, var, (void*) (size_t) conshdlrdata->nRows) );
+            assert( conshdlrdata->nRows == (int) (size_t) SCIPhashmapGetImage(conshdlrdata->slackHash, var) );
+            SCIPdebugMessage("Inserted slack variable <%s> into hashmap (row: %d).\n", SCIPvarGetName(var), conshdlrdata->nRows);
+            matind[cnt] = (conshdlrdata->nRows)++;
+
+            /* store new variables */
+            newRowsSlack[nNewRows++] = TRUE;
+         }
+         assert( conshdlrdata->nRows >= (int) (size_t) SCIPhashmapGetImage(conshdlrdata->slackHash, var) );
+         matval[cnt] = sign * rowvals[v];
+         ++cnt;
+      }
+      else
+      {
+         /* if variable exists */
+         if ( SCIPhashmapExists(conshdlrdata->varHash, var) )
+            matind[cnt] = (int) (size_t) SCIPhashmapGetImage(conshdlrdata->varHash, var);
+         else
+         {
+            /* add variable in map and array and remember to add a new row */
+            SCIP_CALL( SCIPhashmapInsert(conshdlrdata->varHash, var, (void*) (size_t) conshdlrdata->nRows) );
+            assert( conshdlrdata->nRows == (int) (size_t) SCIPhashmapGetImage(conshdlrdata->varHash, var) );
+            SCIPdebugMessage("Inserted variable <%s> into hashmap (row: %d).\n", SCIPvarGetName(var), conshdlrdata->nRows);
+            matind[cnt] = (conshdlrdata->nRows)++;
+
+            /* store new variables */
+            newRowsSlack[nNewRows++] = FALSE;
+            newVars[nNewVars++] = var;
+         }
+         assert( SCIPhashmapExists(conshdlrdata->varHash, var) );
+         matval[cnt] = sign * rowvals[v];
+         ++cnt;
+      }
+   }
+
+   /* add new rows */
+   if ( nNewRows > 0 )
+   {
+      SCIP_Real* lhs;
+      SCIP_Real* rhs;
+      int i;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &lhs, nNewRows) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &rhs, nNewRows) );
+      for (i = 0; i < nNewRows; ++i)
+      {
+         if ( newRowsSlack[i] )
+            lhs[i] = -SCIPlpiInfinity(conshdlrdata->altLP);
+         else
+            lhs[i] = 0.0;
+         rhs[i] = 0.0;
+      }
+      /* add new rows */
+      SCIP_CALL( SCIPlpiAddRows(conshdlrdata->altLP, nNewRows, lhs, rhs, NULL, 0, NULL, NULL, NULL) );
+
+      SCIPfreeBufferArray(scip, &lhs);
+      SCIPfreeBufferArray(scip, &rhs);
+   }
+
+   /* now add column */
+   obj[0] = objcoef;
+   lb[0] = 0.0;
+   ub[0] = SCIPlpiInfinity(conshdlrdata->altLP);
+   matbeg[0] = 0;
+
+   /* create a free variable for equations */
+   if ( SCIPisEQ(scip, rowlhs, rowrhs) )
+   {
+      lb[0] = -SCIPlpiInfinity(conshdlrdata->altLP);
+   }
+
+   SCIP_CALL( SCIPlpiAddCols(conshdlrdata->altLP, 1, obj, lb, ub, NULL, cnt, matbeg, matind, matval) );
+
+   /* add columns corresponding to bounds of original variables - no bounds needed for slack vars */
+   cnt = 0;
+   nNewCols = 0;
+   for (v = 0; v < nNewVars; ++v)
+   {
+      SCIP_VAR* var = newVars[v];
+
+      /* if the lower bound is finite */
+      val  = SCIPvarGetLbGlobal(var);
+      if ( ! SCIPisInfinity(scip, -val) )
+      {
+         matbeg[nNewCols] = cnt;
+         if ( ! SCIPisZero(scip, val) )
+         {
+            matind[cnt] = 0;
+            matval[cnt] = -val;
+            ++cnt;
+         }
+         assert( SCIPhashmapExists(conshdlrdata->varHash, var) );
+         matind[cnt] = (int) (size_t) SCIPhashmapGetImage(conshdlrdata->varHash, var);
+         matval[cnt] = -1.0;
+         ++cnt;
+         obj[nNewCols] = 0.0;
+         lb[nNewCols] = 0.0;
+         ub[nNewCols] = SCIPlpiInfinity(conshdlrdata->altLP);
+         ++conshdlrdata->nLbBounds;
+         SCIP_CALL( SCIPhashmapInsert(conshdlrdata->lbHash, var, (void*) (size_t) (nCols + 1 + nNewCols)) );
+         assert( SCIPhashmapExists(conshdlrdata->lbHash, var) );
+         SCIPdebugMessage("added column corr. to lower bound (%f) of variable <%s> to alternative polyhedron (col: %d).\n",
+            val, SCIPvarGetName(var), nCols + 1 + nNewCols);
+         ++nNewCols;
+      }
+
+      /* if the upper bound is finite */
+      val = SCIPvarGetUbGlobal(var);
+      if ( ! SCIPisInfinity(scip, val) )
+      {
+         matbeg[nNewCols] = cnt;
+         if ( ! SCIPisZero(scip, val) )
+         {
+            matind[cnt] = 0;
+            matval[cnt] = val;
+            ++cnt;
+         }
+         assert( SCIPhashmapExists(conshdlrdata->varHash, var) );
+         matind[cnt] = (int) (size_t) SCIPhashmapGetImage(conshdlrdata->varHash, var);
+         matval[cnt] = 1.0;
+         ++cnt;
+         obj[nNewCols] = 0.0;
+         lb[nNewCols] = 0.0;
+         ub[nNewCols] = SCIPlpiInfinity(conshdlrdata->altLP);
+         ++conshdlrdata->nUbBounds;
+         SCIP_CALL( SCIPhashmapInsert(conshdlrdata->ubHash, var, (void*) (size_t) (nCols + 1 + nNewCols)) );
+         assert( SCIPhashmapExists(conshdlrdata->ubHash, var) );
+         SCIPdebugMessage("added column corr. to upper bound (%f) of variable <%s> to alternative polyhedron (col: %d).\n",
+            val, SCIPvarGetName(var), nCols + 1 + nNewCols);
+         ++nNewCols;
+      }
+   }
+
+   /* add columns if necessary */
+   if ( nNewCols > 0 )
+   {
+      SCIP_CALL( SCIPlpiAddCols(conshdlrdata->altLP, nNewCols, obj, lb, ub, NULL, cnt, matbeg, matind, matval) );
+   }
+
+#ifndef NDEBUG
+   SCIP_CALL( SCIPlpiGetNCols(conshdlrdata->altLP, &cnt) );
+   assert( cnt == nCols + nNewCols + 1 );
+#endif
+
+   SCIPfreeBufferArray(scip, &ub);
+   SCIPfreeBufferArray(scip, &lb);
+   SCIPfreeBufferArray(scip, &obj);
+   SCIPfreeBufferArray(scip, &matind);
+   SCIPfreeBufferArray(scip, &matval);
+   SCIPfreeBufferArray(scip, &matbeg);
+   SCIPfreeBufferArray(scip, &newVars);
+   SCIPfreeBufferArray(scip, &newRowsSlack);
+
+   conshdlrdata->scaled = FALSE;
+
+#ifdef SCIP_OUTPUT
+   SCIP_CALL( SCIPlpiWriteLP(conshdlrdata->altLP, "alt.lp") );
+#endif
+
+   return SCIP_OKAY;
+}
+
+
 /** delete column corresponding to constraint in alternative LP
  *
  *  We currently just fix the corresponding variable to 0.
@@ -2831,7 +3123,7 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
          {
             SCIPdebugMessage("Adding column for <%s> to alternative LP ...\n", SCIPconsGetName(conss[c]));
             SCIP_CALL( addAltLPConstraint(scip, conshdlr, consdata->lincons, consdata->slackvar, 1.0, &consdata->colIndex) );
-            SCIPdebugMessage("Colum index for <%s>: %d\n", SCIPconsGetName(conss[c]), consdata->colIndex);
+            SCIPdebugMessage("Column index for <%s>: %d\n", SCIPconsGetName(conss[c]), consdata->colIndex);
 #ifdef SCIP_OUTPUT
             SCIP_CALL( SCIPprintCons(scip, consdata->lincons, NULL) );
 #endif
@@ -5229,6 +5521,43 @@ SCIP_RETCODE SCIPaddLinearConsIndicator(
    assert( conshdlrdata->nAddLinCons+1 <= conshdlrdata->maxAddLinCons );
 
    conshdlrdata->addLinCons[conshdlrdata->nAddLinCons++] = lincons;
+
+   return SCIP_OKAY;
+}
+
+
+/** adds additional row that is not connected by an indicator constraint, but can be used for separation 
+ *
+ *  @note The row is directly added to the alternative polyhedron and is not stored. 
+ */
+SCIP_RETCODE SCIPaddRowIndicator(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< indicator constraint handler */
+   SCIP_ROW*             row                 /**< row to add */
+   )
+{
+   int colIndex;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert( scip != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert( row != NULL );
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   /* do not add rows if we do not separate */
+   if ( ! conshdlrdata->sepaAlternativeLP )
+      return SCIP_OKAY;
+
+   /* skip local cuts (local cuts would require to dynamically add and remove columns from the alternative polyhedron */
+   if ( SCIProwIsLocal(row) )
+      return SCIP_OKAY;
+
+   SCIPdebugMessage("Adding row <%s> to alternative LP.\n", SCIProwGetName(row));
+
+   /* add row directly to alternative polyhedron */
+   SCIP_CALL( addAltLPRow(scip, conshdlr, row, 0.0, &colIndex) );
 
    return SCIP_OKAY;
 }

@@ -184,12 +184,20 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
    SCIP_Bool*            changed             /**< whether the solution has been changed */
    );
 
-/** adds additional linear constraint that is not connected with an indicator constraint, but can be used for separation */
+/** adds additional linear constraint that is not connected by an indicator constraint, but can be used for separation */
 extern
 SCIP_RETCODE SCIPaddLinearConsIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< indicator constraint handler */
    SCIP_CONS*            lincons             /**< linear constraint */
+   );
+
+/** adds additional globally valid row that is not connected by an indicator constraint, but can be used for separation */
+extern
+SCIP_RETCODE SCIPaddRowIndicator(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< indicator constraint handler */
+   SCIP_ROW*             row                 /**< row to add */
    );
 
 #ifdef __cplusplus

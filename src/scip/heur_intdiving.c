@@ -255,6 +255,13 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
    /* allow at least a certain number of LP iterations in this dive */
    maxnlpiterations = MAX(maxnlpiterations, heurdata->nlpiterations + MINLPITER);
 
+   /* get unfixed integer variables */
+   SCIP_CALL( SCIPgetPseudoBranchCands(scip, &pseudocands, &nfixcands, NULL) );
+
+   /* don't try to dive, if there are no fractional variables */
+   if( nfixcands == 0 )
+      return SCIP_OKAY;
+
    /* calculate the objective search bound */
    if( SCIPgetNSolsFound(scip) == 0 )
    {
@@ -291,14 +298,10 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
    maxdivedepth = MIN(maxdivedepth, maxdepth);
    maxdivedepth *= 10;
 
-
    *result = SCIP_DIDNOTFIND;
 
    /* start diving */
    SCIP_CALL( SCIPstartProbing(scip) );
-
-   /* get unfixed integer variables */
-   SCIP_CALL( SCIPgetPseudoBranchCands(scip, &pseudocands, &nfixcands, NULL) );
 
    SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") executing intdiving heuristic: depth=%d, %d non-fixed, dualbound=%g, searchbound=%g\n", 
       SCIPgetNNodes(scip), SCIPgetDepth(scip), nfixcands, SCIPgetDualbound(scip), SCIPretransformObj(scip, searchbound));

@@ -46,6 +46,9 @@ interface:
 - added SCIPconvertCutsToConss() and SCIPcopyCuts() to scip.{c,h} for copying cuts to linear constraints
 - new method SCIPnodeGetParent() to get parent node of a node
 - added method SCIPsortRealIntLong() and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines in misc.c
+- new method SCIPnodesSharePath() in pub_tree.h that determines whether two nodes are on the same leaf-root path
+- new method SCIPnodesGetCommonAncestor() in pub_tree.h that finds the common ancestor node for two given nodes
+- new method SCIPgetNLPFracVars() to get the fractional variables in an NLP solution
 
 performance improvements:
 - performance improvements in prop_vbounds
@@ -175,12 +178,13 @@ fixed bugs:
 - fixed segmentation fault in heur_subnlp.c which occured if resolving the NLP with a tighter feasibility tolerance failed with a solver error
 - fixed wrong assumption that an optimal LP solution in the root is optimal for the problem if there are no active pricers, need to check also whether all variables are in the LP
 - fixed wrong assert in var.c (replaced '==' through 'SCIPsetIsEQ'), real values do not have to be exactly the same when computed in different function
+- fixed bug in SCIPsolveIsStopped where it could happen that TRUE was reported if a nodelimit was reached but checknodelimits had been set to FALSE
 
 performance improvements:
 - fasten propagation in cons_knapsack.c due to negated clique partitions
 - recalculating only needed partitions in cons_knapsack.c, not always both
 - calculation of node priority now also works when variable's relaxation value is equal to a bound
-- fasten knapsack separation by replacing SCIPallocBufer(Array) through SCIPallocBlockMemory(Array)
+- fasten knapsack separation by replacing SCIPallocBuffer(Array) through SCIPallocBlockMemory(Array)
 - fixed issue w.r.t. calling primal heuristics after presolving detected infeasibility
 - improved runtime and memory consumption in SCIPsolveKnapsackExactly() in cons_knapsack.c
 
