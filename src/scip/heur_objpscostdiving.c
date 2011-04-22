@@ -317,6 +317,13 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
    /* allow at least a certain number of LP iterations in this dive */
    maxnlpiterations = MAX(maxnlpiterations, heurdata->nlpiterations + MINLPITER);
 
+   /* get fractional variables that should be integral */
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL) );
+
+   /* don't try to dive, if there are no fractional variables */
+   if( nlpcands == 0 )
+      return SCIP_OKAY;
+
    /* calculate the maximal diving depth */
    nvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
    if( SCIPgetNSolsFound(scip) == 0 )
@@ -335,10 +342,6 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
    /* start diving */
    SCIP_CALL( SCIPstartDive(scip) );
 
-   /* get LP objective value, and fractional variables, that should be integral */
-   lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL) );
-
    SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") executing objpscostdiving heuristic: depth=%d, %d fractionals, dualbound=%g, maxnlpiterations=%"SCIP_LONGINT_FORMAT", maxdivedepth=%d\n", 
       SCIPgetNNodes(scip), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), maxnlpiterations, maxdivedepth);
 
@@ -348,6 +351,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
     * - if the number of fractional variables decreased at least with 1 variable per 2 dive depths, we continue diving
     */
    lperror = FALSE;
+   lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
    divedepth = 0;
    bestcandmayrounddown = FALSE;
    bestcandmayroundup = FALSE;

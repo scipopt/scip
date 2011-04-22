@@ -225,6 +225,10 @@ SCIP_RETCODE SCIPprimalHeuristics(
       SCIPdebugMessage(" -> executing heuristic <%s> with priority %d\n",
          SCIPheurGetName(set->heurs[h]), SCIPheurGetPriority(set->heurs[h]));
       SCIP_CALL( SCIPheurExec(set->heurs[h], set, primal, depth, lpstateforkdepth, heurtiming, &ndelayedheurs, &result) );
+
+      /* make sure that heuristic did not leave on probing or diving mode */
+      assert(tree == NULL || !SCIPtreeProbing(tree));
+      assert(lp == NULL || !SCIPlpDiving(lp));
    }
    assert(0 <= ndelayedheurs && ndelayedheurs <= set->nheurs);
 
