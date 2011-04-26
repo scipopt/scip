@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+#define SCIP_DEBUG
 /**@file   sepa_cgmip.c
  * @ingroup SEPARATORS
  * @brief  Chvatal-Gomory cuts computed via a sub-MIP
