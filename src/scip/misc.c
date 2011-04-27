@@ -762,7 +762,7 @@ SCIP_DECL_HASHKEYVAL(SCIPhashKeyValString)
 static
 SCIP_RETCODE hashmaplistAppend(
    SCIP_HASHMAPLIST**    hashmaplist,        /**< pointer to hash list */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
+   BMS_BLKMEM*           blkmem,             /**< block memory, or NULL */
    void*                 origin,             /**< origin of the mapping origin -> image */
    void*                 image               /**< image of the mapping origin -> image */
    )
@@ -793,7 +793,7 @@ SCIP_RETCODE hashmaplistAppend(
 static
 void hashmaplistFree(
    SCIP_HASHMAPLIST**    hashmaplist,        /**< pointer to hash list to free */
-   BMS_BLKMEM*           blkmem              /**< block memory */
+   BMS_BLKMEM*           blkmem              /**< block memory, or NULL */
    )
 {
    SCIP_HASHMAPLIST* list;
@@ -865,7 +865,7 @@ void* hashmaplistGetImage(
 static
 SCIP_RETCODE hashmaplistSetImage(
    SCIP_HASHMAPLIST**    hashmaplist,        /**< pointer to hash list */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
+   BMS_BLKMEM*           blkmem,             /**< block memory, or NULL */
    void*                 origin,             /**< origin to set image for */
    void*                 image               /**< new image for origin */
    )
@@ -890,7 +890,7 @@ SCIP_RETCODE hashmaplistSetImage(
 static
 SCIP_RETCODE hashmaplistRemove(
    SCIP_HASHMAPLIST**    hashmaplist,        /**< pointer to hash list */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
+   BMS_BLKMEM*           blkmem,             /**< block memory, or NULL */
    void*                 origin              /**< origin to remove from the list */
    )
 {
@@ -923,10 +923,13 @@ SCIP_RETCODE hashmaplistRemove(
 }
 
 
-/** creates a hash map mapping pointers to pointers */
+/** creates a hash map mapping pointers to pointers 
+ *
+ * @note if possible always use a blkmem pointer instead of NULL, otherwise it could slow down the map
+ */
 SCIP_RETCODE SCIPhashmapCreate(
    SCIP_HASHMAP**        hashmap,            /**< pointer to store the created hash map */
-   BMS_BLKMEM*           blkmem,             /**< block memory used to store hash map entries */
+   BMS_BLKMEM*           blkmem,             /**< block memory used to store hash map entries, or NULL */
    int                   mapsize             /**< size of the hash map */
    )
 {
