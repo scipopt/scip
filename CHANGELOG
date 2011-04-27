@@ -151,6 +151,7 @@ features:
 - it is possible to change bounds of a variable in the interactive shell
 - it is possible to add a constraint to a problem in the interactive shell
 - added clock for determine the time for reading
+- new presolving step in cons_knapsack (detectRedundantVars, deleteRedundantVars) which determines redundant variables in knapsack constraint with or without using clique information
 
 SCIP version 2.0.2
 ==================
