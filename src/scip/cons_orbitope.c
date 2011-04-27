@@ -776,7 +776,7 @@ SCIP_RETCODE propagateCons(
 
    if ( ! ispart )
    {
-      /* packing case: if entry (0,0) is fixed to zero */
+      /* packing case: if entry (0,0) is fixed to 0 */
       if ( SCIPvarGetUbLocal(vars[0][0]) < 0.5 )
       {
          lastoneprevrow = -1;
@@ -797,13 +797,13 @@ SCIP_RETCODE propagateCons(
       if ( lastcolumn > i )
 	 lastcolumn = i;
 
-      /* find first position not fixed to zero */
+      /* find first position not fixed to 0 (partitioning) or fixed to 1 (packing) */
       firstnonzeroinrow = -1;
       for (j = 0; j <= lastcolumn; ++j)
       {
          if ( ispart )
          {
-            /* partitioning case: if variable is not fixed to zero */
+            /* partitioning case: if variable is not fixed to 0 */
             if ( SCIPvarGetUbLocal(vars[i][j]) > 0.5 )
             {
                firstnonzeroinrow = j;
@@ -812,7 +812,7 @@ SCIP_RETCODE propagateCons(
          }
          else
          {
-            /* packing case: if variable is fixed to one */
+            /* packing case: if variable is fixed to 1 */
             if ( SCIPvarGetLbLocal(vars[i][j]) > 0.5 )
             {
                firstnonzeroinrow = j;
@@ -820,7 +820,7 @@ SCIP_RETCODE propagateCons(
             }
          }
       }
-      /* if all variables are fixed to zero in the partitioning case - should not happen */
+      /* if all variables are fixed to 0 in the partitioning case - should not happen */
       if ( firstnonzeroinrow == -1 && ispart )
       {
 	 SCIPdebugMessage(" -> Infeasible node: all variables in row %d are fixed to 0.\n", i);
@@ -836,7 +836,7 @@ SCIP_RETCODE propagateCons(
       assert( !ispart || 0 <= lastoneprevrow );
       assert( lastoneprevrow <= lastcolumn );
 
-      /* if we are at right border or if entry in column lastoneprevrow+1 is fixed to zero */
+      /* if we are at right border or if entry in column lastoneprevrow+1 is fixed to 0 */
       infrontier = FALSE;
       if ( lastoneprevrow == nblocks-1 || SCIPvarGetUbLocal(vars[i][lastoneprevrow+1]) < 0.5 )
 	 lastoneinrow = lastoneprevrow;
@@ -871,7 +871,7 @@ SCIP_RETCODE propagateCons(
          goto TERMINATE;
       }
 
-      /* fix entries beyond the last possible position for a one in the row to zero (see Lemma 1 in the paper) */
+      /* fix entries beyond the last possible position for a 1 in the row to 0 (see Lemma 1 in the paper) */
       for (j = lastoneinrow+1; j <= lastcolumn; ++j)
       {
 	 /* if the entry is not yet fixed to 0 */
@@ -916,12 +916,12 @@ SCIP_RETCODE propagateCons(
       /* note for packing case: if we are in a frontier step then lastoneinrow >= 0 */
       assert( 0 <= lastoneinrow && lastoneinrow < nblocks );
 
-      /* if entry is not fixed*/
+      /* if entry is not fixed */
       if ( SCIPvarGetLbLocal(vars[s][lastoneinrow]) < 0.5 && SCIPvarGetUbLocal(vars[s][lastoneinrow]) > 0.5 )
       {
          int betaprev;
          betaprev = lastoneinrow - 1;
-            
+
          /* loop through rows below s */
          for (i = s+1; i < nspcons; ++i)
          {
@@ -933,7 +933,7 @@ SCIP_RETCODE propagateCons(
             else
                beta = betaprev + 1;
             assert( -1 <= beta && beta < nblocks );
-               
+
             if ( firstnonzeros[i] > beta )
             {
                SCIP_Bool tightened;
@@ -1005,6 +1005,7 @@ SCIP_RETCODE resolvePropagation(
    SCIP_Real** vals;
    SCIP_Real** weights;
    SCIP_VAR*** vars;
+   SCIP_Bool ispart;
    int** cases;
 
    int i;
@@ -1030,6 +1031,7 @@ SCIP_RETCODE resolvePropagation(
    vars = consdata->vars;
    vals = consdata->vals;
    weights = consdata->weights;
+   ispart = consdata->ispart;
    cases = consdata->cases;
 
    *result = SCIP_DIDNOTFIND;
@@ -1171,7 +1173,7 @@ SCIP_RETCODE resolvePropagation(
 	    --p2;   /* decrease column */
 	 else
 	 {
-	    /* case 2 or 3: */
+	    /* case 2 or 3: reason are formed by variables in SC fixed to 0 */
 	    assert( cases[p1][p2] == 2 || cases[p1][p2] == 3 );
 	    if ( SCIPvarGetUbAtIndex(vars[p1][p2], bdchgidx, FALSE) < 0.5 )
 	    {
@@ -1195,29 +1197,56 @@ SCIP_RETCODE resolvePropagation(
 	 }
 	 --p1;  /* decrease row */
       }
-      while ( p1 >= 0 );   /* should always be true, i.e. the break should end the loop */
+      while ( p1 >= 0 );   /* should always be true, i.e., the break should end the loop */
       assert( cases[p1][p2] == 3 );
       assert( pos1 >= 0 && pos2 >= 0 );
 
-      /* add variables before the bar */
-#ifdef SCIP_DEBUG
-      (void) SCIPsnprintf(tmpstr, SCIP_MAXSTRLEN, "  before bar: ");
-      (void) strncat(str, tmpstr, SCIP_MAXSTRLEN);
-#endif
-      for (k = 0; k < j; ++k)
+      /* distinguish partitioning/packing */
+      if ( ispart )
       {
-	 assert( SCIPvarGetUbAtIndex(vars[i][k], bdchgidx, FALSE) < 0.5 );
-	 SCIP_CALL( SCIPaddConflictUb(scip, vars[i][k], bdchgidx) );
-	 *result = SCIP_SUCCESS;
+         /* partitioning case */
 #ifdef SCIP_DEBUG
-	 (void) SCIPsnprintf(tmpstr, SCIP_MAXSTRLEN, " (%d,%d)", i, k);
-	 (void) strncat(str, tmpstr, SCIP_MAXSTRLEN);
+         (void) SCIPsnprintf(tmpstr, SCIP_MAXSTRLEN, "  before bar: ");
+         (void) strncat(str, tmpstr, SCIP_MAXSTRLEN);
 #endif
-      }
+         /* add variables before the bar in the partioning case */
+         for (k = 0; k < j; ++k)
+         {
+            assert( SCIPvarGetUbAtIndex(vars[i][k], bdchgidx, FALSE) < 0.5 );
+            SCIP_CALL( SCIPaddConflictUb(scip, vars[i][k], bdchgidx) );
+            *result = SCIP_SUCCESS;
+#ifdef SCIP_DEBUG
+            (void) SCIPsnprintf(tmpstr, SCIP_MAXSTRLEN, " (%d,%d)", i, k);
+            (void) strncat(str, tmpstr, SCIP_MAXSTRLEN);
+#endif
+         }
 
 #ifdef SCIP_DEBUG
-      SCIPdebugMessage("%s\n", str);
+         SCIPdebugMessage("%s\n", str);
 #endif
+      }
+      else
+      {
+         /* packing case */
+         int lastcolumn;
+
+         /* last column considered as part of the bar: */
+         lastcolumn = nblocks - 1;
+         if ( lastcolumn > i )
+            lastcolumn = i;
+
+         /* search for variable in the bar that is fixed to 1 in the packing case */
+         for (k = j; k <= lastcolumn; ++k)
+         {
+            if ( SCIPvarGetLbAtIndex(vars[i][k], bdchgidx, FALSE) > 0.5 )
+            {
+               SCIP_CALL( SCIPaddConflictLb(scip, vars[i][k], bdchgidx) );
+               *result = SCIP_SUCCESS;
+               SCIPdebugMessage("   and variable x[%d][%d] fixed to 1.\n", i, k);
+               break;
+            }
+         }
+      }
    }
 
    return SCIP_OKAY;
