@@ -770,10 +770,17 @@ SCIP_RETCODE hashmaplistAppend(
    SCIP_HASHMAPLIST* newlist;
 
    assert(hashmaplist != NULL);
-   assert(blkmem != NULL);
    assert(origin != NULL);
 
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &newlist) );
+   if( blkmem != NULL )
+   {
+      SCIP_ALLOC( BMSallocBlockMemory(blkmem, &newlist) );
+   }
+   else
+   {
+      SCIP_ALLOC( BMSallocMemory(&newlist) );
+   }
+
    newlist->origin = origin;
    newlist->image = image;
    newlist->next = *hashmaplist;
@@ -793,13 +800,21 @@ void hashmaplistFree(
    SCIP_HASHMAPLIST* nextlist;
 
    assert(hashmaplist != NULL);
-   assert(blkmem != NULL);
    
    list = *hashmaplist;
    while( list != NULL )
    {
       nextlist = list->next;
-      BMSfreeBlockMemory(blkmem, &list);
+
+      if( blkmem != NULL )
+      {
+         BMSfreeBlockMemory(blkmem, &list);
+      }
+      else
+      {
+         BMSfreeMemory(&list);
+      }
+
       list = nextlist;
    }
 
@@ -882,7 +897,6 @@ SCIP_RETCODE hashmaplistRemove(
    SCIP_HASHMAPLIST* nextlist;
 
    assert(hashmaplist != NULL);
-   assert(blkmem != NULL);
    assert(origin != NULL);
 
    while( *hashmaplist != NULL && (*hashmaplist)->origin != origin )
@@ -892,7 +906,16 @@ SCIP_RETCODE hashmaplistRemove(
    if( *hashmaplist != NULL )
    {
       nextlist = (*hashmaplist)->next;
-      BMSfreeBlockMemory(blkmem, hashmaplist);
+
+      if( blkmem != NULL )
+      {
+         BMSfreeBlockMemory(blkmem, hashmaplist);
+      }
+      else
+      {
+         BMSfreeMemory(hashmaplist);
+      }
+
       *hashmaplist = nextlist;
    }
 

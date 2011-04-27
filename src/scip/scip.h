@@ -531,6 +531,21 @@ SCIP_VERBLEVEL SCIPgetVerbLevel(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+#ifndef NPARASCIP
+/** allocates memory for all message handlers for number of given threads */
+extern
+SCIP_RETCODE SCIPcreateMesshdlrPThreads(
+   int                   nthreads            /**< number of threads to allocate memory for */
+   );
+
+/** frees memory for all message handlers */
+extern
+void SCIPfreeMesshdlrPThreads(
+   void
+   );
+#endif
+
+
 /**@} */
 
 
