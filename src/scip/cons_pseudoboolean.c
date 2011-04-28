@@ -123,17 +123,17 @@
 /** and-constraint data object */
 struct ConsAndData
 {
-   SCIP_CONS*           cons;                /**< pointer to the and-constraint of this 'term' of variables */
-   SCIP_CONS*           origcons;            /**< pointer to the original and-constraint of this 'term' of variables
-                                              *   after problem was transformed, NULL otherwise */
-   SCIP_VAR**           vars;                /**< all variables */
-   int                  nvars;               /**< number of all variables */
-   int                  svars;               /**< size of all variables */
-   SCIP_VAR**           newvars;             /**< new variables in this presolving round */
-   int                  nnewvars;            /**< number of new variables in this presolving round */
-   int                  snewvars;            /**< size of new variables in this presolving round */
-   int                  nuses;               /**< how often is this data in usage */
-   SCIP_Bool            deleted;             /**< was memory of both variable arrays already freed */
+   SCIP_CONS*            cons;                /**< pointer to the and-constraint of this 'term' of variables */
+   SCIP_CONS*            origcons;            /**< pointer to the original and-constraint of this 'term' of variables
+                                               *   after problem was transformed, NULL otherwise */
+   SCIP_VAR**            vars;                /**< all variables */
+   int                   nvars;               /**< number of all variables */
+   int                   svars;               /**< size of all variables */
+   SCIP_VAR**            newvars;             /**< new variables in this presolving round */
+   int                   nnewvars;            /**< number of new variables in this presolving round */
+   int                   snewvars;            /**< size of new variables in this presolving round */
+   int                   nuses;               /**< how often is this data in usage */
+   SCIP_Bool             deleted;             /**< was memory of both variable arrays already freed */
 };
 typedef struct ConsAndData CONSANDDATA;
 
@@ -189,6 +189,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             decomposenormalpbcons;/**< decompose the pseudo boolean constraint into a "linear" constraint "and" constrainst */
    SCIP_Bool             decomposeindicatorpbcons;/**< decompose the indicator pseudo boolean constraint into a "linear" constraint "and" constrainst */
    int                   nlinconss;          /**< for counting number of created linear constraints */
+   int                   noriguses;          /**< how many consanddata objects are used by original constraints */
 };
 
 /*
@@ -321,6 +322,9 @@ SCIP_RETCODE conshdlrdataCreate(
 
    /* for constraint names count number of created constraints */
    (*conshdlrdata)->nlinconss = 0;
+
+   /* initializes how many consanddata objects are used by original constraints */
+   (*conshdlrdata)->noriguses = 0;
 
    return SCIP_OKAY;
 }
@@ -607,6 +611,16 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->presolved = FALSE;
    (*consdata)->cliquesadded = FALSE;
    (*consdata)->upgradetried = TRUE;
+
+   /* count number of used consanddata objects in original problem */
+   if( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM )
+   {
+      SCIP_CONSHDLRDATA* conshdlrdata;
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+      
+      conshdlrdata->noriguses += (*consdata)->nconsanddatas;
+   }
 
    return SCIP_OKAY;
 }
@@ -6323,6 +6337,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolPseudoboolean)
 static
 SCIP_DECL_CONSDELETE(consDeletePseudoboolean)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -6330,6 +6345,9 @@ SCIP_DECL_CONSDELETE(consDeletePseudoboolean)
    assert(consdata != NULL);
    assert(*consdata != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
 #if 0
    if( (*consdata)->nconsanddatas > 0 )
@@ -6354,9 +6372,19 @@ SCIP_DECL_CONSDELETE(consDeletePseudoboolean)
    }
 #endif
 
+   /* count number of used consanddata objects in original problem */
+   if( SCIPconsIsOriginal(cons) )
+      conshdlrdata->noriguses -= (*consdata)->nconsanddatas;
 
    /* free pseudo boolean constraint */
    SCIP_CALL( consdataFree(scip, consdata) );
+
+   /* if original constraint got deleted, than we have to clear the constraint handler data */
+   if( conshdlrdata->noriguses == 0 )
+   {
+      /* clear constraint handler data */
+      SCIP_CALL( conshdlrdataClear(scip, &conshdlrdata) );
+   }
 
    return SCIP_OKAY;
 }
@@ -6398,7 +6426,7 @@ SCIP_DECL_CONSTRANS(consTransPseudoboolean)
       assert(andconss[c] != NULL);
    }
 
-   /* create linear constraint data for target constraint */
+   /* create pseudoboolean constraint data for target constraint */
    SCIP_CALL( consdataCreate(scip, conshdlr, &targetdata, sourcedata->lincons, sourcedata->linconstype, 
          andconss, sourcedata->andcoefs, sourcedata->nconsanddatas,     
          sourcedata->indvar, sourcedata->weight, sourcedata->issoftcons, sourcedata->intvar, sourcedata->lhs, sourcedata->rhs) );
