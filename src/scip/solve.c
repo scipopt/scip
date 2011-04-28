@@ -110,7 +110,13 @@ SCIP_Bool SCIPsolveIsStopped(
    else if( checknodelimits && set->limit_stallnodes >= 0 && stat->nnodes >= stat->bestsolnode + set->limit_stallnodes )
       stat->status = SCIP_STATUS_STALLNODELIMIT;
 
-   return (stat->status != SCIP_STATUS_UNKNOWN);
+   /* If stat->status was initialized to SCIP_STATUS_NODELIMIT or SCIP_STATUS_STALLNODELIMIT due to a previous call to SCIPsolveIsStopped(,,TRUE),
+    * in the case of checknodelimits == FALSE, we do not want to report here that the solve will be stopped due to a nodelimit.
+    */
+   if( !checknodelimits )
+      return (stat->status != SCIP_STATUS_UNKNOWN && stat->status != SCIP_STATUS_NODELIMIT && stat->status != SCIP_STATUS_STALLNODELIMIT);
+   else
+      return (stat->status != SCIP_STATUS_UNKNOWN);
 }
 
 /** calls primal heuristics */
@@ -219,6 +225,10 @@ SCIP_RETCODE SCIPprimalHeuristics(
       SCIPdebugMessage(" -> executing heuristic <%s> with priority %d\n",
          SCIPheurGetName(set->heurs[h]), SCIPheurGetPriority(set->heurs[h]));
       SCIP_CALL( SCIPheurExec(set->heurs[h], set, primal, depth, lpstateforkdepth, heurtiming, &ndelayedheurs, &result) );
+
+      /* make sure that heuristic did not leave on probing or diving mode */
+      assert(tree == NULL || !SCIPtreeProbing(tree));
+      assert(lp == NULL || !SCIPlpDiving(lp));
    }
    assert(0 <= ndelayedheurs && ndelayedheurs <= set->nheurs);
 

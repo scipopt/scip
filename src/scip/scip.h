@@ -531,6 +531,21 @@ SCIP_VERBLEVEL SCIPgetVerbLevel(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+#ifndef NPARASCIP
+/** allocates memory for all message handlers for number of given threads */
+extern
+SCIP_RETCODE SCIPcreateMesshdlrPThreads(
+   int                   nthreads            /**< number of threads to allocate memory for */
+   );
+
+/** frees memory for all message handlers */
+extern
+void SCIPfreeMesshdlrPThreads(
+   void
+   );
+#endif
+
+
 /**@} */
 
 
@@ -4978,6 +4993,17 @@ SCIP_RETCODE SCIPcreateNLPSol(
 extern
 SCIP_Real SCIPgetNLPObjval(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets fractional variables of last NLP solution along with solution values and fractionalities */
+extern
+SCIP_RETCODE SCIPgetNLPFracVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR***           fracvars,           /**< pointer to store the array of NLP fractional variables, or NULL */
+   SCIP_Real**           fracvarssol,        /**< pointer to store the array of NLP fractional variables solution values, or NULL */
+   SCIP_Real**           fracvarsfrac,       /**< pointer to store the array of NLP fractional variables fractionalities, or NULL */
+   int*                  nfracvars,          /**< pointer to store the number of NLP fractional variables , or NULL */
+   int*                  npriofracvars       /**< pointer to store the number of NLP fractional variables with maximal branching priority, or NULL */
    );
 
 /** writes current NLP to a file */

@@ -33,6 +33,11 @@
 #include <assert.h>
 #include <string.h>
 
+#ifndef NPARASCIP
+#include <pthread.h>
+#include <time.h>
+#endif
+
 #include "scip/def.h"
 #include "scip/retcode.h"
 #include "scip/set.h"
@@ -906,9 +911,39 @@ SCIP_VERBLEVEL SCIPgetVerbLevel(
    return scip->set->disp_verblevel;
 }
 
+#ifndef NPARASCIP
+/** allocates memory for all message handlers for number of given threads 
+ *
+ * @note it is necessary to call SCIPmessageSetDefaultHandler or SCIPmessageSetHandler for each thread
+ */
+SCIP_RETCODE SCIPcreateMesshdlrPThreads(
+   int                   nthreads            /**< number of threads to allocate memory for */
+   )
+{
+   assert(nthreads > 0);
+
+   return SCIPmesshdlrCreatePThreads(nthreads);
+}
+
+/** frees memory for all message handlers */
+void SCIPfreeMesshdlrPThreads(
+   void
+   )
+{
+   SCIPmesshdlrFreePThreads();
+}
+#endif
+
+
 /*
  * SCIP copy methods
  */
+
+#ifndef NPARASCIP
+/* mutex to lock important copy parts */
+static pthread_mutex_t copymutex = PTHREAD_MUTEX_INITIALIZER;
+#endif
+
 
 #define HASHTABLESIZE_FACTOR 5
 
@@ -916,6 +951,8 @@ SCIP_VERBLEVEL SCIPgetVerbLevel(
  *  cannot be copied, valid will return FALSE. All plugins can declare that, if their copy process failed, the 
  *  copied SCIP instance might not represent the same problem semantics as the original. 
  *  Note that in this case dual reductions might be invalid. 
+ *
+ *  @note Do not change the source SCIP environment during the copying process
  */
 SCIP_RETCODE SCIPcopyPlugins(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
@@ -955,7 +992,10 @@ SCIP_RETCODE SCIPcopyPlugins(
    return SCIP_OKAY;
 }
 
-/** create a problem by copying the problem data of the source SCIP */
+/** create a problem by copying the problem data of the source SCIP 
+ *
+ *  @note Do not change the source SCIP environment during the copying process
+ */
 SCIP_RETCODE SCIPcopyProb(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -1014,8 +1054,14 @@ SCIP_RETCODE SCIPcopyProb(
    /* create the statistics data structure */
    SCIP_CALL( SCIPstatCreate(&targetscip->stat, targetscip->mem->probmem, targetscip->set) );
 
+#ifndef NPARASCIP
+   pthread_mutex_lock(&copymutex);
+#endif
    /* create the problem by copying the source problme */
    SCIP_CALL( SCIPprobCopy(&targetscip->origprob, targetscip->mem->probmem, targetscip->set, name, sourcescip, sourceprob, localvarmap, localconsmap, global) );
+#ifndef NPARASCIP
+   pthread_mutex_unlock(&copymutex);
+#endif
 
    if( uselocalvarmap )
    {
@@ -1110,8 +1156,14 @@ SCIP_RETCODE SCIPgetVarCopy(
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_FIXED:
+#ifndef NPARASCIP
+   pthread_mutex_lock(&copymutex);
+#endif
       SCIP_CALL( SCIPvarCopy(&var, targetscip->mem->probmem, targetscip->set, targetscip->stat, 
             sourcescip, sourcevar, localvarmap, localconsmap, global) );
+#ifndef NPARASCIP
+   pthread_mutex_unlock(&copymutex);
+#endif
       break;
       
    case SCIP_VARSTATUS_AGGREGATED:
@@ -1133,9 +1185,15 @@ SCIP_RETCODE SCIPgetVarCopy(
       SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourceaggrvar, &targetaggrvar, localvarmap, localconsmap, global, success) );
       assert(*success);
 
+#ifndef NPARASCIP
+   pthread_mutex_lock(&copymutex);
+#endif
       /* create copy of the aggregated variable */
       SCIP_CALL( SCIPvarCopy(&var, targetscip->mem->probmem, targetscip->set, targetscip->stat, 
             sourcescip, sourcevar, localvarmap, localconsmap, global) );
+#ifndef NPARASCIP
+   pthread_mutex_unlock(&copymutex);
+#endif
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_aggr", SCIPvarGetName(sourcevar));
          
@@ -1163,8 +1221,14 @@ SCIP_RETCODE SCIPgetVarCopy(
       int naggrvars;
       int i;
         
+#ifndef NPARASCIP
+   pthread_mutex_lock(&copymutex);
+#endif
       /* get the active representation */
       SCIP_CALL( SCIPflattenVarAggregationGraph(sourcescip, sourcevar) );
+#ifndef NPARASCIP
+   pthread_mutex_unlock(&copymutex);
+#endif
     
       /* get multiaggregation data */
       naggrvars = SCIPvarGetMultaggrNVars(sourcevar);
@@ -1180,10 +1244,16 @@ SCIP_RETCODE SCIPgetVarCopy(
          SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourceaggrvars[i], &targetaggrvars[i], localvarmap, localconsmap, global, success) );
          assert(*success);
       }
-         
+
+#ifndef NPARASCIP
+   pthread_mutex_lock(&copymutex);
+#endif
       /* create copy of the multiaggregated variable */
       SCIP_CALL( SCIPvarCopy(&var, targetscip->mem->probmem, targetscip->set, targetscip->stat, 
             sourcescip, sourcevar, localvarmap, localconsmap, global) );
+#ifndef NPARASCIP
+   pthread_mutex_unlock(&copymutex);
+#endif
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_multaggr", SCIPvarGetName(sourcevar));
          
@@ -1204,7 +1274,7 @@ SCIP_RETCODE SCIPgetVarCopy(
       SCIP_VAR* targetnegatedvar;
          
       /* get negated source variable */
-      SCIP_CALL( SCIPgetNegatedVar(sourcescip, sourcevar, &sourcenegatedvar) );
+      sourcenegatedvar = SCIPvarGetNegationVar(sourcevar);
       assert(sourcenegatedvar != NULL);
       assert(SCIPvarGetStatus(sourcenegatedvar) != SCIP_VARSTATUS_NEGATED);
 
@@ -1254,6 +1324,8 @@ SCIP_RETCODE SCIPgetVarCopy(
  *  variables are stored in the variable hashmap, target-SCIP has to be in problem creation stage
  *
  *  @note the variables are added to the target-SCIP but not captured
+ *
+ *  @note Do not change the source SCIP environment during the copying process
  */
 SCIP_RETCODE SCIPcopyVars(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
@@ -1453,10 +1525,16 @@ SCIP_RETCODE SCIPgetConsCopy(
       if( *targetcons != NULL )
          return SCIP_OKAY;
    }
-   
+
+#ifndef NPARASCIP
+   pthread_mutex_lock(&copymutex);
+#endif
    /*  copy the constraint */
    SCIP_CALL( SCIPconsCopy(targetcons, targetscip->set, name, sourcescip, sourceconshdlr, sourcecons, localvarmap, localconsmap,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, success) );
+#ifndef NPARASCIP
+   pthread_mutex_unlock(&copymutex);
+#endif
 
    if( uselocalvarmap )
    {
@@ -1477,6 +1555,8 @@ SCIP_RETCODE SCIPgetConsCopy(
  *  variables between the source and the target SCIP, a hash map can be given;
  *
  *  @note the constraints are added to the target-SCIP but are not captured
+ *
+ *  @note Do not change the source SCIP environment during the copying process
  */
 SCIP_RETCODE SCIPcopyConss(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
@@ -1699,7 +1779,7 @@ SCIP_RETCODE SCIPconvertCutsToConss(
          ncols = SCIProwGetNNonz(row);
          
          /* get all variables of the row */
-         SCIP_CALL( SCIPallocBufferArray(sourcescip, &vars, ncols) );
+         SCIP_CALL( SCIPallocBufferArray(targetscip, &vars, ncols) );
          for( i = 0; i < ncols; ++i )
             vars[i] = SCIPcolGetVar(cols[i]);
 
@@ -1717,7 +1797,7 @@ SCIP_RETCODE SCIPconvertCutsToConss(
                   SCIPdebugMessage("Converting cuts to constraints failed.\n");
                   
                   /* free temporary memory */
-                  SCIPfreeBufferArray(sourcescip, &vars);
+                  SCIPfreeBufferArray(targetscip, &vars);
                   return SCIP_OKAY;
                }
             }
@@ -1734,7 +1814,7 @@ SCIP_RETCODE SCIPconvertCutsToConss(
          SCIP_CALL( SCIPreleaseCons(targetscip, &cons) );
 
          /* free temporary memory */
-         SCIPfreeBufferArray(sourcescip, &vars);
+         SCIPfreeBufferArray(targetscip, &vars);
 
          ++(*ncutsadded);
       }
@@ -1743,7 +1823,10 @@ SCIP_RETCODE SCIPconvertCutsToConss(
    return SCIP_OKAY;
 }
 
-/** copies all active cuts from cutpool of sourcescip to constraints in targetscip */
+/** copies all active cuts from cutpool of sourcescip to constraints in targetscip 
+ *
+ *  @note Do not change the source SCIP environment during the copying process
+ */
 SCIP_RETCODE SCIPcopyCuts(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -1773,7 +1856,10 @@ SCIP_RETCODE SCIPcopyCuts(
    return SCIP_OKAY;
 }
 
-/** copies parameter settings from sourcescip to targetscip */
+/** copies parameter settings from sourcescip to targetscip 
+ *
+ *  @note Do not change the source SCIP environment during the copying process
+ */
 SCIP_RETCODE SCIPcopyParamSettings(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip          /**< target SCIP data structure */
@@ -1801,6 +1887,8 @@ SCIP_RETCODE SCIPcopyParamSettings(
  *  5) copy the settings 
  *
  *  @note all variables and constraints which are created in the target-SCIP are not (user) captured 
+ *
+ *  @note Do not change the source SCIP environment during the copying process
  */
 SCIP_RETCODE SCIPcopy(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
@@ -14855,6 +14943,31 @@ SCIP_Real SCIPgetNLPObjval(
       SCIPerrorMessage("NLP has not been not constructed.\n");
       return SCIP_INVALID;
    }
+}
+
+/** gets fractional variables of last NLP solution along with solution values and fractionalities */
+SCIP_RETCODE SCIPgetNLPFracVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR***           fracvars,           /**< pointer to store the array of NLP fractional variables, or NULL */
+   SCIP_Real**           fracvarssol,        /**< pointer to store the array of NLP fractional variables solution values, or NULL */
+   SCIP_Real**           fracvarsfrac,       /**< pointer to store the array of NLP fractional variables fractionalities, or NULL */
+   int*                  nfracvars,          /**< pointer to store the number of NLP fractional variables , or NULL */
+   int*                  npriofracvars       /**< pointer to store the number of NLP fractional variables with maximal branching priority, or NULL */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPgetNLPFracVars", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( scip->nlp != NULL )
+   {
+      SCIP_CALL( SCIPnlpGetFracVars(scip->nlp, SCIPblkmem(scip), scip->set, scip->stat, fracvars, fracvarssol, fracvarsfrac, nfracvars, npriofracvars) );
+   }
+   else
+   {
+      SCIPerrorMessage("NLP has not been not constructed.\n");
+      return SCIP_ERROR;
+   }
+
+   return SCIP_OKAY;
 }
 
 /** writes current NLP to a file */

@@ -46,6 +46,10 @@ interface:
 - added SCIPconvertCutsToConss() and SCIPcopyCuts() to scip.{c,h} for copying cuts to linear constraints
 - new method SCIPnodeGetParent() to get parent node of a node
 - added method SCIPsortRealIntLong() and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines in misc.c
+- new method SCIPnodesSharePath() in pub_tree.h that determines whether two nodes are on the same leaf-root path
+- new method SCIPnodesGetCommonAncestor() in pub_tree.h that finds the common ancestor node for two given nodes
+- new method SCIPgetNLPFracVars() to get the fractional variables in an NLP solution
+- new methods SCIPcreateMesshdlrPThreads() and SCIPfreeMesshdlrPThreads() for allocating and deleting necessary memory for message handlers for parallel pthread version
 
 performance improvements:
 - performance improvements in prop_vbounds
@@ -69,6 +73,7 @@ fixed bugs:
 - fixed bug which occured when changing a bound in the solving stage when this variables got upgraded from continuous to a integer type, where the bounds of this variable were still not integral; due to that SCIPchgVarType has changed(see above)
 - fixed bug which occured when the dual farkas multipliers were not available in the lpi because the LP could
   only be solved with the primal simplex due to numerical problems
+- fixed bug in cons_orbitope:resprop() for the packing case
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})
@@ -107,8 +112,9 @@ parameters:
 - added parameter <constraints/indicator/genBilinear> to generate bilinear (quadratic) constraints instead of indicator constraints
 - added parameter <timing/reading> to add reading time to solving time
 - added parameter <constraints/quadratic/binreforminitial> to indicate whether constraints added due to reformulation of products with binary variables in
-  a quadratic constraints should be initial (if the quadratic constraint is initial), default is TRUE
+  a quadratic constraints should be initial (if the quadratic constraint is initial), default is FALSE
 - renamed parameter <constraints/quadratic/linearizenlpsol> to <constraints/quadratic/linearizeheursol> and do linearizations in every solution found by some heuristic
+- renamed parameter <constraints/quadratic/mincutefficacyenfo> to <constraints/quadratic/mincutefficacyenfofac> and interpret it as a factor of the feasibility tolerance
 
 features:
 - flatzinc reader is now capable to read cumulative constraints
@@ -147,6 +153,11 @@ features:
 - it is possible to change bounds of a variable in the interactive shell
 - it is possible to add a constraint to a problem in the interactive shell
 - added clock for determine the time for reading
+- new presolving step in cons_knapsack (detectRedundantVars, deleteRedundantVars) which determines redundant variables in knapsack constraint with or without using clique information
+
+design:
+- SCIP_HASHMAP now works also without block memory
+- the 'make' parameter 'PARASCIP=true' leads to threadsafe message handlers where you need to call SCIPcreateMesshdlrPThreads and SCIPmessageSetHandler/SCIPmessageSetDefaultHandler and SCIPfreeMesshdlrPThreads, and to a threadsafe SCIPcopy...() mechanism which all uses mutex; therefor we need to link with pthread library
 
 SCIP version 2.0.2
 ==================
@@ -173,12 +184,14 @@ fixed bugs:
 - fixed bug concerning overflow in memsize calculation in set.c
 - fixed segmentation fault in heur_subnlp.c which occured if resolving the NLP with a tighter feasibility tolerance failed with a solver error
 - fixed wrong assumption that an optimal LP solution in the root is optimal for the problem if there are no active pricers, need to check also whether all variables are in the LP
+- fixed wrong assert in var.c (replaced '==' through 'SCIPsetIsEQ'), real values do not have to be exactly the same when computed in different function
+- fixed bug in SCIPsolveIsStopped where it could happen that TRUE was reported if a nodelimit was reached but checknodelimits had been set to FALSE
 
 performance improvements:
 - fasten propagation in cons_knapsack.c due to negated clique partitions
 - recalculating only needed partitions in cons_knapsack.c, not always both
 - calculation of node priority now also works when variable's relaxation value is equal to a bound
-- fasten knapsack separation by replacing SCIPallocBufer(Array) through SCIPallocBlockMemory(Array)
+- fasten knapsack separation by replacing SCIPallocBuffer(Array) through SCIPallocBlockMemory(Array)
 - fixed issue w.r.t. calling primal heuristics after presolving detected infeasibility
 - improved runtime and memory consumption in SCIPsolveKnapsackExactly() in cons_knapsack.c
 

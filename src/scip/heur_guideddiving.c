@@ -271,6 +271,13 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
    /* allow at least a certain number of LP iterations in this dive */
    maxnlpiterations = MAX(maxnlpiterations, heurdata->nlpiterations + MINLPITER);
 
+   /* get fractional variables that should be integral */
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL) );
+
+   /* don't try to dive, if there are no fractional variables */
+   if( nlpcands == 0 )
+      return SCIP_OKAY;
+
    /* calculate the objective search bound */
    if( heurdata->maxdiveubquot > 0.0 )
       searchubbound = SCIPgetLowerbound(scip)
@@ -305,10 +312,9 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
    /* start diving */
    SCIP_CALL( SCIPstartProbing(scip) );
 
-   /* get LP objective value, and fractional variables, that should be integral */
+   /* get LP objective value */
    lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
    objval = SCIPgetLPObjval(scip);
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL) );
 
    SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") executing guideddiving heuristic: depth=%d, %d fractionals, dualbound=%g, searchbound=%g\n", 
       SCIPgetNNodes(scip), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), SCIPretransformObj(scip, searchbound));

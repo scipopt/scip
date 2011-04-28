@@ -56,7 +56,7 @@
 #define DEFAULT_PERTSOLFOUND     TRUE   /**< should a random perturbation be performed if a feasible solution was found? */
 #define DEFAULT_STAGE3          FALSE   /**< should we solve a local branching sub-MIP if no solution could be found? */
 #define DEFAULT_NEIGHBORHOODSIZE  18    /**< radius of the neighborhood to be searched in stage 3 */
-#define DEFAULT_COPYCUTS         TRUE   /**< should all active cuts from the cutpool of the original scip be copied to
+#define DEFAULT_COPYCUTS         TRUE   /**< should all active cuts from the cutpool of the original SCIP be copied to
                                          *   constraints of the subscip
                                          */
 

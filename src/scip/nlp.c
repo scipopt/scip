@@ -4716,9 +4716,12 @@ SCIP_RETCODE nlpSolve(
             SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &nlp->primalsolution, nlp->nvars) );
          }
 
-         /* evaluate objective function */
+         /* set primalsolution and evaluate objective function */
          if( nlp->indiving && nlp->divingobj != NULL )
          {
+            for( i = 0; i < nlp->nvars; ++i )
+               nlp->primalsolution[i] = solversol[nlp->varmap_nlp2nlpi[i]];
+
             /* evaluate modified diving objective */
             SCIP_CALL( SCIPnlrowGetNLPActivity(nlp->divingobj, set, stat, nlp, &nlp->primalsolobjval) );
          }
@@ -4734,6 +4737,9 @@ SCIP_RETCODE nlpSolve(
          }
          else
          {
+            for( i = 0; i < nlp->nvars; ++i )
+               nlp->primalsolution[i] = solversol[nlp->varmap_nlp2nlpi[i]];
+
             /* evaluate non-default objective function */
             SCIP_CALL( SCIPnlrowGetNLPActivity(nlp->objective, set, stat, nlp, &nlp->primalsolobjval) );
          }
@@ -4743,6 +4749,152 @@ SCIP_RETCODE nlpSolve(
          nlp->primalsolobjval = SCIP_INVALID;
          break;
    } /*lint !e788*/
+
+   return SCIP_OKAY;
+}
+
+/** assembles list of fractional variables in last NLP solution */
+static
+SCIP_RETCODE nlpCalcFracVars(
+   SCIP_NLP*             nlp,                /**< NLP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics */
+   )
+{
+   assert(nlp != NULL);
+   assert(blkmem != NULL);
+   assert(set != NULL);
+   assert(stat != NULL);
+   assert(nlp->validfracvars <= stat->nnlps);
+   assert(nlp->primalsolution != NULL || nlp->solstat > SCIP_NLPSOLSTAT_LOCINFEASIBLE);
+
+   SCIPdebugMessage("calculating NLP fractional variables: validfracvars=%d, nnlps=%d\n", nlp->validfracvars, stat->nnlps);
+
+   if( nlp->solstat > SCIP_NLPSOLSTAT_LOCINFEASIBLE )
+   {
+      nlp->nfracvars     = 0;
+      nlp->npriofracvars = 0;
+      nlp->validfracvars = stat->nnlps;
+
+      SCIPdebugMessage("NLP globally infeasible, unbounded, or worse -> no solution values -> no fractional variables\n");
+      return SCIP_OKAY;
+   }
+
+   /* check, if the current NLP fractional variables array is invalid */
+   if( nlp->validfracvars < stat->nnlps )
+   {
+      SCIP_VAR* var;
+      SCIP_Real primsol;
+      SCIP_Real frac;
+      int branchpriority;
+      int insertpos;
+      int maxpriority;
+      int i;
+
+      SCIPdebugMessage(" -> recalculating NLP fractional variables\n");
+
+      if( nlp->fracvarssize == 0 )
+      {
+         assert(nlp->fracvars     == NULL);
+         assert(nlp->fracvarssol  == NULL);
+         assert(nlp->fracvarsfrac == NULL);
+         nlp->fracvarssize = 5;
+         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &nlp->fracvars,     nlp->fracvarssize) );
+         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &nlp->fracvarssol,  nlp->fracvarssize) );
+         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &nlp->fracvarsfrac, nlp->fracvarssize) );
+      }
+
+      maxpriority = INT_MIN;
+      nlp->nfracvars = 0;
+      nlp->npriofracvars = 0;
+      for( i = 0; i < nlp->nvars; ++i )
+      {
+         var = nlp->vars[i];
+         assert(var != NULL);
+
+         primsol = nlp->primalsolution[i];
+         assert(primsol < SCIP_INVALID);
+
+         /* consider only binary and integer variables */
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY && SCIPvarGetType(var) != SCIP_VARTYPE_INTEGER )
+            continue;
+
+         /* ignore fixed variables (due to numerics, it is possible, that the NLP solution of a fixed integer variable
+          * (with large fixed value) is fractional in terms of absolute feasibility measure)
+          */
+         if( SCIPvarGetLbLocal(var) >= SCIPvarGetUbLocal(var) - 0.5 )
+            continue;
+
+         /* check, if the LP solution value is fractional */
+         frac = SCIPsetFeasFrac(set, primsol);
+         if( SCIPsetIsFeasFracIntegral(set, frac) )
+            continue;
+
+         /* ensure enough space in fracvars arrays */
+         if( nlp->fracvarssize <= nlp->nfracvars )
+         {
+            int newsize;
+
+            newsize = SCIPsetCalcMemGrowSize(set, nlp->nfracvars + 1);
+            SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &nlp->fracvars,     nlp->fracvarssize, newsize) );
+            SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &nlp->fracvarssol,  nlp->fracvarssize, newsize) );
+            SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &nlp->fracvarsfrac, nlp->fracvarssize, newsize) );
+            nlp->fracvarssize = newsize;
+         }
+         assert(nlp->nfracvars < nlp->fracvarssize);
+         assert(nlp->fracvars     != NULL);
+         assert(nlp->fracvarssol  != NULL);
+         assert(nlp->fracvarsfrac != NULL);
+
+         /* insert candidate in candidate list */
+         branchpriority = SCIPvarGetBranchPriority(var);
+         insertpos = nlp->nfracvars;
+         nlp->nfracvars++;
+         if( branchpriority > maxpriority )
+         {
+            /* candidate has higher priority than the current maximum:
+             * move it to the front and declare it to be the single best candidate
+             */
+            if( insertpos != 0 )
+            {
+               nlp->fracvars[insertpos]     = nlp->fracvars[0];
+               nlp->fracvarssol[insertpos]  = nlp->fracvarssol[0];
+               nlp->fracvarsfrac[insertpos] = nlp->fracvarsfrac[0];
+               insertpos = 0;
+            }
+            nlp->npriofracvars = 1;
+            maxpriority = branchpriority;
+         }
+         else if( branchpriority == maxpriority )
+         {
+            /* candidate has equal priority as the current maximum:
+             * move away the first non-maximal priority candidate, move the current candidate to the correct
+             * slot (binaries first) and increase the number of maximal priority candidates
+             */
+            if( insertpos != nlp->npriofracvars )
+            {
+               nlp->fracvars[insertpos]     = nlp->fracvars[nlp->npriofracvars];
+               nlp->fracvarssol[insertpos]  = nlp->fracvarssol[nlp->npriofracvars];
+               nlp->fracvarsfrac[insertpos] = nlp->fracvarsfrac[nlp->npriofracvars];
+               insertpos = nlp->npriofracvars;
+            }
+            ++nlp->npriofracvars;
+         }
+         nlp->fracvars[insertpos]     = var;
+         nlp->fracvarssol[insertpos]  = primsol;
+         nlp->fracvarsfrac[insertpos] = frac;
+
+         SCIPdebugMessage(" -> candidate %d: var=<%s>, sol=%g, frac=%g, prio=%d (max: %d) -> pos %d\n",
+            nlp->nfracvars, SCIPvarGetName(var), primsol, frac, branchpriority, maxpriority, insertpos);
+      }
+
+      nlp->validfracvars = stat->nnlps;
+   }
+   assert(0 <= nlp->npriofracvars);
+   assert(nlp->npriofracvars <= nlp->nfracvars);
+
+   SCIPdebugMessage(" -> %d fractional variables (%d of maximal priority)\n", nlp->nfracvars, nlp->npriofracvars);
 
    return SCIP_OKAY;
 }
@@ -4798,6 +4950,7 @@ SCIP_DECL_EVENTEXEC(eventExecNlp)
 
    return SCIP_OKAY;
 }
+
 
 /*
  * public NLP methods
@@ -4930,6 +5083,15 @@ SCIP_RETCODE SCIPnlpCreate(
       SCIP_EVENTTYPE_VARADDED | SCIP_EVENTTYPE_VARDELETED,
       (*nlp)->eventhdlr, (SCIP_EVENTDATA*)(*nlp), &(*nlp)->globalfilterpos) );
 
+   /* fractional variables in last NLP solution */
+   (*nlp)->fracvars     = NULL;
+   (*nlp)->fracvarssol  = NULL;
+   (*nlp)->fracvarsfrac = NULL;
+   (*nlp)->nfracvars     = 0;
+   (*nlp)->npriofracvars = 0;
+   (*nlp)->fracvarssize  = 0;
+   (*nlp)->validfracvars = -1;
+
    /* miscellaneous */
    SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*nlp)->name, name, strlen(name)+1) );
 
@@ -4949,6 +5111,11 @@ SCIP_RETCODE SCIPnlpFree(
    assert(*nlp   != NULL);
    assert(blkmem != NULL);
    assert(set    != NULL);
+
+   /* drop fractional variables */
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*nlp)->fracvars,     (*nlp)->fracvarssize);
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*nlp)->fracvarssol,  (*nlp)->fracvarssize);
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*nlp)->fracvarsfrac, (*nlp)->fracvarssize);
 
    /* drop global events (variable addition and deletion) */
    SCIP_CALL( SCIPeventfilterDel(set->scip->eventfilter, blkmem, set,
@@ -5503,6 +5670,41 @@ SCIP_RETCODE SCIPnlpGetSol(
    {
       SCIP_CALL( SCIPsolSetVal(*sol, set, stat, tree, nlp->vars[i], nlp->primalsolution[i]) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** gets fractional variables of last NLP solution along with solution values and fractionalities
+ */
+SCIP_RETCODE SCIPnlpGetFracVars(
+   SCIP_NLP*             nlp,                /**< NLP data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_VAR***           fracvars,           /**< pointer to store the array of NLP fractional variables, or NULL */
+   SCIP_Real**           fracvarssol,        /**< pointer to store the array of NLP fractional variables solution values, or NULL */
+   SCIP_Real**           fracvarsfrac,       /**< pointer to store the array of NLP fractional variables fractionalities, or NULL */
+   int*                  nfracvars,          /**< pointer to store the number of NLP fractional variables , or NULL */
+   int*                  npriofracvars       /**< pointer to store the number of NLP fractional variables with maximal branching priority, or NULL */
+   )
+{
+   assert(nlp != NULL);
+
+   SCIP_CALL( nlpCalcFracVars(nlp, blkmem, set, stat) );
+   assert(nlp->fracvars     != NULL);
+   assert(nlp->fracvarssol  != NULL);
+   assert(nlp->fracvarsfrac != NULL);
+
+   if( fracvars != NULL )
+      *fracvars = nlp->fracvars;
+   if( fracvarssol != NULL )
+      *fracvarssol = nlp->fracvarssol;
+   if( fracvarsfrac != NULL )
+      *fracvarsfrac = nlp->fracvarsfrac;
+   if( nfracvars != NULL )
+      *nfracvars = nlp->nfracvars;
+   if( npriofracvars != NULL )
+      *npriofracvars = nlp->npriofracvars;
 
    return SCIP_OKAY;
 }

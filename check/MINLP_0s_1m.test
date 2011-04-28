@@ -124,3 +124,6 @@ MINLP/instances/POLIP/portfolio/small-investor-MVO-DAX30-return_0.0010-budget_10
 MINLP/instances/POLIP/portfolio/small-investor-MVO-SNP100-return_0.0030-budget_1000-1100.pip.gz
 MINLP/instances/POLIP/portfolio/small-investor-MVO-SNP100-return_0.0035-budget_2000-2200.pip.gz
 MINLP/instances/POLIP/portfolio/small-investor-MVO-DAX30-return_0.0010-budget_20000-22000.pip.gz
+MINLP/instances/Anstreicher/lp/spar30-60-2.lp
+MINLP/instances/Anstreicher/lp/spar30-80-2.lp
+MINLP/instances/Anstreicher/lp/spar30-80-3.lp
