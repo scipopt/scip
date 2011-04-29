@@ -49,6 +49,7 @@ interface:
 - new method SCIPnodesSharePath() in pub_tree.h that determines whether two nodes are on the same leaf-root path
 - new method SCIPnodesGetCommonAncestor() in pub_tree.h that finds the common ancestor node for two given nodes
 - new method SCIPgetNLPFracVars() to get the fractional variables in an NLP solution
+- new methods SCIPcreateMesshdlrPThreads() and SCIPfreeMesshdlrPThreads() for allocating and deleting necessary memory for message handlers for parallel pthread version
 
 performance improvements:
 - performance improvements in prop_vbounds
@@ -152,6 +153,11 @@ features:
 - it is possible to change bounds of a variable in the interactive shell
 - it is possible to add a constraint to a problem in the interactive shell
 - added clock for determine the time for reading
+- new presolving step in cons_knapsack (detectRedundantVars, deleteRedundantVars) which determines redundant variables in knapsack constraint with or without using clique information
+
+design:
+- SCIP_HASHMAP now works also without block memory
+- the 'make' parameter 'PARASCIP=true' leads to threadsafe message handlers where you need to call SCIPcreateMesshdlrPThreads and SCIPmessageSetHandler/SCIPmessageSetDefaultHandler and SCIPfreeMesshdlrPThreads, and to a threadsafe SCIPcopy...() mechanism which all uses mutex; therefor we need to link with pthread library
 
 SCIP version 2.0.2
 ==================

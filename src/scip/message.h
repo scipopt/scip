@@ -191,6 +191,20 @@ void SCIPmessageVFPrintVerbInfo(
    va_list               ap                  /**< variable argument list */
    );
 
+#ifndef NPARASCIP
+/** allocates memory for all message handlers for number of given threads */
+extern
+SCIP_RETCODE SCIPmesshdlrCreatePThreads(
+   int                   nthreads            /**< number of threads to allocate memory for */
+   );
+
+/** frees memory for all message handlers */
+extern
+void SCIPmesshdlrFreePThreads(
+   void
+   );
+#endif
+
 #ifdef __cplusplus
 }
 #endif

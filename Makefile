@@ -172,6 +172,8 @@ DFLAGS		+=	$(USRDFLAGS)
 
 ifeq ($(PARASCIP),false)
 FLAGS		+=	-DNPARASCIP
+else
+LDFLAGS         +=      -lpthread
 endif
 
 #-----------------------------------------------------------------------------
