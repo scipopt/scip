@@ -385,7 +385,7 @@ SCIP_RETCODE consdataPrint(
    SCIPinfoMessage(scip, file, "xor(");
 
    /* print variable list */
-   SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars, FALSE) );
+   SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars, FALSE, ',') );
 
    /* close variable list and write right hand side */
    SCIPinfoMessage(scip, file, ") = %d", consdata->rhs);
@@ -2346,7 +2346,7 @@ SCIP_DECL_CONSPARSE(consParseXor)
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
 
    /* parse string */
-   SCIP_CALL( SCIPparseVarsList(scip, str, pos, vars, &nvars, varssize, &requiredsize, &pos, success) );
+   SCIP_CALL( SCIPparseVarsList(scip, str, pos, vars, &nvars, varssize, &requiredsize, &pos, ',', success) );
 
    if( *success )
    {
@@ -2360,7 +2360,7 @@ SCIP_DECL_CONSPARSE(consParseXor)
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
 
          /* parse string again with the correct size of the variable array */
-         SCIP_CALL( SCIPparseVarsList(scip, str, pos, vars, &nvars, varssize, &requiredsize, &pos, success) );
+         SCIP_CALL( SCIPparseVarsList(scip, str, pos, vars, &nvars, varssize, &requiredsize, &pos, ',', success) );
       }
 
       assert(*success);

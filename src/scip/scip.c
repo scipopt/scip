@@ -7449,15 +7449,19 @@ SCIP_RETCODE SCIPwriteVarName(
    return SCIP_OKAY;
 }
 
-/** print the given list of variables to output stream separated by a comma; the variables x1, x2, ..., xn are
- *  written as: \<x1\>, \<x2\>, ..., \<xn\>; the method SCIPparseVarsList() can parse such a string
+/** print the given list of variables to output stream separated by the given delimiter character; 
+ *
+ *  i. e. the variables x1, x2, ..., xn with given delimiter ',' are written as: \<x1\>, \<x2\>, ..., \<xn\>;
+ *
+ *  the method SCIPparseVarsList() can parse such a string
  */
 SCIP_RETCODE SCIPwriteVarsList(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file, or NULL for stdout */
    SCIP_VAR**            vars,               /**< variable array to output */
    int                   nvars,              /**< number of variables */
-   SCIP_Bool             type                /**< should the variable type be also posted */
+   SCIP_Bool             type,               /**< should the variable type be also posted */
+   char                  delimiter           /**< character which is used for delimitation */
    )
 {
    int v;
@@ -7468,7 +7472,7 @@ SCIP_RETCODE SCIPwriteVarsList(
    {
       if( v > 0 )
       {
-         SCIPinfoMessage(scip, file, ", ");
+         SCIPinfoMessage(scip, file, "%c ", delimiter);
       }
       
       /* print variable name */
@@ -7602,8 +7606,8 @@ SCIP_RETCODE SCIPparseVarName(
    return SCIP_OKAY;
 }
 
-/** parse the given string as variable list (\<x1\>, \<x2\>, ..., \<xn\>) (see SCIPwriteVarsList() ); if it was
- *  successful, the pointer success is set to TRUE
+/** parse the given string as variable list (here ',' is the delimiter)) (\<x1\>, \<x2\>, ..., \<xn\>) (see
+ *  SCIPwriteVarsList() ); if it was successful, the pointer success is set to TRUE
  *
  *  @note the pointer success in only set to FALSE in the case that a variable with a parsed variable name does not exist
  *
@@ -7621,6 +7625,7 @@ SCIP_RETCODE SCIPparseVarsList(
    int                   varssize,           /**< size of the variable array */
    int*                  requiredsize,       /**< pointer to store the required array size for the active variables */
    int*                  endpos,             /**< position where the parsing stopped */
+   char                  delimiter,          /**< character which is used for delimitation */
    SCIP_Bool*            success             /**< pointer to store the whether the parsing was successfully or not */
    )
 {
@@ -7659,7 +7664,7 @@ SCIP_RETCODE SCIPparseVarsList(
       while( isspace(str[pos]) )
          pos++;
    }
-   while( str[pos] == ',' );
+   while( str[pos] == delimiter );
 
    /* if all variable name searches were successfully and the variable array has enough slots copy the collected
     * variables 
