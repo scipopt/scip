@@ -140,6 +140,7 @@ void bufferMessage(
    }
 }
 
+
 /** for parascip we need to make this threadsafe */
 #ifdef NPARASCIP
 
@@ -275,6 +276,8 @@ static SCIP_HASHMAP* messagepthreadhashmap = NULL;
 static SCIP_MESSAGEHDLR** curmessagehdlrs = NULL;
 static size_t ncurmessagehdlrs = 0;
 
+/* standard message handler when not initializing the array above by calling */
+static SCIP_MESSAGEHDLR* emergencycurmessagehdlr = &messagehdlrDefault;
 
 /** prints error message with the current message handler, or buffers the message if no newline exists */
 static
@@ -287,12 +290,17 @@ void messagePrintError(
    {
       SCIP_MESSAGEHDLR* curmessagehdlr;
 
-      assert(messagepthreadhashmap != NULL);
-      assert(curmessagehdlrs != NULL);
-      assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) > 0);
-      assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) <= ncurmessagehdlrs);
-
-      curmessagehdlr = curmessagehdlrs[((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) - 1];
+      if( ncurmessagehdlrs == 0 )
+         curmessagehdlr = emergencycurmessagehdlr;
+      else
+      {
+         assert(messagepthreadhashmap != NULL);
+         assert(curmessagehdlrs != NULL);
+         assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) > 0);
+         assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) <= ncurmessagehdlrs);
+         
+         curmessagehdlr = curmessagehdlrs[((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) - 1];
+      }
 
       if( curmessagehdlr != NULL && curmessagehdlr->messageerror != NULL )
       {
@@ -318,12 +326,17 @@ void messagePrintWarning(
    {
       SCIP_MESSAGEHDLR* curmessagehdlr;
 
-      assert(messagepthreadhashmap != NULL);
-      assert(curmessagehdlrs != NULL);
-      assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) > 0);
-      assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) <= ncurmessagehdlrs);
+      if( ncurmessagehdlrs == 0 )
+         curmessagehdlr = emergencycurmessagehdlr;
+      else
+      {
+         assert(messagepthreadhashmap != NULL);
+         assert(curmessagehdlrs != NULL);
+         assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) > 0);
+         assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) <= ncurmessagehdlrs);
 
-      curmessagehdlr = curmessagehdlrs[((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) - 1];
+         curmessagehdlr = curmessagehdlrs[((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) - 1];
+      }
 
       if( curmessagehdlr != NULL && curmessagehdlr->messagewarning != NULL )
       {
@@ -350,12 +363,17 @@ void messagePrintDialog(
    {
       SCIP_MESSAGEHDLR* curmessagehdlr;
 
-      assert(messagepthreadhashmap != NULL);
-      assert(curmessagehdlrs != NULL);
-      assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) > 0);
-      assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) <= ncurmessagehdlrs);
+      if( ncurmessagehdlrs == 0 )
+         curmessagehdlr = emergencycurmessagehdlr;
+      else
+      {
+         assert(messagepthreadhashmap != NULL);
+         assert(curmessagehdlrs != NULL);
+         assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) > 0);
+         assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) <= ncurmessagehdlrs);
 
-      curmessagehdlr = curmessagehdlrs[((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) - 1];
+         curmessagehdlr = curmessagehdlrs[((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) - 1];
+      }
 
       if( curmessagehdlr != NULL && curmessagehdlr->messagedialog != NULL )
       {
@@ -391,12 +409,17 @@ void messagePrintInfo(
    {
       SCIP_MESSAGEHDLR* curmessagehdlr;
 
-      assert(messagepthreadhashmap != NULL);
-      assert(curmessagehdlrs != NULL);
-      assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) > 0);
-      assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) <= ncurmessagehdlrs);
+      if( ncurmessagehdlrs == 0 )
+         curmessagehdlr = emergencycurmessagehdlr;
+      else
+      {
+         assert(messagepthreadhashmap != NULL);
+         assert(curmessagehdlrs != NULL);
+         assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) > 0);
+         assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) <= ncurmessagehdlrs);
 
-      curmessagehdlr = curmessagehdlrs[((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) - 1];
+         curmessagehdlr = curmessagehdlrs[((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) - 1];
+      }
 
       if( curmessagehdlr != NULL && curmessagehdlr->messageinfo != NULL )
       {
