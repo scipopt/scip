@@ -50,6 +50,7 @@ interface:
 - new method SCIPnodesGetCommonAncestor() in pub_tree.h that finds the common ancestor node for two given nodes
 - new method SCIPgetNLPFracVars() to get the fractional variables in an NLP solution
 - new methods SCIPcreateMesshdlrPThreads() and SCIPfreeMesshdlrPThreads() for allocating and deleting necessary memory for message handlers for parallel pthread version
+- new methods SCIPallocClearMemoryArray() and BMSallocClearMemoryArray() for allocating cleared memory arrays in scip.h and memory.h
 
 performance improvements:
 - performance improvements in prop_vbounds
