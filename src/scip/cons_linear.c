@@ -8780,7 +8780,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreLinear)
          if( infeasible )
          {
             SCIPdebugMessage(" -> infeasible fixing\n");
-            *result = SCIP_INFEASIBLE;
+            *result = SCIP_CUTOFF;
             return SCIP_OKAY;
          }
       }
