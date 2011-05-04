@@ -105,6 +105,30 @@
 
 #define QUADCONSUPGD_PRIORITY     1000000 /**< priority of the constraint handler for upgrading of quadratic constraints */
 
+#ifdef WITH_PRINTORIGCONSTYPES
+/** constraint type */
+enum SCIP_Constype
+{
+   SCIP_CONSTYPE_EMPTY         =  0,         /**<  */
+   SCIP_CONSTYPE_FREE          =  1,         /**<  */
+   SCIP_CONSTYPE_SINGLETON     =  2,         /**<  */
+   SCIP_CONSTYPE_AGGREGATION   =  3,         /**<  */
+   SCIP_CONSTYPE_VARBOUND      =  4,         /**<  */
+   SCIP_CONSTYPE_SETPARTITION  =  5,         /**<  */
+   SCIP_CONSTYPE_SETPACKING    =  6,         /**<  */
+   SCIP_CONSTYPE_SETCOVERING   =  7,         /**<  */
+   SCIP_CONSTYPE_CARDINALITY   =  8,         /**<  */
+   SCIP_CONSTYPE_INVKNAPSACK   =  9,         /**<  */
+   SCIP_CONSTYPE_EQKNAPSACK    = 10,         /**<  */
+   SCIP_CONSTYPE_BINPACKING    = 11,         /**<  */
+   SCIP_CONSTYPE_KNAPSACK      = 12,         /**<  */
+   SCIP_CONSTYPE_INTKNAPSACK   = 13,         /**<  */
+   SCIP_CONSTYPE_MIXEDBINARY   = 14,         /**<  */
+   SCIP_CONSTYPE_GENERAL       = 15          /**<  */
+};
+typedef enum SCIP_Constype SCIP_CONSTYPE;
+#endif
+
 
 /** constraint data for linear constraints */
 struct SCIP_ConsData
@@ -8743,8 +8767,343 @@ SCIP_DECL_CONSEXIT(consExitLinear)
 }
 
 
+#ifndef WITH_PRINTORIGCONSTYPES
+
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
 #define consInitpreLinear NULL
+
+#else
+
+/** is constraint ranged row, i.e., -inf < lhs < rhs < inf? */
+static
+SCIP_Bool isRangedRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(SCIPconsGetData(cons) != NULL);
+
+   return !(SCIPisEQ(scip, SCIPconsGetData(cons)->lhs, SCIPconsGetData(cons)->rhs)
+      || SCIPisInfinity(scip, -SCIPconsGetData(cons)->lhs) || SCIPisInfinity(scip, SCIPconsGetData(cons)->rhs) );
+}
+
+/** is constraint ranged row, i.e., -inf < lhs < rhs < inf? */
+static
+SCIP_Bool isFiniteNonnegativeIntegral(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             x                   /**< value */
+   )
+{
+   assert(scip != NULL);
+
+   return (!SCIPisInfinity(scip, x) && !SCIPisNegative(scip, x) && SCIPisIntegral(scip, x));
+}
+
+/** presolving initialization method of constraint handler (called when presolving is about to begin) */
+static
+SCIP_DECL_CONSINITPRE(consInitpreLinear)
+{  /*lint --e{715}*/
+   int counter[SCIP_CONSTYPE_GENERAL + 1];
+   int c;
+
+   assert(scip != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_CUTOFF;
+
+   /* initialize counter for constraint types to zero */
+   BMSclearMemoryArray(counter, SCIP_CONSTYPE_GENERAL + 1);
+
+   /* loop through all constraints */
+   for( c = 0; c < nconss; c++ )
+   {
+      SCIP_CONS* cons;
+      SCIP_CONSDATA* consdata;
+      int i;
+
+      /* get constraint */
+      cons = conss[c];
+      assert(cons != NULL);
+
+      /* get constraint data */
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
+
+      /* merge multiples and delete variables with zero coefficient */
+      SCIP_CALL( mergeMultiples(scip, cons) );
+      for( i = 0; i < consdata->nvars; i++ )
+      {
+         assert(!SCIPisZero(scip, consdata->vals[i]));
+      }
+
+      SCIPdebugMessage("classifying constraint ");
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+
+      /* is constraint of type SCIP_CONSTYPE_EMPTY? */
+      if( consdata->nvars == 0 )
+      {
+         SCIPdebugMessage(" as EMPTY\n");
+         counter[SCIP_CONSTYPE_EMPTY]++;
+         continue;
+      }
+
+      /* is constraint of type SCIP_CONSTYPE_FREE? */
+      if( SCIPisInfinity(scip, consdata->rhs) && SCIPisInfinity(scip, -consdata->lhs) )
+      {
+         SCIPdebugMessage(" as FREE\n");
+         counter[SCIP_CONSTYPE_FREE]++;
+         continue;
+      }
+
+      /* is constraint of type SCIP_CONSTYPE_SINGLETON? */
+      if( consdata->nvars == 1 )
+      {
+         SCIPdebugMessage(" as SINGLETON\n");
+         counter[SCIP_CONSTYPE_SINGLETON] += isRangedRow(scip, cons) ? 2 : 1;
+         continue;
+      }
+
+      /* is constraint of type SCIP_CONSTYPE_AGGREGATION? */
+      if( consdata->nvars == 2 && SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
+      {
+         SCIPdebugMessage(" as AGGREGATION\n");
+         counter[SCIP_CONSTYPE_AGGREGATION]++;
+         continue;
+      }
+
+      /* is constraint of type SCIP_CONSTYPE_{VARBOUND}? */
+      if( consdata->nvars == 2 )
+      {
+         SCIPdebugMessage(" as VARBOUND\n");
+         counter[SCIP_CONSTYPE_VARBOUND] += isRangedRow(scip, cons) ? 2 : 1;
+         continue;
+      }
+
+      /* is constraint of type SCIP_CONSTYPE_{SETPARTITION, SETPACKING, SETCOVERING, CARDINALITY, INVKNAPSACK}? */
+      {
+         SCIP_Real scale;
+         SCIP_Real b;
+         SCIP_Bool unmatched;
+         int nnegbinvars;
+
+         unmatched = FALSE;
+         nnegbinvars = 0;
+
+         scale = REALABS(consdata->vals[0]);
+         for( i = 0; i < consdata->nvars && !unmatched; i++ )
+         {
+            unmatched = unmatched || SCIPvarGetType(consdata->vars[i]) == SCIP_VARTYPE_CONTINUOUS;
+            unmatched = unmatched || SCIPisLE(scip, SCIPvarGetLbGlobal(consdata->vars[i]), -1.0);
+            unmatched = unmatched || SCIPisGE(scip, SCIPvarGetUbGlobal(consdata->vars[i]), 2.0);
+            unmatched = unmatched || !SCIPisEQ(scip, REALABS(consdata->vals[i]), scale);
+
+            if( consdata->vals[i] < 0.0 )
+               nnegbinvars++;
+         }
+
+         if( !unmatched )
+         {
+            if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
+            {
+               b = consdata->rhs/scale + nnegbinvars;
+               if( SCIPisEQ(scip, 1.0, b) )
+               {
+                  SCIPdebugMessage(" as SETPARTITION\n");
+                  counter[SCIP_CONSTYPE_SETPARTITION]++;
+                  continue;
+               }
+               else if( SCIPisIntegral(scip, b) && !SCIPisNegative(scip, b) )
+               {
+                  SCIPdebugMessage(" as CARDINALITY\n");
+                  counter[SCIP_CONSTYPE_CARDINALITY]++;
+                  continue;
+               }
+            }
+
+            b = consdata->rhs/scale + nnegbinvars;
+            if( SCIPisEQ(scip, 1.0, b) )
+            {
+               SCIPdebugMessage(" as SETPACKING\n");
+               counter[SCIP_CONSTYPE_SETPACKING]++;
+               consdata->rhs = SCIPinfinity(scip);
+            }
+            else if( SCIPisIntegral(scip, b) && !SCIPisNegative(scip, b) )
+            {
+               SCIPdebugMessage(" as INVKNAPSACK\n");
+               counter[SCIP_CONSTYPE_INVKNAPSACK]++;
+               consdata->rhs = SCIPinfinity(scip);
+            }
+
+            b = consdata->lhs/scale + nnegbinvars;
+            if( SCIPisEQ(scip, 1.0, b) )
+            {
+               SCIPdebugMessage(" as SETCOVERING\n");
+               counter[SCIP_CONSTYPE_SETCOVERING]++;
+               consdata->lhs = -SCIPinfinity(scip);
+            }
+
+            if( SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, consdata->rhs) )
+               continue;
+         }
+      }
+
+      /* is constraint of type SCIP_CONSTYPE_{EQKNAPSACK, BINPACKING, KNAPSACK}? */
+      /* TODO: If coefficents or rhs are not integral, we currently do not check
+       * if the constraint could be scaled (finitely), such that they are.
+       */
+      {
+         SCIP_Real b;
+         SCIP_Bool unmatched;
+
+         b = consdata->rhs;
+         unmatched = FALSE;
+         for( i = 0; i < consdata->nvars && !unmatched; i++ )
+         {
+            unmatched = unmatched || SCIPvarGetType(consdata->vars[i]) == SCIP_VARTYPE_CONTINUOUS;
+            unmatched = unmatched || SCIPisLE(scip, SCIPvarGetLbGlobal(consdata->vars[i]), -1.0);
+            unmatched = unmatched || SCIPisGE(scip, SCIPvarGetUbGlobal(consdata->vars[i]), 2.0);
+            unmatched = unmatched || !SCIPisIntegral(scip, consdata->vals[i]);
+
+            if( SCIPisNegative(scip, consdata->vals[i]) )
+               b -= consdata->vals[i];
+         }
+         unmatched = unmatched || !isFiniteNonnegativeIntegral(scip, b);
+
+         if( !unmatched )
+         {
+            if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
+            {
+               SCIPdebugMessage(" as EQKNAPSACK\n");
+               counter[SCIP_CONSTYPE_EQKNAPSACK]++;
+               continue;
+            }
+            else
+            {
+               SCIP_Bool matched;
+
+               matched = FALSE;
+               for( i = 0; i < consdata->nvars && !matched; i++ )
+               {
+                  matched = matched || SCIPisEQ(scip, b, REALABS(consdata->vals[i]));
+               }
+
+               SCIPdebugMessage(" as %s\n", matched ? "BINPACKING" : "KNAPSACK");
+               counter[matched ? SCIP_CONSTYPE_BINPACKING : SCIP_CONSTYPE_KNAPSACK]++;
+            }
+
+            if( SCIPisInfinity(scip, -consdata->lhs) )
+               continue;
+            else
+               consdata->rhs = SCIPinfinity(scip);
+         }
+      }
+
+      /* is constraint of type SCIP_CONSTYPE_{INTKNAPSACK}? */
+      {
+         SCIP_Real b;
+         SCIP_Bool unmatched;
+
+         unmatched = FALSE;
+
+         b = consdata->rhs;
+         unmatched = unmatched || !isFiniteNonnegativeIntegral(scip, b);
+
+         for( i = 0; i < consdata->nvars && !unmatched; i++ )
+         {
+            unmatched = unmatched || SCIPvarGetType(consdata->vars[i]) == SCIP_VARTYPE_CONTINUOUS;
+            unmatched = unmatched || SCIPisNegative(scip, SCIPvarGetLbGlobal(consdata->vars[i]));
+            unmatched = unmatched || !SCIPisIntegral(scip, consdata->vals[i]);
+            unmatched = unmatched || SCIPisNegative(scip, consdata->vals[i]);
+         }
+
+         if( !unmatched )
+         {
+            SCIPdebugMessage(" as INTKNAPSACK\n");
+            counter[SCIP_CONSTYPE_INTKNAPSACK]++;
+
+            if( SCIPisInfinity(scip, -consdata->lhs) )
+               continue;
+            else
+               consdata->rhs = SCIPinfinity(scip);
+         }
+      }
+
+      /* is constraint of type SCIP_CONSTYPE_{MIXEDBINARY}? */
+      {
+         SCIP_Bool unmatched;
+
+         unmatched = FALSE;
+         for( i = 0; i < consdata->nvars && !unmatched; i++ )
+         {
+            if( SCIPvarGetType(consdata->vars[i]) != SCIP_VARTYPE_CONTINUOUS
+               && (SCIPisLE(scip, SCIPvarGetLbGlobal(consdata->vars[i]), -1.0)
+                  || SCIPisGE(scip, SCIPvarGetUbGlobal(consdata->vars[i]), 2.0)) )
+               unmatched = TRUE;
+         }
+
+         if( !unmatched )
+         {
+            SCIPdebugMessage(" as MIXEDBINARY (%d)\n", isRangedRow(scip, cons) ? 2 : 1);
+            counter[SCIP_CONSTYPE_MIXEDBINARY] += isRangedRow(scip, cons) ? 2 : 1;
+            continue;
+         }
+      }
+
+      /* no special structure detected */
+      SCIPdebugMessage(" as GENERAL\n");
+      counter[SCIP_CONSTYPE_GENERAL] += isRangedRow(scip, cons) ? 2 : 1;
+   }
+
+   /* print statistics */
+   SCIPinfoMessage(scip, NULL, "\nNumber of constraints according to type:\n");
+   SCIPinfoMessage(scip, NULL, "----------------------------------------\n");
+   SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_EMPTY        %6d\n",  0, counter[ 0]);
+   SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_FREE         %6d\n",  1, counter[ 1]);
+   SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_SINGLETON    %6d\n",  2, counter[ 2]);
+   SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_AGGREGATION  %6d\n",  3, counter[ 3]);
+   SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_VARBOUND     %6d\n",  4, counter[ 4]);
+   SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_SETPARTITION %6d\n",  5, counter[ 5]);
+   SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_SETPACKING   %6d\n",  6, counter[ 6]);
+   SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_SETCOVERING  %6d\n",  7, counter[ 7]);
+   SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_CARDINALITY  %6d\n",  8, counter[ 8]);
+   SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_INVKNAPSACK  %6d\n",  9, counter[ 9]);
+   SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_EQKNAPSACK   %6d\n", 10, counter[10]);
+   SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_BINPACKING   %6d\n", 11, counter[11]);
+   SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_KNAPSACK     %6d\n", 12, counter[12]);
+   SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_INTKNAPSACK  %6d\n", 13, counter[13]);
+   SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_MIXEDBINARY  %6d\n", 14, counter[14]);
+   SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_GENERAL      %6d\n", 15, counter[15]);
+   SCIPinfoMessage(scip, NULL, "----------------------------------------\n\n");
+
+   SCIPinfoMessage(scip, NULL, "    EMPTY");
+   SCIPinfoMessage(scip, NULL, "     FREE");
+   SCIPinfoMessage(scip, NULL, "     SING");
+   SCIPinfoMessage(scip, NULL, "     AGGR");
+   SCIPinfoMessage(scip, NULL, "    VARBD");
+   SCIPinfoMessage(scip, NULL, "  SETPART");
+   SCIPinfoMessage(scip, NULL, "  SETPACK");
+   SCIPinfoMessage(scip, NULL, "   SETCOV");
+   SCIPinfoMessage(scip, NULL, "     CARD");
+   SCIPinfoMessage(scip, NULL, "  INVKNAP");
+   SCIPinfoMessage(scip, NULL, "   EQKNAP");
+   SCIPinfoMessage(scip, NULL, "  BINPACK");
+   SCIPinfoMessage(scip, NULL, "     KNAP");
+   SCIPinfoMessage(scip, NULL, "  INTKNAP");
+   SCIPinfoMessage(scip, NULL, "   MIXBIN");
+   SCIPinfoMessage(scip, NULL, "      GEN\n");
+   for( c = 0; c <= SCIP_CONSTYPE_GENERAL; c++ )
+   {
+      SCIPinfoMessage(scip, NULL, "%9d", counter[c]);
+   }
+
+   SCIPinfoMessage(scip, NULL, "\n\n");
+   SCIPinfoMessage(scip, NULL, "----------------------------------------\n\n");
+
+   return SCIP_OKAY;
+}
+#endif
 
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
