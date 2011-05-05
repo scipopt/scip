@@ -512,19 +512,6 @@ SCIP_RETCODE SCIPnlpDelNlRow(
    SCIP_NLROW*           nlrow               /**< nonlinear row */
    );
 
-/** sets the objective function
- * If a nonliner row is given, then the row function is used as objective function and its bounds are ignored.
- * The row is captured.
- * If NULL is given, then a linear objective with coefficients taken from the SCIP problem is used (i.e., objective coefficients as stored in variables that are part of the NLP).
- */
-extern
-SCIP_RETCODE SCIPnlpSetObjective(
-   SCIP_NLP*             nlp,                /**< NLP data */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLROW*           obj                 /**< new objective as nonlinear row, or NULL for SCIP objective */
-   );
-
 /** applies all cached changes to the NLP solver */
 extern
 SCIP_RETCODE SCIPnlpFlush(
@@ -556,20 +543,6 @@ SCIP_RETCODE SCIPnlpGetPseudoObjval(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Real*            pseudoobjval        /**< buffer to store pseudo objective value */
    );
-
-/** provides current primal solution in new SCIP_SOL data structure
- * *sol is set to NULL if no NLP solution is available */
-extern
-SCIP_RETCODE SCIPnlpGetSol(
-   SCIP_NLP*             nlp,                /**< NLP data structure */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PRIMAL*          primal,             /**< primal data */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_SOL**            sol,                /**< buffer where to store pointer to new solution, set to NULL if no solution available */
-   SCIP_HEUR*            heur                /**< heuristic that solved the NLP, or NULL if not from a heuristic */
-);
 
 /** gets fractional variables of last NLP solution along with solution values and fractionalities
  */
@@ -661,6 +634,12 @@ SCIP_RETCODE SCIPnlpChgVarsBoundsDive(
    SCIP_VAR**            vars,               /**< variables which bounds to change */
    SCIP_Real*            lbs,                /**< new lower bounds of variables */
    SCIP_Real*            ubs                 /**< new upper bounds of variables */
+   );
+
+/** returns whether the objective function has been changed during diving */
+extern
+SCIP_RETCODE SCIPnlpIsDivingObjChanged(
+   SCIP_NLP*             nlp                 /**< current NLP data */
    );
 
 /** solves diving NLP */

@@ -1276,8 +1276,7 @@ SCIP_RETCODE getFixingValue(
          assert(!heurdata->nlpfailed);
 
          /* retrieve nlp solution value */
-         assert(SCIPgetNLP(scip) != NULL);
-         SCIP_CALL( SCIPnlpGetVarSolVal(SCIPgetNLP(scip), var, val) );
+         *val = SCIPvarGetNLPSol(var);
          *success = TRUE;
       }
       /* solve nlp relaxation unless it has not failed too often before */
@@ -1348,7 +1347,7 @@ SCIP_RETCODE getFixingValue(
 
             /* retrieve nlp solution value */
             assert(SCIPgetNLP(scip) != NULL);
-            SCIP_CALL( SCIPnlpGetVarSolVal(SCIPgetNLP(scip), var, val) );
+            *val = SCIPvarGetNLPSol(var);
          }
          else
          {

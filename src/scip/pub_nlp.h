@@ -192,7 +192,7 @@ const char* SCIPnlrowGetName(
    SCIP_NLROW*           nlrow               /**< NLP row */
    );
 
-/** gets position of a nonlinear row in current NLP, or -1 if it is objective, or -2 if not in NLP */
+/** gets position of a nonlinear row in current NLP, or -1 if not in NLP */
 extern
 int SCIPnlrowGetNLPPos(
    SCIP_NLROW*           nlrow               /**< NLP row */
@@ -248,13 +248,6 @@ int SCIPnlpGetNNlRows(
    SCIP_NLP*             nlp                 /**< current NLP data */
    );
 
-/** gets objective of the NLP
- * gives NULL if SCIP objective is used */
-extern
-SCIP_NLROW* SCIPnlpGetObjective(
-   SCIP_NLP*             nlp                 /**< current NLP data */
-   );
-
 /** gets the NLP solver interface */
 extern
 SCIP_NLPI* SCIPnlpGetNLPI(
@@ -297,23 +290,6 @@ SCIP_RETCODE SCIPnlpGetStatistics(
 extern
 SCIP_Bool SCIPnlpHasSolution(
    SCIP_NLP*             nlp                 /**< current NLP data */
-   );
-
-/** gets values of current primal NLP solution
- * returns NULL if no solution available
- * use SCIPnlpGetSolstat to get information on whether solution is optimal or just feasible
- * use SCIPnlpGetVars to get variables corresponding to solution values */
-extern
-SCIP_Real* SCIPnlpGetSolVals(
-   SCIP_NLP*             nlp                 /**< current NLP data */
-   );
-
-/** gets primal value of a single variable in current NLP solution */
-extern
-SCIP_RETCODE SCIPnlpGetVarSolVal(
-   SCIP_NLP*             nlp,                /**< current NLP data */
-   SCIP_VAR*             var,                /**< variable to get solution value for */
-   SCIP_Real*            val                 /**< buffer to store value of variable in solution, or SCIP_INVALID if no solution available */
    );
 
 /** gets integer parameter of NLP */

@@ -169,9 +169,7 @@ SCIP_RETCODE createSubproblem(
       if( startsol == 'l')
          solval = SCIPvarGetLPSol(vars[i]);
       else
-      {
-         SCIP_CALL( SCIPnlpGetVarSolVal(SCIPgetNLP(scip), vars[i], &solval) );
-      }
+         solval = SCIPvarGetNLPSol(vars[i]);
 
       if( SCIPisFeasIntegral(scip, solval) )
       {

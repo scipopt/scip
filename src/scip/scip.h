@@ -4982,15 +4982,6 @@ SCIP_NLPSOLSTAT SCIPgetNLPSolstat(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets SCIP solution set to values of current NLP, if available
- * *sol is set to NULL if no solution is available */
-extern
-SCIP_RETCODE SCIPcreateNLPSol(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL**            sol,                /**< buffer where to store point to new SCIP solution */
-   SCIP_HEUR*            heur                /**< heuristic that solved NLP, or NULL */
-   );
-
 /** gets objective value of current NLP */
 extern
 SCIP_Real SCIPgetNLPObjval(
@@ -6116,6 +6107,14 @@ SCIP_RETCODE SCIPcreateSol(
 /** creates a primal solution, initialized to the current LP solution */
 extern
 SCIP_RETCODE SCIPcreateLPSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            sol,                /**< pointer to store the solution */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   );
+
+/** creates a primal solution, initialized to the current NLP solution */
+extern
+SCIP_RETCODE SCIPcreateNLPSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to store the solution */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */

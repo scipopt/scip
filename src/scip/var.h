@@ -1055,6 +1055,14 @@ SCIP_RETCODE SCIPvarSetRelaxSol(
    SCIP_Bool             updateobj           /**< should the objective value be updated? */
    );
 
+/** stores the solution value as NLP solution in the problem variable */
+extern
+void SCIPvarSetNLPSol(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             solval              /**< solution value in the current NLP solution */
+   );
+
 /** resolves variable to columns and adds them with the coefficient to the row */
 extern
 SCIP_RETCODE SCIPvarAddToRow(

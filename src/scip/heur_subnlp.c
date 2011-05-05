@@ -835,10 +835,8 @@ SCIP_RETCODE createSolFromNLP(
 )
 {
    SCIP_HEURDATA* heurdata;
-   SCIP_NLP*      nlp;
    SCIP_VAR*      var;
    SCIP_VAR*      subvar;
-   SCIP_Real      val;
    int            i;
    
    assert(scip != NULL);
@@ -849,9 +847,6 @@ SCIP_RETCODE createSolFromNLP(
    assert(heurdata != NULL);
    
    SCIP_CALL( SCIPcreateSol(scip, sol, heur) );
-   
-   nlp = SCIPgetNLP(heurdata->subscip);
-   assert(nlp != NULL);
    
    /* subSCIP may have more variable than the number of active (transformed) variables in the main SCIP
     * since constraint copying may have required the copy of variables that are fixed in the main SCIP
@@ -865,12 +860,10 @@ SCIP_RETCODE createSolFromNLP(
          continue;
       
       subvar = SCIPgetOrigVars(heurdata->subscip)[i];
-      subvar = SCIPvarGetTransVar(subvar);
+      assert(subvar != NULL);
       
-      SCIP_CALL( SCIPnlpGetVarSolVal(nlp, subvar, &val) );
-      assert(val != SCIP_INVALID);  /*lint !e777*/
-
-      SCIP_CALL( SCIPsetSolVal(scip, *sol, var, val) );
+      assert(SCIPvarGetNLPSol(subvar) != SCIP_INVALID);  /*lint !e777*/
+      SCIP_CALL( SCIPsetSolVal(scip, *sol, var, SCIPvarGetNLPSol(subvar)) );
    }
    
    return SCIP_OKAY;

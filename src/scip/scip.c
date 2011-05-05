@@ -14908,29 +14908,6 @@ SCIP_NLPSOLSTAT SCIPgetNLPSolstat(
    }
 }
 
-/** gets SCIP solution set to values of current NLP, if available
- * *sol is set to NULL if no solution is available */
-SCIP_RETCODE SCIPcreateNLPSol(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL**            sol,                /**< buffer where to store point to new SCIP solution */
-   SCIP_HEUR*            heur                /**< heuristic that solved NLP, or NULL */
-   )
-{
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPcreateNLPSol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-
-   if( scip->nlp != NULL )
-   {
-      SCIP_CALL( SCIPnlpGetSol(scip->nlp, SCIPblkmem(scip), scip->set, scip->stat, scip->primal, scip->tree, sol, heur) );
-   }
-   else
-   {
-      SCIPerrorMessage("NLP has not been not constructed.\n");
-      return SCIP_ERROR;
-   }
-
-   return SCIP_OKAY;
-}
-
 /** gets objective value of current NLP */
 SCIP_Real SCIPgetNLPObjval(
    SCIP*                 scip                /**< SCIP data structure */
@@ -17427,6 +17404,34 @@ SCIP_RETCODE SCIPcreateLPSol(
    }
 
    SCIP_CALL( SCIPsolCreateLPSol(sol, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree, scip->lp,
+         heur) );
+
+   return SCIP_OKAY;
+}
+
+/** creates a primal solution, initialized to the current NLP solution */
+SCIP_RETCODE SCIPcreateNLPSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            sol,                /**< pointer to store the solution */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPcreateNLPSol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPisNLPConstructed(scip) )
+   {
+      SCIPerrorMessage("NLP does not exist\n");
+      return SCIP_INVALIDCALL;
+   }
+   assert(scip->nlp != NULL);
+
+   if( !SCIPnlpHasSolution(scip->nlp) )
+   {
+      SCIPerrorMessage("NLP solution does not exist\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   SCIP_CALL( SCIPsolCreateNLPSol(sol, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree, scip->nlp,
          heur) );
 
    return SCIP_OKAY;
