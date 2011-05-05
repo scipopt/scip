@@ -2373,6 +2373,10 @@ SCIP_RETCODE SCIPapplyUndercover(
    SCIPfreeBufferArrayNull(scip, &bdvars);
 
    /* free covering problem */
+   for( i = nvars-1; i >= 0; i-- )
+   {
+      SCIP_CALL( SCIPreleaseVar(scip, &coveringvars[i]) );
+   }
    SCIPfreeBufferArray(scip, &coveringvars);
    SCIP_CALL( SCIPfree(&coveringscip) );
 

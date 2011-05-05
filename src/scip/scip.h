@@ -531,6 +531,21 @@ SCIP_VERBLEVEL SCIPgetVerbLevel(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+#ifndef NPARASCIP
+/** allocates memory for all message handlers for number of given threads */
+extern
+SCIP_RETCODE SCIPcreateMesshdlrPThreads(
+   int                   nthreads            /**< number of threads to allocate memory for */
+   );
+
+/** frees memory for all message handlers */
+extern
+void SCIPfreeMesshdlrPThreads(
+   void
+   );
+#endif
+
+
 /**@} */
 
 
@@ -2357,7 +2372,8 @@ SCIP_RETCODE SCIPwriteVarsList(
    FILE*                 file,               /**< output file, or NULL for stdout */
    SCIP_VAR**            vars,               /**< variable array to output */
    int                   nvars,              /**< number of variables */
-   SCIP_Bool             type                /**< should the variable type be also posted */
+   SCIP_Bool             type,               /**< should the variable type be also posted */
+   char                  delimiter           /**< character which is used for delimitation */
    );
 
 /** print the given variables and coefficients as linear sum in the following form 
@@ -2406,8 +2422,8 @@ SCIP_RETCODE SCIPparseVarName(
    int*                  endpos              /**< position where the parsing stopped */
    );
 
-/** parse the given string as variable list (\<x1\>, \<x2\>, ..., \<xn\>) (see SCIPwriteVarsList() ); if it was
- *  successful, the pointer success is set to TRUE
+/** parse the given string as variable list (here ',' is the delimiter)) (\<x1\>, \<x2\>, ..., \<xn\>) (see
+ *  SCIPwriteVarsList() ); if it was successful, the pointer success is set to TRUE
  *
  *  @note the pointer success in only set to FALSE in the case that a variable with a parsed variable name does not exist
  *
@@ -2426,6 +2442,7 @@ SCIP_RETCODE SCIPparseVarsList(
    int                   varssize,           /**< size of the variable array */
    int*                  requiredsize,       /**< pointer to store the required array size for the active variables */
    int*                  endpos,             /**< position where the parsing stopped */
+   char                  delimiter,          /**< character which is used for delimitation */
    SCIP_Bool*            success             /**< pointer to store the whether the parsing was successfully or not */
    );
 
@@ -4978,6 +4995,17 @@ SCIP_RETCODE SCIPcreateNLPSol(
 extern
 SCIP_Real SCIPgetNLPObjval(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets fractional variables of last NLP solution along with solution values and fractionalities */
+extern
+SCIP_RETCODE SCIPgetNLPFracVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR***           fracvars,           /**< pointer to store the array of NLP fractional variables, or NULL */
+   SCIP_Real**           fracvarssol,        /**< pointer to store the array of NLP fractional variables solution values, or NULL */
+   SCIP_Real**           fracvarsfrac,       /**< pointer to store the array of NLP fractional variables fractionalities, or NULL */
+   int*                  nfracvars,          /**< pointer to store the number of NLP fractional variables , or NULL */
+   int*                  npriofracvars       /**< pointer to store the number of NLP fractional variables with maximal branching priority, or NULL */
    );
 
 /** writes current NLP to a file */
@@ -7944,6 +7972,8 @@ void SCIPprintReal(
 #define SCIPallocMemory(scip,ptr)               ( (BMSallocMemory((ptr)) == NULL) \
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )
 #define SCIPallocMemoryArray(scip,ptr,num)      ( (BMSallocMemoryArray((ptr), (num)) == NULL) \
+                                                       ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPallocClearMemoryArray(scip,ptr,num) ( (BMSallocClearMemoryArray((ptr), (num)) == NULL) \
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )
 #define SCIPallocMemorySize(scip,ptr,size)      ( (BMSallocMemorySize((ptr), (size)) == NULL) \
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )

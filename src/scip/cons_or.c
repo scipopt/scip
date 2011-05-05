@@ -485,7 +485,7 @@ SCIP_RETCODE consdataPrint(
    SCIPinfoMessage(scip, file, " == or(");
 
    /* print variable list */
-   SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars, FALSE) );
+   SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars, FALSE, ',') );
 
    /* close the variable list */
    SCIPinfoMessage(scip, file, ")");
@@ -1885,7 +1885,7 @@ SCIP_DECL_CONSPARSE(consParseOr)
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
 
       /* pasre string */
-      SCIP_CALL( SCIPparseVarsList(scip, token, 0, vars, &nvars, varssize, &requiredsize, &pos, success) );
+      SCIP_CALL( SCIPparseVarsList(scip, token, 0, vars, &nvars, varssize, &requiredsize, &pos, ',', success) );
    
       if( *success )
       {
@@ -1897,7 +1897,7 @@ SCIP_DECL_CONSPARSE(consParseOr)
             SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
             
             /* parse string again with the correct size of the variable array */
-            SCIP_CALL( SCIPparseVarsList(scip, token, 0, vars, &nvars, varssize, &requiredsize, &pos, success) );
+            SCIP_CALL( SCIPparseVarsList(scip, token, 0, vars, &nvars, varssize, &requiredsize, &pos, ',', success) );
          }
          
          assert(*success);

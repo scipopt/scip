@@ -24,10 +24,16 @@
 #include <string.h>
 #include <assert.h>
 
+#ifndef NPARASCIP
+#include <pthread.h>
+#include <time.h>
+#endif
+
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
 #include "scip/message.h"
 #include "scip/misc.h"
+
 
 #ifndef va_copy
 #define va_copy(dest, src) do { BMScopyMemory(&dest, &src); } while (0)
@@ -71,10 +77,6 @@ SCIP_MESSAGEHDLR messagehdlrDefault =
    { messageErrorDefault, messageWarningDefault, messageDialogDefault, messageInfoDefault,
      NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0 };
 
-/** static variable that contains the currently installed message handler;
- *  if the handler is set to NULL, messages are suppressed
- */
-static SCIP_MESSAGEHDLR* curmessagehdlr = &messagehdlrDefault;
 
 /** stores the given message in the buffer and returns the part of the buffer and message that should be printed now */
 static
@@ -137,6 +139,17 @@ void bufferMessage(
       }
    }
 }
+
+
+/** for parascip we need to make this threadsafe */
+#ifdef NPARASCIP
+
+
+/** static variable that contains the currently installed message handler;
+ *  if the handler is set to NULL, messages are suppressed
+ */
+static SCIP_MESSAGEHDLR* curmessagehdlr = &messagehdlrDefault;
+
 
 /** prints error message with the current message handler, or buffers the message if no newline exists */
 static
@@ -221,6 +234,331 @@ void messagePrintInfo(
       }
    }
 }
+
+/** installs the given message handler */
+void SCIPmessageSetHandler(
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler to install, or NULL to suppress all output */
+   )
+{
+   curmessagehdlr = messagehdlr;
+}
+
+/** installs the default message handler that prints messages to stdout or stderr */
+void SCIPmessageSetDefaultHandler(
+   void
+   )
+{
+   curmessagehdlr = &messagehdlrDefault;
+}
+
+/** returns the currently installed message handler, or NULL if messages are currently suppressed */
+SCIP_MESSAGEHDLR* SCIPmessageGetHandler(
+   void
+   )
+{
+   return curmessagehdlr;
+}
+
+
+#else //NPARASCIP
+
+/* mutex to lock all message printings in pthread case */
+static pthread_mutex_t  messagemutex = PTHREAD_MUTEX_INITIALIZER;
+
+/* hashmap which identifies for each thread the corresponding messagehandler */
+static SCIP_HASHMAP* messagepthreadhashmap = NULL;
+
+/** static array that should contain all messagehanlders in multiple thread case;
+ *  if the handler is set to NULL, messages are suppressed;
+ *
+ *  @Note: in this case it is mandatory to call SCIPcreateMesshdlrPThreads
+ */
+static SCIP_MESSAGEHDLR** curmessagehdlrs = NULL;
+static size_t ncurmessagehdlrs = 0;
+
+/* standard message handler when not initializing the array above by calling */
+static SCIP_MESSAGEHDLR* emergencycurmessagehdlr = &messagehdlrDefault;
+
+/** prints error message with the current message handler, or buffers the message if no newline exists */
+static
+void messagePrintError(
+   const char*           msg                 /**< message to print; NULL to flush the output buffer */
+   )
+{
+   pthread_mutex_lock(&messagemutex);
+
+   {
+      SCIP_MESSAGEHDLR* curmessagehdlr;
+
+      if( ncurmessagehdlrs == 0 )
+         curmessagehdlr = emergencycurmessagehdlr;
+      else
+      {
+         assert(messagepthreadhashmap != NULL);
+         assert(curmessagehdlrs != NULL);
+         assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) > 0);
+         assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) <= ncurmessagehdlrs);
+         
+         curmessagehdlr = curmessagehdlrs[((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) - 1];
+      }
+
+      if( curmessagehdlr != NULL && curmessagehdlr->messageerror != NULL )
+      {
+         char outmsg[SCIP_MAXSTRLEN];
+         
+         bufferMessage(curmessagehdlr->errorbuffer, &curmessagehdlr->errorbufferlen, msg, outmsg);
+         if( *outmsg != '\0' )
+            curmessagehdlr->messageerror(curmessagehdlr, stderr, outmsg);
+      }
+   }
+
+   pthread_mutex_unlock(&messagemutex);   
+}
+
+/** prints warning message with the current message handler, or buffers the message if no newline exists */
+static
+void messagePrintWarning(
+   const char*           msg                 /**< message to print; NULL to flush the output buffer */
+   )
+{
+   pthread_mutex_lock(&messagemutex);
+
+   {
+      SCIP_MESSAGEHDLR* curmessagehdlr;
+
+      if( ncurmessagehdlrs == 0 )
+         curmessagehdlr = emergencycurmessagehdlr;
+      else
+      {
+         assert(messagepthreadhashmap != NULL);
+         assert(curmessagehdlrs != NULL);
+         assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) > 0);
+         assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) <= ncurmessagehdlrs);
+
+         curmessagehdlr = curmessagehdlrs[((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) - 1];
+      }
+
+      if( curmessagehdlr != NULL && curmessagehdlr->messagewarning != NULL )
+      {
+         char outmsg[SCIP_MAXSTRLEN];
+         
+         bufferMessage(curmessagehdlr->warningbuffer, &curmessagehdlr->warningbufferlen, msg, outmsg);
+         if( *outmsg != '\0' )
+            curmessagehdlr->messagewarning(curmessagehdlr, stderr, outmsg);
+      }
+   }
+
+   pthread_mutex_unlock(&messagemutex);
+}
+
+/** prints dialog message with the current message handler, or buffers the message if no newline exists */
+static
+void messagePrintDialog(
+   FILE*                 file,               /**< file stream to print into, or NULL for stdout */
+   const char*           msg                 /**< message to print; NULL to flush the output buffer */
+   )
+{
+   pthread_mutex_lock(&messagemutex);
+
+   {
+      SCIP_MESSAGEHDLR* curmessagehdlr;
+
+      if( ncurmessagehdlrs == 0 )
+         curmessagehdlr = emergencycurmessagehdlr;
+      else
+      {
+         assert(messagepthreadhashmap != NULL);
+         assert(curmessagehdlrs != NULL);
+         assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) > 0);
+         assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) <= ncurmessagehdlrs);
+
+         curmessagehdlr = curmessagehdlrs[((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) - 1];
+      }
+
+      if( curmessagehdlr != NULL && curmessagehdlr->messagedialog != NULL )
+      {
+         if( file == NULL || file == stdout )
+         {
+            char outmsg[SCIP_MAXSTRLEN];
+
+            bufferMessage(curmessagehdlr->dialogbuffer, &curmessagehdlr->dialogbufferlen, msg, outmsg);
+            if( *outmsg != '\0' )
+               curmessagehdlr->messagedialog(curmessagehdlr, stdout, outmsg);
+         }
+         else
+         {
+            /* file output cannot be buffered because the output file may change */
+            if( *msg != '\0' )
+               curmessagehdlr->messagedialog(curmessagehdlr, file, msg);
+         }
+      }
+   }
+
+   pthread_mutex_unlock(&messagemutex);
+}
+
+/** prints info message with the current message handler, or buffers the message if no newline exists */
+static
+void messagePrintInfo(
+   FILE*                 file,               /**< file stream to print into, or NULL for stdout */
+   const char*           msg                 /**< message to print; NULL to flush the output buffer */
+   )
+{
+   pthread_mutex_lock(&messagemutex);
+
+   {
+      SCIP_MESSAGEHDLR* curmessagehdlr;
+
+      if( ncurmessagehdlrs == 0 )
+         curmessagehdlr = emergencycurmessagehdlr;
+      else
+      {
+         assert(messagepthreadhashmap != NULL);
+         assert(curmessagehdlrs != NULL);
+         assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) > 0);
+         assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) <= ncurmessagehdlrs);
+
+         curmessagehdlr = curmessagehdlrs[((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) - 1];
+      }
+
+      if( curmessagehdlr != NULL && curmessagehdlr->messageinfo != NULL )
+      {
+         if( (file == NULL || file == stdout) && (msg == NULL || strlen(msg) < SCIP_MAXSTRLEN) )
+         {
+            char outmsg[SCIP_MAXSTRLEN];
+
+            bufferMessage(curmessagehdlr->infobuffer, &curmessagehdlr->infobufferlen, msg, outmsg);
+            if( *outmsg != '\0' )
+               curmessagehdlr->messageinfo(curmessagehdlr, stdout, outmsg);
+         }
+         else
+         {
+            /* file output cannot be buffered because the output file may change or the message is to long */
+            if( *msg != '\0' )
+               curmessagehdlr->messageinfo(curmessagehdlr, file == NULL ? stdout : file, msg);
+         }
+      }
+   }
+
+   pthread_mutex_unlock(&messagemutex);
+}
+
+/** installs the given message handler */
+void SCIPmessageSetHandler(
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler to install, or NULL to suppress all output */
+   )
+{
+   pthread_mutex_lock(&messagemutex);
+
+   assert(messagepthreadhashmap != NULL);
+   assert(curmessagehdlrs != NULL);
+
+   if( SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self()) == NULL )
+   {
+      ++ncurmessagehdlrs;
+      SCIP_CALL_ABORT( SCIPhashmapInsert(messagepthreadhashmap, (void*) pthread_self(), (void*) ncurmessagehdlrs) );
+   }   
+   assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) > 0);
+   assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) <= ncurmessagehdlrs);
+
+   curmessagehdlrs[((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) - 1] = messagehdlr;
+
+   pthread_mutex_unlock(&messagemutex);
+}
+
+/** installs the default message handler that prints messages to stdout or stderr */
+void SCIPmessageSetDefaultHandler(
+   void
+   )
+{
+   pthread_mutex_lock(&messagemutex);
+
+   assert(messagepthreadhashmap != NULL);
+   assert(curmessagehdlrs != NULL);
+
+   if( SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self()) == NULL )
+   {
+      ++ncurmessagehdlrs;
+      SCIP_CALL_ABORT( SCIPhashmapInsert(messagepthreadhashmap, (void*) pthread_self(), (void*) ncurmessagehdlrs) );
+   }
+   assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) > 0);
+   assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) <= ncurmessagehdlrs);
+   
+   curmessagehdlrs[((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) - 1] = &messagehdlrDefault;
+
+   pthread_mutex_unlock(&messagemutex);
+}
+
+/** returns the currently installed message handler, or NULL if messages are currently suppressed */
+SCIP_MESSAGEHDLR* SCIPmessageGetHandler(
+   void
+   )
+{
+   SCIP_MESSAGEHDLR* curmessagehdlr;
+
+   pthread_mutex_unlock(&messagemutex);
+
+   assert(messagepthreadhashmap != NULL);
+   assert(curmessagehdlrs != NULL);
+   assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) > 0);
+   assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) <= ncurmessagehdlrs);
+
+   curmessagehdlr = curmessagehdlrs[((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) - 1];
+
+   pthread_mutex_unlock(&messagemutex);
+
+   return curmessagehdlr;
+}
+
+#define HASHMAPSIZE_FACTOR 5
+
+/** allocates memory for all message handlers for number of given threads */
+SCIP_RETCODE SCIPmesshdlrCreatePThreads(
+   int                   nthreads            /**< number of threads to allocate memory for */
+   )
+{
+   pthread_mutex_lock(&messagemutex);
+
+   assert(nthreads > 0);
+   assert(messagepthreadhashmap == NULL);
+   assert(curmessagehdlrs == NULL);
+   assert(ncurmessagehdlrs == 0);
+
+   /* check that we only create the hashmap and array once */
+   if( messagepthreadhashmap != NULL || curmessagehdlrs != NULL )
+   {
+      return SCIP_INVALIDCALL;
+   }
+
+   /* create hashmap and message handler array */
+   SCIP_CALL( SCIPhashmapCreate(&messagepthreadhashmap, NULL, HASHMAPSIZE_FACTOR * nthreads) );
+   SCIP_ALLOC( BMSallocMemoryArray(&curmessagehdlrs, nthreads) );
+
+   pthread_mutex_unlock(&messagemutex);
+
+   return SCIP_OKAY;
+}
+
+/** frees memory for all message handlers */
+void SCIPmesshdlrFreePThreads(
+   void
+   )
+{
+   pthread_mutex_lock(&messagemutex);
+
+   assert(messagepthreadhashmap != NULL);
+   assert(curmessagehdlrs != NULL);
+
+   /* free hashmap and message handler array */
+   SCIPhashmapFree(&messagepthreadhashmap);
+   BMSfreeMemoryArray(&curmessagehdlrs);
+   ncurmessagehdlrs = 0;
+
+   pthread_mutex_unlock(&messagemutex);
+}
+
+#endif //NPARASCIP
+
 
 /** creates a message handler */
 SCIP_RETCODE SCIPmessagehdlrCreate(
@@ -313,30 +651,6 @@ SCIP_MESSAGEHDLRDATA* SCIPmessagehdlrGetData(
       return messagehdlr->messagehdlrdata;
    else
       return NULL;
-}
-
-/** installs the given message handler */
-void SCIPmessageSetHandler(
-   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler to install, or NULL to suppress all output */
-   )
-{
-   curmessagehdlr = messagehdlr;
-}
-
-/** installs the default message handler that prints messages to stdout or stderr */
-void SCIPmessageSetDefaultHandler(
-   void
-   )
-{
-   curmessagehdlr = &messagehdlrDefault;
-}
-
-/** returns the currently installed message handler, or NULL if messages are currently suppressed */
-SCIP_MESSAGEHDLR* SCIPmessageGetHandler(
-   void
-   )
-{
-   return curmessagehdlr;
 }
 
 /** prints the header with source file location for an error message */

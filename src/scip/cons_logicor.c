@@ -286,7 +286,7 @@ SCIP_RETCODE consdataPrint(
    SCIPinfoMessage(scip, file, "logicor(");
 
    /* print variable list */
-   SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars, FALSE) );
+   SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars, FALSE, ',') );
    
    /* close bracket */
    SCIPinfoMessage(scip, file, ")");
@@ -2931,7 +2931,7 @@ SCIP_DECL_CONSPARSE(consParseLogicor)
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
 
    /* parse string */
-   SCIP_CALL( SCIPparseVarsList(scip, token, 0, vars, &nvars, varssize, &requiredsize, &pos, success) );
+   SCIP_CALL( SCIPparseVarsList(scip, token, 0, vars, &nvars, varssize, &requiredsize, &pos, ',', success) );
    
    if( *success )
    {
@@ -2943,7 +2943,7 @@ SCIP_DECL_CONSPARSE(consParseLogicor)
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
          
          /* parse string again with the correct size of the variable array */
-         SCIP_CALL( SCIPparseVarsList(scip, token, 0, vars, &nvars, varssize, &requiredsize, &pos, success) );
+         SCIP_CALL( SCIPparseVarsList(scip, token, 0, vars, &nvars, varssize, &requiredsize, &pos, ',', success) );
       }
       
       assert(*success);

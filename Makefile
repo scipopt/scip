@@ -67,6 +67,7 @@ LPSCHECK	=	false
 LPSOPT		=	opt
 ZIMPLOPT	=	opt
 IPOPTOPT	=	opt
+PRINTORIGCONSTYPES	=	false
 
 CC		=	gcc
 CC_c		=	-c # the trailing space is important
@@ -172,6 +173,8 @@ DFLAGS		+=	$(USRDFLAGS)
 
 ifeq ($(PARASCIP),false)
 FLAGS		+=	-DNPARASCIP
+else
+LDFLAGS         +=      -lpthread
 endif
 
 #-----------------------------------------------------------------------------
@@ -409,6 +412,10 @@ SOFTLINKS	+=	$(LIBDIR)/libzimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT).$(STATICLI
 SOFTLINKS	+=	$(LIBDIR)/libzimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT).$(SHAREDLIBEXT)
 LPIINSTMSG	+=	"\n  -> \"zimplinc\" is a directory containing the path to the ZIMPL \"src\" directory, e.g., \"../../../zimpl/src\".\n"
 LPIINSTMSG	+=	" -> \"libzimpl.*\" is the path to the ZIMPL library, e.g., \"../../zimpl/lib/libzimpl.linux.x86.gnu.opt.a\""
+endif
+
+ifeq ($(PRINTORIGCONSTYPES),true)
+FLAGS		+=	-DWITH_PRINTORIGCONSTYPES
 endif
 
 ifeq ($(IPOPT),true)

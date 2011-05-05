@@ -571,6 +571,21 @@ SCIP_RETCODE SCIPnlpGetSol(
    SCIP_HEUR*            heur                /**< heuristic that solved the NLP, or NULL if not from a heuristic */
 );
 
+/** gets fractional variables of last NLP solution along with solution values and fractionalities
+ */
+extern
+SCIP_RETCODE SCIPnlpGetFracVars(
+   SCIP_NLP*             nlp,                /**< NLP data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_VAR***           fracvars,           /**< pointer to store the array of NLP fractional variables, or NULL */
+   SCIP_Real**           fracvarssol,        /**< pointer to store the array of NLP fractional variables solution values, or NULL */
+   SCIP_Real**           fracvarsfrac,       /**< pointer to store the array of NLP fractional variables fractionalities, or NULL */
+   int*                  nfracvars,          /**< pointer to store the number of NLP fractional variables , or NULL */
+   int*                  npriofracvars       /**< pointer to store the number of NLP fractional variables with maximal branching priority, or NULL */
+   );
+
 /** removes all redundant nonlinear rows */
 extern
 SCIP_RETCODE SCIPnlpRemoveRedundantNlRows(

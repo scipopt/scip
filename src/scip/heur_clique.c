@@ -494,12 +494,14 @@ SCIP_DECL_HEURINIT(heurInitClique)
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
 
-   /* free heuristic data */
+   /* reset heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
    /* set the seed value to the initial random seed value */
    heurdata->seed = (unsigned int) heurdata->initseed;
+
+   heurdata->usednodes = 0;
 
    return SCIP_OKAY;
 }

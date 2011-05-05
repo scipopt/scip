@@ -146,7 +146,7 @@ struct SCIP_ConshdlrData
    int                   empathy4and;               /**< how much empathy we have for using the AND constraint handler: 0 avoid always; 1 use sometimes; 2 use as often as possible */
    SCIP_Bool             binreforminitial;          /**< whether to make constraints added due to replacing products with binary variables initial */
    SCIP_Real             mincutefficacysepa;        /**< minimal efficacy of a cut in order to add it to relaxation during separation */
-   SCIP_Real             mincutefficacyenfo;        /**< minimal target efficacy of a cut in order to add it to relaxation during enforcement (may be ignored) */
+   SCIP_Real             mincutefficacyenfofac;     /**< minimal target efficacy of a cut in order to add it to relaxation during enforcement as factor of feasibility tolerance (may be ignored) */
    SCIP_Bool             doscaling;                 /**< should constraints be scaled in the feasibility check ? */
    SCIP_Real             defaultbound;              /**< a bound to set for variables that are unbounded and in a nonconvex term after presolve */
    SCIP_Real             cutmaxrange;               /**< maximal range (maximal coef / minimal coef) of a cut in order to be added to LP */
@@ -5049,46 +5049,85 @@ SCIP_RETCODE generateCut(
    if( success )
    {
       SCIP_Real abscoef;
+      int       mincoefidx;
 
       assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
-      mincoef = consdata->lincoefsmin;
-      maxcoef = consdata->lincoefsmax;
-      for( j = 0; j < consdata->nquadvars; ++j )
+
+      do
       {
-         if( SCIPisZero(scip, coef[j]) )
-            continue;
-
-         abscoef = REALABS(coef[j]);
-         if( abscoef < mincoef )
-            mincoef = abscoef;
-         if( abscoef > maxcoef )
-            maxcoef = abscoef;
-      }
-
-      assert(mincoef > 0.0);
-      if( maxcoef < mincoef )
-      {
-         /* if all coefficients are zero, then mincoef and maxcoef are still at their initial values
-          * skip cut generation if its boring */
-         assert(maxcoef == 0.0);
-         assert(mincoef == SCIPinfinity(scip));
-
-         if( (violside == SCIP_SIDETYPE_LEFT  && SCIPisLE(scip, consdata->lhs, constant)) ||
-             (violside == SCIP_SIDETYPE_RIGHT && SCIPisGE(scip, consdata->rhs, constant)) )
+         mincoefidx = -1;
+         mincoef = consdata->lincoefsmin;
+         maxcoef = consdata->lincoefsmax;
+         for( j = 0; j < consdata->nquadvars; ++j )
          {
-            SCIPdebugMessage("skip cut for constraint <%s> since all coefficients are zero and it's always satisfied\n", SCIPconsGetName(cons));
+            if( SCIPisZero(scip, coef[j]) )
+               continue;
+
+            abscoef = REALABS(coef[j]);
+            if( abscoef < mincoef )
+            {
+               mincoef = abscoef;
+               mincoefidx = j;
+            }
+            if( abscoef > maxcoef )
+               maxcoef = abscoef;
+         }
+
+         if( maxcoef < mincoef )
+         {
+            /* if all coefficients are zero, then mincoef and maxcoef are still at their initial values
+             * skip cut generation if its boring */
+            assert(maxcoef == 0.0);
+            assert(mincoef == SCIPinfinity(scip));
+
+            if( (violside == SCIP_SIDETYPE_LEFT  && SCIPisLE(scip, consdata->lhs, constant)) ||
+                (violside == SCIP_SIDETYPE_RIGHT && SCIPisGE(scip, consdata->rhs, constant)) )
+            {
+               SCIPdebugMessage("skip cut for constraint <%s> since all coefficients are zero and it's always satisfied\n", SCIPconsGetName(cons));
+               success = FALSE;
+            }
+            else
+            {
+               /* cut will cutoff node */
+            }
+
+            break;
+         }
+
+         if( maxcoef / mincoef > maxrange  )
+         {
+            SCIPdebugMessage("cut coefficients for constraint <%s> have very large range: mincoef = %g maxcoef = %g\n", SCIPconsGetName(cons), mincoef, maxcoef);
+            if( mincoefidx >= 0 )
+            {
+               var = consdata->quadvarterms[mincoefidx].var;
+               /* try to eliminate coefficient with minimal absolute value by weakening cut and try again */
+               if( ((coef[mincoefidx] > 0.0 && violside == SCIP_SIDETYPE_RIGHT) ||
+                    (coef[mincoefidx] < 0.0 && violside == SCIP_SIDETYPE_LEFT )) &&
+                   !SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
+               {
+                  SCIPdebugMessage("eliminate coefficient %g for <%s> [%g, %g]\n", coef[mincoefidx], SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+                  constant += coef[mincoefidx] * SCIPvarGetLbLocal(var);
+                  coef[mincoefidx] = 0.0;
+                  refquadpartval += coef[mincoefidx] * (SCIPvarGetLbLocal(var) - ref[mincoefidx]);
+                  continue;
+               }
+               else if( ((coef[mincoefidx] < 0.0 && violside == SCIP_SIDETYPE_RIGHT) ||
+                         (coef[mincoefidx] > 0.0 && violside == SCIP_SIDETYPE_LEFT )) &&
+                        !SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
+               {
+                  SCIPdebugMessage("eliminate coefficient %g for <%s> [%g, %g]\n", coef[mincoefidx], SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+                  constant += coef[mincoefidx] * SCIPvarGetUbLocal(var);
+                  coef[mincoefidx] = 0.0;
+                  refquadpartval += coef[mincoefidx] * (SCIPvarGetUbLocal(var) - ref[mincoefidx]);
+                  continue;
+               }
+            }
+
+            SCIPdebugMessage("skip cut\n");
             success = FALSE;
          }
-         else
-         {
-            /* cut will cutoff node */
-         }
-      }
-      else if( maxcoef / mincoef > maxrange )
-      {
-         SCIPdebugMessage("skip cut for constraint <%s> because of very large range: %g\n", SCIPconsGetName(cons), maxcoef / mincoef);
-         success = FALSE;
-      }
+
+      } while( FALSE );
 
       if( violside == SCIP_SIDETYPE_LEFT )
          viol = consdata->lhs - (reflinpartval + refquadpartval);
@@ -6398,10 +6437,10 @@ SCIP_RETCODE propagateBoundsCons(
       assert(!SCIPintervalIsEmpty(consdata->quadactivitybounds));
    }
 
-   /* extend constraint bounds by feasibility tolerance to avoid some numerical difficulties */
+   /* extend constraint bounds by epsilon to avoid some numerical difficulties */
    SCIPintervalSetBounds(&consbounds,
-      -infty2infty(SCIPinfinity(scip), intervalinfty, -consdata->lhs+SCIPfeastol(scip)),
-       infty2infty(SCIPinfinity(scip), intervalinfty,  consdata->rhs+SCIPfeastol(scip)));
+      -infty2infty(SCIPinfinity(scip), intervalinfty, -consdata->lhs+SCIPepsilon(scip)),
+       infty2infty(SCIPinfinity(scip), intervalinfty,  consdata->rhs+SCIPepsilon(scip)));
 
    /* check redundancy and infeasibility */
    SCIPintervalSetBounds(&consactivity, consdata->minlinactivityinf > 0 ? -intervalinfty : consdata->minlinactivity, consdata->maxlinactivityinf > 0 ? intervalinfty : consdata->maxlinactivity);
@@ -6883,6 +6922,17 @@ void consdataFindUnlockedLinearVar(
             consdata->linvar_mayincrease = i;
       }
    }
+
+#ifdef SCIP_DEBUG
+   if( consdata->linvar_mayincrease >= 0 )
+   {
+      SCIPdebugMessage("may increase <%s> to become feasible\n", SCIPvarGetName(consdata->linvars[consdata->linvar_mayincrease]));
+   }
+   if( consdata->linvar_maydecrease >= 0 )
+   {
+      SCIPdebugMessage("may decrease <%s> to become feasible\n", SCIPvarGetName(consdata->linvars[consdata->linvar_maydecrease]));
+   }
+#endif
 }
 
 /** Given a solution where every quadratic constraint is either feasible or can be made feasible by
@@ -7155,6 +7205,7 @@ SCIP_DECL_CONSEXIT(consExitQuadratic)
 }
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
+#if 0
 static
 SCIP_DECL_CONSINITPRE(consInitpreQuadratic)
 {
@@ -7171,18 +7222,11 @@ SCIP_DECL_CONSINITPRE(consInitpreQuadratic)
    
    *result = SCIP_FEASIBLE;
 
-   for( c = 0; c < nconss; ++c )
-   {
-      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
-      assert(consdata != NULL);
-
-      /* reset linvar_may{in,de}crease to -1 in case some values are still set from a previous solve round */
-      consdata->linvar_mayincrease = -1;
-      consdata->linvar_maydecrease = -1;
-   }
-
    return SCIP_OKAY;
 }
+#else
+#define consInitpreQuadratic NULL
+#endif
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
 static
@@ -7273,16 +7317,6 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
 
       /* check for a linear variable that can be increase or decreased without harming feasibility */
       consdataFindUnlockedLinearVar(scip, consdata);
-#ifdef SCIP_DEBUG
-      if( consdata->linvar_mayincrease >= 0 )
-      {
-         SCIPdebugMessage("may increase <%s> to become feasible\n", SCIPvarGetName(consdata->linvars[consdata->linvar_mayincrease]));
-      }
-      if( consdata->linvar_maydecrease >= 0 )
-      {
-         SCIPdebugMessage("may decrease <%s> to become feasible\n", SCIPvarGetName(consdata->linvars[consdata->linvar_maydecrease]));
-      }
-#endif
 
       /* setup lincoefsmin, lincoefsmax */
       consdata->lincoefsmin = SCIPinfinity(scip);
@@ -7753,7 +7787,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpQuadratic)
     * thus, in the latter case, we are also happy if the efficacy is at least, say, 75% of the maximal violation
     * but in any case we need an efficacy that is at least feastol
     */
-   minefficacy = MIN(0.75*maxviol, conshdlrdata->mincutefficacyenfo);
+   minefficacy = MIN(0.75*maxviol, conshdlrdata->mincutefficacyenfofac * SCIPfeastol(scip));
    minefficacy = MAX(minefficacy, SCIPfeastol(scip));
    SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, minefficacy, TRUE, &separateresult, &sepaefficacy) );
    if( separateresult == SCIP_SEPARATED )
@@ -7778,6 +7812,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpQuadratic)
       SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, SCIPfeastol(scip), TRUE, &separateresult, &sepaefficacy) );
       if( separateresult == SCIP_SEPARATED )
       {
+         SCIPdebugMessage("separation fallback succeeded, efficacy = %g\n", sepaefficacy);
          *result = SCIP_SEPARATED;
          return SCIP_OKAY;
       }
@@ -8392,7 +8427,8 @@ SCIP_DECL_CONSCHECK(consCheckQuadratic)
    *result = SCIP_FEASIBLE;
 
    maxviol = 0.0;
-   maypropfeasible = conshdlrdata->linfeasshift && (conshdlrdata->trysolheur != NULL);
+   maypropfeasible = conshdlrdata->linfeasshift && (conshdlrdata->trysolheur != NULL) &&
+      SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED && SCIPgetStage(scip) <= SCIP_STAGE_SOLVING;
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL);
@@ -8943,15 +8979,15 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/binreforminitial",
          "whether to make constraints added due to replacing products with binary variables initial",
-         &conshdlrdata->binreforminitial, TRUE, TRUE, NULL, NULL) );
+         &conshdlrdata->binreforminitial, TRUE, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacysepa",
          "minimal efficacy for a cut to be added to the LP during separation; overwrites separating/efficacy",
          &conshdlrdata->mincutefficacysepa, TRUE, 0.0001, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacyenfo",
-         "minimal target efficacy of a cut in order to add it to relaxation during enforcement (may be ignored)",
-         &conshdlrdata->mincutefficacyenfo, TRUE, 2.0*SCIPfeastol(scip), 0.0, SCIPinfinity(scip), NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacyenfofac",
+         "minimal target efficacy of a cut in order to add it to relaxation during enforcement as a factor of the feasibility tolerance (may be ignored)",
+         &conshdlrdata->mincutefficacyenfofac, TRUE, 2.0, 1.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/scaling", 
          "whether a quadratic constraint should be scaled w.r.t. the current gradient norm when checking for feasibility",

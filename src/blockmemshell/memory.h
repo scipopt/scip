@@ -56,6 +56,7 @@ extern "C" {
 #define BMSreallocMemoryArray(ptr,num)        ASSIGN((ptr), BMSreallocMemory_call( *(ptr), (num)*sizeof(**(ptr)), \
                                                 __FILE__, __LINE__ ))
 #define BMSallocMemoryArrayCPP(num,size)      BMSallocMemory_call( (size_t)((num)*(size)), __FILE__, __LINE__ )
+#define BMSallocClearMemoryArray(ptr,num)     ASSIGN((ptr), BMSallocClearMemory_call( (num), sizeof(**(ptr)), __FILE__, __LINE__ ))
 #else
 #define BMSallocMemoryArray(ptr,num)          ( ( ((size_t)(num)) > (UINT_MAX / sizeof(**(ptr))) ) \
 						? NULL                                                         \
@@ -68,6 +69,9 @@ extern "C" {
 #define BMSallocMemoryArrayCPP(num,size)      ( ( ((size_t)(num)) > (UINT_MAX / size) ) \
 						? NULL                                                        \
 						:( BMSallocMemory_call( (size_t)((num)*(size)), __FILE__, __LINE__ ) ) )
+#define BMSallocClearMemoryArray(ptr,num)     ( ( ((size_t)(num)) > (UINT_MAX / sizeof(**(ptr))) ) \
+						? NULL                                                         \
+                                                : ASSIGN((ptr), BMSallocClearMemory_call((num), sizeof(**(ptr)), __FILE__, __LINE__ ))
 #endif
 
 #define BMSallocMemory(ptr)                   ASSIGN((ptr), BMSallocMemory_call( sizeof(**(ptr)), __FILE__, __LINE__ ))
@@ -107,6 +111,15 @@ extern "C" {
 #define BMScheckEmptyMemory()                 /**/
 #define BMSgetMemoryUsed()                    0LL
 #endif
+
+/** allocates memory and initializes it with 0; returns NULL if memory allocation failed */
+extern
+void* BMSallocClearMemory_call(
+   size_t                num,                /**< number of memory element to allocate */
+   size_t                size,               /**< size of memory element to allocate */
+   const char*           filename,           /**< source file where the allocation is performed */
+   int                   line                /**< line number in source file where the allocation is performed */
+   );
 
 /** allocates memory; returns NULL if memory allocation failed */
 extern
