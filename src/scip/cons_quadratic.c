@@ -5635,7 +5635,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
       if( (!SCIPisFeasPositive(scip, consdata->lhsviol) || consdata->isconcave) &&
           (!SCIPisFeasPositive(scip, consdata->rhsviol) || consdata->isconvex ) )
          continue;
-      SCIPdebugMessage("con %s violation: %g %g  convex: %u %u\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol, consdata->isconvex, consdata->isconcave);
+      SCIPdebugMessage("cons %s violation: %g %g  convex: %u %u\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol, consdata->isconvex, consdata->isconcave);
       
       /* square terms */
       for( j = 0; j < consdata->nquadvars; ++j )
@@ -6423,11 +6423,6 @@ SCIP_RETCODE propagateBoundsCons(
    assert(consdata->minlinactivityinf >= 0);
    assert(consdata->maxlinactivityinf >= 0);
 
-   SCIPdebugMessage("linear activity: [%g, %g]   quadratic activity: [%g, %g]\n",
-      consdata->minlinactivityinf > 0 ? -SCIPinfinity(scip) : consdata->minlinactivity,
-      consdata->maxlinactivityinf > 0 ?  SCIPinfinity(scip) : consdata->maxlinactivity,
-      consdata->quadactivitybounds.inf, consdata->quadactivitybounds.sup);
-
    /* compute activity of quad term part, if not up to date
     * in that case, we also collect the contribution of each quad var term for later */
    if( SCIPintervalIsEmpty(consdata->quadactivitybounds) )
@@ -6436,6 +6431,11 @@ SCIP_RETCODE propagateBoundsCons(
       propagateBoundsGetQuadActivity(scip, consdata, intervalinfty, &minquadactivity, &maxquadactivity, &quadminactinf, &quadmaxactinf, quadactcontr);
       assert(!SCIPintervalIsEmpty(consdata->quadactivitybounds));
    }
+
+   SCIPdebugMessage("linear activity: [%g, %g]   quadratic activity: [%g, %g]\n",
+      consdata->minlinactivityinf > 0 ? -SCIPinfinity(scip) : consdata->minlinactivity,
+      consdata->maxlinactivityinf > 0 ?  SCIPinfinity(scip) : consdata->maxlinactivity,
+      consdata->quadactivitybounds.inf, consdata->quadactivitybounds.sup);
 
    /* extend constraint bounds by epsilon to avoid some numerical difficulties */
    SCIPintervalSetBounds(&consbounds,
@@ -6862,6 +6862,7 @@ SCIP_RETCODE propagateBounds(
          }
          if( redundant )
          {
+            SCIPdebugMessage("deleting constraint <%s> locally\n", SCIPconsGetName(conss[c]));
             SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
          }
       }
