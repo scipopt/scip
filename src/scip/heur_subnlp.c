@@ -917,7 +917,6 @@ SCIP_RETCODE solveSubNLP(
    )
 {
    SCIP_HEURDATA* heurdata;
-   SCIP_NLP*      nlp;
    SCIP_Real*     startpoint;
    SCIP_VAR*      var;
    SCIP_VAR*      subvar;
@@ -1045,20 +1044,17 @@ SCIP_RETCODE solveSubNLP(
    if( timelimit == 0.0 )
       goto CLEANUP;
    
-   nlp = SCIPgetNLP(heurdata->subscip);
-   assert(nlp != NULL);
-
    /* add non-combinatorial linear constraints from subscip into subNLP (shall be replaced by catching row events in NLP) */
    SCIP_CALL( addLinearConstraintsToNlp(heurdata->subscip, FALSE, TRUE) );
 
    /* set starting values (=refpoint, if not NULL; otherwise LP solution (or pseudo solution)) */
-   SCIP_CALL( SCIPallocBufferArray(scip, &startpoint, SCIPnlpGetNVars(nlp)) );
-   for( i = 0; i < SCIPnlpGetNVars(nlp); ++i )
+   SCIP_CALL( SCIPallocBufferArray(scip, &startpoint, SCIPgetNNLPVars(heurdata->subscip)) );
+   for( i = 0; i < SCIPgetNNLPVars(heurdata->subscip); ++i )
    {
       SCIP_Real scalar;
       SCIP_Real constant;
 
-      subvar = SCIPnlpGetVars(nlp)[i];
+      subvar = SCIPgetNLPVars(heurdata->subscip)[i];
 
       /* gets corresponding original variable */
       scalar = 1.0;
@@ -1090,13 +1086,13 @@ SCIP_RETCODE solveSubNLP(
    if( tighttolerances )
    {
       /* set feasibility tolerance, if tighttolerances is set */
-      SCIP_CALL( SCIPnlpSetRealPar(nlp, SCIP_NLPPAR_FEASTOL, heurdata->resolvetolfactor*SCIPfeastol(scip)) );
+      SCIP_CALL( SCIPsetNLPRealPar(heurdata->subscip, SCIP_NLPPAR_FEASTOL, heurdata->resolvetolfactor*SCIPfeastol(scip)) );
    }
 
    /* set option file to use by NLP solver */
    if( heurdata->nlpoptfile != NULL && *heurdata->nlpoptfile != '\0' )
    {
-      SCIP_CALL( SCIPnlpSetStringPar(nlp, SCIP_NLPPAR_OPTFILE, heurdata->nlpoptfile) );
+      SCIP_CALL( SCIPsetNLPStringPar(heurdata->subscip, SCIP_NLPPAR_OPTFILE, heurdata->nlpoptfile) );
    }
 
    /* set iteration limit for NLP solver */
@@ -1104,14 +1100,14 @@ SCIP_RETCODE solveSubNLP(
       itercontingent = heurdata->nlpiterlimit;
    if( itercontingent > 0 )
    {
-      SCIP_CALL( SCIPnlpSetIntPar(nlp, SCIP_NLPPAR_ITLIM, (int)MIN(INT_MAX, itercontingent)) );
+      SCIP_CALL( SCIPsetNLPIntPar(heurdata->subscip, SCIP_NLPPAR_ITLIM, (int)MIN(INT_MAX, itercontingent)) );
    }
 
    /* set time limit for NLP solver */
-   SCIP_CALL( SCIPnlpSetRealPar(nlp, SCIP_NLPPAR_TILIM, timelimit) );
+   SCIP_CALL( SCIPsetNLPRealPar(heurdata->subscip, SCIP_NLPPAR_TILIM, timelimit) );
 
    /* set verbosity of NLP solver */
-   SCIP_CALL( SCIPnlpSetIntPar(nlp, SCIP_NLPPAR_VERBLEVEL, heurdata->nlpverblevel) );
+   SCIP_CALL( SCIPsetNLPIntPar(heurdata->subscip, SCIP_NLPPAR_VERBLEVEL, heurdata->nlpverblevel) );
 
 
    /* let the NLP solver do its magic */
@@ -1119,25 +1115,25 @@ SCIP_RETCODE solveSubNLP(
    SCIP_CALL( SCIPsolveNLP(heurdata->subscip) );
 
    SCIPdebugMessage("NLP solver returned with termination status %d and solution status %d, objective value is %g\n",
-      SCIPnlpGetTermstat(nlp), SCIPnlpGetSolstat(nlp), SCIPgetNLPObjval(heurdata->subscip));
+      SCIPgetNLPTermstat(heurdata->subscip), SCIPgetNLPSolstat(heurdata->subscip), SCIPgetNLPObjval(heurdata->subscip));
    
-   if( SCIPnlpGetTermstat(nlp) >= SCIP_NLPTERMSTAT_MEMERR )
+   if( SCIPgetNLPTermstat(heurdata->subscip) >= SCIP_NLPTERMSTAT_MEMERR )
    {  /* oops, something did not go well at all */
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, 
          "NLP solver returned with bad termination status %d. Will not run NLP heuristic again for this run.\n",  
-         SCIPnlpGetTermstat(nlp));
+         SCIPgetNLPTermstat(heurdata->subscip));
       SCIP_CALL( freeSubSCIP(scip, heurdata) );
       goto CLEANUP;
    }
 
-   SCIP_CALL( SCIPnlpGetStatistics(nlp, heurdata->nlpstatistics) );
+   SCIP_CALL( SCIPgetNLPStatistics(heurdata->subscip, heurdata->nlpstatistics) );
 
    if( iterused != NULL )
       *iterused += SCIPnlpStatisticsGetNIterations(heurdata->nlpstatistics);
    SCIPdebugMessage("NLP solver used %d iterations and %g seconds\n",
       SCIPnlpStatisticsGetNIterations(heurdata->nlpstatistics), SCIPnlpStatisticsGetTotalTime(heurdata->nlpstatistics));
    
-   if( SCIPnlpGetSolstat(nlp) <= SCIP_NLPSOLSTAT_FEASIBLE && SCIPisLE(scip, SCIPgetNLPObjval(heurdata->subscip), SCIPgetObjlimit(heurdata->subscip)) )
+   if( SCIPgetNLPSolstat(heurdata->subscip) <= SCIP_NLPSOLSTAT_FEASIBLE && SCIPisLE(scip, SCIPgetNLPObjval(heurdata->subscip), SCIPgetObjlimit(heurdata->subscip)) )
    {  /* NLP solver claims it found a feasible (maybe even optimal) solution and its objective value is better than our cutoff */
       SCIP_SOL*  sol;
       SCIP_Bool  stored;

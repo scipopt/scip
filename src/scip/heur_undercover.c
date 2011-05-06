@@ -441,10 +441,8 @@ SCIP_RETCODE createCoveringProblem(
    if( SCIPisNLPConstructed(scip) )
    {
       int nnlprows;
-
-      assert(SCIPgetNLP(scip) != NULL);
  
-      nnlprows = SCIPnlpGetNNlRows(SCIPgetNLP(scip));
+      nnlprows = SCIPgetNNLPNlRows(scip);
       if( nnlprows > 0 )
       {
          int mapsize;
@@ -732,19 +730,14 @@ SCIP_RETCODE createCoveringProblem(
    /* go through all yet unprocessed nlrows */
    if( nlrowmap != NULL )
    {
-      SCIP_NLP* nlp;
       SCIP_NLROW** nlrows;
       int nnlrows;
 
       assert(SCIPisNLPConstructed(scip));
 
-      /* get nlp */
-      nlp = SCIPgetNLP(scip);
-      assert(nlp != NULL);
-
       /* get nlrows */
-      nnlrows = SCIPnlpGetNNlRows(nlp);
-      nlrows = SCIPnlpGetNlRows(nlp);
+      nnlrows = SCIPgetNNLPNlRows(scip);
+      nlrows = SCIPgetNLPNlRows(scip);
 
       for( i = nnlrows-1; i >= 0; i-- )
       {
@@ -1327,7 +1320,7 @@ SCIP_RETCODE getFixingValue(
          }
 
          /* activate nlp solver output if we are in SCIP's debug mode */
-         SCIPdebug( SCIP_CALL( SCIPnlpSetIntPar(SCIPgetNLP(scip), SCIP_NLPPAR_VERBLEVEL, 1) ) );
+         SCIPdebug( SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_VERBLEVEL, 1) ) );
 
          /* set starting point to lp solution */
          SCIP_CALL( SCIPsetNLPInitialGuessSol(scip, NULL) );
@@ -1346,7 +1339,6 @@ SCIP_RETCODE getFixingValue(
             heurdata->nlpsolved = TRUE;
 
             /* retrieve nlp solution value */
-            assert(SCIPgetNLP(scip) != NULL);
             *val = SCIPvarGetNLPSol(var);
          }
          else
@@ -2354,8 +2346,8 @@ SCIP_RETCODE SCIPapplyUndercover(
    }
 
    /* we must remain in nlp diving mode until here to be able to retrieve nlp solution values easily */
-   assert((SCIPisNLPConstructed(scip) == FALSE && heurdata->nlpsolved == FALSE) ||
-      (SCIPisNLPConstructed(scip) == TRUE && heurdata->nlpsolved == SCIPnlpIsDiving(SCIPgetNLP(scip))));
+   /* assert((SCIPisNLPConstructed(scip) == FALSE && heurdata->nlpsolved == FALSE) ||
+      (SCIPisNLPConstructed(scip) == TRUE && heurdata->nlpsolved == SCIPnlpIsDiving(SCIPgetNLP(scip)))); */
    if( heurdata->nlpsolved )
    {
       SCIP_CALL( SCIPendDiveNLP(scip) );
@@ -2587,18 +2579,13 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
    /* go through all nlrows and check for general nonlinearities */
    if( SCIPisNLPConstructed(scip) )
    {
-      SCIP_NLP* nlp;
       SCIP_NLROW** nlrows;
       int nnlrows;
       int i;
 
-      /* get nlp */
-      nlp = SCIPgetNLP(scip);
-      assert(nlp != NULL);
-
       /* get nlrows */
-      nnlrows = SCIPnlpGetNNlRows(nlp);
-      nlrows = SCIPnlpGetNlRows(nlp);
+      nnlrows = SCIPgetNNLPNlRows(scip);
+      nlrows = SCIPgetNLPNlRows(scip);
 
       /* check for an nlrow with nontrivial expression tree or quadratic terms; start from 0 since we expect the linear
        * nlrows at the end */

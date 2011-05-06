@@ -651,6 +651,137 @@ SCIP_RETCODE SCIPnlpSolveDive(
    SCIP_STAT*            stat                /**< problem statistics */
    );
 
+#if 0
+/** sets whether the current NLP is a convex problem, i.e., all restrictions are defined by convex functions w.r.t. current bounds */
+extern
+void SCIPnlpSetIsConvex(
+   SCIP_NLP*             nlp,                /**< NLP data */
+   SCIP_Bool             isconvex            /**< is the current NLP a convex problem? */
+   );
+
+/** returns whether the current NLP is a convex problem, i.e., all restrictions are defined by convex functions w.r.t. current bounds */
+extern
+SCIP_Bool SCIPnlpIsConvex(
+   SCIP_NLP*             nlp                 /**< NLP data */
+   );
+#endif
+
+/** gets array with variables of the NLP */
+extern
+SCIP_VAR** SCIPnlpGetVars(
+   SCIP_NLP*             nlp                 /**< current NLP data */
+   );
+
+/** gets current number of variables in NLP */
+extern
+int SCIPnlpGetNVars(
+   SCIP_NLP*             nlp                 /**< current NLP data */
+   );
+
+/** gets array with nonlinear rows of the NLP */
+extern
+SCIP_NLROW** SCIPnlpGetNlRows(
+   SCIP_NLP*             nlp                 /**< current NLP data */
+   );
+
+/** gets current number of nonlinear rows in NLP */
+extern
+int SCIPnlpGetNNlRows(
+   SCIP_NLP*             nlp                 /**< current NLP data */
+   );
+
+/** gets the NLP solver interface */
+extern
+SCIP_NLPI* SCIPnlpGetNLPI(
+   SCIP_NLP*             nlp                 /**< current NLP data */
+   );
+
+/** gets the NLP problem in the solver interface */
+extern
+SCIP_NLPIPROBLEM* SCIPnlpGetNLPIProblem(
+   SCIP_NLP*             nlp                 /**< current NLP data */
+   );
+
+/** indicates whether NLP is currently in diving mode */
+extern
+SCIP_Bool SCIPnlpIsDiving(
+   SCIP_NLP*             nlp                 /**< current NLP data */
+   );
+
+/** gets solution status of current NLP */
+extern
+SCIP_NLPSOLSTAT SCIPnlpGetSolstat(
+   SCIP_NLP*             nlp                 /**< current NLP data */
+   );
+
+/** gets termination status of last NLP solve */
+extern
+SCIP_NLPTERMSTAT SCIPnlpGetTermstat(
+   SCIP_NLP*             nlp                 /**< current NLP data */
+   );
+
+/** gives statistics (number of iterations, solving time, ...) of last NLP solve */
+extern
+SCIP_RETCODE SCIPnlpGetStatistics(
+   SCIP_NLP*             nlp,                /**< pointer to NLP datastructure */
+   SCIP_NLPSTATISTICS*   statistics          /**< pointer to store statistics */
+);
+
+/** indicates whether a feasible solution for the current NLP is available
+ * thus, returns whether the solution status <= feasible  */
+extern
+SCIP_Bool SCIPnlpHasSolution(
+   SCIP_NLP*             nlp                 /**< current NLP data */
+   );
+
+/** gets integer parameter of NLP */
+extern
+SCIP_RETCODE SCIPnlpGetIntPar(
+   SCIP_NLP*             nlp,                /**< pointer to NLP datastructure */
+   SCIP_NLPPARAM         type,               /**< parameter number */
+   int*                  ival                /**< pointer to store the parameter value */
+);
+
+/** sets integer parameter of NLP */
+extern
+SCIP_RETCODE SCIPnlpSetIntPar(
+   SCIP_NLP*             nlp,                /**< pointer to NLP datastructure */
+   SCIP_NLPPARAM         type,               /**< parameter number */
+   int                   ival                /**< parameter value */
+);
+
+/** gets floating point parameter of NLP */
+extern
+SCIP_RETCODE SCIPnlpGetRealPar(
+   SCIP_NLP*             nlp,                /**< pointer to NLP datastructure */
+   SCIP_NLPPARAM         type,               /**< parameter number */
+   SCIP_Real*            dval                /**< pointer to store the parameter value */
+);
+
+/** sets floating point parameter of NLP */
+extern
+SCIP_RETCODE SCIPnlpSetRealPar(
+   SCIP_NLP*             nlp,                /**< pointer to NLP datastructure */
+   SCIP_NLPPARAM         type,               /**< parameter number */
+   SCIP_Real             dval                /**< parameter value */
+);
+
+/** gets string parameter of NLP */
+extern
+SCIP_RETCODE SCIPnlpGetStringPar(
+   SCIP_NLP*             nlp,                /**< pointer to NLP datastructure */
+   SCIP_NLPPARAM         type,               /**< parameter number */
+   const char**          sval                /**< pointer to store the parameter value */
+);
+
+/** sets string parameter of NLP */
+extern
+SCIP_RETCODE SCIPnlpSetStringPar(
+   SCIP_NLP*             nlp,                /**< pointer to NLP datastructure */
+   SCIP_NLPPARAM         type,               /**< parameter number */
+   const char*           sval                /**< parameter value */
+);
+
 /**@} */
 
 #ifdef __cplusplus

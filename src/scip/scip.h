@@ -4900,24 +4900,24 @@ SCIP_Bool SCIPisNLPConstructed(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns pointer to NLP */
-extern
-SCIP_NLP* SCIPgetNLP(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** makes sure that the NLP of the current node is flushed */
-extern
-SCIP_RETCODE SCIPflushNLP(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 /** gets current NLP variables along with the current number of NLP variables */
 extern
 SCIP_RETCODE SCIPgetNLPVarsData(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR***           vars,               /**< pointer to store the array of NLP variables, or NULL */
    int*                  nvars               /**< pointer to store the number of NLP variables, or NULL */
+   );
+
+/** gets array with variables of the NLP */
+extern
+SCIP_VAR** SCIPgetNLPVars(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets current number of variables in NLP */
+extern
+int SCIPgetNNLPVars(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** gets current NLP nonlinear rows along with the current number of NLP nonlinear rows */
@@ -4928,12 +4928,30 @@ SCIP_RETCODE SCIPgetNLPNlRowsData(
    int*                  nnlrows             /**< pointer to store the number of NLP nonlinear rows, or NULL */
    );
 
+/** gets array with nonlinear rows of the NLP */
+extern
+SCIP_NLROW** SCIPgetNLPNlRows(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets current number of nonlinear rows in NLP */
+extern
+int SCIPgetNNLPNlRows(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** adds a nonlinear row to the NLP
  * row is captured by NLP */
 extern
 SCIP_RETCODE SCIPaddNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow               /**< nonlinear row to add to NLP */
+   );
+
+/** makes sure that the NLP of the current node is flushed */
+extern
+SCIP_RETCODE SCIPflushNLP(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** sets or clears initial primal guess for NLP solution (start point for NLP solver) */
@@ -4962,9 +4980,29 @@ SCIP_NLPSOLSTAT SCIPgetNLPSolstat(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** gets termination status of last NLP solve */
+extern
+SCIP_NLPTERMSTAT SCIPgetNLPTermstat(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gives statistics (number of iterations, solving time, ...) of last NLP solve */
+extern
+SCIP_RETCODE SCIPgetNLPStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPSTATISTICS*   statistics          /**< pointer to store statistics */
+);
+
 /** gets objective value of current NLP */
 extern
 SCIP_Real SCIPgetNLPObjval(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** indicates whether a feasible solution for the current NLP is available
+ * thus, returns whether the solution status <= feasible  */
+extern
+SCIP_Bool SCIPhasNLPSolution(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -4979,6 +5017,54 @@ SCIP_RETCODE SCIPgetNLPFracVars(
    int*                  npriofracvars       /**< pointer to store the number of NLP fractional variables with maximal branching priority, or NULL */
    );
 
+/** gets integer parameter of NLP */
+extern
+SCIP_RETCODE SCIPgetNLPIntPar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPPARAM         type,               /**< parameter number */
+   int*                  ival                /**< pointer to store the parameter value */
+);
+
+/** sets integer parameter of NLP */
+extern
+SCIP_RETCODE SCIPsetNLPIntPar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPPARAM         type,               /**< parameter number */
+   int                   ival                /**< parameter value */
+);
+
+/** gets floating point parameter of NLP */
+extern
+SCIP_RETCODE SCIPgetNLPRealPar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPPARAM         type,               /**< parameter number */
+   SCIP_Real*            dval                /**< pointer to store the parameter value */
+);
+
+/** sets floating point parameter of NLP */
+extern
+SCIP_RETCODE SCIPsetNLPRealPar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPPARAM         type,               /**< parameter number */
+   SCIP_Real             dval                /**< parameter value */
+);
+
+/** gets string parameter of NLP */
+extern
+SCIP_RETCODE SCIPgetNLPStringPar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPPARAM         type,               /**< parameter number */
+   const char**          sval                /**< pointer to store the parameter value */
+);
+
+/** sets string parameter of NLP */
+extern
+SCIP_RETCODE SCIPsetNLPStringPar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPPARAM         type,               /**< parameter number */
+   const char*           sval                /**< parameter value */
+);
+
 /** writes current NLP to a file */
 extern
 SCIP_RETCODE SCIPwriteNLP(
@@ -4986,8 +5072,8 @@ SCIP_RETCODE SCIPwriteNLP(
    const char*           fname               /**< file name */
    );
 
-/** gets the NLP interface of SCIP;
- *  with the NLPI you can use all of the methods defined in nlpi/nlpi.h;
+/** gets the NLP interface and problem used by the SCIP NLP;
+ *  with the NLPI and its problem you can use all of the methods defined in nlpi/nlpi.h;
  *  Warning! You have to make sure, that the full internal state of the NLPI does not change or is recovered completely after
  *  the end of the method that uses the NLPI. In particular, if you manipulate the NLP or its solution (e.g. by calling one of the
  *  SCIPnlpiAdd...() or the SCIPnlpiSolve() method), you have to check in advance whether the NLP is currently solved.
@@ -4998,7 +5084,8 @@ SCIP_RETCODE SCIPwriteNLP(
 extern
 SCIP_RETCODE SCIPgetNLPI(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPI**           nlpi                /**< pointer to store the NLP solver interface */
+   SCIP_NLPI**           nlpi,               /**< pointer to store the NLP solver interface */
+   SCIP_NLPIPROBLEM**    nlpiproblem         /**< pointer to store the NLP solver interface problem */
    );
 
 /**@} */

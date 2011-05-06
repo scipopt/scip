@@ -5606,258 +5606,6 @@ SCIP_RETCODE SCIPnlpWrite(
    return SCIP_OKAY;
 }
 
-/*
- * NLP diving methods
- */
-
-/** signals start of diving */
-SCIP_RETCODE SCIPnlpStartDive(
-   SCIP_NLP*             nlp,                /**< current NLP data */
-   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
-   SCIP_SET*             set                 /**< global SCIP settings */
-   )
-{
-   assert(nlp != NULL);
-
-   if( nlp->indiving )
-   {
-      SCIPerrorMessage("NLP is already in diving mode\n");
-      return SCIP_ERROR;
-   }
-   
-   if( nlp->solver == NULL )
-   {
-      /* In diving mode we do not cache changes but put them directly in the NLPI problem, which does not exsts if there is no solver.
-       * So we forbid diving of no solver is available. */
-      SCIPerrorMessage("Cannot start diving if no NLP solver is available\n");
-      return SCIP_ERROR;
-   }
-
-   SCIP_CALL( SCIPnlpFlush(nlp, blkmem, set) );
-
-   nlp->indiving = TRUE;
-
-   return SCIP_OKAY;
-}
-
-/** resets the bound and objective changes made during diving and disables diving mode */
-SCIP_RETCODE SCIPnlpEndDive(
-   SCIP_NLP*             nlp,                /**< current NLP data */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
-   )
-{
-   int i;
-   int* varidx;
-   SCIP_Real* varlb;
-   SCIP_Real* varub;
-
-   assert(nlp != NULL);
-   assert(set != NULL);
-   assert(nlp->nvars == nlp->nvars_solver);
-
-   if( !nlp->indiving )
-   {
-      SCIPerrorMessage("NLP not in diving mode, cannot end dive\n");
-      return SCIP_ERROR;
-   }
-   
-   assert(nlp->solver != NULL);
-   assert(nlp->problem != NULL);
-
-   /* reset variable bounds in NLPI problem to their current values */
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &varidx, nlp->nvars) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &varlb,  nlp->nvars) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &varub,  nlp->nvars) );
-   for( i = 0; i < nlp->nvars; ++i )
-   {
-      varidx[i] = i;
-      varlb[i] = SCIPvarGetLbLocal(nlp->vars[nlp->varmap_nlpi2nlp[i]]);
-      varub[i] = SCIPvarGetUbLocal(nlp->vars[nlp->varmap_nlpi2nlp[i]]);
-   }
-
-   SCIP_CALL( SCIPnlpiChgVarBounds(nlp->solver, nlp->problem, nlp->nvars, varidx, varlb, varub) );
-
-   SCIPsetFreeBufferArray(set, &varidx);
-   SCIPsetFreeBufferArray(set, &varlb);
-   SCIPsetFreeBufferArray(set, &varub);
-
-   /* clear diving objective, if one was used (i.e., if SCIPnlpChgVarObjDive had been called)
-    * the objective in the NLPI will be reset in the next flush */
-   if( nlp->divingobj != NULL )
-   {
-      SCIP_CALL( SCIPnlrowRelease(&nlp->divingobj, blkmem, set) );
-      assert(nlp->divingobj == NULL);
-      assert(nlp->objflushed == FALSE);
-   }
-
-   /* we do not have a valid solution anymore */
-   nlp->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-   nlp->termstat = SCIP_NLPTERMSTAT_OTHER;
-   nlp->primalsolobjval = SCIP_INVALID;
-
-   nlp->indiving = FALSE;
-
-   return SCIP_OKAY;
-}
-
-/** changes coefficient of variable in diving NLP */
-SCIP_RETCODE SCIPnlpChgVarObjDive(
-   SCIP_NLP*             nlp,                /**< current NLP data */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_VAR*             var,                /**< variable which coefficient to change */
-   SCIP_Real             coef                /**< new linear coefficient of variable in objective */
-   )
-{
-   int pos;
-   int objidx;
-
-   assert(nlp != NULL);
-   assert(var != NULL);
-   assert(SCIPhashmapExists(nlp->varhash, var));
-   assert(nlp->indiving);
-   assert(nlp->solver != NULL);
-   assert(nlp->problem != NULL);
-
-   /* get position of variable in NLPI problem */
-   pos = (int) (size_t) SCIPhashmapGetImage(nlp->varhash, var);
-   pos = nlp->varmap_nlp2nlpi[pos];
-   assert(pos >= 0);
-
-   /* set coefficient in NLPI problem objective */
-   objidx = -1;
-   SCIP_CALL( SCIPnlpiChgLinearCoefs(nlp->solver, nlp->problem, objidx, 1, &pos, &coef) );
-
-   /* create an nlrow that holds the diving objective, if not done yet */
-   if( nlp->divingobj == NULL )
-   {
-      SCIP_Real* coefs;
-      int        i;
-
-      SCIP_CALL( SCIPsetAllocBufferArray(set, &coefs, nlp->nvars) );
-      for( i = 0; i < nlp->nvars; ++i )
-         coefs[i] = SCIPvarGetObj(nlp->vars[i]);
-
-      SCIP_CALL( SCIPnlrowCreate(&nlp->divingobj, blkmem, set, "divingobj",
-         0.0,
-         nlp->nvars, nlp->vars, coefs,
-         0, NULL, 0, NULL,
-         NULL,
-         -SCIPsetInfinity(set), SCIPsetInfinity(set)) );
-
-      SCIPsetFreeBufferArray(set, &coefs);
-   }
-   assert(nlp->divingobj != NULL);
-
-   /* modify coefficient in diving objective */
-   SCIP_CALL( SCIPnlrowChgLinearCoef(nlp->divingobj, blkmem, set, stat, nlp, var, coef) );
-
-   /* remember that we have to store objective after diving ended */
-   nlp->objflushed = FALSE;
-
-   return SCIP_OKAY;
-}
-
-/** changes bounds of variable in diving NLP */
-SCIP_RETCODE SCIPnlpChgVarBoundsDive(
-   SCIP_NLP*             nlp,                /**< current NLP data */
-   SCIP_VAR*             var,                /**< variable which coefficient to change */
-   SCIP_Real             lb,                 /**< new lower bound of variable */
-   SCIP_Real             ub                  /**< new upper bound of variable */
-   )
-{
-   int pos;
-
-   assert(nlp != NULL);
-   assert(var != NULL);
-   assert(SCIPhashmapExists(nlp->varhash, var));
-   assert(nlp->indiving);
-   assert(nlp->solver != NULL);
-   assert(nlp->problem != NULL);
-
-   /* get position of variable in NLPI problem */
-   pos = (int) (size_t) SCIPhashmapGetImage(nlp->varhash, var);
-   pos = nlp->varmap_nlp2nlpi[pos];
-   assert(pos >= 0);
-
-   /* set new bounds in NLPI */
-   SCIP_CALL( SCIPnlpiChgVarBounds(nlp->solver, nlp->problem, 1, &pos, &lb, &ub) );
-
-   return SCIP_OKAY;
-}
-
-/** changes bounds of a set of variables in diving NLP */
-SCIP_RETCODE SCIPnlpChgVarsBoundsDive(
-   SCIP_NLP*             nlp,                /**< current NLP data */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   int                   nvars,              /**< number of variables which bounds to change */
-   SCIP_VAR**            vars,               /**< variables which bounds to change */
-   SCIP_Real*            lbs,                /**< new lower bounds of variables */
-   SCIP_Real*            ubs                 /**< new upper bounds of variables */
-   )
-{
-   int i;
-   int* poss;
-
-   assert(nlp  != NULL);
-   assert(vars != NULL || nvars == 0);
-   assert(nlp->indiving);
-   assert(lbs  != NULL || nvars == 0);
-   assert(ubs  != NULL || nvars == 0);
-   assert(nlp->solver != NULL);
-   assert(nlp->problem != NULL);
-
-   if( nvars == 0 )
-      return SCIP_OKAY;
-
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &poss, nvars) );
-
-   for( i = 0; i < nvars; ++i )
-   {
-      assert(SCIPhashmapExists(nlp->varhash, vars[i]));  /*lint !e613*/
-
-      /* get position of variable in NLPI problem */
-      poss[i] = (int) (size_t) SCIPhashmapGetImage(nlp->varhash, vars[i]);   /*lint !e613*/
-      poss[i] = nlp->varmap_nlp2nlpi[poss[i]];
-      assert(poss[i] >= 0);
-   }
-
-   /* set new bounds in NLPI */
-   SCIP_CALL( SCIPnlpiChgVarBounds(nlp->solver, nlp->problem, nvars, poss, lbs, ubs) );
-
-   SCIPsetFreeBufferArray(set, &poss);
-
-   return SCIP_OKAY;
-}
-
-/** returns whether the objective function has been changed during diving */
-SCIP_RETCODE SCIPnlpIsDivingObjChanged(
-   SCIP_NLP*             nlp                 /**< current NLP data */
-   )
-{
-   return nlp->divingobj != NULL;
-}
-
-/** solves diving NLP */
-SCIP_RETCODE SCIPnlpSolveDive(
-   SCIP_NLP*             nlp,                /**< current NLP data */
-   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat                /**< problem statistics */
-   )
-{
-   SCIP_CALL( nlpSolve(nlp, blkmem, set, stat) );
-
-   return SCIP_OKAY;
-}
-
-
-/*
- * public NLP methods
- */
-
 #if 0
 /** sets whether the current NLP is a convex problem, i.e., all restrictions are defined by convex functions w.r.t. current bounds */
 void SCIPnlpSetIsConvex(
@@ -6096,3 +5844,251 @@ SCIP_RETCODE SCIPnlpSetStringPar(
 
    return SCIP_OKAY;
 }
+
+/*
+ * NLP diving methods
+ */
+
+/** signals start of diving */
+SCIP_RETCODE SCIPnlpStartDive(
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(nlp != NULL);
+
+   if( nlp->indiving )
+   {
+      SCIPerrorMessage("NLP is already in diving mode\n");
+      return SCIP_ERROR;
+   }
+
+   if( nlp->solver == NULL )
+   {
+      /* In diving mode we do not cache changes but put them directly in the NLPI problem, which does not exsts if there is no solver.
+       * So we forbid diving of no solver is available. */
+      SCIPerrorMessage("Cannot start diving if no NLP solver is available\n");
+      return SCIP_ERROR;
+   }
+
+   SCIP_CALL( SCIPnlpFlush(nlp, blkmem, set) );
+
+   nlp->indiving = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** resets the bound and objective changes made during diving and disables diving mode */
+SCIP_RETCODE SCIPnlpEndDive(
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   int i;
+   int* varidx;
+   SCIP_Real* varlb;
+   SCIP_Real* varub;
+
+   assert(nlp != NULL);
+   assert(set != NULL);
+   assert(nlp->nvars == nlp->nvars_solver);
+
+   if( !nlp->indiving )
+   {
+      SCIPerrorMessage("NLP not in diving mode, cannot end dive\n");
+      return SCIP_ERROR;
+   }
+
+   assert(nlp->solver != NULL);
+   assert(nlp->problem != NULL);
+
+   /* reset variable bounds in NLPI problem to their current values */
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &varidx, nlp->nvars) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &varlb,  nlp->nvars) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &varub,  nlp->nvars) );
+   for( i = 0; i < nlp->nvars; ++i )
+   {
+      varidx[i] = i;
+      varlb[i] = SCIPvarGetLbLocal(nlp->vars[nlp->varmap_nlpi2nlp[i]]);
+      varub[i] = SCIPvarGetUbLocal(nlp->vars[nlp->varmap_nlpi2nlp[i]]);
+   }
+
+   SCIP_CALL( SCIPnlpiChgVarBounds(nlp->solver, nlp->problem, nlp->nvars, varidx, varlb, varub) );
+
+   SCIPsetFreeBufferArray(set, &varidx);
+   SCIPsetFreeBufferArray(set, &varlb);
+   SCIPsetFreeBufferArray(set, &varub);
+
+   /* clear diving objective, if one was used (i.e., if SCIPnlpChgVarObjDive had been called)
+    * the objective in the NLPI will be reset in the next flush */
+   if( nlp->divingobj != NULL )
+   {
+      SCIP_CALL( SCIPnlrowRelease(&nlp->divingobj, blkmem, set) );
+      assert(nlp->divingobj == NULL);
+      assert(nlp->objflushed == FALSE);
+   }
+
+   /* we do not have a valid solution anymore */
+   nlp->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+   nlp->termstat = SCIP_NLPTERMSTAT_OTHER;
+   nlp->primalsolobjval = SCIP_INVALID;
+
+   nlp->indiving = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** changes coefficient of variable in diving NLP */
+SCIP_RETCODE SCIPnlpChgVarObjDive(
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_VAR*             var,                /**< variable which coefficient to change */
+   SCIP_Real             coef                /**< new linear coefficient of variable in objective */
+   )
+{
+   int pos;
+   int objidx;
+
+   assert(nlp != NULL);
+   assert(var != NULL);
+   assert(SCIPhashmapExists(nlp->varhash, var));
+   assert(nlp->indiving);
+   assert(nlp->solver != NULL);
+   assert(nlp->problem != NULL);
+
+   /* get position of variable in NLPI problem */
+   pos = (int) (size_t) SCIPhashmapGetImage(nlp->varhash, var);
+   pos = nlp->varmap_nlp2nlpi[pos];
+   assert(pos >= 0);
+
+   /* set coefficient in NLPI problem objective */
+   objidx = -1;
+   SCIP_CALL( SCIPnlpiChgLinearCoefs(nlp->solver, nlp->problem, objidx, 1, &pos, &coef) );
+
+   /* create an nlrow that holds the diving objective, if not done yet */
+   if( nlp->divingobj == NULL )
+   {
+      SCIP_Real* coefs;
+      int        i;
+
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &coefs, nlp->nvars) );
+      for( i = 0; i < nlp->nvars; ++i )
+         coefs[i] = SCIPvarGetObj(nlp->vars[i]);
+
+      SCIP_CALL( SCIPnlrowCreate(&nlp->divingobj, blkmem, set, "divingobj",
+         0.0,
+         nlp->nvars, nlp->vars, coefs,
+         0, NULL, 0, NULL,
+         NULL,
+         -SCIPsetInfinity(set), SCIPsetInfinity(set)) );
+
+      SCIPsetFreeBufferArray(set, &coefs);
+   }
+   assert(nlp->divingobj != NULL);
+
+   /* modify coefficient in diving objective */
+   SCIP_CALL( SCIPnlrowChgLinearCoef(nlp->divingobj, blkmem, set, stat, nlp, var, coef) );
+
+   /* remember that we have to store objective after diving ended */
+   nlp->objflushed = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** changes bounds of variable in diving NLP */
+SCIP_RETCODE SCIPnlpChgVarBoundsDive(
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   SCIP_VAR*             var,                /**< variable which coefficient to change */
+   SCIP_Real             lb,                 /**< new lower bound of variable */
+   SCIP_Real             ub                  /**< new upper bound of variable */
+   )
+{
+   int pos;
+
+   assert(nlp != NULL);
+   assert(var != NULL);
+   assert(SCIPhashmapExists(nlp->varhash, var));
+   assert(nlp->indiving);
+   assert(nlp->solver != NULL);
+   assert(nlp->problem != NULL);
+
+   /* get position of variable in NLPI problem */
+   pos = (int) (size_t) SCIPhashmapGetImage(nlp->varhash, var);
+   pos = nlp->varmap_nlp2nlpi[pos];
+   assert(pos >= 0);
+
+   /* set new bounds in NLPI */
+   SCIP_CALL( SCIPnlpiChgVarBounds(nlp->solver, nlp->problem, 1, &pos, &lb, &ub) );
+
+   return SCIP_OKAY;
+}
+
+/** changes bounds of a set of variables in diving NLP */
+SCIP_RETCODE SCIPnlpChgVarsBoundsDive(
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   nvars,              /**< number of variables which bounds to change */
+   SCIP_VAR**            vars,               /**< variables which bounds to change */
+   SCIP_Real*            lbs,                /**< new lower bounds of variables */
+   SCIP_Real*            ubs                 /**< new upper bounds of variables */
+   )
+{
+   int i;
+   int* poss;
+
+   assert(nlp  != NULL);
+   assert(vars != NULL || nvars == 0);
+   assert(nlp->indiving);
+   assert(lbs  != NULL || nvars == 0);
+   assert(ubs  != NULL || nvars == 0);
+   assert(nlp->solver != NULL);
+   assert(nlp->problem != NULL);
+
+   if( nvars == 0 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &poss, nvars) );
+
+   for( i = 0; i < nvars; ++i )
+   {
+      assert(SCIPhashmapExists(nlp->varhash, vars[i]));  /*lint !e613*/
+
+      /* get position of variable in NLPI problem */
+      poss[i] = (int) (size_t) SCIPhashmapGetImage(nlp->varhash, vars[i]);   /*lint !e613*/
+      poss[i] = nlp->varmap_nlp2nlpi[poss[i]];
+      assert(poss[i] >= 0);
+   }
+
+   /* set new bounds in NLPI */
+   SCIP_CALL( SCIPnlpiChgVarBounds(nlp->solver, nlp->problem, nvars, poss, lbs, ubs) );
+
+   SCIPsetFreeBufferArray(set, &poss);
+
+   return SCIP_OKAY;
+}
+
+/** returns whether the objective function has been changed during diving */
+SCIP_RETCODE SCIPnlpIsDivingObjChanged(
+   SCIP_NLP*             nlp                 /**< current NLP data */
+   )
+{
+   return nlp->divingobj != NULL;
+}
+
+/** solves diving NLP */
+SCIP_RETCODE SCIPnlpSolveDive(
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics */
+   )
+{
+   SCIP_CALL( nlpSolve(nlp, blkmem, set, stat) );
+
+   return SCIP_OKAY;
+}
+
