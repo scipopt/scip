@@ -4878,19 +4878,6 @@ void SCIPmarkNonlinearitiesPresent(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** marks that there is a plugin that makes use of an NLP if nonlinear constraints are present
- * This method should be called by heuristics, separators, propagators, or relaxators that can make use of an NLP relaxation of the problem.
- * 
- * The function should be called during initialization or presolving.
- * 
- * If some constraint handler signals that it has nonlinear rows to contribute and there are plugins that can use an NLP,
- * then SCIP initializes the NLP when initializing the solving process (initsol).
- */ 
-extern
-void SCIPmarkRequireNLP(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 /** returns whether constraints representable as nonlinear rows are present that involve continuous nonlinear variables
  * @see SCIPmarkContinuousNonlinearitiesPresent
  */
@@ -4904,13 +4891,6 @@ SCIP_Bool SCIPhasContinuousNonlinearitiesPresent(
  */
 extern
 SCIP_Bool SCIPhasNonlinearitiesPresent(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** returns whether some plugin requires an NLP
- * @see SCIPmarkRequireNLP */ 
-extern
-SCIP_Bool SCIPisNLPRequired(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

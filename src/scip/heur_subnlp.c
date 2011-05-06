@@ -963,9 +963,6 @@ SCIP_RETCODE solveSubNLP(
 
    if( SCIPgetNVars(heurdata->subscip) > 0 )
    {
-      /* tell subscip that we would like to have an NLP */
-      SCIPmarkRequireNLP(heurdata->subscip);
-
       /* do init solve, i.e., "solve" root node with node limit 0 (should do scip.c::initSolve and then stop immediately in solve.c::SCIPsolveCIP) */
       SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 0LL) );
       SCIP_CALL( SCIPsolve(heurdata->subscip) );

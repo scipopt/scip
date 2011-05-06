@@ -2426,27 +2426,7 @@ SCIP_DECL_HEURFREE(heurFreeUndercover)
 
 
 /** initialization method of primal heuristic (called after problem was transformed) */
-static
-SCIP_DECL_HEURINIT(heurInitUndercover)
-{  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
-
-   assert(heur != NULL);
-   assert(scip != NULL);
-
-   /* get heuristic's data */
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   /* we use the nlp for building up the covering problem, i.e., even if we do not solve the nlp relaxation or perform
-    * nlp local search;
-    * however, if we want to use nlp fixing values exclusively and no nlp solver is available,
-    * heuristic will not run anyway */
-   if( strcmp(heurdata->fixingalts, "n") != 0 || SCIPgetNNlpis(scip) > 0 )
-      SCIPmarkRequireNLP(scip);
-
-   return SCIP_OKAY;
-}
+#define heurInitUndercover NULL
 
 
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */

@@ -622,10 +622,6 @@ SCIP_DECL_HEURINIT(heurInitRens)
    heurdata = SCIPheurGetData(heur);
    assert( heurdata != NULL );
 
-   /* mark that the NLP relaxation has to be constructed */
-   if( heurdata->startsol == 'n' && SCIPgetNNlpis(scip) > 0 )
-      SCIPmarkRequireNLP(scip);
-
    /* initialize data */
    heurdata->usednodes = 0;
 

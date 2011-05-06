@@ -124,7 +124,6 @@ struct SCIP_Set
    SCIP_Bool             limitchanged;       /**< marks whether any of the limit parameters was changed */
    SCIP_Bool             continnonlinpresent;/**< marks whether any constraints with continuous nonlinear variables are present */
    SCIP_Bool             nonlinearitypresent;/**< marks whether any constraints with discrete nonlinear variables are present */
-   SCIP_Bool             nlprequired;        /**< marks whether any plugin has use for an NLP */ 
 
    /* branching settings */
    char                  branch_scorefunc;   /**< branching score function ('s'um, 'p'roduct) */

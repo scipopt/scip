@@ -52,6 +52,7 @@ interface:
 - new methods SCIPcreateMesshdlrPThreads() and SCIPfreeMesshdlrPThreads() for allocating and deleting necessary memory for message handlers for parallel pthread version
 - new methods SCIPallocClearMemoryArray() and BMSallocClearMemoryArray() for allocating cleared memory arrays in scip.h and memory.h
 - removed methods SCIPnlpGetObjective(), SCIPnlpGetSolVals(), SCIPnlpGetVarSolVal(); added method SCIPvarGetNLPSol(); SCIPcreateNLPSol() now returns an error if NLP or NLP solution is not available
+- removed methods SCIPmarkRequireNLP() and SCIPisNLPRequired(), NLP is now always constructed if nonlinearities are present
 
 performance improvements:
 - performance improvements in prop_vbounds
