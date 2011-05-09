@@ -6886,8 +6886,7 @@ void consdataFindUnlockedLinearVar(
    consdata->linvar_maydecrease = -1;
    consdata->linvar_mayincrease = -1;
 
-   /* check for a linear variable that can be increase or decreased without harming feasibility
-    * setup lincoefsmin, lincoefsmax */
+   /* check for a linear variable that can be increase or decreased without harming feasibility */
    for( i = 0; i < consdata->nlinvars; ++i )
    {
       /* compute locks of i'th linear variable */
@@ -7958,7 +7957,7 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
    doreformulations = (nrounds > 0 || SCIPconshdlrWasPresolvingDelayed(conshdlr)) &&
       nnewfixedvars == 0 && nnewaggrvars == 0 && nnewchgvartypes == 0 && nnewchgbds == 0 &&
       nnewholes == 0 && /* nnewdelconss == 0 && */ nnewaddconss == 0 && nnewupgdconss == 0 && nnewchgcoefs == 0 && nnewchgsides == 0;
-   SCIPdebugMessage("presolving will %swait with reformulation", doreformulations ? "not " : "");
+   SCIPdebugMessage("presolving will %swait with reformulation\n", doreformulations ? "not " : "");
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -9653,6 +9652,26 @@ SCIP_QUADVARTERM* SCIPgetQuadVarTermsQuadratic(
    assert(SCIPconsGetData(cons) != NULL);
    
    return SCIPconsGetData(cons)->quadvarterms;
+}
+
+/** Finds the position of a quadratic variable term for a given variable.
+ * Note that if the quadratic variable terms have not been sorted before, then a search may reorder the current order of the terms.
+ */
+SCIP_RETCODE SCIPfindQuadVarTermQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_VAR*             var,                /**< variable to search for */
+   int*                  pos                 /**< buffer to store position of quadvarterm for var, or -1 if not found */
+   )
+{
+   assert(cons != NULL);
+   assert(SCIPconsGetData(cons) != NULL);
+   assert(var != NULL);
+   assert(pos != NULL);
+
+   SCIP_CALL( consdataFindQuadVarTerm(scip, SCIPconsGetData(cons), var, pos) );
+
+   return SCIP_OKAY;
 }
 
 /** Gets the number of bilinear terms of a quadratic constraint.

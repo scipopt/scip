@@ -582,6 +582,49 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayBranching)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the display relaxators command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayRelaxators)
+{  /*lint --e{715}*/
+   SCIP_RELAX** relaxs;
+   SCIP_RELAX** sorted;
+   int nrelaxs;
+   int i;
+
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   relaxs = SCIPgetRelaxs(scip);
+   nrelaxs = SCIPgetNRelaxs(scip);
+
+   /* copy relaxs array into temporary memory for sorting */
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &sorted, relaxs, nrelaxs) );
+
+   /* sort the relaxators */
+   SCIPsortPtr((void**)sorted, SCIPrelaxComp, nrelaxs);
+
+   /* display sorted list of relaxators */
+   SCIPdialogMessage(scip, NULL, "\n");
+   SCIPdialogMessage(scip, NULL, " relaxator            priority freq  description\n");
+   SCIPdialogMessage(scip, NULL, " --------------       -------- ----  -----------\n");
+   for( i = 0; i < nrelaxs; ++i )
+   {
+      SCIPdialogMessage(scip, NULL, " %-20s ", SCIPrelaxGetName(sorted[i]));
+      if( strlen(SCIPrelaxGetName(sorted[i])) > 20 )
+         SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
+      SCIPdialogMessage(scip, NULL, "%8d %4d  ", SCIPrelaxGetPriority(sorted[i]),
+         SCIPrelaxGetFreq(sorted[i]));
+      SCIPdialogMessage(scip, NULL, "%s", SCIPrelaxGetDesc(sorted[i]));
+      SCIPdialogMessage(scip, NULL, "\n");
+   }
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &sorted);
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for the display conflict command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayConflict)
 {  /*lint --e{715}*/
@@ -2865,6 +2908,17 @@ SCIP_RETCODE SCIPincludeDialogDefault(
             NULL,
             SCIPdialogExecDisplayReaders, NULL, NULL,
             "readers", "display file readers", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* display relaxing */
+   if( !SCIPdialogHasEntry(submenu, "relaxators") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecDisplayRelaxators, NULL, NULL,
+            "relaxators", "display relaxators", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }

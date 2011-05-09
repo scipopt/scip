@@ -304,6 +304,17 @@ SCIP_QUADVARTERM* SCIPgetQuadVarTermsQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    );
 
+/** Finds the position of a quadratic variable term for a given variable.
+ * Note that if the quadratic variable terms have not been sorted before, then a search may reorder the current order of the terms.
+ */
+extern
+SCIP_RETCODE SCIPfindQuadVarTermQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_VAR*             var,                /**< variable to search for */
+   int*                  pos                 /**< buffer to store position of quadvarterm for var, or -1 if not found */
+   );
+
 /** Gets the number of bilinear terms of a quadratic constraint.
  */
 extern
