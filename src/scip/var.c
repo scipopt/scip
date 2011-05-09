@@ -1787,6 +1787,7 @@ SCIP_RETCODE varCreate(
    (*var)->rootsol = 0.0;
    (*var)->rootredcost = SCIP_INVALID;
    (*var)->relaxsol = 0.0;
+   (*var)->nlpsol = 0.0;
    (*var)->primsolavg = 0.5 * (lb + ub);
    (*var)->conflictlb = SCIP_REAL_MIN;
    (*var)->conflictub = SCIP_REAL_MAX;
@@ -3241,7 +3242,7 @@ SCIP_RETCODE SCIPvarFix(
       obj = var->obj;
       SCIP_CALL( SCIPvarChgObj(var, blkmem, set, primal, lp, eventqueue, 0.0) );
 
-      /* since we change the variable type form loose to multi aggregated, we have to adjust the number of loose
+      /* since we change the variable type form loose to fixed, we have to adjust the number of loose
        * variables in the LP data structure; the loose objective value (looseobjval) in the LP data structure, however,
        * gets adjusted automatically, due to the event SCIP_EVENTTYPE_OBJCHANGED which dropped in the moment where the
        * objective of this variable is set to zero
@@ -10280,6 +10281,53 @@ SCIP_Real SCIPvarGetLPSol_rec(
    }
 }
 
+/** gets primal NLP solution value of variable */
+SCIP_Real SCIPvarGetNLPSol_rec(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   SCIP_Real solval;
+   int i;
+
+   assert(var != NULL);
+
+   /* only values for non fixed variables (LOOSE or COLUMN) are stored; others have to be transformed */
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      return SCIPvarGetNLPSol(var->data.original.transvar);
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+         return var->relaxsol;
+
+   case SCIP_VARSTATUS_FIXED:
+      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetUbGlobal(var));  /*lint !e777*/
+      assert(SCIPvarGetLbLocal(var) == SCIPvarGetUbLocal(var));    /*lint !e777*/
+      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetLbLocal(var));   /*lint !e777*/
+      return SCIPvarGetLbGlobal(var);
+
+   case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
+      solval = SCIPvarGetNLPSol(var->data.aggregate.var);
+      return var->data.aggregate.scalar * solval + var->data.aggregate.constant;
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      solval = var->data.multaggr.constant;
+      for( i = 0; i < var->data.multaggr.nvars; ++i )
+         solval += var->data.multaggr.scalars[i] * SCIPvarGetNLPSol(var->data.multaggr.vars[i]);
+      return solval;
+
+   case SCIP_VARSTATUS_NEGATED:
+      solval = SCIPvarGetNLPSol(var->negatedvar);
+      return var->data.negate.constant - solval;
+
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      SCIPABORT();
+      return SCIP_INVALID; /*lint !e527*/
+   }
+}
+
 /** gets pseudo solution value of variable at current node */
 static
 SCIP_Real SCIPvarGetPseudoSol_rec(
@@ -10589,6 +10637,56 @@ SCIP_Real SCIPvarGetRelaxSolTransVar(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
 
    return var->relaxsol;
+}
+
+/** stores the solution value as NLP solution in the problem variable */
+void SCIPvarSetNLPSol(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             solval              /**< solution value in the current NLP solution */
+   )
+{
+   assert(var != NULL);
+
+   /* we want to store only values for non fixed variables (LOOSE or COLUMN); others have to be transformed */
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      SCIPvarSetNLPSol(var->data.original.transvar, set, solval);
+      break;
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+      var->nlpsol = solval;
+      break;
+
+   case SCIP_VARSTATUS_FIXED:
+      if( !SCIPsetIsEQ(set, solval, var->glbdom.lb) )
+      {
+         SCIPerrorMessage("cannot set NLP solution value for variable <%s> fixed to %.15g to different value %.15g\n",
+            SCIPvarGetName(var), var->glbdom.lb, solval);
+         SCIPABORT();
+      }
+      break;
+
+   case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
+      assert(!SCIPsetIsZero(set, var->data.aggregate.scalar));
+      SCIPvarSetNLPSol(var->data.aggregate.var, set, (solval - var->data.aggregate.constant)/var->data.aggregate.scalar);
+      break;
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      SCIPerrorMessage("cannot set solution value for multiple aggregated variable\n");
+      SCIPABORT();
+      break;
+
+   case SCIP_VARSTATUS_NEGATED:
+      SCIPvarSetNLPSol(var->negatedvar, set, var->data.negate.constant - solval);
+      break;
+
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      SCIPABORT();
+   }
 }
 
 /** returns a weighted average solution value of the variable in all feasible primal solutions found so far */
@@ -12938,6 +13036,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarGetNCliques
 #undef SCIPvarGetCliques
 #undef SCIPvarGetLPSol
+#undef SCIPvarGetNLPSol
 #undef SCIPvarGetBdchgInfoLb
 #undef SCIPvarGetNBdchgInfosLb
 #undef SCIPvarGetBdchgInfoUb
@@ -13802,6 +13901,19 @@ SCIP_Real SCIPvarGetLPSol(
       return SCIPcolGetPrimsol(var->data.col);
    else
       return SCIPvarGetLPSol_rec(var);
+}
+
+/** gets primal NLP solution value of variable */
+SCIP_Real SCIPvarGetNLPSol(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   if( (SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE) )
+      return var->nlpsol;
+   else
+      return SCIPvarGetNLPSol_rec(var);
 }
 
 /** return lower bound change info at requested position */

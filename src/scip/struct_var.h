@@ -202,6 +202,7 @@ struct SCIP_Var
    SCIP_Real             rootsol;            /**< primal solution of variable in root node, or SCIP_INVALID */
    SCIP_Real             rootredcost;        /**< reduced costs of variable in root node, or SCIP_INVALID */
    SCIP_Real             relaxsol;           /**< primal solution of variable in current relaxation solution, or SCIP_INVALID */
+   SCIP_Real             nlpsol;             /**< primal solution of variable in current NLP solution, or SCIP_INVALID */
    SCIP_Real             primsolavg;         /**< weighted average of all values of variable in primal feasible solutions */
    SCIP_Real             conflictlb;         /**< maximal lower bound of variable in the current conflict */
    SCIP_Real             conflictub;         /**< minimal upper bound of variable in the current conflict */

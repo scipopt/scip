@@ -98,8 +98,8 @@ struct SCIP_NlRow
    SCIP_Real             minactivity;        /**< minimal activity value w.r.t. the variables's bounds, or SCIP_INVALID */
    SCIP_Real             maxactivity;        /**< maximal activity value w.r.t. the variables's bounds, or SCIP_INVALID */
    SCIP_Longint          validactivitybdsdomchg; /**< domain change number for which activity bound values are valid */
-   int                   nlpindex;           /**< index of this row in NLP, or -1 if used as objective, or -2 if not added */
-   int                   nlpiindex;          /**< index of this row in NLPI problem, or -1 if used as objective, or -2 if not in there */
+   int                   nlpindex;           /**< index of this row in NLP, or -1 if not added */
+   int                   nlpiindex;          /**< index of this row in NLPI problem, or -1 if not in there */
 };
 
 /** current NLP data */
@@ -139,7 +139,6 @@ struct SCIP_Nlp
    int*                  nlrowmap_nlpi2nlp;  /**< index of a NLPI row in NLP (nlrows[nlrowmap_nlpi2nlp[i]]->nlpiidx == i for i = 0..nnlrows_solver-1), or -1 if row has been deleted from NLP */
 
    /* objective function */
-   SCIP_NLROW*           objective;          /**< objective function, NULL for using SCIP objective */
    SCIP_Bool             objflushed;         /**< is the objective in the NLPI up to date? */
    SCIP_NLROW*           divingobj;          /**< objective function during diving */
 
@@ -148,7 +147,6 @@ struct SCIP_Nlp
    SCIP_Real*            initialguess;       /**< initial guess of primal values to use in next NLP solve, if available */
 
    /* solution of NLP */
-   SCIP_Real*            primalsolution;     /**< current primal solution of NLP, if available */
    SCIP_Real             primalsolobjval;    /**< objective function value of primal solution */
    SCIP_NLPSOLSTAT       solstat;            /**< status of NLP solution (feasible, optimal, unknown...) */
    SCIP_NLPTERMSTAT      termstat;           /**< termination status of NLP (normal, some limit reached, ...) */

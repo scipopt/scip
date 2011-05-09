@@ -1498,7 +1498,7 @@ SCIP_RETCODE consdataCreate(
          
          for( v = 0; v < nvars; ++v )
          {
-            if( SCIPvarIsActive((*consdata)->vars[v]) )
+            if( SCIPvarIsActive((*consdata)->vars[v]) && !SCIPdoNotMultaggrVar(scip,  (*consdata)->vars[v]) )
             {
                SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, (*consdata)->vars[v]) );
             }
@@ -2269,7 +2269,7 @@ SCIP_RETCODE analyzeConflictCoreTimesBinvarsCumulative(
    assert(success != NULL );
    assert(inferdemand > 0 );
    assert(SCIPvarGetType(inferbinvar) == SCIP_VARTYPE_BINARY);
-   assert(SCIPvarGetType(intvar) == SCIP_VARTYPE_INTEGER);
+   assert( SCIPvarGetType(intvar) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(intvar) == SCIP_VARTYPE_IMPLINT );
 
    SCIPdebugMessage("analyze reason of bound change of variable <%s>[%d], cap = %d because of capacity at time %d\n",
       SCIPvarGetName(inferbinvar), inferdemand, capacity, timepoint );
@@ -4421,7 +4421,7 @@ SCIP_RETCODE respropCumulativeCondition(
    
    struct_inferinfo = intToInferInfo(inferinfo);
 
-   if( SCIPvarGetType(infervar) == SCIP_VARTYPE_INTEGER )
+   if( SCIPvarGetType(infervar) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(infervar) == SCIP_VARTYPE_IMPLINT )
    {
       /* get duration and demand of inference variable */
       /**@todo hashmap for variables and durations would speed this up */

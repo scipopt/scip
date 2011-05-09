@@ -169,9 +169,7 @@ SCIP_RETCODE createSubproblem(
       if( startsol == 'l')
          solval = SCIPvarGetLPSol(vars[i]);
       else
-      {
-         SCIP_CALL( SCIPnlpGetVarSolVal(SCIPgetNLP(scip), vars[i], &solval) );
-      }
+         solval = SCIPvarGetNLPSol(vars[i]);
 
       if( SCIPisFeasIntegral(scip, solval) )
       {
@@ -623,10 +621,6 @@ SCIP_DECL_HEURINIT(heurInitRens)
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
    assert( heurdata != NULL );
-
-   /* mark that the NLP relaxation has to be constructed */
-   if( heurdata->startsol == 'n' && SCIPgetNNlpis(scip) > 0 )
-      SCIPmarkRequireNLP(scip);
 
    /* initialize data */
    heurdata->usednodes = 0;

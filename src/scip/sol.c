@@ -29,6 +29,7 @@
 #include "scip/clock.h"
 #include "scip/misc.h"
 #include "scip/lp.h"
+#include "scip/nlp.h"
 #include "scip/relax.h"
 #include "scip/var.h"
 #include "scip/prob.h"
@@ -137,6 +138,9 @@ SCIP_Real solGetArrayVal(
       case SCIP_SOLORIGIN_LPSOL:
          return SCIPvarGetLPSol(var);
 
+      case SCIP_SOLORIGIN_NLPSOL:
+         return SCIPvarGetNLPSol(var);
+
       case SCIP_SOLORIGIN_RELAXSOL:
          return SCIPvarGetRelaxSolTransVar(var);
 
@@ -189,6 +193,14 @@ SCIP_RETCODE solUnlinkVar(
 
    case SCIP_SOLORIGIN_LPSOL:
       solval = SCIPvarGetLPSol(var);
+      if( !SCIPsetIsZero(set, solval) )
+      {
+         SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
+      }
+      return SCIP_OKAY;
+
+   case SCIP_SOLORIGIN_NLPSOL:
+      solval = SCIPvarGetNLPSol(var);
       if( !SCIPsetIsZero(set, solval) )
       {
          SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
@@ -354,6 +366,27 @@ SCIP_RETCODE SCIPsolCreateLPSol(
 
    SCIP_CALL( SCIPsolCreate(sol, blkmem, set, stat, primal, tree, heur) );
    SCIP_CALL( SCIPsolLinkLPSol(*sol, set, stat, tree, lp) );
+
+   return SCIP_OKAY;
+}
+
+/** creates primal CIP solution, initialized to the current NLP solution */
+SCIP_RETCODE SCIPsolCreateNLPSol(
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   )
+{
+   assert(sol != NULL);
+   assert(nlp != NULL);
+
+   SCIP_CALL( SCIPsolCreate(sol, blkmem, set, stat, primal, tree, heur) );
+   SCIP_CALL( SCIPsolLinkNLPSol(*sol, set, stat, tree, nlp) );
 
    return SCIP_OKAY;
 }
@@ -527,6 +560,58 @@ SCIP_RETCODE SCIPsolLinkLPSol(
       sol->obj = SCIPlpGetObjval(lp, set);
    }
    sol->solorigin = SCIP_SOLORIGIN_LPSOL;
+   solStamp(sol, stat, tree, TRUE);
+
+   SCIPdebugMessage(" -> objective value: %g\n", sol->obj);
+
+   return SCIP_OKAY;
+}
+
+/** copies current NLP solution into CIP solution by linking */
+SCIP_RETCODE SCIPsolLinkNLPSol(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_NLP*             nlp                 /**< current NLP data */
+   )
+{
+   assert(sol != NULL);
+   assert(stat != NULL);
+   assert(tree != NULL);
+   assert(nlp != NULL);
+   assert(SCIPnlpGetSolstat(nlp) <= SCIP_NLPSOLSTAT_FEASIBLE);
+
+   SCIPdebugMessage("linking solution to NLP\n");
+
+   /* clear the old solution arrays */
+   SCIP_CALL( solClearArrays(sol) );
+
+   /* get objective value of NLP solution */
+   if( SCIPnlpIsDivingObjChanged(nlp) )
+   {
+      /* the objective value has to be calculated manually, because the NLP's value is invalid */
+
+      SCIP_VAR** vars;
+      int nvars;
+      int v;
+
+      sol->obj = 0.0;
+
+      vars = SCIPnlpGetVars(nlp);
+      nvars = SCIPnlpGetNVars(nlp);
+      for( v = 0; v < nvars; ++v )
+      {
+         assert(SCIPvarIsActive(vars[v]));
+         sol->obj += SCIPvarGetObj(vars[v]) * SCIPvarGetNLPSol(vars[v]);
+      }
+   }
+   else
+   {
+      sol->obj = SCIPnlpGetObjval(nlp);
+   }
+
+   sol->solorigin = SCIP_SOLORIGIN_NLPSOL;
    solStamp(sol, stat, tree, TRUE);
 
    SCIPdebugMessage(" -> objective value: %g\n", sol->obj);
