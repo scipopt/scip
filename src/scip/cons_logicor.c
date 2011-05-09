@@ -796,7 +796,9 @@ SCIP_RETCODE mergeMultiples(
    SCIP_Bool* negarray;
    SCIP_VAR* var;
    int v;
+#ifndef NDEBUG
    int nbinvars;
+#endif
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -827,7 +829,9 @@ SCIP_RETCODE mergeMultiples(
 
    assert(consdata->vars != NULL && nvars > 0);
 
+#ifndef NDEBUG
    nbinvars = SCIPgetNBinVars(scip);
+#endif
 
    assert(*nentries >= nbinvars);
 
@@ -1567,13 +1571,16 @@ SCIP_RETCODE detectRedundantConstraints(
  
       if( cons1 != NULL )
       {
+#ifndef NDEBUG
          SCIP_CONSDATA* consdata1;
+#endif
 
          assert(SCIPconsIsActive(cons1));
          assert(!SCIPconsIsModifiable(cons1));
       
+#ifndef NDEBUG
          consdata1 = SCIPconsGetData(cons1);
-         
+#endif
          assert(consdata0 != NULL && consdata1 != NULL);
          assert(consdata0->nvars >= 1 && consdata0->nvars == consdata1->nvars);
          
@@ -2709,7 +2716,9 @@ static
 SCIP_DECL_CONSRESPROP(consRespropLogicor)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
+#ifndef NDEBUG
    SCIP_Bool infervarfound;
+#endif
    int v;
 
    assert(conshdlr != NULL);
@@ -2728,7 +2737,9 @@ SCIP_DECL_CONSRESPROP(consRespropLogicor)
     */
    assert(SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > 0.5); /* the inference variable must be assigned to one */
 
+#ifndef NDEBUG
    infervarfound = FALSE;
+#endif
    for( v = 0; v < consdata->nvars; ++v )
    {
       if( consdata->vars[v] != infervar )
@@ -2737,11 +2748,13 @@ SCIP_DECL_CONSRESPROP(consRespropLogicor)
          assert(SCIPvarGetUbAtIndex(consdata->vars[v], bdchgidx, FALSE) < 0.5);
          SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
       }
+#ifndef NDEBUG
       else
       {
          assert(!infervarfound);
          infervarfound = TRUE;
       }
+#endif
    }
    assert(infervarfound);
 

@@ -3034,8 +3034,10 @@ SCIP_RETCODE addGLSBinImpls(
    unsigned int m;
    SCIP_VAR* neighbor;          /* current neighbor of the current variable         */
    unsigned int neighindex;
+#ifndef NDEBUG
    SCIP_Real* implbounds;
-   
+#endif
+
    assert(scip != NULL);
    assert(sepadata != NULL);
    assert(vars != NULL);
@@ -3050,7 +3052,9 @@ SCIP_RETCODE addGLSBinImpls(
    /* get implication data */
    implvars = SCIPvarGetImplVars(vars[varsidx], original);
    impltypes = SCIPvarGetImplTypes(vars[varsidx], original);
+#ifndef NDEBUG
    implbounds = SCIPvarGetImplBounds(vars[varsidx], original);
+#endif
 
    /* add all implications to the graph */
    for( m = 0; m < nbinimpls; ++m )

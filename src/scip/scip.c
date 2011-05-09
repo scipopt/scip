@@ -13706,7 +13706,9 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
    int* rowinds;
    int* colinds;
    int nnewcols;
+#ifndef NDEBUG
    int nslacks;
+#endif
    int beg;
    int cnt;
    int i;
@@ -13825,9 +13827,11 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
          ++nnewcols;
       }
    }
+#ifndef NDEBUG
    nslacks = nnewcols - lp->ncols - 1;
    assert( nslacks >= 0 );
    assert( nnewcols <= 3*lp->ncols + 2*lp->nrows + 1 );
+#endif
 
    /* add columns */
    SCIP_CALL( SCIPlpiAddCols(lpi, nnewcols, obj, lb, ub, NULL, 0, NULL, NULL, NULL) );

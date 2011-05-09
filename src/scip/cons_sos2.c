@@ -694,7 +694,6 @@ SCIP_RETCODE enforceSOS2(
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool infeasible;
    SCIP_NODE* node1;
    SCIP_NODE* node2;
@@ -718,10 +717,6 @@ SCIP_RETCODE enforceSOS2(
 
    SCIPdebugMessage("Enforcing SOS2 constraints <%s>.\n", SCIPconshdlrGetName(conshdlr) );
    *result = SCIP_FEASIBLE;
-
-   /* get constraint handler data */
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != NULL );
 
    /* check each constraint */
    for (c = 0; c < nconss; ++c)
@@ -1774,6 +1769,7 @@ SCIP_DECL_CONSLOCK(consLockSOS2)
 {
    SCIP_CONSDATA* consdata;
    SCIP_VAR** vars;
+   int nvars;
    int j;
 
    assert( scip != NULL );
@@ -1786,12 +1782,13 @@ SCIP_DECL_CONSLOCK(consLockSOS2)
    SCIPdebugMessage("Locking constraint <%s>.\n", SCIPconsGetName(cons));
 
    vars = consdata->vars;
+   nvars = consdata->nvars;
    assert( vars != NULL );
 
-   for (j = 0; j < consdata->nvars; ++j)
+   for (j = 0; j < nvars; ++j)
    {
       SCIP_VAR* var;
-      var = consdata->vars[j];
+      var = vars[j];
 
       /* if lower bound is negative, rounding down may violate constraint */
       if ( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)) )

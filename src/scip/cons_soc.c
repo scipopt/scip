@@ -2575,7 +2575,6 @@ SCIP_RETCODE polishSolution(
    SCIP_Bool*      success    /**< buffer to store whether polishing was successful */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_Real rhsval;
    
@@ -2583,9 +2582,6 @@ SCIP_RETCODE polishSolution(
    assert(cons != NULL);
    assert(sol  != NULL);
    assert(success != NULL);
-   
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
    
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);

@@ -5350,12 +5350,16 @@ SCIP_RETCODE removeIrrelevantJobs(
 {
    SCIP_CONSDATA* consdata;
    SCIP_VAR* var;
+#if 0
    int* demands;
+#endif
    int* times;
    int* indices;
    int* perm;
-   
+
+#if 0   
    int capacity;
+#endif
    int nvars;
    int idx;
    int v;
@@ -5368,8 +5372,10 @@ SCIP_RETCODE removeIrrelevantJobs(
    assert(consdata != NULL);
    
    nvars = consdata->nvars;
+#if 0
    demands = consdata->demands;
    capacity = consdata->capacity;
+#endif
    
    SCIP_CALL( SCIPallocBufferArray(scip, &times, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &indices, nvars) );
@@ -6277,7 +6283,9 @@ SCIP_RETCODE collectIntVars(
    int startindex;
    int endtime;
    int duration;
+#ifndef NDEBUG
    int demand;
+#endif
    int starttime;
 
    int varidx;
@@ -6304,8 +6312,10 @@ SCIP_RETCODE collectIntVars(
       var = consdata->vars[varidx];
       duration = consdata->durations[varidx];
       assert(duration > 0);
+#ifndef NDEBUG
       demand = consdata->demands[varidx];
       assert(demand > 0);
+#endif
       assert(var != NULL);
       
       starttime = lower ? convertBoundToInt(scip, SCIPvarGetLbLocal(var)) : convertBoundToInt(scip, SCIPvarGetUbLocal(var));
@@ -6438,7 +6448,9 @@ SCIP_RETCODE createCapacityRestrictionIntvars(
 {
    SCIP_CONSDATA* consdata;
    char name[SCIP_MAXSTRLEN];
+#ifndef NDEBUG
    int capacity;
+#endif
    int lhs; /* left hand side of constraint */
 
    SCIP_VAR** activevars;
@@ -6452,9 +6464,10 @@ SCIP_RETCODE createCapacityRestrictionIntvars(
    assert(consdata != NULL);
    assert(consdata->nvars > 0);
 
+#ifndef NDEBUG
    capacity = consdata->capacity;
    assert(capacity > 0);
-
+#endif
    
    SCIP_CALL( SCIPallocBufferArray(scip, &activevars, nstarted-nfinished) );
 
@@ -6630,7 +6643,6 @@ SCIP_DECL_CONSFREE(consFreeCumulative)
 static
 SCIP_DECL_CONSINITPRE(consInitpreCumulative)
 {  
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS* cons;
    int c; 
 
@@ -6640,9 +6652,6 @@ SCIP_DECL_CONSINITPRE(consInitpreCumulative)
    assert(result != NULL);
 
    (*result) = SCIP_FEASIBLE;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    /* check all constraints for trivial feasibility  or infeasibility */
    for( c = 0; c < nconss; ++c )
@@ -7411,7 +7420,6 @@ SCIP_RETCODE SCIPcreateConsCumulative(
    )
 {
    SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
 
    assert(scip != NULL);
@@ -7425,9 +7433,6 @@ SCIP_RETCODE SCIPcreateConsCumulative(
    }
 
    SCIPdebugMessage("create cumulative constraint <%s> with %d jobs\n", name, nvars);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    /* create constraint data */
    SCIP_CALL( consdataCreate(scip, &consdata, vars, NULL, durations, demands, nvars, capacity) );

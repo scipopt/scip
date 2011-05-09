@@ -1179,15 +1179,19 @@ SCIP_RETCODE optimize(
       /* Shift variables' solution values by bound in their respective directions */
       if( !SCIPisZero(scip, bound) )
       {
+#ifndef NDEBUG
          SCIP_Real changedobj;
+#endif
          SCIP_Bool feasible;
 
          SCIPdebugMessage("  Promising candidates {%s=%g, %s=%g} with objectives <%g>, <%g> to be set to {%g, %g}\n",
                SCIPvarGetName(master), mastersolval, SCIPvarGetName(slave), slavesolval,
                masterobj, slaveobj, mastersolval + (int)masterdir * bound, slavesolval + (int)slavedir * bound);
 
+#ifndef NDEBUG
          /* the improvement of objective function is calculated */
          changedobj = ((int)slavedir * slaveobj  + (int)masterdir *  masterobj) * bound;
+#endif
 
          assert(SCIPisFeasLT(scip, changedobj, 0.0));
          assert(SCIPvarGetStatus(master) == SCIP_VARSTATUS_COLUMN && SCIPvarGetStatus(slave) == SCIP_VARSTATUS_COLUMN);

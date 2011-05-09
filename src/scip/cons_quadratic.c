@@ -5595,7 +5595,6 @@ SCIP_RETCODE registerVariableInfeasibilities(
    int*                  nnotify             /**< counter for number of notifications performed */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
    int                c;
    int                j;
@@ -5618,10 +5617,9 @@ SCIP_RETCODE registerVariableInfeasibilities(
    assert(conshdlr != NULL);
    assert(conss != NULL || nconss == 0);
    
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-   
    *nnotify = 0;
+   yval = SCIP_INVALID;
+   xval = SCIP_INVALID;
 
    for( c = 0; c < nconss; ++c )
    {
@@ -6368,7 +6366,6 @@ SCIP_RETCODE propagateBoundsCons(
    )
 {  /*lint --e{666}*/
    SCIP_CONSDATA*     consdata;
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_INTERVAL      consbounds;    /* lower and upper bounds of constraint */
    SCIP_INTERVAL      consactivity;  /* activity of linear plus quadratic part */
    SCIP_Real          intervalinfty; /* infinity used for interval computation */  
@@ -6391,9 +6388,6 @@ SCIP_RETCODE propagateBoundsCons(
    assert(result != NULL);
    assert(nchgbds != NULL);
    assert(redundant != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -7614,19 +7608,19 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
                lb = SCIPvarGetLbGlobal(var);
                ub = SCIPvarGetUbGlobal(var);
 
-               if( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) )
+               if( SCIPisInfinity(scip, -lb) )
                {
-                  if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
+                  if( SCIPisInfinity(scip, ub) )
                      x[i] = 0.0;
                   else
-                     x[i] = MIN(0.0, SCIPvarGetUbGlobal(var));
+                     x[i] = MIN(0.0, ub);
                   unbounded = TRUE;
                }
                else
                {
-                  if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
+                  if( SCIPisInfinity(scip, ub) )
                   {
-                     x[i] = MAX(0.0, SCIPvarGetLbGlobal(var));
+                     x[i] = MAX(0.0, lb);
                      unbounded = TRUE;
                   }
                   else

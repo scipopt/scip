@@ -3797,10 +3797,12 @@ SCIP_RETCODE identifySourcesTargets(
       SCIP_Real nsourceinconsistencies;
       SCIP_Real ntargetinconsistencies;
       int ntouchedcoms;
-      int r;
       int i;
+#ifndef NDEBUG
+      int r;
 
       r = SCIProwGetLPPos(capacityrows[a]);
+#endif
       assert(0 <= r && r < SCIPgetNLPRows(scip));
       assert((mcfdata->capacityrowsigns[r] & (LHSASSIGNED | RHSASSIGNED)) != 0);
       assert(mcfdata->rowarcid[r] == a);
