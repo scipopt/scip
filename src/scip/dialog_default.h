@@ -110,6 +110,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayPropagators);
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayReaders);
 
+/** dialog execution method for the display relaxators command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayRelaxators);
+
 /** dialog execution method for the display separators command */
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySeparators);
