@@ -6077,7 +6077,9 @@ SCIP_RETCODE tightenWeights(
             if( delta > 0 )
             {
                SCIP_Longint newcapacity;
+#ifndef NDEBUG
                SCIP_Longint newmincliqueweight;
+#endif
                SCIP_Longint newminweightsuminclique;
                SCIP_Bool forceclique;
                int nnewweights;
@@ -6086,10 +6088,11 @@ SCIP_RETCODE tightenWeights(
                SCIPdebugMessage("knapsack constraint <%s>: weights of clique %d (maxweight: %"SCIP_LONGINT_FORMAT") can be tightened: cliqueweightsum=%"SCIP_LONGINT_FORMAT", capacity=%"SCIP_LONGINT_FORMAT" -> delta: %"SCIP_LONGINT_FORMAT"\n",
                   SCIPconsGetName(cons), i, maxcliqueweights[i], cliqueweightsum, consdata->capacity, delta);
                newcapacity = consdata->capacity - delta;
-               newmincliqueweight = newcapacity + 1;
                forceclique = FALSE;
                nnewweights = 0;
 #ifndef NDEBUG
+               newmincliqueweight = newcapacity + 1;
+
                for( j = 0; j < i; ++j )
                   assert(consdata->cliquepartition[j] < i); /* no element j < i can be in clique i */
 #endif
@@ -6108,8 +6111,10 @@ SCIP_RETCODE tightenWeights(
                      newweightidxs[nnewweights] = j;
                      nnewweights++;
 
+#ifndef NDEBUG
                      assert(newweight <= newmincliqueweight); /* items are sorted by non-increasing weight! */
                      newmincliqueweight = newweight;
+#endif
                   }
                }
 
@@ -6711,7 +6716,9 @@ SCIP_DECL_HASHGETKEY(hashGetKeyKnapsackcons)
 static
 SCIP_DECL_HASHKEYEQ(hashKeyEqKnapsackcons)
 {
+#ifndef NDEBUG
    SCIP* scip;
+#endif
    SCIP_CONSDATA* consdata1;
    SCIP_CONSDATA* consdata2;
    int i;
@@ -6720,8 +6727,10 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqKnapsackcons)
    consdata2 = SCIPconsGetData((SCIP_CONS*)key2);
    assert(consdata1->sorted);
    assert(consdata2->sorted);
+#ifndef NDEBUG
    scip = (SCIP*)userptr; 
    assert(scip != NULL);
+#endif
    
    /* checks trivial case */
    if( consdata1->nvars != consdata2->nvars )
@@ -6750,7 +6759,9 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqKnapsackcons)
 static
 SCIP_DECL_HASHKEYVAL(hashKeyValKnapsackcons)
 {
+#ifndef NDEBUG
    SCIP* scip;
+#endif
    SCIP_CONSDATA* consdata;
    unsigned int hashval;
    int minidx;
@@ -6762,8 +6773,10 @@ SCIP_DECL_HASHKEYVAL(hashKeyValKnapsackcons)
    assert(consdata != NULL);
    assert(consdata->nvars > 0);
 
+#ifndef NDEBUG
    scip = (SCIP*)userptr; 
    assert(scip != NULL);
+#endif
 
    /* sorts the constraints */
    sortItems(consdata);

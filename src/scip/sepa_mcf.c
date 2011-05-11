@@ -3797,15 +3797,15 @@ SCIP_RETCODE identifySourcesTargets(
       SCIP_Real nsourceinconsistencies;
       SCIP_Real ntargetinconsistencies;
       int ntouchedcoms;
-      int r;
       int i;
+#ifndef NDEBUG
+      int r;
 
       r = SCIProwGetLPPos(capacityrows[a]);
       assert(0 <= r && r < SCIPgetNLPRows(scip));
       assert((mcfdata->capacityrowsigns[r] & (LHSASSIGNED | RHSASSIGNED)) != 0);
       assert(mcfdata->rowarcid[r] == a);
 
-#ifndef NDEBUG
       for ( i = 0; i < nnodes; i++ )
       {
          assert(sourcenodecnt[i] == 0);

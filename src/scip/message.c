@@ -372,15 +372,21 @@ void SCIPmessagePrintError(
    else if( n >= SCIP_MAXSTRLEN )
    {
       char* bigmsg;
+#ifndef NDEBUG
       int m;
+#endif
       va_list aq;
    
       if( BMSallocMemorySize(&bigmsg, n+1) == NULL )
          return;
       
       va_start(aq, formatstr); /*lint !e826*/
+#ifndef NDEBUG
       m = vsnprintf(bigmsg, n+1, formatstr, aq); /*lint !e718 !e746*/
       assert(m == n);
+#else
+      vsnprintf(bigmsg, n+1, formatstr, aq); /*lint !e718 !e746*/
+#endif
       va_end(aq);
       messagePrintError(bigmsg);
       BMSfreeMemory(&bigmsg);
@@ -423,14 +429,20 @@ void SCIPmessagePrintWarning(
    {
       va_list aq;
       char* bigmsg;
+#ifndef NDEBUG
       int m;
+#endif
 
       if( BMSallocMemorySize(&bigmsg, n+1) == NULL )
          return;
 
       va_start(aq, formatstr); /*lint !e826*/
+#ifndef NDEBUG
       m = vsnprintf(bigmsg, n+1, formatstr, aq);  /*lint !e718 !e746*/
       assert(m == n);
+#else
+      vsnprintf(bigmsg, n+1, formatstr, aq); /*lint !e718 !e746*/
+#endif
       va_end(aq);
       messagePrintWarning(bigmsg);
       BMSfreeMemory(&bigmsg);
@@ -494,7 +506,9 @@ void SCIPmessageVFPrintDialog(
    else if( n >= SCIP_MAXSTRLEN )
    {
       char* bigmsg;
+#ifndef NDEBUG
       int m;
+#endif
 
       if( BMSallocMemorySize(&bigmsg, n+1) == NULL )
       {
@@ -502,8 +516,13 @@ void SCIPmessageVFPrintDialog(
          return;
       }
 
-      m = vsnprintf(bigmsg, n+1, formatstr, aq);
+#ifndef NDEBUG
+      m = vsnprintf(bigmsg, n+1, formatstr, aq); /*lint !e718 !e746*/
       assert(m == n);
+#else
+      vsnprintf(bigmsg, n+1, formatstr, aq); /*lint !e718 !e746*/
+#endif
+
       va_end(aq);
       messagePrintDialog(file, bigmsg);
       BMSfreeMemory(&bigmsg);
@@ -568,7 +587,9 @@ void SCIPmessageVFPrintInfo(
    else if( n >= SCIP_MAXSTRLEN )
    {
       char* bigmsg;
+#ifndef NDEBUG
       int m;
+#endif
 
       if( BMSallocMemorySize(&bigmsg, n+1) == NULL )
       {
@@ -576,8 +597,13 @@ void SCIPmessageVFPrintInfo(
          return;
       }
 
-      m = vsnprintf(bigmsg, n+1, formatstr, aq);
+#ifndef NDEBUG
+      m = vsnprintf(bigmsg, n+1, formatstr, aq);  /*lint !e718 !e746*/
       assert(m == n);
+#else
+      vsnprintf(bigmsg, n+1, formatstr, aq); /*lint !e718 !e746*/
+#endif
+
       va_end(aq);
       messagePrintInfo(file, bigmsg);
       BMSfreeMemory(&bigmsg);
@@ -656,7 +682,9 @@ void SCIPmessageVFPrintVerbInfo(
       else if( n >= SCIP_MAXSTRLEN )
       {
          char* bigmsg;
+#ifndef NDEBUG
          int m;
+#endif
          
          if( BMSallocMemorySize(&bigmsg, n+1) == NULL )
          {
@@ -664,8 +692,13 @@ void SCIPmessageVFPrintVerbInfo(
             return;
          }
          
-         m = vsnprintf(bigmsg, n+1, formatstr, aq);
+#ifndef NDEBUG
+         m = vsnprintf(bigmsg, n+1, formatstr, aq);  /*lint !e718 !e746*/
          assert(m == n);
+#else
+         vsnprintf(bigmsg, n+1, formatstr, aq); /*lint !e718 !e746*/
+#endif
+
          va_end(aq);
          messagePrintInfo(file, bigmsg);
          BMSfreeMemory(&bigmsg);

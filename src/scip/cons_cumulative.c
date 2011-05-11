@@ -2513,7 +2513,9 @@ SCIP_RETCODE checkForHoles(
    )
 {
    SCIP_VAR** binvars;
+#ifndef NDEBUG
    SCIP_CONSDATA* consdata;
+#endif
 
    SCIP_Bool infeasible;
    SCIP_Bool tightened;
@@ -2525,8 +2527,10 @@ SCIP_RETCODE checkForHoles(
    int t;
    int pos;
 
+#ifndef NDEBUG
    consdata= SCIPconsGetData(cons);
    assert(consdata != NULL);
+#endif
    
    lb = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
    ub = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
@@ -3512,12 +3516,14 @@ SCIP_RETCODE createRelaxation(
    SCIP_Bool             cutsasconss         /**< should the cumulative constraint create the cuts as constraints? */
    )
 {
+#ifndef NDEBUG
    SCIP_CONSDATA* consdata;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->demandrows == NULL);
    assert(consdata->ndemandrows == 0);
+#endif
 
    SCIP_CALL( consCapacityConstraintsFinder(scip, cons, cutsasconss) ); 
 
@@ -3645,7 +3651,9 @@ SCIP_RETCODE initializeConflictAnalysisEnergeticReasoning(
    INFERINFO             inferinfo           /**< inference information */
    )
 {
+#ifndef NDEBUG
    SCIP_CONSDATA* consdata;
+#endif
    SCIP_Bool success;
    
    SCIPdebugMessage("initialize conflict analysis for energetic reasoning\n");
@@ -3653,8 +3661,10 @@ SCIP_RETCODE initializeConflictAnalysisEnergeticReasoning(
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
       return SCIP_OKAY;
 
+#ifndef NDEBUG
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+#endif
 
    assert(inferInfoGetProprule(inferinfo) == PROPRULE_4_ENERGETICREASONING);
    
@@ -5150,7 +5160,9 @@ SCIP_RETCODE collectIntVars(
    int startindex;
    int endtime;
    int duration;
+#ifndef NDEBUG
    int demand;
+#endif
    int starttime;
 
    int varidx;
@@ -5177,8 +5189,10 @@ SCIP_RETCODE collectIntVars(
       var = consdata->vars[varidx];
       duration = consdata->durations[varidx];
       assert(duration > 0);
+#ifndef NDEBUG
       demand = consdata->demands[varidx];
       assert(demand > 0);
+#endif
       assert(var != NULL);
       
       starttime = lower ? convertBoundToInt(scip, SCIPvarGetLbLocal(var)) : convertBoundToInt(scip, SCIPvarGetUbLocal(var));
@@ -5311,7 +5325,6 @@ SCIP_RETCODE createCapacityRestrictionIntvars(
 {
    SCIP_CONSDATA* consdata;
    char name[SCIP_MAXSTRLEN];
-   int capacity;
    int lhs; /* left hand side of constraint */
 
    SCIP_VAR** activevars;
@@ -5324,10 +5337,7 @@ SCIP_RETCODE createCapacityRestrictionIntvars(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->nvars > 0);
-
-   capacity = consdata->capacity;
-   assert(capacity > 0);
-
+   assert(consdata->capacity > 0);
    
    SCIP_CALL( SCIPallocBufferArray(scip, &activevars, nstarted-nfinished) );
 
@@ -5503,7 +5513,6 @@ SCIP_DECL_CONSFREE(consFreeCumulative)
 static
 SCIP_DECL_CONSINITPRE(consInitpreCumulative)
 {  
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS* cons;
    int c; 
 
@@ -5513,9 +5522,6 @@ SCIP_DECL_CONSINITPRE(consInitpreCumulative)
    assert(result != NULL);
 
    (*result) = SCIP_FEASIBLE;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    /* check all constraints for trivial feasibility  or infeasibility */
    for( c = 0; c < nconss; ++c )
@@ -6450,7 +6456,6 @@ SCIP_RETCODE SCIPcreateConsCumulative(
    )
 {
    SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
 
    assert(scip != NULL);
@@ -6464,9 +6469,6 @@ SCIP_RETCODE SCIPcreateConsCumulative(
    }
 
    SCIPdebugMessage("create cumulative constraint <%s> with %d jobs\n", name, nvars);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    /* create constraint data */
    SCIP_CALL( consdataCreate(scip, &consdata, vars, NULL, durations, demands, nvars, capacity) );

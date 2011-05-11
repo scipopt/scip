@@ -1581,7 +1581,9 @@ SCIP_DECL_CONSRESPROP(consRespropBounddisjunction)
    SCIP_CONSDATA* consdata;
    SCIP_VAR** vars;
    SCIP_BOUNDTYPE* boundtypes;
+#ifndef NDEBUG
    SCIP_Real* bounds;
+#endif
    int v;
 
    assert(conshdlr != NULL);
@@ -1598,9 +1600,11 @@ SCIP_DECL_CONSRESPROP(consRespropBounddisjunction)
 
    vars = consdata->vars;
    boundtypes = consdata->boundtypes;
-   bounds = consdata->bounds;
    assert(boundtypes != NULL);
+#ifndef NDEBUG
+   bounds = consdata->bounds;
    assert(bounds != NULL);
+#endif
 
    SCIPdebugMessage("conflict resolving method of bound disjunction constraint handler\n");
 

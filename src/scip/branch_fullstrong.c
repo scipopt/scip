@@ -115,7 +115,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
    SCIP_VAR** lpcands;
    SCIP_Real* lpcandssol;
    SCIP_Real* lpcandsfrac;
+#ifndef NDEBUG
    SCIP_Real cutoffbound;
+#endif
    SCIP_Real lpobjval;
    SCIP_Real bestdown;
    SCIP_Real bestup;
@@ -144,7 +146,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
 
    /* get current LP objective bound of the local sub problem and global cutoff bound */
    lpobjval = SCIPgetLPObjval(scip);
+#ifndef NDEBUG
    cutoffbound = SCIPgetCutoffbound(scip);
+#endif
 
    /* check, if we want to solve the problem exactly, meaning that strong branching information is not useful
     * for cutting off sub problems and improving lower bounds of children

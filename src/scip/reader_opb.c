@@ -185,16 +185,20 @@ SCIP_DECL_HASHGETKEY(hashGetKeyOpbAndcons)
 static
 SCIP_DECL_HASHKEYEQ(hashKeyEqOpbAndcons)
 {
+#ifndef NDEBUG
    SCIP* scip;
+#endif
    CONSANDDATA* consanddata1;
    CONSANDDATA* consanddata2;
    int i;
 
    consanddata1 = (CONSANDDATA*)key1;
    consanddata2 = (CONSANDDATA*)key2;
+#ifndef NDEBUG
    scip = (SCIP*)userptr; 
-
    assert(scip != NULL);
+#endif
+
    assert(consanddata1 != NULL);
    assert(consanddata2 != NULL);
    assert(consanddata1->vars != NULL);

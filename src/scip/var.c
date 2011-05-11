@@ -2026,7 +2026,9 @@ void parseValue(
    SCIP_Real*            value               /**< pointer to store the parsed value */
    )
 {                                                
+#ifndef NDEBUG
    int cnt;
+#endif
    
    if(strncmp(str, "+inf", 4) == 0 )
       *value = SCIPsetInfinity(set);
@@ -2034,8 +2036,12 @@ void parseValue(
       *value = -SCIPsetInfinity(set);
    else 
    {
+#ifndef NDEBUG
       cnt = sscanf(str, "%"SCIP_REAL_FORMAT"", value);
       assert(cnt == 1);
+#else
+      sscanf(str, "%"SCIP_REAL_FORMAT"", value);
+#endif
    }
 }
 
@@ -2058,7 +2064,9 @@ SCIP_RETCODE varParse(
    char* copystr;
    char* token;
    char* saveptr;
+#ifndef NDEBUG
    int cnt;
+#endif
 
    assert(lb != NULL);
    assert(ub != NULL);
@@ -2097,8 +2105,12 @@ SCIP_RETCODE varParse(
    
    /* get objective coefficient */
    token = SCIPstrtok(NULL, " ,:", &saveptr);
+#ifndef NDEBUG
    cnt = sscanf(token, "obj=%"SCIP_REAL_FORMAT",", obj);
    assert(cnt == 1);
+#else
+   sscanf(token, "obj=%"SCIP_REAL_FORMAT",", obj);
+#endif
    
    /* get global bound */
    (void) SCIPstrtok(NULL, "[", &saveptr);

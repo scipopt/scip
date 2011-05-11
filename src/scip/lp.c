@@ -4764,7 +4764,9 @@ SCIP_RETCODE SCIProwCalcIntegralScalar(
    SCIP_Bool*            success             /**< stores whether returned value is valid */
    )
 {
+#ifndef NDEBUG
    SCIP_COL* col;
+#endif
    SCIP_Longint gcd;
    SCIP_Longint scm;
    SCIP_Longint nominator;
@@ -4801,11 +4803,13 @@ SCIP_RETCODE SCIProwCalcIntegralScalar(
    minval = SCIP_REAL_MAX;
    for( c = 0; c < row->len; ++c )
    {
+#ifndef NDEBUG
       col = row->cols[c];
       assert(col != NULL);
       assert(col->var != NULL);
       assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
       assert(SCIPvarGetCol(col->var) == col);
+#endif
       val = row->vals[c];
       assert(!SCIPsetIsZero(set, val));
 
@@ -13901,7 +13905,9 @@ SCIP_RETCODE lpRemoveObsoleteCols(
    )
 {
    SCIP_COL** cols;
+#ifndef NDEBUG
    SCIP_COL** lpicols;
+#endif
    int* coldstat;
    int ncols;
    int ndelcols;
@@ -13920,7 +13926,9 @@ SCIP_RETCODE lpRemoveObsoleteCols(
 
    ncols = lp->ncols;
    cols = lp->cols;
+#ifndef NDEBUG
    lpicols = lp->lpicols;
+#endif
 
    /* get temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &coldstat, ncols) );
@@ -13976,7 +13984,9 @@ SCIP_RETCODE lpRemoveObsoleteRows(
    )
 {
    SCIP_ROW** rows;
+#ifndef NDEBUG
    SCIP_ROW** lpirows;
+#endif
    int* rowdstat;
    int nrows;
    int ndelrows;
@@ -13995,7 +14005,9 @@ SCIP_RETCODE lpRemoveObsoleteRows(
 
    nrows = lp->nrows;
    rows = lp->rows;
+#ifndef NDEBUG
    lpirows = lp->lpirows;
+#endif
 
    /* get temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &rowdstat, nrows) );
@@ -14176,7 +14188,9 @@ SCIP_RETCODE lpCleanupRows(
    int                   firstrow            /**< first row to check for clean up */
    )
 {
+#ifndef NDEBUG
    SCIP_ROW** rows;
+#endif
    SCIP_ROW** lpirows;
    int* rowdstat;
    int nrows;
@@ -14195,8 +14209,10 @@ SCIP_RETCODE lpCleanupRows(
    if( lp->nremovablerows == 0 || !lp->solisbasic  )
       return SCIP_OKAY;
 
-   nrows = lp->nrows;
+#ifndef NDEBUG
    rows = lp->rows;
+#endif
+   nrows = lp->nrows;
    lpirows = lp->lpirows;
 
    /* get temporary memory */
@@ -14320,7 +14336,9 @@ SCIP_RETCODE SCIPlpRemoveRedundantRows(
    SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    )
 {
+#ifndef NDEBUG
    SCIP_ROW** rows;
+#endif
    SCIP_ROW** lpirows;
    int* rowdstat;
    int nrows;
@@ -14339,8 +14357,10 @@ SCIP_RETCODE SCIPlpRemoveRedundantRows(
    if( lp->firstnewrow == lp->nrows )
       return SCIP_OKAY;
 
-   nrows = lp->nrows;
+#ifndef NDEBUG
    rows = lp->rows;
+#endif
+   nrows = lp->nrows;
    lpirows = lp->lpirows;
 
    /* get temporary memory */

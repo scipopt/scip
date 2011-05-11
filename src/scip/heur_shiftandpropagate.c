@@ -722,8 +722,10 @@ SCIP_Real retransformVariable(
    SCIP_Real             solvalue            /**< solution value of the variable */
    )
 {
+#ifndef NDEBUG
    SCIP_Real lb;
    SCIP_Real ub;
+#endif
    TRANSFORMSTATUS status;
 
    assert(matrix != NULL);
@@ -731,9 +733,11 @@ SCIP_Real retransformVariable(
 
    status = matrix->transformstatus[varindex];
 
+#ifndef NDEBUG
    /* get variables position and status */
    lb = SCIPvarGetLbLocal(var);
    ub = SCIPvarGetUbLocal(var);
+#endif
 
    assert(status != TRANSFORMSTATUS_NONE);
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);

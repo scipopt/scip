@@ -3428,7 +3428,6 @@ SCIP_RETCODE normalizeCons(
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_VAR** vars;
    SCIP_Real* vals;
    SCIP_Longint scm;
    SCIP_Longint nominator;
@@ -3461,10 +3460,9 @@ SCIP_RETCODE normalizeCons(
       return SCIP_OKAY;
 
    /* get coefficient arrays */
-   vars = consdata->vars;
    vals = consdata->vals;
    nvars = consdata->nvars;
-   assert(nvars == 0 || vars != NULL);
+   assert(nvars == 0 || consdata->vars != NULL);
    assert(nvars == 0 || vals != NULL);
 
    /* calculate the maximal multiplier for common divisor calculation:
@@ -4032,7 +4030,9 @@ SCIP_RETCODE resolvePropagation(
 {
    SCIP_CONSDATA* consdata;
    SCIP_VAR** vars;
+#ifndef NDEBUG
    SCIP_Real* vals;
+#endif
    int nvars;
    int inferpos;
 
@@ -4043,10 +4043,12 @@ SCIP_RETCODE resolvePropagation(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    vars = consdata->vars;
-   vals = consdata->vals;
    nvars = consdata->nvars;
-   assert(vars != NULL);
+#ifndef NDEBUG
+   vals = consdata->vals;
    assert(vals != NULL);
+#endif
+   assert(vars != NULL);
 
    /* get the position of the inferred variable in the vars array */
    inferpos = inferInfoGetPos(inferinfo);
@@ -7671,7 +7673,9 @@ SCIP_RETCODE preprocessConstraintPairs(
       {
          SCIP_CONS* consstay;
          SCIP_CONS* consdel;
+#ifndef NDEBUG
          SCIP_CONSDATA* consdatastay;
+#endif
          SCIP_CONSDATA* consdatadel;
          SCIP_Real lhs;
          SCIP_Real rhs;
@@ -7711,7 +7715,9 @@ SCIP_RETCODE preprocessConstraintPairs(
          {
             assert(!consdata1->upgraded);
             consstay = cons1;
+#ifndef NDEBUG
             consdatastay = consdata1;
+#endif
 
             consdel = cons0;
             consdatadel = consdata0;
@@ -7720,7 +7726,9 @@ SCIP_RETCODE preprocessConstraintPairs(
          else
          {
             consstay = cons0;
+#ifndef NDEBUG
             consdatastay = consdata0;
+#endif
 
             consdel = cons1;
             consdatadel = consdata1;
@@ -8855,7 +8863,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolLinear)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpLinear)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool violated;
    int c;
 
@@ -8863,9 +8870,6 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinear)
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    /*debugMessage("Enfolp method of linear constraints\n");*/
 

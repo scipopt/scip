@@ -1134,8 +1134,10 @@ SCIP_RETCODE resolvePropagation(
       int k;
       int p1;
       int p2;
+#ifndef NDEBUG
       int pos1;
       int pos2;
+#endif
 #ifdef SCIP_DEBUG
       char str[SCIP_MAXSTRLEN];
       char tmpstr[SCIP_MAXSTRLEN];
@@ -1158,8 +1160,10 @@ SCIP_RETCODE resolvePropagation(
 
       p1 = i-1;
       p2 = j-1;
+#ifndef NDEBUG
       pos1 = -1;
       pos2 = -1;
+#endif
       do
       {
 	 assert( cases[p1][p2] != -1 );
@@ -1183,6 +1187,7 @@ SCIP_RETCODE resolvePropagation(
 	       (void) strncat(str, tmpstr, SCIP_MAXSTRLEN);
 #endif
 	    }
+#ifndef NDEBUG
 	    else
 	    {
 	       assert( SCIPvarGetLbAtIndex(vars[p1][p2], bdchgidx, FALSE) < 0.5 );
@@ -1190,6 +1195,8 @@ SCIP_RETCODE resolvePropagation(
 	       pos1 = p1;
 	       pos2 = p2;
 	    }
+#endif
+
 	    if ( cases[p1][p2] == 3 )
 	       break;
 	 }

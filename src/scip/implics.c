@@ -2054,6 +2054,7 @@ void SCIPcliquelistCheck(
    SCIP_VAR*             var                 /**< variable, the clique list belongs to */
    )
 {
+#ifndef NDEBUG
    int value;
 
    assert(SCIPvarGetNCliques(var, FALSE) == SCIPcliquelistGetNCliques(cliquelist, FALSE));
@@ -2082,6 +2083,7 @@ void SCIPcliquelistCheck(
          assert(clique->values[pos] == (SCIP_Bool)value);
       }
    }
+#endif
 }
 
 /** gets the number of cliques stored in the clique table */

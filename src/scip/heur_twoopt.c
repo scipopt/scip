@@ -1077,7 +1077,9 @@ SCIP_RETCODE optimize(
             SCIP_VAR* slave;
             SCIP_Real slaveobj;
             SCIP_Bool feasible;
+#ifndef NDEBUG
             SCIP_Real changedobj;
+#endif
 
             assert(SCIPisFeasGT(scip, bestbound, 0.0));
 
@@ -1089,10 +1091,11 @@ SCIP_RETCODE optimize(
                SCIPvarGetName(master), SCIPgetSolVal(scip, worksol, master), SCIPvarGetName(slave), SCIPgetSolVal(scip, worksol, slave),
                masterobj, slaveobj, mastersolval + (int)bestmasterdir * bestbound, slavesolval + (int)bestslavedir * bestbound);
 
+#ifndef NDEBUG
             /* the improvement of objective function is calculated */
             changedobj = ((int)bestslavedir * slaveobj  + (int)bestmasterdir *  masterobj) * bestbound;
-	  	  
             assert(SCIPisFeasLT(scip, changedobj, 0.0));
+#endif
             assert(SCIPvarGetStatus(master) == SCIP_VARSTATUS_COLUMN && SCIPvarGetStatus(slave) == SCIP_VARSTATUS_COLUMN);
             /* try to change the solution values of the variables */
             feasible = FALSE;

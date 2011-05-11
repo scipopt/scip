@@ -1607,6 +1607,7 @@ SCIP_DECL_HEURFREE(heurFreeSubNlp)
 
 
 /** initialization method of primal heuristic (called after problem was transformed) */
+#if 0
 static
 SCIP_DECL_HEURINIT(heurInitSubNlp)
 {
@@ -1620,8 +1621,12 @@ SCIP_DECL_HEURINIT(heurInitSubNlp)
 
    return SCIP_OKAY;
 }
+#else
+#define heurInitSubNlp NULL
+#endif
 
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
+#if 0
 static
 SCIP_DECL_HEUREXIT(heurExitSubNlp)
 {
@@ -1635,6 +1640,9 @@ SCIP_DECL_HEUREXIT(heurExitSubNlp)
 
    return SCIP_OKAY;
 }
+#else
+#define heurExitSubNlp NULL
+#endif
 
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
 static

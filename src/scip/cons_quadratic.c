@@ -4868,7 +4868,6 @@ SCIP_RETCODE registerVariableInfeasibilities(
    int*                  nnotify             /**< counter for number of notifications performed */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
    int                c;
    int                j;
@@ -4884,9 +4883,6 @@ SCIP_RETCODE registerVariableInfeasibilities(
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(conss != NULL || nconss == 0);
-   
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
    
    *nnotify = 0;
 
@@ -5663,7 +5659,6 @@ SCIP_RETCODE propagateBounds(
   )
 {  /*lint --e{666}*/
    SCIP_CONSDATA*     consdata;
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_INTERVAL      consbounds;    /* lower and upper bounds of constraint */
    SCIP_Real          intervalinfty; /* infinity used for interval computation */  
    int                linminactinf;  /* number of linear variables that contribute -infinity to minimal activity of linear term */
@@ -5688,9 +5683,6 @@ SCIP_RETCODE propagateBounds(
    assert(cons != NULL);
    assert(result != NULL);
    assert(nchgbds != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -6358,16 +6350,12 @@ SCIP_DECL_CONSEXIT(consExitQuadratic)
 static
 SCIP_DECL_CONSINITPRE(consInitpreQuadratic)
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    int c;
    
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(conss != NULL || nconss == 0);
-   
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
    
    *result = SCIP_FEASIBLE;
 

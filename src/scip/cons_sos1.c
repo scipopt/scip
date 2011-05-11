@@ -1691,7 +1691,7 @@ SCIP_DECL_CONSLOCK(consLockSOS1)
    for (j = 0; j < consdata->nVars; ++j)
    {
       SCIP_VAR* var;
-      var = consdata->Vars[j];
+      var = Vars[j];
 
       /* if lower bound is negative, rounding down may violate constraint */
       if ( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)) )
