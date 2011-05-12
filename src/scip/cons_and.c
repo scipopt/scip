@@ -85,6 +85,10 @@ struct SCIP_ConsData
    unsigned int          sorted:1;           /**< are the constraint's variables sorted? */
    unsigned int          changed:1;          /**< was constraint changed since last pair preprocessing round? */
    unsigned int          merged:1;           /**< are the constraint's equal variables already merged? */
+   unsigned int          checkwhenupgr:1;    /**< if and constraint is upgraded to an logicor constraint or the and-
+                                              *   constraint is linearized, should the check flag set to true, even if
+                                              *   the and-constraint ha a check flag false
+                                              */
 };
 
 /** constraint handler data */
@@ -414,6 +418,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->sorted = FALSE;
    (*consdata)->changed = TRUE;
    (*consdata)->merged = FALSE;
+   (*consdata)->checkwhenupgr = FALSE;
 
    /* get transformed variables, if we are in the transformed problem */
    if( SCIPisTransformed(scip) )
@@ -1436,7 +1441,7 @@ SCIP_RETCODE propagateCons(
          
          SCIP_VAR** consvars;
          SCIP_CONS* lincons;
-         
+
          assert(SCIPvarGetUbGlobal(resvar) < 0.5);
          
          SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nvars) );
@@ -1449,7 +1454,7 @@ SCIP_RETCODE propagateCons(
 
          /* create, add, and release the logicor constraint */
          SCIP_CALL( SCIPcreateConsLogicor(scip, &lincons, SCIPconsGetName(cons), nvars, consvars,
-               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), TRUE/*SCIPconsIsChecked(cons)*/,
+               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), consdata->checkwhenupgr | SCIPconsIsChecked(cons),
                SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), 
                SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
          SCIP_CALL( SCIPaddCons(scip, lincons) );
@@ -2041,7 +2046,7 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
    
    if( conshdlrdata->linearize )
    {
-      /* linearize all "and" constraints  and remove the "and" constraints */
+      /* linearize all "and" constraints and remove the "and" constraints */
       SCIP_CONS* newcons;
       SCIP_CONS* cons;
       SCIP_CONSDATA* consdata;
@@ -2082,7 +2087,7 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
             
                SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, consname, 2, vars, vals, -SCIPinfinity(scip), 0.0,
                      SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-                     SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), 
+                     consdata->checkwhenupgr | SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), 
                      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
                      SCIPconsIsStickingAtNode(cons)) );
                
@@ -2113,7 +2118,7 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
 
             SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, consname, nvars + 1, vars, vals, -SCIPinfinity(scip), 0.0,
                   SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-                  SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), 
+                  consdata->checkwhenupgr | SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), 
                   SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
                   SCIPconsIsStickingAtNode(cons)) );
 
@@ -2129,7 +2134,7 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
 
          SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, consname, nvars + 1, vars, vals, -nvars + 1.0, SCIPinfinity(scip),
                SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), 
+               consdata->checkwhenupgr | SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), 
                SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
                SCIPconsIsStickingAtNode(cons)) );
          
@@ -3053,6 +3058,36 @@ SCIP_RETCODE SCIPsortAndCons(
 
    SCIP_CALL( consdataSort(scip, consdata) );
    assert(consdata->sorted);
+
+   return SCIP_OKAY;
+}
+
+/* changes the check flag for all constraints created out of the given and-constraint, even if the check flag of this
+ * and-constraint is set to FALSE
+ */
+SCIP_RETCODE SCIPchgAndConsCheckFlagWhenUpgr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_Bool             flag                /**< should an arising constraint from the given and-constraint be checked,
+                                              *   even if the check flag of the and-constraint is set to FALSE
+                                              */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not an and constraint\n");
+      SCIPABORT();
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   consdata->checkwhenupgr = flag;
 
    return SCIP_OKAY;
 }

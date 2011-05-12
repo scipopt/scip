@@ -105,6 +105,18 @@ SCIP_RETCODE SCIPsortAndCons(
    SCIP_CONS*            cons                /**< and-constraint */
    );
 
+/* changes the check flag for all constraints created out of the given and-constraint, even if the check flag of this
+ * and-constraint is set to FALSE
+ */
+extern
+SCIP_RETCODE SCIPchgAndConsCheckFlagWhenUpgr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_Bool             flag                /**< should an arising constraint from the given and-constraint be checked,
+                                              *   even if the check flag of the and-constraint is set to FALSE
+                                              */
+   );
+
 #ifdef __cplusplus
 }
 #endif
