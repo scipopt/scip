@@ -1295,7 +1295,9 @@ SCIP_RETCODE SCIPconflictFlushConss(
       SCIP_CONFLICTSET* repropconflictset;
       int nconflictsetsused;
       int focusdepth;
+#ifndef NDEBUG
       int currentdepth;
+#endif
       int cutoffdepth;
       int repropdepth;
       int maxconflictsets;
@@ -1307,9 +1309,11 @@ SCIP_RETCODE SCIPconflictFlushConss(
       maxsize = conflictCalcMaxsize(set, prob);
 
       focusdepth = SCIPtreeGetFocusDepth(tree);
+#ifndef NDEBUG
       currentdepth = SCIPtreeGetCurrentDepth(tree);
       assert(focusdepth <= currentdepth);
       assert(currentdepth == tree->pathlen-1);
+#endif
 
       SCIPdebugMessage("flushing %d conflict sets at focus depth %d (maxconflictsets: %d, maxsize: %d)\n",
          conflict->nconflictsets, focusdepth, maxconflictsets, maxsize);

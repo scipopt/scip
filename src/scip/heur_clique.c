@@ -494,12 +494,14 @@ SCIP_DECL_HEURINIT(heurInitClique)
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
 
-   /* free heuristic data */
+   /* reset heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
    /* set the seed value to the initial random seed value */
    heurdata->seed = (unsigned int) heurdata->initseed;
+
+   heurdata->usednodes = 0;
 
    return SCIP_OKAY;
 }
@@ -525,7 +527,9 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    int nbinvars;
    int* cliquepartition;
    int ncliques;
+#if 0
    SCIP_Longint tmpnnodes;
+#endif
    SCIP_Bool cutoff;
    SCIP_Bool backtrackcutoff;
    SCIP_Bool lperror;
@@ -993,9 +997,9 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    SCIPfreeBufferArray(scip, &cliquepartition);
    SCIPfreeBufferArray(scip, &binvars);
 
+#if 0
    /* calculate next node number to run this heuristic */
    tmpnnodes = (SCIP_Longint) SCIPceil(scip, heurdata->nnodefornextrun * heurdata->multiplier);
-#if 0
    heurdata->nnodefornextrun = MIN(tmpnnodes, INT_MAX);
    SCIPdebugMessage("Next run will be at node %lld.\n", heurdata->nnodefornextrun);
 #endif

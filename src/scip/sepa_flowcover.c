@@ -1222,7 +1222,9 @@ SCIP_RETCODE getFlowCover(
    SCIP_Real n2itemsminweight;
    SCIP_Real scalar;
    SCIP_Real transcapacityreal;
+#if !defined(NDEBUG) || defined(SCIP_DEBUG)
    SCIP_Bool kpexact;
+#endif
    SCIP_Bool scalesuccess;
    SCIP_Bool transweightsrealintegral;
    SCIP_Longint transcapacityint;
@@ -1265,7 +1267,9 @@ SCIP_RETCODE getFlowCover(
    nflowcovervarsafterfix = 0;
    nnonflowcovervarsafterfix = 0;
    flowcoverweightafterfix = 0.0;
+#if !defined(NDEBUG) || defined(SCIP_DEBUG)
    kpexact = FALSE;
+#endif
 
    /* fix some variables in advance according to the following fixing strategy
     *   put j into N1\C1,          if j in N1 and x*_j = 0, 
@@ -1475,8 +1479,10 @@ SCIP_RETCODE getFlowCover(
             SCIP_CALL(SCIPsolveKnapsackApproximatelyLT(scip, nitems, transweightsreal, transprofitsreal, 
                   transcapacityreal, items, solitems, nonsolitems, &nsolitems, &nnonsolitems, NULL));
          }
+#if !defined(NDEBUG) || defined(SCIP_DEBUG)
          else
             kpexact = TRUE;
+#endif
       }
       else
       {
@@ -1508,7 +1514,9 @@ SCIP_RETCODE getFlowCover(
       /* solve KP^SNF_rat approximately */
       SCIP_CALL(SCIPsolveKnapsackApproximatelyLT(scip, nitems, transweightsreal, transprofitsreal, transcapacityreal, 
             items, solitems, nonsolitems, &nsolitems, &nnonsolitems, NULL));
+#if !defined(NDEBUG) || defined(SCIP_DEBUG)
       kpexact = FALSE;
+#endif
       
       /* build the flow cover from the solution of KP^SNF_rat and the fixing */
       *nflowcovervars = nflowcovervarsafterfix;

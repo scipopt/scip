@@ -1465,7 +1465,9 @@ SCIP_RETCODE processFixings(
          {
             SCIP_VAR** vars;
             SCIP_VAR* var;
+#ifndef NDEBUG
             SCIP_Bool fixedonefound;
+#endif
             SCIP_Bool fixed;
             SCIP_Bool infeasible;
             SCIP_Bool tightened;
@@ -1481,7 +1483,9 @@ SCIP_RETCODE processFixings(
              */
             vars = consdata->vars;
             nvars = consdata->nvars;
+#ifndef NDEBUG
             fixedonefound = FALSE;
+#endif
             fixed = FALSE;
             for( v = 0; v < nvars && consdata->nfixedones == 1; ++v )
             {
@@ -1494,8 +1498,10 @@ SCIP_RETCODE processFixings(
                   fixed = fixed || tightened;
                   SCIPdebugMessage("   -> fixed <%s> to zero (tightened=%u)\n", SCIPvarGetName(var), tightened);
                }
+#ifndef NDEBUG
                else
                   fixedonefound = TRUE;
+#endif
             }
             /* the fixed to one variable must have been found, and at least one variable must have been fixed */
             assert(consdata->nfixedones >= 2 || (fixedonefound && fixed));
@@ -1897,7 +1903,9 @@ SCIP_DECL_HASHGETKEY(hashGetKeySetppccons)
 static
 SCIP_DECL_HASHKEYEQ(hashKeyEqSetppccons)
 {
+#ifndef NDEBUG
    SCIP* scip;
+#endif
    SCIP_CONSDATA* consdata1;
    SCIP_CONSDATA* consdata2;
    SCIP_Bool coefsequal;
@@ -1907,8 +1915,10 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqSetppccons)
    consdata2 = SCIPconsGetData((SCIP_CONS*)key2);
    assert(consdata1->sorted);
    assert(consdata2->sorted);
+#ifndef NDEBUG
    scip = (SCIP*)userptr; 
    assert(scip != NULL);
+#endif
    
    /* checks trivial case */
    if( consdata1->nvars != consdata2->nvars )
@@ -3928,12 +3938,16 @@ SCIP_DECL_CONSRESPROP(consRespropSetppc)
       || ((SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING
          && SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > 0.5) )
    {
+#ifndef NDEBUG
       SCIP_Bool confvarfound;
+#endif
 
       /* the inference constraint is a set partitioning or covering constraint with the inference variable infered to 1.0:
        * the reason for the deduction is the assignment of 0.0 to all other variables
        */
+#ifndef NDEBUG
       confvarfound = FALSE;
+#endif
       for( v = 0; v < consdata->nvars; ++v )
       {
          if( consdata->vars[v] != infervar )

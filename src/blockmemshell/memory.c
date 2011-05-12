@@ -273,6 +273,34 @@ long long BMSgetMemoryUsed_call(
 
 #endif
 
+/** allocates memory and initializes it with 0; returns NULL if memory allocation failed */
+void* BMSallocClearMemory_call(
+   size_t                num,                /**< number of memory element to allocate */
+   size_t                size,               /**< size of one memory element to allocate */
+   const char*           filename,           /**< source file where the allocation is performed */
+   int                   line                /**< line number in source file where the allocation is performed */
+   )
+{
+   void* ptr;
+
+   debugMessage("calloc %lld elements of %lld bytes [%s:%d]\n", (long long) num, (long long)size, filename, line);
+
+   num = MAX(num, 1);
+   size = MAX(size, 1);
+   ptr = calloc(num, size);
+
+   if( ptr == NULL )
+   {
+      printErrorHeader(filename, line);
+      printError("Insufficient memory for allocation of %lld bytes\n", ((long long) num) * ((long long) size));
+   }
+#ifndef NDEBUG
+   else
+      addMemlistEntry(ptr, num*size, filename, line);
+#endif
+
+   return ptr;
+}
 
 /** allocates memory; returns NULL if memory allocation failed */
 void* BMSallocMemory_call(

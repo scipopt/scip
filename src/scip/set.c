@@ -698,7 +698,6 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->limitchanged = FALSE;
    (*set)->continnonlinpresent = FALSE;
    (*set)->nonlinearitypresent = FALSE;
-   (*set)->nlprequired = FALSE;
    (*set)->extcodenames = NULL;
    (*set)->extcodedescs = NULL;
    (*set)->nextcodes = 0;

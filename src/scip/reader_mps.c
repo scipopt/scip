@@ -2983,7 +2983,9 @@ void printRhsSection(
 {
    int c;
    int recordcnt;
+#ifndef NDEBUG
    SCIP_CONS* cons;
+#endif
 
    assert( rhss != NULL );
 
@@ -2995,8 +2997,10 @@ void printRhsSection(
    /* take care of the linear constraints */
    for( c = 0; c < nconss; ++c )
    {
+#ifndef NDEBUG
       cons = conss[c];
       assert( cons != NULL );
+#endif
 
       /* skip all contraints which have a right hand side of infinity */
       if( SCIPisInfinity(scip, rhss[c]) )
@@ -3007,7 +3011,6 @@ void printRhsSection(
        */
       assert(!transformed || SCIPconsIsEnabled(cons));
       
-      assert( conss[c] != NULL );
       assert( consnames[c] != NULL );
       assert( !SCIPisInfinity(scip, rhss[c]) );
       

@@ -207,15 +207,19 @@ SCIP_DECL_HASHGETKEY(hashGetKeyAndConsDatas)
 static
 SCIP_DECL_HASHKEYEQ(hashKeyEqAndConsDatas)
 {
+#ifndef NDEBUG
    SCIP* scip;
+#endif
    CONSANDDATA* cdata1;
    CONSANDDATA* cdata2;
    int v;
 
    cdata1 = (CONSANDDATA*)key1;
    cdata2 = (CONSANDDATA*)key2;
-   scip = (SCIP*)userptr; 
 
+#ifndef NDEBUG
+   scip = (SCIP*)userptr; 
+#endif
    assert(scip != NULL);
    assert(cdata1 != NULL);
    assert(cdata2 != NULL);
@@ -1204,8 +1208,7 @@ SCIP_RETCODE consdataPrint(
 
          /* @todo: better write new method SCIPwriteProduct */
          /* print variable list */
-         //         SCIP_CALL( SCIPwriteVarsList(scip, file, andvars, nandvars, '*', TRUE) );
-         SCIP_CALL( SCIPwriteVarsList(scip, file, andvars, nandvars, TRUE) );
+         SCIP_CALL( SCIPwriteVarsList(scip, file, andvars, nandvars, '*', TRUE) );
       }
    }
    
@@ -6249,7 +6252,9 @@ SCIP_DECL_CONSPRESOL(consPresolPseudoboolean)
    for( c = 0; c < nconss && !cutoff && !SCIPisStopped(scip); ++c )
    {
       SCIP_CONS* cons;
+#ifndef NDEBUG
       SCIP_CONSDATA* consdata;
+#endif
       SCIP_VAR** vars;
       SCIP_Real* coefs;
       int nvars;
@@ -6266,7 +6271,9 @@ SCIP_DECL_CONSPRESOL(consPresolPseudoboolean)
       assert(cons != NULL);
       assert(SCIPconsIsActive(cons));
 
+#ifndef NDEBUG
       consdata = SCIPconsGetData(cons);
+#endif
       assert(consdata != NULL);
       assert(consdata->lincons != NULL);
 

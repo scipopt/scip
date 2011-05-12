@@ -921,7 +921,7 @@ const char* SCIPlpiGetSolverDesc(
    void
    )
 {
-   return "Linear Programming Solver developed by IBM (www-01.ibm.com/software/integration/optimization/cplex-optimizer)";
+   return "Linear Programming Solver developed by IBM (www.cplex.com)";
 }
 
 /** gets pointer for LP solver - use only with great care 

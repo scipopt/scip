@@ -1235,7 +1235,6 @@ SCIP_DECL_CONSFREE(consFreeCountsols)
    /* free constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-   assert(&conshdlrdata != NULL);
 
    /* free conshdlrdata */
    freeInt(&conshdlrdata->nsols);
@@ -2036,13 +2035,17 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
                SCIP_VAR** origvars;
                SCIP_VAR* var;
                const char* varname;
+#ifndef NDEBUG
                int norigvars;
+#endif
                int v;
                
                /* get original problem variables */
                origvars = SCIPgetOrigVars(scip);
+#ifndef NDEBUG
                norigvars = SCIPgetNOrigVars(scip);
                assert(norigvars == nvars);
+#endif
 
                SCIPdialogMessage(scip, NULL, "saving %"SCIP_LONGINT_FORMAT" (%d) feasible solutions\n", nsols, nsparsesols);
                
@@ -2171,7 +2174,9 @@ SCIP_RETCODE createCountDialog(
 static
 SCIP_DECL_DISPOUTPUT(dispOutputSols)
 {  /*lint --e{715}*/
+#ifndef NDEBUG
    SCIP_CONSHDLR* conshdlr;
+#endif
    SCIP_Longint sols;
    SCIP_Bool valid;
 
@@ -2179,9 +2184,11 @@ SCIP_DECL_DISPOUTPUT(dispOutputSols)
    assert(strcmp(SCIPdispGetName(disp), DISP_SOLS_NAME) == 0);
    assert(scip != NULL);
    
+#ifndef NDEBUG
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    assert( conshdlr != NULL );
    assert( SCIPconshdlrGetNConss(conshdlr) == 0 );
+#endif
    
    sols = SCIPgetNCountedSols(scip, &valid);
    
@@ -2202,15 +2209,19 @@ SCIP_DECL_DISPOUTPUT(dispOutputSols)
 static
 SCIP_DECL_DISPOUTPUT(dispOutputFeasSubtrees)
 { /*lint --e{715}*/
+#ifndef NDEBUG
    SCIP_CONSHDLR* conshdlr;
+#endif
    
    assert(disp != NULL);
    assert(scip != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_CUTS_NAME) == 0);
    
+#ifndef NDEBUG
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    assert( conshdlr != NULL );
    assert( SCIPconshdlrGetNConss(conshdlr) == 0 );
+#endif
    
    SCIPdispLongint(file, SCIPgetNCountedFeasSubtrees(scip), DISP_CUTS_WIDTH);
    

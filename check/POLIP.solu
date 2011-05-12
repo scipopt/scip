@@ -1,238 +1,259 @@
-=unkn= bernasconi.20.10
-=unkn= bernasconi.20.15
-=unkn= bernasconi.20.20
-=unkn= bernasconi.20.3
-=unkn= bernasconi.20.5
-=unkn= bernasconi.25.13
-=unkn= bernasconi.25.19
-=unkn= bernasconi.25.25
-=unkn= bernasconi.25.3
-=unkn= bernasconi.25.6
-=unkn= bernasconi.30.15
-=unkn= bernasconi.30.23
-=unkn= bernasconi.30.30
-=unkn= bernasconi.30.4
-=unkn= bernasconi.30.8
-=unkn= bernasconi.35.18
-=unkn= bernasconi.35.26
-=unkn= bernasconi.35.35
-=unkn= bernasconi.35.4
-=unkn= bernasconi.35.9
-=unkn= bernasconi.40.10
-=unkn= bernasconi.40.20
-=unkn= bernasconi.40.30
-=unkn= bernasconi.40.40
-=unkn= bernasconi.40.5
-=unkn= bernasconi.45.11
-=unkn= bernasconi.45.23
-=unkn= bernasconi.45.34
-=unkn= bernasconi.45.45
-=unkn= bernasconi.45.5
-=unkn= bernasconi.50.13
-=unkn= bernasconi.50.25
-=unkn= bernasconi.50.38
-=unkn= bernasconi.50.50
-=unkn= bernasconi.50.6
-=unkn= bernasconi.55.14
-=unkn= bernasconi.55.28
-=unkn= bernasconi.55.41
-=unkn= bernasconi.55.55
-=unkn= bernasconi.55.6
-=unkn= bernasconi.60.15
-=unkn= bernasconi.60.30
-=unkn= bernasconi.60.45
-=unkn= bernasconi.60.60
-=unkn= bernasconi.60.8
-=unkn= bip_cross_min.10.10.10.1
-=unkn= bip_cross_min.10.10.20.1
-=unkn= bip_cross_min.10.10.30.1
-=unkn= bip_cross_min.10.10.40.1
-=unkn= bip_cross_min.10.10.50.1
-=unkn= bip_cross_min.10.10.60.1
-=unkn= bip_cross_min.10.10.70.1
-=unkn= bip_cross_min.10.10.80.1
-=unkn= bip_cross_min.10.10.90.1
-=unkn= bip_cross_min.12.12.100.1
-=unkn= bip_cross_min.12.12.115.1
-=unkn= bip_cross_min.12.12.129.1
-=unkn= bip_cross_min.12.12.14.1
-=unkn= bip_cross_min.12.12.28.1
-=unkn= bip_cross_min.12.12.43.1
-=unkn= bip_cross_min.12.12.57.1
-=unkn= bip_cross_min.12.12.72.1
-=unkn= bip_cross_min.12.12.86.1
-=unkn= bip_cross_min.14.14.117.1
-=unkn= bip_cross_min.14.14.137.1
-=unkn= bip_cross_min.14.14.156.1
-=unkn= bip_cross_min.14.14.176.1
-=unkn= bip_cross_min.14.14.19.1
-=unkn= bip_cross_min.14.14.39.1
-=unkn= bip_cross_min.14.14.58.1
-=unkn= bip_cross_min.14.14.78.1
-=unkn= bip_cross_min.14.14.98.1
-=unkn= bip_cross_min.16.16.102.1
-=unkn= bip_cross_min.16.16.128.1
-=unkn= bip_cross_min.16.16.153.1
-=unkn= bip_cross_min.16.16.179.1
-=unkn= bip_cross_min.16.16.204.1
-=unkn= bip_cross_min.16.16.230.1
-=unkn= bip_cross_min.16.16.25.1
-=unkn= bip_cross_min.16.16.51.1
-=unkn= bip_cross_min.16.16.76.1
-=unkn= bip_cross_min.18.18.32.1
-=unkn= bip_cross_min.18.18.64.1
-=unkn= bip_cross_min.20.20.40.1
-=unkn= bip_cross_min.20.20.80.1
-=unkn= bip_cross_min.22.22.48.1
-=unkn= bip_cross_min.22.22.96.1
-=unkn= bip_cross_min.24.24.115.1
-=unkn= bip_cross_min.24.24.57.1
-=opt= data_2g_1010_824.dimacs -7024864 
-=opt=  data_2g_44_1601.dimacs  -954077
-=opt=  data_2g_55_62.dimacs    -1484348
-=opt=  data_2g_66_66.dimacs    -2865560
-=opt=  data_2g_77_77.dimacs    -3282435
-=opt=  data_2g_88_88.dimacs    -5935341
-=opt=  data_2g_99_9211.dimacs  -5070020
-=opt=  data_2pm_44_44.dimacs   -13
-=opt=  data_2pm_55_55.dimacs   -20
-=opt=  data_2pm_66_66.dimacs   -29
-=opt=  data_2pm_77_777.dimacs  -40
-=opt=  data_2pm_88_888.dimacs  -55
-=opt=  data_2pm_99_999.dimacs  -64
-=opt=  data_3g_234_234.dimacs  -1952753
-=opt=  data_3g_244_244.dimacs  -2725383
-=opt=  data_3g_333_333.dimacs  -1882389
-=opt=  data_3g_334_334.dimacs  -3410696
-=opt=  data_3g_344_344.dimacs  -5301516
-=opt=  data_3g_444_444.dimacs  -7603756
-=opt=  data_3pm_234_234.dimacs   -20
-=opt=  data_3pm_244_244.dimacs   -28
-=opt=  data_3pm_333_333.dimacs   -26
-=opt=  data_3pm_334_334.dimacs   -36
-=opt=  data_3pm_344_344.dimacs   -48
-=best= data_3pm_444_444.dimacs   -65
-=opt=  data_clique_20.dimacs   147
-=opt=  data_clique_30.dimacs   495
-=opt=  data_clique_40.dimacs   1183
-=opt=  data_clique_50.dimacs   2312
-=opt=  data_clique_60.dimacs   3990
-=opt=  data_clique_70.dimacs   6348
-=opt=  ising2.5-100_5555 2460049
-=opt=  ising2.5-150_5555 4363532
-=opt=  ising3.0-100_5555 2448189
-=opt=  ising3.0-150_5555 4279261
-=opt=  t2g10_5555 6049461
-=opt=  t2g15_5555 15051133
-=opt=  t2g20_5555 24838942
-=opt=  t3g5_5555  10933215
-=opt=  t3g6_5555  17434469
-=opt=  t3g7_5555  28302918
-=unkn= small-investor-MVO-DAX30-return_0.0010-budget_10000-11000
-=unkn= small-investor-MVO-DAX30-return_0.0010-budget_1000-1100
-=unkn= small-investor-MVO-DAX30-return_0.0010-budget_15000-16500
-=unkn= small-investor-MVO-DAX30-return_0.0010-budget_20000-22000
-=unkn= small-investor-MVO-DAX30-return_0.0010-budget_2000-2200
-=unkn= small-investor-MVO-DAX30-return_0.0010-budget_5000-5500
-=unkn= small-investor-MVO-DAX30-return_0.0015-budget_10000-11000
-=unkn= small-investor-MVO-DAX30-return_0.0015-budget_1000-1100
-=unkn= small-investor-MVO-DAX30-return_0.0015-budget_15000-16500
-=unkn= small-investor-MVO-DAX30-return_0.0015-budget_20000-22000
-=unkn= small-investor-MVO-DAX30-return_0.0015-budget_2000-2200
-=unkn= small-investor-MVO-DAX30-return_0.0015-budget_5000-5500
-=unkn= small-investor-MVO-DAX30-return_0.0020-budget_10000-11000
-=unkn= small-investor-MVO-DAX30-return_0.0020-budget_1000-1100
-=unkn= small-investor-MVO-DAX30-return_0.0020-budget_15000-16500
-=unkn= small-investor-MVO-DAX30-return_0.0020-budget_20000-22000
-=unkn= small-investor-MVO-DAX30-return_0.0020-budget_2000-2200
-=unkn= small-investor-MVO-DAX30-return_0.0020-budget_5000-5500
-=unkn= small-investor-MVO-DAX30-return_0.0025-budget_10000-11000
-=unkn= small-investor-MVO-DAX30-return_0.0025-budget_1000-1100
-=unkn= small-investor-MVO-DAX30-return_0.0025-budget_15000-16500
-=unkn= small-investor-MVO-DAX30-return_0.0025-budget_20000-22000
-=unkn= small-investor-MVO-DAX30-return_0.0025-budget_2000-2200
-=unkn= small-investor-MVO-DAX30-return_0.0025-budget_5000-5500
-=unkn= small-investor-MVO-DAX30-return_0.0030-budget_10000-11000
-=unkn= small-investor-MVO-DAX30-return_0.0030-budget_1000-1100
-=unkn= small-investor-MVO-DAX30-return_0.0030-budget_15000-16500
-=unkn= small-investor-MVO-DAX30-return_0.0030-budget_20000-22000
-=unkn= small-investor-MVO-DAX30-return_0.0030-budget_2000-2200
-=unkn= small-investor-MVO-DAX30-return_0.0030-budget_5000-5500
-=unkn= small-investor-MVO-DAX30-return_0.0035-budget_10000-11000
-=unkn= small-investor-MVO-DAX30-return_0.0035-budget_1000-1100
-=unkn= small-investor-MVO-DAX30-return_0.0035-budget_15000-16500
-=unkn= small-investor-MVO-DAX30-return_0.0035-budget_20000-22000
-=unkn= small-investor-MVO-DAX30-return_0.0035-budget_2000-2200
-=unkn= small-investor-MVO-DAX30-return_0.0035-budget_5000-5500
-=unkn= small-investor-MVO-DAX30-return_0.0040-budget_10000-11000
-=unkn= small-investor-MVO-DAX30-return_0.0040-budget_1000-1100
-=unkn= small-investor-MVO-DAX30-return_0.0040-budget_15000-16500
-=unkn= small-investor-MVO-DAX30-return_0.0040-budget_20000-22000
-=unkn= small-investor-MVO-DAX30-return_0.0040-budget_2000-2200
-=unkn= small-investor-MVO-DAX30-return_0.0040-budget_5000-5500
-=unkn= small-investor-MVO-DAX30-return_0.0045-budget_10000-11000
-=unkn= small-investor-MVO-DAX30-return_0.0045-budget_1000-1100
-=unkn= small-investor-MVO-DAX30-return_0.0045-budget_15000-16500
-=unkn= small-investor-MVO-DAX30-return_0.0045-budget_20000-22000
-=unkn= small-investor-MVO-DAX30-return_0.0045-budget_2000-2200
-=unkn= small-investor-MVO-DAX30-return_0.0045-budget_5000-5500
-=unkn= small-investor-MVO-DAX30-return_0.0050-budget_10000-11000
-=unkn= small-investor-MVO-DAX30-return_0.0050-budget_1000-1100
-=unkn= small-investor-MVO-DAX30-return_0.0050-budget_15000-16500
-=unkn= small-investor-MVO-DAX30-return_0.0050-budget_20000-22000
-=unkn= small-investor-MVO-DAX30-return_0.0050-budget_2000-2200
-=unkn= small-investor-MVO-DAX30-return_0.0050-budget_5000-5500
-=unkn= small-investor-MVO-SNP100-return_0.0010-budget_10000-11000
-=unkn= small-investor-MVO-SNP100-return_0.0010-budget_1000-1100
-=unkn= small-investor-MVO-SNP100-return_0.0010-budget_15000-16500
-=unkn= small-investor-MVO-SNP100-return_0.0010-budget_20000-22000
-=unkn= small-investor-MVO-SNP100-return_0.0010-budget_2000-2200
-=unkn= small-investor-MVO-SNP100-return_0.0010-budget_5000-5500
-=unkn= small-investor-MVO-SNP100-return_0.0015-budget_10000-11000
-=unkn= small-investor-MVO-SNP100-return_0.0015-budget_1000-1100
-=unkn= small-investor-MVO-SNP100-return_0.0015-budget_15000-16500
-=unkn= small-investor-MVO-SNP100-return_0.0015-budget_20000-22000
-=unkn= small-investor-MVO-SNP100-return_0.0015-budget_2000-2200
-=unkn= small-investor-MVO-SNP100-return_0.0015-budget_5000-5500
-=unkn= small-investor-MVO-SNP100-return_0.0020-budget_10000-11000
-=unkn= small-investor-MVO-SNP100-return_0.0020-budget_1000-1100
-=unkn= small-investor-MVO-SNP100-return_0.0020-budget_15000-16500
-=unkn= small-investor-MVO-SNP100-return_0.0020-budget_20000-22000
-=unkn= small-investor-MVO-SNP100-return_0.0020-budget_2000-2200
-=unkn= small-investor-MVO-SNP100-return_0.0020-budget_5000-5500
-=unkn= small-investor-MVO-SNP100-return_0.0025-budget_10000-11000
-=unkn= small-investor-MVO-SNP100-return_0.0025-budget_1000-1100
-=unkn= small-investor-MVO-SNP100-return_0.0025-budget_15000-16500
-=unkn= small-investor-MVO-SNP100-return_0.0025-budget_20000-22000
-=unkn= small-investor-MVO-SNP100-return_0.0025-budget_2000-2200
-=unkn= small-investor-MVO-SNP100-return_0.0025-budget_5000-5500
-=unkn= small-investor-MVO-SNP100-return_0.0030-budget_10000-11000
-=unkn= small-investor-MVO-SNP100-return_0.0030-budget_1000-1100
-=unkn= small-investor-MVO-SNP100-return_0.0030-budget_15000-16500
-=unkn= small-investor-MVO-SNP100-return_0.0030-budget_20000-22000
-=unkn= small-investor-MVO-SNP100-return_0.0030-budget_2000-2200
-=unkn= small-investor-MVO-SNP100-return_0.0030-budget_5000-5500
-=unkn= small-investor-MVO-SNP100-return_0.0035-budget_10000-11000
-=unkn= small-investor-MVO-SNP100-return_0.0035-budget_1000-1100
-=unkn= small-investor-MVO-SNP100-return_0.0035-budget_15000-16500
-=unkn= small-investor-MVO-SNP100-return_0.0035-budget_20000-22000
-=unkn= small-investor-MVO-SNP100-return_0.0035-budget_2000-2200
-=unkn= small-investor-MVO-SNP100-return_0.0035-budget_5000-5500
-=unkn= small-investor-MVO-SNP100-return_0.0040-budget_10000-11000
-=unkn= small-investor-MVO-SNP100-return_0.0040-budget_1000-1100
-=unkn= small-investor-MVO-SNP100-return_0.0040-budget_15000-16500
-=unkn= small-investor-MVO-SNP100-return_0.0040-budget_20000-22000
-=unkn= small-investor-MVO-SNP100-return_0.0040-budget_2000-2200
-=unkn= small-investor-MVO-SNP100-return_0.0040-budget_5000-5500
-=unkn= small-investor-MVO-SNP100-return_0.0045-budget_10000-11000
-=unkn= small-investor-MVO-SNP100-return_0.0045-budget_1000-1100
-=unkn= small-investor-MVO-SNP100-return_0.0045-budget_15000-16500
-=unkn= small-investor-MVO-SNP100-return_0.0045-budget_20000-22000
-=unkn= small-investor-MVO-SNP100-return_0.0045-budget_2000-2200
-=unkn= small-investor-MVO-SNP100-return_0.0045-budget_5000-5500
-=unkn= small-investor-MVO-SNP100-return_0.0050-budget_10000-11000
-=unkn= small-investor-MVO-SNP100-return_0.0050-budget_1000-1100
-=unkn= small-investor-MVO-SNP100-return_0.0050-budget_15000-16500
-=unkn= small-investor-MVO-SNP100-return_0.0050-budget_20000-22000
-=unkn= small-investor-MVO-SNP100-return_0.0050-budget_2000-2200
-=unkn= small-investor-MVO-SNP100-return_0.0050-budget_5000-5500
+=opt= bip_cross_min.10.10.10.1                1
+=opt= bip_cross_min.10.10.20.1               11
+=opt= bip_cross_min.10.10.30.1               52
+=opt= bip_cross_min.10.10.40.1              142
+=opt= bip_cross_min.10.10.50.1              276
+=opt= bip_cross_min.10.10.60.1              459
+=opt= bip_cross_min.10.10.70.1              717
+=opt= bip_cross_min.10.10.80.1             1037
+=opt= bip_cross_min.10.10.90.1             1387
+=best= bip_cross_min.12.12.100.1             1596
+=opt= bip_cross_min.12.12.115.1             2233
+=opt= bip_cross_min.12.12.129.1             3061
+=opt= bip_cross_min.12.12.14.1                3
+=opt= bip_cross_min.12.12.28.1               35
+=opt= bip_cross_min.12.12.43.1              166
+=opt= bip_cross_min.12.12.57.1              298
+=opt= bip_cross_min.12.12.72.1              657
+=opt= bip_cross_min.12.12.86.1             1061
+=best= bip_cross_min.14.14.117.1             1973
+=best= bip_cross_min.14.14.137.1             2874
+=best= bip_cross_min.14.14.156.1             4310
+=best= bip_cross_min.14.14.176.1             5875
+=opt= bip_cross_min.14.14.19.1                4
+=opt= bip_cross_min.14.14.39.1              109
+=best= bip_cross_min.14.14.58.1              353
+=best= bip_cross_min.14.14.78.1              725
+=best= bip_cross_min.14.14.98.1             1355
+=best= bip_cross_min.16.16.102.1             1296
+=best= bip_cross_min.16.16.128.1             2355
+=best= bip_cross_min.16.16.153.1             3846
+=best= bip_cross_min.16.16.179.1             5528
+=best= bip_cross_min.16.16.204.1             7607
+=best= bip_cross_min.16.16.230.1            10433
+=opt= bip_cross_min.16.16.25.1               12
+=opt= bip_cross_min.16.16.51.1              155
+=best= bip_cross_min.16.16.76.1              565
+=opt= bip_cross_min.18.18.32.1               12
+=best= bip_cross_min.18.18.64.1              312
+=opt= bip_cross_min.20.20.40.1               57
+=best= bip_cross_min.20.20.80.1              520
+=best= bip_cross_min.22.22.48.1               84
+=best= bip_cross_min.22.22.96.1              962
+=best= bip_cross_min.24.24.115.1             1453
+=best= bip_cross_min.24.24.57.1              184
+=best= data_2g_1010_824.dimacs         -6299521
+=opt= data_2g_44_1601.dimacs          -954077
+=opt= data_2g_55_62.dimacs         -1484348
+=best= data_2g_66_66.dimacs         -2775376
+=best= data_2g_77_77.dimacs         -3192319
+=best= data_2g_88_88.dimacs         -5779849
+=best= data_2g_99_9211.dimacs         -4574989
+=unkn= data_2pm_44_44.dimacs
+=best= data_2pm_55_55.dimacs              -20
+=best= data_2pm_66_66.dimacs              -29
+=best= data_2pm_77_777.dimacs      -38.0000015
+=best= data_2pm_88_888.dimacs      -51.0000038
+=best= data_2pm_99_999.dimacs       -63.000002
+=opt= data_3g_234_234.dimacs         -1952753
+=best= data_3g_244_244.dimacs         -2538521
+=best= data_3g_333_333.dimacs         -1729410
+=best= data_3g_334_334.dimacs         -3410696
+=best= data_3g_344_344.dimacs         -5257797
+=best= data_3g_444_444.dimacs         -7262123
+=best= data_3pm_234_234.dimacs              -20
+=best= data_3pm_244_244.dimacs      -27.0000005
+=best= data_3pm_333_333.dimacs       -25.000001
+=best= data_3pm_334_334.dimacs      -34.0000005
+=best= data_3pm_344_344.dimacs       -45.000001
+=best= data_3pm_444_444.dimacs      -62.0000005
+=best= data_clique_20.dimacs              147
+=best= data_clique_30.dimacs              495
+=best= data_clique_40.dimacs             1183
+=best= data_clique_50.dimacs             2312
+=best= data_clique_60.dimacs             3990
+=best= data_clique_70.dimacs             6348
+=best= ising2.5-100_5555           2436696
+=best= ising2.5-150_5555           4241758
+=best= ising3.0-100_5555           2399600
+=best= ising3.0-150_5555           4150523
+=opt= sched-10-4711                    44
+=opt= sched-12-4711                    68
+=opt= sched-14-4711                    96
+=best= sched-16-4711                   130
+=best= sched-18-4711                   160
+=best= sched-20-4711                   190
+=best= sched-22-4711                   228
+=best= sched-24-4711                   276
+=best= sched-26-4711                   314
+=best= sched-28-4711                   358
+=best= sched-30-4711                   372
+=best= sched-32-4711                   416
+=best= sched-34-4711                   514
+=best= sched-36-4711                   530
+=best= sched-38-4711                   642
+=best= sched-40-4711                   678
+=best= sched-42-4711                   786
+=best= sched-44-4711                    -0
+=opt= sched-4-4711                      4
+=best= sched-46-4711                    32
+=best= sched-48-4711                   948
+=best= sched-50-4711                   144
+=opt= sched-6-4711                     12
+=opt= sched-8-4711                     24
+=best= t2g10_5555                  5868995
+=best= t2g15_5555                 14472741
+=best= t2g20_5555                 21352224
+=best= t3g5_5555                  10835729
+=best= t3g6_5555                  16063921
+=best= t3g7_5555                  24874640
+=best= breast-cancer-wisconsin_q               21
+=unkn= bupa_q            
+=opt= echocardiogram_q                  6
+=unkn= glass_q           
+=best= heart-cleveland_q                50
+=best= ionosphere_q                      9
+=unkn= iris.1_q          
+=opt= iris.2_q                          1
+=unkn= new-thyroid_q     
+=best= pima_q                          768
+=opt= prob.10.30.100.0_q                2
+=opt= prob.10.40.100.0_q                6
+=unkn= prob.10.50.100.0_q
+=unkn= prob.10.60.100.0_q
+=unkn= prob.10.70.100.0_q
+=unkn= prob.10.80.100.0_q
+=unkn= prob.10.90.100.0_q
+=opt= prob.15.40.100.5_q                1
+=opt= prob.15.50.100.0_q                1
+=opt= prob.15.60.100.0_q                3
+=unkn= prob.15.70.100.0_q
+=unkn= prob.15.80.100.0_q
+=unkn= prob.15.90.100.0_q
+=opt= prob.20.50.100.0_q                2
+=opt= prob.20.60.100.0_q                3
+=opt= prob.20.70.100.0_q                5
+=unkn= prob.20.80.100.0_q
+=unkn= prob.20.90.100.0_q
+=unkn= prob.25.70.100.0_q
+=unkn= prob.25.80.100.0_q
+=unkn= prob.25.90.100.0_q
+=opt= prob.5.030.100.0_q                3
+=opt= prob.5.040.100.0_q                8
+=unkn= prob.5.050.100.0_q
+=unkn= prob.5.060.100.0_q
+=unkn= prob.5.070.100.0_q
+=unkn= prob.5.080.100.0_q
+=unkn= prob.5.090.100.0_q
+=unkn= prob.5.100.100.0_q
+=unkn= prob.5.110.100.0_q
+=best= tic-tac-toe_q                   107
+=unkn= wpbc_q            
+=opt= small-investor-MVO-DAX30-return_0.0010-budget_10000-11000       39.1621419
+=opt= small-investor-MVO-DAX30-return_0.0010-budget_1000-1100      0.398797498
+=opt= small-investor-MVO-DAX30-return_0.0010-budget_15000-16500       88.1049347
+=opt= small-investor-MVO-DAX30-return_0.0010-budget_20000-22000       156.604268
+=opt= small-investor-MVO-DAX30-return_0.0010-budget_2000-2200       1.57152728
+=opt= small-investor-MVO-DAX30-return_0.0010-budget_5000-5500       9.79714345
+=opt= small-investor-MVO-DAX30-return_0.0015-budget_10000-11000       39.1621419
+=opt= small-investor-MVO-DAX30-return_0.0015-budget_1000-1100      0.398797498
+=opt= small-investor-MVO-DAX30-return_0.0015-budget_15000-16500       88.1049348
+=opt= small-investor-MVO-DAX30-return_0.0015-budget_20000-22000       156.604268
+=opt= small-investor-MVO-DAX30-return_0.0015-budget_2000-2200       1.57152798
+=opt= small-investor-MVO-DAX30-return_0.0015-budget_5000-5500       9.79714345
+=opt= small-investor-MVO-DAX30-return_0.0020-budget_10000-11000       39.1621419
+=opt= small-investor-MVO-DAX30-return_0.0020-budget_1000-1100      0.398797498
+=best= small-investor-MVO-DAX30-return_0.0020-budget_15000-16500       88.3172884
+=opt= small-investor-MVO-DAX30-return_0.0020-budget_20000-22000       156.604268
+=opt= small-investor-MVO-DAX30-return_0.0020-budget_2000-2200       1.57152798
+=opt= small-investor-MVO-DAX30-return_0.0020-budget_5000-5500       9.79714345
+=opt= small-investor-MVO-DAX30-return_0.0025-budget_10000-11000       39.1621419
+=opt= small-investor-MVO-DAX30-return_0.0025-budget_1000-1100      0.398797497
+=opt= small-investor-MVO-DAX30-return_0.0025-budget_15000-16500       88.1049347
+=opt= small-investor-MVO-DAX30-return_0.0025-budget_20000-22000       156.604268
+=opt= small-investor-MVO-DAX30-return_0.0025-budget_2000-2200       1.57152798
+=opt= small-investor-MVO-DAX30-return_0.0025-budget_5000-5500       9.79714345
+=opt= small-investor-MVO-DAX30-return_0.0030-budget_10000-11000       39.1621419
+=opt= small-investor-MVO-DAX30-return_0.0030-budget_1000-1100      0.398797498
+=opt= small-investor-MVO-DAX30-return_0.0030-budget_15000-16500       88.1049348
+=opt= small-investor-MVO-DAX30-return_0.0030-budget_20000-22000       156.604268
+=opt= small-investor-MVO-DAX30-return_0.0030-budget_2000-2200       1.57152798
+=opt= small-investor-MVO-DAX30-return_0.0030-budget_5000-5500       9.79714345
+=opt= small-investor-MVO-DAX30-return_0.0035-budget_10000-11000       39.1621419
+=opt= small-investor-MVO-DAX30-return_0.0035-budget_1000-1100      0.398797498
+=opt= small-investor-MVO-DAX30-return_0.0035-budget_15000-16500       88.1049348
+=opt= small-investor-MVO-DAX30-return_0.0035-budget_20000-22000       156.604268
+=opt= small-investor-MVO-DAX30-return_0.0035-budget_2000-2200       1.57152744
+=opt= small-investor-MVO-DAX30-return_0.0035-budget_5000-5500       9.79714345
+=opt= small-investor-MVO-DAX30-return_0.0040-budget_10000-11000       39.1621419
+=opt= small-investor-MVO-DAX30-return_0.0040-budget_1000-1100      0.398797498
+=opt= small-investor-MVO-DAX30-return_0.0040-budget_15000-16500       88.1049348
+=best= small-investor-MVO-DAX30-return_0.0040-budget_20000-22000       156.644154
+=opt= small-investor-MVO-DAX30-return_0.0040-budget_2000-2200       1.57152798
+=opt= small-investor-MVO-DAX30-return_0.0040-budget_5000-5500       9.79714345
+=opt= small-investor-MVO-DAX30-return_0.0045-budget_10000-11000       39.1621419
+=opt= small-investor-MVO-DAX30-return_0.0045-budget_1000-1100      0.398797497
+=opt= small-investor-MVO-DAX30-return_0.0045-budget_15000-16500       88.1049348
+=opt= small-investor-MVO-DAX30-return_0.0045-budget_20000-22000       156.604268
+=opt= small-investor-MVO-DAX30-return_0.0045-budget_2000-2200       1.57152798
+=opt= small-investor-MVO-DAX30-return_0.0045-budget_5000-5500       9.79714345
+=opt= small-investor-MVO-DAX30-return_0.0050-budget_10000-11000       39.1621419
+=opt= small-investor-MVO-DAX30-return_0.0050-budget_1000-1100      0.398797497
+=opt= small-investor-MVO-DAX30-return_0.0050-budget_15000-16500       88.1049347
+=opt= small-investor-MVO-DAX30-return_0.0050-budget_20000-22000       156.604268
+=opt= small-investor-MVO-DAX30-return_0.0050-budget_2000-2200       1.57152798
+=opt= small-investor-MVO-DAX30-return_0.0050-budget_5000-5500       9.79714333
+=best= small-investor-MVO-SNP100-return_0.0010-budget_10000-11000        5.9565052
+=opt= small-investor-MVO-SNP100-return_0.0010-budget_1000-1100      0.066528205
+=best= small-investor-MVO-SNP100-return_0.0010-budget_15000-16500       13.1629785
+=best= small-investor-MVO-SNP100-return_0.0010-budget_20000-22000       23.8738943
+=opt= small-investor-MVO-SNP100-return_0.0010-budget_2000-2200      0.249427251
+=best= small-investor-MVO-SNP100-return_0.0010-budget_5000-5500       1.51169186
+=best= small-investor-MVO-SNP100-return_0.0015-budget_10000-11000       6.08456289
+=opt= small-investor-MVO-SNP100-return_0.0015-budget_1000-1100      0.066528206
+=best= small-investor-MVO-SNP100-return_0.0015-budget_15000-16500       13.3091084
+=best= small-investor-MVO-SNP100-return_0.0015-budget_20000-22000       23.6796631
+=opt= small-investor-MVO-SNP100-return_0.0015-budget_2000-2200      0.258004542
+=best= small-investor-MVO-SNP100-return_0.0015-budget_5000-5500       1.50113157
+=best= small-investor-MVO-SNP100-return_0.0020-budget_10000-11000       6.00967867
+=opt= small-investor-MVO-SNP100-return_0.0020-budget_1000-1100      0.066528205
+=best= small-investor-MVO-SNP100-return_0.0020-budget_15000-16500       13.6679263
+=best= small-investor-MVO-SNP100-return_0.0020-budget_20000-22000       24.4927527
+=opt= small-investor-MVO-SNP100-return_0.0020-budget_2000-2200      0.261126841
+=opt= small-investor-MVO-SNP100-return_0.0020-budget_5000-5500       1.50222379
+=best= small-investor-MVO-SNP100-return_0.0025-budget_10000-11000       6.05896475
+=opt= small-investor-MVO-SNP100-return_0.0025-budget_1000-1100       0.06808016
+=best= small-investor-MVO-SNP100-return_0.0025-budget_15000-16500        13.506167
+=best= small-investor-MVO-SNP100-return_0.0025-budget_20000-22000       24.0817374
+=opt= small-investor-MVO-SNP100-return_0.0025-budget_2000-2200      0.263234059
+=opt= small-investor-MVO-SNP100-return_0.0025-budget_5000-5500       1.51966165
+=best= small-investor-MVO-SNP100-return_0.0030-budget_10000-11000       6.20331471
+=opt= small-investor-MVO-SNP100-return_0.0030-budget_1000-1100      0.084068386
+=best= small-investor-MVO-SNP100-return_0.0030-budget_15000-16500       13.9349849
+=best= small-investor-MVO-SNP100-return_0.0030-budget_20000-22000       24.6380657
+=opt= small-investor-MVO-SNP100-return_0.0030-budget_2000-2200       0.26323406
+=opt= small-investor-MVO-SNP100-return_0.0030-budget_5000-5500       1.58958587
+=opt= small-investor-MVO-SNP100-return_0.0035-budget_10000-11000       6.27399989
+=opt= small-investor-MVO-SNP100-return_0.0035-budget_1000-1100       0.08802962
+=opt= small-investor-MVO-SNP100-return_0.0035-budget_15000-16500       14.0351798
+=opt= small-investor-MVO-SNP100-return_0.0035-budget_20000-22000       24.9510179
+=opt= small-investor-MVO-SNP100-return_0.0035-budget_2000-2200      0.263234059
+=opt= small-investor-MVO-SNP100-return_0.0035-budget_5000-5500       1.61302256
+=opt= small-investor-MVO-SNP100-return_0.0040-budget_10000-11000       6.36716132
+=opt= small-investor-MVO-SNP100-return_0.0040-budget_1000-1100      0.111102332
+=opt= small-investor-MVO-SNP100-return_0.0040-budget_15000-16500       14.2952285
+=opt= small-investor-MVO-SNP100-return_0.0040-budget_20000-22000       25.2688953
+=opt= small-investor-MVO-SNP100-return_0.0040-budget_2000-2200      0.282351779
+=opt= small-investor-MVO-SNP100-return_0.0040-budget_5000-5500       1.64119836
+=opt= small-investor-MVO-SNP100-return_0.0045-budget_10000-11000       6.53575468
+=opt= small-investor-MVO-SNP100-return_0.0045-budget_1000-1100      0.111102332
+=opt= small-investor-MVO-SNP100-return_0.0045-budget_15000-16500       14.5480574
+=opt= small-investor-MVO-SNP100-return_0.0045-budget_20000-22000       25.8292058
+=opt= small-investor-MVO-SNP100-return_0.0045-budget_2000-2200      0.306938419
+=opt= small-investor-MVO-SNP100-return_0.0045-budget_5000-5500       1.65973717
+=opt= small-investor-MVO-SNP100-return_0.0050-budget_10000-11000       6.63689883
+=opt= small-investor-MVO-SNP100-return_0.0050-budget_1000-1100      0.111102332
+=opt= small-investor-MVO-SNP100-return_0.0050-budget_15000-16500       14.8803879
+=opt= small-investor-MVO-SNP100-return_0.0050-budget_20000-22000       26.2652138
+=opt= small-investor-MVO-SNP100-return_0.0050-budget_2000-2200       0.30800448
+=opt= small-investor-MVO-SNP100-return_0.0050-budget_5000-5500       1.67256644

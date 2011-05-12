@@ -2221,7 +2221,7 @@ SCIP_RETCODE SCIPbranchExecExtern(
    if( branchcand->nexterncands == 0 )
       return SCIP_OKAY;
 
-   /* if there is a non-fixed variable with higher priority than the maximal priority of the fractional candidates,
+   /* if there is a non-fixed variable with higher priority than the maximal priority of the external candidates,
     * use pseudo solution branching instead
     */
    if( branchcand->pseudomaxpriority > branchcand->externmaxpriority )

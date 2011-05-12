@@ -50,6 +50,10 @@ interface:
 - new method SCIPnodesGetCommonAncestor() in pub_tree.h that finds the common ancestor node for two given nodes
 - new method SCIPgetNLPFracVars() to get the fractional variables in an NLP solution
 - new methods SCIPcreateMesshdlrPThreads() and SCIPfreeMesshdlrPThreads() for allocating and deleting necessary memory for message handlers for parallel pthread version
+- new methods SCIPallocClearMemoryArray() and BMSallocClearMemoryArray() for allocating cleared memory arrays in scip.h and memory.h
+- removed methods SCIPnlpGetObjective(), SCIPnlpGetSolVals(), SCIPnlpGetVarSolVal(); added method SCIPvarGetNLPSol(); SCIPcreateNLPSol() now returns an error if NLP or NLP solution is not available
+- removed methods SCIPmarkRequireNLP() and SCIPisNLPRequired(), NLP is now always constructed if nonlinearities are present
+- removed NLP methods from pub_nlp.h and added corresponding methods to scip.h; removed SCIPgetNLP()
 
 performance improvements:
 - performance improvements in prop_vbounds
@@ -154,6 +158,7 @@ features:
 - it is possible to add a constraint to a problem in the interactive shell
 - added clock for determine the time for reading
 - new presolving step in cons_knapsack (detectRedundantVars, deleteRedundantVars) which determines redundant variables in knapsack constraint with or without using clique information
+- SCIPcreateSolNLP() now creates a SCIP_SOL that is linked to the solution of the current NLP relaxation
 
 design:
 - SCIP_HASHMAP now works also without block memory

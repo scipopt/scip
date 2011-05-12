@@ -1125,11 +1125,15 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
       if( SCIPisEfficacious(scip, unscaledweight - 1.0) )
       {
          SCIP_VAR** vars;
+#ifndef NDEBUG
          int nvars;
+#endif
          SCIP_ROW* cut;
          char cutname[SCIP_MAXSTRLEN];
 
+#ifndef NDEBUG
          nvars = sepadata->tcliquegraph->nnodes;
+#endif
          vars = sepadata->tcliquegraph->vars;
          assert(nvars > 0);
          assert(vars != NULL);

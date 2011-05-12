@@ -796,14 +796,18 @@ int* tcliqueGetLastAdjedge(
 {
    HEAD_ADJ* adjedges;
    int* adjnodes;
+#ifndef NDEBUG
    int* degrees;
+#endif
 
    assert(tcliquegraph != NULL);
    assert(tcliquegraph->ncachededges == 0);
    assert(0 <= node && node < tcliquegraph->nnodes);
 
    adjedges = tcliquegraph->adjedges;
+#ifndef NDEBUG
    degrees = tcliqueGetDegrees(tcliquegraph);
+#endif
    assert(adjedges != NULL);
    assert(degrees[node] == 0 || adjedges[node].last-1 >= 0);
    assert(adjedges[node].last-1 <= tcliqueGetNEdges(tcliquegraph));

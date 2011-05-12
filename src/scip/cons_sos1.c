@@ -1674,6 +1674,7 @@ SCIP_DECL_CONSLOCK(consLockSOS1)
 {
    SCIP_CONSDATA* consdata;
    SCIP_VAR** vars;
+   int nvars;
    int j;
 
    assert( scip != NULL );
@@ -1686,12 +1687,13 @@ SCIP_DECL_CONSLOCK(consLockSOS1)
    SCIPdebugMessage("Locking constraint <%s>.\n", SCIPconsGetName(cons));
 
    vars = consdata->vars;
+   nvars = consdata->nvars;
    assert( vars != NULL );
 
-   for (j = 0; j < consdata->nvars; ++j)
+   for (j = 0; j < nvars; ++j)
    {
       SCIP_VAR* var;
-      var = consdata->vars[j];
+      var = vars[j];
 
       /* if lower bound is negative, rounding down may violate constraint */
       if ( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)) )

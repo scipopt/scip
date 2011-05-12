@@ -5595,7 +5595,6 @@ SCIP_RETCODE registerVariableInfeasibilities(
    int*                  nnotify             /**< counter for number of notifications performed */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
    int                c;
    int                j;
@@ -5618,10 +5617,9 @@ SCIP_RETCODE registerVariableInfeasibilities(
    assert(conshdlr != NULL);
    assert(conss != NULL || nconss == 0);
    
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-   
    *nnotify = 0;
+   yval = SCIP_INVALID;
+   xval = SCIP_INVALID;
 
    for( c = 0; c < nconss; ++c )
    {
@@ -5635,7 +5633,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
       if( (!SCIPisFeasPositive(scip, consdata->lhsviol) || consdata->isconcave) &&
           (!SCIPisFeasPositive(scip, consdata->rhsviol) || consdata->isconvex ) )
          continue;
-      SCIPdebugMessage("con %s violation: %g %g  convex: %u %u\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol, consdata->isconvex, consdata->isconcave);
+      SCIPdebugMessage("cons %s violation: %g %g  convex: %u %u\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol, consdata->isconvex, consdata->isconcave);
       
       /* square terms */
       for( j = 0; j < consdata->nquadvars; ++j )
@@ -6368,7 +6366,6 @@ SCIP_RETCODE propagateBoundsCons(
    )
 {  /*lint --e{666}*/
    SCIP_CONSDATA*     consdata;
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_INTERVAL      consbounds;    /* lower and upper bounds of constraint */
    SCIP_INTERVAL      consactivity;  /* activity of linear plus quadratic part */
    SCIP_Real          intervalinfty; /* infinity used for interval computation */  
@@ -6391,9 +6388,6 @@ SCIP_RETCODE propagateBoundsCons(
    assert(result != NULL);
    assert(nchgbds != NULL);
    assert(redundant != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -6423,11 +6417,6 @@ SCIP_RETCODE propagateBoundsCons(
    assert(consdata->minlinactivityinf >= 0);
    assert(consdata->maxlinactivityinf >= 0);
 
-   SCIPdebugMessage("linear activity: [%g, %g]   quadratic activity: [%g, %g]\n",
-      consdata->minlinactivityinf > 0 ? -SCIPinfinity(scip) : consdata->minlinactivity,
-      consdata->maxlinactivityinf > 0 ?  SCIPinfinity(scip) : consdata->maxlinactivity,
-      consdata->quadactivitybounds.inf, consdata->quadactivitybounds.sup);
-
    /* compute activity of quad term part, if not up to date
     * in that case, we also collect the contribution of each quad var term for later */
    if( SCIPintervalIsEmpty(consdata->quadactivitybounds) )
@@ -6436,6 +6425,11 @@ SCIP_RETCODE propagateBoundsCons(
       propagateBoundsGetQuadActivity(scip, consdata, intervalinfty, &minquadactivity, &maxquadactivity, &quadminactinf, &quadmaxactinf, quadactcontr);
       assert(!SCIPintervalIsEmpty(consdata->quadactivitybounds));
    }
+
+   SCIPdebugMessage("linear activity: [%g, %g]   quadratic activity: [%g, %g]\n",
+      consdata->minlinactivityinf > 0 ? -SCIPinfinity(scip) : consdata->minlinactivity,
+      consdata->maxlinactivityinf > 0 ?  SCIPinfinity(scip) : consdata->maxlinactivity,
+      consdata->quadactivitybounds.inf, consdata->quadactivitybounds.sup);
 
    /* extend constraint bounds by epsilon to avoid some numerical difficulties */
    SCIPintervalSetBounds(&consbounds,
@@ -6862,6 +6856,7 @@ SCIP_RETCODE propagateBounds(
          }
          if( redundant )
          {
+            SCIPdebugMessage("deleting constraint <%s> locally\n", SCIPconsGetName(conss[c]));
             SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
          }
       }
@@ -6885,8 +6880,7 @@ void consdataFindUnlockedLinearVar(
    consdata->linvar_maydecrease = -1;
    consdata->linvar_mayincrease = -1;
 
-   /* check for a linear variable that can be increase or decreased without harming feasibility
-    * setup lincoefsmin, lincoefsmax */
+   /* check for a linear variable that can be increase or decreased without harming feasibility */
    for( i = 0; i < consdata->nlinvars; ++i )
    {
       /* compute locks of i'th linear variable */
@@ -7614,19 +7608,19 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
                lb = SCIPvarGetLbGlobal(var);
                ub = SCIPvarGetUbGlobal(var);
 
-               if( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) )
+               if( SCIPisInfinity(scip, -lb) )
                {
-                  if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
+                  if( SCIPisInfinity(scip, ub) )
                      x[i] = 0.0;
                   else
-                     x[i] = MIN(0.0, SCIPvarGetUbGlobal(var));
+                     x[i] = MIN(0.0, ub);
                   unbounded = TRUE;
                }
                else
                {
-                  if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
+                  if( SCIPisInfinity(scip, ub) )
                   {
-                     x[i] = MAX(0.0, SCIPvarGetLbGlobal(var));
+                     x[i] = MAX(0.0, lb);
                      unbounded = TRUE;
                   }
                   else
@@ -7957,7 +7951,7 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
    doreformulations = (nrounds > 0 || SCIPconshdlrWasPresolvingDelayed(conshdlr)) &&
       nnewfixedvars == 0 && nnewaggrvars == 0 && nnewchgvartypes == 0 && nnewchgbds == 0 &&
       nnewholes == 0 && /* nnewdelconss == 0 && */ nnewaddconss == 0 && nnewupgdconss == 0 && nnewchgcoefs == 0 && nnewchgsides == 0;
-   SCIPdebugMessage("presolving will %swait with reformulation", doreformulations ? "not " : "");
+   SCIPdebugMessage("presolving will %swait with reformulation\n", doreformulations ? "not " : "");
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -9652,6 +9646,26 @@ SCIP_QUADVARTERM* SCIPgetQuadVarTermsQuadratic(
    assert(SCIPconsGetData(cons) != NULL);
    
    return SCIPconsGetData(cons)->quadvarterms;
+}
+
+/** Finds the position of a quadratic variable term for a given variable.
+ * Note that if the quadratic variable terms have not been sorted before, then a search may reorder the current order of the terms.
+ */
+SCIP_RETCODE SCIPfindQuadVarTermQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_VAR*             var,                /**< variable to search for */
+   int*                  pos                 /**< buffer to store position of quadvarterm for var, or -1 if not found */
+   )
+{
+   assert(cons != NULL);
+   assert(SCIPconsGetData(cons) != NULL);
+   assert(var != NULL);
+   assert(pos != NULL);
+
+   SCIP_CALL( consdataFindQuadVarTerm(scip, SCIPconsGetData(cons), var, pos) );
+
+   return SCIP_OKAY;
 }
 
 /** Gets the number of bilinear terms of a quadratic constraint.

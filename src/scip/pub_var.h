@@ -723,6 +723,12 @@ SCIP_Real SCIPvarGetLPSol(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
+/** gets primal NLP solution value of variable */
+extern
+SCIP_Real SCIPvarGetNLPSol(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
 /** return lower bound change info at requested position */
 extern
 SCIP_BDCHGINFO* SCIPvarGetBdchgInfoLb(
@@ -829,6 +835,7 @@ int SCIPvarGetNBdchgInfosUb(
 #define SCIPvarGetNCliques(var, fix)    (SCIPcliquelistGetNCliques((var)->cliquelist, fix))
 #define SCIPvarGetCliques(var, fix)     (SCIPcliquelistGetCliques((var)->cliquelist, fix))
 #define SCIPvarGetLPSol(var)            ((var)->varstatus == SCIP_VARSTATUS_COLUMN ? SCIPcolGetPrimsol((var)->data.col) : SCIPvarGetLPSol_rec(var))
+#define SCIPvarGetNLPSol(var)           (((var)->varstatus == SCIP_VARSTATUS_COLUMN || ((var)->varstatus == SCIP_VARSTATUS_LOOSE)) ? (var)->nlpsol : SCIPvarGetNLPSol_rec(var))
 #define SCIPvarGetBdchgInfoLb(var, pos)   (&((var)->lbchginfos[pos]))
 #define SCIPvarGetNBdchgInfosLb(var)      ((var)->nlbchginfos)
 #define SCIPvarGetBdchgInfoUb(var, pos)   (&((var)->ubchginfos[pos]))
@@ -862,6 +869,12 @@ SCIP_BOUNDTYPE SCIPvarGetWorstBoundType(
 /** gets primal LP solution value of variable */
 extern
 SCIP_Real SCIPvarGetLPSol_rec(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** gets primal NLP solution value of variable */
+extern
+SCIP_Real SCIPvarGetNLPSol_rec(
    SCIP_VAR*             var                 /**< problem variable */
    );
 

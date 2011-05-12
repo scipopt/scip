@@ -987,7 +987,9 @@ SCIP_RETCODE processBinvarFixings(
       {
          SCIP_VAR** vars;
          SCIP_VAR* var;
+#ifndef NDEBUG
          SCIP_Bool fixedonefound;
+#endif
          int nvars;
          int v;
 
@@ -1000,7 +1002,10 @@ SCIP_RETCODE processBinvarFixings(
           */
          vars = consdata->binvars;
          nvars = consdata->nbinvars;
+#ifndef NDEBUG
          fixedonefound = FALSE;
+#endif
+
          for( v = 0; v < nvars && consdata->nfixedones == 1 && !(*cutoff); ++v )
          {
             var = vars[v];
@@ -1013,7 +1018,9 @@ SCIP_RETCODE processBinvarFixings(
             }
             else
             {
+#ifndef NDEBUG
                fixedonefound = TRUE;
+#endif
                /* fix integer variable */
                SCIP_CALL( consFixInteger(scip, cons, v, cutoff) );
             }
@@ -1558,12 +1565,7 @@ SCIP_RETCODE enforcePseudo(
 
    if( mustcheck )
    {
-      SCIP_CONSDATA* consdata;
-
       assert(!addcut);
-
-      consdata = SCIPconsGetData(cons);
-      assert(consdata != NULL);
 
       if( checkCons(scip, cons, NULL) )
       {
@@ -1679,12 +1681,16 @@ SCIP_DECL_CONSINITPRE(consInitpreLinking)
 static
 SCIP_DECL_CONSEXITSOL(consExitsolLinking)
 {  /*lint --e{715}*/
+#if 0
    SCIP_CONSHDLRDATA* conshdlrdata;
+#endif
    SCIP_CONSDATA* consdata;
    int c;
 
+#if 0
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+#endif
 
    for( c = 0; c < nconss; ++c )
    {
@@ -1827,7 +1833,6 @@ SCIP_DECL_CONSINITLP(consInitlpLinking)
 static
 SCIP_DECL_CONSSEPALP(consSepalpLinking)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool cutoff;
    SCIP_Bool separated;
    int nchgbds;
@@ -1840,9 +1845,6 @@ SCIP_DECL_CONSSEPALP(consSepalpLinking)
    
    SCIPdebugMessage("separating %d/%d linking constraints\n", nusefulconss, nconss);
    
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
    cutoff = FALSE;
    separated = FALSE;
    nchgbds = 0;
@@ -1911,7 +1913,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolLinking)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpLinking)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool cutoff;
    SCIP_Bool separated;
    int nchgbds;
@@ -1923,9 +1924,6 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinking)
    assert(result != NULL);
 
    SCIPdebugMessage("LP enforcing %d linking constraints\n", nconss);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    cutoff = FALSE;
    separated = FALSE;
@@ -2509,8 +2507,10 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
    }
    else if( inferinfo == -2 )
    {
+#ifndef NDEBUG
       SCIP_Real lb;
-      
+#endif
+
       /* we have to resolve a fixing of a binary variable which was done due to the integer variable lower bound */
       assert(SCIPvarIsBinary(infervar)); 
       assert(SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) < 0.5); 
@@ -2519,14 +2519,18 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
       assert( SCIPisFeasEQ(scip, SCIPvarGetUbAtIndex(intvar, bdchgidx, TRUE), SCIPvarGetUbAtIndex(intvar, bdchgidx, FALSE)) );
       assert( SCIPisFeasEQ(scip, SCIPvarGetLbAtIndex(intvar, bdchgidx, TRUE), SCIPvarGetLbAtIndex(intvar, bdchgidx, FALSE)) );    
 
+#ifndef NDEBUG
       lb = SCIPvarGetLbAtIndex(intvar, bdchgidx, TRUE);
       assert(infervar != consdata->binvars[(int)(lb + 0.5) - consdata->offset] ); /*@repaired: vorher + offset && == */
+#endif
 
       SCIP_CALL( SCIPaddConflictLb( scip, intvar, bdchgidx) );
    }
    else if( inferinfo == -3 )
    {
+#ifndef NDEBUG
       SCIP_Real ub;
+#endif
       
       /* we have to resolve a fixing of a binary variable which was done due to the integer variable upper bound */
       assert(SCIPvarIsBinary(infervar)); 
@@ -2536,8 +2540,10 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
       assert( SCIPisFeasEQ(scip, SCIPvarGetUbAtIndex(intvar, bdchgidx, TRUE), SCIPvarGetUbAtIndex(intvar, bdchgidx, FALSE)) );
       assert( SCIPisFeasEQ(scip, SCIPvarGetLbAtIndex(intvar, bdchgidx, TRUE), SCIPvarGetLbAtIndex(intvar, bdchgidx, FALSE)) );
 
+#ifndef NDEBUG
       ub = SCIPvarGetUbAtIndex(intvar, bdchgidx, TRUE);
       assert(infervar != consdata->binvars[(int)(ub + 0.5) - consdata->offset] );/*@repaired: vorher +offset */
+#endif
       
       SCIP_CALL( SCIPaddConflictUb( scip, intvar, bdchgidx) );
    }

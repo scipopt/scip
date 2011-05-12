@@ -3455,7 +3455,6 @@ static
 SCIP_DECL_CONSPRESOL(consPresolIndicator)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_EVENTHDLR* eventhdlr;
    SCIP_Bool noReductions;
    int oldnfixedvars;
    int oldndelconss;
@@ -3474,8 +3473,6 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
-   eventhdlr = conshdlrdata->eventhdlr;
-   assert( eventhdlr != NULL );
 
    SCIPdebugMessage("Presolving indicator constraints.\n");
 
@@ -4452,15 +4449,23 @@ SCIP_DECL_CONSPARSE(consParseIndicator)
       return SCIP_OKAY;
    }
 
-   /* overwrite binvarname */
+   /* overwrite binvarname: set up name for linear constraint */
    (void) SCIPsnprintf(binvarname, 1023, "indlin%s", posstr+8);
 
    lincons = SCIPfindCons(scip, binvarname);
    if ( lincons == NULL )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "while parsing indicator constraint <%s>: unknown linear constraint <%s>\n", name, binvarname);
-      *success = FALSE;
-      return SCIP_OKAY;
+      /* if not found - check without indlin */
+      (void) SCIPsnprintf(binvarname, 1023, "%s", posstr+9);
+      lincons = SCIPfindCons(scip, binvarname);
+      
+      if ( lincons == NULL )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "while parsing indicator constraint <%s>: unknown linear constraint <indlin%s> or <%s>.\n", 
+            name, binvarname, binvarname);
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
    }
 
    /* create indicator constraint */
@@ -4762,7 +4767,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
  */
 SCIP_RETCODE SCIPcreateConsIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint (indicator or quadratic) */
    const char*           name,               /**< name of constraint */
    SCIP_VAR*             binvar,             /**< binary indicator variable (or NULL) */
    int                   nvars,              /**< number of variables in the inequality */
@@ -4908,7 +4913,7 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    {
       SCIP_Real val;
    
-      /* create a quadratic constraint with a single bilinear term - note cons is used */
+      /* create a quadratic constraint with a single bilinear term - note that cons is used */
       val = 1.0;
       SCIP_CALL( SCIPcreateConsQuadratic(scip, cons, name, 0, NULL, NULL, 1, &binvar, &slackvar, &val, 0.0, 0.0,
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -5010,7 +5015,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorLinCons(
    SCIP_CALL( SCIPcaptureVar(scip, slackvar) );
    SCIP_CALL( SCIPcaptureCons(scip, lincons) );
 
-   /* if the problem should be decomposed if only non-integer variables are present */
+   /* if the problem should be decomposed (only if all variables are continuous) */
    linconsactive = TRUE;
    if ( conshdlrdata->noLinconsCont )
    {
@@ -5039,18 +5044,31 @@ SCIP_RETCODE SCIPcreateConsIndicatorLinCons(
          linconsactive = FALSE;
    }
 
-   /* mark linear constraint no to be upgraded - otherwise we loos control over it */
+   /* mark linear constraint not to be upgraded - otherwise we loose control over it */
    SCIP_CALL( SCIPmarkDoNotUpgradeConsLinear(scip, lincons) );
 
-   /* create constraint data */
-   consdata = NULL;
-   SCIP_CALL( consdataCreate(scip, conshdlr, name, &consdata, conshdlrdata->eventhdlr, 
-         binvar, slackvar, lincons, linconsactive, conshdlrdata->sepaAlternativeLP) );
-   assert( consdata != NULL );
+   /* check whether we should generate a bilinear constraint instead of a indicator contraint */
+   if ( conshdlrdata->generateBilinear )
+   {
+      SCIP_Real val;
 
-   /* create constraint */
-   SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-         local, modifiable, dynamic, removable, stickingatnode) );
+      /* create a quadratic constraint with a single bilinear term - note that cons is used */
+      val = 1.0;
+      SCIP_CALL( SCIPcreateConsQuadratic(scip, cons, name, 0, NULL, NULL, 1, &binvar, &slackvar, &val, 0.0, 0.0,
+            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   }
+   else
+   {
+      /* create constraint data */
+      consdata = NULL;
+      SCIP_CALL( consdataCreate(scip, conshdlr, name, &consdata, conshdlrdata->eventhdlr, 
+            binvar, slackvar, lincons, linconsactive, conshdlrdata->sepaAlternativeLP) );
+      assert( consdata != NULL );
+      
+      /* create constraint */
+      SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
+            local, modifiable, dynamic, removable, stickingatnode) );
+   }
 
    return SCIP_OKAY;
 }
