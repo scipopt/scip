@@ -2270,27 +2270,29 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
       {
          /* init obj to infinity */
          obj = SCIPinfinity(scip);
-	 for (j = 0; j < nblocks; ++j)
-	 {
-            SCIP_VAR* var = vars[i][j];
+         for (j = 0; j < nblocks; ++j)
+         {
+            SCIP_Bool fixedZero;
+            SCIP_VAR* var;
 
-	    /* all variables need to be binary */
-	    assert( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY );
+            var = vars[i][j];
+
+            /* all variables need to be binary */
+            assert( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY );
 
             /* fixed variables have obj = 0; for variables fixed to 0, we assume that there is no
                problem (but we cannot always check it, e.g., when in the original problem
                variables were fixed and this problem was copied.) */
-            SCIP_Bool fixedZero;
             fixedZero = ( SCIPisZero(scip, SCIPvarGetLbGlobal(var)) && SCIPisZero(scip, SCIPvarGetUbGlobal(var)) );
 
             /* check whether all variables in a row have the same objective */
-	    if ( ! fixedZero && SCIPisInfinity(scip, obj) )
-	       obj = SCIPvarGetObj(var);
-	    else
-	    {
-	       assert( fixedZero || SCIPisEQ(scip, obj, SCIPvarGetObj(var)) );    /*lint !e644*/
-	    }
-	 }
+            if ( ! fixedZero && SCIPisInfinity(scip, obj) )
+               obj = SCIPvarGetObj(var);
+            else
+            {
+               assert( fixedZero || SCIPisEQ(scip, obj, SCIPvarGetObj(var)) );    /*lint !e644*/
+            }
+         }
       }
    }
 #endif
