@@ -55,6 +55,7 @@ struct SCIP_HeurData
    SCIP*                 subscip;            /**< copy of CIP where presolving and NLP solving is done */
    SCIP_Bool             triedsetupsubscip;  /**< whether we have tried to setup an subSCIP */
    SCIP_Bool             subscipisvalid;     /**< whether all constraints have been copied */
+   int                   nseriousnlpierror;  /**< number of consecutive serious NLP solver failures (memout, ...) */
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for global bound change events */
    
    int                   nvars;              /**< number of active transformed variables in SCIP */
@@ -1119,12 +1120,19 @@ SCIP_RETCODE solveSubNLP(
    
    if( SCIPgetNLPTermstat(heurdata->subscip) >= SCIP_NLPTERMSTAT_MEMERR )
    {  /* oops, something did not go well at all */
+      ++heurdata->nseriousnlpierror;
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, 
-         "NLP solver returned with bad termination status %d. Will not run NLP heuristic again for this run.\n",  
-         SCIPgetNLPTermstat(heurdata->subscip));
-      SCIP_CALL( freeSubSCIP(scip, heurdata) );
+         "NLP solver in subNLP heuristic for problem <%s> returned with bad termination status %d. This was the %d%s successive time.\n",
+         SCIPgetProbName(scip), SCIPgetNLPTermstat(heurdata->subscip), heurdata->nseriousnlpierror,
+         heurdata->nseriousnlpierror == 1 ? "st" : heurdata->nseriousnlpierror == 2 ? "nd" : heurdata->nseriousnlpierror == 3 ? "rd" : "th");
+      if( heurdata->nseriousnlpierror >= 5 )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Will not run NLP heuristic again for this run.\n");
+         SCIP_CALL( freeSubSCIP(scip, heurdata) );
+      }
       goto CLEANUP;
    }
+   heurdata->nseriousnlpierror = 0;
 
    SCIP_CALL( SCIPgetNLPStatistics(heurdata->subscip, heurdata->nlpstatistics) );
 
