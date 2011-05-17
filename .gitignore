@@ -4,9 +4,11 @@
 # exclude patterns (uncomment them if you want to use them):
 *.[oa]
 *~
+\#*
 bin/
 lib/
 obj/
+TAGS
 release/
 check/results/
 check/locks

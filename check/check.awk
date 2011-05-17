@@ -39,7 +39,7 @@ BEGIN {
    timegeomshift = 10.0;
    nodegeomshift = 100.0;
    sblpgeomshift = 0.0;
-   pavshift = 1.0;
+   pavshift = 0.0;
    onlyinsolufile = 0;          # should only instances be reported that are included in the .solu file?
    onlyintestfile = 0;          # should only instances be reported that are included in the .test file?  TEMPORARY HACK!
    onlypresolvereductions = 0;  # should only instances with presolve reductions be shown?
@@ -85,6 +85,13 @@ BEGIN {
    scipversion = "?";
    conftottime = 0.0;
    overheadtottime = 0.0;
+   
+   #initialize paver input file
+   if( PAVFILE != "" ) {
+      printf("* Trace Record Definition\n") > PAVFILE;
+      printf("* InputFileName,ModelType,SolverName,Direction,ModelStatus,SolverStatus,ObjectiveValue,ObjectiveValueEstimate,SolverTime\n") > PAVFILE;
+      printf("* NumberOfNodes,NumberOfIterations,NumberOfEquations,NumberOfVariables\n") > PAVFILE;
+   }
 }
 /^IP\// {  # TEMPORARY HACK to parse .test files
    intestfile[$1] = 1;
@@ -741,25 +748,45 @@ BEGIN {
          printf("%s\n", status);
       }
 
-      #PAVER output: see http://www.gamsworld.org/performance/paver/pprocess_submit.htm
-      if( solstatus[prob] == "opt" || solstatus[prob] == "feas" )
-         modelstat = 1;
-      else if( solstatus[prob] == "inf" )
-         modelstat = 1;
-      else if( solstatus[prob] == "best" )
-         modelstat = 8;
-      else
-         modelstat = 1;
-      if( status == "ok" || status == "unknown" )
-         solverstat = 1;
-      else if( status == "timeout" )
-         solverstat = 3;
-      else
-         solverstat = 10;
-      pavprob = prob;
-      if( length(pavprob) > 25 )
-         pavprob = substr(pavprob, length(pavprob)-24,25);
-      printf("%s,MIP,SCIP_%s,0,%d,%d,%g,%g\n", pavprob, settings, modelstat, solverstat, pb, tottime+pavshift) > PAVFILE;
+      if( PAVFILE != "" ) {
+         #PAVER output: see http://www.gamsworld.org/performance/paver/pprocess_submit.htm
+         if( status == "abort" ) {
+            modelstat = 13;
+            solverstat = 13;
+         } else if( status == "fail" || status == "unknown" ) {
+            modelstat = 7;
+            solverstat = 1;
+         } else if( status == "timeout" ) {
+            modelstat = abs(pb) < infty ? 8 : 14;
+            solverstat = 3;
+         } else if( status == "gaplimit" || status == "better" ) {
+            modelstat = 8;
+            solverstat = 1;
+         } else if( status == "ok" || status == "solved" || status == "solved not verified" ) {
+            modelstat = 1;
+            solverstat = 1;
+         } else {
+            modelstat = 13;
+            solverstat = 13;
+         }
+         pavprob = prob;
+         if( length(pavprob) > 25 )
+              pavprob = substr(pavprob, length(pavprob)-24,25);
+         if( vars == 0 )
+            gamsprobtype = "LP";
+         else if( lincons < cons && binvars == 0 && intvars == 0 )
+            gamsprobtype = "NLP";
+         else if( lincons < cons )
+            gamsprobtype = "MINLP";
+         else if( binvars == 0 && intvars == 0 )
+            gamsprobtype = "LP";
+         else
+            gamsprobtype = "MIP";
+         #InputFileName,ModelType,SolverName,Direction,ModelStatus,SolverStatus,ObjectiveValue,ObjectiveValueEstimate,SolverTime
+         #NumberOfNodes,NumberOfIterations,NumberOfEquations,NumberOfVariables
+         printf("%s,%s,SCIP_%s,%d,%d,%d,%g,%g,%g,", pavprob, gamsprobtype, settings, firstpb-rootdb < -max(abstol,reltol) ? 1 : 0, modelstat, solverstat, pb, db, tottime+pavshift) > PAVFILE;
+         printf("%d,%d,%d,%d\n", bbnodes, simpiters, cons, vars) > PAVFILE;
+      }
    }
 }
 END {

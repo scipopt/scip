@@ -147,15 +147,18 @@ SCIP_DECL_HASHGETKEY(hashGetKeyNonLinearTerms)
 static
 SCIP_DECL_HASHKEYEQ(hashKeyEqNonLinearTerms)
 {
+#ifndef NDEBUG
    SCIP* scip;
+#endif
    TERM* term1;
    TERM* term2;
    int v;
 
    term1 = (TERM*)key1;
    term2 = (TERM*)key2;
+#ifndef NDEBUG
    scip = (SCIP*)userptr; 
-
+#endif
    assert(scip != NULL);
    assert(term1 != NULL);
    assert(term2 != NULL);
@@ -1123,7 +1126,7 @@ SCIP_RETCODE chgLhs(
          }
 
          /* non-linear part */
-         for( t = consdata->nnonlinterms - 1; t >= 0; --t )
+         for( t = nterms - 1; t >= 0; --t )
          {
             assert(terms[t] != NULL);
             assert(terms[t]->nvars == 0 || terms[t]->vars != NULL);
@@ -1182,7 +1185,7 @@ SCIP_RETCODE chgLhs(
          }
 
          /* non-linear part */
-         for( t = consdata->nnonlinterms - 1; t >= 0; --t )
+         for( t = nterms - 1; t >= 0; --t )
          {
             assert(terms[t] != NULL);
             assert(terms[t]->nvars == 0 || terms[t]->vars != NULL);
@@ -1280,7 +1283,7 @@ SCIP_RETCODE chgRhs(
          nterms = consdata->nnonlinterms;
 
          /* linear part */
-         for( v = consdata->nlinvars - 1; v >= 0;--v )
+         for( v = nlinvars - 1; v >= 0;--v )
          {
             assert(vars[v] != NULL);
             assert(!SCIPisZero(scip, lincoefs[v]));
@@ -1296,7 +1299,7 @@ SCIP_RETCODE chgRhs(
          }
 
          /* non-linear part */
-         for( t = consdata->nnonlinterms - 1; t >= 0; --t )
+         for( t = nterms - 1; t >= 0; --t )
          {
             assert(terms[t] != NULL);
             assert(terms[t]->nvars == 0 || terms[t]->vars != NULL);
@@ -1339,7 +1342,7 @@ SCIP_RETCODE chgRhs(
          nterms = consdata->nnonlinterms;
 
          /* linear part */
-         for( v = consdata->nlinvars - 1; v >= 0;--v )
+         for( v = nlinvars - 1; v >= 0;--v )
          {
             assert(vars[v] != NULL);
             assert(!SCIPisZero(scip, lincoefs[v]));
@@ -1355,7 +1358,7 @@ SCIP_RETCODE chgRhs(
          }
 
          /* non-linear part */
-         for( t = consdata->nnonlinterms - 1; t >= 0; --t )
+         for( t = nterms - 1; t >= 0; --t )
          {
             assert(terms[t] != NULL);
             assert(terms[t]->nvars == 0 || terms[t]->vars != NULL);
@@ -3014,14 +3017,18 @@ SCIP_DECL_CONSPRESOL(consPresolPseudoboolean)
    for( c = 0; c < nconss && !cutoff && !SCIPisStopped(scip); ++c )
    {
       SCIP_CONS* cons;
+#ifndef NDEBUG
       SCIP_CONSDATA* consdata;
+#endif
       SCIP_Bool infeasible;
 
       infeasible = FALSE;
 
       cons = conss[c];
       assert(SCIPconsIsActive(cons));
+#ifndef NDEBUG
       consdata = SCIPconsGetData(cons);
+#endif
       assert(consdata != NULL);
 
       /* incorporate fixings and aggregations in constraint */

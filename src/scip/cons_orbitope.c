@@ -1136,8 +1136,10 @@ SCIP_RETCODE resolvePropagation(
       int k;
       int p1;
       int p2;
+#ifndef NDEBUG
       int pos1;
       int pos2;
+#endif
 #ifdef SCIP_DEBUG
       char str[SCIP_MAXSTRLEN];
       char tmpstr[SCIP_MAXSTRLEN];
@@ -1160,8 +1162,10 @@ SCIP_RETCODE resolvePropagation(
 
       p1 = i-1;
       p2 = j-1;
+#ifndef NDEBUG
       pos1 = -1;
       pos2 = -1;
+#endif
       do
       {
 	 assert( cases[p1][p2] != -1 );
@@ -1185,6 +1189,7 @@ SCIP_RETCODE resolvePropagation(
 	       (void) strncat(str, tmpstr, SCIP_MAXSTRLEN);
 #endif
 	    }
+#ifndef NDEBUG
 	    else
 	    {
 	       assert( SCIPvarGetLbAtIndex(vars[p1][p2], bdchgidx, FALSE) < 0.5 );
@@ -1192,6 +1197,7 @@ SCIP_RETCODE resolvePropagation(
 	       pos1 = p1;
 	       pos2 = p2;
 	    }
+#endif
 	    if ( cases[p1][p2] == 3 )
 	       break;
 	 }
@@ -2264,27 +2270,29 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
       {
          /* init obj to infinity */
          obj = SCIPinfinity(scip);
-	 for (j = 0; j < nblocks; ++j)
-	 {
-            SCIP_VAR* var = vars[i][j];
+         for (j = 0; j < nblocks; ++j)
+         {
+            SCIP_Bool fixedZero;
+            SCIP_VAR* var;
 
-	    /* all variables need to be binary */
-	    assert( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY );
+            var = vars[i][j];
+
+            /* all variables need to be binary */
+            assert( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY );
 
             /* fixed variables have obj = 0; for variables fixed to 0, we assume that there is no
                problem (but we cannot always check it, e.g., when in the original problem
                variables were fixed and this problem was copied.) */
-            SCIP_Bool fixedZero;
             fixedZero = ( SCIPisZero(scip, SCIPvarGetLbGlobal(var)) && SCIPisZero(scip, SCIPvarGetUbGlobal(var)) );
 
             /* check whether all variables in a row have the same objective */
-	    if ( ! fixedZero && SCIPisInfinity(scip, obj) )
-	       obj = SCIPvarGetObj(var);
-	    else
-	    {
-	       assert( fixedZero || SCIPisEQ(scip, obj, SCIPvarGetObj(var)) );    /*lint !e644*/
-	    }
-	 }
+            if ( ! fixedZero && SCIPisInfinity(scip, obj) )
+               obj = SCIPvarGetObj(var);
+            else
+            {
+               assert( fixedZero || SCIPisEQ(scip, obj, SCIPvarGetObj(var)) );    /*lint !e644*/
+            }
+         }
       }
    }
 #endif

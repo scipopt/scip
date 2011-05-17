@@ -4331,7 +4331,9 @@ SCIP_RETCODE preprocessConsiderMinSlack(
    int                   noddrhsrows;
    int                   nlslrowsremoved;  
    int                   nlcolrowsremoved;
+#ifndef NDEBUG
    int                   r;
+#endif
    int                   c;
    SCIP_Bool*            removerow;
    int                   i;
@@ -4416,7 +4418,9 @@ SCIP_RETCODE preprocessConsiderMinSlack(
          nlslrowsremoved += mod2data->nrowsind - i;      
          while(i < mod2data->nrowsind)
          {
+#ifndef NDEBUG
             r = mod2data->rowsind[i];
+#endif
             assert(!mod2data->rhs[r]);
             assert(SCIPisGT(scip, minslackoddrhsrows + mod2data->slacks[r], sepadata->maxslack)); 
             markRowAsRemoved(mod2data, i, SLACK_GREATER_THAN_MSL_MINUS_SODD);
@@ -6465,8 +6469,10 @@ SCIP_RETCODE process(
    SCIP_Bool             stop;
 
    char                  sepaname[SCIP_MAXSTRLEN];
+#ifdef ZEROHALF__PRINT_STATISTICS
    int                   nsepacutsbefore;
    int                   nzerohalfcutsbefore;
+#endif
    int                   nsepacutsinitial;
    int                   nzerohalfcutsinitial;
 
@@ -6550,10 +6556,10 @@ SCIP_RETCODE process(
       /* statistics*/ 
       ZEROHALFstartTimer(sepatimer); 
       ZEROHALFstartTimer(sepadata->sepatimers[i]);
+#ifdef ZEROHALF__PRINT_STATISTICS
       nsepacutsbefore = *nsepacuts;
       nzerohalfcutsbefore = *nzerohalfcuts;
     
-#ifndef ZEROHALF__PRINT_STATISTICS
       /* abort if enough cuts have already been found */
       if( *nsepacuts >= maxsepacuts || *nzerohalfcuts >= maxcuts )
          break;

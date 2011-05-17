@@ -2171,11 +2171,7 @@ SCIP_DECL_CONSTRANS(consTransAnd)
 static
 SCIP_DECL_CONSINITLP(consInitlpAnd)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
    int i;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    for( i = 0; i < nconss; i++ )
    {
@@ -2191,14 +2187,10 @@ SCIP_DECL_CONSINITLP(consInitlpAnd)
 static
 SCIP_DECL_CONSSEPALP(consSepalpAnd)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool separated;
    int c;
 
    *result = SCIP_DIDNOTFIND;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    /* separate all useful constraints */
    for( c = 0; c < nusefulconss; ++c )
@@ -2219,14 +2211,10 @@ SCIP_DECL_CONSSEPALP(consSepalpAnd)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolAnd)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool separated;
    int c;
 
    *result = SCIP_DIDNOTFIND;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    /* separate all useful constraints */
    for( c = 0; c < nusefulconss; ++c )

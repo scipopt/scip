@@ -3455,7 +3455,6 @@ static
 SCIP_DECL_CONSPRESOL(consPresolIndicator)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_EVENTHDLR* eventhdlr;
    SCIP_Bool noReductions;
    int oldnfixedvars;
    int oldndelconss;
@@ -3474,8 +3473,6 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
-   eventhdlr = conshdlrdata->eventhdlr;
-   assert( eventhdlr != NULL );
 
    SCIPdebugMessage("Presolving indicator constraints.\n");
 
