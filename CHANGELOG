@@ -192,6 +192,7 @@ fixed bugs:
 - fixed wrong assert in var.c (replaced '==' through 'SCIPsetIsEQ'), real values do not have to be exactly the same when computed in different function
 - fixed bug in SCIPsolveIsStopped where it could happen that TRUE was reported if a nodelimit was reached but checknodelimits had been set to FALSE
 - fixed bug in sorting mechanism in cons_xor.c
+- fixed bug in changing quadratic coefficients of a row in the NLP
 
 performance improvements:
 - fasten propagation in cons_knapsack.c due to negated clique partitions
