@@ -473,11 +473,12 @@ void SCIPexprtreeSetParamVal(
    SCIP_Real             paramval            /**< new value of parameter */
 );
 
-/** sets values of all parameters in expression tree */
+/** sets number and values of all parameters in expression tree */
 extern
-void SCIPexprtreeSetParamVals(
+SCIP_RETCODE SCIPexprtreeSetParams(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
-   SCIP_Real*            paramvals           /**< new values of parameters */
+   int                   nparams,            /**< number of parameters */
+   SCIP_Real*            paramvals           /**< values of parameters, can be NULL if nparams == 0 */
 );
 
 /** gets data of expression tree interpreter

@@ -3139,17 +3139,34 @@ void SCIPexprtreeSetParamVal(
    tree->params[paramidx] = paramval;
 }
 
-/** sets values of all parameters in expression tree */
-void SCIPexprtreeSetParamVals(
+/** sets number and values of all parameters in expression tree */
+SCIP_RETCODE SCIPexprtreeSetParams(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
-   SCIP_Real*            paramvals           /**< new values of parameters */
+   int                   nparams,            /**< number of parameters */
+   SCIP_Real*            paramvals           /**< values of parameters, can be NULL if nparams == 0 */
 )
 {
    assert(tree != NULL);
-   assert(paramvals != NULL);
-   assert(tree->params != NULL);
+   assert(paramvals != NULL || nparams == 0);
 
-   BMScopyMemoryArray(tree->params, paramvals, tree->nparams);
+   if( nparams == 0 )
+   {
+      BMSfreeBlockMemoryArrayNull(tree->blkmem, &tree->params, tree->nparams);
+   }
+   else if( tree->params != NULL )
+   {
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(tree->blkmem, &tree->params, tree->nparams, nparams) );
+      BMScopyMemoryArray(tree->params, paramvals, nparams);
+   }
+   else
+   {
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(tree->blkmem, &tree->params, paramvals, nparams) );
+   }
+
+   tree->nparams = nparams;
+   assert(tree->params != NULL || tree->nparams == 0);
+
+   return SCIP_OKAY;
 }
 
 /** gets data of expression tree interpreter

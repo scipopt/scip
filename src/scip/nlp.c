@@ -111,12 +111,10 @@ SCIP_RETCODE SCIPexprtreeSetVars(
 
    if( nvars == 0 )
    {
-      BMSfreeBlockMemoryArray(tree->blkmem, &tree->vars, tree->nvars);
+      BMSfreeBlockMemoryArrayNull(tree->blkmem, &tree->vars, tree->nvars);
       tree->nvars = 0;
-      return SCIP_OKAY;
    }
-
-   if( tree->vars != NULL )
+   else if( tree->vars != NULL )
    {
       SCIP_ALLOC( BMSreallocBlockMemoryArray(tree->blkmem, &tree->vars, tree->nvars, nvars) );
       BMScopyMemoryArray(tree->vars, (void**)vars, nvars);
@@ -127,6 +125,8 @@ SCIP_RETCODE SCIPexprtreeSetVars(
    }
 
    tree->nvars = nvars;
+
+   assert(tree->vars != NULL || tree->nvars == 0);
 
    return SCIP_OKAY;
 }
@@ -2671,7 +2671,7 @@ SCIP_RETCODE SCIPnlrowChgExprtreeParams(
    assert(blkmem != NULL);
    assert(nlrow->exprtree != NULL);
 
-   SCIPexprtreeSetParamVals(nlrow->exprtree, paramvals);
+   SCIP_CALL( SCIPexprtreeSetParams(nlrow->exprtree, SCIPexprtreeGetNParams(nlrow->exprtree), paramvals) );
 
    /* notify row about the change */
    SCIP_CALL( nlrowExprtreeParamChanged(nlrow, set, stat, -1, nlp) );
