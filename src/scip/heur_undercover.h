@@ -35,6 +35,23 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** computes a minimal set of covering variables */
+extern
+SCIP_RETCODE SCIPcomputeCoverUndercover(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  coversize,          /**< size of the computed cover */
+   SCIP_VAR**            cover,              /**< buffer to store the variables (of the original SCIP) in the computed cover
+                                              *   (should be ready to hold SCIPgetNVars(scip) entries) */
+   SCIP_Real             timelimit,          /**< time limit */
+   SCIP_Real             memorylimit,        /**< memory limit */
+   SCIP_Bool             globalbounds,       /**< should global bounds on variables be used instead of local bounds at focus node? */
+   SCIP_Bool             onlyconvexify,      /**< should we only fix/dom.red. variables creating nonconvexity? */
+   char                  coveringobj,        /**< objective function of the covering problem ('b'ranching status,
+                                              *   influenced nonlinear 'c'onstraints/'t'erms, 'd'omain size, 'l'ocks,
+                                              *   'm'in of up/down locks, 'u'nit penalties, constraint 'v'iolation) */
+   SCIP_Bool*            success             /**< feasible cover found? */
+   );
+
 #ifdef __cplusplus
 }
 #endif
