@@ -345,8 +345,8 @@ static
 SCIP_RETCODE calcCliquepartition(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< constraint data */
-   SCIP_Bool             normalclique,       /** should normal cliquepartition be created */
-   SCIP_Bool             negatedclique       /** should negated cliquepartition be created */
+   SCIP_Bool             normalclique,       /**< Should normal cliquepartition be created? */
+   SCIP_Bool             negatedclique       /**< Should negated cliquepartition be created? */
    )
 {
    assert(consdata != NULL);
