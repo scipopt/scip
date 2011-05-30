@@ -316,7 +316,7 @@ endif
 
 LPSOPTIONS	+=	none
 ifeq ($(LPS),none)
-LPILIBOBJ	=	scip/lpi_none.o scip/bitencode.o blockmemshell/memory.o scip/message.o
+LPILIBOBJ	=	scip/lpi_none.o blockmemshell/memory.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 endif
 
