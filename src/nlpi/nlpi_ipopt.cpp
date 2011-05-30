@@ -38,6 +38,9 @@
 
 #include <new>      /* for std::bad_alloc */
 
+/* if defined, then primal values of intermediate solutions are stored and returned as solution if Ipopt does not finish with a feasible solution */
+/* #define NLPIIPOPT_STOREINTERMEDIATE */
+
 #include "IpIpoptApplication.hpp"
 namespace Ipopt
 {
@@ -45,6 +48,11 @@ namespace Ipopt
    class IpoptData;
 }
 #include "IpIpoptCalculatedQuantities.hpp"
+#ifdef NLPIIPOPT_STOREINTERMEDIATE
+#include "IpIpoptData.hpp"
+#include "IpTNLPAdapter.hpp"
+#include "IpOrigIpoptNLP.hpp"
+#endif
 #include "IpSolveStatistics.hpp"
 #include "IpJournalist.hpp"
 #include "config_ipopt.h"
@@ -87,6 +95,7 @@ public:
    SCIP_NLPSOLSTAT             lastsolstat;  /**< solution status from last run */
    SCIP_NLPTERMSTAT            lasttermstat; /**< termination status from last run */
    SCIP_Real*                  lastsol;      /**< solution from last run, if available */
+   SCIP_Real                   lastsolinfeas;/**< infeasibility (constraint violation) of solution stored in lastsol */
    int                         lastniter;    /**< number of iterations in last run */
    SCIP_Real                   lasttime;     /**< time spend in last run */
 
@@ -323,6 +332,7 @@ void invalidateSolution(
    BMSfreeMemoryArrayNull(&problem->lastsol);
    problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
    problem->lasttermstat = SCIP_NLPTERMSTAT_OTHER;
+   problem->lastsolinfeas = SCIP_INVALID;
 }
 
 /** copy method of NLP interface (called when SCIP copies plugins)
@@ -902,6 +912,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
    
    problem->lastniter = -1;
    problem->lasttime  = -1.0;
+   problem->lastsolinfeas = SCIP_INVALID;
    
    try
    {
@@ -2220,6 +2231,41 @@ bool ScipNLP::intermediate_callback(
    IpoptCalculatedQuantities* ip_cq       /**< pointer to current calculated quantities */
 )
 {
+#ifdef NLPIIPOPT_STOREINTERMEDIATE
+   if( mode == RegularMode && inf_pr < nlpiproblem->lastsolinfeas )
+   {
+      Ipopt::TNLPAdapter* tnlp_adapter;
+
+      tnlp_adapter = NULL;
+      if( ip_cq != NULL )
+      {
+         Ipopt::OrigIpoptNLP* orignlp;
+
+         orignlp = dynamic_cast<OrigIpoptNLP*>(GetRawPtr(ip_cq->GetIpoptNLP()));
+         if( orignlp != NULL )
+            tnlp_adapter = dynamic_cast<TNLPAdapter*>(GetRawPtr(orignlp->nlp()));
+      }
+
+      if( tnlp_adapter != NULL && ip_data != NULL && IsValid(ip_data->curr()) )
+      {
+         SCIPdebugMessage("update lastsol: inf_pr old = %g -> new = %g\n", nlpiproblem->lastsolinfeas, inf_pr);
+
+         if( nlpiproblem->lastsol == NULL )
+         {
+            if( BMSallocMemoryArray(&nlpiproblem->lastsol, SCIPnlpiOracleGetNVars(nlpiproblem->oracle)) == NULL )
+            {
+               SCIPerrorMessage("out-of-memory in ScipNLP::intermediate_callback()\n");
+               return TRUE;
+            }
+         }
+
+         assert(IsValid(ip_data->curr()->x()));
+         tnlp_adapter->ResortX(*ip_data->curr()->x(), nlpiproblem->lastsol);
+         nlpiproblem->lastsolinfeas = inf_pr;
+      }
+   }
+#endif
+
    return (SCIPinterrupted() == FALSE);
 }
 
@@ -2314,8 +2360,34 @@ void ScipNLP::finalize_solution(
          break;
    }
 
-   if( x != NULL )
+   /* if Ipopt reports its solution as locally infeasible, then report the intermediate point with lowest constraint violation, if available */
+   if( (x == NULL || nlpiproblem->lastsolstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE) && nlpiproblem->lastsolinfeas != SCIP_INVALID )
    {
+      assert(nlpiproblem->lastsol != NULL); /* if infeasibility of lastsol is not invalid, then lastsol should exist */
+
+      /* check if lastsol is feasible */
+      Number constrvioltol;
+      nlpiproblem->ipopt->Options()->GetNumericValue("constr_viol_tol", constrvioltol, "");
+      if( nlpiproblem->lastsolinfeas <= constrvioltol )
+      {
+         nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
+      }
+      else
+      {
+         nlpiproblem->ipopt->Options()->GetNumericValue("acceptable_constr_viol_tol", constrvioltol, "");
+         if( nlpiproblem->lastsolinfeas <= constrvioltol )
+            nlpiproblem->lastsolstat = SCIP_NLPSOLSTAT_FEASIBLE;
+         else
+            nlpiproblem->lastsolstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+      }
+
+      SCIPdebugMessage("drop Ipopt's final point and report intermediate locally %sfeasible solution with infeas %g instead\n",
+         nlpiproblem->lastsolstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE ? "in" : "", nlpiproblem->lastsolinfeas);
+   }
+   else
+   {
+      assert(x != NULL);
+
       if( nlpiproblem->lastsol == NULL )
       {
          if( BMSduplicateMemoryArray(&nlpiproblem->lastsol, x, n) == NULL )

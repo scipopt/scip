@@ -212,7 +212,6 @@ SCIP_RETCODE updateTimelimit(
 static
 SCIP_RETCODE processNlRow(
    SCIP*                 scip,               /**< original SCIP data structure */
-   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    SCIP_NLROW*           nlrow,              /**< nonlinear row representation of a nonlinear constraint */
    SCIP*                 coveringscip,       /**< SCIP data structure for the covering problem */
    int                   nvars,              /**< number of variables */
@@ -220,6 +219,9 @@ SCIP_RETCODE processNlRow(
    int*                  termcounter,        /**< counter array for number of nonlinear nonzeros per variable */
    int*                  conscounter,        /**< counter array for number of nonlinear constraints per variable */
    SCIP_Bool*            consmarker,         /**< marker array if constraint has been counted in conscounter */
+   SCIP_Bool             globalbounds,       /**< should global bounds on variables be used instead of local bounds at focus node? */
+   SCIP_Bool             onlyconvexify,      /**< should we only fix/dom.red. variables creating nonconvexity? */
+   char                  coveringobj,        /**< objective function of the covering problem */
    SCIP_Bool*            success             /**< pointer to store whether the problem was created successfully */
    )
 {
@@ -230,7 +232,6 @@ SCIP_RETCODE processNlRow(
    char name[SCIP_MAXSTRLEN];
 
    assert(scip != NULL);
-   assert(heurdata != NULL);
    assert(nlrow != NULL);
    assert(coveringscip != NULL);
    assert(nvars >= 1);
@@ -274,7 +275,7 @@ SCIP_RETCODE processNlRow(
             }
 
             /* term is constant, nothing to do */
-            if( termIsConstant(scip, exprtreevars[i], 1.0, heurdata->globalbounds) )
+            if( termIsConstant(scip, exprtreevars[i], 1.0, globalbounds) )
                continue;
 
             /* otherwise fix variable */
@@ -321,11 +322,11 @@ SCIP_RETCODE processNlRow(
       if( bilinvar1 == bilinvar2 )
       {
          /* term is constant, nothing to do */
-         if( termIsConstant(scip, bilinvar1, quadelem->coef, heurdata->globalbounds) )
+         if( termIsConstant(scip, bilinvar1, quadelem->coef, globalbounds) )
             continue;
 
          /* if we only convexify and term is convex considering the bounds of the nlrow, nothing to do */
-         if( heurdata->onlyconvexify && termIsConvex(scip, SCIPnlrowGetLhs(nlrow), SCIPnlrowGetRhs(nlrow), quadelem->coef >= 0) )
+         if( onlyconvexify && termIsConvex(scip, SCIPnlrowGetLhs(nlrow), SCIPnlrowGetRhs(nlrow), quadelem->coef >= 0) )
             continue;
 
          /* otherwise variable has to be in the cover */
@@ -345,8 +346,8 @@ SCIP_RETCODE processNlRow(
          SCIP_VAR* coveringconsvars[2];
 
          /* if the term is linear because one of the variables is fixed or the coefficient is zero, nothing to do */
-         if( termIsConstant(scip, bilinvar1, quadelem->coef, heurdata->globalbounds)
-            || termIsConstant(scip, bilinvar2, quadelem->coef, heurdata->globalbounds) )
+         if( termIsConstant(scip, bilinvar1, quadelem->coef, globalbounds)
+            || termIsConstant(scip, bilinvar2, quadelem->coef, globalbounds) )
             continue;
 
          /* create covering constraint */
@@ -384,7 +385,9 @@ SCIP_RETCODE createCoveringProblem(
    SCIP*                 scip,               /**< original SCIP data structure */
    SCIP*                 coveringscip,       /**< SCIP data structure for the covering problem */
    SCIP_VAR**            coveringvars,       /**< array to store the covering problem's variables */
-   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   SCIP_Bool             globalbounds,       /**< should global bounds on variables be used instead of local bounds at focus node? */
+   SCIP_Bool             onlyconvexify,      /**< should we only fix/dom.red. variables creating nonconvexity? */
+   char                  coveringobj,        /**< objective function of the covering problem */
    SCIP_Bool*            success             /**< pointer to store whether the problem was created successfully */
    )
 {
@@ -405,7 +408,6 @@ SCIP_RETCODE createCoveringProblem(
    assert(scip != NULL);
    assert(coveringscip != NULL);
    assert(coveringvars != NULL);
-   assert(heurdata != NULL);
    assert(success != NULL);
 
    *success = FALSE;
@@ -511,14 +513,14 @@ SCIP_RETCODE createCoveringProblem(
             }
 
             /* if variable is fixed to 0, entire constraint can be linearized */
-            if( varIsFixed(scip, andvars[v], 0.0, heurdata->globalbounds) )
+            if( varIsFixed(scip, andvars[v], 0.0, globalbounds) )
             {
                ntofix = 0;
                break;
             }
 
             /* if variable is fixed, nothing to do */
-            if( termIsConstant(scip, andvars[v], 1.0, heurdata->globalbounds) )
+            if( termIsConstant(scip, andvars[v], 1.0, globalbounds) )
             {
                continue;
             }
@@ -540,7 +542,7 @@ SCIP_RETCODE createCoveringProblem(
          }
 
          /* if less than 2 variables are unfixed or the resultant variable is fixed, the entire constraint can be linearized anyway */
-         if( ntofix >= 2 && !termIsConstant(scip, vars[probindex], 1.0, heurdata->globalbounds) )
+         if( ntofix >= 2 && !termIsConstant(scip, vars[probindex], 1.0, globalbounds) )
          {
             assert(ntofix <= SCIPgetNVarsAnd(scip, andcons));
 
@@ -603,14 +605,15 @@ SCIP_RETCODE createCoveringProblem(
          }
 
          /* if we only want to convexify and curvature and bounds prove already convexity, nothing to do */
-         if( heurdata->onlyconvexify
+         if( onlyconvexify
             && ((SCIPisInfinity(scip, -SCIPgetLhsQuadratic(scip, quadcons)) && SCIPisConvexQuadratic(scip, quadcons))
                || (SCIPisInfinity(scip, SCIPgetRhsQuadratic(scip, quadcons)) && SCIPisConcaveQuadratic(scip, quadcons))) )
             continue;
 
          /* process nlrow */
          *success = FALSE;
-         SCIP_CALL( processNlRow(scip, heurdata, nlrow, coveringscip, nvars, coveringvars, termcounter, conscounter, consmarker, success) );
+         SCIP_CALL( processNlRow(scip, nlrow, coveringscip, nvars, coveringvars, termcounter, conscounter, consmarker,
+               globalbounds, onlyconvexify, coveringobj, success) );
 
          if( *success == FALSE )
             goto TERMINATE;
@@ -621,7 +624,7 @@ SCIP_RETCODE createCoveringProblem(
 
    /* go through all "soc" constraints in the original problem */
    conshdlr = SCIPfindConshdlr(scip, "soc");
-   if( conshdlr != NULL && !heurdata->onlyconvexify )
+   if( conshdlr != NULL && !onlyconvexify )
    {
       int c;
 
@@ -671,7 +674,7 @@ SCIP_RETCODE createCoveringProblem(
          }
 
          /* add covering variable for unfixed rhs variable */
-         if( !termIsConstant(scip, socrhsvar, SCIPgetRhsCoefSOC(scip, soccons), heurdata->globalbounds) )
+         if( !termIsConstant(scip, socrhsvar, SCIPgetRhsCoefSOC(scip, soccons), globalbounds) )
          {
             SCIP_CALL( SCIPgetNegatedVar(coveringscip, coveringvars[probindex], &coveringconsvars[ntofix]) );
             ntofix++;
@@ -692,7 +695,7 @@ SCIP_RETCODE createCoveringProblem(
             }
 
             /* add covering variable for unfixed lhs variable */
-            if( !termIsConstant(scip, soclhsvars[v], SCIPgetLhsCoefsSOC(scip, soccons)[v], heurdata->globalbounds) )
+            if( !termIsConstant(scip, soclhsvars[v], SCIPgetLhsCoefsSOC(scip, soccons)[v], globalbounds) )
             {
                SCIP_CALL( SCIPgetNegatedVar(coveringscip, coveringvars[probindex], &coveringconsvars[ntofix]) );
                ntofix++;
@@ -749,7 +752,8 @@ SCIP_RETCODE createCoveringProblem(
          
          /* process nlrow */
          *success = FALSE;
-         SCIP_CALL( processNlRow(scip, heurdata, nlrows[i], coveringscip, nvars, coveringvars, termcounter, conscounter, consmarker, success) );
+         SCIP_CALL( processNlRow(scip, nlrows[i], coveringscip, nvars, coveringvars, termcounter, conscounter, consmarker,
+               globalbounds, onlyconvexify, coveringobj, success) );
 
          if( *success == FALSE )
             goto TERMINATE;
@@ -757,7 +761,7 @@ SCIP_RETCODE createCoveringProblem(
    }
 
    /* set objective function of covering problem */
-   switch( heurdata->coveringobj )
+   switch( coveringobj )
    {
    case 'c': /* number of influenced nonlinear constraints */
       for( i = nvars-1; i >= 0; i-- )
@@ -769,7 +773,7 @@ SCIP_RETCODE createCoveringProblem(
       for( i = nvars-1; i >= 0; i-- )
       {
          SCIP_CALL( SCIPchgVarObj(coveringscip, coveringvars[i],
-               (heurdata->globalbounds ? SCIPvarGetUbGlobal(vars[i]) - SCIPvarGetLbGlobal(vars[i]) : SCIPvarGetUbLocal(vars[i]) - SCIPvarGetLbLocal(vars[i]))) );
+               (globalbounds ? SCIPvarGetUbGlobal(vars[i]) - SCIPvarGetLbGlobal(vars[i]) : SCIPvarGetUbLocal(vars[i]) - SCIPvarGetLbLocal(vars[i]))) );
       }
       break;
    case 'l': /* number of locks */
@@ -801,7 +805,7 @@ SCIP_RETCODE createCoveringProblem(
       }
       break;
    default:
-      SCIPerrorMessage("invalid choice <%c> for covering objective\n", heurdata->coveringobj);
+      SCIPerrorMessage("invalid choice <%c> for covering objective\n", coveringobj);
       goto TERMINATE;
    }
 
@@ -1938,7 +1942,7 @@ SCIP_RETCODE SCIPapplyUndercover(
    SCIP_CALL( SCIPcreate(&coveringscip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(coveringscip) );
    SCIP_CALL( SCIPallocBufferArray(scip, &coveringvars, nvars) );
-   SCIP_CALL( createCoveringProblem(scip, coveringscip, coveringvars, heurdata, &success) );
+   SCIP_CALL( createCoveringProblem(scip, coveringscip, coveringvars, heurdata->globalbounds, heurdata->onlyconvexify, heurdata->coveringobj, &success) );
 
    if( !success )
    {
@@ -2739,6 +2743,81 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/copycuts",
          "should all active cuts from cutpool be copied to constraints in subproblem?",
          &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
+
+   return SCIP_OKAY;
+}
+
+
+/** computes a minimal set of covering variables */
+SCIP_RETCODE SCIPcomputeCoverUndercover(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  coversize,          /**< buffer for the size of the computed cover */
+   SCIP_VAR**            cover,              /**< buffer to store the variables (for the original SCIP) in the computed cover
+                                              *   (should be ready to hold SCIPgetNVars(scip) entries) */
+   SCIP_Real             timelimit,          /**< time limit */
+   SCIP_Real             memorylimit,        /**< memory limit */
+   SCIP_Bool             globalbounds,       /**< should global bounds on variables be used instead of local bounds at focus node? */
+   SCIP_Bool             onlyconvexify,      /**< should we only fix/dom.red. variables creating nonconvexity? */
+   char                  coveringobj,        /**< objective function of the covering problem ('b'ranching status,
+                                              *   influenced nonlinear 'c'onstraints/'t'erms, 'd'omain size, 'l'ocks,
+                                              *   'm'in of up/down locks, 'u'nit penalties, constraint 'v'iolation) */
+   SCIP_Bool*            success             /**< feasible cover found? */
+   )
+{
+   SCIP* coveringscip;                       /* SCIP instance for covering problem */
+   SCIP_VAR** coveringvars;                  /* covering variables */
+   SCIP_VAR** vars;                          /* original variables */
+   int* coverinds;                           /* indices of variables in the cover */
+   int nvars;                                /* number of original variables */
+   int i;
+
+   assert(scip != NULL);
+   assert(coversize != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   /* allocate memory for variables of the covering problem */
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL ) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &coveringvars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &coverinds, nvars) );
+
+   /* create covering problem */
+   SCIP_CALL( SCIPcreate(&coveringscip) );
+   SCIP_CALL( SCIPincludeDefaultPlugins(coveringscip) );
+   SCIP_CALL( createCoveringProblem(scip, coveringscip, coveringvars, globalbounds, onlyconvexify, coveringobj, success) );
+
+   if( !*success )
+   {
+      SCIPdebugMessage("failure: covering problem could not be created\n");
+      return SCIP_OKAY;
+   }
+
+   /* solve covering problem */
+   SCIPdebugMessage("solving covering problem\n\n");
+
+   SCIP_CALL( solveCoveringProblem(coveringscip, nvars, coveringvars, coversize, coverinds,
+         timelimit, memorylimit + SCIPgetMemUsed(coveringscip)/1048576.0, success) );
+
+   assert(*coversize >= 0);
+   assert(*coversize <= nvars);
+
+   /* return orginal variables in the cover */
+   for( i = *coversize-1; i >= 0; i-- )
+   {
+      assert(coverinds[i] >= 0);
+      assert(coverinds[i] < nvars);
+      cover[i] = vars[coverinds[i]];
+   }
+
+   /* free covering problem */
+   SCIPfreeBufferArray(scip, &coverinds);
+   for( i = nvars-1; i >= 0; i-- )
+   {
+      SCIP_CALL( SCIPreleaseVar(scip, &coveringvars[i]) );
+   }
+   SCIPfreeBufferArray(scip, &coveringvars);
+   SCIP_CALL( SCIPfree(&coveringscip) );
 
    return SCIP_OKAY;
 }

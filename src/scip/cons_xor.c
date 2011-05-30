@@ -497,41 +497,6 @@ SCIP_RETCODE delCoefPos(
    return SCIP_OKAY;
 }
 
-/** comparison method for entries of an xor constraint: returns -1 if var1 is smaller, +1 if var2 is smaller, and
- *  0 if both are equal
- */
-static
-int compareVars(
-   SCIP_VAR*             var1,               /**< first variable to compare */
-   SCIP_VAR*             var2                /**< second variable to compare */
-   )
-{
-   SCIP_VAR* probvar1;
-   SCIP_VAR* probvar2;
-
-   if( var1 == var2 )
-      return 0;
-
-   /* compare problem variables */
-   probvar1 = SCIPvarGetProbvar(var1);
-   probvar2 = SCIPvarGetProbvar(var2);
-   if( probvar1 == probvar2 )
-   {
-      assert(var1 == SCIPvarGetNegatedVar(var2));
-      if( SCIPvarGetProbindex(var2) == -1 )
-      {
-         assert(SCIPvarGetProbindex(var1) >= 0);
-         return -1;
-      }
-      else
-      {
-         assert(SCIPvarGetProbindex(var2) >= 0);
-         return +1;
-      }
-   }
-   return SCIPvarCompare(probvar1, probvar2);
-}
-
 /** index comparison method of and constraints: compares two indices of the variable set in the xor constraint */
 static
 SCIP_DECL_SORTINDCOMP(consdataCompVar)
@@ -542,7 +507,7 @@ SCIP_DECL_SORTINDCOMP(consdataCompVar)
    assert(0 <= ind1 && ind1 < consdata->nvars);
    assert(0 <= ind2 && ind2 < consdata->nvars);
 
-   return compareVars(consdata->vars[ind1], consdata->vars[ind2]);
+   return SCIPvarCompareActiveAndNegated(consdata->vars[ind1], consdata->vars[ind2]);
 }
 
 /** sorts and constraint's variables by non-decreasing variable index */
@@ -611,7 +576,7 @@ SCIP_RETCODE consdataSort(
       /* check sorting */
       for( v = 0; v < consdata->nvars; ++v )
       {
-         assert(v == consdata->nvars-1 || compareVars(consdata->vars[v], consdata->vars[v+1]) <= 0);
+         assert(v == consdata->nvars-1 || SCIPvarCompareActiveAndNegated(consdata->vars[v], consdata->vars[v+1]) <= 0);
          assert(perm[v] == v);
       }
 #endif
@@ -640,7 +605,6 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqXorcons)
    SCIP* scip;
    SCIP_CONSDATA* consdata1;
    SCIP_CONSDATA* consdata2;
-   SCIP_Bool coefsequal;
    int i;
 
    consdata1 = SCIPconsGetData((SCIP_CONS*)key1);
@@ -656,8 +620,6 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqXorcons)
    SCIP_CALL_ABORT( consdataSort(scip, consdata1) );
    SCIP_CALL_ABORT( consdataSort(scip, consdata2) );
 
-   coefsequal = TRUE;
-
    for( i = 0; i < consdata1->nvars ; ++i )
    {
       /* tests if variables are equal */
@@ -665,13 +627,12 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqXorcons)
       {
          assert(SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == 1 || 
             SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == -1);
-         coefsequal = FALSE;
-         break;
+         return FALSE;
       }
-      assert(SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == 0); 
+      assert(SCIPvarCompareActiveAndNegated(consdata1->vars[i], consdata2->vars[i]) == 0);
    } 
    
-   return coefsequal;
+   return TRUE;
 }
 
 /** returns the hash value of the key */
@@ -689,10 +650,20 @@ SCIP_DECL_HASHKEYVAL(hashKeyValXorcons)
    assert(consdata->sorted);
    assert(consdata->nvars > 0);
 
+   /* only active, fixed or negated variables are allowed */
+   assert(consdata->vars[0] != NULL);
+   assert(consdata->vars[consdata->nvars / 2] != NULL);
+   assert(consdata->vars[consdata->nvars - 1] != NULL);
+   assert(SCIPvarIsActive(consdata->vars[0]) || SCIPvarGetStatus(consdata->vars[0]) == SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(consdata->vars[0]) == SCIP_VARSTATUS_FIXED);
+   assert(SCIPvarIsActive(consdata->vars[consdata->nvars / 2]) || SCIPvarGetStatus(consdata->vars[consdata->nvars / 2]) == SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(consdata->vars[consdata->nvars / 2]) == SCIP_VARSTATUS_FIXED);
+   assert(SCIPvarIsActive(consdata->vars[consdata->nvars - 1]) || SCIPvarGetStatus(consdata->vars[consdata->nvars - 1]) == SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(consdata->vars[consdata->nvars - 1]) == SCIP_VARSTATUS_FIXED);
+
    minidx = SCIPvarGetIndex(consdata->vars[0]);
    mididx = SCIPvarGetIndex(consdata->vars[consdata->nvars / 2]);
    maxidx = SCIPvarGetIndex(consdata->vars[consdata->nvars - 1]);
-   assert(minidx >= 0 && minidx <= maxidx);
+   /* note that for all indices it does not hold that they are sorted, because variables are sorted with
+    * SCIPvarCompareActiveAndNegated (see var.c)
+    */
 
    hashval = (consdata->nvars << 29) + (minidx << 22) + (mididx << 11) + maxidx; /*lint !e701*/
 
@@ -1335,6 +1306,7 @@ SCIP_RETCODE detectRedundantConstraints(
    SCIP_CONS**           conss,              /**< constraint set */
    int                   nconss,             /**< number of constraints in constraint set */
    int*                  firstchange,        /**< pointer to store first changed constraint */
+   int*                  nchgcoefs,          /**< pointer to add up the number of changed coefficients */
    int*                  ndelconss,          /**< pointer to count number of deleted constraints */
    SCIP_Bool*            cutoff              /**< pointer to store TRUE, if a cutoff was found */
 )
@@ -1358,11 +1330,26 @@ SCIP_RETCODE detectRedundantConstraints(
       SCIP_CONS* cons0;
       SCIP_CONS* cons1;
       SCIP_CONSDATA* consdata0;
+      SCIP_CONSHDLR* conshdlr;
+      SCIP_CONSHDLRDATA* conshdlrdata;
 
       cons0 = conss[c];
 
       if( !SCIPconsIsActive(cons0) || SCIPconsIsModifiable(cons0) )
          continue;
+
+      /* get constraint handler data */
+      conshdlr = SCIPconsGetHdlr(cons0);
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+
+      /* it can happen that during preprocessing some variables got aggregated and a constraint now has not active
+       * variables inside so we need to remove them for sortation
+       */
+      /* remove all variables that are fixed to zero and all pairs of variables fixed to one;
+       * merge multiple entries of the same or negated variables
+       */
+      SCIP_CALL( applyFixings(scip, cons0, conshdlrdata->eventhdlr, nchgcoefs) );
 
       consdata0 = SCIPconsGetData(cons0);
       /* sort the constraint */
@@ -1464,6 +1451,14 @@ SCIP_RETCODE preprocessConstraintPairs(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   /* it can happen that during preprocessing some variables got aggregated and a constraint now has not active
+    * variables inside so we need to remove them for sortation
+    */
+   /* remove all variables that are fixed to zero and all pairs of variables fixed to one;
+    * merge multiple entries of the same or negated variables
+    */
+   SCIP_CALL( applyFixings(scip, cons0, conshdlrdata->eventhdlr, nchgcoefs) );
+
    /* sort cons0 */
    SCIP_CALL( consdataSort(scip, consdata0) );
 
@@ -1492,6 +1487,14 @@ SCIP_RETCODE preprocessConstraintPairs(
 
       consdata1 = SCIPconsGetData(cons1);
       assert(consdata1 != NULL);
+
+      /* it can happen that during preprocessing some variables got aggregated and a constraint now has not active
+       * variables inside so we need to remove them for sortation
+       */
+      /* remove all variables that are fixed to zero and all pairs of variables fixed to one;
+       * merge multiple entries of the same or negated variables
+       */
+      SCIP_CALL( applyFixings(scip, cons1, conshdlrdata->eventhdlr, nchgcoefs) );
 
       SCIPdebugMessage("preprocess xor constraint pair <%s>[chg:%u] and <%s>[chg:%u]\n",
          SCIPconsGetName(cons0), cons0changed, SCIPconsGetName(cons1), consdata1->changed);
@@ -1532,7 +1535,7 @@ SCIP_RETCODE preprocessConstraintPairs(
          else if( v1 == consdata1->nvars )
             cmp = -1;
          else
-            cmp = compareVars(consdata0->vars[v0], consdata1->vars[v1]);
+            cmp = SCIPvarCompareActiveAndNegated(consdata0->vars[v0], consdata1->vars[v1]);
 
          switch( cmp )
          {
@@ -1714,13 +1717,13 @@ SCIP_RETCODE preprocessConstraintPairs(
          if( !parity )
          {
             /* aggregate singlevar0 == singlevar1 */
-            SCIP_CALL( SCIPaggregateVars(scip, singlevar0, singlevar1, 1.0, -1.0, 0.0,
+            SCIP_CALL( SCIPaggregateVars(scip, singlevar1, singlevar0, 1.0, -1.0, 0.0,
                   &infeasible, &redundant, &aggregated) );
          }
          else
          {
             /* aggregate singlevar0 == 1-singlevar1 */
-            SCIP_CALL( SCIPaggregateVars(scip, singlevar0, singlevar1, 1.0, 1.0, 1.0,
+            SCIP_CALL( SCIPaggregateVars(scip, singlevar1, singlevar0, 1.0, 1.0, 1.0,
                   &infeasible, &redundant, &aggregated) );
          }
          assert(infeasible || redundant);
@@ -1729,6 +1732,16 @@ SCIP_RETCODE preprocessConstraintPairs(
             (*naggrvars)++;
          SCIP_CALL( SCIPdelCons(scip, cons1) );
          (*ndelconss)++;
+#if 0
+      /* if aggregation in the core of SCIP is not changed we do not need to call applyFixing, this would be the correct
+       * way
+       */
+      /* remove all variables that are fixed to zero and all pairs of variables fixed to one;
+       * merge multiple entries of the same or negated variables
+       */
+      SCIP_CALL( applyFixings(scip, cons0, conshdlrdata->eventhdlr, nchgcoefs) );
+#endif
+
       }
    }
 
@@ -2156,7 +2169,7 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
          if( firstchange < nconss && conshdlrdata->presolusehashing ) 
          {
             /* detect redundant constraints; fast version with hash table instead of pairwise comparison */
-            SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &firstchange, ndelconss, &cutoff) );
+            SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &firstchange, nchgcoefs, ndelconss, &cutoff) );
          }
          if( conshdlrdata->presolpairwise )
          {

@@ -405,7 +405,7 @@ void SCIPintervalSquare(
    );
 
 /** stores (positive part of) square root of operand in resultant
- * @caution we assume a correctly rounded sqrt(double) function when rounding is to nearest
+ * @attention we assume a correctly rounded sqrt(double) function when rounding is to nearest
  */
 extern
 void SCIPintervalSquareRoot(
@@ -437,7 +437,7 @@ void SCIPintervalPowerScalar(
 /** stores bounds on the power of a scalar operand1 to a scalar operand2 in resultant
  * both operands need to be finite numbers
  * need to have operand1 >= 0 or operand2 integer and need to have operand2 >= 0 if operand1 == 0
- * @caution we assume a correctly rounded pow(double) function when rounding is to nearest
+ * @attention we assume a correctly rounded pow(double) function when rounding is to nearest
  */
 extern
 void SCIPintervalPowerScalarScalar(
@@ -481,7 +481,7 @@ void SCIPintervalPowerScalarInteger(
  * 
  * the signed power of x w.r.t. an exponent n >= 0 is given as sign(x) * abs(x)^n
  *
- * @caution we assume correctly rounded sqrt(double) and pow(double) functions when rounding is to nearest
+ * @attention we assume correctly rounded sqrt(double) and pow(double) functions when rounding is to nearest
  */
 extern
 void SCIPintervalSignPowerScalar(
@@ -501,7 +501,7 @@ void SCIPintervalReciprocal(
    );
 
 /** stores exponential of operand in resultant
- * @caution we assume a correctly rounded exp(double) function when rounding is to nearest
+ * @attention we assume a correctly rounded exp(double) function when rounding is to nearest
  */
 extern
 void SCIPintervalExp(
@@ -511,7 +511,7 @@ void SCIPintervalExp(
    );
 
 /** stores natural logarithm of operand in resultant
- * @caution we assume a correctly rounded log(double) function when rounding is to nearest
+ * @attention we assume a correctly rounded log(double) function when rounding is to nearest
  */
 extern
 void SCIPintervalLog(
