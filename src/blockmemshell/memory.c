@@ -294,7 +294,7 @@ void* BMSallocClearMemory_call(
       printErrorHeader(filename, line);
       printError("Insufficient memory for allocation of %lld bytes\n", ((long long) num) * ((long long) size));
    }
-#ifndef NDEBUG
+#if !defined(NDEBUG) && defined(NPARASCIP)
    else
       addMemlistEntry(ptr, num*size, filename, line);
 #endif
