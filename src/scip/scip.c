@@ -939,11 +939,6 @@ void SCIPfreeMesshdlrPThreads(
  * SCIP copy methods
  */
 
-#ifndef NPARASCIP
-/* mutex to lock important copy parts */
-static pthread_mutex_t copymutex = PTHREAD_MUTEX_INITIALIZER;
-#endif
-
 
 #define HASHTABLESIZE_FACTOR 5
 
@@ -952,6 +947,7 @@ static pthread_mutex_t copymutex = PTHREAD_MUTEX_INITIALIZER;
  *  copied SCIP instance might not represent the same problem semantics as the original. 
  *  Note that in this case dual reductions might be invalid. 
  *
+ *  @note you need to lock from outside before copying
  *  @note Do not change the source SCIP environment during the copying process
  */
 SCIP_RETCODE SCIPcopyPlugins(
@@ -994,6 +990,7 @@ SCIP_RETCODE SCIPcopyPlugins(
 
 /** create a problem by copying the problem data of the source SCIP 
  *
+ *  @note you need to lock from outside before copying
  *  @note Do not change the source SCIP environment during the copying process
  */
 SCIP_RETCODE SCIPcopyProb(
@@ -1054,14 +1051,8 @@ SCIP_RETCODE SCIPcopyProb(
    /* create the statistics data structure */
    SCIP_CALL( SCIPstatCreate(&targetscip->stat, targetscip->mem->probmem, targetscip->set) );
 
-#ifndef NPARASCIP
-   pthread_mutex_lock(&copymutex);
-#endif
    /* create the problem by copying the source problme */
    SCIP_CALL( SCIPprobCopy(&targetscip->origprob, targetscip->mem->probmem, targetscip->set, name, sourcescip, sourceprob, localvarmap, localconsmap, global) );
-#ifndef NPARASCIP
-   pthread_mutex_unlock(&copymutex);
-#endif
 
    if( uselocalvarmap )
    {
@@ -1156,14 +1147,8 @@ SCIP_RETCODE SCIPgetVarCopy(
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_FIXED:
-#ifndef NPARASCIP
-   pthread_mutex_lock(&copymutex);
-#endif
       SCIP_CALL( SCIPvarCopy(&var, targetscip->mem->probmem, targetscip->set, targetscip->stat, 
             sourcescip, sourcevar, localvarmap, localconsmap, global) );
-#ifndef NPARASCIP
-   pthread_mutex_unlock(&copymutex);
-#endif
       break;
       
    case SCIP_VARSTATUS_AGGREGATED:
@@ -1185,15 +1170,9 @@ SCIP_RETCODE SCIPgetVarCopy(
       SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourceaggrvar, &targetaggrvar, localvarmap, localconsmap, global, success) );
       assert(*success);
 
-#ifndef NPARASCIP
-   pthread_mutex_lock(&copymutex);
-#endif
       /* create copy of the aggregated variable */
       SCIP_CALL( SCIPvarCopy(&var, targetscip->mem->probmem, targetscip->set, targetscip->stat, 
             sourcescip, sourcevar, localvarmap, localconsmap, global) );
-#ifndef NPARASCIP
-   pthread_mutex_unlock(&copymutex);
-#endif
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_aggr", SCIPvarGetName(sourcevar));
          
@@ -1221,14 +1200,8 @@ SCIP_RETCODE SCIPgetVarCopy(
       int naggrvars;
       int i;
         
-#ifndef NPARASCIP
-   pthread_mutex_lock(&copymutex);
-#endif
       /* get the active representation */
       SCIP_CALL( SCIPflattenVarAggregationGraph(sourcescip, sourcevar) );
-#ifndef NPARASCIP
-   pthread_mutex_unlock(&copymutex);
-#endif
     
       /* get multiaggregation data */
       naggrvars = SCIPvarGetMultaggrNVars(sourcevar);
@@ -1245,15 +1218,9 @@ SCIP_RETCODE SCIPgetVarCopy(
          assert(*success);
       }
 
-#ifndef NPARASCIP
-   pthread_mutex_lock(&copymutex);
-#endif
       /* create copy of the multiaggregated variable */
       SCIP_CALL( SCIPvarCopy(&var, targetscip->mem->probmem, targetscip->set, targetscip->stat, 
             sourcescip, sourcevar, localvarmap, localconsmap, global) );
-#ifndef NPARASCIP
-   pthread_mutex_unlock(&copymutex);
-#endif
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_multaggr", SCIPvarGetName(sourcevar));
          
@@ -1325,6 +1292,7 @@ SCIP_RETCODE SCIPgetVarCopy(
  *
  *  @note the variables are added to the target-SCIP but not captured
  *
+ *  @note you need to lock from outside before copying
  *  @note Do not change the source SCIP environment during the copying process
  */
 SCIP_RETCODE SCIPcopyVars(
@@ -1526,15 +1494,9 @@ SCIP_RETCODE SCIPgetConsCopy(
          return SCIP_OKAY;
    }
 
-#ifndef NPARASCIP
-   pthread_mutex_lock(&copymutex);
-#endif
    /*  copy the constraint */
    SCIP_CALL( SCIPconsCopy(targetcons, targetscip->set, name, sourcescip, sourceconshdlr, sourcecons, localvarmap, localconsmap,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, success) );
-#ifndef NPARASCIP
-   pthread_mutex_unlock(&copymutex);
-#endif
 
    if( uselocalvarmap )
    {
@@ -1556,6 +1518,7 @@ SCIP_RETCODE SCIPgetConsCopy(
  *
  *  @note the constraints are added to the target-SCIP but are not captured
  *
+ *  @note you need to lock from outside before copying
  *  @note Do not change the source SCIP environment during the copying process
  */
 SCIP_RETCODE SCIPcopyConss(
@@ -1825,6 +1788,7 @@ SCIP_RETCODE SCIPconvertCutsToConss(
 
 /** copies all active cuts from cutpool of sourcescip to constraints in targetscip 
  *
+ *  @note you need to lock from outside before copying
  *  @note Do not change the source SCIP environment during the copying process
  */
 SCIP_RETCODE SCIPcopyCuts(
@@ -1858,6 +1822,7 @@ SCIP_RETCODE SCIPcopyCuts(
 
 /** copies parameter settings from sourcescip to targetscip 
  *
+ *  @note you need to lock from outside before copying
  *  @note Do not change the source SCIP environment during the copying process
  */
 SCIP_RETCODE SCIPcopyParamSettings(
@@ -1888,6 +1853,7 @@ SCIP_RETCODE SCIPcopyParamSettings(
  *
  *  @note all variables and constraints which are created in the target-SCIP are not (user) captured 
  *
+ *  @note you need to lock from outside before copying
  *  @note Do not change the source SCIP environment during the copying process
  */
 SCIP_RETCODE SCIPcopy(
