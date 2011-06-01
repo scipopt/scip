@@ -162,7 +162,7 @@ features:
 
 design:
 - SCIP_HASHMAP now works also without block memory
-- the 'make' parameter 'PARASCIP=true' leads to threadsafe message handlers where you need to call SCIPcreateMesshdlrPThreads and SCIPmessageSetHandler/SCIPmessageSetDefaultHandler and SCIPfreeMesshdlrPThreads, and to a threadsafe SCIPcopy...() mechanism which all uses mutex; therefor we need to link with pthread library
+- the 'make' parameter 'PARASCIP=true' leads to threadsafe message handlers where you need to call SCIPcreateMesshdlrPThreads and SCIPmessageSetHandler/SCIPmessageSetDefaultHandler and SCIPfreeMesshdlrPThreads; therefor we need to link with pthread library
 
 SCIP version 2.0.2
 ==================
@@ -193,6 +193,7 @@ fixed bugs:
 - fixed bug in SCIPsolveIsStopped where it could happen that TRUE was reported if a nodelimit was reached but checknodelimits had been set to FALSE
 - fixed bug in sorting mechanism in cons_xor.c
 - fixed bug in changing quadratic coefficients of a row in the NLP
+- fixed bug caused by not (correctly) counting boundchanges in cons_varbound.c
 
 performance improvements:
 - fasten propagation in cons_knapsack.c due to negated clique partitions
