@@ -32,6 +32,7 @@ fixed bugs:
 - fixed bug in SCIPsolveIsStopped where it could happen that TRUE was reported if a nodelimit was reached but checknodelimits had been set to FALSE
 - fixed bug in sorting mechanism in cons_xor.c
 - fixed bug in changing quadratic coefficients of a row in the NLP
+- fixed bug caused by not (correctly) counting boundchanges in cons_varbound.c
 
 performance improvements:
 - shiftandpropagate-heuristic uses optimized data structures and produces no memory overhead anymore
