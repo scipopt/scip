@@ -3409,13 +3409,9 @@ void writeBuffer(
    
    if( bufferpos > 0 )
    {
-      int i; 
-      int ntokens;
-
       buffer[bufferpos] = '\0';
-      ntokens = bufferpos / (SCIP_MAXSTRLEN-1);
-      for( i =0; i<=ntokens; i++)
-         SCIPinfoMessage(scip, file, "%s", buffer+i*(SCIP_MAXSTRLEN-1));
+      
+      SCIPinfoMessage(scip, file, "%s", buffer);
    }
 }
 
@@ -3447,7 +3443,7 @@ SCIP_RETCODE appendBuffer(
    }
    
    /* append extension to linebuffer */
-   (void)strncpy((*buffer)+(*bufferpos), extension, (size_t)((*bufferlen)-(*bufferpos)));
+   (void)strncpy((*buffer)+(*bufferpos), extension, (size_t)strlen(extension));
    *bufferpos = newpos;
 
    return SCIP_OKAY;
@@ -3464,7 +3460,7 @@ void flattenFloat(
    if( SCIPisIntegral(scip, val) )
       (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%.1f", SCIPround(scip, val));
    else
-      (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%f", val);
+      (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%+.15g", val);
  
 }
 
@@ -3837,12 +3833,12 @@ SCIP_RETCODE writeFzn(
          assert( v >= nbinvars );
 
          /* declare the variable without any bound */
-         if( v < nintvars )
+         if( v < ndiscretevars )
 	    SCIPinfoMessage(scip, file, "var int: %s;\n", varname);
          else 
 	    SCIPinfoMessage(scip, file, "var float: %s;\n", varname);
 	   
-         /* if there is a  bound, store the variable and its boundtype for adding a corresponding constraint lateron */
+         /* if there is a bound, store the variable and its boundtype for adding a corresponding constraint lateron */
          if( SCIPisInfinity(scip, ub) ) 
          {
             boundedvars[nboundedvars] = v;
