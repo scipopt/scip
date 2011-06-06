@@ -6078,7 +6078,7 @@ SCIP_RETCODE SCIPnlpChgVarsBoundsDive(
 }
 
 /** returns whether the objective function has been changed during diving */
-SCIP_RETCODE SCIPnlpIsDivingObjChanged(
+SCIP_Bool SCIPnlpIsDivingObjChanged(
    SCIP_NLP*             nlp                 /**< current NLP data */
    )
 {

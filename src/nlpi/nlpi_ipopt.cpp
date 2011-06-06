@@ -1752,7 +1752,11 @@ SCIP_RETCODE SCIPcreateNlpSolverIpopt(
 /** gets string that identifies Ipopt (version number) */
 const char* SCIPgetSolverNameIpopt(void)
 {
+#ifdef IPOPT_VERSION
    return "Ipopt "IPOPT_VERSION;
+#else
+   return "Ipopt < 3.9.2";
+#endif
 }
 
 /** gets string that describes Ipopt (version number) */

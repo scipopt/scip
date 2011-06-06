@@ -1150,8 +1150,8 @@ SCIP_RETCODE optimize(
       SCIP_Real masterobj;
       SCIP_Real slaveobj;
       SCIP_Real bound;
-      int masterdir;
-      int slavedir;
+      DIRECTION masterdir;
+      DIRECTION slavedir;
 
       master = bestmasters[b];
       slave = bestslaves[b];
