@@ -38,6 +38,7 @@
 
 #include <new>      /* for std::bad_alloc */
 
+#include "IpoptConfig.h"
 #include "IpIpoptApplication.hpp"
 namespace Ipopt
 {
@@ -47,7 +48,6 @@ namespace Ipopt
 #include "IpIpoptCalculatedQuantities.hpp"
 #include "IpSolveStatistics.hpp"
 #include "IpJournalist.hpp"
-#include "config_ipopt.h"
 
 using namespace Ipopt;
 
@@ -1741,7 +1741,7 @@ SCIP_RETCODE SCIPcreateNlpSolverIpopt(
 /** gets string that identifies Ipopt (version number) */
 const char* SCIPgetSolverNameIpopt(void)
 {
-   return PACKAGE_STRING;
+   return "Ipopt "IPOPT_VERSION;
 }
 
 /** gets string that describes Ipopt (version number) */
@@ -2352,6 +2352,39 @@ void ScipNLP::finalize_solution(
    }
 }
 
+/* Future Ipopt versions do not reveal defines like F77_FUNC.
+ * However, they install IpLapack.hpp, so Ipopt's Lapack interface is available.
+ * Thus, we use IpLapack if F77_FUNC is not defined and access Lapack's Dsyev directly if F77_FUNC is defined.
+ */
+#ifndef F77_FUNC
+
+#include "IpLapack.hpp"
+
+/** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix.
+ * It's here, because we use Ipopt's interface to Lapack.
+ */
+SCIP_RETCODE LapackDsyev(
+   SCIP_Bool             computeeigenvectors,/**< should also eigenvectors should be computed ? */
+   int                   N,                  /**< dimension */
+   SCIP_Real*            a,                  /**< matrix data on input (size N*N); eigenvectors on output if computeeigenvectors == TRUE */
+   SCIP_Real*            w                   /**< buffer to store eigenvalues (size N) */
+   )
+{
+   int info;
+
+   IpLapackDsyev(computeeigenvectors, N, a, N, w, info);
+
+   if( info != 0 )
+   {
+      SCIPerrorMessage("There was an error when calling DSYEV. INFO = %d\n", info);
+      return SCIP_ERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+#else
+
 extern "C" {
 /** LAPACK Fortran subroutine DSYEV */
 void F77_FUNC(dsyev,DSYEV)(
@@ -2415,3 +2448,5 @@ SCIP_RETCODE LapackDsyev(
 
    return SCIP_OKAY;
 }
+
+#endif
