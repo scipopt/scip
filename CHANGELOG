@@ -62,6 +62,7 @@ performance improvements:
 - for continuous variables, the pseudo costs update and the pscost branching rule now use the same strategies for updating the pseudo costs and estimating the improvement in the LP bound
 - only perform probing if the variables are locked
 - performance and memory consumption improvements in xmlparse.c
+- avoid very long separation times of LEWIs in cons_knapsack for very large minimal covers
 
 fixed bugs:
 - fixed bug in propagation of indicator constraints: cannot fix slack variable to 0 if linear constraint is disabled/not active
