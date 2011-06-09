@@ -28,6 +28,7 @@
 #include "scip/cons_and.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
+#include "scip/cons_setppc.h"
 #include "scip/pub_misc.h"
 
 
@@ -1268,6 +1269,7 @@ SCIP_RETCODE propagateCons(
          else
          {
             SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+
             if( tightened )
             {
                SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -1443,20 +1445,34 @@ SCIP_RETCODE propagateCons(
          SCIP_CONS* lincons;
 
          assert(SCIPvarGetUbGlobal(resvar) < 0.5);
-         
-         SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nvars) );
-         
-         /* collect negated variables */
-         for( i = 0; i < nvars; ++i )
-         {
-            SCIP_CALL( SCIPgetNegatedVar(scip, vars[i], &consvars[i]) );
-         }
 
-         /* create, add, and release the logicor constraint */
-         SCIP_CALL( SCIPcreateConsLogicor(scip, &lincons, SCIPconsGetName(cons), nvars, consvars,
-               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), consdata->checkwhenupgr | SCIPconsIsChecked(cons),
-               SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), 
-               SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+         /* if we only have two variables, we prefer a set packing constraint instead of a logicor constraint */
+         if( nvars == 2 )
+         {
+            consvars = NULL;
+
+            /* create, add, and release the setppc constraint */
+            SCIP_CALL( SCIPcreateConsSetpack(scip, &lincons, SCIPconsGetName(cons), nvars, vars,
+                  SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), consdata->checkwhenupgr | SCIPconsIsChecked(cons),
+                  SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), 
+                  SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nvars) );
+            
+            /* collect negated variables */
+            for( i = 0; i < nvars; ++i )
+            {
+               SCIP_CALL( SCIPgetNegatedVar(scip, vars[i], &consvars[i]) );
+            }
+            
+            /* create, add, and release the logicor constraint */
+            SCIP_CALL( SCIPcreateConsLogicor(scip, &lincons, SCIPconsGetName(cons), nvars, consvars,
+                  SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), consdata->checkwhenupgr | SCIPconsIsChecked(cons),
+                  SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), 
+                  SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+         }
          SCIP_CALL( SCIPaddCons(scip, lincons) );
          SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
 
@@ -1465,7 +1481,7 @@ SCIP_RETCODE propagateCons(
 
 	 (*nupgdconss)++;
 
-         SCIPfreeBufferArray(scip, &consvars);
+         SCIPfreeBufferArrayNull(scip, &consvars);
       }
    }
 

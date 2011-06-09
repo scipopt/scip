@@ -4044,7 +4044,7 @@ SCIP_RETCODE SCIPincludeReaderOpb(
    /* add opb reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/"READER_NAME"/dynamicconss", "should model constraints be subject to aging?",
-         NULL, FALSE, TRUE, NULL, NULL) );
+         NULL, FALSE, FALSE/*TRUE*/, NULL, NULL) ); /* have to be FALSE, otherwise an error might inccur in restart during branch and bound */
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/"READER_NAME"/dynamiccols", "should columns be added and removed dynamically to the LP?",
          NULL, FALSE, FALSE, NULL, NULL) );

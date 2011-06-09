@@ -7472,7 +7472,7 @@ SCIP_RETCODE SCIPwriteVarsList(
    {
       if( v > 0 )
       {
-         SCIPinfoMessage(scip, file, "%c ", delimiter);
+         SCIPinfoMessage(scip, file, "%c", delimiter);
       }
       
       /* print variable name */
