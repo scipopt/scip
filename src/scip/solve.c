@@ -2418,7 +2418,8 @@ SCIP_RETCODE solveNodeLP(
          *cutoff = TRUE;
       }
    }
-   assert(!(*pricingaborted) || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_NOTSOLVED || (*cutoff));
+   assert(!(*pricingaborted) || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL 
+      || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_NOTSOLVED || SCIPsolveIsStopped(set, stat, FALSE) || (*cutoff));
 
    assert(*cutoff || *lperror || (lp->flushed && lp->solved));
 

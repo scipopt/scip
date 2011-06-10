@@ -2235,7 +2235,8 @@ SCIP_RETCODE SCIPnlpiOracleChgQuadCoefs(
       assert(*myquadelems == NULL);
       
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(oracle->blkmem, myquadelems, quadelems, nquadelems) );
-            
+      *myquadlen = nquadelems;
+
       addednew = TRUE;
    }
    else
@@ -2280,6 +2281,7 @@ SCIP_RETCODE SCIPnlpiOracleChgQuadCoefs(
       if( addednew )
       {
          /* shrink to actual needed size */
+         assert(len > 0);
          SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, myquadelems, *myquadlen + nquadelems, len) );
          *myquadlen = len;
       }

@@ -12397,12 +12397,10 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                SCIP_CALL( SCIPsetSetCharParam(set, "lp/pricing", 's') );
 
                /* resolve LP with an iteration limit of 1 */
-               SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPITLIM, 1) );
-               SCIP_CALL( lpSolve(lp, set, stat,  SCIP_LPALGO_DUALSIMPLEX, -1, -1, FALSE, FALSE, FALSE, fastmip, tightfeastol, fromscratch, keepsol, lperror) );
+               SCIP_CALL( lpSolve(lp, set, stat,  SCIP_LPALGO_DUALSIMPLEX, 1, -1, FALSE, FALSE, TRUE, fastmip, tightfeastol, fromscratch, keepsol, lperror) );
 
-               /* reinstall old cutoff bound, iteration limit and lp pricing strategy */
+               /* reinstall old cutoff bound and lp pricing strategy */
                lp->cutoffbound = tmpcutoff;
-               SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPITLIM, lp->lpiitlim) );
                SCIP_CALL( SCIPsetSetCharParam(set, "lp/pricing", tmppricingchar) );
 
                /* get objective value */
@@ -13626,7 +13624,9 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
       assert(lpicols[c]->var != NULL);
       rayobjval += ray[c] * lpicols[c]->obj;
    }
-   assert(SCIPsetIsNegative(set, rayobjval));
+   /* TODO: How to check for negative objval here? */
+   assert(rayobjval < 0);
+   //assert(SCIPsetIsNegative(set, rayobjval));
 
    /* scale the ray, such that the resulting point has infinite objective value */
    assert(rayobjval != 0.0);

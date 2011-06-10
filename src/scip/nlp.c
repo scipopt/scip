@@ -589,6 +589,8 @@ SCIP_RETCODE nlrowQuadElemChanged(
             elem.idx1 = tmp;
          }
 
+         elem.coef = quadelem.coef;
+
          /* change coefficient in NLPI problem */
          SCIP_CALL( SCIPnlpiChgQuadCoefs(nlp->solver, nlp->problem, nlrow->nlpiindex, 1, &elem) );
       }
@@ -1172,7 +1174,7 @@ SCIP_RETCODE nlrowAddQuadElement(
    /* insert the element */
    nlrow->quadelems[pos] = elem;
 
-   /* notifiy row and NLP */
+   /* notify row and NLP */
    SCIP_CALL( nlrowQuadElemChanged(nlrow, set, stat, elem, nlp) );
 
    /* update sorted flag */
@@ -1201,6 +1203,8 @@ SCIP_RETCODE nlrowDelQuadElemPos(
    assert(set != NULL);
    assert(0 <= pos && pos < nlrow->nquadelems);
 
+   SCIPdebugMessage("delete quad element (%d,%d) at pos %d\n", nlrow->quadelems[pos].idx1, nlrow->quadelems[pos].idx2, pos);
+
    elem = nlrow->quadelems[pos];
 
    /* move last coefficient to position of empty slot (should set sorted flag to FALSE, if not last element was deleted) */
@@ -1228,6 +1232,8 @@ SCIP_RETCODE nlrowChgQuadElemPos(
 {
    assert(nlrow != NULL);
    assert(0 <= pos && pos < nlrow->nquadelems);
+
+   SCIPdebugMessage("change quad element (%d,%d) at pos %d to %g\n", nlrow->quadelems[pos].idx1, nlrow->quadelems[pos].idx2, pos, coef);
 
    if( SCIPsetIsZero(set, coef) )
    {
@@ -6072,7 +6078,7 @@ SCIP_RETCODE SCIPnlpChgVarsBoundsDive(
 }
 
 /** returns whether the objective function has been changed during diving */
-SCIP_RETCODE SCIPnlpIsDivingObjChanged(
+SCIP_Bool SCIPnlpIsDivingObjChanged(
    SCIP_NLP*             nlp                 /**< current NLP data */
    )
 {
