@@ -394,7 +394,10 @@ SCIP_RETCODE consdataCreate(
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    int                   nvars,              /**< number of variables in the and operation */
    SCIP_VAR**            vars,               /**< variables in and operation */
-   SCIP_VAR*             resvar              /**< resultant variable */
+   SCIP_VAR*             resvar,             /**< resultant variable */
+   SCIP_Bool             checkwhenupgr       /**< should an upgraded constraint be checked despite the fact that this
+                                              *   and-constraint will not be checked
+                                              */
    )
 {
    assert(consdata != NULL);
@@ -419,7 +422,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->sorted = FALSE;
    (*consdata)->changed = TRUE;
    (*consdata)->merged = FALSE;
-   (*consdata)->checkwhenupgr = FALSE;
+   (*consdata)->checkwhenupgr = checkwhenupgr;
 
    /* get transformed variables, if we are in the transformed problem */
    if( SCIPisTransformed(scip) )
@@ -1473,6 +1476,7 @@ SCIP_RETCODE propagateCons(
                   SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), 
                   SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
          }
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, lincons, NULL) ) );
          SCIP_CALL( SCIPaddCons(scip, lincons) );
          SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
 
@@ -2230,7 +2234,7 @@ SCIP_DECL_CONSTRANS(consTransAnd)
 
    /* create target constraint data */
    SCIP_CALL( consdataCreate(scip, &targetdata, conshdlrdata->eventhdlr,
-         sourcedata->nvars, sourcedata->vars, sourcedata->resvar) );
+         sourcedata->nvars, sourcedata->vars, sourcedata->resvar, sourcedata->checkwhenupgr) );
 
    /* create target constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
@@ -2938,7 +2942,7 @@ SCIP_RETCODE SCIPcreateConsAnd(
    assert(conshdlrdata != NULL);
 
    /* create constraint data */
-   SCIP_CALL( consdataCreate(scip, &consdata, conshdlrdata->eventhdlr, nvars, vars, resvar) );
+   SCIP_CALL( consdataCreate(scip, &consdata, conshdlrdata->eventhdlr, nvars, vars, resvar, FALSE) );
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
