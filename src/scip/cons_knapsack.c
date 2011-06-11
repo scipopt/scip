@@ -84,6 +84,8 @@
                                          *   comparison round */
 #define DEFAULT_DUALPRESOLVING     TRUE /**< should dual presolving steps be preformed? */
 
+#define MAXCOVERSIZEITERLEWI       1000 /**< maximal size for which LEWI are iteratively separated by reducing the feasible set */
+
 
 /*
  * Data structures
@@ -3183,6 +3185,10 @@ SCIP_RETCODE getFeasibleSet(
          SCIP_CALL( separateSequLiftedExtendedWeightInequality(scip, cons, vars, nvars, ntightened, weights, capacity, solvals, 
                covervars, noncovervars, *ncovervars, *nnoncovervars, sol, ncuts) );
       }
+
+      /* stop if cover is too large */
+      if ( *ncovervars >= MAXCOVERSIZEITERLEWI )
+         break;
    }
 
    /* frees temporary memory */
