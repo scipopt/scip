@@ -21,9 +21,9 @@
  *
  *
  * The constraint handler deals with pseudo Boolean constraints. These are constraints of the form 
- *
- * lhs <= \sum_{k=0}^m c_k * x_k  +  \sum_{i=0}^n c_i * \prod_{j\in I_i} x_j <= rhs
- *
+ * \f[
+ * \mbox{lhs} \leq \sum_{k=0}^m c_k \cdot x_k  +  \sum_{i=0}^n c_i \cdot \prod_{j \in I_i} x_j \leq \mbox{rhs}
+ * \f]
  * where all x are binary and all c are integer
  */
 

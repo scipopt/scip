@@ -27,7 +27,8 @@
 
 /** an interval that extends the SCIP_INTERVAL struct
  * by various methods to allow calculating with intervals as with ordinary numbers */
-class SCIPInterval : public SCIP_INTERVAL {
+class SCIPInterval : public SCIP_INTERVAL
+{
 public:
    /** value to use for infinity
     * currently a global variable, thus use with care!

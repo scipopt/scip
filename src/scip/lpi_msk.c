@@ -133,10 +133,11 @@ int rowpacketNum(
    return (nrows+(int)ROWS_PER_PACKET-1)/(int)ROWS_PER_PACKET;
 }
 
+/** create error string */
 static
-void MSKAPI printstr (
-   void*                 handle, 
-   const char*           str
+void MSKAPI printstr(
+   void*                 handle,             /**< error handle */
+   const char*           str                 /**< string that contains string on output */
    )
 {  /*lint --e{715}*/
 #if SUPRESS_NAME_ERROR && !FORCE_SILENCE
@@ -149,7 +150,8 @@ void MSKAPI printstr (
    SCIPdebugMessage("MOSEK: %s",str);
 }
 
-#if DEBUG_CHECK_DATA > 0   
+#if DEBUG_CHECK_DATA > 0
+/** check data */
 static SCIP_RETCODE scip_checkdata(
    SCIP_LPI*             lpi                 /**< pointer to an LP interface structure */
    const char*           functionname        /**< function name */
@@ -326,11 +328,12 @@ void generateMskBounds(
    }
 }
 
+/** get end pointers of arrays */
 static 
 SCIP_RETCODE getEndptrs(
-   int                   n, 
-   const int*            beg, 
-   int                   nnonz,
+   int                   n,                  /**< array size */
+   const int*            beg,                /**< array of beginning indices */
+   int                   nnonz,              /**< number of nonzeros */
    int**                 aptre               /**< pointer to store the result */
    )
 {
@@ -364,6 +367,7 @@ SCIP_RETCODE getEndptrs(
    return SCIP_OKAY;
 }
 
+/** compute indices from range */
 static 
 SCIP_RETCODE getIndicesRange(
    int                   first,              /**< first index */ 
@@ -385,11 +389,12 @@ SCIP_RETCODE getIndicesRange(
    return SCIP_OKAY;
 }
 
+/** compute indices from dense array */
 static 
 SCIP_RETCODE getIndicesFromDense(
-   int*                  dstat, 
-   int                   n, 
-   int*                  count,
+   int*                  dstat,              /**< array */
+   int                   n,                  /**< size of array */
+   int*                  count,              /**< array of counts (sizes) */
    int**                 sub                 /**< pointer to stroe array of indices */
    )
 {
@@ -3039,11 +3044,12 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
    return SCIP_OKAY;
 }
 
+/** handle singular basis */
 static 
 SCIP_RETCODE handle_singular(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   int*                  basis, 
-   MSKrescodee           res
+   int*                  basis,              /**< array of basis indices */
+   MSKrescodee           res                 /**< result */
    )
 {
    if (res == MSK_RES_ERR_BASIS_SINGULAR)
@@ -3065,13 +3071,14 @@ SCIP_RETCODE handle_singular(
  * LP Basis Methods
  */
 
+/** convert Mosek status to SCIP status */
 static
 SCIP_RETCODE convertstat_mosek2scip(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   MSKaccmodee           acc, 
-   MSKstakeye*           sk, 
-   int                   n, 
-   int*                  stat
+   MSKaccmodee           acc,                /**< ??? */
+   MSKstakeye*           sk,                 /**< ??? */
+   int                   n,                  /**< size */
+   int*                  stat                /**< status array */
    )
 {
    int i;
@@ -3119,13 +3126,14 @@ SCIP_RETCODE convertstat_mosek2scip(
    return SCIP_OKAY;
 }
 
+/** converst Mosek to SCIP status - slack variables */
 static
 SCIP_RETCODE convertstat_mosek2scip_slack(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   MSKaccmodee           acc, 
-   MSKstakeye*           sk, 
-   int                   n, 
-   int*                  stat
+   MSKaccmodee           acc,                /**< ??? */
+   MSKstakeye*           sk,                 /**< ??? */
+   int                   n,                  /**< size */
+   int*                  stat                /**< status array */
    )
 {
    int i;
@@ -3170,11 +3178,12 @@ SCIP_RETCODE convertstat_mosek2scip_slack(
    return SCIP_OKAY;
 }
 
+/** convert SCIP to Mosek status */
 static 
 void convertstat_scip2mosek(
-   int*                  stat, 
-   int                   n, 
-   MSKstakeye*           resstat
+   int*                  stat,               /**< SCIP status array */
+   int                   n,                  /**< size of array */
+   MSKstakeye*           resstat             /**< resulting Mosek status array */
    )
 {
    int i;
@@ -3200,11 +3209,12 @@ void convertstat_scip2mosek(
    }
 }
 
+/** convert SCIP to Mosek status - slack variables */
 static 
 void convertstat_scip2mosek_slack(
-   int*                  stat, 
-   int                   n, 
-   MSKstakeye*           resstat
+   int*                  stat,               /**< SCIP status array */
+   int                   n,                  /**< size of array */
+   MSKstakeye*           resstat             /**< resulting Mosek status array */
    )
 {
    /* Slacks is stored as -1 in mosek i.e bounds are reversed compared to scip  */
@@ -3296,9 +3306,10 @@ SCIP_RETCODE SCIPlpiSetBase(
 }
 
 /** returns the indices of the basic columns and rows */
-SCIP_RETCODE SCIPlpiGetBasisInd(SCIP_LPI*             lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiGetBasisInd(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
    int*                  bind                /**< basic column n gives value n, basic row m gives value -1-m */
-                                )
+   )
 {
    int nrows;
    int i;
@@ -3572,13 +3583,14 @@ void lpistateFree(
 }
 
 #ifndef NDEBUG
+/** check state */
 static
 SCIP_RETCODE checkState1(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   n,                  /**< number of rows or columns */
-   MSKstakeye*           sk,                 
-   MSKaccmodee           accmode, 
-   char                  xc
+   MSKstakeye*           sk,                 /**< ??? */
+   MSKaccmodee           accmode,            /**< ??? */
+   char                  xc                  /**< ??? */
    )
 {
    int i;
@@ -3617,11 +3629,12 @@ SCIP_RETCODE checkState1(
    return SCIP_OKAY;
 }
 
+/** check state */
 static
 SCIP_RETCODE checkState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   int                   ncols, 
-   int                   nrows
+   int                   ncols,              /**< number of columns */
+   int                   nrows               /**< number of rows */
    )
 {
    SCIP_CALL( checkState1(lpi, ncols, lpi->skx, MSK_ACC_VAR, 'x') );
@@ -3656,8 +3669,8 @@ SCIP_RETCODE lpistatePack(
 static
 void lpistateUnpack(
    SCIP_LPISTATE*        lpistate,           /**< pointer to LPi state data */
-   MSKstakeye*           skx, 
-   MSKstakeye*           skc
+   MSKstakeye*           skx,                /**< ??? */
+   MSKstakeye*           skc                 /**< ??? */
    )
 {
    assert(sizeof(int) == sizeof(MSKstakeye));

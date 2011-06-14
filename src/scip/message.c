@@ -271,7 +271,7 @@ static SCIP_HASHMAP* messagepthreadhashmap = NULL;
 /** static array that should contain all messagehanlders in multiple thread case;
  *  if the handler is set to NULL, messages are suppressed;
  *
- *  @Note: in this case it is mandatory to call SCIPcreateMesshdlrPThreads
+ *  @note: in this case it is mandatory to call SCIPcreateMesshdlrPThreads
  */
 static SCIP_MESSAGEHDLR** curmessagehdlrs = NULL;
 static size_t ncurmessagehdlrs = 0;
