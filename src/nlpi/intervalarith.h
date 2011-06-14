@@ -25,6 +25,15 @@
 
 #include "scip/intervalarith.h"
 
+/* In some cases, a user may need the SCIPInterval class to be defined in some namespace.
+ * To allow this, the symbol SCIPInterval_NAMESPACE should be defined to the name of that namespace
+ * before inclusion of this header file
+ * It is in the users responsibility to implement the corresponding symbols from nlpi/intervalarith.c.
+ */
+#ifdef SCIPInterval_NAMESPACE
+namespace SCIPInterval_NAMESPACE {
+#endif
+
 /** an interval that extends the SCIP_INTERVAL struct
  * by various methods to allow calculating with intervals as with ordinary numbers */
 class SCIPInterval : public SCIP_INTERVAL
@@ -353,5 +362,9 @@ SCIP_INTERVALARITH_UNDEFFUNC(cosh)
 SCIP_INTERVALARITH_UNDEFFUNC(sinh)
 SCIP_INTERVALARITH_UNDEFFUNC(erf)
 #undef SCIP_INTERVALARITH_UNDEFFUNC
+
+#ifdef SCIPInterval_NAMESPACE
+} /* namespace SCIPInterval_NAMESPACE */
+#endif
 
 #endif
