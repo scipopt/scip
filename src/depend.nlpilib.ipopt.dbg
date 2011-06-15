@@ -65,7 +65,7 @@ $(LIBOBJDIR)/nlpi/nlpi_ipopt.o: src/nlpi/nlpi_ipopt.cpp src/nlpi/nlpi_ipopt.h \
  src/scip/intervalarith.h src/scip/interrupt.h src/scip/type_interrupt.h \
  src/scip/pub_misc.h lib/ipoptinc/IpIpoptApplication.hpp \
  lib/ipoptinc/IpJournalist.hpp lib/ipoptinc/IpoptConfig.h \
- lib/ipoptinc/config_ipopt.h lib/ipoptinc/IpTypes.hpp \
+ lib/ipoptinc/IpTypes.hpp \
  lib/ipoptinc/IpReferenced.hpp lib/ipoptinc/IpDebug.hpp \
  lib/ipoptinc/IpSmartPtr.hpp lib/ipoptinc/IpTNLP.hpp \
  lib/ipoptinc/IpUtils.hpp lib/ipoptinc/IpException.hpp \
@@ -76,5 +76,4 @@ $(LIBOBJDIR)/nlpi/nlpi_ipopt.o: src/nlpi/nlpi_ipopt.cpp src/nlpi/nlpi_ipopt.h \
  lib/ipoptinc/IpMatrix.hpp lib/ipoptinc/IpSymMatrix.hpp \
  lib/ipoptinc/IpOptionsList.hpp lib/ipoptinc/IpRegOptions.hpp \
  lib/ipoptinc/IpIpoptCalculatedQuantities.hpp \
- lib/ipoptinc/IpSolveStatistics.hpp lib/ipoptinc/IpJournalist.hpp \
- lib/ipoptinc/config_ipopt.h
+ lib/ipoptinc/IpSolveStatistics.hpp lib/ipoptinc/IpJournalist.hpp
