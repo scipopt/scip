@@ -7322,7 +7322,7 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
       }
 
       /* add nlrow respresentation to NLP, if NLP had been constructed */
-      if( SCIPisNLPConstructed(scip) )
+      if( SCIPisNLPConstructed(scip) && SCIPconsIsChecked(conss[c]) )
       {
          if( consdata->nlrow == NULL )
          {
