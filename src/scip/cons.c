@@ -5021,13 +5021,16 @@ SCIP_RETCODE SCIPconsSetInitial(
    if( cons->initial != initial )
    {
       cons->initial = initial;
-      if( cons->initial )
+      if( !cons->original )
       {
-         SCIP_CALL( conshdlrAddInitcons(SCIPconsGetHdlr(cons), set, cons) );
-      }
-      else
-      {
-         conshdlrDelInitcons(SCIPconsGetHdlr(cons), cons);
+         if( cons->initial )
+         {
+            SCIP_CALL( conshdlrAddInitcons(SCIPconsGetHdlr(cons), set, cons) );
+         }
+         else
+         {
+            conshdlrDelInitcons(SCIPconsGetHdlr(cons), cons);
+         }
       }
    }
 
@@ -5113,29 +5116,32 @@ SCIP_RETCODE SCIPconsSetChecked(
    {
       cons->check = check;
 
-      /* if constraint is a problem constraint, update variable roundings locks */
-      if( cons->addconssetchg == NULL && cons->addarraypos >= 0 )
+      if( !cons->original )
       {
-         if( cons->check )
+         /* if constraint is a problem constraint, update variable roundings locks */
+         if( cons->addconssetchg == NULL && cons->addarraypos >= 0 )
          {
-            SCIP_CALL( SCIPconsAddLocks(cons, set, +1, 0) );
+            if( cons->check )
+            {
+               SCIP_CALL( SCIPconsAddLocks(cons, set, +1, 0) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPconsAddLocks(cons, set, -1, 0) );
+            }
          }
-         else
-         {
-            SCIP_CALL( SCIPconsAddLocks(cons, set, -1, 0) );
-         }
-      }
 
-      /* if constraint is active, update the checkconss array of the constraint handler */
-      if( cons->active )
-      {
-         if( cons->check )
+         /* if constraint is active, update the checkconss array of the constraint handler */
+         if( cons->active )
          {
-            SCIP_CALL( conshdlrAddCheckcons(cons->conshdlr, set, cons) );
-         }
-         else
-         {
-            conshdlrDelCheckcons(cons->conshdlr, cons);
+            if( cons->check )
+            {
+               SCIP_CALL( conshdlrAddCheckcons(cons->conshdlr, set, cons) );
+            }
+            else
+            {
+               conshdlrDelCheckcons(cons->conshdlr, cons);
+            }
          }
       }
    }
