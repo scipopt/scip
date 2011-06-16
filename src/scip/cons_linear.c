@@ -2695,21 +2695,58 @@ SCIP_Real consdataGetActivity(
    else
    {
       SCIP_Real solval;
+      int nposinf;
+      int nneginf;
+      SCIP_Bool negsign;
       int v;
 
       activity = 0.0;
+      nposinf = 0;
+      nneginf = 0;
+      negsign = 0;
+
       for( v = 0; v < consdata->nvars; ++v )
       {
          solval = SCIPgetSolVal(scip, sol, consdata->vars[v]);
-         activity += consdata->vals[v] * solval;
-      }
 
-      SCIPdebugMessage("activity of linear constraint: %.15g\n", activity);
+         if( consdata->vals[v] < 0 )
+            negsign = 1;
+         else 
+            negsign = 0;
+
+         if( (SCIPisInfinity(scip, solval) && !negsign) || (SCIPisInfinity(scip, -solval) && negsign) )
+            ++nposinf;
+         else if( (SCIPisInfinity(scip, solval) && negsign) || (SCIPisInfinity(scip, -solval) && !negsign) )
+            ++nneginf;
+         else
+            activity += consdata->vals[v] * solval;
+      }
+      assert(nneginf >= 0 && nposinf >= 0);
+
+      SCIPdebugMessage("activity of linear constraint: %.15g, %d positive infinity values, %d negative infinity values \n", activity, nposinf, nneginf);
+
+      /* check for amount of infinity values and correct the activity*/
+      if( nposinf != nneginf )
+      {
+         if( nposinf > 0 && nneginf == 0 )
+            activity = SCIPinfinity(scip);
+         else if( nposinf == 0 )
+            activity = -SCIPinfinity(scip);
+      }
+      else if( nposinf > 0 )
+      {
+         activity = (consdata->rhs + consdata->lhs) / 2;
+      }
+     
+      SCIPdebugMessage("corrected activity of linear constraint: %.15g\n", activity);
    }
 
    scipinf = SCIPinfinity(scip);
-   activity = MAX(activity, -scipinf);
-   activity = MIN(activity, +scipinf);
+
+   if( activity < 0 )
+      activity = MAX(activity, -scipinf);
+   else
+      activity = MIN(activity, +scipinf);
 
    return activity;
 }
@@ -2809,7 +2846,8 @@ static
 void permSortConsdata(
    SCIP_CONSDATA*        consdata,           /**< the constraint data */
    int*                  perm,               /**< the target permutation */
-   int                   nvars               /**< the number of variables */
+   int                   nvars,              /**< the number of variables */
+   SCIP_Bool             isinpresolving      /**< is the scip stage before initsolve */
    )
 {
    SCIP_VAR* varv;
@@ -2863,7 +2901,10 @@ void permSortConsdata(
    /* check sorting */
    for( v = 0; v < nvars; ++v )
    {
-      assert(v == nvars-1 || SCIPvarCompare(consdata->vars[v], consdata->vars[v+1]) <= 0);
+      if( isinpresolving )
+      {
+         assert(v == nvars-1 || SCIPvarCompare(consdata->vars[v], consdata->vars[v+1]) <= 0);
+      }
       assert(perm[v] == v);
       assert(consdata->eventdatas == NULL || consdata->eventdatas[v]->varpos == v);
    }
@@ -2904,7 +2945,7 @@ SCIP_RETCODE consdataSort(
       /* call sortation method  */
       SCIPsort(perm, consdataCompVar, (void*)consdata, consdata->nvars);
 
-      permSortConsdata(consdata, perm, consdata->nvars);
+      permSortConsdata(consdata, perm, consdata->nvars, TRUE);
 
       /* free temporary memory */
       SCIPfreeBufferArray(scip, &perm);
@@ -2999,7 +3040,7 @@ SCIP_RETCODE consdataSort(
          /* execute the sortation */
 	 SCIPsortDownRealInt(absvals, perm, lastbin);
 
-	 permSortConsdata(consdata, perm, lastbin);
+	 permSortConsdata(consdata, perm, lastbin, FALSE);
 
          /* free temporary arrays */
 	 SCIPfreeBufferArray(scip, &perm);
