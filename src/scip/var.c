@@ -3637,13 +3637,10 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
                activevars[v] = activevars[nactivevars];
                activescalars[v] = activescalars[nactivevars];
             }
-
          }
       }
-      *requiredsize = nactivevars;
    }
-   else
-      *requiredsize = nactivevars;
+   *requiredsize = nactivevars;
 
    if( varssize >= *requiredsize )
    {
@@ -3695,14 +3692,14 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
    nmultvars = var->data.multaggr.nvars;
    multvarssize = var->data.multaggr.varssize;
 
-   SCIP_CALL( SCIPvarGetActiveRepresentatives(set, var->data.multaggr.vars, var->data.multaggr.scalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize, FALSE) );
+   SCIP_CALL( SCIPvarGetActiveRepresentatives(set, var->data.multaggr.vars, var->data.multaggr.scalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize, TRUE) );
 
    if( multrequiredsize > multvarssize )
    {
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(var->data.multaggr.vars), multvarssize, multrequiredsize) );
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(var->data.multaggr.scalars), multvarssize, multrequiredsize) );
       multvarssize = multrequiredsize;
-      SCIP_CALL( SCIPvarGetActiveRepresentatives(set, var->data.multaggr.vars, var->data.multaggr.scalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize, FALSE) );
+      SCIP_CALL( SCIPvarGetActiveRepresentatives(set, var->data.multaggr.vars, var->data.multaggr.scalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize, TRUE) );
       assert( multrequiredsize <= multvarssize );
    }
    /**@note After the flattening the multi aggregation might resolve to be in fact an aggregation (or even a fixing?).
