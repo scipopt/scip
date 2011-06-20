@@ -196,7 +196,6 @@ fixed bugs:
 - fixed bug in changing quadratic coefficients of a row in the NLP
 - fixed bug caused by not (correctly) counting boundchanges in cons_varbound.c
 - fixed three bugs when writing in fzn format (wrongly splitted writing buffer, wrong variables was used, floats were printed to short)
-- fixed wrong setting of lp iteration limit when performing another simplex iteration to verify "objective limit reached" in lp.c
 
 performance improvements:
 - fasten propagation in cons_knapsack.c due to negated clique partitions
