@@ -12397,7 +12397,8 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                SCIP_CALL( SCIPsetSetCharParam(set, "lp/pricing", 's') );
 
                /* resolve LP with an iteration limit of 1 */
-               SCIP_CALL( lpSolve(lp, set, stat,  SCIP_LPALGO_DUALSIMPLEX, 1, -1, FALSE, FALSE, TRUE, fastmip, tightfeastol, fromscratch, keepsol, lperror) );
+               SCIP_CALL( lpSolve(lp, set, stat,  SCIP_LPALGO_DUALSIMPLEX, 1, -1,
+                     FALSE, FALSE, TRUE, fastmip, tightfeastol, fromscratch, keepsol, lperror) );
 
                /* reinstall old cutoff bound and lp pricing strategy */
                lp->cutoffbound = tmpcutoff;

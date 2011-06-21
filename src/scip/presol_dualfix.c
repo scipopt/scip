@@ -156,8 +156,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDualfix)
                 */
                continue;
             }
-	    SCIPdebugMessage("variable <%s> with objective %g fixed to lower bound %g\n",
-			     SCIPvarGetName(vars[v]), SCIPvarGetObj(vars[v]), bound);
+	    SCIPdebugMessage("variable <%s> with objective %g and %d uplocks fixed to lower bound %g\n",
+               SCIPvarGetName(vars[v]), SCIPvarGetObj(vars[v]), SCIPvarGetNLocksUp(vars[v]), bound);
 	 }
 	 else if( SCIPvarMayRoundUp(vars[v]) && !SCIPisPositive(scip, obj) )
 	 {
@@ -170,8 +170,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDualfix)
                 */
                continue;
             }
-	    SCIPdebugMessage("variable <%s> with objective %g fixed to upper bound %g\n",
-			     SCIPvarGetName(vars[v]), SCIPvarGetObj(vars[v]), bound);
+	    SCIPdebugMessage("variable <%s> with objective %g and %d downlocks fixed to upper bound %g\n",
+               SCIPvarGetName(vars[v]), SCIPvarGetObj(vars[v]), SCIPvarGetNLocksDown(vars[v]), bound);
 	 }
 	 else
 	    continue;

@@ -3586,8 +3586,10 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       break;
    case SCIP_LPPAR_LPITLIM:
       *ival = getIntParam(lpi, CPX_PARAM_ITLIM);
+#if (CPX_VERSION <= 1230)
       if( *ival >= CPX_INT_MAX )
          *ival = INT_MAX;
+#endif
       break;
    case SCIP_LPPAR_THREADS:
 #if (CPX_VERSION == 1100 || (CPX_VERSION == 1220 && (CPX_SUBVERSION == 0 || CPX_SUBVERSION == 2)))
@@ -3683,7 +3685,9 @@ SCIP_RETCODE SCIPlpiSetIntpar(
 	 setIntParam(lpi, CPX_PARAM_SCRIND, CPX_OFF);
       break;
    case SCIP_LPPAR_LPITLIM:
+#if (CPX_VERSION <= 1230)
       ival = MIN(ival, CPX_INT_MAX);
+#endif
       setIntParam(lpi, CPX_PARAM_ITLIM, ival);
       break;
    case SCIP_LPPAR_THREADS:
