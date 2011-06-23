@@ -849,7 +849,8 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
       SCIP_Real newlb;
       SCIP_Real newub;
 
-      /* if probingvar is binary, then there is nothing we could deduct here (variable should be fixed in both branches) */
+      /* if probingvar is binary, then there is nothing we could deduce here (variable should be fixed in both branches)
+       * if it is not binary, we wanna look if we found bound tightenings, even though it seems very unlikely */
       if( vars[j] == probingvar && SCIPvarIsBinary(probingvar) )
          continue;
 
@@ -926,12 +927,15 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
             break;
       }
 
+      /* below we add aggregations and implications between probingvar and vars[j],
+       * we don't want this if both variables are the same
+       */
       if( vars[j] == probingvar )
          continue;
 
       /* check for aggregations and implications */
-      if( fixedleft  && SCIPisEQ(scip, leftproplbs[j],  leftpropubs[j]) &&
-          fixedright && SCIPisEQ(scip, rightproplbs[j], rightpropubs[j]) )
+      if( fixedleft && fixedright &&
+          SCIPisEQ(scip, leftproplbs[j],  leftpropubs[j]) && SCIPisEQ(scip, rightproplbs[j], rightpropubs[j]) )
       {
          /* vars[j] is fixed whenever probingvar is fixed, i.e.,
           *   vars[j] = leftproplbs[j] + (rightproplbs[j] - leftproplbs[j]) / (rightlb - leftub) * (probingvar - leftub)
@@ -964,7 +968,26 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
                (*naggrvars)++;
             }
          }
-         /* @todo if not in presolving, should we add a locally valid linear constraint, or should SCIPaggregateVars to be extended to do this? */
+         else if( SCIPvarGetType(probingvar) == SCIP_VARTYPE_BINARY || SCIPvarGetType(probingvar) == SCIP_VARTYPE_INTEGER )
+         {
+            /* if we are not in presolving, then we cannot do aggregations
+             * but we can use variable bounds to code the same equality
+             * vars[j] == ((leftproplbs[j] * rightlb - rightproplbs[j] * leftub) + (rightproplbs[j] - leftproplbs[j]) * probingvar) / (rightlb - leftub)
+             */
+            int nboundchanges;
+
+            assert(!SCIPisEQ(scip, leftub, rightlb));
+
+            SCIP_CALL( SCIPaddVarVlb(scip, vars[j], probingvar, (rightproplbs[j] - leftproplbs[j]) / (rightlb - leftub), (leftproplbs[j] * rightlb - rightproplbs[j] * leftub) / (rightlb - leftub), cutoff, &nboundchanges) );
+            (*nchgbds) += nboundchanges;
+            if( !*cutoff )
+            {
+               SCIP_CALL( SCIPaddVarVub(scip, vars[j], probingvar, (rightproplbs[j] - leftproplbs[j]) / (rightlb - leftub), (leftproplbs[j] * rightlb - rightproplbs[j] * leftub) / (rightlb - leftub), cutoff, &nboundchanges) );
+               (*nchgbds) += nboundchanges;
+            }
+            (*nimplications)++;
+         }
+         /* if probingvar is continuous and we are in solving stage, then we do nothing, but it's unlikely that we get here (fixedleft && fixedright) with a continuous variable */
       }
       else if( SCIPvarGetType(probingvar) == SCIP_VARTYPE_BINARY )
       {
