@@ -54,6 +54,7 @@ interface:
 - removed methods SCIPnlpGetObjective(), SCIPnlpGetSolVals(), SCIPnlpGetVarSolVal(); added method SCIPvarGetNLPSol(); SCIPcreateNLPSol() now returns an error if NLP or NLP solution is not available
 - removed methods SCIPmarkRequireNLP() and SCIPisNLPRequired(), NLP is now always constructed if nonlinearities are present
 - removed NLP methods from pub_nlp.h and added corresponding methods to scip.h; removed SCIPgetNLP()
+- new method SCIPsetParam() which is a generic parameter setter method, independent of the parameter type 
 
 performance improvements:
 - performance improvements in prop_vbounds
