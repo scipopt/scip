@@ -849,8 +849,8 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
       SCIP_Real newlb;
       SCIP_Real newub;
 
-      /* @todo why not also look at probingvar? */
-      if( vars[j] == probingvar )
+      /* if probingvar is binary, then there is nothing we could deduct here (variable should be fixed in both branches) */
+      if( vars[j] == probingvar && SCIPvarIsBinary(probingvar) )
          continue;
 
       /* new bounds of the variable is the union of the propagated bounds of the left and right case */
@@ -925,6 +925,9 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
          if( *cutoff )
             break;
       }
+
+      if( vars[j] == probingvar )
+         continue;
 
       /* check for aggregations and implications */
       if( fixedleft  && SCIPisEQ(scip, leftproplbs[j],  leftpropubs[j]) &&
