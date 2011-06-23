@@ -810,8 +810,8 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
 
    assert(scip != NULL);
    assert(probingvar != NULL);
-   assert(SCIPisGE(scip, leftub,  SCIPvarGetLbGlobal(probingvar))); /* left  branch should not be empty by default */
-   assert(SCIPisLE(scip, rightlb, SCIPvarGetUbGlobal(probingvar))); /* right branch should not be empty by default */
+   assert(SCIPisGE(scip, leftub,  SCIPvarGetLbLocal(probingvar))); /* left  branch should not be empty by default */
+   assert(SCIPisLE(scip, rightlb, SCIPvarGetUbLocal(probingvar))); /* right branch should not be empty by default */
    assert(vars != NULL || nvars == 0);
    assert(leftproplbs != NULL);
    assert(leftpropubs != NULL);
@@ -839,8 +839,8 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
    }
 
    /* check if probing variable was fixed in the branches */
-   fixedleft  = SCIPisEQ(scip, SCIPvarGetLbGlobal(probingvar), leftub);
-   fixedright = SCIPisEQ(scip, SCIPvarGetUbGlobal(probingvar), rightlb);
+   fixedleft  = SCIPisEQ(scip, SCIPvarGetLbLocal(probingvar), leftub);
+   fixedright = SCIPisEQ(scip, SCIPvarGetUbLocal(probingvar), rightlb);
 
    *cutoff = FALSE;
 
@@ -858,14 +858,28 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
       newub = MAX(leftpropubs[j], rightpropubs[j]);
 
       /* check for fixed variables */
-      if( SCIPisFeasEQ(scip, newlb, newub) )
+      if( SCIPisEQ(scip, newlb, newub) )
       {
          SCIP_Real fixval;
          SCIP_Bool fixed;
 
          /* in both probings, variable j is deduced to the same value: fix variable to this value */
          fixval = SCIPselectSimpleValue(newlb - SCIPepsilon(scip), newub + SCIPepsilon(scip), MAXDNOM);
-         SCIP_CALL( SCIPfixVar(scip, vars[j], fixval, cutoff, &fixed) );
+         if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) == 0 )
+         {
+            SCIP_CALL( SCIPfixVar(scip, vars[j], fixval, cutoff, &fixed) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPtightenVarLb(scip, vars[j], fixed, TRUE, cutoff, &fixed) );
+            if( !*cutoff )
+            {
+               SCIP_Bool tightened;
+
+               SCIP_CALL( SCIPtightenVarUb(scip, vars[j], fixval, TRUE, cutoff, &tightened) );
+               fixed &= tightened;
+            }
+         }
          if( fixed )
          {
             SCIPdebugMessage("fixed variable <%s> to %g due to probing on <%s> with nlocks=(%d/%d)\n",
@@ -882,8 +896,8 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
          SCIP_Real oldub;
          SCIP_Bool tightened;
 
-         oldlb = SCIPvarGetLbGlobal(vars[j]);
-         oldub = SCIPvarGetUbGlobal(vars[j]);
+         oldlb = SCIPvarGetLbLocal(vars[j]);
+         oldub = SCIPvarGetUbLocal(vars[j]);
          if( SCIPisLbBetter(scip, newlb, oldlb, oldub) )
          {
             /* in both probings, variable j is deduced to be at least newlb: tighten lower bound */
@@ -928,22 +942,26 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
           * case leftproplbs[j] = 1, rightproblbs[j] = 0, i.e., vars[j] and probingvar are fixed to oppositve values
           *    -> aggregation is 1 * vars[j] + 1 * probingvar = 1 * 1 - 0 * 0 = 0 -> correct
           */
-         SCIP_Bool aggregated;
-         SCIP_Bool redundant;
-
-         SCIP_CALL( SCIPaggregateVars(scip, vars[j], probingvar,
-            rightlb - leftub, -(rightproplbs[j] - leftproplbs[j]), leftproplbs[j] * rightlb - rightproplbs[j] * leftub,
-            cutoff, &redundant, &aggregated) );
-
-         if( aggregated )
+         if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
          {
-            SCIPdebugMessage("aggregated variables %g<%s> - %g<%s> == %g, nlocks=(%d/%d)\n",
-               rightlb - leftub, SCIPvarGetName(vars[j]),
-               rightproplbs[j] - leftproplbs[j], SCIPvarGetName(probingvar),
-               leftproplbs[j] * rightlb - rightproplbs[j] * leftub,
-               SCIPvarGetNLocksDown(vars[j]), SCIPvarGetNLocksUp(probingvar));
-            (*naggrvars)++;
+            SCIP_Bool aggregated;
+            SCIP_Bool redundant;
+
+            SCIP_CALL( SCIPaggregateVars(scip, vars[j], probingvar,
+               rightlb - leftub, -(rightproplbs[j] - leftproplbs[j]), leftproplbs[j] * rightlb - rightproplbs[j] * leftub,
+               cutoff, &redundant, &aggregated) );
+
+            if( aggregated )
+            {
+               SCIPdebugMessage("aggregated variables %g<%s> - %g<%s> == %g, nlocks=(%d/%d)\n",
+                  rightlb - leftub, SCIPvarGetName(vars[j]),
+                  rightproplbs[j] - leftproplbs[j], SCIPvarGetName(probingvar),
+                  leftproplbs[j] * rightlb - rightproplbs[j] * leftub,
+                  SCIPvarGetNLocksDown(vars[j]), SCIPvarGetNLocksUp(probingvar));
+               (*naggrvars)++;
+            }
          }
+         /* @todo if not in presolving, should we add a locally valid linear constraint, or should SCIPaggregateVars to be extended to do this? */
       }
       else if( SCIPvarGetType(probingvar) == SCIP_VARTYPE_BINARY )
       {
