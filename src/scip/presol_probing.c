@@ -850,7 +850,7 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
       SCIP_Real newub;
 
       /* if probingvar is binary, then there is nothing we could deduce here (variable should be fixed in both branches)
-       * if it is not binary, we wanna look if we found bound tightenings, even though it seems very unlikely */
+       * if it is not binary, we want to see if we found bound tightenings, even though it seems quite unlikely */
       if( vars[j] == probingvar && SCIPvarIsBinary(probingvar) )
          continue;
 
