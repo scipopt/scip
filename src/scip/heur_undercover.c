@@ -2787,37 +2787,38 @@ SCIP_RETCODE SCIPcomputeCoverUndercover(
    SCIP_CALL( SCIPincludeDefaultPlugins(coveringscip) );
    SCIP_CALL( createCoveringProblem(scip, coveringscip, coveringvars, globalbounds, onlyconvexify, coveringobj, success) );
 
-   if( !*success )
+   if( *success )
+   {
+      /* solve covering problem */
+      SCIPdebugMessage("solving covering problem\n\n");
+
+      SCIP_CALL( solveCoveringProblem(coveringscip, nvars, coveringvars, coversize, coverinds,
+            timelimit, memorylimit + SCIPgetMemUsed(coveringscip)/1048576.0, success) );
+
+      assert(*coversize >= 0);
+      assert(*coversize <= nvars);
+
+      /* return orginal variables in the cover */
+      for( i = *coversize-1; i >= 0; i-- )
+      {
+         assert(coverinds[i] >= 0);
+         assert(coverinds[i] < nvars);
+         cover[i] = vars[coverinds[i]];
+      }
+   }
+   else
    {
       SCIPdebugMessage("failure: covering problem could not be created\n");
-      return SCIP_OKAY;
-   }
-
-   /* solve covering problem */
-   SCIPdebugMessage("solving covering problem\n\n");
-
-   SCIP_CALL( solveCoveringProblem(coveringscip, nvars, coveringvars, coversize, coverinds,
-         timelimit, memorylimit + SCIPgetMemUsed(coveringscip)/1048576.0, success) );
-
-   assert(*coversize >= 0);
-   assert(*coversize <= nvars);
-
-   /* return orginal variables in the cover */
-   for( i = *coversize-1; i >= 0; i-- )
-   {
-      assert(coverinds[i] >= 0);
-      assert(coverinds[i] < nvars);
-      cover[i] = vars[coverinds[i]];
    }
 
    /* free covering problem */
-   SCIPfreeBufferArray(scip, &coverinds);
    for( i = nvars-1; i >= 0; i-- )
    {
       SCIP_CALL( SCIPreleaseVar(scip, &coveringvars[i]) );
    }
-   SCIPfreeBufferArray(scip, &coveringvars);
    SCIP_CALL( SCIPfree(&coveringscip) );
+   SCIPfreeBufferArray(scip, &coverinds);
+   SCIPfreeBufferArray(scip, &coveringvars);
 
    return SCIP_OKAY;
 }

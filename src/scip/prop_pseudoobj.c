@@ -17,6 +17,7 @@
  * @ingroup PROPAGATORS
  * @brief  pseudoobj propagator
  * @author Tobias Achterberg
+ * @author Stefan Heinz
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -29,16 +30,21 @@
 
 #define PROP_NAME              "pseudoobj"
 #define PROP_DESC              "pseudo objective function propagator"
-#define PROP_PRIORITY                 0
-#define PROP_FREQ                     1
+#define PROP_TIMING             SCIP_PROPTIMING_ALWAYS
+#define PROP_PRIORITY                 0 /**< propagator priority */ 
+#define PROP_FREQ                     1 /**< propagator frequency */
 #define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
+#define PROP_PRESOL_PRIORITY   +6000000 /**< priority of the presolving method (>= 0: before, < 0: after constraint handlers); combined with presolvers */
+#define PROP_PRESOL_DELAY          TRUE /**< should presolving be delay, if other presolvers found reductions?  */
+#define PROP_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds the presolver participates in (-1: no
+                                         *   limit) */
 
 #define EVENTHDLR_NAME         "pseudoobj"
 #define EVENTHDLR_DESC         "bound change event handler for pseudo objective function propagator"
 
 #define DEFAULT_MAXCANDS            100 /**< maximal number of variables to look at in a single propagation round
                                          *   (-1: process all variables) */
-
+#define DEFAULT_PROPFULLINROOT     TRUE /**< do we want to propagate full if we are propagating the root node, despite the number of maxcand */
 
 
 
@@ -51,11 +57,14 @@ struct SCIP_PropData
 {
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for global bound change events */
    SCIP_VAR**            objvars;            /**< variables with non-zero objective */
+   SCIP_Real             cutoffbound;        /**< last cutoff bound used in presolving */
+   SCIP_Real             pseudoobjval;       /**< last pseudo objective used in presolving */
    SCIP_Real             maxpseudoobjact;    /**< maximal global pseudo objective activity */
    int                   maxpseudoobjactinf; /**< number of coefficients contributing with infinite value to maxpseudoobjact */
    int                   nobjvars;           /**< number of variables with non-zero objective */
    int                   maxcands;           /**< maximal number of variables to look at in a single propagation round */
    int                   lastvarnum;         /**< last variable number that was looked at */
+   SCIP_Bool             propfullinroot;     /**< do we want to propagate full if we are propagating the root node, despite the number of maxcand */
 };
 
 
@@ -132,6 +141,71 @@ SCIP_RETCODE resolvePropagation(
    return SCIP_OKAY;
 }
 
+/** propagates the cutoff bound for the given variables */
+static
+SCIP_RETCODE propagateCutoffboundVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_VAR*             var,                /**< variables to propagate */
+   SCIP_Real             cutoffbound,        /**< cutoff bound to use */
+   SCIP_Real             pseudoobjval,       /**< pseudo objective value to use */
+   int*                  nchgbds             /**< pointer to store the number of changed bounds */
+   )
+{
+   SCIP_Real lb;
+   SCIP_Real ub;
+   SCIP_Real obj;
+   
+   assert(!SCIPisInfinity(scip, -pseudoobjval));
+   assert(!SCIPisInfinity(scip, cutoffbound));
+   assert(SCIPisLT(scip, pseudoobjval, cutoffbound) );
+   
+   lb = SCIPvarGetLbLocal(var);
+   ub = SCIPvarGetUbLocal(var);
+   
+   if( SCIPisFeasEQ(scip, lb, ub) )
+      return SCIP_OKAY;
+   
+   obj = SCIPvarGetObj(var);
+   assert(!SCIPisZero(scip, obj));
+
+   if( obj > 0.0 )
+   {
+      SCIP_Real newub;
+      SCIP_Bool infeasible;
+      SCIP_Bool tightened;
+
+      newub = lb + (cutoffbound - pseudoobjval)/obj;
+      if( SCIPisUbBetter(scip, newub, lb, ub) )
+      {
+         SCIPdebugMessage(" -> new upper bound of variable <%s>[%.10f,%.10f]: %.10f\n",
+            SCIPvarGetName(var), lb, ub, newub);
+         SCIP_CALL( SCIPinferVarUbProp(scip, var, newub, prop, 0, FALSE, &infeasible, &tightened) );
+         assert(!infeasible);
+         if( tightened ) /* might not be tightened due to numerical reasons */
+            (*nchgbds)++;
+      }
+   }
+   else
+   {
+      SCIP_Real newlb;
+      SCIP_Bool infeasible;
+      SCIP_Bool tightened;
+
+      newlb = ub + (cutoffbound - pseudoobjval)/obj;
+      if( SCIPisLbBetter(scip, newlb, lb, ub) )
+      {
+         SCIPdebugMessage(" -> new lower bound of variable <%s>[%g,%g]: %g\n", SCIPvarGetName(var), lb, ub, newlb);
+         SCIP_CALL( SCIPinferVarLbProp(scip, var, newlb, prop, 0, FALSE, &infeasible, &tightened) );
+         assert(!infeasible);
+         if( tightened ) /* might not be tightened due to numerical reasons */
+            (*nchgbds)++;
+      }
+   }
+   
+   return SCIP_OKAY;
+}
+
 /** propagates the cutoff bound c*x <= cutoff */
 static
 SCIP_RETCODE propagateCutoffbound(
@@ -143,12 +217,9 @@ SCIP_RETCODE propagateCutoffbound(
 {  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
    SCIP_VAR** objvars;
-   SCIP_VAR* var;
    SCIP_Real pseudoobjval;
    SCIP_Real cutoffbound;
-   SCIP_Real obj;
-   SCIP_Real lb;
-   SCIP_Real ub;
+   int nchgbds;
    int ncands;
    int nobjvars;
    int c;
@@ -176,6 +247,7 @@ SCIP_RETCODE propagateCutoffbound(
    cutoffbound = SCIPgetCutoffbound(scip);
    if( SCIPisInfinity(scip, cutoffbound) )
       return SCIP_OKAY;
+
    if( SCIPisGE(scip, pseudoobjval, cutoffbound) )
    {
       SCIPdebugMessage("pseudo objective value %g exceeds cutoff bound %g\n", pseudoobjval, cutoffbound);
@@ -195,58 +267,35 @@ SCIP_RETCODE propagateCutoffbound(
    SCIPdebugMessage("propagating pseudo objective function (pseudoobj: %g, cutoffbound: %g)\n", pseudoobjval, cutoffbound);
 
    *result = SCIP_DIDNOTFIND;
+   nchgbds = 0;
 
    /* tighten domains, if they would increase the pseudo objective value above the upper bound */
-   ncands = (propdata->maxcands >= 0 ? MIN(propdata->maxcands, nobjvars) : nobjvars);
-   v = propdata->lastvarnum;
-   for( c = 0; c < ncands; ++c )
+   if( propdata->propfullinroot && SCIPgetDepth(scip) == 0 )
    {
-      v++;
-      if( v >= nobjvars )
-         v = 0;
-      var = objvars[v];
-      lb = SCIPvarGetLbLocal(var);
-      ub = SCIPvarGetUbLocal(var);
-      if( SCIPisFeasEQ(scip, lb, ub) )
-         continue;
-      obj = SCIPvarGetObj(var);
-      assert(!SCIPisZero(scip, obj));
-
-      if( obj > 0.0 )
+      for( v = 0; v < nobjvars; ++v )
       {
-         SCIP_Real newub;
-         SCIP_Bool infeasible;
-         SCIP_Bool tightened;
-
-         newub = lb + (cutoffbound - pseudoobjval)/obj;
-         if( SCIPisUbBetter(scip, newub, lb, ub) )
-         {
-            SCIPdebugMessage(" -> new upper bound of variable <%s>[%.10f,%.10f]: %.10f\n",
-               SCIPvarGetName(var), lb, ub, newub);
-            SCIP_CALL( SCIPinferVarUbProp(scip, var, newub, prop, 0, FALSE, &infeasible, &tightened) );
-            assert(!infeasible);
-            if( tightened ) /* might not be tightened due to numerical reasons */
-               *result = SCIP_REDUCEDDOM;
-         }
+         SCIP_CALL( propagateCutoffboundVar(scip, prop, objvars[v], cutoffbound, pseudoobjval, &nchgbds) );
       }
-      else
-      {
-         SCIP_Real newlb;
-         SCIP_Bool infeasible;
-         SCIP_Bool tightened;
 
-         newlb = ub + (cutoffbound - pseudoobjval)/obj;
-         if( SCIPisLbBetter(scip, newlb, lb, ub) )
-         {
-            SCIPdebugMessage(" -> new lower bound of variable <%s>[%g,%g]: %g\n", SCIPvarGetName(var), lb, ub, newlb);
-            SCIP_CALL( SCIPinferVarLbProp(scip, var, newlb, prop, 0, FALSE, &infeasible, &tightened) );
-            assert(!infeasible);
-            if( tightened ) /* might not be tightened due to numerical reasons */
-               *result = SCIP_REDUCEDDOM;
-         }
-      }
+      propdata->lastvarnum = -1;
    }
-   propdata->lastvarnum = v;
+   else
+   {
+      ncands = (propdata->maxcands >= 0 ? MIN(propdata->maxcands, nobjvars) : nobjvars);
+      v = propdata->lastvarnum;
+      for( c = 0; c < ncands; ++c )
+      {
+         v++;
+         if( v >= nobjvars )
+            v = 0;
+
+         SCIP_CALL( propagateCutoffboundVar(scip, prop, objvars[v], cutoffbound, pseudoobjval, &nchgbds) );
+      }
+      propdata->lastvarnum = v;
+   }
+
+   if( nchgbds > 0 )
+      *result = SCIP_REDUCEDDOM;
 
    return SCIP_OKAY;
 }
@@ -522,6 +571,14 @@ SCIP_DECL_PROPFREE(propFreePseudoobj)
 #define propExitPseudoobj NULL
 
 
+/** presolving initialization method of propagator (called when presolving is about to begin) */
+#define propInitprePseudoobj NULL
+
+
+/** presolving deinitialization method of propagator (called after presolving has been finished) */
+#define propExitprePseudoobj NULL
+
+
 /** solving process initialization method of propagator (called when branch and bound process is about to begin) */
 static
 SCIP_DECL_PROPINITSOL(propInitsolPseudoobj)
@@ -656,6 +713,70 @@ SCIP_DECL_PROPEXITSOL(propExitsolPseudoobj)
 }
 
 
+/** presolving method of propagator */
+static
+SCIP_DECL_PROPPRESOL(propPresolPseudoobj)
+{  /*lint --e{715}*/
+   SCIP_PROPDATA* propdata;
+   SCIP_VAR** vars;
+   SCIP_Real cutoffbound;
+   SCIP_Real pseudoobjval;
+   int oldnchgbds;
+   int nvars;
+   int v;
+
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* get current pseudo objective value and cutoff bound */
+   pseudoobjval = SCIPgetPseudoObjval(scip);
+   if( SCIPisInfinity(scip, -pseudoobjval) )
+      return SCIP_OKAY;
+   cutoffbound = SCIPgetCutoffbound(scip);
+   if( SCIPisInfinity(scip, cutoffbound) )
+      return SCIP_OKAY;
+   if( SCIPisGE(scip, pseudoobjval, cutoffbound) )
+   {
+      *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
+   }
+
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
+   
+   if( cutoffbound < propdata->cutoffbound || pseudoobjval > propdata->pseudoobjval )
+   {
+      *result = SCIP_DIDNOTFIND;
+      oldnchgbds = *nchgbds;
+
+      /* get the problem variables */
+      vars = SCIPgetVars(scip);
+      nvars = SCIPgetNVars(scip);
+      
+      /* scan the variables for pseudoobj bound reductions
+       * (loop backwards, since a variable fixing can change the current and the subsequent slots in the vars array)
+       */
+      for( v = nvars - 1; v >= 0; --v )
+      {
+         if( SCIPisZero(scip, SCIPvarGetObj(vars[v])) )
+            continue;
+         
+         SCIP_CALL( propagateCutoffboundVar(scip, prop, vars[v], cutoffbound, pseudoobjval, nchgbds) );
+      }
+      
+      if( *nchgbds > oldnchgbds )
+         *result = SCIP_SUCCESS;
+
+      /* store the old values */
+      propdata->cutoffbound = cutoffbound;
+      propdata->pseudoobjval = pseudoobjval;
+   }
+   
+   return SCIP_OKAY;
+}
+
+
 /** execution method of propagator */
 static
 SCIP_DECL_PROPEXEC(propExecPseudoobj)
@@ -746,6 +867,8 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
    propdata->maxpseudoobjact = SCIP_INVALID;
    propdata->maxpseudoobjactinf = 0;
    propdata->lastvarnum = -1;
+   propdata->cutoffbound = SCIPinfinity(scip);
+   propdata->pseudoobjval = -SCIPinfinity(scip);
 
    /* get event handler for bound change events */
    propdata->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
@@ -756,10 +879,10 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
    }
 
    /* include propagator */
-   SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY,
+   SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY,
          propCopyPseudoobj,
-         propFreePseudoobj, propInitPseudoobj, propExitPseudoobj, 
-         propInitsolPseudoobj, propExitsolPseudoobj, propExecPseudoobj, propRespropPseudoobj,
+         propFreePseudoobj, propInitPseudoobj, propExitPseudoobj, propInitprePseudoobj, propExitprePseudoobj, 
+         propInitsolPseudoobj, propExitsolPseudoobj, propPresolPseudoobj, propExecPseudoobj, propRespropPseudoobj,
          propdata) );
 
    /* add pseudoobj propagator parameters */
@@ -767,6 +890,12 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
          "propagating/pseudoobj/maxcands", 
          "maximal number of variables to look at in a single propagation round (-1: process all variables)",
          &propdata->maxcands, TRUE, DEFAULT_MAXCANDS, -1, INT_MAX, NULL, NULL) );
+
+   /* add pseudoobj propagator parameters */
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/pseudoobj/propfullinroot", 
+         "do we want to propagate full if we are propagating the root node, despite the number of maxcand",
+         &propdata->propfullinroot, TRUE, DEFAULT_PROPFULLINROOT, NULL, NULL) );
 
    return SCIP_OKAY;
 }

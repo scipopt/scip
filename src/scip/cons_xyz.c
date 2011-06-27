@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_xyz.c
- * @ingroup CONSHDLRS 
+ * @ingroup CONSHDLRS
  * @brief  constraint handler for xyz constraints
  * @author Tobias Achterberg
  */
@@ -41,6 +41,8 @@
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
+
+#define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP
 
 /* TODO: (optional) enable linear constraint upgrading */
 #if 0
@@ -90,7 +92,7 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdXyz)
    SCIP_Bool upgrade;
 
    assert(upgdcons != NULL);
-   
+
    /* check, if linear constraint can be upgraded to xyz constraint */
    upgrade = FALSE;
    /* TODO: put the constraint's properties here, in terms of the statistics given by nposbin, nnegbin, ... */
@@ -98,13 +100,13 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdXyz)
    if( upgrade )
    {
       SCIPdebugMessage("upgrading constraint <%s> to xyz constraint\n", SCIPconsGetName(cons));
-      
+
       /* create the bin Xyz constraint (an automatically upgraded constraint is always unmodifiable) */
       assert(!SCIPconsIsModifiable(cons));
       SCIP_CALL( SCIPcreateConsXyz(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, lhs, rhs,
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
             SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
-            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), 
+            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
             SCIPconsIsStickingAtNode(cons)) );
    }
 
@@ -128,7 +130,7 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyXyz)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
- 
+
    return SCIP_OKAY;
 }
 #else
@@ -255,7 +257,7 @@ SCIP_DECL_CONSDELETE(consDeleteXyz)
 #endif
 
 
-/** transforms constraint data into data belonging to the transformed problem */ 
+/** transforms constraint data into data belonging to the transformed problem */
 #if 0
 static
 SCIP_DECL_CONSTRANS(consTransXyz)
@@ -529,15 +531,16 @@ SCIP_RETCODE SCIPincludeConshdlrXyz(
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         CONSHDLR_PROP_TIMING,
          conshdlrCopyXyz,
-         consFreeXyz, consInitXyz, consExitXyz, 
+         consFreeXyz, consInitXyz, consExitXyz,
          consInitpreXyz, consExitpreXyz, consInitsolXyz, consExitsolXyz,
          consDeleteXyz, consTransXyz, consInitlpXyz,
-         consSepalpXyz, consSepasolXyz, consEnfolpXyz, consEnfopsXyz, consCheckXyz, 
+         consSepalpXyz, consSepasolXyz, consEnfolpXyz, consEnfopsXyz, consCheckXyz,
          consPropXyz, consPresolXyz, consRespropXyz, consLockXyz,
-         consActiveXyz, consDeactiveXyz, 
+         consActiveXyz, consDeactiveXyz,
          consEnableXyz, consDisableXyz,
          consPrintXyz, consCopyXyz, consParseXyz,
          conshdlrdata) );
@@ -582,7 +585,7 @@ SCIP_RETCODE SCIPcreateConsXyz(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are seperated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */

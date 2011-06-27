@@ -45,6 +45,8 @@
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
+
 #define LINCONSUPGD_PRIORITY    +000000 /**< priority of the constraint handler for upgrading of linear constraints */
 
 
@@ -518,6 +520,7 @@ SCIP_RETCODE SCIPincludeConshdlrBinpack(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         CONSHDLR_PROP_TIMING,
          conshdlrCopyBinpack,
          consFreeBinpack, consInitBinpack, consExitBinpack, 
          consInitpreBinpack, consExitpreBinpack, consInitsolBinpack, consExitsolBinpack,

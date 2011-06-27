@@ -670,6 +670,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->nprops = 0;
    (*set)->propssize = 0;
    (*set)->propssorted = FALSE;
+   (*set)->propspresolsorted = FALSE;
    (*set)->heurs = NULL;
    (*set)->nheurs = 0;
    (*set)->heurssize = 0;
@@ -1031,8 +1032,8 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "lp/fastmip",
-         "which FASTMIP setting of LP solver should be used? 0: off, 1: medium, 2: full (do not use for branch-and-price!)",
-         &(*set)->lp_fastmip, TRUE, SCIP_DEFAULT_LP_FASTMIP, 0, 2,
+         "which FASTMIP setting of LP solver should be used? 0: off, 1: low",
+         &(*set)->lp_fastmip, TRUE, SCIP_DEFAULT_LP_FASTMIP, 0, 1,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "lp/scaling",
@@ -1811,6 +1812,20 @@ SCIP_RETCODE SCIPsetGetStringParam(
    assert(set != NULL);
 
    SCIP_CALL( SCIPparamsetGetString(set->paramset, name, value) );
+
+   return SCIP_OKAY;
+}
+
+/** changes the value of an existing parameter */
+SCIP_RETCODE SCIPsetSetParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   void*                 value               /**< new value of the parameter */
+   )
+{
+   assert(set != NULL);
+
+   SCIP_CALL( SCIPparamsetSet(set->paramset, set, name, value) );
 
    return SCIP_OKAY;
 }
@@ -2614,6 +2629,22 @@ void SCIPsetSortProps(
    {
       SCIPsortPtr((void**)set->props, SCIPpropComp, set->nprops);
       set->propssorted = TRUE;
+      set->propspresolsorted = FALSE;
+   }
+}
+
+/** sorts propagators by priorities for presolving */
+void SCIPsetSortPropsPresol(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->propspresolsorted )
+   {
+      SCIPsortPtr((void**)set->props, SCIPpropPresolComp, set->nprops);
+      set->propspresolsorted = TRUE;
+      set->propssorted = FALSE;
    }
 }
 
@@ -3273,6 +3304,24 @@ SCIP_RETCODE SCIPsetInitprePlugins(
       }
    }
 
+   /* inform propagators that the presolving is abound to begin */
+   for( i = 0; i < set->nprops; ++i )
+   {
+      SCIP_CALL( SCIPpropInitpre(set->props[i], set, &result) );
+      if( result == SCIP_CUTOFF )
+      {
+         *infeasible = TRUE;
+         SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "propagator <%s> detected infeasibility\n", SCIPpropGetName(set->props[i]));
+      }
+      else if( result == SCIP_UNBOUNDED )
+      {
+         *unbounded = TRUE;
+         SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "propagator <%s> detected unboundness (or infeasibility)\n", SCIPpropGetName(set->props[i]));
+      }
+   }
+
    /* inform constraint handlers that the presolving is abound to begin */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
@@ -3326,6 +3375,24 @@ SCIP_RETCODE SCIPsetExitprePlugins(
          *unbounded = TRUE;
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpresolGetName(set->presols[i]));
+      }
+   }
+
+   /* inform propagators that the presolving is abound to begin */
+   for( i = 0; i < set->nprops; ++i )
+   {
+      SCIP_CALL( SCIPpropExitpre(set->props[i], set, &result) );
+      if( result == SCIP_CUTOFF )
+      {
+         *infeasible = TRUE;
+         SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "propagator <%s> detected infeasibility\n", SCIPpropGetName(set->props[i]));
+      }
+      else if( result == SCIP_UNBOUNDED )
+      {
+         *unbounded = TRUE;
+         SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpropGetName(set->props[i]));
       }
    }
 

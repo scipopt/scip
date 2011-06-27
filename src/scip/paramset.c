@@ -1949,6 +1949,67 @@ SCIP_RETCODE SCIPparamsetGetString(
    return SCIP_OKAY;
 }
 
+/** changes the value of an existing parameter */
+SCIP_RETCODE SCIPparamsetSet(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   void*                 value               /**< new value of the parameter */
+   )
+{
+   SCIP_PARAM* param;
+   
+   assert(paramset != NULL);
+   assert(set != NULL);
+
+   /* retrieve parameter from hash table */
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   if( param == NULL )
+   {
+      SCIPerrorMessage("parameter <%s> unknown\n", name);
+      return SCIP_PARAMETERUNKNOWN;
+   }
+   
+   switch( param->paramtype )
+   {
+   case SCIP_PARAMTYPE_BOOL:
+      /* set the parameter's current value */
+      SCIP_CALL( SCIPparamSetBool(param, set->scip, (SCIP_Bool) (size_t) value, TRUE) );
+      break;
+      
+   case  SCIP_PARAMTYPE_INT:
+      /* set the parameter's current value */
+      SCIP_CALL( SCIPparamSetInt(param, set->scip, (int) (size_t) value, TRUE) );
+      break;
+      
+   case SCIP_PARAMTYPE_LONGINT:
+      /* set the parameter's current value */
+      SCIP_CALL( SCIPparamSetLongint(param, set->scip, (SCIP_Longint) (size_t) value, TRUE) );
+      break;
+      
+   case SCIP_PARAMTYPE_REAL:
+      /* set the parameter's current value */
+      SCIP_CALL( SCIPparamSetReal(param, set->scip, (SCIP_Real) (size_t) value, TRUE) );
+      break;
+      
+   case SCIP_PARAMTYPE_CHAR:
+      /* set the parameter's current value */
+      SCIP_CALL( SCIPparamSetChar(param, set->scip, (char) (size_t) value, TRUE) );
+      break;
+      
+   case SCIP_PARAMTYPE_STRING:
+      /* set the parameter's current value */
+      SCIP_CALL( SCIPparamSetString(param, set->scip, (char*) value, TRUE) );
+      break;
+      
+   default:
+      SCIPerrorMessage("unknown parameter type\n");
+      return SCIP_INVALIDDATA;
+   }
+   
+   return SCIP_OKAY;
+}
+
 /** changes the value of an existing SCIP_Bool parameter */
 SCIP_RETCODE SCIPparamsetSetBool(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
@@ -2691,7 +2752,7 @@ SCIP_RETCODE paramsetSetPresolvingAggressive(
    SCIP_CALL( paramSetInt(scip, paramset, "presolving/boundshift/maxrounds", -1, quiet) );
  
    /* explicitly change parameters of probing */
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "presolving/probing/maxuseless");
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/probing/maxuseless");
    param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
    if( param != NULL )
    {
@@ -2702,7 +2763,7 @@ SCIP_RETCODE paramsetSetPresolvingAggressive(
     
       SCIP_CALL( paramSetInt(scip, paramset, paramname, (int) (1.5 * defvalue), quiet) );
    }
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "presolving/probing/maxtotaluseless");
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/probing/maxtotaluseless");
    param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
    if( param != NULL )
    {
@@ -2757,7 +2818,7 @@ SCIP_RETCODE paramsetSetPresolvingFast(
    SCIP_CALL( paramSetInt(scip, paramset, "presolving/maxrestarts", 0, quiet) );
 
    /* turn off probing */
-   SCIP_CALL( paramSetInt(scip, paramset, "presolving/probing/maxrounds", 0, quiet) );
+   SCIP_CALL( paramSetInt(scip, paramset, "propagating/probing/maxprerounds", 0, quiet) );
 
    /* explicitly change parameters of knapsack constraint handler, if the constraint handler is included */
    SCIP_CALL( paramSetBool(scip, paramset, "constraints/knapsack/disaggregation", FALSE, quiet) );

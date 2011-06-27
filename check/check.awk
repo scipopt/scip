@@ -134,6 +134,7 @@ BEGIN {
    lincons = 0;
    origvars = 0;
    origcons = 0;
+   objsense = 0;
    timeout = 0;
    feasible = 0;
    pb = +infty;
@@ -207,6 +208,16 @@ BEGIN {
 /^loaded parameter file/ { settings = $4; sub(/<.*settings\//, "", settings); sub(/\.set>/, "", settings); }
 /^parameter <limits\/time> set to/ { timelimit = $5; }
 /^limits\/time =/ { timelimit = $3; }
+#
+# get objective sense
+#
+/^  Objective sense  :/ {
+   if ( $4 == "minimize" )
+      objsense = 1;
+   if ( $4 == "maximize" )
+      objsense = -1;
+   # objsense is 0 otherwise
+}
 #
 # conflict analysis
 #
@@ -384,31 +395,33 @@ BEGIN {
    if( !headerprinted ) {
       ntexcolumns = 8 + (2 * printsoltimes);
       
-      #print header of tex file table
-      printf("\\documentclass[leqno]{article}\n")                      >TEXFILE;
-      printf("\\usepackage{a4wide}\n")                                 >TEXFILE;
-      printf("\\usepackage{amsmath,amsfonts,amssymb,booktabs}\n")      >TEXFILE;
-      printf("\\usepackage{supertabular}\n")                           >TEXFILE;
-      printf("\\pagestyle{empty}\n\n")                                 >TEXFILE;
-      printf("\\begin{document}\n\n")                                  >TEXFILE;
-      printf("\\begin{center}\n")                                      >TEXFILE;
-      printf("\\setlength{\\tabcolsep}{2pt}\n")                        >TEXFILE;
-      printf("\\newcommand{\\g}{\\raisebox{0.25ex}{\\tiny $>$}}\n")    >TEXFILE;
-      printf("\\tablehead{\n\\toprule\n")                              >TEXFILE;
-      printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\%% &     Nodes &     Time ") >TEXFILE;
-      if( printsoltimes )
-         printf(" &     To First      &    To Last   ") > TEXFILE;
-      printf("\\\\\n") > TEXFILE;
-      printf("\\midrule\n}\n")                                         >TEXFILE;
-      printf("\\tabletail{\n\\midrule\n")                              >TEXFILE;
-      printf("\\multicolumn{%d}{r} \\; continue next page \\\\\n", ntexcolumns) >TEXFILE;
-      printf("\\bottomrule\n}\n")                                      >TEXFILE;
-      printf("\\tablelasttail{\\bottomrule}\n")                        >TEXFILE;
-      printf("\\tablecaption{SCIP with %s settings}\n",settings)       >TEXFILE;
-      printf("\\begin{supertabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lrrrrrrr") >TEXFILE;
-      if( printsoltimes )
-         printf("rr") > TEXFILE;
-      printf("@{}}\n") > TEXFILE;
+      if (TEXFILE != "") {
+         #print header of tex file table
+         printf("\\documentclass[leqno]{article}\n")                      >TEXFILE;
+         printf("\\usepackage{a4wide}\n")                                 >TEXFILE;
+         printf("\\usepackage{amsmath,amsfonts,amssymb,booktabs}\n")      >TEXFILE;
+         printf("\\usepackage{supertabular}\n")                           >TEXFILE;
+         printf("\\pagestyle{empty}\n\n")                                 >TEXFILE;
+         printf("\\begin{document}\n\n")                                  >TEXFILE;
+         printf("\\begin{center}\n")                                      >TEXFILE;
+         printf("\\setlength{\\tabcolsep}{2pt}\n")                        >TEXFILE;
+         printf("\\newcommand{\\g}{\\raisebox{0.25ex}{\\tiny $>$}}\n")    >TEXFILE;
+         printf("\\tablehead{\n\\toprule\n")                              >TEXFILE;
+         printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\%% &     Nodes &     Time ") >TEXFILE;
+         if( printsoltimes )
+            printf(" &     To First      &    To Last   ") > TEXFILE;
+         printf("\\\\\n") > TEXFILE;
+         printf("\\midrule\n}\n")                                         >TEXFILE;
+         printf("\\tabletail{\n\\midrule\n")                              >TEXFILE;
+         printf("\\multicolumn{%d}{r} \\; continue next page \\\\\n", ntexcolumns) >TEXFILE;
+         printf("\\bottomrule\n}\n")                                      >TEXFILE;
+         printf("\\tablelasttail{\\bottomrule}\n")                        >TEXFILE;
+         printf("\\tablecaption{SCIP with %s settings}\n",settings)       >TEXFILE;
+         printf("\\begin{supertabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lrrrrrrr") >TEXFILE;
+         if( printsoltimes )
+            printf("rr") > TEXFILE;
+         printf("@{}}\n") > TEXFILE;
+      }
       
       #print header of table when this regular expression is matched for the first time
       tablehead1 = "------------------+------+--- Original --+-- Presolved --+----------------+----------------+------+--------+-------+-------+";
@@ -440,15 +453,31 @@ BEGIN {
       pb = 1.0*temp;
       temp = db;
       db = 1.0*temp;
-      
-      #firstpb and rootdb are used to detect the direction of optimization (min or max)
-      if( timetofirst < 0.0 )
-         temp = pb;
-      else
-         temp = firstpb;
-      firstpb = 1.0*temp;
       temp = rootdb;
       rootdb = 1.0*temp;
+      
+      # if objsense could not be determined so far (output is maybe too old)
+      if ( objsense == 0 )
+      {
+         reltol = 1e-5 * max(abs(pb),1.0);
+         abstol = 1e-4;
+
+	 # firstpb and rootdb are used to detect the direction of optimization (min or max)
+	 if( timetofirst < 0.0 )
+	    temp = pb;
+	 else
+	    temp = firstpb;
+	 firstpb = 1.0*temp;
+
+	 if ( firstpb - rootdb > max(abstol,reltol) )
+	    objsense = 1;   # minimize
+	 else
+	    objsense = -1;  # maximize
+      }
+      
+      # modify primal bound for maximization problems without primal solution
+      if ( objsense == -1 && pb >= +infty )
+	 pb = -1.0 * pb;
 
       nprobs++;
 
@@ -559,7 +588,8 @@ BEGIN {
          reltol = 1e-5 * max(abs(pb),1.0);
          abstol = 1e-4;
 
-         if( ( firstpb-rootdb > max(abstol,reltol) && (db-sol[prob] > reltol || sol[prob]-pb > reltol) ) || ( rootdb-firstpb > max(reltol,abstol) && (sol[prob]-db > reltol || pb-sol[prob] > reltol) ) ) {
+	 # objsense = 1 -> minimize; objsense = -1 -> maximize
+         if( ( objsense == 1 && (db-sol[prob] > reltol || sol[prob]-pb > reltol) ) || ( objsense == -1 && (sol[prob]-db > reltol || pb-sol[prob] > reltol) ) ) {
             status = "fail";
             failtime += tottime;
             fail++;
@@ -592,14 +622,15 @@ BEGIN {
          reltol = 1e-5 * max(abs(pb),1.0);
          abstol = 1e-4;
 
-         if( ( firstpb-rootdb > max(abstol,reltol) && db-sol[prob] > reltol) || ( rootdb-firstpb > max(reltol,abstol) && sol[prob]-db > reltol) ) {
+	 # objsense = 1 -> minimize; objsense = -1 -> maximize
+         if( ( objsense == 1 && db-sol[prob] > reltol) || ( objsense == -1 && sol[prob]-db > reltol) ) {
             status = "fail";
             failtime += tottime;
             fail++;
          }
          else {
             if( timeout || gapreached || sollimitreached ) {
-               if( (firstpb-rootdb > max(abstol,reltol) && sol[prob]-pb > reltol) || (rootdb-firstpb > max(abstol,reltol) && pb-sol[prob] > reltol) ) {
+               if( (objsense == 1 && sol[prob]-pb > reltol) || (objsense == -1 && pb-sol[prob] > reltol) ) {
                   status = "better";
                   timeouttime += tottime;
                   timeouts++;
@@ -735,11 +766,13 @@ BEGIN {
 
       #write output to both the tex file and the console depending on whether printsoltimes is activated or not
       if( !onlypresolvereductions || origcons > cons || origvars > vars ) {
-         printf("%-19s & %6d & %6d & %16.9g & %16.9g & %6s &%s%8d &%s%7.1f",
-                pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime)  >TEXFILE;
-         if( printsoltimes )
-            printf(" & %7.1f & %7.1f", timetofirst, timetobest) > TEXFILE;
-         printf("\\\\\n") > TEXFILE;
+         if (TEXFILE != "") {
+            printf("%-19s & %6d & %6d & %16.9g & %16.9g & %6s &%s%8d &%s%7.1f",
+                   pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime)  >TEXFILE;
+            if( printsoltimes )
+               printf(" & %7.1f & %7.1f", timetofirst, timetobest) > TEXFILE;
+            printf("\\\\\n") > TEXFILE;
+         }
 
          printf("%-19s %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %8d %7d %7.1f ",
                 shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, simpiters, bbnodes, tottime);
@@ -784,7 +817,7 @@ BEGIN {
             gamsprobtype = "MIP";
          #InputFileName,ModelType,SolverName,Direction,ModelStatus,SolverStatus,ObjectiveValue,ObjectiveValueEstimate,SolverTime
          #NumberOfNodes,NumberOfIterations,NumberOfEquations,NumberOfVariables
-         printf("%s,%s,SCIP_%s,%d,%d,%d,%g,%g,%g,", pavprob, gamsprobtype, settings, firstpb-rootdb < -max(abstol,reltol) ? 1 : 0, modelstat, solverstat, pb, db, tottime+pavshift) > PAVFILE;
+         printf("%s,%s,SCIP_%s,%d,%d,%d,%g,%g,%g,", pavprob, gamsprobtype, settings, objsense == 1 ? 1 : 0, modelstat, solverstat, pb, db, tottime+pavshift) > PAVFILE;
          printf("%d,%d,%d,%d\n", bbnodes, simpiters, cons, vars) > PAVFILE;
       }
    }
@@ -799,23 +832,24 @@ END {
    shiftedtimetofirstgeom -= timegeomshift;
    shiftedtimetobestgeom -= timegeomshift;
 
-   printf("\\midrule\n")                                                 >TEXFILE;
-   printf("%-14s (%2d) &        &        &                &                &        & %9d & %8.1f",
-          "Total", nprobs, sbab, stottime) >TEXFILE;
-   if( printsoltimes )
-      printf(" & %8.1f & %8.1f", stimetofirst, stimetobest) > TEXFILE;
-   printf("\\\\\n") > TEXFILE;
-   printf("%-14s      &        &        &                &                &        & %9d & %8.1f",
-          "Geom. Mean", nodegeom, timegeom) >TEXFILE;
-   if( printsoltimes )
-      printf(" & %8.1f & %8.1f", timetofirstgeom, timetobestgeom) > TEXFILE;
-   printf("\\\\\n") > TEXFILE;
-   printf("%-14s      &        &        &                &                &        & %9d & %8.1f ",
-          "Shifted Geom.", shiftednodegeom, shiftedtimegeom) >TEXFILE;
-   if( printsoltimes )
-      printf(" & %8.1f & %8.1f", shiftedtimetofirstgeom, shiftedtimetobestgeom) > TEXFILE;
-   printf("\\\\\n") > TEXFILE;
-
+   if (TEXFILE != "" ) {
+      printf("\\midrule\n")                                                 >TEXFILE;
+      printf("%-14s (%2d) &        &        &                &                &        & %9d & %8.1f",
+             "Total", nprobs, sbab, stottime) >TEXFILE;
+      if( printsoltimes )
+         printf(" & %8.1f & %8.1f", stimetofirst, stimetobest) > TEXFILE;
+      printf("\\\\\n") > TEXFILE;
+      printf("%-14s      &        &        &                &                &        & %9d & %8.1f",
+             "Geom. Mean", nodegeom, timegeom) >TEXFILE;
+      if( printsoltimes )
+         printf(" & %8.1f & %8.1f", timetofirstgeom, timetobestgeom) > TEXFILE;
+      printf("\\\\\n") > TEXFILE;
+      printf("%-14s      &        &        &                &                &        & %9d & %8.1f ",
+             "Shifted Geom.", shiftednodegeom, shiftedtimegeom) >TEXFILE;
+      if( printsoltimes )
+         printf(" & %8.1f & %8.1f", shiftedtimetofirstgeom, shiftedtimetobestgeom) > TEXFILE;
+      printf("\\\\\n") > TEXFILE;
+   }
    printf(tablehead3);
    printf("\n");
 
@@ -850,10 +884,12 @@ END {
    printf("\n");
    printf(tablebottom3);
 
-   printf("\\noalign{\\vspace{6pt}}\n")                                  >TEXFILE;
-   printf("\\end{supertabular*}\n")                                      >TEXFILE;
-   printf("\\end{center}\n")                                             >TEXFILE;
-   printf("\\end{document}\n")                                           >TEXFILE;
+   if (TEXFILE != "" ) {
+      printf("\\noalign{\\vspace{6pt}}\n")                                  >TEXFILE;
+      printf("\\end{supertabular*}\n")                                      >TEXFILE;
+      printf("\\end{center}\n")                                             >TEXFILE;
+      printf("\\end{document}\n")                                           >TEXFILE;
+   }
 
    printf("@02 timelimit: %g\n", timelimit);
    printf("@01 SCIP(%s)%s(%s):%s\n", scipversion, lpsname, lpsversion, settings);

@@ -48,6 +48,8 @@
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
+
 #define LINCONSUPGD_PRIORITY    +800000 /**< priority of the constraint handler for upgrading of linear constraints */
 
 #define EVENTHDLR_NAME         "logicor"
@@ -65,7 +67,6 @@
 #define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presol comparisons to repeat pairwise comparison round */
 #define DEFAULT_DUALPRESOLVING     TRUE /**< should dual presolving steps be preformed? */
 #define DEFAULT_NEGATEDCLIQUE     FALSE /**< should negated clique information be used in presolving */
-
 
 /* @todo make this a parameter setting */
 #if 1 /* @todo test which AGEINCREASE formula is better! */
@@ -399,6 +400,21 @@ SCIP_RETCODE addCoef(
    consdata->vars[consdata->nvars] = var;
    consdata->nvars++;
 
+   /* we only catch this event in presolving stage */
+   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
+   {
+      SCIP_CONSHDLRDATA* conshdlrdata;
+      SCIP_CONSHDLR* conshdlr;
+
+      conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+      assert(conshdlr != NULL);
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+
+      SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_VARFIXED, conshdlrdata->eventhdlr,
+            (SCIP_EVENTDATA*)cons, NULL) );
+   }
+
    consdata->sorted = (consdata->nvars == 1);
    consdata->changed = TRUE;
 
@@ -436,6 +452,13 @@ SCIP_RETCODE delCoefPos(
 
    /* remove the rounding locks of variable */
    SCIP_CALL( unlockRounding(scip, cons, consdata->vars[pos]) );
+
+   /* we only catch this event in presolving stage, so we need to only drop it there */
+   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
+   {
+      SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_VARFIXED, eventhdlr,
+            (SCIP_EVENTDATA*)cons, -1) );
+   }
 
    if( SCIPconsIsTransformed(cons) )
    {
@@ -681,7 +704,9 @@ SCIP_RETCODE dualPresolving(
    return SCIP_OKAY;
 }
 
-/** deletes all zero-fixed variables, checks for variables fixed to one */
+/** deletes all zero-fixed variables, checks for variables fixed to one, replace all variables which are not active or
+ *  not a negation of an active variable by there active or negation of an active counterpart
+ */
 static
 SCIP_RETCODE applyFixings(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -693,6 +718,9 @@ SCIP_RETCODE applyFixings(
    SCIP_CONSDATA* consdata;
    SCIP_VAR* var;
    int v;
+   SCIP_VAR** vars;
+   SCIP_Bool* negarray;
+   int nvars;
 
    assert(eventhdlr != NULL);
    assert(redundant != NULL);
@@ -703,6 +731,8 @@ SCIP_RETCODE applyFixings(
 
    *redundant = FALSE;
    v = 0;
+
+   /* remove zeros and mark constraint redundant when found one variable fixed to one */
    while( v < consdata->nvars )
    {
       var = consdata->vars[v];
@@ -722,6 +752,33 @@ SCIP_RETCODE applyFixings(
       else
          ++v;
    }
+
+   if( consdata->nvars == 0 )
+      return SCIP_OKAY;
+
+   nvars = consdata->nvars;
+
+   /* allocate temporary memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &negarray, nvars) );
+
+   /* get active or negation of active variables */
+   SCIP_CALL( SCIPgetBinvarRepresentatives(scip, nvars, consdata->vars, vars, negarray) );
+
+   /* renew all variables, important that we do a backwards loop because deletion only affect rear items */
+   for( v = nvars - 1; v >= 0; --v )
+   {
+      if( vars[v] != consdata->vars[v] )
+      {
+         SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
+         SCIP_CALL( addCoef(scip, cons, vars[v]) );
+      }
+   }
+   assert(consdata->nvars == nvars);
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &negarray);
+   SCIPfreeBufferArray(scip, &vars);
 
    SCIPdebugMessage("after fixings: ");
    SCIPdebug( SCIP_CALL(consdataPrint(scip, consdata, NULL, TRUE)) );
@@ -852,7 +909,7 @@ SCIP_RETCODE mergeMultiples(
       (*entries)[SCIPvarGetProbindex(var)] = 0;
    }
 
-   /** check all vars for multiple entries */
+   /** check all vars for multiple entries, do necessary backwards loop because deletion only affect rear items */
    for( v = nvars - 1; v >= 0; --v )
    {
       var = negarray[v] ? SCIPvarGetNegationVar(vars[v]) : vars[v];
@@ -2074,14 +2131,63 @@ SCIP_DECL_CONSFREE(consFreeLogicor)
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
 #define consExitLogicor NULL
 
-
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#define consInitpreLogicor NULL
+static
+SCIP_DECL_CONSINITPRE(consInitpreLogicor)
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   int c;
+   int v;
 
+   assert(conshdlr != NULL);
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* catch all variable event for deleted variables, which is only used in presolving */
+   for( c = nconss - 1; c >= 0; --c )
+   {
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      for( v = consdata->nvars - 1; v >= 0; --v )
+      {
+         SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[v], SCIP_EVENTTYPE_VARFIXED, conshdlrdata->eventhdlr,
+               (SCIP_EVENTDATA*)conss[c], NULL) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#define consExitpreLogicor NULL
+static
+SCIP_DECL_CONSEXITPRE(consExitpreLogicor)
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   int c;
+   int v;
 
+   assert(conshdlr != NULL);
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* drop all variable event for deleted variables, which was only used in presolving */
+   for( c = nconss - 1; c >= 0; --c )
+   {
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      for( v = consdata->nvars - 1; v >= 0; --v )
+      {
+         SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[v], SCIP_EVENTTYPE_VARFIXED, conshdlrdata->eventhdlr,
+               (SCIP_EVENTDATA*)conss[c], -1) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
 #define consInitsolLogicor NULL
@@ -2119,6 +2225,21 @@ SCIP_DECL_CONSDELETE(consDeleteLogicor)
    assert(consdata != NULL);
    assert(*consdata != NULL);
 
+   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
+   {
+      SCIP_CONSHDLRDATA* conshdlrdata;
+      int v;
+
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+
+      for( v = (*consdata)->nvars - 1; v >= 0; --v )
+      {
+         SCIP_CALL( SCIPdropVarEvent(scip, (*consdata)->vars[v], SCIP_EVENTTYPE_VARFIXED, conshdlrdata->eventhdlr,
+               (SCIP_EVENTDATA*)cons, -1) );
+      }
+   }
+
    /* free LP row and logic or constraint */
    SCIP_CALL( consdataFree(scip, consdata) );
 
@@ -2154,6 +2275,21 @@ SCIP_DECL_CONSTRANS(consTransLogicor)
          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
          SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), 
          SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
+
+   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
+   {
+      SCIP_CONSHDLRDATA* conshdlrdata;
+      int v;
+
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+
+      for( v = targetdata->nvars - 1; v >= 0; --v )
+      {
+         SCIP_CALL( SCIPcatchVarEvent(scip, targetdata->vars[v], SCIP_EVENTTYPE_VARFIXED, conshdlrdata->eventhdlr,
+               (SCIP_EVENTDATA*)(*targetcons), NULL) );
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -2992,11 +3128,34 @@ SCIP_DECL_EVENTEXEC(eventExecLogicor)
    if( SCIPeventGetType(event) == SCIP_EVENTTYPE_LBRELAXED )
    {
       SCIP_CALL( SCIPenableCons(scip, (SCIP_CONS*)eventdata) );
+      SCIP_CALL( SCIPenableConsPropagation(scip, (SCIP_CONS*)eventdata) );
    }
-   else
-      assert(SCIPeventGetType(event) == SCIP_EVENTTYPE_UBTIGHTENED);
+   else if( SCIPeventGetType(event) == SCIP_EVENTTYPE_UBTIGHTENED )
+   {
+      SCIP_CALL( SCIPenableConsPropagation(scip, (SCIP_CONS*)eventdata) );
+   }
 
-   SCIP_CALL( SCIPenableConsPropagation(scip, (SCIP_CONS*)eventdata) );
+   if( SCIPeventGetType(event) == SCIP_EVENTTYPE_VARFIXED )
+   {
+      SCIP_CONS* cons;
+      SCIP_CONSDATA* consdata;
+
+      /* we only catch this event in presolving stage */
+      assert(SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING);
+      assert(SCIPeventGetVar(event) != NULL);
+
+      if( SCIPvarGetStatus(SCIPeventGetVar(event)) != SCIP_VARSTATUS_FIXED )
+      {
+         cons = (SCIP_CONS*)eventdata;
+
+         if( !SCIPconsIsActive(cons) )
+            return SCIP_OKAY;
+
+         consdata = SCIPconsGetData(cons);
+         assert(consdata != NULL);
+         consdata->merged = FALSE;
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -3098,6 +3257,7 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         CONSHDLR_PROP_TIMING,
          conshdlrCopyLogicor,
          consFreeLogicor, consInitLogicor, consExitLogicor, 
          consInitpreLogicor, consExitpreLogicor, consInitsolLogicor, consExitsolLogicor,
@@ -3191,6 +3351,21 @@ SCIP_RETCODE SCIPcreateConsLogicor(
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
+
+   if( SCIPisTransformed(scip) && SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
+   {
+      SCIP_CONSHDLRDATA* conshdlrdata;
+      int v;
+
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+
+      for( v = consdata->nvars - 1; v >= 0; --v )
+      {
+         SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[v], SCIP_EVENTTYPE_VARFIXED, conshdlrdata->eventhdlr,
+               (SCIP_EVENTDATA*)(*cons), NULL) );
+      }
+   }
 
    return SCIP_OKAY;
 }

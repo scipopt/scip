@@ -49,9 +49,14 @@
 
 #define PROP_NAME              "vbounds"
 #define PROP_DESC              "propagates variable upper and lower bounds"
-#define PROP_PRIORITY           2000000
-#define PROP_FREQ                     1
-#define PROP_DELAY                FALSE      /**< should propagation method be delayed, if other propagators found reductions? */
+#define PROP_TIMING             SCIP_PROPTIMING_BEFORELP
+#define PROP_PRIORITY           2000000 /**< propagator priority */ 
+#define PROP_FREQ                     1 /**< propagator frequency */
+#define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
+#define PROP_PRESOL_PRIORITY          0 /**< priority of the presolving method (>= 0: before, < 0: after constraint handlers); combined with presolvers */
+#define PROP_PRESOL_DELAY          TRUE /**< should presolving be delay, if other presolvers found reductions?  */
+#define PROP_PRESOL_MAXROUNDS         0 /**< maximal number of presolving rounds the presolver participates in (-1: no
+                                         *   limit) */
 
 #define EVENTHDLR_NAME         "vbounds"
 #define EVENTHDLR_DESC         "bound change event handler for for vbounds propagator"
@@ -72,6 +77,8 @@ struct SCIP_PropData
    SCIP_EVENTTYPE*       lbeventtypes;       /**< event types of variables belonging to variable lower bounds */ 
    SCIP_EVENTTYPE*       ubeventtypes;       /**< event types of variables belonging to variable upper bounds */ 
    int                   nvars;              /**< number of involved variables */
+   int                   neventvars;         /**< number of variables which are triggered by an event */
+   int                   sizevars;           /**< size of the variable array vars */
    int                   nlbvars;            /**< number of variables in variable lower bound array */
    int                   nubvars;            /**< number of variables in variable upper bound array */
    SCIP_Bool             lbpropagated;       /**< is the lower bound variable array already propagated? */
@@ -173,6 +180,7 @@ void resetPropdata(
    propdata->lbeventtypes = NULL;
    propdata->ubeventtypes = NULL;
    propdata->nvars = 0;
+   propdata->neventvars = 0;
    propdata->nlbvars = 0;
    propdata->nubvars = 0;
    propdata->lbpropagated = TRUE;
@@ -310,6 +318,8 @@ SCIP_RETCODE catchEvents(
 
    assert(propdata != NULL);
 
+   propdata->neventvars = propdata->nvars;
+
    /* setup arrays of eventtypes lbeventtype and ubeventtype */
    if( propdata->nlbvars > 0 )
    {
@@ -318,8 +328,8 @@ SCIP_RETCODE catchEvents(
        */
       
       assert(propdata->lbeventtypes == NULL);
-      SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->lbeventtypes, propdata->nvars) );
-      BMSclearMemoryArray(propdata->lbeventtypes, propdata->nvars);
+      SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->lbeventtypes, propdata->neventvars) );
+      BMSclearMemoryArray(propdata->lbeventtypes, propdata->neventvars);
       
       for( v = 0; v < propdata->nlbvars; ++v )
       {
@@ -344,7 +354,7 @@ SCIP_RETCODE catchEvents(
 
             assert(SCIPhashmapExists(propdata->varHashmap, vbvar));
             idx = (int)(size_t)SCIPhashmapGetImage(propdata->varHashmap, vbvar);
-            assert(idx < propdata->nvars);
+            assert(idx < propdata->neventvars);
             
             if( coef > 0.0 )
             {
@@ -367,8 +377,8 @@ SCIP_RETCODE catchEvents(
        */
 
       assert(propdata->ubeventtypes == NULL);
-      SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->ubeventtypes, propdata->nvars) );
-      BMSclearMemoryArray(propdata->ubeventtypes, propdata->nvars);
+      SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->ubeventtypes, propdata->neventvars) );
+      BMSclearMemoryArray(propdata->ubeventtypes, propdata->neventvars);
 
       for( v = 0; v < propdata->nubvars; ++v )
       {
@@ -393,7 +403,7 @@ SCIP_RETCODE catchEvents(
 
             assert(SCIPhashmapExists(propdata->varHashmap, vbvar));
             idx = (int)(size_t)SCIPhashmapGetImage(propdata->varHashmap, vbvar);
-            assert(idx < propdata->nvars);
+            assert(idx < propdata->neventvars);
             
             if( coef > 0.0 )
             {
@@ -413,13 +423,17 @@ SCIP_RETCODE catchEvents(
    eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
    assert(eventhdlr != NULL);
 
-   for( v = 0; v < propdata->nvars; ++v )
+   for( v = 0; v < propdata->neventvars; ++v )
    {
       if( propdata->lbeventtypes != NULL && propdata->lbeventtypes[v] != SCIP_EVENTTYPE_DISABLED )
+      {
          SCIP_CALL( SCIPcatchVarEvent(scip, propdata->vars[v], propdata->lbeventtypes[v], eventhdlr, (SCIP_EVENTDATA*)(&propdata->lbpropagated), NULL) );
+      }
 
       if( propdata->ubeventtypes != NULL && propdata->ubeventtypes[v] != SCIP_EVENTTYPE_DISABLED )
+      {
          SCIP_CALL( SCIPcatchVarEvent(scip, propdata->vars[v], propdata->ubeventtypes[v], eventhdlr, (SCIP_EVENTDATA*)(&propdata->ubpropagated), NULL) );
+      }
    }
 
    return SCIP_OKAY;
@@ -443,13 +457,16 @@ SCIP_RETCODE dropEvents(
    eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
    assert(eventhdlr != NULL);
 
-   for( v = 0; v < propdata->nvars; ++v )
+   for( v = 0; v < propdata->neventvars; ++v )
    {
       if( propdata->lbeventtypes != NULL && propdata->lbeventtypes[v] != SCIP_EVENTTYPE_DISABLED )
+      {
          SCIP_CALL( SCIPdropVarEvent(scip, propdata->vars[v], propdata->lbeventtypes[v], eventhdlr, (SCIP_EVENTDATA*)(&propdata->lbpropagated), -1) );
-
+      }
       if( propdata->ubeventtypes != NULL && propdata->ubeventtypes[v] != SCIP_EVENTTYPE_DISABLED )
+      {
          SCIP_CALL( SCIPdropVarEvent(scip, propdata->vars[v], propdata->ubeventtypes[v], eventhdlr, (SCIP_EVENTDATA*)(&propdata->ubpropagated), -1) );
+      }
    }
   
    return SCIP_OKAY;
@@ -963,6 +980,49 @@ SCIP_RETCODE analyzeConflictUpperbound(
    return SCIP_OKAY;
 }
 
+/** find position of the given variable in the variable array; if it does not exist yet it gets added to the end of the
+ *  array 
+ */
+static
+SCIP_RETCODE getVarPos(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROPDATA*        propdata,           /**< vbounds propagator data */
+   SCIP_VAR*             var,                /**< variable */
+   int*                  pos                 /**< pointer to store position in array */
+   )
+{
+   assert(scip != NULL);
+   assert(propdata != NULL);
+   assert(var != NULL);
+   assert(pos != NULL);
+
+   /* get position of vbvar in variable arrays */
+   if( SCIPhashmapExists(propdata->varHashmap, var) )
+      *pos = (int)(size_t)SCIPhashmapGetImage(propdata->varHashmap, var);
+   else
+   {
+      /* ensure array size */
+      if( propdata->sizevars <= propdata->nvars )
+      {
+         propdata->sizevars = SCIPcalcMemGrowSize(scip, propdata->nvars + 1);
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &(propdata->vars), propdata->sizevars) );
+      }
+      assert(propdata->sizevars > propdata->nvars);
+
+      propdata->vars[propdata->nvars] = var;
+      *pos = propdata->nvars;
+      propdata->nvars++;
+
+      /* capture variable to ensure the existence */
+      SCIP_CALL( SCIPcaptureVar(scip, var) );
+      
+      /* insert variable bound variable into the hash table since they are involve in propagation */ 
+      SCIP_CALL( SCIPhashmapInsert(propdata->varHashmap, var, (void*)(size_t)*pos) );
+   }
+   
+   return SCIP_OKAY;
+}
+
 /** performs propagation of variables lower and upper bounds */
 static
 SCIP_RETCODE propagateVbounds(
@@ -1082,8 +1142,7 @@ SCIP_RETCODE propagateVbounds(
                      coef, SCIPvarGetLbLocal(vbvar), SCIPvarGetUbLocal(vbvar), constant);
 
                   /* get position of vbvar in variable arrays */
-                  assert(SCIPhashmapExists(propdata->varHashmap, vbvar));
-                  pos = (int)(size_t)SCIPhashmapGetImage(propdata->varHashmap, vbvar);
+                  SCIP_CALL( getVarPos(scip, propdata, vbvar, &pos) );
 
                   /* construct infer info */
                   inferinfo = getInferInfo(pos, SCIP_BOUNDTYPE_LOWER);
@@ -1118,8 +1177,7 @@ SCIP_RETCODE propagateVbounds(
                      coef, SCIPvarGetLbLocal(vbvar), SCIPvarGetUbLocal(vbvar), constant);
                   
                   /* get position of vbvar in variable arrays */
-                  assert(SCIPhashmapExists(propdata->varHashmap, vbvar));
-                  pos = (int)(size_t)SCIPhashmapGetImage(propdata->varHashmap, vbvar);
+                  SCIP_CALL( getVarPos(scip, propdata, vbvar, &pos) );
 
                   /* construct infer info */
                   inferinfo = getInferInfo(pos, SCIP_BOUNDTYPE_UPPER);
@@ -1201,7 +1259,7 @@ SCIP_RETCODE propagateVbounds(
 
             /* transform variable bound variable to an active variable if possible */
             SCIP_CALL( SCIPvarGetProbvarSum(&vbvar, &coef, &constant) );
-
+            
             if( !SCIPvarIsActive(vbvar) )
                continue;
 
@@ -1234,9 +1292,8 @@ SCIP_RETCODE propagateVbounds(
                      coef, SCIPvarGetLbLocal(vbvar), SCIPvarGetUbLocal(vbvar), constant);
                   
                   /* get position of vbvar in variable arrays */
-                  assert(SCIPhashmapExists(propdata->varHashmap, vbvar));
-                  pos = (int)(size_t)SCIPhashmapGetImage(propdata->varHashmap, vbvar);
-                  
+                  SCIP_CALL( getVarPos(scip, propdata, vbvar, &pos) );
+
                   /* construct infer info */
                   inferinfo = getInferInfo(pos, SCIP_BOUNDTYPE_UPPER);
                }
@@ -1270,9 +1327,8 @@ SCIP_RETCODE propagateVbounds(
                      coef, SCIPvarGetLbLocal(vbvar), SCIPvarGetUbLocal(vbvar), constant);
                   
                   /* get position of vbvar in variable arrays */
-                  assert(SCIPhashmapExists(propdata->varHashmap, vbvar));
-                  pos = (int)(size_t)SCIPhashmapGetImage(propdata->varHashmap, vbvar);
-                  
+                  SCIP_CALL( getVarPos(scip, propdata, vbvar, &pos) );
+
                   /* construct infer info */
                   inferinfo = getInferInfo(pos, SCIP_BOUNDTYPE_LOWER);
                }
@@ -1359,8 +1415,18 @@ SCIP_DECL_PROPFREE(propFreeVbounds)
 /** initialization method of propagator (called after problem was transformed) */
 #define propInitVbounds NULL
 
+
 /** deinitialization method of propagator (called before transformed problem is freed) */
 #define propExitVbounds NULL
+
+
+/** presolving initialization method of propagator (called when presolving is about to begin) */
+#define propInitpreVbounds NULL
+
+
+/** presolving deinitialization method of propagator (called after presolving has been finished) */
+#define propExitpreVbounds NULL
+
 
 /** solving process initialization method of propagator (called when branch and bound process is about to begin) */
 static
@@ -1388,6 +1454,9 @@ SCIP_DECL_PROPINITSOL(propInitsolVbounds)
    SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->lbvars, nvars) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->ubvars, nvars) );
 
+   /* store size of the variable array */
+   propdata->sizevars = nvars;
+   
    /* create hash table for storing the involved variables */
    assert(propdata->nvars == 0);
    SCIP_CALL( SCIPhashmapCreate(&propdata->varHashmap, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * nvars)) );
@@ -1458,6 +1527,10 @@ SCIP_DECL_PROPEXITSOL(propExitsolVbounds)
 }
 
 
+/** presolving method of propagator */
+#define propPresolVbounds NULL
+
+
 /** execution method of propagator */
 static
 SCIP_DECL_PROPEXEC(propExecVbounds)
@@ -1525,10 +1598,10 @@ SCIP_RETCODE SCIPincludePropVbounds(
    resetPropdata(propdata);
 
    /* include propagator */
-   SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY,
+   SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY,
          propCopyVbounds,
-         propFreeVbounds, propInitVbounds, propExitVbounds, 
-         propInitsolVbounds, propExitsolVbounds, propExecVbounds, propRespropVbounds,
+         propFreeVbounds, propInitVbounds, propExitVbounds, propInitpreVbounds, propExitpreVbounds, 
+         propInitsolVbounds, propExitsolVbounds, propPresolVbounds, propExecVbounds, propRespropVbounds,
          propdata) );
 
    /* include event handler for bound change events */

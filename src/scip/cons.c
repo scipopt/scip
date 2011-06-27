@@ -1747,6 +1747,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
    SCIP_Bool             delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
    SCIP_Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
+   SCIP_PROPTIMING       timingmask,         /**< positions in the node solving loop where propagation method of constraint handlers should be executed */
    SCIP_DECL_CONSHDLRCOPY((*conshdlrcopy)),  /**< copy method of constraint handler or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
    SCIP_DECL_CONSINIT    ((*consinit)),      /**< initialize constraint handler */
@@ -1907,6 +1908,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->delayupdatecount = 0;
    (*conshdlr)->ageresetavg = AGERESETAVG_INIT;
    (*conshdlr)->needscons = needscons;
+   (*conshdlr)->timingmask = timingmask;
    (*conshdlr)->sepalpwasdelayed = FALSE;
    (*conshdlr)->sepasolwasdelayed = FALSE;
    (*conshdlr)->propwasdelayed = FALSE;
@@ -3944,6 +3946,15 @@ SCIP_Bool SCIPconshdlrIsClonable(
    return (conshdlr->conshdlrcopy != NULL);
 }
 
+/** returns the timing mask of the propagation method of the constraint handler */
+SCIP_PROPTIMING SCIPconshdlrGetPropTimingmask(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->timingmask;
+}
 
 
 

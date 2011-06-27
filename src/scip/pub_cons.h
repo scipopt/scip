@@ -412,7 +412,13 @@ SCIP_Bool SCIPconshdlrIsInitialized(
 extern
 SCIP_Bool SCIPconshdlrIsClonable(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
-				 );
+   );
+
+/** returns the timing mask of the propagation method of the constraint handler */
+extern
+SCIP_PROPTIMING SCIPconshdlrGetPropTimingmask(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
 
 
 

@@ -134,6 +134,40 @@ SCIP_DECL_PROPEXIT(propExitObj)
 }
 
 
+/** presolving initialization method of propagator (called when presolving is about to begin) */
+static
+SCIP_DECL_PROPINITPRE(propInitpreObj)
+{  /*lint --e{715}*/
+   SCIP_PROPDATA* propdata;
+
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
+   assert(propdata->objprop != NULL);
+
+   /* call virtual method of prop object */
+   SCIP_CALL( propdata->objprop->scip_initpre(scip, prop, result) );
+
+   return SCIP_OKAY;
+}
+
+
+/** presolving deinitialization method of propagator (called after presolving has been finished) */
+static
+SCIP_DECL_PROPEXITPRE(propExitpreObj)
+{  /*lint --e{715}*/
+   SCIP_PROPDATA* propdata;
+
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
+   assert(propdata->objprop != NULL);
+
+   /* call virtual method of prop object */
+   SCIP_CALL( propdata->objprop->scip_exitpre(scip, prop, result) );
+
+   return SCIP_OKAY;
+}
+
+
 /** solving process initialization method of propagator (called when branch and bound process is about to begin) */
 static
 SCIP_DECL_PROPINITSOL(propInitsolObj)
@@ -163,6 +197,27 @@ SCIP_DECL_PROPEXITSOL(propExitsolObj)
 
    /* call virtual method of prop object */
    SCIP_CALL( propdata->objprop->scip_exitsol(scip, prop) );
+
+   return SCIP_OKAY;
+}
+
+
+/** presolving method of propagator */
+static
+SCIP_DECL_PROPPRESOL(propPresolObj)
+{  /*lint --e{715}*/
+   SCIP_PROPDATA* propdata;
+
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
+   assert(propdata->objprop != NULL);
+
+   /* call virtual method of prop object */
+   SCIP_CALL( propdata->objprop->scip_presol(scip, prop, nrounds,
+         nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewholes,
+         nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
+         nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
+         ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result) );
 
    return SCIP_OKAY;
 }
@@ -228,9 +283,10 @@ SCIP_RETCODE SCIPincludeObjProp(
    /* include propagator */
    SCIP_CALL( SCIPincludeProp(scip, objprop->scip_name_, objprop->scip_desc_, 
          objprop->scip_priority_, objprop->scip_freq_, objprop->scip_delay_,
+         objprop->scip_timingmask_, objprop->scip_presol_priority_, objprop->scip_presol_maxrounds_, objprop->scip_presol_delay_,
          propCopyObj,
-         propFreeObj, propInitObj, propExitObj, propInitsolObj, propExitsolObj,
-         propExecObj, propRespropObj,
+         propFreeObj, propInitObj, propExitObj, propInitpreObj, propExitpreObj, propInitsolObj, propExitsolObj,
+         propPresolObj, propExecObj, propRespropObj,
          propdata) ); /*lint !e429*/
 
    return SCIP_OKAY; /*lint !e429*/

@@ -44,6 +44,8 @@
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
+
 #define EVENTHDLR_NAME         "xor"
 #define EVENTHDLR_DESC         "event handler for xor constraints"
 
@@ -2456,6 +2458,7 @@ SCIP_RETCODE SCIPincludeConshdlrXor(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         CONSHDLR_PROP_TIMING,
          conshdlrCopyXor,
          consFreeXor, consInitXor, consExitXor, 
          consInitpreXor, consExitpreXor, consInitsolXor, consExitsolXor,

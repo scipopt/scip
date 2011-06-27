@@ -34,7 +34,7 @@
 
 #include <assert.h>
 #include <string.h> /* for strcmp */ 
-#include <ctype.h>  /* for isdigit */
+#include <ctype.h>  /* for isspace */
 
 #include "scip/cons_quadratic.h"
 #include "scip/cons_linear.h"
@@ -61,6 +61,8 @@
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
+
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
 
 #define MAXDNOM                 10000LL /**< maximal denominator for simple rational fixed values */
 
@@ -172,23 +174,6 @@ struct SCIP_ConshdlrData
 #endif
 };
 
-/** data structure for tokenizing strings */
-struct SCIP_Tokenizer
-{
-   const char* strbuf;                       /**< string to be tokenized */
-   char* token;                              /**< current token */
-   char* tokenbuf;                           /**< token buffer */
-   int strpos;                               /**< current position in string */
-};
-typedef struct SCIP_Tokenizer SCIP_TOKENIZER;     /**< data structure for tokenizing a string */
-
-/** enum type for constraint sense */
-enum CipSense
-{
-   CIP_SENSE_NOTHING, CIP_SENSE_LE, CIP_SENSE_GE, CIP_SENSE_EQ
-};
-typedef enum CipSense CIPSENSE;                   /**< enum type for constraint sense */
-
 
 /*
  * local methods for managing quadratic constraint update methods
@@ -228,250 +213,6 @@ SCIP_Bool conshdlrdataHasUpgrade(
 /*
  * Local methods
  */
-
-/* local methods for parsing quadratic constraints */
-static const char delimchars[] = " \f\n\r\t\v";
-static const char tokenchars[] = "-+<>=^";
-
-/** returns whether the given character is a token delimiter */
-static
-SCIP_Bool isDelimChar(
-   char                  c                   /**< input character */
-   )
-{
-   return (c == '\0') || (strchr(delimchars, c) != NULL);
-}
-
-/** returns whether the given character is a single token */
-static
-SCIP_Bool isTokenChar(
-   char                  c                   /**< input character */
-   )
-{
-   return (strchr(tokenchars, c) != NULL);
-}
-
-/** returns whether the current token is an equation sense */
-static
-SCIP_Bool isSense(
-   SCIP_TOKENIZER*       tokenizer,          /**< LP reading data */
-   CIPSENSE*             sense               /**< pointer to store the equation sense */
-   )
-{
-   assert(tokenizer != NULL);
-   assert(sense != NULL);
-
-   if( strcmp(tokenizer->token, "<=") == 0 )
-   {
-      *sense = CIP_SENSE_LE;
-      return TRUE;
-   }
-   else if( strcmp(tokenizer->token, ">=") == 0 )
-   {
-      *sense = CIP_SENSE_GE;
-      return TRUE;
-   }
-   else if( strcmp(tokenizer->token, "==") == 0 )
-   {
-      *sense = CIP_SENSE_EQ;
-      return TRUE;
-   }
-
-   return FALSE;
-}
-
-/** returns whether the current token is a sign */
-static
-SCIP_Bool isSign(
-   SCIP_TOKENIZER*       tokenizer,          /**< LP reading data */
-   int*                  sign                /**< pointer to update the sign */
-   )
-{
-   assert(tokenizer != NULL);
-   assert(sign != NULL);
-   assert(*sign == +1 || *sign == -1);
-
-   if( tokenizer->token[1] == '\0' )
-   {
-      if( *tokenizer->token == '+' )
-         return TRUE;
-      else if( *tokenizer->token == '-' )
-      {
-         *sign *= -1;
-         return TRUE;
-      }
-   }
-
-   return FALSE;
-}
-
-/** returns whether the current token is a value */
-static
-SCIP_Bool isValue(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_TOKENIZER*       lpinput,            /**< LP reading data */
-   SCIP_Real*            value               /**< pointer to store the value (unchanged, if token is no value) */
-   )
-{
-   assert(lpinput != NULL);
-   assert(value != NULL);
-
-   if( strcasecmp(lpinput->token, "INFINITY") == 0 || strcasecmp(lpinput->token, "INF") == 0 )
-   {
-      *value = SCIPinfinity(scip);
-      return TRUE;
-   }
-   else
-   {
-      double val;
-      char* endptr;
-
-      val = strtod(lpinput->token, &endptr);
-      if( endptr != lpinput->token && *endptr == '\0' )
-      {
-         *value = val;
-         return TRUE;
-      }
-   }
-
-   return FALSE;
-}
-
-
-/** returns whether the current character is member of a value string */
-static
-SCIP_Bool isValueChar(
-   char                  c,                  /**< input character */
-   char                  nextc,              /**< next input character */
-   SCIP_Bool*            hasdot,             /**< pointer to update the dot flag */
-   char*                 hasexp              /**< pointer to update the exponent flag */
-   )
-{
-   assert(hasdot != NULL);
-   assert(hasexp != NULL);
-   assert(*hasexp == 0 || *hasexp == 1 || *hasexp == 2);
-
-   /* hasexp = 0 means, that we did not had an 'e', 'E', 'd', or 'D' yet
-    * hasexp = 1 means, that we just had an 'e', 'E', 'd', or 'D'; in this case, an '-' is allowed to follow
-    * hasexp = 2 means, that we already had an 'e', 'E', 'd', or 'D', but it is more than 1 character away
-    */
-
-   if( *hasexp == 1 )
-   { /* we just had an 'e', 'E', 'd', or 'D', so we set *hasexp to 2
-        this is now the only case where an '-' or '+' is allowed */
-      *hasexp = 2;
-      if( (c == '-' || c == '+') && isdigit(nextc) )
-         return TRUE;
-   }
-
-   if( isdigit(c) )
-      return TRUE;
-   else if( !(*hasdot) && !(*hasexp) && (c == '.') && isdigit(nextc) )
-   {
-      *hasdot = TRUE;
-      return TRUE;
-   }
-   else if( (*hasexp == 0) && (c == 'e' || c == 'E' || c == 'd' || c == 'D') && (isdigit(nextc) || nextc == '-' || nextc == '+') )
-   {
-      *hasexp = 1;
-      return TRUE;
-   }
-
-   return FALSE;
-}
-
-/** reads the next token from the string into the token buffer; returns whether a token was read */
-static
-SCIP_Bool getNextToken(
-   SCIP_TOKENIZER*       tokenizer           /**< string tokenizer */
-   )
-{
-   SCIP_Bool hasdot;
-   char hasexp;
-   int tokenlen;
-   const char* buf;
-   
-   /* skip delimiters */
-   buf = tokenizer->strbuf;
-   while( isDelimChar(buf[tokenizer->strpos]) )
-   {
-      if( buf[tokenizer->strpos] == '\0' )
-      {
-         SCIPdebugMessage("end of string\n");
-         return FALSE;
-      }
-      
-      tokenizer->strpos++;
-   }
-
-   assert(!isDelimChar(buf[tokenizer->strpos]));
-
-   /* check if the token is a value */
-   hasdot = FALSE;
-   hasexp = 0;
-   if( isValueChar(buf[tokenizer->strpos], buf[tokenizer->strpos+1], &hasdot, &hasexp) )
-   {
-      /* read value token */
-      tokenlen = 0;
-      do
-      {
-         assert(tokenlen < SCIP_MAXSTRLEN);
-         assert(!isDelimChar(buf[tokenizer->strpos]));
-         tokenizer->token[tokenlen] = buf[tokenizer->strpos];
-         tokenlen++;
-         tokenizer->strpos++;
-      }
-      while( isValueChar(buf[tokenizer->strpos], buf[tokenizer->strpos+1], &hasdot, &hasexp) );
-   }
-   else
-   {
-      /* read non-value token */
-      tokenlen = 0;
-      do
-      {
-         assert(tokenlen < SCIP_MAXSTRLEN);
-         tokenizer->token[tokenlen] = buf[tokenizer->strpos];
-         tokenlen++;
-         tokenizer->strpos++;
-         if( tokenlen == 1 && isTokenChar(tokenizer->token[0]) )
-            break;
-      }
-      while( !isDelimChar(buf[tokenizer->strpos]) && !isTokenChar(buf[tokenizer->strpos]) );
-
-      /* if the token is an equation sense '<', '>', or '=', skip a following '='
-       * if the token is an equality token '=' and the next character is a '<' or '>', replace the token by the inequality sense
-       * if the token is an ^ and the next character is a '2', read the next character 
-       */
-      if( tokenlen == 1
-         && (tokenizer->token[0] == '<' || tokenizer->token[0] == '>' || tokenizer->token[0] == '=')
-         && buf[tokenizer->strpos] == '=' )
-      {
-         tokenizer->token[tokenlen] = buf[tokenizer->strpos];
-         tokenlen++;
-         tokenizer->strpos++;
-      }
-      else if( tokenlen == 1 && tokenizer->token[0] == '=' && (buf[tokenizer->strpos] == '<' || buf[tokenizer->strpos] == '>') )
-      {
-         tokenlen++;
-         tokenizer->token[1] = tokenizer->token[0];
-         tokenizer->token[0] = buf[tokenizer->strpos];
-         tokenizer->token[1] = buf[tokenizer->strpos];
-         tokenizer->strpos++;
-      }
-      else if( tokenlen == 1 && tokenizer->token[0] == '^' && buf[tokenizer->strpos] == '2' )
-      {
-         tokenizer->token[1] = buf[tokenizer->strpos];
-         tokenlen++;
-         tokenizer->strpos++;
-      }
-   }
-   assert(tokenlen < SCIP_MAXSTRLEN);
-   tokenizer->token[tokenlen] = '\0';
-
-   SCIPdebugMessage("read token: '%s'\n", tokenizer->token);
-
-   return TRUE;
-}
 
 /** translate from one value of infinity to another
  * 
@@ -3012,8 +2753,8 @@ SCIP_RETCODE removeFixedVariables(
             {
                bilinterm = &consdata->bilinterms[consdata->quadvarterms[i].adjbilin[j]];
                
-               var2 = bilinterm->var1 == var ? bilinterm->var2 : bilinterm->var1;
-               assert(var2 != var);
+               var2 = bilinterm->var1 == consdata->quadvarterms[i].var ? bilinterm->var2 : bilinterm->var1;
+               assert(var2 != consdata->quadvarterms[i].var);
                
                var2pos = 0;
                while( consdata->quadvarterms[var2pos].var != var2 )
@@ -8317,10 +8058,11 @@ SCIP_DECL_CONSPRINT(consPrintQuadratic)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    int            j;
-   
+   const SCIP_Bool writevartype = FALSE;
+
    assert(scip != NULL);
    assert(cons != NULL);
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -8330,54 +8072,47 @@ SCIP_DECL_CONSPRINT(consPrintQuadratic)
       && !SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
       SCIPinfoMessage(scip, file, "%.15g <= ", consdata->lhs);
 
+   /* print marker that constraint function starts now */
+   SCIPinfoMessage(scip, file, "[ ");
+
    /* print coefficients and variables */
    if( consdata->nlinvars == 0 && consdata->nquadvars == 0 )
+   {
       SCIPinfoMessage(scip, file, "0 ");
+   }
    else
    {
       for( j = 0; j < consdata->nlinvars; ++j )
       {
-         SCIPinfoMessage(scip, file, "%+.15g<%s>[%c] ", consdata->lincoefs[j], SCIPvarGetName(consdata->linvars[j]),
-            SCIPvarGetType(consdata->linvars[j]) == SCIP_VARTYPE_BINARY ? 'B' :
-            SCIPvarGetType(consdata->linvars[j]) == SCIP_VARTYPE_INTEGER ? 'I' :
-            SCIPvarGetType(consdata->linvars[j]) == SCIP_VARTYPE_IMPLINT ? 'I' : 'C');
+         SCIPinfoMessage(scip, file, "%+.15g", consdata->lincoefs[j]);
+         SCIP_CALL( SCIPwriteVarName(scip, file, consdata->linvars[j], writevartype) );
       }
 
       for( j = 0; j < consdata->nquadvars; ++j )
       {
          if( consdata->quadvarterms[j].lincoef != 0.0 )
          {
-            SCIPinfoMessage(scip, file, "%+.15g<%s>[%c]", consdata->quadvarterms[j].lincoef, SCIPvarGetName(consdata->quadvarterms[j].var),
-               SCIPvarGetType(consdata->quadvarterms[j].var) == SCIP_VARTYPE_BINARY ? 'B' :
-               SCIPvarGetType(consdata->quadvarterms[j].var) == SCIP_VARTYPE_INTEGER ? 'I' :
-               SCIPvarGetType(consdata->quadvarterms[j].var) == SCIP_VARTYPE_IMPLINT ? 'I' : 'C');
+            SCIPinfoMessage(scip, file, "%+.15g", consdata->quadvarterms[j].lincoef);
+            SCIP_CALL( SCIPwriteVarName(scip, file, consdata->quadvarterms[j].var, writevartype) );
          }
          if( consdata->quadvarterms[j].sqrcoef != 0.0 )
          {
-            SCIPinfoMessage(scip, file, "%+.15g<%s>[%c]^2", consdata->quadvarterms[j].sqrcoef, SCIPvarGetName(consdata->quadvarterms[j].var),
-               SCIPvarGetType(consdata->quadvarterms[j].var) == SCIP_VARTYPE_BINARY ? 'B' :
-               SCIPvarGetType(consdata->quadvarterms[j].var) == SCIP_VARTYPE_INTEGER ? 'I' :
-               SCIPvarGetType(consdata->quadvarterms[j].var) == SCIP_VARTYPE_IMPLINT ? 'I' : 'C',
-               SCIPvarGetName(consdata->quadvarterms[j].var),
-               SCIPvarGetType(consdata->quadvarterms[j].var) == SCIP_VARTYPE_BINARY ? 'B' :
-               SCIPvarGetType(consdata->quadvarterms[j].var) == SCIP_VARTYPE_INTEGER ? 'I' :
-               SCIPvarGetType(consdata->quadvarterms[j].var) == SCIP_VARTYPE_IMPLINT ? 'I' : 'C');
+            SCIPinfoMessage(scip, file, "%+.15g", consdata->quadvarterms[j].sqrcoef);
+            SCIP_CALL( SCIPwriteVarName(scip, file, consdata->quadvarterms[j].var, writevartype) );
+            SCIPinfoMessage(scip, file, "^2");
          }
       }
 
       for( j = 0; j < consdata->nbilinterms; ++j )
       {
-         SCIPinfoMessage(scip, file, "%+.15g<%s>[%c]<%s>[%c]", consdata->bilinterms[j].coef,
-            SCIPvarGetName(consdata->bilinterms[j].var1),
-            SCIPvarGetType(consdata->bilinterms[j].var1) == SCIP_VARTYPE_BINARY ? 'B' :
-            SCIPvarGetType(consdata->bilinterms[j].var1) == SCIP_VARTYPE_INTEGER ? 'I' :
-            SCIPvarGetType(consdata->bilinterms[j].var1) == SCIP_VARTYPE_IMPLINT ? 'I' : 'C',
-            SCIPvarGetName(consdata->bilinterms[j].var2),
-            SCIPvarGetType(consdata->bilinterms[j].var2) == SCIP_VARTYPE_BINARY ? 'B' :
-            SCIPvarGetType(consdata->bilinterms[j].var2) == SCIP_VARTYPE_INTEGER ? 'I' :
-            SCIPvarGetType(consdata->bilinterms[j].var2) == SCIP_VARTYPE_IMPLINT ? 'I' : 'C');
+         SCIPinfoMessage(scip, file, "%+.15g", consdata->bilinterms[j].coef);
+         SCIP_CALL( SCIPwriteVarName(scip, file, consdata->bilinterms[j].var1, writevartype) );
+         SCIP_CALL( SCIPwriteVarName(scip, file, consdata->bilinterms[j].var2, writevartype) );
       }
    }
+
+   /* print marker that constraint function ends now */
+   SCIPinfoMessage(scip, file, " ]");
 
    /* print right hand side */
    if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
@@ -8394,6 +8129,7 @@ SCIP_DECL_CONSPRINT(consPrintQuadratic)
    }
    else
    {
+      /* should be ignored by parser */
       SCIPinfoMessage(scip, file, " [free]");
    }
 
@@ -8614,316 +8350,208 @@ SCIP_DECL_CONSCOPY(consCopyQuadratic)
 static
 SCIP_DECL_CONSPARSE(consParseQuadratic)
 {  /*lint --e{715}*/
-   SCIP_TOKENIZER tokenizer;
-   SCIP_VAR** linvars;
-   SCIP_Real* lincoefs;
-   SCIP_VAR** quadvars1;
-   SCIP_VAR** quadvars2;
-   SCIP_Real* quadcoefs;
-   SCIP_VAR*  var1;
-   SCIP_VAR*  var2;
+   SCIP_VAR*** monomialvars;
+   SCIP_Real** monomialexps;
+   SCIP_Real*  monomialcoefs;
+   int*        monomialnvars;
+   int         nmonomials;
+   int         endpos;
 
    SCIP_Real lhs;
    SCIP_Real rhs;
 
-   SCIP_Bool havesign;
-   SCIP_Bool havevalue;
-   CIPSENSE sense;
-   SCIP_Real coef;
-   int coefsign;
-   int lincoefssize;
-   int nlincoefs;
-   int bilincoefssize;
-   int nbilincoefs;
-   
-   /* initialize tokenizer */
-   tokenizer.strbuf = str;
-   SCIP_CALL( SCIPallocBufferArray(scip, &tokenizer.token, SCIP_MAXSTRLEN) );
-   tokenizer.token[0] = '\0';
-   SCIP_CALL( SCIPallocBufferArray(scip, &tokenizer.tokenbuf, SCIP_MAXSTRLEN) );
-   tokenizer.tokenbuf[0] = '\0';
-   tokenizer.strpos = 0;
-   
-   /* initialize buffers for storing the coefficients */
-   lincoefssize = 100;
-   SCIP_CALL( SCIPallocBufferArray(scip, &linvars,  lincoefssize) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs, lincoefssize) );
-   bilincoefssize = 100;
-   SCIP_CALL( SCIPallocBufferArray(scip, &quadvars1, bilincoefssize) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &quadvars2, bilincoefssize) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &quadcoefs, bilincoefssize) );
-   
-   /* set right hand and left side to their default values */
+   assert(scip != NULL);
+   assert(success != NULL);
+   assert(str != NULL);
+   assert(name != NULL);
+   assert(cons != NULL);
+
+   /* set left and right hand side to their default values */
    lhs = -SCIPinfinity(scip);
    rhs =  SCIPinfinity(scip);
 
-   (*success) = TRUE;
+   (*success) = FALSE;
 
-   /* read the coefficients */
-   coefsign = +1;
-   coef = 1.0;
-   havesign  = FALSE;
-   havevalue = FALSE;
-   sense = CIP_SENSE_NOTHING;
-   nlincoefs = 0;
-   nbilincoefs = 0;
-   var1 = NULL;
-   var2 = NULL;
+   /* return of string empty */
+   if( !*str )
+      return SCIP_OKAY;
 
-   SCIPdebugMessage("start parsing quadratic constraint expression\n");
+   /* ignore whitespace */
+   while( isspace(*str) )
+      ++str;
 
-   while( getNextToken(&tokenizer) && (*success) )
+   if( *str != '[' )
    {
-      /* if the variable type is given ignore it */
-      if( strncmp(tokenizer.token, "[B]", 3) == 0 && strlen(tokenizer.token) == 3 )
-      {
-         assert(var1 != NULL);
-         assert(SCIPvarGetType(var2 == NULL ? var1 : var2) == SCIP_VARTYPE_BINARY);
-         SCIPdebugMessage("ignoring token <%s>\n", tokenizer.token);
-         continue;
-      }
-      if( strncmp(tokenizer.token, "[I]", 3) == 0 && strlen(tokenizer.token) == 3 )
-      {
-         assert(var1 != NULL);
-         /* in can be the case that the variable type is already changed to binary (for example the variable is fixed to
-          * zero in the file); hence, there could be a mismatch between the information of the file and current variable type; */
-         assert(SCIPvarGetType(var2 == NULL ? var1 : var2) != SCIP_VARTYPE_CONTINUOUS);
-         SCIPdebugMessage("ignoring token <%s>\n", tokenizer.token);
-         continue;
-      }
-      if( strncmp(tokenizer.token, "[C]", 3) == 0 && strlen(tokenizer.token) == 3 )
-      {
-         assert(var1 != NULL);
-         assert(SCIPvarGetType(var2 == NULL ? var1 : var2) == SCIP_VARTYPE_CONTINUOUS || 
-            (SCIPisRelEQ(scip, SCIPvarGetLbGlobal(var1), SCIPvarGetUbGlobal(var1)) && SCIPisIntegral(scip, SCIPvarGetLbGlobal(var1))) );
-         SCIPdebugMessage("ignoring token <%s>\n", tokenizer.token);
-         continue;
-      }
-      
-      if( *tokenizer.token == '>' && strlen(tokenizer.token) == 1 )
-      {
-         SCIPdebugMessage("ignoring token <%s>\n", tokenizer.token);
-         continue;
-      }
-      if( *tokenizer.token == '<' && strlen(tokenizer.token) == 1 )
-      {
-         SCIPdebugMessage("ignoring token <%s>\n", tokenizer.token);
-         continue;
-      }
-      
-      /* check if we read a ^2 */
-      if( strncmp(tokenizer.token, "^2", 2) == 0 && strlen(tokenizer.token) == 2 )
-      {
-         if( var1 == NULL )
-         {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: expected variable before ^2 token\n");
-            (*success) = FALSE;
-            continue;
-         }
-         if( var2 != NULL )
-         {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: unexpected ^2 token after <%s>*<%s>\n", SCIPvarGetName(var1), SCIPvarGetName(var2));
-            (*success) = FALSE;
-            continue;
-         }
-         SCIPdebugMessage("read ^2 symbol after variable <%s>\n", SCIPvarGetName(var1));
-         var2 = var1;
-         continue;
-      }
-      
-      /* check if a term was finished */
-      if( var1 != NULL )
-      {
-         CIPSENSE  nextsense = CIP_SENSE_NOTHING;
-         int       nextcoefsign = +1;
-         SCIP_Real nextcoef = 1.0;
+      /* we seem to have a left-hand-side */
+      char* endstr;
 
-         if( isSense(&tokenizer, &nextsense) || isSign(&tokenizer, &nextcoefsign) || isValue(scip, &tokenizer, &nextcoef) )
-         {
-            if( var2 == NULL )
-            {
-               /* insert the coefficient */
-               SCIPdebugMessage("read coefficient: %+g<%s>\n", coefsign * coef, SCIPvarGetName(var1));
-               if( !SCIPisZero(scip, coef) )
-               {
-                  /* resize the vars and coefs array if needed */
-                  if( nlincoefs >= lincoefssize )
-                  {
-                     lincoefssize *= 2;
-                     lincoefssize = MAX(lincoefssize, nlincoefs+1);
-                     SCIP_CALL( SCIPreallocBufferArray(scip, &linvars,  lincoefssize) );
-                     SCIP_CALL( SCIPreallocBufferArray(scip, &lincoefs, lincoefssize) );
-                  }
-                  assert(nlincoefs < lincoefssize);
-
-                  /* add coefficient */
-                  linvars [nlincoefs] = var1;
-                  lincoefs[nlincoefs] = coefsign * coef;
-                  nlincoefs++;
-               }
-            }
-            else
-            {
-               /* insert the coefficient */
-               SCIPdebugMessage("read coefficient: %+g<%s><%s>\n", coefsign * coef, SCIPvarGetName(var1), SCIPvarGetName(var2));
-               if( !SCIPisZero(scip, coef) )
-               {
-                  /* resize the vars and coefs array if needed */
-                  if( nbilincoefs >= bilincoefssize )
-                  {
-                     bilincoefssize *= 2;
-                     bilincoefssize = MAX(bilincoefssize, nbilincoefs+1);
-                     SCIP_CALL( SCIPreallocBufferArray(scip, &quadvars1, bilincoefssize) );
-                     SCIP_CALL( SCIPreallocBufferArray(scip, &quadvars2, bilincoefssize) );
-                     SCIP_CALL( SCIPreallocBufferArray(scip, &quadcoefs, bilincoefssize) );
-                  }
-                  assert(nbilincoefs < bilincoefssize);
-
-                  /* add coefficient */
-                  quadvars1[nbilincoefs] = var1;
-                  quadvars2[nbilincoefs] = var2;
-                  quadcoefs[nbilincoefs] = coefsign * coef;
-                  nbilincoefs++;
-               }
-            }
-            
-            /* reset the flags and coefficient value for the next term */
-            coefsign = +1;
-            coef = 1.0;
-            havesign = FALSE;
-            havevalue = FALSE;
-            var1 = NULL;
-            var2 = NULL;
-         }
-      }
-      
-      /* check if we reached an equation sense */
-      if( isSense(&tokenizer, &sense) )
+      lhs = strtod(str, &endstr);
+      if( str == endstr )
       {
-         if( nlincoefs == 0 && nbilincoefs == 0 && havevalue )
-         {
-            /* the constraint has no variables */
-            switch(sense)
-            {
-            case CIP_SENSE_LE:
-               lhs = coefsign * coef;
-               break;
-            case CIP_SENSE_GE:
-               rhs = coefsign * coef;
-               break;
-            case CIP_SENSE_EQ:
-               lhs = coefsign * coef;
-               rhs = coefsign * coef;
-               break;
-            default:
-               SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: expected unknown sense <%d>)\n", sense);
-               (*success) = FALSE;
-            } /*lint !e788*/
-            sense = CIP_SENSE_NOTHING;
-            havevalue = FALSE;
-         }
-
-         continue;
+         SCIPerrorMessage("error parsing left-hand-side from %s\n", str);
+         return SCIP_OKAY;
       }
-      
-      /* check if we read a sign */
-      if( isSign(&tokenizer, &coefsign) )
+      str = endstr;
+
+      while( isspace(*str) )
+         ++str;
+
+      if( str[0] == '\0' || str[0] != '<' || str[1] != '=' )
       {
-         SCIPdebugMessage("read coefficient sign: %+d\n", coefsign);
-         havesign = TRUE;
-         continue;
+         SCIPerrorMessage("expected '<=' at %s\n", str);
+         return SCIP_OKAY;
       }
 
-      /* all but the first coefficient need a sign */
-      if( (nlincoefs > 0 || nbilincoefs > 0) && !havesign && sense == CIP_SENSE_NOTHING )
-      {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: expected sign ('+' or '-') or sense ('<' or '>')\n");
-         (*success) = FALSE;
-         break;
-      }
+      str += 2;
 
-      /* check if we read a value */
-      if( isValue(scip, &tokenizer, &coef) )
-      {
-         SCIPdebugMessage("read coefficient value: <%g> with sign %+d\n", coef, coefsign);
-         if( havevalue )
-         {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: two consecutive values");
-            (*success) = FALSE;
-            break;
-         }
-         havevalue = TRUE;
-         
-         if( sense == CIP_SENSE_EQ ) 
-         {
-            lhs = coefsign * coef;
-            rhs = coefsign * coef;
-         }
-         else if( sense == CIP_SENSE_LE ) 
-            rhs = coefsign * coef;
-         if( sense == CIP_SENSE_GE ) 
-            lhs = coefsign * coef;
-         
-         continue;
-      }
-      
-      /* the token is a variable name */
-      
-      /* if there is no first variable yet, get the corresponding variable */
-      if( var1 == NULL )
-      {
-         var1 = SCIPfindVar(scip, tokenizer.token);
-
-         if( var1 == NULL )
-         {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s>", tokenizer.token);
-            (*success) = FALSE;
-         }
-         
-         continue;
-      }
-      
-      /* if there is already a first and a second variable, then this is an error */
-      if( var2 != NULL )
-      {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "third variable variable <%s> in product", tokenizer.token);
-         (*success) = FALSE;
-         continue;
-      }
-      
-      /* get the corresponding variable */
-      var2 = SCIPfindVar(scip, tokenizer.token);
-
-      if( var2 == NULL )
-      {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s>", tokenizer.token);
-         (*success) = FALSE;
-      }
+      /* ignore whitespace */
+      while( isspace(*str) )
+         ++str;
    }
-   
-   if( var1 != NULL )
-   { /* TODO may this happen for free constraints? */
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unexpected end of string after term with variable <%s>", SCIPvarGetName(var1));
-      (*success) = FALSE;
+
+   if( *str != '[' )
+   {
+      SCIPerrorMessage("expected '[' at %s\n", str);
+      return SCIP_OKAY;
+   }
+   ++str;
+
+   SCIP_CALL( SCIPparseVarsPolynomial(scip, str, 0, ']', &monomialvars, &monomialexps, &monomialcoefs, &monomialnvars, &nmonomials, &endpos, success) );
+
+   if( *success )
+   {
+      /* check what comes after quadratic function */
+      char* endstr;
+
+      str += endpos;
+      assert(*str == ']');
+      ++str;
+
+      /* ignore whitespace */
+      while( isspace(*str) )
+         ++str;
+
+      if( *str && str[0] == '<' && str[1] == '=' )
+      {
+         /* we seem to get a right-hand-side */
+         str += 2;
+
+         rhs = strtod(str, &endstr);
+         if( str == endstr )
+         {
+            SCIPerrorMessage("error parsing right-hand-side from %s\n", str);
+            *success = FALSE;
+         }
+         else
+            str = endstr;
+      }
+      else if( *str && str[0] == '>' && str[1] == '=' )
+      {
+         /* we seem to get a left-hand-side */
+         str += 2;
+
+         /* we should not have a left-hand-side already */
+         assert(SCIPisInfinity(scip, -lhs));
+
+         lhs = strtod(str, &endstr);
+         if( str == endstr )
+         {
+            SCIPerrorMessage("error parsing left-hand-side from %s\n", str);
+            *success = FALSE;
+         }
+         else
+            str = endstr;
+      }
+      else if( *str && str[0] == '=' && str[1] == '=' )
+      {
+         /* we seem to get a left- and right-hand-side */
+         str += 2;
+
+         /* we should not have a left-hand-side already */
+         assert(SCIPisInfinity(scip, -lhs));
+
+         lhs = strtod(str, &endstr);
+         rhs = lhs;
+         if( str == endstr )
+         {
+            SCIPerrorMessage("error parsing left-hand-side from %s\n", str);
+            *success = FALSE;
+         }
+         else
+            str = endstr;
+      }
    }
 
    if( *success )
    {
+      int i;
+
+      /* setup constraint */
       assert(stickingatnode == FALSE);
-      SCIP_CALL( SCIPcreateConsQuadratic(scip, cons, name, nlincoefs, linvars, lincoefs, 
-         nbilincoefs, quadvars1, quadvars2, quadcoefs, lhs, rhs, 
+      SCIP_CALL( SCIPcreateConsQuadratic(scip, cons, name, 0, NULL, NULL,
+         0, NULL, NULL, NULL, lhs, rhs,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
+
+      for( i = 0; i < nmonomials; ++i )
+      {
+         if( monomialnvars[i] == 0 )
+         {
+            /* constant monomial */
+            SCIPaddConstantQuadratic(scip, *cons, monomialcoefs[i]);
+         }
+         else if( monomialnvars[i] == 1 && monomialexps[i][0] == 1.0 )
+         {
+            /* linear monomial */
+            SCIP_CALL( SCIPaddLinearVarQuadratic(scip, *cons, monomialvars[i][0], monomialcoefs[i]) );
+         }
+         else if( monomialnvars[i] == 1 && monomialexps[i][0] == 2.0 )
+         {
+            /* square monomial */
+            SCIP_CALL( SCIPaddQuadVarQuadratic(scip, *cons, monomialvars[i][0], 0.0, monomialcoefs[i]) );
+         }
+         else if( monomialnvars[i] == 2 && monomialexps[i][0] == 1.0 && monomialexps[i][1] == 1.0 )
+         {
+            /* bilinear term */
+            SCIP_VAR* var1;
+            SCIP_VAR* var2;
+            int pos;
+
+            var1 = monomialvars[i][0];
+            var2 = monomialvars[i][1];
+            if( var1 == var2 )
+            {
+               /* actually a square term */
+               SCIP_CALL( SCIPaddQuadVarQuadratic(scip, *cons, var1, 0.0, monomialcoefs[i]) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPfindQuadVarTermQuadratic(scip, *cons, var1, &pos) );
+               if( pos == -1 )
+               {
+                  SCIP_CALL( SCIPaddQuadVarQuadratic(scip, *cons, var1, 0.0, 0.0) );
+               }
+
+               SCIP_CALL( SCIPfindQuadVarTermQuadratic(scip, *cons, var2, &pos) );
+               if( pos == -1 )
+               {
+                  SCIP_CALL( SCIPaddQuadVarQuadratic(scip, *cons, var2, 0.0, 0.0) );
+               }
+            }
+
+            SCIP_CALL( SCIPaddBilinTermQuadratic(scip, *cons, var1, var2, monomialcoefs[i]) );
+         }
+         else
+         {
+            SCIPerrorMessage("polynomial in quadratic constraint does not have degree at most 2\n");
+            *success = FALSE;
+            SCIP_CALL( SCIPreleaseCons(scip, cons) );
+            break;
+         }
+      }
    }
 
-   SCIPfreeBufferArray(scip, &lincoefs);
-   SCIPfreeBufferArray(scip, &linvars);
-   SCIPfreeBufferArray(scip, &quadvars1);
-   SCIPfreeBufferArray(scip, &quadvars2);
-   SCIPfreeBufferArray(scip, &quadcoefs);
-   tokenizer.token[0] = '\0';
-   SCIPfreeBufferArray(scip, &tokenizer.tokenbuf);
-   SCIPfreeBufferArray(scip, &tokenizer.token);
-   
+   SCIPfreeParseVarsPolynomialData(scip, &monomialvars, &monomialexps, &monomialcoefs, &monomialnvars, nmonomials);
+
    return SCIP_OKAY;
 }
 #else
@@ -8951,6 +8579,7 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         CONSHDLR_PROP_TIMING,
          conshdlrCopyQuadratic,
          consFreeQuadratic, consInitQuadratic, consExitQuadratic,
          consInitpreQuadratic, consExitpreQuadratic, consInitsolQuadratic, consExitsolQuadratic,

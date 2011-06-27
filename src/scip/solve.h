@@ -67,11 +67,12 @@ SCIP_RETCODE SCIPpropagateDomains(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    int                   depth,              /**< depth level to use for propagator frequency checks */
    int                   maxrounds,          /**< maximal number of propagation rounds (-1: no limit, 0: parameter settings) */
+   unsigned int          timingmask,         /**< timing mask to decide which propagaters are executed */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    );
 
-/** constructs the LP of the current node, but does not load the LP state and warmstart information  */
-extern
+   /** constructs the LP of the current node, but does not load the LP state and warmstart information  */
+   extern
 SCIP_RETCODE SCIPconstructCurrentLP(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */

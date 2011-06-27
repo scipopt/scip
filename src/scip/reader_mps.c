@@ -1319,6 +1319,8 @@ SCIP_RETCODE readBounds(
       /* Only read the first Bound in section */
       if( !strcmp(bndname, mpsinputField2(mpsi)) )
       {
+         SCIP_Bool infeasible;
+
          var = SCIPfindVar(scip, mpsinputField3(mpsi));
          /* if variable did not appear in columns section before, then it may still come in later sections (QCMATRIX, QMATRIX, SOS, ...)
           * thus add it as continuous variables, which has default bounds 0.0 <= x, and default cost 0.0 */
@@ -1337,34 +1339,32 @@ SCIP_RETCODE readBounds(
             SCIP_CALL( SCIPreleaseVar(scip, &varcpy) );
             /* mpsinputEntryIgnored(scip, mpsi, "column", mpsinputField3(mpsi), "bound", bndname, SCIP_VERBLEVEL_NORMAL); */
          }
+         assert(var != NULL);
+
+         if( mpsinputField4(mpsi) == NULL )
+            val = 0.0;
          else
+            val = atof(mpsinputField4(mpsi));
+
+         /* if a bound of a binary variable is given, the variable is converted into an integer variable
+          * with default bounds 0 <= x <= infinity
+          */
+         if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
          {
-            SCIP_Bool infeasible;
-
-            if( mpsinputField4(mpsi) == NULL )
-               val = 0.0;
-            else
-               val = atof(mpsinputField4(mpsi));
-
-            /* if a bound of a binary variable is given, the variable is converted into an integer variable
-             * with default bounds 0 <= x <= infinity
-             */
-            if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+            if( (mpsinputField1(mpsi)[1] == 'I') /* CPLEX extension (Integer Bound) */
+               || (!(mpsinputField1(mpsi)[0] == 'L' && SCIPisFeasEQ(scip, val, 0.0))
+                  && !(mpsinputField1(mpsi)[0] == 'U' && SCIPisFeasEQ(scip, val, 1.0))) )
             {
-               if( (mpsinputField1(mpsi)[1] == 'I') /* CPLEX extension (Integer Bound) */
-                  || (!(mpsinputField1(mpsi)[0] == 'L' && SCIPisFeasEQ(scip, val, 0.0))
-                     && !(mpsinputField1(mpsi)[0] == 'U' && SCIPisFeasEQ(scip, val, 1.0))) )
-               {
-                  assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
-                  assert(SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(var), 1.0));
-                  SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
-                  /* don't assert feasibility here because the presolver will and should detect a infeasibility */
-                  SCIP_CALL( SCIPchgVarUb(scip, var, SCIPinfinity(scip)) );
-               }
+               assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
+               assert(SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(var), 1.0));
+               SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
+               /* don't assert feasibility here because the presolver will and should detect a infeasibility */
+               SCIP_CALL( SCIPchgVarUb(scip, var, SCIPinfinity(scip)) );
             }
+         }
 
-            switch( mpsinputField1(mpsi)[0] )
-            {
+         switch( mpsinputField1(mpsi)[0] )
+         {
             case 'L':
                if( mpsinputField1(mpsi)[1] == 'I' ) /* CPLEX extension (Integer Bound) */
                {
@@ -1399,7 +1399,7 @@ SCIP_RETCODE readBounds(
                assert(semicont != NULL);
                semicont[nsemicont] = var;
                ++nsemicont;
-               
+
                SCIP_CALL( SCIPchgVarUb(scip, var, val) );
                break;
             case 'F':
@@ -1429,7 +1429,6 @@ SCIP_RETCODE readBounds(
             default:
                mpsinputSyntaxerror(mpsi);
                return SCIP_OKAY;
-            }
          }
       }
       else

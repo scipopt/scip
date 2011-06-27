@@ -46,6 +46,8 @@
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
+
 #define LINCONSUPGD_PRIORITY    +700000 /**< priority of the constraint handler for upgrading of linear constraints */
 
 #define EVENTHDLR_NAME         "setppc"
@@ -3799,7 +3801,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
          if( !SCIPconsIsActive(cons) )
             continue;
       }
-            
+
       /* remember the first changed constraint to begin the next redundancy round with */
       if( firstchange == INT_MAX && consdata->changed )
          firstchange = c;
@@ -3834,6 +3836,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
          for( c = firstchange; c < nconss && !SCIPisStopped(scip); ++c )
          {
             assert(*result != SCIP_CUTOFF);
+
             if( SCIPconsIsActive(conss[c]) && !SCIPconsIsModifiable(conss[c]) )
             {
                npaircomparisons += (SCIPconsGetData(conss[c])->changed) ? c : (c - firstchange);
@@ -4298,6 +4301,7 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         CONSHDLR_PROP_TIMING,
          conshdlrCopySetppc,
          consFreeSetppc, consInitSetppc, consExitSetppc,
          consInitpreSetppc, consExitpreSetppc, consInitsolSetppc, consExitsolSetppc,

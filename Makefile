@@ -53,9 +53,12 @@ LIBEXT		=	$(STATICLIBEXT)
 LINKER  	=	C
 SOFTLINKS	=
 
+INSTALLDIR	=	
+
 #will this be compiled for parascip, necessary for dbg-builds to make it threadsafe
 PARASCIP	=	false
 
+SHARED		=	false
 MAKESOFTLINKS	=	true
 READLINE	=	true
 ZLIB		=	true
@@ -136,8 +139,9 @@ BINOBJDIR	=	$(OBJDIR)/bin
 LIBOBJDIR	=	$(OBJDIR)/lib
 LIBOBJSUBDIRS	=       scip objscip blockmemshell tclique nlpi xml dijkstra
 SRCDIR		=	src
-BINDIR		=	bin
 LIBDIR		=	lib
+BINDIR		=	bin
+INCLUDEDIR	=	include
 EXEEXTENSION	=
 ALLSRC		=
 
@@ -146,6 +150,7 @@ SCIPDIR		=	$(realpath .)
 
 #-----------------------------------------------------------------------------
 include make/make.$(BASE)
+-include make/make.$(OSTYPE).$(COMP).$(OPT)
 -include make/local/make.$(HOSTNAME)
 -include make/local/make.$(HOSTNAME).$(COMP)
 -include make/local/make.$(HOSTNAME).$(COMP).$(OPT)
@@ -166,6 +171,20 @@ DFLAGS		+=	$(USRDFLAGS)
 
 #FLAGS		+=	-DBMS_NOSAFEMEM
 #FLAGS		+=	-DBMS_NOBLOCKMEM
+
+#-----------------------------------------------------------------------------
+# SHARED Libaries
+#-----------------------------------------------------------------------------
+
+ifeq ($(SHARED),true)
+FLAGS		+=	-fPIC
+LIBEXT		=	$(SHAREDLIBEXT)
+LIBBUILD	=	$(LINKCC)
+LIBBUILDFLAGS	=      -shared -fPIC
+LIBBUILD_o	= 	-o # the trailing space is important
+ARFLAGS		=
+RANLIB		=
+endif
 
 #-----------------------------------------------------------------------------
 # PARASCIP
@@ -236,7 +255,7 @@ endif
 LPSOPTIONS	+=	spx
 ifeq ($(LPS),spx)
 LINKER		=	CPP
-FLAGS		+=	-I$(LIBDIR)/spxinc 
+FLAGS		+=	-I$(LIBDIR)/spxinc
 LPSLDFLAGS	=	$(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
 LPILIBOBJ	=	scip/lpi_spx.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/scip/lpi_spx.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
@@ -259,7 +278,7 @@ endif
 LPSOPTIONS	+=	spx132
 ifeq ($(LPS),spx132)
 LINKER		=	CPP
-FLAGS		+=	-I$(LIBDIR)/spx132inc 
+FLAGS		+=	-I$(LIBDIR)/spx132inc
 LPSLDFLAGS	=	$(LINKCXX_l)soplex132.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
 LPILIBOBJ	=	scip/lpi_spx132.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/scip/lpi_spx132.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
@@ -325,7 +344,7 @@ LPILIBFILE	=	$(LIBDIR)/lib$(LPILIB).$(LIBEXT)
 LPILIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(LPILIBOBJ))
 LPILIBDEP	=	$(SRCDIR)/depend.lpilib.$(LPS).$(OPT)
 LPILIBLINK	=	$(LIBDIR)/lib$(LPILIBSHORTNAME).$(BASE).$(LIBEXT)
-LPILIBSHORTLINK = $(LIBDIR)/lib$(LPILIBSHORTNAME).$(LIBEXT)
+LPILIBSHORTLINK = 	$(LIBDIR)/lib$(LPILIBSHORTNAME).$(LIBEXT)
 ALLSRC		+=	$(LPILIBSRC)
 
 
@@ -344,7 +363,7 @@ NLPILIBCOBJ	= nlpi/nlpi.o \
 NLPILIBCXXOBJ	= nlpi/intervalarith.o
 
 ifeq ($(EXPRINT),none)
-NLPILIBCOBJ += nlpi/exprinterpret_none.o
+NLPILIBCOBJ += 	nlpi/exprinterpret_none.o
 endif
 ifeq ($(EXPRINT),cppad)
 NLPILIBCXXOBJ += nlpi/exprinterpret_cppad.o
@@ -465,50 +484,7 @@ endif
 
 SCIPLIBSHORTNAME=	scip
 SCIPLIBNAME	=	$(SCIPLIBSHORTNAME)-$(VERSION)
-SCIPLIBOBJ	=	scip/branch.o \
-			scip/buffer.o \
-			scip/clock.o \
-			scip/conflict.o \
-			scip/cons.o \
-			scip/cutpool.o \
-			scip/debug.o \
-			scip/dialog.o \
-			scip/disp.o \
-			scip/event.o \
-			scip/fileio.o \
-			scip/heur.o \
-			scip/history.o \
-			scip/implics.o \
-			scip/interrupt.o \
-			scip/intervalarith.o \
-			scip/lp.o \
-			scip/mem.o \
-			scip/misc.o \
-			scip/nlp.o \
-			scip/nodesel.o \
-			scip/paramset.o \
-			scip/presol.o \
-			scip/pricestore.o \
-			scip/pricer.o \
-			scip/primal.o \
-			scip/prob.o \
-			scip/prop.o \
-			scip/reader.o \
-			scip/relax.o \
-			scip/retcode.o \
-			scip/scip.o \
-			scip/scipdefplugins.o \
-			scip/scipshell.o \
-			scip/sepa.o \
-			scip/sepastore.o \
-			scip/set.o \
-			scip/sol.o \
-			scip/solve.o \
-			scip/stat.o \
-			scip/tree.o \
-			scip/var.o \
-			scip/vbc.o \
-			scip/branch_allfullstrong.o \
+SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/branch_fullstrong.o \
 			scip/branch_inference.o \
 			scip/branch_mostinf.o \
@@ -585,9 +561,10 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/presol_dualfix.o \
 			scip/presol_implics.o \
 			scip/presol_inttobinary.o \
-			scip/presol_probing.o \
 			scip/presol_trivial.o \
+			scip/prop_probing.o \
 			scip/prop_pseudoobj.o \
+			scip/prop_redcost.o \
 			scip/prop_rootredcost.o \
 			scip/prop_vbounds.o \
 			scip/reader_ccg.o \
@@ -615,23 +592,69 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/sepa_intobj.o \
 			scip/sepa_mcf.o \
 			scip/sepa_oddcycle.o \
-			dijkstra/dijkstra_bh.o \
 			scip/sepa_rapidlearning.o \
-			scip/sepa_redcost.o \
 			scip/sepa_strongcg.o \
-			scip/sepa_zerohalf.o \
+			scip/sepa_zerohalf.o
+
+SCIPLIBOBJ	=	scip/branch.o \
+			scip/buffer.o \
+			scip/clock.o \
+			scip/conflict.o \
+			scip/cons.o \
+			scip/cutpool.o \
+			scip/debug.o \
+			scip/dialog.o \
+			scip/disp.o \
+			scip/event.o \
+			scip/fileio.o \
+			scip/heur.o \
+			scip/history.o \
+			scip/implics.o \
+			scip/interrupt.o \
+			scip/intervalarith.o \
+			scip/lp.o \
+			scip/mem.o \
+			scip/misc.o \
+			scip/nlp.o \
+			scip/nodesel.o \
+			scip/paramset.o \
+			scip/presol.o \
+			scip/pricestore.o \
+			scip/pricer.o \
+			scip/primal.o \
+			scip/prob.o \
+			scip/prop.o \
+			scip/reader.o \
+			scip/relax.o \
+			scip/retcode.o \
+			scip/scip.o \
+			scip/scipdefplugins.o \
+			scip/scipshell.o \
+			scip/sepa.o \
+			scip/sepastore.o \
+			scip/set.o \
+			scip/sol.o \
+			scip/solve.o \
+			scip/stat.o \
+			scip/tree.o \
+			scip/var.o \
+			scip/vbc.o \
 			tclique/tclique_branch.o \
 			tclique/tclique_coloring.o \
 			tclique/tclique_graph.o \
+			dijkstra/dijkstra_bh.o \
 			xml/xmlparse.o
 
 SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
 SCIPLIBFILE	=	$(LIBDIR)/lib$(SCIPLIB).$(LIBEXT)
-SCIPLIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SCIPLIBOBJ))
-SCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(SCIPLIBOBJ:.o=.c))
+SCIPLIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SCIPPLUGINLIBOBJ))
+SCIPLIBOBJFILES	+=	$(addprefix $(LIBOBJDIR)/,$(SCIPLIBOBJ))
+SCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(SCIPPLUGINLIBOBJ:.o=.c))
+SCIPLIBSRC	+=	$(addprefix $(SRCDIR)/,$(SCIPLIBOBJ:.o=.c))
+SCIPPLUGININCSRC=	$(addprefix $(SRCDIR)/,$(SCIPPLUGINLIBOBJ:.o=.h))
 SCIPLIBDEP	=	$(SRCDIR)/depend.sciplib.$(OPT)
 SCIPLIBLINK	=	$(LIBDIR)/lib$(SCIPLIBSHORTNAME).$(BASE).$(LIBEXT)
-SCIPLIBSHORTLINK = $(LIBDIR)/lib$(SCIPLIBSHORTNAME).$(LIBEXT)
+SCIPLIBSHORTLINK = 	$(LIBDIR)/lib$(SCIPLIBSHORTNAME).$(LIBEXT)
 
 ALLSRC		+=	$(SCIPLIBSRC)
 
@@ -662,9 +685,10 @@ OBJSCIPLIB	=	$(OBJSCIPLIBNAME).$(BASE)
 OBJSCIPLIBFILE	=	$(LIBDIR)/lib$(OBJSCIPLIB).$(LIBEXT)
 OBJSCIPLIBOBJFILES=	$(addprefix $(LIBOBJDIR)/,$(OBJSCIPLIBOBJ))
 OBJSCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(OBJSCIPLIBOBJ:.o=.cpp))
+OBJSCIPINCSRC	=	$(addprefix $(SRCDIR)/,$(OBJSCIPLIBOBJ:.o=.h))
 OBJSCIPLIBDEP	=	$(SRCDIR)/depend.objsciplib.$(OPT)
 OBJSCIPLIBLINK	=	$(LIBDIR)/lib$(OBJSCIPLIBSHORTNAME).$(BASE).$(LIBEXT)
-OBJSCIPLIBSHORTLINK	=	$(LIBDIR)/lib$(OBJSCIPLIBSHORTNAME).$(LIBEXT)
+OBJSCIPLIBSHORTLINK=	$(LIBDIR)/lib$(OBJSCIPLIBSHORTNAME).$(LIBEXT)
 ALLSRC		+=	$(OBJSCIPLIBSRC)
 
 
@@ -734,6 +758,37 @@ lintfiles:
 .PHONY: doc
 doc: 		
 		cd doc; $(DOXY) $(MAINSHORTNAME).dxy ; $(DOXY) $(MAINSHORTNAME)devel.dxy
+
+.PHONY: install
+install:	$(INCLUDEDIR) $(INSTALLDIR) $(OBJSCIPLIBFILE) $(MAINFILE) 
+		@echo "-> copy scip headers"
+		@-cp $(SCIPPLUGININCSRC) $(INCLUDEDIR)/scip/
+		@-cp $(SRCDIR)/scip/pub_*h $(INCLUDEDIR)/scip/
+		@-cp $(SRCDIR)/scip/struct_*h $(INCLUDEDIR)/scip/
+		@-cp $(SRCDIR)/scip/type_*h $(INCLUDEDIR)/scip/
+		@-cp $(SRCDIR)/scip/scip.h $(INCLUDEDIR)/scip/
+		@echo "-> copy objective scip headers"
+		@-cp $(OBJSCIPINCSRC) $(INCLUDEDIR)/objscip/
+		@-cp $(MAINFILE) $(INCLUDEDIR)/
+		@-cp $(LPILIBFILE) $(INCLUDEDIR)/
+		@-cp $(NLPILIBFILE) $(INCLUDEDIR)/
+		@-cp $(SCIPLIBFILE) $(INCLUDEDIR)/
+		@-cp $(OBJSCIPLIBFILE) $(INCLUDEDIR)/
+
+#		@-mkdir -p $(INCLUDEDIR)/objscip
+#		@echo "-> copy objective scip headers"
+#		@-mkdir -p $(INCLUDEDIR)/scip
+
+.PHONY: uninstall
+uninstall:	cleanlib cleanbin
+		@echo "-> remove scip headers"
+		@-mkdir -p $(INCLUDEDIR)/scip
+		@-rm -f $(INCLUDEDIR)/scip/*.h
+		@echo "-> remove objective scip headers"
+		@-mkdir -p $(INCLUDEDIR)/objscip
+		@-rm -f $(INCLUDEDIR)/objscip/*.h
+		@-rmdir $(INCLUDEDIR)/scip $(INCLUDEDIR)/objscip
+		@-rmdir --ignore-fail-on-non-empty $(INCLUDEDIR)
 
 .PHONY: check
 check:		test
@@ -848,14 +903,20 @@ $(LIBOBJDIR):	$(OBJDIR)
 $(LIBOBJSUBDIRS):	$(LIBOBJDIR)
 		@-mkdir -p $(LIBOBJDIR)/$@
 
-$(LIBDIR):
+$(LIBDIR)::	
 		@-mkdir -p $(LIBDIR)
 
-$(BINDIR):
+$(INSTALLDIR):
+		@-mkdir -p $(INSTALLDIR)
+
+$(BINDIR):	$(INSTALLDIR)
 		@-mkdir -p $(BINDIR)
 
+$(INCLUDEDIR):	$(INSTALLDIR)
+		@-mkdir -p $(INCLUDEDIR)
+
 .PHONY: clean
-clean:          $(LIBOBJDIR) $(LIBOBJSUBDIRS) $(BINOBJDIR) $(OBJDIR)
+clean:          cleanlib cleanbin $(LIBOBJDIR) $(LIBOBJSUBDIRS) $(BINOBJDIR) $(OBJDIR)
 ifneq ($(LIBOBJDIR),)
 		@-(cd $(LIBOBJDIR) && rm -f */*.o && rmdir $(LIBOBJSUBDIRS));
 		@-rmdir $(LIBOBJDIR)
@@ -867,12 +928,20 @@ ifneq ($(OBJDIR),)
 		@-rm -f $(LASTSETTINGS)
 		@-rmdir $(OBJDIR)
 endif
-		@echo "-> remove objective files"
-		@-rm -f $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINFILE) \
-		$(LPILIBLINK) $(LPILIBSHORTLINK) $(NLPILIBLINK) $(NLPILIBSHORTLINK) \
-		$(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK) $(MAINLINK) $(MAINSHORTLINK)
+
+.PHONY: cleanlib
+cleanlib:       
 		@echo "-> remove libraries"
+		@-rm -f $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) \
+		$(LPILIBLINK) $(LPILIBSHORTLINK) $(NLPILIBLINK) $(NLPILIBSHORTLINK) \
+		$(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK)
+		@-rmdir --ignore-fail-on-non-empty $(LIBDIR)
+
+.PHONY: cleanbin
+cleanbin:       
 		@echo "-> remove binary"
+		@-rm -f $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
+		@-rmdir --ignore-fail-on-non-empty $(BINDIR)
 
 .PHONY: lpidepend
 lpidepend:
@@ -941,12 +1010,12 @@ $(MAINFILE):	$(BINDIR) $(BINOBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) 
 		@echo "-> linking $@"
 ifeq ($(LINKER),C)
 		$(LINKCC) $(MAINOBJFILES) \
-		$(LINKCC_L)$(LIBDIR) $(LINKCC_l)$(SCIPLIB)$(LINKLIBSUFFIX) $(LINKCC_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCC_l)$(NLPILIB)$(LINKLIBSUFFIX) \
+		$(LINKCC_L)$(LIBDIR) $(LINKCC_L)$(LIBDIR) $(LINKCC_l)$(SCIPLIB)$(LINKLIBSUFFIX) $(LINKCC_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCC_l)$(NLPILIB)$(LINKLIBSUFFIX) \
 		$(OFLAGS) $(LPSLDFLAGS) $(LDFLAGS) $(LINKCC_o)$@
 endif
 ifeq ($(LINKER),CPP)
 		$(LINKCXX) $(MAINOBJFILES) \
-		$(LINKCXX_L)$(LIBDIR) $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
+		$(LINKCXX_L)$(LIBDIR) $(LINKCC_L)$(LIBDIR) $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
 		$(OFLAGS) $(LPSLDFLAGS) $(LDFLAGS) $(LINKCXX_o)$@
 endif
 

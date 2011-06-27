@@ -55,6 +55,19 @@ public:
    /** should propagator be delayed, if other propagators found reductions? */
    const SCIP_Bool scip_delay_;
 
+   /** positions in the node solving loop where propagator should be executed */
+   const unsigned int scip_timingmask_;
+
+   /** default presolving priority of the propagator */
+   const int scip_presol_priority_;
+
+   /** frequency for calling propagator */
+   const int scip_presol_maxrounds_;
+
+   /** should presolving of propagator be delayed, if other preprocessers found reductions? */
+   const SCIP_Bool scip_presol_delay_;
+
+
    /** default constructor */
    ObjProp(
       SCIP*              scip,               /**< SCIP data structure */
@@ -62,14 +75,22 @@ public:
       const char*        desc,               /**< description of propagator */
       int                priority,           /**< priority of the propagator */
       int                freq,               /**< frequency for calling propagator */
-      SCIP_Bool          delay               /**< should propagator be delayed, if other propagators found reductions? */
+      SCIP_Bool          delay,              /**< should propagator be delayed, if other propagators found reductions? */
+      unsigned int       timingmask,         /**< positions in the node solving loop where propagator should be executed */
+      int                presolpriority,     /**< presolving priority of the propagator (>= 0: before, < 0: after constraint handlers) */
+      int                presolmaxrounds,    /**< maximal number of presolving rounds the propagator participates in (-1: no limit) */
+      SCIP_Bool          presoldelay         /**< should presolving be delayed, if other presolvers found reductions? */
       )
       : scip_(scip),
         scip_name_(0),
         scip_desc_(0),
         scip_priority_(priority),
         scip_freq_(freq),
-        scip_delay_(delay)
+        scip_delay_(delay),
+        scip_timingmask_(timingmask),
+        scip_presol_priority_(presolpriority),
+        scip_presol_maxrounds_(presolmaxrounds),
+        scip_presol_delay_(presoldelay)
    {
       /* the macro SCIPduplicateMemoryArray does not need the first argument: */
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_name_, name, std::strlen(name)+1) );
@@ -111,6 +132,59 @@ public:
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
+
+   /** presolving initialization method of propagator (called when presolving is about to begin)
+    *
+    *  This method is called when the presolving process is about to begin, even if presolving is turned off.  The
+    *  propagator may use this call to initialize its presolving data, before the presolving process begins.  
+    *
+    *  input:
+    *  - scip            : SCIP main data structure
+    *  - prop            : the propagator itself
+    *
+    *  output:
+    *  - result          : pointer to store the result of the call
+    *
+    *  possible return values for *result:
+    *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
+    *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
+    *  - SCIP_FEASIBLE   : no infeasibility nor unboundness could be found
+    */
+   virtual SCIP_RETCODE scip_initpre(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_PROP*         prop,               /**< the propagator itself */
+      SCIP_RESULT*       result              /**< pointer to store the result of the propagation call */
+      )
+   {  /*lint --e{715}*/
+      return SCIP_OKAY;
+   }
+   
+   /** presolving deinitialization method of propagator (called after presolving has been finished)
+    *
+    *  This method is called after the presolving has been finished, even if presolving is turned off.
+    *  The propagator may use this call e.g. to clean up its presolving data, before the branch and bound process begins.
+    *  Besides necessary modifications and clean up, no time consuming operations should be done.
+    *
+    *  input:
+    *  - scip            : SCIP main data structure
+    *  - prop            : the propagator itself
+    *
+    *  output:
+    *  - result          : pointer to store the result of the call
+    *
+    *  possible return values for *result:
+    *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
+    *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
+    *  - SCIP_FEASIBLE   : no infeasibility nor unboundness could be found
+    */
+   virtual SCIP_RETCODE scip_exitpre(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_PROP*         prop,               /**< the propagator itself */
+      SCIP_RESULT*       result              /**< pointer to store the result of the propagation call */
+      )
+   {  /*lint --e{715}*/
+      return SCIP_OKAY;
+   }
    
    /** solving process initialization method of propagator (called when branch and bound process is about to begin)
     *
@@ -138,6 +212,52 @@ public:
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
+
+   /** presolving method of propagator
+    *
+    *  The presolver should go through the variables and constraints and tighten the domains or
+    *  constraints. Each tightening should increase the given total number of changes.
+    *
+    *  possible return values for *result:
+    *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
+    *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
+    *  - SCIP_SUCCESS    : the presolver found a reduction
+    *  - SCIP_DIDNOTFIND : the presolver searched, but did not find a presolving change
+    *  - SCIP_DIDNOTRUN  : the presolver was skipped
+    *  - SCIP_DELAYED    : the presolver was skipped, but should be called again
+    */
+   virtual SCIP_RETCODE scip_presol(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_PROP*         prop,               /**< the propagator itself */
+      int                nrounds,            /**< no. of presolving rounds already done */
+      int                nnewfixedvars,      /**< no. of variables fixed since last call to presolving method */
+      int                nnewaggrvars,       /**< no. of variables aggregated since last call to presolving method */
+      int                nnewchgvartypes,    /**< no. of variable type changes since last call to presolving method */
+      int                nnewchgbds,         /**< no. of variable bounds tightend since last call to presolving method */
+      int                nnewholes,          /**< no. of domain holes added since last call to presolving method */
+      int                nnewdelconss,       /**< no. of deleted constraints since last call to presolving method */
+      int                nnewaddconss,       /**< no. of added constraints since last call to presolving method */
+      int                nnewupgdconss,      /**< no. of upgraded constraints since last call to presolving method */
+      int                nnewchgcoefs,       /**< no. of changed coefficients since last call to presolving method */
+      int                nnewchgsides,       /**< no. of changed left or right hand sides since last call to presolving method */
+      int*               nfixedvars,         /**< pointer to count total number of variables fixed of all presolvers */
+      int*               naggrvars,          /**< pointer to count total number of variables aggregated of all presolvers */
+      int*               nchgvartypes,       /**< pointer to count total number of variable type changes of all presolvers */
+      int*               nchgbds,            /**< pointer to count total number of variable bounds tightend of all presolvers */
+      int*               naddholes,          /**< pointer to count total number of domain holes added of all presolvers */
+      int*               ndelconss,          /**< pointer to count total number of deleted constraints of all presolvers */
+      int*               naddconss,          /**< pointer to count total number of added constraints of all presolvers */
+      int*               nupgdconss,         /**< pointer to count total number of upgraded constraints of all presolvers */
+      int*               nchgcoefs,          /**< pointer to count total number of changed coefficients of all presolvers */
+      int*               nchgsides,          /**< pointer to count total number of changed sides of all presolvers */
+      SCIP_RESULT*       result              /**< pointer to store the result of the presolving call */
+      )
+   {  /*lint --e{715}*/
+      assert(result != NULL);
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
+
    
    /** execution method of propagator
     *

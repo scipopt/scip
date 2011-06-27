@@ -269,7 +269,10 @@ extern
 SCIP_RETCODE SCIPnlpiSetInitialGuess(
    SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
    SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   SCIP_Real*            values              /**< initial starting solution, or NULL to clear previous starting solution */
+   SCIP_Real*            primalvalues,       /**< initial primal values for variables, or NULL to clear previous values */
+   SCIP_Real*            consdualvalues,     /**< initial dual values for constraints, or NULL to clear previous values */
+   SCIP_Real*            varlbdualvalues,    /**< initial dual values for variable lower bounds, or NULL to clear previous values */
+   SCIP_Real*            varubdualvalues     /**< initial dual values for variable upper bounds, or NULL to clear previous values */
    );
 
 /** tries to solve NLP */
@@ -295,12 +298,15 @@ SCIP_NLPTERMSTAT SCIPnlpiGetTermstat(
    SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
    );
 
-/** gives primal solution */
+/** gives primal and dual solution */
 extern
 SCIP_RETCODE SCIPnlpiGetSolution(
    SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
    SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   SCIP_Real**           primalvalues        /**< pointer to store primal values */
+   SCIP_Real**           primalvalues,       /**< buffer to store pointer to array to primal values, or NULL if not needed */
+   SCIP_Real**           consdualvalues,     /**< buffer to store pointer to array to dual values of constraints, or NULL if not needed */
+   SCIP_Real**           varlbdualvalues,    /**< buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed */
+   SCIP_Real**           varubdualvalues     /**< buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed */
    );
 
 /** gives solve statistics */
