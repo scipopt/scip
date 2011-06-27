@@ -1429,6 +1429,14 @@ SCIP_RETCODE nlrowRemoveFixedLinearCoefPos(
             SCIP_CALL( nlrowRemoveFixedLinearCoefPos(nlrow, blkmem, set, stat, nlp, nlrow->nlinvars-1) );
          }
       }
+
+      /* due to nlrowDelLinearCoefPos, an inactive variable may have moved to position pos
+       * if that is the case, call ourself recursively
+       */
+      if( pos < nlrow->nlinvars && !SCIPvarIsActive(nlrow->linvars[pos]) )
+      {
+         SCIP_CALL( nlrowRemoveFixedLinearCoefPos(nlrow, blkmem, set, stat, nlp, pos) );
+      }
    }
 
    return SCIP_OKAY;
