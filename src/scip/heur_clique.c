@@ -733,7 +733,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    }
 
    /* check if this is a feasible solution */
-   if( !lperror && lpstatus == SCIP_LPSOLSTAT_OPTIMAL )
+   if( lpstatus == SCIP_LPSOLSTAT_OPTIMAL && !lperror )
    {
       SCIP_Bool stored;
       SCIP_Bool success;
