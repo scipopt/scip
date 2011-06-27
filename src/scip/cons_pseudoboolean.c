@@ -4828,7 +4828,7 @@ SCIP_RETCODE tryUpgradingSetppc(
       
       /* @todo: implement the following */
 
-      /* for every old set packing constraint: 
+      /* for each set packing constraint: 
        *     sum_i (x_i) + res <= 1 , with and-constraint of res as the resultant like res = y_1 * ... * y_n
        *  => sum_i (n * x_i) + sum_j=1^n y_j <= n + n-1
        *
@@ -4836,7 +4836,7 @@ SCIP_RETCODE tryUpgradingSetppc(
        *  => 3x_1 + 3x_2 + 3x_3 + x_4 + x_5 + x_6 <= 5
        */
 
-      /* for every old set partitioning constraint: 
+      /* for each set partitioning constraint: 
        *     sum_i (x_i) + res = 1 , with the corresponding and-constraint of res like 
        *                             res = y_1 * ... * y_n 
        *
@@ -4922,11 +4922,13 @@ SCIP_RETCODE tryUpgradingSetppc(
       assert(nminvars > 0);
       assert(nminvars <= nmaxvars);
 
+#if 0
       /* now we only want to handle the easy case where nminvars == nmaxvars 
        * @todo: implement for the othercase too
        */
       if( nminvars < nmaxvars )
          break;
+#endif
 
       nneweqvars = 0;
       for( v = 0, v2 = 0; v < neqvars && v2 < nvars; )
@@ -4970,8 +4972,32 @@ SCIP_RETCODE tryUpgradingSetppc(
 
    /* if all and-constraints in pseudoboolean constraint have the same length and some equal variables we can upgrade
     * the linear constraint and fix some variables in setpartitioning case
+    *
+    * e.g. x1 * x2 + x1 * x3 + x1 * x4 <= 1
+    * =>   3 * x1 + x2 + x3 + x4 <= 4
+    *
+    * e.g. x1 * x2 * x3 + x1 * x2 * x4 <= 1
+    * =>  2x1 + 2x2 + x3 + x4 <= 5
+    *
+    * e.g. x1 * x2 + x1 * x3 == 1
+    * =>   x1 = 1 /\ x2 + x3 == 1
+    *
+    * e.g. x1 * x2 * x3 + x1 * x4 == 1
+    * =>   x1 = 1 /\ x2 * x3 + x4 == 1 (constraint is created indirectly, caused by the fixing of x1)
+    *
+    * e.g. x1 * x2 + x1 * x2 * x3 + x1 * x2 * x4 == 1
+    * =>   x1 = 1, x2 = 1, x3 = 0, x4 = 0
+    *
+    * e.g. x1 * x2 + x1 * x2 * x3 + x1 * x2 * x4 * x5 == 1
+    * =>   x1 = 1, x2 = 1, x3 = 0 /\ x4 * x5 == 0
+    *
+    * @todo: implement the next cases
+    *
+    * e.g. x1 * x2 * x3 + x1 * x2 * x4 + x5 <= 1
+    * =>  2x1 + 2x2 + x3 + x4 + x5 <= 5
+    *
     */
-   if( neqvars > 0 && nminvars == nmaxvars && nminvars == neqvars + 1 )
+   if( neqvars > 0 && ((nminvars == nmaxvars && nminvars == neqvars + 1) || (neqvars == nminvars) || (type == SCIP_SETPPCTYPE_PARTITIONING)) )
    {
       SCIP_CONS* lincons;
       SCIP_CONS* newcons;
@@ -4981,6 +5007,7 @@ SCIP_RETCODE tryUpgradingSetppc(
       SCIP_Bool infeasible;
       SCIP_Bool fixed;
       SCIP_Bool createcons;
+      SCIP_Bool deletecons;
 
       /* determine new sides of linear constraint */
       if( type == SCIP_SETPPCTYPE_PARTITIONING )
@@ -4995,17 +5022,18 @@ SCIP_RETCODE tryUpgradingSetppc(
          rhs = 1.0; 
       }
 
-#if 0
       /* if one and-constraint was completely contained in all other and-constraints, we have to reduced the right hand
        * side by 1
        */
       if( neqvars == nminvars )
          rhs -= 1.0; 
-#endif
 
-      createcons = SCIPisLE(scip, lhs, rhs);
+      createcons = (SCIPisLE(scip, lhs, rhs) && nminvars == nmaxvars && nminvars == neqvars + 1);
       assert(createcons || type == SCIP_SETPPCTYPE_PARTITIONING);
 
+      deletecons = (nminvars != nmaxvars || nminvars != neqvars + 1) && (neqvars != nminvars);
+      assert(!deletecons || type == SCIP_SETPPCTYPE_PARTITIONING);
+      
       lincons = consdata->lincons;
 
       if( createcons )
@@ -5047,6 +5075,26 @@ SCIP_RETCODE tryUpgradingSetppc(
          }
          assert(nvars > 0 && vars != NULL);
 
+         /* if the consanddata object has at least two more different variables then the equal variables we have to fix the resultant to zero */
+         if( type == SCIP_SETPPCTYPE_PARTITIONING && neqvars + 1 < nvars )
+         {
+            assert(SCIPgetResultantAnd(scip, consanddata->cons) != NULL);
+
+            /* fix the resultant variable which have to be zero */
+            SCIP_CALL( SCIPfixVar(scip, SCIPgetResultantAnd(scip, consanddata->cons), 0.0, &infeasible, &fixed) );
+            if( infeasible )
+            {
+               SCIPdebugMessage(" -> infeasible fixing\n");
+               *cutoff = TRUE;
+               goto TERMINATE;
+            }
+            if( fixed )
+               ++(*nfixedvars);
+
+            continue;
+         }
+
+         /* if the consanddata object has at exactly one more different variable then the equal variables we have to fix it to zero */
          for( v = 0, v2 = 0; v < neqvars && v2 < nvars; )
          {
             int index1;
@@ -5129,7 +5177,7 @@ SCIP_RETCODE tryUpgradingSetppc(
       {
          if( type == SCIP_SETPPCTYPE_PARTITIONING )
          {
-            /* fix the variable which cannot be one */
+            /* fix the variable which have to be one */
             SCIP_CALL( SCIPfixVar(scip, eqvars[v], 1.0, &infeasible, &fixed) );
             if( infeasible )
             {
@@ -5171,10 +5219,13 @@ SCIP_RETCODE tryUpgradingSetppc(
          ++(*naddconss);
       }
 
-      /* delete old constraints */
-      SCIP_CALL( SCIPdelCons(scip, lincons) );
-      SCIP_CALL( SCIPdelCons(scip, cons) );
-      (*ndelconss) += 2;
+      if( deletecons )
+      {
+         /* delete old constraints */
+         SCIP_CALL( SCIPdelCons(scip, lincons) );
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+         (*ndelconss) += 2;
+      }
    }
 
  TERMINATE:
