@@ -161,6 +161,7 @@ features:
 - added clock for determine the time for reading
 - new presolving step in cons_knapsack (detectRedundantVars, deleteRedundantVars) which determines redundant variables in knapsack constraint with or without using clique information
 - SCIPcreateSolNLP() now creates a SCIP_SOL that is linked to the solution of the current NLP relaxation
+- it is now possible in SCIP_STAGE_TRANSFORMED to call SCIPaddVarLocks (i.e. to lock variables in initialization methods)
 
 design:
 - SCIP_HASHMAP now works also without block memory
