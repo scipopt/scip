@@ -14728,6 +14728,27 @@ int SCIPgetNNLPVars(
    return 0;
 }
 
+/** computes for each variables the number of NLP rows in which the variable appears in a nonlinear var */
+SCIP_RETCODE SCIPgetNLPVarsNonlinearity(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  nlcount             /**< an array of length at least SCIPnlpGetNVars() to store nonlinearity counts of variables */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPgetNLPVarsNonlinearity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( scip->nlp != NULL )
+   {
+      SCIP_CALL( SCIPnlpGetVarsNonlinearity(scip->nlp, nlcount) );
+   }
+   else
+   {
+      SCIPerrorMessage("NLP has not been not constructed.\n");
+      return SCIP_ERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** gets current NLP nonlinear rows along with the current number of NLP nonlinear rows */
 SCIP_RETCODE SCIPgetNLPNlRowsData(
    SCIP*                 scip,               /**< SCIP data structure */

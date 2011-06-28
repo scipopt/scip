@@ -4920,6 +4920,13 @@ int SCIPgetNNLPVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** computes for each variables the number of NLP rows in which the variable appears in a nonlinear var */
+extern
+SCIP_RETCODE SCIPgetNLPVarsNonlinearity(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  nlcount             /**< an array of length at least SCIPnlpGetNVars() to store nonlinearity counts of variables */
+   );
+
 /** gets current NLP nonlinear rows along with the current number of NLP nonlinear rows */
 extern
 SCIP_RETCODE SCIPgetNLPNlRowsData(
