@@ -2816,6 +2816,7 @@ SCIP_RETCODE SCIPcomputeCoverUndercover(
    {
       SCIP_CALL( SCIPreleaseVar(scip, &coveringvars[i]) );
    }
+   SCIP_CALL( SCIPfree(&coveringscip) );
    SCIPfreeBufferArray(scip, &coverinds);
    SCIPfreeBufferArray(scip, &coveringvars);
 
