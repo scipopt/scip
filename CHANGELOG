@@ -80,6 +80,7 @@ fixed bugs:
 - fixed bug which occured when the dual farkas multipliers were not available in the lpi because the LP could
   only be solved with the primal simplex due to numerical problems
 - fixed bug in cons_orbitope:resprop() for the packing case
+- fixed bug in reader_mps.c: if a variables first occurence is in the bounds section, then the corresponding variable bound was lost  
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})
