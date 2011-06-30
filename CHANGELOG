@@ -12,7 +12,6 @@ interface:
 - the methods SCIPparseVarName() and SCIPparseVarsList() got two new parameters names "pos" and "endpos"; the parameter pos 
   determines the current position in the the string which gets parsed and the pointer to an int (endpos) returns
   the position where the current parsing stopped
-- prototype for methods SCIPparseVarsLinearsum()
 - new functions SCIPround() and SCIPfeasRound() to round to nearest integer
 - new functions SCIPcomputeVarCurrent{L,U}b{Local,Global}() to compute local or global lower or upper bounds of a multiaggregated variable
   from the bounds of the aggregation variables
@@ -55,6 +54,7 @@ interface:
 - removed methods SCIPmarkRequireNLP() and SCIPisNLPRequired(), NLP is now always constructed if nonlinearities are present
 - removed NLP methods from pub_nlp.h and added corresponding methods to scip.h; removed SCIPgetNLP()
 - added method SCIPgetNLPVarsNonlinearity() to get for each variable in the NLP the number of NLP rows in which this variable appears in a nonlinear way
+- added methods SCIPparseVarsLinearsum(), SCIPparseVarsPolynomial() and SCIPwriteVarsPolynomial() and for writing and parsing polynomials in constraint handler writing/parsing methods  
 
 performance improvements:
 - performance improvements in prop_vbounds
@@ -200,6 +200,7 @@ fixed bugs:
 - fixed bug caused by not (correctly) counting boundchanges in cons_varbound.c
 - fixed three bugs when writing in fzn format (wrongly splitted writing buffer, wrong variables was used, floats were printed to short)
 - fixed removal of fixed linear variables from a nonlinear row: a fixed variable may have not been removed if there was also a multiaggregated variable
+- fixed bug in reader_cip regarding reading of very long constraints 
 
 performance improvements:
 - fasten propagation in cons_knapsack.c due to negated clique partitions
