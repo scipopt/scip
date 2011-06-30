@@ -102,6 +102,7 @@ fixed bugs:
 - fixed bug in reader_gms.c: linear coefficients for quadratic variables were not printed if they had no square-coefficient
 - fixed bug in heur_subnlp when forbidding a particular combination of integer variables in the main problem
 - fixed bug in cons_indicator.c: creating constraints in transformed stage is now possible
+- fixed bug in reader_mps.c: a bound was lost if the corresponding variable made its first appearance in the bounds section
 
 parameters:
 - replaced parameter <constraints/quadratic/minefficacy> by <constraints/quadratic/minefficacysepa> and <constraints/quadratic/minefficacyenfo>
