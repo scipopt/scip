@@ -34,7 +34,7 @@
 
 #include <assert.h>
 #include <string.h> /* for strcmp */ 
-#include <ctype.h>  /* for isdigit */
+#include <ctype.h>  /* for isspace */
 
 #include "scip/cons_quadratic.h"
 #include "scip/cons_linear.h"
@@ -8358,8 +8358,11 @@ SCIP_DECL_CONSPARSE(consParseQuadratic)
    SCIP_Real lhs;
    SCIP_Real rhs;
 
+   assert(scip != NULL);
+   assert(success != NULL);
    assert(str != NULL);
    assert(name != NULL);
+   assert(cons != NULL);
 
    /* set left and right hand side to their default values */
    lhs = -SCIPinfinity(scip);
