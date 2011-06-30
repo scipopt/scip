@@ -13,6 +13,7 @@ release/
 check/results/
 check/locks
 check/MINLP
+check/IP
 cplex.log
 doc/html/
 doc/html_devel/
