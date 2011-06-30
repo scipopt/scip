@@ -36,6 +36,7 @@ fixed bugs:
 - fixed three bugs when writing in fzn format (wrongly splitted writing buffer, wrong variables was used, floats were printed to short)
 - fixed wrong setting of lp iteration limit when performing another simplex iteration to verify "objective limit reached" in lp.c
 - fixed removal of fixed linear variables from a nonlinear row: a fixed variable may have not been removed if there was also a multiaggregated variable
+- fixed bug in reader_cip regarding reading of very long constraints 
 
 performance improvements:
 - shiftandpropagate-heuristic uses optimized data structures and produces no memory overhead anymore
