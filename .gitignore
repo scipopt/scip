@@ -12,6 +12,7 @@ TAGS
 release/
 check/results/
 check/locks
+check/MINLP
 cplex.log
 doc/html/
 doc/html_devel/
