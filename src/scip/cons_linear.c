@@ -4571,7 +4571,8 @@ SCIP_RETCODE separateCons(
    SCIP_Bool             separatecards,      /**< should knapsack cardinality cuts be generated? */
    SCIP_Bool             separateall,        /**< should all constraints be subject to cardinality cut generation instead of only
                                               *   the ones with non-zero dual value? */
-   int*                  ncuts               /**< pointer to add up the number of found cuts */
+   int*                  ncuts,              /**< pointer to add up the number of found cuts */
+   SCIP_Bool*            cutoff              /**< pointer to store whether a cutoff was found */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -4580,13 +4581,14 @@ SCIP_RETCODE separateCons(
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(cutoff != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(ncuts != NULL);
    assert(consdata != NULL);
-   assert(cons != NULL);
 
    oldncuts = *ncuts;
+   *cutoff = FALSE;
 
    SCIP_CALL( checkCons(scip, cons, sol, (sol != NULL), &violated) );
 
@@ -4612,7 +4614,7 @@ SCIP_RETCODE separateCons(
                if( !SCIPisInfinity(scip, consdata->rhs) )
                {
                   SCIP_CALL( SCIPseparateRelaxedKnapsack(scip, cons, consdata->nvars, consdata->vars,
-                        consdata->vals, +1.0, consdata->rhs, sol, ncuts) );
+                        consdata->vals, +1.0, consdata->rhs, sol, ncuts, cutoff) );
                }
             }
             else if( SCIPisFeasPositive(scip, dualsol) )
@@ -4620,7 +4622,7 @@ SCIP_RETCODE separateCons(
                if( !SCIPisInfinity(scip, -consdata->lhs) )
                {
                   SCIP_CALL( SCIPseparateRelaxedKnapsack(scip, cons, consdata->nvars, consdata->vars,
-                        consdata->vals, -1.0, -consdata->lhs, sol, ncuts) );
+                        consdata->vals, -1.0, -consdata->lhs, sol, ncuts, cutoff) );
                }
             }
          }
@@ -4630,12 +4632,12 @@ SCIP_RETCODE separateCons(
          if( !SCIPisInfinity(scip, consdata->rhs) )
          {
             SCIP_CALL( SCIPseparateRelaxedKnapsack(scip, cons, consdata->nvars, consdata->vars,
-                  consdata->vals, +1.0, consdata->rhs, sol, ncuts) );
+                  consdata->vals, +1.0, consdata->rhs, sol, ncuts, cutoff) );
          }
          if( !SCIPisInfinity(scip, -consdata->lhs) )
          {
             SCIP_CALL( SCIPseparateRelaxedKnapsack(scip, cons, consdata->nvars, consdata->vars,
-                  consdata->vals, -1.0, -consdata->lhs, sol, ncuts) );
+                  consdata->vals, -1.0, -consdata->lhs, sol, ncuts, cutoff) );
          }
       }
    }
@@ -8748,6 +8750,7 @@ SCIP_DECL_CONSSEPALP(consSepalpLinear)
    SCIP_Real cutoffbound;
    SCIP_Real maxbound;
    SCIP_Bool separatecards;
+   SCIP_Bool cutoff;
    int c;
    int depth;
    int nrounds;
@@ -8786,16 +8789,19 @@ SCIP_DECL_CONSSEPALP(consSepalpLinear)
 
    *result = SCIP_DIDNOTFIND;
    ncuts = 0;
+   cutoff = FALSE;
 
    /* check all useful linear constraints for feasibility */
-   for( c = 0; c < nusefulconss && ncuts < maxsepacuts; ++c )
+   for( c = 0; c < nusefulconss && ncuts < maxsepacuts && !cutoff; ++c )
    {
       /*debugMessage("separating linear constraint <%s>\n", SCIPconsGetName(conss[c]));*/
-      SCIP_CALL( separateCons(scip, conss[c], NULL, separatecards, conshdlrdata->separateall, &ncuts) );
+      SCIP_CALL( separateCons(scip, conss[c], NULL, separatecards, conshdlrdata->separateall, &ncuts, &cutoff) );
    }
-
+   
    /* adjust return value */
-   if( ncuts > 0 )
+   if( cutoff )
+      *result = SCIP_CUTOFF;
+   else if( ncuts > 0 )
       *result = SCIP_SEPARATED;
 
    /* combine linear constraints to get more cuts */
@@ -8815,6 +8821,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolLinear)
    int nrounds;
    int maxsepacuts;
    int ncuts;
+   SCIP_Bool cutoff;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -8840,16 +8847,19 @@ SCIP_DECL_CONSSEPASOL(consSepasolLinear)
 
    *result = SCIP_DIDNOTFIND;
    ncuts = 0;
+   cutoff = FALSE;
 
    /* check all useful linear constraints for feasibility */
-   for( c = 0; c < nusefulconss && ncuts < maxsepacuts; ++c )
+   for( c = 0; c < nusefulconss && ncuts < maxsepacuts && !cutoff; ++c )
    {
       /*debugMessage("separating linear constraint <%s>\n", SCIPconsGetName(conss[c]));*/
-      SCIP_CALL( separateCons(scip, conss[c], sol, TRUE, conshdlrdata->separateall, &ncuts) );
+      SCIP_CALL( separateCons(scip, conss[c], sol, TRUE, conshdlrdata->separateall, &ncuts, &cutoff) );
    }
 
    /* adjust return value */
-   if( ncuts > 0 )
+   if( cutoff )
+      *result = SCIP_CUTOFF;
+   else if( ncuts > 0 )
       *result = SCIP_SEPARATED;
 
    /* combine linear constraints to get more cuts */
