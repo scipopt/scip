@@ -3,7 +3,7 @@
 *                  This file is part of the program and library             *
 *         SCIP --- Solving Constraint Integer Programs                      *
 *                                                                           *
-*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            *
+*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            *
 *                            fuer Informationstechnik Berlin                *
 *                                                                           *
 *  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -63,6 +63,11 @@ Here is what you have to do to get SCIP running:
 
 1. Compile the library and the solver program:
    In your SCIP main directory, enter "make [options]" with the following options:
+   - "INSTALLDIR="     to current directory as install directory (dafault) 
+   - "INSTALLDIR=/usr/local" 
+                       to install the libraries (/usr/local/lib/) and binary (/usr/loacl/bin/) 
+		       in the directory /usr/local 
+
    - "OPT=opt"         to use optimized compilation mode (default)
    - "OPT=dbg"         to use debug compilation mode
    - "OPT=prf"         to use performance analysis compilation mode
