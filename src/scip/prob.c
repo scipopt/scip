@@ -1643,5 +1643,5 @@ void SCIPprobPrintStatistics(
       prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars);
    SCIPmessageFPrintInfo(file, "  Constraints      : %d initial, %d maximal\n", prob->startnconss, prob->maxnconss);
    if ( ! prob->transformed )
-      SCIPmessageFPrintInfo(file, "  Objective sense  : %s\n", prob->objsense == SCIP_OBJSENSE_MINIMIZE ? "minimze" : "maximize");
+      SCIPmessageFPrintInfo(file, "  Objective sense  : %s\n", prob->objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");
 }
