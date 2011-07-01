@@ -53,6 +53,8 @@ LIBEXT		=	$(STATICLIBEXT)
 LINKER  	=	C
 SOFTLINKS	=
 
+INSTALLDIR	=	
+
 #will this be compiled for parascip, necessary for dbg-builds to make it threadsafe
 PARASCIP	=	false
 
@@ -136,8 +138,16 @@ BINOBJDIR	=	$(OBJDIR)/bin
 LIBOBJDIR	=	$(OBJDIR)/lib
 LIBOBJSUBDIRS	=       scip objscip blockmemshell tclique nlpi xml dijkstra
 SRCDIR		=	src
-BINDIR		=	bin
+LIBINCDIR	=	lib
+ifeq ($(INSTALLDIR),)
 LIBDIR		=	lib
+BINDIR		=	bin
+INCLUDEDIR	=	include
+else
+LIBDIR		=	$(INSTALLDIR)/lib
+BINDIR		=	$(INSTALLDIR)/bin
+INCLUDEDIR	=	$(INSTALLDIR)/include
+endif
 EXEEXTENSION	=
 ALLSRC		=
 
@@ -196,38 +206,38 @@ FLAGS		+=	-I$(LIBDIR)/cpxinc
 LPSLDFLAGS	+=	$(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
 LPILIBOBJ	=	scip/lpi_cpx.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
-SOFTLINKS	+=	$(LIBDIR)/cpxinc
-SOFTLINKS	+=	$(LIBDIR)/libcplex.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
-SOFTLINKS	+=	$(LIBDIR)/libcplex.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
+SOFTLINKS	+=	$(LIBINCDIR)/cpxinc
+SOFTLINKS	+=	$(LIBINCDIR)/libcplex.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
+SOFTLINKS	+=	$(LIBINCDIR)/libcplex.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
 LPIINSTMSG	=	"  -> \"cpxinc\" is the path to the CPLEX \"include\" directory, e.g., \"<CPLEX-path>/include/ilcplex\".\n"
 LPIINSTMSG	+=	" -> \"libcplex.*\" is the path to the CPLEX library, e.g., \"<CPLEX-path>/lib/x86_rhel4.0_3.4/static_pic/libcplex.a\""
 endif
 
 LPSOPTIONS	+=	xprs
 ifeq ($(LPS),xprs)
-FLAGS		+=	-I$(LIBDIR)/xprsinc
+FLAGS		+=	-I$(LIBINCDIR)/xprsinc
 LPSLDFLAGS	=	$(LINKCC_l)xpress.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)  $(LINKCC_l)pthread$(LINKLIBSUFFIX)  $(LINKCC_l)dl$(LINKLIBSUFFIX)
 LPILIBOBJ	=	scip/lpi_xprs.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
-SOFTLINKS	+=	$(LIBDIR)/xprsinc
-SOFTLINKS	+=	$(LIBDIR)/libxpress.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
-SOFTLINKS	+=	$(LIBDIR)/libxpress.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
+SOFTLINKS	+=	$(LIBINCDIR)/xprsinc
+SOFTLINKS	+=	$(LIBINCDIR)/libxpress.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
+SOFTLINKS	+=	$(LIBINCDIR)/libxpress.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
 LPIINSTMSG	=	"  -> \"xprsinc\" is the path to the XPRESS \"include\" directory, e.g., \"<XPRESS-path>/include\".\n"
 LPIINSTMSG	+=	" -> \"libpress.*\" is the path to the XPRESS library, e.g., \"<XPRESS-path>/lib/libxpress.a\""
 endif
 
 LPSOPTIONS	+=	msk
 ifeq ($(LPS),msk)
-FLAGS		+=	-I$(LIBDIR)/mskinc
+FLAGS		+=	-I$(LIBINCDIR)/mskinc
 LPSLDFLAGS	=	$(LINKCC_l)mosek.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
 			$(LINKCXX_l)iomp5.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
 LPILIBOBJ	=	scip/lpi_msk.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
-SOFTLINKS	+=	$(LIBDIR)/mskinc
-SOFTLINKS	+=	$(LIBDIR)/libmosek.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
-SOFTLINKS	+=	$(LIBDIR)/libmosek.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
-SOFTLINKS	+=	$(LIBDIR)/libiomp5.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
-SOFTLINKS	+=	$(LIBDIR)/libiomp5.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
+SOFTLINKS	+=	$(LIBINCDIR)/mskinc
+SOFTLINKS	+=	$(LIBINCDIR)/libmosek.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
+SOFTLINKS	+=	$(LIBINCDIR)/libmosek.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
+SOFTLINKS	+=	$(LIBINCDIR)/libiomp5.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
+SOFTLINKS	+=	$(LIBINCDIR)/libiomp5.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
 LPIINSTMSG	=	"  -> \"mskinc\" is the path to the Mosek \"include\" directory, e.g., \"<Mosek-path>/include\".\n"
 LPIINSTMSG	+=	" -> \"libmosek.*\" is the path to the Mosek library, e.g., \"<Mosek-path>/lib/libmosek.a\".\n"
 LPIINSTMSG	+=	" -> \"libiomp5.*\" is the path to the libiomp5, e.g., \"<Mosek-path>/lib/libiomp5.a\""
@@ -236,21 +246,21 @@ endif
 LPSOPTIONS	+=	spx
 ifeq ($(LPS),spx)
 LINKER		=	CPP
-FLAGS		+=	-I$(LIBDIR)/spxinc 
+FLAGS		+=	-I$(LIBINCDIR)/spxinc
 LPSLDFLAGS	=	$(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
 LPILIBOBJ	=	scip/lpi_spx.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/scip/lpi_spx.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
-SOFTLINKS	+=	$(LIBDIR)/spxinc
-SOFTLINKS	+=	$(LIBDIR)/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(STATICLIBEXT)
-SOFTLINKS	+=	$(LIBDIR)/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(SHAREDLIBEXT)
+SOFTLINKS	+=	$(LIBINCDIR)/spxinc
+SOFTLINKS	+=	$(LIBINCDIR)/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(STATICLIBEXT)
+SOFTLINKS	+=	$(LIBINCDIR)/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(SHAREDLIBEXT)
 LPIINSTMSG	=	"  -> \"spxinc\" is the path to the SoPlex \"src\" directory, e.g., \"../../soplex/src\".\n"
 LPIINSTMSG	+=	" -> \"libsoplex.*\" is the path to the SoPlex library, e.g., \"../../soplex/lib/libsoplex.linux.x86.gnu.opt.a\""
 ifeq ($(LPSCHECK),true)
-FLAGS		+=	-DWITH_LPSCHECK -I$(LIBDIR)/cpxinc
+FLAGS		+=	-DWITH_LPSCHECK -I$(LIBINCDIR)/cpxinc
 LPSLDFLAGS	+=	$(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
-SOFTLINKS	+=	$(LIBDIR)/cpxinc
-SOFTLINKS	+=	$(LIBDIR)/libcplex.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
-SOFTLINKS	+=	$(LIBDIR)/libcplex.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
+SOFTLINKS	+=	$(LIBINCDIR)/cpxinc
+SOFTLINKS	+=	$(LIBINCDIR)/libcplex.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
+SOFTLINKS	+=	$(LIBINCDIR)/libcplex.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
 LPIINSTMSG	+=	"  -> \"cpxinc\" is the path to the CPLEX \"include\" directory, e.g., \"<CPLEX-path>/include/ilcplex\".\n"
 LPIINSTMSG	+=	" -> \"libcplex.*\" is the path to the CPLEX library, e.g., \"<CPLEX-path>/lib/x86_rhel4.0_3.4/static_pic/libcplex.a\""
 endif
@@ -259,13 +269,13 @@ endif
 LPSOPTIONS	+=	spx132
 ifeq ($(LPS),spx132)
 LINKER		=	CPP
-FLAGS		+=	-I$(LIBDIR)/spx132inc 
+FLAGS		+=	-I$(LIBINCDIR)/spx132inc
 LPSLDFLAGS	=	$(LINKCXX_l)soplex132.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
 LPILIBOBJ	=	scip/lpi_spx132.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/scip/lpi_spx132.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
-SOFTLINKS	+=	$(LIBDIR)/spx132inc
-SOFTLINKS	+=	$(LIBDIR)/libsoplex132.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(STATICLIBEXT)
-SOFTLINKS	+=	$(LIBDIR)/libsoplex132.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(SHAREDLIBEXT)
+SOFTLINKS	+=	$(LIBINCDIR)/spx132inc
+SOFTLINKS	+=	$(LIBINCDIR)/libsoplex132.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(STATICLIBEXT)
+SOFTLINKS	+=	$(LIBINCDIR)/libsoplex132.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(SHAREDLIBEXT)
 LPIINSTMSG	=	"  -> \"spxinc\" is the path to the SoPlex 1.3.2 \"src\" directory, e.g., \"../../soplex-132/src\".\n"
 LPIINSTMSG	+=	" -> \"libsoplex.*\" is the path to the SoPlex library, e.g., \"../../soplex/lib/libsoplex-1.3.2.linux.x86.gnu.opt.a\""
 endif
@@ -273,17 +283,17 @@ endif
 LPSOPTIONS	+=	clp
 ifeq ($(LPS),clp)
 LINKER		=	CPP
-FLAGS		+=	-I$(LIBDIR)/clpinc
-LPSLDFLAGS	=	$(LINKCXX_L)$(LIBDIR) $(LINKCXX_l)clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX) \
+FLAGS		+=	-I$(LIBINCDIR)/clpinc
+LPSLDFLAGS	=	$(LINKCXX_L)$(LIBINCDIR) $(LINKCXX_l)clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX) \
 			$(LINKCXX_l)coinutils.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX) \
 			$(LINKCXX_l)bz2$(LINKLIBSUFFIX) $(LINKCXX_l)lapack$(LINKLIBSUFFIX)
 LPILIBOBJ	=	scip/lpi_clp.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/scip/lpi_clp.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
-SOFTLINKS	+=	$(LIBDIR)/clpinc
-SOFTLINKS	+=	$(LIBDIR)/libclp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(STATICLIBEXT)
-SOFTLINKS	+=	$(LIBDIR)/libclp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(SHAREDLIBEXT)
-SOFTLINKS	+=	$(LIBDIR)/libcoinutils.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(STATICLIBEXT)
-SOFTLINKS	+=	$(LIBDIR)/libcoinutils.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(SHAREDLIBEXT)
+SOFTLINKS	+=	$(LIBINCDIR)/clpinc
+SOFTLINKS	+=	$(LIBINCDIR)/libclp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(STATICLIBEXT)
+SOFTLINKS	+=	$(LIBINCDIR)/libclp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(SHAREDLIBEXT)
+SOFTLINKS	+=	$(LIBINCDIR)/libcoinutils.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(STATICLIBEXT)
+SOFTLINKS	+=	$(LIBINCDIR)/libcoinutils.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(SHAREDLIBEXT)
 LPIINSTMSG	=	"  -> \"clpinc\" is the path to the Clp \"include\" directory, e.g., \"<Clp-path>/include/coin\".\n"
 LPIINSTMSG	+=	" -> \"libclp.*\" is the path to the Clp library, e.g., \"<Clp-path>/lib/libclp.a\"\n"
 LPIINSTMSG	+=	" -> \"libcoinutils.*\" is the path to the COIN utilities library, e.g., \"<Clp-path>/lib/libcoinutils.a\""
@@ -291,25 +301,25 @@ endif
 
 LPSOPTIONS	+=	qso
 ifeq ($(LPS),qso)
-FLAGS         	+=      -I$(LIBDIR)/qsinc
+FLAGS         	+=      -I$(LIBINCDIR)/qsinc
 LPSLDFLAGS    	=       $(LINKCC_l)qsopt.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
 LPILIBOBJ     	= 	scip/lpi_qso.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC     	=       $(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
-SOFTLINKS     	+=      $(LIBDIR)/qsinc
-SOFTLINKS     	+=      $(LIBDIR)/libqsopt.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
+SOFTLINKS     	+=      $(LIBINCDIR)/qsinc
+SOFTLINKS     	+=      $(LIBINCDIR)/libqsopt.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
 LPIINSTMSG	=	"  -> \"qsinc\" is the path to the QSopt \"include\" directory, e.g., \"<QSopt-path>\".\n"
 LPIINSTMSG	+=	" -> \"libqsopt.*\" is the path to the QSopt library, e.g., \"<QSopt-path>/libqsopt.a\""
 endif
 
 LPSOPTIONS	+=	grb
 ifeq ($(LPS),grb)
-FLAGS		+=	-I$(LIBDIR)/grbinc
+FLAGS		+=	-I$(LIBINCDIR)/grbinc
 LPSLDFLAGS	=	$(LINKCC_l)gurobi.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
 LPILIBOBJ	=	scip/lpi_grb.o blockmemshell/memory.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
-SOFTLINKS	+=	$(LIBDIR)/grbinc
-SOFTLINKS	+=	$(LIBDIR)/libgurobi.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
-SOFTLINKS	+=	$(LIBDIR)/libgurobi.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
+SOFTLINKS	+=	$(LIBINCDIR)/grbinc
+SOFTLINKS	+=	$(LIBINCDIR)/libgurobi.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
+SOFTLINKS	+=	$(LIBINCDIR)/libgurobi.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
 LPIINSTMSG	=	"  -> \"grbinc\" is the path to the Gurobi \"include\" directory, e.g., \"<Gurobi-path>/include\".\n"
 LPIINSTMSG	+=	" -> \"libgurobi.*\" is the path to the Gurobi library, e.g., \"<Gurobi-path>/lib/libgurobi.so\""
 endif
@@ -325,7 +335,7 @@ LPILIBFILE	=	$(LIBDIR)/lib$(LPILIB).$(LIBEXT)
 LPILIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(LPILIBOBJ))
 LPILIBDEP	=	$(SRCDIR)/depend.lpilib.$(LPS).$(OPT)
 LPILIBLINK	=	$(LIBDIR)/lib$(LPILIBSHORTNAME).$(BASE).$(LIBEXT)
-LPILIBSHORTLINK = $(LIBDIR)/lib$(LPILIBSHORTNAME).$(LIBEXT)
+LPILIBSHORTLINK = 	$(LIBDIR)/lib$(LPILIBSHORTNAME).$(LIBEXT)
 ALLSRC		+=	$(LPILIBSRC)
 
 
@@ -344,7 +354,7 @@ NLPILIBCOBJ	= nlpi/nlpi.o \
 NLPILIBCXXOBJ	= nlpi/intervalarith.o
 
 ifeq ($(EXPRINT),none)
-NLPILIBCOBJ += nlpi/exprinterpret_none.o
+NLPILIBCOBJ += 	nlpi/exprinterpret_none.o
 endif
 ifeq ($(EXPRINT),cppad)
 NLPILIBCXXOBJ += nlpi/exprinterpret_cppad.o
@@ -404,12 +414,12 @@ endif
 ifeq ($(GMP),false)
 $(error ZIMPL requires the GMP to be linked. Use either ZIMPL=false or GMP=auto)
 endif
-FLAGS		+=	-DWITH_ZIMPL -I$(LIBDIR)/zimplinc $(ZIMPL_FLAGS)
+FLAGS		+=	-DWITH_ZIMPL -I$(LIBINCDIR)/zimplinc $(ZIMPL_FLAGS)
 LDFLAGS		+=	$(LINKCC_l)zimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT)$(LINKLIBSUFFIX) $(ZIMPL_LDFLAGS)
-DIRECTORIES	+=	$(LIBDIR)/zimplinc
-SOFTLINKS	+=	$(LIBDIR)/zimplinc/zimpl
-SOFTLINKS	+=	$(LIBDIR)/libzimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT).$(STATICLIBEXT)
-SOFTLINKS	+=	$(LIBDIR)/libzimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT).$(SHAREDLIBEXT)
+DIRECTORIES	+=	$(LIBINCDIR)/zimplinc
+SOFTLINKS	+=	$(LIBINCDIR)/zimplinc/zimpl
+SOFTLINKS	+=	$(LIBINCDIR)/libzimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT).$(STATICLIBEXT)
+SOFTLINKS	+=	$(LIBINCDIR)/libzimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT).$(SHAREDLIBEXT)
 LPIINSTMSG	+=	"\n  -> \"zimplinc\" is a directory containing the path to the ZIMPL \"src\" directory, e.g., \"../../../zimpl/src\".\n"
 LPIINSTMSG	+=	" -> \"libzimpl.*\" is the path to the ZIMPL library, e.g., \"../../zimpl/lib/libzimpl.linux.x86.gnu.opt.a\""
 endif
@@ -420,18 +430,18 @@ endif
 
 ifeq ($(IPOPT),true)
 LINKER		=	CPP
-FLAGS		+=	-I$(LIBDIR)/ipoptinc $(IPOPT_FLAGS)
+FLAGS		+=	-I$(LIBINCDIR)/ipoptinc $(IPOPT_FLAGS)
 LDFLAGS		+=	$(LINKCXX_l)ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)$(LINKLIBSUFFIX) $(IPOPT_LDFLAGS)
 ifeq ($(LIBEXT),$(STATICLIBEXT))
-LDFLAGS		+=	`cat $(LIBDIR)/ipopt_addlibs.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(STATICLIBEXT)`
+LDFLAGS		+=	`cat $(LIBINCDIR)/ipopt_addlibs.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(STATICLIBEXT)`
 else
-LDFLAGS		+=	`cat $(LIBDIR)/ipopt_addlibs.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(SHAREDLIBEXT)`
+LDFLAGS		+=	`cat $(LIBINCDIR)/ipopt_addlibs.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(SHAREDLIBEXT)`
 endif
-SOFTLINKS	+=	$(LIBDIR)/ipoptinc
-SOFTLINKS	+=	$(LIBDIR)/libipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(STATICLIBEXT)
-SOFTLINKS	+=	$(LIBDIR)/libipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(SHAREDLIBEXT)
-SOFTLINKS	+=	$(LIBDIR)/ipopt_addlibs.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(STATICLIBEXT)
-SOFTLINKS	+=	$(LIBDIR)/ipopt_addlibs.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(SHAREDLIBEXT)
+SOFTLINKS	+=	$(LIBINCDIR)/ipoptinc
+SOFTLINKS	+=	$(LIBINCDIR)/libipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(STATICLIBEXT)
+SOFTLINKS	+=	$(LIBINCDIR)/libipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(SHAREDLIBEXT)
+SOFTLINKS	+=	$(LIBINCDIR)/ipopt_addlibs.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(STATICLIBEXT)
+SOFTLINKS	+=	$(LIBINCDIR)/ipopt_addlibs.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(SHAREDLIBEXT)
 LPIINSTMSG	+=	"\n  -> \"ipoptinc\" is a directory containing the ipopt header files, i.e., \"ipoptinc/IpIpoptApplication.hpp\" should exist.\n"
 LPIINSTMSG	+=	" -> \"libipopt.*\" is the Ipopt library, e.g., \"/client/lib/ipopt-3.7.0/libipopt.a\"\n"
 LPIINSTMSG	+=	" -> \"ipopt_addlibs.*\" is the Ipopt addlibs_cpp file, e.g., \"/client/lib/ipopt-3.7.0/ipopt_addlibs_cpp.txt\"\n"
@@ -439,8 +449,8 @@ endif
 
 ifeq ($(EXPRINT),cppad)
 LINKER		=	CPP
-FLAGS		+=	-I$(LIBDIR) $(CPPAD_FLAGS)
-SOFTLINKS	+=	$(LIBDIR)/cppad
+FLAGS		+=	-I$(LIBINCDIR) $(CPPAD_FLAGS)
+SOFTLINKS	+=	$(LIBINCDIR)/cppad
 LPIINSTMSG	+=	" -> \"cppad\" is a directory containing the CppAD header files, i.e., \"cppad/cppad.hpp\" should exist.\n"
 endif
 
@@ -465,50 +475,7 @@ endif
 
 SCIPLIBSHORTNAME=	scip
 SCIPLIBNAME	=	$(SCIPLIBSHORTNAME)-$(VERSION)
-SCIPLIBOBJ	=	scip/branch.o \
-			scip/buffer.o \
-			scip/clock.o \
-			scip/conflict.o \
-			scip/cons.o \
-			scip/cutpool.o \
-			scip/debug.o \
-			scip/dialog.o \
-			scip/disp.o \
-			scip/event.o \
-			scip/fileio.o \
-			scip/heur.o \
-			scip/history.o \
-			scip/implics.o \
-			scip/interrupt.o \
-			scip/intervalarith.o \
-			scip/lp.o \
-			scip/mem.o \
-			scip/misc.o \
-			scip/nlp.o \
-			scip/nodesel.o \
-			scip/paramset.o \
-			scip/presol.o \
-			scip/pricestore.o \
-			scip/pricer.o \
-			scip/primal.o \
-			scip/prob.o \
-			scip/prop.o \
-			scip/reader.o \
-			scip/relax.o \
-			scip/retcode.o \
-			scip/scip.o \
-			scip/scipdefplugins.o \
-			scip/scipshell.o \
-			scip/sepa.o \
-			scip/sepastore.o \
-			scip/set.o \
-			scip/sol.o \
-			scip/solve.o \
-			scip/stat.o \
-			scip/tree.o \
-			scip/var.o \
-			scip/vbc.o \
-			scip/branch_allfullstrong.o \
+SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/branch_fullstrong.o \
 			scip/branch_inference.o \
 			scip/branch_mostinf.o \
@@ -615,23 +582,70 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/sepa_intobj.o \
 			scip/sepa_mcf.o \
 			scip/sepa_oddcycle.o \
-			dijkstra/dijkstra_bh.o \
 			scip/sepa_rapidlearning.o \
 			scip/sepa_redcost.o \
 			scip/sepa_strongcg.o \
-			scip/sepa_zerohalf.o \
+			scip/sepa_zerohalf.o
+
+SCIPLIBOBJ	=	scip/branch.o \
+			scip/buffer.o \
+			scip/clock.o \
+			scip/conflict.o \
+			scip/cons.o \
+			scip/cutpool.o \
+			scip/debug.o \
+			scip/dialog.o \
+			scip/disp.o \
+			scip/event.o \
+			scip/fileio.o \
+			scip/heur.o \
+			scip/history.o \
+			scip/implics.o \
+			scip/interrupt.o \
+			scip/intervalarith.o \
+			scip/lp.o \
+			scip/mem.o \
+			scip/misc.o \
+			scip/nlp.o \
+			scip/nodesel.o \
+			scip/paramset.o \
+			scip/presol.o \
+			scip/pricestore.o \
+			scip/pricer.o \
+			scip/primal.o \
+			scip/prob.o \
+			scip/prop.o \
+			scip/reader.o \
+			scip/relax.o \
+			scip/retcode.o \
+			scip/scip.o \
+			scip/scipdefplugins.o \
+			scip/scipshell.o \
+			scip/sepa.o \
+			scip/sepastore.o \
+			scip/set.o \
+			scip/sol.o \
+			scip/solve.o \
+			scip/stat.o \
+			scip/tree.o \
+			scip/var.o \
+			scip/vbc.o \
 			tclique/tclique_branch.o \
 			tclique/tclique_coloring.o \
 			tclique/tclique_graph.o \
+			dijkstra/dijkstra_bh.o \
 			xml/xmlparse.o
 
 SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
 SCIPLIBFILE	=	$(LIBDIR)/lib$(SCIPLIB).$(LIBEXT)
-SCIPLIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SCIPLIBOBJ))
-SCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(SCIPLIBOBJ:.o=.c))
+SCIPLIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SCIPPLUGINLIBOBJ))
+SCIPLIBOBJFILES	+=	$(addprefix $(LIBOBJDIR)/,$(SCIPLIBOBJ))
+SCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(SCIPPLUGINLIBOBJ:.o=.c))
+SCIPLIBSRC	+=	$(addprefix $(SRCDIR)/,$(SCIPLIBOBJ:.o=.c))
+SCIPPLUGININCSRC=	$(addprefix $(SRCDIR)/,$(SCIPPLUGINLIBOBJ:.o=.h))
 SCIPLIBDEP	=	$(SRCDIR)/depend.sciplib.$(OPT)
 SCIPLIBLINK	=	$(LIBDIR)/lib$(SCIPLIBSHORTNAME).$(BASE).$(LIBEXT)
-SCIPLIBSHORTLINK = $(LIBDIR)/lib$(SCIPLIBSHORTNAME).$(LIBEXT)
+SCIPLIBSHORTLINK = 	$(LIBDIR)/lib$(SCIPLIBSHORTNAME).$(LIBEXT)
 
 ALLSRC		+=	$(SCIPLIBSRC)
 
@@ -662,9 +676,10 @@ OBJSCIPLIB	=	$(OBJSCIPLIBNAME).$(BASE)
 OBJSCIPLIBFILE	=	$(LIBDIR)/lib$(OBJSCIPLIB).$(LIBEXT)
 OBJSCIPLIBOBJFILES=	$(addprefix $(LIBOBJDIR)/,$(OBJSCIPLIBOBJ))
 OBJSCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(OBJSCIPLIBOBJ:.o=.cpp))
+OBJSCIPINCSRC	=	$(addprefix $(SRCDIR)/,$(OBJSCIPLIBOBJ:.o=.h))
 OBJSCIPLIBDEP	=	$(SRCDIR)/depend.objsciplib.$(OPT)
 OBJSCIPLIBLINK	=	$(LIBDIR)/lib$(OBJSCIPLIBSHORTNAME).$(BASE).$(LIBEXT)
-OBJSCIPLIBSHORTLINK	=	$(LIBDIR)/lib$(OBJSCIPLIBSHORTNAME).$(LIBEXT)
+OBJSCIPLIBSHORTLINK=	$(LIBDIR)/lib$(OBJSCIPLIBSHORTNAME).$(LIBEXT)
 ALLSRC		+=	$(OBJSCIPLIBSRC)
 
 
@@ -694,7 +709,7 @@ ALLSRC		+=	$(MAINSRC)
 
 
 
-LINKSMARKERFILE	=	$(LIBDIR)/linkscreated.$(LPS)-$(LPSOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT).$(IPOPT)-$(IPOPTOPT).$(EXPRINT)
+LINKSMARKERFILE	=	$(LIBINCDIR)/linkscreated.$(LPS)-$(LPSOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT).$(IPOPT)-$(IPOPTOPT).$(EXPRINT)
 LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
 
 #-----------------------------------------------------------------------------
@@ -734,6 +749,30 @@ lintfiles:
 .PHONY: doc
 doc: 		
 		cd doc; $(DOXY) $(MAINSHORTNAME).dxy ; $(DOXY) $(MAINSHORTNAME)devel.dxy
+
+.PHONY: install
+install:	$(INCLUDEDIR) $(INSTALLDIR) $(OBJSCIPLIBFILE) $(MAINFILE) 
+		@echo "-> copy scip headers"
+		@-mkdir -p $(INCLUDEDIR)/scip
+		@-cp $(SCIPPLUGININCSRC) $(INCLUDEDIR)/scip
+		@-cp $(SRCDIR)/scip/pub_*h $(INCLUDEDIR)/scip
+		@-cp $(SRCDIR)/scip/struct_*h $(INCLUDEDIR)/scip
+		@-cp $(SRCDIR)/scip/type_*h $(INCLUDEDIR)/scip
+		@-cp $(SRCDIR)/scip/scip.h $(INCLUDEDIR)/scip
+		@echo "-> copy objective scip headers"
+		@-mkdir -p $(INCLUDEDIR)/objscip
+		@-cp $(OBJSCIPINCSRC) $(INCLUDEDIR)/objscip
+
+.PHONY: uninstall
+uninstall:	cleanlib cleanbin
+		@echo "-> remove scip headers"
+		@-mkdir -p $(INCLUDEDIR)/scip
+		@-rm -f $(INCLUDEDIR)/scip/*.h
+		@echo "-> remove objective scip headers"
+		@-mkdir -p $(INCLUDEDIR)/objscip
+		@-rm -f $(INCLUDEDIR)/objscip/*.h
+		@-rmdir $(INCLUDEDIR)/scip $(INCLUDEDIR)/objscip
+		@-rmdir --ignore-fail-on-non-empty $(INCLUDEDIR)
 
 .PHONY: check
 check:		test
@@ -848,14 +887,23 @@ $(LIBOBJDIR):	$(OBJDIR)
 $(LIBOBJSUBDIRS):	$(LIBOBJDIR)
 		@-mkdir -p $(LIBOBJDIR)/$@
 
-$(LIBDIR):
+$(LIBINCDIR)::	
+		@-mkdir -p $(LIBINCDIR)
+
+$(INSTALLDIR):
+		@-mkdir -p $(INSTALLDIR)
+
+$(LIBDIR)::	$(INSTALLDIR)
 		@-mkdir -p $(LIBDIR)
 
-$(BINDIR):
+$(BINDIR):	$(INSTALLDIR)
 		@-mkdir -p $(BINDIR)
 
+$(INCLUDEDIR):	$(INSTALLDIR)
+		@-mkdir -p $(INCLUDEDIR)
+
 .PHONY: clean
-clean:          $(LIBOBJDIR) $(LIBOBJSUBDIRS) $(BINOBJDIR) $(OBJDIR)
+clean:          cleanlib cleanbin $(LIBOBJDIR) $(LIBOBJSUBDIRS) $(BINOBJDIR) $(OBJDIR)
 ifneq ($(LIBOBJDIR),)
 		@-(cd $(LIBOBJDIR) && rm -f */*.o && rmdir $(LIBOBJSUBDIRS));
 		@-rmdir $(LIBOBJDIR)
@@ -867,12 +915,20 @@ ifneq ($(OBJDIR),)
 		@-rm -f $(LASTSETTINGS)
 		@-rmdir $(OBJDIR)
 endif
-		@echo "-> remove objective files"
-		@-rm -f $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINFILE) \
-		$(LPILIBLINK) $(LPILIBSHORTLINK) $(NLPILIBLINK) $(NLPILIBSHORTLINK) \
-		$(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK) $(MAINLINK) $(MAINSHORTLINK)
+
+.PHONY: cleanlib
+cleanlib:       
 		@echo "-> remove libraries"
+		@-rm -f $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) \
+		$(LPILIBLINK) $(LPILIBSHORTLINK) $(NLPILIBLINK) $(NLPILIBSHORTLINK) \
+		$(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK)
+		@-rmdir --ignore-fail-on-non-empty $(LIBDIR)
+
+.PHONY: cleanbin
+cleanbin:       
 		@echo "-> remove binary"
+		@-rm -f $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
+		@-rmdir --ignore-fail-on-non-empty $(BINDIR)
 
 .PHONY: lpidepend
 lpidepend:
@@ -941,12 +997,12 @@ $(MAINFILE):	$(BINDIR) $(BINOBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) 
 		@echo "-> linking $@"
 ifeq ($(LINKER),C)
 		$(LINKCC) $(MAINOBJFILES) \
-		$(LINKCC_L)$(LIBDIR) $(LINKCC_l)$(SCIPLIB)$(LINKLIBSUFFIX) $(LINKCC_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCC_l)$(NLPILIB)$(LINKLIBSUFFIX) \
+		$(LINKCC_L)$(LIBINCDIR) $(LINKCC_L)$(LIBDIR) $(LINKCC_l)$(SCIPLIB)$(LINKLIBSUFFIX) $(LINKCC_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCC_l)$(NLPILIB)$(LINKLIBSUFFIX) \
 		$(OFLAGS) $(LPSLDFLAGS) $(LDFLAGS) $(LINKCC_o)$@
 endif
 ifeq ($(LINKER),CPP)
 		$(LINKCXX) $(MAINOBJFILES) \
-		$(LINKCXX_L)$(LIBDIR) $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
+		$(LINKCXX_L)$(LIBINCDIR) $(LINKCC_L)$(LIBDIR) $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
 		$(OFLAGS) $(LPSLDFLAGS) $(LDFLAGS) $(LINKCXX_o)$@
 endif
 
@@ -1029,7 +1085,7 @@ $(LINKSMARKERFILE):
 		@$(MAKE) links
 
 .PHONY: links
-links:		echosoftlinks $(LIBDIR) $(DIRECTORIES) $(SOFTLINKS)
+links:		echosoftlinks $(LIBINCDIR) $(DIRECTORIES) $(SOFTLINKS)
 		@rm -f $(LINKSMARKERFILE)
 		@echo "this is only a marker" > $(LINKSMARKERFILE)
 
