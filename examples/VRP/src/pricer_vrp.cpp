@@ -252,9 +252,9 @@ SCIP_RETCODE ObjPricerVRP::add_tour_variable(
    )
 {
    SCIP_VAR* var;
-   char      tmp_name[255];
 
    /* create meaningful variable name */
+   char tmp_name[255];
    char var_name[255];
    SCIPsnprintf(var_name, 255, "T");
    for (list<int>::const_iterator it = tour.begin(); it != tour.end(); ++it)
