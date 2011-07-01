@@ -16,7 +16,7 @@
 /**@file
  * @brief  main file for VRP pricer example
  * @author Andreas Bley
- * @authro Marc Pfetsch
+ * @author Marc Pfetsch
  *
  * We want to solve the vehicle routing problem on a graph G = (V,E) with
  * V = J cup {d}, where d is the depot and the distances are given by the
@@ -236,6 +236,9 @@ int main(int argc, char** argv)
    SCIPprintVersion(NULL);
    cout << endl;
 
+   cout << "Solving the vehicle routing problem using SCIP." << endl;
+   cout << "Implemented by Andreas Bley." << endl << endl;
+
    if ( argc != 2 && argc != 3 )
    {
       cerr << "Usage: vrp [-h] datafile" << endl;
@@ -256,12 +259,13 @@ int main(int argc, char** argv)
    int capacity;
    int num_nodes;
 
-   if ( read_problem( argv[argc-1], num_nodes, capacity, demand, distance) )
+   if ( read_problem(argv[argc-1], num_nodes, capacity, demand, distance) )
    {
       cerr << "Error reading data file " << argv[argc-1] << endl;
       return 1;
    }
 
+   cout << "Number of nodes: " << num_nodes << endl;
 
    if ( argc == 3 )
    {
@@ -277,10 +281,10 @@ int main(int argc, char** argv)
       capacity = (num_nodes - 1) * capacity / total_demand;
       demand.assign(num_nodes, 1);
       demand[0] = 0;
-      cout << "Max customers per tour " << capacity << endl << endl;
+      cout << "Max customers per tour: " << capacity << endl << endl;
    }
    else
-      cout << "Max demand per tour " << capacity << endl << endl;
+      cout << "Max demand per tour: " << capacity << endl << endl;
 
    /**************
     * Setup SCIP *
@@ -411,7 +415,6 @@ int main(int argc, char** argv)
 
    /* activate pricer */
    SCIP_CALL( SCIPactivatePricer(scip, SCIPfindPricer(scip, VRP_PRICER_NAME)) );
-
 
    // SCIP_CALL( SCIPprintOrigProblem(scip, NULL, NULL, FALSE) );
 
