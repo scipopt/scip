@@ -134,6 +134,7 @@ BEGIN {
    lincons = 0;
    origvars = 0;
    origcons = 0;
+   objsense = 0;
    timeout = 0;
    feasible = 0;
    pb = +infty;
@@ -207,6 +208,16 @@ BEGIN {
 /^loaded parameter file/ { settings = $4; sub(/<.*settings\//, "", settings); sub(/\.set>/, "", settings); }
 /^parameter <limits\/time> set to/ { timelimit = $5; }
 /^limits\/time =/ { timelimit = $3; }
+#
+# get objective sense
+#
+/^  Objective sense  :/ {
+   if ( $4 == "minimize" )
+      objsense = 1;
+   if ( $4 == "maximize" )
+      objsense = -1;
+   # objsense is 0 otherwise
+}
 #
 # conflict analysis
 #
@@ -440,15 +451,31 @@ BEGIN {
       pb = 1.0*temp;
       temp = db;
       db = 1.0*temp;
-      
-      #firstpb and rootdb are used to detect the direction of optimization (min or max)
-      if( timetofirst < 0.0 )
-         temp = pb;
-      else
-         temp = firstpb;
-      firstpb = 1.0*temp;
       temp = rootdb;
       rootdb = 1.0*temp;
+      
+      # if objsense could not be determined so far (output is maybe too old)
+      if ( objsense == 0 )
+      {
+         reltol = 1e-5 * max(abs(pb),1.0);
+         abstol = 1e-4;
+
+	 # firstpb and rootdb are used to detect the direction of optimization (min or max)
+	 if( timetofirst < 0.0 )
+	    temp = pb;
+	 else
+	    temp = firstpb;
+	 firstpb = 1.0*temp;
+
+	 if ( firstpb - rootdb > max(abstol,reltol) )
+	    objsense = 1;   # minimize
+	 else
+	    objsense = -1;  # maximize
+      }
+      
+      # modify primal bound for maximization problems without primal solution
+      if ( objsense == -1 && pb >= +infty )
+	 pb = -1.0 * pb;
 
       nprobs++;
 
@@ -559,7 +586,8 @@ BEGIN {
          reltol = 1e-5 * max(abs(pb),1.0);
          abstol = 1e-4;
 
-         if( ( firstpb-rootdb > max(abstol,reltol) && (db-sol[prob] > reltol || sol[prob]-pb > reltol) ) || ( rootdb-firstpb > max(reltol,abstol) && (sol[prob]-db > reltol || pb-sol[prob] > reltol) ) ) {
+	 # objsense = 1 -> minimize; objsense = -1 -> maximize
+         if( ( objsense == 1 && (db-sol[prob] > reltol || sol[prob]-pb > reltol) ) || ( objsense == -1 && (sol[prob]-db > reltol || pb-sol[prob] > reltol) ) ) {
             status = "fail";
             failtime += tottime;
             fail++;
@@ -592,14 +620,15 @@ BEGIN {
          reltol = 1e-5 * max(abs(pb),1.0);
          abstol = 1e-4;
 
-         if( ( firstpb-rootdb > max(abstol,reltol) && db-sol[prob] > reltol) || ( rootdb-firstpb > max(reltol,abstol) && sol[prob]-db > reltol) ) {
+	 # objsense = 1 -> minimize; objsense = -1 -> maximize
+         if( ( objsense == 1 && db-sol[prob] > reltol) || ( objsense == -1 && sol[prob]-db > reltol) ) {
             status = "fail";
             failtime += tottime;
             fail++;
          }
          else {
             if( timeout || gapreached || sollimitreached ) {
-               if( (firstpb-rootdb > max(abstol,reltol) && sol[prob]-pb > reltol) || (rootdb-firstpb > max(abstol,reltol) && pb-sol[prob] > reltol) ) {
+               if( (objsense == 1 && sol[prob]-pb > reltol) || (objsense == -1 && pb-sol[prob] > reltol) ) {
                   status = "better";
                   timeouttime += tottime;
                   timeouts++;
@@ -784,7 +813,7 @@ BEGIN {
             gamsprobtype = "MIP";
          #InputFileName,ModelType,SolverName,Direction,ModelStatus,SolverStatus,ObjectiveValue,ObjectiveValueEstimate,SolverTime
          #NumberOfNodes,NumberOfIterations,NumberOfEquations,NumberOfVariables
-         printf("%s,%s,SCIP_%s,%d,%d,%d,%g,%g,%g,", pavprob, gamsprobtype, settings, firstpb-rootdb < -max(abstol,reltol) ? 1 : 0, modelstat, solverstat, pb, db, tottime+pavshift) > PAVFILE;
+         printf("%s,%s,SCIP_%s,%d,%d,%d,%g,%g,%g,", pavprob, gamsprobtype, settings, objsense == 1 ? 1 : 0, modelstat, solverstat, pb, db, tottime+pavshift) > PAVFILE;
          printf("%d,%d,%d,%d\n", bbnodes, simpiters, cons, vars) > PAVFILE;
       }
    }
