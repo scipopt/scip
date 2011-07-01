@@ -80,7 +80,7 @@ fixed bugs:
 - fixed bug which occured when the dual farkas multipliers were not available in the lpi because the LP could
   only be solved with the primal simplex due to numerical problems
 - fixed bug in cons_orbitope:resprop() for the packing case
-- fixed bug in reader_mps.c: if a variables first occurence is in the bounds section, then the corresponding variable bound was lost  
+- fixed bug in reader_mps.c: if a variables first occurence is in the bounds section, then the corresponding variable bound was lost
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})
@@ -204,7 +204,8 @@ fixed bugs:
 - fixed bug caused by not (correctly) counting boundchanges in cons_varbound.c
 - fixed three bugs when writing in fzn format (wrongly splitted writing buffer, wrong variables was used, floats were printed to short)
 - fixed removal of fixed linear variables from a nonlinear row: a fixed variable may have not been removed if there was also a multiaggregated variable
-- fixed bug in reader_cip regarding reading of very long constraints 
+- fixed bug in reader_cip regarding reading of very long constraints
+- fixed bug in cons_knapsack: in seldom circumstances the relaxation of a linear constraint can detect infeasibility, which was not handled properly
 
 performance improvements:
 - fasten propagation in cons_knapsack.c due to negated clique partitions

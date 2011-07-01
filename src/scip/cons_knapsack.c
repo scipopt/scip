@@ -3342,13 +3342,15 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
    SCIP_Real             valscale,           /**< -1.0 if lhs of row is used as rhs of c. k. constraint, +1.0 otherwise */
    SCIP_Real             rhs,                /**< right hand side of the continuous knapsack constraint */
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
-   int*                  ncuts               /**< pointer to add up the number of found cuts */
+   int*                  ncuts,              /**< pointer to add up the number of found cuts */
+   SCIP_Bool*            cutoff              /**< pointer to store whether a cutoff was found */
    )
 {
    SCIP_VAR** binvars;
    SCIP_VAR** consvars;
    SCIP_Real* binvals;
    SCIP_Longint* consvals;
+   SCIP_Longint minact;
    SCIP_Longint maxact;
    SCIP_Real intscalar;
    SCIP_Bool success;
@@ -3364,6 +3366,7 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
 
    assert(nknapvars > 0);
    assert(knapvars != NULL);
+   assert(cutoff != NULL);
 
    tmpindices = NULL;
 
@@ -3378,6 +3381,8 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
    /* all variables which are of integral type can be potentially of binary type; this can be checked via the method SCIPvarIsBinary(var) */
    nbinvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
 
+   *cutoff = FALSE;
+   
    if( nbinvars == 0 )
       return SCIP_OKAY;
 
@@ -3485,6 +3490,16 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
             if( SCIPvarIsBinary(zvlb[j]) && SCIPvarIsActive(zvlb[j]) && REALABS(bvlb[j]) <= MAXABSVBCOEF )
             {
                SCIP_Real vlbsol;
+               
+               if( (bvlb[j] >= 0.0 && SCIPisGT(scip, bvlb[j] * SCIPvarGetLbLocal(zvlb[j]) + dvlb[j], SCIPvarGetUbLocal(var))) ||
+                   (bvlb[j] <= 0.0 && SCIPisGT(scip, bvlb[j] * SCIPvarGetUbLocal(zvlb[j]) + dvlb[j], SCIPvarGetUbLocal(var))) )
+               {
+                  *cutoff = TRUE;
+                  SCIPdebugMessage("variable bound <%s>[%g,%g] >= %g<%s>[%g,%g] + %g implies local cutoff\n",
+                        SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
+                        bvlb[j], SCIPvarGetName(zvlb[j]), SCIPvarGetLbLocal(zvlb[j]), SCIPvarGetUbLocal(zvlb[j]), dvlb[j]);
+                  goto TERMINATE;
+               }
 
                assert(0 <= SCIPvarGetProbindex(zvlb[j]) && SCIPvarGetProbindex(zvlb[j]) < nbinvars);
                vlbsol = bvlb[j] * SCIPgetSolVal(scip, sol, zvlb[j]) + dvlb[j];
@@ -3556,6 +3571,16 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
             {
                SCIP_Real vubsol;
 
+               if( (bvub[j] >= 0.0 && SCIPisLT(scip, bvub[j] * SCIPvarGetUbLocal(zvub[j]) + dvub[j], SCIPvarGetLbLocal(var))) ||
+                   (bvub[j] <= 0.0 && SCIPisLT(scip, bvub[j] * SCIPvarGetLbLocal(zvub[j]) + dvub[j], SCIPvarGetLbLocal(var))) )
+               {
+                  *cutoff = TRUE;
+                  SCIPdebugMessage("variable bound <%s>[%g,%g] <= %g<%s>[%g,%g] + %g implies local cutoff\n",
+                        SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
+                        bvub[j], SCIPvarGetName(zvub[j]), SCIPvarGetLbLocal(zvub[j]), SCIPvarGetUbLocal(zvub[j]), dvub[j]);
+                  goto TERMINATE;
+               }
+
                assert(0 <= SCIPvarGetProbindex(zvub[j]) && SCIPvarGetProbindex(zvub[j]) < nbinvars);
                vubsol = bvub[j] * SCIPgetSolVal(scip, sol, zvub[j]) + dvub[j];
                if( SCIPisLE(scip, vubsol, bestubsol) )
@@ -3622,6 +3647,7 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
    rhs = rhs*intscalar;
 
    SCIPdebugMessage(" -> rhs = %.15g\n", rhs);
+   minact = 0;
    maxact = 0;
    for( i = 0; i < nbinvars; i++ )
    {
@@ -3649,7 +3675,10 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
             -val, SCIPvarGetName(binvars[i]), binvals[i], SCIPvarGetName(var), rhs);
       }
 
-      maxact += val;
+      if( SCIPvarGetLbLocal(var) > 0.5 )
+         minact += val;
+      if( SCIPvarGetUbLocal(var) > 0.5 )
+         maxact += val;
       consvals[nconsvars] = val;
       consvars[nconsvars] = var;
       nconsvars++;
@@ -3658,13 +3687,13 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
    if( nconsvars > 0 )
    {
       SCIP_Longint capacity;
-
+      
       assert(consvars != NULL);
       assert(consvals != NULL);
       capacity = (SCIP_Longint)SCIPfeasFloor(scip, rhs);
-      if( maxact > capacity )
-      {
+
 #ifdef SCIP_DEBUG
+      {
          SCIP_Real act;
 
          SCIPdebugMessage(" -> linear constraint <%s> relaxed to knapsack:", cons != NULL ? SCIPconsGetName(cons) : "-");
@@ -3675,10 +3704,20 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
                SCIPgetSolVal(scip, sol, consvars[i]));
             act += consvals[i] * SCIPgetSolVal(scip, sol, consvars[i]);
          }
-         SCIPdebugPrintf(" <= %"SCIP_LONGINT_FORMAT" (%.15g) [act: %.15g, max: %"SCIP_LONGINT_FORMAT"]\n",
-            capacity, rhs, act, maxact);
+         SCIPdebugPrintf(" <= %"SCIP_LONGINT_FORMAT" (%.15g) [act: %.15g, min: %"SCIP_LONGINT_FORMAT" max: %"SCIP_LONGINT_FORMAT"]\n",
+            capacity, rhs, act, minact, maxact);
+      }
 #endif
 
+      if( minact > capacity )
+      {
+         SCIPdebugMessage("minactivity of knapsack relaxation implies local cutoff\n");
+         *cutoff = TRUE;
+         goto TERMINATE;
+      }
+
+      if( maxact > capacity )
+      {
          /* separate lifted cut from relaxed knapsack constraint */
          SCIP_CALL( SCIPseparateKnapsackCuts(scip, cons, consvars, nconsvars, consvals, capacity, sol, ncuts) );
       }
