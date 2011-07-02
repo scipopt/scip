@@ -7160,7 +7160,7 @@ int SCIPgetNEnabledConss(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets average dual bound of all unprocessed nodes */
+/** gets average dual bound of all unprocessed nodes for original problem */
 extern
 SCIP_Real SCIPgetAvgDualbound(
    SCIP*                 scip                /**< SCIP data structure */
@@ -7172,7 +7172,7 @@ SCIP_Real SCIPgetAvgLowerbound(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets global dual bound */
+/** gets global dual bound for original problem */
 extern
 SCIP_Real SCIPgetDualbound(
    SCIP*                 scip                /**< SCIP data structure */
@@ -7184,7 +7184,7 @@ SCIP_Real SCIPgetLowerbound(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets dual bound of the root node */
+/** gets dual bound of the root node for the original problem */
 extern
 SCIP_Real SCIPgetDualboundRoot(
    SCIP*                 scip                /**< SCIP data structure */
@@ -7196,7 +7196,7 @@ SCIP_Real SCIPgetLowerboundRoot(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets global primal bound (objective value of best solution or user objective limit) */
+/** gets global primal bound (objective value of best solution or user objective limit) for the original problem */
 extern
 SCIP_Real SCIPgetPrimalbound(
    SCIP*                 scip                /**< SCIP data structure */
