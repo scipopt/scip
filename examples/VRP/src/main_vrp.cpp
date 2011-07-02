@@ -179,7 +179,7 @@ int read_problem(
          }
          for (int i = 0; i < num_nodes; ++i)
          {
-            for ( int j = 0; j < i; ++j )
+            for (int j = 0; j < i; ++j)
             {
                int dx = x[i] - x[j];
                int dy = y[i] - y[j];
@@ -214,7 +214,8 @@ int read_problem(
             }
          }
       }
-      else {
+      else 
+      {
          getline(file, dummy);
       }
    }
@@ -410,32 +411,32 @@ int main(int argc, char** argv)
    }
 
    /* include VRP pricer */
-   ObjPricerVRP* vrp_pricer_ptr = new ObjPricerVRP(scip, VRP_PRICER_NAME, num_nodes, capacity, demand, distance, arc_var, arc_con, part_con);
+   ObjPricerVRP* vrp_pricer_ptr = new ObjPricerVRP(scip, VRP_PRICER_NAME, num_nodes, capacity, demand, distance, 
+      arc_var, arc_con, part_con);
+
    SCIP_CALL( SCIPincludeObjPricer(scip, vrp_pricer_ptr, true) );
 
    /* activate pricer */
    SCIP_CALL( SCIPactivatePricer(scip, SCIPfindPricer(scip, VRP_PRICER_NAME)) );
 
-   // SCIP_CALL( SCIPprintOrigProblem(scip, NULL, NULL, FALSE) );
+   //    SCIP_CALL( SCIPwriteOrigProblem(scip, "vrp_init.lp", "lp", FALSE) );
 
-   /* turn on LP output */
-   // SCIP_CALL( SCIPsetBoolParam(scip, "display/lpinfo", TRUE) );
 
    /*************
     *  Solve    *
     *************/
+
    SCIP_CALL( SCIPsolve(scip) );
+
 
    /**************
     * Statistics *
     *************/
    //SCIP_CALL( SCIPprintStatistics(scip, NULL) );
 
-   //SCIP_CALL( SCIPprintTransProblem(scip, 0) );
-
    SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
 
-   //SCIP_CALL( SCIPwriteLP(scip,"test.lp") );
+
 
    /********************
     * Deinitialization *
