@@ -26,7 +26,6 @@
 #include <map>
 #include <vector>
 
-#include "scip/pub_misc.h"
 #include "scip/cons_linear.h"
 
 using namespace std;
@@ -302,7 +301,7 @@ SCIP_RETCODE ObjPricerVRP::add_tour_variable(
 }
 
 
-/** Computes a shortest admissible tour with respect to the given lengths. The function must returns
+/** Computes a shortest admissible tour with respect to the given lengths. The function must return
  *  the computed tour via the parameter tour and the length (w.r.t. given lengths) of this tour as
  *  return parameter. The returned tour must be the ordered list of customer nodes contained in the
  *  tour (i.e., 2-5-7 for the tour 0-2-5-7-0).
@@ -354,7 +353,12 @@ typedef std::map< NODE_TABLE_KEY, NODE_TABLE_DATA > NODE_TABLE;
 }
 
 
-/** return negative reduced cost tour (uses restricted shortest path dynamic programming algorithm) */
+/** return negative reduced cost tour (uses restricted shortest path dynamic programming algorithm) 
+ *
+ *  The algorithm uses the priority queue implementation in pqueue.h. SCIP's implementation of
+ *  priority queues cannot be used, since it currently does not support removal of elements that are
+ *  not at the top.
+ */
 double ObjPricerVRP::find_shortest_tour(
    const vector< vector<double> >& length,   /**< matrix of lengths */
    list<int>&            tour                /**< list of nodes in tour */
