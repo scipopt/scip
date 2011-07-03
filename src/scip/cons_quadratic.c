@@ -2751,8 +2751,8 @@ SCIP_RETCODE removeFixedVariables(
             {
                bilinterm = &consdata->bilinterms[consdata->quadvarterms[i].adjbilin[j]];
                
-               var2 = bilinterm->var1 == var ? bilinterm->var2 : bilinterm->var1;
-               assert(var2 != var);
+               var2 = bilinterm->var1 == consdata->quadvarterms[i].var ? bilinterm->var2 : bilinterm->var1;
+               assert(var2 != consdata->quadvarterms[i].var);
                
                var2pos = 0;
                while( consdata->quadvarterms[var2pos].var != var2 )

@@ -206,6 +206,7 @@ fixed bugs:
 - fixed removal of fixed linear variables from a nonlinear row: a fixed variable may have not been removed if there was also a multiaggregated variable
 - fixed bug in reader_cip regarding reading of very long constraints
 - fixed bug in cons_knapsack: in seldom circumstances the relaxation of a linear constraint can detect infeasibility, which was not handled properly
+- fixed bug in cons_quadratic: in seldom cases, fixed variables may have been substituted out wrongly in presolve
 
 performance improvements:
 - fasten propagation in cons_knapsack.c due to negated clique partitions
