@@ -968,10 +968,11 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
                (*naggrvars)++;
             }
          }
-         else if( SCIPvarGetType(probingvar) == SCIP_VARTYPE_BINARY || SCIPvarGetType(probingvar) == SCIP_VARTYPE_INTEGER )
+         else if( (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) == 0) &&
+                  (SCIPvarGetType(probingvar) == SCIP_VARTYPE_BINARY || SCIPvarGetType(probingvar) == SCIP_VARTYPE_INTEGER) )
          {
             /* if we are not in presolving, then we cannot do aggregations
-             * but we can use variable bounds to code the same equality
+             * but if we are at the root, then we can use variable bounds to code the same equality
              * vars[j] == ((leftproplbs[j] * rightlb - rightproplbs[j] * leftub) + (rightproplbs[j] - leftproplbs[j]) * probingvar) / (rightlb - leftub)
              */
             int nboundchanges;
@@ -989,9 +990,10 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
          }
          /* if probingvar is continuous and we are in solving stage, then we do nothing, but it's unlikely that we get here (fixedleft && fixedright) with a continuous variable */
       }
-      else if( SCIPvarGetType(probingvar) == SCIP_VARTYPE_BINARY )
+      else if( SCIPvarGetType(probingvar) == SCIP_VARTYPE_BINARY &&
+         (SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING || (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) == 0)) )
       {
-         /* implications can be added only for binary variables */
+         /* implications are global information and can be added for binary variables only */
          int nboundchanges;
 
          /* since probing var is binary variable, probing should have fixed variable in both branches,
