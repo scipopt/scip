@@ -1876,6 +1876,7 @@ void getPartitionNoncovervars(
    
    *nvarsF = 0;
    *nvarsR = 0;
+
    for( j = 0; j < nnoncovervars; j++ )
    {
       /* variable has solution value zero */
@@ -1912,6 +1913,7 @@ SCIP_RETCODE getLiftingSequence(
    )
 {
    SORTKEYPAIR** sortkeypairsF;
+   SORTKEYPAIR* sortkeypairsFstore;
    SCIP_Real* sortkeysC2;
    SCIP_Real* sortkeysR;
    int j;
@@ -1927,10 +1929,11 @@ SCIP_RETCODE getLiftingSequence(
    assert(nvarsR >= 0);
    
    /* allocates temporary memory */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sortkeypairsF, nvarsF) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &sortkeypairsF, nvarsF) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &sortkeypairsFstore, nvarsF) );
    SCIP_CALL( SCIPallocBufferArray(scip, &sortkeysC2, nvarsC2) );
    SCIP_CALL( SCIPallocBufferArray(scip, &sortkeysR, nvarsR) );
-   
+
    /* gets sorting key for variables in F corresponding to the following lifting sequence 
     *  sequence 1: non-increasing absolute difference between x*_j and the value the variable is fixed to, i.e. 
     *              x*_1 >= x*_2 >= ... >= x*_|F| 
@@ -1939,8 +1942,7 @@ SCIP_RETCODE getLiftingSequence(
     */
    for( j = 0; j < nvarsF; j++ )
    {
-      SCIP_CALL( SCIPallocBlockMemory(scip, &sortkeypairsF[j]) );
-
+      sortkeypairsF[j] =&(sortkeypairsFstore[j]);
       sortkeypairsF[j]->key1 = solvals[varsF[j]]; 
       sortkeypairsF[j]->key2 = (SCIP_Real) weights[varsF[j]]; 
    }
@@ -1972,11 +1974,10 @@ SCIP_RETCODE getLiftingSequence(
    }
    
    /* frees temporary memory */
-   for( j = nvarsF-1; j >= 0; j-- )
-      SCIPfreeBlockMemory(scip, &sortkeypairsF[j]);
    SCIPfreeBufferArray(scip, &sortkeysR);
    SCIPfreeBufferArray(scip, &sortkeysC2);
-   SCIPfreeBlockMemoryArray(scip, &sortkeypairsF, nvarsF);
+   SCIPfreeMemoryArray(scip, &sortkeypairsFstore);
+   SCIPfreeMemoryArray(scip, &sortkeypairsF);
    
    return SCIP_OKAY;
 }

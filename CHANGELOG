@@ -63,6 +63,9 @@ performance improvements:
 - only perform probing if the variables are locked
 - performance and memory consumption improvements in xmlparse.c
 - avoid very long separation times of LEWIs in cons_knapsack for very large minimal covers
+- used SCIPallocMemoryArray instead of SCIPallocBlockMemoryArray which leads to fewer memory consumption in getLiftingSequence() in cons_knapsack, also improved cache use bei using an extra array instead blockmemory chunks
+- switched FASTMIP from 1 to 2 for CPLEX and changed default pricing rule back to steepest edge pricing instead of qucikstart steepest edge pricing
+- made sorting method more robust
 
 fixed bugs:
 - fixed bug in propagation of indicator constraints: cannot fix slack variable to 0 if linear constraint is disabled/not active
