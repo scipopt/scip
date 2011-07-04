@@ -1382,7 +1382,7 @@ SCIP_RETCODE rowAddCoef(
    /* insert the column at the correct position and update the links */
    row->cols[pos] = col;
    row->cols_index[pos] = col->index;
-   row->vals[pos] = val;
+   row->vals[pos] = SCIPsetIsIntegral(set, val) ? SCIPsetRound(set, val) : val;
    row->linkpos[pos] = linkpos;
    row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPsetIsIntegral(set, val);
    if( linkpos == -1 )
@@ -1559,7 +1559,7 @@ SCIP_RETCODE rowChgCoefPos(
       
       /* change existing coefficient */
       rowDelNorms(row, set, row->cols[pos], row->vals[pos], FALSE);
-      row->vals[pos] = val;
+      row->vals[pos] = SCIPsetIsIntegral(set, val) ? SCIPsetRound(set, val) : val;
       row->integral = row->integral && SCIPcolIsIntegral(row->cols[pos]) && SCIPsetIsIntegral(set, val);
       rowAddNorms(row, set, row->cols[pos], row->vals[pos]);
       coefChanged(row, row->cols[pos], lp);
@@ -4260,7 +4260,15 @@ SCIP_RETCODE SCIProwCreate(
          var = cols[i]->var;
          (*row)->cols_index[i] = cols[i]->index;
          (*row)->linkpos[i] = -1;
-         (*row)->integral = (*row)->integral && SCIPvarIsIntegral(var) && SCIPsetIsIntegral(set, vals[i]);
+         if( SCIPsetIsIntegral(set, (*row)->vals[i]) )
+         {
+            vals[i] = SCIPsetRound(set, (*row)->vals[i]);
+            (*row)->integral = (*row)->integral && SCIPvarIsIntegral(var);
+         }
+         else
+         {
+            (*row)->integral = FALSE;
+         }
       }
    }
    else
@@ -5103,6 +5111,8 @@ void rowMerge(
          {
             /* merge entries with equal column */
             vals[t] += vals[s];
+            if( SCIPsetIsIntegral(set, vals[t]) )
+               vals[t] = SCIPsetRound(set, vals[t]);
          }
          else
          {
@@ -12397,7 +12407,8 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                SCIP_CALL( SCIPsetSetCharParam(set, "lp/pricing", 's') );
 
                /* resolve LP with an iteration limit of 1 */
-               SCIP_CALL( lpSolve(lp, set, stat,  SCIP_LPALGO_DUALSIMPLEX, 1, -1, FALSE, FALSE, TRUE, fastmip, tightfeastol, fromscratch, keepsol, lperror) );
+               SCIP_CALL( lpSolve(lp, set, stat,  SCIP_LPALGO_DUALSIMPLEX, 1, -1,
+                     FALSE, FALSE, TRUE, fastmip, tightfeastol, fromscratch, keepsol, lperror) );
 
                /* reinstall old cutoff bound and lp pricing strategy */
                lp->cutoffbound = tmpcutoff;

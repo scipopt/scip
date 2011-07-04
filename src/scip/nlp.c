@@ -1429,6 +1429,14 @@ SCIP_RETCODE nlrowRemoveFixedLinearCoefPos(
             SCIP_CALL( nlrowRemoveFixedLinearCoefPos(nlrow, blkmem, set, stat, nlp, nlrow->nlinvars-1) );
          }
       }
+
+      /* due to nlrowDelLinearCoefPos, an inactive variable may have moved to position pos
+       * if that is the case, call ourself recursively
+       */
+      if( pos < nlrow->nlinvars && !SCIPvarIsActive(nlrow->linvars[pos]) )
+      {
+         SCIP_CALL( nlrowRemoveFixedLinearCoefPos(nlrow, blkmem, set, stat, nlp, pos) );
+      }
    }
 
    return SCIP_OKAY;
@@ -5653,6 +5661,61 @@ int SCIPnlpGetNVars(
    assert(nlp != NULL);
 
    return nlp->nvars;
+}
+
+/** computes for each variables the number of NLP rows in which the variable appears in a nonlinear var */
+SCIP_RETCODE SCIPnlpGetVarsNonlinearity(
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   int*                  nlcount             /**< an array of length at least SCIPnlpGetNVars() to store nonlinearity counts of variables */
+   )
+{
+   SCIP_NLROW* nlrow;
+   int varidx;
+   int i;
+   int c;
+
+   assert(nlp != NULL);
+   assert(nlcount != NULL || nlp->nvars == 0);
+
+   BMSclearMemoryArray(nlcount, nlp->nvars);
+
+   for( c = 0; c < nlp->nnlrows; ++c )
+   {
+      nlrow = nlp->nlrows[c];
+      assert(nlrow != NULL);
+
+      for( i = 0; i < nlrow->nquadvars; ++i )
+      {
+         assert(SCIPhashmapExists(nlp->varhash, (void*)nlrow->quadvars[i]));
+         varidx = (size_t) SCIPhashmapGetImage(nlp->varhash, (void*)nlrow->quadvars[i]);
+         assert(varidx < nlp->nvars);
+         ++nlcount[varidx];
+      }
+
+      if( nlrow->exprtree != NULL )
+      {
+         SCIP_VAR** exprtreevars;
+         int nexprtreevars;
+
+         exprtreevars = SCIPexprtreeGetVars(nlrow->exprtree);
+         nexprtreevars = SCIPexprtreeGetNVars(nlrow->exprtree);
+         assert(exprtreevars != NULL || nexprtreevars == 0);
+         for( i = 0; i < nexprtreevars; ++i )
+         {
+            assert(SCIPhashmapExists(nlp->varhash, (void*)exprtreevars[i]));
+
+            /* skip variables that also appear in quadratic part, so they are not counted twice */
+            if( nlrow->quadvarshash != NULL && SCIPhashmapExists(nlrow->quadvarshash, (void*)exprtreevars[i]) )
+               continue;
+
+            varidx = (size_t) SCIPhashmapGetImage(nlp->varhash, (void*)exprtreevars[i]);
+            assert(varidx < nlp->nvars);
+            ++nlcount[varidx];
+         }
+      }
+   }
+
+   return SCIP_OKAY;
 }
 
 /** gets array with nonlinear rows of the NLP */

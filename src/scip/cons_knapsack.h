@@ -245,7 +245,8 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
    SCIP_Real             valscale,           /**< -1.0 if lhs of row is used as rhs of c. k. constraint, +1.0 otherwise */
    SCIP_Real             rhs,                /**< right hand side of the continuous knapsack constraint */
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
-   int*                  ncuts               /**< pointer to add up the number of found cuts */
+   int*                  ncuts,              /**< pointer to add up the number of found cuts */
+   SCIP_Bool*            cutoff              /**< pointer to store whether a cutoff was found */
    );
 
 #ifdef __cplusplus

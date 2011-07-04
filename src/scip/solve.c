@@ -3850,7 +3850,7 @@ SCIP_RETCODE SCIPsolveCIP(
          }
       }
       else if( primal->nsols == 0
-         || SCIPsetIsGE(set, SCIPsolGetObj(primal->sols[0], set, transprob), 
+         || SCIPsetIsGT(set, SCIPsolGetObj(primal->sols[0], set, transprob),
             SCIPprobInternObjval(transprob, set, SCIPprobGetObjlim(transprob, set))) )
       {
          /* switch status to INFEASIBLE */
