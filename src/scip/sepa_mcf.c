@@ -5671,7 +5671,8 @@ SCIP_RETCODE addCut(
    SCIP_Real*            cutcoefs,           /**< coefficients of active variables in cut */
    SCIP_Real             cutrhs,             /**< right hand side of cut */
    SCIP_Bool             cutislocal,         /**< is the cut only locally valid? */
-   int*                  ncuts               /**< pointer to count the number of added cuts */
+   int*                  ncuts,              /**< pointer to count the number of added cuts */
+   SCIP_Bool*            cutoff              /**< pointer to store whether a cutoff was found */
 )
 {
    SCIP_ROW* cut;
@@ -5685,17 +5686,19 @@ SCIP_RETCODE addCut(
    SCIP_Real* cutvals = NULL;
    int ncutvars;
 
-
    assert(scip != NULL);
    assert(sepadata != NULL);
    assert(cutcoefs != NULL);
    assert(ncuts != NULL);
+   assert(cutoff != NULL);
 
    /* get active problem variables */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
    assert(nvars == 0 || vars != NULL);
 
    ncutvars = 0;
+   *cutoff = FALSE;
+   
    if( sepadata->separateknapsack )
    {
       /* allocate temporary memory */
@@ -5749,7 +5752,7 @@ SCIP_RETCODE addCut(
    if ( sepadata->separateknapsack)
    {
       /* relax cut to knapsack row and separate lifted cover cuts */
-      SCIP_CALL( SCIPseparateRelaxedKnapsack(scip, NULL, ncutvars, cutvars, cutvals, +1.0, cutrhs, sol, ncuts) );
+      SCIP_CALL( SCIPseparateRelaxedKnapsack(scip, NULL, ncutvars, cutvars, cutvals, +1.0, cutrhs, sol, ncuts, cutoff) );
 
       /* free temporary memory */
       SCIPfreeBufferArray(scip, &cutvals);
@@ -5769,7 +5772,8 @@ SCIP_RETCODE generateClusterCuts(
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_MCFNETWORK*      mcfnetwork,         /**< MCF network structure */
    NODEPARTITION*        nodepartition,      /**< node partition data structure, or NULL */
-   int*                  ncuts               /**< pointer to count the number of added cuts */
+   int*                  ncuts,              /**< pointer to count the number of added cuts */
+   SCIP_Bool*            cutoff              /**< pointer to store whether a cutoff was found */
 )
 {
    SCIP_ROW***       nodeflowrows      = mcfnetwork->nodeflowrows;
@@ -5805,6 +5809,7 @@ SCIP_RETCODE generateClusterCuts(
    int maxtestdelta;
 
    int oldncuts = 0; /* to check success of separation for one nodeset */
+   *cutoff = FALSE;
 
    assert( effortlevel == MCFEFFORTLEVEL_AGGRESSIVE || effortlevel == MCFEFFORTLEVEL_DEFAULT );
    nrows = SCIPgetNLPRows(scip);
@@ -5882,7 +5887,7 @@ SCIP_RETCODE generateClusterCuts(
    }
    useinverted = (mcfnetwork->modeltype == SCIP_MCFMODELTYPE_DIRECTED);
 
-   for ( partition = startpartition; partition <= allpartitions-1 && !SCIPisStopped(scip) && *ncuts < maxsepacuts; partition++ )
+   for ( partition = startpartition; partition <= allpartitions-1 && !SCIPisStopped(scip) && *ncuts < maxsepacuts && !*cutoff; partition++ )
    {
       int v;
       int a;
@@ -5909,7 +5914,7 @@ SCIP_RETCODE generateClusterCuts(
          }
       }
 
-      for ( inverted = FALSE; inverted <= useinverted; inverted++ )
+      for ( inverted = FALSE; inverted <= useinverted && !*cutoff; inverted++ )
       {
 
          if ( nodepartition == NULL )
@@ -6300,7 +6305,9 @@ SCIP_RETCODE generateClusterCuts(
             if ( SCIPisFeasGT(scip, cutact, cutrhs) )
             {
                SCIPdebugMessage("success -> delta = %g  -> rhs: %g, act: %g\n", deltas[d], cutrhs, cutact);
-               SCIP_CALL( addCut(scip, sepadata, sol, cutcoefs, cutrhs, cutislocal, ncuts) );
+               SCIP_CALL( addCut(scip, sepadata, sol, cutcoefs, cutrhs, cutislocal, ncuts, cutoff) );
+               if( *cutoff )
+                  break;
 
 #ifdef SCIP_DEBUG
                for ( a = 0; a < narcs; a++ )
@@ -6325,7 +6332,7 @@ SCIP_RETCODE generateClusterCuts(
          }
 
          /* only separate flowcutset inequalities if no cutset inequalities have been found */
-         if ( sepadata->separateflowcutset && oldncuts == *ncuts )
+         if ( sepadata->separateflowcutset && oldncuts == *ncuts && !*cutoff )
          {
             /* try to separate flow cuts for the best delta */
             f0 = SCIPfrac(scip, baserhs/bestdelta);
@@ -6459,7 +6466,7 @@ SCIP_RETCODE generateClusterCuts(
                   if ( success && SCIPisFeasGT(scip, cutact, cutrhs) )
                   {
                      SCIPdebugMessage(" -> delta = %g  -> rhs: %g, act: %g\n", bestdelta, cutrhs, cutact);
-                     SCIP_CALL( addCut(scip, sepadata, sol, cutcoefs, cutrhs, cutislocal, ncuts) );
+                     SCIP_CALL( addCut(scip, sepadata, sol, cutcoefs, cutrhs, cutislocal, ncuts, cutoff) );
                   }
                }
             }
@@ -6495,11 +6502,13 @@ SCIP_RETCODE separateCuts(
    int nrows;
    SCIP_Real colrowratio;
    int i;
+   SCIP_Bool cutoff;
 
    assert(result != NULL);
    assert(*result == SCIP_DIDNOTRUN);
 
    ncuts = 0;
+   cutoff = FALSE;
 
    /* check for column/row ratio */
    nrows = SCIPgetNLPRows(scip);
@@ -6568,7 +6577,7 @@ SCIP_RETCODE separateCuts(
       *result = SCIP_DIDNOTFIND;
       sepadata->lastroundsuccess = FALSE;
 
-      for ( i = 0; i < nmcfnetworks; i++ )
+      for ( i = 0; i < nmcfnetworks && !cutoff; i++ )
       {
          SCIP_MCFNETWORK* mcfnetwork;
          NODEPARTITION* nodepartition;
@@ -6592,32 +6601,40 @@ SCIP_RETCODE separateCuts(
 
          /* enumerate single node cuts */
          if( sepadata->separatesinglenodecuts )
-            SCIP_CALL( generateClusterCuts(scip, sepadata, sol, mcfnetwork, NULL, &ncuts) );
+         {
+            SCIP_CALL( generateClusterCuts(scip, sepadata, sol, mcfnetwork, NULL, &ncuts, &cutoff) );
+         }
 
-
-         /* partition nodes into a small number of clusters */
-         SCIP_CALL( nodepartitionCreate(scip, mcfnetwork, &nodepartition,
-                                        sepadata->effortlevel == MCFEFFORTLEVEL_DEFAULT ? sepadata->nclusters : 2 * sepadata->nclusters) );
+         if( !cutoff )
+         {
+            /* partition nodes into a small number of clusters */
+            SCIP_CALL( nodepartitionCreate(scip, mcfnetwork, &nodepartition,
+                  sepadata->effortlevel == MCFEFFORTLEVEL_DEFAULT ? sepadata->nclusters : 2 * sepadata->nclusters) );
 #ifdef SCIP_DEBUG
-         nodepartitionPrint(nodepartition);
+            nodepartitionPrint(nodepartition);
 #endif
 
-         /* enumerate cuts between subsets of the clusters */
-         SCIP_CALL( generateClusterCuts(scip, sepadata, sol, mcfnetwork, nodepartition, &ncuts) );
+            /* enumerate cuts between subsets of the clusters */
+            SCIP_CALL( generateClusterCuts(scip, sepadata, sol, mcfnetwork, nodepartition, &ncuts, &cutoff) );
 
-         /* free node partition */
-         nodepartitionFree(scip, &nodepartition);
+            /* free node partition */
+            nodepartitionFree(scip, &nodepartition);
+         }
 
-         MCFdebugMessage("MCF network has %d nodes, %d arcs, %d commodities. Found %d MCF network cuts.\n",
-                         mcfnetwork->nnodes, mcfnetwork->narcs, mcfnetwork->ncommodities, ncuts);
+         MCFdebugMessage("MCF network has %d nodes, %d arcs, %d commodities. Found %d MCF network cuts and %d cutoffs.\n",
+                         mcfnetwork->nnodes, mcfnetwork->narcs, mcfnetwork->ncommodities, ncuts, cutoff);
 
          /* adjust result code */
-         if ( ncuts > 0 )
+         if( cutoff )
+         {
+            *result = SCIP_CUTOFF;
+            sepadata->lastroundsuccess = TRUE;
+         }
+         else if ( ncuts > 0 )
          {
             *result = SCIP_SEPARATED;
             sepadata->lastroundsuccess = TRUE;
          }
-
       }
    }
 

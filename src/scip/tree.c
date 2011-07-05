@@ -982,6 +982,9 @@ SCIP_RETCODE SCIPnodeFree(
    /* inform solution debugger, that the node has been freed */
    assert( stat->inrestart || SCIPdebugRemoveNode(blkmem, set, *node) ); /*lint !e506 !e774*/
 
+   /* check, if the node to be freed is the root node */
+   isroot = (SCIPnodeGetDepth(*node) == 0);
+
    /* free nodetype specific data, and release no longer needed LPI states */
    switch( SCIPnodeGetType(*node) )
    {
@@ -1032,6 +1035,14 @@ SCIP_RETCODE SCIPnodeFree(
       SCIP_CALL( pseudoforkFree(&((*node)->data.pseudofork), blkmem, set, lp) );
       break;
    case SCIP_NODETYPE_FORK:
+      
+      /** release special root LPI state capture which is used to keep the root LPI state over the whole solving
+       *  process 
+       */
+      if( isroot )
+      {
+         SCIP_CALL( SCIPnodeReleaseLPIState(*node, blkmem, lp) );
+      }
       SCIP_CALL( forkFree(&((*node)->data.fork), blkmem, set, lp) );
       break;
    case SCIP_NODETYPE_SUBROOT:
@@ -1044,9 +1055,6 @@ SCIP_RETCODE SCIPnodeFree(
       SCIPerrorMessage("unknown node type %d\n", SCIPnodeGetType(*node));
       return SCIP_INVALIDDATA;
    }
-
-   /* check, if the node to be freed is the root node */
-   isroot = (SCIPnodeGetDepth(*node) == 0);
 
    /* free common data */
    SCIP_CALL( SCIPconssetchgFree(&(*node)->conssetchg, blkmem, set) );
@@ -3471,6 +3479,12 @@ SCIP_RETCODE focusnodeToFork(
    tree->focusnode->nodetype = SCIP_NODETYPE_FORK; /*lint !e641*/
    tree->focusnode->data.fork = fork;
 
+   /* capture the LPI state of the root node to ensure that the LPI state of the root stays for the whole solving
+    * process
+    */
+   if( tree->focusnode == tree->root )
+      forkCaptureLPIState(fork, 1);
+   
    /* release LPI state */
    if( tree->focuslpstatefork != NULL )
    {

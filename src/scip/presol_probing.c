@@ -810,8 +810,8 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
 
    assert(scip != NULL);
    assert(probingvar != NULL);
-   assert(SCIPisGE(scip, leftub,  SCIPvarGetLbGlobal(probingvar))); /* left  branch should not be empty by default */
-   assert(SCIPisLE(scip, rightlb, SCIPvarGetUbGlobal(probingvar))); /* right branch should not be empty by default */
+   assert(SCIPisGE(scip, leftub,  SCIPvarGetLbLocal(probingvar))); /* left  branch should not be empty by default */
+   assert(SCIPisLE(scip, rightlb, SCIPvarGetUbLocal(probingvar))); /* right branch should not be empty by default */
    assert(vars != NULL || nvars == 0);
    assert(leftproplbs != NULL);
    assert(leftpropubs != NULL);
@@ -839,8 +839,8 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
    }
 
    /* check if probing variable was fixed in the branches */
-   fixedleft  = SCIPisEQ(scip, SCIPvarGetLbGlobal(probingvar), leftub);
-   fixedright = SCIPisEQ(scip, SCIPvarGetUbGlobal(probingvar), rightlb);
+   fixedleft  = SCIPisEQ(scip, SCIPvarGetLbLocal(probingvar), leftub);
+   fixedright = SCIPisEQ(scip, SCIPvarGetUbLocal(probingvar), rightlb);
 
    *cutoff = FALSE;
 
@@ -849,8 +849,9 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
       SCIP_Real newlb;
       SCIP_Real newub;
 
-      /* @todo why not also look at probingvar? */
-      if( vars[j] == probingvar )
+      /* if probingvar is binary, then there is nothing we could deduce here (variable should be fixed in both branches)
+       * if it is not binary, we want to see if we found bound tightenings, even though it seems quite unlikely */
+      if( vars[j] == probingvar && SCIPvarIsBinary(probingvar) )
          continue;
 
       /* new bounds of the variable is the union of the propagated bounds of the left and right case */
@@ -858,14 +859,28 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
       newub = MAX(leftpropubs[j], rightpropubs[j]);
 
       /* check for fixed variables */
-      if( SCIPisFeasEQ(scip, newlb, newub) )
+      if( SCIPisEQ(scip, newlb, newub) )
       {
          SCIP_Real fixval;
          SCIP_Bool fixed;
 
          /* in both probings, variable j is deduced to the same value: fix variable to this value */
          fixval = SCIPselectSimpleValue(newlb - SCIPepsilon(scip), newub + SCIPepsilon(scip), MAXDNOM);
-         SCIP_CALL( SCIPfixVar(scip, vars[j], fixval, cutoff, &fixed) );
+         if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) == 0 )
+         {
+            SCIP_CALL( SCIPfixVar(scip, vars[j], fixval, cutoff, &fixed) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPtightenVarLb(scip, vars[j], fixed, TRUE, cutoff, &fixed) );
+            if( !*cutoff )
+            {
+               SCIP_Bool tightened;
+
+               SCIP_CALL( SCIPtightenVarUb(scip, vars[j], fixval, TRUE, cutoff, &tightened) );
+               fixed &= tightened;
+            }
+         }
          if( fixed )
          {
             SCIPdebugMessage("fixed variable <%s> to %g due to probing on <%s> with nlocks=(%d/%d)\n",
@@ -882,8 +897,8 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
          SCIP_Real oldub;
          SCIP_Bool tightened;
 
-         oldlb = SCIPvarGetLbGlobal(vars[j]);
-         oldub = SCIPvarGetUbGlobal(vars[j]);
+         oldlb = SCIPvarGetLbLocal(vars[j]);
+         oldub = SCIPvarGetUbLocal(vars[j]);
          if( SCIPisLbBetter(scip, newlb, oldlb, oldub) )
          {
             /* in both probings, variable j is deduced to be at least newlb: tighten lower bound */
@@ -912,9 +927,15 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
             break;
       }
 
+      /* below we add aggregations and implications between probingvar and vars[j],
+       * we don't want this if both variables are the same
+       */
+      if( vars[j] == probingvar )
+         continue;
+
       /* check for aggregations and implications */
-      if( fixedleft  && SCIPisEQ(scip, leftproplbs[j],  leftpropubs[j]) &&
-          fixedright && SCIPisEQ(scip, rightproplbs[j], rightpropubs[j]) )
+      if( fixedleft && fixedright &&
+          SCIPisEQ(scip, leftproplbs[j],  leftpropubs[j]) && SCIPisEQ(scip, rightproplbs[j], rightpropubs[j]) )
       {
          /* vars[j] is fixed whenever probingvar is fixed, i.e.,
           *   vars[j] = leftproplbs[j] + (rightproplbs[j] - leftproplbs[j]) / (rightlb - leftub) * (probingvar - leftub)
@@ -928,26 +949,51 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
           * case leftproplbs[j] = 1, rightproblbs[j] = 0, i.e., vars[j] and probingvar are fixed to oppositve values
           *    -> aggregation is 1 * vars[j] + 1 * probingvar = 1 * 1 - 0 * 0 = 0 -> correct
           */
-         SCIP_Bool aggregated;
-         SCIP_Bool redundant;
-
-         SCIP_CALL( SCIPaggregateVars(scip, vars[j], probingvar,
-            rightlb - leftub, -(rightproplbs[j] - leftproplbs[j]), leftproplbs[j] * rightlb - rightproplbs[j] * leftub,
-            cutoff, &redundant, &aggregated) );
-
-         if( aggregated )
+         if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
          {
-            SCIPdebugMessage("aggregated variables %g<%s> - %g<%s> == %g, nlocks=(%d/%d)\n",
-               rightlb - leftub, SCIPvarGetName(vars[j]),
-               rightproplbs[j] - leftproplbs[j], SCIPvarGetName(probingvar),
-               leftproplbs[j] * rightlb - rightproplbs[j] * leftub,
-               SCIPvarGetNLocksDown(vars[j]), SCIPvarGetNLocksUp(probingvar));
-            (*naggrvars)++;
+            SCIP_Bool aggregated;
+            SCIP_Bool redundant;
+
+            SCIP_CALL( SCIPaggregateVars(scip, vars[j], probingvar,
+               rightlb - leftub, -(rightproplbs[j] - leftproplbs[j]), leftproplbs[j] * rightlb - rightproplbs[j] * leftub,
+               cutoff, &redundant, &aggregated) );
+
+            if( aggregated )
+            {
+               SCIPdebugMessage("aggregated variables %g<%s> - %g<%s> == %g, nlocks=(%d/%d)\n",
+                  rightlb - leftub, SCIPvarGetName(vars[j]),
+                  rightproplbs[j] - leftproplbs[j], SCIPvarGetName(probingvar),
+                  leftproplbs[j] * rightlb - rightproplbs[j] * leftub,
+                  SCIPvarGetNLocksDown(vars[j]), SCIPvarGetNLocksUp(probingvar));
+               (*naggrvars)++;
+            }
          }
+         else if( (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) == 0) &&
+                  (SCIPvarGetType(probingvar) == SCIP_VARTYPE_BINARY || SCIPvarGetType(probingvar) == SCIP_VARTYPE_INTEGER) )
+         {
+            /* if we are not in presolving, then we cannot do aggregations
+             * but if we are at the root, then we can use variable bounds to code the same equality
+             * vars[j] == ((leftproplbs[j] * rightlb - rightproplbs[j] * leftub) + (rightproplbs[j] - leftproplbs[j]) * probingvar) / (rightlb - leftub)
+             */
+            int nboundchanges;
+
+            assert(!SCIPisEQ(scip, leftub, rightlb));
+
+            SCIP_CALL( SCIPaddVarVlb(scip, vars[j], probingvar, (rightproplbs[j] - leftproplbs[j]) / (rightlb - leftub), (leftproplbs[j] * rightlb - rightproplbs[j] * leftub) / (rightlb - leftub), cutoff, &nboundchanges) );
+            (*nchgbds) += nboundchanges;
+            if( !*cutoff )
+            {
+               SCIP_CALL( SCIPaddVarVub(scip, vars[j], probingvar, (rightproplbs[j] - leftproplbs[j]) / (rightlb - leftub), (leftproplbs[j] * rightlb - rightproplbs[j] * leftub) / (rightlb - leftub), cutoff, &nboundchanges) );
+               (*nchgbds) += nboundchanges;
+            }
+            (*nimplications)++;
+         }
+         /* if probingvar is continuous and we are in solving stage, then we do nothing, but it's unlikely that we get here (fixedleft && fixedright) with a continuous variable */
       }
-      else if( SCIPvarGetType(probingvar) == SCIP_VARTYPE_BINARY )
+      else if( SCIPvarGetType(probingvar) == SCIP_VARTYPE_BINARY &&
+         (SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING || (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) == 0)) )
       {
-         /* implications can be added only for binary variables */
+         /* implications are global information and can be added for binary variables only */
          int nboundchanges;
 
          /* since probing var is binary variable, probing should have fixed variable in both branches,
