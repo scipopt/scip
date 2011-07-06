@@ -118,8 +118,8 @@ SCIP_RETCODE getInputString(
       }
       
       /* read next line */
-      cipinput->endfile = (SCIPfgets(&(cipinput->strbuf[pos]), cipinput->readingsize, cipinput->file) == NULL);
-      
+      cipinput->endfile = (SCIPfgets(&(cipinput->strbuf[pos]), cipinput->len - pos, cipinput->file) == NULL);
+
       if( cipinput->endfile )
          return SCIP_OKAY;
 

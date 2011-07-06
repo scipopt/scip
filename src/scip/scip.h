@@ -2399,6 +2399,23 @@ SCIP_RETCODE SCIPwriteVarsLinearsum(
    SCIP_Bool             type                /**< should the variable type be also posted */
    );
 
+/** print the given monomials as polynomial in the following form
+ *  c1 \<x11\>^e11 \<x12\>^e12 ... \<x1n\>^e1n + c2 \<x21\>^e21 \<x22\>^e22 ... + ... + cn \<xn1\>^en1 ...
+ *
+ *  This string can be parsed by the method SCIPparseVarsPolynomial().
+ */
+extern
+SCIP_RETCODE SCIPwriteVarsPolynomial(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file, or NULL for stdout */
+   SCIP_VAR***           monomialvars,       /**< arrays with variables for each monomial */
+   SCIP_Real**           monomialexps,       /**< arrays with variable exponents, or NULL if always 1.0 */
+   SCIP_Real*            monomialcoefs,      /**< array with monomial coefficients */
+   int*                  monomialnvars,      /**< array with number of variables for each monomial */
+   int                   nmonomials,         /**< number of monomials */
+   SCIP_Bool             type                /**< should the variable type be also posted */
+   );
+
 /** parses variable information (in cip format) out of a string; if the parsing process was successful a variable is
  *  created and captured; if variable is of integral type, fractional bounds are automatically rounded; an integer
  *  variable with bounds zero and one is automatically converted into a binary variable
@@ -2454,7 +2471,7 @@ SCIP_RETCODE SCIPparseVarsList(
    SCIP_Bool*            success             /**< pointer to store the whether the parsing was successfully or not */
    );
 
-/** parse the given string as linear sum of variables and coefficients (c1 \<x1\> + c2 \<x2\> + ... + cn \<xn\>) 
+/** parse the given string as linear sum of variables and coefficients (c1 \<x1\> + c2 \<x2\> + ... + cn \<xn\>)
  *  (see SCIPwriteVarsLinearsum() ); if it was successful, the pointer success is set to TRUE
  *
  *  @note the pointer success in only set to FALSE in the case that a variable with a parsed variable name does not exist
@@ -2468,6 +2485,7 @@ SCIP_RETCODE SCIPparseVarsLinearsum(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           str,                /**< string to parse */
    int                   pos,                /**< position to start parsing the string */
+   char                  endchar,            /**< character where to stop parsing, or 0 */
    SCIP_VAR**            vars,               /**< array to store the parsed variables */
    SCIP_Real*            vals,               /**< array to store the parsed coefficients */
    int*                  nvars,              /**< pointer to store number of parsed variables */
@@ -2475,6 +2493,44 @@ SCIP_RETCODE SCIPparseVarsLinearsum(
    int*                  requiredsize,       /**< pointer to store the required array size for the active variables */
    int*                  endpos,             /**< pointer to store where the parsing ended */
    SCIP_Bool*            success             /**< pointer to store the whether the parsing was successfully or not */
+   );
+
+/** parse the given string as polynomial of variables and coefficients
+ * (c1 \<x11\>^e11 \<x12\>^e12 ... \<x1n\>^e1n + c2 \<x21\>^e21 \<x22\>^e22 ... + ... + cn \<xn1\>^en1 ...)
+ * (see SCIPwriteVarsPolynomial()); if it was successful, the pointer success is set to TRUE
+ *
+ * The user has to call SCIPfreeParseVarsPolynomialData(scip, monomialvars, monomialexps, monomialcoefs, monomialnvars, *nmonomials)
+ * short after SCIPparseVarsPolynomial to free all the allocated memory again.
+ * Do not keep the arrays created by SCIPparseVarsPolynomial around, since they use buffer memory that is intended for short term use only.
+ *
+ * Parsing is stopped at the end of string (indicated by the \0-character), or when the character stored in endchar is found (outside of variable names and numbers).
+ * Set endchar to \0 if you want parsing until the end of str.
+ * A space character is not allowed for endchar.
+ */
+extern
+SCIP_RETCODE SCIPparseVarsPolynomial(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           str,                /**< string to parse */
+   int                   pos,                /**< position to start parsing the string */
+   char                  endchar,            /**< character where to stop parsing */
+   SCIP_VAR****          monomialvars,       /**< pointer to store arrays with variables for each monomial */
+   SCIP_Real***          monomialexps,       /**< pointer to store arrays with variable exponents */
+   SCIP_Real**           monomialcoefs,      /**< pointer to store array with monomial coefficients */
+   int**                 monomialnvars,      /**< pointer to store array with number of variables for each monomial */
+   int*                  nmonomials,         /**< pointer to store number of parsed monomials */
+   int*                  endpos,             /**< pointer to store where the parsing ended */
+   SCIP_Bool*            success             /**< pointer to store the whether the parsing was successfully or not */
+   );
+
+/** frees memory allocated when parsing a polynomial from a string */
+extern
+void SCIPfreeParseVarsPolynomialData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR****          monomialvars,       /**< pointer to store arrays with variables for each monomial */
+   SCIP_Real***          monomialexps,       /**< pointer to store arrays with variable exponents */
+   SCIP_Real**           monomialcoefs,      /**< pointer to store array with monomial coefficients */
+   int**                 monomialnvars,      /**< pointer to store array with number of variables for each monomial */
+   int                   nmonomials          /**< pointer to store number of parsed monomials */
    );
 
 /** increases usage counter of variable */
@@ -4928,6 +4984,13 @@ int SCIPgetNNLPVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** computes for each variables the number of NLP rows in which the variable appears in a nonlinear var */
+extern
+SCIP_RETCODE SCIPgetNLPVarsNonlinearity(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  nlcount             /**< an array of length at least SCIPnlpGetNVars() to store nonlinearity counts of variables */
+   );
+
 /** gets current NLP nonlinear rows along with the current number of NLP nonlinear rows */
 extern
 SCIP_RETCODE SCIPgetNLPNlRowsData(
@@ -7105,7 +7168,7 @@ int SCIPgetNEnabledConss(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets average dual bound of all unprocessed nodes */
+/** gets average dual bound of all unprocessed nodes for original problem */
 extern
 SCIP_Real SCIPgetAvgDualbound(
    SCIP*                 scip                /**< SCIP data structure */
@@ -7117,7 +7180,7 @@ SCIP_Real SCIPgetAvgLowerbound(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets global dual bound */
+/** gets global dual bound for original problem */
 extern
 SCIP_Real SCIPgetDualbound(
    SCIP*                 scip                /**< SCIP data structure */
@@ -7129,7 +7192,7 @@ SCIP_Real SCIPgetLowerbound(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets dual bound of the root node */
+/** gets dual bound of the root node for the original problem */
 extern
 SCIP_Real SCIPgetDualboundRoot(
    SCIP*                 scip                /**< SCIP data structure */
@@ -7141,7 +7204,7 @@ SCIP_Real SCIPgetLowerboundRoot(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets global primal bound (objective value of best solution or user objective limit) */
+/** gets global primal bound (objective value of best solution or user objective limit) for the original problem */
 extern
 SCIP_Real SCIPgetPrimalbound(
    SCIP*                 scip                /**< SCIP data structure */

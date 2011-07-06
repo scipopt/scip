@@ -422,6 +422,10 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
    int oldnaggrvars;
    int oldnchgbds;
    int oldnimplications;
+   int localnfixedvars;
+   int localnaggrvars;
+   int localnchgbds;
+   int localnimplications;
    int i;
    SCIP_Bool delay;
    SCIP_Bool cutoff;
@@ -530,7 +534,6 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
       SCIP_Bool localcutoff;
       SCIP_Bool probingzero;
       SCIP_Bool probingone;
-      int j;
 
       /* check whether probing should be aborted */
       if( SCIPisStopped(scip) || presoldata->nuseless >= maxuseless
@@ -661,232 +664,36 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
          }
       }
 
-      /* not not have to check deductions if only one probing direction has been checked */
+      /* not have to check deductions if only one probing direction has been checked */
       if ( ! probingzero || ! probingone )
          continue;
 
       /* analyze probing deductions */
-      for( j = 0; j < nvars && !cutoff; ++j )
+      localnfixedvars    = 0;
+      localnaggrvars     = 0;
+      localnimplications = 0;
+      localnchgbds       = 0;
+      SCIP_CALL( SCIPanalyzeDeductionsProbing(scip, vars[i], 0.0, 1.0,
+         nvars, vars, zeroimpllbs, zeroimplubs, zeroproplbs, zeropropubs, oneimpllbs, oneimplubs, oneproplbs, onepropubs,
+         &localnfixedvars, &localnaggrvars, &localnimplications, &localnchgbds, &cutoff) );
+
+      *nfixedvars += localnfixedvars;
+      *naggrvars  += localnaggrvars;
+      *nchgbds    += localnchgbds;
+      presoldata->nfixings      += localnfixedvars;
+      presoldata->naggregations += localnaggrvars;
+      presoldata->nbdchgs       += localnchgbds;
+      presoldata->nimplications += localnimplications;
+
+      if( localnfixedvars > 0 || localnaggrvars > 0 )
       {
-         SCIP_Real newlb;
-         SCIP_Real newub;
-         SCIP_Bool fixed;
-
-         if( j == i )
-            continue;
-
-         /* new bounds of the variable is the union of the propagated bounds of the zero and one case */
-         newlb = MIN(zeroproplbs[j], oneproplbs[j]);
-         newub = MAX(zeropropubs[j], onepropubs[j]);
-
-         /* check for fixed variables */
-         if( SCIPisFeasEQ(scip, newlb, newub) )
-         {
-            SCIP_Real fixval;
-
-            /* in both probings, variable j is deduced to 0: fix variable to 0 */
-            fixval = SCIPselectSimpleValue(newlb - SCIPepsilon(scip), newub + SCIPepsilon(scip), MAXDNOM);
-            SCIP_CALL( SCIPfixVar(scip, vars[j], fixval, &cutoff, &fixed) );
-            if( fixed )
-            {
-               SCIPdebugMessage("fixed variable <%s> to %g due to probing on <%s> with nlocks=(%d/%d)\n",
-                  SCIPvarGetName(vars[j]), fixval, 
-                  SCIPvarGetName(vars[i]), SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
-               (*nfixedvars)++;
-               presoldata->nfixings++;
-               presoldata->nuseless = 0;
-               presoldata->ntotaluseless = 0;
-            }
-            continue;
-         }
-
-         if( j < nbinvars )
-         {
-            SCIP_Bool redundant;
-            SCIP_Bool aggregated;
-            int nboundchanges;
-
-            assert(SCIPvarGetType(vars[j]) == SCIP_VARTYPE_BINARY);
-
-            /* check for aggregations and implications on binary variables */
-            if( zeropropubs[j] < 0.5 && oneproplbs[j] > 0.5 )
-            {
-               /* variable j is always deduced to the same value as probing variable i:
-                * both variables can be aggregated with x_i - x_j == 0
-                */
-               SCIP_CALL( SCIPaggregateVars(scip, vars[i], vars[j], 1.0, -1.0, 0.0, &cutoff, &redundant, &aggregated) );
-               if( aggregated )
-               {
-                  SCIPdebugMessage("aggregated variables <%s> == <%s>, nlocks=(%d/%d)\n",
-                     SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), 
-                     SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
-                  (*naggrvars)++;
-                  presoldata->naggregations++;
-                  presoldata->nuseless = 0;
-                  presoldata->ntotaluseless = 0;
-               }
-            }
-            else if( zeroproplbs[j] > 0.5 && onepropubs[j] < 0.5 )
-            {
-               /* variable j is always deduced to the opposite value of probing variable i:
-                * both variables can be aggregated with x_i + x_j == 1
-                */
-               SCIP_CALL( SCIPaggregateVars(scip, vars[i], vars[j], 1.0, 1.0, 1.0, &cutoff, &redundant, &aggregated) );
-               if( aggregated )
-               {
-                  SCIPdebugMessage("aggregated variables <%s> == 1 - <%s>, nlocks=(%d/%d)\n",
-                     SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]),
-                     SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
-                  (*naggrvars)++;
-                  presoldata->naggregations++;
-                  presoldata->nuseless = 0;
-                  presoldata->ntotaluseless = 0;
-               }
-            }
-            else if( zeropropubs[j] < 0.5 && zeroimplubs[j] > 0.5 ) /* ignore already existing implications */
-            {
-               /* insert implication: x_i == 0  =>  x_j == 0 */
-               /*SCIPdebugMessage("found implication <%s> == 0  =>  <%s> == 0\n", 
-                 SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]));*/
-               SCIP_CALL( SCIPaddVarImplication(scip, vars[i], FALSE, vars[j], SCIP_BOUNDTYPE_UPPER, 0.0,
-                     &cutoff, &nboundchanges) );
-               presoldata->nimplications++;
-               (*nchgbds) += nboundchanges;
-               presoldata->nbdchgs += nboundchanges;
-               presoldata->ntotaluseless = 0;
-            }
-            else if( zeroproplbs[j] > 0.5 && zeroimpllbs[j] < 0.5 ) /* ignore already existing implications */
-            {
-               /* insert implication: x_i == 0  =>  x_j == 1 */
-               /*SCIPdebugMessage("found implication <%s> == 0  =>  <%s> == 1\n", 
-                 SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]));*/
-               SCIP_CALL( SCIPaddVarImplication(scip, vars[i], FALSE, vars[j], SCIP_BOUNDTYPE_LOWER, 1.0,
-                     &cutoff, &nboundchanges) );
-               presoldata->nimplications++;
-               (*nchgbds) += nboundchanges;
-               presoldata->nbdchgs += nboundchanges;
-               presoldata->ntotaluseless = 0;
-            }
-            else if( onepropubs[j] < 0.5 && oneimplubs[j] > 0.5 ) /* ignore already existing implications */
-            {
-               /* insert implication: x_i == 1  =>  x_j == 0 */
-               /*SCIPdebugMessage("found implication <%s> == 1  =>  <%s> == 0\n", 
-                 SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]));*/
-               SCIP_CALL( SCIPaddVarImplication(scip, vars[i], TRUE, vars[j], SCIP_BOUNDTYPE_UPPER, 0.0,
-                     &cutoff, &nboundchanges) );
-               presoldata->nimplications++;
-               (*nchgbds) += nboundchanges;
-               presoldata->nbdchgs += nboundchanges;
-               presoldata->ntotaluseless = 0;
-            }
-            else if( oneproplbs[j] > 0.5 && oneimpllbs[j] < 0.5 ) /* ignore already existing implications */
-            {
-               /* insert implication: x_i == 1  =>  x_j == 1 */
-               /*SCIPdebugMessage("found implication <%s> == 1  =>  <%s> == 1\n", 
-                 SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]));*/
-               SCIP_CALL( SCIPaddVarImplication(scip, vars[i], TRUE, vars[j], SCIP_BOUNDTYPE_LOWER, 1.0, 
-                     &cutoff, &nboundchanges) );
-               presoldata->nimplications++;
-               (*nchgbds) += nboundchanges;
-               presoldata->nbdchgs += nboundchanges;
-               presoldata->ntotaluseless = 0;
-            }
-         }
-         else
-         {
-            SCIP_Real oldlb;
-            SCIP_Real oldub;
-            SCIP_Bool tightened;
-            int nboundchanges;
-
-            assert(SCIPvarGetType(vars[j]) != SCIP_VARTYPE_BINARY);
-
-            /* check for bound tightenings */
-            oldlb = SCIPvarGetLbGlobal(vars[j]);
-            oldub = SCIPvarGetUbGlobal(vars[j]);
-            if( SCIPisLbBetter(scip, newlb, oldlb, oldub) )
-            {
-               /* in both probings, variable j is deduced to be at least newlb: tighten lower bound */
-               SCIP_CALL( SCIPtightenVarLb(scip, vars[j], newlb, FALSE, &cutoff, &tightened) );
-               if( tightened )
-               {
-                  SCIPdebugMessage("tightened lower bound of variable <%s>[%g,%g] to %g due to probing on <%s> with nlocks=(%d/%d)\n",
-                     SCIPvarGetName(vars[j]), oldlb, oldub, newlb,
-                     SCIPvarGetName(vars[i]), SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
-                  (*nchgbds)++;
-                  presoldata->nbdchgs++;
-                  /*presoldata->nuseless = 0;*/
-                  presoldata->ntotaluseless = 0;
-               }
-            }
-            if( SCIPisUbBetter(scip, newub, oldlb, oldub) && !cutoff )
-            {
-               /* in both probings, variable j is deduced to be at most newub: tighten upper bound */
-               SCIP_CALL( SCIPtightenVarUb(scip, vars[j], newub, FALSE, &cutoff, &tightened) );
-               if( tightened )
-               {
-                  SCIPdebugMessage("tightened upper bound of variable <%s>[%g,%g] to %g due to probing on <%s> with nlocks=(%d/%d)\n",
-                     SCIPvarGetName(vars[j]), oldlb, oldub, newub,
-                     SCIPvarGetName(vars[i]), SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
-                  (*nchgbds)++;
-                  presoldata->nbdchgs++;
-                  /*presoldata->nuseless = 0;*/
-                  presoldata->ntotaluseless = 0;
-               }
-            }
-
-            /* check for implications (only store implications with bounds tightened at least by 0.5) */
-            if( zeropropubs[j] < newub - 0.5 && zeropropubs[j] < zeroimplubs[j] && !cutoff )
-            {
-               /* insert implication: x_i == 0  =>  x_j <= zeropropubs[j] */
-               /*SCIPdebugMessage("found implication <%s> == 0  =>  <%s>[%g,%g] <= %g\n", 
-                 SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, zeropropubs[j]);*/
-               SCIP_CALL( SCIPaddVarImplication(scip, vars[i], FALSE, vars[j], SCIP_BOUNDTYPE_UPPER, zeropropubs[j],
-                     &cutoff, &nboundchanges) );
-               presoldata->nimplications++;
-               (*nchgbds) += nboundchanges;
-               presoldata->nbdchgs += nboundchanges;
-               presoldata->ntotaluseless = 0;
-            }
-            if( zeroproplbs[j] > newlb + 0.5 && zeroproplbs[j] > zeroimpllbs[j] && !cutoff )
-            {
-               /* insert implication: x_i == 0  =>  x_j >= zeroproplbs[j] */
-               SCIPdebugMessage("found implication <%s> == 0  =>  <%s>[%g,%g] >= %g\n", 
-                 SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, zeroproplbs[j]);
-               SCIP_CALL( SCIPaddVarImplication(scip, vars[i], FALSE, vars[j], SCIP_BOUNDTYPE_LOWER, zeroproplbs[j],
-                     &cutoff, &nboundchanges) );
-               presoldata->nimplications++;
-               (*nchgbds) += nboundchanges;
-               presoldata->nbdchgs += nboundchanges;
-               presoldata->ntotaluseless = 0;
-            }
-            if( onepropubs[j] < newub - 0.5 && onepropubs[j] < oneimplubs[j] && !cutoff )
-            {
-               /* insert implication: x_i == 1  =>  x_j <= onepropubs[j] */
-               SCIPdebugMessage("found implication <%s> == 1  =>  <%s>[%g,%g] <= %g\n", 
-                 SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, onepropubs[j]);
-               SCIP_CALL( SCIPaddVarImplication(scip, vars[i], TRUE, vars[j], SCIP_BOUNDTYPE_UPPER, onepropubs[j],
-                     &cutoff, &nboundchanges) );
-               presoldata->nimplications++;
-               (*nchgbds) += nboundchanges;
-               presoldata->nbdchgs += nboundchanges;
-               presoldata->ntotaluseless = 0;
-            }
-            if( oneproplbs[j] > newlb + 0.5 && oneproplbs[j] > oneimpllbs[j] && !cutoff )
-            {
-               /* insert implication: x_i == 1  =>  x_j >= oneproplbs[j] */
-               SCIPdebugMessage("found implication <%s> == 1  =>  <%s>[%g,%g] >= %g\n", 
-                 SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, oneproplbs[j]);
-               SCIP_CALL( SCIPaddVarImplication(scip, vars[i], TRUE, vars[j], SCIP_BOUNDTYPE_LOWER, oneproplbs[j],
-                     &cutoff, &nboundchanges) );
-               presoldata->nimplications++;
-               (*nchgbds) += nboundchanges;
-               presoldata->nbdchgs += nboundchanges;
-               presoldata->ntotaluseless = 0;
-            }
-         }
+         presoldata->nuseless = 0;
+         presoldata->ntotaluseless = 0;
       }
+      if( localnimplications > 0 || localnchgbds > 0 )
+         presoldata->ntotaluseless = 0;
    }
+
    presoldata->startidx = i;
 
    /* free temporary memory */
@@ -962,6 +769,341 @@ SCIP_RETCODE SCIPincludePresolProbing(
          "presolving/probing/maxsumuseless",
          "maximal number of probings without fixings, until probing is aborted (0: don't abort)",
          &presoldata->maxsumuseless, TRUE, DEFAULT_MAXSUMUSELESS, 0, INT_MAX, NULL, NULL) );
+
+   return SCIP_OKAY;
+}
+
+/** analyses boundchanges resulting from probing on a variable and performs deduced fixations, aggregations, and domain tightenings
+ * Given a variable probingvar with domain [l,u] and bound tightening results from reducing the domain
+ * once to [l,leftub] and once to [rightlb,u], the method computes and applies resulting variable fixations, aggregations,
+ * implications, and bound changes. Variable probingvar does not need to be binary.
+ * The whole domain of probingvar need to be covered by the left and right branches, i.e.,
+ * we assume leftub >= rightlb for continuous variables or floor(leftub) >= ceil(rightlb)-1 for discrete variables.
+ * Bounds after applying implications and cliques do not need to be provided, but if they are omitted and probingvar is a binary variable,
+ * then already existing implications may be added.
+ */
+SCIP_RETCODE SCIPanalyzeDeductionsProbing(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             probingvar,         /**< the probing variable */
+   SCIP_Real             leftub,             /**< upper bound of probing variable in left branch */
+   SCIP_Real             rightlb,            /**< lower bound of probing variable in right branch */
+   int                   nvars,              /**< number of variables which bound changes should be analyzed */
+   SCIP_VAR**            vars,               /**< variables which bound changes should be analyzed */
+   SCIP_Real*            leftimpllbs,        /**< lower bounds after applying implications and cliques in left branch, or NULL */
+   SCIP_Real*            leftimplubs,        /**< upper bounds after applying implications and cliques in left branch, or NULL */
+   SCIP_Real*            leftproplbs,        /**< lower bounds after applying domain propagation in left branch */
+   SCIP_Real*            leftpropubs,        /**< upper bounds after applying domain propagation in left branch */
+   SCIP_Real*            rightimpllbs,       /**< lower bounds after applying implications and cliques in right branch, or NULL */
+   SCIP_Real*            rightimplubs,       /**< upper bounds after applying implications and cliques in right branch, or NULL */
+   SCIP_Real*            rightproplbs,       /**< lower bounds after applying domain propagation in right branch */
+   SCIP_Real*            rightpropubs,       /**< upper bounds after applying domain propagation in right branch */
+   int*                  nfixedvars,         /**< pointer to counter which is increased by the number of deduced variable fixations */
+   int*                  naggrvars,          /**< pointer to counter which is increased by the number of deduced variable aggregations */
+   int*                  nimplications,      /**< pointer to counter which is increased by the number of deduced implications */
+   int*                  nchgbds,            /**< pointer to counter which is increased by the number of deduced bound tightenings */
+   SCIP_Bool*            cutoff              /**< buffer to store whether a cutoff is detected */
+   )
+{
+   SCIP_Bool fixedleft;
+   SCIP_Bool fixedright;
+   int j;
+
+   assert(scip != NULL);
+   assert(probingvar != NULL);
+   assert(SCIPisGE(scip, leftub,  SCIPvarGetLbLocal(probingvar))); /* left  branch should not be empty by default */
+   assert(SCIPisLE(scip, rightlb, SCIPvarGetUbLocal(probingvar))); /* right branch should not be empty by default */
+   assert(vars != NULL || nvars == 0);
+   assert(leftproplbs != NULL);
+   assert(leftpropubs != NULL);
+   assert(rightproplbs != NULL);
+   assert(rightpropubs != NULL);
+   assert(nfixedvars != NULL);
+   assert(naggrvars != NULL);
+   assert(nimplications != NULL);
+   assert(nchgbds != NULL);
+   assert(cutoff != NULL);
+
+   /* @todo the asserts below could be relaxed by taking domain holes into account */
+   if( SCIPvarGetType(probingvar) != SCIP_VARTYPE_CONTINUOUS )
+   {
+      /* adjust bounds to actually used ones */
+      leftub  = SCIPfloor(scip, leftub);
+      rightlb = SCIPceil(scip, rightlb);
+      /* assert dichotomy in case of discrete var: leftub >= rightlb - 1.0 */
+      assert(SCIPisGE(scip, leftub, rightlb - 1.0));
+   }
+   else
+   {
+      /* assert dichotomy in case of continuous var: leftub >= rightlb */
+      assert(SCIPisGE(scip, leftub, rightlb));
+   }
+
+   /* check if probing variable was fixed in the branches */
+   fixedleft  = SCIPisEQ(scip, SCIPvarGetLbLocal(probingvar), leftub);
+   fixedright = SCIPisEQ(scip, SCIPvarGetUbLocal(probingvar), rightlb);
+
+   *cutoff = FALSE;
+
+   for( j = 0; j < nvars && !*cutoff; ++j )
+   {
+      SCIP_Real newlb;
+      SCIP_Real newub;
+
+      /* if probingvar is binary, then there is nothing we could deduce here (variable should be fixed in both branches)
+       * if it is not binary, we want to see if we found bound tightenings, even though it seems quite unlikely */
+      if( vars[j] == probingvar && SCIPvarIsBinary(probingvar) )
+         continue;
+
+      /* new bounds of the variable is the union of the propagated bounds of the left and right case */
+      newlb = MIN(leftproplbs[j], rightproplbs[j]);
+      newub = MAX(leftpropubs[j], rightpropubs[j]);
+
+      /* check for fixed variables */
+      if( SCIPisEQ(scip, newlb, newub) )
+      {
+         SCIP_Real fixval;
+         SCIP_Bool fixed;
+
+         /* in both probings, variable j is deduced to the same value: fix variable to this value */
+         fixval = SCIPselectSimpleValue(newlb - SCIPepsilon(scip), newub + SCIPepsilon(scip), MAXDNOM);
+         if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) == 0 )
+         {
+            SCIP_CALL( SCIPfixVar(scip, vars[j], fixval, cutoff, &fixed) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPtightenVarLb(scip, vars[j], fixed, TRUE, cutoff, &fixed) );
+            if( !*cutoff )
+            {
+               SCIP_Bool tightened;
+
+               SCIP_CALL( SCIPtightenVarUb(scip, vars[j], fixval, TRUE, cutoff, &tightened) );
+               fixed &= tightened;
+            }
+         }
+         if( fixed )
+         {
+            SCIPdebugMessage("fixed variable <%s> to %g due to probing on <%s> with nlocks=(%d/%d)\n",
+               SCIPvarGetName(vars[j]), fixval,
+               SCIPvarGetName(probingvar), SCIPvarGetNLocksDown(probingvar), SCIPvarGetNLocksUp(probingvar));
+            (*nfixedvars)++;
+         }
+         continue;
+      }
+      else
+      {
+         /* check for bound tightenings */
+         SCIP_Real oldlb;
+         SCIP_Real oldub;
+         SCIP_Bool tightened;
+
+         oldlb = SCIPvarGetLbLocal(vars[j]);
+         oldub = SCIPvarGetUbLocal(vars[j]);
+         if( SCIPisLbBetter(scip, newlb, oldlb, oldub) )
+         {
+            /* in both probings, variable j is deduced to be at least newlb: tighten lower bound */
+            SCIP_CALL( SCIPtightenVarLb(scip, vars[j], newlb, FALSE, cutoff, &tightened) );
+            if( tightened )
+            {
+               SCIPdebugMessage("tightened lower bound of variable <%s>[%g,%g] to %g due to probing on <%s> with nlocks=(%d/%d)\n",
+                  SCIPvarGetName(vars[j]), oldlb, oldub, newlb,
+                  SCIPvarGetName(probingvar), SCIPvarGetNLocksDown(probingvar), SCIPvarGetNLocksUp(probingvar));
+               (*nchgbds)++;
+            }
+         }
+         if( SCIPisUbBetter(scip, newub, oldlb, oldub) && !*cutoff )
+         {
+            /* in both probings, variable j is deduced to be at most newub: tighten upper bound */
+            SCIP_CALL( SCIPtightenVarUb(scip, vars[j], newub, FALSE, cutoff, &tightened) );
+            if( tightened )
+            {
+               SCIPdebugMessage("tightened upper bound of variable <%s>[%g,%g] to %g due to probing on <%s> with nlocks=(%d/%d)\n",
+                  SCIPvarGetName(vars[j]), oldlb, oldub, newub,
+                  SCIPvarGetName(probingvar), SCIPvarGetNLocksDown(probingvar), SCIPvarGetNLocksUp(probingvar));
+               (*nchgbds)++;
+            }
+         }
+         if( *cutoff )
+            break;
+      }
+
+      /* below we add aggregations and implications between probingvar and vars[j],
+       * we don't want this if both variables are the same
+       */
+      if( vars[j] == probingvar )
+         continue;
+
+      /* check for aggregations and implications */
+      if( fixedleft && fixedright &&
+          SCIPisEQ(scip, leftproplbs[j],  leftpropubs[j]) && SCIPisEQ(scip, rightproplbs[j], rightpropubs[j]) )
+      {
+         /* vars[j] is fixed whenever probingvar is fixed, i.e.,
+          *   vars[j] = leftproplbs[j] + (rightproplbs[j] - leftproplbs[j]) / (rightlb - leftub) * (probingvar - leftub)
+          * -> both variables can be aggregated:
+          *    (rightlb - leftub) * (vars[j] - leftproplbs[j]) = (rightproplbs[j] - leftproplbs[j]) * (probingvar - leftub)
+          * -> (rightlb - leftub) * vars[j] - (rightproplbs[j] - leftproplbs[j]) * probingvar = leftproplbs[j] * rightlb - rightproplbs[j] * leftub
+          *
+          * check for case where both variables are binary: leftub = 1, rightlb = 0
+          * case leftproplbs[j] = 0, rightproplbs[j] = 1, i.e., vars[j] and probingvar are fixed to same value
+          *    -> aggregation is 1 * vars[j] - 1 * probingvar = 0 * 1 - 1 * 0 = 0 -> correct
+          * case leftproplbs[j] = 1, rightproblbs[j] = 0, i.e., vars[j] and probingvar are fixed to oppositve values
+          *    -> aggregation is 1 * vars[j] + 1 * probingvar = 1 * 1 - 0 * 0 = 0 -> correct
+          */
+         if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
+         {
+            SCIP_Bool aggregated;
+            SCIP_Bool redundant;
+
+            SCIP_CALL( SCIPaggregateVars(scip, vars[j], probingvar,
+               rightlb - leftub, -(rightproplbs[j] - leftproplbs[j]), leftproplbs[j] * rightlb - rightproplbs[j] * leftub,
+               cutoff, &redundant, &aggregated) );
+
+            if( aggregated )
+            {
+               SCIPdebugMessage("aggregated variables %g<%s> - %g<%s> == %g, nlocks=(%d/%d)\n",
+                  rightlb - leftub, SCIPvarGetName(vars[j]),
+                  rightproplbs[j] - leftproplbs[j], SCIPvarGetName(probingvar),
+                  leftproplbs[j] * rightlb - rightproplbs[j] * leftub,
+                  SCIPvarGetNLocksDown(vars[j]), SCIPvarGetNLocksUp(probingvar));
+               (*naggrvars)++;
+            }
+         }
+         else if( (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) == 0) &&
+                  (SCIPvarGetType(probingvar) == SCIP_VARTYPE_BINARY || SCIPvarGetType(probingvar) == SCIP_VARTYPE_INTEGER) )
+         {
+            /* if we are not in presolving, then we cannot do aggregations
+             * but if we are at the root, then we can use variable bounds to code the same equality
+             * vars[j] == ((leftproplbs[j] * rightlb - rightproplbs[j] * leftub) + (rightproplbs[j] - leftproplbs[j]) * probingvar) / (rightlb - leftub)
+             */
+            int nboundchanges;
+
+            assert(!SCIPisEQ(scip, leftub, rightlb));
+
+            SCIP_CALL( SCIPaddVarVlb(scip, vars[j], probingvar, (rightproplbs[j] - leftproplbs[j]) / (rightlb - leftub), (leftproplbs[j] * rightlb - rightproplbs[j] * leftub) / (rightlb - leftub), cutoff, &nboundchanges) );
+            (*nchgbds) += nboundchanges;
+            if( !*cutoff )
+            {
+               SCIP_CALL( SCIPaddVarVub(scip, vars[j], probingvar, (rightproplbs[j] - leftproplbs[j]) / (rightlb - leftub), (leftproplbs[j] * rightlb - rightproplbs[j] * leftub) / (rightlb - leftub), cutoff, &nboundchanges) );
+               (*nchgbds) += nboundchanges;
+            }
+            (*nimplications)++;
+         }
+         /* if probingvar is continuous and we are in solving stage, then we do nothing, but it's unlikely that we get here (fixedleft && fixedright) with a continuous variable */
+      }
+      else if( SCIPvarGetType(probingvar) == SCIP_VARTYPE_BINARY &&
+         (SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING || (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) == 0)) )
+      {
+         /* implications are global information and can be added for binary variables only */
+         int nboundchanges;
+
+         /* since probing var is binary variable, probing should have fixed variable in both branches,
+          * which is to 0.0 in the left branch and to 1.0 in the right branch */
+         assert(fixedleft);
+         assert(fixedright);
+         assert(SCIPisZero(scip, leftub));
+         assert(SCIPisEQ(scip, rightlb, 1.0));
+
+         if( SCIPisEQ(scip, newlb, leftpropubs[j]) && (leftimplubs == NULL || leftimplubs[j] > leftpropubs[j]) )
+         {
+            /* vars[j] is fixed to lower bound whenever probingvar is fixed to 0.0
+             * and implication is not already known
+             * -> insert implication: probingvar == 0  =>  vars[j] <= leftpropubs[j]
+             */
+            /*SCIPdebugMessage("found implication <%s> == 0  =>  <%s> == %g\n",
+              SCIPvarGetName(probingvar), SCIPvarGetName(vars[j]), leftpropubs[j]);*/
+            SCIP_CALL( SCIPaddVarImplication(scip, probingvar, FALSE, vars[j], SCIP_BOUNDTYPE_UPPER, leftpropubs[j],
+               cutoff, &nboundchanges) );
+            (*nimplications)++;
+            (*nchgbds) += nboundchanges;
+         }
+         else if( SCIPisEQ(scip, newub, leftproplbs[j]) && (leftimpllbs == NULL || leftimpllbs[j] < leftproplbs[j]) )
+         {
+            /* vars[j] is fixed to upper bound whenever probingvar is fixed to 0.0
+             * and implication is not already known
+             * -> insert implication: probingvar == 0  =>  vars[j] >= leftproplbs[j]
+             */
+            /*SCIPdebugMessage("found implication <%s> == 0  =>  <%s> == %g\n",
+              SCIPvarGetName(probingvar), SCIPvarGetName(vars[j]), leftproplbs[j]);*/
+            SCIP_CALL( SCIPaddVarImplication(scip, probingvar, FALSE, vars[j], SCIP_BOUNDTYPE_LOWER, leftproplbs[j],
+               cutoff, &nboundchanges) );
+            (*nimplications)++;
+            (*nchgbds) += nboundchanges;
+         }
+         /* we can do an else here, since the case where vars[j] is fixed for both fixings of probingvar had been handled as aggregation */
+         else if( SCIPisEQ(scip, newlb, rightpropubs[j]) && (rightimplubs == NULL || rightimplubs[j] > rightpropubs[j]) )
+         {
+            /* vars[j] is fixed to lower bound whenever probingvar is fixed to 1.0
+             * and implication is not already known
+             * -> insert implication: probingvar == 1  =>  vars[j] <= rightpropubs[j]
+             */
+            /*SCIPdebugMessage("found implication <%s> == 1  =>  <%s> == %g\n",
+              SCIPvarGetName(probingvar), SCIPvarGetName(vars[j]), rightpropubs[j]);*/
+            SCIP_CALL( SCIPaddVarImplication(scip, probingvar, TRUE, vars[j], SCIP_BOUNDTYPE_UPPER, rightpropubs[j],
+               cutoff, &nboundchanges) );
+            (*nimplications)++;
+            (*nchgbds) += nboundchanges;
+         }
+         else if( SCIPisEQ(scip, newub, rightproplbs[j]) && (rightimpllbs == NULL || rightimpllbs[j] < rightproplbs[j]) )
+         {
+            /* vars[j] is fixed to upper bound whenever probingvar is fixed to 1.0
+             * and implication is not already known
+             * -> insert implication: probingvar == 1  =>  vars[j] >= leftproplbs[j]
+             */
+            /*SCIPdebugMessage("found implication <%s> == 1  =>  <%s> == %g\n",
+              SCIPvarGetName(probingvar), SCIPvarGetName(vars[j]), rightproplbs[j]);*/
+            SCIP_CALL( SCIPaddVarImplication(scip, probingvar, TRUE, vars[j], SCIP_BOUNDTYPE_LOWER, rightproplbs[j],
+               cutoff, &nboundchanges) );
+            (*nimplications)++;
+            (*nchgbds) += nboundchanges;
+         }
+         else if( SCIPvarGetType(vars[j]) != SCIP_VARTYPE_BINARY )
+         {
+            /* check for implications for lower or upper bounds (only store implications with bounds tightened at least by 0.5)
+             * in case of binary variables, this should have been handled in the previous cases, since every boundchange also fixes the variable
+             */
+            if( leftpropubs[j] < newub - 0.5 && (leftimplubs == NULL || leftpropubs[j] < leftimplubs[j]) )
+            {
+               /* insert implication: probingvar == 0  =>  vars[j] <= leftpropubs[j] */
+               /*SCIPdebugMessage("found implication <%s> == 0  =>  <%s>[%g,%g] <= %g\n",
+                 SCIPvarGetName(probingvar), SCIPvarGetName(vars[j]), newlb, newub, leftpropubs[j]);*/
+               SCIP_CALL( SCIPaddVarImplication(scip, probingvar, FALSE, vars[j], SCIP_BOUNDTYPE_UPPER, leftpropubs[j],
+                     cutoff, &nboundchanges) );
+               (*nimplications)++;
+               (*nchgbds) += nboundchanges;
+            }
+            if( leftproplbs[j] > newlb + 0.5 && (leftimpllbs == NULL || leftproplbs[j] > leftimpllbs[j]) && !*cutoff )
+            {
+               /* insert implication: probingvar == 0  =>  vars[j] >= leftproplbs[j] */
+               /*SCIPdebugMessage("found implication <%s> == 0  =>  <%s>[%g,%g] >= %g\n",
+                 SCIPvarGetName(probingvar), SCIPvarGetName(vars[j]), newlb, newub, leftproplbs[j]);*/
+               SCIP_CALL( SCIPaddVarImplication(scip, probingvar, FALSE, vars[j], SCIP_BOUNDTYPE_LOWER, leftproplbs[j],
+                     cutoff, &nboundchanges) );
+               (*nimplications)++;
+               (*nchgbds) += nboundchanges;
+            }
+            if( rightpropubs[j] < newub - 0.5 && (rightpropubs == NULL || rightpropubs[j] < rightimplubs[j]) && !*cutoff )
+            {
+               /* insert implication: probingvar == 1  =>  vars[j] <= rightpropubs[j] */
+               /*SCIPdebugMessage("found implication <%s> == 1  =>  <%s>[%g,%g] <= %g\n",
+                 SCIPvarGetName(probingvar), SCIPvarGetName(vars[j]), newlb, newub, rightpropubs[j]);*/
+               SCIP_CALL( SCIPaddVarImplication(scip, probingvar, TRUE, vars[j], SCIP_BOUNDTYPE_UPPER, rightpropubs[j],
+                     cutoff, &nboundchanges) );
+               (*nimplications)++;
+               (*nchgbds) += nboundchanges;
+            }
+            if( rightproplbs[j] > newlb + 0.5 && (rightproplbs == NULL || rightproplbs[j] > rightimpllbs[j]) && !*cutoff )
+            {
+               /* insert implication: probingvar == 1  =>  vars[j] >= rightproplbs[j] */
+               /*SCIPdebugMessage("found implication <%s> == 1  =>  <%s>[%g,%g] >= %g\n",
+                 SCIPvarGetName(probingvar), SCIPvarGetName(vars[j]), newlb, newub, rightproplbs[j]);*/
+               SCIP_CALL( SCIPaddVarImplication(scip, probingvar, TRUE, vars[j], SCIP_BOUNDTYPE_LOWER, rightproplbs[j],
+                     cutoff, &nboundchanges) );
+               (*nimplications)++;
+               (*nchgbds) += nboundchanges;
+            }
+         }
+      }
+   }
 
    return SCIP_OKAY;
 }
