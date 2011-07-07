@@ -212,6 +212,7 @@ fixed bugs:
 - fixed bug in cons_knapsack: in seldom circumstances the relaxation of a linear constraint can detect infeasibility, which was not handled properly
 - fixed bug in cons_quadratic: in seldom cases, fixed variables may have been substituted out wrongly in presolve
 - fixed bug in cons_countsols.c w.r.t. to collecting feasible solutions
+- fixed bug in cons_linear.c: multiaggregated variables were not removed when adding during solve, leading to a failing assert in tightenBounds due to an unsuccessful bound tightening
 
 performance improvements:
 - fasten propagation in cons_knapsack.c due to negated clique partitions
