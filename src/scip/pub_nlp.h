@@ -204,6 +204,12 @@ SCIP_Bool SCIPnlrowIsInNLP(
    SCIP_NLROW*           nlrow               /**< NLP row */
    );
 
+/** gets the dual NLP solution of a nlrow */
+extern
+SCIP_Real SCIPnlrowGetDualsol(
+   SCIP_NLROW*           nlrow               /**< NLP row */
+   );
+
 /**@} */
 
 #ifdef __cplusplus

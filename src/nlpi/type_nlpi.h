@@ -358,6 +358,9 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
 
 /** gives primal and dual solution values
  * 
+ * solver can return NULL in dual values if not available
+ * but if solver provides dual values for one side of variable bounds, then it must also provide those for the other side
+ *
  * input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance

@@ -100,6 +100,7 @@ struct SCIP_NlRow
    SCIP_Longint          validactivitybdsdomchg; /**< domain change number for which activity bound values are valid */
    int                   nlpindex;           /**< index of this row in NLP, or -1 if not added */
    int                   nlpiindex;          /**< index of this row in NLPI problem, or -1 if not in there */
+   SCIP_Real             dualsol;            /**< dual value associated with row in last NLP solve */
 };
 
 /** current NLP data */
@@ -120,8 +121,8 @@ struct SCIP_Nlp
 
    /* variables in problem */
    int                   nvars;              /**< number of variables */
-   int                   sizevars;           /**< size allocated space for variables */
-   SCIP_VAR**            vars;               /**< allocated space for variables */
+   int                   sizevars;           /**< allocated space for variables */
+   SCIP_VAR**            vars;               /**< variables */
    SCIP_HASHMAP*         varhash;            /**< variable hash: map SCIP_VAR* to index of variable in NLP */
    /* variables in NLPI problem */
    int                   nvars_solver;       /**< number of variables in NLPI problem */
@@ -150,6 +151,8 @@ struct SCIP_Nlp
    SCIP_Real             primalsolobjval;    /**< objective function value of primal solution */
    SCIP_NLPSOLSTAT       solstat;            /**< status of NLP solution (feasible, optimal, unknown...) */
    SCIP_NLPTERMSTAT      termstat;           /**< termination status of NLP (normal, some limit reached, ...) */
+   SCIP_Real*            varlbdualvals;      /**< dual values associated with variable lower bounds */
+   SCIP_Real*            varubdualvals;      /**< dual values associated with variable upper bounds */
 
    /* event handling */
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */

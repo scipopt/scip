@@ -57,6 +57,7 @@ interface:
 - added methods SCIPparseVarsLinearsum(), SCIPparseVarsPolynomial() and SCIPwriteVarsPolynomial() and for writing and parsing polynomials in constraint handler writing/parsing methods  
 - new method SCIPsetParam() which is a generic parameter setter method, independent of the parameter type
 - the callbacks NLPIGETSOLUTION and NLPISETINITIALGUESS and the functions SCIPnlpiGetSolution() and SCIPnlpiSetInitialGuess() now also take arguments to get/set dual values
+- added methods SCIPnlrowGetDualsol(), SCIPgetNLPVarsLbDualsol(), SCIPgetNLPVarsUbDualsol() to retrieve dual values from an NLP solution
 
 performance improvements:
 - performance improvements in prop_vbounds

@@ -38,7 +38,7 @@
 
 #include <new>      /* for std::bad_alloc */
 
-/* if defined, then primal values of intermediate solutions are stored and returned as solution if Ipopt does not finish with a feasible solution */
+/* if defined, then solution values of intermediate solutions are stored and returned as solution if Ipopt does not finish with a feasible solution */
 /* #define NLPIIPOPT_STOREINTERMEDIATE */
 
 #include "IpoptConfig.h"
@@ -94,15 +94,19 @@ public:
    
    SCIP_NLPSOLSTAT             lastsolstat;  /**< solution status from last run */
    SCIP_NLPTERMSTAT            lasttermstat; /**< termination status from last run */
-   SCIP_Real*                  lastsol;      /**< solution from last run, if available */
-   SCIP_Real                   lastsolinfeas;/**< infeasibility (constraint violation) of solution stored in lastsol */
+   SCIP_Real*                  lastsolprimals; /**< primal solution values from last run, if available */
+   SCIP_Real*                  lastsoldualcons; /**< dual solution values of constraints from last run, if available */
+   SCIP_Real*                  lastsoldualvarlb; /**< dual solution values of variable lower bounds from last run, if available */
+   SCIP_Real*                  lastsoldualvarub; /**< dual solution values of variable upper bounds from last run, if available */
+   SCIP_Real                   lastsolinfeas;/**< infeasibility (constraint violation) of solution stored in lastsolprimals */
    int                         lastniter;    /**< number of iterations in last run */
    SCIP_Real                   lasttime;     /**< time spend in last run */
 
    SCIP_NlpiProblem()
    : oracle(NULL),
      firstrun(TRUE), initguess(NULL),
-     lastsolstat(SCIP_NLPSOLSTAT_UNKNOWN), lasttermstat(SCIP_NLPTERMSTAT_OTHER), lastsol(NULL),
+     lastsolstat(SCIP_NLPSOLSTAT_UNKNOWN), lasttermstat(SCIP_NLPTERMSTAT_OTHER),
+     lastsolprimals(NULL), lastsoldualcons(NULL), lastsoldualvarlb(NULL), lastsoldualvarub(NULL),
      lastniter(-1), lasttime(-1.0)
    { }
 };
@@ -329,7 +333,10 @@ void invalidateSolution(
 {
    assert(problem != NULL);
    
-   BMSfreeMemoryArrayNull(&problem->lastsol);
+   BMSfreeMemoryArrayNull(&problem->lastsolprimals);
+   BMSfreeMemoryArrayNull(&problem->lastsoldualcons);
+   BMSfreeMemoryArrayNull(&problem->lastsoldualvarlb);
+   BMSfreeMemoryArrayNull(&problem->lastsoldualvarub);
    problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
    problem->lasttermstat = SCIP_NLPTERMSTAT_OTHER;
    problem->lastsolinfeas = SCIP_INVALID;
@@ -500,7 +507,10 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemIpopt)
    }
    
    BMSfreeMemoryArrayNull(&(*problem)->initguess);
-   BMSfreeMemoryArrayNull(&(*problem)->lastsol);
+   BMSfreeMemoryArrayNull(&(*problem)->lastsolprimals);
+   BMSfreeMemoryArrayNull(&(*problem)->lastsoldualcons);
+   BMSfreeMemoryArrayNull(&(*problem)->lastsoldualvarlb);
+   BMSfreeMemoryArrayNull(&(*problem)->lastsoldualvarub);
    
    delete *problem;
    *problem = NULL;
@@ -1043,8 +1053,17 @@ SCIP_DECL_NLPIGETSOLUTION(nlpiGetSolutionIpopt)
    assert(problem != NULL);
     
    if( primalvalues != NULL )
-      *primalvalues = problem->lastsol;
+      *primalvalues = problem->lastsolprimals;
    
+   if( consdualvalues != NULL )
+      *consdualvalues = problem->lastsoldualcons;
+
+   if( varlbdualvalues != NULL )
+      *varlbdualvalues = problem->lastsoldualvarlb;
+
+   if( varubdualvalues != NULL )
+      *varubdualvalues = problem->lastsoldualvarub;
+
    return SCIP_OKAY;
 }
 
@@ -2255,11 +2274,17 @@ bool ScipNLP::intermediate_callback(
 
       if( tnlp_adapter != NULL && ip_data != NULL && IsValid(ip_data->curr()) )
       {
-         SCIPdebugMessage("update lastsol: inf_pr old = %g -> new = %g\n", nlpiproblem->lastsolinfeas, inf_pr);
+         printf("update lastsol: inf_pr old = %g -> new = %g\n", nlpiproblem->lastsolinfeas, inf_pr);
 
-         if( nlpiproblem->lastsol == NULL )
+         if( nlpiproblem->lastsolprimals == NULL )
          {
-            if( BMSallocMemoryArray(&nlpiproblem->lastsol, SCIPnlpiOracleGetNVars(nlpiproblem->oracle)) == NULL )
+            assert(nlpiproblem->lastsoldualcons == NULL);
+            assert(nlpiproblem->lastsoldualvarlb == NULL);
+            assert(nlpiproblem->lastsoldualvarub == NULL);
+            if( BMSallocMemoryArray(&nlpiproblem->lastsolprimals, SCIPnlpiOracleGetNVars(nlpiproblem->oracle)) == NULL ||
+                BMSallocMemoryArray(&nlpiproblem->lastsoldualcons, SCIPnlpiOracleGetNConstraints(nlpiproblem->oracle)) == NULL ||
+                BMSallocMemoryArray(&nlpiproblem->lastsoldualvarlb, SCIPnlpiOracleGetNVars(nlpiproblem->oracle)) == NULL ||
+                BMSallocMemoryArray(&nlpiproblem->lastsoldualvarub, SCIPnlpiOracleGetNVars(nlpiproblem->oracle)) == NULL )
             {
                SCIPerrorMessage("out-of-memory in ScipNLP::intermediate_callback()\n");
                return TRUE;
@@ -2267,8 +2292,20 @@ bool ScipNLP::intermediate_callback(
          }
 
          assert(IsValid(ip_data->curr()->x()));
-         tnlp_adapter->ResortX(*ip_data->curr()->x(), nlpiproblem->lastsol);
+         tnlp_adapter->ResortX(*ip_data->curr()->x(), nlpiproblem->lastsolprimals);
          nlpiproblem->lastsolinfeas = inf_pr;
+
+         assert(IsValid(ip_data->curr()->y_c()));
+         assert(IsValid(ip_data->curr()->y_d()));
+         tnlp_adapter->ResortG(*ip_data->curr()->y_c(), *ip_data->curr()->y_d(), nlpiproblem->lastsoldualcons);
+
+         // need to clear arrays first because ResortBnds only sets values for non-fixed variables
+         BMSclearMemoryArray(nlpiproblem->lastsoldualvarlb, SCIPnlpiOracleGetNVars(nlpiproblem->oracle));
+         BMSclearMemoryArray(nlpiproblem->lastsoldualvarub, SCIPnlpiOracleGetNVars(nlpiproblem->oracle));
+         assert(IsValid(ip_data->curr()->z_L()));
+         assert(IsValid(ip_data->curr()->z_U()));
+         tnlp_adapter->ResortBnds(*ip_data->curr()->z_L(), nlpiproblem->lastsoldualvarlb, *ip_data->curr()->z_U(), nlpiproblem->lastsoldualvarub);
+
       }
    }
 #endif
@@ -2370,7 +2407,11 @@ void ScipNLP::finalize_solution(
    /* if Ipopt reports its solution as locally infeasible, then report the intermediate point with lowest constraint violation, if available */
    if( (x == NULL || nlpiproblem->lastsolstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE) && nlpiproblem->lastsolinfeas != SCIP_INVALID )
    {
-      assert(nlpiproblem->lastsol != NULL); /* if infeasibility of lastsol is not invalid, then lastsol should exist */
+      /* if infeasibility of lastsol is not invalid, then lastsol values should exist */
+      assert(nlpiproblem->lastsolprimals != NULL);
+      assert(nlpiproblem->lastsoldualcons != NULL);
+      assert(nlpiproblem->lastsoldualvarlb != NULL);
+      assert(nlpiproblem->lastsoldualvarub != NULL);
 
       /* check if lastsol is feasible */
       Number constrvioltol;
@@ -2394,21 +2435,34 @@ void ScipNLP::finalize_solution(
    else
    {
       assert(x != NULL);
+      assert(lambda != NULL);
+      assert(z_L != NULL);
+      assert(z_U != NULL);
 
-      if( nlpiproblem->lastsol == NULL )
+      if( nlpiproblem->lastsolprimals == NULL )
       {
-         if( BMSduplicateMemoryArray(&nlpiproblem->lastsol, x, n) == NULL )
+         assert(nlpiproblem->lastsoldualcons == NULL);
+         assert(nlpiproblem->lastsoldualvarlb == NULL);
+         assert(nlpiproblem->lastsoldualvarub == NULL);
+         BMSallocMemoryArray(&nlpiproblem->lastsolprimals,   n);
+         BMSallocMemoryArray(&nlpiproblem->lastsoldualcons,  m);
+         BMSallocMemoryArray(&nlpiproblem->lastsoldualvarlb, n);
+         BMSallocMemoryArray(&nlpiproblem->lastsoldualvarub, n);
+
+         if( nlpiproblem->lastsolprimals == NULL || nlpiproblem->lastsoldualcons == NULL ||
+            nlpiproblem->lastsoldualvarlb == NULL || nlpiproblem->lastsoldualvarub == NULL )
          {
             nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
             nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_MEMERR;
             return;
          }
       }
-      else
-      {
-         BMScopyMemoryArray(nlpiproblem->lastsol, x, n);
-      }
-      
+
+      BMScopyMemoryArray(nlpiproblem->lastsolprimals, x, n);
+      BMScopyMemoryArray(nlpiproblem->lastsoldualcons, lambda, m);
+      BMScopyMemoryArray(nlpiproblem->lastsoldualvarlb, z_L, n);
+      BMScopyMemoryArray(nlpiproblem->lastsoldualvarub, z_U, n);
+
       if( check_feasibility && cq != NULL )
       {
          Number constrviol;
