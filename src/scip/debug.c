@@ -294,6 +294,9 @@ SCIP_Bool debugSolIsAchieved(
 
       solvalue = SCIPgetSolOrigObj(scip, bestsol);
 
+      /* make sure a debug solution has been read, so we do not compare against the initial debugsolval == 0 */
+      SCIP_CALL( readSolution(set) );
+
       if( (SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE && SCIPsetIsLE(set, solvalue, debugsolval)) || (SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE && SCIPsetIsGE(set, solvalue, debugsolval)) )
          solisachieved = TRUE;
    }
