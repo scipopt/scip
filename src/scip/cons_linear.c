@@ -3608,38 +3608,38 @@ SCIP_RETCODE applyFixings(
             fixedval = SCIPvarGetLbGlobal(var);
             if( !SCIPisInfinity(scip, -consdata->lhs) )
             {
-	       if( SCIPisInfinity(scip, ABS(fixedval)) )
-	       {
-		  if( val * fixedval > 0.0 )
-		  {
-		     SCIP_CALL( chgLhs(scip, cons, -SCIPinfinity(scip)) );
-		  }
-		  else
-		  {
+               if( SCIPisInfinity(scip, ABS(fixedval)) )
+               {
+                  if( val * fixedval > 0.0 )
+                  {
+                     SCIP_CALL( chgLhs(scip, cons, -SCIPinfinity(scip)) );
+                  }
+                  else
+                  {
                      /* if lhs gets infinity it means that the problem is infeasible */
                      *infeasible = TRUE;
                      return SCIP_OKAY;
-		  }
-	       }
-	       else
+                  }
+               }
+               else
                   lhssubtrahend += val * fixedval;
             }
             if( !SCIPisInfinity(scip, consdata->rhs) )
             {
-	       if( SCIPisInfinity(scip, ABS(fixedval)) )
-	       {
-		  if( val * fixedval > 0.0 )
-		  {
+               if( SCIPisInfinity(scip, ABS(fixedval)) )
+               {
+                  if( val * fixedval > 0.0 )
+                  {
                      /* if rhs gets -infinity it means that the problem is infeasible */
                      *infeasible = TRUE;
                      return SCIP_OKAY;
-		  }
-		  else
-		  {
-		     SCIP_CALL( chgRhs(scip, cons, SCIPinfinity(scip)) );
-		  }
-	       }
-	       else
+                  }
+                  else
+                  {
+                     SCIP_CALL( chgRhs(scip, cons, SCIPinfinity(scip)) );
+                  }
+               }
+               else
                   rhssubtrahend += val * fixedval;
             }
             SCIP_CALL( delCoefPos(scip, cons, v) );
@@ -4306,6 +4306,14 @@ SCIP_RETCODE tightenBounds(
 
    /* we cannot tighten variables' bounds, if the constraint may be not complete */
    if( SCIPconsIsModifiable(cons) )
+      return SCIP_OKAY;
+
+   /* if a constraint was created after presolve, then it may hold fixed variables
+    * if there are even multiaggregated variables, then we cannot do bound tightening on these
+    * thus, ensure here again that variable fixings have been applied
+    */
+   SCIP_CALL( applyFixings(scip, cons, cutoff) );
+   if( *cutoff )
       return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);
@@ -10688,21 +10696,6 @@ SCIP_RETCODE SCIPaddCoefLinear(
    }
 
    SCIP_CALL( addCoef(scip, cons, var, val) );
-
-   /* Adding a multiaggregated variable does not allow domain bound tightening.
-    * But fixed variables are usually only removed during or immediately after presolving.
-    * To ensure that we can still do bound tightening (and to avoid an assert at the end of tightenBounds),
-    * we call applyFixings here again.
-    */
-   if( SCIPgetStage(scip) > SCIP_STAGE_PRESOLVING && SCIPvarGetStatus(SCIPvarGetProbvar(var)) == SCIP_VARSTATUS_MULTAGGR )
-   {
-      SCIP_Bool infeasible;
-
-      SCIP_CALL( applyFixings(scip, cons, &infeasible) );
-
-      /* infeasible can only be TRUE if a variable is fixed to +/-infinity */
-      assert(infeasible == FALSE);
-   }
 
    return SCIP_OKAY;
 }
