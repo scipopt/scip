@@ -611,6 +611,7 @@ void SCIPbranchcandClearExternCands(
    branchcand->nprioexternbins = 0;
    branchcand->nprioexternints = 0;
    branchcand->nprioexternimpls = 0;
+   branchcand->externmaxpriority = INT_MIN;
 }
 
 /** checks whether the given variable is contained in the candidate storage for external branching */

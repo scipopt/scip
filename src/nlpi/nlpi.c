@@ -472,13 +472,16 @@ SCIP_RETCODE SCIPnlpiChgObjConstant(
 SCIP_RETCODE SCIPnlpiSetInitialGuess(
    SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
    SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   SCIP_Real*            values              /**< initial starting solution */
+   SCIP_Real*            primalvalues,       /**< initial primal values for variables, or NULL to clear previous values */
+   SCIP_Real*            consdualvalues,     /**< initial dual values for constraints, or NULL to clear previous values */
+   SCIP_Real*            varlbdualvalues,    /**< initial dual values for variable lower bounds, or NULL to clear previous values */
+   SCIP_Real*            varubdualvalues     /**< initial dual values for variable upper bounds, or NULL to clear previous values */
    )
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
    
-   SCIP_CALL( (*nlpi->nlpisetinitialguess)(nlpi, problem, values) );
+   SCIP_CALL( (*nlpi->nlpisetinitialguess)(nlpi, problem, primalvalues, consdualvalues, varlbdualvalues, varubdualvalues) );
    
    return SCIP_OKAY;
 }
@@ -521,17 +524,20 @@ SCIP_NLPTERMSTAT SCIPnlpiGetTermstat(
    return (*nlpi->nlpigettermstat)(nlpi, problem);
 }
 
-/** gives primal solution */
+/** gives primal and dual solution */
 SCIP_RETCODE SCIPnlpiGetSolution(
    SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
    SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   SCIP_Real**           primalvalues        /**< pointer to store primal values */
+   SCIP_Real**           primalvalues,       /**< buffer to store pointer to array to primal values, or NULL if not needed */
+   SCIP_Real**           consdualvalues,     /**< buffer to store pointer to array to dual values of constraints, or NULL if not needed */
+   SCIP_Real**           varlbdualvalues,    /**< buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed */
+   SCIP_Real**           varubdualvalues     /**< buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed */
    )
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
    
-   SCIP_CALL( (*nlpi->nlpigetsolution)(nlpi, problem, primalvalues) );
+   SCIP_CALL( (*nlpi->nlpigetsolution)(nlpi, problem, primalvalues, consdualvalues, varlbdualvalues, varubdualvalues) );
    
    return SCIP_OKAY;
 }

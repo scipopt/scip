@@ -685,6 +685,18 @@ SCIP_RETCODE SCIPnlpGetVarsNonlinearity(
    int*                  nlcount             /**< an array of length at least SCIPnlpGetNVars() to store nonlinearity counts of variables */
    );
 
+/** gives dual solution values associated with lower bounds of NLP variables */
+extern
+SCIP_Real* SCIPnlpGetVarsLbDualsol(
+   SCIP_NLP*             nlp                 /**< current NLP data */
+   );
+
+/** gives dual solution values associated with upper bounds of NLP variables */
+extern
+SCIP_Real* SCIPnlpGetVarsUbDualsol(
+   SCIP_NLP*             nlp                 /**< current NLP data */
+   );
+
 /** gets array with nonlinear rows of the NLP */
 extern
 SCIP_NLROW** SCIPnlpGetNlRows(

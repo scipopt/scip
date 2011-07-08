@@ -55,7 +55,9 @@ interface:
 - removed NLP methods from pub_nlp.h and added corresponding methods to scip.h; removed SCIPgetNLP()
 - added method SCIPgetNLPVarsNonlinearity() to get for each variable in the NLP the number of NLP rows in which this variable appears in a nonlinear way
 - added methods SCIPparseVarsLinearsum(), SCIPparseVarsPolynomial() and SCIPwriteVarsPolynomial() and for writing and parsing polynomials in constraint handler writing/parsing methods  
-- new method SCIPsetParam() which is a generic parameter setter method, independent of the parameter type 
+- new method SCIPsetParam() which is a generic parameter setter method, independent of the parameter type
+- the callbacks NLPIGETSOLUTION and NLPISETINITIALGUESS and the functions SCIPnlpiGetSolution() and SCIPnlpiSetInitialGuess() now also take arguments to get/set dual values
+- added methods SCIPnlrowGetDualsol(), SCIPgetNLPVarsLbDualsol(), SCIPgetNLPVarsUbDualsol() to retrieve dual values from an NLP solution
 
 performance improvements:
 - performance improvements in prop_vbounds
@@ -213,6 +215,7 @@ fixed bugs:
 - fixed bug in cons_quadratic: in seldom cases, fixed variables may have been substituted out wrongly in presolve
 - fixed bug in cons_countsols.c w.r.t. to collecting feasible solutions
 - fixed bug in cons_linear.c: multiaggregated variables were not removed when adding during solve, leading to a failing assert in tightenBounds due to an unsuccessful bound tightening
+- fixed bug w.r.t. to pricing variables in case new initial constraints come in during the price and cut loop
 
 performance improvements:
 - fasten propagation in cons_knapsack.c due to negated clique partitions

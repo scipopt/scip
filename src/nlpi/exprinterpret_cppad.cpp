@@ -45,7 +45,10 @@ SCIP_Real SCIPInterval_NAMESPACE::SCIPInterval::infinity = SCIP_DEFAULT_INFINITY
 using SCIPInterval_NAMESPACE::SCIPInterval;
 
 #include <cppad/cppad.hpp>
-#include <cppad/config.h>  // to get PACKAGE_STRING define
+#ifndef CPPAD_PACKAGE_STRING
+#include <cppad/config.h>
+#define CPPAD_PACKAGE_STRING PACKAGE_STRING
+#endif
 #include <cppad/declare.hpp>
 #include <cppad/error_handler.hpp>
 
