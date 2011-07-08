@@ -10689,6 +10689,21 @@ SCIP_RETCODE SCIPaddCoefLinear(
 
    SCIP_CALL( addCoef(scip, cons, var, val) );
 
+   /* Adding a multiaggregated variable does not allow domain bound tightening.
+    * But fixed variables are usually only removed during or immediately after presolving.
+    * To ensure that we can still do bound tightening (and to avoid an assert at the end of tightenBounds),
+    * we call applyFixings here again.
+    */
+   if( SCIPgetStage(scip) > SCIP_STAGE_PRESOLVING && SCIPvarGetStatus(SCIPvarGetProbvar(var)) == SCIP_VARSTATUS_MULTAGGR )
+   {
+      SCIP_Bool infeasible;
+
+      SCIP_CALL( applyFixings(scip, cons, &infeasible) );
+
+      /* infeasible can only be TRUE if a variable is fixed to +/-infinity */
+      assert(infeasible == FALSE);
+   }
+
    return SCIP_OKAY;
 }
 
