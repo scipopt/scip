@@ -60,7 +60,11 @@
 #include <ClpPrimalColumnSteepest.hpp>
 #include <ClpDualRowSteepest.hpp>
 #include <CoinIndexedVector.hpp>
+#include <ClpConfig.h>
+#ifndef CLP_VERSION
 #include <config_clp.h>
+#define CLP_VERSION VERSION
+#endif
 
 #include <iostream>
 #include <cassert>
@@ -430,7 +434,7 @@ const char* SCIPlpiGetSolverName(
    )
 {
    // Currently Clp has no function to get version, so we hard code it ...
-   snprintf(clpname, SCIP_MAXSTRLEN, "Clp "VERSION"");
+   snprintf(clpname, SCIP_MAXSTRLEN, "Clp "CLP_VERSION"");
    return clpname;
 }
 
