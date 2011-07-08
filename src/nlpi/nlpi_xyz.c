@@ -433,7 +433,10 @@ SCIP_DECL_NLPICHGOBJCONSTANT( nlpiChgObjConstantXyz )
  * input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
- *  - values initial starting solution, or NULL to clear previous starting solution
+ *  - primalvalues initial primal values for variables, or NULL to clear previous values
+ *  - consdualvalues initial dual values for constraints, or NULL to clear previous values
+ *  - varlbdualvalues  initial dual values for variable lower bounds, or NULL to clear previous values
+ *  - varubdualvalues  initial dual values for variable upper bounds, or NULL to clear previous values
  */
 static
 SCIP_DECL_NLPISETINITIALGUESS( nlpiSetInitialGuessXyz )
@@ -493,15 +496,15 @@ SCIP_DECL_NLPIGETTERMSTAT( nlpiGetTermstatXyz )
    return SCIP_NLPITERMSTAT_OTHER;
 }
 
-/** gives primal solution
+/** gives primal and dual solution values
  * 
  * input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
- *  - primalvalues pointer to store primal values
- * 
- * output:
- *  - primalvalues primal values of solution
+ *  - primalvalues buffer to store pointer to array to primal values, or NULL if not needed
+ *  - consdualvalues buffer to store pointer to array to dual values of constraints, or NULL if not needed
+ *  - varlbdualvalues buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed
+ *  - varubdualvalues buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed
  */
 static
 SCIP_DECL_NLPIGETSOLUTION( nlpiGetSolutionXyz )

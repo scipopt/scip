@@ -4621,7 +4621,7 @@ SCIP_RETCODE nlpSolve(
 
          initialguess_solver[i] = nlp->initialguess[nlpidx];
       }
-      SCIP_CALL( SCIPnlpiSetInitialGuess(nlp->solver, nlp->problem, initialguess_solver) );
+      SCIP_CALL( SCIPnlpiSetInitialGuess(nlp->solver, nlp->problem, initialguess_solver, NULL, NULL, NULL) );
 
       SCIPsetFreeBufferArray(set, &initialguess_solver);
    }
@@ -4646,7 +4646,7 @@ SCIP_RETCODE nlpSolve(
          SCIP_Real* solversol;
 
          /* store solution in variables */
-         SCIP_CALL( SCIPnlpiGetSolution(nlp->solver, nlp->problem, &solversol) );
+         SCIP_CALL( SCIPnlpiGetSolution(nlp->solver, nlp->problem, &solversol, NULL, NULL, NULL) );
          assert(solversol != NULL);
 
          /* store solution values in variable and evaluate objective function */
@@ -5553,7 +5553,7 @@ SCIP_RETCODE SCIPnlpSetInitialGuess(
    if( initguess == NULL )
    {
       nlp->haveinitguess = FALSE;
-      SCIP_CALL( SCIPnlpiSetInitialGuess(nlp->solver, nlp->problem, NULL) );
+      SCIP_CALL( SCIPnlpiSetInitialGuess(nlp->solver, nlp->problem, NULL, NULL, NULL, NULL) );
       return SCIP_OKAY;
    }
 
