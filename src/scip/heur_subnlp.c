@@ -454,7 +454,8 @@ SCIP_RETCODE addLinearConstraints(
 
    for( i = 0; i < nconss; ++i )
    {
-      if( !SCIPconsIsEnabled(conss[i]) )
+      /* skip local and redundant constraints */
+      if( !SCIPconsIsEnabled(conss[i]) || !SCIPconsIsChecked(conss[i]) )
          continue;
       
       /* under some circumstances, this method may be called even though the problem has been shown to be infeasible in presolve already
@@ -524,7 +525,8 @@ SCIP_RETCODE addVarboundConstraints(
 
    for( i = 0; i < nconss; ++i )
    {
-      if( !SCIPconsIsEnabled(conss[i]) )
+      /* skip local and redundant constraints */
+      if( !SCIPconsIsEnabled(conss[i]) || !SCIPconsIsChecked(conss[i]) )
          continue;
       
       vars[0] = SCIPgetVarVarbound(scip, conss[i]);
@@ -581,8 +583,8 @@ SCIP_RETCODE addLogicOrConstraints(
 
    for( i = 0; i < nconss; ++i )
    {
-      /* skip local constraints */
-      if( !SCIPconsIsEnabled(conss[i]) )
+      /* skip local and redundant constraints */
+      if( !SCIPconsIsEnabled(conss[i]) || !SCIPconsIsChecked(conss[i]) )
          continue;
       
       nvars = SCIPgetNVarsLogicor(scip, conss[i]);
@@ -650,8 +652,8 @@ SCIP_RETCODE addSetppcConstraints(
 
    for( i = 0; i < nconss; ++i )
    {
-      /* skip local constraints */
-      if( !SCIPconsIsEnabled(conss[i]) )
+      /* skip local and redundant constraints */
+      if( !SCIPconsIsEnabled(conss[i]) || !SCIPconsIsChecked(conss[i]) )
          continue;
       
       nvars = SCIPgetNVarsSetppc(scip, conss[i]);
@@ -740,8 +742,8 @@ SCIP_RETCODE addKnapsackConstraints(
 
    for( i = 0; i < nconss; ++i )
    {
-      /* skip local constraints */
-      if( !SCIPconsIsEnabled(conss[i]) )
+      /* skip local and redundant constraints */
+      if( !SCIPconsIsEnabled(conss[i]) || !SCIPconsIsChecked(conss[i]) )
          continue;
       
       nvars = SCIPgetNVarsKnapsack(scip, conss[i]);
