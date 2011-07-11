@@ -19,6 +19,10 @@
  * @author Tobias Achterberg
  */
 
+/* CPLEX supports FASTMIP which fastens the lp solving process but therefor it might happen that there will be a loss in
+ * precision (because e.g. the optimal basis will not be factorized again)
+ */
+
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
@@ -3627,7 +3631,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       setIntParam(lpi, CPX_PARAM_ADVIND, ival == FALSE ? CPX_ON : CPX_OFF);
       break;
    case SCIP_LPPAR_FASTMIP:
-      assert(0 <= ival && ival <= 2);
+      assert(0 <= ival && ival <= 1);
       setIntParam(lpi, CPX_PARAM_FASTMIP, ival);
       break;
    case SCIP_LPPAR_SCALING:
