@@ -1697,13 +1697,14 @@ SCIP_RETCODE SCIPpriceLoop(
       assert(SCIPpricestoreGetNVars(pricestore) == 0);
       assert(SCIPpricestoreGetNBoundResets(pricestore) == 0);
       assert(!lp->flushed || lp->solved || *lperror);
-      mustprice = mustprice || !lp->flushed || (prob->ncolvars != *npricedcolvars);
-      *mustsepa = *mustsepa || !lp->flushed;
 
       /* put all initial constraints into the LP */
       SCIP_CALL( initConssLP(blkmem, set, sepastore, stat, tree, lp, branchcand, eventqueue, eventfilter, pretendroot, &cutoff) );
       assert(cutoff == FALSE);
 
+      mustprice = mustprice || !lp->flushed || (prob->ncolvars != *npricedcolvars);
+      *mustsepa = *mustsepa || !lp->flushed;
+      
       /* solve LP again after resetting bounds and adding new initial constraints (with dual simplex) */
       SCIPdebugMessage("pricing: solve LP after resetting bounds and adding new initial constraints\n");
       SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, eventqueue, eventfilter, prob, 

@@ -62,7 +62,7 @@ $(LIBOBJDIR)/nlpi/exprinterpret_cppad.o: src/nlpi/exprinterpret_cppad.cpp src/sc
  src/nlpi/type_exprinterpret.h src/scip/intervalarith.h \
  src/nlpi/exprinterpret.h src/nlpi/intervalarith.h lib/cppad/cppad.hpp \
  lib/cppad/declare.hpp lib/cppad/local/base_complex.hpp \
- lib/cppad/error_handler.hpp lib/cppad/configure.hpp lib/cppad/config.h \
+ lib/cppad/error_handler.hpp lib/cppad/configure.hpp \
  lib/cppad/check_numeric_type.hpp lib/cppad/check_simple_vector.hpp \
  lib/cppad/local/cppad_assert.hpp lib/cppad/lu_solve.hpp \
  lib/cppad/std_math_unary.hpp lib/cppad/lu_factor.hpp \
@@ -95,7 +95,7 @@ $(LIBOBJDIR)/nlpi/exprinterpret_cppad.o: src/nlpi/exprinterpret_cppad.cpp src/sc
  lib/cppad/local/erf.hpp lib/cppad/local/pow.hpp \
  lib/cppad/local/discrete.hpp lib/cppad/local/bool_valued.hpp \
  lib/cppad/local/compare.hpp lib/cppad/local/near_equal_ext.hpp \
- lib/cppad/local/bool_fun.hpp lib/cppad/local/bool_fun_link.hpp \
+ lib/cppad/local/bool_fun.hpp \
  lib/cppad/local/par_var.hpp lib/cppad/local/equal_op_seq.hpp \
  lib/cppad/local/op.hpp lib/cppad/local/sparse_pack.hpp \
  lib/cppad/local/sparse_set.hpp lib/cppad/local/abs_op.hpp \

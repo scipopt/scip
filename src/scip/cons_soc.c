@@ -2587,9 +2587,6 @@ SCIP_RETCODE polishSolution(
    assert(consdata != NULL);
    assert(!SCIPisZero(scip, consdata->rhscoeff));
 
-   /* assert that absolute constraint violation is positive */
-   assert(SCIPisInfinity(scip, consdata->lhsval) || SCIPisPositive(scip, consdata->lhsval - consdata->rhscoeff * (SCIPgetSolVal(scip, sol, consdata->rhsvar) + consdata->rhsoffset)));
-   
    /* compute minimal rhs variable value so that constraint is satisfied */
    if( !SCIPisInfinity(scip, consdata->lhsval) )
       rhsval = consdata->lhsval / consdata->rhscoeff - consdata->rhsoffset;
@@ -3473,7 +3470,7 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
       {
          if( SCIPvarGetStatus(consdata->rhsvar) != SCIP_VARSTATUS_MULTAGGR &&
              ( (consdata->rhscoeff > 0.0 && SCIPvarMayRoundUp  (consdata->rhsvar)) ||
-               (consdata->rhscoeff < 0.0 && SCIPvarMayRoundDown(consdata->rhsvar)) )  )
+               (consdata->rhscoeff < 0.0 && SCIPvarMayRoundDown(consdata->rhsvar)) ) )
          {
             SCIP_Bool success;
 

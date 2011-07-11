@@ -691,6 +691,14 @@ SCIP_RETCODE SCIPgetStringParam(
    char**                value               /**< pointer to store the parameter */
    );
 
+/** changes the value of an existing parameter */
+extern
+SCIP_RETCODE SCIPsetParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name,               /**< name of the parameter */
+   void*                 value               /**< new value of the parameter */
+   );
+
 /** changes the value of an existing SCIP_Bool parameter */
 extern
 SCIP_RETCODE SCIPsetBoolParam(
@@ -4981,6 +4989,18 @@ extern
 SCIP_RETCODE SCIPgetNLPVarsNonlinearity(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  nlcount             /**< an array of length at least SCIPnlpGetNVars() to store nonlinearity counts of variables */
+   );
+
+/** gives dual solution values associated with lower bounds of NLP variables */
+extern
+SCIP_Real* SCIPgetNLPVarsLbDualsol(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gives dual solution values associated with upper bounds of NLP variables */
+extern
+SCIP_Real* SCIPgetNLPVarsUbDualsol(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** gets current NLP nonlinear rows along with the current number of NLP nonlinear rows */

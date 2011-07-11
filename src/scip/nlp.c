@@ -2119,6 +2119,7 @@ SCIP_RETCODE SCIPnlrowCreate(
    (*nlrow)->nlpindex = -1;
    (*nlrow)->nlpiindex = -1;
    (*nlrow)->nuses = 0;
+   (*nlrow)->dualsol = 0.0;
 
    /* capture the nonlinear row */
    SCIPnlrowCapture(*nlrow);
@@ -3398,6 +3399,16 @@ SCIP_Bool SCIPnlrowIsInNLP(
    return nlrow->nlpindex != -1;
 }
 
+/** gets the dual NLP solution of a nlrow */
+SCIP_Real SCIPnlrowGetDualsol(
+   SCIP_NLROW*           nlrow               /**< NLP row */
+   )
+{
+   assert(nlrow != NULL);
+
+   return nlrow->nlpiindex >= 0 ? nlrow->dualsol : 0.0;
+}
+
 /*
  * private NLP methods
  */
@@ -3730,6 +3741,9 @@ SCIP_RETCODE nlpAddVars(
       nlp->varmap_nlp2nlpi[nlp->nvars+i] = -1;
       SCIP_CALL( SCIPhashmapInsert(nlp->varhash, var, (void*) (size_t) (nlp->nvars+i)) );
 
+      nlp->varlbdualvals[nlp->nvars+i]   = 0.0;
+      nlp->varubdualvals[nlp->nvars+i]   = 0.0;
+
       /* update objective, if necessary (new variables have coefficient 0.0 anyway) */
       if( SCIPvarGetObj(var) != 0.0 )
       {
@@ -3788,6 +3802,8 @@ SCIP_RETCODE nlpMoveVar(
    SCIP_CALL( SCIPhashmapSetImage(nlp->varhash, nlp->vars[oldpos], (void*) (size_t) newpos) );
    nlp->vars[newpos]            = nlp->vars[oldpos];
    nlp->varmap_nlp2nlpi[newpos] = nlp->varmap_nlp2nlpi[oldpos];
+   nlp->varlbdualvals[newpos]   = nlp->varlbdualvals[oldpos];
+   nlp->varubdualvals[newpos]   = nlp->varubdualvals[oldpos];
    if( nlp->initialguess != NULL )
       nlp->initialguess[newpos] = nlp->initialguess[oldpos];
 
@@ -4621,7 +4637,7 @@ SCIP_RETCODE nlpSolve(
 
          initialguess_solver[i] = nlp->initialguess[nlpidx];
       }
-      SCIP_CALL( SCIPnlpiSetInitialGuess(nlp->solver, nlp->problem, initialguess_solver) );
+      SCIP_CALL( SCIPnlpiSetInitialGuess(nlp->solver, nlp->problem, initialguess_solver, NULL, NULL, NULL) );
 
       SCIPsetFreeBufferArray(set, &initialguess_solver);
    }
@@ -4643,17 +4659,26 @@ SCIP_RETCODE nlpSolve(
       case SCIP_NLPSOLSTAT_FEASIBLE:
       case SCIP_NLPSOLSTAT_LOCINFEASIBLE:
       {
-         SCIP_Real* solversol;
+         SCIP_Real* primalvals;
+         SCIP_Real* nlrowdualvals;
+         SCIP_Real* varlbdualvals;
+         SCIP_Real* varubdualvals;
 
-         /* store solution in variables */
-         SCIP_CALL( SCIPnlpiGetSolution(nlp->solver, nlp->problem, &solversol) );
-         assert(solversol != NULL);
+         primalvals    = NULL;
+         nlrowdualvals = NULL;
+         varlbdualvals = NULL;
+         varubdualvals = NULL;
 
-         /* store solution values in variable and evaluate objective function */
+         /* get NLP solution */
+         SCIP_CALL( SCIPnlpiGetSolution(nlp->solver, nlp->problem, &primalvals, &nlrowdualvals, &varlbdualvals, &varubdualvals) );
+         assert(primalvals    != NULL || nlp->nvars == 0);
+         assert((varlbdualvals != NULL) == (varubdualvals != NULL)); /* if there are duals for one bound, then there should also be duals for the other bound */
+
+         /* store solution primal values in variable and evaluate objective function */
          if( nlp->indiving && nlp->divingobj != NULL )
          {
             for( i = 0; i < nlp->nvars; ++i )
-               SCIPvarSetNLPSol(nlp->vars[i], set, solversol[nlp->varmap_nlp2nlpi[i]]);
+               SCIPvarSetNLPSol(nlp->vars[i], set, primalvals[nlp->varmap_nlp2nlpi[i]]);
 
             /* evaluate modified diving objective */
             SCIP_CALL( SCIPnlrowGetNLPActivity(nlp->divingobj, set, stat, nlp, &nlp->primalsolobjval) );
@@ -4664,10 +4689,40 @@ SCIP_RETCODE nlpSolve(
             nlp->primalsolobjval = 0.0;
             for( i = 0; i < nlp->nvars; ++i )
             {
-               SCIPvarSetNLPSol(nlp->vars[i], set, solversol[nlp->varmap_nlp2nlpi[i]]);
-               nlp->primalsolobjval += SCIPvarGetObj(nlp->vars[i]) * solversol[nlp->varmap_nlp2nlpi[i]];
+               SCIPvarSetNLPSol(nlp->vars[i], set, primalvals[nlp->varmap_nlp2nlpi[i]]);
+               nlp->primalsolobjval += SCIPvarGetObj(nlp->vars[i]) * primalvals[nlp->varmap_nlp2nlpi[i]];
             }
          }
+
+         /* store solution dual values in nlrows and variables */
+         for( i = 0; i < nlp->nnlrows; ++i )
+         {
+            assert(nlp->nlrows[i]->nlpiindex >= 0); /* NLP was flushed before solve, so all nlrows should be in there */
+
+            nlp->nlrows[i]->dualsol = nlrowdualvals != NULL ? nlrowdualvals[nlp->nlrows[i]->nlpiindex] : 0.0;
+
+            /* SCIPdebugMessage("dual of nlrow <%s> = %g\n", nlp->nlrows[i]->name, nlp->nlrows[i]->dualsol); */
+         }
+         assert(nlp->varlbdualvals != NULL || nlp->nvars == 0);
+         assert(nlp->varubdualvals != NULL || nlp->nvars == 0);
+         if( varlbdualvals != NULL )
+         {
+            for( i = 0; i < nlp->nvars; ++i )
+            {
+               assert(nlp->varmap_nlp2nlpi[i] >= 0); /* NLP was flushed before solve, so all vars should be in there */
+
+               nlp->varlbdualvals[i] = varlbdualvals[nlp->varmap_nlp2nlpi[i]];
+               nlp->varubdualvals[i] = varubdualvals[nlp->varmap_nlp2nlpi[i]];
+
+               /* SCIPdebugMessage("duals of var <%s> = %g %g\n", SCIPvarGetName(nlp->vars[i]), nlp->varlbdualvals[i], nlp->varubdualvals[i]); */
+            }
+         }
+         else if( nlp->nvars > 0 )
+         {
+            BMSclearMemoryArray(nlp->varlbdualvals, nlp->nvars);
+            BMSclearMemoryArray(nlp->varubdualvals, nlp->nvars);
+         }
+
          break;
       }
       default:
@@ -4994,6 +5049,8 @@ SCIP_RETCODE SCIPnlpCreate(
    (*nlp)->primalsolobjval = SCIP_INVALID;
    (*nlp)->solstat         = SCIP_NLPSOLSTAT_UNKNOWN;
    (*nlp)->termstat        = SCIP_NLPTERMSTAT_OTHER;
+   (*nlp)->varlbdualvals   = NULL;
+   (*nlp)->varubdualvals   = NULL;
 
    /* event handling: catch variable addition and deletion events */
    (*nlp)->eventhdlr = SCIPsetFindEventhdlr(set, EVENTHDLR_NAME);
@@ -5147,6 +5204,8 @@ SCIP_RETCODE SCIPnlpEnsureVarsSize(
       newsize = SCIPsetCalcMemGrowSize(set, num);
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &nlp->vars,            nlp->sizevars, newsize) );
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &nlp->varmap_nlp2nlpi, nlp->sizevars, newsize) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &nlp->varlbdualvals,   nlp->sizevars, newsize) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &nlp->varubdualvals,   nlp->sizevars, newsize) );
       if( nlp->initialguess != NULL )
       {
          SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &nlp->initialguess, nlp->sizevars, newsize) );
@@ -5553,7 +5612,7 @@ SCIP_RETCODE SCIPnlpSetInitialGuess(
    if( initguess == NULL )
    {
       nlp->haveinitguess = FALSE;
-      SCIP_CALL( SCIPnlpiSetInitialGuess(nlp->solver, nlp->problem, NULL) );
+      SCIP_CALL( SCIPnlpiSetInitialGuess(nlp->solver, nlp->problem, NULL, NULL, NULL, NULL) );
       return SCIP_OKAY;
    }
 
@@ -5716,6 +5775,26 @@ SCIP_RETCODE SCIPnlpGetVarsNonlinearity(
    }
 
    return SCIP_OKAY;
+}
+
+/** gives dual solution values associated with lower bounds of NLP variables */
+SCIP_Real* SCIPnlpGetVarsLbDualsol(
+   SCIP_NLP*             nlp                 /**< current NLP data */
+   )
+{
+   assert(nlp != NULL);
+
+   return nlp->varlbdualvals;
+}
+
+/** gives dual solution values associated with upper bounds of NLP variables */
+SCIP_Real* SCIPnlpGetVarsUbDualsol(
+   SCIP_NLP*             nlp                 /**< current NLP data */
+   )
+{
+   assert(nlp != NULL);
+
+   return nlp->varubdualvals;
 }
 
 /** gets array with nonlinear rows of the NLP */
