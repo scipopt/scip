@@ -2404,9 +2404,9 @@ SCIP_Real consdataGetActivity(
          solval = SCIPgetSolVal(scip, sol, consdata->vars[v]);
 
          if( consdata->vals[v] < 0 )
-            negsign = 1;
+            negsign = TRUE;
          else 
-            negsign = 0;
+            negsign = FALSE;
 
          if( (SCIPisInfinity(scip, solval) && !negsign) || (SCIPisInfinity(scip, -solval) && negsign) )
             ++nposinf;
@@ -2419,18 +2419,13 @@ SCIP_Real consdataGetActivity(
 
       SCIPdebugMessage("activity of linear constraint: %.15g, %d positive infinity values, %d negative infinity values \n", activity, nposinf, nneginf);
 
-      /* check for amount of infinity values and correct the activity*/
-      if( nposinf != nneginf )
-      {
-         if( nposinf > 0 && nneginf == 0 )
-            activity = SCIPinfinity(scip);
-         else if( nposinf == 0 )
-            activity = -SCIPinfinity(scip);
-      }
-      else if( nposinf > 0 )
-      {
+      /* check for amount of infinity values and correct the activity */
+      if( nposinf > 0 && nneginf > 0 )
          activity = (consdata->rhs + consdata->lhs) / 2;
-      }
+      else if( nposinf > 0 )
+         activity = SCIPinfinity(scip);
+      else if( nneginf > 0 )
+         activity = -SCIPinfinity(scip);
      
       SCIPdebugMessage("corrected activity of linear constraint: %.15g\n", activity);
    }
@@ -4403,7 +4398,7 @@ SCIP_RETCODE checkCons(
          activity, consdata->lhs, consdata->rhs, (void*)consdata->row, checklprows,
          consdata->row == NULL ? 0 : SCIProwIsInLP(consdata->row), (void*)sol,
          consdata->row == NULL ? FALSE : SCIPhasCurrentNodeLP(scip));
-   
+
    if( SCIPisFeasLT(scip, activity, consdata->lhs) || SCIPisFeasGT(scip, activity, consdata->rhs) )
    {
       *violated = TRUE;
