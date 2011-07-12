@@ -237,6 +237,8 @@ SCIP_RETCODE execRelpscost(
 
 #ifdef USESBGAIN /* ??????????? */
    exactsolve = FALSE;
+#else
+   exactsolve = TRUE;
 #endif
 
    /* check, if all existing columns are in LP, and thus the strong branching results give lower bounds */

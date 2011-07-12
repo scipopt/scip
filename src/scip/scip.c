@@ -6844,6 +6844,8 @@ SCIP_RETCODE SCIPgetVarStrongbranch(
 
 #ifdef USESBGAIN /* ??????????? */
    exactsolve = FALSE;
+#else
+   exactsolve = TRUE;
 #endif
 
    /* call strong branching for column */

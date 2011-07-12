@@ -1566,9 +1566,10 @@ void SCIPprobPrintStatistics(
    {
       assert(prob->conss != NULL);
       assert(prob->nconss == 1);
-      SCIPmessageFPrintInfo(file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous) (%d inf bounds, %d large bounds)\n",
+      SCIPmessageFPrintInfo(file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous) (%d inf bounds, %d large bounds, %d inf bounds on non-continuous)\n",
          prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars, 
-         SCIPgetNInfinitBounds(prob->conss[0]), SCIPgetNLargeBounds(prob->conss[0]));
+         SCIPgetNInfiniteBounds(prob->conss[0]), SCIPgetNLargeBounds(prob->conss[0]), 
+         SCIPgetNInfiniteIntegerBounds(prob->conss[0]));
       SCIPmessageFPrintInfo(file, "  Constraints      : %d initial, %d maximal, %d linear (%d by split), would split %d conss for FP-relaxation\n", 
          prob->startnconss, prob->maxnconss, SCIPgetNConssExactlp(prob->conss[0]), 
          SCIPuseFPRelaxation(set->scip) ? SCIPgetNSplitconssExactlp(prob->conss[0]) : 0,
