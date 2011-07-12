@@ -48,6 +48,7 @@ STATICLIBEXT	=	a
 SHAREDLIBEXT	=	so
 LIBEXT		=	$(STATICLIBEXT)
 
+SHARED		=	false
 READLINE	=	true
 ZLIB		=	true
 GMP             =       auto
@@ -94,6 +95,7 @@ GAMS            =       gams
 
 SHELL		= 	bash
 READ		=	read -e
+LN_s		= 	ln -s
 
 FLAGS		=	-I$(SRCDIR) -DWITH_SCIPDEF -I$(SCIPDIR)/src
 OFLAGS		=
@@ -129,6 +131,7 @@ ALLSRC		=
 
 #-----------------------------------------------------------------------------
 include $(SCIPDIR)/make/make.$(BASE)
+-include $(SCIPDIR)/make/make.$(OSTYPE).$(COMP).$(OPT)
 -include $(SCIPDIR)/make/local/make.$(HOSTNAME)
 -include $(SCIPDIR)/make/local/make.$(HOSTNAME).$(COMP)
 -include $(SCIPDIR)/make/local/make.$(HOSTNAME).$(COMP).$(OPT)
@@ -149,6 +152,19 @@ DFLAGS		+=	$(USRDFLAGS)
 #FLAGS		+=	-DNOSAFEMEM
 #FLAGS		+=	-DNOBLOCKMEM
 
+#-----------------------------------------------------------------------------
+# SHARED Libaries
+#-----------------------------------------------------------------------------
+
+ifeq ($(SHARED),true)
+FLAGS		+=	-fPIC
+LIBEXT		=	$(SHAREDLIBEXT)
+LIBBUILD	=	$(LINKCC)
+LIBBUILDFLAGS	=      -shared -fPIC
+LIBBUILD_o	= 	-o # the trailing space is important
+ARFLAGS		=
+RANLIB		=
+endif
 
 #-----------------------------------------------------------------------------
 # LP Solver Interface
