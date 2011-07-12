@@ -9265,6 +9265,43 @@ void SCIPgetBestSolexObj(
    }
 }
 
+/** returns transformed objective value of best exact primal CIP solution found so far */
+void SCIPgetBestSolexTransObj(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< exactlp constraint data */
+   mpq_t                 obj                 /**< pointer to store objective value */ 
+   )
+{
+   SCIP_SOLEX* sol;
+
+   /* get best exact solution found so far */
+   sol = SCIPgetBestSolex(scip);
+   if( sol != NULL )
+   {
+      SCIPgetSolexTransObj(scip, sol, obj);
+   }
+   else
+   {
+      SCIP_CONSHDLRDATA* conshdlrdata;
+      SCIP_CONSHDLR* conshdlr;
+
+      /* find the exactlp constraint handler */
+      conshdlr = SCIPconsGetHdlr(cons);
+
+      if( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
+      {
+         SCIPerrorMessage("constraint is not of type exactlp\n");
+         SCIPABORT();
+      }
+
+      /* get constraint handler data */
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+
+      assert(conshdlrdata != NULL);
+      mpq_set(obj, *posInfinity(conshdlrdata));
+   }
+}
+
 /** outputs non-zero variables of exact solution in original problem space to file stream */
 SCIP_RETCODE SCIPprintSolex(
    SCIP*                 scip,               /**< SCIP data structure */

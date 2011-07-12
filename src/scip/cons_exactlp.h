@@ -213,6 +213,14 @@ void SCIPgetBestSolexObj(
    mpq_t                 obj                 /**< pointer to store objective value */ 
    );
 
+/** returns transformed objective value of best exact primal CIP solution found so far */
+extern
+void SCIPgetBestSolexTransObj(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< exactlp constraint data */
+   mpq_t                 obj                 /**< pointer to store objective value */ 
+   );
+
 /** outputs non-zero variables of exact solution in original problem space to file stream */
 extern
 SCIP_RETCODE SCIPprintSolex(
