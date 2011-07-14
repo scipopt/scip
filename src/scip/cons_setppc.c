@@ -3799,7 +3799,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
          if( !SCIPconsIsActive(cons) )
             continue;
       }
-            
+
       /* remember the first changed constraint to begin the next redundancy round with */
       if( firstchange == INT_MAX && consdata->changed )
          firstchange = c;
@@ -3834,6 +3834,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
          for( c = firstchange; c < nconss && !SCIPisStopped(scip); ++c )
          {
             assert(*result != SCIP_CUTOFF);
+
             if( SCIPconsIsActive(conss[c]) && !SCIPconsIsModifiable(conss[c]) )
             {
                npaircomparisons += (SCIPconsGetData(conss[c])->changed) ? c : (c - firstchange);

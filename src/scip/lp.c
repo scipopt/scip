@@ -2107,7 +2107,7 @@ SCIP_RETCODE lpSetFastmip(
 {
    assert(lp != NULL);
    assert(success != NULL);
-   assert(0 <= fastmip && fastmip <= 2);
+   assert(0 <= fastmip && fastmip <= 1);
 
    SCIP_CALL( lpCheckIntpar(lp, SCIP_LPPAR_FASTMIP, lp->lpifastmip) );
 
@@ -12382,7 +12382,6 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             assert(lp->lastlpalgo != SCIP_LPALGO_DUALSIMPLEX || 
                    SCIPlpiIsObjlimExc(lpi) || 
                    SCIPsetIsRelGE(set, lp->lpobjval, lp->lpiuobjlim));
-            assert(set->lp_fastmip <= 1); /* fastmip setting 2 should not be used with pricing */
 
             SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
 
