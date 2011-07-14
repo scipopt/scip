@@ -33,11 +33,15 @@
 #define BRANCHRULE_MAXDEPTH      -1
 #define BRANCHRULE_MAXBOUNDDIST  1.0
 
-#define BRANCHRULE_STRATEGIES    "cdsu"      /**< possible pseudo cost multiplication strategies for branching on external candidates */
-#define BRANCHRULE_STRATEGY_DEFAULT 'u'      /**< default pseudo cost multiplication strategy */
+#define BRANCHRULE_STRATEGIES          "cdsu" /**< possible pseudo cost multiplication strategies for branching on external candidates */
+#define BRANCHRULE_STRATEGY_DEFAULT       'u' /**< default pseudo cost multiplication strategy */
 #define BRANCHRULE_SCOREMINWEIGHT_DEFAULT 0.8 /**< default weight for minimum of scores of a branching candidate */
 #define BRANCHRULE_SCOREMAXWEIGHT_DEFAULT 1.3 /**< default weight for maximum of scores of a branching candidate */
 #define BRANCHRULE_SCORESUMWEIGHT_DEFAULT 0.1 /**< default weight for sum of scores of a branching candidate */
+#define BRANCHRULE_NCHILDREN_DEFAULT        2 /**< default number of children in n-ary branching */
+#define BRANCHRULE_NARYMAXDEPTH_DEFAULT    -1 /**< default maximal depth where to do n-ary branching */
+#define BRANCHRULE_NARYMINWIDTH_DEFAULT 0.001 /**< default minimal domain width in children when doing n-ary branching */
+#define BRANCHRULE_NARYWIDTHFAC_DEFAULT   2.0 /**< default factor of domain width in n-ary branching */
 
 #define WEIGHTEDSCORING(data, min, max, sum) \
    ((data)->scoreminweight * (min) + (data)->scoremaxweight * (max) + (data)->scoresumweight * (sum))
@@ -51,6 +55,11 @@ struct SCIP_BranchruleData
    SCIP_Real             scoresumweight;     /**< weight for sum of scores of a branching candidate */
 
    char                  updatestrategy;     /**< strategy used to update pseudo costs of continuous variables */
+
+   int                   nchildren;          /**< targeted number of children in n-ary branching */
+   int                   narymaxdepth;       /**< maximal depth where to do n-ary branching, -1 to turn off */
+   SCIP_Real             naryminwidth;       /**< minimal domain width in children when doing n-ary branching, relative to global bounds */
+   SCIP_Real             narywidthfactor;    /**< factor of domain width in n-ary branching */
 };
 
 /*
@@ -541,9 +550,7 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextPscost)
    int nprioexterncands;
    SCIP_VAR* brvar;
    SCIP_Real brpoint;
-   SCIP_NODE* downchild;
-   SCIP_NODE* eqchild;
-   SCIP_NODE* upchild;
+   int nchildren;
 
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
@@ -580,9 +587,24 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextPscost)
    SCIPdebugMessage("branching on variable <%s>: new intervals: [%g, %g] and [%g, %g]\n",
       SCIPvarGetName(brvar), SCIPvarGetLbLocal(brvar), SCIPadjustedVarUb(scip, brvar, brpoint), SCIPadjustedVarLb(scip, brvar, brpoint), SCIPvarGetUbLocal(brvar));
 
-   SCIP_CALL( SCIPbranchVarVal(scip, brvar, brpoint, &downchild, &eqchild, &upchild) );
+   if( branchruledata->nchildren > 2 && SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) <= branchruledata->narymaxdepth )
+   {
+      /* do n-ary branching */
+      SCIP_Real minwidth;
 
-   if( downchild != NULL || eqchild != NULL || upchild != NULL )
+      minwidth = 0.0;
+      if( !SCIPisInfinity(scip, -SCIPvarGetLbGlobal(brvar)) && !SCIPisInfinity(scip, SCIPvarGetUbGlobal(brvar)) )
+         minwidth = branchruledata->naryminwidth * (SCIPvarGetUbGlobal(brvar) - SCIPvarGetLbGlobal(brvar));
+
+      SCIP_CALL( SCIPbranchVarValNary(scip, brvar, brpoint, branchruledata->nchildren, minwidth, branchruledata->narywidthfactor, &nchildren) );
+   }
+   else
+   {
+      /* do binary branching */
+      SCIP_CALL( SCIPbranchVarValNary(scip, brvar, brpoint, 2, 0.0, 1.0, &nchildren) );
+   }
+
+   if( nchildren > 1 )
    {
       *result = SCIP_BRANCHED;
    }
@@ -639,6 +661,22 @@ SCIP_RETCODE SCIPincludeBranchrulePscost(
    SCIP_CALL( SCIPaddRealParam(scip, "branching/"BRANCHRULE_NAME"/sumscoreweight",
          "weight for sum of scores of a branching candidate when building weighted sum of min/max/sum of scores",
          &branchruledata->scoresumweight, TRUE, BRANCHRULE_SCORESUMWEIGHT_DEFAULT, -SCIPinfinity(scip), SCIPinfinity(scip), NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "branching/"BRANCHRULE_NAME"/nchildren",
+         "number of children to create in n-ary branching",
+         &branchruledata->nchildren, FALSE, BRANCHRULE_NCHILDREN_DEFAULT, 2, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "branching/"BRANCHRULE_NAME"/narymaxdepth",
+         "maximal depth where to do n-ary branching, -1 to turn off",
+         &branchruledata->narymaxdepth, FALSE, BRANCHRULE_NARYMAXDEPTH_DEFAULT, -1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "branching/"BRANCHRULE_NAME"/naryminwidth",
+         "minimal domain width in children when doing n-ary branching, relative to global bounds",
+         &branchruledata->naryminwidth, FALSE, BRANCHRULE_NARYMINWIDTH_DEFAULT, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "branching/"BRANCHRULE_NAME"/narywidthfactor",
+         "factor of domain width in n-ary branching when creating nodes with increasing distance from branching value",
+         &branchruledata->narywidthfactor, FALSE, BRANCHRULE_NARYWIDTHFAC_DEFAULT, 1.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

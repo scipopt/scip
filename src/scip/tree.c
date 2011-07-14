@@ -4597,7 +4597,7 @@ SCIP_Real SCIPtreeCalcChildEstimate(
  *  if x is a continuous variable, then two child nodes will be created
  *  (x <= x', x >= x')
  *  but if the bounds of x are such that their relative difference is smaller than epsilon,
- *  the variable is fixed to val (if not SCIP_INVALID) or a well choosen alternative in the current node,
+ *  the variable is fixed to val (if not SCIP_INVALID) or a well chosen alternative in the current node,
  *  i.e., no children are created
  *  if x is not a continuous variable, then:
  *  if solution value x' is fractional, two child nodes will be created
@@ -4897,6 +4897,372 @@ SCIP_RETCODE SCIPtreeBranchVar(
             var, uplb, SCIP_BOUNDTYPE_LOWER, FALSE) );
       if( upchild != NULL )
          *upchild = node;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** n-ary branching on a variable x
+ * Branches on variable x such that up to n/2 children are created on each side of the usual branching value.
+ * The branching value is selected as in SCIPtreeBranchVar().
+ * If n is 2 or the variables local domain is too small for a branching into n pieces, SCIPtreeBranchVar() is called.
+ * The parameters minwidth and widthfactor determine the domain width of the branching variable in the child nodes.
+ * If n is odd, one child with domain width 'width' and having the branching value in the middle is created.
+ * Otherwise, two children with domain width 'width' and being left and right of the branching value are created.
+ * Next further nodes to the left and right are created, where width is multiplied by widthfactor with increasing distance from the first nodes.
+ * The initial width is calculated such that n/2 nodes are created to the left and to the right of the branching value.
+ * If this value is below minwidth, the initial width is set to minwidth, which may result in creating less than n nodes.
+ *
+ * Giving a large value for widthfactor results in creating children with small domain when close to the branching value
+ * and large domain when closer to the current variable bounds. That is, setting widthfactor to a very large value and n to 3
+ * results in a ternary branching where the branching variable is mostly fixed in the middle child.
+ * Setting widthfactor to 1.0 results in children where the branching variable always has the same domain width
+ * (except for one child if the branching value is not in the middle).
+ */
+SCIP_RETCODE SCIPtreeBranchVarNary(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_VAR*             var,                /**< variable to branch on */
+   SCIP_Real             val,                /**< value to branch on or SCIP_INVALID for branching on current LP/pseudo solution.
+                                              *   A branching value is required for branching on continuous variables */
+   int                   n,                  /**< attempted number of children to be created, must be >= 2 */
+   SCIP_Real             minwidth,           /**< minimal domain width in children */
+   SCIP_Real             widthfactor,        /**< multiplier for children domain width with increasing distance from val, must be >= 1.0 */
+   int*                  nchildren           /**< buffer to store number of created children, or NULL */
+   )
+{
+   SCIP_NODE* node;
+   SCIP_Real priority;
+   SCIP_Real estimate;
+   SCIP_Real lpval;
+   SCIP_Real width;
+   SCIP_Bool validval;
+   SCIP_Real left;
+   SCIP_Real right;
+   SCIP_Real bnd;
+   int i;
+
+   assert(tree != NULL);
+   assert(set != NULL);
+   assert(var != NULL);
+   assert(n >= 2);
+   assert(minwidth >= 0.0);
+
+   /* if binary branching is requested or we have not enough space for n children, delegate to SCIPtreeBranchVar */
+   if( n == 2 ||
+      2.0 * minwidth >= SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var) ||
+      SCIPrelDiff(SCIPvarGetUbLocal(SCIPvarGetProbvar(var)), SCIPvarGetLbLocal(SCIPvarGetProbvar(var))) <= n * SCIPsetEpsilon(set) )
+   {
+      SCIP_NODE* downchild;
+      SCIP_NODE* fixchild;
+      SCIP_NODE* upchild;
+
+      SCIP_CALL( SCIPtreeBranchVar(tree, blkmem, set, stat, lp, branchcand, eventqueue, var, val, &downchild, &fixchild, &upchild) );
+
+      if( nchildren != NULL )
+         *nchildren = (downchild != NULL ? 1 : 0) + (fixchild != NULL ? 1 : 0) + (upchild != NULL ? 1 : 0);
+
+      return SCIP_OKAY;
+   }
+
+   /* store whether a valid value was given for branching */
+   validval = (val != SCIP_INVALID);  /*lint !e777 */
+
+   /* get the corresponding active problem variable
+    * if branching value is given, then transform it to the value of the active variable */
+   if( validval )
+   {
+      SCIP_Real scalar;
+      SCIP_Real constant;
+
+      scalar   = 1.0;
+      constant = 0.0;
+
+      SCIP_CALL( SCIPvarGetProbvarSum(&var, &scalar, &constant) );
+
+      if( scalar == 0.0 )
+      {
+         SCIPerrorMessage("cannot branch on fixed variable <%s>\n", SCIPvarGetName(var));
+         return SCIP_INVALIDDATA;
+      }
+
+      /* we should have givenvariable = scalar * activevariable + constant */
+      val = (val - constant) / scalar;
+   }
+   else
+      var = SCIPvarGetProbvar(var);
+
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
+   {
+      SCIPerrorMessage("cannot branch on fixed or multi-aggregated variable <%s>\n", SCIPvarGetName(var));
+      return SCIP_INVALIDDATA;
+   }
+
+   /* ensure, that branching on continuous variables will only be performed when a branching point is given. */
+   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && !validval )
+   {
+      SCIPerrorMessage("Cannot branch on continuous variables without a given branching value.\n", SCIPvarGetName(var));
+      return SCIP_INVALIDDATA;
+   }
+
+   assert(SCIPvarIsActive(var));
+   assert(SCIPvarGetProbindex(var) >= 0);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, SCIPvarGetLbLocal(var)));
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, SCIPvarGetUbLocal(var)));
+   assert(SCIPsetIsLT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
+
+   /* get value of variable in current LP or pseudo solution */
+   lpval = SCIPvarGetSol(var, tree->focusnodehaslp);
+
+   /* if there was no explicit value given for branching, branch on current LP or pseudo solution value */
+   if( !validval )
+   {
+      val = lpval;
+
+      /* avoid branching on infinite values in pseudo solution */
+      if( SCIPsetIsInfinity(set, -val) || SCIPsetIsInfinity(set, val) )
+      {
+         val = SCIPvarGetWorstBound(var);
+
+         /* if both bounds are infinite, choose zero as branching point */
+         if( SCIPsetIsInfinity(set, -val) || SCIPsetIsInfinity(set, val) )
+         {
+            assert(SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var)));
+            assert(SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var)));
+            val = 0.0;
+         }
+      }
+   }
+
+   assert(SCIPsetIsFeasGE(set, val, SCIPvarGetLbLocal(var)));
+   assert(SCIPsetIsFeasLE(set, val, SCIPvarGetUbLocal(var)));
+   assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS ||
+      SCIPsetIsRelEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) ||
+      (SCIPsetIsLT(set, 2.1*SCIPvarGetLbLocal(var), 2.1*val) && SCIPsetIsLT(set, 2.1*val, 2.1*SCIPvarGetUbLocal(var))) );  /* see comment in SCIPbranchVarVal */
+
+   /* calculate minimal distance of val from bounds */
+   width = SCIP_REAL_MAX;
+   if( !SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var)) )
+   {
+      width = val - SCIPvarGetLbLocal(var);
+   }
+   if( !SCIPsetIsInfinity(set,  SCIPvarGetUbLocal(var)) )
+   {
+      width = MIN(width, SCIPvarGetUbLocal(var) - val);
+   }
+   /* calculate initial domain width of child nodes
+    * if we have at least one finite bounds, choose width such that we have roughly the same number of nodes left and right of val
+    */
+   if( width == SCIP_REAL_MAX )
+   {
+      /* unbounded variable, let's create a child with a small domain */
+      width = 1.0;
+   }
+   else if( widthfactor == 1.0 )
+   {
+      /* most domains get same size */
+      width /= n/2;
+   }
+   else
+   {
+      /* width is increased by widthfactor for each child
+       * if n is even, compute width such that we can create n/2 nodes with width
+       * width, widthfactor*width, ..., widthfactor^(n/2)*width on each side, i.e.,
+       *      sum(width * widthfactor^(i-1), i = 1..n/2) = min(ub-val, val-lb)
+       *  <-> width * (widthfactor^(n/2) - 1) / (widthfactor - 1) = min(ub-val, val-lb)
+       *
+       * if n is odd, compute width such that we can create one middle node with width width
+       * and n/2 nodes with width widthfactor*width, ..., widthfactor^(n/2)*width on each side, i.e.,
+       *      width/2 + sum(width * widthfactor^i, i = 1..n/2) = min(ub-val, val-lb)
+       *  <-> width * (1/2 + widthfactor * (widthfactor^(n/2) - 1) / (widthfactor - 1) = min(ub-val, val-lb)
+       */
+      assert(widthfactor > 1.0);
+      if( n % 2 == 0 )
+         width *= (widthfactor - 1.0) / (pow(widthfactor, n/2) - 1.0);
+      else
+         width /= 0.5 + widthfactor * (pow(widthfactor, n/2) - 1.0) / (widthfactor - 1.0);
+   }
+   if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+      minwidth = MAX(1.0, minwidth);
+   if( width < minwidth )
+      width = minwidth;
+   assert(SCIPsetIsPositive(set, width));
+
+   SCIPdebugMessage("%d-ary branching on variable <%s> [%g, %g] around %g, initial width = %g\n",
+      n, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), val, width);
+
+   if( nchildren != NULL )
+      *nchildren = 0;
+
+   /* initialize upper bound on children left of val and children right of val
+    * if we are supposed to create an odd number of children, then create a child that has val in the middle of its domain */
+   if( n % 2 == 1 )
+   {
+      left  = val - width/2.0;
+      right = val + width/2.0;
+      SCIPvarAdjustLb(var, set, &left);
+      SCIPvarAdjustUb(var, set, &right);
+
+      /* create child node left <= x <= right, if left <= right */
+      if( left <= right )
+      {
+         priority = SCIPtreeCalcNodeselPriority(tree, set, stat, var, SCIP_BRANCHDIR_FIXED, val); /* ????????????? how to compute priority for such a child? */
+         /* if LP solution is cutoff in child, compute a new estimate
+          * otherwise we cannot expect a direct change in the best solution, so we keep the estimate of the parent node */
+         if( SCIPsetIsLT(set, lpval, left) )
+            estimate = SCIPtreeCalcChildEstimate(tree, set, stat, var, left);
+         else if( SCIPsetIsGT(set, lpval, right) )
+            estimate = SCIPtreeCalcChildEstimate(tree, set, stat, var, right);
+         else
+            estimate = SCIPnodeGetEstimate(tree->focusnode);
+         SCIPdebugMessage(" -> creating middle child: %g <= <%s> <= %g (priority: %g, estimate: %g, width: %g)\n",
+            left, SCIPvarGetName(var), right, priority, estimate, right - left);
+         SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
+         SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, tree, lp, branchcand, eventqueue,
+            var, left , SCIP_BOUNDTYPE_LOWER, FALSE) );
+         SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, tree, lp, branchcand, eventqueue,
+            var, right, SCIP_BOUNDTYPE_UPPER, FALSE) );
+
+         if( nchildren != NULL )
+            ++*nchildren;
+      }
+      --n;
+
+      if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+      {
+         /* if it's a discrete variable, we can use left-1 and right+1 as upper and lower bounds for following nodes on the left and right, resp. */
+         left  -= 1.0;
+         right += 1.0;
+      }
+
+      width *= widthfactor;
+   }
+   else
+   {
+      if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+      {
+         left  = SCIPsetFloor(set, val);
+         right = SCIPsetCeil(set, val);
+         if( left == right )
+            left -= 1.0;
+      }
+      else if( SCIPsetIsZero(set, val) )
+      {
+         left  = 0.0;
+         right = 0.0;
+      }
+      else
+      {
+         left  = val;
+         right = val;
+      }
+   }
+
+   assert(n % 2 == 0);
+   n /= 2;
+   for( i = 0; i < n; ++i )
+   {
+      /* create child node left - width <= x <= left, if left > lb(x) or x is discrete */
+      if( SCIPsetIsRelLT(set, SCIPvarGetLbLocal(var), left) || SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+      {
+         /* new lower bound should be variables lower bound, if we are in the last round or left - width is very close to lower bound
+          * otherwise we take left - width
+          */
+         if( i == n-1 || SCIPsetIsRelEQ(set, SCIPvarGetLbLocal(var), left - width))
+         {
+            bnd = SCIPvarGetLbLocal(var);
+         }
+         else
+         {
+            bnd = left - width;
+            SCIPvarAdjustLb(var, set, &bnd);
+            bnd = MAX(SCIPvarGetLbLocal(var), bnd);
+         }
+         assert(SCIPsetIsRelLT(set, bnd, left));
+
+         /* the nodeselection priority of nodes is decreased as more as they are away from val */
+         priority = SCIPtreeCalcNodeselPriority(tree, set, stat, var, SCIP_BRANCHDIR_DOWNWARDS, bnd) / (i+1);
+         /* if LP solution is cutoff in child, compute a new estimate
+          * otherwise we cannot expect a direct change in the best solution, so we keep the estimate of the parent node */
+         if( SCIPsetIsLT(set, lpval, bnd) )
+            estimate = SCIPtreeCalcChildEstimate(tree, set, stat, var, bnd);
+         else if( SCIPsetIsGT(set, lpval, left) )
+            estimate = SCIPtreeCalcChildEstimate(tree, set, stat, var, left);
+         else
+            estimate = SCIPnodeGetEstimate(tree->focusnode);
+         SCIPdebugMessage(" -> creating left  child: %g <= <%s> <= %g (priority: %g, estimate: %g, width: %g)\n",
+            bnd, SCIPvarGetName(var), left, priority, estimate, left - bnd);
+         SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
+         if( SCIPsetIsGT(set, bnd, SCIPvarGetLbLocal(var)) )
+         {
+            SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, tree, lp, branchcand, eventqueue,
+               var, bnd, SCIP_BOUNDTYPE_LOWER, FALSE) );
+         }
+         SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, tree, lp, branchcand, eventqueue,
+            var, left, SCIP_BOUNDTYPE_UPPER, FALSE) );
+
+         if( nchildren != NULL )
+            ++*nchildren;
+
+         left = bnd;
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+            left -= 1.0;
+      }
+
+      /* create child node right <= x <= right + width, if right < ub(x) */
+      if( SCIPsetIsRelGT(set, SCIPvarGetUbLocal(var), right) || SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+      {
+         /* new upper bound should be variables upper bound, if we are in the last round or right + width is very close to upper bound
+          * otherwise we take right + width
+          */
+         if( i == n-1 || SCIPsetIsRelEQ(set, SCIPvarGetUbLocal(var), right + width))
+         {
+            bnd = SCIPvarGetUbLocal(var);
+         }
+         else
+         {
+            bnd = right + width;
+            SCIPvarAdjustUb(var, set, &bnd);
+            bnd = MIN(SCIPvarGetUbLocal(var), bnd);
+         }
+         assert(SCIPsetIsRelGT(set, bnd, right));
+
+         /* the nodeselection priority of nodes is decreased as more as they are away from val */
+         priority = SCIPtreeCalcNodeselPriority(tree, set, stat, var, SCIP_BRANCHDIR_UPWARDS, bnd) / (i+1);
+         /* if LP solution is cutoff in child, compute a new estimate
+          * otherwise we cannot expect a direct change in the best solution, so we keep the estimate of the parent node */
+         if( SCIPsetIsLT(set, lpval, right) )
+            estimate = SCIPtreeCalcChildEstimate(tree, set, stat, var, right);
+         else if( SCIPsetIsGT(set, lpval, bnd) )
+            estimate = SCIPtreeCalcChildEstimate(tree, set, stat, var, bnd);
+         else
+            estimate = SCIPnodeGetEstimate(tree->focusnode);
+         SCIPdebugMessage(" -> creating right child: %g <= <%s> <= %g (priority: %g, estimate: %g, width: %g)\n",
+            right, SCIPvarGetName(var), bnd, priority, estimate, bnd - right);
+         SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
+         SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, tree, lp, branchcand, eventqueue,
+            var, right, SCIP_BOUNDTYPE_LOWER, FALSE) );
+         if( SCIPsetIsLT(set, bnd, SCIPvarGetUbLocal(var)) )
+         {
+            SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, tree, lp, branchcand, eventqueue,
+               var, bnd, SCIP_BOUNDTYPE_UPPER, FALSE) );
+         }
+
+         if( nchildren != NULL )
+            ++*nchildren;
+
+         right = bnd;
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+            right += 1.0;
+      }
+
+      width *= widthfactor;
    }
 
    return SCIP_OKAY;
