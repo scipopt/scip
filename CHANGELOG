@@ -58,6 +58,7 @@ interface:
 - new method SCIPsetParam() which is a generic parameter setter method, independent of the parameter type
 - the callbacks NLPIGETSOLUTION and NLPISETINITIALGUESS and the functions SCIPnlpiGetSolution() and SCIPnlpiSetInitialGuess() now also take arguments to get/set dual values
 - added methods SCIPnlrowGetDualsol(), SCIPgetNLPVarsLbDualsol(), SCIPgetNLPVarsUbDualsol() to retrieve dual values from an NLP solution
+- added method SCIPbranchVarValNary() for n-ary variable branching
 
 performance improvements:
 - performance improvements in prop_vbounds
@@ -87,6 +88,7 @@ fixed bugs:
   only be solved with the primal simplex due to numerical problems
 - fixed bug in cons_orbitope:resprop() for the packing case
 - fixed bug in reader_mps.c: if a variables first occurence is in the bounds section, then the corresponding variable bound was lost
+- fixed bug trying to print big messages bigger than SCIP_MAXSTRLEN
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})
@@ -129,6 +131,7 @@ parameters:
 - renamed parameter <constraints/quadratic/linearizenlpsol> to <constraints/quadratic/linearizeheursol> and do linearizations in every solution found by some heuristic
 - renamed parameter <constraints/quadratic/mincutefficacyenfo> to <constraints/quadratic/mincutefficacyenfofac> and interpret it as a factor of the feasibility tolerance
 - removed fastmip setting 2, which means the dualsolution would not be calculated but because SCIP always asks for the dual solution, the lp would be reoptimized to calculate them; so it had no real effect
+- added parameters <branching/pscost/nchildren> and <branching/pscost/nary*> to enable and customize n-ary branching on external branching candidates (e.g., in spatial branching for MINLP)
 
 features:
 - flatzinc reader is now capable to read cumulative constraints
@@ -174,6 +177,7 @@ features:
   binary, $(INSTALLDIR)/bin, and include headers, $(INSTALLDIR)/include, the default value is the empty string
 - new target in Makefile "install" performs "make" and copies the include headers
 - new target in Makefile "uninstall" removes libraries, binary, and include headers
+- cons_logicor is now abled to replace all aggregated variables in presolving by there active or negation of an active variable counterpart
 
 design:
 - SCIP_HASHMAP now works also without block memory
