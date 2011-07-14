@@ -87,6 +87,7 @@ fixed bugs:
   only be solved with the primal simplex due to numerical problems
 - fixed bug in cons_orbitope:resprop() for the packing case
 - fixed bug in reader_mps.c: if a variables first occurence is in the bounds section, then the corresponding variable bound was lost
+- fixed bug trying to print big messages bigger than SCIP_MAXSTRLEN
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})

@@ -80,15 +80,20 @@ SCIP_MESSAGEHDLR messagehdlrDefault =
 
 /** stores the given message in the buffer and returns the part of the buffer and message that should be printed now */
 static
-void bufferMessage(
+SCIP_Bool bufferMessage(
    char*                 buffer,             /**< message buffer */
    int*                  bufferlen,          /**< pointer to the currently used entries in the message buffer */
    const char*           msg,                /**< message to store in the buffer; NULL to flush the buffer */
-   char*                 outmsg              /**< array to store message that should be printed immediately */
+   char*                 outmsg,             /**< array to store message that should be printed immediately */
+   int*                  outmsgsize          /**< pointer which stored allocated space in outmsg, size should be at
+                                              *   least SCIP_MAXSTRLEN, if space would be not enough the needed sized is
+                                              *   returned
+                                              */
    )
 {
    assert(outmsg != NULL);
-   assert(msg == NULL || strlen(msg) < SCIP_MAXSTRLEN);
+   assert(outmsgsize != NULL);
+   assert(*outmsgsize >= SCIP_MAXSTRLEN);
 
    *outmsg = '\0';
 
@@ -98,20 +103,38 @@ void bufferMessage(
       if( buffer != NULL )
          (void)strncpy(outmsg, buffer, SCIP_MAXSTRLEN);
       (*bufferlen) = 0;
-      assert(strlen(outmsg) < SCIP_MAXSTRLEN);
-      return;
+      assert((int)strlen(outmsg) < SCIP_MAXSTRLEN);
+      return TRUE;
    }
 
    /* do we have a buffer? */
    if( buffer == NULL )
    {
+      /* check if the message fits into the output message */
+      if( (int)strlen(msg) >= *outmsgsize )
+      {
+         *outmsgsize = (int)strlen(msg) + 1;
+         return FALSE;
+      }
       /* no buffer exists -> just copy the message to the output */
-      (void)strncpy(outmsg, msg, SCIP_MAXSTRLEN);
-      assert(strlen(outmsg) < SCIP_MAXSTRLEN);
+      (void)strncpy(outmsg, msg, strlen(msg));
+      outmsg[strlen(msg)] = '\0';
+      assert((int)strlen(outmsg) < *outmsgsize);
    }
    else
    {
+      char* outmsgpos;
+
       assert(bufferlen != NULL);
+
+      /* check if the message fits into the output message */
+      if( (int)strlen(msg) + *bufferlen >= *outmsgsize + SCIP_MAXSTRLEN-1 )
+      {
+         *outmsgsize = (int)strlen(msg) + *bufferlen - SCIP_MAXSTRLEN + 2;
+         return FALSE;
+      }
+
+      outmsgpos = outmsg;
 
       while( *msg != '\0' )
       {
@@ -129,15 +152,29 @@ void bufferMessage(
          if( *bufferlen >= SCIP_MAXSTRLEN-1 || c == '\n' )
          {
             buffer[*bufferlen] = '\0';
-            (void)strncpy(outmsg, buffer, SCIP_MAXSTRLEN);
-            (void)strncpy(buffer, msg, SCIP_MAXSTRLEN);
-            *bufferlen = (int)strlen(msg);
-            assert(*bufferlen < SCIP_MAXSTRLEN-1);
-            assert(strlen(outmsg) < SCIP_MAXSTRLEN);
-            break;
+            (void)strncpy(outmsgpos, buffer, SCIP_MAXSTRLEN);
+            outmsgpos = &(outmsgpos[*bufferlen]);
+
+            /* if rest fits into buffer copy all */
+            if( (int)strlen(msg) < SCIP_MAXSTRLEN - 1 )
+            {
+               (void)strncpy(buffer, msg, SCIP_MAXSTRLEN);
+               *bufferlen = (int)strlen(msg);
+               assert(*bufferlen < SCIP_MAXSTRLEN-1);
+               assert((int)strlen(outmsg) < *outmsgsize);
+               break;
+            }
+            else
+            {
+               (void)strncpy(buffer, msg, SCIP_MAXSTRLEN - 2);
+               *bufferlen = SCIP_MAXSTRLEN - 2;
+               msg += (SCIP_MAXSTRLEN - 2);
+            }
          }
       }
    }
+
+   return TRUE;
 }
 
 
@@ -154,32 +191,94 @@ static SCIP_MESSAGEHDLR* curmessagehdlr = &messagehdlrDefault;
 /** prints error message with the current message handler, or buffers the message if no newline exists */
 static
 void messagePrintError(
-   const char*           msg                 /**< message to print; NULL to flush the output buffer */
+   const char*           msg,                /**< message to print; NULL to flush the output buffer */
+   int                   msglength           /**< message length if bigger than SCIP_MAXSTRLEN, or SCIP_MAXSTRLEN */
    )
 {
    if( curmessagehdlr != NULL && curmessagehdlr->messageerror != NULL )
    {
-      char outmsg[SCIP_MAXSTRLEN];
+      char* outmsg;
+      int outmsgsize;
 
-      bufferMessage(curmessagehdlr->errorbuffer, &curmessagehdlr->errorbufferlen, msg, outmsg);
+      outmsgsize = msglength + 1;
+
+      if( BMSallocMemorySize(&outmsg, outmsgsize) == NULL )
+      {
+         return;
+      }
+
+      if( !bufferMessage(curmessagehdlr->errorbuffer, &curmessagehdlr->errorbufferlen, msg, outmsg, &outmsgsize) )
+      {
+         assert(outmsgsize > msglength + 1);
+         if( BMSreallocMemorySize(&outmsg, outmsgsize) != NULL )
+         {
+#ifndef NDEBUG
+            SCIP_Bool ret;
+
+            ret = bufferMessage(curmessagehdlr->errorbuffer, &curmessagehdlr->errorbufferlen, msg, outmsg, &outmsgsize);
+            assert(ret);
+#else
+            bufferMessage(curmessagehdlr->errorbuffer, &curmessagehdlr->errorbufferlen, msg, outmsg, &outmsgsize);
+#endif
+         }
+         else
+         {
+            BMSfreeMemory(&outmsg);
+            return;
+         }
+      }
+
       if( *outmsg != '\0' )
          curmessagehdlr->messageerror(curmessagehdlr, stderr, outmsg);
+
+      BMSfreeMemory(&outmsg);
    }
 }
 
 /** prints warning message with the current message handler, or buffers the message if no newline exists */
 static
 void messagePrintWarning(
-   const char*           msg                 /**< message to print; NULL to flush the output buffer */
+   const char*           msg,                /**< message to print; NULL to flush the output buffer */
+   int                   msglength           /**< message length if bigger than SCIP_MAXSTRLEN, or SCIP_MAXSTRLEN */
    )
 {
    if( curmessagehdlr != NULL && curmessagehdlr->messagewarning != NULL )
    {
-      char outmsg[SCIP_MAXSTRLEN];
+      char* outmsg;
+      int outmsgsize;
 
-      bufferMessage(curmessagehdlr->warningbuffer, &curmessagehdlr->warningbufferlen, msg, outmsg);
+      outmsgsize = msglength + 1;
+
+      if( BMSallocMemorySize(&outmsg, outmsgsize) == NULL )
+      {
+         return;
+      }
+
+      if( !bufferMessage(curmessagehdlr->warningbuffer, &curmessagehdlr->warningbufferlen, msg, outmsg, &outmsgsize) )
+      {
+         assert(outmsgsize > msglength + 1);
+         if( BMSreallocMemorySize(&outmsg, outmsgsize) != NULL )
+         {
+#ifndef NDEBUG
+            SCIP_Bool ret;
+
+            ret = bufferMessage(curmessagehdlr->warningbuffer, &curmessagehdlr->warningbufferlen, msg, outmsg, &outmsgsize);
+            assert(ret);
+#else
+            bufferMessage(curmessagehdlr->warningbuffer, &curmessagehdlr->warningbufferlen, msg, outmsg, &outmsgsize);
+#endif
+         }
+         else
+         {
+            BMSfreeMemory(&outmsg);
+            return;
+         }
+      }
+
       if( *outmsg != '\0' )
          curmessagehdlr->messagewarning(curmessagehdlr, stderr, outmsg);
+
+      BMSfreeMemory(&outmsg);
    }
 }
 
@@ -187,18 +286,49 @@ void messagePrintWarning(
 static
 void messagePrintDialog(
    FILE*                 file,               /**< file stream to print into, or NULL for stdout */
-   const char*           msg                 /**< message to print; NULL to flush the output buffer */
+   const char*           msg,                /**< message to print; NULL to flush the output buffer */
+   int                   msglength           /**< message length if bigger than SCIP_MAXSTRLEN, or SCIP_MAXSTRLEN */
    )
 {
    if( curmessagehdlr != NULL && curmessagehdlr->messagedialog != NULL )
    {
       if( file == NULL || file == stdout )
       {
-         char outmsg[SCIP_MAXSTRLEN];
+         char* outmsg;
+         int outmsgsize;
 
-         bufferMessage(curmessagehdlr->dialogbuffer, &curmessagehdlr->dialogbufferlen, msg, outmsg);
+         outmsgsize = msglength + 1;
+
+         if( BMSallocMemorySize(&outmsg, outmsgsize) == NULL )
+         {
+            return;
+         }
+
+         if( !bufferMessage(curmessagehdlr->dialogbuffer, &curmessagehdlr->dialogbufferlen, msg, outmsg, &outmsgsize) )
+         {
+            assert(outmsgsize > msglength + 1);
+            if( BMSreallocMemorySize(&outmsg, outmsgsize) != NULL )
+            {
+#ifndef NDEBUG
+               SCIP_Bool ret;
+
+               ret = bufferMessage(curmessagehdlr->dialogbuffer, &curmessagehdlr->dialogbufferlen, msg, outmsg, &outmsgsize);
+               assert(ret);
+#else
+               bufferMessage(curmessagehdlr->dialogbuffer, &curmessagehdlr->dialogbufferlen, msg, outmsg, &outmsgsize);
+#endif
+            }
+            else
+            {
+               BMSfreeMemory(&outmsg);
+               return;
+            }
+         }
+
          if( *outmsg != '\0' )
             curmessagehdlr->messagedialog(curmessagehdlr, stdout, outmsg);
+
+         BMSfreeMemory(&outmsg);
       }
       else
       {
@@ -213,18 +343,49 @@ void messagePrintDialog(
 static
 void messagePrintInfo(
    FILE*                 file,               /**< file stream to print into, or NULL for stdout */
-   const char*           msg                 /**< message to print; NULL to flush the output buffer */
+   const char*           msg,                 /**< message to print; NULL to flush the output buffer */
+   int                   msglength           /**< message length if bigger than SCIP_MAXSTRLEN, or SCIP_MAXSTRLEN */
    )
 {
    if( curmessagehdlr != NULL && curmessagehdlr->messageinfo != NULL )
    {
       if( (file == NULL || file == stdout) && (msg == NULL || strlen(msg) < SCIP_MAXSTRLEN) )
       {
-         char outmsg[SCIP_MAXSTRLEN];
+         char* outmsg;
+         int outmsgsize;
 
-         bufferMessage(curmessagehdlr->infobuffer, &curmessagehdlr->infobufferlen, msg, outmsg);
+         outmsgsize = msglength + 1;
+
+         if( BMSallocMemorySize(&outmsg, outmsgsize) == NULL )
+         {
+            return;
+         }
+
+         if( !bufferMessage(curmessagehdlr->infobuffer, &curmessagehdlr->infobufferlen, msg, outmsg, &outmsgsize) )
+         {
+            assert(outmsgsize > msglength + 1);
+            if( BMSreallocMemorySize(&outmsg, outmsgsize) != NULL )
+            {
+#ifndef NDEBUG
+               SCIP_Bool ret;
+
+               ret = bufferMessage(curmessagehdlr->infobuffer, &curmessagehdlr->infobufferlen, msg, outmsg, &outmsgsize);
+               assert(ret);
+#else
+               bufferMessage(curmessagehdlr->infobuffer, &curmessagehdlr->infobufferlen, msg, outmsg, &outmsgsize);
+#endif
+            }
+            else
+            {
+               BMSfreeMemory(&outmsg);
+               return;
+            }
+         }
+
          if( *outmsg != '\0' )
             curmessagehdlr->messageinfo(curmessagehdlr, stdout, outmsg);
+
+         BMSfreeMemory(&outmsg);
       }
       else
       {
@@ -282,7 +443,8 @@ static SCIP_MESSAGEHDLR* emergencycurmessagehdlr = &messagehdlrDefault;
 /** prints error message with the current message handler, or buffers the message if no newline exists */
 static
 void messagePrintError(
-   const char*           msg                 /**< message to print; NULL to flush the output buffer */
+   const char*           msg,                /**< message to print; NULL to flush the output buffer */
+   int                   msglength           /**< message length if bigger than SCIP_MAXSTRLEN, or SCIP_MAXSTRLEN */
    )
 {
    pthread_mutex_lock(&messagemutex);
@@ -304,11 +466,41 @@ void messagePrintError(
 
       if( curmessagehdlr != NULL && curmessagehdlr->messageerror != NULL )
       {
-         char outmsg[SCIP_MAXSTRLEN];
-         
-         bufferMessage(curmessagehdlr->errorbuffer, &curmessagehdlr->errorbufferlen, msg, outmsg);
+         char* outmsg;
+         int outmsgsize;
+
+         outmsgsize = msglength + 1;
+
+         if( BMSallocMemorySize(&outmsg, outmsgsize) == NULL )
+         {
+            return;
+         }
+
+         if( !bufferMessage(curmessagehdlr->errorbuffer, &curmessagehdlr->errorbufferlen, msg, outmsg, &outmsgsize) )
+         {
+            assert(outmsgsize > msglength + 1);
+            if( BMSreallocMemorySize(&outmsg, outmsgsize) != NULL )
+            {
+#ifndef NDEBUG
+               SCIP_Bool ret;
+
+               ret = bufferMessage(curmessagehdlr->errorbuffer, &curmessagehdlr->errorbufferlen, msg, outmsg, &outmsgsize);
+               assert(ret);
+#else
+               bufferMessage(curmessagehdlr->errorbuffer, &curmessagehdlr->errorbufferlen, msg, outmsg, &outmsgsize);
+#endif
+            }
+            else
+            {
+               BMSfreeMemory(&outmsg);
+               return;
+            }
+         }
+
          if( *outmsg != '\0' )
             curmessagehdlr->messageerror(curmessagehdlr, stderr, outmsg);
+
+         BMSfreeMemory(&outmsg);
       }
    }
 
@@ -318,7 +510,8 @@ void messagePrintError(
 /** prints warning message with the current message handler, or buffers the message if no newline exists */
 static
 void messagePrintWarning(
-   const char*           msg                 /**< message to print; NULL to flush the output buffer */
+   const char*           msg,                /**< message to print; NULL to flush the output buffer */
+   int                   msglength           /**< message length if bigger than SCIP_MAXSTRLEN, or SCIP_MAXSTRLEN */
    )
 {
    pthread_mutex_lock(&messagemutex);
@@ -340,11 +533,41 @@ void messagePrintWarning(
 
       if( curmessagehdlr != NULL && curmessagehdlr->messagewarning != NULL )
       {
-         char outmsg[SCIP_MAXSTRLEN];
-         
-         bufferMessage(curmessagehdlr->warningbuffer, &curmessagehdlr->warningbufferlen, msg, outmsg);
+         char* outmsg;
+         int outmsgsize;
+
+         outmsgsize = msglength + 1;
+
+         if( BMSallocMemorySize(&outmsg, outmsgsize) == NULL )
+         {
+            return;
+         }
+
+         if( !bufferMessage(curmessagehdlr->warningbuffer, &curmessagehdlr->warningbufferlen, msg, outmsg, &outmsgsize) )
+         {
+            assert(outmsgsize > msglength + 1);
+            if( BMSreallocMemorySize(&outmsg, outmsgsize) != NULL )
+            {
+#ifndef NDEBUG
+               SCIP_Bool ret;
+
+               ret = bufferMessage(curmessagehdlr->warningbuffer, &curmessagehdlr->warningbufferlen, msg, outmsg, &outmsgsize);
+               assert(ret);
+#else
+               bufferMessage(curmessagehdlr->warningbuffer, &curmessagehdlr->warningbufferlen, msg, outmsg, &outmsgsize);
+#endif
+            }
+            else
+            {
+               BMSfreeMemory(&outmsg);
+               return;
+            }
+         }
+
          if( *outmsg != '\0' )
             curmessagehdlr->messagewarning(curmessagehdlr, stderr, outmsg);
+
+         BMSfreeMemory(&outmsg);
       }
    }
 
@@ -355,7 +578,8 @@ void messagePrintWarning(
 static
 void messagePrintDialog(
    FILE*                 file,               /**< file stream to print into, or NULL for stdout */
-   const char*           msg                 /**< message to print; NULL to flush the output buffer */
+   const char*           msg,                /**< message to print; NULL to flush the output buffer */
+   int                   msglength           /**< message length if bigger than SCIP_MAXSTRLEN, or SCIP_MAXSTRLEN */
    )
 {
    pthread_mutex_lock(&messagemutex);
@@ -379,11 +603,41 @@ void messagePrintDialog(
       {
          if( file == NULL || file == stdout )
          {
-            char outmsg[SCIP_MAXSTRLEN];
+            char* outmsg;
+            int outmsgsize;
 
-            bufferMessage(curmessagehdlr->dialogbuffer, &curmessagehdlr->dialogbufferlen, msg, outmsg);
+            outmsgsize = msglength + 1;
+
+            if( BMSallocMemorySize(&outmsg, outmsgsize) == NULL )
+            {
+               return;
+            }
+
+            if( !bufferMessage(curmessagehdlr->dialogbuffer, &curmessagehdlr->dialogbufferlen, msg, outmsg, &outmsgsize) )
+            {
+               assert(outmsgsize > msglength + 1);
+               if( BMSreallocMemorySize(&outmsg, outmsgsize) != NULL )
+               {
+#ifndef NDEBUG
+                  SCIP_Bool ret;
+
+                  ret = bufferMessage(curmessagehdlr->dialogbuffer, &curmessagehdlr->dialogbufferlen, msg, outmsg, &outmsgsize);
+                  assert(ret);
+#else
+                  bufferMessage(curmessagehdlr->dialogbuffer, &curmessagehdlr->dialogbufferlen, msg, outmsg, &outmsgsize);
+#endif
+               }
+               else
+               {
+                  BMSfreeMemory(&outmsg);
+                  return;
+               }
+            }
+
             if( *outmsg != '\0' )
                curmessagehdlr->messagedialog(curmessagehdlr, stdout, outmsg);
+
+            BMSfreeMemory(&outmsg);
          }
          else
          {
@@ -401,7 +655,8 @@ void messagePrintDialog(
 static
 void messagePrintInfo(
    FILE*                 file,               /**< file stream to print into, or NULL for stdout */
-   const char*           msg                 /**< message to print; NULL to flush the output buffer */
+   const char*           msg,                /**< message to print; NULL to flush the output buffer */
+   int                   msglength           /**< message length if bigger than SCIP_MAXSTRLEN, or SCIP_MAXSTRLEN */
    )
 {
    pthread_mutex_lock(&messagemutex);
@@ -425,11 +680,41 @@ void messagePrintInfo(
       {
          if( (file == NULL || file == stdout) && (msg == NULL || strlen(msg) < SCIP_MAXSTRLEN) )
          {
-            char outmsg[SCIP_MAXSTRLEN];
+            char* outmsg;
+            int outmsgsize;
 
-            bufferMessage(curmessagehdlr->infobuffer, &curmessagehdlr->infobufferlen, msg, outmsg);
+            outmsgsize = msglength + 1;
+
+            if( BMSallocMemorySize(&outmsg, outmsgsize) == NULL )
+            {
+               return;
+            }
+
+            if( !bufferMessage(curmessagehdlr->infobuffer, &curmessagehdlr->infobufferlen, msg, outmsg, &outmsgsize) )
+            {
+               assert(outmsgsize > msglength + 1);
+               if( BMSreallocMemorySize(&outmsg, outmsgsize) != NULL )
+               {
+#ifndef NDEBUG
+                  SCIP_Bool ret;
+
+                  ret = bufferMessage(curmessagehdlr->infobuffer, &curmessagehdlr->infobufferlen, msg, outmsg, &outmsgsize);
+                  assert(ret);
+#else
+                  bufferMessage(curmessagehdlr->infobuffer, &curmessagehdlr->infobufferlen, msg, outmsg, &outmsgsize);
+#endif
+               }
+               else
+               {
+                  BMSfreeMemory(&outmsg);
+                  return;
+               }
+            }
+
             if( *outmsg != '\0' )
                curmessagehdlr->messageinfo(curmessagehdlr, stdout, outmsg);
+
+            BMSfreeMemory(&outmsg);
          }
          else
          {
@@ -612,10 +897,10 @@ void SCIPmessagehdlrFree(
    if( *messagehdlr != NULL )
    {
       /* flush message buffers */
-      messagePrintError(NULL);
-      messagePrintWarning(NULL);
-      messagePrintDialog(NULL, NULL);
-      messagePrintInfo(NULL, NULL);
+      messagePrintError(NULL, SCIP_MAXSTRLEN);
+      messagePrintWarning(NULL, SCIP_MAXSTRLEN);
+      messagePrintDialog(NULL, NULL, SCIP_MAXSTRLEN);
+      messagePrintInfo(NULL, NULL, SCIP_MAXSTRLEN);
 
       BMSfreeMemoryArrayNull(&(*messagehdlr)->errorbuffer);
       BMSfreeMemoryArrayNull(&(*messagehdlr)->warningbuffer);
@@ -664,7 +949,7 @@ void SCIPmessagePrintErrorHeader(
    /* safe string printing - do not use SCIPsnprintf() since message.c should be independent */
    (void) snprintf(msg, SCIP_MAXSTRLEN, "[%s:%d] ERROR: ", sourcefile, sourceline);
    msg[SCIP_MAXSTRLEN-1] = '\0';
-   messagePrintError(msg);
+   messagePrintError(msg, SCIP_MAXSTRLEN);
 }
 
 /** prints an error message, acting like the printf() command */
@@ -702,12 +987,12 @@ void SCIPmessagePrintError(
 #endif
       assert(m == n);
       va_end(aq);
-      messagePrintError(bigmsg);
+      messagePrintError(bigmsg, n);
       BMSfreeMemory(&bigmsg);
       return;
    }   
 
-   messagePrintError(msg);
+   messagePrintError(msg, SCIP_MAXSTRLEN);
 }
 
 /** prints the header with source file location for an error message */
@@ -721,7 +1006,7 @@ void SCIPmessagePrintWarningHeader(
    /* safe string printing - do not use SCIPsnprintf() since message.c should be independent */
    (void) snprintf(msg, SCIP_MAXSTRLEN, "[%s:%d] Warning: ", sourcefile, sourceline);
    msg[SCIP_MAXSTRLEN-1] = '\0';   
-   messagePrintWarning(msg);
+   messagePrintWarning(msg, SCIP_MAXSTRLEN);
 }
 
 /** prints a warning message, acting like the printf() command */
@@ -758,11 +1043,11 @@ void SCIPmessagePrintWarning(
 #endif
       assert(m == n);
       va_end(aq);
-      messagePrintWarning(bigmsg);
+      messagePrintWarning(bigmsg, n);
       BMSfreeMemory(&bigmsg);
       return;
    }   
-   messagePrintWarning(msg);
+   messagePrintWarning(msg, SCIP_MAXSTRLEN);
 }
 
 /** prints a dialog message that requests user interaction, acting like the printf() command */
@@ -837,11 +1122,11 @@ void SCIPmessageVFPrintDialog(
 #endif
       assert(m == n);
       va_end(aq);
-      messagePrintDialog(file, bigmsg);
+      messagePrintDialog(file, bigmsg, n);
       BMSfreeMemory(&bigmsg);
       return;
    }   
-   messagePrintDialog(file, msg);
+   messagePrintDialog(file, msg, SCIP_MAXSTRLEN);
    va_end(aq);
 }
 
@@ -917,11 +1202,11 @@ void SCIPmessageVFPrintInfo(
 #endif
       assert(m == n);
       va_end(aq);
-      messagePrintInfo(file, bigmsg);
+      messagePrintInfo(file, bigmsg, n);
       BMSfreeMemory(&bigmsg);
       return;
    }   
-   messagePrintInfo(file, msg);
+   messagePrintInfo(file, msg, SCIP_MAXSTRLEN);
    va_end(aq);
 }
 
@@ -1011,11 +1296,11 @@ void SCIPmessageVFPrintVerbInfo(
 #endif
          assert(m == n);
          va_end(aq);
-         messagePrintInfo(file, bigmsg);
+         messagePrintInfo(file, bigmsg, n);
          BMSfreeMemory(&bigmsg);
          return;
       }   
-      messagePrintInfo(file, msg);
+      messagePrintInfo(file, msg, SCIP_MAXSTRLEN);
       va_end(aq);
    }
 }
