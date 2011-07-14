@@ -1,12 +1,7 @@
-FLAGS		+=	-DNDEBUG -DROUNDING_FE
-OFLAGS		+=	-O3 -mtune=native -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
-CFLAGS		+=	-m64 $(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
-CXXFLAGS	+=	-m64 $(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
-ARFLAGS		=	crs
-LDFLAGS		+=      -m64 -lm -Wl,-rpath,$(SCIPDIR)/$(LIBDIR)
-ZLIB_FLAGS	=
-ZLIB_LDFLAGS 	=	-lz
-GMP_FLAGS	=
-GMP_LDFLAGS 	=	-lgmp
-READLINE_FLAGS	=
-READLINE_LDFLAGS=	-lreadline -lncurses
+CFLAGS		+=	-m64
+CXXFLAGS	+=	-m64 
+LDFLAGS		+=      -m64 
+
+ifeq ($(SHARED),true)
+LIBBUILDFLAGS   +=	-m64
+endif
