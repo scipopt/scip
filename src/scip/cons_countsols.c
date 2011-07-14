@@ -384,7 +384,6 @@ CUTOFF_CONSTRAINT(addBinaryCons)
 
    SCIP_Real value;
    SCIP_VAR* var;
-   SCIP_VAR* negvar;
    SCIP_CONS* cons;
    
    assert( scip != NULL );
@@ -401,6 +400,7 @@ CUTOFF_CONSTRAINT(addBinaryCons)
    {
       var = vars[v];
     
+      assert( var != NULL );
       assert( SCIPvarIsBinary(var) );
       assert( varIsUnfixedLocal(var) );
 
@@ -409,11 +409,10 @@ CUTOFF_CONSTRAINT(addBinaryCons)
 
       if (value > 0.5)
       {
-         negvar = var;
-         SCIP_CALL( SCIPgetNegatedVar(scip, negvar, &vars[nvars]));
+         SCIP_CALL( SCIPgetNegatedVar(scip, var, &consvars[v]) );
       }
       else
-         consvars[nvars] = var;
+         consvars[v] = var;
    }
     
    /* create constraint */
