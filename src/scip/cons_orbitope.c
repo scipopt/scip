@@ -37,6 +37,23 @@
  *
  * In this paper a linear time propagation algorithm is described, a variant of which is implemented
  * here. The implemented variant does not run in linear time, but is very fast in practice.
+ *
+ * <table>
+ *   <caption>translation table</caption>
+ *   <tr><td>here</td><td>paper</td></tr>
+ *   <tr><td></td><td></td></tr>
+ *   <tr><td>nspcons      </td><td>p       </td></tr>
+ *   <tr><td>nblocks      </td><td>q       </td></tr>
+ *   <tr><td>vars         </td><td>x       </td></tr>
+ *   <tr><td>vals         </td><td>A^\\star</td></tr>
+ *   <tr><td>weights      </td><td>\\omega </td></tr>
+ *   <tr><td>cases        </td><td>\\tau   </td></tr>
+ *   <tr><td>fixtriangle  </td><td>--      </td></tr>
+ *   <tr><td>resolveprop  </td><td>--      </td></tr>
+ *   <tr><td>firstnonzeros</td><td>\\mu    </td></tr>
+ *   <tr><td>lastones     </td><td>\\alpha </td></tr>
+ *   <tr><td>frontiersteps</td><td>\\Gamma </td></tr>
+ * </table>
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -66,26 +83,6 @@
 
 /*
  * Data structures
- */
-
-/* ###############################################################################
- * ######                 TRANSLATION TABLE FOR VARIABLE NAMES               #####
- * ###### +---------------+-----------------+----------------+-------------+ #####
- * ###### |     HERE      |    COLORING     |    BHCOUNT     |    PAPER    | #####
- * ###### +---------------+-----------------+----------------+-------------+ #####
- * ###### | nspcons       |  n_             | m              | p           | #####
- * ###### | nblocks       |  maxColors_     | n              | q           | #####
- * ###### | vars          |  XVars_         | xvars          | x           | #####
- * ###### | vals          |  XVals_         | xvals          | A^\star     | #####
- * ###### | weights       |  A_             | A              | \omega      | #####
- * ###### | cases         |  T_             | T              | \tau        | #####
- * ###### | fixtriangle   |  fixTriangle_   | fixtriangle    |     --      | #####
- * ###### | resolveprop   |  resolveProp_   | resolveProp    |     --      | #####
- * ###### | firstnonzeros |  Mu_            | Mu             | \mu         | #####
- * ###### | lastones      |  Alpha_         | Alpha          | \alpha      | #####
- * ###### | frontiersteps |  S              | Gamma          | \Gamma      | #####
- * ###### +---------------+-----------------+----------------+-------------+ #####
- * ###############################################################################
  */
 
 /** constraint data for orbitope constraints */
@@ -1026,6 +1023,10 @@ SCIP_RETCODE resolvePropagation(
    assert( consdata->cases != NULL );
    assert( consdata->isTriangleFixed );
 
+   *result = SCIP_DIDNOTFIND;
+   if ( ! consdata->resolveprop )
+      return SCIP_OKAY;
+
    nspcons = consdata->nspcons;
    nblocks = consdata->nblocks;
    vars = consdata->vars;
@@ -1034,7 +1035,6 @@ SCIP_RETCODE resolvePropagation(
    ispart = consdata->ispart;
    cases = consdata->cases;
 
-   *result = SCIP_DIDNOTFIND;
    SCIPdebugMessage("Propagation resolution method of orbitope constraint using orbitopal fixing\n");
 
    /* fill table */
