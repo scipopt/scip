@@ -225,7 +225,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpClosecuts)
          }
          if ( sepadata->sepasol == NULL )
          {
-            SCIP_CALL( SCIPcomputeLPRelIntPoint(scip, FALSE, sepadata->inclobjcutoff, &sepadata->sepasol) );
+            SCIP_CALL( SCIPcomputeLPRelIntPoint(scip, TRUE, sepadata->inclobjcutoff, &sepadata->sepasol) );
          }
       }
       else
