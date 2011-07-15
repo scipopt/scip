@@ -5911,14 +5911,28 @@ SCIP_RETCODE SCIPsolve(
          SCIP_CONS** conss;
          char s[SCIP_MAXSTRLEN];
          mpq_t primalboundex;
-         
+         int n;
+
          conss = SCIPgetConss(scip);
          assert(conss != NULL);
          mpq_init(primalboundex);
 
          SCIPgetBestSolexObj(scip, conss[0], primalboundex);
-         gmp_snprintf(s, SCIP_MAXSTRLEN, "Exact Primal Bound : %+Qd (%d solutions)\n", primalboundex, SCIPgetNSolexs(scip));
-         SCIPmessagePrintInfo(s);
+
+         n = gmp_snprintf(s, SCIP_MAXSTRLEN, "Exact Primal Bound : %+Qd (%d solutions)\n", primalboundex, SCIPgetNSolexs(scip));
+         if( n >= SCIP_MAXSTRLEN )
+         {
+            char* bigs;
+
+            SCIP_CALL( SCIPallocMemorySize(scip, &bigs, n+1) );
+            gmp_snprintf(bigs, n+1, "Exact Primal Bound : %+Qd (%d solutions)\n", primalboundex, SCIPgetNSolexs(scip));
+            SCIPmessagePrintInfo(bigs);
+            SCIPfreeMemory(scip, &bigs);
+         }
+         else
+         {
+            SCIPmessagePrintInfo(s);
+         }
          mpq_clear(primalboundex);
       }
 #endif
@@ -16450,7 +16464,8 @@ void printSolutionStatistics(
          SCIP_CONS** conss;
          char s[SCIP_MAXSTRLEN];
          mpq_t primalboundex;
-      
+         int n;
+               
          conss = SCIPgetConss(scip);
          assert(conss != NULL);
          mpq_init(primalboundex);
@@ -16475,8 +16490,24 @@ void printSolutionStatistics(
                SCIPmessageFPrintInfo(file, "   (user objective limit)\n");
             else
             {
-               gmp_snprintf(s, SCIP_MAXSTRLEN, "  Exact Primal Bnd : %+Qd\n", primalboundex);
-               SCIPmessageFPrintInfo(file, s);
+               n = gmp_snprintf(s, SCIP_MAXSTRLEN, "  Exact Primal Bnd : %+Qd\n", primalboundex);
+               if( n >= SCIP_MAXSTRLEN )
+               {
+                  char* bigs;
+                  
+                  if( SCIPallocMemorySize(scip, &bigs, n+1) != SCIP_OKAY )
+                  {
+                     SCIPmessagePrintInfo("  Exact Primal Bnd : string to long\n");
+                  }
+                  else
+                  {
+                     gmp_snprintf(bigs, n+1, "  Exact Primal Bnd : %+Qd\n", primalboundex);
+                     SCIPmessagePrintInfo(bigs);
+                     SCIPfreeMemory(scip, &bigs);
+                  }
+               }
+               else
+                  SCIPmessageFPrintInfo(file, s);
             }
          }
 

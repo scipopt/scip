@@ -7891,6 +7891,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpExactlp)
 
    /* select dual bounding method to apply */
    dualboundmethod = SCIPselectDualBoundMethod(scip, FALSE);
+   assert(SCIPgetNLPBranchCands(scip) == 0 || dualboundmethod == 'e');
 
    /* start timing for dual bounding method 'e' (is performed here, as we cannot branch in sepalp) */
    if( dualboundmethod == 'e' )
@@ -7955,10 +7956,10 @@ SCIP_DECL_CONSENFOLP(consEnfolpExactlp)
    {
       SCIPerrorMessage("exact LP solver returns error: case not handled yet\n");
 
-      if( dualboundmethod == 'e' )
-         conshdlrdata->nfailprovedfeaslp++;
-      else
+      if( dualboundmethod != 'e' || SCIPgetNLPBranchCands(scip) == 0 )
          conshdlrdata->nwrongexactfeaslp++;
+      else
+         conshdlrdata->nfailprovedfeaslp++;
 
       return SCIP_ERROR;
    }
@@ -7967,8 +7968,8 @@ SCIP_DECL_CONSENFOLP(consEnfolpExactlp)
    SCIP_CALL( evaluateLPEX(scip, conss[0], conshdlrdata, consdata, result) );
 
    /* update number of wrong integral LP claims */
-   if( *result == SCIP_BRANCHED && dualboundmethod != 'e' )
-      conshdlrdata->nwrongexactfeaslp++;
+    if( *result == SCIP_BRANCHED && ( dualboundmethod != 'e' || SCIPgetNLPBranchCands(scip) == 0 ) )
+         conshdlrdata->nwrongexactfeaslp++;
 
    return SCIP_OKAY;
 }
@@ -9313,13 +9314,24 @@ SCIP_RETCODE SCIPprintSolex(
 {
    char s[SCIP_MAXSTRLEN];
    mpq_t obj;
-
+   int n;
+         
    mpq_init(obj);
    
    SCIPgetSolexOrigObj(scip, cons, sol, obj);
-   gmp_snprintf(s, SCIP_MAXSTRLEN, "objective value:                 %20Qd\n", obj);
-   SCIPmessageFPrintInfo(file, s);
-
+   n = gmp_snprintf(s, SCIP_MAXSTRLEN, "objective value:                 %20Qd\n", obj);
+   if( n >= SCIP_MAXSTRLEN )
+   {
+      char* bigs;
+      
+      SCIP_CALL( SCIPallocMemorySize(scip, &bigs, n+1) );
+      gmp_snprintf(bigs, n+1, "objective value:                 %20Qd\n", obj);
+      SCIPmessagePrintInfo(bigs);
+      SCIPfreeMemory(scip, &bigs);
+   }
+   else
+      SCIPmessageFPrintInfo(file, s);
+   
    /* todo: usinf scip->orig/transprob is ugly! think about a general way get information from the constraint handler 
     *       implement all the methods in cons_exactlp.c that operate and use exact problem data, like exact solutions
     *       ??????????? 
