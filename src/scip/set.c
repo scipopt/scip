@@ -189,6 +189,7 @@
                                                  *   ('n'eumaier and shcherbina, 'v'erify LP basis, 'r'epair LP basis, 
                                                  *   'p'roject and scale, 'e'xact LP, 'i'nterval neumaier and shcherbina,
                                                  *   e'x'act neumaier and shcherbina, 'a'utomatic) */
+#define SCIP_DEFAULT_MISC_PSINFEASRAY     FALSE /**< should project and shift method prove node infeasibility by correcting dual ray? */
 #define SCIP_DEFAULT_MISC_REDUCESAFEDB      'n' /**< strategy for reducing safe dual bounding calls
                                                  *   ('n'o reduction, 'w'eak reduction, 's'trong reduction) */
 #define SCIP_DEFAULT_MISC_IGNOREPSSOL     FALSE /**< should pseudo solutions be ignored for dual bounds? */
@@ -849,6 +850,11 @@ SCIP_RETCODE SCIPsetCreate(
          "method for computing truely valid dual bounds at the nodes ('n'eumaier and shcherbina, 'v'erify LP basis, 'r'epair LP basis, 'p'roject and scale, 'e'xact LP,'i'nterval neumaier and shcherbina, e'x'act neumaier and shcherbina, 'a'utomatic)",
          &(*set)->misc_dbmethod, FALSE, SCIP_DEFAULT_MISC_DBMETHOD, "nvrpeixa",
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "misc/psinfeasray",
+         "should project and shift method prove node infeasibility by correcting dual ray?",
+         &(*set)->misc_psinfeasray, FALSE, SCIP_DEFAULT_MISC_PSINFEASRAY,
+         NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
          "misc/reducesafedb",
          "strategy for reducing safe dual bounding calls ('n'o reduction, 'w'eak reduction, 's'trong reduction)",
@@ -865,6 +871,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->misc_exactsolve = SCIP_DEFAULT_MISC_EXACTSOLVE;
    (*set)->misc_usefprelax = SCIP_DEFAULT_MISC_USEFPRELAX;
    (*set)->misc_dbmethod = SCIP_DEFAULT_MISC_DBMETHOD;
+   (*set)->misc_psinfeasray = SCIP_DEFAULT_MISC_PSINFEASRAY;
    (*set)->misc_reducesafedb = SCIP_DEFAULT_MISC_REDUCESAFEDB;
    (*set)->misc_ignorepssol = SCIP_DEFAULT_MISC_IGNOREPSSOL;
 #endif

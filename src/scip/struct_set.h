@@ -229,6 +229,7 @@ struct SCIP_Set
                                               *   ('n'eumaier and shcherbina, 'v'erify LP basis, 'r'epair LP basis, 
                                               *   'p'roject and scale, 'e'xact LP, 'i'nterval neumaier and shcherbina,
                                               *   e'x'act neumaier and shcherbina, 'a'utomatic) */
+   SCIP_Bool             misc_psinfeasray;   /**< should project and shift method prove node infeasibility by correcting dual ray? */
    char                  misc_reducesafedb;  /**< strategy for reducing safe dual bounding calls
                                               *   ('n'o reduction, 'w'eak reduction, 's'trong reduction) */
    SCIP_Bool             misc_ignorepssol;   /**< should pseudo solutions be ignored for dual bounds */

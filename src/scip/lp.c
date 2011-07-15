@@ -11460,7 +11460,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          {
             SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat) );
          }
-         if( set->misc_exactsolve && (set->misc_dbmethod == 'p' || set->misc_dbmethod == 'a') )
+         if( set->misc_exactsolve && (set->misc_dbmethod == 'p' || set->misc_dbmethod == 'a') && !set->misc_psinfeasray)
          {
             SCIP_CALL( SCIPlpGetUnboundedDualSol(lp, set, stat) );
          }

@@ -123,7 +123,8 @@ struct SCIP_ConshdlrData
                                               *   variables with infinite best bound */
    int                   pseudoobjvalinf;    /**< number of variables with infinite best bound in pseudo solution at node 
                                               *   where all unprocessed bound changes were applied last */
-   mpq_t*                interiorpt;         /**< stores S-interior point/ray for root node dual problem */
+   mpq_t*                interiorpt;         /**< stores S-interior point for root node dual problem */
+   mpq_t*                interiorray;        /**< stores S-interior ray for root node dual problem */
    int*                  includedcons;       /**< 1 if constraints dual variable is included in original S-interior point/ray */
    int                   nextendedconss;     /**< dimension of S-interior point/ray = 2*(nvars+nconss) */
    int*                  psbasis;            /**< mapping for basis used in factorization */
@@ -133,6 +134,7 @@ struct SCIP_ConshdlrData
    SCIP_PRIMALEX*        primal;             /**< exact primal data and solution storage */
    SCIP_Bool             psdatacon;          /**< was project and scale data structure constructed? */  
    SCIP_Bool             psdatafail;         /**< did the construction of the project and shift root node data fail? */
+   SCIP_Bool             psrayfail;          /**< did the construction of the S-interior ray at the root node data fail? */
    SCIP_Real             psobjweight;        /**< weight of the original objective function in lp to compute interior point */
    SCIP_Bool             psreduceauxlp;      /**< should the number of constraints in lp to compute interior point be reduced? */
    SCIP_Bool             pslambdacompwise;   /**< should lambda in shifting step of ps method be computed componentwise? */
@@ -816,6 +818,7 @@ SCIP_RETCODE conshdlrdataCreate(
    (*conshdlrdata)->pseudoobjvalinf = 0;
 
    (*conshdlrdata)->interiorpt = NULL;
+   (*conshdlrdata)->interiorray = NULL;
    (*conshdlrdata)->includedcons = NULL;
    (*conshdlrdata)->psbasis = NULL;
    (*conshdlrdata)->rootactivity = NULL;
@@ -831,6 +834,7 @@ SCIP_RETCODE conshdlrdataCreate(
 
    (*conshdlrdata)->primal = NULL;
    (*conshdlrdata)->psdatafail = FALSE;
+   (*conshdlrdata)->psrayfail = FALSE;
 
    (*conshdlrdata)->nprovedfeaslp = 0;
    (*conshdlrdata)->nprovedinfeaslp = 0;    
@@ -874,6 +878,9 @@ SCIP_RETCODE conshdlrdataFree(
       for( i = 0; i < (*conshdlrdata)->nextendedconss; i++ )
          mpq_clear((*conshdlrdata)->interiorpt[i]);
       SCIPfreeMemoryArray(scip, &(*conshdlrdata)->interiorpt);
+      for( i = 0; i < (*conshdlrdata)->nextendedconss; i++ )
+         mpq_clear((*conshdlrdata)->interiorray[i]);
+      SCIPfreeMemoryArray(scip, &(*conshdlrdata)->interiorray);
       SCIPfreeMemoryArray(scip, &(*conshdlrdata)->includedcons);
    }
 
@@ -3093,6 +3100,10 @@ SCIP_RETCODE constructPSData(
    SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->interiorpt, nextendedconss) );
    for( i = 0; i < nextendedconss; i++ )
       mpq_init(conshdlrdata->interiorpt[i]);
+   /* and for interior ray */
+   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->interiorray, nextendedconss) );
+   for( i = 0; i < nextendedconss; i++ )
+      mpq_init(conshdlrdata->interiorray[i]);
 
    /* allocate memory for the basis mapping */
    SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->psbasis, nextendedconss) );
@@ -4466,7 +4477,7 @@ SCIP_RETCODE constructPSData(
 
       if( !conshdlrdata->psuseintpoint )
       {
-         /* In this case we want to find an interior point instead of an interior ray
+         /* In this case we want to find an interior ray instead of an interior point
           * the problem will be modified to the following problem:
           * max:  [OBJ, 0]*[y,d]'
           * s.t.: [0] <= [ A~ |  0]   [y] <= [  0   ]
@@ -4640,7 +4651,7 @@ SCIP_RETCODE constructPSData(
             conshdlrdata->psdatafail = TRUE;
             SCIPerrorMessage(" Error: interior point not found \n");
          }
-
+         
 #ifdef PS_OUT
          printf("Constraints all satisfied by slack of:  ");
          mpq_out_str(stdout, 10, conshdlrdata->commonslack);
@@ -4687,6 +4698,241 @@ SCIP_RETCODE constructPSData(
       else
       {
          SCIPerrorMessage("Other Error\n");
+      }
+      
+      /* Next, if we are constructing interior ray in addition to interior point, we do this here */
+
+      if ( SCIPpsInfeasRay(scip) )
+      {
+         {
+            /* In this case we want to find an interior ray instead of an interior point
+             * the problem will be modified to the following problem:
+             * max:  [OBJ, 0]*[y,d]'
+             * s.t.: [0] <= [ A~ |  0]   [y] <= [  0   ]
+             *       [0] <= [ I* | -1] * [d] <= [\infty] <-- only for dual vars from includecons 
+             * bounds:     0 <= y <= \infty
+             *             1 <= d <= \infty  
+             * y is a vector of length (ndvarmap) and d is a single variable
+             * and A~ is the submatrix of [A',-A',I,-I] using columns in dvarmap
+             * and OBJ is the subvector of [lhs,-rhs,lb,-ub] using columns in dvarmap
+             *
+             * the parts that change are the objective function, the RHS/LHS of the first constraint set
+             * and the lower bound for d
+             */
+            
+            /* update the objective */
+            pos = 0;
+            for( i = 0; i < nconss; i++ )
+            {
+               if( dvarincidence[i] )
+               {
+                  mpq_set(psobj[pos], consdata->lhs[i]);
+                  pos++;
+               }
+            }
+            for( i = 0; i < nconss; i++ )
+            {
+               if( dvarincidence[nconss + i] ) 
+               {
+                  mpq_neg(psobj[pos], consdata->rhs[i]);
+                  pos++;
+               }
+            }
+            for( i = 0; i < nvars; i++ )
+            {
+               if( dvarincidence[2*nconss + i] )
+               {
+                  mpq_set(psobj[pos], consdata->lb[i]);
+                  pos++;
+               }
+            }
+            for( i = 0; i < nvars; i++ )
+            {  
+               if( dvarincidence[2*nconss + nvars + i])
+               {
+                  mpq_neg(psobj[pos], consdata->ub[i]);
+                  pos++;
+               }
+            }
+            assert(pos == ndvarmap);
+            mpq_set_ui(psobj[ndvarmap], 0, 1);
+            
+            /* update the rhs/lhs */
+            for( i = 0; i < nvars; i++ )
+            {
+               mpq_set_ui(pslhs[i], 0, 1);
+               mpq_set_ui(psrhs[i], 0, 1);
+            }
+            
+            /* update bounds on d */
+            mpq_set(psub[ndvarmap], conshdlrdata->posinfinity);
+            mpq_set_ui(pslb[ndvarmap], 1 ,1);
+         }
+#ifdef PS_OUT 
+         printf("Creating and assigning LPIEX to find S-interior ray\n");
+#endif
+         SCIP_CALL( SCIPlpiexFreeState(pslpiex, SCIPblkmem(scip), &lpistate) );
+         if( pslpiex != NULL )
+         {
+            SCIP_CALL( SCIPlpiexFree(&pslpiex) );
+         }
+         pslpiex = NULL;
+         /* build aux LP using the exact LP interface */
+         SCIP_CALL( SCIPlpiexCreate(&pslpiex, NULL, SCIP_OBJSEN_MAXIMIZE) );
+         
+         /* add all columns to the exact LP */
+         SCIP_CALL( SCIPlpiexAddCols(pslpiex, psnvars, psobj, pslb, psub, colnames, 0, NULL, NULL, NULL) );
+         
+         /* add all constraints to the exact LP */
+         SCIP_CALL( SCIPlpiexAddRows(pslpiex, psnconss, (const mpq_t*) pslhs, (const mpq_t*) psrhs, 
+               NULL, psnnonz, psbeg, pslen, psind, psval) );
+         
+#ifdef PS_OUT
+         /* write LP to file */
+         //      SCIP_CALL( SCIPlpiexWriteLP(pslpiex, "prob/psdebug_opt.lp") );  /* ????????????*/
+         printf("solving LPIEX \n");
+#endif
+         
+         
+         if( PSWARMSTARTAUXPROB )
+         {
+            /* warm start the exact LP by solving the approximate LP first */
+            
+            /* allocate and copy aux problem using SCIP_Real arrays */
+            SCIP_CALL( SCIPallocBufferArray(scip, &psobj_real, psnvars) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &pslb_real, psnvars) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &psub_real, psnvars) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &pslhs_real, psnconss) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &psrhs_real, psnconss) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &psval_real, psnnonz) );
+            for( i = 0; i < psnvars; i++)
+            {
+               psobj_real[i] = mpq_get_d(psobj[i]);
+               pslb_real[i] = mpq_get_d(pslb[i]);
+               psub_real[i] = mpq_get_d(psub[i]);
+            }
+            for( i = 0; i < psnconss; i++)
+            {
+               pslhs_real[i] = mpq_get_d(pslhs[i]);
+               psrhs_real[i] = mpq_get_d(psrhs[i]);
+            }
+            for( i = 0; i < psnnonz; i++)
+               psval_real[i] = mpq_get_d(psval[i]);
+            
+            /* build and solve approximate aux. problem */
+            SCIP_CALL( SCIPlpiCreate(&pslpi, "problem" , SCIP_OBJSEN_MAXIMIZE) );
+            SCIP_CALL( SCIPlpiAddCols(pslpi, psnvars, psobj_real, pslb_real, psub_real, colnames, 0, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPlpiAddRows(pslpi, psnconss, pslhs_real, psrhs_real, NULL, psnnonz, psbeg, psind, psval_real) );
+            SCIP_CALL( SCIPlpiSolveDual(pslpi) );
+            
+            /* load lp state into exact LP */
+            SCIP_CALL( SCIPlpiGetState(pslpi, SCIPblkmem(scip), &lpistate) );
+            SCIP_CALL( SCIPlpiexSetState(pslpiex, SCIPblkmem(scip), lpistate) );
+            
+            /* free memory used for approx LP */
+            SCIP_CALL( SCIPlpiFreeState(pslpi, SCIPblkmem(scip), &lpistate) );
+            SCIPfreeBufferArray(scip, &psval_real);
+            SCIPfreeBufferArray(scip, &psrhs_real);
+            SCIPfreeBufferArray(scip, &pslhs_real);
+            SCIPfreeBufferArray(scip, &psub_real);
+            SCIPfreeBufferArray(scip, &pslb_real);
+            SCIPfreeBufferArray(scip, &psobj_real);
+            if( pslpi != NULL )
+            {
+               SCIP_CALL( SCIPlpiFree(&pslpi) );
+            }
+            assert(pslpi == NULL);
+         }
+         
+         /* solve the LP */      
+         SCIP_CALL( SCIPlpiexSolveDual(pslpiex) );
+         // SCIP_CALL( SCIPlpiexSolvePrimal(pslpiex) );
+         
+         /* recover the optimal solution and set interior point and slack in constraint handler data */
+         if( SCIPlpiexIsOptimal(pslpiex) )
+         {
+            SCIPdebugMessage("   exact LP solved to optimality\n"); 
+            /* get optimal dual solution */
+            SCIP_CALL( SCIPlpiexGetSol(pslpiex, &objval, primalsol, NULL, NULL, NULL) );
+            
+#ifdef PS_OUT 
+            printf("Dual solution: \n");
+            if( psnvars < 100 )
+            {
+               for( i = 0; i < psnvars; i++ )
+               {
+                  mpq_out_str(stdout, 10, primalsol[i]);
+                  printf(" \n");
+               }   
+            }
+            else
+               printf("Solution too long\n");
+            printf("Objective value: ");
+            mpq_out_str(stdout, 10, objval);
+            printf(" \n");   
+#endif         
+            /* assign interior ray to constraint handler data */
+            mpq_set(conshdlrdata->commonslack, primalsol[psnvars - 1]);
+            for( i = 0; i < ndvarmap; i++ )                
+            {                                         
+               mpq_set( conshdlrdata->interiorray[dvarmap[i]], primalsol[i]);    
+            }     
+            
+            if( mpq_sgn(conshdlrdata->commonslack) == 0 )
+            {
+               conshdlrdata->psrayfail = TRUE;
+               SCIPerrorMessage(" Error: interior ray not found \n");
+            }
+            else
+               conshdlrdata->psrayfail = FALSE;
+            
+#ifdef PS_OUT
+            printf("Constraints all satisfied by slack of:  ");
+            mpq_out_str(stdout, 10, conshdlrdata->commonslack);
+            printf(" \n"); 
+            printf("Relative interior ray: \n");
+            if( conshdlrdata->nextendedconss < 100 )
+            {
+               for( i = 0; i <  conshdlrdata->nextendedconss; i++ )
+               {
+                  mpq_out_str(stdout, 10, conshdlrdata->interiorray[i]);
+                  printf(" \n");
+               }
+            }
+            else
+               printf("Sol. too long\n");
+#endif
+         }
+         else if( SCIPlpiexIsObjlimExc(pslpiex) )
+         {
+            conshdlrdata->psrayfail = TRUE;
+            SCIPerrorMessage("exact LP exceeds objlimit: case not handled yet\n");
+         }
+         else if( SCIPlpiexIsPrimalInfeasible(pslpiex) )
+         {
+            conshdlrdata->psrayfail = TRUE;
+            SCIPerrorMessage(" Error: interior point not found - infeasible aux. problem \n");
+            SCIPdebugMessage("   exact LP is primal infeasible\n"); 
+         }
+         else if( SCIPlpiexExistsPrimalRay(pslpiex) ) 
+         {
+            conshdlrdata->psrayfail = TRUE;
+            SCIPerrorMessage("exact LP has primal ray: case not handled yet\n");
+         }
+         else if( SCIPlpiexIsIterlimExc(pslpiex) )
+         {
+            conshdlrdata->psrayfail = TRUE;
+            SCIPerrorMessage("exact LP exceeds iteration limit: case not handled yet\n");
+         }
+         else if( SCIPlpiexIsTimelimExc(pslpiex) )
+         {
+            conshdlrdata->psrayfail = TRUE;
+            SCIPerrorMessage("exact LP exceeds time limit: case not handled yet\n");
+         }
+         else
+         {
+            SCIPerrorMessage("Other Error\n");
+         }
       }
       
       if(primalsol != NULL)
@@ -4905,9 +5151,14 @@ SCIP_RETCODE constructPSData(
       printf("Creating and assigning LPIEX to find S-interior point\n");
 #endif
 
-      /* build aux LP using the exact LP interface */
+      /* build aux LP using the exact LP interface */   
+      if( pslpiex != NULL )
+      {
+         SCIP_CALL( SCIPlpiexFree(&pslpiex) );
+      }
+      pslpiex = NULL;
       SCIP_CALL( SCIPlpiexCreate(&pslpiex, NULL, SCIP_OBJSEN_MAXIMIZE) );
-
+      
 #ifdef PS_OUT
       /*activate extra output from exact LP solver */
       SCIPlpiexSetIntpar(pslpiex,SCIP_LPPAR_LPINFO,TRUE);
@@ -5591,7 +5842,7 @@ SCIP_RETCODE getPSdualbound(
             {
                mpq_div(mpqtemp, approxdualsol[i], conshdlrdata->interiorpt[i]);
                mpq_neg(mpqtemp, mpqtemp);
-               if( mpq_cmp(lambda2, mpqtemp) > 0 )
+               if( mpq_cmp(lambda2, mpqtemp) < 0 ) /* changed to < */
                   mpq_set(lambda2, mpqtemp);
             }
          }    
@@ -5791,6 +6042,471 @@ SCIP_RETCODE getPSdualbound(
    return SCIP_OKAY;
 }
 
+/** compute node infeasibility by project and shift method.
+ *  approximate dual ray is corrected to be exactly feasible.
+ *  projection step (to ensure that equalities are satisfied):  
+ *   - compute error in equalities: r=c-Ay^ 
+ *   - backsolve system of equations to find correction of error: z with Dz=r
+ *   - add corretion to approximate dual ray: bold(y)=y^+[z 0]
+ *  shifing step (to ensure that dual ray is feasible):
+ *   - take convex combination of projected approximate ray bold(y) with S-interior ray y*
+ *  compute objective value of ray
+ */
+static
+SCIP_RETCODE PScorrectdualray(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
+   SCIP_CONSDATA*        consdata,           /**< exactlp constraint data */
+   SCIP_Bool*            success             /**< was corrected dual ray cost improving? */  
+   )
+{
+   int i;
+   int j;
+   int rval;
+   int nextendedconss;
+   int nconss;
+   int nvars;
+   int currentrow;
+   int isfeas;
+   mpq_t* approxdualray;
+   mpq_t* costvect; /**< dual cost vector for expanded problem*/
+   mpq_t* violation;
+   mpq_t* correction;
+   mpq_t mpqtemp;
+   mpq_t mpqtemp2;
+   mpq_t lambda1;
+   mpq_t lambda2;
+   mpq_t maxv;
+   mpq_t dualbound;
+   SCIP_COL** cols;
+
+   *success = TRUE;
+
+   /* if data has not been constructed, or it failed, then exit */
+   if( !conshdlrdata->psdatacon || conshdlrdata->psdatafail || conshdlrdata->psrayfail )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   SCIPdebugMessage("  calling PScorrectdualray()\n");
+
+   mpq_init(mpqtemp);
+   mpq_init(mpqtemp2);
+   mpq_init(lambda1);
+   mpq_init(lambda2);
+   mpq_init(maxv);
+   mpq_init(dualbound);
+
+   nextendedconss = conshdlrdata->nextendedconss;
+   nconss = consdata->nconss;
+   nvars = consdata->nvars;
+
+   /* process bound changes */
+   processBoundchgs(scip, conshdlrdata, consdata);
+
+   /* allocate memory for approximate dual solution, dual cost vector, violation and correction */
+   SCIP_CALL( SCIPallocBufferArray(scip, &approxdualray, nextendedconss) );
+   for( i = 0; i < nextendedconss; i++ )
+      mpq_init(approxdualray[i]);
+   SCIP_CALL( SCIPallocBufferArray(scip, &costvect, nextendedconss) );
+   for( i = 0; i < nextendedconss; i++ )
+      mpq_init(costvect[i]);
+   SCIP_CALL( SCIPallocBufferArray(scip, &violation, nvars) );
+   for( i = 0; i < nvars; i++ )
+      mpq_init(violation[i]);
+   SCIP_CALL( SCIPallocBufferArray(scip, &correction, nextendedconss) );
+   for( i = 0; i < nextendedconss; i++ )
+      mpq_init(correction[i]);
+
+   /* recover the objective coefs and approximate solution value of dual solution; 
+    * dual vars of lhs constraints (including -inf) and rhs constraints (including +inf),
+    * dual vars of lb constraint (including -inf) and ub constraints (including +inf) 
+    */
+   for( i = 0; i < nconss; i++ )
+   {
+      /* in case we want to prove infeasibility it might be that we were not able to compute a dual solution 
+       * with bound exceeding objective value; in this case dual solution is set to SCIP_INVALID
+       */
+      if( SCIProwGetDualsol(consdata->rows[i]) == SCIP_INVALID )
+      {
+         SCIPdebugMessage("  no valid unbounded approx dual sol given\n");
+         *success = FALSE;
+         goto TERMINATE;
+      }
+      mpq_set_d(mpqtemp, SCIProwGetDualfarkas(consdata->rows[i]));
+      
+      /* lhs constraint */
+      if( mpq_sgn(mpqtemp) > 0 )
+         mpq_set(approxdualray[i], mpqtemp);
+      /* rhs constraint */
+      else
+         mpq_neg(approxdualray[i+nconss], mpqtemp);
+
+      mpq_set(costvect[i], consdata->lhs[i]);
+      mpq_neg(costvect[i+nconss], consdata->rhs[i]);
+   }
+   cols = SCIPgetLPCols(scip);
+   for( i = 0; i < nvars; i++ )  
+   {
+      mpq_set_d(mpqtemp, -SCIPgetColFarkasCoef(scip, cols[i]));
+      /* lb constraint */
+      if( mpq_sgn(mpqtemp) > 0 )
+         mpq_set(approxdualray[i + 2*nconss], mpqtemp);
+      /* ub constraint */
+      else
+         mpq_neg(approxdualray[i + 2*nconss + nvars], mpqtemp);
+
+      mpq_set(costvect[i + 2*nconss], consdata->lbloc[i]);
+      mpq_neg(costvect[i + 2*nconss + nvars], consdata->ubloc[i]);
+   }
+   
+#ifdef PS_OUT 
+   printf("Approximate dual ray:\n");
+   if( nextendedconss < 100 )
+   {
+      for( i = 0; i < nextendedconss; i++ )
+      {
+         mpq_out_str(stdout, 10, approxdualray[i]);
+         printf(" \n");
+      }
+   }
+   mpq_set_ui(dualbound, 0, 1);                                                             
+   for( i = 0; i < nextendedconss; i++ )
+   {
+      mpq_mul(mpqtemp, approxdualray[i], costvect[i]);
+      mpq_add(dualbound, dualbound,mpqtemp);
+   }
+   printf("objective value of approx ray is %.20f: \n", mpq_get_d(dualbound));         
+   mpq_out_str(stdout, 10, dualbound);                                                      
+   printf(" \n");                                                                        
+#endif  
+
+   /* first, ensure nonnegativity of dual ray and fix artificial dual variables to zero */
+   for( i = 0; i < nextendedconss; i++ ) 
+   { 
+      if( mpq_sgn(approxdualray[i]) < 0)
+         mpq_set_si(approxdualray[i], 0, 1);
+      else if( isNegInfinity(conshdlrdata, costvect[i]) )
+      {
+         assert(!conshdlrdata->includedcons[i]);
+         mpq_set_si(approxdualray[i], 0, 1);
+      }
+   } 
+   
+   /* calculate violation of equality constraints r=0-A^ty */
+   for( i = 0; i < nvars; i++ )
+   {
+      mpq_set_si(violation[i], 0, 1);
+   }
+   /* A^ty for y corresponding to primal constraints */
+   for( i = 0; i < nconss; i++ )
+   {
+      for( j = consdata->beg[i]; j < consdata->beg[i] + consdata->len[i]; j++)
+      {
+         currentrow = consdata->ind[j];
+         mpq_mul(mpqtemp, approxdualray[i], consdata->val[j]);
+         mpq_sub(violation[currentrow], violation[currentrow], mpqtemp);
+         mpq_mul(mpqtemp, approxdualray[i+nconss], consdata->val[j]);
+         mpq_add(violation[currentrow], violation[currentrow], mpqtemp);
+      }
+   }
+   /* A^ty for y corresponding to bound constraints */
+   for( i = 0; i < nvars; i++ )
+   {
+      mpq_sub(violation[i], violation[i], approxdualray[i+2*nconss]);
+      mpq_add(violation[i], violation[i], approxdualray[i+2*nconss+nvars]);
+   }
+
+
+   /* project solution */
+#ifdef PS_OUT 
+   printf("violation: \n");
+   if(nvars<100)
+   {
+      for( i = 0; i < nvars; i++ )
+      {
+         mpq_out_str(stdout, 10, violation[i]);
+         printf(" \n");
+      }     
+   }
+   else
+      printf(" Solution too long to print.\n");
+
+#endif
+
+   /* if there is no violation of the constraints, then skip the projection */
+   isfeas = 1;
+   for( i = 0; i < nvars; i++ )
+   {
+      if( mpq_sgn(violation[i]) )
+      {
+         isfeas = 0;
+         i = nvars;
+      }
+   }     
+   /* isfeas is equal to one only if approximate dual solution is already feasible for the dual */
+   if( !isfeas )
+   {
+      /* compute [z] with Dz=r (D depends on conshdlrdata->psdualcolselection) */
+      rval = RECTLUsolveSystem( conshdlrdata->rectfactor, nvars, nextendedconss, violation, correction);
+      
+#ifdef PS_OUT 
+      printf("correction: \n");  
+      if(nextendedconss < 100)
+      {
+         for( i = 0; i < conshdlrdata->npsbasis; i++ )
+         {
+            mpq_out_str(stdout, 10, correction[i]);
+            printf(" in position %d \n", conshdlrdata->psbasis[i]);
+         }   
+      }
+      else
+         printf(" Solution too long to print.\n");
+#endif
+
+      /* projection step: compute bold(y)=y^+[z 0];
+       * correct only components corresponding to D (npsbasis=#of columns in D 
+       */
+      for( i = 0; i < conshdlrdata->npsbasis; i++ )
+      {
+         mpq_add(approxdualray[conshdlrdata->psbasis[i]], approxdualray[conshdlrdata->psbasis[i]], correction[i]);
+      }   
+   }
+#ifdef PS_OUT 
+   printf("updated dual ray: \n");
+   if(nextendedconss < 100)
+   {
+      for( i = 0; i < nextendedconss; i++ )
+      {
+         mpq_out_str(stdout, 10, approxdualray[i]);
+         printf(" \n");
+      } 
+   }
+   else
+      printf(" Solution too long to print.\n");
+#endif
+
+   /* in this case we are using an interior ray that can be added freely to the solution */
+   mpq_set_si(lambda1, 1, 1);
+   /* compute lambda values */
+   if( conshdlrdata->pslambdacompwise )
+   {
+      /* compute lambda1 componentwise (set lambda1 = 1 and lower it if necessary) */
+      mpq_set_ui(lambda1, 1, 1);
+      for( i = 0; i < nextendedconss; i++ )
+      {
+         if( mpq_sgn(approxdualray[i]) < 0 && conshdlrdata->includedcons[i] )
+         {
+            mpq_div(mpqtemp, approxdualray[i], conshdlrdata->interiorray[i]);
+            mpq_neg(mpqtemp, mpqtemp);
+            if( mpq_cmp(lambda2, mpqtemp) < 0 )/* changed to < */
+               mpq_set(lambda2, mpqtemp);
+         }
+      }    
+   }
+   else
+   {
+      mpq_set_ui(maxv, 0, 1);
+      /* compute lambda2 as -(max violation of inequality constraints)/ (common slack) */
+      for( i = 0; i < nextendedconss; i++ )
+      {
+         if( mpq_cmp(maxv, approxdualray[i]) > 0 )
+            mpq_set(maxv, approxdualray[i]);
+      }    
+#ifdef PS_OUT 
+      printf("Constraints all satisfied by slack of:  ");
+      mpq_out_str(stdout, 10, conshdlrdata->commonslack);
+      printf(" \n"); 
+#endif
+      mpq_div(mpqtemp, maxv, conshdlrdata->commonslack);
+      mpq_neg(lambda2, mpqtemp);
+   }
+   
+   
+   /* perform shift */
+   if( mpq_sgn(lambda2) != 0 )
+   {
+      for( i = 0; i < nextendedconss; i++ )
+      {
+         mpq_mul(approxdualray[i], approxdualray[i], lambda1);
+      }  
+      for( i =0; i < nextendedconss; i++ )
+      {
+         mpq_mul(mpqtemp, conshdlrdata->interiorray[i], lambda2);
+         mpq_add(approxdualray[i], approxdualray[i], mpqtemp);
+      }
+   }
+   
+   
+   /* postprocess dual solution to reduce values when both sides of constraint used;
+    * if y(lhs) and y(rhs) are both nonzero shift them such that one becomes zero 
+    * this will tighten the solution and improve the objective value, there is no way this can hurt 
+    */
+   if( PSPOSTPROCESSDUALSOL )
+   {
+      /* y(lhs) and y(rhs) corresponding to primal constraints */
+      for( i = 0; i < nconss; i++ )
+      {
+         /* find the min value of y(lhs) and y(rhs) */
+         if( mpq_cmp(approxdualray[i], approxdualray[i+nconss]) > 0 )
+            mpq_set(mpqtemp, approxdualray[i+nconss]);
+         else
+            mpq_set(mpqtemp, approxdualray[i]);
+         
+         /* shift if both are nonzero */
+         if( mpq_sgn(mpqtemp) > 0 )
+         {
+            mpq_sub(approxdualray[i], approxdualray[i], mpqtemp);
+            mpq_sub(approxdualray[i+nconss], approxdualray[i+nconss], mpqtemp);
+         }
+      }
+      /* y(lhs) and y(rhs) corresponding to bound constraints */
+      for( i = 0; i < nvars; i++ )
+      {
+         /* find the min value of y(lhs) and y(rhs) */
+         if( mpq_cmp(approxdualray[i + 2*nconss], approxdualray[i + 2*nconss + nvars]) > 0 )
+            mpq_set(mpqtemp, approxdualray[i + 2*nconss + nvars]);
+         else
+            mpq_set(mpqtemp, approxdualray[i + 2*nconss]);
+         
+         /* shift if both are nonzero */
+         if( mpq_sgn(mpqtemp) > 0 )
+         {
+            mpq_sub(approxdualray[i+2*nconss], approxdualray[i+2*nconss], mpqtemp);
+            mpq_sub(approxdualray[i+2*nconss + nvars], approxdualray[i+2*nconss + nvars], mpqtemp);
+         }
+      }
+   }
+
+#ifdef PS_OUT 
+   printf("projected and shifted dual ray: \n");
+   printf("(Should be an exact feasible dual ray) \n");
+   if( nextendedconss < 100 )
+   {
+      for( i = 0; i < nextendedconss; i++ )            
+      {                                                                                     
+         mpq_out_str(stdout, 10, approxdualray[i]);           
+         printf(" \n");             
+      }            
+   }
+   else
+      printf(" Solution too long to print.\n");
+#endif
+
+
+#ifndef NDEBUG
+   SCIPdebugMessage("Verifying feasibility of dual solution... \n");
+
+   /* calculate violation of equality constraints */
+   rval = 0;
+   for( i = 0; i < nvars; i++ )
+   {
+      mpq_set_si(violation[i], 0, 1);
+      /* SUBTRACT Ax to get violation 0-Ax */
+      /* subtract A(approxdualray) */
+   }
+   for( i = 0; i < nconss; i++ )
+   {
+      for( j = consdata->beg[i]; j < consdata->beg[i] + consdata->len[i]; j++ )
+      {
+         currentrow = consdata->ind[j];
+         mpq_mul(mpqtemp, approxdualray[i], consdata->val[j]);
+         mpq_sub(violation[currentrow], violation[currentrow], mpqtemp);
+         mpq_mul(mpqtemp, approxdualray[i+nconss], consdata->val[j]);
+         mpq_add(violation[currentrow], violation[currentrow], mpqtemp);
+      }
+   }
+   for( i = 0; i < nvars; i++ )
+   {
+      mpq_sub(violation[i], violation[i], approxdualray[i+2*nconss]);
+      mpq_add(violation[i], violation[i], approxdualray[i+2*nconss+nvars]);
+   }
+   for( i = 0; i < nvars; i++ )
+   {
+      if( mpq_sgn(violation[i]) )
+      {
+         SCIPdebugMessage("Dual ray incorrect, violates equalties\n");
+         i = nvars;
+         rval = 1;
+      }
+   }
+   for( i = 0; i < nextendedconss; i++ )            
+   {                                                                                     
+      if( mpq_sgn(approxdualray[i])<0 )
+      {
+         SCIPdebugMessage("Dual ray incorrect, negative components\n");
+         i = nextendedconss;
+         rval = 1;
+      }
+   }            
+   if( !rval )
+   {
+      SCIPdebugMessage("Dual ray verified\n");
+   }   
+   assert(!rval);
+#endif 
+
+   /* compute dual bound for constructed exact dual solution */
+   mpq_set_ui(dualbound, 0, 1);
+   for( i = 0; i < nextendedconss; i++ )
+   {
+      mpq_mul(mpqtemp, approxdualray[i], costvect[i]);
+      mpq_add(dualbound, dualbound, mpqtemp);
+   }
+   
+   /* if the objective value of the corrected ray is positive we can prune node, otherwise not */
+   if( mpq_sgn(dualbound) > 0 )
+      *success = TRUE;
+   else 
+      *success = FALSE;
+
+
+#ifdef PS_OUT 
+   printf("Common slack is: %.20f or \n", mpq_get_d(conshdlrdata->commonslack));
+   mpq_out_str(stdout, 10, conshdlrdata->commonslack);
+   printf(" \n");
+
+   printf("Max violation is: %.20f or \n", mpq_get_d(maxv));
+   mpq_out_str(stdout, 10, maxv);
+   printf(" \n");
+
+   printf("Lambda (use of interior point) is: %.20f or \n", mpq_get_d(lambda2));
+   mpq_out_str(stdout, 10, lambda2);
+   printf(" \n");
+
+   printf("objective value of dual feasible ray is: \n");  
+   mpq_out_str(stdout, 10, dualbound);
+   printf(" \n");
+#endif
+
+ TERMINATE:
+   /* free memory */
+   for( i = 0; i < nextendedconss; i++ )
+      mpq_clear(correction[i]);
+   SCIPfreeBufferArray(scip, &correction);
+
+   for( i = 0; i < nvars; i++ )
+      mpq_clear(violation[i]);
+   SCIPfreeBufferArray(scip, &violation);
+
+   for( i = 0; i < nextendedconss; i++ )
+      mpq_clear(costvect[i]);
+   SCIPfreeBufferArray(scip, &costvect);
+
+   for( i = 0; i < nextendedconss; i++ )
+      mpq_clear(approxdualray[i]);
+   SCIPfreeBufferArray(scip, &approxdualray);
+
+   mpq_clear(dualbound);
+   mpq_clear(maxv);
+   mpq_clear(lambda2);
+   mpq_clear(lambda1);
+   mpq_clear(mpqtemp2);
+   mpq_clear(mpqtemp);
+
+   return SCIP_OKAY;
+}
 
 /** calculates y*b + min{(c - y*A)*x | lb <= x <= ub} for given vectors y and c;                                                   
  *  the vector b is defined with b[i] = lhs[i] if y[i] >= 0, b[i] = rhs[i] if y[i] < 0                                             
@@ -8048,46 +8764,67 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
                }
 
                /* try to prove infeasibility by reparing solution with cutoff bound exceeding objective value */
-               mpq_init(dualobjval);
-               SCIP_CALL( getPSdualbound(scip, conshdlrdata, consdata, &dualobjval, &success) );
-               if( success ) 
+               /* if we are trying to cut off node via primal bound, compute valid bound */
+               if( !SCIPpsInfeasRay(scip) )
                {
+                  mpq_init(dualobjval);
+                  SCIP_CALL( getPSdualbound(scip, conshdlrdata, consdata, &dualobjval, &success) );
+                  if( success ) 
+                  {
 #ifdef DETAILED_DEBUG /*????????? */
-                  oldlb = SCIPgetLocalLowerbound(scip);
+                     oldlb = SCIPgetLocalLowerbound(scip);
 #endif
-
-                  SCIP_CALL( SCIPupdateLocalLowerbound(scip, mpqGetRealRelax(scip, dualobjval, GMP_RNDD)) ); /* todo: check whether it is ok to use this function instead of SCIPupdateLocalDualbound() ?????????? */ 
-
+                     
+                     SCIP_CALL( SCIPupdateLocalLowerbound(scip, mpqGetRealRelax(scip, dualobjval, GMP_RNDD)) ); /* todo: check whether it is ok to use this function instead of SCIPupdateLocalDualbound() ?????????? */ 
+                     
 #ifdef DETAILED_DEBUG /*????????? */
-                  if( oldlb < SCIPgetLocalLowerbound(scip) )
-                  {
-                     SCIPdebugMessage("lower bound improved: %.50f --> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip)); 
-                  }
-                  else
-                  {
-                     SCIPdebugMessage("lower bound did not improve: %.50f -/-> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip));
-                  }
+                     if( oldlb < SCIPgetLocalLowerbound(scip) )
+                     {
+                        SCIPdebugMessage("lower bound improved: %.50f --> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip)); 
+                     }
+                     else
+                     {
+                        SCIPdebugMessage("lower bound did not improve: %.50f -/-> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip));
+                     }
 #endif
-
-                  /* check if node can be cut off by bounding, i.e., whether construction was successful */
-                  if( SCIPgetLocalLowerbound(scip) >= SCIPgetCutoffbound(scip) )
-                  {
-
-                     SCIPdebugMessage("node is cut off by bounding (lower=%g, upper=%g)\n", SCIPgetLocalLowerbound(scip), SCIPgetCutoffbound(scip));
-                     *result = SCIP_CUTOFF;
+                     
+                     /* check if node can be cut off by bounding, i.e., whether construction was successful */
+                     if( SCIPgetLocalLowerbound(scip) >= SCIPgetCutoffbound(scip) )
+                     {
+                        
+                        SCIPdebugMessage("node is cut off by bounding (lower=%g, upper=%g)\n", SCIPgetLocalLowerbound(scip), SCIPgetCutoffbound(scip));
+                        *result = SCIP_CUTOFF;
+                     }
+                     else
+                     {
+                        /* update number of fails */
+                        conshdlrdata->nfailprovedinfeaslp++;
+                     }
                   }
                   else
                   {
                      /* update number of fails */
                      conshdlrdata->nfailprovedinfeaslp++;
                   }
+                  mpq_clear(dualobjval);
                }
                else
                {
-                  /* update number of fails */
-                  conshdlrdata->nfailprovedinfeaslp++;
+                  /* else, try to prove infeasibility of node by correcting a dual ray to be exactly feasible */
+                  
+                  SCIP_CALL( PScorrectdualray(scip, conshdlrdata, consdata, &success) );
+                  if( success ) 
+                  {
+                     SCIPdebugMessage("node is cut off by unbounded dual LP.  Exactly feasible cost-improving dual ray found.\n");
+                     *result = SCIP_CUTOFF;                 
+                  }
+                  else
+                  {
+                     /* update number of fails */
+                     SCIPdebugMessage("failed to correct dual ray \n");
+                     conshdlrdata->nfailprovedinfeaslp++;
+                  }                 
                }
-               mpq_clear(dualobjval);
 
                /* stop timing and update number of calls */
                SCIPstopClock(scip, conshdlrdata->provedinfeaslptime);

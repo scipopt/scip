@@ -229,6 +229,12 @@ char SCIPdualBoundMethod(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** returns if we should try to prove node infeasibility with project and shift by correcting a dual ray */
+extern
+SCIP_Bool SCIPpsInfeasRay(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** returns whether pseudo solutions should be ignored for calculating dual bounds */
 extern
 SCIP_Bool SCIPignorePseudosol(

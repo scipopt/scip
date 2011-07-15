@@ -776,6 +776,17 @@ char SCIPdualBoundMethod(
    return (scip->set->misc_dbmethod);
 }
 
+/** returns if we should try to prove node infeasibility with project and shift by correcting a dual ray */
+SCIP_Bool SCIPpsInfeasRay(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return (scip->set->misc_psinfeasray);
+}
+
 /** returns whether pseudo solutions should be ignored for calculating dual bounds */
 SCIP_Bool SCIPignorePseudosol(
    SCIP*                 scip                /**< SCIP data structure */
@@ -11236,7 +11247,10 @@ SCIP_Real SCIPgetColFarkasCoef(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetColFarkasCoef", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   if( !SCIPtreeHasCurrentNodeLP(scip->tree) )
+   /* if in the exact mode we have to prove infeasibility we switch from lp to pseudo solution. in this case 
+    * SCIPtreeHasCurrentNodeLP() is false eventhough the LP has been solved and all information are avaiable
+    */
+   if( !SCIPtreeHasCurrentNodeLP(scip->tree) && !scip->set->misc_exactsolve )
    {
       SCIPerrorMessage("cannot get farkas coeff, because node LP is not processed\n");
       SCIPABORT();
