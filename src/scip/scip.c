@@ -7744,16 +7744,17 @@ SCIP_RETCODE SCIPparseVarsList(
 }
 
 /** parse the given string as polynomial of variables and coefficients
- * (c1 \<x11\>^e11 \<x12\>^e12 ... \<x1n\>^e1n + c2 \<x21\>^e21 \<x22\>^e22 ... + ... + cn \<xn1\>^en1 ...)
- * (see SCIPwriteVarsPolynomial()); if it was successful, the pointer success is set to TRUE
+ *  (c1 \<x11\>^e11 \<x12\>^e12 ... \<x1n\>^e1n + c2 \<x21\>^e21 \<x22\>^e22 ... + ... + cn \<xn1\>^en1 ...)
+ *  (see SCIPwriteVarsPolynomial()); if it was successful, the pointer success is set to TRUE
  *
- * The user has to call SCIPfreeParseVarsPolynomialData(scip, monomialvars, monomialexps, monomialcoefs, monomialnvars, *nmonomials)
- * short after SCIPparseVarsPolynomial to free all the allocated memory again.
- * Do not keep the arrays created by SCIPparseVarsPolynomial around, since they use buffer memory that is intended for short term use only.
+ *  The user has to call SCIPfreeParseVarsPolynomialData(scip, monomialvars, monomialexps,
+ *  monomialcoefs, monomialnvars, *nmonomials) short after SCIPparseVarsPolynomial to free all the
+ *  allocated memory again.  Do not keep the arrays created by SCIPparseVarsPolynomial around, since
+ *  they use buffer memory that is intended for short term use only.
  *
- * Parsing is stopped at the end of string (indicated by the \0-character), or when the character stored in endchar is found (outside of variable names and numbers).
- * Set endchar to \0 if you want parsing until the end of str.
- * A space character is not allowed for endchar.
+ *  Parsing is stopped at the end of string (indicated by the \\0-character), or when the character
+ *  stored in endchar is found (outside of variable names and numbers). Set endchar to \\0 if you
+ *  want parsing until the end of str.  A space character is not allowed for endchar.
  */
 SCIP_RETCODE SCIPparseVarsPolynomial(
    SCIP*                 scip,               /**< SCIP data structure */
