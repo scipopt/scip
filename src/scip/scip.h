@@ -4609,11 +4609,19 @@ SCIP_RETCODE SCIPprintLPSolutionQuality(
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
-/** Compute relative interior point to current LP */
+/** Compute relative interior point to current LP w.r.t. one-norm */
 extern
-SCIP_RETCODE SCIPcomputeLPRelIntPoint(
+SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             relaxrows,          /**< should the rows be relaxed */
+   SCIP_Bool             inclobjcutoff,      /**< should a row for the objective cutoff be included */
+   SCIP_SOL**            point               /**< relative interior point on exit */
+   );
+
+/** Compute relative interior point to current LP w.r.t. supremum-norm */
+extern
+SCIP_RETCODE SCIPcomputeLPRelIntPointSupNorm(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             inclobjcutoff,      /**< should a row for the objective cutoff be included */
    SCIP_SOL**            point               /**< relative interior point on exit */
    );

@@ -14095,7 +14095,7 @@ SCIP_RETCODE SCIPprintLPSolutionQuality(
    return SCIP_OKAY;
 }
 
-/** Compute relative interior point to current LP 
+/** Compute relative interior point to current LP w.r.t. one-norm
  *
  *  We use the approach of@par
  *  R. Freund, R. Roundy, M. J. Todd@par
@@ -14120,13 +14120,14 @@ SCIP_RETCODE SCIPprintLPSolutionQuality(
  *             & A x - y - \alpha a & \geq 0\\
  *             & B x + y - \alpha b & \leq 0\\
  *             & D x - \alpha d & = 0\\
- *             & 0 \leq y & \leq 1.
+ *             & 0 \leq y & \leq 1\\
+ *             & alpha & \geq 1.
  *     \end{array}
  *  \f]
  *  If the original LP is feasible, this LP is feasible as well. Any optimal solution yields the
  *  relative interior point \f$x^*_j/\alpha^*\f$.
  */
-SCIP_RETCODE SCIPcomputeLPRelIntPoint(
+SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             relaxrows,          /**< should the rows be relaxed */
    SCIP_Bool             inclobjcutoff,      /**< should a row for the objective cutoff be included */
@@ -14164,7 +14165,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
    /* init point */
    *point = NULL;
 
-   /* exit if LP if there are no columns */
+   /* exit if there are no columns */
    lp = scip->lp;
    assert( lp->nrows >= 0 && lp->ncols >= 0 );
    if ( lp->ncols == 0 )
@@ -14327,8 +14328,8 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
          continue;
 
       /* get row data */
-      lhs = row->lhs - row->constant;
-      rhs = row->rhs - row->constant;
+      lhs = row->lhs - (SCIPisInfinity(scip, -row->lhs) ? 0.0 : row->constant);
+      rhs = row->rhs - (SCIPisInfinity(scip,  row->rhs) ? 0.0 : row->constant);
       nnonz = row->nlpcols;
       assert( nnonz <= lp->ncols );
       rowcols = row->cols;
@@ -14492,7 +14493,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
    SCIPfreeBufferArray(scip, &rowinds);
 
 #ifdef SCIP_OUTPUT
-   SCIP_CALL( SCIPlpiWriteLP(lpi, "relativeInterior.lp") );
+   SCIP_CALL( SCIPlpiWriteLP(lpi, "relativeInteriorOneNorm.lp") );
 #endif
 
    /* solve and store point */
@@ -14540,8 +14541,8 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
             assert( row != NULL );
 
             /* get row data */
-            lhs = row->lhs - row->constant;
-            rhs = row->rhs - row->constant;
+            lhs = row->lhs - (SCIPisInfinity(scip, -row->lhs) ? 0.0 : row->constant);
+            rhs = row->rhs - (SCIPisInfinity(scip,  row->rhs) ? 0.0 : row->constant);
             nnonz = row->nlpcols;
             assert( nnonz <= lp->ncols );
             rowcols = row->cols;
@@ -14562,13 +14563,13 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
                /* treat lhs */
                if ( !SCIPisInfinity(scip, ABS(lhs)) )
                {
-                  assert( SCIPisFeasZero(scip, primal[lp->ncols+1+cnt]) || SCIPisFeasGT(scip, sum, lhs) ); 
+                  assert( SCIPisFeasZero(scip, primal[lp->ncols+1+cnt]) || SCIPisFeasGT(scip, sum, lhs) );
                   ++cnt;
                }
                /* treat rhs */
                if ( !SCIPisInfinity(scip, ABS(rhs)) )
                {
-                  assert( SCIPisFeasZero(scip, primal[lp->ncols+1+cnt]) || SCIPisFeasLT(scip, sum, rhs) ); 
+                  assert( SCIPisFeasZero(scip, primal[lp->ncols+1+cnt]) || SCIPisFeasLT(scip, sum, rhs) );
                   ++cnt;
                }
             }
@@ -14593,7 +14594,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
       {
          SCIP_COL* col;
          SCIP_Real val;
-         
+
          col = lp->cols[j];
          assert( col != NULL );
          val = primal[col->lppos] / alpha;
@@ -14604,15 +14605,370 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
             /* treat lb */
             if ( !SCIPisInfinity(scip, ABS(col->lb)) )
             {
-               assert( SCIPisFeasZero(scip, primal[lp->ncols+1+cnt]) || SCIPisFeasGT(scip, val, col->lb) ); 
+               assert( SCIPisFeasZero(scip, primal[lp->ncols+1+cnt]) || SCIPisFeasGT(scip, val, col->lb) );
                ++cnt;
             }
             /* treat rhs */
             if ( !SCIPisInfinity(scip, ABS(col->ub)) )
             {
-               assert( SCIPisFeasZero(scip, primal[lp->ncols+1+cnt]) || SCIPisFeasLT(scip, val, col->ub) ); 
+               assert( SCIPisFeasZero(scip, primal[lp->ncols+1+cnt]) || SCIPisFeasLT(scip, val, col->ub) );
                ++cnt;
             }
+         }
+      }
+#endif
+
+      /* free */
+      SCIPfreeBufferArray(scip, &primal);
+   }
+   SCIP_CALL( SCIPlpiFree(&lpi) );
+
+   return SCIP_OKAY;
+}
+
+/** Compute relative interior point to current LP w.r.t. supremum norm
+ *
+ *  Assume the orginal LP looks as follows:
+ *  \f[
+ *     \begin{array}{rrl}
+ *        \min & c^T x &\\
+ *             & A x & \geq a\\
+ *             & B x & \leq b\\
+ *             & D x & = d.
+ *     \end{array}
+ *  \f]
+ *  Note that bounds should be included in the system. The following artificial LP does the job:
+ *  \f[
+ *     \begin{array}{rrl}
+ *        \max & sigma &\\
+ *             & <A_i, x> - sigma ||A_i|| & \geq a_i\\
+ *             & <B_i, x> + sigma ||B_i|| & \leq b_i\\
+ *             & D x & = d\\
+ *             & sigma & \geq 0.
+ *     \end{array}
+ *  \f]
+ *  If the original LP is feasible, this LP is feasible as well. Any optimal solution yields a
+ *  relative interior point.
+ */
+SCIP_RETCODE SCIPcomputeLPRelIntPointSupNorm(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             inclobjcutoff,      /**< should a row for the objective cutoff be included */
+   SCIP_SOL**            point               /**< relative interior point on exit */
+   )
+{
+   SCIP_LP* lp;
+   SCIP_LPI* lpi;
+   SCIP_Real* obj;
+   SCIP_Real* lb;
+   SCIP_Real* ub;
+   SCIP_Real* primal;
+   SCIP_Real* colvals;
+   SCIP_Real zero;
+   SCIP_Real minusinf;
+   SCIP_Real plusinf;
+   SCIP_Real objval;
+   SCIP_Real sigma;
+   int* colinds;
+   int ncols;
+   int beg;
+   int i;
+   int j;
+
+   assert( scip != NULL );
+   assert( point != NULL );
+
+   SCIP_CALL( checkStage(scip, "SCIPcomputeLPRelIntPointSup", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   /* init point */
+   *point = NULL;
+
+   /* exit if there are no columns */
+   lp = scip->lp;
+   assert( lp->nrows >= 0 && lp->ncols >= 0 );
+   if( lp->ncols == 0 )
+      return SCIP_OKAY;
+
+   /* disable objective cutoff if we have none */
+   if( inclobjcutoff && (SCIPgetCutoffbound(scip) >= SCIPinfinity(scip) || SCIPlpGetLooseObjval(lp, scip->set) <= -SCIPinfinity(scip) || SCIPlpGetLooseObjval(lp, scip->set) == SCIP_INVALID) )
+      inclobjcutoff = FALSE;
+
+   SCIPdebugMessage("Computing relative interior point to current LP.\n");
+
+   /* if there are no rows, we return the zero point */
+   if( lp->nrows == 0 && !inclobjcutoff )
+   {
+      /* create zero point */
+      SCIP_CALL( SCIPcreateSol(scip, point, NULL) );
+      return SCIP_OKAY;
+   }
+
+   /* create auxiliary LP */
+   SCIP_CALL( SCIPlpiCreate(&lpi, "relativeInteriorSup", SCIP_OBJSEN_MAXIMIZE) );
+
+   /* get storage */
+   ncols = lp->ncols + 1;
+   SCIP_CALL( SCIPallocBufferArray(scip, &lb, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ub, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &obj, ncols) );
+
+   /* create original columns (bounds are relaxed below, unless the variable is fixed) */
+   for (j = 0; j < lp->ncols; ++j)
+   {
+      obj[j] = 0.0;
+      lb[j]  = lp->cols[j]->lb;
+      ub[j]  = lp->cols[j]->ub;
+   }
+
+   /* add artificial sigma variable */
+   obj[lp->ncols] = 1.0;
+   lb[lp->ncols]  = 0.0;
+   ub[lp->ncols]  = SCIPlpiInfinity(lpi);
+
+   /* add columns */
+   SCIP_CALL( SCIPlpiAddCols(lpi, ncols, obj, lb, ub, NULL, 0, NULL, NULL, NULL) );
+
+   /* free storage */
+   SCIPfreeBufferArray(scip, &obj);
+   SCIPfreeBufferArray(scip, &ub);
+   SCIPfreeBufferArray(scip, &lb);
+
+   /* prepare storage for rows */
+   SCIP_CALL( SCIPallocBufferArray(scip, &colinds, lp->ncols+1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &colvals, lp->ncols+1) );
+
+   /* create rows arising from original rows */
+   beg = 0;
+   zero = 0.0;
+   minusinf = -SCIPlpiInfinity(lpi);
+   plusinf  =  SCIPlpiInfinity(lpi);
+   for (i = 0; i < lp->nrows; ++i)
+   {
+      SCIP_ROW* row;
+      SCIP_COL** rowcols;
+      SCIP_Real* rowvals;
+      SCIP_Real lhs;
+      SCIP_Real rhs;
+      int nnonz;
+
+      row = lp->rows[i];
+      assert( row != NULL );
+
+      if( SCIProwIsModifiable(row) )
+         continue;
+
+      /* get row data */
+      lhs = row->lhs - (SCIPisInfinity(scip, -row->lhs) ? 0.0 : row->constant);
+      rhs = row->rhs - (SCIPisInfinity(scip,  row->rhs) ? 0.0 : row->constant);
+      nnonz = row->nlpcols;
+      assert( nnonz <= lp->ncols );
+      rowcols = row->cols;
+      rowvals = row->vals;
+
+      /* set up indices */
+      for (j = 0; j < nnonz; ++j)
+      {
+         assert( rowcols[j] != NULL );
+         assert( 0 <= rowcols[j]->lppos && rowcols[j]->lppos < lp->ncols );
+         assert( lp->cols[rowcols[j]->lppos] == rowcols[j] );
+         colinds[j] = rowcols[j]->lppos;
+         colvals[j] = rowvals[j];
+      }
+
+      if( SCIPisEQ(scip, lhs, rhs) )
+      {
+         /* add original row to LP -> this is for the 'relative' in the relative interior */
+         SCIP_CALL( SCIPlpiAddRows(lpi, 1, &lhs, &rhs, NULL, nnonz, &beg, colinds, colvals) );
+      }
+      else
+      {
+         /* add row <A_i,x> + sigma ||A_i|| <= rhs, if rhs is finite */
+         if( !SCIPisInfinity(scip,  rhs) )
+         {
+            colinds[nnonz] = lp->ncols;
+            colvals[nnonz] =  SCIProwGetNorm(row);
+
+            SCIP_CALL( SCIPlpiAddRows(lpi, 1, &minusinf, &rhs, NULL, nnonz+1, &beg, colinds, colvals) );
+         }
+
+         /* add row <A_i,x> - sigma ||A_i|| >= lhs, if lhs is finite */
+         if( !SCIPisInfinity(scip, -lhs) )
+         {
+            colinds[nnonz] = lp->ncols;
+            colvals[nnonz] = -SCIProwGetNorm(row);
+
+            SCIP_CALL( SCIPlpiAddRows(lpi, 1, &lhs, &plusinf, NULL, nnonz+1, &beg, colinds, colvals) );
+         }
+      }
+   }
+
+   /* create row arising from objective cutoff */
+   if( inclobjcutoff )
+   {
+      SCIP_Real rhs;
+      SCIP_Real norm;
+      int nnonz;
+
+      /* get row data */
+      rhs = SCIPgetCutoffbound(scip) - SCIPlpGetLooseObjval(lp, scip->set);
+
+      /* set up indices and coefficients */
+      nnonz = 0;
+      norm = 0.0;
+      for (j = 0; j < lp->ncols; ++j)
+      {
+         assert( lp->cols[j] != NULL );
+         assert( 0 <= lp->cols[j]->lppos && lp->cols[j]->lppos < lp->ncols );
+         assert( lp->cols[lp->cols[j]->lppos] == lp->cols[j] );
+         if( lp->cols[j]->obj == 0.0 )
+            continue;
+         colinds[nnonz] = lp->cols[j]->lppos;
+         colvals[nnonz] = lp->cols[j]->obj;
+         norm += lp->cols[j]->obj * lp->cols[j]->obj;
+         ++nnonz;
+      }
+
+      /* add artificial variable */
+      colinds[nnonz] = lp->ncols;
+      colvals[nnonz] = sqrt(norm);
+      ++nnonz;
+
+      SCIP_CALL( SCIPlpiAddRows(lpi, 1, &minusinf, &rhs, NULL, nnonz, &beg, colinds, colvals) );
+   }
+
+   /* create rows arising from bounds */
+   for (j = 0; j < lp->ncols; ++j)
+   {
+      SCIP_COL* col;
+
+      col = lp->cols[j];
+      assert( col != NULL );
+      assert( col->lppos == j );
+
+      /* skip fixed variables, column bounds have been set above already */
+      if( SCIPisEQ(scip, col->lb, col->ub) )
+         continue;
+
+      /* set up index of column */
+      colinds[0] = j;
+      colvals[0] = 1.0;
+
+      if( !SCIPisInfinity(scip,  col->ub) )
+      {
+         /* add artificial variable with coefficient +1.0 */
+         colinds[1] = lp->ncols;
+         colvals[1] = 1.0;
+
+         SCIP_CALL( SCIPlpiAddRows(lpi, 1, &minusinf, &col->ub, NULL, 2, &beg, colinds, colvals) );
+      }
+
+      if( !SCIPisInfinity(scip, -col->lb) )
+      {
+         /* add artificial variable with coefficient -1.0 */
+         colinds[1] = lp->ncols;
+         colvals[1] = -1.0;
+
+         SCIP_CALL( SCIPlpiAddRows(lpi, 1, &col->lb, &plusinf, NULL, 2, &beg, colinds, colvals) );
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &colvals);
+   SCIPfreeBufferArray(scip, &colinds);
+
+#ifdef SCIP_OUTPUT
+   SCIP_CALL( SCIPlpiWriteLP(lpi, "relativeInteriorSupNorm.lp") );
+#endif
+
+   /* solve and store point */
+   SCIP_CALL( SCIPlpiSolveDual(lpi) );  /* dual is usually faster */
+
+   if( SCIPlpiIsOptimal(lpi) )
+   {
+      /* get primal solution */
+      SCIP_CALL( SCIPallocBufferArray(scip, &primal, ncols) );
+      SCIP_CALL( SCIPlpiGetSol(lpi, &objval, primal, NULL, NULL, NULL) );
+      sigma = primal[lp->ncols];
+      assert( !SCIPisNegative(scip, sigma) );
+
+      SCIPdebugMessage("Solved relative interior lp with objective %g.\n", objval);
+
+      /* construct relative interior point */
+      SCIP_CALL( SCIPcreateSol(scip, point, NULL) );
+      for( j = 0; j < lp->ncols; ++j )
+      {
+         if( !SCIPisFeasZero(scip, primal[j]) )
+         {
+            SCIP_VAR* var;
+            var = lp->cols[j]->var;
+            SCIP_CALL( SCIPsetSolVal(scip, *point, var, primal[j]) );
+         }
+      }
+
+#ifdef SCIP_DEBUG
+      /* check whether the point is a relative interior point */
+      for (i = 0; i < lp->nrows; ++i)
+      {
+         SCIP_ROW* row;
+         SCIP_COL** rowcols;
+         SCIP_Real* rowvals;
+         SCIP_Real lhs;
+         SCIP_Real rhs;
+         SCIP_Real sum;
+         int nnonz;
+
+         row = lp->rows[i];
+         assert( row != NULL );
+
+         /* get row data */
+         lhs = row->lhs - (SCIPisInfinity(scip, -row->lhs) ? 0.0 : row->constant);
+         rhs = row->rhs - (SCIPisInfinity(scip,  row->rhs) ? 0.0 : row->constant);
+         nnonz = row->nlpcols;
+         assert( nnonz <= lp->ncols );
+         rowcols = row->cols;
+         rowvals = row->vals;
+
+         sum = 0.0;
+         for (j = 0; j < nnonz; ++j)
+            sum += rowvals[j] * primal[rowcols[j]->lppos];
+
+         /* if we have an equation */
+         if ( SCIPisEQ(scip, lhs, rhs) )
+         {
+            assert( SCIPisFeasEQ(scip, sum, lhs) );
+         }
+         else
+         {
+            assert( SCIPisInfinity(scip, lhs) || SCIPisFeasZero(scip, sigma) || SCIPisFeasGT(scip, sum, lhs) );
+            assert( SCIPisInfinity(scip, rhs) || SCIPisFeasZero(scip, sigma) || SCIPisFeasLT(scip, sum, rhs) );
+         }
+      }
+      if( inclobjcutoff )
+      {
+         SCIP_Real sum;
+         SCIP_Real rhs;
+
+         sum = 0.0;
+         for (j = 0; j < lp->ncols; ++j)
+            sum += lp->cols[j]->obj * primal[lp->cols[j]->lppos];
+
+         rhs = SCIPgetCutoffbound(scip) - SCIPlpGetLooseObjval(lp, scip->set);
+         assert( SCIPisFeasZero(scip, sigma) || SCIPisFeasLT(scip, sum, rhs) );
+      }
+
+      /* check bounds */
+      for( j = 0; j < lp->ncols; ++j )
+      {
+         SCIP_COL* col;
+         SCIP_Real val;
+         
+         col = lp->cols[j];
+         assert( col != NULL );
+
+         /* if the variable is not fixed */
+         if( !SCIPisEQ(scip, col->lb, col->ub) )
+         {
+            val = primal[col->lppos];
+            assert( SCIPisInfinity(scip, -col->lb) || SCIPisFeasZero(scip, sigma) || SCIPisFeasGT(scip, val, col->lb) );
+            assert( SCIPisInfinity(scip,  col->ub) || SCIPisFeasZero(scip, sigma) || SCIPisFeasLT(scip, val, col->ub) );
          }
       }
 #endif

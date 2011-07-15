@@ -43,6 +43,7 @@
 #define SCIP_DEFAULT_SEPATHRESHOLD             50 /**< threshold on number of generated cuts below which the ordinary separation is started */
 #define SCIP_DEFAULT_INCLOBJCUTOFF          FALSE /**< include the objective cutoff when computing the relative interior? */
 #define SCIP_DEFAULT_RECOMPUTERELINT        FALSE /**< recompute relative interior in each separation call? */
+#define SCIP_DEFAULT_RELINTNORMTYPE           'o' /**< type of norm to use when computing relative interior */
 
 
 
@@ -55,6 +56,8 @@ struct SCIP_SepaData
    int                   sepathreshold;      /**< threshold on number of generated cuts below which the ordinary separation is started */
    SCIP_Bool             inclobjcutoff;      /**< include the objective cutoff when computing the relative interior? */
    SCIP_Bool             recomputerelint;    /**< recompute relative interior in each separation call? */
+   char                  relintnormtype;     /**< type of norm to use when computing relative interior */
+
    SCIP_SOL*             sepasol;            /**< solution that can be used for generating close cuts */
 };
 
@@ -225,7 +228,15 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpClosecuts)
          }
          if ( sepadata->sepasol == NULL )
          {
-            SCIP_CALL( SCIPcomputeLPRelIntPoint(scip, TRUE, sepadata->inclobjcutoff, &sepadata->sepasol) );
+            assert(sepadata->relintnormtype == 'o' || sepadata->relintnormtype == 'i');
+            if( sepadata->relintnormtype == 'o' )
+            {
+               SCIP_CALL( SCIPcomputeLPRelIntPointOneNorm(scip, TRUE, sepadata->inclobjcutoff, &sepadata->sepasol) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPcomputeLPRelIntPointSupNorm(scip, sepadata->inclobjcutoff, &sepadata->sepasol) );
+            }
          }
       }
       else
@@ -339,6 +350,11 @@ SCIP_RETCODE SCIPincludeSepaClosecuts(
          "separating/closecuts/recomputerelint",
          "recompute relative interior point in each separation call?",
          &sepadata->recomputerelint, TRUE, SCIP_DEFAULT_RECOMPUTERELINT, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddCharParam(scip,
+         "separating/closecuts/relintnormtype",
+         "type of norm to use when computing relative interior: 'o'ne norm, 'i'nfinity norm",
+         &sepadata->relintnormtype, TRUE, SCIP_DEFAULT_RELINTNORMTYPE, "oi", NULL, NULL) );
 
    return SCIP_OKAY;
 }

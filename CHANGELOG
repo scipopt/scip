@@ -27,7 +27,7 @@ interface:
 - new parameter success in SCIPgetVarCopy() that will be FALSE if method is called after problem creation stage
 - SCIP_DECL_PROBCOPY got a new parameter global
 - using proper terms "monomial" and "polynomial" (instead of "monom" and "polynom") in nonlinear expressions (nlpi/*expr*) results in many renamings of types, structs, and methods
-- added function SCIPcomputeLPRelIntPoint() to compute a relative interior point of the current LP
+- added functions SCIPcomputeLPRelIntPointOneNorm() and SCIPcomputeLPRelIntPointSupNorm() to compute relative interior points of the current LP
 - added function SCIPsepastoreRemoveInefficaciousCuts() to remove non-efficious cuts from the separation storage
 - added result value SCIP_NEWROUND that allows a separator/constraint handler to start a new separation round (without previous calls to other separators/conshdlrs)
 - implemented SCIPlpiGetPrimalRay() in SoPlex interface that has become available with SoPlex version 1.5.0.2
