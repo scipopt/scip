@@ -14128,6 +14128,7 @@ SCIP_RETCODE SCIPprintLPSolutionQuality(
 SCIP_RETCODE SCIPcomputeLPRelIntPoint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             relaxrows,          /**< should the rows be relaxed */
+   SCIP_Bool             inclobjcutoff,      /**< should a row for the objective cutoff be included */
    SCIP_SOL**            point               /**< relative interior point on exit */
    )
 {
@@ -14168,10 +14169,14 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
    if ( lp->ncols == 0 )
       return SCIP_OKAY;
 
+   /* disable objective cutoff if we have none */
+   if( inclobjcutoff && (SCIPgetCutoffbound(scip) >= SCIPinfinity(scip) || SCIPlpGetLooseObjval(lp, scip->set) <= -SCIPinfinity(scip) || SCIPlpGetLooseObjval(lp, scip->set) == SCIP_INVALID) )
+      inclobjcutoff = FALSE;
+
    SCIPdebugMessage("Computing relative interior point to current LP.\n");
 
    /* if there are no rows, we return the zero point */
-   if ( lp->nrows == 0 )
+   if ( lp->nrows == 0 && !inclobjcutoff )
    {
       /* create zero point */
       SCIP_CALL( SCIPcreateSol(scip, point, NULL) );
@@ -14182,7 +14187,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
    SCIP_CALL( SCIPlpiCreate(&lpi, "relativeInterior", SCIP_OBJSEN_MAXIMIZE) );
 
    /* get storage */
-   nnewcols = 3*lp->ncols + 2*lp->nrows + 1;
+   nnewcols = 3*lp->ncols + 2*lp->nrows + (inclobjcutoff ? 1 : 0) + 1;
    SCIP_CALL( SCIPallocBufferArray(scip, &lb, nnewcols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &ub, nnewcols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &obj, nnewcols) );
@@ -14243,6 +14248,19 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
       }
    }
 
+   /* create slacks for objective cutoff row */
+   if( inclobjcutoff )
+   {
+      if ( relaxrows )
+      {
+         /* add slacks for right hand side */
+         obj[nnewcols] = 1.0;
+         lb[nnewcols] = 0.0;
+         ub[nnewcols] = 1.0;
+         ++nnewcols;
+      }
+   }
+
    /* create slacks for bounds */
    for (j = 0; j < lp->ncols; ++j)
    {
@@ -14270,7 +14288,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
 #ifndef NDEBUG
    nslacks = nnewcols - lp->ncols - 1;
    assert( nslacks >= 0 );
-   assert( nnewcols <= 3*lp->ncols + 2*lp->nrows + 1 );
+   assert( nnewcols <= 3*lp->ncols + 2*lp->nrows + (inclobjcutoff ? 1 : 0) + 1 );
 #endif
 
    /* add columns */
@@ -14282,7 +14300,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
    SCIPfreeBufferArray(scip, &lb);
 
    /* prepare storage for rows */
-   SCIP_CALL( SCIPallocBufferArray(scip, &rowinds, lp->nrows + 2*lp->ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &rowinds, lp->nrows + (inclobjcutoff ? 1 : 0) + 2*lp->ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &colinds, lp->ncols+2) );
    SCIP_CALL( SCIPallocBufferArray(scip, &colvals, lp->ncols+2) );
 
@@ -14322,7 +14340,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
          assert( 0 <= rowcols[j]->lppos && rowcols[j]->lppos < lp->ncols );
          assert( lp->cols[rowcols[j]->lppos] == rowcols[j] );
          colinds[j] = rowcols[j]->lppos;
-	 colvals[j] = rowvals[j];
+         colvals[j] = rowvals[j];
       }
 
       /* if we have an equation */
@@ -14332,14 +14350,14 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
          colinds[nnonz] = lp->ncols;
          colvals[nnonz] = -rhs;
 
-	 /* add row */
-	 SCIP_CALL( SCIPlpiAddRows(lpi, 1, &zero, &zero, NULL, nnonz+1, &beg, colinds, colvals) );
+         /* add row */
+         SCIP_CALL( SCIPlpiAddRows(lpi, 1, &zero, &zero, NULL, nnonz+1, &beg, colinds, colvals) );
       }
       else
       {
-	 /* treat lhs */
+         /* treat lhs */
          if ( !SCIPisInfinity(scip, ABS(lhs)) )
-	 {
+         {
             assert( ! SCIPisEQ(scip, lhs, rhs) );
 
             /* add artificial variable */
@@ -14358,11 +14376,11 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
             {
                SCIP_CALL( SCIPlpiAddRows(lpi, 1, &zero, &plusinf, NULL, nnonz+1, &beg, colinds, colvals) );
             }
-	 }
+         }
 
-	 /* treat rhs */
+         /* treat rhs */
          if ( !SCIPisInfinity(scip, ABS(rhs)) )
-	 {
+         {
             assert( ! SCIPisEQ(scip, lhs, rhs) );
 
             /* add artificial variable */
@@ -14381,8 +14399,48 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
             {
                SCIP_CALL( SCIPlpiAddRows(lpi, 1, &minusinf, &zero, NULL, nnonz+1, &beg, colinds, colvals) );
             }
-	 }
+         }
       }
+   }
+
+   /* create row arising from objective cutoff */
+   if( inclobjcutoff )
+   {
+      SCIP_Real rhs;
+      int nnonz;
+
+      /* get row data */
+      rhs = SCIPgetCutoffbound(scip) - SCIPlpGetLooseObjval(lp, scip->set);
+
+      /* set up indices and coefficients */
+      nnonz = 0;
+      for (j = 0; j < lp->ncols; ++j)
+      {
+         assert( lp->cols[j] != NULL );
+         assert( 0 <= lp->cols[j]->lppos && lp->cols[j]->lppos < lp->ncols );
+         assert( lp->cols[lp->cols[j]->lppos] == lp->cols[j] );
+         if( lp->cols[j]->obj == 0.0 )
+            continue;
+         colinds[nnonz] = lp->cols[j]->lppos;
+         colvals[nnonz] = lp->cols[j]->obj;
+         ++nnonz;
+      }
+
+      /* treat rhs */
+      /* add artificial variable */
+      colinds[nnonz] = lp->ncols;
+      colvals[nnonz] = -rhs;
+      ++nnonz;
+
+      if ( relaxrows )
+      {
+         /* add slack variable */
+         colinds[nnonz] = lp->ncols + 1 + cnt;
+         colvals[nnonz] = 1.0;
+         ++nnonz;
+         ++cnt;
+      }
+      SCIP_CALL( SCIPlpiAddRows(lpi, 1, &minusinf, &zero, NULL, nnonz, &beg, colinds, colvals) );
    }
 
    /* create rows arising from bounds */
@@ -14513,6 +14571,20 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
                   ++cnt;
                }
             }
+         }
+         if( inclobjcutoff )
+         {
+            SCIP_Real sum;
+            SCIP_Real rhs;
+
+            sum = 0.0;
+            for (j = 0; j < lp->ncols; ++j)
+               sum += lp->cols[j]->obj * primal[lp->cols[j]->lppos];
+            sum /= alpha;
+
+            rhs = SCIPgetCutoffbound(scip) - SCIPlpGetLooseObjval(lp, scip->set);
+            assert( SCIPisFeasZero(scip, primal[lp->ncols+1+cnt]) || SCIPisFeasLT(scip, sum, rhs) );
+            ++cnt;
          }
       }
       /* check bounds */

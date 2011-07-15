@@ -4613,6 +4613,7 @@ extern
 SCIP_RETCODE SCIPcomputeLPRelIntPoint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             relaxrows,          /**< should the rows be relaxed */
+   SCIP_Bool             inclobjcutoff,      /**< should a row for the objective cutoff be included */
    SCIP_SOL**            point               /**< relative interior point on exit */
    );
 
