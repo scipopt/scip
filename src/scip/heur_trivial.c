@@ -87,9 +87,6 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
    if( SCIPgetNRuns(scip) > 1 )
       return SCIP_OKAY;
 
-   if( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) == 0 )
-      return SCIP_OKAY;
-
    *result = SCIP_DIDNOTFIND;
    success = FALSE;
 

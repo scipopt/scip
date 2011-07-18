@@ -40,7 +40,10 @@
 #define SCIP_DEFAULT_SEPARELINT              TRUE /**< generate close cuts w.r.t. relative interior point (best solution otherwise)? */
 #define SCIP_DEFAULT_SEPACOMBVALUE           0.30 /**< convex combination value for close cuts */
 #define SCIP_DEFAULT_SEPAROOTONLY            TRUE /**< generate close cuts in the root only? */
-#define SCIP_DEFAULT_SEPATHRESHOLD           50   /**< threshold on number of generated cuts below which the ordinary separation is started */
+#define SCIP_DEFAULT_SEPATHRESHOLD             50 /**< threshold on number of generated cuts below which the ordinary separation is started */
+#define SCIP_DEFAULT_INCLOBJCUTOFF          FALSE /**< include the objective cutoff when computing the relative interior? */
+#define SCIP_DEFAULT_RECOMPUTERELINT        FALSE /**< recompute relative interior in each separation call? */
+#define SCIP_DEFAULT_RELINTNORMTYPE           'o' /**< type of norm to use when computing relative interior */
 
 
 
@@ -51,6 +54,10 @@ struct SCIP_SepaData
    SCIP_Bool             separootonly;       /**< generate close cuts in the root only? */
    SCIP_Real             sepacombvalue;      /**< convex combination value for close cuts */
    int                   sepathreshold;      /**< threshold on number of generated cuts below which the ordinary separation is started */
+   SCIP_Bool             inclobjcutoff;      /**< include the objective cutoff when computing the relative interior? */
+   SCIP_Bool             recomputerelint;    /**< recompute relative interior in each separation call? */
+   char                  relintnormtype;     /**< type of norm to use when computing relative interior */
+
    SCIP_SOL*             sepasol;            /**< solution that can be used for generating close cuts */
 };
 
@@ -213,10 +220,23 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpClosecuts)
       /* check whether we have to compute a relative interior point */
       if ( sepadata->separelint )
       {
+         /* check if previous relative interior point should be forgotten,
+          * otherwise it is computed only once and the same point is used for all nodes */
+         if ( sepadata->recomputerelint && sepadata->sepasol != NULL )
+         {
+            SCIP_CALL( SCIPfreeSol(scip, &sepadata->sepasol) );
+         }
          if ( sepadata->sepasol == NULL )
          {
-            /* note: the relative interior point is computed only once -> the same point is used for all nodes */
-            SCIP_CALL( SCIPcomputeLPRelIntPoint(scip, TRUE, &sepadata->sepasol) );
+            assert(sepadata->relintnormtype == 'o' || sepadata->relintnormtype == 'i');
+            if( sepadata->relintnormtype == 'o' )
+            {
+               SCIP_CALL( SCIPcomputeLPRelIntPointOneNorm(scip, TRUE, sepadata->inclobjcutoff, &sepadata->sepasol) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPcomputeLPRelIntPointSupNorm(scip, sepadata->inclobjcutoff, &sepadata->sepasol) );
+            }
          }
       }
       else
@@ -320,6 +340,21 @@ SCIP_RETCODE SCIPincludeSepaClosecuts(
          "separating/closecuts/closethres",
          "threshold on number of generated cuts below which the ordinary separation is started",
          &sepadata->sepathreshold, TRUE, SCIP_DEFAULT_SEPATHRESHOLD, -1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "separating/closecuts/inclobjcutoff",
+         "include an objective cutoff when computing the relative interior?",
+         &sepadata->inclobjcutoff, TRUE, SCIP_DEFAULT_INCLOBJCUTOFF, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "separating/closecuts/recomputerelint",
+         "recompute relative interior point in each separation call?",
+         &sepadata->recomputerelint, TRUE, SCIP_DEFAULT_RECOMPUTERELINT, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddCharParam(scip,
+         "separating/closecuts/relintnormtype",
+         "type of norm to use when computing relative interior: 'o'ne norm, 'i'nfinity norm",
+         &sepadata->relintnormtype, TRUE, SCIP_DEFAULT_RELINTNORMTYPE, "oi", NULL, NULL) );
 
    return SCIP_OKAY;
 }
