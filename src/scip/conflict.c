@@ -3525,6 +3525,11 @@ SCIP_RETCODE undoBdchgsProof(
    return SCIP_OKAY;
 }
 
+/* because calculations might cancel out some values, we stop the infeasibility analysis if a value is bigger than
+ * 2^53 = 9007199254740992
+ */
+#define NUMSTOP 9007199254740992
+
 /** analyzes an infeasible LP and undoes additional bound changes while staying infeasible */
 static
 SCIP_RETCODE undoBdchgsDualfarkas(
@@ -3637,6 +3642,11 @@ SCIP_RETCODE undoBdchgsDualfarkas(
             /* check if sign of dual farkas value is valid */
             if( SCIPsetIsInfinity(set, -row->lhs) )
                continue;
+
+            /* due to numerical reasons we want to stop */
+            if( REALABS(dualfarkas[r] * (row->lhs - row->constant)) > NUMSTOP )
+               goto TERMINATE;
+
             farkaslhs += dualfarkas[r] * (row->lhs - row->constant);
          }
          else
@@ -3644,10 +3654,19 @@ SCIP_RETCODE undoBdchgsDualfarkas(
             /* check if sign of dual farkas value is valid */
             if( SCIPsetIsInfinity(set, row->rhs) )
                continue;
+
+            /* due to numerical reasons we want to stop */
+            if( REALABS(dualfarkas[r] * (row->rhs - row->constant)) > NUMSTOP )
+               goto TERMINATE;
+
             farkaslhs += dualfarkas[r] * (row->rhs - row->constant);
          }
          SCIPdebugMessage(" -> farkaslhs: %g<%s>[%g,%g] -> %g\n", dualfarkas[r], SCIProwGetName(row),
             row->lhs - row->constant, row->rhs - row->constant, farkaslhs);
+
+         /* due to numerical reasons we want to stop */
+         if( REALABS(farkaslhs) > NUMSTOP )
+            goto TERMINATE;
 
          /* add row coefficients to farkas row */
          for( i = 0; i < row->len; ++i )
