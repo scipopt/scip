@@ -221,6 +221,7 @@ fixed bugs:
 - fixed bugs in cons_countsols.c w.r.t. collecting feasible solutions and forbidding a found solution
 - fixed bug in cons_linear.c: multiaggregated variables were not removed when adding during solve, leading to a failing assert in tightenBounds due to an unsuccessful bound tightening
 - fixed bug w.r.t. to pricing variables in case new initial constraints come in during the price and cut loop
+- fixed bug in conflict.c, infeasibility analysis with big values led to wrong result
 
 performance improvements:
 - fasten propagation in cons_knapsack.c due to negated clique partitions
