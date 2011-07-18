@@ -14663,16 +14663,17 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointSupNorm(
    SCIP_Real* ub;
    SCIP_Real* primal;
    SCIP_Real* colvals;
-   SCIP_Real zero;
    SCIP_Real minusinf;
    SCIP_Real plusinf;
    SCIP_Real objval;
-   SCIP_Real sigma;
    int* colinds;
    int ncols;
    int beg;
    int i;
    int j;
+#ifndef NDEBUG
+   SCIP_Real sigma;
+#endif
 
    assert( scip != NULL );
    assert( point != NULL );
@@ -14738,7 +14739,6 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointSupNorm(
 
    /* create rows arising from original rows */
    beg = 0;
-   zero = 0.0;
    minusinf = -SCIPlpiInfinity(lpi);
    plusinf  =  SCIPlpiInfinity(lpi);
    for (i = 0; i < lp->nrows; ++i)
@@ -14886,8 +14886,10 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointSupNorm(
       /* get primal solution */
       SCIP_CALL( SCIPallocBufferArray(scip, &primal, ncols) );
       SCIP_CALL( SCIPlpiGetSol(lpi, &objval, primal, NULL, NULL, NULL) );
+#ifndef NDEBUG
       sigma = primal[lp->ncols];
       assert( !SCIPisNegative(scip, sigma) );
+#endif
 
       SCIPdebugMessage("Solved relative interior lp with objective %g.\n", objval);
 
