@@ -2308,7 +2308,7 @@ SCIP_RETCODE propagateBounds(
    
    /* @todo do something clever to decide whether propagation should be tried */
 
-   SCIPintervalSet(&lhsrange, consdata->constant);
+   SCIPintervalSetBounds(&lhsrange, consdata->constant - SCIPepsilon(scip), consdata->constant + SCIPepsilon(scip));
    
    SCIP_CALL( SCIPallocBufferArray(scip, &lhsranges, consdata->nvars) );
    for( i = 0; i < consdata->nvars; ++i )
@@ -2700,7 +2700,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 
             ++lhscount;
          }
-         else if( rhsvar || SCIPisLT(scip, SCIPvarGetLbGlobal(term->var), term->lincoef / (2*term->sqrcoef)) )
+         else if( rhsvar || SCIPisLT(scip, SCIPvarGetLbGlobal(term->var), -term->lincoef / (2*term->sqrcoef)) )
          { /* second variable with positive coefficient -> cannot be SOC */
             /* or lower bound of variable does not ensure positivity of right hand side */
             rhsvar = NULL;
