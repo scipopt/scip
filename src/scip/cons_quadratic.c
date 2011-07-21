@@ -3352,6 +3352,10 @@ SCIP_RETCODE presolveTryAddLinearReform(
             assert(scale > 0.0);
             assert(!SCIPisInfinity(scip, scale));
 
+            /* if x-term is always negative, negate scale so we get a positive auxiliary variable; maybe this is better sometimes? */
+            if( !SCIPisPositive(scip, SCIPintervalGetSup(xbnds)) )
+               scale = -scale;
+
             SCIPdebugMessage("binary reformulation using scale %g, nxvars = %d, integral = %d\n", scale, nxvars, integral);
             if( scale != 1.0 )
             {
