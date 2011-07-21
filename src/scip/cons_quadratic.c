@@ -8094,8 +8094,6 @@ static
 SCIP_DECL_CONSPRINT(consPrintQuadratic)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
-   int            j;
-   const SCIP_Bool writevartype = FALSE;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -8119,33 +8117,79 @@ SCIP_DECL_CONSPRINT(consPrintQuadratic)
    }
    else
    {
+      SCIP_VAR*** monomialvars;
+      SCIP_Real** monomialexps;
+      SCIP_Real*  monomialcoefs;
+      int*        monomialnvars;
+      int         nmonomials;
+      int         monomialssize;
+      int         j;
+
+      monomialssize = consdata->nlinvars + 2 * consdata->nquadvars + consdata->nbilinterms;
+      SCIP_CALL( SCIPallocBufferArray(scip, &monomialvars,  monomialssize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &monomialexps,  monomialssize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &monomialcoefs, monomialssize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &monomialnvars, monomialssize) );
+
+      nmonomials = 0;
       for( j = 0; j < consdata->nlinvars; ++j )
       {
-         SCIPinfoMessage(scip, file, "%+.15g", consdata->lincoefs[j]);
-         SCIP_CALL( SCIPwriteVarName(scip, file, consdata->linvars[j], writevartype) );
+         assert(nmonomials < monomialssize);
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &monomialvars[nmonomials], 1) );
+
+         monomialvars[nmonomials][0] = consdata->linvars[j];
+         monomialexps[nmonomials] = NULL;
+         monomialcoefs[nmonomials] = consdata->lincoefs[j];
+         monomialnvars[nmonomials] = 1;
+         ++nmonomials;
       }
 
       for( j = 0; j < consdata->nquadvars; ++j )
       {
          if( consdata->quadvarterms[j].lincoef != 0.0 )
          {
-            SCIPinfoMessage(scip, file, "%+.15g", consdata->quadvarterms[j].lincoef);
-            SCIP_CALL( SCIPwriteVarName(scip, file, consdata->quadvarterms[j].var, writevartype) );
+            assert(nmonomials < monomialssize);
+
+            SCIP_CALL( SCIPallocBufferArray(scip, &monomialvars[nmonomials], 1) );
+
+            monomialvars[nmonomials][0] = consdata->quadvarterms[j].var;
+            monomialexps[nmonomials] = NULL;
+            monomialcoefs[nmonomials] = consdata->quadvarterms[j].lincoef;
+            monomialnvars[nmonomials] = 1;
+            ++nmonomials;
          }
+
          if( consdata->quadvarterms[j].sqrcoef != 0.0 )
          {
-            SCIPinfoMessage(scip, file, "%+.15g", consdata->quadvarterms[j].sqrcoef);
-            SCIP_CALL( SCIPwriteVarName(scip, file, consdata->quadvarterms[j].var, writevartype) );
-            SCIPinfoMessage(scip, file, "^2");
+            assert(nmonomials < monomialssize);
+
+            SCIP_CALL( SCIPallocBufferArray(scip, &monomialvars[nmonomials], 1) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &monomialexps[nmonomials], 1) );
+
+            monomialvars[nmonomials][0] = consdata->quadvarterms[j].var;
+            monomialexps[nmonomials][0] = 2.0;
+            monomialcoefs[nmonomials] = consdata->quadvarterms[j].sqrcoef;
+            monomialnvars[nmonomials] = 1;
+            ++nmonomials;
          }
       }
 
       for( j = 0; j < consdata->nbilinterms; ++j )
       {
-         SCIPinfoMessage(scip, file, "%+.15g", consdata->bilinterms[j].coef);
-         SCIP_CALL( SCIPwriteVarName(scip, file, consdata->bilinterms[j].var1, writevartype) );
-         SCIP_CALL( SCIPwriteVarName(scip, file, consdata->bilinterms[j].var2, writevartype) );
+         assert(nmonomials < monomialssize);
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &monomialvars[nmonomials], 2) );
+
+         monomialvars[nmonomials][0] = consdata->bilinterms[j].var1;
+         monomialvars[nmonomials][1] = consdata->bilinterms[j].var2;
+         monomialexps[nmonomials] = NULL;
+         monomialcoefs[nmonomials] = consdata->bilinterms[j].coef;
+         monomialnvars[nmonomials] = 2;
+         ++nmonomials;
       }
+
+      SCIP_CALL( SCIPwriteVarsPolynomial(scip, file, monomialvars, monomialexps, monomialcoefs, monomialnvars, nmonomials, FALSE) );
    }
 
    /* print marker that constraint function ends now */
