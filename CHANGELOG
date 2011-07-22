@@ -178,6 +178,7 @@ features:
 - new target in Makefile "install" performs "make" and copies the include headers
 - new target in Makefile "uninstall" removes libraries, binary, and include headers
 - cons_logicor is now abled to replace all aggregated variables in presolving by there active or negation of an active variable counterpart
+- reader_gms is now able to write indicator constraints (reformulated either via big-M or sos1), see new parameters <reading/gmsreader/bigmdefault> and <reading/gmsreader/indicatorreform>
 
 design:
 - SCIP_HASHMAP now works also without block memory
