@@ -3373,12 +3373,18 @@ SCIP_RETCODE presolveTryAddLinearReform(
                   0.0, integral ? SCIP_VARTYPE_IMPLINT : SCIP_VARTYPE_CONTINUOUS, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(scip, auxvar) );
 
-            if( !SCIPisZero(scip, SCIPintervalGetInf(xbnds)) )
+            /* add auxiliary constraints
+             * it seems to be advantageous to make the varbound constraints initial and the linear constraints not initial
+             * maybe because it is more likely that a binary variable taked value 0 instead of 1, and thus the varbound constraints
+             * are more often active, compared to the linear constraints added below
+             * also, the varbound constraints are more sparse than the linear cons
+             */
+            if( SCIPisNegative(scip, SCIPintervalGetInf(xbnds)) )
             {
                /* add 0 <= z - xbnds.inf * y constraint (as varbound constraint) */
                (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s_1", SCIPvarGetName(y));
                SCIP_CALL( SCIPcreateConsVarbound(scip, &auxcons, name, auxvar, y, -SCIPintervalGetInf(xbnds), 0.0, SCIPinfinity(scip),
-                  SCIPconsIsInitial(cons) && conshdlrdata->binreforminitial,
+                  SCIPconsIsInitial(cons) /*&& conshdlrdata->binreforminitial*/,
                   SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
                   SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
                   SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
@@ -3388,12 +3394,12 @@ SCIP_RETCODE presolveTryAddLinearReform(
                SCIP_CALL( SCIPreleaseCons(scip, &auxcons) );
                ++*naddconss;
             }
-            if( !SCIPisZero(scip, SCIPintervalGetSup(xbnds)) )
+            if( SCIPisPositive(scip, SCIPintervalGetSup(xbnds)) )
             {
                /* add z - xbnds.sup * y <= 0 constraint (as varbound constraint) */
                (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s_2", SCIPvarGetName(y));
                SCIP_CALL( SCIPcreateConsVarbound(scip, &auxcons, name, auxvar, y, -SCIPintervalGetSup(xbnds), -SCIPinfinity(scip), 0.0,
-                  SCIPconsIsInitial(cons) && conshdlrdata->binreforminitial,
+                  SCIPconsIsInitial(cons) /*&& conshdlrdata->binreforminitial*/,
                   SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
                   SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
                   SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
@@ -8685,7 +8691,7 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          &conshdlrdata->empathy4and, FALSE, 0, 0, 2, NULL, NULL) );
    
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/binreforminitial",
-         "whether to make constraints added due to replacing products with binary variables initial",
+         "whether to make non-varbound linear constraints added due to replacing products with binary variables initial",
          &conshdlrdata->binreforminitial, TRUE, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacysepa",
