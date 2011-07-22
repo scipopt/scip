@@ -29,9 +29,6 @@ CONVERTSCIP=${12}
 # set this to true to keep solutions in .gdx files
 KEEPSOLS=false
 
-#TODOs:
-# - enable solvelink=5 ?
-
 if ! which $GAMSBIN > /dev/null 2>&1
 then
   echo "No GAMS system available: $GAMSBIN does not work. Abort."
@@ -128,16 +125,27 @@ echo "hard time limit: $HARDTIMELIMIT s" >>$OUTFILE
 
 # set pf4=0 to get no default upper bounds on integer variables
 # set domlim to infinity to not stop on function evaluation errors
-# set workfactor to it's maximum for BARON
-# #do not use scratch files (solvelink=5) if possible, GAMS resets to solvelink=2 if not supported by solver  
+# do not use scratch files (solvelink=5) if possible, GAMS resets to solvelink=2 if not supported by solver
 # set logoption=3 to get default output to stdout
 # listing file: append mode, print step summary, disable solution printing, disable rows and columns output, disable page control
-GAMSOPTS="pf4=0 domlim=9999999 workfactor=1500"  #solvelink=5
+GAMSOPTS="pf4=0 domlim=9999999 solvelink=5"
 GAMSOPTS="$GAMSOPTS logoption=3 output=$LSTFILE appendout=1 stepsum=1 solprint=0 limcol=0 limrow=0 pc=2 pw=255"
 GAMSOPTS="$GAMSOPTS reslim=$TIMELIMIT"
 GAMSOPTS="$GAMSOPTS nodlim=$NODELIMIT"
 GAMSOPTS="$GAMSOPTS optcr=$GAPLIMIT"
 GAMSOPTS="$GAMSOPTS threads=$THREADS"
+
+# set workfactor to it's maximum for BARON, so it can keep more nodes in memory
+if test $SOLVER = BARON
+then
+  GAMSOPTS="$GAMSOPTS workfactor=1500"
+fi
+
+# set SBB option to overwrite NLP solver status files in each node instead of appending
+if test $SOLVER = SBB
+then
+  GAMSOPTS="$GAMSOPTS integer4=2"
+fi
 
 # use scratch directory for GAMS scratch file if given and existing
 if test -n "$SCRDIR"
