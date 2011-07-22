@@ -1425,6 +1425,7 @@ SCIP_RETCODE SCIPwriteGms(
    SCIP_CALL( checkConsnames(scip, conss, nconss, transformed) );
 
    /* print statistics as comment to file */
+   SCIPinfoMessage(scip, file, "$OFFLISTING\n");
    SCIPinfoMessage(scip, file, "* SCIP STATISTICS\n");
    SCIPinfoMessage(scip, file, "*   Problem name     : %s\n", name);
    SCIPinfoMessage(scip, file, "*   Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
@@ -1849,6 +1850,10 @@ SCIP_RETCODE SCIPwriteGms(
 
    /* print model creation */
    SCIPinfoMessage(scip, file, "Model m / all /;\n\n");
+
+   /* set some options to reduce listing file size */
+   SCIPinfoMessage(scip, file, "option limrow = 0;\n");
+   SCIPinfoMessage(scip, file, "option limcol = 0;\n\n");
 
    /* print solve command */
    (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s%s",
