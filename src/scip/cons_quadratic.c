@@ -8200,6 +8200,17 @@ SCIP_DECL_CONSPRINT(consPrintQuadratic)
       }
 
       SCIP_CALL( SCIPwriteVarsPolynomial(scip, file, monomialvars, monomialexps, monomialcoefs, monomialnvars, nmonomials, FALSE) );
+
+      for( j = 0; j < nmonomials; ++j )
+      {
+         SCIPfreeBufferArray(scip, &monomialvars[j]);
+         SCIPfreeBufferArrayNull(scip, &monomialexps[j]);
+      }
+
+      SCIPfreeBufferArray(scip, &monomialvars);
+      SCIPfreeBufferArray(scip, &monomialexps);
+      SCIPfreeBufferArray(scip, &monomialcoefs);
+      SCIPfreeBufferArray(scip, &monomialnvars);
    }
 
    /* print marker that constraint function ends now */
