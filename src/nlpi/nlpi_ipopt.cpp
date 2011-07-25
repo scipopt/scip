@@ -1873,13 +1873,20 @@ bool ScipNLP::get_bounds_info(
    
    assert(SCIPnlpiOracleGetVarLbs(nlpiproblem->oracle) != NULL);
    assert(SCIPnlpiOracleGetVarUbs(nlpiproblem->oracle) != NULL);
-   assert(SCIPnlpiOracleGetConstraintLhss(nlpiproblem->oracle) != NULL);
-   assert(SCIPnlpiOracleGetConstraintRhss(nlpiproblem->oracle) != NULL);
    
    BMScopyMemoryArray(x_l, SCIPnlpiOracleGetVarLbs(nlpiproblem->oracle), n);
    BMScopyMemoryArray(x_u, SCIPnlpiOracleGetVarUbs(nlpiproblem->oracle), n);
-   BMScopyMemoryArray(g_l, SCIPnlpiOracleGetConstraintLhss(nlpiproblem->oracle), m);
-   BMScopyMemoryArray(g_u, SCIPnlpiOracleGetConstraintRhss(nlpiproblem->oracle), m);
+#ifndef NDEBUG
+   for( int i = 0; i < n; ++i )
+      assert(x_l[i] <= x_u[i]);
+#endif
+
+   for( int i = 0; i < m; ++i )
+   {
+      g_l[i] = SCIPnlpiOracleGetConstraintLhs(nlpiproblem->oracle, i);
+      g_u[i] = SCIPnlpiOracleGetConstraintRhs(nlpiproblem->oracle, i);
+      assert(g_l[i] <= g_u[i]);
+   }
 
    return true;
 }
@@ -2056,23 +2063,19 @@ bool ScipNLP::get_var_con_metadata(
       }
    }
 
-   char** consnames = SCIPnlpiOracleGetConstraintNames(nlpiproblem->oracle);
-   if( consnames != NULL )
+   std::vector<std::string>& consnamesvec(con_string_md["idx_names"]);
+   consnamesvec.reserve(m);
+   for( int i = 0; i < m; ++i )
    {
-      std::vector<std::string>& consnamesvec(con_string_md["idx_names"]);
-      consnamesvec.reserve(m);
-      for( int i = 0; i < m; ++i )
+      if( SCIPnlpiOracleGetConstraintName(nlpiproblem->oracle, i) != NULL )
       {
-         if( consnames[i] != NULL )
-         {
-            consnamesvec.push_back(consnames[i]);
-         }
-         else
-         {
-            char buffer[20];
-            sprintf(buffer, "nlpicons%8d", i);
-            consnamesvec.push_back(buffer);
-         }
+         consnamesvec.push_back(SCIPnlpiOracleGetConstraintName(nlpiproblem->oracle, i));
+      }
+      else
+      {
+         char buffer[20];
+         sprintf(buffer, "nlpicons%8d", i);
+         consnamesvec.push_back(buffer);
       }
    }
 

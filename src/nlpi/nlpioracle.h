@@ -84,7 +84,7 @@ SCIP_RETCODE SCIPnlpiOracleAddVars(
 /** adds constraints 
  * 
  *  linear coefficients: row(=constraint) oriented matrix;
- *  quadratic coefficiens: row oriented matrix for each constraint
+ *  quadratic coefficients: row oriented matrix for each constraint
  */
 extern
 SCIP_RETCODE SCIPnlpiOracleAddConstraints(
@@ -105,7 +105,7 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
    const char**          consnames           /**< names of new constraints, or NULL if no names should be stored */
    );
 
-/** sets or overwrites objective, a minization problem is expected
+/** sets or overwrites objective, a minimization problem is expected
  * 
  *  May change sparsity pattern.
  */
@@ -158,8 +158,7 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
                                               *   new position of row in output (-1 if row was deleted) */
    );
 
-/** changes (or adds) linear coefficients in one constraint or objective
- */
+/** changes (or adds) linear coefficients in one constraint or objective */
 extern
 SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
@@ -169,8 +168,7 @@ SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
    const SCIP_Real*      newcoefs            /**< array with new coefficients of variables */
    );
 
-/** changes (or adds) coefficients in the quadratic part of one constraint or objective
- */
+/** changes (or adds) coefficients in the quadratic part of one constraint or objective */
 extern
 SCIP_RETCODE SCIPnlpiOracleChgQuadCoefs(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
@@ -179,8 +177,7 @@ SCIP_RETCODE SCIPnlpiOracleChgQuadCoefs(
    const SCIP_QUADELEM*  quadelems           /**< new elements in quadratic matrix (replacing already existing ones or adding new ones) */
    );
 
-/** replaces expression tree of one constraint or objective
- */
+/** replaces expression tree of one constraint or objective */
 extern
 SCIP_RETCODE SCIPnlpiOracleChgExprtree(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
@@ -254,31 +251,34 @@ int* SCIPnlpiOracleGetVarDegrees(
    SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
    );
 
-/** gives the constraints left-hand sides */
+/** gives left-hand side of a constraint */
 extern
-const SCIP_Real* SCIPnlpiOracleGetConstraintLhss(
-   SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
+SCIP_Real SCIPnlpiOracleGetConstraintLhs(
+   SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
+   int                   considx             /**< constraint index */
    );
 
-/** gives the constraints right-hand sides */
+/** gives right-hand side of a constraint */
 extern
-const SCIP_Real* SCIPnlpiOracleGetConstraintRhss(
-   SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
+SCIP_Real SCIPnlpiOracleGetConstraintRhs(
+   SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
+   int                   considx             /**< constraint index */
    );
 
-/** gives the constraint names, or NULL if not set */
+/** gives name of a constraint, may be NULL */
 extern
-char** SCIPnlpiOracleGetConstraintNames(
-   SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
+char* SCIPnlpiOracleGetConstraintName(
+   SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
+   int                   considx             /**< constraint index */
    );
 
-/** Gives maximum degree of a constraints.
- *  The degree of a constraint is the maximal degree of all summands which appear in it, and is infinity for nonpolynomial terms.
+/** gives maximum degree of a constraint or objective
+ *  The degree is the maximal degree of all summands,, and is infinity for nonpolynomial terms.
  */ 
 extern
 int SCIPnlpiOracleGetConstraintDegree(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   int                   considx             /**< index of constraint for which the degree is requested */
+   int                   considx             /**< index of constraint for which the degree is requested, or -1 for objective */
    );
 
 /** Gives maximum degree over all constraints and the objective (or over all variables, resp.).
@@ -337,7 +337,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintGradient(
    SCIP_Real*            congrad             /**< pointer to store (dense) constraint gradient */  
    );
 
-/** Gets sparsity pattern (rowwise) of Jacobian matrix.
+/** gets sparsity pattern (rowwise) of Jacobian matrix
  * 
  *  Note that internal data is returned in *offset and *col, thus the user does not need to allocate memory there.
  *  Adding or deleting constraints destroys the sparsity structure and make another call to this function necessary. 
@@ -350,7 +350,7 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
                                               *   offsets[nconss] gives length of col, can be NULL */
    );
 
-/** Evaluates the Jacobi matrix in a given point.
+/** evaluates the Jacobi matrix in a given point
  * 
  *  The values in the Jacobi matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetJacobianSparsity.
  *  The user need to call SCIPnlpiOracleGetJacobianSparsity at least ones before using this function. 
@@ -364,9 +364,9 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
    SCIP_Real*            jacobi              /**< pointer to store sparse jacobian values */  
    );
 
-/** Gets sparsity pattern of the Hessian matrix of the Lagrangian.
+/** gets sparsity pattern of the Hessian matrix of the Lagrangian
  * 
- *  Note that internal data is returned in *offset and *col, thus the user does not need to allocate memory there.
+ *  Note that internal data is returned in *offset and *col, thus the user must not to allocate memory there.
  *  Adding or deleting variables, objective, or constraints may destroy the sparsity structure and make another call to this function necessary.
  *  Only elements of the lower left triangle and the diagonal are counted.
  */
@@ -378,7 +378,7 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
                                               *   offsets[nconss] gives length of col, can be NULL */
    );
 
-/** Evaluates the Hessian matrix of the Lagrangian in a given point.
+/** evaluates the Hessian matrix of the Lagrangian in a given point
  * 
  *  The values in the Hessian matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetHessianLagSparsity.
  *  The user must call SCIPnlpiOracleGetHessianLagSparsity at least ones before using this function. 
