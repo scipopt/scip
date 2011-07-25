@@ -618,12 +618,15 @@ SCIP_RETCODE updatePseudocost(
       weight = (nvalidupdates > 0 ? 1.0 / (SCIP_Real)nvalidupdates : 1.0);
       lpgain = (SCIPlpGetObjval(lp, set) - tree->focuslpstatefork->lowerbound) * weight;
       lpgain = MAX(lpgain, 0.0);
+
       for( i = 0; i < nupdates; ++i )
       {
          assert((SCIP_BOUNDCHGTYPE)updates[i]->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING);
+
          var = updates[i]->var;
          assert(var != NULL);
          assert((PSEUDOCOSTFLAG)var->pseudocostflag != PSEUDOCOST_NONE);
+
          if( (PSEUDOCOSTFLAG)var->pseudocostflag == PSEUDOCOST_UPDATE )
          {
             if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS || set->branch_lpgainnorm == 'l' )
@@ -637,7 +640,6 @@ SCIP_RETCODE updatePseudocost(
             }
             else
             {
-               assert(set->branch_lpgainnorm == 'd' || set->branch_lpgainnorm == 's');
                /* set->branch_lpgainnorm == 'd':
                 * For continuous variables, we want to pseudocosts to be the average of the gain in the LP value
                 * if the domain is reduced from x% of its original width to y% of its original (e.g., global) width, i.e.,
@@ -658,23 +660,30 @@ SCIP_RETCODE updatePseudocost(
                 * Thus, we have oldwidth = c-a, newwidth = c-b, and oldwidth - newwidth = b-a.
                 * To get c (the previous lower bound), we look into the var->lbchginfos array.
                 */
-               int j;
-               int nbdchginfos;
                SCIP_BDCHGINFO* bdchginfo;
                SCIP_Real oldbound;
                SCIP_Real delta;
+               int j;
+               int nbdchginfos;
+
+               assert(set->branch_lpgainnorm == 'd' || set->branch_lpgainnorm == 's');
+
+               oldbound = SCIP_INVALID;
+
                if( set->branch_lpgainnorm == 'd' )
                {
                   assert(!updates[i]->redundant);
+
                   if( updates[i]->boundtype == SCIP_BOUNDTYPE_UPPER )
                   {
                      nbdchginfos = SCIPvarGetNBdchgInfosUb(var);
-                     oldbound = SCIP_INVALID;
+
                      /* walk backwards through bound change infos array to find the bound change corresponding to branching in updates[i]
                       * usually it will be the first one we look at */
                      for( j = nbdchginfos-1; j >= 0; --j )
                      {
                         bdchginfo = SCIPvarGetBdchgInfoUb(var, j);
+
                         if( bdchginfo->oldbound > updates[i]->newbound )
                         {
                            /* first boundchange which upper bound is above the upper bound set by the branching in updates[i]
@@ -688,9 +697,8 @@ SCIP_RETCODE updatePseudocost(
                               oldbound = bdchginfo->oldbound;
                            }
                            else
-                           {
                               assert(updates[i]->redundant);
-                           }
+
                            break;
                         }
                      }
@@ -709,20 +717,20 @@ SCIP_RETCODE updatePseudocost(
                            delta = updates[i]->newbound - oldbound;
                      }
                      else
-                     {
                         delta = SCIP_INVALID;
-                     }
+
                   }
                   else
                   {
                      assert(updates[i]->boundtype == SCIP_BOUNDTYPE_LOWER);
                      nbdchginfos = SCIPvarGetNBdchgInfosLb(var);
-                     oldbound = SCIP_INVALID;
+
                      /* walk backwards through bound change infos array to find the bound change corresponding to branching in updates[i]
                       * usually it will be the first one we look at */
                      for( j = nbdchginfos-1; j >= 0; --j )
                      {
                         bdchginfo = SCIPvarGetBdchgInfoLb(var, j);
+
                         if( bdchginfo->oldbound < updates[i]->newbound )
                         {
                            /* first boundchange which lower bound is below the lower bound set by the branching in updates[i]
@@ -736,9 +744,8 @@ SCIP_RETCODE updatePseudocost(
                               oldbound = bdchginfo->oldbound;
                            }
                            else
-                           {
                               assert(updates[i]->redundant);
-                           }
+
                            break;
                         }
                      }
@@ -757,9 +764,7 @@ SCIP_RETCODE updatePseudocost(
                            delta = updates[i]->newbound - oldbound;
                      }
                      else
-                     {
                         delta = SCIP_INVALID;
-                     }
                   }
                }
                else
@@ -3781,6 +3786,7 @@ SCIP_RETCODE SCIPsolveCIP(
           * again, because the selected next node may be invalid due to cut off
           */
          assert(!tree->cutoffdelayed);
+
          if( nnodes != SCIPtreeGetNNodes(tree) || SCIPsolveIsStopped(set, stat, TRUE) )
             nextnode = NULL;
       }
@@ -3815,7 +3821,7 @@ SCIP_RETCODE SCIPsolveCIP(
    }
    assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
-   SCIPdebugMessage("Problem solving finished (restart=%u)\n", *restart);
+   SCIPdebugMessage("Problem solving finished with status %u (restart=%u)\n", stat->status, *restart);
 
    /* if the current node is the only remaining node, and if its lower bound exceeds the upper bound, we have
     * to delete it manually in order to get to the SOLVED stage instead of thinking, that only the gap limit

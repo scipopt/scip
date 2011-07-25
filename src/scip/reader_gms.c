@@ -43,6 +43,7 @@
 #include "scip/cons_soc.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_varbound.h"
+#include "scip/cons_indicator.h"
 #ifdef WITH_SIGNPOWER
 #include "cons_signpower.h"
 #endif
@@ -60,7 +61,8 @@
 #define GMS_MAX_PRINTLEN     256       /**< the maximum length of any line is 255 + '\\0' = 256*/
 #define GMS_MAX_NAMELEN      64        /**< the maximum length for any name is 63 + '\\0' = 64 */
 #define GMS_PRINTLEN         100
-
+#define GMS_DEFAULT_BIGM     1e+6
+#define GMS_DEFAULT_INDICATORREFORM 's'
 
 
 /*
@@ -268,7 +270,7 @@ SCIP_RETCODE printActiveVariables(
 
    if( nvars == 0 )
    {
-      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s(0)%s", prefix ? prefix : "", suffix ? suffix : "");
+      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s(0)%s", prefix != NULL ? prefix : "", suffix != NULL ? suffix : "");
 
       appendLine(scip, file, linebuffer, linecnt, buffer);
    }
@@ -301,14 +303,14 @@ SCIP_RETCODE printActiveVariables(
             /* we start a new line; therefore we tab this line */
             appendLine(scip, file, linebuffer, linecnt, "     ");
 
-         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s(0)%s", prefix ? prefix : "", suffix ? suffix : "");
+         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s(0)%s", prefix != NULL ? prefix : "", suffix != NULL ? suffix : "");
 
          appendLine(scip, file, linebuffer, linecnt, buffer);
       }
       else
       {
          /* buffer prefix */
-         (void) SCIPsnprintf(ext, GMS_MAX_PRINTLEN, "%s(", prefix);
+         (void) SCIPsnprintf(ext, GMS_MAX_PRINTLEN, "%s(", prefix != NULL ? prefix : "");
 
          /* find position of closing bracket */
          closingbracket = nactivevars;
@@ -885,6 +887,106 @@ SCIP_RETCODE printSOCCons(
    return SCIP_OKAY;
 }
 
+/* print indicator constraint in some GAMS format to file stream (performing retransformation to active variables)
+ * The constraints are of the following form:
+ * \f[
+ *    z = 1 -> s = 0
+ * \f]
+ * */
+static
+SCIP_RETCODE printIndicatorCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           rowname,            /**< row name */
+   SCIP_VAR*             z,                  /**< indicating variable (binary) */
+   SCIP_VAR*             s,                  /**< slack variable */
+   SCIP_Bool             transformed         /**< transformed constraint? */
+   )
+{
+   char linebuffer[GMS_MAX_PRINTLEN] = { '\0' };
+   int linecnt;
+   SCIP_Real coef;
+   char indicatorform;
+
+   char consname[GMS_MAX_NAMELEN + 30];
+   char buffer[GMS_MAX_PRINTLEN];
+
+   assert( scip != NULL );
+   assert( strlen(rowname) > 0 );
+   assert( z != NULL );
+   assert( s != NULL );
+   assert( SCIPvarIsBinary(z) );
+
+   clearLine(linebuffer, &linecnt);
+
+   /* start each line with a space */
+   appendLine(scip, file, linebuffer, &linecnt, " ");
+
+   SCIP_CALL( SCIPgetCharParam(scip, "reading/gmsreader/indicatorreform", &indicatorform) );
+
+   switch( indicatorform )
+   {
+      case 'b':
+      {
+         /* print row name */
+         (void) SCIPsnprintf(buffer, GMS_MAX_NAMELEN + 3, "%s ..", rowname);
+         SCIP_CALL( printConformName(scip, consname, GMS_MAX_NAMELEN + 3, buffer) );
+
+         appendLine(scip, file, linebuffer, &linecnt, consname);
+
+         /* write as s <= upperbound(s)*(1-z) */
+         coef = 1.0;
+         SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, NULL, " =l= ", 1, &s, &coef, transformed) );
+
+         coef = SCIPvarGetUbGlobal(s);
+         if( SCIPisInfinity(scip, coef) )
+         {
+            SCIP_CALL( SCIPgetRealParam(scip, "reading/gmsreader/bigmdefault", &coef) );
+
+            SCIPwarningMessage("do not have upper bound on slack variable <%s> in indicator constraint <%s>, will use M = %g.\n",
+               SCIPvarGetName(s), rowname, coef);
+         }
+
+         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%.15g + ", coef);
+
+         coef = -coef;
+         SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, buffer, ";", 1, &z, &coef, transformed) );
+
+         break;
+      }
+
+      case 's':
+      {
+         /* write as
+          * sos1 Variable name_sos(sosset);
+          *  name_soseq(sosset).. name_sos(sosset) =e= s$(sameas(sosset,'slack') + z$(sameas(sosset,'bin'));
+          */
+         coef = 1.0;
+         SCIP_CALL( printConformName(scip, consname, GMS_MAX_NAMELEN, rowname) );
+
+         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "sos1 Variable %s_sos(sosset);", consname);
+         appendLine(scip, file, linebuffer, &linecnt, buffer);
+         endLine(scip, file, linebuffer, &linecnt);
+
+         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s(sosset).. %s_sos(sosset) =e= ", consname, consname);
+         appendLine(scip, file, linebuffer, &linecnt, buffer);
+         SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, NULL, "$sameas(sosset,'slack')", 1, &s, &coef, transformed) );
+         SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, " + ", "$sameas(sosset,'bin');", 1, &z, &coef, transformed) );
+         endLine(scip, file, linebuffer, &linecnt);
+
+         break;
+      }
+
+      default:
+         SCIPerrorMessage("wrong value '%c' for parameter reading/gmsreader/indicatorreform\n", indicatorform);
+         return SCIP_ERROR;
+   }
+
+   endLine(scip, file, linebuffer, &linecnt);
+
+   return SCIP_OKAY;
+}
+
 #ifdef WITH_SIGNPOWER
 /* print signpower row in GAMS format to file stream (performing retransformation to active variables) */
 static
@@ -1249,6 +1351,14 @@ SCIP_RETCODE SCIPincludeReaderGms(
          "reading/gmsreader/replaceforbiddenchars", "shall characters '#', '*', '+', '/', and '-' in variable and constraint names be replaced by '_'?",
          NULL, FALSE, FALSE, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "reading/gmsreader/bigmdefault", "default M value for big-M reformulation of indicator constraints in case no bound on slack variable is given",
+         NULL, FALSE, GMS_DEFAULT_BIGM, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddCharParam(scip,
+         "reading/gmsreader/indicatorreform", "which reformulation to use for indicator constraints: 'b'ig-M, 's'os1",
+         NULL, FALSE, GMS_DEFAULT_INDICATORREFORM, "bs", NULL, NULL) );
+
    return SCIP_OKAY;
 }
 
@@ -1304,6 +1414,7 @@ SCIP_RETCODE SCIPwriteGms(
    SCIP_Bool nlcons;
    SCIP_Bool nqcons;
    SCIP_Bool rangedrow;
+   char indicatorform;
 
    assert( scip != NULL );
    assert( nvars > 0 );
@@ -1314,6 +1425,7 @@ SCIP_RETCODE SCIPwriteGms(
    SCIP_CALL( checkConsnames(scip, conss, nconss, transformed) );
 
    /* print statistics as comment to file */
+   SCIPinfoMessage(scip, file, "$OFFLISTING\n");
    SCIPinfoMessage(scip, file, "* SCIP STATISTICS\n");
    SCIPinfoMessage(scip, file, "*   Problem name     : %s\n", name);
    SCIPinfoMessage(scip, file, "*   Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
@@ -1490,6 +1602,21 @@ SCIP_RETCODE SCIPwriteGms(
       SCIPinfoMessage(scip, file, "* (All other bounds at default value: binary [0,1], integer [%s], continuous [-inf,+inf].)\n", freeints ? "0,+inf" : "0,100");
    SCIPinfoMessage(scip, file, "\n");
 
+   /* declare set for SOS1 declarations from reformulation of indicator, if needed */
+   conshdlr = SCIPfindConshdlr(scip, "indicator");
+   SCIP_CALL( SCIPgetCharParam(scip, "reading/gmsreader/indicatorreform", &indicatorform) );
+   if( conshdlr != NULL && indicatorform == 's' )
+   {
+      for( c = 0; c < nconss; ++c )
+      {
+         if( SCIPconsGetHdlr(conss[c]) == conshdlr )
+         {
+            SCIPinfoMessage(scip, file, "Set sosset / slack, bin /;\n\n");
+            break;
+         }
+      }
+   }
+
    /* print equations section */
    SCIPinfoMessage(scip, file, "Equations\n");
    clearLine(linebuffer, &linecnt);
@@ -1540,6 +1667,14 @@ SCIP_RETCODE SCIPwriteGms(
          (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", consname, (c < nconss - 1) ? "," : ";");
          appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
+      else if( strcmp(conshdlrname, "indicator") == 0 )
+      {
+         if( indicatorform == 'b' )
+            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", consname, (c < nconss - 1) ? "," : ";");
+         else
+            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s(sosset)%s", consname, (c < nconss - 1) ? "," : ";");
+         appendLine(scip, file, linebuffer, &linecnt, buffer);
+      }
       else
       {
          SCIPwarningMessage("Constraint type <%s> not supported. Skip writing constraint <%s>.\n", conshdlrname, consname);
@@ -1547,13 +1682,16 @@ SCIP_RETCODE SCIPwriteGms(
             appendLine(scip, file, linebuffer, &linecnt, ";");
       }
    }
-      
+
    endLine(scip, file, linebuffer, &linecnt);
    SCIPinfoMessage(scip, file, "\n");
-   
+
    /* print objective function equation */
    clearLine(linebuffer, &linecnt);
-   (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " objequ .. objvar =e= ");
+   if( transformed && SCIPgetTransObjoffset(scip) != 0.0 )
+      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " objequ .. objvar =e= %.15g + ", SCIPgetTransObjoffset(scip));
+   else
+      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " objequ .. objvar =e= ");
    appendLine(scip, file, linebuffer, &linecnt, buffer);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &objcoeffs, nvars) );
@@ -1563,12 +1701,8 @@ SCIP_RETCODE SCIPwriteGms(
       var = vars[v];
       assert( var != NULL );
 
-#ifndef NDEBUG
       /* in case the original problem has to be posted the variables have to be either "original" or "negated" */
-      if( !transformed )
-         assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL ||
-            SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED );
-#endif
+      assert( transformed || SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED );
 
       objcoeffs[v] = SCIPisZero(scip, SCIPvarGetObj(var)) ? 0.0 : SCIPvarGetObj(var);
    }
@@ -1685,6 +1819,12 @@ SCIP_RETCODE SCIPwriteGms(
          nlcons = nlcons || !isGAMSprintableSOC(SCIPgetNLhsVarsSOC(scip, cons), SCIPgetLhsVarsSOC(scip, cons), SCIPgetLhsCoefsSOC(scip, cons), SCIPgetLhsOffsetsSOC(scip, cons), SCIPgetLhsConstantSOC(scip, cons),
             SCIPgetRhsVarSOC(scip, cons), SCIPgetRhsCoefSOC(scip, cons), SCIPgetRhsOffsetSOC(scip, cons));
       }
+      else if( strcmp(conshdlrname, "indicator") == 0 )
+      {
+         SCIP_CALL( printIndicatorCons(scip, file, consname,
+            SCIPgetBinaryVarIndicator(cons), SCIPgetSlackVarIndicator(cons),
+            transformed) );
+      }
 #ifdef WITH_SIGNPOWER
       else if( strcmp(conshdlrname, "signpower") == 0 )
       {
@@ -1710,6 +1850,10 @@ SCIP_RETCODE SCIPwriteGms(
 
    /* print model creation */
    SCIPinfoMessage(scip, file, "Model m / all /;\n\n");
+
+   /* set some options to reduce listing file size */
+   SCIPinfoMessage(scip, file, "option limrow = 0;\n");
+   SCIPinfoMessage(scip, file, "option limcol = 0;\n\n");
 
    /* print solve command */
    (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s%s",

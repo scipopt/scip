@@ -27,7 +27,7 @@ interface:
 - new parameter success in SCIPgetVarCopy() that will be FALSE if method is called after problem creation stage
 - SCIP_DECL_PROBCOPY got a new parameter global
 - using proper terms "monomial" and "polynomial" (instead of "monom" and "polynom") in nonlinear expressions (nlpi/*expr*) results in many renamings of types, structs, and methods
-- added function SCIPcomputeLPRelIntPoint() to compute a relative interior point of the current LP
+- added functions SCIPcomputeLPRelIntPointOneNorm() and SCIPcomputeLPRelIntPointSupNorm() to compute relative interior points of the current LP
 - added function SCIPsepastoreRemoveInefficaciousCuts() to remove non-efficious cuts from the separation storage
 - added result value SCIP_NEWROUND that allows a separator/constraint handler to start a new separation round (without previous calls to other separators/conshdlrs)
 - implemented SCIPlpiGetPrimalRay() in SoPlex interface that has become available with SoPlex version 1.5.0.2
@@ -126,8 +126,7 @@ parameters:
   -1 (no limit) for resolveiterfac and 1000 for resolveitermin
 - added parameter <constraints/indicator/genBilinear> to generate bilinear (quadratic) constraints instead of indicator constraints
 - added parameter <timing/reading> to add reading time to solving time
-- added parameter <constraints/quadratic/binreforminitial> to indicate whether constraints added due to reformulation of products with binary variables in
-  a quadratic constraints should be initial (if the quadratic constraint is initial), default is FALSE
+- added parameter <constraints/quadratic/binreforminitial> to indicate whether linear (non-varbound) constraints added due to reformulation of products with binary variables in a quadratic constraints should be initial (if the quadratic constraint is initial), default is FALSE
 - renamed parameter <constraints/quadratic/linearizenlpsol> to <constraints/quadratic/linearizeheursol> and do linearizations in every solution found by some heuristic
 - renamed parameter <constraints/quadratic/mincutefficacyenfo> to <constraints/quadratic/mincutefficacyenfofac> and interpret it as a factor of the feasibility tolerance
 - removed fastmip setting 2, which means the dualsolution would not be calculated but because SCIP always asks for the dual solution, the lp would be reoptimized to calculate them; so it had no real effect
@@ -178,6 +177,7 @@ features:
 - new target in Makefile "install" performs "make" and copies the include headers
 - new target in Makefile "uninstall" removes libraries, binary, and include headers
 - cons_logicor is now abled to replace all aggregated variables in presolving by there active or negation of an active variable counterpart
+- reader_gms is now able to write indicator constraints (reformulated either via big-M or sos1), see new parameters <reading/gmsreader/bigmdefault> and <reading/gmsreader/indicatorreform>
 
 design:
 - SCIP_HASHMAP now works also without block memory
@@ -218,9 +218,11 @@ fixed bugs:
 - fixed bug in reader_cip regarding reading of very long constraints
 - fixed bug in cons_knapsack: in seldom circumstances the relaxation of a linear constraint can detect infeasibility, which was not handled properly
 - fixed bug in cons_quadratic: in seldom cases, fixed variables may have been substituted out wrongly in presolve
-- fixed bug in cons_countsols.c w.r.t. to collecting feasible solutions
+- fixed bugs in cons_countsols.c w.r.t. collecting feasible solutions and forbidding a found solution
 - fixed bug in cons_linear.c: multiaggregated variables were not removed when adding during solve, leading to a failing assert in tightenBounds due to an unsuccessful bound tightening
 - fixed bug w.r.t. to pricing variables in case new initial constraints come in during the price and cut loop
+- fixed bug in conflict.c, infeasibility analysis with big values led to wrong result
+- fixed bug in cons_soc.c w.r.t. upgrading from quadratic constraints with finite left-hand-side
 
 performance improvements:
 - fasten propagation in cons_knapsack.c due to negated clique partitions
