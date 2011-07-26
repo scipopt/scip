@@ -78,7 +78,6 @@
 
 #define DEFAULT_PSOBJWEIGHT         0.0 /**< weight of the original objective function in lp to compute interior point */
 #define DEFAULT_PSREDUCEAUXLP     FALSE /**< should the number of constraints in lp to compute interior point be reduced? */
-#define DEFAULT_PSLAMBDACOMPWISE   TRUE /**< should lambda in shifting step of ps method be computed componentwise? */
 #define DEFAULT_PSDUALCOLSELECTION  'n' /**< strategy to select which dual columns to use for lp to compute interior point 
                                          *   ('n'o sel, 'a'ctive rows of exact primal LP, 'A'ctive rows of inexact primal LP, 
                                          *   'b'asic rows of exact primal LP, 'B'asic rows of inexact primal LP)" */
@@ -137,7 +136,6 @@ struct SCIP_ConshdlrData
    SCIP_Bool             psrayfail;          /**< did the construction of the S-interior ray at the root node data fail? */
    SCIP_Real             psobjweight;        /**< weight of the original objective function in lp to compute interior point */
    SCIP_Bool             psreduceauxlp;      /**< should the number of constraints in lp to compute interior point be reduced? */
-   SCIP_Bool             pslambdacompwise;   /**< should lambda in shifting step of ps method be computed componentwise? */
    char                  psdualcolselection; /**< strategy to select which dual columns to use for lp to compute interior point 
                                               *   ('n'o sel, 'a'ctive rows of exact primal LP, 'A'ctive rows of inexact primal LP, 
                                               *   'b'asic rows of exact primal LP, 'B'asic rows of inexact primal LP)" */
@@ -5793,37 +5791,19 @@ SCIP_RETCODE getPSdualbound(
        *   lambda2 = 1 - lambda1 
        */
       
-      /* compute lambda values */
-      if( conshdlrdata->pslambdacompwise )
+      /* compute lambda1 componentwise (set lambda1 = 1 and lower it if necessary) */
+      mpq_set_ui(lambda1, 1, 1);
+      for( i = 0; i < nextendedconss; i++ )
       {
-         /* compute lambda1 componentwise (set lambda1 = 1 and lower it if necessary) */
-         mpq_set_ui(lambda1, 1, 1);
-         for( i = 0; i < nextendedconss; i++ )
+         if( mpq_sgn(approxdualsol[i]) < 0 )
          {
-            if( mpq_sgn(approxdualsol[i]) < 0 )
-            {
-               mpq_set(mpqtemp2, conshdlrdata->interiorpt[i]);
-               mpq_sub(mpqtemp, conshdlrdata->interiorpt[i], approxdualsol[i]);
-               mpq_div(mpqtemp2, mpqtemp2, mpqtemp);
-               if( mpq_cmp(lambda1, mpqtemp2) > 0 )
-                  mpq_set(lambda1, mpqtemp2);
-            }
-         }    
-      }
-      else
-      {
-         mpq_set_ui(maxv, 0, 1);
-         /* compute lambda1 as max violation of inequality constraints */
-         for( i = 0; i < nextendedconss; i++ )
-         {
-            if( mpq_cmp(maxv, approxdualsol[i]) > 0 )
-               mpq_set(maxv, approxdualsol[i]);
-         }    
-         mpq_set(lambda1, conshdlrdata->commonslack);
-         mpq_sub(mpqtemp, conshdlrdata->commonslack, maxv);
-         mpq_div(lambda1, lambda1, mpqtemp);
-      }
-      
+            mpq_set(mpqtemp2, conshdlrdata->interiorpt[i]);
+            mpq_sub(mpqtemp, conshdlrdata->interiorpt[i], approxdualsol[i]);
+            mpq_div(mpqtemp2, mpqtemp2, mpqtemp);
+            if( mpq_cmp(lambda1, mpqtemp2) > 0 )
+               mpq_set(lambda1, mpqtemp2);
+         }
+      }    
       mpq_set_si(lambda2, 1, 1);
       mpq_sub(lambda2, lambda2, lambda1);
    }
@@ -5832,38 +5812,18 @@ SCIP_RETCODE getPSdualbound(
       /* in this case we are using an interior ray that can be added freely to the solution */
       mpq_set_si(lambda1, 1, 1);
       /* compute lambda values */
-      if( conshdlrdata->pslambdacompwise )
+      /* compute lambda1 componentwise (set lambda1 = 1 and lower it if necessary) */
+      mpq_set_ui(lambda1, 1, 1);
+      for( i = 0; i < nextendedconss; i++ )
       {
-         /* compute lambda1 componentwise (set lambda1 = 1 and lower it if necessary) */
-         mpq_set_ui(lambda1, 1, 1);
-         for( i = 0; i < nextendedconss; i++ )
+         if( mpq_sgn(approxdualsol[i]) < 0 && conshdlrdata->includedcons[i] )
          {
-            if( mpq_sgn(approxdualsol[i]) < 0 && conshdlrdata->includedcons[i] )
-            {
-               mpq_div(mpqtemp, approxdualsol[i], conshdlrdata->interiorpt[i]);
-               mpq_neg(mpqtemp, mpqtemp);
-               if( mpq_cmp(lambda2, mpqtemp) < 0 ) /* changed to < */
-                  mpq_set(lambda2, mpqtemp);
-            }
-         }    
-      }
-      else
-      {
-         mpq_set_ui(maxv, 0, 1);
-         /* compute lambda2 as -(max violation of inequality constraints)/ (common slack) */
-         for( i = 0; i < nextendedconss; i++ )
-         {
-            if( mpq_cmp(maxv, approxdualsol[i]) > 0 )
-               mpq_set(maxv, approxdualsol[i]);
-         }    
-#ifdef PS_OUT 
-         printf("Constraints all satisfied by slack of:  ");
-         mpq_out_str(stdout, 10, conshdlrdata->commonslack);
-         printf(" \n"); 
-#endif
-         mpq_div(mpqtemp, maxv, conshdlrdata->commonslack);
-         mpq_neg(lambda2, mpqtemp);
-      }
+            mpq_div(mpqtemp, approxdualsol[i], conshdlrdata->interiorpt[i]);
+            mpq_neg(mpqtemp, mpqtemp);
+            if( mpq_cmp(lambda2, mpqtemp) < 0 ) /* changed to < */
+               mpq_set(lambda2, mpqtemp);
+         }
+      }    
    }
 
    /* perform shift */
@@ -6290,38 +6250,20 @@ SCIP_RETCODE PScorrectdualray(
    /* in this case we are using an interior ray that can be added freely to the solution */
    mpq_set_si(lambda1, 1, 1);
    /* compute lambda values */
-   if( conshdlrdata->pslambdacompwise )
+
+   /* compute lambda1 componentwise (set lambda1 = 1 and lower it if necessary) */
+   mpq_set_ui(lambda1, 1, 1);
+   for( i = 0; i < nextendedconss; i++ )
    {
-      /* compute lambda1 componentwise (set lambda1 = 1 and lower it if necessary) */
-      mpq_set_ui(lambda1, 1, 1);
-      for( i = 0; i < nextendedconss; i++ )
+      if( mpq_sgn(approxdualray[i]) < 0 && conshdlrdata->includedcons[i] )
       {
-         if( mpq_sgn(approxdualray[i]) < 0 && conshdlrdata->includedcons[i] )
-         {
-            mpq_div(mpqtemp, approxdualray[i], conshdlrdata->interiorray[i]);
-            mpq_neg(mpqtemp, mpqtemp);
-            if( mpq_cmp(lambda2, mpqtemp) < 0 )/* changed to < */
-               mpq_set(lambda2, mpqtemp);
-         }
-      }    
-   }
-   else
-   {
-      mpq_set_ui(maxv, 0, 1);
-      /* compute lambda2 as -(max violation of inequality constraints)/ (common slack) */
-      for( i = 0; i < nextendedconss; i++ )
-      {
-         if( mpq_cmp(maxv, approxdualray[i]) > 0 )
-            mpq_set(maxv, approxdualray[i]);
-      }    
-#ifdef PS_OUT 
-      printf("Constraints all satisfied by slack of:  ");
-      mpq_out_str(stdout, 10, conshdlrdata->commonslack);
-      printf(" \n"); 
-#endif
-      mpq_div(mpqtemp, maxv, conshdlrdata->commonslack);
-      mpq_neg(lambda2, mpqtemp);
-   }
+         mpq_div(mpqtemp, approxdualray[i], conshdlrdata->interiorray[i]);
+         mpq_neg(mpqtemp, mpqtemp);
+         if( mpq_cmp(lambda2, mpqtemp) < 0 )/* changed to < */
+            mpq_set(lambda2, mpqtemp);
+      }
+   }    
+   
    
    
    /* perform shift */
@@ -9634,10 +9576,6 @@ SCIP_RETCODE SCIPincludeConshdlrExactlp(
          "constraints/exactlp/psreduceauxlp",
          "should the number of constraints in lp to compute interior point be reduced?",
          &conshdlrdata->psreduceauxlp, TRUE, DEFAULT_PSREDUCEAUXLP, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/exactlp/pslambdacompwise",
-         "should lambda in shifting step of ps method be computed componentwise?",
-         &conshdlrdata->pslambdacompwise, TRUE, DEFAULT_PSLAMBDACOMPWISE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, 
          "constraints/exactlp/psdualcolselection",
