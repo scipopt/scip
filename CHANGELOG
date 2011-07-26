@@ -126,8 +126,7 @@ parameters:
   -1 (no limit) for resolveiterfac and 1000 for resolveitermin
 - added parameter <constraints/indicator/genBilinear> to generate bilinear (quadratic) constraints instead of indicator constraints
 - added parameter <timing/reading> to add reading time to solving time
-- added parameter <constraints/quadratic/binreforminitial> to indicate whether constraints added due to reformulation of products with binary variables in
-  a quadratic constraints should be initial (if the quadratic constraint is initial), default is FALSE
+- added parameter <constraints/quadratic/binreforminitial> to indicate whether linear (non-varbound) constraints added due to reformulation of products with binary variables in a quadratic constraints should be initial (if the quadratic constraint is initial), default is FALSE
 - renamed parameter <constraints/quadratic/linearizenlpsol> to <constraints/quadratic/linearizeheursol> and do linearizations in every solution found by some heuristic
 - renamed parameter <constraints/quadratic/mincutefficacyenfo> to <constraints/quadratic/mincutefficacyenfofac> and interpret it as a factor of the feasibility tolerance
 - removed fastmip setting 2, which means the dualsolution would not be calculated but because SCIP always asks for the dual solution, the lp would be reoptimized to calculate them; so it had no real effect
@@ -178,6 +177,7 @@ features:
 - new target in Makefile "install" performs "make" and copies the include headers
 - new target in Makefile "uninstall" removes libraries, binary, and include headers
 - cons_logicor is now abled to replace all aggregated variables in presolving by there active or negation of an active variable counterpart
+- reader_gms is now able to write indicator constraints (reformulated either via big-M or sos1), see new parameters <reading/gmsreader/bigmdefault> and <reading/gmsreader/indicatorreform>
 
 design:
 - SCIP_HASHMAP now works also without block memory

@@ -3181,6 +3181,8 @@ SCIP_RETCODE presolveTryAddLinearReform(
    int*               todelete;
    int                ntodelete;
    int                maxnrvar;
+   SCIP_Bool          integral;
+   SCIP_Longint       gcd;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -3200,6 +3202,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
    xvars = NULL;
    xcoef = NULL;
    todelete = NULL;
+   gcd = 0;
    
    for( i = 0; i < consdata->nquadvars; ++i )
    {
@@ -3230,6 +3233,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
 
          mincoef = SCIPinfinity(scip);
          maxcoef = 0.0;
+         integral = TRUE;
 
          /* collect at most maxnrvar variables for x term */
          for( ; j < nbilinterms && nxvars < maxnrvar; ++j )
@@ -3248,6 +3252,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
                continue;
 
             bilincoef = consdata->bilinterms[bilinidx].coef;
+            assert(bilincoef != 0.0);
 
             /* add bvar to x term */  
             xvars[nxvars] = bvar;
@@ -3263,6 +3268,16 @@ SCIP_RETCODE presolveTryAddLinearReform(
                mincoef = ABS(bilincoef);
             if( ABS(bilincoef) > maxcoef )
                maxcoef = ABS(bilincoef);
+
+            /* update whether all coefficients will be integral and if so, compute their gcd */
+            integral &= (SCIPvarGetType(bvar) < SCIP_VARTYPE_CONTINUOUS) && SCIPisIntegral(scip, bilincoef);
+            if( integral )
+            {
+               if( nxvars == 1 )
+                  gcd = SCIPround(scip, REALABS(bilincoef));
+               else
+                  gcd = SCIPcalcGreComDiv(gcd, SCIPround(scip, REALABS(bilincoef)));
+            }
             
             /* remember that we have to remove this bilinear term later */
             assert(ntodelete < nbilinterms);
@@ -3280,7 +3295,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
             /* product of two binary variables, replace by auxvar and AND constraint */
             /* add auxiliary variable z */
             (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "prod%s*%s", SCIPvarGetName(y), SCIPvarGetName(xvars[0]));
-            SCIP_CALL( SCIPcreateVar(scip, &auxvar, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY,
+            SCIP_CALL( SCIPcreateVar(scip, &auxvar, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT,
                   TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(scip, auxvar) );
 
@@ -3306,37 +3321,70 @@ SCIP_RETCODE presolveTryAddLinearReform(
          }
          else
          {
-            /* product of binary avariable with more than one binary or with continuous variables or with binary and user did not like AND -> replace by auxvar and linear constraints */
-            SCIP_Real scale = 1.0;
-            if( maxcoef < 0.5 )
-               scale = maxcoef;
-            if( mincoef > 2.0 )
+            /* product of binary variable with more than one binary or with continuous variables or with binary and user did not like AND -> replace by auxvar and linear constraints */
+            SCIP_Real scale;
+
+            /* scale auxiliary constraint by some nice value,
+             * if all coefficients are integral, take a value that preserves integrality (-> gcd), so we can make the auxiliary variable impl. integer
+             */
+            if( integral )
+            {
+               scale = gcd;
+               assert(scale >= 1.0);
+            }
+            else if( nxvars == 1 )
+            {
+               /* scaling by the only coefficient gives auxiliary variable = x * y, which thus will be implicit integral provided y is not continuous */
+               assert(mincoef == maxcoef);
                scale = mincoef;
+               integral = SCIPvarGetType(xvars[0]) < SCIP_VARTYPE_CONTINUOUS;
+            }
+            else
+            {
+               scale = 1.0;
+               if( maxcoef < 0.5 )
+                  scale = maxcoef;
+               if( mincoef > 2.0 )
+                  scale = mincoef;
+               if( scale != 1.0 )
+                  scale = SCIPselectSimpleValue(scale / 2.0, 1.5 * scale, MAXDNOM);
+            }
+            assert(scale > 0.0);
+            assert(!SCIPisInfinity(scip, scale));
+
+            /* if x-term is always negative, negate scale so we get a positive auxiliary variable; maybe this is better sometimes? */
+            if( !SCIPisPositive(scip, SCIPintervalGetSup(xbnds)) )
+               scale = -scale;
+
+            SCIPdebugMessage("binary reformulation using scale %g, nxvars = %d, integral = %d\n", scale, nxvars, integral);
             if( scale != 1.0 )
             {
-               /* scale will be a cofficient in a linear constraint -> there is no harm in choosing a "nice value" for it */
-               scale = SCIPselectSimpleValue(scale / 2.0, 1.5 * scale, MAXDNOM);
-               
-               SCIPdebugMessage("binary reformulation using scale %g\n", scale);
                SCIPintervalDivScalar(SCIPinfinity(scip), &xbnds, xbnds, scale);
                for( k = 0; k < nxvars; ++k )
                   xcoef[k] /= scale;
             }
-            
+
             /* add auxiliary variable z */
             if( nxvars == 1 )
                (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "prod%s*%s", SCIPvarGetName(y), SCIPvarGetName(xvars[0]));
             else
                (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "prod%s*%s*more", SCIPvarGetName(y), SCIPvarGetName(xvars[0]));
             SCIP_CALL( SCIPcreateVar(scip, &auxvar, name, MIN(0., SCIPintervalGetInf(xbnds)), MAX(0., SCIPintervalGetSup(xbnds)), 
-                  0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
+                  0.0, integral ? SCIP_VARTYPE_IMPLINT : SCIP_VARTYPE_CONTINUOUS, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(scip, auxvar) );
 
-            if( !SCIPisZero(scip, SCIPintervalGetInf(xbnds)) )
-            { /* add 0 <= z - xbnds.inf * y constraint (as varbound constraint) */
+            /* add auxiliary constraints
+             * it seems to be advantageous to make the varbound constraints initial and the linear constraints not initial
+             * maybe because it is more likely that a binary variable taked value 0 instead of 1, and thus the varbound constraints
+             * are more often active, compared to the linear constraints added below
+             * also, the varbound constraints are more sparse than the linear cons
+             */
+            if( SCIPisNegative(scip, SCIPintervalGetInf(xbnds)) )
+            {
+               /* add 0 <= z - xbnds.inf * y constraint (as varbound constraint) */
                (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s_1", SCIPvarGetName(y));
                SCIP_CALL( SCIPcreateConsVarbound(scip, &auxcons, name, auxvar, y, -SCIPintervalGetInf(xbnds), 0.0, SCIPinfinity(scip),
-                  SCIPconsIsInitial(cons) && conshdlrdata->binreforminitial,
+                  SCIPconsIsInitial(cons) /*&& conshdlrdata->binreforminitial*/,
                   SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
                   SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
                   SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
@@ -3346,11 +3394,12 @@ SCIP_RETCODE presolveTryAddLinearReform(
                SCIP_CALL( SCIPreleaseCons(scip, &auxcons) );
                ++*naddconss;
             }
-            if( !SCIPisZero(scip, SCIPintervalGetSup(xbnds)) )
-            { /* add z - xbnds.sup * y <= 0 constraint (as varbound constraint) */
+            if( SCIPisPositive(scip, SCIPintervalGetSup(xbnds)) )
+            {
+               /* add z - xbnds.sup * y <= 0 constraint (as varbound constraint) */
                (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s_2", SCIPvarGetName(y));
                SCIP_CALL( SCIPcreateConsVarbound(scip, &auxcons, name, auxvar, y, -SCIPintervalGetSup(xbnds), -SCIPinfinity(scip), 0.0,
-                  SCIPconsIsInitial(cons) && conshdlrdata->binreforminitial,
+                  SCIPconsIsInitial(cons) /*&& conshdlrdata->binreforminitial*/,
                   SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
                   SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
                   SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
@@ -8055,8 +8104,6 @@ static
 SCIP_DECL_CONSPRINT(consPrintQuadratic)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
-   int            j;
-   const SCIP_Bool writevartype = FALSE;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -8080,33 +8127,90 @@ SCIP_DECL_CONSPRINT(consPrintQuadratic)
    }
    else
    {
+      SCIP_VAR*** monomialvars;
+      SCIP_Real** monomialexps;
+      SCIP_Real*  monomialcoefs;
+      int*        monomialnvars;
+      int         nmonomials;
+      int         monomialssize;
+      int         j;
+
+      monomialssize = consdata->nlinvars + 2 * consdata->nquadvars + consdata->nbilinterms;
+      SCIP_CALL( SCIPallocBufferArray(scip, &monomialvars,  monomialssize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &monomialexps,  monomialssize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &monomialcoefs, monomialssize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &monomialnvars, monomialssize) );
+
+      nmonomials = 0;
       for( j = 0; j < consdata->nlinvars; ++j )
       {
-         SCIPinfoMessage(scip, file, "%+.15g", consdata->lincoefs[j]);
-         SCIP_CALL( SCIPwriteVarName(scip, file, consdata->linvars[j], writevartype) );
+         assert(nmonomials < monomialssize);
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &monomialvars[nmonomials], 1) );
+
+         monomialvars[nmonomials][0] = consdata->linvars[j];
+         monomialexps[nmonomials] = NULL;
+         monomialcoefs[nmonomials] = consdata->lincoefs[j];
+         monomialnvars[nmonomials] = 1;
+         ++nmonomials;
       }
 
       for( j = 0; j < consdata->nquadvars; ++j )
       {
          if( consdata->quadvarterms[j].lincoef != 0.0 )
          {
-            SCIPinfoMessage(scip, file, "%+.15g", consdata->quadvarterms[j].lincoef);
-            SCIP_CALL( SCIPwriteVarName(scip, file, consdata->quadvarterms[j].var, writevartype) );
+            assert(nmonomials < monomialssize);
+
+            SCIP_CALL( SCIPallocBufferArray(scip, &monomialvars[nmonomials], 1) );
+
+            monomialvars[nmonomials][0] = consdata->quadvarterms[j].var;
+            monomialexps[nmonomials] = NULL;
+            monomialcoefs[nmonomials] = consdata->quadvarterms[j].lincoef;
+            monomialnvars[nmonomials] = 1;
+            ++nmonomials;
          }
+
          if( consdata->quadvarterms[j].sqrcoef != 0.0 )
          {
-            SCIPinfoMessage(scip, file, "%+.15g", consdata->quadvarterms[j].sqrcoef);
-            SCIP_CALL( SCIPwriteVarName(scip, file, consdata->quadvarterms[j].var, writevartype) );
-            SCIPinfoMessage(scip, file, "^2");
+            assert(nmonomials < monomialssize);
+
+            SCIP_CALL( SCIPallocBufferArray(scip, &monomialvars[nmonomials], 1) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &monomialexps[nmonomials], 1) );
+
+            monomialvars[nmonomials][0] = consdata->quadvarterms[j].var;
+            monomialexps[nmonomials][0] = 2.0;
+            monomialcoefs[nmonomials] = consdata->quadvarterms[j].sqrcoef;
+            monomialnvars[nmonomials] = 1;
+            ++nmonomials;
          }
       }
 
       for( j = 0; j < consdata->nbilinterms; ++j )
       {
-         SCIPinfoMessage(scip, file, "%+.15g", consdata->bilinterms[j].coef);
-         SCIP_CALL( SCIPwriteVarName(scip, file, consdata->bilinterms[j].var1, writevartype) );
-         SCIP_CALL( SCIPwriteVarName(scip, file, consdata->bilinterms[j].var2, writevartype) );
+         assert(nmonomials < monomialssize);
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &monomialvars[nmonomials], 2) );
+
+         monomialvars[nmonomials][0] = consdata->bilinterms[j].var1;
+         monomialvars[nmonomials][1] = consdata->bilinterms[j].var2;
+         monomialexps[nmonomials] = NULL;
+         monomialcoefs[nmonomials] = consdata->bilinterms[j].coef;
+         monomialnvars[nmonomials] = 2;
+         ++nmonomials;
       }
+
+      SCIP_CALL( SCIPwriteVarsPolynomial(scip, file, monomialvars, monomialexps, monomialcoefs, monomialnvars, nmonomials, FALSE) );
+
+      for( j = 0; j < nmonomials; ++j )
+      {
+         SCIPfreeBufferArray(scip, &monomialvars[j]);
+         SCIPfreeBufferArrayNull(scip, &monomialexps[j]);
+      }
+
+      SCIPfreeBufferArray(scip, &monomialvars);
+      SCIPfreeBufferArray(scip, &monomialexps);
+      SCIPfreeBufferArray(scip, &monomialcoefs);
+      SCIPfreeBufferArray(scip, &monomialnvars);
    }
 
    /* print marker that constraint function ends now */
@@ -8598,7 +8702,7 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          &conshdlrdata->empathy4and, FALSE, 0, 0, 2, NULL, NULL) );
    
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/binreforminitial",
-         "whether to make constraints added due to replacing products with binary variables initial",
+         "whether to make non-varbound linear constraints added due to replacing products with binary variables initial",
          &conshdlrdata->binreforminitial, TRUE, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacysepa",
