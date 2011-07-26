@@ -265,6 +265,9 @@ SCIP_RETCODE SCIPsepaInitsol(
    assert(sepa != NULL);
    assert(set != NULL);
 
+   sepa->lpwasdelayed = FALSE;
+   sepa->solwasdelayed = FALSE;
+
    /* call solving process initialization method of separator */
    if( sepa->sepainitsol != NULL )
    {

@@ -201,6 +201,7 @@ SCIP_RETCODE SCIPpropInit(
       prop->nrespropcalls = 0;
       prop->ncutoffs = 0;
       prop->ndomredsfound = 0;
+      prop->wasdelayed = FALSE;
    }
 
    if( prop->propinit != NULL )
