@@ -415,7 +415,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStrongcoloring)
    SCIP_Bool* wasnode2;
    SCIP_Bool start;
    TCLIQUE_GRAPH* graph;
-   SCIP_NODE* node;
    SCIP_Real currLb;
    SCIP_Real sameLb;
    SCIP_Real differLb;
@@ -427,9 +426,11 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStrongcoloring)
    int bestnode2;
    int bestnode1;
 
-   int nsets;
-
    SCIP_BRANCHRULEDATA* branchruledata;
+
+#ifndef NDEBUG
+   SCIP_NODE* node;
+#endif
 
    assert(scip != NULL);
    assert(branchrule != NULL);
@@ -512,10 +513,11 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStrongcoloring)
       bestsame = -1;
 
       SCIPsetBoolParam(scip, "pricers/coloring/usetclique", branchruledata->usetclique);
+#ifndef NDEBUG
       node = SCIPgetCurrentNode(scip);
+#endif
       currentcons = COLORconsGetActiveStoreGraphCons(scip);
        
-      nsets = COLORprobGetNStableSets(scip);
       start = TRUE;
       for ( i = SCIPgetDepth(scip)%nnodes; (start || (i != SCIPgetDepth(scip)%nnodes)); i=((i+1)%nnodes) )
       {

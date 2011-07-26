@@ -268,7 +268,6 @@ SCIP_DECL_CONSEXITSOL(consExitsolStoreGraph)
 static
 SCIP_DECL_CONSDELETE(consDeleteStoreGraph)
 {
-   SCIP_CONSHDLRDATA* conshdlrData;
    int i;
 
    assert(scip != NULL);
@@ -278,8 +277,6 @@ SCIP_DECL_CONSDELETE(consDeleteStoreGraph)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(*consdata != NULL);
 
-   conshdlrData = SCIPconshdlrGetData(conshdlr);
-   
    SCIPdebugMessage("Deleting store graph constraint: <%s(%d,%d)>.\n", SCIPconsGetName(cons), (*consdata)->node1+1, (*consdata)->node2+1);
 
    /* free constraint data */
