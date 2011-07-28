@@ -80,8 +80,9 @@ SCIP_RETCODE SCIPnlpiCreate(
 /** copies an NLPI */
 extern
 SCIP_RETCODE SCIPnlpiCopy(
+   BMS_BLKMEM*           blkmem,             /**< block memory in target SCIP */
    SCIP_NLPI*            sourcenlpi,         /**< pointer to NLPI data structure to copy */
-   SCIP_NLPI**           targetnlpi         /**< buffer to store pointer to copied NLPI data structure */
+   SCIP_NLPI**           targetnlpi          /**< buffer to store pointer to copied NLPI data structure */
    );
 
 /** frees NLPI user data */
