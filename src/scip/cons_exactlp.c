@@ -79,8 +79,7 @@
 #define DEFAULT_PSOBJWEIGHT         0.0 /**< weight of the original objective function in lp to compute interior point */
 #define DEFAULT_PSREDUCEAUXLP     FALSE /**< should the number of constraints in lp to compute interior point be reduced? */
 #define DEFAULT_PSDUALCOLSELECTION  'n' /**< strategy to select which dual columns to use for lp to compute interior point 
-                                         *   ('n'o sel, 'a'ctive rows of exact primal LP, 'A'ctive rows of inexact primal LP, 
-                                         *   'b'asic rows of exact primal LP, 'B'asic rows of inexact primal LP)" */
+                                         *   ('n'o sel, 'a'ctive rows of exact primal LP, 'A'ctive rows of inexact primal LP) */
 #define DEFAULT_PSINTPOINTSELECTION 'a' /**< method to select interior point ('a'rbitrary interior point, 'o'ptimized interior 
                                          *   point, 'A'rbitrary interior point in dual form, 't'wo stage optimized interior point */
 #define DEFAULT_PSUSEINTPOINT      TRUE /**< should correction shift use an interior pt? (otherwise use interior ray of recession cone) */
@@ -137,8 +136,7 @@ struct SCIP_ConshdlrData
    SCIP_Real             psobjweight;        /**< weight of the original objective function in lp to compute interior point */
    SCIP_Bool             psreduceauxlp;      /**< should the number of constraints in lp to compute interior point be reduced? */
    char                  psdualcolselection; /**< strategy to select which dual columns to use for lp to compute interior point 
-                                              *   ('n'o sel, 'a'ctive rows of exact primal LP, 'A'ctive rows of inexact primal LP, 
-                                              *   'b'asic rows of exact primal LP, 'B'asic rows of inexact primal LP)" */
+                                              *   ('n'o sel, 'a'ctive rows of exact primal LP, 'A'ctive rows of inexact primal LP) */
    char                  psintpointselection;/**< method to select interior point ('a'rbitrary interior point, 'o'ptimized interior point
                                               *   'A'rbitrary interior point in dual form, 't'wo stage optimized interior point) */
    SCIP_Bool             psuseintpoint;      /**< should correction shift use an interior pt? (otherwise use interior ray of recession cone) */
@@ -873,12 +871,18 @@ SCIP_RETCODE conshdlrdataFree(
    if( (*conshdlrdata)->nextendedconss > 0 )
    {
       SCIPfreeMemoryArray(scip, &(*conshdlrdata)->psbasis);
-      for( i = 0; i < (*conshdlrdata)->nextendedconss; i++ )
-         mpq_clear((*conshdlrdata)->interiorpt[i]);
-      SCIPfreeMemoryArray(scip, &(*conshdlrdata)->interiorpt);
-      for( i = 0; i < (*conshdlrdata)->nextendedconss; i++ )
-         mpq_clear((*conshdlrdata)->interiorray[i]);
-      SCIPfreeMemoryArray(scip, &(*conshdlrdata)->interiorray);
+      if( (*conshdlrdata)->interiorpt != NULL )
+      {
+         for( i = 0; i < (*conshdlrdata)->nextendedconss; i++ )
+            mpq_clear((*conshdlrdata)->interiorpt[i]);
+         SCIPfreeMemoryArray(scip, &(*conshdlrdata)->interiorpt);
+      }
+      if( (*conshdlrdata)->interiorray != NULL )
+      {
+         for( i = 0; i < (*conshdlrdata)->nextendedconss; i++ )
+            mpq_clear((*conshdlrdata)->interiorray[i]);
+         SCIPfreeMemoryArray(scip, &(*conshdlrdata)->interiorray);
+      }
       SCIPfreeMemoryArray(scip, &(*conshdlrdata)->includedcons);
    }
 
@@ -2956,88 +2960,21 @@ SCIP_RETCODE evaluateLPEX(
 }
 
 
-/* here we construct data used to compute dual bounds by the project and shift method.
- * we consider the primal problem as:
- *
- * min c'x
- * lhs <= Ax <= rhs
- *  lb <=  x <= ub
- *
- * and the dual of the form
- * 
- * max [lhs',-rhs',lb',-ub'] y
- *     [  A',  -A',  I,  -I] y =  c
- *                           y >= 0  
- *
- * a subset S of the dual columns are chosen to give a submatrix D of [A',-A',I,-I], which is then LU factorized using RECTLU
- * then an S-interior point is found (a dual solution that is strictly positive for each column in S).
- * this data is then reused throughout the tree where the LU factorization can be used to correct feasibility of
- * the equality constraints of the dual, and a convex combination with the S-interior point can correct any infeasibility 
- * coming from negative variables.
- *
+/* this is a subroutine of constructPSdata() that chooses which columns of the matrix
+ * are designated as the set S, used for projections.
  */
 static
-SCIP_RETCODE constructPSData(
+SCIP_RETCODE psChooseS(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
    SCIP_CONSDATA*        consdata            /**< exactlp constraint data */
    )
 {
    int i;
-   int j;
-   int rval;
-   int pos;
    int nconss;
    int nvars;
-   int nextendedconss;     /* number of extended constraints, # of cols in [A',-A',I,-I] */    
-   int nnonz;
-   int npsbasis;
-   int indx;
+   int nextendedconss;
    int nrows;
-   mpq_t mpqtemp;
-   mpq_t alpha;
-   mpq_t beta;
-   int nobjnz;
-
-   /* lpiex and data used for the aux. problem */
-   SCIP_LPIEX* pslpiex;
-   int psnvars;
-   mpq_t* psobj;
-   mpq_t* pslb;
-   mpq_t* psub;
-   int psnconss;
-   mpq_t* pslhs;
-   mpq_t* psrhs;
-   int psnnonz;
-   int* psbeg;
-   int* pslen;
-   int* psind;
-   mpq_t* psval;
-   mpq_t* dualsol;
-   mpq_t* primalsol;
-   char ** colnames;
-   mpq_t objval;
-
-   /* lpi and data used for approximation of aux. problem */
-   SCIP_LPI* pslpi;
-   SCIP_LPISTATE* lpistate;
-   SCIP_Real* psobj_real;
-   SCIP_Real* pslb_real;
-   SCIP_Real* psub_real;
-   SCIP_Real* pslhs_real;
-   SCIP_Real* psrhs_real;
-   SCIP_Real* psval_real;
-   
-   /* mapping between variables used in the aux. problem and the original problem */
-   int ndvarmap;
-   int* dvarmap;
-   int* dvarincidence;
- 
-   /* sparse representation of the matrix used for the LU factorization */
-   int* projbeg;
-   int* projlen;
-   int* projind;
-   mpq_t* projval;
 
    /* solution information for exact root LP */
    mpq_t* rootactivity;
@@ -3046,77 +2983,17 @@ SCIP_RETCODE constructPSData(
 
    SCIP_COL** cols;
    SCIP_ROW** rows;
-   
-   //   assert(!conshdlrdata->psdatafail);
-   assert(consdata->nconss > 0);
-   
-   /* if the ps data was already constructed, exit */
-   if( conshdlrdata->psdatacon )
-      return SCIP_OKAY;
-   /* now mark that this function has been called */
-   conshdlrdata->psdatacon = TRUE; 
-
-   SCIPdebugMessage("Calling constructPSdata(). \n");
-
-   /* process the bound changes */
-   processBoundchgs(scip, conshdlrdata, consdata);
-
-   psnvars = 0;
-   psnconss = 0;
-   psnnonz = 0;
-   pslpiex = NULL;
-   psobj = NULL;
-   pslb = NULL;
-   psub = NULL;
-   pslhs = NULL;
-   psrhs = NULL;
-   psbeg = NULL;
-   pslen = NULL;
-   psind = NULL;
-   psval = NULL;
-   dvarmap = NULL;
-   dualsol = NULL;
-   primalsol = NULL;
-   projbeg = NULL;
-   projlen = NULL;
-   projind = NULL;
-   projval = NULL;
-   rootactivity = NULL;
-   rootprimal = NULL;
-   mpq_init(mpqtemp);
-   mpq_init(alpha);
-   mpq_init(beta);
 
    nconss = consdata->nconss;
    nvars = consdata->nvars;
-   nnonz = consdata->nnonz;
-   nextendedconss = 2*nconss + 2*nvars;
-   conshdlrdata->nextendedconss = nextendedconss;   
+   nextendedconss = conshdlrdata->nextendedconss;
 
-   /* allocate memory for the interior point solution */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->includedcons, nextendedconss) ); 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->interiorpt, nextendedconss) );
-   for( i = 0; i < nextendedconss; i++ )
-      mpq_init(conshdlrdata->interiorpt[i]);
-   /* and for interior ray */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->interiorray, nextendedconss) );
-   for( i = 0; i < nextendedconss; i++ )
-      mpq_init(conshdlrdata->interiorray[i]);
+   rootactivity = NULL;
+   rootprimal = NULL;
 
-   /* allocate memory for the basis mapping */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->psbasis, nextendedconss) );
-
-   /* allocate memory for the projection factorization */
-   SCIP_CALL( SCIPallocBufferArray(scip, &projbeg, nextendedconss) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &projlen, nextendedconss) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &projind, 2*nnonz + 2*nvars) ); 
-   for( i = 0; i < 2*nnonz + 2*nvars; i++)
-      projind[i]=0; 
-   SCIP_CALL( SCIPallocBufferArray(scip, &projval, 2*nnonz + 2*nvars) );
-   for( i = 0; i < 2*nnonz + 2*nvars; i++)
-      mpq_init(projval[i]);   
 
    /* build includedcons vector based on psdualcolselection, this determines the matrix D */
+   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->includedcons, nextendedconss) ); 
    for( i = 0; i < nextendedconss; i++ )
       conshdlrdata->includedcons[i] = 0;
    if( conshdlrdata->psdualcolselection == 'n' || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_INFEASIBLE )
@@ -3236,19 +3113,61 @@ SCIP_RETCODE constructPSData(
          }
       }
    }
-   else if( conshdlrdata->psdualcolselection == 'b' )
-   {
-      SCIPerrorMessage("psdualcolselection: case 'b' not handled yet\n");
-   }
-   else if( conshdlrdata->psdualcolselection == 'B' )
-   {
-      SCIPerrorMessage("psdualcolselection: case 'B' not handled yet\n");
-   }
    else
    {
       SCIPerrorMessage("Invald value for parameter psdualcolselection\n");
    }
+   return SCIP_OKAY;
+}
 
+/* this is a subroutine of constructPSdata() that computes the LU factorization used by
+ * the project and shift method by calling the RectLU code.
+ */
+static
+SCIP_RETCODE psFactorizeD(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
+   SCIP_CONSDATA*        consdata            /**< exactlp constraint data */
+   )
+{
+
+   int i;
+   int j;
+   int rval;
+   int pos;
+   int nconss;
+   int nvars;
+   int nextendedconss;
+   int nnonz;
+
+   /* sparse representation of the matrix used for the LU factorization */
+   int* projbeg;
+   int* projlen;
+   int* projind;
+   mpq_t* projval;
+
+   nconss = consdata->nconss;
+   nvars = consdata->nvars;
+   nextendedconss = conshdlrdata->nextendedconss;
+   nnonz = consdata->nnonz;
+   
+   projbeg = NULL;
+   projlen = NULL;
+   projind = NULL;
+   projval = NULL;
+
+   /* allocate memory for the projection factorization */
+   SCIP_CALL( SCIPallocBufferArray(scip, &projbeg, nextendedconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &projlen, nextendedconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &projind, 2*nnonz + 2*nvars) ); 
+   for( i = 0; i < 2*nnonz + 2*nvars; i++)
+      projind[i]=0; 
+   SCIP_CALL( SCIPallocBufferArray(scip, &projval, 2*nnonz + 2*nvars) );
+   for( i = 0; i < 2*nnonz + 2*nvars; i++)
+      mpq_init(projval[i]);  
+
+   /* allocate memory for the basis mapping */
+   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->psbasis, nextendedconss) );
 
    /* use includedcons to construct psbasis, a description/mapping for D it has length npsbasis 
     * and psbasis[i] tells what column (out of the original nextendecons) the ith column in D is
@@ -3263,7 +3182,6 @@ SCIP_RETCODE constructPSData(
       }
    }
    conshdlrdata->npsbasis = pos;
-   npsbasis = conshdlrdata->npsbasis;
 
    /* build the sparse representation of D that will be passed to the RECTLU code for factorization */
    pos = 0;
@@ -3363,6 +3281,109 @@ SCIP_RETCODE constructPSData(
       printf("Factorization failed!! \n");
 #endif
 
+   
+   for( i = 0; i < 2*nnonz + 2*nvars; i++ )
+      mpq_clear(projval[i]); 
+   SCIPfreeBufferArray(scip, &projval);
+   SCIPfreeBufferArray(scip, &projind);
+   SCIPfreeBufferArray(scip, &projlen);
+   SCIPfreeBufferArray(scip, &projbeg);
+
+   return SCIP_OKAY;
+}
+
+/* this is a subroutine of constructPSdata() that computes the S interior point or ray
+ * which is used to do the shift in the project and shift method.
+ */
+static
+SCIP_RETCODE psComputeSintPointRay(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
+   SCIP_CONSDATA*        consdata            /**< exactlp constraint data */
+   )
+{
+   int i;
+   int j;
+   int pos;
+   int nconss;
+   int nvars;
+   int nextendedconss;     /* number of extended constraints, # of cols in [A',-A',I,-I] */    
+   int nnonz;
+   int indx;
+   mpq_t mpqtemp;
+   mpq_t alpha;
+   mpq_t beta;
+   int nobjnz;
+
+/* lpiex and data used for the aux. problem */
+   SCIP_LPIEX* pslpiex;
+   int psnvars;
+   mpq_t* psobj;
+   mpq_t* pslb;
+   mpq_t* psub;
+   int psnconss;
+   mpq_t* pslhs;
+   mpq_t* psrhs;
+   int psnnonz;
+   int* psbeg;
+   int* pslen;
+   int* psind;
+   mpq_t* psval;
+   mpq_t* dualsol;
+   mpq_t* primalsol;
+   char ** colnames;
+   mpq_t objval;
+
+   /* lpi and data used for approximation of aux. problem */
+   SCIP_LPI* pslpi;
+   SCIP_LPISTATE* lpistate;
+   SCIP_Real* psobj_real;
+   SCIP_Real* pslb_real;
+   SCIP_Real* psub_real;
+   SCIP_Real* pslhs_real;
+   SCIP_Real* psrhs_real;
+   SCIP_Real* psval_real;
+   
+   /* mapping between variables used in the aux. problem and the original problem */
+   int ndvarmap;
+   int* dvarmap;
+   int* dvarincidence;
+
+   nconss = consdata->nconss;
+   nvars = consdata->nvars;
+   nnonz = consdata->nnonz;
+   nextendedconss = conshdlrdata->nextendedconss;  
+
+   psnvars = 0;
+   psnconss = 0;
+   psnnonz = 0;
+   pslpiex = NULL;
+   psobj = NULL;
+   pslb = NULL;
+   psub = NULL;
+   pslhs = NULL;
+   psrhs = NULL;
+   psbeg = NULL;
+   pslen = NULL;
+   psind = NULL;
+   psval = NULL;
+   dvarmap = NULL;
+   dualsol = NULL;
+   primalsol = NULL;
+   mpq_init(mpqtemp);
+   mpq_init(alpha);
+   mpq_init(beta);
+   
+
+   /* allocate memory for the interior point solution */
+   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->interiorpt, nextendedconss) );
+   for( i = 0; i < nextendedconss; i++ )
+      mpq_init(conshdlrdata->interiorpt[i]);
+   /* and for interior ray */
+   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->interiorray, nextendedconss) );
+   for( i = 0; i < nextendedconss; i++ )
+      mpq_init(conshdlrdata->interiorray[i]);
+
    /* set up dvarmap - mapping between variables and original problem 
     * use the rows that are used for aux. problem 
     * dvarmap[i] is the index in the original problem of the i^th constraint
@@ -3410,18 +3431,9 @@ SCIP_RETCODE constructPSData(
    }
    ndvarmap = pos;
 
-
-
-
-
-
    /* build and solve aux problem based on parameter -- dvarmap tells which dual vars to use */
  
-  if( conshdlrdata->psdatafail )
-   {
-      SCIPdebugMessage("construction of PS data failed, skipping construction of aux. problem\n");  
-   }
-   else if( conshdlrdata->psintpointselection == 'a' )
+   if( conshdlrdata->psintpointselection == 'a' )
    {
       /* Use 'a'rbitrary interior point */
 
@@ -3920,7 +3932,7 @@ SCIP_RETCODE constructPSData(
          mpq_set_ui(pslhs[i], 0, 1);
          mpq_set_ui(psrhs[i], 0, 1);
       }
-      for( i = 0; i < npsbasis; i++ )
+      for( i = 0; i < conshdlrdata->npsbasis; i++ )
       {
          mpq_set_ui(pslhs[nvars + i], 0, 1);
          mpq_set(psrhs[nvars + i], conshdlrdata->posinfinity);
@@ -3953,7 +3965,7 @@ SCIP_RETCODE constructPSData(
             pslen[indx]++;
          }
       }
-      for( i = 0; i < npsbasis; i++ )
+      for( i = 0; i < conshdlrdata->npsbasis; i++ )
       {
          pslen[nvars + i] = 2;
       }
@@ -4046,9 +4058,7 @@ SCIP_RETCODE constructPSData(
       
       /* write LP to file */
       //   SCIP_CALL( SCIPlpiexWriteLP(pslpiex, "prob/psdebug.lp") );  /* ????????????*/
-      
-      
-      
+            
       if( PSWARMSTARTAUXPROB )
       {
          /* warm start the exact LP by solving the approximate LP first */
@@ -4332,20 +4342,6 @@ SCIP_RETCODE constructPSData(
          mpq_set_d(beta, pow(2, (int) (log(mpq_get_d(beta))/log(2)))); 
       }
 
-      // OLD WAY
-      // /*calculate L1 norm of objective */
-      // mpq_set_ui(mpqtemp, 0, 1);
-      // for( i = 0; i < ndvarmap; i ++)
-      // {
-      //    if( mpq_sgn(psobj[i]) > 0 )
-      //       mpq_add(mpqtemp, mpqtemp, psobj[i]);
-      //    else
-      //       mpq_sub(mpqtemp, mpqtemp, psobj[i]);
-      // }
-      // // round mpqtemp to nearest power of two, we dont need it exactly..
-      // mpq_set_d(mpqtemp, pow(2, (int) log(mpq_get_d(mpqtemp))));
-
-      // mpq_div(alpha, alpha, mpqtemp);
       
 #ifdef PS_OUT
       printf("alpha = ");
@@ -4376,7 +4372,7 @@ SCIP_RETCODE constructPSData(
          mpq_set(pslhs[i], consdata->obj[i]);
          mpq_set(psrhs[i], consdata->obj[i]);
       }
-      for( i = 0; i < npsbasis; i++ )
+      for( i = 0; i < conshdlrdata->npsbasis; i++ )
       {
          mpq_set_si(pslhs[nvars + i], 0, 1);
          mpq_set(psrhs[nvars + i], conshdlrdata->posinfinity);
@@ -4408,7 +4404,7 @@ SCIP_RETCODE constructPSData(
             pslen[indx]++;
          }
       }
-      for( i = 0; i < npsbasis; i++ )
+      for( i = 0; i < conshdlrdata->npsbasis; i++ )
       {
          pslen[nvars + i] = 2;
       }
@@ -5048,7 +5044,7 @@ SCIP_RETCODE constructPSData(
          mpq_set(pslhs[i], consdata->obj[i]);
          mpq_set(psrhs[i], consdata->obj[i]);
       }
-      for( i = 0; i < npsbasis; i++ )
+      for( i = 0; i < conshdlrdata->npsbasis; i++ )
       {
          mpq_set_si(pslhs[nvars + i], 0, 1);
          mpq_set(psrhs[nvars + i], conshdlrdata->posinfinity);
@@ -5080,7 +5076,7 @@ SCIP_RETCODE constructPSData(
             pslen[indx]++;
          }
       }
-      for( i = 0; i < npsbasis; i++ )
+      for( i = 0; i < conshdlrdata->npsbasis; i++ )
       {
          pslen[nvars + i] = 2;
       }
@@ -5383,16 +5379,9 @@ SCIP_RETCODE constructPSData(
       SCIPerrorMessage("Invald value for parameter psintpointselection\n");
    }
 
-   /* free memory */
-#ifdef PS_OUT 
-   printf("Freeing memory from constructpsdata\n");
-#endif
-
    mpq_clear(beta);
    mpq_clear(alpha);
    mpq_clear(mpqtemp);
-   for( i = 0; i < 2*nnonz + 2*nvars; i++ )
-      mpq_clear(projval[i]); 
    for( i = 0; i < psnvars; i++ )
       mpq_clear(psobj[i]);
    for( i = 0; i < psnvars; i++ )
@@ -5425,11 +5414,64 @@ SCIP_RETCODE constructPSData(
    SCIPfreeBufferArray(scip, &psobj);
    SCIPfreeBufferArray(scip, &dvarincidence);
    SCIPfreeBufferArray(scip, &dvarmap);
-   SCIPfreeBufferArray(scip, &projval);
-   SCIPfreeBufferArray(scip, &projind);
-   SCIPfreeBufferArray(scip, &projlen);
-   SCIPfreeBufferArray(scip, &projbeg);
+   return SCIP_OKAY;
+}
 
+
+/* here we construct data used to compute dual bounds by the project and shift method.
+ * we consider the primal problem as:
+ *
+ * min c'x
+ * lhs <= Ax <= rhs
+ *  lb <=  x <= ub
+ *
+ * and the dual of the form
+ * 
+ * max [lhs',-rhs',lb',-ub'] y
+ *     [  A',  -A',  I,  -I] y =  c
+ *                           y >= 0  
+ *
+ * a subset S of the dual columns are chosen to give a submatrix D of [A',-A',I,-I], which is then LU factorized using RECTLU
+ * then an S-interior point is found (a dual solution that is strictly positive for each column in S).
+ * this data is then reused throughout the tree where the LU factorization can be used to correct feasibility of
+ * the equality constraints of the dual, and a convex combination with the S-interior point can correct any infeasibility 
+ * coming from negative variables.
+ *
+ */
+static
+SCIP_RETCODE constructPSData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
+   SCIP_CONSDATA*        consdata            /**< exactlp constraint data */
+   )
+{
+   assert(consdata->nconss > 0);
+   
+   /* if the ps data was already constructed, exit */
+   if( conshdlrdata->psdatacon )
+      return SCIP_OKAY;
+   /* now mark that this function has been called */
+   conshdlrdata->psdatacon = TRUE; 
+
+   SCIPdebugMessage("Calling constructPSdata(). \n");
+
+   /* process the bound changes */
+   processBoundchgs(scip, conshdlrdata, consdata);
+
+   conshdlrdata->nextendedconss = 2*consdata->nconss + 2*consdata->nvars;
+
+   /* call function to select the set S */
+   SCIP_CALL( psChooseS(scip, conshdlrdata, consdata) );
+
+   /* compute LU factorization of D == A|_S */
+   SCIP_CALL( psFactorizeD(scip, conshdlrdata, consdata) );
+
+   /* compute LU S-interior point/ray */
+   if( !conshdlrdata->psdatafail )
+   {
+      SCIP_CALL( psComputeSintPointRay(scip, conshdlrdata, consdata) );
+   }
+   
 #ifdef PS_OUT 
    printf("exiting constructpsdata\n");
 #endif
@@ -9579,7 +9621,7 @@ SCIP_RETCODE SCIPincludeConshdlrExactlp(
 
    SCIP_CALL( SCIPaddCharParam(scip, 
          "constraints/exactlp/psdualcolselection",
-         "strategy to select which dual columns to use for lp to compute interior point ('n'o selection (all cols), 'a'ctive rows from exact primal LP, 'A'ctive rows from inexact primal LP, 'b'asic rows from exact primal LP, 'B'asic rows from inexact primal LP)",
+         "strategy to select which dual columns to use for lp to compute interior point ('n'o selection (all cols), 'a'ctive rows from exact primal LP, 'A'ctive rows from inexact primal LP)",
          &conshdlrdata->psdualcolselection, TRUE, DEFAULT_PSDUALCOLSELECTION, "naAbB", NULL, NULL) );
    SCIP_CALL( SCIPaddCharParam(scip, 
          "constraints/exactlp/psintpointselection",
