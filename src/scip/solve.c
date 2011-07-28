@@ -138,6 +138,10 @@ SCIP_RETCODE SCIPprimalHeuristics(
    int depth;
    int lpstateforkdepth;
    int h;
+#ifndef NDEBUG
+   SCIP_Bool inprobing;
+   SCIP_Bool indiving;
+#endif
 
    assert(set != NULL);
    assert(primal != NULL);
@@ -214,6 +218,16 @@ SCIP_RETCODE SCIPprimalHeuristics(
    /* call heuristics */
    ndelayedheurs = 0;
    oldnbestsolsfound = primal->nbestsolsfound;
+
+#ifndef NDEBUG
+   /* remember old probing and diving status */
+   inprobing = tree != NULL && SCIPtreeProbing(tree);
+   indiving = lp != NULL && SCIPlpDiving(lp);
+
+   /* heuristics should currently not be called in diving mode */
+   assert(!indiving);
+#endif
+
    for( h = 0; h < set->nheurs; ++h )
    {
       /* it might happen that a diving heuristic renders the previously solved node LP invalid
@@ -226,9 +240,9 @@ SCIP_RETCODE SCIPprimalHeuristics(
          SCIPheurGetName(set->heurs[h]), SCIPheurGetPriority(set->heurs[h]));
       SCIP_CALL( SCIPheurExec(set->heurs[h], set, primal, depth, lpstateforkdepth, heurtiming, &ndelayedheurs, &result) );
 
-      /* make sure that heuristic did not leave on probing or diving mode */
-      assert(tree == NULL || !SCIPtreeProbing(tree));
-      assert(lp == NULL || !SCIPlpDiving(lp));
+      /* make sure that heuristic did not change probing or diving status */
+      assert(tree == NULL || inprobing == SCIPtreeProbing(tree));
+      assert(lp == NULL || indiving == SCIPlpDiving(lp));
    }
    assert(0 <= ndelayedheurs && ndelayedheurs <= set->nheurs);
 
