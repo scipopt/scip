@@ -3727,6 +3727,9 @@ SCIP_RETCODE SCIPsolveCIP(
             /* node solution is not feasible */
             if( tree->nchildren == 0 )
             {
+               /* change color of node in VBC output */
+               SCIPvbcCutoffNode(stat->vbc, stat, focusnode);
+
                /* issue NODEINFEASIBLE event */
                SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEINFEASIBLE) );
 
