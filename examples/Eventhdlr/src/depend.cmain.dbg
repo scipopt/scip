@@ -39,22 +39,22 @@ $(OBJDIR)/cmain.o: src/cmain.c ../../src/scip/scip.h ../../src/scip/def.h \
  ../../src/scip/branch_random.h ../../src/scip/branch_relpscost.h \
  ../../src/scip/cons_and.h ../../src/scip/cons_bounddisjunction.h \
  ../../src/scip/cons_conjunction.h ../../src/scip/cons_countsols.h \
- ../../src/scip/cons_cumulative.h ../../src/scip/cons_indicator.h \
- ../../src/scip/cons_integral.h ../../src/scip/cons_knapsack.h \
- ../../src/scip/cons_linear.h ../../src/scip/cons_linking.h \
- ../../src/scip/cons_logicor.h ../../src/scip/cons_or.h \
- ../../src/scip/cons_orbitope.h ../../src/scip/cons_pseudoboolean.h \
- ../../src/scip/cons_quadratic.h ../../src/scip/cons_setppc.h \
- ../../src/scip/cons_sos1.h ../../src/scip/cons_sos2.h \
- ../../src/scip/cons_soc.h ../../src/scip/cons_varbound.h \
- ../../src/scip/cons_xor.h ../../src/scip/dialog_default.h \
- ../../src/scip/disp_default.h ../../src/scip/heur_actconsdiving.h \
- ../../src/scip/heur_clique.h ../../src/scip/heur_coefdiving.h \
- ../../src/scip/heur_crossover.h ../../src/scip/heur_dins.h \
- ../../src/scip/heur_feaspump.h ../../src/scip/heur_fixandinfer.h \
- ../../src/scip/heur_fracdiving.h ../../src/scip/heur_guideddiving.h \
- ../../src/scip/heur_intdiving.h ../../src/scip/heur_intshifting.h \
- ../../src/scip/heur_linesearchdiving.h \
+ ../../src/scip/cons_cumulative.h ../../src/scip/cons_disjunction.h \
+ ../../src/scip/cons_indicator.h ../../src/scip/cons_integral.h \
+ ../../src/scip/cons_knapsack.h ../../src/scip/cons_linear.h \
+ ../../src/scip/cons_linking.h ../../src/scip/cons_logicor.h \
+ ../../src/scip/cons_or.h ../../src/scip/cons_orbitope.h \
+ ../../src/scip/cons_pseudoboolean.h ../../src/scip/cons_quadratic.h \
+ ../../src/scip/cons_setppc.h ../../src/scip/cons_sos1.h \
+ ../../src/scip/cons_sos2.h ../../src/scip/cons_soc.h \
+ ../../src/scip/cons_varbound.h ../../src/scip/cons_xor.h \
+ ../../src/scip/dialog_default.h ../../src/scip/disp_default.h \
+ ../../src/scip/heur_actconsdiving.h ../../src/scip/heur_clique.h \
+ ../../src/scip/heur_coefdiving.h ../../src/scip/heur_crossover.h \
+ ../../src/scip/heur_dins.h ../../src/scip/heur_feaspump.h \
+ ../../src/scip/heur_fixandinfer.h ../../src/scip/heur_fracdiving.h \
+ ../../src/scip/heur_guideddiving.h ../../src/scip/heur_intdiving.h \
+ ../../src/scip/heur_intshifting.h ../../src/scip/heur_linesearchdiving.h \
  ../../src/scip/heur_localbranching.h ../../src/scip/heur_mutation.h \
  ../../src/scip/heur_objpscostdiving.h ../../src/scip/heur_octane.h \
  ../../src/scip/heur_oneopt.h ../../src/scip/heur_pscostdiving.h \
@@ -80,14 +80,15 @@ $(OBJDIR)/cmain.o: src/cmain.c ../../src/scip/scip.h ../../src/scip/def.h \
  ../../src/scip/reader_pip.h ../../src/scip/reader_ppm.h \
  ../../src/scip/reader_rlp.h ../../src/scip/reader_sol.h \
  ../../src/scip/reader_wbo.h ../../src/scip/reader_zpl.h \
- ../../src/scip/sepa_clique.h ../../src/scip/sepa_cgmip.h \
- ../../src/scip/sepa_cmir.h ../../src/scip/sepa_flowcover.h \
- ../../src/scip/sepa_gomory.h ../../src/scip/sepa_impliedbounds.h \
- ../../src/scip/sepa_intobj.h ../../src/scip/sepa_mcf.h \
- ../../src/scip/sepa_oddcycle.h ../../src/scip/sepa_rapidlearning.h \
- ../../src/scip/sepa_redcost.h ../../src/scip/sepa_strongcg.h \
- ../../src/scip/sepa_zerohalf.h ../../src/scip/scipshell.h \
- ../../src/nlpi/nlpi_ipopt.h src/event_bestsol.h
+ ../../src/scip/sepa_clique.h ../../src/scip/sepa_closecuts.h \
+ ../../src/scip/sepa_cgmip.h ../../src/scip/sepa_cmir.h \
+ ../../src/scip/sepa_flowcover.h ../../src/scip/sepa_gomory.h \
+ ../../src/scip/sepa_impliedbounds.h ../../src/scip/sepa_intobj.h \
+ ../../src/scip/sepa_mcf.h ../../src/scip/sepa_oddcycle.h \
+ ../../src/scip/sepa_rapidlearning.h ../../src/scip/sepa_redcost.h \
+ ../../src/scip/sepa_strongcg.h ../../src/scip/sepa_zerohalf.h \
+ ../../src/scip/scipshell.h ../../src/nlpi/nlpi_ipopt.h \
+ src/event_bestsol.h
 $(OBJDIR)/event_bestsol.o: src/event_bestsol.c src/event_bestsol.h \
  ../../src/scip/scip.h ../../src/scip/def.h ../../src/scip/type_retcode.h \
  ../../src/scip/message.h ../../src/scip/type_message.h \

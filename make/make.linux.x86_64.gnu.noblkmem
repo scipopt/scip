@@ -3,7 +3,6 @@ OFLAGS		+=	-O3 -m64 -mtune=native -fomit-frame-pointer # -malign-double -mcpu=pe
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
 CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
 ARFLAGS		=	crs
-LDFLAGS		+=      -Wl,-rpath,$(SCIPDIR)/$(LIBDIR)
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
 GMP_FLAGS	=

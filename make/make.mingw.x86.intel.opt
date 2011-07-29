@@ -15,6 +15,7 @@ OFLAGS	+=
 CFLAGS	+=	-O3 -Oi -fp:precise
 CXXFLAGS	+=	-O3 -Oi -fp:precise -EHsc -GR
 LDFLAGS		=	
+LINKRPATH =
 ZLIB_FLAGS	=	
 ZLIB_LDFLAGS	=	
 GMP_FLAGS	=	

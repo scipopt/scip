@@ -4,6 +4,7 @@ CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missin
 CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing
 ARFLAGS		=	crs
 LDFLAGS		=	-lm -static
+LINKRPATH =
 EXEEXTENSION	=	.exe
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz

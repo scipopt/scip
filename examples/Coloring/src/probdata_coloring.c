@@ -554,7 +554,9 @@ SCIP_RETCODE SCIPcreateProbColoring(
 {
    int i;
    SCIP_PROBDATA* probdata = NULL;
+#ifndef NDEBUG
    TCLIQUE_Bool graphcreated;
+#endif
 
    assert(nnodes > 0);  /* at least one node */
    assert(nedges >= 0); /* no negative number of edges */
@@ -565,8 +567,12 @@ SCIP_RETCODE SCIPcreateProbColoring(
    SCIP_CALL( SCIPallocMemory(scip, &probdata) );
 
    /* create graph */
+#ifndef NDEBUG
    graphcreated = tcliqueCreate(&((probdata)->oldgraph));
    assert(graphcreated);
+#else
+   tcliqueCreate(&((probdata)->oldgraph));
+#endif
    
    /* add all nodes from 0 to nnodes-1 */
    tcliqueAddNode((probdata)->oldgraph, nnodes-1, 0);

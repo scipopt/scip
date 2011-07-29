@@ -85,10 +85,11 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
 /** copy method of NLP interface (called when SCIP copies plugins)
  *
  * input:
+ *  - blkmem block memory of target SCIP
  *  - sourcenlpi the NLP interface to copy
  *  - targetnlpi buffer to store pointer to copy of NLP interface
  */
-#define SCIP_DECL_NLPICOPY(x) SCIP_RETCODE x (SCIP_NLPI* sourcenlpi, SCIP_NLPI** targetnlpi)
+#define SCIP_DECL_NLPICOPY(x) SCIP_RETCODE x (BMS_BLKMEM* blkmem, SCIP_NLPI* sourcenlpi, SCIP_NLPI** targetnlpi)
 
 /** destructor of NLP interface to free nlpi data
  * 

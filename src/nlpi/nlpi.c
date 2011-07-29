@@ -160,14 +160,16 @@ SCIP_RETCODE SCIPnlpiCreate(
 
 /** copies an NLPI */
 SCIP_RETCODE SCIPnlpiCopy(
+   BMS_BLKMEM*           blkmem,             /**< block memory in target SCIP */
    SCIP_NLPI*            sourcenlpi,         /**< pointer to NLPI data structure to copy */
    SCIP_NLPI**           targetnlpi          /**< buffer to store pointer to copied NLPI data structure */
 )
 {
+   assert(blkmem     != NULL);
    assert(sourcenlpi != NULL);
    assert(targetnlpi != NULL);
 
-   SCIP_CALL( (*sourcenlpi->nlpicopy)(sourcenlpi, targetnlpi) );
+   SCIP_CALL( (*sourcenlpi->nlpicopy)(blkmem, sourcenlpi, targetnlpi) );
 
    return SCIP_OKAY;
 }

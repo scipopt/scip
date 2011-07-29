@@ -6,6 +6,7 @@ FLAGS		+=	-DNDEBUG -I/client/include -DNO_STRERROR_R -DROUNDING_FE
 OFLAGS		+=	-xO5 -xprefetch=auto -xipo=2
 CFLAGS		+=	-Xa -errtags=yes -erroff=E_STATEMENT_NOT_REACHED
 CXXFLAGS	+=
+LINKRPATH =
 AR		=	CC
 ARFLAGS		=	$(FLAGS) $(CXXFLAGS) -xar -o
 LDFLAGS		+=	-L/client/lib -lsocket -lnsl

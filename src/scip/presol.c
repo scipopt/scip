@@ -206,7 +206,7 @@ SCIP_RETCODE SCIPpresolInit(
       presol->nupgdconss = 0;
       presol->nchgcoefs = 0;
       presol->nchgsides = 0;
-      presol->wasdelayed = 0;
+      presol->wasdelayed = FALSE;
    }
    
    /* call initialization method of presolver */
@@ -267,7 +267,7 @@ SCIP_RETCODE SCIPpresolInitpre(
    presol->lastnupgdconss = 0;
    presol->lastnchgcoefs = 0;
    presol->lastnchgsides = 0;
-   presol->wasdelayed = 0;
+   presol->wasdelayed = FALSE;
 
    /* call presolving initialization method of presolver */
    if( presol->presolinitpre != NULL )

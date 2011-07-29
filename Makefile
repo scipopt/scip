@@ -87,6 +87,7 @@ LINKCXX_L	=	-L
 LINKCXX_l	=	-l
 LINKCXX_o	=	-o # the trailing space is important
 LINKLIBSUFFIX	=
+LINKRPATH	=	-Wl,-rpath,
 DCC		=	gcc
 DCXX		=	g++
 AR		=	ar
@@ -439,21 +440,22 @@ endif
 
 ifeq ($(IPOPT),true)
 LINKER		=	CPP
-FLAGS		+=	-I$(LIBDIR)/ipoptinc $(IPOPT_FLAGS)
-LDFLAGS		+=	$(LINKCXX_l)ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)$(LINKLIBSUFFIX) $(IPOPT_LDFLAGS)
-ifeq ($(LIBEXT),$(STATICLIBEXT))
-LDFLAGS		+=	`cat $(LIBDIR)/ipopt_addlibs.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(STATICLIBEXT)`
-else
-LDFLAGS		+=	`cat $(LIBDIR)/ipopt_addlibs.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(SHAREDLIBEXT)`
+FLAGS		+=	-I$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/include/coin $(IPOPT_FLAGS)
+# for Ipopt >= 3.9.0, all linker flags are in share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt
+# for Ipopt < 3.9.0, we need to link against libipopt from the lib directory, plus the additional flags given in share/doc/coin/Ipopt/ipopt_addlibs_cpp.txt
+LDFLAGS		+=	`test -e $(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt && \
+  cat $(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt`
+LDFLAGS		+=	`test -e $(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/share/doc/coin/Ipopt/ipopt_addlibs_cpp.txt && \
+  (echo $(LINKCXX_L)$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib $(LINKCXX_l)ipopt; cat $(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/share/doc/coin/Ipopt/ipopt_addlibs_cpp.txt)`
+# ensure that also shared libraries are found while running the binary
+# for Ipopt 3.9.x, the libraries are installed in the lib/coin subdirectory
+# for Ipopt != 3.9.x, they are installed into the lib subdirectory, and additionally in lib/ThirdParty for Ipopt >= 3.10.0
+ifneq ($(LINKRPATH), )
+LDFLAGS		+=  $(LINKRPATH)$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib/coin $(LINKRPATH)$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib/coin/ThirdParty
+LDFLAGS		+=  $(LINKRPATH)$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib $(LINKRPATH)$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib/ThirdParty
 endif
-SOFTLINKS	+=	$(LIBDIR)/ipoptinc
-SOFTLINKS	+=	$(LIBDIR)/libipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(STATICLIBEXT)
-SOFTLINKS	+=	$(LIBDIR)/libipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(SHAREDLIBEXT)
-SOFTLINKS	+=	$(LIBDIR)/ipopt_addlibs.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(STATICLIBEXT)
-SOFTLINKS	+=	$(LIBDIR)/ipopt_addlibs.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(SHAREDLIBEXT)
-LPIINSTMSG	+=	"\n  -> \"ipoptinc\" is a directory containing the ipopt header files, i.e., \"ipoptinc/IpIpoptApplication.hpp\" should exist.\n"
-LPIINSTMSG	+=	" -> \"libipopt.*\" is the Ipopt library, e.g., \"/client/lib/ipopt-3.7.0/libipopt.a\"\n"
-LPIINSTMSG	+=	" -> \"ipopt_addlibs.*\" is the Ipopt addlibs_cpp file, e.g., \"/client/lib/ipopt-3.7.0/ipopt_addlibs_cpp.txt\"\n"
+SOFTLINKS	+= $(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)
+LPIINSTMSG	+=	"\n  -> \"ipopt.*\" is a directory containing the ipopt installation, i.e., \"ipopt.*/include/coin/IpIpoptApplication.hpp\" should exist.\n"
 endif
 
 ifeq ($(EXPRINT),cppad)
@@ -716,6 +718,9 @@ MAINLINK	=	$(BINDIR)/$(MAINSHORTNAME).$(BASE).$(LPS)$(EXEEXTENSION)
 MAINSHORTLINK	=	$(BINDIR)/$(MAINSHORTNAME)$(EXEEXTENSION)
 ALLSRC		+=	$(MAINSRC)
 
+ifneq ($(LINKRPATH), )
+LDFLAGS		+=	$(LINKRPATH)$(SCIPDIR)/$(LIBDIR)
+endif
 
 
 LINKSMARKERFILE	=	$(LIBDIR)/linkscreated.$(LPS)-$(LPSOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT).$(IPOPT)-$(IPOPTOPT).$(EXPRINT)
@@ -968,6 +973,8 @@ endif
 ifeq ($(LINKER),CPP)
 		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(NLPILIBSRC) \
 		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
+		| sed '\''s|$(LIBDIR)/ipopt.* ||g'\'' | sed '\''s|$(LIBDIR)/ipopt.*$$||g'\'' \
+		| sed '\''s|$(LIBDIR)/cppad.* ||g'\'' | sed '\''s|$(LIBDIR)/cppad.*$$||g'\'' \
 		>$(NLPILIBDEP)'
 endif
 

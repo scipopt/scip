@@ -132,7 +132,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
    SCIP_PROBDATA* probdata;
       
    SCIP_Real** pairweights;
-   int npairweights;
    
    SCIP_VAR** lpcands;
    SCIP_Real* lpcandsfrac;
@@ -170,7 +169,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
    assert(probdata != NULL);
    
    nitems = SCIPprobdataGetNItems(probdata);
-   npairweights = (nitems*nitems - 3*nitems +2) / 2;
 
    /* allocate memory for triangle matrix */
    SCIP_CALL( SCIPallocBufferArray(scip, &pairweights, nitems) );

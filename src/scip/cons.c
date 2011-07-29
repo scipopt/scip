@@ -2063,8 +2063,12 @@ SCIP_RETCODE SCIPconshdlrInit(
       conshdlr->nchgcoefs = 0;
       conshdlr->nchgsides = 0;
       conshdlr->ageresetavg = AGERESETAVG_INIT;
+      conshdlr->sepalpwasdelayed = FALSE;
+      conshdlr->sepasolwasdelayed = FALSE;
+      conshdlr->propwasdelayed = FALSE;
+      conshdlr->presolwasdelayed = FALSE;
    }
-   
+
    /* call initialization method of constraint handler */
    if( conshdlr->consinit != NULL )
    {
@@ -2161,6 +2165,8 @@ SCIP_RETCODE SCIPconshdlrInitpre(
    conshdlr->lastnupgdconss = 0;
    conshdlr->lastnchgcoefs = 0;
    conshdlr->lastnchgsides = 0;
+   conshdlr->propwasdelayed = FALSE;
+   conshdlr->presolwasdelayed = FALSE;
 
    /* call presolving initialization method of constraint handler */
    if( conshdlr->consinitpre != NULL )
@@ -2250,6 +2256,9 @@ SCIP_RETCODE SCIPconshdlrInitsol(
    assert(conshdlr != NULL);
    assert(set != NULL);
    assert(stat != NULL);
+
+   conshdlr->sepalpwasdelayed = FALSE;
+   conshdlr->sepasolwasdelayed = FALSE;
 
    /* call solving process initialization method of constraint handler */
    if( conshdlr->consinitsol != NULL )
