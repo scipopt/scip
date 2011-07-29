@@ -254,8 +254,8 @@ SCIP_RETCODE createSubSCIP(
          SCIP_CALL( SCIPcaptureVar(scip, var) );
          SCIP_CALL( SCIPcaptureVar(heurdata->subscip, subvar) );
 
-         assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetLbGlobal(subvar)));
-         assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(var), SCIPvarGetUbGlobal(subvar)));
+         assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetLbGlobal(subvar)));
+         assert(SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(var), SCIPvarGetUbGlobal(subvar)));
          
          SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_GBDCHANGED, heurdata->eventhdlr, (SCIP_EVENTDATA*)heurdata, NULL) );
       }
