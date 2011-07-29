@@ -455,7 +455,7 @@ LDFLAGS		+=  $(LINKRPATH)$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/l
 LDFLAGS		+=  $(LINKRPATH)$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib $(LINKRPATH)$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib/ThirdParty
 endif
 SOFTLINKS	+= $(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)
-LPIINSTMSG	+=	"\n  -> \"ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)\" is a directory containing the ipopt installation, i.e., \"ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/include/coin/IpIpoptApplication.hpp\" should exist.\n"
+LPIINSTMSG	+=	"\n  -> \"ipopt.*\" is a directory containing the ipopt installation, i.e., \"ipopt.*/include/coin/IpIpoptApplication.hpp\" should exist.\n"
 endif
 
 ifeq ($(EXPRINT),cppad)
