@@ -3,7 +3,6 @@ OFLAGS		+=	-O0 -m64 -fprofile-arcs -ftest-coverage
 CFLAGS		+=	$(GCCWARN)
 CXXFLAGS	+=	$(GXXWARN)
 ARFLAGS		=	crs
-LDFLAGS		+=      -Wl,-rpath,$(SCIPDIR)/$(LIBDIR)
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
 GMP_FLAGS	=

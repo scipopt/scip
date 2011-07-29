@@ -6,6 +6,7 @@ ARFLAGS		=	crs
 LDFLAGS		+=	
 CC		=	xlc
 CXX		=	xlc
+LINKRPATH =
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
 GMP_FLAGS	=

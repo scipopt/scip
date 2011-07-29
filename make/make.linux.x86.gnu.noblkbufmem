@@ -3,7 +3,7 @@ OFLAGS		+=	-O3 -mtune=native -fomit-frame-pointer # -malign-double -mcpu=pentium
 CFLAGS		+=	-m32 $(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
 CXXFLAGS	+=	-m32 $(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
 ARFLAGS		=	crs
-LDFLAGS		+=      -m32 -Wl,-rpath,$(SCIPDIR)/$(LIBDIR)
+LDFLAGS		+=      -m32
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
 GMP_FLAGS	=

@@ -15,6 +15,7 @@ OFLAGS		+=
 CFLAGS		+=	-Zi
 CXXFLAGS	+=	-Zi -EHsc -GR
 LDFLAGS		=	-debug -subsystem:console -incremental:no -fixed:no
+LINKRPATH =
 ZLIB_FLAGS	=	
 ZLIB_LDFLAGS	=	
 GMP_FLAGS	=	

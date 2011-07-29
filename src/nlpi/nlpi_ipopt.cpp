@@ -1778,7 +1778,7 @@ const char* SCIPgetSolverNameIpopt(void)
 #ifdef IPOPT_VERSION
    return "Ipopt "IPOPT_VERSION;
 #else
-   return "Ipopt < 3.9.2";
+   return "Ipopt < 3.9.0";
 #endif
 }
 

@@ -184,6 +184,8 @@ features:
 design:
 - SCIP_HASHMAP now works also without block memory
 - the 'make' parameter 'PARASCIP=true' leads to threadsafe message handlers where you need to call SCIPcreateMesshdlrPThreads and SCIPmessageSetHandler/SCIPmessageSetDefaultHandler and SCIPfreeMesshdlrPThreads; therefor we need to link with pthread library
+- to link against IPOPT, only the base directory of an Ipopt installation need to be specified now;
+  additionally, if building with gnu compilers, the Ipopt libraries directory is stored in the SCIP binary, which should make it easier to run with Ipopt shared libraries
 
 SCIP version 2.0.2
 ==================
