@@ -282,8 +282,9 @@ LDFLAGS		+=	`test -e $(SCIPDIR)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOP
 # for Ipopt 3.9.x, the libraries are installed in the lib/coin subdirectory
 # for Ipopt != 3.9.x, they are installed into the lib subdirectory, and additionally in lib/ThirdParty for Ipopt >= 3.10.0
 ifneq ($(LINKRPATH), )
-LDFLAGS		+=  $(LINKRPATH)$(SCIPDIR)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib/coin $(LINKRPATH)$(SCIPDIR)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib/coin/ThirdParty
-LDFLAGS		+=  $(LINKRPATH)$(SCIPDIR)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib $(LINKRPATH)$(SCIPDIR)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib/ThirdParty
+IPOPTFULLPATH = `cd $(SCIPDIR)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT); pwd`
+LDFLAGS		+=  $(LINKRPATH)$(IPOPTFULLPATH)/lib/coin $(LINKRPATH)$(IPOPTFULLPATH)/lib/coin/ThirdParty
+LDFLAGS		+=  $(LINKRPATH)$(IPOPTFULLPATH)/lib      $(LINKRPATH)$(IPOPTFULLPATH)/lib/ThirdParty
 endif
 NLPILIBSHORTNAMEIPOPT = .ipopt
 endif

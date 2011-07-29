@@ -451,8 +451,9 @@ LDFLAGS		+=	`test -e $(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/share
 # for Ipopt 3.9.x, the libraries are installed in the lib/coin subdirectory
 # for Ipopt != 3.9.x, they are installed into the lib subdirectory, and additionally in lib/ThirdParty for Ipopt >= 3.10.0
 ifneq ($(LINKRPATH), )
-LDFLAGS		+=  $(LINKRPATH)$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib/coin $(LINKRPATH)$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib/coin/ThirdParty
-LDFLAGS		+=  $(LINKRPATH)$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib $(LINKRPATH)$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib/ThirdParty
+IPOPTFULLPATH = `cd $(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT); pwd`
+LDFLAGS		+=  $(LINKRPATH)$(IPOPTFULLPATH)/lib/coin $(LINKRPATH)$(IPOPTFULLPATH)/lib/coin/ThirdParty
+LDFLAGS		+=  $(LINKRPATH)$(IPOPTFULLPATH)/lib      $(LINKRPATH)$(IPOPTFULLPATH)/lib/ThirdParty
 endif
 SOFTLINKS	+= $(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)
 LPIINSTMSG	+=	"\n  -> \"ipopt.*\" is a directory containing the ipopt installation, i.e., \"ipopt.*/include/coin/IpIpoptApplication.hpp\" should exist.\n"
