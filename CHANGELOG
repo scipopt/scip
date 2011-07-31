@@ -176,8 +176,8 @@ features:
 - it is now possible in SCIP_STAGE_TRANSFORMED to call SCIPaddVarLocks (i.e. to lock variables in initialization methods)
 - new variable $(INSTALLDIR) in Makefile which define installation directory for the libraries, $(INSTALLDIR)/lib/, 
   binary, $(INSTALLDIR)/bin, and include headers, $(INSTALLDIR)/include, the default value is the empty string
-- new target in Makefile "install" performs "make" and copies the include headers
-- new target in Makefile "uninstall" removes libraries, binary, and include headers
+- new target in Makefile "install" performs "make" and copies the include headers, binary, and libraries
+- new target in Makefile "uninstall" removes libraries, binary, and include headers form INSTALLDIR
 - cons_logicor is now abled to replace all aggregated variables in presolving by there active or negation of an active variable counterpart
 - reader_gms is now able to write indicator constraints (reformulated either via big-M or sos1), see new parameters <reading/gmsreader/bigmdefault> and <reading/gmsreader/indicatorreform>
 

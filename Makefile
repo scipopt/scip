@@ -765,37 +765,6 @@ lintfiles:
 doc: 		
 		cd doc; $(DOXY) $(MAINSHORTNAME).dxy ; $(DOXY) $(MAINSHORTNAME)devel.dxy
 
-.PHONY: install
-install:	$(INCLUDEDIR) $(INSTALLDIR) $(OBJSCIPLIBFILE) $(MAINFILE) 
-		@echo "-> copy scip headers"
-		@-cp $(SCIPPLUGININCSRC) $(INCLUDEDIR)/scip/
-		@-cp $(SRCDIR)/scip/pub_*h $(INCLUDEDIR)/scip/
-		@-cp $(SRCDIR)/scip/struct_*h $(INCLUDEDIR)/scip/
-		@-cp $(SRCDIR)/scip/type_*h $(INCLUDEDIR)/scip/
-		@-cp $(SRCDIR)/scip/scip.h $(INCLUDEDIR)/scip/
-		@echo "-> copy objective scip headers"
-		@-cp $(OBJSCIPINCSRC) $(INCLUDEDIR)/objscip/
-		@-cp $(MAINFILE) $(INCLUDEDIR)/
-		@-cp $(LPILIBFILE) $(INCLUDEDIR)/
-		@-cp $(NLPILIBFILE) $(INCLUDEDIR)/
-		@-cp $(SCIPLIBFILE) $(INCLUDEDIR)/
-		@-cp $(OBJSCIPLIBFILE) $(INCLUDEDIR)/
-
-#		@-mkdir -p $(INCLUDEDIR)/objscip
-#		@echo "-> copy objective scip headers"
-#		@-mkdir -p $(INCLUDEDIR)/scip
-
-.PHONY: uninstall
-uninstall:	cleanlib cleanbin
-		@echo "-> remove scip headers"
-		@-mkdir -p $(INCLUDEDIR)/scip
-		@-rm -f $(INCLUDEDIR)/scip/*.h
-		@echo "-> remove objective scip headers"
-		@-mkdir -p $(INCLUDEDIR)/objscip
-		@-rm -f $(INCLUDEDIR)/objscip/*.h
-		@-rmdir $(INCLUDEDIR)/scip $(INCLUDEDIR)/objscip
-		@-rmdir --ignore-fail-on-non-empty $(INCLUDEDIR)
-
 .PHONY: check
 check:		test
 
@@ -861,6 +830,9 @@ tags:
 # include local targets 
 -include make/local/make.targets
 
+# include install/uninstall targets
+-include make/make.install
+
 $(LPILIBLINK):	$(LPILIBFILE)
 		@rm -f $@
 		cd $(dir $@) && $(LN_s) $(notdir $(LPILIBFILE)) $(notdir $@)
@@ -912,14 +884,8 @@ $(LIBOBJSUBDIRS):	$(LIBOBJDIR)
 $(LIBDIR)::	
 		@-mkdir -p $(LIBDIR)
 
-$(INSTALLDIR):
-		@-mkdir -p $(INSTALLDIR)
-
-$(BINDIR):	$(INSTALLDIR)
+$(BINDIR):	
 		@-mkdir -p $(BINDIR)
-
-$(INCLUDEDIR):	$(INSTALLDIR)
-		@-mkdir -p $(INCLUDEDIR)
 
 .PHONY: clean
 clean:          cleanlib cleanbin $(LIBOBJDIR) $(LIBOBJSUBDIRS) $(BINOBJDIR) $(OBJDIR)
@@ -1095,12 +1061,16 @@ endif
 ifneq ($(LPSCHECK),$(LAST_LPSCHECK))
 		@-touch $(LPSCHECKSRC)
 endif
+ifneq ($(SHARED),$(LAST_SHARED))
+		@-touch $(ALLSRC)
+endif
 		@-rm -f $(LASTSETTINGS)
 		@echo "LAST_ZLIB=$(ZLIB)" >> $(LASTSETTINGS)
 		@echo "LAST_GMP=$(GMP)" >> $(LASTSETTINGS)
 		@echo "LAST_READLINE=$(READLINE)" >> $(LASTSETTINGS)
 		@echo "LAST_ZIMPL=$(ZIMPL)" >> $(LASTSETTINGS)
 		@echo "LAST_LPSCHECK=$(LPSCHECK)" >> $(LASTSETTINGS)
+		@echo "LAST_SHARED=$(SHARED)" >> $(LASTSETTINGS)
 
 $(LINKSMARKERFILE):
 		@$(MAKE) links
