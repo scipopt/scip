@@ -3761,28 +3761,6 @@ SCIP_RETCODE psComputeSintPointRay(
             else
                mpq_div( conshdlrdata->interiorpt[dvarmap[i]], dualsol[i], dualsol[psnconss - 1]);    
          }     
-        
-
-#ifdef PS_OUT /*???????????????????*/
-         printf("Constraints all satisfied by slack of:  ");
-         mpq_out_str(stdout, 10, conshdlrdata->commonslack);
-         printf(" \n"); 
-         printf("Objective value of aux problem is:  ");
-         mpq_out_str(stdout, 10, objval);
-         printf(" \n"); 
-
-         printf("Relative interior solution: \n");
-         if( conshdlrdata->nextendedconss < 100 )
-         {
-            for( i = 0; i <  conshdlrdata->nextendedconss; i++ )
-            {
-               mpq_out_str(stdout, 10, conshdlrdata->interiorpt[i]);
-               printf(" \n");
-            }
-         }
-         else
-         printf("Sol. too long\n");
-#endif
       }
       else if( SCIPlpiexIsObjlimExc(pslpiex) )
       {
@@ -4108,7 +4086,6 @@ SCIP_RETCODE psComputeSintPointRay(
          }
          assert(pslpi == NULL);
       }
-
       
       /* solve the LP */
       SCIPdebugMessage("Solving aux. problem\n");
@@ -4215,9 +4192,6 @@ SCIP_RETCODE psComputeSintPointRay(
        * After solving this y will be the S-interior point and d will be the common slack.
        * Here we actually construct the dual in row representation so it can be solved directly.
        */
-#ifdef PS_OUT /*???????????????????*/
-      printf("Building optimized interior point aux. problem \n");
-#endif
 
       psnvars =  ndvarmap + 1;
       psnconss = nvars + conshdlrdata->npsbasis;
@@ -4285,7 +4259,6 @@ SCIP_RETCODE psComputeSintPointRay(
        * alpha := (1-beta)/||OBJ||
        */
 
-    
       /* set up the objective */
       pos = 0;
       for( i = 0; i < nconss; i++ )
@@ -4321,8 +4294,7 @@ SCIP_RETCODE psComputeSintPointRay(
          }
       }
       assert(pos == ndvarmap);
-      
-
+ 
       /* set alpha and beta. */
       mpq_set_d(alpha, conshdlrdata->psobjweight);
       mpq_set_ui(beta, 1, 1);
@@ -4341,16 +4313,6 @@ SCIP_RETCODE psComputeSintPointRay(
          mpq_set_ui(alpha, 1, 1);
          mpq_set_d(beta, pow(2, (int) (log(mpq_get_d(beta))/log(2)))); 
       }
-
-      
-#ifdef PS_OUT
-      printf("alpha = ");
-      mpq_out_str(stdout, 10, alpha);
-      printf(" \n");
-      printf("beta = ");
-      mpq_out_str(stdout, 10, beta);
-      printf(" \n");
-#endif
 
       /* set objective to normalized value */
       for( i = 0; i < ndvarmap; i ++)
@@ -4534,10 +4496,6 @@ SCIP_RETCODE psComputeSintPointRay(
          mpq_set(psub[ndvarmap], conshdlrdata->posinfinity);
          mpq_set_ui(pslb[ndvarmap], 1 ,1);
       }
-      
-#ifdef PS_OUT 
-      printf("Creating and assigning LPIEX to find S-interior point\n");
-#endif
 
       /* build aux LP using the exact LP interface */
       SCIP_CALL( SCIPlpiexCreate(&pslpiex, NULL, SCIP_OBJSEN_MAXIMIZE) );
@@ -4548,13 +4506,6 @@ SCIP_RETCODE psComputeSintPointRay(
       /* add all constraints to the exact LP */
       SCIP_CALL( SCIPlpiexAddRows(pslpiex, psnconss, (const mpq_t*) pslhs, (const mpq_t*) psrhs, 
             NULL, psnnonz, psbeg, pslen, psind, psval) );
-
-#ifdef PS_OUT
-      /* write LP to file */
-      //      SCIP_CALL( SCIPlpiexWriteLP(pslpiex, "prob/psdebug_opt.lp") );  /* ????????????*/
-      printf("solving LPIEX \n");
-#endif
-
 
       if( PSWARMSTARTAUXPROB )
       {
@@ -4617,22 +4568,6 @@ SCIP_RETCODE psComputeSintPointRay(
          /* get optimal dual solution */
          SCIP_CALL( SCIPlpiexGetSol(pslpiex, &objval, primalsol, NULL, NULL, NULL) );
 
-#ifdef PS_OUT 
-         printf("Dual solution: \n");
-         if( psnvars < 100 )
-         {
-            for( i = 0; i < psnvars; i++ )
-            {
-               mpq_out_str(stdout, 10, primalsol[i]);
-               printf(" \n");
-            }   
-         }
-         else
-            printf("Solution too long\n");
-         printf("Objective value: ");
-         mpq_out_str(stdout, 10, objval);
-         printf(" \n");   
-#endif         
          /* assign interior point solution to constraint handler data */
          mpq_set(conshdlrdata->commonslack, primalsol[psnvars - 1]);
          for( i = 0; i < ndvarmap; i++ )                
@@ -4645,23 +4580,6 @@ SCIP_RETCODE psComputeSintPointRay(
             conshdlrdata->psdatafail = TRUE;
             SCIPerrorMessage(" Error: interior point not found \n");
          }
-         
-#ifdef PS_OUT
-         printf("Constraints all satisfied by slack of:  ");
-         mpq_out_str(stdout, 10, conshdlrdata->commonslack);
-         printf(" \n"); 
-         printf("Relative interior solution: \n");
-         if( conshdlrdata->nextendedconss < 100 )
-         {
-            for( i = 0; i <  conshdlrdata->nextendedconss; i++ )
-            {
-               mpq_out_str(stdout, 10, conshdlrdata->interiorpt[i]);
-               printf(" \n");
-            }
-         }
-         else
-            printf("Sol. too long\n");
-#endif
       }
       else if( SCIPlpiexIsObjlimExc(pslpiex) )
       {
@@ -4848,23 +4766,7 @@ SCIP_RETCODE psComputeSintPointRay(
             SCIPdebugMessage("   exact LP solved to optimality\n"); 
             /* get optimal dual solution */
             SCIP_CALL( SCIPlpiexGetSol(pslpiex, &objval, primalsol, NULL, NULL, NULL) );
-            
-#ifdef PS_OUT 
-            printf("Dual solution: \n");
-            if( psnvars < 100 )
-            {
-               for( i = 0; i < psnvars; i++ )
-               {
-                  mpq_out_str(stdout, 10, primalsol[i]);
-                  printf(" \n");
-               }   
-            }
-            else
-               printf("Solution too long\n");
-            printf("Objective value: ");
-            mpq_out_str(stdout, 10, objval);
-            printf(" \n");   
-#endif         
+       
             /* assign interior ray to constraint handler data */
             mpq_set(conshdlrdata->commonslack, primalsol[psnvars - 1]);
             for( i = 0; i < ndvarmap; i++ )                
@@ -4879,23 +4781,6 @@ SCIP_RETCODE psComputeSintPointRay(
             }
             else
                conshdlrdata->psrayfail = FALSE;
-            
-#ifdef PS_OUT
-            printf("Constraints all satisfied by slack of:  ");
-            mpq_out_str(stdout, 10, conshdlrdata->commonslack);
-            printf(" \n"); 
-            printf("Relative interior ray: \n");
-            if( conshdlrdata->nextendedconss < 100 )
-            {
-               for( i = 0; i <  conshdlrdata->nextendedconss; i++ )
-               {
-                  mpq_out_str(stdout, 10, conshdlrdata->interiorray[i]);
-                  printf(" \n");
-               }
-            }
-            else
-               printf("Sol. too long\n");
-#endif
          }
          else if( SCIPlpiexIsObjlimExc(pslpiex) )
          {
@@ -4927,8 +4812,7 @@ SCIP_RETCODE psComputeSintPointRay(
          {
             SCIPerrorMessage("Other Error\n");
          }
-      }
-      
+      }     
       if(primalsol != NULL)
       {
          for( i = 0; i < psnvars; i++ )
@@ -5141,10 +5025,6 @@ SCIP_RETCODE psComputeSintPointRay(
       }
       assert( pos == psnconss);
       
-#ifdef PS_OUT 
-      printf("Creating and assigning LPIEX to find S-interior point\n");
-#endif
-
       /* build aux LP using the exact LP interface */   
       if( pslpiex != NULL )
       {
@@ -5164,10 +5044,6 @@ SCIP_RETCODE psComputeSintPointRay(
       /* add all constraints to the exact LP */
       SCIP_CALL( SCIPlpiexAddRows(pslpiex, psnconss, (const mpq_t*) pslhs, (const mpq_t*) psrhs, 
             NULL, psnnonz, psbeg, pslen, psind, psval) );
-
-#ifdef PS_OUT
-      printf("solving LPIEX \n");
-#endif
  
       if( PSWARMSTARTAUXPROB )
       {
@@ -5289,23 +5165,7 @@ SCIP_RETCODE psComputeSintPointRay(
          SCIPdebugMessage("   exact LP solved to optimality\n"); 
          /* get optimal dual solution */
          SCIP_CALL( SCIPlpiexGetSol(pslpiex, &objval, primalsol, NULL, NULL, NULL) );
-
-#ifdef PS_OUT 
-         printf("Solution: \n");
-         if( psnvars < 100 )
-         {
-            for( i = 0; i < psnvars; i++ )
-            {
-               mpq_out_str(stdout, 10, primalsol[i]);
-               printf(" \n");
-            }   
-         }
-         else
-            printf("Solution too long\n");
-         printf("Objective value: ");
-         mpq_out_str(stdout, 10, objval);
-         printf(" \n");   
-#endif         
+        
          /* assign interior point solution to constraint handler data */
          mpq_set(conshdlrdata->commonslack, primalsol[psnvars - 1]);
          for( i = 0; i < ndvarmap; i++ )                
@@ -5318,23 +5178,6 @@ SCIP_RETCODE psComputeSintPointRay(
             conshdlrdata->psdatafail = TRUE;
             SCIPerrorMessage(" Error: interior point not found \n");
          }
-
-#ifdef PS_OUT
-         printf("Constraints all satisfied by slack of:  ");
-         mpq_out_str(stdout, 10, conshdlrdata->commonslack);
-         printf(" \n"); 
-         printf("Relative interior solution: \n");
-         if( conshdlrdata->nextendedconss < 100 )
-         {
-            for( i = 0; i <  conshdlrdata->nextendedconss; i++ )
-            {
-               mpq_out_str(stdout, 10, conshdlrdata->interiorpt[i]);
-               printf(" \n");
-            }
-         }
-         else
-            printf("Sol. too long\n");
-#endif
       }
       else if( SCIPlpiexIsObjlimExc(pslpiex) )
       {
@@ -5472,9 +5315,7 @@ SCIP_RETCODE constructPSData(
       SCIP_CALL( psComputeSintPointRay(scip, conshdlrdata, consdata) );
    }
    
-#ifdef PS_OUT 
-   printf("exiting constructpsdata\n");
-#endif
+   SCIPdebugMessage("Exiting constructPSdata()\n");
 
    return SCIP_OKAY;
 }
@@ -5615,17 +5456,13 @@ SCIP_RETCODE getPSdualbound(
    mpq_t dualbound;
    SCIP_COL** cols;
 
-   //   assert(conshdlrdata->psdatacon);
-   //   assert(!conshdlrdata->psdatafail);
-
-   *success = TRUE;
-
    /* if data has not been constructed, or it failed, then exit */
    if( !conshdlrdata->psdatacon || conshdlrdata->psdatafail)
    {
       *success = FALSE;
       return SCIP_OKAY;
    }
+   *success = TRUE;
 
    SCIPdebugMessage("  calling getPSdualbound()\n");
 
@@ -6220,7 +6057,6 @@ SCIP_RETCODE PScorrectdualray(
       mpq_add(violation[i], violation[i], approxdualray[i+2*nconss+nvars]);
    }
 
-
    /* project solution */
 #ifdef PS_OUT 
    printf("violation: \n");
@@ -6306,8 +6142,6 @@ SCIP_RETCODE PScorrectdualray(
       }
    }    
    
-   
-   
    /* perform shift */
    if( mpq_sgn(lambda2) != 0 )
    {
@@ -6321,8 +6155,7 @@ SCIP_RETCODE PScorrectdualray(
          mpq_add(approxdualray[i], approxdualray[i], mpqtemp);
       }
    }
-   
-   
+
    /* postprocess dual solution to reduce values when both sides of constraint used;
     * if y(lhs) and y(rhs) are both nonzero shift them such that one becomes zero 
     * this will tighten the solution and improve the objective value, there is no way this can hurt 
