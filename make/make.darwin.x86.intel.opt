@@ -7,7 +7,7 @@ OFLAGS		+=	-O3 -mtune=core2 -axT -w1 -vec_report0 -ip -par_report0 -fno-rtti
 CFLAGS		+=
 CXXFLAGS	+=	
 ARFLAGS		=	crs
-LDFLAGS		+=	-lpthread -lm -lstdc++ -Bstatic
+LDFLAGS		+=	-lirc -lpthread -lm -lstdc++ -Bstatic
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
 GMP_FLAGS	=

@@ -22,7 +22,7 @@ TIMELIMIT=$6
 NODELIMIT=$7
 GAPLIMIT=${8:-0}
 THREADS=$9
-CONTINUE=${10}
+CONTINUE=${10,,}
 SCRDIR=${11}
 CONVERTSCIP=${12}
 
@@ -187,7 +187,7 @@ then
 fi
 
 # initialize gams trace file if not continuing previous run
-if test "$CONTINUE" = "false"
+if test "$CONTINUE" != "true"
 then
   echo "* Trace Record Definition" > $TRCFILE
   echo "* GamsSolve" >> $TRCFILE

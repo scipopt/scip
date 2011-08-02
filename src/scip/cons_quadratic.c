@@ -4690,6 +4690,7 @@ SCIP_RETCODE generateCut(
 {
    SCIP_CONSDATA* consdata;
    SCIP_Bool      isconvex;
+   SCIP_Bool      forcelocal;
    SCIP_Real*     coef;
    SCIP_Real      constant;
    SCIP_Bool      success;
@@ -4716,6 +4717,7 @@ SCIP_RETCODE generateCut(
 
    SCIP_CALL( checkCurvature(scip, cons, checkcurvmultivar) );
    isconvex = (violside == SCIP_SIDETYPE_LEFT) ? consdata->isconcave : consdata->isconvex;
+   forcelocal = FALSE;
 
    constant = 0.0;
    refquadpartval = 0.0;
@@ -4888,7 +4890,8 @@ SCIP_RETCODE generateCut(
             if( mincoefidx >= 0 )
             {
                var = consdata->quadvarterms[mincoefidx].var;
-               /* try to eliminate coefficient with minimal absolute value by weakening cut and try again */
+               /* try to eliminate coefficient with minimal absolute value by weakening cut and try again
+                * since we use local bounds, we need to make the row local if they are different from their global counterpart */
                if( ((coef[mincoefidx] > 0.0 && violside == SCIP_SIDETYPE_RIGHT) ||
                     (coef[mincoefidx] < 0.0 && violside == SCIP_SIDETYPE_LEFT )) &&
                    !SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
@@ -4897,6 +4900,7 @@ SCIP_RETCODE generateCut(
                   constant += coef[mincoefidx] * SCIPvarGetLbLocal(var);
                   coef[mincoefidx] = 0.0;
                   refquadpartval += coef[mincoefidx] * (SCIPvarGetLbLocal(var) - ref[mincoefidx]);
+                  forcelocal |= SCIPisGT(scip, SCIPvarGetLbLocal(var), SCIPvarGetLbGlobal(var));
                   continue;
                }
                else if( ((coef[mincoefidx] < 0.0 && violside == SCIP_SIDETYPE_RIGHT) ||
@@ -4907,6 +4911,7 @@ SCIP_RETCODE generateCut(
                   constant += coef[mincoefidx] * SCIPvarGetUbLocal(var);
                   coef[mincoefidx] = 0.0;
                   refquadpartval += coef[mincoefidx] * (SCIPvarGetUbLocal(var) - ref[mincoefidx]);
+                  forcelocal |= SCIPisLT(scip, SCIPvarGetUbLocal(var), SCIPvarGetUbGlobal(var));
                   continue;
                }
             }
@@ -4949,7 +4954,7 @@ SCIP_RETCODE generateCut(
       SCIP_CALL( SCIPcreateEmptyRow(scip, row, cutname,
          violside == SCIP_SIDETYPE_LEFT  ? consdata->lhs - constant : -SCIPinfinity(scip),
          violside == SCIP_SIDETYPE_RIGHT ? consdata->rhs - constant :  SCIPinfinity(scip),
-         SCIPconsIsLocal(cons) || !isconvex, FALSE, TRUE) );
+         SCIPconsIsLocal(cons) || !isconvex || forcelocal, FALSE, TRUE) );
 
       /* add coefficients from linear part */
       SCIP_CALL( SCIPaddVarsToRow(scip, *row, consdata->nlinvars, consdata->linvars, consdata->lincoefs) );

@@ -143,7 +143,6 @@ features:
 - the xor constraint handler can now parse its constraints
 - the bounddisjunction constraint handler can now parse its constraints
 - SCIP-CPX is now threadsafe
-- via "PARASCIP=true" as a "Makefile" option it is possible to compile SCIP threadsafe in DEBUG-mode, (in OPT-mode it's not necessary)
 - new dual presolving methods in cons_setppc and cons_logicor
 - added dialog "write nlp" to write current NLP relaxation to a file
 - new data structure SCIP_STAIRMAP
@@ -174,18 +173,22 @@ features:
 - new presolving step in cons_knapsack (detectRedundantVars, deleteRedundantVars) which determines redundant variables in knapsack constraint with or without using clique information
 - SCIPcreateSolNLP() now creates a SCIP_SOL that is linked to the solution of the current NLP relaxation
 - it is now possible in SCIP_STAGE_TRANSFORMED to call SCIPaddVarLocks (i.e. to lock variables in initialization methods)
-- new variable $(INSTALLDIR) in Makefile which define installation directory for the libraries, $(INSTALLDIR)/lib/, 
-  binary, $(INSTALLDIR)/bin, and include headers, $(INSTALLDIR)/include, the default value is the empty string
-- new target in Makefile "install" performs "make" and copies the include headers
-- new target in Makefile "uninstall" removes libraries, binary, and include headers
 - cons_logicor is now abled to replace all aggregated variables in presolving by there active or negation of an active variable counterpart
 - reader_gms is now able to write indicator constraints (reformulated either via big-M or sos1), see new parameters <reading/gmsreader/bigmdefault> and <reading/gmsreader/indicatorreform>
 
 design:
 - SCIP_HASHMAP now works also without block memory
+
+Makefile
+- via "PARASCIP=true" as a "Makefile" option it is possible to compile SCIP threadsafe in DEBUG-mode, (in OPT-mode it's not necessary)
+- new variable $(INSTALLDIR) in Makefile which define installation directory for the libraries, $(INSTALLDIR)/lib/, 
+  binary, $(INSTALLDIR)/bin, and include headers, $(INSTALLDIR)/include, the default value is the empty string
+- new target in Makefile "install" performs "make" and copies the include headers, binary, and libraries
+- new target in Makefile "uninstall" removes libraries, binary, and include headers form INSTALLDIR
 - the 'make' parameter 'PARASCIP=true' leads to threadsafe message handlers where you need to call SCIPcreateMesshdlrPThreads and SCIPmessageSetHandler/SCIPmessageSetDefaultHandler and SCIPfreeMesshdlrPThreads; therefor we need to link with pthread library
 - to link against IPOPT, only the base directory of an Ipopt installation need to be specified now;
   additionally, if building with gnu compilers, the Ipopt libraries directory is stored in the SCIP binary, which should make it easier to run with Ipopt shared libraries
+- new target "make libs" which compiles only the libraries
 
 SCIP version 2.0.2
 ==================
@@ -295,7 +298,6 @@ fixed bugs:
 parameters:
 - replaced parameter <constraints/quadratic/minefficacy> by <constraints/quadratic/minefficacysepa> and <constraints/quadratic/minefficacyenfo>
 - added possible values 'a' and 'e' for <constraints/soc/nlpform> to enable automatic choice and convex exponential-sqrt form for SOC constraint representation in NLP
-
 
 SCIP version 2.0.0
 ===============
