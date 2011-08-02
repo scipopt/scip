@@ -30,7 +30,7 @@ include make/make.detecthost
 # default settings
 #-----------------------------------------------------------------------------
 
-VERSION		:=	2.0.1.5
+VERSION		:=	2.0.1.6
 
 TIME     	=  	3600
 NODES           =       2100000000
@@ -734,13 +734,17 @@ LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
 
 ifeq ($(VERBOSE),false)
 .SILENT:	$(MAINFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) \
-		$(LPILIBLINK) $(LPILIBSHORTLINK) $(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK) \
-	  $(NLPILIBLINK) $(NLPILIBSHORTLINK) $(MAINLINK) $(MAINSHORTLINK) \
+		$(LPILIBLINK) $(LPILIBSHORTLINK) $(SCIPLIBLINK) $(SCIPLIBSHORTLINK) \
+		$(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK) $(NLPILIBLINK) $(NLPILIBSHORTLINK) \
+		$(MAINLINK) $(MAINSHORTLINK) \
 		$(LPILIBOBJFILES) $(NLPILIBOBJFILES) $(SCIPLIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(MAINOBJFILES)
 endif
 
 .PHONY: all
-all: checklpsdefine $(LINKSMARKERFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINFILE) $(LPILIBLINK) $(LPILIBSHORTLINK) $(NLPILIBLINK) $(NLPILIBSHORTLINK) $(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK) $(MAINLINK) $(MAINSHORTLINK)
+all: 		libs $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
+
+.PHONY: libs
+libs: 		checklpsdefine $(LINKSMARKERFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(LPILIBLINK) $(LPILIBSHORTLINK) $(NLPILIBLINK) $(NLPILIBSHORTLINK) $(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK) 
 
 .PHONY: lint
 lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(NLPILIBSRC) $(MAINSRC)
@@ -889,7 +893,7 @@ $(BINDIR):
 		@-mkdir -p $(BINDIR)
 
 .PHONY: clean
-clean:          cleanlib cleanbin $(LIBOBJDIR) $(LIBOBJSUBDIRS) $(BINOBJDIR) $(OBJDIR)
+clean:          cleanlib cleanbin $(LIBOBJSUBDIRS) $(LIBOBJDIR) $(BINOBJDIR) $(OBJDIR)
 ifneq ($(LIBOBJDIR),)
 		@-(cd $(LIBOBJDIR) && rm -f */*.o && rmdir $(LIBOBJSUBDIRS));
 		@-rmdir $(LIBOBJDIR)
@@ -900,10 +904,11 @@ endif
 ifneq ($(OBJDIR),)
 		@-rm -f $(LASTSETTINGS)
 		@-rmdir $(OBJDIR)
+		@-rmdir --ignore-fail-on-non-empty obj
 endif
 
 .PHONY: cleanlib
-cleanlib:       
+cleanlib:       $(LIBDIR)
 		@echo "-> remove libraries"
 		@-rm -f $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) \
 		$(LPILIBLINK) $(LPILIBSHORTLINK) $(NLPILIBLINK) $(NLPILIBSHORTLINK) \
@@ -911,7 +916,7 @@ cleanlib:
 		@-rmdir --ignore-fail-on-non-empty $(LIBDIR)
 
 .PHONY: cleanbin
-cleanbin:       
+cleanbin:       $(BINDIR) 
 		@echo "-> remove binary"
 		@-rm -f $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
 		@-rmdir --ignore-fail-on-non-empty $(BINDIR)
