@@ -451,7 +451,7 @@ LDFLAGS		+=	$(shell test -e $(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT
 # for Ipopt 3.9.x, the libraries are installed in the lib/coin and lib/coin/ThirdParty subdirectories
 # for Ipopt != 3.9.x, they are installed into the lib subdirectory
 ifneq ($(LINKRPATH),)
-IPOPTFULLPATH	=	$(shell cd $(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT); pwd)
+IPOPTFULLPATH	:=	$(shell cd $(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT) && pwd)
 LDFLAGS		+=	$(LINKRPATH)$(IPOPTFULLPATH)/lib
 LDFLAGS		+=	$(shell test -e $(IPOPTFULLPATH)/lib/coin && echo $(LINKRPATH)$(IPOPTFULLPATH)/lib/coin)
 LDFLAGS		+=	$(shell test -e $(IPOPTFULLPATH)/lib/coin/ThirdParty && echo $(LINKRPATH)$(IPOPTFULLPATH)/lib/coin/ThirdParty)
