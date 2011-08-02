@@ -7,6 +7,7 @@ CXXFLAGS	+=	-nortti -D__USE_STD_IOSTREAM # -noexceptions (CLP uses exceptions)
 LDFLAGS		+=	-om # -non_shared
 ARFLAGS		=	crs
 LDFLAGS		+=	
+LINKRPATH =
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
 GMP_FLAGS	=

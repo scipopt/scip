@@ -345,6 +345,7 @@ void invalidateSolution(
 /** copy method of NLP interface (called when SCIP copies plugins)
  *
  * input:
+ *  - blkmem block memory of target SCIP
  *  - sourcenlpi the NLP interface to copy
  *  - targetnlpi buffer to store pointer to copy of NLP interface
  */
@@ -359,7 +360,7 @@ SCIP_DECL_NLPICOPY(nlpiCopyIpopt)
    sourcedata = SCIPnlpiGetData(sourcenlpi);
    assert(sourcedata != NULL);
 
-   SCIP_CALL( SCIPcreateNlpSolverIpopt(sourcedata->blkmem, targetnlpi) );
+   SCIP_CALL( SCIPcreateNlpSolverIpopt(blkmem, targetnlpi) );
    assert(*targetnlpi != NULL);
 
    SCIP_CALL( SCIPnlpiSetRealPar((*targetnlpi), NULL, SCIP_NLPPAR_INFINITY, sourcedata->infinity) );
@@ -1777,7 +1778,7 @@ const char* SCIPgetSolverNameIpopt(void)
 #ifdef IPOPT_VERSION
    return "Ipopt "IPOPT_VERSION;
 #else
-   return "Ipopt < 3.9.2";
+   return "Ipopt < 3.9.0";
 #endif
 }
 

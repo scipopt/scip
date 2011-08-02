@@ -15,7 +15,8 @@ $(LIBOBJDIR)/nlpi/expr.o: src/nlpi/expr.c src/nlpi/pub_expr.h src/scip/def.h \
  src/scip/struct_message.h src/scip/pub_message.h \
  src/blockmemshell/memory.h src/nlpi/type_expr.h \
  src/nlpi/type_exprinterpret.h src/scip/intervalarith.h \
- src/nlpi/struct_expr.h src/nlpi/exprinterpret.h
+ src/nlpi/struct_expr.h src/nlpi/exprinterpret.h src/scip/pub_misc.h \
+ src/scip/type_misc.h
 $(LIBOBJDIR)/blockmemshell/memory.o: src/blockmemshell/memory.c src/scip/def.h \
  src/scip/type_retcode.h src/scip/message.h src/scip/type_message.h \
  src/scip/struct_message.h src/scip/pub_message.h \
@@ -63,17 +64,31 @@ $(LIBOBJDIR)/nlpi/nlpi_ipopt.o: src/nlpi/nlpi_ipopt.cpp src/nlpi/nlpi_ipopt.h \
  src/nlpi/nlpi.h src/scip/type_misc.h src/nlpi/nlpioracle.h \
  src/nlpi/exprinterpret.h src/nlpi/type_exprinterpret.h \
  src/scip/intervalarith.h src/scip/interrupt.h src/scip/type_interrupt.h \
- src/scip/pub_misc.h lib/ipoptinc/IpIpoptApplication.hpp \
- lib/ipoptinc/IpJournalist.hpp lib/ipoptinc/IpoptConfig.h \
- lib/ipoptinc/IpTypes.hpp \
- lib/ipoptinc/IpReferenced.hpp lib/ipoptinc/IpDebug.hpp \
- lib/ipoptinc/IpSmartPtr.hpp lib/ipoptinc/IpTNLP.hpp \
- lib/ipoptinc/IpUtils.hpp lib/ipoptinc/IpException.hpp \
- lib/ipoptinc/IpAlgTypes.hpp lib/ipoptinc/IpReturnCodes.hpp \
- lib/ipoptinc/IpReturnCodes_inc.h lib/ipoptinc/IpNLP.hpp \
- lib/ipoptinc/IpVector.hpp lib/ipoptinc/IpTaggedObject.hpp \
- lib/ipoptinc/IpObserver.hpp lib/ipoptinc/IpCachedResults.hpp \
- lib/ipoptinc/IpMatrix.hpp lib/ipoptinc/IpSymMatrix.hpp \
- lib/ipoptinc/IpOptionsList.hpp lib/ipoptinc/IpRegOptions.hpp \
- lib/ipoptinc/IpIpoptCalculatedQuantities.hpp \
- lib/ipoptinc/IpSolveStatistics.hpp lib/ipoptinc/IpJournalist.hpp
+ src/scip/pub_misc.h \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ 

@@ -6,6 +6,7 @@ CFLAGS		+=	-msg_disable strctpadding,nestincl,ignorecallval,unusedincl,unnecincl
 CXXFLAGS	+=	-msg_disable basclsnondto,boolexprconst,constrlitnondep -D__USE_STD_IOSTREAM
 ARFLAGS		=	crs
 LDFLAGS		+=	
+LINKRPATH =
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
 GMP_FLAGS	=

@@ -3,7 +3,6 @@ OFLAGS		+=	-O0 -g -m64
 CFLAGS		+=	$(GCCWARN) -funit-at-a-time 
 CXXFLAGS	+=	$(GXXWARN) -funit-at-a-time 
 ARFLAGS		=	crs
-LDFLAGS		+=      -Wl,-rpath,$(SCIPDIR)/$(LIBDIR)
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
 GMP_FLAGS	=

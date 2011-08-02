@@ -62,6 +62,7 @@ struct SCIP_NlpiProblem
 /** copy method of NLP interface (called when SCIP copies plugins)
  *
  * input:
+ *  - blkmem block memory in target SCIP
  *  - sourcenlpi the NLP interface to copy
  *  - targetnlpi buffer to store pointer to copy of NLP interface
  */

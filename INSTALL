@@ -66,7 +66,7 @@ Here is what you have to do to get SCIP running:
    - "INSTALLDIR="     to current directory as install directory (dafault) 
    - "INSTALLDIR=/usr/local" 
                        to install the libraries (/usr/local/lib/) and binary (/usr/loacl/bin/) 
-		       in the directory /usr/local 
+                       in the directory /usr/local
 
    - "OPT=opt"         to use optimized compilation mode (default)
    - "OPT=dbg"         to use debug compilation mode
@@ -204,9 +204,7 @@ make[1]: Entering directory `/sw/scip'
   -> "clpinc" is the path to the Clp "include" directory, e.g., "<Clp-path>/include/coin".
   -> "libclp.*" is the path to the Clp library, e.g., "<Clp-path>/lib/libclp.a"
   -> "libcoinutils.*" is the path to the COIN-OR utilities library, e.g., "<Clp-path>/lib/libcoinutils.a"
-  -> "ipoptinc" is a directory containing the ipopt header files, i.e., "ipoptinc/IpIpoptApplication.hpp" should exist.
-  -> "libipopt.*" is the Ipopt library, e.g., "/client/lib/ipopt-3.7.0/libipopt.a"
-  -> "ipopt_addlibs.*" is the Ipopt addlibs_cpp file, e.g., "/client/lib/ipopt-3.7.0/ipopt_addlibs_cpp.txt"
+  -> "ipopt.*" is a directory containing the ipopt installation, i.e., "ipopt.*/IpIpoptApplication.hpp" should exist.
   -> "cppad" is a directory containing the CppAD header files, i.e., "cppad/cppad.hpp" should exist.
 
 - preparing missing soft-link "lib/clpinc":
@@ -241,36 +239,10 @@ make[1]: Entering directory `/sw/scip'
 * skipped creation of softlink "lib/libcoinutils.linux.x86_64.gnu.opt.so". Call "make links" if needed later.
 
 
-- preparing missing soft-link "lib/ipoptinc":
-> Enter soft-link target file or directory for "lib/ipoptinc" (return if not needed):
-> /sw/Ipopt-3.8/build/include/coin
--> creating softlink "lib/ipoptinc" -> "/sw/Ipopt-3.8/build/include/coin"
-
-
-- preparing missing soft-link "lib/libipopt.linux.x86_64.gnu.opt.a":
-> Enter soft-link target file or directory for "lib/libipopt.linux.x86_64.gnu.opt.a" (return if not needed):
-> /sw/Ipopt-3.8/build/lib/libipopt.a
--> creating softlink "lib/libipopt.linux.x86_64.gnu.opt.a" -> "/sw/Ipopt-3.8/build/lib/libipopt.a"
-
-
-- preparing missing soft-link "lib/libipopt.linux.x86_64.gnu.opt.so":
-* this soft-link is not necessarily needed since "lib/libipopt.linux.x86_64.gnu.opt.a" already exists - press return to skip
-> Enter soft-link target file or directory for "lib/libipopt.linux.x86_64.gnu.opt.so" (return if not needed):
->
-* skipped creation of softlink "lib/libipopt.linux.x86_64.gnu.opt.so". Call "make links" if needed later.
-
-
-- preparing missing soft-link "lib/ipopt_addlibs.linux.x86_64.gnu.opt.a":
-> Enter soft-link target file or directory for "lib/ipopt_addlibs.linux.x86_64.gnu.opt.a" (return if not needed):
-> /sw/Ipopt-3.8/build/share/doc/coin/Ipopt/ipopt_addlibs_cpp.txt
--> creating softlink "lib/ipopt_addlibs.linux.x86_64.gnu.opt.a" -> "/sw/Ipopt-3.8/build/share/doc/coin/Ipopt/ipopt_addlibs_cpp.txt"
-
-
-- preparing missing soft-link "lib/ipopt_addlibs.linux.x86_64.gnu.opt.so":
-* this soft-link is not necessarily needed since "lib/ipopt_addlibs.linux.x86_64.gnu.opt.a" already exists - press return to skip
-> Enter soft-link target file or directory for "lib/ipopt_addlibs.linux.x86_64.gnu.opt.so" (return if not needed):
->
-* skipped creation of softlink "lib/ipopt_addlibs.linux.x86_64.gnu.opt.so". Call "make links" if needed later.
+- preparing missing soft-link "lib/ipopt.linux.x86_64.gnu.opt":
+> Enter soft-link target file or directory for "lib/ipopt.linux.x86_64.gnu.opt" (return if not needed):
+> /sw/ia64_lx26/ipopt-3.10.0/
+-> creating softlink "lib/ipopt.linux.x86_64.gnu.opt" -> "/sw/ia64_lx26/ipopt-3.10.0/"
 
 make[1]: Leaving directory `/sw/scip'
 ---
@@ -400,14 +372,8 @@ make[1]: Leaving directory `/sw/scip'
        installed on your system.
 
    (h) to use IPOPT as NLP solver
-       - ln -s <path to IPOPT's header files> <path to SCIP>/lib/ipoptinc
-         (e.g. "cd scip; ln -s /Ipopt/include/coin lib/ipoptinc")
-       - ln -s <file libipopt.a> <path to SCIP>/lib/libipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).a
-         for each operating system and architecture to use
-         (e.g. "cd scip; ln -s /Ipopt/lib/libipopt.a lib/libipopt.linux.x86.gnu.opt.a")
-       - ln -s <file ipopt_addlibs_cpp.txt> <path to SCIP>/lib/ipopt_addlibs.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).a
-         for each operating system and architecture to use
-         (e.g. "cd scip; ln -s /Ipopt/share/doc/coin/Ipopt/ipopt_addlibs_cpp.txt lib/ipopt_addlibs.linux.x86.gnu.opt.a")
+       - ln -s <path to IPOPT installation> <path to SCIP>/lib/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)
+         (e.g. "cd scip; ln -s /Ipopt lib/ipopt.linux.x86.gnu.opt")
 
    (i) to use CppAD as expressions interpreter
        - ln -s <path to CppAD's header files> <path to SCIP>/lib/cppad

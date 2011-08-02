@@ -15,7 +15,8 @@ $(LIBOBJDIR)/nlpi/expr.o: src/nlpi/expr.c src/nlpi/pub_expr.h src/scip/def.h \
  src/scip/struct_message.h src/scip/pub_message.h \
  src/blockmemshell/memory.h src/nlpi/type_expr.h \
  src/nlpi/type_exprinterpret.h src/scip/intervalarith.h \
- src/nlpi/struct_expr.h src/nlpi/exprinterpret.h
+ src/nlpi/struct_expr.h src/nlpi/exprinterpret.h src/scip/pub_misc.h \
+ src/scip/type_misc.h
 $(LIBOBJDIR)/blockmemshell/memory.o: src/blockmemshell/memory.c src/scip/def.h \
  src/scip/type_retcode.h src/scip/message.h src/scip/type_message.h \
  src/scip/struct_message.h src/scip/pub_message.h \
@@ -56,75 +57,76 @@ $(LIBOBJDIR)/nlpi/exprinterpret_cppad.o: src/nlpi/exprinterpret_cppad.cpp src/sc
  src/scip/struct_message.h src/scip/pub_message.h \
  src/blockmemshell/memory.h src/nlpi/pub_expr.h src/nlpi/type_expr.h \
  src/nlpi/type_exprinterpret.h src/scip/intervalarith.h \
- src/nlpi/exprinterpret.h src/nlpi/intervalarith.h lib/cppad/cppad.hpp \
- lib/cppad/declare.hpp lib/cppad/local/base_complex.hpp \
- lib/cppad/error_handler.hpp lib/cppad/configure.hpp \
- lib/cppad/check_numeric_type.hpp lib/cppad/check_simple_vector.hpp \
- lib/cppad/local/cppad_assert.hpp lib/cppad/lu_solve.hpp \
- lib/cppad/std_math_unary.hpp lib/cppad/lu_factor.hpp \
- lib/cppad/lu_invert.hpp lib/cppad/near_equal.hpp \
- lib/cppad/ode_err_control.hpp lib/cppad/nan.hpp lib/cppad/ode_gear.hpp \
- lib/cppad/vector.hpp lib/cppad/track_new_del.hpp \
- lib/cppad/ode_gear_control.hpp lib/cppad/poly.hpp lib/cppad/pow_int.hpp \
- lib/cppad/romberg_mul.hpp lib/cppad/romberg_one.hpp \
- lib/cppad/rosen_34.hpp lib/cppad/runge_45.hpp lib/cppad/speed_test.hpp \
- lib/cppad/local/define.hpp lib/cppad/local/test_vector.hpp \
- lib/cppad/local/declare_ad.hpp lib/cppad/local/ad.hpp \
- lib/cppad/local/ordered.hpp lib/cppad/local/identical.hpp \
- lib/cppad/local/op_code.hpp lib/cppad/local/recorder.hpp \
- lib/cppad/local/hash_code.hpp lib/cppad/local/player.hpp \
- lib/cppad/local/ad_tape.hpp lib/cppad/local/tape_link.hpp \
- lib/cppad/local/user_ad.hpp lib/cppad/local/default.hpp \
- lib/cppad/local/ad_copy.hpp lib/cppad/local/convert.hpp \
- lib/cppad/local/value.hpp lib/cppad/local/integer.hpp \
- lib/cppad/local/output.hpp lib/cppad/local/print_for.hpp \
- lib/cppad/local/var2par.hpp lib/cppad/local/vec_ad.hpp \
- lib/cppad/local/ad_valued.hpp lib/cppad/local/arithmetic.hpp \
- lib/cppad/local/unary_plus.hpp lib/cppad/local/unary_minus.hpp \
- lib/cppad/local/ad_binary.hpp lib/cppad/local/add.hpp \
- lib/cppad/local/sub.hpp lib/cppad/local/mul.hpp lib/cppad/local/div.hpp \
- lib/cppad/local/compute_assign.hpp lib/cppad/local/add_eq.hpp \
- lib/cppad/local/sub_eq.hpp lib/cppad/local/mul_eq.hpp \
- lib/cppad/local/div_eq.hpp lib/cppad/local/std_math_ad.hpp \
- lib/cppad/local/cond_exp.hpp lib/cppad/local/math_other.hpp \
- lib/cppad/local/abs.hpp lib/cppad/local/atan2.hpp \
- lib/cppad/local/erf.hpp lib/cppad/local/pow.hpp \
- lib/cppad/local/discrete.hpp lib/cppad/local/bool_valued.hpp \
- lib/cppad/local/compare.hpp lib/cppad/local/near_equal_ext.hpp \
- lib/cppad/local/bool_fun.hpp \
- lib/cppad/local/par_var.hpp lib/cppad/local/equal_op_seq.hpp \
- lib/cppad/local/op.hpp lib/cppad/local/sparse_pack.hpp \
- lib/cppad/local/sparse_set.hpp lib/cppad/local/abs_op.hpp \
- lib/cppad/local/add_op.hpp lib/cppad/local/acos_op.hpp \
- lib/cppad/local/asin_op.hpp lib/cppad/local/atan_op.hpp \
- lib/cppad/local/comp_op.hpp lib/cppad/local/cond_op.hpp \
- lib/cppad/local/cos_op.hpp lib/cppad/local/cosh_op.hpp \
- lib/cppad/local/csum_op.hpp lib/cppad/local/discrete_op.hpp \
- lib/cppad/local/div_op.hpp lib/cppad/local/exp_op.hpp \
- lib/cppad/local/load_op.hpp lib/cppad/local/log_op.hpp \
- lib/cppad/local/mul_op.hpp lib/cppad/local/parameter_op.hpp \
- lib/cppad/local/pow_op.hpp lib/cppad/local/print_op.hpp \
- lib/cppad/local/sin_op.hpp lib/cppad/local/sinh_op.hpp \
- lib/cppad/local/sqrt_op.hpp lib/cppad/local/sub_op.hpp \
- lib/cppad/local/sparse_binary_op.hpp lib/cppad/local/sparse_unary_op.hpp \
- lib/cppad/local/store_op.hpp lib/cppad/local/ad_fun.hpp \
- lib/cppad/local/forward0sweep.hpp lib/cppad/local/forward_sweep.hpp \
- lib/cppad/local/reverse_sweep.hpp lib/cppad/local/for_jac_sweep.hpp \
- lib/cppad/local/rev_jac_sweep.hpp lib/cppad/local/rev_hes_sweep.hpp \
- lib/cppad/local/independent.hpp lib/cppad/local/dependent.hpp \
- lib/cppad/local/fun_construct.hpp lib/cppad/local/abort_recording.hpp \
- lib/cppad/local/fun_eval.hpp lib/cppad/local/forward.hpp \
- lib/cppad/local/cap_taylor.hpp lib/cppad/local/reverse.hpp \
- lib/cppad/local/sparse.hpp lib/cppad/local/for_sparse_jac.hpp \
- lib/cppad/local/rev_sparse_jac.hpp lib/cppad/local/rev_sparse_hes.hpp \
- lib/cppad/local/drivers.hpp lib/cppad/local/jacobian.hpp \
- lib/cppad/local/for_one.hpp lib/cppad/local/rev_one.hpp \
- lib/cppad/local/hessian.hpp lib/cppad/local/for_two.hpp \
- lib/cppad/local/rev_two.hpp lib/cppad/local/sparse_jacobian.hpp \
- lib/cppad/local/sparse_hessian.hpp lib/cppad/local/fun_check.hpp \
- lib/cppad/local/omp_max_thread.hpp lib/cppad/local/optimize.hpp \
- lib/cppad/local/lu_ratio.hpp lib/cppad/local/bender_quad.hpp \
- lib/cppad/local/undef.hpp
+ src/nlpi/exprinterpret.h src/nlpi/intervalarith.h \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ 
 $(LIBOBJDIR)/nlpi/nlpi_ipopt.o: src/nlpi/nlpi_ipopt.cpp src/nlpi/nlpi_ipopt.h \
  src/nlpi/type_nlpi.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
@@ -132,17 +134,31 @@ $(LIBOBJDIR)/nlpi/nlpi_ipopt.o: src/nlpi/nlpi_ipopt.cpp src/nlpi/nlpi_ipopt.h \
  src/nlpi/nlpi.h src/scip/type_misc.h src/nlpi/nlpioracle.h \
  src/nlpi/exprinterpret.h src/nlpi/type_exprinterpret.h \
  src/scip/intervalarith.h src/scip/interrupt.h src/scip/type_interrupt.h \
- src/scip/pub_misc.h lib/ipoptinc/IpIpoptApplication.hpp \
- lib/ipoptinc/IpJournalist.hpp lib/ipoptinc/IpoptConfig.h \
- lib/ipoptinc/IpTypes.hpp \
- lib/ipoptinc/IpReferenced.hpp lib/ipoptinc/IpDebug.hpp \
- lib/ipoptinc/IpSmartPtr.hpp lib/ipoptinc/IpTNLP.hpp \
- lib/ipoptinc/IpUtils.hpp lib/ipoptinc/IpException.hpp \
- lib/ipoptinc/IpAlgTypes.hpp lib/ipoptinc/IpReturnCodes.hpp \
- lib/ipoptinc/IpReturnCodes_inc.h lib/ipoptinc/IpNLP.hpp \
- lib/ipoptinc/IpVector.hpp lib/ipoptinc/IpTaggedObject.hpp \
- lib/ipoptinc/IpObserver.hpp lib/ipoptinc/IpCachedResults.hpp \
- lib/ipoptinc/IpMatrix.hpp lib/ipoptinc/IpSymMatrix.hpp \
- lib/ipoptinc/IpOptionsList.hpp lib/ipoptinc/IpRegOptions.hpp \
- lib/ipoptinc/IpIpoptCalculatedQuantities.hpp \
- lib/ipoptinc/IpSolveStatistics.hpp lib/ipoptinc/IpJournalist.hpp
+ src/scip/pub_misc.h \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ 
