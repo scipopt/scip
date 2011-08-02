@@ -11460,7 +11460,11 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          {
             SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat) );
          }
-         if( set->misc_exactsolve && (set->misc_dbmethod == 'p' || set->misc_dbmethod == 'a') && !set->misc_psinfeasray)
+         /* ???????  we used to also check "&& !set->misc_psinfeasray)" here, but this was removed because
+          * even if  set->misc_psinfeasray is true, we still might need this in case dual ray
+          * is not successfully constructed (the success of this is in cons_exactlp conshdlrdata->pshasray
+          */
+         if( set->misc_exactsolve && (set->misc_dbmethod == 'p' || set->misc_dbmethod == 'a') )
          {
             SCIP_CALL( SCIPlpGetUnboundedDualSol(lp, set, stat) );
          }
