@@ -450,7 +450,7 @@ LDFLAGS		+=	`test -e $(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/share
 # ensure that also shared libraries are found while running the binary
 # for Ipopt 3.9.x, the libraries are installed in the lib/coin subdirectory
 # for Ipopt != 3.9.x, they are installed into the lib subdirectory, and additionally in lib/ThirdParty for Ipopt >= 3.10.0
-ifneq ($(LINKRPATH), )
+ifneq ($(LINKRPATH),)
 IPOPTFULLPATH = `cd $(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT); pwd`
 LDFLAGS		+=  $(LINKRPATH)$(IPOPTFULLPATH)/lib/coin $(LINKRPATH)$(IPOPTFULLPATH)/lib/coin/ThirdParty
 LDFLAGS		+=  $(LINKRPATH)$(IPOPTFULLPATH)/lib      $(LINKRPATH)$(IPOPTFULLPATH)/lib/ThirdParty
@@ -719,7 +719,7 @@ MAINLINK	=	$(BINDIR)/$(MAINSHORTNAME).$(BASE).$(LPS)$(EXEEXTENSION)
 MAINSHORTLINK	=	$(BINDIR)/$(MAINSHORTNAME)$(EXEEXTENSION)
 ALLSRC		+=	$(MAINSRC)
 
-ifneq ($(LINKRPATH), )
+ifneq ($(LINKRPATH),)
 LDFLAGS		+=	$(LINKRPATH)$(SCIPDIR)/$(LIBDIR)
 endif
 
