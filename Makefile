@@ -181,7 +181,7 @@ ifeq ($(SHARED),true)
 FLAGS		+=	-fPIC
 LIBEXT		=	$(SHAREDLIBEXT)
 LIBBUILD	=	$(LINKCC)
-LIBBUILDFLAGS	=      -shared -fPIC
+LIBBUILDFLAGS	+=      -shared -fPIC
 LIBBUILD_o	= 	-o # the trailing space is important
 ARFLAGS		=
 RANLIB		=
