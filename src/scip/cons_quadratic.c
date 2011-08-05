@@ -111,6 +111,9 @@ struct SCIP_ConsData
    unsigned int          isremovedfixings:1; /**< did we removed fixed/aggr/multiaggr variables ? */
    unsigned int          ispropagated:1;     /**< was the constraint propagated with respect to the current bounds ? */
    unsigned int          ispresolved:1;      /**< did we checked for possibilities of upgrading or implicit integer variables ? */
+#if 0
+   unsigned int          isimpladded:1;      /**< has there been an implication added for a binary variable in a bilinear term? */
+#endif
 
    SCIP_Real             minlinactivity;     /**< sum of minimal activities of all linear terms with finite minimal activity */
    SCIP_Real             maxlinactivity;     /**< sum of maximal activities of all linear terms with finite maximal activity */
@@ -355,7 +358,7 @@ SCIP_RETCODE catchQuadVarEvents(
    
    eventdata->consdata = consdata;
    eventdata->varidx   = -quadvarpos-1;
-   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->quadvarterms[quadvarpos].var, SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED, eventhdlr, eventdata, &eventdata->filterpos) );
+   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->quadvarterms[quadvarpos].var, SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED /*| SCIP_EVENTTYPE_IMPLADDED*/, eventhdlr, eventdata, &eventdata->filterpos) );
 
    consdata->quadvarterms[quadvarpos].eventdata = eventdata;
 
@@ -387,7 +390,7 @@ SCIP_RETCODE dropQuadVarEvents(
    assert(consdata->quadvarterms[quadvarpos].eventdata->varidx == -quadvarpos-1);
    assert(consdata->quadvarterms[quadvarpos].eventdata->filterpos >= 0);
    
-   SCIP_CALL( SCIPdropVarEvent(scip, consdata->quadvarterms[quadvarpos].var, SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED, eventhdlr, consdata->quadvarterms[quadvarpos].eventdata, consdata->quadvarterms[quadvarpos].eventdata->filterpos) );
+   SCIP_CALL( SCIPdropVarEvent(scip, consdata->quadvarterms[quadvarpos].var, SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED /*| SCIP_EVENTTYPE_IMPLADDED*/, eventhdlr, consdata->quadvarterms[quadvarpos].eventdata, consdata->quadvarterms[quadvarpos].eventdata->filterpos) );
 
    SCIPfreeBlockMemory(scip, &consdata->quadvarterms[quadvarpos].eventdata);
 
@@ -910,11 +913,6 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
 
    eventtype = SCIPeventGetType(event);
 
-   if( eventtype & SCIP_EVENTTYPE_VARFIXED )
-   {
-      consdata->isremovedfixings = FALSE;
-   }
-
    if( eventtype & SCIP_EVENTTYPE_BOUNDCHANGED )
    {
       if( eventdata->varidx < 0 )
@@ -934,6 +932,21 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
       if( eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED )
          consdata->ispropagated = FALSE;
    }
+
+   if( eventtype & SCIP_EVENTTYPE_VARFIXED )
+   {
+      consdata->isremovedfixings = FALSE;
+   }
+
+#if 0
+   if( eventtype & SCIP_EVENTTYPE_IMPLADDED )
+   {
+      assert(eventdata->varidx < 0); /* we catch impladded events only for quadratic variables */
+      /* if variable is binary (quite likely if an implication has been added) and occurs in a bilinear term, then mark that we should check implications */
+      if( SCIPvarIsBinary(SCIPeventGetVar(event)) && consdata->quadvarterms[-eventdata->varidx-1].nadjbilin > 0 )
+         consdata->isimpladded = TRUE;
+   }
+#endif
 
    return SCIP_OKAY;
 }
@@ -3140,6 +3153,77 @@ SCIP_RETCODE presolveTryAddAND(
    return SCIP_OKAY;
 }
 
+/** gets bounds of variable y if x takes a certain value
+ * checks whether x = xval has implications on y
+ */
+static
+void getImpliedBounds(
+   SCIP_VAR*             x,                  /**< variable which implications to check */
+   SCIP_Bool             xval,               /**< value of x to check for (TRUE for 1, FALSE for 0) */
+   SCIP_VAR*             y,                  /**< variable to check if bounds can be reduced */
+   SCIP_INTERVAL*        resultant           /**< buffer to store bounds on y */
+   )
+{
+   int nimpls;
+   int nbinimpls;
+   SCIP_VAR** implvars;
+   SCIP_BOUNDTYPE* impltypes;
+   SCIP_Real* implbounds;
+   int pos;
+
+   assert(x != NULL);
+   assert(y != NULL);
+   assert(resultant != NULL);
+
+   SCIPintervalSetBounds(resultant, MIN(SCIPvarGetLbGlobal(y), SCIPvarGetUbGlobal(y)), MAX(SCIPvarGetLbGlobal(y), SCIPvarGetUbGlobal(y)));
+
+   if( !SCIPvarIsBinary(x) || !SCIPvarIsActive(x) )
+      return;
+
+   /* analyse implications for x = xval */
+   nimpls = SCIPvarGetNImpls(x, xval);
+   if( nimpls == 0 )
+      return;
+
+   nbinimpls  = SCIPvarGetNBinImpls (x, xval);
+   implvars   = SCIPvarGetImplVars  (x, xval);
+   impltypes  = SCIPvarGetImplTypes (x, xval);
+   implbounds = SCIPvarGetImplBounds(x, xval);
+
+   assert(implvars != NULL);
+   assert(impltypes != NULL);
+   assert(implbounds != NULL);
+
+   if( SCIPvarGetType(y) == SCIP_VARTYPE_BINARY )
+   {
+      if( !SCIPsortedvecFindPtr((void**)implvars, SCIPvarComp, (void*)y, nbinimpls, &pos) )
+         return;
+   }
+   else if( nbinimpls < nimpls )
+   {
+      if( !SCIPsortedvecFindPtr((void**)&implvars[nbinimpls], SCIPvarComp, (void*)y, nimpls - nbinimpls, &pos) )
+         return;
+   }
+   else
+      return;
+
+   /* if there are several implications on y, go to the first one */
+   while( pos > 0 && implvars[pos-1] == y )
+      --pos;
+
+   /* update implied lower and upper bounds on y */
+   while( pos < nimpls && implvars[pos] == y )
+   {
+      if( impltypes[pos] == SCIP_BOUNDTYPE_LOWER )
+         resultant->inf = MAX(resultant->inf, implbounds[pos]);
+      else
+         resultant->sup = MIN(resultant->sup, implbounds[pos]);
+      ++pos;
+   }
+
+   assert(!SCIPintervalIsEmpty(*resultant));
+}
+
 /** Reformulates products of binary times bounded continuous variables as system of linear inequalities (plus auxiliary variable).
  * 
  *  For a product x*y, with y a binary variable and x a continous variable with finite bounds,
@@ -3162,7 +3246,8 @@ SCIP_RETCODE presolveTryAddLinearReform(
    SCIP_CONSDATA*     consdata;
    SCIP_VAR**         xvars;
    SCIP_Real*         xcoef;
-   SCIP_INTERVAL      xbnds;
+   SCIP_INTERVAL      xbndszero;
+   SCIP_INTERVAL      xbndsone;
    SCIP_INTERVAL      tmp;
    int                nxvars;
    SCIP_VAR*          y;
@@ -3222,14 +3307,15 @@ SCIP_RETCODE presolveTryAddLinearReform(
       ntodelete = 0;
 
       /* setup a list of bounded variables x_i with coefficients a_i that are multiplied with binary y: y*(sum_i a_i*x_i)
-       * and compute range of sum_i a_i*x_i
+       * and compute range of sum_i a_i*x_i for the cases y = 0 and y = 1
        * we may need several rounds of maxnrvar < nbilinterms
        */
       j = 0;
       do
       {
          nxvars = 0;
-         SCIPintervalSet(&xbnds, 0.0);
+         SCIPintervalSet(&xbndszero, 0.0);
+         SCIPintervalSet(&xbndsone, 0.0);
 
          mincoef = SCIPinfinity(scip);
          maxcoef = 0.0;
@@ -3260,9 +3346,20 @@ SCIP_RETCODE presolveTryAddLinearReform(
             ++nxvars;
 
             /* update bounds on x term */
+#if 0
             SCIPintervalSetBounds(&tmp, MIN(SCIPvarGetLbGlobal(bvar), SCIPvarGetUbGlobal(bvar)), MAX(SCIPvarGetLbGlobal(bvar), SCIPvarGetUbGlobal(bvar)));
             SCIPintervalMulScalar(SCIPinfinity(scip), &tmp, tmp, bilincoef);
-            SCIPintervalAdd(SCIPinfinity(scip), &xbnds, xbnds, tmp);
+            SCIPintervalAdd(SCIPinfinity(scip), &xbndszero, xbndszero, tmp);
+            SCIPintervalAdd(SCIPinfinity(scip), &xbndsone,  xbndsone,  tmp);
+#else
+            getImpliedBounds(y, FALSE, bvar, &tmp); /* get bounds on x if y = 0 */
+            SCIPintervalMulScalar(SCIPinfinity(scip), &tmp, tmp, bilincoef);
+            SCIPintervalAdd(SCIPinfinity(scip), &xbndszero, xbndszero, tmp);
+
+            getImpliedBounds(y,  TRUE, bvar, &tmp); /* get bounds on x if y = 1 */
+            SCIPintervalMulScalar(SCIPinfinity(scip), &tmp, tmp, bilincoef);
+            SCIPintervalAdd(SCIPinfinity(scip), &xbndsone, xbndsone, tmp);
+#endif
 
             if( ABS(bilincoef) < mincoef )
                mincoef = ABS(bilincoef);
@@ -3287,9 +3384,17 @@ SCIP_RETCODE presolveTryAddLinearReform(
          if( nxvars == 0 ) /* all (remaining) x_j seem to be unbounded */
             break;
          
-         assert(!SCIPisInfinity(scip, -SCIPintervalGetInf(xbnds)));
-         assert(!SCIPisInfinity(scip,  SCIPintervalGetSup(xbnds)));
-         
+         assert(!SCIPisInfinity(scip, -SCIPintervalGetInf(xbndszero)));
+         assert(!SCIPisInfinity(scip,  SCIPintervalGetSup(xbndszero)));
+         assert(!SCIPisInfinity(scip, -SCIPintervalGetInf(xbndsone)));
+         assert(!SCIPisInfinity(scip,  SCIPintervalGetSup(xbndsone)));
+
+#ifdef SCIP_DEBUG
+         if( SCIPintervalGetInf(xbndszero) != SCIPintervalGetInf(xbndsone) ||
+             SCIPintervalGetSup(xbndszero) != SCIPintervalGetSup(xbndsone) )
+            SCIPdebugMessage("got different bounds for y = 0: [%g, %g] and y = 1: [%g, %g]\n", xbndszero.inf, xbndszero.sup, xbndsone.inf, xbndsone.sup);
+#endif
+
          if( nxvars == 1 && conshdlrdata->empathy4and >= 1 && SCIPvarIsBinary(xvars[0]) )
          {
             /* product of two binary variables, replace by auxvar and AND constraint */
@@ -3352,14 +3457,15 @@ SCIP_RETCODE presolveTryAddLinearReform(
             assert(scale > 0.0);
             assert(!SCIPisInfinity(scip, scale));
 
-            /* if x-term is always negative, negate scale so we get a positive auxiliary variable; maybe this is better sometimes? */
-            if( !SCIPisPositive(scip, SCIPintervalGetSup(xbnds)) )
+            /* if x-term is always negative for y = 1, negate scale so we get a positive auxiliary variable; maybe this is better sometimes? */
+            if( !SCIPisPositive(scip, SCIPintervalGetSup(xbndsone)) )
                scale = -scale;
 
             SCIPdebugMessage("binary reformulation using scale %g, nxvars = %d, integral = %d\n", scale, nxvars, integral);
             if( scale != 1.0 )
             {
-               SCIPintervalDivScalar(SCIPinfinity(scip), &xbnds, xbnds, scale);
+               SCIPintervalDivScalar(SCIPinfinity(scip), &xbndszero, xbndszero, scale);
+               SCIPintervalDivScalar(SCIPinfinity(scip), &xbndsone,  xbndsone, scale);
                for( k = 0; k < nxvars; ++k )
                   xcoef[k] /= scale;
             }
@@ -3369,21 +3475,21 @@ SCIP_RETCODE presolveTryAddLinearReform(
                (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "prod%s*%s", SCIPvarGetName(y), SCIPvarGetName(xvars[0]));
             else
                (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "prod%s*%s*more", SCIPvarGetName(y), SCIPvarGetName(xvars[0]));
-            SCIP_CALL( SCIPcreateVar(scip, &auxvar, name, MIN(0., SCIPintervalGetInf(xbnds)), MAX(0., SCIPintervalGetSup(xbnds)), 
+            SCIP_CALL( SCIPcreateVar(scip, &auxvar, name, MIN(0., SCIPintervalGetInf(xbndsone)), MAX(0., SCIPintervalGetSup(xbndsone)),
                   0.0, integral ? SCIP_VARTYPE_IMPLINT : SCIP_VARTYPE_CONTINUOUS, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(scip, auxvar) );
 
             /* add auxiliary constraints
              * it seems to be advantageous to make the varbound constraints initial and the linear constraints not initial
-             * maybe because it is more likely that a binary variable taked value 0 instead of 1, and thus the varbound constraints
+             * maybe because it is more likely that a binary variable takes value 0 instead of 1, and thus the varbound constraints
              * are more often active, compared to the linear constraints added below
              * also, the varbound constraints are more sparse than the linear cons
              */
-            if( SCIPisNegative(scip, SCIPintervalGetInf(xbnds)) )
+            if( SCIPisNegative(scip, SCIPintervalGetInf(xbndsone)) )
             {
-               /* add 0 <= z - xbnds.inf * y constraint (as varbound constraint) */
+               /* add 0 <= z - xbndsone.inf * y constraint (as varbound constraint) */
                (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s_1", SCIPvarGetName(y));
-               SCIP_CALL( SCIPcreateConsVarbound(scip, &auxcons, name, auxvar, y, -SCIPintervalGetInf(xbnds), 0.0, SCIPinfinity(scip),
+               SCIP_CALL( SCIPcreateConsVarbound(scip, &auxcons, name, auxvar, y, -SCIPintervalGetInf(xbndsone), 0.0, SCIPinfinity(scip),
                   SCIPconsIsInitial(cons) /*&& conshdlrdata->binreforminitial*/,
                   SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
                   SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
@@ -3394,11 +3500,11 @@ SCIP_RETCODE presolveTryAddLinearReform(
                SCIP_CALL( SCIPreleaseCons(scip, &auxcons) );
                ++*naddconss;
             }
-            if( SCIPisPositive(scip, SCIPintervalGetSup(xbnds)) )
+            if( SCIPisPositive(scip, SCIPintervalGetSup(xbndsone)) )
             {
-               /* add z - xbnds.sup * y <= 0 constraint (as varbound constraint) */
+               /* add z - xbndsone.sup * y <= 0 constraint (as varbound constraint) */
                (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s_2", SCIPvarGetName(y));
-               SCIP_CALL( SCIPcreateConsVarbound(scip, &auxcons, name, auxvar, y, -SCIPintervalGetSup(xbnds), -SCIPinfinity(scip), 0.0,
+               SCIP_CALL( SCIPcreateConsVarbound(scip, &auxcons, name, auxvar, y, -SCIPintervalGetSup(xbndsone), -SCIPinfinity(scip), 0.0,
                   SCIPconsIsInitial(cons) /*&& conshdlrdata->binreforminitial*/,
                   SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
                   SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
@@ -3410,14 +3516,14 @@ SCIP_RETCODE presolveTryAddLinearReform(
                ++*naddconss;
             }
 
-            /* add xbnds.inf <= sum_i a_i*x_i + xbnds.inf * y - z constraint */
+            /* add xbndszero.inf <= sum_i a_i*x_i + xbndszero.inf * y - z constraint */
             xvars[nxvars]   = y;
             xvars[nxvars+1] = auxvar;
-            xcoef[nxvars]   = SCIPintervalGetInf(xbnds);
+            xcoef[nxvars]   = SCIPintervalGetInf(xbndszero);
             xcoef[nxvars+1] = -1;
 
             (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s_3", SCIPvarGetName(y));
-            SCIP_CALL( SCIPcreateConsLinear(scip, &auxcons, name, nxvars+2, xvars, xcoef, SCIPintervalGetInf(xbnds), SCIPinfinity(scip),
+            SCIP_CALL( SCIPcreateConsLinear(scip, &auxcons, name, nxvars+2, xvars, xcoef, SCIPintervalGetInf(xbndszero), SCIPinfinity(scip),
                SCIPconsIsInitial(cons) && conshdlrdata->binreforminitial,
                SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
                SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
@@ -3428,11 +3534,11 @@ SCIP_RETCODE presolveTryAddLinearReform(
             SCIP_CALL( SCIPreleaseCons(scip, &auxcons) );
             ++*naddconss;
 
-            /* add sum_i a_i*x_i + xbnds.sup * y - z <= xbnds.sup constraint */
-            xcoef[nxvars] = SCIPintervalGetSup(xbnds);
+            /* add sum_i a_i*x_i + xbndszero.sup * y - z <= xbndszero.sup constraint */
+            xcoef[nxvars] = SCIPintervalGetSup(xbndszero);
 
             (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s_4", SCIPvarGetName(y));
-            SCIP_CALL( SCIPcreateConsLinear(scip, &auxcons, name, nxvars+2, xvars, xcoef, -SCIPinfinity(scip), SCIPintervalGetSup(xbnds),
+            SCIP_CALL( SCIPcreateConsLinear(scip, &auxcons, name, nxvars+2, xvars, xcoef, -SCIPinfinity(scip), SCIPintervalGetSup(xbndszero),
                SCIPconsIsInitial(cons) && conshdlrdata->binreforminitial,
                SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
                SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
@@ -3880,6 +3986,117 @@ SCIP_RETCODE presolveDisaggregate(
    
    return SCIP_OKAY;
 }
+
+#if 0
+/** checks if there are bilinear terms x*y with a binary variable x and an implication x = {0,1} -> y = 0
+ * in this case, the bilinear term can be removed (x=0 case) or replaced by y (x=1 case)
+ * FIXME: if the implication was derived from this constraint, then we cannot just remove the bilinear term!!!
+ */
+static
+SCIP_RETCODE presolveApplyImplications(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< quadratic constraint */
+   int*                  nbilinremoved       /**< buffer to store number of removed bilinear terms */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR* x;
+   SCIP_VAR* y;
+   SCIP_INTERVAL implbnds;
+   int i;
+   int j;
+   int k;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(nbilinremoved != NULL);
+
+   *nbilinremoved = 0;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   SCIPdebugMessage("apply implications in <%s>\n", SCIPconsGetName(cons));
+
+   /* sort quadvarterms in case we need to search */
+   SCIP_CALL( consdataSortQuadVarTerms(scip, consdata) );
+
+   for( i = 0; i < consdata->nquadvars; ++i )
+   {
+      x = consdata->quadvarterms[i].var;
+      assert(x != NULL);
+
+      if( consdata->quadvarterms[i].nadjbilin == 0 )
+         continue;
+
+      if( !SCIPvarIsBinary(x) )
+         continue;
+
+      if( !SCIPvarIsActive(x) )
+         continue;
+
+      if( SCIPvarGetNImpls(x, TRUE) == 0 && SCIPvarGetNImpls(x, FALSE) == 0 )
+         continue;
+
+      for( j = 0; j < consdata->quadvarterms[i].nadjbilin; ++j )
+      {
+         k = consdata->quadvarterms[i].adjbilin[j];
+         assert(k >= 0);
+         assert(k < consdata->nbilinterms);
+
+         if( consdata->bilinterms[k].coef == 0.0 )
+            continue;
+
+         y = consdata->bilinterms[k].var1 == x ? consdata->bilinterms[k].var2 : consdata->bilinterms[k].var1;
+         assert(x != y);
+
+         getImpliedBounds(x, TRUE, y, &implbnds);
+         if( SCIPisZero(scip, implbnds.inf) && SCIPisZero(scip, implbnds.sup) )
+         {
+            /* if x = 1 implies y = 0, then we can remove the bilinear term x*y, since it is always 0
+             * we only set the coefficient to 0.0 here and mark the bilinterms as not merged */
+            SCIPdebugMessage("remove bilinear term %g<%s><%s> from <%s> due to implication\n", consdata->bilinterms[k].coef, SCIPvarGetName(x), SCIPvarGetName(y), SCIPconsGetName(cons));
+            consdata->bilinterms[k].coef = 0.0;
+            consdata->bilinmerged = FALSE;
+            ++*nbilinremoved;
+            continue;
+         }
+
+         getImpliedBounds(x, FALSE, y, &implbnds);
+         if( SCIPisZero(scip, implbnds.inf) && SCIPisZero(scip, implbnds.sup) )
+         {
+            /* if x = 0 implies y = 0, then we can replace the bilinear term x*y by y
+             * we only move the coefficient to the linear coef of y here and mark the bilinterms as not merged */
+            SCIPdebugMessage("replace bilinear term %g<%s><%s> by %g<%s> in <%s> due to implication\n", consdata->bilinterms[k].coef, SCIPvarGetName(x), SCIPvarGetName(y), consdata->bilinterms[k].coef, SCIPvarGetName(y), SCIPconsGetName(cons));
+            assert(consdata->quadvarssorted);
+            SCIP_CALL( SCIPaddQuadVarLinearCoefQuadratic(scip, cons, y, consdata->bilinterms[k].coef) );
+            consdata->bilinterms[k].coef = 0.0;
+            consdata->bilinmerged = FALSE;
+            ++*nbilinremoved;
+         }
+      }
+   }
+
+   if( *nbilinremoved > 0 )
+   {
+      SCIP_CALL( mergeAndCleanBilinearTerms(scip, cons) );
+
+      /* invalidate nonlinear row */
+      if( consdata->nlrow != NULL )
+      {
+         SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
+      }
+
+      consdata->ispropagated  = FALSE;
+      consdata->ispresolved   = FALSE;
+      consdata->iscurvchecked = FALSE;
+   }
+
+   consdata->isimpladded = FALSE;
+
+   return SCIP_OKAY;
+}
+#endif
 
 /** checks a quadratic constraint for convexity and/or concavity */
 static
@@ -7759,7 +7976,20 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
       SCIPdebug( SCIPprintCons(scip, conss[c], NULL) );
 
       havechange = FALSE;
-
+#if 0
+      if( consdata->isimpladded )
+      {
+         int nbilinremoved;
+         SCIP_CALL( presolveApplyImplications(scip, conss[c], &nbilinremoved) );
+         if( nbilinremoved > 0 )
+         {
+            *nchgcoefs += nbilinremoved;
+            havechange = TRUE;
+            *result = SCIP_SUCCESS;
+         }
+         assert(!consdata->isimpladded);
+      }
+#endif
       /* call upgrade methods if the constraint has not been presolved yet or there has been a bound tightening or possibly be a change in variable type
        * we want to do this before (multi)aggregated variables are replaced, since that may change structure, e.g., introduce bilinear terms
        */
