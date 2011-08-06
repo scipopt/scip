@@ -942,7 +942,7 @@ SCIP_RETCODE SCIPsepastoreRemoveInefficaciousCuts(
       else
          ++c;
    }
-   SCIPdebugMessage("removed %d non-violated cuts\n", cnt);
+   SCIPdebugMessage("removed %d non-efficious cuts\n", cnt);
 
    return SCIP_OKAY;
 }
