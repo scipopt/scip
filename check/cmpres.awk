@@ -664,7 +664,7 @@ END {
          # If we got a timeout although the time limit has not been reached (e.g., due to a memory limit),
          # we assume that the run would have been continued with the same nodes/sec.
          # Set the time to the time limit and increase the nodes accordingly.
-         if( ( status[s,pidx] == "timeout" ) && time[s,pidx] < timelimit[s] )
+         if( status[s,pidx] == "timeout" && time[s,pidx] < timelimit[s] )
          {
             nodes[s,pidx] *= timelimit[s]/time[s,pidx];
             time[s,pidx] = timelimit[s];
@@ -718,6 +718,22 @@ END {
             notimeout = 0;
             continue;
          }
+	 else
+	 {
+            if ( status[s,pidx] == "timeout" )
+	    {
+               # If memory limit was exceeded or we hit a hard time/memory limit,
+               # replace time and nodes by worst time and worst nodes of all runs.
+	       # Note this also takes action if the time limits of the runs are
+	       # different: in this case we set the values to the worst case.
+	       if ( time[s,pidx] < 0.99*worsttime || nodes[s,pidx] <= 1 )
+	       {
+		  iters[s,pidx] = worstiters+s; # make sure this is not treated as equal path
+		  nodes[s,pidx] = worstnodes;
+		  time[s,pidx] = worsttime;
+	       }
+	    }
+	 }
 
          if( nodecomp == -1 )
          {
@@ -759,7 +775,7 @@ END {
                if( !unprocessed )
                {
                   if ( notimeout )
-                  nsolved[s,-1]++;
+		     nsolved[s,-1]++;
                   nsolved[s,0]++;
                   nsolved[s,category[s]]++;
                   nthissolved++;
@@ -771,14 +787,6 @@ END {
                notimeout = 0;
                if( !unprocessed )
                {
-                  # if memory limit was exceeded or we hit a hard time/memory limit,
-                  # replace time and nodes by worst time and worst nodes of all runs
-                  if( time[s,pidx] < 0.99*worsttime || nodes[s,pidx] <= 1 )
-                  {
-                     iters[s,pidx] = worstiters+s; # make sure this is not treated as equal path
-                     nodes[s,pidx] = worstnodes;
-                     time[s,pidx] = worsttime;
-                  }
                   if( countprob )
                   {
                      ntimeouts[s,0]++;
