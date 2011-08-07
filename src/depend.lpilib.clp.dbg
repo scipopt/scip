@@ -1,19 +1,32 @@
-$(LIBOBJDIR)/scip/lpi_clp.o: src/scip/lpi_clp.cpp lib/clpinc/ClpSimplex.hpp \
- lib/clpinc/ClpModel.hpp lib/clpinc/ClpConfig.h \
- lib/clpinc/ClpPackedMatrix.hpp lib/clpinc/CoinPragma.hpp \
- lib/clpinc/ClpMatrixBase.hpp lib/clpinc/CoinTypes.hpp \
- lib/clpinc/CoinUtilsConfig.h lib/clpinc/CoinPackedMatrix.hpp \
- lib/clpinc/CoinError.hpp lib/clpinc/CoinPackedVectorBase.hpp \
- lib/clpinc/CoinShallowPackedVector.hpp lib/clpinc/CoinMessageHandler.hpp \
- lib/clpinc/CoinHelperFunctions.hpp lib/clpinc/CoinFinite.hpp \
- lib/clpinc/ClpParameters.hpp lib/clpinc/ClpObjective.hpp \
- lib/clpinc/ClpSolve.hpp lib/clpinc/ClpPrimalColumnSteepest.hpp \
- lib/clpinc/ClpPrimalColumnPivot.hpp lib/clpinc/ClpDualRowSteepest.hpp \
- lib/clpinc/ClpDualRowPivot.hpp lib/clpinc/CoinIndexedVector.hpp \
- lib/clpinc/CoinSort.hpp lib/clpinc/CoinDistance.hpp \
- lib/clpinc/ClpConfig.h src/scip/lpi.h src/scip/def.h \
- src/scip/type_retcode.h src/scip/message.h src/scip/type_message.h \
- src/scip/struct_message.h src/scip/pub_message.h \
+$(LIBOBJDIR)/scip/lpi_clp.o: src/scip/lpi_clp.cpp \
+ lib/clp.linux.x86_64.gnu.opt/include/coin/ClpSimplex.hpp \
+ lib/clp.linux.x86_64.gnu.opt/include/coin/ClpModel.hpp \
+ lib/clp.linux.x86_64.gnu.opt/include/coin/ClpConfig.h \
+ lib/clp.linux.x86_64.gnu.opt/include/coin/ClpPackedMatrix.hpp \
+ lib/clp.linux.x86_64.gnu.opt/include/coin/CoinPragma.hpp \
+ lib/clp.linux.x86_64.gnu.opt/include/coin/ClpMatrixBase.hpp \
+ lib/clp.linux.x86_64.gnu.opt/include/coin/CoinTypes.hpp \
+ lib/clp.linux.x86_64.gnu.opt/include/coin/CoinUtilsConfig.h \
+ lib/clp.linux.x86_64.gnu.opt/include/coin/CoinPackedMatrix.hpp \
+ lib/clp.linux.x86_64.gnu.opt/include/coin/CoinError.hpp \
+ lib/clp.linux.x86_64.gnu.opt/include/coin/CoinPackedVectorBase.hpp \
+ lib/clp.linux.x86_64.gnu.opt/include/coin/CoinShallowPackedVector.hpp \
+ lib/clp.linux.x86_64.gnu.opt/include/coin/CoinMessageHandler.hpp \
+ lib/clp.linux.x86_64.gnu.opt/include/coin/CoinHelperFunctions.hpp \
+ lib/clp.linux.x86_64.gnu.opt/include/coin/CoinFinite.hpp \
+ lib/clp.linux.x86_64.gnu.opt/include/coin/ClpParameters.hpp \
+ lib/clp.linux.x86_64.gnu.opt/include/coin/ClpObjective.hpp \
+ lib/clp.linux.x86_64.gnu.opt/include/coin/ClpSolve.hpp \
+ lib/clp.linux.x86_64.gnu.opt/include/coin/ClpPrimalColumnSteepest.hpp \
+ lib/clp.linux.x86_64.gnu.opt/include/coin/ClpPrimalColumnPivot.hpp \
+ lib/clp.linux.x86_64.gnu.opt/include/coin/ClpDualRowSteepest.hpp \
+ lib/clp.linux.x86_64.gnu.opt/include/coin/ClpDualRowPivot.hpp \
+ lib/clp.linux.x86_64.gnu.opt/include/coin/CoinIndexedVector.hpp \
+ lib/clp.linux.x86_64.gnu.opt/include/coin/CoinSort.hpp \
+ lib/clp.linux.x86_64.gnu.opt/include/coin/CoinDistance.hpp \
+ lib/clp.linux.x86_64.gnu.opt/include/coin/ClpConfig.h src/scip/lpi.h \
+ src/scip/def.h src/scip/type_retcode.h src/scip/message.h \
+ src/scip/type_message.h src/scip/struct_message.h src/scip/pub_message.h \
  src/blockmemshell/memory.h src/scip/type_lpi.h src/scip/bitencode.h
 $(LIBOBJDIR)/scip/bitencode.o: src/scip/bitencode.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \

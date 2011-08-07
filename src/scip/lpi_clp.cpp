@@ -56,13 +56,13 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 
-#include <ClpSimplex.hpp>
-#include <ClpPrimalColumnSteepest.hpp>
-#include <ClpDualRowSteepest.hpp>
-#include <CoinIndexedVector.hpp>
-#include <ClpConfig.h>
+#include <coin/ClpSimplex.hpp>
+#include <coin/ClpPrimalColumnSteepest.hpp>
+#include <coin/ClpDualRowSteepest.hpp>
+#include <coin/CoinIndexedVector.hpp>
+#include <coin/ClpConfig.h>
 #ifndef CLP_VERSION
-#include <config_clp.h>
+#include <coin/config_clp.h>
 #define CLP_VERSION VERSION
 #endif
 
