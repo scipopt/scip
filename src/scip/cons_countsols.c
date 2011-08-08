@@ -641,10 +641,10 @@ SCIP_RETCODE countSparsesol(
    assert( conshdlrdata != NULL );
    assert( result != NULL );
    
-   /* setting result to infeasible since we reject any solution; however, if the solution passes the sparse test the
-    * result is set to SCIP_CUTOFF which cuts off the subtree initialized through the current node 
+   /* the result should be infeasible since we reject any solution; however, if the solution passes the sparse test the
+    * result is set to SCIP_CUTOFF which cuts off the subtree initialized through the current node
     */
-   *result = SCIP_INFEASIBLE;
+   assert(*result == SCIP_INFEASIBLE);
    
    if( feasible )
    {
@@ -1192,6 +1192,11 @@ SCIP_RETCODE checkSolution(
    assert( SCIPgetNOrigVars(scip) != 0);
    assert( SCIPsolGetHeur(sol) == NULL);
 
+   /* setting result to infeasible since we reject any solution; however, if the solution passes the sparse test or is
+    * completely fixed the result is set to SCIP_CUTOFF which cuts off the subtree initialized through the current node
+    */
+   *result = SCIP_INFEASIBLE;
+
 #ifdef SCIP_DEBUG
    {
       SCIP_VAR* var;
@@ -1235,7 +1240,7 @@ SCIP_RETCODE checkSolution(
       SCIP_CALL( checkFeasSubtree(scip, sol, &feasible) ) ;
       SCIP_CALL( countSparsesol(scip, sol, feasible, conshdlrdata, result) );
    }
-
+   
    /* transform the current number of solutions into a SCIP_Longint */
    nsols = getNCountedSols(conshdlrdata->nsols, &valid);
    
