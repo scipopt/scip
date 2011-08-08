@@ -1024,10 +1024,11 @@ depend:	scipdepend lpidepend nlpidepend maindepend
 -include	$(NLPILIBDEP)
 
 $(MAINFILE):	$(BINDIR) $(BINOBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINOBJFILES)
-		@echo "-> linking $@"
 ifneq ($(SHARED),true) # this is temporary hack which is needed since the shared libraries are prefered 
+		@echo "temporary hack since shared libraries are prefered"
 		@$(MAKE) cleanlib SHARED=true
 endif
+		@echo "-> linking $@"
 ifeq ($(LINKER),C)
 		$(LINKCC) $(MAINOBJFILES) \
 		$(LINKCC_L)$(LIBDIR) $(LINKCC_l)$(SCIPLIB)$(LINKLIBSUFFIX) $(LINKCC_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCC_l)$(NLPILIB)$(LINKLIBSUFFIX) \
