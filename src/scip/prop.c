@@ -45,6 +45,12 @@ SCIP_DECL_SORTPTRCOMP(SCIPpropComp)
    return ((SCIP_PROP*)elem2)->priority - ((SCIP_PROP*)elem1)->priority;
 }
 
+/** compares two propagators w. r. to their priority */
+SCIP_DECL_SORTPTRCOMP(SCIPpropPresolComp)
+{  /*lint --e{715}*/
+   return ((SCIP_PROP*)elem2)->presolpriority - ((SCIP_PROP*)elem1)->presolpriority;
+}
+
 /** method to call, when the priority of a propagator was changed */
 static
 SCIP_DECL_PARAMCHGD(paramChgdPropPriority)
@@ -56,6 +62,21 @@ SCIP_DECL_PARAMCHGD(paramChgdPropPriority)
 
    /* use SCIPsetPropPriority() to mark the props unsorted */
    SCIP_CALL( SCIPsetPropPriority(scip, (SCIP_PROP*)paramdata, SCIPparamGetInt(param)) ); /*lint !e740*/
+
+   return SCIP_OKAY;
+}
+
+/** method to call, when the presolving priority of a propagator was changed */
+static
+SCIP_DECL_PARAMCHGD(paramChgdPropPresolPriority)
+{  /*lint --e{715}*/
+   SCIP_PARAMDATA* paramdata;
+
+   paramdata = SCIPparamGetData(param);
+   assert(paramdata != NULL);
+
+   /* use SCIPsetPropPriority() to mark the props unsorted */
+   SCIP_CALL( SCIPsetPropPresolPriority(scip, (SCIP_PROP*)paramdata, SCIPparamGetInt(param)) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -88,12 +109,19 @@ SCIP_RETCODE SCIPpropCreate(
    int                   priority,           /**< priority of the propagator (>= 0: before, < 0: after constraint handlers) */
    int                   freq,               /**< frequency for calling propagator */
    SCIP_Bool             delay,              /**< should propagator be delayed, if other propagators found reductions? */
+   SCIP_PROPTIMING       timingmask,         /**< positions in the node solving loop where heuristic should be executed */
+   int                   presolpriority,     /**< priority of the propagator (>= 0: before, < 0: after constraint handlers) */
+   int                   presolmaxrounds,    /**< maximal number of presolving rounds the propagator participates in (-1: no limit) */
+   SCIP_Bool             presoldelay,        /**< should presolving be delayed, if other presolvers found reductions? */
    SCIP_DECL_PROPCOPY    ((*propcopy)),      /**< copy method of propagator or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_PROPFREE    ((*propfree)),      /**< destructor of propagator */
    SCIP_DECL_PROPINIT    ((*propinit)),      /**< initialize propagator */
    SCIP_DECL_PROPEXIT    ((*propexit)),      /**< deinitialize propagator */
+   SCIP_DECL_PROPINITPRE ((*propinitpre)),   /**< presolving initialization method of propagator */
+   SCIP_DECL_PROPEXITPRE ((*propexitpre)),   /**< presolving deinitialization method of propagator */
    SCIP_DECL_PROPINITSOL ((*propinitsol)),   /**< solving process initialization method of propagator */
    SCIP_DECL_PROPEXITSOL ((*propexitsol)),   /**< solving process deinitialization method of propagator */
+   SCIP_DECL_PROPPRESOL  ((*proppresol)),    /**< presolving method */
    SCIP_DECL_PROPEXEC    ((*propexec)),      /**< execution method of propagator */
    SCIP_DECL_PROPRESPROP ((*propresprop)),   /**< propagation conflict resolving method */
    SCIP_PROPDATA*        propdata            /**< propagator data */
@@ -117,17 +145,23 @@ SCIP_RETCODE SCIPpropCreate(
    (*prop)->propfree = propfree;
    (*prop)->propinit = propinit;
    (*prop)->propexit = propexit;
+   (*prop)->propinitpre = propinitpre;
+   (*prop)->propexitpre = propexitpre;
    (*prop)->propinitsol = propinitsol;
    (*prop)->propexitsol = propexitsol;
+   (*prop)->proppresol = proppresol;
    (*prop)->propexec = propexec;
    (*prop)->propresprop = propresprop;
    (*prop)->propdata = propdata;
+   (*prop)->timingmask = timingmask;
    SCIP_CALL( SCIPclockCreate(&(*prop)->proptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*prop)->resproptime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*prop)->presoltime, SCIP_CLOCKTYPE_DEFAULT) );
    (*prop)->ncalls = 0;
    (*prop)->nrespropcalls = 0;
    (*prop)->ncutoffs = 0;
    (*prop)->ndomredsfound = 0;
+   (*prop)->presolwasdelayed = FALSE;
    (*prop)->wasdelayed = FALSE;
    (*prop)->initialized = FALSE;
 
@@ -147,6 +181,22 @@ SCIP_RETCODE SCIPpropCreate(
    SCIP_CALL( SCIPsetAddBoolParam(set, blkmem, paramname,
          "should propagator be delayed, if other propagators found reductions?",
          &(*prop)->delay, TRUE, delay, NULL, NULL) ); /*lint !e740*/
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/presolpriority", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "presolving priority of propagator <%s>", name);
+   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
+         &(*prop)->presolpriority, TRUE, presolpriority, INT_MIN/4, INT_MAX/4, 
+         paramChgdPropPresolPriority, (SCIP_PARAMDATA*)(*prop)) ); /*lint !e740*/
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/maxprerounds", name);
+   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname,
+         "maximal number of presolving rounds the presolver participates in (-1: no limit)",
+         &(*prop)->maxprerounds, FALSE, presolmaxrounds, -1, INT_MAX, NULL, NULL) ); /*lint !e740*/
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/presoldelay", name);
+   SCIP_CALL( SCIPsetAddBoolParam(set, blkmem, paramname,
+         "should presolver be delayed, if other presolvers found reductions?",
+         &(*prop)->presoldelay, TRUE, presoldelay, NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -168,10 +218,11 @@ SCIP_RETCODE SCIPpropFree(
       SCIP_CALL( (*prop)->propfree(set->scip, *prop) );
    }
 
-   SCIPclockFree(&(*prop)->proptime);
+   SCIPclockFree(&(*prop)->presoltime);
    SCIPclockFree(&(*prop)->resproptime);
-   BMSfreeMemoryArray(&(*prop)->name);
+   SCIPclockFree(&(*prop)->proptime);
    BMSfreeMemoryArray(&(*prop)->desc);
+   BMSfreeMemoryArray(&(*prop)->name);
    BMSfreeMemory(prop);
 
    return SCIP_OKAY;
@@ -196,12 +247,34 @@ SCIP_RETCODE SCIPpropInit(
    {
       SCIPclockReset(prop->proptime);
       SCIPclockReset(prop->resproptime);
+      SCIPclockReset(prop->presoltime);
 
       prop->ncalls = 0;
       prop->nrespropcalls = 0;
       prop->ncutoffs = 0;
       prop->ndomredsfound = 0;
+      prop->lastnfixedvars = 0;
+      prop->lastnaggrvars = 0;
+      prop->lastnchgvartypes = 0;
+      prop->lastnchgbds = 0;
+      prop->lastnaddholes = 0;
+      prop->lastndelconss = 0;
+      prop->lastnaddconss = 0;
+      prop->lastnupgdconss = 0;
+      prop->lastnchgcoefs = 0;
+      prop->lastnchgsides = 0;
+      prop->nfixedvars = 0;
+      prop->naggrvars = 0;
+      prop->nchgvartypes = 0;
+      prop->nchgbds = 0;
+      prop->naddholes = 0;
+      prop->ndelconss = 0;
+      prop->naddconss = 0;
+      prop->nupgdconss = 0;
+      prop->nchgcoefs = 0;
+      prop->nchgsides = 0;
       prop->wasdelayed = FALSE;
+      prop->presolwasdelayed = FALSE;
    }
 
    if( prop->propinit != NULL )
@@ -233,6 +306,83 @@ SCIP_RETCODE SCIPpropExit(
       SCIP_CALL( prop->propexit(set->scip, prop) );
    }
    prop->initialized = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** informs propagator that the presolving process is being started */
+SCIP_RETCODE SCIPpropInitpre(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   assert(prop != NULL);
+   assert(set != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_FEASIBLE;
+
+   prop->lastnfixedvars = 0;
+   prop->lastnaggrvars = 0;
+   prop->lastnchgvartypes = 0;
+   prop->lastnchgbds = 0;
+   prop->lastnaddholes = 0;
+   prop->lastndelconss = 0;
+   prop->lastnaddconss = 0;
+   prop->lastnupgdconss = 0;
+   prop->lastnchgcoefs = 0;
+   prop->lastnchgsides = 0;
+   prop->presolwasdelayed = FALSE;
+   prop->wasdelayed = FALSE;
+
+   /* call propving initialization method of propver */
+   if( prop->propinitpre != NULL )
+   {
+      SCIP_CALL( prop->propinitpre(set->scip, prop, result) );
+
+      /* evaluate result */
+      if( *result != SCIP_CUTOFF
+         && *result != SCIP_UNBOUNDED
+         && *result != SCIP_FEASIBLE )
+      {
+         SCIPerrorMessage("presolving initialization method of propagator <%s> returned invalid result <%d>\n", 
+            prop->name, *result);
+         return SCIP_INVALIDRESULT;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** informs propagator that the presolving process is finished */
+SCIP_RETCODE SCIPpropExitpre(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   assert(prop != NULL);
+   assert(set != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_FEASIBLE;
+
+   /* call propving deinitialization method of propver */
+   if( prop->propexitpre != NULL )
+   {
+      SCIP_CALL( prop->propexitpre(set->scip, prop, result) );
+
+      /* evaluate result */
+      if( *result != SCIP_CUTOFF
+         && *result != SCIP_UNBOUNDED
+         && *result != SCIP_FEASIBLE )
+      {
+         SCIPerrorMessage("presolving deinitialization method of propagator <%s> returned invalid result <%d>\n", 
+            prop->name, *result);
+         return SCIP_INVALIDRESULT;
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -273,6 +423,151 @@ SCIP_RETCODE SCIPpropExitsol(
    return SCIP_OKAY;
 }
 
+/** executes presolving method of propagator */
+SCIP_RETCODE SCIPpropPresol(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             execdelayed,        /**< execute presolving even if it is marked to be delayed */
+   int                   nrounds,            /**< number of presolving rounds already done */
+   int*                  nfixedvars,         /**< pointer to total number of variables fixed of all presolvers */
+   int*                  naggrvars,          /**< pointer to total number of variables aggregated of all presolvers */
+   int*                  nchgvartypes,       /**< pointer to total number of variable type changes of all presolvers */
+   int*                  nchgbds,            /**< pointer to total number of variable bounds tightend of all presolvers */
+   int*                  naddholes,          /**< pointer to total number of domain holes added of all presolvers */
+   int*                  ndelconss,          /**< pointer to total number of deleted constraints of all presolvers */
+   int*                  naddconss,          /**< pointer to total number of added constraints of all presolvers */
+   int*                  nupgdconss,         /**< pointer to total number of upgraded constraints of all presolvers */
+   int*                  nchgcoefs,          /**< pointer to total number of changed coefficients of all presolvers */
+   int*                  nchgsides,          /**< pointer to total number of changed left/right hand sides of all presolvers */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   int oldnfixedvars;
+   int oldnaggrvars;
+   int oldnchgvartypes;
+   int oldnchgbds;
+   int oldnaddholes;
+   int oldndelconss;
+   int oldnaddconss;
+   int oldnupgdconss;
+   int oldnchgcoefs;
+   int oldnchgsides;
+
+   assert(prop != NULL);
+   assert(set != NULL);
+   assert(nfixedvars != NULL);
+   assert(naggrvars != NULL);
+   assert(nchgvartypes != NULL);
+   assert(nchgbds != NULL);
+   assert(naddholes != NULL);
+   assert(ndelconss != NULL);
+   assert(naddconss != NULL);
+   assert(nupgdconss != NULL);
+   assert(nchgcoefs != NULL);
+   assert(nchgsides != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   if( prop->proppresol == NULL )
+      return SCIP_OKAY;
+   
+   /* check number of presolving rounds */
+   if( prop->maxprerounds >= 0 && nrounds >= prop->maxprerounds && !prop->presolwasdelayed )
+      return SCIP_OKAY;
+
+   /* remember the old number of changes */
+   oldnfixedvars = *nfixedvars;
+   oldnaggrvars = *naggrvars;
+   oldnchgvartypes = *nchgvartypes;
+   oldnchgbds = *nchgbds;
+   oldnaddholes = *naddholes;
+   oldndelconss = *ndelconss;
+   oldnaddconss = *naddconss;
+   oldnupgdconss = *nupgdconss;
+   oldnchgcoefs = *nchgcoefs;
+   oldnchgsides = *nchgsides;
+   assert(oldnfixedvars >= 0);
+   assert(oldnaggrvars >= 0);
+   assert(oldnchgvartypes >= 0);
+   assert(oldnchgbds >= 0);
+   assert(oldnaddholes >= 0);
+   assert(oldndelconss >= 0);
+   assert(oldnaddconss >= 0);
+   assert(oldnupgdconss >= 0);
+   assert(oldnchgcoefs >= 0);
+   assert(oldnchgsides >= 0);
+
+   /* check, if presolver should be delayed */
+   if( !prop->presoldelay || execdelayed )
+   {
+      SCIPdebugMessage("calling propagator <%s>\n", prop->name);
+
+      /* start timing */
+      SCIPclockStart(prop->presoltime, set);
+
+      /* call external method */
+      SCIP_CALL( prop->proppresol(set->scip, prop, nrounds,
+            *nfixedvars - prop->nfixedvars, *naggrvars - prop->naggrvars, *nchgvartypes - prop->nchgvartypes,
+            *nchgbds - prop->nchgbds, *naddholes - prop->naddholes, *ndelconss - prop->ndelconss, 
+            *naddconss - prop->naddconss, *nupgdconss - prop->nupgdconss, *nchgcoefs - prop->nchgcoefs, 
+            *nchgsides - prop->nchgsides,
+            nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
+            ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result) );
+
+      /* stop timing */
+      SCIPclockStop(prop->presoltime, set);
+
+      /* count the new changes */
+      prop->nfixedvars += *nfixedvars - oldnfixedvars;
+      prop->naggrvars += *naggrvars - oldnaggrvars;
+      prop->nchgvartypes += *nchgvartypes - oldnchgvartypes;
+      prop->nchgbds += *nchgbds - oldnchgbds;
+      prop->naddholes += *naddholes - oldnaddholes;
+      prop->ndelconss += *ndelconss - oldndelconss;
+      prop->naddconss += *naddconss - oldnaddconss;
+      prop->nupgdconss += *nupgdconss - oldnupgdconss;
+      prop->nchgcoefs += *nchgcoefs - oldnchgcoefs;
+      prop->nchgsides += *nchgsides - oldnchgsides;
+
+      /* check result code of callback method */
+      if( *result != SCIP_CUTOFF
+         && *result != SCIP_UNBOUNDED
+         && *result != SCIP_SUCCESS
+         && *result != SCIP_DIDNOTFIND
+         && *result != SCIP_DIDNOTRUN
+         && *result != SCIP_DELAYED )
+      {
+         SCIPerrorMessage("propagator <%s> returned invalid result <%d>\n", prop->name, *result);
+         return SCIP_INVALIDRESULT;
+      }
+      else if( *result != SCIP_DIDNOTRUN && *result != SCIP_DELAYED )
+      {
+         /* remember the number of changes prior to the call of the presolving method */
+         prop->lastnfixedvars = oldnfixedvars;
+         prop->lastnaggrvars = oldnaggrvars;
+         prop->lastnchgvartypes = oldnchgvartypes;
+         prop->lastnchgbds = oldnchgbds;
+         prop->lastnaddholes = oldnaddholes;
+         prop->lastndelconss = oldndelconss;
+         prop->lastnaddconss = oldnaddconss;
+         prop->lastnupgdconss = oldnupgdconss;
+         prop->lastnchgcoefs = oldnchgcoefs;
+         prop->lastnchgsides = oldnchgsides;
+      }
+   }
+   else
+   {
+      SCIPdebugMessage("presoving of propagator <%s> was delayed\n", prop->name);
+      *result = SCIP_DELAYED;
+   }
+
+   /* remember whether presolving was delayed */
+   prop->presolwasdelayed = (*result == SCIP_DELAYED);
+
+   return SCIP_OKAY;
+}
+
 /** calls execution method of propagator */
 SCIP_RETCODE SCIPpropExec(
    SCIP_PROP*            prop,               /**< propagator */
@@ -292,7 +587,7 @@ SCIP_RETCODE SCIPpropExec(
    assert(depth >= 0);
    assert(result != NULL);
 
-   if( (depth == 0 && prop->freq == 0) || (prop->freq > 0 && depth % prop->freq == 0) || prop->wasdelayed )
+   if( (depth == 0 && prop->freq == 0) || (prop->freq > 0 && depth % prop->freq == 0) )
    {
       if( !prop->delay || execdelayed )
       {
@@ -456,6 +751,16 @@ int SCIPpropGetPriority(
    return prop->priority;
 }
 
+/** gets presolving priority of propagator */
+int SCIPpropGetPresolPriority(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return prop->presolpriority;
+}
+
 /** sets priority of propagator */
 void SCIPpropSetPriority(
    SCIP_PROP*            prop,               /**< propagator */
@@ -468,6 +773,20 @@ void SCIPpropSetPriority(
    
    prop->priority = priority;
    set->propssorted = FALSE;
+}
+
+/** sets presolving priority of propagator */
+void SCIPpropSetPresolPriority(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   presolpriority      /**< new priority of the propagator */
+   )
+{
+   assert(prop != NULL);
+   assert(set != NULL);
+   
+   prop->presolpriority = presolpriority;
+   set->propspresolsorted = FALSE;
 }
 
 /** gets frequency of propagator */
@@ -498,6 +817,16 @@ SCIP_Real SCIPpropGetRespropTime(
    assert(prop != NULL);
 
    return SCIPclockGetTime(prop->resproptime);
+}
+
+/** gets time in seconds used in this propagator for presolving */
+SCIP_Real SCIPpropGetPresolTime(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return SCIPclockGetTime(prop->presoltime);
 }
 
 /** gets the total number of times, the propagator was called */
@@ -560,6 +889,16 @@ SCIP_Bool SCIPpropWasDelayed(
    return prop->wasdelayed;
 }
 
+/** was presolving of propagator delayed at the last call? */
+SCIP_Bool SCIPpropWasPresolDelayed(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return prop->presolwasdelayed;
+}
+
 /** is propagator initialized? */
 SCIP_Bool SCIPpropIsInitialized(
    SCIP_PROP*            prop                /**< propagator */
@@ -569,3 +908,124 @@ SCIP_Bool SCIPpropIsInitialized(
 
    return prop->initialized;
 }
+
+/** gets number of variables fixed during presolving of propagator */
+int SCIPpropGetNFixedVars(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return prop->nfixedvars;
+}
+
+/** gets number of variables aggregated during presolving of propagator  */
+int SCIPpropGetNAggrVars(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return prop->naggrvars;
+}
+
+/** gets number of variable types changed during presolving of propagator  */
+int SCIPpropGetNChgVarTypes(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return prop->nchgvartypes;
+}
+
+/** gets number of bounds changed during presolving of propagator  */
+int SCIPpropGetNChgBds(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return prop->nchgbds;
+}
+
+/** gets number of holes added to domains of variables during presolving of propagator  */
+int SCIPpropGetNAddHoles(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return prop->naddholes;
+}
+
+/** gets number of constraints deleted during presolving of propagator */
+int SCIPpropGetNDelConss(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return prop->ndelconss;
+}
+
+/** gets number of constraints added during presolving of propagator */
+int SCIPpropGetNAddConss(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return prop->naddconss;
+}
+
+/** gets number of constraints upgraded during presolving of propagator  */
+int SCIPpropGetNUpgdConss(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return prop->nupgdconss;
+}
+
+/** gets number of coefficients changed during presolving of propagator */
+int SCIPpropGetNChgCoefs(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return prop->nchgcoefs;
+}
+
+/** gets number of constraint sides changed during presolving of propagator */
+int SCIPpropGetNChgSides(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return prop->nchgsides;
+}
+
+/** returns the timing mask of the propagator */
+SCIP_PROPTIMING SCIPpropGetTimingmask(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return prop->timingmask;
+}
+
+/** does the propagator perform presolving? */
+SCIP_Bool SCIPpropDoesPresolve(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return (prop->proppresol != NULL);
+}
+

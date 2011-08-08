@@ -57,6 +57,8 @@ typedef SCIP_Longint         Int;
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
 
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
+
 /* default parameter settings */
 #define DEFAULT_SPARSETEST         TRUE /**< sparse test on or off */
 #define DEFAULT_DISCARDSOLS        TRUE /**< is it allowed to discard solutions */
@@ -2275,6 +2277,7 @@ SCIP_RETCODE SCIPincludeConshdlrCountsols(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         CONSHDLR_PROP_TIMING,
          conshdlrCopyCountsols,
          consFreeCountsols, consInitCountsols, consExitCountsols, 
          consInitpreCountsols, consExitpreCountsols, consInitsolCountsols, consExitsolCountsols,

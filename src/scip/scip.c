@@ -2659,6 +2659,7 @@ SCIP_RETCODE SCIPincludeConshdlr(
    SCIP_Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
    SCIP_Bool             delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
    SCIP_Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
+   SCIP_PROPTIMING       timingmask,         /**< positions in the node solving loop where propagators should be executed */
    SCIP_DECL_CONSHDLRCOPY((*conshdlrcopy)),  /**< copy method of constraint handler or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
    SCIP_DECL_CONSINIT    ((*consinit)),      /**< initialize constraint handler */
@@ -2703,6 +2704,7 @@ SCIP_RETCODE SCIPincludeConshdlr(
    SCIP_CALL( SCIPconshdlrCreate(&conshdlr, scip->set, scip->mem->setmem,
          name, desc, sepapriority, enfopriority, chckpriority, sepafreq, propfreq, eagerfreq, maxprerounds,
          delaysepa, delayprop, delaypresol, needscons,
+         timingmask,
          conshdlrcopy,
          consfree, consinit, consexit, consinitpre, consexitpre, consinitsol, consexitsol,
          consdelete, constrans, consinitlp, conssepalp, conssepasol, consenfolp, consenfops, conscheck, consprop,
@@ -3102,12 +3104,19 @@ SCIP_RETCODE SCIPincludeProp(
    int                   priority,           /**< priority of the propagator (>= 0: before, < 0: after constraint handlers) */
    int                   freq,               /**< frequency for calling propagator */
    SCIP_Bool             delay,              /**< should propagator be delayed, if other propagators found reductions? */
+   SCIP_PROPTIMING       timingmask,         /**< positions in the node solving loop where propagators should be executed */
+   int                   presolpriority,     /**< presolving priority of the propagator (>= 0: before, < 0: after constraint handlers) */
+   int                   presolmaxrounds,    /**< maximal number of presolving rounds the propagator participates in (-1: no limit) */
+   SCIP_Bool             presoldelay,        /**< should presolving be delayed, if other presolvers found reductions? */
    SCIP_DECL_PROPCOPY    ((*propcopy)),      /**< copy method of propagator or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_PROPFREE    ((*propfree)),      /**< destructor of propagator */
    SCIP_DECL_PROPINIT    ((*propinit)),      /**< initialize propagator */
    SCIP_DECL_PROPEXIT    ((*propexit)),      /**< deinitialize propagator */
+   SCIP_DECL_PROPINITPRE ((*propinitpre)),   /**< presolving initialization method of propagator */
+   SCIP_DECL_PROPEXITPRE ((*propexitpre)),   /**< presolving deinitialization method of propagator */
    SCIP_DECL_PROPINITSOL ((*propinitsol)),   /**< solving process initialization method of propagator */
    SCIP_DECL_PROPEXITSOL ((*propexitsol)),   /**< solving process deinitialization method of propagator */
+   SCIP_DECL_PROPPRESOL  ((*proppresol)),    /**< presolving method */
    SCIP_DECL_PROPEXEC    ((*propexec)),      /**< execution method of propagator */
    SCIP_DECL_PROPRESPROP ((*propresprop)),   /**< propagation conflict resolving method */
    SCIP_PROPDATA*        propdata            /**< propagator data */
@@ -3125,9 +3134,10 @@ SCIP_RETCODE SCIPincludeProp(
    }
 
    SCIP_CALL( SCIPpropCreate(&prop, scip->set, scip->mem->setmem,
-         name, desc, priority, freq, delay,
+         name, desc, priority, freq, delay, timingmask, presolpriority, presolmaxrounds, presoldelay,
          propcopy,
-         propfree, propinit, propexit, propinitsol, propexitsol, propexec, propresprop, propdata) );
+         propfree, propinit, propexit, propinitpre, propexitpre, propinitsol, propexitsol,
+         proppresol, propexec, propresprop, propdata) );
    SCIP_CALL( SCIPsetIncludeProp(scip->set, prop) );
 
    return SCIP_OKAY;
@@ -3178,6 +3188,20 @@ SCIP_RETCODE SCIPsetPropPriority(
    SCIP_CALL( checkStage(scip, "SCIPsetPropPriority", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    SCIPpropSetPriority(prop, scip->set, priority);
+
+   return SCIP_OKAY;
+}
+
+/** sets the presolving priority of a propagator */
+SCIP_RETCODE SCIPsetPropPresolPriority(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator */
+   int                   presolpriority      /**< new presol priority of the propagator */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPropPresolPriority", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPpropSetPresolPriority(prop, scip->set, presolpriority);
 
    return SCIP_OKAY;
 }
@@ -6232,6 +6256,9 @@ SCIP_RETCODE presolveRound(
    SCIP_EVENT event;
    SCIP_Bool aborted;
    int i;
+   int j;
+   int priopresol;
+   int prioprop;
 
    assert(scip != NULL);
    assert(scip->set != NULL);
@@ -6245,21 +6272,64 @@ SCIP_RETCODE presolveRound(
    aborted = FALSE;
 
    /* call included presolvers with nonnegative priority */
-   for( i = 0; i < scip->set->npresols && !(*unbounded) && !(*infeasible) && !aborted; ++i )
+   for( i = 0, j = 0; !(*unbounded) && !(*infeasible) && !aborted && (i < scip->set->npresols || j < scip->set->nprops);  )
    {
-      if( SCIPpresolGetPriority(scip->set->presols[i]) < 0 )
-         continue;
+      if( i < scip->set->npresols )
+         priopresol = SCIPpresolGetPriority(scip->set->presols[i]);
+      else
+         priopresol = -1;
 
-      if( onlydelayed && !SCIPpresolWasDelayed(scip->set->presols[i]) )
-         continue;
+      if( j < scip->set->nprops )
+         prioprop = SCIPpropGetPresolPriority(scip->set->props[j]);
+      else
+         prioprop = -1;
 
-      SCIPdebugMessage("executing presolver <%s>\n", SCIPpresolGetName(scip->set->presols[i]));
-      SCIP_CALL( SCIPpresolExec(scip->set->presols[i], scip->set, onlydelayed, scip->stat->npresolrounds,
-            &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
-            &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
-            &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, 
-            &scip->stat->npresolchgsides, &result) );
-      assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
+      /* choose presolving */
+      if( prioprop >= priopresol )
+      {
+         /* only presolving methods which have non-negative priority will be called before constraint handlers */
+         if( prioprop < 0 )
+            break;
+         
+         if( onlydelayed && !SCIPpropWasPresolDelayed(scip->set->props[j]) )
+         {
+            ++j;
+            continue;
+         }
+
+         SCIPdebugMessage("executing presolving of propagator <%s>\n", SCIPpropGetName(scip->set->props[j]));
+         SCIP_CALL( SCIPpropPresol(scip->set->props[j], scip->set, onlydelayed, scip->stat->npresolrounds,
+               &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
+               &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
+               &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, 
+               &scip->stat->npresolchgsides, &result) );
+         assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
+
+         ++j;
+      }
+      else
+      {
+         /* only presolving methods which have non-negative priority will be called before constraint handlers */
+         if( priopresol < 0 )
+            break;
+
+         if( onlydelayed && !SCIPpresolWasDelayed(scip->set->presols[i]) )
+         {
+            ++i;
+            continue;
+         }
+
+         SCIPdebugMessage("executing presolver <%s>\n", SCIPpresolGetName(scip->set->presols[i]));
+         SCIP_CALL( SCIPpresolExec(scip->set->presols[i], scip->set, onlydelayed, scip->stat->npresolrounds,
+               &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
+               &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
+               &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, 
+               &scip->stat->npresolchgsides, &result) );
+         assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
+
+         ++i;
+      }
+
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
@@ -6329,21 +6399,58 @@ SCIP_RETCODE presolveRound(
    }
 
    /* call included presolvers with negative priority */
-   for( i = 0; i < scip->set->npresols && !(*unbounded) && !(*infeasible) && !aborted; ++i )
+   for( i = 0, j = 0; !(*unbounded) && !(*infeasible) && !aborted && (i < scip->set->npresols || j < scip->set->nprops);  )
    {
-      if( SCIPpresolGetPriority(scip->set->presols[i]) >= 0 )
-         continue;
+      if( i < scip->set->npresols )
+         priopresol = SCIPpresolGetPriority(scip->set->presols[i]);
+      else
+         priopresol = -INT_MAX;
 
-      if( onlydelayed && !SCIPpresolWasDelayed(scip->set->presols[i]) )
-         continue;
+      if( j < scip->set->nprops )
+         prioprop = SCIPpropGetPresolPriority(scip->set->props[j]);
+      else
+         prioprop = -INT_MAX;
 
-      SCIPdebugMessage("executing presolver <%s>\n", SCIPpresolGetName(scip->set->presols[i]));
-      SCIP_CALL( SCIPpresolExec(scip->set->presols[i], scip->set, onlydelayed, scip->stat->npresolrounds,
-            &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
-            &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss, 
-            &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, 
-            &scip->stat->npresolchgsides, &result) );
-      assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
+      /* choose presolving */
+      if( prioprop >= priopresol )
+      {
+         /* only presolving methods which have negative priority will be called after constraint handlers */
+         if( prioprop >= 0 || (onlydelayed && !SCIPpropWasPresolDelayed(scip->set->props[j])) )
+         {
+            ++j;
+            continue;
+         }
+
+         SCIPdebugMessage("executing presolving of propagator <%s>\n", SCIPpropGetName(scip->set->props[j]));
+         SCIP_CALL( SCIPpropPresol(scip->set->props[j], scip->set, onlydelayed, scip->stat->npresolrounds,
+               &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
+               &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
+               &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, 
+               &scip->stat->npresolchgsides, &result) );
+         assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
+
+         ++j;
+      }
+      else
+      {
+         /* only presolving methods which have negative priority will be called after constraint handlers */
+         if( priopresol >= 0 || (onlydelayed && !SCIPpresolWasDelayed(scip->set->presols[i])) )
+         {
+            ++i;
+            continue;
+         }
+
+         SCIPdebugMessage("executing presolver <%s>\n", SCIPpresolGetName(scip->set->presols[i]));
+         SCIP_CALL( SCIPpresolExec(scip->set->presols[i], scip->set, onlydelayed, scip->stat->npresolrounds,
+               &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
+               &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
+               &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, 
+               &scip->stat->npresolchgsides, &result) );
+         assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
+
+         ++i;
+      }
+
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
@@ -6539,6 +6646,9 @@ SCIP_RETCODE presolve(
       lastnchgsides = scip->stat->npresolchgsides;
       /*lastnimplications = scip->stat->nimplications;*/
       /*lastncliques = SCIPcliquetableGetNCliques(scip->cliquetable);*/
+
+      /* sort propagators */
+      SCIPsetSortPropsPresol(scip->set);
 
       /* sort presolvers by priority */
       SCIPsetSortPresols(scip->set);
@@ -7525,7 +7635,6 @@ SCIP_RETCODE SCIPwriteVarsPolynomial(
 
    assert(scip != NULL);
    assert(monomialvars  != NULL || nmonomials == 0);
-   assert(monomialexps  != NULL || nmonomials == 0);
    assert(monomialcoefs != NULL || nmonomials == 0);
    assert(monomialnvars != NULL || nmonomials == 0);
 
@@ -17902,7 +18011,7 @@ SCIP_RETCODE SCIPpropagateProbing(
       *ndomredsfound = -(scip->stat->nprobboundchgs + scip->stat->nprobholechgs);
 
    SCIP_CALL( SCIPpropagateDomains(scip->mem->probmem, scip->set, scip->stat, scip->transprob, 
-         scip->primal, scip->tree, scip->conflict, 0, maxproprounds, cutoff) );
+         scip->primal, scip->tree, scip->conflict, 0, maxproprounds, SCIP_PROPTIMING_ALWAYS, cutoff) );
 
    if( ndomredsfound != NULL )
       *ndomredsfound += scip->stat->nprobboundchgs + scip->stat->nprobholechgs;
@@ -21272,6 +21381,41 @@ void printPresolverStatistics(
          SCIPpresolGetNChgCoefs(presol));
    }
 
+   /* presolver statistics */
+   for( i = 0; i < scip->set->nprops; ++i )
+   {
+      SCIP_PROP* prop;
+      prop = scip->set->props[i];
+      if( SCIPpropDoesPresolve(prop) 
+#if 0
+         && ( SCIPpropGetNFixedVars(prop) > 0
+            || SCIPpropGetNAggrVars(prop) > 0
+            || SCIPpropGetNChgVarTypes(prop) > 0
+            || SCIPpropGetNChgBds(prop) > 0
+            || SCIPpropGetNAddHoles(prop) > 0
+            || SCIPpropGetNDelConss(prop) > 0
+            || SCIPpropGetNAddConss(prop) > 0
+            || SCIPpropGetNChgSides(prop) > 0
+            || SCIPpropGetNChgCoefs(prop) > 0
+            || SCIPpropGetNUpgdConss(prop) > 0) 
+#endif
+         )
+      {
+         SCIPmessageFPrintInfo(file, "  %-17.17s:", SCIPpropGetName(prop));
+         SCIPmessageFPrintInfo(file, " %10.2f %10d %10d %10d %10d %10d %10d %10d %10d %10d\n",
+            SCIPpropGetPresolTime(prop),
+            SCIPpropGetNFixedVars(prop),
+            SCIPpropGetNAggrVars(prop),
+            SCIPpropGetNChgVarTypes(prop),
+            SCIPpropGetNChgBds(prop),
+            SCIPpropGetNAddHoles(prop),
+            SCIPpropGetNDelConss(prop),
+            SCIPpropGetNAddConss(prop),
+            SCIPpropGetNChgSides(prop),
+            SCIPpropGetNChgCoefs(prop));
+      }
+   }
+
    /* constraint handler presolving methods statistics */
    for( i = 0; i < scip->set->nconshdlrs; ++i )
    {
@@ -21429,7 +21573,7 @@ void printPropagatorStatistics(
          SCIPpropGetNDomredsFound(prop));
    }
    
-   SCIPmessageFPrintInfo(file, "Propagator Timings :  TotalTime  Propagate    Resprop\n");
+   SCIPmessageFPrintInfo(file, "Propagator Timings :  TotalTime  Presolve   Propagate    Resprop\n");
 
    for( i = 0; i < scip->set->nprops; ++i )
    {
@@ -21437,11 +21581,11 @@ void printPropagatorStatistics(
       SCIP_Real totaltime;
          
       prop = scip->set->props[i];
-      totaltime = SCIPpropGetTime(prop) + SCIPpropGetRespropTime(prop);
+      totaltime = SCIPpropGetPresolTime(prop) + SCIPpropGetTime(prop) + SCIPpropGetRespropTime(prop);
       
       SCIPmessageFPrintInfo(file, "  %-17.17s:", SCIPpropGetName(prop));
-      SCIPmessageFPrintInfo(file, " %10.2f %10.2f %10.2f\n",
-         totaltime, SCIPpropGetTime(prop), SCIPpropGetRespropTime(prop));
+      SCIPmessageFPrintInfo(file, " %10.2f %10.2f %10.2f %10.2f\n",
+         totaltime, SCIPpropGetPresolTime(prop), SCIPpropGetTime(prop), SCIPpropGetRespropTime(prop));
    }
 }
 

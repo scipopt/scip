@@ -217,7 +217,7 @@ struct SCIP_Conshdlr
    int                   lastnaddconss;      /**< number of added constraints before the last call to the presolver */
    int                   lastnupgdconss;     /**< number of upgraded constraints before the last call to the presolver */
    int                   lastnchgcoefs;      /**< number of changed coefficients before the last call to the presolver */
-   int                   lastnchgsides;      /**< number of changed left or right hand sides before the last call */
+   int                   lastnchgsides;      /**< number of changed left or right hand sides before the last call to the presolver */
    int                   nfixedvars;         /**< total number of variables fixed by this presolver */
    int                   naggrvars;          /**< total number of variables aggregated by this presolver */
    int                   nchgvartypes;       /**< total number of variable type changes by this presolver */
@@ -238,6 +238,7 @@ struct SCIP_Conshdlr
    SCIP_Bool             propwasdelayed;     /**< was the propagation method delayed at the last call? */
    SCIP_Bool             presolwasdelayed;   /**< was the presolving method delayed at the last call? */
    SCIP_Bool             initialized;        /**< is constraint handler initialized? */
+   SCIP_PROPTIMING       timingmask;         /**< positions in the node solving loop where propagation method of constraint handlers should be executed */
 };
 
 #ifdef __cplusplus

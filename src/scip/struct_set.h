@@ -118,6 +118,7 @@ struct SCIP_Set
    SCIP_Bool             relaxssorted;       /**< are the relaxators sorted by priority? */
    SCIP_Bool             sepassorted;        /**< are the separators sorted by priority? */
    SCIP_Bool             propssorted;        /**< are the propagators sorted by priority? */
+   SCIP_Bool             propspresolsorted;  /**< are the propagators sorted by priority for presolving? */
    SCIP_Bool             heurssorted;        /**< are the heuristics sorted by priority? */
    SCIP_Bool             branchrulessorted;  /**< are the branching rules sorted by priority? */
    SCIP_Bool             nlpissorted;        /**< are the NLPIs sorted by priority? */

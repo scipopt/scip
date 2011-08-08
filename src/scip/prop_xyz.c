@@ -28,9 +28,14 @@
 
 #define PROP_NAME              "xyz"
 #define PROP_DESC              "propagator template"
-#define PROP_PRIORITY                 0
-#define PROP_FREQ                    10
+#define PROP_TIMING             SCIP_PROPTIMING_BEFORELP
+#define PROP_PRIORITY                 0 /**< propagator priority */ 
+#define PROP_FREQ                    10 /**< propagator frequency */
 #define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
+#define PROP_PRESOL_PRIORITY          0 /**< priority of the presolving method (>= 0: before, < 0: after constraint handlers); combined with presolvers */
+#define PROP_PRESOL_DELAY          TRUE /**< should presolving be delay, if other presolvers found reductions?  */
+#define PROP_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds the presolver participates in (-1: no
+                                         *   limit) */
 
 
 
@@ -124,6 +129,36 @@ SCIP_DECL_PROPEXIT(propExitXyz)
 #endif
 
 
+/** presolving initialization method of propagator (called when presolving is about to begin) */
+#if 0
+static
+SCIP_DECL_PROPINITPRE(propInitpreXyz)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define propInitpreXyz NULL
+#endif
+
+
+/** presolving deinitialization method of propagator (called after presolving has been finished) */
+#if 0
+static
+SCIP_DECL_PROPEXITPRE(propExitpreXyz)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define propExitpreXyz NULL
+#endif
+
+
 /** solving process initialization method of propagator (called when branch and bound process is about to begin) */
 #if 0
 static
@@ -151,6 +186,21 @@ SCIP_DECL_PROPEXITSOL(propExitsolXyz)
 }
 #else
 #define propExitsolXyz NULL
+#endif
+
+
+/** presolving method of propagator */
+#if 0
+static
+SCIP_DECL_PROPPRESOL(propPresolXyz)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of xyz propagator not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define propPresolXyz NULL
 #endif
 
 
@@ -194,10 +244,10 @@ SCIP_RETCODE SCIPincludePropXyz(
    /* TODO: (optional) create propagator specific data here */
 
    /* include propagator */
-   SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY,
+   SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY,
          propCopyXyz,
-         propFreeXyz, propInitXyz, propExitXyz, 
-         propInitsolXyz, propExitsolXyz, propExecXyz, propRespropXyz,
+         propFreeXyz, propInitXyz, propExitXyz, propInitpreXyz, propExitpreXyz,
+         propInitsolXyz, propExitsolXyz, propPresolXyz, propExecXyz, propRespropXyz,
          propdata) );
 
    /* add xyz propagator parameters */
