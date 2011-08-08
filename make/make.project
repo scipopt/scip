@@ -211,9 +211,20 @@ LPSLDFLAGS	=	$(LINKCXX_l)gurobi.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
 endif
 
 ifeq ($(LPS),clp)
-LPSLDFLAGS	=	$(LINKCXX_L)$(LIBDIR) $(LINKCXX_l)clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX) \
-			$(LINKCXX_l)coinutils.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX) \
+# for newer Clp versions all linker flags are in share/coin/doc/Clp/clp_addlibs.txt
+CLPDIR		= 	$(SCIPDIR)/$(LIBDIR)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
+LPSLDFLAGS	=	$(shell test -e $(CLPDIR)/share/coin/doc/Clp/clp_addlibs.txt && cat $(CLPDIR)/share/coin/doc/Clp/clp_addlibs.txt)
+# if we could not find clp_addlibs file, try to guess linker flags
+ifeq ($(LPSLDFLAGS),)
+LPSLDFLAGS	=	$(LINKCXX_L)$(CLPDIR)/lib $(LINKCXX_l)Clp$(LINKLIBSUFFIX) \
+			$(LINKCXX_l)CoinUtils$(LINKLIBSUFFIX) \
 			$(LINKCXX_l)bz2$(LINKLIBSUFFIX) $(LINKCXX_l)lapack$(LINKLIBSUFFIX)
+endif
+# ensure that also shared libraries are found while running the binary
+ifneq ($(LINKRPATH),)
+CLPFULLPATH	:=	$(realpath $(CLPDIR))
+LPSLDFLAGS	+=	$(LINKRPATH)$(CLPFULLPATH)/lib
+endif
 endif
 
 ifeq ($(LPS),qso)
@@ -282,7 +293,7 @@ LDFLAGS		+=	$(shell test -e $(SCIPDIR)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP)
 # for Ipopt 3.9.x, the libraries are installed in the lib/coin and lib/coin/ThirdParty subdirectories
 # for Ipopt != 3.9.x, they are installed into the lib subdirectory
 ifneq ($(LINKRPATH),)
-IPOPTFULLPATH	:=	$(shell cd $(SCIPDIR)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT) && pwd)
+IPOPTFULLPATH	:=	$(realpath $(SCIPDIR)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT))
 LDFLAGS		+=	$(LINKRPATH)$(IPOPTFULLPATH)/lib
 LDFLAGS		+=	$(shell test -e $(IPOPTFULLPATH)/lib/coin && echo $(LINKRPATH)$(IPOPTFULLPATH)/lib/coin)
 LDFLAGS		+=	$(shell test -e $(IPOPTFULLPATH)/lib/coin/ThirdParty && echo $(LINKRPATH)$(IPOPTFULLPATH)/lib/coin/ThirdParty)

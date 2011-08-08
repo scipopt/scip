@@ -13632,6 +13632,8 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    {
       assert(lpicols[c] != NULL);
       assert(lpicols[c]->var != NULL);
+      assert(ray[c] >= 0 || SCIPsetIsInfinity(set, -lpicols[c]->lb));
+      assert(ray[c] <= 0 || SCIPsetIsInfinity(set, lpicols[c]->ub));
       rayobjval += ray[c] * lpicols[c]->obj;
    }
    /* TODO: How to check for negative objval here? */

@@ -82,6 +82,25 @@ struct Dimensions
 };
 typedef struct Dimensions DIMENSIONS;
 
+/** FlatZinc constant */
+struct FznConstant
+{
+   const char*          name;           /**< constant name */
+   FZNNUMBERTYPE        type;           /**< constant type */
+   SCIP_Real            value;          /**< constant value */
+};
+typedef struct FznConstant FZNCONSTANT;
+
+/* structure to store information for an array variable */
+struct ConstArray
+{
+   FZNCONSTANT**         constants;     /**< array of constants */
+   char*                 name;          /**< name of constant array */
+   int                   nconstants;    /**< number of constants */
+   FZNNUMBERTYPE         type;          /**< constant type */ 
+};
+typedef struct ConstArray CONSTARRAY;
+
 /* structure to store information for an array variable */
 struct VarArray
 {
@@ -100,15 +119,6 @@ struct SCIP_ReaderData
    int                   nvararrays;    /**< number of variables */
    int                   vararrayssize; /**< size of variable array */
 };
-
-/** FlatZinc constant */
-struct FznConstant
-{
-   const char*          name;           /**< constant name */
-   FZNNUMBERTYPE        type;           /**< constant type */
-   SCIP_Real            value;          /**< constant value */
-};
-typedef struct FznConstant FZNCONSTANT;
 
 /** tries to creates and adds a constraint; sets parameter created to TRUE if method was successful 
  * 
@@ -147,6 +157,14 @@ struct FznInput
    SCIP_Bool             comment;            /**< current buffer contains everything until a comment starts */
    SCIP_Bool             haserror;           /**< a error was detected during parsing */
    SCIP_Bool             valid;
+
+   VARARRAY**            vararrays;          /**< variable arrays */
+   int                   nvararrays;         /**< number of variables */
+   int                   vararrayssize;      /**< size of variable array */
+   
+   CONSTARRAY**          constarrays;        /**< variable arrays to output */
+   int                   nconstarrays;       /**< number of variables */
+   int                   constarrayssize;    /**< size of variable array */
 };
 typedef struct FznInput FZNINPUT;
 
@@ -202,212 +220,6 @@ SCIP_DECL_SORTPTRCOMP(vararraysComp)
    return strcmp( ((VARARRAY*)elem1)->name, ((VARARRAY*)elem2)->name );
 }
 
-/*
- * Local methods (for reading)
- */
-
-/** issues an error message and marks the FlatZinc data to have errors */
-static
-void syntaxError(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FZNINPUT*             fzninput,           /**< FZN reading data */
-   const char*           msg                 /**< error message */
-   )
-{
-   assert(fzninput != NULL);
-
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error in line %d: %s found <%s>\n",
-      fzninput->linenumber, msg, fzninput->token);
-
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "  input: %s", fzninput->linebuf);
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "\n");
-
-   fzninput->haserror = TRUE;
-}
-
-/** returns whether a syntax error was detected */
-static
-SCIP_Bool hasError(
-   FZNINPUT*              fzninput             /**< FZN reading data */
-   )
-{
-   assert(fzninput != NULL);
-
-   return (fzninput->haserror || !fzninput->valid);
-}
-
-/** create reader data */
-static
-SCIP_RETCODE readerdataCreate(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_READERDATA**     readerdata          /**< pointer to reader data */
-   )
-{
-   SCIP_CALL( SCIPallocMemory(scip, readerdata) );
-
-   (*readerdata)->vararrays = NULL;
-   (*readerdata)->nvararrays = 0;
-   (*readerdata)->vararrayssize = 0;
-   
-   return SCIP_OKAY;
-}
-
-/** ensure the size if the variable array */
-static
-SCIP_RETCODE ensureVararrySize(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_READERDATA*      readerdata          /**< reader data */
-   )
-{
-   int nvararrays;
-   int vararrayssize;
-   
-   nvararrays = readerdata->nvararrays;
-   vararrayssize = readerdata->vararrayssize;
-   
-   if( vararrayssize == nvararrays )
-   {
-      if( vararrayssize == 0 )
-      {
-         vararrayssize = 100;
-         SCIP_CALL( SCIPallocMemoryArray(scip, &readerdata->vararrays, vararrayssize) );
-      }
-      else
-      {
-         vararrayssize *= 2;
-         SCIP_CALL( SCIPreallocMemoryArray(scip, &readerdata->vararrays, vararrayssize) );
-      }
-   }
-
-   readerdata->vararrayssize = vararrayssize;
-   
-   return SCIP_OKAY;
-}
-   
-/** print given value in FlatZinc format to given stream */
-static
-void printValue(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file,               /**< output file (or NULL for standard output) */
-   SCIP_Real             value,              /**< value to print */
-   FZNNUMBERTYPE         type                /**< FlatZinc number type */
-   )
-{
-   switch( type )
-   {
-   case FZN_BOOL:
-      if( value < 0.5 )
-         SCIPinfoMessage(scip, file, "false");
-      else         
-         SCIPinfoMessage(scip, file, "true");
-      break;
-   case FZN_INT:
-   {
-      SCIP_Longint longvalue;
-      longvalue = (SCIP_Longint)(value + 0.5);
-      SCIPinfoMessage(scip, file, "%"SCIP_LONGINT_FORMAT"", longvalue);
-      break;
-   }
-   case FZN_FLOAT:
-      if( SCIPisIntegral(scip, value) )
-      {
-         printValue(scip, file, value, FZN_INT);
-
-         /* add a ".0" to be type save */
-         SCIPinfoMessage(scip, file, ".0");
-      }
-      else
-      {
-         SCIPinfoMessage(scip, file, "%.1f", value);
-      }
-      break;
-   }
-}
-
-/** add variable to the reader data */
-static
-SCIP_RETCODE readerdataAddOutputvar(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_READERDATA*      readerdata,         /**< reader data */
-   SCIP_VAR*             var,                /**< variable to add to the reader data */
-   FZNNUMBERTYPE         type                /**< variable type */
-   )
-{
-   DIMENSIONS* info;
-   const char* name;
-   VARARRAY* vararray;
-   int nvararrays;
-   
-   nvararrays = readerdata->nvararrays;
-
-   SCIP_CALL( ensureVararrySize(scip, readerdata) );
-   assert(nvararrays < readerdata->vararrayssize);
-   
-   /* get variable name */
-   name = SCIPvarGetName(var);
-
-   /* allocate memory for the new vararray struct */
-   SCIP_CALL( SCIPallocMemory(scip, &vararray) );
-   
-   /* copy variable pointers */
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &vararray->vars, &var, 1) );
-
-   /* copy variable array name */
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &vararray->name, name, strlen(name)+1) );
-
-   SCIP_CALL( SCIPallocMemory(scip, &info) );
-   info->lbs = NULL;
-   info->ubs = NULL;
-   info->ndims = 0;
-   
-   vararray->info = info;
-   vararray->nvars = 1;
-   vararray->type = type;
-   
-   readerdata->vararrays[nvararrays] = vararray;
-   readerdata->nvararrays++;
-   
-   return SCIP_OKAY;
-}
-
-/** add variable to the reader data */
-static
-SCIP_RETCODE readerdataAddOutputvararray(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_READERDATA*      readerdata,         /**< reader data */
-   const char*           name,               /**< name of the variable array */
-   SCIP_VAR**            vars,               /**< array of variable to add to the reader data */
-   int                   nvars,              /**< number of variables */  
-   FZNNUMBERTYPE         type,               /**< variable type */
-   DIMENSIONS*           info                /**< dimension information for output */
-   )
-{
-   VARARRAY* vararray;
-   int nvararrays;
-
-   nvararrays = readerdata->nvararrays;
-
-   SCIP_CALL( ensureVararrySize(scip, readerdata) );
-   assert(nvararrays < readerdata->vararrayssize);
-   
-   /* allocate memory for the new vararray struct */
-   SCIP_CALL( SCIPallocMemory(scip, &vararray) );
-   
-   /* copy variable pointers */
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &vararray->vars, vars, nvars) );
-
-   /* copy variable array name */
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &vararray->name, name, strlen(name)+1) );
-
-   vararray->info = info;
-   vararray->nvars = nvars;
-   vararray->type = type;
-   
-   readerdata->vararrays[nvararrays] = vararray;
-   readerdata->nvararrays++;
-   
-   return SCIP_OKAY;
-}
 
 /** frees a given buffer char* array */
 static
@@ -828,6 +640,507 @@ SCIP_Bool isValue(
    return FALSE;
 }
 
+/*
+ * Local methods (for reading)
+ */
+
+/** issues an error message and marks the FlatZinc data to have errors */
+static
+void syntaxError(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FZNINPUT*             fzninput,           /**< FZN reading data */
+   const char*           msg                 /**< error message */
+   )
+{
+   assert(fzninput != NULL);
+
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error in line %d: %s found <%s>\n",
+      fzninput->linenumber, msg, fzninput->token);
+
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "  input: %s", fzninput->linebuf);
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "\n");
+
+   fzninput->haserror = TRUE;
+}
+
+/** returns whether a syntax error was detected */
+static
+SCIP_Bool hasError(
+   FZNINPUT*              fzninput             /**< FZN reading data */
+   )
+{
+   assert(fzninput != NULL);
+
+   return (fzninput->haserror || !fzninput->valid);
+}
+
+/** create reader data */
+static
+SCIP_RETCODE readerdataCreate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READERDATA**     readerdata          /**< pointer to reader data */
+   )
+{
+   SCIP_CALL( SCIPallocMemory(scip, readerdata) );
+
+   (*readerdata)->vararrays = NULL;
+   (*readerdata)->nvararrays = 0;
+   (*readerdata)->vararrayssize = 0;
+   
+   return SCIP_OKAY;
+}
+
+/** ensure the size if the variable array */
+static
+SCIP_RETCODE ensureVararrySize(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READERDATA*      readerdata          /**< reader data */
+   )
+{
+   int nvararrays;
+   int vararrayssize;
+   
+   nvararrays = readerdata->nvararrays;
+   vararrayssize = readerdata->vararrayssize;
+   
+   if( vararrayssize == nvararrays )
+   {
+      if( vararrayssize == 0 )
+      {
+         vararrayssize = 100;
+         SCIP_CALL( SCIPallocMemoryArray(scip, &readerdata->vararrays, vararrayssize) );
+      }
+      else
+      {
+         vararrayssize *= 2;
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &readerdata->vararrays, vararrayssize) );
+      }
+   }
+
+   readerdata->vararrayssize = vararrayssize;
+   
+   return SCIP_OKAY;
+}
+   
+/** ensure the size if the variable array */
+static
+SCIP_RETCODE ensureVararrySizeFznInput(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FZNINPUT*             fzninput            /**< FZN reading data */
+   )
+{
+   int nvararrays;
+   int vararrayssize;
+   
+   nvararrays = fzninput->nvararrays;
+   vararrayssize = fzninput->vararrayssize;
+   
+   if( vararrayssize == nvararrays )
+   {
+      if( vararrayssize == 0 )
+      {
+         vararrayssize = 100;
+         SCIP_CALL( SCIPallocMemoryArray(scip, &fzninput->vararrays, vararrayssize) );
+      }
+      else
+      {
+         vararrayssize *= 2;
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &fzninput->vararrays, vararrayssize) );
+      }
+   }
+
+   fzninput->vararrayssize = vararrayssize;
+   
+   return SCIP_OKAY;
+}
+
+/** ensure the size if the variable array */
+static
+SCIP_RETCODE ensureConstarrySizeFznInput(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FZNINPUT*             fzninput            /**< FZN reading data */
+   )
+{
+   int nconstarrays;
+   int constarrayssize;
+   
+   nconstarrays = fzninput->nconstarrays;
+   constarrayssize = fzninput->constarrayssize;
+   
+   if( constarrayssize == nconstarrays )
+   {
+      if( constarrayssize == 0 )
+      {
+         constarrayssize = 100;
+         SCIP_CALL( SCIPallocMemoryArray(scip, &fzninput->constarrays, constarrayssize) );
+      }
+      else
+      {
+         constarrayssize *= 2;
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &fzninput->constarrays, constarrayssize) );
+      }
+   }
+
+   fzninput->constarrayssize = constarrayssize;
+   
+   return SCIP_OKAY;
+}
+
+/** print given value in FlatZinc format to given stream */
+static
+void printValue(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Real             value,              /**< value to print */
+   FZNNUMBERTYPE         type                /**< FlatZinc number type */
+   )
+{
+   switch( type )
+   {
+   case FZN_BOOL:
+      if( value < 0.5 )
+         SCIPinfoMessage(scip, file, "false");
+      else         
+         SCIPinfoMessage(scip, file, "true");
+      break;
+   case FZN_INT:
+   {
+      SCIP_Longint longvalue;
+      longvalue = (SCIP_Longint)(value + 0.5);
+      SCIPinfoMessage(scip, file, "%"SCIP_LONGINT_FORMAT"", longvalue);
+      break;
+   }
+   case FZN_FLOAT:
+      if( SCIPisIntegral(scip, value) )
+      {
+         printValue(scip, file, value, FZN_INT);
+
+         /* add a ".0" to be type save */
+         SCIPinfoMessage(scip, file, ".0");
+      }
+      else
+      {
+         SCIPinfoMessage(scip, file, "%.1f", value);
+      }
+      break;
+   }
+}
+
+/*
+ * Local methods (for VARARRAY)
+ */
+
+/** free dimension structure */
+static
+SCIP_RETCODE copyDimensions(
+   SCIP*                 scip,               /**< SCIP data structure */
+   DIMENSIONS**          target,             /**< pointer to dimension target structure */
+   DIMENSIONS*           source              /**< dimension source */
+   )
+{
+   if( source != NULL )
+   {
+      SCIP_CALL( SCIPallocMemory(scip, target) );
+
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*target)->lbs, source->lbs, source->ndims) );
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*target)->ubs, source->ubs, source->ndims) );
+      (*target)->ndims = source->ndims;
+   }
+   else
+      *target = NULL;
+   
+   return SCIP_OKAY;
+}
+
+/** create variable array data structure */
+static
+SCIP_RETCODE createVararray(
+   SCIP*                 scip,               /**< SCIP data structure */
+   VARARRAY**            vararray,           /**< pointer to variable array */
+   const char*           name,               /**< name of the variable array */
+   SCIP_VAR**            vars,               /**< array of variables */
+   int                   nvars,              /**< number of variables */  
+   FZNNUMBERTYPE         type,               /**< variable type */
+   DIMENSIONS*           info                /**< dimension information for output */
+   )
+{
+   
+   /* allocate memory for the new vararray struct */
+   SCIP_CALL( SCIPallocMemory(scip, vararray) );
+   
+   /* copy variable pointers */
+   SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*vararray)->vars, vars, nvars) );
+
+   /* copy variable array name */
+   SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*vararray)->name, name, strlen(name)+1) );
+
+   SCIP_CALL( copyDimensions(scip, &(*vararray)->info, info) );
+
+   (*vararray)->nvars = nvars;
+   (*vararray)->type = type;
+
+   return SCIP_OKAY;
+}
+
+/** free dimension structure */
+static
+void freeDimensions(
+   SCIP*                 scip,               /**< SCIP data structure */
+   DIMENSIONS**          dim                 /**< pointer to dimension structure */
+   )
+{
+   if( *dim != NULL )
+   {
+      SCIPfreeMemoryArrayNull(scip, &(*dim)->lbs);
+      SCIPfreeMemoryArrayNull(scip, &(*dim)->ubs);
+      SCIPfreeMemory(scip, dim);
+   }
+}
+
+/** free variable array data structure */
+static
+void freeVararray(
+   SCIP*                 scip,               /**< SCIP data structure */
+   VARARRAY**            vararray            /**< pointer to variable array */
+   )
+{ 
+   freeDimensions(scip, &(*vararray)->info);
+ 
+   SCIPfreeMemoryArray(scip, &(*vararray)->name);
+   SCIPfreeMemoryArray(scip, &(*vararray)->vars);
+   
+   SCIPfreeMemory(scip, vararray);
+}
+
+/** searches the variable array data base if a constant array exists with the given name; if it exists it is returned */
+static
+VARARRAY* findVararray(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FZNINPUT*             fzninput,           /**< FZN reading data */
+   const char*           name                /**< variable array name */
+   )
+{
+   VARARRAY* vararray;
+   int c;
+   
+   /* search in constants array list for a constants array with the given name */
+   for( c = 0; c < fzninput->nvararrays; ++c )
+   {
+      vararray = fzninput->vararrays[c];
+         
+      if( equalTokens(name, vararray->name) )
+         return vararray;
+   }
+
+   return NULL;
+}
+
+/*
+ * Local methods (for CONSTARRAY)
+ */
+
+/** create constant array data structure */
+static
+SCIP_RETCODE createConstarray(
+   SCIP*                 scip,               /**< SCIP data structure */
+   CONSTARRAY**          constarray,         /**< pointer to constant array */
+   const char*           name,               /**< name of the variable array */
+   FZNCONSTANT**         constants,          /**< array of constants */
+   int                   nconstants,         /**< number of constants */  
+   FZNNUMBERTYPE         type                /**< constant type */
+   )
+{
+   SCIPdebugMessage("create constant array <%s>\n", name);
+   
+   /* allocate memory for the new constarray struct */
+   SCIP_CALL( SCIPallocMemory(scip, constarray) );
+   
+   /* copy constant values */
+   SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*constarray)->constants, constants, nconstants) );
+
+   /* copy constant array name */
+   SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*constarray)->name, name, strlen(name)+1) );
+   
+   (*constarray)->nconstants = nconstants;
+   (*constarray)->type = type;
+   
+   return SCIP_OKAY;
+}
+
+/** free constant array data structure */
+static
+void freeConstarray(
+   SCIP*                 scip,               /**< SCIP data structure */
+   CONSTARRAY**          constarray          /**< pointer to constant array */
+   )
+{
+   SCIPdebugMessage("free constant array <%s>\n", (*constarray)->name);
+
+   /* free variable pointers */
+   SCIPfreeMemoryArray(scip, &(*constarray)->constants);
+
+   /* free variable array name */
+   SCIPfreeMemoryArray(scip, &(*constarray)->name);
+
+   /* allocate memory for the new vararray struct */
+   SCIPfreeMemory(scip, constarray);
+}
+
+/** searches the constant array data base if a constant array exists with the given name; if it exists it is returned */
+static
+CONSTARRAY* findConstarray(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FZNINPUT*             fzninput,           /**< FZN reading data */
+   const char*           name                /**< constant array name */
+   )
+{
+   CONSTARRAY* constarray;
+   int c;
+   
+   /* search in constants array list for a constants array with the given name */
+   for( c = 0; c < fzninput->nconstarrays; ++c )
+   {
+      constarray = fzninput->constarrays[c];
+         
+      if( equalTokens(name, constarray->name) )
+         return constarray;
+   }
+
+   return NULL;
+}
+
+/** add variable to the reader data */
+static
+SCIP_RETCODE readerdataAddOutputvar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READERDATA*      readerdata,         /**< reader data */
+   SCIP_VAR*             var,                /**< variable to add to the reader data */
+   FZNNUMBERTYPE         type                /**< variable type */
+   )
+{
+   DIMENSIONS* info;
+   const char* name;
+   VARARRAY* vararray;
+   int nvararrays;
+   
+   nvararrays = readerdata->nvararrays;
+
+   SCIP_CALL( ensureVararrySize(scip, readerdata) );
+   assert(nvararrays < readerdata->vararrayssize);
+   
+   /* get variable name */
+   name = SCIPvarGetName(var);
+
+   /* allocate memory for the new vararray struct */
+   SCIP_CALL( SCIPallocMemory(scip, &vararray) );
+   
+   /* copy variable pointers */
+   SCIP_CALL( SCIPduplicateMemoryArray(scip, &vararray->vars, &var, 1) );
+
+   /* copy variable array name */
+   SCIP_CALL( SCIPduplicateMemoryArray(scip, &vararray->name, name, strlen(name)+1) );
+
+   SCIP_CALL( SCIPallocMemory(scip, &info) );
+   info->lbs = NULL;
+   info->ubs = NULL;
+   info->ndims = 0;
+   
+   vararray->info = info;
+   vararray->nvars = 1;
+   vararray->type = type;
+   
+   readerdata->vararrays[nvararrays] = vararray;
+   readerdata->nvararrays++;
+   
+   return SCIP_OKAY;
+}
+
+/** add variable to the reader data */
+static
+SCIP_RETCODE readerdataAddOutputvararray(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READERDATA*      readerdata,         /**< reader data */
+   const char*           name,               /**< name of the variable array */
+   SCIP_VAR**            vars,               /**< array of variable to add to the reader data */
+   int                   nvars,              /**< number of variables */  
+   FZNNUMBERTYPE         type,               /**< variable type */
+   DIMENSIONS*           info                /**< dimension information for output */
+   )
+{
+   VARARRAY* vararray;
+   int nvararrays;
+
+   nvararrays = readerdata->nvararrays;
+
+   SCIP_CALL( ensureVararrySize(scip, readerdata) );
+   assert(nvararrays < readerdata->vararrayssize);
+   
+   /* create variable array data structure */
+   SCIP_CALL( createVararray(scip, &vararray, name, vars, nvars, type, info) );
+   
+   readerdata->vararrays[nvararrays] = vararray;
+   readerdata->nvararrays++;
+   
+   return SCIP_OKAY;
+}
+
+/** add variable to the input data */
+static
+SCIP_RETCODE fzninputAddVararray(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FZNINPUT*             fzninput,           /**< FZN reading data */
+   const char*           name,               /**< name of the variable array */
+   SCIP_VAR**            vars,               /**< array of variables */
+   int                   nvars,              /**< number of variables */  
+   FZNNUMBERTYPE         type,               /**< variable type */
+   DIMENSIONS*           info                /**< dimension information for output */
+   )
+{
+   VARARRAY* vararray;
+   int nvararrays;
+
+   nvararrays = fzninput->nvararrays;
+
+   SCIP_CALL( ensureVararrySizeFznInput(scip, fzninput) );
+   assert(nvararrays < fzninput->vararrayssize);
+   
+   /* create variable array data structure */
+   SCIP_CALL( createVararray(scip, &vararray, name, vars, nvars, type, info) );
+   
+   fzninput->vararrays[nvararrays] = vararray;
+   fzninput->nvararrays++;
+   
+   return SCIP_OKAY;
+}
+
+/** add variable to the reader data */
+static
+SCIP_RETCODE fzninputAddConstarray(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FZNINPUT*             fzninput,           /**< FZN reading data */
+   const char*           name,               /**< name of the variable array */
+   FZNCONSTANT**         constants,          /**< array of constants */
+   int                   nconstants,         /**< number of constants */
+   FZNNUMBERTYPE         type                /**< variable type */
+   )
+{
+   CONSTARRAY* constarray;
+   int nconstarrays;
+
+   nconstarrays = fzninput->nconstarrays;
+
+   SCIP_CALL( ensureConstarrySizeFznInput(scip, fzninput) );
+   assert(nconstarrays < fzninput->constarrayssize);
+   
+   /* create constant array structure */
+   SCIP_CALL( createConstarray(scip, &constarray, name, constants, nconstants, type) );
+   
+   fzninput->constarrays[nconstarrays] = constarray;
+   fzninput->nconstarrays++;
+   
+   return SCIP_OKAY;
+}
+
 /** creates, adds, and releases a linear constraint */
 static
 SCIP_RETCODE createQuadraticCons(
@@ -1136,7 +1449,7 @@ SCIP_RETCODE parseList(
          if( hasError(fzninput) )
             break;
          
-         /* strore assignment */
+         /* store assignment */
          SCIP_CALL( SCIPduplicateBufferArray(scip, &(*elements)[(*nelements)], assignment, (int) strlen(assignment) + 1) );
          
          (*nelements)++;
@@ -1424,31 +1737,31 @@ SCIP_RETCODE applyVariableAssignment(
 
 /** applies constant assignment expression */
 static
-SCIP_RETCODE applyConstantAssignment(
+SCIP_RETCODE createConstantAssignment(
    SCIP*                 scip,               /**< SCIP data structure */
+   FZNCONSTANT**         constant,           /**< pointer to constant */
    FZNINPUT*             fzninput,           /**< FZN reading data */
    const char*           name,               /**< constant name */
    FZNNUMBERTYPE         type,               /**< number type */     
    const char*           assignment          /**< assignment to apply */
    )
 {
-   FZNCONSTANT* constant;
    SCIP_Bool boolvalue;
    SCIP_Real realvalue;
    SCIP_Real value;
 
-   constant = (FZNCONSTANT*) SCIPhashtableRetrieve(fzninput->constantHashtable, (char*) assignment);
+   (*constant) = (FZNCONSTANT*) SCIPhashtableRetrieve(fzninput->constantHashtable, (char*) assignment);
 
-   if( constant != NULL )
+   if( *constant != NULL )
    {
       /* check if the consatnt type fit */
-      if( type != constant->type )
+      if( type != (*constant)->type )
       {
          syntaxError(scip, fzninput, "type error");
          return SCIP_OKAY;
       }
       
-      value = constant->value;
+      value = (*constant)->value;
    }
    else if( isBoolExp(assignment, &boolvalue) && type == FZN_BOOL )
    {
@@ -1465,11 +1778,11 @@ SCIP_RETCODE applyConstantAssignment(
    }
 
    /* get buffer memory for FZNCONSTANT struct */
-   SCIP_CALL( SCIPallocBuffer(scip, &constant) );
+   SCIP_CALL( SCIPallocBuffer(scip, constant) );
    
-   constant->type = type;
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &constant->name, name, (int) strlen(name) + 1) );
-   constant->value = value;
+   (*constant)->type = type;
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &(*constant)->name, name, (int) strlen(name) + 1) );
+   (*constant)->value = value;
    
    /* store constant */
    if( fzninput->sconstants == fzninput->nconstants )
@@ -1480,10 +1793,10 @@ SCIP_RETCODE applyConstantAssignment(
    }
 
    assert(fzninput->sconstants > fzninput->nconstants);
-   fzninput->constants[fzninput->nconstants] = constant;
+   fzninput->constants[fzninput->nconstants] = *constant;
    fzninput->nconstants++;
    
-   SCIP_CALL( SCIPhashtableInsert(fzninput->constantHashtable, (void*) constant) );
+   SCIP_CALL( SCIPhashtableInsert(fzninput->constantHashtable, (void*) (*constant)) );
    
    return SCIP_OKAY;
 }
@@ -1674,7 +1987,7 @@ SCIP_RETCODE parseVariableArray(
    
    /* create variables and add them to the problem */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
-
+   
    for( v = 0; v < nvars; ++v )
    {
       (void) SCIPsnprintf(varname, FZN_BUFFERLEN, "%s[%d]", name, v + 1);
@@ -1686,47 +1999,51 @@ SCIP_RETCODE parseVariableArray(
    if( !getNextToken(fzninput) )
    {
       syntaxError(scip, fzninput, "expected semicolon");
-      return SCIP_OKAY;
-   }
-   
-   if( isChar(fzninput->token, '=') )
-   {
-      char** assigns;
-      int nassigns;
-
-      SCIP_CALL( SCIPallocBufferArray(scip, &assigns, nvars) );
-      nassigns = 0;
-
-      SCIP_CALL( parseArrayAssignment(scip, fzninput, &assigns, &nassigns, nvars) );
-
-      if(!hasError(fzninput) )
-      {
-         for( v = 0; v < nvars && !hasError(fzninput); ++v )
-         {
-            /* parse and apply assignment */
-            SCIP_CALL( applyVariableAssignment(scip, fzninput, vars[v], assigns[v]) );
-         }
-      }
-      
-      freeStringBufferArray(scip, assigns, nassigns);
    }
    else
    {
-      /* push back the ';' */
-      assert( isEndStatement(fzninput) );
-      pushToken(fzninput);
+      if( isChar(fzninput->token, '=') )
+      {
+         char** assigns;
+         int nassigns;
+         
+         SCIP_CALL( SCIPallocBufferArray(scip, &assigns, nvars) );
+         nassigns = 0;
+         
+         SCIP_CALL( parseArrayAssignment(scip, fzninput, &assigns, &nassigns, nvars) );
+         
+         if(!hasError(fzninput) )
+         {
+            for( v = 0; v < nvars && !hasError(fzninput); ++v )
+            {
+               /* parse and apply assignment */
+               SCIP_CALL( applyVariableAssignment(scip, fzninput, vars[v], assigns[v]) );
+            }
+         }
+         
+         freeStringBufferArray(scip, assigns, nassigns);
+      }
+      else
+      {
+         /* push back the ';' */
+         assert( isEndStatement(fzninput) );
+         pushToken(fzninput);
+      }
+      
+      if( info != NULL )
+      {
+         SCIP_CALL( readerdataAddOutputvararray(scip, readerdata, name, vars, nvars, type, info) );
+      }
+      
+      /* add variable information to fzninput since this array name might be used later in the fzn file */
+      SCIP_CALL( fzninputAddVararray(scip, fzninput, name, vars, nvars, type, info) );
    }
-   
-   if( info != NULL )
-   {
-      SCIP_CALL( readerdataAddOutputvararray(scip, readerdata, name, vars, nvars, type, info) );
-   }
-
+    
    SCIPfreeBufferArray(scip, &vars);
-
+      
    return SCIP_OKAY;
 }
- 
+
 /** parse constant array assignment and create the constants */
 static
 SCIP_RETCODE parseConstantArray(
@@ -1737,8 +2054,9 @@ SCIP_RETCODE parseConstantArray(
    FZNNUMBERTYPE         type                /**< number type */
    )
 {
+   FZNCONSTANT** constants;
    char** assigns;
-   char constantname[FZN_BUFFERLEN];            \
+   char constantname[FZN_BUFFERLEN];
    int nassigns;
    int c;
    
@@ -1749,6 +2067,7 @@ SCIP_RETCODE parseConstantArray(
    }
    
    SCIP_CALL( SCIPallocBufferArray(scip, &assigns, nconstants) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &constants, nconstants) );
    nassigns = 0;
    
    SCIP_CALL( parseArrayAssignment(scip, fzninput, &assigns, &nassigns, nconstants) );
@@ -1758,10 +2077,14 @@ SCIP_RETCODE parseConstantArray(
       for( c = 0; c < nconstants; ++c )
       {
          (void) SCIPsnprintf(constantname, FZN_BUFFERLEN, "%s[%d]", name, c + 1);
-         SCIP_CALL( applyConstantAssignment(scip, fzninput, constantname, type, assigns[c]) );
+         SCIP_CALL( createConstantAssignment(scip, &constants[c], fzninput, constantname, type, assigns[c]) );
       }
+  
+      /* add variable information to fzninput since this array name might be used later in the fzn file */
+      SCIP_CALL( fzninputAddConstarray(scip, fzninput, name, constants, nconstants, type) );
    }
 
+   SCIPfreeBufferArray(scip, &constants);
    freeStringBufferArray(scip, assigns, nassigns);
    
    return SCIP_OKAY;
@@ -1836,6 +2159,8 @@ SCIP_RETCODE parseArray(
    else
       SCIP_CALL( parseConstantArray(scip, fzninput, name, nelements, type) );
    
+   freeDimensions(scip, &info);
+
    return SCIP_OKAY;
 }
 
@@ -1911,6 +2236,7 @@ SCIP_RETCODE parseConstant(
    FZNNUMBERTYPE         type                /**< constant type */
    )
 {
+   FZNCONSTANT* constant;
    char name[FZN_BUFFERLEN];
    char assignment[FZN_BUFFERLEN];
 
@@ -1936,7 +2262,7 @@ SCIP_RETCODE parseConstant(
    flattenAssignment(scip, fzninput, assignment);
    
    /* applies constant assignment and creates constant */
-   SCIP_CALL( applyConstantAssignment(scip, fzninput, name, type, assignment) );
+   SCIP_CALL( createConstantAssignment(scip, &constant, fzninput, name, type, assignment) );
 
    return SCIP_OKAY;
 } 
@@ -1953,7 +2279,7 @@ void parseValue(
    if( isValue(assignment, value) )
       return;
    
-   /* if it is an identifier name, it has to belong to a constant */
+   /* if it is an identifier name, it has to belong to a constant or fixed variable */
    if( isIdentifier(assignment) )
    {
       FZNCONSTANT* constant;
@@ -1962,7 +2288,21 @@ void parseValue(
       constant = (FZNCONSTANT*) SCIPhashtableRetrieve(fzninput->constantHashtable, (char*) assignment);
       
       if( constant == NULL )
-         syntaxError(scip, fzninput, "unknown constant name");
+      {
+         SCIP_VAR* var;
+         
+         var = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, (char*) assignment);
+
+         if( var == NULL )
+            syntaxError(scip, fzninput, "unknown constant name");
+         else
+         {
+            if( SCIPisEQ(scip, SCIPvarGetLbOriginal(var), SCIPvarGetUbOriginal(var)) )
+               (*value) = SCIPvarGetLbOriginal(var);
+            else
+               syntaxError(scip, fzninput, "expected fixed variable");
+         }
+      }
       else
          (*value) = constant->value;
    }
@@ -1980,34 +2320,117 @@ SCIP_RETCODE parseConstantArrayAssignment(
    int                   sizevals            /**< size of the vals array */
    )
 {
-   char** elements;
-   SCIP_Real value;
-   int nelements;
    int c;
 
    assert(*nvals <= sizevals); 
 
-   value = 0.0;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &elements, sizevals) );
-   nelements = 0;
-
-   SCIP_CALL( parseArrayAssignment(scip, fzninput, &elements, &nelements, sizevals) );
-
-   if( sizevals <= *nvals + nelements )
+   /* check for next token */
+   if( !getNextToken(fzninput) )
    {
-      SCIP_CALL( SCIPreallocBufferArray(scip, vals, *nvals + nelements) );
-   }
-
-   for( c = 0; c < nelements && !hasError(fzninput); ++c )
-   {
-      parseValue(scip, fzninput, &value, elements[c]);
-      (*vals)[(*nvals)] = value;
-      (*nvals)++;
+      syntaxError(scip, fzninput, "expected constant array");
+      return SCIP_OKAY;
    }
    
-   freeStringBufferArray(scip, elements, nelements);
+   /* check if an array is given explicitly */
+   if( isChar(fzninput->token, '[') )
+   {
+      char** elements;
+      SCIP_Real value;
+      int nelements;
+      
+      SCIP_CALL( SCIPallocBufferArray(scip, &elements, sizevals) );
+      nelements = 0;
 
+      value = 0.0;
+
+      /* push back '[' which closes the list */
+      pushToken(fzninput);
+         
+      /* pares array assignment */
+      SCIP_CALL( parseArrayAssignment(scip, fzninput, &elements, &nelements, sizevals) );
+
+      if( sizevals <= *nvals + nelements )
+      {
+         SCIP_CALL( SCIPreallocBufferArray(scip, vals, *nvals + nelements) );
+      }
+      
+      for( c = 0; c < nelements && !hasError(fzninput); ++c )
+      {
+         parseValue(scip, fzninput, &value, elements[c]);
+         (*vals)[(*nvals)] = value;
+         (*nvals)++;
+      }
+      
+      freeStringBufferArray(scip, elements, nelements);
+   }
+   else
+   {
+      /* array is not given explicitly; therefore, check constant array data base if the given constant array name was
+       * parsed before
+       */
+      
+      CONSTARRAY* constarray;
+      
+      constarray = findConstarray(scip, fzninput, fzninput->token);
+      
+      if( constarray != NULL )
+      {
+         /* ensure variable array size */
+         if( sizevals <= *nvals + constarray->nconstants )
+         {
+            SCIP_CALL( SCIPreallocBufferArray(scip, vals, *nvals + constarray->nconstants) );
+         }
+         
+         for( c = 0; c < constarray->nconstants; ++c )  
+         {
+            (*vals)[(*nvals)] = constarray->constants[c]->value;
+            (*nvals)++;
+         } 
+      }
+      else
+      {
+         /* there is no constant array with the given name; therefore check the variable array data base if such an
+          * array exist with fixed variables
+          */
+         
+         VARARRAY* vararray;
+
+         vararray = findVararray(scip, fzninput, fzninput->token);
+         
+         if( vararray == NULL )
+         {
+            syntaxError(scip, fzninput, "unknown constants array name");
+         }
+         else
+         {
+            /* ensure variable array size */
+            if( sizevals <= *nvals + vararray->nvars )
+            {
+               SCIP_CALL( SCIPreallocBufferArray(scip, vals, *nvals + vararray->nvars) );
+            }
+            
+            for( c = 0; c < vararray->nvars; ++c )  
+            {
+               SCIP_VAR* var;
+
+               var = vararray->vars[c];
+               assert(var != NULL);
+               
+               if( SCIPisEQ(scip, SCIPvarGetLbOriginal(var), SCIPvarGetUbOriginal(var)) )
+               {
+                  (*vals)[(*nvals)] = SCIPvarGetLbOriginal(var);
+                  (*nvals)++;
+               } 
+               else
+               {
+                  syntaxError(scip, fzninput, "variable array contains unfixed variable");
+                  break;
+               }
+            }
+         }
+      }
+   }
+   
    return SCIP_OKAY;
 }
 
@@ -2021,62 +2444,102 @@ SCIP_RETCODE parseVariableArrayAssignment(
    int                   sizevars            /**< size of the variable array */
    )
 {
-   char** elements;
-   int nelements;
    int v;
 
    assert(*nvars <= sizevars);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &elements, sizevars) );
-   nelements = 0;
-
-   SCIP_CALL( parseArrayAssignment(scip, fzninput, &elements, &nelements, sizevars) );
-
-   if( sizevars <= *nvars + nelements )
+   
+   /* check for next token */
+   if( !getNextToken(fzninput) )
    {
-      SCIP_CALL( SCIPreallocBufferArray(scip, vars, *nvars + nelements) );
+      syntaxError(scip, fzninput, "expected constant array");
+      return SCIP_OKAY;
    }
    
-   for( v = 0; v < nelements; ++v )
+   if( isChar(fzninput->token, '[') )
    {
-      (*vars)[(*nvars)] = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, elements[v]);
+      char** elements;
+      int nelements;
       
-      if( (*vars)[(*nvars)] == NULL )
+      SCIP_CALL( SCIPallocBufferArray(scip, &elements, sizevars) );
+      nelements = 0;
+
+      /* push back '[' which closes the list */
+      pushToken(fzninput);
+
+      SCIP_CALL( parseArrayAssignment(scip, fzninput, &elements, &nelements, sizevars) );
+
+      if( sizevars <= *nvars + nelements )
       {
-         /* since the given element does not correspond to an variable name
-          * it might be the case that it is a constant which can be seen as
-          * as a fixed variable */
-         
-         FZNCONSTANT* constant;
-         SCIP_Real value;
-
-         constant = (FZNCONSTANT*) SCIPhashtableRetrieve(fzninput->constantHashtable, (char*) elements[v]);
-
-         if( constant != NULL )
-         {
-            assert(constant->type == FZN_FLOAT);
-            value = constant->value;
-         } 
-         else if(!isValue(elements[v], &value) )
-         {
-            char* tmptoken;
-         
-            tmptoken = fzninput->token;
-            fzninput->token = elements[v];
-            syntaxError(scip, fzninput, "expected variable name or constant");
-            
-            fzninput->token = tmptoken;
-            break;
-         }
-         
-         /* create a fixed variable */
-         SCIP_CALL( createVariable(scip, fzninput, &(*vars)[*nvars], elements[v], value, value, FZN_FLOAT) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, vars, *nvars + nelements) );
       }
       
-      (*nvars)++;
-   }
+      for( v = 0; v < nelements; ++v )
+      {
+         (*vars)[(*nvars)] = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, elements[v]);
+      
+         if( (*vars)[(*nvars)] == NULL )
+         {
+            /* since the given element does not correspond to an variable name
+             * it might be the case that it is a constant which can be seen as
+             * as a fixed variable 
+             */
+            
+            FZNCONSTANT* constant;
+            SCIP_Real value;
 
-   freeStringBufferArray(scip, elements, nelements);
+            constant = (FZNCONSTANT*) SCIPhashtableRetrieve(fzninput->constantHashtable, (char*) elements[v]);
+
+            if( constant != NULL )
+            {
+               assert(constant->type == FZN_FLOAT);
+               value = constant->value;
+            } 
+            else if(!isValue(elements[v], &value) )
+            {
+               char* tmptoken;
+         
+               tmptoken = fzninput->token;
+               fzninput->token = elements[v];
+               syntaxError(scip, fzninput, "expected variable name or constant");
+            
+               fzninput->token = tmptoken;
+               break;
+            }
+         
+            /* create a fixed variable */
+            SCIP_CALL( createVariable(scip, fzninput, &(*vars)[*nvars], elements[v], value, value, FZN_FLOAT) );
+         }
+      
+         (*nvars)++;
+      }
+
+      freeStringBufferArray(scip, elements, nelements);
+   }
+   else
+   {
+      VARARRAY* vararray;
+      
+      vararray = findVararray(scip, fzninput, fzninput->token);
+      
+      if( vararray != NULL )
+      {
+         assert(vararray != NULL);
+
+         /* ensure variable array size */
+         if( sizevars <= *nvars + vararray->nvars )
+         {
+            SCIP_CALL( SCIPreallocBufferArray(scip, vars, *nvars + vararray->nvars) );
+         }
+        
+         for( v = 0; v < vararray->nvars; ++v )  
+         {
+            (*vars)[(*nvars)] = vararray->vars[v];
+            (*nvars)++;
+         } 
+      }
+      else
+         syntaxError(scip, fzninput, "unknown variable array name");
+   }
    
    return SCIP_OKAY;
 }
@@ -2814,7 +3277,7 @@ CREATE_CONSTRAINT(createCumulativeOpCons)
 
    assert(scip != NULL);
    assert(fzninput != NULL);
-
+   
    /* check if the function identifier name is array operation */
    if( !equalTokens(ftokens[0], "cumulative") )
       return SCIP_OKAY;
@@ -2889,7 +3352,8 @@ CREATE_CONSTRAINT(createCumulativeOpCons)
    /* add and release the constraint to the problem */
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
+   
+   assert(!hasError(fzninput));
    *created = TRUE;
 
  TERMINATE:
@@ -4219,8 +4683,6 @@ static
 SCIP_DECL_READERFREE(readerFreeFzn)
 {
    SCIP_READERDATA* readerdata;
-   VARARRAY* vararray;
-   DIMENSIONS* info;
    int v;
 
    readerdata = SCIPreaderGetData(reader);
@@ -4229,16 +4691,7 @@ SCIP_DECL_READERFREE(readerFreeFzn)
    /* free all variable array elements */
    for( v = 0; v < readerdata->nvararrays; ++v )
    {
-      vararray = readerdata->vararrays[v];
-      info = vararray->info;
-      
-      SCIPfreeMemoryArrayNull(scip, &info->lbs);
-      SCIPfreeMemoryArrayNull(scip, &info->ubs);
-      SCIPfreeMemory(scip, &vararray->info);
-      SCIPfreeMemoryArray(scip, &vararray->name);
-      SCIPfreeMemoryArray(scip, &vararray->vars);
-      
-      SCIPfreeMemory(scip, &vararray);
+      freeVararray(scip, &readerdata->vararrays[v]);
    }
    
    SCIPfreeMemoryArrayNull(scip, &readerdata->vararrays);
@@ -4278,6 +4731,12 @@ SCIP_DECL_READERREAD(readerReadFzn)
    fzninput.comment = FALSE;
    fzninput.haserror = FALSE;
    fzninput.valid = TRUE;
+   fzninput.vararrays = NULL;
+   fzninput.nvararrays = 0;
+   fzninput.vararrayssize = 0;
+   fzninput.constarrays = NULL;
+   fzninput.nconstarrays = 0;
+   fzninput.constarrayssize = 0;
    
    SCIP_CALL( SCIPhashtableCreate(&fzninput.varHashtable, SCIPblkmem(scip), SCIP_HASHSIZE_NAMES,
          hashGetKeyVar, SCIPhashKeyEqString, SCIPhashKeyValString, NULL) );
@@ -4308,6 +4767,20 @@ SCIP_DECL_READERREAD(readerReadFzn)
    SCIPhashtableFree(&fzninput.varHashtable);
    SCIPhashtableFree(&fzninput.constantHashtable);
    SCIPfreeBufferArray(scip, &fzninput.constants);
+
+   /* free variable arrays */
+   for( i = 0; i < fzninput.nvararrays; ++i )
+   {
+      freeVararray(scip, &fzninput.vararrays[i]);
+   }
+   SCIPfreeMemoryArrayNull(scip, &(fzninput.vararrays));
+
+   /* free constant arrays */
+   for( i = 0; i < fzninput.nconstarrays; ++i )
+   {
+      freeConstarray(scip, &(fzninput.constarrays[i]));
+   }
+   SCIPfreeMemoryArrayNull(scip, &fzninput.constarrays);
 
    /* evaluate the result */
    if( fzninput.haserror )

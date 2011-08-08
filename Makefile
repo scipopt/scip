@@ -30,7 +30,7 @@ include make/make.detecthost
 # default settings
 #-----------------------------------------------------------------------------
 
-VERSION		:=	2.0.1.6
+VERSION		:=	2.0.1.7
 
 TIME     	=  	3600
 NODES           =       2100000000
@@ -181,7 +181,7 @@ ifeq ($(SHARED),true)
 FLAGS		+=	-fPIC
 LIBEXT		=	$(SHAREDLIBEXT)
 LIBBUILD	=	$(LINKCC)
-LIBBUILDFLAGS	=      -shared -fPIC
+LIBBUILDFLAGS	+=      -shared -fPIC
 LIBBUILD_o	= 	-o # the trailing space is important
 ARFLAGS		=
 RANLIB		=
@@ -293,20 +293,25 @@ endif
 LPSOPTIONS	+=	clp
 ifeq ($(LPS),clp)
 LINKER		=	CPP
-FLAGS		+=	-I$(LIBDIR)/clpinc
-LPSLDFLAGS	=	$(LINKCXX_L)$(LIBDIR) $(LINKCXX_l)clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX) \
-			$(LINKCXX_l)coinutils.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX) \
+CLPDIR		= 	$(LIBDIR)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
+FLAGS			+=	-I$(CLPDIR)/include/coin
+# for newer Clp versions all linker flags are in share/coin/doc/Clp/clp_addlibs.txt
+LPSLDFLAGS	=	$(shell test -e $(CLPDIR)/share/coin/doc/Clp/clp_addlibs.txt && cat $(CLPDIR)/share/coin/doc/Clp/clp_addlibs.txt)
+# if we could not find clp_addlibs file, try to guess linker flags
+ifeq ($(LPSLDFLAGS),)
+LPSLDFLAGS	=	$(LINKCXX_L)$(CLPDIR)/lib $(LINKCXX_l)Clp$(LINKLIBSUFFIX) \
+			$(LINKCXX_l)CoinUtils$(LINKLIBSUFFIX) \
 			$(LINKCXX_l)bz2$(LINKLIBSUFFIX) $(LINKCXX_l)lapack$(LINKLIBSUFFIX)
+endif
+# ensure that also shared libraries are found while running the binary
+ifneq ($(LINKRPATH),)
+CLPFULLPATH	:=	$(realpath $(CURDIR)/$(CLPDIR))
+LPSLDFLAGS	+=	$(LINKRPATH)$(CLPFULLPATH)/lib
+endif
 LPILIBOBJ	=	scip/lpi_clp.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/scip/lpi_clp.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
-SOFTLINKS	+=	$(LIBDIR)/clpinc
-SOFTLINKS	+=	$(LIBDIR)/libclp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(STATICLIBEXT)
-SOFTLINKS	+=	$(LIBDIR)/libclp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(SHAREDLIBEXT)
-SOFTLINKS	+=	$(LIBDIR)/libcoinutils.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(STATICLIBEXT)
-SOFTLINKS	+=	$(LIBDIR)/libcoinutils.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(SHAREDLIBEXT)
-LPIINSTMSG	=	"  -> \"clpinc\" is the path to the Clp \"include\" directory, e.g., \"<Clp-path>/include/coin\".\n"
-LPIINSTMSG	+=	" -> \"libclp.*\" is the path to the Clp library, e.g., \"<Clp-path>/lib/libclp.a\"\n"
-LPIINSTMSG	+=	" -> \"libcoinutils.*\" is the path to the COIN utilities library, e.g., \"<Clp-path>/lib/libcoinutils.a\""
+SOFTLINKS	+=	$(CLPDIR)
+LPIINSTMSG	=	"  -> \"clp.*\" is a directory containing the Clp installation, i.e., \"clp.*/include/coin/ClpModel.hpp\" should exist.\n"
 endif
 
 LPSOPTIONS	+=	qso
@@ -451,7 +456,7 @@ LDFLAGS		+=	$(shell test -e $(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT
 # for Ipopt 3.9.x, the libraries are installed in the lib/coin and lib/coin/ThirdParty subdirectories
 # for Ipopt != 3.9.x, they are installed into the lib subdirectory
 ifneq ($(LINKRPATH),)
-IPOPTFULLPATH	:=	$(shell cd $(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT) && pwd)
+IPOPTFULLPATH	:=	$(realpath $(CURDIR)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT))
 LDFLAGS		+=	$(LINKRPATH)$(IPOPTFULLPATH)/lib
 LDFLAGS		+=	$(shell test -e $(IPOPTFULLPATH)/lib/coin && echo $(LINKRPATH)$(IPOPTFULLPATH)/lib/coin)
 LDFLAGS		+=	$(shell test -e $(IPOPTFULLPATH)/lib/coin/ThirdParty && echo $(LINKRPATH)$(IPOPTFULLPATH)/lib/coin/ThirdParty)
@@ -931,6 +936,7 @@ endif
 ifeq ($(LINKER),CPP)
 		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(LPILIBSRC) \
 		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
+		| sed '\''s|$(LIBDIR)/clp[^ ]*||g'\'' \
 		>$(LPILIBDEP)'
 endif
 		@#we explicitely add all lpi's here, since the content of depend.lpscheck should be independent of the currently selected LPI, but contain all LPI's that use the WITH_LPSCHECK define
@@ -946,8 +952,8 @@ endif
 ifeq ($(LINKER),CPP)
 		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(NLPILIBSRC) \
 		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
-		| sed '\''s|$(LIBDIR)/ipopt.* ||g'\'' | sed '\''s|$(LIBDIR)/ipopt.*$$||g'\'' \
-		| sed '\''s|$(LIBDIR)/cppad.* ||g'\'' | sed '\''s|$(LIBDIR)/cppad.*$$||g'\'' \
+		| sed '\''s|$(LIBDIR)/ipopt[^ ]*||g'\'' \
+		| sed '\''s|$(LIBDIR)/cppad[^ ]*||g'\'' \
 		>$(NLPILIBDEP)'
 endif
 
