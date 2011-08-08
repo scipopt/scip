@@ -357,7 +357,7 @@ SCIP_RETCODE checkParameters(
    if( valid )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, 
-         "At least of heuristic is not turned off! Heuristic solutions are currently not accepted.\n");
+         "At least one heuristic is not turned off! Heuristic solutions are currently not accepted.\n");
    }
    
    /* check if restart is turned off */
@@ -601,14 +601,17 @@ SCIP_RETCODE collectSolution(
    {
       if( sol == NULL )
       {
-         lbvalues[v] = (int)(SCIPvarGetLbLocal(conshdlrdata->vars[v]) + 0.5);
-         ubvalues[v] = (int)(SCIPvarGetUbLocal(conshdlrdata->vars[v]) + 0.5);
+         lbvalues[v] = (SCIP_Longint)(SCIPvarGetLbLocal(conshdlrdata->vars[v]) + 0.5);
+         ubvalues[v] = (SCIP_Longint)(SCIPvarGetUbLocal(conshdlrdata->vars[v]) + 0.5);
       }
       else
       {
-         lbvalues[v] = (int)(SCIPgetSolVal(scip, sol, conshdlrdata->vars[v]) + 0.5);
+         lbvalues[v] = (SCIP_Longint)(SCIPgetSolVal(scip, sol, conshdlrdata->vars[v]) + 0.5);
          ubvalues[v] = lbvalues[v];
       }
+      
+      SCIPdebugMessage("variable <%s> [%"SCIP_LONGINT_FORMAT",%"SCIP_LONGINT_FORMAT"]\n", 
+         SCIPvarGetName(conshdlrdata->vars[v]), lbvalues[v], ubvalues[v]);
    } 
    
    SCIP_CALL( SCIPallocMemory(scip, &solution) );
@@ -639,7 +642,8 @@ SCIP_RETCODE countSparsesol(
    assert( result != NULL );
    
    /* setting result to infeasible since we reject any solution; however, if the solution passes the sparse test the
-    * result is set to SCIP_CUTOFF which cuts off the subtree initialized through the current node */
+    * result is set to SCIP_CUTOFF which cuts off the subtree initialized through the current node 
+    */
    *result = SCIP_INFEASIBLE;
    
    if( feasible )
@@ -682,10 +686,12 @@ SCIP_RETCODE countSparsesol(
          
          /* set newsols to the computed number */
          setInt(&newsols, nsols);
+         SCIPdebugMessage("-> add 2^%d to number of solutions\n", npseudocans);
       }
       else
       {
          SCIP_CALL( SCIPgetPseudoBranchCands(scip, &vars, &nvars, NULL) );
+         
          for( v = 0; v < nvars; ++v )
          {
             var = vars[v];
@@ -1087,12 +1093,12 @@ SCIP_RETCODE checkFeasSubtree(
       conshdlr = conshdlrs[h];
       assert( conshdlr != NULL );
       
-      nconss = SCIPconshdlrGetNEnabledConss(conshdlr);
-      
       /* skip this constraints handler */
       if( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 )
          continue;
 
+      nconss = SCIPconshdlrGetNEnabledConss(conshdlr);
+      
       if( nconss > 0 )
       {
          SCIP_Bool satisfied;
@@ -1208,12 +1214,14 @@ SCIP_RETCODE checkSolution(
    /* check if integer variables are completely fixed */
    if( SCIPgetNPseudoBranchCands(scip) == 0 )
    {
-      /* check solution orifinal space */
+      /* check solution original space */
       checkSolutionOrig(scip, sol, conshdlrdata);
 
       addOne(&conshdlrdata->nsols);
       conshdlrdata->nNonSparseSols++;
       
+      SCIPdebugMessage("-> add one to number of solutions\n");
+
       if( conshdlrdata->collect )
       {
          SCIP_CALL( collectSolution(scip, conshdlrdata, sol) );
