@@ -294,7 +294,7 @@ LPSOPTIONS	+=	clp
 ifeq ($(LPS),clp)
 LINKER		=	CPP
 CLPDIR		= 	$(LIBDIR)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
-FLAGS		+=	-I$(CLPDIR)/include
+FLAGS			+=	-I$(CLPDIR)/include/coin
 # for newer Clp versions all linker flags are in share/coin/doc/Clp/clp_addlibs.txt
 LPSLDFLAGS	=	$(shell test -e $(CLPDIR)/share/coin/doc/Clp/clp_addlibs.txt && cat $(CLPDIR)/share/coin/doc/Clp/clp_addlibs.txt)
 # if we could not find clp_addlibs file, try to guess linker flags
@@ -936,6 +936,7 @@ endif
 ifeq ($(LINKER),CPP)
 		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(LPILIBSRC) \
 		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
+		| sed '\''s|$(LIBDIR)/clp[^ ]*||g'\'' \
 		>$(LPILIBDEP)'
 endif
 		@#we explicitely add all lpi's here, since the content of depend.lpscheck should be independent of the currently selected LPI, but contain all LPI's that use the WITH_LPSCHECK define
@@ -951,8 +952,8 @@ endif
 ifeq ($(LINKER),CPP)
 		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(NLPILIBSRC) \
 		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
-		| sed '\''s|$(LIBDIR)/ipopt.* ||g'\'' | sed '\''s|$(LIBDIR)/ipopt.*$$||g'\'' \
-		| sed '\''s|$(LIBDIR)/cppad.* ||g'\'' | sed '\''s|$(LIBDIR)/cppad.*$$||g'\'' \
+		| sed '\''s|$(LIBDIR)/ipopt[^ ]*||g'\'' \
+		| sed '\''s|$(LIBDIR)/cppad[^ ]*||g'\'' \
 		>$(NLPILIBDEP)'
 endif
 
