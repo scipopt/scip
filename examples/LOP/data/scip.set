@@ -4,7 +4,7 @@ display/freq = 10
 
 # maximal number of fixings found, until probing is interrupted (0: don't iterrupt)
 # [type: int, range: [0,2147483647], default: 50]
-presolving/probing/maxfixings = 0
+propagating/probing/maxfixings = 0
 
 # maximum age a dynamic row can reach before it is deleted from the LP (-1: don't delete rows due to aging)
 # [type: int, range: [-1,2147483647], default: 10]
@@ -24,4 +24,4 @@ lp/cleanuprowsroot = TRUE
 
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
-constraints/LO/sepafreq = 1
+constraints/linearordering/sepafreq = 1
