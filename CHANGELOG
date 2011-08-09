@@ -44,6 +44,7 @@ fixed bugs:
 - fixed bug w.r.t. to pricing variables in case new initial constraints come in during the price and cut loop
 - fixed bug in conflict.c, infeasibility analysis with big values led to wrong result
 - fixed bug in cons_soc.c w.r.t. upgrading from quadratic constraints with finite left-hand-side
+- fixed bug concerning the case of empty LP rows in shiftandpropagate
 
 performance improvements:
 - shiftandpropagate-heuristic uses optimized data structures and produces no memory overhead anymore
