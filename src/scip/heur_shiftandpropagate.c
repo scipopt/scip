@@ -507,7 +507,9 @@ SCIP_RETCODE initMatrix(
       else
          matrix->rhs[i] = SCIPinfinity(scip);
 
-      /* make sure that maxval is larger than zero before normalization */
+      /* make sure that maxval is larger than zero before normalization.
+       * Maxval may be zero if the constraint contains no variables but is modifiable, hence not redundant
+       */
       if( !SCIPisFeasZero(scip, maxval) )
       {
          if( !SCIPisInfinity(scip, -matrix->lhs[i]) )
