@@ -294,7 +294,7 @@ LPSOPTIONS	+=	clp
 ifeq ($(LPS),clp)
 LINKER		=	CPP
 CLPDIR		= 	$(LIBDIR)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
-FLAGS			+=	-I$(CLPDIR)/include/coin
+FLAGS		+=	-I$(CLPDIR)/include/coin
 # for newer Clp versions all linker flags are in share/coin/doc/Clp/clp_addlibs.txt
 LPSLDFLAGS	=	$(shell test -e $(CLPDIR)/share/coin/doc/Clp/clp_addlibs.txt && cat $(CLPDIR)/share/coin/doc/Clp/clp_addlibs.txt)
 # if we could not find clp_addlibs file, try to guess linker flags

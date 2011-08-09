@@ -58,6 +58,12 @@
                         }                                                           \
                       }
 
+#if ( GRB_VERSION_MAJOR < 4 )
+#define GRB_METHOD_DUAL    GRB_LPMETHOD_DUAL
+#define GRB_METHOD_PRIMAL  GRB_LPMETHOD_PRIMAL
+#define GRB_INT_PAR_METHOD GRB_INT_PAR_LPMETHOD
+#endif
+
 typedef unsigned int SCIP_SINGLEPACKET;                /**< storing single bits in packed format */
 #define SCIP_SINGLEPACKETSIZE (sizeof(SCIP_SINGLEPACKET)*8) /**< each entry needs one bit of information */
 typedef unsigned int SCIP_DUALPACKET;                  /**< storing bit pairs in packed format */
@@ -2028,11 +2034,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 
    /* set primal simplex */
    SCIP_CALL( setParameterValues(&(lpi->grbparam)) );
-#if ( GRB_VERSION_MAJOR >= 4 )
-   CHECK_ZERO( GRBsetintparam(grbenv, GRB_INT_PAR_LPMETHOD, GRB_METHOD_PRIMAL) );
-#else
-   CHECK_ZERO( GRBsetintparam(grbenv, GRB_INT_PAR_LPMETHOD, GRB_LPMETHOD_PRIMAL) );
-#endif
+   CHECK_ZERO( GRBsetintparam(grbenv, GRB_INT_PAR_METHOD, GRB_METHOD_PRIMAL) );
 
    retval = GRBoptimize(lpi->grbmodel);
    switch ( retval  )
@@ -2133,11 +2135,8 @@ SCIP_RETCODE SCIPlpiSolveDual(
    /* set dual simplex */
    SCIP_CALL( setParameterValues(&(lpi->grbparam)) );
 
-#if ( GRB_VERSION_MAJOR >= 4 )
-   CHECK_ZERO( GRBsetintparam(grbenv, GRB_INT_PAR_LPMETHOD, GRB_METHOD_DUAL) );
-#else
-   CHECK_ZERO( GRBsetintparam(grbenv, GRB_INT_PAR_LPMETHOD, GRB_LPMETHOD_DUAL) );
-#endif
+   CHECK_ZERO( GRBsetintparam(grbenv, GRB_INT_PAR_METHOD, GRB_METHOD_DUAL) );
+
    retval = GRBoptimize(lpi->grbmodel);
    switch ( retval  )
    {
@@ -2244,11 +2243,8 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
       CHECK_ZERO( GRBsetintparam(grbenv, GRB_INT_PAR_CROSSOVER, 0) );
    }
 
-#if ( GRB_VERSION_MAJOR >= 4 )
-   CHECK_ZERO( GRBsetintparam(grbenv, GRB_INT_PAR_LPMETHOD, GRB_METHOD_BARRIER) );
-#else
-   CHECK_ZERO( GRBsetintparam(grbenv, GRB_INT_PAR_LPMETHOD, GRB_LPMETHOD_BARRIER) );
-#endif
+   CHECK_ZERO( GRBsetintparam(grbenv, GRB_INT_PAR_METHOD, GRB_METHOD_BARRIER) );
+
    retval = GRBoptimize(lpi->grbmodel);
    switch ( retval  )
    {
@@ -2764,13 +2760,9 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
 
    SCIPdebugMessage("checking for primal feasibility\n");
 
-   CHECK_ZERO( GRBgetintparam(grbenv, GRB_INT_PAR_LPMETHOD, &algo) );
+   CHECK_ZERO( GRBgetintparam(grbenv, GRB_INT_PAR_METHOD, &algo) );
 
-#if ( GRB_VERSION_MAJOR >= 4 )
    return (lpi->solstat == GRB_OPTIMAL || (lpi->solstat == GRB_UNBOUNDED && algo == GRB_METHOD_PRIMAL));
-#else
-   return (lpi->solstat == GRB_OPTIMAL || (lpi->solstat == GRB_UNBOUNDED && algo == GRB_LPMETHOD_PRIMAL));
-#endif
 }
 
 /** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point);
@@ -2825,13 +2817,9 @@ SCIP_Bool SCIPlpiIsDualUnbounded(
 
    SCIPdebugMessage("checking for dual unboundness\n");
 
-   CHECK_ZERO( GRBgetintparam(grbenv, GRB_INT_PAR_LPMETHOD, &algo) );
+   CHECK_ZERO( GRBgetintparam(grbenv, GRB_INT_PAR_METHOD, &algo) );
 
-#if ( GRB_VERSION_MAJOR >= 4 )
    return (lpi->solstat == GRB_INFEASIBLE && algo == GRB_METHOD_DUAL);
-#else
-   return (lpi->solstat == GRB_INFEASIBLE && algo == GRB_LPMETHOD_DUAL);
-#endif
 }
 
 /** returns TRUE iff LP is proven to be dual infeasible */
@@ -2863,13 +2851,9 @@ SCIP_Bool SCIPlpiIsDualFeasible(
 
    SCIPdebugMessage("checking for dual feasibility\n");
 
-   CHECK_ZERO( GRBgetintparam(grbenv, GRB_INT_PAR_LPMETHOD, &algo) );
+   CHECK_ZERO( GRBgetintparam(grbenv, GRB_INT_PAR_METHOD, &algo) );
 
-#if ( GRB_VERSION_MAJOR >= 4 )
    return (lpi->solstat == GRB_OPTIMAL || (lpi->solstat == GRB_INFEASIBLE && algo == GRB_METHOD_DUAL));
-#else
-   return (lpi->solstat == GRB_OPTIMAL || (lpi->solstat == GRB_INFEASIBLE && algo == GRB_LPMETHOD_DUAL));
-#endif
 }
 
 /** returns TRUE iff LP was solved to optimality */

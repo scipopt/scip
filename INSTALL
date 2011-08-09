@@ -201,43 +201,14 @@ make[1]: Entering directory `/sw/scip'
 * The links will be installed in the 'lib' directory.
 * For more information and if you experience problems see the INSTALL file.
 
-  -> "clpinc" is the path to the Clp "include" directory, e.g., "<Clp-path>/include/coin".
-  -> "libclp.*" is the path to the Clp library, e.g., "<Clp-path>/lib/libclp.a"
-  -> "libcoinutils.*" is the path to the COIN-OR utilities library, e.g., "<Clp-path>/lib/libcoinutils.a"
+  -> "clp.*" is a directory containing the Clp installation, i.e., "clp.*/include/coin/ClpModel.hpp" should exist.
   -> "ipopt.*" is a directory containing the ipopt installation, i.e., "ipopt.*/IpIpoptApplication.hpp" should exist.
   -> "cppad" is a directory containing the CppAD header files, i.e., "cppad/cppad.hpp" should exist.
 
-- preparing missing soft-link "lib/clpinc":
-> Enter soft-link target file or directory for "lib/clpinc" (return if not needed): 
-> /sw/Clp-1.11/build/include/coin
--> creating softlink "lib/clpinc" -> "/sw/Clp-1.11/build/include/coin"
-
-
-- preparing missing soft-link "lib/libclp.linux.x86_64.gnu.opt.a":
-> Enter soft-link target file or directory for "lib/libclp.linux.x86_64.gnu.opt.a" (return if not needed): 
-> /sw/Clp-1.11/build/lib/libClp.a 
--> creating softlink "lib/libclp.linux.x86_64.gnu.opt.a" -> "/sw/Clp-1.11/build/lib/libClp.a"
-
-
-- preparing missing soft-link "lib/libclp.linux.x86_64.gnu.opt.so":
-* this soft-link is not necessarily needed since "lib/libclp.linux.x86_64.gnu.opt.a" already exists - press return to skip
-> Enter soft-link target file or directory for "lib/libclp.linux.x86_64.gnu.opt.so" (return if not needed):               
->
-* skipped creation of softlink "lib/libclp.linux.x86_64.gnu.opt.so". Call "make links" if needed later.
-
-
-- preparing missing soft-link "lib/libcoinutils.linux.x86_64.gnu.opt.a":
-> Enter soft-link target file or directory for "lib/libcoinutils.linux.x86_64.gnu.opt.a" (return if not needed):
-> /sw/Clp-1.11/build/lib/libCoinUtils.a
--> creating softlink "lib/libcoinutils.linux.x86_64.gnu.opt.a" -> "/sw/Clp-1.11/build/lib/libCoinUtils.a"
-
-
-- preparing missing soft-link "lib/libcoinutils.linux.x86_64.gnu.opt.so":
-* this soft-link is not necessarily needed since "lib/libcoinutils.linux.x86_64.gnu.opt.a" already exists - press return to skip
-> Enter soft-link target file or directory for "lib/libcoinutils.linux.x86_64.gnu.opt.so" (return if not needed):
->
-* skipped creation of softlink "lib/libcoinutils.linux.x86_64.gnu.opt.so". Call "make links" if needed later.
-
+- preparing missing soft-link "lib/clp.linux.x86_64.gnu.opt":
+> Enter soft-link target file or directory for "lib/clp.linux.x86_64.gnu.opt" (return if not needed): 
+> /sw/Clp-1.11/build
+-> creating softlink "lib/clp.linux.x86_64.gnu.opt" -> "/sw/Clp-1.11/build"
 
 - preparing missing soft-link "lib/ipopt.linux.x86_64.gnu.opt":
 > Enter soft-link target file or directory for "lib/ipopt.linux.x86_64.gnu.opt" (return if not needed):
@@ -303,11 +274,19 @@ make[1]: Leaving directory `/sw/scip'
    On some systems, the option [-e] is not available for the read command.
    You have to compile with READ=read.
    
-   In some situations, it may be necessary to adjust the flags for linking against Clp.
-   SCIP's Makefile assumes that Blas and Lapack are installed as system libraries (libblas.a, liblapack.a)
-   and are not build into the CoinUtils library. If that is different in your build of Clp,
-   you may have to remove $(LINKCXX_l)lapack$(LINKLIBSUFFIX) from the LPSLDFLAGS in Makefile
-   or make.project. Also removing $(LINKCXX_l)bz2$(LINKLIBSUFFIX) may help in some cases.
+   In some situations, it may be necessary to adjust the flags for
+   linking against Clp. SCIP's Makefile tries to find the file
+   "clp_addlibs.txt", which specifies the needed libraries. The first
+   thing you should check is whether "clp_addlibs.txt" is present at
+   in path "libclp.*/share/coin/doc/Clp/" (you may have to correct
+   this path for some Clp versions). If this file is not present in
+   your Clp version, SCIP tries to guess the paths and libraries: it
+   assumes that Blas and Lapack are installed as system libraries
+   (libblas.a, liblapack.a) and are not build into the CoinUtils
+   library. If that is different in your build of Clp, you may have to
+   remove $(LINKCXX_l)lapack$(LINKLIBSUFFIX) from the LPSLDFLAGS in
+   Makefile or make.project. Also removing
+   $(LINKCXX_l)bz2$(LINKLIBSUFFIX) may help in some cases.
 
    If you encounter other compiler or linker errors, you should recompile with
    "make VERBOSE=true ..." in order to get the full compiler invocation. This might help to
@@ -355,14 +334,9 @@ make[1]: Leaving directory `/sw/scip'
        - since MOSEK is a shared library, make sure your LD_LIBRARY_PATH contains <path to SCIP>/lib
 
    (f) to use CLP
-       - ln -s <path to CLP's and COIN's *.h files> <path to SCIP>/lib/clpinc
-         (e.g. "cd scip; ln -s /Coin-Clp/include lib/clpinc")
-       - ln -s <file libClp.a> <path to SCIP>/lib/libclp.$(OSTYPE).$(ARCH).$(COMP).a
+       - ln -s <path to Clp main directory> <path to SCIP>/lib/libclp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
          for each operating system and architecture to use
-         (e.g. "cd scip; ln -s /Coin-Clp/lib/libClp.a lib/libclp.linux.x86.gnu.a")
-       - ln -s <file libCoinUtils.a> <path to SCIP>/lib/libcoinutils.$(OSTYPE).$(ARCH).$(COMP).a
-         for each operating system and architecture to use
-         (e.g. "cd scip; ln -s /Coin-Clp/lib/libCoinUtils.a lib/libcoinutils.linux.x86.gnu.a")
+         (e.g. "cd scip; ln -s /Coin-Clp lib/libclp.linux.x86.gnu.opt")
 
    (g) to use ZIMPL as additional file reader for reading *.zpl files
        - mkdir <path to SCIP>/lib/zimplinc
