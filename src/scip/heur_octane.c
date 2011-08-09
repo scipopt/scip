@@ -225,7 +225,8 @@ SCIP_RETCODE generateAverageRay(
    /* get the relevant columns of the simplex tableau */
    for( j = nsubspacevars-1; j >= 0; --j )
    {
-      SCIP_CALL( SCIPgetLPBInvACol(scip, SCIPvarGetProbindex(subspacevars[j]), tableaurows[j]) );
+      assert(SCIPcolGetLPPos(SCIPvarGetCol(subspacevars[j])) >= 0);
+      SCIP_CALL( SCIPgetLPBInvACol(scip, SCIPcolGetLPPos(SCIPvarGetCol(subspacevars[j])), tableaurows[j]) );
       for( i = nrows - 1; i >= 0; --i )
 	 rownorm[i] += tableaurows[j][i] * tableaurows[j][i];
    }
@@ -623,7 +624,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata; 
    SCIP_SOL* sol;
-   SCIP_SOL** first_sols;     /* stores the first ffirst sols in order to check for common viloation of a row */
+   SCIP_SOL** first_sols;     /* stores the first ffirst sols in order to check for common violation of a row */
 
    SCIP_VAR** vars;           /* the variables of the problem */
    SCIP_VAR** fracvars;       /* variables, that are fractional in current LP solution */
@@ -716,11 +717,28 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
    }
    else
    {
+      int currentindex;
+
       nsubspacevars = nvars; 
       SCIP_CALL( SCIPallocBufferArray(scip, &subspacevars, nsubspacevars) );
-      BMScopyMemoryArray(subspacevars, vars, nvars);
-      for( i = nvars - 1; i >= 0; --i )
-         fracspace[i] = i;
+
+      /* only copy the variables which are in the current LP */
+      currentindex = 0;
+      for( i = 0; i < nvars; ++i )
+      {
+         if( SCIPcolGetLPPos(SCIPvarGetCol(vars[i])) >= 0 )
+         {
+            subspacevars[currentindex] = vars[i];
+            fracspace[i] = currentindex;
+            ++currentindex;
+
+         }
+         else
+         {
+            fracspace[i] = -1;
+            --nsubspacevars;
+         }
+      }
    }
 
    /* nothin to do for empty search space */
@@ -728,10 +746,9 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
       return SCIP_OKAY;
    
    assert(0 < nsubspacevars && nsubspacevars <= nvars);
-#ifndef NDEBUG
+
    for( i = 0; i < nsubspacevars; i++)
       assert(fracspace[SCIPvarGetProbindex(subspacevars[i])] == i);
-#endif
 
    /* at most 2^(n-1) facets can be hit */    
    if( nsubspacevars < 30 )
@@ -743,7 +760,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
 
    f_first = MIN(f_first, f_max); 
 
-   /* memory allociation */
+   /* memory allocation */
    SCIP_CALL( SCIPallocBufferArray(scip, &rayorigin, nsubspacevars) ); 
    SCIP_CALL( SCIPallocBufferArray(scip, &raydirection, nsubspacevars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &negquotient, nsubspacevars) );
