@@ -504,7 +504,21 @@ SCIP_RETCODE initMatrix(
       else
          matrix->rhs[i] = SCIPinfinity(scip);
 
-      if( nrowlpnonz == 0 && (SCIPisFeasLT(scip, 0.0, matrix->lhs[i]) || SCIPisFeasGT(scip, 0.0, matrix->rhs[i])) )
+      /* make sure that maxval is larger than zero before normalization.
+       * Maxval may be zero if the constraint contains no variables but is modifiable, hence not redundant
+       */
+      if( !SCIPisFeasZero(scip, maxval) )
+      {
+         if( !SCIPisInfinity(scip, -matrix->lhs[i]) )
+            matrix->lhs[i] /= maxval;
+         if( !SCIPisInfinity(scip, matrix->rhs[i]) )
+            matrix->rhs[i] /= maxval;
+      }
+
+      SCIPdebugMessage(" %s : lhs=%g, rhs=%g, maxval=%g \n", SCIProwGetName(row), matrix->lhs[i], matrix->rhs[i], maxval);
+
+      /* in case of empty rows with a 0 < lhs <= 0.0 or 0.0 <= rhs < 0 we deduce the infeasibility of the problem */
+      if( nrowlpnonz == 0 && (SCIPisFeasPositive(scip, matrix->lhs[i]) || SCIPisFeasNegative(scip, matrix->rhs[i])) )
       {
          *infeasible = TRUE;
          SCIPdebugMessage("  Matrix initialization stopped because of row infeasibility! \n");
