@@ -292,7 +292,7 @@ SCIP_RETCODE createSubSCIP(
     * set nodelimit to 0
     * heuristics and separators were not copied into subscip, so should not need to switch off */
    SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "presolving/maxrounds", heurdata->maxpresolverounds) );
-   SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "presolving/probing/maxrounds", 0) );
+   SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "propagating/probing/maxprerounds", 0) );
    SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "presolving/maxrestarts", 0) );
 #if 0 /* should not need all this, since we normally do not go until root node anyway */
    SCIP_CALL( SCIPsetBoolParam(heurdata->subscip, "conflict/useprop", FALSE) );
