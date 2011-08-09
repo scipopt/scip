@@ -481,6 +481,8 @@ SCIP_RETCODE initMatrix(
 
       /* get LP row information */
       row = lprows[i];
+
+      SCIPdebug( SCIPprintRow(scip, row, NULL) );
       rowvals = SCIProwGetVals(row);
       nrowlpnonz = SCIProwGetNLPNonz(row);
       maxval = SCIPgetRowMaxCoef(scip, row);
@@ -496,16 +498,28 @@ SCIP_RETCODE initMatrix(
        * maximum absolute value of the row
        */
       if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
-         matrix->lhs[i] = (SCIProwGetLhs(row) - constant) / maxval;
+         matrix->lhs[i] = (SCIProwGetLhs(row) - constant);
       else
          matrix->lhs[i] = -SCIPinfinity(scip);
 
       if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) )
-         matrix->rhs[i] = (SCIProwGetRhs(row) - constant) / maxval;
+         matrix->rhs[i] = (SCIProwGetRhs(row) - constant);
       else
          matrix->rhs[i] = SCIPinfinity(scip);
 
-      if( nrowlpnonz == 0 && (SCIPisFeasLT(scip, 0.0, matrix->lhs[i]) || SCIPisFeasGT(scip, 0.0, matrix->rhs[i])) )
+      /* make sure that maxval is larger than zero before normalization */
+      if( !SCIPisFeasZero(scip, maxval) )
+      {
+         if( !SCIPisInfinity(scip, -matrix->lhs[i]) )
+            matrix->lhs[i] /= maxval;
+         if( !SCIPisInfinity(scip, matrix->rhs[i]) )
+            matrix->rhs[i] /= maxval;
+      }
+
+      SCIPdebugMessage(" %s : lhs=%g, rhs=%g, maxval=%g \n", SCIProwGetName(row), matrix->lhs[i], matrix->rhs[i], maxval);
+
+      /* in case of empty rows with a 0 < lhs <= 0.0 or 0.0 <= rhs < 0 we deduce the infeasibility of the problem */
+      if( nrowlpnonz == 0 && (SCIPisFeasPositive(scip, matrix->lhs[i]) || SCIPisFeasNegative(scip, matrix->rhs[i])) )
       {
          *infeasible = TRUE;
          SCIPdebugMessage("  Matrix initialization stopped because of row infeasibility! \n");
@@ -1641,8 +1655,8 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    {
       /* case that remaining LP is empty */
 
-#ifdef SCIP_DEBUG
-      SCIP_CALL( SCIPtrySol(scip, sol, TRUE, TRUE, TRUE, TRUE, &stored) );
+#ifndef NDEBUG
+      SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, TRUE, TRUE, &stored) );
 #else
       /* in optimized mode, variable bounds, integrality and row feasibility are ensured by heuristic and
        * do not need to be checked anymore
@@ -1705,8 +1719,8 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
           * Neither integrality nor feasibility of LP rows have to be checked, because they
           * are guaranteed by the heuristic at this stage.
           */
-#ifdef SCIP_DEBUG
-         SCIP_CALL( SCIPtrySol(scip, sol, TRUE, TRUE, TRUE, TRUE, &stored) );
+#ifndef NDEBUG
+         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, TRUE, TRUE, &stored) );
 #else
          /* @todo: maybe bounds don't need to be checked, in this case put an assert concerning stored ?????????? */
          SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, FALSE, FALSE, &stored) );
