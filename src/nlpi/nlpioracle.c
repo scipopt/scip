@@ -1597,6 +1597,7 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
 
       if( cons->exprtree != NULL )
       {
+         assert(SCIPexprtreeGetNVars(cons->exprtree) <= oracle->nvars);
          addednlcon = TRUE;
          SCIP_CALL( SCIPexprintCompile(oracle->exprinterpreter, cons->exprtree) );
       }
@@ -1646,7 +1647,10 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
       nlin, lininds, linvals, nquadelems, quadelems, exprvaridxs, exprtree, constant, constant, NULL) );
 
    if( oracle->objective->exprtree != NULL )
+   {
+      assert(SCIPexprtreeGetNVars(oracle->objective->exprtree) <= oracle->nvars);
       SCIP_CALL( SCIPexprintCompile(oracle->exprinterpreter, oracle->objective->exprtree) );
+   }
 
    oracle->vardegreesuptodate = FALSE;
    
@@ -2688,6 +2692,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
          assert(cons->exprtree != NULL); /* this had been the first case */
 
          nvars = SCIPexprtreeGetNVars(cons->exprtree);
+         assert(nvars <= oracle->nvars);
          assert(cons->exprvaridxs != NULL || nvars == 0);
 
          if( nvars > 0 )
