@@ -190,12 +190,12 @@ SCIP_RETCODE SCIPpropCreate(
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/maxprerounds", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname,
-         "maximal number of presolving rounds the presolver participates in (-1: no limit)",
+         "maximal number of presolving rounds the propagator participates in (-1: no limit)",
          &(*prop)->maxprerounds, FALSE, presolmaxrounds, -1, INT_MAX, NULL, NULL) ); /*lint !e740*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/presoldelay", name);
    SCIP_CALL( SCIPsetAddBoolParam(set, blkmem, paramname,
-         "should presolver be delayed, if other presolvers found reductions?",
+         "should presolver be delayed, if other propagators found reductions?",
          &(*prop)->presoldelay, TRUE, presoldelay, NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
