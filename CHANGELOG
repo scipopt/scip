@@ -92,6 +92,7 @@ fixed bugs:
 - fixed bug trying to print big messages bigger than SCIP_MAXSTRLEN
 - fixed bug in copying NLPI interfaces that use block-memory (NLPI copy used block memory from source SCIP)
 - fixed several issues in flatzinc reader
+- fixed bug w.r.t. counting feasible solutions and turned of sparse solution test
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})

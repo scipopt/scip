@@ -372,6 +372,7 @@ SCIP_RETCODE SCIPincludeConshdlrViolatedCut(
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          -1000000, -1000000, -1000000, -1, -1, 100, 0, FALSE, FALSE, FALSE, FALSE,
+         SCIP_PROPTIMING_BEFORELP,
          NULL, consFreeViolatedCuts, NULL, NULL,
          NULL, NULL, NULL, NULL,
          NULL, NULL, NULL, NULL, NULL,

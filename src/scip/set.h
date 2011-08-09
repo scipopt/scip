@@ -628,6 +628,12 @@ void SCIPsetSortProps(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** sorts propagators by priorities for presolving */
+extern
+void SCIPsetSortPropsPresol(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** inserts primal heuristic in primal heuristic list */
 extern
 SCIP_RETCODE SCIPsetIncludeHeur(

@@ -29,9 +29,14 @@
 
 #define PROP_NAME              "rootredcost"
 #define PROP_DESC              "reduced cost strengthening at the root node"
-#define PROP_PRIORITY          +1000000
-#define PROP_FREQ                     1
+#define PROP_TIMING             SCIP_PROPTIMING_BEFORELP
+#define PROP_PRIORITY          +1000000 /**< propagator priority */ 
+#define PROP_FREQ                     1 /**< propagator frequency */
 #define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
+#define PROP_PRESOL_PRIORITY          0 /**< priority of the presolving method (>= 0: before, < 0: after constraint handlers); combined with presolvers */
+#define PROP_PRESOL_DELAY          TRUE /**< should presolving be delay, if other presolvers found reductions?  */
+#define PROP_PRESOL_MAXROUNDS         0 /**< maximal number of presolving rounds the presolver participates in (-1: no
+                                         *   limit) */
 
 
 
@@ -90,6 +95,14 @@ SCIP_DECL_PROPFREE(propFreeRootredcost)
 #define propExitRootredcost NULL
 
 
+/** presolving initialization method of propagator (called when presolving is about to begin) */
+#define propInitpreRootredcost NULL
+
+
+/** presolving deinitialization method of propagator (called after presolving has been finished) */
+#define propExitpreRootredcost NULL
+
+
 /** solving process initialization method of propagator (called when branch and bound process is about to begin) */
 static
 SCIP_DECL_PROPINITSOL(propInitsolRootredcost)
@@ -107,6 +120,10 @@ SCIP_DECL_PROPINITSOL(propInitsolRootredcost)
 
 /** solving process deinitialization method of propagator (called before branch and bound process data is freed) */
 #define propExitsolRootredcost NULL
+
+
+/** presolving method of propagator */
+#define propPresolRootredcost NULL
 
 
 /** execution method of propagator */
@@ -296,10 +313,10 @@ SCIP_RETCODE SCIPincludePropRootredcost(
    propdata->lastcutoffbound = SCIPinfinity(scip);
 
    /* include propagator */
-   SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY,
+   SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY,
          propCopyRootredcost,
-         propFreeRootredcost, propInitRootredcost, propExitRootredcost, 
-         propInitsolRootredcost, propExitsolRootredcost, propExecRootredcost, propRespropRootredcost,
+         propFreeRootredcost, propInitRootredcost, propExitRootredcost, propInitpreRootredcost, propExitpreRootredcost,
+         propInitsolRootredcost, propExitsolRootredcost, propPresolRootredcost, propExecRootredcost, propRespropRootredcost,
          propdata) );
 
    return SCIP_OKAY;

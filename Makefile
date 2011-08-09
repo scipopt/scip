@@ -570,9 +570,10 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/presol_dualfix.o \
 			scip/presol_implics.o \
 			scip/presol_inttobinary.o \
-			scip/presol_probing.o \
 			scip/presol_trivial.o \
+			scip/prop_probing.o \
 			scip/prop_pseudoobj.o \
+			scip/prop_redcost.o \
 			scip/prop_rootredcost.o \
 			scip/prop_vbounds.o \
 			scip/reader_ccg.o \
@@ -601,7 +602,6 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/sepa_mcf.o \
 			scip/sepa_oddcycle.o \
 			scip/sepa_rapidlearning.o \
-			scip/sepa_redcost.o \
 			scip/sepa_strongcg.o \
 			scip/sepa_zerohalf.o
 
@@ -775,6 +775,37 @@ lintfiles:
 doc: 		
 		cd doc; $(DOXY) $(MAINSHORTNAME).dxy ; $(DOXY) $(MAINSHORTNAME)devel.dxy
 
+.PHONY: install
+install:	$(INCLUDEDIR) $(INSTALLDIR) $(OBJSCIPLIBFILE) $(MAINFILE) 
+		@echo "-> copy scip headers"
+		@-cp $(SCIPPLUGININCSRC) $(INCLUDEDIR)/scip/
+		@-cp $(SRCDIR)/scip/pub_*h $(INCLUDEDIR)/scip/
+		@-cp $(SRCDIR)/scip/struct_*h $(INCLUDEDIR)/scip/
+		@-cp $(SRCDIR)/scip/type_*h $(INCLUDEDIR)/scip/
+		@-cp $(SRCDIR)/scip/scip.h $(INCLUDEDIR)/scip/
+		@echo "-> copy objective scip headers"
+		@-cp $(OBJSCIPINCSRC) $(INCLUDEDIR)/objscip/
+		@-cp $(MAINFILE) $(INCLUDEDIR)/
+		@-cp $(LPILIBFILE) $(INCLUDEDIR)/
+		@-cp $(NLPILIBFILE) $(INCLUDEDIR)/
+		@-cp $(SCIPLIBFILE) $(INCLUDEDIR)/
+		@-cp $(OBJSCIPLIBFILE) $(INCLUDEDIR)/
+
+#		@-mkdir -p $(INCLUDEDIR)/objscip
+#		@echo "-> copy objective scip headers"
+#		@-mkdir -p $(INCLUDEDIR)/scip
+
+.PHONY: uninstall
+uninstall:	cleanlib cleanbin
+		@echo "-> remove scip headers"
+		@-mkdir -p $(INCLUDEDIR)/scip
+		@-rm -f $(INCLUDEDIR)/scip/*.h
+		@echo "-> remove objective scip headers"
+		@-mkdir -p $(INCLUDEDIR)/objscip
+		@-rm -f $(INCLUDEDIR)/objscip/*.h
+		@-rmdir $(INCLUDEDIR)/scip $(INCLUDEDIR)/objscip
+		@-rmdir --ignore-fail-on-non-empty $(INCLUDEDIR)
+
 .PHONY: check
 check:		test
 
@@ -914,7 +945,7 @@ endif
 
 .PHONY: cleanlib
 cleanlib:       $(LIBDIR)
-		@echo "-> remove libraries"
+		@echo "-> remove libraries $(LIBDIR)/lib*.$(LIBEXT)"
 		@-rm -f $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) \
 		$(LPILIBLINK) $(LPILIBSHORTLINK) $(NLPILIBLINK) $(NLPILIBSHORTLINK) \
 		$(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK)
@@ -993,15 +1024,19 @@ depend:	scipdepend lpidepend nlpidepend maindepend
 -include	$(NLPILIBDEP)
 
 $(MAINFILE):	$(BINDIR) $(BINOBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINOBJFILES)
+ifneq ($(SHARED),true) # this is temporary hack which is needed since the shared libraries are prefered 
+		@echo "temporary hack since shared libraries are prefered"
+		@$(MAKE) cleanlib SHARED=true
+endif
 		@echo "-> linking $@"
 ifeq ($(LINKER),C)
 		$(LINKCC) $(MAINOBJFILES) \
-		$(LINKCC_L)$(LIBDIR) $(LINKCC_L)$(LIBDIR) $(LINKCC_l)$(SCIPLIB)$(LINKLIBSUFFIX) $(LINKCC_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCC_l)$(NLPILIB)$(LINKLIBSUFFIX) \
+		$(LINKCC_L)$(LIBDIR) $(LINKCC_l)$(SCIPLIB)$(LINKLIBSUFFIX) $(LINKCC_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCC_l)$(NLPILIB)$(LINKLIBSUFFIX) \
 		$(OFLAGS) $(LPSLDFLAGS) $(LDFLAGS) $(LINKCC_o)$@
 endif
 ifeq ($(LINKER),CPP)
 		$(LINKCXX) $(MAINOBJFILES) \
-		$(LINKCXX_L)$(LIBDIR) $(LINKCC_L)$(LIBDIR) $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
+		$(LINKCXX_L)$(LIBDIR) $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
 		$(OFLAGS) $(LPSLDFLAGS) $(LDFLAGS) $(LINKCXX_o)$@
 endif
 

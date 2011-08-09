@@ -57,6 +57,8 @@ typedef SCIP_Longint         Int;
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
 
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
+
 /* default parameter settings */
 #define DEFAULT_SPARSETEST         TRUE /**< sparse test on or off */
 #define DEFAULT_DISCARDSOLS        TRUE /**< is it allowed to discard solutions */
@@ -355,7 +357,7 @@ SCIP_RETCODE checkParameters(
    if( valid )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, 
-         "At least of heuristic is not turned off! Heuristic solutions are currently not accepted.\n");
+         "At least one heuristic is not turned off! Heuristic solutions are currently not accepted.\n");
    }
    
    /* check if restart is turned off */
@@ -599,14 +601,17 @@ SCIP_RETCODE collectSolution(
    {
       if( sol == NULL )
       {
-         lbvalues[v] = (int)(SCIPvarGetLbLocal(conshdlrdata->vars[v]) + 0.5);
-         ubvalues[v] = (int)(SCIPvarGetUbLocal(conshdlrdata->vars[v]) + 0.5);
+         lbvalues[v] = (SCIP_Longint)(SCIPvarGetLbLocal(conshdlrdata->vars[v]) + 0.5);
+         ubvalues[v] = (SCIP_Longint)(SCIPvarGetUbLocal(conshdlrdata->vars[v]) + 0.5);
       }
       else
       {
-         lbvalues[v] = (int)(SCIPgetSolVal(scip, sol, conshdlrdata->vars[v]) + 0.5);
+         lbvalues[v] = (SCIP_Longint)(SCIPgetSolVal(scip, sol, conshdlrdata->vars[v]) + 0.5);
          ubvalues[v] = lbvalues[v];
       }
+      
+      SCIPdebugMessage("variable <%s> [%"SCIP_LONGINT_FORMAT",%"SCIP_LONGINT_FORMAT"]\n", 
+         SCIPvarGetName(conshdlrdata->vars[v]), lbvalues[v], ubvalues[v]);
    } 
    
    SCIP_CALL( SCIPallocMemory(scip, &solution) );
@@ -636,9 +641,10 @@ SCIP_RETCODE countSparsesol(
    assert( conshdlrdata != NULL );
    assert( result != NULL );
    
-   /* setting result to infeasible since we reject any solution; however, if the solution passes the sparse test the
-    * result is set to SCIP_CUTOFF which cuts off the subtree initialized through the current node */
-   *result = SCIP_INFEASIBLE;
+   /* the result should be infeasible since we reject any solution; however, if the solution passes the sparse test the
+    * result is set to SCIP_CUTOFF which cuts off the subtree initialized through the current node
+    */
+   assert(*result == SCIP_INFEASIBLE);
    
    if( feasible )
    {
@@ -680,10 +686,12 @@ SCIP_RETCODE countSparsesol(
          
          /* set newsols to the computed number */
          setInt(&newsols, nsols);
+         SCIPdebugMessage("-> add 2^%d to number of solutions\n", npseudocans);
       }
       else
       {
          SCIP_CALL( SCIPgetPseudoBranchCands(scip, &vars, &nvars, NULL) );
+         
          for( v = 0; v < nvars; ++v )
          {
             var = vars[v];
@@ -1085,12 +1093,12 @@ SCIP_RETCODE checkFeasSubtree(
       conshdlr = conshdlrs[h];
       assert( conshdlr != NULL );
       
-      nconss = SCIPconshdlrGetNEnabledConss(conshdlr);
-      
       /* skip this constraints handler */
       if( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 )
          continue;
 
+      nconss = SCIPconshdlrGetNEnabledConss(conshdlr);
+      
       if( nconss > 0 )
       {
          SCIP_Bool satisfied;
@@ -1184,6 +1192,11 @@ SCIP_RETCODE checkSolution(
    assert( SCIPgetNOrigVars(scip) != 0);
    assert( SCIPsolGetHeur(sol) == NULL);
 
+   /* setting result to infeasible since we reject any solution; however, if the solution passes the sparse test or is
+    * completely fixed the result is set to SCIP_CUTOFF which cuts off the subtree initialized through the current node
+    */
+   *result = SCIP_INFEASIBLE;
+
 #ifdef SCIP_DEBUG
    {
       SCIP_VAR* var;
@@ -1206,12 +1219,14 @@ SCIP_RETCODE checkSolution(
    /* check if integer variables are completely fixed */
    if( SCIPgetNPseudoBranchCands(scip) == 0 )
    {
-      /* check solution orifinal space */
+      /* check solution original space */
       checkSolutionOrig(scip, sol, conshdlrdata);
 
       addOne(&conshdlrdata->nsols);
       conshdlrdata->nNonSparseSols++;
       
+      SCIPdebugMessage("-> add one to number of solutions\n");
+
       if( conshdlrdata->collect )
       {
          SCIP_CALL( collectSolution(scip, conshdlrdata, sol) );
@@ -1225,7 +1240,7 @@ SCIP_RETCODE checkSolution(
       SCIP_CALL( checkFeasSubtree(scip, sol, &feasible) ) ;
       SCIP_CALL( countSparsesol(scip, sol, feasible, conshdlrdata, result) );
    }
-
+   
    /* transform the current number of solutions into a SCIP_Longint */
    nsols = getNCountedSols(conshdlrdata->nsols, &valid);
    
@@ -2275,6 +2290,7 @@ SCIP_RETCODE SCIPincludeConshdlrCountsols(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         CONSHDLR_PROP_TIMING,
          conshdlrCopyCountsols,
          consFreeCountsols, consInitCountsols, consExitCountsols, 
          consInitpreCountsols, consExitpreCountsols, consInitsolCountsols, consExitsolCountsols,

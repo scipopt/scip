@@ -13,10 +13,12 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   sepa_redcost.c
- * @ingroup SEPARATORS
- * @brief  reduced cost strengthening separator
+/**@file   prop_redcost.c
+ * @ingroup PROPAGATORS
+ * @brief  redcost propagator
  * @author Tobias Achterberg
+ * @author Matthias Miltenberger
+ * @author Michael Winkler
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -24,85 +26,102 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/sepa_redcost.h"
+#include "scip/prop_redcost.h"
 
 
-#define SEPA_NAME              "redcost"
-#define SEPA_DESC              "reduced cost strengthening separator"
-#define SEPA_PRIORITY         +10000000
-#define SEPA_FREQ                     1
-#define SEPA_MAXBOUNDDIST           1.0
-#define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
-#define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
-
+#define PROP_NAME              "redcost"
+#define PROP_DESC              "reduced cost strengthening propagator"
+#define PROP_TIMING             SCIP_PROPTIMING_DURINGLPLOOP
+#define PROP_PRIORITY         +10000000 /**< propagator priority */
+#define PROP_FREQ                     1 /**< propagator frequency */
+#define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
+#define PROP_PRESOL_PRIORITY          0 /**< priority of the presolving method (>= 0: before, < 0: after constraint handlers); combined with presolvers */
+#define PROP_PRESOL_DELAY          TRUE /**< should presolving be delay, if other presolvers found reductions?  */
+#define PROP_PRESOL_MAXROUNDS         0 /**< maximal number of presolving rounds the presolver participates in (-1: no
+                                         *   limit) */
+#define MAXBOUNDDIST                1.0
 #define DEFAULT_CONTINUOUS        FALSE /**< should reduced cost fixing be also applied to continuous variables? */
 
 
-/** separator data */
-struct SCIP_SepaData
+
+
+/*
+ * Data structures
+ */
+
+
+/** propagator data */
+struct SCIP_PropData
 {
    SCIP_Bool             continuous;         /**< should reduced cost fixing be also applied to continuous variables? */
 };
 
 
-
-/*
- * Callback methods of separator
- */
-
-/** copy method for separator plugins (called when SCIP copies plugins) */
+/** copy method for propagator plugins (called when SCIP copies plugins) */
 static
-SCIP_DECL_SEPACOPY(sepaCopyRedcost)
+SCIP_DECL_PROPCOPY(propCopyRedcost)
 {  /*lint --e{715}*/
    assert(scip != NULL);
-   assert(sepa != NULL);
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+   assert(prop != NULL);
+   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
 
    /* call inclusion method of constraint handler */
-   SCIP_CALL( SCIPincludeSepaRedcost(scip) );
- 
-   return SCIP_OKAY;
-}
-
-/** destructor of separator to free user data (called when SCIP is exiting) */
-static
-SCIP_DECL_SEPAFREE(sepaFreeRedcost)
-{  /*lint --e{715}*/
-   SCIP_SEPADATA* sepadata;
-
-   /* free separator data */
-   sepadata = SCIPsepaGetData(sepa);
-   assert(sepadata != NULL);
-
-   SCIPfreeMemory(scip, &sepadata);
-
-   SCIPsepaSetData(sepa, NULL);
+   SCIP_CALL( SCIPincludePropRedcost(scip) );
 
    return SCIP_OKAY;
 }
 
-
-/** initialization method of separator (called after problem was transformed) */
-#define sepaInitRedcost NULL
-
-
-/** deinitialization method of separator (called before transformed problem is freed) */
-#define sepaExitRedcost NULL
-
-
-/** solving process initialization method of separator (called when branch and bound process is about to begin) */
-#define sepaInitsolRedcost NULL
-
-
-/** solving process deinitialization method of separator (called before branch and bound process data is freed) */
-#define sepaExitsolRedcost NULL
-
-
-/** LP solution separation method of separator */
+/** destructor of propagator to free user data (called when SCIP is exiting) */
 static
-SCIP_DECL_SEPAEXECLP(sepaExeclpRedcost)
+SCIP_DECL_PROPFREE(propFreeRedcost)
 {  /*lint --e{715}*/
-   SCIP_SEPADATA* sepadata;
+   SCIP_PROPDATA* propdata;
+
+   /* free propagator data */
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
+
+   SCIPfreeMemory(scip, &propdata);
+
+   SCIPpropSetData(prop, NULL);
+
+   return SCIP_OKAY;
+}
+
+
+/** initialization method of propagator (called after problem was transformed) */
+#define propInitRedcost NULL
+
+
+/** deinitialization method of propagator (called before transformed problem is freed) */
+#define propExitRedcost NULL
+
+
+/** presolving initialization method of propagator (called when presolving is about to begin) */
+#define propInitpreRedcost NULL
+
+
+/** presolving deinitialization method of propagator (called after presolving has been finished) */
+#define propExitpreRedcost NULL
+
+
+/** solving process initialization method of propagator (called when branch and bound process is about to begin) */
+#define propInitsolRedcost NULL
+
+
+/** solving process deinitialization method of propagator (called before branch and bound process data is freed) */
+#define propExitsolRedcost NULL
+
+
+/** presolving method of propagator */
+#define propPresolRedcost NULL
+
+
+/** reduced cost propagation method for an LP solution */
+static
+SCIP_DECL_PROPEXEC(propExecRedcost)
+{  /*lint --e{715}*/
+   SCIP_PROPDATA* propdata;
    SCIP_COL** cols;
    SCIP_Real cutoffbound;
    SCIP_Real lpobjval;
@@ -111,12 +130,15 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRedcost)
 
    *result = SCIP_DIDNOTRUN;
 
+   if( SCIPgetStage(scip) < SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
+
    /* we cannot apply reduced cost fixing, if we want to solve exactly */
    /**@todo implement reduced cost fixing with interval arithmetics */
    if( SCIPisExactSolve(scip) )
       return SCIP_OKAY;
 
-   /* only call separator, if an optimal LP solution is at hand */
+   /* only call propagator, if an optimal LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
 
@@ -131,7 +153,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRedcost)
    if( SCIPisInfinity(scip, cutoffbound) )
       return SCIP_OKAY;
 
-   /* only call separator, if the current LP is a valid relaxation */
+   /* only call propagator, if the current LP is a valid relaxation */
    if( !SCIPisLPRelax(scip) )
       return SCIP_OKAY;
 
@@ -143,9 +165,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRedcost)
 
    *result = SCIP_DIDNOTFIND;
 
-   /* get separator data */
-   sepadata = SCIPsepaGetData(sepa);
-   assert(sepadata != NULL);
+   /* get propagator data */
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
 
    /* get LP objective value */
    lpobjval = SCIPgetLPObjval(scip);
@@ -157,7 +179,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRedcost)
       SCIP_Real redcost;
 
       var = SCIPcolGetVar(cols[c]);
-      if( !sepadata->continuous && !SCIPvarIsIntegral(var) )
+      if( !propdata->continuous && !SCIPvarIsIntegral(var) )
          continue;
 
       switch( SCIPcolGetBasisStatus(cols[c]) )
@@ -270,39 +292,45 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRedcost)
 }
 
 
-/** arbitrary primal solution separation method of separator */
-#define sepaExecsolRedcost NULL
+
+/** propagation conflict resolving method of propagator */
+static
+SCIP_DECL_PROPRESPROP(propRespropRedcost)
+{  /*lint --e{715}*/
+   *result = SCIP_DIDNOTRUN;
+
+   return SCIP_OKAY;
+}
 
 
 
 
 /*
- * separator specific interface methods
+ * propagator specific interface methods
  */
 
-/** creates the reduced cost strengthening separator and includes it in SCIP */
-SCIP_RETCODE SCIPincludeSepaRedcost(
+/** creates the redcost propagator and includes it in SCIP */
+SCIP_RETCODE SCIPincludePropRedcost(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_SEPADATA* sepadata;
+   SCIP_PROPDATA* propdata;
 
-   /* create redcost separator data */
-   SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
+   /* create redcost propagator data */
+   SCIP_CALL( SCIPallocMemory(scip, &propdata) );
 
-   /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
-         SEPA_USESSUBSCIP, SEPA_DELAY, sepaCopyRedcost,
-         sepaFreeRedcost, sepaInitRedcost, sepaExitRedcost, 
-         sepaInitsolRedcost, sepaExitsolRedcost,
-         sepaExeclpRedcost, sepaExecsolRedcost,
-         sepadata) );
 
-   /* add separator parameters */
+   /* include propagator */
+   SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY,
+         propCopyRedcost,
+         propFreeRedcost, propInitRedcost, propExitRedcost, propInitpreRedcost, propExitpreRedcost,
+         propInitsolRedcost, propExitsolRedcost, propPresolRedcost, propExecRedcost, propRespropRedcost,
+         propdata) );
+
+   /* add redcost propagator parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "separating/redcost/continuous",
+         "propagating/redcost/continuous",
          "should reduced cost fixing be also applied to continuous variables?",
-         &sepadata->continuous, FALSE, DEFAULT_CONTINUOUS, NULL, NULL) );
-
+         &propdata->continuous, FALSE, DEFAULT_CONTINUOUS, NULL, NULL) );
    return SCIP_OKAY;
 }

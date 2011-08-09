@@ -81,6 +81,9 @@ public:
    /** should the constraint handler be skipped, if no constraints are available? */
    const SCIP_Bool scip_needscons_;
 
+   /** positions in the node solving loop where propagation method of constraint handler should be executed */
+   const unsigned int scip_timingmask_;
+
    /** default constructor */
    ObjConshdlr(
       SCIP*              scip,               /**< SCIP data structure */
@@ -97,7 +100,8 @@ public:
       SCIP_Bool          delaysepa,          /**< should separation method be delayed, if other separators found cuts? */
       SCIP_Bool          delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
       SCIP_Bool          delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
-      SCIP_Bool          needscons           /**< should the constraint handler be skipped, if no constraints are available? */
+      SCIP_Bool          needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
+      unsigned int       timingmask          /**< positions in the node solving loop where propagation method of constraint handler should be executed */
       )
       : scip_(scip),
         scip_name_(0),
@@ -112,7 +116,8 @@ public:
         scip_delaysepa_(delaysepa),
         scip_delayprop_(delayprop),
         scip_delaypresol_(delaypresol),
-        scip_needscons_(needscons)
+        scip_needscons_(needscons),
+        scip_timingmask_(timingmask)
    {
       /* the macro SCIPduplicateMemoryArray does not need the first argument: */
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_name_, name, std::strlen(name)+1) );
