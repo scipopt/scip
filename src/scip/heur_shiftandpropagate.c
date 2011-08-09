@@ -495,12 +495,12 @@ SCIP_RETCODE initMatrix(
        * maximum absolute value of the row
        */
       if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
-         matrix->lhs[i] = (SCIProwGetLhs(row) - constant) / maxval;
+         matrix->lhs[i] = (SCIProwGetLhs(row) - constant);
       else
          matrix->lhs[i] = -SCIPinfinity(scip);
 
       if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) )
-         matrix->rhs[i] = (SCIProwGetRhs(row) - constant) / maxval;
+         matrix->rhs[i] = (SCIProwGetRhs(row) - constant);
       else
          matrix->rhs[i] = SCIPinfinity(scip);
 
@@ -1657,7 +1657,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       /* case that remaining LP is empty */
 
 #ifdef SCIP_DEBUG
-      SCIP_CALL( SCIPtrySol(scip, sol, TRUE, TRUE, TRUE, TRUE, &stored) );
+      SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, TRUE, TRUE, &stored) );
 #else
       /* in optimized mode, variable bounds, integrality and row feasibility are ensured by heuristic and
        * do not need to be checked anymore
@@ -1721,7 +1721,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
           * are guaranteed by the heuristic at this stage.
           */
 #ifdef SCIP_DEBUG
-         SCIP_CALL( SCIPtrySol(scip, sol, TRUE, TRUE, TRUE, TRUE, &stored) );
+         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, TRUE, TRUE, &stored) );
 #else
          /* @todo: maybe bounds don't need to be checked, in this case put an assert concerning stored ?????????? */
          SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, FALSE, FALSE, &stored) );
