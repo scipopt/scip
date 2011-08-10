@@ -45,13 +45,9 @@ ifneq ($(INSTALLDIR),)
 		@-mkdir -p $(INSTALLDIR)/$(INCLUDEDIR)/objscip
 		@-rm -f $(INSTALLDIR)/$(INCLUDEDIR)/objscip/*.h
 		@-rmdir $(INSTALLDIR)/$(INCLUDEDIR)/scip $(INSTALLDIR)/$(INCLUDEDIR)/objscip
-		@-rmdir --ignore-fail-on-non-empty $(INSTALLDIR)/$(INCLUDEDIR)
 		@echo "-> remove binary from INSTALLDIR <$(INSTALLDIR)>"
 		@-(cd $(INSTALLDIR) && rm -f $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK));
-		@-rmdir --ignore-fail-on-non-empty $(INSTALLDIR)/$(BINDIR)
 		@echo "-> remove libraries from INSTALLDIR <$(INSTALLDIR)>"
 		@-(cd $(INSTALLDIR) && rm -f $(LPILIBFILE) $(NLPILIBFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE)); 
-		@-rmdir --ignore-fail-on-non-empty $(INSTALLDIR)/$(LIBDIR)
-		@-rmdir --ignore-fail-on-non-empty $(INSTALLDIR)
 endif
 

@@ -361,12 +361,14 @@ ALLSRC		+=	$(LPILIBSRC)
 NLPILIBCOBJ	= nlpi/nlpi.o \
 		  nlpi/nlpioracle.o \
 		  nlpi/expr.o \
-		  blockmemshell/memory.o \
+
+NLPILIBCXXOBJ	= nlpi/intervalarith.o
+
+NLPILIBSCIPOBJ	= blockmemshell/memory.o \
 		  scip/misc.o \
 		  scip/intervalarith.o \
 		  scip/interrupt.o \
 		  scip/message.o
-NLPILIBCXXOBJ	= nlpi/intervalarith.o
 
 ifeq ($(EXPRINT),none)
 NLPILIBCOBJ += 	nlpi/exprinterpret_none.o
@@ -389,6 +391,7 @@ NLPILIBNAME	=	$(NLPILIBSHORTNAME)-$(VERSION)
 NLPILIB		=	$(NLPILIBNAME).$(BASE)
 NLPILIBFILE	=	$(LIBDIR)/lib$(NLPILIB).$(LIBEXT)
 NLPILIBOBJFILES =	$(addprefix $(LIBOBJDIR)/,$(NLPILIBCOBJ)) $(addprefix $(LIBOBJDIR)/,$(NLPILIBCXXOBJ))
+NLPILIBSCIPOBJFILES =	$(addprefix $(LIBOBJDIR)/,$(NLPILIBSCIPOBJ))
 NLPILIBSRC	=	$(addprefix $(SRCDIR)/,$(NLPILIBCOBJ:.o=.c)) $(addprefix $(SRCDIR)/,$(NLPILIBCXXOBJ:.o=.cpp))
 NLPILIBDEP	=	$(SRCDIR)/depend.nlpilib$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAMEIPOPT).$(OPT)
 NLPILIBLINK	=	$(LIBDIR)/lib$(NLPILIBSHORTNAME).$(BASE).$(LIBEXT)
@@ -745,11 +748,9 @@ ifeq ($(VERBOSE),false)
 		$(LPILIBOBJFILES) $(NLPILIBOBJFILES) $(SCIPLIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(MAINOBJFILES)
 endif
 
-.PHONY: all
 all: 		libs $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
 
-.PHONY: libs
-libs: 		checklpsdefine $(LINKSMARKERFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(LPILIBLINK) $(LPILIBSHORTLINK) $(NLPILIBLINK) $(NLPILIBSHORTLINK) $(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK) 
+libs: 		$(LINKSMARKERFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(LPILIBLINK) $(LPILIBSHORTLINK) $(NLPILIBLINK) $(NLPILIBSHORTLINK) $(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK) 
 
 .PHONY: lint
 lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(NLPILIBSRC) $(MAINSRC)
@@ -775,36 +776,6 @@ lintfiles:
 doc: 		
 		cd doc; $(DOXY) $(MAINSHORTNAME).dxy ; $(DOXY) $(MAINSHORTNAME)devel.dxy
 
-.PHONY: install
-install:	$(INCLUDEDIR) $(INSTALLDIR) $(OBJSCIPLIBFILE) $(MAINFILE) 
-		@echo "-> copy scip headers"
-		@-cp $(SCIPPLUGININCSRC) $(INCLUDEDIR)/scip/
-		@-cp $(SRCDIR)/scip/pub_*h $(INCLUDEDIR)/scip/
-		@-cp $(SRCDIR)/scip/struct_*h $(INCLUDEDIR)/scip/
-		@-cp $(SRCDIR)/scip/type_*h $(INCLUDEDIR)/scip/
-		@-cp $(SRCDIR)/scip/scip.h $(INCLUDEDIR)/scip/
-		@echo "-> copy objective scip headers"
-		@-cp $(OBJSCIPINCSRC) $(INCLUDEDIR)/objscip/
-		@-cp $(MAINFILE) $(INCLUDEDIR)/
-		@-cp $(LPILIBFILE) $(INCLUDEDIR)/
-		@-cp $(NLPILIBFILE) $(INCLUDEDIR)/
-		@-cp $(SCIPLIBFILE) $(INCLUDEDIR)/
-		@-cp $(OBJSCIPLIBFILE) $(INCLUDEDIR)/
-
-#		@-mkdir -p $(INCLUDEDIR)/objscip
-#		@echo "-> copy objective scip headers"
-#		@-mkdir -p $(INCLUDEDIR)/scip
-
-.PHONY: uninstall
-uninstall:	cleanlib cleanbin
-		@echo "-> remove scip headers"
-		@-mkdir -p $(INCLUDEDIR)/scip
-		@-rm -f $(INCLUDEDIR)/scip/*.h
-		@echo "-> remove objective scip headers"
-		@-mkdir -p $(INCLUDEDIR)/objscip
-		@-rm -f $(INCLUDEDIR)/objscip/*.h
-		@-rmdir $(INCLUDEDIR)/scip $(INCLUDEDIR)/objscip
-		@-rmdir --ignore-fail-on-non-empty $(INCLUDEDIR)
 
 .PHONY: check
 check:		test
@@ -940,7 +911,6 @@ endif
 ifneq ($(OBJDIR),)
 		@-rm -f $(LASTSETTINGS)
 		@-rmdir $(OBJDIR)
-		@-rmdir --ignore-fail-on-non-empty obj
 endif
 
 .PHONY: cleanlib
@@ -949,13 +919,11 @@ cleanlib:       $(LIBDIR)
 		@-rm -f $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) \
 		$(LPILIBLINK) $(LPILIBSHORTLINK) $(NLPILIBLINK) $(NLPILIBSHORTLINK) \
 		$(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK)
-		@-rmdir --ignore-fail-on-non-empty $(LIBDIR)
 
 .PHONY: cleanbin
 cleanbin:       $(BINDIR) 
 		@echo "-> remove binary"
 		@-rm -f $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
-		@-rmdir --ignore-fail-on-non-empty $(BINDIR)
 
 .PHONY: lpidepend
 lpidepend:
@@ -1014,8 +982,7 @@ scipdepend:
 		@echo `grep -l "WITH_READLINE" $(ALLSRC)` >$(READLINEDEP)
 		@echo `grep -l "WITH_ZIMPL" $(ALLSRC)` >$(ZIMPLDEP)
 
-.PHONY: depend
-depend:	scipdepend lpidepend nlpidepend maindepend
+depend:		scipdepend lpidepend nlpidepend maindepend
 
 -include	$(MAINDEP)
 -include	$(SCIPLIBDEP)
@@ -1023,24 +990,20 @@ depend:	scipdepend lpidepend nlpidepend maindepend
 -include	$(LPILIBDEP)
 -include	$(NLPILIBDEP)
 
-$(MAINFILE):	$(BINDIR) $(BINOBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINOBJFILES)
-ifneq ($(SHARED),true) # this is temporary hack which is needed since the shared libraries are prefered 
-		@echo "temporary hack since shared libraries are prefered"
-		@$(MAKE) cleanlib SHARED=true
-endif
+$(MAINFILE):	$(BINDIR) $(BINOBJDIR) $(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(NLPILIBOBJFILES) $(MAINOBJFILES)
 		@echo "-> linking $@"
 ifeq ($(LINKER),C)
 		$(LINKCC) $(MAINOBJFILES) \
-		$(LINKCC_L)$(LIBDIR) $(LINKCC_l)$(SCIPLIB)$(LINKLIBSUFFIX) $(LINKCC_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCC_l)$(NLPILIB)$(LINKLIBSUFFIX) \
+		$(LINKCC_L)$(LIBDIR) $(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(NLPILIBOBJFILES) \
 		$(OFLAGS) $(LPSLDFLAGS) $(LDFLAGS) $(LINKCC_o)$@
 endif
 ifeq ($(LINKER),CPP)
 		$(LINKCXX) $(MAINOBJFILES) \
-		$(LINKCXX_L)$(LIBDIR) $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
+		$(LINKCXX_L)$(LIBDIR) $(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(NLPILIBOBJFILES) \
 		$(OFLAGS) $(LPSLDFLAGS) $(LDFLAGS) $(LINKCXX_o)$@
 endif
 
-$(SCIPLIBFILE):	checklpsdefine $(LIBOBJSUBDIRS) $(LIBDIR) touchexternal $(SCIPLIBOBJFILES)
+$(SCIPLIBFILE):	checklpsdefine $(LIBDIR) $(LIBOBJSUBDIRS) touchexternal $(SCIPLIBOBJFILES)
 		@echo "-> generating library $@"
 		-rm -f $@
 		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(SCIPLIBOBJFILES)
@@ -1064,10 +1027,10 @@ ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
 
-$(NLPILIBFILE):	$(LIBOBJSUBDIRS) $(LIBDIR) $(NLPILIBOBJFILES)
+$(NLPILIBFILE):	$(LIBOBJSUBDIRS) $(LIBDIR) $(NLPILIBOBJFILES) $(NLPILIBSCIPOBJFILES) 
 		@echo "-> generating library $@"
 		-rm -f $@
-		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(NLPILIBOBJFILES)
+		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(NLPILIBOBJFILES) $(NLPILIBSCIPOBJFILES) 
 ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
@@ -1186,7 +1149,6 @@ checklpsdefine:
 ifeq ($(LPILIBOBJ),)
 		$(error invalid LP solver selected: LPS=$(LPS). Possible options are: $(LPSOPTIONS))
 endif
-
 
 # --- EOF ---------------------------------------------------------------------
 # DO NOT DELETE
