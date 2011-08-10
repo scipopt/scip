@@ -893,7 +893,7 @@ $(LIBOBJDIR):	$(OBJDIR)
 $(LIBOBJSUBDIRS):	$(LIBOBJDIR)
 		@-mkdir -p $(LIBOBJDIR)/$@
 
-$(LIBDIR)::	
+$(LIBDIR):	
 		@-mkdir -p $(LIBDIR)
 
 $(BINDIR):	
@@ -990,7 +990,7 @@ depend:		scipdepend lpidepend nlpidepend maindepend
 -include	$(LPILIBDEP)
 -include	$(NLPILIBDEP)
 
-$(MAINFILE):	$(BINDIR) $(BINOBJDIR) $(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(NLPILIBOBJFILES) $(MAINOBJFILES)
+$(MAINFILE):	$(BINDIR) $(BINOBJDIR) $(LIBOBJSUBDIRS) $(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(NLPILIBOBJFILES) $(MAINOBJFILES)
 		@echo "-> linking $@"
 ifeq ($(LINKER),C)
 		$(LINKCC) $(MAINOBJFILES) \
