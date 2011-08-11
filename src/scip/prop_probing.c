@@ -91,7 +91,7 @@ struct SCIP_PropData
    int                   nuseless;           /**< current number of successive useless probings */
    int                   ntotaluseless;      /**< current number of successive totally useless probings */
    int                   nsumuseless;        /**< current number of useless probings */
-   SCIP_Bool             called;             /**< was probing applied at least once?, used in presolving */
+   SCIP_Longint          lastnode;           /**< last node where probing was applied, or -1 for presolving, and -2 for not applied yet */
 };
 
 
@@ -120,6 +120,7 @@ void initPropdata(
    propdata->nuseless = 0;
    propdata->ntotaluseless = 0;
    propdata->nsumuseless = 0;
+   propdata->lastnode = -2;
 }
 
 /** frees the sorted vars array */
@@ -635,7 +636,7 @@ SCIP_DECL_PROPINITPRE(propInitpreProbing)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
-   propdata->called = FALSE;
+   propdata->lastnode = -2;
 
    return SCIP_OKAY;
 }
@@ -677,7 +678,6 @@ SCIP_DECL_PROPINITSOL(propInitsolProbing)
    propdata->nuseless = 0;
    propdata->ntotaluseless = 0;
    propdata->nsumuseless = 0;
-   propdata->called = FALSE;
 #if 0
    propdata->nfixings = 0;
    propdata->naggregations = 0;
@@ -719,7 +719,7 @@ SCIP_DECL_PROPPRESOL(propPresolProbing)
       return SCIP_OKAY;
 
    /* if no domains changed since the last call, we don't need to probe */
-   if( propdata->called && nnewfixedvars == 0 && nnewaggrvars == 0 && nnewchgbds == 0 && nnewholes == 0 )
+   if( propdata->lastnode == -1 && nnewfixedvars == 0 && nnewaggrvars == 0 && nnewchgbds == 0 && nnewholes == 0 )
       return SCIP_OKAY;
 
    /**@todo currently we only perform probing on variables which are of binary type; there are, however, more
@@ -760,7 +760,7 @@ SCIP_DECL_PROPPRESOL(propPresolProbing)
       nbinvars = SCIPgetNBinVars(scip);
 
    /* if we probed all binary variables in previous runs, start again with the first one */
-   if( !propdata->called && propdata->startidx >= nbinvars )
+   if( propdata->lastnode != -1 && propdata->startidx >= nbinvars )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                       "   (%.1fs) probing cycle finished: starting next cycle\n", SCIPgetSolvingTime(scip));
@@ -769,7 +769,7 @@ SCIP_DECL_PROPPRESOL(propPresolProbing)
       propdata->nuseless = 0;
       propdata->ntotaluseless = 0;
    }
-   propdata->called = TRUE;
+   propdata->lastnode = -1;
 
    /* sort the binary variables by number of rounding locks, if at least 100 variables were probed since last sort */
    if( propdata->lastsortstartidx < 0 || propdata->startidx - propdata->lastsortstartidx >= 100 )
@@ -793,7 +793,7 @@ SCIP_DECL_PROPPRESOL(propPresolProbing)
    {
       *result = SCIP_DELAYED;
       /* probing was interrupted because it reached the maximal fixings parameter, so we want to rerun it at the next call */
-      propdata->called = FALSE;
+      propdata->lastnode = -2;
    }
    else if( *nfixedvars > oldnfixedvars || *naggrvars > oldnaggrvars || *nchgbds > oldnchgbds
       || propdata->nimplications > oldnimplications )
@@ -841,10 +841,10 @@ SCIP_DECL_PROPEXEC(propExecProbing)
    assert(propdata != NULL);
 
    /* if already called stop */
-   if( propdata->called )
+   if( propdata->lastnode == SCIPnodeGetNumber(SCIPgetCurrentNode(scip)) )
       return SCIP_OKAY;
 
-   propdata->called = TRUE;
+   propdata->lastnode = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
 
    /* get number of fractional variables that should be integral */
    nvars = SCIPgetNLPBranchCands(scip);
@@ -872,7 +872,7 @@ SCIP_DECL_PROPEXEC(propExecProbing)
          ++nbinvars;
       }
    }
-   SCIPdebugMessage("probing propagation found %d of %d possible probing candidates\n", nbinvars, nvars);
+   SCIPdebugMessage("problem <%s> node %"SCIP_LONGINT_FORMAT" probing propagation found %d of %d possible probing candidates\n", SCIPgetProbName(scip), SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), nbinvars, nvars);
 
    if( nbinvars == 0 )
    {
@@ -894,12 +894,12 @@ SCIP_DECL_PROPEXEC(propExecProbing)
    
    /* start probing on found variables */
    SCIP_CALL( applyProbing(scip, propdata, binvars, nbinvars, nbinvars, &startidx, &nfixedvars, &naggrvars, &nchgbds, &(propdata->nimplications), oldnfixedvars, oldnaggrvars, &delay, &cutoff) );
-   printf/*SCIPdebugMessage*/("probing propagation found %d fixings, %d aggregation, %d nchgbds, and %d implications\n", nfixedvars, naggrvars, nchgbds, (propdata->nimplications) - oldnimplications);
+   SCIPdebugMessage("probing propagation found %d fixings, %d aggregation, %d nchgbds, and %d implications\n", nfixedvars, naggrvars, nchgbds, (propdata->nimplications) - oldnimplications);
 
    if( delay )
    {
       /* probing was interrupted because it reached the maximal fixings parameter, so we want to rerun it at the next call */
-      propdata->called = FALSE;
+      propdata->lastnode = -2;
    }
 
    /* adjust result code */
