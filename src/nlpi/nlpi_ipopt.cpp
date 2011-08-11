@@ -38,14 +38,14 @@
 
 #include <new>      /* for std::bad_alloc */
 
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wshadow"
+#endif
 #include "IpoptConfig.h"
 #include "IpIpoptApplication.hpp"
-namespace Ipopt
-{
-   class IpoptNLP;
-   class IpoptData;
-}
 #include "IpIpoptCalculatedQuantities.hpp"
+#include "IpSolveStatistics.hpp"
+#include "IpJournalist.hpp"
 /* only for Ipopt >= 3.10 we can be sure that the required header files are available */
 #ifdef IPOPT_VERSION_MAJOR
 #if (IPOPT_VERSION_MAJOR >= 3) && (IPOPT_VERSION_MINOR >= 10)
@@ -54,8 +54,9 @@ namespace Ipopt
 #include "IpOrigIpoptNLP.hpp"
 #endif
 #endif
-#include "IpSolveStatistics.hpp"
-#include "IpJournalist.hpp"
+#ifdef __GNUC__
+#pragma GCC diagnostic warning "-Wshadow"
+#endif
 
 using namespace Ipopt;
 
