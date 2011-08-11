@@ -38,9 +38,6 @@
 
 #include <new>      /* for std::bad_alloc */
 
-/* if defined, then solution values of intermediate solutions are stored and returned as solution if Ipopt does not finish with a feasible solution */
-/* #define NLPIIPOPT_STOREINTERMEDIATE */
-
 #include "IpoptConfig.h"
 #include "IpIpoptApplication.hpp"
 namespace Ipopt
@@ -49,10 +46,13 @@ namespace Ipopt
    class IpoptData;
 }
 #include "IpIpoptCalculatedQuantities.hpp"
-#ifdef NLPIIPOPT_STOREINTERMEDIATE
+/* only for Ipopt >= 3.10 we can be sure that the required header files are available */
+#ifdef IPOPT_VERSION_MAJOR
+#if (IPOPT_VERSION_MAJOR >= 3) && (IPOPT_VERSION_MINOR >= 10)
 #include "IpIpoptData.hpp"
 #include "IpTNLPAdapter.hpp"
 #include "IpOrigIpoptNLP.hpp"
+#endif
 #endif
 #include "IpSolveStatistics.hpp"
 #include "IpJournalist.hpp"
@@ -88,6 +88,7 @@ public:
    SmartPtr<IpoptApplication>  ipopt;        /**< Ipopt application */
    SmartPtr<ScipNLP>           nlp;          /**< NLP in Ipopt form */
    std::string                 optfile;      /**< name of options file */
+   bool                        storeintermediate;/**< whether to store intermediate solutions */
    
    SCIP_Bool                   firstrun;     /**< whether the next NLP solve will be the first one (with the current problem structure) */
    SCIP_Real*                  initguess;    /**< initial values for primal variables, or NULL if not known */
@@ -104,6 +105,7 @@ public:
 
    SCIP_NlpiProblem()
    : oracle(NULL),
+     storeintermediate(false),
      firstrun(TRUE), initguess(NULL),
      lastsolstat(SCIP_NLPSOLSTAT_UNKNOWN), lasttermstat(SCIP_NLPTERMSTAT_OTHER),
      lastsolprimals(NULL), lastsoldualcons(NULL), lastsoldualvarlb(NULL), lastsoldualvarub(NULL),
@@ -461,6 +463,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
       return SCIP_NOMEMORY;
    }
    
+   (*problem)->ipopt->RegOptions()->AddStringOption2("store_intermediate", "whether to store the most feasible intermediate solutions", "no", "yes", "", "no", "", "useful when Ipopt looses a once found feasible solution and then terminates with an infeasible point");
    (*problem)->ipopt->Options()->SetIntegerValue("print_level", DEFAULT_PRINTLEVEL);
    /* (*problem)->ipopt->Options()->SetStringValue("print_timing_statistics", "yes"); */
    (*problem)->ipopt->Options()->SetStringValue("mu_strategy", "adaptive");
@@ -1723,6 +1726,7 @@ SCIP_DECL_NLPISETSTRINGPAR( nlpiSetStringParIpopt )
             SCIPerrorMessage("Error initializing Ipopt using optionfile \"%s\"\n", problem->optfile.c_str());
             return SCIP_ERROR;
          }
+         problem->ipopt->Options()->GetBoolValue("store_intermediate", problem->storeintermediate, "");
          problem->firstrun = TRUE;
          
          return SCIP_OKAY;
@@ -2261,8 +2265,9 @@ bool ScipNLP::intermediate_callback(
    IpoptCalculatedQuantities* ip_cq       /**< pointer to current calculated quantities */
 )
 {
-#ifdef NLPIIPOPT_STOREINTERMEDIATE
-   if( mode == RegularMode && inf_pr < nlpiproblem->lastsolinfeas )
+#ifdef IPOPT_VERSION_MAJOR
+#if (IPOPT_VERSION_MAJOR >= 3) && (IPOPT_VERSION_MINOR >= 10)
+   if( nlpiproblem->storeintermediate && mode == RegularMode && inf_pr < nlpiproblem->lastsolinfeas )
    {
       Ipopt::TNLPAdapter* tnlp_adapter;
 
@@ -2278,7 +2283,7 @@ bool ScipNLP::intermediate_callback(
 
       if( tnlp_adapter != NULL && ip_data != NULL && IsValid(ip_data->curr()) )
       {
-         printf("update lastsol: inf_pr old = %g -> new = %g\n", nlpiproblem->lastsolinfeas, inf_pr);
+         SCIPdebugMessage("update lastsol: inf_pr old = %g -> new = %g\n", nlpiproblem->lastsolinfeas, inf_pr);
 
          if( nlpiproblem->lastsolprimals == NULL )
          {
@@ -2312,6 +2317,7 @@ bool ScipNLP::intermediate_callback(
 
       }
    }
+#endif
 #endif
 
    return (SCIPinterrupted() == FALSE);
