@@ -1171,17 +1171,21 @@ SCIP_RETCODE optimize(
 
       if( !SCIPisZero(scip, bound) )
       {
-         SCIP_Real changedobj;
          SCIP_Bool feasible;
+#ifndef NDEBUG
+         SCIP_Real changedobj;
+#endif
 
          SCIPdebugMessage("  Promising candidates {%s=%g, %s=%g} with objectives <%g>, <%g> to be set to {%g, %g}\n",
                SCIPvarGetName(master), mastersolval, SCIPvarGetName(slave), slavesolval,
                masterobj, slaveobj, mastersolval + (int)masterdir * bound, slavesolval + (int)slavedir * bound);
 
+#ifndef NDEBUG
          /* the improvement of objective function is calculated */
          changedobj = ((int)slavedir * slaveobj  + (int)masterdir *  masterobj) * bound;
-
          assert(SCIPisFeasLT(scip, changedobj, 0.0));
+#endif
+
          assert(SCIPvarGetStatus(master) == SCIP_VARSTATUS_COLUMN && SCIPvarGetStatus(slave) == SCIP_VARSTATUS_COLUMN);
          /* try to change the solution values of the variables */
          feasible = FALSE;
@@ -1599,7 +1603,6 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
    {
       SCIP_VAR** allvars;
       SCIP_Bool lperror;
-      int w;
 #ifdef NDEBUG
       SCIP_RETCODE retstat;
 #endif
@@ -1609,11 +1612,11 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
       allvars = SCIPgetVars(scip);
             
 #ifdef SCIP_DEBUG
-      for( w = ndiscvars; w < SCIPgetNVars(scip); ++w )
+      for( i = ndiscvars; i < SCIPgetNVars(scip); ++i )
       {
          SCIPdebugMessage("  Cont. variable <%s>, status %d with bounds [%g <= %g <= x <= %g <= %g]\n",
-            SCIPvarGetName(allvars[w]), SCIPvarGetStatus(allvars[w]), SCIPvarGetLbGlobal(allvars[w]), SCIPvarGetLbLocal(allvars[w]), SCIPvarGetUbLocal(allvars[w]),
-            SCIPvarGetUbGlobal(allvars[w]));
+            SCIPvarGetName(allvars[i]), SCIPvarGetStatus(allvars[i]), SCIPvarGetLbGlobal(allvars[i]), SCIPvarGetLbLocal(allvars[i]), SCIPvarGetUbLocal(allvars[i]),
+            SCIPvarGetUbGlobal(allvars[i]));
       }
 #endif
       /* start diving to calculate the LP relaxation */
