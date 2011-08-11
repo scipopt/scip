@@ -1602,6 +1602,58 @@ SCIP_DECL_CONSLOCK(consLockCountsols)
  */
 
 /** dialog execution method for the count command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecCountPresolve)
+{  /*lint --e{715}*/
+   SCIP_Bool active;
+
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+   SCIPdialogMessage(scip, NULL, "\n");
+   SCIP_CALL( SCIPgetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", &active) );
+   
+   switch( SCIPgetStage(scip) )
+   {
+   case SCIP_STAGE_INIT:
+      SCIPdialogMessage(scip, NULL, "no problem exists\n");
+      break;
+      
+   case SCIP_STAGE_PROBLEM:
+      /* activate constraint handler cons_countsols */
+      if( !active )
+      {
+         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", TRUE) );
+      }
+      /*lint -fallthrough*/
+   case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_PRESOLVING:
+      /* presolve problem */
+      SCIP_CALL( SCIPpresolve(scip) );
+      break;
+
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_SOLVING:
+      SCIPdialogMessage(scip, NULL, "problem is already presolved\n");
+      break;
+
+   case SCIP_STAGE_SOLVED:
+      SCIPdialogMessage(scip, NULL, "problem is already (pre)solved\n");
+      break;
+
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_FREESOLVE:
+   case SCIP_STAGE_FREETRANS:
+   default:
+      SCIPerrorMessage("invalid SCIP stage\n");
+      return SCIP_INVALIDCALL;
+   } /*lint --e{616}*/
+   
+   SCIPdialogMessage(scip, NULL, "\n");
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the count command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
 {  /*lint --e{715}*/
    SCIP_RETCODE retcode;
@@ -2175,6 +2227,15 @@ SCIP_RETCODE createCountDialog(
    {
       SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, SCIPdialogExecCount, NULL, NULL,
             "count", "count number of feasible solutions", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* add dialog entry for counting */
+   if( !SCIPdialogHasEntry(root, "countpresolve") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, SCIPdialogExecCountPresolve, NULL, NULL,
+            "countpresolve", "presolve instance before counting number of feasible solutions", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
