@@ -138,14 +138,14 @@ SCIP_RETCODE createSubproblem(
       assert(SCIPisNLPConstructed(scip));
 
       /* activate nlp solver output if we are in SCIP's debug mode */
-      SCIPdebug( SCIP_CALL( SCIPnlpGetIntPar(SCIPgetNLP(scip), SCIP_NLPPAR_VERBLEVEL, &nlpverblevel) ) );
-      SCIPdebug( SCIP_CALL( SCIPnlpSetIntPar(SCIPgetNLP(scip), SCIP_NLPPAR_VERBLEVEL, MAX(1,nlpverblevel)) ) );
+      SCIPdebug( SCIP_CALL( SCIPgetNLPIntPar(scip, SCIP_NLPPAR_VERBLEVEL, &nlpverblevel) ) );
+      SCIPdebug( SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_VERBLEVEL, MAX(1,nlpverblevel)) ) );
 
-      SCIPdebugMessage("try to solve nlp relaxation to obtain fixing values");
+      SCIPdebugMessage("try to solve nlp relaxation to obtain fixing values\n");
       
       /* set starting point to lp solution */
       SCIP_CALL( SCIPsetNLPInitialGuessSol(scip, NULL) );
-      
+
       /* solve nlp relaxation */
       SCIP_CALL( SCIPsolveNLP(scip) );
 
@@ -155,7 +155,7 @@ SCIP_RETCODE createSubproblem(
       SCIPdebugMessage("solving nlp relaxation was %s successful (stat=%d)\n", *success ? "" : "not", stat);
 
       /* reset nlp verblevel to the value it had before */
-      SCIPdebug( SCIP_CALL( SCIPnlpSetIntPar(SCIPgetNLP(scip), SCIP_NLPPAR_VERBLEVEL, nlpverblevel) ) );      
+      SCIPdebug( SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_VERBLEVEL, nlpverblevel) ) );
    }
 
    /* change bounds of variables of the subproblem */
@@ -208,7 +208,8 @@ SCIP_RETCODE createSubproblem(
    }
    else
       fixingrate = fixingcounter / (SCIP_Real)(MAX(nbinvars + nintvars, 1));
-   
+   SCIPdebugMessage("fixing rate: %g = %d of %d\n", fixingrate, fixingcounter, nbinvars + nintvars);
+
    /* abort, if the amount of fixed variables is insufficient */
    if( fixingrate < minfixingrate )
    {
