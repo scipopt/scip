@@ -1511,8 +1511,12 @@ SCIP_DECL_CONSINITSOL(consInitsolCountsols)
 static
 SCIP_DECL_CONSEXITSOL(consExitsolCountsols)
 {  /*lint --e{715}*/
-   assert(!restart);
-   
+   SCIP_Bool collect;
+
+   SCIP_CALL( SCIPgetBoolParam(scip, "constraints/"CONSHDLR_NAME"/collect", &collect) );
+   if( collect )
+      assert(!restart);
+
    return SCIP_OKAY;
 }
 #else
