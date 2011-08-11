@@ -40,6 +40,10 @@ typedef struct SparseSolution SPARSESOLUTION;
 
 /** dialog execution method for the count command */
 extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecCountPresolve);
+
+/** dialog execution method for the count command */
+extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount);
    
 /** execution method of dialog for writing all solutions */

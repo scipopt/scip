@@ -1602,7 +1602,6 @@ SCIP_DECL_CONSLOCK(consLockCountsols)
  */
 
 /** dialog execution method for the count command */
-static
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecCountPresolve)
 {  /*lint --e{715}*/
    SCIP_Bool active;
