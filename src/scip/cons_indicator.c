@@ -3595,6 +3595,7 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
 static
 SCIP_DECL_CONSINITPRE(consInitpreIndicator)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    int c;
 
    assert( scip != NULL );
@@ -3628,6 +3629,12 @@ SCIP_DECL_CONSINITPRE(consInitpreIndicator)
          consdata->lincons = translincons;
       }
    }
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* reset flag, in case presolve was called for some problem before */
+   conshdlrdata->addedCouplingCons = FALSE;
 
    return SCIP_OKAY;
 }
