@@ -17920,6 +17920,8 @@ SCIP_RETCODE SCIPchgVarLbProbing(
    }
    assert(SCIPnodeGetType(SCIPtreeGetCurrentNode(scip->tree)) == SCIP_NODETYPE_PROBINGNODE);
 
+   SCIPvarAdjustLb(var, scip->set, &newbound);
+
    SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
          scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER, TRUE) );
 
@@ -17944,6 +17946,8 @@ SCIP_RETCODE SCIPchgVarUbProbing(
    }
    assert(SCIPnodeGetType(SCIPtreeGetCurrentNode(scip->tree)) == SCIP_NODETYPE_PROBINGNODE);
 
+   SCIPvarAdjustUb(var, scip->set, &newbound);
+
    SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
          scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER, TRUE) );
 
@@ -17960,8 +17964,8 @@ SCIP_RETCODE SCIPfixVarProbing(
    SCIP_Real             fixedval            /**< value to fix variable to */
    )
 {
-   SCIP_Real lb;
-   SCIP_Real ub;
+   SCIP_Real fixlb;
+   SCIP_Real fixub;
 
    SCIP_CALL( checkStage(scip, "SCIPfixVarProbing", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
@@ -17972,17 +17976,26 @@ SCIP_RETCODE SCIPfixVarProbing(
    }
    assert(SCIPnodeGetType(SCIPtreeGetCurrentNode(scip->tree)) == SCIP_NODETYPE_PROBINGNODE);
 
-   lb = SCIPvarGetLbLocal(var);
-   ub = SCIPvarGetUbLocal(var);
-   if( SCIPsetIsGT(scip->set, fixedval, lb) )
+   /** we adjust the fixing value here and compare the old bound with the adjusted values because otherwise, 
+    *  it might happen that the unadjusted value is better and we add the boundchange,
+    *  but within SCIPnodeAddBoundchg() the bounds are adjusted - using the feasibility epsilon for integer variables -
+    *  and it is asserted, that the bound is still better than the old one which might then be incorrect.
+    */
+   fixlb = fixedval;
+   fixub = fixedval;
+   SCIPvarAdjustLb(var, scip->set, &fixlb);
+   SCIPvarAdjustUb(var, scip->set, &fixub);
+   assert(SCIPsetIsEQ(scip->set, fixlb, fixub));
+
+   if( SCIPsetIsGT(scip->set, fixlb, SCIPvarGetLbLocal(var)) )
    {
       SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
-            scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, fixedval, SCIP_BOUNDTYPE_LOWER, TRUE) );
+            scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, fixlb, SCIP_BOUNDTYPE_LOWER, TRUE) );
    }
-   if( SCIPsetIsLT(scip->set, fixedval, ub) )
+   if( SCIPsetIsLT(scip->set, fixub, SCIPvarGetUbLocal(var)) )
    {
       SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
-            scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, fixedval, SCIP_BOUNDTYPE_UPPER, TRUE) );
+            scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, fixub, SCIP_BOUNDTYPE_UPPER, TRUE) );
    }
 
    return SCIP_OKAY;
