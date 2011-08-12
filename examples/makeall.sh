@@ -8,6 +8,8 @@ OPTS=(opt dbg)
 
 for EXAMPLE in ${EXAMPLES[@]}
 do
+    echo
+    echo
     echo ===== $EXAMPLE =====
     echo
     cd $EXAMPLE

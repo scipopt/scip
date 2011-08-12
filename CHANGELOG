@@ -60,6 +60,9 @@ interface:
 - added methods SCIPnlrowGetDualsol(), SCIPgetNLPVarsLbDualsol(), SCIPgetNLPVarsUbDualsol() to retrieve dual values from an NLP solution
 - added method SCIPbranchVarValNary() for n-ary variable branching
 - the callback NLPICOPY gets the block memory of the target SCIP as additional parameter
+- due to adding SCIP_DECL_PROPINITPRE, SCIP_DECL_PROPEXITPRE, SCIP_DECL_PROPPRESOL, new timing flag and presolving paramters for propagators the SCIPincludeProp() method has a new list of parameters
+- new methods SCIPpropInitpre, SCIPpropExitpre, SCIPpropPresol which initializes, exists and executes the presolving phase
+- due to the new timingmask for propagation calls SCIPincludeConshdlr() has the timingmask as a new parameter
 
 performance improvements:
 - performance improvements in prop_vbounds
@@ -92,6 +95,9 @@ fixed bugs:
 - fixed bug trying to print big messages bigger than SCIP_MAXSTRLEN
 - fixed bug in copying NLPI interfaces that use block-memory (NLPI copy used block memory from source SCIP)
 - fixed several issues in flatzinc reader
+- fixed bug w.r.t. counting feasible solutions and turned of sparse solution test
+- fixed wrong changing of wasdelayed flag for propagators
+- fixed bug in cons_countsols.c w.r.t. none active variables
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})
@@ -135,6 +141,10 @@ parameters:
 - removed fastmip setting 2, which means the dualsolution would not be calculated but because SCIP always asks for the dual solution, the lp would be reoptimized to calculate them; so it had no real effect
 - added parameters <branching/pscost/nchildren> and <branching/pscost/nary*> to enable and customize n-ary branching on external branching candidates (e.g., in spatial branching for MINLP)
 - added parameter <separating/closecuts/maxunsucessful> to turn off separation if we can not find cuts
+- added parameter <propagating/%s/presolpriority> for all propagators which allows to change the priority of calling the given propagator
+- added parameter <propagating/%s/maxprerounds> for all propagators which allows to change to maximal number of rounds of presolving where this propagator participates in
+- added parameter <propagating/%s/presoldelay> for all propagators which allows to change if the presolving call of the given propagator should be delayed
+- added parameter <propagating/pseudoobj/propfullinroot> for allowing to propagate all variables in the root node, instead of stopping after 'maxcands' which is set by a parameter as well
 
 features:
 - flatzinc reader is now capable to read cumulative constraints
@@ -177,9 +187,19 @@ features:
 - it is now possible in SCIP_STAGE_TRANSFORMED to call SCIPaddVarLocks (i.e. to lock variables in initialization methods)
 - cons_logicor is now abled to replace all aggregated variables in presolving by there active or negation of an active variable counterpart
 - reader_gms is now able to write indicator constraints (reformulated either via big-M or sos1), see new parameters <reading/gmsreader/bigmdefault> and <reading/gmsreader/indicatorreform>
+- propagators can now presolve, added three callback functionalities SCIP_DECL_PROPINITPRE, SCIP_DECL_PROPEXITPRE, and SCIP_DECL_PROPPRESOL
+- prop_pseudoobj is now working in presolving as well
+- added propagator timings SCIP_PROPTIMING_BEFORELP, SCIP_PROPTIMING_DURINGLPLOOP, and SCIP_PROPTIMING_AFTERLPLOOP for all propagation callbacks (see propagators and constraint handlers) which lead to calling the propagation methods of a propagator before the lp is solved, during the lp loop, and after the lp solving loop
+- improved output of propagators in display statistics
+- new method SCIPpropSetPresolPriority which changes the presolving priority of a given propagator
+- new methods SCIPpropGetPresolPriority, SCIPpropGetPresolTime, SCIPpropWasPresolDelayed, SCIPpropGetNFixedVars, SCIPpropGetNAggrVars, SCIPpropGetNChgVarTypes, SCIPpropGetNChgBds, SCIPpropGetNAddHoles, SCIPpropGetNDelConss, SCIPpropGetNAddConss, SCIPpropGetNUpgdConss, SCIPpropGetNChgCoefs, SCIPpropGetNChgSides, SCIPpropGetTimingmask, SCIPpropDoesPresolve which return corresponding presolving information
 
 design:
 - SCIP_HASHMAP now works also without block memory
+- the old probing presolver presol_probing.{c.h} is now a propagator prop_probing.{c,h}, all corresponding  parameters moved as well
+- the old redcost separator sepa_redcost.{c.h} is now a propagator prop_redcost.{c,h}, all corresponding  parameters moved as well
+- moved all timings to type_timing.h
+- outsourced propAndSolve() method in solve.c which calls domain propagation and solving of the lp and relaxation
 
 Makefile
 - via "PARASCIP=true" as a "Makefile" option it is possible to compile SCIP threadsafe in DEBUG-mode, (in OPT-mode it's not necessary)
@@ -191,6 +211,8 @@ Makefile
 - to link against IPOPT, only the base directory of an Ipopt installation need to be specified now;
   additionally, if building with gnu compilers, the Ipopt libraries directory is stored in the SCIP binary, which should make it easier to run with Ipopt shared libraries
 - new target "make libs" which compiles only the libraries
+- to link against Clp, only the base directory of an Clp installation needs to be specified now
+
 
 SCIP version 2.0.2
 ==================

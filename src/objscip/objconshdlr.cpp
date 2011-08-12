@@ -560,7 +560,7 @@ SCIP_RETCODE SCIPincludeObjConshdlr(
          objconshdlr->scip_sepafreq_, objconshdlr->scip_propfreq_, objconshdlr->scip_eagerfreq_,
          objconshdlr->scip_maxprerounds_, 
          objconshdlr->scip_delaysepa_, objconshdlr->scip_delayprop_, objconshdlr->scip_delaypresol_,
-         objconshdlr->scip_needscons_,
+         objconshdlr->scip_needscons_, objconshdlr->scip_timingmask_,
          conshdlrCopyObj,
          consFreeObj, consInitObj, consExitObj, 
          consInitpreObj, consExitpreObj, consInitsolObj, consExitsolObj,

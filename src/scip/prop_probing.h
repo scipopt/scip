@@ -13,15 +13,15 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   presol_probing.h
- * @brief  probing presolver
+/**@file   prop_probing.h
+ * @brief  probing propagator
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_PRESOL_PROBING_H__
-#define __SCIP_PRESOL_PROBING_H__
+#ifndef __SCIP_PROP_XYZ_H__
+#define __SCIP_PROP_XYZ_H__
 
 
 #include "scip/scip.h"
@@ -30,9 +30,9 @@
 extern "C" {
 #endif
 
-/** creates the probing presolver and includes it in SCIP */
+/** creates the probing propagator and includes it in SCIP */
 extern
-SCIP_RETCODE SCIPincludePresolProbing(
+SCIP_RETCODE SCIPincludePropProbing(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

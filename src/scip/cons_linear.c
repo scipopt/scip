@@ -69,6 +69,8 @@
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
+
 #define EVENTHDLR_NAME         "linear"
 #define EVENTHDLR_DESC         "bound change event handler for linear constraints"
 
@@ -4395,10 +4397,10 @@ SCIP_RETCODE checkCons(
       activity = consdataGetActivity(scip, consdata, sol);
    
    SCIPdebugMessage("  consdata activity=%.15g (lhs=%.15g, rhs=%.15g, row=%p, checklprows=%u, rowinlp=%u, sol=%p, hascurrentnodelp=%u)\n",
-         activity, consdata->lhs, consdata->rhs, (void*)consdata->row, checklprows,
-         consdata->row == NULL ? 0 : SCIProwIsInLP(consdata->row), (void*)sol,
-         consdata->row == NULL ? FALSE : SCIPhasCurrentNodeLP(scip));
-
+      activity, consdata->lhs, consdata->rhs, (void*)consdata->row, checklprows,
+      consdata->row == NULL ? 0 : SCIProwIsInLP(consdata->row), (void*)sol,
+      consdata->row == NULL ? FALSE : SCIPhasCurrentNodeLP(scip));
+   
    if( SCIPisFeasLT(scip, activity, consdata->lhs) || SCIPisFeasGT(scip, activity, consdata->rhs) )
    {
       *violated = TRUE;
@@ -10349,6 +10351,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         CONSHDLR_PROP_TIMING,
          conshdlrCopyLinear,
          consFreeLinear, consInitLinear, consExitLinear,
          consInitpreLinear, consExitpreLinear, consInitsolLinear, consExitsolLinear,

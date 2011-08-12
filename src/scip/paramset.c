@@ -2752,7 +2752,7 @@ SCIP_RETCODE paramsetSetPresolvingAggressive(
    SCIP_CALL( paramSetInt(scip, paramset, "presolving/boundshift/maxrounds", -1, quiet) );
  
    /* explicitly change parameters of probing */
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "presolving/probing/maxuseless");
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/probing/maxuseless");
    param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
    if( param != NULL )
    {
@@ -2763,7 +2763,7 @@ SCIP_RETCODE paramsetSetPresolvingAggressive(
     
       SCIP_CALL( paramSetInt(scip, paramset, paramname, (int) (1.5 * defvalue), quiet) );
    }
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "presolving/probing/maxtotaluseless");
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/probing/maxtotaluseless");
    param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
    if( param != NULL )
    {
@@ -2818,7 +2818,7 @@ SCIP_RETCODE paramsetSetPresolvingFast(
    SCIP_CALL( paramSetInt(scip, paramset, "presolving/maxrestarts", 0, quiet) );
 
    /* turn off probing */
-   SCIP_CALL( paramSetInt(scip, paramset, "presolving/probing/maxrounds", 0, quiet) );
+   SCIP_CALL( paramSetInt(scip, paramset, "propagating/probing/maxprerounds", 0, quiet) );
 
    /* explicitly change parameters of knapsack constraint handler, if the constraint handler is included */
    SCIP_CALL( paramSetBool(scip, paramset, "constraints/knapsack/disaggregation", FALSE, quiet) );

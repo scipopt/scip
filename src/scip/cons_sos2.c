@@ -88,6 +88,8 @@
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
+
 /* event handler properties */
 #define EVENTHDLR_NAME         "SOS2"
 #define EVENTHDLR_DESC         "bound change event handler for SOS2 constraints"
@@ -2104,6 +2106,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS2(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         CONSHDLR_PROP_TIMING,
          conshdlrCopySOS2, consFreeSOS2, consInitSOS2, consExitSOS2,
          consInitpreSOS2, consExitpreSOS2, consInitsolSOS2, consExitsolSOS2,
          consDeleteSOS2, consTransSOS2, consInitlpSOS2,

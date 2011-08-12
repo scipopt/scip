@@ -38,6 +38,7 @@
 #include "scip/type_result.h"
 #include "scip/type_clock.h"
 #include "scip/type_misc.h"
+#include "scip/type_timing.h"
 #include "scip/type_paramset.h"
 #include "scip/type_event.h"
 #include "scip/type_lp.h"
@@ -982,7 +983,7 @@ SCIP_RETCODE SCIPincludeConshdlr(
    const char*           desc,               /**< description of constraint handler */
    int                   sepapriority,       /**< priority of the constraint handler for separation */
    int                   enfopriority,       /**< priority of the constraint handler for constraint enforcing */
-   int                   chckpriority,       /**< priority of the constraint handler for checking feasibility */
+   int                   chckpriority,       /**< priority of the constraint handler for checking feasibility (and propagation) */
    int                   sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
    int                   propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
    int                   eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
@@ -992,6 +993,7 @@ SCIP_RETCODE SCIPincludeConshdlr(
    SCIP_Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
    SCIP_Bool             delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
    SCIP_Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
+   SCIP_PROPTIMING       timingmask,         /**< positions in the node solving loop where propagators should be executed */
    SCIP_DECL_CONSHDLRCOPY((*conshdlrcopy)),  /**< copy method of constraint handler or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
    SCIP_DECL_CONSINIT    ((*consinit)),      /**< initialize constraint handler */
@@ -1235,12 +1237,19 @@ SCIP_RETCODE SCIPincludeProp(
    int                   priority,           /**< priority of the propagator (>= 0: before, < 0: after constraint handlers) */
    int                   freq,               /**< frequency for calling propagator */
    SCIP_Bool             delay,              /**< should propagator be delayed, if other propagators found reductions? */
+   SCIP_PROPTIMING       timingmask,         /**< positions in the node solving loop where propagators should be executed */
+   int                   presolpriority,     /**< priority of the propagator (>= 0: before, < 0: after constraint handlers) */
+   int                   presolmaxrounds,    /**< maximal number of presolving rounds the propagator participates in (-1: no limit) */
+   SCIP_Bool             presoldelay,        /**< should presolving be delayed, if other presolvers found reductions? */
    SCIP_DECL_PROPCOPY    ((*propcopy)),      /**< copy method of propagator or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_PROPFREE    ((*propfree)),      /**< destructor of propagator */
    SCIP_DECL_PROPINIT    ((*propinit)),      /**< initialize propagator */
    SCIP_DECL_PROPEXIT    ((*propexit)),      /**< deinitialize propagator */
+   SCIP_DECL_PROPINITPRE ((*propinitpre)),   /**< presolving initialization method of propagator */
+   SCIP_DECL_PROPEXITPRE ((*propexitpre)),   /**< presolving deinitialization method of propagator */
    SCIP_DECL_PROPINITSOL ((*propinitsol)),   /**< solving process initialization method of propagator */
    SCIP_DECL_PROPEXITSOL ((*propexitsol)),   /**< solving process deinitialization method of propagator */
+   SCIP_DECL_PROPPRESOL  ((*proppresol)),    /**< presolving method */
    SCIP_DECL_PROPEXEC    ((*propexec)),      /**< execution method of propagator */
    SCIP_DECL_PROPRESPROP ((*propresprop)),   /**< propagation conflict resolving method */
    SCIP_PROPDATA*        propdata            /**< propagator data */
@@ -1272,6 +1281,15 @@ SCIP_RETCODE SCIPsetPropPriority(
    SCIP_PROP*            prop,               /**< primal propagator */
    int                   priority            /**< new priority of the propagator */
    );
+
+/** sets the presolving priority of a propagator */
+extern
+SCIP_RETCODE SCIPsetPropPresolPriority(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator */
+   int                   presolpriority      /**< new presol priority of the propagator */
+   );
+
 
 /** creates a primal heuristic and includes it in SCIP */
 extern

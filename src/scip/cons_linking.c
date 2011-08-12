@@ -63,6 +63,8 @@
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
+
 
 #define HASHSIZE_BINVARSCONS     131101 /**< minimal size of hash table in linking constraint handler */
 #define DEFAULT_LINEARIZE         FALSE /**< should the linking constraint be linearize after the binary variable are created */
@@ -2868,6 +2870,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinking(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         CONSHDLR_PROP_TIMING,
          conshdlrCopyLinking,
          consFreeLinking, consInitLinking, consExitLinking,
          consInitpreLinking, consExitpreLinking, consInitsolLinking, consExitsolLinking,
