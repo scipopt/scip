@@ -498,6 +498,7 @@ void SCIPprintVersion(
    SCIPmessageFPrintInfo(file, " [mode: optimized]");
 #endif
    SCIPmessageFPrintInfo(file, " [LP solver: %s]", SCIPlpiGetSolverName());
+   SCIPmessageFPrintInfo(file, " [GitHash: %s]", SCIP_GITHASH);
    SCIPmessageFPrintInfo(file, "\n");
    SCIPmessageFPrintInfo(file, "%s\n", SCIP_COPYRIGHT);
 }
