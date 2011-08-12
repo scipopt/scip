@@ -1673,6 +1673,9 @@ SCIP_DECL_HEURINITSOL(heurInitsolSubNlp)
    if( SCIPheurGetFreqofs(heur) == 0 )
       SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_DURINGLPLOOP | HEUR_TIMING);
 
+   /* reset counter on number of serious NLPI errors */
+   heurdata->nseriousnlpierror = 0;
+   
    return SCIP_OKAY;
 }
 
