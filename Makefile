@@ -641,6 +641,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/retcode.o \
 			scip/scip.o \
 			scip/scipdefplugins.o \
+			scip/scipgithash.o \
 			scip/scipshell.o \
 			scip/sepa.o \
 			scip/sepastore.o \
@@ -1049,14 +1050,13 @@ $(BINOBJDIR)/%.o:	$(SRCDIR)/%.cpp $(BINOBJDIR)
 		@echo "-> compiling $@"
 		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) $(CXX_c)$< $(CXX_o)$@
 
-$(LIBOBJDIR)/%.o:	$(SRCDIR)/%.c $(LIBOBJDIR)
+$(LIBOBJDIR)/%.o:	$(SRCDIR)/%.c $(LIBOBJDIR) 
 		@echo "-> compiling $@"
 		$(CC) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CFLAGS) $(CC_c)$< $(CC_o)$@
 
 $(LIBOBJDIR)/%.o:	$(SRCDIR)/%.cpp $(LIBOBJDIR)
 		@echo "-> compiling $@"
 		$(CXX) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CXXFLAGS) $(CXX_c)$< $(CXX_o)$@
-
 
 -include $(LASTSETTINGS)
 

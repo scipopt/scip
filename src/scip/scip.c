@@ -62,6 +62,7 @@
 #include "scip/sepastore.h"
 #include "scip/cutpool.h"
 #include "scip/solve.h"
+#include "scip/scipgithash.h"
 #include "scip/scip.h"
 
 #include "scip/branch.h"
@@ -498,7 +499,7 @@ void SCIPprintVersion(
    SCIPmessageFPrintInfo(file, " [mode: optimized]");
 #endif
    SCIPmessageFPrintInfo(file, " [LP solver: %s]", SCIPlpiGetSolverName());
-   SCIPmessageFPrintInfo(file, " [GitHash: %s]", SCIP_GITHASH);
+   SCIPmessageFPrintInfo(file, " [GitHash: %s]", SCIPgetGitHash());
    SCIPmessageFPrintInfo(file, "\n");
    SCIPmessageFPrintInfo(file, "%s\n", SCIP_COPYRIGHT);
 }
