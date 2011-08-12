@@ -2626,6 +2626,15 @@ SCIP_RETCODE propIndicator(
    {
       SCIPdebugMessage("the node is infeasible, both the slackvariable and the binary variable are fixed to be nonzero.\n");
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
+      assert( SCIPvarGetLbLocal(consdata->binvar) > 0.5 );
+      assert( SCIPisPositive(scip, SCIPvarGetLbLocal(consdata->slackvar)) );
+
+      /* perform conflict analysis */
+      SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->binvar) );
+      SCIP_CALL( SCIPaddConflictLb(scip, consdata->slackvar, NULL) );
+      SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
+
       *cutoff = TRUE;
       return SCIP_OKAY;
    }
@@ -2636,7 +2645,7 @@ SCIP_RETCODE propIndicator(
       SCIP_Bool infeasible, tightened;
 
       /* increase age of constraint; age is reset to zero, if a conflict or a propagation was found */
-      if( !SCIPinRepropagation(scip) )
+      if ( !SCIPinRepropagation(scip) )
          SCIP_CALL( SCIPincConsAge(scip, cons) );
 
       /* if binvar is fixed to be nonzero */
