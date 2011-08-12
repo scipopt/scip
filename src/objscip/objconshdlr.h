@@ -716,6 +716,29 @@ public:
       return SCIP_OKAY;
    }
 
+
+   /** variable deletion method of constraint handler
+    *
+    *  This method goes through all constraints of the constraint handler and deletes all variables
+    *  that were marked for deletion by SCIPdelVar().
+    *
+    *  possible return values for *result:
+    *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
+    *  - SCIP_REDUCEDDOM : at least one domain reduction was found
+    *  - SCIP_DIDNOTFIND : the propagator searched, but did not find any domain reductions
+    *  - SCIP_DIDNOTRUN  : the propagator was skipped
+    *  - SCIP_DELAYED    : the propagator was skipped, but should be called again
+    */
+   virtual SCIP_RETCODE scip_delvars(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS**        conss,              /**< array of constraints in transformed problem */
+      int                nconss              /**< number of constraints in transformed problem */
+      )
+   {  /*lint --e{715}*/
+      return SCIP_OKAY;
+   }
+
    /** constraint display method of constraint handler
     *
     *  The constraint handler should output a representation of the constraint into the given text file.

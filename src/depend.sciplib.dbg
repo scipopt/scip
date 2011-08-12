@@ -582,7 +582,8 @@ $(LIBOBJDIR)/scip/cons_linear.o: src/scip/cons_linear.c src/scip/cons_linear.h \
  src/scip/pub_tree.h src/scip/pub_var.h src/scip/type_history.h \
  src/scip/lpi.h src/nlpi/pub_expr.h src/nlpi/type_exprinterpret.h \
  src/scip/intervalarith.h src/scip/cons_knapsack.h \
- src/scip/cons_quadratic.h
+ src/scip/cons_quadratic.h src/scip/var.h src/scip/type_primal.h \
+ src/scip/struct_var.h
 $(LIBOBJDIR)/scip/cons_linking.o: src/scip/cons_linking.c src/scip/cons_linear.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
@@ -2969,7 +2970,13 @@ $(LIBOBJDIR)/scip/reader_zpl.o: src/scip/reader_zpl.c src/scip/reader_zpl.h src/
  src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
  src/scip/pub_var.h src/scip/type_history.h src/scip/lpi.h \
  src/nlpi/pub_expr.h src/nlpi/type_exprinterpret.h \
- src/scip/intervalarith.h
+ src/scip/intervalarith.h src/scip/cons_linear.h src/scip/cons_setppc.h \
+ src/scip/cons_sos1.h src/scip/cons_sos2.h src/scip/cons_indicator.h \
+ src/scip/cons_quadratic.h lib/zimplinc/zimpl/bool.h \
+ lib/zimplinc/zimpl/ratlptypes.h lib/zimplinc/zimpl/mme.h \
+ lib/zimplinc/zimpl/numb.h lib/zimplinc/zimpl/bound.h \
+ lib/zimplinc/zimpl/mono.h lib/zimplinc/zimpl/term.h \
+ lib/zimplinc/zimpl/xlpglue.h lib/zimplinc/zimpl/zimpllib.h
 $(LIBOBJDIR)/scip/sepa_clique.o: src/scip/sepa_clique.c src/scip/sepa_clique.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
@@ -4136,7 +4143,7 @@ $(LIBOBJDIR)/scip/scipdefplugins.o: src/scip/scipdefplugins.c src/scip/scipdefpl
  src/scip/sepa_zerohalf.h src/scip/scipshell.h src/nlpi/nlpi_ipopt.h \
  src/scip/debug.h
 $(LIBOBJDIR)/scip/scipgithash.o: src/scip/scipgithash.c src/scip/scipgithash.h \
- src/scip/githash.h
+ src/scip/githash.c
 $(LIBOBJDIR)/scip/scipshell.o: src/scip/scipshell.c src/scip/scip.h src/scip/def.h \
  src/scip/type_retcode.h src/scip/message.h src/scip/type_message.h \
  src/scip/struct_message.h src/scip/pub_message.h \

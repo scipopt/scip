@@ -480,6 +480,22 @@ SCIP_DECL_CONSDISABLE(consDisableObj)
    return SCIP_OKAY;
 }
 
+/** variable deletion method of constraint handler */
+static
+SCIP_DECL_CONSDELVARS(consDelVarsObj)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->objconshdlr != NULL);
+
+   /* call virtual method of conshdlr object */
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_delvars(scip, conshdlr, conss, nconss) );
+
+   return SCIP_OKAY;
+}
+
 /** constraint display method of constraint handler */
 static
 SCIP_DECL_CONSPRINT(consPrintObj)
@@ -569,7 +585,7 @@ SCIP_RETCODE SCIPincludeObjConshdlr(
          consPropObj, consPresolObj, consRespropObj, consLockObj,
          consActiveObj, consDeactiveObj, 
          consEnableObj, consDisableObj,
-         consPrintObj, consCopyObj, consParseObj,
+         consDelVarsObj, consPrintObj, consCopyObj, consParseObj,
          conshdlrdata) ); /*lint !e429*/
 
    return SCIP_OKAY; /*lint !e429*/

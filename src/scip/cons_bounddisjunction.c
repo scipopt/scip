@@ -1988,6 +1988,10 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveBounddisjunction)
 #define consDisableBounddisjunction NULL
 
 
+/** variable deletion method of constraint handler */
+#define consDelVarsBounddisjunction NULL
+
+
 /** constraint display method of constraint handler */
 static
 SCIP_DECL_CONSPRINT(consPrintBounddisjunction)
@@ -2327,7 +2331,7 @@ SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
          consPropBounddisjunction, consPresolBounddisjunction, consRespropBounddisjunction, consLockBounddisjunction,
          consActiveBounddisjunction, consDeactiveBounddisjunction,
          consEnableBounddisjunction, consDisableBounddisjunction,
-         consPrintBounddisjunction, consCopyBounddisjunction, consParseBounddisjunction,
+         consDelVarsBounddisjunction, consPrintBounddisjunction, consCopyBounddisjunction, consParseBounddisjunction,
          conshdlrdata) );
 
    return SCIP_OKAY;

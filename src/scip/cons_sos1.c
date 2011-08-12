@@ -1920,6 +1920,9 @@ SCIP_DECL_CONSPARSE(consParseSOS1)
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
 #define consExitpreSOS1 NULL
 
+/** variable deletion method of constraint handler */
+#define consDelVarsSOS1 NULL
+
 
 
 
@@ -2019,14 +2022,14 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopySOS1,consFreeSOS1, consInitSOS1, consExitSOS1,
+         conshdlrCopySOS1, consFreeSOS1, consInitSOS1, consExitSOS1,
          consInitpreSOS1, consExitpreSOS1, consInitsolSOS1, consExitsolSOS1,
          consDeleteSOS1, consTransSOS1, consInitlpSOS1,
          consSepalpSOS1, consSepasolSOS1, consEnfolpSOS1, consEnfopsSOS1, consCheckSOS1,
          consPropSOS1, consPresolSOS1, consRespropSOS1, consLockSOS1,
          consActiveSOS1, consDeactiveSOS1,
          consEnableSOS1, consDisableSOS1,
-         consPrintSOS1, consCopySOS1, consParseSOS1, conshdlrdata) );
+         consDelVarsSOS1, consPrintSOS1, consCopySOS1, consParseSOS1, conshdlrdata) );
 
    /* add SOS1 constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/SOS1/branchSOS", "Use SOS1 branching in enforcing (otherwise leave decision to branching rules)?",

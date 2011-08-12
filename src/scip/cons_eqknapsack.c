@@ -65,6 +65,7 @@
  * Callback methods of constraint handler
  */
 
+
 /* TODO: Implement all necessary constraint handler methods. The methods with an #if 0 ... #else #define ... are optional */
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
@@ -84,183 +85,51 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyEqknapsack)
 #endif
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
-#if 0
-static
-SCIP_DECL_CONSFREE(consFreeEqknapsack)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define consFreeEqknapsack NULL
-#endif
 
 
 /** initialization method of constraint handler (called after problem was transformed) */
-#if 0
-static
-SCIP_DECL_CONSINIT(consInitEqknapsack)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define consInitEqknapsack NULL
-#endif
 
 
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
-#if 0
-static
-SCIP_DECL_CONSEXIT(consExitEqknapsack)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define consExitEqknapsack NULL
-#endif
 
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#if 0
-static
-SCIP_DECL_CONSINITPRE(consInitpreEqknapsack)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define consInitpreEqknapsack NULL
-#endif
 
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#if 0
-static
-SCIP_DECL_CONSEXITPRE(consExitpreEqknapsack)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define consExitpreEqknapsack NULL
-#endif
 
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#if 0
-static
-SCIP_DECL_CONSINITSOL(consInitsolEqknapsack)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define consInitsolEqknapsack NULL
-#endif
 
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
-#if 0
-static
-SCIP_DECL_CONSEXITSOL(consExitsolEqknapsack)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define consExitsolEqknapsack NULL
-#endif
 
 
 /** frees specific constraint data */
-#if 0
-static
-SCIP_DECL_CONSDELETE(consDeleteEqknapsack)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define consDeleteEqknapsack NULL
-#endif
 
 
 /** transforms constraint data into data belonging to the transformed problem */ 
-#if 0
-static
-SCIP_DECL_CONSTRANS(consTransEqknapsack)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define consTransEqknapsack NULL
-#endif
 
 
 /** LP initialization method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSINITLP(consInitlpEqknapsack)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define consInitlpEqknapsack NULL
-#endif
 
 
 /** separation method of constraint handler for LP solutions */
-#if 0
-static
-SCIP_DECL_CONSSEPALP(consSepalpEqknapsack)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define consSepalpEqknapsack NULL
-#endif
 
 
 /** separation method of constraint handler for arbitrary primal solutions */
-#if 0
-static
-SCIP_DECL_CONSSEPASOL(consSepasolEqknapsack)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define consSepasolEqknapsack NULL
-#endif
 
 
 /** constraint enforcing method of constraint handler for LP solutions */
@@ -297,48 +166,15 @@ SCIP_DECL_CONSCHECK(consCheckEqknapsack)
 
 
 /** domain propagation method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSPROP(consPropEqknapsack)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define consPropEqknapsack NULL
-#endif
 
 
 /** presolving method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSPRESOL(consPresolEqknapsack)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define consPresolEqknapsack NULL
-#endif
 
 
 /** propagation conflict resolving method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSRESPROP(consRespropEqknapsack)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define consRespropEqknapsack NULL
-#endif
 
 
 /** variable rounding lock method of constraint handler */
@@ -353,77 +189,27 @@ SCIP_DECL_CONSLOCK(consLockEqknapsack)
 
 
 /** constraint activation notification method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSACTIVE(consActiveEqknapsack)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define consActiveEqknapsack NULL
-#endif
 
 
 /** constraint deactivation notification method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSDEACTIVE(consDeactiveEqknapsack)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define consDeactiveEqknapsack NULL
-#endif
 
 
 /** constraint enabling notification method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSENABLE(consEnableEqknapsack)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define consEnableEqknapsack NULL
-#endif
 
 
 /** constraint disabling notification method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSDISABLE(consDisableEqknapsack)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define consDisableEqknapsack NULL
-#endif
+
+
+/** variable deletion method of constraint handler */
+#define consDelVarsEqknapsack NULL
+
 
 /** constraint display method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSPRINT(consPrintEqknapsack)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define consPrintEqknapsack NULL
-#endif
 
 /** constraint copying method of constraint handler */
 #define consCopyEqknapsack NULL
@@ -502,7 +288,7 @@ SCIP_RETCODE SCIPincludeConshdlrEqknapsack(
          consPropEqknapsack, consPresolEqknapsack, consRespropEqknapsack, consLockEqknapsack,
          consActiveEqknapsack, consDeactiveEqknapsack, 
          consEnableEqknapsack, consDisableEqknapsack,
-         consPrintEqknapsack, consCopyEqknapsack, consParseEqknapsack,
+         consDelVarsEqknapsack, consPrintEqknapsack, consCopyEqknapsack, consParseEqknapsack,
          conshdlrdata) );
 
 #ifdef LINCONSUPGD_PRIORITY

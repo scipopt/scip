@@ -4452,6 +4452,8 @@ SCIP_DECL_CONSLOCK(consLockIndicator)
    return SCIP_OKAY;
 }
 
+/** variable deletion method of constraint handler */
+#define consDelVarsIndicator NULL
 
 /** constraint display method of constraint handler */
 static
@@ -4823,7 +4825,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
          consSepasolIndicator, consEnfolpIndicator, consEnfopsIndicator, consCheckIndicator,
          consPropIndicator, consPresolIndicator, consRespropIndicator, consLockIndicator,
          consActiveIndicator, consDeactiveIndicator, consEnableIndicator, consDisableIndicator,
-         consPrintIndicator, consCopyIndicator, consParseIndicator, conshdlrdata) );
+         consDelVarsIndicator, consPrintIndicator, consCopyIndicator, consParseIndicator, conshdlrdata) );
 
    /* add indicator constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

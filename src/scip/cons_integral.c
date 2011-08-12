@@ -248,6 +248,11 @@ SCIP_DECL_CONSLOCK(consLockIntegral)
 /** constraint disabling notification method of constraint handler */
 #define consDisableIntegral NULL
 
+
+/** variable deletion method of constraint handler */
+#define consDelVarsIntegral NULL
+
+
 /** constraint display method of constraint handler */
 #define consPrintIntegral NULL
 
@@ -287,7 +292,7 @@ SCIP_RETCODE SCIPincludeConshdlrIntegral(
          consPropIntegral, consPresolIntegral, consRespropIntegral, consLockIntegral,
          consActiveIntegral, consDeactiveIntegral, 
          consEnableIntegral, consDisableIntegral,
-         consPrintIntegral, consCopyIntegral, consParseIntegral,
+         consDelVarsIntegral, consPrintIntegral, consCopyIntegral, consParseIntegral,
          conshdlrdata) );
 
    return SCIP_OKAY;

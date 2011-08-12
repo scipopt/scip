@@ -1737,7 +1737,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    const char*           desc,               /**< description of constraint handler */
    int                   sepapriority,       /**< priority of the constraint handler for separation */
    int                   enfopriority,       /**< priority of the constraint handler for constraint enforcing */
-   int                   checkpriority,      /**< priority of the constraint handler for checking feasibility (and propagation) */
+   int                   checkpriority,      /**< priority of the constraint handler for checking feasibility */
    int                   sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
    int                   propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
    int                   eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
@@ -1772,6 +1772,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_DECL_CONSDEACTIVE((*consdeactive)),  /**< deactivation notification method */
    SCIP_DECL_CONSENABLE  ((*consenable)),    /**< enabling notification method */
    SCIP_DECL_CONSDISABLE ((*consdisable)),   /**< disabling notification method */
+   SCIP_DECL_CONSDELVARS ((*consdelvars)),   /**< variable deletion method */
    SCIP_DECL_CONSPRINT   ((*consprint)),     /**< constraint display method */
    SCIP_DECL_CONSCOPY    ((*conscopy)),      /**< constraint copying method */
    SCIP_DECL_CONSPARSE   ((*consparse)),     /**< constraint parsing method */
@@ -1823,6 +1824,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->consenable = consenable;
    (*conshdlr)->consdisable = consdisable;
    (*conshdlr)->consprint = consprint;
+   (*conshdlr)->consdelvars = consdelvars;
    (*conshdlr)->conscopy = conscopy;
    (*conshdlr)->consparse = consparse;
    (*conshdlr)->conshdlrdata = conshdlrdata;
@@ -3329,6 +3331,38 @@ SCIP_RETCODE SCIPconshdlrPresolve(
 
       /* remember whether presolving method was delayed */
       conshdlr->presolwasdelayed = (*result == SCIP_DELAYED);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls variable deletion method of constraint handler */
+SCIP_RETCODE SCIPconshdlrDelVars(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
+   )
+{
+   assert(conshdlr != NULL);
+   assert(set != NULL);
+
+   if( conshdlr->consdelvars != NULL )
+   {
+      SCIPdebugMessage("deleting variables in constraints of handler <%s>\n", conshdlr->name);
+      //printf("deleting variables in constraints of handler <%s>\n", conshdlr->name);
+
+      /* during constraint processing, constraints of this handler may be deleted, activated, deactivated,
+       * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
+       * external method; to avoid this, these changes will be buffered and processed after the method call
+       */
+      conshdlrDelayUpdates(conshdlr);
+
+      /* call external method */
+      SCIP_CALL( conshdlr->consdelvars(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss) );
+
+      /* perform the cached constraint updates */
+      SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
    }
 
    return SCIP_OKAY;

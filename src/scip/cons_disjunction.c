@@ -576,6 +576,10 @@ SCIP_DECL_CONSLOCK(consLockDisjunction)
 /** constraint disabling notification method of constraint handler */
 #define consDisableDisjunction NULL
 
+/** variable deletion method of constraint handler */
+#define consDelVarsDisjunction NULL
+
+
 /** constraint display method of constraint handler */
 static
 SCIP_DECL_CONSPRINT(consPrintDisjunction)
@@ -684,7 +688,7 @@ SCIP_RETCODE SCIPincludeConshdlrDisjunction(
          consCheckDisjunction, consPropDisjunction, consPresolDisjunction, consRespropDisjunction, consLockDisjunction,
          consActiveDisjunction, consDeactiveDisjunction, 
          consEnableDisjunction, consDisableDisjunction,
-         consPrintDisjunction, consCopyConjuction, consParseConjuction,
+         consDelVarsDisjunction, consPrintDisjunction, consCopyConjuction, consParseConjuction,
          conshdlrdata) );
 
    return SCIP_OKAY;

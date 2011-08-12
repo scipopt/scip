@@ -7316,6 +7316,10 @@ SCIP_DECL_CONSCOPY(consCopyCumulative)
    return SCIP_OKAY;
 }
 
+/** variable deletion method of constraint handler */
+#define consDelvarsCumulative NULL
+
+
 /** constraint parsing method of constraint handler */
 #define consParseCumulative NULL
 
@@ -7346,7 +7350,7 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
          consSepalpCumulative, consSepasolCumulative, consEnfolpCumulative, consEnfopsCumulative, consCheckCumulative,
          consPropCumulative, consPresolCumulative, consRespropCumulative, consLockCumulative,
          consActiveCumulative, consDeactiveCumulative,
-         consEnableCumulative, consDisableCumulative,
+         consEnableCumulative, consDisableCumulative, consDelvarsCumulative,
          consPrintCumulative, consCopyCumulative, consParseCumulative,
          conshdlrdata) );
 

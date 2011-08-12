@@ -378,7 +378,7 @@ SCIP_RETCODE SCIPincludeConshdlrViolatedCut(
          NULL, NULL, NULL, NULL, NULL,
          consEnfolpViolatedCuts, consEnfopsViolatedCuts, consCheckViolatedCuts, 
          NULL, NULL, NULL, consLockViolatedCuts,
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+         NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
          conshdlrdata) );
 
    return SCIP_OKAY;

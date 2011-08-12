@@ -1779,6 +1779,11 @@ SCIP_DECL_CONSLOCK(consLockOr)
 /** constraint disabling notification method of constraint handler */
 #define consDisableOr NULL
 
+
+/** variable deletion method of constraint handler */
+#define consDelVarsOr NULL
+
+
 /** constraint display method of constraint handler */
 static
 SCIP_DECL_CONSPRINT(consPrintOr)
@@ -1984,7 +1989,7 @@ SCIP_RETCODE SCIPincludeConshdlrOr(
          consPropOr, consPresolOr, consRespropOr, consLockOr,
          consActiveOr, consDeactiveOr, 
          consEnableOr, consDisableOr,
-         consPrintOr, consCopyOr, consParseOr,
+         consDelVarsOr, consPrintOr, consCopyOr, consParseOr,
          conshdlrdata) );
 
    return SCIP_OKAY;

@@ -2686,6 +2686,7 @@ SCIP_RETCODE SCIPincludeConshdlr(
    SCIP_DECL_CONSDEACTIVE((*consdeactive)),  /**< deactivation notification method */
    SCIP_DECL_CONSENABLE  ((*consenable)),    /**< enabling notification method */
    SCIP_DECL_CONSDISABLE ((*consdisable)),   /**< disabling notification method */
+   SCIP_DECL_CONSDELVARS ((*consdelvars)),   /**< variable deletion method */
    SCIP_DECL_CONSPRINT   ((*consprint)),     /**< constraint display method */
    SCIP_DECL_CONSCOPY    ((*conscopy)),      /**< constraint copying method */
    SCIP_DECL_CONSPARSE   ((*consparse)),     /**< constraint parsing method */
@@ -2710,7 +2711,7 @@ SCIP_RETCODE SCIPincludeConshdlr(
          conshdlrcopy,
          consfree, consinit, consexit, consinitpre, consexitpre, consinitsol, consexitsol,
          consdelete, constrans, consinitlp, conssepalp, conssepasol, consenfolp, consenfops, conscheck, consprop,
-         conspresol, consresprop, conslock, consactive, consdeactive, consenable, consdisable, consprint, 
+         conspresol, consresprop, conslock, consactive, consdeactive, consenable, consdisable, consdelvars, consprint, 
          conscopy, consparse, conshdlrdata) );
    SCIP_CALL( SCIPsetIncludeConshdlr(scip->set, conshdlr) );
 
@@ -8352,7 +8353,7 @@ SCIP_RETCODE SCIPcaptureVar(
    SCIP_VAR*             var                 /**< variable to capture */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPcaptureVar", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPcaptureVar", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    SCIPvarCapture(var);
 

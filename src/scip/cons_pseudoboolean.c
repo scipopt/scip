@@ -3289,6 +3289,9 @@ SCIP_DECL_CONSPARSE(consParsePseudoboolean)
 #define consParsePseudoboolean NULL
 #endif
 
+/** variable deletion method of constraint handler */
+#define consDelvarsPseudoboolean NULL
+
 
 
 
@@ -3319,7 +3322,7 @@ SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
          consSepalpPseudoboolean, consSepasolPseudoboolean, consEnfolpPseudoboolean, consEnfopsPseudoboolean, consCheckPseudoboolean, 
          consPropPseudoboolean, consPresolPseudoboolean, consRespropPseudoboolean, consLockPseudoboolean,
          consActivePseudoboolean, consDeactivePseudoboolean, 
-         consEnablePseudoboolean, consDisablePseudoboolean,
+         consEnablePseudoboolean, consDisablePseudoboolean, consDelvarsPseudoboolean,
          consPrintPseudoboolean, consCopyPseudoboolean, consParsePseudoboolean,
          conshdlrdata) );
 

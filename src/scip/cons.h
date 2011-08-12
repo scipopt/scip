@@ -72,7 +72,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    const char*           desc,               /**< description of constraint handler */
    int                   sepapriority,       /**< priority of the constraint handler for separation */
    int                   enfopriority,       /**< priority of the constraint handler for constraint enforcing */
-   int                   checkpriority,      /**< priority of the constraint handler for checking feasibility (and propagation) */
+   int                   checkpriority,      /**< priority of the constraint handler for checking feasibility */
    int                   sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
    int                   propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
    int                   eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
@@ -107,6 +107,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_DECL_CONSDEACTIVE((*consdeactive)),  /**< deactivation notification method */
    SCIP_DECL_CONSENABLE  ((*consenable)),    /**< enabling notification method */
    SCIP_DECL_CONSDISABLE ((*consdisable)),   /**< disabling notification method */
+   SCIP_DECL_CONSDELVARS ((*consdelvars)),   /**< variable deletion method */
    SCIP_DECL_CONSPRINT   ((*consprint)),     /**< constraint display method */
    SCIP_DECL_CONSCOPY    ((*conscopy)),      /**< constraint copying method */
    SCIP_DECL_CONSPARSE   ((*consparse)),     /**< constraint parsing method */
@@ -293,6 +294,17 @@ SCIP_RETCODE SCIPconshdlrPresolve(
    int*                  nchgsides,          /**< pointer to total number of changed left/right hand sides of all presolvers */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
+
+
+/** calls variable deletion method of constraint handler */
+extern
+SCIP_RETCODE SCIPconshdlrDelVars(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
+   );
+
 
 /** locks rounding of variables involved in the given constraint constraint handler that doesn't need constraints */
 SCIP_RETCODE SCIPconshdlrLockVars(

@@ -617,6 +617,20 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  */
 #define SCIP_DECL_CONSDISABLE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons)
 
+/** variable deletion method of constraint handler
+ *
+ *  This method should iterate over all constraints of the constraint handler and delete all variables 
+ *  that were marked for deletion by SCIPdelVar().
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
+ *  - conss           : array of constraints in transformed problem
+ *  - nconss          : number of constraints in transformed problem
+ */
+#define SCIP_DECL_CONSDELVARS(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss)
+
+
 /** constraint display method of constraint handler
  *
  *  The constraint handler should store a representation of the constraint into the given text file.

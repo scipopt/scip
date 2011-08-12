@@ -1752,6 +1752,11 @@ SCIP_DECL_CONSLOCK(consLockVarbound)
 /** constraint disabling notification method of constraint handler */
 #define consDisableVarbound NULL
 
+
+/** variable deletion method of constraint handler */
+#define consDelVarsVarbound NULL
+
+
 /** constraint display method of constraint handler */
 static
 SCIP_DECL_CONSPRINT(consPrintVarbound)
@@ -1871,7 +1876,7 @@ SCIP_RETCODE SCIPincludeConshdlrVarbound(
          consPropVarbound, consPresolVarbound, consRespropVarbound, consLockVarbound,
          consActiveVarbound, consDeactiveVarbound, 
          consEnableVarbound, consDisableVarbound,
-         consPrintVarbound, consCopyVarbound, consParseVarbound,
+         consDelVarsVarbound, consPrintVarbound, consCopyVarbound, consParseVarbound,
          conshdlrdata) );
 
    if( SCIPfindConshdlr(scip,"linear") != NULL )

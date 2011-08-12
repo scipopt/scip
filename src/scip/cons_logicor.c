@@ -214,6 +214,8 @@ SCIP_RETCODE consdataCreate(
    SCIP_VAR**            vars                /**< variables of the constraint */
    )
 {
+   int v;
+
    assert(consdata != NULL);
    assert(nvars == 0 || vars != NULL);
 
@@ -247,6 +249,13 @@ SCIP_RETCODE consdataCreate(
       SCIP_CALL( SCIPgetTransformedVars(scip, (*consdata)->nvars, (*consdata)->vars, (*consdata)->vars) );
    }
 
+   /* capture vars */
+   for( v = 0; v < (*consdata)->nvars; v++ )
+   {
+      assert((*consdata)->vars[v] != NULL);
+      SCIPcaptureVar(scip, (*consdata)->vars[v]);
+   }
+
    return SCIP_OKAY;
 }   
 
@@ -257,6 +266,8 @@ SCIP_RETCODE consdataFree(
    SCIP_CONSDATA**       consdata            /**< pointer to the logic or constraint */
    )
 {
+   int v;
+
    assert(consdata != NULL);
    assert(*consdata != NULL);
 
@@ -264,6 +275,13 @@ SCIP_RETCODE consdataFree(
    if( (*consdata)->row != NULL )
    {
       SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->row) );
+   }
+
+   /* release vars */
+   for( v = 0; v < (*consdata)->nvars; v++ )
+   {
+      assert((*consdata)->vars[v] != NULL);
+      SCIPreleaseVar(scip, &((*consdata)->vars[v]));
    }
 
    SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->vars, (*consdata)->varssize);
@@ -398,6 +416,7 @@ SCIP_RETCODE addCoef(
 
    SCIP_CALL( consdataEnsureVarsSize(scip, consdata, consdata->nvars + 1) );
    consdata->vars[consdata->nvars] = var;
+   SCIPcaptureVar(scip, consdata->vars[consdata->nvars]);
    consdata->nvars++;
 
    /* we only catch this event in presolving stage */
@@ -474,6 +493,9 @@ SCIP_RETCODE delCoefPos(
    }
    assert(pos != consdata->watchedvar1);
    assert(pos != consdata->watchedvar2);
+
+   /* release variable */
+   SCIPreleaseVar(scip, &consdata->vars[pos]);
 
    /* move the last variable to the free slot */
    if( pos != consdata->nvars - 1 )
@@ -3007,6 +3029,10 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveLogicor)
 #define consDisableLogicor NULL
 
 
+/** variable deletion method of constraint handler */
+#define consDelVarsLogicor NULL
+
+
 /** constraint display method of constraint handler */
 static
 SCIP_DECL_CONSPRINT(consPrintLogicor)
@@ -3266,7 +3292,7 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
          consPropLogicor, consPresolLogicor, consRespropLogicor, consLockLogicor,
          consActiveLogicor, consDeactiveLogicor,
          consEnableLogicor, consDisableLogicor,
-         consPrintLogicor, consCopyLogicor, consParseLogicor,
+         consDelVarsLogicor, consPrintLogicor, consCopyLogicor, consParseLogicor,
          conshdlrdata) );
 
    conshdlrdata->conshdlrlinear = SCIPfindConshdlr(scip,"linear");

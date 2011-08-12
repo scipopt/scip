@@ -1279,7 +1279,6 @@ SCIP_RETCODE SCIPeventProcess(
       break;
 
    case SCIP_EVENTTYPE_VARADDED:
-   case SCIP_EVENTTYPE_VARDELETED:
    case SCIP_EVENTTYPE_PRESOLVEROUND:
    case SCIP_EVENTTYPE_NODEFOCUSED:
    case SCIP_EVENTTYPE_NODEFEASIBLE:
@@ -1297,6 +1296,14 @@ SCIP_RETCODE SCIPeventProcess(
    case SCIP_EVENTTYPE_ROWCONSTCHANGED:
    case SCIP_EVENTTYPE_ROWSIDECHANGED:
       SCIP_CALL( SCIPeventfilterProcess(eventfilter, set, event) );
+      break;
+
+   case SCIP_EVENTTYPE_VARDELETED:
+      var = event->data.eventvardeleted.var;
+      assert(var != NULL);
+
+      /* process variable's event filter */
+      SCIP_CALL( SCIPeventfilterProcess(var->eventfilter, set, event) );
       break;
 
    case SCIP_EVENTTYPE_VARFIXED:

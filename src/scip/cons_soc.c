@@ -3726,6 +3726,10 @@ SCIP_DECL_CONSDISABLE(consDisableSOC)
 #endif
 
 
+/** variable deletion method of constraint handler */
+#define consDelVarsSOC NULL
+
+
 /** constraint display method of constraint handler */
 static
 SCIP_DECL_CONSPRINT(consPrintSOC)
@@ -3913,7 +3917,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
          consPropSOC, consPresolSOC, consRespropSOC, consLockSOC,
          consActiveSOC, consDeactiveSOC, 
          consEnableSOC, consDisableSOC,
-         consPrintSOC, consCopySOC, consParseSOC,
+         consDelVarsSOC, consPrintSOC, consCopySOC, consParseSOC,
          conshdlrdata) );
 
 #ifdef QUADCONSUPGD_PRIORITY

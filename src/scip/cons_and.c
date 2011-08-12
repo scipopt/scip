@@ -393,6 +393,8 @@ SCIP_RETCODE consdataCreate(
    SCIP_VAR*             resvar              /**< resultant variable */
    )
 {
+   int v;
+
    assert(consdata != NULL);
    assert(nvars == 0 || vars != NULL);
    assert(resvar != NULL);
@@ -424,6 +426,15 @@ SCIP_RETCODE consdataCreate(
       /* catch needed events on variables */
       SCIP_CALL( consdataCatchEvents(scip, *consdata, eventhdlr) );
    }
+
+   /* capture vars */
+   SCIPcaptureVar(scip, (*consdata)->resvar);
+   for( v = 0; v < (*consdata)->nvars; v++ )
+   {
+      assert((*consdata)->vars[v] != NULL);
+      SCIPcaptureVar(scip, (*consdata)->vars[v]);
+   }
+
 
    return SCIP_OKAY;
 }
@@ -461,6 +472,8 @@ SCIP_RETCODE consdataFree(
    SCIP_EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
    )
 {
+   int v;
+
    assert(consdata != NULL);
    assert(*consdata != NULL);
 
@@ -480,6 +493,15 @@ SCIP_RETCODE consdataFree(
 
    /* release and free the rows */
    SCIP_CALL( consdataFreeRows(scip, *consdata) );
+
+   /* release vars */
+   for( v = 0; v < (*consdata)->nvars; v++ )
+   {
+      assert((*consdata)->vars[v] != NULL);
+      SCIPreleaseVar(scip, &((*consdata)->vars[v]));
+   }
+   SCIPreleaseVar(scip, &((*consdata)->resvar));
+
 
    SCIPfreeBlockMemoryArray(scip, &(*consdata)->vars, (*consdata)->varssize);
    SCIPfreeBlockMemory(scip, consdata);
@@ -547,6 +569,9 @@ SCIP_RETCODE addCoef(
    consdata->sorted = (consdata->nvars == 1);
    consdata->changed = TRUE;
 
+   /* capture variable */
+   SCIPcaptureVar(scip, var);
+
    /* if we are in transformed problem, catch the variable's events */
    if( transformed )
    {
@@ -610,6 +635,9 @@ SCIP_RETCODE delCoefPos(
    }
    assert(pos != consdata->watchedvar1);
    assert(pos != consdata->watchedvar2);
+
+   /* release variable */
+   SCIPreleaseVar(scip, &(consdata->vars[pos]));
 
    /* move the last variable to the free slot */
    consdata->vars[pos] = consdata->vars[consdata->nvars-1];
@@ -1969,7 +1997,6 @@ SCIP_DECL_CONSFREE(consFreeAnd)
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
 #define consExitAnd NULL
 
-
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
 static
 SCIP_DECL_CONSINITPRE(consInitpreAnd)
@@ -2589,6 +2616,10 @@ SCIP_DECL_CONSLOCK(consLockAnd)
 #define consDisableAnd NULL
 
 
+/** variable deletion method of constraint handler */
+#define consDelVarsAnd NULL
+
+
 /** constraint display method of constraint handler */
 static
 SCIP_DECL_CONSPRINT(consPrintAnd)
@@ -2785,7 +2816,7 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
          consPropAnd, consPresolAnd, consRespropAnd, consLockAnd,
          consActiveAnd, consDeactiveAnd, 
          consEnableAnd, consDisableAnd,
-         consPrintAnd, consCopyAnd, consParseAnd,
+         consDelVarsAnd, consPrintAnd, consCopyAnd, consParseAnd,
          conshdlrdata) );
 
    /* add and constraint handler parameters */
