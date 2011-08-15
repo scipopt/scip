@@ -36,7 +36,7 @@
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPNODE
-#define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
+#define HEUR_USESSUBSCIP      TRUE      /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_NODESOFS      5000LL    /* number of nodes added to the contingent of the total nodes          */
 #define DEFAULT_MAXNODES      5000LL    /* maximum number of nodes to regard in the subproblem                 */
@@ -47,11 +47,9 @@
 #define DEFAULT_NEIGHBORHOODSIZE  18    /* radius of the incumbents neighborhood to be searched                */
 #define DEFAULT_SOLNUM        5         /* number of pool-solutions to be checked for flag array update        */
 #define DEFAULT_USELPROWS     TRUE      /* should subproblem be created out of the rows in the LP rows, 
-                                         * otherwise, the copy constructors of the constraints handlers are used 
-					 */
+                                         * otherwise, the copy constructors of the constraints handlers are used */
 #define DEFAULT_COPYCUTS      TRUE      /* if DEFAULT_USELPROWS is FALSE, then should all active cuts from the cutpool
-                                         * of the original scip be copied to constraints of the subscip
-					 */
+                                         * of the original scip be copied to constraints of the subscip        */
 
 
 /*
@@ -506,7 +504,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 
    *result = SCIP_DELAYED;
 
-   /* only call heuristic, if an IP solution is at hand */
+   /* only call heuristic, if a CIP solution is at hand */
    if( SCIPgetNSols(scip) <= 0 )
       return SCIP_OKAY;
 
@@ -556,13 +554,17 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    if( SCIPisStopped(scip) )
      return SCIP_OKAY;
 
-   /* initialize the subproblem */  
-   SCIP_CALL( SCIPcreate(&subscip) );
-
    /* get required data of the original problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
    assert(vars != NULL || nvars == 0);
    assert(nbinvars <= nvars);
+
+   /* do not run heuristic if only continuous variables are present */
+   if( nbinvars == 0 && nintvars == 0 )
+      return SCIP_OKAY;
+
+   /* initialize the subproblem */
+   SCIP_CALL( SCIPcreate(&subscip) );
 
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPallocBufferArray( scip, &subvars, nvars ) ); 

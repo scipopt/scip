@@ -37,7 +37,7 @@
 #define HEUR_FREQOFS          5
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPNODE
-#define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
+#define HEUR_USESSUBSCIP      TRUE      /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_NODESOFS      500       /* number of nodes added to the contingent of the total nodes          */
 #define DEFAULT_MAXNODES      5000      /* maximum number of nodes to regard in the subproblem                 */
@@ -47,8 +47,7 @@
 #define DEFAULT_NODESQUOT     0.1       /* subproblem nodes in relation to nodes of the original problem       */
 #define DEFAULT_NWAITINGNODES 200       /* number of nodes without incumbent change that heuristic should wait */
 #define DEFAULT_USELPROWS     TRUE      /* should subproblem be created out of the rows in the LP rows, 
-                                         * otherwise, the copy constructors of the constraints handlers are used 
-					 */
+                                         * otherwise, the copy constructors of the constraints handlers are used */
 #define DEFAULT_COPYCUTS      TRUE      /* if DEFAULT_USELPROWS is FALSE, then should all active cuts from the cutpool
                                          * of the original scip be copied to constraints of the subscip
                                          */
@@ -131,7 +130,7 @@ SCIP_RETCODE createSubproblem(
       
    fixingrate = 0.0;
 
-   /* abort, if all variables were fixed (which should not happen) */
+   /* abort, if all variables were fixed */
    if( fixingcounter == nbinvars + nintvars )
    {
       *success = FALSE;
@@ -330,7 +329,9 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem */
    SCIP_Real upperbound;
 
-   int nvars;                     
+   int nvars;
+   int nbinvars;
+   int nintvars;
    int i;   
 
    SCIP_Bool success;
@@ -378,6 +379,12 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    if( nstallnodes < heurdata->minnodes )
       return SCIP_OKAY;
 
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
+
+   /* check whether discrete variables are available */
+   if( nbinvars == 0 && nintvars == 0 )
+      return SCIP_OKAY;
+
    /* check whether there is enough time and memory left */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
    if( !SCIPisInfinity(scip, timelimit) )
@@ -392,8 +399,6 @@ SCIP_DECL_HEUREXEC(heurExecRins)
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
-
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
    /* initializing the subproblem */  
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) ); 
