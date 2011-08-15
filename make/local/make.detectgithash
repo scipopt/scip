@@ -17,10 +17,13 @@
 #@brief   SCIP sub Makefile
 #@author  Stefan Heinz
 
-SCIPGITHASHFILE	= 	$(SRCDIR)/scip/scipgithash.h
+SCIPGITHASHFILE	= 	$(SRCDIR)/scip/githash.c
 SCIPGITHASH	=	`git log -1 --pretty=%h`
 
 .PHONY: githash
 githash::	# do not remove the double-colon
 		@rm -f $(SCIPGITHASHFILE)
 		@echo "#define SCIP_GITHASH \"$(SCIPGITHASH)\"" >> $(SCIPGITHASHFILE)
+
+$(SCIPGITHASHFILE): githash
+
