@@ -265,6 +265,9 @@ struct SCIP_Var
    unsigned int          pseudocostflag:2;   /**< temporary flag used in pseudo cost update */
    unsigned int          branchdirection:2;  /**< preferred branching direction of the variable (downwards, upwards, auto) */
    unsigned int          eventqueueimpl:1;   /**< is an IMPLADDED event on this variable currently in the event queue? */
+   unsigned int          deletable:1;        /**< TRUE iff the variable is removable from the problem */
+   unsigned int          essential:1;        /**< TRUE iff the variable must not be deleted, e.g. because it is contained in
+                                              *   some basis information or a solution */
 };
 
 #ifdef __cplusplus

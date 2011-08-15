@@ -101,7 +101,9 @@ extern
 SCIP_RETCODE SCIPdomchgFree(
    SCIP_DOMCHG**         domchg,             /**< pointer to domain change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LP*              lp                  /**< current LP data */
    );
 
 /** converts a dynamic domain change data into a static one, using less memory than for a dynamic one */
@@ -109,7 +111,9 @@ extern
 SCIP_RETCODE SCIPdomchgMakeStatic(
    SCIP_DOMCHG**         domchg,             /**< pointer to domain change data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LP*              lp                  /**< current LP data */
    );
 
 /** applies domain change */
@@ -313,6 +317,12 @@ SCIP_RETCODE SCIPvarRelease(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< current LP data (may be NULL, if it's not a column variable) */
+   );
+
+/** get usage counter of variable */
+extern
+int SCIPvarGetNUses(
+   SCIP_VAR*             var                 /**< variable */
    );
 
 /** initializes variable data structure for solving */
@@ -1317,7 +1327,15 @@ SCIP_Real SCIPvarGetVSIDS(
 
 #endif
 
+extern
+SCIP_Bool SCIPvarIsEssential(
+   SCIP_VAR*             var
+   );
 
+extern
+void SCIPvarSetEssential(
+   SCIP_VAR*             var
+   );
 
 
 /*

@@ -844,6 +844,10 @@ SCIP_RETCODE boundchgCaptureData(
 {
    assert(boundchg != NULL);
 
+   /* capture variable associated with the bound change */
+   assert(boundchg->var != NULL);
+   SCIPvarCapture(boundchg->var);
+
    switch( boundchg->boundchgtype )
    {
    case SCIP_BOUNDCHGTYPE_BRANCHING:
@@ -869,7 +873,10 @@ static
 SCIP_RETCODE boundchgReleaseData(
    SCIP_BOUNDCHG*        boundchg,           /**< bound change to remove */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LP*              lp                  /**< current LP data */
+
    )
 {
    assert(boundchg != NULL);
@@ -890,6 +897,11 @@ SCIP_RETCODE boundchgReleaseData(
       SCIPerrorMessage("invalid bound change type\n");
       return SCIP_INVALIDDATA;
    }
+
+   /* release variable */
+   assert(boundchg->var != NULL);
+   SCIP_CALL( SCIPvarRelease(&boundchg->var, blkmem, set, eventqueue, lp) );
+
 
    return SCIP_OKAY;
 }
@@ -920,7 +932,9 @@ SCIP_RETCODE domchgCreate(
 SCIP_RETCODE SCIPdomchgFree(
    SCIP_DOMCHG**         domchg,             /**< pointer to domain change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(domchg != NULL);
@@ -930,10 +944,10 @@ SCIP_RETCODE SCIPdomchgFree(
    {
       int i;
 
-      /* release branching and inference data associated with the bound changes */
+      /* release variables, branching and inference data associated with the bound changes */
       for( i = 0; i < (int)(*domchg)->domchgbound.nboundchgs; ++i )
       {
-         SCIP_CALL( boundchgReleaseData(&(*domchg)->domchgbound.boundchgs[i], blkmem, set) );
+         SCIP_CALL( boundchgReleaseData(&(*domchg)->domchgbound.boundchgs[i], blkmem, set, eventqueue, lp) );
       }
 
       /* free memory for bound and hole changes */
@@ -1019,7 +1033,9 @@ SCIP_RETCODE domchgMakeDynamic(
 SCIP_RETCODE SCIPdomchgMakeStatic(
    SCIP_DOMCHG**         domchg,             /**< pointer to domain change data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(domchg != NULL);
@@ -1034,7 +1050,7 @@ SCIP_RETCODE SCIPdomchgMakeStatic(
       case SCIP_DOMCHGTYPE_BOUND:
          if( (*domchg)->domchgbound.nboundchgs == 0 )
          {
-            SCIP_CALL( SCIPdomchgFree(domchg, blkmem, set) );
+            SCIP_CALL( SCIPdomchgFree(domchg, blkmem, set, eventqueue, lp) );
          }
          break;
       case SCIP_DOMCHGTYPE_BOTH:
@@ -1042,7 +1058,7 @@ SCIP_RETCODE SCIPdomchgMakeStatic(
          {
             if( (*domchg)->domchgbound.nboundchgs == 0 )
             {
-               SCIP_CALL( SCIPdomchgFree(domchg, blkmem, set) );
+               SCIP_CALL( SCIPdomchgFree(domchg, blkmem, set, eventqueue, lp) );
             }
             else
             {
@@ -1056,7 +1072,7 @@ SCIP_RETCODE SCIPdomchgMakeStatic(
          {
             if( (*domchg)->domchgbound.nboundchgs == 0 )
             {
-               SCIP_CALL( SCIPdomchgFree(domchg, blkmem, set) );
+               SCIP_CALL( SCIPdomchgFree(domchg, blkmem, set, eventqueue, lp) );
             }
             else
             {
@@ -1842,6 +1858,8 @@ SCIP_RETCODE varCreate(
    (*var)->vartype = vartype; /*lint !e641*/
    (*var)->pseudocostflag = FALSE;
    (*var)->eventqueueimpl = FALSE;
+   (*var)->deletable = FALSE;
+   (*var)->essential = FALSE;
    stat->nvaridx++;
 
    /* create branching and inference history entries */
@@ -2502,6 +2520,7 @@ void SCIPvarCapture(
    assert(var->nuses >= 0);
 
    SCIPdebugMessage("capture variable <%s> with nuses=%d\n", var->name, var->nuses);
+   //printf("capture variable <%s> with nuses=%d\n", var->name, var->nuses);
    var->nuses++;
 }
 
@@ -2520,6 +2539,7 @@ SCIP_RETCODE SCIPvarRelease(
    assert(blkmem != NULL);
 
    SCIPdebugMessage("release variable <%s> with nuses=%d\n", (*var)->name, (*var)->nuses);
+   //printf("release variable <%s> with nuses=%d\n", (*var)->name, (*var)->nuses);
    (*var)->nuses--;
    if( (*var)->nuses == 0 )
    {
@@ -2529,6 +2549,16 @@ SCIP_RETCODE SCIPvarRelease(
    *var = NULL;
 
    return SCIP_OKAY;
+}
+
+/** get usage counter of variable */
+int SCIPvarGetNUses(
+   SCIP_VAR*             var                 /**< variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->nuses;
 }
 
 /** initializes variable data structure for solving */
@@ -4914,13 +4944,13 @@ SCIP_RETCODE SCIPvarAddObj(
       case SCIP_VARSTATUS_FIXED:
          assert(SCIPsetIsEQ(set, var->locdom.lb, var->locdom.ub));
          SCIPprobAddObjoffset(prob, var->locdom.lb * addobj);
-         SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, prob, tree, lp) );
+         SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, prob, tree, lp) );
          break;
 
       case SCIP_VARSTATUS_AGGREGATED:
          /* x = a*y + c  ->  add a*addobj to obj. val. of y, and c*addobj to obj. offset of problem */
          SCIPprobAddObjoffset(prob, var->data.aggregate.constant * addobj);
-         SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, prob, tree, lp) );
+         SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, prob, tree, lp) );
          SCIP_CALL( SCIPvarAddObj(var->data.aggregate.var, blkmem, set, stat, prob, primal, tree, lp, eventqueue,
                var->data.aggregate.scalar * addobj) );
          break;
@@ -4929,7 +4959,7 @@ SCIP_RETCODE SCIPvarAddObj(
 	 assert(!var->donotmultaggr);
          /* x = a_1*y_1 + ... + a_n*y_n  + c  ->  add a_i*addobj to obj. val. of y_i, and c*addobj to obj. offset */
          SCIPprobAddObjoffset(prob, var->data.multaggr.constant * addobj);
-         SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, prob, tree, lp) );
+         SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, prob, tree, lp) );
          for( i = 0; i < var->data.multaggr.nvars; ++i )
          {
             SCIP_CALL( SCIPvarAddObj(var->data.multaggr.vars[i], blkmem, set, stat, prob, primal, tree, lp, 
@@ -4943,7 +4973,7 @@ SCIP_RETCODE SCIPvarAddObj(
          assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
          assert(var->negatedvar->negatedvar == var);
          SCIPprobAddObjoffset(prob, var->data.negate.constant * addobj);
-         SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, prob, tree, lp) );
+         SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, prob, tree, lp) );
          SCIP_CALL( SCIPvarAddObj(var->negatedvar, blkmem, set, stat, prob, primal, tree, lp, eventqueue, -addobj) );
          break;
 
@@ -14258,4 +14288,18 @@ SCIP_Bool SCIPbdchginfoIsTighter(
    return (SCIPbdchginfoGetBoundtype(bdchginfo1) == SCIP_BOUNDTYPE_LOWER
       ? bdchginfo1->newbound > bdchginfo2->newbound
       : bdchginfo1->newbound < bdchginfo2->newbound);
+}
+
+SCIP_Bool SCIPvarIsEssential(
+   SCIP_VAR*             var
+   )
+{
+   return var->essential;
+}
+
+void SCIPvarSetEssential(
+   SCIP_VAR*             var
+   )
+{
+   var->essential = TRUE;
 }

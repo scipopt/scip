@@ -1156,6 +1156,8 @@ SCIP_RETCODE colDelCoefPos(
    assert(0 <= pos && pos < col->len);
    assert(col->rows[pos] != NULL);
    assert(col->linkpos[pos] == -1 || col->rows[pos]->cols[col->linkpos[pos]] == col);
+   assert(col->linkpos[pos] == -1 || col->rows[pos]->cols[col->linkpos[pos]] == col
+      || col->coefchanged || col->rows[pos]->coefchanged);
    assert((pos < col->nlprows) == (col->linkpos[pos] >= 0 && col->rows[pos]->lppos >= 0));
 
    row = col->rows[pos];
@@ -1199,6 +1201,8 @@ SCIP_RETCODE colChgCoefPos(
    assert(0 <= pos && pos < col->len);
    assert(col->rows[pos] != NULL);
    assert(col->linkpos[pos] == -1 || col->rows[pos]->cols[col->linkpos[pos]] == col);
+   assert(col->linkpos[pos] == -1 || col->rows[pos]->cols[col->linkpos[pos]] == col
+      || ((col->coefchanged || col->rows[pos]->coefchanged) && SCIPsetIsZero(set, val)) );
 
    /*debugMessage("changing coefficient %g * <%s> at position %d of column <%s> to %g\n", 
      col->vals[pos], col->rows[pos]->name, pos, SCIPvarGetName(col->var), val);*/
@@ -1480,6 +1484,8 @@ SCIP_RETCODE rowDelCoefPos(
    assert(0 <= pos && pos < row->len);
    assert(row->cols[pos] != NULL);
    assert(row->linkpos[pos] == -1 || row->cols[pos]->rows[row->linkpos[pos]] == row);
+   assert(row->linkpos[pos] == -1 || row->cols[pos]->rows[row->linkpos[pos]] == row
+      || row->coefchanged || row->cols[pos]->coefchanged);
    assert((pos < row->nlpcols) == (row->linkpos[pos] >= 0 && row->cols[pos]->lppos >= 0));
 
    col = row->cols[pos];
@@ -1536,6 +1542,8 @@ SCIP_RETCODE rowChgCoefPos(
    assert(0 <= pos && pos < row->len);
    assert(row->cols[pos] != NULL);
    assert(row->linkpos[pos] == -1 || row->cols[pos]->rows[row->linkpos[pos]] == row);
+   assert(row->linkpos[pos] == -1 || row->cols[pos]->rows[row->linkpos[pos]] == row
+      || ((row->coefchanged || row->cols[pos]->coefchanged) && SCIPsetIsZero(set, val)) );
 
    /*debugMessage("changing coefficient %g * <%s> at position %d of row <%s> to %g\n", 
      row->vals[pos], SCIPvarGetName(row->cols[pos]->var), pos, row->name, val);*/
