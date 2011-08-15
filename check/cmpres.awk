@@ -174,7 +174,7 @@ BEGIN {
    printsoltimes = 0; # for reference solver, absolute time to first and best solution are printed, for other solvers the corresponding ratios
                       #! please NOTE that this additional output is currently only available for SCIP .res-files created with the evalcheck.sh script and
                       #  the flag printsoltimes = 1 set in check.awk. If other solvers are involved, leave this flag set to 0.
-   printgap = 0; # if timeout, then print absolute gap at termination in time column
+   printgap = 0; # if timeout, then print absolute gap at termination in time column, if gap is finite
    printsoltimes = !short && printsoltimes; # short deactivates the detailed solution times output
    infinity = 1e+20;
    timegeomshift = 10.0;
@@ -718,22 +718,22 @@ END {
             notimeout = 0;
             continue;
          }
-	 else
-	 {
+         else
+         {
             if ( status[s,pidx] == "timeout" )
-	    {
+            {
                # If memory limit was exceeded or we hit a hard time/memory limit,
                # replace time and nodes by worst time and worst nodes of all runs.
-	       # Note this also takes action if the time limits of the runs are
-	       # different: in this case we set the values to the worst case.
-	       if ( time[s,pidx] < 0.99*worsttime || nodes[s,pidx] <= 1 )
-	       {
-		  iters[s,pidx] = worstiters+s; # make sure this is not treated as equal path
-		  nodes[s,pidx] = worstnodes;
-		  time[s,pidx] = worsttime;
-	       }
-	    }
-	 }
+               # Note this also takes action if the time limits of the runs are
+               # different: in this case we set the values to the worst case.
+               if ( time[s,pidx] < 0.99*worsttime || nodes[s,pidx] <= 1 )
+               {
+                  iters[s,pidx] = worstiters+s; # make sure this is not treated as equal path
+                  nodes[s,pidx] = worstnodes;
+                  time[s,pidx] = worsttime;
+               }
+            }
+         }
 
          if( nodecomp == -1 )
          {
@@ -775,7 +775,7 @@ END {
                if( !unprocessed )
                {
                   if ( notimeout )
-		     nsolved[s,-1]++;
+                     nsolved[s,-1]++;
                   nsolved[s,0]++;
                   nsolved[s,category[s]]++;
                   nthissolved++;
@@ -831,7 +831,7 @@ END {
             line = sprintf("%s           -        -", line);
          else
          {
-            if( printgap && status[s,pidx] == "timeout" )
+            if( printgap && status[s,pidx] == "timeout" && gap[s,pidx] != "--" )
               line = sprintf("%s %s%10d %7.2f%%", line, feasmark, nodes[s,pidx], gap[s,pidx]);
             else
               line = sprintf("%s %s%10d %s%7.1f", line, feasmark, nodes[s,pidx], marker, time[s,pidx]);
