@@ -2139,13 +2139,14 @@ SCIP_RETCODE replaceQuadVarTermPos(
       }
 
       /* swap var1 and var2 if they are in wrong order */
-      if( SCIPvarCompare(bilinterm->var1, bilinterm->var2) < 0 )
+      if( SCIPvarCompare(bilinterm->var1, bilinterm->var2) > 0 )
       {
          SCIP_VAR* tmp;
          tmp = bilinterm->var1;
          bilinterm->var1 = bilinterm->var2;
          bilinterm->var2 = tmp;
       }
+      assert(SCIPvarCompare(bilinterm->var1, bilinterm->var2) == -1);
 
       if( offset != 0.0 )
       {
@@ -5587,9 +5588,12 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
       if( row == NULL )
          continue;
 
-      assert(!SCIProwIsLocal(row));
+      /* if bad row coefficients were eliminated with the use of local bounds, the cut may be local, which we cannot use here */
+      if( !SCIProwIsLocal(row) )
+      {
+         SCIP_CALL( SCIPaddPoolCut(scip, row) );
+      }
 
-      SCIP_CALL( SCIPaddPoolCut(scip, row) );
       SCIP_CALL( SCIPreleaseRow(scip, &row) );
    }
 
