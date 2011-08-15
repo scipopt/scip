@@ -51,12 +51,10 @@
 #define DEFAULT_RANDOMIZATION TRUE           /* should the choice which sols to take be randomized?                 */ 
 #define DEFAULT_DONTWAITATROOT FALSE         /* should the nwaitingnodes parameter be ignored at the root node?     */ 
 #define DEFAULT_USELPROWS     TRUE           /* should subproblem be created out of the rows in the LP rows, 
-                                              * otherwise, the copy constructors of the constraints handlers are used 
-					      */
+                                              * otherwise, the copy constructors of the constraints handlers are used */
 #define DEFAULT_COPYCUTS      TRUE           /* if DEFAULT_USELPROWS is FALSE, then should all active cuts from the
-                                              * cutpool of the original scip be copied to constraints of the subscip
-					      */
-                                            
+                                              * cutpool of the original scip be copied to constraints of the subscip */
+
 #define HASHSIZE_SOLS         11113          /* size of hash table for solution tuples in crossover heuristic       */
 
 
@@ -688,6 +686,8 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    
    int* selection;                           /* pool of solutions crossover uses                    */ 
    int nvars;                                /* number of original problem's variables              */
+   int nbinvars;
+   int nintvars;
    int nusedsols;
    int i;   
 
@@ -765,8 +765,12 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
 
    *result = SCIP_DIDNOTFIND;
 
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
    assert(nvars > 0);
+
+   /* check whether discrete variables are available */
+   if( nbinvars == 0 && nintvars == 0 )
+      return SCIP_OKAY;
 
    /* initializing the subproblem */  
    SCIP_CALL( SCIPcreate(&subscip) );

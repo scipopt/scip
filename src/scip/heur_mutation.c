@@ -47,11 +47,9 @@
 #define DEFAULT_NODESQUOT     0.1           /* subproblem nodes in relation to nodes of the original problem       */
 #define DEFAULT_NWAITINGNODES 200           /* number of nodes without incumbent change that heuristic should wait */
 #define DEFAULT_USELPROWS     TRUE          /* should subproblem be created out of the rows in the LP rows, 
-                                             * otherwise, the copy constructors of the constraints handlers are used 
-					     */
+                                             * otherwise, the copy constructors of the constraints handlers are used */
 #define DEFAULT_COPYCUTS      TRUE          /* if DEFAULT_USELPROWS is FALSE, then should all active cuts from the
-                                             * cutpool of the original scip be copied to constraints of the subscip
-					     */
+                                             * cutpool of the original scip be copied to constraints of the subscip */
 
 
 
@@ -166,7 +164,7 @@ SCIP_RETCODE createSubproblem(
 
    if( uselprows )
    {
-      SCIP_ROW** rows;                          /* original scip rows                         */
+      SCIP_ROW** rows;   /* original scip rows */
       int nrows;
       
       /* get the rows and their number */
@@ -385,6 +383,10 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTRUN;
+
+   /* only call heuristic, if discrete variables are present */
+   if( SCIPgetNBinVars(scip) == 0 && SCIPgetNIntVars(scip) == 0 )
+      return SCIP_OKAY;
 
    /* calculate the maximal number of branching nodes until heuristic is aborted */
    maxnnodesr = heurdata->nodesquot * SCIPgetNNodes(scip);

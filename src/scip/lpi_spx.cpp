@@ -2832,7 +2832,8 @@ SCIP_Bool SCIPlpiIsPrimalUnbounded(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   return (lpi->spx->getStatus() == SPxSolver::UNBOUNDED && lpi->spx->basis().status() == SPxBasis::PRIMAL);
+   return lpi->spx->getStatus() == SPxSolver::UNBOUNDED
+      && (lpi->spx->basis().status() == SPxBasis::PRIMAL || lpi->spx->basis().status() == SPxBasis::UNBOUNDED);
 }
 
 /** returns TRUE iff LP is proven to be primal infeasible */
@@ -2862,7 +2863,7 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
 
    basestatus = lpi->spx->basis().status();
 
-   return (basestatus == SPxBasis::PRIMAL || basestatus == SPxBasis::OPTIMAL);
+   return (basestatus == SPxBasis::PRIMAL || basestatus == SPxBasis::OPTIMAL || basestatus == SPxBasis::UNBOUNDED);
 }
 
 /** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point);

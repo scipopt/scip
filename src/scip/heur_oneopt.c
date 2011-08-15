@@ -326,7 +326,14 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
    /* get problem variables */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
-   nintvars = nbinvars + nintvars;
+   nintvars += nbinvars;
+
+   /* do not run if there are no discrete variables */
+   if( nintvars == 0 )
+   {
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
 
    /* we need to be able to start diving from current node in order to resolve the LP
     * with continuous or implicit integer variables

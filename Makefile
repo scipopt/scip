@@ -641,6 +641,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/retcode.o \
 			scip/scip.o \
 			scip/scipdefplugins.o \
+			scip/scipgithash.o \
 			scip/scipshell.o \
 			scip/sepa.o \
 			scip/sepastore.o \
@@ -748,7 +749,7 @@ ifeq ($(VERBOSE),false)
 		$(LPILIBOBJFILES) $(NLPILIBOBJFILES) $(SCIPLIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(MAINOBJFILES)
 endif
 
-all: 		libs $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
+all: 		githash libs $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
 
 libs: 		$(LINKSMARKERFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(LPILIBLINK) $(LPILIBSHORTLINK) $(NLPILIBLINK) $(NLPILIBSHORTLINK) $(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK) 
 
@@ -838,6 +839,12 @@ testgams:
 .PHONY: tags
 tags:
 		rm -f TAGS; ctags -e -R -h ".c.cpp.h" --exclude=".*" src/; 
+
+# include target to detect the current git hash 
+-include make/local/make.detectgithash
+
+# this empty target is needed for the SCIP release versions
+githash::	# do not remove the double-colon
 
 # include local targets 
 -include make/local/make.targets
@@ -1043,14 +1050,13 @@ $(BINOBJDIR)/%.o:	$(SRCDIR)/%.cpp $(BINOBJDIR)
 		@echo "-> compiling $@"
 		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) $(CXX_c)$< $(CXX_o)$@
 
-$(LIBOBJDIR)/%.o:	$(SRCDIR)/%.c $(LIBOBJDIR)
+$(LIBOBJDIR)/%.o:	$(SRCDIR)/%.c $(LIBOBJDIR) 
 		@echo "-> compiling $@"
 		$(CC) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CFLAGS) $(CC_c)$< $(CC_o)$@
 
 $(LIBOBJDIR)/%.o:	$(SRCDIR)/%.cpp $(LIBOBJDIR)
 		@echo "-> compiling $@"
 		$(CXX) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CXXFLAGS) $(CXX_c)$< $(CXX_o)$@
-
 
 -include $(LASTSETTINGS)
 

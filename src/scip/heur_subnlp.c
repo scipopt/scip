@@ -1703,10 +1703,12 @@ SCIP_DECL_HEUREXITSOL(heurExitsolSubNlp)
 
    SCIPheurSetTimingmask(heur, HEUR_TIMING);
    
-   /* reset some flags */
+   /* reset some flags and counters */
    heurdata->triedsetupsubscip = FALSE;
    heurdata->comblinearconsadded = FALSE;
    heurdata->contlinearconsadded = FALSE;
+   heurdata->nseriousnlpierror = 0;
+   heurdata->iterused = 0;
 
    return SCIP_OKAY;
 }
