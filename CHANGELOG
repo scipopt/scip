@@ -200,6 +200,7 @@ design:
 - the old redcost separator sepa_redcost.{c.h} is now a propagator prop_redcost.{c,h}, all corresponding  parameters moved as well
 - moved all timings to type_timing.h
 - outsourced propAndSolve() method in solve.c which calls domain propagation and solving of the lp and relaxation
+- CIP format variable characters defined, e.g. SCIP_VARTYPE_INTEGER_CHAR
 
 Makefile
 - via "PARASCIP=true" as a "Makefile" option it is possible to compile SCIP threadsafe in DEBUG-mode, (in OPT-mode it's not necessary)

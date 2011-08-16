@@ -54,6 +54,14 @@ extern "C" {
 #define SCIP_COPYRIGHT   "Copyright (c) 2002-2011 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
+/*
+ * CIP format variable characters
+ */
+
+#define SCIP_VARTYPE_BINARY_CHAR 'B'
+#define SCIP_VARTYPE_INTEGER_CHAR 'I'
+#define SCIP_VARTYPE_IMPLINT_CHAR 'M'
+#define SCIP_VARTYPE_CONTINUOUS_CHAR 'C'
 
 /*
  * Long Integer values
