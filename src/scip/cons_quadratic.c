@@ -5117,9 +5117,9 @@ SCIP_RETCODE generateCut(
                    !SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
                {
                   SCIPdebugMessage("eliminate coefficient %g for <%s> [%g, %g]\n", coef[mincoefidx], SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+                  refquadpartval += coef[mincoefidx] * (SCIPvarGetLbLocal(var) - ref[mincoefidx]);
                   constant += coef[mincoefidx] * SCIPvarGetLbLocal(var);
                   coef[mincoefidx] = 0.0;
-                  refquadpartval += coef[mincoefidx] * (SCIPvarGetLbLocal(var) - ref[mincoefidx]);
                   forcelocal |= SCIPisGT(scip, SCIPvarGetLbLocal(var), SCIPvarGetLbGlobal(var));
                   continue;
                }
@@ -5128,9 +5128,9 @@ SCIP_RETCODE generateCut(
                         !SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
                {
                   SCIPdebugMessage("eliminate coefficient %g for <%s> [%g, %g]\n", coef[mincoefidx], SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+                  refquadpartval += coef[mincoefidx] * (SCIPvarGetUbLocal(var) - ref[mincoefidx]);
                   constant += coef[mincoefidx] * SCIPvarGetUbLocal(var);
                   coef[mincoefidx] = 0.0;
-                  refquadpartval += coef[mincoefidx] * (SCIPvarGetUbLocal(var) - ref[mincoefidx]);
                   forcelocal |= SCIPisLT(scip, SCIPvarGetUbLocal(var), SCIPvarGetUbGlobal(var));
                   continue;
                }
@@ -5140,7 +5140,8 @@ SCIP_RETCODE generateCut(
             success = FALSE;
          }
 
-      } while( FALSE );
+         break;
+      } while( TRUE );
 
       if( violside == SCIP_SIDETYPE_LEFT )
          viol = consdata->lhs - (reflinpartval + refquadpartval);
