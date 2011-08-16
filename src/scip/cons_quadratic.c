@@ -2248,7 +2248,7 @@ SCIP_RETCODE addBilinearTerm(
    SCIP_CALL( consdataEnsureBilinSize(scip, consdata, consdata->nbilinterms + 1) );
    
    bilinterm = &consdata->bilinterms[consdata->nbilinterms];
-   if( SCIPvarCompare(consdata->quadvarterms[var1pos].var, consdata->quadvarterms[var2pos].var) > 0 )
+   if( SCIPvarCompare(consdata->quadvarterms[var1pos].var, consdata->quadvarterms[var2pos].var) < 0 )
    {
       bilinterm->var1 = consdata->quadvarterms[var1pos].var;
       bilinterm->var2 = consdata->quadvarterms[var2pos].var;
@@ -2265,6 +2265,7 @@ SCIP_RETCODE addBilinearTerm(
       SCIPerrorMessage("tried to add bilinear term where both variables are the same, but appear at different positions in quadvarterms array\n");
       return SCIP_INVALIDDATA;
    }
+   assert(SCIPvarCompare(bilinterm->var1, bilinterm->var2) == -1);
    
    SCIP_CALL( consdataEnsureAdjBilinSize(scip, &consdata->quadvarterms[var1pos], consdata->quadvarterms[var1pos].nadjbilin + 1) );
    SCIP_CALL( consdataEnsureAdjBilinSize(scip, &consdata->quadvarterms[var2pos], consdata->quadvarterms[var2pos].nadjbilin + 1) );
