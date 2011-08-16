@@ -539,7 +539,7 @@ SCIP_RETCODE sepastoreApplyBdchg(
    assert(vals != NULL);
    assert(!SCIPsetIsZero(set, vals[0]));
 
-   /* if the coefficient is nearly zero, we better igore this cut for numerical reasons */
+   /* if the coefficient is nearly zero, we better ignore this cut for numerical reasons */
    if( SCIPsetIsFeasZero(set, vals[0]) )
       return SCIP_OKAY;
 
@@ -806,6 +806,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
       /* if the cut is a bound change (i.e. a row with only one variable), add it as bound change instead of LP row */
       if( !SCIProwIsModifiable(cut) && SCIProwGetNNonz(cut) == 1 )
       {
+         SCIPdebugMessage(" -> applying forced cut <%s> as boundchange\n", SCIProwGetName(cut));
          SCIP_CALL( sepastoreApplyBdchg(sepastore, blkmem, set, stat, tree, lp, branchcand, eventqueue, cut, cutoff) );
       }
       else
