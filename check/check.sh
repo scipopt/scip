@@ -121,7 +121,7 @@ HARDMEMLIMIT=`expr $HARDMEMLIMIT \* 1024`
 echo "hard time limit: $HARDTIMELIMIT s" >>$OUTFILE
 echo "hard mem limit: $HARDMEMLIMIT k" >>$OUTFILE
 
-for i in `cat $TSTNAME.test` DONE
+for i in `cat testset/$TSTNAME.test` DONE
 do
     if test "$i" = "DONE"
     then

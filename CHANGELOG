@@ -213,7 +213,7 @@ Makefile
   additionally, if building with gnu compilers, the Ipopt libraries directory is stored in the SCIP binary, which should make it easier to run with Ipopt shared libraries
 - new target "make libs" which compiles only the libraries
 - to link against Clp, only the base directory of an Clp installation needs to be specified now
-
+- moved *.test and *.solu files to folder testset in check folder and adjusted test scripts
 
 SCIP version 2.0.2
 ==================
