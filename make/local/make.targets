@@ -28,5 +28,5 @@ SCIPEXAMPLES	=	Binpacking Coloring Eventhdlr MIPSolver TSP
 
 .PHONY: testexamples
 testexamples:
-		@$(foreach EXAMPLE, $(SCIPEXAMPLES), $(MAKE) -C examples/$(EXAMPLE) $^ test;)
+		@$(foreach EXAMPLE, $(SCIPEXAMPLES), $(MAKE) -C examples/$(EXAMPLE) $^ test || exit 1;)
 
