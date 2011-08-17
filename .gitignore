@@ -42,7 +42,13 @@ examples/Eventhdlr/check/getlastproblem.awk
 examples/Eventhdlr/check/locks/
 examples/Eventhdlr/check/results/
 examples/Eventhdlr/doc/html/
-examples/MIPSolver/check/
+examples/MIPSolver/check/check.awk
+examples/MIPSolver/check/check.sh
+examples/MIPSolver/check/evalcheck.sh
+examples/MIPSolver/check/getlastprob.awk
+examples/MIPSolver/check/getlastproblem.awk
+examples/MIPSolver/check/locks/
+examples/MIPSolver/check/results/
 examples/TSP/check/check.sh
 examples/TSP/check/check.awk
 examples/TSP/check/evalcheck.sh
