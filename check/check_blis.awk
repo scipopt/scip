@@ -259,6 +259,8 @@ BEGIN {
       }
       else if( abs(db) < 1e-06 )
          gap = -1.0;
+      else if( abs(pb) < 1e-06 )
+         gap = -1.0;
       else if( pb*db < 0.0 )
          gap = -1.0;
       else if( abs(db) >= +infty )
@@ -266,7 +268,7 @@ BEGIN {
       else if( abs(pb) >= +infty )
          gap = -1.0;
       else
-         gap = 100.0*abs((pb-db)/db);
+         gap = 100.0*abs((pb-db)/min(abs(db),abs(pb)));
       if( gap < 0.0 )
          gapstr = "  --  ";
       else if( gap < 1e+04 )

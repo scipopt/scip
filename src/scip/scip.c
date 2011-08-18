@@ -404,7 +404,7 @@ SCIP_Real getDualbound(
        * since -infinity is the only valid lower bound
        */
       if( SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD || SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED )
-         return (-SCIPinfinity(scip));
+         return SCIPprobExternObjval(scip->transprob, scip->set, -SCIPinfinity(scip));
       else
          return getPrimalbound(scip);
    }
@@ -20932,8 +20932,8 @@ SCIP_Bool SCIPisPrimalboundSol(
    return SCIPprimalUpperboundIsSol(scip->primal, scip->set, scip->transprob);
 }
 
-/** gets current gap |(primalbound - dualbound)/dualbound| if both bounds have same sign, or infinity, if they have
- *  opposite sign
+/** gets current gap |(primalbound - dualbound)/min(|primalbound|,|dualbound|)| if both bounds have same sign,
+ *  or infinity, if they have opposite sign
  */
 SCIP_Real SCIPgetGap(
    SCIP*                 scip                /**< SCIP data structure */
@@ -20946,8 +20946,8 @@ SCIP_Real SCIPgetGap(
 
    if( SCIPsetIsInfinity(scip->set, getLowerbound(scip)) )
    {
-      /* in case we could not prove whether the problem is unbounded or infeasible, we want to terminate with 
-       * gap = +inf instead of gap = 0 
+      /* in case we could not prove whether the problem is unbounded or infeasible, we want to terminate with
+       * gap = +inf instead of gap = 0
        */
       if( SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD )
          return SCIPsetInfinity(scip->set);
@@ -20961,14 +20961,16 @@ SCIP_Real SCIPgetGap(
    if( SCIPsetIsEQ(scip->set, primalbound, dualbound) )
       return 0.0;
    else if( SCIPsetIsZero(scip->set, dualbound)
+      || SCIPsetIsZero(scip->set, primalbound)
       || SCIPsetIsInfinity(scip->set, REALABS(primalbound))
+      || SCIPsetIsInfinity(scip->set, REALABS(dualbound))
       || primalbound * dualbound < 0.0 )
       return SCIPsetInfinity(scip->set);
    else
-      return REALABS((primalbound - dualbound)/dualbound);
+      return REALABS((primalbound - dualbound)/MIN(REALABS(dualbound),REALABS(primalbound)));
 }
 
-/** gets current gap |(upperbound - lowerbound)/lowerbound| in transformed problem if both bounds have same sign,
+/** gets current gap |(upperbound - lowerbound)/min(|upperbound|,|lowerbound|)| in transformed problem if both bounds have same sign,
  *  or infinity, if they have opposite sign
  */
 SCIP_Real SCIPgetTransGap(
@@ -20984,15 +20986,25 @@ SCIP_Real SCIPgetTransGap(
    lowerbound = getLowerbound(scip);
 
    if( SCIPsetIsInfinity(scip->set, lowerbound) )
-      return 0.0;
+      /* in case we could not prove whether the problem is unbounded or infeasible, we want to terminate with
+       * gap = +inf instead of gap = 0
+       */
+      if( SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD )
+         return SCIPsetInfinity(scip->set);
+      else
+         return 0.0;
    else if( SCIPsetIsEQ(scip->set, upperbound, lowerbound) )
       return 0.0;
    else if( SCIPsetIsZero(scip->set, lowerbound)
+      || SCIPsetIsZero(scip->set, upperbound)
       || SCIPsetIsInfinity(scip->set, upperbound)
+      || SCIPsetIsInfinity(scip->set, -lowerbound)
       || lowerbound * upperbound < 0.0 )
       return SCIPsetInfinity(scip->set);
-   else
+   else if( lowerbound > 0 )
       return REALABS((upperbound - lowerbound)/lowerbound);
+   else
+      return REALABS((upperbound - lowerbound)/upperbound);
 }
 
 /** gets number of feasible primal solutions found so far */

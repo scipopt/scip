@@ -193,6 +193,10 @@ features:
 - improved output of propagators in display statistics
 - new method SCIPpropSetPresolPriority which changes the presolving priority of a given propagator
 - new methods SCIPpropGetPresolPriority, SCIPpropGetPresolTime, SCIPpropWasPresolDelayed, SCIPpropGetNFixedVars, SCIPpropGetNAggrVars, SCIPpropGetNChgVarTypes, SCIPpropGetNChgBds, SCIPpropGetNAddHoles, SCIPpropGetNDelConss, SCIPpropGetNAddConss, SCIPpropGetNUpgdConss, SCIPpropGetNChgCoefs, SCIPpropGetNChgSides, SCIPpropGetTimingmask, SCIPpropDoesPresolve which return corresponding presolving information
+- changed computation of optimality gap which is now done in the same way as described in the MIPLIB 2010 paper:
+  the gap is 0, if primalbound (pb) and dualbound (db) are equal (within tolerances), it is infinity if pb and db have opposite signs,
+  and (this changed), if both have the same sign, the difference between pb and db is devided by the minimum of the absolute values of pb and db
+  (instead of always the dual bound)
 
 design:
 - SCIP_HASHMAP now works also without block memory
@@ -214,6 +218,7 @@ Makefile
 - new target "make libs" which compiles only the libraries
 - to link against Clp, only the base directory of an Clp installation needs to be specified now
 - moved *.test and *.solu files to folder testset in check folder and adjusted test scripts
+- adjusted all test scripts to use the same new optimality gap computation as in SCIP
 
 SCIP version 2.0.2
 ==================
