@@ -82,6 +82,8 @@
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
+#define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP
+
 
 /** constraint data for storing graph constraints */
 struct SCIP_ConsData
@@ -726,8 +728,8 @@ SCIP_RETCODE COLORincludeConshdlrStoreGraph(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         conshdlrCopyStoreGraph,
-         consFreeStoreGraph, consInitStoreGraph, consExitStoreGraph,
+         CONSHDLR_PROP_TIMING,
+         conshdlrCopyStoreGraph, consFreeStoreGraph, consInitStoreGraph, consExitStoreGraph,
          consInitpreStoreGraph, consExitpreStoreGraph, consInitsolStoreGraph, consExitsolStoreGraph,
          consDeleteStoreGraph, consTransStoreGraph, consInitlpStoreGraph,
          consSepalpStoreGraph, consSepasolStoreGraph, consEnfolpStoreGraph, consEnfopsStoreGraph, consCheckStoreGraph,

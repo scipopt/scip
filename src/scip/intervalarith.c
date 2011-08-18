@@ -2453,6 +2453,9 @@ void SCIPintervalExp(
    {
       assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
       resultant->inf = nextafter(exp(operand.inf), SCIP_REAL_MIN);
+      /* make sure we do not exceed value for infinity, so interval is not declared as empty if inf and sup are both > infinity */
+      if( resultant->inf >= infinity )
+         resultant->inf = infinity;
    }
   
    if( operand.sup >=  infinity )
@@ -2467,6 +2470,8 @@ void SCIPintervalExp(
    {
       assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
       resultant->sup = nextafter(exp(operand.sup), SCIP_REAL_MAX);
+      if( resultant->sup < -infinity )
+         resultant->sup = -infinity;
    }
 }
 

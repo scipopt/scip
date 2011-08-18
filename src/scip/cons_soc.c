@@ -2441,8 +2441,8 @@ SCIP_RETCODE propagateBounds(
    SCIP_CALL( SCIPallocBufferArray(scip, &lhsranges, consdata->nvars) );
    for( i = 0; i < consdata->nvars; ++i )
    {
-      lb = SCIPcomputeVarLbLocal(scip, consdata->vars[i]);
-      ub = SCIPcomputeVarUbLocal(scip, consdata->vars[i]);
+      lb = SCIPcomputeVarLbLocal(scip, consdata->vars[i]) - SCIPepsilon(scip);
+      ub = SCIPcomputeVarUbLocal(scip, consdata->vars[i]) + SCIPepsilon(scip);
       SCIPintervalSetBounds(&lhsranges[i], MIN(lb, ub), MAX(lb, ub));
       if( consdata->offsets[i] != 0.0 )
          SCIPintervalAddScalar(SCIPinfinity(scip), &lhsranges[i], lhsranges[i], consdata->offsets[i]);
@@ -2476,8 +2476,8 @@ SCIP_RETCODE propagateBounds(
 
    if( *result != SCIP_CUTOFF )
    {
-      lb = SCIPcomputeVarLbLocal(scip, consdata->rhsvar);
-      ub = SCIPcomputeVarUbLocal(scip, consdata->rhsvar);
+      lb = SCIPcomputeVarLbLocal(scip, consdata->rhsvar) - SCIPepsilon(scip);
+      ub = SCIPcomputeVarUbLocal(scip, consdata->rhsvar) + SCIPepsilon(scip);
       SCIPintervalSetBounds(&rhsrange, MIN(lb, ub), MAX(lb, ub));
       if( consdata->rhsoffset != 0.0 )
          SCIPintervalAddScalar(SCIPinfinity(scip), &rhsrange, rhsrange, consdata->rhsoffset);
@@ -2486,6 +2486,16 @@ SCIP_RETCODE propagateBounds(
       SCIPintervalSquare(SCIPinfinity(scip), &rhsrange, rhsrange);
       /* rhsrange = sqr(rhscoeff * (rhsvar + rhsoffset) ) */
 
+      if( lhsrange.inf > rhsrange.sup )
+      {
+         SCIPdebugMessage("propagation found constraint <%s> infeasible: lhs = [%.15g,%.15g] > rhs = [%.15g,%.15g]\n",
+            SCIPconsGetName(cons), lhsrange.inf, lhsrange.sup, rhsrange.inf, rhsrange.sup);
+         *result = SCIP_CUTOFF;
+      }
+   }
+
+   if( *result != SCIP_CUTOFF )
+   {
       SCIPintervalSub(SCIPinfinity(scip), &b, rhsrange, lhsrange);
       for( i = 0; i < consdata->nvars; ++i )
       {

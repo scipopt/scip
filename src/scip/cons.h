@@ -72,7 +72,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    const char*           desc,               /**< description of constraint handler */
    int                   sepapriority,       /**< priority of the constraint handler for separation */
    int                   enfopriority,       /**< priority of the constraint handler for constraint enforcing */
-   int                   checkpriority,      /**< priority of the constraint handler for checking feasibility */
+   int                   checkpriority,      /**< priority of the constraint handler for checking feasibility (and propagation) */
    int                   sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
    int                   propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
    int                   eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,

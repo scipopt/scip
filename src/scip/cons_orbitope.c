@@ -690,7 +690,7 @@ SCIP_RETCODE separateSCIs(
 static
 SCIP_RETCODE propagateCons(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< and constraint to be processed */
+   SCIP_CONS*            cons,               /**< constraint to be processed */
    SCIP_Bool*            infeasible,         /**< pointer to store TRUE, if the node can be cut off */
    int*                  nfixedvars          /**< pointer to add up the number of found domain reductions */
    )
@@ -751,6 +751,16 @@ SCIP_RETCODE propagateCons(
 	    SCIP_CALL( SCIPtightenVarUb(scip, vars[i][j], 0.0, FALSE, infeasible, &tightened) );
 	    if ( tightened )
 	       ++(*nfixedvars);
+
+            /* if fixing is not possible (vars[i][j] is fixed to 1) -> analyze the conflict */
+            if ( *infeasible )
+            {
+               /* should not happen, since these variables should be fixed in preprocessing */
+               SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
+               SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
+               return SCIP_OKAY;
+            }
 	 }
       }
       if ( *nfixedvars > 0 )
@@ -824,6 +834,7 @@ SCIP_RETCODE propagateCons(
       {
 	 SCIPdebugMessage(" -> Infeasible node: all variables in row %d are fixed to 0.\n", i);
 	 *infeasible = TRUE;
+         /* conflict should be analyzed by setppc constraint handler */
 	 goto TERMINATE;
       }
       firstnonzeros[i] = firstnonzeroinrow;
@@ -866,6 +877,31 @@ SCIP_RETCODE propagateCons(
                i, firstnonzeroinrow, lastoneinrow);
          }
 #endif
+
+         /* perform conflict analysis */
+         SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+         /* add bounds that result in the first nonzero entry */
+         for (j = 0; j <= lastcolumn; ++j)
+         {
+            if ( ( ispart && SCIPvarGetUbLocal(vars[i][j]) > 0.5 ) || ( ! ispart && SCIPvarGetLbLocal(vars[i][j]) > 0.5 ) )
+            {
+               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
+            }
+         }
+
+         /* add bounds that result in the last one - pass through rows */
+         for (j = 0; j < i; ++j)
+         {
+            int l;
+            l = lastones[j] + 1;
+            if ( l < nblocks-1 && SCIPvarGetUbLocal(vars[j][l]) < 0.5 )
+            {
+               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[j][l]) );
+            }
+         }
+         SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
+
 	 *infeasible = TRUE;
          goto TERMINATE;
       }
@@ -894,6 +930,25 @@ SCIP_RETCODE propagateCons(
 	    if ( *infeasible )
 	    {
 	       SCIPdebugMessage(" -> Infeasible node: row %d, 1 in column %d beyond rightmost position %d\n", i, j, lastoneinrow);
+
+               /* perform conflict analysis */
+               SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+               /* add current bound */
+               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
+
+               /* add bounds that result in the last one - pass through rows */
+               for (j = 0; j < i; ++j)
+               {
+                  int l;
+                  l = lastones[j] + 1;
+                  if ( l < nblocks-1 && SCIPvarGetUbLocal(vars[j][l]) < 0.5 )
+                  {
+                     SCIP_CALL( SCIPaddConflictBinvar(scip, vars[j][l]) );
+                  }
+               }
+               SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
+
                goto TERMINATE;
 	    }
 	    if ( tightened )
