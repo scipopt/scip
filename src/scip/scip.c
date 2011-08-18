@@ -6261,6 +6261,7 @@ SCIP_RETCODE presolveRound(
    int j;
    int priopresol;
    int prioprop;
+   SCIP_Bool lastranpresol;
 
    assert(scip != NULL);
    assert(scip->set != NULL);
@@ -6272,6 +6273,7 @@ SCIP_RETCODE presolveRound(
    *unbounded = FALSE;
    *infeasible = FALSE;
    aborted = FALSE;
+   lastranpresol = FALSE;
 
    /* call included presolvers with nonnegative priority */
    for( i = 0, j = 0; !(*unbounded) && !(*infeasible) && !aborted && (i < scip->set->npresols || j < scip->set->nprops);  )
@@ -6307,6 +6309,7 @@ SCIP_RETCODE presolveRound(
                &scip->stat->npresolchgsides, &result) );
          assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
 
+         lastranpresol = FALSE;
          ++j;
       }
       else
@@ -6329,20 +6332,31 @@ SCIP_RETCODE presolveRound(
                &scip->stat->npresolchgsides, &result) );
          assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
 
+         lastranpresol = TRUE;
          ++i;
       }
 
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
-         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "presolver <%s> detected infeasibility\n", SCIPpresolGetName(scip->set->presols[i]));
+
+         if( lastranpresol )
+            SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               "presolver <%s> detected infeasibility\n", SCIPpresolGetName(scip->set->presols[i-1]));
+         else
+            SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               "propagator <%s> detected infeasibility\n", SCIPpropGetName(scip->set->props[j-1]));
       }
       else if( result == SCIP_UNBOUNDED )
       {
          *unbounded = TRUE;
-         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpresolGetName(scip->set->presols[i]));
+
+         if( lastranpresol )
+            SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpresolGetName(scip->set->presols[i-1]));
+         else
+            SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               "propagator <%s> detected infeasibility\n", SCIPpropGetName(scip->set->props[j-1]));
       }
       *delayed = *delayed || (result == SCIP_DELAYED);
 
@@ -6431,6 +6445,7 @@ SCIP_RETCODE presolveRound(
                &scip->stat->npresolchgsides, &result) );
          assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
 
+         lastranpresol = FALSE;
          ++j;
       }
       else
@@ -6450,20 +6465,31 @@ SCIP_RETCODE presolveRound(
                &scip->stat->npresolchgsides, &result) );
          assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
 
+         lastranpresol = TRUE;
          ++i;
       }
 
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
-         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "presolver <%s> detected infeasibility\n", SCIPpresolGetName(scip->set->presols[i]));
+
+         if( lastranpresol )
+            SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               "presolver <%s> detected infeasibility\n", SCIPpresolGetName(scip->set->presols[i-1]));
+         else
+            SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               "propagator <%s> detected infeasibility\n", SCIPpropGetName(scip->set->props[j-1]));
       }
       else if( result == SCIP_UNBOUNDED )
       {
          *unbounded = TRUE;
-         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpresolGetName(scip->set->presols[i]));
+
+         if( lastranpresol )
+            SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpresolGetName(scip->set->presols[i-1]));
+         else
+            SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               "propagator <%s> detected infeasibility\n", SCIPpropGetName(scip->set->props[j-1]));
       }
       *delayed = *delayed || (result == SCIP_DELAYED);
 
@@ -7533,9 +7559,9 @@ SCIP_RETCODE SCIPwriteVarName(
    {
       /* print variable type */
       SCIPinfoMessage(scip, file, "[%c]", 
-         SCIPvarGetType(var) == SCIP_VARTYPE_BINARY ? 'B' :
-         SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER ? 'I' :
-         SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT ? 'I' : 'C');
+         SCIPvarGetType(var) == SCIP_VARTYPE_BINARY ? SCIP_VARTYPE_BINARY_CHAR :
+         SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER ? SCIP_VARTYPE_INTEGER_CHAR :
+         SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT ? SCIP_VARTYPE_IMPLINT_CHAR : SCIP_VARTYPE_CONTINUOUS_CHAR);
    }
    
    return SCIP_OKAY;
@@ -7766,7 +7792,8 @@ SCIP_RETCODE SCIPparseVarName(
 
    /* skip additional variable type marker */
    if( str[*endpos] == '[' &&
-       (str[*endpos+1] == 'B' || str[*endpos+1] == 'I' || str[*endpos+1] == 'C') &&
+       (str[*endpos+1] == SCIP_VARTYPE_BINARY_CHAR || str[*endpos+1] == SCIP_VARTYPE_INTEGER_CHAR || 
+          str[*endpos+1] == SCIP_VARTYPE_IMPLINT_CHAR || str[*endpos+1] == SCIP_VARTYPE_CONTINUOUS_CHAR) &&
        str[*endpos+2] == ']' )
       *endpos += 3;
    
@@ -7804,7 +7831,7 @@ SCIP_RETCODE SCIPparseVarsList(
    SCIP_CALL( checkStage(scip, "SCIPparseVarsList", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    /* allocate buffer memory for temporary storing the parsed variables */
-   SCIP_CALL (SCIPallocBufferArray(scip, &tmpvars, varssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpvars, varssize) );
 
    ntmpvars = 0;
    (*success) = TRUE;

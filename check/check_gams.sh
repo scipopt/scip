@@ -250,7 +250,7 @@ schulzpid=$!
 # kill schulz on exit, or if we are interrupted
 trap "kill $schulzpid" EXIT SIGHUP SIGINT SIGTERM
 
-for i in `cat $TSTNAME.test`
+for i in `cat testset/$TSTNAME.test`
 do
     if test "$LASTPROB" = ""
     then

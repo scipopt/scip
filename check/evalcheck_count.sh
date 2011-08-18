@@ -39,23 +39,23 @@ do
 
     TSTNAME=`echo $NAME | sed 's/checkcount.\([a-zA-Z0-9_]*\).*/\1/g'`
 
-    if test -f $TSTNAME.test
+    if test -f testset/$TSTNAME.test
     then
-	TESTFILE=$TSTNAME.test
+	TESTFILE=testset/$TSTNAME.test
     else
 	TESTFILE=""
     fi
 
-    if test -f $TSTNAME.solu
+    if test -f testset/$TSTNAME.solu
     then
-	SOLUFILE=$TSTNAME.solu
-    else if test -f all.solu
+	SOLUFILE=testset/$TSTNAME.solu
+    else if test -f testset/all.solu
     then
-	SOLUFILE=all.solu
+	SOLUFILE=testset/all.solu
     else
         SOLUFILE=""
     fi
     fi
 
-    awk -f checkcount.awk $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
+    awk -f check_count.awk $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
 done
