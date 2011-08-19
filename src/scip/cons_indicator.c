@@ -5659,6 +5659,50 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
 }
 
 
+/** Based on values of other variables, computes slack and binary variable to turn all constraints feasible */
+SCIP_RETCODE SCIPmakeIndicatorsFeasible(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< indicator constraint handler */
+   SCIP_SOL*             sol,                /**< solution */
+   SCIP_Bool*            changed             /**< whether the solution has been changed */
+   )
+{
+   SCIP_CONS** conss;
+   int nconss;
+   int c;
+
+   assert( conshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert( sol != NULL );
+   assert( changed != NULL );
+
+   *changed = FALSE;
+
+   /* only run after or in presolving */
+   if ( SCIPgetStage(scip) < SCIP_STAGE_PRESOLVING )
+      return SCIP_OKAY;
+
+   conss = SCIPconshdlrGetConss(conshdlr);
+   nconss = SCIPconshdlrGetNConss(conshdlr);
+
+   for (c = 0; c < nconss; ++c)
+   {
+      assert( conss[c] != NULL );
+      if ( SCIPisViolatedIndicator(scip, conss[c], sol) )
+      {
+         SCIP_Bool chg = FALSE;
+         SCIPmakeIndicatorFeasible(scip, conss[c], sol, &chg);
+         /* chg can be false, e.g., if linconsActive is false; in this case we stop, because we cannot fix the problem. */
+         if ( ! chg )
+            break;
+         *changed = TRUE;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** adds additional linear constraint that is not connected with an indicator constraint, but can be used for separation */
 SCIP_RETCODE SCIPaddLinearConsIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
