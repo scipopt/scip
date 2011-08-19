@@ -4141,7 +4141,7 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
-   /* copy solution if it makes sense */
+   /* copy solution if it makes sense (will send solution to trysol heuristic in any case (see below) */
    if ( SCIPgetStage(scip) < SCIP_STAGE_SOLVED && conshdlrdata->trySolutions && conshdlrdata->heurTrySol != NULL )
    {
       SCIP_CALL( SCIPcreateSolCopy(scip, &trysol, sol) );
@@ -4173,6 +4173,7 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
       /* if printreason is true it can happen that non-integral solutions are checked */
       assert( checkintegrality || SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, consdata->binvar)) );
 
+      /* if constraint is infeasible */
       if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->binvar)) &&
            ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->slackvar)) )
       {
@@ -4222,7 +4223,7 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
       lp = conshdlrdata->altLP;
       assert( conshdlrdata->sepaAlternativeLP );
 
-      /* the check maybe called before we have build the alternativ polyhedron -> return SCIP_INFEASIBLE */
+      /* the check maybe called before we have build the alternative polyhedron -> return SCIP_INFEASIBLE */
       if ( lp != NULL )
       {
 #ifndef NDEBUG
@@ -4231,7 +4232,9 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
 
          /* change coefficients of bounds in alternative LP */
          if ( conshdlrdata->updateBounds )
+         {
             SCIP_CALL( updateFirstRowGlobal(scip, conshdlrdata) );
+         }
 
          /* scale first row if necessary */
          SCIP_CALL( scaleFirstRow(scip, conshdlrdata) );
@@ -5537,7 +5540,10 @@ SCIP_Bool SCIPisViolatedIndicator(
 }
 
 
-/** Based on values of other variables, computes slack and binary variable to turn constraint feasible */
+/** Based on values of other variables, computes slack and binary variable to turn constraint feasible 
+ *
+ *  Will also clean up solution, i.e., shift slack variable.
+ */
 SCIP_RETCODE SCIPmakeIndicatorFeasible(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< indicator constraint */
