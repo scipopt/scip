@@ -20,8 +20,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_PROP_XYZ_H__
-#define __SCIP_PROP_XYZ_H__
+#ifndef __SCIP_PROP_PROBING_H__
+#define __SCIP_PROP_PROBING_H__
 
 
 #include "scip/scip.h"
@@ -37,13 +37,15 @@ SCIP_RETCODE SCIPincludePropProbing(
    );
 
 /** analyses boundchanges resulting from probing on a variable and performs deduced fixations, aggregations, and domain tightenings
- * Given a variable probingvar with domain [l,u] and bound tightening results from reducing the domain
- * once to [l,leftub] and once to [rightlb,u], the method computes and applies resulting variable fixations, aggregations,
- * implications, and bound changes. Variable probingvar does not need to be binary.
- * The whole domain of probingvar need to be covered by the left and right branches, i.e.,
- * we assume leftub >= rightlb for continuous variables or floor(leftub) >= ceil(rightlb)-1 for discrete variables.
- * Bounds after applying implications and cliques do not need to be provided, but if they are omitted and probingvar is a binary variable,
- * then already existing implications may be added.
+ *
+ *  Given a variable probingvar with domain [l,u] and bound tightening results from reducing the
+ *  domain once to [l,leftub] and once to [rightlb,u], the method computes and applies resulting
+ *  variable fixations, aggregations, implications, and bound changes. Variable probingvar does not
+ *  need to be binary.  The whole domain of probingvar need to be covered by the left and right
+ *  branches, i.e., we assume leftub >= rightlb for continuous variables or floor(leftub) >=
+ *  ceil(rightlb)-1 for discrete variables.  Bounds after applying implications and cliques do not
+ *  need to be provided, but if they are omitted and probingvar is a binary variable, then already
+ *  existing implications may be added.
  */
 extern
 SCIP_RETCODE SCIPanalyzeDeductionsProbing(
