@@ -98,6 +98,7 @@ fixed bugs:
 - fixed bug w.r.t. counting feasible solutions and turned of sparse solution test
 - fixed wrong changing of wasdelayed flag for propagators
 - fixed bug in cons_countsols.c w.r.t. none active variables
+- deactived checking of zero solution in Zimpl reader when no starting values are provided
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})
