@@ -197,6 +197,7 @@ features:
   the gap is 0, if primalbound (pb) and dualbound (db) are equal (within tolerances), it is infinity if pb and db have opposite signs,
   and (this changed), if both have the same sign, the difference between pb and db is devided by the minimum of the absolute values of pb and db
   (instead of always the dual bound)
+- new dialog "change freetransproblem" to free transformed problem in the interactive shell before changing the problem
 
 design:
 - SCIP_HASHMAP now works also without block memory
