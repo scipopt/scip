@@ -2090,14 +2090,12 @@ SCIP_RETCODE SCIPexprCreateMonomial(
    SCIP_EXPRDATA_MONOMIAL** monomial,        /**< buffer where to store pointer to new monomial */
    SCIP_Real             coef,               /**< coefficient of monomial */
    int                   nfactors,           /**< number of factors in monomial */
-   int*                  childidxs,          /**< indices of children corresponding to factors */
-   SCIP_Real*            exponents           /**< exponent in each factor */
+   int*                  childidxs,          /**< indices of children corresponding to factors, or NULL if identity */
+   SCIP_Real*            exponents           /**< exponent in each factor, or NULL if all 1.0 */
 )
 {
    assert(blkmem != NULL);
-   assert(monomial  != NULL);
-   assert(childidxs != NULL || nfactors == 0);
-   assert(exponents != NULL || nfactors == 0);
+   assert(monomial != NULL);
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, monomial) );
 
@@ -2108,8 +2106,31 @@ SCIP_RETCODE SCIPexprCreateMonomial(
 
    if( nfactors > 0 )
    {
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*monomial)->childidxs, childidxs, nfactors) );
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*monomial)->exponents, exponents, nfactors) );
+      if( childidxs != NULL )
+      {
+         SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*monomial)->childidxs, childidxs, nfactors) );
+      }
+      else
+      {
+         int i;
+
+         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*monomial)->childidxs, nfactors) );
+         for( i = 0; i < nfactors; ++i )
+            (*monomial)->childidxs[i] = i;
+      }
+
+      if( exponents != NULL )
+      {
+         SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*monomial)->exponents, exponents, nfactors) );
+      }
+      else
+      {
+         int i;
+
+         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*monomial)->exponents, nfactors) );
+         for( i = 0; i < nfactors; ++i )
+            (*monomial)->exponents[i] = 1.0;
+      }
    }
    else
    {

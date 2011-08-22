@@ -83,7 +83,7 @@ echo > $EVALFILE
 # counter to define file names for a test set uniquely 
 COUNT=1
 
-for i in `cat $TSTNAME.test` DONE
+for i in `cat testset/$TSTNAME.test` DONE
 do
   if test "$i" = "DONE"
   then
