@@ -82,6 +82,7 @@
 #define DEFAULT_ALLOWLOCAL        FALSE /**< allow to generate local cuts */
 #define DEFAULT_ONLYINTVARS       FALSE /**< generate cuts for problems with only integer variables? */
 #define DEFAULT_ONLYACTIVEROWS    FALSE /**< use only active rows to generate cuts? */
+#define DEFAULT_MAXROWAGE            -1 /**< maxmial age of rows to consider if onlyactiverows is false */
 #define DEFAULT_USECUTPOOL         TRUE /**< use cutpool to store CG-cuts even if the are not efficient? */
 #define DEFAULT_PRIMALSEPARATION   TRUE /**< only separate cuts that are tight for the best feasible solution? */
 #define DEFAULT_ONLYRANKONE       FALSE /**< whether only rank 1 inequalities should be separated */
@@ -128,13 +129,14 @@ struct SCIP_SepaData
    SCIP_Bool             cmirownbounds;      /**< tell CMIR-generator which bounds to used in rounding? */
    SCIP_Bool             allowlocal;         /**< allow local cuts */
    SCIP_Bool             onlyintvars;        /**< generate cuts for problems with only integer variables? */
-   SCIP_Bool             onlyActiveRows;     /**< use only active rows to generate cuts? */
-   SCIP_Bool             useCutpool;         /**< use cutpool to store CG-cuts even if the are not efficient? */
-   SCIP_Bool             primalSeparation;   /**< only separate cuts that are tight for the best feasible solution? */
+   SCIP_Bool             onlyactiverows;     /**< use only active rows to generate cuts? */
+   int                   maxrowage;          /**< maxmial age of rows to consider if onlyactiverows is false */
+   SCIP_Bool             usecutpool;         /**< use cutpool to store CG-cuts even if the are not efficient? */
+   SCIP_Bool             primalseparation;   /**< only separate cuts that are tight for the best feasible solution? */
    SCIP_Bool             onlyrankone;        /**< whether only rank 1 inequalities should be separated */
    SCIP_Bool             earlyterm;          /**< terminate separation if a violated (but possibly sub-optimal) cut has been found? */
-   SCIP_Bool             addViolationCons;   /**< add constraint to subscip that only allows violated cuts? */
-   SCIP_Bool             addViolConshdlr;    /**< add constraint handler to filter out violated cuts? */
+   SCIP_Bool             addviolationcons;   /**< add constraint to subscip that only allows violated cuts? */
+   SCIP_Bool             addviolconshdlr;    /**< add constraint handler to filter out violated cuts? */
    SCIP_Bool             conshdlrusenorm;    /**< should the violation constraint handler use the cut-norm to check for feasibility? */
    SCIP_Bool             objlone;            /**< should the objective of the sub-MIP minimize the l1-norm of the multipliers? */
 };
@@ -741,7 +743,7 @@ SCIP_RETCODE transformColumn(
  *    case, the combintation of rows and bounds has to be integral. We force this by requiring that
  *    \f$f_i = 0\f$.
  *
- *  - If required, i.e., parameter primalSeparation is true, we force a primal separation step. For
+ *  - If required, i.e., parameter primalseparation is true, we force a primal separation step. For
  *    this we require that the cut is tight at the currently best solution. To get reliable solutions
  *    we relax equality by EPSILONVALUE.
  */
@@ -807,7 +809,7 @@ SCIP_RETCODE createSubscip(
 #endif
 
    /* add violation constraint handler if requested */
-   if ( sepadata->addViolConshdlr )
+   if ( sepadata->addviolconshdlr )
    {
       SCIP_CALL( SCIPincludeConshdlrViolatedCut(subscip, mipdata) );
    }
@@ -960,6 +962,10 @@ SCIP_RETCODE createSubscip(
       if ( SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && !sepadata->allowlocal) )
 	 continue;
 
+      /* skip rows that not have been active for a longer time */
+      if ( ! sepadata->onlyactiverows && sepadata->maxrowage > 0 && SCIProwGetAge(row) > sepadata->maxrowage )
+         continue;
+
       /* check whether we want to skip cut produced by the CGMIP separator */
       if ( sepadata->onlyrankone )
       {
@@ -978,7 +984,7 @@ SCIP_RETCODE createSubscip(
       {
 	 assert( ! SCIPisInfinity(scip, rhs[i]) );
 
-	 if ( ! sepadata->onlyActiveRows || SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetLhs(row)) )
+	 if ( ! sepadata->onlyactiverows || SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetLhs(row)) )
 	 {
 	    /* create two variables for each equation */
 	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "yeq1_%d", i);
@@ -998,7 +1004,7 @@ SCIP_RETCODE createSubscip(
       {
 	 /* create variable for lhs of row if necessary */
 	 if ( ! SCIPisInfinity(scip, -lhs[i]) && 
-	    ( ! sepadata->onlyActiveRows || SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetLhs(row))) )
+	    ( ! sepadata->onlyactiverows || SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetLhs(row))) )
 	 {
 	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "ylhs_%d", i);
 	    SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->ylhs[i]), name, 0.0, 1.0-EPSILONVALUE,
@@ -1009,7 +1015,7 @@ SCIP_RETCODE createSubscip(
 
 	 /* create variable for rhs of row if necessary */
 	 if ( ! SCIPisInfinity(scip, rhs[i]) && 
-	    ( ! sepadata->onlyActiveRows || SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetRhs(row))) )
+	    ( ! sepadata->onlyactiverows || SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetRhs(row))) )
 	 {
 	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "yrhs_%d", i);
 	    SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->yrhs[i]), name, 0.0, 1.0-EPSILONVALUE,
@@ -1313,7 +1319,7 @@ SCIP_RETCODE createSubscip(
    ++mipdata->m;
 
    /* add primal separation constraint if required */
-   if ( sepadata->primalSeparation )
+   if ( sepadata->primalseparation )
    {
       SCIP_SOL* bestsol;
       bestsol = SCIPgetBestSol(scip);
@@ -1339,7 +1345,7 @@ SCIP_RETCODE createSubscip(
 	 ++nconsvars;
 
 	 /* add linear constraint - allow slight deviation from equality */
-	 SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, "primalSeparation", nconsvars, consvars, consvals, -EPSILONVALUE, EPSILONVALUE,
+	 SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, "primalseparation", nconsvars, consvars, consvals, -EPSILONVALUE, EPSILONVALUE,
 	       TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 	 SCIP_CALL( SCIPaddCons(subscip, cons) );
 	 SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
@@ -1348,7 +1354,7 @@ SCIP_RETCODE createSubscip(
    }
 
    /* add constraint to force violated cuts if required */
-   if ( sepadata->addViolationCons )
+   if ( sepadata->addviolationcons )
    {
       nconsvars = 0;
       for (j = 0; j < ncols; ++j)
@@ -2190,7 +2196,7 @@ SCIP_RETCODE createCGCutsDirect(
          {
             SCIP_Bool violated = SCIPisEfficacious(scip, (cutact - cutrhs)/cutnorm);
 
-            if ( violated || (sepadata->useCutpool && ! cutislocal ) )
+            if ( violated || (sepadata->usecutpool && ! cutislocal ) )
             {
                SCIP_ROW* cut;
 
@@ -2219,7 +2225,7 @@ SCIP_RETCODE createCGCutsDirect(
                /* add cut to pool */
                if ( ! cutislocal )
                {
-                  assert( violated || sepadata->useCutpool );
+                  assert( violated || sepadata->usecutpool );
                   SCIP_CALL( SCIPaddPoolCut(scip, cut) );
                }
 
@@ -2461,7 +2467,7 @@ SCIP_RETCODE createCGCutsCMIR(
             violated = SCIPisEfficacious(scip, (cutact - cutrhs)/cutnorm);
 
             /* only if the cut if violated - if it is not violated we might store non-local cuts in the pool */
-            if ( violated || ( sepadata->useCutpool && ! cutislocal) )
+            if ( violated || ( sepadata->usecutpool && ! cutislocal) )
             {
                SCIP_ROW* cut;
 
@@ -2502,7 +2508,7 @@ SCIP_RETCODE createCGCutsCMIR(
                   /* add cut to pool */
                   if ( !cutislocal )
                   {
-                     assert( violated || sepadata->useCutpool );
+                     assert( violated || sepadata->usecutpool );
                      SCIP_CALL( SCIPaddPoolCut(scip, cut) );
                   }
                }
@@ -2854,15 +2860,19 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/cgmip/onlyactiverows",
          "use only active rows to generate cuts?",
-         &sepadata->onlyActiveRows, FALSE, DEFAULT_ONLYACTIVEROWS, NULL, NULL) );
+         &sepadata->onlyactiverows, FALSE, DEFAULT_ONLYACTIVEROWS, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "separating/cgmip/maxrowage",
+         "maxmial age of rows to consider if onlyactiverows is false",
+         &sepadata->maxrowage, FALSE, DEFAULT_MAXROWAGE, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/cgmip/usecutpool",
          "use cutpool to store CG-cuts even if the are not efficient?",
-         &sepadata->useCutpool, FALSE, DEFAULT_USECUTPOOL, NULL, NULL) );
+         &sepadata->usecutpool, FALSE, DEFAULT_USECUTPOOL, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/cgmip/primalseparation",
          "only separate cuts that are tight for the best feasible solution?",
-         &sepadata->primalSeparation, FALSE, DEFAULT_PRIMALSEPARATION, NULL, NULL) );
+         &sepadata->primalseparation, FALSE, DEFAULT_PRIMALSEPARATION, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/cgmip/onlyrankone",
          "whether only rank 1 inequalities should be separated",
@@ -2874,11 +2884,11 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/cgmip/addviolationcons",
          "add constraint to subscip that only allows violated cuts?",
-         &sepadata->addViolationCons, FALSE, DEFAULT_ADDVIOLATIONCONS, NULL, NULL) );
+         &sepadata->addviolationcons, FALSE, DEFAULT_ADDVIOLATIONCONS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/cgmip/addviolconshdlr",
          "add constraint handler to filter out violated cuts?",
-         &sepadata->addViolConshdlr, FALSE, DEFAULT_ADDVIOLCONSHDLR, NULL, NULL) );
+         &sepadata->addviolconshdlr, FALSE, DEFAULT_ADDVIOLCONSHDLR, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/cgmip/conshdlrusenorm",
          "should the violation constraint handler use the norm of a cut to check for feasibility?",
