@@ -70,7 +70,7 @@
 #define SEPA_USESSUBSCIP           TRUE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
-#define DEFAULT_MAXROUNDS             0 /**< maximal number of separation rounds per node (-1: unlimited) */
+#define DEFAULT_MAXROUNDS             5 /**< maximal number of separation rounds per node (-1: unlimited) */
 #define DEFAULT_MAXROUNDSROOT        50 /**< maximal number of separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
 #define DEFAULT_TIMELIMIT          1e20 /**< time limit for sub-MIP */
@@ -81,7 +81,7 @@
 #define DEFAULT_CMIROWNBOUNDS     FALSE /**< tell CMIR-generator which bounds to used in rounding? */
 #define DEFAULT_ALLOWLOCAL        FALSE /**< allow to generate local cuts */
 #define DEFAULT_ONLYINTVARS       FALSE /**< generate cuts for problems with only integer variables? */
-#define DEFAULT_ONLYACTIVEROWS     TRUE /**< use only active rows to generate cuts? */
+#define DEFAULT_ONLYACTIVEROWS    FALSE /**< use only active rows to generate cuts? */
 #define DEFAULT_USECUTPOOL         TRUE /**< use cutpool to store CG-cuts even if the are not efficient? */
 #define DEFAULT_PRIMALSEPARATION   TRUE /**< only separate cuts that are tight for the best feasible solution? */
 #define DEFAULT_ONLYRANKONE       FALSE /**< whether only rank 1 inequalities should be separated */
