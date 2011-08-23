@@ -5725,19 +5725,23 @@ SCIP_RETCODE SCIPaddLinearConsIndicator(
    SCIP_CONS*            lincons             /**< linear constraint */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
    assert( scip != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( lincons != NULL );
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != NULL );
+   /* do not add locally valid constraints (this would require much more bookkeeping) */
+   if ( ! SCIPconsIsLocal(lincons) )
+   {
+      SCIP_CONSHDLRDATA* conshdlrdata;
 
-   SCIP_CALL( consdataEnsureAddLinConsSize(scip, conshdlr, conshdlrdata->nAddLinCons+1) );
-   assert( conshdlrdata->nAddLinCons+1 <= conshdlrdata->maxAddLinCons );
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert( conshdlrdata != NULL );
 
-   conshdlrdata->addLinCons[conshdlrdata->nAddLinCons++] = lincons;
+      SCIP_CALL( consdataEnsureAddLinConsSize(scip, conshdlr, conshdlrdata->nAddLinCons+1) );
+      assert( conshdlrdata->nAddLinCons+1 <= conshdlrdata->maxAddLinCons );
+
+      conshdlrdata->addLinCons[conshdlrdata->nAddLinCons++] = lincons;
+   }
 
    return SCIP_OKAY;
 }
@@ -5753,28 +5757,28 @@ SCIP_RETCODE SCIPaddRowIndicator(
    SCIP_ROW*             row                 /**< row to add */
    )
 {
-   int colIndex;
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
    assert( scip != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( row != NULL );
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != NULL );
-
-   /* do not add rows if we do not separate */
-   if ( ! conshdlrdata->sepaAlternativeLP )
-      return SCIP_OKAY;
-
    /* skip local cuts (local cuts would require to dynamically add and remove columns from the alternative polyhedron */
-   if ( SCIProwIsLocal(row) )
-      return SCIP_OKAY;
+   if ( ! SCIProwIsLocal(row) )
+   {
+      int colIndex;
+      SCIP_CONSHDLRDATA* conshdlrdata;
 
-   SCIPdebugMessage("Adding row <%s> to alternative LP.\n", SCIProwGetName(row));
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert( conshdlrdata != NULL );
 
-   /* add row directly to alternative polyhedron */
-   SCIP_CALL( addAltLPRow(scip, conshdlr, row, 0.0, &colIndex) );
+      /* do not add rows if we do not separate */
+      if ( ! conshdlrdata->sepaAlternativeLP )
+         return SCIP_OKAY;
+
+      SCIPdebugMessage("Adding row <%s> to alternative LP.\n", SCIProwGetName(row));
+
+      /* add row directly to alternative polyhedron */
+      SCIP_CALL( addAltLPRow(scip, conshdlr, row, 0.0, &colIndex) );
+   }
 
    return SCIP_OKAY;
 }
