@@ -541,6 +541,7 @@ SCIP_RETCODE SCIPcreate(
    SCIPclockStart((*scip)->totaltime, (*scip)->set);
    (*scip)->stat = NULL;
    (*scip)->origprob = NULL;
+   (*scip)->origprimal = NULL;
    (*scip)->eventfilter = NULL;
    (*scip)->eventqueue = NULL;
    (*scip)->branchcand = NULL;
@@ -1064,6 +1065,10 @@ SCIP_RETCODE SCIPcopyProb(
    /* create the problem by copying the source problem */
    SCIP_CALL( SCIPprobCopy(&targetscip->origprob, targetscip->mem->probmem, targetscip->set, name, sourcescip, sourceprob, localvarmap, localconsmap, global) );
 
+   /* creating the solution candidates storage */
+   /**@todo copy solution of source SCIP as candidates for the target SCIP */
+   SCIP_CALL( SCIPprimalCreate(&targetscip->origprimal) );
+   
    if( uselocalvarmap )
    {
       /* free hash map */
@@ -4056,6 +4061,9 @@ SCIP_RETCODE SCIPcreateProb(
    SCIP_CALL( SCIPprobCreate(&scip->origprob, scip->mem->probmem, scip->set, name,
          probdelorig, probtrans, probdeltrans, probinitsol, probexitsol, probcopy, probdata, FALSE) );
 
+   /* create solution pool for original solution candidates */
+   SCIP_CALL( SCIPprimalCreate(&scip->origprimal) );
+   
    return SCIP_OKAY;
 }
 
@@ -4342,7 +4350,8 @@ SCIP_RETCODE SCIPfreeProb(
       }
       assert(scip->set->nactivepricers == 0);
 
-      /* free problem and problem statistics data structures */
+      /* free original primal solution candidate pool, original problem and problem statistics data structures */
+      SCIP_CALL( SCIPprimalFree(&scip->origprimal, scip->mem->probmem) );
       SCIP_CALL( SCIPprobFree(&scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
       SCIP_CALL( SCIPstatFree(&scip->stat, scip->mem->probmem) );
 
@@ -5939,12 +5948,113 @@ SCIP_RETCODE SCIPchgChildPrio(
  * solve methods
  */
 
+/** checks solution for feasibility in original problem without adding it to the solution store */
+static
+SCIP_RETCODE checkSolOrig(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Bool*            feasible,           /**< stores whether given solution is feasible */
+   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
+   SCIP_Bool             completely,         /**< should all violation be checked? */
+   SCIP_Bool             checkbounds,        /**< should the bounds of the variables be checked? */
+   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
+   SCIP_Bool             checkmodifiable     /**< have modifiable constraint to be checked? */
+   )
+{
+   SCIP_RESULT result;
+   int v;
+   int c;
+   int h;
+
+   assert(scip != NULL);
+   assert(sol != NULL);
+   assert(feasible != NULL);
+
+   SCIP_CALL( checkStage(scip, "checkSolOrig", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   *feasible = TRUE;
+
+   /* check bounds */
+   if( checkbounds )
+   {
+      for( v = 0; v < scip->origprob->nvars && (*feasible || printreason); ++v )
+      {
+         SCIP_VAR* var;
+         SCIP_Real solval;
+         SCIP_Real lb;
+         SCIP_Real ub;
+         
+         var = scip->origprob->vars[v];
+         solval = SCIPsolGetVal(sol, scip->set, scip->stat, var);
+         lb = SCIPvarGetLbOriginal(var);
+         ub = SCIPvarGetUbOriginal(var);
+         if( SCIPsetIsFeasLT(scip->set, solval, lb) || SCIPsetIsFeasGT(scip->set, solval, ub) )
+         {
+            *feasible = FALSE;
+            
+            if( printreason )
+            {
+               SCIPmessagePrintInfo("solution violates original bounds of variable <%s> [%g,%g] solution value <%g>\n",
+                  SCIPvarGetName(var), lb, ub, solval);
+            }
+            
+            if( !completely )
+               return SCIP_OKAY;
+         }
+      }
+   }
+
+   /* check original constraints
+    *
+    * in general modifiable constraints can not be checked, because the variables to fulfill them might be missing in
+    * the original problem; however, if the solution comes from a heuristic during presolving modifiable constraints
+    * have to be checked;
+    */
+   for( c = 0; c < scip->origprob->nconss; ++c )
+   {
+      if( SCIPconsIsChecked(scip->origprob->conss[c]) && (checkmodifiable || !SCIPconsIsModifiable(scip->origprob->conss[c])) )
+      {
+         /* check solution */
+         SCIP_CALL( SCIPconsCheck(scip->origprob->conss[c], scip->set, sol, 
+               checkintegrality, checklprows, printreason, &result) );
+
+         if( result != SCIP_FEASIBLE )
+         {
+            *feasible = FALSE;
+            if( !completely )
+               return SCIP_OKAY;
+         }
+      }
+   }
+
+   /* call constraint handlers that don't need constraints */
+   for( h = 0; h < scip->set->nconshdlrs; ++h )
+   {
+      if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
+      {
+         SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
+               checkintegrality, checklprows, printreason, &result) );
+         if( result != SCIP_FEASIBLE )
+         {
+            *feasible = FALSE;
+            if( !completely) 
+               return SCIP_OKAY;
+         }
+      }
+   }
+   
+   return SCIP_OKAY;
+}
+
 /** initializes solving data structures and transforms problem */
 SCIP_RETCODE SCIPtransformProb(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   int nfeassols;
    int h;
+   int s;
 
    SCIP_CALL( checkStage(scip, "SCIPtransformProb", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
@@ -5992,6 +6102,43 @@ SCIP_RETCODE SCIPtransformProb(
    /* switch stage to TRANSFORMED */
    scip->set->stage = SCIP_STAGE_TRANSFORMED;
   
+   /* check solution of solution candidate storage */
+   nfeassols = 0;
+   for( s = scip->origprimal->nsols - 1; s >= 0; --s )
+   {
+      SCIP_Bool feasible;
+      SCIP_Bool stored;
+      SCIP_SOL* sol ;
+
+      sol =  scip->origprimal->sols[s];
+
+      /* SCIPprimalTrySol() can only be called on transformed solutions; therefore check solutions in original problem
+       * including modifiable constraints
+       */
+      SCIP_CALL( checkSolOrig(scip, sol, &feasible, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE) );
+      
+      if( feasible )
+      {
+         /* add primal solution to solution storage by copying it */
+         SCIP_CALL( SCIPprimalAddSol(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->transprob,
+               scip->tree, scip->lp, scip->eventfilter, sol, &stored) );
+
+         if( stored )
+            nfeassols++;
+      }
+
+      SCIP_CALL( SCIPsolFree(&sol, scip->mem->probmem, scip->origprimal) );
+      scip->origprimal->nsols--;
+   }
+   
+   assert(scip->origprimal->nsols == 0);
+   assert(scip->origprimal->nexistingsols == 0);
+   
+   if( nfeassols > 0 )
+   {
+      SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "%d feasible solutions given by solution candidate storage\n", nfeassols);                    
+   }
+
    /* update upper bound and cutoff bound due to objective limit in primal data */
    SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
          scip->tree, scip->lp) );
@@ -7015,6 +7162,10 @@ SCIP_RETCODE freeTransform(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_Bool stored;
+   int nsols;
+   int s;
+   
    assert(scip != NULL);
    assert(scip->mem != NULL);
    assert(scip->stat != NULL);
@@ -7025,7 +7176,30 @@ SCIP_RETCODE freeTransform(
 
    /* switch stage to FREETRANS */
    scip->set->stage = SCIP_STAGE_FREETRANS;
+   
+   assert(scip->origprimal->nsols == 0);
 
+   nsols = MIN(scip->set->limit_maxorigsol, scip->primal->nsols);
+   stored = TRUE;
+   
+   /* copy best primal solution to original solution candidate list */
+   for( s = 0; s < nsols && stored; ++s )
+   {
+      SCIP_SOL* sol;
+
+      sol = scip->primal->sols[s];
+      assert(sol != NULL);
+      
+      if( SCIPsolGetOrigin(sol) != SCIP_SOLORIGIN_ORIGINAL )
+      {
+         /* retransform solution into the original problem space */
+         SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob) );
+      }
+   
+      /* add solution to original candidate solution storage */
+      SCIP_CALL( SCIPaddSol(scip, sol, &stored) );
+   }
+   
    /* free transformed problem data structures */
    SCIP_CALL( SCIPprobFree(&scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
    SCIP_CALL( SCIPcliquetableFree(&scip->cliquetable, scip->mem->probmem) );
@@ -18770,9 +18944,30 @@ SCIP_RETCODE SCIPcreateSol(
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPcreateSol", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-
-   SCIP_CALL( SCIPsolCreate(sol, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree, heur) );
+   SCIP_CALL( checkStage(scip, "SCIPcreateSol", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      SCIP_CALL( SCIPsolCreateOriginal(sol, scip->mem->probmem, scip->set, scip->stat, scip->origprimal, NULL, heur) );
+      return SCIP_OKAY;
+      
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_SOLVING:
+      SCIP_CALL( SCIPsolCreate(sol, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree, heur) );
+      return SCIP_OKAY;
+      
+   case SCIP_STAGE_SOLVED:
+   case SCIP_STAGE_FREESOLVE:
+   case SCIP_STAGE_FREETRANS:
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_ERROR;
+   }  /*lint !e788*/
 
    return SCIP_OKAY;
 }
@@ -18902,9 +19097,30 @@ SCIP_RETCODE SCIPcreateOrigSol(
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPcreateOrigSol", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPcreateOrigSol", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPsolCreateOriginal(sol, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree, heur) );
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      SCIP_CALL( SCIPsolCreateOriginal(sol, scip->mem->probmem, scip->set, scip->stat, scip->origprimal, NULL, heur) );
+      return SCIP_OKAY;
+      
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_SOLVING:
+      SCIP_CALL( SCIPsolCreateOriginal(sol, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree, heur) );
+      return SCIP_OKAY;
+      
+   case SCIP_STAGE_SOLVED:
+   case SCIP_STAGE_FREESOLVE:
+   case SCIP_STAGE_FREETRANS:
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_ERROR;
+   }  /*lint !e788*/
 
    return SCIP_OKAY;
 }
@@ -19044,7 +19260,7 @@ SCIP_RETCODE SCIPsetSolVal(
    SCIP_Real             val                 /**< solution value of variable */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPsetSolVal", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetSolVal", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL && SCIPvarIsTransformed(var) )
    {
@@ -19527,19 +19743,40 @@ SCIP_RETCODE SCIPaddSol(
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPaddSol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPaddSol", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE) );
 
-   /* if the solution is added during presolving and it is not defined on original variables, 
-    * presolving operations will destroy its validity, so we retransform it to the original space
-    */
-   if( scip->set->stage == SCIP_STAGE_PRESOLVING && SCIPsolGetOrigin(sol) != SCIP_SOLORIGIN_ORIGINAL )
+   switch( scip->set->stage )
    {
-      SCIP_CALL( SCIPsolUnlink(sol, scip->set, scip->transprob) );
-      SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob) );      
-   }
+   case SCIP_STAGE_PROBLEM:
+   case SCIP_STAGE_FREETRANS:
+      assert( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL );
+      SCIP_CALL( SCIPprimalAddOrigSol(scip->origprimal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, sol, stored) );
+      return SCIP_OKAY;
 
-   SCIP_CALL( SCIPprimalAddSol(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->transprob, scip->tree,
-         scip->lp, scip->eventfilter, sol, stored) );
+   case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_PRESOLVING:
+      /* if the solution is added during presolving and it is not defined on original variables, 
+       * presolving operations will destroy its validity, so we retransform it to the original space
+       */
+      if( SCIPsolGetOrigin(sol) != SCIP_SOLORIGIN_ORIGINAL )
+      {
+         SCIP_CALL( SCIPsolUnlink(sol, scip->set, scip->transprob) );
+         SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob) );      
+      }
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_SOLVING:
+      SCIP_CALL( SCIPprimalAddSol(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->transprob, scip->tree,
+            scip->lp, scip->eventfilter, sol, stored) );
+      return SCIP_OKAY;
+      
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_SOLVED:
+   case SCIP_STAGE_FREESOLVE:
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_ERROR;
+   }  /*lint !e788*/
 
    return SCIP_OKAY;
 }
@@ -19551,19 +19788,40 @@ SCIP_RETCODE SCIPaddSolFree(
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPaddSolFree", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPaddSolFree", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE) );
 
-   /* if the solution is added during presolving and it is not defined on original variables, 
-    * presolving operations will destroy its validity, so we retransform it to the original space
-    */
-   if( scip->set->stage == SCIP_STAGE_PRESOLVING && SCIPsolGetOrigin(*sol) != SCIP_SOLORIGIN_ORIGINAL )
+   switch( scip->set->stage )
    {
-      SCIP_CALL( SCIPsolUnlink(*sol, scip->set, scip->transprob) );
-      SCIP_CALL( SCIPsolRetransform(*sol, scip->set, scip->stat, scip->origprob) );      
-   }
+   case SCIP_STAGE_PROBLEM:
+   case SCIP_STAGE_FREETRANS:
+      assert( SCIPsolGetOrigin(*sol) == SCIP_SOLORIGIN_ORIGINAL );
+      SCIP_CALL( SCIPprimalAddOrigSolFree(scip->origprimal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, sol, stored) );
+      return SCIP_OKAY;
 
-   SCIP_CALL( SCIPprimalAddSolFree(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->transprob, scip->tree,
-         scip->lp, scip->eventfilter, sol, stored) );
+   case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_PRESOLVING:
+      /* if the solution is added during presolving and it is not defined on original variables, 
+       * presolving operations will destroy its validity, so we retransform it to the original space
+       */
+      if( SCIPsolGetOrigin(*sol) != SCIP_SOLORIGIN_ORIGINAL )
+      {
+         SCIP_CALL( SCIPsolUnlink(*sol, scip->set, scip->transprob) );
+         SCIP_CALL( SCIPsolRetransform(*sol, scip->set, scip->stat, scip->origprob) );      
+      }
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_SOLVING:
+      SCIP_CALL( SCIPprimalAddSolFree(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->transprob, scip->tree,
+            scip->lp, scip->eventfilter, sol, stored) );
+      return SCIP_OKAY;
+      
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_SOLVED:
+   case SCIP_STAGE_FREESOLVE:
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_ERROR;
+   }  /*lint !e788*/
 
    return SCIP_OKAY;
 }
@@ -19583,6 +19841,7 @@ SCIP_RETCODE SCIPaddCurrentSol(
    return SCIP_OKAY;
 }
 
+<<<<<<< HEAD
 /** checks solution for feasibility in original problem without adding it to the solution store */
 static
 SCIP_RETCODE checkSolOrig(
@@ -19682,6 +19941,8 @@ SCIP_RETCODE checkSolOrig(
    return SCIP_OKAY;
 }
 
+=======
+>>>>>>> added solution candidate store
 /** checks solution for feasibility; if possible, adds it to storage by copying */
 SCIP_RETCODE SCIPtrySol(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -19699,7 +19960,7 @@ SCIP_RETCODE SCIPtrySol(
 
    /* if the solution is added during presolving and it is not defined on original variables, 
     * presolving operations will destroy its validity, so we retransform it to the original space
-    */
+    */ 
    if( scip->set->stage == SCIP_STAGE_PRESOLVING && SCIPsolGetOrigin(sol) != SCIP_SOLORIGIN_ORIGINAL )
    {
       SCIP_CALL( SCIPsolUnlink(sol, scip->set, scip->transprob) );
@@ -19760,7 +20021,8 @@ SCIP_RETCODE SCIPtrySolFree(
       SCIP_Bool feasible;
 
       /* SCIPprimalTrySol() can only be called on transformed solutions; therefore check solutions in original problem 
-       *  including modifiable constraints */
+       * including modifiable constraints 
+       */
       SCIP_CALL( checkSolOrig(scip, *sol, &feasible, printreason, FALSE, checkbounds, checkintegrality, checklprows, TRUE) );
       
       if( feasible )

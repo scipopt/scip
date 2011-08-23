@@ -70,6 +70,7 @@ interface:
 - various extensions and modifications for expressions and expression trees (too much to state here)
 - split off PARAMEMPHASIS from PARAMSETTING (in pub_paramset.c/paramset.c)
 - added new method to linear constraint handler SCIPsetUpgradeConsLinear(), which (de-)activates the possibility to upgrade a linear constraint to a specialized linear constraint (e.g. knapsack)
+- new method SCIPsolGetOrigObj() in pub_sol.h which returns for a solution in the original problem space the objective value
 
 performance improvements:
 - performance improvements in prop_vbounds
@@ -165,6 +166,7 @@ parameters:
 - added parameter <propagating/pseudoobj/propfullinroot> for allowing to propagate all variables in the root node, instead of stopping after 'maxcands' which is set by a parameter as well
 - added parameter <reading/gmsreader/signpower> to enable writing sign(x)abs(x)^n as the rarely used gams function signpower(x,n)
 - added parameters <constraints/indicator/forcerestart> and <constraints/indicator/restartfrac> to control forced restart in cons_indicator
+- new parameter <limit/maxorigsol> which defines the size of the solution candidate store (default value is 10)
 
 features:
 - flatzinc reader is now capable to read cumulative constraints
@@ -227,6 +229,10 @@ features:
 - implement presolving in exitpre() in cons_orbitope and cons_indicator
 - implement possibility to force a restart in cons_indicator if enough indicator variables have been fixed
 - functionality to use the bound flipping ratio test of SoPlex is available (requires at least version 1.5.0.7)
+- there exists now a solution candidate store for the original problem;  during transformation these solutions are tried; during free the
+  transformed problem the best feasible solution of the transformed problem  are copied to the solution candidate store of the original problem; this
+  useful if you solve several problems iteratively, solutions get now carried over automatically.
+- solution which are given by the user are form the outside a now marke by '#' in the ouput 	   
 
 design:
 - SCIP_HASHMAP now works also without block memory

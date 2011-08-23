@@ -319,7 +319,23 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputSolFound)
    dispdata = SCIPdispGetData(disp);
    if( sol != (SCIP_SOL*)dispdata )
    {
-      SCIPinfoMessage(scip, file, "%c", SCIPheurGetDispchar(SCIPgetSolHeur(scip, sol)));
+      SCIP_HEUR* heur;
+      char c;
+
+      heur = SCIPgetSolHeur(scip, sol);
+      
+      if( heur == NULL )
+      {
+         if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+            c = '#';
+         else
+            c = '*';
+      }
+      else
+         c = SCIPheurGetDispchar(heur);
+      
+      SCIPinfoMessage(scip, file, "%c", c);
+
       SCIPdispSetData(disp, (SCIP_DISPDATA*)sol);
    }
    else
