@@ -52,13 +52,16 @@
  * <b>Getting started</b>
  *
  * - \ref SHELL   "Tutorial: the interactive shell"
+ *
+ * - \ref MAKE    "Installation information / Makefiles"
+ *
  * - \ref START   "How to start a new project"
  * - \ref DOC     "How to search the documentation for interface methods"
  *
  * <b>General Information</b>
  *
- * - \ref LICENSE "License"
  * - \ref FAQ     "Frequently asked questions (FAQ)"
+ * - \ref LICENSE "License"
  *
  * - \ref PUBLICMETHODS "List of callable functions"
  * - \ref PARAMETERS "List of all SCIP parameters"
@@ -66,9 +69,10 @@
  * - \ref TEST    "How to run automated tests with SCIP"
  * - \ref COUNTER "How to use SCIP to count feasible solutions"
  *
- * - \ref MAKE    "Makefiles / Installation information"
  *
  * <b>Programming with SCIP</b>
+ *
+ * - \ref DEBUG   "Debugging"
  *
  * - How to add ...
  *   - \ref CONS    "Constraint handlers"
@@ -92,8 +96,6 @@
  *   - \ref OBJ     "Creating, capturing, releasing, and adding data objects"
  *   - \ref PARAM   "Adding additional user parameters"
  *
- *
- * - \ref DEBUG   "Debugging"
  *
  * <table cellpadding="0px" border="0" width="100%">
  *   <tr>

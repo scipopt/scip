@@ -44,6 +44,26 @@
       If you want to use SCIP commercially, please write an e-mail to koch@zib.de .
     </p>
     <p class="q">
+      <a name="Q5">How do I get started?</a>
+    </p>
+    <p class="a">
+      An easy way is to use the SCIP-binaries and call SCIP from a shell, see <a href="SHELL.html">here</a> for a tutorial. 
+      For that, you just have to download one of the precompiled binaries from the 
+      <a href="http://scip.zib.de/download.shtml">download section</a>, or the zipped source code and compile it 
+      with your favorite settings. This is described in detail in the <a href="INSTALL.html"><tt>INSTALL</tt></a> file in the SCIP main directory.
+    </p>
+    <p class="a">
+      Another way is to use SCIP as a solver integrated into your own program source code.
+      See the directories &quot;examples/MIPsolver/&quot and &quot;examples/Queens/&quot;
+      for simple examples and <a href="#Q12">this point</a>.
+    </p>
+    <p class="a">
+      A third way is to implement your own plugins into SCIP. 
+      This is explained in the HowTos for all plugin types, which you can find in the 
+      <a href="http://scip.zib.de/doc/html/index.html">doxygen documentation</a>.
+      See also <a href="http://scip.zib.de/doc/html/START.html">How to start a new project</a>.
+    </p>
+    <p class="q">
       <a name="Q4">Do I need any extra software?</a>
     </p>
     <p class="a">
@@ -70,47 +90,6 @@
     <p class="a">
     If you want to use SCIP for mixed integer nonlinear programming, you might want to use an underlying NLP solver (e.g., 
     <a href="https://projects.coin-or.org/Ipopt">Ipopt</a>) and an expression interpreter (e.g., <a href="http://www.coin-or.org/CppAD/">CppAD</a>).
-    </p>
-    <p class="q">
-      <a name="Q5">How do I get started?</a>
-    </p>
-    <p class="a">
-      An easy way is to use the SCIP-binaries and call SCIP from a shell, see <a href="SHELL.html">here</a> for a tutorial. 
-      For that, you just have to download one of the precompiled binaries from the 
-      <a href="http://scip.zib.de/download.shtml">download section</a>, or the zipped source code and compile it 
-      with your favorite settings. This is described in detail in the <a href="INSTALL.html"><tt>INSTALL</tt></a> file in the SCIP main directory.
-    </p>
-    <p class="a">
-      Another way is to use SCIP as a solver integrated into your own program source code.
-      See the directories &quot;examples/MIPsolver/&quot and &quot;examples/Queens/&quot;
-      for simple examples and <a href="#Q12">this point</a>.
-    </p>
-    <p class="a">
-      A third way is to implement your own plugins into SCIP. 
-      This is explained in the HowTos for all plugin types, which you can find in the 
-      <a href="http://scip.zib.de/doc/html/index.html">doxygen documentation</a>.
-      See also <a href="http://scip.zib.de/doc/html/START.html">How to start a new project</a>.
-    </p>
-    <p class="q">
-      <a name="Q6"> I would like to check whether some functionality is implemented into SCIP. 
-	How does the naming of the methods work? Where do I find the most common methods?</a>
-    </p>
-    <p class="a">
-      For an explanation of the naming see the 
-      <a href="http://scip.zib.de/doc/html/CODE.html">coding style guidelines</a>. <br> 
-      The methods being of interest for you, should normally be found either in scip.h or in pub_*.h, 
-      see also <a href="http://scip.zib.de/doc/html/DOC.html">here</a>.
-      In the doxygen documentation of <a href="http://scip.zib.de/doc/html/scip_8h.html">scip.h</a>, 
-      the methods are ordered by topics.		      
-    </p>
-    <p class="q">
-      <a name="Q7">The methods SCIPgetVarSol() and SCIPvarGetSol() seem to have the same
-	functionality. Which one should I use?</a>
-    </p>
-    <p class="a">
-      In fact, there is a slight difference: <code>SCIPvarGetSol()</code> is also able to return pseudo solution values.
-      If you do not have an idea, what pseudo solutions are, <code>SCIPgetVarSol()</code> should be just fine.<br> This
-      should be the only case of 'duplicate methods'. If you find, however, another one, please contact us.
     </p>
      <p class="q">
        <a name="Q27">I have installation problems. What can I do?</a>
@@ -154,6 +133,35 @@
         <li> <a href="http://scip.zib.de/doc/html/CHG3.html">Interface changes between SCIP 1.1 and SCIP 1.2</a></li>
         <li> <a href="http://scip.zib.de/doc/html/CHG4.html">Interface changes between SCIP 1.2 and SCIP 2.0</a></li>
     </ul>
+    <p class="q">
+      <a name="Q43">How can I debug in SCIP?</a>
+    </p>
+    <p class="a">
+      Compile SCIP in debug mode: <code>make OPT=dbg</code>. Put the binary into a debugger, e.g., <a href="http://www.gnu.org/s/gdb/">gdb</a> 
+      and let it run again. If you get an impression which component is causing the trouble, set <code>#define SCIP_DEBUG</code> as the first 
+      line of the corresponding *.c file, recompile, let it run again. This will print debug messages from that piece of code. 
+      Find a short debugging tutorial <a href="DEBUG.html">here</a>.
+    </p>
+    <p class="q">
+      <a name="Q44">SCIP prints error messages, aborts, produces segmentation faults, or just behaves strangely. What do?</a>
+    </p>
+    <p class="a">
+       <a href="#Q43>See above.</a> Often, the asserts that show up in debug mode already help to clarify misunderstandings 
+       and imply fixings, if you were calling SCIP functions in an unexpected manner. If you, however, have the impression that there is a bug in SCIP,
+       send us a bug report and include a log file and ideally a backtrace from a debugger.
+    </p>
+    <p class="q">
+      <a name="Q6"> I would like to check whether some functionality is implemented into SCIP. 
+	How does the naming of the methods work? Where do I find the most common methods?</a>
+    </p>
+    <p class="a">
+      For an explanation of the naming see the 
+      <a href="http://scip.zib.de/doc/html/CODE.html">coding style guidelines</a>. <br> 
+      The methods being of interest for you, should normally be found either in scip.h or in pub_*.h, 
+      see also <a href="http://scip.zib.de/doc/html/DOC.html">here</a>.
+      In the doxygen documentation of <a href="http://scip.zib.de/doc/html/scip_8h.html">scip.h</a>, 
+      the methods are ordered by topics.		      
+    </p>
     <p class="q">
       <a name="Q18">Can I use SCIP as a pure CP-Solver?</a>
     </p>
@@ -200,6 +208,22 @@
        If you are using your own building system: The "magic" changes are the <code>-FPIC</code> 
        compiler/linker option and the <code>-Wl,-rpath</code> option.
     </p>
+    <p class="q">
+      <a name="Q7">The methods SCIPgetVarSol() and SCIPvarGetSol() seem to have the same
+	functionality. Which one should I use?</a>
+    </p>
+    <p class="a">
+      In fact, there is a slight difference: <code>SCIPvarGetSol()</code> is also able to return pseudo solution values.
+      If you do not have an idea, what pseudo solutions are, <code>SCIPgetVarSol()</code> should be just fine.<br> This
+      should be the only case of 'duplicate methods'. If you find, however, another one, please contact us.
+    </p>
+
+
+
+
+
+
+
 <h4><a name="Section2">Using SCIP as a standalone MIP-Solver</a></h4>
     <p class="q">
       <a name="Q28">The output is too wide for my terminal window. What can I do?</a>
@@ -345,7 +369,7 @@
       Second, the feasibility of solutions is always tested on the original problem!
     </p>
     <p class="q">
-      <a name="Q16">Why do the names, e.g. in debug messages<!--DBG FAQ????--> often differ from the ones I
+      <a name="Q16">Why do the names, e.g., in debug messages often differ from the ones I
 	defined?</a>
     </p>
     <p class="a">
@@ -374,7 +398,7 @@
       Yes, you do. SCIP_CALL() is a global define, which handles the return codes of all methods 
       which return a SCIP_RETCODE and should therefore parenthesize each such method.
       SCIP_OKAY is the code which is returned if everything worked well; 
-      there are 18 different error codes, see type_retcode.h.
+      there are 17 different error codes, see type_retcode.h.
       Each method that calls methods which return a SCIP_RETCODE should itself return a SCIP_RETCODE.
       If this is not possible, use SCIP_CALL_ABORT() to catch the return codes of the methods.
       If you do not want to use this either, you have to do the exception handling
@@ -388,9 +412,9 @@
       <code>limits/nodes</code> for a node limit. 
       If you want to set a limit, you have to change these parameters.
       For example, for setting the time limit to one hour, you have to call 
-      <code>SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", 3600) )</code>.
-      For more examples, please have a look into heur_rens.c.
-      
+      <code>SCIP_CALL( SCIPsetRealParam(scip, "limits/time", 3600) )</code>.
+      In the interactive shell, you just enter <code>SCIP> set limits time 3600</code>	
+      For more examples, please have a look into heur_rens.c.      
     </p>		   
 <h4><a name="Section4">Using SCIP as a Branch-Cut-And-Price-Framework</a></h4>
     <p class="q">
@@ -401,7 +425,7 @@
     </p>
     <p class="q">
       <a name="Q19">What types of plugins can I add and how do I do this?</a>
-    </p>
+    </	 p>
     <p class="a">
       See the <a href="http://scip.zib.de/doc/html/index.html">doxygen documentation</a> for a list of 
       plugin types. There is a HowTo for each of them.
