@@ -678,7 +678,7 @@ SCIP_DECL_EXPRCURV( exprcurvDiv )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPREVAL( exprevalSqr )
+SCIP_DECL_EXPREVAL( exprevalSquare )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -689,7 +689,7 @@ SCIP_DECL_EXPREVAL( exprevalSqr )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRINTEVAL( exprevalIntSqr )
+SCIP_DECL_EXPRINTEVAL( exprevalIntSquare )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -700,7 +700,7 @@ SCIP_DECL_EXPRINTEVAL( exprevalIntSqr )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRCURV( exprcurvSqr )
+SCIP_DECL_EXPRCURV( exprcurvSquare )
 {
    assert(result    != NULL);
    assert(argcurv   != NULL);
@@ -712,7 +712,7 @@ SCIP_DECL_EXPRCURV( exprcurvSqr )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPREVAL( exprevalSqrt )
+SCIP_DECL_EXPREVAL( exprevalSquareRoot )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -723,7 +723,7 @@ SCIP_DECL_EXPREVAL( exprevalSqrt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRINTEVAL( exprevalIntSqrt )
+SCIP_DECL_EXPRINTEVAL( exprevalIntSquareRoot )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -734,7 +734,7 @@ SCIP_DECL_EXPRINTEVAL( exprevalIntSqrt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRCURV( exprcurvSqrt )
+SCIP_DECL_EXPRCURV( exprcurvSquareRoot )
 {
    assert(result    != NULL);
    assert(argcurv   != NULL);
@@ -1986,8 +1986,8 @@ struct exprOpTableElement exprOpTable[] =
    { "minus",             2, exprevalMinus,      exprevalIntMinus,      exprcurvMinus,      NULL, NULL  },
    { "mul",               2, exprevalMult,       exprevalIntMult,       exprcurvMult,       NULL, NULL  },
    { "div",               2, exprevalDiv,        exprevalIntDiv,        exprcurvDiv,        NULL, NULL  },
-   { "sqr",               1, exprevalSqr,        exprevalIntSqr,        exprcurvSqr,        NULL, NULL  },
-   { "sqrt",              1, exprevalSqrt,       exprevalIntSqrt,       exprcurvSqrt,       NULL, NULL  },
+   { "sqr",               1, exprevalSquare,     exprevalIntSquare,     exprcurvSquare,     NULL, NULL  },
+   { "sqrt",              1, exprevalSquareRoot, exprevalIntSquareRoot, exprcurvSquareRoot, NULL, NULL  },
    { "realpower",         1, exprevalRealPower,  exprevalIntRealPower,  exprcurvRealPower,  NULL, NULL  },
    { "intpower",          1, exprevalIntPower,   exprevalIntIntPower,   exprcurvIntPower,   NULL, NULL  },
    { "signpower",         1, exprevalSignPower,  exprevalIntSignPower,  exprcurvSignPower,  NULL, NULL  },
