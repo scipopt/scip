@@ -14,24 +14,25 @@
     <p class="q">
       <a name="Q1">What is SCIP?</a>
     </p>
+
     <p class="a">
-      SCIP is a constraint integer program solver and contain all necessary plugin to be a <b>standalone MIP-Solver</b> 
-      as well as a <b>branch-cut-and-price-framework</b>.<br> 
+      SCIP is a constraint integer program solver. It can be used as a framework for <b>branch-cut-and-price</b> 
+      and contains all necessary plugins to serve as a <b>standalone solver</b> for MIP, MIQCP, and PBO.<br> 
     <ul>
       <li>You can use the <a href="http://scip.zib.de/download.shtml">precompiled binaries</a>
-          with which you can solve MIPs in *.mps, *.lp, or others file format</li>
-      <li>You can use SCIP as a subroutine for solving MIPs from your own source code.</li>
+          with which you can solve MIPs, MIQCPS, or PBO problems in *.mps, *.lp, *.rlp, *.zpl, *.opb, *.wbo and other file formats</li>
+      <li>You can use SCIP as a subroutine for solving MIPs and more general constraint integer programs from your own source code.</li>
       <li>You can use SCIP as a framework in which you implement your own plugins.</li> 
       <li>You can use SCIP in any combination of the three purposes above.</li>
    </ul>
-      This FAQ consists of four separate sections treating these usages of SCIP.
+      This FAQ contains separate sections treating each of these usages of SCIP. It further considers specific questions for some features.
     <p class="q">
       <a name="Q2">When should I use SCIP?</a>
     </p>
     <p class="a">
-      If you are either looking for a fast non-commercial MIP-Solver or for a 
+      If you are either looking for a fast non-commercial MIP-solver or for a 
       branch-cut-and-price-framework in which you can directly implement your own methods 
-      &mdash; which can even be for more general purposes than MIP (see <a href="#Q18">here</a>).
+      &mdash; which can even be for more general purposes than MIP (see, e.g., <a href="#Q18">here</a>).
     </p>
     <p class="q">
       <a name="Q3">I heard something about licenses. Do I have to pay for using SCIP?</a>
@@ -40,6 +41,7 @@
       As long as you use it for academic, non-commercial purposes: No. 
       This will not change. For the other cases, check the explanation of the 
       <a href="http://zibopt.zib.de/ZIBLicence.shtml">ZIB academic license</a> and always feel free to ask us.
+      If you want to use SCIP commercially, please write an e-mail to koch@zib.de .
     </p>
     <p class="q">
       <a name="Q4">Do I need any extra software?</a>
@@ -52,9 +54,9 @@
     </p>
     <ul>
       <li><a href="http://www.coin-or.org/Clp/">CLP</a></li>
-      <li><a href="http://www.dashoptimization.com/home/products/products_optimizer.html">Dash XPress-MP</a></li>
+      <li><a href="http://www.fico.com/en/Products/DMTools/Pages/FICO-Xpress-Optimization-Suite.aspx">FICO XPress</a></li>
     <li><a href="http://www.gurobi.com/">Gurobi</a> (interface is in beta stage)</li>
-      <li><a href="http://www.ilog.com/products/cplex/">ILOG CPLEX</a></li>
+      <li><a href="http://www-01.ibm.com/software/integration/optimization/cplex-optimizer/">ILOG CPLEX</a></li>
       <li><a href="http://www.mosek.com/">Mosek</a></li>
       <li><a href="http://www2.isye.gatech.edu/~wcook/qsopt/">QSopt</a></li>
       <li><a href="http://soplex.zib.de/">SoPlex</a></li>
@@ -63,12 +65,17 @@
       We also provide some <a href="http://scip.zib.de/download.shtml">precompiled binaries</a>. Besides that,
       you might need a modeling language like <a href="http://www.zib.de/koch/zimpl/">ZIMPL</a> to generate *.mps 
       or *.lp files. ZIMPL files can also directly be read by SCIP.
+      You can download a package which includes SCIP, SoPlex and ZIMPL <a href="http://scip.zib.de/download.shtml">here</a>.
+    </p>
+    <p class="a">
+    If you want to use SCIP for mixed integer nonlinear programming, you might want to use an underlying NLP solver (e.g., 
+    <a href="https://projects.coin-or.org/Ipopt">Ipopt</a>) and an expression interpreter (e.g., <a href="http://www.coin-or.org/CppAD/">CppAD</a>).
     </p>
     <p class="q">
       <a name="Q5">How do I get started?</a>
     </p>
     <p class="a">
-      An easy way is to use the SCIP-binaries and call SCIP from a shell. 
+      An easy way is to use the SCIP-binaries and call SCIP from a shell, see <a href="SHELL.html">here</a> for a tutorial. 
       For that, you just have to download one of the precompiled binaries from the 
       <a href="http://scip.zib.de/download.shtml">download section</a>, or the zipped source code and compile it 
       with your favorite settings. This is described in detail in the <a href="INSTALL.html"><tt>INSTALL</tt></a> file in the SCIP main directory.
@@ -145,6 +152,7 @@
         <li> <a href="http://scip.zib.de/doc/html/CHG1.html">Interface changes between SCIP 0.9 and SCIP 1.0</a></li>
         <li> <a href="http://scip.zib.de/doc/html/CHG2.html">Interface changes between SCIP 1.0 and SCIP 1.1</a></li>
         <li> <a href="http://scip.zib.de/doc/html/CHG3.html">Interface changes between SCIP 1.1 and SCIP 1.2</a></li>
+        <li> <a href="http://scip.zib.de/doc/html/CHG4.html">Interface changes between SCIP 1.2 and SCIP 2.0</a></li>
     </ul>
     <p class="q">
       <a name="Q18">Can I use SCIP as a pure CP-Solver?</a>
@@ -178,17 +186,19 @@
        <a name="Q20">Can I compile SCIP as a shared library?</a>
     </p>
     <p class="a">
-       If you are using Linux and a GNU compiler you can use the <code>OPT=opt-shared</code> option
+       You can use the <code>SHARED=true</code> option
        when making SCIP. This will generate the libraries of SCIP in shared format. The binary then
        also uses this form. Note that the path to the <code>lib</code> directory of SCIP is used to
        locate the libraries. If you want to move the libraries, you might to set the
        <code>LD_LIBRARY_PATH</code> environment variable to include the new path.
 
+    <!--
        If you have a different system or compiler (which supports shared libraries) you might try to
        copy the file <code>make.linux.x86.gnu.opt-shared</code> and modify it according to your
-       needs (see also <a href="http://scip.zib.de/doc/html/MAKE.html">Makefiles</a>). The "magic"
-       changes are the <code>-FPIC</code> compiler/liner option and the <code>-Wl,-rpath</code>
-       option.
+       needs (see also <a href="http://scip.zib.de/doc/html/MAKE.html">Makefiles</a>).
+     -->
+       If you are using your own building system: The "magic" changes are the <code>-FPIC</code> 
+       compiler/linker option and the <code>-Wl,-rpath</code> option.
     </p>
 <h4><a name="Section2">Using SCIP as a standalone MIP-Solver</a></h4>
     <p class="q">
@@ -217,8 +227,8 @@
     <p class="a">
       You can switch the settings for all presolving, heuristics, and separation plugins to three different modes
       via the "set {presolving, heuristics, separation} emphasis" parameters in the interactive shell.
-      "Off" turns off the respective type of plugins, "fast" chooses settings that lead to less time spent
-      in this type of plugins, possibly deteriorating their impact, and "aggressive" increases the impact
+      "off" turns off the respective type of plugins, "fast" chooses settings that lead to less time spent
+      in this type of plugins, decreasing their impact, and "aggressive" increases the impact
       of this type of plugins.
       You can combine these general settings for cuts, presolving, and heuristics arbitrarily.<br>
       "display parameters" shows you which settings currently differ from their default, 
