@@ -85,8 +85,8 @@
 #define DEFAULT_MAXSEPACUTSROOT       200 /**< maximal number of cuts separated per separation round in root node */
 #define DEFAULT_PRESOLPAIRWISE       TRUE /**< should pairwise constraint comparison be performed in presolving? */
 #define DEFAULT_PRESOLUSEHASHING     TRUE /**< should hash table be used for detecting redundant constraints in advance */
-#define DEFAULT_NMINCOMPARISONS    200000 /**< number for minimal pairwise presol comparisons */
-#define DEFAULT_MINGAINPERNMINCOMP  1e-06 /**< minimal gain per minimal pairwise presol comparisons to repeat pairwise 
+#define DEFAULT_NMINCOMPARISONS    200000 /**< number for minimal pairwise presolving comparisons */
+#define DEFAULT_MINGAINPERNMINCOMP  1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise 
                                            *   comparison round */
 #define DEFAULT_SORTVARS             TRUE /**< should variables be sorted after presolve w.r.t their coefficient absolute for faster
                                            *  propagation? */
@@ -98,7 +98,7 @@
                                            *   the ones with non-zero dual value? */
 #define DEFAULT_AGGREGATEVARIABLES   TRUE /**< should presolving search for redundant variables in equations */
 #define DEFAULT_SIMPLIFYINEQUALITIES FALSE/**< should presolving try to simplify inequalities */
-#define DEFAULT_DUALPRESOLVING       TRUE /**< should dual presolving steps be preformed? */
+#define DEFAULT_DUALPRESOLVING       TRUE /**< should dual presolving steps be performed? */
 
 #define MAXDNOM                   10000LL /**< maximal denominator for simple rational fixed values */
 #define MAXSCALEDCOEF               1e+03 /**< maximal coefficient value after scaling */
@@ -207,7 +207,7 @@ struct SCIP_ConshdlrData
                                               *   (0.0: disable constraint aggregation) */
    SCIP_Real             maxcardbounddist;   /**< maximal relative distance from current node's dual bound to primal bound compared
                                               *   to best node's dual bound for separating knapsack cardinality cuts */
-   SCIP_Real             mingainpernmincomp; /**< minimal gain per minimal pairwise presol comparisons to repeat pairwise comparison round */
+   SCIP_Real             mingainpernmincomp; /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise comparison round */
    int                   linconsupgradessize;/**< size of linconsupgrade array */
    int                   nlinconsupgrades;   /**< number of linear constraint upgrade methods */
    int                   tightenboundsfreq;  /**< multiplier on propagation frequency, how often the bounds are tightened */
@@ -215,14 +215,14 @@ struct SCIP_ConshdlrData
    int                   maxroundsroot;      /**< maximal number of separation rounds in the root node (-1: unlimited) */
    int                   maxsepacuts;        /**< maximal number of cuts separated per separation round */
    int                   maxsepacutsroot;    /**< maximal number of cuts separated per separation round in root node */
-   int                   nmincomparisons;    /**< number for minimal pairwise presol comparisons */
+   int                   nmincomparisons;    /**< number for minimal pairwise presolving comparisons */
    SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
    SCIP_Bool             presolusehashing;   /**< should hash table be used for detecting redundant constraints in advance */
    SCIP_Bool             separateall;        /**< should all constraints be subject to cardinality cut generation instead of only
                                               *   the ones with non-zero dual value? */
    SCIP_Bool             aggregatevariables; /**< should presolving search for redundant variables in equations */
    SCIP_Bool             simplifyinequalities;/**< should presolving try to cancel down or delete coefficients in inequalities */
-   SCIP_Bool             dualpresolving;      /**< should dual presolving steps be preformed? */
+   SCIP_Bool             dualpresolving;      /**< should dual presolving steps be performed? */
    SCIP_Bool             sortvars;            /**< should binary variables be sorted for faster propagation? */
 };
 
@@ -433,7 +433,7 @@ void linconsupgradeFree(
    SCIPfreeMemory(scip, linconsupgrade);
 }
 
-/** creates constaint handler data for linear constraint handler */
+/** creates constraint handler data for linear constraint handler */
 static
 SCIP_RETCODE conshdlrdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3467,7 +3467,7 @@ SCIP_RETCODE normalizeCons(
 
       if( gcd > 1 )
       {
-         /* divide the constaint by the greatest common divisor of the coefficients */
+         /* divide the constraint by the greatest common divisor of the coefficients */
          SCIPdebugMessage("divide linear constraint by greatest common divisor %"SCIP_LONGINT_FORMAT"\n", gcd);
          SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
          SCIP_CALL( scaleCons(scip, cons, 1.0/(SCIP_Real)gcd) );
@@ -10430,7 +10430,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          &conshdlrdata->simplifyinequalities, TRUE, DEFAULT_SIMPLIFYINEQUALITIES, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/linear/dualpresolving",
-         "should dual presolving steps be preformed?",
+         "should dual presolving steps be performed?",
          &conshdlrdata->dualpresolving, TRUE, DEFAULT_DUALPRESOLVING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/linear/sortvars", "apply binaries sorting in decr. order of coeff abs value?",
          &conshdlrdata->sortvars, TRUE, DEFAULT_SORTVARS, NULL, NULL) );

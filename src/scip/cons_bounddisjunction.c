@@ -200,7 +200,7 @@ SCIP_RETCODE dropEvents(
    return SCIP_OKAY;
 }
 
-/** creates constaint handler data for bound disjunction constraint handler */
+/** creates constraint handler data for bound disjunction constraint handler */
 static
 SCIP_RETCODE conshdlrdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */

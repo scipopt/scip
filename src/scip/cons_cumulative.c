@@ -1376,7 +1376,7 @@ int convertBoundToInt(
 #define convertBoundToInt(x, y) ((int)((y) + 0.5))
 #endif
 
-/** creates constaint handler data for cumulative constraint handler */
+/** creates constraint handler data for cumulative constraint handler */
 static
 SCIP_RETCODE conshdlrdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */

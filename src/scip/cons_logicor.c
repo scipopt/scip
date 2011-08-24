@@ -63,9 +63,9 @@
 
 #define HASHSIZE_LOGICORCONS     131101 /**< minimal size of hash table in logicor constraint tables */
 #define DEFAULT_PRESOLUSEHASHING   TRUE /**< should hash table be used for detecting redundant constraints in advance */
-#define NMINCOMPARISONS          200000 /**< number for minimal pairwise presol comparisons */
-#define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presol comparisons to repeat pairwise comparison round */
-#define DEFAULT_DUALPRESOLVING     TRUE /**< should dual presolving steps be preformed? */
+#define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
+#define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise comparison round */
+#define DEFAULT_DUALPRESOLVING     TRUE /**< should dual presolving steps be performed? */
 #define DEFAULT_NEGATEDCLIQUE     FALSE /**< should negated clique information be used in presolving */
 
 /* @todo make this a parameter setting */
@@ -83,7 +83,7 @@ struct SCIP_ConshdlrData
    SCIP_CONSHDLR*        conshdlrlinear;     /**< pointer to linear constraint handler or NULL if not included */
    SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
    SCIP_Bool             presolusehashing;   /**< should hash table be used for detecting redundant constraints in advance */
-   SCIP_Bool             dualpresolving;     /**< should dual presolving steps be preformed? */
+   SCIP_Bool             dualpresolving;     /**< should dual presolving steps be performed? */
    SCIP_Bool             usenegatedclique;   /**< should negated clique information be used in presolving */
    int                   nlastcliques;       /**< number of cliques after last negated clique presolving round */
    int                   nlastimpls;         /**< number of implications after last negated clique presolving round */
@@ -141,7 +141,7 @@ SCIP_RETCODE unlockRounding(
    return SCIP_OKAY;
 }
 
-/** creates constaint handler data for logic or constraint handler */
+/** creates constraint handler data for logic or constraint handler */
 static
 SCIP_RETCODE conshdlrdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -696,7 +696,7 @@ SCIP_RETCODE dualPresolving(
       SCIPdebugMessage(" -> fixed <%s> == 1.0\n", SCIPvarGetName(vars[idx]));
       ++(*nfixedvars);
 
-      /* remnove constraint since i*/
+      /* remove constraint since i*/
       SCIP_CALL( SCIPdelCons(scip, cons) );
       ++(*ndelconss);
    }
@@ -2774,7 +2774,7 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
          }
       }
       
-      /* perform for dual redundantions */
+      /* perform dual reductions */
       if( conshdlrdata->dualpresolving )
       {
          SCIP_CALL( dualPresolving(scip, cons, nfixedvars, ndelconss, result) );
@@ -3288,7 +3288,7 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
          &conshdlrdata->presolusehashing, TRUE, DEFAULT_PRESOLUSEHASHING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/logicor/dualpresolving",
-         "should dual presolving steps be preformed?",
+         "should dual presolving steps be performed?",
          &conshdlrdata->dualpresolving, TRUE, DEFAULT_DUALPRESOLVING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/logicor/negatedclique",

@@ -260,7 +260,7 @@ void sortTerm(
    term->sorted = TRUE;
 }
 
-/** creates constaint handler data for pseudo boolean constraint handler */
+/** creates constraint handler data for pseudo boolean constraint handler */
 static
 SCIP_RETCODE conshdlrdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */

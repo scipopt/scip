@@ -82,10 +82,10 @@
 #define HASHSIZE_KNAPSACKCONS    131101 /**< minimal size of hash table in linear constraint tables */
 
 #define DEFAULT_PRESOLPAIRWISE     TRUE /**< should pairwise constraint comparison be performed in presolving? */
-#define NMINCOMPARISONS          200000 /**< number for minimal pairwise presol comparisons */
-#define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presol comparisons to repeat pairwise 
+#define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
+#define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise 
                                          *   comparison round */
-#define DEFAULT_DUALPRESOLVING     TRUE /**< should dual presolving steps be preformed? */
+#define DEFAULT_DUALPRESOLVING     TRUE /**< should dual presolving steps be performed? */
 
 #define MAXCOVERSIZEITERLEWI       1000 /**< maximal size for which LEWI are iteratively separated by reducing the feasible set */
 
@@ -137,7 +137,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             negatedclique;      /**< should negated clique information be used in solving process */
    SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
    SCIP_Bool             presolusehashing;   /**< should hash table be used for detecting redundant constraints in advance */
-   SCIP_Bool             dualpresolving;     /**< should dual presolving steps be preformed? */
+   SCIP_Bool             dualpresolving;     /**< should dual presolving steps be performed? */
 };
 
 
@@ -8963,7 +8963,7 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
          &conshdlrdata->presolusehashing, TRUE, DEFAULT_PRESOLUSEHASHING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/knapsack/dualpresolving",
-         "should dual presolving steps be preformed?",
+         "should dual presolving steps be performed?",
          &conshdlrdata->dualpresolving, TRUE, DEFAULT_DUALPRESOLVING, NULL, NULL) );
 
    return SCIP_OKAY;
