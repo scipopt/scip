@@ -347,33 +347,6 @@ SCIP_RETCODE quadraticdataCreate(
    return SCIP_OKAY;
 }
 
-/** frees SCIP_EXPRDATA_QUADRATIC data structure */
-static
-void quadraticdataFree(
-   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
-   SCIP_EXPRDATA_QUADRATIC** quadraticdata,  /**< buffer to store pointer to quadratic data */
-   int                   nchildren           /**< number of children */
-   )
-{
-   assert(blkmem != NULL);
-   assert(quadraticdata != NULL);
-   assert(*quadraticdata != NULL);
-   assert(nchildren >= 0);
-
-   if( (*quadraticdata)->lincoefs != NULL )
-   {
-      BMSfreeBlockMemoryArray(blkmem, &(*quadraticdata)->lincoefs, nchildren);
-   }
-
-   if( (*quadraticdata)->nquadelems > 0 )
-   {
-      assert((*quadraticdata)->quadelems != NULL);
-      BMSfreeBlockMemoryArray(blkmem, &(*quadraticdata)->quadelems, (*quadraticdata)->nquadelems);
-   }
-
-   BMSfreeBlockMemory(blkmem, quadraticdata);
-}
-
 /** sorts quadratic elements in a SCIP_EXPRDATA_QUADRATIC data structure */
 static
 void quadraticdataSort(
@@ -1460,6 +1433,37 @@ SCIP_DECL_EXPRCURV( exprcurvLinear )
 } /*lint !e715*/
 
 static
+SCIP_DECL_EXPRCOPYDATA( exprCopyDataLinear )
+{
+   SCIP_Real* targetdata;
+
+   assert(blkmem != NULL);
+   assert(nchildren >= 0);
+   assert(opdatatarget != NULL);
+
+   /* for a linear expression, we need to copy the array that holds the coefficients and constant term */
+   assert(opdatasource.data != NULL);
+   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &targetdata, (SCIP_Real*)opdatasource.data, nchildren + 1) );  /*lint !e866*/
+   opdatatarget->data = targetdata;
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_EXPRFREEDATA( exprFreeDataLinear )
+{
+   SCIP_Real* freedata;
+
+   assert(blkmem != NULL);
+   assert(nchildren >= 0);
+
+   freedata = (SCIP_Real*)opdata.data;
+   assert(freedata != NULL);
+
+   BMSfreeBlockMemoryArray(blkmem, &freedata, nchildren + 1);  /*lint !e866*/
+}
+
+static
 SCIP_DECL_EXPREVAL( exprevalQuadratic )
 {
    SCIP_EXPRDATA_QUADRATIC* quaddata;
@@ -1631,6 +1635,49 @@ SCIP_DECL_EXPRCURV( exprcurvQuadratic )
 
    return SCIP_OKAY;
 } /*lint !e715*/
+
+static
+SCIP_DECL_EXPRCOPYDATA( exprCopyDataQuadratic )
+{
+   SCIP_EXPRDATA_QUADRATIC* sourcedata;
+
+   assert(blkmem != NULL);
+   assert(opdatatarget != NULL);
+
+   sourcedata = (SCIP_EXPRDATA_QUADRATIC*)opdatasource.data;
+   assert(sourcedata != NULL);
+
+   SCIP_CALL( quadraticdataCreate(blkmem, (SCIP_EXPRDATA_QUADRATIC**)&opdatatarget->data,
+      sourcedata->constant, nchildren, sourcedata->lincoefs, sourcedata->nquadelems, sourcedata->quadelems) );
+
+   return SCIP_OKAY;
+}
+
+/** frees SCIP_EXPRDATA_QUADRATIC data structure */
+static
+SCIP_DECL_EXPRFREEDATA( exprFreeDataQuadratic )
+{
+   SCIP_EXPRDATA_QUADRATIC* quadraticdata;
+
+   assert(blkmem != NULL);
+   assert(nchildren >= 0);
+
+   quadraticdata = (SCIP_EXPRDATA_QUADRATIC*)opdata.data;
+   assert(quadraticdata != NULL);
+
+   if( quadraticdata->lincoefs != NULL )
+   {
+      BMSfreeBlockMemoryArray(blkmem, &quadraticdata->lincoefs, nchildren);
+   }
+
+   if( quadraticdata->nquadelems > 0 )
+   {
+      assert(quadraticdata->quadelems != NULL);
+      BMSfreeBlockMemoryArray(blkmem, &quadraticdata->quadelems, quadraticdata->nquadelems);
+   }
+
+   BMSfreeBlockMemory(blkmem, &quadraticdata);
+}
 
 static
 SCIP_DECL_EXPREVAL( exprevalPolynomial )
@@ -1843,6 +1890,75 @@ SCIP_DECL_EXPRCURV( exprcurvPolynomial )
    return SCIP_OKAY;
 } /*lint !e715*/
 
+/** copies data of polynomial expression */
+static
+SCIP_DECL_EXPRCOPYDATA( exprCopyDataPolynomial )
+{
+   SCIP_EXPRDATA_POLYNOMIAL* sourcepolynomialdata;
+   SCIP_EXPRDATA_POLYNOMIAL* targetpolynomialdata;
+
+   assert(blkmem != NULL);
+   assert(opdatatarget != NULL);
+
+   sourcepolynomialdata = (SCIP_EXPRDATA_POLYNOMIAL*)opdatasource.data;
+   assert(sourcepolynomialdata != NULL);
+
+   SCIP_ALLOC( BMSduplicateBlockMemory(blkmem, &targetpolynomialdata, sourcepolynomialdata) );
+
+   targetpolynomialdata->monomialssize = sourcepolynomialdata->nmonomials;
+   if( sourcepolynomialdata->nmonomials > 0 )
+   {
+      int i;
+
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &targetpolynomialdata->monomials, targetpolynomialdata->monomialssize) );
+
+      for( i = 0; i < sourcepolynomialdata->nmonomials; ++i )
+      {
+         assert(sourcepolynomialdata->monomials[i] != NULL);  /*lint !e613*/
+         SCIP_CALL( SCIPexprCreateMonomial(blkmem, &targetpolynomialdata->monomials[i], sourcepolynomialdata->monomials[i]->coef,
+            sourcepolynomialdata->monomials[i]->nfactors, sourcepolynomialdata->monomials[i]->childidxs, sourcepolynomialdata->monomials[i]->exponents) );
+         targetpolynomialdata->monomials[i]->sorted = sourcepolynomialdata->monomials[i]->sorted;
+      }
+   }
+   else
+   {
+      targetpolynomialdata->monomials = NULL;
+   }
+
+   opdatatarget->data = (void*)targetpolynomialdata;
+
+   return SCIP_OKAY;
+}
+
+/** frees a SCIP_EXPRDATA_POLYNOMIAL data structure */
+static
+SCIP_DECL_EXPRFREEDATA( exprFreeDataPolynomial )
+{
+   SCIP_EXPRDATA_POLYNOMIAL* polynomialdata;
+
+   assert(blkmem != NULL);
+
+   polynomialdata = (SCIP_EXPRDATA_POLYNOMIAL*)opdata.data;
+   assert(polynomialdata != NULL);
+
+   if( polynomialdata->monomialssize > 0 )
+   {
+      int i;
+
+      for( i = 0; i < polynomialdata->nmonomials; ++i )
+      {
+         assert(polynomialdata->monomials[i] != NULL);
+         SCIPexprFreeMonomial(blkmem, &polynomialdata->monomials[i]);
+         assert(polynomialdata->monomials[i] == NULL);
+      }
+
+      BMSfreeBlockMemoryArray(blkmem, &polynomialdata->monomials, polynomialdata->monomialssize);
+   }
+   assert(polynomialdata->monomials == NULL);
+
+   BMSfreeBlockMemory(blkmem, &polynomialdata);
+}
+
 /* element in table of expression operands */
 struct exprOpTableElement
 {
@@ -1851,48 +1967,52 @@ struct exprOpTableElement
   SCIP_DECL_EXPREVAL    ((*eval));          /**< evaluation function */
   SCIP_DECL_EXPRINTEVAL ((*inteval));       /**< interval evaluation function */
   SCIP_DECL_EXPRCURV    ((*curv));          /**< curvature check function */
+  SCIP_DECL_EXPRCOPYDATA ((*copydata));     /**< expression data copy function, or NULL to only opdata union */
+  SCIP_DECL_EXPRFREEDATA ((*freedata));     /**< expression data free function, or NULL if nothing to free */
 };
+
+#define EXPROPEMPTY {NULL, -1, NULL, NULL, NULL, NULL, NULL}
 
 /** table containing for each operand the name, the number of children, and some evaluation functions */
 /* @TODO declare static when finished merging */
 struct exprOpTableElement exprOpTable[] =
 {
-   {NULL,-1,NULL,NULL,NULL},
-   { "variable",          0, exprevalVar,           exprevalIntVar,           exprcurvVar      },
-   { "constant",          0, exprevalConst,         exprevalIntConst,         exprcurvConst    },
-   { "parameter",         0, exprevalParam,         exprevalIntParam,         exprcurvParam},
-   {NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},
-   { "plus",              2, exprevalPlus,          exprevalIntPlus,          exprcurvPlus         },
-   { "minus",             2, exprevalMinus,         exprevalIntMinus,         exprcurvMinus        },
-   { "mul",               2, exprevalMult,          exprevalIntMult,          exprcurvMult         },
-   { "div",               2, exprevalDiv,           exprevalIntDiv,           exprcurvDiv          },
-   { "sqr",               1, exprevalSqr,           exprevalIntSqr,           exprcurvSqr          },
-   { "sqrt",              1, exprevalSqrt,          exprevalIntSqrt,          exprcurvSqrt         },
-   { "realpower",         1, exprevalRealPower,     exprevalIntRealPower,     exprcurvRealPower    },
-   { "intpower",          1, exprevalIntPower,      exprevalIntIntPower,      exprcurvIntPower     },
-   { "signpower",         1, exprevalSignPower,     exprevalIntSignPower,     exprcurvSignPower    },
-   { "exp",               1, exprevalExp,           exprevalIntExp,           exprcurvExp          },
-   { "log",               1, exprevalLog,           exprevalIntLog,           exprcurvLog          },
-   { "sin",               1, exprevalSin,           exprevalIntSin,           exprcurvSin          },
-   { "cos",               1, exprevalCos,           exprevalIntCos,           exprcurvCos          },
-   { "tan",               1, exprevalTan,           exprevalIntTan,           exprcurvTan          },
-/* { "erf",               1, exprevalErf,           exprevalIntErf,           exprcurvErf          }, */
-/* { "erfi",              1, exprevalErfi,          exprevalIntErfi           exprcurvErfi         }, */
-   {NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},
-   { "min",               2, exprevalMin,           exprevalIntMin,           exprcurvMin          },
-   { "max",               2, exprevalMax,           exprevalIntMax,           exprcurvMax          },
-   { "abs",               1, exprevalAbs,           exprevalIntAbs,           exprcurvAbs          },
-   { "sign",              1, exprevalSign,          exprevalIntSign,          exprcurvSign         },
-   {NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},
-   {NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},
-   {NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},
-   {NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},
-   {NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},
-   { "sum",              -2, exprevalSum,           exprevalIntSum,           exprcurvSum          },
-   { "prod",             -2, exprevalProduct,       exprevalIntProduct,       exprcurvProduct      },
-   { "linear",           -2, exprevalLinear,        exprevalIntLinear,        exprcurvLinear       },
-   { "quadratic",        -2, exprevalQuadratic,     exprevalIntQuadratic,     exprcurvQuadratic    },
-   { "polynomial",       -2, exprevalPolynomial,    exprevalIntPolynomial,    exprcurvPolynomial   }
+   EXPROPEMPTY,
+   { "variable",          0, exprevalVar,        exprevalIntVar,        exprcurvVar,        NULL, NULL  },
+   { "constant",          0, exprevalConst,      exprevalIntConst,      exprcurvConst,      NULL, NULL  },
+   { "parameter",         0, exprevalParam,      exprevalIntParam,      exprcurvParam,      NULL, NULL  },
+   EXPROPEMPTY, EXPROPEMPTY, EXPROPEMPTY, EXPROPEMPTY,
+   { "plus",              2, exprevalPlus,       exprevalIntPlus,       exprcurvPlus,       NULL, NULL  },
+   { "minus",             2, exprevalMinus,      exprevalIntMinus,      exprcurvMinus,      NULL, NULL  },
+   { "mul",               2, exprevalMult,       exprevalIntMult,       exprcurvMult,       NULL, NULL  },
+   { "div",               2, exprevalDiv,        exprevalIntDiv,        exprcurvDiv,        NULL, NULL  },
+   { "sqr",               1, exprevalSqr,        exprevalIntSqr,        exprcurvSqr,        NULL, NULL  },
+   { "sqrt",              1, exprevalSqrt,       exprevalIntSqrt,       exprcurvSqrt,       NULL, NULL  },
+   { "realpower",         1, exprevalRealPower,  exprevalIntRealPower,  exprcurvRealPower,  NULL, NULL  },
+   { "intpower",          1, exprevalIntPower,   exprevalIntIntPower,   exprcurvIntPower,   NULL, NULL  },
+   { "signpower",         1, exprevalSignPower,  exprevalIntSignPower,  exprcurvSignPower,  NULL, NULL  },
+   { "exp",               1, exprevalExp,        exprevalIntExp,        exprcurvExp,        NULL, NULL  },
+   { "log",               1, exprevalLog,        exprevalIntLog,        exprcurvLog,        NULL, NULL  },
+   { "sin",               1, exprevalSin,        exprevalIntSin,        exprcurvSin,        NULL, NULL  },
+   { "cos",               1, exprevalCos,        exprevalIntCos,        exprcurvCos,        NULL, NULL  },
+   { "tan",               1, exprevalTan,        exprevalIntTan,        exprcurvTan,        NULL, NULL  },
+/* { "erf",               1, exprevalErf,        exprevalIntErf,        exprcurvErf,        NULL, NULL  }, */
+/* { "erfi",              1, exprevalErfi,       exprevalIntErfi        exprcurvErfi,       NULL, NULL  }, */
+   EXPROPEMPTY, EXPROPEMPTY,
+   { "min",               2, exprevalMin,        exprevalIntMin,        exprcurvMin,        NULL, NULL  },
+   { "max",               2, exprevalMax,        exprevalIntMax,        exprcurvMax,        NULL, NULL  },
+   { "abs",               1, exprevalAbs,        exprevalIntAbs,        exprcurvAbs,        NULL, NULL  },
+   { "sign",              1, exprevalSign,       exprevalIntSign,       exprcurvSign,       NULL, NULL  },
+   EXPROPEMPTY, EXPROPEMPTY, EXPROPEMPTY,
+   EXPROPEMPTY, EXPROPEMPTY, EXPROPEMPTY, EXPROPEMPTY, EXPROPEMPTY, EXPROPEMPTY, EXPROPEMPTY, EXPROPEMPTY, EXPROPEMPTY, EXPROPEMPTY,
+   EXPROPEMPTY, EXPROPEMPTY, EXPROPEMPTY, EXPROPEMPTY, EXPROPEMPTY, EXPROPEMPTY, EXPROPEMPTY, EXPROPEMPTY, EXPROPEMPTY, EXPROPEMPTY,
+   EXPROPEMPTY, EXPROPEMPTY, EXPROPEMPTY, EXPROPEMPTY, EXPROPEMPTY, EXPROPEMPTY, EXPROPEMPTY, EXPROPEMPTY, EXPROPEMPTY, EXPROPEMPTY,
+   EXPROPEMPTY, EXPROPEMPTY, EXPROPEMPTY,
+   { "sum",              -2, exprevalSum,        exprevalIntSum,        exprcurvSum,        NULL, NULL  },
+   { "prod",             -2, exprevalProduct,    exprevalIntProduct,    exprcurvProduct,    NULL, NULL  },
+   { "linear",           -2, exprevalLinear,     exprevalIntLinear,     exprcurvLinear,     exprCopyDataLinear,     exprFreeDataLinear     },
+   { "quadratic",        -2, exprevalQuadratic,  exprevalIntQuadratic,  exprcurvQuadratic,  exprCopyDataQuadratic,  exprFreeDataQuadratic  },
+   { "polynomial",       -2, exprevalPolynomial, exprevalIntPolynomial, exprcurvPolynomial, exprCopyDataPolynomial, exprFreeDataPolynomial }
 };
 
 /** gives the name of an operand as string */
@@ -2212,43 +2332,6 @@ SCIP_RETCODE polynomialdataCreate(
    return SCIP_OKAY;
 }
 
-/** creates a copy of a SCIP_EXPRDATA_POLYNOMIAL data structure */
-static
-SCIP_RETCODE polynomialdataCopy(
-   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
-   SCIP_EXPRDATA_POLYNOMIAL** polynomialdata,/**< buffer to store pointer to polynomial data */
-   SCIP_EXPRDATA_POLYNOMIAL* sourcepolynomialdata /**< polynomial data to copy */
-   )
-{
-   assert(blkmem != NULL);
-   assert(polynomialdata != NULL);
-   assert(sourcepolynomialdata != NULL);
-
-   SCIP_ALLOC( BMSduplicateBlockMemory(blkmem, polynomialdata, sourcepolynomialdata) );
-
-   (*polynomialdata)->monomialssize = sourcepolynomialdata->nmonomials;
-   if( sourcepolynomialdata->nmonomials > 0 )
-   {
-      int i;
-
-      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*polynomialdata)->monomials, (*polynomialdata)->monomialssize) );
-
-      for( i = 0; i < sourcepolynomialdata->nmonomials; ++i )
-      {
-         assert(sourcepolynomialdata->monomials[i] != NULL);  /*lint !e613*/
-         SCIP_CALL( SCIPexprCreateMonomial(blkmem, &(*polynomialdata)->monomials[i], sourcepolynomialdata->monomials[i]->coef,
-            sourcepolynomialdata->monomials[i]->nfactors, sourcepolynomialdata->monomials[i]->childidxs, sourcepolynomialdata->monomials[i]->exponents) );
-         (*polynomialdata)->monomials[i]->sorted = sourcepolynomialdata->monomials[i]->sorted;
-      }
-   }
-   else
-   {
-      (*polynomialdata)->monomials = NULL;
-   }
-
-   return SCIP_OKAY;
-}
-
 /** ensures that the monomials array of a polynomial has at least a given size */
 static
 SCIP_RETCODE polynomialdataEnsureMonomsSize(
@@ -2271,35 +2354,6 @@ SCIP_RETCODE polynomialdataEnsureMonomsSize(
    assert(minsize <= polynomialdata->monomialssize);
 
    return SCIP_OKAY;
-}
-
-/** frees a SCIP_EXPRDATA_POLYNOMIAL data structure */
-static
-void polynomialdataFree(
-   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
-   SCIP_EXPRDATA_POLYNOMIAL** polynomialdata /**< pointer to polynomial data to free */
-   )
-{
-   assert(blkmem != NULL);
-   assert(polynomialdata != NULL);
-   assert(*polynomialdata != NULL);
-
-   if( (*polynomialdata)->monomialssize > 0 )
-   {
-      int i;
-
-      for( i = 0; i < (*polynomialdata)->nmonomials; ++i )
-      {
-         assert((*polynomialdata)->monomials[i] != NULL);
-         SCIPexprFreeMonomial(blkmem, &(*polynomialdata)->monomials[i]);
-         assert((*polynomialdata)->monomials[i] == NULL);
-      }
-
-      BMSfreeBlockMemoryArray(blkmem, &(*polynomialdata)->monomials, (*polynomialdata)->monomialssize);
-   }
-   assert((*polynomialdata)->monomials == NULL);
-
-   BMSfreeBlockMemory(blkmem, polynomialdata);
 }
 
 /** adds an array of monomials to a polynomial */
@@ -2392,51 +2446,13 @@ SCIP_RETCODE SCIPexprCopyDeep(
       assert((*targetexpr)->children == NULL); /* otherwise, sourceexpr->children was not NULL, which is wrong */
    }
 
-   /* copy data for more complex operands
-    * for simple operands BMSduplicate above should have done the job */
-   switch( sourceexpr->op )
+   /* call operands data copy callback for complex operands
+    * for simple operands BMSduplicate above should have done the job
+    */
+   if( exprOpTable[sourceexpr->op].copydata != NULL )
    {
-      case SCIP_EXPR_LINEAR:
-      {
-         SCIP_Real* targetdata;
-
-         /* for a linear expression, we need to copy the array that holds the coefficients and constant term */
-         assert(sourceexpr->data.data != NULL);
-         SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &targetdata, (SCIP_Real*) sourceexpr->data.data, sourceexpr->nchildren + 1) );  /*lint !e866*/
-         (*targetexpr)->data.data = (void*) targetdata;
-
-         break;
-      }
-      
-      case SCIP_EXPR_QUADRATIC:
-      {
-         SCIP_EXPRDATA_QUADRATIC* sourcedata;
-         
-         sourcedata = (SCIP_EXPRDATA_QUADRATIC*)sourceexpr->data.data;
-         assert(sourcedata != NULL);
-         
-         SCIP_CALL( quadraticdataCreate(blkmem, (SCIP_EXPRDATA_QUADRATIC**)&(*targetexpr)->data.data,
-            sourcedata->constant, sourceexpr->nchildren, sourcedata->lincoefs, sourcedata->nquadelems, sourcedata->quadelems) );
-         break;
-      }
-
-      case SCIP_EXPR_POLYNOMIAL:
-      {
-         SCIP_EXPRDATA_POLYNOMIAL* sourcedata;
-         SCIP_EXPRDATA_POLYNOMIAL* targetdata;
-
-         sourcedata = (SCIP_EXPRDATA_POLYNOMIAL*)sourceexpr->data.data;
-         assert(sourcedata != NULL);
-
-         SCIP_CALL( polynomialdataCopy(blkmem, &targetdata, sourcedata) );
-
-         (*targetexpr)->data.data = (void*)targetdata;
-
-         break;
-      }
-
-     default: ;
-   }  /*lint !e788*/
+      SCIP_CALL( exprOpTable[sourceexpr->op].copydata(blkmem, sourceexpr->nchildren, sourceexpr->data, &(*targetexpr)->data) );
+   }
 
    return SCIP_OKAY;
 }
@@ -2451,37 +2467,11 @@ void SCIPexprFreeDeep(
    assert(expr   != NULL);
    assert(*expr  != NULL);
    
-   /* free data of more complex operands
-    * @todo move into expression table */
-   switch( (*expr)->op )
+   /* call operands data free callback, if given */
+   if( exprOpTable[(*expr)->op].freedata != NULL )
    {
-      case SCIP_EXPR_LINEAR:
-      {
-         SCIP_Real* freedata;
-
-         freedata = (SCIP_Real*)(*expr)->data.data;
-         assert(freedata != NULL);
-
-         BMSfreeBlockMemoryArray(blkmem, &freedata, (*expr)->nchildren + 1);  /*lint !e866*/
-         break;
-      }
-      
-      case SCIP_EXPR_QUADRATIC:
-      {
-         assert((*expr)->data.data != NULL);
-         quadraticdataFree(blkmem, (SCIP_EXPRDATA_QUADRATIC**)&(*expr)->data.data, (*expr)->nchildren);
-         break;
-      }
-
-      case SCIP_EXPR_POLYNOMIAL:
-      {
-         assert((*expr)->data.data != NULL);
-         polynomialdataFree(blkmem, (SCIP_EXPRDATA_POLYNOMIAL**)&(*expr)->data.data);
-         break;
-      }
-
-      default: ;
-   }  /*lint !e788*/
+      exprOpTable[(*expr)->op].freedata(blkmem, (*expr)->nchildren, (*expr)->data);
+   }
 
    if( (*expr)->nchildren )
    {

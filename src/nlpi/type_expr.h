@@ -147,6 +147,23 @@ typedef struct SCIP_ExprData_Polynomial SCIP_EXPRDATA_POLYNOMIAL; /**< the data 
  */
 #define SCIP_DECL_EXPRCURV(x) SCIP_RETCODE x (SCIP_Real infinity, SCIP_EXPROPDATA opdata, int nargs, SCIP_INTERVAL* argbounds, SCIP_EXPRCURV* argcurv, SCIP_EXPRCURV* result)
 
+/** signature of a expression data copy function
+ *
+ * - blkmem       block memory
+ * - nchildren    number of children in expression
+ * - opdatasource source expression data
+ * - opdatatarget pointer to target expression data
+ */
+#define SCIP_DECL_EXPRCOPYDATA(x) SCIP_RETCODE x (BMS_BLKMEM* blkmem, int nchildren, SCIP_EXPROPDATA opdatasource, SCIP_EXPROPDATA* opdatatarget)
+
+/** signature of a expression data free function
+ *
+ * - blkmem       block memory
+ * - nchildren    number of children in expression
+ * - opdata       expression data to free
+ */
+#define SCIP_DECL_EXPRFREEDATA(x) void x (BMS_BLKMEM* blkmem, int nchildren, SCIP_EXPROPDATA opdata)
+
 #ifdef __cplusplus
 }
 #endif
