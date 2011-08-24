@@ -95,6 +95,15 @@ struct SCIP_ExprData_Monomial
    SCIP_Bool             sorted;             /**< are the factors sorted (by childidx)? */
 };
 
+/* element in table of expression operands */
+struct SCIPexprOpTableElement
+{
+  const char*           name;               /**< name of operand (used for printing) */
+  int                   nargs;              /**< number of arguments (negative if not fixed) */
+  SCIP_DECL_EXPREVAL    ((*eval));          /**< evaluation function */
+  SCIP_DECL_EXPRINTEVAL ((*inteval));       /**< interval evaluation function */
+};
+
 #ifdef __cplusplus
 }
 #endif

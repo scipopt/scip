@@ -98,6 +98,33 @@ typedef struct SCIP_ExprData_Quadratic SCIP_EXPRDATA_QUADRATIC; /**< the data of
 typedef struct SCIP_ExprData_Monomial   SCIP_EXPRDATA_MONOMIAL;   /**< a monomial as part of the data in a polynomial expression */
 typedef struct SCIP_ExprData_Polynomial SCIP_EXPRDATA_POLYNOMIAL; /**< the data of a polynomial expression (SCIP_EXPR_POLYNOMIAL) */
 
+#define SCIP_EXPR_DEGREEINFINITY 65535       /**< value that stands for an infinite degree of an expression (see SCIPexprGetMaxDegree) */
+
+/** signature of an expression (pointwise) evaluation function
+ * The function should return nan, inf, or -inf in result if the function is undefined for the given arguments.
+ *
+ * - opdata    operand data
+ * - nargs     number of arguments
+ * - argvals   values of arguments
+ * - varvals   values for variables
+ * - paramvals values for parameters
+ * - result    buffer where to store result of evaluation
+ */
+#define SCIP_DECL_EXPREVAL(x) SCIP_RETCODE x (SCIP_EXPROPDATA opdata, int nargs, SCIP_Real* argvals, SCIP_Real* varvals, SCIP_Real* paramvals, SCIP_Real* result)
+
+/** signature of an expression (interval) evaluation function
+ * The function should return and empty interval if the function is undefined for the given arguments.
+ *
+ * - infinity  value for infinity
+ * - opdata    operand data
+ * - nargs     number of arguments
+ * - argvals   interval values of arguments
+ * - varvals   interval values for variables
+ * - paramvals values for parameters
+ * - result    buffer where to store result of evaluation
+ */
+#define SCIP_DECL_EXPRINTEVAL(x) SCIP_RETCODE x (SCIP_Real infinity, SCIP_EXPROPDATA opdata, int nargs, SCIP_INTERVAL* argvals, SCIP_INTERVAL* varvals, SCIP_Real* paramvals, SCIP_INTERVAL* result)
+
 #ifdef __cplusplus
 }
 #endif

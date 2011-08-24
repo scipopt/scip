@@ -38,42 +38,6 @@
  */
 #define SIGN(x) ((x) >= 0.0 ? 1.0 : -1.0)
 
-#if 0
-/** signature of an expression (pointwise) evaluation function
- * The function should return nan, inf, or -inf in result if the function is undefined for the given arguments.
- *   
- * - opdata    operand data
- * - nargs     number of arguments
- * - argvals   values of arguments 
- * - varvals   values for variables 
- * - paramvals values for parameters 
- * - result    buffer where to store result of evaluation
- */
-#define SCIP_DECL_EVAL(x) SCIP_RETCODE x (SCIP_EXPROPDATA opdata, int nargs, SCIP_Real* argvals, SCIP_Real* varvals, SCIP_Real* paramvals, SCIP_Real* result)
-
-/** signature of an expression (interval) evaluation function
- * The function should return and empty interval if the function is undefined for the given arguments.
- *
- * - infinity  value for infinity
- * - opdata    operand data
- * - nargs     number of arguments
- * - argvals   interval values of arguments
- * - varvals   interval values for variables
- * - paramvals values for parameters
- * - result    buffer where to store result of evaluation
- */
-#define SCIP_DECL_INTEVAL(x) SCIP_RETCODE x (SCIP_Real infinity, SCIP_EXPROPDATA opdata, int nargs, SCIP_INTERVAL* argvals, SCIP_INTERVAL* varvals, SCIP_Real* paramvals, SCIP_INTERVAL* result)
-
-/* element in table of expression operands */
-struct SCIPexprOpTableElement
-{
-   const char*           name;               /**< name of operand (used for printing) */
-   int                   nargs;              /**< number of arguments (negative if not fixed) */
-   SCIP_DECL_EVAL        ((*eval));          /**< evaluation function */
-   SCIP_DECL_INTEVAL     ((*inteval));       /**< interval evaluation function */
-};
-#endif
-
 /** creates SCIP_EXPRDATA_QUADRATIC data structure from given quadratic elements */
 static
 SCIP_RETCODE quadraticdataCreate(
@@ -169,7 +133,7 @@ void quadraticdataSort(
 }
 
 static
-SCIP_DECL_EVAL( SCIPexprevalPushVar )
+SCIP_DECL_EXPREVAL( SCIPexprevalPushVar )
 {
    assert(result  != NULL);
    assert(varvals != NULL);
@@ -180,7 +144,7 @@ SCIP_DECL_EVAL( SCIPexprevalPushVar )
 } /*lint !e715*/
 
 static
-SCIP_DECL_INTEVAL( SCIPexprevalPushVarInt )
+SCIP_DECL_EXPRINTEVAL( SCIPexprevalPushVarInt )
 {
    assert(result  != NULL);
    assert(varvals != NULL);
@@ -191,7 +155,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalPushVarInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EVAL( SCIPexprevalPushValue )
+SCIP_DECL_EXPREVAL( SCIPexprevalPushValue )
 {
    assert(result != NULL);
 
@@ -201,7 +165,7 @@ SCIP_DECL_EVAL( SCIPexprevalPushValue )
 } /*lint !e715*/
 
 static
-SCIP_DECL_INTEVAL( SCIPexprevalPushValueInt )
+SCIP_DECL_EXPRINTEVAL( SCIPexprevalPushValueInt )
 {
    assert(result != NULL);
 
@@ -211,7 +175,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalPushValueInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EVAL( SCIPexprevalPushParameter )
+SCIP_DECL_EXPREVAL( SCIPexprevalPushParameter )
 {
    assert(result    != NULL);
    assert(paramvals != NULL );
@@ -222,7 +186,7 @@ SCIP_DECL_EVAL( SCIPexprevalPushParameter )
 } /*lint !e715*/
 
 static
-SCIP_DECL_INTEVAL( SCIPexprevalPushParameterInt )
+SCIP_DECL_EXPRINTEVAL( SCIPexprevalPushParameterInt )
 {
    assert(result    != NULL);
    assert(paramvals != NULL );
@@ -233,7 +197,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalPushParameterInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EVAL( SCIPexprevalPlus )
+SCIP_DECL_EXPREVAL( SCIPexprevalPlus )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -244,7 +208,7 @@ SCIP_DECL_EVAL( SCIPexprevalPlus )
 } /*lint !e715*/
 
 static
-SCIP_DECL_INTEVAL( SCIPexprevalPlusInt )
+SCIP_DECL_EXPRINTEVAL( SCIPexprevalPlusInt )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -255,7 +219,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalPlusInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EVAL( SCIPexprevalMinus )
+SCIP_DECL_EXPREVAL( SCIPexprevalMinus )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -266,7 +230,7 @@ SCIP_DECL_EVAL( SCIPexprevalMinus )
 } /*lint !e715*/
 
 static
-SCIP_DECL_INTEVAL( SCIPexprevalMinusInt )
+SCIP_DECL_EXPRINTEVAL( SCIPexprevalMinusInt )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -277,7 +241,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalMinusInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EVAL( SCIPexprevalMult )
+SCIP_DECL_EXPREVAL( SCIPexprevalMult )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -288,7 +252,7 @@ SCIP_DECL_EVAL( SCIPexprevalMult )
 } /*lint !e715*/
 
 static
-SCIP_DECL_INTEVAL( SCIPexprevalMultInt )
+SCIP_DECL_EXPRINTEVAL( SCIPexprevalMultInt )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -299,7 +263,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalMultInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EVAL( SCIPexprevalDiv )
+SCIP_DECL_EXPREVAL( SCIPexprevalDiv )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -310,7 +274,7 @@ SCIP_DECL_EVAL( SCIPexprevalDiv )
 } /*lint !e715*/
 
 static
-SCIP_DECL_INTEVAL( SCIPexprevalDivInt )
+SCIP_DECL_EXPRINTEVAL( SCIPexprevalDivInt )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -321,7 +285,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalDivInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EVAL( SCIPexprevalSqr )
+SCIP_DECL_EXPREVAL( SCIPexprevalSqr )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -332,7 +296,7 @@ SCIP_DECL_EVAL( SCIPexprevalSqr )
 } /*lint !e715*/
 
 static
-SCIP_DECL_INTEVAL( SCIPexprevalSqrInt )
+SCIP_DECL_EXPRINTEVAL( SCIPexprevalSqrInt )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -343,7 +307,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalSqrInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EVAL( SCIPexprevalSqrt )
+SCIP_DECL_EXPREVAL( SCIPexprevalSqrt )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -354,7 +318,7 @@ SCIP_DECL_EVAL( SCIPexprevalSqrt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_INTEVAL( SCIPexprevalSqrtInt )
+SCIP_DECL_EXPRINTEVAL( SCIPexprevalSqrtInt )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -365,7 +329,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalSqrtInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EVAL( SCIPexprevalRealPower )
+SCIP_DECL_EXPREVAL( SCIPexprevalRealPower )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -376,7 +340,7 @@ SCIP_DECL_EVAL( SCIPexprevalRealPower )
 } /*lint !e715*/
 
 static
-SCIP_DECL_INTEVAL( SCIPexprevalRealPowerInt )
+SCIP_DECL_EXPRINTEVAL( SCIPexprevalRealPowerInt )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -387,7 +351,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalRealPowerInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EVAL( SCIPexprevalIntPower )
+SCIP_DECL_EXPREVAL( SCIPexprevalIntPower )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -418,7 +382,7 @@ SCIP_DECL_EVAL( SCIPexprevalIntPower )
 } /*lint !e715*/
 
 static
-SCIP_DECL_INTEVAL( SCIPexprevalIntPowerInt )
+SCIP_DECL_EXPRINTEVAL( SCIPexprevalIntPowerInt )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -429,7 +393,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalIntPowerInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EVAL( SCIPexprevalSignPower )
+SCIP_DECL_EXPREVAL( SCIPexprevalSignPower )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -443,7 +407,7 @@ SCIP_DECL_EVAL( SCIPexprevalSignPower )
 } /*lint !e715*/
 
 static
-SCIP_DECL_INTEVAL( SCIPexprevalSignPowerInt )
+SCIP_DECL_EXPRINTEVAL( SCIPexprevalSignPowerInt )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -454,7 +418,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalSignPowerInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EVAL( SCIPexprevalExp )
+SCIP_DECL_EXPREVAL( SCIPexprevalExp )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -465,7 +429,7 @@ SCIP_DECL_EVAL( SCIPexprevalExp )
 } /*lint !e715*/
 
 static
-SCIP_DECL_INTEVAL( SCIPexprevalExpInt )
+SCIP_DECL_EXPRINTEVAL( SCIPexprevalExpInt )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -476,7 +440,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalExpInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EVAL( SCIPexprevalLog )
+SCIP_DECL_EXPREVAL( SCIPexprevalLog )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -487,7 +451,7 @@ SCIP_DECL_EVAL( SCIPexprevalLog )
 } /*lint !e715*/
 
 static
-SCIP_DECL_INTEVAL( SCIPexprevalLogInt )
+SCIP_DECL_EXPRINTEVAL( SCIPexprevalLogInt )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -498,7 +462,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalLogInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EVAL( SCIPexprevalSin )
+SCIP_DECL_EXPREVAL( SCIPexprevalSin )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -509,7 +473,7 @@ SCIP_DECL_EVAL( SCIPexprevalSin )
 } /*lint !e715*/
 
 static
-SCIP_DECL_INTEVAL( SCIPexprevalSinInt )
+SCIP_DECL_EXPRINTEVAL( SCIPexprevalSinInt )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -522,7 +486,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalSinInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EVAL( SCIPexprevalCos )
+SCIP_DECL_EXPREVAL( SCIPexprevalCos )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -533,7 +497,7 @@ SCIP_DECL_EVAL( SCIPexprevalCos )
 } /*lint !e715*/
 
 static
-SCIP_DECL_INTEVAL( SCIPexprevalCosInt )
+SCIP_DECL_EXPRINTEVAL( SCIPexprevalCosInt )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -546,7 +510,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalCosInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EVAL( SCIPexprevalTan )
+SCIP_DECL_EXPREVAL( SCIPexprevalTan )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -561,7 +525,7 @@ SCIP_DECL_EVAL( SCIPexprevalTan )
 
 #if 0
 static
-SCIP_DECL_EVAL( SCIPexprevalErf )
+SCIP_DECL_EXPREVAL( SCIPexprevalErf )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -575,7 +539,7 @@ SCIP_DECL_EVAL( SCIPexprevalErf )
 #define SCIPexprevalErfInt NULL
 
 static
-SCIP_DECL_EVAL( SCIPexprevalErfi )
+SCIP_DECL_EXPREVAL( SCIPexprevalErfi )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -591,7 +555,7 @@ SCIP_DECL_EVAL( SCIPexprevalErfi )
 #endif
 
 static
-SCIP_DECL_EVAL( SCIPexprevalMin )
+SCIP_DECL_EXPREVAL( SCIPexprevalMin )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -602,7 +566,7 @@ SCIP_DECL_EVAL( SCIPexprevalMin )
 } /*lint !e715*/
 
 static
-SCIP_DECL_INTEVAL( SCIPexprevalMinInt )
+SCIP_DECL_EXPRINTEVAL( SCIPexprevalMinInt )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -613,7 +577,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalMinInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EVAL( SCIPexprevalMax )
+SCIP_DECL_EXPREVAL( SCIPexprevalMax )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -624,7 +588,7 @@ SCIP_DECL_EVAL( SCIPexprevalMax )
 } /*lint !e715*/
 
 static
-SCIP_DECL_INTEVAL( SCIPexprevalMaxInt )
+SCIP_DECL_EXPRINTEVAL( SCIPexprevalMaxInt )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -635,7 +599,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalMaxInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EVAL( SCIPexprevalAbs )
+SCIP_DECL_EXPREVAL( SCIPexprevalAbs )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -646,7 +610,7 @@ SCIP_DECL_EVAL( SCIPexprevalAbs )
 } /*lint !e715*/
 
 static
-SCIP_DECL_INTEVAL( SCIPexprevalAbsInt )
+SCIP_DECL_EXPRINTEVAL( SCIPexprevalAbsInt )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -657,7 +621,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalAbsInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EVAL( SCIPexprevalSign )
+SCIP_DECL_EXPREVAL( SCIPexprevalSign )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -668,7 +632,7 @@ SCIP_DECL_EVAL( SCIPexprevalSign )
 } /*lint !e715*/
 
 static
-SCIP_DECL_INTEVAL( SCIPexprevalSignInt )
+SCIP_DECL_EXPRINTEVAL( SCIPexprevalSignInt )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -679,7 +643,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalSignInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EVAL( SCIPexprevalSum )
+SCIP_DECL_EXPREVAL( SCIPexprevalSum )
 {
    int i;
    
@@ -694,7 +658,7 @@ SCIP_DECL_EVAL( SCIPexprevalSum )
 } /*lint !e715*/
 
 static
-SCIP_DECL_INTEVAL( SCIPexprevalSumInt )
+SCIP_DECL_EXPRINTEVAL( SCIPexprevalSumInt )
 {
    int i;
 
@@ -710,7 +674,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalSumInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EVAL( SCIPexprevalProduct )
+SCIP_DECL_EXPREVAL( SCIPexprevalProduct )
 {
    int i;
    
@@ -725,7 +689,7 @@ SCIP_DECL_EVAL( SCIPexprevalProduct )
 } /*lint !e715*/
 
 static
-SCIP_DECL_INTEVAL( SCIPexprevalProductInt )
+SCIP_DECL_EXPRINTEVAL( SCIPexprevalProductInt )
 {
    int i;
 
@@ -741,7 +705,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalProductInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EVAL( SCIPexprevalLinear )
+SCIP_DECL_EXPREVAL( SCIPexprevalLinear )
 {
    SCIP_Real* coef;
    int i;
@@ -762,7 +726,7 @@ SCIP_DECL_EVAL( SCIPexprevalLinear )
 } /*lint !e715*/
 
 static
-SCIP_DECL_INTEVAL( SCIPexprevalLinearInt )
+SCIP_DECL_EXPRINTEVAL( SCIPexprevalLinearInt )
 {
    assert(result  != NULL);
    assert(argvals != NULL || nargs == 0);
@@ -775,7 +739,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalLinearInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EVAL( SCIPexprevalQuadratic )
+SCIP_DECL_EXPREVAL( SCIPexprevalQuadratic )
 {
    SCIP_EXPRDATA_QUADRATIC* quaddata;
    SCIP_Real* lincoefs;
@@ -809,7 +773,7 @@ SCIP_DECL_EVAL( SCIPexprevalQuadratic )
 } /*lint !e715*/
 
 static
-SCIP_DECL_INTEVAL( SCIPexprevalQuadraticInt )
+SCIP_DECL_EXPRINTEVAL( SCIPexprevalQuadraticInt )
 {
    SCIP_EXPRDATA_QUADRATIC* quaddata;
    SCIP_Real* lincoefs;
@@ -883,7 +847,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalQuadraticInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EVAL( SCIPexprevalPolynomial )
+SCIP_DECL_EXPREVAL( SCIPexprevalPolynomial )
 {
    SCIP_EXPRDATA_POLYNOMIAL* polynomialdata;
    SCIP_EXPRDATA_MONOMIAL*   monomialdata;
@@ -975,7 +939,7 @@ SCIP_DECL_EVAL( SCIPexprevalPolynomial )
 } /*lint !e715*/
 
 static
-SCIP_DECL_INTEVAL( SCIPexprevalPolynomialInt )
+SCIP_DECL_EXPRINTEVAL( SCIPexprevalPolynomialInt )
 {
    SCIP_EXPRDATA_POLYNOMIAL* polynomialdata;
    SCIP_EXPRDATA_MONOMIAL*   monomialdata;
