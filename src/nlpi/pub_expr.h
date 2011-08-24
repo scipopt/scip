@@ -34,6 +34,54 @@
 extern "C" {
 #endif
 
+/**@name Expression curvature methods */
+/**@{ */
+
+/* gives curvature for a sum of two functions with given curvature */
+extern
+SCIP_EXPRCURV SCIPexprcurvAdd(
+   SCIP_EXPRCURV         curv1,              /**< curvature of first summand */
+   SCIP_EXPRCURV         curv2               /**< curvature of second summand */
+   );
+
+/** gives the curvature for the negation of a function with given curvature */
+extern
+SCIP_EXPRCURV SCIPexprcurvNegate(
+   SCIP_EXPRCURV         curvature           /**< curvature of function */
+   );
+
+/* gives curvature for a functions with given curvature multiplied by a constant factor */
+extern
+SCIP_EXPRCURV SCIPexprcurvMultiply(
+   SCIP_Real             factor,             /**< constant factor */
+   SCIP_EXPRCURV         curvature           /**< curvature of other factor */
+   );
+
+/* gives curvature for base^exponent for given bounds and curvature of base-function and constant exponent */
+extern
+SCIP_EXPRCURV SCIPexprcurvPower(
+   SCIP_INTERVAL         basebounds,         /**< bounds on base function */
+   SCIP_EXPRCURV         basecurv,           /**< curvature of base function */
+   SCIP_Real             exponent            /**< exponent */
+   );
+
+/* gives curvature for a monomial with given curvatures and bounds for each factor */
+extern
+SCIP_EXPRCURV SCIPexprcurvMonomial(
+   int                   nfactors,           /**< number of factors in monomial */
+   SCIP_Real*            exponents,          /**< exponents in monomial, or NULL if all 1.0 */
+   int*                  factoridxs,         /**< indices of factors, or NULL if identity mapping */
+   SCIP_EXPRCURV*        factorcurv,         /**< curvature of each factor */
+   SCIP_INTERVAL*        factorbounds        /**< bounds of each factor */
+   );
+
+/** gives name as string for a curvature */
+extern
+const char* SCIPexprcurvGetName(
+   SCIP_EXPRCURV         curv                /**< curvature */
+   );
+
+/**@} */
 
 /**@name Expression operand methods */
 /**@{ */
@@ -346,6 +394,17 @@ SCIP_RETCODE SCIPexprEvalInt(
    SCIP_INTERVAL*        val                 /**< buffer to store value */
 );
 
+/** tries to determine the curvature type of an expression w.r.t. given variable domains */
+extern
+SCIP_RETCODE SCIPexprCheckCurvature(
+   SCIP_EXPR*            expr,               /**< expression to check */
+   SCIP_Real             infinity,           /**< value to use for infinity */
+   SCIP_INTERVAL*        varbounds,          /**< domains of variables */
+   SCIP_Real*            param,              /**< values for parameters, can be NULL if the expression is not parameterized */
+   SCIP_EXPRCURV*        curv,               /**< buffer to store curvature of expression */
+   SCIP_INTERVAL*        bounds              /**< buffer to store bounds on expression */
+);
+
 /** substitutes variables (SCIP_EXPR_VARIDX) by expressions
  * Note than only the children of the given expr are checked!
  * A variable with index i is replaced by a copy of substexprs[i], if that latter is not NULL
@@ -372,6 +431,7 @@ void SCIPexprPrint(
    const char**          varnames,           /**< names of variables, or NULL for default names */
    const char**          paramnames          /**< names of parameters, or NULL for default names */
 );
+
 
 /**@} */
 
@@ -497,6 +557,16 @@ SCIP_RETCODE SCIPexprtreeEvalInt(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        varvals,            /**< intervals for variables */
    SCIP_INTERVAL*        val                 /**< buffer to store expression tree value */
+);
+
+/** tries to determine the curvature type of an expression tree w.r.t. given variable domains */
+extern
+SCIP_RETCODE SCIPexprtreeCheckCurvature(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        varbounds,          /**< domains of variables */
+   SCIP_EXPRCURV*        curv,               /**< buffer to store curvature of expression */
+   SCIP_INTERVAL*        bounds              /**< buffer to store bounds on expression, or NULL if not needed */
 );
 
 /** substitutes variables (SCIP_EXPR_VARIDX) in an expression tree by expressions

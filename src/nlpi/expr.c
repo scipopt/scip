@@ -38,6 +38,277 @@
  */
 #define SIGN(x) ((x) >= 0.0 ? 1.0 : -1.0)
 
+
+/** curvature names as strings */
+static
+const char* curvnames[4] =
+{
+   "unknown",
+   "convex",
+   "concave",
+   "linear"
+};
+
+/* gives curvature for a sum of two functions with given curvature */
+SCIP_EXPRCURV SCIPexprcurvAdd(
+   SCIP_EXPRCURV         curv1,              /**< curvature of first summand */
+   SCIP_EXPRCURV         curv2               /**< curvature of second summand */
+   )
+{
+   return curv1 & curv2;
+}
+
+/** gives the curvature for the negation of a function with given curvature */
+SCIP_EXPRCURV SCIPexprcurvNegate(
+   SCIP_EXPRCURV         curvature           /**< curvature of function */
+   )
+{
+   return ((curvature & SCIP_EXPRCURV_CONVEX)  ? SCIP_EXPRCURV_CONCAVE : SCIP_EXPRCURV_UNKNOWN) |
+          ((curvature & SCIP_EXPRCURV_CONCAVE) ? SCIP_EXPRCURV_CONVEX  : SCIP_EXPRCURV_UNKNOWN);
+}
+
+/* gives curvature for a functions with given curvature multiplied by a constant factor */
+SCIP_EXPRCURV SCIPexprcurvMultiply(
+   SCIP_Real             factor,             /**< constant factor */
+   SCIP_EXPRCURV         curvature           /**< curvature of other factor */
+   )
+{
+   if( factor == 0.0 )
+      return SCIP_EXPRCURV_LINEAR;
+   if( factor > 0.0 )
+      return curvature;
+   return SCIPexprcurvNegate(curvature);
+}
+
+/* gives curvature for base^exponent for given bounds and curvature of base-function and constant exponent */
+SCIP_EXPRCURV SCIPexprcurvPower(
+   SCIP_INTERVAL         basebounds,         /**< bounds on base function */
+   SCIP_EXPRCURV         basecurv,           /**< curvature of base function */
+   SCIP_Real             exponent            /**< exponent */
+   )
+{
+   SCIP_Bool expisint;
+
+   assert(basebounds.inf <= basebounds.sup);
+
+   if( exponent == 0.0 )
+      return SCIP_EXPRCURV_LINEAR;
+
+   if( exponent == 1.0 )
+      return basecurv;
+
+   expisint = EPSISINT(exponent, 0.0);
+
+   /* if exponent is fractional, then power is not defined for a negative base
+    * thus, consider only positive part of basebounds
+    */
+   if( !expisint && basebounds.inf < 0.0 )
+   {
+      basebounds.inf = 0.0;
+      if( basebounds.sup < 0.0 )
+         return SCIP_EXPRCURV_LINEAR;
+   }
+
+   /* if basebounds contains 0.0, consider negative and positive interval separately, if possible */
+   if( basebounds.inf < 0.0 && basebounds.sup > 0.0 )
+   {
+      SCIP_INTERVAL leftbounds;
+      SCIP_INTERVAL rightbounds;
+
+      /* something like x^(-2) may look convex on each side of zero, but is not convex on the whole interval due to the singularity at 0.0 */
+      if( exponent < 0.0 )
+         return SCIP_EXPRCURV_UNKNOWN;
+
+      SCIPintervalSetBounds(&leftbounds,  basebounds.inf, 0.0);
+      SCIPintervalSetBounds(&rightbounds, 0.0, basebounds.sup);
+
+      return SCIPexprcurvPower(leftbounds,  basecurv, exponent) & SCIPexprcurvPower(rightbounds, basecurv, exponent);
+   }
+   assert(basebounds.inf >= 0.0 || basebounds.sup <= 0.0);
+
+   /* (base^exponent)'' = exponent * ( (exponent-1) base^(exponent-2) (base')^2 + base^(exponent-1) base'' )
+    *
+    * if base'' is positive, i.e., base is convex, then
+    * - for base > 0.0 and exponent > 1.0, the second deriv. is positive -> convex
+    * - for base < 0.0 and exponent > 1.0, we can't say (first and second summand opposite signs)
+    * - for base > 0.0 and 0.0 < exponent < 1.0, we can't say (first sommand negative, second summand positive)
+    * - for base > 0.0 and exponent < 0.0, we can't say (first and second summand opposite signs)
+    * - for base < 0.0 and exponent < 0.0 and even, the second deriv. is positive -> convex
+    * - for base < 0.0 and exponent < 0.0 and odd, the second deriv. is negative -> concave
+    *
+    * if base'' is negative, i.e., base is concave, then
+    * - for base > 0.0 and exponent > 1.0, we can't say (first summand positive, second summand negative)
+    * - for base < 0.0 and exponent > 1.0 and even, the second deriv. is positive -> convex
+    * - for base < 0.0 and exponent > 1.0 and odd, the second deriv. is negative -> concave
+    * - for base > 0.0 and 0.0 < exponent < 1.0, the second deriv. is negative -> concave
+    * - for base > 0.0 and exponent < 0.0, the second deriv. is positive -> convex
+    * - for base < 0.0 and exponent < 0.0, we can't say (first and second summand opposite signs)
+    *
+    * if base'' is zero, i.e., base is linear, then
+    *   (base^exponent)'' = exponent * (exponent-1) base^(exponent-2) (base')^2
+    * - just multiply signs
+    */
+
+   if( basecurv == SCIP_EXPRCURV_LINEAR )
+   {
+      SCIP_Real sign;
+
+      /* base^(exponent-2) is negative, if base < 0.0 and exponent is odd */
+      sign = exponent * (exponent - 1.0);
+      assert(basebounds.inf >= 0.0 || expisint);
+      if( basebounds.inf < 0.0 && ((int)exponent)%2 == 1 )
+         sign *= -1.0;
+      assert(sign != 0.0);
+
+      return sign > 0.0 ? SCIP_EXPRCURV_CONVEX : SCIP_EXPRCURV_CONCAVE;
+   }
+
+   if( basecurv == SCIP_EXPRCURV_CONVEX )
+   {
+      if( basebounds.sup <= 0.0 && exponent < 0.0 && expisint )
+         return ((int)exponent)%2 == 0 ? SCIP_EXPRCURV_CONVEX : SCIP_EXPRCURV_CONCAVE;
+      if( basebounds.inf >= 0.0 && exponent > 1.0 )
+         return SCIP_EXPRCURV_CONVEX ;
+      return SCIP_EXPRCURV_UNKNOWN;
+   }
+
+   if( basecurv == SCIP_EXPRCURV_CONCAVE )
+   {
+      if( basebounds.sup <= 0.0 && exponent > 1.0 && expisint )
+         return ((int)exponent)%2 == 0 ? SCIP_EXPRCURV_CONVEX : SCIP_EXPRCURV_CONCAVE;
+      if( basebounds.inf >= 0.0 && exponent < 1.0 )
+         return exponent < 0.0 ? SCIP_EXPRCURV_CONVEX : SCIP_EXPRCURV_CONCAVE;
+      return SCIP_EXPRCURV_UNKNOWN;
+   }
+
+   return SCIP_EXPRCURV_UNKNOWN;
+}
+
+/* gives curvature for a monomial with given curvatures and bounds for each factor
+ * see Maranas and Floudas, Finding All Solutions of Nonlinearly Constrained Systems of Equations, JOGO 7, 1995
+ * for the categorization in the case that all factors are linear */
+SCIP_EXPRCURV SCIPexprcurvMonomial(
+   int                   nfactors,           /**< number of factors in monomial */
+   SCIP_Real*            exponents,          /**< exponents in monomial, or NULL if all 1.0 */
+   int*                  factoridxs,         /**< indices of factors (but not exponents), or NULL if identity mapping */
+   SCIP_EXPRCURV*        factorcurv,         /**< curvature of each factor */
+   SCIP_INTERVAL*        factorbounds        /**< bounds of each factor */
+   )
+{
+   SCIP_Real mult;
+   SCIP_Real e;
+   SCIP_EXPRCURV curv;
+   SCIP_EXPRCURV fcurv;
+   int nnegative;
+   int npositive;
+   SCIP_Real sum;
+   SCIP_Bool expcurvpos;
+   SCIP_Bool expcurvneg;
+   int j;
+   int f;
+
+   assert(nfactors >= 0);
+   assert(factorcurv   != NULL || nfactors == 0);
+   assert(factorbounds != NULL || nfactors == 0);
+
+   if( nfactors == 0 )
+      return SCIP_EXPRCURV_LINEAR;
+
+   if( nfactors == 1 )
+   {
+      f = factoridxs != NULL ? factoridxs[0] : 0;
+      e = exponents != NULL ? exponents[0] : 1.0;
+      /* SCIPdebugMessage("monomial [%g,%g]^%g is %s\n",
+         factorbounds[f].inf, factorbounds[f].sup, e,
+         SCIPexprcurvGetName(SCIPexprcurvPower(factorbounds[f], factorcurv[f], e))); */
+      return SCIPexprcurvPower(factorbounds[f], factorcurv[f], e);
+   }
+
+   mult = 1.0;
+
+   nnegative = 0; /* number of negative exponents */
+   npositive = 0; /* number of positive exponents */
+   sum = 0.0;     /* sum of exponents */
+   expcurvpos = TRUE; /* whether exp_j * f_j''(x) >= 0 for all factors (assuming f_j >= 0) */
+   expcurvneg = TRUE; /* whether exp_j * f_j''(x) <= 0 for all factors (assuming f_j >= 0) */
+
+   for( j = 0; j < nfactors; ++j )
+   {
+      f = factoridxs != NULL ? factoridxs[j] : j;
+      if( factorcurv[f] == SCIP_EXPRCURV_UNKNOWN )
+         return SCIP_EXPRCURV_UNKNOWN;
+      if( factorbounds[f].inf < 0.0 && factorbounds[f].sup > 0.0 )
+         return SCIP_EXPRCURV_UNKNOWN;
+
+      e = exponents != NULL ? exponents[j] : 1.0;
+      if( e < 0.0 )
+         ++nnegative;
+      else
+         ++npositive;
+      sum += e;
+
+      if( factorbounds[f].inf < 0.0 )
+      {
+         /* if argument is negative, then exponent should be integer */
+         assert(EPSISINT(e, 0.0));
+
+         /* flip j'th argument: (f_j)^(exp_j) = (-1)^(exp_j) (-f_j)^(exp_j) */
+
+         /* -f_j has negated curvature of f_j */
+         fcurv = SCIPexprcurvNegate(factorcurv[f]);
+
+         /* negate monomial, if exponent is odd, i.e., (-1)^(exp_j) = -1 */
+         if( (int)e % 2 != 0 )
+            mult *= -1.0;
+      }
+      else
+      {
+         fcurv = factorcurv[f];
+      }
+
+      /* check if exp_j * fcurv is convex (>= 0) and/or concave */
+      fcurv = SCIPexprcurvMultiply(exponents[f], fcurv);
+      if( !(fcurv & SCIP_EXPRCURV_CONVEX) )
+         expcurvpos = FALSE;
+      if( !(fcurv & SCIP_EXPRCURV_CONCAVE) )
+         expcurvneg = FALSE;
+   }
+
+   /* if all factors are linear, then a product f_j^exp_j with f_j >= 0 is convex if
+    * - all exponents are negative, or
+    * - all except one exponent j* are negative and exp_j* >= 1 - sum_{j!=j*}exp_j, but the latter is equivalent to sum_j exp_j >= 1
+    * further, the product is concave if
+    * - all exponents are positive and the sum of exponents is <= 1.0
+    *
+    * if factors are nonlinear, then we require additionally, that for convexity
+    * - each factor is convex if exp_j >= 0, or concave if exp_j <= 0, i.e., exp_j*f_j'' >= 0
+    * and for concavity, we require that
+    * - all factors are concave, i.e., exp_j*f_j'' <= 0
+    */
+
+   if( nnegative == nfactors && expcurvpos )
+      curv = SCIP_EXPRCURV_CONVEX;
+   else if( nnegative == nfactors-1 && EPSGE(sum, 1.0, 1e-9) && expcurvpos )
+      curv = SCIP_EXPRCURV_CONVEX;
+   else if( npositive == nfactors && EPSLE(sum, 1.0, 1e-9) && expcurvneg )
+      curv = SCIP_EXPRCURV_CONCAVE;
+   else
+      curv = SCIP_EXPRCURV_UNKNOWN;
+   curv = SCIPexprcurvMultiply(mult, curv);
+
+   return curv;
+}
+
+/** gives name as string for a curvature */
+const char* SCIPexprcurvGetName(
+   SCIP_EXPRCURV         curv                /**< curvature */
+   )
+{
+   assert(curv <= SCIP_EXPRCURV_LINEAR);
+
+   return curvnames[curv];
+}
+
 /** creates SCIP_EXPRDATA_QUADRATIC data structure from given quadratic elements */
 static
 SCIP_RETCODE quadraticdataCreate(
@@ -155,6 +426,16 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalPushVarInt )
 } /*lint !e715*/
 
 static
+SCIP_DECL_EXPRCURV( SCIPexprcurvPushVar )
+{
+   assert(result  != NULL);
+
+   *result = SCIP_EXPRCURV_LINEAR;
+
+   return SCIP_OKAY;
+} /*lint !e715*/
+
+static
 SCIP_DECL_EXPREVAL( SCIPexprevalPushValue )
 {
    assert(result != NULL);
@@ -175,13 +456,23 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalPushValueInt )
 } /*lint !e715*/
 
 static
+SCIP_DECL_EXPRCURV( SCIPexprcurvPushValue )
+{
+   assert(result  != NULL);
+
+   *result = SCIP_EXPRCURV_LINEAR;
+
+   return SCIP_OKAY;
+} /*lint !e715*/
+
+static
 SCIP_DECL_EXPREVAL( SCIPexprevalPushParameter )
 {
    assert(result    != NULL);
    assert(paramvals != NULL );
-   
+
    *result = paramvals[opdata.intval];
-   
+
    return SCIP_OKAY;
 } /*lint !e715*/
 
@@ -197,13 +488,23 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalPushParameterInt )
 } /*lint !e715*/
 
 static
+SCIP_DECL_EXPRCURV( SCIPexprcurvPushParameter )
+{
+   assert(result  != NULL);
+
+   *result = SCIP_EXPRCURV_LINEAR;
+
+   return SCIP_OKAY;
+} /*lint !e715*/
+
+static
 SCIP_DECL_EXPREVAL( SCIPexprevalPlus )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
 
    *result = argvals[0] + argvals[1];
-   
+
    return SCIP_OKAY;
 } /*lint !e715*/
 
@@ -219,13 +520,24 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalPlusInt )
 } /*lint !e715*/
 
 static
+SCIP_DECL_EXPRCURV( SCIPexprcurvPlus )
+{
+   assert(result  != NULL);
+   assert(argcurv != NULL);
+
+   *result = SCIPexprcurvAdd(argcurv[0], argcurv[1]);
+
+   return SCIP_OKAY;
+} /*lint !e715*/
+
+static
 SCIP_DECL_EXPREVAL( SCIPexprevalMinus )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
 
    *result = argvals[0] - argvals[1];
-   
+
    return SCIP_OKAY;
 } /*lint !e715*/
 
@@ -236,6 +548,17 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalMinusInt )
    assert(argvals != NULL);
 
    SCIPintervalSub(infinity, result, argvals[0], argvals[1]);
+
+   return SCIP_OKAY;
+} /*lint !e715*/
+
+static
+SCIP_DECL_EXPRCURV( SCIPexprcurvMinus )
+{
+   assert(result  != NULL);
+   assert(argcurv != NULL);
+
+   *result = SCIPexprcurvAdd(argcurv[0], SCIPexprcurvNegate(argcurv[1]));
 
    return SCIP_OKAY;
 } /*lint !e715*/
@@ -263,13 +586,43 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalMultInt )
 } /*lint !e715*/
 
 static
+SCIP_DECL_EXPRCURV( SCIPexprcurvMult )
+{
+   assert(result    != NULL);
+   assert(argcurv   != NULL);
+   assert(argbounds != NULL);
+
+   /* if one factor is constant, then product is
+    * - linear, if constant is 0.0
+    * - same curvature as other factor, if constant is positive
+    * - negated curvature of other factor, if constant is negative
+    *
+    * if both factors are not constant, then product may not be convex nor concave
+    */
+   if( argbounds[1].inf == argbounds[1].sup )
+   {
+      *result = SCIPexprcurvMultiply(argbounds[1].inf, argcurv[0]);
+   }
+   else if( argbounds[0].inf == argbounds[0].sup )
+   {
+      *result = SCIPexprcurvMultiply(argbounds[0].inf, argcurv[1]);
+   }
+   else
+   {
+      *result = SCIP_EXPRCURV_UNKNOWN;
+   }
+
+   return SCIP_OKAY;
+} /*lint !e715*/
+
+static
 SCIP_DECL_EXPREVAL( SCIPexprevalDiv )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
 
    *result = argvals[0] / argvals[1];
-   
+
    return SCIP_OKAY;
 } /*lint !e715*/
 
@@ -280,6 +633,55 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalDivInt )
    assert(argvals != NULL);
 
    SCIPintervalDiv(infinity, result, argvals[0], argvals[1]);
+
+   return SCIP_OKAY;
+} /*lint !e715*/
+
+static
+SCIP_DECL_EXPRCURV( SCIPexprcurvDiv )
+{
+   assert(result    != NULL);
+   assert(argcurv   != NULL);
+   assert(argbounds != NULL);
+
+   /* if denominator is constant, then quotient has curvature sign(denominator) * curv(nominator)
+    *
+    * if nominator is a constant, then quotient is
+    * - sign(nominator) * convex, if denominator is concave and positive
+    * - sign(nominator) * concave, if denominator is convex and negative
+    *
+    * if denominator is positive but convex, then we don't know, e.g.,
+    *   - 1/x^2 is convex for x>=0
+    *   - 1/(1+(x-1)^2) is neither convex nor concave for x >= 0
+    *
+    * if both nominator and denominator are not constant, then quotient may not be convex nor concave
+    */
+   if( argbounds[1].inf == argbounds[1].sup )
+   {
+      /* denominator is constant */
+      *result = SCIPexprcurvMultiply(argbounds[1].inf, argcurv[0]);
+   }
+   else if( argbounds[0].inf == argbounds[0].sup )
+   {
+      /* nominator is constant */
+      if( argbounds[1].inf >= 0.0 && (argcurv[1] & SCIP_EXPRCURV_CONCAVE) )
+      {
+         *result = SCIPexprcurvMultiply(argbounds[0].inf, SCIP_EXPRCURV_CONVEX);
+      }
+      else if( argbounds[1].sup <= 0.0 && (argcurv[1] & SCIP_EXPRCURV_CONVEX) )
+      {
+         *result = SCIPexprcurvMultiply(argbounds[0].inf, SCIP_EXPRCURV_CONCAVE);
+      }
+      else
+      {
+         *result = SCIP_EXPRCURV_UNKNOWN;
+      }
+   }
+   else
+   {
+      /* denominator and nominator not constant */
+      *result = SCIP_EXPRCURV_UNKNOWN;
+   }
 
    return SCIP_OKAY;
 } /*lint !e715*/
@@ -307,6 +709,18 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalSqrInt )
 } /*lint !e715*/
 
 static
+SCIP_DECL_EXPRCURV( SCIPexprcurvSqr )
+{
+   assert(result    != NULL);
+   assert(argcurv   != NULL);
+   assert(argbounds != NULL);
+
+   *result = SCIPexprcurvPower(argbounds[0], argcurv[0], 2.0);
+
+   return SCIP_OKAY;
+} /*lint !e715*/
+
+static
 SCIP_DECL_EXPREVAL( SCIPexprevalSqrt )
 {
    assert(result  != NULL);
@@ -329,6 +743,24 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalSqrtInt )
 } /*lint !e715*/
 
 static
+SCIP_DECL_EXPRCURV( SCIPexprcurvSqrt )
+{
+   assert(result    != NULL);
+   assert(argcurv   != NULL);
+
+   /* square-root is concave, if child is concave
+    * otherwise, we don't know
+    */
+
+   if( argcurv[0] & SCIP_EXPRCURV_CONCAVE )
+      *result = SCIP_EXPRCURV_CONCAVE;
+   else
+      *result = SCIP_EXPRCURV_UNKNOWN;
+
+   return SCIP_OKAY;
+} /*lint !e715*/
+
+static
 SCIP_DECL_EXPREVAL( SCIPexprevalRealPower )
 {
    assert(result  != NULL);
@@ -346,6 +778,18 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalRealPowerInt )
    assert(argvals != NULL);
 
    SCIPintervalPowerScalar(infinity, result, argvals[0], opdata.dbl);
+
+   return SCIP_OKAY;
+} /*lint !e715*/
+
+static
+SCIP_DECL_EXPRCURV( SCIPexprcurvRealPower )
+{
+   assert(result    != NULL);
+   assert(argcurv   != NULL);
+   assert(argbounds != NULL);
+
+   *result = SCIPexprcurvPower(argbounds[0], argcurv[0], opdata.dbl);
 
    return SCIP_OKAY;
 } /*lint !e715*/
@@ -393,6 +837,18 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalIntPowerInt )
 } /*lint !e715*/
 
 static
+SCIP_DECL_EXPRCURV( SCIPexprcurvIntPower )
+{
+   assert(result    != NULL);
+   assert(argcurv   != NULL);
+   assert(argbounds != NULL);
+
+   *result = SCIPexprcurvPower(argbounds[0], argcurv[0], opdata.intval);
+
+   return SCIP_OKAY;
+} /*lint !e715*/
+
+static
 SCIP_DECL_EXPREVAL( SCIPexprevalSignPower )
 {
    assert(result  != NULL);
@@ -413,6 +869,48 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalSignPowerInt )
    assert(argvals != NULL);
 
    SCIPintervalSignPowerScalar(infinity, result, argvals[0], opdata.dbl);
+
+   return SCIP_OKAY;
+} /*lint !e715*/
+
+static
+SCIP_DECL_EXPRCURV( SCIPexprcurvSignPower )
+{
+   SCIP_INTERVAL tmp;
+   SCIP_EXPRCURV left;
+   SCIP_EXPRCURV right;
+
+   assert(result    != NULL);
+   assert(argcurv   != NULL);
+   assert(argbounds != NULL);
+
+   /* for x <= 0, signpower(x,c) = -(-x)^c
+    * for x >= 0, signpower(x,c) =  ( x)^c
+    *
+    * thus, get curvatures for both parts and "intersect" them
+    */
+
+   if( argbounds[0].inf < 0 )
+   {
+      SCIPintervalSetBounds(&tmp, 0.0, -opdata.dbl);
+      left = SCIPexprcurvNegate(SCIPexprcurvPower(tmp, SCIPexprcurvNegate(argcurv[0]), opdata.dbl));
+   }
+   else
+   {
+      left = SCIP_EXPRCURV_LINEAR;
+   }
+
+   if( argbounds[0].sup > 0 )
+   {
+      SCIPintervalSetBounds(&tmp, 0.0,  argbounds[0].sup);
+      right = SCIPexprcurvPower(tmp, argcurv[0], opdata.dbl);
+   }
+   else
+   {
+      right = SCIP_EXPRCURV_LINEAR;
+   }
+
+   *result = left & right;
 
    return SCIP_OKAY;
 } /*lint !e715*/
@@ -440,6 +938,23 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalExpInt )
 } /*lint !e715*/
 
 static
+SCIP_DECL_EXPRCURV( SCIPexprcurvExp )
+{
+   assert(result    != NULL);
+   assert(argcurv   != NULL);
+
+   /* expression is convex if child is convex
+    * otherwise, we don't know
+    */
+   if( argcurv[0] & SCIP_EXPRCURV_CONVEX )
+      *result = SCIP_EXPRCURV_CONVEX;
+   else
+      *result = SCIP_EXPRCURV_UNKNOWN;
+
+   return SCIP_OKAY;
+} /*lint !e715*/
+
+static
 SCIP_DECL_EXPREVAL( SCIPexprevalLog )
 {
    assert(result  != NULL);
@@ -457,6 +972,23 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalLogInt )
    assert(argvals != NULL);
 
    SCIPintervalLog(infinity, result, argvals[0]);
+
+   return SCIP_OKAY;
+} /*lint !e715*/
+
+static
+SCIP_DECL_EXPRCURV( SCIPexprcurvLog )
+{
+   assert(result    != NULL);
+   assert(argcurv   != NULL);
+
+   /* expression is concave if child is concave
+    * otherwise, we don't know
+    */
+   if( argcurv[0] & SCIP_EXPRCURV_CONCAVE )
+      *result = SCIP_EXPRCURV_CONCAVE;
+   else
+      *result = SCIP_EXPRCURV_UNKNOWN;
 
    return SCIP_OKAY;
 } /*lint !e715*/
@@ -486,13 +1018,25 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalSinInt )
 } /*lint !e715*/
 
 static
+SCIP_DECL_EXPRCURV( SCIPexprcurvSin )
+{
+   assert(result    != NULL);
+
+   /* @todo implement */
+   SCIPwarningMessage("SCIPexprcurvSin always reports unknown curvature so far\n");
+   *result = SCIP_EXPRCURV_UNKNOWN;
+
+   return SCIP_OKAY;
+} /*lint !e715*/
+
+static
 SCIP_DECL_EXPREVAL( SCIPexprevalCos )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
 
    *result = cos(argvals[0]);
-   
+
    return SCIP_OKAY;
 } /*lint !e715*/
 
@@ -505,6 +1049,18 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalCosInt )
    /* @todo implement SCIPintervalCos */
    SCIPwarningMessage("SCIPexprevalCosInt gives only trivial bounds so far\n");
    SCIPintervalSetBounds(result, -1.0, 1.0);
+
+   return SCIP_OKAY;
+} /*lint !e715*/
+
+static
+SCIP_DECL_EXPRCURV( SCIPexprcurvCos )
+{
+   assert(result    != NULL);
+
+   /* @todo implement */
+   SCIPwarningMessage("SCIPexprcurvCos always reports unknown curvature so far\n");
+   *result = SCIP_EXPRCURV_UNKNOWN;
 
    return SCIP_OKAY;
 } /*lint !e715*/
@@ -523,6 +1079,18 @@ SCIP_DECL_EXPREVAL( SCIPexprevalTan )
 /* @todo implement SCIPintervalTan */
 #define SCIPexprevalTanInt NULL
 
+static
+SCIP_DECL_EXPRCURV( SCIPexprcurvTan )
+{
+   assert(result    != NULL);
+
+   /* @todo implement */
+   SCIPwarningMessage("SCIPexprcurvTan always reports unknown curvature so far\n");
+   *result = SCIP_EXPRCURV_UNKNOWN;
+
+   return SCIP_OKAY;
+} /*lint !e715*/
+
 #if 0
 static
 SCIP_DECL_EXPREVAL( SCIPexprevalErf )
@@ -531,7 +1099,7 @@ SCIP_DECL_EXPREVAL( SCIPexprevalErf )
    assert(argvals != NULL);
 
    *result = erf(argvals[0]);
-   
+
    return SCIP_OKAY;
 } /*lint !e715*/
 
@@ -546,7 +1114,7 @@ SCIP_DECL_EXPREVAL( SCIPexprevalErfi )
 
    /* @TODO implement erfi evaluation */
    SCIPerrorMessage("erfi not implemented");
-   
+
    return SCIP_ERROR;
 } /*lint !e715*/
 
@@ -577,6 +1145,24 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalMinInt )
 } /*lint !e715*/
 
 static
+SCIP_DECL_EXPRCURV( SCIPexprcurvMin )
+{
+   assert(result  != NULL);
+   assert(argcurv != NULL);
+
+   /* the minimum of two concave functions is concave
+    * otherwise, we don't know
+    */
+
+   if( (argcurv[0] & SCIP_EXPRCURV_CONCAVE) && (argcurv[1] & SCIP_EXPRCURV_CONCAVE) )
+      *result = SCIP_EXPRCURV_CONCAVE;
+   else
+      *result = SCIP_EXPRCURV_UNKNOWN;
+
+   return SCIP_OKAY;
+} /*lint !e715*/
+
+static
 SCIP_DECL_EXPREVAL( SCIPexprevalMax )
 {
    assert(result  != NULL);
@@ -599,13 +1185,30 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalMaxInt )
 } /*lint !e715*/
 
 static
+SCIP_DECL_EXPRCURV( SCIPexprcurvMax )
+{
+   assert(result  != NULL);
+   assert(argcurv != NULL);
+
+   /* the maximum of two convex functions is convex
+    * otherwise, we don't know
+    */
+   if( (argcurv[0] & SCIP_EXPRCURV_CONVEX) && (argcurv[1] & SCIP_EXPRCURV_CONVEX) )
+      *result = SCIP_EXPRCURV_CONVEX;
+   else
+      *result = SCIP_EXPRCURV_UNKNOWN;
+
+   return SCIP_OKAY;
+} /*lint !e715*/
+
+static
 SCIP_DECL_EXPREVAL( SCIPexprevalAbs )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
 
    *result = ABS(argvals[0]);
-   
+
    return SCIP_OKAY;
 } /*lint !e715*/
 
@@ -621,13 +1224,37 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalAbsInt )
 } /*lint !e715*/
 
 static
+SCIP_DECL_EXPRCURV( SCIPexprcurvAbs )
+{
+   assert(result    != NULL);
+   assert(argcurv   != NULL);
+   assert(argbounds != NULL);
+
+   /* if child is only negative, then abs(child) = -child
+    * if child is only positive, then abs(child) = child
+    * if child is both positive and negative, but also linear, then abs(child) is convex
+    * otherwise, we don't know
+    */
+   if( argbounds[0].sup <= 0.0 )
+      *result = SCIPexprcurvMultiply(-1.0, argcurv[0]);
+   else if( argbounds[0].inf >= 0.0 )
+      *result = argcurv[0];
+   else if( argcurv[0] == SCIP_EXPRCURV_LINEAR )
+      *result = SCIP_EXPRCURV_CONVEX;
+   else
+      *result = SCIP_EXPRCURV_UNKNOWN;
+
+   return SCIP_OKAY;
+} /*lint !e715*/
+
+static
 SCIP_DECL_EXPREVAL( SCIPexprevalSign )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
 
    *result = SIGN(argvals[0]);
-   
+
    return SCIP_OKAY;
 } /*lint !e715*/
 
@@ -643,17 +1270,34 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalSignInt )
 } /*lint !e715*/
 
 static
+SCIP_DECL_EXPRCURV( SCIPexprcurvSign )
+{
+   assert(result    != NULL);
+   assert(argbounds != NULL);
+
+   /* if sign of child is clear, then sign is linear
+    * otherwise, we don't know
+    */
+   if( argbounds[0].sup <= 0.0 || argbounds[0].inf >= 0.0 )
+      *result = SCIP_EXPRCURV_LINEAR;
+   else
+      *result = SCIP_EXPRCURV_UNKNOWN;
+
+   return SCIP_OKAY;
+} /*lint !e715*/
+
+static
 SCIP_DECL_EXPREVAL( SCIPexprevalSum )
 {
    int i;
-   
+
    assert(result  != NULL);
    assert(argvals != NULL);
-   
+
    *result = 0.0;
    for( i = 0; i < nargs; ++i )
       *result += argvals[i];
-   
+
    return SCIP_OKAY;
 } /*lint !e715*/
 
@@ -674,17 +1318,35 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalSumInt )
 } /*lint !e715*/
 
 static
+SCIP_DECL_EXPRCURV( SCIPexprcurvSum )
+{
+   int i;
+
+   assert(result  != NULL);
+   assert(argcurv != NULL);
+
+   *result = SCIP_EXPRCURV_LINEAR;
+
+   for( i = 0; i < nargs; ++i )
+   {
+      *result = SCIPexprcurvAdd(*result, argcurv[i]);
+   }
+
+   return SCIP_OKAY;
+} /*lint !e715*/
+
+static
 SCIP_DECL_EXPREVAL( SCIPexprevalProduct )
 {
    int i;
-   
+
    assert(result  != NULL);
    assert(argvals != NULL);
-   
+
    *result = 1.0;
    for( i = 0; i < nargs; ++i )
       *result *= argvals[i];
-   
+
    return SCIP_OKAY;
 } /*lint !e715*/
 
@@ -700,6 +1362,49 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalProductInt )
 
    for( i = 0; i < nargs; ++i )
       SCIPintervalMul(infinity, result, *result, argvals[i]);
+
+   return SCIP_OKAY;
+} /*lint !e715*/
+
+static
+SCIP_DECL_EXPRCURV( SCIPexprcurvProduct )
+{
+   SCIP_Bool hadnonconst;
+   SCIP_Real constants;
+   int i;
+
+   assert(result    != NULL);
+   assert(argcurv   != NULL);
+   assert(argbounds != NULL);
+
+   /* if all factors are constant, then product is linear (even constant)
+    * if only one factor is not constant, then product is curvature of this factor, multiplied by sign of product of remaining factors
+    */
+   *result = SCIP_EXPRCURV_LINEAR;
+   hadnonconst = FALSE;
+   constants = 1.0;
+
+   for( i = 0; i < nargs; ++i )
+   {
+      if( argbounds[i].inf == argbounds[i].sup )
+      {
+         constants *= argbounds[i].inf;
+      }
+      else if( !hadnonconst )
+      {
+         /* first non-constant child */
+         *result = argcurv[i];
+         hadnonconst = TRUE;
+      }
+      else
+      {
+         /* more than one non-constant child, thus don't know curvature */
+         *result = SCIP_EXPRCURV_UNKNOWN;
+         break;
+      }
+   }
+
+   *result = SCIPexprcurvMultiply(constants, *result);
 
    return SCIP_OKAY;
 } /*lint !e715*/
@@ -739,6 +1444,26 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalLinearInt )
 } /*lint !e715*/
 
 static
+SCIP_DECL_EXPRCURV( SCIPexprcurvLinear )
+{
+   SCIP_Real* data;
+   int i;
+
+   assert(result  != NULL);
+   assert(argcurv != NULL);
+
+   data = (SCIP_Real*)opdata.data;
+   assert(data != NULL);
+
+   *result = SCIP_EXPRCURV_LINEAR;
+
+   for( i = 0; i < nargs; ++i )
+      *result = SCIPexprcurvAdd(*result, SCIPexprcurvMultiply(data[i], argcurv[i]));
+
+   return SCIP_OKAY;
+} /*lint !e715*/
+
+static
 SCIP_DECL_EXPREVAL( SCIPexprevalQuadratic )
 {
    SCIP_EXPRDATA_QUADRATIC* quaddata;
@@ -756,10 +1481,10 @@ SCIP_DECL_EXPREVAL( SCIPexprevalQuadratic )
    lincoefs   = quaddata->lincoefs;
    nquadelems = quaddata->nquadelems;
    quadelems  = quaddata->quadelems;
-   
+
    assert(quadelems != NULL || nquadelems == 0);
    assert(argvals != NULL   || nquadelems == 0);
-   
+
    *result = quaddata->constant;
 
    if( lincoefs != NULL )
@@ -797,7 +1522,7 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalQuadraticInt )
 
    assert(quadelems != NULL || nquadelems == 0);
    assert(argvals   != NULL || nquadelems == 0);
-   
+
    /* make sure coefficients are sorted */
    quadraticdataSort(quaddata);
 
@@ -842,6 +1567,71 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalQuadraticInt )
       SCIPintervalAdd(infinity, result, *result, tmp);
    }
    assert(i == nquadelems);
+
+   return SCIP_OKAY;
+} /*lint !e715*/
+
+static
+SCIP_DECL_EXPRCURV( SCIPexprcurvQuadratic )
+{
+   SCIP_EXPRDATA_QUADRATIC* data;
+   SCIP_QUADELEM* quadelems;
+   int nquadelems;
+   SCIP_Real* lincoefs;
+   int i;
+
+   assert(result    != NULL);
+   assert(argcurv   != NULL);
+   assert(argbounds != NULL);
+
+   data = (SCIP_EXPRDATA_QUADRATIC*)opdata.data;
+   assert(data != NULL);
+
+   lincoefs   = data->lincoefs;
+   quadelems  = data->quadelems;
+   nquadelems = data->nquadelems;
+
+   *result = SCIP_EXPRCURV_LINEAR;
+
+   if( lincoefs != NULL )
+      for( i = 0; i < nargs; ++i )
+         *result = SCIPexprcurvAdd(*result, SCIPexprcurvMultiply(lincoefs[i], argcurv[i]));
+
+   /* @todo could try cholesky factorization if all children linear...
+    * @todo should cache result */
+   for( i = 0; i < nquadelems && *result != SCIP_EXPRCURV_UNKNOWN; ++i )
+   {
+      if( quadelems[i].coef == 0.0 )
+         continue;
+
+      if( argbounds[quadelems[i].idx1].inf == argbounds[quadelems[i].idx1].sup &&
+          argbounds[quadelems[i].idx2].inf == argbounds[quadelems[i].idx2].sup
+        )
+      {
+         /* both factors are constants -> curvature does not change */
+         ;
+      }
+      else if( argbounds[quadelems[i].idx1].inf == argbounds[quadelems[i].idx1].sup )
+      {
+         /* first factor is constant, second is not -> add curvature of second */
+         *result = SCIPexprcurvAdd(*result, SCIPexprcurvMultiply(quadelems[i].coef * argbounds[quadelems[i].idx1].inf, argcurv[quadelems[i].idx2]));
+      }
+      else if( argbounds[quadelems[i].idx2].inf == argbounds[quadelems[i].idx2].sup )
+      {
+         /* first factor is not constant, second is -> add curvature of first */
+         *result = SCIPexprcurvAdd(*result, SCIPexprcurvMultiply(quadelems[i].coef * argbounds[quadelems[i].idx2].inf, argcurv[quadelems[i].idx1]));
+      }
+      else if( quadelems[i].idx1 == quadelems[i].idx2 )
+      {
+         /* both factors not constant, but the same (square term) */
+         *result = SCIPexprcurvAdd(*result, SCIPexprcurvMultiply(quadelems[i].coef, SCIPexprcurvPower(argbounds[quadelems[i].idx1], argcurv[quadelems[i].idx1], 2.0)));
+      }
+      else
+      {
+         /* two different non-constant factors -> can't tell about curvature */
+         *result = SCIP_EXPRCURV_UNKNOWN;
+      }
+   }
 
    return SCIP_OKAY;
 } /*lint !e715*/
@@ -1024,44 +1814,77 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalPolynomialInt )
    return SCIP_OKAY;
 } /*lint !e715*/
 
+static
+SCIP_DECL_EXPRCURV( SCIPexprcurvPolynomial )
+{
+   SCIP_EXPRDATA_POLYNOMIAL* data;
+   SCIP_EXPRDATA_MONOMIAL** monomials;
+   SCIP_EXPRDATA_MONOMIAL* monomial;
+   int nmonomials;
+   int i;
+
+   assert(result    != NULL);
+   assert(argcurv   != NULL);
+   assert(argbounds != NULL);
+
+   data = (SCIP_EXPRDATA_POLYNOMIAL*)opdata.data;
+   assert(data != NULL);
+
+   monomials  = data->monomials;
+   nmonomials = data->nmonomials;
+
+   *result = SCIP_EXPRCURV_LINEAR;
+
+   for( i = 0; i < nmonomials && *result != SCIP_EXPRCURV_UNKNOWN; ++i )
+   {
+      /* we assume that some simplifier was running, so that monomials do not have constants in their factors and such that all factors are different
+       * (result would still be correct)
+       */
+      monomial = monomials[i];
+      *result = SCIPexprcurvAdd(*result, SCIPexprcurvMultiply(monomial->coef, SCIPexprcurvMonomial(monomial->nfactors, monomial->exponents, monomial->childidxs, argcurv, argbounds)));
+   }
+
+   return SCIP_OKAY;
+} /*lint !e715*/
+
 /** table containing for each operand the name, the number of children, and some evaluation functions */
 struct SCIPexprOpTableElement SCIPexprOpTable[] =
 {
-   {NULL,-1,NULL,NULL},
-   { "variable",          0, SCIPexprevalPushVar,       SCIPexprevalPushVarInt       },
-   { "constant",          0, SCIPexprevalPushValue,     SCIPexprevalPushValueInt     },
-   { "parameter",         0, SCIPexprevalPushParameter, SCIPexprevalPushParameterInt },
-   {NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},
-   { "plus",              2, SCIPexprevalPlus,          SCIPexprevalPlusInt          },
-   { "minus",             2, SCIPexprevalMinus,         SCIPexprevalMinusInt         },
-   { "mul",               2, SCIPexprevalMult,          SCIPexprevalMultInt          },
-   { "div",               2, SCIPexprevalDiv,           SCIPexprevalDivInt           },
-   { "sqr",               1, SCIPexprevalSqr,           SCIPexprevalSqrInt           },
-   { "sqrt",              1, SCIPexprevalSqrt,          SCIPexprevalSqrtInt          },
-   { "realpower",         1, SCIPexprevalRealPower,     SCIPexprevalRealPowerInt     },
-   { "intpower",          1, SCIPexprevalIntPower,      SCIPexprevalIntPowerInt      },
-   { "signpower",         1, SCIPexprevalSignPower,     SCIPexprevalSignPowerInt     },
-   { "exp",               1, SCIPexprevalExp,           SCIPexprevalExpInt           },
-   { "log",               1, SCIPexprevalLog,           SCIPexprevalLogInt           },
-   { "sin",               1, SCIPexprevalSin,           SCIPexprevalSinInt           },
-   { "cos",               1, SCIPexprevalCos,           SCIPexprevalCosInt           },
-   { "tan",               1, SCIPexprevalTan,           SCIPexprevalTanInt           },
-   {NULL,-1,NULL,NULL}, /* { "erf",               1, SCIPexprevalErf,           SCIPexprevalErfInt           }, */
-   {NULL,-1,NULL,NULL}, /* { "erfi",              1, SCIPexprevalErfi,          SCIPexprevalErfiInt          }, */
-   { "min",               2, SCIPexprevalMin,           SCIPexprevalMinInt           },
-   { "max",               2, SCIPexprevalMax,           SCIPexprevalMaxInt           },
-   { "abs",               1, SCIPexprevalAbs,           SCIPexprevalAbsInt           },
-   { "sign",              1, SCIPexprevalSign,          SCIPexprevalSignInt          },
-   {NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},
-   {NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},
-   {NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},
-   {NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},
-   {NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},
-   { "sum",              -2, SCIPexprevalSum,           SCIPexprevalSumInt           },
-   { "prod",             -2, SCIPexprevalProduct,       SCIPexprevalProductInt       },
-   { "linear",           -2, SCIPexprevalLinear,        SCIPexprevalLinearInt        },
-   { "quadratic",        -2, SCIPexprevalQuadratic,     SCIPexprevalQuadraticInt     },
-   { "polynomial",       -2, SCIPexprevalPolynomial,    SCIPexprevalPolynomialInt    }
+   {NULL,-1,NULL,NULL,NULL},
+   { "variable",          0, SCIPexprevalPushVar,       SCIPexprevalPushVarInt,       SCIPexprcurvPushVar      },
+   { "constant",          0, SCIPexprevalPushValue,     SCIPexprevalPushValueInt,     SCIPexprcurvPushValue    },
+   { "parameter",         0, SCIPexprevalPushParameter, SCIPexprevalPushParameterInt, SCIPexprcurvPushParameter},
+   {NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},
+   { "plus",              2, SCIPexprevalPlus,          SCIPexprevalPlusInt,          SCIPexprcurvPlus         },
+   { "minus",             2, SCIPexprevalMinus,         SCIPexprevalMinusInt,         SCIPexprcurvMinus        },
+   { "mul",               2, SCIPexprevalMult,          SCIPexprevalMultInt,          SCIPexprcurvMult         },
+   { "div",               2, SCIPexprevalDiv,           SCIPexprevalDivInt,           SCIPexprcurvDiv          },
+   { "sqr",               1, SCIPexprevalSqr,           SCIPexprevalSqrInt,           SCIPexprcurvSqr          },
+   { "sqrt",              1, SCIPexprevalSqrt,          SCIPexprevalSqrtInt,          SCIPexprcurvSqrt         },
+   { "realpower",         1, SCIPexprevalRealPower,     SCIPexprevalRealPowerInt,     SCIPexprcurvRealPower    },
+   { "intpower",          1, SCIPexprevalIntPower,      SCIPexprevalIntPowerInt,      SCIPexprcurvIntPower     },
+   { "signpower",         1, SCIPexprevalSignPower,     SCIPexprevalSignPowerInt,     SCIPexprcurvSignPower    },
+   { "exp",               1, SCIPexprevalExp,           SCIPexprevalExpInt,           SCIPexprcurvExp          },
+   { "log",               1, SCIPexprevalLog,           SCIPexprevalLogInt,           SCIPexprcurvLog          },
+   { "sin",               1, SCIPexprevalSin,           SCIPexprevalSinInt,           SCIPexprcurvSin          },
+   { "cos",               1, SCIPexprevalCos,           SCIPexprevalCosInt,           SCIPexprcurvCos          },
+   { "tan",               1, SCIPexprevalTan,           SCIPexprevalTanInt,           SCIPexprcurvTan          },
+   {NULL,-1,NULL,NULL,NULL}, /* { "erf",               1, SCIPexprevalErf,           SCIPexprevalErfInt           }, */
+   {NULL,-1,NULL,NULL,NULL}, /* { "erfi",              1, SCIPexprevalErfi,          SCIPexprevalErfiInt          }, */
+   { "min",               2, SCIPexprevalMin,           SCIPexprevalMinInt,           SCIPexprcurvMin          },
+   { "max",               2, SCIPexprevalMax,           SCIPexprevalMaxInt,           SCIPexprcurvMax          },
+   { "abs",               1, SCIPexprevalAbs,           SCIPexprevalAbsInt,           SCIPexprcurvAbs          },
+   { "sign",              1, SCIPexprevalSign,          SCIPexprevalSignInt,          SCIPexprcurvSign         },
+   {NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},
+   {NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},
+   {NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},
+   {NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},
+   {NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},
+   { "sum",              -2, SCIPexprevalSum,           SCIPexprevalSumInt,           SCIPexprcurvSum          },
+   { "prod",             -2, SCIPexprevalProduct,       SCIPexprevalProductInt,       SCIPexprcurvProduct      },
+   { "linear",           -2, SCIPexprevalLinear,        SCIPexprevalLinearInt,        SCIPexprcurvLinear       },
+   { "quadratic",        -2, SCIPexprevalQuadratic,     SCIPexprevalQuadraticInt,     SCIPexprcurvQuadratic    },
+   { "polynomial",       -2, SCIPexprevalPolynomial,    SCIPexprevalPolynomialInt,    SCIPexprcurvPolynomial   }
 };
 
 /** gives the name of an operand as string */
@@ -2632,6 +3455,64 @@ SCIP_RETCODE SCIPexprEvalInt(
    return SCIP_OKAY;
 }
 
+/** tries to determine the curvature type of an expression w.r.t. given variable domains */
+SCIP_RETCODE SCIPexprCheckCurvature(
+   SCIP_EXPR*            expr,               /**< expression to check */
+   SCIP_Real             infinity,           /**< value to use for infinity */
+   SCIP_INTERVAL*        varbounds,          /**< domains of variables */
+   SCIP_Real*            param,              /**< values for parameters, can be NULL if the expression is not parameterized */
+   SCIP_EXPRCURV*        curv,               /**< buffer to store curvature of expression */
+   SCIP_INTERVAL*        bounds              /**< buffer to store bounds on expression */
+   )
+{
+   SCIP_INTERVAL  childboundsbuf[SCIP_EXPRESSION_MAXCHILDEST];
+   SCIP_INTERVAL* childbounds;
+   SCIP_EXPRCURV  childcurvbuf[SCIP_EXPRESSION_MAXCHILDEST];
+   SCIP_EXPRCURV* childcurv;
+   int i;
+
+   assert(expr != NULL);
+   assert(curv != NULL);
+   assert(bounds != NULL);
+
+   /* if many children, get large enough memory to store argument values */
+   if( expr->nchildren > SCIP_EXPRESSION_MAXCHILDEST )
+   {
+      SCIP_ALLOC( BMSallocMemoryArray(&childbounds, expr->nchildren) );
+      SCIP_ALLOC( BMSallocMemoryArray(&childcurv,   expr->nchildren) );
+   }
+   else
+   {
+      childbounds = childboundsbuf;
+      childcurv   = childcurvbuf;
+   }
+
+   /* check curvature and compute bounds of children
+    * constant children can be considered as always linear */
+   for( i = 0; i < expr->nchildren; ++i )
+   {
+      SCIP_CALL( SCIPexprCheckCurvature(expr->children[i], infinity, varbounds, param, &childcurv[i], &childbounds[i]) );
+      if( childbounds[i].inf == childbounds[i].sup )
+         childcurv[i] = SCIP_EXPRCURV_LINEAR;
+   }
+
+   /* get curvature and bounds of expr */
+   assert(SCIPexprOpTable[expr->op].curv != NULL);
+   assert(SCIPexprOpTable[expr->op].inteval != NULL);
+
+   SCIP_CALL( SCIPexprOpTable[expr->op].curv(infinity, expr->data, expr->nchildren, childbounds, childcurv, curv) );
+   SCIP_CALL( SCIPexprOpTable[expr->op].inteval(infinity, expr->data, expr->nchildren, childbounds, varbounds, param, bounds) );
+
+   /* free memory, if allocated before */
+   if( childboundsbuf != childbounds )
+   {
+      BMSfreeMemoryArray(&childcurv);
+      BMSfreeMemoryArray(&childbounds);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** substitutes variables (SCIP_EXPR_VARIDX) by expressions
  * a variable with index i is replaced by a copy of substexprs[i], if that latter is not NULL
  * if substexprs[i] == NULL, then the variable expression i is not touched */
@@ -3250,6 +4131,28 @@ SCIP_RETCODE SCIPexprtreeEvalInt(
    assert(val     != NULL);
 
    SCIP_CALL( SCIPexprEvalInt(tree->root, infinity, varvals, tree->params, val) );
+
+   return SCIP_OKAY;
+}
+
+/** tries to determine the curvature type of an expression tree w.r.t. given variable domains */
+SCIP_RETCODE SCIPexprtreeCheckCurvature(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        varbounds,          /**< domains of variables */
+   SCIP_EXPRCURV*        curv,               /**< buffer to store curvature of expression */
+   SCIP_INTERVAL*        bounds              /**< buffer to store bounds on expression, or NULL if not needed */
+)
+{
+   SCIP_INTERVAL exprbounds;
+
+   assert(tree != NULL);
+   assert(tree->root != NULL);
+
+   SCIP_CALL( SCIPexprCheckCurvature(tree->root, infinity, varbounds, tree->params, curv, &exprbounds) );
+
+   if( bounds != NULL )
+      *bounds = exprbounds;
 
    return SCIP_OKAY;
 }

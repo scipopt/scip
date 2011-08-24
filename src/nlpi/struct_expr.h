@@ -102,6 +102,7 @@ struct SCIPexprOpTableElement
   int                   nargs;              /**< number of arguments (negative if not fixed) */
   SCIP_DECL_EXPREVAL    ((*eval));          /**< evaluation function */
   SCIP_DECL_EXPRINTEVAL ((*inteval));       /**< interval evaluation function */
+  SCIP_DECL_EXPRCURV    ((*curv));          /**< curvature check function */
 };
 
 #ifdef __cplusplus

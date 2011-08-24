@@ -76,10 +76,20 @@ enum SCIP_ExprOp {
    SCIP_EXPR_LAST      = 69   /**< no expression, used for counting reasons */
 };
 
+/** Curvature types */
+enum SCIP_ExprCurv
+{
+   SCIP_EXPRCURV_UNKNOWN    = 0,             /**< unknown curvature (or indefinite) */
+   SCIP_EXPRCURV_CONVEX     = 1,             /**< convex */
+   SCIP_EXPRCURV_CONCAVE    = 2,             /**< concave */
+   SCIP_EXPRCURV_LINEAR     = SCIP_EXPRCURV_CONVEX | SCIP_EXPRCURV_CONCAVE/**< linear = convex and concave */
+};
+
 typedef enum   SCIP_ExprOp      SCIP_EXPROP;     /**< expression operand */
 typedef union  SCIP_ExprOpData  SCIP_EXPROPDATA; /**< expression operand data */
 typedef struct SCIP_Expr        SCIP_EXPR;       /**< expression */
 typedef struct SCIP_ExprTree    SCIP_EXPRTREE;   /**< expression tree */
+typedef enum   SCIP_ExprCurv    SCIP_EXPRCURV;   /**< curvature types */
 
 /** An element of a quadratic term: two variable indices and a coefficient.
  * The convention is to have idx1 <= idx2.
@@ -113,7 +123,7 @@ typedef struct SCIP_ExprData_Polynomial SCIP_EXPRDATA_POLYNOMIAL; /**< the data 
 #define SCIP_DECL_EXPREVAL(x) SCIP_RETCODE x (SCIP_EXPROPDATA opdata, int nargs, SCIP_Real* argvals, SCIP_Real* varvals, SCIP_Real* paramvals, SCIP_Real* result)
 
 /** signature of an expression (interval) evaluation function
- * The function should return and empty interval if the function is undefined for the given arguments.
+ * The function should return an empty interval if the function is undefined for the given arguments.
  *
  * - infinity  value for infinity
  * - opdata    operand data
@@ -124,6 +134,18 @@ typedef struct SCIP_ExprData_Polynomial SCIP_EXPRDATA_POLYNOMIAL; /**< the data 
  * - result    buffer where to store result of evaluation
  */
 #define SCIP_DECL_EXPRINTEVAL(x) SCIP_RETCODE x (SCIP_Real infinity, SCIP_EXPROPDATA opdata, int nargs, SCIP_INTERVAL* argvals, SCIP_INTERVAL* varvals, SCIP_Real* paramvals, SCIP_INTERVAL* result)
+
+/** signature of a simple expression curvature check function
+ *
+ * - infinity  value for infinity
+ * - opdata    operand data
+ * - nargs     number of arguments
+ * - argbounds bounds on value of arguments
+ * - argcurv   curvature of arguments
+ * - paramvals values for parameters
+ * - result    buffer where to store result of curvature check
+ */
+#define SCIP_DECL_EXPRCURV(x) SCIP_RETCODE x (SCIP_Real infinity, SCIP_EXPROPDATA opdata, int nargs, SCIP_INTERVAL* argbounds, SCIP_EXPRCURV* argcurv, SCIP_EXPRCURV* result)
 
 #ifdef __cplusplus
 }
