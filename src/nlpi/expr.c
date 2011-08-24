@@ -3572,6 +3572,27 @@ void SCIPexprReindexVars(
       SCIPexprReindexVars(expr->children[i], newindices);
 }
 
+/** updates parameter indices in expression tree */
+void SCIPexprReindexParams(
+   SCIP_EXPR*            expr,               /**< expression to update */
+   int*                  newindices          /**< new indices of variables */
+)
+{
+   int i;
+
+   assert(expr != NULL);
+   assert(newindices != NULL);
+
+   if( expr->op == SCIP_EXPR_PARAM )
+   {
+      expr->data.intval = newindices[expr->data.intval];
+      assert(expr->data.intval >= 0);
+   }
+
+   for( i = 0; i < expr->nchildren; ++i )
+      SCIPexprReindexParams(expr->children[i], newindices);
+}
+
 /** prints an expression */
 void SCIPexprPrint(
    SCIP_EXPR*            expr,               /**< expression */

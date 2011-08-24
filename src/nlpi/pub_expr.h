@@ -423,6 +423,13 @@ void SCIPexprReindexVars(
    int*                  newindices          /**< new indices of variables */
 );
 
+/** updates parameter indices in expression tree */
+extern
+void SCIPexprReindexParams(
+   SCIP_EXPR*            expr,               /**< expression to update */
+   int*                  newindices          /**< new indices of variables */
+);
+
 /** prints an expression */
 extern
 void SCIPexprPrint(
