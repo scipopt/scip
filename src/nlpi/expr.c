@@ -403,8 +403,26 @@ void quadraticdataSort(
    quadraticdata->sorted = TRUE;
 }
 
+/* a default implementation of expression interval evaluation that always gives a correct result */
 static
-SCIP_DECL_EXPREVAL( SCIPexprevalPushVar )
+SCIP_DECL_EXPRINTEVAL( exprevalIntDefault )
+{
+   SCIPintervalSetEntire(infinity, result);
+
+   return SCIP_OKAY;
+} /*lint !e715*/
+
+/* a default implementation of expression curvature check that always gives a correct result */
+static
+SCIP_DECL_EXPRCURV( exprcurvDefault )
+{
+   *result = SCIP_EXPRCURV_UNKNOWN;
+
+   return SCIP_OKAY;
+} /*lint !e715*/
+
+static
+SCIP_DECL_EXPREVAL( exprevalVar )
 {
    assert(result  != NULL);
    assert(varvals != NULL);
@@ -415,7 +433,7 @@ SCIP_DECL_EXPREVAL( SCIPexprevalPushVar )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRINTEVAL( SCIPexprevalPushVarInt )
+SCIP_DECL_EXPRINTEVAL( exprevalIntVar )
 {
    assert(result  != NULL);
    assert(varvals != NULL);
@@ -426,7 +444,7 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalPushVarInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRCURV( SCIPexprcurvPushVar )
+SCIP_DECL_EXPRCURV( exprcurvVar )
 {
    assert(result  != NULL);
 
@@ -436,7 +454,7 @@ SCIP_DECL_EXPRCURV( SCIPexprcurvPushVar )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPREVAL( SCIPexprevalPushValue )
+SCIP_DECL_EXPREVAL( exprevalConst )
 {
    assert(result != NULL);
 
@@ -446,7 +464,7 @@ SCIP_DECL_EXPREVAL( SCIPexprevalPushValue )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRINTEVAL( SCIPexprevalPushValueInt )
+SCIP_DECL_EXPRINTEVAL( exprevalIntConst )
 {
    assert(result != NULL);
 
@@ -456,7 +474,7 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalPushValueInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRCURV( SCIPexprcurvPushValue )
+SCIP_DECL_EXPRCURV( exprcurvConst )
 {
    assert(result  != NULL);
 
@@ -466,7 +484,7 @@ SCIP_DECL_EXPRCURV( SCIPexprcurvPushValue )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPREVAL( SCIPexprevalPushParameter )
+SCIP_DECL_EXPREVAL( exprevalParam )
 {
    assert(result    != NULL);
    assert(paramvals != NULL );
@@ -477,7 +495,7 @@ SCIP_DECL_EXPREVAL( SCIPexprevalPushParameter )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRINTEVAL( SCIPexprevalPushParameterInt )
+SCIP_DECL_EXPRINTEVAL( exprevalIntParam )
 {
    assert(result    != NULL);
    assert(paramvals != NULL );
@@ -488,7 +506,7 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalPushParameterInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRCURV( SCIPexprcurvPushParameter )
+SCIP_DECL_EXPRCURV( exprcurvParam )
 {
    assert(result  != NULL);
 
@@ -498,7 +516,7 @@ SCIP_DECL_EXPRCURV( SCIPexprcurvPushParameter )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPREVAL( SCIPexprevalPlus )
+SCIP_DECL_EXPREVAL( exprevalPlus )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -509,7 +527,7 @@ SCIP_DECL_EXPREVAL( SCIPexprevalPlus )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRINTEVAL( SCIPexprevalPlusInt )
+SCIP_DECL_EXPRINTEVAL( exprevalIntPlus )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -520,7 +538,7 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalPlusInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRCURV( SCIPexprcurvPlus )
+SCIP_DECL_EXPRCURV( exprcurvPlus )
 {
    assert(result  != NULL);
    assert(argcurv != NULL);
@@ -531,7 +549,7 @@ SCIP_DECL_EXPRCURV( SCIPexprcurvPlus )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPREVAL( SCIPexprevalMinus )
+SCIP_DECL_EXPREVAL( exprevalMinus )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -542,7 +560,7 @@ SCIP_DECL_EXPREVAL( SCIPexprevalMinus )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRINTEVAL( SCIPexprevalMinusInt )
+SCIP_DECL_EXPRINTEVAL( exprevalIntMinus )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -553,7 +571,7 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalMinusInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRCURV( SCIPexprcurvMinus )
+SCIP_DECL_EXPRCURV( exprcurvMinus )
 {
    assert(result  != NULL);
    assert(argcurv != NULL);
@@ -564,7 +582,7 @@ SCIP_DECL_EXPRCURV( SCIPexprcurvMinus )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPREVAL( SCIPexprevalMult )
+SCIP_DECL_EXPREVAL( exprevalMult )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -575,7 +593,7 @@ SCIP_DECL_EXPREVAL( SCIPexprevalMult )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRINTEVAL( SCIPexprevalMultInt )
+SCIP_DECL_EXPRINTEVAL( exprevalIntMult )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -586,7 +604,7 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalMultInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRCURV( SCIPexprcurvMult )
+SCIP_DECL_EXPRCURV( exprcurvMult )
 {
    assert(result    != NULL);
    assert(argcurv   != NULL);
@@ -616,7 +634,7 @@ SCIP_DECL_EXPRCURV( SCIPexprcurvMult )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPREVAL( SCIPexprevalDiv )
+SCIP_DECL_EXPREVAL( exprevalDiv )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -627,7 +645,7 @@ SCIP_DECL_EXPREVAL( SCIPexprevalDiv )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRINTEVAL( SCIPexprevalDivInt )
+SCIP_DECL_EXPRINTEVAL( exprevalIntDiv )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -638,7 +656,7 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalDivInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRCURV( SCIPexprcurvDiv )
+SCIP_DECL_EXPRCURV( exprcurvDiv )
 {
    assert(result    != NULL);
    assert(argcurv   != NULL);
@@ -687,7 +705,7 @@ SCIP_DECL_EXPRCURV( SCIPexprcurvDiv )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPREVAL( SCIPexprevalSqr )
+SCIP_DECL_EXPREVAL( exprevalSqr )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -698,7 +716,7 @@ SCIP_DECL_EXPREVAL( SCIPexprevalSqr )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRINTEVAL( SCIPexprevalSqrInt )
+SCIP_DECL_EXPRINTEVAL( exprevalIntSqr )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -709,7 +727,7 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalSqrInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRCURV( SCIPexprcurvSqr )
+SCIP_DECL_EXPRCURV( exprcurvSqr )
 {
    assert(result    != NULL);
    assert(argcurv   != NULL);
@@ -721,7 +739,7 @@ SCIP_DECL_EXPRCURV( SCIPexprcurvSqr )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPREVAL( SCIPexprevalSqrt )
+SCIP_DECL_EXPREVAL( exprevalSqrt )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -732,7 +750,7 @@ SCIP_DECL_EXPREVAL( SCIPexprevalSqrt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRINTEVAL( SCIPexprevalSqrtInt )
+SCIP_DECL_EXPRINTEVAL( exprevalIntSqrt )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -743,7 +761,7 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalSqrtInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRCURV( SCIPexprcurvSqrt )
+SCIP_DECL_EXPRCURV( exprcurvSqrt )
 {
    assert(result    != NULL);
    assert(argcurv   != NULL);
@@ -761,7 +779,7 @@ SCIP_DECL_EXPRCURV( SCIPexprcurvSqrt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPREVAL( SCIPexprevalRealPower )
+SCIP_DECL_EXPREVAL( exprevalRealPower )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -772,7 +790,7 @@ SCIP_DECL_EXPREVAL( SCIPexprevalRealPower )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRINTEVAL( SCIPexprevalRealPowerInt )
+SCIP_DECL_EXPRINTEVAL( exprevalIntRealPower )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -783,7 +801,7 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalRealPowerInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRCURV( SCIPexprcurvRealPower )
+SCIP_DECL_EXPRCURV( exprcurvRealPower )
 {
    assert(result    != NULL);
    assert(argcurv   != NULL);
@@ -795,7 +813,7 @@ SCIP_DECL_EXPRCURV( SCIPexprcurvRealPower )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPREVAL( SCIPexprevalIntPower )
+SCIP_DECL_EXPREVAL( exprevalIntPower )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -826,7 +844,7 @@ SCIP_DECL_EXPREVAL( SCIPexprevalIntPower )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRINTEVAL( SCIPexprevalIntPowerInt )
+SCIP_DECL_EXPRINTEVAL( exprevalIntIntPower )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -837,7 +855,7 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalIntPowerInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRCURV( SCIPexprcurvIntPower )
+SCIP_DECL_EXPRCURV( exprcurvIntPower )
 {
    assert(result    != NULL);
    assert(argcurv   != NULL);
@@ -849,7 +867,7 @@ SCIP_DECL_EXPRCURV( SCIPexprcurvIntPower )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPREVAL( SCIPexprevalSignPower )
+SCIP_DECL_EXPREVAL( exprevalSignPower )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -863,7 +881,7 @@ SCIP_DECL_EXPREVAL( SCIPexprevalSignPower )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRINTEVAL( SCIPexprevalSignPowerInt )
+SCIP_DECL_EXPRINTEVAL( exprevalIntSignPower )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -874,7 +892,7 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalSignPowerInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRCURV( SCIPexprcurvSignPower )
+SCIP_DECL_EXPRCURV( exprcurvSignPower )
 {
    SCIP_INTERVAL tmp;
    SCIP_EXPRCURV left;
@@ -916,7 +934,7 @@ SCIP_DECL_EXPRCURV( SCIPexprcurvSignPower )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPREVAL( SCIPexprevalExp )
+SCIP_DECL_EXPREVAL( exprevalExp )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -927,7 +945,7 @@ SCIP_DECL_EXPREVAL( SCIPexprevalExp )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRINTEVAL( SCIPexprevalExpInt )
+SCIP_DECL_EXPRINTEVAL( exprevalIntExp )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -938,7 +956,7 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalExpInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRCURV( SCIPexprcurvExp )
+SCIP_DECL_EXPRCURV( exprcurvExp )
 {
    assert(result    != NULL);
    assert(argcurv   != NULL);
@@ -955,7 +973,7 @@ SCIP_DECL_EXPRCURV( SCIPexprcurvExp )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPREVAL( SCIPexprevalLog )
+SCIP_DECL_EXPREVAL( exprevalLog )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -966,7 +984,7 @@ SCIP_DECL_EXPREVAL( SCIPexprevalLog )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRINTEVAL( SCIPexprevalLogInt )
+SCIP_DECL_EXPRINTEVAL( exprevalIntLog )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -977,7 +995,7 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalLogInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRCURV( SCIPexprcurvLog )
+SCIP_DECL_EXPRCURV( exprcurvLog )
 {
    assert(result    != NULL);
    assert(argcurv   != NULL);
@@ -994,7 +1012,7 @@ SCIP_DECL_EXPRCURV( SCIPexprcurvLog )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPREVAL( SCIPexprevalSin )
+SCIP_DECL_EXPREVAL( exprevalSin )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -1005,32 +1023,23 @@ SCIP_DECL_EXPREVAL( SCIPexprevalSin )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRINTEVAL( SCIPexprevalSinInt )
+SCIP_DECL_EXPRINTEVAL( exprevalIntSin )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
 
    /* @todo implement SCIPintervalSin */
-   SCIPwarningMessage("SCIPexprevalSinInt gives only trivial bounds so far\n");
+   SCIPwarningMessage("exprevalSinInt gives only trivial bounds so far\n");
    SCIPintervalSetBounds(result, -1.0, 1.0);
 
    return SCIP_OKAY;
 } /*lint !e715*/
 
-static
-SCIP_DECL_EXPRCURV( SCIPexprcurvSin )
-{
-   assert(result    != NULL);
-
-   /* @todo implement */
-   SCIPwarningMessage("SCIPexprcurvSin always reports unknown curvature so far\n");
-   *result = SCIP_EXPRCURV_UNKNOWN;
-
-   return SCIP_OKAY;
-} /*lint !e715*/
+/* @todo implement exprcurvSin */
+#define exprcurvSin exprcurvDefault
 
 static
-SCIP_DECL_EXPREVAL( SCIPexprevalCos )
+SCIP_DECL_EXPREVAL( exprevalCos )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -1041,32 +1050,23 @@ SCIP_DECL_EXPREVAL( SCIPexprevalCos )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRINTEVAL( SCIPexprevalCosInt )
+SCIP_DECL_EXPRINTEVAL( exprevalIntCos )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
 
    /* @todo implement SCIPintervalCos */
-   SCIPwarningMessage("SCIPexprevalCosInt gives only trivial bounds so far\n");
+   SCIPwarningMessage("exprevalCosInt gives only trivial bounds so far\n");
    SCIPintervalSetBounds(result, -1.0, 1.0);
 
    return SCIP_OKAY;
 } /*lint !e715*/
 
-static
-SCIP_DECL_EXPRCURV( SCIPexprcurvCos )
-{
-   assert(result    != NULL);
-
-   /* @todo implement */
-   SCIPwarningMessage("SCIPexprcurvCos always reports unknown curvature so far\n");
-   *result = SCIP_EXPRCURV_UNKNOWN;
-
-   return SCIP_OKAY;
-} /*lint !e715*/
+/* @todo implement exprcurvSin */
+#define exprcurvCos exprcurvDefault
 
 static
-SCIP_DECL_EXPREVAL( SCIPexprevalTan )
+SCIP_DECL_EXPREVAL( exprevalTan )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -1077,23 +1077,14 @@ SCIP_DECL_EXPREVAL( SCIPexprevalTan )
 } /*lint !e715*/
 
 /* @todo implement SCIPintervalTan */
-#define SCIPexprevalTanInt NULL
+#define exprevalIntTan exprevalIntDefault
 
-static
-SCIP_DECL_EXPRCURV( SCIPexprcurvTan )
-{
-   assert(result    != NULL);
-
-   /* @todo implement */
-   SCIPwarningMessage("SCIPexprcurvTan always reports unknown curvature so far\n");
-   *result = SCIP_EXPRCURV_UNKNOWN;
-
-   return SCIP_OKAY;
-} /*lint !e715*/
+/* @todo implement exprcurvTan */
+#define exprcurvTan exprcurvDefault
 
 #if 0
 static
-SCIP_DECL_EXPREVAL( SCIPexprevalErf )
+SCIP_DECL_EXPREVAL( exprevalErf )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -1104,10 +1095,13 @@ SCIP_DECL_EXPREVAL( SCIPexprevalErf )
 } /*lint !e715*/
 
 /* @todo implement SCIPintervalErf */
-#define SCIPexprevalErfInt NULL
+#define exprevalIntErf exprevalIntDefault
+
+/* @todo implement SCIPintervalErf */
+#define exprcurvErf exprcurvDefault
 
 static
-SCIP_DECL_EXPREVAL( SCIPexprevalErfi )
+SCIP_DECL_EXPREVAL( exprevalErfi )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -1119,11 +1113,13 @@ SCIP_DECL_EXPREVAL( SCIPexprevalErfi )
 } /*lint !e715*/
 
 /* @todo implement SCIPintervalErfi */
-#define SCIPexprevalErfiInt NULL
+#define exprevalIntErfi NULL
+
+#define exprcurvErfi exprcurvDefault
 #endif
 
 static
-SCIP_DECL_EXPREVAL( SCIPexprevalMin )
+SCIP_DECL_EXPREVAL( exprevalMin )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -1134,7 +1130,7 @@ SCIP_DECL_EXPREVAL( SCIPexprevalMin )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRINTEVAL( SCIPexprevalMinInt )
+SCIP_DECL_EXPRINTEVAL( exprevalIntMin )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -1145,7 +1141,7 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalMinInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRCURV( SCIPexprcurvMin )
+SCIP_DECL_EXPRCURV( exprcurvMin )
 {
    assert(result  != NULL);
    assert(argcurv != NULL);
@@ -1163,7 +1159,7 @@ SCIP_DECL_EXPRCURV( SCIPexprcurvMin )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPREVAL( SCIPexprevalMax )
+SCIP_DECL_EXPREVAL( exprevalMax )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -1174,7 +1170,7 @@ SCIP_DECL_EXPREVAL( SCIPexprevalMax )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRINTEVAL( SCIPexprevalMaxInt )
+SCIP_DECL_EXPRINTEVAL( exprevalIntMax )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -1185,7 +1181,7 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalMaxInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRCURV( SCIPexprcurvMax )
+SCIP_DECL_EXPRCURV( exprcurvMax )
 {
    assert(result  != NULL);
    assert(argcurv != NULL);
@@ -1202,7 +1198,7 @@ SCIP_DECL_EXPRCURV( SCIPexprcurvMax )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPREVAL( SCIPexprevalAbs )
+SCIP_DECL_EXPREVAL( exprevalAbs )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -1213,7 +1209,7 @@ SCIP_DECL_EXPREVAL( SCIPexprevalAbs )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRINTEVAL( SCIPexprevalAbsInt )
+SCIP_DECL_EXPRINTEVAL( exprevalIntAbs )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -1224,7 +1220,7 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalAbsInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRCURV( SCIPexprcurvAbs )
+SCIP_DECL_EXPRCURV( exprcurvAbs )
 {
    assert(result    != NULL);
    assert(argcurv   != NULL);
@@ -1248,7 +1244,7 @@ SCIP_DECL_EXPRCURV( SCIPexprcurvAbs )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPREVAL( SCIPexprevalSign )
+SCIP_DECL_EXPREVAL( exprevalSign )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -1259,7 +1255,7 @@ SCIP_DECL_EXPREVAL( SCIPexprevalSign )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRINTEVAL( SCIPexprevalSignInt )
+SCIP_DECL_EXPRINTEVAL( exprevalIntSign )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
@@ -1270,7 +1266,7 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalSignInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRCURV( SCIPexprcurvSign )
+SCIP_DECL_EXPRCURV( exprcurvSign )
 {
    assert(result    != NULL);
    assert(argbounds != NULL);
@@ -1287,7 +1283,7 @@ SCIP_DECL_EXPRCURV( SCIPexprcurvSign )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPREVAL( SCIPexprevalSum )
+SCIP_DECL_EXPREVAL( exprevalSum )
 {
    int i;
 
@@ -1302,7 +1298,7 @@ SCIP_DECL_EXPREVAL( SCIPexprevalSum )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRINTEVAL( SCIPexprevalSumInt )
+SCIP_DECL_EXPRINTEVAL( exprevalIntSum )
 {
    int i;
 
@@ -1318,7 +1314,7 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalSumInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRCURV( SCIPexprcurvSum )
+SCIP_DECL_EXPRCURV( exprcurvSum )
 {
    int i;
 
@@ -1336,7 +1332,7 @@ SCIP_DECL_EXPRCURV( SCIPexprcurvSum )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPREVAL( SCIPexprevalProduct )
+SCIP_DECL_EXPREVAL( exprevalProduct )
 {
    int i;
 
@@ -1351,7 +1347,7 @@ SCIP_DECL_EXPREVAL( SCIPexprevalProduct )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRINTEVAL( SCIPexprevalProductInt )
+SCIP_DECL_EXPRINTEVAL( exprevalIntProduct )
 {
    int i;
 
@@ -1367,7 +1363,7 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalProductInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRCURV( SCIPexprcurvProduct )
+SCIP_DECL_EXPRCURV( exprcurvProduct )
 {
    SCIP_Bool hadnonconst;
    SCIP_Real constants;
@@ -1410,7 +1406,7 @@ SCIP_DECL_EXPRCURV( SCIPexprcurvProduct )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPREVAL( SCIPexprevalLinear )
+SCIP_DECL_EXPREVAL( exprevalLinear )
 {
    SCIP_Real* coef;
    int i;
@@ -1431,7 +1427,7 @@ SCIP_DECL_EXPREVAL( SCIPexprevalLinear )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRINTEVAL( SCIPexprevalLinearInt )
+SCIP_DECL_EXPRINTEVAL( exprevalIntLinear )
 {
    assert(result  != NULL);
    assert(argvals != NULL || nargs == 0);
@@ -1444,7 +1440,7 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalLinearInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRCURV( SCIPexprcurvLinear )
+SCIP_DECL_EXPRCURV( exprcurvLinear )
 {
    SCIP_Real* data;
    int i;
@@ -1464,7 +1460,7 @@ SCIP_DECL_EXPRCURV( SCIPexprcurvLinear )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPREVAL( SCIPexprevalQuadratic )
+SCIP_DECL_EXPREVAL( exprevalQuadratic )
 {
    SCIP_EXPRDATA_QUADRATIC* quaddata;
    SCIP_Real* lincoefs;
@@ -1498,7 +1494,7 @@ SCIP_DECL_EXPREVAL( SCIPexprevalQuadratic )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRINTEVAL( SCIPexprevalQuadraticInt )
+SCIP_DECL_EXPRINTEVAL( exprevalIntQuadratic )
 {
    SCIP_EXPRDATA_QUADRATIC* quaddata;
    SCIP_Real* lincoefs;
@@ -1572,7 +1568,7 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalQuadraticInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRCURV( SCIPexprcurvQuadratic )
+SCIP_DECL_EXPRCURV( exprcurvQuadratic )
 {
    SCIP_EXPRDATA_QUADRATIC* data;
    SCIP_QUADELEM* quadelems;
@@ -1637,7 +1633,7 @@ SCIP_DECL_EXPRCURV( SCIPexprcurvQuadratic )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPREVAL( SCIPexprevalPolynomial )
+SCIP_DECL_EXPREVAL( exprevalPolynomial )
 {
    SCIP_EXPRDATA_POLYNOMIAL* polynomialdata;
    SCIP_EXPRDATA_MONOMIAL*   monomialdata;
@@ -1729,7 +1725,7 @@ SCIP_DECL_EXPREVAL( SCIPexprevalPolynomial )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRINTEVAL( SCIPexprevalPolynomialInt )
+SCIP_DECL_EXPRINTEVAL( exprevalIntPolynomial )
 {
    SCIP_EXPRDATA_POLYNOMIAL* polynomialdata;
    SCIP_EXPRDATA_MONOMIAL*   monomialdata;
@@ -1815,7 +1811,7 @@ SCIP_DECL_EXPRINTEVAL( SCIPexprevalPolynomialInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EXPRCURV( SCIPexprcurvPolynomial )
+SCIP_DECL_EXPRCURV( exprcurvPolynomial )
 {
    SCIP_EXPRDATA_POLYNOMIAL* data;
    SCIP_EXPRDATA_MONOMIAL** monomials;
@@ -1847,44 +1843,56 @@ SCIP_DECL_EXPRCURV( SCIPexprcurvPolynomial )
    return SCIP_OKAY;
 } /*lint !e715*/
 
+/* element in table of expression operands */
+struct exprOpTableElement
+{
+  const char*           name;               /**< name of operand (used for printing) */
+  int                   nargs;              /**< number of arguments (negative if not fixed) */
+  SCIP_DECL_EXPREVAL    ((*eval));          /**< evaluation function */
+  SCIP_DECL_EXPRINTEVAL ((*inteval));       /**< interval evaluation function */
+  SCIP_DECL_EXPRCURV    ((*curv));          /**< curvature check function */
+};
+
 /** table containing for each operand the name, the number of children, and some evaluation functions */
-struct SCIPexprOpTableElement SCIPexprOpTable[] =
+/* @TODO declare static when finished merging */
+struct exprOpTableElement exprOpTable[] =
 {
    {NULL,-1,NULL,NULL,NULL},
-   { "variable",          0, SCIPexprevalPushVar,       SCIPexprevalPushVarInt,       SCIPexprcurvPushVar      },
-   { "constant",          0, SCIPexprevalPushValue,     SCIPexprevalPushValueInt,     SCIPexprcurvPushValue    },
-   { "parameter",         0, SCIPexprevalPushParameter, SCIPexprevalPushParameterInt, SCIPexprcurvPushParameter},
+   { "variable",          0, exprevalVar,           exprevalIntVar,           exprcurvVar      },
+   { "constant",          0, exprevalConst,         exprevalIntConst,         exprcurvConst    },
+   { "parameter",         0, exprevalParam,         exprevalIntParam,         exprcurvParam},
    {NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},
-   { "plus",              2, SCIPexprevalPlus,          SCIPexprevalPlusInt,          SCIPexprcurvPlus         },
-   { "minus",             2, SCIPexprevalMinus,         SCIPexprevalMinusInt,         SCIPexprcurvMinus        },
-   { "mul",               2, SCIPexprevalMult,          SCIPexprevalMultInt,          SCIPexprcurvMult         },
-   { "div",               2, SCIPexprevalDiv,           SCIPexprevalDivInt,           SCIPexprcurvDiv          },
-   { "sqr",               1, SCIPexprevalSqr,           SCIPexprevalSqrInt,           SCIPexprcurvSqr          },
-   { "sqrt",              1, SCIPexprevalSqrt,          SCIPexprevalSqrtInt,          SCIPexprcurvSqrt         },
-   { "realpower",         1, SCIPexprevalRealPower,     SCIPexprevalRealPowerInt,     SCIPexprcurvRealPower    },
-   { "intpower",          1, SCIPexprevalIntPower,      SCIPexprevalIntPowerInt,      SCIPexprcurvIntPower     },
-   { "signpower",         1, SCIPexprevalSignPower,     SCIPexprevalSignPowerInt,     SCIPexprcurvSignPower    },
-   { "exp",               1, SCIPexprevalExp,           SCIPexprevalExpInt,           SCIPexprcurvExp          },
-   { "log",               1, SCIPexprevalLog,           SCIPexprevalLogInt,           SCIPexprcurvLog          },
-   { "sin",               1, SCIPexprevalSin,           SCIPexprevalSinInt,           SCIPexprcurvSin          },
-   { "cos",               1, SCIPexprevalCos,           SCIPexprevalCosInt,           SCIPexprcurvCos          },
-   { "tan",               1, SCIPexprevalTan,           SCIPexprevalTanInt,           SCIPexprcurvTan          },
-   {NULL,-1,NULL,NULL,NULL}, /* { "erf",               1, SCIPexprevalErf,           SCIPexprevalErfInt           }, */
-   {NULL,-1,NULL,NULL,NULL}, /* { "erfi",              1, SCIPexprevalErfi,          SCIPexprevalErfiInt          }, */
-   { "min",               2, SCIPexprevalMin,           SCIPexprevalMinInt,           SCIPexprcurvMin          },
-   { "max",               2, SCIPexprevalMax,           SCIPexprevalMaxInt,           SCIPexprcurvMax          },
-   { "abs",               1, SCIPexprevalAbs,           SCIPexprevalAbsInt,           SCIPexprcurvAbs          },
-   { "sign",              1, SCIPexprevalSign,          SCIPexprevalSignInt,          SCIPexprcurvSign         },
+   { "plus",              2, exprevalPlus,          exprevalIntPlus,          exprcurvPlus         },
+   { "minus",             2, exprevalMinus,         exprevalIntMinus,         exprcurvMinus        },
+   { "mul",               2, exprevalMult,          exprevalIntMult,          exprcurvMult         },
+   { "div",               2, exprevalDiv,           exprevalIntDiv,           exprcurvDiv          },
+   { "sqr",               1, exprevalSqr,           exprevalIntSqr,           exprcurvSqr          },
+   { "sqrt",              1, exprevalSqrt,          exprevalIntSqrt,          exprcurvSqrt         },
+   { "realpower",         1, exprevalRealPower,     exprevalIntRealPower,     exprcurvRealPower    },
+   { "intpower",          1, exprevalIntPower,      exprevalIntIntPower,      exprcurvIntPower     },
+   { "signpower",         1, exprevalSignPower,     exprevalIntSignPower,     exprcurvSignPower    },
+   { "exp",               1, exprevalExp,           exprevalIntExp,           exprcurvExp          },
+   { "log",               1, exprevalLog,           exprevalIntLog,           exprcurvLog          },
+   { "sin",               1, exprevalSin,           exprevalIntSin,           exprcurvSin          },
+   { "cos",               1, exprevalCos,           exprevalIntCos,           exprcurvCos          },
+   { "tan",               1, exprevalTan,           exprevalIntTan,           exprcurvTan          },
+/* { "erf",               1, exprevalErf,           exprevalIntErf,           exprcurvErf          }, */
+/* { "erfi",              1, exprevalErfi,          exprevalIntErfi           exprcurvErfi         }, */
+   {NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},
+   { "min",               2, exprevalMin,           exprevalIntMin,           exprcurvMin          },
+   { "max",               2, exprevalMax,           exprevalIntMax,           exprcurvMax          },
+   { "abs",               1, exprevalAbs,           exprevalIntAbs,           exprcurvAbs          },
+   { "sign",              1, exprevalSign,          exprevalIntSign,          exprcurvSign         },
    {NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},
    {NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},
    {NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},
    {NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},
    {NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},{NULL,-1,NULL,NULL,NULL},
-   { "sum",              -2, SCIPexprevalSum,           SCIPexprevalSumInt,           SCIPexprcurvSum          },
-   { "prod",             -2, SCIPexprevalProduct,       SCIPexprevalProductInt,       SCIPexprcurvProduct      },
-   { "linear",           -2, SCIPexprevalLinear,        SCIPexprevalLinearInt,        SCIPexprcurvLinear       },
-   { "quadratic",        -2, SCIPexprevalQuadratic,     SCIPexprevalQuadraticInt,     SCIPexprcurvQuadratic    },
-   { "polynomial",       -2, SCIPexprevalPolynomial,    SCIPexprevalPolynomialInt,    SCIPexprcurvPolynomial   }
+   { "sum",              -2, exprevalSum,           exprevalIntSum,           exprcurvSum          },
+   { "prod",             -2, exprevalProduct,       exprevalIntProduct,       exprcurvProduct      },
+   { "linear",           -2, exprevalLinear,        exprevalIntLinear,        exprcurvLinear       },
+   { "quadratic",        -2, exprevalQuadratic,     exprevalIntQuadratic,     exprcurvQuadratic    },
+   { "polynomial",       -2, exprevalPolynomial,    exprevalIntPolynomial,    exprcurvPolynomial   }
 };
 
 /** gives the name of an operand as string */
@@ -1894,7 +1902,7 @@ const char* SCIPexpropGetName(
 {
    assert(op < SCIP_EXPR_LAST);
 
-   return SCIPexprOpTable[op].name;
+   return exprOpTable[op].name;
 }
 
 /** gives the number of children of a simple operand */
@@ -1904,7 +1912,7 @@ int SCIPexpropGetNChildren(
 {
    assert(op < SCIP_EXPR_LAST);
 
-   return SCIPexprOpTable[op].nargs;
+   return exprOpTable[op].nargs;
 }
 
 /** calculate memory size for dynamically allocated arrays (copied from scip/set.c) */
@@ -3401,8 +3409,8 @@ SCIP_RETCODE SCIPexprEval(
    }
 
    /* evaluate this expression */
-   assert( SCIPexprOpTable[expr->op].eval != NULL );
-   SCIP_CALL( SCIPexprOpTable[expr->op].eval(expr->data, expr->nchildren, buf, varvals, param, val) );
+   assert( exprOpTable[expr->op].eval != NULL );
+   SCIP_CALL( exprOpTable[expr->op].eval(expr->data, expr->nchildren, buf, varvals, param, val) );
 
    /* free memory, if allocated before */
    if( staticbuf != buf )
@@ -3443,8 +3451,8 @@ SCIP_RETCODE SCIPexprEvalInt(
    }
 
    /* evaluate this expression */
-   assert( SCIPexprOpTable[expr->op].inteval != NULL );
-   SCIP_CALL( SCIPexprOpTable[expr->op].inteval(infinity, expr->data, expr->nchildren, buf, varvals, param, val) );
+   assert( exprOpTable[expr->op].inteval != NULL );
+   SCIP_CALL( exprOpTable[expr->op].inteval(infinity, expr->data, expr->nchildren, buf, varvals, param, val) );
 
    /* free memory, if allocated before */
    if( staticbuf != buf )
@@ -3497,11 +3505,11 @@ SCIP_RETCODE SCIPexprCheckCurvature(
    }
 
    /* get curvature and bounds of expr */
-   assert(SCIPexprOpTable[expr->op].curv != NULL);
-   assert(SCIPexprOpTable[expr->op].inteval != NULL);
+   assert(exprOpTable[expr->op].curv != NULL);
+   assert(exprOpTable[expr->op].inteval != NULL);
 
-   SCIP_CALL( SCIPexprOpTable[expr->op].curv(infinity, expr->data, expr->nchildren, childbounds, childcurv, curv) );
-   SCIP_CALL( SCIPexprOpTable[expr->op].inteval(infinity, expr->data, expr->nchildren, childbounds, varbounds, param, bounds) );
+   SCIP_CALL( exprOpTable[expr->op].curv(infinity, expr->data, expr->nchildren, childbounds, childcurv, curv) );
+   SCIP_CALL( exprOpTable[expr->op].inteval(infinity, expr->data, expr->nchildren, childbounds, varbounds, param, bounds) );
 
    /* free memory, if allocated before */
    if( childboundsbuf != childbounds )
@@ -3651,7 +3659,7 @@ void SCIPexprPrint(
 
       case SCIP_EXPR_REALPOWER:
       case SCIP_EXPR_SIGNPOWER:
-         SCIPmessageFPrintInfo(file, "%s(", SCIPexprOpTable[expr->op].name);
+         SCIPmessageFPrintInfo(file, "%s(", exprOpTable[expr->op].name);
          SCIPexprPrint(expr->children[0], file, varnames, paramnames);
          SCIPmessageFPrintInfo(file, ", %g)", expr->data.dbl);
          break;
@@ -3678,7 +3686,7 @@ void SCIPexprPrint(
       {
          int i;
          
-         SCIPmessageFPrintInfo(file, "%s(", SCIPexprOpTable[expr->op].name);
+         SCIPmessageFPrintInfo(file, "%s(", exprOpTable[expr->op].name);
          
          for( i = 0; i < expr->nchildren; ++i )
          {
