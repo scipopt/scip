@@ -464,6 +464,20 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeBounds)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the freetransproblem command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeFreetransproblem)
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   /* free transformed problem */
+   SCIP_CALL( SCIPfreeTransform(scip) );
+
+   /* set root dialog as next dialog */
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for the checksol command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecChecksol)
 {  /*lint --e{715}*/
@@ -2715,6 +2729,17 @@ SCIP_RETCODE SCIPincludeDialogDefault(
             NULL,
             SCIPdialogExecChangeBounds, NULL, NULL,
             "bounds", "change bounds of a variable", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* free transformed problem */
+   if( !SCIPdialogHasEntry(submenu, "freetransproblem") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecChangeFreetransproblem, NULL, NULL,
+            "freetransproblem", "free transformed problem", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }

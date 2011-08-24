@@ -224,7 +224,7 @@ SCIP_BOUNDTYPE SCIPboundtypeOpposite(
 #define SCIPcolGetVar(col)              (col)->var
 #define SCIPcolGetIndex(col)            (col)->index
 #define SCIPcolIsIntegral(col)          (col)->integral
-#define SCIPcolIsRemovable(col)        (col)->removable
+#define SCIPcolIsRemovable(col)         (col)->removable
 #define SCIPcolGetLPPos(col)            (col)->lppos
 #define SCIPcolGetLPDepth(col)          (col)->lpdepth
 #define SCIPcolIsInLP(col)              ((col)->lppos >= 0)
@@ -401,6 +401,12 @@ int SCIProwGetIndex(
    SCIP_ROW*             row                 /**< LP row */
    );
 
+/** gets age of row */
+extern
+int SCIProwGetAge(
+   SCIP_ROW*             row                 /**< LP row */
+   );
+
 /** returns TRUE iff the activity of the row (without the row's constant) is always integral in a feasible solution */
 extern
 SCIP_Bool SCIProwIsIntegral(
@@ -469,6 +475,7 @@ SCIP_Bool SCIProwIsInLP(
 #define SCIProwGetBasisStatus(row)      (row)->basisstatus
 #define SCIProwGetName(row)             (row)->name
 #define SCIProwGetIndex(row)            (row)->index
+#define SCIProwGetAge(row)            (row)->age
 #define SCIProwIsIntegral(row)          (row)->integral
 #define SCIProwIsLocal(row)             (row)->local
 #define SCIProwIsModifiable(row)        (row)->modifiable

@@ -1,0 +1,7 @@
+check/check.sh
+check/check.awk
+check/evalcheck.sh
+check/getlastprob.awk
+check/temp.tour
+check/locks/
+check/results/
