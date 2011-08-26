@@ -532,7 +532,7 @@ SCIP_RETCODE SCIPcreate(
    SCIP_CALL( SCIPmemCreate(&(*scip)->mem) );
    SCIP_CALL( SCIPsetCreate(&(*scip)->set, (*scip)->mem->setmem, *scip) );
    SCIP_CALL( SCIPinterruptCreate(&(*scip)->interrupt) );
-   SCIP_CALL( SCIPdialoghdlrCreate(&(*scip)->dialoghdlr) );
+   SCIP_CALL( SCIPdialoghdlrCreate((*scip)->set, &(*scip)->dialoghdlr) );
    SCIP_CALL( SCIPclockCreate(&(*scip)->totaltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIPclockStart((*scip)->totaltime, (*scip)->set);
    (*scip)->stat = NULL;

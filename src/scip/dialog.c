@@ -297,9 +297,14 @@ SCIP_RETCODE SCIPdialogCopyInclude(
 
 /** creates a dialog handler */
 SCIP_RETCODE SCIPdialoghdlrCreate(
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_DIALOGHDLR**     dialoghdlr          /**< pointer to store dialog handler */
    )
 {
+#ifdef WITH_READLINE
+   char readlineversion[20];
+#endif
+
    assert(dialoghdlr != NULL);
    
    SCIP_ALLOC( BMSallocMemory(dialoghdlr) );
@@ -311,6 +316,11 @@ SCIP_RETCODE SCIPdialoghdlrCreate(
    SCIP_ALLOC( BMSallocMemoryArray(&(*dialoghdlr)->buffer, (*dialoghdlr)->buffersize) );
 
    SCIPdialoghdlrClearBuffer(*dialoghdlr);
+
+#ifdef WITH_READLINE
+   (void) SCIPsnprintf(readlineversion, sizeof(readlineversion), "Readline %s", rl_library_version);
+   SCIP_CALL( SCIPsetIncludeExternalCode(set, readlineversion, "GNU library for command line editing (gnu.org/s/readline)") );
+#endif
 
    return SCIP_OKAY;
 }
