@@ -1,4 +1,4 @@
-# SCIP version 2.0.1
+# SCIP version 2.0.2
 
 # branching score function ('s'um, 'p'roduct)
 # [type: char, range: {sp}, default: p]
@@ -2948,9 +2948,9 @@ heuristics/shiftandpropagate/freqofs = 0
 # [type: int, range: [-1,2147483647], default: -1]
 heuristics/shiftandpropagate/maxdepth = -1
 
-# Should continuous variables be relaxated?
+# Should continuous variables be relaxed?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
-heuristics/shiftandpropagate/relaxate = TRUE
+heuristics/shiftandpropagate/relax = TRUE
 
 # Should domains be reduced by probing?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -3117,7 +3117,7 @@ heuristics/twoopt/intopt = FALSE
 heuristics/twoopt/waitingnodes = 0
 
 # maximum number of slaves for one master variable
-# [type: int, range: [1,1000000], default: 199]
+# [type: int, range: [-1,1000000], default: 199]
 heuristics/twoopt/maxnslaves = 199
 
 # parameter to determine the percentage of rows two variables have to share before they are considered equal
