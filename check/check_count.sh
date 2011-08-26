@@ -120,7 +120,7 @@ HARDMEMLIMIT=`expr $HARDMEMLIMIT \* 1024`
 echo "hard time limit: $HARDTIMELIMIT s" >>$OUTFILE
 echo "hard mem limit: $HARDMEMLIMIT k" >>$OUTFILE
 
-for i in `cat $TSTNAME.test` DONE
+for i in `cat testset/$TSTNAME.test` DONE
 do
     if test "$i" = "DONE"
     then
@@ -151,7 +151,7 @@ do
             echo set display verblevel 4           >> $TMPFILE
             echo set display freq $DISPFREQ        >> $TMPFILE
             echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
-            if test "$LPS" == "none"      
+            if test "$LPS" == "none"
             then
                 echo set lp solvefreq -1           >> $TMPFILE # avoid solving LPs in case of LPS=none
 
@@ -162,7 +162,7 @@ do
             echo display statistics                >> $TMPFILE
             echo quit                              >> $TMPFILE
 
-#            if test "$LPS" == "cpx"      
+#            if test "$LPS" == "cpx"
 #            then
 #                waitcplex.sh # ??????????????????
 #            fi
@@ -200,7 +200,7 @@ date >>$ERRFILE
 
 if test -e $DONEFILE
 then
-    ./evalcheckcount.sh $OUTFILE
+    ./evalcheck_count.sh $OUTFILE
 
     if test "$LOCK" = "true"
     then

@@ -49,7 +49,6 @@ using SCIPInterval_NAMESPACE::SCIPInterval;
 #include <cppad/config.h>
 #define CPPAD_PACKAGE_STRING PACKAGE_STRING
 #endif
-#include <cppad/declare.hpp>
 #include <cppad/error_handler.hpp>
 
 /* Brad recomends using the discrete function feature of CppAD for sign, since it avoids the need for retaping

@@ -42,7 +42,7 @@ $NAME/check/check_glpk.sh $NAME/check/evalcheck_glpk.sh $NAME/check/check_glpk.a
 $NAME/check/check_gurobi.sh $NAME/check/evalcheck_gurobi.sh $NAME/check/check_gurobi.awk \
 $NAME/check/check_mosek.sh $NAME/check/evalcheck_mosek.sh $NAME/check/check_mosek.awk \
 $NAME/check/check_symphony.sh $NAME/check/evalcheck_symphony.sh $NAME/check/check_symphony.awk \
-$NAME/check/checkcount.sh $NAME/check/evalcheckcount.sh $NAME/check/checkcount.awk \
+$NAME/check/check_count.sh $NAME/check/evalcheck_count.sh $NAME/check/check_count.awk \
 $NAME/check/short.test $NAME/check/short.solu \
 $NAME/check/cmpres.awk $NAME/check/allcmpres.sh \
 $NAME/check/getlastprob.awk \

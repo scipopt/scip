@@ -15150,6 +15150,7 @@ SCIP_RETCODE SCIPlpWriteMip(
 #undef SCIProwGetBasisStatus
 #undef SCIProwGetName
 #undef SCIProwGetIndex
+#undef SCIProwGetAge
 #undef SCIProwIsIntegral
 #undef SCIProwIsLocal
 #undef SCIProwIsModifiable
@@ -15567,6 +15568,16 @@ int SCIProwGetIndex(
    assert(row != NULL);
 
    return row->index;
+}
+
+/** gets age of row */
+int SCIProwGetAge(
+   SCIP_ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->age;
 }
 
 /** returns TRUE iff the activity of the row (without the row's constant) is always integral in a feasible solution */

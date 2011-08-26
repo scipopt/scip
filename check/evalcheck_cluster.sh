@@ -114,7 +114,6 @@ do
   # check if the out file exists
   if test -e $DIR/$EVALFILE.out
   then
-
       echo create results for $EVALFILE
 
       # detect used queue
@@ -135,20 +134,20 @@ do
       echo "Testset " $TSTNAME
       echo "Solver  " $SOLVER
 
-      if test -f $TSTNAME.test
+      if test -f testset/$TSTNAME.test
       then
-	  TESTFILE=$TSTNAME.test
+	  TESTFILE=testset/$TSTNAME.test
       else
 	  TESTFILE=""
       fi
 
-      if test -f $TSTNAME.solu
+      if test -f testset/$TSTNAME.solu
       then
-	  SOLUFILE=$TSTNAME.solu
+	  SOLUFILE=testset/$TSTNAME.solu
       else 
-	  if test -f all.solu
+	  if test -f testset/all.solu
 	  then
-	      SOLUFILE=all.solu
+	      SOLUFILE=testset/all.solu
 	  else
 	      SOLUFILE=""
 	  fi
@@ -158,7 +157,12 @@ do
       then
 	  awk -f check_cplex.awk -v "TEXFILE=$TEXFILE" $AWKARGS $SOLUFILE $OUTFILE | tee $RESFILE
       else
-	  awk -f check.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
+	  if test  "$SOLVER" = "cbc"
+	  then
+	      awk -f check_cbc.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
+	  else
+	      awk -f check.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
+	  fi
       fi
   fi
 done

@@ -60,7 +60,7 @@
  * LP construction interface of ZIMPL
  */
 
-/* ZIMPL does not support user data in callbacks - we have to use a static variables */
+/* ZIMPL does not support user data in callbacks - we have to use static variables */
 static SCIP* scip_ = NULL;
 static SCIP_Real* startvals_ = NULL;
 static SCIP_VAR** startvars_ = NULL;
@@ -927,9 +927,8 @@ SCIP_DECL_READERREAD(readerReadZpl)
 
    if( usestartsol )
    {
-      /* if read failed, transformProb might fail also, due to lack of a Prob
-       */
-      if( !readerror_ )
+      /* if read failed, transformProb might fail also, due to lack of a problem */
+      if( nstartvals_ > 0 && !readerror_ )
       {
          /* transform the problem such that adding primal solutions is possible */
          SCIP_CALL( SCIPtransformProb(scip) );
@@ -946,8 +945,8 @@ SCIP_DECL_READERREAD(readerReadZpl)
             SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "ZIMPL starting solution accepted\n");
       }
       
-      SCIPfreeMemoryArray(scip_,&startvals_);
-      SCIPfreeMemoryArray(scip_,&startvars_);
+      SCIPfreeMemoryArray(scip_, &startvals_);
+      SCIPfreeMemoryArray(scip_, &startvars_);
       nstartvals_ = 0;
       startvalssize_ = 0;
    }

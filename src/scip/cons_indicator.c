@@ -2626,6 +2626,15 @@ SCIP_RETCODE propIndicator(
    {
       SCIPdebugMessage("the node is infeasible, both the slackvariable and the binary variable are fixed to be nonzero.\n");
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
+      assert( SCIPvarGetLbLocal(consdata->binvar) > 0.5 );
+      assert( SCIPisPositive(scip, SCIPvarGetLbLocal(consdata->slackvar)) );
+
+      /* perform conflict analysis */
+      SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->binvar) );
+      SCIP_CALL( SCIPaddConflictLb(scip, consdata->slackvar, NULL) );
+      SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
+
       *cutoff = TRUE;
       return SCIP_OKAY;
    }
@@ -2636,7 +2645,7 @@ SCIP_RETCODE propIndicator(
       SCIP_Bool infeasible, tightened;
 
       /* increase age of constraint; age is reset to zero, if a conflict or a propagation was found */
-      if( !SCIPinRepropagation(scip) )
+      if ( !SCIPinRepropagation(scip) )
          SCIP_CALL( SCIPincConsAge(scip, cons) );
 
       /* if binvar is fixed to be nonzero */
@@ -4141,7 +4150,7 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
-   /* copy solution if it makes sense */
+   /* copy solution if it makes sense (will send solution to trysol heuristic in any case (see below) */
    if ( SCIPgetStage(scip) < SCIP_STAGE_SOLVED && conshdlrdata->trySolutions && conshdlrdata->heurTrySol != NULL )
    {
       SCIP_CALL( SCIPcreateSolCopy(scip, &trysol, sol) );
@@ -4173,6 +4182,7 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
       /* if printreason is true it can happen that non-integral solutions are checked */
       assert( checkintegrality || SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, consdata->binvar)) );
 
+      /* if constraint is infeasible */
       if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->binvar)) &&
            ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->slackvar)) )
       {
@@ -4222,7 +4232,7 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
       lp = conshdlrdata->altLP;
       assert( conshdlrdata->sepaAlternativeLP );
 
-      /* the check maybe called before we have build the alternativ polyhedron -> return SCIP_INFEASIBLE */
+      /* the check maybe called before we have build the alternative polyhedron -> return SCIP_INFEASIBLE */
       if ( lp != NULL )
       {
 #ifndef NDEBUG
@@ -4231,7 +4241,9 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
 
          /* change coefficients of bounds in alternative LP */
          if ( conshdlrdata->updateBounds )
+         {
             SCIP_CALL( updateFirstRowGlobal(scip, conshdlrdata) );
+         }
 
          /* scale first row if necessary */
          SCIP_CALL( scaleFirstRow(scip, conshdlrdata) );
@@ -5537,7 +5549,10 @@ SCIP_Bool SCIPisViolatedIndicator(
 }
 
 
-/** Based on values of other variables, computes slack and binary variable to turn constraint feasible */
+/** Based on values of other variables, computes slack and binary variable to turn constraint feasible 
+ *
+ *  Will also clean up solution, i.e., shift slack variable.
+ */
 SCIP_RETCODE SCIPmakeIndicatorFeasible(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< indicator constraint */
@@ -5659,6 +5674,50 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
 }
 
 
+/** Based on values of other variables, computes slack and binary variable to turn all constraints feasible */
+SCIP_RETCODE SCIPmakeIndicatorsFeasible(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< indicator constraint handler */
+   SCIP_SOL*             sol,                /**< solution */
+   SCIP_Bool*            changed             /**< whether the solution has been changed */
+   )
+{
+   SCIP_CONS** conss;
+   int nconss;
+   int c;
+
+   assert( conshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert( sol != NULL );
+   assert( changed != NULL );
+
+   *changed = FALSE;
+
+   /* only run after or in presolving */
+   if ( SCIPgetStage(scip) < SCIP_STAGE_PRESOLVING )
+      return SCIP_OKAY;
+
+   conss = SCIPconshdlrGetConss(conshdlr);
+   nconss = SCIPconshdlrGetNConss(conshdlr);
+
+   for (c = 0; c < nconss; ++c)
+   {
+      assert( conss[c] != NULL );
+      if ( SCIPisViolatedIndicator(scip, conss[c], sol) )
+      {
+         SCIP_Bool chg = FALSE;
+         SCIPmakeIndicatorFeasible(scip, conss[c], sol, &chg);
+         /* chg can be false, e.g., if linconsActive is false; in this case we stop, because we cannot fix the problem. */
+         if ( ! chg )
+            break;
+         *changed = TRUE;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** adds additional linear constraint that is not connected with an indicator constraint, but can be used for separation */
 SCIP_RETCODE SCIPaddLinearConsIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -5666,19 +5725,23 @@ SCIP_RETCODE SCIPaddLinearConsIndicator(
    SCIP_CONS*            lincons             /**< linear constraint */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
    assert( scip != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( lincons != NULL );
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != NULL );
+   /* do not add locally valid constraints (this would require much more bookkeeping) */
+   if ( ! SCIPconsIsLocal(lincons) )
+   {
+      SCIP_CONSHDLRDATA* conshdlrdata;
 
-   SCIP_CALL( consdataEnsureAddLinConsSize(scip, conshdlr, conshdlrdata->nAddLinCons+1) );
-   assert( conshdlrdata->nAddLinCons+1 <= conshdlrdata->maxAddLinCons );
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert( conshdlrdata != NULL );
 
-   conshdlrdata->addLinCons[conshdlrdata->nAddLinCons++] = lincons;
+      SCIP_CALL( consdataEnsureAddLinConsSize(scip, conshdlr, conshdlrdata->nAddLinCons+1) );
+      assert( conshdlrdata->nAddLinCons+1 <= conshdlrdata->maxAddLinCons );
+
+      conshdlrdata->addLinCons[conshdlrdata->nAddLinCons++] = lincons;
+   }
 
    return SCIP_OKAY;
 }
@@ -5694,28 +5757,28 @@ SCIP_RETCODE SCIPaddRowIndicator(
    SCIP_ROW*             row                 /**< row to add */
    )
 {
-   int colIndex;
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
    assert( scip != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( row != NULL );
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != NULL );
-
-   /* do not add rows if we do not separate */
-   if ( ! conshdlrdata->sepaAlternativeLP )
-      return SCIP_OKAY;
-
    /* skip local cuts (local cuts would require to dynamically add and remove columns from the alternative polyhedron */
-   if ( SCIProwIsLocal(row) )
-      return SCIP_OKAY;
+   if ( ! SCIProwIsLocal(row) )
+   {
+      int colIndex;
+      SCIP_CONSHDLRDATA* conshdlrdata;
 
-   SCIPdebugMessage("Adding row <%s> to alternative LP.\n", SCIProwGetName(row));
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert( conshdlrdata != NULL );
 
-   /* add row directly to alternative polyhedron */
-   SCIP_CALL( addAltLPRow(scip, conshdlr, row, 0.0, &colIndex) );
+      /* do not add rows if we do not separate */
+      if ( ! conshdlrdata->sepaAlternativeLP )
+         return SCIP_OKAY;
+
+      SCIPdebugMessage("Adding row <%s> to alternative LP.\n", SCIProwGetName(row));
+
+      /* add row directly to alternative polyhedron */
+      SCIP_CALL( addAltLPRow(scip, conshdlr, row, 0.0, &colIndex) );
+   }
 
    return SCIP_OKAY;
 }

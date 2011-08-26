@@ -33,21 +33,6 @@
  *
  * \OTHERDOCUTEXT
  *
- * @version  2.0.1.7
- *
- * <b>Changes between different versions of SCIP</b>
- *
- * - \ref CHANGELOG    "Change log"
- * - \ref RELEASENOTES "Release notes"
- * - \ref CHG4         "Interface changes between version 1.2 and 2.0"
- * - \ref CHG3         "Interface changes between version 1.1 and 1.2"
- * - \ref CHG2         "Interface changes between version 1.0 and 1.1"
- * - \ref CHG1         "Interface changes between version 0.9 and 1.0"
- *
- * <b>SCIP Authors</b>
- * - <a class="el" href="AUTHORS.html#zib">Current developers at ZIB</a>
- * - <a class="el" href="AUTHORS.html#programmers">Other developers</a>
- * - <a class="el" href="AUTHORS.html#contributors">Contributors</a>
  *
  *
  * <b>What is SCIP?</b>
@@ -55,42 +40,39 @@
  * SCIP is a framework to solve constraint integer programs (CIPs). In particular,
  *
  * - SCIP is a branch-and-cut-and-price framework,
- * - incorporates a full-scale mixed integer programming (MIP) solver,
- * - is also a constraint programming (CP) solver, and
- * - incorporates SAT-solving features (conflict analysis, restarts).
+ * - incorporates a full-scale mixed integer programming (MIP) solver, and
+ * - incorporates a full-scale mixed integer quadratically constrained programming (MIQCP) solver.
  *
- * SCIP is based on SIP (Solving Integer Programs) by <a
- * href="http://fauam2m.am.uni-erlangen.de/optimization/edom/staff-members/martin-alexander/prof-dr-alexander-martin.html">Alexander
- * Martin</a>. The main developer of SCIP was Tobias Achterberg (2002-2007) with contributions by Timo Berthold and Kati
- * Wolter. The persons listed above contributed or are currently contributing to SCIP.
+ * See the web site of <a href="http://scip.zib.de">SCIP</a> for more information about licensing and to download SCIP.
  *
  * SCIP is developed together with <a href="http://www.tu-braunschweig.de/mo/">TU Braunschweig</a> and <a
  * href="http://www.am.uni-erlangen.de/optimization/edom.html">University of Erlangen-N&uuml;rnberg (Chair of EDOM)</a>
- * and has approx. 270'000 lines of C code. See the web
- * site of <a href="http://scip.zib.de">SCIP</a> for more information about licensing and to download SCIP.
+ * and has more than 300'000 lines of C code.
  *
+ * <b>Getting started</b>
+ *
+ * - \ref SHELL   "Tutorial: the interactive shell"
+ *
+ * - \ref MAKE    "Installation information / Makefiles"
+ *
+ * - \ref START   "How to start a new project"
+ * - \ref DOC     "How to search the documentation for interface methods"
  *
  * <b>General Information</b>
  *
- * - \ref LICENSE "License"
  * - \ref FAQ     "Frequently asked questions (FAQ)"
+ * - \ref LICENSE "License"
  *
  * - \ref PUBLICMETHODS "List of callable functions"
  * - \ref PARAMETERS "List of all SCIP parameters"
  *
- * - \ref START   "How to start a new project"
- * - \ref DOC     "How to search the documentation for interface methods"
  * - \ref TEST    "How to run automated tests with SCIP"
  * - \ref COUNTER "How to use SCIP to count feasible solutions"
  *
- * - \ref MAKE    "Makefiles / Installation information"
+ *
+ * <b>Programming with SCIP</b>
  *
  * - \ref DEBUG   "Debugging"
- *
- * <table cellpadding="0px" border="0" width="100%">
- *   <tr>
- *     <td nowrap >
- * <b>Programming with SCIP</b>
  *
  * - How to add ...
  *   - \ref CONS    "Constraint handlers"
@@ -108,11 +90,32 @@
  *   - \ref EVENT   "Event handler"
  *   - \ref NLPI    "Interfaces to NLP solvers"
  *   - \ref EXPRINT "Interfaces to Expression interpreters"
+ *   - \ref CONF    "Conflict analysis"
  *
  * - Miscellaneous
  *   - \ref CODE    "Coding style guidelines"
  *   - \ref OBJ     "Creating, capturing, releasing, and adding data objects"
  *   - \ref PARAM   "Adding additional user parameters"
+ *
+ *
+ * <table cellpadding="0px" border="0" width="100%">
+ *   <tr>
+ *     <td nowrap >
+ * <b>Changes between different versions of SCIP</b>
+ *
+ * - \ref CHANGELOG    "Change log"
+ * - \ref RELEASENOTES "Release notes"
+ * - \ref CHG4         "Interface changes between version 1.2 and 2.0"
+ * - \ref CHG3         "Interface changes between version 1.1 and 1.2"
+ * - \ref CHG2         "Interface changes between version 1.0 and 1.1"
+ * - \ref CHG1         "Interface changes between version 0.9 and 1.0"
+ *
+ * <b>SCIP Authors</b>
+ * - <a class="el" href="AUTHORS.html#main">Current main developers</a>
+ * - <a class="el" href="AUTHORS.html#further">Further developers</a>
+ * - <a class="el" href="AUTHORS.html#contributors">Contributors</a>
+ *
+ * @version  2.0.1.7
  *
  *     </td>
  *     <td valign="bottom" width="200">
@@ -120,6 +123,9 @@
  *     </td>
  *   </tr>
  * </table>
+ *
+ *
+ *
  */
 
 
@@ -455,6 +461,279 @@
  *   compile your code, see \ref MAKE.
  *
  */
+
+
+/**@page SHELL Tutorial: the interactive shell
+ * 
+ * If are using SCIP as a black box solver, here you will find some tips and tricks what you can do.
+ *
+ * First of all, we need a SCIP binary and an example problem file to work with.  Therefore, you can either download the
+ * SCIP standard distribution (which includes problem files) and compile it on your own or you can download a
+ * precompiled binary and an example problem separately.
+ *
+ * If you want to download the SCIP standard distribution, we recommend to go to the <a
+ * href="http://zibopt.zib.de/download.shtml">ZIBopt download section</a>, download the latest release (version 2.0.1 as
+ * of this writing), inflate the tarball (e.g., with "tar xzf ziboptsuite-<version>.tgz"), and follow the instructions
+ * in the INSTALL file. The instance stein27, which will serve as an example in this tutorial, can be found under
+ * ziboptsuite-<version>/scip-<version>/check/instances/MIP/stein27.mps.
+ *
+ * If you want to download a precompiled binary, go to the <a href="http://scip.zib.de/download.shtml">SCIP download
+ * section</a> and download an appropriate binary for your operating system. To follow this tutorial, we recommend to download the instances 
+ * <a href="http://miplib.zib.de/miplib3/miplib3/stein27.mps.gz">stein27</a> from the <a href="http://miplib.zib.de/miplib3/miplib3.html">MIPLIB 3.0</a> homepage.
+ *
+ * Now start your binary, without any arguments. This opens the interactive shell, which should look somehow like this:
+ *
+ * \code
+ * SCIP version 2.0.1 [precision: 8 byte] [memory: block] [mode: optimized] [LP solver: SoPlex 1.5.0]
+ * Copyright (c) 2002-2011 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
+ * 
+ * External codes: 
+ *   SoPlex 1.5.0         Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)
+ *   ZIMPL 3.1.0          Zuse Institute Mathematical Programming Language developed by T. Koch (zimpl.zib.de)
+ * 
+ * user parameter file <scip.set> not found - using default parameters
+ * 
+ * SCIP> 
+ * \endcode
+ *
+ * First of all "help" shows you a list of all available shell commands. Brackets indicate a submenu with further options.
+ * \code
+ * SCIP> help
+
+ *  <display>             display information  
+ *  <set>                 load/save/change parameters
+ * ...
+ *  read                  read a problem
+ * \endcode
+ *
+ * Okay, let's solve some MIPs... use "read <path/to/file>" to parse a problem file, "optimize" to solve it and "display
+ * solution" to show the nonzero variables of the best found solution.
+
+ * \code 
+ * SCIP> read check/instances/MIP/stein27.mps 
+ * original problem has 27 variables (27 bin, 0 int, 0 impl, 0 cont) and 118 constraints
+ * SCIP> optimize
+ * 
+ * feasible solution found by trivial heuristic, objective value  2.700000e+01
+ * presolving:
+ * (round 1) 0 del vars, 0 del conss, 0 chg bounds, 0 chg sides, 0 chg coeffs, 118 upgd conss, 0 impls, 0 clqs
+ * presolving (2 rounds):
+ *  0 deleted vars, 0 deleted constraints, 0 tightened bounds, 0 added holes, 0 changed sides, 0 changed coefficients
+ *  0 implications, 0 cliques
+ * presolved problem has 27 variables (27 bin, 0 int, 0 impl, 0 cont) and 118 constraints
+ *       1 constraints of type <knapsack>
+ *     117 constraints of type <logicor>
+ * transformed objective value is always integral (scale: 1)
+ * Presolving Time: 0.00
+ * 
+ *  time | node  | left  |LP iter|LP it/n| mem |mdpt |frac |vars |cons |cols |rows |cuts |confs|strbr|  dualbound   | primalbound  |  gap   
+ * t 0.0s|     1 |     0 |    34 |     - | 337k|   0 |  21 |  27 | 118 |  27 | 118 |   0 |   0 |   0 | 1.300000e+01 | 2.700000e+01 | 107.69%
+ * R 0.0s|     1 |     0 |    34 |     - | 338k|   0 |  21 |  27 | 118 |  27 | 118 |   0 |   0 |   0 | 1.300000e+01 | 2.600000e+01 | 100.00%
+ * s 0.0s|     1 |     0 |    34 |     - | 339k|   0 |  21 |  27 | 118 |  27 | 118 |   0 |   0 |   0 | 1.300000e+01 | 2.500000e+01 |  92.31%
+ *   0.0s|     1 |     0 |    44 |     - | 392k|   0 |  21 |  27 | 118 |  27 | 120 |   2 |   0 |   0 | 1.300000e+01 | 2.500000e+01 |  92.31%
+ * b 0.0s|     1 |     0 |    44 |     - | 393k|   0 |  21 |  27 | 118 |  27 | 120 |   2 |   0 |   0 | 1.300000e+01 | 1.900000e+01 |  46.15%
+ * ...
+ *   0.1s|     1 |     2 |   107 |     - | 920k|   0 |  24 |  27 | 118 |  27 | 131 |  13 |   0 |  24 | 1.300000e+01 | 1.900000e+01 |  46.15%
+ * R 0.1s|    14 |    10 |   203 |   7.4 | 935k|  13 |   - |  27 | 118 |  27 | 124 |  13 |   0 | 164 | 1.300000e+01 | 1.800000e+01 |  38.46%
+ *   0.1s|   100 |    54 |   688 |   5.9 | 994k|  13 |  20 |  27 | 118 |  27 | 124 |  13 |   0 | 206 | 1.300000e+01 | 1.800000e+01 |  38.46%
+ *   0.1s|   200 |    86 |  1195 |   5.5 |1012k|  13 |   - |  27 | 119 |  27 | 124 |  13 |   1 | 207 | 1.300000e+01 | 1.800000e+01 |  38.46%
+ *  time | node  | left  |LP iter|LP it/n| mem |mdpt |frac |vars |cons |cols |rows |cuts |confs|strbr|  dualbound   | primalbound  |  gap   
+ *   0.2s|   300 |   106 |  1686 |   5.3 |1024k|  13 |   - |  27 | 119 |  27 | 124 |  13 |   1 | 207 | 1.350000e+01 | 1.800000e+01 |  33.33%
+ * ...  
+ *   0.7s|  4100 |    50 | 18328 |   4.4 |1033k|  16 |   8 |  27 | 119 |  27 | 124 |  13 |  15 | 207 | 1.650000e+01 | 1.800000e+01 |   9.09%
+ * 
+ * SCIP Status        : problem is solved [optimal solution found]
+ * Solving Time (sec) : 0.73
+ * Solving Nodes      : 4192
+ * Primal Bound       : +1.80000000000000e+01 (283 solutions)
+ * Dual Bound         : +1.80000000000000e+01
+ * Gap                : 0.00 %
+ * 
+ * SCIP> display solution
+ * 
+ * objective value:                                   18
+ * x0001                                               1   (obj:1)
+ * x0003                                               1   (obj:1)
+ * ...
+ * x0027                                               1   (obj:1)
+ * 
+ * SCIP> 
+ * \endcode
+ *
+ * What do we see here? After "optimize", SCIP first goes into presolving. Not much happening for this instance, just
+ * the linear constraints get upgraded to more specific types. Each round of presolving will be displayed in a single
+ * line, with a short summary at the end.  Then, we see the actual solving process. The first three output lines
+ * indicate that new incumbent solutions were found by the primal heuristics with display characters "t", "R", and "s";
+ * see, how the "primalbound" column goes down from 27 to 25. In the fourth line, two "cuts" are added.  Up to here, we
+ * needed 44 "LP iter"ations (34 for the first LP and 10 more to resolve after adding cuts). Little later, the root node
+ * processing is finished. We see that there are now two open nodes in the "left" column. From now on, we will see an
+ * output line every hundredth node or whenever a new incumbent is found (e.g. at node 14 in the above output). After
+ * some more nodes, the "dualbound" starts moving, too. At one point, both will be the same, and the solving process
+ * terminates, showing us some wrap-up information. 
+ *
+ * The exact performance varies amongst different architectures, operating systems, and so on. Do not be worried, if
+ * your installation needs more or less time or nodes to solve. Also, this instance has more than 2000 different optimal
+ * solutions. The optimal objective value always has to be 18, but the solution vector may differ.
+ *
+ * We might want to have some more information now. Which were the heuristics that found the solutions? What plugins
+ *  were called during the solutions process and how much time did they spend? How did the instance that we were solving
+ *  actually look like?  Information on certain plugin types (e.g., heuristics, branching rules, separators) we get by
+ *  "display <plugin-type>", information on the solution process, we get by "display statistics", and "display problem"
+ *  shows us the current instance.
+ *
+  \code 
+ * SCIP> display heuristics
+ *  primal heuristic     c priority freq ofs  description
+ *  ----------------     - -------- ---- ---  -----------
+ *  trivial              t    10000    0   0  start heuristic which tries some trivial solutions
+ * ...
+ *  rounding             R    -1000    1   0  LP rounding heuristic with infeasibility recovering
+ *  shifting             s    -5000   10   0  LP rounding heuristic with infeasibility recovering also using continuous variables
+ * ...
+ * SCIP> display statistics
+ * ...
+ *   gomory           :       0.02          6          0          0        461          0
+ *   cgmip            :       0.00          0          0          0          0          0
+ *   strongcg         :       0.01          6          0          0        598          0
+ * ...
+ *   oneopt           :       0.01          4          1
+ *   coefdiving       :       0.02         57          0
+ * ...
+ *   primal LP        :       0.00          0          0       0.00          -
+ *   dual LP          :       0.20       4187      14351       3.43   71755.00
+ * ...
+ * \endcode
+ *
+ * We see that rounding and shifting were the heuristics producing the solutions in the beginning. Rounding is called at
+ * every node, shifting only at every tenth level of the tree. The statistics are quite comprehensive, thus, we just
+ * explain a few lines here. We get information for all types of plugins and for the overall solving process. Besides
+ * others, we see that in in six calls, the gomory cut separator and the strong Chv&agrave;tal-Gomory separator each produced 
+ * several hundred cuts (of which only a few entered the LP). The oneopt heuristic found one solution in 4 calls,
+ * whereas coefdiving failed all 57 times it was called. All the LPs have been solved with the primal simplex, which
+ * took about 0.2 seconds of the 0.7 seconds overall solving time.
+ *
+ * Now, we can start playing around with parameters. Rounding and shifting seem to be quite successful on this instance,
+ * wondering what happens if we disable them? Or what happens, if we are even more rigorous and disable all heuristics?
+ * Or if we do the opposite and use aggressive heuristics?
+ *
+ * \code
+ * SCIP> set
+ * 
+ *   <branching>           change parameters for branching rules
+ *  ...
+ *   <heuristics>          change parameters for primal heuristics
+ * 
+ * SCIP/set> heuristics
+ * 
+ *   <actconsdiving>       LP diving heuristic that chooses fixings w.r.t. the active constraints
+ *  ...
+ *   <shifting>            LP rounding heuristic with infeasibility recovering also using continuous variables
+ *  ...
+ * 
+ * SCIP/set/heuristics> shifting 
+ * 
+ *   <advanced>            advanced parameters
+ *   freq                  frequency for calling primal heuristic <shifting> (-1: never, 0: only at depth freqofs) [10]
+ *   freqofs               frequency offset for calling primal heuristic <shifting> [0]
+ * 
+ * SCIP/set/heuristics/shifting> freq
+ * current value: 10, new value [-1,2147483647]: -1
+ * heuristics/shifting/freq = -1
+ * 
+ * SCIP> se he rou freq -1
+ * heuristics/rounding/freq = -1
+ * 
+ * SCIP> re check/instances/MIP/stein27.mps 
+ * original problem has 27 variables (27 bin, 0 int, 0 impl, 0 cont) and 118 constraints
+ * SCIP> o 
+ * 
+ * feasible solution found by trivial heuristic, objective value  2.700000e+01
+ * ...
+ * z 0.1s|     3 |     4 |   140 |  10.5 |1060k|   2 |  22 |  27 | 118 |  27 | 123 |  14 |   0 |  66 | 1.300000e+01 | 1.900000e+01 |  46.15%
+ * z 0.1s|     6 |     7 |   176 |  11.4 |1063k|   5 |  18 |  27 | 118 |  27 | 123 |  14 |   0 | 118 | 1.300000e+01 | 1.900000e+01 |  46.15%
+ * * 0.1s|    39 |    28 |   386 |   7.0 |1092k|  14 |   - |  27 | 118 |  27 | 123 |  14 |   0 | 199 | 1.300000e+01 | 1.800000e+01 |  38.46%
+ * ...
+ * SCIP Status        : problem is solved [optimal solution found]
+ * Solving Time (sec) : 0.75
+ * Solving Nodes      : 4253
+ * Primal Bound       : +1.80000000000000e+01 (287 solutions)
+ * Dual Bound         : +1.80000000000000e+01
+ * Gap                : 0.00 %
+ * 
+ * SCIP> 
+ * \endcode
+ *
+ * We can navigate through the menus step-by-step and get a list of available options and submenus. Thus, we select
+ * "set" to change settings, "heuristics" to change settings of primal heuristics, "shifting" for that particular
+ * heuristic. Then we see a list of parameters (and yet another submenu for advanced parameters), and disable this
+ * heuristic by setting its calling frequency to -1. If we already know the path to a certain setting, we can directly
+ * type it. Note that we do not have to use the full names, but we may use short versions, as long as they are unique.
+ *
+ * To solve a problem a second time, we have to read it and start the optimization process again.
+ *
+ * \code
+ * SCIP> set default
+ * reset parameters to their default values
+ * SCIP> set heuristics emphasis           
+ * 
+ *   aggressive            sets heuristics <aggressive>
+ *   fast                  sets heuristics <fast>
+ *   off                   turns <off> all heuristics
+ * 
+ * SCIP/set/heuristics/emphasis> aggr
+ * heuristics/veclendiving/freq = 5
+ * ...
+ * heuristics/crossover/minfixingrate = 0.5
+ * SCIP> read check/instances/MIP/stein27.mps
+ * original problem has 27 variables (27 bin, 0 int, 0 impl, 0 cont) and 118 constraints
+
+ * SCIP> opt
+ * ...
+ * D 0.1s|     1 |     0 |   107 |     - | 971k|   0 |  24 |  27 | 122 |  27 | 131 |  13 |   4 |   0 | 1.300000e+01 | 1.800000e+01 |  38.46%
+ *   0.1s|     1 |     0 |   107 |     - | 971k|   0 |  24 |  27 | 122 |  27 | 131 |  13 |   4 |   0 | 1.300000e+01 | 1.800000e+01 |  38.46%
+ *   0.1s|     1 |     0 |   119 |     - |1111k|   0 |  24 |  27 | 122 |  27 | 132 |  14 |   4 |   0 | 1.300000e+01 | 1.800000e+01 |  38.46%
+ *   0.1s|     1 |     2 |   119 |     - |1112k|   0 |  24 |  27 | 122 |  27 | 132 |  14 |   4 |  24 | 1.300000e+01 | 1.800000e+01 |  38.46%
+ *  time | node  | left  |LP iter|LP it/n| mem |mdpt |frac |vars |cons |cols |rows |cuts |confs|strbr|  dualbound   | primalbound  |  gap   
+ *   0.2s|   100 |    59 |   698 |   5.8 |1138k|  14 |  11 |  27 | 122 |  27 | 123 |  14 |   4 | 204 | 1.300000e+01 | 1.800000e+01 |  38.46%
+ *   0.2s|   200 |    91 |  1226 |   5.6 |1155k|  14 |   - |  27 | 122 |  27 | 123 |  14 |   4 | 207 | 1.300000e+01 | 1.800000e+01 |  38.46%
+ * ^Cpressed CTRL-C 1 times (5 times for forcing termination)
+ * 
+ * SCIP Status        : solving was interrupted [user interrupt]
+ * Solving Time (sec) : 0.32
+ * Solving Nodes      : 216
+ * Primal Bound       : +1.80000000000000e+01 (283 solutions)
+ * Dual Bound         : +1.30000000000000e+01
+ * Gap                : 38.46 %
+ * 
+ * SCIP> 
+ * \endcode
+ *
+ * Okay, what happened here? First, we reset all parameters to their default values, using "set default". Next, we
+ * loaded some meta-parameter settings, to apply primal heuristics more aggressively. SCIP shows us, which single
+ * parameters it changed therefor. Now, the optimal solution is already found at the root node, by a heuristic which is
+ * deactivated by default.  Then, after node 200, the user pressed CTRL-C which interrupts the solving process, We see
+ * that now in the short status report, primal and dual bound are different, thus, the problem is not solved yet.
+ * Nevertheless, we could access statistics, see the current incumbent solution, change parameters and so on. Entering
+ * "optimize" we continue the solving process from the point on at which it has been interrupted.
+ *
+ * SCIP can also write information to files. E.g., we could store the incumbent solution to a file, or output the
+ * problem instance in another files format (th LP format is much better human readable than the MPS format, for example).
+ *
+ * \code
+ * SCIP> write solution stein27.sol
+ * 
+ * written solution information to file <stein27.sol>
+ * 
+ * SCIP> write problem stein27.lp
+ * written original problem to file <stein27.lp>
+ * 
+ * SCIP> q
+ * ...
+ * \endcode
+ *
+ * We hope this tutorial gave you an overview on what is possible using the SCIP interactive shell. Please also read our
+ * \ref FAQ, in particular the section <a href="FAQ.html#Section2">Using SCIP as a standalone MIP-Solver</a>.
+ */ 
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page DOC How to search the documentation for interface methods
@@ -4417,6 +4696,103 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/**@page CONF How to add use conflict analysis
+ *
+ * Conflict analysis is a way to automatically use the information obtained from infeasible nodes
+ * in the branch-and-bound tree. 
+ *
+ * Once a node is declared infeasible, SCIP automatically tries to infer a constraint that
+ * essentially states that at least one of the variables that are fixed at the current infeasible
+ * node during branching has to take a different value, because their current setting leads to
+ * infeasibility. Clearly, all variables that are fixed in the current infeasible node would yield
+ * such a constraint (since this leads to infeasibility). Thus, the key point is to infer a "small"
+ * constraint that does the same job. SCIP handles this by several heuristics. For these heuristics
+ * SCIP needs the so-called (directed) conflict graph. The nodes in this graph correspond to bound
+ * changes of variables and an arc (@a u, @a v) means that the bound change corresponding to @a v is
+ * based on the bound change of @a u. In general, a node will have several ingoing arcs which
+ * represent all bound changes that have been used to infer (propagate) the bound change in
+ * question. The graph also contains nodes for each bound that has been changed during branching and
+ * an artificial target node representing the conflict, i.e., the infeasibility. Essentially SCIP
+ * heuristically constructs a cut in this graph that involves few "branching nodes". We cannot in
+ * detail explain the techniques that SCIP uses, but have to refer to the paper@par
+ * Tobias Achterberg, Conflict Analysis in Mixed Integer Programming@n
+ * Discrete Optimization, 4, 4-20 (2007)
+ *
+ * For conflict analysis to work well, the author of a constraint or propagator has to
+ * implement three kinds of functionality: 
+ *
+ * -# If one detects infeasibility, one should initiate conflict analysis, see below.
+ * -# During propagation, one should call the right functions to fix variables.
+ * -# One should implement the <em>so-called reverse propagation</em>.
+ *
+ * If this functionality is not implemented, SCIP will still work correctly, but cannot use the
+ * information of the constraint or propagator for conflict analysis.
+ *
+ * @section Initiating Conflict Analysis
+ *
+ * If one detects infeasibility within propagation, one should do the following:
+ * -# Call SCIPinitConflictAnalysis().
+ * -# Inform SCIP about all variable bounds that are the reason for the detection of infeasibility
+ * via the functions SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(), or
+ * SCIPaddConflictBinvar().
+ * -# Call SCIPanalyzeConflict() from a propagator or SCIPanalyzeConflictCons() from a constraint
+ * handler.
+ *
+ * This functionality allows SCIP to add the artificial node that represents infeasibility.
+ *
+ * @section Propagation
+ *
+ * When propagating (fixing) variables, SCIP needs to be informed that the variable bounds should be
+ * used in conflict analysis. This can be done by the functions SCIPinferVarLbCons(),
+ * SCIPinferVarUbCons(), and SCIPinferBinvarCons() for constraint handlers and SCIPinferVarLbProp(),
+ * SCIPinferVarUbProp(), and SCIPinferBinvarProp() for propagators. You can pass one integer of
+ * information that should indicate the reason of the propagation and can be used in reverse
+ * propagation, see the next section.
+ *
+ * @section Reverse Propagation
+ *
+ * Reverse Propagation allows to build up the conflict graph. Essentially, it provides an algorithm
+ * to detect the arcs leading to a node in the conflict graph, i.e., the bound changes responsible
+ * for the new bound change during propagation. Reverse Propagation needs to be implemented in the
+ * respop() callback functions of constraint handlers or propagators. These callbacks receive the
+ * following information: the variable which is under investigation (@p infervar), the corresponding
+ * bound change (@p bdchgidx, @p boundtype), and the integer (@p inferinfo) that has been supplied
+ * during propagation.
+ *
+ * One can use SCIPvarGetUbAtIndex() or SCIPvarGetLbAtIndex() to detect the bounds before or after
+ * the propagation that should be investigated. Then the bounds that were involved should be passed
+ * to SCIP via SCIPaddConflictLb() and SCIPaddConflictUb().
+ *
+ * @section Example
+ *
+ * Consider the constraint handler @p cons_linearordering.c in the linear ordering example (see @p
+ * example/LOP directory). This constraint handler propagates the equations \f$x_{ij} + x_{ji} =
+ * 1\f$ and triangle inequalities \f$x_{ij} + x_{jk} + x_{ki} \leq 2\f$.
+ * 
+ * When propagating the equation and @p vars[i][j] is fixed to 1, it uses
+ * \code
+ *    SCIP_CALL( SCIPinferBinvarCons(scip, vars[j][i], FALSE, cons, i*n + j, &infeasible, &tightened) );
+ * \endcode
+ * Thus, variable @p vars[j][i] is fixed to 0 and it passes @p i*n + @p j as @p inferinfo. 
+ *
+ * When it propagates the triangle inequality and @p vars[i][j] and @p vars[j[k] are fixed to 1, it uses
+ * \code
+ *    SCIP_CALL( SCIPinferBinvarCons(scip, vars[k][i], FALSE, cons, n*n + i*n*n + j*n + k, &infeasible, &tightened) );
+ * \endcode
+ * Thus, in this case, variable @p vars[k][i] is fixed to 0 and @p n*n + @p i*n*n + @p j*n + @p k is
+ * passed as inferinfo.
+ *
+ * In reverse propagation, the two cases can be distinguished by @p inferinfo: if it is less than @p
+ * n*n, we deal with an equation, otherwise with a triangle inequality. It can then extract the
+ * indices @p i, @p j (and @p k in the second case) from inferinfo.
+ *
+ * In the first case it has to distinguish whether @p vars[i][j] is fixed to 0 or 1 - it then calls
+ * SCIPaddConflictLb() or SCIPaddConflictUb(), respectively, with variable @p vars[i][j]. In the
+ * second case, it is clear that @p vars[i][j] and @p vars[j[k] are fixed to 1. It then calls
+ * SCIPaddConflictLb() for both @p vars[i][j] and @p vars[j[k].
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page OBJ Creating, capturing, releasing, and adding data objects
  *
  *  Data objects (variables, constraints, rows, ... ) are subject to reference counting
@@ -5226,6 +5602,8 @@
  */
 
 /**@page RELEASENOTES Release notes
+ *
+ * \verbinclude SCIP-release-notes-2.0.2
  *
  * \verbinclude SCIP-release-notes-2.0.1
  *

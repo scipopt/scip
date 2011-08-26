@@ -22,3 +22,4 @@ doc/html_devel/
 hooks/
 localhooks/
 src/scip/githash.c
+doc/doxygen

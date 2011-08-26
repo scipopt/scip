@@ -63,6 +63,7 @@ interface:
 - due to adding SCIP_DECL_PROPINITPRE, SCIP_DECL_PROPEXITPRE, SCIP_DECL_PROPPRESOL, new timing flag and presolving paramters for propagators the SCIPincludeProp() method has a new list of parameters
 - new methods SCIPpropInitpre, SCIPpropExitpre, SCIPpropPresol which initializes, exists and executes the presolving phase
 - due to the new timingmask for propagation calls SCIPincludeConshdlr() has the timingmask as a new parameter
+- new method SCIProwGetAge() to access the age of a row (pub_lp.h/lp.c)
 
 performance improvements:
 - performance improvements in prop_vbounds
@@ -98,6 +99,9 @@ fixed bugs:
 - fixed bug w.r.t. counting feasible solutions and turned of sparse solution test
 - fixed wrong changing of wasdelayed flag for propagators
 - fixed bug in cons_countsols.c w.r.t. none active variables
+- deactived checking of zero solution in Zimpl reader when no starting values are provided
+- LP solution status is now checked when checking root LP solution. Otherwise, due to different time measurements, 
+  it might happen that the LP solving was stopped due to the time limit, but SCIP did not reach the limit, yet.
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})
@@ -106,6 +110,7 @@ plugins:
 - all C template files are now called <plugintype>_xyz.{c,h} instead of <plugintype>_xxx.{c,h}
 - added first version of cons_disjunction.{c,h} which allows a disjunctions of constraints
 - added first version of sepa_closecuts.{c,h} to separate cuts w.r.t. to a point that is closer to the integral polyhedron
+- added reader for variable bounds (reader_bnd.{c,h})
 
 parameters:
 - added parameter <constraints/quadratic/disaggregate> to split a block-separable quadratic constraint into several quadratic constraint
@@ -193,6 +198,11 @@ features:
 - improved output of propagators in display statistics
 - new method SCIPpropSetPresolPriority which changes the presolving priority of a given propagator
 - new methods SCIPpropGetPresolPriority, SCIPpropGetPresolTime, SCIPpropWasPresolDelayed, SCIPpropGetNFixedVars, SCIPpropGetNAggrVars, SCIPpropGetNChgVarTypes, SCIPpropGetNChgBds, SCIPpropGetNAddHoles, SCIPpropGetNDelConss, SCIPpropGetNAddConss, SCIPpropGetNUpgdConss, SCIPpropGetNChgCoefs, SCIPpropGetNChgSides, SCIPpropGetTimingmask, SCIPpropDoesPresolve which return corresponding presolving information
+- changed computation of optimality gap which is now done in the same way as described in the MIPLIB 2010 paper:
+  the gap is 0, if primalbound (pb) and dualbound (db) are equal (within tolerances), it is infinity if pb and db have opposite signs,
+  and (this changed), if both have the same sign, the difference between pb and db is devided by the minimum of the absolute values of pb and db
+  (instead of always the dual bound)
+- new dialog "change freetransproblem" to free transformed problem in the interactive shell before changing the problem
 
 design:
 - SCIP_HASHMAP now works also without block memory
@@ -213,7 +223,8 @@ Makefile
   additionally, if building with gnu compilers, the Ipopt libraries directory is stored in the SCIP binary, which should make it easier to run with Ipopt shared libraries
 - new target "make libs" which compiles only the libraries
 - to link against Clp, only the base directory of an Clp installation needs to be specified now
-
+- moved *.test and *.solu files to folder testset in check folder and adjusted test scripts
+- adjusted all test scripts to use the same new optimality gap computation as in SCIP
 
 SCIP version 2.0.2
 ==================

@@ -87,7 +87,7 @@ HARDMEMLIMIT=`expr $HARDMEMLIMIT \* 1024`
 echo "hard time limit: $HARDTIMELIMIT s" >>$OUTFILE
 echo "hard mem limit: $HARDMEMLIMIT k" >>$OUTFILE
 
-for i in `cat $TSTNAME.test`
+for i in `cat testset/$TSTNAME.test`
 do
     if test "$LASTPROB" = ""
     then
@@ -163,9 +163,4 @@ rm -f $TMPFILE
 date >>$OUTFILE
 date >>$ERRFILE
 
-if test -f $TSTNAME.solu
-then
-    awk -f check_symphony.awk -vTEXFILE=$TEXFILE $TSTNAME.solu $OUTFILE | tee $RESFILE
-else
-    awk -f check_symphony.awk -vTEXFILE=$TEXFILE $OUTFILE | tee $RESFILE
-fi
+./evalcheck_symphony.sh $OUTFILE
