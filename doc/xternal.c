@@ -5216,6 +5216,8 @@
 
 /**@page RELEASENOTES Release notes
  *
+ * \verbinclude SCIP-release-notes-2.0.2
+ *
  * \verbinclude SCIP-release-notes-2.0.1
  *
  * \verbinclude SCIP-release-notes-2.0
