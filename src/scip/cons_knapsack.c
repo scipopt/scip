@@ -837,6 +837,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    SCIP_Longint weightsum;
    int* myitems;
    SCIP_Longint* myweights;
+   SCIP_Longint* allcurrminweight;
    SCIP_Real* myprofits;
    int nmyitems;
    SCIP_Longint gcd;
@@ -1183,6 +1184,14 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
 
    SCIPdebugMessage("Start real exact algorithm.\n");
 
+   /* we memorize at each step the current minimal weight to later on know which value in our optvalues matrix is valid;
+    * all values entries of the j-th row of optvalues is valid if the index is >= allcurrminweight[j], otherwise it is
+    * invalid, a second possibility would be to clear the whole optvalues, which should be more expensive than storing
+    * 'nmyitem' values
+    */
+   SCIP_CALL( SCIPallocBufferArray(scip, &allcurrminweight, nmyitems - 1) );
+   allcurrminweight[0] = myweights[0] - minweight;
+
    currminweight = myweights[0] - minweight;
    /* fills first row of dynamic programming table with optimal values */
    for( d = currminweight; d < intcap; ++d )
@@ -1200,13 +1209,6 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       for( d = currminweight; d < intweight && d < intcap; ++d )
          optvalues[IDX(j,d)] = optvalues[IDX(j-1,d)];
 
-      /* initialize last line if we found a new smallest weight which becomes necessary for later use */
-      if( intweight < currminweight )
-      {
-         for( d = intweight; d < currminweight; ++d )
-            optvalues[IDX(j-1,d)] = 0.0;
-      }
-
       /* update corresponding row */
       for( d = intweight; d < intcap; ++d )
       {
@@ -1221,6 +1223,8 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       /* update currminweight */
       if( intweight < currminweight )
          currminweight = intweight;
+
+      allcurrminweight[j] = currminweight;
    }
 
    /* update optimal solution by following the table */
@@ -1233,15 +1237,17 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       /* insert all items in (non-) solution vector */
       for( j = nmyitems - 1; j > 0; --j )
       {
-         /* if we cannot find any item which is in our solution stop */
-         if( d < 0 || optvalues[IDX(j,d)] == 0.0 )
+         /* if we cannot find any item anymore which is in our solution stop, if the following condition holds this
+          * means all remaining items does not fit anymore
+          */
+         if( d < allcurrminweight[j] )
          {
+            /* we cannot have exceeded our capacity */
             assert(d >= -minweight);
             break;
          }
-
-         /* collect solution items */
-         if( optvalues[IDX(j,d)] > optvalues[IDX(j-1,d)] )
+         /* collect solution items, first condition means that no next item can fit anymore, but this does */
+         if( d < allcurrminweight[j-1] || optvalues[IDX(j,d)] > optvalues[IDX(j-1,d)] )
          {
             solitems[*nsolitems] = myitems[j];
             ++(*nsolitems);
@@ -1256,7 +1262,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       }
 
       /* insert remaining items */
-      if( d >= 0 && optvalues[IDX(j,d)] > 0.0 )
+      if( d >= allcurrminweight[j] )
       {
          assert(j == 0);
          solitems[*nsolitems] = myitems[j];
@@ -1265,7 +1271,8 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       else
       {
          assert(j >= 0);
-         assert(d < 0 || optvalues[IDX(j,d)] == 0.0);
+         assert(d < allcurrminweight[j]);
+
          for( ; j >= 0; --j )
          {
             nonsolitems[*nnonsolitems] = myitems[j];
@@ -1279,6 +1286,8 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    /* update solution value */
    if( solval != NULL )
       *solval += optvalues[IDX(nmyitems-1,intcap-1)];
+
+   SCIPfreeBufferArray(scip, &allcurrminweight);
 
    /* free all temporary memory */
    SCIPfreeBufferArray(scip, &tempsort);
