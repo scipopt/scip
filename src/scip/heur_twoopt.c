@@ -1375,13 +1375,13 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
       return SCIP_OKAY;
 
    presolthiscall = FALSE;
-   ncolsforsorting = MIN(ncols, SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip));
 
    /* ensure that heuristic specific presolve is applied when heuristic is executed first */
    if( !heurdata->presolved )
    {
 
       SCIP_CALL( SCIPgetLPColsData(scip,&cols, &ncols) );
+      ncolsforsorting = MIN(ncols, SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip));
 
       for( i = 0; i < ncolsforsorting; ++i )
          SCIPcolSort(cols[i]);
@@ -1442,6 +1442,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
    if( !presolthiscall )
    {
       SCIP_CALL( SCIPgetLPColsData(scip,&cols, &ncols) );
+      ncolsforsorting = MIN(ncols, SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip));
       for( i = 0; i < ncolsforsorting; ++i )
       {
          SCIPcolSort(cols[i]);
