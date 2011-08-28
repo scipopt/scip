@@ -683,6 +683,30 @@ SCIP_RETCODE checkIIS(
 
 /* ------------------------ auxiliary operations -------------------------------*/
 
+/** return objective contribution of variable 
+ *
+ *  Special treatment of negated variables: return negative of objective of original variable
+ */
+static
+SCIP_Real varGetObjDelta(
+   SCIP_VAR*             var                 /**< variable */
+   )
+{
+   if ( SCIPvarIsBinary(var) && SCIPvarIsNegated(var) )
+   {
+      assert( SCIPvarGetNegatedVar(var) != NULL );
+      return -SCIPvarGetObj(SCIPvarGetNegatedVar(var));
+   }
+   else if ( SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED )
+   {
+      assert( SCIPvarGetAggrVar(var) != NULL );
+      return SCIPvarGetAggrScalar(var) * SCIPvarGetObj(SCIPvarGetAggrVar(var));
+   }
+
+   return SCIPvarGetObj(var);
+}
+
+
 /** ensures that the addLinCons array can store at least num entries */
 static
 SCIP_RETCODE consdataEnsureAddLinConsSize(
@@ -2280,7 +2304,7 @@ SCIP_RETCODE extendToCover(
                {
                   candidate = j;
                   candIndex = ind;
-                  candObj = SCIPvarGetObj(consdata->binvar);
+                  candObj = varGetObjDelta(consdata->binvar);
                }
             }
          }
@@ -2781,7 +2805,7 @@ SCIP_RETCODE enforceCuts(
       if ( SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->binvar)) )
       {
          ++size;
-         value += SCIPvarGetObj(consdata->binvar);
+         value += varGetObjDelta(consdata->binvar);
          S[j] = TRUE;
       }
       else
@@ -3064,7 +3088,7 @@ SCIP_RETCODE separateIISRounding(
          if ( SCIPisFeasLT(scip, SCIPgetVarSol(scip, consdata->binvar), threshold) )
          {
             S[j] = TRUE;
-            value += SCIPvarGetObj(consdata->binvar);
+            value += varGetObjDelta(consdata->binvar);
             ++size;
          }
          else
@@ -5644,16 +5668,18 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
       }
       else
       {
-         /* the original constraint is satisfied - we can set the slack variable to 0 (slackvar should only occur in this indicator constraint) */
+         /* the original constraint is satisfied - we can set the slack variable to 0 (slackvar
+            should only occur in this indicator constraint) */
          if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, slackvar), 0.0) )
          {
             SCIP_CALL( SCIPsetSolVal(scip, sol, slackvar, 0.0) );
             *changed = TRUE;
          }
-         /* we might also set the binary variable - if no other constraints prevent it */
-         if ( SCIPvarGetObj(binvar) < 0 )
+
+         if ( varGetObjDelta(binvar) < 0 )
          {
-            if ( SCIPvarMayRoundUp(binvar) && ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 1.0) )
+            /* setting variable to 1 decreases objective -> check whether variable only occurs in the current constraint */
+            if ( SCIPvarGetNLocksUp(binvar) <= 1 && ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 1.0) )
             {
                SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 1.0) );
                *changed = TRUE;
@@ -5661,7 +5687,8 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
          }
          else
          {
-            if ( SCIPvarMayRoundDown(binvar) && ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 0.0) )
+            /* setting variable to 0 may decrease objective -> check whether variable only occurs in the current constraint */
+            if ( SCIPvarGetNLocksDown(binvar) <= 1 && ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 0.0) )
             {
                SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 0.0) );
                *changed = TRUE;
@@ -5702,16 +5729,19 @@ SCIP_RETCODE SCIPmakeIndicatorsFeasible(
 
    for (c = 0; c < nconss; ++c)
    {
+      SCIP_CONSDATA* consdata;
+      SCIP_Bool chg = FALSE;
       assert( conss[c] != NULL );
-      if ( SCIPisViolatedIndicator(scip, conss[c], sol) )
-      {
-         SCIP_Bool chg = FALSE;
-         SCIPmakeIndicatorFeasible(scip, conss[c], sol, &chg);
-         /* chg can be false, e.g., if linconsActive is false; in this case we stop, because we cannot fix the problem. */
-         if ( ! chg )
-            break;
-         *changed = TRUE;
-      }
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert( consdata != NULL );
+      
+      /* if the linear constraint is not present, we stop */
+      if ( ! consdata->linconsActive )
+         break;
+
+      SCIP_CALL( SCIPmakeIndicatorFeasible(scip, conss[c], sol, &chg) );
+      *changed = *changed || chg;
    }
 
    return SCIP_OKAY;
