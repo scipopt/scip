@@ -1492,7 +1492,8 @@ void SCIPintervalSquareRoot(
 
 /** stores operand1 to the power of operand2 in resultant
  * 
- * uses SCIPintervalPowerScalar if operand2 is a scalar, otherwise computes exp(op2*log(op1)) */
+ * uses SCIPintervalPowerScalar if operand2 is a scalar, otherwise computes exp(op2*log(op1))
+ */
 void SCIPintervalPower(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -1864,14 +1865,6 @@ void SCIPintervalPowerScalar(
       return;
    }
 
-   if( operand2 == 0.0 )
-   {
-      /* x^0 = 1 */
-      resultant->inf = 1.0;
-      resultant->sup = 1.0;
-      return;
-   }
-
    if( operand2 == 1.0 )
    {
       /* x^1 = x */
@@ -2117,6 +2110,80 @@ void SCIPintervalPowerScalar(
          resultant->inf = -infinity;
          resultant->sup =  infinity;
       }
+   }
+}
+
+/** given an interval for the image of a power operation, computes an interval for the origin
+ * that is, for y = x^p with p = exponent a given scalar and y = image a given interval,
+ * computes a subinterval x of basedomain such that y in x^p and such that for all z in basedomain less x, z^p not in y
+ */
+extern
+void SCIPintervalPowerScalarInverse(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         basedomain,         /**< domain of base */
+   SCIP_Real             exponent,           /**< exponent */
+   SCIP_INTERVAL         image               /**< interval image of power */
+   )
+{
+   SCIP_INTERVAL tmp;
+   SCIP_INTERVAL exprecip;
+
+   assert(resultant != NULL);
+   assert(image.inf <= image.sup);
+   assert(basedomain.inf <= basedomain.sup);
+
+   if( exponent == 0.0 )
+   {
+      /* exponent is 0.0 */
+      if( image.inf <= 1.0 && image.sup >= 1.0 )
+      {
+         /* 1 in image -> resultant = entire */
+         *resultant = basedomain;
+      }
+      else if( image.inf <= 0.0 && image.sup >= 0.0 )
+      {
+         /* 0 in image, 1 not in image -> resultant = 0   (provided 0^0 = 0 ???)
+          * -> resultant = {0} intersected with basedomain */
+         SCIPintervalSetBounds(resultant, MAX(0.0, basedomain.inf), MIN(0.0, basedomain.sup));
+      }
+      else
+      {
+         /* 0 and 1 not in image -> resultant = empty */
+         SCIPintervalSetEmpty(resultant);
+      }
+      return;
+   }
+
+   /* i = b^e
+    *   i >= 0 -> b = i^(1/e) [union -i^(1/e), if e is even]
+    *   i < 0, e odd integer -> b = -(-i)^(1/e)
+    *   i < 0, e even integer or fractional -> empty
+    */
+
+   SCIPintervalSetBounds(&exprecip, exponent, exponent);
+   SCIPintervalReciprocal(infinity, &exprecip, exprecip);
+
+   /* invert positive part of image, if any */
+   if( image.sup >= 0.0 )
+   {
+      SCIPintervalSetBounds(&tmp, MAX(image.inf, 0.0), image.sup);
+      SCIPintervalPower(infinity, resultant, tmp, exprecip);
+      if( basedomain.inf <= -resultant->inf && EPSISINT(exponent, 0.0) && (int)exponent % 2 == 0 )
+         SCIPintervalSetBounds(resultant, -resultant->sup, resultant->sup);
+      SCIPintervalIntersect(resultant, *resultant, basedomain);
+   }
+   else
+      SCIPintervalSetEmpty(resultant);
+
+   /* invert negative part of image, if any and if base can take negative value and if exponent is such that negative values are possible */
+   if( image.inf < 0.0 && basedomain.inf < 0.0 && EPSISINT(exponent, 0.0) && ((int)exponent % 2 != 0) )
+   {
+      SCIPintervalSetBounds(&tmp, MAX(-image.sup, 0.0), -image.inf);
+      SCIPintervalPower(infinity, &tmp, tmp, exprecip);
+      SCIPintervalSetBounds(&tmp, MAX(basedomain.inf, -tmp.sup), MIN(basedomain.sup, -tmp.inf));
+
+      SCIPintervalUnify(resultant, *resultant, tmp);
    }
 }
 

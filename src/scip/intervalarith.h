@@ -416,7 +416,8 @@ void SCIPintervalSquareRoot(
 
 /** stores operand1 to the power of operand2 in resultant
  * 
- * uses SCIPintervalPowerScalar if operand2 is a scalar, otherwise computes exp(op2*log(op1)) */
+ * uses SCIPintervalPowerScalar if operand2 is a scalar, otherwise computes exp(op2*log(op1))
+ */
 extern
 void SCIPintervalPower(
    SCIP_Real             infinity,           /**< value for infinity */
@@ -475,6 +476,19 @@ void SCIPintervalPowerScalarInteger(
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_Real             operand1,           /**< first operand of operation */
    int                   operand2            /**< second operand of operation */
+   );
+
+/** given an interval for the image of a power operation, computes an interval for the origin
+ * that is, for y = x^p with p = exponent a given scalar and y = image a given interval,
+ * computes a subinterval x of basedomain such that y in x^p and such that for all z in basedomain less x, z^p not in y
+ */
+extern
+void SCIPintervalPowerScalarInverse(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         basedomain,         /**< domain of base */
+   SCIP_Real             exponent,           /**< exponent */
+   SCIP_INTERVAL         image               /**< interval image of power */
    );
 
 /** stores operand1 to the signed power of the scalar positive operand2 in resultant 
