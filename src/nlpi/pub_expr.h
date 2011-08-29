@@ -696,6 +696,15 @@ SCIP_RETCODE SCIPexprtreeSimplify(
    SCIP_Real*            lincoefs            /**< array to store coefficients of linear part, or NULL */
 );
 
+/** adds an expression to the root expression of the tree
+ * the root is replaced with an SCIP_EXPR_PLUS expression which has the previous root and the given expression as children */
+extern
+SCIP_RETCODE SCIPexprtreeAddExpr(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_EXPR*            expr,               /**< expression to add to tree */
+   SCIP_Bool             copyexpr            /**< whether expression should be copied */
+   );
+
 /** evaluates an expression tree w.r.t. a point */
 extern
 SCIP_RETCODE SCIPexprtreeEval(

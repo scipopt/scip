@@ -6910,6 +6910,30 @@ SCIP_RETCODE SCIPexprtreeSimplify(
    return SCIP_OKAY;
 }
 
+/** adds an expression to the root expression of the tree
+ * the root is replaced with an SCIP_EXPR_PLUS expression which has the previous root and the given expression (or a copy of it) as children */
+SCIP_RETCODE SCIPexprtreeAddExpr(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_EXPR*            expr,               /**< expression to add to tree */
+   SCIP_Bool             copyexpr            /**< whether expression should be copied */
+   )
+{
+   assert(tree != NULL);
+   assert(tree->root != NULL);
+
+   /* adding something to the tree may invalidate the interpreter data */
+   SCIP_CALL( SCIPexprtreeFreeInterpreterData(tree) );
+
+   if( copyexpr )
+   {
+      SCIP_CALL( SCIPexprCopyDeep(tree->blkmem, &expr, expr) );
+   }
+
+   SCIP_CALL( SCIPexprCreate(tree->blkmem, &tree->root, SCIP_EXPR_PLUS, tree->root, expr) );
+
+   return SCIP_OKAY;
+}
+
 /** evaluates an expression tree w.r.t. a point */
 SCIP_RETCODE SCIPexprtreeEval(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
