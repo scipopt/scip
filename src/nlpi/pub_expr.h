@@ -474,6 +474,22 @@ SCIP_RETCODE SCIPexprGetMaxDegree(
    int*                  maxdegree           /**< buffer to store maximal degree */
 );
 
+/** counts usage of variables in expression */
+extern
+void SCIPexprGetVarsUsage(
+   SCIP_EXPR*            expr,               /**< expression to update */
+   int*                  varsusage           /**< array with counters of variable usage */
+);
+
+/** compares whether two expressions are the same
+ * inconclusive, i.e., may give FALSE even if expressions are equivalent (x*y != y*x) */
+extern
+SCIP_Bool SCIPexprAreEqual(
+   SCIP_EXPR*            expr1,              /**< first expression */
+   SCIP_EXPR*            expr2,              /**< second expression */
+   SCIP_Real             eps                 /**< threshold under which numbers are assumed to be zero */
+);
+
 /** evaluates an expression w.r.t. a point */
 extern
 SCIP_RETCODE SCIPexprEval(

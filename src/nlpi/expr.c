@@ -4079,6 +4079,229 @@ SCIP_RETCODE SCIPexprGetMaxDegree(
    return SCIP_OKAY;
 }
 
+/** counts usage of variables in expression */
+void SCIPexprGetVarsUsage(
+   SCIP_EXPR*            expr,               /**< expression to update */
+   int*                  varsusage           /**< array with counters of variable usage */
+)
+{
+   int i;
+
+   assert(expr != NULL);
+   assert(varsusage != NULL);
+
+   if( expr->op == SCIP_EXPR_VARIDX )
+   {
+      ++varsusage[expr->data.intval];
+   }
+
+   for( i = 0; i < expr->nchildren; ++i )
+      SCIPexprGetVarsUsage(expr->children[i], varsusage);
+}
+
+/** compares whether two expressions are the same
+ * inconclusive, i.e., may give FALSE even if expressions are equivalent (x*y != y*x) */
+extern
+SCIP_Bool SCIPexprAreEqual(
+   SCIP_EXPR*            expr1,              /**< first expression */
+   SCIP_EXPR*            expr2,              /**< second expression */
+   SCIP_Real             eps                 /**< threshold under which numbers are assumed to be zero */
+)
+{
+   assert(expr1 != NULL);
+   assert(expr2 != NULL);
+
+   if( expr1 == expr2 )
+      return TRUE;
+
+   if( expr1->op != expr2->op )
+      return FALSE;
+
+   switch( expr1->op )
+   {
+      case SCIP_EXPR_VARIDX:
+      case SCIP_EXPR_PARAM:
+         return expr1->data.intval == expr2->data.intval;
+
+      case SCIP_EXPR_CONST:
+         return EPSEQ(expr1->data.dbl, expr2->data.dbl, eps);
+
+      /* operands with two children */
+      case SCIP_EXPR_PLUS     :
+      case SCIP_EXPR_MINUS    :
+      case SCIP_EXPR_MUL      :
+      case SCIP_EXPR_DIV      :
+      case SCIP_EXPR_MIN      :
+      case SCIP_EXPR_MAX      :
+         return SCIPexprAreEqual(expr1->children[0], expr2->children[0], eps) && SCIPexprAreEqual(expr1->children[1], expr2->children[1], eps);
+
+      /* operands with one child */
+      case SCIP_EXPR_SQUARE:
+      case SCIP_EXPR_SQRT  :
+      case SCIP_EXPR_EXP   :
+      case SCIP_EXPR_LOG   :
+      case SCIP_EXPR_SIN   :
+      case SCIP_EXPR_COS   :
+      case SCIP_EXPR_TAN   :
+      /* case SCIP_EXPR_ERF   : */
+      /* case SCIP_EXPR_ERFI  : */
+      case SCIP_EXPR_ABS   :
+      case SCIP_EXPR_SIGN  :
+         return SCIPexprAreEqual(expr1->children[0], expr2->children[0], eps);
+
+      case SCIP_EXPR_REALPOWER:
+      case SCIP_EXPR_SIGNPOWER:
+         return EPSEQ(expr1->data.dbl, expr2->data.dbl, eps) && SCIPexprAreEqual(expr1->children[0], expr2->children[0], eps);
+
+      case SCIP_EXPR_INTPOWER:
+         return expr1->data.intval == expr2->data.intval && SCIPexprAreEqual(expr1->children[0], expr2->children[0], eps);
+
+      /* complex operands */
+      case SCIP_EXPR_SUM    :
+      case SCIP_EXPR_PRODUCT:
+      {
+         int i;
+
+         /* @todo sort children and have sorted flag in data? */
+
+         if( expr1->nchildren != expr2->nchildren )
+            return FALSE;
+
+         for( i = 0; i < expr1->nchildren; ++i )
+         {
+            if( !SCIPexprAreEqual(expr1->children[i], expr2->children[i], eps) )
+               return FALSE;
+         }
+
+         return TRUE;
+      }
+
+      case SCIP_EXPR_LINEAR :
+      {
+         SCIP_Real* data1;
+         SCIP_Real* data2;
+         int i;
+
+         /* @todo sort children and have sorted flag in data? */
+
+         if( expr1->nchildren != expr2->nchildren )
+            return FALSE;
+
+         data1 = (SCIP_Real*)expr1->data.data;
+         data2 = (SCIP_Real*)expr2->data.data;
+
+         /* check if constant and coefficients are equal */
+         for( i = 0; i < expr1->nchildren + 1; ++i )
+            if( !EPSEQ(data1[i], data2[i], eps) )
+               return FALSE;
+
+         /* check if children are equal */
+         for( i = 0; i < expr1->nchildren; ++i )
+         {
+            if( !SCIPexprAreEqual(expr1->children[i], expr2->children[i], eps) )
+               return FALSE;
+         }
+
+         return TRUE;
+      }
+
+      case SCIP_EXPR_QUADRATIC:
+      {
+         SCIP_EXPRDATA_QUADRATIC* data1;
+         SCIP_EXPRDATA_QUADRATIC* data2;
+         int i;
+
+         if( expr1->nchildren != expr2->nchildren )
+            return FALSE;
+
+         data1 = (SCIP_EXPRDATA_QUADRATIC*)expr1->data.data;
+         data2 = (SCIP_EXPRDATA_QUADRATIC*)expr2->data.data;
+
+         if( data1->nquadelems != data2->nquadelems )
+            return FALSE;
+
+         if( !EPSEQ(data1->constant, data2->constant, eps) )
+            return FALSE;
+
+         /* check if linear part is equal */
+         if( data1->lincoefs != NULL || data2->lincoefs != NULL )
+            for( i = 0; i < expr1->nchildren; ++i )
+            {
+               if( data1->lincoefs == NULL && !EPSZ(data2->lincoefs[i], eps) )
+                  return FALSE;
+               if( data2->lincoefs == NULL && !EPSZ(data1->lincoefs[i], eps) )
+                  return FALSE;
+               if( !EPSEQ(data1->lincoefs[i], data2->lincoefs[i], eps) )
+                  return FALSE;
+            }
+
+         SCIPexprSortQuadElems(expr1);
+         SCIPexprSortQuadElems(expr2);
+
+         /* check if quadratic elements are equal */
+         for( i = 0; i < data1->nquadelems; ++i )
+            if( data1->quadelems[i].idx1 != data2->quadelems[i].idx1 ||
+                data1->quadelems[i].idx2 != data2->quadelems[i].idx2 ||
+                !EPSEQ(data1->quadelems[i].coef, data2->quadelems[i].coef, eps) )
+               return FALSE;
+
+         /* check if children are equal */
+         for( i = 0; i < expr1->nchildren; ++i )
+            if( !SCIPexprAreEqual(expr1->children[i], expr2->children[i], eps) )
+               return FALSE;
+
+         return TRUE;
+      }
+
+      case SCIP_EXPR_POLYNOMIAL:
+      {
+         SCIP_EXPRDATA_POLYNOMIAL* data1;
+         SCIP_EXPRDATA_POLYNOMIAL* data2;
+         int i;
+
+         if( expr1->nchildren != expr2->nchildren )
+            return FALSE;
+
+         data1 = (SCIP_EXPRDATA_POLYNOMIAL*)expr1->data.data;
+         data2 = (SCIP_EXPRDATA_POLYNOMIAL*)expr2->data.data;
+
+         if( data1->nmonomials != data2->nmonomials )
+            return FALSE;
+
+         if( !EPSEQ(data1->constant, data2->constant, eps) )
+            return FALSE;
+
+         /* make sure polynomials are sorted */
+         SCIPexprSortMonomials(expr1);
+         SCIPexprSortMonomials(expr2);
+
+         /* check if monomials are equal */
+         for( i = 0; i < data1->nmonomials; ++i )
+         {
+            if( !SCIPexprAreMonomialsEqual(data1->monomials[i], data2->monomials[i], eps) )
+               return FALSE;
+         }
+
+         /* check if children are equal */
+         for( i = 0; i < expr1->nchildren; ++i )
+         {
+            if( !SCIPexprAreEqual(expr1->children[i], expr2->children[i], eps) )
+               return FALSE;
+         }
+
+         return TRUE;
+      }
+
+      case SCIP_EXPR_LAST:
+      default:
+         SCIPerrorMessage("got expression with invalid operand %d\n", expr1->op);
+   }
+
+   SCIPerrorMessage("this should never happen\n");
+   SCIPABORT();
+   return FALSE;
+}
+
 /** evaluates an expression w.r.t. a point */
 SCIP_RETCODE SCIPexprEval(
    SCIP_EXPR*            expr,               /**< expression */
