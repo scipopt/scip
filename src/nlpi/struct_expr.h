@@ -25,6 +25,7 @@
 #define __SCIP_STRUCT_EXPRESSION_H__
 
 #include "scip/def.h"
+#include "scip/type_misc.h"
 #include "nlpi/type_expr.h"
 #include "nlpi/type_exprinterpret.h"
 #include "blockmemshell/memory.h"
@@ -93,6 +94,75 @@ struct SCIP_ExprData_Monomial
    int*                  childidxs;          /**< children corresponding to factors */
    SCIP_Real*            exponents;          /**< value of exponent for each factor */
    SCIP_Bool             sorted;             /**< are the factors sorted (by childidx)? */
+};
+
+/** a node in an expression graph */
+struct SCIP_ExprGraphNode
+{
+   /* definition of expression */
+   SCIP_EXPROP         op;                   /**< operand of expression */
+   SCIP_EXPROPDATA     data;                 /**< data of expression */
+
+   /* location of expression in expression graph */
+   int                 depth;                /**< depth of node in expression graph */
+   int                 pos;                  /**< position of node in expression graph nodes array of depth depth*/
+
+   /* children of expression */
+   int                 nchildren;            /**< number of child nodes in expression graph */
+   SCIP_EXPRGRAPHNODE** children;            /**< children nodes */
+
+   /* parents of expression */
+   int                 parentssize;          /**< length of parents array */
+   int                 nparents;             /**< number of parent nodes in expression graph */
+   SCIP_EXPRGRAPHNODE** parents;             /**< parent nodes */
+   SCIP_Bool           parentssorted;        /**< whether the parents array is sorted */
+
+   /* domain propagation */
+   SCIP_INTERVAL       bounds;               /**< bounds on expression */
+   SCIP_EXPRBOUNDSTATUS boundstatus;         /**< status of bounds */
+
+   /* value */
+   SCIP_Real           value;                /**< value of expression in last evaluation call */
+
+   /* curvature */
+   SCIP_EXPRCURV       curv;                 /**< curvature of expression */
+
+   /* miscellaneous */
+   SCIP_Bool           enabled;              /**< whether the node is enabled currently */
+   SCIP_Bool           simplified;           /**< whether the node has been simplified */
+   int                 nuses;                /**< how often node is used */
+};
+
+/** a set of expression trees, stored in a single directed acyclic graph
+ * the variables of the graph are stored at depth 0
+ * for each depth, an array of nodes is stored */
+struct SCIP_ExprGraph
+{
+   BMS_BLKMEM*          blkmem;              /**< block memory */
+
+   int                  depth;               /**< depth of expression graph */
+   int*                 nodessize;           /**< current size of nodes array for each depth */
+   int*                 nnodes;              /**< number of nodes for each depth */
+   SCIP_EXPRGRAPHNODE*** nodes;              /**< nodes of expression graph for each depth */
+
+   int                  varssize;            /**< length of vars array */
+   int                  nvars;               /**< number of variables in expression graph */
+   void**               vars;                /**< array for variables in expression graph, having length varssize */
+   SCIP_EXPRGRAPHNODE** varnodes;            /**< nodes corresponding to variables in expression graph */
+   SCIP_INTERVAL*       varbounds;           /**< current bounds on variables */
+   SCIP_HASHMAP*        varidxs;             /**< maps variables to variable indices */
+
+   int                  constssize;          /**< length of consts array */
+   int                  nconsts;             /**< number of constants in expression graph */
+   SCIP_EXPRGRAPHNODE** constnodes;          /**< nodes corresponding to constants in expression graph */
+   SCIP_Bool            constssorted;        /**< whether the constnodes array has been sorted */
+
+   SCIP_DECL_EXPRGRAPHVARADDED((*exprgraphvaradded)); /**< callback for variable addition event */
+   SCIP_DECL_EXPRGRAPHVARREMOVE((*exprgraphvarremove)); /**< callback for variable removal event */
+   SCIP_DECL_EXPRGRAPHVARCHGIDX((*exprgraphvarchgidx)); /**< callback for variable index change event */
+   void*                userdata;            /**< user data associated with callback methods */
+
+   SCIP_Bool            needvarboundprop;    /**< whether variable bounds need be propagated, e.g., because new nodes have been added to the graph */
 };
 
 #ifdef __cplusplus

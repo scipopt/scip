@@ -164,6 +164,49 @@ typedef struct SCIP_ExprData_Polynomial SCIP_EXPRDATA_POLYNOMIAL; /**< the data 
  */
 #define SCIP_DECL_EXPRFREEDATA(x) void x (BMS_BLKMEM* blkmem, int nchildren, SCIP_EXPROPDATA opdata)
 
+typedef struct SCIP_ExprGraphNode SCIP_EXPRGRAPHNODE; /**< node in an expression graph */
+typedef struct SCIP_ExprGraph     SCIP_EXPRGRAPH;     /**< an expression graph (DAG) */
+
+/** callback method of expression graph invoked when a new variable has been added to the graph
+ *
+ * input:
+ * - exprgraph    expression graph
+ * - userdata     a pointer to user data
+ * - var          variable that has been added to expression graph
+ * - varnode      new expression graph node for a variable
+ */
+#define SCIP_DECL_EXPRGRAPHVARADDED(x) SCIP_RETCODE x (SCIP_EXPRGRAPH* exprgraph, void* userdata, void* var, SCIP_EXPRGRAPHNODE* varnode)
+
+/** callback method of expression graph invoked when a variable is to be removed from the graph
+ *
+ * input:
+ * - exprgraph    expression graph
+ * - userdata     a pointer to user data
+ * - var          variable that will be removed from the expression graph
+ * - varnode      expression graph node corresponding to variable
+ */
+#define SCIP_DECL_EXPRGRAPHVARREMOVE(x) SCIP_RETCODE x (SCIP_EXPRGRAPH* exprgraph, void* userdata, void* var, SCIP_EXPRGRAPHNODE* varnode)
+
+/** callback method of expression graph invoked when a variable changes its index
+ *
+ * input:
+ * - exprgraph    expression graph
+ * - userdata     a pointer to user data
+ * - var          variable which will change its index
+ * - varnode      expression graph node corresponding to variable
+ * - oldidx       current index of variable
+ * - newidx       new index the variable will have
+ */
+#define SCIP_DECL_EXPRGRAPHVARCHGIDX(x) SCIP_RETCODE x (SCIP_EXPRGRAPH* exprgraph, void* userdata, void* var, SCIP_EXPRGRAPHNODE* varnode, int oldidx, int newidx)
+
+#define SCIP_EXPRBOUNDSTATUS_VALID             0x0 /**< bounds are valid, i.e., conform with bounds of children */
+#define SCIP_EXPRBOUNDSTATUS_CHILDTIGHTENED    0x1 /**< a child bounds were tightened since last calculation */
+#define SCIP_EXPRBOUNDSTATUS_CHILDRELAXED      0x2 /**< bounds are not valid and need to be recomputed, because the bounds in a child were relaxed */
+#define SCIP_EXPRBOUNDSTATUS_TIGHTENEDBYPARENT 0x4 /**< bounds have been tightened by reverse propagation in a parent, they are valid as long as there has been no relaxation of bounds somewhere in the graph */
+#define SCIP_EXPRBOUNDSTATUS_TIGHTENEDBYPARENTRECENT (0x8 | SCIP_EXPRBOUNDSTATUS_TIGHTENEDBYPARENT) /**< bounds have recently been tightened by reverse propagation in a parent, this tightening has not been propagated further down yet */
+
+typedef char             SCIP_EXPRBOUNDSTATUS;     /**< bitflags that indicate the status of bounds stored in a node of an expression graph */
+
 #ifdef __cplusplus
 }
 #endif

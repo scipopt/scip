@@ -14,15 +14,15 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlpi/pub_expr.h
- * @brief  public methods for expressions and expression trees
+ * @brief  public methods for expressions, expression trees, expression graphs, and related stuff
  * @author Stefan Vigerske
  * @author Thorsten Gellermann
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __NLPI_EXPRESSION_H__
-#define __NLPI_EXPRESSION_H__
+#ifndef __NLPI_PUB_EXPR_H__
+#define __NLPI_PUB_EXPR_H__
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
@@ -440,7 +440,8 @@ SCIP_RETCODE SCIPexprMultiplyMonomialByMonomial(
 );
 
 /** replaces the monomial by a power of the monomial
- * allows only integers as exponent */
+ * allows only integers as exponent
+ */
 extern
 void SCIPexprMonomialPower(
    SCIP_EXPRDATA_MONOMIAL* monomial,         /**< monomial */
@@ -448,7 +449,8 @@ void SCIPexprMonomialPower(
 );
 
 /** merges factors that correspond to the same child by adding exponents
- * eliminates factors with exponent between -eps and eps */
+ * eliminates factors with exponent between -eps and eps
+ */
 extern
 void SCIPexprMergeMonomialFactors(
    SCIP_EXPRDATA_MONOMIAL* monomial,         /**< monomial */
@@ -482,7 +484,8 @@ void SCIPexprGetVarsUsage(
 );
 
 /** compares whether two expressions are the same
- * inconclusive, i.e., may give FALSE even if expressions are equivalent (x*y != y*x) */
+ * inconclusive, i.e., may give FALSE even if expressions are equivalent (x*y != y*x)
+ */
 extern
 SCIP_Bool SCIPexprAreEqual(
    SCIP_EXPR*            expr1,              /**< first expression */
@@ -535,9 +538,10 @@ SCIP_RETCODE SCIPexprCheckCurvature(
 );
 
 /** substitutes variables (SCIP_EXPR_VARIDX) by expressions
- * Note than only the children of the given expr are checked!
+ * Note that only the children of the given expr are checked!
  * A variable with index i is replaced by a copy of substexprs[i], if that latter is not NULL
- * if substexprs[i] == NULL, then the variable expression i is not touched */
+ * if substexprs[i] == NULL, then the variable expression i is not touched
+ */
 extern
 SCIP_RETCODE SCIPexprSubstituteVars(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
@@ -639,9 +643,7 @@ SCIP_RETCODE SCIPexprtreeSetParams(
    SCIP_Real*            paramvals           /**< values of parameters, can be NULL if nparams == 0 */
 );
 
-/** gets data of expression tree interpreter
- * @return NULL if not set
- */
+/** gets data of expression tree interpreter, or NULL if not set */
 extern
 SCIP_EXPRINTDATA* SCIPexprtreeGetInterpreterData(
    SCIP_EXPRTREE*        tree                /**< expression tree */
@@ -685,8 +687,9 @@ void SCIPexprtreeGetVarsUsage(
    int*                  varsusage           /**< array where to store for each variable how often it is used in the tree */
 );
 
-/** aims at simplifying an expression tree
- * separates out linear part, if requested */
+/** aims at simplifying an expression and splitting of a linear expression
+ * if linear variables are split off, expression interpreter data, if stored in the tree, is freed
+ */
 extern
 SCIP_RETCODE SCIPexprtreeSimplify(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
@@ -697,7 +700,8 @@ SCIP_RETCODE SCIPexprtreeSimplify(
 );
 
 /** adds an expression to the root expression of the tree
- * the root is replaced with an SCIP_EXPR_PLUS expression which has the previous root and the given expression as children */
+ * the root is replaced with an SCIP_EXPR_PLUS expression which has the previous root and the given expression as children
+ */
 extern
 SCIP_RETCODE SCIPexprtreeAddExpr(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
@@ -734,7 +738,8 @@ SCIP_RETCODE SCIPexprtreeCheckCurvature(
 
 /** substitutes variables (SCIP_EXPR_VARIDX) in an expression tree by expressions
  * A variable with index i is replaced by a copy of substexprs[i], if that latter is not NULL
- * if substexprs[i] == NULL, then the variable expression i is not touched */
+ * if substexprs[i] == NULL, then the variable expression i is not touched
+ */
 extern
 SCIP_RETCODE SCIPexprtreeSubstituteVars(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
@@ -792,8 +797,613 @@ void SCIPquadelemSqueeze(
 
 /**@} */
 
+/**@name Expression graph node methods */
+/**@{ */
+
+/** creates an expression graph node */
+extern
+SCIP_RETCODE SCIPexprgraphCreateNode(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPRGRAPHNODE**  node,               /**< buffer to store expression graph node */
+   SCIP_EXPROP           op,                 /**< operator type of expression */
+   ...
+);
+
+/** creates an expression graph node for a linear expression */
+extern
+SCIP_RETCODE SCIPexprgraphCreateNodeLinear(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPRGRAPHNODE**  node,               /**< buffer to store expression graph node */
+   int                   ncoefs,             /**< number of coefficients */
+   SCIP_Real*            coefs,              /**< coefficients of linear expression */
+   SCIP_Real             constant            /**< constant of linear expression */
+);
+
+/** creates an expression graph node for a quadratic expression */
+extern
+SCIP_RETCODE SCIPexprgraphCreateNodeQuadratic(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPRGRAPHNODE**  node,               /**< buffer to store expression graph node */
+   int                   nchildren,          /**< number of children */
+   SCIP_Real*            lincoefs,           /**< linear coefficients for children, or NULL */
+   int                   nquadelems,         /**< number of quadratic elements */
+   SCIP_QUADELEM*        quadelems,          /**< quadratic elements, or NULL if nquadelems == 0 */
+   SCIP_Real             constant            /**< constant */
+);
+
+/** creates an expression graph node for a polynomial expression */
+extern
+SCIP_RETCODE SCIPexprgraphCreateNodePolynomial(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPRGRAPHNODE**  node,               /**< buffer to store expression graph node */
+   int                   nmonomials,         /**< number of monomials */
+   SCIP_EXPRDATA_MONOMIAL** monomials,       /**< monomials */
+   SCIP_Real             constant,           /**< constant of polynomial */
+   SCIP_Bool             copymonomials       /**< whether to copy monomials or to assume ownership */
+);
+
+/** adds monomials to an expression graph node that is a polynomial expression */
+extern
+SCIP_RETCODE SCIPexprgraphNodePolynomialAddMonomials(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPRGRAPHNODE*   node,               /**< store expression graph node with polynomial operator */
+   int                   nmonomials,         /**< number of monomials */
+   SCIP_EXPRDATA_MONOMIAL** monomials,       /**< monomials */
+   SCIP_Bool             copymonomials       /**< whether to copy monomials or to assume ownership */
+);
+
+/** given a node of an expression graph, splitup a linear part which variables are not used somewhere else in the same expression
+ * E.g., if the expression is 1 + x + y + y^2, one gets 1 + x and the node remains at y + y^2.
+ * If the node is a linear expression, it may be freed.
+ * If it is not linear, the node may change, i.e., the remaining nonlinear part may be stored in a new node.
+ * It is assumed that the user had captured the node.
+ * It is assumed that the expression graph has been simplified before.
+ */
+extern
+SCIP_RETCODE SCIPexprgraphNodeSplitOffLinear(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   SCIP_EXPRGRAPHNODE**  node,               /**< expression graph node where to splitup linear part */
+   int                   linvarssize,        /**< length of linvars and lincoefs arrays */
+   int*                  nlinvars,           /**< buffer to store length of linear term that have been splitup */
+   void**                linvars,            /**< buffer to store variables of linear part */
+   SCIP_Real*            lincoefs,           /**< buffer to store coefficients of linear part */
+   SCIP_Real*            constant            /**< buffer to store constant part */
+);
+
+/** moves parents from a one node to another node
+ * in other words, replaces the child srcnode by targetnode in all parents of srcnode
+ * srcnode may be freed, if not captured
+ * it is assumes that targetnode represents the same expression as srcnode
+ */
+extern
+SCIP_RETCODE SCIPexprgraphMoveNodeParents(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   SCIP_EXPRGRAPHNODE**  srcnode,            /**< node which parents to move */
+   SCIP_EXPRGRAPHNODE*   targetnode          /**< node where to move parents to */
+);
+
+/** captures node, i.e., increases number of uses */
+extern
+void SCIPexprgraphCaptureNode(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node to capture */
+);
+
+/** releases node, i.e., decreases number of uses
+ * node is freed if no parents and no other uses
+ * children are recursively released if they have no other parents
+ * nodes that are removed are also freed
+ * if node correspond to a variable, then the variable is removed from the expression graph
+ * similar for constants
+ */
+extern
+SCIP_RETCODE SCIPexprgraphReleaseNode(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   SCIP_EXPRGRAPHNODE**  node                /**< expression graph node to release */
+);
+
+/** frees a node of an expression graph */
+extern
+void SCIPexprgraphFreeNode(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPRGRAPHNODE**  node                /**< pointer to expression graph node that should be freed */
+);
+
+/** enables a node and recursively all its children in an expression graph */
+extern
+void SCIPexprgraphEnableNode(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node to enable */
+);
+
+/** disables a node and recursively all children which have no enabled parents in an expression graph */
+extern
+void SCIPexprgraphDisableNode(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node to enable */
+);
+
+/** gets number of children of a node in an expression graph */
+extern
+int SCIPexprgraphGetNodeNChildren(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+);
+
+/** gets children of a node in an expression graph */
+extern
+SCIP_EXPRGRAPHNODE** SCIPexprgraphGetNodeChildren(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+);
+
+/** gets number of parents of a node in an expression graph */
+extern
+int SCIPexprgraphGetNodeNParents(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+);
+
+/** gets parents of a node in an expression graph */
+extern
+SCIP_EXPRGRAPHNODE** SCIPexprgraphGetNodeParents(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+);
+
+/** returns whether the node has siblings in the expression graph */
+extern
+SCIP_Bool SCIPexprgraphHasNodeSibling(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+);
+
+/** gets depth of node in expression graph */
+extern
+int SCIPexprgraphGetNodeDepth(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+);
+
+/** gets position of node in expression graph at its depth level */
+extern
+int SCIPexprgraphGetNodePosition(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+);
+
+/** gets operator of a node in an expression graph */
+extern
+SCIP_EXPROP SCIPexprgraphGetNodeOperator(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+);
+
+/** gives index belonging to a SCIP_EXPR_VARIDX or SCIP_EXPR_PARAM operand */
+extern
+int SCIPexprgraphGetNodeOperatorIndex(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+);
+
+/** gives real belonging to a SCIP_EXPR_CONST operand */
+extern
+SCIP_Real SCIPexprgraphGetNodeOperatorReal(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+);
+
+/** gives variable belonging to a SCIP_EXPR_VARIDX expression */
+extern
+void* SCIPexprgraphGetNodeVar(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+);
+
+/** gives exponent belonging to a SCIP_EXPR_REALPOWER expression */
+extern
+SCIP_Real SCIPexprgraphGetNodeRealPowerExponent(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+);
+
+/** gives exponent belonging to a SCIP_EXPR_INTPOWER expression */
+extern
+int SCIPexprgraphGetNodeIntPowerExponent(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+);
+
+/** gives exponent belonging to a SCIP_EXPR_SIGNPOWER expression */
+extern
+SCIP_Real SCIPexprgraphGetNodeSignPowerExponent(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+);
+
+/** gives linear coefficients belonging to a SCIP_EXPR_LINEAR expression */
+extern
+SCIP_Real* SCIPexprgraphGetNodeLinearCoefs(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+);
+
+/** gives constant belonging to a SCIP_EXPR_LINEAR expression  */
+extern
+SCIP_Real SCIPexprgraphGetNodeLinearConstant(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+);
+
+/** gives constant belonging to a SCIP_EXPR_QUADRATIC expression */
+extern
+SCIP_Real SCIPexprgraphGetNodeQuadraticConstant(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+);
+
+/** gives linear coefficients belonging to a SCIP_EXPR_QUADRATIC expression, or NULL if all coefficients are 0.0 */
+extern
+SCIP_Real* SCIPexprgraphGetNodeQuadraticLinearCoefs(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+);
+
+/** gives quadratic elements belonging to a SCIP_EXPR_QUADRATIC expression */
+extern
+SCIP_QUADELEM* SCIPexprgraphGetNodeQuadraticQuadElements(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+);
+
+/** gives number of quadratic elements belonging to a SCIP_EXPR_QUADRATIC expression */
+extern
+int SCIPexprgraphGetNodeQuadraticNQuadElements(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+);
+
+/** gives the monomials belonging to a SCIP_EXPR_POLYNOMIAL expression */
+extern
+SCIP_EXPRDATA_MONOMIAL** SCIPexprgraphGetNodePolynomialMonomials(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+);
+
+/** gives the number of monomials belonging to a SCIP_EXPR_POLYNOMIAL expression */
+extern
+int SCIPexprgraphGetNodePolynomialNMonomials(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+);
+
+/** gives the constant belonging to a SCIP_EXPR_POLYNOMIAL expression */
+extern
+SCIP_Real SCIPexprgraphGetNodePolynomialConstant(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+);
+
+/** gets bounds of a node in an expression graph */
+extern
+SCIP_INTERVAL SCIPexprgraphGetNodeBounds(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+);
+
+/** gets value of expression associated to node from last evaluation call */
+extern
+SCIP_Real SCIPexprgraphGetNodeVal(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+);
+
+/** gets curvature of expression associated to node from last curvature check call */
+extern
+SCIP_EXPRCURV SCIPexprgraphGetNodeCurvature(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+);
+
+/** returns whether all children of an expression graph node are variable nodes
+ * gives TRUE for nodes without children
+ */
+extern
+SCIP_Bool SCIPexprgraphAreAllNodeChildrenVars(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+);
+
+/** returns whether the node has an ancestor which has a nonlinear expression operand */
+extern
+SCIP_Bool SCIPexprgraphHasNodeNonlinearAncestor(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+);
+
+/** prints an expression graph node */
+extern
+void SCIPexprgraphPrintNode(
+   SCIP_EXPRGRAPHNODE*   node,               /**< expression graph node */
+   FILE*                 file                /**< file to print to, or NULL for stdout */
+);
+
+/** tightens the bounds in a node of the graph
+ * preparation for reverse propagation
+ * sets bound status to SCIP_EXPRBOUNDSTATUS_TIGHTENEDBYPARENTRECENT if tightening is strong enough and not cutoff
+ */
+extern
+void SCIPexprgraphTightenNodeBounds(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   SCIP_EXPRGRAPHNODE*   node,               /**< node in expression graph with no parents */
+   SCIP_INTERVAL         nodebounds,         /**< new bounds for node */
+   SCIP_Real             minstrength,        /**< minimal required relative bound strengthening in a node to trigger a propagation into children nodes */
+   SCIP_Bool*            cutoff              /**< buffer to store whether a node's bounds were propagated to an empty interval */
+);
+
+/** ensures that bounds and curvature information in a node is uptodate
+ * assumes that bounds and curvature in children are uptodate
+ */
+extern
+SCIP_RETCODE SCIPexprgraphUpdateNodeBoundsCurvature(
+   SCIP_EXPRGRAPHNODE*   node,               /**< expression graph node */
+   SCIP_Real             infinity,           /**< value for infinity in interval arithmetics */
+   SCIP_Real             minstrength,        /**< minimal required relative bound strengthening to trigger a bound recalculation in parent nodes */
+   SCIP_Bool             clearreverseprop    /**< whether to reset bound tightenings from reverse propagation */
+);
+
+/**@} */
+
+/**@name Expression graph methods */
+/**@{ */
+
+/** creates an empty expression graph */
+extern
+SCIP_RETCODE SCIPexprgraphCreate(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPRGRAPH**      exprgraph,          /**< buffer to store pointer to expression graph */
+   int                   varssizeinit,       /**< minimal initial size for variables array, or -1 to choose automatically */
+   int                   depthinit,          /**< minimal initial depth of expression graph, or -1 to choose automatically */
+   SCIP_DECL_EXPRGRAPHVARADDED((*exprgraphvaradded)), /** callback method to invoke when a variable has been added to the expression graph, or NULL if not needed */
+   SCIP_DECL_EXPRGRAPHVARREMOVE((*exprgraphvarremove)), /** callback method to invoke when a variable will be removed from the expression graph, or NULL if not needed */
+   SCIP_DECL_EXPRGRAPHVARCHGIDX((*exprgraphvarchgidx)), /** callback method to invoke when a variable changes its index in the expression graph, or NULL if not needed */
+   void*                 userdata            /**< user data to pass to callback functions */
+);
+
+/** frees an expression graph */
+extern
+SCIP_RETCODE SCIPexprgraphFree(
+   SCIP_EXPRGRAPH**      exprgraph           /**< pointer to expression graph that should be freed */
+);
+
+/** adds an expression graph node to an expression graph
+ * expression graph assumes ownership of node
+ * children are notified about new parent
+ * depth will be chosen to be the maximum of mindepth and the depth of all children plus one
+ */
+extern
+SCIP_RETCODE SCIPexprgraphAddNode(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   SCIP_EXPRGRAPHNODE*   node,               /**< expression graph node to add */
+   int                   mindepth,           /**< minimal depth in expression graph where to add node, e.g., 0 or smaller to choose automatically */
+   int                   nchildren,          /**< number of children */
+   SCIP_EXPRGRAPHNODE**  children            /**< children nodes, or NULL if no children */
+);
+
+/** adds variables to an expression graph, if not existing yet
+ * also already existing nodes are enabled
+ */
+extern
+SCIP_RETCODE SCIPexprgraphAddVars(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   int                   nvars,              /**< number of variables to add */
+   void**                vars,               /**< variables to add */
+   SCIP_EXPRGRAPHNODE**  varnodes            /**< array to store nodes corresponding to variables, or NULL if not of interest */
+);
+
+/** adds a constant to an expression graph, if not existing yet
+ * also already existing nodes are enabled
+ */
+SCIP_RETCODE SCIPexprgraphAddConst(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   SCIP_Real             constant,           /**< constant to add */
+   SCIP_EXPRGRAPHNODE**  constnode           /**< buffer to store pointer to expression graph node corresponding to constant */
+);
+
+/** adds sum of expression trees into expression graph
+ * node will also be captured
+ */
+extern
+SCIP_RETCODE SCIPexprgraphAddExprtreeSum(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   int                   nexprtrees,         /**< number of expression trees to add */
+   SCIP_EXPRTREE**       exprtrees,          /**< expression trees that should be added */
+   SCIP_Real*            coefs,              /**< coefficients of expression trees, or NULL if all 1.0 */
+   SCIP_EXPRGRAPHNODE**  rootnode,           /**< buffer to store expression graph node corresponding to root of expression tree */
+   SCIP_Bool*            rootnodeisnew       /**< buffer to indicate whether the node in *rootnode has been newly created for this expression tree (otherwise, expression tree was already in graph) */
+);
+
+/** replaces variable in expression graph by a linear sum of variables
+ * variables will be added if not in the graph yet
+ */
+extern
+SCIP_RETCODE SCIPexprgraphReplaceVarByLinearSum(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   void*                 var,                /**< variable to replace */
+   int                   ncoefs,             /**< number of coefficients in linear term */
+   SCIP_Real*            coefs,              /**< coefficients in linear term, or NULL if ncoefs == 0 */
+   void**                vars,               /**< variables in linear term */
+   SCIP_Real             constant            /**< constant offset */
+);
+
+/** finds expression graph node corresponding to a variable */
+extern
+SCIP_Bool SCIPexprgraphFindVarNode(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   void*                 var,                /**< variable to search for */
+   SCIP_EXPRGRAPHNODE**  varnode             /**< buffer to store node corresponding to variable, if found, or NULL if not found */
+);
+
+/** finds expression graph node corresponding to a constant */
+extern
+SCIP_Bool SCIPexprgraphFindConstNode(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   SCIP_Real             constant,           /**< constant to search for */
+   SCIP_EXPRGRAPHNODE**  constnode           /**< buffer to store node corresponding to constant, if found, or NULL if not found */
+);
+
+/** get current maximal depth of expression graph */
+extern
+int SCIPexprgraphGetDepth(
+   SCIP_EXPRGRAPH*       exprgraph           /**< expression graph */
+);
+
+/** gets array with number of nodes at each depth of expression graph */
+extern
+int* SCIPexprgraphGetNNodes(
+   SCIP_EXPRGRAPH*       exprgraph           /**< expression graph */
+);
+
+/** gets nodes of expression graph, one array per depth */
+extern
+SCIP_EXPRGRAPHNODE*** SCIPexprgraphGetNodes(
+   SCIP_EXPRGRAPH*       exprgraph           /**< expression graph */
+);
+
+/** gets number of variables in expression graph */
+extern
+int SCIPexprgraphGetNVars(
+   SCIP_EXPRGRAPH*       exprgraph           /**< pointer to expression graph that should be freed */
+);
+
+/** gets array of variables in expression graph */
+extern
+void** SCIPexprgraphGetVars(
+   SCIP_EXPRGRAPH*       exprgraph           /**< pointer to expression graph that should be freed */
+);
+
+/** gets array of expression graph nodes corresponding to variables */
+extern
+SCIP_EXPRGRAPHNODE** SCIPexprgraphGetVarNodes(
+   SCIP_EXPRGRAPH*       exprgraph           /**< pointer to expression graph that should be freed */
+);
+
+/** prints an expression graph in dot format */
+extern
+SCIP_RETCODE SCIPexprgraphPrintDot(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   FILE*                 file,               /**< file to print to, or NULL for stdout */
+   const char**          varnames            /**< variable names, or NULL for generic names */
+);
+
+/** evaluates nodes of expression graph for given values of variables */
+extern
+SCIP_RETCODE SCIPexprgraphEval(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   SCIP_Real*            varvals             /**< values for variables */
+);
+
+/** sets bounds for variables */
+extern
+void SCIPexprgraphSetVarsBounds(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   SCIP_INTERVAL*        varbounds           /**< new bounds for variables */
+);
+
+/** sets bounds for a single variable */
+extern
+void SCIPexprgraphSetVarBounds(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   void*                 var,                /**< variable */
+   SCIP_INTERVAL         varbounds           /**< new bounds of variable */
+);
+
+/** sets bounds for a single variable given as expression graph node */
+extern
+void SCIPexprgraphSetVarNodeBounds(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   SCIP_EXPRGRAPHNODE*   varnode,            /**< expression graph node corresponding to variable */
+   SCIP_INTERVAL         varbounds           /**< new bounds of variable */
+);
+
+/** sets lower bound for a single variable given as expression graph node */
+extern
+void SCIPexprgraphSetVarNodeLb(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   SCIP_EXPRGRAPHNODE*   varnode,            /**< expression graph node corresponding to variable */
+   SCIP_Real             lb                  /**< new lower bound for variable */
+);
+
+/** sets upper bound for a single variable given as expression graph node */
+extern
+void SCIPexprgraphSetVarNodeUb(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   SCIP_EXPRGRAPHNODE*   varnode,            /**< expression graph node corresponding to variable */
+   SCIP_Real             ub                  /**< new upper bound for variable */
+);
+
+/** gets bounds that are stored for all variables */
+extern
+SCIP_INTERVAL* SCIPexprgraphGetVarsBounds(
+   SCIP_EXPRGRAPH*       exprgraph           /**< expression graph */
+);
+
+/** propagates bound changes in variables forward through the expression graph */
+extern
+SCIP_RETCODE SCIPexprgraphPropagateVarBounds(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   SCIP_Real             infinity,           /**< value for infinity in interval arithmetics */
+   SCIP_Bool             clearreverseprop,   /**< whether to reset bound tightenings from reverse propagation */
+   SCIP_Bool*            domainerror         /**< buffer to store whether a node with empty bounds has been found, propagation is interrupted in this case */
+);
+
+/** propagates bound changes in nodes backward through the graph
+ * new bounds are not stored in varbounds, but only in nodes corresponding to variables
+ * NOTE: it is assumed that SCIPexprgraphPropagateVarBounds was called before if variable bounds were relaxed
+ */
+extern
+void SCIPexprgraphPropagateNodeBounds(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   SCIP_Real             infinity,           /**< value for infinity in interval arithmetics */
+   SCIP_Real             minstrength,        /**< minimal required relative bound strengthening in a node to trigger a propagation into children nodes */
+   SCIP_Bool*            cutoff              /**< buffer to store whether a node's bounds were propagated to an empty interval */
+);
+
+/** updates curvature information in expression graph nodes w.r.t. currently stored variable bounds
+ * implies update of bounds in expression graph
+ */
+extern
+SCIP_RETCODE SCIPexprgraphCheckCurvature(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   SCIP_Real             infinity,           /**< value for infinity in interval arithmetics */
+   SCIP_Bool             clearreverseprop    /**< whether to reset bound tightenings from reverse propagation */
+);
+
+/** aims at simplifying an expression graph
+ * a domain error can occur when variables were fixed to values for which a parent expression is not defined (e.g., 0^(-1) or log(-1))
+ */
+extern
+SCIP_RETCODE SCIPexprgraphSimplify(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   SCIP_Real             eps,                /**< threshold, under which positive values are treat as 0 */
+   SCIP_Bool*            havechange,         /**< buffer to indicate whether the graph has been modified */
+   SCIP_Bool*            domainerror         /**< buffer to indicate whether a domain error has been encountered, i.e., some expressions turned into NaN */
+);
+
+/** creates an expression tree from a given node in an expression graph */
+extern
+SCIP_RETCODE SCIPexprgraphGetTree(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   SCIP_EXPRGRAPHNODE*   rootnode,           /**< expression graph node that should represent root of expression tree */
+   SCIP_EXPRTREE**       exprtree            /**< buffer to store pointer to created expression tree */
+);
+
+/** creates a sum of expression trees with pairwise disjoint variables from a given node in an expression graph
+ * Giving SCIPexprgraphGetNodeNChildren() for exprtreesize is always sufficient.
+ */
+extern
+SCIP_RETCODE SCIPexprgraphGetSeparableTrees(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   SCIP_EXPRGRAPHNODE*   node,               /**< expression graph node which represents expression to get */
+   int                   exprtreessize,      /**< length of exprtrees and exprtreecoefs arrays, need to be at least one */
+   int*                  nexprtrees,         /**< buffer to store number of expression trees */
+   SCIP_EXPRTREE**       exprtrees,          /**< array where to store expression trees */
+   SCIP_Real*            exprtreecoefs       /**< array where to store coefficients of expression trees */
+);
+
+/** gives the number of summands which the expression of an expression graph node consists of */
+extern
+int SCIPexprgraphGetSumTreesNSummands(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+);
+
+/** creates a sum of expression trees, possibly sharing variables, from a given node in an expression graph */
+extern
+SCIP_RETCODE SCIPexprgraphGetSumTrees(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   SCIP_EXPRGRAPHNODE*   node,               /**< expression graph node which represents expression to get */
+   int                   exprtreessize,      /**< length of exprtrees and exptreecoefs arrays, should be at least SCIPexprgraphGetSumTreesNSummands() */
+   int*                  nexprtrees,         /**< buffer to store number of expression trees */
+   SCIP_EXPRTREE**       exprtrees,          /**< array where to store expression trees */
+   SCIP_Real*            exprtreecoefs       /**< array where to store coefficients of expression trees */
+);
+
+/**@} */
+
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __NLPI_EXPRESSION_H__ */
+#endif /* __NLPI_PUB_EXPR_H__ */
