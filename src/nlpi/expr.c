@@ -32,6 +32,8 @@
 #include "scip/pub_misc.h"
 
 #define SCIP_EXPRESSION_MAXCHILDEST 20       /**< estimate on maximal number of children */
+/* @todo check whether > 2 is really good */
+#define MAXEXPANSIONEXPONENT        10       /**< maximal exponent for which we still expand polynomials */
 
 /** sign of a value (-1 or +1)
  * 0.0 has sign +1
@@ -48,6 +50,22 @@ const char* curvnames[4] =
    "concave",
    "linear"
 };
+
+/** calculate memory size for dynamically allocated arrays (copied from scip/set.c) */
+static
+int calcGrowSize(
+   int                   num                 /**< minimum number of entries to store */
+   )
+{
+   int size;
+
+   /* calculate the size with this loop, such that the resulting numbers are always the same (-> block memory) */
+   size = 4;
+   while( size < num )
+      size = (int)(1.2 * size + 4);
+
+   return size;
+}
 
 /* gives curvature for a sum of two functions with given curvature */
 SCIP_EXPRCURV SCIPexprcurvAdd(
@@ -376,6 +394,118 @@ void quadraticdataSort(
    quadraticdata->sorted = TRUE;
 }
 
+/** compares two monomials
+ * gives 0 if monomials are equal */
+static
+SCIP_DECL_SORTPTRCOMP(monomialdataCompare)
+{
+   SCIP_EXPRDATA_MONOMIAL* monomial1;
+   SCIP_EXPRDATA_MONOMIAL* monomial2;
+
+   int i;
+
+   assert(elem1 != NULL);
+   assert(elem2 != NULL);
+
+   monomial1 = (SCIP_EXPRDATA_MONOMIAL*)elem1;
+   monomial2 = (SCIP_EXPRDATA_MONOMIAL*)elem2;
+
+   /* make sure, both monomials are equal */
+   SCIPexprSortMonomialFactors(monomial1);
+   SCIPexprSortMonomialFactors(monomial2);
+
+   /* for the first factor where both monomials differ,
+    * we return either the difference in the child indices, if children are different
+    * or the sign of the difference in the exponents
+    */
+   for( i = 0; i < monomial1->nfactors && i < monomial2->nfactors; ++i )
+   {
+      if( monomial1->childidxs[i] != monomial2->childidxs[i] )
+         return monomial1->childidxs[i] - monomial2->childidxs[i];
+      if( monomial1->exponents[i] > monomial2->exponents[i] )
+         return 1;
+      else if( monomial1->exponents[i] < monomial2->exponents[i] )
+         return -1;
+   }
+
+   /* if the factors of one monomial are a proper subset of the factors of the other monomial,
+    * we return the difference in the number of monomials
+    */
+   return monomial1->nfactors - monomial2->nfactors;
+}
+
+/** ensures that the factors arrays of a monomial have at least a given size */
+static
+SCIP_RETCODE monomialdataEnsureFactorsSize(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPRDATA_MONOMIAL*  monomialdata,    /**< monomial data */
+   int                   minsize             /**< minimal size of factors arrays */
+   )
+{
+   assert(blkmem != NULL);
+   assert(monomialdata != NULL);
+
+   if( minsize > monomialdata->factorssize )
+   {
+      int newsize;
+
+      newsize = calcGrowSize(minsize);
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &monomialdata->childidxs, monomialdata->factorssize, newsize) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &monomialdata->exponents, monomialdata->factorssize, newsize) );
+      monomialdata->factorssize = newsize;
+   }
+   assert(minsize <= monomialdata->factorssize);
+
+   return SCIP_OKAY;
+}
+
+/** creates SCIP_EXPRDATA_POLYNOMIAL data structure from given monomials */
+static
+SCIP_RETCODE polynomialdataCreate(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPRDATA_POLYNOMIAL** polynomialdata,/**< buffer to store pointer to polynomial data */
+   int                   nmonomials,         /**< number of monomials */
+   SCIP_EXPRDATA_MONOMIAL** monomials,       /**< monomials */
+   SCIP_Real             constant,           /**< constant part */
+   SCIP_Bool             copymonomials       /**< whether to copy monomials, or copy only given pointers, in which case polynomialdata assumes ownership of monomial structure */
+   )
+{
+   assert(blkmem != NULL);
+   assert(polynomialdata != NULL);
+   assert(monomials != NULL || nmonomials == 0);
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, polynomialdata) );
+
+   (*polynomialdata)->constant = constant;
+   (*polynomialdata)->nmonomials  = nmonomials;
+   (*polynomialdata)->monomialssize = nmonomials;
+   (*polynomialdata)->monomials   = NULL;
+   (*polynomialdata)->sorted   = (nmonomials <= 1);
+
+   if( nmonomials > 0 )
+   {
+      int i;
+
+      if( copymonomials )
+      {
+         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*polynomialdata)->monomials, nmonomials) );
+
+         for( i = 0; i < nmonomials; ++i )
+         {
+            assert(monomials[i] != NULL);  /*lint !e613*/
+            SCIP_CALL( SCIPexprCreateMonomial(blkmem, &(*polynomialdata)->monomials[i],
+               monomials[i]->coef, monomials[i]->nfactors, monomials[i]->childidxs, monomials[i]->exponents) );  /*lint !e613*/
+         }
+      }
+      else
+      {
+         SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*polynomialdata)->monomials, monomials, nmonomials) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** creates a copy of a SCIP_EXPRDATA_POLYNOMIAL data structure */
 static
 SCIP_RETCODE polynomialdataCopy(
@@ -440,6 +570,635 @@ void polynomialdataFree(
    assert((*polynomialdata)->monomials == NULL);
 
    BMSfreeBlockMemory(blkmem, polynomialdata);
+}
+
+
+/** ensures that the monomials array of a polynomial has at least a given size */
+static
+SCIP_RETCODE polynomialdataEnsureMonomialsSize(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPRDATA_POLYNOMIAL* polynomialdata, /**< polynomial data */
+   int                   minsize             /**< minimal size of monomials array */
+   )
+{
+   assert(blkmem != NULL);
+   assert(polynomialdata != NULL);
+
+   if( minsize > polynomialdata->monomialssize )
+   {
+      int newsize;
+
+      newsize = calcGrowSize(minsize);
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &polynomialdata->monomials, polynomialdata->monomialssize, newsize) );
+      polynomialdata->monomialssize = newsize;
+   }
+   assert(minsize <= polynomialdata->monomialssize);
+
+   return SCIP_OKAY;
+}
+
+/** adds an array of monomials to a polynomial */
+static
+SCIP_RETCODE polynomialdataAddMonomials(
+   BMS_BLKMEM*           blkmem,             /**< block memory of expression */
+   SCIP_EXPRDATA_POLYNOMIAL* polynomialdata, /**< polynomial data */
+   int                   nmonomials,         /**< number of monomials to add */
+   SCIP_EXPRDATA_MONOMIAL** monomials,       /**< the monomials to add */
+   SCIP_Bool             copymonomials       /**< whether to copy monomials or to assume ownership */
+)
+{
+   int i;
+
+   assert(blkmem != NULL);
+   assert(polynomialdata != NULL);
+   assert(monomials != NULL || nmonomials == 0);
+
+   if( nmonomials == 0 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( polynomialdataEnsureMonomialsSize(blkmem, polynomialdata, polynomialdata->nmonomials + nmonomials) );
+   assert(polynomialdata->monomialssize >= polynomialdata->nmonomials + nmonomials);
+
+   if( copymonomials )
+   {
+      for( i = 0; i < nmonomials; ++i )
+      {
+         assert(monomials[i] != NULL);  /*lint !e613*/
+         SCIP_CALL( SCIPexprCreateMonomial(blkmem, &polynomialdata->monomials[polynomialdata->nmonomials + i],
+            monomials[i]->coef, monomials[i]->nfactors, monomials[i]->childidxs, monomials[i]->exponents) );  /*lint !e613*/
+      }
+   }
+   else
+   {
+      BMScopyMemoryArray(&polynomialdata->monomials[polynomialdata->nmonomials], monomials, nmonomials);
+   }
+   polynomialdata->nmonomials += nmonomials;
+
+   polynomialdata->sorted = (polynomialdata->nmonomials <= 1);
+
+   return SCIP_OKAY;
+}
+
+/** ensures that monomials of a polynomial are sorted */
+static
+void polynomialdataSortMonomials(
+   SCIP_EXPRDATA_POLYNOMIAL* polynomialdata  /**< polynomial expression */
+)
+{
+   assert(polynomialdata != NULL);
+
+   if( polynomialdata->sorted )
+   {
+#ifndef NDEBUG
+      int i;
+
+      /* a polynom with more than one monoms can only be sorted if its monoms are sorted */
+      for( i = 1; i < polynomialdata->nmonomials; ++i )
+      {
+         assert(polynomialdata->monomials[i-1]->sorted);
+         assert(polynomialdata->monomials[i]->sorted);
+         assert(monomialdataCompare(polynomialdata->monomials[i-1], polynomialdata->monomials[i]) <= 0);
+      }
+#endif
+      return;
+   }
+
+   if( polynomialdata->nmonomials > 0 )
+      SCIPsortPtr((void*)polynomialdata->monomials, monomialdataCompare, polynomialdata->nmonomials);
+
+   polynomialdata->sorted = TRUE;
+}
+
+/** merges monomials that differ only in coefficient into a single monomial
+ * eliminates monomials with coefficient between -eps and eps
+ */
+static
+void polynomialdataMergeMonomials(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPRDATA_POLYNOMIAL* polynomialdata, /**< polynomial data */
+   SCIP_Real             eps,                /**< threshold under which numbers are treat as zero */
+   SCIP_Bool             mergefactors        /**< whether to merge factors in monomials too */
+   )
+{
+   int i;
+   int offset;
+   int oldnfactors;
+
+   assert(polynomialdata != NULL);
+   assert(eps >= 0.0);
+
+   polynomialdataSortMonomials(polynomialdata);
+
+   /* merge monomials by adding their coefficients
+    * eliminate monomials with no factors or zero coefficient*/
+   offset = 0;
+   i = 0;
+   while( i + offset < polynomialdata->nmonomials )
+   {
+      if( offset > 0 )
+      {
+         assert(polynomialdata->monomials[i] == NULL);
+         assert(polynomialdata->monomials[i+offset] != NULL);
+         polynomialdata->monomials[i] = polynomialdata->monomials[i+offset];
+#ifndef NDEBUG
+         polynomialdata->monomials[i+offset] = NULL;
+#endif
+      }
+
+      if( mergefactors )
+      {
+         oldnfactors = polynomialdata->monomials[i]->nfactors;
+         SCIPexprMergeMonomialFactors(polynomialdata->monomials[i], eps);
+
+         /* if monomial has changed, then we cannot assume anymore that polynomial is sorted */
+         if( oldnfactors != polynomialdata->monomials[i]->nfactors )
+            polynomialdata->sorted = FALSE;
+      }
+
+      while( i+offset+1 < polynomialdata->nmonomials )
+      {
+         assert(polynomialdata->monomials[i+offset+1] != NULL);
+         if( mergefactors )
+         {
+            oldnfactors = polynomialdata->monomials[i+offset+1]->nfactors;
+            SCIPexprMergeMonomialFactors(polynomialdata->monomials[i+offset+1], eps);
+
+            /* if monomial has changed, then we cannot assume anymore that polynomial is sorted */
+            if( oldnfactors != polynomialdata->monomials[i+offset+1]->nfactors )
+               polynomialdata->sorted = FALSE;
+         }
+         if( monomialdataCompare((void*)polynomialdata->monomials[i], (void*)polynomialdata->monomials[i+offset+1]) != 0 )
+            break;
+         polynomialdata->monomials[i]->coef += polynomialdata->monomials[i+offset+1]->coef;
+         SCIPexprFreeMonomial(blkmem, &polynomialdata->monomials[i+offset+1]);
+         ++offset;
+      }
+
+      if( polynomialdata->monomials[i]->nfactors == 0 )
+      {
+         /* constant monomial */
+         polynomialdata->constant += polynomialdata->monomials[i]->coef;
+         SCIPexprFreeMonomial(blkmem, &polynomialdata->monomials[i]);
+         ++offset;
+         continue;
+      }
+
+      if( EPSZ(polynomialdata->monomials[i]->coef, eps) )
+      {
+         SCIPexprFreeMonomial(blkmem, &polynomialdata->monomials[i]);
+         ++offset;
+         continue;
+      }
+
+      ++i;
+   }
+
+#ifndef NDEBUG
+   while( i < polynomialdata->nmonomials )
+      assert(polynomialdata->monomials[i++] == NULL);
+#endif
+
+   polynomialdata->nmonomials -= offset;
+
+   if( EPSZ(polynomialdata->constant, eps) )
+      polynomialdata->constant = 0.0;
+}
+
+/** multiplies each summand of a polynomial by a given constant */
+static
+void polynomialdataMultiplyByConstant(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPRDATA_POLYNOMIAL* polynomialdata, /**< polynomial data */
+   SCIP_Real             factor              /**< constant factor */
+)
+{
+   int i;
+
+   assert(polynomialdata != NULL);
+
+   if( factor == 1.0 )
+      return;
+
+   if( factor == 0.0 )
+   {
+      for( i = 0; i < polynomialdata->nmonomials; ++i )
+         SCIPexprFreeMonomial(blkmem, &polynomialdata->monomials[i]);
+      polynomialdata->nmonomials = 0;
+   }
+   else
+   {
+      for( i = 0; i < polynomialdata->nmonomials; ++i )
+         SCIPexprChgMonomialCoef(polynomialdata->monomials[i], polynomialdata->monomials[i]->coef * factor);
+   }
+
+   polynomialdata->constant *= factor;
+}
+
+/** multiplies each summand of a polynomial by a given monomial */
+static
+SCIP_RETCODE polynomialdataMultiplyByMonomial(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPRDATA_POLYNOMIAL* polynomialdata, /**< polynomial data */
+   SCIP_EXPRDATA_MONOMIAL* factor,           /**< monomial factor */
+   int*                  childmap            /**< map children in factor to children in expr, or NULL for 1:1 */
+)
+{
+   int i;
+
+   assert(blkmem != NULL);
+   assert(factor != NULL);
+   assert(polynomialdata != NULL);
+
+   if( factor->nfactors == 0 )
+   {
+      polynomialdataMultiplyByConstant(blkmem, polynomialdata, factor->coef);
+      return SCIP_OKAY;
+   }
+
+   /* multiply each monomial by factor */
+   for( i = 0; i < polynomialdata->nmonomials; ++i )
+   {
+      SCIP_CALL( SCIPexprMultiplyMonomialByMonomial(blkmem, polynomialdata->monomials[i], factor, childmap) );
+   }
+
+   /* add new monomial for constant multiplied by factor */
+   if( polynomialdata->constant != 0.0 )
+   {
+      SCIP_CALL( polynomialdataEnsureMonomialsSize(blkmem, polynomialdata, polynomialdata->nmonomials+1) );
+      SCIP_CALL( SCIPexprCreateMonomial(blkmem, &polynomialdata->monomials[polynomialdata->nmonomials], polynomialdata->constant, 0, NULL, NULL) );
+      SCIP_CALL( SCIPexprMultiplyMonomialByMonomial(blkmem, polynomialdata->monomials[polynomialdata->nmonomials], factor, childmap) );
+      ++polynomialdata->nmonomials;
+      polynomialdata->sorted = FALSE;
+      polynomialdata->constant = 0.0;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** multiplies a polynomial by a polynomial
+ * factors need to be different */
+static
+SCIP_RETCODE polynomialdataMultiplyByPolynomial(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPRDATA_POLYNOMIAL* polynomialdata, /**< polynomial data */
+   SCIP_EXPRDATA_POLYNOMIAL* factordata,     /**< polynomial factor data */
+   int*                  childmap            /**< map children in factor to children in polynomialdata, or NULL for 1:1 */
+)
+{
+   int i1;
+   int i2;
+   int orignmonomials;
+
+   assert(blkmem != NULL);
+   assert(polynomialdata != NULL);
+   assert(factordata != NULL);
+   assert(polynomialdata != factordata);
+
+   if( factordata->nmonomials == 0 )
+   {
+      polynomialdataMultiplyByConstant(blkmem, polynomialdata, factordata->constant);
+      return SCIP_OKAY;
+   }
+
+   if( factordata->nmonomials == 1 && factordata->constant == 0.0 )
+   {
+      SCIP_CALL( polynomialdataMultiplyByMonomial(blkmem, polynomialdata, factordata->monomials[0], childmap) );
+      return SCIP_OKAY;
+   }
+
+   /* turn constant into a monomial, so we can assume below that constant is 0.0 */
+   if( polynomialdata->constant != 0.0 )
+   {
+      SCIP_CALL( polynomialdataEnsureMonomialsSize(blkmem, polynomialdata, polynomialdata->nmonomials+1) );
+      SCIP_CALL( SCIPexprCreateMonomial(blkmem, &polynomialdata->monomials[polynomialdata->nmonomials], polynomialdata->constant, 0, NULL, NULL) );
+      ++polynomialdata->nmonomials;
+      polynomialdata->sorted = FALSE;
+      polynomialdata->constant = 0.0;
+   }
+
+   SCIP_CALL( polynomialdataEnsureMonomialsSize(blkmem, polynomialdata, polynomialdata->nmonomials * (factordata->nmonomials + (factordata->constant == 0.0 ? 0 : 1))) );
+
+   /* for each monomial in factordata (except the last, if factordata->constant is 0),
+    * duplicate monomials from polynomialdata and multiply them by the monomial for factordata */
+   orignmonomials = polynomialdata->nmonomials;
+   for( i2 = 0; i2 < factordata->nmonomials; ++i2 )
+   {
+      /* add a copy of original monomials to end of polynomialdata's monomials array */
+      assert(polynomialdata->nmonomials + orignmonomials <= polynomialdata->monomialssize); /* reallocating in polynomialdataAddMonomials would make the polynomialdata->monomials invalid, so assert that above the monomials array was made large enough */
+      SCIP_CALL( polynomialdataAddMonomials(blkmem, polynomialdata, orignmonomials, polynomialdata->monomials, TRUE) );
+      assert(polynomialdata->nmonomials == (i2+2) * orignmonomials);
+
+      /* multiply each copied monomial by current monomial from factordata */
+      for( i1 = (i2+1) * orignmonomials; i1 < (i2+2) * orignmonomials; ++i1 )
+      {
+         SCIP_CALL( SCIPexprMultiplyMonomialByMonomial(blkmem, polynomialdata->monomials[i1], factordata->monomials[i2], childmap) );
+      }
+
+      if( factordata->constant == 0.0 && i2 == factordata->nmonomials - 2 )
+      {
+         ++i2;
+         break;
+      }
+   }
+
+   if( factordata->constant != 0.0 )
+   {
+      assert(i2 == factordata->nmonomials);
+      /* multiply original monomials in polynomialdata by constant in factordata */
+      for( i1 = 0; i1 < orignmonomials; ++i1 )
+         SCIPexprChgMonomialCoef(polynomialdata->monomials[i1], polynomialdata->monomials[i1]->coef * factordata->constant);
+   }
+   else
+   {
+      assert(i2 == factordata->nmonomials - 1);
+      /* multiply original monomials in polynomialdata by last monomial in factordata */
+      for( i1 = 0; i1 < orignmonomials; ++i1 )
+      {
+         SCIP_CALL( SCIPexprMultiplyMonomialByMonomial(blkmem, polynomialdata->monomials[i1], factordata->monomials[i2], childmap) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** takes a power of a polynomial
+ * exponent need to be an integer
+ * polynomial need to be a monomial, if exponent is negative
+ */
+static
+SCIP_RETCODE polynomialdataPower(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPRDATA_POLYNOMIAL* polynomialdata, /**< polynomial data */
+   int                   exponent            /**< exponent of power operation */
+)
+{
+   SCIP_EXPRDATA_POLYNOMIAL* factor;
+   int i;
+
+   assert(blkmem != NULL);
+   assert(polynomialdata != NULL);
+
+   if( exponent == 0 )
+   {
+      /* x^0 = 1, except if x = 0 */
+      if( polynomialdata->nmonomials == 0 && polynomialdata->constant == 0.0 )
+      {
+         polynomialdata->constant = 0.0;
+      }
+      else
+      {
+         polynomialdata->constant = 1.0;
+
+         for( i = 0; i < polynomialdata->nmonomials; ++i )
+            SCIPexprFreeMonomial(blkmem, &polynomialdata->monomials[i]);
+         polynomialdata->nmonomials = 0;
+      }
+
+      return SCIP_OKAY;
+   }
+
+   if( exponent == 1 )
+      return SCIP_OKAY;
+
+   if( polynomialdata->nmonomials == 1 && polynomialdata->constant == 0.0 )
+   {
+      /* polynomial is a single monomial */
+      SCIPexprMonomialPower(polynomialdata->monomials[0], exponent);
+      return SCIP_OKAY;
+   }
+
+   if( polynomialdata->nmonomials == 0 )
+   {
+      /* polynomial is a constant */
+      polynomialdata->constant = pow(polynomialdata->constant, exponent);
+      return SCIP_OKAY;
+   }
+
+   assert(exponent >= 2); /* negative exponents not allowed if more than one monom */
+
+   /* todo improve, look into intervalarith.c */
+
+   /* get copy of our polynomial */
+   SCIP_CALL( polynomialdataCopy(blkmem, &factor, polynomialdata) );
+
+   /* do repeated multiplication */
+   for( i = 2; i <= exponent; ++i )
+   {
+      SCIP_CALL( polynomialdataMultiplyByPolynomial(blkmem, polynomialdata, factor, NULL) );
+      polynomialdataMergeMonomials(blkmem, polynomialdata, 0.0, TRUE);
+   }
+
+   /* free copy again */
+   polynomialdataFree(blkmem, &factor);
+
+   return SCIP_OKAY;
+}
+
+/** applies a mapping of child indices to the indices used in polynomial monomials */
+static
+void polynomialdataApplyChildmap(
+   SCIP_EXPRDATA_POLYNOMIAL* polynomialdata, /**< polynomial data */
+   int*                   childmap           /**< mapping of child indices */
+   )
+{
+   SCIP_EXPRDATA_MONOMIAL* monomial;
+   int i;
+   int j;
+
+   assert(polynomialdata != NULL);
+
+   for( i = 0; i < polynomialdata->nmonomials; ++i )
+   {
+      monomial = polynomialdata->monomials[i];
+      assert(monomial != NULL);
+
+      for( j = 0; j < monomial->nfactors; ++j )
+      {
+         monomial->childidxs[j] = childmap[monomial->childidxs[j]];
+         assert(monomial->childidxs[j] >= 0);
+      }
+      monomial->sorted = FALSE;
+   }
+
+   polynomialdata->sorted = FALSE;
+}
+
+/* replaces a factor in a monomial by a polynomial and expands the result */
+static
+SCIP_RETCODE polynomialdataExpandMonomialFactor(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPRDATA_POLYNOMIAL* polynomialdata, /**< polynomial data where to expand a monomial */
+   int                   monomialpos,        /**< position of monomial which factor to expand */
+   int                   factorpos,          /**< position of factor in monomial to expand */
+   SCIP_EXPRDATA_POLYNOMIAL* factorpolynomial,/**< polynomial that should replace factor */
+   int*                  childmap,           /**< map of child indices in factorpolynomial to children of polynomial */
+   SCIP_Bool*            success             /**< buffer to store whether expansion has been done */
+   )
+{
+   SCIP_EXPRDATA_POLYNOMIAL* factorpolynomialcopy;
+   SCIP_EXPRDATA_MONOMIAL* monomial;
+   int i;
+
+   assert(blkmem != NULL);
+   assert(polynomialdata != NULL);
+   assert(factorpolynomial != NULL);
+   assert(childmap != NULL || factorpolynomial->nmonomials == 0);
+   assert(success != NULL);
+   assert(monomialpos >= 0);
+   assert(monomialpos < polynomialdata->nmonomials);
+   assert(factorpos >= 0);
+
+   monomial = polynomialdata->monomials[monomialpos];
+   assert(monomial != NULL);
+   assert(factorpos < monomial->nfactors);
+
+   *success = TRUE;
+
+   if( factorpolynomial->nmonomials == 0 )
+   {
+      /* factorpolynomial is a constant */
+
+      if( !EPSISINT(monomial->exponents[factorpos], 0.0) && factorpolynomial->constant < 0.0 )
+      {
+         /* if polynomial is a negative constant and our exponent is not integer, then cannot do expansion */
+         SCIPwarningMessage("got negative constant %g to the power of a noninteger exponent %g\n", factorpolynomial->constant, monomial->exponents[factorpos]);
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+      monomial->coef *= pow(factorpolynomial->constant, monomial->exponents[factorpos]);
+
+      /* move last factor to position factorpos */
+      if( factorpos < monomial->nfactors-1 )
+      {
+         monomial->exponents[factorpos] = monomial->exponents[monomial->nfactors-1];
+         monomial->childidxs[factorpos] = monomial->childidxs[monomial->nfactors-1];
+      }
+      --monomial->nfactors;
+      monomial->sorted = FALSE;
+      polynomialdata->sorted = FALSE;
+
+      return SCIP_OKAY;
+   }
+
+#if 0
+   /* @todo taking the power of a monomial to a fractional exponent can be possible,
+    * but we need to make sure that for even numbers p, (x^p)^(1/p) expands to |x|, or -x if x<=0, or x if x>=0
+    * also, e.g., (cx^p)^(1/p) for c<0, p odd, and x<=0, is equivalent to ((-c)(-x)^p)^(1/p), and thus should be expanded to (-c)^(1/p)(-x)
+    */
+   if( !EPSISINT(monomial->exponents[factorpos], 0.0) )
+   {
+      /* if exponent is not a natural number, then we skip expansion for now */
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+#endif
+
+   if( factorpolynomial->constant == 0.0 && factorpolynomial->nmonomials == 1 )
+   {
+      /* factorpolynomial is a single monomial */
+      SCIP_EXPRDATA_MONOMIAL* factormonomial;
+      int childidx;
+      SCIP_Real exponent;
+
+      factormonomial = factorpolynomial->monomials[0];
+      assert(factormonomial != NULL);
+
+      if( !EPSISINT(monomial->exponents[factorpos], 0.0) )
+      {
+         if( factormonomial->coef < 0.0 )
+         {
+            /* if coefficient of monomial is negative and our exponent is not integer, then do not do expansion
+             * @todo the only case this makes sense is if the factors can be negative, i.e., when we have negative arguments with an odd exponent: (-x^a)^b = (-x)^(ab) for a odd
+             */
+            *success = FALSE;
+            return SCIP_OKAY;
+         }
+         if( factormonomial->nfactors > 1 )
+         {
+            /* @todo if there is an even number of factors in factormonomial that are negative, then they always multiply to something positive
+             * however, we cannot expand them as below, since we cannot compute the single powers
+             * this we do not have the bounds on the factors here, we skip expansion in this case
+             */
+            *success = FALSE;
+            return SCIP_OKAY;
+         }
+      }
+
+      SCIP_CALL( monomialdataEnsureFactorsSize(blkmem, monomial, monomial->nfactors + factormonomial->nfactors) );
+
+      for( i = 0; i < factormonomial->nfactors; ++i )
+      {
+         childidx = childmap[factormonomial->childidxs[i]];
+         /* can do this because monomial->exponents[factorpos] is assumed to be integer
+          * if factormonomial->exponents[i] is fractional, then we should assume that it's argument is positive */
+         exponent = factormonomial->exponents[i] * monomial->exponents[factorpos];
+         SCIP_CALL( SCIPexprAddMonomialFactors(blkmem, monomial, 1, &childidx, &exponent) );
+      }
+
+      monomial->coef *= pow(factormonomial->coef, monomial->exponents[factorpos]);
+
+      /* move last factor to position factorpos */
+      if( factorpos < monomial->nfactors-1 )
+      {
+         monomial->exponents[factorpos] = monomial->exponents[monomial->nfactors-1];
+         monomial->childidxs[factorpos] = monomial->childidxs[monomial->nfactors-1];
+      }
+      --monomial->nfactors;
+      monomial->sorted = FALSE;
+      polynomialdata->sorted = FALSE;
+
+      return SCIP_OKAY;
+   }
+
+   if( !EPSISINT(monomial->exponents[factorpos], 0.0) || monomial->exponents[factorpos] < 0.0 )
+   {
+      /* if exponent is negative or fractional and the polynomial is not just a monomial, then we cannot do expansion */
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   if( monomial->exponents[factorpos] > MAXEXPANSIONEXPONENT )
+   {
+      /* if exponent is too large, skip expansion */
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   /* create a copy of factor */
+   SCIP_CALL( polynomialdataCopy(blkmem, &factorpolynomialcopy, factorpolynomial) );
+   /* apply childmap to copy */
+   polynomialdataApplyChildmap(factorpolynomialcopy, childmap);
+   /* create power of factor */
+   SCIP_CALL( polynomialdataPower(blkmem, factorpolynomialcopy, EPSFLOOR(monomial->exponents[factorpos], 0.0)) );
+
+   /* remove factor from monomial by moving last factor to position factorpos */
+   if( factorpos < monomial->nfactors-1 )
+   {
+      monomial->exponents[factorpos] = monomial->exponents[monomial->nfactors-1];
+      monomial->childidxs[factorpos] = monomial->childidxs[monomial->nfactors-1];
+   }
+   --monomial->nfactors;
+   monomial->sorted = FALSE;
+
+   /* multiply factor with this reduced monomial */
+   SCIP_CALL( polynomialdataMultiplyByMonomial(blkmem, factorpolynomialcopy, monomial, NULL) );
+
+   /* remove monomial from polynomial and move last monomial to monomialpos */
+   SCIPexprFreeMonomial(blkmem, &polynomialdata->monomials[monomialpos]);
+   monomial = NULL;
+   if( monomialpos < polynomialdata->nmonomials-1 )
+      polynomialdata->monomials[monomialpos] = polynomialdata->monomials[polynomialdata->nmonomials-1];
+   --polynomialdata->nmonomials;
+   polynomialdata->sorted = FALSE;
+
+   /* add factorpolynomialcopy to polynomial */
+   SCIP_CALL( polynomialdataAddMonomials(blkmem, polynomialdata, factorpolynomialcopy->nmonomials, factorpolynomialcopy->monomials, FALSE) );
+   polynomialdata->constant += factorpolynomialcopy->constant;
+
+   factorpolynomialcopy->nmonomials = 0;
+   polynomialdataFree(blkmem, &factorpolynomialcopy);
+
+   return SCIP_OKAY;
 }
 
 /* a default implementation of expression interval evaluation that always gives a correct result */
@@ -750,7 +1509,7 @@ SCIP_DECL_EXPREVAL( exprevalSquare )
    assert(argvals != NULL);
 
    *result = argvals[0] * argvals[0];
-   
+
    return SCIP_OKAY;
 } /*lint !e715*/
 
@@ -784,7 +1543,7 @@ SCIP_DECL_EXPREVAL( exprevalSquareRoot )
    assert(argvals != NULL);
 
    *result = sqrt(argvals[0]);
-   
+
    return SCIP_OKAY;
 } /*lint !e715*/
 
@@ -1111,7 +1870,7 @@ SCIP_DECL_EXPREVAL( exprevalTan )
    assert(argvals != NULL);
 
    *result = tan(argvals[0]);
-   
+
    return SCIP_OKAY;
 } /*lint !e715*/
 
@@ -1164,7 +1923,7 @@ SCIP_DECL_EXPREVAL( exprevalMin )
    assert(argvals != NULL);
 
    *result = MIN(argvals[0], argvals[1]);
-   
+
    return SCIP_OKAY;
 } /*lint !e715*/
 
@@ -2066,22 +2825,6 @@ int SCIPexpropGetNChildren(
    return exprOpTable[op].nargs;
 }
 
-/** calculate memory size for dynamically allocated arrays (copied from scip/set.c) */
-static
-int calcGrowSize(
-   int                   num                 /**< minimum number of entries to store */
-   )
-{
-   int size;
-
-   /* calculate the size with this loop, such that the resulting numbers are always the same (-> block memory) */
-   size = 4;
-   while( size < num )
-      size = (int)(1.2 * size + 4);
-
-   return size;
-}
-
 /** creates an expression
  * Note, that the expression is allocated but for the children only the pointer is copied.
  */
@@ -2110,6 +2853,1539 @@ SCIP_RETCODE exprCreate(
    return SCIP_OKAY;
 }
 
+/** tries to convert a given (operator,operatordata) pair into a polynomial operator with corresponding data
+ * does not do this for constants
+ * if conversion is not possible or operator is already polynomial, *op and *data will not be untouched
+ */
+static
+SCIP_RETCODE exprConvertToPolynomial(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPROP*          op,                 /**< pointer to expression operator */
+   SCIP_EXPROPDATA*      data,               /**< pointer to expression data */
+   int                   nchildren           /**< number of children of operator */
+   )
+{
+   assert(blkmem != NULL);
+   assert(op != NULL);
+   assert(data != NULL);
+
+   switch( *op )
+   {
+      case SCIP_EXPR_VARIDX:
+      case SCIP_EXPR_PARAM:
+      case SCIP_EXPR_CONST:
+         break;
+
+      case SCIP_EXPR_PLUS:
+      {
+         SCIP_EXPRDATA_POLYNOMIAL* polynomialdata;
+         SCIP_EXPRDATA_MONOMIAL* monomials[2];
+         int childidx;
+         SCIP_Real exponent;
+
+         assert(nchildren == 2);
+
+         /* create monomial for first child */
+         childidx = 0;
+         exponent = 1.0;
+         SCIP_CALL( SCIPexprCreateMonomial(blkmem, &monomials[0], 1.0, 1, &childidx, &exponent) );
+
+         /* create monomial for second child */
+         childidx = 1;
+         exponent = 1.0;
+         SCIP_CALL( SCIPexprCreateMonomial(blkmem, &monomials[1], 1.0, 1, &childidx, &exponent) );
+
+         /* create polynomial for sum of children */
+         SCIP_CALL( polynomialdataCreate(blkmem, &polynomialdata, 2, monomials, 0.0, FALSE) );
+
+         *op = SCIP_EXPR_POLYNOMIAL;
+         data->data = (void*)polynomialdata;
+
+         break;
+      }
+
+      case SCIP_EXPR_MINUS:
+      {
+         SCIP_EXPRDATA_POLYNOMIAL* polynomialdata;
+         SCIP_EXPRDATA_MONOMIAL* monomials[2];
+         int childidx;
+         SCIP_Real exponent;
+
+         assert(nchildren == 2);
+
+         /* create monomial for first child */
+         childidx = 0;
+         exponent = 1.0;
+         SCIP_CALL( SCIPexprCreateMonomial(blkmem, &monomials[0],  1.0, 1, &childidx, &exponent) );
+
+         /* create monomial for second child */
+         childidx = 1;
+         exponent = 1.0;
+         SCIP_CALL( SCIPexprCreateMonomial(blkmem, &monomials[1], -1.0, 1, &childidx, &exponent) );
+
+         /* create polynomial for difference of children */
+         SCIP_CALL( polynomialdataCreate(blkmem, &polynomialdata, 2, monomials, 0.0, FALSE) );
+
+         *op = SCIP_EXPR_POLYNOMIAL;
+         data->data = (void*)polynomialdata;
+
+         break;
+      }
+
+      case SCIP_EXPR_MUL:
+      {
+         SCIP_EXPRDATA_POLYNOMIAL* polynomialdata;
+         SCIP_EXPRDATA_MONOMIAL* monomial;
+         int childidx[2];
+         SCIP_Real exponent[2];
+
+         assert(nchildren == 2);
+
+         /* create monomial for product of children */
+         childidx[0] = 0;
+         childidx[1] = 1;
+         exponent[0] = 1.0;
+         exponent[1] = 1.0;
+         SCIP_CALL( SCIPexprCreateMonomial(blkmem, &monomial, 1.0, 2, childidx, exponent) );
+
+         /* create polynomial */
+         SCIP_CALL( polynomialdataCreate(blkmem, &polynomialdata, 1, &monomial, 0.0, FALSE) );
+
+         *op = SCIP_EXPR_POLYNOMIAL;
+         data->data = (void*)polynomialdata;
+
+         break;
+      }
+
+      case SCIP_EXPR_DIV:
+      {
+         SCIP_EXPRDATA_POLYNOMIAL* polynomialdata;
+         SCIP_EXPRDATA_MONOMIAL* monomial;
+         int childidx[2];
+         SCIP_Real exponent[2];
+
+         assert(nchildren == 2);
+
+         /* create monomial for division of children */
+         childidx[0] = 0;
+         childidx[1] = 1;
+         exponent[0] =  1.0;
+         exponent[1] = -1.0;
+         SCIP_CALL( SCIPexprCreateMonomial(blkmem, &monomial, 1.0, 2, childidx, exponent) );
+
+         /* create polynomial */
+         SCIP_CALL( polynomialdataCreate(blkmem, &polynomialdata, 1, &monomial, 0.0, FALSE) );
+
+         *op = SCIP_EXPR_POLYNOMIAL;
+         data->data = (void*)polynomialdata;
+
+         break;
+      }
+
+      case SCIP_EXPR_SQUARE:
+      {
+         SCIP_EXPRDATA_POLYNOMIAL* polynomialdata;
+         SCIP_EXPRDATA_MONOMIAL* monomial;
+         int childidx;
+         SCIP_Real exponent;
+
+         assert(nchildren == 1);
+
+         /* create monomial for square of child */
+         childidx = 0;
+         exponent = 2.0;
+         SCIP_CALL( SCIPexprCreateMonomial(blkmem, &monomial, 1.0, 1, &childidx, &exponent) );
+
+         /* create polynomial */
+         SCIP_CALL( polynomialdataCreate(blkmem, &polynomialdata, 1, &monomial, 0.0, FALSE) );
+
+         *op = SCIP_EXPR_POLYNOMIAL;
+         data->data = (void*)polynomialdata;
+
+         break;
+      }
+
+      case SCIP_EXPR_SQRT:
+      {
+         SCIP_EXPRDATA_POLYNOMIAL* polynomialdata;
+         SCIP_EXPRDATA_MONOMIAL* monomial;
+         int childidx;
+         SCIP_Real exponent;
+
+         assert(nchildren == 1);
+
+         /* create monomial for square root of child */
+         childidx = 0;
+         exponent = 0.5;
+         SCIP_CALL( SCIPexprCreateMonomial(blkmem, &monomial, 1.0, 1, &childidx, &exponent) );
+
+         /* create polynomial */
+         SCIP_CALL( polynomialdataCreate(blkmem, &polynomialdata, 1, &monomial, 0.0, FALSE) );
+
+         *op = SCIP_EXPR_POLYNOMIAL;
+         data->data = (void*)polynomialdata;
+
+         break;
+      }
+
+      case SCIP_EXPR_REALPOWER:
+      {
+         SCIP_EXPRDATA_POLYNOMIAL* polynomialdata;
+         SCIP_EXPRDATA_MONOMIAL* monomial;
+         int childidx;
+
+         assert(nchildren == 1);
+
+         /* convert to child0 to the power of exponent */
+
+         /* create monomial for power of first child */
+         childidx = 0;
+         SCIP_CALL( SCIPexprCreateMonomial(blkmem, &monomial, 1.0, 1, &childidx, &data->dbl) );
+
+         /* create polynomial */
+         SCIP_CALL( polynomialdataCreate(blkmem, &polynomialdata, 1, &monomial, 0.0, FALSE) );
+
+         *op = SCIP_EXPR_POLYNOMIAL;
+         data->data = (void*)polynomialdata;
+
+         break;
+      }
+
+      case SCIP_EXPR_SIGNPOWER:
+      {
+         SCIP_Real exponent;
+
+         assert(nchildren == 1);
+
+         /* check if exponent is an odd integer */
+         exponent = data->dbl;
+         if( EPSISINT(exponent, 0.0) && (int)exponent % 2 != 0 )
+         {
+            /* convert to child0 to the power of exponent, since sign is kept by taking power */
+            SCIP_EXPRDATA_POLYNOMIAL* polynomialdata;
+            SCIP_EXPRDATA_MONOMIAL* monomial;
+            int childidx;
+
+            /* create monomial for power of first child */
+            childidx = 0;
+            SCIP_CALL( SCIPexprCreateMonomial(blkmem, &monomial, 1.0, 1, &childidx, &exponent) );
+
+            /* create polynomial */
+            SCIP_CALL( polynomialdataCreate(blkmem, &polynomialdata, 1, &monomial, 0.0, FALSE) );
+
+            *op = SCIP_EXPR_POLYNOMIAL;
+            data->data = (void*)polynomialdata;
+         }
+         /* if exponent is not an odd integer constant, then keep it as signpower expression */
+         break;
+      }
+
+      case SCIP_EXPR_INTPOWER:
+      {
+         SCIP_EXPRDATA_POLYNOMIAL* polynomialdata;
+         SCIP_EXPRDATA_MONOMIAL* monomial;
+         int childidx;
+         SCIP_Real exponent;
+
+         assert(nchildren == 1);
+
+         /* create monomial for power of child */
+         childidx = 0;
+         exponent = data->intval;
+         SCIP_CALL( SCIPexprCreateMonomial(blkmem, &monomial, 1.0, 1, &childidx, &exponent) );
+
+         /* create polynomial */
+         SCIP_CALL( polynomialdataCreate(blkmem, &polynomialdata, 1, &monomial, 0.0, FALSE) );
+
+         *op = SCIP_EXPR_POLYNOMIAL;
+         data->data = (void*)polynomialdata;
+
+         break;
+      }
+
+      case SCIP_EXPR_EXP:
+      case SCIP_EXPR_LOG:
+      case SCIP_EXPR_SIN:
+      case SCIP_EXPR_COS:
+      case SCIP_EXPR_TAN:
+      /* case SCIP_EXPR_ERF: */
+      /* case SCIP_EXPR_ERFI: */
+      case SCIP_EXPR_MIN:
+      case SCIP_EXPR_MAX:
+      case SCIP_EXPR_ABS:
+      case SCIP_EXPR_SIGN:
+         break;
+
+      case SCIP_EXPR_SUM:
+      {
+         SCIP_EXPRDATA_POLYNOMIAL* polynomialdata;
+         SCIP_EXPRDATA_MONOMIAL* monomial;
+         int childidx;
+         int i;
+         SCIP_Real exponent;
+
+         /* create empty polynomial */
+         SCIP_CALL( polynomialdataCreate(blkmem, &polynomialdata, 0, NULL, 0.0, FALSE) );
+         SCIP_CALL( polynomialdataEnsureMonomialsSize(blkmem, polynomialdata, nchildren) );
+         assert(polynomialdata->monomialssize >= nchildren);
+
+         /* add summands as monomials */
+         childidx = 0;
+         exponent = 1.0;
+         SCIP_CALL( SCIPexprCreateMonomial(blkmem, &monomial, 1.0, 1, &childidx, &exponent) );
+         for( i = 0; i < nchildren; ++i )
+         {
+            monomial->childidxs[0] = i;
+            SCIP_CALL( polynomialdataAddMonomials(blkmem, polynomialdata, 1, &monomial, TRUE) );
+         }
+         SCIPexprFreeMonomial(blkmem, &monomial);
+
+         *op = SCIP_EXPR_POLYNOMIAL;
+         data->data = (void*)polynomialdata;
+
+         break;
+      }
+
+      case SCIP_EXPR_PRODUCT:
+      {
+         SCIP_EXPRDATA_POLYNOMIAL* polynomialdata;
+         SCIP_EXPRDATA_MONOMIAL* monomial;
+         int childidx;
+         int i;
+         SCIP_Real exponent;
+
+         /* create monomial */
+         SCIP_CALL( SCIPexprCreateMonomial(blkmem, &monomial, 1.0, 0, NULL, NULL) );
+         SCIP_CALL( monomialdataEnsureFactorsSize(blkmem, monomial, nchildren) );
+         exponent = 1.0;
+         for( i = 0; i < nchildren; ++i )
+         {
+            childidx = i;
+            SCIP_CALL( SCIPexprAddMonomialFactors(blkmem, monomial, 1, &childidx, &exponent) );
+         }
+
+         /* create polynomial */
+         SCIP_CALL( polynomialdataCreate(blkmem, &polynomialdata, 1, &monomial, 0.0, FALSE) );
+
+         *op = SCIP_EXPR_POLYNOMIAL;
+         data->data = (void*)polynomialdata;
+
+         break;
+      }
+
+      case SCIP_EXPR_LINEAR:
+      {
+         SCIP_Real* lineardata;
+         SCIP_EXPRDATA_POLYNOMIAL* polynomialdata;
+         SCIP_EXPRDATA_MONOMIAL* monomial;
+         int childidx;
+         int i;
+         SCIP_Real exponent;
+
+         /* get coefficients of linear term */
+         lineardata = (SCIP_Real*)data->data;
+         assert(lineardata != NULL);
+
+         /* create polynomial consisting of constant from linear term */
+         SCIP_CALL( polynomialdataCreate(blkmem, &polynomialdata, 0, NULL, lineardata[nchildren], FALSE) );
+         /* ensure space for linear coefficients */
+         SCIP_CALL( polynomialdataEnsureMonomialsSize(blkmem, polynomialdata, nchildren) );
+         assert(polynomialdata->monomialssize >= nchildren);
+
+         /* add summands as monomials */
+         childidx = 0;
+         exponent = 1.0;
+         SCIP_CALL( SCIPexprCreateMonomial(blkmem, &monomial, 1.0, 1, &childidx, &exponent) );
+         for( i = 0; i < nchildren; ++i )
+         {
+            monomial->coef = lineardata[i];
+            monomial->childidxs[0] = i;
+            SCIP_CALL( polynomialdataAddMonomials(blkmem, polynomialdata, 1, &monomial, TRUE) );
+         }
+         SCIPexprFreeMonomial(blkmem, &monomial);
+
+         /* free coefficient array from linear data */
+         BMSfreeBlockMemoryArray(blkmem, &lineardata, nchildren + 1);
+
+         *op = SCIP_EXPR_POLYNOMIAL;
+         data->data = (void*)polynomialdata;
+
+         break;
+      }
+
+      case SCIP_EXPR_QUADRATIC:
+      {
+         SCIP_EXPRDATA_QUADRATIC* quaddata;
+         SCIP_EXPRDATA_POLYNOMIAL* polynomialdata;
+         SCIP_EXPRDATA_MONOMIAL* squaremonomial;
+         SCIP_EXPRDATA_MONOMIAL* bilinmonomial;
+         SCIP_EXPRDATA_MONOMIAL* linmonomial;
+         int childidx[2];
+         SCIP_Real exponent[2];
+         int i;
+
+         /* get data of quadratic expression */
+         quaddata = (SCIP_EXPRDATA_QUADRATIC*)data->data;
+         assert(quaddata != NULL);
+
+         /* create empty polynomial */
+         SCIP_CALL( polynomialdataCreate(blkmem, &polynomialdata, 0, NULL, quaddata->constant, FALSE) );
+         /* ensure space for linear and quadratic terms */
+         SCIP_CALL( polynomialdataEnsureMonomialsSize(blkmem, polynomialdata, (quaddata->lincoefs != NULL ? nchildren : 0) + quaddata->nquadelems) );
+         assert(polynomialdata->monomialssize >= quaddata->nquadelems);
+
+         childidx[0] = 0;
+         childidx[1] = 0;
+
+         /* create monomial templates */
+         exponent[0] = 2.0;
+         SCIP_CALL( SCIPexprCreateMonomial(blkmem, &squaremonomial, 1.0, 1, childidx, exponent) );
+         exponent[0] = 1.0;
+         exponent[1] = 1.0;
+         SCIP_CALL( SCIPexprCreateMonomial(blkmem, &bilinmonomial,  1.0, 2, childidx, exponent) );
+         SCIP_CALL( SCIPexprCreateMonomial(blkmem, &linmonomial,    1.0, 1, childidx, exponent) );
+
+         /* add linear terms as monomials */
+         if( quaddata->lincoefs != NULL )
+            for( i = 0; i < nchildren; ++i )
+               if( quaddata->lincoefs[i] != 0.0 )
+               {
+                  linmonomial->childidxs[0] = i;
+                  linmonomial->coef         = quaddata->lincoefs[i];
+                  SCIP_CALL( polynomialdataAddMonomials(blkmem, polynomialdata, 1, &linmonomial, TRUE) );
+               }
+
+         /* add quadratic terms as monomials */
+         for( i = 0; i < quaddata->nquadelems; ++i )
+         {
+            if( quaddata->quadelems[i].idx1 == quaddata->quadelems[i].idx2 )
+            {
+               squaremonomial->childidxs[0] = quaddata->quadelems[i].idx1;
+               squaremonomial->coef         = quaddata->quadelems[i].coef;
+               SCIP_CALL( polynomialdataAddMonomials(blkmem, polynomialdata, 1, &squaremonomial, TRUE) );
+            }
+            else
+            {
+               bilinmonomial->childidxs[0] = quaddata->quadelems[i].idx1;
+               bilinmonomial->childidxs[1] = quaddata->quadelems[i].idx2;
+               bilinmonomial->coef         = quaddata->quadelems[i].coef;
+               SCIP_CALL( polynomialdataAddMonomials(blkmem, polynomialdata, 1, &bilinmonomial, TRUE) );
+            }
+         }
+         SCIPexprFreeMonomial(blkmem, &squaremonomial);
+         SCIPexprFreeMonomial(blkmem, &bilinmonomial);
+         SCIPexprFreeMonomial(blkmem, &linmonomial);
+
+         /* free quadratic term data */
+         exprFreeDataQuadratic(blkmem, nchildren, *data);
+
+         *op = SCIP_EXPR_POLYNOMIAL;
+         data->data = (void*)polynomialdata;
+
+         break;
+      }
+
+      case SCIP_EXPR_POLYNOMIAL:
+         break;
+
+      default:
+         SCIPerrorMessage("operand %d unknown\n", *op);
+         return SCIP_ERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** converts polynomial expression back into simpler expression, if possible
+ */
+static
+SCIP_RETCODE exprUnconvertPolynomial(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPROP*          op,                 /**< pointer to expression operator */
+   SCIP_EXPROPDATA*      data,               /**< pointer to expression data holding polynomial data */
+   int                   nchildren,          /**< number of children of operator */
+   void**                children            /**< children array */
+   )
+{
+   SCIP_EXPRDATA_POLYNOMIAL* polynomialdata;
+   SCIP_EXPRDATA_MONOMIAL* monomial;
+   int maxdegree;
+   int nlinmonomials;
+   int i;
+   int j;
+
+   assert(blkmem != NULL);
+   assert(op != NULL);
+   assert(*op == SCIP_EXPR_POLYNOMIAL);
+   assert(data != NULL);
+   assert(children != NULL || nchildren == 0);
+
+   polynomialdata = (SCIP_EXPRDATA_POLYNOMIAL*)data->data;
+   assert(polynomialdata != NULL);
+
+   /* make sure monomials are sorted and merged */
+   polynomialdataMergeMonomials(blkmem, polynomialdata, 0.0, TRUE);
+
+   /* if no monomials, then leave as it is */
+   if( polynomialdata->nmonomials == 0 )
+      return SCIP_OKAY;
+
+   /* check maximal degree of polynomial only - not considering children expressions
+    * check number of linear monomials */
+   maxdegree = 0;
+   nlinmonomials = 0;
+   for( i = 0; i < polynomialdata->nmonomials; ++i )
+   {
+      int monomialdegree;
+
+      monomial = polynomialdata->monomials[i];
+      assert(monomial != NULL);
+
+      monomialdegree = 0;
+      for(j = 0; j < monomial->nfactors; ++j )
+      {
+         if( !EPSISINT(monomial->exponents[j], 0.0) || monomial->exponents[j] < 0.0 )
+         {
+            monomialdegree = SCIP_EXPR_DEGREEINFINITY;
+            break;
+         }
+
+         monomialdegree += (int)EPSROUND(monomial->exponents[j], 0.0);
+      }
+
+      if( monomialdegree == SCIP_EXPR_DEGREEINFINITY )
+      {
+         maxdegree = SCIP_EXPR_DEGREEINFINITY;
+         break;
+      }
+
+      if( monomialdegree == 1 )
+         ++nlinmonomials;
+
+      if( monomialdegree > maxdegree )
+         maxdegree = monomialdegree;
+   }
+   assert(maxdegree > 0 );
+
+   if( maxdegree == 1 )
+   {
+      /* polynomial is a linear expression in children */
+
+      /* polynomial simplification and monomial merging should ensure that monomial i corresponds to child i and that there are not unused children */
+      assert(polynomialdata->nmonomials == nchildren);
+      assert(polynomialdata->nmonomials == nlinmonomials);
+
+      if( polynomialdata->constant == 0.0 && polynomialdata->nmonomials == 2 && polynomialdata->monomials[0]->coef == 1.0 && polynomialdata->monomials[1]->coef == 1.0 )
+      {
+         /* polynomial is addition of two expressions, so turn into SCIP_EXPR_PLUS */
+
+         assert(polynomialdata->monomials[0]->nfactors == 1);
+         assert(polynomialdata->monomials[0]->exponents[0] == 1.0);
+         assert(polynomialdata->monomials[1]->nfactors == 1);
+         assert(polynomialdata->monomials[1]->exponents[0] == 1.0);
+
+         polynomialdataFree(blkmem, &polynomialdata);
+         data->data = NULL;
+
+         /* change operator type to PLUS */
+         *op = SCIP_EXPR_PLUS;
+
+         return SCIP_OKAY;
+      }
+
+      if( polynomialdata->constant == 0.0 && polynomialdata->nmonomials == 2 && polynomialdata->monomials[0]->coef == 1.0 && polynomialdata->monomials[1]->coef == -1.0 )
+      {
+         /* polynomial is substraction of two expressions, so turn into SCIP_EXPR_MINUS */
+
+         assert(polynomialdata->monomials[0]->nfactors == 1);
+         assert(polynomialdata->monomials[0]->exponents[0] == 1.0);
+         assert(polynomialdata->monomials[1]->nfactors == 1);
+         assert(polynomialdata->monomials[1]->exponents[0] == 1.0);
+
+         polynomialdataFree(blkmem, &polynomialdata);
+         data->data = NULL;
+
+         /* change operator type to MINUS */
+         *op = SCIP_EXPR_MINUS;
+
+         return SCIP_OKAY;
+      }
+
+      if( polynomialdata->constant == 0.0 && polynomialdata->nmonomials == 2 && polynomialdata->monomials[0]->coef == -1.0 && polynomialdata->monomials[1]->coef == 1.0 )
+      {
+         /* polynomial is substraction of two expressions, so turn into SCIP_EXPR_MINUS */
+         void* tmp;
+
+         assert(polynomialdata->monomials[0]->nfactors == 1);
+         assert(polynomialdata->monomials[0]->exponents[0] == 1.0);
+         assert(polynomialdata->monomials[1]->nfactors == 1);
+         assert(polynomialdata->monomials[1]->exponents[0] == 1.0);
+
+         polynomialdataFree(blkmem, &polynomialdata);
+         data->data = NULL;
+
+         /* swap children */
+         tmp = children[1];
+         children[1] = children[0];
+         children[0] = tmp;
+
+         /* change operator type to MINUS */
+         *op = SCIP_EXPR_MINUS;
+
+         return SCIP_OKAY;
+      }
+
+      if( polynomialdata->constant == 0.0 )
+      {
+         /* check if all monomials have coefficient 1.0 */
+         for( i = 0; i < polynomialdata->nmonomials; ++i )
+            if( polynomialdata->monomials[i]->coef != 1.0 )
+               break;
+
+         if( i == polynomialdata->nmonomials )
+         {
+            /* polynomial is sum of children, so turn into SCIP_EXPR_SUM */
+
+            polynomialdataFree(blkmem, &polynomialdata);
+            data->data = NULL;
+
+            /* change operator type to MINUS */
+            *op = SCIP_EXPR_SUM;
+
+            return SCIP_OKAY;
+         }
+      }
+
+      /* turn polynomial into linear expression */
+      {
+         SCIP_Real* lindata;
+
+         /* monomial merging should ensure that each child appears in at most one monomial,
+          * that monomials are ordered according to the child index, and that constant monomials have been removed
+          */
+
+         /* setup data of linear expression */
+         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &lindata, polynomialdata->nmonomials + 1) );
+
+         for( i = 0; i < polynomialdata->nmonomials; ++i )
+         {
+            assert(polynomialdata->monomials[i]->childidxs[0] == i);
+            assert(polynomialdata->monomials[i]->exponents[0] == 1.0);
+            lindata[i] = polynomialdata->monomials[i]->coef;
+         }
+         lindata[i] = polynomialdata->constant;
+
+         polynomialdataFree(blkmem, &polynomialdata);
+         *op = SCIP_EXPR_LINEAR;
+         data->data = (void*)lindata;
+
+         return SCIP_OKAY;
+      }
+   }
+
+   if( maxdegree == 2 && (polynomialdata->nmonomials > 1 || polynomialdata->constant != 0.0 || polynomialdata->monomials[0]->coef != 1.0) )
+   {
+      /* polynomial is quadratic expression with more than one summand or with a constant or a square or bilinear term with coefficient != 1.0, so turn into SCIP_EXPR_QUADRATIC */
+      SCIP_EXPRDATA_QUADRATIC* quaddata;
+      int quadelemidx;
+
+      SCIP_ALLOC( BMSallocBlockMemory(blkmem, &quaddata) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &quaddata->quadelems, polynomialdata->nmonomials - nlinmonomials) );
+      quaddata->nquadelems = polynomialdata->nmonomials - nlinmonomials;
+      quaddata->constant = polynomialdata->constant;
+      quaddata->sorted = FALSE; /* quadratic data is sorted different than polynomials */
+
+      if( nlinmonomials > 0 )
+      {
+         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &quaddata->lincoefs, nchildren) );
+         BMSclearMemoryArray(quaddata->lincoefs, nchildren);
+      }
+      else
+         quaddata->lincoefs = NULL;
+
+      quadelemidx = 0;
+      for( i = 0; i < polynomialdata->nmonomials; ++i )
+      {
+         assert(polynomialdata->monomials[i]->nfactors == 1 || polynomialdata->monomials[i]->nfactors == 2);
+         if( polynomialdata->monomials[i]->nfactors == 1 )
+         {
+            if( polynomialdata->monomials[i]->exponents[0] == 1.0 )
+            {
+               /* monomial is a linear term */
+               assert(quaddata->lincoefs != NULL);
+               quaddata->lincoefs[polynomialdata->monomials[i]->childidxs[0]] += polynomialdata->monomials[i]->coef;
+            }
+            else
+            {
+               /* monomial should be a square term */
+               assert(polynomialdata->monomials[i]->exponents[0] == 2.0);
+               assert(quadelemidx < quaddata->nquadelems);
+               quaddata->quadelems[quadelemidx].idx1 = polynomialdata->monomials[i]->childidxs[0];
+               quaddata->quadelems[quadelemidx].idx2 = polynomialdata->monomials[i]->childidxs[0];
+               quaddata->quadelems[quadelemidx].coef = polynomialdata->monomials[i]->coef;
+               ++quadelemidx;
+            }
+         }
+         else
+         {
+            /* monomial should be a bilinear term */
+            assert(polynomialdata->monomials[i]->exponents[0] == 1.0);
+            assert(polynomialdata->monomials[i]->exponents[1] == 1.0);
+            assert(quadelemidx < quaddata->nquadelems);
+            quaddata->quadelems[quadelemidx].idx1 = MIN(polynomialdata->monomials[i]->childidxs[0], polynomialdata->monomials[i]->childidxs[1]);
+            quaddata->quadelems[quadelemidx].idx2 = MAX(polynomialdata->monomials[i]->childidxs[0], polynomialdata->monomials[i]->childidxs[1]);
+            quaddata->quadelems[quadelemidx].coef = polynomialdata->monomials[i]->coef;
+            ++quadelemidx;
+         }
+      }
+      assert(quadelemidx == quaddata->nquadelems);
+
+      polynomialdataFree(blkmem, &polynomialdata);
+
+      *op = SCIP_EXPR_QUADRATIC;
+      data->data = (void*)quaddata;
+
+      return SCIP_OKAY;
+   }
+
+   if( polynomialdata->constant == 0.0 && polynomialdata->nmonomials == 1 && polynomialdata->monomials[0]->coef == 1.0 )
+   {
+      /* polynomial is product of children */
+      monomial = polynomialdata->monomials[0];
+
+      if( monomial->nfactors == 1 )
+      {
+         /* polynomial is x^k for some k */
+         assert(monomial->exponents[0] != 1.0); /* should have been handled before */
+
+         if( monomial->exponents[0] == 2.0 )
+         {
+            /* polynomial is x^2, so turn into SCIP_EXPR_SQUARE */
+
+            polynomialdataFree(blkmem, &polynomialdata);
+            data->data = NULL;
+
+            *op = SCIP_EXPR_SQUARE;
+
+            return SCIP_OKAY;
+         }
+
+         if( EPSISINT(monomial->exponents[0], 0.0) )
+         {
+            /* k is an integer, so turn into SCIP_EXPR_INTPOWER */
+            int exponent;
+
+            exponent = EPSROUND(monomial->exponents[0], 0.0);
+
+            polynomialdataFree(blkmem, &polynomialdata);
+
+            *op = SCIP_EXPR_INTPOWER;
+            data->intval = exponent;
+
+            return SCIP_OKAY;
+         }
+
+         if( monomial->exponents[0] == 0.5 )
+         {
+            /* polynomial is sqrt(x), so turn into SCIP_EXPR_SQRT */
+
+            polynomialdataFree(blkmem, &polynomialdata);
+            data->data = NULL;
+
+            *op = SCIP_EXPR_SQRT;
+
+            return SCIP_OKAY;
+         }
+
+         {
+            /* polynomial is x^a with a some real number, so turn into SCIP_EXPR_REALPOWER */
+            SCIP_Real exponent;
+
+            exponent = monomial->exponents[0];
+
+            polynomialdataFree(blkmem, &polynomialdata);
+
+            *op = SCIP_EXPR_REALPOWER;
+            data->dbl = exponent;
+
+            return SCIP_OKAY;
+         }
+      }
+
+      if( maxdegree == 2 && monomial->nfactors == 2 )
+      {
+         /* polynomial is product of two children, so turn into SCIP_EXPR_MUL */
+         assert(monomial->exponents[0] == 1.0);
+         assert(monomial->exponents[1] == 1.0);
+
+         polynomialdataFree(blkmem, &polynomialdata);
+         data->data = NULL;
+
+         *op = SCIP_EXPR_MUL;
+
+         return SCIP_OKAY;
+      }
+
+      if( maxdegree == monomial->nfactors )
+      {
+         /* polynomial is a product of n children, so turn into SCIP_EXPR_PRODUCT */
+
+         polynomialdataFree(blkmem, &polynomialdata);
+         data->data = NULL;
+
+         *op = SCIP_EXPR_PRODUCT;
+
+         return SCIP_OKAY;
+      }
+
+      if( monomial->nfactors == 2 && monomial->exponents[0] == 1.0 && monomial->exponents[1] == -1.0 )
+      {
+         /* polynomial is x/y, so turn into SCIP_EXPR_DIV */
+
+         polynomialdataFree(blkmem, &polynomialdata);
+         data->data = NULL;
+
+         *op = SCIP_EXPR_DIV;
+
+         return SCIP_OKAY;
+      }
+
+      if( monomial->nfactors == 2 && monomial->exponents[0] == -1.0 && monomial->exponents[1] == 1.0 )
+      {
+         /* polynomial is y/x, so turn into SCIP_EXPR_DIV */
+         void* tmp;
+
+         polynomialdataFree(blkmem, &polynomialdata);
+         data->data = NULL;
+
+         /* swap children */
+         tmp = children[1];
+         children[1] = children[0];
+         children[0] = tmp;
+
+         *op = SCIP_EXPR_DIV;
+
+         return SCIP_OKAY;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** adds copies of expressions to the array of children of a sum, product, linear, quadratic, or polynomial expression
+ * for a sum or product expression, this corresponds to add additional summands and factors, resp.
+ * for a linear expression, this corresponds to add each expression with coefficient 1.0
+ * for a quadratic or polynomial expression, only the children array may be enlarged, the expression itself remains the same
+ */
+static
+SCIP_RETCODE exprsimplifyAddChildren(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            expr,               /**< quadratic or polynomial expression */
+   int                   nexprs,             /**< number of expressions to add */
+   SCIP_EXPR**           exprs,              /**< expressions to add */
+   SCIP_Bool             comparechildren,    /**< whether to compare expressions with already existing children (no effect for sum and product) */
+   SCIP_Real             eps,                /**< which epsilon to use when comparing expressions */
+   int*                  childmap            /**< array where to store mapping of indices from exprs to children array in expr, or NULL if not of interest */
+)
+{
+   int i;
+
+   assert(blkmem != NULL);
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_SUM || expr->op == SCIP_EXPR_PRODUCT || expr->op == SCIP_EXPR_LINEAR || expr->op == SCIP_EXPR_QUADRATIC || expr->op == SCIP_EXPR_POLYNOMIAL);
+   assert(exprs != NULL || nexprs == 0);
+
+   if( nexprs == 0 )
+      return SCIP_OKAY;
+
+   switch( expr->op )
+   {
+      case SCIP_EXPR_SUM:
+      case SCIP_EXPR_PRODUCT:
+      {
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &expr->children, expr->nchildren, expr->nchildren + nexprs) );
+         for( i = 0; i < nexprs; ++i )
+         {
+            SCIP_CALL( SCIPexprCopyDeep(blkmem, &expr->children[expr->nchildren + i], exprs[i]) );
+            if( childmap != NULL )
+               childmap[i] = expr->nchildren + i;
+         }
+         expr->nchildren += nexprs;
+
+         break;
+      }
+
+      case SCIP_EXPR_LINEAR:
+      case SCIP_EXPR_QUADRATIC:
+      case SCIP_EXPR_POLYNOMIAL:
+      {
+         int j;
+         int orignchildren;
+         SCIP_Bool existsalready;
+
+         orignchildren = expr->nchildren;
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &expr->children, expr->nchildren, expr->nchildren + nexprs) );
+
+         for( i = 0; i < nexprs; ++i )
+         {
+            existsalready = FALSE;
+            if( comparechildren )
+               for( j = 0; j < orignchildren; ++j )
+                  /* during simplification of polynomials, their may be NULL's in children array */
+                  if( expr->children[j] != NULL && SCIPexprAreEqual(expr->children[j], exprs[i], eps) )
+                  {
+                     existsalready = TRUE;
+                     break;
+                  }
+
+            if( !existsalready )
+            {
+               /* add copy of exprs[j] to children array */
+               SCIP_CALL( SCIPexprCopyDeep(blkmem, &expr->children[expr->nchildren], exprs[i]) );
+               if( childmap != NULL )
+                  childmap[i] = expr->nchildren;
+               ++expr->nchildren;
+            }
+            else
+            {
+               if( childmap != NULL )
+                  childmap[i] = j;
+               if( expr->op == SCIP_EXPR_LINEAR )
+               {
+                  /* if linear expression, increase coefficient by 1.0 */
+                  ((SCIP_Real*)expr->data.data)[j] += 1.0;
+               }
+            }
+         }
+
+         /* shrink children array to actually used size */
+         assert(comparechildren || expr->nchildren == orignchildren + nexprs);
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &expr->children, orignchildren + nexprs, expr->nchildren) );
+
+         if( expr->op == SCIP_EXPR_LINEAR && expr->nchildren > orignchildren )
+         {
+            /* if linear expression, then add 1.0 coefficients for new expressions */
+            SCIP_Real* data;
+
+            data = (SCIP_Real*)expr->data.data;
+            SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &data, orignchildren + 1, expr->nchildren + 1) );
+            data[expr->nchildren] = data[orignchildren]; /* move constant from old end to new end */
+            for( i = orignchildren; i < expr->nchildren; ++i )
+               data[i] = 1.0;
+            expr->data.data = (void*)data;
+         }
+         else if( expr->op == SCIP_EXPR_QUADRATIC && expr->nchildren > orignchildren )
+         {
+            /* if quadratic expression, then add 0.0 linear coefficients for new expressions */
+            SCIP_EXPRDATA_QUADRATIC* data;
+
+            data = (SCIP_EXPRDATA_QUADRATIC*)expr->data.data;
+            SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &data->lincoefs, orignchildren, expr->nchildren) );
+            BMSclearMemoryArray(&data->lincoefs[orignchildren], expr->nchildren - orignchildren);
+         }
+
+         break;
+      }
+
+      default:
+         SCIPerrorMessage("exprsimplifyAddChildren cannot be called for operand %d\n", expr->op);
+         return SCIP_INVALIDDATA;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** converts expressions into polynomials, where possible and obvious
+ */
+static
+SCIP_RETCODE exprsimplifyConvertToPolynomials(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPR*            expr                /**< expression to convert */
+   )
+{
+   int i;
+
+   assert(expr != NULL);
+
+   for( i = 0; i < expr->nchildren; ++i )
+   {
+      SCIP_CALL( exprsimplifyConvertToPolynomials(blkmem, expr->children[i]) );
+   }
+
+   SCIP_CALL( exprConvertToPolynomial(blkmem, &expr->op, &expr->data, expr->nchildren) );
+
+   return SCIP_OKAY;
+}
+
+
+/** removes duplicate children in a polynomial expression
+ * leaves NULL's in children array */
+static
+SCIP_RETCODE exprsimplifyRemoveDuplicatePolynomialChildren(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real             eps                 /**< threshold for zero */
+   )
+{
+   SCIP_Bool foundduplicates;
+   int* childmap;
+   int i;
+   int j;
+
+   assert(blkmem != NULL);
+   assert(expr != NULL);
+   assert(SCIPexprGetOperator(expr) == SCIP_EXPR_POLYNOMIAL);
+
+   if( expr->nchildren == 0 )
+      return SCIP_OKAY;
+
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &childmap, expr->nchildren) );
+
+   foundduplicates = FALSE;
+   for( i = 0; i < expr->nchildren; ++i )
+   {
+      if( expr->children[i] == NULL )
+         continue;
+      childmap[i] = i;
+
+      for( j = i+1; j < expr->nchildren; ++j )
+      {
+         if( expr->children[j] == NULL )
+            continue;
+
+         if( SCIPexprAreEqual(expr->children[i], expr->children[j], eps) )
+         {
+            /* forget about expr j and remember that is to be replaced by i */
+            SCIPexprFreeDeep(blkmem, &expr->children[j]);
+            childmap[j] = i;
+            foundduplicates = TRUE;
+         }
+      }
+   }
+
+   /* apply childmap to monomials */
+   if( foundduplicates )
+      polynomialdataApplyChildmap((SCIP_EXPRDATA_POLYNOMIAL*)expr->data.data, childmap);
+
+   /* free childmap */
+   BMSfreeBlockMemoryArray(blkmem, &childmap, expr->nchildren);
+
+   return SCIP_OKAY;
+}
+
+/** eliminates NULL's in children array and shrinks it to actual size */
+static
+SCIP_RETCODE exprsimplifyRemovePolynomialNullChildren(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   int* childmap;
+   int lastnonnull;
+   int i;
+
+   assert(blkmem != NULL);
+   assert(expr != NULL);
+   assert(SCIPexprGetOperator(expr) == SCIP_EXPR_POLYNOMIAL);
+
+   if( expr->nchildren == 0 )
+      return SCIP_OKAY;
+
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &childmap, expr->nchildren) );
+
+   /* close gaps in children array */
+   lastnonnull = expr->nchildren-1;
+   while( lastnonnull >= 0 && expr->children[lastnonnull] == NULL )
+      --lastnonnull;
+   for( i = 0; i <= lastnonnull; ++i )
+   {
+      if( expr->children[i] != NULL )
+      {
+         childmap[i] = i; /* child at index i is not moved */
+         continue;
+      }
+      assert(expr->children[lastnonnull] != NULL);
+
+      /* move child at lastnonnull to position i */
+      expr->children[i] = expr->children[lastnonnull];
+      expr->children[lastnonnull] = NULL;
+      childmap[lastnonnull] = i;
+
+      /* update lastnonnull */
+      --lastnonnull;
+      while( lastnonnull >= 0 && expr->children[lastnonnull] == NULL )
+         --lastnonnull;
+   }
+   assert(i > lastnonnull);
+
+   /* apply childmap to monomials */
+   if( lastnonnull < expr->nchildren-1 )
+      polynomialdataApplyChildmap((SCIP_EXPRDATA_POLYNOMIAL*)expr->data.data, childmap);
+
+   BMSfreeBlockMemoryArray(blkmem, &childmap, expr->nchildren);
+
+   /* shrink children array */
+   if( lastnonnull >= 0 )
+   {
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &expr->children, expr->nchildren, lastnonnull+1) );
+      expr->nchildren = lastnonnull+1;
+   }
+   else
+   {
+      BMSfreeBlockMemoryArray(blkmem, &expr->children, expr->nchildren);
+      expr->nchildren = 0;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** checks which children are still in use and frees those which are not */
+static
+SCIP_RETCODE exprsimplifyRemovePolynomialUnusedChildren(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPR*            expr                /**< polynomial expression */
+   )
+{
+   SCIP_EXPRDATA_POLYNOMIAL* polynomialdata;
+   SCIP_EXPRDATA_MONOMIAL* monomial;
+   SCIP_Bool* childinuse;
+   int i;
+   int j;
+
+   assert(blkmem != NULL);
+   assert(expr != NULL);
+
+   if( expr->nchildren == 0 )
+      return SCIP_OKAY;
+
+   polynomialdata = (SCIP_EXPRDATA_POLYNOMIAL*)expr->data.data;
+   assert(polynomialdata != NULL);
+
+   /* check which children are still in use */
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &childinuse, expr->nchildren) );
+   BMSclearMemoryArray(childinuse, expr->nchildren);
+   for( i = 0; i < polynomialdata->nmonomials; ++i )
+   {
+      monomial = polynomialdata->monomials[i];
+      assert(monomial != NULL);
+
+      for( j = 0; j < monomial->nfactors; ++j )
+      {
+         assert(monomial->childidxs[j] >= 0);
+         assert(monomial->childidxs[j] < expr->nchildren);
+         childinuse[monomial->childidxs[j]] = TRUE;
+      }
+   }
+
+   /* free children that are not used in any monomial */
+   for( i = 0; i < expr->nchildren; ++i )
+      if( expr->children[i] != NULL && !childinuse[i] )
+         SCIPexprFreeDeep(blkmem, &expr->children[i]);
+
+   BMSfreeBlockMemoryArray(blkmem, &childinuse, expr->nchildren);
+
+   return SCIP_OKAY;
+}
+
+/** flattens polynomials in polynomials, check for constants in non-polynomials expressions
+ * exprsimplifyConvertToPolynomials should have been called before to eliminate simple polynomial operands */
+static
+SCIP_RETCODE exprsimplifyFlattenPolynomials(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real             eps                 /**< threshold, under which values are treat as 0 */
+   )
+{
+   int i;
+
+   assert(expr != NULL);
+
+   for( i = 0; i < expr->nchildren; ++i )
+   {
+      SCIP_CALL( exprsimplifyFlattenPolynomials(blkmem, expr->children[i], eps) );
+   }
+
+   switch( SCIPexprGetOperator(expr) )
+   {
+      case SCIP_EXPR_VARIDX:
+      case SCIP_EXPR_CONST:
+      case SCIP_EXPR_PARAM:
+      case SCIP_EXPR_PLUS:
+      case SCIP_EXPR_MINUS:
+      case SCIP_EXPR_MUL:
+      case SCIP_EXPR_DIV:
+      case SCIP_EXPR_SQUARE:
+      case SCIP_EXPR_SQRT:
+      case SCIP_EXPR_INTPOWER:
+      case SCIP_EXPR_REALPOWER:
+      case SCIP_EXPR_SIGNPOWER:
+         break;
+
+      case SCIP_EXPR_EXP:
+      case SCIP_EXPR_LOG:
+      case SCIP_EXPR_SIN:
+      case SCIP_EXPR_COS:
+      case SCIP_EXPR_TAN:
+      /* case SCIP_EXPR_ERF: */
+      /* case SCIP_EXPR_ERFI: */
+      case SCIP_EXPR_ABS:
+      case SCIP_EXPR_SIGN:
+      {
+         /* check if argument is a constant */
+         if( (expr->children[0]->op == SCIP_EXPR_POLYNOMIAL && SCIPexprGetNChildren(expr->children[0]) == 0) ||
+              expr->children[0]->op == SCIP_EXPR_CONST )
+         {
+            SCIP_EXPRDATA_POLYNOMIAL* polynomialdata;
+            SCIP_Real exprval;
+
+            /* since child0 has no children and it's polynomial was flattened, it should have no monomials */
+            assert(expr->children[0]->op != SCIP_EXPR_POLYNOMIAL || SCIPexprGetNMonomials(expr->children[0]) == 0);
+
+            /* evaluate expression in constant polynomial */
+            SCIP_CALL( SCIPexprEval(expr, NULL, NULL, &exprval) );
+
+            /* create polynomial */
+            SCIP_CALL( polynomialdataCreate(blkmem, &polynomialdata, 0, NULL, exprval, FALSE) );
+
+            expr->op = SCIP_EXPR_POLYNOMIAL;
+            expr->data.data = (void*)polynomialdata;
+
+            /* forget child */
+            SCIPexprFreeDeep(blkmem, &expr->children[0]);
+            BMSfreeBlockMemoryArray(blkmem, &expr->children, 1);
+            expr->nchildren = 0;
+         }
+
+         break;
+      }
+
+      case SCIP_EXPR_MIN:
+      case SCIP_EXPR_MAX:
+      {
+         /* check if both arguments are constants */
+         if( ((expr->children[0]->op == SCIP_EXPR_POLYNOMIAL && SCIPexprGetNChildren(expr->children[0]) == 0) || expr->children[0]->op == SCIP_EXPR_CONST) &&
+             ((expr->children[1]->op == SCIP_EXPR_POLYNOMIAL && SCIPexprGetNChildren(expr->children[1]) == 0) || expr->children[1]->op == SCIP_EXPR_CONST) )
+         {
+            SCIP_EXPRDATA_POLYNOMIAL* polynomialdata;
+            SCIP_Real exprval;
+
+            /* since children have no children and it's polynomial was flattened, it should have no monomials */
+            assert(expr->children[0]->op != SCIP_EXPR_POLYNOMIAL || SCIPexprGetNMonomials(expr->children[0]) == 0);
+            assert(expr->children[1]->op != SCIP_EXPR_POLYNOMIAL || SCIPexprGetNMonomials(expr->children[1]) == 0);
+
+            /* evaluate expression in constants */
+            SCIP_CALL( SCIPexprEval(expr, NULL, NULL, &exprval) );
+
+            /* create polynomial */
+            SCIP_CALL( polynomialdataCreate(blkmem, &polynomialdata, 0, NULL, exprval, FALSE) );
+
+            expr->op = SCIP_EXPR_POLYNOMIAL;
+            expr->data.data = (void*)polynomialdata;
+
+            /* forget children */
+            SCIPexprFreeDeep(blkmem, &expr->children[0]);
+            SCIPexprFreeDeep(blkmem, &expr->children[1]);
+            BMSfreeBlockMemoryArray(blkmem, &expr->children, 2);
+            expr->nchildren = 0;
+         }
+
+         break;
+      }
+
+      case SCIP_EXPR_SUM:
+      case SCIP_EXPR_PRODUCT:
+      case SCIP_EXPR_LINEAR:
+      case SCIP_EXPR_QUADRATIC:
+         break;
+
+      case SCIP_EXPR_POLYNOMIAL:
+      {
+         SCIP_EXPRDATA_POLYNOMIAL* polynomialdata;
+         SCIP_EXPRDATA_MONOMIAL* monomial;
+         SCIP_Bool removechild;
+         int* childmap;
+         int childmapsize;
+         int j;
+
+         /* simplify current polynomial */
+         SCIP_CALL( exprsimplifyRemoveDuplicatePolynomialChildren(blkmem, expr, eps) );
+         SCIPexprMergeMonomials(blkmem, expr, eps, TRUE);
+
+         polynomialdata = (SCIP_EXPRDATA_POLYNOMIAL*)expr->data.data;
+         assert(polynomialdata != NULL);
+
+         SCIPdebugMessage("expand factors in expression ");
+         SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL) );
+         SCIPdebugPrintf("\n");
+
+         /* resolve children that are constants or polynomials itself */
+         childmap = NULL;
+         childmapsize = 0;
+         for( i = 0; i < expr->nchildren; ++i )
+         {
+            if( expr->children[i] == NULL )
+               continue;
+
+            if( SCIPexprGetOperator(expr->children[i]) != SCIP_EXPR_POLYNOMIAL &&
+                SCIPexprGetOperator(expr->children[i]) != SCIP_EXPR_CONST )
+               continue;
+
+            removechild = TRUE; /* we intend to delete children[i] */
+
+            if( childmapsize < expr->children[i]->nchildren )
+            {
+               int newsize;
+
+               newsize = calcGrowSize(expr->children[i]->nchildren);
+               SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &childmap, childmapsize, newsize) );
+               childmapsize = newsize;
+            }
+
+            /* add children of child i */
+            SCIP_CALL( exprsimplifyAddChildren(blkmem, expr, expr->children[i]->nchildren, expr->children[i]->children, TRUE, eps, childmap) );
+
+            /* put polynomial of child i into every monomial where child i is used */
+            j = 0;
+            while( j < polynomialdata->nmonomials )
+            {
+               int factorpos;
+               SCIP_Bool success;
+
+               monomial = polynomialdata->monomials[j];
+               /* if monomial is not sorted, then polynomial should not be sorted either, or have only one monomial */
+               assert(monomial->sorted || !polynomialdata->sorted || polynomialdata->nmonomials <= 1);
+
+               if( SCIPexprFindMonomialFactor(monomial, i, &factorpos) )
+               {
+                  assert(factorpos >= 0);
+                  assert(factorpos < monomial->nfactors);
+                  /* assert that factors have been merged */
+                  assert(factorpos == 0 || monomial->childidxs[factorpos-1] != i);
+                  assert(factorpos == monomial->nfactors-1 || monomial->childidxs[factorpos+1] != i);
+
+                  /* SCIPdebugMessage("attempt expanding child %d at monomial %d factor %d\n", i, j, factorpos);
+                  SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL) ); SCIPdebugPrintf("\n");
+                  SCIPdebug( SCIPexprPrint(expr->children[i], NULL, NULL, NULL) ); SCIPdebugPrintf("\n"); */
+
+                  if( expr->children[i]->op == SCIP_EXPR_CONST )
+                  {
+                     if( !EPSISINT(monomial->exponents[factorpos], 0.0) && SCIPexprGetOpReal(expr->children[i]) < 0.0 )
+                     {
+                        /* if constant is negative and our exponent is not integer, then cannot do expansion */
+                        SCIPwarningMessage("got negative constant %g to the power of a noninteger exponent %g\n", SCIPexprGetOpReal(expr->children[i]), monomial->exponents[factorpos]);
+                        success = FALSE;
+                     }
+                     else
+                     {
+                        monomial->coef *= pow(SCIPexprGetOpReal(expr->children[i]), monomial->exponents[factorpos]);
+
+                        /* move last factor to position factorpos */
+                        if( factorpos < monomial->nfactors-1 )
+                        {
+                           monomial->exponents[factorpos] = monomial->exponents[monomial->nfactors-1];
+                           monomial->childidxs[factorpos] = monomial->childidxs[monomial->nfactors-1];
+                        }
+                        --monomial->nfactors;
+                        monomial->sorted = FALSE;
+                        polynomialdata->sorted = FALSE;
+
+                        success = TRUE;
+                     }
+                  }
+                  else
+                  {
+                     SCIP_CALL( polynomialdataExpandMonomialFactor(blkmem, polynomialdata, j, factorpos, (SCIP_EXPRDATA_POLYNOMIAL*)expr->children[i]->data.data, childmap, &success) );
+                  }
+
+                  if( !success )
+                  {
+                     removechild = FALSE;
+                     ++j;
+                  }
+               }
+               else
+                  ++j;
+
+               /* expansion may remove monomials[j], move a monomial from the end to position j, or add new monomials to the end of polynomialdata
+                * we thus repeat with index j, if a factor was successfully expanded
+                */
+            }
+
+            /* forget about child i, if it is not used anymore */
+            if( removechild )
+               SCIPexprFreeDeep(blkmem, &expr->children[i]);
+
+            /* simplify current polynomial again */
+            SCIPexprMergeMonomials(blkmem, expr, eps, TRUE);
+         }
+
+         BMSfreeBlockMemoryArrayNull(blkmem, &childmap, childmapsize);
+
+         /* free children that are not in use anymore */
+         SCIP_CALL( exprsimplifyRemovePolynomialUnusedChildren(blkmem, expr) );
+
+         /* remove NULLs from children array */
+         SCIP_CALL( exprsimplifyRemovePolynomialNullChildren(blkmem, expr) );
+
+         /* if no children left, then it's a constant polynomial -> change into EXPR_CONST */
+         if( expr->nchildren == 0 )
+         {
+            SCIP_Real val;
+
+            /* if no children, then it should also have no monomials */
+            assert(polynomialdata->nmonomials == 0);
+
+            val = polynomialdata->constant;
+            polynomialdataFree(blkmem, &polynomialdata);
+
+            expr->op = SCIP_EXPR_CONST;
+            expr->data.dbl = val;
+         }
+
+         SCIPdebugMessage("-> ");
+         SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL) );
+         SCIPdebugPrintf("\n");
+
+         break;
+      }
+
+      default:
+         SCIPerrorMessage("operand %d unknown\n", expr->op);
+         return SCIP_ERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** separates linear monomials from an expression, if it is a polynomial expression
+ * separates only those linear terms which variable is not used otherwise in the expression
+ */
+static
+SCIP_RETCODE exprsimplifySeparateLinearFromPolynomial(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real             eps,                /**< threshold, under which positive values are treat as 0 */
+   int                   nvars,              /**< number of variables in expression */
+   int*                  nlinvars,           /**< buffer to store number of linear variables in linear part */
+   int*                  linidxs,            /**< array to store indices of variables in expression tree which belong to linear part */
+   SCIP_Real*            lincoefs            /**< array to store coefficients of linear part */
+   )
+{
+   SCIP_EXPRDATA_POLYNOMIAL* polynomialdata;
+   SCIP_EXPRDATA_MONOMIAL* monomial;
+   int* varsusage;
+   int* childusage;
+   int childidx;
+   int i;
+   int j;
+
+   assert(blkmem != NULL);
+   assert(expr != NULL);
+   assert(nlinvars != NULL);
+   assert(linidxs != NULL);
+   assert(lincoefs != NULL);
+
+   *nlinvars = 0;
+
+   if( SCIPexprGetOperator(expr) != SCIP_EXPR_POLYNOMIAL )
+      return SCIP_OKAY;
+
+   if( SCIPexprGetNChildren(expr) == 0 )
+      return SCIP_OKAY;
+
+   polynomialdata = (SCIP_EXPRDATA_POLYNOMIAL*)expr->data.data;
+   assert(polynomialdata != NULL);
+
+   /* get variable usage */
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &varsusage, nvars) );
+   BMSclearMemoryArray(varsusage, nvars);
+   SCIPexprGetVarsUsage(expr, varsusage);
+
+   /* get child usage: how often each child is used in the polynomial */
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &childusage, expr->nchildren) );
+   BMSclearMemoryArray(childusage, expr->nchildren);
+   for( i = 0; i < polynomialdata->nmonomials; ++i )
+   {
+      monomial = polynomialdata->monomials[i];
+      assert(monomial != NULL);
+      for( j = 0; j < monomial->nfactors; ++j )
+      {
+         assert(monomial->childidxs[j] >= 0);
+         assert(monomial->childidxs[j] < expr->nchildren);
+         ++childusage[monomial->childidxs[j]];
+      }
+   }
+
+   /* move linear monomials out of polynomial */
+   for( i = 0; i < polynomialdata->nmonomials; ++i )
+   {
+      monomial = polynomialdata->monomials[i];
+      assert(monomial != NULL);
+      if( monomial->nfactors != 1 )
+         continue;
+      if( monomial->exponents[0] != 1.0 )
+         continue;
+      childidx = monomial->childidxs[0];
+      if( SCIPexprGetOperator(expr->children[childidx]) != SCIP_EXPR_VARIDX )
+         continue;
+
+      /* we are at a linear monomial in a variable */
+      assert(SCIPexprGetOpIndex(expr->children[childidx]) < nvars);
+      if( childusage[childidx] == 1 && varsusage[SCIPexprGetOpIndex(expr->children[childidx])] == 1 )
+      {
+         /* if the child expression is not used in another monomial (which would due to merging be not linear)
+          * and if the variable is not used somewhere else in the tree,
+          * then move this monomial into linear part and free child
+          */
+         linidxs[*nlinvars]  = SCIPexprGetOpIndex(expr->children[childidx]);
+         lincoefs[*nlinvars] = monomial->coef;
+         ++*nlinvars;
+
+         SCIPexprFreeDeep(blkmem, &expr->children[childidx]);
+         monomial->coef = 0.0;
+         monomial->nfactors = 0;
+      }
+   }
+
+   BMSfreeBlockMemoryArray(blkmem, &varsusage, nvars);
+   BMSfreeBlockMemoryArray(blkmem, &childusage, expr->nchildren);
+
+   if( *nlinvars > 0 )
+   {
+      /* if we did something, cleanup polynomial (e.g., remove monomials with coefficient 0.0) */
+      polynomialdataMergeMonomials(blkmem, polynomialdata, eps, FALSE);
+      SCIP_CALL( exprsimplifyRemovePolynomialNullChildren(blkmem, expr) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** converts polynomial expressions back into simpler expressions, where possible
+ */
+static
+SCIP_RETCODE exprsimplifyUnconvertPolynomials(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPR*            expr                /**< expression to convert back */
+   )
+{
+   int i;
+
+   assert(blkmem != NULL);
+   assert(expr != NULL);
+
+   for( i = 0; i < expr->nchildren; ++i )
+   {
+      SCIP_CALL( exprsimplifyUnconvertPolynomials(blkmem, expr->children[i]) );
+   }
+
+   if( expr->op != SCIP_EXPR_POLYNOMIAL )
+      return SCIP_OKAY;
+
+   SCIP_CALL( exprUnconvertPolynomial(blkmem, &expr->op, &expr->data, expr->nchildren, (void**)expr->children) );
+
+   return SCIP_OKAY;
+}
+
 /** creates a simple expression */
 SCIP_RETCODE SCIPexprCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
@@ -2121,7 +4397,7 @@ SCIP_RETCODE SCIPexprCreate(
    va_list         ap;
    SCIP_EXPR**     children;
    SCIP_EXPROPDATA opdata;
-   
+
    assert(blkmem != NULL);
    assert(expr   != NULL);
 
@@ -2133,19 +4409,19 @@ SCIP_RETCODE SCIPexprCreate(
          va_start( ap, op );  /*lint !e826*/
          opdata.intval = va_arg( ap, int );  /*lint !e416 !e826*/
          va_end( ap );  /*lint !e826*/
-         
+
          assert( opdata.intval >= 0 );
-         
+
          SCIP_CALL( exprCreate( blkmem, expr, op, 0, NULL, opdata ) );
          break;
       }
-         
+
       case SCIP_EXPR_CONST:
       {
          va_start(ap, op );  /*lint !e826*/
          opdata.dbl = va_arg( ap, SCIP_Real );  /*lint !e416 !e826*/
          va_end( ap );  /*lint !e826*/
-         
+
          SCIP_CALL( exprCreate( blkmem, expr, op, 0, NULL, opdata ) );
          break;
       }
@@ -2159,7 +4435,7 @@ SCIP_RETCODE SCIPexprCreate(
       case SCIP_EXPR_MAX      :
       {
          SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &children, 2) );
-         
+
          va_start(ap, op );  /*lint !e826*/
          children[0] = va_arg( ap, SCIP_EXPR* );  /*lint !e416 !e826*/
          children[1] = va_arg( ap, SCIP_EXPR* );  /*lint !e416 !e826*/
@@ -2167,7 +4443,7 @@ SCIP_RETCODE SCIPexprCreate(
          assert(children[1] != NULL);
          va_end( ap );  /*lint !e826*/
          opdata.data = NULL; /* to avoid compiler warning about use of uninitialised value */
-         
+
          SCIP_CALL( exprCreate( blkmem, expr, op, 2, children, opdata ) );
          break;
       }
@@ -2186,13 +4462,13 @@ SCIP_RETCODE SCIPexprCreate(
       case SCIP_EXPR_SIGN  :
       {
          SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &children, 1) );
-         
+
          va_start(ap, op );  /*lint !e826*/
          children[0] = va_arg( ap, SCIP_EXPR* );  /*lint !e416 !e826*/
          assert(children[0] != NULL);
          va_end( ap );  /*lint !e826*/
          opdata.data = NULL; /* to avoid compiler warning about use of uninitialised value */
-         
+
          SCIP_CALL( exprCreate( blkmem, expr, op, 1, children, opdata ) );
          break;
       }
@@ -2272,539 +4548,6 @@ SCIP_RETCODE SCIPexprCreate(
          SCIPerrorMessage("unknown operand: %d\n", op);
          return SCIP_INVALIDDATA;
    }
-   
-   return SCIP_OKAY;
-}
-
-/** compares two monomials
- * gives 0 if monomials are equal */
-static
-SCIP_DECL_SORTPTRCOMP(monomialdataCompare)
-{
-   SCIP_EXPRDATA_MONOMIAL* monomial1;
-   SCIP_EXPRDATA_MONOMIAL* monomial2;
-
-   int i;
-
-   assert(elem1 != NULL);
-   assert(elem2 != NULL);
-
-   monomial1 = (SCIP_EXPRDATA_MONOMIAL*)elem1;
-   monomial2 = (SCIP_EXPRDATA_MONOMIAL*)elem2;
-
-   /* make sure, both monomials are equal */
-   SCIPexprSortMonomialFactors(monomial1);
-   SCIPexprSortMonomialFactors(monomial2);
-
-   /* for the first factor where both monomials differ,
-    * we return either the difference in the child indices, if children are different
-    * or the sign of the difference in the exponents
-    */
-   for( i = 0; i < monomial1->nfactors && i < monomial2->nfactors; ++i )
-   {
-      if( monomial1->childidxs[i] != monomial2->childidxs[i] )
-         return monomial1->childidxs[i] - monomial2->childidxs[i];
-      if( monomial1->exponents[i] > monomial2->exponents[i] )
-         return 1;
-      else if( monomial1->exponents[i] < monomial2->exponents[i] )
-         return -1;
-   }
-
-   /* if the factors of one monomial are a proper subset of the factors of the other monomial,
-    * we return the difference in the number of monomials
-    */
-   return monomial1->nfactors - monomial2->nfactors;
-}
-
-/** ensures that the factors arrays of a monomial have at least a given size */
-static
-SCIP_RETCODE monomialdataEnsureFactorsSize(
-   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
-   SCIP_EXPRDATA_MONOMIAL*  monomialdata,    /**< monomial data */
-   int                   minsize             /**< minimal size of factors arrays */
-   )
-{
-   assert(blkmem != NULL);
-   assert(monomialdata != NULL);
-
-   if( minsize > monomialdata->factorssize )
-   {
-      int newsize;
-
-      newsize = calcGrowSize(minsize);
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &monomialdata->childidxs, monomialdata->factorssize, newsize) );
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &monomialdata->exponents, monomialdata->factorssize, newsize) );
-      monomialdata->factorssize = newsize;
-   }
-   assert(minsize <= monomialdata->factorssize);
-
-   return SCIP_OKAY;
-}
-
-/** creates SCIP_EXPRDATA_POLYNOMIAL data structure from given monomials */
-static
-SCIP_RETCODE polynomialdataCreate(
-   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
-   SCIP_EXPRDATA_POLYNOMIAL** polynomialdata,/**< buffer to store pointer to polynomial data */
-   int                   nmonomials,         /**< number of monomials */
-   SCIP_EXPRDATA_MONOMIAL** monomials,       /**< monomials */
-   SCIP_Real             constant,           /**< constant part */
-   SCIP_Bool             copymonomials       /**< whether to copy monomials, or copy only given pointers, in which case polynomialdata assumes ownership of monomial structure */
-   )
-{
-   assert(blkmem != NULL);
-   assert(polynomialdata != NULL);
-   assert(monomials != NULL || nmonomials == 0);
-
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, polynomialdata) );
-
-   (*polynomialdata)->constant = constant;
-   (*polynomialdata)->nmonomials  = nmonomials;
-   (*polynomialdata)->monomialssize = nmonomials;
-   (*polynomialdata)->monomials   = NULL;
-   (*polynomialdata)->sorted   = (nmonomials <= 1);
-
-   if( nmonomials > 0 )
-   {
-      int i;
-
-      if( copymonomials )
-      {
-         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*polynomialdata)->monomials, nmonomials) );
-
-         for( i = 0; i < nmonomials; ++i )
-         {
-            assert(monomials[i] != NULL);  /*lint !e613*/
-            SCIP_CALL( SCIPexprCreateMonomial(blkmem, &(*polynomialdata)->monomials[i],
-               monomials[i]->coef, monomials[i]->nfactors, monomials[i]->childidxs, monomials[i]->exponents) );  /*lint !e613*/
-         }
-      }
-      else
-      {
-         SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*polynomialdata)->monomials, monomials, nmonomials) );
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
-/** ensures that the monomials array of a polynomial has at least a given size */
-static
-SCIP_RETCODE polynomialdataEnsureMonomialsSize(
-   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
-   SCIP_EXPRDATA_POLYNOMIAL* polynomialdata, /**< polynomial data */
-   int                   minsize             /**< minimal size of monomials array */
-   )
-{
-   assert(blkmem != NULL);
-   assert(polynomialdata != NULL);
-
-   if( minsize > polynomialdata->monomialssize )
-   {
-      int newsize;
-
-      newsize = calcGrowSize(minsize);
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &polynomialdata->monomials, polynomialdata->monomialssize, newsize) );
-      polynomialdata->monomialssize = newsize;
-   }
-   assert(minsize <= polynomialdata->monomialssize);
-
-   return SCIP_OKAY;
-}
-
-/** adds an array of monomials to a polynomial */
-static
-SCIP_RETCODE polynomialdataAddMonomials(
-   BMS_BLKMEM*           blkmem,             /**< block memory of expression */
-   SCIP_EXPRDATA_POLYNOMIAL* polynomialdata, /**< polynomial data */
-   int                   nmonomials,         /**< number of monomials to add */
-   SCIP_EXPRDATA_MONOMIAL** monomials,       /**< the monomials to add */
-   SCIP_Bool             copymonomials       /**< whether to copy monomials or to assume ownership */
-)
-{
-   int i;
-
-   assert(blkmem != NULL);
-   assert(polynomialdata != NULL);
-   assert(monomials != NULL || nmonomials == 0);
-
-   if( nmonomials == 0 )
-      return SCIP_OKAY;
-
-   SCIP_CALL( polynomialdataEnsureMonomialsSize(blkmem, polynomialdata, polynomialdata->nmonomials + nmonomials) );
-   assert(polynomialdata->monomialssize >= polynomialdata->nmonomials + nmonomials);
-
-   if( copymonomials )
-   {
-      for( i = 0; i < nmonomials; ++i )
-      {
-         assert(monomials[i] != NULL);  /*lint !e613*/
-         SCIP_CALL( SCIPexprCreateMonomial(blkmem, &polynomialdata->monomials[polynomialdata->nmonomials + i],
-            monomials[i]->coef, monomials[i]->nfactors, monomials[i]->childidxs, monomials[i]->exponents) );  /*lint !e613*/
-      }
-   }
-   else
-   {
-      BMScopyMemoryArray(&polynomialdata->monomials[polynomialdata->nmonomials], monomials, nmonomials);
-   }
-   polynomialdata->nmonomials += nmonomials;
-
-   polynomialdata->sorted = (polynomialdata->nmonomials <= 1);
-
-   return SCIP_OKAY;
-}
-
-/** ensures that monomials of a polynomial are sorted */
-static
-void polynomialdataSortMonomials(
-   SCIP_EXPRDATA_POLYNOMIAL* polynomialdata  /**< polynomial expression */
-)
-{
-   assert(polynomialdata != NULL);
-
-   if( polynomialdata->sorted )
-   {
-#ifndef NDEBUG
-      int i;
-
-      /* a polynom with more than one monoms can only be sorted if its monoms are sorted */
-      for( i = 1; i < polynomialdata->nmonomials; ++i )
-      {
-         assert(polynomialdata->monomials[i-1]->sorted);
-         assert(polynomialdata->monomials[i]->sorted);
-         assert(monomialdataCompare(polynomialdata->monomials[i-1], polynomialdata->monomials[i]) <= 0);
-      }
-#endif
-      return;
-   }
-
-   if( polynomialdata->nmonomials > 0 )
-      SCIPsortPtr((void*)polynomialdata->monomials, monomialdataCompare, polynomialdata->nmonomials);
-
-   polynomialdata->sorted = TRUE;
-}
-
-/** merges monomials that differ only in coefficient into a single monomial
- * eliminates monomials with coefficient between -eps and eps
- */
-static
-void polynomialdataMergeMonomials(
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_EXPRDATA_POLYNOMIAL* polynomialdata, /**< polynomial data */
-   SCIP_Real             eps,                /**< threshold under which numbers are treat as zero */
-   SCIP_Bool             mergefactors        /**< whether to merge factors in monomials too */
-   )
-{
-   int i;
-   int offset;
-   int oldnfactors;
-
-   assert(polynomialdata != NULL);
-   assert(eps >= 0.0);
-
-   polynomialdataSortMonomials(polynomialdata);
-
-   /* merge monomials by adding their coefficients
-    * eliminate monomials with no factors or zero coefficient*/
-   offset = 0;
-   i = 0;
-   while( i + offset < polynomialdata->nmonomials )
-   {
-      if( offset > 0 )
-      {
-         assert(polynomialdata->monomials[i] == NULL);
-         assert(polynomialdata->monomials[i+offset] != NULL);
-         polynomialdata->monomials[i] = polynomialdata->monomials[i+offset];
-#ifndef NDEBUG
-         polynomialdata->monomials[i+offset] = NULL;
-#endif
-      }
-
-      if( mergefactors )
-      {
-         oldnfactors = polynomialdata->monomials[i]->nfactors;
-         SCIPexprMergeMonomialFactors(polynomialdata->monomials[i], eps);
-
-         /* if monomial has changed, then we cannot assume anymore that polynomial is sorted */
-         if( oldnfactors != polynomialdata->monomials[i]->nfactors )
-            polynomialdata->sorted = FALSE;
-      }
-
-      while( i+offset+1 < polynomialdata->nmonomials )
-      {
-         assert(polynomialdata->monomials[i+offset+1] != NULL);
-         if( mergefactors )
-         {
-            oldnfactors = polynomialdata->monomials[i+offset+1]->nfactors;
-            SCIPexprMergeMonomialFactors(polynomialdata->monomials[i+offset+1], eps);
-
-            /* if monomial has changed, then we cannot assume anymore that polynomial is sorted */
-            if( oldnfactors != polynomialdata->monomials[i+offset+1]->nfactors )
-               polynomialdata->sorted = FALSE;
-         }
-         if( monomialdataCompare((void*)polynomialdata->monomials[i], (void*)polynomialdata->monomials[i+offset+1]) != 0 )
-            break;
-         polynomialdata->monomials[i]->coef += polynomialdata->monomials[i+offset+1]->coef;
-         SCIPexprFreeMonomial(blkmem, &polynomialdata->monomials[i+offset+1]);
-         ++offset;
-      }
-
-      if( polynomialdata->monomials[i]->nfactors == 0 )
-      {
-         /* constant monomial */
-         polynomialdata->constant += polynomialdata->monomials[i]->coef;
-         SCIPexprFreeMonomial(blkmem, &polynomialdata->monomials[i]);
-         ++offset;
-         continue;
-      }
-
-      if( EPSZ(polynomialdata->monomials[i]->coef, eps) )
-      {
-         SCIPexprFreeMonomial(blkmem, &polynomialdata->monomials[i]);
-         ++offset;
-         continue;
-      }
-
-      ++i;
-   }
-
-#ifndef NDEBUG
-   while( i < polynomialdata->nmonomials )
-      assert(polynomialdata->monomials[i++] == NULL);
-#endif
-
-   polynomialdata->nmonomials -= offset;
-
-   if( EPSZ(polynomialdata->constant, eps) )
-      polynomialdata->constant = 0.0;
-}
-
-/** multiplies each summand of a polynomial by a given constant */
-static
-void polynomialdataMultiplyByConstant(
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_EXPRDATA_POLYNOMIAL* polynomialdata, /**< polynomial data */
-   SCIP_Real             factor              /**< constant factor */
-)
-{
-   int i;
-
-   assert(polynomialdata != NULL);
-
-   if( factor == 1.0 )
-      return;
-
-   if( factor == 0.0 )
-   {
-      for( i = 0; i < polynomialdata->nmonomials; ++i )
-         SCIPexprFreeMonomial(blkmem, &polynomialdata->monomials[i]);
-      polynomialdata->nmonomials = 0;
-   }
-   else
-   {
-      for( i = 0; i < polynomialdata->nmonomials; ++i )
-         SCIPexprChgMonomialCoef(polynomialdata->monomials[i], polynomialdata->monomials[i]->coef * factor);
-   }
-
-   polynomialdata->constant *= factor;
-}
-
-/** multiplies each summand of a polynomial by a given monomial */
-static
-SCIP_RETCODE polynomialdataMultiplyByMonomial(
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_EXPRDATA_POLYNOMIAL* polynomialdata, /**< polynomial data */
-   SCIP_EXPRDATA_MONOMIAL* factor,           /**< monomial factor */
-   int*                  childmap            /**< map children in factor to children in expr, or NULL for 1:1 */
-)
-{
-   int i;
-
-   assert(blkmem != NULL);
-   assert(factor != NULL);
-   assert(polynomialdata != NULL);
-
-   if( factor->nfactors == 0 )
-   {
-      polynomialdataMultiplyByConstant(blkmem, polynomialdata, factor->coef);
-      return SCIP_OKAY;
-   }
-
-   /* multiply each monomial by factor */
-   for( i = 0; i < polynomialdata->nmonomials; ++i )
-   {
-      SCIP_CALL( SCIPexprMultiplyMonomialByMonomial(blkmem, polynomialdata->monomials[i], factor, childmap) );
-   }
-
-   /* add new monomial for constant multiplied by factor */
-   if( polynomialdata->constant != 0.0 )
-   {
-      SCIP_CALL( polynomialdataEnsureMonomialsSize(blkmem, polynomialdata, polynomialdata->nmonomials+1) );
-      SCIP_CALL( SCIPexprCreateMonomial(blkmem, &polynomialdata->monomials[polynomialdata->nmonomials], polynomialdata->constant, 0, NULL, NULL) );
-      SCIP_CALL( SCIPexprMultiplyMonomialByMonomial(blkmem, polynomialdata->monomials[polynomialdata->nmonomials], factor, childmap) );
-      ++polynomialdata->nmonomials;
-      polynomialdata->sorted = FALSE;
-      polynomialdata->constant = 0.0;
-   }
-
-   return SCIP_OKAY;
-}
-
-/** multiplies a polynomial by a polynomial
- * factors need to be different */
-static
-SCIP_RETCODE polynomialdataMultiplyByPolynomial(
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_EXPRDATA_POLYNOMIAL* polynomialdata, /**< polynomial data */
-   SCIP_EXPRDATA_POLYNOMIAL* factordata,     /**< polynomial factor data */
-   int*                  childmap            /**< map children in factor to children in polynomialdata, or NULL for 1:1 */
-)
-{
-   int i1;
-   int i2;
-   int orignmonomials;
-
-   assert(blkmem != NULL);
-   assert(polynomialdata != NULL);
-   assert(factordata != NULL);
-   assert(polynomialdata != factordata);
-
-   if( factordata->nmonomials == 0 )
-   {
-      polynomialdataMultiplyByConstant(blkmem, polynomialdata, factordata->constant);
-      return SCIP_OKAY;
-   }
-
-   if( factordata->nmonomials == 1 && factordata->constant == 0.0 )
-   {
-      SCIP_CALL( polynomialdataMultiplyByMonomial(blkmem, polynomialdata, factordata->monomials[0], childmap) );
-      return SCIP_OKAY;
-   }
-
-   /* turn constant into a monomial, so we can assume below that constant is 0.0 */
-   if( polynomialdata->constant != 0.0 )
-   {
-      SCIP_CALL( polynomialdataEnsureMonomialsSize(blkmem, polynomialdata, polynomialdata->nmonomials+1) );
-      SCIP_CALL( SCIPexprCreateMonomial(blkmem, &polynomialdata->monomials[polynomialdata->nmonomials], polynomialdata->constant, 0, NULL, NULL) );
-      ++polynomialdata->nmonomials;
-      polynomialdata->sorted = FALSE;
-      polynomialdata->constant = 0.0;
-   }
-
-   SCIP_CALL( polynomialdataEnsureMonomialsSize(blkmem, polynomialdata, polynomialdata->nmonomials * (factordata->nmonomials + (factordata->constant == 0.0 ? 0 : 1))) );
-
-   /* for each monomial in factordata (except the last, if factordata->constant is 0),
-    * duplicate monomials from polynomialdata and multiply them by the monomial for factordata */
-   orignmonomials = polynomialdata->nmonomials;
-   for( i2 = 0; i2 < factordata->nmonomials; ++i2 )
-   {
-      /* add a copy of original monomials to end of polynomialdata's monomials array */
-      assert(polynomialdata->nmonomials + orignmonomials <= polynomialdata->monomialssize); /* reallocating in polynomialdataAddMonomials would make the polynomialdata->monomials invalid, so assert that above the monomials array was made large enough */
-      SCIP_CALL( polynomialdataAddMonomials(blkmem, polynomialdata, orignmonomials, polynomialdata->monomials, TRUE) );
-      assert(polynomialdata->nmonomials == (i2+2) * orignmonomials);
-
-      /* multiply each copied monomial by current monomial from factordata */
-      for( i1 = (i2+1) * orignmonomials; i1 < (i2+2) * orignmonomials; ++i1 )
-      {
-         SCIP_CALL( SCIPexprMultiplyMonomialByMonomial(blkmem, polynomialdata->monomials[i1], factordata->monomials[i2], childmap) );
-      }
-
-      if( factordata->constant == 0.0 && i2 == factordata->nmonomials - 2 )
-      {
-         ++i2;
-         break;
-      }
-   }
-
-   if( factordata->constant != 0.0 )
-   {
-      assert(i2 == factordata->nmonomials);
-      /* multiply original monomials in polynomialdata by constant in factordata */
-      for( i1 = 0; i1 < orignmonomials; ++i1 )
-         SCIPexprChgMonomialCoef(polynomialdata->monomials[i1], polynomialdata->monomials[i1]->coef * factordata->constant);
-   }
-   else
-   {
-      assert(i2 == factordata->nmonomials - 1);
-      /* multiply original monomials in polynomialdata by last monomial in factordata */
-      for( i1 = 0; i1 < orignmonomials; ++i1 )
-      {
-         SCIP_CALL( SCIPexprMultiplyMonomialByMonomial(blkmem, polynomialdata->monomials[i1], factordata->monomials[i2], childmap) );
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
-/** takes a power of a polynomial
- * exponent need to be an integer
- * polynomial need to be a monomial, if exponent is negative
- */
-static
-SCIP_RETCODE polynomialdataPower(
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_EXPRDATA_POLYNOMIAL* polynomialdata, /**< polynomial data */
-   int                   exponent            /**< exponent of power operation */
-)
-{
-   SCIP_EXPRDATA_POLYNOMIAL* factor;
-   int i;
-
-   assert(blkmem != NULL);
-   assert(polynomialdata != NULL);
-
-   if( exponent == 0 )
-   {
-      /* x^0 = 1, except if x = 0 */
-      if( polynomialdata->nmonomials == 0 && polynomialdata->constant == 0.0 )
-      {
-         polynomialdata->constant = 0.0;
-      }
-      else
-      {
-         polynomialdata->constant = 1.0;
-
-         for( i = 0; i < polynomialdata->nmonomials; ++i )
-            SCIPexprFreeMonomial(blkmem, &polynomialdata->monomials[i]);
-         polynomialdata->nmonomials = 0;
-      }
-
-      return SCIP_OKAY;
-   }
-
-   if( exponent == 1 )
-      return SCIP_OKAY;
-
-   if( polynomialdata->nmonomials == 1 && polynomialdata->constant == 0.0 )
-   {
-      /* polynomial is a single monomial */
-      SCIPexprMonomialPower(polynomialdata->monomials[0], exponent);
-      return SCIP_OKAY;
-   }
-
-   if( polynomialdata->nmonomials == 0 )
-   {
-      /* polynomial is a constant */
-      polynomialdata->constant = pow(polynomialdata->constant, exponent);
-      return SCIP_OKAY;
-   }
-
-   assert(exponent >= 2); /* negative exponents not allowed if more than one monom */
-
-   /* todo improve, look into intervalarith.c */
-
-   /* get copy of our polynomial */
-   SCIP_CALL( polynomialdataCopy(blkmem, &factor, polynomialdata) );
-
-   /* do repeated multiplication */
-   for( i = 2; i <= exponent; ++i )
-   {
-      SCIP_CALL( polynomialdataMultiplyByPolynomial(blkmem, polynomialdata, factor, NULL) );
-      polynomialdataMergeMonomials(blkmem, polynomialdata, 0.0, TRUE);
-   }
-
-   /* free copy again */
-   polynomialdataFree(blkmem, &factor);
 
    return SCIP_OKAY;
 }
@@ -4302,6 +6045,56 @@ SCIP_Bool SCIPexprAreEqual(
    return FALSE;
 }
 
+/** aims at simplifying an expression */
+SCIP_RETCODE SCIPexprSimplify(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real             eps,                /**< threshold, under which positive values are treat as 0 */
+   int                   nvars,              /**< number of variables in expression */
+   int*                  nlinvars,           /**< buffer to store number of linear variables in linear part, or NULL if linear part should not be separated */
+   int*                  linidxs,            /**< array to store indices of variables in expression tree which belong to linear part, or NULL */
+   SCIP_Real*            lincoefs            /**< array to store coefficients of linear part, or NULL */
+)
+{
+   assert(blkmem != NULL);
+   assert(expr != NULL);
+   assert(eps >= 0.0);
+
+   SCIPdebugMessage("simplify expression: ");
+   SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL) );
+   SCIPdebugPrintf("\n");
+
+   SCIP_CALL( exprsimplifyConvertToPolynomials(blkmem, expr) );
+
+   SCIPdebugMessage("converted to polynomials: ");
+   SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL) );
+   SCIPdebugPrintf("\n");
+
+   SCIP_CALL( exprsimplifyFlattenPolynomials(blkmem, expr, eps) );
+
+   SCIPdebugMessage("polynomials flattened: ");
+   SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL) );
+   SCIPdebugPrintf("\n");
+
+   if( nlinvars != NULL )
+   {
+      /* separate linear part from root polynomial */
+      SCIP_CALL( exprsimplifySeparateLinearFromPolynomial(blkmem, expr, eps, nvars, nlinvars, linidxs, lincoefs) );
+
+      SCIPdebugMessage("separated linear part: ");
+      SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL) );
+      SCIPdebugPrintf("\n");
+   }
+
+   SCIP_CALL( exprsimplifyUnconvertPolynomials(blkmem, expr) );
+
+   SCIPdebugMessage("converted back from polynomials: ");
+   SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL) );
+   SCIPdebugPrintf("\n");
+
+   return SCIP_OKAY;
+}
+
 /** evaluates an expression w.r.t. a point */
 SCIP_RETCODE SCIPexprEval(
    SCIP_EXPR*            expr,               /**< expression */
@@ -5049,6 +6842,70 @@ SCIP_RETCODE SCIPexprtreeGetMaxDegree(
    assert(tree != NULL);
    
    SCIP_CALL( SCIPexprGetMaxDegree(tree->root, maxdegree) );
+
+   return SCIP_OKAY;
+}
+
+/** gives the number of usages for each variable in the expression tree */
+void SCIPexprtreeGetVarsUsage(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   int*                  varsusage           /**< array where to store for each variable how often it is used in the tree */
+)
+{
+   assert(tree != NULL);
+   assert(varsusage != NULL);
+
+   if( tree->nvars == 0 )
+      return;
+
+   BMSclearMemoryArray(varsusage, tree->nvars);
+   SCIPexprGetVarsUsage(tree->root, varsusage);
+}
+
+/** aims at simplifying an expression and splitting of a linear expression
+ * if linear variables are split off, expression interpreter data, if stored in the tree, is freed
+ */
+SCIP_RETCODE SCIPexprtreeSimplify(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_Real             eps,                /**< threshold, under which positive values are treat as 0 */
+   int*                  nlinvars,           /**< buffer to store number of linear variables in linear part, or NULL if linear part should not be separated */
+   int*                  linidxs,            /**< array to store indices of variables in expression tree which belong to linear part, or NULL */
+   SCIP_Real*            lincoefs            /**< array to store coefficients of linear part, or NULL */
+)
+{
+#ifndef NDEBUG
+   SCIP_Real* testx;
+   SCIP_Real testval_before;
+   SCIP_Real testval_after;
+   int i;
+   unsigned int seed;
+#endif
+
+   assert(tree != NULL);
+
+#ifndef NDEBUG
+   seed = 42;
+   BMSallocMemoryArray(&testx, SCIPexprtreeGetNVars(tree));
+   for( i = 0; i < SCIPexprtreeGetNVars(tree); ++i )
+      testx[i] = SCIPgetRandomReal(-100.0, 100.0, &seed);
+   SCIP_CALL( SCIPexprtreeEval(tree, testx, &testval_before) );
+#endif
+
+   /* we should be careful about declaring numbers close to zero as zero, so take eps^2 as tolerance */
+   SCIP_CALL( SCIPexprSimplify(tree->blkmem, tree->root, eps*eps, tree->nvars, nlinvars, linidxs, lincoefs) );
+
+#ifndef NDEBUG
+   SCIP_CALL( SCIPexprtreeEval(tree, testx, &testval_after) );
+   if( nlinvars != NULL && !isnan(testval_before) )
+      for( i = 0; i < *nlinvars; ++i )
+         testval_after += lincoefs[i] * testx[linidxs[i]];
+   assert(!isfinite(testval_before) || EPSZ(SCIPrelDiff(testval_before, testval_after), eps));
+   BMSfreeMemoryArray(&testx);
+#endif
+
+   /* removing something from the the tree may invalidate the interpreter data */
+   if( nlinvars != NULL && *nlinvars > 0 )
+      SCIP_CALL( SCIPexprtreeFreeInterpreterData(tree) );
 
    return SCIP_OKAY;
 }

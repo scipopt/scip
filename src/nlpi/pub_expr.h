@@ -490,6 +490,20 @@ SCIP_Bool SCIPexprAreEqual(
    SCIP_Real             eps                 /**< threshold under which numbers are assumed to be zero */
 );
 
+/** aims at simplifying an expression and splitting of a linear expression
+ * if linear variables are split off, expression interpreter data, if stored in the tree, is freed
+ */
+extern
+SCIP_RETCODE SCIPexprSimplify(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real             eps,                /**< threshold, under which positive values are treat as 0 */
+   int                   nvars,              /**< number of variables in expression */
+   int*                  nlinvars,           /**< buffer to store number of linear variables in linear part, or NULL if linear part should not be separated */
+   int*                  linidxs,            /**< array to store indices of variables in expression tree which belong to linear part, or NULL */
+   SCIP_Real*            lincoefs            /**< array to store coefficients of linear part, or NULL */
+);
+
 /** evaluates an expression w.r.t. a point */
 extern
 SCIP_RETCODE SCIPexprEval(
@@ -662,6 +676,24 @@ extern
 SCIP_RETCODE SCIPexprtreeGetMaxDegree(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    int*                  maxdegree           /**< buffer to store maximal degree */
+);
+
+/** gives the number of usages for each variable in the expression tree */
+extern
+void SCIPexprtreeGetVarsUsage(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   int*                  varsusage           /**< array where to store for each variable how often it is used in the tree */
+);
+
+/** aims at simplifying an expression tree
+ * separates out linear part, if requested */
+extern
+SCIP_RETCODE SCIPexprtreeSimplify(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_Real             eps,                /**< threshold, under which positive values are treat as 0 */
+   int*                  nlinvars,           /**< buffer to store number of linear variables in linear part, or NULL if linear part should not be separated */
+   int*                  linidxs,            /**< array to store indices of variables in expression tree which belong to linear part, or NULL */
+   SCIP_Real*            lincoefs            /**< array to store coefficients of linear part, or NULL */
 );
 
 /** evaluates an expression tree w.r.t. a point */
