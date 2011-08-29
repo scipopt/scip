@@ -5262,6 +5262,40 @@ int SCIPgetNOrigContVars(
    return scip->origprob->ncontvars;
 }
 
+/** gets number of all problem variables created during creation and solving of problem;
+ *  this includes also variables that were deleted in the meantime
+ */
+int SCIPgetNTotalVars(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNTotalVars", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   assert(scip->stat != NULL);
+
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_SOLVED:
+   case SCIP_STAGE_FREESOLVE:
+   case SCIP_STAGE_FREETRANS:
+      return scip->stat->nvaridx;
+
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      SCIPABORT();
+      return 0; /*lint !e527*/
+   }  /*lint !e788*/
+
+}
+
+
 /** gets variables of the original or transformed problem along with the numbers of different variable types;
  *  the returned problem space (original or transformed) corresponds to the given solution;
  *  data may become invalid after calls to SCIPchgVarType(), SCIPfixVar(), SCIPaggregateVars(), and

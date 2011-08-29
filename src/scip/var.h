@@ -472,7 +472,6 @@ SCIP_Bool SCIPvarDoNotMultaggr(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-
 /** gets negated variable x' = offset - x of problem variable x; the negated variable is created if not yet existing;
  *  the negation offset of binary variables is always 1, the offset of other variables is fixed to lb + ub when the
  *  negated variable is created
@@ -729,8 +728,6 @@ SCIP_RETCODE SCIPvarChgUbLazy(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             lazylb              /**< the lazy lower bound to be set */
    );
-
-
 
 /** changes lower bound of variable in current dive; if possible, adjusts bound to integral value */
 extern
@@ -1326,17 +1323,6 @@ SCIP_Real SCIPvarGetVSIDS(
       SCIPhistoryGetVSIDS(var->history, dir)/stat->vsidsweight : SCIPvarGetVSIDS_rec(var, stat, dir))
 
 #endif
-
-extern
-SCIP_Bool SCIPvarIsEssential(
-   SCIP_VAR*             var
-   );
-
-extern
-void SCIPvarSetEssential(
-   SCIP_VAR*             var
-   );
-
 
 /*
  * Hash functions

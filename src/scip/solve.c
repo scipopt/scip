@@ -2413,7 +2413,7 @@ SCIP_RETCODE solveNodeLP(
 
 #ifndef NDEBUG
          /* in the debug mode we want to explicitly check if the solution is feasible if it was stored */
-         SCIP_CALL( SCIPprimalTrySol(primal, blkmem, set, stat, origprob, transprob, tree, lp, 
+         SCIP_CALL( SCIPprimalTrySol(primal, blkmem, set, stat, origprob, transprob, tree, lp,
                eventqueue, eventfilter, sol, FALSE, TRUE, TRUE, checklprows, &stored) );
 
          if( stored )
@@ -3612,45 +3612,6 @@ SCIP_RETCODE solveNode(
    /* remember root LP solution */
    if( actdepth == 0 && !(*cutoff) && !(*unbounded) )
       SCIPprobStoreRootSol(transprob, set, stat, lp, SCIPtreeHasFocusNodeLP(tree));
-
-   /* remove priced in vars that are currenty not in the lp*/
-   if ( set->nactivepricers > 0 )
-   {
-      int i;
-      int ndelvars;
-
-      ndelvars = 0;
-
-      assert(SCIPtreeGetCurrentNode(tree) != NULL);
-
-      /* mark vars as deleted */
-      for ( i = 0; i < transprob->nvars; i++ )
-      {
-         assert(transprob->vars[i] != NULL);
-         //assert(SCIPvarIsNewCreated(prob->vars[i]) == (SCIPvarGetNodeNr(prob->vars[i]) == SCIPnodeGetNumber(SCIPtreeGetCurrentNode(tree))));
-
-         //if ( !SCIPvarIsInLP(transprob->vars[i]) && (SCIPvarGetNodeNr(transprob->vars[i]) == SCIPnodeGetNumber(SCIPtreeGetCurrentNode(tree))) )
-         if ( FALSE && !SCIPvarIsInLP(transprob->vars[i]) && !SCIPvarIsEssential(transprob->vars[i]))
-         {
-            //printf("var %s not in LP, created at node %lld, current node = %lld\n", SCIPvarGetName(transprob->vars[i]), SCIPvarGetNodeNr(transprob->vars[i]), SCIPnodeGetNumber(SCIPtreeGetCurrentNode(tree)));
-            SCIP_CALL( SCIPdelVar(set->scip, transprob->vars[i]) );
-            ndelvars++;
-         }
-
-         SCIPvarSetEssential(transprob->vars[i]);
-      }
-
-      printf("delvars at node %lld, deleted %d vars\n", stat->nnodes, ndelvars);
-
-      /* delete vars from the constraints */
-      for( i = 0; i < set->nconshdlrs; ++i )
-      {
-         SCIP_CALL( SCIPconshdlrDelVars(set->conshdlrs[i], blkmem, set, stat) );
-      }
-
-      /* perform the var deletions */
-      SCIP_CALL( SCIPprobPerformVarDeletions(transprob, blkmem, set, eventqueue, lp, branchcand) );
-   }
 
    /* check for cutoff */
    if( *cutoff )

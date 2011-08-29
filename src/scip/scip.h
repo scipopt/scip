@@ -2026,6 +2026,14 @@ int SCIPgetNOrigContVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** gets number of all problem variables created during creation and solving of problem;
+ *  this includes also variables that were deleted in the meantime
+ */
+extern
+int SCIPgetNTotalVars(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** gets variables of the original or transformed problem along with the numbers of different variable types;
  *  the returned problem space (original or transformed) corresponds to the given solution;
  *  data may become invalid after calls to SCIPchgVarType(), SCIPfixVar(), SCIPaggregateVars(), and 

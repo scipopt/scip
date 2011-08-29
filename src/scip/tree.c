@@ -17,6 +17,7 @@
  * @brief  methods for branch and bound tree
  * @author Tobias Achterberg
  * @author Timo Berthold
+ * @author Gerald Gamrath
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -40,6 +41,9 @@
 #include "scip/nodesel.h"
 #include "scip/prop.h"
 #include "scip/debug.h"
+#include "scip/prob.h"
+#include "scip/scip.h"
+#include "scip/disp.h"
 
 
 #define MAXDEPTH          65535  /**< maximal depth level for nodes; must correspond to node data structure */
@@ -3297,12 +3301,93 @@ SCIP_RETCODE nodeToLeaf(
    return SCIP_OKAY;
 }
 
+/** */
+static
+SCIP_RETCODE focusnodeCleanupVars(
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_Bool             inlp                /**< should variables in the LP be deleted, too? */
+   )
+{
+   SCIP_VAR* var;
+   int i;
+   int ndelvars;
+
+   assert(blkmem != NULL);
+   assert(set != NULL);
+   assert(stat != NULL);
+   assert(tree != NULL);
+   assert(!SCIPtreeProbing(tree));
+   assert(tree->focusnode != NULL);
+   assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
+   assert(lp != NULL);
+
+   /* remove priced in vars that are currenty not in the lp */
+   if( set->nactivepricers == 0 )
+      return SCIP_OKAY;
+
+   ndelvars = 0;
+
+   if( inlp )
+   {
+      /* remove all additions to the LP at this node */
+      SCIP_CALL( SCIPlpShrinkCols(lp, set, SCIPlpGetNCols(lp) - SCIPlpGetNNewcols(lp)) );
+
+      SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
+   }
+
+   /* mark variables as deleted */
+   for( i = 0; i < prob->nvars; i++ )
+   {
+      var = prob->vars[i];
+      assert(var != NULL);
+
+      if( SCIPvarIsDeletable(var) && !SCIPvarIsEssential(var) && (inlp || !SCIPvarIsInLP(var)) )
+      {
+         SCIP_CALL( SCIPdelVar(set->scip, var) );
+         ndelvars++;
+      }
+
+      SCIPvarMarkEssential(var);
+   }
+
+   printf("delvars at node %lld, deleted %d vars\n", stat->nnodes, ndelvars);
+
+   /* delete variables from the constraints */
+   for( i = 0; i < set->nconshdlrs; ++i )
+   {
+      SCIP_CALL( SCIPconshdlrDelVars(set->conshdlrs[i], blkmem, set, stat) );
+   }
+
+   /* perform the variable deletions from the problem */
+   SCIP_CALL( SCIPprobPerformVarDeletions(prob, blkmem, set, eventqueue, lp, branchcand) );
+
+   if( ndelvars > 0 )
+   {
+      /* display node information line */
+      SCIP_CALL( SCIPdispPrintLine(set, stat, NULL, TRUE) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** converts the focus node into a deadend node */
 static
 SCIP_RETCODE focusnodeToDeadend(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp                  /**< current LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
    )
 {
    assert(blkmem != NULL);
@@ -3314,6 +3399,9 @@ SCIP_RETCODE focusnodeToDeadend(
 
    SCIPdebugMessage("focusnode #%"SCIP_LONGINT_FORMAT" to deadend at depth %d\n",
       SCIPnodeGetNumber(tree->focusnode), SCIPnodeGetDepth(tree->focusnode));
+
+   /* remove variables from the problem that are marked as deletable and were created at this node */
+   SCIP_CALL( focusnodeCleanupVars(blkmem, set, stat, eventqueue, prob, tree, lp, branchcand, TRUE) );
 
    tree->focusnode->nodetype = SCIP_NODETYPE_DEADEND; /*lint !e641*/
 
@@ -3331,9 +3419,12 @@ static
 SCIP_RETCODE focusnodeToJunction(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp                  /**< current LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
    )
 {
    assert(tree != NULL);
@@ -3341,6 +3432,7 @@ SCIP_RETCODE focusnodeToJunction(
    assert(tree->focusnode != NULL);
    assert(tree->focusnode->active); /* otherwise, no children could be created at the focus node */
    assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
+   assert(SCIPlpGetNNewcols(lp) == 0);
 
    SCIPdebugMessage("focusnode #%"SCIP_LONGINT_FORMAT" to junction at depth %d\n",
       SCIPnodeGetNumber(tree->focusnode), SCIPnodeGetDepth(tree->focusnode));
@@ -3367,9 +3459,12 @@ static
 SCIP_RETCODE focusnodeToPseudofork(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp                  /**< current LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
    )
 {
    SCIP_PSEUDOFORK* pseudofork;
@@ -3385,6 +3480,9 @@ SCIP_RETCODE focusnodeToPseudofork(
 
    SCIPdebugMessage("focusnode #%"SCIP_LONGINT_FORMAT" to pseudofork at depth %d\n",
       SCIPnodeGetNumber(tree->focusnode), SCIPnodeGetDepth(tree->focusnode));
+
+   /* remove variables from the problem that are marked as deletable and were created at this node */
+   SCIP_CALL( focusnodeCleanupVars(blkmem, set, stat, eventqueue, prob, tree, lp, branchcand, FALSE) );
 
    /* create pseudofork data */
    SCIP_CALL( pseudoforkCreate(&pseudofork, blkmem, tree, lp) );
@@ -3414,7 +3512,8 @@ SCIP_RETCODE focusnodeToFork(
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp                  /**< current LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
    )
 {
    SCIP_FORK* fork;
@@ -3476,13 +3575,19 @@ SCIP_RETCODE focusnodeToFork(
       SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, eventqueue, eventfilter, SCIPlpGetNRows(lp) - SCIPlpGetNNewrows(lp)) );
    
       /* convert node into a junction */
-      SCIP_CALL( focusnodeToJunction(blkmem, set, eventqueue, tree, lp) );
+      SCIP_CALL( focusnodeToJunction(blkmem, set, stat, eventqueue, prob, tree, lp, branchcand) );
       
       return SCIP_OKAY;
    }
    assert(lp->flushed);
    assert(lp->solved);
    assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL);
+
+   /* remove variables from the problem that are marked as deletable, were created at this node and are not contained in the LP */
+   SCIP_CALL( focusnodeCleanupVars(blkmem, set, stat, eventqueue, prob, tree, lp, branchcand, FALSE) );
+
+   assert(lp->flushed);
+   assert(lp->solved);
 
    /* create fork data */
    SCIP_CALL( forkCreate(&fork, blkmem, tree, lp) );
@@ -3519,7 +3624,8 @@ SCIP_RETCODE focusnodeToSubroot(
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp                  /**< current LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
    )
 {
    SCIP_SUBROOT* subroot;
@@ -3590,13 +3696,20 @@ SCIP_RETCODE focusnodeToSubroot(
       SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, eventqueue, eventfilter, SCIPlpGetNRows(lp) - SCIPlpGetNNewrows(lp)) );
    
       /* convert node into a junction */
-      SCIP_CALL( focusnodeToJunction(blkmem, set, eventqueue, tree, lp) );
+      SCIP_CALL( focusnodeToJunction(blkmem, set, stat, eventqueue, prob, tree, lp, branchcand) );
       
       return SCIP_OKAY;
    }
    assert(lp->flushed);
    assert(lp->solved);
    assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL);
+
+   /* remove variables from the problem that are marked as deletable, were created at this node and are not contained in the LP */
+   SCIP_CALL( focusnodeCleanupVars(blkmem, set, stat, eventqueue, prob, tree, lp, branchcand, FALSE) );
+
+   assert(lp->flushed);
+   assert(lp->solved);
+
 
    /* create subroot data */
    SCIP_CALL( subrootCreate(&subroot, blkmem, tree, lp) );
@@ -3840,7 +3953,7 @@ SCIP_RETCODE SCIPnodeFocus(
          if( tree->focusnode->depth > 0 && tree->focusnode->depth % 25 == 0 )
          {
             /* convert old focus node into a subroot node */
-            SCIP_CALL( focusnodeToSubroot(blkmem, set, stat, eventqueue, eventfilter, prob, tree, lp) );
+            SCIP_CALL( focusnodeToSubroot(blkmem, set, stat, eventqueue, eventfilter, prob, tree, lp, branchcand) );
             if( *node != NULL && SCIPnodeGetType(*node) == SCIP_NODETYPE_CHILD
                && SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_SUBROOT )
                subroot = tree->focusnode;
@@ -3849,7 +3962,7 @@ SCIP_RETCODE SCIPnodeFocus(
 #endif
          {
             /* convert old focus node into a fork node */
-            SCIP_CALL( focusnodeToFork(blkmem, set, stat, eventqueue, eventfilter, prob, tree, lp) );
+            SCIP_CALL( focusnodeToFork(blkmem, set, stat, eventqueue, eventfilter, prob, tree, lp, branchcand) );
          }
 
          /* check, if the conversion into a subroot or fork was successful */
@@ -3877,7 +3990,7 @@ SCIP_RETCODE SCIPnodeFocus(
       else if( tree->focuslpconstructed && (SCIPlpGetNNewcols(lp) > 0 || SCIPlpGetNNewrows(lp) > 0) )
       {
          /* convert old focus node into pseudofork */
-         SCIP_CALL( focusnodeToPseudofork(blkmem, set, eventqueue, tree, lp) );
+         SCIP_CALL( focusnodeToPseudofork(blkmem, set, stat, eventqueue, prob, tree, lp, branchcand) );
          assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_PSEUDOFORK);
 
          /* update the path's LP size */
@@ -3894,13 +4007,13 @@ SCIP_RETCODE SCIPnodeFocus(
       else
       {
          /* convert old focus node into junction */
-         SCIP_CALL( focusnodeToJunction(blkmem, set, eventqueue, tree, lp) );
+         SCIP_CALL( focusnodeToJunction(blkmem, set, stat, eventqueue, prob, tree, lp, branchcand) );
       }
    }
    else if( tree->focusnode != NULL )
    {
       /* convert old focus node into deadend */
-      SCIP_CALL( focusnodeToDeadend(blkmem, tree, lp) );
+      SCIP_CALL( focusnodeToDeadend(blkmem, set, stat, eventqueue, prob, tree, lp, branchcand) );
    }
    assert(subroot == NULL || SCIPnodeGetType(subroot) == SCIP_NODETYPE_SUBROOT);
    assert(lpstatefork == NULL

@@ -3161,7 +3161,7 @@ SCIP_RETCODE SCIPvarLoose(
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
    assert(var->data.col != NULL);
-   assert(var->data.col->len == var->data.col->nunlinked); /* no rows can include the column */
+   /* assert(var->data.col->len == var->data.col->nunlinked);*/ /* no rows can include the column */ /* TODO: is this assert correct ???? */
    assert(var->data.col->lppos == -1);
    assert(var->data.col->lpipos == -1);
 
@@ -13027,6 +13027,10 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarIsInitial
 #undef SCIPvarIsRemovable
 #undef SCIPvarIsDeleted
+#undef SCIPvarIsDeletable
+#undef SCIPvarIsEssential
+#undef SCIPvarMarkDeletable
+#undef SCIPvarMarkEssential
 #undef SCIPvarIsActive
 #undef SCIPvarGetIndex
 #undef SCIPvarGetProbindex
@@ -13378,6 +13382,46 @@ SCIP_Bool SCIPvarIsDeleted(
    assert(var != NULL);
 
    return var->deleted;
+}
+
+/** marks the variable to be deletable, i.e., it may be deleted completely from the problem */
+void SCIPvarMarkDeletable(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   var->deletable = TRUE;
+}
+
+/** marks the variable to be essential, i.e., it must not be deleted */
+void SCIPvarMarkEssential(
+   SCIP_VAR*             var
+   )
+{
+   assert(var != NULL);
+
+   var->essential = TRUE;
+}
+
+/** returns whether variable is allowed to be deleted completely */
+SCIP_Bool SCIPvarIsDeletable(
+   SCIP_VAR*             var
+   )
+{
+   assert(var != NULL);
+
+   return var->deletable;
+}
+
+/** returns whether variable is essential, i.e. must not be deleted */
+SCIP_Bool SCIPvarIsEssential(
+   SCIP_VAR*             var
+   )
+{
+   assert(var != NULL);
+
+   return var->essential;
 }
 
 /** returns whether variable is an active (neither fixed nor aggregated) variable */
@@ -14288,18 +14332,4 @@ SCIP_Bool SCIPbdchginfoIsTighter(
    return (SCIPbdchginfoGetBoundtype(bdchginfo1) == SCIP_BOUNDTYPE_LOWER
       ? bdchginfo1->newbound > bdchginfo2->newbound
       : bdchginfo1->newbound < bdchginfo2->newbound);
-}
-
-SCIP_Bool SCIPvarIsEssential(
-   SCIP_VAR*             var
-   )
-{
-   return var->essential;
-}
-
-void SCIPvarSetEssential(
-   SCIP_VAR*             var
-   )
-{
-   var->essential = TRUE;
 }
