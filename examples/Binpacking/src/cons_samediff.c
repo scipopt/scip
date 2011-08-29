@@ -607,7 +607,7 @@ SCIP_RETCODE SCIPincludeConshdlrSamediff(
          consPropSamediff, consPresolSamediff, consRespropSamediff, consLockSamediff,
          consActiveSamediff, consDeactiveSamediff, 
          consEnableSamediff, consDisableSamediff, 
-         consPrintSamediff, consCopySamediff, consParseSamediff,
+         NULL, consPrintSamediff, consCopySamediff, consParseSamediff,
          conshdlrdata) );
 
    return SCIP_OKAY;

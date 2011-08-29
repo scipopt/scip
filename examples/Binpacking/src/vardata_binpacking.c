@@ -148,6 +148,8 @@ SCIP_RETCODE SCIPcreateVarBinpacking(
 {
    SCIP_CALL( SCIPcreateVar(scip, var, name, 0.0, 1.0, obj, SCIP_VARTYPE_BINARY,
          initial, removable, vardataDelOrig, vardataTrans, vardataDelTrans, vardataCopy, vardata) );
+
+   SCIPvarMarkDeletable(*var);
    
    SCIPdebug(SCIPprintVar(scip, *var, NULL) );
 
