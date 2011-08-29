@@ -480,8 +480,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStrongcoloring)
          {
             differLb = currLb + 1000;
          }
+
          score = computeScore( sameLb-currLb, differLb-currLb, branchruledata );
-         assert( !SCIPisFeasZero(scip, score) || (SCIPisFeasZero(scip, sameLb-currLb) && SCIPisFeasZero(scip, differLb-currLb)) );
+         assert( !SCIPisFeasZero(scip, score) || (SCIPisFeasZero(scip, 0.2 * (sameLb-currLb)) && SCIPisFeasZero(scip, 0.2 * (differLb-currLb))
+               && (SCIPisFeasZero(scip, sameLb-currLb) || SCIPisFeasZero(scip, differLb-currLb))) );
 
          if ( score > bestscore )
          {
@@ -599,7 +601,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStrongcoloring)
 
    }
       
-   assert(bestscore >= 0);
+   assert(!SCIPisSumNegative(scip, bestscore));
   
    node1 = bestnode1;
    node2 = bestnode2;

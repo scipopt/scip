@@ -43,6 +43,9 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 #include "probdata_coloring.h"
 
+#define EVENTHDLR_NAME         "probdatavardeleted"
+#define EVENTHDLR_DESC         "event handler for variable deleted event"
+
 struct SCIP_ProbData
 {
    TCLIQUE_GRAPH*   graph;              /* the preprocessed graph */
@@ -537,6 +540,66 @@ SCIP_DECL_PROBDELORIG(probdelorigColoring)
 }
 
 
+/*
+ * Callback methods of event handler
+ */
+
+/** destructor of event handler to free user data (called when SCIP is exiting) */
+#define eventFreeProbdatavardeleted NULL
+
+/** initialization method of event handler (called after problem was transformed) */
+#define eventInitProbdatavardeleted NULL
+
+/** deinitialization method of event handler (called before transformed problem is freed) */
+#define eventExitProbdatavardeleted NULL
+
+/** solving process initialization method of event handler (called when branch and bound process is about to begin) */
+#define eventInitsolProbdatavardeleted NULL
+
+/** solving process deinitialization method of event handler (called before branch and bound process data is freed) */
+#define eventExitsolProbdatavardeleted NULL
+
+/** frees specific event data */
+#define eventDeleteProbdatavardeleted NULL
+
+/** execution method of event handler */
+static
+SCIP_DECL_EVENTEXEC(eventExecProbdatavardeleted)
+{
+   SCIP_VAR* var;
+   SCIP_PROBDATA* probdata;
+   int idx;
+
+   assert(SCIPeventGetType(event) == SCIP_EVENTTYPE_VARDELETED);
+   var = SCIPeventGetVar(event);
+   probdata = (SCIP_PROBDATA*) eventdata;
+
+   assert(probdata != NULL);
+   assert(var != NULL);
+
+   SCIPdebugMessage("remove variable %s [%d] from list of stable sets\n", SCIPvarGetName(var), (int)(size_t)SCIPvarGetData(var));
+   //printf("remove variable %s [%d] from list of stable sets\n", SCIPvarGetName(var), (int)(size_t)SCIPvarGetData(var));
+
+   idx = (int)(size_t) SCIPvarGetData(var);
+
+   assert(probdata->stablesetvars[idx] == var);
+
+   SCIPfreeBlockMemoryArray(scip, &(probdata->stablesets[idx]), probdata->stablesetlengths[idx]);
+   SCIP_CALL( SCIPreleaseVar(scip, &(probdata->stablesetvars[idx])) );
+
+   for( ; idx < probdata->nstablesets - 1; idx++)
+   {
+      probdata->stablesets[idx] = probdata->stablesets[idx + 1];
+      probdata->stablesetlengths[idx] = probdata->stablesetlengths[idx + 1];
+      probdata->stablesetvars[idx] = probdata->stablesetvars[idx + 1];
+      SCIPvarSetData(probdata->stablesetvars[idx], (SCIP_VARDATA*) (size_t) idx);
+   }
+
+   probdata->nstablesets--;
+
+   return SCIP_OKAY;
+}
+
 
 
 /*
@@ -580,6 +643,9 @@ SCIP_RETCODE SCIPcreateProbColoring(
    /* add all edges, first into cache, then flush to add all of them to the graph */
    for ( i = 0; i < nedges; i++ )
    {
+      assert((edges[i][0] > 0) && (edges[i][0] <= nnodes));
+      assert((edges[i][1] > 0) && (edges[i][1] <= nnodes));
+
       tcliqueAddEdge((probdata)->oldgraph, edges[i][0]-1, edges[i][1]-1);
    }
    tcliqueFlush((probdata)->oldgraph);
@@ -594,6 +660,12 @@ SCIP_RETCODE SCIPcreateProbColoring(
 
    probdata->maxstablesets = 2;
    probdata->nstablesets = 0;
+
+   /* include event handler into original SCIP */
+   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         NULL, eventFreeProbdatavardeleted, eventInitProbdatavardeleted, eventExitProbdatavardeleted,
+         eventInitsolProbdatavardeleted, eventExitsolProbdatavardeleted, eventDeleteProbdatavardeleted, eventExecProbdatavardeleted,
+         NULL) );
 
    /* create problem in SCIP */
    SCIP_CALL( SCIPcreateProb(scip, name, probdelorigColoring, probtransColoring, probdeltransColoring, 
@@ -691,6 +763,8 @@ void COLORprobAddVarForStableSet(
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
    assert((setindex >= 0) && (setindex < probdata->nstablesets));
+
+   SCIP_CALL_ABORT( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_VARDELETED, SCIPfindEventhdlr(scip, EVENTHDLR_NAME), (SCIP_EVENTDATA*) probdata, NULL) );
 
    probdata->stablesetvars[setindex] = var;
 }
@@ -864,7 +938,7 @@ SCIP_RETCODE COLORprobAddNewStableSet(
       assert(stablesetnodes[i] >= 0);
       probdata->stablesets[probdata->nstablesets][i] = stablesetnodes[i];
    }
-   *setindex =  probdata->nstablesets;
+   *setindex = probdata->nstablesets;
 
    probdata->nstablesets++;
 

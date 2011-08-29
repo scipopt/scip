@@ -564,11 +564,10 @@ SCIP_DECL_CONSACTIVE(consActiveStoreGraph)
       assert(consdata->cgraph != NULL);
       COLORprobGetComplementaryGraph(scip, consdata->graph, consdata->cgraph);
    }
-
    /* if new variables where created after the last propagation of this cons, repropagate it */
    else
    {
-      if ( (consdata->propagatedvars < COLORprobGetNStableSets(scip)) && (consdata->type != COLOR_CONSTYPE_ROOT) )
+      if ( (consdata->type != COLOR_CONSTYPE_ROOT) && (consdata->propagatedvars < SCIPgetNTotalVars(scip)) )
       {
          SCIPrepropagateNode(scip, consdata->stickingatnode);
       }
@@ -643,7 +642,7 @@ SCIP_DECL_CONSPROP(consPropStoreGraph)
    
    SCIPdebugMessage( "Starting propagation of store graph constraint <%s(%d,%d)> .\n", SCIPconsGetName(cons), (consdata->node1+1), (consdata->node2+1));
   
-   /* propagation for differ: set upper bound of all stable sets, which contain both nodes, to 0 */
+   /* propagation for differ: set upper bound to 0 for all stable sets, which contain both nodes */
    if (consdata->type == COLOR_CONSTYPE_DIFFER)
    {
       for ( i = 0; i < nsets; i++ )
@@ -660,7 +659,7 @@ SCIP_DECL_CONSPROP(consPropStoreGraph)
       }
    }
 
-   /* propagation for same: set upper bound of all stable sets to 0, which do not contain both nodes */   
+   /* propagation for same: set upper bound to 0 for all stable sets, which do not contain both nodes */
    if ( consdata->type == COLOR_CONSTYPE_SAME )
    {
       for ( i = 0; i < nsets; i++ )
@@ -681,7 +680,7 @@ SCIP_DECL_CONSPROP(consPropStoreGraph)
    SCIPdebugMessage( "Finished propagation of store graph constraint <%s(%d,%d)>, %d vars fixed.\n", SCIPconsGetName(cons), (consdata->node1+1), (consdata->node2+1), propcount);
 
    consdata = SCIPconsGetData(COLORconsGetActiveStoreGraphCons(scip));
-   consdata->propagatedvars = COLORprobGetNStableSets(scip);
+   consdata->propagatedvars = SCIPgetNTotalVars(scip);
    
    return SCIP_OKAY;
 }
@@ -736,7 +735,7 @@ SCIP_RETCODE COLORincludeConshdlrStoreGraph(
          consPropStoreGraph, consPresolStoreGraph, consRespropStoreGraph, consLockStoreGraph,
          consActiveStoreGraph, consDeactiveStoreGraph,
          consEnableStoreGraph, consDisableStoreGraph,
-         consPrintStoreGraph, consCopyStoreGraph, consParseStoreGraph,
+         NULL, consPrintStoreGraph, consCopyStoreGraph, consParseStoreGraph,
          conshdlrData) );
 
    return SCIP_OKAY;

@@ -644,9 +644,10 @@ SCIP_DECL_HEUREXEC(heurExecInit)
          SCIP_CALL( COLORprobAddNewStableSet(scip, colors, nstablesetnodes, &setnumber) );
          assert(setnumber != -1);
          
-         /* create variable for the stable set and add it to SCIP*/
+         /* create variable for the stable set and add it to SCIP */
          SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0, 1, 1, SCIP_VARTYPE_BINARY, 
                TRUE, TRUE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) );
+
          COLORprobAddVarForStableSet(scip, setnumber, var);
          SCIP_CALL( SCIPaddVar(scip, var) );
          SCIP_CALL( SCIPchgVarUbLazy(scip, var, 1.0) );
@@ -672,7 +673,7 @@ SCIP_DECL_HEUREXEC(heurExecInit)
    {
       SCIP_CALL( SCIPsetSolVal(scip, sol, COLORprobGetVarForStableSet(scip, i), 1.0) );
    }
-   SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, FALSE, &stored) );
+   SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, FALSE, FALSE, FALSE, &stored) );
    assert(stored);
 
    /* set maximal number of variables to be priced in each round */

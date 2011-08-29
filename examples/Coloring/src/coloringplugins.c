@@ -23,7 +23,7 @@
 #include "coloringplugins.h"
 #include "scip/debug.h"
 
-#define USEHEURS 1
+#define USEHEURS 0
 
 
 /** includes default plugins for coloring into SCIP */
