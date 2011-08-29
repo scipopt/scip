@@ -48,6 +48,7 @@ SCIP_RETCODE SCIPdialogCopyInclude(
 /** creates a dialog handler */
 extern
 SCIP_RETCODE SCIPdialoghdlrCreate(
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_DIALOGHDLR**     dialoghdlr          /**< pointer to store dialog handler */
    );
 

@@ -216,7 +216,7 @@
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
-#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
+#define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP
 
 
 /* event handler properties */
@@ -244,7 +244,7 @@
 
 
 /* other values */
-#define OBJEPSILON                 0.001 /**< value to add to objective in alt. LP if the binary variable is 1 in order to get small IISs */
+#define OBJEPSILON                 0.001     /**< value to add to objective in alt. LP if the binary variable is 1 to get small IISs */
 
 
 /** constraint data for indicator constraints */
@@ -682,6 +682,31 @@ SCIP_RETCODE checkIIS(
 
 
 /* ------------------------ auxiliary operations -------------------------------*/
+
+/** return objective contribution of variable 
+ *
+ *  Special treatment of negated variables: return negative of objective of original
+ *  variable. SCIPvarGetObj() would return 0 in these cases.
+ */
+static
+SCIP_Real varGetObjDelta(
+   SCIP_VAR*             var                 /**< variable */
+   )
+{
+   if ( SCIPvarIsBinary(var) && SCIPvarIsNegated(var) )
+   {
+      assert( SCIPvarGetNegatedVar(var) != NULL );
+      return -SCIPvarGetObj(SCIPvarGetNegatedVar(var));
+   }
+   else if ( SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED )
+   {
+      assert( SCIPvarGetAggrVar(var) != NULL );
+      return SCIPvarGetAggrScalar(var) * SCIPvarGetObj(SCIPvarGetAggrVar(var));
+   }
+
+   return SCIPvarGetObj(var);
+}
+
 
 /** ensures that the addLinCons array can store at least num entries */
 static
@@ -2280,7 +2305,7 @@ SCIP_RETCODE extendToCover(
                {
                   candidate = j;
                   candIndex = ind;
-                  candObj = SCIPvarGetObj(consdata->binvar);
+                  candObj = varGetObjDelta(consdata->binvar);
                }
             }
          }
@@ -2698,14 +2723,10 @@ SCIP_RETCODE propIndicator(
          ++(*nGen);
       }
 
-      /* Note that because of possible mulit-aggregation we cannot simply remove the indicator
+      /* Note that because of possible multi-aggregation we cannot simply remove the indicator
        * constraint if the linear constraint is not active or disabled - see the note in @ref
-       * PREPROC.
-       */
-
-      /* We cannot remove linear constraints, because of the reasons stated in
-       * consPresolIndicator(). Moreover, it would drastically increase memory consumption, because
-       * the linear constraints have to be stored in each node. */
+       * PREPROC and consPresolIndicator(). Moreover, it would drastically increase memory
+       * consumption, because the linear constraints have to be stored in each node. */
    }
 
    return SCIP_OKAY;
@@ -2781,7 +2802,7 @@ SCIP_RETCODE enforceCuts(
       if ( SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->binvar)) )
       {
          ++size;
-         value += SCIPvarGetObj(consdata->binvar);
+         value += varGetObjDelta(consdata->binvar);
          S[j] = TRUE;
       }
       else
@@ -3064,7 +3085,7 @@ SCIP_RETCODE separateIISRounding(
          if ( SCIPisFeasLT(scip, SCIPgetVarSol(scip, consdata->binvar), threshold) )
          {
             S[j] = TRUE;
-            value += SCIPvarGetObj(consdata->binvar);
+            value += varGetObjDelta(consdata->binvar);
             ++size;
          }
          else
@@ -3479,7 +3500,7 @@ SCIP_DECL_CONSDELETE(consDeleteIndicator)
                (SCIP_EVENTDATA*)*consdata, -1) );
       }
 
-      /* can there be cases where lincons is NULL, e.g., if presolve found the problem infeasible */
+      /* Can there be cases where lincons is NULL, e.g., if presolve found the problem infeasible? */
       assert( (*consdata)->lincons != NULL );
 
       /* release linear constraint if it is transformed as well - otherwise initpre has not been called */
@@ -3583,7 +3604,7 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
          SCIP_Bool infeasible;
 
          SCIP_CALL( SCIPchgVarType(scip, consdata->slackvar, SCIP_VARTYPE_IMPLINT, &infeasible) );
-         /* don't assert feasibility here because the presolver will and should detect a infeasibility */
+         /* don't assert feasibility here because the presolver should detect infeasibility */
       }
    }
 
@@ -4056,6 +4077,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolIndicator)
       SCIPdebugMessage("Separating inequalities for indicator constraints.\n");
 
       *result = SCIP_DIDNOTFIND;
+
       /* start separation */
       SCIP_CALL( separateIISRounding(scip, conshdlr, sol, nconss, conss, &nGen) );
       SCIPdebugMessage("Separated %d cuts from indicator constraints.\n", nGen);
@@ -4355,6 +4377,7 @@ SCIP_DECL_CONSPROP(consPropIndicator)
       /* SCIPdebugMessage("Propagating indicator constraint <%s>.\n", SCIPconsGetName(cons) ); */
 
       *result = SCIP_DIDNOTFIND;
+
       SCIP_CALL( propIndicator(scip, cons, consdata, &cutoff, &nGen) );
       if ( cutoff )
       {
@@ -4498,6 +4521,7 @@ SCIP_DECL_CONSPRINT(consPrintIndicator)
    return SCIP_OKAY;
 }
 
+
 /** constraint copying method of constraint handler */
 static
 SCIP_DECL_CONSCOPY(consCopyIndicator)
@@ -4531,7 +4555,7 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
    sourcelincons = sourceconsdata->lincons;
 
    /* if the constraint has been deleted -> create empty constraint (multi-aggregation might still contain slackvariable, so indicator is valid) */
-   if( SCIPconsIsDeleted(sourcelincons) )
+   if ( SCIPconsIsDeleted(sourcelincons) )
    {
       SCIPdebugMessage("Linear constraint <%s> deleted! Create empty linear constraint.\n", SCIPconsGetName(sourceconsdata->lincons));
 
@@ -4544,7 +4568,8 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
       /* get copied version of linear constraint */
       assert( sourcelincons != NULL );
       conshdlrlinear = SCIPfindConshdlr(sourcescip, "linear");
-      assert(conshdlrlinear != NULL);
+      assert( conshdlrlinear != NULL );
+
       SCIP_CALL( SCIPgetConsCopy(sourcescip, scip, sourcelincons, &targetlincons, conshdlrlinear, varmap, consmap, SCIPconsGetName(sourcelincons),
             SCIPconsIsInitial(sourcelincons), SCIPconsIsSeparated(sourcelincons), SCIPconsIsEnforced(sourcelincons), SCIPconsIsChecked(sourcelincons),
             SCIPconsIsPropagated(sourcelincons), SCIPconsIsLocal(sourcelincons), SCIPconsIsModifiable(sourcelincons), SCIPconsIsDynamic(sourcelincons),
@@ -4552,45 +4577,45 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
    }
 
    /* find copied variable corresponding to binvar */
-   if( *valid )
+   if ( *valid )
    {
       SCIP_VAR* sourcebinvar;
       
       sourcebinvar = sourceconsdata->binvar;
-      assert(sourcebinvar != NULL);
+      assert( sourcebinvar != NULL );
 
       SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcebinvar, &targetbinvar, varmap, consmap, global, valid) );
    }
 
    /* find copied variable corresponding to slackvar */
-   if( *valid )
+   if ( *valid )
    {
       SCIP_VAR* sourceslackvar;
 
       sourceslackvar = sourceconsdata->slackvar;
-      assert(sourceslackvar != NULL);
+      assert( sourceslackvar != NULL );
 
       SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourceslackvar, &targetslackvar, varmap, consmap, global, valid) );
    }
 
    /* create indicator constraint */
-   if( *valid )
+   if ( *valid )
    {
-      assert(targetlincons != NULL);
-      assert(targetbinvar != NULL);
-      assert(targetslackvar != NULL);
+      assert( targetlincons != NULL );
+      assert( targetbinvar != NULL );
+      assert( targetslackvar != NULL );
 
       SCIP_CALL( SCIPcreateConsIndicatorLinCons(scip, cons, consname, targetbinvar, targetlincons, targetslackvar,
             initial, separate, enforce, check, propagate, local, dynamic, modifiable, stickingatnode) );
    }
 
-   if( !(*valid) )
+   if ( !(*valid) )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "could not copy linear constraint <%s>\n", SCIPconsGetName(sourcelincons));
    }
 
    /* release empty constraint */
-   if( SCIPconsIsDeleted(sourcelincons) )
+   if ( SCIPconsIsDeleted(sourcelincons) )
    {
       SCIP_CALL( SCIPreleaseCons(scip, &targetlincons) );
    }   
@@ -5644,16 +5669,18 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
       }
       else
       {
-         /* the original constraint is satisfied - we can set the slack variable to 0 (slackvar should only occur in this indicator constraint) */
+         /* the original constraint is satisfied - we can set the slack variable to 0 (slackvar
+            should only occur in this indicator constraint) */
          if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, slackvar), 0.0) )
          {
             SCIP_CALL( SCIPsetSolVal(scip, sol, slackvar, 0.0) );
             *changed = TRUE;
          }
-         /* we might also set the binary variable - if no other constraints prevent it */
-         if ( SCIPvarGetObj(binvar) < 0 )
+
+         if ( varGetObjDelta(binvar) < 0 )
          {
-            if ( SCIPvarMayRoundUp(binvar) && ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 1.0) )
+            /* setting variable to 1 decreases objective -> check whether variable only occurs in the current constraint */
+            if ( SCIPvarGetNLocksUp(binvar) <= 1 && ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 1.0) )
             {
                SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 1.0) );
                *changed = TRUE;
@@ -5661,7 +5688,8 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
          }
          else
          {
-            if ( SCIPvarMayRoundDown(binvar) && ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 0.0) )
+            /* setting variable to 0 may decrease objective -> check whether variable only occurs in the current constraint */
+            if ( SCIPvarGetNLocksDown(binvar) <= 1 && ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 0.0) )
             {
                SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 0.0) );
                *changed = TRUE;
@@ -5702,16 +5730,19 @@ SCIP_RETCODE SCIPmakeIndicatorsFeasible(
 
    for (c = 0; c < nconss; ++c)
    {
+      SCIP_CONSDATA* consdata;
+      SCIP_Bool chg = FALSE;
       assert( conss[c] != NULL );
-      if ( SCIPisViolatedIndicator(scip, conss[c], sol) )
-      {
-         SCIP_Bool chg = FALSE;
-         SCIPmakeIndicatorFeasible(scip, conss[c], sol, &chg);
-         /* chg can be false, e.g., if linconsActive is false; in this case we stop, because we cannot fix the problem. */
-         if ( ! chg )
-            break;
-         *changed = TRUE;
-      }
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert( consdata != NULL );
+      
+      /* if the linear constraint is not present, we stop */
+      if ( ! consdata->linconsActive )
+         break;
+
+      SCIP_CALL( SCIPmakeIndicatorFeasible(scip, conss[c], sol, &chg) );
+      *changed = *changed || chg;
    }
 
    return SCIP_OKAY;

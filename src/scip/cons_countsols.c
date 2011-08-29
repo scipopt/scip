@@ -2449,6 +2449,10 @@ SCIP_RETCODE SCIPincludeConshdlrCountsols(
    /* create countsol constraint handler data */
    SCIP_CONSHDLRDATA* conshdlrdata;
    
+#ifdef WITH_GMP
+   char gmpversion[20];
+#endif
+
    /* create constraint handler specific data here */
    SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
    
@@ -2502,6 +2506,12 @@ SCIP_RETCODE SCIPincludeConshdlrCountsols(
          NULL, NULL, NULL, NULL, NULL, NULL, dispOutputFeasSubtrees, 
          NULL, DISP_CUTS_WIDTH, DISP_CUTS_PRIORITY, DISP_CUTS_POSITION, DISP_CUTS_STRIPLINE) );
    
+#ifdef WITH_GMP
+   /* add info that about using GMP to external codes information */
+   (void) SCIPsnprintf(gmpversion, sizeof(gmpversion), "GMP %d.%d.%d", __GNU_MP_VERSION, __GNU_MP_VERSION_MINOR, __GNU_MP_VERSION_PATCHLEVEL);
+   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, gmpversion, "GNU Multiple Precision Arithmetic Library developed by T. Granlund (gmplib.org)") );
+#endif
+
    return SCIP_OKAY;
 }
 

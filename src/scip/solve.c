@@ -2398,7 +2398,9 @@ SCIP_RETCODE solveNodeLP(
        * separators; in case the root LP is aborted, e.g, by hitting the time limit, we do not check the LP solution
        * since the corresponding data structures have not been updated 
        */
-      if( SCIPtreeGetCurrentDepth(tree) == 0 && !(*cutoff) && !(*lperror) && !SCIPsolveIsStopped(set, stat, FALSE) )
+      if( SCIPtreeGetCurrentDepth(tree) == 0 && !(*cutoff) && !(*lperror)
+         && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY)
+         && !SCIPsolveIsStopped(set, stat, FALSE) )
       {
          SCIP_Bool checklprows;
          SCIP_Bool stored;

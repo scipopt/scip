@@ -100,6 +100,8 @@ fixed bugs:
 - fixed wrong changing of wasdelayed flag for propagators
 - fixed bug in cons_countsols.c w.r.t. none active variables
 - deactived checking of zero solution in Zimpl reader when no starting values are provided
+- LP solution status is now checked when checking root LP solution. Otherwise, due to different time measurements, 
+  it might happen that the LP solving was stopped due to the time limit, but SCIP did not reach the limit, yet.
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})

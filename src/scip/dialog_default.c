@@ -3711,7 +3711,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
    {
       SCIP_CALL( SCIPincludeDialog(scip, &dialog,
             NULL, SCIPdialogExecSetHeuristicsEmphasisOff, NULL, NULL,
-            "off", "turns <off> all heuritics", FALSE, NULL) );
+            "off", "turns <off> all heuristics", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, emphasismenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
