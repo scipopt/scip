@@ -297,10 +297,53 @@ void SCIPexprChgPolynomialConstant(
    SCIP_Real             constant            /**< new value for constant */
 );
 
-/** ensures that monomials of a polynomial are sorted */
+/** multiplies each summand of a polynomial by a given constant */
 extern
-void SCIPexprSortMonomials(
-   SCIP_EXPR*            expr                /**< polynomial expression */
+void SCIPexprMultiplyPolynomialByConstant(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            expr,               /**< polynomial expression */
+   SCIP_Real             factor              /**< constant factor */
+);
+
+/** multiplies each summand of a polynomial by a given monomial */
+extern
+SCIP_RETCODE SCIPexprMultiplyPolynomialByMonomial(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            expr,               /**< polynomial expression */
+   SCIP_EXPRDATA_MONOMIAL* factor,           /**< monomial factor */
+   int*                  childmap            /**< map children in factor to children in expr, or NULL for 1:1 */
+);
+
+/** multiplies this polynomial by a polynomial
+ * factor needs to be different from expr */
+extern
+SCIP_RETCODE SCIPexprMultiplyPolynomialByPolynomial(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            expr,               /**< polynomial expression */
+   SCIP_EXPR*            factor,             /**< polynomial factor */
+   int*                  childmap            /**< map children in factor to children in expr, or NULL for 1:1 */
+);
+
+/** takes a power of the polynomial
+ * exponent need to be an integer
+ * polynomial need to be a monomial, if exponent is negative
+ */
+extern
+SCIP_RETCODE SCIPexprPolynomialPower(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            expr,               /**< polynomial expression */
+   int                   exponent            /**< exponent of power operation */
+);
+
+/** merges monomials in a polynomial expression that differ only in coefficient into a single monomial
+ * eliminates monomials with coefficient between -eps and eps
+ */
+extern
+void SCIPexprMergeMonomials(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            expr,               /**< polynomial expression */
+   SCIP_Real             eps,                /**< threshold under which numbers are treat as zero */
+   SCIP_Bool             mergefactors        /**< whether to merge factors in monomials too */
 );
 
 /** creates a monomial */
@@ -361,6 +404,62 @@ SCIP_Bool SCIPexprFindMonomialFactor(
    int                   childidx,           /**< index of the child which factor to search for */
    int*                  pos                 /**< buffer to store position of factor */
    );
+
+/** checks if two monomials are equal */
+extern
+SCIP_Bool SCIPexprAreMonomialsEqual(
+   SCIP_EXPRDATA_MONOMIAL*  monomial1,       /**< first monomial */
+   SCIP_EXPRDATA_MONOMIAL*  monomial2,       /**< second monomial */
+   SCIP_Real             eps                 /**< threshold under which numbers are treated as 0.0 */
+);
+
+/** adds factors to a monomial */
+extern
+SCIP_RETCODE SCIPexprAddMonomialFactors(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPRDATA_MONOMIAL* monomial,         /**< monomial */
+   int                   nfactors,           /**< number of factors to add */
+   int*                  childidxs,          /**< indices of children corresponding to factors */
+   SCIP_Real*            exponents           /**< exponent in each factor */
+);
+
+/** changes coefficient of monomial */
+extern
+void SCIPexprChgMonomialCoef(
+   SCIP_EXPRDATA_MONOMIAL* monomial,         /**< monomial */
+   SCIP_Real             newcoef             /**< new coefficient */
+);
+
+/** multiplies a monomial with a monomial */
+extern
+SCIP_RETCODE SCIPexprMultiplyMonomialByMonomial(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPRDATA_MONOMIAL* monomial,         /**< monomial */
+   SCIP_EXPRDATA_MONOMIAL* factor,           /**< factor monomial */
+   int*                  childmap            /**< map to apply to children in factor, or NULL for 1:1 */
+);
+
+/** replaces the monomial by a power of the monomial
+ * allows only integers as exponent */
+extern
+void SCIPexprMonomialPower(
+   SCIP_EXPRDATA_MONOMIAL* monomial,         /**< monomial */
+   int                   exponent            /**< integer exponent of power operation */
+);
+
+/** merges factors that correspond to the same child by adding exponents
+ * eliminates factors with exponent between -eps and eps */
+extern
+void SCIPexprMergeMonomialFactors(
+   SCIP_EXPRDATA_MONOMIAL* monomial,         /**< monomial */
+   SCIP_Real             eps                 /**< threshold under which numbers are treated as 0.0 */
+   );
+
+/** ensures that monomials of a polynomial are sorted */
+extern
+void SCIPexprSortMonomials(
+   SCIP_EXPR*            expr                /**< polynomial expression */
+);
 
 /** indicates whether the expression contains a SCIP_EXPR_PARAM */
 extern
