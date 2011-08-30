@@ -20,7 +20,7 @@ find ./ -name "*.sh" -exec chmod 750 {} \;
 chmod 750 bin/*
 
 echo generating default setting files
-make LPS=none OPT=opt-gccold READLINE=false ZLIB=false ZIMPL=false -j
+make LPS=none OPT=opt-gccold READLINE=false ZLIB=false ZIMPL=false -j4
 bin/scip -c "set default set save doc/inc/parameters.set quit"
 
 tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
