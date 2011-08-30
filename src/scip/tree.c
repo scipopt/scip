@@ -3312,12 +3312,13 @@ SCIP_RETCODE focusnodeCleanupVars(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_Bool             inlp                /**< should variables in the LP be deleted, too? */
+   SCIP_Bool             inlp                /**< should variables in the LP be deleted, too?*/
    )
 {
    SCIP_VAR* var;
    int i;
    int ndelvars;
+   SCIP_Bool needdel;
 
    assert(blkmem != NULL);
    assert(set != NULL);
@@ -3328,12 +3329,19 @@ SCIP_RETCODE focusnodeCleanupVars(
    assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
    assert(lp != NULL);
 
-   /* remove priced in vars that are currenty not in the lp */
+   /* check the settings, whether variables should be deleted */
+   needdel = (set->price_delvars && tree->focusnode != tree->root) || (set->price_delvarsroot && tree->focusnode == tree->root);
+
+   if( !needdel )
+      return SCIP_OKAY;
+
+   /* only remove variables if there are pricers present, s.t. the variable could be regenerated, if needed */
    if( set->nactivepricers == 0 )
       return SCIP_OKAY;
 
    ndelvars = 0;
 
+   /* also delete variables currently in the LP, thus remove all new variables from the LP, first */
    if( inlp )
    {
       /* remove all additions to the LP at this node */

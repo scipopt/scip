@@ -295,6 +295,10 @@ struct SCIP_Set
    SCIP_Real             price_abortfac;     /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */
    int                   price_maxvars;      /**< maximal number of variables priced in per pricing round */
    int                   price_maxvarsroot;  /**< maximal number of priced variables at the root node */
+   SCIP_Bool             price_delvars;      /**< should variables created at the current node be deleted when the node is solved
+                                              *   in case they are not present in the LP anymore? */
+   SCIP_Bool             price_delvarsroot;  /**< should variables created at the root node be deleted when the root is solved
+                                              *   in case they are not present in the LP anymore? */
 
    /* propagation settings */
    int                   prop_maxrounds;     /**< maximal number of propagation rounds per node (-1: unlimited) */

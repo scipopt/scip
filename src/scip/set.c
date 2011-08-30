@@ -234,6 +234,10 @@
                                                  *   found */
 #define SCIP_DEFAULT_PRICE_MAXVARS          100 /**< maximal number of variables priced in per pricing round */
 #define SCIP_DEFAULT_PRICE_MAXVARSROOT     2000 /**< maximal number of priced variables at the root node */
+#define SCIP_DEFAULT_PRICE_DELVARS        FALSE /**< should variables created at the current node be deleted when the node is solved
+                                                 *   in case they are not present in the LP anymore? */
+#define SCIP_DEFAULT_PRICE_DELVARSROOT    FALSE /**< should variables created at the root node be deleted when the root is solved
+                                                 *   in case they are not present in the LP anymore? */
 
 
 /* Propagating */
@@ -1301,6 +1305,16 @@ SCIP_RETCODE SCIPsetCreate(
          "pricing/abortfac",
          "pricing is aborted, if fac * pricing/maxvars pricing candidates were found",
          &(*set)->price_abortfac, FALSE, SCIP_DEFAULT_PRICE_ABORTFAC, 1.0, SCIP_REAL_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "pricing/delvars",
+         "should variables created at the current node be deleted when the node is solved in case they are not present in the LP anymore?",
+         &(*set)->price_delvars, FALSE, SCIP_DEFAULT_PRICE_DELVARS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "pricing/delvarsroot",
+         "should variables created at the root node be deleted when the root is solved in case they are not present in the LP anymore?",
+         &(*set)->price_delvarsroot, FALSE, SCIP_DEFAULT_PRICE_DELVARSROOT,
          NULL, NULL) );
 
    /* propagation parameters */
