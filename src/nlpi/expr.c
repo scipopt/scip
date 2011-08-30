@@ -2561,7 +2561,6 @@ SCIP_DECL_EXPRINTEVAL( exprevalIntQuadratic )
       return SCIP_OKAY;
    }
 
-#if 0 /* @TODO enable again */
    if( nargs == 2 && nquadelems > 0 )
    {
       /* if it's a bivariate quadratic expression with bilinear term, do something special */
@@ -2580,30 +2579,13 @@ SCIP_DECL_EXPRINTEVAL( exprevalIntQuadratic )
          else
             axy += quadelems[i].coef;
 
-      if( axy != 0.0 )
-      {
-         getQuadBivariateRange(infinity, &newbounds, ax, ay, axy,
-            lincoefs != NULL ? lincoefs[0] : 0.0, lincoefs != NULL ? lincoefs[1] : 0.0,
-            argvals[0], argvals[1]);
-
-         SCIPintervalAddScalar(infinity, result, *result, quaddata->constant);
-      }
-      else
-      {
-         SCIPintervalSet(result, quaddata->constant);
-
-         SCIPintervalSet(&lincoef, lincoefs != NULL ? lincoefs[0] : 0.0);
-         SCIPintervalQuad(infinity, &tmp, ax, lincoef, argvals[0]);
-         SCIPintervalAdd(infinity, result, *result, tmp);
-
-         SCIPintervalSet(&lincoef, lincoefs != NULL ? lincoefs[1] : 0.0);
-         SCIPintervalQuad(infinity, &tmp, ay, lincoef, argvals[1]);
-         SCIPintervalAdd(infinity, result, *result, tmp);
-      }
+      SCIPintervalQuadBivar(infinity, result, ax, ay, axy,
+         lincoefs != NULL ? lincoefs[0] : 0.0, lincoefs != NULL ? lincoefs[1] : 0.0,
+         argvals[0], argvals[1]);
+      SCIPintervalAddScalar(infinity, result, *result, quaddata->constant);
 
       return SCIP_OKAY;
    }
-#endif
 
    /* make sure coefficients are sorted */
    quadraticdataSort(quaddata);
@@ -9146,7 +9128,6 @@ void exprgraphNodePropagateBounds(
          if( SCIPintervalIsEntire(infinity, node->bounds) )
             break;
 
-#if 0 /* @TODO activate again */
          if( node->nchildren == 2 && nquadelems > 0 )
          {
             /* if it's a bivariate quadratic expression with bilinear term, do something special */
@@ -9168,57 +9149,53 @@ void exprgraphNodePropagateBounds(
             c = node->bounds;
             SCIPintervalSubScalar(infinity, &c, c, quaddata->constant);
 
-            if( axy != 0.0 && (ax != 0.0 || ay != 0.0) )
+            /* compute bounds for x */
+            SCIPintervalSolveBivariateQuadExpressionAllScalar(
+               infinity, &childbounds, ax, ay, axy,
+               lincoefs != NULL ? lincoefs[0] : 0.0, lincoefs != NULL ? lincoefs[1] : 0.0,
+                  c, node->children[0]->bounds, node->children[1]->bounds
+            );
+            if( (childbounds.inf > node->children[0]->bounds.inf + 1e-9 || childbounds.sup + 1e-9 < node->children[0]->bounds.sup) )
             {
-               /* compute bounds for x */
-               solveBivariateQuadExpressionFirstVar(
-                  infinity, &childbounds, ax, ay, axy,
-                  lincoefs != NULL ? lincoefs[0] : 0.0, lincoefs != NULL ? lincoefs[1] : 0.0,
-                     c, node->children[0]->bounds, node->children[1]->bounds
+               SCIPdebugMessage("%g x^2 + %g y^2 + %g xy + %g x + %g y in [%g,%g], x = [%g,%g], y = [%g,%g] -> x in [%g,%g], cutoff = %d\n",
+                  ax, ay, axy, lincoefs != NULL ? lincoefs[0] : 0.0, lincoefs != NULL ? lincoefs[1] : 0.0,
+                     c.inf, c.sup, node->children[0]->bounds.inf, node->children[0]->bounds.sup,
+                     node->children[1]->bounds.inf, node->children[1]->bounds.sup, childbounds.inf, childbounds.sup, SCIPintervalIsEmpty(childbounds)
                );
-               if( (childbounds.inf > node->children[0]->bounds.inf + 1e-9 || childbounds.sup + 1e-9 < node->children[0]->bounds.sup) )
-               {
-                  SCIPdebugMessage("%g x^2 + %g y^2 + %g xy + %g x + %g y in [%g,%g], x = [%g,%g], y = [%g,%g] -> x in [%g,%g], cutoff = %d\n",
-                     ax, ay, axy, lincoefs != NULL ? lincoefs[0] : 0.0, lincoefs != NULL ? lincoefs[1] : 0.0,
-                        c.inf, c.sup, node->children[0]->bounds.inf, node->children[0]->bounds.sup,
-                        node->children[1]->bounds.inf, node->children[1]->bounds.sup, childbounds.inf, childbounds.sup, SCIPintervalIsEmpty(childbounds)
-                  );
-               }
-
-               if( SCIPintervalIsEmpty(childbounds) )
-                  *cutoff = TRUE;
-               else
-                  SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, cutoff);
-               if( *cutoff )
-                  break;
-
-               /* compute bounds for y */
-               solveBivariateQuadExpressionFirstVar(
-                  infinity, &childbounds, ay, ax, axy,
-                  lincoefs != NULL ? lincoefs[1] : 0.0, lincoefs != NULL ? lincoefs[0] : 0.0,
-                     c, node->children[1]->bounds, node->children[0]->bounds
-               );
-
-               if( (childbounds.inf > node->children[1]->bounds.inf + 1e-9 || childbounds.sup + 1e-9 < node->children[1]->bounds.sup) )
-               {
-                  SCIPdebugMessage("%g x^2 + %g y^2 + %g xy + %g x + %g y in [%g,%g], x = [%g,%g], y = [%g,%g] -> y in [%g,%g], cutoff = %d\n",
-                     ax, ay, axy, lincoefs != NULL ? lincoefs[0] : 0.0, lincoefs != NULL ? lincoefs[1] : 0.0,
-                        c.inf, c.sup, node->children[0]->bounds.inf, node->children[0]->bounds.sup,
-                        node->children[1]->bounds.inf, node->children[1]->bounds.sup, childbounds.inf, childbounds.sup, SCIPintervalIsEmpty(childbounds)
-                  );
-               }
-
-               if( SCIPintervalIsEmpty(childbounds) )
-                  *cutoff = TRUE;
-               else
-                  SCIPexprgraphTightenNodeBounds(exprgraph, node->children[1], childbounds, minstrength, cutoff);
-               if( *cutoff )
-                  break;
-
-               break;
             }
+
+            if( SCIPintervalIsEmpty(childbounds) )
+               *cutoff = TRUE;
+            else
+               SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, cutoff);
+            if( *cutoff )
+               break;
+
+            /* compute bounds for y */
+            SCIPintervalSolveBivariateQuadExpressionAllScalar(
+               infinity, &childbounds, ay, ax, axy,
+               lincoefs != NULL ? lincoefs[1] : 0.0, lincoefs != NULL ? lincoefs[0] : 0.0,
+                  c, node->children[1]->bounds, node->children[0]->bounds
+            );
+
+            if( (childbounds.inf > node->children[1]->bounds.inf + 1e-9 || childbounds.sup + 1e-9 < node->children[1]->bounds.sup) )
+            {
+               SCIPdebugMessage("%g x^2 + %g y^2 + %g xy + %g x + %g y in [%g,%g], x = [%g,%g], y = [%g,%g] -> y in [%g,%g], cutoff = %d\n",
+                  ax, ay, axy, lincoefs != NULL ? lincoefs[0] : 0.0, lincoefs != NULL ? lincoefs[1] : 0.0,
+                     c.inf, c.sup, node->children[0]->bounds.inf, node->children[0]->bounds.sup,
+                     node->children[1]->bounds.inf, node->children[1]->bounds.sup, childbounds.inf, childbounds.sup, SCIPintervalIsEmpty(childbounds)
+               );
+            }
+
+            if( SCIPintervalIsEmpty(childbounds) )
+               *cutoff = TRUE;
+            else
+               SCIPexprgraphTightenNodeBounds(exprgraph, node->children[1], childbounds, minstrength, cutoff);
+            if( *cutoff )
+               break;
+
+            break;
          }
-#endif
 
          for( i = 0; i < node->nchildren && !*cutoff; ++i )
          {

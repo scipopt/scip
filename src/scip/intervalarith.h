@@ -628,6 +628,42 @@ void SCIPintervalSolveUnivariateQuadExpression(
    SCIP_INTERVAL         rhs                 /**< right hand side of equation */
 );
 
+/** stores range of bivariate quadratic term in resultant
+ * given scalars ax, ay, axy, bx, and by and intervals for x and y, computes interval for \f$ ax x^2 + ay y^2 + axy x y + bx x + by y \f$
+ * NOTE: the operations are not applied rounding-safe here
+ */
+extern
+void SCIPintervalQuadBivar(
+   SCIP_Real             infinity,           /**< value for infinity in interval arithmetics */
+   SCIP_INTERVAL*        resultant,          /**< buffer where to store result of operation */
+   SCIP_Real             ax,                 /**< square coefficient of x */
+   SCIP_Real             ay,                 /**< square coefficient of y */
+   SCIP_Real             axy,                /**< bilinear coefficients */
+   SCIP_Real             bx,                 /**< linear coefficient of x */
+   SCIP_Real             by,                 /**< linear coefficient of y */
+   SCIP_INTERVAL         xbnds,              /**< bounds on x */
+   SCIP_INTERVAL         ybnds               /**< bounds on y */
+);
+
+/** solves a bivariate quadratic equation for the first variable
+ * given scalars ax, ay, axy, bx and by, and intervals for x, y, and rhs,
+ * computes \f$ \{ x \in \mathbf{x} : \exists y \in \mathbf{y} : a_x x^2 + a_y y^2 + a_{xy} x y + b_x x + b_y y \in \mathbf{\text{rhs}} \} \f$
+ * NOTE: the operations are not applied rounding-safe here
+ */
+extern
+void SCIPintervalSolveBivariateQuadExpressionAllScalar(
+   SCIP_Real             infinity,           /**< value for infinity in interval arithmetics */
+   SCIP_INTERVAL*        resultant,          /**< buffer where to store result of operation */
+   SCIP_Real             ax,                 /**< square coefficient of x */
+   SCIP_Real             ay,                 /**< square coefficient of y */
+   SCIP_Real             axy,                /**< bilinear coefficients */
+   SCIP_Real             bx,                 /**< linear coefficient of x */
+   SCIP_Real             by,                 /**< linear coefficient of y */
+   SCIP_INTERVAL         rhs,                /**< right-hand-side of equation */
+   SCIP_INTERVAL         xbnds,              /**< bounds on x */
+   SCIP_INTERVAL         ybnds               /**< bounds on y */
+);
+
 #ifdef __cplusplus
 }
 #endif
