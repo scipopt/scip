@@ -916,7 +916,11 @@ const char* SCIPlpiGetSolverName(
    void
    )
 {
+#ifdef CPX_VERSION_VERSION
+   snprintf(cpxname, SCIP_MAXSTRLEN, "CPLEX %d.%d.%d.%d", CPX_VERSION_VERSION, CPX_VERSION_RELEASE, CPX_VERSION_MODIFICATION, CPX_VERSION_FIX);
+#else
    snprintf(cpxname, SCIP_MAXSTRLEN, "CPLEX %d.%d.%d.%d", CPX_VERSION/100, (CPX_VERSION%100)/10, CPX_VERSION%10, CPX_SUBVERSION);
+#endif
    return cpxname;
 }
 
