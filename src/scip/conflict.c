@@ -3528,7 +3528,7 @@ SCIP_RETCODE undoBdchgsProof(
 /* because calculations might cancel out some values, we stop the infeasibility analysis if a value is bigger than
  * 2^53 = 9007199254740992
  */
-#define NUMSTOP 9007199254740992
+#define NUMSTOP 9007199254740992.0
 
 /** analyzes an infeasible LP and undoes additional bound changes while staying infeasible */
 static
