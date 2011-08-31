@@ -3407,9 +3407,6 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
    if( ax > 0.0 )
    {
       long double sqrtax;
-      long double calcc_const;
-      long double calcc_coefy;
-      long double calcc_coefyy;
       long double minvalleft;
       long double maxvalleft;
       long double minvalright;
@@ -3420,12 +3417,6 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
       long double rcoef_const;
 
       sqrtax = sqrt(ax_);
-      calcc_const = bx_ * bx_ / (4.0 * ax_);
-      calcc_coefy = axy_ * bx_ / (2.0 * ax_) - by_;
-      calcc_coefyy = axy_ * axy_ / (4.0 * ax_) - ay_;
-
-#define CALCB(y)    ((bx_ + axy_ * (y)) / (2.0 * sqrtax))
-#define CALCC(c,y)  (calcc_const + (c) + (calcc_coefy * + calcc_coefyy * (y)) * (y))
 
       /* rewrite equation as (sqrt(ax)x + b(y))^2 \in r(rhs,y), where
        * b(y) = (bx + axy y)/(2sqrt(ax)), r(rhs,y) = rhs - ay y^2 - by y + b(y)^2
@@ -3435,6 +3426,9 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
       rcoef_y     = axy_ * bx_  / (2.0*ax_) - by_;
       rcoef_yy    = axy_ * axy_ / (4.0*ax_) - ay_;
       rcoef_const = bx_  * bx_  / (4.0*ax_);
+
+#define CALCB(y)    ((bx_ + axy_ * (y)) / (2.0 * sqrtax))
+#define CALCR(c,y)  (rcoef_const + (c) + (rcoef_y + rcoef_yy * (y)) * (y))
 
       /* check whether r(rhs,y) is always negative */
       if( rhs.sup < infinity )
@@ -3507,7 +3501,7 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
 
          if( rhs.sup <  infinity )
          {
-            c = CALCC(rhs.sup, ybnds.inf);
+            c = CALCR(rhs.sup, ybnds.inf);
 
             if( c > 0.0 )
             {
@@ -3518,7 +3512,7 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
 
          if( rhs.inf > -infinity )
          {
-            c = CALCC(rhs.inf, ybnds.inf);
+            c = CALCR(rhs.inf, ybnds.inf);
 
             if( c > 0.0 )
             {
@@ -3562,7 +3556,7 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
 
          if( rhs.sup <  infinity )
          {
-            c = CALCC(rhs.sup, ybnds.sup);
+            c = CALCR(rhs.sup, ybnds.sup);
 
             if( c > 0.0 )
             {
@@ -3573,7 +3567,7 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
 
          if( rhs.inf > -infinity )
          {
-            c = CALCC(rhs.inf, ybnds.sup);
+            c = CALCR(rhs.inf, ybnds.sup);
 
             if( c > 0.0 )
             {
@@ -3608,7 +3602,7 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
                      long double c;
 
                      b = CALCB(ymin);
-                     c = CALCC(rhs.sup, ymin);
+                     c = CALCR(rhs.sup, ymin);
 
                      if( c > 0.0 )
                      {
@@ -3628,7 +3622,7 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
                      long double c;
 
                      b = CALCB(ymin);
-                     c = CALCC(rhs.sup, ymin);
+                     c = CALCR(rhs.sup, ymin);
 
                      if( c > 0.0 )
                      {
@@ -3656,7 +3650,7 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
                      long double c;
 
                      b = CALCB(ymin);
-                     c = CALCC(rhs.inf, ymin);
+                     c = CALCR(rhs.inf, ymin);
 
                      if( c > 0.0 )
                      {
@@ -3676,7 +3670,7 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
                      long double c;
 
                      b = CALCB(ymin);
-                     c = CALCC(rhs.inf, ymin);
+                     c = CALCR(rhs.inf, ymin);
 
                      if( c > 0.0 )
                      {
@@ -3702,7 +3696,7 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
                   long double c;
 
                   b = CALCB(ymin);
-                  c = CALCC(rhs.sup, ymin);
+                  c = CALCR(rhs.sup, ymin);
 
                   if( c > 0.0 )
                   {
@@ -3724,7 +3718,7 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
                   long double c;
 
                   b = CALCB(ymin);
-                  c = CALCC(rhs.inf, ymin);
+                  c = CALCR(rhs.inf, ymin);
 
                   if( c > 0.0 )
                   {
@@ -3808,8 +3802,11 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
             /* find all y >= 0 such that -rcoef_y * y + rcoef_yy * y^2 in -rhs2 and then negate y */
             SCIPintervalSet(&rcoef_y_int, -rcoef_y);
             SCIPintervalSolveUnivariateQuadExpressionPositive(infinity, &yneg, rcoef_yy_int, rcoef_y_int, rhs2);
-            SCIPintervalSetBounds(&yneg, -yneg.sup, -yneg.inf);
-            SCIPintervalIntersect(&yneg, yneg, ybnds);
+            if( !SCIPintervalIsEmpty(yneg) )
+            {
+               SCIPintervalSetBounds(&yneg, -yneg.sup, -yneg.inf);
+               SCIPintervalIntersect(&yneg, yneg, ybnds);
+            }
             if( !SCIPintervalIsEmpty(yneg) )
             {
                if( yneg.inf > -infinity )
@@ -3879,7 +3876,7 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
       resultant->sup += 1e-10 * REALABS(resultant->sup);
 
 #undef CALCB
-#undef CALCC
+#undef CALCR
    }
    else
    {
