@@ -569,7 +569,8 @@ void SCIPexprPrint(
    SCIP_EXPR*            expr,               /**< expression */
    FILE*                 file,               /**< file for printing, or NULL for stdout */
    const char**          varnames,           /**< names of variables, or NULL for default names */
-   const char**          paramnames          /**< names of parameters, or NULL for default names */
+   const char**          paramnames,         /**< names of parameters, or NULL for default names */
+   SCIP_Real*            paramvals           /**< values of parameters, or NULL for not printing */
 );
 
 

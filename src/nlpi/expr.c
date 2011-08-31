@@ -4378,7 +4378,7 @@ SCIP_RETCODE exprsimplifyFlattenPolynomials(
          assert(polynomialdata != NULL);
 
          SCIPdebugMessage("expand factors in expression ");
-         SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL) );
+         SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL, NULL) );
          SCIPdebugPrintf("\n");
 
          /* resolve children that are constants or polynomials itself */
@@ -4506,7 +4506,7 @@ SCIP_RETCODE exprsimplifyFlattenPolynomials(
          }
 
          SCIPdebugMessage("-> ");
-         SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL) );
+         SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL, NULL) );
          SCIPdebugPrintf("\n");
 
          break;
@@ -6331,19 +6331,19 @@ SCIP_RETCODE SCIPexprSimplify(
    assert(eps >= 0.0);
 
    SCIPdebugMessage("simplify expression: ");
-   SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL) );
+   SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL, NULL) );
    SCIPdebugPrintf("\n");
 
    SCIP_CALL( exprsimplifyConvertToPolynomials(blkmem, expr) );
 
    SCIPdebugMessage("converted to polynomials: ");
-   SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL) );
+   SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL, NULL) );
    SCIPdebugPrintf("\n");
 
    SCIP_CALL( exprsimplifyFlattenPolynomials(blkmem, expr, eps) );
 
    SCIPdebugMessage("polynomials flattened: ");
-   SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL) );
+   SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL, NULL) );
    SCIPdebugPrintf("\n");
 
    if( nlinvars != NULL )
@@ -6352,14 +6352,14 @@ SCIP_RETCODE SCIPexprSimplify(
       SCIP_CALL( exprsimplifySeparateLinearFromPolynomial(blkmem, expr, eps, nvars, nlinvars, linidxs, lincoefs) );
 
       SCIPdebugMessage("separated linear part: ");
-      SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL) );
+      SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL, NULL) );
       SCIPdebugPrintf("\n");
    }
 
    SCIP_CALL( exprsimplifyUnconvertPolynomials(blkmem, expr) );
 
    SCIPdebugMessage("converted back from polynomials: ");
-   SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL) );
+   SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL, NULL) );
    SCIPdebugPrintf("\n");
 
    return SCIP_OKAY;
@@ -6595,7 +6595,8 @@ void SCIPexprPrint(
    SCIP_EXPR*            expr,               /**< expression */
    FILE*                 file,               /**< file for printing, or NULL for stdout */
    const char**          varnames,           /**< names of variables, or NULL for default names */
-   const char**          paramnames          /**< names of parameters, or NULL for default names */
+   const char**          paramnames,         /**< names of parameters, or NULL for default names */
+   SCIP_Real*            paramvals           /**< values of parameters, or NULL for not printing */
 )
 {
    assert( expr != NULL );
@@ -6624,6 +6625,10 @@ void SCIPexprPrint(
          {
             SCIPmessageFPrintInfo(file, "param%d", expr->data.intval );
          }
+         if( paramvals != NULL )
+         {
+            SCIPmessageFPrintInfo(file, "[%g]", paramvals[expr->data.intval] );
+         }
          break;
          
       case SCIP_EXPR_CONST:
@@ -6635,46 +6640,46 @@ void SCIPexprPrint(
 
       case SCIP_EXPR_PLUS:
          SCIPmessageFPrintInfo(file, "(");
-         SCIPexprPrint(expr->children[0], file, varnames, paramnames);
+         SCIPexprPrint(expr->children[0], file, varnames, paramnames, paramvals);
          SCIPmessageFPrintInfo(file, " + ");
-         SCIPexprPrint(expr->children[1], file, varnames, paramnames);
+         SCIPexprPrint(expr->children[1], file, varnames, paramnames, paramvals);
          SCIPmessageFPrintInfo(file, ")");
          break;
          
       case SCIP_EXPR_MINUS:
          SCIPmessageFPrintInfo(file, "(");
-         SCIPexprPrint(expr->children[0], file, varnames, paramnames);
+         SCIPexprPrint(expr->children[0], file, varnames, paramnames, paramvals);
          SCIPmessageFPrintInfo(file, " - ");
-         SCIPexprPrint(expr->children[1], file, varnames, paramnames);
+         SCIPexprPrint(expr->children[1], file, varnames, paramnames, paramvals);
          SCIPmessageFPrintInfo(file, ")");
          break;
          
       case SCIP_EXPR_MUL:
          SCIPmessageFPrintInfo(file, "(");
-         SCIPexprPrint(expr->children[0], file, varnames, paramnames);
+         SCIPexprPrint(expr->children[0], file, varnames, paramnames, paramvals);
          SCIPmessageFPrintInfo(file, " * ");
-         SCIPexprPrint(expr->children[1], file, varnames, paramnames);
+         SCIPexprPrint(expr->children[1], file, varnames, paramnames, paramvals);
          SCIPmessageFPrintInfo(file, ")");
          break;
          
       case SCIP_EXPR_DIV:
          SCIPmessageFPrintInfo(file, "(");
-         SCIPexprPrint(expr->children[0], file, varnames, paramnames);
+         SCIPexprPrint(expr->children[0], file, varnames, paramnames, paramvals);
          SCIPmessageFPrintInfo(file, " / ");
-         SCIPexprPrint(expr->children[1], file, varnames, paramnames);
+         SCIPexprPrint(expr->children[1], file, varnames, paramnames, paramvals);
          SCIPmessageFPrintInfo(file, ")");
          break;
 
       case SCIP_EXPR_REALPOWER:
       case SCIP_EXPR_SIGNPOWER:
          SCIPmessageFPrintInfo(file, "%s(", exprOpTable[expr->op].name);
-         SCIPexprPrint(expr->children[0], file, varnames, paramnames);
+         SCIPexprPrint(expr->children[0], file, varnames, paramnames, paramvals);
          SCIPmessageFPrintInfo(file, ", %g)", expr->data.dbl);
          break;
         
       case SCIP_EXPR_INTPOWER:
          SCIPmessageFPrintInfo(file, "power(");
-         SCIPexprPrint(expr->children[0], file, varnames, paramnames);
+         SCIPexprPrint(expr->children[0], file, varnames, paramnames, paramvals);
          SCIPmessageFPrintInfo(file, ", %d)", expr->data.intval);
          break;
 
@@ -6698,7 +6703,7 @@ void SCIPexprPrint(
          
          for( i = 0; i < expr->nchildren; ++i )
          {
-            SCIPexprPrint(expr->children[i], file, varnames, paramnames);
+            SCIPexprPrint(expr->children[i], file, varnames, paramnames, paramvals);
             if( i + 1 < expr->nchildren )
             {
                SCIPmessageFPrintInfo(file, ", ");
@@ -6718,7 +6723,7 @@ void SCIPexprPrint(
                SCIPmessageFPrintInfo(file, expr->op == SCIP_EXPR_SUM ? "0" : "1");
                break;
             case 1:
-               SCIPexprPrint(expr->children[0], file, varnames, paramnames);
+               SCIPexprPrint(expr->children[0], file, varnames, paramnames, paramvals);
                break;
             default:
             {
@@ -6732,7 +6737,7 @@ void SCIPexprPrint(
                   {
                      SCIPmessageFPrintInfo(file, opstr);
                   }
-                  SCIPexprPrint(expr->children[i], file, varnames, paramnames);
+                  SCIPexprPrint(expr->children[i], file, varnames, paramnames, paramvals);
                }
                SCIPmessageFPrintInfo(file, ")");
             }
@@ -6763,7 +6768,7 @@ void SCIPexprPrint(
          for( i = 0; i < expr->nchildren; ++i )
          {
             SCIPmessageFPrintInfo(file, " %+.20g ", ((SCIP_Real*)expr->data.data)[i]);
-            SCIPexprPrint(expr->children[i], file, varnames, paramnames);
+            SCIPexprPrint(expr->children[i], file, varnames, paramnames, paramvals);
          }
 
          SCIPmessageFPrintInfo(file, ")");
@@ -6789,13 +6794,13 @@ void SCIPexprPrint(
                if( quadraticdata->lincoefs[i] == 0.0 )
                   continue;
                SCIPmessageFPrintInfo(file, " %+.20g ", quadraticdata->lincoefs[i]);
-               SCIPexprPrint(expr->children[i], file, varnames, paramnames);
+               SCIPexprPrint(expr->children[i], file, varnames, paramnames, paramvals);
             }
 
          for( i = 0; i < quadraticdata->nquadelems; ++i )
          {
             SCIPmessageFPrintInfo(file, " %+.20g ", quadraticdata->quadelems[i].coef);
-            SCIPexprPrint(expr->children[quadraticdata->quadelems[i].idx1], file, varnames, paramnames);
+            SCIPexprPrint(expr->children[quadraticdata->quadelems[i].idx1], file, varnames, paramnames, paramvals);
             if( quadraticdata->quadelems[i].idx1 == quadraticdata->quadelems[i].idx2 )
             {
                SCIPmessageFPrintInfo(file, "^2");
@@ -6803,7 +6808,7 @@ void SCIPexprPrint(
             else
             {
                SCIPmessageFPrintInfo(file, " * ");
-               SCIPexprPrint(expr->children[quadraticdata->quadelems[i].idx2], file, varnames, paramnames);
+               SCIPexprPrint(expr->children[quadraticdata->quadelems[i].idx2], file, varnames, paramnames, paramvals);
             }
          }
 
@@ -6837,7 +6842,7 @@ void SCIPexprPrint(
             {
                SCIPmessageFPrintInfo(file, " * ");
 
-               SCIPexprPrint(expr->children[monomialdata->childidxs[j]], file, varnames, paramnames);
+               SCIPexprPrint(expr->children[monomialdata->childidxs[j]], file, varnames, paramnames, paramvals);
                if( monomialdata->exponents[j] < 0.0 )
                {
                   SCIPmessageFPrintInfo(file, "^(%.20g)", monomialdata->exponents[j]);
@@ -7312,7 +7317,7 @@ void SCIPexprtreePrint(
 {
    assert(tree != NULL);
 
-   SCIPexprPrint(tree->root, file, varnames, paramnames);
+   SCIPexprPrint(tree->root, file, varnames, paramnames, tree->params);
 }
 
 /**@} */
