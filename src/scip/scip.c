@@ -19546,7 +19546,7 @@ SCIP_Bool SCIPareSolsEqual(
    SCIP_SOL*             sol2                /**< second primal CIP solution */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPareSolsEqual", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPareSolsEqual", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    return SCIPsolsAreEqual(sol1, sol2, scip->set, scip->stat, scip->origprob, scip->transprob);
 }
@@ -19628,39 +19628,116 @@ SCIP_RETCODE SCIPprintTransSol(
    return SCIP_OKAY;
 }
 
-/** gets number of feasible primal solutions stored in the solution storage */
+/** gets number of feasible primal solutions stored in the solution storage in case the problem is transformed; in case
+ *  if the problem stage is SCIP_STAGE_PROBLEM, it returns the number solution in the original solution candidate
+ *  storage
+ */
 int SCIPgetNSols(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNSols", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNSols", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSols", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   return scip->primal->nsols;
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      return scip->origprimal->nsols;
+      
+   case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_SOLVED:
+   case SCIP_STAGE_FREESOLVE:
+      return scip->primal->nsols;
+      
+   case SCIP_STAGE_INIT:
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_FREETRANS:
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_ERROR;
+   }  /*lint !e788*/
 }
 
-/** gets array of feasible primal solutions stored in the solution storage */
+/** gets array of feasible primal solutions stored in the solution storage in case the problem is transformed; in case
+ *  if the problem stage is in SCIP_STAGE_PROBLEM, it returns the number array of solution candidate stored
+ */
 SCIP_SOL** SCIPgetSols(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSols", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSols", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   return scip->primal->sols;
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      return scip->origprimal->sols;
+      
+   case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_SOLVED:
+   case SCIP_STAGE_FREESOLVE:
+      return scip->primal->sols;
+      
+   case SCIP_STAGE_INIT:
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_FREETRANS:
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_ERROR;
+   }  /*lint !e788*/
 }
 
-/** gets best feasible primal solution found so far, or NULL if no solution has been found */
+/** gets best feasible primal solution found so far if the problem is transformed; in case the the problem is problem
+ *  stage it returns the best solution candidate, or NULL if no solution has been found or the candidate store is empty;
+ */
 SCIP_SOL* SCIPgetBestSol(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetBestSol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
-
-   if( scip->primal != NULL && scip->primal->nsols > 0 )
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetBestSol", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   switch( scip->set->stage )
    {
-      assert(scip->primal->sols != NULL);
-      assert(scip->primal->sols[0] != NULL);
-      return scip->primal->sols[0];
+   case SCIP_STAGE_PROBLEM:
+      assert(scip->origprimal != NULL);
+      if(  scip->origprimal->nsols > 0 )
+      {
+         assert(scip->origprimal->sols != NULL);
+         assert(scip->origprimal->sols[0] != NULL);
+         return scip->origprimal->sols[0];
+      }
+      break;
+      
+   case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_SOLVED:
+   case SCIP_STAGE_FREESOLVE:
+      assert(scip->primal != NULL);
+      if(  scip->primal->nsols > 0 )
+      {
+         assert(scip->primal->sols != NULL);
+         assert(scip->primal->sols[0] != NULL);
+         return scip->primal->sols[0];
+      }
+      break;
+      
+   case SCIP_STAGE_INIT:
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_FREETRANS:
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_ERROR;
    }
+
    return NULL;
 }
 

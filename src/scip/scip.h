@@ -6553,19 +6553,26 @@ SCIP_RETCODE SCIPprintTransSol(
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    );
 
-/** gets number of primal solutions stored in the solution storage */
+/** gets number of feasible primal solutions stored in the solution storage in case the problem is transformed; in case
+ *  if the problem stage is SCIP_STAGE_PROBLEM, it returns the number solution in the original solution candidate
+ *  storage
+ */
 extern
 int SCIPgetNSols(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets array of feasible primal solutions stored in the solution storage */
+/** gets array of feasible primal solutions stored in the solution storage in case the problem is transformed; in case
+ *  if the problem stage is in SCIP_STAGE_PROBLEM, it returns the number array of solution candidate stored
+ */
 extern
 SCIP_SOL** SCIPgetSols(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets best feasible primal solution found so far, or NULL if no solution has been found */
+/** gets best feasible primal solution found so far if the problem is transformed; in case the the problem is problem
+ *  stage it returns the best solution candidate, or NULL if no solution has been found or the candidate store is empty;
+ */
 extern
 SCIP_SOL* SCIPgetBestSol(
    SCIP*                 scip                /**< SCIP data structure */
