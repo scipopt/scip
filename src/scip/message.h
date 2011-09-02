@@ -203,6 +203,22 @@ extern
 void SCIPmesshdlrFreePThreads(
    void
    );
+
+/** gets maximal number of threads for which message handler space has been allocated
+ * returned value is the one given by SCIPmesshdlrCreatePThreads(), or 0 if that hasn't been called
+ */
+extern
+size_t SCIPmessagehdlrGetNThreads(
+   void
+   );
+
+/** gets number of current thread as assigned by message handler hashmap
+ * assignes a new number to the thread if new */
+extern
+size_t SCIPmessagehdlrGetThreadNum(
+   void
+   );
+
 #endif
 
 #ifdef __cplusplus
