@@ -1081,7 +1081,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    /* this condition is only to check if the size of memory which will be allocated is still positiv( so no error occurs
     * ), which will be necessary after this if condition
     */ 
-   if( (intcap) < 0 || (nmyitems) * (intcap) < 0 || (nmyitems) * (intcap) * ((int) sizeof(*optvalues)) < 0 )
+   if( (intcap) < 0 || (nmyitems) * (intcap) < (intcap) || (nmyitems) * (intcap) < (nmyitems) || (nmyitems) * (intcap) * ((int) sizeof(*optvalues)) < (nmyitems) * (intcap) )
    {
       SCIPdebugMessage("Too much memory will be consumed.\n");
 
