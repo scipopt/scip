@@ -39,8 +39,7 @@ using std::vector;
 #include "scip/message.h"
 
 /** CppAD needs to know a fixed upper bound on the number of threads at compile time. */
-#define MAX_NUM_THREADS 48
-#define CPPAD_MAX_NUM_THREADS MAX_NUM_THREADS
+#define CPPAD_MAX_NUM_THREADS 48
 #endif
 
 /** sign of a value (-1 or +1)
@@ -83,7 +82,7 @@ size_t thread_num(void)
  */
 static char init_parallel(void)
 {
-   CppAD::thread_alloc::parallel_setup(MAX_NUM_THREADS, in_parallel, thread_num);
+   CppAD::thread_alloc::parallel_setup(CPPAD_MAX_NUM_THREADS, in_parallel, thread_num);
    CppAD::parallel_ad<double>();
    CppAD::parallel_ad<SCIPInterval>();
 
