@@ -12311,9 +12311,13 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                SCIP_CALL( lpSolve(lp, set, stat,  SCIP_LPALGO_DUALSIMPLEX, FALSE, FALSE, TRUE,
                      fastmip, tightfeastol, fromscratch, keepsol, lperror) );
 
-               /* reinstall old cutoff bound, iteration limit, and lp pricing strategy */
+               /* reinstall old cutoff bound, iteration limit, and lp pricing strategy
+                  we do not use lpSetIterationLimit here, because it sets the solution status to SCIP_LPSOLSTAT_NOTSOLVED,
+                  which leads to reporting an LP error below
+               */
                lp->cutoffbound = tmpcutoff;
-               SCIP_CALL( lpSetIterationLimit(lp, tmpitlim) );
+               SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPITLIM, tmpitlim) );
+               lp->lpiitlim = tmpitlim;
                SCIP_CALL( SCIPsetSetCharParam(set, "lp/pricing", tmppricingchar) );
 
                /* get objective value */

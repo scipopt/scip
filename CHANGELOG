@@ -3,6 +3,7 @@ SCIP version 2.0.3
 
 fixed bugs:
 - fixed bug in heur_twoopt.c: ncolsforsorting was not initialized correctly
+- fixed bug in bugfix in lp.c: resetting the lp iteration limit when performing another simplex iteration to verify "objective limit reached" lead to set the LP solution status to unsolved, which resulted in an LP error
 
 SCIP version 2.0.2
 ===============
