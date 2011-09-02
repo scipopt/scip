@@ -1144,8 +1144,9 @@ void SCIPsolUpdateVarObj(
 /** checks primal CIP solution for feasibility */
 SCIP_RETCODE SCIPsolCheck(
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_Bool             printreason,        /**< should all reasons of violations be printed? */
@@ -1192,7 +1193,7 @@ SCIP_RETCODE SCIPsolCheck(
             
             if( printreason && (SCIPsetIsFeasLT(set, solval, lb) || SCIPsetIsFeasGT(set, solval, ub)) )
             {
-               SCIPmessagePrintInfo("solution value %g violates bounds of <%s>[%g,%g] by %g\n", solval, SCIPvarGetName(var),
+               SCIPmessagePrintInfo(messagehdlr, "solution value %g violates bounds of <%s>[%g,%g] by %g\n", solval, SCIPvarGetName(var),
                   SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), MAX(lb - solval, 0.0) + MAX(solval - ub, 0.0));
             }
          }
@@ -1470,6 +1471,7 @@ SCIP_Bool SCIPsolsAreEqual(
 SCIP_RETCODE SCIPsolPrint(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            prob,               /**< problem data (original or transformed) */
    SCIP_PROB*            transprob,          /**< transformed problem data or NULL (to display priced variables) */
@@ -1491,16 +1493,16 @@ SCIP_RETCODE SCIPsolPrint(
       solval = SCIPsolGetVal(sol, set, stat, prob->fixedvars[v]);
       if( printzeros || !SCIPsetIsZero(set, solval) )
       {
-         SCIPmessageFPrintInfo(file, "%-32s", SCIPvarGetName(prob->fixedvars[v]));
+         SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(prob->fixedvars[v]));
          if( solval == SCIP_UNKNOWN ) /*lint !e777*/
-            SCIPmessageFPrintInfo(file, "              unknown");
+            SCIPmessageFPrintInfo(messagehdlr, file, "              unknown");
          else if( SCIPsetIsInfinity(set, solval) )
-            SCIPmessageFPrintInfo(file, "            +infinity");
+            SCIPmessageFPrintInfo(messagehdlr, file, "            +infinity");
          else if( SCIPsetIsInfinity(set, -solval) )
-            SCIPmessageFPrintInfo(file, "            -infinity");
+            SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
          else
-            SCIPmessageFPrintInfo(file, " % 20.15g", solval);
-         SCIPmessageFPrintInfo(file, " \t(obj:%.15g)\n", SCIPvarGetObj(prob->fixedvars[v]));
+            SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
+         SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetObj(prob->fixedvars[v]));
       }
    }
    for( v = 0; v < prob->nvars; ++v )
@@ -1509,16 +1511,16 @@ SCIP_RETCODE SCIPsolPrint(
       solval = SCIPsolGetVal(sol, set, stat, prob->vars[v]);
       if( printzeros || !SCIPsetIsZero(set, solval) )
       {
-         SCIPmessageFPrintInfo(file, "%-32s", SCIPvarGetName(prob->vars[v]));
+         SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(prob->vars[v]));
          if( solval == SCIP_UNKNOWN ) /*lint !e777*/
-            SCIPmessageFPrintInfo(file, "              unknown");
+            SCIPmessageFPrintInfo(messagehdlr, file, "              unknown");
          else if( SCIPsetIsInfinity(set, solval) )
-            SCIPmessageFPrintInfo(file, "            +infinity");
+            SCIPmessageFPrintInfo(messagehdlr, file, "            +infinity");
          else if( SCIPsetIsInfinity(set, -solval) )
-            SCIPmessageFPrintInfo(file, "            -infinity");
+            SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
          else
-            SCIPmessageFPrintInfo(file, " %20.15g", solval);
-         SCIPmessageFPrintInfo(file, " \t(obj:%.15g)\n", SCIPvarGetObj(prob->vars[v]));
+            SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g", solval);
+         SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetObj(prob->vars[v]));
       }
    }
 
@@ -1535,16 +1537,16 @@ SCIP_RETCODE SCIPsolPrint(
          solval = SCIPsolGetVal(sol, set, stat, transprob->fixedvars[v]);
          if( printzeros || !SCIPsetIsZero(set, solval) )
          {
-            SCIPmessageFPrintInfo(file, "%-32s", SCIPvarGetName(transprob->fixedvars[v]));
+            SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(transprob->fixedvars[v]));
             if( solval == SCIP_UNKNOWN ) /*lint !e777*/
-               SCIPmessageFPrintInfo(file, "              unknown");
+               SCIPmessageFPrintInfo(messagehdlr, file, "              unknown");
             else if( SCIPsetIsInfinity(set, solval) )
-               SCIPmessageFPrintInfo(file, "            +infinity");
+               SCIPmessageFPrintInfo(messagehdlr, file, "            +infinity");
             else if( SCIPsetIsInfinity(set, -solval) )
-               SCIPmessageFPrintInfo(file, "            -infinity");
+               SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
             else
-               SCIPmessageFPrintInfo(file, " % 20.15g", solval);
-            SCIPmessageFPrintInfo(file, " \t(obj:%.15g)\n", SCIPvarGetObj(transprob->fixedvars[v]));
+               SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
+            SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetObj(transprob->fixedvars[v]));
          }
       }
       for( v = 0; v < transprob->nvars; ++v )
@@ -1556,16 +1558,16 @@ SCIP_RETCODE SCIPsolPrint(
          solval = SCIPsolGetVal(sol, set, stat, transprob->vars[v]);
          if( printzeros || !SCIPsetIsZero(set, solval) )
          {
-            SCIPmessageFPrintInfo(file, "%-32s", SCIPvarGetName(transprob->vars[v]));
+            SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(transprob->vars[v]));
             if( solval == SCIP_UNKNOWN ) /*lint !e777*/
-               SCIPmessageFPrintInfo(file, "              unknown");
+               SCIPmessageFPrintInfo(messagehdlr, file, "              unknown");
             else if( SCIPsetIsInfinity(set, solval) )
-               SCIPmessageFPrintInfo(file, "            +infinity");
+               SCIPmessageFPrintInfo(messagehdlr, file, "            +infinity");
             else if( SCIPsetIsInfinity(set, -solval) )
-               SCIPmessageFPrintInfo(file, "            -infinity");
+               SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
             else
-               SCIPmessageFPrintInfo(file, " % 20.15g", solval);
-            SCIPmessageFPrintInfo(file, " \t(obj:%.15g)\n", SCIPvarGetObj(transprob->vars[v]));
+               SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
+            SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetObj(transprob->vars[v]));
          }
       }
    }

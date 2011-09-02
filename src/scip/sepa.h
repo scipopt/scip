@@ -50,6 +50,7 @@ extern
 SCIP_RETCODE SCIPsepaCreate(
    SCIP_SEPA**           sepa,               /**< pointer to separator data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    const char*           name,               /**< name of separator */
    const char*           desc,               /**< description of separator */

@@ -106,8 +106,8 @@ SCIP_RETCODE readSol(
       {
          if( !unknownvariablemessage )
          {
-            SCIPwarningMessage("unknown variable <%s> in line %d of solution file <%s>\n", varname, lineno, filename);
-            SCIPwarningMessage("  (further unknown variables are ignored)\n");
+            SCIPwarningMessage(scip, "unknown variable <%s> in line %d of solution file <%s>\n", varname, lineno, filename);
+            SCIPwarningMessage(scip, "  (further unknown variables are ignored)\n");
             unknownvariablemessage = TRUE;
          }
          continue;

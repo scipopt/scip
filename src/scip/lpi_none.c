@@ -24,7 +24,7 @@
 #include <assert.h>
 
 #include "scip/lpi.h"
-#include "scip/message.h"
+#include "scip/pub_message.h"
 
 #define LPINAME          "NONE"              /**< name of the LPI interface */
 #define LPIINFINITY       1e20               /**< infinity value */
@@ -106,7 +106,8 @@ void* SCIPlpiGetSolverPointer(
 SCIP_RETCODE SCIPlpiCreate(
    SCIP_LPI**            lpi,                /**< pointer to an LP interface structure */
    const char*           name,               /**< problem name */
-   SCIP_OBJSEN           objsen              /**< objective sense */
+   SCIP_OBJSEN           objsen,             /**< objective sense */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler to use for printing messages, or NULL */
    )
 {  /*lint --e{715}*/
    assert(lpi != NULL);

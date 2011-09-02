@@ -1796,36 +1796,38 @@ SCIP_Bool SCIPprobAllColsInLP(
 /** displays current pseudo solution */
 void SCIPprobPrintPseudoSol(
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    )
 {
    SCIP_VAR* var;
    SCIP_Real solval;
    int v;
-   
+
    for( v = 0; v < prob->nvars; ++v )
    {
       var = prob->vars[v];
       assert(var != NULL);
       solval = SCIPvarGetPseudoSol(var);
       if( !SCIPsetIsZero(set, solval) )
-         SCIPmessagePrintInfo(" <%s>=%.15g", SCIPvarGetName(var), solval);
+         SCIPmessagePrintInfo(messagehdlr, " <%s>=%.15g", SCIPvarGetName(var), solval);
    }
-   SCIPmessagePrintInfo("\n");
+   SCIPmessagePrintInfo(messagehdlr, "\n");
 }
 
 /** outputs problem statistics */
 void SCIPprobPrintStatistics(
    SCIP_PROB*            prob,               /**< problem data */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
    assert(prob != NULL);
 
-   SCIPmessageFPrintInfo(file, "  Problem name     : %s\n", prob->name);
-   SCIPmessageFPrintInfo(file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
+   SCIPmessageFPrintInfo(messagehdlr, file, "  Problem name     : %s\n", prob->name);
+   SCIPmessageFPrintInfo(messagehdlr, file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
       prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars);
-   SCIPmessageFPrintInfo(file, "  Constraints      : %d initial, %d maximal\n", prob->startnconss, prob->maxnconss);
+   SCIPmessageFPrintInfo(messagehdlr, file, "  Constraints      : %d initial, %d maximal\n", prob->startnconss, prob->maxnconss);
    if( ! prob->transformed )
-      SCIPmessageFPrintInfo(file, "  Objective sense  : %s\n", prob->objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");
+      SCIPmessageFPrintInfo(messagehdlr, file, "  Objective sense  : %s\n", prob->objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");
 }

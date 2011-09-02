@@ -24,8 +24,8 @@
 #include "qsopt.h"
 #include "scip/bitencode.h"
 #include "scip/lpi.h"
-#include "scip/message.h"
-#include "scip/misc.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
 #include <string.h>
 
 typedef SCIP_DUALPACKET COLPACKET;           /* each column needs two bits of information (basic/on_lower/on_upper) */
@@ -52,6 +52,7 @@ struct SCIP_LPi
    double* itab;    /**< array of length tbsz */
    char* ibas;      /**< array of length tbsz */
    int pricing;     /**< SCIP pricing option */
+   SCIP_MESSAGEHDLR*     messagehdlr;        /**< messagehdlr handler to printing messages, or NULL */
 };
 
 /** solver name */
@@ -370,7 +371,8 @@ void* SCIPlpiGetSolverPointer(
 SCIP_RETCODE SCIPlpiCreate(
    SCIP_LPI**            lpi,                /**< pointer to an LP interface structure */
    const char*           name,               /**< problem name */
-   SCIP_OBJSEN           objsen              /**< objective sense */
+   SCIP_OBJSEN           objsen,             /**< objective sense */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler to use for printing messages, or NULL */
    )
 {
    /* QSopt only works with doubles as floating points and bool as integers */
@@ -405,6 +407,8 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->tbsz = 1024;
    SCIP_ALLOC( BMSallocMemoryArray(&((*lpi)->itab), 1024) );
    SCIP_ALLOC( BMSallocMemoryArray(&((*lpi)->ibas), 1024) );
+
+   (*lpi)->messagehdlr = messagehdlr;
 
    return SCIP_OKAY;
 }
@@ -2861,7 +2865,7 @@ SCIP_RETCODE SCIPlpiClearState(
    assert(lpi != NULL);
 
    /**@todo implement SCIPlpiClearState() for QSopt */
-   SCIPwarningMessage("QSopt interface does not implement SCIPlpiClearState()\n");
+   SCIPwarningMessage(lpi->messagehdlr, "QSopt interface does not implement SCIPlpiClearState()\n");
 
    return SCIP_OKAY;
 }

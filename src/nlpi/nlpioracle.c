@@ -16,16 +16,17 @@
 /**@file    nlpioracle.c
  * @brief   implementation of NLPI oracle interface
  * @author  Stefan Vigerske
- * 
+ *
  * @todo jacobi evaluation should be sparse
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
 #include "nlpi/nlpioracle.h"
 #include "nlpi/pub_expr.h"
 #include "nlpi/exprinterpret.h"
-#include "scip/pub_misc.h"
 
 #include <string.h> /* for strlen */
 
@@ -896,7 +897,6 @@ SCIP_RETCODE evalFunctionGradient(
       }
 
       SCIPdebugMessage("eval gradient of ");
-      SCIPdebug( SCIPexprtreePrint(cons->exprtree, NULL, NULL, NULL) );
       SCIPdebug( if( isnewx ) {printf("\nx ="); for( i = 0; i < nvars; ++i) printf(" %g", xx[i]); /*lint !e613*/ printf("\n");} )
 
       SCIP_CALL( SCIPexprintGrad(oracle->exprinterpreter, cons->exprtree, xx, isnewx, &nlval, g) );  /*lint !e644*/
@@ -1213,10 +1213,11 @@ void printName(
    }
 }
 
-/** prints a function */ 
+/** prints a function */
 static
 SCIP_RETCODE printFunction(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< file to print to, has to be not NULL */
    SCIP_NLPIORACLECONS*  cons,               /**< constraint which function to print */
    SCIP_Bool             longvarnames,       /**< whether variable names need to be shorten to 64 characters */
@@ -1236,20 +1237,20 @@ SCIP_RETCODE printFunction(
    for( i = 0; i < cons->nlinidxs; ++i )
    {
       printName(namebuf, oracle->varnames != NULL ? oracle->varnames[cons->linidxs[i]] : NULL, cons->linidxs[i], 'x', NULL, longvarnames);
-      SCIPmessageFPrintInfo(file, "%+.20g*%s", cons->lincoefs[i], namebuf);
+      SCIPmessageFPrintInfo(messagehdlr, file, "%+.20g*%s", cons->lincoefs[i], namebuf);
       if( i % 10 == 9 )
-         SCIPmessageFPrintInfo(file, "\n");
+         SCIPmessageFPrintInfo(messagehdlr, file, "\n");
    }
 
    j = 0;
    for( i = 0; i < cons->nquadelems; ++i )
    {
       printName(namebuf, oracle->varnames != NULL ? oracle->varnames[cons->quadelems[i].idx1] : NULL, cons->quadelems[i].idx1, 'x', NULL, longvarnames);
-      SCIPmessageFPrintInfo(file, "%+.20g*%s", cons->quadelems[j].coef, namebuf);
+      SCIPmessageFPrintInfo(messagehdlr, file, "%+.20g*%s", cons->quadelems[j].coef, namebuf);
       printName(namebuf, oracle->varnames != NULL ? oracle->varnames[cons->quadelems[i].idx2] : NULL, cons->quadelems[i].idx2, 'x', NULL, longvarnames);
-      SCIPmessageFPrintInfo(file, "*%s", namebuf);
+      SCIPmessageFPrintInfo(messagehdlr, file, "*%s", namebuf);
       if( i % 10 == 9 )
-         SCIPmessageFPrintInfo(file, "\n");
+         SCIPmessageFPrintInfo(messagehdlr, file, "\n");
    }
 
    if( cons->exprtree != NULL )
@@ -1265,8 +1266,8 @@ SCIP_RETCODE printFunction(
          printName(varnames[i], oracle->varnames != NULL ? oracle->varnames[cons->exprvaridxs[i]] : NULL, cons->exprvaridxs[i], 'x', NULL, longvarnames);
       }
 
-      SCIPmessageFPrintInfo(file, " +");
-      SCIPexprtreePrint(cons->exprtree, file, (const char**)varnames, NULL);
+      SCIPmessageFPrintInfo(messagehdlr, file, " +");
+      SCIPexprtreePrint(cons->exprtree, messagehdlr, file, (const char**)varnames, NULL);
 
       for( i = 0; i < SCIPexprtreeGetNVars(cons->exprtree); ++i )
       {
@@ -2688,7 +2689,6 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
             }
 
             SCIPdebugMessage("eval gradient of ");
-            SCIPdebug( SCIPexprtreePrint(cons->exprtree, NULL, NULL, NULL) );
             SCIPdebug( if( isnewx ) {printf("\nx ="); for( l = 0; l < nvars; ++l) printf(" %g", xx[l]); /*lint !e613*/ printf("\n");} )
 
             SCIP_CALL( SCIPexprintGrad(oracle->exprinterpreter, cons->exprtree, xx, isnewx, &nlval, grad) );  /*lint !e644*/
@@ -2725,7 +2725,6 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
          else if( convals != NULL )
          {
             SCIPdebugMessage("eval value of constant ");
-            SCIPdebug( SCIPexprtreePrint(cons->exprtree, NULL, NULL, NULL) );
 
             SCIP_CALL( SCIPexprintEval(oracle->exprinterpreter, cons->exprtree, NULL, &convals[i]) );
          }
@@ -2894,6 +2893,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
 /** prints the problem to a file. */
 SCIP_RETCODE SCIPnlpiOraclePrintProblem(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< file to print to, or NULL for standard output */
    )
 {  /*lint --e{777} */
@@ -2908,48 +2908,48 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblem(
    if( file == NULL )
       file = stdout;
 
-   SCIPmessageFPrintInfo(file, "NLPI Oracle %s: %d variables and %d constraints\n", oracle->name ? oracle->name : "", oracle->nvars, oracle->nconss);
+   SCIPmessageFPrintInfo(messagehdlr, file, "NLPI Oracle %s: %d variables and %d constraints\n", oracle->name ? oracle->name : "", oracle->nvars, oracle->nconss);
    for( i = 0; i < oracle->nvars; ++i )
    {
       if( oracle->varnames != NULL && oracle->varnames[i] != NULL )
-         SCIPmessageFPrintInfo(file, "%10s", oracle->varnames[i]);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%10s", oracle->varnames[i]);
       else
-         SCIPmessageFPrintInfo(file, "x%09d", i);
-      SCIPmessageFPrintInfo(file, ": [%8g, %8g]", oracle->varlbs[i], oracle->varubs[i]);
+         SCIPmessageFPrintInfo(messagehdlr, file, "x%09d", i);
+      SCIPmessageFPrintInfo(messagehdlr, file, ": [%8g, %8g]", oracle->varlbs[i], oracle->varubs[i]);
       if( oracle->vardegreesuptodate )
-         SCIPmessageFPrintInfo(file, "\t degree: %d", oracle->vardegrees[i]);
-      SCIPmessageFPrintInfo(file, "\n");
+         SCIPmessageFPrintInfo(messagehdlr, file, "\t degree: %d", oracle->vardegrees[i]);
+      SCIPmessageFPrintInfo(messagehdlr, file, "\n");
    }
 
-   SCIPmessageFPrintInfo(file, "objective: ");
-   SCIP_CALL( printFunction(oracle, file, oracle->objective, FALSE, FALSE) );
+   SCIPmessageFPrintInfo(messagehdlr, file, "objective: ");
+   SCIP_CALL( printFunction(oracle, messagehdlr, file, oracle->objective, FALSE, FALSE) );
    if( oracle->objective->lhs != 0.0 )
-      SCIPmessageFPrintInfo(file, "%+.20g", oracle->objective->lhs);
-   SCIPmessageFPrintInfo(file, "\n");
+      SCIPmessageFPrintInfo(messagehdlr, file, "%+.20g", oracle->objective->lhs);
+   SCIPmessageFPrintInfo(messagehdlr, file, "\n");
 
    for( i = 0; i < oracle->nconss; ++i )
    {
       if( oracle->conss[i]->name != NULL )
-         SCIPmessageFPrintInfo(file, "%10s", oracle->conss[i]->name);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%10s", oracle->conss[i]->name);
       else
-         SCIPmessageFPrintInfo(file, "con%07d", i);
+         SCIPmessageFPrintInfo(messagehdlr, file, "con%07d", i);
 
       lhs = oracle->conss[i]->lhs;
       rhs = oracle->conss[i]->rhs;
-      SCIPmessageFPrintInfo(file, ": ");
+      SCIPmessageFPrintInfo(messagehdlr, file, ": ");
       if( lhs > -oracle->infinity && rhs < oracle->infinity && lhs != rhs )
-         SCIPmessageFPrintInfo(file, "%.20g <= ", lhs);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%.20g <= ", lhs);
 
-      SCIP_CALL( printFunction(oracle, file, oracle->conss[i], FALSE, FALSE) );
+      SCIP_CALL( printFunction(oracle, messagehdlr, file, oracle->conss[i], FALSE, FALSE) );
 
       if( lhs == rhs )
-         SCIPmessageFPrintInfo(file, " = %.20g", rhs);
+         SCIPmessageFPrintInfo(messagehdlr, file, " = %.20g", rhs);
       else if( rhs <  oracle->infinity )
-         SCIPmessageFPrintInfo(file, " <= %.20g", rhs);
+         SCIPmessageFPrintInfo(messagehdlr, file, " <= %.20g", rhs);
       else if( lhs > -oracle->infinity )
-         SCIPmessageFPrintInfo(file, " >= %.20g", lhs);
+         SCIPmessageFPrintInfo(messagehdlr, file, " >= %.20g", lhs);
 
-      SCIPmessageFPrintInfo(file, "\n");
+      SCIPmessageFPrintInfo(messagehdlr, file, "\n");
    }
 
    return SCIP_OKAY;
@@ -2963,6 +2963,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblem(
 SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    SCIP_Real*            initval,            /**< starting point values for variables or NULL */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< file to print to, or NULL for standard output */
    )
 {  /*lint --e{777} */
@@ -2999,18 +3000,18 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
          break;
       }
 
-   SCIPmessageFPrintInfo(file, "$offlisting\n");
-   SCIPmessageFPrintInfo(file, "$offdigit\n");
-   SCIPmessageFPrintInfo(file, "* NLPI Oracle Problem %s\n", oracle->name ? oracle->name : "");
-   SCIPmessageFPrintInfo(file, "Variables ");
+   SCIPmessageFPrintInfo(messagehdlr, file, "$offlisting\n");
+   SCIPmessageFPrintInfo(messagehdlr, file, "$offdigit\n");
+   SCIPmessageFPrintInfo(messagehdlr, file, "* NLPI Oracle Problem %s\n", oracle->name ? oracle->name : "");
+   SCIPmessageFPrintInfo(messagehdlr, file, "Variables ");
    for( i = 0; i < oracle->nvars; ++i )
    {
       printName(namebuf, oracle->varnames != NULL ? oracle->varnames[i] : NULL, i, 'x', NULL, havelongvarnames);
-      SCIPmessageFPrintInfo(file, "%s, ", namebuf);
+      SCIPmessageFPrintInfo(messagehdlr, file, "%s, ", namebuf);
       if( i % 10 == 9 )
-         SCIPmessageFPrintInfo(file, "\n");
+         SCIPmessageFPrintInfo(messagehdlr, file, "\n");
    }
-   SCIPmessageFPrintInfo(file, "NLPIORACLEOBJVAR;\n\n");
+   SCIPmessageFPrintInfo(messagehdlr, file, "NLPIORACLEOBJVAR;\n\n");
    for( i = 0; i < oracle->nvars; ++i )
    {
       char* name;
@@ -3018,52 +3019,52 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
       if( oracle->varlbs[i] == oracle->varubs[i] )
       {
          printName(namebuf, name, i, 'x', NULL, havelongvarnames);
-         SCIPmessageFPrintInfo(file, "%s.fx = %.20g;\t", namebuf, oracle->varlbs[i]);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%s.fx = %.20g;\t", namebuf, oracle->varlbs[i]);
       }
       else
       {
          if( oracle->varlbs[i] > -oracle->infinity )
          {
             printName(namebuf, name, i, 'x', NULL, havelongvarnames);
-            SCIPmessageFPrintInfo(file, "%s.lo = %.20g;\t", namebuf, oracle->varlbs[i]);
+            SCIPmessageFPrintInfo(messagehdlr, file, "%s.lo = %.20g;\t", namebuf, oracle->varlbs[i]);
          }
          if( oracle->varubs[i] <  oracle->infinity )
          {
             printName(namebuf, name, i, 'x', NULL, havelongvarnames);
-            SCIPmessageFPrintInfo(file, "%s.up = %.20g;\t", namebuf, oracle->varubs[i]);
+            SCIPmessageFPrintInfo(messagehdlr, file, "%s.up = %.20g;\t", namebuf, oracle->varubs[i]);
          }
       }
       if( initval != NULL )
       {
          printName(namebuf, name, i, 'x', NULL, havelongvarnames);
-         SCIPmessageFPrintInfo(file, "%s.l = %.20g;\t", namebuf, initval[i]);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%s.l = %.20g;\t", namebuf, initval[i]);
       }
-      SCIPmessageFPrintInfo(file, "\n");
+      SCIPmessageFPrintInfo(messagehdlr, file, "\n");
    }
-   SCIPmessageFPrintInfo(file, "\n");
+   SCIPmessageFPrintInfo(messagehdlr, file, "\n");
 
-   SCIPmessageFPrintInfo(file, "Equations ");
+   SCIPmessageFPrintInfo(messagehdlr, file, "Equations ");
    for( i = 0; i < oracle->nconss; ++i )
    {
       printName(namebuf, oracle->conss[i]->name, i, 'e', NULL, havelongequnames);
-      SCIPmessageFPrintInfo(file, "%s, ", namebuf);
+      SCIPmessageFPrintInfo(messagehdlr, file, "%s, ", namebuf);
 
       if( oracle->conss[i]->lhs > -oracle->infinity && oracle->conss[i]->rhs < oracle->infinity && oracle->conss[i]->lhs != oracle->conss[i]->rhs )
       {
          /* ranged row: add second constraint */
          printName(namebuf, oracle->conss[i]->name, i, 'e', "_RNG", havelongequnames);
-         SCIPmessageFPrintInfo(file, "%s, ", namebuf);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%s, ", namebuf);
       }
       if( i % 10 == 9 )
-         SCIPmessageFPrintInfo(file, "\n");
+         SCIPmessageFPrintInfo(messagehdlr, file, "\n");
    }
-   SCIPmessageFPrintInfo(file, "NLPIORACLEOBJ;\n\n");
+   SCIPmessageFPrintInfo(messagehdlr, file, "NLPIORACLEOBJ;\n\n");
 
-   SCIPmessageFPrintInfo(file, "NLPIORACLEOBJ.. NLPIORACLEOBJVAR =E= ");
-   SCIP_CALL( printFunction(oracle, file, oracle->objective, havelongvarnames, havelongequnames) );
+   SCIPmessageFPrintInfo(messagehdlr, file, "NLPIORACLEOBJ.. NLPIORACLEOBJVAR =E= ");
+   SCIP_CALL( printFunction(oracle, messagehdlr, file, oracle->objective, havelongvarnames, havelongequnames) );
    if( oracle->objective->lhs != 0.0 )
-      SCIPmessageFPrintInfo(file, "%+.20g", oracle->objective->lhs);
-   SCIPmessageFPrintInfo(file, ";\n");
+      SCIPmessageFPrintInfo(messagehdlr, file, "%+.20g", oracle->objective->lhs);
+   SCIPmessageFPrintInfo(messagehdlr, file, ";\n");
 
    for( i = 0; i < oracle->nconss; ++i )
    {
@@ -3071,31 +3072,31 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
       SCIP_Real rhs;
 
       printName(namebuf, oracle->conss[i]->name, i, 'e', NULL, havelongequnames);
-      SCIPmessageFPrintInfo(file, "%s.. ", namebuf);
+      SCIPmessageFPrintInfo(messagehdlr, file, "%s.. ", namebuf);
 
-      SCIP_CALL( printFunction(oracle, file, oracle->conss[i], havelongvarnames, havelongequnames) );
+      SCIP_CALL( printFunction(oracle, messagehdlr, file, oracle->conss[i], havelongvarnames, havelongequnames) );
 
       lhs = oracle->conss[i]->lhs;
       rhs = oracle->conss[i]->rhs;
 
       if( lhs == rhs )
-         SCIPmessageFPrintInfo(file, " =E= %.20g", rhs);
+         SCIPmessageFPrintInfo(messagehdlr, file, " =E= %.20g", rhs);
       else if( rhs <  oracle->infinity )
-         SCIPmessageFPrintInfo(file, " =L= %.20g", rhs);
+         SCIPmessageFPrintInfo(messagehdlr, file, " =L= %.20g", rhs);
       else if( lhs > -oracle->infinity )
-         SCIPmessageFPrintInfo(file, " =G= %.20g", lhs);
+         SCIPmessageFPrintInfo(messagehdlr, file, " =G= %.20g", lhs);
       else
-         SCIPmessageFPrintInfo(file, " =N= 0");
-      SCIPmessageFPrintInfo(file, ";\n");
+         SCIPmessageFPrintInfo(messagehdlr, file, " =N= 0");
+      SCIPmessageFPrintInfo(messagehdlr, file, ";\n");
 
       if( lhs > -oracle->infinity && rhs < oracle->infinity && lhs != rhs )
       {
          printName(namebuf, oracle->conss[i]->name, i, 'e', "_RNG", havelongequnames);
-         SCIPmessageFPrintInfo(file, "%s.. ", namebuf);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%s.. ", namebuf);
 
-         SCIP_CALL( printFunction(oracle, file, oracle->conss[i], havelongvarnames, havelongequnames) );
+         SCIP_CALL( printFunction(oracle, messagehdlr, file, oracle->conss[i], havelongvarnames, havelongequnames) );
 
-         SCIPmessageFPrintInfo(file, " =G= %.20g;\n", lhs);
+         SCIPmessageFPrintInfo(messagehdlr, file, " =G= %.20g;\n", lhs);
       }
 
       if( nllevel <= 0 && oracle->conss[i]->nquadelems > 0 )
@@ -3108,10 +3109,10 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
 
    problemname = oracle->name ? oracle->name : "m";
 
-   SCIPmessageFPrintInfo(file, "Model %s / all /;\n", problemname);
-   SCIPmessageFPrintInfo(file, "option limrow = 0;\n");
-   SCIPmessageFPrintInfo(file, "option limcol = 0;\n");
-   SCIPmessageFPrintInfo(file, "Solve %s minimizing NLPIORACLEOBJVAR using %s;\n", problemname, nllevelname[nllevel]);
+   SCIPmessageFPrintInfo(messagehdlr, file, "Model %s / all /;\n", problemname);
+   SCIPmessageFPrintInfo(messagehdlr, file, "option limrow = 0;\n");
+   SCIPmessageFPrintInfo(messagehdlr, file, "option limcol = 0;\n");
+   SCIPmessageFPrintInfo(messagehdlr, file, "Solve %s minimizing NLPIORACLEOBJVAR using %s;\n", problemname, nllevelname[nllevel]);
 
    return SCIP_OKAY;
 }

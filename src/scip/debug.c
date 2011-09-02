@@ -271,7 +271,7 @@ SCIP_RETCODE getSolutionValue(
 
    if( *val < SCIPvarGetLbGlobal(var) - 1e-06 || *val > SCIPvarGetUbGlobal(var) + 1e-06 )
    {
-      SCIPwarningMessage("invalid solution value %.15g for variable <%s>[%.15g,%.15g]\n",
+      SCIPmessagePrintWarning(messagehdlr, "invalid solution value %.15g for variable <%s>[%.15g,%.15g]\n",
          *val, SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
    }
 
@@ -1175,12 +1175,12 @@ SCIP_RETCODE SCIPdebugCheckBInvRow(
       if( k == r && !SCIPisFeasEQ(scip, vecval, 1.0) )
       {
          /* we expected a 1.0 and found something different */
-         SCIPwarningMessage("checked SCIPgetLPBInvRow() found value <%g> expected 1.0\n", vecval);
+         SCIPmessagePrintWarning(messagehdlr, "checked SCIPgetLPBInvRow() found value <%g> expected 1.0\n", vecval);
       }
       else if( k != r && !SCIPisFeasZero(scip, vecval) )
       {
          /* we expected a 0.0 and found something different */
-         SCIPwarningMessage("checked SCIPgetLPBInvRow() found value <%g> expected 0.0\n", vecval);
+         SCIPmessagePrintWarning(messagehdlr, "checked SCIPgetLPBInvRow() found value <%g> expected 0.0\n", vecval);
       }
    }
 

@@ -833,7 +833,7 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
    if( SCIPgetBoolParam(scip, "constraints/and/linearize", &paramvalue) == SCIP_OKAY )
       if( paramvalue )
       {
-	 SCIPwarningMessage("Gate-presolving is the counterpart of linearizing all and constraints, so enabling both presolving steps at ones does not make sense.\n");
+	 SCIPwarningMessage(scip, "Gate-presolving is the counterpart of linearizing all and constraints, so enabling both presolving steps at ones does not make sense.\n");
       }
 
    *result = SCIP_DIDNOTFIND;

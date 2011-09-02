@@ -955,7 +955,7 @@ SCIP_RETCODE printIndicatorCons(
          {
             SCIP_CALL( SCIPgetRealParam(scip, "reading/gmsreader/bigmdefault", &coef) );
 
-            SCIPwarningMessage("do not have upper bound on slack variable <%s> in indicator constraint <%s>, will use M = %g.\n",
+            SCIPwarningMessage(scip, "do not have upper bound on slack variable <%s> in indicator constraint <%s>, will use M = %g.\n",
                SCIPvarGetName(s), rowname, coef);
          }
 
@@ -1196,7 +1196,7 @@ SCIP_RETCODE printExpr(
 
       case SCIP_EXPR_PARAM:
       {
-         SCIPwarningMessage("parameterized expression in GAMS writer. GAMS file will not compile.\n");
+         SCIPwarningMessage(scip, "parameterized expression in GAMS writer. GAMS file will not compile.\n");
 
          (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "param%d", SCIPexprGetOpIndex(expr));
          appendLineWithIndent(scip, file, linebuffer, linecnt, buffer);
@@ -1717,7 +1717,7 @@ SCIP_RETCODE checkVarnames(
             }
             else
             {
-               SCIPwarningMessage("there is a variable name with symbol '%c', not allowed in GAMS format; use 'write genproblem'/'write gentransproblem', or set 'reading/gmsreader/replaceforbiddenchars' to TRUE and risk duplicate variable names.\n", *badchar);
+               SCIPwarningMessage(scip, "there is a variable name with symbol '%c', not allowed in GAMS format; use 'write genproblem'/'write gentransproblem', or set 'reading/gmsreader/replaceforbiddenchars' to TRUE and risk duplicate variable names.\n", *badchar);
             }
 
             break;
@@ -1733,7 +1733,7 @@ SCIP_RETCODE checkVarnames(
 
       if( strlen(SCIPvarGetName(var)) > GMS_MAX_NAMELEN )
       {
-         SCIPwarningMessage("there is a variable name which has to be cut down to %d characters; GAMS model might be corrupted.\n", 
+         SCIPwarningMessage(scip, "there is a variable name which has to be cut down to %d characters; GAMS model might be corrupted.\n", 
             GMS_MAX_NAMELEN - 1);
          break;
       }
@@ -1779,7 +1779,7 @@ SCIP_RETCODE checkConsnames(
             }
             else
             {
-               SCIPwarningMessage("there is a constraint name with symbol '%c', not allowed in GAMS format; use 'write genproblem'/'write gentransproblem', or set 'reading/gmsreader/replaceforbiddenchars' to TRUE and risk duplicate variable names.\n", *badchar);
+               SCIPwarningMessage(scip, "there is a constraint name with symbol '%c', not allowed in GAMS format; use 'write genproblem'/'write gentransproblem', or set 'reading/gmsreader/replaceforbiddenchars' to TRUE and risk duplicate variable names.\n", *badchar);
             }
 
             break;
@@ -1809,20 +1809,20 @@ SCIP_RETCODE checkConsnames(
 
          if( SCIPisEQ(scip, lhs, rhs) && strlen(SCIPconsGetName(conss[c])) > GMS_MAX_NAMELEN )
          {
-            SCIPwarningMessage("there is a constraint name which has to be cut down to %d characters;\n",
+            SCIPwarningMessage(scip, "there is a constraint name which has to be cut down to %d characters;\n",
                GMS_MAX_NAMELEN - 1);
             break;
          }
          else if( !SCIPisEQ(scip, lhs, rhs) && strlen(SCIPconsGetName(conss[c])) > GMS_MAX_NAMELEN - 4 )
          {
-            SCIPwarningMessage("there is a constraint name which has to be cut down to %d characters;\n",
+            SCIPwarningMessage(scip, "there is a constraint name which has to be cut down to %d characters;\n",
                GMS_MAX_NAMELEN - 5);
             break;
          }
       }
       else if( strlen(SCIPconsGetName(conss[c])) > GMS_MAX_NAMELEN )
       {
-         SCIPwarningMessage("there is a constraint name which has to be cut down to %d characters;\n",
+         SCIPwarningMessage(scip, "there is a constraint name which has to be cut down to %d characters;\n",
             GMS_MAX_NAMELEN - 1);
          break;
       }
@@ -2235,7 +2235,7 @@ SCIP_RETCODE SCIPwriteGms(
       }
       else
       {
-         SCIPwarningMessage("Constraint type <%s> not supported. Skip writing constraint <%s>.\n", conshdlrname, consname);
+         SCIPwarningMessage(scip, "Constraint type <%s> not supported. Skip writing constraint <%s>.\n", conshdlrname, consname);
          if( c == nconss - 1 )
             appendLine(scip, file, linebuffer, &linecnt, ";");
       }
@@ -2430,7 +2430,7 @@ SCIP_RETCODE SCIPwriteGms(
       }
       else
       {
-         SCIPwarningMessage("constraint handler <%s> cannot print requested format\n", conshdlrname );
+         SCIPwarningMessage(scip, "constraint handler <%s> cannot print requested format\n", conshdlrname );
          SCIPinfoMessage(scip, file, "* ");
          SCIP_CALL( SCIPprintCons(scip, cons, file) );
          SCIPinfoMessage(scip, file, "\n");

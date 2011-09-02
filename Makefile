@@ -563,6 +563,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_vbounds.o \
 			scip/heur_veclendiving.o \
 			scip/heur_zirounding.o \
+			scip/message_default.o \
 			scip/nodesel_bfs.o \
 			scip/nodesel_dfs.o \
 			scip/nodesel_estimate.o \

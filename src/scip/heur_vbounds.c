@@ -571,7 +571,7 @@ SCIP_RETCODE applyVbounds(
          retstat = SCIPpresolve(subscip);
          if( retstat != SCIP_OKAY )
          {
-            SCIPwarningMessage("Error while presolving subMIP in vbounds heuristic; sub-SCIP terminated with code <%d>\n", retstat);
+            SCIPwarningMessage(scip, "Error while presolving subMIP in vbounds heuristic; sub-SCIP terminated with code <%d>\n", retstat);
          }
       }
 #else
@@ -597,7 +597,7 @@ SCIP_RETCODE applyVbounds(
             retstat = SCIPsolve(subscip);
             if( retstat != SCIP_OKAY )
             {
-               SCIPwarningMessage("Error while solving subMIP in vbounds heuristic; sub-SCIP terminated with code <%d>\n",retstat);
+               SCIPwarningMessage(scip, "Error while solving subMIP in vbounds heuristic; sub-SCIP terminated with code <%d>\n",retstat);
             }
          }
 #else

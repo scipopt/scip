@@ -173,7 +173,7 @@ SCIP_RETCODE SCIPnodepqBound(
 
 
 /*
- * node selector methods 
+ * node selector methods
  */
 
 /** copies the given node selector to a new scip */
@@ -188,6 +188,7 @@ extern
 SCIP_RETCODE SCIPnodeselCreate(
    SCIP_NODESEL**        nodesel,            /**< pointer to store node selector */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    const char*           name,               /**< name of node selector */
    const char*           desc,               /**< description of node selector */

@@ -330,7 +330,7 @@ void checkSolutionOrig(
    /* check return code manually */
    if( retcode != SCIP_OKAY )
    {
-      SCIPprintError(retcode, stderr);
+      SCIPprintError(retcode);
       SCIPABORT();
    }
 
@@ -1658,7 +1658,7 @@ SCIP_DECL_CONSCHECK(consCheckCountsols)
    {
       if( !conshdlrdata->warning )
       {
-         SCIPwarningMessage("a solution comes in over <SCIP_DECL_CONSCHECK(consCheckCountsols)>; currently these solutions are ignored\n");
+         SCIPwarningMessage(scip, "a solution comes in over <SCIP_DECL_CONSCHECK(consCheckCountsols)>; currently these solutions are ignored\n");
          conshdlrdata->warning = TRUE;
       }
 
@@ -2469,7 +2469,7 @@ SCIP_DECL_DISPOUTPUT(dispOutputSols)
    }
    else
    {
-      SCIPdispLongint(file, sols, DISP_SOLS_WIDTH);
+      SCIPdispLongint(SCIPgetMessagehdlr(scip), file, sols, DISP_SOLS_WIDTH);
    }
 
    return SCIP_OKAY;
@@ -2494,7 +2494,7 @@ SCIP_DECL_DISPOUTPUT(dispOutputFeasSubtrees)
    assert( SCIPconshdlrGetNConss(conshdlr) == 0 );
 #endif
 
-   SCIPdispLongint(file, SCIPgetNCountedFeasSubtrees(scip), DISP_CUTS_WIDTH);
+   SCIPdispLongint(SCIPgetMessagehdlr(scip), file, SCIPgetNCountedFeasSubtrees(scip), DISP_CUTS_WIDTH);
 
    return SCIP_OKAY;
 }

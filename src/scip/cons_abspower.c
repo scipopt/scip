@@ -5492,7 +5492,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpAbspower)
       SCIP_CALL( registerLargeLPValueVariableForBranching(scip, conss, nconss, &brvar) );
       if( brvar == NULL )
       {
-         SCIPwarningMessage("Could not find any branching variable candidate. Cutting off node. Max viol = %g.\n", SCIPconsGetData(maxviolcons)->lhsviol+SCIPconsGetData(maxviolcons)->rhsviol);
+         SCIPwarningMessage(scip, "Could not find any branching variable candidate. Cutting off node. Max viol = %g.\n", SCIPconsGetData(maxviolcons)->lhsviol+SCIPconsGetData(maxviolcons)->rhsviol);
          *result = SCIP_CUTOFF;
          return SCIP_OKAY;
       }

@@ -23,12 +23,13 @@
 #include <assert.h>
 #include <ctype.h>
 #include <string.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
+#include "scip/pub_message.h"
 #include "scip/set.h"
 #include "scip/misc.h"
 #include "scip/intervalarith.h"
@@ -389,10 +390,10 @@ void* hashtablelistRetrieve(
 #ifndef NDEBUG
       if( hashtablelistFind(h->next, hashgetkey, hashkeyeq, hashkeyval, userptr, keyval, key) != NULL )
       {
-         SCIPwarningMessage("hashkey with same value exists multiple times (e.g. duplicate constraint/variable names), so the return value is maybe not correct\n");
+         SCIPerrorMessage("WARNING: hashkey with same value exists multiple times (e.g. duplicate constraint/variable names), so the return value is maybe not correct\n");
       }
 #endif
-      
+
       return h->element;
    }
    else
@@ -706,7 +707,8 @@ SCIP_RETCODE SCIPhashtableRemove(
 
 /** prints statistics about hash table usage */
 void SCIPhashtablePrintStatistics(
-   SCIP_HASHTABLE*       hashtable           /**< hash table */
+   SCIP_HASHTABLE*       hashtable,          /**< hash table */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    )
 {
    SCIP_HASHTABLELIST* hashtablelist;
@@ -738,12 +740,12 @@ void SCIPhashtablePrintStatistics(
       }
    }
 
-   SCIPmessagePrintInfo("%d hash entries, used %d/%d slots (%.1f%%)",
+   SCIPmessagePrintInfo(messagehdlr, "%d hash entries, used %d/%d slots (%.1f%%)",
       sumslotsize, usedslots, hashtable->nlists, 100.0*(SCIP_Real)usedslots/(SCIP_Real)(hashtable->nlists));
    if( usedslots > 0 )
-      SCIPmessagePrintInfo(", avg. %.1f entries/used slot, max. %d entries in slot",
+      SCIPmessagePrintInfo(messagehdlr, ", avg. %.1f entries/used slot, max. %d entries in slot",
          (SCIP_Real)sumslotsize/(SCIP_Real)usedslots, maxslotsize);
-   SCIPmessagePrintInfo("\n");
+   SCIPmessagePrintInfo(messagehdlr, "\n");
 }
 
 
@@ -1103,7 +1105,8 @@ SCIP_RETCODE SCIPhashmapRemove(
 
 /** prints statistics about hash map usage */
 void SCIPhashmapPrintStatistics(
-   SCIP_HASHMAP*         hashmap             /**< hash map */
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    )
 {
    SCIP_HASHMAPLIST* hashmaplist;
@@ -1135,12 +1138,12 @@ void SCIPhashmapPrintStatistics(
       }
    }
 
-   SCIPmessagePrintInfo("%d hash entries, used %d/%d slots (%.1f%%)",
+   SCIPmessagePrintInfo(messagehdlr, "%d hash entries, used %d/%d slots (%.1f%%)",
       sumslotsize, usedslots, hashmap->nlists, 100.0*(SCIP_Real)usedslots/(SCIP_Real)(hashmap->nlists));
    if( usedslots > 0 )
-      SCIPmessagePrintInfo(", avg. %.1f entries/used slot, max. %d entries in slot", 
+      SCIPmessagePrintInfo(messagehdlr, ", avg. %.1f entries/used slot, max. %d entries in slot", 
          (SCIP_Real)sumslotsize/(SCIP_Real)usedslots, maxslotsize);
-   SCIPmessagePrintInfo("\n");
+   SCIPmessagePrintInfo(messagehdlr, "\n");
 }
 
 /** indicates whether a hash map has no entries */
@@ -3532,6 +3535,7 @@ SCIP_RETCODE SCIPstairmapResize(
 /** output of the given stair map */
 void SCIPstairmapPrint(
    SCIP_STAIRMAP*        stairmap,           /**< stair map to output */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
@@ -3539,10 +3543,10 @@ void SCIPstairmapPrint(
    
    for( t = 0; t < stairmap->ntimepoints; ++t )
    {
-      SCIPmessageFPrintInfo(file, "i: %d, tp: %d, fc: %d ;", t, stairmap->timepoints[t], stairmap-> freecapacities[t]); 
+      SCIPmessageFPrintInfo(messagehdlr, file, "i: %d, tp: %d, fc: %d ;", t, stairmap->timepoints[t], stairmap-> freecapacities[t]); 
    }
    
-   SCIPmessageFPrintInfo(file,"\n");
+   SCIPmessageFPrintInfo(messagehdlr, file,"\n");
 }
 
 /** returns if the given time point exists in the stair map and stores the position of the given time point if it
@@ -5125,14 +5129,14 @@ SCIP_RETCODE SCIPgetRandomSubset(
    /* abort, if size of subset is too big */
    if( nsubelems > nelems )
    {
-      SCIPerrorMessage("Cannot create %d-elementary subset of %d-elementary set.\n", nsubelems, nelems);      
+      SCIPerrorMessage("Cannot create %d-elementary subset of %d-elementary set.\n", nsubelems, nelems);
       return SCIP_INVALIDDATA;
    }
 #ifndef NDEBUG
-   for( i = 0; i < nsubelems; i++ ) 
-      for( j = 0; j < i; j++ ) 
+   for( i = 0; i < nsubelems; i++ )
+      for( j = 0; j < i; j++ )
          assert(set[i] != set[j]);
-#endif   
+#endif
 
    /* draw each element individually */
    i = 0;
@@ -5235,7 +5239,7 @@ int SCIPsnprintf(
 {
    va_list ap;
    int n;
-   
+
    assert(t != NULL);
    assert(len > 0);
 
@@ -5246,7 +5250,9 @@ int SCIPsnprintf(
    {
 #ifndef NDEBUG
       if( n < 0 )
-         SCIPmessagePrintWarning("vsnprintf returned %d\n",n);
+      {
+         SCIPerrorMessage("vsnprintf returned %d\n",n);
+      }
 #endif
       t[len-1] = '\0';
       n = len-1;

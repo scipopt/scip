@@ -47,21 +47,6 @@ struct SCIP_MessagehdlrData
 
 extern "C"
 {
-/** error message print method of message handler */
-static
-SCIP_DECL_MESSAGEERROR(messagehdlrErrorObj)
-{  /*lint --e{715}*/
-   SCIP_MESSAGEHDLRDATA* messagehdlrdata;
-
-   messagehdlrdata = SCIPmessagehdlrGetData(messagehdlr);
-   assert(messagehdlrdata != NULL);
-   assert(messagehdlrdata->objmessagehdlr != NULL);
-
-   /* call virtual method of messagehdlr object */
-   messagehdlrdata->objmessagehdlr->scip_error(messagehdlr, file, msg);
-}
-
-
 /** warning message print method of message handler */
 static
 SCIP_DECL_MESSAGEWARNING(messagehdlrWarningObj)
@@ -105,6 +90,30 @@ SCIP_DECL_MESSAGEINFO(messagehdlrInfoObj)
    /* call virtual method of messagehdlr object */
    messagehdlrdata->objmessagehdlr->scip_info(messagehdlr, file, msg);
 }
+
+/** destructor of message handler to free message handler data */
+static
+SCIP_DECL_MESSAGEHDLRFREE(messagehdlrFree)
+{  /*lint --e{715}*/
+   SCIP_MESSAGEHDLRDATA* messagehdlrdata;
+
+   messagehdlrdata = SCIPmessagehdlrGetData(messagehdlr);
+   assert(messagehdlrdata != NULL);
+   assert(messagehdlrdata->objmessagehdlr != NULL);
+
+   /* call virtual method of messagehdlr object */
+   messagehdlrdata->objmessagehdlr->scip_free(messagehdlr);
+
+   /* free message handler object */
+   if( messagehdlrdata->deleteobject )
+      delete messagehdlrdata->objmessagehdlr;
+
+   /* free message handler data */
+   delete messagehdlrdata;
+   SCIP_CALL( SCIPmessagehdlrSetData(messagehdlr, NULL) ); /*lint !e64*/
+
+   return SCIP_OKAY;
+}
 }
 
 
@@ -129,9 +138,9 @@ SCIP_RETCODE SCIPcreateObjMessagehdlr(
    messagehdlrdata->deleteobject = deleteobject;
 
    /* create message handler */
-   retcode = SCIPcreateMessagehdlr(messagehdlr, objmessagehdlr->scip_bufferedoutput_,
-      messagehdlrErrorObj, messagehdlrWarningObj, messagehdlrDialogObj, messagehdlrInfoObj,
-      messagehdlrdata); /*lint !e429*/
+   retcode = SCIPmessagehdlrCreate(messagehdlr, objmessagehdlr->scip_bufferedoutput_, NULL, FALSE,
+      messagehdlrWarningObj, messagehdlrDialogObj, messagehdlrInfoObj,
+      messagehdlrFree, messagehdlrdata); /*lint !e429*/
 
    if( retcode != SCIP_OKAY )
    {
@@ -146,35 +155,6 @@ SCIP_RETCODE SCIPcreateObjMessagehdlr(
    return SCIP_OKAY; /*lint !e429 !e593*/
 }
 
-/** destroys the message handler that was created by SCIPcreateObjMessagehdlr();
- *  if deleteobject was set to TRUE in SCIPcreateObjMessagehdlr(), the message handler object is deleted
- */
-SCIP_RETCODE SCIPfreeObjMessagehdlr(
-   SCIP_MESSAGEHDLR**    messagehdlr         /**< pointer to the message handler */
-   )
-{
-   SCIP_MESSAGEHDLRDATA* messagehdlrdata;
-
-   assert(messagehdlr != NULL);
-
-   messagehdlrdata = SCIPmessagehdlrGetData(*messagehdlr);
-   assert(messagehdlrdata != NULL);
-   assert(messagehdlrdata->objmessagehdlr != NULL);
-
-   /* free message handler object */
-   if( messagehdlrdata->deleteobject )
-      delete messagehdlrdata->objmessagehdlr;
-
-   /* free message handler data */
-   delete messagehdlrdata;
-   SCIP_CALL( SCIPmessagehdlrSetData(*messagehdlr, NULL) ); /*lint !e64*/
-
-   /* free message handler */
-   SCIP_CALL( SCIPfreeMessagehdlr(messagehdlr) );
-   
-   return SCIP_OKAY;
-}
-   
 /** returns the message handler object for the given message handler */
 scip::ObjMessagehdlr* SCIPgetObjMessagehdlr(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */

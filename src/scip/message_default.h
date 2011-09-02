@@ -13,36 +13,31 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   retcode.h
- * @brief  internal methods for return codes for SCIP methods
- * @author Tobias Achterberg
+/**@file   type_message.h
+ * @ingroup PUBLICMETHODS
+ * @brief  default message handler
+ * @author Stefan Heinz
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_RETCODE_H__
-#define __SCIP_RETCODE_H__
+#ifndef __SCIP_MESSAGE_DEFAULT_H__
+#define __SCIP_MESSAGE_DEFAULT_H__
 
-#include <stdio.h>
-
-#include "scip/pub_message.h"
+#include "scip/def.h"
+#include "scip/type_message.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** prints error message for return code */
+/** Create default message handler. To free the message handler use SCIPmessagehdlrFree() */
 extern
-void SCIPretcodePrint(
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   FILE*                 file,               /**< file stream to write error message */
-   SCIP_RETCODE          retcode             /**< SCIP return code causing the error */
-   );
-
-/** prints error message for return code via error message */
-extern
-void SCIPretcodePrintError(
-   SCIP_RETCODE          retcode             /**< SCIP return code causing the error */
+SCIP_RETCODE SCIPcreateMessagehdlrDefault(
+   SCIP_MESSAGEHDLR**    messagehdlr,        /**< pointer to store message handler */
+   SCIP_Bool             bufferedoutput,     /**< should the output be buffered up to the next newline? */
+   const char*           filename,           /**< name of log file, or NULL (stdout) */
+   SCIP_Bool             quiet                /**< should screen messages be suppressed? */
    );
 
 #ifdef __cplusplus

@@ -55,6 +55,89 @@
 
 
 /*
+ * debug messages
+ */
+
+#ifdef SCIP_DEBUG
+/** method is to print in row in case SCIP_DEBUG is defined */
+static
+void debugRowPrint(
+   SCIP_ROW*             row                 /**< LP row */
+   )
+{
+   int i;
+
+   assert(row != NULL);
+
+   /* print row name */
+   if( row->name != NULL && row->name[0] != '\0' )
+   {
+      SCIPdebugMessage("%s: ", row->name);
+   }
+
+   /* print left hand side */
+   SCIPdebugPrintf("%.15g <= ", row->lhs);
+
+   /* print coefficients */
+   if( row->len == 0 )
+   {
+      SCIPdebugPrintf("0 ");
+   }
+   for( i = 0; i < row->len; ++i )
+   {
+      assert(row->cols[i] != NULL);
+      assert(row->cols[i]->var != NULL);
+      assert(SCIPvarGetName(row->cols[i]->var) != NULL);
+      assert(SCIPvarGetStatus(row->cols[i]->var) == SCIP_VARSTATUS_COLUMN);
+      SCIPdebugPrintf("%+.15g<%s> ", row->vals[i], SCIPvarGetName(row->cols[i]->var));
+   }
+
+   /* print constant */
+   if( REALABS(row->constant) > SCIP_DEFAULT_EPSILON )
+   {
+      SCIPdebugPrintf("%+.15g ", row->constant);
+   }
+
+   /* print right hand side */
+   SCIPdebugPrintf("<= %.15g\n", row->rhs);
+}
+#else
+#define debugRowPrint(x) /**/
+#endif
+
+#ifdef SCIP_DEBUG
+/** method to output column if SCIP_DEBUG is define */
+static
+void debugColPrint(
+   SCIP_COL*             col                 /**< LP column */
+   )
+{
+   int r;
+
+   assert(col != NULL);
+   assert(col->var != NULL);
+
+   /* print bounds */
+   SCIPdebugMessage("(obj: %.15g) [%.15g,%.15g], ", col->obj, col->lb, col->ub);
+
+   /* print coefficients */
+   if( col->len == 0 )
+   {
+      SCIPdebugPrintf("<empty>");
+   }
+   for( r = 0; r < col->len; ++r )
+   {
+      assert(col->rows[r] != NULL);
+      assert(col->rows[r]->name != NULL);
+      SCIPdebugPrintf("%+.15g<%s> ", col->vals[r], col->rows[r]->name);
+   }
+   SCIPdebugPrintf("\n");
+}
+#else
+#define debugColPrint(x) /**/
+#endif
+
+/*
  * memory growing methods for dynamically allocated arrays
  */
 
@@ -514,7 +597,7 @@ void checkRow(
 
    if( !msgdisp )
    {
-      SCIPwarningMessage("LP ROW CHECKING ACTIVATED! THIS IS VERY SLOW!\n");
+      SCIPmessagePrintWarning(messagehdlr, "LP ROW CHECKING ACTIVATED! THIS IS VERY SLOW!\n");
       msgdisp = TRUE;
    }
 
@@ -1347,7 +1430,7 @@ void checkLinks(
 
    if( !msgdisp )
    {
-      SCIPwarningMessage("LP LINK CHECKING ACTIVATED! THIS IS VERY SLOW!\n");
+      SCIPmessagePrintWarning(messagehdlr, "LP LINK CHECKING ACTIVATED! THIS IS VERY SLOW!\n");
       msgdisp = TRUE;
    }
 
@@ -2928,6 +3011,33 @@ SCIP_RETCODE SCIPcolFree(
    return SCIP_OKAY;
 }
 
+/** output column to file stream */
+void SCIPcolPrint(
+   SCIP_COL*             col,                /**< LP column */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   )
+{
+   int r;
+
+   assert(col != NULL);
+   assert(col->var != NULL);
+
+   /* print bounds */
+   SCIPmessageFPrintInfo(messagehdlr, file, "(obj: %.15g) [%.15g,%.15g], ", col->obj, col->lb, col->ub);
+
+   /* print coefficients */
+   if( col->len == 0 )
+      SCIPmessageFPrintInfo(messagehdlr, file, "<empty>");
+   for( r = 0; r < col->len; ++r )
+   {
+      assert(col->rows[r] != NULL);
+      assert(col->rows[r]->name != NULL);
+      SCIPmessageFPrintInfo(messagehdlr, file, "%+.15g<%s> ", col->vals[r], col->rows[r]->name);
+   }
+   SCIPmessageFPrintInfo(messagehdlr, file, "\n");
+}
+
 /** sorts column entries such that LP rows precede non-LP rows and inside both parts lower row indices precede higher ones
  */
 void SCIPcolSort(
@@ -4383,33 +4493,6 @@ SCIP_Longint SCIPcolGetStrongbranchLPAge(
    return (col->sbnode != stat->nnodes ? SCIP_LONGINT_MAX : stat->lpcount - col->validsblp);
 }
 
-/** output column to file stream */
-void SCIPcolPrint(
-   SCIP_COL*             col,                /**< LP column */
-   FILE*                 file                /**< output file (or NULL for standard output) */
-   )
-{
-   int r;
-
-   assert(col != NULL);
-   assert(col->var != NULL);
-
-   /* print bounds */
-   SCIPmessageFPrintInfo(file, "(obj: %.15g) [%.15g,%.15g], ", col->obj, col->lb, col->ub);
-
-   /* print coefficients */
-   if( col->len == 0 )
-      SCIPmessageFPrintInfo(file, "<empty>");
-   for( r = 0; r < col->len; ++r )
-   {
-      assert(col->rows[r] != NULL);
-      assert(col->rows[r]->name != NULL);
-      SCIPmessageFPrintInfo(file, "%+.15g<%s> ", col->vals[r], col->rows[r]->name);
-   }
-   SCIPmessageFPrintInfo(file, "\n");
-}
-
-
 
 
 /*
@@ -4671,7 +4754,7 @@ SCIP_RETCODE rowScale(
    SCIP_CALL( SCIProwChgConstant(row, blkmem, set, stat, eventqueue, lp, 0.0) );
 
    SCIPdebugMessage("scaled row <%s> (integral: %u)\n", row->name, row->integral);
-   SCIPdebug(SCIProwPrint(row, NULL));
+   debugRowPrint(row);
 
 #ifdef SCIP_DEBUG
    /* check integrality status of row */
@@ -4847,6 +4930,46 @@ SCIP_RETCODE SCIProwFree(
    BMSfreeBlockMemory(blkmem, row);
 
    return SCIP_OKAY;
+}
+
+/** output row to file stream */
+void SCIProwPrint(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   )
+{
+   int i;
+
+   assert(row != NULL);
+
+   /* print row name */
+   if( row->name != NULL && row->name[0] != '\0' )
+   {
+      SCIPmessageFPrintInfo(messagehdlr, file, "%s: ", row->name);
+   }
+
+   /* print left hand side */
+   SCIPmessageFPrintInfo(messagehdlr, file, "%.15g <= ", row->lhs);
+
+   /* print coefficients */
+   if( row->len == 0 )
+      SCIPmessageFPrintInfo(messagehdlr, file, "0 ");
+   for( i = 0; i < row->len; ++i )
+   {
+      assert(row->cols[i] != NULL);
+      assert(row->cols[i]->var != NULL);
+      assert(SCIPvarGetName(row->cols[i]->var) != NULL);
+      assert(SCIPvarGetStatus(row->cols[i]->var) == SCIP_VARSTATUS_COLUMN);
+      SCIPmessageFPrintInfo(messagehdlr, file, "%+.15g<%s> ", row->vals[i], SCIPvarGetName(row->cols[i]->var));
+   }
+
+   /* print constant */
+   if( REALABS(row->constant) > SCIP_DEFAULT_EPSILON )
+      SCIPmessageFPrintInfo(messagehdlr, file, "%+.15g ", row->constant);
+
+   /* print right hand side */
+   SCIPmessageFPrintInfo(messagehdlr, file, "<= %.15g\n", row->rhs);
 }
 
 /** increases usage counter of LP row */
@@ -6372,45 +6495,6 @@ SCIP_Real SCIProwGetObjParallelism(
    return parallelism;
 }
 
-/** output row to file stream */
-void SCIProwPrint(
-   SCIP_ROW*             row,                /**< LP row */
-   FILE*                 file                /**< output file (or NULL for standard output) */
-   )
-{
-   int i;
-
-   assert(row != NULL);
-
-   /* print row name */
-   if( row->name != NULL && row->name[0] != '\0' )
-   {
-      SCIPmessageFPrintInfo(file, "%s: ", row->name);
-   }
-
-   /* print left hand side */
-   SCIPmessageFPrintInfo(file, "%.15g <= ", row->lhs);
-
-   /* print coefficients */
-   if( row->len == 0 )
-      SCIPmessageFPrintInfo(file, "0 ");
-   for( i = 0; i < row->len; ++i )
-   {
-      assert(row->cols[i] != NULL);
-      assert(row->cols[i]->var != NULL);
-      assert(SCIPvarGetName(row->cols[i]->var) != NULL);
-      assert(SCIPvarGetStatus(row->cols[i]->var) == SCIP_VARSTATUS_COLUMN);
-      SCIPmessageFPrintInfo(file, "%+.15g<%s> ", row->vals[i], SCIPvarGetName(row->cols[i]->var));
-   }
-
-   /* print constant */
-   if( REALABS(row->constant) > SCIP_DEFAULT_EPSILON )
-      SCIPmessageFPrintInfo(file, "%+.15g ", row->constant);
-
-   /* print right hand side */
-   SCIPmessageFPrintInfo(file, "<= %.15g\n", row->rhs);
-}
-
 /** includes event handler with given data in row's event filter */
 SCIP_RETCODE SCIProwCatchEvent(
    SCIP_ROW*             row,                /**< row */
@@ -6639,7 +6723,7 @@ SCIP_RETCODE lpFlushAddCols(
       assert(nnonz + col->nlprows <= naddcoefs);
 
       SCIPdebugMessage("flushing added column <%s>: ", SCIPvarGetName(col->var));
-      SCIPdebug( SCIPcolPrint(col, NULL) );
+      debugColPrint(col);
 
       /* Because the column becomes a member of the LP solver, it now can take values
        * different from zero. That means, we have to include the column in the corresponding
@@ -6854,7 +6938,7 @@ SCIP_RETCODE lpFlushAddRows(
       assert(nnonz + row->nlpcols <= naddcoefs);
 
       SCIPdebugMessage("flushing added row <%s>: ", row->name);
-      SCIPdebug( SCIProwPrint(row, NULL) );
+      debugRowPrint(row);
 
       /* Because the row becomes a member of the LP solver, its dual variable now can take values
        * different from zero. That means, we have to include the row in the corresponding
@@ -7480,6 +7564,7 @@ void rowUpdateDelLP(
 SCIP_RETCODE SCIPlpCreate(
    SCIP_LP**             lp,                 /**< pointer to LP data object */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics */
    const char*           name                /**< problem name */
    )
@@ -7494,7 +7579,7 @@ SCIP_RETCODE SCIPlpCreate(
    SCIP_ALLOC( BMSallocMemory(lp) );
 
    /* open LP Solver interface */
-   SCIP_CALL( SCIPlpiCreate(&(*lp)->lpi, name, SCIP_OBJSEN_MINIMIZE) );
+   SCIP_CALL( SCIPlpiCreate(&(*lp)->lpi, name, SCIP_OBJSEN_MINIMIZE, messagehdlr) );
 
    (*lp)->lpicols = NULL;
    (*lp)->lpirows = NULL;
@@ -7585,7 +7670,7 @@ SCIP_RETCODE SCIPlpCreate(
    SCIP_CALL( lpSetRealpar(*lp, SCIP_LPPAR_UOBJLIM, (*lp)->lpiuobjlim, &success) );
    if( !success )
    {
-      SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+      SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "LP Solver <%s>: upper objective limit cannot be set -- can lead to unnecessary simplex iterations\n",
          SCIPlpiGetSolverName());
    }
@@ -7593,7 +7678,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lpihasfeastol = success;
    if( !success )
    {
-      SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+      SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "LP Solver <%s>: primal feasibility tolerance cannot be set -- tolerance of SCIP and LP solver may differ\n",
          SCIPlpiGetSolverName());
    }
@@ -7601,7 +7686,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lpihasdualfeastol = success;
    if( !success )
    {
-      SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+      SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "LP Solver <%s>: dual feasibility tolerance cannot be set -- tolerance of SCIP and LP solver may differ\n",
          SCIPlpiGetSolverName());
    }
@@ -7609,7 +7694,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lpihasbarrierconvtol = success;
    if( !success )
    {
-      SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+      SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "LP Solver <%s>: barrier convergence tolerance cannot be set -- tolerance of SCIP and LP solver may differ\n",
          SCIPlpiGetSolverName());
    }
@@ -7618,7 +7703,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lpihasfastmip = success;
    if( !success )
    {
-      SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+      SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "LP Solver <%s>: fastmip setting not available -- SCIP parameter has no effect\n",
          SCIPlpiGetSolverName());
    }
@@ -7626,7 +7711,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lpihasscaling = success;
    if( !success )
    {
-      SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+      SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "LP Solver <%s>: scaling not available -- SCIP parameter has no effect\n",
          SCIPlpiGetSolverName());
    }
@@ -7634,28 +7719,28 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lpihaspresolving = success;
    if( !success )
    {
-      SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+      SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "LP Solver <%s>: presolving not available -- SCIP parameter has no effect\n",
          SCIPlpiGetSolverName());
    }
    SCIP_CALL( lpSetIntpar(*lp, SCIP_LPPAR_LPITLIM, (*lp)->lpiitlim, &success) );
    if( !success )
    {
-      SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+      SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "LP Solver <%s>: iteration limit cannot be set -- can lead to unnecessary simplex iterations\n",
          SCIPlpiGetSolverName());
    }
    SCIP_CALL( lpSetIntpar(*lp, SCIP_LPPAR_PRICING, (int)(*lp)->lpipricing, &success) );
    if( !success )
    {
-      SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+      SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "LP Solver <%s>: pricing strategy cannot be set -- SCIP parameter has no effect\n",
          SCIPlpiGetSolverName());
    }
    SCIP_CALL( lpSetBoolpar(*lp, SCIP_LPPAR_LPINFO, (*lp)->lpilpinfo, &success) );
    if( !success )
    {
-      SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+      SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "LP Solver <%s>: lpinfo setting not available -- SCIP parameter has no effect\n",
          SCIPlpiGetSolverName());
    }
@@ -7663,14 +7748,14 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lpihasrowrep = success;
    if( !success )
    {
-      SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+      SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "LP Solver <%s>: row representation of the basis not available -- SCIP parameter lp/rowrepswitch has no effect\n",
          SCIPlpiGetSolverName());
    }
    SCIP_CALL( lpSetIntpar(*lp, SCIP_LPPAR_THREADS, (*lp)->lpithreads, &success) );
    if( !success )
    {
-      SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+      SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "LP Solver <%s>: number of threads settings not available -- SCIP parameter has no effect\n",
          SCIPlpiGetSolverName());
    }
@@ -8540,7 +8625,7 @@ void sumMIRRow(
          SCIPdebugMessage("MIR: %d: row <%s>, lhs = %g, rhs = %g, scale = %g, weight = %g, slacksign = %d -> rhs = %g\n",
             r, SCIProwGetName(row), row->lhs - row->constant, row->rhs - row->constant, 
             scale, weights[r], slacksign[r], *mirrhs);
-         SCIPdebug(SCIProwPrint(row, NULL));
+         debugRowPrint(row);
 
          ++i; /* handle next row */
       }
@@ -10047,7 +10132,7 @@ void sumStrongCGRow(
             SCIPdebugMessage("strong CG: %d: row <%s>, lhs = %g, rhs = %g, scale = %g, weight = %g, slacksign = %d -> rhs = %g\n",
                r, SCIProwGetName(row), row->lhs - row->constant, row->rhs - row->constant, 
                scale, weights[r], slacksign[r], *strongcgrhs);
-            SCIPdebug(SCIProwPrint(row, NULL));
+            debugRowPrint(row);
          }
       }
       else
@@ -12119,6 +12204,7 @@ static
 SCIP_RETCODE lpSolveStable(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_LPALGO           lpalgo,             /**< LP algorithm that should be applied */
@@ -12188,7 +12274,7 @@ SCIP_RETCODE lpSolveStable(
       SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
       if( success )
       {
-         SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "(node %"SCIP_LONGINT_FORMAT") numerical troubles in LP %"SCIP_LONGINT_FORMAT" -- ignoring instability of %s\n",
             stat->nnodes, stat->nlps, lpalgoName(lpalgo));
          return SCIP_OKAY;
@@ -12207,7 +12293,7 @@ SCIP_RETCODE lpSolveStable(
       SCIP_CALL( lpSetFastmip(lp, 0, &success) );
       if( success )
       {
-         SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "(node %"SCIP_LONGINT_FORMAT") numerical troubles in LP %"SCIP_LONGINT_FORMAT" -- solve again without FASTMIP with %s\n",
             stat->nnodes, stat->nlps, lpalgoName(lpalgo));
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
@@ -12220,7 +12306,7 @@ SCIP_RETCODE lpSolveStable(
             SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
             if( success )
             {
-               SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                   "(node %"SCIP_LONGINT_FORMAT") numerical troubles in LP %"SCIP_LONGINT_FORMAT" -- ignoring instability of %s\n",
                   stat->nnodes, stat->nlps, lpalgoName(lpalgo));
                return SCIP_OKAY;
@@ -12238,7 +12324,7 @@ SCIP_RETCODE lpSolveStable(
       SCIP_CALL( lpSetScaling(lp, !set->lp_scaling, &success) );
       if( success )
       {
-         SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "(node %"SCIP_LONGINT_FORMAT") numerical troubles in LP %"SCIP_LONGINT_FORMAT" -- solve again with %s %s scaling\n",
             stat->nnodes, stat->nlps, lpalgoName(lpalgo), !set->lp_scaling ? "with" : "without");
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
@@ -12251,7 +12337,7 @@ SCIP_RETCODE lpSolveStable(
             SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
             if( success )
             {
-               SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                   "(node %"SCIP_LONGINT_FORMAT") numerical troubles in LP %"SCIP_LONGINT_FORMAT" -- ignoring instability of %s\n",
                   stat->nnodes, stat->nlps, lpalgoName(lpalgo));
                return SCIP_OKAY;
@@ -12273,7 +12359,7 @@ SCIP_RETCODE lpSolveStable(
       SCIP_CALL( lpSetPresolving(lp, !set->lp_presolving, &success) );
       if( success )
       {
-         SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "(node %"SCIP_LONGINT_FORMAT") numerical troubles in LP %"SCIP_LONGINT_FORMAT" -- solve again with %s %s presolving\n",
             stat->nnodes, stat->nlps, lpalgoName(lpalgo), !set->lp_presolving ? "with" : "without");
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
@@ -12286,7 +12372,7 @@ SCIP_RETCODE lpSolveStable(
             SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
             if( success )
             {
-               SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                   "(node %"SCIP_LONGINT_FORMAT") numerical troubles in LP %"SCIP_LONGINT_FORMAT" -- ignoring instability of %s\n",
                   stat->nnodes, stat->nlps, lpalgoName(lpalgo));
                return SCIP_OKAY;
@@ -12309,7 +12395,7 @@ SCIP_RETCODE lpSolveStable(
       SCIP_CALL( lpSetBarrierconvtol(lp, FEASTOLTIGHTFAC * SCIPsetBarrierconvtol(set), &success2) );
       if( success || success2 )
       {
-         SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "(node %"SCIP_LONGINT_FORMAT") numerical troubles in LP %"SCIP_LONGINT_FORMAT" -- solve again with %s with tighter feasibility tolerance\n",
             stat->nnodes, stat->nlps, lpalgoName(lpalgo));
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
@@ -12322,7 +12408,7 @@ SCIP_RETCODE lpSolveStable(
             SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
             if( success )
             {
-               SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                   "(node %"SCIP_LONGINT_FORMAT") numerical troubles in LP %"SCIP_LONGINT_FORMAT" -- ignoring instability of %s\n",
                   stat->nnodes, stat->nlps, lpalgoName(lpalgo));
                return SCIP_OKAY;
@@ -12346,7 +12432,7 @@ SCIP_RETCODE lpSolveStable(
       SCIP_CALL( lpSetFromscratch(lp, TRUE, &success) );
       if( success )
       {
-         SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "(node %"SCIP_LONGINT_FORMAT") numerical troubles in LP %"SCIP_LONGINT_FORMAT" -- solve again from scratch with %s\n",
             stat->nnodes, stat->nlps, lpalgoName(lpalgo));
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
@@ -12359,7 +12445,7 @@ SCIP_RETCODE lpSolveStable(
             SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
             if( success )
             {
-               SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                   "(node %"SCIP_LONGINT_FORMAT") numerical troubles in LP %"SCIP_LONGINT_FORMAT" -- ignoring instability of %s\n",
                   stat->nnodes, stat->nlps, lpalgoName(lpalgo));
                return SCIP_OKAY;
@@ -12372,7 +12458,7 @@ SCIP_RETCODE lpSolveStable(
    if( simplex )
    {
       lpalgo = (lpalgo == SCIP_LPALGO_PRIMALSIMPLEX ? SCIP_LPALGO_DUALSIMPLEX : SCIP_LPALGO_PRIMALSIMPLEX);
-      SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+      SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "(node %"SCIP_LONGINT_FORMAT") numerical troubles in LP %"SCIP_LONGINT_FORMAT" -- solve again from scratch with %s\n",
          stat->nnodes, stat->nlps, lpalgoName(lpalgo));
       SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
@@ -12385,7 +12471,7 @@ SCIP_RETCODE lpSolveStable(
          SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
          if( success )
          {
-            SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                "(node %"SCIP_LONGINT_FORMAT") numerical troubles in LP %"SCIP_LONGINT_FORMAT" -- ignoring instability of %s\n",
                stat->nnodes, stat->nlps, lpalgoName(lpalgo));
             return SCIP_OKAY;
@@ -12396,7 +12482,7 @@ SCIP_RETCODE lpSolveStable(
       SCIP_CALL( lpSetScaling(lp, !set->lp_scaling, &success) );
       if( success )
       {
-         SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "(node %"SCIP_LONGINT_FORMAT") numerical troubles in LP %"SCIP_LONGINT_FORMAT" -- solve again from scratch with %s %s scaling\n",
             stat->nnodes, stat->nlps, lpalgoName(lpalgo), !set->lp_scaling ? "with" : "without");
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
@@ -12409,7 +12495,7 @@ SCIP_RETCODE lpSolveStable(
             SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
             if( success )
             {
-               SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                   "(node %"SCIP_LONGINT_FORMAT") numerical troubles in LP %"SCIP_LONGINT_FORMAT" -- ignoring instability of %s\n",
                   stat->nnodes, stat->nlps, lpalgoName(lpalgo));
                return SCIP_OKAY;
@@ -12425,7 +12511,7 @@ SCIP_RETCODE lpSolveStable(
       SCIP_CALL( lpSetPresolving(lp, !set->lp_presolving, &success) );
       if( success )
       {
-         SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "(node %"SCIP_LONGINT_FORMAT") numerical troubles in LP %"SCIP_LONGINT_FORMAT" -- solve again from scratch with %s %s presolving\n",
             stat->nnodes, stat->nlps, lpalgoName(lpalgo), !set->lp_presolving ? "with" : "without");
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
@@ -12438,7 +12524,7 @@ SCIP_RETCODE lpSolveStable(
             SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
             if( success )
             {
-               SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                   "(node %"SCIP_LONGINT_FORMAT") numerical troubles in LP %"SCIP_LONGINT_FORMAT" -- ignoring instability of %s\n",
                   stat->nnodes, stat->nlps, lpalgoName(lpalgo));
                return SCIP_OKAY;
@@ -12458,7 +12544,7 @@ SCIP_RETCODE lpSolveStable(
          SCIP_CALL( lpSetBarrierconvtol(lp, FEASTOLTIGHTFAC * SCIPsetBarrierconvtol(set), &success2) );
          if( success || success2 )
          {
-            SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                "(node %"SCIP_LONGINT_FORMAT") numerical troubles in LP %"SCIP_LONGINT_FORMAT" -- solve again from scratch with %s with tighter feasibility tolerance\n",
                stat->nnodes, stat->nlps, lpalgoName(lpalgo));
             SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
@@ -12471,7 +12557,7 @@ SCIP_RETCODE lpSolveStable(
                SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
                if( success )
                {
-                  SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+                  SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                      "(node %"SCIP_LONGINT_FORMAT") numerical troubles in LP %"SCIP_LONGINT_FORMAT" -- ignoring instability of %s\n",
                      stat->nnodes, stat->nlps, lpalgoName(lpalgo));
                   return SCIP_OKAY;
@@ -12487,7 +12573,7 @@ SCIP_RETCODE lpSolveStable(
    }
 
    /* nothing worked -- exit with an LPERROR */
-   SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %"SCIP_LONGINT_FORMAT"\n",
+   SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %"SCIP_LONGINT_FORMAT"\n",
       stat->nnodes, stat->nlps);
    *lperror = TRUE;
 
@@ -12499,6 +12585,7 @@ static
 SCIP_RETCODE lpSolve(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_LPALGO           lpalgo,             /**< LP algorithm that should be applied */
@@ -12536,7 +12623,7 @@ SCIP_RETCODE lpSolve(
 
  SOLVEAGAIN:
    /* call simplex */
-   SCIP_CALL( lpSolveStable(lp, set, stat, prob, lpalgo, itlim, harditlim, resolve, fastmip, tightfeastol, fromscratch,
+   SCIP_CALL( lpSolveStable(lp, set, messagehdlr, stat, prob, lpalgo, itlim, harditlim, resolve, fastmip, tightfeastol, fromscratch,
          keepsol, &timelimit, lperror) );
    resolve = FALSE; /* only the first solve should be counted as resolving call */
    solvedprimal = solvedprimal || (lp->lastlpalgo == SCIP_LPALGO_PRIMALSIMPLEX);
@@ -12623,7 +12710,7 @@ SCIP_RETCODE lpSolve(
    {
       assert(lp->lastlpalgo != SCIP_LPALGO_DUALSIMPLEX);
       lpalgo = SCIP_LPALGO_DUALSIMPLEX;
-      SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+      SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "(node %"SCIP_LONGINT_FORMAT") solution status of LP %"SCIP_LONGINT_FORMAT" could not be proven (internal status:%d) -- solve again with %s\n",
          stat->nnodes, stat->nlps, SCIPlpiGetInternalStatus(lp->lpi), lpalgoName(lpalgo));
       goto SOLVEAGAIN;
@@ -12632,7 +12719,7 @@ SCIP_RETCODE lpSolve(
    {
       assert(lp->lastlpalgo != SCIP_LPALGO_PRIMALSIMPLEX);
       lpalgo = SCIP_LPALGO_PRIMALSIMPLEX;
-      SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+      SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "(node %"SCIP_LONGINT_FORMAT") solution status of LP %"SCIP_LONGINT_FORMAT" could not be proven (internal status:%d) -- solve again with %s\n",
          stat->nnodes, stat->nlps, SCIPlpiGetInternalStatus(lp->lpi), lpalgoName(lpalgo));
       goto SOLVEAGAIN;
@@ -12660,6 +12747,7 @@ SCIP_RETCODE lpFlushAndSolve(
    SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -12696,38 +12784,38 @@ SCIP_RETCODE lpFlushAndSolve(
       if( lp->dualfeasible || !lp->primalfeasible )
       {
          SCIPdebugMessage("solving dual LP\n");
-         SCIP_CALL( lpSolve(lp, set, stat, prob, SCIP_LPALGO_DUALSIMPLEX, resolveitlim, harditlim, needprimalray,
+         SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_DUALSIMPLEX, resolveitlim, harditlim, needprimalray,
                needdualray, resolve, fastmip, tightfeastol, fromscratch, keepsol, lperror) );
       }
       else
       {
          SCIPdebugMessage("solving primal LP\n");
-         SCIP_CALL( lpSolve(lp, set, stat, prob, SCIP_LPALGO_PRIMALSIMPLEX, resolveitlim, harditlim, needprimalray,
+         SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_PRIMALSIMPLEX, resolveitlim, harditlim, needprimalray,
                needdualray, resolve, fastmip, tightfeastol, fromscratch, keepsol, lperror) );
       }
       break;
 
    case 'p':
       SCIPdebugMessage("solving primal LP\n");
-      SCIP_CALL( lpSolve(lp, set, stat, prob, SCIP_LPALGO_PRIMALSIMPLEX, resolveitlim, harditlim, needprimalray,
+      SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_PRIMALSIMPLEX, resolveitlim, harditlim, needprimalray,
             needdualray, resolve, fastmip, tightfeastol, fromscratch, keepsol, lperror) );
       break;
 
    case 'd':
       SCIPdebugMessage("solving dual LP\n");
-      SCIP_CALL( lpSolve(lp, set, stat, prob, SCIP_LPALGO_DUALSIMPLEX, resolveitlim, harditlim, needprimalray,
+      SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_DUALSIMPLEX, resolveitlim, harditlim, needprimalray,
             needdualray, resolve, fastmip, tightfeastol, fromscratch, keepsol, lperror) );
       break;
 
    case 'b':
       SCIPdebugMessage("solving barrier LP\n");
-      SCIP_CALL( lpSolve(lp, set, stat, prob, SCIP_LPALGO_BARRIER, resolveitlim, harditlim, needprimalray,
+      SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_BARRIER, resolveitlim, harditlim, needprimalray,
             needdualray, resolve, fastmip, tightfeastol, fromscratch, keepsol, lperror) );
       break;
 
    case 'c':
       SCIPdebugMessage("solving barrier LP with crossover\n");
-      SCIP_CALL( lpSolve(lp, set, stat, prob, SCIP_LPALGO_BARRIERCROSSOVER, resolveitlim, harditlim, needprimalray,
+      SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_BARRIERCROSSOVER, resolveitlim, harditlim, needprimalray,
             needdualray, resolve, fastmip, tightfeastol, fromscratch, keepsol, lperror) );
       break;
 
@@ -12854,14 +12942,15 @@ int lpGetResolveItlim(
 /** solves the LP with simplex algorithm, and copy the solution into the column's data */
 SCIP_RETCODE SCIPlpSolveAndEval(
    SCIP_LP*              lp,                 /**< LP data */
-   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            prob,               /**< problem data */
    int                   itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
-   SCIP_Bool             limitresolveiters,  /**< should LP iterations for resolving calls be limited? 
+   SCIP_Bool             limitresolveiters,  /**< should LP iterations for resolving calls be limited?
                                               *   (limit is computed within the method w.r.t. the average LP iterations) */
    SCIP_Bool             aging,              /**< should aging and removal of obsolete cols/rows be applied? */
    SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
@@ -12930,7 +13019,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
    SOLVEAGAIN:
       /* solve the LP */
       oldnlps = stat->nlps;
-      SCIP_CALL( lpFlushAndSolve(lp, blkmem, set, stat, prob, eventqueue, resolveitlim, itlim, needprimalray,
+      SCIP_CALL( lpFlushAndSolve(lp, blkmem, set, messagehdlr, stat, prob, eventqueue, resolveitlim, itlim, needprimalray,
             needdualray, fastmip, tightfeastol, fromscratch, keepsol, lperror) );
       SCIPdebugMessage("lpFlushAndSolve() returned solstat %d (error=%u)\n", SCIPlpGetSolstat(lp), *lperror);
       assert(!(*lperror) || !lp->solved);
@@ -12987,7 +13076,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             if( (fastmip > 0) && simplex )
             {
                /* solution is infeasible (this can happen due to numerical problems): solve again without FASTMIP */
-               SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                   "(node %"SCIP_LONGINT_FORMAT") solution of LP %"SCIP_LONGINT_FORMAT" not optimal (pfeas=%d, dfeas=%d) -- solving again without FASTMIP\n",
                   stat->nnodes, stat->nlps, primalfeasible, dualfeasible);
                fastmip = 0;
@@ -12998,7 +13087,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                /* solution is infeasible (this can happen due to numerical problems): solve again with tighter feasibility
                 * tolerance
                 */
-               SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                   "(node %"SCIP_LONGINT_FORMAT") solution of LP %"SCIP_LONGINT_FORMAT" not optimal (pfeas=%d, dfeas=%d) -- solving again with tighter feasibility tolerance\n",
                   stat->nnodes, stat->nlps, primalfeasible, dualfeasible);
                tightfeastol = TRUE;
@@ -13007,7 +13096,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             else if( !fromscratch && !wasfromscratch && simplex )
             {
                /* solution is infeasible (this can happen due to numerical problems): solve again from scratch */
-               SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                   "(node %"SCIP_LONGINT_FORMAT") solution of LP %"SCIP_LONGINT_FORMAT" not optimal (pfeas=%d, dfeas=%d) -- solving again from scratch\n",
                   stat->nnodes, stat->nlps, primalfeasible, dualfeasible);
                fromscratch = TRUE;
@@ -13015,7 +13104,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             }
             else
             {
-               SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                   "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %"SCIP_LONGINT_FORMAT"\n", stat->nnodes, stat->nlps);
                lp->solved = FALSE;
                lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
@@ -13040,7 +13129,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
              */
             else
             {
-               SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                   "(node %"SCIP_LONGINT_FORMAT") infeasibility of LP %"SCIP_LONGINT_FORMAT" could not be proven by dual ray\n", stat->nnodes, stat->nlps);
                lp->solved = FALSE;
                lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
@@ -13076,7 +13165,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             if( (fastmip > 0) && simplex )
             {
                /* unbounded solution is infeasible (this can happen due to numerical problems): solve again without FASTMIP */
-               SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                   "(node %"SCIP_LONGINT_FORMAT") solution of unbounded LP %d not optimal (pfeas=%d, rfeas=%d) -- solving again without FASTMIP\n",
                   stat->nnodes, stat->nlps, primalfeasible, rayfeasible);
                fastmip = 0;
@@ -13087,7 +13176,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                /* unbounded solution is infeasible (this can happen due to numerical problems): solve again with tighter feasibility
                 * tolerance
                 */
-               SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                   "(node %"SCIP_LONGINT_FORMAT") solution of unbounded LP %d not optimal (pfeas=%d, rfeas=%d) -- solving again with tighter feasibility tolerance\n",
                   stat->nnodes, stat->nlps, primalfeasible, rayfeasible);
                tightfeastol = TRUE;
@@ -13096,7 +13185,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             else if( !fromscratch && simplex )
             {
                /* unbounded solution is infeasible (this can happen due to numerical problems): solve again from scratch */
-               SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                   "(node %"SCIP_LONGINT_FORMAT") solution of unbounded LP %d not optimal (pfeas=%d, rfeas=%d) -- solving again from scratch\n",
                   stat->nnodes, stat->nlps, primalfeasible, rayfeasible);
                fromscratch = TRUE;
@@ -13107,7 +13196,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                /* unbounded solution is infeasible (this can happen due to numerical problems) and nothing helped:
                 * forget about the LP at this node and mark it to be unsolved
                 */
-               SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                   "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in unbounded LP %d\n", stat->nnodes, stat->nlps);
                lp->solved = FALSE;
                lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
@@ -13156,15 +13245,15 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
                /* set lp pricing strategy to steepest edge */
                SCIP_CALL( SCIPsetGetCharParam(set, "lp/pricing", &tmppricingchar) );
-               SCIP_CALL( SCIPsetSetCharParam(set, "lp/pricing", 's') );
+               SCIP_CALL( SCIPsetSetCharParam(set, messagehdlr, "lp/pricing", 's') );
 
                /* resolve LP with an iteration limit of 1 */
-               SCIP_CALL( lpSolve(lp, set, stat, prob, SCIP_LPALGO_DUALSIMPLEX, 1, -1,
+               SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_DUALSIMPLEX, 1, -1,
                      FALSE, FALSE, TRUE, fastmip, tightfeastol, fromscratch, keepsol, lperror) );
 
                /* reinstall old cutoff bound and lp pricing strategy */
                lp->cutoffbound = tmpcutoff;
-               SCIP_CALL( SCIPsetSetCharParam(set, "lp/pricing", tmppricingchar) );
+               SCIP_CALL( SCIPsetSetCharParam(set, messagehdlr, "lp/pricing", tmppricingchar) );
 
                /* get objective value */
                SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
@@ -13189,7 +13278,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                {
                   assert(!(*lperror));
 
-                  SCIP_CALL( lpSolve(lp, set, stat, prob, SCIP_LPALGO_DUALSIMPLEX, -1, -1,
+                  SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_DUALSIMPLEX, -1, -1,
                         FALSE, FALSE, TRUE, fastmip, tightfeastol, fromscratch, keepsol, lperror) );
 
                   /* get objective value */
@@ -13253,7 +13342,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                      || (solstat == SCIP_LPSOLSTAT_OBJLIMIT &&
                         !SCIPsetIsGE(set, objval, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob))) )
                   {
-                     SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+                     SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
                         "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %d\n", stat->nnodes, stat->nlps);
                      lp->solved = FALSE;
                      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
@@ -13300,7 +13389,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                       * @todo: like in the default LP solving evaluation, solve without fastmip,
                       * with tighter feasibility tolerance and from scratch
                       */
-                     SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+                     SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                         "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in unbounded LP %d\n", stat->nnodes, stat->nlps);
                      lp->solved = FALSE;
                      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
@@ -15820,6 +15909,7 @@ SCIP_RETCODE SCIPlpEndDive(
    SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
@@ -15869,10 +15959,10 @@ SCIP_RETCODE SCIPlpEndDive(
    {
       SCIP_Bool lperror;
 
-      SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, eventqueue, eventfilter, prob, -1, FALSE, FALSE, FALSE, &lperror) );
+      SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr,  blkmem, stat, eventqueue, eventfilter, prob, -1, FALSE, FALSE, FALSE, &lperror) );
       if( lperror )
       {
-         SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles while resolving LP %"SCIP_LONGINT_FORMAT" after diving\n", stat->nnodes, stat->nlps);
          lp->resolvelperror = TRUE;
       }
@@ -15881,7 +15971,7 @@ SCIP_RETCODE SCIPlpEndDive(
          && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY
          && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OBJLIMIT )
       {
-         SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "LP was not resolved to a sufficient status after diving\n");
          lp->resolvelperror = TRUE;
       }
@@ -16148,12 +16238,12 @@ SCIP_RETCODE SCIPlpWrite(
 SCIP_RETCODE SCIPlpWriteMip(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           fname,              /**< file name */
    SCIP_Bool             genericnames,       /**< should generic names like x_i and row_j be used in order to avoid
                                               *   troubles with reserved symbols? */
    SCIP_Bool             origobj,            /**< should the original objective function be used? */
    SCIP_OBJSENSE         objsense,           /**< objective sense */
-   
    SCIP_Real             objscale,           /**< objective scaling factor */
    SCIP_Real             objoffset           /**< objective offset, e.g., caused by variable fixings in presolving */
    )
@@ -16179,28 +16269,28 @@ SCIP_RETCODE SCIPlpWriteMip(
 
    /* print comments */
    if( genericnames )
-      SCIPmessageFPrintInfo(file, "\\ Original Variable and Constraint Names have been replaced by generic names.\n"); 
+      SCIPmessageFPrintInfo(messagehdlr, file, "\\ Original Variable and Constraint Names have been replaced by generic names.\n"); 
    else
    {
-      SCIPmessageFPrintInfo(file,"\\ Warning: Variable and Constraint Names should not contain special characters like '+', '=' etc.\n");
-      SCIPmessageFPrintInfo(file, "\\ If this is the case, the model may be corrupted!\n");
+      SCIPmessageFPrintInfo(messagehdlr, file,"\\ Warning: Variable and Constraint Names should not contain special characters like '+', '=' etc.\n");
+      SCIPmessageFPrintInfo(messagehdlr, file, "\\ If this is the case, the model may be corrupted!\n");
    }
 
    if( origobj && objoffset != 0.0 )
    {
-      SCIPmessageFPrintInfo(file, "\\ An artificial variable 'objoffset' has been added and fixed to 1.\n"); 
-      SCIPmessageFPrintInfo(file, "\\ Switching this variable to 0 will disable the offset in the objective.\n\n"); 
+      SCIPmessageFPrintInfo(messagehdlr, file, "\\ An artificial variable 'objoffset' has been added and fixed to 1.\n"); 
+      SCIPmessageFPrintInfo(messagehdlr, file, "\\ Switching this variable to 0 will disable the offset in the objective.\n\n"); 
    }
    
    /* print objective function */
    /**@note the transformed problem in SCIP is always a minimization problem */
    if( !origobj || objsense == SCIP_OBJSENSE_MINIMIZE )
-      SCIPmessageFPrintInfo(file, "Minimize");
+      SCIPmessageFPrintInfo(messagehdlr, file, "Minimize");
    else
-      SCIPmessageFPrintInfo(file, "Maximize");
+      SCIPmessageFPrintInfo(messagehdlr, file, "Maximize");
    
    /* print objective */
-   SCIPmessageFPrintInfo(file, "\n Obj:");
+   SCIPmessageFPrintInfo(messagehdlr, file, "\n Obj:");
    j = 0;
    for( i = 0; i < lp->ncols; ++i )
    {
@@ -16214,20 +16304,20 @@ SCIP_RETCODE SCIPlpWriteMip(
          }
 
          if( genericnames )
-            SCIPmessageFPrintInfo(file," %+.15g x_%d", coeff, lp->cols[i]->lppos);
+            SCIPmessageFPrintInfo(messagehdlr, file," %+.15g x_%d", coeff, lp->cols[i]->lppos);
          else
-            SCIPmessageFPrintInfo(file," %+.15g %s", coeff, lp->cols[i]->var->name);
+            SCIPmessageFPrintInfo(messagehdlr, file," %+.15g %s", coeff, lp->cols[i]->var->name);
          
          ++j;
          if( j % 10 == 0 )
-            SCIPmessageFPrintInfo(file,"\n     ");
+            SCIPmessageFPrintInfo(messagehdlr, file,"\n     ");
       }
    }
    if( origobj && objoffset != 0.0 ) 
-      SCIPmessageFPrintInfo(file," %+.15g objoffset", objoffset * (SCIP_Real) objsense * objscale);
+      SCIPmessageFPrintInfo(messagehdlr, file," %+.15g objoffset", objoffset * (SCIP_Real) objsense * objscale);
 
    /* print constraint section */
-   SCIPmessageFPrintInfo(file,"\n\nSubject to\n");
+   SCIPmessageFPrintInfo(messagehdlr, file,"\n\nSubject to\n");
    for( i = 0; i < lp->nrows; i++ )
    {
       char type;
@@ -16259,19 +16349,19 @@ SCIP_RETCODE SCIPlpWriteMip(
       case 'l':
       case 'e':
          if( strlen(rowname) > 0 )
-            SCIPmessageFPrintInfo(file,"%s: ", rowname);
+            SCIPmessageFPrintInfo(messagehdlr, file, "%s: ", rowname);
          break;
       case 'i':
-         SCIPmessageFPrintInfo(file,"\\\\ WARNING: The lhs and the rhs of the row with original name <%s>",lp->rows[i]->name); 
-         SCIPmessageFPrintInfo(file,"are not in a valid range. The following two constraints may be corrupted!\n");
-         SCIPwarningMessage("The lhs and rhs of row <%s> are not in a valid range.\n",lp->rows[i]->name);
+         SCIPmessageFPrintInfo(messagehdlr, file,"\\\\ WARNING: The lhs and the rhs of the row with original name <%s>",lp->rows[i]->name); 
+         SCIPmessageFPrintInfo(messagehdlr, file,"are not in a valid range. The following two constraints may be corrupted!\n");
+         SCIPmessagePrintWarning(messagehdlr, "The lhs and rhs of row <%s> are not in a valid range.\n",lp->rows[i]->name);
          type = 'b';
          /*lint -fallthrough*/
       case 'b':
-         SCIPmessageFPrintInfo(file,"%s_lhs: ", rowname);
+         SCIPmessageFPrintInfo(messagehdlr, file,"%s_lhs: ", rowname);
          break;
       case 'B':
-         SCIPmessageFPrintInfo(file,"%s_rhs: ", rowname);
+         SCIPmessageFPrintInfo(messagehdlr, file,"%s_rhs: ", rowname);
          break;
       default:
          SCIPerrorMessage("Undefined row type!\n");
@@ -16282,30 +16372,30 @@ SCIP_RETCODE SCIPlpWriteMip(
       for( j = 0; j < lp->rows[i]->nlpcols; ++j )
       {
          if( genericnames )
-            SCIPmessageFPrintInfo(file," %+.15g x_%d", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->lppos);
+            SCIPmessageFPrintInfo(messagehdlr, file," %+.15g x_%d", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->lppos);
          else
-            SCIPmessageFPrintInfo(file," %+.15g %s", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->var->name);
+            SCIPmessageFPrintInfo(messagehdlr, file," %+.15g %s", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->var->name);
          
          if( (j+1) % 10 == 0 )
-            SCIPmessageFPrintInfo(file,"\n          ");
+            SCIPmessageFPrintInfo(messagehdlr, file,"\n          ");
       }
       
       /* print right hand side */
       switch( type )
       {
       case 'b':
-         SCIPmessageFPrintInfo(file," >= %.15g\n",lp->rows[i]->lhs - lp->rows[i]->constant);         
+         SCIPmessageFPrintInfo(messagehdlr, file," >= %.15g\n",lp->rows[i]->lhs - lp->rows[i]->constant);         
          type = 'B';
          goto WRITEROW;
       case 'l':
-         SCIPmessageFPrintInfo(file," >= %.15g\n",lp->rows[i]->lhs - lp->rows[i]->constant);
+         SCIPmessageFPrintInfo(messagehdlr, file," >= %.15g\n",lp->rows[i]->lhs - lp->rows[i]->constant);
          break;
       case 'B':
       case 'r':
-         SCIPmessageFPrintInfo(file," <= %.15g\n",lp->rows[i]->rhs - lp->rows[i]->constant);
+         SCIPmessageFPrintInfo(messagehdlr, file," <= %.15g\n",lp->rows[i]->rhs - lp->rows[i]->constant);
          break;
       case 'e':
-         SCIPmessageFPrintInfo(file," = %.15g\n",lp->rows[i]->lhs - lp->rows[i]->constant);
+         SCIPmessageFPrintInfo(messagehdlr, file," = %.15g\n",lp->rows[i]->lhs - lp->rows[i]->constant);
          break;
       default:
          SCIPerrorMessage("Undefined row type!\n");
@@ -16314,32 +16404,32 @@ SCIP_RETCODE SCIPlpWriteMip(
    }
 
    /* print variable bounds */
-   SCIPmessageFPrintInfo(file,"\n\nBounds\n");
+   SCIPmessageFPrintInfo(messagehdlr, file,"\n\nBounds\n");
    for( i = 0; i < lp->ncols; ++i )
    {
       if( !SCIPsetIsInfinity(set,-lp->cols[i]->lb) || !SCIPsetIsInfinity(set,lp->cols[i]->ub) )
       {
          /* print lower bound as far this one is not infinity */
          if( !SCIPsetIsInfinity(set,-lp->cols[i]->lb) )
-            SCIPmessageFPrintInfo(file," %.15g <=", lp->cols[i]->lb);
+            SCIPmessageFPrintInfo(messagehdlr, file," %.15g <=", lp->cols[i]->lb);
          
          /* print variable name */
          if( genericnames )
-            SCIPmessageFPrintInfo(file," x_%d ", lp->cols[i]->lppos);
+            SCIPmessageFPrintInfo(messagehdlr, file," x_%d ", lp->cols[i]->lppos);
          else
-            SCIPmessageFPrintInfo(file," %s ", lp->cols[i]->var->name);
+            SCIPmessageFPrintInfo(messagehdlr, file," %s ", lp->cols[i]->var->name);
          
          /* print upper bound as far this one is not infinity */
          if( !SCIPsetIsInfinity(set,lp->cols[i]->ub) )
-            SCIPmessageFPrintInfo(file,"<= %.15g", lp->cols[i]->ub);
-         SCIPmessageFPrintInfo(file,"\n");
+            SCIPmessageFPrintInfo(messagehdlr, file,"<= %.15g", lp->cols[i]->ub);
+         SCIPmessageFPrintInfo(messagehdlr, file,"\n");
       }
    }
    if( origobj && objoffset != 0.0 )
-      SCIPmessageFPrintInfo(file," objoffset = 1");
+      SCIPmessageFPrintInfo(messagehdlr, file," objoffset = 1");
 
    /* print integer variables */
-   SCIPmessageFPrintInfo(file,"\n\nGenerals\n ");
+   SCIPmessageFPrintInfo(messagehdlr, file,"\n\nGenerals\n ");
    j = 0;
    for( i = 0; i < lp->ncols; ++i )
    {
@@ -16347,17 +16437,17 @@ SCIP_RETCODE SCIPlpWriteMip(
       {
          /* print variable name */
          if( genericnames )
-            SCIPmessageFPrintInfo(file," x_%d ", lp->cols[i]->lppos);
+            SCIPmessageFPrintInfo(messagehdlr, file," x_%d ", lp->cols[i]->lppos);
          else
-            SCIPmessageFPrintInfo(file," %s ", lp->cols[i]->var->name);
+            SCIPmessageFPrintInfo(messagehdlr, file," %s ", lp->cols[i]->var->name);
 
          j++;
          if( j % 10 == 0 )
-            SCIPmessageFPrintInfo(file,"\n ");
+            SCIPmessageFPrintInfo(messagehdlr, file,"\n ");
       }
    }
    
-   SCIPmessageFPrintInfo(file,"\n\nEnd");
+   SCIPmessageFPrintInfo(messagehdlr, file,"\n\nEnd");
    fclose(file);
    
    return SCIP_OKAY;
@@ -17240,6 +17330,7 @@ void SCIPlpMarkDivingObjChanged(
  */
 SCIP_RETCODE SCIPlpComputeRelIntPoint(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Bool             relaxrows,          /**< should the rows be relaxed */
@@ -17302,7 +17393,7 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
    }
 
    /* create auxiliary LP */
-   SCIP_CALL( SCIPlpiCreate(&lpi, "relativeInterior", SCIP_OBJSEN_MAXIMIZE) );
+   SCIP_CALL( SCIPlpiCreate(&lpi, "relativeInterior", SCIP_OBJSEN_MAXIMIZE, messagehdlr) );
 
    /* get storage */
    if( normtype == 'o' )

@@ -1297,7 +1297,7 @@ SCIP_RETCODE forbidFixation(
    if( nsubbinvars == 0 && nsubintvars == 0 )
    {
       /* If we did not fix any discrete variables but found the "sub"CIP infeasible, then also the CIP is infeasible. */
-      SCIPwarningMessage("heur_subnlp found subCIP infeasible after fixing no variables, something is strange here...\n");
+      SCIPwarningMessage(scip, "heur_subnlp found subCIP infeasible after fixing no variables, something is strange here...\n");
       return SCIP_OKAY;
    }
 

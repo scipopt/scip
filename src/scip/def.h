@@ -43,7 +43,7 @@
 #endif
 
 #include "scip/type_retcode.h"
-#include "scip/message.h"
+#include "scip/pub_message.h"
 
 #ifdef __cplusplus
 extern "C" {

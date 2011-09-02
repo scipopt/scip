@@ -2540,11 +2540,11 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
          
             if( SCIPisInfinity(scip, maxact) )
             {
-               SCIPwarningMessage("maxactivity = %g exceed infinity value.\n", maxact);
+               SCIPwarningMessage(scip, "maxactivity = %g exceed infinity value.\n", maxact);
             }
             if( SCIPisInfinity(scip, -minact) )
             {
-               SCIPwarningMessage("minactivity = %g exceed -infinity value.\n", minact);
+               SCIPwarningMessage(scip, "minactivity = %g exceed -infinity value.\n", minact);
             }
 
             /* @todo check whether it's better to set the initial flag to false */         

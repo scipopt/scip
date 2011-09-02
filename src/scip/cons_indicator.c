@@ -749,9 +749,9 @@ SCIP_RETCODE checkParam(
       /* check stage */
       if ( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM )
       {
-         SCIPwarningMessage("Cannot change parameter <%s> stage %d - reset to old value %s.\n", name, SCIPgetStage(scip), oldvalue ? "true" : "false");
+         SCIPwarningMessage(scip, "Cannot change parameter <%s> stage %d - reset to old value %s.\n", name, SCIPgetStage(scip), oldvalue ? "true" : "false");
          /* reset parameter (NULL = do not recursively call paramchd function) */
-         SCIP_CALL( SCIPparamSetBool(param, NULL, oldvalue, FALSE) );
+         SCIP_CALL( SCIPchgBoolParam(scip, param, oldvalue) );
          *newvalue = oldvalue;
       }
    }
@@ -832,7 +832,7 @@ SCIP_RETCODE checkIIS(
    nconss = SCIPconshdlrGetNConss(conshdlr);
 
    /* create LP */
-   SCIP_CALL( SCIPlpiCreate(&lp, "checkLP", SCIP_OBJSEN_MINIMIZE) );
+   SCIP_CALL( SCIPlpiCreate(&lp, "checkLP", SCIP_OBJSEN_MINIMIZE, SCIPgetMessagehdlr(scip)) );
 
    /* set up hash map */
    SCIP_CALL( SCIPhashmapCreate(&varhash, SCIPblkmem(scip), SCIPcalcHashtableSize(10 * SCIPgetNVars(scip))) );
@@ -1151,7 +1151,7 @@ SCIP_RETCODE initAlternativeLP(
    SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->ubhash, SCIPblkmem(scip), SCIPcalcHashtableSize(10 * SCIPgetNVars(scip))) );
 
    /* create alternative LP */
-   SCIP_CALL( SCIPlpiCreate(&conshdlrdata->altlp, "altlp", SCIP_OBJSEN_MINIMIZE) );
+   SCIP_CALL( SCIPlpiCreate(&conshdlrdata->altlp, "altlp", SCIP_OBJSEN_MINIMIZE, SCIPgetMessagehdlr(scip)) );
 
    /* add first row */
    lhs = -1.0;
@@ -2482,7 +2482,7 @@ SCIP_RETCODE checkAltLPInfeasible(
    {
       SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, TRUE) );
       SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_PRESOLVING, FALSE) );
-      SCIPwarningMessage("Numerical problems, retrying ...\n");
+      SCIPwarningMessage(scip, "Numerical problems, retrying ...\n");
 
       /* re-solve LP */
       if ( primal )
@@ -2540,7 +2540,7 @@ SCIP_RETCODE checkAltLPInfeasible(
    if ( ! SCIPlpiIsPrimalInfeasible(lp) && ! SCIPlpiIsPrimalUnbounded(lp) &&
         ! SCIPlpiIsOptimal(lp) && SCIPlpiExistsPrimalRay(lp) && !primal )
    {
-      SCIPwarningMessage("The dual simplex produced a primal ray. Retrying with primal ...\n");
+      SCIPwarningMessage(scip, "The dual simplex produced a primal ray. Retrying with primal ...\n");
       /* the following settings might be changed: */
       SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, TRUE) );
       SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_PRESOLVING, TRUE) );
@@ -2571,11 +2571,11 @@ SCIP_RETCODE checkAltLPInfeasible(
          /* We have a status different from unbounded or optimal. This should not be the case ... */
          if (primal)
          {
-            SCIPwarningMessage("Primal simplex returned with unknown status: %d\n", SCIPlpiGetInternalStatus(lp));
+            SCIPwarningMessage(scip, "Primal simplex returned with unknown status: %d\n", SCIPlpiGetInternalStatus(lp));
          }
          else
          {
-            SCIPwarningMessage("Dual simplex returned with unknown status: %d\n", SCIPlpiGetInternalStatus(lp));
+            SCIPwarningMessage(scip, "Dual simplex returned with unknown status: %d\n", SCIPlpiGetInternalStatus(lp));
          }
          /* SCIP_CALL( SCIPlpiWriteLP(lp, "debug.lp") ); */
          *error = TRUE;
@@ -4286,7 +4286,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolIndicator)
 
 #ifdef SCIP_DEBUG
       SCIPinfoMessage(scip, NULL, "\nStatistics for slack hash:\n");
-      SCIPhashmapPrintStatistics(conshdlrdata->slackhash);
+      SCIPhashmapPrintStatistics(conshdlrdata->slackhash, SCIPgetMessagehdlr(scip));
 #endif
 
       if ( conshdlrdata->altlp != NULL )
@@ -4297,13 +4297,13 @@ SCIP_DECL_CONSEXITSOL(consExitsolIndicator)
 
 #ifdef SCIP_DEBUG
          SCIPinfoMessage(scip, NULL, "\nStatistics for var hash:\n");
-         SCIPhashmapPrintStatistics(conshdlrdata->varhash);
+         SCIPhashmapPrintStatistics(conshdlrdata->varhash, SCIPgetMessagehdlr(scip));
          SCIPinfoMessage(scip, NULL, "\nStatistics for slack hash:\n");
-         SCIPhashmapPrintStatistics(conshdlrdata->slackhash);
+         SCIPhashmapPrintStatistics(conshdlrdata->slackhash, SCIPgetMessagehdlr(scip));
          SCIPinfoMessage(scip, NULL, "\nStatistics for lower bound hash:\n");
-         SCIPhashmapPrintStatistics(conshdlrdata->lbhash);
+         SCIPhashmapPrintStatistics(conshdlrdata->lbhash, SCIPgetMessagehdlr(scip));
          SCIPinfoMessage(scip, NULL, "\nStatistics for upper bound hash:\n");
-         SCIPhashmapPrintStatistics(conshdlrdata->ubhash);
+         SCIPhashmapPrintStatistics(conshdlrdata->ubhash, SCIPgetMessagehdlr(scip));
 #endif
 
          SCIPhashmapFree(&conshdlrdata->varhash);

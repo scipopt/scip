@@ -951,7 +951,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
       retstat = SCIPsolveDiveLP(scip, -1, &lperror);
       if( retstat != SCIP_OKAY )
       {
-         SCIPwarningMessage("Error while solving LP in Intshifting heuristic; LP solve terminated with code <%d>\n",retstat);
+         SCIPwarningMessage(scip, "Error while solving LP in Intshifting heuristic; LP solve terminated with code <%d>\n",retstat);
       }
 #else
       SCIP_CALL( SCIPsolveDiveLP(scip, -1, &lperror) );

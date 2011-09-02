@@ -152,14 +152,14 @@ int SCIPsubversion(
 /** prints a version information line to a file stream */
 extern
 void SCIPprintVersion(
+   SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
 /** prints error message for the given SCIP return code */
 extern
 void SCIPprintError(
-   SCIP_RETCODE          retcode,            /**< SCIP return code causing the error */
-   FILE*                 file                /**< output file (or NULL for standard output) */
+   SCIP_RETCODE          retcode             /**< SCIP return code causing the error */
    );
 
 /**@} */
@@ -265,46 +265,53 @@ SCIP_Bool SCIPisStopped(
 /**@name Message Output Methods */
 /**@{ */
 
-/** creates a message handler; this method can already be called before SCIPcreate() */
-extern
-SCIP_RETCODE SCIPcreateMessagehdlr(
-   SCIP_MESSAGEHDLR**    messagehdlr,        /**< pointer to store the message handler */
-   SCIP_Bool             bufferedoutput,     /**< should the output be buffered up to the next newline? */
-   SCIP_DECL_MESSAGEERROR((*messageerror)),  /**< error message print method of message handler */
-   SCIP_DECL_MESSAGEWARNING((*messagewarning)),/**< warning message print method of message handler */
-   SCIP_DECL_MESSAGEDIALOG((*messagedialog)),/**< dialog message print method of message handler */
-   SCIP_DECL_MESSAGEINFO ((*messageinfo)),   /**< info message print method of message handler */
-   SCIP_MESSAGEHDLRDATA* messagehdlrdata     /**< message handler data */
-   );
-
-/** frees message handler; this method can be called after SCIPfree() */
-extern
-SCIP_RETCODE SCIPfreeMessagehdlr(
-   SCIP_MESSAGEHDLR**    messagehdlr         /**< pointer to the message handler */
-   );
-
-/** installs the given message handler, such that all messages are passed to this handler;
- *  this method can already be called before SCIPcreate()
+/** Installs the given message handler, such that all messages are passed to this handler. A messages handler can be
+ *  created via SCIPmessagehdlrCreate().
+ *
+ *  @note The currently installed messages handler gets not freed. That has to be done by the user using
+ *        SCIPmessagehdlrFree() or use SCIPsetMessagehdlrFree().
  */
 extern
 SCIP_RETCODE SCIPsetMessagehdlr(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler to install, or NULL to suppress all output */
    );
 
-/** installs the default message handler, such that all messages are printed to stdout and stderr;
- *  this method can already be called before SCIPcreate()
+/** Installs the given message handler, such that all messages are passed to this handler. A messages handler can be
+ *  created via SCIPmessagehdlrCreate(). The currently installed messages handler gets freed.
  */
 extern
-SCIP_RETCODE SCIPsetDefaultMessagehdlr(
-   void
+SCIP_RETCODE SCIPsetMessagehdlrFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler to install, or NULL to suppress all output */
    );
 
-/** returns the currently installed message handler, or NULL if messages are currently suppressed;
- *  this method can already be called before SCIPcreate()
- */
+/** returns the currently installed message handler, or NULL if messages are currently suppressed */
 extern
 SCIP_MESSAGEHDLR* SCIPgetMessagehdlr(
-   void
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** sets the log file name for the message handler */
+extern
+void SCIPsetMessagehdlrLogfile(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename            /**< name of log file, or NULL (stdout) */
+   );
+
+/** sets the currently installed message handler to be quiet (or not) */
+extern
+void SCIPsetMessagehdlrQuiet(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quiet               /**< should screen messages be suppressed? */
+   );
+
+/** prints a warning message via the message handler */
+extern
+void SCIPwarningMessage(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
    );
 
 /** prints a dialog message that requests user interaction or is a direct response to a user interactive command */
@@ -340,23 +347,6 @@ extern
 SCIP_VERBLEVEL SCIPgetVerbLevel(
    SCIP*                 scip                /**< SCIP data structure */
    );
-
-#ifndef NPARASCIP
-/** allocates memory for all message handlers for number of given threads
- *
- * @note it is necessary to call SCIPmessageSetDefaultHandler or SCIPmessageSetHandler for each thread
- */
-extern
-SCIP_RETCODE SCIPcreateMesshdlrPThreads(
-   int                   nthreads            /**< number of threads to allocate memory for */
-   );
-
-/** frees memory for all message handlers */
-extern
-void SCIPfreeMesshdlrPThreads(
-   void
-   );
-#endif
 
 
 /**@} */
@@ -763,10 +753,26 @@ SCIP_RETCODE SCIPsetParam(
 
 /** changes the value of an existing SCIP_Bool parameter */
 extern
+SCIP_RETCODE SCIPchgBoolParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_Bool             value               /**< new value of the parameter */
+   );
+
+/** changes the value of an existing SCIP_Bool parameter */
+extern
 SCIP_RETCODE SCIPsetBoolParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of the parameter */
    SCIP_Bool             value               /**< new value of the parameter */
+   );
+
+/** changes the value of an existing Int parameter */
+extern
+SCIP_RETCODE SCIPchgIntParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAM*           param,              /**< parameter */
+   int                   value               /**< new value of the parameter */
    );
 
 /** changes the value of an existing Int parameter */
@@ -779,10 +785,26 @@ SCIP_RETCODE SCIPsetIntParam(
 
 /** changes the value of an existing SCIP_Longint parameter */
 extern
+SCIP_RETCODE SCIPchgLongintParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_Longint          value               /**< new value of the parameter */
+   );
+
+/** changes the value of an existing SCIP_Longint parameter */
+extern
 SCIP_RETCODE SCIPsetLongintParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of the parameter */
    SCIP_Longint          value               /**< new value of the parameter */
+   );
+
+/** changes the value of an existing SCIP_Real parameter */
+extern
+SCIP_RETCODE SCIPchgRealParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_Real             value               /**< new value of the parameter */
    );
 
 /** changes the value of an existing SCIP_Real parameter */
@@ -795,10 +817,26 @@ SCIP_RETCODE SCIPsetRealParam(
 
 /** changes the value of an existing Char parameter */
 extern
+SCIP_RETCODE SCIPchgCharParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAM*           param,              /**< parameter */
+   char                  value               /**< new value of the parameter */
+   );
+
+/** changes the value of an existing Char parameter */
+extern
 SCIP_RETCODE SCIPsetCharParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of the parameter */
    char                  value               /**< new value of the parameter */
+   );
+
+/** changes the value of an existing String parameter */
+extern
+SCIP_RETCODE SCIPchgStringParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAM*           param,              /**< parameter */
+   const char*           value               /**< new value of the parameter */
    );
 
 /** changes the value of an existing String parameter */
@@ -4874,14 +4912,14 @@ SCIP_RETCODE SCIPcalcStrongCG(
 extern
 SCIP_RETCODE SCIPwriteLP(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           fname               /**< file name */
+   const char*           filename            /**< file name */
    );
 
 /** writes MIP relaxation of the current branch-and-bound node to a file */
 extern
 SCIP_RETCODE SCIPwriteMIP(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           fname,              /**< file name */
+   const char*           filename,           /**< file name */
    SCIP_Bool             genericnames,       /**< should generic names like x_i and row_j be used in order to avoid
                                               *   troubles with reserved strings? */
    SCIP_Bool             origobj             /**< should the original objective function be used? */
@@ -5465,7 +5503,7 @@ SCIP_RETCODE SCIPsetNLPStringPar(
 extern
 SCIP_RETCODE SCIPwriteNLP(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           fname               /**< file name */
+   const char*           filename            /**< file name */
    );
 
 /** gets the NLP interface and problem used by the SCIP NLP;
@@ -6929,7 +6967,7 @@ SCIP_RETCODE SCIPretransformSol(
 extern
 SCIP_RETCODE SCIPreadSol(
    SCIP*                 scip,              /**< SCIP data structure */
-   const char*           fname              /**< name of the input file */
+   const char*           filename           /**< name of the input file */
    );
 
 /** adds feasible primal solution to solution storage by copying it */

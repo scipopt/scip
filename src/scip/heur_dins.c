@@ -788,7 +788,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 #ifndef NDEBUG
       SCIP_CALL( retcode );
 #endif
-      SCIPwarningMessage("Error while solving subproblem in DINS heuristic; sub-SCIP terminated with code <%d>\n", retcode);
+      SCIPwarningMessage(scip, "Error while solving subproblem in DINS heuristic; sub-SCIP terminated with code <%d>\n", retcode);
    }
 
    heurdata->usednodes += SCIPgetNNodes(subscip);

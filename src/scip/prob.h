@@ -437,23 +437,16 @@ SCIP_Bool SCIPprobAllColsInLP(
 extern
 void SCIPprobPrintPseudoSol(
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
 /** outputs problem statistics */
 extern
 void SCIPprobPrintStatistics(
    SCIP_PROB*            prob,               /**< problem data */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< output file (or NULL for standard output) */
-   );
-
-/** outputs problem to file stream */
-extern
-SCIP_RETCODE SCIPprobPrint(
-   SCIP_PROB*            prob,               /**< problem data */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   FILE*                 file,               /**< output file (or NULL for standard output) */
-   const char*           comment             /**< string which starts a comment line in requested format (or NULL) */
    );
 
 #ifdef __cplusplus

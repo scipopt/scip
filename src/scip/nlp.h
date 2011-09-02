@@ -97,6 +97,14 @@ SCIP_RETCODE SCIPnlrowFree(
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
+/** output nonlinear row to file stream */
+extern
+SCIP_RETCODE SCIPnlrowPrint(
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   );
+
 /** increases usage counter of NLP nonlinear row */
 extern
 void SCIPnlrowCapture(
@@ -526,6 +534,7 @@ SCIP_RETCODE SCIPnlpSolve(
    SCIP_NLP*             nlp,                /**< NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat                /**< problem statistics */
    );
 
@@ -569,10 +578,13 @@ SCIP_RETCODE SCIPnlpRemoveRedundantNlRows(
    );
 
 /** set initial guess (approximate primal solution) for next solve
- * array initguess must be NULL or have length at least SCIPnlpGetNVars */
+ *
+ *  array initguess must be NULL or have length at least SCIPnlpGetNVars()
+ */
 extern
 SCIP_RETCODE SCIPnlpSetInitialGuess(
    SCIP_NLP*             nlp,                /**< current NLP data */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_Real*            initguess           /**< new initial guess, or NULL to clear previous one */
    );
@@ -582,6 +594,7 @@ extern
 SCIP_RETCODE SCIPnlpWrite(
    SCIP_NLP*             nlp,                /**< current NLP data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           fname               /**< file name */
    );
 
@@ -648,6 +661,7 @@ SCIP_RETCODE SCIPnlpSolveDive(
    SCIP_NLP*             nlp,                /**< current NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat                /**< problem statistics */
    );
 

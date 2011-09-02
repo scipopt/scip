@@ -317,12 +317,14 @@ public:
 protected:
    void PrintImpl(Ipopt::EJournalCategory category, Ipopt::EJournalLevel level, const char* str)
    {
-      SCIPmessagePrintInfo(str);
+      //SCIPmessagePrintInfo(str);
+      printf(str);
    }
 
    void PrintfImpl(Ipopt::EJournalCategory category, Ipopt::EJournalLevel level, const char* pformat, va_list ap)
    {
-      SCIPmessageVPrintInfo(pformat, ap);
+      //SCIPmessageVPrintInfo(pformat, ap);
+      vprintf(pformat, ap);
    }
 
    void FlushBufferImpl() { }
@@ -948,7 +950,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
             if( !(SCIPexprintGetCapability() & SCIP_EXPRINTCAPABILITY_FUNCVALUE) ||
                ! (SCIPexprintGetCapability() & SCIP_EXPRINTCAPABILITY_GRADIENT) )
             {
-               SCIPwarningMessage("Do not have expression interpreter that can compute function values and gradients. Cannot solve NLP with Ipopt.\n");
+               SCIPerrorMessage("Do not have expression interpreter that can compute function values and gradients. Cannot solve NLP with Ipopt.\n");
                problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
                problem->lasttermstat = SCIP_NLPTERMSTAT_OTHER;
                return SCIP_OKAY;
@@ -1258,7 +1260,7 @@ SCIP_DECL_NLPISETINTPAR(nlpiSetIntParIpopt)
    {
       if( ival == 0 || ival == 1 )
       {
-         SCIPwarningMessage("from scratch parameter not supported by Ipopt interface yet. Ignored.\n");
+         printf("from scratch parameter not supported by Ipopt interface yet. Ignored.\n");
       }
       else
       {
@@ -1508,7 +1510,7 @@ SCIP_DECL_NLPISETREALPAR(nlpiSetRealParIpopt)
 
    case SCIP_NLPPAR_LOBJLIM:
    {
-      SCIPwarningMessage("Parameter lower objective limit not supported by Ipopt interface yet. Ignored.\n");
+      printf("Parameter lower objective limit not supported by Ipopt interface yet. Ignored.\n");
       break;
    }
 

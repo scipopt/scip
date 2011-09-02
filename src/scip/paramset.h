@@ -54,6 +54,7 @@ void SCIPparamsetFree(
 extern
 SCIP_RETCODE SCIPparamsetAddBool(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
@@ -68,6 +69,7 @@ SCIP_RETCODE SCIPparamsetAddBool(
 extern
 SCIP_RETCODE SCIPparamsetAddInt(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
@@ -84,6 +86,7 @@ SCIP_RETCODE SCIPparamsetAddInt(
 extern
 SCIP_RETCODE SCIPparamsetAddLongint(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
@@ -100,6 +103,7 @@ SCIP_RETCODE SCIPparamsetAddLongint(
 extern
 SCIP_RETCODE SCIPparamsetAddReal(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
@@ -116,6 +120,7 @@ SCIP_RETCODE SCIPparamsetAddReal(
 extern
 SCIP_RETCODE SCIPparamsetAddChar(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
@@ -131,6 +136,7 @@ SCIP_RETCODE SCIPparamsetAddChar(
 extern
 SCIP_RETCODE SCIPparamsetAddString(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
@@ -194,6 +200,7 @@ extern
 SCIP_RETCODE SCIPparamsetSet(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           name,               /**< name of the parameter */
    void*                 value               /**< new value of the parameter */
    );
@@ -203,6 +210,7 @@ extern
 SCIP_RETCODE SCIPparamsetSetBool(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           name,               /**< name of the parameter */
    SCIP_Bool             value               /**< new value of the parameter */
    );
@@ -212,6 +220,7 @@ extern
 SCIP_RETCODE SCIPparamsetSetInt(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           name,               /**< name of the parameter */
    int                   value               /**< new value of the parameter */
    );
@@ -221,6 +230,7 @@ extern
 SCIP_RETCODE SCIPparamsetSetLongint(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           name,               /**< name of the parameter */
    SCIP_Longint          value               /**< new value of the parameter */
    );
@@ -230,6 +240,7 @@ extern
 SCIP_RETCODE SCIPparamsetSetReal(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           name,               /**< name of the parameter */
    SCIP_Real             value               /**< new value of the parameter */
    );
@@ -239,6 +250,7 @@ extern
 SCIP_RETCODE SCIPparamsetSetChar(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           name,               /**< name of the parameter */
    char                  value               /**< new value of the parameter */
    );
@@ -248,6 +260,7 @@ extern
 SCIP_RETCODE SCIPparamsetSetString(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           name,               /**< name of the parameter */
    const char*           value               /**< new value of the parameter */
    );
@@ -256,12 +269,14 @@ SCIP_RETCODE SCIPparamsetSetString(
 SCIP_RETCODE SCIPparamsetRead(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           filename            /**< file name */
    );
 
 /** writes all parameters in the parameter set to a file */
 SCIP_RETCODE SCIPparamsetWrite(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           filename,           /**< file name, or NULL for stdout */
    SCIP_Bool             comments,           /**< should parameter descriptions be written as comments? */
    SCIP_Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */
@@ -271,14 +286,16 @@ SCIP_RETCODE SCIPparamsetWrite(
 extern
 SCIP_RETCODE SCIPparamsetSetToDefaults(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
-   SCIP*                 scip                /**< SCIP data structure, or NULL if paramchgd method should not be called */   
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
 /** installs default value for a single parameter */
 extern
 SCIP_RETCODE SCIPparamsetSetToDefault(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
-   SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           paramname           /**< name of the parameter */
    );
 
@@ -294,7 +311,8 @@ SCIP_RETCODE SCIPparamsetSetToDefault(
 extern
 SCIP_RETCODE SCIPparamsetSetEmphasis(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
-   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_PARAMEMPHASIS    paramemphasis,      /**< parameter emphasis */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
@@ -305,7 +323,8 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
 extern
 SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
-   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
@@ -318,7 +337,8 @@ SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
 extern
 SCIP_RETCODE SCIPparamsetSetHeuristics(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
-   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
@@ -332,7 +352,8 @@ SCIP_RETCODE SCIPparamsetSetHeuristics(
 extern
 SCIP_RETCODE SCIPparamsetSetPresolving(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
-   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
@@ -346,7 +367,8 @@ SCIP_RETCODE SCIPparamsetSetPresolving(
 extern
 SCIP_RETCODE SCIPparamsetSetSeparating(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
-   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
@@ -366,9 +388,78 @@ int SCIPparamsetGetNParams(
 /** copies all parameter values of the source parameter set to the corresponding parameters in the target set */
 extern
 SCIP_RETCODE SCIPparamsetCopyParams(
- SCIP_PARAMSET*          sourceparamset,     /**< source parameter set */
- SCIP_PARAMSET*          targetparamset,     /**< target parameter set */
- SCIP*                   targetscip          /**< target SCIP data structure */
+   SCIP_PARAMSET*        sourceparamset,     /**< source parameter set */
+   SCIP_PARAMSET*        targetparamset,     /**< target parameter set */
+   SCIP_SET*             set,                /**< global SCIP settings of target SCIP */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler of target SCIP */
+   );
+
+/** sets value of SCIP_Bool parameter */
+extern
+SCIP_RETCODE SCIPparamSetBool(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_SET*             set,                /**< global SCIP settings, or NULL if param change method should not be called */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_Bool             value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   );
+
+/** sets value of int parameter */
+extern
+SCIP_RETCODE SCIPparamSetInt(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_SET*             set,                /**< global SCIP settings, or NULL if param change method should not be called */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   int                   value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   );
+
+/** sets value of SCIP_Longint parameter */
+extern
+SCIP_RETCODE SCIPparamSetLongint(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_SET*             set,                /**< global SCIP settings, or NULL if param change method should not be called */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_Longint          value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   );
+
+/** sets value of SCIP_Real parameter */
+extern
+SCIP_RETCODE SCIPparamSetReal(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_SET*             set,                /**< global SCIP settings, or NULL if param change method should not be called */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_Real             value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   );
+
+/** sets value of char parameter */
+extern
+SCIP_RETCODE SCIPparamSetChar(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_SET*             set,                /**< global SCIP settings, or NULL if param change method should not be called */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   char                  value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   );
+
+/** sets value of string parameter */
+extern
+SCIP_RETCODE SCIPparamSetString(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_SET*             set,                /**< global SCIP settings, or NULL if param change method should not be called */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   const char*           value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   );
+
+/** sets the parameter to its default setting */
+extern
+SCIP_RETCODE SCIPparamSetToDefault(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
 #ifdef __cplusplus

@@ -30,6 +30,7 @@
 #include "blockmemshell/memory.h"
 #include "scip/type_retcode.h"
 #include "scip/type_misc.h"
+#include "scip/type_message.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -179,7 +180,8 @@ SCIP_RETCODE SCIPhashtableRemove(
 /** prints statistics about hash table usage */
 extern
 void SCIPhashtablePrintStatistics(
-   SCIP_HASHTABLE*       hashtable           /**< hash table */
+   SCIP_HASHTABLE*       hashtable,          /**< hash table */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
 /** standard hash key comparator for string keys */
@@ -253,7 +255,8 @@ SCIP_RETCODE SCIPhashmapRemove(
 /** prints statistics about hash map usage */
 extern
 void SCIPhashmapPrintStatistics(
-   SCIP_HASHMAP*         hashmap             /**< hash map */
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
 /** indicates whether a hash map has no entries */
@@ -3341,6 +3344,7 @@ SCIP_RETCODE SCIPstairmapResize(
 extern
 void SCIPstairmapPrint(
    SCIP_STAIRMAP*        stairmap,           /**< stair map to output */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
 

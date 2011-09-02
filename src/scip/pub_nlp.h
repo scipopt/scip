@@ -28,6 +28,7 @@
 #include <stdio.h>
 
 #include "scip/def.h"
+#include "scip/type_message.h"
 #include "blockmemshell/memory.h"
 #include "scip/type_set.h"
 #include "scip/type_stat.h"
@@ -70,6 +71,7 @@ SCIP_RETCODE SCIPexprtreeAddVars(
 extern
 SCIP_RETCODE SCIPexprtreePrintWithNames(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< file for printing, or NULL for stdout */
 );
 
@@ -95,13 +97,6 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
 
 /**@name Nonlinear row methods */
 /**@{ */
-
-/** output nonlinear row to file stream */
-extern
-SCIP_RETCODE SCIPnlrowPrint(
-   SCIP_NLROW*           nlrow,              /**< NLP row */
-   FILE*                 file                /**< output file (or NULL for standard output) */
-   );
 
 /** gets constant */
 extern

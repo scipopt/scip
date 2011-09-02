@@ -514,7 +514,7 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
             retstat = SCIPsolveProbingLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror);
             if( retstat != SCIP_OKAY )
             {
-               SCIPwarningMessage("Error while solving LP in Guideddiving heuristic; LP solve terminated with code <%d>\n",retstat);
+               SCIPwarningMessage(scip, "Error while solving LP in Guideddiving heuristic; LP solve terminated with code <%d>\n",retstat);
             }
 #else
             nlpiterations = SCIPgetNLPIterations(scip);

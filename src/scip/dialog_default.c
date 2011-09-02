@@ -495,7 +495,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChecksol)
       SCIPdialogMessage(scip, NULL, "no feasible solution available\n");
    else
    {
-      SCIPmessagePrintInfo("check best solution\n");
+      SCIPinfoMessage(scip, NULL, "check best solution\n");
       SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, TRUE, FALSE) );
 
       if( feasible )
@@ -1628,10 +1628,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
       if( !error )
       {
-         SCIP_CALL( SCIPparamSetBool(param, scip, boolval, FALSE) );
+         SCIP_CALL( SCIPchgBoolParam(scip, param, boolval) );
          SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, boolval ? "TRUE" : "FALSE", TRUE) );
       }
-      
+
       break;
 
    case SCIP_PARAMTYPE_INT:
@@ -1653,7 +1653,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
          SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
          return SCIP_OKAY;
       }
-      retcode = SCIPparamSetInt(param, scip, intval, FALSE);
+      retcode = SCIPchgIntParam(scip, param, intval);
       if( retcode != SCIP_PARAMETERWRONGVAL )
       {
          SCIP_CALL( retcode );
@@ -1679,7 +1679,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
          SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
          return SCIP_OKAY;
       }
-      retcode = SCIPparamSetLongint(param, scip, longintval, FALSE);
+      retcode = SCIPchgLongintParam(scip, param, longintval);
       if( retcode != SCIP_PARAMETERWRONGVAL )
       {
          SCIP_CALL( retcode );
@@ -1705,7 +1705,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
          SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
          return SCIP_OKAY;
       }
-      retcode = SCIPparamSetReal(param, scip, realval, FALSE);
+      retcode = SCIPchgRealParam(scip, param, realval);
       if( retcode != SCIP_PARAMETERWRONGVAL )
       {
          SCIP_CALL( retcode );
@@ -1730,7 +1730,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
          SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
          return SCIP_OKAY;
       }
-      retcode = SCIPparamSetChar(param, scip, charval, FALSE);
+      retcode = SCIPchgCharParam(scip, param, charval);
       if( retcode != SCIP_PARAMETERWRONGVAL )
       {
          SCIP_CALL( retcode );
@@ -1750,7 +1750,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
 
-      retcode = SCIPparamSetString(param, scip, valuestr, FALSE);
+      retcode = SCIPchgStringParam(scip, param, valuestr);
       if( retcode != SCIP_PARAMETERWRONGVAL )
       {
          SCIP_CALL( retcode );

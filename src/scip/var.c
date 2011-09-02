@@ -2114,6 +2114,7 @@ SCIP_RETCODE parseBounds(
 static
 SCIP_RETCODE varParse(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           str,                /**< string to parse */
    char*                 name,               /**< pointer to store the variable name */
    SCIP_Real*            lb,                 /**< pointer to store the lower bound */
@@ -2158,7 +2159,7 @@ SCIP_RETCODE varParse(
       (*vartype) = SCIP_VARTYPE_CONTINUOUS;
    else
    {
-      SCIPwarningMessage("unknown variable type\n");
+      SCIPmessagePrintWarning(messagehdlr, "unknown variable type\n");
       (*success) = FALSE;
       return SCIP_OKAY;
    }
@@ -2226,6 +2227,7 @@ SCIP_RETCODE SCIPvarParseOriginal(
    SCIP_VAR**            var,                /**< pointer to variable data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics */
    const char*           str,                /**< string to parse */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
@@ -2245,13 +2247,13 @@ SCIP_RETCODE SCIPvarParseOriginal(
    SCIP_VARTYPE vartype;
    SCIP_Real lazylb;
    SCIP_Real lazyub;
-   
+
    assert(var != NULL);
    assert(blkmem != NULL);
    assert(stat != NULL);
-   
+
    /* parse string in cip format for variable information */
-   SCIP_CALL( varParse(set, str, name, &lb, &ub, &obj, &vartype, &lazylb, &lazyub, FALSE, success) );
+   SCIP_CALL( varParse(set, messagehdlr, str, name, &lb, &ub, &obj, &vartype, &lazylb, &lazyub, FALSE, success) );
 
    if( *success )
    {
@@ -2269,7 +2271,7 @@ SCIP_RETCODE SCIPvarParseOriginal(
       /* set lazy status of variable bounds */
       (*var)->lazylb = lazylb;
       (*var)->lazyub = lazyub;
-      
+
       /* capture variable */
       SCIPvarCapture(*var);
    }
@@ -2285,6 +2287,7 @@ SCIP_RETCODE SCIPvarParseTransformed(
    SCIP_VAR**            var,                /**< pointer to variable data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics */
    const char*           str,                /**< string to parse */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
@@ -2310,14 +2313,14 @@ SCIP_RETCODE SCIPvarParseTransformed(
    assert(blkmem != NULL);
 
    /* parse string in cip format for variable information */
-   SCIP_CALL( varParse(set, str, name, &lb, &ub, &obj, &vartype, &lazylb, &lazyub, TRUE, success) );
+   SCIP_CALL( varParse(set, messagehdlr, str, name, &lb, &ub, &obj, &vartype, &lazylb, &lazyub, TRUE, success) );
 
    if( *success )
    {
       /* create variable */
       SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, initial, removable,
             varcopy, vardelorig, vartrans, vardeltrans, vardata) );
-      
+
       /* create event filter for transformed variable */
       SCIP_CALL( SCIPeventfilterCreate(&(*var)->eventfilter, blkmem) );
 
@@ -2612,9 +2615,10 @@ void SCIPvarInitSolve(
 }
 
 /** outputs the given bounds into the file stream */
-static 
+static
 void printBounds(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    SCIP_Real             lb,                 /**< lower bound */
    SCIP_Real             ub,                 /**< upper bound */
@@ -2622,26 +2626,27 @@ void printBounds(
    )
 {
    assert(set != NULL);
-   
-   SCIPmessageFPrintInfo(file, ", %s=", name);
+
+   SCIPmessageFPrintInfo(messagehdlr, file, ", %s=", name);
    if( SCIPsetIsInfinity(set, lb) )
-      SCIPmessageFPrintInfo(file, "[+inf,");
+      SCIPmessageFPrintInfo(messagehdlr, file, "[+inf,");
    else if( SCIPsetIsInfinity(set, -lb) )
-      SCIPmessageFPrintInfo(file, "[-inf,");
+      SCIPmessageFPrintInfo(messagehdlr, file, "[-inf,");
    else
-      SCIPmessageFPrintInfo(file, "[%.15g,", lb);
+      SCIPmessageFPrintInfo(messagehdlr, file, "[%.15g,", lb);
    if( SCIPsetIsInfinity(set, ub) )
-      SCIPmessageFPrintInfo(file, "+inf]");
+      SCIPmessageFPrintInfo(messagehdlr, file, "+inf]");
    else if( SCIPsetIsInfinity(set, -ub) )
-      SCIPmessageFPrintInfo(file, "-inf]");
+      SCIPmessageFPrintInfo(messagehdlr, file, "-inf]");
    else
-      SCIPmessageFPrintInfo(file, "%.15g]", ub);
+      SCIPmessageFPrintInfo(messagehdlr, file, "%.15g]", ub);
 }
 
 /** prints hole list to file stream */
 static
 void printHolelist(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    SCIP_HOLELIST*        holelist,           /**< hole list pointer to hole of interest */
    const char*           name                /**< hole type name */
@@ -2652,22 +2657,22 @@ void printHolelist(
 
    if( holelist == NULL )
       return;
-   
+
    left = SCIPholelistGetLeft(holelist);
    right = SCIPholelistGetRight(holelist);
-   
+
    /* display first hole */
-   SCIPmessageFPrintInfo(file, ", %s=(%g,%g)", name, left, right);
+   SCIPmessageFPrintInfo(messagehdlr, file, ", %s=(%g,%g)", name, left, right);
    holelist = SCIPholelistGetNext(holelist);
-   
+
    while(holelist != NULL  )
    {
       left = SCIPholelistGetLeft(holelist);
       right = SCIPholelistGetRight(holelist);
 
       /* display hole */
-      SCIPmessageFPrintInfo(file, "(%g,%g)", left, right);
-   
+      SCIPmessageFPrintInfo(messagehdlr, file, "(%g,%g)", left, right);
+
       /* get next hole */
       holelist = SCIPholelistGetNext(holelist);
    }
@@ -2677,6 +2682,7 @@ void printHolelist(
 void SCIPvarPrint(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
@@ -2691,16 +2697,16 @@ void SCIPvarPrint(
    switch( SCIPvarGetType(var) )
    {
    case SCIP_VARTYPE_BINARY:
-      SCIPmessageFPrintInfo(file, "  [binary]");
+      SCIPmessageFPrintInfo(messagehdlr, file, "  [binary]");
       break;
    case SCIP_VARTYPE_INTEGER:
-      SCIPmessageFPrintInfo(file, "  [integer]");
+      SCIPmessageFPrintInfo(messagehdlr, file, "  [integer]");
       break;
    case SCIP_VARTYPE_IMPLINT:
-      SCIPmessageFPrintInfo(file, "  [implicit]");
+      SCIPmessageFPrintInfo(messagehdlr, file, "  [implicit]");
       break;
    case SCIP_VARTYPE_CONTINUOUS:
-      SCIPmessageFPrintInfo(file, "  [continuous]");
+      SCIPmessageFPrintInfo(messagehdlr, file, "  [continuous]");
       break;
    default:
       SCIPerrorMessage("unknown variable type\n");
@@ -2708,10 +2714,10 @@ void SCIPvarPrint(
    }
 
    /* name */
-   SCIPmessageFPrintInfo(file, " <%s>:", var->name);
+   SCIPmessageFPrintInfo(messagehdlr, file, " <%s>:", var->name);
 
    /* objective value */
-   SCIPmessageFPrintInfo(file, " obj=%.15g", var->obj);
+   SCIPmessageFPrintInfo(messagehdlr, file, " obj=%.15g", var->obj);
 
    /* bounds (global bounds for transformed variables, original bounds for original variables) */
    if( !SCIPvarIsTransformed(var) )
@@ -2719,7 +2725,7 @@ void SCIPvarPrint(
       /* output original bound */
       lb = SCIPvarGetLbOriginal(var);
       ub = SCIPvarGetUbOriginal(var);
-      printBounds(set, file, lb, ub, "original bounds");
+      printBounds(set, messagehdlr, file, lb, ub, "original bounds");
 
       /* output lazy bound */
       lb = SCIPvarGetLbLazy(var);
@@ -2727,40 +2733,40 @@ void SCIPvarPrint(
 
       /* only display the lazy bounds if they are different from [-infinity,infinity] */
       if( !SCIPsetIsInfinity(set, -lb) || !SCIPsetIsInfinity(set, ub) )
-         printBounds(set, file, lb, ub, "lazy bounds");
+         printBounds(set, messagehdlr, file, lb, ub, "lazy bounds");
 
       holelist = SCIPvarGetHolelistOriginal(var);
-      printHolelist(set, file, holelist, "original holes");
+      printHolelist(set, messagehdlr, file, holelist, "original holes");
    }
    else
    {
       /* output global bound */
       lb = SCIPvarGetLbGlobal(var);
       ub = SCIPvarGetUbGlobal(var);
-      printBounds(set, file, lb, ub, "global bounds");
+      printBounds(set, messagehdlr, file, lb, ub, "global bounds");
 
       /* output local bound */
       lb = SCIPvarGetLbLocal(var);
       ub = SCIPvarGetUbLocal(var);
-      printBounds(set, file, lb, ub, "local bounds");
+      printBounds(set, messagehdlr, file, lb, ub, "local bounds");
 
       /* output lazy bound */
       lb = SCIPvarGetLbLazy(var);
       ub = SCIPvarGetUbLazy(var);
-   
+
       /* only display the lazy bounds if they are different from [-infinity,infinity] */
       if( !SCIPsetIsInfinity(set, -lb) || !SCIPsetIsInfinity(set, ub) )
-         printBounds(set, file, lb, ub, "lazy bounds");
+         printBounds(set, messagehdlr, file, lb, ub, "lazy bounds");
 
       /* global hole list */
       holelist = SCIPvarGetHolelistGlobal(var);
-      printHolelist(set, file, holelist, "global holes");
+      printHolelist(set, messagehdlr, file, holelist, "global holes");
 
       /* local hole list */
       holelist = SCIPvarGetHolelistLocal(var);
-      printHolelist(set, file, holelist, "local holes");
+      printHolelist(set, messagehdlr, file, holelist, "local holes");
    }
-    
+
    /* fixings and aggregations */
    switch( SCIPvarGetStatus(var) )
    {
@@ -2768,34 +2774,34 @@ void SCIPvarPrint(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
       break;
-      
+
    case SCIP_VARSTATUS_FIXED:
-      SCIPmessageFPrintInfo(file, ", fixed:");
+      SCIPmessageFPrintInfo(messagehdlr, file, ", fixed:");
       if( SCIPsetIsInfinity(set, var->glbdom.lb) )
-         SCIPmessageFPrintInfo(file, "+inf");
+         SCIPmessageFPrintInfo(messagehdlr, file, "+inf");
       else if( SCIPsetIsInfinity(set, -var->glbdom.lb) )
-         SCIPmessageFPrintInfo(file, "-inf");
+         SCIPmessageFPrintInfo(messagehdlr, file, "-inf");
       else
-         SCIPmessageFPrintInfo(file, "%.15g", var->glbdom.lb);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%.15g", var->glbdom.lb);
       break;
-      
+
    case SCIP_VARSTATUS_AGGREGATED:
-      SCIPmessageFPrintInfo(file, ", aggregated:");
+      SCIPmessageFPrintInfo(messagehdlr, file, ", aggregated:");
       if( !SCIPsetIsZero(set, var->data.aggregate.constant) )
-         SCIPmessageFPrintInfo(file, " %.15g", var->data.aggregate.constant);
-      SCIPmessageFPrintInfo(file, " %+.15g<%s>", var->data.aggregate.scalar, SCIPvarGetName(var->data.aggregate.var));
+         SCIPmessageFPrintInfo(messagehdlr, file, " %.15g", var->data.aggregate.constant);
+      SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g<%s>", var->data.aggregate.scalar, SCIPvarGetName(var->data.aggregate.var));
       break;
-      
+
    case SCIP_VARSTATUS_MULTAGGR:
-      SCIPmessageFPrintInfo(file, ", aggregated:");
+      SCIPmessageFPrintInfo(messagehdlr, file, ", aggregated:");
       if( !SCIPsetIsZero(set, var->data.multaggr.constant) )
-         SCIPmessageFPrintInfo(file, " %.15g", var->data.multaggr.constant);
+         SCIPmessageFPrintInfo(messagehdlr, file, " %.15g", var->data.multaggr.constant);
       for( i = 0; i < var->data.multaggr.nvars; ++i )
-         SCIPmessageFPrintInfo(file, " %+.15g<%s>", var->data.multaggr.scalars[i], SCIPvarGetName(var->data.multaggr.vars[i]));
+         SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g<%s>", var->data.multaggr.scalars[i], SCIPvarGetName(var->data.multaggr.vars[i]));
       break;
 
    case SCIP_VARSTATUS_NEGATED:
-      SCIPmessageFPrintInfo(file, ", negated: %.15g - <%s>", var->data.negate.constant, SCIPvarGetName(var->negatedvar));
+      SCIPmessageFPrintInfo(messagehdlr, file, ", negated: %.15g - <%s>", var->data.negate.constant, SCIPvarGetName(var->negatedvar));
       break;
 
    default:
@@ -2803,7 +2809,7 @@ void SCIPvarPrint(
       SCIPABORT();
    }
 
-   SCIPmessageFPrintInfo(file, "\n");
+   SCIPmessageFPrintInfo(messagehdlr, file, "\n");
 }
 
 /** issues a VARUNLOCKED event on the given variable */

@@ -525,7 +525,7 @@ SCIP_DECL_HEUREXEC(heurExecRins)
 #ifndef NDEBUG
       SCIP_CALL( retcode );
 #endif
-      SCIPwarningMessage("Error while solving subproblem in RINS heuristic; sub-SCIP terminated with code <%d>\n",retcode);
+      SCIPwarningMessage(scip, "Error while solving subproblem in RINS heuristic; sub-SCIP terminated with code <%d>\n",retcode);
    }
 
    heurdata->usednodes += SCIPgetNNodes(subscip);

@@ -48,6 +48,7 @@ extern
 SCIP_RETCODE SCIPpresolCreate(
    SCIP_PRESOL**         presol,             /**< pointer to store presolver */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    const char*           name,               /**< name of presolver */
    const char*           desc,               /**< description of presolver */

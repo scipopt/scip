@@ -133,7 +133,7 @@ void clockSetType(
       else
       {
          SCIP_Real sec;
-         
+
          sec = SCIPclockGetTime(clck);
          clck->clocktype = newtype;
          SCIPclockSetTime(clck, sec);

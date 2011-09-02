@@ -98,6 +98,7 @@ struct SCIP_LPi
    int                   skcsize;
    MSKstakeye*           skx;
    MSKstakeye*           skc;
+   SCIP_MESSAGEHDLR*     messagehdlr;        /**< messagehdlr handler to printing messages, or NULL */
 };
 
 typedef SCIP_DUALPACKET COLPACKET;           /* each column needs two bits of information (basic/on_lower/on_upper) */
@@ -590,12 +591,13 @@ void* SCIPlpiGetSolverPointer(
 SCIP_RETCODE SCIPlpiCreate(
    SCIP_LPI**            lpi,                /**< pointer to an LP interface structure */
    const char*           name,               /**< problem name */
-   SCIP_OBJSEN           objsen              /**< objective sense */
+   SCIP_OBJSEN           objsen,             /**< objective sense */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler to use for printing messages, or NULL */
    )
 {
    assert(lpi != NULL);
    assert(numlp >= 0);
-   
+
    SCIPdebugMessage("Calling SCIPlpiCreate\n");
 
    if (!MosekEnv)
@@ -604,7 +606,7 @@ SCIP_RETCODE SCIPlpiCreate(
       MOSEK_CALL( MSK_linkfunctoenvstream(MosekEnv, MSK_STREAM_LOG, NULL, printstr) );
       MOSEK_CALL( MSK_initenv(MosekEnv) );
    }
-   
+
    numlp++;
 
    SCIP_ALLOC( BMSallocMemory(lpi) );
@@ -630,6 +632,7 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->skcsize = 0;
    (*lpi)->skx = NULL;
    (*lpi)->skc = NULL;
+   (*lpi)->messagehdlr = messagehdlr;
 
    return SCIP_OKAY;
 }
@@ -1677,13 +1680,14 @@ SCIP_RETCODE getSolutionStatus(
 }
 
 
-static 
+static
 MSKrescodee filterTRMrescode(
-   MSKrescodee*          termcode, 
+   SCIP_MESSAGEHDLR*     messagehdlr,
+   MSKrescodee*          termcode,
    MSKrescodee           res
    )
 {
-   if (   res == MSK_RES_TRM_MAX_ITERATIONS || res == MSK_RES_TRM_MAX_TIME 
+   if (   res == MSK_RES_TRM_MAX_ITERATIONS || res == MSK_RES_TRM_MAX_TIME
       || res == MSK_RES_TRM_OBJECTIVE_RANGE || res == MSK_RES_TRM_STALL
 #if ASSERT_ON_NUMERICAL_TROUBLES > 0
       || res == MSK_RES_TRM_MAX_NUM_SETBACKS
@@ -1694,8 +1698,8 @@ MSKrescodee filterTRMrescode(
       *termcode = res;
       if (res == MSK_RES_TRM_MAX_NUM_SETBACKS || res == MSK_RES_TRM_NUMERICAL_PROBLEM)
       {
-         SCIPwarningMessage("Return code %d in [%d]\n",res,optimizecount);
-        
+         SCIPmessagePrintWarning(messages, "Return code %d in [%d]\n", res, optimizecount);
+
 #if ASSERT_ON_WARNING
          assert(0);
 #endif
@@ -1805,13 +1809,13 @@ SCIP_RETCODE SolveWSimplex(
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG_SIM, 100) );
 #endif
 
-   MOSEK_CALL( filterTRMrescode(&lpi->termcode, MSK_optimize(lpi->task)) );
+   MOSEK_CALL( filterTRMrescode(&lpi->messagehdlr, &lpi->termcode, MSK_optimize(lpi->task)) );
 
    if( lpi->termcode == MSK_RES_TRM_MAX_NUM_SETBACKS )
-   {    
+   {
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SCALING, MSK_SCALING_AGGRESSIVE) );
 
-      MOSEK_CALL( filterTRMrescode(&lpi->termcode, MSK_optimize(lpi->task)) );
+      MOSEK_CALL( filterTRMrescode(&lpi->messagehdlr, &lpi->termcode, MSK_optimize(lpi->task)) );
    }
 
 #if FORCE_MOSEK_SUMMARY
@@ -1864,7 +1868,7 @@ SCIP_RETCODE SolveWSimplex(
    case MSK_SOL_STA_NEAR_PRIM_AND_DUAL_FEAS:
    case MSK_SOL_STA_NEAR_PRIM_INFEAS_CER:
    case MSK_SOL_STA_NEAR_DUAL_INFEAS_CER:
-      SCIPwarningMessage("Simplex[%d] returned solsta = %d\n", optimizecount, solsta);
+      SCIPmessagePrintWarning("lpi->messagehdlr, Simplex[%d] returned solsta = %d\n", optimizecount, solsta);
       
       if (lpi->termcode == MSK_RES_OK)
          lpi->termcode = MSK_RES_TRM_NUMERICAL_PROBLEM;
@@ -1902,8 +1906,8 @@ SCIP_RETCODE SolveWSimplex(
    case MSK_PRO_STA_NEAR_DUAL_FEAS:
    case MSK_PRO_STA_ILL_POSED:
    case MSK_PRO_STA_PRIM_INFEAS_OR_UNBOUNDED:
-      SCIPwarningMessage("Simplex[%d] returned prosta = %d\n", optimizecount, prosta);
-      
+      SCIPmessagePrintWarning(lpi->messagehdlr, "Simplex[%d] returned prosta = %d\n", optimizecount, prosta);
+
       if (lpi->termcode == MSK_RES_OK)
          lpi->termcode = MSK_RES_TRM_NUMERICAL_PROBLEM;
 
@@ -1977,7 +1981,7 @@ SCIP_RETCODE SolveWSimplex(
 
       if (lpi->termcode == MSK_RES_TRM_MAX_ITERATIONS)
       {
-         SCIPwarningMessage("Simplex[%d] failed to terminate in 10000 iterations, switching to interior point\n",
+         SCIPmessagePrintWarning(lpi->messagehdlr, "Simplex[%d] failed to terminate in 10000 iterations, switching to interior point\n",
             optimizecount);
 
          SCIP_CALL( SCIPlpiSolveBarrier(lpi,TRUE) );
@@ -2176,7 +2180,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    }
 #endif
 
-   MOSEK_CALL( filterTRMrescode(&lpi->termcode, MSK_optimize(lpi->task)) );
+   MOSEK_CALL( filterTRMrescode(&lpi->messagehdlr, &lpi->termcode, MSK_optimize(lpi->task)) );
 
    if (lpi->termcode == MSK_RES_TRM_MAX_ITERATIONS)
       ++numdualmaxiter;
@@ -2261,7 +2265,7 @@ SCIP_RETCODE SCIPlpiStrongbranch(
    
    if (lpi->termcode != MSK_RES_OK)
    {
-      SCIPwarningMessage("SB Warning: Previous termcode is %d\n",lpi->termcode);
+      SCIPmessagePrintWarning(lpi->messagehdlr, "SB Warning: Previous termcode is %d\n",lpi->termcode);
    }
    
    MOSEK_CALL( MSK_getnumvar(lpi->task, &ncols) );
@@ -2324,7 +2328,7 @@ SCIP_RETCODE SCIPlpiStrongbranch(
 
       if (SCIPlpiExistsPrimalRay(lpi))
       {
-         SCIPwarningMessage("SB ERROR: Lp [%d] is dual infeasible\n",optimizecount);
+         SCIPmessagePrintWarning(lpi->messagehdlr, "SB ERROR: Lp [%d] is dual infeasible\n",optimizecount);
          
          *down = -1e20;
          *downvalid = FALSE;
@@ -2341,7 +2345,7 @@ SCIP_RETCODE SCIPlpiStrongbranch(
 
          if (!dfeas)
          {
-            SCIPwarningMessage("SB ERROR: Lp [%d] is not dual feasible\n", optimizecount);
+            SCIPmessagePrintWarning(lpi->messagehdlr, "SB ERROR: Lp [%d] is not dual feasible\n", optimizecount);
 
             *down = -1e20;
             *downvalid = FALSE;
@@ -2410,7 +2414,7 @@ SCIP_RETCODE SCIPlpiStrongbranch(
 
          if (!dfeas)
          {
-            SCIPwarningMessage("SB ERROR: Lp [%d] is not dual feasible\n",optimizecount);
+            SCIPmessagePrintWarning(lpi->messagehdlr, "SB ERROR: Lp [%d] is not dual feasible\n",optimizecount);
             
             *up = -1e20;
             *upvalid = FALSE;
@@ -3783,7 +3787,7 @@ SCIP_RETCODE SCIPlpiClearState(
    assert(lpi != NULL);
 
    /**@todo implement SCIPlpiClearState() for MOSEK */
-   SCIPwarningMessage("MOSEK interface does not implement SCIPlpiClearState()\n");
+   SCIPmessagePrintWarning(lpi->messagehdlr, "MOSEK interface does not implement SCIPlpiClearState()\n");
 
    return SCIP_OKAY;
 }

@@ -48,7 +48,7 @@ int XPRS_CC XPRSstrongbranch( XPRSprob prob, const int _nbnd, const int *_mbndin
 
 #include "scip/bitencode.h"
 #include "scip/lpi.h"
-#include "scip/message.h"
+#include "scip/pub_message.h"
 
 
 /** output XPRESS error */
@@ -79,18 +79,18 @@ void xprs_error(
       }                                         \
    }
 
-#define CHECK_ZEROW(p, x) {  int restat = (x);          \
+#define CHECK_ZEROW(p, messagehdlr, x) {  int restat = (x);      \
       if( restat != 0 ) {                               \
          char errmsg[512];                              \
          const char *msg;                               \
          xprs_error((p), restat, &msg, errmsg);         \
-         SCIPwarningMessage(msg, restat, errmsg);       \
+         SCIPmessagePrintWarning(messagehdlr, msg, restat, errmsg);      \
       }                                                 \
    }
 
 #define CHECK_ZEROLPIE(x) CHECK_ZEROE(lpi->xprslp, x)
-#define CHECK_ZEROLPIW(x) CHECK_ZEROW(lpi->xprslp, x)
-#define CHECK_ZEROPLPIE(x) CHECK_ZEROE((*lpi)->xprslp, x)
+#define CHECK_ZEROLPIW(x) CHECK_ZEROW(lpi->xprslp, lpi->messagehdlr, x)
+#define CHECK_ZEROPLPIE(x) CHECK_ZEROE((*lpi)->xprslp, (*lpi)->messagehdlr, x)
 #define CHECK_ZERO CHECK_ZEROLPIE
 
 #define ABORT_ZERO(x) { int _restat_;                                   \
@@ -135,6 +135,7 @@ struct SCIP_LPi
    SCIP_Real             par_uobjlim;        /**< objective upper bound */
    int                   par_fastlp;         /**< special meta parameter for making LP reoptimize go faster */
    int                   par_presolve;       /**< need to distinguish between the users setting and the optimizer setting of presolve */
+   SCIP_MESSAGEHDLR*     messagehdlr;        /**< messagehdlr handler to printing messages, or NULL */
 };
 
 /** LPi state stores basis information */
@@ -710,7 +711,8 @@ void* SCIPlpiGetSolverPointer(
 SCIP_RETCODE SCIPlpiCreate(
    SCIP_LPI**            lpi,                /**< pointer to an LP interface structure */
    const char*           name,               /**< problem name */
-   SCIP_OBJSEN           objsen              /**< objective sense */
+   SCIP_OBJSEN           objsen,             /**< objective sense */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler to use for printing messages, or NULL */
    )
 {
    int izero = 0;
@@ -753,6 +755,7 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->par_uobjlim = +1e+40;
    (*lpi)->par_fastlp = 1;
    (*lpi)->par_presolve = 1;
+   (*lpi)->messagehdlr = messagehdlr;
 
    CHECK_ZEROPLPIE( XPRScreateprob(&(*lpi)->xprslp) );
    invalidateSolution(*lpi);
@@ -3446,7 +3449,7 @@ SCIP_RETCODE SCIPlpiClearState(
    assert(lpi != NULL);
 
    /**@todo implement SCIPlpiClearState() for Xpress */
-   SCIPwarningMessage("Xpress interface does not implement SCIPlpiClearState()\n");
+   SCIPmessagePrintWarning(lpi->messagehdlr, "Xpress interface does not implement SCIPlpiClearState()\n");
 
    return SCIP_OKAY;
 }

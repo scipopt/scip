@@ -25,10 +25,11 @@
 #define __NLPI_PUB_EXPR_H__
 
 #include "scip/def.h"
+#include "scip/pub_message.h"
+#include "scip/intervalarith.h"
 #include "blockmemshell/memory.h"
 #include "nlpi/type_expr.h"
 #include "nlpi/type_exprinterpret.h"
-#include "scip/intervalarith.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -499,6 +500,7 @@ SCIP_Bool SCIPexprAreEqual(
 extern
 SCIP_RETCODE SCIPexprSimplify(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_EXPR*            expr,               /**< expression */
    SCIP_Real             eps,                /**< threshold, under which positive values are treat as 0 */
    int                   maxexpansionexponent,/**< maximal exponent for which we still expand non-monomial polynomials */
@@ -568,6 +570,7 @@ void SCIPexprReindexParams(
 extern
 void SCIPexprPrint(
    SCIP_EXPR*            expr,               /**< expression */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< file for printing, or NULL for stdout */
    const char**          varnames,           /**< names of variables, or NULL for default names */
    const char**          paramnames,         /**< names of parameters, or NULL for default names */
@@ -695,6 +698,7 @@ void SCIPexprtreeGetVarsUsage(
 extern
 SCIP_RETCODE SCIPexprtreeSimplify(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Real             eps,                /**< threshold, under which positive values are treat as 0 */
    int                   maxexpansionexponent,/**< maximal exponent for which we still expand non-monomial polynomials */
    int*                  nlinvars,           /**< buffer to store number of linear variables in linear part, or NULL if linear part should not be separated */
@@ -753,6 +757,7 @@ SCIP_RETCODE SCIPexprtreeSubstituteVars(
 extern
 void SCIPexprtreePrint(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< file for printing, or NULL for stdout */
    const char**          varnames,           /**< names of variables, or NULL for default names */
    const char**          paramnames          /**< names of parameters, or NULL for default names */
@@ -1106,6 +1111,7 @@ SCIP_Bool SCIPexprgraphHasNodeNonlinearAncestor(
 extern
 void SCIPexprgraphPrintNode(
    SCIP_EXPRGRAPHNODE*   node,               /**< expression graph node */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< file to print to, or NULL for stdout */
    );
 
@@ -1273,6 +1279,7 @@ SCIP_EXPRGRAPHNODE** SCIPexprgraphGetVarNodes(
 extern
 SCIP_RETCODE SCIPexprgraphPrintDot(
    SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< file to print to, or NULL for stdout */
    const char**          varnames            /**< variable names, or NULL for generic names */
    );
@@ -1373,6 +1380,7 @@ SCIP_RETCODE SCIPexprgraphCheckCurvature(
 extern
 SCIP_RETCODE SCIPexprgraphSimplify(
    SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Real             eps,                /**< threshold, under which positive values are treat as 0 */
    int                   maxexpansionexponent,/**< maximal exponent for which we still expand non-monomial polynomials */
    SCIP_Bool*            havechange,         /**< buffer to indicate whether the graph has been modified */

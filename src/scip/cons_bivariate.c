@@ -1763,7 +1763,7 @@ SCIP_RETCODE generateUnderestimatorParallelYFacets(
    assert(!SCIPisEQ(scip,yub,yval));
 
    SCIPdebugMessage("f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
-   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, NULL) ) );
+   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, SCIPgetMessagehdlr(scip), NULL) ) );
    SCIPdebugPrintf("\n");
 
    t = (yub - yval) / (yub - ylb);
@@ -1976,7 +1976,7 @@ SCIP_RETCODE generateOrthogonal_lx_ly_Underestimator(
    *success = FALSE;
 
    SCIPdebugMessage("f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
-   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, NULL) ) );
+   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, SCIPgetMessagehdlr(scip), NULL) ) );
    SCIPdebugPrintf("\n");
    SCIPdebugMessage("%s[%g,%g] = %g  %s[%g,%g] = %g\n", SCIPvarGetName(x), xlb, xub, xval, SCIPvarGetName(y), ylb, yub, yval);
 
@@ -2324,7 +2324,7 @@ SCIP_RETCODE generateOrthogonal_lx_uy_Underestimator(
    *success = FALSE;
 
    SCIPdebugMessage("f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
-   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, NULL) ) );
+   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, SCIPgetMessagehdlr(scip), NULL) ) );
    SCIPdebugPrintf("\n");
 
    /* check in which triangle the point (xval,yval) lies */
@@ -2653,7 +2653,7 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
    }
 
    SCIPdebugMessage("f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
-   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, NULL) ) );
+   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, SCIPgetMessagehdlr(scip), NULL) ) );
    SCIPdebugPrintf("\n");
 
    if( SCIPisEQ(scip, xlb, xub) )
@@ -2806,7 +2806,7 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
       SCIP_CALL( SCIPexprintNewParametrization(exprinterpreter, f_yfixed) );
 
       SCIPdebugMessage("f(x,yub) = ");
-      SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f_yfixed, NULL) ) );
+      SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f_yfixed, SCIPgetMessagehdlr(scip), NULL) ) );
       SCIPdebugPrintf("\n");
 
       /* find xtilde in [xlb, xub] such that f'(xtilde,yub) = f'(xval,ylb) */
@@ -2967,7 +2967,7 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
       SCIP_CALL( SCIPexprintNewParametrization(exprinterpreter, vred) );
 
       SCIPdebugMessage("vred(s;x0,y0,ylb,yub) = ");
-      SCIPdebug( SCIPexprtreePrint(vred, NULL, NULL, paramnames) );
+      SCIPdebug( SCIPexprtreePrint(vred, SCIPgetMessagehdlr(scip), NULL, NULL, paramnames) );
       SCIPdebugPrintf("\n");
 
       /* compute bounds on s */
@@ -3318,7 +3318,7 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorAtBoundary(
    *success = FALSE;
 
    SCIPdebugMessage("f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
-   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, NULL) ) );
+   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, SCIPgetMessagehdlr(scip), NULL) ) );
    SCIPdebugPrintf("\n");
 
    xval = xyref[0];
@@ -3531,7 +3531,7 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorInTheInteriorPatternA(
    }
 
    SCIPdebugMessage("f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
-   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, NULL) ) );
+   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, SCIPgetMessagehdlr(scip), NULL) ) );
    SCIPdebugPrintf("\n");
 
    SCIPdebugMessage("xval=%g in [%g,%g], yval=%g in [%g,%g]\n", xval, xlb, xub, yval, ylb, yub);
@@ -3703,7 +3703,7 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorInTheInteriorPatternB(
    *success = FALSE;
 
    SCIPdebugMessage("f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
-   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, NULL) ) );
+   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, SCIPgetMessagehdlr(scip), NULL) ) );
    SCIPdebugPrintf("\n");
 
    xval = xyref[0];
@@ -6085,7 +6085,7 @@ SCIP_DECL_CONSINITLP(consInitlpBivariate)
 
             default:
             {
-               SCIPwarningMessage("initlp for convexity type %d not implemented\n", consdata->convextype);
+               SCIPwarningMessage(scip, "initlp for convexity type %d not implemented\n", consdata->convextype);
             }
             }  /*lint !e788*/
 
@@ -6348,7 +6348,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpBivariate)
          else
          {
             *result = SCIP_FEASIBLE;
-            SCIPwarningMessage("could not enforce feasibility by separating or branching; declaring solution with viol %g as feasible\n", maxviol);
+            SCIPwarningMessage(scip, "could not enforce feasibility by separating or branching; declaring solution with viol %g as feasible\n", maxviol);
          }
          return SCIP_OKAY;
       }
@@ -6879,7 +6879,7 @@ SCIP_DECL_CONSPRINT(consPrintBivariate)
       SCIPinfoMessage(scip, file, "%.15g <= ", consdata->lhs);
 
    /* print coefficients and variables */
-   SCIP_CALL( SCIPexprtreePrintWithNames(consdata->f, file) );
+   SCIP_CALL( SCIPexprtreePrintWithNames(consdata->f, SCIPgetMessagehdlr(scip), file) );
 
    if( consdata->z != NULL )
    {

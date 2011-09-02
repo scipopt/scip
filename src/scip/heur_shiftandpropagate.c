@@ -22,7 +22,6 @@
 
 #include <assert.h>
 #include <string.h>
-#include "scip/lp.h"
 #include "scip/heur_shiftandpropagate.h"
 
 #define HEUR_NAME             "shiftandpropagate"
@@ -1753,7 +1752,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          retstat = SCIPsolveProbingLP(scip, -1, &lperror);
          if( retstat != SCIP_OKAY )
          {
-            SCIPwarningMessage("Error while solving LP in SHIFTANDPROPAGATE heuristic; LP solve terminated with code <%d>\n",
+            SCIPwarningMessage(scip, "Error while solving LP in SHIFTANDPROPAGATE heuristic; LP solve terminated with code <%d>\n",
                retstat);
          }
       }

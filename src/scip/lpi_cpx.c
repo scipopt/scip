@@ -33,17 +33,21 @@
 #endif
 #include "scip/bitencode.h"
 #include "scip/lpi.h"
-#include "scip/message.h"
+#include "scip/pub_message.h"
 
 
 
-#define CHECK_ZERO(x) { int _restat_;                                   \
+#define CHECK_ZERO(messagehdlr, x) { int _restat_;                      \
       if( (_restat_ = (x)) != 0 )                                       \
       {                                                                 \
-         SCIPerrorMessage("LP Error: CPLEX returned %d\n", _restat_);   \
+         SCIPmessagePrintWarning(messagehdlr, "LP Error: CPLEX returned %d\n", _restat_); \
          return SCIP_LPERROR;                                           \
       }                                                                 \
    }
+
+#define CHECK_ZEROLPI(x) CHECK_ZERO(lpi->messagehdlr, x)
+#define CHECK_ZEROLPIPTR(x) CHECK_ZERO((*lpi)->messagehdlr, x)
+
 
 #define ABORT_ZERO(x) { int _restat_;                                   \
       if( (_restat_ = (x)) != 0 )                                       \
@@ -143,6 +147,7 @@ struct SCIP_LPi
                                               *   we set the thread count to 1. In order to fulfill assert in lp.c,
                                               *   we have to return the value set by SCIP and not the real thread count */
 #endif
+   SCIP_MESSAGEHDLR*        messagehdlr;        /**< messagehdlr handler to printing messages, or NULL */
 };
 
 /** LPi state stores basis information */
@@ -302,7 +307,7 @@ SCIP_RETCODE getBase(
    SCIP_CALL( ensureRstatMem(lpi, nrows) );
 
    /* get unpacked basis information from CPLEX */
-   CHECK_ZERO( CPXgetbase(lpi->cpxenv, lpi->cpxlp, lpi->cstat, lpi->rstat) );
+   CHECK_ZEROLPI( CPXgetbase(lpi->cpxenv, lpi->cpxlp, lpi->cstat, lpi->rstat) );
 
    return SCIP_OKAY;
 }
@@ -319,7 +324,7 @@ SCIP_RETCODE setBase(
    SCIPdebugMessage("setBase()\n");
 
    /* load basis information into CPLEX */
-   CHECK_ZERO( CPXcopybase(lpi->cpxenv, lpi->cpxlp, lpi->cstat, lpi->rstat) );
+   CHECK_ZEROLPI( CPXcopybase(lpi->cpxenv, lpi->cpxlp, lpi->cstat, lpi->rstat) );
 
    return SCIP_OKAY;
 }
@@ -427,24 +432,24 @@ void lpistateFree(
 /** gets all CPLEX parameters used in LPI */
 static
 SCIP_RETCODE getParameterValues(
-   CPXENVptr             cpxenv,             /**< CPLEX environment */
+   SCIP_LPI*             lpi,                /**< LP interface structure */
    CPXPARAM*             cpxparam            /**< current parameter values for this LP */
    )
 {
    int i;
    
-   assert(cpxenv != NULL);
+   assert(lpi != NULL);
    assert(cpxparam != NULL);
 
    SCIPdebugMessage("getParameterValues()\n");
 
    for( i = 0; i < NUMINTPARAM; ++i )
    {
-      CHECK_ZERO( CPXgetintparam(cpxenv, intparam[i], &(cpxparam->intparval[i])) );
+      CHECK_ZEROLPI( CPXgetintparam(lpi->cpxenv, intparam[i], &(cpxparam->intparval[i])) );
    }
    for( i = 0; i < NUMDBLPARAM; ++i )
    {
-      CHECK_ZERO( CPXgetdblparam(cpxenv, dblparam[i], &(cpxparam->dblparval[i])) );
+      CHECK_ZEROLPI( CPXgetdblparam(lpi->cpxenv, dblparam[i], &(cpxparam->dblparval[i])) );
    }
 
    return SCIP_OKAY;
@@ -463,7 +468,7 @@ SCIP_RETCODE checkParameterValues(
    assert(lpi != NULL);
    assert(lpi->cpxenv != NULL);
 
-   SCIP_CALL( getParameterValues(lpi->cpxenv, &par) );
+   SCIP_CALL( getParameterValues(lpi, &par) );
    for( i = 0; i < NUMINTPARAM; ++i )
       assert(lpi->curparam.intparval[i] == par.intparval[i]);
    for( i = 0; i < NUMDBLPARAM; ++i )
@@ -495,7 +500,7 @@ SCIP_RETCODE setParameterValues(
          SCIPdebugMessage("setting CPLEX int parameter %d from %d to %d\n", 
             intparam[i], lpi->curparam.intparval[i], cpxparam->intparval[i]);
          lpi->curparam.intparval[i] = cpxparam->intparval[i];
-         CHECK_ZERO( CPXsetintparam(lpi->cpxenv, intparam[i], lpi->curparam.intparval[i]) );
+         CHECK_ZEROLPI( CPXsetintparam(lpi->cpxenv, intparam[i], lpi->curparam.intparval[i]) );
       }
    }
    for( i = 0; i < NUMDBLPARAM; ++i )
@@ -505,7 +510,7 @@ SCIP_RETCODE setParameterValues(
          SCIPdebugMessage("setting CPLEX dbl parameter %d from %g to %g\n", 
             dblparam[i], lpi->curparam.dblparval[i], MAX(cpxparam->dblparval[i], dblparammin[i]));
          lpi->curparam.dblparval[i] = MAX(cpxparam->dblparval[i], dblparammin[i]);
-         CHECK_ZERO( CPXsetdblparam(lpi->cpxenv, dblparam[i], lpi->curparam.dblparval[i]) );
+         CHECK_ZEROLPI( CPXsetdblparam(lpi->cpxenv, dblparam[i], lpi->curparam.dblparval[i]) );
       }
    }
 
@@ -961,7 +966,8 @@ void* SCIPlpiGetSolverPointer(
 SCIP_RETCODE SCIPlpiCreate(
    SCIP_LPI**            lpi,                /**< pointer to an LP interface structure */
    const char*           name,               /**< problem name */
-   SCIP_OBJSEN           objsen              /**< objective sense */
+   SCIP_OBJSEN           objsen,             /**< objective sense */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler to use for printing messages, or NULL */
    )
 {
    int          restat;
@@ -976,20 +982,20 @@ SCIP_RETCODE SCIPlpiCreate(
 
    /* create environment */
    (*lpi)->cpxenv = CPXopenCPLEX(&restat);
-   CHECK_ZERO( restat );
+   CHECK_ZEROLPIPTR( restat );
 
 #if (CPX_VERSION == 1100 || (CPX_VERSION == 1220 && (CPX_SUBVERSION == 0 || CPX_SUBVERSION == 2)))
    /* manually set number of threads to 1 to avoid huge system load due to CPLEX bug (version 1100) or segmentation fault (version 1220) */
-   CHECK_ZERO( CPXsetintparam((*lpi)->cpxenv, CPX_PARAM_THREADS, 1) );
+   CHECK_ZEROLPIPTR( CPXsetintparam((*lpi)->cpxenv, CPX_PARAM_THREADS, 1) );
 #endif
 
 #if 0 /* turning presolve off seems to be faster than turning it off on demand (if presolve detects infeasibility) */
       /* turn presolve off, s.t. for an infeasible problem, a ray is always available */
-   CHECK_ZERO( CPXsetintparam((*lpi)->cpxenv, CPX_PARAM_PREIND, CPX_OFF) );
+   CHECK_ZEROLPIPTR( CPXsetintparam((*lpi)->cpxenv, CPX_PARAM_PREIND, CPX_OFF) );
 #endif
 
    /* get default parameter values */
-   SCIP_CALL( getParameterValues((*lpi)->cpxenv,&((*lpi)->defparam)) );
+   SCIP_CALL( getParameterValues((*lpi), &((*lpi)->defparam)) );
    copyParameterValues(&((*lpi)->curparam), &((*lpi)->defparam));
    
    /* create LP */
@@ -1019,7 +1025,7 @@ SCIP_RETCODE SCIPlpiCreate(
 #if (CPX_VERSION <= 1100)
    (*lpi)->rngfound = FALSE;
 #endif
-   CHECK_ZERO( restat );
+   CHECK_ZEROLPIPTR( restat );
    invalidateSolution(*lpi);
    copyParameterValues(&((*lpi)->cpxparam), &((*lpi)->defparam));
 
@@ -1044,7 +1050,7 @@ SCIP_RETCODE SCIPlpiFree(
    SCIPdebugMessage("SCIPlpiFree()\n");
 
    /* free LP */
-   CHECK_ZERO( CPXfreeprob((*lpi)->cpxenv, &((*lpi)->cpxlp)) );
+   CHECK_ZEROLPIPTR( CPXfreeprob((*lpi)->cpxenv, &((*lpi)->cpxlp)) );
 
    /* free memory */
    BMSfreeMemoryArrayNull(&(*lpi)->larray);
@@ -1057,10 +1063,10 @@ SCIP_RETCODE SCIPlpiFree(
    BMSfreeMemoryArrayNull(&(*lpi)->rstat);
 
    /* free environment */
-   CHECK_ZERO( CPXcloseCPLEX(&((*lpi)->cpxenv)) );
+   CHECK_ZEROLPIPTR( CPXcloseCPLEX(&((*lpi)->cpxenv)) );
 
    BMSfreeMemory(lpi);
-   
+
    return SCIP_OKAY;
 }
 
@@ -1123,7 +1129,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    assert(cnt[ncols-1] >= 0);
 
    /* copy data into CPLEX */
-   CHECK_ZERO( CPXcopylpwnames(lpi->cpxenv, lpi->cpxlp, ncols, nrows, cpxObjsen(objsen), obj, 
+   CHECK_ZEROLPI( CPXcopylpwnames(lpi->cpxenv, lpi->cpxlp, ncols, nrows, cpxObjsen(objsen), obj, 
          lpi->rhsarray, lpi->senarray, beg, cnt, ind, val, lb, ub, lpi->rngarray, colnames, rownames) );
 
    /* free temporary memory */
@@ -1160,11 +1166,11 @@ SCIP_RETCODE SCIPlpiAddCols(
 
    if( nnonz > 0 )
    {
-      CHECK_ZERO( CPXaddcols(lpi->cpxenv, lpi->cpxlp, ncols, nnonz, obj, beg, ind, val, lb, ub, colnames) );
+      CHECK_ZEROLPI( CPXaddcols(lpi->cpxenv, lpi->cpxlp, ncols, nnonz, obj, beg, ind, val, lb, ub, colnames) );
    }
    else
    {
-      CHECK_ZERO( CPXnewcols(lpi->cpxenv, lpi->cpxlp, ncols, obj, lb, ub, NULL, colnames) );
+      CHECK_ZEROLPI( CPXnewcols(lpi->cpxenv, lpi->cpxlp, ncols, obj, lb, ub, NULL, colnames) );
    }
 
    return SCIP_OKAY;
@@ -1186,7 +1192,7 @@ SCIP_RETCODE SCIPlpiDelCols(
 
    invalidateSolution(lpi);
 
-   CHECK_ZERO( CPXdelcols(lpi->cpxenv, lpi->cpxlp, firstcol, lastcol) );
+   CHECK_ZEROLPI( CPXdelcols(lpi->cpxenv, lpi->cpxlp, firstcol, lastcol) );
 
    return SCIP_OKAY;   
 }
@@ -1207,7 +1213,7 @@ SCIP_RETCODE SCIPlpiDelColset(
 
    invalidateSolution(lpi);
 
-   CHECK_ZERO( CPXdelsetcols(lpi->cpxenv, lpi->cpxlp, dstat) );
+   CHECK_ZEROLPI( CPXdelsetcols(lpi->cpxenv, lpi->cpxlp, dstat) );
 
    return SCIP_OKAY;   
 }
@@ -1243,12 +1249,12 @@ SCIP_RETCODE SCIPlpiAddRows(
    /* add rows to LP */
    if( nnonz > 0 )
    {
-      CHECK_ZERO( CPXaddrows(lpi->cpxenv, lpi->cpxlp, 0, nrows, nnonz, lpi->rhsarray, lpi->senarray, beg, ind, val, NULL,
+      CHECK_ZEROLPI( CPXaddrows(lpi->cpxenv, lpi->cpxlp, 0, nrows, nnonz, lpi->rhsarray, lpi->senarray, beg, ind, val, NULL,
             rownames) );
    }
    else
    {
-      CHECK_ZERO( CPXnewrows(lpi->cpxenv, lpi->cpxlp, nrows, lpi->rhsarray, lpi->senarray, NULL, rownames) );
+      CHECK_ZEROLPI( CPXnewrows(lpi->cpxenv, lpi->cpxlp, nrows, lpi->rhsarray, lpi->senarray, NULL, rownames) );
    }
    if( rngcount > 0 )
    {
@@ -1259,7 +1265,7 @@ SCIP_RETCODE SCIPlpiAddRows(
          lpi->rngfound = TRUE;
       }
 #endif
-      CHECK_ZERO( CPXchgrngval(lpi->cpxenv, lpi->cpxlp, rngcount, lpi->rngindarray, lpi->rngarray) );
+      CHECK_ZEROLPI( CPXchgrngval(lpi->cpxenv, lpi->cpxlp, rngcount, lpi->rngindarray, lpi->rngarray) );
    }
 
    return SCIP_OKAY;
@@ -1281,7 +1287,7 @@ SCIP_RETCODE SCIPlpiDelRows(
 
    invalidateSolution(lpi);
 
-   CHECK_ZERO( CPXdelrows(lpi->cpxenv, lpi->cpxlp, firstrow, lastrow) );
+   CHECK_ZEROLPI( CPXdelrows(lpi->cpxenv, lpi->cpxlp, firstrow, lastrow) );
 
    return SCIP_OKAY;   
 }
@@ -1302,7 +1308,7 @@ SCIP_RETCODE SCIPlpiDelRowset(
 
    invalidateSolution(lpi);
 
-   CHECK_ZERO( CPXdelsetrows(lpi->cpxenv, lpi->cpxlp, dstat) );
+   CHECK_ZEROLPI( CPXdelsetrows(lpi->cpxenv, lpi->cpxlp, dstat) );
 
    return SCIP_OKAY;   
 }
@@ -1327,11 +1333,11 @@ SCIP_RETCODE SCIPlpiClear(
    nrows = CPXgetnumrows(lpi->cpxenv, lpi->cpxlp);
    if( ncols >= 1 )
    {
-      CHECK_ZERO( CPXdelcols(lpi->cpxenv, lpi->cpxlp, 0, ncols-1) );
+      CHECK_ZEROLPI( CPXdelcols(lpi->cpxenv, lpi->cpxlp, 0, ncols-1) );
    }
    if( nrows >= 1 )
    {
-      CHECK_ZERO( CPXdelrows(lpi->cpxenv, lpi->cpxlp, 0, nrows-1) );
+      CHECK_ZEROLPI( CPXdelrows(lpi->cpxenv, lpi->cpxlp, 0, nrows-1) );
    }
 
    return SCIP_OKAY;
@@ -1363,8 +1369,8 @@ SCIP_RETCODE SCIPlpiChgBounds(
 
    SCIP_CALL( ensureBoundchgMem(lpi, ncols) );
 
-   CHECK_ZERO( CPXchgbds(lpi->cpxenv, lpi->cpxlp, ncols, ind, lpi->larray, (SCIP_Real*)lb) );
-   CHECK_ZERO( CPXchgbds(lpi->cpxenv, lpi->cpxlp, ncols, ind, lpi->uarray, (SCIP_Real*)ub) );
+   CHECK_ZEROLPI( CPXchgbds(lpi->cpxenv, lpi->cpxlp, ncols, ind, lpi->larray, (SCIP_Real*)lb) );
+   CHECK_ZEROLPI( CPXchgbds(lpi->cpxenv, lpi->cpxlp, ncols, ind, lpi->uarray, (SCIP_Real*)ub) );
 
 #ifndef NDEBUG
    {
@@ -1374,8 +1380,8 @@ SCIP_RETCODE SCIPlpiChgBounds(
          SCIP_Real cpxlb;
          SCIP_Real cpxub;
 
-         CHECK_ZERO( CPXgetlb(lpi->cpxenv, lpi->cpxlp, &cpxlb, ind[i], ind[i]) );
-         CHECK_ZERO( CPXgetub(lpi->cpxenv, lpi->cpxlp, &cpxub, ind[i], ind[i]) );
+         CHECK_ZEROLPI( CPXgetlb(lpi->cpxenv, lpi->cpxlp, &cpxlb, ind[i], ind[i]) );
+         CHECK_ZEROLPI( CPXgetub(lpi->cpxenv, lpi->cpxlp, &cpxub, ind[i], ind[i]) );
 
          assert(cpxlb == lb[i]);
          assert(cpxub == ub[i]);
@@ -1412,8 +1418,8 @@ SCIP_RETCODE SCIPlpiChgSides(
    convertSides(lpi, nrows, lhs, rhs, 0, &rngcount);
 
    /* change row sides */
-   CHECK_ZERO( CPXchgsense(lpi->cpxenv, lpi->cpxlp, nrows, ind, lpi->senarray) );
-   CHECK_ZERO( CPXchgrhs(lpi->cpxenv, lpi->cpxlp, nrows, ind, lpi->rhsarray) );
+   CHECK_ZEROLPI( CPXchgsense(lpi->cpxenv, lpi->cpxlp, nrows, ind, lpi->senarray) );
+   CHECK_ZEROLPI( CPXchgrhs(lpi->cpxenv, lpi->cpxlp, nrows, ind, lpi->rhsarray) );
    if( rngcount > 0 )
    {
       /* adjust the range count indices to the correct row indices */
@@ -1425,7 +1431,7 @@ SCIP_RETCODE SCIPlpiChgSides(
       }
 
       /* change the range values in CPLEX */
-      CHECK_ZERO( CPXchgrngval(lpi->cpxenv, lpi->cpxlp, rngcount, lpi->rngindarray, lpi->rngarray) );
+      CHECK_ZEROLPI( CPXchgrngval(lpi->cpxenv, lpi->cpxlp, rngcount, lpi->rngindarray, lpi->rngarray) );
    }
 
    return SCIP_OKAY;
@@ -1447,7 +1453,7 @@ SCIP_RETCODE SCIPlpiChgCoef(
 
    invalidateSolution(lpi);
 
-   CHECK_ZERO( CPXchgcoef(lpi->cpxenv, lpi->cpxlp, row, col, newval) );
+   CHECK_ZEROLPI( CPXchgcoef(lpi->cpxenv, lpi->cpxlp, row, col, newval) );
 
    return SCIP_OKAY;
 }
@@ -1485,7 +1491,7 @@ SCIP_RETCODE SCIPlpiChgObj(
 
    SCIPdebugMessage("changing %d objective values in CPLEX\n", ncols);
 
-   CHECK_ZERO( CPXchgobj(lpi->cpxenv, lpi->cpxlp, ncols, ind, obj) );
+   CHECK_ZEROLPI( CPXchgobj(lpi->cpxenv, lpi->cpxlp, ncols, ind, obj) );
 
    return SCIP_OKAY;
 }
@@ -1698,8 +1704,8 @@ SCIP_RETCODE SCIPlpiGetCols(
    {
       assert(ub != NULL);
 
-      CHECK_ZERO( CPXgetlb(lpi->cpxenv, lpi->cpxlp, lb, firstcol, lastcol) );
-      CHECK_ZERO( CPXgetub(lpi->cpxenv, lpi->cpxlp, ub, firstcol, lastcol) );
+      CHECK_ZEROLPI( CPXgetlb(lpi->cpxenv, lpi->cpxlp, lb, firstcol, lastcol) );
+      CHECK_ZEROLPI( CPXgetub(lpi->cpxenv, lpi->cpxlp, ub, firstcol, lastcol) );
    }
    else
       assert(ub == NULL);
@@ -1713,7 +1719,7 @@ SCIP_RETCODE SCIPlpiGetCols(
       assert(val != NULL);
 
       /* get matrix entries */
-      CHECK_ZERO( CPXgetcols(lpi->cpxenv, lpi->cpxlp, nnonz, beg, ind, val, CPXgetnumnz(lpi->cpxenv, lpi->cpxlp), &surplus, 
+      CHECK_ZEROLPI( CPXgetcols(lpi->cpxenv, lpi->cpxlp, nnonz, beg, ind, val, CPXgetnumnz(lpi->cpxenv, lpi->cpxlp), &surplus, 
             firstcol, lastcol) );
       assert(surplus >= 0);
    }
@@ -1756,12 +1762,12 @@ SCIP_RETCODE SCIPlpiGetRows(
    {
       /* get row sense, rhs, and ranges */
       SCIP_CALL( ensureSidechgMem(lpi, lastrow - firstrow + 1) );
-      CHECK_ZERO( CPXgetsense(lpi->cpxenv, lpi->cpxlp, lpi->senarray, firstrow, lastrow) );
-      CHECK_ZERO( CPXgetrhs(lpi->cpxenv, lpi->cpxlp, lpi->rhsarray, firstrow, lastrow) );
+      CHECK_ZEROLPI( CPXgetsense(lpi->cpxenv, lpi->cpxlp, lpi->senarray, firstrow, lastrow) );
+      CHECK_ZEROLPI( CPXgetrhs(lpi->cpxenv, lpi->cpxlp, lpi->rhsarray, firstrow, lastrow) );
       retcode = CPXgetrngval(lpi->cpxenv, lpi->cpxlp, lpi->rngarray, firstrow, lastrow);
       if( retcode != CPXERR_NO_RNGVAL ) /* ignore "No range values" error */
       {
-         CHECK_ZERO( retcode );
+         CHECK_ZEROLPI( retcode );
       }
       else
          BMSclearMemoryArray(lpi->rngarray, lastrow-firstrow+1);
@@ -1779,7 +1785,7 @@ SCIP_RETCODE SCIPlpiGetRows(
       assert(val != NULL);
 
       /* get matrix entries */
-      CHECK_ZERO( CPXgetrows(lpi->cpxenv, lpi->cpxlp, nnonz, beg, ind, val, CPXgetnumnz(lpi->cpxenv, lpi->cpxlp), &surplus, 
+      CHECK_ZEROLPI( CPXgetrows(lpi->cpxenv, lpi->cpxlp, nnonz, beg, ind, val, CPXgetnumnz(lpi->cpxenv, lpi->cpxlp), &surplus, 
             firstrow, lastrow) );
       assert(surplus >= 0);
    }
@@ -1821,7 +1827,7 @@ SCIP_RETCODE SCIPlpiGetColNames(
    assert( namestoragesize != 0 || retcode == CPXERR_NEGATIVE_SURPLUS );
    if( namestoragesize != 0 )
    {
-      CHECK_ZERO( retcode );
+      CHECK_ZEROLPI( retcode );
    }
 
    return SCIP_OKAY;
@@ -1855,7 +1861,7 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    assert( namestoragesize != 0 || retcode == CPXERR_NEGATIVE_SURPLUS );
    if( namestoragesize != 0 )
    {
-      CHECK_ZERO( retcode );
+      CHECK_ZEROLPI( retcode );
    }
 
    return SCIP_OKAY;
@@ -1877,7 +1883,7 @@ SCIP_RETCODE SCIPlpiGetObj(
    
    SCIPdebugMessage("getting objective values %d to %d\n", firstcol, lastcol);
 
-   CHECK_ZERO( CPXgetobj(lpi->cpxenv, lpi->cpxlp, vals, firstcol, lastcol) );
+   CHECK_ZEROLPI( CPXgetobj(lpi->cpxenv, lpi->cpxlp, vals, firstcol, lastcol) );
 
    return SCIP_OKAY;
 }
@@ -1900,12 +1906,12 @@ SCIP_RETCODE SCIPlpiGetBounds(
 
    if( lbs != NULL )
    {
-      CHECK_ZERO( CPXgetlb(lpi->cpxenv, lpi->cpxlp, lbs, firstcol, lastcol) );
+      CHECK_ZEROLPI( CPXgetlb(lpi->cpxenv, lpi->cpxlp, lbs, firstcol, lastcol) );
    }
 
    if( ubs != NULL )
    {
-      CHECK_ZERO( CPXgetub(lpi->cpxenv, lpi->cpxlp, ubs, firstcol, lastcol) );
+      CHECK_ZEROLPI( CPXgetub(lpi->cpxenv, lpi->cpxlp, ubs, firstcol, lastcol) );
    }
 
    return SCIP_OKAY;
@@ -1931,12 +1937,12 @@ SCIP_RETCODE SCIPlpiGetSides(
 
    /* get row sense, rhs, and ranges */
    SCIP_CALL( ensureSidechgMem(lpi, lastrow - firstrow + 1) );
-   CHECK_ZERO( CPXgetsense(lpi->cpxenv, lpi->cpxlp, lpi->senarray, firstrow, lastrow) );
-   CHECK_ZERO( CPXgetrhs(lpi->cpxenv, lpi->cpxlp, lpi->rhsarray, firstrow, lastrow) );
+   CHECK_ZEROLPI( CPXgetsense(lpi->cpxenv, lpi->cpxlp, lpi->senarray, firstrow, lastrow) );
+   CHECK_ZEROLPI( CPXgetrhs(lpi->cpxenv, lpi->cpxlp, lpi->rhsarray, firstrow, lastrow) );
    retval = CPXgetrngval(lpi->cpxenv, lpi->cpxlp, lpi->rngarray, firstrow, lastrow);
    if( retval != CPXERR_NO_RNGVAL ) /* ignore "No range values" error */
    {
-      CHECK_ZERO( retval );
+      CHECK_ZEROLPI( retval );
    }
    else
       BMSclearMemoryArray(lpi->rngarray, lastrow-firstrow+1);
@@ -1961,7 +1967,7 @@ SCIP_RETCODE SCIPlpiGetCoef(
 
    SCIPdebugMessage("getting coefficient of row %d col %d\n", row, col);
 
-   CHECK_ZERO( CPXgetcoef(lpi->cpxenv, lpi->cpxlp, row, col, val) );
+   CHECK_ZEROLPI( CPXgetcoef(lpi->cpxenv, lpi->cpxlp, row, col, val) );
 
    return SCIP_OKAY;
 }
@@ -2017,7 +2023,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    lpi->solisbasic = TRUE;
    lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
    lpi->instabilityignored = FALSE;
-   CHECK_ZERO( CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
+   CHECK_ZEROLPI( CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
    SCIPdebugMessage(" -> CPLEX returned solstat=%d, pfeas=%d, dfeas=%d (%d iterations)\n",
       lpi->solstat, primalfeasible, dualfeasible, lpi->iterations);
 
@@ -2103,7 +2109,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
    lpi->solisbasic = TRUE;
    lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
    lpi->instabilityignored = FALSE;
-   CHECK_ZERO( CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
+   CHECK_ZEROLPI( CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
    SCIPdebugMessage(" -> CPLEX returned solstat=%d, pfeas=%d, dfeas=%d (%d iterations)\n",
       lpi->solstat, primalfeasible, dualfeasible, lpi->iterations);
 
@@ -2134,7 +2140,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
          lpi->iterations += CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
          lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
          lpi->instabilityignored = FALSE;
-         CHECK_ZERO( CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
+         CHECK_ZEROLPI( CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
          SCIPdebugMessage(" -> CPLEX returned solstat=%d (%d iterations)\n", lpi->solstat, lpi->iterations);
 
          /* switch on preprocessing again */
@@ -2182,7 +2188,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
          setDblParam(lpi, CPX_PARAM_OBJLLIM, -CPX_INFBOUND);
          setDblParam(lpi, CPX_PARAM_OBJULIM, CPX_INFBOUND);
          SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
-         CHECK_ZERO( CPXsetintparam(lpi->cpxenv, CPX_PARAM_FINALFACTOR, FALSE) );
+         CHECK_ZEROLPI( CPXsetintparam(lpi->cpxenv, CPX_PARAM_FINALFACTOR, FALSE) );
          
          retval = CPXdualopt(lpi->cpxenv, lpi->cpxlp);
          switch( retval  )
@@ -2203,7 +2209,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
          setDblParam(lpi, CPX_PARAM_OBJLLIM, llim);
          setDblParam(lpi, CPX_PARAM_OBJULIM, ulim);
          SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
-         CHECK_ZERO( CPXsetintparam(lpi->cpxenv, CPX_PARAM_FINALFACTOR, TRUE) );
+         CHECK_ZEROLPI( CPXsetintparam(lpi->cpxenv, CPX_PARAM_FINALFACTOR, TRUE) );
          
          /* resolve LP again in order to restore the status of exceeded objective limit */
          retval = CPXdualopt(lpi->cpxenv, lpi->cpxlp);
@@ -2264,7 +2270,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
       return SCIP_LPERROR;
    }
 
-   CHECK_ZERO( CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
+   CHECK_ZEROLPI( CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
 
    lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
    lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
@@ -2291,7 +2297,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
          return SCIP_LPERROR;
       }
 
-      CHECK_ZERO( CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
+      CHECK_ZEROLPI( CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
 
       lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
       lpi->iterations += CPXgetbaritcnt(lpi->cpxenv, lpi->cpxlp);
@@ -2349,8 +2355,8 @@ SCIP_RETCODE lpiStrongbranchIntegral(
 
    /* save current LP basis and bounds*/
    SCIP_CALL( getBase(lpi) );
-   CHECK_ZERO( CPXgetlb(lpi->cpxenv, lpi->cpxlp, &oldlb, col, col) );
-   CHECK_ZERO( CPXgetub(lpi->cpxenv, lpi->cpxlp, &oldub, col, col) );
+   CHECK_ZEROLPI( CPXgetlb(lpi->cpxenv, lpi->cpxlp, &oldlb, col, col) );
+   CHECK_ZEROLPI( CPXgetub(lpi->cpxenv, lpi->cpxlp, &oldub, col, col) );
 
    /* save old iteration limit and set iteration limit to strong branching limit */
    if( itlim > CPX_INT_MAX )
@@ -2362,7 +2368,7 @@ SCIP_RETCODE lpiStrongbranchIntegral(
    newub = EPSCEIL(psol-1.0, lpi->feastol);
    if( newub >= oldlb - 0.5 )
    {
-      CHECK_ZERO( CPXchgbds(lpi->cpxenv, lpi->cpxlp, 1, &col, &ubound, &newub) );
+      CHECK_ZEROLPI( CPXchgbds(lpi->cpxenv, lpi->cpxlp, 1, &col, &ubound, &newub) );
       SCIP_CALL( SCIPlpiSolveDual(lpi) );
       if( SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsObjlimExc(lpi) )
          *down = objsen == CPX_MIN ? getDblParam(lpi, CPX_PARAM_OBJULIM) : getDblParam(lpi, CPX_PARAM_OBJLLIM);
@@ -2379,7 +2385,7 @@ SCIP_RETCODE lpiStrongbranchIntegral(
       }
       SCIPdebugMessage(" -> down (x%d <= %g): %g\n", col, newub, *down);
       
-      CHECK_ZERO( CPXchgbds(lpi->cpxenv, lpi->cpxlp, 1, &col, &ubound, &oldub) );
+      CHECK_ZEROLPI( CPXchgbds(lpi->cpxenv, lpi->cpxlp, 1, &col, &ubound, &oldub) );
       SCIP_CALL( setBase(lpi) );
    }
    else
@@ -2389,7 +2395,7 @@ SCIP_RETCODE lpiStrongbranchIntegral(
    newlb = EPSFLOOR(psol+1.0, lpi->feastol);
    if( newlb <= oldub + 0.5 )
    {
-      CHECK_ZERO( CPXchgbds(lpi->cpxenv, lpi->cpxlp, 1, &col, &lbound, &newlb) );
+      CHECK_ZEROLPI( CPXchgbds(lpi->cpxenv, lpi->cpxlp, 1, &col, &lbound, &newlb) );
       SCIP_CALL( SCIPlpiSolveDual(lpi) );
       if( SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsObjlimExc(lpi) )
          *up = objsen == CPX_MIN ? getDblParam(lpi, CPX_PARAM_OBJULIM) : getDblParam(lpi, CPX_PARAM_OBJLLIM);
@@ -2406,7 +2412,7 @@ SCIP_RETCODE lpiStrongbranchIntegral(
       }
       SCIPdebugMessage(" -> up  (x%d >= %g): %g\n", col, newlb, *up);
       
-      CHECK_ZERO( CPXchgbds(lpi->cpxenv, lpi->cpxlp, 1, &col, &lbound, &oldlb) );
+      CHECK_ZEROLPI( CPXchgbds(lpi->cpxenv, lpi->cpxlp, 1, &col, &lbound, &oldlb) );
       SCIP_CALL( setBase(lpi) );
    }
    else
@@ -2483,7 +2489,7 @@ SCIP_RETCODE SCIPlpiStrongbranchFrac(
       SCIPdebugMessage(" -> time limit exceeded during strong branching\n");
       return SCIP_LPERROR;
    }
-   CHECK_ZERO( retval );
+   CHECK_ZEROLPI( retval );
    SCIPdebugMessage(" -> down: %g, up:%g\n", *down, *up);
 
    /* CPLEX is not able to return the iteration counts in strong branching */
@@ -2550,7 +2556,7 @@ SCIP_RETCODE SCIPlpiStrongbranchesFrac(
       SCIPdebugMessage(" -> time limit exceeded during strong branching\n");
       return SCIP_LPERROR;
    }
-   CHECK_ZERO( retval );
+   CHECK_ZEROLPI( retval );
 
    /* CPLEX is not able to return the iteration counts in strong branching */
    if( iter != NULL )
@@ -2674,7 +2680,7 @@ SCIP_RETCODE SCIPlpiGetSolFeasibility(
 
    SCIPdebugMessage("getting solution feasibility\n");
 
-   CHECK_ZERO( CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &pfeas, &dfeas) );
+   CHECK_ZEROLPI( CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &pfeas, &dfeas) );
    *primalfeasible = (SCIP_Bool)pfeas;
    *dualfeasible = (SCIP_Bool)dfeas;
 
@@ -2980,7 +2986,7 @@ SCIP_RETCODE SCIPlpiGetObjval(
 
    SCIPdebugMessage("getting solution's objective value\n");
 
-   CHECK_ZERO( CPXgetobjval(lpi->cpxenv, lpi->cpxlp, objval) );
+   CHECK_ZEROLPI( CPXgetobjval(lpi->cpxenv, lpi->cpxlp, objval) );
 
    return SCIP_OKAY;
 }
@@ -3004,12 +3010,12 @@ SCIP_RETCODE SCIPlpiGetSol(
 
    SCIPdebugMessage("getting solution\n");
 
-   CHECK_ZERO( CPXsolution(lpi->cpxenv, lpi->cpxlp, &dummy, objval, primsol, dualsol, NULL, redcost) );
+   CHECK_ZEROLPI( CPXsolution(lpi->cpxenv, lpi->cpxlp, &dummy, objval, primsol, dualsol, NULL, redcost) );
    assert(dummy == lpi->solstat || lpi->instabilityignored);
 
    if( activity != NULL )
    {
-      CHECK_ZERO( CPXgetax(lpi->cpxenv, lpi->cpxlp, activity, 0, CPXgetnumrows(lpi->cpxenv, lpi->cpxlp)-1) );
+      CHECK_ZEROLPI( CPXgetax(lpi->cpxenv, lpi->cpxlp, activity, 0, CPXgetnumrows(lpi->cpxenv, lpi->cpxlp)-1) );
    }
 
    return SCIP_OKAY;
@@ -3029,7 +3035,7 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
    SCIPdebugMessage("calling CPLEX get primal ray: %d cols, %d rows\n",
       CPXgetnumcols(lpi->cpxenv, lpi->cpxlp), CPXgetnumrows(lpi->cpxenv, lpi->cpxlp));
 
-   CHECK_ZERO( CPXgetray(lpi->cpxenv, lpi->cpxlp, ray) );
+   CHECK_ZEROLPI( CPXgetray(lpi->cpxenv, lpi->cpxlp, ray) );
 
    return SCIP_OKAY;
 }
@@ -3049,7 +3055,7 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    SCIPdebugMessage("calling CPLEX dual Farkas: %d cols, %d rows\n",
       CPXgetnumcols(lpi->cpxenv, lpi->cpxlp), CPXgetnumrows(lpi->cpxenv, lpi->cpxlp));
 
-   CHECK_ZERO( CPXdualfarkas(lpi->cpxenv, lpi->cpxlp, dualfarkas, NULL) );
+   CHECK_ZEROLPI( CPXdualfarkas(lpi->cpxenv, lpi->cpxlp, dualfarkas, NULL) );
 
    return SCIP_OKAY;
 }
@@ -3101,7 +3107,7 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
       return SCIP_INVALIDDATA;
    }
 
-   CHECK_ZERO( CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
+   CHECK_ZEROLPI( CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
 
    if( solntype == CPX_NO_SOLN )
    {
@@ -3109,7 +3115,7 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
    }
    else
    {
-      CHECK_ZERO( CPXgetdblquality(lpi->cpxenv, lpi->cpxlp, quality, what) );
+      CHECK_ZEROLPI( CPXgetdblquality(lpi->cpxenv, lpi->cpxlp, quality, what) );
    }
 
    return SCIP_OKAY;
@@ -3140,7 +3146,7 @@ SCIP_RETCODE SCIPlpiGetBase(
 
    SCIPdebugMessage("saving CPLEX basis into %p/%p\n", (void *) cstat, (void *) rstat);
 
-   CHECK_ZERO( CPXgetbase(lpi->cpxenv, lpi->cpxlp, cstat, rstat) );
+   CHECK_ZEROLPI( CPXgetbase(lpi->cpxenv, lpi->cpxlp, cstat, rstat) );
 
    /* because the basis status values are equally defined in SCIP and CPLEX, they don't need to be transformed */
    assert((int)SCIP_BASESTAT_LOWER == CPX_AT_LOWER);
@@ -3174,7 +3180,7 @@ SCIP_RETCODE SCIPlpiSetBase(
    assert((int)SCIP_BASESTAT_UPPER == CPX_AT_UPPER);
    assert((int)SCIP_BASESTAT_ZERO == CPX_FREE_SUPER);
 
-   CHECK_ZERO( CPXcopybase(lpi->cpxenv, lpi->cpxlp, cstat, rstat) );
+   CHECK_ZEROLPI( CPXcopybase(lpi->cpxenv, lpi->cpxlp, cstat, rstat) );
 
    return SCIP_OKAY;
 }
@@ -3207,12 +3213,12 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
        * a strong branching conflict created a constraint that is not able to modify the LP but trigger the additional
        * call of the separators, in particular, the Gomory separator
        */
-      CHECK_ZERO( CPXdualopt(lpi->cpxenv, lpi->cpxlp) );
+      CHECK_ZEROLPI( CPXdualopt(lpi->cpxenv, lpi->cpxlp) );
       assert(CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) == 0);
       assert(CPXgetitcnt(lpi->cpxenv, lpi->cpxlp) == 0);
       retval = CPXgetbhead(lpi->cpxenv, lpi->cpxlp, bind, NULL);
    }
-   CHECK_ZERO( retval );
+   CHECK_ZEROLPI( retval );
 
    return SCIP_OKAY;
 }
@@ -3246,12 +3252,12 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
        * a strong branching conflict created a constraint that is not able to modify the LP but trigger the additional
        * call of the separators, in particular, the Gomory separator
        */
-      CHECK_ZERO( CPXdualopt(lpi->cpxenv, lpi->cpxlp) );
+      CHECK_ZEROLPI( CPXdualopt(lpi->cpxenv, lpi->cpxlp) );
       assert(CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) == 0);
       assert(CPXgetitcnt(lpi->cpxenv, lpi->cpxlp) == 0);
       retval = CPXbinvrow(lpi->cpxenv, lpi->cpxlp, r, coef);
    }
-   CHECK_ZERO( retval );
+   CHECK_ZEROLPI( retval );
 
    return SCIP_OKAY;
 }
@@ -3289,12 +3295,12 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
        * a strong branching conflict created a constraint that is not able to modify the LP but trigger the additional
        * call of the separators, in particular, the Gomory separator
        */
-      CHECK_ZERO( CPXdualopt(lpi->cpxenv, lpi->cpxlp) );
+      CHECK_ZEROLPI( CPXdualopt(lpi->cpxenv, lpi->cpxlp) );
       assert(CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) == 0);
       assert(CPXgetitcnt(lpi->cpxenv, lpi->cpxlp) == 0);
       retval = CPXbinvcol(lpi->cpxenv, lpi->cpxlp, c, coef);
    }
-   CHECK_ZERO( retval );
+   CHECK_ZEROLPI( retval );
 
    return SCIP_OKAY;
 }
@@ -3329,7 +3335,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
        * a strong branching conflict created a constraint that is not able to modify the LP but trigger the additional
        * call of the separators, in particular, the Gomory separator
        */
-      CHECK_ZERO( CPXdualopt(lpi->cpxenv, lpi->cpxlp) );
+      CHECK_ZEROLPI( CPXdualopt(lpi->cpxenv, lpi->cpxlp) );
 
       /* In a numerical perfect world, the 10 below should be zero. However, due to numerical inaccuracies after refactorization, 
        * it might be necessary to do one (or even a few) extra pivot steps, in particular if FASTMIP is used. */ 
@@ -3337,7 +3343,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
       assert(CPXgetitcnt(lpi->cpxenv, lpi->cpxlp) <= 10);
       retval = CPXbinvarow(lpi->cpxenv, lpi->cpxlp, r, coef);
    }
-   CHECK_ZERO( retval );
+   CHECK_ZEROLPI( retval );
 
    return SCIP_OKAY;
 }
@@ -3371,7 +3377,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
        * a strong branching conflict created a constraint that is not able to modify the LP but trigger the additional
        * call of the separators, in particular, the Gomory separator
        */
-      CHECK_ZERO( CPXdualopt(lpi->cpxenv, lpi->cpxlp) );
+      CHECK_ZEROLPI( CPXdualopt(lpi->cpxenv, lpi->cpxlp) );
 
       /* In a numerical perfect world, the 10 below should be zero. However, due to numerical inaccuracies after refactorization, 
        * it might be necessary to do one (or even a few) extra pivot steps, in particular if FASTMIP is used. */ 
@@ -3379,7 +3385,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
       assert(CPXgetitcnt(lpi->cpxenv, lpi->cpxlp) <= 10);
       retval = CPXbinvacol(lpi->cpxenv, lpi->cpxlp, c, coef);
    }
-   CHECK_ZERO( retval );
+   CHECK_ZEROLPI( retval );
 
    return SCIP_OKAY;
 }
@@ -3546,7 +3552,7 @@ SCIP_RETCODE SCIPlpiReadState(
 
    SCIPdebugMessage("reading LP state from file <%s>\n", fname);
 
-   CHECK_ZERO( CPXreadcopybase(lpi->cpxenv, lpi->cpxlp, fname) );
+   CHECK_ZEROLPI( CPXreadcopybase(lpi->cpxenv, lpi->cpxlp, fname) );
 
    return SCIP_OKAY;
 }
@@ -3563,7 +3569,7 @@ SCIP_RETCODE SCIPlpiWriteState(
 
    SCIPdebugMessage("writing LP state to file <%s>\n", fname);
 
-   CHECK_ZERO( CPXmbasewrite(lpi->cpxenv, lpi->cpxlp, fname) );
+   CHECK_ZEROLPI( CPXmbasewrite(lpi->cpxenv, lpi->cpxlp, fname) );
 
    return SCIP_OKAY;
 }

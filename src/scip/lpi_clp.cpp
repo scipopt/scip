@@ -73,7 +73,7 @@
 
 #include "scip/lpi.h"
 #include "scip/bitencode.h"
-#include "scip/message.h"
+#include "scip/pub_message.h"
 
 
 /* in C++ we have to use "0" instead of "(void*)0" */
@@ -466,7 +466,8 @@ void* SCIPlpiGetSolverPointer(
 SCIP_RETCODE SCIPlpiCreate(
    SCIP_LPI**            lpi,                /**< pointer to an LP interface structure */
    const char*           name,               /**< problem name */
-   SCIP_OBJSEN           objsen              /**< objective sense */
+   SCIP_OBJSEN           objsen,             /**< objective sense */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler to use for printing messages, or NULL */
    )
 {
    assert(lpi != 0);
