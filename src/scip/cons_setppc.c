@@ -25,6 +25,7 @@
 #include <assert.h>
 #include <string.h>
 #include <limits.h>
+#include <stdio.h>
 
 #include "scip/cons_setppc.h"
 #include "scip/cons_linear.h"
@@ -4147,13 +4148,96 @@ SCIP_DECL_CONSCOPY(consCopySetppc)
 }
 
 /** constraint parsing method of constraint handler */
-#define consParseSetppc NULL
+static
+SCIP_DECL_CONSPARSE(consParseSetppc)
+{
+   SCIP_VAR* var;
+   char varname[SCIP_MAXSTRLEN];
+   SCIP_VAR** vars;
+   int nvars;
+   int varssize;
+   int parselen;
 
+   assert(scip != NULL);
+   assert(success != NULL);
+   assert(str != NULL);
+   assert(name != NULL);
+   assert(cons != NULL);
 
+   *success = TRUE;
 
+   nvars = 0;
+   varssize = 5;
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
 
+   if( str[0] == '0' )
+   {
+      assert(str[1] == ' ');
+      str += 2;
+   }
+   else
+   {
+      while( sscanf(str, "+<%[^>]> %n", varname, &parselen) >= 1 )
+      {
+         str += parselen;
 
+         if( varname[0] == '~' )
+         {
+            var = SCIPfindVar(scip, &varname[1]);
+            if( var != NULL )
+            {
+               SCIP_CALL( SCIPgetNegatedVar(scip, var, &var) );
+            }
+         }
+         else
+         {
+            var = SCIPfindVar(scip, varname);
+         }
+         if( var == NULL )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s>", varname);
+            *success = FALSE;
+            break;
+         }
 
+         if( varssize >= nvars )
+         {
+            varssize = SCIPcalcMemGrowSize(scip, varssize+1);
+            SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
+         }
+
+         vars[nvars] = var;
+         ++nvars;
+      }
+   }
+
+   if( *success )
+   {
+      switch( *str )
+      {
+         case '=' :
+            SCIP_CALL( SCIPcreateConsSetpart(scip, cons, name, nvars, vars,
+                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+            break;
+         case '<' :
+            SCIP_CALL( SCIPcreateConsSetpack(scip, cons, name, nvars, vars,
+                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+            break;
+         case '>' :
+            SCIP_CALL( SCIPcreateConsSetcover(scip, cons, name, nvars, vars,
+                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+            break;
+         default:
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "error parsing setppc type\n");
+            *success = FALSE;
+            break;
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
 
 
 /*
