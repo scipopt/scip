@@ -26,6 +26,7 @@
 #include <assert.h>
 #include <string.h>
 #include <limits.h>
+#include <stdio.h>
 
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
@@ -8724,9 +8725,87 @@ SCIP_DECL_CONSCOPY(consCopyKnapsack)
 }
 
 /** constraint parsing method of constraint handler */
-#define consParseKnapsack NULL
+static
+SCIP_DECL_CONSPARSE(consParseKnapsack)
+{
+   SCIP_VAR* var;
+   SCIP_Longint weight;
+   char varname[SCIP_MAXSTRLEN];
+   SCIP_VAR** vars;
+   SCIP_Longint* weights;
+   SCIP_Longint capacity;
+   int nvars;
+   int varssize;
+   int parselen;
 
+   assert(scip != NULL);
+   assert(success != NULL);
+   assert(str != NULL);
+   assert(name != NULL);
+   assert(cons != NULL);
 
+   *success = TRUE;
+
+   nvars = 0;
+   varssize = 5;
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars,    varssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &weights, varssize) );
+
+   while( sscanf(str, "%"SCIP_LONGINT_FORMAT"<%[^>]>%n", &weight, varname, &parselen) >= 2 )
+   {
+      str += parselen;
+
+      if( varname[0] == '~' )
+      {
+         var = SCIPfindVar(scip, &varname[1]);
+         if( var != NULL )
+         {
+            SCIP_CALL( SCIPgetNegatedVar(scip, var, &var) );
+         }
+      }
+      else
+      {
+         var = SCIPfindVar(scip, varname);
+      }
+      if( var == NULL )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s>", varname);
+         *success = FALSE;
+         break;
+      }
+
+      if( varssize >= nvars )
+      {
+         varssize = SCIPcalcMemGrowSize(scip, varssize+1);
+         SCIP_CALL( SCIPreallocBufferArray(scip, &vars,    varssize) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, &weights, varssize) );
+      }
+
+      vars[nvars]    = var;
+      weights[nvars] = weight;
+      ++nvars;
+   }
+
+   if( *success )
+   {
+      if( sscanf(str, " <= %"SCIP_LONGINT_FORMAT, &capacity) != 1  )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "error parsing capacity");
+         *success = FALSE;
+      }
+   }
+
+   if( *success )
+   {
+      SCIP_CALL( SCIPcreateConsKnapsack(scip, cons, name, nvars, vars, weights, capacity,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+   }
+
+   SCIPfreeBufferArray(scip, &vars);
+   SCIPfreeBufferArray(scip, &weights);
+
+   return SCIP_OKAY;
+}
 
 /*
  * Event handler
