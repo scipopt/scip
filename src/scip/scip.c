@@ -8342,6 +8342,9 @@ SCIP_RETCODE SCIPparseVarsLinearsum(
    {
       *nvars = 0;
       *requiredsize = 0;
+
+      SCIPfreeParseVarsPolynomialData(scip, &monomialvars, &monomialexps, &monomialcoefs, &monomialnvars, nmonomials);
+
       return SCIP_OKAY;
    }
 
