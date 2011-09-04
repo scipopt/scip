@@ -1190,7 +1190,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
     * invalid, a second possibility would be to clear the whole optvalues, which should be more expensive than storing
     * 'nmyitem' values
     */
-   SCIP_CALL( SCIPallocBufferArray(scip, &allcurrminweight, nmyitems - 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &allcurrminweight, nmyitems) );
    allcurrminweight[0] = myweights[0] - minweight;
 
    currminweight = myweights[0] - minweight;
