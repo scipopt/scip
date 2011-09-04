@@ -455,7 +455,7 @@ SCIP_RETCODE consdataFree(
 
 /** prints set partitioning / packing / covering constraint to file stream */
 static
-void consdataPrint(
+SCIP_RETCODE consdataPrint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< set partitioning / packing / covering constraint data */
    FILE*                 file                /**< output file (or NULL for standard output) */
@@ -471,7 +471,9 @@ void consdataPrint(
    for( v = 0; v < consdata->nvars; ++v )
    {
       assert(consdata->vars[v] != NULL);
-      SCIPinfoMessage(scip, file, "+<%s> ", SCIPvarGetName(consdata->vars[v]));
+      SCIPinfoMessage(scip, file, "+");
+      SCIP_CALL( SCIPwriteVarName(scip, file, consdata->vars[v], FALSE) );
+      SCIPinfoMessage(scip, file, " ");
    }
 
    /* print right hand side */
@@ -488,8 +490,10 @@ void consdataPrint(
       break;
    default:
       SCIPerrorMessage("unknown setppc type\n");
-      SCIPABORT();
+      return SCIP_ERROR;
    }
+
+   return SCIP_OKAY;
 }
 
 /** returns the signature bitmask for the given variable */
@@ -4091,7 +4095,7 @@ SCIP_DECL_CONSPRINT(consPrintSetppc)
    assert( conshdlr != NULL );
    assert( cons != NULL );
 
-   consdataPrint(scip, SCIPconsGetData(cons), file);
+   SCIP_CALL( consdataPrint(scip, SCIPconsGetData(cons), file) );
  
    return SCIP_OKAY;
 }
@@ -4195,12 +4199,12 @@ SCIP_DECL_CONSPARSE(consParseSetppc)
          }
          if( var == NULL )
          {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s>", varname);
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s>\n", varname);
             *success = FALSE;
             break;
          }
 
-         if( varssize >= nvars )
+         if( varssize <= nvars )
          {
             varssize = SCIPcalcMemGrowSize(scip, varssize+1);
             SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );

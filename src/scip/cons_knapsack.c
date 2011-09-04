@@ -8681,7 +8681,8 @@ SCIP_DECL_CONSPRINT(consPrintKnapsack)
    {
       if( i > 0 )
          SCIPinfoMessage(scip, file, " ");
-      SCIPinfoMessage(scip, file, "%+"SCIP_LONGINT_FORMAT"<%s>", consdata->weights[i], SCIPvarGetName(consdata->vars[i]));
+      SCIPinfoMessage(scip, file, "%+"SCIP_LONGINT_FORMAT, consdata->weights[i]);
+      SCIP_CALL( SCIPwriteVarName(scip, file, consdata->vars[i], FALSE) );
    }
    SCIPinfoMessage(scip, file, " <= %"SCIP_LONGINT_FORMAT"", consdata->capacity);
    
@@ -8769,12 +8770,12 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
       }
       if( var == NULL )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s>", varname);
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s>\n", varname);
          *success = FALSE;
          break;
       }
 
-      if( varssize >= nvars )
+      if( varssize <= nvars )
       {
          varssize = SCIPcalcMemGrowSize(scip, varssize+1);
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars,    varssize) );
@@ -8790,7 +8791,7 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
    {
       if( sscanf(str, " <= %"SCIP_LONGINT_FORMAT, &capacity) != 1  )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "error parsing capacity");
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "error parsing capacity\n");
          *success = FALSE;
       }
    }
