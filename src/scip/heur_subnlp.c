@@ -920,7 +920,7 @@ SCIP_RETCODE solveSubNLP(
    SCIP_Longint          itercontingent,     /**< iteration limit for NLP solver, or -1 for default of NLP heuristic */
    SCIP_Real             timelimit,          /**< time limit for NLP solver                                      */
    SCIP_Longint*         iterused,           /**< buffer to store number of iterations used by NLP solver, or NULL if not of interest */
-   SCIP_Bool             tighttolerances     /**< whether to use tight feasibility tolerances and reduce presolve */
+   SCIP_Bool             tighttolerances,    /**< whether to use tight feasibility tolerances and reduce presolve */
    SCIP_SOL*             resultsol           /**< a solution where to store found solution values, if any, or NULL if to try adding to SCIP */
    )
 {
