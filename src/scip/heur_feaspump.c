@@ -236,7 +236,7 @@ SCIP_RETCODE handleCycle(
    /* just flipping the objective coefficients from +1 to -1 and the rounding from floor to ceil */
    for( i = 0; i < nbinandintvars; i++ )
    {
-      /* decide arbitraryly whether the variable will be flipped or not */
+      /* decide arbitrarily whether the variable will be flipped or not */
       var = vars[i];
       solval = SCIPvarGetLPSol(var);   
       orgobjcoeff = SCIPvarGetObj(var);

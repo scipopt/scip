@@ -260,7 +260,7 @@ void sortTerm(
    term->sorted = TRUE;
 }
 
-/** creates constaint handler data for pseudo boolean constraint handler */
+/** creates constraint handler data for pseudo boolean constraint handler */
 static
 SCIP_RETCODE conshdlrdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1901,7 +1901,7 @@ SCIP_RETCODE applyFixingsLinear(
             SCIP_CALL( delCoefLinear(scip, cons, v) );
             break;
 
-#if 0 /* binary variables should not be multiaggregated */
+#if 0 /* binary variables should not be multi-aggregated */
          case SCIP_VARSTATUS_MULTAGGR:
             SCIP_CALL( SCIPflattenVarAggregationGraph(scip,var) );
             naggrvars = SCIPvarGetMultaggrNVars(var);

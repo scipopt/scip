@@ -459,7 +459,7 @@ SCIP_RETCODE SCIPconflicthdlrFree(
    return SCIP_OKAY;
 }
 
-/** calls init method of conflict handler */
+/** calls initialization method of conflict handler */
 SCIP_RETCODE SCIPconflicthdlrInit(
    SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
    SCIP_SET*             set                 /**< global SCIP settings */

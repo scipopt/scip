@@ -85,8 +85,8 @@
 #define DEFAULT_MAXSEPACUTSROOT       200 /**< maximal number of cuts separated per separation round in root node */
 #define DEFAULT_PRESOLPAIRWISE       TRUE /**< should pairwise constraint comparison be performed in presolving? */
 #define DEFAULT_PRESOLUSEHASHING     TRUE /**< should hash table be used for detecting redundant constraints in advance */
-#define DEFAULT_NMINCOMPARISONS    200000 /**< number for minimal pairwise presol comparisons */
-#define DEFAULT_MINGAINPERNMINCOMP  1e-06 /**< minimal gain per minimal pairwise presol comparisons to repeat pairwise 
+#define DEFAULT_NMINCOMPARISONS    200000 /**< number for minimal pairwise presolving comparisons */
+#define DEFAULT_MINGAINPERNMINCOMP  1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise 
                                            *   comparison round */
 #define DEFAULT_SORTVARS             TRUE /**< should variables be sorted after presolve w.r.t their coefficient absolute for faster
                                            *  propagation? */
@@ -98,7 +98,7 @@
                                            *   the ones with non-zero dual value? */
 #define DEFAULT_AGGREGATEVARIABLES   TRUE /**< should presolving search for redundant variables in equations */
 #define DEFAULT_SIMPLIFYINEQUALITIES FALSE/**< should presolving try to simplify inequalities */
-#define DEFAULT_DUALPRESOLVING       TRUE /**< should dual presolving steps be preformed? */
+#define DEFAULT_DUALPRESOLVING       TRUE /**< should dual presolving steps be performed? */
 
 #define MAXDNOM                   10000LL /**< maximal denominator for simple rational fixed values */
 #define MAXSCALEDCOEF               1e+03 /**< maximal coefficient value after scaling */
@@ -207,7 +207,7 @@ struct SCIP_ConshdlrData
                                               *   (0.0: disable constraint aggregation) */
    SCIP_Real             maxcardbounddist;   /**< maximal relative distance from current node's dual bound to primal bound compared
                                               *   to best node's dual bound for separating knapsack cardinality cuts */
-   SCIP_Real             mingainpernmincomp; /**< minimal gain per minimal pairwise presol comparisons to repeat pairwise comparison round */
+   SCIP_Real             mingainpernmincomp; /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise comparison round */
    int                   linconsupgradessize;/**< size of linconsupgrade array */
    int                   nlinconsupgrades;   /**< number of linear constraint upgrade methods */
    int                   tightenboundsfreq;  /**< multiplier on propagation frequency, how often the bounds are tightened */
@@ -215,14 +215,14 @@ struct SCIP_ConshdlrData
    int                   maxroundsroot;      /**< maximal number of separation rounds in the root node (-1: unlimited) */
    int                   maxsepacuts;        /**< maximal number of cuts separated per separation round */
    int                   maxsepacutsroot;    /**< maximal number of cuts separated per separation round in root node */
-   int                   nmincomparisons;    /**< number for minimal pairwise presol comparisons */
+   int                   nmincomparisons;    /**< number for minimal pairwise presolving comparisons */
    SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
    SCIP_Bool             presolusehashing;   /**< should hash table be used for detecting redundant constraints in advance */
    SCIP_Bool             separateall;        /**< should all constraints be subject to cardinality cut generation instead of only
                                               *   the ones with non-zero dual value? */
    SCIP_Bool             aggregatevariables; /**< should presolving search for redundant variables in equations */
    SCIP_Bool             simplifyinequalities;/**< should presolving try to cancel down or delete coefficients in inequalities */
-   SCIP_Bool             dualpresolving;      /**< should dual presolving steps be preformed? */
+   SCIP_Bool             dualpresolving;      /**< should dual presolving steps be performed? */
    SCIP_Bool             sortvars;            /**< should binary variables be sorted for faster propagation? */
 };
 
@@ -433,7 +433,7 @@ void linconsupgradeFree(
    SCIPfreeMemory(scip, linconsupgrade);
 }
 
-/** creates constaint handler data for linear constraint handler */
+/** creates constraint handler data for linear constraint handler */
 static
 SCIP_RETCODE conshdlrdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3467,7 +3467,7 @@ SCIP_RETCODE normalizeCons(
 
       if( gcd > 1 )
       {
-         /* divide the constaint by the greatest common divisor of the coefficients */
+         /* divide the constraint by the greatest common divisor of the coefficients */
          SCIPdebugMessage("divide linear constraint by greatest common divisor %"SCIP_LONGINT_FORMAT"\n", gcd);
          SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
          SCIP_CALL( scaleCons(scip, cons, 1.0/(SCIP_Real)gcd) );
@@ -4306,7 +4306,7 @@ SCIP_RETCODE tightenBounds(
       return SCIP_OKAY;
 
    /* if a constraint was created after presolve, then it may hold fixed variables
-    * if there are even multiaggregated variables, then we cannot do bound tightening on these
+    * if there are even multi-aggregated variables, then we cannot do bound tightening on these
     * thus, ensure here again that variable fixings have been applied
     */
    SCIP_CALL( applyFixings(scip, cons, cutoff) );
@@ -5398,8 +5398,8 @@ SCIP_RETCODE convertLongEquality(
    SCIP_Bool coefszeroone;
    SCIP_Bool coefsintegral;
    SCIP_Bool varsintegral;
-   SCIP_Bool supinf;                         /* might the supremum of the multiaggregation be infinite? */
-   SCIP_Bool infinf;                         /* might the infimum of the multiaggregation be infinite? */
+   SCIP_Bool supinf;                         /* might the supremum of the multi-aggregation be infinite? */
+   SCIP_Bool infinf;                         /* might the infimum of the multi-aggregation be infinite? */
    SCIP_Bool infeasible;
 
    int maxnlocksstay;
@@ -5425,7 +5425,7 @@ SCIP_RETCODE convertLongEquality(
 
    SCIPdebugMessage("linear constraint <%s>: try to multi-aggregate equality\n", SCIPconsGetName(cons));
 
-   /* We do not want to increase the total number of non-zeros due to the multiaggregation.
+   /* We do not want to increase the total number of non-zeros due to the multi-aggregation.
     * Therefore, we have to restrict the number of locks of a variable that is aggregated out.
     *   maxnlocksstay:   maximal sum of lock numbers if the constraint does not become redundant after the aggregation
     *   maxnlocksremove: maximal sum of lock numbers if the constraint can be deleted after the aggregation
@@ -5626,7 +5626,7 @@ SCIP_RETCODE convertLongEquality(
    supinf = FALSE;
    infinf = FALSE;
    
-   /* check whether the the infimum and the supremum of the multiaggregation can be get infinite */
+   /* check whether the the infimum and the supremum of the multi-aggregation can be get infinite */
    for( v = 0; v < consdata->nvars; ++v )
    {
       if( v != bestslackpos )
@@ -5644,11 +5644,11 @@ SCIP_RETCODE convertLongEquality(
       }
    }
  
-   /* If the infimum and the supremum of a multiaggregation are both infinite, then the multiaggregation might not be resolvable.
+   /* If the infimum and the supremum of a multi-aggregation are both infinite, then the multi-aggregation might not be resolvable.
     * E.g., consider the equality z = x-y. If x and y are both fixed to +infinity, the value for z is not determined */     
    if( supinf && infinf )
    {      
-      SCIPdebugMessage("do not perform multiaggregation: infimum and supremum are both infinite\n");     
+      SCIPdebugMessage("do not perform multi-aggregation: infimum and supremum are both infinite\n");     
       return SCIP_OKAY;
    }
 
@@ -5965,10 +5965,10 @@ SCIP_RETCODE dualPresolve(
     * everything else would produce fill-in. Exceptions:
     * - If there are only two variables in the constraint from which the multi-aggregation arises, no fill-in will be
     *   produced.
-    * - If there are three variables in the constraint, multiaggregation in three additional constraintsw will remove
+    * - If there are three variables in the constraint, multi-aggregation in three additional constraintsw will remove
     *   six nonzeros (three from the constraint and the three entries of the multi-aggregated variable) and add
     *   six nonzeros (two variables per substitution).
-    * - If there at most four variables in the constraint, multiaggregation in two additional constraints will remove
+    * - If there at most four variables in the constraint, multi-aggregation in two additional constraints will remove
     *   six nonzeros (four from the constraint and the two entries of the multi-aggregated variable) and add
     *   six nonzeros (three variables per substitution). God exists! 
     */
@@ -6188,8 +6188,8 @@ SCIP_RETCODE dualPresolve(
       int j;
       SCIP_Bool infeasible;
       SCIP_Bool aggregated;
-      SCIP_Bool supinf;                      /* might the supremum of the multiaggregation be infinite? */
-      SCIP_Bool infinf;                      /* might the infimum of the multiaggregation be infinite? */
+      SCIP_Bool supinf;                      /* might the supremum of the multi-aggregation be infinite? */
+      SCIP_Bool infinf;                      /* might the infimum of the multi-aggregation be infinite? */
 
       assert(!bestislhs || lhsexists);
       assert(bestislhs || rhsexists);
@@ -6260,9 +6260,9 @@ SCIP_RETCODE dualPresolve(
       }
       else
       {
-         /* If the infimum and the supremum of a multiaggregation are both infinite, then the multiaggregation might not be resolvable.
+         /* If the infimum and the supremum of a multi-aggregation are both infinite, then the multi-aggregation might not be resolvable.
           * E.g., consider the equality z = x-y. If x and y are both fixed to +infinity, the value for z is not determined */
-         SCIPdebugMessage("do not perform multiaggregation: infimum and supremum are both infinite\n");
+         SCIPdebugMessage("do not perform multi-aggregation: infimum and supremum are both infinite\n");
       }
       /* free temporary memory */
       SCIPfreeBufferArray(scip, &aggrcoefs);
@@ -10136,7 +10136,7 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
 
    if( (eventtype & SCIP_EVENTTYPE_VARUNLOCKED) != 0 )
    {
-      /* there is only one lock left: we may multiaggregate the variable as slack of an equation */
+      /* there is only one lock left: we may multi-aggregate the variable as slack of an equation */
       assert(SCIPvarGetNLocksDown(var) <= 1);
       assert(SCIPvarGetNLocksUp(var) <= 1);
       consdata->presolved = FALSE;
@@ -10430,7 +10430,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          &conshdlrdata->simplifyinequalities, TRUE, DEFAULT_SIMPLIFYINEQUALITIES, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/linear/dualpresolving",
-         "should dual presolving steps be preformed?",
+         "should dual presolving steps be performed?",
          &conshdlrdata->dualpresolving, TRUE, DEFAULT_DUALPRESOLVING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/linear/sortvars", "apply binaries sorting in decr. order of coeff abs value?",
          &conshdlrdata->sortvars, TRUE, DEFAULT_SORTVARS, NULL, NULL) );

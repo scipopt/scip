@@ -86,7 +86,7 @@ SCIP_RETCODE SCIPbranchcandGetExternCands(
    int*                  nprioexterncands,    /**< pointer to store the number of candidates with maximal priority, or NULL */
    int*                  nprioexternbins,     /**< pointer to store the number of binary candidates with maximal priority, or NULL */
    int*                  nprioexternints,     /**< pointer to store the number of integer candidates with maximal priority, or NULL */
-   int*                  nprioexternimpls     /**< pointer to store the number of implicit integercandidates with maximal priority, 
+   int*                  nprioexternimpls     /**< pointer to store the number of implicit integer candidates with maximal priority, 
                                               *   or NULL */
    );
 

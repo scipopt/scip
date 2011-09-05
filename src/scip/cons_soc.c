@@ -1513,7 +1513,7 @@ SCIP_RETCODE presolveRemoveFixedVariables(
          ++*ndelconss;
       }
       else if( !SCIPvarIsActive(consdata->rhsvar) )
-      { /* remaining constraint is sqrt(gamma) - rhscoeff * rhsoffset <= rhscoeff * rhsvar, and rhsvar is probably multiaggregated */
+      { /* remaining constraint is sqrt(gamma) - rhscoeff * rhsoffset <= rhscoeff * rhsvar, and rhsvar is probably multi-aggregated */
          SCIP_CONS* lincons;
 
          SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, SCIPconsGetName(cons), 1, &consdata->rhsvar, &consdata->rhscoeff,
@@ -3505,7 +3505,7 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
             /* disable solution polishing if we failed for this constraint */
             dolinfeasshift = success;
          }
-         else /* if locks of the variable are bad or rhs is multiaggregated, disable solution polishing */
+         else /* if locks of the variable are bad or rhs is multi-aggregated, disable solution polishing */
          {
             dolinfeasshift = FALSE;
          }

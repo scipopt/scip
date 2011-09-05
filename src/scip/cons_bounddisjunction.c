@@ -200,7 +200,7 @@ SCIP_RETCODE dropEvents(
    return SCIP_OKAY;
 }
 
-/** creates constaint handler data for bound disjunction constraint handler */
+/** creates constraint handler data for bound disjunction constraint handler */
 static
 SCIP_RETCODE conshdlrdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1770,7 +1770,7 @@ SCIP_DECL_CONSPRESOL(consPresolBounddisjunction)
             }
             else
             {
-               /* upgrade to a linear constraint, if vars[0] is multiaggregated */
+               /* upgrade to a linear constraint, if vars[0] is multi-aggregated */
                SCIP_CONS* lincons;
                SCIP_Real one;
 
@@ -1863,7 +1863,7 @@ SCIP_DECL_CONSRESPROP(consRespropBounddisjunction)
          assert(consdata->vars[v] != infervar || consdata->boundtypes[v] != consdata->boundtypes[inferinfo]);
 
          /* the reason literal must have been violated
-          * we do not check for multiaggregated variables, since SCIPvarGetXbAtIndex is not implemented for multiaggr. variables */
+          * we do not check for multi-aggregated variables, since SCIPvarGetXbAtIndex is not implemented for them */
          assert(SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_MULTAGGR
             || (boundtypes[v] == SCIP_BOUNDTYPE_LOWER
                && SCIPisFeasLT(scip, SCIPvarGetUbAtIndex(vars[v], bdchgidx, TRUE), bounds[v]))

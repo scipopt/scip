@@ -2026,7 +2026,7 @@ SCIP_RETCODE findShortestPathToRoot(
    assert(inQueue != NULL);
    assert(parentTree != NULL);
 
-   /* init distances */
+   /* initialize distances */
    for( i = 0; i < graph->n; ++i )
    {
       distance[i] = 2*(graph->nnodes)*scale;
@@ -2035,7 +2035,7 @@ SCIP_RETCODE findShortestPathToRoot(
    }
    distance[startnode] = 0;
 
-   /* init queue */
+   /* initialize queue */
    startQueue = 0;
    endQueue = 0;
    queue[0] = startnode;
@@ -2218,7 +2218,7 @@ findUnblockedShortestPathToRoot(
    assert(parentTree != NULL);
    assert(transform != NULL);
 
-   /* init distances */
+   /* initialize distances */
    for( i = 0; i < graph->n; ++i )
    {
       distance[i] = 2*(graph->nnodes)*scale;
@@ -2229,7 +2229,7 @@ findUnblockedShortestPathToRoot(
    }
    distance[startnode] = 0;
 
-   /* init queue */
+   /* initialize queue */
    startQueue = 0;
    endQueue = 0;
    queue[0] = startnode;
@@ -2371,7 +2371,7 @@ SCIP_RETCODE createNextLevel(
       assert(negated < nbinvars || u < nbinvars);
       assert(negated >= nbinvars || u >= nbinvars);
       
-      /* init adjacency lists for node u */
+      /* initialize adjacency lists for node u */
       graph->beginForward[u] = (int) graph->lastF;
       graph->beginBackward[u] = (int) graph->lastB;
       graph->beginAdj[u] = (int) (graph->levelAdj[level+1] + nAdj);
@@ -2697,7 +2697,7 @@ SCIP_RETCODE separateHeur(
       ++rootcounter;
       ncutsroot = 0;
       
-      /* init graph */
+      /* initialize graph */
       for( j = 0; j < graph.n; ++j)
       {
          graph.beginForward[j] = -1;

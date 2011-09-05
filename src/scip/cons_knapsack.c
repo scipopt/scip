@@ -82,10 +82,10 @@
 #define HASHSIZE_KNAPSACKCONS    131101 /**< minimal size of hash table in linear constraint tables */
 
 #define DEFAULT_PRESOLPAIRWISE     TRUE /**< should pairwise constraint comparison be performed in presolving? */
-#define NMINCOMPARISONS          200000 /**< number for minimal pairwise presol comparisons */
-#define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presol comparisons to repeat pairwise 
+#define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
+#define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise 
                                          *   comparison round */
-#define DEFAULT_DUALPRESOLVING     TRUE /**< should dual presolving steps be preformed? */
+#define DEFAULT_DUALPRESOLVING     TRUE /**< should dual presolving steps be performed? */
 
 #define MAXCOVERSIZEITERLEWI       1000 /**< maximal size for which LEWI are iteratively separated by reducing the feasible set */
 
@@ -137,7 +137,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             negatedclique;      /**< should negated clique information be used in solving process */
    SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
    SCIP_Bool             presolusehashing;   /**< should hash table be used for detecting redundant constraints in advance */
-   SCIP_Bool             dualpresolving;     /**< should dual presolving steps be preformed? */
+   SCIP_Bool             dualpresolving;     /**< should dual presolving steps be performed? */
 };
 
 
@@ -5621,7 +5621,7 @@ SCIP_RETCODE applyFixings(
          SCIP_CALL( SCIPgetBinvarRepresentative(scip, var, &repvar, &negated) );
 	 assert(repvar != NULL);
 
-	 /* check for multiaggregation */
+	 /* check for multi-aggregation */
 	 if( SCIPvarIsNegated(repvar) )
 	 {
 	    workvar = SCIPvarGetNegatedVar(repvar);
@@ -5635,16 +5635,16 @@ SCIP_RETCODE applyFixings(
 	 }
 
 	 /* @todo maybe resolve the problem that the eliminating of the multi-aggreation leads to a non-knapsack
-          * constraint (converting into a linear constraint), for example the multiaggregation consist of a non-binary
+          * constraint (converting into a linear constraint), for example the multi-aggregation consist of a non-binary
           * variable or due to resolving now their are non-integral coefficients or a non-integral capacity 
           *
           * If repvar is not negated so workwar = repvar, otherwise workvar = 1 - repvar. This means,
           * weight * workvar = weight * (a_1*y_1 + ... + a_n*y_n + c) 
           *
           * The explaination for  the following block:  
-	  * 1a) If repvar is a multiaggregated variable weight * repvar should be replaced by 
+	  * 1a) If repvar is a multi-aggregated variable weight * repvar should be replaced by 
 	  *     weight * (a_1*y_1 + ... + a_n*y_n + c).
-	  * 1b) If repvar is a negated variable of a multiaggregated variable weight * repvar should be replaced by 
+	  * 1b) If repvar is a negated variable of a multi-aggregated variable weight * repvar should be replaced by 
 	  *     weight - weight * (a_1*y_1 + ... + a_n*y_n + c), for better further use here we switch the sign of weight
 	  *     so now we have the replacement -weight + weight * (a_1*y_1 + ... + a_n*y_n + c).
 	  * 2)  For all replacement variable we check:
@@ -5672,7 +5672,7 @@ SCIP_RETCODE applyFixings(
 
 	    if( !SCIPisIntegral(scip, weight * aggrconst) )
             {
-               SCIPerrorMessage("try to resolve a multiaggregation with a non-integral value for weight*aggrconst = %g\n", weight*aggrconst);
+               SCIPerrorMessage("try to resolve a multi-aggregation with a non-integral value for weight*aggrconst = %g\n", weight*aggrconst);
                return SCIP_ERROR;
 	    }
             
@@ -5687,12 +5687,12 @@ SCIP_RETCODE applyFixings(
 
 	       if( !SCIPvarIsBinary(aggrvars[i]) )
                {
-                  SCIPerrorMessage("try to resolve a multiaggregation with a non-binary variable <%s>\n", aggrvars[i]);
+                  SCIPerrorMessage("try to resolve a multi-aggregation with a non-binary variable <%s>\n", aggrvars[i]);
                   return SCIP_ERROR;
                }
 	       if( !SCIPisIntegral(scip, weight * aggrscalars[i]) )
                {
-                  SCIPerrorMessage("try to resolve a multiaggregation with a non-integral value for weight*aggrscalars = %g\n", weight*aggrscalars[i]);
+                  SCIPerrorMessage("try to resolve a multi-aggregation with a non-integral value for weight*aggrscalars = %g\n", weight*aggrscalars[i]);
                   return SCIP_ERROR;
                }
 	       /* if the new coefficent is smaller than zero, we need to add the negated variable instead and adjust the capacity */
@@ -8963,7 +8963,7 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
          &conshdlrdata->presolusehashing, TRUE, DEFAULT_PRESOLUSEHASHING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/knapsack/dualpresolving",
-         "should dual presolving steps be preformed?",
+         "should dual presolving steps be performed?",
          &conshdlrdata->dualpresolving, TRUE, DEFAULT_DUALPRESOLVING, NULL, NULL) );
 
    return SCIP_OKAY;

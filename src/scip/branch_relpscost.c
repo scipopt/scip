@@ -45,7 +45,7 @@
 #define DEFAULT_SBITEROFS   100000      /**< additional number of allowed strong branching LP iterations */
 #define DEFAULT_MAXLOOKAHEAD     8      /**< maximal number of further variables evaluated without better score */
 #define DEFAULT_INITCAND       100      /**< maximal number of candidates initialized with strong branching per node */
-#define DEFAULT_INITITER         0      /**< iteration limit for strong branching init of pseudo cost entries (0: auto) */
+#define DEFAULT_INITITER         0      /**< iteration limit for strong branching initialization of pseudo cost entries (0: auto) */
 #define DEFAULT_MAXBDCHGS        5      /**< maximal number of bound tightenings before the node is reevaluated (-1: unlimited) */
 
 
@@ -63,7 +63,7 @@ struct SCIP_BranchruleData
    int                   sbiterofs;          /**< additional number of allowed strong branching LP iterations */
    int                   maxlookahead;       /**< maximal number of further variables evaluated without better score */
    int                   initcand;           /**< maximal number of candidates initialized with strong branching per node */
-   int                   inititer;           /**< iteration limit for strong branching init of pseudo cost entries (0: auto) */
+   int                   inititer;           /**< iteration limit for strong branching initialization of pseudo cost entries (0: auto) */
    int                   maxbdchgs;          /**< maximal number of bound tightenings before the node is reevaluated (-1: unlimited) */
 };
 
@@ -856,7 +856,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
  * branching specific interface methods
  */
 
-/** creates the reliable pseudo cost braching rule and includes it in SCIP */
+/** creates the reliable pseudo cost branching rule and includes it in SCIP */
 SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    SCIP*                 scip                /**< SCIP data structure */
    )

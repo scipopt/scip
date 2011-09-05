@@ -1385,7 +1385,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    nprobings = 0;
    infeasible = FALSE;
 
-   /* init heuristic matrix and working solution */
+   /* initialize heuristic matrix and working solution */
    SCIP_CALL( SCIPallocBuffer(scip, &matrix) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nvarsleftinrow, nlprows) );
    BMSclearMemoryArray(nvarsleftinrow, nlprows);
@@ -1517,6 +1517,12 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       ub = SCIPvarGetUbLocal(var);
       assert(SCIPcolGetLPPos(SCIPvarGetCol(var)) >= 0);
       assert(SCIPvarIsIntegral(var));
+
+      /* check whether we hit some limit, e.g. the time limit, in between
+       * since the check itself consumes some time, we only do it every tenth iteration
+       */
+      if( c % 10 == 0 && SCIPisStopped(scip) )
+         goto TERMINATE2;
 
       /* if propagation is enabled, check if propagation has changed the variables bounds
        * and update the transformed upper bound correspondingly
@@ -1789,12 +1795,13 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       heurdata->nredundantrows = nredundantrows;
       )
 
+ TERMINATE2:
    /* free all allocated memory */
-   SCIP_CALL( SCIPfreeSol(scip, &sol) );
-   SCIPfreeBufferArray(scip, &violatedrows);
    SCIPfreeBufferArray(scip, &violatedrowpos);
+   SCIPfreeBufferArray(scip, &violatedrows);
    SCIPfreeBufferArray(scip, &rowweights);
    SCIPfreeBufferArray(scip, &permutation);
+   SCIP_CALL( SCIPfreeSol(scip, &sol) );
 
  TERMINATE:
    /* terminate probing mode and free the remaining memory */

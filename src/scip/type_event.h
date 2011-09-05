@@ -41,7 +41,7 @@ extern "C" {
 /* variable events */
 #define SCIP_EVENTTYPE_VARADDED       0x00000001 /**< a variable has been added to the transformed problem */
 #define SCIP_EVENTTYPE_VARDELETED     0x00000002 /**< a variable will be deleted from the transformed problem */
-#define SCIP_EVENTTYPE_VARFIXED       0x00000004 /**< a variable has been fixed, aggregated, or multiaggregated */
+#define SCIP_EVENTTYPE_VARFIXED       0x00000004 /**< a variable has been fixed, aggregated, or multi-aggregated */
 #define SCIP_EVENTTYPE_VARUNLOCKED    0x00000008 /**< the number of rounding locks of a variable was reduced to zero or
                                                   *   one */
 #define SCIP_EVENTTYPE_OBJCHANGED     0x00000010 /**< the objective value of a variable has been changed */

@@ -87,7 +87,7 @@ SCIP_DECL_BRANCHINIT(branchInitFullstrong)
 {  /*lint --e{715}*/
    SCIP_BRANCHRULEDATA* branchruledata;
 
-   /* init branching rule data */
+   /* initialize branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
    branchruledata->lastcand = 0;
 
@@ -193,7 +193,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
       /* get current node number */
       nodenum = SCIPgetNNodes(scip);
 
-      /* init strong branching */
+      /* initialize strong branching */
       SCIP_CALL( SCIPstartStrongbranch(scip) );
 
       /* search the full strong candidate
@@ -396,7 +396,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
  * branching specific interface methods
  */
 
-/** creates the full strong LP braching rule and includes it in SCIP */
+/** creates the full strong LP branching rule and includes it in SCIP */
 SCIP_RETCODE SCIPincludeBranchruleFullstrong(
    SCIP*                 scip                /**< SCIP data structure */
    )
