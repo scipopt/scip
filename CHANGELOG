@@ -203,6 +203,7 @@ features:
   and (this changed), if both have the same sign, the difference between pb and db is devided by the minimum of the absolute values of pb and db
   (instead of always the dual bound)
 - new dialog "change freetransproblem" to free transformed problem in the interactive shell before changing the problem
+- the knapsack, setppc, and soc constraint handler can now parse their constraints
 
 design:
 - SCIP_HASHMAP now works also without block memory
