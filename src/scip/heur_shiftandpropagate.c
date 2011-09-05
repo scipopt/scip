@@ -38,16 +38,16 @@
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_WEIGHT_INEQUALITY   1   /**< the heuristic row weight for inequalities */
-#define DEFAULT_WEIGHT_EQUALITY     3   /**< the heuristic row weight for equalitities */
+#define DEFAULT_WEIGHT_EQUALITY     3   /**< the heuristic row weight for equations */
 #define DEFAULT_RELAX            TRUE   /**< Should continuous variables be relaxed from the problem? */
 #define DEFAULT_PROBING          TRUE   /**< Is propagation of solution values enabled? */
 #define DEFAULT_NPROPROUNDS         1   /**< The default number of propagation rounds for each propagation used */
 #define DEFAULT_PROPBREAKER      65000   /**< fixed maximum number of propagations */
 #define DEFAULT_CUTOFFBREAKER      15   /**< fixed maximum number of allowed cutoffs before the heuristic stops */
 #define DEFAULT_RANDSEED            3141598   /**< the default random seed for random number generation */
-#define DEFAULT_SORTKEY            'u'  /**< the default key for variable sortation */
+#define DEFAULT_SORTKEY            'u'  /**< the default key for variable sorting */
 #define DEFAULT_SORTVARS         TRUE   /**< should variables be processed in sorted order? */
-#define SORTKEYS                  "nru"  /**< options sortation key: (n)orms down, norms (u)p or (r)andom */
+#define SORTKEYS                  "nru"  /**< options sorting key: (n)orms down, norms (u)p or (r)andom */
 
 /* enable statistic output by defining macro STATISTIC_INFORMATION */
 #ifdef STATISTIC_INFORMATION
@@ -129,8 +129,8 @@ void getRowData(
    SCIP_Real**           valpointer,         /**< pointer to store the nonzero coefficients of the row */
    SCIP_Real*            lhs,                /**< lhs of the row */
    SCIP_Real*            rhs,                /**< rhs of the row */
-   int**                 indexpointer,       /**< pointer to store column indices which belong to the nonzeroes */
-   int*                  nrowvals            /**< poniter to store number of nonzeroes in the desired row */
+   int**                 indexpointer,       /**< pointer to store column indices which belong to the nonzeros */
+   int*                  nrowvals            /**< pointer to store number of nonzeros in the desired row */
    )
 {
    int arrayposition;
@@ -163,8 +163,8 @@ void getColumnData(
    CONSTRAINTMATRIX*     matrix,             /**< constraint matrix object */
    int                   colindex,           /**< the index of the desired column */
    SCIP_Real**           valpointer,         /**< pointer to store the nonzero coefficients of the column */
-   int**                 indexpointer,       /**< pointer to store row indices which belong to the nonzeroes */
-   int*                  ncolvals            /**< pointer to store number of nonzeroes in the desired column */
+   int**                 indexpointer,       /**< pointer to store row indices which belong to the nonzeros */
+   int*                  ncolvals            /**< pointer to store number of nonzeros in the desired column */
    )
 {
    int arrayposition;
@@ -432,7 +432,7 @@ SCIP_RETCODE initMatrix(
    matrix->normalized = FALSE;
    matrix->ndiscvars = 0;
 
-   /* count the number of nonzeroes of the LP constraint matrix */
+   /* count the number of nonzeros of the LP constraint matrix */
    for( j = 0; j < ncols; ++j )
    {
       assert(lpcols[j] != NULL);
@@ -742,7 +742,7 @@ SCIP_Real retransformVariable(
    SCIP*                 scip,               /**< current scip instance */
    CONSTRAINTMATRIX*     matrix,             /**< constraint matrix object */
    SCIP_VAR*             var,                /**< variable whose solution value has to be retransformed */
-   int                   varindex,           /**< permutation of variable indices according to sortation */
+   int                   varindex,           /**< permutation of variable indices according to sorting */
    SCIP_Real             solvalue            /**< solution value of the variable */
    )
 {
@@ -1307,15 +1307,15 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    CONSTRAINTMATRIX* matrix;      /* constraint matrix object */
    SCIP_VAR** vars;               /* variables of the problem */
    SCIP_SOL* sol;                 /* solution pointer */
-   SCIP_Real* colnorms;           /* contains euclidean norms of column vectors */
+   SCIP_Real* colnorms;           /* contains Euclidean norms of column vectors */
    int* violatedrows;             /* the violated rows */
-   int* violatedrowpos;           /* the array position of a violated row, or -1*/
+   int* violatedrowpos;           /* the array position of a violated row, or -1 */
    int* permutation;              /* reflects the position of the variables after sorting */
    int* rowweights;               /* weighting of rows for best shift calculation */
    int* nvarsleftinrow;           /* number of variables left to the row */
 
    int nviolatedrows;             /* the number of violated rows */
-   int ndiscvars;                 /* the number of noncontinuous variables of the problem */
+   int ndiscvars;                 /* the number of non-continuous variables of the problem */
    int lastindexofsusp;           /* the last variable which has been swapped due to a cutoff */
    int nbinvars;                  /* number of binary variables */
    int nintvars;                  /* number of integer variables */
@@ -1435,7 +1435,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    assert(nintvars >= 0);
    assert(nimplvars >= 0);
    
-   /* sort variables w.r.t. the sortation key parameter. Sortation is indirect, all matrix column data
+   /* sort variables w.r.t. the sorting key parameter. Sorting is indirect, all matrix column data
     * stays in place, but permutation array gives access to the sorted order of variables
     */
    if( heurdata->sortvars && heurdata->sortkey == 'n' )
@@ -1849,7 +1849,7 @@ SCIP_RETCODE SCIPincludeHeurShiftandpropagate(
          &heurdata->probing, TRUE, DEFAULT_PROBING, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/cutoffbreaker", "The number of cutoffs before heuristic stops",
            &heurdata->cutoffbreaker, TRUE, DEFAULT_CUTOFFBREAKER, -1, 1000000, NULL, NULL) );
-   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/sortkey", "the key for variable sortation: (n)orms or (r)andom",
+   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/sortkey", "the key for variable sorting: (n)orms or (r)andom",
          &heurdata->sortkey, TRUE, DEFAULT_SORTKEY, SORTKEYS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/sortvars", "Should variables be sorted for the heuristic?",
          &heurdata->sortvars, TRUE, DEFAULT_SORTVARS, NULL, NULL));

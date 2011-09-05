@@ -104,7 +104,7 @@ void calculateBounds(
    SCIP_Real*            upslacks,           /**< array that contains the slacks between row activities and the right hand sides of the rows */
    SCIP_Real*            downslacks,         /**< array that contains lhs slacks */
    int                   nslacks,            /**< current number of slacks */
-   SCIP_Bool*            numericalerror      /**< flag to determine wether a numerical error occurred */
+   SCIP_Bool*            numericalerror      /**< flag to determine whether a numerical error occurred */
    )
 {
    SCIP_COL*      col;
@@ -164,7 +164,7 @@ void calculateBounds(
 
       assert(0 <= rowpos && rowpos < nslacks);
 
-      /** all bounds and slacks as they are calculated in zirounding always have to be greater euqal zero.
+      /** all bounds and slacks as they are calculated in zirounding always have to be greater equal zero.
        * It might however be due to numerical issues, e.g. with scaling, that they are not. Better abort in this case.
        */      
       if( SCIPisFeasLT(scip, *lowerbound, 0.0) || SCIPisFeasLT(scip, *upperbound, 0.0) 

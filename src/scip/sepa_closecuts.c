@@ -57,7 +57,7 @@ struct SCIP_SepaData
    SCIP_Bool             inclobjcutoff;      /**< include the objective cutoff when computing the relative interior? */
    SCIP_Bool             recomputerelint;    /**< recompute relative interior in each separation call? */
    char                  relintnormtype;     /**< type of norm to use when computing relative interior */
-   int                   maxunsucessful;     /**< turn off separation in current node after unsuccessful calls (-1 never turn off) */
+   int                   maxunsuccessful;    /**< turn off separation in current node after unsuccessful calls (-1 never turn off) */
    SCIP_SOL*             sepasol;            /**< solution that can be used for generating close cuts */
    SCIP_Longint          discardnode;        /**< number of node for which separation is discarded */
    int                   nunsuccessful;      /**< number of consecutive unsuccessful calls */
@@ -302,7 +302,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpClosecuts)
             SCIPdebugMessage("Separated close cuts: %d (enoughcuts: %d, unsuccessfull: %d).\n", SCIPgetNCuts(scip) - noldcuts,
                SCIPgetNCuts(scip) - noldcuts > sepadata->sepathreshold, sepadata->nunsuccessful);
 
-            if ( sepadata->maxunsucessful >= 0 && sepadata->nunsuccessful > sepadata->maxunsucessful )
+            if ( sepadata->maxunsuccessful >= 0 && sepadata->nunsuccessful > sepadata->maxunsuccessful )
             {
                SCIPdebugMessage("Turn off close cut separation, because of %d unsuccessfull calls.\n", sepadata->nunsuccessful);
                sepadata->discardnode = currentnodenumber;
@@ -381,9 +381,9 @@ SCIP_RETCODE SCIPincludeSepaClosecuts(
          &sepadata->relintnormtype, TRUE, SCIP_DEFAULT_RELINTNORMTYPE, "oi", NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/closecuts/maxunsucessful",
+         "separating/closecuts/maxunsuccessful",
          "turn off separation in current node after unsuccessful calls (-1 never turn off)",
-         &sepadata->maxunsucessful, TRUE, SCIP_DEFAULT_MAXUNSUCCESSFULL, -1, INT_MAX, NULL, NULL) );
+         &sepadata->maxunsuccessful, TRUE, SCIP_DEFAULT_MAXUNSUCCESSFULL, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

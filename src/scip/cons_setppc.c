@@ -79,7 +79,7 @@ struct SCIP_ConshdlrData
 {
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
 #ifdef VARUSES
-   SCIP_INTARRAY*        varuses;            /**< number of times a var is used in the active set ppc constraints */
+   SCIP_INTARRAY*        varuses;            /**< number of times a var is used in the active setppc constraints */
 #endif
    int                   npseudobranches;    /**< number of children created in pseudo branching (0 to disable branching) */
    SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
@@ -2075,7 +2075,7 @@ SCIP_RETCODE detectRedundantConstraints(
          assert(SCIPconsIsActive(cons1));
          assert(!SCIPconsIsModifiable(cons1));
       
-         /* constraint found: create a new constraint with same coeffients and best left and right hand side; 
+         /* constraint found: create a new constraint with same coefficients and best left and right hand side; 
           * delete old constraints afterwards
           */
          consdata0 = SCIPconsGetData(cons0);
@@ -3648,7 +3648,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
       }
       else if( !SCIPconsIsModifiable(cons) )
       {
-         /* all other preprocessings can only be done on non-modifiable constraints */
+         /* all other preprocessing steps can only be done on non-modifiable constraints */
          if( consdata->nfixedzeros == consdata->nvars )
          {
             /* all variables are fixed to zero:
@@ -4643,7 +4643,7 @@ SCIP_Real SCIPgetDualsolSetppc(
       return 0.0;
 }
 
-/** gets the dual farkas value of the set partitioning / packing / covering constraint in the current infeasible LP */
+/** gets the dual Farkas value of the set partitioning / packing / covering constraint in the current infeasible LP */
 SCIP_Real SCIPgetDualfarkasSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */

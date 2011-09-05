@@ -488,7 +488,7 @@ SCIP_RETCODE consdataCreate(
    SCIP_VAR*             intvar,             /**< integer variable which is linked */
    SCIP_VAR**            binvars,            /**< binary variables */
    int                   nbinvars,           /**< number of binary starting variables */
-   int                   offset              /**< offset ot the binary variable representation */
+   int                   offset              /**< offset of the binary variable representation */
    )
 {
    assert(scip!= NULL);
@@ -889,7 +889,7 @@ SCIP_RETCODE tightenedIntvar(
 
          nvars = ub - newub;
          
-         /* unlock the fixe binary which we remove */
+         /* unlock the fixed binary which we remove */
          SCIP_CALL( unlockRounding(scip, cons, &consdata->binvars[newub - offset + 1], nvars) );
          consdata->nbinvars -= nvars;
          consdata->nfixedzeros -= nvars;
@@ -1356,7 +1356,7 @@ SCIP_RETCODE createRows(
    assert(consdata->row2 == NULL);
    assert(consdata->nbinvars > 1);
 
-   /* create the LP row which capturs the linking between the integer and binary variables */
+   /* create the LP row which captures the linking between the integer and binary variables */
    (void)SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s[link]", SCIPconsGetName(cons));
 
    SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->row1, rowname, -(SCIP_Real)consdata->offset, -(SCIP_Real)consdata->offset,
@@ -2749,7 +2749,7 @@ SCIP_DECL_CONSCOPY(consCopyLinking)
    sourceconsdata = SCIPconsGetData(sourcecons);
    assert(sourceconsdata != NULL);
 
-   /* get number of binary variables, intger variables, and offset of the source constraint */
+   /* get number of binary variables, integer variables, and offset of the source constraint */
    nbinvars = sourceconsdata->nbinvars;
    intvar = sourceconsdata->intvar;
    offset = sourceconsdata->offset;
@@ -2903,7 +2903,7 @@ SCIP_RETCODE SCIPcreateConsLinking(
    SCIP_VAR*             intvar,             /**< integer variable which should be linked */
    SCIP_VAR**            binvars,            /**< binary variables, or NULL */
    int                   nbinvars,           /**< number of binary variables */
-   int                   offset,             /**< offset ot the binary variable representation */
+   int                   offset,             /**< offset of the binary variable representation */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -2952,7 +2952,7 @@ SCIP_RETCODE SCIPcreateConsLinking(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   /* check if the linking for the requestes integer variable already exists */
+   /* check if the linking for the requests integer variable already exists */
    assert(!SCIPhashmapExists(conshdlrdata->varmap, getHashmapKey(intvar)));
 
    /* create the constraint specific data */

@@ -324,7 +324,7 @@ SCIP_RETCODE SCIPcopyVars(
    );
 
 /** returns copy of the source constraint; if there already is a copy of the source constraint in the constraint hash
- *  map, it is just returned as target constrint; elsewise a new constraint will be created in the target SCIP; this
+ *  map, it is just returned as target constraint; elsewise a new constraint will be created in the target SCIP; this
  *  created constraint is added to the constraint hash map and returned as target constraint; the variable map is used
  *  to map the variables of the source SCIP to the variables of the target SCIP;
  *
@@ -871,7 +871,7 @@ SCIP_RETCODE SCIPincludeReader(
    const char*           name,               /**< name of reader */
    const char*           desc,               /**< description of reader */
    const char*           extension,          /**< file extension that reader processes */
-   SCIP_DECL_READERCOPY  ((*readercopy)),    /**< copy method of reader or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_READERCOPY  ((*readercopy)),    /**< copy method of reader or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_READERFREE  ((*readerfree)),    /**< destructor of reader */
    SCIP_DECL_READERREAD  ((*readerread)),    /**< read method */
    SCIP_DECL_READERWRITE ((*readerwrite)),   /**< write method */
@@ -913,7 +913,7 @@ SCIP_RETCODE SCIPincludePricer(
                                               *   that already exist in the problem (which are also priced in by the
                                               *   default problem variable pricing in the same round)
                                               */
-   SCIP_DECL_PRICERCOPY  ((*pricercopy)),    /**< copy method of variable pricer or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_PRICERCOPY  ((*pricercopy)),    /**< copy method of variable pricer or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_PRICERFREE  ((*pricerfree)),    /**< destructor of variable pricer */
    SCIP_DECL_PRICERINIT  ((*pricerinit)),    /**< initialize variable pricer */
    SCIP_DECL_PRICEREXIT  ((*pricerexit)),    /**< deinitialize variable pricer */
@@ -994,7 +994,7 @@ SCIP_RETCODE SCIPincludeConshdlr(
    SCIP_Bool             delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
    SCIP_Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
    SCIP_PROPTIMING       timingmask,         /**< positions in the node solving loop where propagators should be executed */
-   SCIP_DECL_CONSHDLRCOPY((*conshdlrcopy)),  /**< copy method of constraint handler or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_CONSHDLRCOPY((*conshdlrcopy)),  /**< copy method of constraint handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
    SCIP_DECL_CONSINIT    ((*consinit)),      /**< initialize constraint handler */
    SCIP_DECL_CONSEXIT    ((*consexit)),      /**< deinitialize constraint handler */
@@ -1050,7 +1050,7 @@ SCIP_RETCODE SCIPincludeConflicthdlr(
    const char*           name,               /**< name of conflict handler */
    const char*           desc,               /**< description of conflict handler */
    int                   priority,           /**< priority of the conflict handler */
-   SCIP_DECL_CONFLICTCOPY((*conflictcopy)),  /**< copy method of conflict handler or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_CONFLICTCOPY((*conflictcopy)),  /**< copy method of conflict handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_CONFLICTFREE((*conflictfree)),  /**< destructor of conflict handler */
    SCIP_DECL_CONFLICTINIT((*conflictinit)),  /**< initialize conflict handler */
    SCIP_DECL_CONFLICTEXIT((*conflictexit)),  /**< deinitialize conflict handler */
@@ -1096,7 +1096,7 @@ SCIP_RETCODE SCIPincludePresol(
    int                   priority,           /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
    int                   maxrounds,          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
    SCIP_Bool             delay,              /**< should presolver be delayed, if other presolvers found reductions? */
-   SCIP_DECL_PRESOLCOPY  ((*presolcopy)),    /**< copy method of presolver or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_PRESOLCOPY  ((*presolcopy)),    /**< copy method of presolver or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver to free user data (called when SCIP is exiting) */
    SCIP_DECL_PRESOLINIT  ((*presolinit)),    /**< initialization method of presolver (called after problem was transformed) */
    SCIP_DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialization method of presolver (called before transformed problem is freed) */
@@ -1141,7 +1141,7 @@ SCIP_RETCODE SCIPincludeRelax(
    const char*           desc,               /**< description of relaxator */
    int                   priority,           /**< priority of the relaxator (negative: after LP, non-negative: before LP) */
    int                   freq,               /**< frequency for calling relaxator */
-   SCIP_DECL_RELAXCOPY   ((*relaxcopy)),     /**< copy method of relaxator or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_RELAXCOPY   ((*relaxcopy)),     /**< copy method of relaxator or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_RELAXFREE   ((*relaxfree)),     /**< destructor of relaxator */
    SCIP_DECL_RELAXINIT   ((*relaxinit)),     /**< initialize relaxator */
    SCIP_DECL_RELAXEXIT   ((*relaxexit)),     /**< deinitialize relaxator */
@@ -1190,7 +1190,7 @@ SCIP_RETCODE SCIPincludeSepa(
                                               *   to best node's dual bound for applying separation */
    SCIP_Bool             usessubscip,        /**< does the separator use a secondary SCIP instance? */
    SCIP_Bool             delay,              /**< should separator be delayed, if other separators found cuts? */
-   SCIP_DECL_SEPACOPY    ((*sepacopy)),      /**< copy method of separator or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_SEPACOPY    ((*sepacopy)),      /**< copy method of separator or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_SEPAFREE    ((*sepafree)),      /**< destructor of separator */
    SCIP_DECL_SEPAINIT    ((*sepainit)),      /**< initialize separator */
    SCIP_DECL_SEPAEXIT    ((*sepaexit)),      /**< deinitialize separator */
@@ -1241,7 +1241,7 @@ SCIP_RETCODE SCIPincludeProp(
    int                   presolpriority,     /**< priority of the propagator (>= 0: before, < 0: after constraint handlers) */
    int                   presolmaxrounds,    /**< maximal number of presolving rounds the propagator participates in (-1: no limit) */
    SCIP_Bool             presoldelay,        /**< should presolving be delayed, if other presolvers found reductions? */
-   SCIP_DECL_PROPCOPY    ((*propcopy)),      /**< copy method of propagator or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_PROPCOPY    ((*propcopy)),      /**< copy method of propagator or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_PROPFREE    ((*propfree)),      /**< destructor of propagator */
    SCIP_DECL_PROPINIT    ((*propinit)),      /**< initialize propagator */
    SCIP_DECL_PROPEXIT    ((*propexit)),      /**< deinitialize propagator */
@@ -1305,7 +1305,7 @@ SCIP_RETCODE SCIPincludeHeur(
    unsigned int          timingmask,         /**< positions in the node solving loop where heuristic should be executed;
                                               *   see definition of SCIP_HeurTiming for possible values */
    SCIP_Bool             usessubscip,        /**< does the heuristic use a secondary SCIP instance? */
-   SCIP_DECL_HEURCOPY    ((*heurcopy)),      /**< copy method of primal heuristic or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_HEURCOPY    ((*heurcopy)),      /**< copy method of primal heuristic or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    SCIP_DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
    SCIP_DECL_HEUREXIT    ((*heurexit)),      /**< deinitialize primal heuristic */
@@ -1348,7 +1348,7 @@ SCIP_RETCODE SCIPincludeEventhdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of event handler */
    const char*           desc,               /**< description of event handler */
-   SCIP_DECL_EVENTCOPY   ((*eventcopy)),     /**< copy method of event handler or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_EVENTCOPY   ((*eventcopy)),     /**< copy method of event handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_EVENTFREE   ((*eventfree)),     /**< destructor of event handler */
    SCIP_DECL_EVENTINIT   ((*eventinit)),     /**< initialize event handler */
    SCIP_DECL_EVENTEXIT   ((*eventexit)),     /**< deinitialize event handler */
@@ -1386,7 +1386,7 @@ SCIP_RETCODE SCIPincludeNodesel(
    const char*           desc,               /**< description of node selector */
    int                   stdpriority,        /**< priority of the node selector in standard mode */
    int                   memsavepriority,    /**< priority of the node selector in memory saving mode */
-   SCIP_DECL_NODESELCOPY ((*nodeselcopy)),   /**< copy method of node selector or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_NODESELCOPY ((*nodeselcopy)),   /**< copy method of node selector or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_NODESELFREE ((*nodeselfree)),   /**< destructor of node selector */
    SCIP_DECL_NODESELINIT ((*nodeselinit)),   /**< initialize node selector */
    SCIP_DECL_NODESELEXIT ((*nodeselexit)),   /**< deinitialize node selector */
@@ -1449,7 +1449,7 @@ SCIP_RETCODE SCIPincludeBranchrule(
    SCIP_Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound
                                               *   compared to best node's dual bound for applying branching rule
                                               *   (0.0: only on current best node, 1.0: on all nodes) */
-   SCIP_DECL_BRANCHCOPY  ((*branchcopy)),    /**< copy method of branching rule or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_BRANCHCOPY  ((*branchcopy)),    /**< copy method of branching rule or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_BRANCHFREE  ((*branchfree)),    /**< destructor of branching rule */
    SCIP_DECL_BRANCHINIT  ((*branchinit)),    /**< initialize branching rule */
    SCIP_DECL_BRANCHEXIT  ((*branchexit)),    /**< deinitialize branching rule */
@@ -1512,7 +1512,7 @@ SCIP_RETCODE SCIPincludeDisp(
    const char*           desc,               /**< description of display column */
    const char*           header,             /**< head line of display column */
    SCIP_DISPSTATUS       dispstatus,         /**< display activation status of display column */
-   SCIP_DECL_DISPCOPY    ((*dispcopy)),      /**< copy method of display column or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_DISPCOPY    ((*dispcopy)),      /**< copy method of display column or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_DISPFREE    ((*dispfree)),      /**< destructor of display column */
    SCIP_DECL_DISPINIT    ((*dispinit)),      /**< initialize display column */
    SCIP_DECL_DISPEXIT    ((*dispexit)),      /**< deinitialize display column */
@@ -1636,7 +1636,7 @@ extern
 SCIP_RETCODE SCIPincludeDialog(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIALOG**         dialog,             /**< pointer to store the dialog */
-   SCIP_DECL_DIALOGCOPY  ((*dialogcopy)),    /**< inclusion method of dialog or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_DIALOGCOPY  ((*dialogcopy)),    /**< inclusion method of dialog or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_DIALOGEXEC  ((*dialogexec)),    /**< execution method of dialog */
    SCIP_DECL_DIALOGDESC  ((*dialogdesc)),    /**< description output method of dialog, or NULL */
    SCIP_DECL_DIALOGFREE  ((*dialogfree)),    /**< destructor of dialog to free user data, or NULL */

@@ -472,7 +472,7 @@ void computeSCTableFixTriangle(
    assert( vals != NULL );
 
 #ifndef NDEBUG
-   /* for debuging */
+   /* for debugging */
    for (i = 0; i < nspcons; ++i)
    {
       for (j = 0; j < nblocks; ++j)
@@ -1272,7 +1272,7 @@ SCIP_RETCODE resolvePropagation(
          (void) SCIPsnprintf(tmpstr, SCIP_MAXSTRLEN, "  before bar: ");
          (void) strncat(str, tmpstr, SCIP_MAXSTRLEN);
 #endif
-         /* add variables before the bar in the partioning case */
+         /* add variables before the bar in the partitioning case */
          for (k = 0; k < j; ++k)
          {
             assert( SCIPvarGetUbAtIndex(vars[i][k], bdchgidx, FALSE) < 0.5 );

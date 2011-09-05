@@ -66,7 +66,8 @@ struct SCIP_HeurData
    int                   maxlpiterofs;       /**< additional number of allowed LP iterations */
    int                   maxsols;            /**< total number of feasible solutions found up to which heuristic is called
                                               *   (-1: no limit) */
-   SCIP_Real             depthfac;           /**< maximal diving depth: number of binary/integer variables times depthfac */   SCIP_Real             depthfacnosol;      /**< maximal diving depth factor if no feasible solution was found yet */
+   SCIP_Real             depthfac;           /**< maximal diving depth: number of binary/integer variables times depthfac */  
+   SCIP_Real             depthfacnosol;      /**< maximal diving depth factor if no feasible solution was found yet */
    SCIP_Longint          nlpiterations;      /**< LP iterations used in this heuristic */
    int                   nsuccess;           /**< number of runs that produced at least one feasible solution */
 };
@@ -402,7 +403,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
                else
                   calcPscostQuot(scip, var, primsol, frac, -1, &pscostquot, &roundup);
 
-               /* prefer variables, that have already been softrounded but failed to get integral */
+               /* prefer variables, that have already been soft rounded but failed to get integral */
                varidx = SCIPvarGetProbindex(var);
                assert(0 <= varidx && varidx < nvars);
                if( roundings[varidx] != 0 )
@@ -424,7 +425,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
             /* the candidate may not be rounded: calculate pseudo cost quotient and preferred direction */
             calcPscostQuot(scip, var, primsol, frac, 0, &pscostquot, &roundup);
 
-            /* prefer variables, that have already been softrounded but failed to get integral */
+            /* prefer variables, that have already been soft rounded but failed to get integral */
             varidx = SCIPvarGetProbindex(var);
             assert(0 <= varidx && varidx < nvars);
             if( roundings[varidx] != 0 )
@@ -534,7 +535,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
       lpsolstat = SCIPgetLPSolstat(scip);
 
       /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
-       * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+       * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
        */
       if( retcode != SCIP_OKAY )
       { 

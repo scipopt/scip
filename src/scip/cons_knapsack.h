@@ -114,7 +114,7 @@ SCIP_Real SCIPgetDualsolKnapsack(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
-/** gets the dual farkas value of the knapsack constraint in the current infeasible LP */
+/** gets the dual Farkas value of the knapsack constraint in the current infeasible LP */
 extern
 SCIP_Real SCIPgetDualfarkasKnapsack(
    SCIP*                 scip,               /**< SCIP data structure */

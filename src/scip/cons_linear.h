@@ -237,7 +237,7 @@ SCIP_Real SCIPgetDualsolLinear(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
-/** gets the dual farkas value of the linear constraint in the current infeasible LP */
+/** gets the dual Farkas value of the linear constraint in the current infeasible LP */
 extern
 SCIP_Real SCIPgetDualfarkasLinear(
    SCIP*                 scip,               /**< SCIP data structure */

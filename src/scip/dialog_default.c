@@ -95,7 +95,7 @@ SCIP_RETCODE dialogExecMenu(
 }
 
 
-/* parse the given string to detect a bool value and returns it */
+/* parse the given string to detect a Boolean value and returns it */
 static
 SCIP_Bool parseBoolValue(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2105,7 +2105,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisCpsolver)
    /* reset SCIP parameters */
    SCIP_CALL( SCIPresetParams(scip) );
 
-   /* set parameters for cp like search problems */
+   /* set parameters for CP like search problems */
    SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMSETTING_CPSOLVER, FALSE) );
    
    return SCIP_OKAY;
@@ -2227,7 +2227,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective)
    return SCIP_OKAY;
 }
 
-/** dialog execution method for the write lp command */
+/** dialog execution method for the write LP command */
 static
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteLp)
 {  /*lint --e{715}*/
@@ -2282,7 +2282,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteLp)
    return SCIP_OKAY;
 }
 
-/** dialog execution method for the write mip command */
+/** dialog execution method for the write MIP command */
 static
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMip)
 {  /*lint --e{715}*/
@@ -2373,7 +2373,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMip)
 }
 
 
-/** dialog execution method for the write nlp command */
+/** dialog execution method for the write NLP command */
 static
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteNlp)
 {  /*lint --e{715}*/
@@ -3132,7 +3132,7 @@ SCIP_RETCODE SCIPincludeDialogDefault(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   /* write lp */
+   /* write LP */
    if( !SCIPdialogHasEntry(submenu, "lp") )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &dialog,
@@ -3143,7 +3143,7 @@ SCIP_RETCODE SCIPincludeDialogDefault(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
-   /* write mip */
+   /* write MIP */
    if( !SCIPdialogHasEntry(submenu, "mip") )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &dialog,
@@ -3154,7 +3154,7 @@ SCIP_RETCODE SCIPincludeDialogDefault(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
-   /* write nlp */
+   /* write NLP */
    if( !SCIPdialogHasEntry(submenu, "nlp") )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &dialog,
@@ -3735,7 +3735,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }
 
-   /* set lp */
+   /* set LP */
    if( !SCIPdialogHasEntry(setmenu, "lp") )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &submenu,
@@ -3746,7 +3746,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }
 
-   /* set nlp */
+   /* set NLP */
    if( !SCIPdialogHasEntry(setmenu, "nlp") )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &submenu,

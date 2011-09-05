@@ -394,7 +394,7 @@ SCIP_RETCODE SCIPconflicthdlrCreate(
    const char*           name,               /**< name of conflict handler */
    const char*           desc,               /**< description of conflict handler */
    int                   priority,           /**< priority of the conflict handler */
-   SCIP_DECL_CONFLICTCOPY((*conflictcopy)),  /**< copy method of conflict handler or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_CONFLICTCOPY((*conflictcopy)),  /**< copy method of conflict handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_CONFLICTFREE((*conflictfree)),  /**< destructor of conflict handler */
    SCIP_DECL_CONFLICTINIT((*conflictinit)),  /**< initialize conflict handler */
    SCIP_DECL_CONFLICTEXIT((*conflictexit)),  /**< deinitialize conflict handler */
@@ -1104,7 +1104,7 @@ SCIP_RETCODE conflictInsertConflictset(
    assert((*conflictset)->validdepth <= (*conflictset)->insertdepth);
    assert(set->conf_allowlocal || (*conflictset)->validdepth == 0);
 
-   /* calculate conflict and repropatation depth */
+   /* calculate conflict and repropagation depth */
    conflictsetCalcConflictDepth(*conflictset);
 
    /* if we apply repropagations, the conflict set should be inserted at most at its repropdepth */
@@ -3163,15 +3163,15 @@ SCIP_RETCODE ensureCandsSize(
  *  variable can relaxed to global bounds immediately without increasing the proof's activity;
  *  the candidates are sorted with respect to the following two criteria:
  *  - prefer bound changes that have been applied deeper in the tree, to get a more global conflict
- *  - prefer variables with small farkas coefficient to get rid of as many bound changes as possible
+ *  - prefer variables with small Farkas coefficient to get rid of as many bound changes as possible
  */
 static
 SCIP_RETCODE addCand(
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   currentdepth,       /**< current depth in the tree */
    SCIP_VAR*             var,                /**< variable to add to candidate array */
-   int                   lbchginfopos,       /**< positions of currently active lower bound change infos in variable's array */
-   int                   ubchginfopos,       /**< positions of currently active upper bound change infos in variable's array */
+   int                   lbchginfopos,       /**< positions of currently active lower bound change information in variable's array */
+   int                   ubchginfopos,       /**< positions of currently active upper bound change information in variable's array */
    SCIP_Real             proofcoef,          /**< coefficient of variable in infeasibility/bound proof */
    SCIP_Real             prooflhs,           /**< left hand side of infeasibility/bound proof */
    SCIP_Real             proofact,           /**< activity of infeasibility/bound proof row */
@@ -3332,7 +3332,7 @@ void skipRedundantBdchginfos(
    }
 }
 
-/** undos bound changes on variables, still leaving the given infeasibility proof valid */
+/** undoes bound changes on variables, still leaving the given infeasibility proof valid */
 static
 SCIP_RETCODE undoBdchgsProof(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -3343,8 +3343,8 @@ SCIP_RETCODE undoBdchgsProof(
    SCIP_Real             proofact,           /**< current activity of proof */
    SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables */
    SCIP_Real*            curvarubs,          /**< current upper bounds of active problem variables */
-   int*                  lbchginfoposs,      /**< positions of currently active lower bound change infos in variables' arrays */
-   int*                  ubchginfoposs,      /**< positions of currently active upper bound change infos in variables' arrays */
+   int*                  lbchginfoposs,      /**< positions of currently active lower bound change information in variables' arrays */
+   int*                  ubchginfoposs,      /**< positions of currently active upper bound change information in variables' arrays */
    int**                 bdchginds,          /**< pointer to bound change index array, or NULL */
    SCIP_Real**           bdchgoldlbs,        /**< pointer to bound change old lower bounds array, or NULL */
    SCIP_Real**           bdchgoldubs,        /**< pointer to bound change old upper bounds array, or NULL */
@@ -3539,8 +3539,8 @@ SCIP_RETCODE undoBdchgsDualfarkas(
    int                   currentdepth,       /**< current depth in the tree */
    SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables */
    SCIP_Real*            curvarubs,          /**< current upper bounds of active problem variables */
-   int*                  lbchginfoposs,      /**< positions of currently active lower bound change infos in variables' arrays */
-   int*                  ubchginfoposs,      /**< positions of currently active upper bound change infos in variables' arrays */
+   int*                  lbchginfoposs,      /**< positions of currently active lower bound change information in variables' arrays */
+   int*                  ubchginfoposs,      /**< positions of currently active upper bound change information in variables' arrays */
    int**                 bdchginds,          /**< pointer to bound change index array, or NULL */
    SCIP_Real**           bdchgoldlbs,        /**< pointer to bound change old lower bounds array, or NULL */
    SCIP_Real**           bdchgoldubs,        /**< pointer to bound change old upper bounds array, or NULL */
@@ -3603,13 +3603,13 @@ SCIP_RETCODE undoBdchgsDualfarkas(
    if ( ! SCIPlpiHasDualRay(lpi) )
       goto TERMINATE;
 
-   /* get dual farkas values of rows */
+   /* get dual Farkas values of rows */
    retcode = SCIPlpiGetDualfarkas(lpi, dualfarkas);
    if( retcode == SCIP_LPERROR ) /* on an error in the LP solver, just abort the conflict analysis */
       goto TERMINATE;
    SCIP_CALL( retcode );
 
-   /* calculate the farkas row */
+   /* calculate the Farkas row */
    BMSclearMemoryArray(farkascoefs, nvars);
    farkaslhs = 0.0;
    for( r = 0; r < nrows; ++r )
@@ -3620,7 +3620,7 @@ SCIP_RETCODE undoBdchgsDualfarkas(
       assert(row->len == 0 || row->vals != NULL);
       assert(row == lp->lpirows[r]);
 
-      /* ignore local rows and rows with farkas value 0.0 */
+      /* ignore local rows and rows with Farkas value 0.0 */
       if( !row->local && !SCIPsetIsZero(set, dualfarkas[r]) )
       {
 #ifndef NDEBUG
@@ -3636,10 +3636,10 @@ SCIP_RETCODE undoBdchgsDualfarkas(
          }
 #endif
 
-         /* add row side to farkas row lhs: dualfarkas > 0 -> lhs, dualfarkas < 0 -> rhs */
+         /* add row side to Farkas row lhs: dualfarkas > 0 -> lhs, dualfarkas < 0 -> rhs */
          if( dualfarkas[r] > 0.0 )
          {
-            /* check if sign of dual farkas value is valid */
+            /* check if sign of dual Farkas value is valid */
             if( SCIPsetIsInfinity(set, -row->lhs) )
                continue;
 
@@ -3651,7 +3651,7 @@ SCIP_RETCODE undoBdchgsDualfarkas(
          }
          else
          {
-            /* check if sign of dual farkas value is valid */
+            /* check if sign of dual Farkas value is valid */
             if( SCIPsetIsInfinity(set, row->rhs) )
                continue;
 
@@ -3668,7 +3668,7 @@ SCIP_RETCODE undoBdchgsDualfarkas(
          if( REALABS(farkaslhs) > NUMSTOP )
             goto TERMINATE;
 
-         /* add row coefficients to farkas row */
+         /* add row coefficients to Farkas row */
          for( i = 0; i < row->len; ++i )
          {
             v = SCIPvarGetProbindex(SCIPcolGetVar(row->cols[i]));
@@ -3679,27 +3679,23 @@ SCIP_RETCODE undoBdchgsDualfarkas(
 #ifdef SCIP_DEBUG
       else if( !SCIPsetIsZero(set, dualfarkas[r]) )
       {
-         SCIPdebugMessage(" -> ignoring %s row <%s> with dual farkas value %.10f (lhs=%g, rhs=%g)\n",
+         SCIPdebugMessage(" -> ignoring %s row <%s> with dual Farkas value %.10f (lhs=%g, rhs=%g)\n",
             row->local ? "local" : "global", SCIProwGetName(row), dualfarkas[r],
             row->lhs - row->constant, row->rhs - row->constant);
       }
 #endif
    }
 
-   /* calculate the current farkas activity, always using the best bound w.r.t. the farkas coefficient */
+   /* calculate the current Farkas activity, always using the best bound w.r.t. the Farkas coefficient */
    farkasact = 0.0;
    for( v = 0; v < nvars; ++v )
    {
       var = vars[v];
       assert(SCIPvarGetProbindex(var) == v);
 
-      /* ignore coefs close to 0.0 */
+      /* ignore coefficients close to 0.0 */
       if( SCIPsetIsZero(set, farkascoefs[v]) )
-      {
-         /*debugMessage(" -> ignoring zero farkas coefficient <%s> [%g,%g]: %.10f\n",
-           SCIPvarGetName(var), curvarlbs[v], curvarubs[v], farkascoefs[v]);*/
          farkascoefs[v] = 0.0;
-      }
       else if( farkascoefs[v] > 0.0 )
       {
          assert((SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN && SCIPcolGetLPPos(SCIPvarGetCol(var)) >= 0)
@@ -3723,7 +3719,7 @@ SCIP_RETCODE undoBdchgsDualfarkas(
    }
    SCIPdebugMessage(" -> farkaslhs=%g, farkasact=%g\n", farkaslhs, farkasact);
 
-   /* check, if the farkas row is still violated (using current bounds and ignoring local rows) */
+   /* check, if the Farkas row is still violated (using current bounds and ignoring local rows) */
    if( SCIPsetIsFeasGT(set, farkaslhs, farkasact) )
    {
       /* undo bound changes while keeping the infeasibility proof valid */
@@ -3757,8 +3753,8 @@ SCIP_RETCODE undoBdchgsDualsol(
    int                   currentdepth,       /**< current depth in the tree */
    SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables */
    SCIP_Real*            curvarubs,          /**< current upper bounds of active problem variables */
-   int*                  lbchginfoposs,      /**< positions of currently active lower bound change infos in variables' arrays */
-   int*                  ubchginfoposs,      /**< positions of currently active upper bound change infos in variables' arrays */
+   int*                  lbchginfoposs,      /**< positions of currently active lower bound change information in variables' arrays */
+   int*                  ubchginfoposs,      /**< positions of currently active upper bound change information in variables' arrays */
    int**                 bdchginds,          /**< pointer to bound change index array, or NULL */
    SCIP_Real**           bdchgoldlbs,        /**< pointer to bound change old lower bounds array, or NULL */
    SCIP_Real**           bdchgoldubs,        /**< pointer to bound change old upper bounds array, or NULL */
@@ -3972,8 +3968,6 @@ SCIP_RETCODE undoBdchgsDualsol(
             goto TERMINATE;
          dualact += dualcoefs[v] * curvarlbs[v];
       }
-      /*debugMessage(" -> col <%s> [%g,%g]: redcost=%g, coef=%g -> activity=%g\n",
-        SCIPvarGetName(var), curvarlbs[v], curvarubs[v], varredcosts[v], dualcoefs[v], dualact);*/
    }
    SCIPdebugMessage(" -> final dual values: lhs=%g, act=%g\n", duallhs, dualact);
 
@@ -4012,8 +4006,8 @@ SCIP_RETCODE conflictAnalyzeRemainingBdchgs(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_Bool             diving,             /**< are we in strong branching or diving mode? */
-   int*                  lbchginfoposs,      /**< positions of currently active lower bound change infos in variables' arrays */
-   int*                  ubchginfoposs,      /**< positions of currently active upper bound change infos in variables' arrays */
+   int*                  lbchginfoposs,      /**< positions of currently active lower bound change information in variables' arrays */
+   int*                  ubchginfoposs,      /**< positions of currently active upper bound change information in variables' arrays */
    int*                  nconss,             /**< pointer to store the number of generated conflict constraints */
    int*                  nliterals,          /**< pointer to store the number of literals in generated conflict constraints */
    int*                  nreconvconss,       /**< pointer to store the number of generated reconvergence constraints */

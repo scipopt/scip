@@ -573,8 +573,8 @@ SCIP_Real determineBound(
 }
 
 /** 
- * disposes variable with no heuristic relevancy, e.g., due to a fixed solution value, from its neighbourhood block. 
- * The affected neighbourhood block is reduced by 1.
+ * disposes variable with no heuristic relevancy, e.g., due to a fixed solution value, from its neighborhood block. 
+ * The affected neighborhood block is reduced by 1.
  */
 static 
 void disposeVariable(
@@ -636,7 +636,7 @@ SCIP_RETCODE innerPresolve(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*blockstart)), nvars/2) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*blockend)), nvars/2) );
       
-   /* loop over variables and compare neighbours*/
+   /* loop over variables and compare neighbors */
    for( v = 1; v < nvars; ++v ) 
    {
       if( !checkConstraintMatching(scip, (*varspointer)[startindex], (*varspointer)[v], heurdata->matchingrate) )
@@ -674,7 +674,7 @@ SCIP_RETCODE innerPresolve(
  *  If objective coefficient functions are not all equal, each Binary and Integer variables are sorted 
  *  into heuristic-specific arrays with respect to their lexicographical column order, 
  *  where every zero in a column is interpreted as zero and every nonzero as '1'.
- *  After the sortation, the variables are compared with respect to user parameter matchingrate and 
+ *  After the sorting, the variables are compared with respect to user parameter matchingrate and 
  *  the heuristic specific blocks are determined.
  */
 static 

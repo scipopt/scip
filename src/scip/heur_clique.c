@@ -50,10 +50,10 @@
 #define DEFAULT_NODESOFS      500LL                      /* number of nodes added to the contingent of the total nodes */
 #define DEFAULT_NODESQUOT     0.1                        /* subproblem nodes in relation to nodes of the original problem */
 #define DEFAULT_MAXPROPROUNDS 2                          /* maximum number of propagation rounds during probing */
-#define DEFAULT_INITSEED      0                          /**< random seed value to initialize the rendom permutation
+#define DEFAULT_INITSEED      0                          /**< random seed value to initialize the random permutation
                                                           * value for variables
                                                           */
-#define DEFAULT_MULTIPLIER    1.1                        /**< value to increase nodenumber to determine the next run */
+#define DEFAULT_MULTIPLIER    1.1                        /**< value to increase node number to determine the next run */
 #define DEFAULT_COPYCUTS      TRUE                       /**< should all active cuts from the cutpool of the
                                                           *   original scip be copied to constraints of the subscip
                                                           */
@@ -110,7 +110,7 @@ SCIP_DECL_SORTPTRCOMP(varObjSort)
       return 0;
 }
 
-/** sort the binary variable array w.r.t. the clique partition; thereby ensure the current order withín the cliques are
+/** sort the binary variable array w.r.t. the clique partition; thereby ensure the current order within the cliques are
  *  not changed
  */
 static
@@ -425,7 +425,7 @@ SCIP_RETCODE createNewSol(
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
-   /* subSCIP may have more variable than the number of active (transformed) variables in the main SCIP
+   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
     * since constraint copying may have required the copy of variables that are fixed in the main SCIP
     */ 
    assert(nvars <= SCIPgetNOrigVars(subscip));  
@@ -892,7 +892,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
       /* solve the subproblem */
       /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
-       * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+       * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
        */
 #ifdef NDEBUG
       {
@@ -900,7 +900,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
          retstat = SCIPpresolve(subscip);
          if( retstat != SCIP_OKAY )
          { 
-            SCIPwarningMessage("Error while presolving subMIP in clique heuristic; subSCIP terminated with code <%d>\n", retstat);
+            SCIPwarningMessage("Error while presolving subMIP in clique heuristic; sub-SCIP terminated with code <%d>\n", retstat);
          }
       }
 #else
@@ -926,7 +926,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
             retstat = SCIPsolve(subscip);
             if( retstat != SCIP_OKAY )
             { 
-               SCIPwarningMessage("Error while solving subMIP in clique heuristic; subSCIP terminated with code <%d>\n",retstat);
+               SCIPwarningMessage("Error while solving subMIP in clique heuristic; sub-SCIP terminated with code <%d>\n",retstat);
             }
          }
 #else
@@ -951,7 +951,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
          /* if subscip was infeasible we can add a conflict too */
          if( SCIPgetStatus(subscip) == SCIP_STATUS_INFEASIBLE )
          {
-            /* in case the last fixing in both direction led to infeasibility or to a reached objlimit than our conflict will only include all variabkle before that last fixing */
+            /* in case the last fixing in both direction led to infeasibility or to a reached objlimit than our conflict will only include all variable before that last fixing */
             shortconflict = backtracked;
 
             /* create own conflict */ 

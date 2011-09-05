@@ -4302,12 +4302,12 @@ SCIP_RETCODE SCIPvarMultiaggregate(
          {  
             if( SCIPsetIsZero(set, tmpconstant) ) /* x = x */
             {
-               SCIPdebugMessage("Possible multi-aggregation was completly resolved and detected to be redundant.\n");
+               SCIPdebugMessage("Possible multi-aggregation was completely resolved and detected to be redundant.\n");
                goto TERMINATE;
             }
             else /* 0 = c and c != 0 */
             {
-               SCIPdebugMessage("Multi-aggregation was completly resolved and led to infeasibility.\n");
+               SCIPdebugMessage("Multi-aggregation was completely resolved and led to infeasibility.\n");
                *infeasible = TRUE;
                goto TERMINATE;
             }
@@ -12797,7 +12797,7 @@ SCIP_BDCHGIDX* SCIPvarGetLastBdchgIndex(
 
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
-   /* get depths of last bound change infos for the lower and upper bound */
+   /* get depths of last bound change information for the lower and upper bound */
    lbchgidx = (var->nlbchginfos > 0 && !var->lbchginfos[var->nlbchginfos-1].redundant
       ? &var->lbchginfos[var->nlbchginfos-1].bdchgidx : &initbdchgidx);
    ubchgidx = (var->nubchginfos > 0 && !var->ubchginfos[var->nubchginfos-1].redundant

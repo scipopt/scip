@@ -101,7 +101,7 @@ extern
 void SCIPgetCountedSparseSolutions( 
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR***           vars,               /**< pointer to variable array defining to variable order */
-   int*                  nvars,              /**< number of varibales */
+   int*                  nvars,              /**< number of variables */
    SPARSESOLUTION***     sols,               /**< pointer to the solutions */
    int*                  nsols               /**< pointer to number of solutions */
    );

@@ -375,7 +375,7 @@ SCIP_Real SCIProwGetDualsol(
    SCIP_ROW*             row                 /**< LP row */
    );
 
-/** gets the dual farkas coefficient of a row in an infeasible LP */
+/** gets the dual Farkas coefficient of a row in an infeasible LP */
 extern
 SCIP_Real SCIProwGetDualfarkas(
    SCIP_ROW*             row                 /**< LP row */

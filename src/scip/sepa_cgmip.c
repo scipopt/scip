@@ -2839,7 +2839,7 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
          &sepadata->nodelimit, FALSE, DEFAULT_NODELIMIT, -1LL, SCIP_LONGINT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/cgmip/objweight",
-         "weight used for the row combination coefficent in the sub-MIP objective",
+         "weight used for the row combination coefficient in the sub-MIP objective",
          &sepadata->objweight, TRUE, DEFAULT_OBJWEIGHT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/cgmip/usecmir",

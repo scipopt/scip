@@ -54,7 +54,7 @@ SCIP_RETCODE SCIPrelaxCreate(
    const char*           desc,               /**< description of relaxator */
    int                   priority,           /**< priority of the relaxator (negative: after LP, non-negative: before LP) */
    int                   freq,               /**< frequency for calling relaxator */
-   SCIP_DECL_RELAXCOPY   ((*relaxcopy)),     /**< copy method of relaxator or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_RELAXCOPY   ((*relaxcopy)),     /**< copy method of relaxator or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_RELAXFREE   ((*relaxfree)),     /**< destructor of relaxator */
    SCIP_DECL_RELAXINIT   ((*relaxinit)),     /**< initialize relaxator */
    SCIP_DECL_RELAXEXIT   ((*relaxexit)),     /**< deinitialize relaxator */

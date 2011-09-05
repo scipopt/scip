@@ -2996,7 +2996,7 @@ SCIP_RETCODE checkArraySizesGLS(
       return SCIP_OKAY;
    }
 
-   /* intialize new segments of graph as empty graph */
+   /* initialize new segments of graph as empty graph */
    for( j = oldarraysize; j < MIN(maxarcs,(*arraysize)); ++j )
    {
       (graph->head)[j] = DIJKSTRA_UNUSED;
@@ -3462,7 +3462,7 @@ SCIP_RETCODE separateGLS(
    SCIP_CALL( SCIPallocBufferArray(scip, &entry, (int) graph.nodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &order, (int) graph.nodes) );
    
-   /* intialize Dijkstra graph as empty graph */
+   /* initialize Dijkstra graph as empty graph */
    for( i = 0; i < MIN(arraysize,maxarcs); ++i )
    {
       graph.head[i] = DIJKSTRA_UNUSED;

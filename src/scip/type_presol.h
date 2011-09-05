@@ -113,7 +113,7 @@ typedef struct SCIP_PresolData SCIP_PRESOLDATA;   /**< presolver specific data *
  *  - nnewfixedvars   : number of variables fixed since the last call to the presolver
  *  - nnewaggrvars    : number of variables aggregated since the last call to the presolver
  *  - nnewchgvartypes : number of variable type changes since the last call to the presolver
- *  - nnewchgbds      : number of variable bounds tightend since the last call to the presolver
+ *  - nnewchgbds      : number of variable bounds tightened since the last call to the presolver
  *  - nnewholes       : number of domain holes added since the last call to the presolver
  *  - nnewdelconss    : number of deleted constraints since the last call to the presolver
  *  - nnewaddconss    : number of added constraints since the last call to the presolver
@@ -125,7 +125,7 @@ typedef struct SCIP_PresolData SCIP_PRESOLDATA;   /**< presolver specific data *
  *  - nfixedvars      : pointer to total number of variables fixed of all presolvers
  *  - naggrvars       : pointer to total number of variables aggregated of all presolvers
  *  - nchgvartypes    : pointer to total number of variable type changes of all presolvers
- *  - nchgbds         : pointer to total number of variable bounds tightend of all presolvers
+ *  - nchgbds         : pointer to total number of variable bounds tightened of all presolvers
  *  - naddholes       : pointer to total number of domain holes added of all presolvers
  *  - ndelconss       : pointer to total number of deleted constraints of all presolvers
  *  - naddconss       : pointer to total number of added constraints of all presolvers

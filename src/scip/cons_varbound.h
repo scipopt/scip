@@ -114,7 +114,7 @@ SCIP_Real SCIPgetDualsolVarbound(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
-/** gets the dual farkas value of the variable bound constraint in the current infeasible LP */
+/** gets the dual Farkas value of the variable bound constraint in the current infeasible LP */
 extern
 SCIP_Real SCIPgetDualfarkasVarbound(
    SCIP*                 scip,               /**< SCIP data structure */

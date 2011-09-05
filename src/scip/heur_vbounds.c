@@ -140,7 +140,7 @@ void heurdataReset(
    heurdata->applicable = FALSE;
 }
 
-/** initialitze candidate lists */
+/** initialize candidate lists */
 static
 SCIP_RETCODE initializeCandsLists(
    SCIP*                 scip,               /**< original SCIP data structure */
@@ -183,7 +183,7 @@ SCIP_RETCODE initializeCandsLists(
    /* create the topological sorted variable array with respect to the variable upper bounds */
    SCIP_CALL( SCIPcreateTopoSortedVars(scip, allvars, nallvars, NULL, vars, &nvars, ubvars, &nubvars, FALSE) );
    
-   /* create hash table for variables whcih are alreadz collected */
+   /* create hash table for variables which are already collected */
    SCIP_CALL( SCIPhashtableCreate(&collectedvars, SCIPblkmem(scip), SCIPcalcHashtableSize(nallvars), hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
 
    /* collect variables which improve the objective by fixing them to suggested bound  */
@@ -280,7 +280,7 @@ SCIP_RETCODE applyVboundsFixings(
    int                   nubvars,            /**< number of variables to use the upper bound */
    SCIP_SOL*             sol,                /**< working solution */
    SCIP_Bool*            infeasible,         /**< pointer to store whether problem is infeasible */
-   SCIP_RESULT*          result              /**< pointer to store the result (solution founbd) */
+   SCIP_RESULT*          result              /**< pointer to store the result (solution found) */
    )
 {
    SCIP_Bool success;
@@ -369,7 +369,7 @@ SCIP_RETCODE createNewSol(
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
-   /* subSCIP may have more variable than the number of active (transformed) variables in the main SCIP
+   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
     * since constraint copying may have required the copy of variables that are fixed in the main SCIP
     */ 
    assert( nvars <= SCIPgetNOrigVars(subscip) );  
@@ -557,7 +557,7 @@ SCIP_RETCODE applyVbounds(
 
       /* solve the subproblem */
       /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
-       * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+       * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
        */
 #ifdef NDEBUG
       {
@@ -565,7 +565,7 @@ SCIP_RETCODE applyVbounds(
          retstat = SCIPpresolve(subscip);
          if( retstat != SCIP_OKAY )
          { 
-            SCIPwarningMessage("Error while presolving subMIP in vbounds heuristic; subSCIP terminated with code <%d>\n", retstat);
+            SCIPwarningMessage("Error while presolving subMIP in vbounds heuristic; sub-SCIP terminated with code <%d>\n", retstat);
          }
       }
 #else
@@ -591,7 +591,7 @@ SCIP_RETCODE applyVbounds(
             retstat = SCIPsolve(subscip);
             if( retstat != SCIP_OKAY )
             { 
-               SCIPwarningMessage("Error while solving subMIP in vbounds heuristic; subSCIP terminated with code <%d>\n",retstat);
+               SCIPwarningMessage("Error while solving subMIP in vbounds heuristic; sub-SCIP terminated with code <%d>\n",retstat);
             }
          }
 #else

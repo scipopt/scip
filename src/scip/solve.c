@@ -613,7 +613,7 @@ SCIP_RETCODE updatePseudocost(
                 * and therefore should be regarded in the pseudocost updates
                 *
                 * however, if the variable is continuous and we normalize the pseudo costs by the domain reduction,
-                * then getting the variable bound before the branching is not possible by looking at the variables branching infos (since redundant branchings are not applied)
+                * then getting the variable bound before the branching is not possible by looking at the variables branching information (since redundant branchings are not applied)
                 * thus, in this case we ignore the boundchange
                 */
                if( (SCIP_BOUNDCHGTYPE)boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING &&
@@ -707,7 +707,7 @@ SCIP_RETCODE updatePseudocost(
                   {
                      nbdchginfos = SCIPvarGetNBdchgInfosUb(var);
 
-                     /* walk backwards through bound change infos array to find the bound change corresponding to branching in updates[i]
+                     /* walk backwards through bound change information array to find the bound change corresponding to branching in updates[i]
                       * usually it will be the first one we look at */
                      for( j = nbdchginfos-1; j >= 0; --j )
                      {
@@ -754,7 +754,7 @@ SCIP_RETCODE updatePseudocost(
                      assert(updates[i]->boundtype == SCIP_BOUNDTYPE_LOWER);
                      nbdchginfos = SCIPvarGetNBdchgInfosLb(var);
 
-                     /* walk backwards through bound change infos array to find the bound change corresponding to branching in updates[i]
+                     /* walk backwards through bound change information array to find the bound change corresponding to branching in updates[i]
                       * usually it will be the first one we look at */
                      for( j = nbdchginfos-1; j >= 0; --j )
                      {

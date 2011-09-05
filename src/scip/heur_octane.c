@@ -45,7 +45,7 @@ struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
    int                   f_max;              /**< {0,1}-points to be checked */
-   int                   f_first;            /**< {0,1}-points to be generated at first in order to check whether restart is neccessary */
+   int                   f_first;            /**< {0,1}-points to be generated at first in order to check whether restart is necessary */
    int                   lastrule;           /**< last ray selection rule that was performed */
    SCIP_Bool             usefracspace;       /**< use heuristic for the space of fractional variables or for the whole space? */
    SCIP_Bool             useobjray;          /**< should the inner normal of the objective be used as one ray direction? */
@@ -111,7 +111,7 @@ SCIP_RETCODE getSolFromFacet(
    SCIP*                 scip,               /**< SCIP data structure                   */
    SCIP_Bool*            facet,              /**< current facet                         */
    SCIP_SOL*             sol,                /**< solution to create                    */
-   SCIP_Bool*            sign,               /**< marker for retransfomation            */
+   SCIP_Bool*            sign,               /**< marker for retransformation            */
    SCIP_VAR**            subspacevars,       /**< pointer to fractional space variables */   
    int                   nsubspacevars       /**< dimension of fractional space         */   
    )
@@ -513,7 +513,7 @@ void generateNeighborFacets(
 #endif
 }
 
-/** tests, whether an array is completly zero */
+/** tests, whether an array is completely zero */
 static
 SCIP_Bool isZero(
    SCIP*                 scip,               /**< SCIP data structure                   */
@@ -653,7 +653,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
    int i;                /* counter */
    int j;                /* counter */
    int f_max;            /* {0,1}-points to be checked */
-   int f_first;          /* {0,1}-points to be generated at first in order to check whether a restart is neccessary */     
+   int f_first;          /* {0,1}-points to be generated at first in order to check whether a restart is necessary */     
    int r;                /* counter */
    int firstrule;
  
@@ -741,7 +741,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
       }
    }
 
-   /* nothin to do for empty search space */
+   /* nothing to do for empty search space */
    if( nsubspacevars == 0 )
       return SCIP_OKAY;
    
@@ -833,7 +833,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
       if( isZero(scip, raydirection, nsubspacevars) )
          continue;
 
-      /* coord. transformation such that raydirection >= 0 */
+      /* transform coordinates such that raydirection >= 0 */
       flipCoords(rayorigin, raydirection, sign, nsubspacevars);
 
       for( i = f_max - 1; i >= 0; --i)
@@ -865,7 +865,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
 
       assert(SCIPisPositive(scip, q));
 
-      /* resort the coordinates in nonincreasing order of negquotient using a variant of quicksort */
+      /* resort the coordinates in nonincreasing order of negquotient */
       SCIPsortDownRealRealRealBoolPtr( negquotient, raydirection, rayorigin, sign, (void**) subspacevars, nsubspacevars);
       
 #ifndef NDEBUG

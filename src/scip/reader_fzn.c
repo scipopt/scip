@@ -3202,7 +3202,7 @@ CREATE_CONSTRAINT(createComparisonOpCons)
    }
    else
    {
-      syntaxError(scip, fzninput, "unknown contraint type");
+      syntaxError(scip, fzninput, "unknown constraint type");
    }
 
    *created = TRUE;
@@ -3466,7 +3466,7 @@ SCIP_RETCODE parseConstraint(
       SCIP_CALL( constypes[c](scip, fzninput, fname, tokens, ntokens, &created) );
    }
    
-   /* check if a contraint was created */
+   /* check if a constraint was created */
    if( !hasError(fzninput) && !created )
    {
       fzninput->valid = FALSE;
@@ -3938,7 +3938,7 @@ SCIP_RETCODE printRow(
    SCIP_Real*            vals,               /**< array of values */
    int                   nvars,              /**< number of variables */
    SCIP_Real             rhs,                /**< right hand side */
-   SCIP_Bool             hasfloats           /**< are there continuous varibales or coefficients in the constraint? */
+   SCIP_Bool             hasfloats           /**< are there continuous variables or coefficients in the constraint? */
    )
 {
    SCIP_VAR* var;                            /* some variable */

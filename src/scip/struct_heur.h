@@ -40,7 +40,7 @@ struct SCIP_Heur
    SCIP_Longint          nbestsolsfound;     /**< number of new best primal CIP solutions found so far by this heuristic */
    char*                 name;               /**< name of primal heuristic */
    char*                 desc;               /**< description of primal heuristic */
-   SCIP_DECL_HEURCOPY    ((*heurcopy));      /**< copy method of primal heuristic or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_HEURCOPY    ((*heurcopy));      /**< copy method of primal heuristic or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_HEURFREE    ((*heurfree));      /**< destructor of primal heuristic */
    SCIP_DECL_HEURINIT    ((*heurinit));      /**< initialize primal heuristic */
    SCIP_DECL_HEUREXIT    ((*heurexit));      /**< deinitialize primal heuristic */

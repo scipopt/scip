@@ -825,7 +825,7 @@ SCIP_DECL_PROPRESPROP(propRespropPseudoobj)
  * Event handler
  */
 
-/** execution methode of bound change event handler */
+/** execution method of bound change event handler */
 static
 SCIP_DECL_EVENTEXEC(eventExecPseudoobj)
 {  /*lint --e{715}*/

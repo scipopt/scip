@@ -59,14 +59,14 @@ SCIP_RETCODE SCIPpricerCreate(
    int                   priority,           /**< priority of the variable pricer */
    SCIP_Bool             delay,              /**< should the pricer be delayed until no other pricers or already existing
                                               *   problem variables with negative reduced costs are found */
-   SCIP_DECL_PRICERCOPY  ((*pricercopy)),    /**< copy method of pricer or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_PRICERCOPY  ((*pricercopy)),    /**< copy method of pricer or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_PRICERFREE  ((*pricerfree)),    /**< destructor of variable pricer */
    SCIP_DECL_PRICERINIT  ((*pricerinit)),    /**< initialize variable pricer */
    SCIP_DECL_PRICEREXIT  ((*pricerexit)),    /**< deinitialize variable pricer */
    SCIP_DECL_PRICERINITSOL((*pricerinitsol)),/**< solving process initialization method of variable pricer */
    SCIP_DECL_PRICEREXITSOL((*pricerexitsol)),/**< solving process deinitialization method of variable pricer */
    SCIP_DECL_PRICERREDCOST((*pricerredcost)),/**< reduced cost pricing method of variable pricer for feasible LPs */
-   SCIP_DECL_PRICERFARKAS((*pricerfarkas)),  /**< farkas pricing method of variable pricer for infeasible LPs */
+   SCIP_DECL_PRICERFARKAS((*pricerfarkas)),  /**< Farkas pricing method of variable pricer for infeasible LPs */
    SCIP_PRICERDATA*      pricerdata          /**< variable pricer data */
    );
 
@@ -129,7 +129,7 @@ SCIP_RETCODE SCIPpricerRedcost(
    SCIP_RESULT*          result              /**< result of the pricing process */    
    );
 
-/** calls farkas pricing method of variable pricer */
+/** calls Farkas pricing method of variable pricer */
 extern
 SCIP_RETCODE SCIPpricerFarkas(
    SCIP_PRICER*          pricer,             /**< variable pricer */
@@ -137,7 +137,7 @@ SCIP_RETCODE SCIPpricerFarkas(
    SCIP_PROB*            prob                /**< transformed problem */
    );
 
-/** depending on the LP's solution status, calls reduced cost or farkas pricing method of variable pricer */
+/** depending on the LP's solution status, calls reduced cost or Farkas pricing method of variable pricer */
 extern
 SCIP_RETCODE SCIPpricerExec(
    SCIP_PRICER*          pricer,             /**< variable pricer */

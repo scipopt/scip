@@ -86,7 +86,7 @@ SCIP_Real calcShiftVal(
    shiftval = 0.0;
    shiftdown = TRUE;
 
-   /* determine shifting direction and maximal possible shifting wrt. corresponding bound */
+   /* determine shifting direction and maximal possible shifting w.r.t. corresponding bound */
    if( obj > 0.0 && SCIPisFeasGE(scip, solval - 1.0, lb) )
       shiftval = SCIPfeasFloor(scip, solval - lb);
    else if ( obj < 0.0 && SCIPisFeasLE(scip, solval + 1.0, ub) )
@@ -586,7 +586,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          SCIPdebugMessage(" -> old LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
 
          /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
-          * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+          * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
           */
 #ifdef NDEBUG
          retstat = SCIPsolveDiveLP(scip, -1, &lperror);

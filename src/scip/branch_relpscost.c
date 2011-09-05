@@ -41,7 +41,7 @@
 #define DEFAULT_PSCOSTWEIGHT     1.0    /**< weight in score calculations for pseudo cost score */
 #define DEFAULT_MINRELIABLE      1.0    /**< minimal value for minimum pseudo cost size to regard pseudo cost value as reliable */
 #define DEFAULT_MAXRELIABLE      8.0    /**< maximal value for minimum pseudo cost size to regard pseudo cost value as reliable */
-#define DEFAULT_SBITERQUOT       0.5    /**< maximal fraction of strong branching LP iterations compared to normal iters */
+#define DEFAULT_SBITERQUOT       0.5    /**< maximal fraction of strong branching LP iterations compared to normal iterations */
 #define DEFAULT_SBITEROFS   100000      /**< additional number of allowed strong branching LP iterations */
 #define DEFAULT_MAXLOOKAHEAD     8      /**< maximal number of further variables evaluated without better score */
 #define DEFAULT_INITCAND       100      /**< maximal number of candidates initialized with strong branching per node */
@@ -59,7 +59,7 @@ struct SCIP_BranchruleData
    SCIP_Real             pscostweight;       /**< weight in score calculations for pseudo cost score */
    SCIP_Real             minreliable;        /**< minimal value for minimum pseudo cost size to regard pseudo cost value as reliable */
    SCIP_Real             maxreliable;        /**< maximal value for minimum pseudo cost size to regard pseudo cost value as reliable */
-   SCIP_Real             sbiterquot;         /**< maximal fraction of strong branching LP iterations compared to normal iters */
+   SCIP_Real             sbiterquot;         /**< maximal fraction of strong branching LP iterations compared to normal iterations */
    int                   sbiterofs;          /**< additional number of allowed strong branching LP iterations */
    int                   maxlookahead;       /**< maximal number of further variables evaluated without better score */
    int                   initcand;           /**< maximal number of candidates initialized with strong branching per node */
@@ -198,7 +198,7 @@ SCIP_RETCODE execRelpscost(
    SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
    SCIP_Bool             allowaddcons,       /**< is the branching rule allowed to add constraints to the current node
                                               *   in order to cut off the current solution instead of creating a branching? */
-   SCIP_VAR**            branchcands,        /**< brancing candidates */
+   SCIP_VAR**            branchcands,        /**< branching candidates */
    SCIP_Real*            branchcandssol,     /**< solution value for the branching candidates */
    SCIP_Real*            branchcandsfrac,    /**< fractional part of the branching candidates */
    int                   nbranchcands,       /**< number of branching candidates */
@@ -485,7 +485,7 @@ SCIP_RETCODE execRelpscost(
          inititer = MIN(inititer, 500);
       }
       
-      SCIPdebugMessage("strong branching (reliable=%g, %d/%d cands, %d uninit, maxcands=%d, maxlookahead=%g, inititer=%d, iters:%"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", basic:%u)\n",
+      SCIPdebugMessage("strong branching (reliable=%g, %d/%d cands, %d uninit, maxcands=%d, maxlookahead=%g, inititer=%d, iterations:%"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", basic:%u)\n",
          reliable, ninitcands, nbranchcands, nuninitcands, maxninitcands, maxlookahead, inititer, 
          SCIPgetNStrongbranchLPIterations(scip), maxnsblpiterations, SCIPisLPSolBasic(scip));
 
@@ -513,7 +513,7 @@ SCIP_RETCODE execRelpscost(
          c = initcands[i];
          assert(!SCIPisFeasIntegral(scip, branchcandssol[c]));
 
-         SCIPdebugMessage("init pseudo cost (%g/%g) of <%s> at %g (score:%g) with strong branching (%d iters) -- %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT" iterations\n",
+         SCIPdebugMessage("init pseudo cost (%g/%g) of <%s> at %g (score:%g) with strong branching (%d iterations) -- %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT" iterations\n",
             SCIPgetVarPseudocostCountCurrentRun(scip, branchcands[c], SCIP_BRANCHDIR_DOWNWARDS), 
             SCIPgetVarPseudocostCountCurrentRun(scip, branchcands[c], SCIP_BRANCHDIR_UPWARDS), 
             SCIPvarGetName(branchcands[c]), branchcandssol[c], initcandscores[i],
@@ -936,7 +936,7 @@ SCIP_RETCODE SCIPexecRelpscostBranching(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             allowaddcons,       /**< is the branching rule allowed to add constraints to the current node
                                               *   in order to cut off the current solution instead of creating a branching? */
-   SCIP_VAR**            branchcands,        /**< brancing candidates */
+   SCIP_VAR**            branchcands,        /**< branching candidates */
    SCIP_Real*            branchcandssol,     /**< solution value for the branching candidates */
    SCIP_Real*            branchcandsfrac,    /**< fractional part of the branching candidates */
    int                   nbranchcands,       /**< number of branching candidates */

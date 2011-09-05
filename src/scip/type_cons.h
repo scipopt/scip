@@ -418,7 +418,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - nnewfixedvars   : number of variables fixed since the last call to the presolving method
  *  - nnewaggrvars    : number of variables aggregated since the last call to the presolving method
  *  - nnewchgvartypes : number of variable type changes since the last call to the presolving method
- *  - nnewchgbds      : number of variable bounds tightend since the last call to the presolving method
+ *  - nnewchgbds      : number of variable bounds tightened since the last call to the presolving method
  *  - nnewholes       : number of domain holes added since the last call to the presolving method
  *  - nnewdelconss    : number of deleted constraints since the last call to the presolving method
  *  - nnewaddconss    : number of added constraints since the last call to the presolving method

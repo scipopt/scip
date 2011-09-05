@@ -99,7 +99,7 @@ SCIP_Real SCIPgetDualsolLogicor(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
-/** gets the dual farkas value of the logic or constraint in the current infeasible LP */
+/** gets the dual Farkas value of the logic or constraint in the current infeasible LP */
 extern
 SCIP_Real SCIPgetDualfarkasLogicor(
    SCIP*                 scip,               /**< SCIP data structure */

@@ -169,13 +169,13 @@ SCIP_DIALOG* SCIPdialogGetParent(
    SCIP_DIALOG*          dialog              /**< dialog */
    );
 
-/** gets the array of subdialogs associated with the given dialog */
+/** gets the array of sub-dialogs associated with the given dialog */
 extern
 SCIP_DIALOG** SCIPdialogGetSubdialogs(
    SCIP_DIALOG*          dialog              /**< dialog */
    );
 
-/** gets the number of subdialogs associated with the given dialog */
+/** gets the number of sub-dialogs associated with the given dialog */
 extern
 int SCIPdialogGetNSubdialogs(
    SCIP_DIALOG*          dialog              /**< dialog */

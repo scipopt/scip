@@ -74,7 +74,7 @@
 struct SCIP_EventData
 {
    SCIP_CONSDATA*        consdata;           /**< the constraint data */
-   int                   varidx;             /**< the index of the variable which bound change is catched, positive for linear variables, negative for quadratic variables */
+   int                   varidx;             /**< the index of the variable which bound change is caught, positive for linear variables, negative for quadratic variables */
    int                   filterpos;          /**< position of eventdata in SCIP's event filter */
 };
 
@@ -105,7 +105,7 @@ struct SCIP_ConsData
    unsigned int          quadvarssorted:1;   /**< are the quadratic variables already sorted? */
    unsigned int          quadvarsmerged:1;   /**< are equal quadratic variables already merged? */
    unsigned int          bilinsorted:1;      /**< are the bilinear terms already sorted? */
-   unsigned int          bilinmerged:1;      /**< are equal bilinar terms already merged? */
+   unsigned int          bilinmerged:1;      /**< are equal bilinear terms already merged? */
 
    unsigned int          isconvex:1;         /**< is quadratic function is convex ? */
    unsigned int          isconcave:1;        /**< is quadratic function is concave ? */
@@ -165,7 +165,7 @@ struct SCIP_ConshdlrData
    SCIP_HEUR*            subnlpheur;                /**< a pointer to the subnlp heuristic, if available */
    SCIP_HEUR*            trysolheur;                /**< a pointer to the trysol heuristic, if available */
    SCIP_EVENTHDLR*       eventhdlr;                 /**< our handler for variable bound change events */
-   int                   newsoleventfilterpos;      /**< filter position of new solution event handler, if catched */
+   int                   newsoleventfilterpos;      /**< filter position of new solution event handler, if caught */
   
    SCIP_QUADCONSUPGRADE** quadconsupgrades;         /**< quadratic constraint upgrade methods for specializing quadratic constraints */
    int                   quadconsupgradessize;      /**< size of quadconsupgrade array */
@@ -256,7 +256,7 @@ SCIP_RETCODE catchLinearVarEvents(
    if( !SCIPisInfinity(scip, consdata->rhs) )
    {
       /* if right hand side is finite, then a tightening in the lower bound of coef*linvar is of interest
-       * since we also want to keep activities in consdata uptodate, we also need to know when the corresponding bound is relaxed */
+       * since we also want to keep activities in consdata up-to-date, we also need to know when the corresponding bound is relaxed */
       if( consdata->lincoefs[linvarpos] > 0.0 )
          eventtype |= SCIP_EVENTTYPE_LBCHANGED;
       else
@@ -265,7 +265,7 @@ SCIP_RETCODE catchLinearVarEvents(
    if( !SCIPisInfinity(scip, -consdata->lhs) )
    {
       /* if left hand side is finite, then a tightening in the upper bound of coef*linvar is of interest
-       * since we also want to keep activities in consdata uptodate, we also need to know when the corresponding bound is relaxed */
+       * since we also want to keep activities in consdata up-to-date, we also need to know when the corresponding bound is relaxed */
       if( consdata->lincoefs[linvarpos] > 0.0 )
          eventtype |= SCIP_EVENTTYPE_UBCHANGED;
       else
@@ -310,7 +310,7 @@ SCIP_RETCODE dropLinearVarEvents(
    if( !SCIPisInfinity(scip, consdata->rhs) )
    {
       /* if right hand side is finite, then a tightening in the lower bound of coef*linvar is of interest
-       * since we also want to keep activities in consdata uptodate, we also need to know when the corresponding bound is relaxed */
+       * since we also want to keep activities in consdata up-to-date, we also need to know when the corresponding bound is relaxed */
       if( consdata->lincoefs[linvarpos] > 0.0 )
          eventtype |= SCIP_EVENTTYPE_LBCHANGED;
       else
@@ -319,7 +319,7 @@ SCIP_RETCODE dropLinearVarEvents(
    if( !SCIPisInfinity(scip, -consdata->lhs) )
    {
       /* if left hand side is finite, then a tightening in the upper bound of coef*linvar is of interest
-       * since we also want to keep activities in consdata uptodate, we also need to know when the corresponding bound is relaxed */
+       * since we also want to keep activities in consdata up-to-date, we also need to know when the corresponding bound is relaxed */
       if( consdata->lincoefs[linvarpos] > 0.0 )
          eventtype |= SCIP_EVENTTYPE_UBCHANGED;
       else
@@ -597,7 +597,7 @@ void consdataUpdateLinearActivity(
    if( consdata->minlinactivity != SCIP_INVALID && consdata->maxlinactivity != SCIP_INVALID &&
        (consdata->minlinactivityinf > 0 || consdata->maxlinactivityinf > 0 || consdata->minlinactivity <= consdata->maxlinactivity) )
    {
-      /* activities should be uptodate */
+      /* activities should be up-to-date */
       assert(consdata->minlinactivityinf >= 0);
       assert(consdata->maxlinactivityinf >= 0);
       return;
@@ -615,8 +615,8 @@ void consdataUpdateLinearActivity(
    if( consdata->nlinvars == 0 )
       return;
 
-   /* if the activities computed here should be still uptodate after boundchanges,
-    * variable events need to be catched */
+   /* if the activities computed here should be still up-to-date after bound changes,
+    * variable events need to be caught */
    assert(consdata->lineventdata != NULL);
 
    prevroundmode = SCIPintervalGetRoundingMode();
@@ -710,7 +710,7 @@ void consdataUpdateLinearActivityLbChange(
 
    /* @todo since we check the linear activity for consistency later anyway, we may skip changing the rounding mode here */
 
-   /* assume lhs <= a*x + y <= rhs, then the following boundchanges can be deduced:
+   /* assume lhs <= a*x + y <= rhs, then the following bound changes can be deduced:
     * a > 0:  y <= rhs - a*lb(x),  y >= lhs - a*ub(x)
     * a < 0:  y <= rhs - a*ub(x),  y >= lhs - a*lb(x)
     */
@@ -813,7 +813,7 @@ void consdataUpdateLinearActivityUbChange(
 
    /* @todo since we check the linear activity for consistency later anyway, we may skip changing the rounding mode here */
 
-   /* assume lhs <= a*x + y <= rhs, then the following boundchanges can be deduced:
+   /* assume lhs <= a*x + y <= rhs, then the following bound changes can be deduced:
     * a > 0:  y <= rhs - a*lb(x),  y >= lhs - a*ub(x)
     * a < 0:  y <= rhs - a*ub(x),  y >= lhs - a*lb(x)
     */
@@ -1008,7 +1008,7 @@ SCIP_RETCODE consdataEnsureQuadVarTermsSize(
    return SCIP_OKAY;
 }
 
-/** ensures, that adjaceny array array can store at least num entries */
+/** ensures, that adjacency array can store at least num entries */
 static
 SCIP_RETCODE consdataEnsureAdjBilinSize(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1307,7 +1307,7 @@ void consdataSortLinearVars(
    consdata->linvarssorted = TRUE;
 }
 
-#if 0 /* noone needs this routine currently */
+#if 0 /* no-one needs this routine currently */
 /** returns the position of variable in the linear coefficients array of a constraint, or -1 if not found */
 static
 int consdataFindLinearVar(
@@ -2370,7 +2370,7 @@ SCIP_RETCODE removeBilinearTermsPos(
          }
          else
          {
-            /* update index of j'th bilin term and store at position j-offset */
+            /* update index of j'th bilinear term and store at position j-offset */
             consdata->quadvarterms[i].adjbilin[j-offset] = newpos[consdata->quadvarterms[i].adjbilin[j]];
          }
       }
@@ -3184,7 +3184,7 @@ void getImpliedBounds(
    if( !SCIPvarIsBinary(x) || !SCIPvarIsActive(x) )
       return;
 
-   /* analyse implications for x = xval */
+   /* analyze implications for x = xval */
    nimpls = SCIPvarGetNImpls(x, xval);
    if( nimpls == 0 )
       return;
@@ -4232,7 +4232,7 @@ SCIP_RETCODE checkCurvature(
       }
 
       SCIP_CALL( SCIPallocBufferArray(scip, &alleigval, n) );
-      /* TODO can we compute only min and max eigval?
+      /* TODO can we compute only min and max eigen value?
       TODO can we estimate the numerical error? 
       TODO trying a cholesky factorization may be much faster */
       if( LapackDsyev(FALSE, n, matrix, alleigval) != SCIP_OKAY )
@@ -4345,7 +4345,7 @@ SCIP_RETCODE boundUnboundedVars(
 }
 
 #if 0
-/** gets euclidean norm of gradient of quadratic function */
+/** gets Euclidean norm of gradient of quadratic function */
 static
 SCIP_Real getGradientNorm(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4580,7 +4580,7 @@ void addSquareLinearization(
    SCIP_Real*            lincoef,            /**< buffer to add coefficient of linearization */
    SCIP_Real*            linconstant,        /**< buffer to add constant of linearization */
    SCIP_Real*            linval,             /**< buffer to add value of linearization in reference point */
-   SCIP_Bool*            success             /**< buffer to set to FALSE if linearzation has failed due to large numbers */
+   SCIP_Bool*            success             /**< buffer to set to FALSE if linearization has failed due to large numbers */
    )
 {
    assert(scip != NULL);
@@ -4705,7 +4705,7 @@ void addBilinLinearization(
    SCIP_Real*            lincoefy,           /**< buffer to add coefficient of second variable in linearization */
    SCIP_Real*            linconstant,        /**< buffer to add constant of linearization */
    SCIP_Real*            linval,             /**< buffer to add value of linearization in reference point */
-   SCIP_Bool*            success             /**< buffer to set to FALSE if linearzation has failed due to large numbers */
+   SCIP_Bool*            success             /**< buffer to set to FALSE if linearization has failed due to large numbers */
    )
 {
    SCIP_Real constant;
@@ -4758,7 +4758,7 @@ void addBilinMcCormick(
    SCIP_Real*            lincoefy,           /**< buffer to add coefficient of second variable in linearization */
    SCIP_Real*            linconstant,        /**< buffer to add constant of linearization */
    SCIP_Real*            linval,             /**< buffer to add value of linearization in reference point */
-   SCIP_Bool*            success             /**< buffer to set to FALSE if linearzation has failed due to large numbers */
+   SCIP_Bool*            success             /**< buffer to set to FALSE if linearization has failed due to large numbers */
    )
 {
    SCIP_Real constant;
@@ -4956,7 +4956,7 @@ SCIP_RETCODE generateCut(
    success = TRUE;
    if( isconvex )
    {
-      /* do first-order taylor for each term */
+      /* do first-order Taylor for each term */
       for( j = 0; j < consdata->nquadvars && success; ++j )
       {
          /* add linearization of square term */
@@ -5564,7 +5564,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    conss = SCIPconshdlrGetConss(conshdlr);
    assert(conss != NULL);
 
-   SCIPdebugMessage("catched new sol event %x from heur <%s>; have %d conss\n", SCIPeventGetType(event), SCIPheurGetName(SCIPsolGetHeur(sol)), nconss);
+   SCIPdebugMessage("caught new sol event %x from heur <%s>; have %d conss\n", SCIPeventGetType(event), SCIPheurGetName(SCIPsolGetHeur(sol)), nconss);
 
    for( c = 0; c < nconss; ++c )
    {
@@ -6247,7 +6247,7 @@ void propagateBoundsGetQuadActivity(
    SCIP_Real*            maxquadactivity,    /**< maximal activity of quadratic variable terms where only terms with finite maximal activity contribute */
    int*                  minactivityinf,     /**< number of quadratic variables that contribute -infinity to minimal activity */
    int*                  maxactivityinf,     /**< number of quadratic variables that contribute +infinity to maximal activity */
-   SCIP_INTERVAL*        quadactcontr        /**< contribution of each quadractic variables to quadactivity */
+   SCIP_INTERVAL*        quadactcontr        /**< contribution of each quadratic variables to quadactivity */
    )
 {  /*lint --e{666}*/
    SCIP_ROUNDMODE prevroundmode;
@@ -6391,7 +6391,7 @@ SCIP_RETCODE propagateBoundsCons(
    SCIP_Real          maxquadactivity; /* upper bound on finite activities of quadratic part */
    int                quadminactinf; /* number of quadratic variables that contribute -infinity to minimal activity of quadratic term */
    int                quadmaxactinf; /* number of quadratic variables that contribute +infinity to maximal activity of quadratic term */
-   SCIP_INTERVAL*     quadactcontr;  /* constribution of each quadratic variable term to quadactivity */
+   SCIP_INTERVAL*     quadactcontr;  /* contribution of each quadratic variable term to quadactivity */
    
    SCIP_VAR*          var;
    SCIP_INTERVAL      rhs;           /* right hand side of quadratic equation */
@@ -6646,7 +6646,7 @@ SCIP_RETCODE propagateBoundsCons(
    /* propagate quadratic part \in rhs = consbounds - linactivity */
    assert(consdata->minlinactivity != SCIP_INVALID);
    assert(consdata->maxlinactivity != SCIP_INVALID);
-   consdataUpdateLinearActivity(scip, consdata, intervalinfty); /* make sure, activities of linear part did not become invalid by above boundchanges, if any */
+   consdataUpdateLinearActivity(scip, consdata, intervalinfty); /* make sure, activities of linear part did not become invalid by above bound changes, if any */
    assert(consdata->minlinactivityinf > 0 || consdata->maxlinactivityinf > 0 || consdata->minlinactivity <= consdata->maxlinactivity);
    SCIPintervalSetBounds(&tmp,
       consdata->minlinactivityinf > 0 ? -intervalinfty : consdata->minlinactivity,
@@ -6693,7 +6693,7 @@ SCIP_RETCODE propagateBoundsCons(
       {
          /* general case */
 
-         /* compute "advanced" information on quad var term activities, if not uptodate */
+         /* compute "advanced" information on quad var term activities, if not up-to-date */
          if( quadminactinf == -1  )
          {
             assert(quadactcontr == NULL);
@@ -7339,7 +7339,7 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
          consdata->lincoefsmax = MAX(consdata->lincoefsmax, REALABS(consdata->lincoefs[i]));
       }
 
-      /* add nlrow respresentation to NLP, if NLP had been constructed */
+      /* add nlrow representation to NLP, if NLP had been constructed */
       if( SCIPisNLPConstructed(scip) )
       {
          if( consdata->nlrow == NULL )
@@ -7610,14 +7610,14 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
          unbounded = FALSE; /* whether there are unbounded variables */
          possquare = FALSE; /* whether there is a positive square term */
          negsquare = FALSE; /* whether there is a negative square term */
-         lambda = 0.6; /* weight of prefered bound */
+         lambda = 0.6; /* weight of preferred bound */
          for( k = 0; k < 2; ++k )
          {
             /* set reference point to 0 projected on bounds for unbounded variables or in between lower and upper bound for bounded variables
              * in the first round, we set it closer to the best bound, in the second closer to the worst bound
              * the reason is, that for a bilinear term with bounded variables, there are always two linear underestimators
-             * if the reference point is set to the middle, then rounding and luck decides which underestimator is choosen
-             * we thus choose the reference point not to be the middle, so both McCormick terms are definitely choosen one time
+             * if the reference point is set to the middle, then rounding and luck decides which underestimator is chosen
+             * we thus choose the reference point not to be the middle, so both McCormick terms are definitely chosen one time
              * of course, the possible number of cuts is something in the order of 2^nquadvars, and we choose two of them here
              */
             for( i = 0; i < consdata->nquadvars; ++i )
@@ -9319,11 +9319,11 @@ SCIP_RETCODE SCIPcreateConsQuadratic2(
    return SCIP_OKAY;
 }
 
-/** Adds a constant to the constraint function, that is, substracts a constant from both sides */
+/** Adds a constant to the constraint function, that is, subtracts a constant from both sides */
 void SCIPaddConstantQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
-   SCIP_Real             constant            /**< constant to substract from both sides */
+   SCIP_Real             constant            /**< constant to subtract from both sides */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -9695,7 +9695,7 @@ SCIP_Real SCIPgetRhsQuadratic(
    return SCIPconsGetData(cons)->rhs;
 }
 
-/** Check the quadratic function of a quadratic constraint for its semi-definitness, if not done yet.
+/** Check the quadratic function of a quadratic constraint for its semi-definiteness, if not done yet.
  */
 SCIP_RETCODE SCIPcheckCurvatureQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */

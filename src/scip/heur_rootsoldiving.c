@@ -264,7 +264,7 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
 
    *result = SCIP_DIDNOTFIND;
 
-   /* get all varibales of LP */
+   /* get all variables of LP */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
 
    /* get root solution value of all binary and integer variables */
@@ -468,7 +468,7 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
       lpsolstat = SCIPgetLPSolstat(scip);
 
       /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
-       * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+       * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
        */
       if( retcode != SCIP_OKAY )
       { 

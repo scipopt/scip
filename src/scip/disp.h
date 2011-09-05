@@ -59,7 +59,7 @@ SCIP_RETCODE SCIPdispCreate(
    const char*           desc,               /**< description of display column */
    const char*           header,             /**< head line of display column */
    SCIP_DISPSTATUS       dispstatus,         /**< display activation status of display column */
-   SCIP_DECL_DISPCOPY    ((*dispcopy)),      /**< copy method of display column or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_DISPCOPY    ((*dispcopy)),      /**< copy method of display column or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_DISPFREE    ((*dispfree)),      /**< destructor of display column */
    SCIP_DECL_DISPINIT    ((*dispinit)),      /**< initialize display column */
    SCIP_DECL_DISPEXIT    ((*dispexit)),      /**< deinitialize display column */
@@ -70,7 +70,7 @@ SCIP_RETCODE SCIPdispCreate(
    int                   width,              /**< width of display column (no. of chars used) */
    int                   priority,           /**< priority of display column */
    int                   position,           /**< relative position of display column */
-   SCIP_Bool             stripline           /**< should the column be separated with a line from its right neighbour? */
+   SCIP_Bool             stripline           /**< should the column be separated with a line from its right neighbor? */
    );
 
 /** frees memory of display column */

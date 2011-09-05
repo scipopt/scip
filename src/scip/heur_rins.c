@@ -30,7 +30,7 @@
 #include "scip/pub_misc.h"
 
 #define HEUR_NAME             "rins"
-#define HEUR_DESC             "relaxation induced neighbourhood search by Danna, Rothberg, and Le Pape"
+#define HEUR_DESC             "relaxation induced neighborhood search by Danna, Rothberg, and Le Pape"
 #define HEUR_DISPCHAR         'N'
 #define HEUR_PRIORITY         -1101000
 #define HEUR_FREQ             -1
@@ -222,7 +222,7 @@ SCIP_RETCODE createNewSol(
 
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-   /* subSCIP may have more variable than the number of active (transformed) variables in the main SCIP
+   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
     * since constraint copying may have required the copy of variables that are fixed in the main SCIP
     */ 
    assert(nvars <= SCIPgetNOrigVars(subscip));  
@@ -322,7 +322,7 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    SCIP* subscip;                            /* the subproblem created by RINS      */
    SCIP_VAR** vars;                          /* original problem's variables        */
    SCIP_VAR** subvars;                       /* subproblem's variables              */
-   SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to subSCIP variables */    
+   SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */    
 
    SCIP_Real timelimit;                      /* timelimit for the subproblem        */
    SCIP_Real memorylimit;
@@ -521,14 +521,14 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    retcode = SCIPsolve(subscip);
    
    /* Errors in solving the subproblem should not kill the overall solving process 
-    * Hence, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+    * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
     */
    if( retcode != SCIP_OKAY )
    { 
 #ifndef NDEBUG
       SCIP_CALL( retcode );     
 #endif
-      SCIPwarningMessage("Error while solving subproblem in RINS heuristic; subSCIP terminated with code <%d>\n",retcode);
+      SCIPwarningMessage("Error while solving subproblem in RINS heuristic; sub-SCIP terminated with code <%d>\n",retcode);
    }
    
    heurdata->usednodes += SCIPgetNNodes(subscip);

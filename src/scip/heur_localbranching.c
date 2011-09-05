@@ -178,7 +178,7 @@ SCIP_RETCODE addLocalBranchingConstraint(
    bestsol = SCIPgetBestSol(scip);
    assert( bestsol != NULL );
 
-   /* memory allociation */
+   /* memory allocation */
    SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nbinvars) );  
    SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nbinvars) );
    
@@ -244,7 +244,7 @@ SCIP_RETCODE createNewSol(
 
    /* copy the solution */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-   /* subSCIP may have more variable than the number of active (transformed) variables in the main SCIP
+   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
     * since constraint copying may have required the copy of variables that are fixed in the main SCIP
     */ 
    assert(nvars <= SCIPgetNOrigVars(subscip));
@@ -358,7 +358,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    SCIP_Real upperbound;
    SCIP_Real memorylimit;
 
-   SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to subSCIP variables */    
+   SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */    
    SCIP_VAR** vars;
 
    int nvars;
@@ -465,7 +465,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
       /* copy all plugins */
       SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
 
-      /* get name of the original problem and add the string "_renssub" */
+      /* get name of the original problem and add the string "_localbranchsub" */
       (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_localbranchsub", SCIPgetProbName(scip));
       
          /* create the subproblem */
@@ -575,14 +575,14 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    retcode = SCIPsolve(subscip);
    
    /* Errors in solving the subproblem should not kill the overall solving process 
-    * Hence, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+    * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
     */
    if( retcode != SCIP_OKAY )
    { 
 #ifndef NDEBUG
       SCIP_CALL( retcode );     
 #endif
-      SCIPwarningMessage("Error while solving subproblem in local branching heuristic; subSCIP terminated with code <%d>\n",retcode);
+      SCIPwarningMessage("Error while solving subproblem in local branching heuristic; sub-SCIP terminated with code <%d>\n",retcode);
    }
 
    heurdata->usednodes += SCIPgetNNodes(subscip);

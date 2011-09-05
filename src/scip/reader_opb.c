@@ -67,7 +67,7 @@
  *  
  *  <comment_or_constraint>::=<comment>|<constraint>|<softconstraint> 
  *
- *  <softconstraint>::= "[" <zeroOrMoreSpace> <unsigned integer> <zeroOrMoreSpace> "]" <contraint>
+ *  <softconstraint>::= "[" <zeroOrMoreSpace> <unsigned integer> <zeroOrMoreSpace> "]" <constraint>
  *  
  */
 
@@ -1881,7 +1881,7 @@ SCIP_RETCODE computeAndConstraintInfos(
                      }
                      return SCIP_INVALIDDATA;
                   }
-               SCIPdebugMessage("Another and-contraint contains and-resultant:");
+               SCIPdebugMessage("Another and-constraint contains and-resultant:");
                SCIPdebug( SCIP_CALL( SCIPprintVar(scip, (*resvars)[pos], NULL) ) );
                SCIPdebugMessage("Trying to resolve.\n");
                

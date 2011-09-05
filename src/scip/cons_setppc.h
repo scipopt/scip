@@ -180,7 +180,7 @@ SCIP_Real SCIPgetDualsolSetppc(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
-/** gets the dual farkas value of the set partitioning / packing / covering constraint in the current infeasible LP */
+/** gets the dual Farkas value of the set partitioning / packing / covering constraint in the current infeasible LP */
 extern
 SCIP_Real SCIPgetDualfarkasSetppc(
    SCIP*                 scip,               /**< SCIP data structure */

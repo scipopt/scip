@@ -48,7 +48,7 @@ static SCIP_SET* mainscipset = NULL;
 static SCIP_HASHMAP* solinnode = NULL;       /**< maps nodes to bools, storing whether the solution is valid for the node */
 static SCIP_Bool falseptr = FALSE;
 static SCIP_Bool trueptr = TRUE;
-static SCIP_Bool solisachieved = FALSE;      /**< means if current bestsolution is better than the given debugsolution */
+static SCIP_Bool solisachieved = FALSE;      /**< means if current best solution is better than the given debug solution */
 static SCIP_Real debugsolval = 0.0;          /**< objective value for debug solution */
 
 /** reads solution from given file into given arrays */
@@ -220,7 +220,7 @@ SCIP_RETCODE getSolutionValue(
       *val = SCIP_UNKNOWN;
       return SCIP_OKAY;
    }
-   /* retransform variable onto orginal variable space */
+   /* retransform variable onto original variable space */
    solvar = var;
    scalar = 1.0;
    constant = 0.0;
@@ -355,7 +355,7 @@ SCIP_RETCODE isSolutionInNode(
       return SCIP_OKAY;
    }
 
-   /* if the solution is not contained in the parent of the node, it cannot be containt in the current node */
+   /* if the solution is not contained in the parent of the node, it cannot be contained in the current node */
    *solcontained = TRUE;
    if( node->parent != NULL )
    {

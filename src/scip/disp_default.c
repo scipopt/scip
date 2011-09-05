@@ -301,7 +301,7 @@ SCIP_DECL_DISPCOPY(dispCopyDefault)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' for chararcter of best solution */
+/** output method of display column to output file stream 'file' for character of best solution */
 static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputSolFound)
 {  /*lint --e{715}*/
