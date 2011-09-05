@@ -30,7 +30,7 @@
 extern "C" {
 #endif
 
-/** creates the least infeasible LP braching rule and includes it in SCIP */
+/** creates the least infeasible LP branching rule and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludeBranchruleLeastinf(
    SCIP*                 scip                /**< SCIP data structure */

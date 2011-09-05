@@ -3285,7 +3285,7 @@ SCIP_RETCODE colStrongbranchesFrac(
    /* start timing */
    SCIPclockStart(stat->strongbranchtime, set);
 
-   /* init storage */
+   /* initialize storage */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &lpipos, ncols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &primsols, ncols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &sbdown, ncols) );
@@ -3293,7 +3293,7 @@ SCIP_RETCODE colStrongbranchesFrac(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &sbdownvalid, ncols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &sbupvalid, ncols) );
 
-   /* init columns */
+   /* initialize columns */
    for (j = 0; j < ncols; ++j)
    {
       SCIP_COL* col;
@@ -3417,7 +3417,7 @@ SCIP_RETCODE colStrongbranchesInt(
    /* start timing */
    SCIPclockStart(stat->strongbranchtime, set);
 
-   /* init storage */
+   /* initialize storage */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &lpipos, ncols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &primsols, ncols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &sbdown, ncols) );
@@ -3425,7 +3425,7 @@ SCIP_RETCODE colStrongbranchesInt(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &sbdownvalid, ncols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &sbupvalid, ncols) );
 
-   /* init columns */
+   /* initialize columns */
    for (j = 0; j < ncols; ++j)
    {
       SCIP_COL* col;

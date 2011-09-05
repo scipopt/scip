@@ -215,7 +215,7 @@ SCIP_Bool solCutIsViolated(
    subscip = mipdata->subscip;
    assert( subscip != NULL );
 
-   /* init activity and norm */
+   /* initialize activity and norm */
    act = 0.0;
    norm = 1.0;
 
@@ -1702,7 +1702,7 @@ SCIP_RETCODE computeCut(
    assert( nrows == (int) mipdata->nrows );
    assert( ncols == (int) mipdata->ncols );
 
-   /* init */
+   /* initialize */
    *success = TRUE;
    *localrowsused = FALSE;
    *localboundsused = FALSE;

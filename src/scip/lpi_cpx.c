@@ -2508,7 +2508,7 @@ SCIP_RETCODE SCIPlpiStrongbranchesFrac(
 
    SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
 
-   /* init */
+   /* initialize */
    for (j = 0; j < ncols; ++j)
    {
       /* results of CPLEX are valid in any case */
@@ -2608,7 +2608,7 @@ SCIP_RETCODE SCIPlpiStrongbranchesInt(
    if ( iter != NULL )
       *iter = 0;
 
-   /* init */
+   /* initialize */
    for (j = 0; j < ncols; ++j)
    {
       assert( EPSISINT(psols[j], 1e-06) );

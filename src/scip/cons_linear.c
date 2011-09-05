@@ -4306,7 +4306,7 @@ SCIP_RETCODE tightenBounds(
       return SCIP_OKAY;
 
    /* if a constraint was created after presolve, then it may hold fixed variables
-    * if there are even multiaggregated variables, then we cannot do bound tightening on these
+    * if there are even multi-aggregated variables, then we cannot do bound tightening on these
     * thus, ensure here again that variable fixings have been applied
     */
    SCIP_CALL( applyFixings(scip, cons, cutoff) );
@@ -5398,8 +5398,8 @@ SCIP_RETCODE convertLongEquality(
    SCIP_Bool coefszeroone;
    SCIP_Bool coefsintegral;
    SCIP_Bool varsintegral;
-   SCIP_Bool supinf;                         /* might the supremum of the multiaggregation be infinite? */
-   SCIP_Bool infinf;                         /* might the infimum of the multiaggregation be infinite? */
+   SCIP_Bool supinf;                         /* might the supremum of the multi-aggregation be infinite? */
+   SCIP_Bool infinf;                         /* might the infimum of the multi-aggregation be infinite? */
    SCIP_Bool infeasible;
 
    int maxnlocksstay;
@@ -5425,7 +5425,7 @@ SCIP_RETCODE convertLongEquality(
 
    SCIPdebugMessage("linear constraint <%s>: try to multi-aggregate equality\n", SCIPconsGetName(cons));
 
-   /* We do not want to increase the total number of non-zeros due to the multiaggregation.
+   /* We do not want to increase the total number of non-zeros due to the multi-aggregation.
     * Therefore, we have to restrict the number of locks of a variable that is aggregated out.
     *   maxnlocksstay:   maximal sum of lock numbers if the constraint does not become redundant after the aggregation
     *   maxnlocksremove: maximal sum of lock numbers if the constraint can be deleted after the aggregation
@@ -5626,7 +5626,7 @@ SCIP_RETCODE convertLongEquality(
    supinf = FALSE;
    infinf = FALSE;
    
-   /* check whether the the infimum and the supremum of the multiaggregation can be get infinite */
+   /* check whether the the infimum and the supremum of the multi-aggregation can be get infinite */
    for( v = 0; v < consdata->nvars; ++v )
    {
       if( v != bestslackpos )
@@ -5644,11 +5644,11 @@ SCIP_RETCODE convertLongEquality(
       }
    }
  
-   /* If the infimum and the supremum of a multiaggregation are both infinite, then the multiaggregation might not be resolvable.
+   /* If the infimum and the supremum of a multi-aggregation are both infinite, then the multi-aggregation might not be resolvable.
     * E.g., consider the equality z = x-y. If x and y are both fixed to +infinity, the value for z is not determined */     
    if( supinf && infinf )
    {      
-      SCIPdebugMessage("do not perform multiaggregation: infimum and supremum are both infinite\n");     
+      SCIPdebugMessage("do not perform multi-aggregation: infimum and supremum are both infinite\n");     
       return SCIP_OKAY;
    }
 
@@ -5965,10 +5965,10 @@ SCIP_RETCODE dualPresolve(
     * everything else would produce fill-in. Exceptions:
     * - If there are only two variables in the constraint from which the multi-aggregation arises, no fill-in will be
     *   produced.
-    * - If there are three variables in the constraint, multiaggregation in three additional constraintsw will remove
+    * - If there are three variables in the constraint, multi-aggregation in three additional constraintsw will remove
     *   six nonzeros (three from the constraint and the three entries of the multi-aggregated variable) and add
     *   six nonzeros (two variables per substitution).
-    * - If there at most four variables in the constraint, multiaggregation in two additional constraints will remove
+    * - If there at most four variables in the constraint, multi-aggregation in two additional constraints will remove
     *   six nonzeros (four from the constraint and the two entries of the multi-aggregated variable) and add
     *   six nonzeros (three variables per substitution). God exists! 
     */
@@ -6188,8 +6188,8 @@ SCIP_RETCODE dualPresolve(
       int j;
       SCIP_Bool infeasible;
       SCIP_Bool aggregated;
-      SCIP_Bool supinf;                      /* might the supremum of the multiaggregation be infinite? */
-      SCIP_Bool infinf;                      /* might the infimum of the multiaggregation be infinite? */
+      SCIP_Bool supinf;                      /* might the supremum of the multi-aggregation be infinite? */
+      SCIP_Bool infinf;                      /* might the infimum of the multi-aggregation be infinite? */
 
       assert(!bestislhs || lhsexists);
       assert(bestislhs || rhsexists);
@@ -6260,9 +6260,9 @@ SCIP_RETCODE dualPresolve(
       }
       else
       {
-         /* If the infimum and the supremum of a multiaggregation are both infinite, then the multiaggregation might not be resolvable.
+         /* If the infimum and the supremum of a multi-aggregation are both infinite, then the multi-aggregation might not be resolvable.
           * E.g., consider the equality z = x-y. If x and y are both fixed to +infinity, the value for z is not determined */
-         SCIPdebugMessage("do not perform multiaggregation: infimum and supremum are both infinite\n");
+         SCIPdebugMessage("do not perform multi-aggregation: infimum and supremum are both infinite\n");
       }
       /* free temporary memory */
       SCIPfreeBufferArray(scip, &aggrcoefs);
@@ -10136,7 +10136,7 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
 
    if( (eventtype & SCIP_EVENTTYPE_VARUNLOCKED) != 0 )
    {
-      /* there is only one lock left: we may multiaggregate the variable as slack of an equation */
+      /* there is only one lock left: we may multi-aggregate the variable as slack of an equation */
       assert(SCIPvarGetNLocksDown(var) <= 1);
       assert(SCIPvarGetNLocksUp(var) <= 1);
       consdata->presolved = FALSE;

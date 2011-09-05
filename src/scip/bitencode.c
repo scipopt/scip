@@ -34,7 +34,7 @@ void SCIPencodeSingleBit(
    int                   count               /**< number of elements */
    )
 {
-   static const SCIP_SINGLEPACKET mask[SCIP_SINGLEPACKETSIZE][2] = {   /* if the packetsize changes, the mask has to be updated */
+   static const SCIP_SINGLEPACKET mask[SCIP_SINGLEPACKETSIZE][2] = {   /* if the packet size changes, the mask has to be updated */
       {0x00000000, 0x00000001},
       {0x00000000, 0x00000002},
       {0x00000000, 0x00000004},
@@ -231,7 +231,7 @@ void SCIPencodeDualBit(
    int                   count               /**< number of elements */
    )
 {
-   static const SCIP_DUALPACKET mask[SCIP_DUALPACKETSIZE][4] = {   /* if the packetsize changes, the mask has to be updated */
+   static const SCIP_DUALPACKET mask[SCIP_DUALPACKETSIZE][4] = {   /* if the packet size changes, the mask has to be updated */
       {0x00000000, 0x00000001, 0x00000002, 0x00000003},
       {0x00000000, 0x00000004, 0x00000008, 0x0000000C},
       {0x00000000, 0x00000010, 0x00000020, 0x00000030},

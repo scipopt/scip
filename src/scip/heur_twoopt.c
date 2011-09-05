@@ -56,7 +56,7 @@ struct SCIP_HeurData
    int                   lastsolindex;       /**< index of last solution for which heuristic was performed */
    SCIP_Real             matchingrate;       /**< percentage by which two variables have have to match in their LP-row 
                                               *   set to be associated as pair by heuristic */
-   SCIP_VAR**            binvars;            /**< Array of binary variables which are sorted with respect to their occurence
+   SCIP_VAR**            binvars;            /**< Array of binary variables which are sorted with respect to their occurrence
                                               *   in the LP-rows */  
    int                   nbinvars;           /**< number of binary variables stored in heuristic array */
    int                   waitingnodes;       /**< user parameter to determine number of nodes to wait after last best solution 
@@ -820,7 +820,7 @@ SCIP_DECL_HEURINIT(heurInitTwoopt)
    heurdata->randseed = 0;
 
 #ifdef STATISTIC_INFORMATION
-   /* init statistics */
+   /* initialize statistics */
    heurdata->binnexchanges = 0;
    heurdata->intnexchanges = 0;
    heurdata->binnblockvars = 0;

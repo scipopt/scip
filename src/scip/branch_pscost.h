@@ -30,7 +30,7 @@
 extern "C" {
 #endif
 
-/** creates the pseudo cost braching rule and includes it in SCIP */
+/** creates the pseudo cost branching rule and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludeBranchrulePscost(
    SCIP*                 scip                /**< SCIP data structure */

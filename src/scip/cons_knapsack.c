@@ -5621,7 +5621,7 @@ SCIP_RETCODE applyFixings(
          SCIP_CALL( SCIPgetBinvarRepresentative(scip, var, &repvar, &negated) );
 	 assert(repvar != NULL);
 
-	 /* check for multiaggregation */
+	 /* check for multi-aggregation */
 	 if( SCIPvarIsNegated(repvar) )
 	 {
 	    workvar = SCIPvarGetNegatedVar(repvar);
@@ -5635,16 +5635,16 @@ SCIP_RETCODE applyFixings(
 	 }
 
 	 /* @todo maybe resolve the problem that the eliminating of the multi-aggreation leads to a non-knapsack
-          * constraint (converting into a linear constraint), for example the multiaggregation consist of a non-binary
+          * constraint (converting into a linear constraint), for example the multi-aggregation consist of a non-binary
           * variable or due to resolving now their are non-integral coefficients or a non-integral capacity 
           *
           * If repvar is not negated so workwar = repvar, otherwise workvar = 1 - repvar. This means,
           * weight * workvar = weight * (a_1*y_1 + ... + a_n*y_n + c) 
           *
           * The explaination for  the following block:  
-	  * 1a) If repvar is a multiaggregated variable weight * repvar should be replaced by 
+	  * 1a) If repvar is a multi-aggregated variable weight * repvar should be replaced by 
 	  *     weight * (a_1*y_1 + ... + a_n*y_n + c).
-	  * 1b) If repvar is a negated variable of a multiaggregated variable weight * repvar should be replaced by 
+	  * 1b) If repvar is a negated variable of a multi-aggregated variable weight * repvar should be replaced by 
 	  *     weight - weight * (a_1*y_1 + ... + a_n*y_n + c), for better further use here we switch the sign of weight
 	  *     so now we have the replacement -weight + weight * (a_1*y_1 + ... + a_n*y_n + c).
 	  * 2)  For all replacement variable we check:
@@ -5672,7 +5672,7 @@ SCIP_RETCODE applyFixings(
 
 	    if( !SCIPisIntegral(scip, weight * aggrconst) )
             {
-               SCIPerrorMessage("try to resolve a multiaggregation with a non-integral value for weight*aggrconst = %g\n", weight*aggrconst);
+               SCIPerrorMessage("try to resolve a multi-aggregation with a non-integral value for weight*aggrconst = %g\n", weight*aggrconst);
                return SCIP_ERROR;
 	    }
             
@@ -5687,12 +5687,12 @@ SCIP_RETCODE applyFixings(
 
 	       if( !SCIPvarIsBinary(aggrvars[i]) )
                {
-                  SCIPerrorMessage("try to resolve a multiaggregation with a non-binary variable <%s>\n", aggrvars[i]);
+                  SCIPerrorMessage("try to resolve a multi-aggregation with a non-binary variable <%s>\n", aggrvars[i]);
                   return SCIP_ERROR;
                }
 	       if( !SCIPisIntegral(scip, weight * aggrscalars[i]) )
                {
-                  SCIPerrorMessage("try to resolve a multiaggregation with a non-integral value for weight*aggrscalars = %g\n", weight*aggrscalars[i]);
+                  SCIPerrorMessage("try to resolve a multi-aggregation with a non-integral value for weight*aggrscalars = %g\n", weight*aggrscalars[i]);
                   return SCIP_ERROR;
                }
 	       /* if the new coefficent is smaller than zero, we need to add the negated variable instead and adjust the capacity */

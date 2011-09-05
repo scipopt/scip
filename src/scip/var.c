@@ -3673,7 +3673,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
 }
 
 
-/** flattens aggregation graph of multiaggregated variable in order to avoid exponential recursion lateron */
+/** flattens aggregation graph of multi-aggregated variable in order to avoid exponential recursion lateron */
 SCIP_RETCODE SCIPvarFlattenAggregationGraph(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -3709,7 +3709,7 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
     * Note, that there are two cases where SCIPvarFlattenAggregationGraph() is called: The easier one is that it is
     * called while installing the multi-aggregation. in principle, the described issue could be handled straightforward
     * in this case by aggregating or fixing the variable instead.  The more complicated case is the one, when the
-    * multiaggregation is used, e.g., in linear presolving (and the variable is already declared to be multiaggregated).
+    * multi-aggregation is used, e.g., in linear presolving (and the variable is already declared to be multi-aggregated).
     *
     * By now, it is not allowed to fix or aggregate multi-aggregated variables which would be necessary in this case.
     *
@@ -4265,7 +4265,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &tmpvars, aggvars, ntmpvars) );
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &tmpscalars, scalars, ntmpvars) );
 
-      /* get all active variables for multiaggregation */
+      /* get all active variables for multi-aggregation */
       SCIP_CALL( SCIPvarGetActiveRepresentatives(set, tmpvars, tmpscalars, &ntmpvars, tmpvarssize, &tmpconstant, &tmprequiredsize, FALSE) );
       if( tmprequiredsize > tmpvarssize )
       {
@@ -4278,8 +4278,8 @@ SCIP_RETCODE SCIPvarMultiaggregate(
 
       tmpscalar = 0.0;
       
-      /* iterate over all active variables of the multiaggregation and filter all variables which are equal to the
-       * possible multiaggregated variable 
+      /* iterate over all active variables of the multi-aggregation and filter all variables which are equal to the
+       * possible multi-aggregated variable 
        */
       for( v = ntmpvars - 1; v >= 0; --v )
       {
@@ -4375,7 +4375,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
          goto TERMINATE;
       }
 
-      /* if only one aggregation variable is left, we perform a normal aggregation instead of a multiaggregation */
+      /* if only one aggregation variable is left, we perform a normal aggregation instead of a multi-aggregation */
       if( ntmpvars == 1 )
       {
          /* prefer aggregating the variable of more general type (preferred aggregation variable is varx) */
@@ -4411,7 +4411,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
 	 goto TERMINATE;
       }
 
-      /* if the variable to be multiaggregated has implications or variable bounds (i.e. is the implied variable or
+      /* if the variable to be multi-aggregated has implications or variable bounds (i.e. is the implied variable or
        * variable bound variable of another variable), we have to remove it from the other variables implications or
        * variable bounds
        */
@@ -6729,9 +6729,9 @@ SCIP_RETCODE SCIPvarChgUbDive(
    return SCIP_OKAY;
 }
 
-/** for a multiaggregated variable, gives the local lower bound computed by adding the local bounds from all aggregation variables
+/** for a multi-aggregated variable, gives the local lower bound computed by adding the local bounds from all aggregation variables
  * this lower bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multiaggregated variable is not allowed
+ * calling this function for a non-multi-aggregated variable is not allowed
  */
 SCIP_Real SCIPvarGetMultaggrLbLocal(
    SCIP_VAR*             var,                /**< problem variable */
@@ -6774,9 +6774,9 @@ SCIP_Real SCIPvarGetMultaggrLbLocal(
    return lb;
 }
 
-/** for a multiaggregated variable, gives the local upper bound computed by adding the local bounds from all aggregation variables
+/** for a multi-aggregated variable, gives the local upper bound computed by adding the local bounds from all aggregation variables
  * this upper bound may be tighter than the one given by SCIPvarGetUbLocal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multiaggregated variable is not allowed
+ * calling this function for a non-multi-aggregated variable is not allowed
  */
 SCIP_Real SCIPvarGetMultaggrUbLocal(
    SCIP_VAR*             var,                /**< problem variable */
@@ -6819,9 +6819,9 @@ SCIP_Real SCIPvarGetMultaggrUbLocal(
    return ub;
 }
 
-/** for a multiaggregated variable, gives the global lower bound computed by adding the global bounds from all aggregation variables
+/** for a multi-aggregated variable, gives the global lower bound computed by adding the global bounds from all aggregation variables
  * this global bound may be tighter than the one given by SCIPvarGetLbGlobal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multiaggregated variable is not allowed
+ * calling this function for a non-multi-aggregated variable is not allowed
  */
 SCIP_Real SCIPvarGetMultaggrLbGlobal(
    SCIP_VAR*             var,                /**< problem variable */
@@ -6864,9 +6864,9 @@ SCIP_Real SCIPvarGetMultaggrLbGlobal(
    return lb;
 }
 
-/** for a multiaggregated variable, gives the global upper bound computed by adding the global bounds from all aggregation variables
+/** for a multi-aggregated variable, gives the global upper bound computed by adding the global bounds from all aggregation variables
  * this upper bound may be tighter than the one given by SCIPvarGetUbGlobal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multiaggregated variable is not allowed
+ * calling this function for a non-multi-aggregated variable is not allowed
  */
 SCIP_Real SCIPvarGetMultaggrUbGlobal(
    SCIP_VAR*             var,                /**< problem variable */
