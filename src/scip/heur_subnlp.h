@@ -60,6 +60,17 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
    SCIP_Longint*         iterused            /**< buffer to store number of iterations used by NLP solver, or NULL if not of interest */
    );
 
+/** for a given solution, resolves the corresponding subNLP and updates solution values for continuous variables, if NLP solution is feasible in original problem */
+extern
+SCIP_RETCODE SCIPresolveSolHeurSubNlp(
+   SCIP*                 scip,               /**< original SCIP data structure */
+   SCIP_HEUR*            heur,               /**< heuristic data structure */
+   SCIP_SOL*             sol,                /**< solution for which to solve NLP, and where to store resolved solution values */
+   SCIP_Bool*            success,            /**< buffer where to store whether a feasible solution was found */
+   SCIP_Longint          itercontingent,     /**< iteration limit for NLP solver, or -1 for default of NLP heuristic */
+   SCIP_Real             timelimit           /**< time limit for NLP solver */
+   );
+
 /** adds all known linear constraint to the NLP, if initialized and not done already
  * This function is temporary and will hopefully become obsolete in the near future.
  */ 
