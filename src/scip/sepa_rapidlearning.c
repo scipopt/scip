@@ -437,7 +437,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
       }
 
       /* set node limit to 100% */
-      SCIP_CALL( SCIPgetLongintParam(subscip, "limits/nodes", &nodelimit) );
+      SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit) );
 
       /* solve the subproblem */
       retcode = SCIPsolve(subscip);

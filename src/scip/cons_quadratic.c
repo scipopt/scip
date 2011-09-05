@@ -2809,7 +2809,7 @@ SCIP_RETCODE removeFixedVariables(
       }
       else
       {
-         /* if GetProbVar gave a multiaggr. variable, add new quad var terms and new bilinear terms
+         /* if GetProbVar gave a multi-aggregated variable, add new quad var terms and new bilinear terms
           * x is replaced by coef * (sum_i a_ix_i + b) + offset
           * lcoef * x + scoef * x^2 + bcoef * x * y ->
           *   (b*coef + offset) * (lcoef + (b*coef + offset) * scoef)

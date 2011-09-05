@@ -2651,7 +2651,7 @@ SCIP_RETCODE SCIPgetBinvarRepresentatives(
    SCIP_Bool*            negated             /**< array to store whether the negation of an active variable was returned */
    );
 
-/** flattens aggregation graph of multiaggregated variable in order to avoid exponential recursion later on */
+/** flattens aggregation graph of multi-aggregated variable in order to avoid exponential recursion later on */
 extern
 SCIP_RETCODE SCIPflattenVarAggregationGraph(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3238,9 +3238,9 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
 
 #ifndef NDEBUG
 
-/** for a multiaggregated variable, returns the global lower bound computed by adding the global bounds from all aggregation variables
+/** for a multi-aggregated variable, returns the global lower bound computed by adding the global bounds from all aggregation variables
  * this global bound may be tighter than the one given by SCIPvarGetLbGlobal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multiaggregated variable results in a call to SCIPvarGetLbGlobal
+ * calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetLbGlobal
  */
 extern
 SCIP_Real SCIPcomputeVarLbGlobal(
@@ -3248,9 +3248,9 @@ SCIP_Real SCIPcomputeVarLbGlobal(
    SCIP_VAR*             var                 /**< variable to compute the bound for */
    );
 
-/** for a multiaggregated variable, returns the global upper bound computed by adding the global bounds from all aggregation variables
+/** for a multi-aggregated variable, returns the global upper bound computed by adding the global bounds from all aggregation variables
  * this global bound may be tighter than the one given by SCIPvarGetUbGlobal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multiaggregated variable results in a call to SCIPvarGetUbGlobal
+ * calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetUbGlobal
  */
 extern
 SCIP_Real SCIPcomputeVarUbGlobal(
@@ -3258,9 +3258,9 @@ SCIP_Real SCIPcomputeVarUbGlobal(
    SCIP_VAR*             var                 /**< variable to compute the bound for */
    );
 
-/** for a multiaggregated variable, returns the local lower bound computed by adding the local bounds from all aggregation variables
+/** for a multi-aggregated variable, returns the local lower bound computed by adding the local bounds from all aggregation variables
  * this local bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multiaggregated variable results in a call to SCIPvarGetLbLocal
+ * calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetLbLocal
  */
 extern
 SCIP_Real SCIPcomputeVarLbLocal(
@@ -3268,9 +3268,9 @@ SCIP_Real SCIPcomputeVarLbLocal(
    SCIP_VAR*             var                 /**< variable to compute the bound for */
    );
 
-/** for a multiaggregated variable, returns the local upper bound computed by adding the local bounds from all aggregation variables
+/** for a multi-aggregated variable, returns the local upper bound computed by adding the local bounds from all aggregation variables
  * this local bound may be tighter than the one given by SCIPvarGetUbLocal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multiaggregated variable results in a call to SCIPvarGetUbLocal
+ * calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetUbLocal
  */
 extern
 SCIP_Real SCIPcomputeVarUbLocal(
@@ -3541,7 +3541,7 @@ SCIP_RETCODE SCIPaggregateVars(
 
 /** converts variable into multi-aggregated variable; this changes the vars array returned from
  *  SCIPgetVars() and SCIPgetVarsData(); Warning! The integrality condition is not checked anymore on
- *  the multiaggregated variable. You must not multiaggregate an integer variable without being sure,
+ *  the multi-aggregated variable. You must not multi-aggregate an integer variable without being sure,
  *  that integrality on the aggregation variables implies integrality on the aggregated variable.
  *
  *  The output flags have the following meaning:

@@ -1213,7 +1213,7 @@ SCIP_RETCODE SCIPgetVarCopy(
       /* get the active representation */
       SCIP_CALL( SCIPflattenVarAggregationGraph(sourcescip, sourcevar) );
     
-      /* get multiaggregation data */
+      /* get multi-aggregation data */
       naggrvars = SCIPvarGetMultaggrNVars(sourcevar);
       sourceaggrvars = SCIPvarGetMultaggrVars(sourcevar);
       aggrcoefs = SCIPvarGetMultaggrScalars(sourcevar);
@@ -1221,20 +1221,20 @@ SCIP_RETCODE SCIPgetVarCopy(
    
       SCIP_CALL( SCIPallocBufferArray(targetscip, &targetaggrvars, naggrvars) );
             
-      /* get copies of the active variables of the multiaggregation */
+      /* get copies of the active variables of the multi-aggregation */
       for( i = 0; i < naggrvars; ++i )
       {
          SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourceaggrvars[i], &targetaggrvars[i], localvarmap, localconsmap, global, success) );
          assert(*success);
       }
 
-      /* create copy of the multiaggregated variable */
+      /* create copy of the multi-aggregated variable */
       SCIP_CALL( SCIPvarCopy(&var, targetscip->mem->probmem, targetscip->set, targetscip->stat, 
             sourcescip, sourcevar, localvarmap, localconsmap, global) );
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_multaggr", SCIPvarGetName(sourcevar));
          
-      /* add multiaggregation x = a^T y + c as linear constraint a^T y - x = -c */
+      /* add multi-aggregation x = a^T y + c as linear constraint a^T y - x = -c */
       SCIP_CALL( SCIPcreateConsLinear(targetscip, &cons, name, naggrvars, targetaggrvars, aggrcoefs, -constant,
             -constant, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCoefLinear(targetscip, cons, var, -1.0) );
@@ -6008,7 +6008,7 @@ SCIP_RETCODE SCIPtransformProb(
    }
    SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL, "\n");
 
-   /* call init methods of plugins */
+   /* call initialization methods of plugins */
    SCIP_CALL( SCIPsetInitPlugins(scip->set, scip->mem->probmem, scip->stat) );
 
    /* in case the permutation seed is different to -1, permute the transformed problem */
@@ -6127,7 +6127,7 @@ SCIP_RETCODE exitPresolve(
 
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
       {
-         /** flattens aggregation graph of multiaggregated variable in order to avoid exponential recursion lateron */
+         /** flattens aggregation graph of multi-aggregated variable in order to avoid exponential recursion lateron */
          SCIP_CALL( SCIPvarFlattenAggregationGraph(var, scip->mem->probmem, scip->set) );
 
 #ifndef NDEBUG      
@@ -6871,7 +6871,7 @@ SCIP_RETCODE initSolve(
    /* create VBC output file */
    SCIP_CALL( SCIPvbcInit(scip->stat->vbc, scip->mem->probmem, scip->set) );
 
-   /* init solution process data structures */
+   /* initialize solution process data structures */
    SCIP_CALL( SCIPpricestoreCreate(&scip->pricestore) );
    SCIP_CALL( SCIPsepastoreCreate(&scip->sepastore) );
    SCIP_CALL( SCIPcutpoolCreate(&scip->cutpool, scip->mem->probmem, scip->set, scip->set->sepa_cutagelimit, TRUE) );
@@ -8342,6 +8342,9 @@ SCIP_RETCODE SCIPparseVarsLinearsum(
    {
       *nvars = 0;
       *requiredsize = 0;
+
+      SCIPfreeParseVarsPolynomialData(scip, &monomialvars, &monomialexps, &monomialcoefs, &monomialnvars, nmonomials);
+
       return SCIP_OKAY;
    }
 
@@ -8654,7 +8657,7 @@ SCIP_RETCODE SCIPgetBinvarRepresentatives(
    return SCIP_OKAY;
 }
 
-/** flattens aggregation graph of multiaggregated variable in order to avoid exponential recursion lateron */
+/** flattens aggregation graph of multi-aggregated variable in order to avoid exponential recursion lateron */
 SCIP_RETCODE SCIPflattenVarAggregationGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< problem variable */
@@ -10861,9 +10864,9 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
 #undef SCIPcomputeVarLbLocal
 #undef SCIPcomputeVarUbLocal
 
-/** for a multiaggregated variable, returns the global lower bound computed by adding the global bounds from all aggregation variables
+/** for a multi-aggregated variable, returns the global lower bound computed by adding the global bounds from all aggregation variables
  * this global bound may be tighter than the one given by SCIPvarGetLbGlobal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multiaggregated variable results in a call to SCIPvarGetLbGlobal
+ * calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetLbGlobal
  */
 SCIP_Real SCIPcomputeVarLbGlobal(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10880,9 +10883,9 @@ SCIP_Real SCIPcomputeVarLbGlobal(
       return SCIPvarGetLbGlobal(var);
 }
 
-/** for a multiaggregated variable, returns the global upper bound computed by adding the global bounds from all aggregation variables
+/** for a multi-aggregated variable, returns the global upper bound computed by adding the global bounds from all aggregation variables
  * this global bound may be tighter than the one given by SCIPvarGetUbGlobal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multiaggregated variable results in a call to SCIPvarGetUbGlobal
+ * calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetUbGlobal
  */
 SCIP_Real SCIPcomputeVarUbGlobal(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10899,9 +10902,9 @@ SCIP_Real SCIPcomputeVarUbGlobal(
       return SCIPvarGetUbGlobal(var);
 }
 
-/** for a multiaggregated variable, returns the local lower bound computed by adding the local bounds from all aggregation variables
+/** for a multi-aggregated variable, returns the local lower bound computed by adding the local bounds from all aggregation variables
  * this local bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multiaggregated variable results in a call to SCIPvarGetLbLocal
+ * calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetLbLocal
  */
 SCIP_Real SCIPcomputeVarLbLocal(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10918,9 +10921,9 @@ SCIP_Real SCIPcomputeVarLbLocal(
       return SCIPvarGetLbLocal(var);
 }
 
-/** for a multiaggregated variable, returns the local upper bound computed by adding the local bounds from all aggregation variables
+/** for a multi-aggregated variable, returns the local upper bound computed by adding the local bounds from all aggregation variables
  * this local bound may be tighter than the one given by SCIPvarGetUbLocal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multiaggregated variable results in a call to SCIPvarGetUbLocal
+ * calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetUbLocal
  */
 SCIP_Real SCIPcomputeVarUbLocal(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -12007,7 +12010,7 @@ SCIP_RETCODE SCIPaggregateVars(
    SCIP_CALL( SCIPvarGetProbvarSum(&varx, &scalarx, &constantx) );
    SCIP_CALL( SCIPvarGetProbvarSum(&vary, &scalary, &constanty) );
 
-   /* we cannot aggregate multiaggregated variables */
+   /* we cannot aggregate multi-aggregated variables */
    if( SCIPvarGetStatus(varx) == SCIP_VARSTATUS_MULTAGGR || SCIPvarGetStatus(vary) == SCIP_VARSTATUS_MULTAGGR )
       return SCIP_OKAY;
 
@@ -12078,7 +12081,7 @@ SCIP_RETCODE SCIPaggregateVars(
 
 /** converts variable into multi-aggregated variable; this changes the vars array returned from
  *  SCIPgetVars() and SCIPgetVarsData(); Warning! The integrality condition is not checked anymore on
- *  the multiaggregated variable. You must not multiaggregate an integer variable without being sure,
+ *  the multi-aggregated variable. You must not multi-aggregate an integer variable without being sure,
  *  that integrality on the aggregation variables implies integrality on the aggregated variable.
  *
  *  The output flags have the following meaning:
@@ -14308,7 +14311,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
 
    SCIP_CALL( checkStage(scip, "SCIPcomputeLPRelIntPoint", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   /* init point */
+   /* initialize point */
    *point = NULL;
 
    /* exit if there are no columns */
@@ -14826,7 +14829,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointSupNorm(
 
    SCIP_CALL( checkStage(scip, "SCIPcomputeLPRelIntPointSup", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   /* init point */
+   /* initialize point */
    *point = NULL;
 
    /* exit if there are no columns */

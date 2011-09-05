@@ -25,6 +25,7 @@
 #include <assert.h>
 #include <string.h>
 #include <limits.h>
+#include <stdio.h>
 
 #include "scip/cons_setppc.h"
 #include "scip/cons_linear.h"
@@ -61,8 +62,8 @@
 
 #define HASHSIZE_SETPPCCONS      131101 /**< minimal size of hash table in setppc constraint tables */
 #define DEFAULT_PRESOLUSEHASHING   TRUE /**< should hash table be used for detecting redundant constraints in advance */
-#define NMINCOMPARISONS          200000 /**< number for minimal pairwise presol comparisons */
-#define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presol comparisons to repeat pairwise comparison round */
+#define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
+#define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise comparison round */
 
 /*#define VARUSES*/  /* activate variable usage counting, that is necessary for LP and pseudo branching */
 /*#define BRANCHLP*/ /* BRANCHLP is only useful if the ENFOPRIORITY is set to a positive value */
@@ -71,7 +72,7 @@
 #define MAXBRANCHWEIGHT             0.7 /**< maximum weight of both sets in binary set branching */
 #endif
 #define DEFAULT_NPSEUDOBRANCHES       2 /**< number of children created in pseudo branching (0: disable branching) */
-#define DEFAULT_DUALPRESOLVING     TRUE /**< should dual presolving steps be preformed? */
+#define DEFAULT_DUALPRESOLVING     TRUE /**< should dual presolving steps be performed? */
 
 /** constraint handler data */
 struct SCIP_ConshdlrData
@@ -83,7 +84,7 @@ struct SCIP_ConshdlrData
    int                   npseudobranches;    /**< number of children created in pseudo branching (0 to disable branching) */
    SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
    SCIP_Bool             presolusehashing;   /**< should hash table be used for detecting redundant constraints in advance */
-   SCIP_Bool             dualpresolving;     /**< should dual presolving steps be preformed? */
+   SCIP_Bool             dualpresolving;     /**< should dual presolving steps be performed? */
 };
 
 /** constraint data for set partitioning / packing / covering constraints */
@@ -181,7 +182,7 @@ SCIP_RETCODE unlockRounding(
    return SCIP_OKAY;
 }
 
-/** creates constaint handler data for set partitioning / packing / covering constraint handler */
+/** creates constraint handler data for set partitioning / packing / covering constraint handler */
 static
 SCIP_RETCODE conshdlrdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -454,7 +455,7 @@ SCIP_RETCODE consdataFree(
 
 /** prints set partitioning / packing / covering constraint to file stream */
 static
-void consdataPrint(
+SCIP_RETCODE consdataPrint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< set partitioning / packing / covering constraint data */
    FILE*                 file                /**< output file (or NULL for standard output) */
@@ -470,7 +471,9 @@ void consdataPrint(
    for( v = 0; v < consdata->nvars; ++v )
    {
       assert(consdata->vars[v] != NULL);
-      SCIPinfoMessage(scip, file, "+<%s> ", SCIPvarGetName(consdata->vars[v]));
+      SCIPinfoMessage(scip, file, "+");
+      SCIP_CALL( SCIPwriteVarName(scip, file, consdata->vars[v], FALSE) );
+      SCIPinfoMessage(scip, file, " ");
    }
 
    /* print right hand side */
@@ -487,8 +490,10 @@ void consdataPrint(
       break;
    default:
       SCIPerrorMessage("unknown setppc type\n");
-      SCIPABORT();
+      return SCIP_ERROR;
    }
+
+   return SCIP_OKAY;
 }
 
 /** returns the signature bitmask for the given variable */
@@ -1131,7 +1136,7 @@ SCIP_RETCODE dualPresolving(
       SCIPdebugMessage(" -> fixed <%s> == %g\n", SCIPvarGetName(vars[idx]), fixval);
       ++(*nfixedvars);
 
-      /* remnove constraint since i*/
+      /* remove constraint since i*/
       SCIP_CALL( SCIPdelCons(scip, cons) );
       ++(*ndelconss);
    }
@@ -3792,7 +3797,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
          }
       }
 
-      /* perform for dual redundantions */
+      /* perform dual reductions */
       if( conshdlrdata->dualpresolving )
       {
          SCIP_CALL( dualPresolving(scip, cons, nfixedvars, ndelconss, result) );
@@ -4090,7 +4095,7 @@ SCIP_DECL_CONSPRINT(consPrintSetppc)
    assert( conshdlr != NULL );
    assert( cons != NULL );
 
-   consdataPrint(scip, SCIPconsGetData(cons), file);
+   SCIP_CALL( consdataPrint(scip, SCIPconsGetData(cons), file) );
  
    return SCIP_OKAY;
 }
@@ -4147,13 +4152,96 @@ SCIP_DECL_CONSCOPY(consCopySetppc)
 }
 
 /** constraint parsing method of constraint handler */
-#define consParseSetppc NULL
+static
+SCIP_DECL_CONSPARSE(consParseSetppc)
+{
+   SCIP_VAR* var;
+   char varname[SCIP_MAXSTRLEN];
+   SCIP_VAR** vars;
+   int nvars;
+   int varssize;
+   int parselen;
 
+   assert(scip != NULL);
+   assert(success != NULL);
+   assert(str != NULL);
+   assert(name != NULL);
+   assert(cons != NULL);
 
+   *success = TRUE;
 
+   nvars = 0;
+   varssize = 5;
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
 
+   if( str[0] == '0' )
+   {
+      assert(str[1] == ' ');
+      str += 2;
+   }
+   else
+   {
+      while( sscanf(str, "+<%[^>]> %n", varname, &parselen) >= 1 )
+      {
+         str += parselen;
 
+         if( varname[0] == '~' )
+         {
+            var = SCIPfindVar(scip, &varname[1]);
+            if( var != NULL )
+            {
+               SCIP_CALL( SCIPgetNegatedVar(scip, var, &var) );
+            }
+         }
+         else
+         {
+            var = SCIPfindVar(scip, varname);
+         }
+         if( var == NULL )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s>\n", varname);
+            *success = FALSE;
+            break;
+         }
 
+         if( varssize <= nvars )
+         {
+            varssize = SCIPcalcMemGrowSize(scip, varssize+1);
+            SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
+         }
+
+         vars[nvars] = var;
+         ++nvars;
+      }
+   }
+
+   if( *success )
+   {
+      switch( *str )
+      {
+         case '=' :
+            SCIP_CALL( SCIPcreateConsSetpart(scip, cons, name, nvars, vars,
+                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+            break;
+         case '<' :
+            SCIP_CALL( SCIPcreateConsSetpack(scip, cons, name, nvars, vars,
+                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+            break;
+         case '>' :
+            SCIP_CALL( SCIPcreateConsSetcover(scip, cons, name, nvars, vars,
+                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+            break;
+         default:
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "error parsing setppc type\n");
+            *success = FALSE;
+            break;
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
 
 
 /*
@@ -4334,7 +4422,7 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
          &conshdlrdata->presolusehashing, TRUE, DEFAULT_PRESOLUSEHASHING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/setppc/dualpresolving",
-         "should dual presolving steps be preformed?",
+         "should dual presolving steps be performed?",
          &conshdlrdata->dualpresolving, TRUE, DEFAULT_DUALPRESOLVING, NULL, NULL) );
 
    return SCIP_OKAY;

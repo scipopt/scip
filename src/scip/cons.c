@@ -1994,7 +1994,7 @@ SCIP_RETCODE SCIPconshdlrFree(
    return SCIP_OKAY;
 }
 
-/** calls init method of constraint handler */
+/** calls initialization method of constraint handler */
 SCIP_RETCODE SCIPconshdlrInit(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */

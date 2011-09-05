@@ -70,7 +70,7 @@ typedef struct sparseGraph SparseGraph;
  * Local methods (for writing)
  */
 
-/** init graph */
+/** initialize graph */
 static
 SCIP_RETCODE initGraph(
    SCIP*              scip,           /**< SCIP data structure */

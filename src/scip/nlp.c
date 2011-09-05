@@ -323,7 +323,7 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
          SCIP_VAR*   mvar;
          SCIP_Real   mscalar;
 
-         /* var is now multiaggregated, thus replace by scalar * (multaggrconst + sum_j multaggrscalar_j*multaggrvar_j) + constant */
+         /* var is now multi-aggregated, thus replace by scalar * (multaggrconst + sum_j multaggrscalar_j*multaggrvar_j) + constant */
          assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR );
 
          /* allocate array for children and coefficients */
@@ -332,7 +332,7 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
          nchildren = 0;
 
          /* linear part
-          * turn each variable in SCIPvarGetMultaggrVars(var) into an active or multiaggregated one and add corresponding term to summands */
+          * turn each variable in SCIPvarGetMultaggrVars(var) into an active or multi-aggregated one and add corresponding term to summands */
          for( j = 0; j < SCIPvarGetMultaggrNVars(var); ++j )
          {
             mvar      = SCIPvarGetMultaggrVars(var)[j];
@@ -407,7 +407,7 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
    {
       if( SCIPvarIsActive((SCIP_VAR*)tree->vars[i]) || i >= nvarsold )
       {
-         /* a new variable need to be either active or multiaggregated */
+         /* a new variable need to be either active or multi-aggregated */
          assert(i < nvarsold || SCIPvarIsActive((SCIP_VAR*)tree->vars[i]) || SCIPvarGetStatus((SCIP_VAR*)tree->vars[i]) == SCIP_VARSTATUS_MULTAGGR);
          newpos[i] = i - offset;
       }
@@ -459,7 +459,7 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
 
    if( havefixedvar )
    {
-      /* if there are still fixed variables left, then this are newly added multiaggregated variables
+      /* if there are still fixed variables left, then this are newly added multi-aggregated variables
        * it is then save to call this function recursively, since the original active variables should not be moved,
        * i.e., varpos and *newvarsstart will remain valid
        */
@@ -952,7 +952,7 @@ SCIP_RETCODE nlrowAddToLinearCoef(
       {
          int j;
 
-         /* if var is still not active, then it is multiaggregated */
+         /* if var is still not active, then it is multi-aggregated */
          assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
 
          if( SCIPvarGetMultaggrConstant(var) != 0.0 )
@@ -1403,7 +1403,7 @@ SCIP_RETCODE nlrowRemoveFixedLinearCoefPos(
       SCIP_Real coef;
       int i;
 
-      /* if not removed or active, the new variable should be multiaggregated */
+      /* if not removed or active, the new variable should be multi-aggregated */
       assert(SCIPvarGetStatus(nlrow->linvars[pos]) == SCIP_VARSTATUS_MULTAGGR);
 
       var  = nlrow->linvars[pos];
@@ -1412,7 +1412,7 @@ SCIP_RETCODE nlrowRemoveFixedLinearCoefPos(
       /* remove the variable from the row */
       SCIP_CALL( nlrowDelLinearCoefPos(nlrow, set, stat, nlp, pos) );
 
-      /* add multiaggregated term to row */
+      /* add multi-aggregated term to row */
       if( SCIPvarGetMultaggrConstant(var) != 0.0 )
       {
          nlrow->constant += coef * SCIPvarGetMultaggrConstant(var);
@@ -1600,7 +1600,7 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
          assert(SCIPvarGetStatus(var1) == SCIP_VARSTATUS_MULTAGGR);
          assert(coef1 == coef2);  /*lint !e777*/
          assert(constant1 == constant2);  /*lint !e777*/
-         /* square term which variable is multiaggregated
+         /* square term which variable is multi-aggregated
           * elem.coef * x^2 -> elem.coef * (coef1 * (multaggrconstant + sum_i multaggrscalar_i*multaggrvar_i) + constant1)^2
           *    = elem.coef * ( (coef1 * multaggrconstant + constant1)^2 +
           *                    2 * (coef1 * multaggrconstant + constant1) * coef1 * (sum_j multaggrscalar_j*multaggrvar_j) +
@@ -1626,7 +1626,7 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
             }
          }
 
-         /* setup array with indices of multiaggregated variables in quadvars */
+         /* setup array with indices of multi-aggregated variables in quadvars */
          SCIP_CALL( SCIPsetAllocBufferArray(set, &multaggrvaridxs, SCIPvarGetMultaggrNVars(var1)) );
          for( j = 0; j < SCIPvarGetMultaggrNVars(var1); ++j )
          {
@@ -1669,7 +1669,7 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
       assert(var2 != NULL);
       if( SCIPvarIsActive(var1) && !SCIPvarIsActive(var2) )
       {
-         /* if the second variable is multiaggregated, but the first one is not, swap both terms */
+         /* if the second variable is multi-aggregated, but the first one is not, swap both terms */
          SCIP_VAR* tmpvar;
          SCIP_Real tmpcoef;
          SCIP_Real tmpconstant;
@@ -1692,7 +1692,7 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
 
          assert(SCIPvarGetStatus(var1) == SCIP_VARSTATUS_MULTAGGR);
 
-         /* the first variable is multiaggregated, add a constant and sequences of linear and quadratic terms:
+         /* the first variable is multi-aggregated, add a constant and sequences of linear and quadratic terms:
           * elem.coef * x * y -> elem.coef * (coef1 * (multaggrconstant + sum_i multaggrscalar_i*multaggrvar_i) + constant1) * (coef2 * var2 + constant2)
           *    = elem.coef * ( (coef1 * multaggrconstant + constant1) * constant2 +
           *                    (coef1 * multaggrconstant + constant1) * coef2 * var2 +
@@ -1848,7 +1848,7 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
       {
          if( !SCIPvarIsActive(nlrow->quadvars[i]) )
          {
-            /* it can have happened that a new quadratic variable was added that is multiaggregated (when multiplying two multiaggregations)
+            /* it can have happened that a new quadratic variable was added that is multi-aggregated (when multiplying two multi-aggregations)
              * in this case, the variable was only temporarily used and should not be used anymore, thus we can remove it */
             assert(SCIPvarGetStatus(nlrow->quadvars[i]) == SCIP_VARSTATUS_MULTAGGR);
             newpos[i] = -1;
@@ -2343,7 +2343,7 @@ SCIP_RETCODE SCIPnlrowAddLinearCoef(
    {
       SCIP_Real constant;
 
-      /* get corresponding active or multiaggregated variable */
+      /* get corresponding active or multi-aggregated variable */
       constant = 0.0;
       SCIP_CALL( SCIPvarGetProbvarSum(&var, &val, &constant) );
 
@@ -2356,7 +2356,7 @@ SCIP_RETCODE SCIPnlrowAddLinearCoef(
 
       if( !SCIPvarIsActive(var) )
       {
-         /* var should be multiaggregated, so call this function recursively */
+         /* var should be multi-aggregated, so call this function recursively */
          int i;
 
          assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
@@ -2754,7 +2754,7 @@ SCIP_RETCODE SCIPnlrowChgRhs(
    return SCIP_OKAY;
 }
 
-/** removes (or substitutes) all fixed, negated, aggregated, multiaggregated variables from the linear, quadratic, and nonquadratic terms of a nonlinear row */
+/** removes (or substitutes) all fixed, negated, aggregated, multi-aggregated variables from the linear, quadratic, and nonquadratic terms of a nonlinear row */
 SCIP_RETCODE SCIPnlrowRemoveFixedVars(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -4908,7 +4908,7 @@ SCIP_DECL_EVENTEXEC(eventExecNlp)
    }
    else if( SCIP_EVENTTYPE_VARFIXED & etype )
    {
-      /* variable was fixed, aggregated, or multiaggregated */
+      /* variable was fixed, aggregated, or multi-aggregated */
       SCIPdebugMessage( "-> handling variable fixation event, variable <%s>\n", SCIPvarGetName(var) );
       SCIP_CALL( nlpRemoveFixedVar(scip->nlp, SCIPblkmem(scip), scip->set, scip->stat, scip->eventqueue, scip->lp, var) );
    }

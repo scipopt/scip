@@ -1765,7 +1765,7 @@ SCIP_RETCODE addAltLPRow(
    if ( SCIProwIsLocal(row) )
       return SCIP_OKAY;
 
-   /* init data */
+   /* initialize data */
    *colIndex = -1;
    sign = 1.0;
    nNewVars = 0;

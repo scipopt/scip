@@ -26,6 +26,7 @@
 #include <assert.h>
 #include <string.h>
 #include <limits.h>
+#include <stdio.h>
 
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
@@ -81,10 +82,10 @@
 #define HASHSIZE_KNAPSACKCONS    131101 /**< minimal size of hash table in linear constraint tables */
 
 #define DEFAULT_PRESOLPAIRWISE     TRUE /**< should pairwise constraint comparison be performed in presolving? */
-#define NMINCOMPARISONS          200000 /**< number for minimal pairwise presol comparisons */
-#define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presol comparisons to repeat pairwise 
+#define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
+#define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise 
                                          *   comparison round */
-#define DEFAULT_DUALPRESOLVING     TRUE /**< should dual presolving steps be preformed? */
+#define DEFAULT_DUALPRESOLVING     TRUE /**< should dual presolving steps be performed? */
 
 #define MAXCOVERSIZEITERLEWI       1000 /**< maximal size for which LEWI are iteratively separated by reducing the feasible set */
 
@@ -136,7 +137,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             negatedclique;      /**< should negated clique information be used in solving process */
    SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
    SCIP_Bool             presolusehashing;   /**< should hash table be used for detecting redundant constraints in advance */
-   SCIP_Bool             dualpresolving;     /**< should dual presolving steps be preformed? */
+   SCIP_Bool             dualpresolving;     /**< should dual presolving steps be performed? */
 };
 
 
@@ -1081,7 +1082,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    /* this condition is only to check if the size of memory which will be allocated is still positiv( so no error occurs
     * ), which will be necessary after this if condition
     */ 
-   if( (intcap) < 0 || (nmyitems) * (intcap) < 0 || (nmyitems) * (intcap) * ((int) sizeof(*optvalues)) < 0 )
+   if( (intcap) < 0 || (nmyitems) * (intcap) < (intcap) || (nmyitems) * (intcap) < (nmyitems) || (nmyitems) * (intcap) * ((int) sizeof(*optvalues)) < (nmyitems) * (intcap) )
    {
       SCIPdebugMessage("Too much memory will be consumed.\n");
 
@@ -1189,7 +1190,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
     * invalid, a second possibility would be to clear the whole optvalues, which should be more expensive than storing
     * 'nmyitem' values
     */
-   SCIP_CALL( SCIPallocBufferArray(scip, &allcurrminweight, nmyitems - 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &allcurrminweight, nmyitems) );
    allcurrminweight[0] = myweights[0] - minweight;
 
    currminweight = myweights[0] - minweight;
@@ -5620,7 +5621,7 @@ SCIP_RETCODE applyFixings(
          SCIP_CALL( SCIPgetBinvarRepresentative(scip, var, &repvar, &negated) );
 	 assert(repvar != NULL);
 
-	 /* check for multiaggregation */
+	 /* check for multi-aggregation */
 	 if( SCIPvarIsNegated(repvar) )
 	 {
 	    workvar = SCIPvarGetNegatedVar(repvar);
@@ -5634,16 +5635,16 @@ SCIP_RETCODE applyFixings(
 	 }
 
 	 /* @todo maybe resolve the problem that the eliminating of the multi-aggreation leads to a non-knapsack
-          * constraint (converting into a linear constraint), for example the multiaggregation consist of a non-binary
+          * constraint (converting into a linear constraint), for example the multi-aggregation consist of a non-binary
           * variable or due to resolving now their are non-integral coefficients or a non-integral capacity 
           *
           * If repvar is not negated so workwar = repvar, otherwise workvar = 1 - repvar. This means,
           * weight * workvar = weight * (a_1*y_1 + ... + a_n*y_n + c) 
           *
           * The explaination for  the following block:  
-	  * 1a) If repvar is a multiaggregated variable weight * repvar should be replaced by 
+	  * 1a) If repvar is a multi-aggregated variable weight * repvar should be replaced by 
 	  *     weight * (a_1*y_1 + ... + a_n*y_n + c).
-	  * 1b) If repvar is a negated variable of a multiaggregated variable weight * repvar should be replaced by 
+	  * 1b) If repvar is a negated variable of a multi-aggregated variable weight * repvar should be replaced by 
 	  *     weight - weight * (a_1*y_1 + ... + a_n*y_n + c), for better further use here we switch the sign of weight
 	  *     so now we have the replacement -weight + weight * (a_1*y_1 + ... + a_n*y_n + c).
 	  * 2)  For all replacement variable we check:
@@ -5671,7 +5672,7 @@ SCIP_RETCODE applyFixings(
 
 	    if( !SCIPisIntegral(scip, weight * aggrconst) )
             {
-               SCIPerrorMessage("try to resolve a multiaggregation with a non-integral value for weight*aggrconst = %g\n", weight*aggrconst);
+               SCIPerrorMessage("try to resolve a multi-aggregation with a non-integral value for weight*aggrconst = %g\n", weight*aggrconst);
                return SCIP_ERROR;
 	    }
             
@@ -5686,12 +5687,12 @@ SCIP_RETCODE applyFixings(
 
 	       if( !SCIPvarIsBinary(aggrvars[i]) )
                {
-                  SCIPerrorMessage("try to resolve a multiaggregation with a non-binary variable <%s>\n", aggrvars[i]);
+                  SCIPerrorMessage("try to resolve a multi-aggregation with a non-binary variable <%s>\n", aggrvars[i]);
                   return SCIP_ERROR;
                }
 	       if( !SCIPisIntegral(scip, weight * aggrscalars[i]) )
                {
-                  SCIPerrorMessage("try to resolve a multiaggregation with a non-integral value for weight*aggrscalars = %g\n", weight*aggrscalars[i]);
+                  SCIPerrorMessage("try to resolve a multi-aggregation with a non-integral value for weight*aggrscalars = %g\n", weight*aggrscalars[i]);
                   return SCIP_ERROR;
                }
 	       /* if the new coefficent is smaller than zero, we need to add the negated variable instead and adjust the capacity */
@@ -8680,7 +8681,8 @@ SCIP_DECL_CONSPRINT(consPrintKnapsack)
    {
       if( i > 0 )
          SCIPinfoMessage(scip, file, " ");
-      SCIPinfoMessage(scip, file, "%+"SCIP_LONGINT_FORMAT"<%s>", consdata->weights[i], SCIPvarGetName(consdata->vars[i]));
+      SCIPinfoMessage(scip, file, "%+"SCIP_LONGINT_FORMAT, consdata->weights[i]);
+      SCIP_CALL( SCIPwriteVarName(scip, file, consdata->vars[i], FALSE) );
    }
    SCIPinfoMessage(scip, file, " <= %"SCIP_LONGINT_FORMAT"", consdata->capacity);
    
@@ -8724,9 +8726,87 @@ SCIP_DECL_CONSCOPY(consCopyKnapsack)
 }
 
 /** constraint parsing method of constraint handler */
-#define consParseKnapsack NULL
+static
+SCIP_DECL_CONSPARSE(consParseKnapsack)
+{
+   SCIP_VAR* var;
+   SCIP_Longint weight;
+   char varname[SCIP_MAXSTRLEN];
+   SCIP_VAR** vars;
+   SCIP_Longint* weights;
+   SCIP_Longint capacity;
+   int nvars;
+   int varssize;
+   int parselen;
 
+   assert(scip != NULL);
+   assert(success != NULL);
+   assert(str != NULL);
+   assert(name != NULL);
+   assert(cons != NULL);
 
+   *success = TRUE;
+
+   nvars = 0;
+   varssize = 5;
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars,    varssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &weights, varssize) );
+
+   while( sscanf(str, "%"SCIP_LONGINT_FORMAT"<%[^>]>%n", &weight, varname, &parselen) >= 2 )
+   {
+      str += parselen;
+
+      if( varname[0] == '~' )
+      {
+         var = SCIPfindVar(scip, &varname[1]);
+         if( var != NULL )
+         {
+            SCIP_CALL( SCIPgetNegatedVar(scip, var, &var) );
+         }
+      }
+      else
+      {
+         var = SCIPfindVar(scip, varname);
+      }
+      if( var == NULL )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s>\n", varname);
+         *success = FALSE;
+         break;
+      }
+
+      if( varssize <= nvars )
+      {
+         varssize = SCIPcalcMemGrowSize(scip, varssize+1);
+         SCIP_CALL( SCIPreallocBufferArray(scip, &vars,    varssize) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, &weights, varssize) );
+      }
+
+      vars[nvars]    = var;
+      weights[nvars] = weight;
+      ++nvars;
+   }
+
+   if( *success )
+   {
+      if( sscanf(str, " <= %"SCIP_LONGINT_FORMAT, &capacity) != 1  )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "error parsing capacity\n");
+         *success = FALSE;
+      }
+   }
+
+   if( *success )
+   {
+      SCIP_CALL( SCIPcreateConsKnapsack(scip, cons, name, nvars, vars, weights, capacity,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+   }
+
+   SCIPfreeBufferArray(scip, &vars);
+   SCIPfreeBufferArray(scip, &weights);
+
+   return SCIP_OKAY;
+}
 
 /*
  * Event handler
@@ -8883,7 +8963,7 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
          &conshdlrdata->presolusehashing, TRUE, DEFAULT_PRESOLUSEHASHING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/knapsack/dualpresolving",
-         "should dual presolving steps be preformed?",
+         "should dual presolving steps be performed?",
          &conshdlrdata->dualpresolving, TRUE, DEFAULT_DUALPRESOLVING, NULL, NULL) );
 
    return SCIP_OKAY;

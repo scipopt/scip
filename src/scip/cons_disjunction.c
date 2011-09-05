@@ -511,7 +511,7 @@ SCIP_DECL_CONSPRESOL(consPresolDisjunction)
 
       if( !SCIPconsIsModifiable(conss[c]) && consdata->nconss == 1 )
       {
-         /* add constaint to the problem */
+         /* add constraint to the problem */
          if( !SCIPconsIsActive(consdata->conss[0]) )
          {
             SCIP_CALL( SCIPaddCons(scip, consdata->conss[0]) );

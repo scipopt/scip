@@ -405,7 +405,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    SCIP_Bool             mergemultiples      /**< should multiple occurrences of a var be replaced by a single coeff? */
    );
 
-/** flattens aggeregation graph of multiaggregated variable in order to avoid exponential recursion lateron */
+/** flattens aggeregation graph of multi-aggregated variable in order to avoid exponential recursion lateron */
 extern
 SCIP_RETCODE SCIPvarFlattenAggregationGraph(
    SCIP_VAR*             var,                /**< problem variable */
@@ -740,9 +740,9 @@ SCIP_RETCODE SCIPvarChgUbDive(
    SCIP_Real             newbound            /**< new bound for variable */
    );
 
-/** for a multiaggregated variable, gives the local lower bound computed by adding the local bounds from all aggregation variables
+/** for a multi-aggregated variable, gives the local lower bound computed by adding the local bounds from all aggregation variables
  * this lower bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multiaggregated variable is not allowed
+ * calling this function for a non-multi-aggregated variable is not allowed
  */
 extern
 SCIP_Real SCIPvarGetMultaggrLbLocal(
@@ -750,9 +750,9 @@ SCIP_Real SCIPvarGetMultaggrLbLocal(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** for a multiaggregated variable, gives the local upper bound computed by adding the local bounds from all aggregation variables
+/** for a multi-aggregated variable, gives the local upper bound computed by adding the local bounds from all aggregation variables
  * this upper bound may be tighter than the one given by SCIPvarGetUbLocal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multiaggregated variable is not allowed
+ * calling this function for a non-multi-aggregated variable is not allowed
  */
 extern
 SCIP_Real SCIPvarGetMultaggrUbLocal(
@@ -760,9 +760,9 @@ SCIP_Real SCIPvarGetMultaggrUbLocal(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** for a multiaggregated variable, gives the global lower bound computed by adding the global bounds from all aggregation variables
+/** for a multi-aggregated variable, gives the global lower bound computed by adding the global bounds from all aggregation variables
  * this global bound may be tighter than the one given by SCIPvarGetLbGlobal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multiaggregated variable is not allowed
+ * calling this function for a non-multi-aggregated variable is not allowed
  */
 extern
 SCIP_Real SCIPvarGetMultaggrLbGlobal(
@@ -770,9 +770,9 @@ SCIP_Real SCIPvarGetMultaggrLbGlobal(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** for a multiaggregated variable, gives the global upper bound computed by adding the global bounds from all aggregation variables
+/** for a multi-aggregated variable, gives the global upper bound computed by adding the global bounds from all aggregation variables
  * this upper bound may be tighter than the one given by SCIPvarGetUbGlobal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multiaggregated variable is not allowed
+ * calling this function for a non-multi-aggregated variable is not allowed
  */
 extern
 SCIP_Real SCIPvarGetMultaggrUbGlobal(

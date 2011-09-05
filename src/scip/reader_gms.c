@@ -182,7 +182,7 @@ void appendLine(
       endLine(scip, file, linebuffer, linecnt);
 }
 
-/** checks string for occurences of '#', '*', '+', '/', and '-' and replaces those by '_' */
+/** checks string for occurrences of '#', '*', '+', '/', and '-' and replaces those by '_' */
 static
 void conformName(
    char*                      name                /**< string to adjust */

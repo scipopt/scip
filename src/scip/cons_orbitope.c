@@ -405,14 +405,14 @@ void computeSCTable(
    }
 #endif
 
-   /* init first row */
+   /* initialize first row */
    for (j = 0; j < nblocks; ++j)
    {
       weights[0][j] = vals[0][j];
       cases[0][j] = 3;
    }
 
-   /* init first column */
+   /* initialize first column */
    for (i = 1; i < nspcons; ++i)
    {
       weights[i][0] = weights[i-1][0] + vals[i][0];
@@ -486,7 +486,7 @@ void computeSCTableFixTriangle(
    }
 #endif
 
-   /* init diagonal */
+   /* initialize diagonal */
    minvalue = vals[0][0];
    weights[0][0] = minvalue;
    cases[0][0] = 3;
@@ -509,7 +509,7 @@ void computeSCTableFixTriangle(
       weights[j][j] = minvalue;
    }
 
-   /* init first column */
+   /* initialize first column */
    for (i = 1; i < nspcons; ++i)
    {
       weights[i][0] = weights[i-1][0] + vals[i][0];
@@ -2326,7 +2326,7 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
       int j;
       for (i = 0; i < nspcons; ++i)
       {
-         /* init obj to infinity */
+         /* initialize obj to infinity */
          obj = SCIPinfinity(scip);
          for (j = 0; j < nblocks; ++j)
          {
