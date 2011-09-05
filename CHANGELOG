@@ -3,6 +3,8 @@ SCIP version 2.0.3
 
 fixed bugs:
 - fixed bug in heur_twoopt.c: ncolsforsorting was not initialized correctly
+- LP solution status is now checked when checking root LP solution. Otherwise, due to different time measurements,
+  it might happen that the LP solving was stopped due to the time limit, but SCIP did not reach the limit, yet.
 - fixed bug in bugfix in lp.c: resetting the lp iteration limit when performing another simplex iteration to verify "objective limit reached" lead to set the LP solution status to unsolved, which resulted in an LP error
 
 SCIP version 2.0.2
@@ -52,8 +54,6 @@ fixed bugs:
 - fixed bug in conflict.c, infeasibility analysis with big values led to wrong result
 - fixed bug in cons_soc.c w.r.t. upgrading from quadratic constraints with finite left-hand-side
 - fixed bug concerning the case of empty LP rows in shiftandpropagate
-- LP solution status is now checked when checking root LP solution. Otherwise, due to different time measurements,
-  it might happen that the LP solving was stopped due to the time limit, but SCIP did not reach the limit, yet.
 
 performance improvements:
 - shiftandpropagate-heuristic uses optimized data structures and produces no memory overhead anymore
