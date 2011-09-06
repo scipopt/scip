@@ -6012,7 +6012,7 @@ SCIP_RETCODE lpFlushDelCols(
       int i;
 
       assert(!lp->diving);
-      SCIPdebugMessage("flushing col deletions: shrink LP from %d to %d colums\n", lp->nlpicols, lp->lpifirstchgcol);
+      SCIPdebugMessage("flushing col deletions: shrink LP from %d to %d columns\n", lp->nlpicols, lp->lpifirstchgcol);
       SCIP_CALL( SCIPlpiDelCols(lp->lpi, lp->lpifirstchgcol, lp->nlpicols-1) );
       for( i = lp->lpifirstchgcol; i < lp->nlpicols; ++i )
       {

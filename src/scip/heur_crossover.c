@@ -345,7 +345,7 @@ static SCIP_RETCODE fixVariables(
    fixingrate = (SCIP_Real)fixingcounter / (SCIP_Real)(MAX(nbinvars + nintvars, 1));
   
    /* if all variables were fixed or amount of fixed variables is insufficient, skip residual part of 
-    * subproblem creation ans abort immediately */
+    * subproblem creation and abort immediately */
    *success = fixingcounter < nbinvars + nintvars && fixingrate >= heurdata->minfixingrate;
 
    return SCIP_OKAY;

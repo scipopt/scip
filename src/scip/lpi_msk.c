@@ -3621,7 +3621,7 @@ SCIP_RETCODE checkState1(
          SCIPdebugMessage("STATE[%d]: %c[%d] = inf\n", optimizecount, xc, i);
          break;
       default:
-         SCIPdebugMessage("STATE[%d]: %c[%d] = unknow stata <%d>\n", optimizecount, xc, i, sk[i]);
+         SCIPdebugMessage("STATE[%d]: %c[%d] = unknown status <%d>\n", optimizecount, xc, i, sk[i]);
          break;
       }  /*lint !e788*/
    }

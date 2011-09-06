@@ -219,7 +219,7 @@ SCIP_RETCODE SCIPprobCopy(
       /* evaluate result */
       if ( result != SCIP_DIDNOTRUN && result != SCIP_SUCCESS )
       {
-         SCIPerrorMessage("prodata copying method returned invalid result <%d>\n", result);
+         SCIPerrorMessage("probdata copying method returned invalid result <%d>\n", result);
          return SCIP_INVALIDRESULT;
       }
 

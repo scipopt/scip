@@ -523,7 +523,7 @@ SCIP_RETCODE SCIPbranchcandAddExternCand(
    {
       /* candidate has equal priority as the current maximum:
        * move away the first non-maximal priority candidate, move the current candidate to the correct
-       * slot (binaries first, integers next, implicits next, continuous last) and increase the number 
+       * slot (binaries first, integers next, implicit integers next, continuous last) and increase the number 
        * of maximal priority candidates
        */
       if( insertpos != branchcand->nprioexterncands )
@@ -644,7 +644,7 @@ SCIP_Bool SCIPbranchcandContainsExternCand(
    if( branchpriority == branchcand->externmaxpriority )
    {
       /* variable has equal priority as the current maximum:
-       * look for it in the correct slot (binaries first, integers next, implicits next, continuous last)
+       * look for it in the correct slot (binaries first, integers next, implicit integers next, continuous last)
        */
       if( vartype == SCIP_VARTYPE_BINARY )
       {
@@ -847,7 +847,7 @@ void branchcandInsertPseudoCand(
    {
       /* candidate has equal priority as the current maximum:
        * move away the first non-maximal priority candidate, move the current candidate to the correct
-       * slot (binaries first, integers next, implicits last) and increase the number of maximal priority candidates
+       * slot (binaries first, integers next, implicit integers last) and increase the number of maximal priority candidates
        */
       if( insertpos != branchcand->npriopseudocands )
       {

@@ -2402,7 +2402,7 @@ SCIP_DECL_DISPOUTPUT(dispOutputSols)
    
    if( !valid )
    {
-      SCIPinfoMessage(scip, file, "ToMany");
+      SCIPinfoMessage(scip, file, "TooMany");
    }
    else
    {

@@ -2042,7 +2042,7 @@ SCIP_RETCODE enlargeMinweights(
  *  for 
  *    S = { x in {0,1}^|N| : sum_{j in N} a_j x_j <= a_0 }; 
  *  uses sequential up-lifting for the variables in F, sequential down-lifting for the variable in M_2, and 
- *  sequential up-lifting for the variabels in R; procedure can be used to strengthen minimal cover inequalities and 
+ *  sequential up-lifting for the variables in R; procedure can be used to strengthen minimal cover inequalities and 
  *  extended weight inequalities.   
  */ 
 static
@@ -2646,7 +2646,7 @@ SCIP_RETCODE separateSequLiftedMinimalCoverInequality(
     *      S = { x in {0,1}^|N|   : sum_{j in N}   a_j x_j <= a_0 }, 
     *
     * uses sequential up-lifting for the variables in F, sequential down-lifting for the variable in C_2 and sequential 
-    * up-lifting for the variabels in R according to the second level lifting sequence    
+    * up-lifting for the variables in R according to the second level lifting sequence    
     */ 
    SCIP_CALL( sequentialUpAndDownLifting(scip, vars, nvars, ntightened, weights, capacity, solvals, varsC1, varsC2, varsF,
          varsR, nvarsC1, nvarsC2, nvarsF, nvarsR, nvarsC1 - 1, liftcoefs, &cutact, &liftrhs) );
@@ -4023,7 +4023,7 @@ SCIP_RETCODE delCoefPos(
                      break;
                   }
                /* if we reached the end in the for loop, it means we have deleted the last element of the clique with
-                * the biggest index, so decrease the number of negeated cliques 
+                * the biggest index, so decrease the number of negated cliques 
                 */
                if( i == consdata->nvars )
                   --(consdata->nnegcliques);
@@ -4691,7 +4691,7 @@ SCIP_RETCODE propagateCons(
          /* add last clique minweightsum */
          minweightsum += localminweightsum;
 
-         SCIPdebugMessage("knapsack constraint <%s> has minimum weigth sum of <%"SCIP_LONGINT_FORMAT">\n", 
+         SCIPdebugMessage("knapsack constraint <%s> has minimum weight sum of <%"SCIP_LONGINT_FORMAT">\n", 
             SCIPconsGetName(cons), minweightsum + consdata->onesweightsum );
 
          /* check, if weights of fixed variables don't exceeds knapsack capacity */
@@ -5638,10 +5638,10 @@ SCIP_RETCODE applyFixings(
           * constraint (converting into a linear constraint), for example the multi-aggregation consist of a non-binary
           * variable or due to resolving now their are non-integral coefficients or a non-integral capacity 
           *
-          * If repvar is not negated so workwar = repvar, otherwise workvar = 1 - repvar. This means,
+          * If repvar is not negated so workvar = repvar, otherwise workvar = 1 - repvar. This means,
           * weight * workvar = weight * (a_1*y_1 + ... + a_n*y_n + c) 
           *
-          * The explaination for  the following block:  
+          * The explanation for  the following block:  
 	  * 1a) If repvar is a multi-aggregated variable weight * repvar should be replaced by 
 	  *     weight * (a_1*y_1 + ... + a_n*y_n + c).
 	  * 1b) If repvar is a negated variable of a multi-aggregated variable weight * repvar should be replaced by 
@@ -5651,8 +5651,8 @@ SCIP_RETCODE applyFixings(
 	  * 2a) weight * a_i < 0 than we add -weight * a_i * y_i_neg to the constraint and adjust the capacity through 
 	  *     capacity -= weight * a_i caused by the negation of y_i.
 	  * 2b) weight * a_i >= 0 than we add weight * a_i * y_i to the constraint.
-	  * 3a) If repvar was not negated we need to substract weight * c from capacity.
-	  * 3b) If repvar was negated we need to substract weight * (c - 1) from capacity(note we switched the sign of 
+	  * 3a) If repvar was not negated we need to subtract weight * c from capacity.
+	  * 3b) If repvar was negated we need to subtract weight * (c - 1) from capacity(note we switched the sign of 
 	  *     weight in this case.
 	  */
 	 if( SCIPvarGetStatus(workvar) == SCIP_VARSTATUS_MULTAGGR )

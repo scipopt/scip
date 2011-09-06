@@ -434,10 +434,10 @@ SCIP_Bool getNextLine(
 
       if( last == NULL )
       {
-         SCIPwarningMessage("we read %d characters from the file; these might indicates an corrupted input file!\n", 
+         SCIPwarningMessage("we read %d characters from the file; this might indicate a corrupted input file!\n", 
             FZN_BUFFERLEN - 2);
          fzninput->linebuf[FZN_BUFFERLEN-2] = '\0';
-         SCIPdebugMessage("the buffer might be currented\n");
+         SCIPdebugMessage("the buffer might be corrupted\n");
       }
       else
       {
@@ -1511,7 +1511,7 @@ void parseRange(
    /* check if upper bound notation fits which lower bound notation */
    if( fzninput->hasdot != (*type == FZN_FLOAT) )
    {
-      SCIPwarningMessage("lower bound and upper bound dismatch in vlaue type, assume %s variable type\n", 
+      SCIPwarningMessage("lower bound and upper bound mismatch in value type, assume %s variable type\n", 
          fzninput->hasdot ? "an integer" : "a continuous");
    }
 }
@@ -3084,7 +3084,7 @@ CREATE_CONSTRAINT(createComparisonOpCons)
     * 'ge' -- greater or equal than 
     *         => these are comparison constraints
     * 'plus'   -- addition
-    * 'minus'  -- substraction
+    * 'minus'  -- subtraction
     * 'negate' -- negation
     *             => these are aggregation constraints
     * 'times' -- multiplication

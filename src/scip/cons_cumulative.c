@@ -2505,7 +2505,7 @@ SCIP_RETCODE propagateCores(
    assert(*cutoff ==  FALSE);
    assert(*initialized ==  FALSE);
 
-   SCIPdebugMessage("check/propgate cores of cumulative condition of constraint <%s>\n", SCIPconsGetName(cons));
+   SCIPdebugMessage("check/propagate cores of cumulative condition of constraint <%s>\n", SCIPconsGetName(cons));
 
    SCIP_CALL(SCIPallocBufferArray(scip, &cores, nvars) );
    SCIP_CALL(SCIPallocBufferArray(scip, &fixeds, nvars) );
@@ -4280,7 +4280,7 @@ SCIP_RETCODE analyzeShortConflictEdgeFinding(
 #ifdef SCIP_DEBUG
       if( remaining >= inferdiff )
       {
-         SCIPdebugMessage("enough energ for C-c_i\n");
+         SCIPdebugMessage("enough energy for C-c_i\n");
       }
       if( energy + inferenergy > capacity * delta_omega )
       {
@@ -5030,7 +5030,7 @@ SCIP_RETCODE checkOverload(
    assert(initialized != NULL);
    assert(cutoff != NULL);
    
-   SCIPdebugMessage("check/propgate overload of cumulative condition of constraint <%s>\n", SCIPconsGetName(cons));
+   SCIPdebugMessage("check/propagate overload of cumulative condition of constraint <%s>\n", SCIPconsGetName(cons));
 
    SCIP_CALL( SCIPallocBufferArray(scip, &lcts, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lct_ids, nvars) );
@@ -7414,7 +7414,7 @@ SCIP_RETCODE SCIPcreateConsCumulative(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even

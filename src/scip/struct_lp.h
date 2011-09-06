@@ -30,7 +30,7 @@
  *  The reduced costs are defined as
  *     redcost = obj - A^T * y
  *  and must be   nonnegative, if the corresponding lb is nonnegative,
- *                zero,        if the corresponging lb is negative.
+ *                zero,        if the corresponding lb is negative.
  *
  *  The main datastructures for storing an LP are the rows and the columns.
  *  A row can live on its own (if it was created by a separator), or as SCIP_LP

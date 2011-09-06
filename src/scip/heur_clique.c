@@ -774,7 +774,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    if( lpstatus == SCIP_LPSOLSTAT_INFEASIBLE || lpstatus == SCIP_LPSOLSTAT_OBJLIMIT || backtrackcutoff ) 
    {
       /* in case the last fixing in both direction led to infeasibility or to a reached objlimit than our conflict will
-       * only include all variabkle before that last fixing 
+       * only include all variable before that last fixing 
        */
       shortconflict = cutoff && (nonefixvars > 0);
 

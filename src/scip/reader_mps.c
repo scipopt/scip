@@ -552,7 +552,7 @@ SCIP_Bool mpsinputReadLine(
        * Initially comment marks '$' are only allowed in the beginning
        * of the 2nd and 3rd name field. We test all fields but the first.
        * This makes no difference, since if the $ is at the start of a value
-       * field, the line will be errornous anyway.
+       * field, the line will be erroneous anyway.
        */
       do
       {
@@ -2176,7 +2176,7 @@ SCIP_RETCODE readIndicators(
 	 {
 	    if ( ! SCIPisEQ(scip, lhs, rhs) )
 	    {
-	       SCIPerrorMessage("ranged row <%s> is not allowd in indicator constraints.\n", mpsinputField2(mpsi));
+	       SCIPerrorMessage("ranged row <%s> is not allowed in indicator constraints.\n", mpsinputField2(mpsi));
 	       mpsinputSyntaxerror(mpsi);
 	       return SCIP_OKAY;
 	    }

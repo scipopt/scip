@@ -301,7 +301,7 @@ SCIP_RETCODE applyVboundsFixings(
       {
          /* fix variable to lower bound */
          SCIP_CALL( SCIPfixVarProbing(scip, vars[v], SCIPvarGetLbLocal(vars[v])) );
-         SCIPdebugMessage("fixing %d: variable <%s> to lower bound <%g> (%d pseudo conds)\n", 
+         SCIPdebugMessage("fixing %d: variable <%s> to lower bound <%g> (%d pseudo cands)\n", 
             v, SCIPvarGetName(vars[v]), SCIPvarGetLbLocal(vars[v]), SCIPgetNPseudoBranchCands(scip));
       }
       else

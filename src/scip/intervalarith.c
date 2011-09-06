@@ -1548,7 +1548,7 @@ SCIP_Real SCIPintervalPowerScalarIntegerInf(
       SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
 
       /* use a binary exponentiation algorithm:
-       * consider the binary respresentation of n: n = sum_i 2^i d_i with d_i \in {0,1}
+       * consider the binary representation of n: n = sum_i 2^i d_i with d_i \in {0,1}
        * then x^n = prod_{i:d_i=1} x^(2^i)
        * in the following, we loop over i=1,..., thereby storing x^(2^i) in z
        * whenever d_i is 1, we multiply result with x^(2^i) (the current z)

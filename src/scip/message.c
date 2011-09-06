@@ -868,7 +868,7 @@ size_t SCIPmessagehdlrGetNThreads(
 }
 
 /** gets number of current thread as assigned by message handler hashmap
- * assignes a new number to the thread if new */
+ * assigns a new number to the thread if new */
 extern
 size_t SCIPmessagehdlrGetThreadNum(
    void

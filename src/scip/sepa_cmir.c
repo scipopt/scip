@@ -469,7 +469,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
    SCIP_CALL( SCIPallocBufferArray(scip, &testeddeltas, 3 + 2*(nintvars+2)) );
 
    /* As in Marchand's version. Use the absolute value of the coefficients of the integer variables (lying 
-    * stricly between its bounds) in the constructed mixed knapsack set, i.e., 
+    * strictly between its bounds) in the constructed mixed knapsack set, i.e., 
     * N* = { |alpha'_j| : j in N, alpha'_j != 0 and l_j < x*_j < u_j }
     */ 
          
@@ -967,7 +967,7 @@ SCIP_RETCODE aggregation(
                   continue;
                
                /* for selected real variable y_k, select constraint r with best score SCORE_r with r in P\Q, 
-                * where P\Q is the set of constraints not yet involved in the aggregation zet
+                * where P\Q is the set of constraints not yet involved in the aggregation set
                 */
                assert(!SCIPisInfinity(scip, -SCIProwGetLhs(nonzrows[r])) || rowlhsscores[lppos] == 0.0);
                assert(!SCIPisInfinity(scip, SCIProwGetRhs(nonzrows[r])) || rowrhsscores[lppos] == 0.0);

@@ -232,7 +232,7 @@ SCIP_RETCODE SCIPheurPassSolTrySol(
 	 if ( heurdata->sol != NULL )
 	    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
 
-	 SCIPdebugMessage("Recieved solution of value %g.\n", SCIPgetSolOrigObj(scip, sol)); 
+	 SCIPdebugMessage("Received solution of value %g.\n", SCIPgetSolOrigObj(scip, sol)); 
 	 SCIP_CALL( SCIPcreateSolCopy(scip, &heurdata->sol, sol) );
 	 SCIP_CALL( SCIPunlinkSol(scip, heurdata->sol) );
 	 SCIPsolSetHeur(heurdata->sol, heur);

@@ -545,7 +545,7 @@ SCIP_RETCODE constructSNFRelaxation(
     *   2. store for x_j that y'_j is the associated real variable in the 0-1 single node flow relaxation. 
     *  
     * start with non-binary variables because a binary variable x_j which is involved in a used variable bound 
-    * imposed on a non-binaray variable y_j has to be handled together with the non-binaray variable y_j. 
+    * imposed on a non-binary variable y_j has to be handled together with the non-binary variable y_j. 
     */
    SCIPdebugMessage("transformation for NONBINARY variables (nnonbinvars=%d):\n", nnonzcolsnonbinary);
 
@@ -1276,7 +1276,7 @@ SCIP_RETCODE getFlowCover(
     *   put j into C1,             if j in N1 and x*_j = 1, 
     *   put j into C2,             if j in N2 and x*_j = 1, 
     *   put j into N2\C2,          if j in N2 and x*_j = 0 
-    * and get the set of the remaing variables
+    * and get the set of the remaining variables
     */
    SCIPdebugMessage("0. Fix some variables in advance:\n");
    nitems = 0;
@@ -1362,7 +1362,7 @@ SCIP_RETCODE getFlowCover(
     * or 
     * 2. to a knapsack problem in maximization form, such that all variables in the knapsack constraint have 
     *    positive integer weights and the constraint is an "<=" constraint, by complementing all variables in N1
-    *    and multilying the constraint by a suitable scalar C
+    *    and multiplying the constraint by a suitable scalar C
     *
     *    (KP^SNF_int)  max sum_{j in N1} ( 1 - x*_j ) z°_j + sum_{j in N2} x*_j z_j
     *                      sum_{j in N1}        C u_j z°_j + sum_{j in N2} C u_j  z_j <= c 
@@ -1398,7 +1398,7 @@ SCIP_RETCODE getFlowCover(
    }
    /* get capacity of knapsack constraint in KP^SNF_rat */
    transcapacityreal = - rhs + flowcoverweight + n1itemsweight;
-   SCIPdebugMessage("     transcapacity = -rhs(%g) + flowcoverweight(%g) + n1itmesweight(%g) = %g\n", 
+   SCIPdebugMessage("     transcapacity = -rhs(%g) + flowcoverweight(%g) + n1itemsweight(%g) = %g\n", 
       rhs, flowcoverweight, n1itemsweight, transcapacityreal);
 
    /* there exists no flow cover if the capacity of knapsack constraint in KP^SNF_rat after fixing 

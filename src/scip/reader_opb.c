@@ -1664,7 +1664,7 @@ SCIP_RETCODE getBinVarsRepresentatives(
 
          if( vars[v] == NULL )
          {
-            SCIPdebugMessage("A variable coundn't retransformed to an original variable.\n");
+            SCIPdebugMessage("A variable couldn't retransformed to an original variable.\n");
             return SCIP_INVALIDDATA;
          }
          if( SCIPisEQ(scip, scalar, -1.0) && SCIPisEQ(scip, constant, 1.0) )
@@ -1675,7 +1675,7 @@ SCIP_RETCODE getBinVarsRepresentatives(
          {
             if( !SCIPisEQ(scip, scalar, 1.0) || !SCIPisZero(scip, constant) )
             {
-               SCIPdebugMessage("A variable coundn't retransformed to an original variable or a negated variable of an original variable (scalar = %g, constant = %g).\n", scalar, constant);
+               SCIPdebugMessage("A variable couldn't retransformed to an original variable or a negated variable of an original variable (scalar = %g, constant = %g).\n", scalar, constant);
                return SCIP_INVALIDDATA;
             }
          }
@@ -2274,7 +2274,7 @@ SCIP_RETCODE writeOpbObjective(
       if( objsense == SCIP_OBJSENSE_MAXIMIZE )
          mult *= -1;
       
-      SCIPdebugMessage("print objective function multiplyed with %"SCIP_LONGINT_FORMAT"\n", mult);
+      SCIPdebugMessage("print objective function multiplied with %"SCIP_LONGINT_FORMAT"\n", mult);
       
       appendBuffer(scip, file, linebuffer, &linecnt, "min:");
 

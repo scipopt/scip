@@ -383,7 +383,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeBounds)
          var = SCIPfindVar(scip, varname);
 
          if( var == NULL )
-            SCIPdialogMessage(scip, NULL, "variable <%s> does not exsist\n", varname);
+            SCIPdialogMessage(scip, NULL, "variable <%s> does not exist\n", varname);
       }
       while( var == NULL );
 

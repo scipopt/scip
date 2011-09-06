@@ -151,7 +151,7 @@ typedef struct SCIP_VarData SCIP_VARDATA;         /**< user variable data */
  *  - sourcedata      : variable data of the source variable which should get copied
  *  - varmap,         : a hashmap which stores the mapping of source variables to corresponding target variables
  *  - consmap,        : a hashmap which stores the mapping of source constraints to corresponding target constraints
- *  - targetvar       : variable of the (targert) SCIP (targetvar is the copy of sourcevar)
+ *  - targetvar       : variable of the (target) SCIP (targetvar is the copy of sourcevar)
  *  - targetdata      : pointer to store created copy of the variable data for the (target) SCIP
  *
  *  output:

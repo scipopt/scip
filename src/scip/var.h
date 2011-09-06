@@ -493,7 +493,7 @@ void SCIPvarSetNamePointer(
 
 /** informs variable that it will be removed from the problem; adjusts probindex and removes variable from the
  *  implication graph;
- *  If 'final' is TRUE, the thorough implication graph removal is not performend. Instead, only the
+ *  If 'final' is TRUE, the thorough implication graph removal is not performed. Instead, only the
  *  variable bounds and implication data structures of the variable are freed. Since in the final removal
  *  of all variables from the transformed problem, this deletes the implication graph completely and is faster
  *  than removing the variables one by one, each time updating all lists of the other variables.

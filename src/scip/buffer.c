@@ -181,7 +181,7 @@ SCIP_RETCODE SCIPbufferReallocMem(
    assert(buffer->firstfree >= 1);
 
    /* Search the pointer in the buffer list
-    * Usally, buffers are allocated and freed like a stack, such that the currently used pointer is
+    * Usually, buffers are allocated and freed like a stack, such that the currently used pointer is
     * most likely at the end of the buffer list.
     */
    for( bufnum = buffer->firstfree-1; bufnum >= 0 && buffer->data[bufnum] != *ptr; --bufnum )
@@ -232,7 +232,7 @@ void SCIPbufferFreeMem(
    assert(dummysize == 0);
 
    /* Search the pointer in the buffer list
-    * Usally, buffers are allocated and freed like a stack, such that the freed pointer is
+    * Usually, buffers are allocated and freed like a stack, such that the freed pointer is
     * most likely at the end of the buffer list.
     */
    for( bufnum = buffer->firstfree-1; bufnum >= 0 && buffer->data[bufnum] != *ptr; --bufnum )

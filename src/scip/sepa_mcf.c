@@ -2080,10 +2080,10 @@ SCIP_RETCODE extractFlow(
       rowcommodity[r] = -1;
 
    /*    (b) As long as there are flow conservation candidates left:
-    *        (i) Create new commodity and use first flow conservation constraint as newrow.
-    *       (ii) Add newrow to commodity, update pluscom/minuscom accordingly.
+    *        (i) Create new commodity and use first flow conservation constraint as new row.
+    *       (ii) Add new row to commodity, update pluscom/minuscom accordingly.
     *      (iii) For the newly added columns search for an incident flow conservation constraint. Pick the one of highest ranking.
-    *       (iv) If found, set newrow to this row and goto (ii).
+    *       (iv) If found, set new row to this row and goto (ii).
     */
    maxnnodes = 0;
    nflowrows = 0;
@@ -2816,7 +2816,7 @@ SCIP_RETCODE extractNodes(
       BMSclearMemoryArray(rowprocessed, nrows);
 
       /* identify flow conservation constraints in other commodities that match this node;
-       * search for flow rows in the column vectors of the indicent columns
+       * search for flow rows in the column vectors of the incident columns
        */
       for( i = 0; i < mcfdata->nnewcols; i++ )
       {
@@ -4195,11 +4195,11 @@ SCIP_RETCODE mcfnetworkExtract(
     * 3. Extract network structure of flow conservation constraints:
     *    (a) Initialize plusflow[c] = minusflow[c] = FALSE for all columns c and other local data.
     *    (b) As long as there are flow conservation candidates left:
-    *        (i) Create new commodity and use first flow conservation constraint as newrow.
-    *       (ii) Add newrow to commodity, update pluscom/minuscom accordingly.
+    *        (i) Create new commodity and use first flow conservation constraint as new row.
+    *       (ii) Add new row to commodity, update pluscom/minuscom accordingly.
     *      (iii) For the newly added columns search for an incident flow conservation constraint. Pick the one of highest ranking.
     *            Reflect row or commodity if necessary (multiply with -1)
-    *       (iv) If found, set newrow to this row and goto (ii).
+    *       (iv) If found, set new row to this row and goto (ii).
     *        (v) If only very few flow rows have been used, discard the commodity immediately.
     * 4. Identify candidate rows for capacity constraints in the LP.
     * 5. Sort capacity constraint candidates by a ranking on how sure we are that it is indeed a constraint of the desired type.

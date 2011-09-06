@@ -484,7 +484,7 @@ SCIP_Bool isNeighbor(
             return FALSE;
    
          /* @todo later: possible improvement: 
-          * do this test for impliations and cliques separately if this here is time consuming
+          * do this test for implications and cliques separately if this here is time consuming
           */
          /* one of the nodes seems to have more arcs than the other, we swap them (since adjacency is symmetric) */
          if( SCIPvarGetNBinImpls(vars[a], originala) + 2 * SCIPvarGetNCliques(vars[a], originala)
@@ -3442,7 +3442,7 @@ SCIP_RETCODE separateGLS(
     * = nbinvars+1 arcs per node
     * * graph.nodes
     * = (nbinvars+1)*graph.nodes
-    * + graph.nodes => separating entrys for arclist)
+    * + graph.nodes => separating entries for arclist)
     */
    graph.arcs = (nbinvars+1)*graph.nodes;
 
@@ -3702,7 +3702,7 @@ SCIP_RETCODE separateGLS(
             pred2[dijkindex - 2*nbinvars] = pred[dijkindex];
 
             /* check whether the object found is really a cycle without sub-cycles 
-             * (sub-cycles may occure in case there is not violated odd cycle inequality)
+             * (sub-cycles may occur in case there is not violated odd cycle inequality)
              * and remove pairs of original and negated variable from cycle
              */
             SCIP_CALL( cleanCycle(scip, pred2, incycle, incut, dijkindex-2*nbinvars, endnode-2*nbinvars, nbinvars, 
@@ -3717,7 +3717,7 @@ SCIP_RETCODE separateGLS(
             pred2[dijkindex] = pred[dijkindex] - 2*nbinvars;
 
             /* check whether the object found is really a cycle without sub-cycles 
-             * (sub-cycles may occure in case there is not violated odd cycle inequality)
+             * (sub-cycles may occur in case there is not violated odd cycle inequality)
              * and remove pairs of original and negated variable from cycle
              */
             SCIP_CALL( cleanCycle(scip, pred2, incycle, incut, dijkindex, endnode-2*nbinvars, nbinvars, &ncyclevars,

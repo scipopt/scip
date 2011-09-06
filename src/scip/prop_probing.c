@@ -1155,7 +1155,7 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
           * check for case where both variables are binary: leftub = 1, rightlb = 0
           * case leftproplbs[j] = 0, rightproplbs[j] = 1, i.e., vars[j] and probingvar are fixed to same value
           *    -> aggregation is 1 * vars[j] - 1 * probingvar = 0 * 1 - 1 * 0 = 0 -> correct
-          * case leftproplbs[j] = 1, rightproblbs[j] = 0, i.e., vars[j] and probingvar are fixed to oppositve values
+          * case leftproplbs[j] = 1, rightproblbs[j] = 0, i.e., vars[j] and probingvar are fixed to opposite values
           *    -> aggregation is 1 * vars[j] + 1 * probingvar = 1 * 1 - 0 * 0 = 0 -> correct
           */
          if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )

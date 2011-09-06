@@ -133,7 +133,7 @@ struct SCIP_LPi
    SCIP_Bool             instabilityignored; /**< was the instability of the last LP ignored? */
 #if (CPX_VERSION <= 1100)
    SCIP_Bool             rngfound;           /**< was ranged row found; scaling is disabled, because there is a bug 
-                                              *   in the scaling algo for ranged rows in CPLEX up to version 11.0 */
+                                              *   in the scaling algorithm for ranged rows in CPLEX up to version 11.0 */
 #endif
 #if (CPX_VERSION == 1100 || (CPX_VERSION == 1220 && (CPX_SUBVERSION == 0 || CPX_SUBVERSION == 2)))
    int                   pseudonthreads;     /**< number of threads that SCIP set for the LP solver, but due to CPLEX bug,

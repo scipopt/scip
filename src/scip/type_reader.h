@@ -63,7 +63,7 @@ typedef struct SCIP_ReaderData SCIP_READERDATA;       /**< reader specific data 
  *  - result          : pointer to store the result of the file reading call
  *
  *  possible return values for *result:
- *  - SCIP_SUCCESS    : the reader read the file correctly and created an appropritate problem
+ *  - SCIP_SUCCESS    : the reader read the file correctly and created an appropriate problem
  *  - SCIP_DIDNOTRUN  : the reader is not responsible for given input file
  *
  *  If the reader detected an error in the input file, it should return with RETCODE SCIP_READERROR or SCIP_NOFILE.

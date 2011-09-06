@@ -902,11 +902,11 @@ SCIP_RETCODE addRelaxation(
 
    char rowname[SCIP_MAXSTRLEN];
    
-   /* in the root LP we only add the weaker relaxation which contains of two rows:
+   /* in the root LP we only add the weaker relaxation which consists of two rows:
     *   - one additional row:             resvar - v1 - ... - vn >= 1-n
     *   - aggregated row:               n*resvar - v1 - ... - vn <= 0.0
     *
-    * during separation we separate the stronger relaxation whcih contains of n+1 row:
+    * during separation we separate the stronger relaxation which consists of n+1 row:
     *   - one additional row:             resvar - v1 - ... - vn >= 1-n
     *   - for each operator variable vi:  resvar - vi            <= 0
     */
@@ -2408,7 +2408,7 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
       SCIP_CALL( propagateCons(scip, cons, conshdlrdata->eventhdlr, &cutoff, nfixedvars, nupgdconss) );
 
       /* remove all variables that are fixed to one; merge multiple entries of the same variable;
-       * fix resuntant to zero if a pair of negated variables is contained in the operand variables
+       * fix resultant to zero if a pair of negated variables is contained in the operand variables
        */
       if( !cutoff && !SCIPconsIsDeleted(cons) )
       {
@@ -2838,7 +2838,7 @@ SCIP_RETCODE SCIPcreateConsAnd(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even

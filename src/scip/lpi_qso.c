@@ -1144,7 +1144,7 @@ SCIP_RETCODE SCIPlpiScaleRow(
          QS_TESTG(rval, CLEANUP, " ");
          break;
       default:
-         SCIPerrorMessage("Imposible! received sense %c (not E L G R)", sense[0]);
+         SCIPerrorMessage("Impossible! received sense %c (not E L G R)", sense[0]);
          rval = 1;
          goto CLEANUP;
       }
@@ -1984,7 +1984,7 @@ SCIP_Bool SCIPlpiExistsPrimalRay(
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
 
-   SCIPdebugMessage("checking primal ray existance\n");
+   SCIPdebugMessage("checking primal ray existence\n");
 
    (void) QSget_status(lpi->prob, &(lpi->solstat));
 
@@ -2335,7 +2335,7 @@ SCIP_RETCODE SCIPlpiGetSol(
    }
    else
    {
-      SCIPerrorMessage("Geting solution with stat %d (not optimal)\n", stat);
+      SCIPerrorMessage("Getting solution with stat %d (not optimal)\n", stat);
    }
 #endif
 #endif

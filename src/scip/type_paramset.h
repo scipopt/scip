@@ -69,8 +69,8 @@ typedef struct SCIP_ParamSet SCIP_PARAMSET;       /**< set of parameters */
 
 /** information method for changes in the parameter
  *
- *  Method is called if the parameter was changed through a SCIPparamsetSetXxx() call
- *  (which is called by SCIPsetXxxParam()).
+ *  Method is called if the parameter was changed through a SCIPparamsetSetXyz() call
+ *  (which is called by SCIPsetXyzParam()).
  *  It will not be called, if the parameter was changed directly by changing the value
  *  in the memory location.
  *

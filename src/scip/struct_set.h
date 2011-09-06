@@ -284,7 +284,7 @@ struct SCIP_Set
    SCIP_Real             presol_restartfac;  /**< fraction of integer variables that were fixed in the root node
                                               *   triggering a restart with preprocessing after root node evaluation */
    SCIP_Real             presol_immrestartfac;/**< fraction of integer variables that were fixed in the root node triggering an
-                                               *   immediate restart with preprcessing */
+                                               *   immediate restart with preprocessing */
    SCIP_Real             presol_subrestartfac;/**< fraction of integer variables that were globally fixed during the
                                                *   solving process triggering a restart with preprocessing */
    SCIP_Real             presol_restartminred;/**< minimal fraction of integer variables removed after restart to allow for

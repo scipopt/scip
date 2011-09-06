@@ -615,7 +615,7 @@ SCIP_RETCODE relaxVbdvarLowerbound(
          SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo), SCIPbdchginfoIsRedundant(bdchginfo));
       
       /* check if the old lower bound is sufficient to prove infeasibility; in case the inference bound is greater
-       * equal to the next possible relxed lower bound, then we have to break since in this case the inference bound
+       * equal to the next possible relaxed lower bound, then we have to break since in this case the inference bound
        * does not lead to an cutoff anymore
        */
       if( SCIPisGE(scip, bound, coef * SCIPbdchginfoGetOldbound(bdchginfo) + constant) )
@@ -674,7 +674,7 @@ SCIP_RETCODE relaxInfervarUpperbound(
          SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo), SCIPbdchginfoIsRedundant(bdchginfo));
    
       /* check if the old upper bound is sufficient to prove infeasibility; in case the inference lower bound is less
-       * equal to the next possible relxed upper bound, then we have to break since in this case the inference lower bound
+       * equal to the next possible relaxed upper bound, then we have to break since in this case the inference lower bound
        * does not lead to an cutoff anymore
        */
       if( SCIPisLE(scip, inferlb, SCIPbdchginfoGetOldbound(bdchginfo)) )
@@ -736,7 +736,7 @@ SCIP_RETCODE relaxVbdvarUpperbound(
          SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo), SCIPbdchginfoIsRedundant(bdchginfo));
       
       /* check if the old upper bound is sufficient to prove infeasibility; in case the inference bound is greater
-       * equal to the next possible relxed upper bound, then we have to break since in this case the inference bound
+       * equal to the next possible relaxed upper bound, then we have to break since in this case the inference bound
        * does not lead to an cutoff anymore
        */
       if( SCIPisGE(scip, bound, coef * SCIPbdchginfoGetOldbound(bdchginfo) + constant) )

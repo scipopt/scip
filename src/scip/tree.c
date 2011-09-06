@@ -3717,7 +3717,7 @@ SCIP_RETCODE SCIPnodeFocus(
    assert(lp != NULL);
    assert(cutoff != NULL);
 
-   SCIPdebugMessage("focussing node #%"SCIP_LONGINT_FORMAT" of type %d in depth %d\n",
+   SCIPdebugMessage("focusing node #%"SCIP_LONGINT_FORMAT" of type %d in depth %d\n",
       *node != NULL ? SCIPnodeGetNumber(*node) : -1, *node != NULL ? (int)SCIPnodeGetType(*node) : 0,
       *node != NULL ? SCIPnodeGetDepth(*node) : -1);
 
@@ -4794,7 +4794,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
          SCIP_Real center;
 
          /* create child nodes with x <= x", and x >= x"+1 with x" = floor((lb + ub)/2);
-          * if x" is integral, make the interval smaller in the child in which the current soluton x'
+          * if x" is integral, make the interval smaller in the child in which the current solution x'
           * is still feasible
           */
          center = (ub + lb) / 2.0;

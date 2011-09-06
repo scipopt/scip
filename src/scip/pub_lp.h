@@ -271,7 +271,7 @@ SCIP_Real SCIProwGetScalarProduct(
 
 /** returns the degree of parallelism between the hyperplanes defined by the two row vectors v, w:
  *  p = |v*w|/(|v|*|w|);
- *  the hyperplanes are parellel, iff p = 1, they are orthogonal, iff p = 0
+ *  the hyperplanes are parallel, iff p = 1, they are orthogonal, iff p = 0
  */
 extern
 SCIP_Real SCIProwGetParallelism(

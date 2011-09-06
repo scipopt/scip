@@ -221,7 +221,7 @@ void domMerge(
       if( SCIPsetIsGE(set, (*holelistptr)->hole.left, dom->ub) )
       {
          /* the remaining holes start behind the upper bound: remove them */
-         SCIPdebugMessage("remove remainig hole since upper bound <%.15g> is less then the left hand side of the current hole\n", dom->ub);
+         SCIPdebugMessage("remove remaining hole since upper bound <%.15g> is less then the left hand side of the current hole\n", dom->ub);
          holelistFree(holelistptr, blkmem);
          assert(*holelistptr == NULL);
 
@@ -3703,7 +3703,7 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
       assert( multrequiredsize <= multvarssize );
    }
    /**@note After the flattening the multi aggregation might resolve to be in fact an aggregation (or even a fixing?).
-    * This issue is not resolved right now, since var->data.multaggr.nvars < 2 should not cause toubles. However, one
+    * This issue is not resolved right now, since var->data.multaggr.nvars < 2 should not cause troubles. However, one
     * may loose performance hereby, since aggregated variables are easier to handle.
     * 
     * Note, that there are two cases where SCIPvarFlattenAggregationGraph() is called: The easier one is that it is
@@ -4698,7 +4698,7 @@ void SCIPvarSetNamePointer(
 
 /** informs variable that it will be removed from the problem; adjusts probindex and removes variable from the
  *  implication graph;
- *  If 'final' is TRUE, the thorough implication graph removal is not performend. Instead, only the
+ *  If 'final' is TRUE, the thorough implication graph removal is not performed. Instead, only the
  *  variable bounds and implication data structures of the variable are freed. Since in the final removal
  *  of all variables from the transformed problem, this deletes the implication graph completely and is faster
  *  than removing the variables one by one, each time updating all lists of the other variables.

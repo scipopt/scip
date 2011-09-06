@@ -558,7 +558,7 @@ SCIP_RETCODE SCIPpropPresol(
    }
    else
    {
-      SCIPdebugMessage("presoving of propagator <%s> was delayed\n", prop->name);
+      SCIPdebugMessage("presolving of propagator <%s> was delayed\n", prop->name);
       *result = SCIP_DELAYED;
    }
 
