@@ -3774,6 +3774,19 @@ SCIP_RETCODE SCIPlpiSetState(
    return SCIP_OKAY;
 }
 
+/** clears current LPi state (like basis information) of the solver */
+SCIP_RETCODE SCIPlpiClearState(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert(lpi != NULL);
+
+   /**@todo implement SCIPlpiClearState() for MOSEK */
+   SCIPwarningMessage("MOSEK interface does not implement SCIPlpiClearState()\n");
+
+   return SCIP_OKAY;
+}
+
 /** frees LP state information */
 SCIP_RETCODE SCIPlpiFreeState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
