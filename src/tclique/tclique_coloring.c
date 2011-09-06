@@ -521,18 +521,23 @@ TCLIQUE_WEIGHT tcliqueColoring(
          BMSfreeChunkMemory(mem, &item);       
          item = tmpitem;                        
       }                                     
-
-      /* free data structure of neighbor colorinterval of node just colored */
-      item = gsd[nodeVindex].lcitv;
-      while( item != NULL )
-      {
-         tmpitem = item->next;                  
-         BMSfreeChunkMemory(mem, &item);       
-         item = tmpitem;                        
-      }                                     
    }
    assert((workclique == clique) != (currentclique == clique));
    
+   /* free data structures of neighbor colorinterval of all nodes; note that this needs to be done in a separate
+    * for-loop, since the above for-loop only covers i = 0,...,nV-2
+    */
+   for( i = 0 ; i < nV; i++ )
+   {
+      item = gsd[i].lcitv;
+      while( item != NULL )
+      {
+         tmpitem = item->next;
+         BMSfreeChunkMemory(mem, &item);
+         item = tmpitem;
+      }
+   }
+
    /* update maximum weight clique found so far */
    if( weightcurrentclique > *weightclique )
    {
