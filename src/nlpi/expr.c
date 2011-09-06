@@ -1866,7 +1866,7 @@ SCIP_DECL_EXPRCURV( exprcurvSignPower )
 
    if( argbounds[0].inf < 0 )
    {
-      SCIPintervalSetBounds(&tmp, 0.0, -opdata.dbl);
+      SCIPintervalSetBounds(&tmp, 0.0, -argbounds[0].inf);
       left = SCIPexprcurvNegate(SCIPexprcurvPower(tmp, SCIPexprcurvNegate(argcurv[0]), opdata.dbl));
    }
    else
