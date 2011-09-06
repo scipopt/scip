@@ -941,6 +941,7 @@ SCIP_RETCODE solveSubNLP(
    {
       /* reduce feasibility tolerance of sub-SCIP and do less aggressive presolve */
       SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "numerics/feastol", heurdata->resolvetolfactor*SCIPfeastol(scip)) );
+      SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "numerics/epsilon", heurdata->resolvetolfactor*SCIPepsilon(scip)) );
       SCIP_CALL( SCIPsetPresolving(heurdata->subscip, SCIP_PARAMSETTING_FAST, TRUE) );
       SCIP_CALL( SCIPsetBoolParam(heurdata->subscip, "constraints/linear/aggregatevariables", FALSE) );
    }
@@ -1212,9 +1213,8 @@ SCIP_RETCODE solveSubNLP(
          }
          else if( !tighttolerances && heurdata->resolvetolfactor < 1.0 )
          {
-            /* if SCIP does not like solution, we try again with tighter tolerances
-            recreate subproblem and resolve with tighter tolerances */
-            SCIPdebugMessage("solution reported by NLP solver not feasible for SCIP, resolve with feasibility tolerance %g\n", heurdata->resolvetolfactor*SCIPfeastol(scip));
+            /* if SCIP does not like solution, we try again with tighter tolerances recreate subproblem and resolve with tighter tolerances */
+            SCIPdebugMessage("solution reported by NLP solver not feasible for SCIP, resolve with feasibility tolerance %g and epsilon %g\n", heurdata->resolvetolfactor*SCIPfeastol(scip), heurdata->resolvetolfactor*SCIPepsilon(scip));
 
             /* free transformed problem */
             SCIP_CALL( SCIPfreeTransform(heurdata->subscip) );
@@ -1254,7 +1254,7 @@ SCIP_RETCODE solveSubNLP(
             /* if SCIP does not like solution, we try again with tighter tolerances
              * recreate subproblem and resolve with tighter tolerances 
              */
-            SCIPdebugMessage("solution reported by NLP solver not feasible for SCIP, resolve with feasibility tolerance %g\n", heurdata->resolvetolfactor*SCIPfeastol(scip));
+            SCIPdebugMessage("solution reported by NLP solver not feasible for SCIP, resolve with feasibility tolerance %g and epsilon %g\n", heurdata->resolvetolfactor*SCIPfeastol(scip), heurdata->resolvetolfactor*SCIPepsilon(scip));
 
             /* free transformed problem */
             SCIP_CALL( SCIPfreeTransform(heurdata->subscip) );
@@ -1276,6 +1276,7 @@ SCIP_RETCODE solveSubNLP(
       {
          /* reset feasibility tolerance of sub-SCIP and reset to normal presolve */
          SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "numerics/feastol", SCIPfeastol(scip)) );
+         SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "numerics/epsilon", SCIPepsilon(scip)) );
          SCIP_CALL( SCIPsetPresolving(heurdata->subscip, SCIP_PARAMSETTING_DEFAULT, TRUE) );
          SCIP_CALL( SCIPresetParam(heurdata->subscip, "constraints/linear/aggregatevariables") );
       }
