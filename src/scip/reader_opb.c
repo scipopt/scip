@@ -1516,7 +1516,7 @@ SCIP_RETCODE getMaxAndConsDim(
 
    opbinput->linebuf[0] = '\0';
 
-#if 0 /* following lines should be correct, but gzseek seems to not reseting status beeing at the end of file */
+#if 0 /* following lines should be correct, but it seems that gzseek does not reset the position if standing at the end of a file */
    /* reset filereader pointer to the beginning */
    (void) SCIPfseek(opbinput->file, 0, SEEK_SET);
 #else
