@@ -1663,6 +1663,27 @@ bool needAlwaysRetape(SCIP_EXPR* expr)
    return false;
 }
 
+/** replacement for CppAD's default error handler
+ * in debug mode, CppAD gives an error when an evaluation contains a nan
+ * we do not want to stop execution in such a case, since the calling routine should check for nan's and decide what to do
+ * since we cannot ignore this particular error, we ignore all
+ * @todo find a way to check whether the error corresponds to a nan and communicate this back
+ */
+static
+void cppaderrorcallback(
+   bool               known,                 /**< is the error from a known source? */
+   int                line,                  /**< line where error occured */
+   const char*        file,                  /**< file where error occured */
+   const char*        exp,                   /**< error condition */
+   const char*        msg                    /**< error message */
+)
+{
+   SCIPdebugMessage("ignore CppAD error from %sknown source %s:%d: msg: %s exp: %s\n", known ? "" : "un", file, line, msg, exp);
+}
+
+/* install our error handler */
+static CppAD::ErrorHandler errorhandler(cppaderrorcallback);
+
 /** gets name and version of expression interpreter */
 const char* SCIPexprintGetName(void)
 {
