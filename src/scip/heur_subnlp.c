@@ -998,7 +998,7 @@ SCIP_RETCODE solveSubNLP(
    {
       SCIP_Bool stored;
       
-      if( resultsol != NULL )
+      if( resultsol == NULL )
       {
          SCIP_SOL* sol;
 
