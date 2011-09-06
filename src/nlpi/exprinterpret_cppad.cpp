@@ -529,7 +529,7 @@ bool rev_hes_sparse_posintpower(
    t[0] = s[0];
 
    // V(x) = g''(f(x)) f'(x) f'(x) R + g'(f(x)) f''(x) R
-   //      = f'(x) U + S f''(x) R, with f'(x) not identically 0 and f''(x) = 2
+   //      = f'(x) U + S f''(x) R, with f'(x) and f''(x) not identically 0
    v[0] = u[0];
    if( s[0] )
       v[0].insert(r[0].begin(), r[0].end());
@@ -730,15 +730,444 @@ CPPAD_USER_ATOMIC(
 )
 #endif
 
+#ifdef CPPAD_USER_ATOMIC
+/** forward sweep of signpower
+ * Given the taylor coefficients for x, we have to compute the taylor coefficients for f(x),
+ * that is, given tx = (x, x', x'', ...), we compute the coefficients ty = (y, y', y'', ...)
+ * in the taylor expansion of f(x) = sign(x)abs(x)^p.
+ * Thus, y   = sign(x)abs(x)^p
+ *           = sign(tx[0])abs(tx[0])^p,
+ *       y'  = p * abs(x)^(p-1) * x'
+ *           = p * abs(tx[0])^(p-1) * tx[1],
+ *       y'' = p * (p-1) * sign(x) * abs(x)^(p-2) * x'^2 + p * abs(x)^(p-1) * x''
+ *           = p * (p-1) * sign(tx[0]) * abs(tx[0])^(p-2) * tx[1]^2 + p * abs(tx[0])^(p-1) * tx[2]
+ */
+template<class Type>
+bool forward_signpower(
+   size_t                      id,           /**< user data identifier, we use it to store the pointer to the expression that holds the exponent p */
+   size_t                      k,            /**< derivative order that shall be computed */
+   size_t                      n,            /**< number of variables, should be 1 */
+   size_t                      m,            /**< dimension of function, should be 1 */
+   const CppAD::vector<bool>&  vx,           /**< indicates whether argument is a variable, or empty vector */
+   CppAD::vector<bool>&        vy,           /**< vector to store which function values depend on variables, or empty vector */
+   const CppAD::vector<Type>&  tx,           /**< values for taylor coefficients of x */
+   CppAD::vector<Type>&        ty            /**< vector to store taylor coefficients of y */
+   )
+{
+   SCIP_Real p;
+
+   assert(id != 0);
+   assert(n == 1);
+   assert(m == 1);
+   assert(tx.size() >= k);
+   assert(ty.size() >= k);
+
+   if( vx.size() > 0 )
+   {
+      assert(vx.size() == 1);
+      assert(vy.size() == 1);
+      assert(k == 0);
+
+      vy[0] = vx[0];
+   }
+
+   p = SCIPexprGetSignPowerExponent((SCIP_EXPR*)(void*)id);
+   assert(p > 1.0);
+
+   switch( k )
+   {
+      case 0:
+         ty[0] = SIGN(tx[0]) * pow(REALABS(tx[0]), p);
+         break;
+
+      case 1:
+         ty[1] = pow(REALABS(tx[0]), p - 1.0) * tx[1];
+         ty[1] *= p;
+         break;
+
+      case 2:
+         if( p != 2.0 )
+         {
+            ty[2]  = SIGN(tx[0]) * pow(REALABS(tx[0]), p - 2.0) * tx[1] * tx[1];
+            ty[2] *= p - 1.0;
+            ty[2] += pow(REALABS(tx[0]), p - 1.0) * tx[2];
+            ty[2] *= p;
+         }
+         else
+         {
+            // y'' = 2 (sign(x) * x'^2 + |x|*x'') = 2 (sign(tx[0]) * tx[1]^2 + abs(tx[0]) * tx[2])
+            ty[2]  = SIGN(tx[0]) * tx[1] * tx[1];
+            ty[2] += REALABS(tx[0]) * tx[2];
+            ty[2] *= p;
+         }
+         break;
+
+      default:
+         return false;
+   }
+
+   return true;
+}
+
+/** specialization of forward_signpower template for SCIPinterval
+ * @todo try to compute tighter resultants
+ */
+template<>
+bool forward_signpower(
+   size_t                             id, /**< user data identifier, we use it to store the pointer to the expression that holds the exponent p */
+   size_t                             k,  /**< derivative order that shall be computed */
+   size_t                             n,  /**< number of variables, should be 1 */
+   size_t                             m,  /**< dimension of function, should be 1 */
+   const CppAD::vector<bool>&         vx, /**< indicates whether argument is a variable, or empty vector */
+   CppAD::vector<bool>&               vy, /**< vector to store which function values depend on variables, or empty vector */
+   const CppAD::vector<SCIPInterval>& tx, /**< values for taylor coefficients of x */
+   CppAD::vector<SCIPInterval>&       ty  /**< vector to store taylor coefficients of y */
+   )
+{
+   SCIP_Real p;
+
+   assert(id != 0);
+   assert(n == 1);
+   assert(m == 1);
+   assert(tx.size() >= k);
+   assert(ty.size() >= k);
+
+   if( vx.size() > 0 )
+   {
+      assert(vx.size() == 1);
+      assert(vy.size() == 1);
+      assert(k == 0);
+
+      vy[0] = vx[0];
+   }
+
+   p = SCIPexprGetSignPowerExponent((SCIP_EXPR*)(void*)id);
+   assert(p > 1.0);
+
+   switch( k )
+   {
+      case 0:
+         ty[0] = signpow(tx[0], p);
+         break;
+
+      case 1:
+         ty[1] = pow(abs(tx[0]), p - 1.0) * tx[1];
+         ty[1] *= p;
+         break;
+
+      case 2:
+         if( p != 2.0 )
+         {
+            ty[2]  = signpow(tx[0], p - 2.0) * square(tx[1]);
+            ty[2] *= p - 1.0;
+            ty[2] += CppAD::pow(abs(tx[0]), p - 1.0) * tx[2];
+            ty[2] *= p;
+         }
+         else
+         {
+            // y'' = 2 (sign(x) * x'^2 + |x|*x'') = 2 (sign(tx[0]) * tx[1]^2 + abs(tx[0]) * tx[2])
+            ty[2]  = CppAD::sign(tx[0]) * square(tx[1]);
+            ty[2] += abs(tx[0]) * tx[2];
+            ty[2] *= p;
+         }
+         break;
+
+      default:
+         return false;
+   }
+
+   return true;
+}
+
+/** reverse sweep of signpower
+ * Assume y(x) is a function of the taylor coefficients of f(x) = sign(x)|x|^p for x, i.e.,
+ *   y(x) = [ f(x), f'(x), f''(x), ... ].
+ * Then in the reverse sweep we have to compute the elements of \partial h / \partial x^[l], l = 0, ..., k,
+ * where x^[l] is the l'th taylor coefficient (x, x', x'', ...) and h(x) = g(y(x)) for some function g:R^k -> R.
+ * That is, we have to compute
+ * px[l] = \partial h / \partial x^[l] = (\partial g / \partial y) * (\partial y / \partial x^[l])
+ *       = \sum_{i=0}^k (\partial g / \partial y_i) * (\partial y_i / \partial x^[l])
+ *       = \sum_{i=0}^k py[i] * (\partial y_i / \partial x^[l])
+ *
+ * For k = 0, this means
+ * px[0] = py[0] * (\partial y_0 / \partial x^[0])
+ *       = py[0] * (\partial f(x) / \partial x)
+ *       = py[0] * p * abs(tx[0])^(p-1)
+ *
+ * For k = 1, this means
+ * px[0] = py[0] * (\partial y_0  / \partial x^[0]) + py[1] * (\partial y_1   / \partial x^[0])
+ *       = py[0] * (\partial f(x) / \partial x)     + py[1] * (\partial f'(x) / \partial x)
+ *       = py[0] * p * abs(tx[0])^(p-1)             + py[1] * p * (p-1) * abs(tx[0])^(p-2) * sign(tx[0]) * tx[1]
+ * px[1] = py[0] * (\partial y_0  / \partial x^[1]) + py[1] * (\partial y_1 / \partial x^[1])
+ *       = py[0] * (\partial f(x) / \partial x')    + py[1] * (\partial f'(x) / \partial x')
+ *       = py[0] * 0                                + py[1] * p * abs(tx[0])^(p-1)
+ */
+template<class Type>
+bool reverse_signpower(
+   size_t                      id,           /**< user data identifier, we use it to store the pointer to the expression that holds the exponent p */
+   size_t                      k,            /**< derivative order that shall be computed */
+   size_t                      n,            /**< number of variables, should be 1 */
+   size_t                      m,            /**< dimension of function, should be 1 */
+   const CppAD::vector<Type>&  tx,           /**< values for taylor coefficients of x */
+   const CppAD::vector<Type>&  ty,           /**< values for taylor coefficients of y */
+   CppAD::vector<Type>&        px,           /**< vector to store partial derivatives of h(x) = g(y(x)) w.r.t. x */
+   const CppAD::vector<Type>&  py            /**< values for partial derivatives of g(x) w.r.t. y */
+)
+{
+   SCIP_Real p;
+
+   assert(id != 0);
+   assert(n == 1);
+   assert(m == 1);
+   assert(px.size() >= k);
+   assert(py.size() >= k);
+   assert(tx.size() >= k);
+
+   p = SCIPexprGetSignPowerExponent((SCIP_EXPR*)(void*)id);
+   assert(p > 1.0);
+
+   switch( k )
+   {
+      case 0:
+         // px[0] = py[0] * p * pow(abs(tx[0]), p-1);
+         px[0]  = py[0] * pow(REALABS(tx[0]), p - 1.0);
+         px[0] *= p;
+         break;
+
+      case 1:
+         if( p != 2.0 )
+         {
+            // px[0] = py[0] * p * abs(tx[0])^(p-1) + py[1] * p * (p-1) * abs(tx[0])^(p-2) * sign(tx[0]) * tx[1]
+            px[0]  = py[1] * tx[1] * pow(REALABS(tx[0]), p - 2.0) * SIGN(tx[0]);
+            px[0] *= p - 1.0;
+            px[0] += py[0] * pow(REALABS(tx[0]), p - 1.0);
+            px[0] *= p;
+            // px[1] = py[1] * p * abs(tx[0])^(p-1)
+            px[1]  = py[1] * pow(REALABS(tx[0]), p - 1.0);
+            px[1] *= p;
+         }
+         else
+         {
+            // px[0] = py[0] * 2.0 * abs(tx[0]) + py[1] * 2.0 * sign(tx[0]) * tx[1]
+            px[0]  = py[1] * tx[1] * SIGN(tx[0]);
+            px[0] += py[0] * REALABS(tx[0]);
+            px[0] *= 2.0;
+            // px[1] = py[1] * 2.0 * abs(tx[0])
+            px[1]  = py[1] * REALABS(tx[0]);
+            px[1] *= 2.0;
+         }
+         break;
+
+      default:
+         return false;
+   }
+
+   return true;
+}
+
+/** specialization of reverse_signpower for SCIPinterval
+ * @todo try to compute tighter resultants
+ */
+template<>
+bool reverse_signpower(
+   size_t                              id,           /**< user data identifier, we use it to store the pointer to the expression that holds the exponent p */
+   size_t                              k,            /**< derivative order that shall be computed */
+   size_t                              n,            /**< number of variables, should be 1 */
+   size_t                              m,            /**< dimension of function, should be 1 */
+   const CppAD::vector<SCIPInterval>&  tx,           /**< values for taylor coefficients of x */
+   const CppAD::vector<SCIPInterval>&  ty,           /**< values for taylor coefficients of y */
+   CppAD::vector<SCIPInterval>&        px,           /**< vector to store partial derivatives of h(x) = g(y(x)) w.r.t. x */
+   const CppAD::vector<SCIPInterval>&  py            /**< values for partial derivatives of g(x) w.r.t. y */
+)
+{
+   SCIP_Real p;
+
+   assert(id != 0);
+   assert(n == 1);
+   assert(m == 1);
+   assert(px.size() >= k);
+   assert(py.size() >= k);
+   assert(tx.size() >= k);
+
+   p = SCIPexprGetSignPowerExponent((SCIP_EXPR*)(void*)id);
+   assert(p > 1.0);
+
+   switch( k )
+   {
+      case 0:
+         // px[0] = py[0] * p * pow(abs(tx[0]), p-1);
+         px[0]  = py[0] * pow(abs(tx[0]), p - 1.0);
+         px[0] *= p;
+         break;
+
+      case 1:
+         if( p != 2.0 )
+         {
+            // px[0] = py[0] * p * abs(tx[0])^(p-1) + py[1] * p * (p-1) * abs(tx[0])^(p-2) * sign(tx[0]) * tx[1]
+            px[0]  = py[1] * tx[1] * signpow(tx[0], p - 2.0);
+            px[0] *= p - 1.0;
+            px[0] += py[0] * pow(abs(tx[0]), p - 1.0);
+            px[0] *= p;
+            // px[1] = py[1] * p * abs(tx[0])^(p-1)
+            px[1]  = py[1] * pow(abs(tx[0]), p - 1.0);
+            px[1] *= p;
+         }
+         else
+         {
+            // px[0] = py[0] * 2.0 * abs(tx[0]) + py[1] * 2.0 * sign(tx[0]) * tx[1]
+            px[0]  = py[1] * tx[1] * CppAD::sign(tx[0]);
+            px[0] += py[0] * abs(tx[0]);
+            px[0] *= 2.0;
+            // px[1] = py[1] * 2.0 * abs(tx[0])
+            px[1]  = py[1] * abs(tx[0]);
+            px[1] *= 2.0;
+         }
+         break;
+
+      default:
+         return false;
+   }
+
+   return true;
+}
+
+/** computes sparsity of jacobian during a forward sweep
+ * For a 1 x q matrix R, we have to return the sparsity pattern of the 1 x q matrix S(x) = f'(x) * R.
+ * Since f'(x) is dense, the sparsity of S will be the sparsity of R.
+ */
+static
+bool for_jac_sparse_signpower(
+   size_t                                 id,           /**< user data identifier, we use it to store the pointer to the expression that holds the exponent p */
+   size_t                                  n,  /**< number of variables, should be 1 */
+   size_t                                  m,  /**< dimension of function, should be 1 */
+   size_t                                  q,  /**< number of columns in R */
+   const CppAD::vector<std::set<size_t> >& r,  /**< sparsity of R, columnwise */
+   CppAD::vector<std::set<size_t> >&       s   /**< vector to store sparsity of S, columnwise */
+   )
+{
+   assert(n == 1);
+   assert(m == 1);
+   assert(id != 0);
+   assert(r.size() == 1);
+   assert(s.size() == 1);
+
+   s[0] = r[0];
+
+   return true;
+}
+
+/** computes sparsity of jacobian during a reverse sweep
+ * For a q x 1 matrix S, we have to return the sparsity pattern of the q x 1 matrix R(x) = S * f'(x).
+ * Since f'(x) is dense, the sparsity of R will be the sparsity of S.
+ */
+static
+bool rev_jac_sparse_signpower(
+   size_t                                 id,  /**< user data identifier, we use it to store the pointer to the expression that holds the exponent p */
+   size_t                                  n,  /**< number of variables, should be 1 */
+   size_t                                  m,  /**< dimension of function, should be 1 */
+   size_t                                  q,  /**< number of rows in R */
+   CppAD::vector<std::set<size_t> >&       r,  /**< sparsity of R, rowwise */
+   const CppAD::vector<std::set<size_t> >& s   /**< vector to store sparsity of S, rowwise */
+   )
+{
+   assert(n == 1);
+   assert(m == 1);
+   assert(id != 0);
+   assert(r.size() == 1);
+   assert(s.size() == 1);
+
+   r[0] = s[0];
+
+   return true;
+}
+
+/** computes sparsity of hessian during a reverse sweep
+ * Assume V(x) = (g(f(x)))'' R  with f(x) = sign(x)abs(x)^p for a function g:R->R and a matrix R.
+ * we have to specify the sparsity pattern of V(x) and T(x) = (g(f(x)))'.
+ */
+static
+bool rev_hes_sparse_signpower(
+   size_t                                 id,  /**< user data identifier, we use it to store the pointer to the expression that holds the exponent p */
+   size_t                                  n,  /**< number of variables, should be 1 */
+   size_t                                  m,  /**< dimension of function, should be 1 */
+   size_t                                  q,  /**< number of columns in S and R */
+   const CppAD::vector<std::set<size_t> >& r,  /**< sparsity pattern of R */
+   const CppAD::vector<bool>&              s,  /**< sparsity pattern of S = g'(y) */
+   CppAD::vector<bool>&                    t,  /**< vector to store sparsity pattern of T(x) = (g(f(x)))' */
+   const CppAD::vector<std::set<size_t> >& u,  /**< sparsity pattern of U(x) = g''(f(x)) f'(x) R */
+   CppAD::vector< std::set<size_t> >&      v   /**< vector to store sparsity pattern of V(x) = (g(f(x)))'' R */
+   )
+{
+   assert(n == 1);
+   assert(m == 1);
+   assert(id != 0);
+   assert(r.size() == 1);
+   assert(s.size() == 1);
+   assert(t.size() == 1);
+   assert(u.size() == 1);
+   assert(v.size() == 1);
+
+   // T(x) = g'(f(x)) * f'(x) = S * f'(x), and f' is not identically 0
+   t[0] = s[0];
+
+   // V(x) = g''(f(x)) f'(x) f'(x) R + g'(f(x)) f''(x) R
+   //      = f'(x) U + S f''(x) R, with f'(x) and f''(x) not identically 0
+   v[0] = u[0];
+   if( s[0] )
+      v[0].insert(r[0].begin(), r[0].end());
+
+   return true;
+}
+
+/** tell CppAD about our implementation for signpower for x double-valued */
+CPPAD_USER_ATOMIC(
+   signpower               ,
+   vector                  ,
+   double                  ,
+   forward_signpower       ,
+   reverse_signpower       ,
+   for_jac_sparse_signpower,
+   rev_jac_sparse_signpower,
+   rev_hes_sparse_signpower
+)
+
+/** tell CppAD about our implementation for signpower for x interval-valued */
+CPPAD_USER_ATOMIC(
+   signpower               ,
+   vector                  ,
+   SCIPInterval            ,
+   forward_signpower       ,
+   reverse_signpower       ,
+   for_jac_sparse_signpower,
+   rev_jac_sparse_signpower,
+   rev_hes_sparse_signpower
+)
+
+template<class Type>
+void evalSignPower(
+   Type&                 resultant,          /**< resultant */
+   Type&                 arg,                /**< operand */
+   SCIP_EXPR*            expr                /**< expression that holds the exponent */
+   )
+{
+   vector<Type> in(1, arg);
+   vector<Type> out(1);
+
+   signpower((size_t)(void*)expr, in, out);
+
+   resultant = out[0];
+   return;
+}
+
+#else
 /** template for evaluation for signpower operator
  * only implemented for real numbers, thus gives error by default
- * @todo implement own userad function
  */
 template<class Type>
 void evalSignPower(
    Type&                 resultant,          /**< resultant */
-   Type&                 arg ,               /**< operand */
-   SCIP_Real             exponent            /**< exponent */
+   Type&                 arg,                /**< operand */
+   SCIP_EXPR*            expr                /**< expression that holds the exponent */
    )
 {
    CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
@@ -753,9 +1182,13 @@ template<>
 void evalSignPower(
    CppAD::AD<double>&    resultant,          /**< resultant */
    CppAD::AD<double>&    arg,                /**< operand */
-   SCIP_Real             exponent            /**< exponent */
+   SCIP_EXPR*            expr                /**< expression that holds the exponent */
    )
 {
+   SCIP_Real exponent;
+
+   exponent = SCIPexprGetSignPowerExponent(expr);
+
    if( arg == 0.0 )
       resultant = 0.0;
    else if( arg > 0.0 )
@@ -763,6 +1196,7 @@ void evalSignPower(
    else
       resultant = -pow(-arg, exponent);
 }
+#endif
 
 /** template for evaluation for minimum operator
  * only implemented for real numbers, thus gives error by default
@@ -978,15 +1412,8 @@ SCIP_RETCODE eval(
          break;
 
       case SCIP_EXPR_SQUARE:
-      {
-         vector<Type> in(1, buf[0]);
-         vector<Type> out(1);
-
-         posintpower(2, in, out);
-
-         val = out[0];
+         evalIntPower(val, buf[0], 2);
          break;
-      }
 
       case SCIP_EXPR_SQRT:
          evalSqrt(val, buf[0]);
@@ -1001,7 +1428,7 @@ SCIP_RETCODE eval(
          break;
 
       case SCIP_EXPR_SIGNPOWER:
-         evalSignPower(val, buf[0], SCIPexprGetSignPowerExponent(expr));
+         evalSignPower(val, buf[0], expr);
          break;
 
       case SCIP_EXPR_EXP:
@@ -1225,7 +1652,9 @@ bool needAlwaysRetape(SCIP_EXPR* expr)
       case SCIP_EXPR_MIN:
       case SCIP_EXPR_MAX:
       case SCIP_EXPR_ABS:
+#ifndef CPPAD_USER_ATOMIC
       case SCIP_EXPR_SIGNPOWER:
+#endif
          return true;
 
       default: ;
