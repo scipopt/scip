@@ -353,8 +353,6 @@ SCIP_RETCODE SCIPapplyRens(
    assert(heur != NULL);
    assert(result != NULL);
 
-   assert(timelimit >= 0.0);
-   assert(memorylimit >= 0.0);
    assert(maxnodes >= 0);
    assert(nstallnodes >= 0);
 
@@ -426,6 +424,8 @@ SCIP_RETCODE SCIPapplyRens(
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
 
    /* check whether there is enough time and memory left */
+   timelimit = 0.0;
+   memorylimit = 0.0;
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
    if( !SCIPisInfinity(scip, timelimit) )
       timelimit -= SCIPgetSolvingTime(scip);

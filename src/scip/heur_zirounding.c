@@ -115,8 +115,8 @@ void calculateBounds(
   
    assert(scip != NULL);
    assert(var != NULL);
-   assert(upslacks != NULL || nslacks == 0);
-   assert(downslacks != NULL || nslacks == 0);
+   assert(upslacks != NULL);
+   assert(downslacks != NULL);
    assert(upperbound != NULL);
    assert(lowerbound != NULL);
 
@@ -512,8 +512,14 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
    /* get LP rows data */
    rows    = SCIPgetLPRows(scip);
    nslacks = SCIPgetNLPRows(scip);
-   assert(rows != NULL || nslacks == 0);
-     
+
+   /* cannot do anything if LP is empty */
+   if( nslacks == 0 )
+      return SCIP_OKAY;
+
+   assert(rows != NULL);
+   assert(nslacks > 0);
+   
    SCIP_CALL( SCIPallocBufferArray(scip, &upslacks, nslacks) );
    SCIP_CALL( SCIPallocBufferArray(scip, &downslacks, nslacks) );
    SCIP_CALL( SCIPallocBufferArray(scip, &activities, nslacks) );

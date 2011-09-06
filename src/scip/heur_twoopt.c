@@ -1471,7 +1471,8 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
 
    presolthiscall = FALSE;
    SCIP_CALL( SCIPgetLPColsData(scip,&cols, &ncols) );
-   ncolsforsorting = MIN(ncols, SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip));
+   ndiscvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
+   ncolsforsorting = MIN(ncols, ndiscvars);
 
    /* ensure that heuristic specific presolve is applied when heuristic is executed first */
    if( !heurdata->presolved )

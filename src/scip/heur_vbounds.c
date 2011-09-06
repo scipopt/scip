@@ -191,7 +191,7 @@ SCIP_RETCODE initializeCandsLists(
    {
       if( SCIPisGE(scip, SCIPvarGetObj(lbvars[v]), 0.0) )
       {
-         SCIPhashtableInsert(collectedvars, lbvars[v]);
+         SCIP_CALL( SCIPhashtableInsert(collectedvars, lbvars[v]) );
          assert(nlbimpvars < nallvars);
          impvars[nlbimpvars] = lbvars[v];
          nlbimpvars++;
