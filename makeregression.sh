@@ -37,37 +37,72 @@ do
     for OPT in ${OPTS[@]}
     do
         # compile SCIP in debug and opt mode 
-	make OPT=$OPT VERSION=$GITHASH ZIMPL=false
-
+	make OPT=$OPT VERSION=$GITHASH ZIMPL=false -j2
 
 	for TEST in ${TESTS[@]}
 	do
 	    # run test 
 	    make OPT=$OPT VERSION=$GITHASH TIME=$TIME LOCK=$LOCK CONTINUE=$CONTINUE TEST=$TEST test
     
-            # remove tex and pav file
+	    # remove tex and pav file
 	    rm -f check/results/check.$TEST.*$GITHASH*tex
 	    rm -f check/results/check.$TEST.*$GITHASH*pav
 
             # check if fail occurs
-	    NFAILS=`grep -c fail check/results/check.$TEST.*$GITHASH*$OPT*res`
-echo $NFAILS
+	    NFAILS=`grep -c fail check/results/check.$TEST.*$GITHASH.*.$OPT.*res`
+	    NABORTS=`grep -c abort check/results/check.$TEST.*$GITHASH.*.$OPT.*res`
+	    NREADERRORS=`grep -c readerror check/results/check.$TEST.*$GITHASH.*.$OPT.*res`
+
+	    HOSTNAME=`hostname`
+	    EMAILTO=lpip-developers@zib.de
+	    EMAILFROM=`whoami`
+
+	    # check read fails
 	    if [ $NFAILS -gt 0 ]; 
 	    then
-		HOSTNAME=`hostname`
-		SUBJECT="[Bug] [$HOSTNAME] [$GITHASH] $TEST $NFAILS fails"
-		EMAILTO=heinz@zib.de
-		EMAILFROM=`whoami`
-		#metasend -z -b -t $EMAILTO -F $EMAILFROM -s "$SUBJECT" -f "bla" -e quoted-printable -m text/plain
-		echo "hallo" | mailx -s "$SUBJECT" $EMAILTO
-	    else
-		HOSTNAME=`hostname`
-		SUBJECT="[OK] [$HOSTNAME] [$GITHASH] $TEST "
-		EMAILTO=heinz@zib.de
-		EMAILFROM=`whoami`
-		#metasend -z -b -t $EMAILTO -F $EMAILFROM -s "$SUBJECT" -f "bla" -e quoted-printable -m text/plain
-		echo "hallo" | mailx -s "$SUBJECT" $EMAILTO
+		SUBJECT="[FAIL] [$HOSTNAME] [OPT=$OPT] [GITHASH: $GITHASH] $TEST"
+		grep fail check/results/check.$TEST.*$GITHASH.*.$OPT.*.res | mailx -s "$SUBJECT" $EMAILTO
 	    fi
+
+	    # check read errors
+	    if [ $NREADERRORS -gt 0 ]; 
+	    then
+		EMAILTO=lpip-developers@zib.de
+		SUBJECT="[READERROR] [$HOSTNAME] [OPT=$OPT] [GITHASH: $GITHASH] $TEST"
+		grep readerror check/results/check.$TEST.*$GITHASH.*.$OPT.*.res | mailx -s "$SUBJECT" $EMAILTO
+	    fi
+	    
+	    # check aborts
+	    if [ $NABORTS -gt 0 ]; 
+	    then
+		SUBJECT="[ABORT] [$HOSTNAME] [OPT=$OPT] [GITHASH: $GITHASH] $TEST"
+		grep abort check/results/check.$TEST.*$GITHASH.*.$OPT.*.res | mailx -s "$SUBJECT" $EMAILTO
+	    fi
+	    
+	    # check performance in opt mode 
+	    if [ "$OPT" == "opt" ];
+	    then
+		NOK=`grep -c ok check/results/check.$TEST.*$GITHASH.*.$OPT.*res`
+		NSOLVED=`grep -c solved check/results/check.$TEST.*$GITHASH.*.$OPT.*res`
+		NTIMEOUTS=`grep -c timeouts check/results/check.$TEST.*$GITHASH.*.$OPT.*res`
+		
+		if [ -f "check/results/check.$TEST.*$LASTGITHASH.*.$OPT.*res" ]
+		then
+		    NLASTTIMEOUTS=`grep -c timeouts check/results/check.$TEST.*$LASTGITHASH.*.$OPT.*res`
+		    
+   	            # check time outs
+		    if [ $NTIMEOUTS -gt NLASTTIMEOUTS ]; 
+		    then
+			SUBJECT="[TIMEOUT] [$HOSTNAME] [OPT=$OPT] [GITHASH: $GITHASH] $TEST"
+			grep timeouts check/results/check.$TEST.*$GITHASH.*.$OPT.*.res | mailx -s "$SUBJECT" $EMAILTO
+		    fi
+		fi
+	    fi
+	    
+	    # in any case send a mail to heinz@zib.de
+	    EMAILTO=heinz@zib.de
+	    SUBJECT="[$HOSTNAME] [OPT=$OPT] [GITHASH: $GITHASH] $TEST"
+	    tail check/results/check.$TEST.*$GITHASH.*.$OPT.*.res | mailx -s "$SUBJECT" $EMAILTO
 	done
     done
 done
