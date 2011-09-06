@@ -5120,6 +5120,8 @@ SCIP_RETCODE SCIPnlpFree(
    BMSfreeBlockMemoryArrayNull(blkmem, &(*nlp)->varmap_nlpi2nlp, (*nlp)->sizevars_solver);
    SCIPhashmapFree(&(*nlp)->varhash);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*nlp)->vars, (*nlp)->sizevars);
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*nlp)->varlbdualvals, (*nlp)->sizevars);
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*nlp)->varubdualvals, (*nlp)->sizevars);
 
    /* free NLPI problem */
    if( (*nlp)->problem != NULL )
