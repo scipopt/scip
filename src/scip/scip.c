@@ -1659,7 +1659,7 @@ SCIP_RETCODE SCIPcopyConss(
 
             /* add constraint to target SCIP */
             SCIP_CALL( SCIPaddCons(targetscip, targetcons) );
-	      
+
             /* insert constraint into mapping between source SCIP and the target SCIP */
             SCIP_CALL( SCIPhashmapInsert(localconsmap, sourceconss[c], targetcons) );
 
@@ -4206,7 +4206,7 @@ SCIP_RETCODE writeProblem(
       if( compression != NULL )
       {
          SCIPwarningMessage("currently it is not possible to write files with any compression\n");
-	 BMSfreeMemoryArray(&tmpfilename);
+         BMSfreeMemoryArray(&tmpfilename);
          (void) fclose(file);
          return SCIP_FILECREATEERROR;
       }
@@ -11228,8 +11228,8 @@ SCIP_RETCODE SCIPcalcCliquePartition(
             /* greedily fill up the clique */
             for( j = i+1; j < nvars; ++j )
             {
-	       /* if variable is not active (multi-aggregated or fixed), it cannot be in any clique */
-	       if( cliquepartition[j] == -1 && SCIPvarIsActive(tmpvars[j]) )
+               /* if variable is not active (multi-aggregated or fixed), it cannot be in any clique */
+               if( cliquepartition[j] == -1 && SCIPvarIsActive(tmpvars[j]) )
                {
                   int k;
 
@@ -11930,7 +11930,7 @@ SCIP_RETCODE aggregateActiveVars(
        */
       if( SCIPvarGetType(varx) == SCIP_VARTYPE_IMPLINT && !SCIPsetIsFeasIntegral(scip->set, scalar) )
       {
-	 return SCIP_OKAY;
+         return SCIP_OKAY;
       }
 
       /* aggregate the variable */
@@ -18141,11 +18141,11 @@ SCIP_RETCODE solveProbingLP(
                scip->pricestore, scip->sepastore, scip->branchcand, scip->eventqueue, scip->eventfilter, pretendroot, displayinfo, maxpricerounds,
                &npricedcolvars, &mustsepa, &lowerbound, lperror, &result) );
 
-	 /* mark the probing node again to update the LP size in the node and the tree path */
-	 if( !(*lperror) )
-	 {
-	    SCIP_CALL( SCIPtreeMarkProbingNodeHasLP(scip->tree, scip->mem->probmem, scip->lp) );
-	 }
+         /* mark the probing node again to update the LP size in the node and the tree path */
+         if( !(*lperror) )
+         {
+            SCIP_CALL( SCIPtreeMarkProbingNodeHasLP(scip->tree, scip->mem->probmem, scip->lp) );
+         }
       }
    }
 
@@ -21752,7 +21752,7 @@ void printSeparatorStatistics(
          SCIPsepaGetNCalls(scip->set->sepas[i]),
          SCIPsepaGetNCutoffs(scip->set->sepas[i]),
          SCIPsepaGetNDomredsFound(scip->set->sepas[i]),
-	 SCIPsepaGetNCutsFound(scip->set->sepas[i]),
+         SCIPsepaGetNCutsFound(scip->set->sepas[i]),
          SCIPsepaGetNConssFound(scip->set->sepas[i]));
 }
 
@@ -22051,7 +22051,7 @@ void printSolutionStatistics(
    {
       if( scip->primal->nsols == 0 )
       {
-	 SCIPmessageFPrintInfo(file, "  Primal Bound     : %+21.14e", primalbound);
+         SCIPmessageFPrintInfo(file, "  Primal Bound     : %+21.14e", primalbound);
          SCIPmessageFPrintInfo(file, "   (user objective limit)\n");
       }
       else

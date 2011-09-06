@@ -2560,7 +2560,7 @@ void permSortConsdata(
          varv = consdata->vars[v];
          valv = consdata->vals[v];
          if( consdata->eventdatas != NULL )
-	    eventdatav = consdata->eventdatas[v];
+            eventdatav = consdata->eventdatas[v];
          i = v;
          do
          {
@@ -2664,25 +2664,25 @@ SCIP_RETCODE consdataSort(
       /* count binary variables and permute variables such that binaries appear first in the sorted vars array */
       for( v = 0; v < nvars; ++v )
       {
-	 if( SCIPvarIsBinary(vars[v]) )
-	 {
+         if( SCIPvarIsBinary(vars[v]) )
+         {
             /* swap variable at the end of the binary variables, if necessary */
             if( lastbin < v )
             {
-	       SCIP_VAR* tmpvar;
-	       SCIP_Real tmpval;
+               SCIP_VAR* tmpvar;
+               SCIP_Real tmpval;
                
-	       tmpvar = vars[lastbin];
-	       tmpval = vals[lastbin];
+               tmpvar = vars[lastbin];
+               tmpval = vals[lastbin];
 
-	       vars[lastbin] = vars[v];
-	       vals[lastbin] = vals[v];
+               vars[lastbin] = vars[v];
+               vals[lastbin] = vals[v];
 
-	       vars[v] = tmpvar;
-	       vals[v] = tmpval;
+               vars[v] = tmpvar;
+               vals[v] = tmpval;
 
-	       if( eventdatas != NULL )
-	       {
+               if( eventdatas != NULL )
+               {
                   SCIP_EVENTDATA* tmpeventdata;
                   
                   tmpeventdata = eventdatas[lastbin];
@@ -2690,15 +2690,15 @@ SCIP_RETCODE consdataSort(
                   eventdatas[lastbin]->varpos = lastbin;
                   eventdatas[v] = tmpeventdata;
                   eventdatas[v]->varpos = v;
-	       }
-	       assert(SCIPvarIsBinary(vars[lastbin]));
+               }
+               assert(SCIPvarIsBinary(vars[lastbin]));
             }
 #ifndef NDEBUG
             else
                assert(lastbin == v);
 #endif
             ++lastbin;
-	 }
+         }
       }
       consdata->nbinvars = lastbin;
 
@@ -2713,32 +2713,32 @@ SCIP_RETCODE consdataSort(
 
       if( consdata->nbinvars > 1 )
       {
-	 SCIP_Real* absvals;
-	 int*       perm;
+         SCIP_Real* absvals;
+         int*       perm;
 
          assert(lastbin == consdata->nbinvars);
 
          /* initialize absolute coefficients and the target permutation for binary variables */
-	 SCIP_CALL( SCIPallocBufferArray(scip, &absvals, lastbin) );
-	 SCIP_CALL( SCIPallocBufferArray(scip, &perm, lastbin) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &absvals, lastbin) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &perm, lastbin) );
 
-	 for( v = 0; v < lastbin; ++v )
-	 {
+         for( v = 0; v < lastbin; ++v )
+         {
              absvals[v] = ABS(vals[v]);
-	     perm[v] = v;
-	 }
-	 
-         /* execute the sorting */
-	 SCIPsortDownRealInt(absvals, perm, lastbin);
+             perm[v] = v;
+         }
 
-	 permSortConsdata(consdata, perm, lastbin, FALSE);
+         /* execute the sorting */
+         SCIPsortDownRealInt(absvals, perm, lastbin);
+
+         permSortConsdata(consdata, perm, lastbin, FALSE);
 
          /* free temporary arrays */
-	 SCIPfreeBufferArray(scip, &perm);
-	 SCIPfreeBufferArray(scip, &absvals);
+         SCIPfreeBufferArray(scip, &perm);
+         SCIPfreeBufferArray(scip, &absvals);
       }
       consdata->binvarssorted = TRUE;
-	 
+         
       /* presolve sorting cannot be guaranteed after binary sorting */
       consdata->sorted = (consdata->sorted && consdata->nbinvars == 0);
    }
@@ -3434,7 +3434,7 @@ SCIP_RETCODE normalizeCons(
    {
       if( !SCIPisIntegral(scip, vals[i]) )
       {
-	 /* epsilon has been slightly decreased above - to be on the safe side */
+         /* epsilon has been slightly decreased above - to be on the safe side */
          success = SCIPrealToRational(vals[i], -epsilon, epsilon , maxmult, &nominator, &denominator);
          if( success )
             scm = SCIPcalcSmaComMul(scm, denominator);
@@ -6010,7 +6010,7 @@ SCIP_RETCODE dualPresolve(
          continue;
 
       if ( SCIPdoNotMultaggrVar(scip, var) )
-	 continue;
+         continue;
 
       val = consdata->vals[i];
       obj = SCIPvarGetObj(var);
@@ -6083,7 +6083,7 @@ SCIP_RETCODE dualPresolve(
                {
                   consdataGetReliableResidualActivity(scip, consdata, var, &minresactivity, TRUE, FALSE);
                   recalculated = !SCIPisEQ(scip, oldminresactivity, minresactivity);
-		  isminsettoinfinity = TRUE; /* here it means only that it was even calculated */
+                  isminsettoinfinity = TRUE; /* here it means only that it was even calculated */
                }
 
                /* check maxresactivity for reliability */
@@ -6091,7 +6091,7 @@ SCIP_RETCODE dualPresolve(
                {
                   consdataGetReliableResidualActivity(scip, consdata, var, &maxresactivity, FALSE, FALSE);
                   recalculated = recalculated || !SCIPisEQ(scip, oldmaxresactivity, maxresactivity);
-		  ismaxsettoinfinity = TRUE; /* here it means only that it was even calculated */
+                  ismaxsettoinfinity = TRUE; /* here it means only that it was even calculated */
                }
 
                /* minresactivity or maxresactivity wasn't reliable so recalculate min- and maxval*/
@@ -6287,7 +6287,7 @@ SCIP_RETCODE dualPresolve(
       }
       else
       {
-	 SCIPdebugMessage("aggregation non successful!\n");
+         SCIPdebugMessage("aggregation non successful!\n");
       }
    }
 
@@ -6707,12 +6707,12 @@ SCIP_RETCODE simplifyInequalities(
 
          /* normalize constraint */
          SCIP_CALL( normalizeCons(scip, cons) );
-	 
-	 /* if only one var is left abort loop */
-	 if( consdata->nvars == 1 )
-	    success = FALSE;
-	 else
-	    success = TRUE;
+         
+         /* if only one var is left abort loop */
+         if( consdata->nvars == 1 )
+            success = FALSE;
+         else
+            success = TRUE;
       }
    }
    while( success );
@@ -8306,7 +8306,7 @@ SCIP_RETCODE fullDualPresolve(
             && !SCIPisInfinity(scip, -redlb[v - nbinvars])
             && redlb[v - nbinvars] < SCIPvarGetUbGlobal(var) )
          {
-	    SCIP_Real ub;
+            SCIP_Real ub;
 
             /* if x_v >= redlb[v], we can always round x_v down to x_v == redlb[v] without violating any constraint
              *  -> tighten upper bound to x_v <= redlb[v]
@@ -8317,7 +8317,7 @@ SCIP_RETCODE fullDualPresolve(
             SCIP_CALL( SCIPtightenVarUb(scip, var, redlb[v - nbinvars], FALSE, &infeasible, &tightened) );
             assert(!infeasible);
 
-	    ub = SCIPvarGetUbGlobal(var);
+            ub = SCIPvarGetUbGlobal(var);
             redub[v - nbinvars] = MIN(redub[v - nbinvars], ub);
             if( tightened )
                (*nchgbds)++;
@@ -8333,7 +8333,7 @@ SCIP_RETCODE fullDualPresolve(
             && !SCIPisInfinity(scip, redub[v - nbinvars])
             && redub[v - nbinvars] > SCIPvarGetLbGlobal(var) )
          {
-	    SCIP_Real lb;
+            SCIP_Real lb;
 
             /* if x_v <= redub[v], we can always round x_v up to x_v == redub[v] without violating any constraint
              *  -> tighten lower bound to x_v >= redub[v]
@@ -8344,7 +8344,7 @@ SCIP_RETCODE fullDualPresolve(
             SCIP_CALL( SCIPtightenVarLb(scip, var, redub[v - nbinvars], FALSE, &infeasible, &tightened) );
             assert(!infeasible);
 
-	    lb = SCIPvarGetLbGlobal(var);
+            lb = SCIPvarGetLbGlobal(var);
             redlb[v - nbinvars] = MAX(redlb[v - nbinvars], lb);
             if( tightened )
                (*nchgbds)++;

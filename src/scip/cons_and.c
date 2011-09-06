@@ -1405,7 +1405,7 @@ SCIP_RETCODE propagateCons(
          /* remove the "and" constraint globally */
          SCIP_CALL( SCIPdelCons(scip, cons) );
 
-	 (*nupgdconss)++;
+         (*nupgdconss)++;
 
          SCIPfreeBufferArray(scip, &consvars);
       }
@@ -2480,24 +2480,24 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
    {
       if( *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars )
       {
-	 if( firstchange < nconss ) 
-	 {
-	    /* detect redundant constraints; fast version with hash table instead of pairwise comparison */
-	    SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &firstchange, &cutoff, naggrvars, ndelconss) );
+         if( firstchange < nconss ) 
+         {
+            /* detect redundant constraints; fast version with hash table instead of pairwise comparison */
+            SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &firstchange, &cutoff, naggrvars, ndelconss) );
             oldnaggrvars = *naggrvars;
-	 }
+         }
       }
       else
-	 delay = TRUE;
+         delay = TRUE;
    }
 
    if( !cutoff && conshdlrdata->presolpairwise )
    {
       if( *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars )
       {
-	 SCIP_Longint npaircomparisons;
-	 npaircomparisons = 0;
-	 oldndelconss = *ndelconss;
+         SCIP_Longint npaircomparisons;
+         npaircomparisons = 0;
+         oldndelconss = *ndelconss;
          
          for( c = firstchange; c < nconss && !cutoff && !SCIPisStopped(scip); ++c )
          {
@@ -2510,13 +2510,13 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
                
                if( npaircomparisons > NMINCOMPARISONS )
                {
-		  if( ((*ndelconss - oldndelconss) + (*naggrvars - oldnaggrvars) + (*nchgbds - oldnchgbds)/2) / (npaircomparisons + 0.0) < MINGAINPERNMINCOMPARISONS )
+                  if( ((*ndelconss - oldndelconss) + (*naggrvars - oldnaggrvars) + (*nchgbds - oldnchgbds)/2) / (npaircomparisons + 0.0) < MINGAINPERNMINCOMPARISONS )
                      break;
-		  oldndelconss = *ndelconss;
+                  oldndelconss = *ndelconss;
                   oldnaggrvars = *naggrvars;
                   oldnchgbds = *nchgbds;
 
-		  npaircomparisons = 0;
+                  npaircomparisons = 0;
                }
             }
          }
@@ -2531,7 +2531,7 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
    else if( delay )
       *result = SCIP_DELAYED;
    else if( *nfixedvars > oldnfixedvars || *naggrvars > oldnaggrvars || *nchgbds > oldnchgbds
-	    || *ndelconss > oldndelconss || *nupgdconss > oldnupgdconss )
+            || *ndelconss > oldndelconss || *nupgdconss > oldnupgdconss )
       *result = SCIP_SUCCESS;
    else
       *result = SCIP_DIDNOTFIND;

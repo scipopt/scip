@@ -40,8 +40,8 @@
 
 #define DEFAULT_APPLYCONFLICTS     TRUE /**< should the found conflicts be applied in the original SCIP?                 */
 #define DEFAULT_APPLYBDCHGS        TRUE /**< should the found global bound deductions be applied in the original SCIP?   
-					 *   apply only if conflicts and incumbent solution will be copied too
-					 */
+                                         *   apply only if conflicts and incumbent solution will be copied too
+                                         */
 #define DEFAULT_APPLYINFERVALS     TRUE /**< should the inference values be used as initialization in the original SCIP? */
 #define DEFAULT_REDUCEDINFER      FALSE /**< should the inference values only be used when rapid learning found other reductions? */
 #define DEFAULT_APPLYPRIMALSOL     TRUE /**< should the incumbent solution be copied to the original SCIP?               */
@@ -95,7 +95,7 @@ SCIP_RETCODE createNewSol(
    SCIP_HEUR*            heur,               /**< trysol heuristic structure                          */
    SCIP_SOL*             subsol,             /**< solution of the subproblem                          */
    SCIP_Bool*            success             /**< used to store whether new solution was found or not */
-)
+   )
 {
    SCIP_VAR** vars;                          /* the original problem's variables                */
    int        nvars;
@@ -455,7 +455,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    }
    else
    {
-     SCIPdebugMessage("do not proceed solving after the first 20%% of the solution process.\n");
+      SCIPdebugMessage("do not proceed solving after the first 20%% of the solution process.\n");
    }
 
 #ifdef SCIP_DEBUG
@@ -482,7 +482,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
       /* sequentially add solutions to trysol heuristic */
       for( i = 0; i < nsubsols && !soladded; ++i )
       {
-	 SCIPdebugMessage("Try to create new solution by copying subscip solution.\n");
+         SCIPdebugMessage("Try to create new solution by copying subscip solution.\n");
          SCIP_CALL( createNewSol(scip, subscip, subvars, heurtrysol, subsols[i], &soladded) );
       }
       if( !soladded || !SCIPisEQ(scip, SCIPgetSolOrigObj(subscip, subsols[i-1]), SCIPgetSolOrigObj(subscip, subsols[0])) )
@@ -522,12 +522,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
          /* copy constraints that have been created in FD run */
          if( conshdlrs[i] != NULL && SCIPconshdlrGetNConss(conshdlrs[i]) > oldnconss[i] )
          {
-	    SCIP_CONS** conss;
+            SCIP_CONS** conss;
             int c;
             int nconss;
             
-	    nconss = SCIPconshdlrGetNConss(conshdlrs[i]);
-	    conss = SCIPconshdlrGetConss(conshdlrs[i]);
+            nconss = SCIPconshdlrGetNConss(conshdlrs[i]);
+            conss = SCIPconshdlrGetConss(conshdlrs[i]);
 
             /* loop over all constraints that have been added in sub-SCIP run, these are the conflicts */            
             for( c = oldnconss[i]; c < nconss; ++c)
@@ -566,21 +566,21 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    if( sepadata->applybdchgs && !disabledualreductions )
       for( i = 0; i < nvars; ++i )
       {
-	 SCIP_Bool infeasible;
-	 SCIP_Bool tightened;
-	 
-	 assert(SCIPisLE(scip, SCIPvarGetLbGlobal(vars[i]), SCIPvarGetLbGlobal(subvars[i]))); 
-	 assert(SCIPisLE(scip, SCIPvarGetLbGlobal(subvars[i]), SCIPvarGetUbGlobal(subvars[i])));
-	 assert(SCIPisLE(scip, SCIPvarGetUbGlobal(subvars[i]), SCIPvarGetUbGlobal(vars[i])));  
-	 
-	 /* update the bounds of the original SCIP, if a better bound was proven in the sub-SCIP */
-	 SCIP_CALL( SCIPtightenVarUb(scip, vars[i], SCIPvarGetUbGlobal(subvars[i]), FALSE, &infeasible, &tightened) );
-	 if( tightened ) 
-	   nbdchgs++;
-	 
-	 SCIP_CALL( SCIPtightenVarLb(scip, vars[i], SCIPvarGetLbGlobal(subvars[i]), FALSE, &infeasible, &tightened) );
-	 if( tightened )
-	   nbdchgs++;   
+         SCIP_Bool infeasible;
+         SCIP_Bool tightened;
+         
+         assert(SCIPisLE(scip, SCIPvarGetLbGlobal(vars[i]), SCIPvarGetLbGlobal(subvars[i]))); 
+         assert(SCIPisLE(scip, SCIPvarGetLbGlobal(subvars[i]), SCIPvarGetUbGlobal(subvars[i])));
+         assert(SCIPisLE(scip, SCIPvarGetUbGlobal(subvars[i]), SCIPvarGetUbGlobal(vars[i])));  
+         
+         /* update the bounds of the original SCIP, if a better bound was proven in the sub-SCIP */
+         SCIP_CALL( SCIPtightenVarUb(scip, vars[i], SCIPvarGetUbGlobal(subvars[i]), FALSE, &infeasible, &tightened) );
+         if( tightened ) 
+            nbdchgs++;
+         
+         SCIP_CALL( SCIPtightenVarLb(scip, vars[i], SCIPvarGetLbGlobal(subvars[i]), FALSE, &infeasible, &tightened) );
+         if( tightened )
+            nbdchgs++;   
       }
 
    n1startinfers = 0;

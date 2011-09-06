@@ -2397,7 +2397,7 @@ SCIP_RETCODE SCIPparamsetWrite(
       file = fopen(filename, "w");
       if( file == NULL )
       {
-	 SCIPerrorMessage("cannot open file <%s> for writing\n", filename);
+         SCIPerrorMessage("cannot open file <%s> for writing\n", filename);
          SCIPprintSysError(filename);
          return SCIP_FILECREATEERROR;
       }
@@ -3536,26 +3536,26 @@ SCIP_RETCODE SCIPparamsetCopyParams(
       /* set value of target parameter to value of source parameter */
       switch( SCIPparamGetType(sourceparamset->params[i]) )
       {
-      case SCIP_PARAMTYPE_BOOL:	
-	 SCIP_CALL( paramCopyBool(sourceparamset->params[i], targetparam, targetscip) );
-	 break;
+      case SCIP_PARAMTYPE_BOOL:
+         SCIP_CALL( paramCopyBool(sourceparamset->params[i], targetparam, targetscip) );
+         break;
 
       case SCIP_PARAMTYPE_INT:
-	 SCIP_CALL( paramCopyInt(sourceparamset->params[i], targetparam, targetscip) );
-	 break;
+         SCIP_CALL( paramCopyInt(sourceparamset->params[i], targetparam, targetscip) );
+         break;
 
       case SCIP_PARAMTYPE_LONGINT:
-	 SCIP_CALL( paramCopyLongint(sourceparamset->params[i], targetparam, targetscip) );
-	 break;
-	 
+         SCIP_CALL( paramCopyLongint(sourceparamset->params[i], targetparam, targetscip) );
+         break;
+         
       case SCIP_PARAMTYPE_REAL:
-	 SCIP_CALL( paramCopyReal(sourceparamset->params[i], targetparam, targetscip) );
-	 break;
-	 
+         SCIP_CALL( paramCopyReal(sourceparamset->params[i], targetparam, targetscip) );
+         break;
+         
       case SCIP_PARAMTYPE_CHAR:
-	 SCIP_CALL( paramCopyChar(sourceparamset->params[i], targetparam, targetscip) );
-	 break;
-	 
+         SCIP_CALL( paramCopyChar(sourceparamset->params[i], targetparam, targetscip) );
+         break;
+         
       case SCIP_PARAMTYPE_STRING:
          /* the vbc parameters are explicitly not copied to avoid that the vbc file of the original SCIP is over
           * written; to avoid that hard coded comparison, each parameter could get a Bool flag which tells if the value
@@ -3564,11 +3564,11 @@ SCIP_RETCODE SCIPparamsetCopyParams(
          {
             SCIP_CALL( paramCopyString(sourceparamset->params[i], targetparam, targetscip) ); 
          }
-	 break;
-	 
+         break;
+         
       default:
-	 SCIPerrorMessage("unknown parameter type\n");
-	 return SCIP_INVALIDDATA;
+         SCIPerrorMessage("unknown parameter type\n");
+         return SCIP_INVALIDDATA;
       }
    }   
   

@@ -114,21 +114,21 @@ SCIP_DECL_PRESOLEXEC(presolExecDualfix)
       if( SCIPisZero(scip, obj) && SCIPvarMayRoundDown(vars[v]) && SCIPvarMayRoundUp(vars[v]) )
       {
          bound = SCIPvarGetLbGlobal(vars[v]);
-	 if( SCIPisLT(scip, bound, 0.0) )
-	 {
-	    if( SCIPisLE(scip, 0.0, SCIPvarGetUbGlobal(vars[v])) )
-	       bound = 0.0;
-	    else
+         if( SCIPisLT(scip, bound, 0.0) )
+         {
+            if( SCIPisLE(scip, 0.0, SCIPvarGetUbGlobal(vars[v])) )
+               bound = 0.0;
+            else
             {
                /* try to take an integer value, only for polishing */
                roundbound = SCIPfloor(scip, SCIPvarGetUbGlobal(vars[v]));
                
-	       if( roundbound < bound )
+               if( roundbound < bound )
                   bound = SCIPvarGetUbGlobal(vars[v]);
                else
                   bound = roundbound;
             }
-	 }
+         }
          else
          {
             /* try to take an integer value, only for polishing */
@@ -142,12 +142,12 @@ SCIP_DECL_PRESOLEXEC(presolExecDualfix)
       }
       else
       {
-	 /* if it is always possible to round variable in direction of objective value,
-	  * fix it to its proper bound
-	  */
-	 if( SCIPvarMayRoundDown(vars[v]) && !SCIPisNegative(scip, obj) )
-	 {
-	    bound = SCIPvarGetLbGlobal(vars[v]);
+         /* if it is always possible to round variable in direction of objective value,
+          * fix it to its proper bound
+          */
+         if( SCIPvarMayRoundDown(vars[v]) && !SCIPisNegative(scip, obj) )
+         {
+            bound = SCIPvarGetLbGlobal(vars[v]);
             if ( SCIPisZero(scip, obj) && SCIPvarGetNLocksUp(vars[v]) == 1 && SCIPisInfinity(scip, -bound) )
             {
                /* variable can be set to -infinity, and it is only contained in one constraint:
@@ -156,12 +156,12 @@ SCIP_DECL_PRESOLEXEC(presolExecDualfix)
                 */
                continue;
             }
-	    SCIPdebugMessage("variable <%s> with objective %g and %d uplocks fixed to lower bound %g\n",
+            SCIPdebugMessage("variable <%s> with objective %g and %d uplocks fixed to lower bound %g\n",
                SCIPvarGetName(vars[v]), SCIPvarGetObj(vars[v]), SCIPvarGetNLocksUp(vars[v]), bound);
-	 }
-	 else if( SCIPvarMayRoundUp(vars[v]) && !SCIPisPositive(scip, obj) )
-	 {
-	    bound = SCIPvarGetUbGlobal(vars[v]);
+         }
+         else if( SCIPvarMayRoundUp(vars[v]) && !SCIPisPositive(scip, obj) )
+         {
+            bound = SCIPvarGetUbGlobal(vars[v]);
             if ( SCIPisZero(scip, obj) && SCIPvarGetNLocksDown(vars[v]) == 1 && SCIPisInfinity(scip, bound) )
             {
                /* variable can be set to +infinity, and it is only contained in one constraint:
@@ -170,11 +170,11 @@ SCIP_DECL_PRESOLEXEC(presolExecDualfix)
                 */
                continue;
             }
-	    SCIPdebugMessage("variable <%s> with objective %g and %d downlocks fixed to upper bound %g\n",
+            SCIPdebugMessage("variable <%s> with objective %g and %d downlocks fixed to upper bound %g\n",
                SCIPvarGetName(vars[v]), SCIPvarGetObj(vars[v]), SCIPvarGetNLocksDown(vars[v]), bound);
-	 }
-	 else
-	    continue;
+         }
+         else
+            continue;
       }
 
       /* apply the fixing */

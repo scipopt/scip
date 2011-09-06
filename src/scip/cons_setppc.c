@@ -3826,8 +3826,8 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
       {
          /* detect redundant constraints; fast version with hash table instead of pairwise comparison */
          SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &firstchange, ndelconss, nchgsides) );
-	 if( oldndelconss < *ndelconss )
-	    *result = SCIP_SUCCESS;
+         if( oldndelconss < *ndelconss )
+            *result = SCIP_SUCCESS;
       }
 
       /* check constraints for redundancy */
@@ -3860,7 +3860,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
                   oldndelconss = *ndelconss;
                   oldnfixedvars = *nfixedvars;
                   npaircomparisons = 0;
-		  *result = SCIP_SUCCESS;
+                  *result = SCIP_SUCCESS;
                }
             }
          }

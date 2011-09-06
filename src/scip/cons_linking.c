@@ -2252,7 +2252,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
             }
          }
 
-	 /* now all other variables are fixed to zero:
+         /* now all other variables are fixed to zero:
           * the constraint is feasible, and if it's not modifiable, it is redundant
           */
          SCIPdebugMessage(""CONSHDLR_NAME" constraint <%s> is redundant\n", SCIPconsGetName(cons));

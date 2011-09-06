@@ -361,7 +361,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
       && (divedepth < 10
          || nlpcands <= startnlpcands - divedepth/2
          || (divedepth < maxdivedepth && nlpcands <= startnlpcands - divedepth/10
-	     && heurdata->nlpiterations < maxnlpiterations)) && !SCIPisStopped(scip) )
+            && heurdata->nlpiterations < maxnlpiterations)) && !SCIPisStopped(scip) )
    {
       SCIP_RETCODE retcode;
 

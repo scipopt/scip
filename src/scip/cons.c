@@ -4317,8 +4317,8 @@ SCIP_RETCODE SCIPconssetchgApply(
          assert(cons->addarraypos >= 0);
          assert(!cons->deleted); /* deleted constraints must not be enabled! */
          SCIP_CALL( SCIPconsDisable(conssetchg->disabledconss[i], set, stat) );
-	 assert(!cons->update);
-	 assert(!cons->enabled);
+         assert(!cons->update);
+         assert(!cons->enabled);
       }
    }
 

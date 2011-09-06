@@ -71,24 +71,24 @@
 
 /** enum containing all mps sections */
 enum MpsSection
-{
-   MPS_NAME,
-   MPS_OBJSEN,
-   MPS_OBJNAME,
-   MPS_ROWS,
-   MPS_USERCUTS,
-   MPS_LAZYCONS,
-   MPS_COLUMNS,
-   MPS_RHS,
-   MPS_RANGES,
-   MPS_BOUNDS,
-   MPS_SOS,
-   MPS_QUADOBJ,
-   MPS_QMATRIX,
-   MPS_QCMATRIX,
-   MPS_INDICATORS,
-   MPS_ENDATA
-};
+   {
+      MPS_NAME,
+      MPS_OBJSEN,
+      MPS_OBJNAME,
+      MPS_ROWS,
+      MPS_USERCUTS,
+      MPS_LAZYCONS,
+      MPS_COLUMNS,
+      MPS_RHS,
+      MPS_RANGES,
+      MPS_BOUNDS,
+      MPS_SOS,
+      MPS_QUADOBJ,
+      MPS_QMATRIX,
+      MPS_QCMATRIX,
+      MPS_INDICATORS,
+      MPS_ENDATA
+   };
 typedef enum MpsSection MPSSECTION;
 
 /** mps input structure */
@@ -1365,70 +1365,70 @@ SCIP_RETCODE readBounds(
 
          switch( mpsinputField1(mpsi)[0] )
          {
-            case 'L':
-               if( mpsinputField1(mpsi)[1] == 'I' ) /* CPLEX extension (Integer Bound) */
+         case 'L':
+            if( mpsinputField1(mpsi)[1] == 'I' ) /* CPLEX extension (Integer Bound) */
+            {
+               SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
+               /* don't assert feasibility here because the presolver will and should detect a infeasibility */
+            }
+            SCIP_CALL( SCIPchgVarLb(scip, var, val) );
+            break;
+         case 'U':
+            if( mpsinputField1(mpsi)[1] == 'I' ) /* CPLEX extension (Integer Bound) */
+            {
+               SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
+               /* don't assert feasibility here because the presolver will and should detect a infeasibility */
+            }
+            SCIP_CALL( SCIPchgVarUb(scip, var, val) );
+            break;
+         case 'S':
+            assert(mpsinputField1(mpsi)[1] == 'C'); /* CPLEX extension (Semi-Continuous) */
+            /* remember that variable is semi-continuous */
+            if( semicontsize <= nsemicont )
+            {
+               semicontsize = SCIPcalcMemGrowSize(scip, nsemicont+1);
+               if( semicont == NULL )
                {
-                  SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
-                  /* don't assert feasibility here because the presolver will and should detect a infeasibility */
-               }
-               SCIP_CALL( SCIPchgVarLb(scip, var, val) );
-               break;
-            case 'U':
-               if( mpsinputField1(mpsi)[1] == 'I' ) /* CPLEX extension (Integer Bound) */
-               {
-                  SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
-                  /* don't assert feasibility here because the presolver will and should detect a infeasibility */
-               }
-               SCIP_CALL( SCIPchgVarUb(scip, var, val) );
-               break;
-            case 'S':
-               assert(mpsinputField1(mpsi)[1] == 'C'); /* CPLEX extension (Semi-Continuous) */
-               /* remember that variable is semi-continuous */
-               if( semicontsize <= nsemicont )
-               {
-                  semicontsize = SCIPcalcMemGrowSize(scip, nsemicont+1);
-                  if( semicont == NULL )
-                  {
-                     SCIP_CALL( SCIPallocBufferArray(scip, &semicont, semicontsize) );
-                  }
-                  else
-                  {
-                     SCIP_CALL( SCIPreallocBufferArray(scip, &semicont, semicontsize) );
-                  }
-               }
-               assert(semicont != NULL);
-               semicont[nsemicont] = var;
-               ++nsemicont;
-
-               SCIP_CALL( SCIPchgVarUb(scip, var, val) );
-               break;
-            case 'F':
-               if( mpsinputField1(mpsi)[1] == 'X' )
-               {
-                  SCIP_CALL( SCIPchgVarLb(scip, var, val) );
-                  SCIP_CALL( SCIPchgVarUb(scip, var, val) );
+                  SCIP_CALL( SCIPallocBufferArray(scip, &semicont, semicontsize) );
                }
                else
                {
-                  SCIP_CALL( SCIPchgVarLb(scip, var, -SCIPinfinity(scip)) );
-                  SCIP_CALL( SCIPchgVarUb(scip, var, +SCIPinfinity(scip)) );
+                  SCIP_CALL( SCIPreallocBufferArray(scip, &semicont, semicontsize) );
                }
-               break;
-            case 'M':
+            }
+            assert(semicont != NULL);
+            semicont[nsemicont] = var;
+            ++nsemicont;
+
+            SCIP_CALL( SCIPchgVarUb(scip, var, val) );
+            break;
+         case 'F':
+            if( mpsinputField1(mpsi)[1] == 'X' )
+            {
+               SCIP_CALL( SCIPchgVarLb(scip, var, val) );
+               SCIP_CALL( SCIPchgVarUb(scip, var, val) );
+            }
+            else
+            {
                SCIP_CALL( SCIPchgVarLb(scip, var, -SCIPinfinity(scip)) );
-               break;
-            case 'P':
                SCIP_CALL( SCIPchgVarUb(scip, var, +SCIPinfinity(scip)) );
-               break;
-            case 'B' : /* CPLEX extension (Binary) */
-               SCIP_CALL( SCIPchgVarLb(scip, var, 0.0) );
-               SCIP_CALL( SCIPchgVarUb(scip, var, 1.0) );
-               SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, &infeasible) );
-               /* don't assert feasibility here because the presolver will and should detect a infeasibility */
-               break;
-            default:
-               mpsinputSyntaxerror(mpsi);
-               return SCIP_OKAY;
+            }
+            break;
+         case 'M':
+            SCIP_CALL( SCIPchgVarLb(scip, var, -SCIPinfinity(scip)) );
+            break;
+         case 'P':
+            SCIP_CALL( SCIPchgVarUb(scip, var, +SCIPinfinity(scip)) );
+            break;
+         case 'B' : /* CPLEX extension (Binary) */
+            SCIP_CALL( SCIPchgVarLb(scip, var, 0.0) );
+            SCIP_CALL( SCIPchgVarUb(scip, var, 1.0) );
+            SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, &infeasible) );
+            /* don't assert feasibility here because the presolver will and should detect a infeasibility */
+            break;
+         default:
+            mpsinputSyntaxerror(mpsi);
+            return SCIP_OKAY;
          }
       }
       else
@@ -1447,7 +1447,7 @@ SCIP_RETCODE readBounds(
    mpsinputSyntaxerror(mpsi);
    
    
-READBOUNDS_FINISH:
+ READBOUNDS_FINISH:
    if( nsemicont > 0 )
    {
       int i;
@@ -1491,7 +1491,7 @@ READBOUNDS_FINISH:
          bounds[1] = oldlb;
          
          SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, 2, vars, boundtypes, bounds,
-            !dynamiccols, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamiccols, FALSE) );
+               !dynamiccols, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamiccols, FALSE) );
          SCIP_CALL( SCIPaddCons(scip, cons) );
          
          SCIPdebugMessage("add bound disjunction constraint for semi-continuity of <%s>:\n\t", SCIPvarGetName(var));
@@ -1606,13 +1606,13 @@ SCIP_RETCODE readSOS(
          {
             /* we do not know the name of the constraint */
             SCIP_CALL( SCIPcreateConsSOS1(scip, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
-               local, modifiable, dynamic, removable) );
+                  local, modifiable, dynamic, removable) );
          }
          else
          {
             assert( type == 2 );
             SCIP_CALL( SCIPcreateConsSOS2(scip, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
-               local, modifiable, dynamic, removable) );
+                  local, modifiable, dynamic, removable) );
          }
          consType = type;
          SCIPdebugMessage("created constraint <%s> of type %d.\n", name, type);
@@ -1654,9 +1654,9 @@ SCIP_RETCODE readSOS(
             assert( consType == 1 || consType == 2 );
             switch (consType)
             {
-               case 1: SCIP_CALL( SCIPaddVarSOS1(scip, cons, var, weight) ); break;
-               case 2: SCIP_CALL( SCIPaddVarSOS2(scip, cons, var, weight) ); break;
-               default: abort(); /* should not happen */
+            case 1: SCIP_CALL( SCIPaddVarSOS1(scip, cons, var, weight) ); break;
+            case 2: SCIP_CALL( SCIPaddVarSOS2(scip, cons, var, weight) ); break;
+            default: abort(); /* should not happen */
             }
             SCIPdebugMessage("added variable <%s> with weight %g.\n", SCIPvarGetName(var), weight);
          }
@@ -1792,7 +1792,7 @@ SCIP_RETCODE readQMatrix(
              * in a QMATRIX section also off-diagonal have to be divided by 2.0, since both lower and upper diagonal elements are given
              */
             if( var1 == var2 || !isQuadObj )
-              quadcoefs[cnt] /= 2.0;
+               quadcoefs[cnt] /= 2.0;
             ++cnt;
             
             SCIPdebugMessage("stored term %g*<%s>*<%s>.\n", coef, SCIPvarGetName(var1), SCIPvarGetName(var2));
@@ -1844,7 +1844,7 @@ SCIP_RETCODE readQMatrix(
       }
       
       SCIP_CALL( SCIPcreateConsQuadratic(scip, &cons, "qmatrix", 1, &qmatrixvar, &minusone, cnt, quadvars1, quadvars2, quadcoefs, lhs, rhs,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
       
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIPdebugMessage("(line %d) added constraint <%s>: ", mpsi->lineno, SCIPconsGetName(cons));
@@ -2006,11 +2006,11 @@ SCIP_RETCODE readQCMatrix(
       SCIP_CONS* cons = NULL;
                   
       SCIP_CALL( SCIPcreateConsQuadratic(scip, &cons, SCIPconsGetName(lincons), 
-         SCIPgetNVarsLinear(scip, lincons), SCIPgetVarsLinear(scip, lincons), SCIPgetValsLinear(scip, lincons),
-         cnt, quadvars1, quadvars2, quadcoefs, SCIPgetLhsLinear(scip, lincons), SCIPgetRhsLinear(scip, lincons),
-         SCIPconsIsInitial(lincons), SCIPconsIsSeparated(lincons), SCIPconsIsEnforced(lincons), SCIPconsIsChecked(lincons),
-         SCIPconsIsPropagated(lincons), SCIPconsIsLocal(lincons), SCIPconsIsModifiable(lincons), SCIPconsIsDynamic(lincons),
-         SCIPconsIsRemovable(lincons)) );
+            SCIPgetNVarsLinear(scip, lincons), SCIPgetVarsLinear(scip, lincons), SCIPgetValsLinear(scip, lincons),
+            cnt, quadvars1, quadvars2, quadcoefs, SCIPgetLhsLinear(scip, lincons), SCIPgetRhsLinear(scip, lincons),
+            SCIPconsIsInitial(lincons), SCIPconsIsSeparated(lincons), SCIPconsIsEnforced(lincons), SCIPconsIsChecked(lincons),
+            SCIPconsIsPropagated(lincons), SCIPconsIsLocal(lincons), SCIPconsIsModifiable(lincons), SCIPconsIsDynamic(lincons),
+            SCIPconsIsRemovable(lincons)) );
       
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIPdebugMessage("(line %d) added constraint <%s>: ", mpsi->lineno, SCIPconsGetName(cons));
@@ -2112,34 +2112,34 @@ SCIP_RETCODE readIndicators(
       lincons = SCIPfindCons(scip, mpsinputField2(mpsi));
       if ( lincons == NULL )
       {
-	 SCIPerrorMessage("row <%s> does not exist.\n", mpsinputField2(mpsi));
-	 mpsinputSyntaxerror(mpsi);
-	 return SCIP_OKAY;
+         SCIPerrorMessage("row <%s> does not exist.\n", mpsinputField2(mpsi));
+         mpsinputSyntaxerror(mpsi);
+         return SCIP_OKAY;
       }
 
       /* check whether constraint is really linear */
       conshdlr = SCIPconsGetHdlr(lincons);
       if ( strcmp(SCIPconshdlrGetName(conshdlr), "linear") != 0 )
       {
-	 SCIPerrorMessage("constraint <%s> is not linear.\n", mpsinputField2(mpsi));
-	 return SCIP_OKAY;
+         SCIPerrorMessage("constraint <%s> is not linear.\n", mpsinputField2(mpsi));
+         return SCIP_OKAY;
       }
 
       /* get binary variable */
       binvar = SCIPfindVar(scip, mpsinputField3(mpsi));
       if ( binvar == NULL )
       {
-	 SCIPerrorMessage("binary variable <%s> does not exist.\n", mpsinputField3(mpsi));
-	 mpsinputSyntaxerror(mpsi);
-	 return SCIP_OKAY;
+         SCIPerrorMessage("binary variable <%s> does not exist.\n", mpsinputField3(mpsi));
+         mpsinputSyntaxerror(mpsi);
+         return SCIP_OKAY;
       }
 
       /* check type */
       if ( SCIPvarGetType(binvar) != SCIP_VARTYPE_BINARY )
       {
-	 SCIPerrorMessage("variable <%s> is not binary.\n", mpsinputField3(mpsi));
-	 mpsinputSyntaxerror(mpsi);
-	 return SCIP_OKAY;
+         SCIPerrorMessage("variable <%s> is not binary.\n", mpsinputField3(mpsi));
+         mpsinputSyntaxerror(mpsi);
+         return SCIP_OKAY;
       }
 
       /* check whether we need the negated variable */
@@ -2147,17 +2147,17 @@ SCIP_RETCODE readIndicators(
       {
          SCIP_VAR* var;
          SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &var) );
-	 binvar = var;
+         binvar = var;
          assert( binvar != NULL );
       }
       else
       {
-	 if ( *mpsinputField4(mpsi) != '1' )
-	 {
-	    SCIPerrorMessage("binary variable <%s> can only take values 0/1 (%s).\n", mpsinputField3(mpsi), mpsinputField4(mpsi));
-	    mpsinputSyntaxerror(mpsi);
-	    return SCIP_OKAY;
-	 }
+         if ( *mpsinputField4(mpsi) != '1' )
+         {
+            SCIPerrorMessage("binary variable <%s> can only take values 0/1 (%s).\n", mpsinputField3(mpsi), mpsinputField4(mpsi));
+            mpsinputSyntaxerror(mpsi);
+            return SCIP_OKAY;
+         }
       }
 
       /* check lhs/rhs */
@@ -2170,62 +2170,62 @@ SCIP_RETCODE readIndicators(
       sign = -1.0;
       if ( ! SCIPisInfinity(scip, -lhs) )
       {
-	 if ( SCIPisInfinity(scip, rhs) )
-	    sign = 1.0;
-	 else
-	 {
-	    if ( ! SCIPisEQ(scip, lhs, rhs) )
-	    {
-	       SCIPerrorMessage("ranged row <%s> is not allowed in indicator constraints.\n", mpsinputField2(mpsi));
-	       mpsinputSyntaxerror(mpsi);
-	       return SCIP_OKAY;
-	    }
-	    else
-	    {
-	       /* create second indicator constraint */
-	       SCIP_VAR** vars;
-	       SCIP_Real* vals;
+         if ( SCIPisInfinity(scip, rhs) )
+            sign = 1.0;
+         else
+         {
+            if ( ! SCIPisEQ(scip, lhs, rhs) )
+            {
+               SCIPerrorMessage("ranged row <%s> is not allowed in indicator constraints.\n", mpsinputField2(mpsi));
+               mpsinputSyntaxerror(mpsi);
+               return SCIP_OKAY;
+            }
+            else
+            {
+               /* create second indicator constraint */
+               SCIP_VAR** vars;
+               SCIP_Real* vals;
 
-	       SCIP_CALL( SCIPallocBufferArray(scip, &vars, nlinvars+1) );
-	       SCIP_CALL( SCIPallocBufferArray(scip, &vals, nlinvars+1) );
-	       for (i = 0; i < nlinvars; ++i)
-	       {
-		  vars[i] = linvars[i];
-		  vals[i] = -linvals[i];
-	       }
+               SCIP_CALL( SCIPallocBufferArray(scip, &vars, nlinvars+1) );
+               SCIP_CALL( SCIPallocBufferArray(scip, &vals, nlinvars+1) );
+               for (i = 0; i < nlinvars; ++i)
+               {
+                  vars[i] = linvars[i];
+                  vals[i] = -linvals[i];
+               }
 
-	       /* create new name */
-	       (void) SCIPsnprintf(name, MPS_MAX_NAMELEN, "indlhs_%s", SCIPconsGetName(lincons));
+               /* create new name */
+               (void) SCIPsnprintf(name, MPS_MAX_NAMELEN, "indlhs_%s", SCIPconsGetName(lincons));
 
-	       /* create indicator constraint */
-	       SCIP_CALL( SCIPcreateConsIndicator(scip, &cons, name, binvar, nlinvars+1, vars, vals, -lhs,
-		     initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
-	       SCIP_CALL( SCIPaddCons(scip, cons) );
-	       SCIPdebugMessage("created indicator constraint <%s>", mpsinputField2(mpsi));
-	       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-	       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+               /* create indicator constraint */
+               SCIP_CALL( SCIPcreateConsIndicator(scip, &cons, name, binvar, nlinvars+1, vars, vals, -lhs,
+                     initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
+               SCIP_CALL( SCIPaddCons(scip, cons) );
+               SCIPdebugMessage("created indicator constraint <%s>", mpsinputField2(mpsi));
+               SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+               SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-	       SCIPfreeBufferArray(scip, &vals);
-	       SCIPfreeBufferArray(scip, &vars);
-	    }
-	 }
+               SCIPfreeBufferArray(scip, &vals);
+               SCIPfreeBufferArray(scip, &vars);
+            }
+         }
       }
 
       /* check if slack variable can be made implicitly integer */
       slackvartype = SCIP_VARTYPE_IMPLINT;
       for (i = 0; i < nlinvars; ++i)
       {
-	 if ( ! SCIPvarIsIntegral(linvars[i]) || ! SCIPisIntegral(scip, linvals[i]) )
-	 {
-	    slackvartype = SCIP_VARTYPE_CONTINUOUS;
-	    break;
-	 }
+         if ( ! SCIPvarIsIntegral(linvars[i]) || ! SCIPisIntegral(scip, linvals[i]) )
+         {
+            slackvartype = SCIP_VARTYPE_CONTINUOUS;
+            break;
+         }
       }
 
       /* create slack variable */
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "indslack_%s", SCIPconsGetName(lincons));
       SCIP_CALL( SCIPcreateVar(scip, &slackvar, name, 0.0, SCIPinfinity(scip), 0.0, slackvartype, TRUE, FALSE,
-	    NULL, NULL, NULL, NULL, NULL) );
+            NULL, NULL, NULL, NULL, NULL) );
 
       /* add slack variable */      
       SCIP_CALL( SCIPaddVar(scip, slackvar) );
@@ -2236,7 +2236,7 @@ SCIP_RETCODE readIndicators(
 
       /* create indicator constraint */
       SCIP_CALL( SCIPcreateConsIndicatorLinCons(scip, &cons, name, binvar, lincons, slackvar,
-	    initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
+            initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
       
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIPdebugMessage("created indicator constraint <%s>", mpsinputField2(mpsi));
@@ -3764,7 +3764,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          }
 
          SCIP_CALL( getLinearCoeffs(scip, consname,
-            SCIPgetLhsVarsSOC(scip, cons), lincoefs, nconsvars, transformed, matrix, &rhs) );
+               SCIPgetLhsVarsSOC(scip, cons), lincoefs, nconsvars, transformed, matrix, &rhs) );
 
          SCIPfreeBufferArray(scip, &lincoefs);
 

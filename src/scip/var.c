@@ -3893,12 +3893,12 @@ SCIP_RETCODE varUpdateAggregationBounds(
             SCIP_CALL( SCIPvarChgLbGlobal(aggvar, blkmem, set, stat, lp, branchcand, eventqueue, aggvarlb) );
             aggvarbdschanged = !SCIPsetIsEQ(set, oldbd, aggvar->glbdom.lb);
          }
-	 if( SCIPsetIsLT(set, aggvarub, aggvar->glbdom.ub) )
+         if( SCIPsetIsLT(set, aggvarub, aggvar->glbdom.ub) )
          {
             oldbd = aggvar->glbdom.ub;
-	    SCIP_CALL( SCIPvarChgUbGlobal(aggvar, blkmem, set, stat, lp, branchcand, eventqueue, aggvarub) );
+            SCIP_CALL( SCIPvarChgUbGlobal(aggvar, blkmem, set, stat, lp, branchcand, eventqueue, aggvarub) );
             aggvarbdschanged = aggvarbdschanged || !SCIPsetIsEQ(set, oldbd, aggvar->glbdom.ub);
-	 }
+         }
 
          /* update the hole list of the aggregation variable */
          /**@todo update hole list of aggregation variable */
@@ -4360,8 +4360,8 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       /* this means that x = b*x + a_1*y_1 + ... + a_n*y_n + c */
       else if( !SCIPsetIsZero(set, tmpscalar) )
       {
-	 tmpscalar = 1 - tmpscalar;
-	 tmpconstant /= tmpscalar;
+         tmpscalar = 1 - tmpscalar;
+         tmpconstant /= tmpscalar;
          for( v = ntmpvars - 1; v >= 0; --v )
             tmpscalars[v] /= tmpscalar;
       }
@@ -4402,13 +4402,13 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       /**@todo currently we don't perform the multi aggregation if the multi aggregation variable has a none
        *  empty hole list; this should be changed in the future  */
       if( SCIPvarGetHolelistGlobal(var) != NULL )
-	 goto TERMINATE;
+         goto TERMINATE;
 
       /* if the variable is not allowed to be multi-aggregated */
       if( SCIPvarDoNotMultaggr(var) )
       {
-	 SCIPdebugMessage("variable is not allowed to be multi-aggregated.\n");
-	 goto TERMINATE;
+         SCIPdebugMessage("variable is not allowed to be multi-aggregated.\n");
+         goto TERMINATE;
       }
 
       /* if the variable to be multi-aggregated has implications or variable bounds (i.e. is the implied variable or
@@ -4926,7 +4926,7 @@ SCIP_RETCODE SCIPvarAddObj(
          break;
 
       case SCIP_VARSTATUS_MULTAGGR:
-	 assert(!var->donotmultaggr);
+         assert(!var->donotmultaggr);
          /* x = a_1*y_1 + ... + a_n*y_n  + c  ->  add a_i*addobj to obj. val. of y_i, and c*addobj to obj. offset */
          SCIPprobAddObjoffset(prob, var->data.multaggr.constant * addobj);
          SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, prob, tree, lp) );
@@ -8213,8 +8213,8 @@ SCIP_RETCODE SCIPvarAddVlb(
          assert(SCIPvarGetStatus(vlbvar) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(vlbvar) == SCIP_VARSTATUS_COLUMN);
          assert(vlbcoef != 0.0);
 
-	 minvlb = -SCIPsetInfinity(set);
-	 maxvlb = -SCIPsetInfinity(set);
+         minvlb = -SCIPsetInfinity(set);
+         maxvlb = -SCIPsetInfinity(set);
 
          xlb = SCIPvarGetLbGlobal(var);
          xub = SCIPvarGetUbGlobal(var);
@@ -8225,8 +8225,8 @@ SCIP_RETCODE SCIPvarAddVlb(
          if( vlbcoef >= 0.0 )
          {
             SCIP_Real newzub;
-	    
-	    if( !SCIPsetIsInfinity(set, xub) )
+            
+            if( !SCIPsetIsInfinity(set, xub) )
             {
                /* x >= b*z + d  ->  z <= (x-d)/b */
                newzub = (xub - vlbconstant)/vlbcoef;
@@ -8244,21 +8244,21 @@ SCIP_RETCODE SCIPvarAddVlb(
                }
                maxvlb = vlbcoef * zub + vlbconstant;
                if( !SCIPsetIsInfinity(set, -zlb) )
-		  minvlb = vlbcoef * zlb + vlbconstant;
+                  minvlb = vlbcoef * zlb + vlbconstant;
             }
-	    else
+            else
             {
                if( !SCIPsetIsInfinity(set, zub) )
-		  maxvlb = vlbcoef * zub + vlbconstant;
+                  maxvlb = vlbcoef * zub + vlbconstant;
                if( !SCIPsetIsInfinity(set, -zlb) )
-		  minvlb = vlbcoef * zlb + vlbconstant;
+                  minvlb = vlbcoef * zlb + vlbconstant;
             }
-	 }
+         }
          else
          {
             SCIP_Real newzlb;
 
-	    if( !SCIPsetIsInfinity(set, xub) )
+            if( !SCIPsetIsInfinity(set, xub) )
             {
                /* x >= b*z + d  ->  z >= (x-d)/b */
                newzlb = (xub - vlbconstant)/vlbcoef;
@@ -8276,17 +8276,17 @@ SCIP_RETCODE SCIPvarAddVlb(
                }
                maxvlb = vlbcoef * zlb + vlbconstant;
                if( !SCIPsetIsInfinity(set, zub) )
-		  minvlb = vlbcoef * zub + vlbconstant;
+                  minvlb = vlbcoef * zub + vlbconstant;
             }
-	    else
+            else
             {
                if( !SCIPsetIsInfinity(set, -zlb) )
-		  maxvlb = vlbcoef * zlb + vlbconstant;
+                  maxvlb = vlbcoef * zlb + vlbconstant;
                if( !SCIPsetIsInfinity(set, zub) )
-		  minvlb = vlbcoef * zub + vlbconstant;
+                  minvlb = vlbcoef * zub + vlbconstant;
             }
          }
-	 if( maxvlb < minvlb )
+         if( maxvlb < minvlb )
             maxvlb = minvlb;
 
          /* adjust bounds due to integrality of variable */
@@ -8314,8 +8314,8 @@ SCIP_RETCODE SCIPvarAddVlb(
             /* b > 0: x >= (maxvlb - minvlb) * z + minvlb
              * b < 0: x >= (minvlb - maxvlb) * z + maxvlb
              */
-	   
-	    assert(!SCIPsetIsInfinity(set, -maxvlb) && !SCIPsetIsInfinity(set, -minvlb));
+           
+            assert(!SCIPsetIsInfinity(set, -maxvlb) && !SCIPsetIsInfinity(set, -minvlb));
 
             if( vlbcoef >= 0.0 )
             {
@@ -8484,8 +8484,8 @@ SCIP_RETCODE SCIPvarAddVub(
          assert(SCIPvarGetStatus(vubvar) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(vubvar) == SCIP_VARSTATUS_COLUMN);
          assert(vubcoef != 0.0);
 
-	 minvub = SCIPsetInfinity(set);
-	 maxvub = SCIPsetInfinity(set);
+         minvub = SCIPsetInfinity(set);
+         maxvub = SCIPsetInfinity(set);
 
          xlb = SCIPvarGetLbGlobal(var);
          xub = SCIPvarGetUbGlobal(var);
@@ -8497,7 +8497,7 @@ SCIP_RETCODE SCIPvarAddVub(
          {
             SCIP_Real newzlb;
 
-	    if( !SCIPsetIsInfinity(set, -xlb) )
+            if( !SCIPsetIsInfinity(set, -xlb) )
             {
                /* x <= b*z + d  ->  z >= (x-d)/b */
                newzlb = (xlb - vubconstant)/vubcoef;
@@ -8513,21 +8513,21 @@ SCIP_RETCODE SCIPvarAddVub(
                }
                minvub = vubcoef * zlb + vubconstant;
                if( !SCIPsetIsInfinity(set, zub) )
-		  maxvub = vubcoef * zub + vubconstant;
+                  maxvub = vubcoef * zub + vubconstant;
             }
-	    else
+            else
             {
                if( !SCIPsetIsInfinity(set, zub) )
-		  maxvub = vubcoef * zub + vubconstant;
+                  maxvub = vubcoef * zub + vubconstant;
                if( !SCIPsetIsInfinity(set, -zlb) )
-		  minvub = vubcoef * zlb + vubconstant;
+                  minvub = vubcoef * zlb + vubconstant;
             }
          }
          else
          {
             SCIP_Real newzub;
 
-	    if( !SCIPsetIsInfinity(set, -xlb) )
+            if( !SCIPsetIsInfinity(set, -xlb) )
             {
                /* x <= b*z + d  ->  z <= (x-d)/b */
                newzub = (xlb - vubconstant)/vubcoef;
@@ -8543,18 +8543,18 @@ SCIP_RETCODE SCIPvarAddVub(
                }
                minvub = vubcoef * zub + vubconstant;
                if( !SCIPsetIsInfinity(set, -zlb) )
-		  maxvub = vubcoef * zlb + vubconstant;
+                  maxvub = vubcoef * zlb + vubconstant;
             }
-	    else
+            else
             {
                if( !SCIPsetIsInfinity(set, zub) )
-		  minvub = vubcoef * zub + vubconstant;
+                  minvub = vubcoef * zub + vubconstant;
                if( !SCIPsetIsInfinity(set, -zlb) )
-		  maxvub = vubcoef * zlb + vubconstant;
+                  maxvub = vubcoef * zlb + vubconstant;
             }
 
          }
-	 if( minvub > maxvub )
+         if( minvub > maxvub )
             minvub = maxvub;
 
          /* adjust bounds due to integrality of vub variable */
@@ -8580,8 +8580,8 @@ SCIP_RETCODE SCIPvarAddVub(
             /* b > 0: x <= (maxvub - minvub) * z + minvub
              * b < 0: x <= (minvub - maxvub) * z + maxvub
              */
-	    
-	    assert(!SCIPsetIsInfinity(set, maxvub) && !SCIPsetIsInfinity(set, minvub));
+            
+            assert(!SCIPsetIsInfinity(set, maxvub) && !SCIPsetIsInfinity(set, minvub));
 
             if( vubcoef >= 0.0 )
             {

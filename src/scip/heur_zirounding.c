@@ -317,7 +317,7 @@ void rowFindSlackVar(
 
       assert(rowcols[v] != NULL);
       if( SCIPcolGetLPPos(rowcols[v]) == -1 )
-	 continue;
+         continue;
 
       colvar = SCIPcolGetVar(rowcols[v]);
 
@@ -325,10 +325,10 @@ void rowFindSlackVar(
          && !SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(colvar), SCIPvarGetUbGlobal(colvar))
          && SCIPcolGetNLPNonz(rowcols[v]) == 1 )
       {
-	 SCIPdebugMessage("  slack variable for row %s found: %s\n", SCIProwGetName(row), SCIPvarGetName(colvar));
+         SCIPdebugMessage("  slack variable for row %s found: %s\n", SCIProwGetName(row), SCIPvarGetName(colvar));
 
          *coeffpointer = rowvals[v];
-	 *varpointer = colvar;
+         *varpointer = colvar;
 
          return;
       }
@@ -598,64 +598,64 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
       if( SCIPisFeasEQ(scip, lhs, rhs) && rowneedsslackvar[i] ) 
       {
          /* @todo: This is only necessary for rows containing fractional variables. */
-	 rowFindSlackVar(scip, row, &(slackvars[i]), &(slackvarcoeffs[i]));
+         rowFindSlackVar(scip, row, &(slackvars[i]), &(slackvarcoeffs[i]));
 
          if( slackvars[i] == NULL )
-	 {
-	    SCIPdebugMessage("No slack variable found for equality row %s, terminating ZI Round heuristic\n", SCIProwGetName(row));
-	    goto TERMINATE;
-	 }
-	 else
-	 {
-	    SCIP_Real ubslackvar;
-	    SCIP_Real lbslackvar;
-	    SCIP_Real solvalslackvar;
-	    SCIP_Real coeffslackvar;
-	    SCIP_Real ubgap;
-	    SCIP_Real lbgap;
+         {
+            SCIPdebugMessage("No slack variable found for equality row %s, terminating ZI Round heuristic\n", SCIProwGetName(row));
+            goto TERMINATE;
+         }
+         else
+         {
+            SCIP_Real ubslackvar;
+            SCIP_Real lbslackvar;
+            SCIP_Real solvalslackvar;
+            SCIP_Real coeffslackvar;
+            SCIP_Real ubgap;
+            SCIP_Real lbgap;
 
-	    assert(SCIPvarGetType(slackvars[i]) == SCIP_VARTYPE_CONTINUOUS);
-	    solvalslackvar = SCIPgetSolVal(scip, sol, slackvars[i]);
-	    ubslackvar = SCIPvarGetUbGlobal(slackvars[i]);
-	    lbslackvar = SCIPvarGetLbGlobal(slackvars[i]);
+            assert(SCIPvarGetType(slackvars[i]) == SCIP_VARTYPE_CONTINUOUS);
+            solvalslackvar = SCIPgetSolVal(scip, sol, slackvars[i]);
+            ubslackvar = SCIPvarGetUbGlobal(slackvars[i]);
+            lbslackvar = SCIPvarGetLbGlobal(slackvars[i]);
 
-	    coeffslackvar = slackvarcoeffs[i];
-	    assert(!SCIPisFeasZero(scip, coeffslackvar));
+            coeffslackvar = slackvarcoeffs[i];
+            assert(!SCIPisFeasZero(scip, coeffslackvar));
 
-	    ubgap = ubslackvar - solvalslackvar;
-	    lbgap = solvalslackvar - lbslackvar;
+            ubgap = ubslackvar - solvalslackvar;
+            lbgap = solvalslackvar - lbslackvar;
 
-	    if( SCIPisFeasZero(scip, ubgap) )
-	      ubgap = 0.0;
-	    if( SCIPisFeasZero(scip, lbgap) )
-	      lbgap = 0.0;
-	 
-	    if( SCIPisFeasPositive(scip, coeffslackvar) )
-	    {
-	      if( !SCIPisInfinity(scip, lbslackvar) )
-		upslacks[i] += coeffslackvar * lbgap;
-	      else
-		upslacks[i] = SCIPinfinity(scip);
-	      if( !SCIPisInfinity(scip, ubslackvar) )
-		downslacks[i] += coeffslackvar * ubgap;
-	      else 
-		downslacks[i] = SCIPinfinity(scip);
-	    }
-	    else
-	    {
-	       if( !SCIPisInfinity(scip, lbslackvar) )
-		  upslacks[i] -= coeffslackvar * ubgap;
-	       else
-		  upslacks[i] = SCIPinfinity(scip);
-	       if( !SCIPisInfinity(scip, ubslackvar) )
-		  downslacks[i] -= coeffslackvar * lbgap;
-	       else
-		  downslacks[i] = SCIPinfinity(scip);
-	    }
-	    SCIPdebugMessage("  Slack variable for row %s at pos %d: %g <= %s = %g <= %g; Coeff %g, upslack = %g, downslack = %g  \n", 
+            if( SCIPisFeasZero(scip, ubgap) )
+              ubgap = 0.0;
+            if( SCIPisFeasZero(scip, lbgap) )
+              lbgap = 0.0;
+         
+            if( SCIPisFeasPositive(scip, coeffslackvar) )
+            {
+              if( !SCIPisInfinity(scip, lbslackvar) )
+                upslacks[i] += coeffslackvar * lbgap;
+              else
+                upslacks[i] = SCIPinfinity(scip);
+              if( !SCIPisInfinity(scip, ubslackvar) )
+                downslacks[i] += coeffslackvar * ubgap;
+              else 
+                downslacks[i] = SCIPinfinity(scip);
+            }
+            else
+            {
+               if( !SCIPisInfinity(scip, lbslackvar) )
+                  upslacks[i] -= coeffslackvar * ubgap;
+               else
+                  upslacks[i] = SCIPinfinity(scip);
+               if( !SCIPisInfinity(scip, ubslackvar) )
+                  downslacks[i] -= coeffslackvar * lbgap;
+               else
+                  downslacks[i] = SCIPinfinity(scip);
+            }
+            SCIPdebugMessage("  Slack variable for row %s at pos %d: %g <= %s = %g <= %g; Coeff %g, upslack = %g, downslack = %g  \n", 
                SCIProwGetName(row), SCIProwGetLPPos(row), lbslackvar, SCIPvarGetName(slackvars[i]), solvalslackvar, ubslackvar, coeffslackvar,
                upslacks[i], downslacks[i]);
-	 }
+         }
       }
       /* due to numerical inaccuracies, the rows might be feasible, even if the slacks are 
        * significantly smaller than zero -> terminate 
@@ -776,7 +776,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
                c--;
          } 
          else if( nroundings == heurdata->maxroundingloops - 1 )
-            goto TERMINATE;	
+            goto TERMINATE;
       }
    }
 

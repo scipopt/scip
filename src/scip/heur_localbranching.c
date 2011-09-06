@@ -51,7 +51,7 @@
                                          * otherwise, the copy constructors of the constraints handlers are used    */
 #define DEFAULT_COPYCUTS      TRUE      /* if DEFAULT_USELPROWS is FALSE, then should all active cuts from the cutpool
                                          * of the original scip be copied to constraints of the subscip
-					 */
+                                         */
 
 
 #define EXECUTE               0
@@ -199,7 +199,7 @@ SCIP_RETCODE addLocalBranchingConstraint(
       {
          consvals[i] = -1.0;
          rhs -= 1.0;
-	 lhs -= 1.0;
+         lhs -= 1.0;
       }
       else
          consvals[i] = 1.0;

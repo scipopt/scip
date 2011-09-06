@@ -144,13 +144,13 @@ typedef struct levelGraph LEVELGRAPH;
  *  and stores the last processed start node or root node and continues from this position in the next separation round.
  */
 enum sorttype
-{
-   UNSORTED                = 0,         /**< variable array is unsorted */
-   MAXIMAL_LP_VALUE        = 1,         /**< variable array is sorted by maximal lp-value */
-   MINIMAL_LP_VALUE        = 2,         /**< variable array is sorted by minimal fractionality */
-   MAXIMAL_FRACTIONALITY   = 3,         /**< variable array is sorted by maximal lp-value */
-   MINIMAL_FRACTIONALITY   = 4          /**< variable array is sorted by minimal fractionality */
-};
+   {
+      UNSORTED                = 0,         /**< variable array is unsorted */
+      MAXIMAL_LP_VALUE        = 1,         /**< variable array is sorted by maximal lp-value */
+      MINIMAL_LP_VALUE        = 2,         /**< variable array is sorted by minimal fractionality */
+      MAXIMAL_FRACTIONALITY   = 3,         /**< variable array is sorted by maximal lp-value */
+      MINIMAL_FRACTIONALITY   = 4          /**< variable array is sorted by minimal fractionality */
+   };
 typedef enum sorttype SORTTYPE;
 
 
@@ -1357,7 +1357,7 @@ SCIP_RETCODE addArc(
    unsigned int          weight,             /**< weight of the arc */
    unsigned int*         nAdj,               /**< array of numbers of arcs inside levels */
    SCIP_Bool*            success             /**< FALSE, iff memory reallocation fails */
-)
+   )
 {
    /* arc is a forward arc */
    if( graph->level[v] == level+1 )
@@ -1768,7 +1768,7 @@ SCIP_RETCODE insertSortedRootNeighbors(
    unsigned int          level,              /**< number of current level */
    unsigned int*         newlevel,           /**< array of nodes of the next level */
    SCIP_Bool*            success             /**< FALSE, iff memory reallocation fails */
-)
+   )
 {
    /* storage for the neighbors of the root */
    unsigned int root;
@@ -2053,23 +2053,23 @@ SCIP_RETCODE findShortestPathToRoot(
       i = (unsigned int) graph->beginBackward[u];
       for( v = graph->targetBackward[i]; v >= 0; v = graph->targetBackward[++i] )
       {
-	 /* distance to u via current arc: */
-	 d = distance[u] + graph->weightBackward[i];
+         /* distance to u via current arc: */
+         d = distance[u] + graph->weightBackward[i];
 
-	 /* if we found a shorter connection */
-	 if( d < distance[v] )
-	 {
-	    distance[v] = d;
-	    parentTree[v] = (int) u;
+         /* if we found a shorter connection */
+         if( d < distance[v] )
+         {
+            distance[v] = d;
+            parentTree[v] = (int) u;
 
-	    /* insert in queue if not already present */
-	    if( !inQueue[v] )
-	    {
+            /* insert in queue if not already present */
+            if( !inQueue[v] )
+            {
                ++endQueue;
-	       queue[endQueue] = (unsigned int) v;
-	       inQueue[v] = TRUE;
-	    }
-	 }
+               queue[endQueue] = (unsigned int) v;
+               inQueue[v] = TRUE;
+            }
+         }
       }
       /* it is not necessary to stop if we found the root (in this case there are no arcs left) and we stop anyway */
    }
@@ -2127,7 +2127,7 @@ SCIP_RETCODE blockRootPath(
       /*  block neighbors of u in higher level */ 
       i = (unsigned int) graph->beginForward[u];
       for( v = graph->targetForward[i]; v >= 0; v = graph->targetForward[++i] )
-      {	 
+      {         
          assert(inlevelgraph[v]);
          blocked[v] = TRUE;
       }
@@ -2136,7 +2136,7 @@ SCIP_RETCODE blockRootPath(
       i = (unsigned int) graph->beginBackward[u];
       for( v = graph->targetBackward[i]; v >= 0; v = graph->targetBackward[++i] )
       {
-	 assert(inlevelgraph[v]);
+         assert(inlevelgraph[v]);
          blocked[v] = TRUE;
       }
 
@@ -2250,23 +2250,23 @@ findUnblockedShortestPathToRoot(
          if( blocked[v] && v != (int) root)
             continue;
          
-	 /* distance to u via current arc: */
-	 d = distance[u] + graph->weightBackward[i];
+         /* distance to u via current arc: */
+         d = distance[u] + graph->weightBackward[i];
 
-	 /* if we found a shorter connection */
-	 if( d < distance[v] )
-	 {
-	    distance[v] = d;
-	    parentTree[v] = (int) u;
+         /* if we found a shorter connection */
+         if( d < distance[v] )
+         {
+            distance[v] = d;
+            parentTree[v] = (int) u;
 
-	    /* insert in queue if not already present */
-	    if( !inQueue[v] )
-	    {
+            /* insert in queue if not already present */
+            if( !inQueue[v] )
+            {
                ++endQueue;
-	       queue[endQueue] = (unsigned int) v;
-	       inQueue[v] = TRUE;
-	    }
-	 }
+               queue[endQueue] = (unsigned int) v;
+               inQueue[v] = TRUE;
+            }
+         }
       }
       /* it is not necessary to stop if we found the root (in this case there are no arcs left) and we stop anyway */
    }

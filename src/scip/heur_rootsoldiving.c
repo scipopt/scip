@@ -305,7 +305,7 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
       && (divedepth < 10
          || nlpcands <= startnlpcands - divedepth/2
          || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations)) 
-	  && !SCIPisStopped(scip) )
+      && !SCIPisStopped(scip) )
    {
       SCIP_Bool success;
       int hardroundingidx;

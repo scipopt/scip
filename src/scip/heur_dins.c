@@ -712,7 +712,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
                solval = SCIPgetSolVal(scip, sols[j], vars[i]);
                delta[i] = delta[i] && SCIPisFeasEQ(scip, mipsolval, solval);
             }
-      	 }
+         }
 
          /* hard fixing if rootlpsolval=nodelpsolval=mipsolval(s) and delta (is TRUE) */
          if( delta[i] && SCIPisFeasEQ(scip, mipsolval, lpsolval) && SCIPisFeasEQ(scip, mipsolval, rootlpsolval) 

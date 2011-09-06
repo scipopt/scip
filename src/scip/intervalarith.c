@@ -160,7 +160,7 @@ SCIP_ROUNDMODE SCIPintervalGetRoundingMode(
    void
    )
 {
-	return _controlfp(0, 0) & _MCW_RC;
+        return _controlfp(0, 0) & _MCW_RC;
 }
 #endif
 

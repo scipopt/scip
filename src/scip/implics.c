@@ -387,7 +387,7 @@ SCIP_DECL_SORTPTRCOMP(compVars)
       else
       {
          SCIPABORT();
-	 /*lint --e{527}*/
+         /*lint --e{527}*/
          return 0;
       }
    }

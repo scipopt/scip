@@ -442,7 +442,7 @@ SCIP_Bool getNextLine(
       else
       {
          SCIPfseek(fzninput->file, -(long) strlen(last) - 1, SEEK_CUR);
-	 SCIPdebugMessage("correct buffer, reread the last %ld characters\n", (long) strlen(last) + 1);
+         SCIPdebugMessage("correct buffer, reread the last %ld characters\n", (long) strlen(last) + 1);
          *last = '\0';
       }
    }
@@ -4176,7 +4176,7 @@ SCIP_RETCODE writeFzn(
    SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
    SCIP_OBJSENSE      objsense,           /**< objective sense */
    SCIP_Real          objscale,           /**< scalar applied to objective function; external objective value is
-	 				   *   extobj = objsense * objscale * (intobj + objoffset) */
+                                            *   extobj = objsense * objscale * (intobj + objoffset) */
    SCIP_Real          objoffset,          /**< objective offset from bound shifting and fixing */
    SCIP_VAR**         vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
    int                nvars,              /**< number of mutable variables in the problem */
@@ -4266,21 +4266,21 @@ SCIP_RETCODE writeFzn(
 
          if( v < ndiscretevars )
          {
-	    assert( SCIPisFeasIntegral(scip, lb) && SCIPisFeasIntegral(scip, ub) );
-	    
-	    if( fixed )
+            assert( SCIPisFeasIntegral(scip, lb) && SCIPisFeasIntegral(scip, ub) );
+
+            if( fixed )
                SCIPinfoMessage(scip, file, "var int: %s = %.f;\n", varname, lb);
-	    else
+            else
                SCIPinfoMessage(scip, file, "var %.f..%.f: %s;\n", lb, ub, varname);
          }
          else
          {
             /* Real valued bounds have to be made type conform */
-	    if( fixed )
+            if( fixed )
             { 
                flattenFloat(scip, lb, buffy);
                SCIPinfoMessage(scip, file, "var float: %s = %s;\n", varname, buffy);
-	    }
+            }
             else
             {
                char buffy2[FZN_BUFFERLEN];
@@ -4298,10 +4298,10 @@ SCIP_RETCODE writeFzn(
 
          /* declare the variable without any bound */
          if( v < ndiscretevars )
-	    SCIPinfoMessage(scip, file, "var int: %s;\n", varname);
+            SCIPinfoMessage(scip, file, "var int: %s;\n", varname);
          else 
-	    SCIPinfoMessage(scip, file, "var float: %s;\n", varname);
-	   
+            SCIPinfoMessage(scip, file, "var float: %s;\n", varname);
+           
          /* if there is a bound, store the variable and its boundtype for adding a corresponding constraint later-on */
          if( SCIPisInfinity(scip, ub) ) 
          {
@@ -4392,7 +4392,7 @@ SCIP_RETCODE writeFzn(
       }
       else if ( strcmp(conshdlrname, "knapsack") == 0 )
       {
-	 SCIP_Longint* weights;
+         SCIP_Longint* weights;
 
          consvars = SCIPgetVarsKnapsack(scip, cons);
          nconsvars = SCIPgetNVarsKnapsack(scip, cons);
@@ -4565,7 +4565,7 @@ SCIP_RETCODE writeFzn(
       else
       {
          assert(SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
-	  
+
          if( boundtypes[v] == SCIP_BOUNDTYPE_LOWER )
          {
             flattenFloat(scip, transformed ? SCIPvarGetLbLocal(var) : SCIPvarGetLbOriginal(var), buffy);

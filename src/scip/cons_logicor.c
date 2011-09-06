@@ -2798,18 +2798,18 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
       
       if( firstchange < nconss && conshdlrdata->presolusehashing ) 
       {
-	 /* detect redundant constraints; fast version with hash table instead of pairwise comparison */
+         /* detect redundant constraints; fast version with hash table instead of pairwise comparison */
          SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &firstchange, ndelconss) );
       }
       
       /* check constraints for redundancy */
       if( conshdlrdata->presolpairwise ) /* && oldndelconss == *ndelconss ) */
       {
-	SCIP_Longint npaircomparisons;
-	npaircomparisons = 0;
-	oldndelconss = *ndelconss;
+        SCIP_Longint npaircomparisons;
+        npaircomparisons = 0;
+        oldndelconss = *ndelconss;
 
-	for( c = firstchange; c < nconss && !SCIPisStopped(scip); ++c )
+        for( c = firstchange; c < nconss && !SCIPisStopped(scip); ++c )
          {
             if( SCIPconsIsActive(conss[c]) && !SCIPconsIsModifiable(conss[c]) )
             {
@@ -2819,10 +2819,10 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
                
                if( npaircomparisons > NMINCOMPARISONS )
                {
-		  if( (*ndelconss - oldndelconss) / (npaircomparisons + 0.0) < MINGAINPERNMINCOMPARISONS )
+                  if( (*ndelconss - oldndelconss) / (npaircomparisons + 0.0) < MINGAINPERNMINCOMPARISONS )
                      break;
-		  oldndelconss = *ndelconss;
-		  npaircomparisons = 0;
+                  oldndelconss = *ndelconss;
+                  npaircomparisons = 0;
                }
             }
          }

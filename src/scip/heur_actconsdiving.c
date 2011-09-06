@@ -422,7 +422,7 @@ SCIP_DECL_HEUREXEC(heurExecActconsdiving) /*lint --e{715}*/
       && (divedepth < 10
          || nlpcands <= startnlpcands - divedepth/2
          || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations && objval < searchbound)) 
-	  && !SCIPisStopped(scip) )
+      && !SCIPisStopped(scip) )
    {
       divedepth++;
       SCIP_CALL( SCIPnewProbingNode(scip) );

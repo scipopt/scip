@@ -379,7 +379,7 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
    while( !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL
       && (divedepth < 10
          || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations && objval < searchbound)) 
-	  && !SCIPisStopped(scip) )
+      && !SCIPisStopped(scip) )
    {
       SCIP_VAR* var;
       SCIP_Real bestsolval;

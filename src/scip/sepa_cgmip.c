@@ -144,12 +144,12 @@ struct SCIP_SepaData
 
 /** what happens for columns in the LP */
 enum CGMIP_ColType
-{
-   colPresent    = 0,    /**< column is present in the separating MIP */
-   colContinuous = 1,    /**< column corresponds to a continuous variable */
-   colAtUb       = 2,    /**< variable corresponding to column was at it's upper bound and was complemented */
-   colAtLb       = 3     /**< variable corresponding to column was at it's lower bound (possibly complemented) */
-};
+   {
+      colPresent    = 0,    /**< column is present in the separating MIP */
+      colContinuous = 1,    /**< column corresponds to a continuous variable */
+      colAtUb       = 2,    /**< variable corresponding to column was at it's upper bound and was complemented */
+      colAtLb       = 3     /**< variable corresponding to column was at it's lower bound (possibly complemented) */
+   };
 typedef enum CGMIP_ColType CGMIP_COLTYPE;
 
 
@@ -488,7 +488,7 @@ SCIP_RETCODE storeCutInArrays(
          }
       }
       if ( len > 0 )
-	 norm = 1.0;
+         norm = 1.0;
       break;
    default:
       SCIPerrorMessage("invalid efficacy norm parameter '%c'\n", normtype);
@@ -581,18 +581,18 @@ SCIP_RETCODE transformColumn(
 
       /* skip modifiable rows and local rows, unless allowed */
       if ( SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && !sepadata->allowlocal) )
-	 continue;
+         continue;
 
       pos = SCIProwGetLPPos(row);
       assert( 0 <= pos && pos < (int) mipdata->nrows );
 
       assert( ! SCIPisInfinity(scip, lhs[pos]) );
       if ( ! SCIPisInfinity(scip, -lhs[pos]) )
-	 lhs[pos] += sigma * colvals[i] * offset;
+         lhs[pos] += sigma * colvals[i] * offset;
 
       assert( ! SCIPisInfinity(scip, -rhs[pos]) );
       if ( ! SCIPisInfinity(scip, rhs[pos]) )
-	 rhs[pos] += sigma * colvals[i] * offset;
+         rhs[pos] += sigma * colvals[i] * offset;
    }
 
    /* correct lower and upper bounds and solution */
@@ -602,25 +602,25 @@ SCIP_RETCODE transformColumn(
 
       assert( ! SCIPisInfinity(scip, -*ub) );
       if ( ! SCIPisInfinity(scip, *ub) )
-	 l = *ub/sigma + offset;
+         l = *ub/sigma + offset;
       else
-	 l = -SCIPinfinity(scip);
+         l = -SCIPinfinity(scip);
 
       assert( ! SCIPisInfinity(scip, *lb) );
       if ( ! SCIPisInfinity(scip, -*lb) )
-	 *ub = *lb/sigma + offset;
+         *ub = *lb/sigma + offset;
       else
-	 *ub = SCIPinfinity(scip);
+         *ub = SCIPinfinity(scip);
       *lb = l;
    }
    else
    {
       assert( ! SCIPisInfinity(scip, *lb) );
       if ( ! SCIPisInfinity(scip, -*lb) )
-	 *lb = *lb/sigma + offset;
+         *lb = *lb/sigma + offset;
       assert( ! SCIPisInfinity(scip, -*ub) );
       if ( ! SCIPisInfinity(scip, *ub) )
-	 *ub = *ub/sigma + offset;
+         *ub = *ub/sigma + offset;
    }
    *primsol = *primsol/sigma + offset;
 
@@ -842,12 +842,12 @@ SCIP_RETCODE createSubscip(
 
       val = SCIProwGetLhs(rows[i]) - SCIProwGetConstant(rows[i]);
       if ( SCIProwIsIntegral(rows[i]) )
-	 val = SCIPfeasCeil(scip, val); /* row is integral: round left hand side up */
+         val = SCIPfeasCeil(scip, val); /* row is integral: round left hand side up */
       lhs[i] = val;
 
       val = SCIProwGetRhs(rows[i]) - SCIProwGetConstant(rows[i]);
       if ( SCIProwIsIntegral(rows[i]) )
-	 val = SCIPfeasFloor(scip, val); /* row is integral: round right hand side down */
+         val = SCIPfeasFloor(scip, val); /* row is integral: round right hand side down */
       rhs[i] = val;
    }
 
@@ -875,14 +875,14 @@ SCIP_RETCODE createSubscip(
 
       /* if allowed, try to use stronger local bound */
       if ( sepadata->allowlocal && SCIPisGT(scip, SCIPvarGetLbLocal(var), lb[j]) )
-	 lb[j] = SCIPvarGetLbLocal(var);
+         lb[j] = SCIPvarGetLbLocal(var);
 
       ub[j] = SCIPvarGetUbGlobal(var);
       assert( SCIPisEQ(scip, SCIPvarGetUbLocal(var), SCIPcolGetUb(col)) );
 
       /* if allowed, try to use stronger local bound */
       if ( sepadata->allowlocal && SCIPisLT(scip, SCIPvarGetUbLocal(var), ub[j]) )
-	 ub[j] = SCIPvarGetUbLocal(var);
+         ub[j] = SCIPvarGetUbLocal(var);
 
       mipdata->colType[j] = colPresent;
       mipdata->isComplemented[j] = FALSE;
@@ -890,56 +890,56 @@ SCIP_RETCODE createSubscip(
 
       /* detect continuous variables, but perform preprocessing for them */
       if ( ! SCIPcolIsIntegral(col) )
-	 mipdata->colType[j] = colContinuous;
+         mipdata->colType[j] = colContinuous;
 
       /* if integer variable is at its upper bound -> complementing (this also generates a 0 lower bound) */
       if ( mipdata->colType[j] == colPresent && SCIPisFeasEQ(scip, primsol[j], ub[j]) )
       {
-	 assert( ! SCIPisInfinity(scip, ub[j]) );
-	 SCIP_CALL( transformColumn(scip, sepadata, mipdata, col, ub[j], -1.0, lhs, rhs, &(lb[j]), &(ub[j]), &(primsol[j])) );
-	 mipdata->isComplemented[j] = TRUE;
-	 mipdata->colType[j] = colAtUb;
-	 ++nubounds;
+         assert( ! SCIPisInfinity(scip, ub[j]) );
+         SCIP_CALL( transformColumn(scip, sepadata, mipdata, col, ub[j], -1.0, lhs, rhs, &(lb[j]), &(ub[j]), &(primsol[j])) );
+         mipdata->isComplemented[j] = TRUE;
+         mipdata->colType[j] = colAtUb;
+         ++nubounds;
       }
       else
       {
-	 /* if a variable has a finite nonzero lower bound -> shift */
-	 if ( ! SCIPisInfinity(scip, -lb[j]) )
-	 {
-	    if ( ! SCIPisZero(scip, lb[j]) )
-	    {
-	       SCIP_CALL( transformColumn(scip, sepadata, mipdata, col, -lb[j], 1.0, lhs, rhs, &(lb[j]), &(ub[j]), &(primsol[j])) );
-	       assert( SCIPisZero(scip, lb[j]) );
-	       mipdata->isShifted[j] = TRUE;
-	       ++nshifted;
-	    }
+         /* if a variable has a finite nonzero lower bound -> shift */
+         if ( ! SCIPisInfinity(scip, -lb[j]) )
+         {
+            if ( ! SCIPisZero(scip, lb[j]) )
+            {
+               SCIP_CALL( transformColumn(scip, sepadata, mipdata, col, -lb[j], 1.0, lhs, rhs, &(lb[j]), &(ub[j]), &(primsol[j])) );
+               assert( SCIPisZero(scip, lb[j]) );
+               mipdata->isShifted[j] = TRUE;
+               ++nshifted;
+            }
 
-	    /* if integer variable is at its lower bound */
-	    if ( mipdata->colType[j] == colPresent && SCIPisZero(scip, primsol[j]) )
-	    {
-	       mipdata->colType[j] = colAtLb;
-	       ++nlbounds;
-	    }
-	 }
-	 else
-	 {
-	    /* lower bound is minus-infinity -> check whether upper bound is finite */
-	    if ( ! SCIPisInfinity(scip, ub[j]) )
-	    {
-	       /* complement variable */
-	       SCIP_CALL( transformColumn(scip, sepadata, mipdata, col, ub[j], -1.0, lhs, rhs, &(lb[j]), &(ub[j]), &(primsol[j])) );
-	       assert( SCIPisZero(scip, lb[j]) );
-	       mipdata->isComplemented[j] = TRUE;
-	       ++ncomplemented;
+            /* if integer variable is at its lower bound */
+            if ( mipdata->colType[j] == colPresent && SCIPisZero(scip, primsol[j]) )
+            {
+               mipdata->colType[j] = colAtLb;
+               ++nlbounds;
+            }
+         }
+         else
+         {
+            /* lower bound is minus-infinity -> check whether upper bound is finite */
+            if ( ! SCIPisInfinity(scip, ub[j]) )
+            {
+               /* complement variable */
+               SCIP_CALL( transformColumn(scip, sepadata, mipdata, col, ub[j], -1.0, lhs, rhs, &(lb[j]), &(ub[j]), &(primsol[j])) );
+               assert( SCIPisZero(scip, lb[j]) );
+               mipdata->isComplemented[j] = TRUE;
+               ++ncomplemented;
 
-	       /* if integer variable is at its lower bound */
-	       if ( mipdata->colType[j] == colPresent && SCIPisZero(scip, primsol[j]) )
-	       {
-		  mipdata->colType[j] = colAtLb;
-		  ++nlbounds;
-	       }
-	    }
-	 }
+               /* if integer variable is at its lower bound */
+               if ( mipdata->colType[j] == colPresent && SCIPisZero(scip, primsol[j]) )
+               {
+                  mipdata->colType[j] = colAtLb;
+                  ++nlbounds;
+               }
+            }
+         }
       }
 
       assert( SCIPisFeasLE(scip, lb[j], primsol[j]) );
@@ -960,7 +960,7 @@ SCIP_RETCODE createSubscip(
 
       /* skip modifiable rows and local rows, unless allowed */
       if ( SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && !sepadata->allowlocal) )
-	 continue;
+         continue;
 
       /* skip rows that not have been active for a longer time */
       if ( ! sepadata->onlyactiverows && sepadata->maxrowage > 0 && SCIProwGetAge(row) > sepadata->maxrowage )
@@ -982,47 +982,47 @@ SCIP_RETCODE createSubscip(
       /* if we have an equation */
       if ( SCIPisEQ(scip, lhs[i], rhs[i]) )
       {
-	 assert( ! SCIPisInfinity(scip, rhs[i]) );
+         assert( ! SCIPisInfinity(scip, rhs[i]) );
 
-	 if ( ! sepadata->onlyactiverows || SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetLhs(row)) )
-	 {
-	    /* create two variables for each equation */
-	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "yeq1_%d", i);
-	    SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->ylhs[i]), name, 0.0, 1.0-EPSILONVALUE,
-		  -sepadata->objweight, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
-	    SCIP_CALL( SCIPaddVar(subscip, mipdata->ylhs[i]) );
-	    ++cnt;
-	    
-	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "yeq2_%d", i);
-	    SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->yrhs[i]), name, 0.0, 1.0-EPSILONVALUE,
-		  -sepadata->objweight, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
-	    SCIP_CALL( SCIPaddVar(subscip, mipdata->yrhs[i]) );
-	    ++cnt;
-	 }
+         if ( ! sepadata->onlyactiverows || SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetLhs(row)) )
+         {
+            /* create two variables for each equation */
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "yeq1_%d", i);
+            SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->ylhs[i]), name, 0.0, 1.0-EPSILONVALUE,
+                  -sepadata->objweight, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPaddVar(subscip, mipdata->ylhs[i]) );
+            ++cnt;
+            
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "yeq2_%d", i);
+            SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->yrhs[i]), name, 0.0, 1.0-EPSILONVALUE,
+                  -sepadata->objweight, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPaddVar(subscip, mipdata->yrhs[i]) );
+            ++cnt;
+         }
       }
       else
       {
-	 /* create variable for lhs of row if necessary */
-	 if ( ! SCIPisInfinity(scip, -lhs[i]) && 
-	    ( ! sepadata->onlyactiverows || SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetLhs(row))) )
-	 {
-	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "ylhs_%d", i);
-	    SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->ylhs[i]), name, 0.0, 1.0-EPSILONVALUE,
-		  -sepadata->objweight, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
-	    SCIP_CALL( SCIPaddVar(subscip, mipdata->ylhs[i]) );
-	    ++cnt;
+         /* create variable for lhs of row if necessary */
+         if ( ! SCIPisInfinity(scip, -lhs[i]) && 
+            ( ! sepadata->onlyactiverows || SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetLhs(row))) )
+         {
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "ylhs_%d", i);
+            SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->ylhs[i]), name, 0.0, 1.0-EPSILONVALUE,
+                  -sepadata->objweight, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPaddVar(subscip, mipdata->ylhs[i]) );
+            ++cnt;
          }
 
-	 /* create variable for rhs of row if necessary */
-	 if ( ! SCIPisInfinity(scip, rhs[i]) && 
-	    ( ! sepadata->onlyactiverows || SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetRhs(row))) )
-	 {
-	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "yrhs_%d", i);
-	    SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->yrhs[i]), name, 0.0, 1.0-EPSILONVALUE,
-		  -sepadata->objweight, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
-	    SCIP_CALL( SCIPaddVar(subscip, mipdata->yrhs[i]) );
-	    ++cnt;
-	 }
+         /* create variable for rhs of row if necessary */
+         if ( ! SCIPisInfinity(scip, rhs[i]) && 
+            ( ! sepadata->onlyactiverows || SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetRhs(row))) )
+         {
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "yrhs_%d", i);
+            SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->yrhs[i]), name, 0.0, 1.0-EPSILONVALUE,
+                  -sepadata->objweight, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPaddVar(subscip, mipdata->yrhs[i]) );
+            ++cnt;
+         }
       }
    }
    assert( (int) cnt <= 2 * nrows );
@@ -1046,39 +1046,39 @@ SCIP_RETCODE createSubscip(
          else
             obj = primsol[j];
 
-	 /* create alpha variables */
-	 (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "alpha_%d", j);
-	 SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->alpha[j]), name, -CUTCOEFBND, CUTCOEFBND, obj,
-	       SCIP_VARTYPE_INTEGER, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
-	 SCIP_CALL( SCIPaddVar(subscip, mipdata->alpha[j]) );
-	 ++cnt;
+         /* create alpha variables */
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "alpha_%d", j);
+         SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->alpha[j]), name, -CUTCOEFBND, CUTCOEFBND, obj,
+               SCIP_VARTYPE_INTEGER, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPaddVar(subscip, mipdata->alpha[j]) );
+         ++cnt;
 
-	 /* create fractional variables */
-	 (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "f_%d", j);
-	 if ( SCIPisInfinity(scip, -lb[j]) && SCIPisInfinity(scip, ub[j]) )
-	 {
-	    /* fix fractional value to be zero for free original variables */
-	    SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->fracalpha[j]), name, 0.0, 0.0, 0.0,
-		  SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
-	 }
-	 else
-	 {
-	    /* fractional value in [0, 1) for variables with finite bounds */
-	    SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->fracalpha[j]), name, 0.0, 1.0-EPSILONVALUE, 0.0,
-		  SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
-	 }
-	 SCIP_CALL( SCIPaddVar(subscip, mipdata->fracalpha[j]) );
-	 ++cnt;
+         /* create fractional variables */
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "f_%d", j);
+         if ( SCIPisInfinity(scip, -lb[j]) && SCIPisInfinity(scip, ub[j]) )
+         {
+            /* fix fractional value to be zero for free original variables */
+            SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->fracalpha[j]), name, 0.0, 0.0, 0.0,
+                  SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+         }
+         else
+         {
+            /* fractional value in [0, 1) for variables with finite bounds */
+            SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->fracalpha[j]), name, 0.0, 1.0-EPSILONVALUE, 0.0,
+                  SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+         }
+         SCIP_CALL( SCIPaddVar(subscip, mipdata->fracalpha[j]) );
+         ++cnt;
 
-	 /* create variables for upper bounds */
-	 if ( ! SCIPisInfinity(scip, ub[j]) )
-	 {
-	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "zub_%d", j);
-	    SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->z[j]), name, 0.0, 1.0-EPSILONVALUE,
-		  0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
-	    SCIP_CALL( SCIPaddVar(subscip, mipdata->z[j]) );
-	    ++ucnt;
-	 }
+         /* create variables for upper bounds */
+         if ( ! SCIPisInfinity(scip, ub[j]) )
+         {
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "zub_%d", j);
+            SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->z[j]), name, 0.0, 1.0-EPSILONVALUE,
+                  0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPaddVar(subscip, mipdata->z[j]) );
+            ++ucnt;
+         }
       }
    }
    assert( (int) cnt <= 2 * ncols );
@@ -1099,7 +1099,7 @@ SCIP_RETCODE createSubscip(
 
    /* create fractional variable for the rhs */
    SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->fracbeta), "fracbeta", 0.0, 1.0-BETAEPSILONVALUE, 0.0,
-	 SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+         SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(subscip, mipdata->fracbeta) );
    mipdata->n += cnt + ucnt + 2;
 
@@ -1117,140 +1117,140 @@ SCIP_RETCODE createSubscip(
       /* create ordinary part for all selected variables */
       if ( mipdata->colType[j] == colPresent )
       {
-	 SCIP_Real sigma;
+         SCIP_Real sigma;
 
-	 assert( cols[j] != NULL );
-	 colrows = SCIPcolGetRows(cols[j]);
-	 colvals = SCIPcolGetVals(cols[j]);
-	 nconsvars = 0;
+         assert( cols[j] != NULL );
+         colrows = SCIPcolGetRows(cols[j]);
+         colvals = SCIPcolGetVals(cols[j]);
+         nconsvars = 0;
 
-	 if ( mipdata->isComplemented[j] )
-	    sigma = -1.0;
-	 else
-	    sigma = 1.0;
+         if ( mipdata->isComplemented[j] )
+            sigma = -1.0;
+         else
+            sigma = 1.0;
 
-	 /* add part for columns */
-	 for (i = 0; i < SCIPcolGetNLPNonz(cols[j]); ++i)
-	 {
-	    SCIP_ROW* row;
-	    int pos;
+         /* add part for columns */
+         for (i = 0; i < SCIPcolGetNLPNonz(cols[j]); ++i)
+         {
+            SCIP_ROW* row;
+            int pos;
 
-	    row = colrows[i];
-	    assert( row != NULL );
+            row = colrows[i];
+            assert( row != NULL );
 
-	    /* skip modifiable rows and local rows, unless allowed */
-	    if ( SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && !sepadata->allowlocal) )
-	       continue;
+            /* skip modifiable rows and local rows, unless allowed */
+            if ( SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && !sepadata->allowlocal) )
+               continue;
 
-	    pos = SCIProwGetLPPos(row);
-	    assert( 0 <= pos && pos < nrows );
+            pos = SCIProwGetLPPos(row);
+            assert( 0 <= pos && pos < nrows );
 
-	    if ( mipdata->ylhs[pos] != NULL )
-	    {
-	       consvars[nconsvars] = mipdata->ylhs[pos];
-	       consvals[nconsvars] = -sigma * colvals[i];
-	       ++nconsvars;
-	    }
-	    if ( mipdata->yrhs[pos] != NULL )
-	    {
-	       consvars[nconsvars] = mipdata->yrhs[pos];
-	       consvals[nconsvars] = sigma * colvals[i];
-	       ++nconsvars;
-	    }
-	    assert( nconsvars <= (int) mipdata->n );
-	 }
-	 /* add part for upper bounds */
-	 if ( mipdata->z[j] != NULL )
-	 {
-	    assert( ! SCIPisInfinity(scip, ub[j]) );
-	    consvars[nconsvars] = mipdata->z[j];
-	    consvals[nconsvars] = 1.0;
-	    ++nconsvars;
-	 }
-	 assert( nconsvars <= (int) mipdata->n );
+            if ( mipdata->ylhs[pos] != NULL )
+            {
+               consvars[nconsvars] = mipdata->ylhs[pos];
+               consvals[nconsvars] = -sigma * colvals[i];
+               ++nconsvars;
+            }
+            if ( mipdata->yrhs[pos] != NULL )
+            {
+               consvars[nconsvars] = mipdata->yrhs[pos];
+               consvals[nconsvars] = sigma * colvals[i];
+               ++nconsvars;
+            }
+            assert( nconsvars <= (int) mipdata->n );
+         }
+         /* add part for upper bounds */
+         if ( mipdata->z[j] != NULL )
+         {
+            assert( ! SCIPisInfinity(scip, ub[j]) );
+            consvars[nconsvars] = mipdata->z[j];
+            consvals[nconsvars] = 1.0;
+            ++nconsvars;
+         }
+         assert( nconsvars <= (int) mipdata->n );
 
-	 /* add alpha variable */
-	 consvars[nconsvars] = mipdata->alpha[j];
-	 consvals[nconsvars] = -1.0;
-	 ++nconsvars;
-	 assert( nconsvars <= (int) mipdata->n );
+         /* add alpha variable */
+         consvars[nconsvars] = mipdata->alpha[j];
+         consvals[nconsvars] = -1.0;
+         ++nconsvars;
+         assert( nconsvars <= (int) mipdata->n );
 
-	 /* add fractional-alpha variable */
-	 consvars[nconsvars] = mipdata->fracalpha[j];
-	 consvals[nconsvars] = -1.0;
-	 ++nconsvars;
-	 assert( nconsvars <= (int) mipdata->n );
+         /* add fractional-alpha variable */
+         consvars[nconsvars] = mipdata->fracalpha[j];
+         consvals[nconsvars] = -1.0;
+         ++nconsvars;
+         assert( nconsvars <= (int) mipdata->n );
 
-	 /* add linear constraint */
-	 (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "alpha_%d", j);
-	 SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, name, nconsvars, consvars, consvals, 0.0, 0.0,
-	       TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-	 SCIP_CALL( SCIPaddCons(subscip, cons) );
-	 SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
-	 ++cnt;
+         /* add linear constraint */
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "alpha_%d", j);
+         SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, name, nconsvars, consvars, consvals, 0.0, 0.0,
+               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         SCIP_CALL( SCIPaddCons(subscip, cons) );
+         SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
+         ++cnt;
       }
       /* generate part that makes sure that cut is valid for continuous variables */
       else if ( mipdata->colType[j] == colContinuous )
       {
-	 SCIP_Real sigma;
-	 SCIP_Real r;
+         SCIP_Real sigma;
+         SCIP_Real r;
 
-	 assert( cols[j] != NULL );
-	 colrows = SCIPcolGetRows(cols[j]);
-	 colvals = SCIPcolGetVals(cols[j]);
-	 nconsvars = 0;
+         assert( cols[j] != NULL );
+         colrows = SCIPcolGetRows(cols[j]);
+         colvals = SCIPcolGetVals(cols[j]);
+         nconsvars = 0;
 
-	 if ( mipdata->isComplemented[j] )
-	    sigma = -1.0;
-	 else
-	    sigma = 1.0;
+         if ( mipdata->isComplemented[j] )
+            sigma = -1.0;
+         else
+            sigma = 1.0;
 
-	 /* add part for columns */
-	 for (i = 0; i < SCIPcolGetNLPNonz(cols[j]); ++i)
-	 {
-	    SCIP_ROW* row;
-	    int pos;
+         /* add part for columns */
+         for (i = 0; i < SCIPcolGetNLPNonz(cols[j]); ++i)
+         {
+            SCIP_ROW* row;
+            int pos;
 
-	    row = colrows[i];
-	    assert( row != NULL );
+            row = colrows[i];
+            assert( row != NULL );
 
-	    /* skip modifiable rows and local rows, unless allowed */
-	    if ( SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && !sepadata->allowlocal) )
-	       continue;
+            /* skip modifiable rows and local rows, unless allowed */
+            if ( SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && !sepadata->allowlocal) )
+               continue;
 
-	    pos = SCIProwGetLPPos(row);
-	    assert( 0 <= pos && pos < nrows );
+            pos = SCIProwGetLPPos(row);
+            assert( 0 <= pos && pos < nrows );
 
-	    if ( mipdata->ylhs[pos] != NULL )
-	    {
-	       consvars[nconsvars] = mipdata->ylhs[pos];
-	       consvals[nconsvars] = -sigma * colvals[i];
-	       ++nconsvars;
-	    }
-	    if ( mipdata->yrhs[pos] != NULL )
-	    {
-	       consvars[nconsvars] = mipdata->yrhs[pos];
-	       consvals[nconsvars] = sigma * colvals[i];
-	       ++nconsvars;
-	    }
-	    assert( nconsvars <= (int) mipdata->n );
-	 }
+            if ( mipdata->ylhs[pos] != NULL )
+            {
+               consvars[nconsvars] = mipdata->ylhs[pos];
+               consvals[nconsvars] = -sigma * colvals[i];
+               ++nconsvars;
+            }
+            if ( mipdata->yrhs[pos] != NULL )
+            {
+               consvars[nconsvars] = mipdata->yrhs[pos];
+               consvals[nconsvars] = sigma * colvals[i];
+               ++nconsvars;
+            }
+            assert( nconsvars <= (int) mipdata->n );
+         }
 
-	 /* add linear constraint */
-	 (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cont_%d", j);
+         /* add linear constraint */
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cont_%d", j);
 
-	 /* for free continuous variables require equality */
-	 r = SCIPinfinity(subscip);
-	 if ( SCIPisInfinity(scip, -lb[j]) && SCIPisInfinity(scip, ub[j]) )
-	    r = 0.0;
-	 else
-	    assert( SCIPisZero(scip, lb[j]) );
+         /* for free continuous variables require equality */
+         r = SCIPinfinity(subscip);
+         if ( SCIPisInfinity(scip, -lb[j]) && SCIPisInfinity(scip, ub[j]) )
+            r = 0.0;
+         else
+            assert( SCIPisZero(scip, lb[j]) );
 
-	 SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, name, nconsvars, consvars, consvals, 0.0, r,
-	       TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-	 SCIP_CALL( SCIPaddCons(subscip, cons) );
-	 SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
-	 ++cnt;
+         SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, name, nconsvars, consvars, consvals, 0.0, r,
+               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         SCIP_CALL( SCIPaddCons(subscip, cons) );
+         SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
+         ++cnt;
       }
    }
    assert( (int) cnt <= ncols );
@@ -1266,23 +1266,23 @@ SCIP_RETCODE createSubscip(
 
       /* skip modifiable rows and local rows, unless allowed */
       if ( SCIProwIsModifiable(rows[i]) || (SCIProwIsLocal(rows[i]) && !sepadata->allowlocal) )
-	 continue;
+         continue;
 
       /* if lhs is there */
       if ( mipdata->ylhs[i] != NULL && ! SCIPisZero(scip, lhs[i]) )
       {
-	 assert( ! SCIPisInfinity(scip, -lhs[i]) );
-	 consvars[nconsvars] = mipdata->ylhs[i];
-	 consvals[nconsvars] = -lhs[i];
-	 ++nconsvars;
+         assert( ! SCIPisInfinity(scip, -lhs[i]) );
+         consvars[nconsvars] = mipdata->ylhs[i];
+         consvals[nconsvars] = -lhs[i];
+         ++nconsvars;
       }
       /* if rhs is there */
       if ( mipdata->yrhs[i] != NULL && ! SCIPisZero(scip, rhs[i]) )
       {
-	 assert( ! SCIPisInfinity(scip, rhs[i]) );
-	 consvars[nconsvars] = mipdata->yrhs[i];
-	 consvals[nconsvars] = rhs[i];
-	 ++nconsvars;
+         assert( ! SCIPisInfinity(scip, rhs[i]) );
+         consvars[nconsvars] = mipdata->yrhs[i];
+         consvals[nconsvars] = rhs[i];
+         ++nconsvars;
       }
       assert( nconsvars <= (int) mipdata->n );
    }
@@ -1292,12 +1292,12 @@ SCIP_RETCODE createSubscip(
       /* if ub is there */
       if ( mipdata->z[j] != NULL && ! SCIPisZero(scip, ub[j]) )
       {
-	 assert( mipdata->colType[j] == colPresent );
-	 assert( ! SCIPisInfinity(scip, ub[j]) );
-	 consvars[nconsvars] = mipdata->z[j];
-	 consvals[nconsvars] = ub[j];
-	 ++nconsvars;
-	 assert( nconsvars <= (int) mipdata->n );
+         assert( mipdata->colType[j] == colPresent );
+         assert( ! SCIPisInfinity(scip, ub[j]) );
+         consvars[nconsvars] = mipdata->z[j];
+         consvals[nconsvars] = ub[j];
+         ++nconsvars;
+         assert( nconsvars <= (int) mipdata->n );
       }
    }
    /* add beta variable */
@@ -1313,7 +1313,7 @@ SCIP_RETCODE createSubscip(
 
    /* add linear constraint */
    SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, "beta", nconsvars, consvars, consvals, 0.0, 0.0,
-	 TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    SCIP_CALL( SCIPaddCons(subscip, cons) );
    SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
    ++mipdata->m;
@@ -1325,31 +1325,31 @@ SCIP_RETCODE createSubscip(
       bestsol = SCIPgetBestSol(scip);
       if ( bestsol != NULL )
       {
-	 nconsvars = 0;
-	 for (j = 0; j < ncols; ++j)
-	 {
-	    if ( mipdata->alpha[j] != NULL )
-	    {
-	       SCIP_Real val;
-	       assert( mipdata->colType[j] == colPresent );
-	       
-	       val = SCIPgetSolVal(scip, bestsol, SCIPcolGetVar(cols[j]));
-	       consvars[nconsvars] = mipdata->alpha[j];
-	       consvals[nconsvars] = val;
-	       ++nconsvars;
-	       assert( nconsvars <= (int) mipdata->n );
-	    }
-	 }
-	 consvars[nconsvars] = mipdata->beta;
-	 consvals[nconsvars] = -1.0;
-	 ++nconsvars;
+         nconsvars = 0;
+         for (j = 0; j < ncols; ++j)
+         {
+            if ( mipdata->alpha[j] != NULL )
+            {
+               SCIP_Real val;
+               assert( mipdata->colType[j] == colPresent );
+               
+               val = SCIPgetSolVal(scip, bestsol, SCIPcolGetVar(cols[j]));
+               consvars[nconsvars] = mipdata->alpha[j];
+               consvals[nconsvars] = val;
+               ++nconsvars;
+               assert( nconsvars <= (int) mipdata->n );
+            }
+         }
+         consvars[nconsvars] = mipdata->beta;
+         consvals[nconsvars] = -1.0;
+         ++nconsvars;
 
-	 /* add linear constraint - allow slight deviation from equality */
-	 SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, "primalseparation", nconsvars, consvars, consvals, -EPSILONVALUE, EPSILONVALUE,
-	       TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-	 SCIP_CALL( SCIPaddCons(subscip, cons) );
-	 SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
-	 ++mipdata->m;
+         /* add linear constraint - allow slight deviation from equality */
+         SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, "primalseparation", nconsvars, consvars, consvals, -EPSILONVALUE, EPSILONVALUE,
+               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         SCIP_CALL( SCIPaddCons(subscip, cons) );
+         SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
+         ++mipdata->m;
       }
    }
 
@@ -1580,7 +1580,7 @@ SCIP_RETCODE solveSubscip(
 
       /* if the solution process was terminated or the problem is infeasible (can happen because of violation constraint) */
       if ( status == SCIP_STATUS_TIMELIMIT || status == SCIP_STATUS_USERINTERRUPT || status == SCIP_STATUS_NODELIMIT || 
-           status == SCIP_STATUS_INFEASIBLE || status == SCIP_STATUS_INFORUNBD)
+         status == SCIP_STATUS_INFEASIBLE || status == SCIP_STATUS_INFORUNBD)
       {
          *success = FALSE;
          return SCIP_OKAY;
@@ -1726,7 +1726,7 @@ SCIP_RETCODE computeCut(
       if ( SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && !sepadata->allowlocal) )
       {
          assert( mipdata->ylhs[i] == NULL && mipdata->yrhs[i] == NULL );
-	 continue;
+         continue;
       }
 
 #ifndef NDEBUG
@@ -1737,20 +1737,20 @@ SCIP_RETCODE computeCut(
       weight = 0.0;
       if ( mipdata->ylhs[i] != NULL )
       {
-	 val = SCIPgetSolVal(subscip, sol, mipdata->ylhs[i]);
-	 if ( SCIPisFeasPositive(scip, val) )
-	    weight = -val;
+         val = SCIPgetSolVal(subscip, sol, mipdata->ylhs[i]);
+         if ( SCIPisFeasPositive(scip, val) )
+            weight = -val;
 
          assert( ! sepadata->onlyrankone || strlen(rowname) <= 5 || 
             rowname[0] != 'c' || rowname[1] != 'g' || rowname[2] != 'c' || rowname[3] != 'u' || rowname[4] != 't' );
       }
       if ( mipdata->yrhs[i] != NULL )
       {
-	 val = SCIPgetSolVal(subscip, sol, mipdata->yrhs[i]);
+         val = SCIPgetSolVal(subscip, sol, mipdata->yrhs[i]);
 
-	 /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
-	 if ( SCIPisFeasGT(scip, val, ABS(weight)) )
-	    weight = val;
+         /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
+         if ( SCIPisFeasGT(scip, val, ABS(weight)) )
+            weight = val;
 
          assert( ! sepadata->onlyrankone || strlen(rowname) <= 5 || 
             rowname[0] != 'c' || rowname[1] != 'g' || rowname[2] != 'c' || rowname[3] != 'u' || rowname[4] != 't' );
@@ -1758,7 +1758,7 @@ SCIP_RETCODE computeCut(
 
       weight = REALABS(weight);
       if ( weight > maxabsweight )
-	 maxabsweight = weight;
+         maxabsweight = weight;
    }
 
    /* calculate the row summation */
@@ -1776,7 +1776,7 @@ SCIP_RETCODE computeCut(
       if ( SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && !sepadata->allowlocal) )
       {
          assert( mipdata->ylhs[i] == NULL && mipdata->yrhs[i] == NULL );
-	 continue;
+         continue;
       }
 
       /* get weight from solution */
@@ -1784,70 +1784,70 @@ SCIP_RETCODE computeCut(
       uselhs = FALSE;
       if ( mipdata->ylhs[i] != NULL )
       {
-	 val = SCIPgetSolVal(subscip, sol, mipdata->ylhs[i]);
-	 assert( ! SCIPisFeasNegative(subscip, val) );
+         val = SCIPgetSolVal(subscip, sol, mipdata->ylhs[i]);
+         assert( ! SCIPisFeasNegative(subscip, val) );
 
-	 if ( SCIPisFeasPositive(scip, val) )
-	 {
-	    uselhs = TRUE;
-	    weight = -val;
-	 }
+         if ( SCIPisFeasPositive(scip, val) )
+         {
+            uselhs = TRUE;
+            weight = -val;
+         }
       }
       if ( mipdata->yrhs[i] != NULL )
       {
-	 val = SCIPgetSolVal(subscip, sol, mipdata->yrhs[i]);
-	 assert( ! SCIPisFeasNegative(subscip, val) );
+         val = SCIPgetSolVal(subscip, sol, mipdata->yrhs[i]);
+         assert( ! SCIPisFeasNegative(subscip, val) );
 
-	 /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
-	 if ( SCIPisFeasGT(scip, val, ABS(weight)) )
-	    weight = val;
+         /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
+         if ( SCIPisFeasGT(scip, val, ABS(weight)) )
+            weight = val;
       }
 
       /* add row if weight is nonzero and lies within range */
       absweight = REALABS(weight);
       if ( ! SCIPisSumZero(scip, weight) && absweight * MAXWEIGHTRANGE >= maxabsweight )
       {
-	 SCIP_COL** rowcols;
-	 SCIP_Real* rowvals;
+         SCIP_COL** rowcols;
+         SCIP_Real* rowvals;
 
-	 rowcols = SCIProwGetCols(row);
-	 rowvals = SCIProwGetVals(row);
+         rowcols = SCIProwGetCols(row);
+         rowvals = SCIProwGetVals(row);
 
-	 /* add the row coefficients to the sum */
-	 for (j = 0; j < SCIProwGetNLPNonz(row); ++j)
-	 {
-	    int idx;
-	    SCIP_VAR* var;
+         /* add the row coefficients to the sum */
+         for (j = 0; j < SCIProwGetNLPNonz(row); ++j)
+         {
+            int idx;
+            SCIP_VAR* var;
 
-	    assert( rowcols[j] != NULL );
-	    var = SCIPcolGetVar(rowcols[j]);
+            assert( rowcols[j] != NULL );
+            var = SCIPcolGetVar(rowcols[j]);
 
-	    assert( var != NULL );
-	    assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN );
-	    assert( SCIPvarGetCol(var) == rowcols[j] );
+            assert( var != NULL );
+            assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN );
+            assert( SCIPvarGetCol(var) == rowcols[j] );
 
-	    idx = SCIPvarGetProbindex(var);
-	    assert( 0 <= idx && idx < nvars );
+            idx = SCIPvarGetProbindex(var);
+            assert( 0 <= idx && idx < nvars );
 
-	    cutcoefs[idx] += weight * rowvals[j];
-	 }
+            cutcoefs[idx] += weight * rowvals[j];
+         }
 
-	 /* compute rhs */
-	 if ( uselhs )
-	 {
-	    assert( ! SCIPisInfinity(scip, -SCIProwGetLhs(row)) );
-	    val = SCIProwGetLhs(row) - SCIProwGetConstant(row);
-	    if ( SCIProwIsIntegral(row) )
-	       val = SCIPfeasCeil(scip, val); /* row is integral: round left hand side up */
-	 }
-	 else
-	 {
-	    assert( ! SCIPisInfinity(scip, SCIProwGetRhs(row)) );
-	    val = SCIProwGetRhs(row) - SCIProwGetConstant(row);
-	    if ( SCIProwIsIntegral(row) )
-	       val = SCIPfeasFloor(scip, val); /* row is integral: round right hand side down */
-	 }
-	 (*cutrhs) += weight * val;
+         /* compute rhs */
+         if ( uselhs )
+         {
+            assert( ! SCIPisInfinity(scip, -SCIProwGetLhs(row)) );
+            val = SCIProwGetLhs(row) - SCIProwGetConstant(row);
+            if ( SCIProwIsIntegral(row) )
+               val = SCIPfeasCeil(scip, val); /* row is integral: round left hand side up */
+         }
+         else
+         {
+            assert( ! SCIPisInfinity(scip, SCIProwGetRhs(row)) );
+            val = SCIProwGetRhs(row) - SCIProwGetConstant(row);
+            if ( SCIProwIsIntegral(row) )
+               val = SCIPfeasFloor(scip, val); /* row is integral: round right hand side down */
+         }
+         (*cutrhs) += weight * val;
 
          *localrowsused = *localrowsused || SCIProwIsLocal(row);
       }
@@ -1859,70 +1859,70 @@ SCIP_RETCODE computeCut(
       assert( cols[j] != NULL );
       if ( mipdata->z[j] != NULL )
       {
-	 assert( mipdata->colType[j] == colPresent );
+         assert( mipdata->colType[j] == colPresent );
 
-	 val = SCIPgetSolVal(subscip, sol, mipdata->z[j]);
-	 assert( ! SCIPisFeasNegative(subscip, val) );
+         val = SCIPgetSolVal(subscip, sol, mipdata->z[j]);
+         assert( ! SCIPisFeasNegative(subscip, val) );
 
-	 /* if a bound has been used */
-	 if ( SCIPisSumPositive(subscip, val) )
-	 {
-	    SCIP_VAR* var;
-	    int idx;
+         /* if a bound has been used */
+         if ( SCIPisSumPositive(subscip, val) )
+         {
+            SCIP_VAR* var;
+            int idx;
 
-	    var = SCIPcolGetVar(cols[j]);
+            var = SCIPcolGetVar(cols[j]);
 
-	    assert( var != NULL );
-	    assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN );
-	    assert( SCIPvarIsIntegral(var) );
-	    assert( SCIPvarGetCol(var) == cols[j] );
+            assert( var != NULL );
+            assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN );
+            assert( SCIPvarIsIntegral(var) );
+            assert( SCIPvarGetCol(var) == cols[j] );
 
-	    idx = SCIPvarGetProbindex(var);
-	    assert( 0 <= idx && idx < nvars );
+            idx = SCIPvarGetProbindex(var);
+            assert( 0 <= idx && idx < nvars );
 
-	    /* check whether variable is complemented */
-	    if ( mipdata->isComplemented[j] )
-	    {
-	       SCIP_Real lbnd;
-	       lbnd = SCIPvarGetLbGlobal(var);
-	       assert( ! SCIPisInfinity(scip, -lbnd) );
-	       assert( SCIPisIntegral(scip, lbnd) );
-	       assert( SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPcolGetLb(cols[j])) );
+            /* check whether variable is complemented */
+            if ( mipdata->isComplemented[j] )
+            {
+               SCIP_Real lbnd;
+               lbnd = SCIPvarGetLbGlobal(var);
+               assert( ! SCIPisInfinity(scip, -lbnd) );
+               assert( SCIPisIntegral(scip, lbnd) );
+               assert( SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPcolGetLb(cols[j])) );
 
-	       /* variable should not be free */
-	       assert( ! SCIPisInfinity(scip, -lbnd) || ! SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) );
+               /* variable should not be free */
+               assert( ! SCIPisInfinity(scip, -lbnd) || ! SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) );
 
-	       /* if allowed, try to use stronger local bound */
-	       if ( sepadata->allowlocal && SCIPvarGetLbLocal(var) - 0.5 > lbnd )
-	       {
-		  lbnd = SCIPvarGetLbLocal(var);
-		  assert( SCIPisIntegral(scip, lbnd) );
-		  *localboundsused = TRUE;
-	       }
+               /* if allowed, try to use stronger local bound */
+               if ( sepadata->allowlocal && SCIPvarGetLbLocal(var) - 0.5 > lbnd )
+               {
+                  lbnd = SCIPvarGetLbLocal(var);
+                  assert( SCIPisIntegral(scip, lbnd) );
+                  *localboundsused = TRUE;
+               }
 
-	       cutcoefs[idx] -= val;
-	       *cutrhs -= lbnd * val;
-	    }
-	    else
-	    {
-	       SCIP_Real ubnd;
-	       ubnd = SCIPvarGetUbGlobal(var);
-	       assert( ! SCIPisInfinity(scip, ubnd) );
-	       assert( SCIPisIntegral(scip, ubnd) );
-	       assert( SCIPisEQ(scip, SCIPvarGetUbLocal(var), SCIPcolGetUb(cols[j])) );
+               cutcoefs[idx] -= val;
+               *cutrhs -= lbnd * val;
+            }
+            else
+            {
+               SCIP_Real ubnd;
+               ubnd = SCIPvarGetUbGlobal(var);
+               assert( ! SCIPisInfinity(scip, ubnd) );
+               assert( SCIPisIntegral(scip, ubnd) );
+               assert( SCIPisEQ(scip, SCIPvarGetUbLocal(var), SCIPcolGetUb(cols[j])) );
 
-	       /* if allowed, try to use stronger local bound */
-	       if ( sepadata->allowlocal && SCIPvarGetUbLocal(var) + 0.5 < ubnd )
-	       {
-		  ubnd = SCIPvarGetUbLocal(var);
-		  assert( SCIPisIntegral(scip, ubnd) );
-		  *localboundsused = TRUE;
-	       }
+               /* if allowed, try to use stronger local bound */
+               if ( sepadata->allowlocal && SCIPvarGetUbLocal(var) + 0.5 < ubnd )
+               {
+                  ubnd = SCIPvarGetUbLocal(var);
+                  assert( SCIPisIntegral(scip, ubnd) );
+                  *localboundsused = TRUE;
+               }
 
-	       cutcoefs[idx] += val;
-	       *cutrhs += ubnd * val;
-	    }
-	 }
+               cutcoefs[idx] += val;
+               *cutrhs += ubnd * val;
+            }
+         }
       }
    }
 
@@ -1939,84 +1939,84 @@ SCIP_RETCODE computeCut(
       /* a variable may has status COLUMN, but the corresponding column may not (yet) be in the LP */
       if ( pos >= 0 && SCIPvarIsIntegral(var) )
       {
-	 assert( pos < ncols );
-	 assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN );
+         assert( pos < ncols );
+         assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN );
 
-	 /* check whether variable is complemented */
-	 if ( mipdata->isComplemented[pos] )
-	 {
-	    assert( ! mipdata->isShifted[pos] );
-	    /* if the variable is complemented, the multiplier for the upper bound arises from the
-	       lower bound multiplier for the transformed problem - because of the minus-sign in the
-	       transformation this yields a round-up operation. */
-	    val = SCIPfeasCeil(scip, cutcoefs[j]) - cutcoefs[j];
-	    assert( ! SCIPisFeasNegative(scip, val) );
+         /* check whether variable is complemented */
+         if ( mipdata->isComplemented[pos] )
+         {
+            assert( ! mipdata->isShifted[pos] );
+            /* if the variable is complemented, the multiplier for the upper bound arises from the
+               lower bound multiplier for the transformed problem - because of the minus-sign in the
+               transformation this yields a round-up operation. */
+            val = SCIPfeasCeil(scip, cutcoefs[j]) - cutcoefs[j];
+            assert( ! SCIPisFeasNegative(scip, val) );
 
-	    /* only if variable needs to be rounded */
-	    if ( SCIPisSumPositive(scip, val) )
-	    {
-	       SCIP_Real ubnd;
-	       ubnd = SCIPvarGetUbGlobal(var);
-	       assert( ! SCIPisInfinity(scip, ubnd) );
-	       assert( SCIPisIntegral(scip, ubnd) );
+            /* only if variable needs to be rounded */
+            if ( SCIPisSumPositive(scip, val) )
+            {
+               SCIP_Real ubnd;
+               ubnd = SCIPvarGetUbGlobal(var);
+               assert( ! SCIPisInfinity(scip, ubnd) );
+               assert( SCIPisIntegral(scip, ubnd) );
 
-	       /* variable should not be free */
-	       assert( ! SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) || ! SCIPisInfinity(scip, ubnd) );
+               /* variable should not be free */
+               assert( ! SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) || ! SCIPisInfinity(scip, ubnd) );
 
-	       /* if allowed, try to use stronger local bound */
-	       if ( sepadata->allowlocal && SCIPvarGetUbLocal(var) + 0.5 < ubnd )
-	       {
-		  ubnd = SCIPvarGetUbLocal(var);
-		  assert( SCIPisIntegral(scip, ubnd) );
-		  *localboundsused = TRUE;
-	       }
+               /* if allowed, try to use stronger local bound */
+               if ( sepadata->allowlocal && SCIPvarGetUbLocal(var) + 0.5 < ubnd )
+               {
+                  ubnd = SCIPvarGetUbLocal(var);
+                  assert( SCIPisIntegral(scip, ubnd) );
+                  *localboundsused = TRUE;
+               }
 
-	       /* round cut coefficients, i.e., add val to cutcoefs[j] */
-	       cutcoefs[j] = SCIPfeasCeil(scip, cutcoefs[j]);
+               /* round cut coefficients, i.e., add val to cutcoefs[j] */
+               cutcoefs[j] = SCIPfeasCeil(scip, cutcoefs[j]);
 
-	       /* correct rhs */
-	       if ( ! SCIPisSumZero(scip, ubnd) )
-		  *cutrhs += ubnd * val;
-	    }
-	 }
-	 else
-	 {
-	    /* compute multiplier for lower bound: */
-	    val = cutcoefs[j] - SCIPfeasFloor(scip, cutcoefs[j]);
-	    assert( ! SCIPisFeasNegative(scip, val) );
+               /* correct rhs */
+               if ( ! SCIPisSumZero(scip, ubnd) )
+                  *cutrhs += ubnd * val;
+            }
+         }
+         else
+         {
+            /* compute multiplier for lower bound: */
+            val = cutcoefs[j] - SCIPfeasFloor(scip, cutcoefs[j]);
+            assert( ! SCIPisFeasNegative(scip, val) );
 
-	    /* only if variable needs to be rounded */
-	    if ( SCIPisSumPositive(scip, val) )
-	    {
-	       SCIP_Real lbnd;
-	       lbnd = SCIPvarGetLbGlobal(var);
-	       assert( ! SCIPisInfinity(scip, -lbnd) );
-	       assert( SCIPisIntegral(scip, lbnd) );
+            /* only if variable needs to be rounded */
+            if ( SCIPisSumPositive(scip, val) )
+            {
+               SCIP_Real lbnd;
+               lbnd = SCIPvarGetLbGlobal(var);
+               assert( ! SCIPisInfinity(scip, -lbnd) );
+               assert( SCIPisIntegral(scip, lbnd) );
 
-	       /* variable should not be free */
-	       assert( ! SCIPisInfinity(scip, -lbnd) || ! SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) );
+               /* variable should not be free */
+               assert( ! SCIPisInfinity(scip, -lbnd) || ! SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) );
 
-	       /* if allowed, try to use stronger local bound */
-	       if ( sepadata->allowlocal && SCIPvarGetLbLocal(var) - 0.5 > lbnd )
-	       {
-		  lbnd = SCIPvarGetLbLocal(var);
-		  assert( SCIPisIntegral(scip, lbnd) );
-		  *localboundsused = TRUE;
-	       }
+               /* if allowed, try to use stronger local bound */
+               if ( sepadata->allowlocal && SCIPvarGetLbLocal(var) - 0.5 > lbnd )
+               {
+                  lbnd = SCIPvarGetLbLocal(var);
+                  assert( SCIPisIntegral(scip, lbnd) );
+                  *localboundsused = TRUE;
+               }
 
-	       /* round cut coefficients, i.e., subtract val from cutcoefs[j] */
-	       cutcoefs[j] = SCIPfeasFloor(scip, cutcoefs[j]);
+               /* round cut coefficients, i.e., subtract val from cutcoefs[j] */
+               cutcoefs[j] = SCIPfeasFloor(scip, cutcoefs[j]);
 
-	       /* correct rhs */
-	       if ( ! SCIPisSumZero(scip, lbnd) )
-		  *cutrhs -= lbnd * val;
-	    }
-	 }
+               /* correct rhs */
+               if ( ! SCIPisSumZero(scip, lbnd) )
+                  *cutrhs -= lbnd * val;
+            }
+         }
       }
       else
       {
-	 /* force coefficients of all continuous variables or of variables not in the lp to zero */
-	 assert( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || pos == -1 );
+         /* force coefficients of all continuous variables or of variables not in the lp to zero */
+         assert( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || pos == -1 );
 
          /* check whether all coefficients for continuous variables are nonnegative */
          if ( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
@@ -2028,7 +2028,7 @@ SCIP_RETCODE computeCut(
             }
          }
 
-	 cutcoefs[j] = 0.0;
+         cutcoefs[j] = 0.0;
       }
    }
 
@@ -2046,7 +2046,7 @@ SCIP_RETCODE createCGCutsDirect(
    SCIP_SEPADATA*        sepadata,           /**< separator data */
    CGMIP_MIPDATA*        mipdata,            /**< data for sub-MIP */
    unsigned int*         ngen                /**< number of generated cuts */
-)
+   )
 {
    SCIP* subscip;
    SCIP_STAGE stage;
@@ -2108,9 +2108,9 @@ SCIP_RETCODE createCGCutsDirect(
    for (k = 0; k < nvars; ++k)
    {
       if ( SCIPvarGetStatus(vars[k]) == SCIP_VARSTATUS_COLUMN )
-	 varsolvals[k] = SCIPvarGetLPSol(vars[k]);
+         varsolvals[k] = SCIPvarGetLPSol(vars[k]);
       else
-	 varsolvals[k] = 0.0;
+         varsolvals[k] = 0.0;
    }
 
    /* loop through solutions found */
@@ -2135,64 +2135,64 @@ SCIP_RETCODE createCGCutsDirect(
       /* compute activity */
       cutact = 0.0;
       for (k = 0; k < nvars; ++k)
-	 cutact += cutcoefs[k] * varsolvals[k];
+         cutact += cutcoefs[k] * varsolvals[k];
 
       SCIPdebugMessage("act=%f, rhs=%f\n", cutact, cutrhs);
 
       /* the following test should be treated with care because of numerical differences - see computeCut() */ 
-      #if 0
+#if 0
       {
-	 /* check for correctness of computed values */
-	 SCIP_Real obj = 0.0;
-	 SCIP_Real val;
-	 SCIP_Bool contVarShifted = FALSE;
-	 unsigned int j;
-	 SCIP_COL** cols;
-	 int ncols;
+         /* check for correctness of computed values */
+         SCIP_Real obj = 0.0;
+         SCIP_Real val;
+         SCIP_Bool contVarShifted = FALSE;
+         unsigned int j;
+         SCIP_COL** cols;
+         int ncols;
 
-	 SCIP_CALL( SCIPprintSol(subscip, sol, NULL, FALSE) );
+         SCIP_CALL( SCIPprintSol(subscip, sol, NULL, FALSE) );
 
-	 SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
-	 for (j = 0; j < mipdata->ncols; ++j)
-	 {
-	    if ( mipdata->colType[j] == colPresent )
-	    {
-	       int idx;
-	       assert( mipdata->alpha[j] != NULL );
-	       val = SCIPgetSolVal(subscip, sol, mipdata->alpha[j]);
-	       assert( SCIPisFeasIntegral(subscip, val) );
-	       idx = SCIPvarGetProbindex(SCIPcolGetVar(cols[j]));
-	       assert( SCIPisFeasEQ(scip, val, cutcoefs[idx]) );
-	       obj += val * SCIPvarGetObj(mipdata->alpha[j]);
-	    }
-	    else
-	    {
-	       if ( mipdata->colType[j] == colContinuous && mipdata->isShifted[j] )
-		  contVarShifted = TRUE;
-	    }
-	 }
-	 assert( mipdata->beta != NULL );
-	 val = SCIPgetSolVal(subscip, sol, mipdata->beta);
-	 assert( SCIPisFeasIntegral(subscip, val) );
-	 obj += val * SCIPvarGetObj(mipdata->beta);
-	 assert( contVarShifted || SCIPisFeasEQ(scip, obj, cutact - cutrhs) );
+         SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
+         for (j = 0; j < mipdata->ncols; ++j)
+         {
+            if ( mipdata->colType[j] == colPresent )
+            {
+               int idx;
+               assert( mipdata->alpha[j] != NULL );
+               val = SCIPgetSolVal(subscip, sol, mipdata->alpha[j]);
+               assert( SCIPisFeasIntegral(subscip, val) );
+               idx = SCIPvarGetProbindex(SCIPcolGetVar(cols[j]));
+               assert( SCIPisFeasEQ(scip, val, cutcoefs[idx]) );
+               obj += val * SCIPvarGetObj(mipdata->alpha[j]);
+            }
+            else
+            {
+               if ( mipdata->colType[j] == colContinuous && mipdata->isShifted[j] )
+                  contVarShifted = TRUE;
+            }
+         }
+         assert( mipdata->beta != NULL );
+         val = SCIPgetSolVal(subscip, sol, mipdata->beta);
+         assert( SCIPisFeasIntegral(subscip, val) );
+         obj += val * SCIPvarGetObj(mipdata->beta);
+         assert( contVarShifted || SCIPisFeasEQ(scip, obj, cutact - cutrhs) );
       }
-      #endif
+#endif
 
       /* if successful, convert dense cut into sparse row, and add the row as a cut */
       if ( SCIPisFeasGT(scip, cutact, cutrhs) )
       {
-	 SCIP_Real cutnorm;
-	 int cutlen;
+         SCIP_Real cutnorm;
+         int cutlen;
 
-	 /* store the cut as sparse row, calculate activity and norm of cut */
-	 SCIP_CALL( storeCutInArrays(scip, nvars, vars, cutcoefs, varsolvals, normtype,
-	       cutvars, cutvals, &cutlen, &cutact, &cutnorm) );
+         /* store the cut as sparse row, calculate activity and norm of cut */
+         SCIP_CALL( storeCutInArrays(scip, nvars, vars, cutcoefs, varsolvals, normtype,
+               cutvars, cutvals, &cutlen, &cutact, &cutnorm) );
 
-	 SCIPdebugMessage("act=%f, rhs=%f, norm=%f, eff=%f\n", cutact, cutrhs, cutnorm, (cutact - cutrhs)/cutnorm);
+         SCIPdebugMessage("act=%f, rhs=%f, norm=%f, eff=%f\n", cutact, cutrhs, cutnorm, (cutact - cutrhs)/cutnorm);
 
          /* if norm is 0, the cut is trivial */
-	 if ( SCIPisPositive(scip, cutnorm) )
+         if ( SCIPisPositive(scip, cutnorm) )
          {
             SCIP_Bool violated = SCIPisEfficacious(scip, (cutact - cutrhs)/cutnorm);
 
@@ -2254,7 +2254,7 @@ SCIP_RETCODE createCGCutsCMIR(
    SCIP_SEPADATA*        sepadata,           /**< separator data */
    CGMIP_MIPDATA*        mipdata,            /**< data for sub-MIP */
    unsigned int*         ngen                /**< number of generated cuts */
-)
+   )
 {
    SCIP* subscip;
    SCIP_STAGE stage;
@@ -2333,9 +2333,9 @@ SCIP_RETCODE createCGCutsCMIR(
    for (k = 0; k < nvars; ++k)
    {
       if ( SCIPvarGetStatus(vars[k]) == SCIP_VARSTATUS_COLUMN )
-	 varsolvals[k] = SCIPvarGetLPSol(vars[k]);
+         varsolvals[k] = SCIPvarGetLPSol(vars[k]);
       else
-	 varsolvals[k] = 0.0;
+         varsolvals[k] = 0.0;
    }
 
    /* prepare arrays for bound information, if requested */
@@ -2359,30 +2359,30 @@ SCIP_RETCODE createCGCutsCMIR(
       /* generate weights */
       for (k = 0; k < nrows; ++k)
       {
-	 SCIP_Real val;
+         SCIP_Real val;
  
-	 weights[k] = 0;
-	 if ( mipdata->ylhs[k] != NULL )
-	 {
+         weights[k] = 0;
+         if ( mipdata->ylhs[k] != NULL )
+         {
             assert( !SCIProwIsModifiable(rows[k]) && (!SCIProwIsLocal(rows[k]) || sepadata->allowlocal) );
 
-	    val = SCIPgetSolVal(subscip, sol, mipdata->ylhs[k]);
-	    assert( ! SCIPisFeasNegative(subscip, val) );
+            val = SCIPgetSolVal(subscip, sol, mipdata->ylhs[k]);
+            assert( ! SCIPisFeasNegative(subscip, val) );
 
-	    if ( SCIPisFeasPositive(subscip, val) )
-	       weights[k] = -val;
-	 }
-	 if ( mipdata->yrhs[k] != NULL )
-	 {
+            if ( SCIPisFeasPositive(subscip, val) )
+               weights[k] = -val;
+         }
+         if ( mipdata->yrhs[k] != NULL )
+         {
             assert( !SCIProwIsModifiable(rows[k]) && (!SCIProwIsLocal(rows[k]) || sepadata->allowlocal) );
 
-	    val = SCIPgetSolVal(subscip, sol, mipdata->yrhs[k]);
-	    assert( ! SCIPisFeasNegative(subscip, val) );
+            val = SCIPgetSolVal(subscip, sol, mipdata->yrhs[k]);
+            assert( ! SCIPisFeasNegative(subscip, val) );
 
             /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
             if ( SCIPisFeasGT(scip, val, ABS(weights[k])) )
                weights[k] = val;
-	 }
+         }
       }
 
       /* set up data for bounds to use */
@@ -2444,24 +2444,24 @@ SCIP_RETCODE createCGCutsCMIR(
       cutact = -1.0;
       cutrhs = -1.0;
       SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, sepadata->allowlocal, FIXINTEGRALRHS, boundsfortrans, boundtypesfortrans,
-	    (int) MAXAGGRLEN(nvars), MAXWEIGHTRANGE, MINFRAC, MAXFRAC,
-	    weights, 1.0, NULL, NULL, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
+            (int) MAXAGGRLEN(nvars), MAXWEIGHTRANGE, MINFRAC, MAXFRAC,
+            weights, 1.0, NULL, NULL, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
       assert( sepadata->allowlocal || !cutislocal );
       SCIPdebugMessage(" -> success=%u: %g <= %g\n", success, cutact, cutrhs);
 
       /* if successful, convert dense cut into sparse row, and add the row as a cut */
       if ( success && SCIPisFeasGT(scip, cutact, cutrhs) )
       {
-	 SCIP_Real cutnorm;
-	 int cutlen;
+         SCIP_Real cutnorm;
+         int cutlen;
 
-	 /* store the cut as sparse row, calculate activity and norm of cut */
-	 SCIP_CALL( storeCutInArrays(scip, nvars, vars, cutcoefs, varsolvals, normtype,
-	       cutvars, cutvals, &cutlen, &cutact, &cutnorm) );
+         /* store the cut as sparse row, calculate activity and norm of cut */
+         SCIP_CALL( storeCutInArrays(scip, nvars, vars, cutcoefs, varsolvals, normtype,
+               cutvars, cutvals, &cutlen, &cutact, &cutnorm) );
 
          /* only proceed if norm is positive - otherwise the cut is trivial */
-	 if ( SCIPisPositive(scip, cutnorm) )
-	 {
+         if ( SCIPisPositive(scip, cutnorm) )
+         {
             SCIP_Bool violated;
 
             violated = SCIPisEfficacious(scip, (cutact - cutrhs)/cutnorm);
@@ -2521,7 +2521,7 @@ SCIP_RETCODE createCGCutsCMIR(
                /* release the row */
                SCIP_CALL( SCIPreleaseRow(scip, &cut) );
             }
-	 }
+         }
       }
    }
 
@@ -2561,9 +2561,9 @@ SCIP_RETCODE freeSubscip(
    {
       if ( mipdata->colType[j] == colPresent )
       {
-	 assert( mipdata->alpha[j] != NULL );
-	 SCIP_CALL( SCIPreleaseVar(subscip, &(mipdata->alpha[j])) );
-	 SCIP_CALL( SCIPreleaseVar(subscip, &(mipdata->fracalpha[j])) );
+         assert( mipdata->alpha[j] != NULL );
+         SCIP_CALL( SCIPreleaseVar(subscip, &(mipdata->alpha[j])) );
+         SCIP_CALL( SCIPreleaseVar(subscip, &(mipdata->fracalpha[j])) );
       }
    }
    SCIP_CALL( SCIPreleaseVar(subscip, &(mipdata->beta)) );
@@ -2573,7 +2573,7 @@ SCIP_RETCODE freeSubscip(
    {
       if ( mipdata->ylhs[i] != NULL )
       {
-	 SCIP_CALL( SCIPreleaseVar(subscip, &(mipdata->ylhs[i])) );
+         SCIP_CALL( SCIPreleaseVar(subscip, &(mipdata->ylhs[i])) );
       }
       if ( mipdata->yrhs[i] != NULL )
       {

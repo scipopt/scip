@@ -229,13 +229,13 @@ SCIP_RETCODE SCIPheurPassSolTrySol(
    {
       if ( heurdata->sol == NULL || SCIPisLT(scip, SCIPgetSolOrigObj(scip, sol), SCIPgetSolOrigObj(scip, heurdata->sol)) )
       {
-	 if ( heurdata->sol != NULL )
-	    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
+         if ( heurdata->sol != NULL )
+            SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
 
-	 SCIPdebugMessage("Received solution of value %g.\n", SCIPgetSolOrigObj(scip, sol)); 
-	 SCIP_CALL( SCIPcreateSolCopy(scip, &heurdata->sol, sol) );
-	 SCIP_CALL( SCIPunlinkSol(scip, heurdata->sol) );
-	 SCIPsolSetHeur(heurdata->sol, heur);
+         SCIPdebugMessage("Received solution of value %g.\n", SCIPgetSolOrigObj(scip, sol)); 
+         SCIP_CALL( SCIPcreateSolCopy(scip, &heurdata->sol, sol) );
+         SCIP_CALL( SCIPunlinkSol(scip, heurdata->sol) );
+         SCIPsolSetHeur(heurdata->sol, heur);
       }
    }
 

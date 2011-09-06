@@ -108,8 +108,8 @@ struct SCIP_SepaData
    int                   maxsepacuts;        /**< maximal number of cmir cuts separated per separation round */
    int                   maxsepacutsroot;    /**< maximal number of cmir cuts separated per separation round in root node */
    int                   densityoffset;      /**< additional number of variables allowed in row on top of density */
-   int                   maxtestdelta;	     /**< maximal number of different deltas to try (-1: unlimited) */
-   int                   maxconts;	     /**< maximal number of active continuous variables in aggregated row */
+   int                   maxtestdelta;             /**< maximal number of different deltas to try (-1: unlimited) */
+   int                   maxconts;             /**< maximal number of active continuous variables in aggregated row */
    int                   maxcontsroot;       /**< maximal number of active continuous variables in aggregated row in the root */
    SCIP_Bool             trynegscaling;      /**< should negative values also be tested in scaling? */
    SCIP_Bool             fixintegralrhs;     /**< should an additional variable be complemented if f0 = 0? */
@@ -231,7 +231,7 @@ SCIP_RETCODE addCut(
    
          /* try to scale the cut to integral values, but only if the scaling is small; otherwise keep the fractional cut */
          SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
-   				     (SCIP_Longint) 30, 100.0, MAKECONTINTEGRAL, &success) );
+               (SCIP_Longint) 30, 100.0, MAKECONTINTEGRAL, &success) );
          if( success && !SCIPisCutEfficacious(scip, sol, cut) )
          {
             SCIPdebugMessage(" -> %s cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
@@ -381,7 +381,7 @@ SCIP_RETCODE tryDelta(
             &success, &cutislocal) );
       assert(allowlocal || !cutislocal);
       SCIPdebugMessage("delta = %g  -> success: %u, cutact: %g, cutrhs: %g, vio: %g\n",
-		       delta, success, success ? cutact : 0.0, success ? cutrhs : 0.0, success ? cutact - cutrhs : 0.0);
+         delta, success, success ? cutact : 0.0, success ? cutrhs : 0.0, success ? cutact - cutrhs : 0.0);
                
       /* check if delta generates cut which is more violated */
       if( success && SCIPisFeasGT(scip, cutact, cutrhs) )

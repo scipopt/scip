@@ -3771,7 +3771,7 @@ int SCIPstairmapGetEarliestFeasibleStart(
    assert(stairmap->timepoints[pos] <= starttime);
    
    (*infeasible) = TRUE;
-	
+
    while( (*infeasible) && starttime <= ub )
    {
       if( SCIPstairmapIsFeasibleStart(stairmap, starttime, duration, height, &pos) )
@@ -3811,7 +3811,7 @@ int SCIPstairmapGetLatestFeasibleStart(
 {
    int starttime;
    int pos;
-	
+
    assert(stairmap != NULL);
    assert(lb >= 0);
    assert(lb <= ub);
@@ -3828,7 +3828,7 @@ int SCIPstairmapGetLatestFeasibleStart(
    assert(stairmap->timepoints[pos] <= starttime);
    
    (*infeasible) = TRUE;
-	
+
    while( (*infeasible) && starttime >= lb )
    {
       if( SCIPstairmapIsFeasibleStart(stairmap, starttime, duration, height, &pos) )

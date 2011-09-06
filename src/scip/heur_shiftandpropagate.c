@@ -1826,7 +1826,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 SCIP_RETCODE SCIPincludeHeurShiftandpropagate(
    SCIP*                 scip                /**< SCIP data structure */
    )
-{	
+{
    SCIP_HEURDATA* heurdata;
 
    /* create shiftandpropagate primal heuristic data */

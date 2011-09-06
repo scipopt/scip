@@ -1687,12 +1687,12 @@ SCIP_RETCODE readBounds(
 
       /* change the bounds of the variable if bounds have been given (do not destroy earlier specification of bounds) */
       if ( lb != 0.0 )
-	 SCIP_CALL( SCIPchgVarLb(scip, var, lb) );
+         SCIP_CALL( SCIPchgVarLb(scip, var, lb) );
       /*lint --e{777}*/
       if ( ub != SCIPinfinity(scip) )
-	 SCIP_CALL( SCIPchgVarUb(scip, var, ub) );
+         SCIP_CALL( SCIPchgVarUb(scip, var, ub) );
       SCIPdebugMessage("(line %d) new bounds: <%s>[%g,%g]\n", pipinput->linenumber, SCIPvarGetName(var),
-	 SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+         SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
    }
 
    return SCIP_OKAY;
@@ -2241,10 +2241,10 @@ SCIP_RETCODE collectAggregatedVars(
             status == SCIP_VARSTATUS_NEGATED );
          
          if ( ! SCIPhashtableExists(*varAggregated, (void*) var) )
-	 {
-	    (*aggregatedVars)[(*nAggregatedVars)++] = var;
-	    SCIP_CALL( SCIPhashtableInsert(*varAggregated, (void*) var) );
-	 }
+         {
+            (*aggregatedVars)[(*nAggregatedVars)++] = var;
+            SCIP_CALL( SCIPhashtableInsert(*varAggregated, (void*) var) );
+         }
       }
    }
 
@@ -2391,7 +2391,7 @@ SCIP_RETCODE SCIPwritePip(
    SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
    SCIP_OBJSENSE      objsense,           /**< objective sense */
    SCIP_Real          objscale,           /**< scalar applied to objective function; external objective value is
-   					       extobj = objsense * objscale * (intobj + objoffset) */
+                                                  extobj = objsense * objscale * (intobj + objoffset) */
    SCIP_Real          objoffset,          /**< objective offset from bound shifting and fixing */
    SCIP_VAR**         vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
    int                nvars,              /**< number of mutable variables in the problem */
@@ -2633,15 +2633,15 @@ SCIP_RETCODE SCIPwritePip(
          /* print lower bound */
          if ( SCIPisInfinity(scip, -lb) )
             SCIPinfoMessage(scip, file, " -inf <= ");
-	 else
+         else
          {
             if ( SCIPisZero(scip, lb) )
-	    {
-	       /* variables are nonnegative by default - so we skip these variables */
-	       if ( SCIPisInfinity(scip, ub) )
-		  continue;
+            {
+               /* variables are nonnegative by default - so we skip these variables */
+               if ( SCIPisInfinity(scip, ub) )
+                  continue;
                lb = 0.0;
-	    }
+            }
 
             SCIPinfoMessage(scip, file, " %.15g <= ", lb);
          }
@@ -2682,12 +2682,12 @@ SCIP_RETCODE SCIPwritePip(
          var = vars[v];
          assert( var != NULL );
 
-	 if ( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
-	 {
+         if ( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+         {
             (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
             (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %s", varname);
             appendLine(scip, file, linebuffer, &linecnt, buffer);
-	 }
+         }
       }
 
       endLine(scip, file, linebuffer, &linecnt);
@@ -2704,11 +2704,11 @@ SCIP_RETCODE SCIPwritePip(
          assert( var != NULL );
 
          if ( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
-	 {
+         {
             (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
             (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %s", varname);
             appendLine(scip, file, linebuffer, &linecnt, buffer);
-	 }
+         }
       }
       endLine(scip, file, linebuffer, &linecnt);
    }

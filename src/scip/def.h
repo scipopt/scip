@@ -68,8 +68,8 @@ extern "C" {
  */
 
 #ifndef LLONG_MAX
-#define LLONG_MAX	9223372036854775807LL
-#define LLONG_MIN	(-LLONG_MAX - 1LL)
+#define LLONG_MAX        9223372036854775807LL
+#define LLONG_MIN        (-LLONG_MAX - 1LL)
 #endif
 
 #define SCIP_Longint long long                         /**< type used for long integer values */

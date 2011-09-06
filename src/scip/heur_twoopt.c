@@ -76,7 +76,7 @@ struct SCIP_HeurData
    int                   nintblocks;         /**< number of blocks */                          
 
    SCIP_Bool             execute;            /**< has presolveTwoOpt detected 
-					      * necessary structure for execution of heuristic? */
+                                              * necessary structure for execution of heuristic? */
    unsigned int          randseed;           /**< seed value for random number generator */
    int                   maxnslaves;         /**< delimits the maximum number of slave candidates for a master variable */
 #ifdef STATISTIC_INFORMATION
@@ -197,8 +197,8 @@ SCIP_RETCODE shiftValues(
          assert(SCIPisFeasLE(scip, activities[rowpos], SCIProwGetRhs(slaverows[j])));
       }
    }
-/* in debug mode, the master rows are checked for feasibility which should be granted by the
- * decision for a shift value */
+   /* in debug mode, the master rows are checked for feasibility which should be granted by the
+    * decision for a shift value */
 #ifndef NDEBUG
    for( i = 0; i < ncolmasterrows && SCIProwGetLPPos(masterrows[i]) >= 0; ++i )
    {
@@ -408,7 +408,7 @@ SCIP_Real determineBound(
    bound = MIN(slavebound, masterbound);
    assert(!SCIPisInfinity(scip,bound));
    if( SCIPisFeasZero(scip, bound) ) 
-     return 0.0;
+      return 0.0;
    
    /* get the necessary row and and column data for each variable */
    col = SCIPvarGetCol(slave);
@@ -448,13 +448,13 @@ SCIP_Real determineBound(
       /* check if one pointer already reached the end of the respective array */
       if( i < nslaverows && SCIProwGetLPPos(slaverows[i]) == -1 )
       {
-	SCIPdebugMessage("  Slaverow %s is not in LP (i=%d, j=%d)\n", SCIProwGetName(slaverows[i]), i, j);
+         SCIPdebugMessage("  Slaverow %s is not in LP (i=%d, j=%d)\n", SCIProwGetName(slaverows[i]), i, j);
          i = nslaverows;
          continue;
       }
       if( j < nmasterrows && SCIProwGetLPPos(masterrows[j]) == -1 )
       {
-	SCIPdebugMessage("  Masterrow %s is not in LP (i=%d, j=%d) \n", SCIProwGetName(masterrows[j]), i, j);
+         SCIPdebugMessage("  Masterrow %s is not in LP (i=%d, j=%d) \n", SCIProwGetName(masterrows[j]), i, j);
          j = nmasterrows;
          continue;
       }
@@ -464,12 +464,12 @@ SCIP_Real determineBound(
       /* If one counter has already reached its limit, assign a huge number to the corresponding 
        * row index to simulate an always greater row position. */
       if( i < nslaverows )
-	 slaveindex = SCIProwGetIndex(slaverows[i]);
+         slaveindex = SCIProwGetIndex(slaverows[i]);
       else 
          slaveindex = INT_MAX;
 
       if( j < nmasterrows )
-	 masterindex = SCIProwGetIndex(masterrows[j]);
+         masterindex = SCIProwGetIndex(masterrows[j]);
       else
          masterindex = INT_MAX;
            
@@ -480,18 +480,18 @@ SCIP_Real determineBound(
       /* the current row is the one with the smaller index */
       if( slaveindex <= masterindex )
       {
-	 rowpos = SCIProwGetLPPos(slaverows[i]);
-	 row = slaverows[i];
-	 slaveincrement = TRUE;
-	 masterincrement = (slaveindex == masterindex);
+         rowpos = SCIProwGetLPPos(slaverows[i]);
+         row = slaverows[i];
+         slaveincrement = TRUE;
+         masterincrement = (slaveindex == masterindex);
       } 
       else
       {
          assert(j < nmasterrows);
-	 
+         
          rowpos = SCIProwGetLPPos(masterrows[j]);
          row = masterrows[j];
-	 masterincrement = TRUE;
+         masterincrement = TRUE;
       }      
       assert(row != NULL);
 
@@ -500,9 +500,9 @@ SCIP_Real determineBound(
       {
          /* effect is the effect on the row activity by shifting the variables by 1 in the respective directions */
          effect = 0.0;
-	 if( slaveindex <= masterindex )
+         if( slaveindex <= masterindex )
             effect += (slavecolvals[i] * (int)slavedirection);
-	 if( masterindex <= slaveindex )
+         if( masterindex <= slaveindex )
             effect += (mastercolvals[j] * (int)masterdirection);
 
          /* get information about the current row */
@@ -521,9 +521,9 @@ SCIP_Real determineBound(
 
             assert(SCIPisFeasLE(scip, lhs, activity) && SCIPisFeasLE(scip, activity, rhs));
 
-	    SCIPdebugMessage("   %g <= %g <= %g, bound = %g, effect = %g (%g * %d + %g * %d) (i=%d,j=%d)\n", lhs, activity, rhs, bound, effect,
-			     slaveindex <= masterindex ? slavecolvals[i] : 0.0, (int)slavedirection, masterindex <= slaveindex ? mastercolvals[j] : 0.0, 
-			     (int)masterdirection, i, j);
+            SCIPdebugMessage("   %g <= %g <= %g, bound = %g, effect = %g (%g * %d + %g * %d) (i=%d,j=%d)\n", lhs, activity, rhs, bound, effect,
+               slaveindex <= masterindex ? slavecolvals[i] : 0.0, (int)slavedirection, masterindex <= slaveindex ? mastercolvals[j] : 0.0, 
+               (int)masterdirection, i, j);
 
             /* if the row has a left hand side, ensure that shifting preserves feasibility of this ">="-constraint */
             if( !SCIPisInfinity(scip, -lhs) && SCIPisFeasLT(scip, activity + (effect * bound), lhs) )
@@ -544,16 +544,16 @@ SCIP_Real determineBound(
             assert(SCIPisFeasLE(scip, lhs, activity + effect * bound) && SCIPisFeasGE(scip, rhs, activity + effect * bound));
             assert(SCIPisFeasIntegral(scip, bound));
          }
-	 else
-	 {
-	   SCIPdebugMessage("  Zero effect on row %s, effect %g, master coeff: %g slave coeff: %g (i=%d, j=%d)",
-			    SCIProwGetName(row), effect, mastercolvals[j], slavecolvals[i], i, j);
-	 }
+         else
+         {
+            SCIPdebugMessage("  Zero effect on row %s, effect %g, master coeff: %g slave coeff: %g (i=%d, j=%d)",
+               SCIProwGetName(row), effect, mastercolvals[j], slavecolvals[i], i, j);
+         }
 
       }
       else
       {
-	SCIPdebugMessage("  Row %s is local.\n", SCIProwGetName(row));
+         SCIPdebugMessage("  Row %s is local.\n", SCIProwGetName(row));
       }
       
       /* increase the counters which belong to the corresponding row. Both counters are increased by 
@@ -581,7 +581,7 @@ void disposeVariable(
    SCIP_VAR**            vars,               /**< problem variables */
    int*                  blockend,           /**< contains end index of block */
    int                   varindex            /**< variable index */
-)
+   )
 {
    assert(blockend != NULL);
    assert(varindex <= *blockend);
@@ -918,9 +918,9 @@ SCIP_RETCODE optimize(
          SCIP_Real bestbound;
          int bestslavepos;
          int s;
-	 int firstslave;
-	 int nslaves;
-	 int bestdirection;
+         int firstslave;
+         int nslaves;
+         int bestdirection;
          DIRECTION bestmasterdir;
          DIRECTION bestslavedir;
 
@@ -928,25 +928,25 @@ SCIP_RETCODE optimize(
          masterobj = SCIPvarGetObj(master);
          mastersolval = SCIPgetSolVal(scip, worksol, master);
 
-	 /* due to cuts or fixings of solution values, worksol might not be feasible w.r.t. its bounds.
-	  * Exit method in that case. */
+         /* due to cuts or fixings of solution values, worksol might not be feasible w.r.t. its bounds.
+          * Exit method in that case. */
          if( SCIPisFeasGT(scip, mastersolval, SCIPvarGetUbGlobal(master)) || SCIPisFeasLT(scip, mastersolval, SCIPvarGetLbGlobal(master)) )
          {
             *varboundserr = TRUE;
             SCIPdebugMessage("Solution has violated variable bounds for var %s: %g <= %g <= %g \n",
-                  SCIPvarGetName(master), SCIPvarGetLbGlobal(master), mastersolval, SCIPvarGetUbGlobal(master));
+               SCIPvarGetName(master), SCIPvarGetLbGlobal(master), mastersolval, SCIPvarGetUbGlobal(master));
             goto TERMINATE;
          }    
 
-	 /* if variable has fixed solution value, it is deleted from heuristic array */
+         /* if variable has fixed solution value, it is deleted from heuristic array */
          if( SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(master), SCIPvarGetLbGlobal(master)) )
-	 {
-	    disposeVariable(vars, &(blockend[b]), blockstart[b] + m);
+         {
+            disposeVariable(vars, &(blockend[b]), blockstart[b] + m);
             --blocklen;
             continue;
-	 }
-	 else if( SCIPvarGetStatus(master) != SCIP_VARSTATUS_COLUMN )
-	   continue;
+         }
+         else if( SCIPvarGetStatus(master) != SCIP_VARSTATUS_COLUMN )
+            continue;
          
          assert(SCIPisFeasIntegral(scip, mastersolval));
 
@@ -960,31 +960,31 @@ SCIP_RETCODE optimize(
          bestmasterdir = DIRECTION_NONE;
          bestslavedir = DIRECTION_NONE;
          bestdirection = -1;
-	 /* in blocks with more than heurdata->maxnslaves variables, a slave candidate
-	  * region is chosen */
-	 if( heurdata->maxnslaves >= 0 && blocklen > heurdata->maxnslaves )
-	    firstslave = SCIPgetRandomInt(blockstart[b] + m, blockend[b], &heurdata->randseed);
-	 else
-	    firstslave = blockstart[b] + m + 1;
+         /* in blocks with more than heurdata->maxnslaves variables, a slave candidate
+          * region is chosen */
+         if( heurdata->maxnslaves >= 0 && blocklen > heurdata->maxnslaves )
+            firstslave = SCIPgetRandomInt(blockstart[b] + m, blockend[b], &heurdata->randseed);
+         else
+            firstslave = blockstart[b] + m + 1;
 
-	 nslaves = MIN((heurdata->maxnslaves == -1 ? INT_MAX : heurdata->maxnslaves), blocklen);
+         nslaves = MIN((heurdata->maxnslaves == -1 ? INT_MAX : heurdata->maxnslaves), blocklen);
 
          /* loop over block and determine a slave shift candidate for master variable.
           * If more than one candidate is available, choose the shift which improves objective function
           * the most.*/
-	 for( s = 0; s < nslaves; ++s )
-	 {
-	    SCIP_VAR* slave;
-	    SCIP_Real slaveobj;
-	    SCIP_Real slavesolval;
-	    SCIP_Real changedobj;
-	    SCIP_Real diffdirbound;
+         for( s = 0; s < nslaves; ++s )
+         {
+            SCIP_VAR* slave;
+            SCIP_Real slaveobj;
+            SCIP_Real slavesolval;
+            SCIP_Real changedobj;
+            SCIP_Real diffdirbound;
             SCIP_Real equaldirbound;
             int directions;
-	    int slaveindex;
+            int slaveindex;
 
-	    slaveindex = (firstslave + s - blockstart[b]) % blocklen;
-	    slaveindex += blockstart[b];
+            slaveindex = (firstslave + s - blockstart[b]) % blocklen;
+            slaveindex += blockstart[b];
             
             /* in case of a small block, we do not want to try possible pairings twice */
             if( (blocklen <= heurdata->maxnslaves || heurdata->maxnslaves == -1) && slaveindex < blockstart[b] + m )
@@ -993,43 +993,43 @@ SCIP_RETCODE optimize(
             if( slaveindex == blockstart[b] + m )
                continue;
 
-	    /* get the next slave variable */
-	    slave = vars[slaveindex];
-	    slaveobj = SCIPvarGetObj(slave);
-	    slavesolval = SCIPgetSolVal(scip, worksol, slave);
+            /* get the next slave variable */
+            slave = vars[slaveindex];
+            slaveobj = SCIPvarGetObj(slave);
+            slavesolval = SCIPgetSolVal(scip, worksol, slave);
             changedobj = 0.0;
 
-	    assert(SCIPvarGetType(master) == SCIPvarGetType(slave));
-	    assert(SCIPisFeasIntegral(scip, slavesolval));
-	    assert(opttype == OPTTYPE_INTEGER || 
-		   (SCIPisFeasEQ(scip, slavesolval, 1.0) || SCIPisFeasEQ(scip, slavesolval, 0.0)));
-	    
-	    /* solution is not feasible w.r.t. the variable bounds, stop optimization in this case */
-	    if( SCIPisFeasGT(scip, slavesolval, SCIPvarGetUbGlobal(slave)) || SCIPisFeasLT(scip, slavesolval, SCIPvarGetLbGlobal(slave)) )
+            assert(SCIPvarGetType(master) == SCIPvarGetType(slave));
+            assert(SCIPisFeasIntegral(scip, slavesolval));
+            assert(opttype == OPTTYPE_INTEGER || 
+               (SCIPisFeasEQ(scip, slavesolval, 1.0) || SCIPisFeasEQ(scip, slavesolval, 0.0)));
+
+            /* solution is not feasible w.r.t. the variable bounds, stop optimization in this case */
+            if( SCIPisFeasGT(scip, slavesolval, SCIPvarGetUbGlobal(slave)) || SCIPisFeasLT(scip, slavesolval, SCIPvarGetLbGlobal(slave)) )
             {
-	       *varboundserr = TRUE;
-	       SCIPdebugMessage("Solution has violated variable bounds for var %s: %g <= %g <= %g \n",
-				SCIPvarGetName(slave), SCIPvarGetLbGlobal(slave), slavesolval, SCIPvarGetUbGlobal(slave));
-	       goto TERMINATE;
-	    }    
-	    
-	    /* if solution value of the variable is fixed, delete it from the remaining candidates in the block */
-	    if( SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(slave), SCIPvarGetLbGlobal(slave) ) )
-	    {
-	       disposeVariable(vars, &(blockend[b]), slaveindex);
-	       --blocklen;
-	       continue;
-	    } 
+               *varboundserr = TRUE;
+               SCIPdebugMessage("Solution has violated variable bounds for var %s: %g <= %g <= %g \n",
+                  SCIPvarGetName(slave), SCIPvarGetLbGlobal(slave), slavesolval, SCIPvarGetUbGlobal(slave));
+               goto TERMINATE;
+            }    
+
+            /* if solution value of the variable is fixed, delete it from the remaining candidates in the block */
+            if( SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(slave), SCIPvarGetLbGlobal(slave) ) )
+            {
+               disposeVariable(vars, &(blockend[b]), slaveindex);
+               --blocklen;
+               continue;
+            } 
             else if( SCIPvarGetStatus(master) != SCIP_VARSTATUS_COLUMN )
-	       continue;
-	    
-	    // /* determine the shifting direction to improve the objective function */
-	    // assert(SCIPisFeasGT(scip, masterobj, slaveobj));
-	    
-	    /* the heuristic chooses the shifting direction and the corresponding maximum nonnegative 
+               continue;
+
+            // /* determine the shifting direction to improve the objective function */
+            // assert(SCIPisFeasGT(scip, masterobj, slaveobj));
+
+            /* the heuristic chooses the shifting direction and the corresponding maximum nonnegative 
              * integer shift value for the two variables which preserves feasibility and improves
              * the objective function value.
-	     */
+             */
             directions = -1;
             diffdirbound = 0.0;
             equaldirbound = 0.0;
@@ -1066,17 +1066,17 @@ SCIP_RETCODE optimize(
                   directions = 0;
                }
             }
-	    assert(SCIPisFeasIntegral(scip, equaldirbound));
+            assert(SCIPisFeasIntegral(scip, equaldirbound));
             assert(SCIPisFeasIntegral(scip, diffdirbound));
-	    assert(SCIPisFeasGE(scip, equaldirbound, 0.0));
+            assert(SCIPisFeasGE(scip, equaldirbound, 0.0));
             assert(SCIPisFeasGE(scip, diffdirbound, 0.0));
 
-	    /* choose the candidate which improves the objective function the most */
+            /* choose the candidate which improves the objective function the most */
             if( (SCIPisFeasGT(scip, equaldirbound, 0.0) || SCIPisFeasGT(scip, diffdirbound, 0.0))
                && SCIPisFeasLT(scip, changedobj, bestimprovement) )
-	    {
-	       bestimprovement = changedobj;
-	       bestslavepos = slaveindex;
+            {
+               bestimprovement = changedobj;
+               bestslavepos = slaveindex;
                bestdirection = directions;
                /* the most promising shift, i.e., the one which can improve the objective 
                 * the most, is recorded by the integer 'directions'. It is recovered via the use
@@ -1096,10 +1096,10 @@ SCIP_RETCODE optimize(
                   bestbound = equaldirbound;
                else
                   bestbound = diffdirbound;
-	    }
-	 }
+            }
+         }
        
-	 /* choose the most promising candidate, if one exists */
+         /* choose the most promising candidate, if one exists */
          if( bestslavepos >= 0 )
          {
             if( npairs == arraysize )
@@ -1121,9 +1121,9 @@ SCIP_RETCODE optimize(
             assert(objchanges[npairs] < 0);
 
             SCIPdebugMessage("  Saved candidate pair {%s=%g, %s=%g} with objectives <%g>, <%g> to be set to {%g, %g} %d\n",
-                  SCIPvarGetName(master), mastersolval, SCIPvarGetName(bestslaves[npairs]), SCIPgetSolVal(scip, worksol, bestslaves[npairs]) ,
-                  masterobj, SCIPvarGetObj(bestslaves[npairs]), mastersolval + (int)bestmasterdir * bestbound, SCIPgetSolVal(scip, worksol, bestslaves[npairs])
-                     + (int)bestslavedir * bestbound, bestdirections[npairs]);
+               SCIPvarGetName(master), mastersolval, SCIPvarGetName(bestslaves[npairs]), SCIPgetSolVal(scip, worksol, bestslaves[npairs]) ,
+               masterobj, SCIPvarGetObj(bestslaves[npairs]), mastersolval + (int)bestmasterdir * bestbound, SCIPgetSolVal(scip, worksol, bestslaves[npairs])
+               + (int)bestslavedir * bestbound, bestdirections[npairs]);
 
             ++npairs;
          }
@@ -1177,8 +1177,8 @@ SCIP_RETCODE optimize(
 #endif
 
          SCIPdebugMessage("  Promising candidates {%s=%g, %s=%g} with objectives <%g>, <%g> to be set to {%g, %g}\n",
-               SCIPvarGetName(master), mastersolval, SCIPvarGetName(slave), slavesolval,
-               masterobj, slaveobj, mastersolval + (int)masterdir * bound, slavesolval + (int)slavedir * bound);
+            SCIPvarGetName(master), mastersolval, SCIPvarGetName(slave), slavesolval,
+            masterobj, slaveobj, mastersolval + (int)masterdir * bound, slavesolval + (int)slavedir * bound);
 
 #ifndef NDEBUG
          /* the improvement of objective function is calculated */
@@ -1201,9 +1201,9 @@ SCIP_RETCODE optimize(
             SCIP_CALL( SCIPsetSolVal(scip, worksol, master, mastersolval + (int)masterdir * bound) );
             SCIP_CALL( SCIPsetSolVal(scip, worksol, slave, slavesolval + (int)slavedir * bound) );
             SCIPdebugMessage("  Feasible shift: <%s>[%g, %g] (obj: %f)  <%f> --> <%f>\n",
-                  SCIPvarGetName(master), SCIPvarGetLbGlobal(master), SCIPvarGetUbGlobal(master), masterobj, mastersolval, SCIPgetSolVal(scip, worksol, master));
+               SCIPvarGetName(master), SCIPvarGetLbGlobal(master), SCIPvarGetUbGlobal(master), masterobj, mastersolval, SCIPgetSolVal(scip, worksol, master));
             SCIPdebugMessage("                  <%s>[%g, %g] (obj: %f)  <%f> --> <%f>\n",
-                  SCIPvarGetName(slave), SCIPvarGetLbGlobal(slave), SCIPvarGetUbGlobal(slave), slaveobj, slavesolval, SCIPgetSolVal(scip, worksol, slave));
+               SCIPvarGetName(slave), SCIPvarGetLbGlobal(slave), SCIPvarGetUbGlobal(slave), slaveobj, slavesolval, SCIPgetSolVal(scip, worksol, slave));
 
 #ifdef STATISTIC_INFORMATION
             /* update statistics */
@@ -1216,7 +1216,7 @@ SCIP_RETCODE optimize(
          }
       }
    }
-   TERMINATE:
+ TERMINATE:
    SCIPfreeBufferArray(scip, &bestdirections);
    SCIPfreeBufferArray(scip, &objchanges);
    SCIPfreeBufferArray(scip, &bestslaves);
@@ -1641,7 +1641,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
 
             solval = SCIPgetSolVal(scip, worksol, allvars[i]);
 
-	    assert(SCIPvarGetType(allvars[i]) != SCIP_VARTYPE_CONTINUOUS && SCIPisFeasIntegral(scip, solval));
+            assert(SCIPvarGetType(allvars[i]) != SCIP_VARTYPE_CONTINUOUS && SCIPisFeasIntegral(scip, solval));
 
             SCIP_CALL( SCIPchgVarLbDive(scip, allvars[i], solval) );
             SCIP_CALL( SCIPchgVarUbDive(scip, allvars[i], solval) );
@@ -1681,9 +1681,9 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
          /* check solution for feasibility */
 
 #ifndef NDEBUG
-	 SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, TRUE, TRUE, TRUE, &success) );
+         SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, TRUE, TRUE, TRUE, &success) );
 #else
-	 SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, TRUE, &success) );
+         SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, TRUE, &success) );
 #endif
          if( success )
          {
@@ -1744,7 +1744,7 @@ SCIP_RETCODE SCIPincludeHeurTwoopt(
 
    /* include parameter maxnslaves */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/twoopt/maxnslaves", "maximum number of slaves for one master variable",
-			      &heurdata->maxnslaves, TRUE, DEFAULT_MAXNSLAVES, -1, 1000000, NULL, NULL) );
+         &heurdata->maxnslaves, TRUE, DEFAULT_MAXNSLAVES, -1, 1000000, NULL, NULL) );
 
    /* include parameter matchingrate */
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/twoopt/matchingrate", 

@@ -323,18 +323,18 @@ SCIP_RETCODE SCIPsepaExecLP(
    {
       if( (!sepa->delay && !sepa->lpwasdelayed) || execdelayed )
       {
-	 SCIP_Longint oldndomchgs;
-	 SCIP_Longint oldnprobdomchgs;
-	 int oldncuts;
-	 int oldnactiveconss;
+         SCIP_Longint oldndomchgs;
+         SCIP_Longint oldnprobdomchgs;
+         int oldncuts;
+         int oldnactiveconss;
          int ncutsfound;
 
          SCIPdebugMessage("executing separator <%s> on LP solution\n", sepa->name);
 
-	 oldndomchgs = stat->nboundchgs + stat->nholechgs;
-	 oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
-	 oldncuts = SCIPsepastoreGetNCuts(sepastore);
-	 oldnactiveconss = stat->nactiveconss;
+         oldndomchgs = stat->nboundchgs + stat->nholechgs;
+         oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
+         oldncuts = SCIPsepastoreGetNCuts(sepastore);
+         oldnactiveconss = stat->nactiveconss;
 
          /* reset the statistics for current node */
          if( sepa->lastsepanode != stat->ntotalnodes )
@@ -364,12 +364,12 @@ SCIP_RETCODE SCIPsepaExecLP(
          ncutsfound = SCIPsepastoreGetNCuts(sepastore) - oldncuts;
          sepa->ncutsfound += ncutsfound;
          sepa->ncutsfoundatnode += ncutsfound;
-	 sepa->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/
+         sepa->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/
 
          /* update domain reductions; therefore remove the domain
           * reduction counts which were generated in probing mode */
-	 sepa->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
-	 sepa->ndomredsfound -= (stat->nprobboundchgs + stat->nprobholechgs - oldnprobdomchgs);
+         sepa->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+         sepa->ndomredsfound -= (stat->nprobboundchgs + stat->nprobholechgs - oldnprobdomchgs);
 
          /* evaluate result */
          if( *result != SCIP_CUTOFF
@@ -426,18 +426,18 @@ SCIP_RETCODE SCIPsepaExecSol(
    {
       if( (!sepa->delay && !sepa->solwasdelayed) || execdelayed )
       {
-	 SCIP_Longint oldndomchgs;
-	 SCIP_Longint oldnprobdomchgs;
-	 int oldncuts;
-	 int oldnactiveconss;
+         SCIP_Longint oldndomchgs;
+         SCIP_Longint oldnprobdomchgs;
+         int oldncuts;
+         int oldnactiveconss;
          int ncutsfound;
 
          SCIPdebugMessage("executing separator <%s> on solution %p\n", sepa->name, (void*)sol);
 
-	 oldndomchgs = stat->nboundchgs + stat->nholechgs;
-	 oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
-	 oldncuts = SCIPsepastoreGetNCuts(sepastore);
-	 oldnactiveconss = stat->nactiveconss;
+         oldndomchgs = stat->nboundchgs + stat->nholechgs;
+         oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
+         oldncuts = SCIPsepastoreGetNCuts(sepastore);
+         oldnactiveconss = stat->nactiveconss;
 
          /* reset the statistics for current node */
          if( sepa->lastsepanode != stat->ntotalnodes )
@@ -467,12 +467,12 @@ SCIP_RETCODE SCIPsepaExecSol(
          ncutsfound = SCIPsepastoreGetNCuts(sepastore) - oldncuts;
          sepa->ncutsfound += ncutsfound;
          sepa->ncutsfoundatnode += ncutsfound;
-	 sepa->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/
+         sepa->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/
 
          /* update domain reductions; therefore remove the domain
           * reduction counts which were generated in probing mode */
-	 sepa->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
-	 sepa->ndomredsfound -= (stat->nprobboundchgs + stat->nprobholechgs - oldnprobdomchgs);
+         sepa->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+         sepa->ndomredsfound -= (stat->nprobboundchgs + stat->nprobholechgs - oldnprobdomchgs);
 
          /* evaluate result */
          if( *result != SCIP_CUTOFF

@@ -5539,27 +5539,27 @@ SCIP_RETCODE treeBacktrackProbing(
 
       while( tree->pathlen > newpathlen )
       {
-	 assert(SCIPnodeGetType(tree->path[tree->pathlen-1]) == SCIP_NODETYPE_PROBINGNODE);
-	 assert(tree->pathlen-1 == SCIPnodeGetDepth(tree->path[tree->pathlen-1]));
-	 assert(tree->pathlen-1 >= SCIPnodeGetDepth(tree->probingroot));
+         assert(SCIPnodeGetType(tree->path[tree->pathlen-1]) == SCIP_NODETYPE_PROBINGNODE);
+         assert(tree->pathlen-1 == SCIPnodeGetDepth(tree->path[tree->pathlen-1]));
+         assert(tree->pathlen-1 >= SCIPnodeGetDepth(tree->probingroot));
 
-	 /* undo bound changes by deactivating the probing node */
-	 SCIP_CALL( nodeDeactivate(tree->path[tree->pathlen-1], blkmem, set, stat, tree, lp, branchcand, eventqueue) );
+         /* undo bound changes by deactivating the probing node */
+         SCIP_CALL( nodeDeactivate(tree->path[tree->pathlen-1], blkmem, set, stat, tree, lp, branchcand, eventqueue) );
 
-	 /* free the probing node */
-	 SCIP_CALL( SCIPnodeFree(&tree->path[tree->pathlen-1], blkmem, set, stat, tree, lp) );
-	 tree->pathlen--;
+         /* free the probing node */
+         SCIP_CALL( SCIPnodeFree(&tree->path[tree->pathlen-1], blkmem, set, stat, tree, lp) );
+         tree->pathlen--;
       }
       assert(tree->pathlen == newpathlen);
 
       /* reset the path LP size to the initial size of the probing node */
       if( SCIPnodeGetType(tree->path[tree->pathlen-1]) == SCIP_NODETYPE_PROBINGNODE )
       {
-	 tree->pathnlpcols[tree->pathlen-1] = tree->path[tree->pathlen-1]->data.probingnode->ninitialcols;
-	 tree->pathnlprows[tree->pathlen-1] = tree->path[tree->pathlen-1]->data.probingnode->ninitialrows;
+         tree->pathnlpcols[tree->pathlen-1] = tree->path[tree->pathlen-1]->data.probingnode->ninitialcols;
+         tree->pathnlprows[tree->pathlen-1] = tree->path[tree->pathlen-1]->data.probingnode->ninitialrows;
       }
       else
-	 assert(SCIPnodeGetType(tree->path[tree->pathlen-1]) == SCIP_NODETYPE_FOCUSNODE);
+         assert(SCIPnodeGetType(tree->path[tree->pathlen-1]) == SCIP_NODETYPE_FOCUSNODE);
       treeCheckPath(tree);
 
       /* undo LP extensions */
@@ -5576,9 +5576,9 @@ SCIP_RETCODE treeBacktrackProbing(
        * reset them to infinity
        */
       if( tree->cutoffdepth >= tree->pathlen )
-	 tree->cutoffdepth = INT_MAX;
+         tree->cutoffdepth = INT_MAX;
       if( tree->repropdepth >= tree->pathlen )
-	 tree->repropdepth = INT_MAX;
+         tree->repropdepth = INT_MAX;
    }
 
    SCIPdebugMessage("probing backtracked to depth %d (%d cols, %d rows)\n", 

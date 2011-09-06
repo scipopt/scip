@@ -62,7 +62,7 @@
 #define DEFAULT_COVERINGOBJ     'u'          /**< objective function of the covering problem */
 #define DEFAULT_COPYCUTS        TRUE         /**< should all active cuts from the cutpool of the original scip be copied
                                               *   to constraints of the subscip
-					      */
+                                              */
 
 #define COVERINGOBJS            "cdlmtu"     /**< list of objective functions of the covering problem */
 #define MAXNLPFAILS             1            /**< maximum number of fails after which we give up solving the nlp relaxation */

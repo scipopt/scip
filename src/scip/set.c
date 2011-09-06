@@ -456,7 +456,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
 
    /* copy all constraint handler plugins */
    if( copyconshdlrs && sourceset->conshdlrs_include != NULL )
-   {	
+   {
       /* copy them in order they were added to the sourcescip
        *
        * @note we only have to set the valid pointer to FALSE in case that a constraint handler, which does not need
