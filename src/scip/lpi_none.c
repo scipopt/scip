@@ -888,10 +888,10 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
    return SCIP_PLUGINNOTFOUND;
 }
 
-/** gets dual farkas proof for infeasibility */
+/** gets dual Farkas proof for infeasibility */
 SCIP_RETCODE SCIPlpiGetDualfarkas(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_Real*            dualfarkas          /**< dual farkas row multipliers */
+   SCIP_Real*            dualfarkas          /**< dual Farkas row multipliers */
    )
 {  /*lint --e{715}*/
    assert(dualfarkas != NULL);

@@ -67,7 +67,7 @@ static char __qsstr[1024];
 #define __QS_PRINTLOC__ fprintf(stderr,", in (%s:%d)\n", __FILE__, __LINE__);
 
 /** This macro is to print error messages and jump to the given point in the code, it also print the
- * file and line where this happend */
+ * file and line where this happened */
 #define QS_TESTG(A,B,...) do{{\
 	 if (A){				\
 	    fprintf(stderr,__VA_ARGS__);	\
@@ -2341,10 +2341,10 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
    return SCIP_ERROR;
 }
 
-/** gets dual farkas proof for infeasibility */
+/** gets dual Farkas proof for infeasibility */
 SCIP_RETCODE SCIPlpiGetDualfarkas(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_Real*            dualfarkas          /**< dual farkas row multipliers */
+   SCIP_Real*            dualfarkas          /**< dual Farkas row multipliers */
    )
 {
    int rval = 0;

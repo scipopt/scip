@@ -64,6 +64,7 @@ interface:
 - new methods SCIPpropInitpre, SCIPpropExitpre, SCIPpropPresol which initializes, exists and executes the presolving phase
 - due to the new timingmask for propagation calls SCIPincludeConshdlr() has the timingmask as a new parameter
 - new method SCIProwGetAge() to access the age of a row (pub_lp.h/lp.c)
+- allowed calling SCIPgetRowSolActivity() in SCIP_STAGE_SOLVED, since LP is still available
 
 performance improvements:
 - performance improvements in prop_vbounds
@@ -102,6 +103,7 @@ fixed bugs:
 - deactived checking of zero solution in Zimpl reader when no starting values are provided
 - LP solution status is now checked when checking root LP solution. Otherwise, due to different time measurements, 
   it might happen that the LP solving was stopped due to the time limit, but SCIP did not reach the limit, yet.
+- fixed memory leak in coloring part of maximum clique algorithm (tclique_coloring.c)
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})

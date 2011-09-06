@@ -1566,7 +1566,7 @@ SCIP_DECL_PROPRESPROP(propRespropVbounds)
  * Event Handler
  */
 
-/** execution methode of bound change event handler */
+/** execution method of bound change event handler */
 static
 SCIP_DECL_EVENTEXEC(eventExecVbound)
 {  /*lint --e{715}*/

@@ -2991,10 +2991,10 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
    return SCIP_OKAY;
 }
 
-/** gets dual farkas proof for infeasibility */
+/** gets dual Farkas proof for infeasibility */
 SCIP_RETCODE SCIPlpiGetDualfarkas(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_Real*            dualfarkas          /**< dual farkas row multipliers */
+   SCIP_Real*            dualfarkas          /**< dual Farkas row multipliers */
    )
 {
    assert(MosekEnv != NULL); 

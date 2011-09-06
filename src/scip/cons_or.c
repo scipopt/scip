@@ -71,7 +71,7 @@ struct SCIP_ConsData
    int                   filterpos1;         /**< event filter position of first watched operator variable */
    int                   filterpos2;         /**< event filter position of second watched operator variable */
    unsigned int          propagated:1;       /**< is constraint already preprocessed/propagated? */
-   unsigned int          nofixedone:1;       /**< is none of the opereator variables fixed to TRUE? */
+   unsigned int          nofixedone:1;       /**< is none of the operator variables fixed to TRUE? */
    unsigned int          impladded:1;        /**< were the implications of the constraint already added? */
    unsigned int          opimpladded:1;      /**< was the implication for 2 operands with fixed resultant added? */
 };
@@ -1856,7 +1856,7 @@ SCIP_DECL_CONSPARSE(consParseOr)
    int nvars;
    int pos;
    
-   SCIPdebugMessage("pasre <%s> as or constraint\n", str);
+   SCIPdebugMessage("parse <%s> as or constraint\n", str);
 
    /* copy string for truncating it */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, str, (int)(strlen(str)+1)));
@@ -1886,7 +1886,7 @@ SCIP_DECL_CONSPARSE(consParseOr)
       /* allocate buffer array for variables */
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
 
-      /* pasre string */
+      /* parse string */
       SCIP_CALL( SCIPparseVarsList(scip, token, 0, vars, &nvars, varssize, &requiredsize, &pos, ',', success) );
    
       if( *success )

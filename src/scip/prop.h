@@ -61,7 +61,7 @@ SCIP_RETCODE SCIPpropCreate(
    int                   presolpriority,     /**< priority of the propagator (>= 0: before, < 0: after constraint handlers) */
    int                   presolmaxrounds,    /**< maximal number of presolving rounds the propagator participates in (-1: no limit) */
    SCIP_Bool             presoldelay,        /**< should presolving be delayed, if other presolvers found reductions? */
-   SCIP_DECL_PROPCOPY    ((*propcopy)),      /**< copy method of propagator or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_PROPCOPY    ((*propcopy)),      /**< copy method of propagator or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_PROPFREE    ((*propfree)),      /**< destructor of propagator */
    SCIP_DECL_PROPINIT    ((*propinit)),      /**< initialize propagator */
    SCIP_DECL_PROPEXIT    ((*propexit)),      /**< deinitialize propagator */
@@ -136,7 +136,7 @@ SCIP_RETCODE SCIPpropPresol(
    int*                  nfixedvars,         /**< pointer to total number of variables fixed of all presolvers */
    int*                  naggrvars,          /**< pointer to total number of variables aggregated of all presolvers */
    int*                  nchgvartypes,       /**< pointer to total number of variable type changes of all presolvers */
-   int*                  nchgbds,            /**< pointer to total number of variable bounds tightend of all presolvers */
+   int*                  nchgbds,            /**< pointer to total number of variable bounds tightened of all presolvers */
    int*                  naddholes,          /**< pointer to total number of domain holes added of all presolvers */
    int*                  ndelconss,          /**< pointer to total number of deleted constraints of all presolvers */
    int*                  naddconss,          /**< pointer to total number of added constraints of all presolvers */

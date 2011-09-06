@@ -70,7 +70,7 @@
 struct SCIP_EventData
 {
    SCIP_CONSDATA*        consdata;           /**< the constraint data */
-   int                   varidx;             /**< the index of a variable on the left hand side which bound change is catched, or -1 for variable on right hand side */
+   int                   varidx;             /**< the index of a variable on the left hand side which bound change is caught, or -1 for variable on right hand side */
    int                   filterpos;          /**< position of corresponding event in event filter */
 };
 
@@ -105,10 +105,10 @@ struct SCIP_ConshdlrData
    SCIP_HEUR*            rensheur;       /**< a pointer to the RENS heuristic, if available */
    SCIP_HEUR*            trysolheur;     /**< a pointer to the trysol heuristic, if available */
    SCIP_EVENTHDLR*       eventhdlr;      /**< event handler for bound change events */
-   int                   newsoleventfilterpos; /**< filter position of new solution event handler, if catched */
+   int                   newsoleventfilterpos; /**< filter position of new solution event handler, if caught */
    SCIP_Bool             haveexprint;    /**< indicates whether an expression interpreter is available */
    
-   SCIP_Bool             glineur;        /**< is the Glineur outer approx prefered to Ben-Tal Nemirovski? */
+   SCIP_Bool             glineur;        /**< is the Glineur outer approx preferred to Ben-Tal Nemirovski? */
    SCIP_Bool             doscaling;      /**< are constraint violations scaled? */
    SCIP_Bool             projectpoint;   /**< is the point in which a cut is generated projected onto the feasible set? */
    int                   nauxvars;       /**< number of auxiliary variables to use when creating a linear outer approx. of a SOC3 constraint */
@@ -1063,7 +1063,7 @@ SCIP_RETCODE generateSparseCut(
    SCIP_CONSDATA* consdata;
    SCIP_Real*     x;
    SCIP_Real*     dist;  /* distance to 0 */
-   int*           ind;   /* indicies */
+   int*           ind;   /* indices */
    int            i;
    int            maxnz, nextmaxnz;
    SCIP_Real      efficacy;
@@ -1111,7 +1111,7 @@ SCIP_RETCODE generateSparseCut(
    do
    {
       /* TODO speed up a bit by computing efficacy of new cut from efficacy of old cut
-       * generate row only if efficiant enough */
+       * generate row only if efficient enough */
       SCIP_CALL( generateCutPoint(scip, cons, x, row) );
       
       if( *row != NULL )
@@ -1207,7 +1207,7 @@ SCIP_RETCODE separatePoint(
                SCIP_CALL( SCIPreleaseRow(scip, &row) );
          }
          
-         if( row == NULL ) /* failed to generate (efficiant enough) cut */
+         if( row == NULL ) /* failed to generate (efficient enough) cut */
             continue;
 
          /* cut cuts off solution and efficient enough */
@@ -1271,7 +1271,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    conss = SCIPconshdlrGetConss(conshdlr);
    assert(conss != NULL);
 
-   SCIPdebugMessage("catched new sol event %x from heur %p; have %d conss\n", SCIPeventGetType(event), (void*)SCIPsolGetHeur(sol), nconss);
+   SCIPdebugMessage("caught new sol event %x from heur %p; have %d conss\n", SCIPeventGetType(event), (void*)SCIPsolGetHeur(sol), nconss);
 
    for( c = 0; c < nconss; ++c )
    {
@@ -1306,7 +1306,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
 /** removes fixed variables, replace aggregated and negated variables
  *
  * repeats replacements until no further change is found;
- * takes care of capture/release and locks, but not of variable events (assumes that var events are not catched yet) 
+ * takes care of capture/release and locks, but not of variable events (assumes that var events are not caught yet) 
  */
 static
 SCIP_RETCODE presolveRemoveFixedVariables(
@@ -2275,7 +2275,7 @@ SCIP_RETCODE presolveCreateOuterApprox(
    const char*           basename,           /**< prefix for variable and constraint name */
    SCIP_CONS*            origcons,           /**< original constraint for which this SOC3 set is added */
    int                   soc3_nr_auxvars,    /**< number of auxiliary variables to use for a SOC3 constraint, or 0 if automatic */
-   SCIP_Bool             glineur,            /**< whether Glineur should be prefered to Ben-Tal Nemirovski */
+   SCIP_Bool             glineur,            /**< whether Glineur should be preferred to Ben-Tal Nemirovski */
    int*                  naddconss           /**< buffer where to add the number of added constraints */
    )
 {
@@ -3071,7 +3071,7 @@ SCIP_DECL_CONSINITSOL(consInitsolSOC)
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->eventhdlr);
 
-   /* add nlrow respresentation to NLP, if NLP has been enabled */
+   /* add nlrow representation to NLP, if NLP has been enabled */
    if( SCIPisNLPConstructed(scip) )
    {
       for( c = 0; c < nconss; ++c )
@@ -3122,7 +3122,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolSOC)
    {
       SCIP_EVENTHDLR* eventhdlr;
 
-      /* failing of the following events mean that new solution events should not have been catched */
+      /* failing of the following events mean that new solution events should not have been caught */
       assert(conshdlrdata->subnlpheur != NULL || conshdlrdata->rensheur != NULL);
 
       eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_newsolution");
@@ -3458,7 +3458,7 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
       
-      /* if feasible, just constinue */
+      /* if feasible, just continue */
       if( !SCIPisFeasPositive(scip, consdata->violation) )
          continue;
       

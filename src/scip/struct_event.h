@@ -185,7 +185,7 @@ struct SCIP_Eventhdlr
 {
    char*                 name;               /**< name of event handler */
    char*                 desc;               /**< description of event handler */
-   SCIP_DECL_EVENTCOPY   ((*eventcopy));     /**< copy method of event handler or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_EVENTCOPY   ((*eventcopy));     /**< copy method of event handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_EVENTFREE   ((*eventfree));     /**< destructor of event handler */
    SCIP_DECL_EVENTINIT   ((*eventinit));     /**< initialize event handler */
    SCIP_DECL_EVENTEXIT   ((*eventexit));     /**< deinitialize event handler */

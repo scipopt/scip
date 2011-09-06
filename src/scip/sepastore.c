@@ -709,7 +709,7 @@ SCIP_RETCODE computeScore(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_Bool             handlepool,         /**< whether the efficiacy of cuts in the pool should be reduced  */
+   SCIP_Bool             handlepool,         /**< whether the efficacy of cuts in the pool should be reduced  */
    int                   pos                 /**< position of cut to handle */
    )
 {

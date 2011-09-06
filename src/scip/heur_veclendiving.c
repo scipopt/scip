@@ -450,7 +450,7 @@ SCIP_DECL_HEUREXEC(heurExecVeclendiving) /*lint --e{715}*/
          {
             /* resolve the diving LP */
             /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
-             * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+             * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
              */
 #ifdef NDEBUG
             SCIP_RETCODE retstat;

@@ -4769,7 +4769,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
       else
       {
          /* in the general case, there is enough space for two branches
-          * a sophisticated user should have also choosen the branching value such that it is not very close to the bounds
+          * a sophisticated user should have also chosen the branching value such that it is not very close to the bounds
           * so here we only ensure that it is at least epsilon away from both bounds
           */
          SCIPdebugMessage("continuous branch on variable <%s> with value %g, priority %d (current lower bound: %g)\n",

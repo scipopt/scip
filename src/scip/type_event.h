@@ -206,7 +206,7 @@ typedef struct SCIP_EventQueue SCIP_EVENTQUEUE;   /**< event queue to cache even
 /** execution method of event handler
  *
  *  Processes the event. The method is called every time an event occurs, for which the event handler
- *  is responsible. Event handlers may declare themselves resposible for events by calling the
+ *  is responsible. Event handlers may declare themselves responsible for events by calling the
  *  corresponding SCIPcatch...() method. This method creates an event filter object to point to the
  *  given event handler and event data.
  *

@@ -40,7 +40,7 @@ struct SCIP_Conflicthdlr
 {
    char*                 name;               /**< name of conflict handler */
    char*                 desc;               /**< description of conflict handler */
-   SCIP_DECL_CONFLICTCOPY((*conflictcopy));  /**< copy method of conflict handler or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_CONFLICTCOPY((*conflictcopy));  /**< copy method of conflict handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_CONFLICTFREE((*conflictfree));  /**< destructor of conflict handler */
    SCIP_DECL_CONFLICTINIT((*conflictinit));  /**< initialize conflict handler */
    SCIP_DECL_CONFLICTEXIT((*conflictexit));  /**< deinitialize conflict handler */

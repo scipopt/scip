@@ -3001,7 +3001,7 @@ void printRhsSection(
       assert( cons != NULL );
 #endif
 
-      /* skip all contraints which have a right hand side of infinity */
+      /* skip all constraints which have a right hand side of infinity */
       if( SCIPisInfinity(scip, rhss[c]) )
          continue;
          

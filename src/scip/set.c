@@ -179,7 +179,7 @@
 
 /* NLP */
 
-#define SCIP_DEFAULT_NLP_SOLVER              "" /**< name of NLP solver to use, or "" if solver should be choosen by priority */
+#define SCIP_DEFAULT_NLP_SOLVER              "" /**< name of NLP solver to use, or "" if solver should be chosen by priority */
 #define SCIP_DEFAULT_NLP_DISABLE          FALSE /**< should the NLP be disabled? */
 
 /* Memory */

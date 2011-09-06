@@ -76,7 +76,7 @@
 #define DEFAULT_NEGATEDCLIQUE      TRUE /**< should negated clique information be used in solving process */
 
 #define MAXABSVBCOEF               1e+5 /**< maximal absolute coefficient in variable bounds used for knapsack relaxation */
-#define USESUPADDLIFT             FALSE /**< should lifted minimal cover ineq using superadditive up-lifting be separated in addition */
+#define USESUPADDLIFT             FALSE /**< should lifted minimal cover inequalities using superadditive up-lifting be separated in addition */
 
 #define DEFAULT_PRESOLUSEHASHING   TRUE /**< should hash table be used for detecting redundant constraints in advance */
 #define HASHSIZE_KNAPSACKCONS    131101 /**< minimal size of hash table in linear constraint tables */
@@ -303,7 +303,7 @@ void sortItems(
 
          for( pos = 0; pos < consdata->nvars; ++pos )
          {
-            /* if the clique number in the normal clique at position pos is greater than the last found cliquenumber the
+            /* if the clique number in the normal clique at position pos is greater than the last found clique number the
              * partition is invalid */
 	    if( consdata->cliquepartition[pos] > lastcliquenum )
             {
@@ -321,7 +321,7 @@ void sortItems(
 
          for( pos = 0; pos < consdata->nvars; ++pos )
          {
-            /* if the clique number in the negated clique at position pos is greater than the last found cliquenumber the
+            /* if the clique number in the negated clique at position pos is greater than the last found clique number the
              * partition is invalid */
 	    if( consdata->negcliquepartition[pos] > lastcliquenum )
             {
@@ -1063,7 +1063,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       goto TERMINATE;
    }
 
-   /* in the follwoing table we do not need the first minweight columns */
+   /* in the following table we do not need the first minweight columns */
    capacity -= (minweight - 1);
 
    /* we can only handle integers */
@@ -1079,8 +1079,8 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    intcap = (int)capacity;
    assert(intcap >= 0);
 
-   /* this condition is only to check if the size of memory which will be allocated is still positiv( so no error occurs
-    * ), which will be necessary after this if condition
+   /* this condition is only to check if the size of memory which will be allocated is still positive (so no error occurs), 
+    * which will be necessary after this if condition
     */ 
    if( (intcap) < 0 || (nmyitems) * (intcap) < (intcap) || (nmyitems) * (intcap) < (nmyitems) || (nmyitems) * (intcap) * ((int) sizeof(*optvalues)) < (nmyitems) * (intcap) )
    {
@@ -1731,7 +1731,7 @@ SCIP_Bool checkMinweightidx(
 
 
 /** gets partition \f$(C_1,C_2)\f$ of minimal cover \f$C\f$, i.e. \f$C_1 \cup C_2 = C\f$ and \f$C_1 \cap C_2 = \emptyset\f$, 
- *  with \f$C_1\f$ not empty; choses partition as follows \f$C_2 = \{ j \in C : x^*_j = 1 \}\f$ and \f$C_1 = C \setminus C_2\f$
+ *  with \f$C_1\f$ not empty; chooses partition as follows \f$C_2 = \{ j \in C : x^*_j = 1 \}\f$ and \f$C_1 = C \setminus C_2\f$
  */
 static
 void getPartitionCovervars(
@@ -1779,7 +1779,7 @@ void getPartitionCovervars(
    assert((*nvarsC1) + (*nvarsC2) == ncovervars);
 }
 
-/** changes given partition (C_1,C_2) of minimal cover C, if |C1| = 1, by moving one and two (if possoble) variables from 
+/** changes given partition (C_1,C_2) of minimal cover C, if |C1| = 1, by moving one and two (if possible) variables from 
  *  C2 to C1 if |C1| = 1 and |C1| = 0, respectively.
  */
 static
@@ -1860,7 +1860,7 @@ SCIP_RETCODE changePartitionFeasiblesetvars(
 
 
 /** gets partition \f$(F,R)\f$ of \f$N \setminus C\f$ where \f$C\f$ is a minimal cover, i.e. \f$F \cup R = N \setminus C\f$
- *  and \f$F \cap R = \emptyset\f$; choses partition as follows \f$R = \{ j \in N \setminus C : x^*_j = 0 \}\f$ and 
+ *  and \f$F \cap R = \emptyset\f$; chooses partition as follows \f$R = \{ j \in N \setminus C : x^*_j = 0 \}\f$ and 
  *  \f$F = (N \setminus C) \setminus F\f$
  */
 static
@@ -2606,7 +2606,7 @@ SCIP_RETCODE separateSequLiftedMinimalCoverInequality(
    SCIP_CALL( SCIPallocBufferArray(scip, &varsR, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &liftcoefs, nvars) );
 
-   /* gets partition (C_1,C_2) of C, i.e. C_1 & C_2 = C and C_1 cap C_2 = emptyset, with C_1 not empty; choses partition 
+   /* gets partition (C_1,C_2) of C, i.e. C_1 & C_2 = C and C_1 cap C_2 = emptyset, with C_1 not empty; chooses partition 
     * as follows
     *   C_2 = { j in C : x*_j = 1 } and
     *   C_1 = C\C_2
@@ -2624,7 +2624,7 @@ SCIP_RETCODE separateSequLiftedMinimalCoverInequality(
    }
    assert(nvarsC2 == 0 || nvarsC1 >= 1);
    
-   /* gets partition (F,R) of N\C, i.e. F & R = N\C and F cap R = emptyset; choses partition as follows 
+   /* gets partition (F,R) of N\C, i.e. F & R = N\C and F cap R = emptyset; chooses partition as follows 
     *   R = { j in N\C : x*_j = 0 } and 
     *   F = (N\C)\F
     */
@@ -2761,7 +2761,7 @@ SCIP_RETCODE separateSequLiftedExtendedWeightInequality(
    SCIP_CALL( SCIPallocBufferArray(scip, &varsR, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &liftcoefs, nvars) );
 
-   /* gets partition (T_1,T_2) of T, i.e. T_1 & T_2 = T and T_1 cap T_2 = emptyset, with T_1 not empty; choses partition 
+   /* gets partition (T_1,T_2) of T, i.e. T_1 & T_2 = T and T_1 cap T_2 = emptyset, with T_1 not empty; chooses partition 
     * as follows
     *   T_2 = { j in T : x*_j = 1 } and
     *   T_1 = T\T_2
@@ -2777,7 +2777,7 @@ SCIP_RETCODE separateSequLiftedExtendedWeightInequality(
    }
    assert(nvarsT2 == 0 || nvarsT1 > 0);
    
-   /* gets partition (F,R) of N\T, i.e. F & R = N\T and F cap R = emptyset; choses partition as follows 
+   /* gets partition (F,R) of N\T, i.e. F & R = N\T and F cap R = emptyset; chooses partition as follows 
     *   R = { j in N\T : x*_j = 0 } and 
     *   F = (N\T)\F
     */
@@ -2970,7 +2970,7 @@ SCIP_RETCODE separateSupLiftedMinimalCoverInequality(
    return SCIP_OKAY;
 }
 
-/** coverts given cover C to a minimal cover by removing variables in the reverse order in which the variables were chosen
+/** converts given cover C to a minimal cover by removing variables in the reverse order in which the variables were chosen
  *  to be in C, i.e. in the order of non-increasing (1 - x*_j)/a_j, if the transformed separation problem was used to find
  *  C and in the order of non-increasing (1 - x*_j), if the modified transformed separation problem was used to find C; 
  *  note that all variables with x*_j = 1 will be removed last
@@ -3108,7 +3108,7 @@ SCIP_RETCODE makeCoverMinimal(
    return SCIP_OKAY;
 }
 
-/** coverts given initial cover C_init to a feasible set by removing variables in the reverse order in which 
+/** converts given initial cover C_init to a feasible set by removing variables in the reverse order in which 
  *  they were chosen to be in C_init:
  *   non-increasing (1 - x*_j)/a_j,   if          transformed separation problem was used to find C_init 
  *   non-increasing (1 - x*_j),       if modified transformed separation problem was used to find C_init.
@@ -3291,7 +3291,7 @@ SCIP_RETCODE SCIPseparateKnapsackCuts(
    /* if no cover was found we stop the separation routine for lifted minimal cover inequality */
    if( coverfound )
    {
-      /* coverts initial cover C_init to a minimal cover C by removing variables in the reverse order in which the 
+      /* converts initial cover C_init to a minimal cover C by removing variables in the reverse order in which the 
        * variables were chosen to be in C_init; note that variables with x*_j = 1 will be removed last
        */
       SCIP_CALL( makeCoverMinimal(scip, weights, capacity, solvals, covervars, noncovervars, &ncovervars, 
@@ -3329,7 +3329,7 @@ SCIP_RETCODE SCIPseparateKnapsackCuts(
    if( !coverfound )
       goto TERMINATE;
       
-   /* coverts initial cover C_init to a feasible set by removing variables in the reverse order in which 
+   /* converts initial cover C_init to a feasible set by removing variables in the reverse order in which 
     * they were chosen to be in C_init and separates lifted extended weight inequalities using sequential 
     * up- and down-lifting for this feasible set and all subsequent feasible sets.
     */
@@ -3351,7 +3351,7 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
    SCIP_CONS*            cons,               /**< constraint that originates the linear constraint, or NULL */
    int                   nknapvars,          /**< number of variables in the continuous knapsack constraint */
    SCIP_VAR**            knapvars,           /**< variables in the continuous knapsack constraint */
-   SCIP_Real*            knapvals,           /**< coefficientce of the variables in the continuous knapsack constraint */
+   SCIP_Real*            knapvals,           /**< coefficient of the variables in the continuous knapsack constraint */
    SCIP_Real             valscale,           /**< -1.0 if lhs of row is used as rhs of c. k. constraint, +1.0 otherwise */
    SCIP_Real             rhs,                /**< right hand side of the continuous knapsack constraint */
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
@@ -3638,7 +3638,7 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
       }
    }
 
-   /* convert coefficents of all (now binary) variables to positive integers:
+   /* convert coefficients of all (now binary) variables to positive integers:
     *   - make all coefficients integral
     *   - make all coefficients positive (substitute negated variable)
     */
@@ -3938,7 +3938,7 @@ SCIP_RETCODE delCoefPos(
          oldcliqenum = consdata->cliquepartition[pos];
          consdata->cliquepartition[pos] = consdata->cliquepartition[consdata->nvars-1];
 	 
-	 /* the following if and else cases assure that we have increasing cliquenumbers */
+	 /* the following if and else cases assure that we have increasing clique numbers */
 	 if( consdata->cliquepartition[pos] > pos )
 	    consdata->cliquepartitioned = FALSE; /* recalculate the clique partition after a coefficient was removed */
 	 else
@@ -3946,7 +3946,7 @@ SCIP_RETCODE delCoefPos(
 	    int i;
 	    int cliquenumbefore;
 
-            /* if the old clique number was greater than the new one we have to check that before a bigger cliquenumber 
+            /* if the old clique number was greater than the new one we have to check that before a bigger clique number 
              * occurs the same as the old one is still in the cliquepartition */
             if( oldcliqenum > consdata->cliquepartition[pos] )
             {
@@ -3965,7 +3965,7 @@ SCIP_RETCODE delCoefPos(
                   --(consdata->ncliques);
             }
             /* if the old clique number was smaller than the new one we have to check the front for an element with 
-             * cliquenumber minus 1 */
+             * clique number minus 1 */
             else if( oldcliqenum < consdata->cliquepartition[pos] )
             {
                cliquenumbefore = consdata->cliquepartition[pos] - 1;
@@ -4002,7 +4002,7 @@ SCIP_RETCODE delCoefPos(
          oldcliqenum = consdata->negcliquepartition[pos];
          consdata->negcliquepartition[pos] = consdata->negcliquepartition[consdata->nvars-1];
 	 
-	 /* the following if and else cases assure that we have increasing cliquenumbers */
+	 /* the following if and else cases assure that we have increasing clique numbers */
 	 if( consdata->negcliquepartition[pos] > pos )
 	    consdata->negcliquepartitioned = FALSE; /* recalculate the clique partition after a coefficient was removed */
 	 else
@@ -4010,7 +4010,7 @@ SCIP_RETCODE delCoefPos(
 	    int i;
 	    int cliquenumbefore;
 
-            /* if the old clique number was greater than the new one we have to check that, before a bigger cliquenumber
+            /* if the old clique number was greater than the new one we have to check that, before a bigger clique number
              * occurs, the same as the old one occurs */
             if( oldcliqenum > consdata->negcliquepartition[pos] )
             {
@@ -4029,7 +4029,7 @@ SCIP_RETCODE delCoefPos(
                   --(consdata->nnegcliques);
             }
             /* if the old clique number was smaller than the new one we have to check the front for an element with 
-             * cliquenumber minus 1 */
+             * clique number minus 1 */
             else if( oldcliqenum < consdata->negcliquepartition[pos] )
             {
                cliquenumbefore = consdata->negcliquepartition[pos] - 1;
@@ -4119,7 +4119,7 @@ SCIP_RETCODE mergeMultiples(
    SCIPsortPtrPtrLongIntInt((void**)consdata->vars, (void**)consdata->eventdatas, consdata->weights, 
       consdata->cliquepartition, consdata->negcliquepartition, SCIPvarCompActiveAndNegated, consdata->nvars);
 
-   /* knapsack-sorting (descreasing weights) now lost */ 
+   /* knapsack-sorting (decreasing weights) now lost */ 
    consdata->sorted = FALSE;
 
    v = consdata->nvars - 1;
@@ -5035,7 +5035,7 @@ SCIP_RETCODE deleteRedundantVars(
          SCIP_CALL( SCIPallocBufferArray(scip, &used, len) );
          BMSclearMemoryArray(used, len);
             
-         /* calculate maxactivy due to cliques */
+         /* calculate maximum activity due to cliques */
          for( w = 0; w < len; ++w )
          {
             assert(clqpart[w] >= 0 && clqpart[w] < len - 1);
@@ -5214,7 +5214,7 @@ SCIP_RETCODE detectRedundantVars(
       else
          break;
 
-   /* if we fixed at least one variable we need to delete them from the conbstraint */
+   /* if we fixed at least one variable we need to delete them from the constraint */
    if( v > 0 )
    {
       if( v == nvars )
@@ -5634,7 +5634,7 @@ SCIP_RETCODE applyFixings(
 	    negated = FALSE;
 	 }
 
-	 /* @todo maybe resolve the problem that the eliminating of the multi-aggreation leads to a non-knapsack
+	 /* @todo maybe resolve the problem that the eliminating of the multi-aggregation leads to a non-knapsack
           * constraint (converting into a linear constraint), for example the multi-aggregation consist of a non-binary
           * variable or due to resolving now their are non-integral coefficients or a non-integral capacity 
           *
@@ -5695,7 +5695,7 @@ SCIP_RETCODE applyFixings(
                   SCIPerrorMessage("try to resolve a multi-aggregation with a non-integral value for weight*aggrscalars = %g\n", weight*aggrscalars[i]);
                   return SCIP_ERROR;
                }
-	       /* if the new coefficent is smaller than zero, we need to add the negated variable instead and adjust the capacity */
+	       /* if the new coefficient is smaller than zero, we need to add the negated variable instead and adjust the capacity */
 	       if( SCIPisNegative(scip, weight * aggrscalars[i]) )
 	       {
 		  SCIP_CALL( SCIPgetNegatedVar(scip, aggrvars[i], &negvar));
@@ -5711,9 +5711,8 @@ SCIP_RETCODE applyFixings(
             /* delete old coefficient */
 	    SCIP_CALL( delCoefPos(scip, cons, v) );
 
-	    /* adjust the capacity with the aggregation constant and if necessary the extra weight through tne
-             * negation */ 
-	    if(negated)
+	    /* adjust the capacity with the aggregation constant and if necessary the extra weight through the negation */ 
+	    if( negated )
 	       consdata->capacity -= (SCIP_Longint)SCIPfloor(scip, weight * (aggrconst - 1) + 0.5);
 	    else
 	       consdata->capacity -= (SCIP_Longint)SCIPfloor(scip, weight * aggrconst + 0.5);
@@ -6923,7 +6922,7 @@ SCIP_RETCODE addNegatedCliques(
       SCIPdebugMessage("Try to add negated cliques in knapsack constraint handler for constraint %s; capacity = %"SCIP_LONGINT_FORMAT", minactivity(due to neg. cliques) = %"SCIP_LONGINT_FORMAT", freecapacity = %"SCIP_LONGINT_FORMAT".\n", 
          SCIPconsGetName(cons), consdata->capacity, minactduetonegcliques, freecapacity);
 
-      /* calculate possible gain by switching choosen items in negated cliques */
+      /* calculate possible gain by switching chosen items in negated cliques */
       for( v = 0; v < nvars; ++v )
       {
          if( !cliqueused[consdata->negcliquepartition[v]] )
@@ -7469,7 +7468,7 @@ SCIP_RETCODE detectRedundantConstraints(
          assert(SCIPconsIsActive(cons1));
          assert(!SCIPconsIsModifiable(cons1));
       
-         /* constraint found: create a new constraint with same coeffients and best left and right hand side; 
+         /* constraint found: create a new constraint with same coefficients and best left and right hand side; 
           * delete old constraints afterwards
           */
          consdata1 = SCIPconsGetData(cons1);
@@ -8576,7 +8575,7 @@ SCIP_DECL_CONSRESPROP(consRespropKnapsack)
    else
    {
       /* according to negated cliques the minweightsum and all variables which are fixed to one which led to a fixing of
-       * another negated clique variable to one, the inferinfo was choosen to be the negative of the position in the 
+       * another negated clique variable to one, the inferinfo was chosen to be the negative of the position in the 
        * knapsack constraint, see one above call of SCIPinferBinvarCons
        */
       if( inferinfo < 0 )
@@ -8812,7 +8811,7 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
  * Event handler
  */
 
-/** execution methode of bound change event handler */
+/** execution method of bound change event handler */
 static
 SCIP_DECL_EVENTEXEC(eventExecKnapsack)
 {  /*lint --e{715}*/
@@ -9154,7 +9153,7 @@ SCIP_Real SCIPgetDualsolKnapsack(
       return 0.0;
 }
 
-/** gets the dual farkas value of the knapsack constraint in the current infeasible LP */
+/** gets the dual Farkas value of the knapsack constraint in the current infeasible LP */
 SCIP_Real SCIPgetDualfarkasKnapsack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */

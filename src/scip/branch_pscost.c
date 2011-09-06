@@ -685,7 +685,7 @@ SCIP_RETCODE SCIPincludeBranchrulePscost(
  *  with a branching point */
 SCIP_RETCODE SCIPselectBranchVarPscost(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            branchcands,        /**< brancing candidates */
+   SCIP_VAR**            branchcands,        /**< branching candidates */
    SCIP_Real*            branchcandssol,     /**< solution value for the branching candidates */
    SCIP_Real*            branchcandsscore,   /**< array of candidate scores */
    int                   nbranchcands,       /**< number of branching candidates */

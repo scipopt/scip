@@ -493,7 +493,7 @@ SCIP_RETCODE propSOS2(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_CONSDATA*        consdata,           /**< constraint data */
-   SCIP_Bool*            cutoff,             /**< whether a cutoff happend */
+   SCIP_Bool*            cutoff,             /**< whether a cutoff happened */
    int*                  nGen                /**< number of domain changes */
    )
 {
@@ -830,7 +830,7 @@ SCIP_RETCODE enforceSOS2(
    SCIPdebugMessage("Branching on variable <%s> in constraint <%s> (nonzeros: %d).\n", SCIPvarGetName(vars[maxInd]),
       SCIPconsGetName(branchCons), maxNonzeros);
 
-   /* calc node selection and objective estimate for node 1 */
+   /* calculate node selection and objective estimate for node 1 */
    nodeselest = 0.0;
    objest = 0.0;
    for (j = 0; j < maxInd; ++j)
@@ -850,7 +850,7 @@ SCIP_RETCODE enforceSOS2(
       assert( ! infeasible );
    }
 
-   /* calc node selection and objective estimate for node 2 */
+   /* calculate node selection and objective estimate for node 2 */
    nodeselest = 0.0;
    objest = 0.0;
    for (j = maxInd+1; j < nvars; ++j)
@@ -1089,7 +1089,7 @@ SCIP_DECL_CONSDELETE(consDeleteSOS2)
 
    SCIPdebugMessage("Deleting SOS2 constraint <%s>.\n", SCIPconsGetName(cons) );
 
-   /* drop events on transfromed variables */
+   /* drop events on transformed variables */
    if ( SCIPconsIsTransformed(cons) )
    {
       SCIP_CONSHDLRDATA* conshdlrdata;
@@ -1268,7 +1268,7 @@ SCIP_DECL_CONSPRESOL(consPresolSOS2)
 
       *result = SCIP_DIDNOTFIND;
 
-      /* only run if sucess is possible */
+      /* only run if success is possible */
       if ( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || nnewchgcoefs > 0 || *nfixedvars > oldnfixedvars )
       {
          SCIP_VAR** vars;

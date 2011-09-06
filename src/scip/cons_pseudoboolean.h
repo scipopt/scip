@@ -38,7 +38,7 @@ SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
    );
 
 /** creates and captures a pseudoboolean constraint  
- *  @note linear and nonlinerar terms can be added using SCIPaddCoefPseudoboolean() and SCIPaddTermPseudoboolean(),
+ *  @note linear and nonlinear terms can be added using SCIPaddCoefPseudoboolean() and SCIPaddTermPseudoboolean(),
  *  respectively
  */
 extern

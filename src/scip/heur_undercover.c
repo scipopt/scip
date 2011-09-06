@@ -50,14 +50,14 @@
 #define DEFAULT_MAXCOVERSIZE    1.0          /**< maximum coversize (as fraction of total number of variables) */
 #define DEFAULT_MINIMPROVE      0.0          /**< factor by which heuristic should at least improve the incumbent */
 #define DEFAULT_NODESQUOT       0.1          /**< subproblem nodes in relation to nodes of the original problem */
-#define DEFAULT_RECOVERDIV      0.9          /**< fraction of covering variables in the last cover which need to change their value when re-covering */
+#define DEFAULT_RECOVERDIV      0.9          /**< fraction of covering variables in the last cover which need to change their value when recovering */
 #define DEFAULT_BEFORECUTS      TRUE         /**< should undercover called at root node before cut separation? */
 #define DEFAULT_FIXINTFIRST     FALSE        /**< should integer variables in the cover be fixed first? */
 #define DEFAULT_LOCKSROUNDING   TRUE         /**< shall LP values for integer vars be rounded according to locks? */
 #define DEFAULT_ONLYCONVEXIFY   FALSE        /**< should we only fix/dom.red. variables creating nonconvexity? */
 #define DEFAULT_POSTNLP         TRUE         /**< should the nlp heuristic be called to polish a feasible solution? */
 #define DEFAULT_MAXBACKTRACKS   6            /**< maximum number of backtracks */
-#define DEFAULT_MAXRECOVERS     1            /**< maximum number of re-coverings */
+#define DEFAULT_MAXRECOVERS     1            /**< maximum number of recoverings */
 #define DEFAULT_MAXREORDERS     1            /**< maximum number of reorderings of the fixing order */
 #define DEFAULT_COVERINGOBJ     'u'          /**< objective function of the covering problem */
 #define DEFAULT_COPYCUTS        TRUE         /**< should all active cuts from the cutpool of the original scip be copied
@@ -91,7 +91,7 @@ struct SCIP_HeurData
    SCIP_Real             maxcoversize;       /**< maximum coversize (as fraction of total number of variables) */
    SCIP_Real             minimprove;         /**< factor by which heuristic should at least improve the incumbent */
    SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem */
-   SCIP_Real             recoverdiv;         /**< fraction of covering variables in the last cover which need to change their value when re-covering */
+   SCIP_Real             recoverdiv;         /**< fraction of covering variables in the last cover which need to change their value when recovering */
    SCIP_Bool             beforecuts;         /**< should undercover be called at root node before cut separation? */
    SCIP_Bool             fixintfirst;        /**< should integer variables in the cover be fixed first? */
    SCIP_Bool             globalbounds;       /**< should global bounds on variables be used instead of local bounds at focus node? */
@@ -101,7 +101,7 @@ struct SCIP_HeurData
    SCIP_Bool             onlyconvexify;      /**< should we only fix/dom.red. variables creating nonconvexity? */
    SCIP_Bool             postnlp;            /**< should the nlp heuristic be called to polish a feasible solution? */
    int                   maxbacktracks;      /**< maximum number of backtracks */
-   int                   maxrecovers;        /**< maximum number of re-coverings */
+   int                   maxrecovers;        /**< maximum number of recoverings */
    int                   maxreorders;        /**< maximum number of reorderings of the fixing order */
    int                   nnlpfails;          /**< number of fails when solving the nlp relaxation after last success */
    int                   npostnlpfails;      /**< number of fails of the nlp local search after last success */
@@ -915,7 +915,7 @@ SCIP_RETCODE forbidCover(
       }
       rhs = (SCIP_Real) (nconsvars-diversification);
 
-      /* if too many covering variables are fixed to 1, the constraint cannot be sataisfied */
+      /* if too many covering variables are fixed to 1, the constraint cannot be satisfied */
       if( rhs < 0 )
       {
          *infeas = TRUE;
@@ -1099,14 +1099,14 @@ SCIP_RETCODE solveCoveringProblem(
    retcode = SCIPsolve(coveringscip);
    
    /* Errors in solving the covering problem should not kill the overall solving process 
-    * Hence, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+    * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
     */
    if( retcode != SCIP_OKAY )
    { 
 #ifndef NDEBUG
       SCIP_CALL( retcode );     
 #endif
-      SCIPwarningMessage("Error while solving covering problem in Undercover heuristic; subSCIP terminated with code <%d>\n",retcode);
+      SCIPwarningMessage("Error while solving covering problem in Undercover heuristic; sub-SCIP terminated with code <%d>\n",retcode);
       return SCIP_OKAY;
    }
 
@@ -1525,7 +1525,7 @@ SCIP_RETCODE copySol(
 
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-   /* subSCIP may have more variable than the number of active (transformed) variables in the main SCIP
+   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
     * since constraint copying may have required the copy of variables that are fixed in the main SCIP
     */ 
    assert(nvars <= SCIPgetNOrigVars(subscip)); 
@@ -1686,14 +1686,14 @@ SCIP_RETCODE solveSubproblem(
    retcode = SCIPsolve(subscip);
    
    /* Errors in solving the subproblem should not kill the overall solving process 
-    * Hence, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+    * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
     */
    if( retcode != SCIP_OKAY )
    { 
 #ifndef NDEBUG
       SCIP_CALL( retcode );     
 #endif
-      SCIPwarningMessage("Error while solving subproblem in Undercover heuristic; subSCIP terminated with code <%d>\n",retcode);
+      SCIPwarningMessage("Error while solving subproblem in Undercover heuristic; sub-SCIP terminated with code <%d>\n",retcode);
       return SCIP_OKAY;
    }
 
@@ -1978,7 +1978,7 @@ SCIP_RETCODE SCIPapplyUndercover(
    SCIP_CALL( SCIPallocBufferArray(scip, &bdbounds, 2*nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &oldbounds, 2*nvars) );
 
-   /* re-covering loop */
+   /* recovering loop */
    SCIP_CALL( SCIPallocBufferArray(scip, &cover, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &fixingvals, nvars) );
    ncovers = 0;
@@ -2312,7 +2312,7 @@ SCIP_RETCODE SCIPapplyUndercover(
          }
       }
 
-      /* heuristic failed but we have another re-covering try, hence we forbid the current cover in the covering problem */
+      /* heuristic failed but we have another recovering try, hence we forbid the current cover in the covering problem */
       if( !success && ncovers <= heurdata->maxrecovers )
       {
          SCIP_Bool infeas;
@@ -2327,7 +2327,7 @@ SCIP_RETCODE SCIPapplyUndercover(
 
          if( infeas )
          {
-            SCIPdebugMessage("re-covering problem infeasible (diversification=%d), terminating\n", diversification);
+            SCIPdebugMessage("recovering problem infeasible (diversification=%d), terminating\n", diversification);
             goto TERMINATE;
          }
          else if( !success )
@@ -2698,7 +2698,7 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
          &heurdata->nodesquot, FALSE, DEFAULT_NODESQUOT, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/recoverdiv",
-         "fraction of covering variables in the last cover which need to change their value when re-covering",
+         "fraction of covering variables in the last cover which need to change their value when recovering",
          &heurdata->recoverdiv, TRUE, DEFAULT_RECOVERDIV, 0.0, 1.0, NULL, NULL) );
 
    /* add bool parameters */
@@ -2728,7 +2728,7 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
          &heurdata->maxbacktracks, TRUE, DEFAULT_MAXBACKTRACKS, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxrecovers",
-         "maximum number of re-coverings",
+         "maximum number of recoverings",
          &heurdata->maxrecovers, TRUE, DEFAULT_MAXRECOVERS, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxreorders",
@@ -2798,7 +2798,7 @@ SCIP_RETCODE SCIPcomputeCoverUndercover(
       assert(*coversize >= 0);
       assert(*coversize <= nvars);
 
-      /* return orginal variables in the cover */
+      /* return original variables in the cover */
       for( i = *coversize-1; i >= 0; i-- )
       {
          assert(coverinds[i] >= 0);

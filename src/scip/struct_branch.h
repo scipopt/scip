@@ -80,7 +80,7 @@ struct SCIP_Branchrule
    SCIP_Longint          nchildren;          /**< number of children created so far by this branching rule */
    char*                 name;               /**< name of branching rule */
    char*                 desc;               /**< description of branching rule */
-   SCIP_DECL_BRANCHCOPY  ((*branchcopy));    /**< copy method of branching rule or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_BRANCHCOPY  ((*branchcopy));    /**< copy method of branching rule or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_BRANCHFREE  ((*branchfree));    /**< destructor of branching rule */
    SCIP_DECL_BRANCHINIT  ((*branchinit));    /**< initialize branching rule */
    SCIP_DECL_BRANCHEXIT  ((*branchexit));    /**< deinitialize branching rule */

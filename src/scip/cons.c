@@ -43,7 +43,7 @@
 
 #define AGERESETAVG_INIT         1000.0 /**< initial value of the exponentially decaying weighted sum for ages */
 #define AGERESETAVG_MIN          100.0  /**< minimal value to use for weighted sum of ages */
-#define AGERESETAVG_DECAY        0.0005 /**< weight of a new addend in the exponentially decaing sum */
+#define AGERESETAVG_DECAY        0.0005 /**< weight of a new addend in the exponentially decyaing sum */
 #define AGERESETAVG_AGELIMIT     2.0    /**< in dynamic setting, a constraint is deleted if its age exceeds the
                                          *   average reset age by this factor */
 #define AGERESETAVG_OBSOLETEAGE  1.8    /**< in dynamic setting, a constraint is marked obsolete if its age exceeds the
@@ -1748,7 +1748,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_Bool             delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
    SCIP_Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
    SCIP_PROPTIMING       timingmask,         /**< positions in the node solving loop where propagation method of constraint handlers should be executed */
-   SCIP_DECL_CONSHDLRCOPY((*conshdlrcopy)),  /**< copy method of constraint handler or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_CONSHDLRCOPY((*conshdlrcopy)),  /**< copy method of constraint handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
    SCIP_DECL_CONSINIT    ((*consinit)),      /**< initialize constraint handler */
    SCIP_DECL_CONSEXIT    ((*consexit)),      /**< deinitialize constraint handler */
@@ -3086,7 +3086,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
          }
          else
          {
-            /* on new domains, we want to proprate all constraints */
+            /* on new domains, we want to propagate all constraints */
             nconss = conshdlr->npropconss;
             nusefulconss = conshdlr->nusefulpropconss;
             firstcons = 0;
@@ -3200,7 +3200,7 @@ SCIP_RETCODE SCIPconshdlrPresolve(
    int*                  nfixedvars,         /**< pointer to total number of variables fixed of all presolvers */
    int*                  naggrvars,          /**< pointer to total number of variables aggregated of all presolvers */
    int*                  nchgvartypes,       /**< pointer to total number of variable type changes of all presolvers */
-   int*                  nchgbds,            /**< pointer to total number of variable bounds tightend of all presolvers */
+   int*                  nchgbds,            /**< pointer to total number of variable bounds tightened of all presolvers */
    int*                  naddholes,          /**< pointer to total number of domain holes added of all presolvers */
    int*                  ndelconss,          /**< pointer to total number of deleted constraints of all presolvers */
    int*                  naddconss,          /**< pointer to total number of added constraints of all presolvers */
@@ -3455,7 +3455,7 @@ int SCIPconshdlrGetNEnfoConss(
    return conshdlr->nenfoconss;
 }
 
-/** gets number of checkedconstraints of constraint handler; this is local information */
+/** gets number of checked constraints of constraint handler; this is local information */
 int SCIPconshdlrGetNCheckConss(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    )
@@ -4135,7 +4135,7 @@ SCIP_RETCODE SCIPconssetchgAddAddedCons(
       SCIP_CALL( SCIPconsActivate(cons, set, stat, depth, focusnode) );
       assert(SCIPconsIsActive(cons));
          
-      /* remember, that this constraint set change data was resposible for the constraint's addition */
+      /* remember, that this constraint set change data was responsible for the constraint's addition */
       cons->addconssetchg = *conssetchg;
       cons->addarraypos = (*conssetchg)->naddedconss-1;
    }
@@ -4289,7 +4289,7 @@ SCIP_RETCODE SCIPconssetchgApply(
          assert(cons->active);
          assert(!cons->update);
          
-         /* remember, that this constraint set change data was resposible for the constraint's addition */
+         /* remember, that this constraint set change data was responsible for the constraint's addition */
          cons->addconssetchg = conssetchg;
          cons->addarraypos = i;
       }

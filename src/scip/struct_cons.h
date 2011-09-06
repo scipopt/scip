@@ -128,7 +128,7 @@ struct SCIP_Conshdlr
    SCIP_Real             ageresetavg;        /**< exp. decaying weighted average of constraint ages at moment of age reset */
    char*                 name;               /**< name of constraint handler */
    char*                 desc;               /**< description of constraint handler */
-   SCIP_DECL_CONSHDLRCOPY((*conshdlrcopy));  /**< copy method of constraint handler or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_CONSHDLRCOPY((*conshdlrcopy));  /**< copy method of constraint handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_CONSFREE    ((*consfree));      /**< destructor of constraint handler */
    SCIP_DECL_CONSINIT    ((*consinit));      /**< initialize constraint handler */
    SCIP_DECL_CONSEXIT    ((*consexit));      /**< deinitialize constraint handler */
@@ -211,7 +211,7 @@ struct SCIP_Conshdlr
    int                   lastnfixedvars;     /**< number of variables fixed before the last call to the presolver */
    int                   lastnaggrvars;      /**< number of variables aggregated before the last call to the presolver */
    int                   lastnchgvartypes;   /**< number of variable type changes before the last call to the presolver */
-   int                   lastnchgbds;        /**< number of variable bounds tightend before the last call to the presolver */
+   int                   lastnchgbds;        /**< number of variable bounds tightened before the last call to the presolver */
    int                   lastnaddholes;      /**< number of domain holes added before the last call to the presolver */
    int                   lastndelconss;      /**< number of deleted constraints before the last call to the presolver */
    int                   lastnaddconss;      /**< number of added constraints before the last call to the presolver */
@@ -221,7 +221,7 @@ struct SCIP_Conshdlr
    int                   nfixedvars;         /**< total number of variables fixed by this presolver */
    int                   naggrvars;          /**< total number of variables aggregated by this presolver */
    int                   nchgvartypes;       /**< total number of variable type changes by this presolver */
-   int                   nchgbds;            /**< total number of variable bounds tightend by this presolver */
+   int                   nchgbds;            /**< total number of variable bounds tightened by this presolver */
    int                   naddholes;          /**< total number of domain holes added by this presolver */
    int                   ndelconss;          /**< total number of deleted constraints by this presolver */
    int                   naddconss;          /**< total number of added constraints by this presolver */

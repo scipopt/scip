@@ -47,7 +47,7 @@
 #define DEFAULT_MAXFAILSROOT        100 /**< maximal number of consecutive unsuccesful aggregation tries in the root node
                                          *   (-1: unlimited) */
 #define DEFAULT_MAXAGGRS              3 /**< maximal number of aggregations for each row per separation round */
-#define DEFAULT_MAXAGGRSROOT          6 /**< maximal number of aggreagtions for each row per round in the root node */
+#define DEFAULT_MAXAGGRSROOT          6 /**< maximal number of aggregations for each row per round in the root node */
 #define DEFAULT_MAXSEPACUTS         100 /**< maximal number of cmir cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT     500 /**< maximal number of cmir cuts separated per separation round in root node */
 #define DEFAULT_MAXSLACK            0.0 /**< maximal slack of rows to be used in aggregation */
@@ -1140,7 +1140,7 @@ SCIP_RETCODE aggregation(
 
       naggrs++;
 
-      SCIPdebugMessage(" -> %d continuous variables left (%d/%d active), %d/%d nonzeroes, %d/%d aggregations\n", 
+      SCIPdebugMessage(" -> %d continuous variables left (%d/%d active), %d/%d nonzeros, %d/%d aggregations\n", 
          naggrcontnonzs, nactiveconts, maxconts, naggrcontnonzs + naggrintnonzs, maxaggrnonzs, naggrs, maxaggrs);
    }
 #ifdef SCIP_DEBUG

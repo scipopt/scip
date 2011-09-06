@@ -173,7 +173,7 @@ SCIP_RETCODE consdataAddCons(
    return SCIP_OKAY;
 }
 
-/** branches disjuctive constraint */
+/** branches on disjunctive constraint */
 static
 SCIP_RETCODE branchCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -190,7 +190,7 @@ SCIP_RETCODE branchCons(
 
    assert(result != NULL);
 
-   /* can branch modifiable constraint */
+   /* cannot branch on modifiable constraint */
    if( SCIPconsIsModifiable(cons) )
       return SCIP_OKAY;
    

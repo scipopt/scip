@@ -478,7 +478,7 @@ SCIP_RETCODE propSOS1(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_CONSDATA*        consdata,           /**< constraint data */
-   SCIP_Bool*            cutoff,             /**< whether a cutoff happend */
+   SCIP_Bool*            cutoff,             /**< whether a cutoff happened */
    int*                  nGen                /**< number of domain changes */
    )
 {
@@ -784,7 +784,7 @@ SCIP_RETCODE enforceSOS1(
       /* branch on variable ind: either all variables up to ind or all variables after ind are zero */
       SCIPdebugMessage("Branching on variable <%s>.\n", SCIPvarGetName(vars[ind]));
 
-      /* calc node selection and objective estimate for node 1 */
+      /* calculate node selection and objective estimate for node 1 */
       nodeselest = 0.0;
       objest = 0.0;
       for (j = 0; j <= ind; ++j)
@@ -803,7 +803,7 @@ SCIP_RETCODE enforceSOS1(
          assert( ! infeasible );
       }
 
-      /* calc node selection and objective estimate for node 1 */
+      /* calculate node selection and objective estimate for node 1 */
       nodeselest = 0.0;
       objest = 0.0;
       for (j = ind+1; j < nvars; ++j)
@@ -1188,7 +1188,7 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
 
       *result = SCIP_DIDNOTFIND;
 
-      /* only run if sucess if possible */
+      /* only run if success if possible */
       if ( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || *nfixedvars > oldnfixedvars )
       {
          SCIP_VAR** vars;
@@ -1325,7 +1325,7 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
             ++(*ndelconss);
             *result = SCIP_SUCCESS;
          }
-         /* note: there is no need to updata consdata->nfixednonzeros, since the constraint is deleted as soon nfixednonzeros > 0. */
+         /* note: there is no need to update consdata->nfixednonzeros, since the constraint is deleted as soon nfixednonzeros > 0. */
       }
    }
 

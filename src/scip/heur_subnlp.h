@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_subnlp.h
- * @brief  NLP local search primal heuristic using subSCIPs
+ * @brief  NLP local search primal heuristic using sub-SCIPs
  * @author Stefan Vigerske
  */
 
@@ -82,21 +82,21 @@ SCIP_RETCODE SCIPaddLinearConsToNlpHeurSubNlp(
    SCIP_Bool             addcontconss        /**< whether to add continuous    linear constraints, i.e., linear constraints that involve not only discrete variables */
 );
    
-/** gets subSCIP used by NLP heuristic, or NULL if none */
+/** gets sub-SCIP used by NLP heuristic, or NULL if none */
 extern
 SCIP* SCIPgetSubScipHeurSubNlp(
    SCIP*                 scip,               /**< original SCIP data structure                                   */
    SCIP_HEUR*            heur                /**< heuristic data structure                                       */
    );
 
-/** gets mapping of SCIP variables to subSCIP variables */
+/** gets mapping of SCIP variables to sub-SCIP variables */
 extern
 SCIP_VAR** SCIPgetVarMappingScip2SubScipHeurSubNlp(
    SCIP*                 scip,               /**< original SCIP data structure                                   */
    SCIP_HEUR*            heur                /**< heuristic data structure                                       */
    );
 
-/** gets mapping of subSCIP variables to SCIP variables */
+/** gets mapping of sub-SCIP variables to SCIP variables */
 extern
 SCIP_VAR** SCIPgetVarMappingSubScip2ScipHeurSubNlp(
    SCIP*                 scip,               /**< original SCIP data structure                                   */

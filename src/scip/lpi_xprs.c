@@ -3007,10 +3007,10 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
    return SCIP_OKAY;
 }
 
-/** gets dual farkas proof for infeasibility */
+/** gets dual Farkas proof for infeasibility */
 SCIP_RETCODE SCIPlpiGetDualfarkas(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_Real*            dualfarkas          /**< dual farkas row multipliers */
+   SCIP_Real*            dualfarkas          /**< dual Farkas row multipliers */
    )
 {
    assert(lpi != NULL);
@@ -3028,7 +3028,7 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    if (lpi->solmethod != 'p')
       return SCIP_ERROR;
 
-   /* The required farkas multipliers should be the duals set up by */
+   /* The required Farkas multipliers should be the duals set up by */
    /* phase I primal. */
    CHECK_ZERO( XPRSgetsol(lpi->xprslp, NULL, NULL, dualfarkas, NULL) );
 #else

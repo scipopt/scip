@@ -95,7 +95,7 @@ struct SCIP_ConsData
    int*                  durations;          /**< array containing corresponding durations */
    int                   varssize;           /**< size of the vars-, demands, durations,  and linkingconss-arrays */
    int                   nvars;              /**< number of variables */
-   int                   ndemandrows;        /**< number of rows of cumulative constrint for linear relaxation */
+   int                   ndemandrows;        /**< number of rows of cumulative constraint for linear relaxation */
    int                   demandrowssize;     /**< size of array rows of demand rows */
    int                   nscoverrows;        /**< number of rows of small cover cuts */
    int                   scoverrowssize;     /**< size of array of small cover cuts */  
@@ -113,7 +113,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             usecoretimes;       /**< should core-times be propagated? */
    SCIP_Bool             usecoretimesholes;  /**< should core-times be propagated to detect holes? */
    SCIP_Bool             useedgefinding;     /**< should edge finding be used? */
-   SCIP_Bool             useenergeticreasoning;/**< should energeticreasoning be used? */
+   SCIP_Bool             useenergeticreasoning;/**< should energetic reasoning be used? */
    SCIP_Bool             localcuts;          /**< should cuts be added only locally? */
    SCIP_Bool             usecovercuts;       /**< should covering cuts be added? */
 
@@ -357,7 +357,7 @@ static
 SCIP_RETCODE splitThetaTreeLeaf(
    SCIP*                 scip,               /**< SCIP data structure */
    THETATREE*            tree,               /**< tree data structure */
-   THETATREENODE*        splitnode,          /**< node to be splitted */
+   THETATREENODE*        splitnode,          /**< node to be split */
    THETATREENODE*        node                /**< node to be inserted */
    )
 {
@@ -404,7 +404,7 @@ SCIP_RETCODE splitThetaTreeLeaf(
    return SCIP_OKAY;
 }
 
-/** creates a theta tree node wth variable and sorting value */
+/** creates a theta tree node with variable and sorting value */
 static
 SCIP_RETCODE thetatreeCreateLeaf(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -453,7 +453,7 @@ SCIP_RETCODE createThetaTree(
    return SCIP_OKAY; 
 }
 
-/** frees the theta tree node datastructure */
+/** frees the theta tree node data structure */
 static
 SCIP_RETCODE freeThetaTreeNode(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -488,7 +488,7 @@ SCIP_RETCODE freeThetaTreeNode(
    return SCIP_OKAY;
 }
 
-/** frees the theta tree node datastructure */
+/** frees the theta tree node data structure */
 static
 SCIP_RETCODE freeThetaTreeLeaf(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -509,7 +509,7 @@ SCIP_RETCODE freeThetaTreeLeaf(
    return SCIP_OKAY;
 }
 
-/** frees the theta tree datastructure */
+/** frees the theta tree data structure */
 static
 SCIP_RETCODE freeThetaTree(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -784,7 +784,7 @@ void tltreeUpdateEnvelop(
 
       node->energyL = MAX( node->left->energyL + node->right->energy, node->left->energy + node->right->energyL );
 
-      /* negativ values are integer min value */
+      /* negative values are integer min value */
       if( node->envelop < 0 )
          node->envelop = INT_MIN;
       if( node->envelopL < 0 )
@@ -804,7 +804,7 @@ static
 SCIP_RETCODE tltreeSplitLeaf(
    SCIP*                 scip,               /**< SCIP data structure */
    TLTREE*               tree,               /**< tree data structure */
-   TLTREENODE*           splitnode,          /**< node to be splitted */
+   TLTREENODE*           splitnode,          /**< node to be split */
    TLTREENODE*           node                /**< node to be inserted */
    )
 {
@@ -982,7 +982,7 @@ SCIP_RETCODE tltreeCreateTree(
    return SCIP_OKAY;
 }
 
-/** frees the theta lambda tree node datastructure, all leaves have to be freed on their own */
+/** frees the theta lambda tree node data structure, all leaves have to be freed on their own */
 static
 SCIP_RETCODE freeTltreeNode(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1038,7 +1038,7 @@ SCIP_RETCODE freeTltreeLeaf(
    return SCIP_OKAY;
 }
 
-/** frees the theta tree datastructure, BUT: all leaves have to be freed on their own */
+/** frees the theta tree data structure, BUT: all leaves have to be freed on their own */
 static
 SCIP_RETCODE freeTltree(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1872,7 +1872,7 @@ SCIP_RETCODE checkCumulativeCondition(
    
    return SCIP_OKAY;
 }
-/** check if the given constrait is valid; checks each starting point of a job whether the remaining capacity is at
+/** check if the given constraint is valid; checks each starting point of a job whether the remaining capacity is at
  *  least zero or not. If not (*violated) is set to TRUE
  */
 static
@@ -1920,8 +1920,8 @@ SCIP_RETCODE consCheckRedundancy(
    SCIP_VAR* var;
    int* starttimes;              /* stores when each job is starting */
    int* endtimes;                /* stores when each job ends */
-   int* startindices;            /* we will sort the startsolvalues, thus we need to know wich index of a job it corresponds to */
-   int* endindices;              /* we will sort the endsolvalues, thus we need to know wich index of a job it corresponds to */
+   int* startindices;            /* we will sort the startsolvalues, thus we need to know which index of a job it corresponds to */
+   int* endindices;              /* we will sort the endsolvalues, thus we need to know which index of a job it corresponds to */
 
    int freecapacity;             /* remaining capacity */
    int curtime;                  /* point in time which we are just checking */
@@ -2027,8 +2027,8 @@ SCIP_RETCODE analyzeConflictCoreTimesCumulative(
    SCIP_VAR* var;
    int* startvalues;      /* stores when core of each job is starting */
    int* endvalues;        /* stores when core of each job ends */
-   int* startindices;     /* we will sort the startvalues, thus we need to know wich index of a job it corresponds to */
-   int* endindices;       /* we will sort the endvalues, thus we need to know wich index of a job it corresponds to */
+   int* startindices;     /* we will sort the startvalues, thus we need to know which index of a job it corresponds to */
+   int* endindices;       /* we will sort the endvalues, thus we need to know which index of a job it corresponds to */
    int* coredemands;
    
    int* conflictids;      /* array where we store job indices of running jobs that are probably in a conflict */
@@ -2223,7 +2223,7 @@ SCIP_RETCODE initializeConflictAnalysisCoreTimes(
    
    SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
-   /* add lower and upper bound of variable which leads to the infeasibilty */
+   /* add lower and upper bound of variable which leads to the infeasibility */
    SCIP_CALL( SCIPaddConflictLb(scip, var, NULL ) );
    SCIP_CALL( SCIPaddConflictUb(scip, var, NULL ) );
  
@@ -2257,7 +2257,7 @@ SCIP_RETCODE analyzeConflictCoreTimesBinvarsCumulative(
 {
    SCIP_VAR** corevars;
    SCIP_VAR* var;
-   int* indices;          /* we will sort the demands, thus we need to know wich index of a job it corresponds to */
+   int* indices;          /* we will sort the demands, thus we need to know which index of a job it corresponds to */
    int* coredemands;
    
    int j; 
@@ -2372,7 +2372,7 @@ SCIP_RETCODE initializeConflictAnalysisCoreTimesBinvars(
    return SCIP_OKAY;
 }
 
-/** updates the bounds by avoiding core infeasibilty */
+/** updates the bounds by avoiding core infeasibility */
 static
 SCIP_RETCODE updateBounds(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2433,7 +2433,7 @@ SCIP_RETCODE updateBounds(
       ++(*nchgbds);
    }
    
-   /* adjsut lower bound */
+   /* adjust lower bound */
    lb = MAX(lb,newlb);
 
    /* get latest start due to cores */
@@ -2532,7 +2532,7 @@ SCIP_RETCODE propagateCores(
       {
          SCIPdebugMessage("infeasibility due to cores\n");
          
-         /* initialize the contflic analyze */
+         /* initialize conflict analysis */
          SCIP_CALL( initializeConflictAnalysisCoreTimes(scip, nvars, vars, durations, demands, capacity,
                var, convertBoundToInt(scip, SCIPvarGetUbLocal(var)), 
                convertBoundToInt(scip, SCIPvarGetLbLocal(var)) + duration, duration, demand,  SCIP_BOUNDTYPE_LOWER) );
@@ -2633,7 +2633,7 @@ SCIP_RETCODE checkForHoles(
    if( nbinvars <= 1 )
       return SCIP_OKAY;
    
-   assert(binvars != NULL); /* for flexlint */
+   assert(binvars != NULL); /* for flexelint */
 
    /* check each point in time, whether job can be executed! */
    for( t = lb + 1; t < ub; ++t )
@@ -2934,7 +2934,7 @@ SCIP_RETCODE createCoverCutsTimepoint(
       start = MAX(lb, time + 1 - consdata->durations[idx]) - offset;
       end =  MIN(time, ub) + 1 - offset;
 
-      /* add all neccessary binary variables */
+      /* add all necessary binary variables */
       for( i = start; i < end; ++i )
       {
          assert(i >= 0);
@@ -3012,7 +3012,7 @@ SCIP_RETCODE createCoverCutsTimepoint(
          start = MAX(lb, time + 1 - consdata->durations[idx]) - offset;
          end =  MIN(time, ub) + 1 - offset;
          
-         /* add  all neccessary binary variables */
+         /* add  all necessary binary variables */
          for( i = start; i < end; ++i )
          {
             assert(i >= 0);
@@ -3059,8 +3059,8 @@ SCIP_RETCODE createCoverCuts(
    int* endvalues;          /* stores when each job ends */
    int* startvaluessorted;  /* stores when each job is starting */
    int* endvaluessorted;    /* stores when each job ends */
-   int* startindices;     /* we sort the startvalues, so we need to know wich index of a job it corresponds to */
-   int* endindices;       /* we sort the endvalues, so we need to know wich index of a job it corresponds to */
+   int* startindices;     /* we sort the startvalues, so we need to know which index of a job it corresponds to */
+   int* endindices;       /* we sort the endvalues, so we need to know which index of a job it corresponds to */
    
    int nvars;               /* number of jobs for this constraint */
    int freecapacity;        /* remaining capacity */
@@ -3185,7 +3185,7 @@ SCIP_RETCODE collectBinaryVars(
    SCIP_VAR***           vars,               /**< pointer to the array to store the binary variables */
    int**                 coefs,              /**< pointer to store the coefficients */
    int*                  nvars,              /**< number if collect binary variables */
-   int*                  startindices,       /**< permutation with rspect to the start times */
+   int*                  startindices,       /**< permutation with respect to the start times */
    int                   curtime,            /**< current point in time */
    int                   nstarted,           /**< number of jobs that start before the curtime or at curtime */
    int                   nfinished           /**< number of jobs that finished before curtime or at curtime */
@@ -3272,7 +3272,7 @@ static
 SCIP_RETCODE createCapacityRestriction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to be checked */
-   int*                  startindices,       /**< permutation with rspect to the start times */
+   int*                  startindices,       /**< permutation with respect to the start times */
    int                   curtime,            /**< current point in time */
    int                   nstarted,           /**< number of jobs that start before the curtime or at curtime */
    int                   nfinished,          /**< number of jobs that finished before curtime or at curtime */
@@ -3361,8 +3361,8 @@ void createSortedEventpoints(
    SCIP_CONSDATA*        consdata,           /**< constraint data */
    int*                  starttimes,         /**< array to store sorted start events */
    int*                  endtimes,           /**< array to store sorted end events */
-   int*                  startindices,       /**< permutation with rspect to the start times */
-   int*                  endindices,         /**< permutation with rspect to the end times */
+   int*                  startindices,       /**< permutation with respect to the start times */
+   int*                  endindices,         /**< permutation with respect to the end times */
    SCIP_Bool             local               /**< shall local bounds be used */
    )
 {
@@ -3440,7 +3440,7 @@ void addEndingJobDemands(
    SCIP_CONSDATA*        consdata,           /**< constraint data */
    int                   curtime,            /**< current point in time */
    int*                  endtimes,           /**< array of end times */
-   int*                  endindices,         /**< permutation with rspect to the end times */
+   int*                  endindices,         /**< permutation with respect to the end times */
    int*                  freecapacity,       /**< pointer to store the resulting free capacity */
    int*                  idx,                /**< pointer to index in end time array */
    int                   nvars               /**< number of vars in array of starttimes and startindices */
@@ -3477,8 +3477,8 @@ SCIP_RETCODE consCapacityConstraintsFinder(
 
    int* starttimes;         /* stores when each job is starting */
    int* endtimes;           /* stores when each job ends */
-   int* startindices;       /* we will sort the startsolvalues, thus we need to know wich index of a job it corresponds to */
-   int* endindices;         /* we will sort the endsolvalues, thus we need to know wich index of a job it corresponds to */
+   int* startindices;       /* we will sort the startsolvalues, thus we need to know which index of a job it corresponds to */
+   int* endindices;         /* we will sort the endsolvalues, thus we need to know which index of a job it corresponds to */
    
    int nvars;               /* number of activities for this constraint */
    int freecapacity;        /* remaining capacity */
@@ -3741,7 +3741,7 @@ SCIP_RETCODE initializeConflictAnalysisEnergeticReasoning(
    
    SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
-   /* add lower and upper bound of variable which lead to the infeasibilty */
+   /* add lower and upper bound of variable which lead to the infeasibility */
    if( infervar != NULL )
    {
       SCIP_CALL( SCIPaddConflictLb(scip, infervar, NULL ) );
@@ -4382,7 +4382,7 @@ SCIP_RETCODE initializeConflictAnalysisEdgeFinding(
 
    SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
-   /* add lower and upper bound of variable which leads to the infeasibilty */
+   /* add lower and upper bound of variable which leads to the infeasibility */
    SCIP_CALL( SCIPaddConflictLb(scip, infervar, NULL) );
    SCIP_CALL( SCIPaddConflictUb(scip, infervar, NULL) );
  
@@ -4626,7 +4626,7 @@ int computeNewLstOmegaset(
    int*                  durations,          /**< array of durations */
    int*                  demands,            /**< array of demands */
    int                   capacity,           /**< cumulative capacity */
-   SCIP_HASHMAP*         varhashmap,         /**< hashmap variable -> inndex */
+   SCIP_HASHMAP*         varhashmap,         /**< hashmap variable -> index */
    TLTREENODE*           respleaf,           /**< theta tree leaf whose variables lower bound will be updated */
    TLTREENODE**          omegaset,           /**< set of lambda nodes who determine new lower bound */
    int                   nelements,          /**< number of elements in omegaset */
@@ -4712,7 +4712,7 @@ int computeNewEstOmegaset(
    int*                  durations,          /**< array of durations */
    int*                  demands,            /**< array of demands */
    int                   capacity,           /**< cumulative capacity */
-   SCIP_HASHMAP*         varhashmap,         /**< hashmap variable -> inndex */
+   SCIP_HASHMAP*         varhashmap,         /**< hashmap variable -> index */
    TLTREENODE*           respleaf,           /**< theta tree leaf whose variables lower bound will be updated */
    TLTREENODE**          omegaset,           /**< set of lambda nodes who determine new lower bound */
    int                   nelements,          /**< number of elements in omegaset */
@@ -5459,7 +5459,7 @@ SCIP_RETCODE removeIrrelevantJobs(
 
          /* case (1c): job can be */
 
-         /* check for each time point in the interval [est,ect) if the capacity of the recource cannot be violated */
+         /* check for each time point in the interval [est,ect) if the capacity of the resource cannot be violated */
 
          cumudemand = demands[idx];
 
@@ -5762,7 +5762,7 @@ SCIP_RETCODE dualPresolving(
    /* copy all plugins */
    SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
       
-   /* get name of the original problem and add the string "_renssub" */
+   /* get name of the original problem and add the string "_cumulative" */
    (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_cumulative", SCIPgetProbName(scip));
       
    /* create the subproblem */
@@ -5843,7 +5843,7 @@ SCIP_RETCODE dualPresolving(
          SCIP_Bool infeasible;
          SCIP_Bool tightened;
          
-         /* transfare the bound changes */
+         /* transfer the bound changes */
          for( v = 0; v < nvars; ++v )
          {
             var = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[v]);
@@ -6015,7 +6015,7 @@ SCIP_RETCODE propagateCons(
    SCIP_Bool             usecoretimes,       /**< should core times be propagated */
    SCIP_Bool             usecoretimesholes,  /**< should core times be propagated to detect holes? */
    SCIP_Bool             useedgefinding,     /**< should edge finding be performed */
-   SCIP_Bool             useenergeticreasoning,     /**< should energetic reasoning be performed */
+   SCIP_Bool             useenergeticreasoning,     /**< should energetic reasoning be performed? */
    int*                  nchgbds,            /**< pointer to store the number of bound changes */
    int*                  ndelconss,          /**< pointer to store the number of deleted constraints */
    SCIP_Bool*            cutoff              /**< pointer to store if the constraint is infeasible */
@@ -6273,7 +6273,7 @@ SCIP_RETCODE collectIntVars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< constraint data */
    SCIP_VAR***           activevars,         /**< jobs that are currently running */
-   int*                  startindices,       /**< permutation with rspect to the start times */
+   int*                  startindices,       /**< permutation with respect to the start times */
    int                   curtime,            /**< current point in time */
    int                   nstarted,           /**< number of jobs that start before the curtime or at curtime */
    int                   nfinished,          /**< number of jobs that finished before curtime or at curtime */
@@ -6349,8 +6349,8 @@ void createSortedEventpointsSol(
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
    int*                  starttimes,         /**< array to store sorted start events */
    int*                  endtimes,           /**< array to store sorted end events */
-   int*                  startindices,       /**< permutation with rspect to the start times */
-   int*                  endindices,         /**< permutation with rspect to the end times */
+   int*                  startindices,       /**< permutation with respect to the start times */
+   int*                  endindices,         /**< permutation with respect to the end times */
    int*                  nvars,              /**< number of variables that are integral */
    SCIP_Bool             lower               /**< shall the constraints be derived for lower or upper bounds? */
    )
@@ -6435,13 +6435,13 @@ void createSortedEventpointsSol(
 }
 
 
-/** this method creats a row for time point curtime which insurse the capacity restriction of the cumulative constraint */
+/** this method creates a row for time point curtime which ensures the capacity restriction of the cumulative constraint */
 static
 SCIP_RETCODE createCapacityRestrictionIntvars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to be checked */
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
-   int*                  startindices,       /**< permutation with rspect to the start times */
+   int*                  startindices,       /**< permutation with respect to the start times */
    int                   curtime,            /**< current point in time */
    int                   nstarted,           /**< number of jobs that start before the curtime or at curtime */
    int                   nfinished,          /**< number of jobs that finished before curtime or at curtime */
@@ -6522,8 +6522,8 @@ SCIP_RETCODE separateConsOnIntegerVariables(
 
    int* starttimes;         /* stores when each job is starting */
    int* endtimes;           /* stores when each job ends */
-   int* startindices;       /* we will sort the startsolvalues, thus we need to know wich index of a job it corresponds to */
-   int* endindices;         /* we will sort the endsolvalues, thus we need to know wich index of a job it corresponds to */
+   int* startindices;       /* we will sort the startsolvalues, thus we need to know which index of a job it corresponds to */
+   int* endindices;         /* we will sort the endsolvalues, thus we need to know which index of a job it corresponds to */
    
    int nvars;               /* number of activities for this constraint */
    int freecapacity;        /* remaining capacity */
@@ -6566,10 +6566,10 @@ SCIP_RETCODE separateConsOnIntegerVariables(
    {
       curtime = starttimes[j];
      
-      /* remove the capacity requirments for all job which start at the curtime */
+      /* remove the capacity requirements for all job which start at the curtime */
       subtractStartingJobDemands(consdata, curtime, starttimes, startindices, &freecapacity, &j, nvars);
 
-      /* add the capacity requirments for all job which end at the curtime */
+      /* add the capacity requirements for all job which end at the curtime */
       addEndingJobDemands(consdata, curtime, endtimes, endindices, &freecapacity, &endindex, nvars);
 
       assert(freecapacity <= consdata->capacity);
@@ -6960,7 +6960,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpCumulative)
    } 
    else
    {
-      /* it is no longer clear how to forbid a solution by cuts on ibnteger variables -> only check solution */
+      /* it is no longer clear how to forbid a solution by cuts on integer variables -> only check solution */
       SCIP_Bool violated;
 
       violated = FALSE;
@@ -7067,7 +7067,7 @@ SCIP_DECL_CONSPROP(consPropCumulative)
    cutoff = FALSE;
    (*result) = SCIP_DIDNOTRUN;
    
-   /* propgate all useful constraints */
+   /* propagate all useful constraints */
    for( c = 0; c < nusefulconss && !cutoff; ++c )
    {
       SCIP_CALL( propagateCons(scip, conss[c], 
@@ -7078,7 +7078,7 @@ SCIP_DECL_CONSPROP(consPropCumulative)
 
    if( !cutoff && nchgbds == 0 )
    {
-      /* propgate all other constraints */
+      /* propagate all other constraints */
       for( c = nusefulconss; c < nconss && !cutoff; ++c )
       {
          SCIP_CALL( propagateCons(scip, conss[c], 
@@ -7629,8 +7629,8 @@ SCIP_RETCODE SCIPrespropCumulativeCondition(
 SCIP_RETCODE SCIPprofileCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    CUMULATIVEPROFILE**   profile,            /**< pointer to store the create profile */
-   int                   capacity,           /**< Capacity for this profile */
-   int                   maxtimepoints       /**< maximium number time points */
+   int                   capacity,           /**< capacity for this profile */
+   int                   maxtimepoints       /**< maximum number of time points */
    )
 {
    assert(scip != NULL);
@@ -7638,12 +7638,12 @@ SCIP_RETCODE SCIPprofileCreate(
    assert(capacity > 0);
    assert(maxtimepoints > 0);
 
-   /* Initialize memory */
+   /* initialize memory */
    SCIP_CALL( SCIPallocMemory(scip, profile) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(*profile)->timepoints, maxtimepoints) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(*profile)->freecapacities, maxtimepoints) );
 
-   /* Set up cumulative profile for use */
+   /* set up cumulative profile for use */
    (*profile)->ntimepoints = 2;
    (*profile)->timepoints[0] = 0;
    (*profile)->timepoints[1] = INT_MAX;
@@ -7703,7 +7703,7 @@ void SCIPprofileInsertCore(
    int                   duration,           /**< duration of the job */
    int                   demand,             /**< demand of the job */
    SCIP_Bool*            core,               /**< pointer to store if the corresponds job has a core */       
-   SCIP_Bool*	         fixed,              /**< poiner to store if the job is fixed due to its bounds */ 
+   SCIP_Bool*            fixed,              /**< pointer to store if the job is fixed due to its bounds */ 
    SCIP_Bool*            infeasible          /**< pointer to store if the job does not fit due to capacity */
    )
 {

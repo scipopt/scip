@@ -722,7 +722,7 @@ SCIP_RETCODE consdataDropAllEvents(
    return SCIP_OKAY;
 }
 
-/** returns whether we are in a stage, where the variable events should be catched */
+/** returns whether we are in a stage, where the variable events should be caught */
 static
 SCIP_Bool needEvents(
    SCIP*                 scip                /**< SCIP data structure */
@@ -962,7 +962,7 @@ static
 SCIP_Bool isNewActivityUnreliable(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             newactivity,        /**< new, updated activity */
-   SCIP_Real             reliableactivity    /**< last activity which was computed completly */
+   SCIP_Real             reliableactivity    /**< last activity which was computed completely */
    )
 {
    SCIP_Real quotient;
@@ -2620,7 +2620,7 @@ SCIP_RETCODE consdataSort(
    assert(scip != NULL);
    assert(consdata != NULL);
 
-   /* check if there are variables for sortation */
+   /* check if there are variables for sorting */
    if( consdata->nvars == 0 )
    {
       consdata->sorted = TRUE;
@@ -2633,7 +2633,7 @@ SCIP_RETCODE consdataSort(
       /* get temporary memory to store the sorted permutation */
       SCIP_CALL( SCIPallocBufferArray(scip, &perm, consdata->nvars) );
 
-      /* call sortation method  */
+      /* call sorting method  */
       SCIPsort(perm, consdataCompVar, (void*)consdata, consdata->nvars);
 
       permSortConsdata(consdata, perm, consdata->nvars, TRUE);
@@ -2728,7 +2728,7 @@ SCIP_RETCODE consdataSort(
 	     perm[v] = v;
 	 }
 	 
-         /* execute the sortation */
+         /* execute the sorting */
 	 SCIPsortDownRealInt(absvals, perm, lastbin);
 
 	 permSortConsdata(consdata, perm, lastbin, FALSE);
@@ -2739,7 +2739,7 @@ SCIP_RETCODE consdataSort(
       }
       consdata->binvarssorted = TRUE;
 	 
-      /* presolve sortation cannot be garanteed after binary sortation */
+      /* presolve sorting cannot be guaranteed after binary sorting */
       consdata->sorted = (consdata->sorted && consdata->nbinvars == 0);
    }
    assert(SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE || consdata->binvarssorted);
@@ -2821,7 +2821,7 @@ SCIP_RETCODE chgLhs(
          SCIP_Real* vals;
          int v;
 
-         /* the left hand side switched from a non-infinte value to -infinity -> remove rounding locks */
+         /* the left hand side switched from a non-infinite value to -infinity -> remove rounding locks */
          vars = consdata->vars;
          vals = consdata->vals;
 
@@ -2931,7 +2931,7 @@ SCIP_RETCODE chgRhs(
          SCIP_Real* vals;
          int v;
 
-         /* the right hand side switched from a non-infinte value to infinity -> remove rounding locks */
+         /* the right hand side switched from a non-infinite value to infinity -> remove rounding locks */
          vars = consdata->vars;
          vals = consdata->vals;
 
@@ -3133,7 +3133,7 @@ SCIP_RETCODE delCoefPos(
    }
    consdata->nvars--;
 
-   /* if at most one variable is left, the activies should be recalculated (to correspond exactly to the bounds
+   /* if at most one variable is left, the activities should be recalculated (to correspond exactly to the bounds
     * of the remaining variable, or give exactly 0.0)
     */
    if( consdata->nvars <= 1 )
@@ -4015,7 +4015,7 @@ SCIP_RETCODE tightenVarBounds(
    int                   pos,                /**< position of the variable in the vars array */
    SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
    int*                  nchgbds,            /**< pointer to count the total number of tightened bounds */
-   SCIP_Bool             force               /**< should a possible boundchange be forced even if below bound strengthening tolerance */
+   SCIP_Bool             force               /**< should a possible bound change be forced even if below bound strengthening tolerance */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -4083,7 +4083,7 @@ SCIP_RETCODE tightenVarBounds(
             SCIP_Bool activityunreliable;
             activityunreliable = isNewActivityUnreliable(scip, minresactivity, consdata->lastminactivity);
 
-            /* check minresactivities for reliablility */
+            /* check minresactivities for reliability */
             if( activityunreliable )
             {
                consdataGetReliableResidualActivity(scip, consdata, var, &minresactivity, TRUE, FALSE);
@@ -4131,7 +4131,7 @@ SCIP_RETCODE tightenVarBounds(
          if( (force && SCIPisGT(scip, newlb, lb)) || (SCIPvarIsIntegral(var) && SCIPisFeasGT(scip, newlb, lb))
             || SCIPisLbBetter(scip, newlb, lb, ub) )
          {
-            /* check maxresactivities for reliablility */
+            /* check maxresactivities for reliability */
             if( isNewActivityUnreliable(scip, maxresactivity, consdata->lastmaxactivity) )
             {
                consdataGetReliableResidualActivity(scip, consdata, var, &maxresactivity, FALSE, FALSE);
@@ -4183,7 +4183,7 @@ SCIP_RETCODE tightenVarBounds(
          {
             SCIP_Bool activityunreliable;
             activityunreliable = isNewActivityUnreliable(scip, minresactivity, consdata->lastminactivity);
-            /* check minresactivities for reliablility */
+            /* check minresactivities for reliability */
             if( activityunreliable )
             {
                consdataGetReliableResidualActivity(scip, consdata, var, &minresactivity, TRUE, FALSE);
@@ -4232,7 +4232,7 @@ SCIP_RETCODE tightenVarBounds(
          if( (force && SCIPisLT(scip, newub, ub)) || (SCIPvarIsIntegral(var) && SCIPisFeasLT(scip, newub, ub))
             || SCIPisUbBetter(scip, newub, lb, ub) )
          {
-            /* check maxresactivities for reliablility */
+            /* check maxresactivities for reliability */
             if( isNewActivityUnreliable(scip, maxresactivity, consdata->lastmaxactivity) )
             {
                consdataGetReliableResidualActivity(scip, consdata, var, &maxresactivity, FALSE, FALSE);
@@ -4334,7 +4334,7 @@ SCIP_RETCODE tightenBounds(
       consdata->boundstightened = TRUE;
 
       /* try to tighten the bounds of each variable in the constraint. During solving process, 
-       * the binary variable sortation enables skipping variables */
+       * the binary variable sorting enables skipping variables */
       for( v = 0; v < nvars && v != lastchange && !(*cutoff); ++v )
       {
          oldnchgbds = *nchgbds;
@@ -4567,7 +4567,7 @@ SCIP_RETCODE propagateCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linear constraint */
    SCIP_Bool             tightenbounds,      /**< should the variable's bounds be tightened? */
-   SCIP_Bool             sortvars,           /**< should variable sortation for faster propagation be used? */
+   SCIP_Bool             sortvars,           /**< should variable sorting for faster propagation be used? */
    SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
    int*                  nchgbds             /**< pointer to count the total number of tightened bounds */
    )
@@ -5578,7 +5578,7 @@ SCIP_RETCODE convertLongEquality(
             getNewSidesAfterAggregation(scip, consdata, var, val, &newlhs, &newrhs);
             removescons = (SCIPisFeasLE(scip, newlhs, minresactivity) && SCIPisFeasLE(scip, maxresactivity, newrhs));
 
-            /* check resactivities for reliablility */
+            /* check resactivities for reliability */
             if (removescons)
             {
                if( !isminsettoinfinity && isNewActivityUnreliable(scip, minresactivity, consdata->lastminactivity) )
@@ -6078,7 +6078,7 @@ SCIP_RETCODE dualPresolve(
                oldmaxresactivity = maxresactivity;
                oldminresactivity = minresactivity;
 
-               /* check minresactivity for reliablility */
+               /* check minresactivity for reliability */
                if( !isminsettoinfinity && isNewActivityUnreliable(scip, minresactivity, consdata->lastminactivity) )
                {
                   consdataGetReliableResidualActivity(scip, consdata, var, &minresactivity, TRUE, FALSE);
@@ -6086,7 +6086,7 @@ SCIP_RETCODE dualPresolve(
 		  isminsettoinfinity = TRUE; /* here it means only that it was even calculated */
                }
 
-               /* check maxresactivity for reliablility */
+               /* check maxresactivity for reliability */
                if( !ismaxsettoinfinity && isNewActivityUnreliable(scip, maxresactivity, consdata->lastmaxactivity) )
                {
                   consdataGetReliableResidualActivity(scip, consdata, var, &maxresactivity, FALSE, FALSE);
@@ -6137,14 +6137,14 @@ SCIP_RETCODE dualPresolve(
                oldmaxresactivity = maxresactivity;
                oldminresactivity = minresactivity;
 
-               /* check minresactivity for reliablility */
+               /* check minresactivity for reliability */
                if( !isminsettoinfinity && isNewActivityUnreliable(scip, minresactivity, consdata->lastminactivity) )
                {
                   consdataGetReliableResidualActivity(scip, consdata, var, &minresactivity, TRUE, FALSE);
                   recalculated = !SCIPisEQ(scip, oldminresactivity, minresactivity);
                }
 
-               /* check maxresactivity for reliablility */
+               /* check maxresactivity for reliability */
                if( !ismaxsettoinfinity && isNewActivityUnreliable(scip, maxresactivity, consdata->lastmaxactivity) )
                {
                   consdataGetReliableResidualActivity(scip, consdata, var, &maxresactivity, FALSE, FALSE);
@@ -6469,7 +6469,7 @@ SCIP_RETCODE aggregateVariables(
          val = (SCIP_Longint)SCIPfeasFloor(scip, vals[v]);
          if( val % 2 != 0 )
          {
-            /* the odd valus have belong to binary variables */
+            /* the odd values have to belong to binary variables */
             if( !SCIPvarIsBinary(vars[v]) )
                return SCIP_OKAY;
             
@@ -7256,7 +7256,7 @@ SCIP_RETCODE detectRedundantConstraints(
          assert(SCIPconsIsActive(cons1));
          assert(!SCIPconsIsModifiable(cons1));
       
-         /* constraint found: create a new constraint with same coeffients and best left and right hand side; 
+         /* constraint found: create a new constraint with same coefficients and best left and right hand side; 
           * delete old constraints afterwards
           */
          consdata0 = SCIPconsGetData(cons0);
@@ -8143,11 +8143,11 @@ SCIP_RETCODE fullDualPresolve(
                /* calculate residual activity bounds if variable would be fixed to zero */
                consdataGetGlbActivityResiduals(scip, consdata, var, val, &minresactivity, &maxresactivity, &isminsettoinfinity, &ismaxsettoinfinity);
                
-               /* check minresactivity for reliablility */
+               /* check minresactivity for reliability */
                if( !isminsettoinfinity && isNewActivityUnreliable(scip, minresactivity, consdata->lastglbminactivity) )
                   consdataGetReliableResidualActivity(scip, consdata, var, &minresactivity, TRUE, TRUE);
                
-               /* check maxresactivity for reliablility */
+               /* check maxresactivity for reliability */
                if( !ismaxsettoinfinity && isNewActivityUnreliable(scip, maxresactivity, consdata->lastglbmaxactivity) )
                   consdataGetReliableResidualActivity(scip, consdata, var, &maxresactivity, FALSE, TRUE);
             }
@@ -8706,7 +8706,7 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
       }
 
       /* is constraint of type SCIP_CONSTYPE_{EQKNAPSACK, BINPACKING, KNAPSACK}? */
-      /* TODO: If coefficents or rhs are not integral, we currently do not check
+      /* TODO: If coefficients or rhs are not integral, we currently do not check
        * if the constraint could be scaled (finitely), such that they are.
        */
       {
@@ -10932,7 +10932,7 @@ SCIP_Real SCIPgetDualsolLinear(
       return 0.0;
 }
 
-/** gets the dual farkas value of the linear constraint in the current infeasible LP */
+/** gets the dual Farkas value of the linear constraint in the current infeasible LP */
 SCIP_Real SCIPgetDualfarkasLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */

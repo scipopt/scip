@@ -80,7 +80,7 @@ struct SCIP_Col
    SCIP_Real             flushedub;          /**< upper bound of column already flushed to the LP solver */
    SCIP_Real             primsol;            /**< primal solution value in LP, is 0 if col is not in LP */
    SCIP_Real             redcost;            /**< reduced cost value in LP, or SCIP_INVALID if not yet calculated */
-   SCIP_Real             farkascoef;         /**< coefficient in dual farkas infeasibility proof (== dualfarkas^T A_c) */
+   SCIP_Real             farkascoef;         /**< coefficient in dual Farkas infeasibility proof (== dualfarkas^T A_c) */
    SCIP_Real             minprimsol;         /**< minimal LP solution value, this column ever assumed */
    SCIP_Real             maxprimsol;         /**< maximal LP solution value, this column ever assumed */
    SCIP_Real             sbdown;             /**< strong branching information for downwards branching */
@@ -102,7 +102,7 @@ struct SCIP_Col
    int                   lpipos;             /**< column position number in LP solver, or -1 if not in LP solver */
    int                   lpdepth;            /**< depth level at which column entered the LP, or -1 if not in current LP */
    int                   validredcostlp;     /**< LP number for which reduced cost value is valid */
-   int                   validfarkaslp;      /**< LP number for which farkas coefficient is valid */
+   int                   validfarkaslp;      /**< LP number for which Farkas coefficient is valid */
    int                   validsblp;          /**< LP number for which strong branching values are valid */
    int                   sbitlim;            /**< strong branching iteration limit used to get strongbranch values, or -1 */
    int                   nsbcalls;           /**< number of times, strong branching was applied on the column */
@@ -144,7 +144,7 @@ struct SCIP_Row
    SCIP_Real             minval;             /**< minimal absolute non-zero value of row vector, only valid if numminval > 0 */
    SCIP_Real             dualsol;            /**< dual solution value in LP, is 0 if row is not in LP */
    SCIP_Real             activity;           /**< row activity value in LP, or SCIP_INVALID if not yet calculated */
-   SCIP_Real             dualfarkas;         /**< multiplier value in dual farkas infeasibility proof */
+   SCIP_Real             dualfarkas;         /**< multiplier value in dual Farkas infeasibility proof */
    SCIP_Real             pseudoactivity;     /**< row activity value in pseudo solution, or SCIP_INVALID if not yet calculated */
    SCIP_Real             minactivity;        /**< minimal activity value w.r.t. the column's bounds, or SCIP_INVALID */
    SCIP_Real             maxactivity;        /**< maximal activity value w.r.t. the column's bounds, or SCIP_INVALID */
@@ -238,7 +238,7 @@ struct SCIP_Lp
    int                   nloosevars;         /**< number of loose variables in LP */
    int                   pseudoobjvalinf;    /**< number of variables with infinite best bound in current pseudo solution */
    int                   validsollp;         /**< LP number for which the currently stored solution values are valid */
-   int                   validfarkaslp;      /**< LP number for which the currently stored farkas row multipliers are valid */
+   int                   validfarkaslp;      /**< LP number for which the currently stored Farkas row multipliers are valid */
    int                   lpiitlim;           /**< current iteration limit setting in LPI */
    int                   lpifastmip;         /**< current FASTMIP setting in LPI */
    int                   lpithreads;         /**< current THREADS setting in LPI */

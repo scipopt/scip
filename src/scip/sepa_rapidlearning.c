@@ -111,7 +111,7 @@ SCIP_RETCODE createNewSol(
 
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-   /* subSCIP may have more variable than the number of active (transformed) variables in the main SCIP
+   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
     * since constraint copying may have required the copy of variables that are fixed in the main SCIP
     */ 
    assert(nvars <= SCIPgetNOrigVars(subscip));   
@@ -192,8 +192,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
 
    SCIP_VAR** vars;                          /* original problem's variables                   */
    SCIP_VAR** subvars;                       /* subproblem's variables                         */
-   SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to subSCIP variables */    
-   SCIP_HASHMAP* varmapbw;                   /* mapping of subSCIP variables to SCIP variables */
+   SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */    
+   SCIP_HASHMAP* varmapbw;                   /* mapping of sub-SCIP variables to SCIP variables */
 
    SCIP_CONSHDLR** conshdlrs;                /* array of constraint handler's that might that might obtain conflicts */
    int* oldnconss;                           /* number of constraints without rapid learning conflicts               */
@@ -210,7 +210,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    int i;                                    /* counter                                                   */
 
    SCIP_Bool success;                        /* was problem creation / copying constraint successful? */
-   SCIP_RETCODE retcode;                     /* used for catching subSCIP errors in debug mode */
+   SCIP_RETCODE retcode;                     /* used for catching sub-SCIP errors in debug mode */
 
    int nconflicts;                          /* statistic: number of conflicts applied         */
    int nbdchgs;                             /* statistic: number of bound changes applied     */
@@ -401,14 +401,14 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    retcode = SCIPsolve(subscip);
    
    /* Errors in solving the subproblem should not kill the overall solving process 
-    * Hence, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+    * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
     */
    if( retcode != SCIP_OKAY )
    { 
 #ifndef NDEBUG
       SCIP_CALL( retcode );     
 #endif
-      SCIPwarningMessage("Error while solving subproblem in rapid learning separator; subSCIP terminated with code <%d>\n",retcode);
+      SCIPwarningMessage("Error while solving subproblem in rapid learning separator; sub-SCIP terminated with code <%d>\n",retcode);
    }
  
    /* abort solving, if limit of applied conflicts is reached */
@@ -443,14 +443,14 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
       retcode = SCIPsolve(subscip);
    
       /* Errors in solving the subproblem should not kill the overall solving process 
-       * Hence, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+       * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
        */
       if( retcode != SCIP_OKAY )
       { 
 #ifndef NDEBUG
          SCIP_CALL( retcode );     
 #endif
-         SCIPwarningMessage("Error while solving subproblem in rapid learning separator; subSCIP terminated with code <%d>\n",retcode);
+         SCIPwarningMessage("Error while solving subproblem in rapid learning separator; sub-SCIP terminated with code <%d>\n",retcode);
       }
    }
    else
@@ -529,7 +529,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
 	    nconss = SCIPconshdlrGetNConss(conshdlrs[i]);
 	    conss = SCIPconshdlrGetConss(conshdlrs[i]);
 
-            /* loop over all constraints that have been added in subSCIP run, these are the conflicts */            
+            /* loop over all constraints that have been added in sub-SCIP run, these are the conflicts */            
             for( c = oldnconss[i]; c < nconss; ++c)
             {
                SCIP_CONS* cons;
@@ -573,7 +573,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
 	 assert(SCIPisLE(scip, SCIPvarGetLbGlobal(subvars[i]), SCIPvarGetUbGlobal(subvars[i])));
 	 assert(SCIPisLE(scip, SCIPvarGetUbGlobal(subvars[i]), SCIPvarGetUbGlobal(vars[i])));  
 	 
-	 /* update the bounds of the original SCIP, if a better bound was proven in the subSCIP */
+	 /* update the bounds of the original SCIP, if a better bound was proven in the sub-SCIP */
 	 SCIP_CALL( SCIPtightenVarUb(scip, vars[i], SCIPvarGetUbGlobal(subvars[i]), FALSE, &infeasible, &tightened) );
 	 if( tightened ) 
 	   nbdchgs++;

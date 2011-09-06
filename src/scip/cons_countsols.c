@@ -161,7 +161,7 @@ void setInt(
 }
 
 
-/** free memoy */
+/** free memory */
 static
 void freeInt(
    Int*          value                      /**< pointer to the value to free */
@@ -202,7 +202,7 @@ void addInt(
 }
 
 
-/** multiplies the factor to the given vakue */
+/** multiplies the factor by the given value */
 static
 void multInt(
    Int*          value,                     /**< pointer to the value to increase */
@@ -651,7 +651,7 @@ static
 SCIP_RETCODE countSparsesol(
    SCIP*                      scip,             /**< SCIP data structure */
    SCIP_SOL*                  sol,              /**< solution */
-   SCIP_Bool                  feasible,         /**< bool if solution is feasible */
+   SCIP_Bool                  feasible,         /**< is solution feasible? */
    SCIP_CONSHDLRDATA*         conshdlrdata,     /**< constraint handler data */
    SCIP_RESULT*               result            /**< pointer to store the result of the checking process */
    )
@@ -695,18 +695,18 @@ SCIP_RETCODE countSparsesol(
       if( SCIPgetNBinVars(scip) == SCIPgetNVars(scip) )
       {
          SCIP_Longint nsols;
-         int npseudocans;
+         int npseudocands;
          
          nsols = 1;
-         npseudocans = SCIPgetNPseudoBranchCands(scip);
-         assert(npseudocans < 64);
+         npseudocands = SCIPgetNPseudoBranchCands(scip);
+         assert(npseudocands < 64);
          
-         /* bit shift the factor by npseudocans; this means factor = 2^npseudocans */
-         nsols <<= npseudocans;
+         /* bit shift the factor by npseudocands; this means factor = 2^npseudocands */
+         nsols <<= npseudocands;
          
          /* set newsols to the computed number */
          setInt(&newsols, nsols);
-         SCIPdebugMessage("-> add 2^%d to number of solutions\n", npseudocans);
+         SCIPdebugMessage("-> add 2^%d to number of solutions\n", npseudocands);
       }
       else
       {
@@ -782,7 +782,7 @@ SCIP_RETCODE checkLogicor(
    int c;
    int v;
 
-   SCIPdebugMessage("check logicor %d contraints\n", nconss);
+   SCIPdebugMessage("check logicor %d constraints\n", nconss);
   
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -797,7 +797,7 @@ SCIP_RETCODE checkLogicor(
          
    for( ; c >= 0 && nconss > 0 && (*satisfied); --c )
    {
-      SCIPdebugMessage("logicor contraint %d\n", c);
+      SCIPdebugMessage("logicor constraint %d\n", c);
     
       if( !SCIPconsIsEnabled(conss[c]) )
          continue;
@@ -855,7 +855,7 @@ SCIP_RETCODE checkKnapsack(
    int c;
    int v;
 
-   SCIPdebugMessage("check knapsack %d contraints\n", nconss);
+   SCIPdebugMessage("check knapsack %d constraints\n", nconss);
   
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -870,7 +870,7 @@ SCIP_RETCODE checkKnapsack(
 
    for( ; c >= 0 && nconss > 0 && (*satisfied); --c )
    {
-      SCIPdebugMessage("knapsack contraint %d\n", c);
+      SCIPdebugMessage("knapsack constraint %d\n", c);
     
       if( !SCIPconsIsEnabled(conss[c]) )
          continue;
@@ -1025,7 +1025,7 @@ SCIP_RETCODE checkVarbound(
    SCIP_Real coef;
    int c;
 
-   SCIPdebugMessage("check varbound %d contraints\n", nconss);
+   SCIPdebugMessage("check varbound %d constraints\n", nconss);
   
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -1040,7 +1040,7 @@ SCIP_RETCODE checkVarbound(
 
    for( ; c >= 0 && nconss > 0 && (*satisfied); --c )
    {
-      SCIPdebugMessage("varbound contraint %d\n", c);
+      SCIPdebugMessage("varbound constraint %d\n", c);
     
       if( !SCIPconsIsEnabled(conss[c]) )
          continue;
@@ -1264,7 +1264,7 @@ SCIP_RETCODE checkSolution(
    /* transform the current number of solutions into a SCIP_Longint */
    nsols = getNCountedSols(conshdlrdata->nsols, &valid);
    
-   /* check if the solution limit is achived and stop SCIP if this is the case */
+   /* check if the solution limit is hit and stop SCIP if this is the case */
    if( conshdlrdata->sollimit > -1 && (!valid || conshdlrdata->sollimit <= nsols) )
    {
       SCIP_CALL( SCIPinterruptSolve(scip) );
@@ -1361,7 +1361,7 @@ SCIP_DECL_CONSINIT(consInitCountsols)
       
       nallvars = 0;
 
-      /* capture and lcok all variables */
+      /* capture and lock all variables */
       for( v = 0; v < norigvars; ++v )
       {
          if( SCIPvarGetType(origvars[v]) != SCIP_VARTYPE_CONTINUOUS )
@@ -2245,7 +2245,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
                
                SCIP_CALL( SCIPduplicateBufferArray(scip, &allvars, conshdlrdata->allvars, norigvars) );
                
-               /* sort original variables array and the corresponding transformed variables w.r.t. the prob index */
+               /* sort original variables array and the corresponding transformed variables w.r.t. the problem index */
                SCIPsortDownPtrPtr((void**)allvars, (void**)origvars, varCompProbindex, norigvars);
 
                /* copy variable array of the sparse solutions */
@@ -2256,7 +2256,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
                for( v = 0; v < nvars; ++v )
                   perm[v] = v;
 
-               /* create permutation for variables of the sparse solution w.r.t. the prob index */
+               /* create permutation for variables of the sparse solution w.r.t. the problem index */
                SCIPsortDownPtrInt((void**)vars, perm, varCompProbindex, nvars);
 
                /* free variable array copy (this copy was only used to get the permutation array */
@@ -2632,7 +2632,7 @@ SCIP_Longint SCIPgetNCountedFeasSubtrees(
 void SCIPgetCountedSparseSolutions( 
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR***           vars,               /**< pointer to active variable array defining to variable order */
-   int*                  nvars,              /**< number of active varibales */
+   int*                  nvars,              /**< number of active variables */
    SPARSESOLUTION***     sols,               /**< pointer to the solutions */
    int*                  nsols               /**< pointer to number of solutions */
    )

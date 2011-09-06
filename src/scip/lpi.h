@@ -654,11 +654,11 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
    SCIP_Real*            ray                 /**< primal ray */
    );
 
-/** gets dual farkas proof for infeasibility */
+/** gets dual Farkas proof for infeasibility */
 extern
 SCIP_RETCODE SCIPlpiGetDualfarkas(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_Real*            dualfarkas          /**< dual farkas row multipliers */
+   SCIP_Real*            dualfarkas          /**< dual Farkas row multipliers */
    );
 
 /** gets the number of LP iterations of the last solve call */

@@ -169,7 +169,7 @@ SCIP_RETCODE SCIPincludeEventHdlrXyz(
    eventhdlrdata = NULL;
    /* TODO: (optional) create event handler specific data here */
 
-   /* imclude event handler into SCIP */
+   /* include event handler into SCIP */
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
          eventCopyXyz,
          eventFreeXyz, eventInitXyz, eventExitXyz, 

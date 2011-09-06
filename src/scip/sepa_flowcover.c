@@ -2162,7 +2162,7 @@ SCIP_RETCODE cutGenerationHeuristic(
    SCIPdebugMessage("2. generate c-MIRFCIs for different values of delta:\n");
 
    /* for each value of delta choose L1 subset N1\C1 and L2 subset N2\C2 by comparison, generate the 
-    * c-MIRFCI for delta, (C1, C2) and (L1, L2) and select the most efficiant c-MIRFCI
+    * c-MIRFCI for delta, (C1, C2) and (L1, L2) and select the most efficient c-MIRFCI
     */ 
    ntesteddeltas = 0;
    bestdelta = 0.0;

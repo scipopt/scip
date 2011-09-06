@@ -298,7 +298,7 @@ SCIP_RETCODE createNewSol(
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
-   /* subSCIP may have more variables than the number of active (transformed) variables in the main SCIP
+   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
     * since constraint copying may have required the copy of variables that are fixed in the main SCIP
     */ 
    assert(nvars <= SCIPgetNOrigVars(subscip));  
@@ -320,7 +320,7 @@ SCIP_RETCODE createNewSol(
    return SCIP_OKAY;
 }
 
-/** main procedure of the RENS heuristic, creates and solves a subMIP */
+/** main procedure of the RENS heuristic, creates and solves a sub-SCIP */
 SCIP_RETCODE SCIPapplyRens(
    SCIP*                 scip,               /**< original SCIP data structure                                        */
    SCIP_HEUR*            heur,               /**< heuristic data structure                                            */
@@ -431,7 +431,7 @@ SCIP_RETCODE SCIPapplyRens(
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
-   /* forbid recursive call of heuristics and separators solving subMIPs */
+   /* forbid recursive call of heuristics and separators solving sub-SCIPs */
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
 
    /* disable cutting plane separation */
@@ -504,14 +504,14 @@ SCIP_RETCODE SCIPapplyRens(
    retcode = SCIPpresolve(subscip);
 
    /* Errors in solving the subproblem should not kill the overall solving process 
-    * Hence, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+    * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
     */
    if( retcode != SCIP_OKAY )
    { 
 #ifndef NDEBUG
       SCIP_CALL( retcode );     
 #endif
-      SCIPwarningMessage("Error while presolving subproblem in RENS heuristic; subSCIP terminated with code <%d>\n",retcode);
+      SCIPwarningMessage("Error while presolving subproblem in RENS heuristic; sub-SCIP terminated with code <%d>\n",retcode);
    }
 
    SCIPdebugMessage("RENS presolved subproblem: %d vars, %d cons, success=%u\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), success);
@@ -523,7 +523,7 @@ SCIP_RETCODE SCIPapplyRens(
    SCIPsetNodeLimit(subscip, 1);
    SCIP_CALL( SCIPsolve(subscip) );
    SCIP_CALL( SCIPwriteMIP(subscip,fname,TRUE,TRUE) );
-   SCIPmessagePrintInfo("wrote RENS-subMIP to file <%s>\n",fname);
+   SCIPmessagePrintInfo("wrote RENS-sub-SCIP to file <%s>\n",fname);
    SCIPsetNodeLimit(subscip, maxnodes);
    }
 #endif
@@ -541,14 +541,14 @@ SCIP_RETCODE SCIPapplyRens(
       retcode = SCIPsolve(subscip);
 
       /* Errors in solving the subproblem should not kill the overall solving process 
-       * Hence, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+       * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
        */
       if( retcode != SCIP_OKAY )
       { 
 #ifndef NDEBUG
          SCIP_CALL( retcode );     
 #endif
-         SCIPwarningMessage("Error while solving subproblem in RENS heuristic; subSCIP terminated with code <%d>\n",retcode);
+         SCIPwarningMessage("Error while solving subproblem in RENS heuristic; sub-SCIP terminated with code <%d>\n",retcode);
       }
 
       /* check, whether a solution was found;
@@ -669,7 +669,7 @@ SCIP_DECL_HEUREXEC(heurExecRens)
    if( SCIPgetNLPBranchCands(scip) == 0 )
       return SCIP_OKAY;
 
-   /* do not proceed, when we should use the NLP relaxatiob, but there is no NLP solv er included in SCIP */
+   /* do not proceed, when we should use the NLP relaxation, but there is no NLP solver included in SCIP */
    if( heurdata->startsol == 'n' && SCIPgetNNlpis(scip) == 0 )
       return SCIP_OKAY;
 
@@ -678,7 +678,7 @@ SCIP_DECL_HEUREXEC(heurExecRens)
    
    /* reward RENS if it succeeded often */
    nstallnodes = (SCIP_Longint)(nstallnodes * 3.0 * (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
-   nstallnodes -= 100 * SCIPheurGetNCalls(heur);  /* count the setup costs for the sub-MIP as 100 nodes */
+   nstallnodes -= 100 * SCIPheurGetNCalls(heur);  /* count the setup costs for the sub-SCIP as 100 nodes */
    nstallnodes += heurdata->nodesofs;
 
    /* determine the node limit for the current process */

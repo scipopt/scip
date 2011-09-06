@@ -1346,7 +1346,7 @@ SCIP_RETCODE detectRedundantConstraints(
       assert(conshdlrdata != NULL);
 
       /* it can happen that during preprocessing some variables got aggregated and a constraint now has not active
-       * variables inside so we need to remove them for sortation
+       * variables inside so we need to remove them for sorting
        */
       /* remove all variables that are fixed to zero and all pairs of variables fixed to one;
        * merge multiple entries of the same or negated variables
@@ -1454,7 +1454,7 @@ SCIP_RETCODE preprocessConstraintPairs(
    assert(conshdlrdata != NULL);
 
    /* it can happen that during preprocessing some variables got aggregated and a constraint now has not active
-    * variables inside so we need to remove them for sortation
+    * variables inside so we need to remove them for sorting
     */
    /* remove all variables that are fixed to zero and all pairs of variables fixed to one;
     * merge multiple entries of the same or negated variables
@@ -1491,7 +1491,7 @@ SCIP_RETCODE preprocessConstraintPairs(
       assert(consdata1 != NULL);
 
       /* it can happen that during preprocessing some variables got aggregated and a constraint now has not active
-       * variables inside so we need to remove them for sortation
+       * variables inside so we need to remove them for sorting
        */
       /* remove all variables that are fixed to zero and all pairs of variables fixed to one;
        * merge multiple entries of the same or negated variables

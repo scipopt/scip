@@ -239,7 +239,7 @@ SCIP_RETCODE createNewSol(
 
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-   /* subSCIP may have more variable than the number of active (transformed) variables in the main SCIP
+   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
     * since constraint copying may have required the copy of variables that are fixed in the main SCIP
     */ 
    assert(nvars <= SCIPgetNOrigVars(subscip));
@@ -344,7 +344,7 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    SCIP* subscip;                            /* the subproblem created by mutation                  */
    SCIP_VAR** vars;                          /* original problem's variables                        */
    SCIP_VAR** subvars;                       /* subproblem's variables                              */
-   SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to subSCIP variables */    
+   SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */    
 
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem                 */
    SCIP_Real maxnnodesr;
@@ -435,8 +435,8 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
       /* copy all plugins */
       SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
 
-      /* get name of the original problem and add the string "_renssub" */
-      (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_renssub", SCIPgetProbName(scip));
+      /* get name of the original problem and add the string "_mutationsub" */
+      (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_mutationsub", SCIPgetProbName(scip));
       
       /* create the subproblem */
       SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
@@ -532,14 +532,14 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    retcode = SCIPsolve(subscip);
    
    /* Errors in solving the subproblem should not kill the overall solving process 
-    * Hence, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+    * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
     */
    if( retcode != SCIP_OKAY )
    { 
 #ifndef NDEBUG
       SCIP_CALL( retcode );     
 #endif
-      SCIPwarningMessage("Error while solving subproblem in Mutation heuristic; subSCIP terminated with code <%d>\n",retcode);
+      SCIPwarningMessage("Error while solving subproblem in Mutation heuristic; sub-SCIP terminated with code <%d>\n",retcode);
    }
    
    heurdata->usednodes += SCIPgetNNodes(subscip);
