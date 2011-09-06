@@ -1916,7 +1916,7 @@ SCIP_RETCODE getActiveVariables(
 static
 void clearLine(
    char*                 linebuffer,         /**< line */
-   int*                  linecnt             /**< number of charaters in line */
+   int*                  linecnt             /**< number of characters in line */
    )
 {
    assert( linebuffer != NULL );
@@ -1932,7 +1932,7 @@ void endLine(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    char*                 linebuffer,         /**< line */
-   int*                  linecnt             /**< number of charaters in line */
+   int*                  linecnt             /**< number of characters in line */
    )
 {
    assert( scip != NULL );
@@ -1954,7 +1954,7 @@ void appendLine(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    char*                 linebuffer,         /**< line */
-   int*                  linecnt,            /**< number of charaters in line */
+   int*                  linecnt,            /**< number of characters in line */
    const char*           extension           /**< string to extent the line */
    )
 {
@@ -2005,7 +2005,7 @@ void printRow(
    SCIP_VAR* var;
    char varname[PIP_MAX_NAMELEN];
    char varname2[PIP_MAX_NAMELEN];
-   char consname[PIP_MAX_NAMELEN + 1]; /* an extra chararter for ':' */
+   char consname[PIP_MAX_NAMELEN + 1]; /* an extra character for ':' */
    char buffer[PIP_MAX_PRINTLEN];
 
    assert( scip != NULL );

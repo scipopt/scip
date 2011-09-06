@@ -121,7 +121,7 @@ SCIP_RETCODE getActiveVariables(
 static
 void clearLine(
    char*                 linebuffer,         /**< line */
-   int*                  linecnt             /**< number of charaters in line */
+   int*                  linecnt             /**< number of characters in line */
    )
 {
    assert( linebuffer != NULL );
@@ -138,7 +138,7 @@ void endLine(
    FILE*                 file,               /**< output file (or NULL for standard output) */
    SCIP_READERDATA*      readerdata,         /**< information for reader */
    char*                 linebuffer,         /**< line */
-   int*                  linecnt             /**< number of charaters in line */
+   int*                  linecnt             /**< number of characters in line */
    )
 {
    assert( scip != NULL );
@@ -164,7 +164,7 @@ void appendLine(
    FILE*                 file,               /**< output file (or NULL for standard output) */
    SCIP_READERDATA*      readerdata,         /**< information for reader */
    char*                 linebuffer,         /**< line */
-   int*                  linecnt,            /**< number of charaters in line */
+   int*                  linecnt,            /**< number of characters in line */
    const char*           extension           /**< string to extent the line */
    )
 {
@@ -308,7 +308,7 @@ void printRow(
       }
       varindex = actvarindex;
 
-      /* fillin white points since these variables indices do not exits in this constraint */
+      /* fill in white points since these variables indices do not exits in this constraint */
       for( ; i < varindex; ++i )
       {
 	 if(readerdata->rgb_ascii)
@@ -333,7 +333,7 @@ void printRow(
       i++;
    }
 
-   /* fillin white points since these variables indices do not exits in this constraint */
+   /* fill in white points since these variables indices do not exits in this constraint */
    for( ; i < ntotalvars; ++i ){
       if(readerdata->rgb_ascii)
 	 appendLine(scip, file, readerdata, linebuffer, &linecnt, white);

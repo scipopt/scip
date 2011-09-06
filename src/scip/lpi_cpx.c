@@ -2137,7 +2137,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
    }
 
 #if 0
-   /* this fixes the strange behaviour of CPLEX, that in case of the objective limit exceedance, it returns the
+   /* this fixes the strange behavior of CPLEX, that in case of the objective limit exceedance, it returns the
     * solution for the basis preceeding the one with exceeding objective limit
     * (using this "wrong" dual solution can cause column generation algorithms to fail to find an improving column)
     */
@@ -3029,7 +3029,7 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    assert(lpi->solstat >= 0);
    assert(dualfarkas != NULL);
 
-   SCIPdebugMessage("calling CPLEX dual farkas: %d cols, %d rows\n",
+   SCIPdebugMessage("calling CPLEX dual Farkas: %d cols, %d rows\n",
       CPXgetnumcols(lpi->cpxenv, lpi->cpxlp), CPXgetnumrows(lpi->cpxenv, lpi->cpxlp));
 
    CHECK_ZERO( CPXdualfarkas(lpi->cpxenv, lpi->cpxlp, dualfarkas, NULL) );

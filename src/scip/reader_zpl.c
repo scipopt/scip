@@ -573,7 +573,7 @@ Bool xlp_addsos_term(
    return FALSE;
 }
 
-/** retuns the variable name */
+/** returns the variable name */
 const char* xlp_getvarname(
    const Var*            var                 /**< variable */
    )

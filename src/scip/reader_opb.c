@@ -786,7 +786,7 @@ SCIP_RETCODE readCoefficients(
    SCIP_Bool*const       newsection,         /**< pointer to store whether a new section was encountered */
    SCIP_Bool*const       isNonlinear,        /**< pointer to store if we have an nonlinear constraint */
    SCIP_Bool*const       issoftcons,         /**< pointer to store whether it is a soft constraint (for wbo files) */
-   SCIP_Real*const       weight              /**< pointer to store the weight of the softconstraint */
+   SCIP_Real*const       weight              /**< pointer to store the weight of the soft constraint */
    )
 {
    SCIP_VAR** tmpvars;
@@ -935,7 +935,7 @@ SCIP_RETCODE readCoefficients(
          }
          havevalue = TRUE;
 
-         /* if we read a wbo file, the first line should be sth. like "soft: <weight>;", where weight is a value or nothing */
+         /* if we read a wbo file, the first line should be something like "soft: <weight>;", where weight is a value or nothing */
          if( strcmp(name, "soft") == 0 )
          {
             assert(ntmpcoefs == 0);
@@ -1135,7 +1135,7 @@ SCIP_RETCODE setObjective(
       
       /* @todo: what todo with non-linear objectives, maybe create the necessary and-constraints and add the arising linear
        * objective (with and-resultants) or add a integer variable to this constraint and put only this variable in the
-       * objective, for this we need to expand the pseudo-boolean constraints to handle interger variables 
+       * objective, for this we need to expand the pseudo-boolean constraints to handle integer variables 
        *
        * integer variant is not implemented 
        */
@@ -1478,10 +1478,10 @@ SCIP_RETCODE getMaxAndConsDim(
       {
          commentstart = strchr(opbinput->linebuf, commentchars[i]);
          
-         /* found a commentline */
+         /* found a commen tline */
          if( commentstart != NULL )
          { 
-	    /* search for "#product= xyz" in commentline, where xyz represents the number of and constraints */
+	    /* search for "#product= xyz" in comment line, where xyz represents the number of and constraints */
             nproducts = strstr(opbinput->linebuf, "#product= ");
             if( nproducts != NULL )
             {
@@ -1730,7 +1730,7 @@ SCIP_RETCODE getActiveVariables(
    return SCIP_OKAY;
 }
 
-/* computes all and-resultants and their corresonding constraint variables */
+/* computes all and-resultants and their corresponding constraint variables */
 static
 SCIP_RETCODE computeAndConstraintInfos(
    SCIP*const            scip,               /**< SCIP data structure */
@@ -1924,7 +1924,7 @@ SCIP_RETCODE computeAndConstraintInfos(
 static
 void clearBuffer(
    char*                 linebuffer,         /**< line */
-   int*                  linecnt             /**< number of charaters in line */
+   int*                  linecnt             /**< number of characters in line */
    )
 {
    assert( linebuffer != NULL );
@@ -1941,7 +1941,7 @@ void writeBuffer(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    char*                 linebuffer,         /**< line */
-   int*                  linecnt             /**< number of charaters in line */
+   int*                  linecnt             /**< number of characters in line */
    )
 {
    assert( scip != NULL );
@@ -1963,7 +1963,7 @@ void appendBuffer(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    char*                 linebuffer,         /**< line */
-   int*                  linecnt,            /**< number of charaters in line */
+   int*                  linecnt,            /**< number of characters in line */
    const char*           extension           /**< string to extent the line */
    )
 {
@@ -3020,7 +3020,7 @@ SCIP_RETCODE writeOpbConstraints(
    conshdlr = SCIPfindConshdlr(scip, "indicator");
    linconssofindicatorsmap = NULL;
 
-   /* find artifical linear constraints which correspond to indicator constraints to avoid double printing */
+   /* find artificial linear constraints which correspond to indicator constraints to avoid double printing */
    if( conshdlr != NULL )
    {
       SCIP_CONS** indconss;
@@ -3365,7 +3365,7 @@ SCIP_RETCODE writeOpbConstraints(
    return SCIP_OKAY;
 }
 
-/* write and constraints of inactive but relevant and-resulants and and variables which are fixed to one */
+/* write and constraints of inactive but relevant and-resultants and and variables which are fixed to one */
 static
 SCIP_RETCODE writeOpbRelevantAnds(
    SCIP*const            scip,               /**< SCIP data structure */
@@ -3425,7 +3425,7 @@ SCIP_RETCODE writeOpbRelevantAnds(
       }   
    }
 
-   /* print and-constraints with fixed andresultant to zero and all and-constraints with 
+   /* print and-constraints with fixed and-resultant to zero and all and-constraints with 
     * aggregated resultant, otherwise we would loose this information 
     */
    for( r = nresvars - 1; r >= 0; --r )
@@ -3439,7 +3439,7 @@ SCIP_RETCODE writeOpbRelevantAnds(
          SCIP_Bool cont;
       
          cont = FALSE;
-         /* if resultant variable and one other and variable is already zero, so we did'nt need to print this and
+         /* if resultant variable and one other and variable is already zero, so we did not need to print this and
           * constraint because all other variables are free 
           */
          for( v = nandvars[r] - 1; v >= 0; --v )
@@ -3458,7 +3458,7 @@ SCIP_RETCODE writeOpbRelevantAnds(
          SCIP_Bool cont;
       
          cont = TRUE;
-         /* if resultant variable and one other and variable is already zero, so we did'nt need to print this and
+         /* if resultant variable and one other and variable is already zero, so we did not need to print this and
           * constraint because all other variables are free 
           */
          for( v = nandvars[r] - 1; v >= 0; --v )
@@ -3471,9 +3471,9 @@ SCIP_RETCODE writeOpbRelevantAnds(
 
 
       /* print and with fixed or aggregated and-resultant */
-      /* rhslhs equals to 0 means the and constraint is relavant due to it's not clear on which values the and variables are
-       * rhslhs equals to 1 means the and constraint is irrelavant cause all and variables have to be 1 too
-       * rhslhs equals to -1 means the and constraint is relavant cause the variable is only aggregated */
+      /* rhslhs equals to 0 means the and constraint is relevant due to it's not clear on which values the and variables are
+       * rhslhs equals to 1 means the and constraint is irrelevant cause all and variables have to be 1 too
+       * rhslhs equals to -1 means the and constraint is relevant cause the variable is only aggregated */
       if( !SCIPvarIsActive(resvar) )
       {
 	 SCIP_VAR* var;
@@ -3612,7 +3612,7 @@ SCIP_RETCODE writeOpb(
 
    if( existands )
    {
-      /* write and constraints of inactive but relevant and-resulants and and-variables which are fixed to one 
+      /* write and constraints of inactive but relevant and-resultants and and-variables which are fixed to one 
          with no fixed and resultant */
       SCIP_CALL( writeOpbRelevantAnds(scip, file, resvars, nresvars, andvars, nandvars, multisymbol, transformed) );
    }
@@ -3733,7 +3733,7 @@ SCIP_RETCODE SCIPwriteOpb(
       int nresvars;
       int v;
 
-      /* computes all and-resultants and their corresonding constraint variables */
+      /* computes all and-resultants and their corresponding constraint variables */
       SCIP_CALL( computeAndConstraintInfos(scip, transformed, &resvars, &nresvars, &andvars, &nandvars, &existandconshdlr, &existands) );
 
       if( genericnames )

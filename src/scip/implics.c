@@ -607,10 +607,10 @@ void implicsSearchVar(
    }
    else
    {
-      /* check whethere there are implications with nonbinary variable y */
+      /* check whether there are implications with non-binary variable y */
       if( implics->nimpls[varfixing] == implics->nbinimpls[varfixing] )
       {
-         /* there are no implications with nonbinary variable y */
+         /* there are no implications with non-binary variable y */
          *posadd = implics->nbinimpls[varfixing];
          *poslower = -1;
          *posupper = -1;
@@ -1480,7 +1480,7 @@ SCIP_Bool SCIPcliquelistsHaveCommonClique(
    {
       int cliqueid;
 
-      /* make the bigger cliuqe the first one */
+      /* make the bigger clique the first one */
       if( ncliques2 > ncliques1 )
       {
          SCIP_CLIQUE** tmpc;
@@ -1494,7 +1494,7 @@ SCIP_Bool SCIPcliquelistsHaveCommonClique(
          ncliques2 = tmpi;
       }
     
-      /* check whether both cliquelists have a same clique */
+      /* check whether both clique lists have a same clique */
       while( TRUE )
       {
          cliqueid = SCIPcliqueGetId(cliques2[i2]);

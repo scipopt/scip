@@ -915,7 +915,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
          lpi->rngarray, obj, beg, cnt, ind, val, lb, ub) );
    if (colnames) 
    {
-      /* We need all names stored consequtively in a single array. */
+      /* We need all names stored consecutively in a single array. */
       int isize = 0;
       SCIP_ALLOC( BMSallocMemoryArray(&cnamestore, cnamesize) );
       for (c = 0; c < ncols; c++) 
@@ -928,7 +928,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    }
    if (rownames) 
    {
-      /* We need all names stored consequtively in a single array. */
+      /* We need all names stored consecutively in a single array. */
       int isize = 0;
       SCIP_ALLOC( BMSallocMemoryArray(&rnamestore, rnamesize) );
       for (c = 0; c < nrows; c++) 
@@ -2014,7 +2014,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    return retval;
 }
 
-/** start strong branching - call before any strongbranching */
+/** start strong branching - call before any strong branching */
 SCIP_RETCODE SCIPlpiStartStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
@@ -2023,7 +2023,7 @@ SCIP_RETCODE SCIPlpiStartStrongbranch(
    return SCIP_OKAY;
 }
 
-/** end strong branching - call after any strongbranching */
+/** end strong branching - call after any strong branching */
 SCIP_RETCODE SCIPlpiEndStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
@@ -2057,7 +2057,7 @@ SCIP_RETCODE lpiStrongbranch(
    assert(downvalid != NULL);
    assert(upvalid != NULL);
 
-   SCIPdebugMessage("calling Xpress strongbranching on variable %d (%d iterations)\n", col, itlim);
+   SCIPdebugMessage("calling Xpress strong branching on variable %d (%d iterations)\n", col, itlim);
 
    /* results of XPRESS are valid in any case */
    *downvalid = TRUE;
@@ -2243,7 +2243,7 @@ SCIP_RETCODE lpiStrongbranches(
    assert( downvalid != NULL );
    assert( upvalid != NULL );
 
-   SCIPdebugMessage("calling Xpress strongbranching on %d variables (%d iterations)\n", ncols, itlim);
+   SCIPdebugMessage("calling Xpress strong branching on %d variables (%d iterations)\n", ncols, itlim);
 
    if( iter != NULL )
       *iter = 0;

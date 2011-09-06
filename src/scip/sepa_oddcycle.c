@@ -3024,7 +3024,7 @@ SCIP_RETCODE addGLSBinImpls(
    unsigned int          maxarcs,            /**< maximal number of arcs inside the Dijkstra Graph */
    SCIP_Bool             original,           /**< TRUE, iff variable is a problem variable */
    SCIP_Bool*            emptygraph,         /**< TRUE, iff there is no arc in the implication graph
-                                              * of the binary varibles of SCIP */
+                                              * of the binary variables of SCIP */
    unsigned int*         arraysize,          /**< current size of graph->head and graph->weight */
    SCIP_Bool*            success             /**< FALSE, iff memory reallocation fails */
    )
@@ -3160,7 +3160,7 @@ SCIP_RETCODE addGLSCliques(
    unsigned int          maxarcs,            /**< maximal number of arcs inside the Dijkstra Graph */
    SCIP_Bool             original,           /**< TRUE, iff variable is a problem variable */
    SCIP_Bool*            emptygraph,         /**< TRUE, iff there is no arc in the implication graph
-                                              * of the binary varibles of SCIP */
+                                              * of the binary variables of SCIP */
    unsigned int*         arraysize,          /**< current size of graph->head and graph->weight */
    SCIP_Bool*            success             /**< FALSE, iff memory reallocation fails */
    )

@@ -1817,7 +1817,7 @@ SCIP_RETCODE readBinaries(
    return SCIP_OKAY;
 }
 
-/** reads the semicontinuous section */
+/** reads the semi-continuous section */
 static
 SCIP_RETCODE readSemicontinuous(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1880,7 +1880,7 @@ SCIP_RETCODE readSemicontinuous(
       
       if( SCIPvarGetLbGlobal(var) <= 0.0 )
       {
-         SCIPdebugMessage("ignore semicontinuity of variable <%s> with negative lower bound %g\n", SCIPvarGetName(var), SCIPvarGetLbGlobal(var));
+         SCIPdebugMessage("ignore semi-continuity of variable <%s> with negative lower bound %g\n", SCIPvarGetName(var), SCIPvarGetLbGlobal(var));
          continue;
       }
       
@@ -1903,7 +1903,7 @@ SCIP_RETCODE readSemicontinuous(
          !dynamiccols, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamiccols, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, cons) );
       
-      SCIPdebugMessage("add bound disjunction constraint for semicontinuity of <%s>:\n\t", SCIPvarGetName(var));
+      SCIPdebugMessage("add bound disjunction constraint for semi-continuity of <%s>:\n\t", SCIPvarGetName(var));
       SCIPdebug( SCIPprintCons(scip, cons, NULL) );
       
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -2300,7 +2300,7 @@ SCIP_RETCODE getActiveVariables(
 static
 void clearLine(
    char*                 linebuffer,         /**< line */
-   int*                  linecnt             /**< number of charaters in line */
+   int*                  linecnt             /**< number of characters in line */
    )
 {
    assert( linebuffer != NULL );
@@ -2316,7 +2316,7 @@ void endLine(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    char*                 linebuffer,         /**< line */
-   int*                  linecnt             /**< number of charaters in line */
+   int*                  linecnt             /**< number of characters in line */
    )
 {
    assert( scip != NULL );
@@ -2338,7 +2338,7 @@ void appendLine(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    char*                 linebuffer,         /**< line */
-   int*                  linecnt,            /**< number of charaters in line */
+   int*                  linecnt,            /**< number of characters in line */
    const char*           extension           /**< string to extent the line */
    )
 {
@@ -2389,7 +2389,7 @@ void printRow(
    SCIP_VAR* var;
    char varname[LP_MAX_NAMELEN];
    char varname2[LP_MAX_NAMELEN];
-   char consname[LP_MAX_NAMELEN + 1]; /* an extra chararter for ':' */
+   char consname[LP_MAX_NAMELEN + 1]; /* an extra character for ':' */
    char buffer[LP_MAX_PRINTLEN];
 
    assert( scip != NULL );
@@ -2674,7 +2674,7 @@ SCIP_RETCODE printSOCCons(
    SCIP_Real coef;
    SCIP_Real offset;
    char varname[LP_MAX_NAMELEN];
-   char consname[LP_MAX_NAMELEN + 1]; /* an extra chararter for ':' */
+   char consname[LP_MAX_NAMELEN + 1]; /* an extra character for ':' */
    char buffer[LP_MAX_PRINTLEN];
    
    SCIP_Real rhs;

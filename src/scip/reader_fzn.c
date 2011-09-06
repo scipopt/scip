@@ -107,7 +107,7 @@ struct VarArray
    SCIP_VAR**            vars;          /**< variable belonging to the variable array */
    char*                 name;          /**< name of the array variable */
    DIMENSIONS*           info;          /**< dimension information */
-   int                   nvars;         /**< number iof variables */
+   int                   nvars;         /**< number of variables */
    FZNNUMBERTYPE         type;          /**< variable type */ 
 };
 typedef struct VarArray VARARRAY;
@@ -168,7 +168,7 @@ struct FznInput
 };
 typedef struct FznInput FZNINPUT;
 
-/** FlatZinc writting data */
+/** FlatZinc writing data */
 struct FznOutput
 {
    char*                varbuffer;           /* buffer for auxiliary variables (float representatives of discrete variables) */
@@ -1276,7 +1276,7 @@ void parseArrayIndex(
 
    assert( isChar(fzninput->token, '[') );
 
-   /* parse array index expresion */
+   /* parse array index expression */
    if( !getNextToken(fzninput) || isEndStatement(fzninput) )
    {
       syntaxError(scip, fzninput, "expecting array index expression");
@@ -1422,7 +1422,7 @@ SCIP_RETCODE parseList(
    FZNINPUT*             fzninput,           /**< FZN reading data */
    char***               elements,           /**< pointer to char* array for storing the elements of the list */
    int*                  nelements,          /**< pointer to store the number of elements */
-   int                   selements           /**< size of the elemnts char* array */
+   int                   selements           /**< size of the elements char* array */
    )
 {
    char assignment[FZN_BUFFERLEN];
@@ -1754,7 +1754,7 @@ SCIP_RETCODE createConstantAssignment(
 
    if( *constant != NULL )
    {
-      /* check if the consatnt type fit */
+      /* check if the constant type fits */
       if( type != (*constant)->type )
       {
          syntaxError(scip, fzninput, "type error");
@@ -1914,7 +1914,7 @@ SCIP_RETCODE createVariable(
    SCIP*                 scip,               /**< SCIP data structure */
    FZNINPUT*             fzninput,           /**< FZN reading data */
    SCIP_VAR**            var,                /**< pointer to hold the created variable, or NULL */
-   const char*           name,               /**< name of the varibale */
+   const char*           name,               /**< name of the variable */
    SCIP_Real             lb,                 /**< lower bound of the variable */
    SCIP_Real             ub,                 /**< upper bound of the variable */
    FZNNUMBERTYPE         type                /**< number type */
@@ -2098,7 +2098,7 @@ SCIP_RETCODE parsePredicate(
    FZNINPUT*             fzninput            /**< FZN reading data */
    )
 {
-   /* mark predicate expression as comment such that it gets skiped */
+   /* mark predicate expression as comment such that it gets skipped */
    fzninput->comment = TRUE;
    
    return SCIP_OKAY;
@@ -2199,7 +2199,7 @@ SCIP_RETCODE parseVariable(
    
    assert(type == FZN_BOOL || type == FZN_INT || type == FZN_FLOAT);
 
-   /* cretae variable */
+   /* create variable */
    SCIP_CALL( createVariable(scip, fzninput, &var, name, lb, ub, type) );
 
    /* check if the variable should be part of the output */
@@ -3436,7 +3436,7 @@ SCIP_RETCODE parseConstraint(
    /* copy function name */
    (void) SCIPsnprintf(fname, FZN_BUFFERLEN, "%s", name);
    
-   /* truncate the function identifier name in separate tokes */
+   /* truncate the function identifier name in separate tokens */
    token = SCIPstrtok(name, "_", &nexttoken);
    ntokens = 0;
    while( token != NULL )
@@ -3643,7 +3643,7 @@ SCIP_RETCODE parseSolveItem(
       }
       else
       {
-         syntaxError(scip, fzninput, "unknown identifier expresion for a objective function");
+         syntaxError(scip, fzninput, "unknown identifier expression for a objective function");
       }
    }
    
@@ -4207,7 +4207,7 @@ SCIP_RETCODE writeFzn(
    SCIP_Real ub;                          /* upper bound of some variable */
 
    int nboundedvars;                      /* number of variables which are bounded to exactly one side */
-   int nconsvars;                         /* number of variables appering in a specific constraint */
+   int nconsvars;                         /* number of variables appearing in a specific constraint */
    int nfloatobjvars;                     /* number of discrete variables which have a fractional objective coefficient */
    int nintobjvars;                       /* number of discrete variables which have an integral objective coefficient */
    int c;                                 /* counter for the constraints */
@@ -4254,7 +4254,7 @@ SCIP_RETCODE writeFzn(
       }
 
       /* If a variable is bounded to both sides, the bounds are added to the declaration,
-       * for variables bounded to exactly one side, an auxiliary constraint will be added lateron.
+       * for variables bounded to exactly one side, an auxiliary constraint will be added later-on.
        */
       if( !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) )
       {
@@ -4302,7 +4302,7 @@ SCIP_RETCODE writeFzn(
          else 
 	    SCIPinfoMessage(scip, file, "var float: %s;\n", varname);
 	   
-         /* if there is a bound, store the variable and its boundtype for adding a corresponding constraint lateron */
+         /* if there is a bound, store the variable and its boundtype for adding a corresponding constraint later-on */
          if( SCIPisInfinity(scip, ub) ) 
          {
             boundedvars[nboundedvars] = v;
@@ -4528,7 +4528,7 @@ SCIP_RETCODE writeFzn(
       }
    }
 
-   /* output all created auxiliary variables (float representives of discrete variables) */
+   /* output all created auxiliary variables (float equivalents of discrete variables) */
    if( fznoutput.varbufferpos > 0 )
    {
       SCIPinfoMessage(scip, file, "\n%%%%%%%%%%%% Auxiliary variables %%%%%%%%%%%%\n");

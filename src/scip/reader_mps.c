@@ -303,7 +303,7 @@ SCIP_Bool mpsinputHasError(
    return mpsi->haserror;
 }
 
-/** returns the value of the Bool "is interger" in the mps input */
+/** returns the value of the Bool "is integer" in the mps input */
 static
 SCIP_Bool mpsinputIsInteger(
    const MPSINPUT*       mpsi                /**< mps input structure */
@@ -1382,8 +1382,8 @@ SCIP_RETCODE readBounds(
                SCIP_CALL( SCIPchgVarUb(scip, var, val) );
                break;
             case 'S':
-               assert(mpsinputField1(mpsi)[1] == 'C'); /* CPLEX extension (Semicontinuous) */
-               /* remember that variable is semicontinuous */
+               assert(mpsinputField1(mpsi)[1] == 'C'); /* CPLEX extension (Semi-Continuous) */
+               /* remember that variable is semi-continuous */
                if( semicontsize <= nsemicont )
                {
                   semicontsize = SCIPcalcMemGrowSize(scip, nsemicont+1);
@@ -1466,14 +1466,14 @@ READBOUNDS_FINISH:
       SCIP_CALL( SCIPgetBoolParam(scip, "reading/mpsreader/dynamicconss", &dynamicconss) );
       SCIP_CALL( SCIPgetBoolParam(scip, "reading/mpsreader/dynamiccols", &dynamiccols) );
       
-      /* add bound disjunction constraints for semicontinuous variables */
+      /* add bound disjunction constraints for semi-continuous variables */
       for( i = 0; i < nsemicont; ++i )
       {
          var = semicont[i];
          
          oldlb = SCIPvarGetLbGlobal(var);
          /* if no bound was specified (which we assume if we see lower bound 0.0),
-          * then the default lower bound for a semicontinuous variable is 1.0 */
+          * then the default lower bound for a semi-continuous variable is 1.0 */
          if( oldlb == 0.0 )
             oldlb = 1.0;
          
@@ -1494,7 +1494,7 @@ READBOUNDS_FINISH:
             !dynamiccols, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamiccols, FALSE) );
          SCIP_CALL( SCIPaddCons(scip, cons) );
          
-         SCIPdebugMessage("add bound disjunction constraint for semicontinuity of <%s>:\n\t", SCIPvarGetName(var));
+         SCIPdebugMessage("add bound disjunction constraint for semi-continuity of <%s>:\n\t", SCIPvarGetName(var));
          SCIPdebug( SCIPprintCons(scip, cons, NULL) );
          
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -1636,7 +1636,7 @@ SCIP_RETCODE readSOS(
          var = SCIPfindVar(scip, mpsinputField1(mpsi));
          if( var == NULL )
          {
-            /* ignore unkown variables - we would not know the type anyway */
+            /* ignore unknown variables - we would not know the type anyway */
             mpsinputEntryIgnored(scip, mpsi, "column", mpsinputField1(mpsi), "SOS", name, SCIP_VERBLEVEL_NORMAL);
          }
          else
@@ -1747,7 +1747,7 @@ SCIP_RETCODE readQMatrix(
       var1 = SCIPfindVar(scip, mpsinputField1(mpsi));
       if( var1 == NULL )
       {
-         /* ignore unkown variables - we would not know the type anyway */
+         /* ignore unknown variables - we would not know the type anyway */
          mpsinputEntryIgnored(scip, mpsi, "column", mpsinputField1(mpsi), "QMatrix", "QMATRIX", SCIP_VERBLEVEL_NORMAL);
       }
       else
@@ -1756,7 +1756,7 @@ SCIP_RETCODE readQMatrix(
          var2 = SCIPfindVar(scip, mpsinputField2(mpsi));
          if( var2 == NULL )
          {
-            /* ignore unkown variables - we would not know the type anyway */
+            /* ignore unknown variables - we would not know the type anyway */
             mpsinputEntryIgnored(scip, mpsi, "column", mpsinputField2(mpsi), "QMatrix", "QMATRIX", SCIP_VERBLEVEL_NORMAL);
          }
          else
@@ -1945,7 +1945,7 @@ SCIP_RETCODE readQCMatrix(
       var1 = SCIPfindVar(scip, mpsinputField1(mpsi));
       if( var1 == NULL )
       {
-         /* ignore unkown variables - we would not know the type anyway */
+         /* ignore unknown variables - we would not know the type anyway */
          mpsinputEntryIgnored(scip, mpsi, "column", mpsinputField1(mpsi), "QCMatrix", SCIPconsGetName(lincons), SCIP_VERBLEVEL_NORMAL);
       }
       else
@@ -1954,7 +1954,7 @@ SCIP_RETCODE readQCMatrix(
          var2 = SCIPfindVar(scip, mpsinputField2(mpsi));
          if( var2 == NULL )
          {
-            /* ignore unkown variables - we would not know the type anyway */
+            /* ignore unknown variables - we would not know the type anyway */
             mpsinputEntryIgnored(scip, mpsi, "column", mpsinputField2(mpsi), "QCMatrix", SCIPconsGetName(lincons), SCIP_VERBLEVEL_NORMAL);
          }
          else
@@ -2211,7 +2211,7 @@ SCIP_RETCODE readIndicators(
 	 }
       }
 
-      /* check if slack variable can be made implicity integer */
+      /* check if slack variable can be made implicitly integer */
       slackvartype = SCIP_VARTYPE_IMPLINT;
       for (i = 0; i < nlinvars; ++i)
       {
@@ -2748,8 +2748,8 @@ SCIP_RETCODE checkVarnames(
    SCIP*              scip,               /**< SCIP data structure */
    SCIP_VAR**         vars,               /**< array of variables */
    int                nvars,              /**< number of variables */
-   unsigned int*      maxnamelen,         /**< pointer to store rhe maximum name lenght */
-   const char***      varnames,           /**< pointer to array of varible names */
+   unsigned int*      maxnamelen,         /**< pointer to store the maximum name length */
+   const char***      varnames,           /**< pointer to array of variable names */
    SCIP_HASHMAP**     varnameHashmap      /**< pointer to hash map storing variable, variable name mapping */      
    )
 {
@@ -2813,9 +2813,9 @@ SCIP_RETCODE checkConsnames(
    SCIP_CONS**        conss,              /**< array of all constraints */
    int                nconss,             /**< number of all constraints */
    SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
-   unsigned int*      maxnamelen,         /**< pointer to store rhe maximum name lenght */
+   unsigned int*      maxnamelen,         /**< pointer to store the maximum name length */
    const char***      consnames,          /**< pointer to array of constraint names */
-   SCIP_Bool*         error               /**< pointer to store whether all constraintnames exist */
+   SCIP_Bool*         error               /**< pointer to store whether all constraint names exist */
    )
 {
    SCIP_CONS* cons;
@@ -2839,7 +2839,7 @@ SCIP_RETCODE checkConsnames(
       cons = conss[i];
       assert( cons != NULL );
 
-      /* in case the transformed probelms is written only constraint are posted which are enabled in the current node */
+      /* in case the transformed problem is written, only constraints are posted which are enabled in the current node */
       assert(!transformed || SCIPconsIsEnabled(cons));
 
       l = strlen(SCIPconsGetName(cons));
@@ -2884,7 +2884,7 @@ SCIP_RETCODE checkConsnames(
 }
 
 
-/** outputs the COULMNS section of the MPS format */
+/** outputs the COLUMNS section of the MPS format */
 static
 void printColumnSection(
    SCIP*              scip,               /**< SCIP data structure */
@@ -2977,7 +2977,7 @@ void printRhsSection(
    const char**       consnames,          /**< constraint names */
    SCIP_Real*         rhss,               /**< right hand side array */
    SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
-   unsigned int       maxnamelen          /**< maximum name lenght */
+   unsigned int       maxnamelen          /**< maximum name length */
    )
 {
    int c;
@@ -3030,7 +3030,7 @@ void printRangeSection(
    int                nconss,             /**< number of constraints */
    const char**       consnames,          /**< constraint names */
    SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
-   unsigned int       maxnamelen          /**< maximum name lenght */
+   unsigned int       maxnamelen          /**< maximum name length */
    )
 {   
    int c;
@@ -3609,7 +3609,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
             /* print row entry */
             printRowType(scip, file, lhs, rhs, consname);
 
-            /* allocat memory */
+            /* allocate memory */
             SCIP_CALL( SCIPallocBufferArray(scip, &consvars, 2) );
             SCIP_CALL( SCIPallocBufferArray(scip, &vals, 2) );
       

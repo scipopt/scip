@@ -304,7 +304,7 @@ SCIP_RETCODE applyProbing(
    int                   nbinvars,           /**< number of binary variables */
    int*                  startidx,           /**< pointer to store starting variable index of next call */
    int*                  nfixedvars,         /**< pointer to store number of fixed variables */
-   int*                  naggrvars,          /**< pointer to store number of aggrgated variables */
+   int*                  naggrvars,          /**< pointer to store number of aggregated variables */
    int*                  nchgbds,            /**< pointer to store number of changed bounds */
    int*                  nimplications,      /**< pointer to store number of implications */
    int                   oldnfixedvars,      /**< number of previously fixed variables */
@@ -947,7 +947,7 @@ SCIP_RETCODE SCIPincludePropProbing(
          propCopyProbing,
          propFreeProbing, propInitProbing, propExitProbing, propInitpreProbing, propExitpreProbing, propInitsolProbing, propExitsolProbing, propPresolProbing, propExecProbing, propRespropProbing, propdata) );
 
-   /* add probing propagater parameters */
+   /* add probing propagator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/probing/maxruns",
          "maximal number of runs, probing participates in (-1: no limit)",

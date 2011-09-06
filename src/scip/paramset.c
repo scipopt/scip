@@ -402,7 +402,7 @@ SCIP_RETCODE paramCopyBool(
    assert(sourceparam != NULL);
    assert(targetparam != NULL);
 
-   /* gett value of source parameter and copy it to target parameter */
+   /* get value of source parameter and copy it to target parameter */
    value = SCIPparamGetBool(sourceparam);
    SCIP_CALL( SCIPparamSetBool(targetparam, targetscip, value, TRUE) );
 
@@ -1739,7 +1739,7 @@ SCIP_RETCODE SCIPparamsetAddString(
    return SCIP_OKAY;
 }
 
-/** returns the name of the given paramter type */
+/** returns the name of the given parameter type */
 static
 const char* paramtypeGetName(
    SCIP_PARAMTYPE        paramtype           /**< type of parameter */
@@ -2503,7 +2503,7 @@ SCIP_RETCODE paramsetSetDefault(
    return SCIP_OKAY;
 }
 
-/** resets parameters changed by other SCIPparamsetSetToHeuristicsXxx functions to their default values */
+/** resets parameters changed by other SCIPparamsetSetToHeuristicsXyz functions to their default values */
 static
 SCIP_RETCODE paramsetSetHeuristicsDefault(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
@@ -2879,7 +2879,7 @@ SCIP_RETCODE paramsetSetPresolvingOff(
    return SCIP_OKAY;
 }
 
-/** reset parameters that may have been changed by other SCIPparamsetSetToSeparatingXxx to their default values */
+/** reset parameters that may have been changed by other SCIPparamsetSetToSeparatingXyz to their default values */
 static
 SCIP_RETCODE paramsetSetSeparatingDefault(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
@@ -3242,7 +3242,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       /* perform a restart after 100 conflict analysis calls were successfully */
       SCIP_CALL( paramSetInt(scip, paramset, "conflict/restartnum", 100, quiet) );
 
-      /* do not check pseudo solution (for performance reaseons) */
+      /* do not check pseudo solution (for performance reasons) */
       SCIP_CALL( paramSetBool(scip, paramset, "constraints/disableenfops", TRUE, quiet) );
 
       /* turn of LP relaxation */

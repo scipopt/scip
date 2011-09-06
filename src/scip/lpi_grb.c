@@ -1231,7 +1231,7 @@ SCIP_RETCODE SCIPlpiDelCols(
 
    invalidateSolution(lpi);
 
-   /* Gurboi can't delete a range of columns, we have to set up an index array */
+   /* Gurobi can't delete a range of columns, we have to set up an index array */
    SCIP_ALLOC( BMSallocMemoryArray(&which, lastcol-firstcol+1) );;
    for (j = firstcol; j <= lastcol; ++j)
       which[j - firstcol] = j;
@@ -1263,7 +1263,7 @@ SCIP_RETCODE SCIPlpiDelColset(
 
    invalidateSolution(lpi);
 
-   /* Gurboi can't delete a range of columns, we have to set up an index array */
+   /* Gurobi can't delete a range of columns, we have to set up an index array */
    CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &nvars) );
 
    SCIP_ALLOC( BMSallocMemoryArray(&which, nvars) );;
@@ -1342,7 +1342,7 @@ SCIP_RETCODE SCIPlpiDelRows(
 
    invalidateSolution(lpi);
 
-   /* Gurboi can't delete a range of rows, we have to set up an index array */
+   /* Gurobi can't delete a range of rows, we have to set up an index array */
    SCIP_ALLOC( BMSallocMemoryArray(&which, lastrow-firstrow+1) );;
    for (i = firstrow; i <= lastrow; ++i)
       which[i - firstrow] = i;
@@ -1375,7 +1375,7 @@ SCIP_RETCODE SCIPlpiDelRowset(
 
    invalidateSolution(lpi);
 
-   /* Gurboi can't delete a range of rows, we have to set up an index array */
+   /* Gurobi can't delete a range of rows, we have to set up an index array */
    CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
    SCIP_ALLOC( BMSallocMemoryArray(&which, nrows) );;
    num = 0;
@@ -2310,7 +2310,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    return SCIP_OKAY;
 }
 
-/** start strong branching - call before any strongbranching */
+/** start strong branching - call before any strong branching */
 SCIP_RETCODE SCIPlpiStartStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
@@ -2319,7 +2319,7 @@ SCIP_RETCODE SCIPlpiStartStrongbranch(
    return SCIP_OKAY;
 }
 
-/** end strong branching - call after any strongbranching */
+/** end strong branching - call after any strong branching */
 SCIP_RETCODE SCIPlpiEndStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
@@ -2361,7 +2361,7 @@ SCIP_RETCODE lpiStrongbranch(
    assert(downvalid != NULL);
    assert(upvalid != NULL);
 
-   SCIPdebugMessage("performing strongbranching on variable %d (%d iterations)\n", col, itlim);
+   SCIPdebugMessage("performing strong branching on variable %d (%d iterations)\n", col, itlim);
 
    SCIP_CALL( setParameterValues(&(lpi->grbparam)) );
 
@@ -2666,7 +2666,7 @@ SCIP_RETCODE SCIPlpiGetSolFeasibility(
    {
       if (lpi->solstat != GRB_UNBOUNDED && lpi->solstat != GRB_INFEASIBLE)
       {
-	 /* check whether maximum scaled dual violation is smaller than optimiality tolerance */
+	 /* check whether maximum scaled dual violation is smaller than optimality tolerance */
 	 CHECK_ZERO( GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_DUAL_SRESIDUAL, &viol) );
 	 CHECK_ZERO( GRBgetdblparam(grbenv, GRB_DBL_PAR_OPTIMALITYTOL, &tol) );
 	 *dualfeasible = (viol <= tol) ? TRUE : FALSE;
@@ -3077,7 +3077,7 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
 
    SCIPerrorMessage("SCIPlpiGetDualfarkas() not supported by Gurobi\n");
 
-   /* SCIPdebugMessage("calling Gurobi dual farkas: %d cols, %d rows\n", ncols, nrows); */
+   /* SCIPdebugMessage("calling Gurobi dual Farkas: %d cols, %d rows\n", ncols, nrows); */
 
    return SCIP_LPERROR;
 }

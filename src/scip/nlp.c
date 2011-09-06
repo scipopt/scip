@@ -242,7 +242,7 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
    if( tree->nvars == 0 )
       return SCIP_OKAY;
 
-   /* create hash map from variable to indices in tree->vars and check if there is a nonfixed variable */
+   /* create hash map from variable to indices in tree->vars and check if there is a non-fixed variable */
    havefixedvar = FALSE;
    SCIP_CALL( SCIPhashmapCreate(&varhash, tree->blkmem, SCIPcalcHashtableSize(5 * tree->nvars)) );
    for( i = 0; i < tree->nvars; ++i )
@@ -1925,7 +1925,7 @@ SCIP_RETCODE nlrowRemoveFixedExprtreeVars(
 
    if( SCIPexprtreeGetNVars(nlrow->exprtree) == 0 && SCIPexprtreeGetNParams(nlrow->exprtree) == 0 )
    {
-      /* if expression tree is constant and not parametrized now, remove it */
+      /* if expression tree is constant and not parameterized now, remove it */
       SCIP_Real exprval;
       SCIP_CALL( SCIPexprtreeEval(nlrow->exprtree, NULL, &exprval) );
       SCIP_CALL( SCIPnlrowChgConstant(nlrow, set, stat, nlp, nlrow->constant + exprval) );
@@ -1960,14 +1960,14 @@ SCIP_RETCODE nlrowRemoveFixedVar(
       SCIP_CALL( nlrowRemoveFixedLinearCoefPos(nlrow, blkmem, set, stat, nlp, pos) );
    }
 
-   /* search for variable in quadratic part and remove all fixed quad. vars if existing */
+   /* search for variable in quadratic part and remove all fixed quadratic variables if existing */
    pos = SCIPnlrowSearchQuadVar(nlrow, var);
    if( pos >= 0 )
    {
       SCIP_CALL( nlrowRemoveFixedQuadVars(nlrow, blkmem, set, stat, nlp) );
    }
 
-   /* search for variable in nonquadratic part and remove all fixed vars in exprtree if existing */
+   /* search for variable in non-quadratic part and remove all fixed variables in expression tree if existing */
    if( nlrow->exprtree != NULL && SCIPexprtreeFindVar(nlrow->exprtree, var) >= 0 )
    {
       SCIP_CALL( nlrowRemoveFixedExprtreeVars(nlrow, set, stat, nlp) );
@@ -2093,7 +2093,7 @@ SCIP_RETCODE SCIPnlrowCreate(
       (*nlrow)->quadelemssorted = TRUE;
    }
 
-   /* nonquadratic part */
+   /* non-quadratic part */
    if( exprtree != NULL )
    {
       SCIP_CALL( SCIPexprtreeCopy( blkmem, &(*nlrow)->exprtree, exprtree) );
@@ -2103,7 +2103,7 @@ SCIP_RETCODE SCIPnlrowCreate(
       (*nlrow)->exprtree = NULL;
    }
 
-   /* left and right hand sides, asserted above that lhs is relle than rhs */
+   /* left and right hand sides, asserted above that lhs is relatively less equal than rhs */
    (*nlrow)->lhs = MIN(lhs, rhs);
    (*nlrow)->rhs = MAX(rhs, rhs);
 
@@ -2252,7 +2252,7 @@ SCIP_RETCODE SCIPnlrowFree(
    if( (*nlrow)->quadvarshash != NULL )
       SCIPhashmapFree(&(*nlrow)->quadvarshash);
 
-   /* nonquadratic part */
+   /* non-quadratic part */
    if( (*nlrow)->exprtree != NULL )
    {
       SCIP_CALL( SCIPexprtreeFree(&(*nlrow)->exprtree) );
@@ -2389,7 +2389,7 @@ SCIP_RETCODE SCIPnlrowDelLinearCoef(
    assert(nlrow != NULL);
    assert(var   != NULL);
 
-   /* if the row is in the NLP already, we can only have active variables, so var should also be active; in non-debugmode, one gets an error below */
+   /* if the row is in the NLP already, we can only have active variables, so var should also be active; in non-debug mode, one gets an error below */
    assert(nlrow->nlpindex == -1 || SCIPvarIsActive(var) );
 
    /* search the position of the variable in the row's variable vector */
@@ -2656,7 +2656,7 @@ SCIP_RETCODE SCIPnlrowChgExprtreeParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_NLP*             nlp,                /**< current NLP data */
-   int                   paramidx,           /**< index of paramater in expression tree's parameter array */
+   int                   paramidx,           /**< index of parameter in expression tree's parameter array */
    SCIP_Real             paramval            /**< new value of parameter */
    )
 {
@@ -2754,7 +2754,7 @@ SCIP_RETCODE SCIPnlrowChgRhs(
    return SCIP_OKAY;
 }
 
-/** removes (or substitutes) all fixed, negated, aggregated, multi-aggregated variables from the linear, quadratic, and nonquadratic terms of a nonlinear row */
+/** removes (or substitutes) all fixed, negated, aggregated, multi-aggregated variables from the linear, quadratic, and non-quadratic terms of a nonlinear row */
 SCIP_RETCODE SCIPnlrowRemoveFixedVars(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -3198,7 +3198,7 @@ SCIP_RETCODE SCIPnlrowPrint(
          SCIPmessageFPrintInfo(file, "%+.15g<%s><%s> ", nlrow->quadelems[i].coef, SCIPvarGetName(nlrow->quadvars[nlrow->quadelems[i].idx1]), SCIPvarGetName(nlrow->quadvars[nlrow->quadelems[i].idx2]));
    }
 
-   /* print nonquadratic part */
+   /* print non-quadratic part */
    if( nlrow->exprtree != NULL )
    {
       SCIPmessageFPrintInfo(file, " + ");
@@ -3324,7 +3324,7 @@ void SCIPnlrowGetQuadData(
    int*                  nquadvars,          /**< buffer to store number of variables in quadratic term, or NULL if not of interest */
    SCIP_VAR***           quadvars,           /**< buffer to store pointer to array of variables in quadratic term, or NULL if not of interest */
    int*                  nquadelems,         /**< buffer to store number of entries in quadratic term, or NULL if not of interest */
-   SCIP_QUADELEM**       quadelems           /**< buffer to store pointer to arrau of entries in quadratic term, or NULL if not of interest */
+   SCIP_QUADELEM**       quadelems           /**< buffer to store pointer to array of entries in quadratic term, or NULL if not of interest */
    )
 {
    assert(nlrow != NULL);
@@ -3939,7 +3939,7 @@ SCIP_RETCODE nlpSetupNlpiIndices(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
    int**                 linidxs,            /**< buffer to store pointer to NLPI indices of linear variables */
-   SCIP_QUADELEM**       quadelems,          /**< buffer to store pointer to quadratic elements w.r.t. NLPI inidices */
+   SCIP_QUADELEM**       quadelems,          /**< buffer to store pointer to quadratic elements w.r.t. NLPI indices */
    int**                 nlinidxs            /**< buffer to store pointer to NLPI indices of nonlinear variables */
 )
 {
@@ -6016,7 +6016,7 @@ SCIP_RETCODE SCIPnlpStartDive(
 
    if( nlp->solver == NULL )
    {
-      /* In diving mode we do not cache changes but put them directly in the NLPI problem, which does not exsts if there is no solver.
+      /* In diving mode we do not cache changes but put them directly in the NLPI problem, which does not exist if there is no solver.
        * So we forbid diving of no solver is available. */
       SCIPerrorMessage("Cannot start diving if no NLP solver is available\n");
       return SCIP_ERROR;
