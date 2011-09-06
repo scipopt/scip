@@ -5739,7 +5739,7 @@ SCIP_RETCODE dualPresolving(
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
    if( !SCIPisInfinity(scip, memorylimit) )
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-   if( timelimit < 10.0 || memorylimit <= 0.0 )
+   if( timelimit <= 0.0 || memorylimit <= 0.0 )
       return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);
@@ -5748,7 +5748,7 @@ SCIP_RETCODE dualPresolving(
    nvars = consdata->nvars;
    vars = consdata->vars;
 
-   SCIPdebugMessage("the cumulative constraint <%s> is independent to rest of the problem\n", SCIPconsGetName(cons));
+   SCIPdebugMessage("the cumulative constraint <%s> is independent from rest of the problem\n", SCIPconsGetName(cons));
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
 
    /* initialize the subproblem */

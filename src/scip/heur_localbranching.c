@@ -430,16 +430,6 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    if( nsubnodes < heurdata->curminnodes )
       return SCIP_OKAY;
 
-   /* check whether there is enough time and memory left */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if( !SCIPisInfinity(scip, timelimit) )
-      timelimit -= SCIPgetSolvingTime(scip);
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
-   if( !SCIPisInfinity(scip, memorylimit) )   
-      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-   if( timelimit < 10.0 || memorylimit <= 0.0 )
-      return SCIP_OKAY;
-
    if( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
@@ -508,6 +498,16 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    /* disable output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
 #endif
+
+   /* check whether there is enough time and memory left */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   if( !SCIPisInfinity(scip, timelimit) )
+      timelimit -= SCIPgetSolvingTime(scip);
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+   if( !SCIPisInfinity(scip, memorylimit) )   
+      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
+   if( timelimit <= 0.0 || memorylimit <= 0.0 )
+      return SCIP_OKAY;
 
    /* set limits for the subproblem */
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nsubnodes) );

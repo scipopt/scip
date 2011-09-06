@@ -268,16 +268,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    if( SCIPgetNVars(scip) > sepadata->maxnvars || SCIPgetNConss(scip) > sepadata->maxnconss )
       return SCIP_OKAY; 
 
-   /* check whether there is enough time and memory left */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if( !SCIPisInfinity(scip, timelimit) )
-      timelimit -= SCIPgetSolvingTime(scip);
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
-   if( !SCIPisInfinity(scip, memorylimit) )   
-      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-   if( timelimit < 10.0 || memorylimit <= 0.0 )
-      return SCIP_OKAY;
-
    if( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
@@ -337,6 +327,16 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    restarts = 0;
    restartnum = 1000;
    
+   /* check whether there is enough time and memory left */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   if( !SCIPisInfinity(scip, timelimit) )
+      timelimit -= SCIPgetSolvingTime(scip);
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+   if( !SCIPisInfinity(scip, memorylimit) )   
+      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
+   if( timelimit <= 0.0 || memorylimit <= 0.0 )
+      return SCIP_OKAY;
+
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit/5) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
