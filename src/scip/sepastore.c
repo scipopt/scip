@@ -292,7 +292,7 @@ SCIP_RETCODE sepastoreAddCut(
    }
    else
    {
-      /* initialze values to invalid (will be initialized during cut filtering) */
+      /* initialize values to invalid (will be initialized during cut filtering) */
       cutefficacy = SCIP_INVALID;
       cutscore = SCIP_INVALID;
 

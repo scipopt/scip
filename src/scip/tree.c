@@ -275,7 +275,7 @@ SCIP_RETCODE SCIPnodeReleaseLPIState(
    }  /*lint !e788*/
 }
 
-/** creates probingnode data wihtout LP information */
+/** creates probingnode data without LP information */
 static
 SCIP_RETCODE probingnodeCreate(
    SCIP_PROBINGNODE**    probingnode,        /**< pointer to probingnode data */
@@ -822,7 +822,7 @@ SCIP_RETCODE nodeReleaseParent(
          SCIPerrorMessage("leaf cannot be a parent node\n");
          return SCIP_INVALIDDATA;
       case SCIP_NODETYPE_DEADEND:
-         SCIPerrorMessage("deadend cannot be a parent node\n");
+         SCIPerrorMessage("dead-end cannot be a parent node\n");
          return SCIP_INVALIDDATA;
       case SCIP_NODETYPE_JUNCTION:
          assert(parent->data.junction.nchildren > 0);
@@ -1415,7 +1415,7 @@ SCIP_RETCODE nodeDeactivate(
    if( !SCIPtreeProbing(tree) )
       stat->ndeactivatednodes++;
 
-   /* free node if it is a deadend node, i.e., has no children */
+   /* free node if it is a dead-end node, i.e., has no children */
    freeNode = FALSE;
    switch( SCIPnodeGetType(node) )   
    {
@@ -2345,7 +2345,7 @@ void treeUpdatePathLPSize(
          SCIPerrorMessage("leaf cannot be in the active path\n");
          SCIPABORT();
       case SCIP_NODETYPE_DEADEND:
-         SCIPerrorMessage("deadend cannot be in the active path\n");
+         SCIPerrorMessage("dead-end cannot be in the active path\n");
          SCIPABORT();
       case SCIP_NODETYPE_JUNCTION:
          break;
@@ -3288,7 +3288,7 @@ SCIP_RETCODE nodeToLeaf(
    return SCIP_OKAY;
 }
 
-/** converts the focus node into a deadend node */
+/** converts the focus node into a dead-end node */
 static
 SCIP_RETCODE focusnodeToDeadend(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
@@ -3303,7 +3303,7 @@ SCIP_RETCODE focusnodeToDeadend(
    assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
    assert(tree->nchildren == 0);
 
-   SCIPdebugMessage("focusnode #%"SCIP_LONGINT_FORMAT" to deadend at depth %d\n",
+   SCIPdebugMessage("focusnode #%"SCIP_LONGINT_FORMAT" to dead-end at depth %d\n",
       SCIPnodeGetNumber(tree->focusnode), SCIPnodeGetDepth(tree->focusnode));
 
    tree->focusnode->nodetype = SCIP_NODETYPE_DEADEND; /*lint !e641*/
@@ -3446,7 +3446,7 @@ SCIP_RETCODE focusnodeToFork(
     *  - The primal heuristics (called after the current node's LP was solved) found a new 
     *    solution, that is better than the current node's lower bound.
     *    (But in this case, all children should be cut off and the node should be converted
-    *    into a deadend instead of a fork.)
+    *    into a dead-end instead of a fork.)
     *  - Something numerically weird happened after cleaning up or after resolving a diving or probing LP.
     * The only thing we can do, is to completely forget about the LP and treat the node as
     * if it was only a pseudo-solution node. Therefore we have to remove all additional
@@ -3560,7 +3560,7 @@ SCIP_RETCODE focusnodeToSubroot(
     *  - The primal heuristics (called after the current node's LP was solved) found a new 
     *    solution, that is better than the current node's lower bound.
     *    (But in this case, all children should be cut off and the node should be converted
-    *    into a deadend instead of a subroot.)
+    *    into a dead-end instead of a subroot.)
     *  - Something numerically weird happened after cleaning up.
     * The only thing we can do, is to completely forget about the LP and treat the node as
     * if it was only a pseudo-solution node. Therefore we have to remove all additional
@@ -3805,7 +3805,7 @@ SCIP_RETCODE SCIPnodeFocus(
    }
 
    /* convert the old focus node into a fork or subroot node, if it has children;
-    * otherwise, convert it into a deadend, which will be freed later in treeSwitchPath()
+    * otherwise, convert it into a dead-end, which will be freed later in treeSwitchPath()
     */
    childrenlpstatefork = tree->focuslpstatefork;
    if( tree->nchildren > 0 )
@@ -3887,7 +3887,7 @@ SCIP_RETCODE SCIPnodeFocus(
    }
    else if( tree->focusnode != NULL )
    {
-      /* convert old focus node into deadend */
+      /* convert old focus node into dead-end */
       SCIP_CALL( focusnodeToDeadend(blkmem, tree, lp) );
    }
    assert(subroot == NULL || SCIPnodeGetType(subroot) == SCIP_NODETYPE_SUBROOT);
@@ -6224,7 +6224,7 @@ void SCIPnodeGetAncestorBranchingPath(
       int start;
       int size;
 
-      /* calculate the start position for the current node ans the maximum remaining slots in the arrays */
+      /* calculate the start position for the current node and the maximum remaining slots in the arrays */
       start = *nbranchvars < branchvarssize - 1 ? *nbranchvars : branchvarssize - 1;
       size = *nbranchvars > branchvarssize ? 0 : branchvarssize-(*nbranchvars);
       if( *nnodes < nodeswitchsize )         

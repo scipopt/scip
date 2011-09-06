@@ -172,7 +172,7 @@ SCIP_RETCODE SCIPprofileCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    CUMULATIVEPROFILE**   profile,            /**< pointer to store the create profile */
    int                   capacity,           /**< Capacity for this profile */
-   int                   maxtimepoints       /**< maximium number time points */
+   int                   maxtimepoints       /**< maximum number of time points */
    );
 
 /** frees given profile */
@@ -201,7 +201,7 @@ void SCIPprofileInsertCore(
    int                   duration,           /**< duration of the job */
    int                   demand,             /**< demand of the job */
    SCIP_Bool*            core,               /**< pointer to store if the corresponds job has a core */       
-   SCIP_Bool*	         fixed,              /**< poiner to store if the job is fixed due to its bounds */ 
+   SCIP_Bool*	         fixed,              /**< pointer to store if the job is fixed due to its bounds */ 
    SCIP_Bool*            infeasible          /**< pointer to store if the job does not fit due to capacity */
    );
 

@@ -112,10 +112,10 @@ struct levelGraph
    unsigned int          lastB;              /**< index of last storage element (in targetBackward, weightBackward)
                                               *   for backward direction
                                               */
-   int*                  beginForward;       /**< index of forward ajacency list (in targetForward, weightForward) 
+   int*                  beginForward;       /**< index of forward adjacency list (in targetForward, weightForward) 
                                               *   for each node
                                               */
-   int*                  beginBackward;      /**< index of backward ajacency list (in targetBackward, weightBackward) 
+   int*                  beginBackward;      /**< index of backward adjacency list (in targetBackward, weightBackward) 
                                               *   for each node
                                               */
    int*                  targetForward;      /**< target nodes of forward arcs */
@@ -407,7 +407,7 @@ SCIP_Bool isNeighbor(
                   if( sepadata->levelgraph->targetAdj[i] == b )
                      return TRUE;
                   
-                  /* if adj list ends we are done and a and b are not adjacent */
+                  /* if adjacency list ends we are done and a and b are not adjacent */
                   if( sepadata->levelgraph->sourceAdj[i] == 0 && sepadata->levelgraph->targetAdj[i] == 0 )
                      return FALSE;
                   
@@ -426,7 +426,7 @@ SCIP_Bool isNeighbor(
                   if( sepadata->levelgraph->targetAdj[i] == a )
                      return TRUE;
 
-                  /* if adj list ends we are done and a and b are not adjacent */
+                  /* if adjacency list ends we are done and a and b are not adjacent */
                   if( sepadata->levelgraph->sourceAdj[i] == 0 && sepadata->levelgraph->targetAdj[i] == 0 )
                      return FALSE;
                   
@@ -845,7 +845,7 @@ SCIP_RETCODE liftOddCycleCut(
    /* try lifting as long as we have lifting candidates */
    while( bestcand >= 0 )
    {
-      /* in case we use a lifting rule, which does not require the first liftingcoef of all variables: REMOVE this */
+      /* in case we use a lifting rule, which does not require the first lifting coefficient of all variables: REMOVE this */
       if( sepadata->calcliftcoefperstep || liftround == 0 )
       {
          for( i = 0; i < 2*nbinvars; ++i )
@@ -1100,8 +1100,8 @@ SCIP_RETCODE generateOddCycleCut(
    return SCIP_OKAY;
 }
 
-/** check whether the given object is really a cycle without subcycles
- *  (subcycles may be calculated by the GLS algorithm in case there is no violated odd cycle inequality)
+/** check whether the given object is really a cycle without sub-cycles
+ *  (sub-cycles may be calculated by the GLS algorithm in case there is no violated odd cycle inequality)
  *  and removes pairs of original and negated variables from the cycle
  */
 static
@@ -1146,7 +1146,7 @@ SCIP_RETCODE cleanCycle(
       negx = x - nbinvars;
    assert(negx < 2*nbinvars);
    
-   /* given object is not an odd cycle (contains subcycle)
+   /* given object is not an odd cycle (contains sub-cycle)
     * or contains original and negated variable pair but we should not repair this
     */
    if( incycle[x] || (incycle[negx] && !repaircycles) )
@@ -1764,7 +1764,7 @@ SCIP_RETCODE insertSortedRootNeighbors(
    SCIP_VAR**            vars,               /**< problem variables */
    SCIP_SEPADATA*        sepadata,           /**< separator data structure */
    unsigned int*         nnewlevel,          /**< number of nodes of the next level */
-   SCIP_Bool*            inlevelgraph,       /**< nodes in new graph corr. to old graph (-1 if unassinged) */
+   SCIP_Bool*            inlevelgraph,       /**< nodes in new graph corr. to old graph (-1 if unassigned) */
    unsigned int          level,              /**< number of current level */
    unsigned int*         newlevel,           /**< array of nodes of the next level */
    SCIP_Bool*            success             /**< FALSE, iff memory reallocation fails */
@@ -2095,7 +2095,7 @@ SCIP_RETCODE blockRootPath(
    SCIP*                 scip,               /**< SCIP data structure */
    LEVELGRAPH*           graph,              /**< LEVELGRAPH data structure */
    unsigned int          startnode,          /**< start node */
-   SCIP_Bool*            inlevelgraph,       /**< nodes in new graph corr. to old graph (-1 if unassinged) */
+   SCIP_Bool*            inlevelgraph,       /**< nodes in new graph corr. to old graph (-1 if unassigned) */
    SCIP_Bool*            blocked,            /**< whether node is blocked */
    int*                  parentTree,         /**< parent tree */
    unsigned int          root                /**< root of the current level graph */
@@ -2450,7 +2450,7 @@ SCIP_RETCODE createNextLevel(
             return SCIP_OKAY;
       }
       
-      /* terminate adj list with 0 for current level lifting */
+      /* terminate adjacency list with 0 for current level lifting */
       graph->sourceAdj[graph->levelAdj[level+1]+nAdj] = 0;
       graph->targetAdj[graph->levelAdj[level+1]+nAdj] = 0;
    }
@@ -2604,7 +2604,7 @@ SCIP_RETCODE separateHeur(
    
    graph.n = 2*nbinvars;
 
-   /* the implication graph is redundant and therefore more implic&cliquearcs may occur than should be possible
+   /* the implication graph is redundant and therefore more implications and clique arcs may occur than should be possible
     * @todo later: filtering of edges which were already added
     */
    /* graph.m = nbinvars*(2*nbinvars-1); */ /* = 2*nbinvars*(2*nbinvars-1)/2 */
@@ -2670,7 +2670,7 @@ SCIP_RETCODE separateHeur(
       if( SCIPisFeasIntegral(scip, vals[i]) )
          continue;
       
-      /* consider original and negated variable pair and skip variable if there is only one egde leaving the pair */
+      /* consider original and negated variable pair and skip variable if there is only one edge leaving the pair */
       if( (SCIPvarGetNBinImpls(vars[i % nbinvars], TRUE) + SCIPvarGetNBinImpls(vars[i % nbinvars], FALSE) < 2)
          && (SCIPvarGetNCliques(vars[i % nbinvars], TRUE) + SCIPvarGetNCliques(vars[i % nbinvars], FALSE) < 1) )
          continue;
@@ -2804,7 +2804,7 @@ SCIP_RETCODE separateHeur(
                ncyclevars = 0;
                success = TRUE;
 
-               /* check cycle for x-neg(x)-subcycles and clean them
+               /* check cycle for x-neg(x)-sub-cycles and clean them
                 *  (note that a variable can not appear twice in a cycle since it is only once in the graph)
                 * convert parentTreeBackward and parentTree to pred&incycle structure for generateOddCycleCut
                 */
@@ -3423,7 +3423,7 @@ SCIP_RETCODE separateGLS(
    for( i = 0; i < nbinvars; ++i )
       sepadata->mapping[SCIPvarGetProbindex(vars[i])] = i;
    
-   /* initialze LP value and cut flag for all variables */
+   /* initialize LP value and cut flag for all variables */
    BMSclearMemoryArray(incut, 2 * nbinvars);    
 
    for( i = 0; i < nbinvars; ++i )
@@ -3446,7 +3446,7 @@ SCIP_RETCODE separateGLS(
     */
    graph.arcs = (nbinvars+1)*graph.nodes;
 
-   /* the implication graph is redundant and therefore more implic&cliquearcs may occur than should be possible
+   /* the implication graph is redundant and therefore more implications and clique arcs may occur than should be possible
     * @todo later: filtering of edges which were already added,  maxarcs should be graph.arcs rather than INT_MAX;
     */
    maxarcs = INT_MAX;
@@ -3673,7 +3673,7 @@ SCIP_RETCODE separateGLS(
       /* detect cycle including:
        * project bipartitioned graph to original graph of variables and their negated
        * (pred&incycle-structure for generateOddCycleCut)
-       * check cycles for double variables and try to clean variable-negated-subcycles if existing
+       * check cycles for double variables and try to clean variable-negated-sub-cycles if existing
        */
 
       /* allocate and initialize predecessor list and flag array representing odd cycle */
@@ -3701,8 +3701,8 @@ SCIP_RETCODE separateGLS(
 
             pred2[dijkindex - 2*nbinvars] = pred[dijkindex];
 
-            /* check whether the object found is really a cycle without subcycles 
-             * (subcycles may occure in case there is not violated odd cycle inequality)
+            /* check whether the object found is really a cycle without sub-cycles 
+             * (sub-cycles may occure in case there is not violated odd cycle inequality)
              * and remove pairs of original and negated variable from cycle
              */
             SCIP_CALL( cleanCycle(scip, pred2, incycle, incut, dijkindex-2*nbinvars, endnode-2*nbinvars, nbinvars, 
@@ -3716,8 +3716,8 @@ SCIP_RETCODE separateGLS(
 
             pred2[dijkindex] = pred[dijkindex] - 2*nbinvars;
 
-            /* check whether the object found is really a cycle without subcycles 
-             * (subcycles may occure in case there is not violated odd cycle inequality)
+            /* check whether the object found is really a cycle without sub-cycles 
+             * (sub-cycles may occure in case there is not violated odd cycle inequality)
              * and remove pairs of original and negated variable from cycle
              */
             SCIP_CALL( cleanCycle(scip, pred2, incycle, incut, dijkindex, endnode-2*nbinvars, nbinvars, &ncyclevars,

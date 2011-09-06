@@ -46,7 +46,7 @@ SCIP_RETCODE SCIPcreateConsLinking(
    SCIP_VAR*             intvar,             /**< integer variable which should be linked */
    SCIP_VAR**            binvars,            /**< binary variables */
    int                   nbinvars,           /**< number of binary starting variables */
-   int                   offset,             /**< offset ot the binary variable representation */
+   int                   offset,             /**< offset of the binary variable representation */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?

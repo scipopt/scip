@@ -68,7 +68,7 @@ struct SCIP_SepaData
    SCIP_Real             cliquetablemem;     /**< maximal memory size of dense clique table (in kb) */
    SCIP_Real             cliquedensity;      /**< minimal density of cliques to use a dense clique table */
    int                   ncuts;              /**< number of cuts found */
-   SCIP_Bool             tcliquegraphloaded; /**< TRUE if tcliquegraph is allready loaded (tcliquegraph can be NULL),
+   SCIP_Bool             tcliquegraphloaded; /**< TRUE if tcliquegraph is already loaded (tcliquegraph can be NULL),
                                               *   FALSE otherwise */
 };
 
@@ -688,7 +688,7 @@ SCIP_RETCODE tcliquegraphAddImplics(
             assert((implvalue == TRUE && tcliquegraph->vars[graphidx] == implvars[j])
                || (implvalue == FALSE && SCIPvarGetNegationVar(tcliquegraph->vars[graphidx]) == implvars[j]));
 
-            /* allocate memory for addional arc */
+            /* allocate memory for additional arc */
             SCIP_CALL( tcliquegraphEnsureAdjnodesSize(scip, tcliquegraph, nadjnodes+1) );
 
             /* store the adjacent node in the tclique graph data structure, sorted by index */
@@ -792,7 +792,7 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
          varids[u] = v;
       }
 
-      /* flag the edges in the indicence matrix (excluding diagonal entries) */
+      /* flag the edges in the incidence matrix (excluding diagonal entries) */
       for( u = 0; u < nvars-1 && !SCIPisStopped(scip); ++u )
       {
          int nu;

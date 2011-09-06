@@ -2721,7 +2721,7 @@ SCIP_Bool SCIPlpiIsPrimalUnbounded(
    assert(lpi->grbmodel != NULL);
    assert(lpi->solstat >= 0);
 
-   SCIPdebugMessage("checking for primal unboundness\n");
+   SCIPdebugMessage("checking for primal unboundedness\n");
 
    primalfeasible = FALSE; /* to fix compiler warning */
    SCIP_CALL_ABORT( SCIPlpiGetSolFeasibility(lpi, &primalfeasible, NULL) );
@@ -2815,7 +2815,7 @@ SCIP_Bool SCIPlpiIsDualUnbounded(
    assert(lpi->grbmodel != NULL);
    assert(lpi->solstat >= 0);
 
-   SCIPdebugMessage("checking for dual unboundness\n");
+   SCIPdebugMessage("checking for dual unboundedness\n");
 
    CHECK_ZERO( GRBgetintparam(grbenv, GRB_INT_PAR_METHOD, &algo) );
 

@@ -220,7 +220,7 @@
 #define SCIP_DEFAULT_PRESOL_MAXRESTARTS      -1 /**< maximal number of restarts (-1: unlimited) */
 #define SCIP_DEFAULT_PRESOL_RESTARTFAC     0.05 /**< fraction of integer variables that were fixed in the root node
                                                  *   triggering a restart with preprocessing after root node evaluation */
-#define SCIP_DEFAULT_PRESOL_IMMRESTARTFAC  0.20 /**< fraction of integer variables that were fixed in the root node triggereing an
+#define SCIP_DEFAULT_PRESOL_IMMRESTARTFAC  0.20 /**< fraction of integer variables that were fixed in the root node triggering an
                                                  *   immediate restart with preprcessing */
 #define SCIP_DEFAULT_PRESOL_SUBRESTARTFAC  1.00 /**< fraction of integer variables that were globally fixed during the
                                                  *   solving process triggering a restart with preprocessing */
@@ -3174,7 +3174,7 @@ SCIP_RETCODE SCIPsetInitprePlugins(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundness */
+   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundedness */
    SCIP_Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
    )
 {
@@ -3199,7 +3199,7 @@ SCIP_RETCODE SCIPsetInitprePlugins(
       {
          *unbounded = TRUE;
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpresolGetName(set->presols[i]));
+            "presolver <%s> detected unboundedness (or infeasibility)\n", SCIPpresolGetName(set->presols[i]));
       }
    }
 
@@ -3217,7 +3217,7 @@ SCIP_RETCODE SCIPsetInitprePlugins(
       {
          *unbounded = TRUE;
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "propagator <%s> detected unboundness (or infeasibility)\n", SCIPpropGetName(set->props[i]));
+            "propagator <%s> detected unboundedness (or infeasibility)\n", SCIPpropGetName(set->props[i]));
       }
    }
 
@@ -3235,7 +3235,7 @@ SCIP_RETCODE SCIPsetInitprePlugins(
       {
          *unbounded = TRUE;
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "constraint handler <%s> detected unboundness (or infeasibility)\n",
+            "constraint handler <%s> detected unboundedness (or infeasibility)\n",
             SCIPconshdlrGetName(set->conshdlrs[i]));
       }
    }
@@ -3248,7 +3248,7 @@ SCIP_RETCODE SCIPsetExitprePlugins(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundness */
+   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundedness */
    SCIP_Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
    )
 {
@@ -3273,7 +3273,7 @@ SCIP_RETCODE SCIPsetExitprePlugins(
       {
          *unbounded = TRUE;
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpresolGetName(set->presols[i]));
+            "presolver <%s> detected unboundedness (or infeasibility)\n", SCIPpresolGetName(set->presols[i]));
       }
    }
 
@@ -3291,7 +3291,7 @@ SCIP_RETCODE SCIPsetExitprePlugins(
       {
          *unbounded = TRUE;
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpropGetName(set->props[i]));
+            "presolver <%s> detected unboundedness (or infeasibility)\n", SCIPpropGetName(set->props[i]));
       }
    }
 
@@ -3309,7 +3309,7 @@ SCIP_RETCODE SCIPsetExitprePlugins(
       {
          *unbounded = TRUE;
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "constraint handler <%s> detected unboundness (or infeasibility)\n",
+            "constraint handler <%s> detected unboundedness (or infeasibility)\n",
             SCIPconshdlrGetName(set->conshdlrs[i]));
       }
    }

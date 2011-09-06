@@ -211,7 +211,7 @@ SCIP_RETCODE SCIPvarCreateOriginal(
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data, or NULL */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable, or NULL */
-   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copys variable data if wanted to subscip, or NULL */
+   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copies variable data if wanted to subscip, or NULL */
    SCIP_VARDATA*         vardata             /**< user data for this specific variable */
    );
 
@@ -234,7 +234,7 @@ SCIP_RETCODE SCIPvarCreateTransformed(
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data, or NULL */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable, or NULL */
-   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copys variable data if wanted to subscip, or NULL */
+   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copies variable data if wanted to subscip, or NULL */
    SCIP_VARDATA*         vardata             /**< user data for this specific variable */
    );
 
@@ -267,10 +267,10 @@ SCIP_RETCODE SCIPvarParseOriginal(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   const char*           str,                /**< stirng to parse */
+   const char*           str,                /**< string to parse */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
-   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copys variable data if wanted to subscip, or NULL */
+   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copies variable data if wanted to subscip, or NULL */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
@@ -288,10 +288,10 @@ SCIP_RETCODE SCIPvarParseTransformed(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   const char*           str,                /**< stirng to parse */
+   const char*           str,                /**< string to parse */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
-   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copys variable data if wanted to subscip, or NULL */
+   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copies variable data if wanted to subscip, or NULL */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
@@ -405,7 +405,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    SCIP_Bool             mergemultiples      /**< should multiple occurrences of a var be replaced by a single coeff? */
    );
 
-/** flattens aggeregation graph of multi-aggregated variable in order to avoid exponential recursion lateron */
+/** flattens aggregation graph of multi-aggregated variable in order to avoid exponential recursion later-on */
 extern
 SCIP_RETCODE SCIPvarFlattenAggregationGraph(
    SCIP_VAR*             var,                /**< problem variable */

@@ -2599,7 +2599,7 @@ SCIP_Bool SCIPlpiIsPrimalUnbounded(
    assert(lpi->xprslp != NULL);
    assert(lpi->solstat >= 0);
 
-   SCIPdebugMessage("checking for primal unboundness\n");
+   SCIPdebugMessage("checking for primal unboundedness\n");
 
    /* If the solution status of Xpress is XPRS_LP_UNBOUNDED, it only means, there is an unbounded ray,
     * but not necessarily a feasible primal solution. If problem is declared LP_UNBOUNDED by dual,
@@ -2691,7 +2691,7 @@ SCIP_Bool SCIPlpiIsDualUnbounded(
    assert(lpi->xprslp != NULL);
    assert(lpi->solstat >= 0);
 
-   SCIPdebugMessage("checking for dual unboundness\n");
+   SCIPdebugMessage("checking for dual unboundedness\n");
 
    return ((lpi->solstat == XPRS_LP_INFEAS) && (lpi->solmethod == 'd'));
 }

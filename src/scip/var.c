@@ -1743,7 +1743,7 @@ SCIP_RETCODE varCreate(
    SCIP_VARTYPE          vartype,            /**< type of variable */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
-   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copys variable data if wanted to subscip, or NULL */
+   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copies variable data if wanted to subscip, or NULL */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data, or NULL */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable, or NULL */
@@ -1869,7 +1869,7 @@ SCIP_RETCODE SCIPvarCreateOriginal(
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data, or NULL */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable, or NULL */
-   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copys variable data if wanted to subscip, or NULL */
+   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copies variable data if wanted to subscip, or NULL */
    SCIP_VARDATA*         vardata             /**< user data for this specific variable */
    )
 {
@@ -1912,7 +1912,7 @@ SCIP_RETCODE SCIPvarCreateTransformed(
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data, or NULL */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable, or NULL */
-   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copys variable data if wanted to subscip, or NULL */
+   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copies variable data if wanted to subscip, or NULL */
    SCIP_VARDATA*         vardata             /**< user data for this specific variable */
    )
 {
@@ -2050,7 +2050,7 @@ void parseValue(
 static
 SCIP_RETCODE varParse(
    SCIP_SET*             set,                /**< global SCIP settings */
-   const char*           str,                /**< stirng to parse */
+   const char*           str,                /**< string to parse */
    char*                 name,               /**< pointer to store the variable name */
    SCIP_Real*            lb,                 /**< pointer to store the lower bound */
    SCIP_Real*            ub,                 /**< pointer to store the upper bound */  
@@ -2084,7 +2084,7 @@ SCIP_RETCODE varParse(
    
    token = SCIPstrtok(copystr, " []", &saveptr);
    
-   /* get varibale type */
+   /* get variable type */
    if( strncmp(token, "binary", 3) == 0 )
       (*vartype) = SCIP_VARTYPE_BINARY;
    else if( strncmp(token, "integer", 3) == 0 )
@@ -2160,10 +2160,10 @@ SCIP_RETCODE SCIPvarParseOriginal(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   const char*           str,                /**< stirng to parse */
+   const char*           str,                /**< string to parse */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
-   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copys variable data if wanted to subscip, or NULL */
+   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copies variable data if wanted to subscip, or NULL */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
@@ -2219,10 +2219,10 @@ SCIP_RETCODE SCIPvarParseTransformed(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   const char*           str,                /**< stirng to parse */
+   const char*           str,                /**< string to parse */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
-   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copys variable data if wanted to subscip, or NULL */
+   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copies variable data if wanted to subscip, or NULL */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
@@ -3673,7 +3673,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
 }
 
 
-/** flattens aggregation graph of multi-aggregated variable in order to avoid exponential recursion lateron */
+/** flattens aggregation graph of multi-aggregated variable in order to avoid exponential recursion later on */
 SCIP_RETCODE SCIPvarFlattenAggregationGraph(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -9824,7 +9824,7 @@ SCIP_RETCODE SCIPvarGetProbvarHole(
       assert(SCIPvarGetStatus((*var)->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert((*var)->negatedvar->negatedvar == *var);
 
-      /* shift and scal back */
+      /* shift and scale back */
       (*left) = (*var)->data.negate.constant - (*left);
       (*right) = (*var)->data.negate.constant - (*right);
       
@@ -14130,7 +14130,7 @@ SCIP_BOUNDTYPE SCIPbdchginfoGetBoundtype(
    return (SCIP_BOUNDTYPE)(bdchginfo->boundtype);
 }
 
-/** returs depth level of given bound change information */
+/** returns depth level of given bound change information */
 int SCIPbdchginfoGetDepth(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    )
@@ -14140,7 +14140,7 @@ int SCIPbdchginfoGetDepth(
    return bdchginfo->bdchgidx.depth;
 }
 
-/** returs bound change position in its depth level of given bound change information */
+/** returns bound change position in its depth level of given bound change information */
 int SCIPbdchginfoGetPos(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    )
@@ -14150,7 +14150,7 @@ int SCIPbdchginfoGetPos(
    return bdchginfo->bdchgidx.pos;
 }
 
-/** returs bound change index of given bound change information */
+/** returns bound change index of given bound change information */
 SCIP_BDCHGIDX* SCIPbdchginfoGetIdx(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    )
@@ -14160,7 +14160,7 @@ SCIP_BDCHGIDX* SCIPbdchginfoGetIdx(
    return &bdchginfo->bdchgidx;
 }
 
-/** returs inference variable of given bound change information */
+/** returns inference variable of given bound change information */
 SCIP_VAR* SCIPbdchginfoGetInferVar(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    )
@@ -14172,7 +14172,7 @@ SCIP_VAR* SCIPbdchginfoGetInferVar(
    return bdchginfo->inferencedata.var;
 }
 
-/** returs inference constraint of given bound change information */
+/** returns inference constraint of given bound change information */
 SCIP_CONS* SCIPbdchginfoGetInferCons(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    )
@@ -14184,7 +14184,7 @@ SCIP_CONS* SCIPbdchginfoGetInferCons(
    return bdchginfo->inferencedata.reason.cons;
 }
 
-/** returs inference propagator of given bound change information, or NULL if no propagator was responsible */
+/** returns inference propagator of given bound change information, or NULL if no propagator was responsible */
 SCIP_PROP* SCIPbdchginfoGetInferProp(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    )
@@ -14195,7 +14195,7 @@ SCIP_PROP* SCIPbdchginfoGetInferProp(
    return bdchginfo->inferencedata.reason.prop;
 }
 
-/** returs inference user information of given bound change information */
+/** returns inference user information of given bound change information */
 int SCIPbdchginfoGetInferInfo(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    )
@@ -14207,7 +14207,7 @@ int SCIPbdchginfoGetInferInfo(
    return bdchginfo->inferencedata.info;
 }
 
-/** returs inference bound of inference variable of given bound change information */
+/** returns inference bound of inference variable of given bound change information */
 SCIP_BOUNDTYPE SCIPbdchginfoGetInferBoundtype(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    )

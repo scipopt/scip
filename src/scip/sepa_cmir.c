@@ -43,8 +43,8 @@
                                          *   (-1: unlimited) */
 #define DEFAULT_MAXTRIESROOT         -1 /**< maximal number of rows to start aggregation with per round in the root node
                                          *   (-1: unlimited) */
-#define DEFAULT_MAXFAILS             20 /**< maximal number of consecutive unsuccesful aggregation tries (-1: unlimited) */
-#define DEFAULT_MAXFAILSROOT        100 /**< maximal number of consecutive unsuccesful aggregation tries in the root node
+#define DEFAULT_MAXFAILS             20 /**< maximal number of consecutive unsuccessful aggregation tries (-1: unlimited) */
+#define DEFAULT_MAXFAILSROOT        100 /**< maximal number of consecutive unsuccessful aggregation tries in the root node
                                          *   (-1: unlimited) */
 #define DEFAULT_MAXAGGRS              3 /**< maximal number of aggregations for each row per separation round */
 #define DEFAULT_MAXAGGRSROOT          6 /**< maximal number of aggregations for each row per round in the root node */
@@ -61,7 +61,7 @@
 #define DEFAULT_MAXTESTDELTA         -1 /**< maximal number of different deltas to try (-1: unlimited) */
 #define DEFAULT_MAXCONTS             10 /**< maximal number of active continuous variables in aggregated row */
 #define DEFAULT_MAXCONTSROOT         10 /**< maximal number of active continuous variables in aggregated row in the root */
-#define DEFAULT_AGGRTOL             0.1 /**< aggregation heuristic: tolerance for bounddistances used to select real 
+#define DEFAULT_AGGRTOL             0.1 /**< aggregation heuristic: tolerance for bound distances used to select real 
                                          *   variable in current aggregated constraint to be eliminated */
 #define DEFAULT_TRYNEGSCALING      TRUE /**< should negative values also be tested in scaling? */
 #define DEFAULT_FIXINTEGRALRHS     TRUE /**< should an additional variable be complemented if f0 = 0? */
@@ -92,16 +92,16 @@ struct SCIP_SepaData
    SCIP_Real             maxaggdensity;      /**< maximal density of aggregated row */
    SCIP_Real             maxrowdensity;      /**< maximal density of row to be used in aggregation */
    SCIP_Real             maxrowfac;          /**< maximal row aggregation factor */
-   SCIP_Real             aggrtol;            /**< tolerance for bounddistance used in aggregation heuristic */
+   SCIP_Real             aggrtol;            /**< tolerance for bound distance used in aggregation heuristic */
    int                   maxrounds;          /**< maximal number of cmir separation rounds per node (-1: unlimited) */
    int                   maxroundsroot;      /**< maximal number of cmir separation rounds in the root node (-1: unlimited) */
    int                   maxtries;           /**< maximal number of rows to start aggregation with per separation round
                                               *   (-1: unlimited) */
    int                   maxtriesroot;       /**< maximal number of rows to start aggregation with per round in the root node
                                               *   (-1: unlimited) */
-   int                   maxfails;           /**< maximal number of consecutive unsuccesful aggregation tries
+   int                   maxfails;           /**< maximal number of consecutive unsuccessful aggregation tries
                                               *   (-1: unlimited) */
-   int                   maxfailsroot;       /**< maximal number of consecutive unsuccesful aggregation tries in the root
+   int                   maxfailsroot;       /**< maximal number of consecutive unsuccessful aggregation tries in the root
                                               *   node (-1: unlimited) */
    int                   maxaggrs;           /**< maximal number of aggregations for each row per separation round */
    int                   maxaggrsroot;       /**< maximal number of aggregations for each row per round in the root node */
@@ -280,7 +280,7 @@ void updateNActiveConts(
    int                   nintvars,           /**< number of integer variables */
    SCIP_VAR*             var,                /**< continuous variable */
    int                   delta,              /**< delta value of counters */
-   int*                  nactiveconts        /**< pointer to count number of active continuous variabls */
+   int*                  nactiveconts        /**< pointer to count number of active continuous variables */
    )
 {
    assert(nactiveconts != NULL);
@@ -577,7 +577,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
                maxfrac, &bestdelta, &bestefficacy) );
       }
 
-      /* if no pointer to store delta is given, add cut here (zerohalf cuts will be stored in a seperate cut pool first) */
+      /* if no pointer to store delta is given, add cut here (zerohalf cuts will be stored in a separate cut pool first) */
       if( delta == NULL )
       {
          /* generate cut with bestdelta and best boundswitch value */
@@ -1567,11 +1567,11 @@ SCIP_RETCODE SCIPincludeSepaCmir(
          &sepadata->maxtriesroot, TRUE, DEFAULT_MAXTRIESROOT, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/cmir/maxfails",
-         "maximal number of consecutive unsuccesful aggregation tries (-1: unlimited)",
+         "maximal number of consecutive unsuccessful aggregation tries (-1: unlimited)",
          &sepadata->maxfails, TRUE, DEFAULT_MAXFAILS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/cmir/maxfailsroot",
-         "maximal number of consecutive unsuccesful aggregation tries in the root node (-1: unlimited)",
+         "maximal number of consecutive unsuccessful aggregation tries in the root node (-1: unlimited)",
          &sepadata->maxfailsroot, TRUE, DEFAULT_MAXFAILSROOT, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/cmir/maxaggrs",
@@ -1635,7 +1635,7 @@ SCIP_RETCODE SCIPincludeSepaCmir(
          &sepadata->maxcontsroot, TRUE, DEFAULT_MAXCONTSROOT, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/cmir/aggrtol",
-         "tolerance for bounddistances used to select continuous variable in current aggregated constraint to be eliminated",
+         "tolerance for bound distances used to select continuous variable in current aggregated constraint to be eliminated",
          &sepadata->aggrtol, TRUE, DEFAULT_AGGRTOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/cmir/trynegscaling",

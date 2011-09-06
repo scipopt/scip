@@ -385,7 +385,7 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorBound)
  *
  * If we have a max FS instance, i.e., the objective is 1 for indicator variables and 0 otherwise,
  * we can force a restart if the gap is 1. In this case, the remaining work consists of proving
- * infeasibility of the nonfixed indicators.
+ * infeasibility of the non-fixed indicators.
  */
 static
 SCIP_DECL_EVENTEXEC(eventExecIndicatorRestart)

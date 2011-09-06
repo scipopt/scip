@@ -83,7 +83,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool*            allvalid            /**< pointer to store whether all plugins  were validly copied */
    );
 
-/** copies parameterss from sourcescip to targetscip */
+/** copies parameters from sourcescip to targetscip */
 extern
 SCIP_RETCODE SCIPsetCopyParams(
    SCIP_SET*             sourceset,          /**< source SCIP_SET data structure */
@@ -725,7 +725,7 @@ SCIP_RETCODE SCIPsetInitprePlugins(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundness */
+   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundedness */
    SCIP_Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
    );
 
@@ -735,7 +735,7 @@ SCIP_RETCODE SCIPsetExitprePlugins(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundness */
+   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundedness */
    SCIP_Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
    );
 

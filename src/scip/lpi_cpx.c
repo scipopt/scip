@@ -2705,7 +2705,7 @@ SCIP_Bool SCIPlpiIsPrimalUnbounded(
    assert(lpi->cpxenv != NULL);
    assert(lpi->solstat >= 0);
 
-   SCIPdebugMessage("checking for primal unboundness\n");
+   SCIPdebugMessage("checking for primal unboundedness\n");
 
    ABORT_ZERO( CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, NULL) );
    
@@ -2795,7 +2795,7 @@ SCIP_Bool SCIPlpiIsDualUnbounded(
    assert(lpi->cpxenv != NULL);
    assert(lpi->solstat >= 0);
 
-   SCIPdebugMessage("checking for dual unboundness\n");
+   SCIPdebugMessage("checking for dual unboundedness\n");
 
    ABORT_ZERO( CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, NULL, &dualfeasible) );
 

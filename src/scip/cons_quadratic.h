@@ -186,12 +186,12 @@ SCIP_RETCODE SCIPcreateConsQuadratic2(
    SCIP_Bool             removable           /**< should the constraint be removed from the LP due to aging or cleanup? */
    );
 
-/** Adds a constant to the constraint function, that is, substracts a constant from both sides */
+/** Adds a constant to the constraint function, that is, subtracts a constant from both sides */
 extern
 void SCIPaddConstantQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
-   SCIP_Real             constant            /**< constant to substract from both sides */
+   SCIP_Real             constant            /**< constant to subtract from both sides */
    );
 
 /** Adds a linear variable with coefficient to a quadratic constraint.
@@ -348,7 +348,7 @@ SCIP_Real SCIPgetRhsQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    );
 
-/** Check the quadratic function of a quadratic constraint for its semi-definitness, if not done yet.
+/** Check the quadratic function of a quadratic constraint for its semi-definiteness, if not done yet.
  */
 extern
 SCIP_RETCODE SCIPcheckCurvatureQuadratic(

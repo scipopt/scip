@@ -82,7 +82,7 @@
 #define DEFAULT_ALLOWLOCAL        FALSE /**< allow to generate local cuts */
 #define DEFAULT_ONLYINTVARS       FALSE /**< generate cuts for problems with only integer variables? */
 #define DEFAULT_ONLYACTIVEROWS    FALSE /**< use only active rows to generate cuts? */
-#define DEFAULT_MAXROWAGE            -1 /**< maxmial age of rows to consider if onlyactiverows is false */
+#define DEFAULT_MAXROWAGE            -1 /**< maximal age of rows to consider if onlyactiverows is false */
 #define DEFAULT_USECUTPOOL         TRUE /**< use cutpool to store CG-cuts even if the are not efficient? */
 #define DEFAULT_PRIMALSEPARATION   TRUE /**< only separate cuts that are tight for the best feasible solution? */
 #define DEFAULT_ONLYRANKONE       FALSE /**< whether only rank 1 inequalities should be separated */
@@ -99,7 +99,7 @@
 #define BETAEPSILONVALUE          1e-02 /**< epsilon value for fracbeta - is larger than EPSILONVALUE for numerical stability */
 #define CUTCOEFBND               1000.0 /**< bounds on the values of the coefficients in the CG-cut */
 #define STALLNODELIMIT           1000LL /**< number of stalling nodes if earlyterm is true */
-#define MINEFFICACY                0.05 /**< minimum efficicy of a cut - compare set.c */
+#define MINEFFICACY                0.05 /**< minimum efficacy of a cut - compare set.c */
 
 /* parameters used for CMIR-generation (taken from sepa_gomory) */
 #define BOUNDSWITCH              0.9999
@@ -130,7 +130,7 @@ struct SCIP_SepaData
    SCIP_Bool             allowlocal;         /**< allow local cuts */
    SCIP_Bool             onlyintvars;        /**< generate cuts for problems with only integer variables? */
    SCIP_Bool             onlyactiverows;     /**< use only active rows to generate cuts? */
-   int                   maxrowage;          /**< maxmial age of rows to consider if onlyactiverows is false */
+   int                   maxrowage;          /**< maximal age of rows to consider if onlyactiverows is false */
    SCIP_Bool             usecutpool;         /**< use cutpool to store CG-cuts even if the are not efficient? */
    SCIP_Bool             primalseparation;   /**< only separate cuts that are tight for the best feasible solution? */
    SCIP_Bool             onlyrankone;        /**< whether only rank 1 inequalities should be separated */
@@ -192,14 +192,14 @@ typedef struct CGMIP_MIPData CGMIP_MIPDATA;
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
-   CGMIP_MIPDATA*        mipdata;            /**< data of separting sub-MIP */
+   CGMIP_MIPDATA*        mipdata;            /**< data of separating sub-MIP */
 };
 
 
 /** check whether cut corresponding to solution is violated */
 static
 SCIP_Bool solCutIsViolated(
-   CGMIP_MIPDATA*        mipdata,            /**< data of separting sub-MIP */
+   CGMIP_MIPDATA*        mipdata,            /**< data of separating sub-MIP */
    SCIP_SOL*             sol                 /**< solution to be checked */
    )
 {
@@ -363,7 +363,7 @@ SCIP_DECL_CONSLOCK(consLockViolatedCuts)
 static
 SCIP_RETCODE SCIPincludeConshdlrViolatedCut(
    SCIP*                 scip,               /**< SCIP data structure */
-   CGMIP_MIPDATA*        mipdata             /**< data of separting sub-MIP */
+   CGMIP_MIPDATA*        mipdata             /**< data of separating sub-MIP */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -2018,7 +2018,7 @@ SCIP_RETCODE computeCut(
 	 /* force coefficients of all continuous variables or of variables not in the lp to zero */
 	 assert( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || pos == -1 );
 
-         /* check whether all cofficients for continuous variables are nonnegative */
+         /* check whether all coefficients for continuous variables are nonnegative */
          if ( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
          {
             if ( SCIPisNegative(scip, cutcoefs[j]) )
@@ -2754,7 +2754,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
       SCIP_CALL( SCIPprintStatistics(mipdata->subscip, NULL) );
 #endif
 
-      /* preceed if solution was successfull */
+      /* preceed if solution was successful */
       if ( success && !SCIPisStopped(scip) )
       {
          if ( sepadata->usecmir )
@@ -2863,7 +2863,7 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
          &sepadata->onlyactiverows, FALSE, DEFAULT_ONLYACTIVEROWS, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/cgmip/maxrowage",
-         "maxmial age of rows to consider if onlyactiverows is false",
+         "maximal age of rows to consider if onlyactiverows is false",
          &sepadata->maxrowage, FALSE, DEFAULT_MAXROWAGE, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/cgmip/usecutpool",

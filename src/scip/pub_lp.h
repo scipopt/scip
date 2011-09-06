@@ -345,7 +345,7 @@ SCIP_Real SCIProwGetConstant(
    SCIP_ROW*             row                 /**< LP row */
    );
 
-/** gets euclidean norm of row vector */
+/** gets Euclidean norm of row vector */
 extern
 SCIP_Real SCIProwGetNorm(
    SCIP_ROW*             row                 /**< LP row */

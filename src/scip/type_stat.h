@@ -31,7 +31,7 @@ extern "C" {
 enum SCIP_Status
 {
    SCIP_STATUS_UNKNOWN        =  0,     /**< the solving status is not yet known */
-   SCIP_STATUS_USERINTERRUPT  =  1,     /**< the user interrupted the solving process (by pressing Ctrl-C) */
+   SCIP_STATUS_USERINTERRUPT  =  1,     /**< the user interrupted the solving process (by pressing CTRL-C) */
    SCIP_STATUS_NODELIMIT      =  2,     /**< the solving process was interrupted because the node limit was reached */
    SCIP_STATUS_STALLNODELIMIT =  3,     /**< the solving process was interrupted because the node limit was reached */
    SCIP_STATUS_TIMELIMIT      =  4,     /**< the solving process was interrupted because the time limit was reached */

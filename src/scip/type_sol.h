@@ -30,7 +30,7 @@ extern "C" {
 /** origin of solution: where to retrieve uncached elements */
 enum SCIP_SolOrigin
 {
-   SCIP_SOLORIGIN_ORIGINAL  = 0,        /**< solution describes original variables; non-chached elements are zero */
+   SCIP_SOLORIGIN_ORIGINAL  = 0,        /**< solution describes original variables; non-cached elements are zero */
    SCIP_SOLORIGIN_ZERO      = 1,        /**< all non-cached elements in solution are equal to zero */
    SCIP_SOLORIGIN_LPSOL     = 2,        /**< all non-cached elements in solution are equal to current LP solution */
    SCIP_SOLORIGIN_NLPSOL    = 3,        /**< all non-cached elements in solution are equal to current NLP solution */

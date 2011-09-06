@@ -48,8 +48,8 @@ struct SCIP_Pricestore
    int                   nbdviolvars;        /**< number of variables, where zero violates the bounds */
    int                   naddedbdviolvars;   /**< number of bound violated variables already added to the LP */
    int                   nprobpricings;      /**< total number of calls to problem variable pricing */
-   int                   nprobvarsfound;     /**< total number of problem variables, that were added (and evtl. thrown away) */
-   int                   nvarsfound;         /**< total number of variables, that were added (and evtl. thrown away) */
+   int                   nprobvarsfound;     /**< total number of problem variables, that were added (and possibly thrown away) */
+   int                   nvarsfound;         /**< total number of variables, that were added (and possibly thrown away) */
    int                   nvarsapplied;       /**< total number of variables, that were added to the LP */
    SCIP_Bool             initiallp;          /**< is the pricing storage currently being filled with the initial LP columns? */
 };

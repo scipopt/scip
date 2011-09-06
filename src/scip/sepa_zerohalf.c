@@ -588,7 +588,7 @@ struct Zerohalf_CutData
 
    SCIP_Bool             success;            /**< was SCIPcalcMIR successful? */
    SCIP_Bool             isfeasviolated;     /**< is zerohalf cut violated w.r.t. the feasibility tolerance? */
-   SCIP_Bool             islocal;            /**< is zerohalf cut onyl locally valid? */
+   SCIP_Bool             islocal;            /**< is zerohalf cut only locally valid? */
   
    SCIP_Real             activity;           /**< activity of the zerohalf cut */
    SCIP_Real             rhs;                /**< rhs of the zerohalf cut */
@@ -619,8 +619,8 @@ struct Zerohalf_AuxGraph_Node
    int*                      relatedrows;    /**< label mapping outgoing edges to mod 2 rows */
    int                       nneighbors;     /**< number of adjacent nodes */
   
-   SCIP_Real                 distance;       /**< actual distant from start node (used by dijkstra)*/
-   ZEROHALF_AUXGRAPH_NODE*   previous;       /**< previous node in shortest-path-tree (used by dijkstra) */
+   SCIP_Real                 distance;       /**< actual distant from start node (used by Dijkstra)*/
+   ZEROHALF_AUXGRAPH_NODE*   previous;       /**< previous node in shortest-path-tree (used by Dijkstra) */
 };
 
 
@@ -1628,7 +1628,7 @@ SCIP_RETCODE getRelevantColumns(
    problem->nrcols = 0;
    for( j = 0 ; j < lpdata->ncols ; ++j)
    {  
-      /* initialise best lb and best ub (-2: undetermined)*/
+      /* initialize best lb and best ub (-2: undetermined)*/
       lpdata->bestlbidxofcol[j] = -2;
       lpdata->bestubidxofcol[j] = -2;
  
@@ -2304,7 +2304,7 @@ SCIP_RETCODE getRelevantRows(
                rowisrelevant = TRUE; 
             }
 
-            /* check if row contains at least one relevant column (because k == 0 by initialisation) */
+            /* check if row contains at least one relevant column (because k == 0 by initialization) */
             if( lpdata->subproblemsindexofcol[collppos] == k )
                rowisrelevant = TRUE;
 
@@ -2677,7 +2677,7 @@ SCIP_RETCODE storeMod2Data(
                continue;
             assert(USEVARBOUNDS && bestbndtype > -1); /*lint !e774 !e506*/
 
-            /* variable bound is used: update coeffcient of non-continuous variable z that is used in substitution */
+            /* variable bound is used: update coefficient of non-continuous variable z that is used in substitution */
             densecoeffscurrentrow[SCIPcolGetLPPos(SCIPvarGetCol(bestzvbnd))] += (nonzvalscurrentrow[j] * intscalar * bestbvbnd);
          }         
          else
@@ -3796,7 +3796,7 @@ SCIP_RETCODE preprocessModGaussElim(
       if( pivotrow == nslackzerorows )
          continue;
 
-      /* gaussian elimination step */
+      /* Gaussian elimination step */
       for( r = 0 ; r < nslackzerorows ; ++r)
       {
          if( r == pivotrow )
@@ -5966,7 +5966,7 @@ SCIP_RETCODE addEdgeToAuxGraph(
 
 
 
-/** Dijkstra's shortes path algorithm. Calculates the shortest path between
+/** Dijkstra's shortest path algorithm. Calculates the shortest path between
     sourcenode and targetnode. The calculation is aborted if the shortest path
     cannot be shorter than maxdistance */ 
 static
@@ -6366,7 +6366,7 @@ SCIP_RETCODE separateByGaussHeuristics(
 
    identsubmatrixsize = 0;
     
-   /* apply gaussian elimination mod 2 */
+   /* apply Gaussian elimination mod 2 */
 
    /* choose pivot col */
    for( pivotcol = 0; pivotcol < mod2data->ncolsind; ++pivotcol )
@@ -6391,7 +6391,7 @@ SCIP_RETCODE separateByGaussHeuristics(
       if( pivotrow == mod2data->nrowsind )
          continue;
 
-      /* gaussian elimination step */
+      /* Gaussian elimination step */
       for( r = 0 ; r < mod2data->nrowsind
               && SCIPisLE(scip, mod2data->slacks[mod2data->rowsind[r]], sepadata->maxslack) ; ++r) 
       {
@@ -6589,7 +6589,7 @@ SCIP_RETCODE process(
          strncpy(sepaname,"auxiliary ip",SCIP_MAXSTRLEN);
          if( *nzerohalfcuts == ncutsfoundbefore )
          {
-            /* no violated cut has been found. hence a proof of non-existance is given */
+            /* no violated cut has been found. hence a proof of non-existence is given */
             stop = TRUE;
          }        
          break;
@@ -6606,7 +6606,7 @@ SCIP_RETCODE process(
       case GAUSSHEUR:
          SCIP_CALL(separateByGaussHeuristics(scip, sepadata, lpdata, mod2data, normtype, maxsepacuts, maxcuts,
                nsepacuts, nzerohalfcuts, zerohalfcuts, varsolvals, result));
-         strncpy(sepaname,"gauss heur",SCIP_MAXSTRLEN);
+         strncpy(sepaname,"Gauss heur",SCIP_MAXSTRLEN);
          break;
       case MAX2ODDENTRIESPERROW:
          ncutsfoundbefore = *nzerohalfcuts;
@@ -6617,7 +6617,7 @@ SCIP_RETCODE process(
          {
             if( *nzerohalfcuts == ncutsfoundbefore )
             {
-               /* no violated cut has been found. hence a proof of non-existance is given */
+               /* no violated cut has been found. hence a proof of non-existence is given */
                stop = TRUE;
             }
          }

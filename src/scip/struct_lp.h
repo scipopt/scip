@@ -104,7 +104,7 @@ struct SCIP_Col
    int                   validredcostlp;     /**< LP number for which reduced cost value is valid */
    int                   validfarkaslp;      /**< LP number for which Farkas coefficient is valid */
    int                   validsblp;          /**< LP number for which strong branching values are valid */
-   int                   sbitlim;            /**< strong branching iteration limit used to get strongbranch values, or -1 */
+   int                   sbitlim;            /**< strong branching iteration limit used to get strong branching values, or -1 */
    int                   nsbcalls;           /**< number of times, strong branching was applied on the column */
    int                   age;                /**< number of successive times this variable was in LP and was 0.0 in solution */
    int                   var_probindex;      /**< copy of var->probindex for avoiding expensive dereferencing */
@@ -137,7 +137,7 @@ struct SCIP_Row
    SCIP_Real             rhs;                /**< right hand side of row */
    SCIP_Real             flushedlhs;         /**< left hand side minus constant of row already flushed to the LP solver */
    SCIP_Real             flushedrhs;         /**< right hand side minus constant of row already flushed to the LP solver */
-   SCIP_Real             sqrnorm;            /**< squared euclidean norm of row vector */
+   SCIP_Real             sqrnorm;            /**< squared Euclidean norm of row vector */
    SCIP_Real             sumnorm;            /**< sum norm of row vector (sum of absolute values of coefficients) */
    SCIP_Real             objprod;            /**< scalar product of row vector with objective function */
    SCIP_Real             maxval;             /**< maximal absolute value of row vector, only valid if nummaxval > 0 */
@@ -203,7 +203,7 @@ struct SCIP_Lp
    SCIP_Real             lpifeastol;         /**< current feasibility tolerance in LPI */
    SCIP_Real             lpidualfeastol;     /**< current reduced costs feasibility tolerance in LPI */
    SCIP_Real             lpibarrierconvtol;  /**< current convergence tolerance used in barrier algorithm in LPI */
-   SCIP_Real             objsqrnorm;         /**< squared euclidean norm of objective function vector of problem variables */
+   SCIP_Real             objsqrnorm;         /**< squared Euclidean norm of objective function vector of problem variables */
    SCIP_Real             objsumnorm;         /**< sum norm of objective function vector of problem variables */
    SCIP_LPI*             lpi;                /**< LP solver interface */
    SCIP_COL**            lpicols;            /**< array with columns currently stored in the LP solver */
@@ -245,7 +245,7 @@ struct SCIP_Lp
    SCIP_PRICING          lpipricing;         /**< current pricing setting in LPI */
    SCIP_LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
    SCIP_LPALGO           lastlpalgo;         /**< algorithm used for last LP solve */
-   SCIP_Bool             objsqrnormunreliable;/**< is squared euclidean norm of objective function vector of problem
+   SCIP_Bool             objsqrnormunreliable;/**< is squared Euclidean norm of objective function vector of problem
                                                *   variables unreliable and need recalculation? */
    SCIP_Bool             flushdeletedcols;   /**< have LPI-columns been deleted in the last lpFlush() call? */
    SCIP_Bool             flushaddedcols;     /**< have LPI-columns been added in the last lpFlush() call? */
@@ -261,7 +261,7 @@ struct SCIP_Lp
    SCIP_Bool             installing;         /**< whether the solution process is in stalling */
    SCIP_Bool             strongbranching;    /**< whether the lp is used for strong branching */
    SCIP_Bool             probing;            /**< are we currently in probing mode? */
-   SCIP_Bool             diving;             /**< LP is used for diving: col bounds and obj don't corresond to variables */
+   SCIP_Bool             diving;             /**< LP is used for diving: col bounds and obj don't correspond to variables */
    SCIP_Bool             divingobjchg;       /**< objective values were changed in diving: LP objective is invalid */
    SCIP_Bool             resolvelperror;     /**< an error occured during resolving the LP after diving or probing */
    SCIP_Bool             lpifromscratch;     /**< current FROMSCRATCH setting in LPI */

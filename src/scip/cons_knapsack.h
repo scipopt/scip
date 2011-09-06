@@ -230,7 +230,7 @@ SCIP_RETCODE SCIPseparateKnapsackCover(
    SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
    SCIP_Longint          capacity,           /**< capacity of knapsack */
    SCIP_SOL*             sol,                /**< primal CIP solution to separate, NULL for current LP solution */
-   int                   maxnumcardlift,     /**< maximal number of cardinality inequ. lifted per sepa round (-1: unlimited) */
+   int                   maxnumcardlift,     /**< maximal number of cardinality inequalities lifted per sepa round (-1: unlimited) */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    );
 
@@ -241,7 +241,7 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
    SCIP_CONS*            cons,               /**< constraint that originates the linear constraint, or NULL */
    int                   nknapvars,          /**< number of variables in the continuous knapsack constraint */
    SCIP_VAR**            knapvars,           /**< variables in the continuous knapsack constraint */
-   SCIP_Real*            knapvals,           /**< coefficientce of the variables in the continuous knapsack constraint */
+   SCIP_Real*            knapvals,           /**< coefficients of the variables in the continuous knapsack constraint */
    SCIP_Real             valscale,           /**< -1.0 if lhs of row is used as rhs of c. k. constraint, +1.0 otherwise */
    SCIP_Real             rhs,                /**< right hand side of the continuous knapsack constraint */
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */

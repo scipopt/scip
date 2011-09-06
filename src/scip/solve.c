@@ -264,7 +264,7 @@ SCIP_RETCODE propagationRound(
    SCIP_Bool             onlydelayed,        /**< should only delayed propagators be called? */
    SCIP_Bool*            delayed,            /**< pointer to store whether a propagator was delayed */
    SCIP_Bool*            propagain,          /**< pointer to store whether propagation should be applied again */
-   unsigned int          timingmask,         /**< timing mask to decide which propagaters are executed */
+   unsigned int          timingmask,         /**< timing mask to decide which propagators are executed */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    )
 {  /*lint --e{715}*/
@@ -391,7 +391,7 @@ SCIP_RETCODE propagateDomains(
    int                   depth,              /**< depth level to use for propagator frequency checks */
    int                   maxproprounds,      /**< maximal number of propagation rounds (-1: no limit, 0: parameter settings) */
    SCIP_Bool             fullpropagation,    /**< should all constraints be propagated (or only new ones)? */
-   unsigned int          timingmask,         /**< timing mask to decide which propagaters are executed */
+   unsigned int          timingmask,         /**< timing mask to decide which propagators are executed */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    )
 {
@@ -462,7 +462,7 @@ SCIP_RETCODE SCIPpropagateDomains(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    int                   depth,              /**< depth level to use for propagator frequency checks */
    int                   maxproprounds,      /**< maximal number of propagation rounds (-1: no limit, 0: parameter settings) */
-   unsigned int          timingmask,         /**< timing mask to decide which propagaters are executed */
+   unsigned int          timingmask,         /**< timing mask to decide which propagators are executed */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    )
 {
@@ -1985,7 +1985,7 @@ SCIP_RETCODE priceAndCutLoop(
          {
             assert(!(*lperror));
 
-            /* call propagaters which are during lp loop */
+            /* call propagators which are during lp loop */
             SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, FALSE, SCIP_PROPTIMING_DURINGLPLOOP, cutoff) );
             assert(SCIPbufferGetNUsed(set->buffer) == 0);
             

@@ -415,13 +415,13 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    SCIP_Bool             crossover            /**< perform crossover */
    );
 
-/** start strong branching - call before any strongbranching */
+/** start strong branching - call before any strong branching */
 extern
 SCIP_RETCODE SCIPlpiStartStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    );
 
-/** end strong branching - call after any strongbranching */
+/** end strong branching - call after any strong branching */
 extern
 SCIP_RETCODE SCIPlpiEndStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */

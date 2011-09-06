@@ -45,7 +45,7 @@
 #define DEFAULT_APPLYINFERVALS     TRUE /**< should the inference values be used as initialization in the original SCIP? */
 #define DEFAULT_REDUCEDINFER      FALSE /**< should the inference values only be used when rapid learning found other reductions? */
 #define DEFAULT_APPLYPRIMALSOL     TRUE /**< should the incumbent solution be copied to the original SCIP?               */
-#define DEFAULT_APPLYSOLVED        TRUE /**< should a solved status ba copied to the original SCIP?                      */
+#define DEFAULT_APPLYSOLVED        TRUE /**< should a solved status be copied to the original SCIP?                      */
 
 #define DEFAULT_MAXNVARS          10000 /**< maximum problem size (variables) for which rapid learning will be called */
 #define DEFAULT_MAXNCONSS         10000 /**< maximum problem size (constraints) for which rapid learning will be called */
@@ -264,7 +264,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    if( SCIPsepaGetNCallsAtNode(sepa) > 0 )
       return SCIP_OKAY;
 
-   /* do not call rapid learning, if the probelm is too big */
+   /* do not call rapid learning, if the problem is too big */
    if( SCIPgetNVars(scip) > sepadata->maxnvars || SCIPgetNConss(scip) > sepadata->maxnconss )
       return SCIP_OKAY; 
 
@@ -494,8 +494,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    if( sepadata->applysolved && !disabledualreductions 
       && (SCIPgetStatus(subscip) == SCIP_STATUS_OPTIMAL || SCIPgetStatus(subscip) == SCIP_STATUS_INFEASIBLE) )
    {
-      /* we need to multiply the dualbound with the scaling facting and add the offset, 
-       * because this information was   disregarded in the subscip */
+      /* we need to multiply the dualbound with the scaling factor and add the offset, 
+       * because this information has been disregarded in the sub-SCIP */
       SCIPdebugMessage("Update old dualbound %g to new dualbound %g.\n", SCIPgetDualbound(scip), SCIPgetTransObjscale(scip) * SCIPgetDualbound(subscip) + SCIPgetTransObjoffset(scip));
 
       SCIP_CALL( SCIPupdateLocalDualbound(scip, SCIPgetDualbound(subscip) * SCIPgetTransObjscale(scip) + SCIPgetTransObjoffset(scip)) );

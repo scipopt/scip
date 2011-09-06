@@ -114,7 +114,7 @@ struct SCIP_Conshdlr
    SCIP_Longint          nenfopscalls;       /**< number of times, the pseudo enforcer was called */
    SCIP_Longint          npropcalls;         /**< number of times, the propagator was called */
    SCIP_Longint          ncheckcalls;        /**< number of times, the feasibility check was called */
-   SCIP_Longint          nrespropcalls;      /**< number of times, the resolve propagtion was called */
+   SCIP_Longint          nrespropcalls;      /**< number of times, the resolve propagation was called */
    SCIP_Longint          ncutoffs;           /**< number of cutoffs found so far by this constraint handler */
    SCIP_Longint          ncutsfound;         /**< number of cuts found by this constraint handler */
    SCIP_Longint          nconssfound;        /**< number of additional constraints added by this constraint handler */
@@ -156,7 +156,7 @@ struct SCIP_Conshdlr
    SCIP_DECL_CONSCOPY    ((*conscopy));      /**< constraint copying method */
    SCIP_DECL_CONSPARSE   ((*consparse));     /**< constraint parsing method */
    SCIP_CONSHDLRDATA*    conshdlrdata;       /**< constraint handler data */
-   SCIP_CONS**           conss;              /**< array with all transformed constraints, active ones preceed incative
+   SCIP_CONS**           conss;              /**< array with all transformed constraints, active ones preceed inactive
                                               *   ones; a constraint is active if it is global and was not removed
                                               *   during presolving or it was added locally (in that case the local flag
                                               *   is TRUE) and the current node belongs to the corresponding sub tree */

@@ -688,7 +688,7 @@ SCIP_Bool SCIPbranchcandContainsExternCand(
    return FALSE;
 }
 
-/** gets branching candidates for pseudo solution branching (nonfixed variables) */
+/** gets branching candidates for pseudo solution branching (non-fixed variables) */
 SCIP_RETCODE SCIPbranchcandGetPseudoCands(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -750,7 +750,7 @@ SCIP_RETCODE SCIPbranchcandGetPseudoCands(
    return SCIP_OKAY;
 }
 
-/** gets number of branching candidates for pseudo solution branching (nonfixed variables) */
+/** gets number of branching candidates for pseudo solution branching (non-fixed variables) */
 int SCIPbranchcandGetNPseudoCands(
    SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
    )

@@ -36,7 +36,7 @@ extern "C" {
 struct SCIP_Prop
 {
    SCIP_Longint          ncalls;             /**< number of times, this propagator was called */
-   SCIP_Longint          nrespropcalls;      /**< number of times, the resolve propagtion was called */
+   SCIP_Longint          nrespropcalls;      /**< number of times, the resolve propagation was called */
    SCIP_Longint          ncutoffs;           /**< number of cutoffs found so far by this constraint handler */
    SCIP_Longint          ndomredsfound;      /**< number of domain reductions found so far by this constraint handler */
    char*                 name;               /**< name of propagator */
