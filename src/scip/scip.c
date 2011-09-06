@@ -15602,7 +15602,7 @@ SCIP_Real SCIPgetRowSolActivity(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetRowSolActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetRowSolActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    if( sol != NULL )
       return SCIProwGetSolActivity(row, scip->set, scip->stat, sol);
