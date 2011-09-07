@@ -4,10 +4,8 @@ GITHASH=0
 TIME=3600
 LOCK=false
 CONTINUE=true
-OPTS=(opt)
-#OPTS=(opt dbg)
-#TESTS=(short miplib2010)
-TESTS=(short)
+OPTS=(opt dbg)
+TESTS=(short miplib2010)
 
 if [ -f $GITHASHFILE ];
 then
