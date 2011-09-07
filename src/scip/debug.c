@@ -685,7 +685,7 @@ SCIP_RETCODE SCIPdebugRemoveNode(
       return SCIP_OKAY;
 
    /* check if a solution will be cutoff in tree */
-   if( SCIPgetStage(set->scip) != SCIP_STAGE_FREESOLVE && SCIPgetStage(set->scip) != SCIP_STAGE_PRESOLVING && !SCIPlpDiving(set->scip->lp) && !SCIPtreeProbing(set->scip->tree) )
+   if( SCIPgetStage(set->scip) != SCIP_STAGE_FREESOLVE && SCIPgetStage(set->scip) != SCIP_STAGE_PRESOLVING && SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
    {
       SCIP_Bool solisinnode;
 
