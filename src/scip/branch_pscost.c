@@ -122,7 +122,7 @@ SCIP_RETCODE updateBestCandidate(
        * if this fails, then register all (unfixed) aggregation variables, thereby forgetting about candsol
        */
       success = FALSE;
-      if( candsol != SCIP_INVALID )
+      if( candsol != SCIP_INVALID ) /*lint !e777*/
       {
          SCIP_Real* multscalars;
          SCIP_Real minact;
@@ -355,7 +355,7 @@ SCIP_RETCODE selectBranchVar(
    SCIP_VAR**            brvar,              /**< pointer to store the selected branching candidate or NULL if none */
    SCIP_Real*            brpoint             /**< pointer to store branching point of selected branching variable */
    )
-{
+{ /*lint --e{850}*/ 
    SCIP_BRANCHRULEDATA* branchruledata;
 
    SCIP_VAR* cand;
@@ -419,7 +419,7 @@ SCIP_RETCODE selectBranchVar(
             candsol = candssol[candsorigidx[j]];
       }
       /* set i to last occurrence of cand in candssorted (instead of first one as before), so in next round we look at another variable */
-      i = j-1; /*lint !e850*/ 
+      i = j-1;
       assert(candssorted[i] == cand);
       
       /* check if new candidate is better than previous candidate (if any) */
