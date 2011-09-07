@@ -30,7 +30,7 @@ do
     do
         echo "wait for new version"
         sleep 60
-	
+
         # pull new version form git repository
         git pull
 
@@ -115,5 +115,5 @@ do
     done
 
     # all test are performed for the current hash
-    echo $GITHASH >> $GITHASHFILE 
+    echo $GITHASH >> $GITHASHFILE
 done
