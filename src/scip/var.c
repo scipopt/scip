@@ -221,7 +221,7 @@ void domMerge(
       if( SCIPsetIsGE(set, (*holelistptr)->hole.left, dom->ub) )
       {
          /* the remaining holes start behind the upper bound: remove them */
-         SCIPdebugMessage("remove remainig hole since upper bound <%.15g> is less then the left hand side of the current hole\n", dom->ub);
+         SCIPdebugMessage("remove remaining hole since upper bound <%.15g> is less then the left hand side of the current hole\n", dom->ub);
          holelistFree(holelistptr, blkmem);
          assert(*holelistptr == NULL);
 
@@ -1743,7 +1743,7 @@ SCIP_RETCODE varCreate(
    SCIP_VARTYPE          vartype,            /**< type of variable */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
-   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copys variable data if wanted to subscip, or NULL */
+   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copies variable data if wanted to subscip, or NULL */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data, or NULL */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable, or NULL */
@@ -1869,7 +1869,7 @@ SCIP_RETCODE SCIPvarCreateOriginal(
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data, or NULL */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable, or NULL */
-   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copys variable data if wanted to subscip, or NULL */
+   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copies variable data if wanted to subscip, or NULL */
    SCIP_VARDATA*         vardata             /**< user data for this specific variable */
    )
 {
@@ -1912,7 +1912,7 @@ SCIP_RETCODE SCIPvarCreateTransformed(
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data, or NULL */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable, or NULL */
-   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copys variable data if wanted to subscip, or NULL */
+   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copies variable data if wanted to subscip, or NULL */
    SCIP_VARDATA*         vardata             /**< user data for this specific variable */
    )
 {
@@ -2050,7 +2050,7 @@ void parseValue(
 static
 SCIP_RETCODE varParse(
    SCIP_SET*             set,                /**< global SCIP settings */
-   const char*           str,                /**< stirng to parse */
+   const char*           str,                /**< string to parse */
    char*                 name,               /**< pointer to store the variable name */
    SCIP_Real*            lb,                 /**< pointer to store the lower bound */
    SCIP_Real*            ub,                 /**< pointer to store the upper bound */  
@@ -2084,7 +2084,7 @@ SCIP_RETCODE varParse(
    
    token = SCIPstrtok(copystr, " []", &saveptr);
    
-   /* get varibale type */
+   /* get variable type */
    if( strncmp(token, "binary", 3) == 0 )
       (*vartype) = SCIP_VARTYPE_BINARY;
    else if( strncmp(token, "integer", 3) == 0 )
@@ -2160,10 +2160,10 @@ SCIP_RETCODE SCIPvarParseOriginal(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   const char*           str,                /**< stirng to parse */
+   const char*           str,                /**< string to parse */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
-   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copys variable data if wanted to subscip, or NULL */
+   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copies variable data if wanted to subscip, or NULL */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
@@ -2219,10 +2219,10 @@ SCIP_RETCODE SCIPvarParseTransformed(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   const char*           str,                /**< stirng to parse */
+   const char*           str,                /**< string to parse */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
-   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copys variable data if wanted to subscip, or NULL */
+   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copies variable data if wanted to subscip, or NULL */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
@@ -3673,7 +3673,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
 }
 
 
-/** flattens aggregation graph of multi-aggregated variable in order to avoid exponential recursion lateron */
+/** flattens aggregation graph of multi-aggregated variable in order to avoid exponential recursion later on */
 SCIP_RETCODE SCIPvarFlattenAggregationGraph(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -3703,7 +3703,7 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
       assert( multrequiredsize <= multvarssize );
    }
    /**@note After the flattening the multi aggregation might resolve to be in fact an aggregation (or even a fixing?).
-    * This issue is not resolved right now, since var->data.multaggr.nvars < 2 should not cause toubles. However, one
+    * This issue is not resolved right now, since var->data.multaggr.nvars < 2 should not cause troubles. However, one
     * may loose performance hereby, since aggregated variables are easier to handle.
     * 
     * Note, that there are two cases where SCIPvarFlattenAggregationGraph() is called: The easier one is that it is
@@ -3893,12 +3893,12 @@ SCIP_RETCODE varUpdateAggregationBounds(
             SCIP_CALL( SCIPvarChgLbGlobal(aggvar, blkmem, set, stat, lp, branchcand, eventqueue, aggvarlb) );
             aggvarbdschanged = !SCIPsetIsEQ(set, oldbd, aggvar->glbdom.lb);
          }
-	 if( SCIPsetIsLT(set, aggvarub, aggvar->glbdom.ub) )
+         if( SCIPsetIsLT(set, aggvarub, aggvar->glbdom.ub) )
          {
             oldbd = aggvar->glbdom.ub;
-	    SCIP_CALL( SCIPvarChgUbGlobal(aggvar, blkmem, set, stat, lp, branchcand, eventqueue, aggvarub) );
+            SCIP_CALL( SCIPvarChgUbGlobal(aggvar, blkmem, set, stat, lp, branchcand, eventqueue, aggvarub) );
             aggvarbdschanged = aggvarbdschanged || !SCIPsetIsEQ(set, oldbd, aggvar->glbdom.ub);
-	 }
+         }
 
          /* update the hole list of the aggregation variable */
          /**@todo update hole list of aggregation variable */
@@ -4360,8 +4360,8 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       /* this means that x = b*x + a_1*y_1 + ... + a_n*y_n + c */
       else if( !SCIPsetIsZero(set, tmpscalar) )
       {
-	 tmpscalar = 1 - tmpscalar;
-	 tmpconstant /= tmpscalar;
+         tmpscalar = 1 - tmpscalar;
+         tmpconstant /= tmpscalar;
          for( v = ntmpvars - 1; v >= 0; --v )
             tmpscalars[v] /= tmpscalar;
       }
@@ -4402,13 +4402,13 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       /**@todo currently we don't perform the multi aggregation if the multi aggregation variable has a none
        *  empty hole list; this should be changed in the future  */
       if( SCIPvarGetHolelistGlobal(var) != NULL )
-	 goto TERMINATE;
+         goto TERMINATE;
 
       /* if the variable is not allowed to be multi-aggregated */
       if( SCIPvarDoNotMultaggr(var) )
       {
-	 SCIPdebugMessage("variable is not allowed to be multi-aggregated.\n");
-	 goto TERMINATE;
+         SCIPdebugMessage("variable is not allowed to be multi-aggregated.\n");
+         goto TERMINATE;
       }
 
       /* if the variable to be multi-aggregated has implications or variable bounds (i.e. is the implied variable or
@@ -4698,7 +4698,7 @@ void SCIPvarSetNamePointer(
 
 /** informs variable that it will be removed from the problem; adjusts probindex and removes variable from the
  *  implication graph;
- *  If 'final' is TRUE, the thorough implication graph removal is not performend. Instead, only the
+ *  If 'final' is TRUE, the thorough implication graph removal is not performed. Instead, only the
  *  variable bounds and implication data structures of the variable are freed. Since in the final removal
  *  of all variables from the transformed problem, this deletes the implication graph completely and is faster
  *  than removing the variables one by one, each time updating all lists of the other variables.
@@ -4926,7 +4926,7 @@ SCIP_RETCODE SCIPvarAddObj(
          break;
 
       case SCIP_VARSTATUS_MULTAGGR:
-	 assert(!var->donotmultaggr);
+         assert(!var->donotmultaggr);
          /* x = a_1*y_1 + ... + a_n*y_n  + c  ->  add a_i*addobj to obj. val. of y_i, and c*addobj to obj. offset */
          SCIPprobAddObjoffset(prob, var->data.multaggr.constant * addobj);
          SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, prob, tree, lp) );
@@ -8213,8 +8213,8 @@ SCIP_RETCODE SCIPvarAddVlb(
          assert(SCIPvarGetStatus(vlbvar) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(vlbvar) == SCIP_VARSTATUS_COLUMN);
          assert(vlbcoef != 0.0);
 
-	 minvlb = -SCIPsetInfinity(set);
-	 maxvlb = -SCIPsetInfinity(set);
+         minvlb = -SCIPsetInfinity(set);
+         maxvlb = -SCIPsetInfinity(set);
 
          xlb = SCIPvarGetLbGlobal(var);
          xub = SCIPvarGetUbGlobal(var);
@@ -8225,8 +8225,8 @@ SCIP_RETCODE SCIPvarAddVlb(
          if( vlbcoef >= 0.0 )
          {
             SCIP_Real newzub;
-	    
-	    if( !SCIPsetIsInfinity(set, xub) )
+            
+            if( !SCIPsetIsInfinity(set, xub) )
             {
                /* x >= b*z + d  ->  z <= (x-d)/b */
                newzub = (xub - vlbconstant)/vlbcoef;
@@ -8244,21 +8244,21 @@ SCIP_RETCODE SCIPvarAddVlb(
                }
                maxvlb = vlbcoef * zub + vlbconstant;
                if( !SCIPsetIsInfinity(set, -zlb) )
-		  minvlb = vlbcoef * zlb + vlbconstant;
+                  minvlb = vlbcoef * zlb + vlbconstant;
             }
-	    else
+            else
             {
                if( !SCIPsetIsInfinity(set, zub) )
-		  maxvlb = vlbcoef * zub + vlbconstant;
+                  maxvlb = vlbcoef * zub + vlbconstant;
                if( !SCIPsetIsInfinity(set, -zlb) )
-		  minvlb = vlbcoef * zlb + vlbconstant;
+                  minvlb = vlbcoef * zlb + vlbconstant;
             }
-	 }
+         }
          else
          {
             SCIP_Real newzlb;
 
-	    if( !SCIPsetIsInfinity(set, xub) )
+            if( !SCIPsetIsInfinity(set, xub) )
             {
                /* x >= b*z + d  ->  z >= (x-d)/b */
                newzlb = (xub - vlbconstant)/vlbcoef;
@@ -8276,17 +8276,17 @@ SCIP_RETCODE SCIPvarAddVlb(
                }
                maxvlb = vlbcoef * zlb + vlbconstant;
                if( !SCIPsetIsInfinity(set, zub) )
-		  minvlb = vlbcoef * zub + vlbconstant;
+                  minvlb = vlbcoef * zub + vlbconstant;
             }
-	    else
+            else
             {
                if( !SCIPsetIsInfinity(set, -zlb) )
-		  maxvlb = vlbcoef * zlb + vlbconstant;
+                  maxvlb = vlbcoef * zlb + vlbconstant;
                if( !SCIPsetIsInfinity(set, zub) )
-		  minvlb = vlbcoef * zub + vlbconstant;
+                  minvlb = vlbcoef * zub + vlbconstant;
             }
          }
-	 if( maxvlb < minvlb )
+         if( maxvlb < minvlb )
             maxvlb = minvlb;
 
          /* adjust bounds due to integrality of variable */
@@ -8314,8 +8314,8 @@ SCIP_RETCODE SCIPvarAddVlb(
             /* b > 0: x >= (maxvlb - minvlb) * z + minvlb
              * b < 0: x >= (minvlb - maxvlb) * z + maxvlb
              */
-	   
-	    assert(!SCIPsetIsInfinity(set, -maxvlb) && !SCIPsetIsInfinity(set, -minvlb));
+           
+            assert(!SCIPsetIsInfinity(set, -maxvlb) && !SCIPsetIsInfinity(set, -minvlb));
 
             if( vlbcoef >= 0.0 )
             {
@@ -8484,8 +8484,8 @@ SCIP_RETCODE SCIPvarAddVub(
          assert(SCIPvarGetStatus(vubvar) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(vubvar) == SCIP_VARSTATUS_COLUMN);
          assert(vubcoef != 0.0);
 
-	 minvub = SCIPsetInfinity(set);
-	 maxvub = SCIPsetInfinity(set);
+         minvub = SCIPsetInfinity(set);
+         maxvub = SCIPsetInfinity(set);
 
          xlb = SCIPvarGetLbGlobal(var);
          xub = SCIPvarGetUbGlobal(var);
@@ -8497,7 +8497,7 @@ SCIP_RETCODE SCIPvarAddVub(
          {
             SCIP_Real newzlb;
 
-	    if( !SCIPsetIsInfinity(set, -xlb) )
+            if( !SCIPsetIsInfinity(set, -xlb) )
             {
                /* x <= b*z + d  ->  z >= (x-d)/b */
                newzlb = (xlb - vubconstant)/vubcoef;
@@ -8513,21 +8513,21 @@ SCIP_RETCODE SCIPvarAddVub(
                }
                minvub = vubcoef * zlb + vubconstant;
                if( !SCIPsetIsInfinity(set, zub) )
-		  maxvub = vubcoef * zub + vubconstant;
+                  maxvub = vubcoef * zub + vubconstant;
             }
-	    else
+            else
             {
                if( !SCIPsetIsInfinity(set, zub) )
-		  maxvub = vubcoef * zub + vubconstant;
+                  maxvub = vubcoef * zub + vubconstant;
                if( !SCIPsetIsInfinity(set, -zlb) )
-		  minvub = vubcoef * zlb + vubconstant;
+                  minvub = vubcoef * zlb + vubconstant;
             }
          }
          else
          {
             SCIP_Real newzub;
 
-	    if( !SCIPsetIsInfinity(set, -xlb) )
+            if( !SCIPsetIsInfinity(set, -xlb) )
             {
                /* x <= b*z + d  ->  z <= (x-d)/b */
                newzub = (xlb - vubconstant)/vubcoef;
@@ -8543,18 +8543,18 @@ SCIP_RETCODE SCIPvarAddVub(
                }
                minvub = vubcoef * zub + vubconstant;
                if( !SCIPsetIsInfinity(set, -zlb) )
-		  maxvub = vubcoef * zlb + vubconstant;
+                  maxvub = vubcoef * zlb + vubconstant;
             }
-	    else
+            else
             {
                if( !SCIPsetIsInfinity(set, zub) )
-		  minvub = vubcoef * zub + vubconstant;
+                  minvub = vubcoef * zub + vubconstant;
                if( !SCIPsetIsInfinity(set, -zlb) )
-		  maxvub = vubcoef * zlb + vubconstant;
+                  maxvub = vubcoef * zlb + vubconstant;
             }
 
          }
-	 if( minvub > maxvub )
+         if( minvub > maxvub )
             minvub = maxvub;
 
          /* adjust bounds due to integrality of vub variable */
@@ -8580,8 +8580,8 @@ SCIP_RETCODE SCIPvarAddVub(
             /* b > 0: x <= (maxvub - minvub) * z + minvub
              * b < 0: x <= (minvub - maxvub) * z + maxvub
              */
-	    
-	    assert(!SCIPsetIsInfinity(set, maxvub) && !SCIPsetIsInfinity(set, minvub));
+            
+            assert(!SCIPsetIsInfinity(set, maxvub) && !SCIPsetIsInfinity(set, minvub));
 
             if( vubcoef >= 0.0 )
             {
@@ -9824,7 +9824,7 @@ SCIP_RETCODE SCIPvarGetProbvarHole(
       assert(SCIPvarGetStatus((*var)->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert((*var)->negatedvar->negatedvar == *var);
 
-      /* shift and scal back */
+      /* shift and scale back */
       (*left) = (*var)->data.negate.constant - (*left);
       (*right) = (*var)->data.negate.constant - (*right);
       
@@ -14130,7 +14130,7 @@ SCIP_BOUNDTYPE SCIPbdchginfoGetBoundtype(
    return (SCIP_BOUNDTYPE)(bdchginfo->boundtype);
 }
 
-/** returs depth level of given bound change information */
+/** returns depth level of given bound change information */
 int SCIPbdchginfoGetDepth(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    )
@@ -14140,7 +14140,7 @@ int SCIPbdchginfoGetDepth(
    return bdchginfo->bdchgidx.depth;
 }
 
-/** returs bound change position in its depth level of given bound change information */
+/** returns bound change position in its depth level of given bound change information */
 int SCIPbdchginfoGetPos(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    )
@@ -14150,7 +14150,7 @@ int SCIPbdchginfoGetPos(
    return bdchginfo->bdchgidx.pos;
 }
 
-/** returs bound change index of given bound change information */
+/** returns bound change index of given bound change information */
 SCIP_BDCHGIDX* SCIPbdchginfoGetIdx(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    )
@@ -14160,7 +14160,7 @@ SCIP_BDCHGIDX* SCIPbdchginfoGetIdx(
    return &bdchginfo->bdchgidx;
 }
 
-/** returs inference variable of given bound change information */
+/** returns inference variable of given bound change information */
 SCIP_VAR* SCIPbdchginfoGetInferVar(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    )
@@ -14172,7 +14172,7 @@ SCIP_VAR* SCIPbdchginfoGetInferVar(
    return bdchginfo->inferencedata.var;
 }
 
-/** returs inference constraint of given bound change information */
+/** returns inference constraint of given bound change information */
 SCIP_CONS* SCIPbdchginfoGetInferCons(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    )
@@ -14184,7 +14184,7 @@ SCIP_CONS* SCIPbdchginfoGetInferCons(
    return bdchginfo->inferencedata.reason.cons;
 }
 
-/** returs inference propagator of given bound change information, or NULL if no propagator was responsible */
+/** returns inference propagator of given bound change information, or NULL if no propagator was responsible */
 SCIP_PROP* SCIPbdchginfoGetInferProp(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    )
@@ -14195,7 +14195,7 @@ SCIP_PROP* SCIPbdchginfoGetInferProp(
    return bdchginfo->inferencedata.reason.prop;
 }
 
-/** returs inference user information of given bound change information */
+/** returns inference user information of given bound change information */
 int SCIPbdchginfoGetInferInfo(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    )
@@ -14207,7 +14207,7 @@ int SCIPbdchginfoGetInferInfo(
    return bdchginfo->inferencedata.info;
 }
 
-/** returs inference bound of inference variable of given bound change information */
+/** returns inference bound of inference variable of given bound change information */
 SCIP_BOUNDTYPE SCIPbdchginfoGetInferBoundtype(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    )

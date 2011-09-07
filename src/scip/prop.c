@@ -336,7 +336,7 @@ SCIP_RETCODE SCIPpropInitpre(
    prop->presolwasdelayed = FALSE;
    prop->wasdelayed = FALSE;
 
-   /* call propving initialization method of propver */
+   /* call presolving initialization method of propagator */
    if( prop->propinitpre != NULL )
    {
       SCIP_CALL( prop->propinitpre(set->scip, prop, result) );
@@ -368,7 +368,7 @@ SCIP_RETCODE SCIPpropExitpre(
 
    *result = SCIP_FEASIBLE;
 
-   /* call propving deinitialization method of propver */
+   /* call presolving deinitialization method of propagator */
    if( prop->propexitpre != NULL )
    {
       SCIP_CALL( prop->propexitpre(set->scip, prop, result) );
@@ -558,7 +558,7 @@ SCIP_RETCODE SCIPpropPresol(
    }
    else
    {
-      SCIPdebugMessage("presoving of propagator <%s> was delayed\n", prop->name);
+      SCIPdebugMessage("presolving of propagator <%s> was delayed\n", prop->name);
       *result = SCIP_DELAYED;
    }
 

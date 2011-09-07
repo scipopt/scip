@@ -71,7 +71,7 @@
 struct SCIP_PropData
 {
    SCIP_VAR**            vars;               /**< array of involved variables */
-   SCIP_HASHMAP*         varHashmap;         /**< mapping a variable to its posiotion in the variable array */    
+   SCIP_HASHMAP*         varHashmap;         /**< mapping a variable to its position in the variable array */    
    SCIP_VAR**            lbvars;             /**< topological sorted variables with respect to the variable lower bound */
    SCIP_VAR**            ubvars;             /**< topological sorted variables with respect to the variable upper bound */
    SCIP_EVENTTYPE*       lbeventtypes;       /**< event types of variables belonging to variable lower bounds */ 
@@ -192,7 +192,7 @@ static
 void getVariableBounds(
    SCIP_VAR*             var,                /**< variable to get the variable bounds from */
    SCIP_VAR***           vbvars,             /**< pointer to store the variable bound array */
-   int*                  nvbvars,            /**< pointer to strore the number of variable bounds */
+   int*                  nvbvars,            /**< pointer to store the number of variable bounds */
    SCIP_Bool             lowerbound          /**< variable lower bounds? (otherwise variable upper bound) */
    )
 {
@@ -215,12 +215,12 @@ static
 SCIP_RETCODE depthFirstSearch(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to start the depth-first-search  */
-   SCIP_HASHMAP*         varPosMap,          /**< mapping a variable to its posiotion in the (used) variable array, or NULL */    
+   SCIP_HASHMAP*         varPosMap,          /**< mapping a variable to its position in the (used) variable array, or NULL */    
    SCIP_VAR**            usedvars,           /**< array of variables which are involved in the propagation, or NULL */
    int*                  nusedvars,          /**< number of variables which are involved in the propagation, or NULL */
    SCIP_HASHTABLE*       connected,          /**< hash table storing if a node was already visited */
    SCIP_VAR**            sortedvars,         /**< array that will contain the topological sorted variables */
-   int*                  nsortedvars,        /**< pointer to store the number of already collectes variables in the sorted variables array */
+   int*                  nsortedvars,        /**< pointer to store the number of already collects variables in the sorted variables array */
    SCIP_Bool             lowerbound          /**< depth-first-search with respect to the variable lower bounds, otherwise variable upper bound */
    )
 {
@@ -320,7 +320,7 @@ SCIP_RETCODE catchEvents(
 
    propdata->neventvars = propdata->nvars;
 
-   /* setup arrays of eventtypes lbeventtype and ubeventtype */
+   /* setup arrays of event types lbeventtype and ubeventtype */
    if( propdata->nlbvars > 0 )
    {
       /* we watch the LBCHANGED if the variable bound coefficient is positive and 
@@ -419,7 +419,7 @@ SCIP_RETCODE catchEvents(
       }
    }
    
-   /* catch variable events according to computed eventtypes */
+   /* catch variable events according to computed event types */
    eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
    assert(eventhdlr != NULL);
 
@@ -523,8 +523,8 @@ SCIP_RETCODE resolvePropagation(
 static
 SCIP_RETCODE relaxInfervarLowerbound(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< variable for which the upper bound shoulb be relexed */
-   SCIP_Real             inferub,            /**< upper bound which lead to infeasiility */
+   SCIP_VAR*             var,                /**< variable for which the upper bound should be relaxed */
+   SCIP_Real             inferub,            /**< upper bound which lead to infeasibility */
    SCIP_Real*            newlb               /**< pointer to store the reached relaxed lower bound */
    )
 {
@@ -553,7 +553,7 @@ SCIP_RETCODE relaxInfervarLowerbound(
          SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo), SCIPbdchginfoIsRedundant(bdchginfo));
 
       /* check if the old lower bound is sufficient to prove infeasibility; in case the inference upper bound is
-       * greather equal to the next possible relaxed lower bound, then we have to break since in this case the inference
+       * greater equal to the next possible relaxed lower bound, then we have to break since in this case the inference
        * upper bound does not lead to an cutoff anymore
        */
       if( SCIPisGE(scip, inferub, SCIPbdchginfoGetOldbound(bdchginfo)) )
@@ -567,7 +567,7 @@ SCIP_RETCODE relaxInfervarLowerbound(
       nbdchgs--;
    }
       
-   /* if the nbdchgs is zero then the local bound matches the global bound, therefore bdchgidx equal to NULL reperesents
+   /* if the nbdchgs is zero then the local bound matches the global bound, therefore bdchgidx equal to NULL represents
     * the right time point and SCIP finds out that this bound is redundant since it is global
     */
    SCIPdebugMessage("add lower bound of bound change info %d to conflict set\n", nbdchgs);
@@ -584,7 +584,7 @@ SCIP_RETCODE relaxInfervarLowerbound(
 static
 SCIP_RETCODE relaxVbdvarLowerbound(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< variable for which the upper bound shoulb be relexed */
+   SCIP_VAR*             var,                /**< variable for which the upper bound should be relaxed */
    SCIP_Real             coef,               /**< variable bound coefficient */
    SCIP_Real             constant,           /**< variable bound constant */
    SCIP_Real             bound,              /**< bound to exceed */
@@ -614,8 +614,8 @@ SCIP_RETCODE relaxVbdvarLowerbound(
          nbdchgs, SCIPbdchginfoGetOldbound(bdchginfo), SCIPbdchginfoGetNewbound(bdchginfo), 
          SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo), SCIPbdchginfoIsRedundant(bdchginfo));
       
-      /* check if the old lower bound is sufficient to prove infeasibility; in case the inference bound is greather
-       * equal to the next possible relxed lower bound, then we have to break since in this case the inference bound
+      /* check if the old lower bound is sufficient to prove infeasibility; in case the inference bound is greater
+       * equal to the next possible relaxed lower bound, then we have to break since in this case the inference bound
        * does not lead to an cutoff anymore
        */
       if( SCIPisGE(scip, bound, coef * SCIPbdchginfoGetOldbound(bdchginfo) + constant) )
@@ -629,7 +629,7 @@ SCIP_RETCODE relaxVbdvarLowerbound(
       nbdchgs--;
    }
       
-   /* if the nbdchgs is zero then the local bound matches the global bound, therefore bdchgidx equal to NULL reperesents
+   /* if the nbdchgs is zero then the local bound matches the global bound, therefore bdchgidx equal to NULL represents
     * the right time point and SCIP finds out that this bound is redundant since it is global
     */
    SCIPdebugMessage("add lower bound of bound change info %d to conflict set\n", nbdchgs); 
@@ -644,8 +644,8 @@ SCIP_RETCODE relaxVbdvarLowerbound(
 static
 SCIP_RETCODE relaxInfervarUpperbound(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< variable for which the upper bound shoulb be relexed */
-   SCIP_Real             inferlb,            /**< lower bound which lead to infeasiility */
+   SCIP_VAR*             var,                /**< variable for which the upper bound should be relaxed */
+   SCIP_Real             inferlb,            /**< lower bound which lead to infeasibility */
    SCIP_Real*            newub               /**< pointer to store the reached relaxed upper bound */
    )
 {
@@ -674,7 +674,7 @@ SCIP_RETCODE relaxInfervarUpperbound(
          SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo), SCIPbdchginfoIsRedundant(bdchginfo));
    
       /* check if the old upper bound is sufficient to prove infeasibility; in case the inference lower bound is less
-       * equal to the next possible relxed upper bound, then we have to break since in this case the inference lower bound
+       * equal to the next possible relaxed upper bound, then we have to break since in this case the inference lower bound
        * does not lead to an cutoff anymore
        */
       if( SCIPisLE(scip, inferlb, SCIPbdchginfoGetOldbound(bdchginfo)) )
@@ -688,7 +688,7 @@ SCIP_RETCODE relaxInfervarUpperbound(
       nbdchgs--;
    }
    
-   /* if the nbdchgs is zero then the local bound matches the global bound, therefore bdchgidx equal to NULL reperesents
+   /* if the nbdchgs is zero then the local bound matches the global bound, therefore bdchgidx equal to NULL represents
     * the right time point and SCIP finds out that this bound is redundant since it is global
     */
    SCIPdebugMessage("add upper bound of bound change info %d to conflict set\n", nbdchgs);
@@ -705,7 +705,7 @@ SCIP_RETCODE relaxInfervarUpperbound(
 static
 SCIP_RETCODE relaxVbdvarUpperbound(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< variable for which the upper bound shoulb be relexed */
+   SCIP_VAR*             var,                /**< variable for which the upper bound should be relaxed */
    SCIP_Real             coef,               /**< variable bound coefficient */
    SCIP_Real             constant,           /**< variable bound constant */
    SCIP_Real             bound,              /**< bound to exceed */
@@ -735,8 +735,8 @@ SCIP_RETCODE relaxVbdvarUpperbound(
          nbdchgs, SCIPbdchginfoGetOldbound(bdchginfo), SCIPbdchginfoGetNewbound(bdchginfo), 
          SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo), SCIPbdchginfoIsRedundant(bdchginfo));
       
-      /* check if the old upper bound is sufficient to prove infeasibility; in case the inference bound is greather
-       * equal to the next possible relxed upper bound, then we have to break since in this case the inference bound
+      /* check if the old upper bound is sufficient to prove infeasibility; in case the inference bound is greater
+       * equal to the next possible relaxed upper bound, then we have to break since in this case the inference bound
        * does not lead to an cutoff anymore
        */
       if( SCIPisGE(scip, bound, coef * SCIPbdchginfoGetOldbound(bdchginfo) + constant) )
@@ -750,7 +750,7 @@ SCIP_RETCODE relaxVbdvarUpperbound(
       nbdchgs--;
    }
       
-   /* if the nbdchgs is zero then the local bound matches the global bound, therefore bdchgidx equal to NULL reperesents
+   /* if the nbdchgs is zero then the local bound matches the global bound, therefore bdchgidx equal to NULL represents
     * the right time point and SCIP finds out that this bound is redundant since it is global
     */
    SCIPdebugMessage("add upper bound of bound change info %d to conflict set\n", nbdchgs);
@@ -765,7 +765,7 @@ SCIP_RETCODE relaxVbdvarUpperbound(
 static
 SCIP_RETCODE relaxVbdvar(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< variable for which the upper bound shoulb be relexed */
+   SCIP_VAR*             var,                /**< variable for which the upper bound should be relaxed */
    SCIP_BOUNDTYPE        boundtype,          /**< boundtype used for the variable bound variable */
    SCIP_Real             coef,               /**< variable bound coefficient */
    SCIP_Real             constant,           /**< variable bound constant */
@@ -787,7 +787,7 @@ SCIP_RETCODE relaxVbdvar(
 }
 
 
-/** analyzes a infeasiility which was reached by updating the lower bound of the inference variable above its upper
+/** analyzes a infeasibility which was reached by updating the lower bound of the inference variable above its upper
  *  bound
  */
 static
@@ -795,7 +795,7 @@ SCIP_RETCODE analyzeConflictLowerbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROPDATA*        propdata,           /**< propagator data */   
    SCIP_VAR*             infervar,           /**< variable which lead to an cutoff */
-   SCIP_Real             inferlb,            /**< lower bound which lead to infeasiility */
+   SCIP_Real             inferlb,            /**< lower bound which lead to infeasibility */
    INFERINFO             inferinfo,          /**< inference information */
    SCIP_Real             coef,               /**< inference variable bound coefficient used */
    SCIP_Real             constant            /**< inference variable bound constant used */
@@ -883,7 +883,7 @@ SCIP_RETCODE analyzeConflictLowerbound(
    return SCIP_OKAY;
 }
 
-/** analyzes a infeasiility which was reached by updating the upper bound of the inference variable below its lower
+/** analyzes a infeasibility which was reached by updating the upper bound of the inference variable below its lower
  *  bound
  */
 static
@@ -891,7 +891,7 @@ SCIP_RETCODE analyzeConflictUpperbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROPDATA*        propdata,           /**< propagator data */   
    SCIP_VAR*             infervar,           /**< variable which lead to an cutoff */
-   SCIP_Real             inferub,            /**< upper bound which lead to infeasiility */
+   SCIP_Real             inferub,            /**< upper bound which lead to infeasibility */
    INFERINFO             inferinfo,          /**< inference information */
    SCIP_Real             coef,               /**< inference variable bound coefficient used */
    SCIP_Real             constant            /**< inference variable bound constant used */
@@ -948,7 +948,7 @@ SCIP_RETCODE analyzeConflictUpperbound(
          /* try to relax variable bound variable */
          SCIP_CALL( relaxVbdvar(scip, vbdvar, inferInfoGetBoundtype(inferinfo), -coef, -constant, -newlb, &inferub) );
 
-         /* continue conflict analysis only if we improved the inference upper bound w.r.t. the previos conflict
+         /* continue conflict analysis only if we improved the inference upper bound w.r.t. the previous conflict
           * analysis run; otherwise we end up with previous conflict set
           */
          if( SCIPisGT(scip, inferub, previnferub ) )
@@ -1196,9 +1196,9 @@ SCIP_RETCODE propagateVbounds(
             SCIPdebugMessage(" -> variable <%s> => variable <%s> lower bound candidate is <%.15g>\n", 
                SCIPvarGetName(propdata->vars[inferInfoGetPos(inferinfo)]), SCIPvarGetName(var), newbound);
             
-            SCIPdebugMessage(" -> lower bound tightening lead to infeasiility\n");
+            SCIPdebugMessage(" -> lower bound tightening lead to infeasibility\n");
             
-            /* analyzes a infeasiility via conflict analysis */
+            /* analyzes a infeasibility via conflict analysis */
             SCIP_CALL( analyzeConflictLowerbound(scip, propdata, var, newbound, inferinfo, bestcoef, bestconstant) );
             *result = SCIP_CUTOFF;
 
@@ -1340,15 +1340,15 @@ SCIP_RETCODE propagateVbounds(
       
          if( infeasible )
          {
-            /* the infeasible results from the fact that the new upper bound lies belowe the current lower bound */
+            /* the infeasible results from the fact that the new upper bound lies below the current lower bound */
             assert(SCIPisLT(scip, newbound, SCIPvarGetLbLocal(var)));
 
             SCIPdebugMessage(" -> variable <%s> => variable <%s> upper bound candidate is <%.15g>\n", 
                SCIPvarGetName(propdata->vars[inferInfoGetPos(inferinfo)]), SCIPvarGetName(var), newbound);
 
-            SCIPdebugMessage(" -> upper bound tightening lead to infeasiility\n");
+            SCIPdebugMessage(" -> upper bound tightening lead to infeasibility\n");
             
-            /* analyzes a infeasiility via conflict analysis */
+            /* analyzes a infeasibility via conflict analysis */
             SCIP_CALL( analyzeConflictUpperbound(scip, propdata, var, newbound, inferinfo, bestcoef, bestconstant) );
             *result = SCIP_CUTOFF;
             
@@ -1625,7 +1625,7 @@ SCIP_RETCODE SCIPcreateTopoSortedVars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< variable which we want sort */
    int                   nvars,              /**< number of variables */
-   SCIP_HASHMAP*         varPosMap,          /**< mapping a variable to its posiotion in the (used) variable array, or NULL */    
+   SCIP_HASHMAP*         varPosMap,          /**< mapping a variable to its position in the (used) variable array, or NULL */    
    SCIP_VAR**            usedvars,           /**< array of variables which are involved in the propagation, or NULL */
    int*                  nusedvars,          /**< number of variables which are involved in the propagation, or NULL */
    SCIP_VAR**            topovars,           /**< array where the topological sorted variables are stored */
@@ -1734,7 +1734,7 @@ SCIP_RETCODE SCIPcreateTopoSortedVars(
    return SCIP_OKAY;
 }
 
-/** returns TRUE if the propagator has the status that all variable lower and upper bounds are propgated */
+/** returns TRUE if the propagator has the status that all variable lower and upper bounds are propagated */
 SCIP_Bool SCIPisPropagatedVbounds(
    SCIP*                 scip                 /**< SCIP data structure */
    )

@@ -149,7 +149,7 @@
    }
 
 
-/** shellsort an array of data elements; use it only for arrays smaller than 25 entries */
+/** shell-sort an array of data elements; use it only for arrays smaller than 25 entries */
 static
 void SORTTPL_NAME(sorttpl_shellSort, SORTTPL_NAMEEXT)
 (
@@ -210,7 +210,7 @@ void SORTTPL_NAME(sorttpl_shellSort, SORTTPL_NAMEEXT)
 }
 
 
-/** quicksort an array of pointers; pivot is the medial element */
+/** quick-sort an array of pointers; pivot is the medial element */
 static
 void SORTTPL_NAME(sorttpl_qSort, SORTTPL_NAMEEXT)
 (
@@ -225,12 +225,12 @@ void SORTTPL_NAME(sorttpl_qSort, SORTTPL_NAMEEXT)
    SORTTPL_HASINDCOMPPAR( void*                  dataptr    )  /**< pointer to data field that is given to the external compare method */
    int                   start,              /**< starting index */
    int                   end,                /**< ending index */
-   SCIP_Bool             type                /**< TRUE, if quicksort should start with with key[lo] < pivot <= key[hi], key[lo] <= pivot < key[hi] otherwise */
+   SCIP_Bool             type                /**< TRUE, if quick-sort should start with with key[lo] < pivot <= key[hi], key[lo] <= pivot < key[hi] otherwise */
    )
 {
    assert(start <= end);
 
-   /* use quick sort for long lists */
+   /* use quick-sort for long lists */
    while( end - start >= SORTTPL_SHELLSORTMAX )
    {
       SORTTPL_KEYTYPE pivotkey;

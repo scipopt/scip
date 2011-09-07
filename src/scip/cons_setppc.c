@@ -2541,7 +2541,7 @@ SCIP_RETCODE createConsSetppc(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? 
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? 
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
@@ -2622,7 +2622,7 @@ SCIP_RETCODE createNormalizedSetppc(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? 
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? 
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
@@ -3826,8 +3826,8 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
       {
          /* detect redundant constraints; fast version with hash table instead of pairwise comparison */
          SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &firstchange, ndelconss, nchgsides) );
-	 if( oldndelconss < *ndelconss )
-	    *result = SCIP_SUCCESS;
+         if( oldndelconss < *ndelconss )
+            *result = SCIP_SUCCESS;
       }
 
       /* check constraints for redundancy */
@@ -3860,7 +3860,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
                   oldndelconss = *ndelconss;
                   oldnfixedvars = *nfixedvars;
                   npaircomparisons = 0;
-		  *result = SCIP_SUCCESS;
+                  *result = SCIP_SUCCESS;
                }
             }
          }
@@ -4453,7 +4453,7 @@ SCIP_RETCODE SCIPcreateConsSetpart(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
@@ -4489,7 +4489,7 @@ SCIP_RETCODE SCIPcreateConsSetpack(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
@@ -4525,7 +4525,7 @@ SCIP_RETCODE SCIPcreateConsSetcover(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even

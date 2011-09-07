@@ -5322,7 +5322,7 @@ SCIP_RETCODE generateCutUnboundedLP(
    }
 
    /* we seek for a linearization of the quadratic function such that it intersects with the unbounded ray
-    * that is, we need a referencepoint ref such that for the gradient g of xAx+bx in ref, we have
+    * that is, we need a reference point ref such that for the gradient g of xAx+bx in ref, we have
     *   <g, ray> > 0.0 if rhs is finite and <g, ray> < 0.0 if lhs is finite
     * Since g = 2*A*ref + b, we have <g, ray> = <2*A*ref + b, ray> = <ref, 2*A*ray> + <b,ray>
     * initially, for finite rhs, we set ref_i = 1.0 if (A*ray)_i > 0.0 and ref_i = -1.0 if (A*ray)_i < 0.0 (for finite lhs analog)
@@ -7339,7 +7339,7 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
          consdata->lincoefsmax = MAX(consdata->lincoefsmax, REALABS(consdata->lincoefs[i]));
       }
 
-      /* add nlrow respresentation to NLP, if NLP had been constructed */
+      /* add nlrow representation to NLP, if NLP had been constructed */
       if( SCIPisNLPConstructed(scip) && SCIPconsIsChecked(conss[c]) )
       {
          if( consdata->nlrow == NULL )
@@ -9109,7 +9109,7 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    )

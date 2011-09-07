@@ -226,55 +226,55 @@ SCIP_RETCODE createEdgesFromRow(
 
       for (j = i+1; j < nvars; ++j)
       {
-	 unsigned int k;
-	 int t;
-	 int a;
-	 t = SCIPvarGetProbindex(vars[j]);
-	 assert( t >= 0 );
+         unsigned int k;
+         int t;
+         int a;
+         t = SCIPvarGetProbindex(vars[j]);
+         assert( t >= 0 );
 
-	 /* search whether edge is already present */
-	 k = 0;
-	 a = G->A[s][k];
-	 while (a >= 0)
-	 {
-	    /* if we found edge, add weight */
-	    if ( a == t )
-	    {
-	       G->W[s][k] += w;
-	       break;
-	    }
-	    a = G->A[s][++k];
-	    assert( k <= G->size[s] );
-	 }
+         /* search whether edge is already present */
+         k = 0;
+         a = G->A[s][k];
+         while (a >= 0)
+         {
+            /* if we found edge, add weight */
+            if ( a == t )
+            {
+               G->W[s][k] += w;
+               break;
+            }
+            a = G->A[s][++k];
+            assert( k <= G->size[s] );
+         }
 
-	 /* add new edge */
-	 if (a < 0)
-	 {
-	    /* forward edge */
-	    SCIP_CALL( ensureEdgeCapacity(scip, G, (unsigned int) s) );
-	    k = G->deg[s];
-	    assert( G->A[s][k] == -1 );
+         /* add new edge */
+         if (a < 0)
+         {
+            /* forward edge */
+            SCIP_CALL( ensureEdgeCapacity(scip, G, (unsigned int) s) );
+            k = G->deg[s];
+            assert( G->A[s][k] == -1 );
 
-	    G->A[s][k] = t;
-	    G->W[s][k] = w;
+            G->A[s][k] = t;
+            G->W[s][k] = w;
 
-	    G->A[s][k+1] = -1;
-	    ++G->deg[s];
+            G->A[s][k+1] = -1;
+            ++G->deg[s];
 
-	    /* backward edge */
-	    SCIP_CALL( ensureEdgeCapacity(scip, G, (unsigned int) t) );
-	    k = G->deg[t];
-	    assert( G->A[t][k] == -1 );
+            /* backward edge */
+            SCIP_CALL( ensureEdgeCapacity(scip, G, (unsigned int) t) );
+            k = G->deg[t];
+            assert( G->A[t][k] == -1 );
 
-	    G->A[t][k] = s;
-	    G->W[t][k] = w;
+            G->A[t][k] = s;
+            G->W[t][k] = w;
 
-	    G->A[t][k+1] = -1;
-	    ++G->deg[t];
+            G->A[t][k+1] = -1;
+            ++G->deg[t];
 
-	    /* increase number of edges */
-	    ++G->m;
-	 }
+            /* increase number of edges */
+            ++G->m;
+         }
       }
    }
 
@@ -445,13 +445,13 @@ SCIP_RETCODE SCIPwriteCcg(
          if( nconsvars > 0 ) 
          { 
             SCIP_CALL( handleLinearCons(scip, SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons),
-		  SCIPgetNVarsLinear(scip, cons), transformed, &G) );
+                  SCIPgetNVarsLinear(scip, cons), transformed, &G) );
          }
       }
       else if( strcmp(conshdlrname, "setppc") == 0 )
       {
-	 consvars = SCIPgetVarsSetppc(scip, cons);
-	 nconsvars = SCIPgetNVarsSetppc(scip, cons);
+         consvars = SCIPgetVarsSetppc(scip, cons);
+         nconsvars = SCIPgetNVarsSetppc(scip, cons);
          assert( consvars != NULL || nconsvars == 0 );
 
          if( nconsvars > 0 ) 
@@ -472,45 +472,45 @@ SCIP_RETCODE SCIPwriteCcg(
       }
       else if ( strcmp(conshdlrname, "knapsack") == 0 )
       {
-	 SCIP_Longint* w;
+         SCIP_Longint* w;
 
-	 consvars = SCIPgetVarsKnapsack(scip, cons);
-	 nconsvars = SCIPgetNVarsKnapsack(scip, cons);
+         consvars = SCIPgetVarsKnapsack(scip, cons);
+         nconsvars = SCIPgetNVarsKnapsack(scip, cons);
          assert( consvars != NULL || nconsvars == 0 );
 
-	 /* copy Longint array to SCIP_Real array */
-	 w = SCIPgetWeightsKnapsack(scip, cons);
-	 SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nconsvars) );
-	 for( v = 0; v < nconsvars; ++v )
-	    consvals[v] = w[v];
+         /* copy Longint array to SCIP_Real array */
+         w = SCIPgetWeightsKnapsack(scip, cons);
+         SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nconsvars) );
+         for( v = 0; v < nconsvars; ++v )
+            consvals[v] = w[v];
 
          if( nconsvars > 0 ) 
          { 
             SCIP_CALL( handleLinearCons(scip, consvars, consvals, nconsvars, transformed, &G) );
          }
-	 SCIPfreeBufferArray(scip, &consvals);
+         SCIPfreeBufferArray(scip, &consvals);
       }
       else if ( strcmp(conshdlrname, "varbound") == 0 )
       {
-	 SCIP_CALL( SCIPallocBufferArray(scip, &consvars, 2) );
-	 SCIP_CALL( SCIPallocBufferArray(scip, &consvals, 2) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &consvars, 2) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &consvals, 2) );
 
-	 consvars[0] = SCIPgetVarVarbound(scip, cons);
-	 consvars[1] = SCIPgetVbdvarVarbound(scip, cons);
+         consvars[0] = SCIPgetVarVarbound(scip, cons);
+         consvars[1] = SCIPgetVbdvarVarbound(scip, cons);
 
-	 consvals[0] = 1.0;
-	 consvals[1] = SCIPgetVbdcoefVarbound(scip, cons);
+         consvals[0] = 1.0;
+         consvals[1] = SCIPgetVbdcoefVarbound(scip, cons);
 
-	 SCIP_CALL( handleLinearCons(scip, consvars, consvals, 2, transformed, &G) );
+         SCIP_CALL( handleLinearCons(scip, consvars, consvals, 2, transformed, &G) );
 
-	 SCIPfreeBufferArray(scip, &consvars);
-	 SCIPfreeBufferArray(scip, &consvals);
+         SCIPfreeBufferArray(scip, &consvars);
+         SCIPfreeBufferArray(scip, &consvals);
       }
       else
       {
-	 SCIPwarningMessage("constraint handler <%s> can not print requested format\n", conshdlrname );
-	 SCIPinfoMessage(scip, file, "\\ ");
-	 SCIP_CALL( SCIPprintCons(scip, cons, file) );
+         SCIPwarningMessage("constraint handler <%s> can not print requested format\n", conshdlrname );
+         SCIPinfoMessage(scip, file, "\\ ");
+         SCIP_CALL( SCIPprintCons(scip, cons, file) );
       }
    }
 
@@ -527,15 +527,15 @@ SCIP_RETCODE SCIPwriteCcg(
       a = G.A[i][k];
       while (a >= 0)
       {
-	 /* only output edges from lower to higher number */
-	 if ( i < a )
-	 {
-	    /* note: node numbers start with 1 in the DIMACS format */
-	    SCIPinfoMessage(scip, file, "e %d %d %f\n", i+1, a+1, G.W[i][k]);
-	 }
+         /* only output edges from lower to higher number */
+         if ( i < a )
+         {
+            /* note: node numbers start with 1 in the DIMACS format */
+            SCIPinfoMessage(scip, file, "e %d %d %f\n", i+1, a+1, G.W[i][k]);
+         }
 
-	 a = G.A[i][++k];
-	 assert( k <= G.size[i] );
+         a = G.A[i][++k];
+         assert( k <= G.size[i] );
       }
       assert( k == G.deg[i] );
    }

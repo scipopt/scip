@@ -429,7 +429,7 @@ static pthread_mutex_t  messagemutex = PTHREAD_MUTEX_INITIALIZER;
 /* hashmap which identifies for each thread the corresponding messagehandler */
 static SCIP_HASHMAP* messagepthreadhashmap = NULL;
 
-/** static array that should contain all messagehanlders in multiple thread case;
+/** static array that should contain all messagehandlers in multiple thread case;
  *  if the handler is set to NULL, messages are suppressed;
  *
  *  @note: in this case it is mandatory to call SCIPcreateMesshdlrPThreads
@@ -868,7 +868,7 @@ size_t SCIPmessagehdlrGetNThreads(
 }
 
 /** gets number of current thread as assigned by message handler hashmap
- * assignes a new number to the thread if new */
+ * assigns a new number to the thread if new */
 extern
 size_t SCIPmessagehdlrGetThreadNum(
    void

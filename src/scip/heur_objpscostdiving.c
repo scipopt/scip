@@ -347,7 +347,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
       SCIPgetNNodes(scip), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), maxnlpiterations, maxdivedepth);
 
    /* dive as long we are in the given diving depth and iteration limits and fractional variables exist, but
-    * - if the last objective change was in a direction, that corresponds to a feasibile rounding, we continue in any case
+    * - if the last objective change was in a direction, that corresponds to a feasible rounding, we continue in any case
     * - if possible, we dive at least with the depth 10
     * - if the number of fractional variables decreased at least with 1 variable per 2 dive depths, we continue diving
     */
@@ -361,7 +361,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
       && (divedepth < 10
          || nlpcands <= startnlpcands - divedepth/2
          || (divedepth < maxdivedepth && nlpcands <= startnlpcands - divedepth/10
-	     && heurdata->nlpiterations < maxnlpiterations)) && !SCIPisStopped(scip) )
+            && heurdata->nlpiterations < maxnlpiterations)) && !SCIPisStopped(scip) )
    {
       SCIP_RETCODE retcode;
 

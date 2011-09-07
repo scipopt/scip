@@ -53,7 +53,7 @@
 #define STARTSOL_CHOICES      "nl"      /* possible values for startsol ('l'p relaxation, 'n'lp relaxation)    */
 #define DEFAULT_USELPROWS     TRUE      /* should subproblem be created out of the rows in the LP rows, 
                                          * otherwise, the copy constructors of the constraints handlers are used 
-					 */
+                                         */
 #define DEFAULT_COPYCUTS      TRUE      /* if DEFAULT_USELPROWS is FALSE, then should all active cuts from the cutpool
                                          * of the original scip be copied to constraints of the subscip
                                          */
@@ -325,8 +325,6 @@ SCIP_RETCODE SCIPapplyRens(
    SCIP*                 scip,               /**< original SCIP data structure                                        */
    SCIP_HEUR*            heur,               /**< heuristic data structure                                            */
    SCIP_RESULT*          result,             /**< result data structure                                               */
-   SCIP_Real             timelimit,          /**< timelimit for the subproblem                                        */
-   SCIP_Real             memorylimit,        /**< memorylimit for the subproblem                                      */
    SCIP_Real             minfixingrate,      /**< minimum percentage of integer variables that have to be fixed       */
    SCIP_Real             minimprove,         /**< factor by which RENS should at least improve the incumbent          */
    SCIP_Longint          maxnodes,           /**< maximum number of  nodes for the subproblem                         */
@@ -342,7 +340,9 @@ SCIP_RETCODE SCIPapplyRens(
    SCIP_VAR** subvars;                       /* subproblem's variables                          */
   
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem             */
-   
+   SCIP_Real timelimit;
+   SCIP_Real memorylimit;
+
    int nvars;                     
    int i;   
 
@@ -353,8 +353,6 @@ SCIP_RETCODE SCIPapplyRens(
    assert(heur != NULL);
    assert(result != NULL);
 
-   assert(timelimit >= 0.0);
-   assert(memorylimit >= 0.0);
    assert(maxnodes >= 0);
    assert(nstallnodes >= 0);
 
@@ -424,6 +422,18 @@ SCIP_RETCODE SCIPapplyRens(
  
    /* disable output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+
+   /* check whether there is enough time and memory left */
+   timelimit = 0.0;
+   memorylimit = 0.0;
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   if( !SCIPisInfinity(scip, timelimit) )
+      timelimit -= SCIPgetSolvingTime(scip);
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+   if( !SCIPisInfinity(scip, memorylimit) )   
+      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
+   if( timelimit <= 0.0 || memorylimit <= 0.0 )
+      return SCIP_OKAY;
  
    /* set limits for the subproblem */
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", nstallnodes) );
@@ -644,8 +654,6 @@ SCIP_DECL_HEUREXEC(heurExecRens)
 {  /*lint --e{715}*/
 
    SCIP_HEURDATA* heurdata;                  /* heuristic's data                    */
-   SCIP_Real timelimit;                      /* timelimit for the subproblem        */
-   SCIP_Real memorylimit;
    SCIP_Longint nstallnodes;                 /* number of stalling nodes for the subproblem */
 
    assert( heur != NULL );
@@ -692,22 +700,12 @@ SCIP_DECL_HEUREXEC(heurExecRens)
       return SCIP_OKAY;
    }
 
-   /* check whether there is enough time and memory left */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if( !SCIPisInfinity(scip, timelimit) )
-      timelimit -= SCIPgetSolvingTime(scip);
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
-   if( !SCIPisInfinity(scip, memorylimit) )   
-      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-   if( timelimit < 10.0 || memorylimit <= 0.0 )
-      return SCIP_OKAY;
-
    if( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
 
-   SCIP_CALL( SCIPapplyRens(scip, heur, result, timelimit, memorylimit, heurdata->minfixingrate, heurdata->minimprove,
+   SCIP_CALL( SCIPapplyRens(scip, heur, result, heurdata->minfixingrate, heurdata->minimprove,
          heurdata->maxnodes, nstallnodes, heurdata->startsol, heurdata->binarybounds, heurdata->uselprows) );   
 
    return SCIP_OKAY;

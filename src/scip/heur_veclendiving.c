@@ -321,7 +321,7 @@ SCIP_DECL_HEUREXEC(heurExecVeclendiving) /*lint --e{715}*/
       && (divedepth < 10
          || nlpcands <= startnlpcands - divedepth/2
          || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations && objval < searchbound))
-	  && !SCIPisStopped(scip) )
+      && !SCIPisStopped(scip) )
    {
       SCIP_VAR* var;
       SCIP_Real bestscore;

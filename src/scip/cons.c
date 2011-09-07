@@ -4317,8 +4317,8 @@ SCIP_RETCODE SCIPconssetchgApply(
          assert(cons->addarraypos >= 0);
          assert(!cons->deleted); /* deleted constraints must not be enabled! */
          SCIP_CALL( SCIPconsDisable(conssetchg->disabledconss[i], set, stat) );
-	 assert(!cons->update);
-	 assert(!cons->enabled);
+         assert(!cons->update);
+         assert(!cons->enabled);
       }
    }
 
@@ -4530,7 +4530,7 @@ SCIP_RETCODE SCIPconsCreate(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
@@ -4723,7 +4723,7 @@ SCIP_RETCODE SCIPconsParse(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even

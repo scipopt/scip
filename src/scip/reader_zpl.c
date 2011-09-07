@@ -316,13 +316,13 @@ Bool xlp_addcon_term(
       SCIP_Real* lincoeff;
       SCIP_Real* quadcoeff;
       Mono*      monom;
-  	  
+
       SCIP_CALL_ABORT( SCIPallocBufferArray(scip_, &linvar,    term_get_elements(term)) );
       SCIP_CALL_ABORT( SCIPallocBufferArray(scip_, &quadvar1,  term_get_elements(term)) );
       SCIP_CALL_ABORT( SCIPallocBufferArray(scip_, &quadvar2,  term_get_elements(term)) );
       SCIP_CALL_ABORT( SCIPallocBufferArray(scip_, &lincoeff,  term_get_elements(term)) );
       SCIP_CALL_ABORT( SCIPallocBufferArray(scip_, &quadcoeff, term_get_elements(term)) );
-  	  
+
       for (i = 0; i < term_get_elements(term); ++i)
       {
          monom = term_get_element(term, i);
@@ -531,7 +531,7 @@ Bool xlp_addsos_term(
          var = (SCIP_VAR*) mono_get_var(term_get_element(term, i), 0);
          weight = numb_todbl(mono_get_coeff(term_get_element(term, i)));
 
-	 SCIP_CALL_ABORT( SCIPaddVarSOS1(scip_, cons, var, weight) );
+         SCIP_CALL_ABORT( SCIPaddVarSOS1(scip_, cons, var, weight) );
       }
       SCIP_CALL_ABORT( SCIPreleaseCons(scip_, &cons) );
       break;
@@ -558,7 +558,7 @@ Bool xlp_addsos_term(
          var = (SCIP_VAR*) mono_get_var(term_get_element(term, i), 0);
          weight = numb_todbl(mono_get_coeff(term_get_element(term, i)));
 
-	 SCIP_CALL_ABORT( SCIPaddVarSOS2(scip_, cons, var, weight) );
+         SCIP_CALL_ABORT( SCIPaddVarSOS2(scip_, cons, var, weight) );
       }
       SCIP_CALL_ABORT( SCIPreleaseCons(scip_, &cons) );
       break;
@@ -573,7 +573,7 @@ Bool xlp_addsos_term(
    return FALSE;
 }
 
-/** retuns the variable name */
+/** returns the variable name */
 const char* xlp_getvarname(
    const Var*            var                 /**< variable */
    )

@@ -62,7 +62,7 @@
 #define DEFAULT_COVERINGOBJ     'u'          /**< objective function of the covering problem */
 #define DEFAULT_COPYCUTS        TRUE         /**< should all active cuts from the cutpool of the original scip be copied
                                               *   to constraints of the subscip
-					      */
+                                              */
 
 #define COVERINGOBJS            "cdlmtu"     /**< list of objective functions of the covering problem */
 #define MAXNLPFAILS             1            /**< maximum number of fails after which we give up solving the nlp relaxation */
@@ -221,7 +221,6 @@ SCIP_RETCODE processNlRow(
    SCIP_Bool*            consmarker,         /**< marker array if constraint has been counted in conscounter */
    SCIP_Bool             globalbounds,       /**< should global bounds on variables be used instead of local bounds at focus node? */
    SCIP_Bool             onlyconvexify,      /**< should we only fix/dom.red. variables creating nonconvexity? */
-   char                  coveringobj,        /**< objective function of the covering problem */
    SCIP_Bool*            success             /**< pointer to store whether the problem was created successfully */
    )
 {
@@ -613,7 +612,7 @@ SCIP_RETCODE createCoveringProblem(
          /* process nlrow */
          *success = FALSE;
          SCIP_CALL( processNlRow(scip, nlrow, coveringscip, nvars, coveringvars, termcounter, conscounter, consmarker,
-               globalbounds, onlyconvexify, coveringobj, success) );
+               globalbounds, onlyconvexify, success) );
 
          if( *success == FALSE )
             goto TERMINATE;
@@ -753,7 +752,7 @@ SCIP_RETCODE createCoveringProblem(
          /* process nlrow */
          *success = FALSE;
          SCIP_CALL( processNlRow(scip, nlrows[i], coveringscip, nvars, coveringvars, termcounter, conscounter, consmarker,
-               globalbounds, onlyconvexify, coveringobj, success) );
+               globalbounds, onlyconvexify, success) );
 
          if( *success == FALSE )
             goto TERMINATE;
@@ -2453,7 +2452,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolUndercover)
       SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_DURINGLPLOOP);
 
    /* find nonlinear constraint handlers */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &heurdata->nlconshdlrs, 3) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &heurdata->nlconshdlrs, 3) );/*lint !e506*/
    h = 0;
    heurdata->nlconshdlrs[h] = SCIPfindConshdlr(scip, "and");
    if( heurdata->nlconshdlrs[h] != NULL )

@@ -523,7 +523,7 @@ SCIP_RETCODE SCIPbranchcandAddExternCand(
    {
       /* candidate has equal priority as the current maximum:
        * move away the first non-maximal priority candidate, move the current candidate to the correct
-       * slot (binaries first, integers next, implicits next, continuous last) and increase the number 
+       * slot (binaries first, integers next, implicit integers next, continuous last) and increase the number 
        * of maximal priority candidates
        */
       if( insertpos != branchcand->nprioexterncands )
@@ -644,7 +644,7 @@ SCIP_Bool SCIPbranchcandContainsExternCand(
    if( branchpriority == branchcand->externmaxpriority )
    {
       /* variable has equal priority as the current maximum:
-       * look for it in the correct slot (binaries first, integers next, implicits next, continuous last)
+       * look for it in the correct slot (binaries first, integers next, implicit integers next, continuous last)
        */
       if( vartype == SCIP_VARTYPE_BINARY )
       {
@@ -688,7 +688,7 @@ SCIP_Bool SCIPbranchcandContainsExternCand(
    return FALSE;
 }
 
-/** gets branching candidates for pseudo solution branching (nonfixed variables) */
+/** gets branching candidates for pseudo solution branching (non-fixed variables) */
 SCIP_RETCODE SCIPbranchcandGetPseudoCands(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -750,7 +750,7 @@ SCIP_RETCODE SCIPbranchcandGetPseudoCands(
    return SCIP_OKAY;
 }
 
-/** gets number of branching candidates for pseudo solution branching (nonfixed variables) */
+/** gets number of branching candidates for pseudo solution branching (non-fixed variables) */
 int SCIPbranchcandGetNPseudoCands(
    SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
    )
@@ -847,7 +847,7 @@ void branchcandInsertPseudoCand(
    {
       /* candidate has equal priority as the current maximum:
        * move away the first non-maximal priority candidate, move the current candidate to the correct
-       * slot (binaries first, integers next, implicits last) and increase the number of maximal priority candidates
+       * slot (binaries first, integers next, implicit integers last) and increase the number of maximal priority candidates
        */
       if( insertpos != branchcand->npriopseudocands )
       {

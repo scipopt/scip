@@ -306,7 +306,7 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
    SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") executing intdiving heuristic: depth=%d, %d non-fixed, dualbound=%g, searchbound=%g\n", 
       SCIPgetNNodes(scip), SCIPgetDepth(scip), nfixcands, SCIPgetDualbound(scip), SCIPretransformObj(scip, searchbound));
 
-   /* copy the pseudo cands into own array, because we want to reorder them */
+   /* copy the pseudo candidates into own array, because we want to reorder them */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &fixcands, pseudocands, nfixcands) );
 
    /* sort non-fixed variables by non-increasing inference score, but prefer binaries over integers in any case */
@@ -379,7 +379,7 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
    while( !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL
       && (divedepth < 10
          || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations && objval < searchbound)) 
-	  && !SCIPisStopped(scip) )
+      && !SCIPisStopped(scip) )
    {
       SCIP_VAR* var;
       SCIP_Real bestsolval;

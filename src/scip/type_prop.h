@@ -85,7 +85,7 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *  possible return values for *result:
  *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
  *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
- *  - SCIP_FEASIBLE   : no infeasibility nor unboundness could be found
+ *  - SCIP_FEASIBLE   : no infeasibility nor unboundedness could be found
  */
 #define SCIP_DECL_PROPINITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop, SCIP_RESULT* result)
 
@@ -105,7 +105,7 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *  possible return values for *result:
  *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
  *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
- *  - SCIP_FEASIBLE   : no infeasibility nor unboundness could be found
+ *  - SCIP_FEASIBLE   : no infeasibility nor unboundedness could be found
  */
 #define SCIP_DECL_PROPEXITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop, SCIP_RESULT* result)
 
@@ -212,7 +212,7 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *  rule and thus identify the "reason" bounds. The bounds that form the reason of the assignment must then be provided
  *  by calls to SCIPaddConflictLb() and SCIPaddConflictUb() in the propagation conflict resolving method.
  *
- *  See the description of the propagation conflict resulving method of constraint handlers for further details.
+ *  See the description of the propagation conflict resolving method of constraint handlers for further details.
  *
  *  input:
  *  - scip            : SCIP main data structure

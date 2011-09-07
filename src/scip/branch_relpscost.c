@@ -655,9 +655,9 @@ SCIP_RETCODE execRelpscost(
 #ifdef SCIP_DEBUG
       if ( bestsbcand >= 0 )
       {
-	 SCIPdebugMessage(" -> best: <%s> (%g / %g / %g), lookahead=%g/%g\n",
-	    SCIPvarGetName(branchcands[bestsbcand]), bestsbscore, bestsbfracscore, bestsbdomainscore, 
-	    lookahead, maxlookahead);
+         SCIPdebugMessage(" -> best: <%s> (%g / %g / %g), lookahead=%g/%g\n",
+            SCIPvarGetName(branchcands[bestsbcand]), bestsbscore, bestsbfracscore, bestsbdomainscore, 
+            lookahead, maxlookahead);
       }
 #endif
 

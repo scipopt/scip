@@ -292,7 +292,7 @@ SCIP_RETCODE sepastoreAddCut(
    }
    else
    {
-      /* initialze values to invalid (will be initialized during cut filtering) */
+      /* initialize values to invalid (will be initialized during cut filtering) */
       cutefficacy = SCIP_INVALID;
       cutscore = SCIP_INVALID;
 
@@ -943,7 +943,7 @@ SCIP_RETCODE SCIPsepastoreRemoveInefficaciousCuts(
       else
          ++c;
    }
-   SCIPdebugMessage("removed %d non-efficious cuts\n", cnt);
+   SCIPdebugMessage("removed %d non-efficacious cuts\n", cnt);
 
    return SCIP_OKAY;
 }

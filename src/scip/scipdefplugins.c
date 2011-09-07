@@ -31,7 +31,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_NLPI* nlpi;
 
    SCIP_CALL( SCIPincludeConshdlrQuadratic(scip) ); /* quadratic must be before linear due to constraint upgrading */
-   SCIP_CALL( SCIPincludeConshdlrLinear(scip) ); /* linear must be before its specialisations due to constraint upgrading */
+   SCIP_CALL( SCIPincludeConshdlrLinear(scip) ); /* linear must be before its specializations due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrAnd(scip) );
    SCIP_CALL( SCIPincludeConshdlrBounddisjunction(scip) );
    SCIP_CALL( SCIPincludeConshdlrConjunction(scip) );
@@ -49,7 +49,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeConshdlrSetppc(scip) );
    SCIP_CALL( SCIPincludeConshdlrSOS1(scip) );
    SCIP_CALL( SCIPincludeConshdlrSOS2(scip) );
-   SCIP_CALL( SCIPincludeConshdlrSOC(scip) ); /* SOC need to be after quadratic due to constraint upgrading */
+   SCIP_CALL( SCIPincludeConshdlrSOC(scip) ); /* SOC needs to be after quadratic due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrVarbound(scip) );
    SCIP_CALL( SCIPincludeConshdlrXor(scip) );
 

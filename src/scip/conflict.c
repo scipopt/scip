@@ -5003,7 +5003,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
 
          SCIPdebugMessage("analyzing conflict on infeasible downwards strongbranch for variable <%s>[%g,%g] in depth %d\n",
             SCIPvarGetName(SCIPcolGetVar(col)), SCIPvarGetLbLocal(SCIPcolGetVar(col)), SCIPvarGetUbLocal(SCIPcolGetVar(col)), 
-	    SCIPtreeGetCurrentDepth(tree));
+            SCIPtreeGetCurrentDepth(tree));
 
          conflict->nsbcalls++;
 
@@ -5064,7 +5064,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
 
          SCIPdebugMessage("analyzing conflict on infeasible upwards strongbranch for variable <%s>[%g,%g] in depth %d\n",
             SCIPvarGetName(SCIPcolGetVar(col)), SCIPvarGetLbLocal(SCIPcolGetVar(col)), SCIPvarGetUbLocal(SCIPcolGetVar(col)), 
-	    SCIPtreeGetCurrentDepth(tree));
+            SCIPtreeGetCurrentDepth(tree));
 
          conflict->nsbcalls++;
 

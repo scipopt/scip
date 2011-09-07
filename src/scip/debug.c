@@ -108,14 +108,14 @@ SCIP_RETCODE readSolfile(
       /* the lines "solution status: ..." and "objective value: ..." may preceed the solution information */
       if( strncmp(buf, "solution", 8) == 0 || strncmp(buf, "objective", 9) == 0 )
       {
-   	 nonvalues++;
+         nonvalues++;
          continue;
       }
 
       /* skip empty lines */
       if( strlen(buf) == 1 )
       {
-   	 nonvalues++;
+         nonvalues++;
          continue;
       }
 

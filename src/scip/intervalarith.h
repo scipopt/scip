@@ -262,7 +262,7 @@ void SCIPintervalAddVectors(
    SCIP_INTERVAL*        operand2            /**< array of second operands of operation */
    );
 
-/** substracts operand2 from operand1 and stores result in resultant */
+/** subtracts operand2 from operand1 and stores result in resultant */
 extern
 void SCIPintervalSub(
    SCIP_Real             infinity,           /**< value for infinity */
@@ -271,7 +271,7 @@ void SCIPintervalSub(
    SCIP_INTERVAL         operand2            /**< second operand of operation */
    );
 
-/** substracts scalar operand2 from operand1 and stores result in resultant */
+/** subtracts scalar operand2 from operand1 and stores result in resultant */
 extern
 void SCIPintervalSubScalar(
    SCIP_Real             infinity,           /**< value for infinity */

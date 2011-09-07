@@ -65,6 +65,7 @@ interface:
 - due to the new timingmask for propagation calls SCIPincludeConshdlr() has the timingmask as a new parameter
 - new method SCIProwGetAge() to access the age of a row (pub_lp.h/lp.c)
 - allowed calling SCIPgetRowSolActivity() in SCIP_STAGE_SOLVED, since LP is still available
+- removed parameters timelimit and memorylimit from SCIPapplyRens()
 
 performance improvements:
 - performance improvements in prop_vbounds

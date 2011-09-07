@@ -94,23 +94,9 @@ SCIP_RETCODE createSubproblem(
    SCIP_Bool             uselprows           /**< should subproblem be created out of the rows in the LP rows?   */
    )
 {
-   SCIP_Real lb;
-   SCIP_Real ub;
-   SCIP_Real lpsol;
    SCIP_SOL* bestsol;
-   SCIP_Real mipsol;
 
-   SCIP_CONS* cons;
-   SCIP_VAR** consvars;
-   SCIP_COL** cols;
-   SCIP_Real constant;
-   SCIP_Real lhs;
-   SCIP_Real rhs;
-   SCIP_Real* vals;
-
-   int nnonz;
    int i;
-   int j;
    
    assert(scip != NULL);
    assert(subscip != NULL);
@@ -124,6 +110,16 @@ SCIP_RETCODE createSubproblem(
    /* create the rebounded general integer variables of the subproblem */
    for( i = nbinvars; i < nbinvars + nintvars; i++ )
    {
+      SCIP_Real mipsol;
+      SCIP_Real lpsol;
+
+      SCIP_Real lbglobal;
+      SCIP_Real ubglobal;
+
+      /* get the bounds for each variable */
+      lbglobal = SCIPvarGetLbGlobal(vars[i]);
+      ubglobal = SCIPvarGetUbGlobal(vars[i]);
+
       assert(SCIPvarGetType(vars[i]) == SCIP_VARTYPE_INTEGER);
       /* get the current LP solution for each variable */
       lpsol = SCIPvarGetLPSol(vars[i]);
@@ -133,10 +129,12 @@ SCIP_RETCODE createSubproblem(
       /* if the solution values differ by 0.5 or more, the variable is rebounded, otherwise it is just copied */
       if( REALABS(lpsol-mipsol) >= 0.5 )
       {
+         SCIP_Real lb;
+         SCIP_Real ub;
          SCIP_Real range; 
-         /* get the bounds for each variable */
-         lb = SCIPvarGetLbGlobal(vars[i]);
-         ub = SCIPvarGetUbGlobal(vars[i]);
+
+         lb = lbglobal;
+         ub = ubglobal;
 
          /* create a equally sized range around lpsol for general integers: bounds are lpsol +- (mipsol-lpsol) */
          range = 2*lpsol-mipsol;
@@ -165,8 +163,8 @@ SCIP_RETCODE createSubproblem(
          }
 
          /* the global domain of variables might have been reduced since incumbent was found: adjust lb and ub accordingly */
-         lb = MAX(lb, SCIPvarGetLbGlobal(vars[i]));
-         ub = MIN(ub, SCIPvarGetUbGlobal(vars[i]));
+         lb = MAX(lb, lbglobal);
+         ub = MIN(ub, ubglobal);
          
          /* perform the bound change */
          SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], lb) );
@@ -175,8 +173,8 @@ SCIP_RETCODE createSubproblem(
       else
       {
          /* the global domain of variables might have been reduced since incumbent was found: adjust it accordingly */
-         mipsol = MAX(mipsol, SCIPvarGetLbGlobal(vars[i]));
-         mipsol = MIN(mipsol, SCIPvarGetUbGlobal(vars[i]));
+         mipsol = MAX(mipsol, lbglobal);
+         mipsol = MIN(mipsol, ubglobal);
          
          /* hard fixing for general integer variables with abs(mipsol-lpsol) < 0.5 */
          SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], mipsol) );
@@ -195,6 +193,17 @@ SCIP_RETCODE createSubproblem(
       /* copy all rows to linear constraints */
       for( i = 0; i < nrows; i++ )
       {
+         SCIP_CONS* cons;
+         SCIP_VAR** consvars;
+         SCIP_COL** cols;
+         SCIP_Real constant;
+         SCIP_Real lhs;
+         SCIP_Real rhs;
+         SCIP_Real* vals;
+         
+         int nnonz;
+         int j;
+
          /* ignore rows that are only locally valid */
          if( SCIProwIsLocal(rows[i]) )
             continue;
@@ -541,27 +550,18 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    if( nsubnodes < heurdata->minnodes )
       return SCIP_OKAY;
 
-   /* check whether there is enough time and memory left */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if( !SCIPisInfinity(scip, timelimit) )
-      timelimit -= SCIPgetSolvingTime(scip);
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
-   if( !SCIPisInfinity(scip, memorylimit) )   
-      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-   if( timelimit < 10.0 || memorylimit <= 0.0 )
-      return SCIP_OKAY;
-
    if( SCIPisStopped(scip) )
      return SCIP_OKAY;
 
    /* get required data of the original problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
-   assert(vars != NULL || nvars == 0);
    assert(nbinvars <= nvars);
 
    /* do not run heuristic if only continuous variables are present */
    if( nbinvars == 0 && nintvars == 0 )
       return SCIP_OKAY;
+
+   assert(vars != NULL);
 
    /* initialize the subproblem */
    SCIP_CALL( SCIPcreate(&subscip) );
@@ -618,6 +618,16 @@ SCIP_DECL_HEUREXEC(heurExecDins)
  
    /* disable output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+
+   /* check whether there is enough time and memory left */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   if( !SCIPisInfinity(scip, timelimit) )
+      timelimit -= SCIPgetSolvingTime(scip);
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+   if( !SCIPisInfinity(scip, memorylimit) )   
+      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
+   if( timelimit <= 0.0 || memorylimit <= 0.0 )
+      return SCIP_OKAY;
 
    /* set limits for the subproblem */
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nsubnodes) );
@@ -712,7 +722,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
                solval = SCIPgetSolVal(scip, sols[j], vars[i]);
                delta[i] = delta[i] && SCIPisFeasEQ(scip, mipsolval, solval);
             }
-      	 }
+         }
 
          /* hard fixing if rootlpsolval=nodelpsolval=mipsolval(s) and delta (is TRUE) */
          if( delta[i] && SCIPisFeasEQ(scip, mipsolval, lpsolval) && SCIPisFeasEQ(scip, mipsolval, rootlpsolval) 

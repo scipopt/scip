@@ -2200,7 +2200,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
       if( consdata->nfixedones >= 2 )
       {
          /* at least two variables are fixed to 1:
-          * - a linkink constraint is infeasible due to the set partitioning condition
+          * - a linking constraint is infeasible due to the set partitioning condition
           */
          SCIPdebugMessage(""CONSHDLR_NAME" constraint <%s> is infeasible\n", SCIPconsGetName(cons));
          *result = SCIP_CUTOFF;
@@ -2252,7 +2252,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
             }
          }
 
-	 /* now all other variables are fixed to zero:
+         /* now all other variables are fixed to zero:
           * the constraint is feasible, and if it's not modifiable, it is redundant
           */
          SCIPdebugMessage(""CONSHDLR_NAME" constraint <%s> is redundant\n", SCIPconsGetName(cons));
@@ -2921,7 +2921,7 @@ SCIP_RETCODE SCIPcreateConsLinking(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even

@@ -103,7 +103,7 @@ struct SCIP_ConsData
    
    SCIP_VAR*             intvar;             /**< a artificial variable which was added only for the objective function,
                                               *   if this variable is not NULL this constraint (without this integer
-                                              *   variable) describes the objective funktion */
+                                              *   variable) describes the objective function */
 
    SCIP_VAR*             indvar;             /**< indicator variable if it's a soft constraint, or NULL */
    SCIP_Real             weight;             /**< weight of the soft constraint, if it is one */
@@ -386,7 +386,7 @@ SCIP_RETCODE consdataCreate(
    SCIP_Bool             issoftcons,         /**< is this a soft constraint */
    SCIP_VAR*             intvar,             /**< a artificial variable which was added only for the objective function,
                                               *   if this variable is not NULL this constraint (without this integer
-                                              *   variable) describes the objective funktion */
+                                              *   variable) describes the objective function */
    SCIP_Real             lhs,                /**< left hand side of row */
    SCIP_Real             rhs                 /**< right hand side of row */
    )
@@ -3363,7 +3363,7 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
    SCIP_Bool             issoftcons,         /**< is this a soft constraint */
    SCIP_VAR*             intvar,             /**< a artificial variable which was added only for the objective function,
                                               *   if this variable is not NULL this constraint (without this integer
-                                              *   variable) describes the objective funktion */
+                                              *   variable) describes the objective function */
    SCIP_Real             lhs,                /**< left hand side of constraint */
    SCIP_Real             rhs,                /**< right hand side of constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
@@ -3383,7 +3383,7 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even

@@ -197,13 +197,13 @@ SCIP_Real SCIPcolGetFarkasValue(
    SCIP_LP*              lp                  /**< current LP data */
    );
 
-/** start strong branching - call before any strongbranching */
+/** start strong branching - call before any strong branching */
 extern
 SCIP_RETCODE SCIPlpStartStrongbranch(
    SCIP_LP*              lp                  /**< LP data */
    );
 
-/** end strong branching - call after any strongbranching */
+/** end strong branching - call after any strong branching */
 extern
 SCIP_RETCODE SCIPlpEndStrongbranch(
    SCIP_LP*              lp                  /**< LP data */
@@ -1330,7 +1330,7 @@ SCIP_RETCODE SCIPlpWriteMip(
    SCIP_Bool             origobj,            /**< should the original objective function be used? */
    SCIP_OBJSENSE         objsense,           /**< objective sense */
    SCIP_Real             objscale,           /**< objective scaling factor */
-   SCIP_Real             objoffset           /**< objective offset, eg. caused by variable fixings in presolving */
+   SCIP_Real             objoffset           /**< objective offset, e.g., caused by variable fixings in presolving */
 );
 
 /** recalculates Euclidean norm of objective function vector of column variables if it have gotten unreliable during calculation */

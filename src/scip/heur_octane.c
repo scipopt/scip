@@ -228,7 +228,7 @@ SCIP_RETCODE generateAverageRay(
       assert(SCIPcolGetLPPos(SCIPvarGetCol(subspacevars[j])) >= 0);
       SCIP_CALL( SCIPgetLPBInvACol(scip, SCIPcolGetLPPos(SCIPvarGetCol(subspacevars[j])), tableaurows[j]) );
       for( i = nrows - 1; i >= 0; --i )
-	 rownorm[i] += tableaurows[j][i] * tableaurows[j][i];
+         rownorm[i] += tableaurows[j][i] * tableaurows[j][i];
    }
       
    /* take average over all rows of the tableau */
@@ -350,11 +350,11 @@ SCIP_RETCODE generateAverageNBRay(
 
       for( j = nnonz - 1; j >= 0; --j )
       { 
-	 SCIP_VAR* var;
+         SCIP_VAR* var;
          int f;
 
-	 var = SCIPcolGetVar(cols[j]);
-	 f = fracspace[SCIPvarGetProbindex(var)];
+         var = SCIPcolGetVar(cols[j]);
+         f = fracspace[SCIPvarGetProbindex(var)];
 
          if( f >= 0 )
          {
@@ -837,7 +837,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
       flipCoords(rayorigin, raydirection, sign, nsubspacevars);
 
       for( i = f_max - 1; i >= 0; --i)
-	lambda[i] = SCIPinfinity(scip);
+         lambda[i] = SCIPinfinity(scip);
 
       /* calculate negquotient, initialize perm, facets[0], p, and q */
       p = 0.5 * nsubspacevars;
@@ -848,12 +848,12 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
          if( SCIPisFeasZero(scip, raydirection[i]) )
          {
             if( rayorigin[i] < 0 )
-	      negquotient[i] = SCIPinfinity(scip);
+               negquotient[i] = SCIPinfinity(scip);
             else
-	      negquotient[i] = -SCIPinfinity(scip);
+               negquotient[i] = -SCIPinfinity(scip);
          }
          else
-	   negquotient[i] = - (rayorigin[i] / raydirection[i]);
+            negquotient[i] = - (rayorigin[i] / raydirection[i]);
 
          perm[i] = i; 
 
@@ -893,14 +893,14 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
       
       /* find the first facets hit by the ray */
       for( i = 0; i < nfacets && i < f_first; ++i)
-	 generateNeighborFacets(scip, facets, lambda, rayorigin, raydirection, negquotient, nsubspacevars, f_max, i, &nfacets);
+         generateNeighborFacets(scip, facets, lambda, rayorigin, raydirection, negquotient, nsubspacevars, f_max, i, &nfacets);
     
       /* construct the first ffirst possible solutions */
       for( i = 0; i < nfacets && i < f_first; ++i )
       { 
-	 SCIP_CALL( SCIPcreateSol(scip, &first_sols[i], heur) );
-	 SCIP_CALL( getSolFromFacet(scip, facets[i], first_sols[i], sign, subspacevars, nsubspacevars) );
-	 assert( first_sols[i] != NULL );
+         SCIP_CALL( SCIPcreateSol(scip, &first_sols[i], heur) );
+         SCIP_CALL( getSolFromFacet(scip, facets[i], first_sols[i], sign, subspacevars, nsubspacevars) );
+         assert( first_sols[i] != NULL );
       }
 
       /* try, whether there is a row violated by all of the first ffirst solutions */
@@ -909,7 +909,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
       for( i = nrows - 1; i >= 0; --i )
       {
          if( !SCIProwIsLocal(rows[i]) )
-	 {
+         {
             SCIP_COL** cols;
             SCIP_Real constant;
             SCIP_Real lhs;
@@ -919,7 +919,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
             int nnonzerovars;
             int k;
             
-	    /* get the row's data */
+            /* get the row's data */
             constant = SCIProwGetConstant(rows[i]);
             lhs = SCIProwGetLhs(rows[i]);
             rhs = SCIProwGetRhs(rows[i]);
@@ -938,13 +938,13 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
                for( k = MIN(f_first, nfacets) - 1; k > 0; --k )
                {
                   rowval = constant;
-		  for( j = nnonzerovars - 1; j >= 0; --j )
-		     rowval += coeffs[j] * SCIPgetSolVal(scip, first_sols[k], SCIPcolGetVar(cols[j]));
+                  for( j = nnonzerovars - 1; j >= 0; --j )
+                     rowval += coeffs[j] * SCIPgetSolVal(scip, first_sols[k], SCIPcolGetVar(cols[j]));
                   if( lhs <= rowval )
-		  {
+                  {
                      cons_viol = FALSE;
-		     break;
-		  }
+                     break;
+                  }
                }
             }
             /* dito for the right hand side */
@@ -954,13 +954,13 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
                for( k = MIN(f_first, nfacets) - 1; k > 0; --k )
                {
                   rowval = constant;
-		  for( j = nnonzerovars - 1; j >= 0; --j )
-		     rowval += coeffs[j] * SCIPgetSolVal(scip, first_sols[k], SCIPcolGetVar(cols[j]));
+                  for( j = nnonzerovars - 1; j >= 0; --j )
+                     rowval += coeffs[j] * SCIPgetSolVal(scip, first_sols[k], SCIPcolGetVar(cols[j]));
                   if( rhs >= rowval )
-		  {
+                  {
                      cons_viol = FALSE;
-		     break;
-		  }
+                     break;
+                  }
                }
             }
             /* break as soon as one row is violated by all of the ffirst solutions */
@@ -973,12 +973,12 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
       if( !cons_viol )
       {
          /* if there was no row violated by all solutions, try whether one or more of them are feasible */
-	 for( i = MIN(f_first, nfacets) - 1; i >= 0; --i )
+         for( i = MIN(f_first, nfacets) - 1; i >= 0; --i )
          {
             assert(first_sols[i] != NULL);
             SCIP_CALL( SCIPtrySol(scip, first_sols[i], FALSE, TRUE, FALSE, TRUE, &success) );
             if( success )
-	       *result = SCIP_FOUNDSOL; 
+               *result = SCIP_FOUNDSOL; 
          }
          /* search for further facets and construct and try solutions out of facets fixed as closest ones */
          for( i = f_first; i < f_max; ++i)
@@ -989,7 +989,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
             SCIP_CALL( getSolFromFacet(scip, facets[i], sol, sign, subspacevars, nsubspacevars) );
             SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, FALSE, TRUE, &success) );
             if( success )
-	       *result = SCIP_FOUNDSOL; 
+               *result = SCIP_FOUNDSOL; 
          }
       }
 

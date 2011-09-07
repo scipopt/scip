@@ -395,7 +395,7 @@ SCIP_RETCODE getIndicesFromDense(
    int*                  dstat,              /**< array */
    int                   n,                  /**< size of array */
    int*                  count,              /**< array of counts (sizes) */
-   int**                 sub                 /**< pointer to stroe array of indices */
+   int**                 sub                 /**< pointer to store array of indices */
    )
 {
    int i;
@@ -617,7 +617,7 @@ SCIP_RETCODE SCIPlpiCreate(
    MOSEK_CALL( MSK_putintparam((*lpi)->task, MSK_IPAR_OPTIMIZER, MSK_OPTIMIZER_FREE_SIMPLEX) );
    MOSEK_CALL( MSK_putintparam((*lpi)->task, MSK_IPAR_SIM_DEGEN, DEGEN_LEVEL) );
    MOSEK_CALL( MSK_putintparam((*lpi)->task, MSK_IPAR_SIM_SWITCH_OPTIMIZER, MSK_ON) );
-   /* We only have status keys (recalc dual solution with out dual superbasics) */
+   /* We only have status keys (recalculate dual solution without dual superbasics) */
    MOSEK_CALL( MSK_putintparam((*lpi)->task, MSK_IPAR_SIM_HOTSTART, MSK_SIM_HOTSTART_STATUS_KEYS) );
    MOSEK_CALL( MSK_puttaskname((*lpi)->task, (char*) name) );
 
@@ -2200,7 +2200,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    return SCIP_OKAY;
 }
 
-/** start strong branching - call before any strongbranching */
+/** start strong branching - call before any strong branching */
 SCIP_RETCODE SCIPlpiStartStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
@@ -2209,7 +2209,7 @@ SCIP_RETCODE SCIPlpiStartStrongbranch(
    return SCIP_OKAY;
 }
 
-/** end strong branching - call after any strongbranching */
+/** end strong branching - call after any strong branching */
 SCIP_RETCODE SCIPlpiEndStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
@@ -3126,7 +3126,7 @@ SCIP_RETCODE convertstat_mosek2scip(
    return SCIP_OKAY;
 }
 
-/** converst Mosek to SCIP status - slack variables */
+/** convert Mosek to SCIP status - slack variables */
 static
 SCIP_RETCODE convertstat_mosek2scip_slack(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -3138,7 +3138,7 @@ SCIP_RETCODE convertstat_mosek2scip_slack(
 {
    int i;
 
-   /* Slacks is stored as -1 in mosek i.e bounds are reversed compared to scip  */
+   /* slacks are stored as -1 in Mosek, i.e., bounds are reversed compared to SCIP  */
 
    for( i = 0; i < n; i++ )
    {
@@ -3217,7 +3217,7 @@ void convertstat_scip2mosek_slack(
    MSKstakeye*           resstat             /**< resulting Mosek status array */
    )
 {
-   /* Slacks is stored as -1 in mosek i.e bounds are reversed compared to scip  */
+   /* slacks are stored as -1 in Mosek, i.e., bounds are reversed compared to SCIP  */
    int i;
 
    for( i = 0; i < n; i++ )
@@ -3621,7 +3621,7 @@ SCIP_RETCODE checkState1(
          SCIPdebugMessage("STATE[%d]: %c[%d] = inf\n", optimizecount, xc, i);
          break;
       default:
-         SCIPdebugMessage("STATE[%d]: %c[%d] = unknow stata <%d>\n", optimizecount, xc, i, sk[i]);
+         SCIPdebugMessage("STATE[%d]: %c[%d] = unknown status <%d>\n", optimizecount, xc, i, sk[i]);
          break;
       }  /*lint !e788*/
    }

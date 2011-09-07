@@ -602,16 +602,6 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       return SCIP_OKAY;
    }
 
-   /* check whether there is enough time and memory left */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if( !SCIPisInfinity(scip, timelimit) )
-      timelimit -= SCIPgetSolvingTime(scip);
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
-   if( !SCIPisInfinity(scip, memorylimit) )   
-      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-   if( timelimit < 10.0 || memorylimit <= 0.0 )
-      return SCIP_OKAY;
-
    *result = SCIP_DIDNOTFIND;
 
    /* allocate memory */
@@ -704,6 +694,8 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    /* solve lp only if the problem is still feasible */
    if( !backtrackcutoff && SCIPhasCurrentNodeLP(scip) )
    {
+      lperror = FALSE;
+
 #if 1
       SCIPdebugMessage("starting solving clique-lp at time %g\n", SCIPgetSolvingTime(scip));
       
@@ -774,7 +766,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    if( lpstatus == SCIP_LPSOLSTAT_INFEASIBLE || lpstatus == SCIP_LPSOLSTAT_OBJLIMIT || backtrackcutoff ) 
    {
       /* in case the last fixing in both direction led to infeasibility or to a reached objlimit than our conflict will
-       * only include all variabkle before that last fixing 
+       * only include all variable before that last fixing 
        */
       shortconflict = cutoff && (nonefixvars > 0);
 
@@ -838,6 +830,16 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       /* disable output to console */
       SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
  
+      /* check whether there is enough time and memory left */
+      SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+      if( !SCIPisInfinity(scip, timelimit) )
+         timelimit -= SCIPgetSolvingTime(scip);
+      SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+      if( !SCIPisInfinity(scip, memorylimit) )   
+         memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
+      if( timelimit <= 0.0 || memorylimit <= 0.0 )
+         return SCIP_OKAY;
+
       /* set limits for the subproblem */
       SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", nstallnodes) );
       SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", heurdata->maxnodes) );

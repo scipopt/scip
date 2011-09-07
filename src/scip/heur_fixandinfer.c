@@ -215,7 +215,7 @@ SCIP_DECL_HEUREXEC(heurExecFixandinfer)
    startncands = ncands;
    while( !cutoff && ncands > 0
       && (divedepth < heurdata->minfixings || (startncands - ncands) * 2 * MAXDIVEDEPTH >= startncands * divedepth) 
-	  && !SCIPisStopped(scip) )
+      && !SCIPisStopped(scip) )
    {
       divedepth++;
 

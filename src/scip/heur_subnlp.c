@@ -2043,9 +2043,9 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
    if( !SCIPisInfinity(scip, timelimit) )
    {
       timelimit -= SCIPgetSolvingTime(scip);
-      if( timelimit < 10.0 )
+      if( timelimit <= 0.0 )
       {
-         SCIPdebugMessage("skip NLP heuristic; only %g seconds time left\n", timelimit);
+         SCIPdebugMessage("skip NLP heuristic; no time left\n");
          return SCIP_OKAY;
       }
    }

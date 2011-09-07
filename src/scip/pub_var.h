@@ -1064,49 +1064,49 @@ SCIP_BOUNDTYPE SCIPbdchginfoGetBoundtype(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    );
 
-/** returs depth level of given bound change information */
+/** returns depth level of given bound change information */
 extern
 int SCIPbdchginfoGetDepth(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    );
 
-/** returs bound change position in its depth level of given bound change information */
+/** returns bound change position in its depth level of given bound change information */
 extern
 int SCIPbdchginfoGetPos(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    );
 
-/** returs bound change index of given bound change information */
+/** returns bound change index of given bound change information */
 extern
 SCIP_BDCHGIDX* SCIPbdchginfoGetIdx(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    );
 
-/** returs inference variable of given bound change information */
+/** returns inference variable of given bound change information */
 extern
 SCIP_VAR* SCIPbdchginfoGetInferVar(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    );
 
-/** returs inference constraint of given bound change information */
+/** returns inference constraint of given bound change information */
 extern
 SCIP_CONS* SCIPbdchginfoGetInferCons(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    );
 
-/** returs inference propagator of given bound change information, or NULL if no propagator was responsible */
+/** returns inference propagator of given bound change information, or NULL if no propagator was responsible */
 extern
 SCIP_PROP* SCIPbdchginfoGetInferProp(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    );
 
-/** returs inference user information of given bound change information */
+/** returns inference user information of given bound change information */
 extern
 int SCIPbdchginfoGetInferInfo(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    );
 
-/** returs inference bound of inference variable of given bound change information */
+/** returns inference bound of inference variable of given bound change information */
 extern
 SCIP_BOUNDTYPE SCIPbdchginfoGetInferBoundtype(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */

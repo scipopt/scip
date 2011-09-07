@@ -38,7 +38,7 @@ struct SCIP_MessagehdlrData
    SCIP_Bool             quiet;              /**< should screen messages be suppressed? */
 };
 
-/** prints a message to the given file stream and writes the same messate to the log file */
+/** prints a message to the given file stream and writes the same message to the log file */
 static
 void logMessage(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */

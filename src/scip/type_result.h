@@ -35,7 +35,7 @@ enum SCIP_Result
    SCIP_DIDNOTFIND  =   3,            /**< the method was executed, but failed finding anything */
    SCIP_FEASIBLE    =   4,            /**< no infeasibility could be found */
    SCIP_INFEASIBLE  =   5,            /**< an infeasibility was detected */
-   SCIP_UNBOUNDED   =   6,            /**< an unboundness was detected */
+   SCIP_UNBOUNDED   =   6,            /**< an unboundedness was detected */
    SCIP_CUTOFF      =   7,            /**< the current node is infeasible and can be cut off */
    SCIP_SEPARATED   =   8,            /**< the method added a cutting plane */
    SCIP_NEWROUND    =   9,            /**< the method added a cutting plane and a new separation round should immediately start */

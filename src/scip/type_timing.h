@@ -40,7 +40,7 @@ extern "C" {
 #define SCIP_PROPTIMING_AFTERLPNODE       0x008     /**< call propagator after the processing of a node with solved LP was
                                                      *   finished */
 
-/** call propagator regardless of curent status */
+/** call propagator regardless of current status */
 #define SCIP_PROPTIMING_ALWAYS (SCIP_PROPTIMING_BEFORELP | SCIP_PROPTIMING_DURINGLPLOOP | SCIP_PROPTIMING_AFTERLPLOOP | SCIP_PROPTIMING_AFTERLPNODE )
 
 typedef unsigned int SCIP_PROPTIMING;
@@ -61,7 +61,7 @@ typedef unsigned int SCIP_PROPTIMING;
 #define SCIP_HEURTIMING_DURINGPRICINGLOOP 0x080 /**< call heuristic during pricing loop */
 #define SCIP_HEURTIMING_BEFOREPRESOL      0x100 /**< call heuristic before presolving */
 #define SCIP_HEURTIMING_DURINGPRESOLLOOP  0x200 /**< call heuristic during presolving loop */
-#define SCIP_HEURTIMING_AFTERPROPLOOP     0x400 /**< call heuristic after propagation ehich is performed before solving the LP */
+#define SCIP_HEURTIMING_AFTERPROPLOOP     0x400 /**< call heuristic after propagation which is performed before solving the LP */
 /* it turned out that a heuristic timing DURINGPROPLOOP causes severe troubles with the resolving of propagations */
 
 /** call heuristic after the processing of a node was finished */

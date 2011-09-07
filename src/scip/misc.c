@@ -3781,7 +3781,7 @@ int SCIPstairmapGetEarliestFeasibleStart(
    assert(stairmap->timepoints[pos] <= starttime);
    
    (*infeasible) = TRUE;
-	
+
    while( (*infeasible) && starttime <= ub )
    {
       if( SCIPstairmapIsFeasibleStart(stairmap, starttime, duration, height, &pos) )
@@ -3821,7 +3821,7 @@ int SCIPstairmapGetLatestFeasibleStart(
 {
    int starttime;
    int pos;
-	
+
    assert(stairmap != NULL);
    assert(lb >= 0);
    assert(lb <= ub);
@@ -3838,7 +3838,7 @@ int SCIPstairmapGetLatestFeasibleStart(
    assert(stairmap->timepoints[pos] <= starttime);
    
    (*infeasible) = TRUE;
-	
+
    while( (*infeasible) && starttime >= lb )
    {
       if( SCIPstairmapIsFeasibleStart(stairmap, starttime, duration, height, &pos) )
@@ -4359,7 +4359,7 @@ SCIP_Bool SCIPfindSimpleRational(
 
    center = 0.5*(lb+ub);
 
-   /* in order to compute a rational number that is exactly withing the bounds (as the user expects),
+   /* in order to compute a rational number that is exactly within the bounds (as the user expects),
     * we computed the allowed delta with downward rounding, if available
     */
    if( SCIPintervalHasRoundingControl() )

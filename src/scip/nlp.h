@@ -233,7 +233,7 @@ SCIP_RETCODE SCIPnlrowChgExprtreeParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_NLP*             nlp,                /**< current NLP data */
-   int                   paramidx,           /**< index of paramater in expression tree's parameter array */
+   int                   paramidx,           /**< index of parameter in expression tree's parameter array */
    SCIP_Real             paramval            /**< new value of parameter */
    );
 

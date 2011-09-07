@@ -2781,13 +2781,13 @@ SCIP_Real SCIPgetRelaxSolObj(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** start strong branching - call before any strongbranching */
+/** start strong branching - call before any strong branching */
 extern
 SCIP_RETCODE SCIPstartStrongbranch(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** end strong branching - call after any strongbranching */
+/** end strong branching - call after any strong branching */
 extern
 SCIP_RETCODE SCIPendStrongbranch(
    SCIP*                 scip                /**< SCIP data structure */
@@ -3755,7 +3755,7 @@ SCIP_Real SCIPgetVarAvgInferenceScoreCurrentRun(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** initializes the upwards and downards pseudocosts, conflict scores, conflict lengths, inference scores, cutoff scores
+/** initializes the upwards and downwards pseudocosts, conflict scores, conflict lengths, inference scores, cutoff scores
  *  of a variable to the given values 
  */
 extern
@@ -5279,7 +5279,7 @@ SCIP_RETCODE SCIPcreateNlRow(
    int                   nquadvars,          /**< number of variables in quadratic term */
    SCIP_VAR**            quadvars,           /**< variables in quadratic terms, or NULL if nquadvars == 0 */
    int                   nquadelems,         /**< number of elements in quadratic term */
-   SCIP_QUADELEM*        quadelems,          /**< elements (i.e., monoms) in quadratic term, or NULL if nquadelems == 0 */
+   SCIP_QUADELEM*        quadelems,          /**< elements (i.e., monomials) in quadratic term, or NULL if nquadelems == 0 */
    SCIP_EXPRTREE*        expression,         /**< nonlinear expression, or NULL */
    SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs                 /**< right hand side */
@@ -6090,7 +6090,7 @@ SCIP_RETCODE SCIPaddExternBranchCand(
    SCIP_Real             solval              /**< value of the variable in the current solution */
    );
 
-/** removes all exteral candidates from the storage for external branching */
+/** removes all external candidates from the storage for external branching */
 extern
 void SCIPclearExternBranchCands(
    SCIP*                 scip                /**< SCIP data structure */
@@ -6103,7 +6103,7 @@ SCIP_Bool SCIPcontainsExternBranchCand(
    SCIP_VAR*             var                 /**< variable to look for */
    );
 
-/** gets branching candidates for pseudo solution branching (nonfixed variables) along with the number of candidates */
+/** gets branching candidates for pseudo solution branching (non-fixed variables) along with the number of candidates */
 extern
 SCIP_RETCODE SCIPgetPseudoBranchCands(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6112,7 +6112,7 @@ SCIP_RETCODE SCIPgetPseudoBranchCands(
    int*                  npriopseudocands    /**< pointer to store the number of candidates with maximal priority, or NULL */
    );
 
-/** gets branching candidates for pseudo solution branching (nonfixed variables) */
+/** gets branching candidates for pseudo solution branching (non-fixed variables) */
 extern
 int SCIPgetNPseudoBranchCands(
    SCIP*                 scip                /**< SCIP data structure */
@@ -7217,7 +7217,7 @@ SCIP_Longint SCIPgetNBacktracks(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets current plunging depth (succ. times, a child was selected as next node) */
+/** gets current plunging depth (successive times, a child was selected as next node) */
 extern
 int SCIPgetPlungeDepth(
    SCIP*                 scip                /**< SCIP data structure */
@@ -8046,7 +8046,7 @@ SCIP_Bool SCIPisRelGE(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if rel. difference of values is in range of sumepsilon */
+/** checks, if relative difference of values is in range of sumepsilon */
 extern
 SCIP_Bool SCIPisSumRelEQ(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -8054,7 +8054,7 @@ SCIP_Bool SCIPisSumRelEQ(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if rel. difference of val1 and val2 is lower than sumepsilon */
+/** checks, if relative difference of val1 and val2 is lower than sumepsilon */
 extern
 SCIP_Bool SCIPisSumRelLT(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -8062,7 +8062,7 @@ SCIP_Bool SCIPisSumRelLT(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if rel. difference of val1 and val2 is not greater than sumepsilon */
+/** checks, if relative difference of val1 and val2 is not greater than sumepsilon */
 extern
 SCIP_Bool SCIPisSumRelLE(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -8070,7 +8070,7 @@ SCIP_Bool SCIPisSumRelLE(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if rel. difference of val1 and val2 is greater than sumepsilon */
+/** checks, if relative difference of val1 and val2 is greater than sumepsilon */
 extern
 SCIP_Bool SCIPisSumRelGT(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -8078,7 +8078,7 @@ SCIP_Bool SCIPisSumRelGT(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if rel. difference of val1 and val2 is not lower than -sumepsilon */
+/** checks, if relative difference of val1 and val2 is not lower than -sumepsilon */
 extern
 SCIP_Bool SCIPisSumRelGE(
    SCIP*                 scip,               /**< SCIP data structure */

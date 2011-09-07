@@ -220,8 +220,8 @@
 #define SCIP_DEFAULT_PRESOL_MAXRESTARTS      -1 /**< maximal number of restarts (-1: unlimited) */
 #define SCIP_DEFAULT_PRESOL_RESTARTFAC     0.05 /**< fraction of integer variables that were fixed in the root node
                                                  *   triggering a restart with preprocessing after root node evaluation */
-#define SCIP_DEFAULT_PRESOL_IMMRESTARTFAC  0.20 /**< fraction of integer variables that were fixed in the root node triggereing an
-                                                 *   immediate restart with preprcessing */
+#define SCIP_DEFAULT_PRESOL_IMMRESTARTFAC  0.20 /**< fraction of integer variables that were fixed in the root node triggering an
+                                                 *   immediate restart with preprocessing */
 #define SCIP_DEFAULT_PRESOL_SUBRESTARTFAC  1.00 /**< fraction of integer variables that were globally fixed during the
                                                  *   solving process triggering a restart with preprocessing */
 #define SCIP_DEFAULT_PRESOL_RESTARTMINRED  0.10 /**< minimal fraction of integer variables removed after restart to allow
@@ -456,7 +456,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
 
    /* copy all constraint handler plugins */
    if( copyconshdlrs && sourceset->conshdlrs_include != NULL )
-   {	
+   {
       /* copy them in order they were added to the sourcescip
        *
        * @note we only have to set the valid pointer to FALSE in case that a constraint handler, which does not need
@@ -1192,7 +1192,7 @@ SCIP_RETCODE SCIPsetCreate(
    /* node selection */
    SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
          "nodeselection/childsel",
-         "child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value, 'r'oot LP value difference, 'h'brid inference/root LP value difference)",
+         "child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value, 'r'oot LP value difference, 'h'ybrid inference/root LP value difference)",
          &(*set)->nodesel_childsel, FALSE, SCIP_DEFAULT_NODESEL_CHILDSEL, "dupilrh",
          NULL, NULL) );
 
@@ -3174,7 +3174,7 @@ SCIP_RETCODE SCIPsetInitprePlugins(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundness */
+   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundedness */
    SCIP_Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
    )
 {
@@ -3199,7 +3199,7 @@ SCIP_RETCODE SCIPsetInitprePlugins(
       {
          *unbounded = TRUE;
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpresolGetName(set->presols[i]));
+            "presolver <%s> detected unboundedness (or infeasibility)\n", SCIPpresolGetName(set->presols[i]));
       }
    }
 
@@ -3217,7 +3217,7 @@ SCIP_RETCODE SCIPsetInitprePlugins(
       {
          *unbounded = TRUE;
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "propagator <%s> detected unboundness (or infeasibility)\n", SCIPpropGetName(set->props[i]));
+            "propagator <%s> detected unboundedness (or infeasibility)\n", SCIPpropGetName(set->props[i]));
       }
    }
 
@@ -3235,7 +3235,7 @@ SCIP_RETCODE SCIPsetInitprePlugins(
       {
          *unbounded = TRUE;
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "constraint handler <%s> detected unboundness (or infeasibility)\n",
+            "constraint handler <%s> detected unboundedness (or infeasibility)\n",
             SCIPconshdlrGetName(set->conshdlrs[i]));
       }
    }
@@ -3248,7 +3248,7 @@ SCIP_RETCODE SCIPsetExitprePlugins(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundness */
+   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundedness */
    SCIP_Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
    )
 {
@@ -3273,7 +3273,7 @@ SCIP_RETCODE SCIPsetExitprePlugins(
       {
          *unbounded = TRUE;
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpresolGetName(set->presols[i]));
+            "presolver <%s> detected unboundedness (or infeasibility)\n", SCIPpresolGetName(set->presols[i]));
       }
    }
 
@@ -3291,7 +3291,7 @@ SCIP_RETCODE SCIPsetExitprePlugins(
       {
          *unbounded = TRUE;
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpropGetName(set->props[i]));
+            "presolver <%s> detected unboundedness (or infeasibility)\n", SCIPpropGetName(set->props[i]));
       }
    }
 
@@ -3309,7 +3309,7 @@ SCIP_RETCODE SCIPsetExitprePlugins(
       {
          *unbounded = TRUE;
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "constraint handler <%s> detected unboundness (or infeasibility)\n",
+            "constraint handler <%s> detected unboundedness (or infeasibility)\n",
             SCIPconshdlrGetName(set->conshdlrs[i]));
       }
    }

@@ -902,11 +902,11 @@ SCIP_RETCODE addRelaxation(
 
    char rowname[SCIP_MAXSTRLEN];
    
-   /* in the root LP we only add the weaker relaxation which contains of two rows:
+   /* in the root LP we only add the weaker relaxation which consists of two rows:
     *   - one additional row:             resvar - v1 - ... - vn >= 1-n
     *   - aggregated row:               n*resvar - v1 - ... - vn <= 0.0
     *
-    * during separation we separate the stronger relaxation whcih contains of n+1 row:
+    * during separation we separate the stronger relaxation which consists of n+1 row:
     *   - one additional row:             resvar - v1 - ... - vn >= 1-n
     *   - for each operator variable vi:  resvar - vi            <= 0
     */
@@ -1405,7 +1405,7 @@ SCIP_RETCODE propagateCons(
          /* remove the "and" constraint globally */
          SCIP_CALL( SCIPdelCons(scip, cons) );
 
-	 (*nupgdconss)++;
+         (*nupgdconss)++;
 
          SCIPfreeBufferArray(scip, &consvars);
       }
@@ -2408,7 +2408,7 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
       SCIP_CALL( propagateCons(scip, cons, conshdlrdata->eventhdlr, &cutoff, nfixedvars, nupgdconss) );
 
       /* remove all variables that are fixed to one; merge multiple entries of the same variable;
-       * fix resuntant to zero if a pair of negated variables is contained in the operand variables
+       * fix resultant to zero if a pair of negated variables is contained in the operand variables
        */
       if( !cutoff && !SCIPconsIsDeleted(cons) )
       {
@@ -2480,24 +2480,24 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
    {
       if( *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars )
       {
-	 if( firstchange < nconss ) 
-	 {
-	    /* detect redundant constraints; fast version with hash table instead of pairwise comparison */
-	    SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &firstchange, &cutoff, naggrvars, ndelconss) );
+         if( firstchange < nconss ) 
+         {
+            /* detect redundant constraints; fast version with hash table instead of pairwise comparison */
+            SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &firstchange, &cutoff, naggrvars, ndelconss) );
             oldnaggrvars = *naggrvars;
-	 }
+         }
       }
       else
-	 delay = TRUE;
+         delay = TRUE;
    }
 
    if( !cutoff && conshdlrdata->presolpairwise )
    {
       if( *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars )
       {
-	 SCIP_Longint npaircomparisons;
-	 npaircomparisons = 0;
-	 oldndelconss = *ndelconss;
+         SCIP_Longint npaircomparisons;
+         npaircomparisons = 0;
+         oldndelconss = *ndelconss;
          
          for( c = firstchange; c < nconss && !cutoff && !SCIPisStopped(scip); ++c )
          {
@@ -2510,13 +2510,13 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
                
                if( npaircomparisons > NMINCOMPARISONS )
                {
-		  if( ((*ndelconss - oldndelconss) + (*naggrvars - oldnaggrvars) + (*nchgbds - oldnchgbds)/2) / (npaircomparisons + 0.0) < MINGAINPERNMINCOMPARISONS )
+                  if( ((*ndelconss - oldndelconss) + (*naggrvars - oldnaggrvars) + (*nchgbds - oldnchgbds)/2) / (npaircomparisons + 0.0) < MINGAINPERNMINCOMPARISONS )
                      break;
-		  oldndelconss = *ndelconss;
+                  oldndelconss = *ndelconss;
                   oldnaggrvars = *naggrvars;
                   oldnchgbds = *nchgbds;
 
-		  npaircomparisons = 0;
+                  npaircomparisons = 0;
                }
             }
          }
@@ -2531,7 +2531,7 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
    else if( delay )
       *result = SCIP_DELAYED;
    else if( *nfixedvars > oldnfixedvars || *naggrvars > oldnaggrvars || *nchgbds > oldnchgbds
-	    || *ndelconss > oldndelconss || *nupgdconss > oldnupgdconss )
+            || *ndelconss > oldndelconss || *nupgdconss > oldnupgdconss )
       *result = SCIP_SUCCESS;
    else
       *result = SCIP_DIDNOTFIND;
@@ -2838,7 +2838,7 @@ SCIP_RETCODE SCIPcreateConsAnd(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even

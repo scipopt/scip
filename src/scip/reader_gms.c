@@ -118,7 +118,7 @@ SCIP_RETCODE getActiveVariables(
 static
 void clearLine(
    char*                 linebuffer,         /**< line */
-   int*                  linecnt             /**< number of charaters in line */
+   int*                  linecnt             /**< number of characters in line */
    )
 {
    assert( linebuffer != NULL );
@@ -134,7 +134,7 @@ void endLine(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    char*                 linebuffer,         /**< line */
-   int*                  linecnt             /**< number of charaters in line */
+   int*                  linecnt             /**< number of characters in line */
    )
 {
    assert( scip != NULL );
@@ -238,7 +238,7 @@ SCIP_RETCODE printActiveVariables(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    char*                 linebuffer,         /**< line */
-   int*                  linecnt,            /**< number of charaters in line */
+   int*                  linecnt,            /**< number of characters in line */
    const char*           prefix,             /**< prefix (maybe NULL) */
    const char*           suffix,             /**< suffix (maybe NULL) */
    int                   nvars,              /**< number of variables */

@@ -151,7 +151,7 @@ SCIP_Bool SCIPbranchcandContainsExternCand(
    SCIP_VAR*             var                 /**< variable to look for */
    );
 
-/** gets branching candidates for pseudo solution branching (nonfixed variables) */
+/** gets branching candidates for pseudo solution branching (non-fixed variables) */
 extern
 SCIP_RETCODE SCIPbranchcandGetPseudoCands(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -162,7 +162,7 @@ SCIP_RETCODE SCIPbranchcandGetPseudoCands(
    int*                  npriopseudocands    /**< pointer to store the number of candidates with maximal priority, or NULL */
    );
 
-/** gets number of branching candidates for pseudo solution branching (nonfixed variables) */
+/** gets number of branching candidates for pseudo solution branching (non-fixed variables) */
 extern
 int SCIPbranchcandGetNPseudoCands(
    SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */

@@ -44,7 +44,7 @@
 #define SCIP_DEFAULT_INCLOBJCUTOFF          FALSE /**< include the objective cutoff when computing the relative interior? */
 #define SCIP_DEFAULT_RECOMPUTERELINT        FALSE /**< recompute relative interior in each separation call? */
 #define SCIP_DEFAULT_RELINTNORMTYPE           'o' /**< type of norm to use when computing relative interior */
-#define SCIP_DEFAULT_MAXUNSUCCESSFULL           0 /**< turn off separation in current node after unsuccessful calls (-1 never turn off) */
+#define SCIP_DEFAULT_MAXUNSUCCESSFUL            0 /**< turn off separation in current node after unsuccessful calls (-1 never turn off) */
 
 
 /** separator data */
@@ -299,12 +299,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpClosecuts)
                }
             }
 
-            SCIPdebugMessage("Separated close cuts: %d (enoughcuts: %d, unsuccessfull: %d).\n", SCIPgetNCuts(scip) - noldcuts,
+            SCIPdebugMessage("Separated close cuts: %d (enoughcuts: %d, unsuccessful: %d).\n", SCIPgetNCuts(scip) - noldcuts,
                SCIPgetNCuts(scip) - noldcuts > sepadata->sepathreshold, sepadata->nunsuccessful);
 
             if ( sepadata->maxunsuccessful >= 0 && sepadata->nunsuccessful > sepadata->maxunsuccessful )
             {
-               SCIPdebugMessage("Turn off close cut separation, because of %d unsuccessfull calls.\n", sepadata->nunsuccessful);
+               SCIPdebugMessage("Turn off close cut separation, because of %d unsuccessful calls.\n", sepadata->nunsuccessful);
                sepadata->discardnode = currentnodenumber;
             }
          }
@@ -383,7 +383,7 @@ SCIP_RETCODE SCIPincludeSepaClosecuts(
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/closecuts/maxunsuccessful",
          "turn off separation in current node after unsuccessful calls (-1 never turn off)",
-         &sepadata->maxunsuccessful, TRUE, SCIP_DEFAULT_MAXUNSUCCESSFULL, -1, INT_MAX, NULL, NULL) );
+         &sepadata->maxunsuccessful, TRUE, SCIP_DEFAULT_MAXUNSUCCESSFUL, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
