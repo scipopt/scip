@@ -36,6 +36,7 @@
 #include <string.h> /* for strcmp */ 
 #include <ctype.h>  /* for isspace */
 
+#include "scip/cons_nonlinear.h"
 #include "scip/cons_quadratic.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_and.h"
@@ -62,10 +63,10 @@
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
-#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
+#define CONSHDLR_PROP_TIMING SCIP_PROPTIMING_BEFORELP
 
 #define MAXDNOM                 10000LL /**< maximal denominator for simple rational fixed values */
-
+#define NONLINCONSUPGD_PRIORITY   40000 /**< priority of upgrading nonlinear constraints */
 /*
  * Data structures
  */
@@ -7107,6 +7108,187 @@ SCIP_RETCODE proposeFeasibleSolution(
    return SCIP_OKAY;
 }
 
+/** tries to upgrade a nonlinear constraint into a quadratic constraint */
+static
+SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdQuadratic)
+{
+   SCIP_EXPRGRAPH* exprgraph;
+   SCIP_EXPRGRAPHNODE* node;
+   int i;
+
+   assert(nupgdconss != NULL);
+   assert(upgdconss != NULL);
+
+   *nupgdconss = 0;
+
+   node = SCIPgetExprgraphNodeNonlinear(scip, cons);
+
+   /* no interest in linear constraints */
+   if( node == NULL )
+      return SCIP_OKAY;
+
+   /* if a quadratic expression has been simplified, then all children of the node should be variables */
+   if( !SCIPexprgraphAreAllNodeChildrenVars(node) )
+      return SCIP_OKAY;
+
+   switch( SCIPexprgraphGetNodeOperator(node) )
+   {
+      case SCIP_EXPR_VARIDX:
+      case SCIP_EXPR_CONST:
+      case SCIP_EXPR_PLUS:
+      case SCIP_EXPR_MINUS:
+      case SCIP_EXPR_SUM:
+      case SCIP_EXPR_LINEAR:
+         /* these should not appear as exprgraphnodes after constraint presolving */
+         return SCIP_OKAY;
+
+      case SCIP_EXPR_DIV:
+      case SCIP_EXPR_SQRT:
+      case SCIP_EXPR_REALPOWER:
+      case SCIP_EXPR_INTPOWER:
+      case SCIP_EXPR_SIGNPOWER:
+      case SCIP_EXPR_EXP:
+      case SCIP_EXPR_LOG:
+      case SCIP_EXPR_SIN:
+      case SCIP_EXPR_COS:
+      case SCIP_EXPR_TAN:
+         /* case SCIP_EXPR_ERF: */
+         /* case SCIP_EXPR_ERFI: */
+      case SCIP_EXPR_MIN:
+      case SCIP_EXPR_MAX:
+      case SCIP_EXPR_ABS:
+      case SCIP_EXPR_SIGN:
+      case SCIP_EXPR_PRODUCT:
+      case SCIP_EXPR_POLYNOMIAL:
+         /* these do not look like an quadratic expression (assuming the expression graph simplifier did run) */
+         return SCIP_OKAY;
+
+      case SCIP_EXPR_MUL:
+      case SCIP_EXPR_SQUARE:
+      case SCIP_EXPR_QUADRATIC:
+         /* these mean that we have something quadratic */
+         break;
+
+      case SCIP_EXPR_PARAM:
+      case SCIP_EXPR_LAST:
+      default:
+         SCIPwarningMessage("unexpected expression operator %d in nonlinear constraint <%s>\n", SCIPexprgraphGetNodeOperator(node), SCIPconsGetName(cons));
+         return SCIP_OKAY;
+   }
+
+   /* setup a quadratic constraint */
+
+   if( upgdconsssize < 1 )
+   {
+      /* request larger upgdconss array */
+      *nupgdconss = -1;
+      return SCIP_OKAY;
+   }
+
+   *nupgdconss = 1;
+   SCIP_CALL( SCIPcreateConsQuadratic(scip, &upgdconss[0], SCIPconsGetName(cons),
+      SCIPgetNLinearVarsNonlinear(scip, cons), SCIPgetLinearVarsNonlinear(scip, cons), SCIPgetLinearCoefsNonlinear(scip, cons),
+      0, NULL, 0, NULL,
+      SCIPgetLhsNonlinear(scip, cons), SCIPgetRhsNonlinear(scip, cons),
+      SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+      SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
+   assert(!SCIPconsIsStickingAtNode(cons));
+
+   exprgraph = SCIPgetExprgraphNonlinear(scip, SCIPconsGetHdlr(cons));
+
+   /* add variables from expression tree as "quadratic" variables to quadratic constraint */
+   for( i = 0; i < SCIPexprgraphGetNodeNChildren(node); ++i )
+   {
+      assert(SCIPexprgraphGetNodeChildren(node)[i] != NULL);
+      SCIP_CALL( SCIPaddQuadVarQuadratic(scip, upgdconss[0], SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[i]), 0.0, 0.0) );
+   }
+
+   switch( SCIPexprgraphGetNodeOperator(node) )
+   {
+      case SCIP_EXPR_MUL:
+      {
+         /* expression is product of two variables, so add bilinear term to constraint */
+         assert(SCIPexprgraphGetNodeNChildren(node) == 2);
+
+         SCIP_CALL( SCIPaddBilinTermQuadratic(scip, upgdconss[0],
+            SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[0]),
+            SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[1]),
+            1.0) );
+
+         break;
+      }
+
+      case SCIP_EXPR_SQUARE:
+      {
+         /* expression is square of a variable, so change square coefficient of quadratic variable */
+         assert(SCIPexprgraphGetNodeNChildren(node) == 1);
+
+         SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, upgdconss[0],
+            SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[0]),
+            1.0) );
+
+         break;
+      }
+
+      case SCIP_EXPR_QUADRATIC:
+      {
+         /* expression is quadratic */
+         SCIP_QUADELEM* quadelems;
+         int nquadelems;
+         SCIP_Real* lincoefs;
+
+         quadelems  = SCIPexprgraphGetNodeQuadraticQuadElements(node);
+         nquadelems = SCIPexprgraphGetNodeQuadraticNQuadElements(node);
+         lincoefs   = SCIPexprgraphGetNodeQuadraticLinearCoefs(node);
+
+         SCIPaddConstantQuadratic(scip, upgdconss[0], SCIPexprgraphGetNodeQuadraticConstant(node));
+
+         if( lincoefs != NULL )
+            for( i = 0; i < SCIPexprgraphGetNodeNChildren(node); ++i )
+               if( lincoefs[i] != 0.0 )
+               {
+                  /* linear term */
+                  SCIP_CALL( SCIPaddQuadVarLinearCoefQuadratic(scip, upgdconss[0],
+                     SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[i]),
+                     lincoefs[i]) );
+               }
+
+         for( i = 0; i < nquadelems; ++i )
+         {
+            assert(quadelems[i].idx1 < SCIPexprgraphGetNodeNChildren(node));
+            assert(quadelems[i].idx2 < SCIPexprgraphGetNodeNChildren(node));
+
+            if( quadelems[i].idx1 == quadelems[i].idx2 )
+            {
+               /* square term */
+               SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, upgdconss[0],
+                  SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[quadelems[i].idx1]),
+                  quadelems[i].coef) );
+            }
+            else
+            {
+               /* bilinear term */
+               SCIP_CALL( SCIPaddBilinTermQuadratic(scip, upgdconss[0],
+                  SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[quadelems[i].idx1]),
+                  SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[quadelems[i].idx2]),
+                  quadelems[i].coef) );
+            }
+         }
+
+         break;
+      }
+
+      default:
+      {
+         SCIPerrorMessage("you should not be here\n");
+         return SCIP_ERROR;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of constraint handler
  */
@@ -9001,6 +9183,9 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_newsolution", "handles the event that a new primal solution has been found",
          NULL,
          NULL, NULL, NULL, NULL, NULL, NULL, processNewSolutionEvent, NULL) );
+
+   /* include the quadratic constraint upgrade in the nonlinear constraint handler */
+   SCIP_CALL( SCIPincludeNonlinconsUpgrade(scip, nonlinconsUpgdQuadratic, NULL, NONLINCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
 
    return SCIP_OKAY;
 }
