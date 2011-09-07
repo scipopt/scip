@@ -690,12 +690,11 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    /*************************** Probing LP Solving ***************************/
 
    lpstatus = SCIP_LPSOLSTAT_ERROR;
+   lperror = FALSE; 
    allfixsolfound = FALSE;
    /* solve lp only if the problem is still feasible */
    if( !backtrackcutoff && SCIPhasCurrentNodeLP(scip) )
    {
-      lperror = FALSE;
-
 #if 1
       SCIPdebugMessage("starting solving clique-lp at time %g\n", SCIPgetSolvingTime(scip));
       

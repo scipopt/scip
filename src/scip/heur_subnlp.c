@@ -178,7 +178,7 @@ SCIP_RETCODE createSubSCIP(
    SCIP_CALL( SCIPcopyVars(scip, heurdata->subscip, varsmap, NULL, TRUE) );
 
    /* copy as many constraints as possible */
-   SCIP_CALL( SCIPhashmapCreate(&conssmap, SCIPblkmem(scip), MAX(5, SCIPgetNConss(scip))) );
+   SCIP_CALL( SCIPhashmapCreate(&conssmap, SCIPblkmem(scip), SCIPcalcHashtableSize(2 * SCIPgetNConss(scip))) );
    SCIP_CALL( SCIPcopyConss(scip, heurdata->subscip, varsmap, conssmap, TRUE, FALSE, &heurdata->subscipisvalid) );
    SCIPhashmapFree(&conssmap);
    if( !heurdata->subscipisvalid )

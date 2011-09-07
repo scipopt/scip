@@ -550,8 +550,8 @@ void updateFailureStatistic(
    /* increase number of failures, calculate next node at which crossover should be called and update actual solutions */
    heurdata->nfailures++;
    heurdata->nextnodenumber = (heurdata->nfailures <= 25
-      ? SCIPgetNNodes(scip) + 100*(2LL << heurdata->nfailures)
-      : SCIP_LONGINT_MAX);
+      ? SCIPgetNNodes(scip) + 100*(2LL << heurdata->nfailures) /*lint !e703*/
+      : SCIP_LONGINT_MAX); 
 }
 
 

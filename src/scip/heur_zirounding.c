@@ -554,6 +554,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
       {
          int rowpos;
 
+         assert(candrows != NULL); /* to please flexelint */
          assert(candrows[r] != NULL);
          rowpos = SCIProwGetLPPos(candrows[r]);
          
@@ -681,7 +682,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
     * whereas number of rounds is limited by parameter maxroundingloops
     */
    while( currentlpcands > 0 && improvementfound && (heurdata->maxroundingloops == -1 || nroundings < heurdata->maxroundingloops) )
-   { 
+   {  /*lint --e{850}*/
       improvementfound = FALSE;
       nroundings++;
       SCIPdebugMessage("zirounding enters while loop for %d time with %d candidates left. \n", nroundings, currentlpcands);

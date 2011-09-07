@@ -1277,7 +1277,7 @@ SCIP_RETCODE getFixingValue(
       }
       /* solve nlp relaxation unless it has not failed too often before */
       else if( !heurdata->nlpfailed )
-      {
+      {  /*lint --e{850}*/
          SCIP_NLPSOLSTAT stat;
          int i;
 
@@ -1286,7 +1286,7 @@ SCIP_RETCODE getFixingValue(
          SCIP_CALL( SCIPstartDiveNLP(scip) );
 
          for( i = bdlen-1; i >= 0; i-- )
-         {  /*lint --e{850}*/
+         {
             SCIP_VAR* relaxvar;
             SCIP_Real lb;
             SCIP_Real ub;
