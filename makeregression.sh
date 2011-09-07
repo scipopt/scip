@@ -1,11 +1,20 @@
 #!/bin/bash
-LASTGITHASH=0
+GITHASHFILE="check/results/githashorder"
 GITHASH=0
 TIME=3600
 LOCK=false
 CONTINUE=true
-OPTS=(opt dbg)
-TESTS=(short miplib2010)
+OPTS=(opt)
+#OPTS=(opt dbg)
+#TESTS=(short miplib2010)
+TESTS=(short)
+
+if [ -f $GITHASHFILE ];
+then
+    LASTGITHASH=`tail -1 $GITHASHFILE`
+else
+    LASTGITHASH=0
+fi
 
 # pull new version form git repository
 git pull
@@ -21,7 +30,7 @@ do
     do
         echo "wait for new version"
         sleep 60
-
+	
         # pull new version form git repository
         git pull
 
@@ -85,7 +94,7 @@ do
                 NSOLVED=`grep -c solved check/results/check.$TEST.*$GITHASH.*.$OPT.*res`
                 NTIMEOUTS=`grep -c timeouts check/results/check.$TEST.*$GITHASH.*.$OPT.*res`
 
-            if [ -f "check/results/check.$TEST.*$LASTGITHASH.*.$OPT.*res" ]
+            if [ -f "check/results/check.$TEST.*$LASTGITHASH.*.$OPT.*res" ];
             then
                 NLASTTIMEOUTS=`grep -c timeouts check/results/check.$TEST.*$LASTGITHASH.*.$OPT.*res`
 
@@ -104,4 +113,7 @@ do
         tail check/results/check.$TEST.*$GITHASH.*.$OPT.*.res | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
         done
     done
+
+    # all test are performed for the current hash
+    echo $GITHASH >> $GITHASHFILE 
 done
