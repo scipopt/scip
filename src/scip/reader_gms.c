@@ -49,7 +49,7 @@
 #include "scip/pub_misc.h"
 
 #define READER_NAME             "gmsreader"
-#define READER_DESC             "file reader for MI(NL)(SOC)Ps in GAMS file format"
+#define READER_DESC             "file writer for MI(NL)(SOC)Ps in GAMS file format"
 #define READER_EXTENSION        "gms"
 
 
@@ -62,7 +62,7 @@
 #define GMS_PRINTLEN         100
 #define GMS_DEFAULT_BIGM     1e+6
 #define GMS_DEFAULT_INDICATORREFORM 's'
-
+#define GMS_DEFAULT_SIGNPOWER FALSE
 
 /*
  * Local methods (for writing)
@@ -1020,7 +1020,8 @@ SCIP_RETCODE printSignpowerRow(
    SCIP_Real             coeflinear,         /**< coefficient of linear variable */
    SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs,                /**< right hand side */
-   SCIP_Bool             transformed         /**< transformed constraint? */
+   SCIP_Bool             transformed,        /**< transformed constraint? */
+   SCIP_Bool             signpowerallowed    /**< allowed to use signpower operator in GAMS? */
    )
 {
    char linebuffer[GMS_MAX_PRINTLEN] = { '\0' };
@@ -1048,29 +1049,40 @@ SCIP_RETCODE printSignpowerRow(
    appendLine(scip, file, linebuffer, &linecnt, consname);
 
    /* print nonlinear term
-    * signpow(x,n) is printed as x*abs(x) if n == 2, x*power(abs(x),n-1) if n is not 2 and not an odd integer, and as intpower(x,n) if n is an odd integer
-    * @todo could also print as signpower(x,n), but not many global solver understand this
+    * if not signpowerallowed, then signpow(x,n) is printed as x*abs(x) if n == 2, x*(abs(x)**(n-1)) if n is not 2 and not an odd integer, and as power(x,n) if n is an odd integer
+    * if signpowerallowed, then signpow(x,n) is printed as power(x,n) if n is an odd integer and as signpower(x,n) otherwiser
     */
    nisoddint = SCIPisIntegral(scip, exponent) && ((int)SCIPfloor(scip, exponent+0.5))%2 == 1;
    if( !nisoddint )
    {
-      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "(%g ", offset);
-      appendLine(scip, file, linebuffer, &linecnt, buffer);
-      SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", ") * ", 1, &nonlinvar, NULL, transformed) );
-
-      if( exponent == 2.0)
+      if( signpowerallowed )
       {
-         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "abs(%g ", offset);
+         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "signpower(%g ", offset);
          appendLine(scip, file, linebuffer, &linecnt, buffer);
-         SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", ")", 1, &nonlinvar, NULL, transformed) );
+         SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", ",", 1, &nonlinvar, NULL, transformed) );
+         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%g)", exponent);
+         appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
       else
       {
-         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "abs(%g ", offset);
+         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "(%g ", offset);
          appendLine(scip, file, linebuffer, &linecnt, buffer);
-         SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", ")", 1, &nonlinvar, NULL, transformed) );
-         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " ** %g)", exponent-1.0);
-         appendLine(scip, file, linebuffer, &linecnt, buffer);
+         SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", ") * ", 1, &nonlinvar, NULL, transformed) );
+
+         if( exponent == 2.0)
+         {
+            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "abs(%g ", offset);
+            appendLine(scip, file, linebuffer, &linecnt, buffer);
+            SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", ")", 1, &nonlinvar, NULL, transformed) );
+         }
+         else
+         {
+            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "abs(%g ", offset);
+            appendLine(scip, file, linebuffer, &linecnt, buffer);
+            SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", ")", 1, &nonlinvar, NULL, transformed) );
+            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " ** %g)", exponent-1.0);
+            appendLine(scip, file, linebuffer, &linecnt, buffer);
+         }
       }
    }
    else
@@ -1119,7 +1131,8 @@ SCIP_RETCODE printSignpowerCons(
    SCIP_Real             coeflinear,         /**< coefficient of linear variable */
    SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs,                /**< right hand side */
-   SCIP_Bool             transformed         /**< transformed constraint? */
+   SCIP_Bool             transformed,        /**< transformed constraint? */
+   SCIP_Bool             signpowerallowed    /**< allowed to use signpower operator in GAMS? */
    )
 {
    assert( scip != NULL );
@@ -1132,7 +1145,7 @@ SCIP_RETCODE printSignpowerCons(
 
       /* print equality constraint */
       SCIP_CALL( printSignpowerRow(scip, file, rowname, "", "=e=",
-         nonlinvar, linvar, exponent, offset, coeflinear, lhs, rhs, transformed) );
+         nonlinvar, linvar, exponent, offset, coeflinear, lhs, rhs, transformed, signpowerallowed) );
    }
    else
    {
@@ -1140,13 +1153,13 @@ SCIP_RETCODE printSignpowerCons(
       {
          /* print inequality ">=" */
          SCIP_CALL( printSignpowerRow(scip, file, rowname, SCIPisInfinity(scip, rhs) ? "" : "_lhs", "=g=",
-            nonlinvar, linvar, exponent, offset, coeflinear, lhs, rhs, transformed) );
+            nonlinvar, linvar, exponent, offset, coeflinear, lhs, rhs, transformed, signpowerallowed) );
       }
       if( !SCIPisInfinity(scip, rhs) )
       {
          /* print inequality "<=" */
          SCIP_CALL( printSignpowerRow(scip, file, rowname, SCIPisInfinity(scip, -lhs) ? "" : "_rhs", "=l=",
-            nonlinvar, linvar, exponent, offset, coeflinear, lhs, rhs, transformed) );
+            nonlinvar, linvar, exponent, offset, coeflinear, lhs, rhs, transformed, signpowerallowed) );
       }
    }
 
@@ -1270,30 +1283,44 @@ SCIP_RETCODE printExpr(
          SCIP_Real exponent;
          SCIP_Bool nisoddint;
 
-         /* signpow(x,y) is printed as x*abs(x) if y == 2, x*power(abs(x),y-1) if y is not 2 and not an odd integer, and as intpower(x,y) if y is an odd integer
-          * @todo there seem to exists a signpower function in GAMS */
-
+         /* signpow(x,y) is printed as x*abs(x) if y == 2, x*(abs(x) ** (y-1)) if y is not 2 and not an odd integer, and as intpower(x,y) if y is an odd integer
+          * but if reading/gmsreader/signpower is TRUE, then we print as signpower(x,y), unless y is odd integer
+          */
          exponent = SCIPexprGetSignPowerExponent(expr);
          nisoddint = ((int)exponent == exponent) && (((int)exponent)%2 == 1);
 
          if( !nisoddint )
          {
-            appendLineWithIndent(scip, file, linebuffer, linecnt, "(");
-            SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, transformed, SCIPexprGetChildren(expr)[0], exprvars) );
-            appendLineWithIndent(scip, file, linebuffer, linecnt, ")");
+            SCIP_Bool signpowerallowed;
 
-            if( exponent == 2.0)
+            SCIP_CALL( SCIPgetBoolParam(scip, "reading/gmsreader/signpower", &signpowerallowed) );
+
+            if( signpowerallowed )
             {
-               appendLineWithIndent(scip, file, linebuffer, linecnt, " * abs(");
+               appendLineWithIndent(scip, file, linebuffer, linecnt, " * signpower(");
                SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, transformed, SCIPexprGetChildren(expr)[0], exprvars) );
-               appendLineWithIndent(scip, file, linebuffer, linecnt, ")");
+               (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, ", %.15g)", exponent);
+               appendLineWithIndent(scip, file, linebuffer, linecnt, buffer);
             }
             else
             {
-               appendLineWithIndent(scip, file, linebuffer, linecnt, " * abs(");
+               appendLineWithIndent(scip, file, linebuffer, linecnt, "(");
                SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, transformed, SCIPexprGetChildren(expr)[0], exprvars) );
-               (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, ")**(%g)", SCIPexprGetRealPowerExponent(expr)-1.0);
-               appendLineWithIndent(scip, file, linebuffer, linecnt, buffer);
+               appendLineWithIndent(scip, file, linebuffer, linecnt, ")");
+
+               if( exponent == 2.0)
+               {
+                  appendLineWithIndent(scip, file, linebuffer, linecnt, " * abs(");
+                  SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, transformed, SCIPexprGetChildren(expr)[0], exprvars) );
+                  appendLineWithIndent(scip, file, linebuffer, linecnt, ")");
+               }
+               else
+               {
+                  appendLineWithIndent(scip, file, linebuffer, linecnt, " * abs(");
+                  SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, transformed, SCIPexprGetChildren(expr)[0], exprvars) );
+                  (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, ")**(%g)", SCIPexprGetRealPowerExponent(expr)-1.0);
+                  appendLineWithIndent(scip, file, linebuffer, linecnt, buffer);
+               }
             }
          }
          else
@@ -1884,6 +1911,10 @@ SCIP_RETCODE SCIPincludeReaderGms(
          "reading/gmsreader/indicatorreform", "which reformulation to use for indicator constraints: 'b'ig-M, 's'os1",
          NULL, FALSE, GMS_DEFAULT_INDICATORREFORM, "bs", NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "reading/gmsreader/signpower", "is it allowed to use the gams function signpower(x,a)?",
+         NULL, FALSE, GMS_DEFAULT_SIGNPOWER, NULL, NULL) );
+
    return SCIP_OKAY;
 }
 
@@ -1940,6 +1971,7 @@ SCIP_RETCODE SCIPwriteGms(
    SCIP_Bool nqcons;
    SCIP_Bool rangedrow;
    char indicatorform;
+   SCIP_Bool signpowerallowed;
 
    assert( scip != NULL );
    assert( nvars > 0 );
@@ -1948,6 +1980,8 @@ SCIP_RETCODE SCIPwriteGms(
    SCIP_CALL( checkVarnames(scip, vars, nvars) );
    /* check if the constraint names are too long */
    SCIP_CALL( checkConsnames(scip, conss, nconss, transformed) );
+
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/gmsreader/signpower", &signpowerallowed) );
 
    /* print statistics as comment to file */
    SCIPinfoMessage(scip, file, "$OFFLISTING\n");
@@ -2366,7 +2400,7 @@ SCIP_RETCODE SCIPwriteGms(
          SCIP_CALL( printSignpowerCons(scip, file, consname,
             SCIPgetNonlinearVarSignedpower(scip, cons), SCIPgetLinearVarSignedpower(scip, cons),
             SCIPgetExponentSignedpower(scip, cons), SCIPgetOffsetSignedpower(scip, cons), SCIPgetCoefLinearSignedpower(scip, cons),
-            SCIPgetLhsSignedpower(scip, cons),  SCIPgetRhsSignedpower(scip, cons), transformed) );
+            SCIPgetLhsSignedpower(scip, cons),  SCIPgetRhsSignedpower(scip, cons), transformed, signpowerallowed) );
 
          nlcons = TRUE;
          nqcons = TRUE;
