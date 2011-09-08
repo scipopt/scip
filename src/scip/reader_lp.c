@@ -350,7 +350,7 @@ SCIP_Bool getNextToken(
       }
       while( !isDelimChar(buf[lpinput->linepos]) && !isTokenChar(buf[lpinput->linepos]) );
 
-      /* if the token is an power sign '^', skip a following '2'
+      /* if the token is a power sign '^', skip a following '2'
        * if the token is an equation sense '<', '>', or '=', skip a following '='
        * if the token is an equality token '=' and the next character is a '<' or '>', replace the token by the inequality sense
        */

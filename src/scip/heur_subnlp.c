@@ -53,7 +53,7 @@
 struct SCIP_HeurData
 {
    SCIP*                 subscip;            /**< copy of CIP where presolving and NLP solving is done */
-   SCIP_Bool             triedsetupsubscip;  /**< whether we have tried to setup an sub-SCIP */
+   SCIP_Bool             triedsetupsubscip;  /**< whether we have tried to setup a sub-SCIP */
    SCIP_Bool             subscipisvalid;     /**< whether all constraints have been copied */
    int                   nseriousnlpierror;  /**< number of consecutive serious NLP solver failures (memout, ...) */
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for global bound change events */

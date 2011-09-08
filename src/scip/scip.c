@@ -19965,7 +19965,7 @@ SCIP_RETCODE SCIPdropVarEvent(
    return SCIP_OKAY;
 }
 
-/** catches an row coefficient, constant, or side change event on the given row */
+/** catches a row coefficient, constant, or side change event on the given row */
 SCIP_RETCODE SCIPcatchRowEvent(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row,                /**< linear row to catch event for */
@@ -19988,7 +19988,7 @@ SCIP_RETCODE SCIPcatchRowEvent(
    return SCIP_OKAY;
 }
 
-/** drops an row coefficient, constant, or side change event (stops to track event) on the given row */
+/** drops a row coefficient, constant, or side change event (stops to track event) on the given row */
 SCIP_RETCODE SCIPdropRowEvent(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row,                /**< linear row to drop event for */

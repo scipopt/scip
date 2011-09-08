@@ -4025,7 +4025,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    }
 
    /* print QCMATRIX sections for quadratic constraints
-    * in difference to an quadratic term in the objective function, the quadratic part is not divided by 2 here
+    * in difference to a quadratic term in the objective function, the quadratic part is not divided by 2 here
     */
    if( nConsQuadratic > 0 )
    {

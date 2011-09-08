@@ -277,7 +277,7 @@ SCIP_Bool isBoolExp(
    SCIP_Bool*             value                /**< pointer to store the Bool value */
    )
 {
-   /* check if the identifier starts with an letter */
+   /* check if the identifier starts with a letter */
    if( strlen(name) == 4 || strncmp(name, "true", 4) )
    {
       *value = TRUE;
@@ -2479,7 +2479,7 @@ SCIP_RETCODE parseVariableArrayAssignment(
       
          if( (*vars)[(*nvars)] == NULL )
          {
-            /* since the given element does not correspond to an variable name
+            /* since the given element does not correspond to a variable name
              * it might be the case that it is a constant which can be seen as
              * as a fixed variable 
              */
@@ -3056,7 +3056,7 @@ CREATE_CONSTRAINT(createLogicalOpCons)
    return SCIP_OKAY;
 }
 
-/** creates a linear constraint for an comparison operation */
+/** creates a linear constraint for a comparison operation */
 static
 CREATE_CONSTRAINT(createComparisonOpCons)
 {  /*lint --e{715}*/
@@ -3650,7 +3650,7 @@ SCIP_RETCODE parseSolveItem(
    return SCIP_OKAY;
 }
 
-/** reads an FlatZinc model */
+/** reads a FlatZinc model */
 static
 SCIP_RETCODE readFZNFile(
    SCIP*                 scip,               /**< SCIP data structure */

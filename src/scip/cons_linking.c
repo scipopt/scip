@@ -2895,7 +2895,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinking(
    return SCIP_OKAY;
 }
 
-/** creates and captures an linking constraint */
+/** creates and captures a linking constraint */
 SCIP_RETCODE SCIPcreateConsLinking(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */

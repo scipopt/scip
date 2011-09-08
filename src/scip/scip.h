@@ -6756,7 +6756,7 @@ SCIP_RETCODE SCIPdropVarEvent(
    int                   filterpos           /**< position of event filter entry returned by SCIPcatchVarEvent(), or -1 */
    );
 
-/** catches an row coefficient, constant, or side change event on the given row */
+/** catches a row coefficient, constant, or side change event on the given row */
 extern
 SCIP_RETCODE SCIPcatchRowEvent(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6767,7 +6767,7 @@ SCIP_RETCODE SCIPcatchRowEvent(
    int*                  filterpos           /**< pointer to store position of event filter entry, or NULL */
    );
 
-/** drops an row coefficient, constant, or side change event (stops to track event) on the given row */
+/** drops a row coefficient, constant, or side change event (stops to track event) on the given row */
 extern
 SCIP_RETCODE SCIPdropRowEvent(
    SCIP*                 scip,               /**< SCIP data structure */
