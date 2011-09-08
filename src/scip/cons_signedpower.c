@@ -670,8 +670,33 @@ SCIP_RETCODE presolveFindDuplicates(
                }
 
                SCIPdebugMessage("<%s> and <%s> are equivalent; dropping the first\n", SCIPconsGetName(cons0), SCIPconsGetName(cons1));
-               consdata1->lhs = MAX(consdata0->lhs, consdata1->lhs);
-               consdata1->rhs = MIN(consdata0->rhs, consdata1->rhs);
+
+               /* if a side of cons1 gets finite via merging with cons0, then this changes locks and events */
+               if( (SCIPisInfinity(scip, -consdata1->lhs) && !SCIPisInfinity(scip, -consdata0->lhs)) ||
+                   (SCIPisInfinity(scip,  consdata1->rhs) && !SCIPisInfinity(scip,  consdata0->rhs)) )
+               {
+                  SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, cons1) );
+                  SCIP_CALL( SCIPunlockVarCons(scip, consdata1->x, cons1, !SCIPisInfinity(scip, -consdata1->lhs), !SCIPisInfinity(scip, consdata1->rhs)) );
+                  if( consdata1->zcoef > 0.0 )
+                     SCIP_CALL( SCIPunlockVarCons(scip, consdata1->z, cons1, !SCIPisInfinity(scip, -consdata1->lhs), !SCIPisInfinity(scip,  consdata1->rhs)) );
+                  else
+                     SCIP_CALL( SCIPunlockVarCons(scip, consdata1->z, cons1, !SCIPisInfinity(scip,  consdata1->rhs), !SCIPisInfinity(scip, -consdata1->lhs)) );
+
+                  consdata1->lhs = MAX(consdata0->lhs, consdata1->lhs);
+                  consdata1->rhs = MIN(consdata0->rhs, consdata1->rhs);
+
+                  SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, cons1) );
+                  SCIP_CALL( SCIPlockVarCons(scip, consdata1->x, cons1, !SCIPisInfinity(scip, -consdata1->lhs), !SCIPisInfinity(scip, consdata1->rhs)) );
+                  if( consdata1->zcoef > 0.0 )
+                     SCIP_CALL( SCIPunlockVarCons(scip, consdata1->z, cons1, !SCIPisInfinity(scip, -consdata1->lhs), !SCIPisInfinity(scip,  consdata1->rhs)) );
+                  else
+                     SCIP_CALL( SCIPunlockVarCons(scip, consdata1->z, cons1, !SCIPisInfinity(scip,  consdata1->rhs), !SCIPisInfinity(scip, -consdata1->lhs)) );
+               }
+               else
+               {
+                  consdata1->lhs = MAX(consdata0->lhs, consdata1->lhs);
+                  consdata1->rhs = MIN(consdata0->rhs, consdata1->rhs);
+               }
 
                SCIP_CALL( SCIPdelCons(scip, cons0) );
                ++*ndelconss;
