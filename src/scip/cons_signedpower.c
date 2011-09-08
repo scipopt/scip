@@ -5678,7 +5678,7 @@ SCIP_RETCODE SCIPincludeConshdlrSignedpower(
          conshdlrdata) );
 
    /* include the quadratic constraint upgrade in the quadratic constraint handler */
-   SCIP_CALL( SCIPincludeQuadconsUpgrade(scip, quadconsUpgdSignedpower, QUADCONSUPGD_PRIORITY, CONSHDLR_NAME) );
+   SCIP_CALL( SCIPincludeQuadconsUpgrade(scip, quadconsUpgdSignedpower, QUADCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
 
    /* include the signedpower constraint upgrade and node reform in the nonlinear constraint handler
     * we give it higher priority as quadratic, so it also takes care of x^2 constraints, if possible

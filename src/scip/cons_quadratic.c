@@ -9195,6 +9195,7 @@ SCIP_RETCODE SCIPincludeQuadconsUpgrade(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECL_QUADCONSUPGD((*quadconsupgd)),  /**< method to call for upgrading quadratic constraint */
    int                   priority,           /**< priority of upgrading method */
+   SCIP_Bool             active,             /**< should the upgrading method be active by default? */
    const char*           conshdlrname        /**< name of the constraint handler */
    )
 {
@@ -9225,7 +9226,7 @@ SCIP_RETCODE SCIPincludeQuadconsUpgrade(
       SCIP_CALL( SCIPallocMemory(scip, &quadconsupgrade) );
       quadconsupgrade->quadconsupgd = quadconsupgd;
       quadconsupgrade->priority     = priority;
-      quadconsupgrade->active       = TRUE;
+      quadconsupgrade->active       = active;
 
       /* insert quadratic constraint upgrade method into constraint handler data */
       assert(conshdlrdata->nquadconsupgrades <= conshdlrdata->quadconsupgradessize);
@@ -9250,7 +9251,7 @@ SCIP_RETCODE SCIPincludeQuadconsUpgrade(
       (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "enable quadratic upgrading for constraint handler <%s>", conshdlrname);
       SCIP_CALL( SCIPaddBoolParam(scip,
             paramname, paramdesc,
-            &quadconsupgrade->active, FALSE, TRUE, NULL, NULL) );
+            &quadconsupgrade->active, FALSE, active, NULL, NULL) );
    }
 
    return SCIP_OKAY;

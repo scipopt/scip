@@ -10402,7 +10402,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
    if( SCIPfindConshdlr(scip, "quadratic") != NULL )
    {
       /* include function that upgrades quadratic constraint to linear constraints */
-      SCIP_CALL( SCIPincludeQuadconsUpgrade(scip, upgradeConsQuadratic, QUADCONSUPGD_PRIORITY, CONSHDLR_NAME) );
+      SCIP_CALL( SCIPincludeQuadconsUpgrade(scip, upgradeConsQuadratic, QUADCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
    }
 
    if( SCIPfindConshdlr(scip, "nonlinear") != NULL )
