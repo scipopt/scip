@@ -14946,7 +14946,7 @@ SCIP_RETCODE SCIPlpWriteMip(
    }
    
    /* print objective function */
-   /**@note the transformed problem in SCIP is always an minimization problem */
+   /**@note the transformed problem in SCIP is always a minimization problem */
    if( !origobj || objsense == SCIP_OBJSENSE_MINIMIZE )
       SCIPmessageFPrintInfo(file, "Minimize");
    else

@@ -326,7 +326,7 @@ SCIP_Bool getNextLine(
 
       if( last == NULL )
       {
-         SCIPwarningMessage("we read %d character from the file; these might indicates an corrupted input file!", 
+         SCIPwarningMessage("we read %d character from the file; these might indicates a corrupted input file!", 
             OPB_MAX_LINELEN - 2);
          opbinput->linebuf[OPB_MAX_LINELEN-2] = '\0';
          SCIPdebugMessage("the buffer might be corrupted\n");
@@ -784,7 +784,7 @@ SCIP_RETCODE readCoefficients(
    int**                 ntermvars,          /**< pointer to store the number of nonlinear variables in the terms (must be freed by caller) */
    int*const             ntermcoefs,         /**< pointer to store the number of nonlinear coefficients */
    SCIP_Bool*const       newsection,         /**< pointer to store whether a new section was encountered */
-   SCIP_Bool*const       isNonlinear,        /**< pointer to store if we have an nonlinear constraint */
+   SCIP_Bool*const       isNonlinear,        /**< pointer to store if we have a nonlinear constraint */
    SCIP_Bool*const       issoftcons,         /**< pointer to store whether it is a soft constraint (for wbo files) */
    SCIP_Real*const       weight              /**< pointer to store the weight of the soft constraint */
    )

@@ -82,7 +82,7 @@ void updateBestCandidate(
        * if this fails, then register all (unfixed) aggregation variables, thereby forgetting about candsol
        */
       success = FALSE;
-      if( candsol != SCIP_INVALID )
+      if( candsol != SCIP_INVALID ) /*lint !e777*/
       {
          SCIP_Real* multscalars;
          SCIP_Real minact;

@@ -1120,7 +1120,7 @@ void SCIPhashmapPrintStatistics(
    SCIPmessagePrintInfo("\n");
 }
 
-/** indicates whether an hash map has no entries */
+/** indicates whether a hash map has no entries */
 SCIP_Bool SCIPhashmapIsEmpty(
    SCIP_HASHMAP*      hashmap          /**< hash map */
 )
@@ -1135,7 +1135,7 @@ SCIP_Bool SCIPhashmapIsEmpty(
    return TRUE;
 }
 
-/** gives the number of entries in an hash map */ 
+/** gives the number of entries in a hash map */ 
 int SCIPhashmapGetNEntries(
    SCIP_HASHMAP*      hashmap          /**< hash map */
 )
@@ -1150,7 +1150,7 @@ int SCIPhashmapGetNEntries(
    return count;
 }
 
-/** gives the number of lists (buckets) in an hash map */ 
+/** gives the number of lists (buckets) in a hash map */ 
 int SCIPhashmapGetNLists(
    SCIP_HASHMAP*      hashmap          /**< hash map */
 )
@@ -1160,7 +1160,7 @@ int SCIPhashmapGetNLists(
    return hashmap->nlists;
 }
 
-/** gives a specific list (bucket) in an hash map */
+/** gives a specific list (bucket) in a hash map */
 SCIP_HASHMAPLIST* SCIPhashmapGetList(
    SCIP_HASHMAP*     hashmap,          /**< hash map */
    int               listindex         /**< index of hash map list */
@@ -1186,7 +1186,7 @@ int SCIPhashmapListGetNEntries(
    return count;
 }
 
-/** retrieves origin of given entry in an hash map */ 
+/** retrieves origin of given entry in a hash map */ 
 void* SCIPhashmapListGetOrigin(
    SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
 )
@@ -1196,7 +1196,7 @@ void* SCIPhashmapListGetOrigin(
    return hashmaplist->origin;
 }
 
-/** retrieves image of given entry in an hash map */ 
+/** retrieves image of given entry in a hash map */ 
 void* SCIPhashmapListGetImage(
    SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
 )
@@ -1206,7 +1206,7 @@ void* SCIPhashmapListGetImage(
    return hashmaplist->image;
 }
 
-/** retrieves next entry from given entry in an hash map list, or NULL if at end of list. */ 
+/** retrieves next entry from given entry in a hash map list, or NULL if at end of list. */ 
 SCIP_HASHMAPLIST* SCIPhashmapListGetNext(
    SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
 )
@@ -1216,7 +1216,7 @@ SCIP_HASHMAPLIST* SCIPhashmapListGetNext(
    return hashmaplist->next;
 }
 
-/** removes all entries in an hash map. */ 
+/** removes all entries in a hash map. */ 
 SCIP_RETCODE SCIPhashmapRemoveAll(
    SCIP_HASHMAP*     hashmap           /**< hash map */
 )
@@ -4775,7 +4775,7 @@ SCIP_Bool SCIPstrGetValue(
    return FALSE;
 }
 
-/** copies the string between an start and end character */
+/** copies the string between a start and end character */
 void SCIPstrCopySection(
    const char*           str,                /**< string to search */
    int                   pos,                /**< position in string to start */

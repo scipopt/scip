@@ -247,6 +247,7 @@ void relaxVar(
 
       rowabs = SCIPgetRowMaxCoef(scip, colrow);
       assert(SCIPisFeasGT(scip, rowabs, 0.0));
+      assert(colvals != NULL); /* to please flexelint */
       colval = colvals[r]/rowabs;
 
       assert(0 <= rowindex && rowindex < matrix->nrows);
@@ -1831,6 +1832,7 @@ SCIP_RETCODE SCIPincludeHeurShiftandpropagate(
 
    /* create shiftandpropagate primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   heurdata->randseed = DEFAULT_RANDSEED;
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,

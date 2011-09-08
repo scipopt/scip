@@ -1352,7 +1352,7 @@ SCIP_RETCODE getFlowCover(
     *                                         z_j in {0,1} for all j in N1 & N2
     *
     * 1. to a knapsack problem in maximization form, such that all variables in the knapsack constraint have 
-    *    positive weights and the constraint is an "<" constraint, by complementing all variables in N1
+    *    positive weights and the constraint is a "<" constraint, by complementing all variables in N1
     *     
     *    (KP^SNF_rat)  max sum_{j in N1} ( 1 - x*_j ) z°_j + sum_{j in N2} x*_j z_j
     *                      sum_{j in N1}          u_j z°_j + sum_{j in N2} u_j  z_j < - b + sum_{j in N1} u_j  
@@ -1361,7 +1361,7 @@ SCIP_RETCODE getFlowCover(
     *    and solve it approximately under consideration of the fixing, 
     * or 
     * 2. to a knapsack problem in maximization form, such that all variables in the knapsack constraint have 
-    *    positive integer weights and the constraint is an "<=" constraint, by complementing all variables in N1
+    *    positive integer weights and the constraint is a "<=" constraint, by complementing all variables in N1
     *    and multiplying the constraint by a suitable scalar C
     *
     *    (KP^SNF_int)  max sum_{j in N1} ( 1 - x*_j ) z°_j + sum_{j in N2} x*_j z_j

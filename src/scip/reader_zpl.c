@@ -646,7 +646,7 @@ Bool xlp_addcon_term(
    return FALSE;
 }
 
-/** method adds an variable; is called directly by ZIMPL */
+/** method adds a variable; is called directly by ZIMPL */
 Var* xlp_addvar(
    const char*           name,               /**< variable name */
    VarClass              usevarclass,        /**< variable type */

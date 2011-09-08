@@ -51,7 +51,7 @@
  * - If an empty constraint is created and then variables are added with SCIPaddVarSOS2(), weights
  *   are needed and stored.
  *
- * - All other calls ignore the weights, i.e., if an nonempty constraint is created or variables are
+ * - All other calls ignore the weights, i.e., if a nonempty constraint is created or variables are
  *   added with SCIPappendVarSOS2().
  *
  * @todo Allow to adapt the order of the constraints, e.g. by priorities. This for instance

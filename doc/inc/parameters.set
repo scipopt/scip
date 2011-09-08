@@ -1,4 +1,4 @@
-# SCIP version 2.0.1.6
+# SCIP version 2.0.2.1
 
 # branching score function ('s'um, 'p'roduct)
 # [type: char, range: {sp}, default: p]
@@ -360,7 +360,7 @@ misc/resetstat = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 misc/improvingsols = FALSE
 
-# child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value, 'r'oot LP value difference, 'h'brid inference/root LP value difference)
+# child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value, 'r'oot LP value difference, 'h'ybrid inference/root LP value difference)
 # [type: char, range: {dupilrh}, default: h]
 nodeselection/childsel = h
 
@@ -732,7 +732,7 @@ constraints/linear/aggregatevariables = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/linear/simplifyinequalities = FALSE
 
-# should dual presolving steps be preformed?
+# should dual presolving steps be performed?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 constraints/linear/dualpresolving = TRUE
 
@@ -1184,7 +1184,7 @@ constraints/knapsack/presolpairwise = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 constraints/knapsack/presolusehashing = TRUE
 
-# should dual presolving steps be preformed?
+# should dual presolving steps be performed?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 constraints/knapsack/dualpresolving = TRUE
 
@@ -1264,7 +1264,7 @@ constraints/logicor/presolpairwise = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 constraints/logicor/presolusehashing = TRUE
 
-# should dual presolving steps be preformed?
+# should dual presolving steps be performed?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 constraints/logicor/dualpresolving = TRUE
 
@@ -1356,7 +1356,7 @@ constraints/pseudoboolean/delayprop = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/pseudoboolean/delaypresol = FALSE
 
-# decompose the pseudo boolean constraint into a "linear" constraint "and" constrainst
+# decompose the pseudo boolean constraint into a "linear" constraint "and" constraints
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 constraints/pseudoboolean/decompose = TRUE
 
@@ -1420,7 +1420,7 @@ constraints/setppc/presolpairwise = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 constraints/setppc/presolusehashing = TRUE
 
-# should dual presolving steps be preformed?
+# should dual presolving steps be performed?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 constraints/setppc/dualpresolving = TRUE
 
@@ -1804,42 +1804,6 @@ presolving/inttobinary/maxrounds = -1
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 presolving/inttobinary/delay = FALSE
 
-# priority of presolver <probing>
-# [type: int, range: [-536870912,536870911], default: -100000]
-presolving/probing/priority = -100000
-
-# maximal number of presolving rounds the presolver participates in (-1: no limit)
-# [type: int, range: [-1,2147483647], default: -1]
-presolving/probing/maxrounds = -1
-
-# should presolver be delayed, if other presolvers found reductions?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-presolving/probing/delay = TRUE
-
-# maximal number of runs, probing participates in (-1: no limit)
-# [type: int, range: [-1,2147483647], default: 1]
-presolving/probing/maxruns = 1
-
-# maximal number of propagation rounds in probing subproblems (-1: no limit, 0: auto)
-# [type: int, range: [-1,2147483647], default: -1]
-presolving/probing/proprounds = -1
-
-# maximal number of fixings found, until probing is interrupted (0: don't iterrupt)
-# [type: int, range: [0,2147483647], default: 50]
-presolving/probing/maxfixings = 50
-
-# maximal number of successive probings without fixings, until probing is aborted (0: don't abort)
-# [type: int, range: [0,2147483647], default: 2000]
-presolving/probing/maxuseless = 2000
-
-# maximal number of successive probings without fixings, bound changes, and implications, until probing is aborted (0: don't abort)
-# [type: int, range: [0,2147483647], default: 100]
-presolving/probing/maxtotaluseless = 100
-
-# maximal number of probings without fixings, until probing is aborted (0: don't abort)
-# [type: int, range: [0,2147483647], default: 0]
-presolving/probing/maxsumuseless = 0
-
 # priority of presolver <trivial>
 # [type: int, range: [-536870912,536870911], default: 9000000]
 presolving/trivial/priority = 9000000
@@ -2004,7 +1968,7 @@ branching/inference/cutoffweight = 1
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 branching/inference/fractionals = TRUE
 
-# should a weighted sum of inference, conflict and cutoff weigths be used?
+# should a weighted sum of inference, conflict and cutoff weights be used?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 branching/inference/useweightedsum = TRUE
 
@@ -3213,8 +3177,8 @@ heuristics/shiftandpropagate/freqofs = 0
 heuristics/shiftandpropagate/maxdepth = -1
 
 # The number of propagation rounds used for each propagation
-# [type: int, range: [-1,1000], default: 20]
-heuristics/shiftandpropagate/nproprounds = 20
+# [type: int, range: [-1,1000], default: 1]
+heuristics/shiftandpropagate/nproprounds = 1
 
 # Should continuous variables be relaxed?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -3223,6 +3187,18 @@ heuristics/shiftandpropagate/relax = TRUE
 # Should domains be reduced by probing?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 heuristics/shiftandpropagate/probing = TRUE
+
+# The number of cutoffs before heuristic stops
+# [type: int, range: [-1,1000000], default: 15]
+heuristics/shiftandpropagate/cutoffbreaker = 15
+
+# the key for variable sorting: (n)orms or (r)andom
+# [type: char, range: {nru}, default: u]
+heuristics/shiftandpropagate/sortkey = u
+
+# Should variables be sorted for the heuristic?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+heuristics/shiftandpropagate/sortvars = TRUE
 
 # priority of heuristic <shifting>
 # [type: int, range: [-536870912,536870911], default: -5000]
@@ -3320,7 +3296,7 @@ heuristics/subnlp/runalways = FALSE
 # [type: real, range: [0,1], default: 0.01]
 heuristics/subnlp/minimprove = 0.01
 
-# limit on number of presolve rounds in subSCIP (-1 for unlimited, 0 for no presolve)
+# limit on number of presolve rounds in sub-SCIP (-1 for unlimited, 0 for no presolve)
 # [type: int, range: [-1,2147483647], default: -1]
 heuristics/subnlp/maxpresolverounds = -1
 
@@ -3448,7 +3424,7 @@ heuristics/undercover/minimprove = 0
 # [type: real, range: [0,1], default: 0.1]
 heuristics/undercover/nodesquot = 0.1
 
-# fraction of covering variables in the last cover which need to change their value when re-covering
+# fraction of covering variables in the last cover which need to change their value when recovering
 # [type: real, range: [0,1], default: 0.9]
 heuristics/undercover/recoverdiv = 0.9
 
@@ -3476,7 +3452,7 @@ heuristics/undercover/postnlp = TRUE
 # [type: int, range: [0,2147483647], default: 6]
 heuristics/undercover/maxbacktracks = 6
 
-# maximum number of re-coverings
+# maximum number of recoverings
 # [type: int, range: [0,2147483647], default: 1]
 heuristics/undercover/maxrecovers = 1
 
@@ -3624,6 +3600,54 @@ heuristics/zirounding/stoppercentage = 0.02
 # [type: int, range: [1,2147483647], default: 1000]
 heuristics/zirounding/minstopncalls = 1000
 
+# priority of propagator <probing>
+# [type: int, range: [-536870912,536870911], default: -100000]
+propagating/probing/priority = -100000
+
+# frequency for calling propagator <probing> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: -1]
+propagating/probing/freq = -1
+
+# should propagator be delayed, if other propagators found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+propagating/probing/delay = TRUE
+
+# presolving priority of propagator <probing>
+# [type: int, range: [-536870912,536870911], default: -100000]
+propagating/probing/presolpriority = -100000
+
+# maximal number of presolving rounds the propagator participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+propagating/probing/maxprerounds = -1
+
+# should presolver be delayed, if other propagators found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+propagating/probing/presoldelay = TRUE
+
+# maximal number of runs, probing participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: 1]
+propagating/probing/maxruns = 1
+
+# maximal number of propagation rounds in probing subproblems (-1: no limit, 0: auto)
+# [type: int, range: [-1,2147483647], default: -1]
+propagating/probing/proprounds = -1
+
+# maximal number of fixings found, until probing is interrupted (0: don't iterrupt)
+# [type: int, range: [0,2147483647], default: 25]
+propagating/probing/maxfixings = 25
+
+# maximal number of successive probings without fixings, until probing is aborted (0: don't abort)
+# [type: int, range: [0,2147483647], default: 1000]
+propagating/probing/maxuseless = 1000
+
+# maximal number of successive probings without fixings, bound changes, and implications, until probing is aborted (0: don't abort)
+# [type: int, range: [0,2147483647], default: 50]
+propagating/probing/maxtotaluseless = 50
+
+# maximal number of probings without fixings, until probing is aborted (0: don't abort)
+# [type: int, range: [0,2147483647], default: 0]
+propagating/probing/maxsumuseless = 0
+
 # priority of propagator <pseudoobj>
 # [type: int, range: [-536870912,536870911], default: 0]
 propagating/pseudoobj/priority = 0
@@ -3636,9 +3660,53 @@ propagating/pseudoobj/freq = 1
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 propagating/pseudoobj/delay = FALSE
 
+# presolving priority of propagator <pseudoobj>
+# [type: int, range: [-536870912,536870911], default: 6000000]
+propagating/pseudoobj/presolpriority = 6000000
+
+# maximal number of presolving rounds the propagator participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+propagating/pseudoobj/maxprerounds = -1
+
+# should presolver be delayed, if other propagators found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+propagating/pseudoobj/presoldelay = TRUE
+
 # maximal number of variables to look at in a single propagation round (-1: process all variables)
 # [type: int, range: [-1,2147483647], default: 100]
 propagating/pseudoobj/maxcands = 100
+
+# do we want to propagate full if we are propagating the root node, despite the number of maxcand
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+propagating/pseudoobj/propfullinroot = TRUE
+
+# priority of propagator <redcost>
+# [type: int, range: [-536870912,536870911], default: 10000000]
+propagating/redcost/priority = 10000000
+
+# frequency for calling propagator <redcost> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 1]
+propagating/redcost/freq = 1
+
+# should propagator be delayed, if other propagators found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+propagating/redcost/delay = FALSE
+
+# presolving priority of propagator <redcost>
+# [type: int, range: [-536870912,536870911], default: 0]
+propagating/redcost/presolpriority = 0
+
+# maximal number of presolving rounds the propagator participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: 0]
+propagating/redcost/maxprerounds = 0
+
+# should presolver be delayed, if other propagators found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+propagating/redcost/presoldelay = TRUE
+
+# should reduced cost fixing be also applied to continuous variables?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+propagating/redcost/continuous = FALSE
 
 # priority of propagator <rootredcost>
 # [type: int, range: [-536870912,536870911], default: 1000000]
@@ -3652,6 +3720,18 @@ propagating/rootredcost/freq = 1
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 propagating/rootredcost/delay = FALSE
 
+# presolving priority of propagator <rootredcost>
+# [type: int, range: [-536870912,536870911], default: 0]
+propagating/rootredcost/presolpriority = 0
+
+# maximal number of presolving rounds the propagator participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: 0]
+propagating/rootredcost/maxprerounds = 0
+
+# should presolver be delayed, if other propagators found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+propagating/rootredcost/presoldelay = TRUE
+
 # priority of propagator <vbounds>
 # [type: int, range: [-536870912,536870911], default: 2000000]
 propagating/vbounds/priority = 2000000
@@ -3663,6 +3743,18 @@ propagating/vbounds/freq = 1
 # should propagator be delayed, if other propagators found reductions?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 propagating/vbounds/delay = FALSE
+
+# presolving priority of propagator <vbounds>
+# [type: int, range: [-536870912,536870911], default: 0]
+propagating/vbounds/presolpriority = 0
+
+# maximal number of presolving rounds the propagator participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: 0]
+propagating/vbounds/maxprerounds = 0
+
+# should presolver be delayed, if other propagators found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+propagating/vbounds/presoldelay = TRUE
 
 # should bound widening be used to initialize conflict analysis?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -3713,8 +3805,8 @@ separating/clique/cliquetablemem = 20000
 separating/clique/cliquedensity = 0.05
 
 # priority of separator <closecuts>
-# [type: int, range: [-536870912,536870911], default: -1500]
-separating/closecuts/priority = -1500
+# [type: int, range: [-536870912,536870911], default: 1000000]
+separating/closecuts/priority = 1000000
 
 # frequency for calling separator <closecuts> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -3756,6 +3848,10 @@ separating/closecuts/recomputerelint = FALSE
 # [type: char, range: {oi}, default: o]
 separating/closecuts/relintnormtype = o
 
+# turn off separation in current node after unsuccessful calls (-1 never turn off)
+# [type: int, range: [-1,2147483647], default: 0]
+separating/closecuts/maxunsuccessful = 0
+
 # priority of separator <cgmip>
 # [type: int, range: [-536870912,536870911], default: -1000]
 separating/cgmip/priority = -1000
@@ -3773,8 +3869,8 @@ separating/cgmip/maxbounddist = 0
 separating/cgmip/delay = FALSE
 
 # maximal number of cgmip separation rounds per node (-1: unlimited)
-# [type: int, range: [-1,2147483647], default: 0]
-separating/cgmip/maxrounds = 0
+# [type: int, range: [-1,2147483647], default: 5]
+separating/cgmip/maxrounds = 5
 
 # maximal number of cgmip separation rounds in the root node (-1: unlimited)
 # [type: int, range: [-1,2147483647], default: 50]
@@ -3796,7 +3892,7 @@ separating/cgmip/memorylimit = 1e+20
 # [type: longint, range: [-1,9223372036854775807], default: 10000]
 separating/cgmip/nodelimit = 10000
 
-# weight used for the row combination coefficent in the sub-MIP objective
+# weight used for the row combination coefficient in the sub-MIP objective
 # [type: real, range: [0,1.79769313486232e+308], default: 0.001]
 separating/cgmip/objweight = 0.001
 
@@ -3817,8 +3913,12 @@ separating/cgmip/allowlocal = FALSE
 separating/cgmip/onlyintvars = FALSE
 
 # use only active rows to generate cuts?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-separating/cgmip/onlyactiverows = TRUE
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/cgmip/onlyactiverows = FALSE
+
+# maximal age of rows to consider if onlyactiverows is false
+# [type: int, range: [-1,2147483647], default: -1]
+separating/cgmip/maxrowage = -1
 
 # use cutpool to store CG-cuts even if the are not efficient?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -3884,11 +3984,11 @@ separating/cmir/maxtries = 100
 # [type: int, range: [-1,2147483647], default: -1]
 separating/cmir/maxtriesroot = -1
 
-# maximal number of consecutive unsuccesful aggregation tries (-1: unlimited)
+# maximal number of consecutive unsuccessful aggregation tries (-1: unlimited)
 # [type: int, range: [-1,2147483647], default: 20]
 separating/cmir/maxfails = 20
 
-# maximal number of consecutive unsuccesful aggregation tries in the root node (-1: unlimited)
+# maximal number of consecutive unsuccessful aggregation tries in the root node (-1: unlimited)
 # [type: int, range: [-1,2147483647], default: 100]
 separating/cmir/maxfailsroot = 100
 
@@ -3952,7 +4052,7 @@ separating/cmir/maxconts = 10
 # [type: int, range: [0,2147483647], default: 10]
 separating/cmir/maxcontsroot = 10
 
-# tolerance for bounddistances used to select continuous variable in current aggregated constraint to be eliminated
+# tolerance for bound distances used to select continuous variable in current aggregated constraint to be eliminated
 # [type: real, range: [0,1.79769313486232e+308], default: 0.1]
 separating/cmir/aggrtol = 0.1
 
@@ -4375,26 +4475,6 @@ separating/rapidlearning/minnodes = 500
 # should all active cuts from cutpool be copied to constraints in subproblem?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 separating/rapidlearning/copycuts = TRUE
-
-# priority of separator <redcost>
-# [type: int, range: [-536870912,536870911], default: 10000000]
-separating/redcost/priority = 10000000
-
-# frequency for calling separator <redcost> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 1]
-separating/redcost/freq = 1
-
-# maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator <redcost> (0.0: only on current best node, 1.0: on all nodes)
-# [type: real, range: [0,1], default: 1]
-separating/redcost/maxbounddist = 1
-
-# should separator be delayed, if other separators found cuts?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-separating/redcost/delay = FALSE
-
-# should reduced cost fixing be also applied to continuous variables?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-separating/redcost/continuous = FALSE
 
 # priority of separator <strongcg>
 # [type: int, range: [-536870912,536870911], default: -2000]

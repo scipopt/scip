@@ -105,6 +105,7 @@ fixed bugs:
 - LP solution status is now checked when checking root LP solution. Otherwise, due to different time measurements, 
   it might happen that the LP solving was stopped due to the time limit, but SCIP did not reach the limit, yet.
 - fixed memory leak in coloring part of maximum clique algorithm (tclique_coloring.c)
+- fixed bug in debug.c: removed tree nodes had not been checked if they were pruned due to an incumbent solution found by a diving heuristic
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})

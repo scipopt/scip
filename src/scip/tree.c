@@ -5665,27 +5665,32 @@ SCIP_RETCODE SCIPtreeEndProbing(
          SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, tree->probinglpistate) );
          SCIP_CALL( SCIPlpFreeState(lp, blkmem, &tree->probinglpistate) );
          SCIPlpSetIsRelax(lp, tree->probinglpwasrelax);
-         /* resolve LP to reset solution */
-         SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, eventqueue, eventfilter, prob, -1, FALSE, FALSE, FALSE, &lperror) );
-         if( lperror )
+
+         /* if the focus LP has not been constructed yet, we do not do it either */
+         if( tree->focuslpconstructed )
          {
-            SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles while resolving LP %d after probing\n",
-               stat->nnodes, stat->nlps);
+            /* resolve LP to reset solution */
+            SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, eventqueue, eventfilter, prob, -1, FALSE, FALSE, FALSE, &lperror) );
+            if( lperror )
+            {
+               SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+                  "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles while resolving LP %d after probing\n",
+                  stat->nnodes, stat->nlps);
             lp->resolvelperror = TRUE;
-         }
-         else if( SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL 
-            && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_INFEASIBLE
-            && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY
-            && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OBJLIMIT )
-         {
-            SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "LP was not resolved to a sufficient status after diving\n");
-            lp->resolvelperror = TRUE;      
-         }
-         else
-         {
-            SCIP_CALL( SCIPnodeUpdateLowerboundLP(tree->focusnode, set, stat, lp) );
+            }
+            else if( SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL 
+               && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_INFEASIBLE
+               && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY
+               && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OBJLIMIT )
+            {
+               SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+                  "LP was not resolved to a sufficient status after diving\n");
+               lp->resolvelperror = TRUE;      
+            }
+            else
+            {
+               SCIP_CALL( SCIPnodeUpdateLowerboundLP(tree->focusnode, set, stat, lp) );
+            }
          }
       }
    }
