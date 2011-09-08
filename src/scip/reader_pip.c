@@ -42,6 +42,7 @@
 #include "scip/cons_setppc.h"
 #include "scip/cons_varbound.h"
 #include "scip/cons_quadratic.h"
+#include "scip/cons_nonlinear.h"
 #include "scip/pub_misc.h"
 
 #define READER_NAME             "pipreader"
@@ -1285,6 +1286,17 @@ SCIP_RETCODE readObjective(
          SCIP_CONS* quadobjcons;
          SCIP_Real  lhs;
          SCIP_Real  rhs;
+         SCIP_Bool dynamicconss;
+         SCIP_Bool dynamicrows;
+         SCIP_Bool initial;
+         SCIP_Bool separate;
+         SCIP_Bool enforce;
+         SCIP_Bool check;
+         SCIP_Bool propagate;
+         SCIP_Bool local;
+         SCIP_Bool modifiable;
+         SCIP_Bool dynamic;
+         SCIP_Bool removable;
          
          SCIP_Real constant;
          int nlinvars;
@@ -1303,8 +1315,20 @@ SCIP_RETCODE readObjective(
 
          getLinearAndQuadraticCoefs(scip, exprtree, &constant, &nlinvars, linvars, lincoefs, &nquadterms, quadvars1, quadvars2, quadcoefs);
 
+         SCIP_CALL( SCIPgetBoolParam(scip, "reading/pipreader/dynamicconss", &dynamicconss) );
+         SCIP_CALL( SCIPgetBoolParam(scip, "reading/pipreader/dynamicrows", &dynamicrows) );
+         initial = !dynamicrows;
+         separate = TRUE;
+         enforce = TRUE;
+         check = TRUE;
+         propagate = TRUE;
+         local = FALSE;
+         modifiable = FALSE;
+         dynamic = dynamicconss;
+         removable = dynamicrows;
+
          SCIP_CALL( SCIPcreateVar(scip, &quadobjvar, "quadobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, 
-               SCIP_VARTYPE_CONTINUOUS, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
+               SCIP_VARTYPE_CONTINUOUS, initial, removable, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, quadobjvar) );
 
          if ( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE )
@@ -1319,7 +1343,7 @@ SCIP_RETCODE readObjective(
          }
 
          SCIP_CALL( SCIPcreateConsQuadratic(scip, &quadobjcons, "quadobj", nlinvars, linvars, lincoefs, nquadterms, quadvars1, quadvars2, quadcoefs, lhs, rhs,
-            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE) );
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
          
          SCIP_CALL( SCIPaddLinearVarQuadratic(scip, quadobjcons, quadobjvar, -1.0) );
 
@@ -1339,9 +1363,64 @@ SCIP_RETCODE readObjective(
       }
       else if( degree > 2 )
       {
-         SCIPerrorMessage("polynomial constraints of degree > 2 not yet supported by SCIP\n");
+         /* insert dummy variable and constraint to represent nonlinear part of objective */
+
+         SCIP_VAR*  nonlinobjvar;
+         SCIP_CONS* nonlinobjcons;
+         SCIP_Real  minusone;
+         SCIP_Real  lhs;
+         SCIP_Real  rhs;
+         SCIP_Bool dynamicconss;
+         SCIP_Bool dynamicrows;
+         SCIP_Bool initial;
+         SCIP_Bool separate;
+         SCIP_Bool enforce;
+         SCIP_Bool check;
+         SCIP_Bool propagate;
+         SCIP_Bool local;
+         SCIP_Bool modifiable;
+         SCIP_Bool dynamic;
+         SCIP_Bool removable;
+
+         SCIP_CALL( SCIPgetBoolParam(scip, "reading/pipreader/dynamicconss", &dynamicconss) );
+         SCIP_CALL( SCIPgetBoolParam(scip, "reading/pipreader/dynamicrows", &dynamicrows) );
+         initial = !dynamicrows;
+         separate = TRUE;
+         enforce = TRUE;
+         check = TRUE;
+         propagate = TRUE;
+         local = FALSE;
+         modifiable = FALSE;
+         dynamic = dynamicconss;
+         removable = dynamicrows;
+
+         SCIP_CALL( SCIPcreateVar(scip, &nonlinobjvar, "nonlinobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
+               SCIP_VARTYPE_CONTINUOUS, initial, removable, NULL, NULL, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPaddVar(scip, nonlinobjvar) );
+
+         minusone = -1.0;
+
+         if ( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE )
+         {
+            lhs = -SCIPinfinity(scip);
+            rhs = 0.0;
+         }
+         else
+         {
+            lhs = 0.0;
+            rhs = SCIPinfinity(scip);
+         }
+
+         SCIP_CALL( SCIPcreateConsNonlinear(scip, &nonlinobjcons, "nonlinobj", 1, &nonlinobjvar, &minusone, 1, &exprtree, NULL, lhs, rhs,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
          SCIP_CALL( SCIPexprtreeFree(&exprtree) );
-         return SCIP_ERROR;
+
+         SCIP_CALL( SCIPaddCons(scip, nonlinobjcons) );
+         SCIPdebugMessage("(line %d) added constraint <%s> to represent nonlinear objective: ", pipinput->linenumber, SCIPconsGetName(nonlinobjcons));
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, nonlinobjcons, NULL) ) );
+
+         SCIP_CALL( SCIPreleaseCons(scip, &nonlinobjcons) );
+         SCIP_CALL( SCIPreleaseVar(scip, &nonlinobjvar) );
       }
    }
    
@@ -1454,8 +1533,30 @@ SCIP_RETCODE readConstraints(
    
    if( degree > 2 )
    {
-      SCIPerrorMessage("polynomial constraints of degree > 2 not supported by SCIP yet\n");
-      return SCIP_ERROR;
+      /* assign the left and right hand side, depending on the constraint sense */
+      switch ( sense )
+      {
+      case PIP_SENSE_GE:
+         lhs = sidevalue;
+         rhs = SCIPinfinity(scip);
+         break;
+      case PIP_SENSE_LE:
+         lhs = -SCIPinfinity(scip);
+         rhs = sidevalue;
+         break;
+      case PIP_SENSE_EQ:
+         lhs = sidevalue;
+         rhs = sidevalue;
+         break;
+      case PIP_SENSE_NOTHING:
+      default:
+         SCIPerrorMessage("invalid constraint sense <%d>\n", sense);
+         return SCIP_INVALIDDATA;
+      }
+
+      SCIP_CALL( SCIPcreateConsNonlinear(scip, &cons, name, 0, NULL, NULL, 1, &exprtree, NULL, lhs, rhs,
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
+      SCIP_CALL( SCIPexprtreeFree(&exprtree) );
    }
    else
    {
@@ -1511,12 +1612,12 @@ SCIP_RETCODE readConstraints(
       SCIPfreeBufferArray(scip, &quadvars1);
       SCIPfreeBufferArray(scip, &quadvars2);
       SCIPfreeBufferArray(scip, &quadcoefs);
-      
-      SCIP_CALL( SCIPaddCons(scip, cons) );
-      SCIPdebugMessage("(line %d) created constraint: ", pipinput->linenumber);
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
+      
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIPdebugMessage("(line %d) created constraint: ", pipinput->linenumber);
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    
 TERMINATE:
    if( exprtree != NULL )
@@ -2383,7 +2484,9 @@ void checkConsnames(
    }
 }
 
-/** writes problem to file */
+/** writes problem to file
+ * @todo add writing for cons_nonlinear and cons_signedpower, in case they represent polynomials
+ */
 SCIP_RETCODE SCIPwritePip(
    SCIP*              scip,               /**< SCIP data structure */
    FILE*              file,               /**< output file, or NULL if standard output should be used */
