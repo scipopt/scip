@@ -2068,8 +2068,6 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    {
       SCIP_CALL( SCIPlpGetProvedLowerbound(lp, set, &lpobjval) );
    }
-   else if ( !(lp->isrelax) )
-      return SCIP_OKAY;
    else
       lpobjval = SCIPlpGetObjval(lp, set);
 
@@ -2553,7 +2551,7 @@ void treeFindSwitchForks(
    }
    tree->cutoffdepth = INT_MAX;
 
-   /* if not already found, continue searching the LP defining fork; it can not be deeper than the common fork */
+   /* if not already found, continue searching the LP defining fork; it cannot be deeper than the common fork */
    if( lpfork == NULL )
    {
       if( tree->focuslpfork != NULL && (int)(tree->focuslpfork->depth) > fork->depth )
@@ -2583,7 +2581,7 @@ void treeFindSwitchForks(
       || SCIPnodeGetType(lpfork) == SCIP_NODETYPE_SUBROOT);
    SCIPdebugMessage("find switch forks: lpforkdepth=%d\n", lpfork == NULL ? -1 : (int)(lpfork->depth));
 
-   /* if not already found, continue searching the LP state defining fork; it can not be deeper than the
+   /* if not already found, continue searching the LP state defining fork; it cannot be deeper than the
     * LP defining fork and the common fork
     */
    if( lpstatefork == NULL )
@@ -5666,31 +5664,27 @@ SCIP_RETCODE SCIPtreeEndProbing(
          SCIP_CALL( SCIPlpFreeState(lp, blkmem, &tree->probinglpistate) );
          SCIPlpSetIsRelax(lp, tree->probinglpwasrelax);
 
-         /* if the focus LP has not been constructed yet, we do not do it either */
-         if( tree->focuslpconstructed )
+         /* resolve LP to reset solution */
+         SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, eventqueue, eventfilter, prob, -1, FALSE, FALSE, FALSE, &lperror) );
+         if( lperror )
          {
-            /* resolve LP to reset solution */
-            SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, eventqueue, eventfilter, prob, -1, FALSE, FALSE, FALSE, &lperror) );
-            if( lperror )
-            {
-               SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles while resolving LP %d after probing\n",
-                  stat->nnodes, stat->nlps);
+            SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles while resolving LP %d after probing\n",
+               stat->nnodes, stat->nlps);
             lp->resolvelperror = TRUE;
-            }
-            else if( SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL 
-               && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_INFEASIBLE
-               && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY
-               && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OBJLIMIT )
-            {
-               SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "LP was not resolved to a sufficient status after diving\n");
-               lp->resolvelperror = TRUE;      
-            }
-            else
-            {
-               SCIP_CALL( SCIPnodeUpdateLowerboundLP(tree->focusnode, set, stat, lp) );
-            }
+         }
+         else if( SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL 
+            && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_INFEASIBLE
+            && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY
+            && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OBJLIMIT )
+         {
+            SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               "LP was not resolved to a sufficient status after diving\n");
+            lp->resolvelperror = TRUE;      
+         }
+         else if( tree->focuslpconstructed && SCIPlpIsRelax(lp) )
+         {
+            SCIP_CALL( SCIPnodeUpdateLowerboundLP(tree->focusnode, set, stat, lp) );
          }
       }
    }

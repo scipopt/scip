@@ -2003,7 +2003,7 @@ SCIP_Bool SCIPlpiHasPrimalRay(
 
    SCIPdebugMessage("checking for primal ray\n");
 
-   /* the current version of QSopt can not give a primal certificate of unboundedness */
+   /* the current version of QSopt cannot give a primal certificate of unboundedness */
    return FALSE;
 }
 

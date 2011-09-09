@@ -1259,7 +1259,7 @@ SCIP_RETCODE propagateCons(
    if( SCIPconsIsModifiable(cons) )
       return SCIP_OKAY;
 
-   /* rules (3) and (4) can not be applied, if we have at least two unfixed variables left;
+   /* rules (3) and (4) cannot be applied, if we have at least two unfixed variables left;
     * that means, we only have to watch (i.e. capture events) of two variables, and switch to other variables
     * if these ones get fixed
     */

@@ -148,7 +148,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualfix)
          if( SCIPvarMayRoundDown(vars[v]) && !SCIPisNegative(scip, obj) )
          {
             bound = SCIPvarGetLbGlobal(vars[v]);
-            if ( SCIPisZero(scip, obj) && SCIPvarGetNLocksUp(vars[v]) == 1 && SCIPisInfinity(scip, -bound) )
+            if( SCIPisZero(scip, obj) && SCIPvarGetNLocksUp(vars[v]) == 1 && SCIPisInfinity(scip, -bound) )
             {
                /* variable can be set to -infinity, and it is only contained in one constraint:
                 * we hope that the corresponding constraint handler is clever enough to set/aggregate the variable
@@ -162,7 +162,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualfix)
          else if( SCIPvarMayRoundUp(vars[v]) && !SCIPisPositive(scip, obj) )
          {
             bound = SCIPvarGetUbGlobal(vars[v]);
-            if ( SCIPisZero(scip, obj) && SCIPvarGetNLocksDown(vars[v]) == 1 && SCIPisInfinity(scip, bound) )
+            if( SCIPisZero(scip, obj) && SCIPvarGetNLocksDown(vars[v]) == 1 && SCIPisInfinity(scip, bound) )
             {
                /* variable can be set to +infinity, and it is only contained in one constraint:
                 * we hope that the corresponding constraint handler is clever enough to set/aggregate the variable

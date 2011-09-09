@@ -585,7 +585,7 @@ SCIP_RETCODE constructSNFRelaxation(
       SCIPdebugMessage("  %d: %g <%s, idx=%d, lp=%g, [%g(%d),%g(%d)]>:\n", c, rowcoef, SCIPvarGetName(var), probidx, 
          varsolvals[probidx], bestslb, bestslbtype, bestsub, bestsubtype);
 
-      /* mixed integer set can not be relaxed to 0-1 single node flow set because both simple bounds are -infinity 
+      /* mixed integer set cannot be relaxed to 0-1 single node flow set because both simple bounds are -infinity 
        * and infinity, respectively 
        */
       if( SCIPisInfinity(scip, -bestslb) && SCIPisInfinity(scip, bestsub) )
@@ -638,7 +638,7 @@ SCIP_RETCODE constructSNFRelaxation(
       }
       SCIPdebugMessage("        bestlb=%g(%d), bestub=%g(%d)\n", bestlb, bestlbtype, bestub, bestubtype);
       
-      /* mixed integer set can not be relaxed to 0-1 single node flow set because there are no suitable bounds 
+      /* mixed integer set cannot be relaxed to 0-1 single node flow set because there are no suitable bounds 
        * to define the transformed variable y'_j 
        */       
       if( SCIPisInfinity(scip, -bestlb) && SCIPisInfinity(scip, bestub) )
@@ -1027,7 +1027,7 @@ SCIP_RETCODE SCIPsolveKnapsackApproximatelyLT(
    /* allocate memory for temporary array used for sorting; array should contain profits divided by corresponding weights (p_1 / w_1 ... p_n / w_n )*/
    SCIP_CALL( SCIPallocBufferArray(scip, &tempsort, nitems) );
    /* initialize temporary array */ 
-   for (i = nitems - 1; i >= 0; --i)
+   for( i = nitems - 1; i >= 0; --i )
    {
       tempsort[i] = profits[i] / weights [i];
    }

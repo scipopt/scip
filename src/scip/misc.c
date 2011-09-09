@@ -3928,15 +3928,15 @@ SCIP_Longint SCIPcalcGreComDiv(
       val2 >>= 1;
    
    /* val1 and val 2 are odd */
-   while (val1 != val2)
-      if (val1 > val2)
+   while( val1 != val2 )
+      if( val1 > val2 )
       {
          val1 -= val2;
          /* val1 is now even, divide it by 2  */
          do 
          {
             val1 >>= 1;
-         } while ( !(val1 & 1) );
+         } while( !(val1 & 1) );
       }
       else 
       {
@@ -3945,7 +3945,7 @@ SCIP_Longint SCIPcalcGreComDiv(
          do 
          {
             val2 >>= 1;
-         } while ( !(val2 & 1) );
+         } while( !(val2 & 1) );
       }
 
    return (val1 << t);

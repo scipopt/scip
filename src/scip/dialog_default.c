@@ -222,7 +222,7 @@ SCIP_RETCODE writeProblem(
             SCIPdialoghdlrClearBuffer(dialoghdlr);
             break;
          }
-         else if ( retcode == SCIP_PLUGINNOTFOUND )
+         else if( retcode == SCIP_PLUGINNOTFOUND )
          {
             /* ask user once for a suitable reader */
             if( extension == NULL )
@@ -250,14 +250,14 @@ SCIP_RETCODE writeProblem(
             SCIP_CALL( retcode );
 
             /* print result message if writing was successful */
-            if ( transformed )
+            if( transformed )
                SCIPdialogMessage(scip, NULL, "written transformed problem to file <%s>\n", tmpfilename);
             else
                SCIPdialogMessage(scip, NULL, "written original problem to file <%s>\n", tmpfilename);
             break;
          }
       }
-      while (extension != NULL );
+      while( extension != NULL );
       
       SCIPfreeBufferArray(scip, &tmpfilename);
    }
@@ -1445,7 +1445,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecRead)
                break;
             }
          }           
-         while (extension != NULL );
+         while( extension != NULL );
              
          /* free buffer array */
          SCIPfreeBufferArray(scip, &tmpfilename);

@@ -11158,7 +11158,7 @@ SCIP_RETCODE lpLexDualSimplex(
             ++nruns;
          }
       }
-      while ( pos >= 0 && nDualDeg > 0 && (set->lp_lexdualmaxrounds == -1 || rounds < set->lp_lexdualmaxrounds) );
+      while( pos >= 0 && nDualDeg > 0 && (set->lp_lexdualmaxrounds == -1 || rounds < set->lp_lexdualmaxrounds) );
 
       /* reset bounds, lhs/rhs, and obj */
       SCIP_CALL( SCIPlpiChgBounds(lp->lpi, lp->nlpicols, indallcol, oldlb, oldub) );
@@ -12563,27 +12563,6 @@ SCIP_LPSOLSTAT SCIPlpGetSolstat(
    assert(lp->solved || lp->lpsolstat == SCIP_LPSOLSTAT_NOTSOLVED);
 
    return (lp->flushed ? lp->lpsolstat : SCIP_LPSOLSTAT_NOTSOLVED);
-}
-
-/** sets whether the current lp is a relaxation of the current problem and its optimal objective value is a local lower bound */
-void SCIPlpSetIsRelax(
-   SCIP_LP*              lp,                 /**< LP data */
-   SCIP_Bool             isrelax             /**< is the current lp a relaxation? */
-   )
-{
-   assert(lp != NULL);
-
-   lp->isrelax = isrelax;
-}
-
-/** returns whether the current lp is a relaxation of the current problem and its optimal objective value is a local lower bound */
-SCIP_Bool SCIPlpIsRelax(
-   SCIP_LP*              lp                  /**< LP data */
-   )
-{
-   assert(lp != NULL);
-
-   return lp->isrelax;
 }
 
 /** gets objective value of current LP */
@@ -15184,6 +15163,8 @@ SCIP_RETCODE SCIPlpWriteMip(
 #undef SCIPlpGetRootColumnObjval
 #undef SCIPlpGetRootLooseObjval
 #undef SCIPlpGetLPI
+#undef SCIPlpSetIsRelax
+#undef SCIPlpIsRelax
 #undef SCIPlpIsSolved
 #undef SCIPlpIsSolBasic
 #undef SCIPlpDiving
@@ -15865,6 +15846,29 @@ SCIP_LPI* SCIPlpGetLPI(
    assert(lp != NULL);
 
    return lp->lpi;
+}
+
+/** sets whether the current LP is a relaxation of the current problem and its optimal objective value is a local lower bound */
+void SCIPlpSetIsRelax(
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_Bool             relax               /**< is the current lp a relaxation? */
+   )
+{
+   assert(lp != NULL);
+
+   lp->isrelax = relax;
+}
+
+/** returns whether the current LP is a relaxation of the problem for which it has been solved and its 
+ *  solution value a valid local lower bound? 
+ */
+SCIP_Bool SCIPlpIsRelax(
+   SCIP_LP*              lp                  /**< LP data */
+   )
+{
+   assert(lp != NULL);
+
+   return lp->isrelax;
 }
 
 /** returns whether the current LP is flushed and solved */

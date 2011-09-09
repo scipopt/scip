@@ -995,20 +995,7 @@ SCIP_LPSOLSTAT SCIPlpGetSolstat(
    SCIP_LP*              lp                  /**< current LP data */
    );
 
-/** sets whether the current lp is a relaxation of the current problem and its optimal objective value is a local lower bound */
-extern
-void SCIPlpSetIsRelax(
-   SCIP_LP*              lp,                 /**< LP data */
-   SCIP_Bool             isrelax             /**< is the current lp a relaxation? */
-   );
-
-/** returns whether the current lp is a relaxation of the current problem and its optimal objective value is a local lower bound */
-extern
-SCIP_Bool SCIPlpIsRelax(
-   SCIP_LP*              lp                  /**< LP data */
-   );
-
-/** sets whether the root lp is a relaxation of the problem and its optimal objective value is a global lower bound */
+/** sets whether the root LP is a relaxation of the problem and its optimal objective value is a global lower bound */
 extern
 void SCIPlpSetRootLPIsRelax(
    SCIP_LP*              lp,                 /**< LP data */
@@ -1429,6 +1416,21 @@ SCIP_LPI* SCIPlpGetLPI(
    SCIP_LP*              lp                  /**< current LP data */
    );
 
+/** sets whether the current lp is a relaxation of the current problem and its optimal objective value is a local lower bound */
+extern
+void SCIPlpSetIsRelax(
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_Bool             relax               /**< is the current lp a relaxation? */
+   );
+
+/** returns whether the current LP is a relaxation of the problem for which it has been solved and its 
+ *  solution value a valid local lower bound? 
+ */
+extern
+SCIP_Bool SCIPlpIsRelax(
+   SCIP_LP*              lp                  /**< LP data */
+   );
+
 /** returns whether the current LP is flushed and solved */
 extern
 SCIP_Bool SCIPlpIsSolved(
@@ -1478,6 +1480,8 @@ void SCIPlpMarkDivingObjChanged(
 #define SCIPlpGetRootColumnObjval(lp)   ((lp)->rootlpobjval)
 #define SCIPlpGetRootLooseObjval(lp)    ((lp)->rootlooseobjval)
 #define SCIPlpGetLPI(lp)                (lp)->lpi
+#define SCIPlpSetIsRelax(lp,relax)      ((lp)->isrelax = relax)
+#define SCIPlpIsRelax(lp)               (lp)->isrelax
 #define SCIPlpIsSolved(lp)              ((lp)->flushed && (lp)->solved)
 #define SCIPlpIsSolBasic(lp)            ((lp)->solisbasic)
 #define SCIPlpDiving(lp)                (lp)->diving

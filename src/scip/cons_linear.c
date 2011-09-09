@@ -7484,7 +7484,7 @@ SCIP_RETCODE preprocessConstraintPairs(
          continue;
       
       /* if both constraints are already upgraded, skip the pair; 
-       * because changes on these constraints can not be applied to the instance anymore */
+       * because changes on these constraints cannot be applied to the instance anymore */
       if( cons0upgraded && consdata1->upgraded )
          continue;
 

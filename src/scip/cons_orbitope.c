@@ -313,10 +313,18 @@ SCIP_RETCODE printSCI(
          {
             switch (M[k][l])
             {
-            case 1: SCIPinfoMessage(scip, 0, "+"); break;
-            case -1: SCIPinfoMessage(scip, 0, "-");; break;
-            case 0: SCIPinfoMessage(scip, 0, "#");; break;
-            default: abort();
+            case 1: 
+               SCIPinfoMessage(scip, 0, "+"); 
+               break;
+            case -1: 
+               SCIPinfoMessage(scip, 0, "-");
+               break;
+            case 0: 
+               SCIPinfoMessage(scip, 0, "#");
+               break;
+            default:
+               SCIPerrorMessage("unexpected matrix entry <%d>: should be -1, 0 or +1\n", M[k][l]);
+               SCIPABORT();
             }
          }
       }

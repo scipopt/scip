@@ -1141,8 +1141,10 @@ void SCIPintervalDivScalar(
       if( operand1.inf <= -infinity )
          resultant->inf = -infinity;
       else if( operand1.inf >= infinity )
+      {
          /* infinity / + = infinity */
          resultant->inf = infinity;
+      }
       else
       {
          SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
@@ -1152,8 +1154,10 @@ void SCIPintervalDivScalar(
       if( operand1.sup >= infinity )
          resultant->sup =  infinity;
       else if( operand1.sup <= -infinity )
+      {
          /* -infinity / + = -infinity */
          resultant->sup = -infinity;
+      }
       else
       {
          SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
@@ -1165,8 +1169,10 @@ void SCIPintervalDivScalar(
       if( operand1.sup >=  infinity )
          resultant->inf = -infinity;
       else if( operand1.sup <= -infinity )
+      {
          /* -infinity / - = infinity */
          resultant->inf = infinity;
+      }
       else
       {
          SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
@@ -1176,8 +1182,10 @@ void SCIPintervalDivScalar(
       if( operand1.inf <= -infinity )
          resultant->sup = infinity;
       else if( operand1.inf >= infinity )
+      {
          /* infinity / - = -infinity */
          resultant->sup = -infinity;
+      }
       else
       {
          SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
@@ -1359,8 +1367,8 @@ void SCIPintervalSquare(
       }
 
       if( operand.inf <= -infinity )
-          resultant->sup = infinity;
-       else
+         resultant->sup = infinity;
+      else
       {
          SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
          resultant->sup = operand.inf * operand.inf;
@@ -1369,8 +1377,8 @@ void SCIPintervalSquare(
    else if( operand.inf >= 0.0 )
    {  /* operand is right of 0.0 */
       if( operand.inf >= infinity )
-          resultant->inf = infinity;
-       else
+         resultant->inf = infinity;
+      else
       {
          SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
          resultant->inf = operand.inf * operand.inf;
@@ -1560,7 +1568,7 @@ SCIP_Real SCIPintervalPowerScalarIntegerInf(
       assert(n >= 1);
       do
       {
-         if( n&1 ) /* n is odd (d_i=1), so multiply result with current z (=x^{2^i}) */
+         if( n & 1 ) /* n is odd (d_i=1), so multiply result with current z (=x^{2^i}) */
          {
             result = result * z;
             n >>= 1;
@@ -1720,7 +1728,7 @@ void SCIPintervalPowerScalarInteger(
       assert(n >= 1);
       do
       {
-         if( n&1 )
+         if( n & 1 )
          {
             result_inf = negate(negate(result_inf) * z_inf);
             result_sup = result_sup * z_sup;

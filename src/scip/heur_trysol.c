@@ -74,7 +74,7 @@ SCIP_DECL_HEURCOPY(heurCopyTrySol)
 
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurTrySol(scip) );
- 
+
    return SCIP_OKAY;
 }
 
@@ -117,7 +117,7 @@ SCIP_DECL_HEUREXITSOL(heurExitTrySol)
    assert(heurdata != NULL);
 
    /* free solution if one is still present */
-   if ( heurdata->sol != NULL )
+   if( heurdata->sol != NULL )
       SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
    assert( heurdata->sol == NULL );
 
@@ -147,7 +147,7 @@ SCIP_DECL_HEUREXEC(heurExecTrySol)
    assert(heurdata != NULL);
 
    /* only run if solution present */
-   if ( heurdata->sol == NULL )
+   if( heurdata->sol == NULL )
       return SCIP_OKAY;
 
    SCIPdebugMessage("exec method of trysol primal heuristic.\n");
@@ -161,7 +161,7 @@ SCIP_DECL_HEUREXEC(heurExecTrySol)
    SCIP_CALL( SCIPtrySolFree(scip, &heurdata->sol, FALSE, TRUE, TRUE, TRUE, &stored) );
    assert( heurdata->sol == NULL );
 
-   if ( stored )
+   if( stored )
    {
 #ifdef SCIP_DEBUG
       SCIPdebugMessage("Found feasible solution of value %g.\n", obj);
@@ -197,7 +197,7 @@ SCIP_RETCODE SCIPincludeHeurTrySol(
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, 
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
          heurCopyTrySol,heurFreeTrySol, heurInitTrySol, heurExitTrySol,
          heurInitsolTrySol, heurExitsolTrySol, heurExecTrySol,
          heurdata) );
@@ -225,14 +225,14 @@ SCIP_RETCODE SCIPheurPassSolTrySol(
    assert(heurdata != NULL);
 
    /* only store solution if we are not within our own SCIPtrySol() call */
-   if ( ! heurdata->rec )
+   if( ! heurdata->rec )
    {
-      if ( heurdata->sol == NULL || SCIPisLT(scip, SCIPgetSolOrigObj(scip, sol), SCIPgetSolOrigObj(scip, heurdata->sol)) )
+      if( heurdata->sol == NULL || SCIPisLT(scip, SCIPgetSolOrigObj(scip, sol), SCIPgetSolOrigObj(scip, heurdata->sol)) )
       {
-         if ( heurdata->sol != NULL )
+         if( heurdata->sol != NULL )
             SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
 
-         SCIPdebugMessage("Received solution of value %g.\n", SCIPgetSolOrigObj(scip, sol)); 
+         SCIPdebugMessage("Received solution of value %g.\n", SCIPgetSolOrigObj(scip, sol));
          SCIP_CALL( SCIPcreateSolCopy(scip, &heurdata->sol, sol) );
          SCIP_CALL( SCIPunlinkSol(scip, heurdata->sol) );
          SCIPsolSetHeur(heurdata->sol, heur);

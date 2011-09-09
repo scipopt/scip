@@ -782,10 +782,10 @@ SCIP_Bool isGAMSprintableSOC(
 
    assert(nlhsvars == 0 || lhsvars != NULL);
 
-   if (rhscoef != 1.0)
+   if( rhscoef != 1.0 )
       return FALSE;
 
-   if (rhsoffset != 0.0)
+   if( rhsoffset != 0.0 )
       return FALSE;
 
    if( rhsvar == NULL )
@@ -2346,7 +2346,7 @@ SCIP_RETCODE SCIPwriteGms(
          consvars = SCIPgetVarsSetppc(scip, cons);
          nconsvars = SCIPgetNVarsSetppc(scip, cons);
 
-         switch ( SCIPgetTypeSetppc(scip, cons) )
+         switch( SCIPgetTypeSetppc(scip, cons) )
          {
          case SCIP_SETPPCTYPE_PARTITIONING :
             SCIP_CALL( printLinearCons(scip, file, consname,
@@ -2407,7 +2407,7 @@ SCIP_RETCODE SCIPwriteGms(
       }
       else
       {
-         SCIPwarningMessage("constraint handler <%s> can not print requested format\n", conshdlrname );
+         SCIPwarningMessage("constraint handler <%s> cannot print requested format\n", conshdlrname );
          SCIPinfoMessage(scip, file, "* ");
          SCIP_CALL( SCIPprintCons(scip, cons, file) );
          SCIPinfoMessage(scip, file, "\n");

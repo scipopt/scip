@@ -458,7 +458,7 @@ SCIP_Bool mpsinputReadLine(
       do
       {
          BMSclearMemoryArray(mpsi->buf, MPS_MAX_LINELEN);
-         if (NULL == SCIPfgets(mpsi->buf, sizeof(mpsi->buf), mpsi->fp))
+         if( NULL == SCIPfgets(mpsi->buf, sizeof(mpsi->buf), mpsi->fp) )
             return FALSE;
          mpsi->lineno++;
       }
@@ -506,7 +506,7 @@ SCIP_Bool mpsinputReadLine(
             | mpsi->buf[47] | mpsi->buf[48]
             | mpsi->buf[61] | mpsi->buf[62] | mpsi->buf[63];
 
-         if (space == BLANK)
+         if( space == BLANK )
          {
             /* Now we have space at the right positions.
              * But are there also the non space where they
@@ -1547,26 +1547,26 @@ SCIP_RETCODE readSOS(
    removable = FALSE;
 
    /* loop through section */
-   while ( mpsinputReadLine(mpsi) )
+   while( mpsinputReadLine(mpsi) )
    {
       int type = -1;
 
       /* check if next section is found */
-      if ( mpsinputField0(mpsi) != NULL )
+      if( mpsinputField0(mpsi) != NULL )
       {
-         if ( !strcmp(mpsinputField0(mpsi), "ENDATA") )
+         if( !strcmp(mpsinputField0(mpsi), "ENDATA") )
             mpsinputSetSection(mpsi, MPS_ENDATA);
-         else if ( !strcmp(mpsinputField0(mpsi), "QMATRIX") )
+         else if( !strcmp(mpsinputField0(mpsi), "QMATRIX") )
             mpsinputSetSection(mpsi, MPS_QMATRIX);
-         else if ( !strcmp(mpsinputField0(mpsi), "QUADOBJ") )
+         else if( !strcmp(mpsinputField0(mpsi), "QUADOBJ") )
             mpsinputSetSection(mpsi, MPS_QUADOBJ);
-         else if ( !strcmp(mpsinputField0(mpsi), "QCMATRIX") )
+         else if( !strcmp(mpsinputField0(mpsi), "QCMATRIX") )
             mpsinputSetSection(mpsi, MPS_QCMATRIX);
-         else if ( !strcmp(mpsinputField0(mpsi), "INDICATORS") )
+         else if( !strcmp(mpsinputField0(mpsi), "INDICATORS") )
             mpsinputSetSection(mpsi, MPS_INDICATORS);
          break;
       }
-      if ( mpsinputField1(mpsi) == NULL || mpsinputField2(mpsi) == NULL )
+      if( mpsinputField1(mpsi) == NULL || mpsinputField2(mpsi) == NULL )
       {
          SCIPerrorMessage("empty data in a non-comment line.\n");
          mpsinputSyntaxerror(mpsi);
@@ -1574,7 +1574,7 @@ SCIP_RETCODE readSOS(
       }
 
       /* check for new SOS set */
-      if ( strcmp(mpsinputField1(mpsi), "S1") == 0 )
+      if( strcmp(mpsinputField1(mpsi), "S1") == 0 )
          type = 1;
       if( strcmp(mpsinputField1(mpsi), "S2") == 0 )
          type = 2;
@@ -1652,11 +1652,17 @@ SCIP_RETCODE readSOS(
 
             /* add variable and weight */
             assert( consType == 1 || consType == 2 );
-            switch (consType)
+            switch( consType )
             {
-            case 1: SCIP_CALL( SCIPaddVarSOS1(scip, cons, var, weight) ); break;
-            case 2: SCIP_CALL( SCIPaddVarSOS2(scip, cons, var, weight) ); break;
-            default: abort(); /* should not happen */
+            case 1: 
+               SCIP_CALL( SCIPaddVarSOS1(scip, cons, var, weight) );
+               break;
+            case 2: 
+               SCIP_CALL( SCIPaddVarSOS2(scip, cons, var, weight) );
+               break;
+            default: 
+               SCIPerrorMessage("unknown SOS type: <%d>\n", type); /* should not happen */
+               SCIPABORT();
             }
             SCIPdebugMessage("added variable <%s> with weight %g.\n", SCIPvarGetName(var), weight);
          }
@@ -1775,7 +1781,7 @@ SCIP_RETCODE readQMatrix(
             }
 
             /* store variables and coefficient */
-            if (cnt >= size)
+            if( cnt >= size )
             {
                int newsize = SCIPcalcMemGrowSize(scip, size+1);
                assert(newsize > size);
@@ -1808,7 +1814,7 @@ SCIP_RETCODE readQMatrix(
    }
 
    /* add constraint */
-   if (cnt)
+   if( cnt )
    {
       SCIP_Bool  initial, separate, enforce, check, propagate;
       SCIP_Bool  local, modifiable, dynamic, removable;
@@ -1832,7 +1838,7 @@ SCIP_RETCODE readQMatrix(
             SCIP_VARTYPE_CONTINUOUS, initial, removable, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, qmatrixvar) );
       
-      if ( mpsinputObjsense(mpsi) == SCIP_OBJSENSE_MINIMIZE )
+      if( mpsinputObjsense(mpsi) == SCIP_OBJSENSE_MINIMIZE )
       {
          lhs = -SCIPinfinity(scip);
          rhs = 0.0;
@@ -1973,7 +1979,7 @@ SCIP_RETCODE readQCMatrix(
             }
 
             /* store variables and coefficient */
-            if (cnt >= size)
+            if( cnt >= size )
             {
                int newsize = SCIPcalcMemGrowSize(scip, size+1);
                assert(newsize > size);
@@ -2001,7 +2007,7 @@ SCIP_RETCODE readQCMatrix(
    }
 
    /* replace linear constraint by quadratic constraint */
-   if (cnt)
+   if( cnt )
    {
       SCIP_CONS* cons = NULL;
                   
@@ -2070,7 +2076,7 @@ SCIP_RETCODE readIndicators(
    stickingatnode = FALSE;
 
    /* loop through section */
-   while ( mpsinputReadLine(mpsi) )
+   while( mpsinputReadLine(mpsi) )
    {
       SCIP_CONSHDLR* conshdlr;
       SCIP_VARTYPE slackvartype;
@@ -2087,13 +2093,13 @@ SCIP_RETCODE readIndicators(
       int i;
 
       /* check if next section is found */
-      if ( mpsinputField0(mpsi) != NULL )
+      if( mpsinputField0(mpsi) != NULL )
       {
-         if ( !strcmp(mpsinputField0(mpsi), "ENDATA") )
+         if( !strcmp(mpsinputField0(mpsi), "ENDATA") )
             mpsinputSetSection(mpsi, MPS_ENDATA);
          break;
       }
-      if ( mpsinputField1(mpsi) == NULL || mpsinputField2(mpsi) == NULL )
+      if( mpsinputField1(mpsi) == NULL || mpsinputField2(mpsi) == NULL )
       {
          SCIPerrorMessage("empty data in a non-comment line.\n");
          mpsinputSyntaxerror(mpsi);
@@ -2101,7 +2107,7 @@ SCIP_RETCODE readIndicators(
       }
 
       /* check for new indicator constraint */
-      if ( strcmp(mpsinputField1(mpsi), "IF") != 0 )
+      if( strcmp(mpsinputField1(mpsi), "IF") != 0 )
       {
          SCIPerrorMessage("Indicator constraints need to be introduced by 'IF' in column 1.\n");
          mpsinputSyntaxerror(mpsi);
@@ -2110,7 +2116,7 @@ SCIP_RETCODE readIndicators(
 
       /* get linear constraint (row) */
       lincons = SCIPfindCons(scip, mpsinputField2(mpsi));
-      if ( lincons == NULL )
+      if( lincons == NULL )
       {
          SCIPerrorMessage("row <%s> does not exist.\n", mpsinputField2(mpsi));
          mpsinputSyntaxerror(mpsi);
@@ -2119,7 +2125,7 @@ SCIP_RETCODE readIndicators(
 
       /* check whether constraint is really linear */
       conshdlr = SCIPconsGetHdlr(lincons);
-      if ( strcmp(SCIPconshdlrGetName(conshdlr), "linear") != 0 )
+      if( strcmp(SCIPconshdlrGetName(conshdlr), "linear") != 0 )
       {
          SCIPerrorMessage("constraint <%s> is not linear.\n", mpsinputField2(mpsi));
          return SCIP_OKAY;
@@ -2127,7 +2133,7 @@ SCIP_RETCODE readIndicators(
 
       /* get binary variable */
       binvar = SCIPfindVar(scip, mpsinputField3(mpsi));
-      if ( binvar == NULL )
+      if( binvar == NULL )
       {
          SCIPerrorMessage("binary variable <%s> does not exist.\n", mpsinputField3(mpsi));
          mpsinputSyntaxerror(mpsi);
@@ -2135,7 +2141,7 @@ SCIP_RETCODE readIndicators(
       }
 
       /* check type */
-      if ( SCIPvarGetType(binvar) != SCIP_VARTYPE_BINARY )
+      if( SCIPvarGetType(binvar) != SCIP_VARTYPE_BINARY )
       {
          SCIPerrorMessage("variable <%s> is not binary.\n", mpsinputField3(mpsi));
          mpsinputSyntaxerror(mpsi);
@@ -2143,7 +2149,7 @@ SCIP_RETCODE readIndicators(
       }
 
       /* check whether we need the negated variable */
-      if ( *mpsinputField4(mpsi) == '0' )
+      if( *mpsinputField4(mpsi) == '0' )
       {
          SCIP_VAR* var;
          SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &var) );
@@ -2152,7 +2158,7 @@ SCIP_RETCODE readIndicators(
       }
       else
       {
-         if ( *mpsinputField4(mpsi) != '1' )
+         if( *mpsinputField4(mpsi) != '1' )
          {
             SCIPerrorMessage("binary variable <%s> can only take values 0/1 (%s).\n", mpsinputField3(mpsi), mpsinputField4(mpsi));
             mpsinputSyntaxerror(mpsi);
@@ -2168,13 +2174,13 @@ SCIP_RETCODE readIndicators(
       linvals = SCIPgetValsLinear(scip, lincons);
 
       sign = -1.0;
-      if ( ! SCIPisInfinity(scip, -lhs) )
+      if( !SCIPisInfinity(scip, -lhs) )
       {
-         if ( SCIPisInfinity(scip, rhs) )
+         if( SCIPisInfinity(scip, rhs) )
             sign = 1.0;
          else
          {
-            if ( ! SCIPisEQ(scip, lhs, rhs) )
+            if( !SCIPisEQ(scip, lhs, rhs) )
             {
                SCIPerrorMessage("ranged row <%s> is not allowed in indicator constraints.\n", mpsinputField2(mpsi));
                mpsinputSyntaxerror(mpsi);
@@ -2188,7 +2194,7 @@ SCIP_RETCODE readIndicators(
 
                SCIP_CALL( SCIPallocBufferArray(scip, &vars, nlinvars+1) );
                SCIP_CALL( SCIPallocBufferArray(scip, &vals, nlinvars+1) );
-               for (i = 0; i < nlinvars; ++i)
+               for( i = 0; i < nlinvars; ++i )
                {
                   vars[i] = linvars[i];
                   vals[i] = -linvals[i];
@@ -2213,9 +2219,9 @@ SCIP_RETCODE readIndicators(
 
       /* check if slack variable can be made implicitly integer */
       slackvartype = SCIP_VARTYPE_IMPLINT;
-      for (i = 0; i < nlinvars; ++i)
+      for( i = 0; i < nlinvars; ++i )
       {
-         if ( ! SCIPvarIsIntegral(linvars[i]) || ! SCIPisIntegral(scip, linvals[i]) )
+         if( !SCIPvarIsIntegral(linvars[i]) || ! SCIPisIntegral(scip, linvals[i]) )
          {
             slackvartype = SCIP_VARTYPE_CONTINUOUS;
             break;
@@ -2378,7 +2384,7 @@ SCIP_DECL_HASHGETKEY(hashGetKeyVar)
 static
 SCIP_DECL_HASHKEYEQ(hashKeyEqVar)
 {  /*lint --e{715}*/
-   if ( key1 == key2 )
+   if( key1 == key2 )
       return TRUE;
    return FALSE;
 }
@@ -2916,7 +2922,7 @@ void printColumnSection(
       assert( var != NULL );
 
       /* skip slack variables in output */
-      if ( indicatorSlackHash != NULL && SCIPhashtableExists(indicatorSlackHash, var) )
+      if( indicatorSlackHash != NULL && SCIPhashtableExists(indicatorSlackHash, var) )
       {
          ++v;
          continue;
@@ -3135,7 +3141,7 @@ void printBoundSection(
       assert( var != NULL );
 
       /* skip slack variables in output */
-      if ( indicatorSlackHash != NULL && SCIPhashtableExists(indicatorSlackHash, var) )
+      if( indicatorSlackHash != NULL && SCIPhashtableExists(indicatorSlackHash, var) )
          continue;
 
       /* get variable name */
@@ -3769,7 +3775,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          SCIPfreeBufferArray(scip, &lincoefs);
 
          /* if there is an offsets on rhs, then we have linear a coefficient that need to be processed here */
-         if (SCIPgetRhsOffsetSOC(scip, cons) != 0.0)
+         if( SCIPgetRhsOffsetSOC(scip, cons) != 0.0 )
          {
             SCIP_VAR* rhsvar;
             SCIP_Real lincoef;
@@ -3807,7 +3813,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    /* free hash table */
    SCIPhashtableFree(&varAggregatedHash);
 
-   if ( nConsIndicator == 0 )
+   if( nConsIndicator == 0 )
    {
       SCIPhashtableFree(&indicatorSlackHash);
       assert( indicatorSlackHash == NULL );
@@ -4160,13 +4166,13 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    }
 
    /* print indicator section */
-   if ( nConsIndicator > 0 )
+   if( nConsIndicator > 0 )
    {
       SCIPinfoMessage(scip, file, "INDICATORS\n");
       SCIPdebugMessage("start printing INDICATOR section\n");
 
       /* output each indicator constraint */
-      for (c = 0; c < nConsIndicator; ++c)
+      for( c = 0; c < nConsIndicator; ++c )
       {
          SCIP_VAR* binvar;
          SCIP_CONS* lincons;
@@ -4176,7 +4182,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          lincons = SCIPgetLinearConsIndicator(cons);
 
          /* create variable and value strings */
-         if ( SCIPvarIsNegated(binvar) )
+         if( SCIPvarIsNegated(binvar) )
          {
             (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25d", 0);
             assert( SCIPvarGetNegatedVar(binvar) != NULL );
@@ -4201,7 +4207,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    freeMatrix(scip, matrix);
 
    /* free slackvar hashtable */
-   if ( indicatorSlackHash != NULL )
+   if( indicatorSlackHash != NULL )
       SCIPhashtableFree(&indicatorSlackHash);
 
    /* free variable hashmap */

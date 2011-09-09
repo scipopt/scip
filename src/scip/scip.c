@@ -1139,6 +1139,11 @@ SCIP_RETCODE SCIPgetVarCopy(
    {
       *success = FALSE;
       *targetvar = NULL;
+
+      /* free local hash map if necessary */
+      if( uselocalvarmap )
+         SCIPhashmapFree(&localvarmap);
+
       return SCIP_OKAY;
    }
 
@@ -1263,7 +1268,14 @@ SCIP_RETCODE SCIPgetVarCopy(
       /* get negation of copied negated source variable, this is the target variable */
       SCIP_CALL( SCIPgetNegatedVar(targetscip, targetnegatedvar, targetvar) );
       assert(SCIPvarGetStatus(*targetvar) == SCIP_VARSTATUS_NEGATED);
-         
+
+      /* free local hash maps if necessary */
+      if( uselocalvarmap )
+         SCIPhashmapFree(&localvarmap);
+
+      if( uselocalconsmap )
+         SCIPhashmapFree(&localconsmap);
+
       /* we have to return right away, to avoid adding the negated variable to the problem since the "not negated"
        * variable was already added */
       return SCIP_OKAY;
@@ -1278,21 +1290,16 @@ SCIP_RETCODE SCIPgetVarCopy(
    SCIP_CALL( SCIPaddVar(targetscip, var) );
 
    *targetvar = var;
-   
+
    /* remove the variable capture which was done due to the creation of the variable */
    SCIP_CALL( SCIPreleaseVar(targetscip, &var) );
-   
+
+   /* free local hash maps if necessary */
    if( uselocalvarmap )
-   {
-      /* free hash map */
       SCIPhashmapFree(&localvarmap);
-   }
 
    if( uselocalconsmap )
-   {
-      /* free hash map */
       SCIPhashmapFree(&localconsmap);
-   }
 
    return SCIP_OKAY;
 }
@@ -1612,7 +1619,7 @@ SCIP_RETCODE SCIPcopyConss(
 #if 0
       /* @todo using the following might reduce the number of copied constraints - check whether this is better */
       /* Get all checked constraints for copying; this included local constraints */
-      if ( ! global )
+      if( !global )
       {
          nsourceconss = SCIPconshdlrGetNCheckConss(sourceconshdlrs[i]);
          sourceconss = SCIPconshdlrGetCheckConss(sourceconshdlrs[i]);
@@ -1621,7 +1628,7 @@ SCIP_RETCODE SCIPcopyConss(
 
       assert(nsourceconss == 0 || sourceconss != NULL);
 
-      if ( nsourceconss > 0 )
+      if( nsourceconss > 0 )
       {
          SCIPdebugMessage("Attempting to copy %d %s constraints\n", nsourceconss, SCIPconshdlrGetName(sourceconshdlrs[i]));
       }
@@ -7767,6 +7774,10 @@ SCIP_RETCODE SCIPparseVarName(
 {
    char varname[SCIP_MAXSTRLEN];
    
+   assert(str != NULL);
+   assert(var != NULL);
+   assert(endpos != NULL);
+
    SCIP_CALL( checkStage(scip, "SCIPparseVarName", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
    
    SCIPstrCopySection(str, pos, '<', '>', varname, SCIP_MAXSTRLEN, endpos); 
@@ -9294,7 +9305,7 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesFrac(
    cols = NULL;
    SCIP_CALL( SCIPallocBufferArray(scip, &cols, nvars) );
    assert(cols != NULL);
-   for (j = 0; j < nvars; ++j)
+   for( j = 0; j < nvars; ++j )
    {
       SCIP_VAR* var;
       SCIP_COL* col;
@@ -9350,7 +9361,7 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesFrac(
        */
       if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !scip->set->misc_exactsolve )
       {
-         for (j = 0; j < nvars; ++j)
+         for( j = 0; j < nvars; ++j )
          {
             SCIP_Bool downcutoff;
             SCIP_Bool upcutoff;
@@ -9423,7 +9434,7 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesInt(
    cols = NULL;
    SCIP_CALL( SCIPallocBufferArray(scip, &cols, nvars) );
    assert(cols != NULL);
-   for (j = 0; j < nvars; ++j)
+   for( j = 0; j < nvars; ++j )
    {
       SCIP_VAR* var;
       SCIP_COL* col;
@@ -9479,7 +9490,7 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesInt(
        */
       if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !scip->set->misc_exactsolve )
       {
-         for (j = 0; j < nvars; ++j)
+         for( j = 0; j < nvars; ++j )
          {
             SCIP_Bool downcutoff;
             SCIP_Bool upcutoff;
@@ -14314,7 +14325,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
    /* exit if there are no columns */
    lp = scip->lp;
    assert( lp->nrows >= 0 && lp->ncols >= 0 );
-   if ( lp->ncols == 0 )
+   if( lp->ncols == 0 )
       return SCIP_OKAY;
 
    /* disable objective cutoff if we have none */
@@ -14324,7 +14335,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
    SCIPdebugMessage("Computing relative interior point to current LP.\n");
 
    /* if there are no rows, we return the zero point */
-   if ( lp->nrows == 0 && !inclobjcutoff )
+   if( lp->nrows == 0 && !inclobjcutoff )
    {
       /* create zero point */
       SCIP_CALL( SCIPcreateSol(scip, point, NULL) );
@@ -14341,7 +14352,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
    SCIP_CALL( SCIPallocBufferArray(scip, &obj, nnewcols) );
 
    /* create original columns (bounds are relaxed below, unless the variable is fixed) */
-   for (j = 0; j < lp->ncols; ++j)
+   for( j = 0; j < lp->ncols; ++j )
    {
       /* note: if the variable is fixed we cannot simply fix the variables (because alpha scales the problem) */
       obj[j] = 0.0;
@@ -14357,35 +14368,35 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
    ++nnewcols;
    
    /* create slacks for rows */
-   for (i = 0; i < lp->nrows; ++i)
+   for( i = 0; i < lp->nrows; ++i )
    {
       SCIP_ROW* row;
 
       row = lp->rows[i];
       assert( row != NULL );
 
-      if ( SCIProwIsModifiable(row) )
+      if( SCIProwIsModifiable(row) )
          continue;
 
       /* check whether we have an equation */
-      if ( SCIPisEQ(scip, row->lhs, row->rhs) )
+      if( SCIPisEQ(scip, row->lhs, row->rhs) )
       {
          assert( !SCIPisInfinity(scip, ABS(row->lhs)) );
          assert( !SCIPisInfinity(scip, ABS(row->rhs)) );
       }
       else
       {
-         if ( relaxrows )
+         if( relaxrows )
          {
             /* otherwise add slacks for each side if necessary */
-            if ( !SCIPisInfinity(scip, ABS(row->lhs)) )
+            if( !SCIPisInfinity(scip, ABS(row->lhs)) )
             {
                obj[nnewcols] = 1.0;
                lb[nnewcols] = 0.0;
                ub[nnewcols] = 1.0;
                ++nnewcols;
             }
-            if ( !SCIPisInfinity(scip, ABS(row->rhs)) )
+            if( !SCIPisInfinity(scip, ABS(row->rhs)) )
             {
                obj[nnewcols] = 1.0;
                lb[nnewcols] = 0.0;
@@ -14399,7 +14410,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
    /* create slacks for objective cutoff row */
    if( inclobjcutoff )
    {
-      if ( relaxrows )
+      if( relaxrows )
       {
          /* add slacks for right hand side */
          obj[nnewcols] = 1.0;
@@ -14410,7 +14421,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
    }
 
    /* create slacks for bounds */
-   for (j = 0; j < lp->ncols; ++j)
+   for( j = 0; j < lp->ncols; ++j )
    {
       SCIP_COL* col;
 
@@ -14418,14 +14429,14 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
       assert( col != NULL );
 
       /* add slacks for each bound if necessary */
-      if ( !SCIPisInfinity(scip, ABS(col->lb)) )
+      if( !SCIPisInfinity(scip, ABS(col->lb)) )
       {
          obj[nnewcols] = 1.0;
          lb[nnewcols] = 0.0;
          ub[nnewcols] = 1.0;
          ++nnewcols;
       }
-      if ( !SCIPisInfinity(scip, ABS(col->ub)) )
+      if( !SCIPisInfinity(scip, ABS(col->ub)) )
       {
          obj[nnewcols] = 1.0;
          lb[nnewcols] = 0.0;
@@ -14458,7 +14469,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
    zero = 0.0;
    minusinf = -SCIPlpiInfinity(lpi);
    plusinf = SCIPlpiInfinity(lpi);
-   for (i = 0; i < lp->nrows; ++i)
+   for( i = 0; i < lp->nrows; ++i )
    {
       SCIP_ROW* row;
       SCIP_COL** rowcols;
@@ -14470,7 +14481,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
       row = lp->rows[i];
       assert( row != NULL );
 
-      if ( SCIProwIsModifiable(row) )
+      if( SCIProwIsModifiable(row) )
          continue;
 
       /* get row data */
@@ -14482,7 +14493,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
       rowvals = row->vals;
 
       /* set up indices */
-      for (j = 0; j < nnonz; ++j)
+      for( j = 0; j < nnonz; ++j )
       {
          assert( rowcols[j] != NULL );
          assert( 0 <= rowcols[j]->lppos && rowcols[j]->lppos < lp->ncols );
@@ -14492,7 +14503,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
       }
 
       /* if we have an equation */
-      if ( SCIPisEQ(scip, lhs, rhs) )
+      if( SCIPisEQ(scip, lhs, rhs) )
       {
          /* add artificial variable */
          colinds[nnonz] = lp->ncols;
@@ -14504,7 +14515,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
       else
       {
          /* treat lhs */
-         if ( !SCIPisInfinity(scip, ABS(lhs)) )
+         if( !SCIPisInfinity(scip, ABS(lhs)) )
          {
             assert( ! SCIPisEQ(scip, lhs, rhs) );
 
@@ -14512,7 +14523,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
             colinds[nnonz] = lp->ncols;
             colvals[nnonz] = -lhs;
 
-            if ( relaxrows )
+            if( relaxrows )
             {
                /* add slack variable */
                colinds[nnonz+1] = lp->ncols + 1 + cnt;
@@ -14527,7 +14538,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
          }
 
          /* treat rhs */
-         if ( !SCIPisInfinity(scip, ABS(rhs)) )
+         if( !SCIPisInfinity(scip, ABS(rhs)) )
          {
             assert( ! SCIPisEQ(scip, lhs, rhs) );
 
@@ -14535,7 +14546,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
             colinds[nnonz] = lp->ncols;
             colvals[nnonz] = -rhs;
 
-            if ( relaxrows )
+            if( relaxrows )
             {
                /* add slack variable */
                colinds[nnonz+1] = lp->ncols + 1 + cnt;
@@ -14562,7 +14573,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
 
       /* set up indices and coefficients */
       nnonz = 0;
-      for (j = 0; j < lp->ncols; ++j)
+      for( j = 0; j < lp->ncols; ++j )
       {
          assert( lp->cols[j] != NULL );
          assert( 0 <= lp->cols[j]->lppos && lp->cols[j]->lppos < lp->ncols );
@@ -14580,7 +14591,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
       colvals[nnonz] = -rhs;
       ++nnonz;
 
-      if ( relaxrows )
+      if( relaxrows )
       {
          /* add slack variable */
          colinds[nnonz] = lp->ncols + 1 + cnt;
@@ -14592,7 +14603,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
    }
 
    /* create rows arising from bounds */
-   for (j = 0; j < lp->ncols; ++j)
+   for( j = 0; j < lp->ncols; ++j )
    {
       SCIP_COL* col;
 
@@ -14605,7 +14616,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
       colvals[0] = 1.0;
       
       /* lower bound */
-      if ( !SCIPisInfinity(scip, ABS(col->lb)) )
+      if( !SCIPisInfinity(scip, ABS(col->lb)) )
       {
          /* add artificial variable */
          colinds[1] = lp->ncols;
@@ -14619,7 +14630,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
       }
 
       /* upper bound */
-      if ( !SCIPisInfinity(scip, ABS(col->ub)) )
+      if( !SCIPisInfinity(scip, ABS(col->ub)) )
       {
          /* add artificial variable */
          colinds[1] = lp->ncols;
@@ -14646,7 +14657,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
    /* SCIP_CALL( SCIPlpiSolvePrimal(lpi) ); */
    SCIP_CALL( SCIPlpiSolveDual(lpi) );  /* dual is usually faster */
 
-   if ( SCIPlpiIsOptimal(lpi) )
+   if( SCIPlpiIsOptimal(lpi) )
    {   
       /* get primal solution */
       SCIP_CALL( SCIPallocBufferArray(scip, &primal, nnewcols) );
@@ -14658,9 +14669,9 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
 
       /* construct relative interior point */
       SCIP_CALL( SCIPcreateSol(scip, point, NULL) );
-      for (j = 0; j < lp->ncols; ++j)
+      for( j = 0; j < lp->ncols; ++j )
       {
-         if ( ! SCIPisFeasZero(scip, primal[j]) )
+         if( !SCIPisFeasZero(scip, primal[j]) )
          {
             SCIP_VAR* var;
             var = lp->cols[j]->var;
@@ -14671,9 +14682,9 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
 #ifdef SCIP_DEBUG
       /* check whether the point is a relative interior point */
       cnt = 0;
-      if ( relaxrows )
+      if( relaxrows )
       {
-         for (i = 0; i < lp->nrows; ++i)
+         for( i = 0; i < lp->nrows; ++i )
          {
             SCIP_ROW* row;
             SCIP_COL** rowcols;
@@ -14695,25 +14706,25 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
             rowvals = row->vals;
 
             sum = 0.0;
-            for (j = 0; j < nnonz; ++j)
+            for( j = 0; j < nnonz; ++j )
                sum += rowvals[j] * primal[rowcols[j]->lppos];
             sum /= alpha;
 
             /* if we have an equation */
-            if ( SCIPisEQ(scip, lhs, rhs) )
+            if( SCIPisEQ(scip, lhs, rhs) )
             {
                assert( SCIPisFeasEQ(scip, sum, lhs) );
             }
             else
             {
                /* treat lhs */
-               if ( !SCIPisInfinity(scip, ABS(lhs)) )
+               if( !SCIPisInfinity(scip, ABS(lhs)) )
                {
                   assert( SCIPisFeasZero(scip, primal[lp->ncols+1+cnt]) || SCIPisFeasGT(scip, sum, lhs) );
                   ++cnt;
                }
                /* treat rhs */
-               if ( !SCIPisInfinity(scip, ABS(rhs)) )
+               if( !SCIPisInfinity(scip, ABS(rhs)) )
                {
                   assert( SCIPisFeasZero(scip, primal[lp->ncols+1+cnt]) || SCIPisFeasLT(scip, sum, rhs) );
                   ++cnt;
@@ -14726,7 +14737,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
             SCIP_Real rhs;
 
             sum = 0.0;
-            for (j = 0; j < lp->ncols; ++j)
+            for( j = 0; j < lp->ncols; ++j )
                sum += lp->cols[j]->obj * primal[lp->cols[j]->lppos];
             sum /= alpha;
 
@@ -14736,7 +14747,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
          }
       }
       /* check bounds */
-      for (j = 0; j < lp->ncols; ++j)
+      for( j = 0; j < lp->ncols; ++j )
       {
          SCIP_COL* col;
          SCIP_Real val;
@@ -14746,16 +14757,16 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
          val = primal[col->lppos] / alpha;
 
          /* if the variable is not fixed */
-         if ( ! SCIPisEQ(scip, col->lb, col->ub) )
+         if( !SCIPisEQ(scip, col->lb, col->ub) )
          {
             /* treat lb */
-            if ( !SCIPisInfinity(scip, ABS(col->lb)) )
+            if( !SCIPisInfinity(scip, ABS(col->lb)) )
             {
                assert( SCIPisFeasZero(scip, primal[lp->ncols+1+cnt]) || SCIPisFeasGT(scip, val, col->lb) );
                ++cnt;
             }
             /* treat rhs */
-            if ( !SCIPisInfinity(scip, ABS(col->ub)) )
+            if( !SCIPisInfinity(scip, ABS(col->ub)) )
             {
                assert( SCIPisFeasZero(scip, primal[lp->ncols+1+cnt]) || SCIPisFeasLT(scip, val, col->ub) );
                ++cnt;
@@ -14859,7 +14870,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointSupNorm(
    SCIP_CALL( SCIPallocBufferArray(scip, &obj, ncols) );
 
    /* create original columns (bounds are relaxed below, unless the variable is fixed) */
-   for (j = 0; j < lp->ncols; ++j)
+   for( j = 0; j < lp->ncols; ++j )
    {
       obj[j] = 0.0;
       lb[j]  = lp->cols[j]->lb;
@@ -14887,7 +14898,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointSupNorm(
    beg = 0;
    minusinf = -SCIPlpiInfinity(lpi);
    plusinf  =  SCIPlpiInfinity(lpi);
-   for (i = 0; i < lp->nrows; ++i)
+   for( i = 0; i < lp->nrows; ++i )
    {
       SCIP_ROW* row;
       SCIP_COL** rowcols;
@@ -14911,7 +14922,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointSupNorm(
       rowvals = row->vals;
 
       /* set up indices */
-      for (j = 0; j < nnonz; ++j)
+      for( j = 0; j < nnonz; ++j )
       {
          assert( rowcols[j] != NULL );
          assert( 0 <= rowcols[j]->lppos && rowcols[j]->lppos < lp->ncols );
@@ -14960,7 +14971,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointSupNorm(
       /* set up indices and coefficients */
       nnonz = 0;
       norm = 0.0;
-      for (j = 0; j < lp->ncols; ++j)
+      for( j = 0; j < lp->ncols; ++j )
       {
          assert( lp->cols[j] != NULL );
          assert( 0 <= lp->cols[j]->lppos && lp->cols[j]->lppos < lp->ncols );
@@ -14982,7 +14993,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointSupNorm(
    }
 
    /* create rows arising from bounds */
-   for (j = 0; j < lp->ncols; ++j)
+   for( j = 0; j < lp->ncols; ++j )
    {
       SCIP_COL* col;
 
@@ -15053,7 +15064,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointSupNorm(
 
 #ifdef SCIP_DEBUG
       /* check whether the point is a relative interior point */
-      for (i = 0; i < lp->nrows; ++i)
+      for( i = 0; i < lp->nrows; ++i )
       {
          SCIP_ROW* row;
          SCIP_COL** rowcols;
@@ -15075,11 +15086,11 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointSupNorm(
          rowvals = row->vals;
 
          sum = 0.0;
-         for (j = 0; j < nnonz; ++j)
+         for( j = 0; j < nnonz; ++j )
             sum += rowvals[j] * primal[rowcols[j]->lppos];
 
          /* if we have an equation */
-         if ( SCIPisEQ(scip, lhs, rhs) )
+         if( SCIPisEQ(scip, lhs, rhs) )
          {
             assert( SCIPisFeasEQ(scip, sum, lhs) );
          }
@@ -15095,7 +15106,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointSupNorm(
          SCIP_Real rhs;
 
          sum = 0.0;
-         for (j = 0; j < lp->ncols; ++j)
+         for( j = 0; j < lp->ncols; ++j )
             sum += lp->cols[j]->obj * primal[lp->cols[j]->lppos];
 
          rhs = SCIPgetCutoffbound(scip) - SCIPlpGetLooseObjval(lp, scip->set);
@@ -17530,7 +17541,7 @@ SCIP_RETCODE SCIPremoveInefficaciousCuts(
    SCIP_CALL( checkStage(scip, "SCIPremoveInefficaciousCuts", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    isroot = FALSE;
-   if ( SCIPtreeGetCurrentDepth(scip->tree) == 0 )
+   if( SCIPtreeGetCurrentDepth(scip->tree) == 0 )
       isroot = TRUE;
    SCIP_CALL( SCIPsepastoreRemoveInefficaciousCuts(scip->sepastore, scip->mem->probmem, scip->set, scip->stat, 
          scip->eventqueue, scip->eventfilter, scip->lp, isroot) );
@@ -17582,6 +17593,7 @@ SCIP_RETCODE SCIPstartDive(
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPstartDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   assert(SCIPnodeGetType(SCIPgetCurrentNode(scip)) == SCIP_NODETYPE_FOCUSNODE);
 
    if( SCIPlpDiving(scip->lp) )
    {
@@ -17595,11 +17607,12 @@ SCIP_RETCODE SCIPstartDive(
       return SCIP_INVALIDCALL;
    }
 
-   if( !SCIPtreeHasCurrentNodeLP(scip->tree) )
+   if( !SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
    {
-      SCIPerrorMessage("cannot start diving at a pseudo node\n");
+      SCIPerrorMessage("cannot start diving if LP has not been constructed\n");
       return SCIP_INVALIDCALL;
    }
+   assert(SCIPtreeHasCurrentNodeLP(scip->tree));
 
    SCIP_CALL( SCIPlpStartDive(scip->lp, scip->mem->probmem, scip->set) );
 
@@ -17624,8 +17637,9 @@ SCIP_RETCODE SCIPendDive(
          scip->transprob, scip->transprob->vars, scip->transprob->nvars) );
 
    /* the lower bound may have changed slightly due to LP resolve in SCIPlpEndDive() */
-   if( !scip->lp->resolvelperror && scip->tree->focusnode != NULL )
+   if( !scip->lp->resolvelperror && scip->tree->focusnode != NULL && SCIPlpIsRelax(scip->lp) )
    {
+      assert(SCIPtreeIsFocusNodeLPConstructed(scip->tree));
       SCIP_CALL( SCIPnodeUpdateLowerboundLP(scip->tree->focusnode, scip->set, scip->stat, scip->lp) );
    }
    /* reset the probably changed LP's cutoff bound */
@@ -18564,7 +18578,7 @@ SCIP_RETCODE SCIPcreateChild(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE**           node,               /**< pointer to node data structure */
    SCIP_Real             nodeselprio,        /**< node selection priority of new node */
-   SCIP_Real             estimate            /**< estimate for (transformed) objective value of best feasible solution in subtree */
+   SCIP_Real             estimate            /**< estimate for(transformed) objective value of best feasible solution in subtree */
    )
 {
    assert(node != NULL);
@@ -19636,7 +19650,7 @@ SCIP_RETCODE checkSolOrig(
 
    /* check original constraints
     *
-    * in general modifiable constraints can not be checked, because the variables to fulfill them might be missing in
+    * in general modifiable constraints cannot be checked, because the variables to fulfill them might be missing in
     * the original problem; however, if the solution comes from a heuristic during presolving modifiable constraints
     * have to be checked;
     */
@@ -20298,7 +20312,7 @@ SCIP_RETCODE SCIPprintNodeRootPath(
          else 
             end =  nodeswitches[j+1];
          
-         for( i = nodeswitches[j]; i < end; ++i)
+         for( i = nodeswitches[j]; i < end; ++i )
          {
             if( i > nodeswitches[j] )
                SCIPmessageFPrintInfo(file, " AND ");

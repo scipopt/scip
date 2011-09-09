@@ -877,7 +877,7 @@ SCIP_RETCODE applyFixings(
          SCIPdebugMessage("variable bound constraint <%s>: variable <%s> is fixed to %.15g\n",
             SCIPconsGetName(cons), SCIPvarGetName(consdata->var), varconstant);
 
-         /* can not change bounds on multi-aggregated variables */
+         /* cannot change bounds on multi-aggregated variables */
          if( SCIPvarGetStatus(vbdvar) != SCIP_VARSTATUS_MULTAGGR )
          {
             /* x is fixed to varconstant: update bounds of y and delete the variable bound constraint */
@@ -985,7 +985,7 @@ SCIP_RETCODE applyFixings(
          SCIPdebugMessage("variable bound constraint <%s>: vbd variable <%s> is fixed to %.15g\n",
             SCIPconsGetName(cons), SCIPvarGetName(consdata->vbdvar), vbdvarconstant);
 
-         /* can not change bounds on multi-aggregated variables */
+         /* cannot change bounds on multi-aggregated variables */
          if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
          {
             /* y is fixed to vbdvarconstant: update bounds of x and delete the variable bound constraint */

@@ -217,7 +217,7 @@ SCIP_RETCODE SCIPprobCopy(
       SCIP_CALL( sourceprob->probcopy(set->scip, sourcescip, sourceprob->probdata, varmap, consmap, &targetdata, global, &result) );
 
       /* evaluate result */
-      if ( result != SCIP_DIDNOTRUN && result != SCIP_SUCCESS )
+      if( result != SCIP_DIDNOTRUN && result != SCIP_SUCCESS )
       {
          SCIPerrorMessage("probdata copying method returned invalid result <%d>\n", result);
          return SCIP_INVALIDRESULT;
@@ -553,7 +553,7 @@ void probInsertVar(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   /* original variables can not go into transformed problem and transformed variables cannot go into original problem */
+   /* original variables cannot go into transformed problem and transformed variables cannot go into original problem */
    assert((SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL) == prob->transformed);
 
    /* insert variable in array */
@@ -733,7 +733,7 @@ SCIP_RETCODE SCIPprobAddVar(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   /* original variables can not go into transformed problem and transformed variables cannot go into original problem */
+   /* original variables cannot go into transformed problem and transformed variables cannot go into original problem */
    assert((SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL) == prob->transformed);
 
 #ifndef NDEBUG
@@ -1642,6 +1642,6 @@ void SCIPprobPrintStatistics(
    SCIPmessageFPrintInfo(file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
       prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars);
    SCIPmessageFPrintInfo(file, "  Constraints      : %d initial, %d maximal\n", prob->startnconss, prob->maxnconss);
-   if ( ! prob->transformed )
+   if( ! prob->transformed )
       SCIPmessageFPrintInfo(file, "  Objective sense  : %s\n", prob->objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");
 }

@@ -36,7 +36,7 @@
 
 
 #ifndef va_copy
-#define va_copy(dest, src) do { BMScopyMemory(&dest, &src); } while (0)
+#define va_copy(dest, src) do { BMScopyMemory(&dest, &src); } while( 0 )
 #endif
 
 /** error message print method of default message handler */

@@ -1196,7 +1196,7 @@ char* getconstantname(
    int value                                 /**< symbolic constant given as int value */
    )
 {
-   switch (value)
+   switch( value )
    {
    case IRRELEVANT: 
       (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "IRRELEVANT"); break;
@@ -3388,7 +3388,7 @@ SCIP_RETCODE preprocessTrivialZerohalfCuts(
       for( r = firstrowsind ; r < mod2data->nrowsind && r2 < mod2data->nrowsind; ++r)
       {
          if( r < lastrowsind - firstrowsind )
-            while (removerow[r2] && r2 < mod2data->nrowsind)
+            while( removerow[r2] && r2 < mod2data->nrowsind )
                r2++;
          if( r < r2 && r2 < mod2data->nrowsind )
             mod2data->rowsind[r] = mod2data->rowsind[r2];
@@ -3523,7 +3523,7 @@ SCIP_RETCODE preprocessRows(
       for( r1 = firstrowsind ; r1 < mod2data->nrowsind && r2 < mod2data->nrowsind; ++r1)
       {
          if( r1 < lastrowsind - firstrowsind )
-            while (removerow[r2] && r2 < mod2data->nrowsind)
+            while( removerow[r2] && r2 < mod2data->nrowsind )
                r2++;
          if( r1 < r2 && r2 < mod2data->nrowsind )
             mod2data->rowsind[r1] = mod2data->rowsind[r2];
@@ -3707,7 +3707,7 @@ SCIP_RETCODE preprocessColumns(
          for( c = firstcolsind ; c < mod2data->ncolsind && j < mod2data->ncolsind; ++c)
          {
             if( c < nconsideredcols )
-               while (removecol[j] && j < mod2data->ncolsind)
+               while( removecol[j] && j < mod2data->ncolsind )
                   j++;
             if( c < j && j < mod2data->ncolsind )
                mod2data->colsind[c] = mod2data->colsind[j];
@@ -3757,8 +3757,8 @@ SCIP_RETCODE preprocessModGaussElim(
 
    /* determine number of slack zero rows */
    nslackzerorows = 0;
-   while (nslackzerorows < mod2data->nrowsind
-      && SCIPisZero(scip, mod2data->slacks[mod2data->rowsind[nslackzerorows]]))
+   while( nslackzerorows < mod2data->nrowsind
+      && SCIPisZero(scip, mod2data->slacks[mod2data->rowsind[nslackzerorows]]) )
       nslackzerorows++;
    /* check if at least one slack zero row exists */
    if( nslackzerorows == 0 )
@@ -4005,7 +4005,7 @@ SCIP_RETCODE decomposeProblem(
    k = 0;
    unprocessedrowidx = 0;
 
-   while (nprocessedrows < problem->nrrows)
+   while( nprocessedrows < problem->nrrows )
    {
       ++k;
       nrrowsinsubprob = 0;
@@ -4024,7 +4024,7 @@ SCIP_RETCODE decomposeProblem(
       queuefirst = 0;
       queuelast = 1;
 
-      while (queuelast > queuefirst)
+      while( queuelast > queuefirst )
       {
          assert(queuelast <= problem->nrrows);
 
@@ -4441,7 +4441,7 @@ SCIP_RETCODE preprocessConsiderMinSlack(
             }
         
             j = 0;
-            while (j < mod2data->ncolsind && SCIPisGT(scip, mod2data->fracsol[mod2data->colsind[j]] + minslackoddrhsrows, sepadata->maxslack))
+            while( j < mod2data->ncolsind && SCIPisGT(scip, mod2data->fracsol[mod2data->colsind[j]] + minslackoddrhsrows, sepadata->maxslack) )
             {
                c = mod2data->colsind[j];
                minslackrowwithnonz = 1.0;
@@ -4477,7 +4477,7 @@ SCIP_RETCODE preprocessConsiderMinSlack(
          for( i = 0 ; i < mod2data->nrowsind && j < mod2data->nrowsind; ++i)
          {
             if( i < mod2data->nrowsind )
-               while (removerow[j] && j < mod2data->nrowsind)
+               while( removerow[j] && j < mod2data->nrowsind )
                   j++;
             if( i < j && j < mod2data->nrowsind )
                mod2data->rowsind[i] = mod2data->rowsind[j];
@@ -4559,7 +4559,7 @@ SCIP_RETCODE preprocessIdenticalColums(
       for( c2 = 0 ; c2 < mod2data->ncolsind && c1 < mod2data->ncolsind; ++c2)
       {
          if( c2 < mod2data->ncolsind )
-            while (removecol[c1] && c1 < mod2data->ncolsind)
+            while( removecol[c1] && c1 < mod2data->ncolsind )
                c1++;
          if( c2 < c1 && c1 < mod2data->ncolsind )
             mod2data->colsind[c2] = mod2data->colsind[c1];
@@ -5699,7 +5699,7 @@ SCIP_RETCODE separateByEnumerationHeuristics(
    if( SCIPisLE(scip, minslackoddrhsrows, sepadata->maxslack) )
       for( ncombinedrows = 1 ; ncombinedrows <= maxncombinedrows ; ++ncombinedrows )
       {
-         switch ( ncombinedrows )
+         switch( ncombinedrows )
          {
          case 1:
             /* check all rows r1 with rhs(r1) odd */
@@ -6025,7 +6025,7 @@ SCIP_RETCODE dijkstra(
    assert(nunprocessednodes > 0);
 
    /* for all nodes */
-   while (nunprocessednodes > 0)
+   while( nunprocessednodes > 0 )
    {
       /* get unprocessed node with minimum distance from sourcenode */
       u = 0;
@@ -6253,7 +6253,7 @@ SCIP_RETCODE separateByAuxGraph(
          nrrowsincut = 0;
          nrowsincut = 0;
          node = auxgraph->nodecopies[n];
-         while (node->previous != NULL)
+         while( node->previous != NULL )
          {
             for( i = 0 ; i < node->nneighbors ; ++i)
                if( node->neighbors[i] == node->previous )
@@ -6919,7 +6919,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
                sepadata->origrows[i+1] = temp;                                         
                issorted = FALSE;                                             
             }                                                               
-      } while (!issorted);    
+      } while( !issorted );    
    }
 
    /* get the maximal number of cuts allowed in a separation round */

@@ -89,7 +89,7 @@ SCIP_RETCODE initGraph(
    SCIP_CALL( SCIPallocBufferArray(scip, &G->A, (int) nNodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &G->W, (int) nNodes) );
 
-   for (i = 0; i < nNodes; ++i)
+   for( i = 0; i < nNodes; ++i )
    {
       G->deg[i] = 0;
       G->size[i] = initSize;
@@ -113,7 +113,7 @@ void freeGraph(
 {
    unsigned int i;
 
-   for (i = 0; i < G->n; ++i)
+   for( i = 0; i < G->n; ++i )
    {
       SCIPfreeBufferArray(scip, &G->A[i]);
       SCIPfreeBufferArray(scip, &G->W[i]);
@@ -134,7 +134,7 @@ SCIP_RETCODE ensureEdgeCapacity(
    unsigned int          node           /**< list for node */
    )
 {
-   if ( G->deg[node] + 2 > G->size[node] )
+   if( G->deg[node] + 2 > G->size[node] )
    {
       unsigned int newSize;
       newSize = G->size[node] * 2;
@@ -171,11 +171,11 @@ SCIP_RETCODE getActiveVariables(
    assert( nvars != NULL );
    assert( constant != NULL );
 
-   if ( transformed )
+   if( transformed )
    {
       SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, *nvars, constant, &requiredsize, TRUE) );
 
-      if ( requiredsize > *nvars )
+      if( requiredsize > *nvars )
       {
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars, requiredsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &scalars, requiredsize) );
@@ -186,7 +186,7 @@ SCIP_RETCODE getActiveVariables(
    }
    else
    {
-      for (v = 0; v < *nvars; ++v)
+      for( v = 0; v < *nvars; ++v )
          SCIP_CALL( SCIPvarGetOrigvarSum(&vars[v], &scalars[v], constant) );
    }
    return SCIP_OKAY;
@@ -214,17 +214,17 @@ SCIP_RETCODE createEdgesFromRow(
 
    /* compute weight */
    w = 0;
-   for (i = 0; i < nvars; ++i)
+   for( i = 0; i < nvars; ++i )
       w += ABS(vals[i]);
 
    /* generate edges */
-   for (i = 0; i < nvars; ++i)
+   for( i = 0; i < nvars; ++i )
    {
       int s;
       s = SCIPvarGetProbindex(vars[i]);
       assert( s >= 0 );
 
-      for (j = i+1; j < nvars; ++j)
+      for( j = i+1; j < nvars; ++j )
       {
          unsigned int k;
          int t;
@@ -235,10 +235,10 @@ SCIP_RETCODE createEdgesFromRow(
          /* search whether edge is already present */
          k = 0;
          a = G->A[s][k];
-         while (a >= 0)
+         while( a >= 0 )
          {
             /* if we found edge, add weight */
-            if ( a == t )
+            if( a == t )
             {
                G->W[s][k] += w;
                break;
@@ -248,7 +248,7 @@ SCIP_RETCODE createEdgesFromRow(
          }
 
          /* add new edge */
-         if (a < 0)
+         if( a < 0 )
          {
             /* forward edge */
             SCIP_CALL( ensureEdgeCapacity(scip, G, (unsigned int) s) );
@@ -306,13 +306,13 @@ SCIP_RETCODE handleLinearCons(
    /* duplicate variable and value array */
    nactivevars = nvars;
    SCIP_CALL( SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars ) );
-   if ( vals != NULL )
+   if( vals != NULL )
       SCIP_CALL( SCIPduplicateBufferArray(scip, &activevals, vals, nactivevars ) );
    else
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &activevals, nactivevars) );
 
-      for ( v = 0; v < nactivevars; ++v )
+      for( v = 0; v < nactivevars; ++v )
          activevals[v] = 1.0;
    }
 
@@ -422,7 +422,7 @@ SCIP_RETCODE SCIPwriteCcg(
    SCIP_CALL( initGraph(scip, &G, (unsigned int) nvars, 10) );
 
    /* check all constraints */
-   for (c = 0; c < nconss; ++c)
+   for( c = 0; c < nconss; ++c)
    {
       cons = conss[c];
       assert( cons != NULL);
@@ -459,7 +459,7 @@ SCIP_RETCODE SCIPwriteCcg(
             SCIP_CALL( handleLinearCons(scip, consvars, NULL, nconsvars, transformed, &G) );
          }
       }
-      else if ( strcmp(conshdlrname, "logicor") == 0 )
+      else if( strcmp(conshdlrname, "logicor") == 0 )
       {  
          consvars = SCIPgetVarsLogicor(scip, cons);
          nconsvars = SCIPgetNVarsLogicor(scip, cons);
@@ -470,7 +470,7 @@ SCIP_RETCODE SCIPwriteCcg(
             SCIP_CALL( handleLinearCons(scip, SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons), transformed, &G) );
          }
       }
-      else if ( strcmp(conshdlrname, "knapsack") == 0 )
+      else if( strcmp(conshdlrname, "knapsack") == 0 )
       {
          SCIP_Longint* w;
 
@@ -490,7 +490,7 @@ SCIP_RETCODE SCIPwriteCcg(
          }
          SCIPfreeBufferArray(scip, &consvals);
       }
-      else if ( strcmp(conshdlrname, "varbound") == 0 )
+      else if( strcmp(conshdlrname, "varbound") == 0 )
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &consvars, 2) );
          SCIP_CALL( SCIPallocBufferArray(scip, &consvals, 2) );
@@ -508,7 +508,7 @@ SCIP_RETCODE SCIPwriteCcg(
       }
       else
       {
-         SCIPwarningMessage("constraint handler <%s> can not print requested format\n", conshdlrname );
+         SCIPwarningMessage("constraint handler <%s> cannot print requested format\n", conshdlrname );
          SCIPinfoMessage(scip, file, "\\ ");
          SCIP_CALL( SCIPprintCons(scip, cons, file) );
       }
@@ -518,17 +518,17 @@ SCIP_RETCODE SCIPwriteCcg(
    SCIPinfoMessage(scip, file, "c graph generated from %s\n", name);
    SCIPinfoMessage(scip, file, "p edge %d %d\n", nvars, G.m);
 
-   for (i = 0; i < nvars; ++i)
+   for( i = 0; i < nvars; ++i )
    {
       unsigned int k;
       int a;
 
       k = 0;
       a = G.A[i][k];
-      while (a >= 0)
+      while( a >= 0 )
       {
          /* only output edges from lower to higher number */
-         if ( i < a )
+         if( i < a )
          {
             /* note: node numbers start with 1 in the DIMACS format */
             SCIPinfoMessage(scip, file, "e %d %d %f\n", i+1, a+1, G.W[i][k]);

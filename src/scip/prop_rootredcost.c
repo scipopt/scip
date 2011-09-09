@@ -144,7 +144,7 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
       return SCIP_OKAY;
 
    /* propagator can only be applied if the root lp was a valid relaxation */
-   if ( !SCIPisRootLPRelax(scip) )
+   if( !SCIPisRootLPRelax(scip) )
       return SCIP_OKAY;
 
    /* get propagator data */

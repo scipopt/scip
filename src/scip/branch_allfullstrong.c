@@ -148,7 +148,7 @@ SCIP_RETCODE branch(
             integral ? "integral" : "fractional", SCIPvarGetName(pseudocands[c]), SCIPvarGetLbLocal(pseudocands[c]), 
             SCIPvarGetUbLocal(pseudocands[c]), solval);
 
-         if ( integral )
+         if( integral )
          {
             SCIP_CALL( SCIPgetVarStrongbranchInt(scip, pseudocands[c], INT_MAX, 
                   &down, &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );

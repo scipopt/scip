@@ -239,7 +239,7 @@ SCIP_RETCODE SCIPvarCreateTransformed(
    );
 
 /** copies and captures a variable from source to target SCIP; an integer variable with bounds zero and one is
- *  automatically converted into a binary variable; in case the variable data can not be copied the variable is not
+ *  automatically converted into a binary variable; in case the variable data cannot be copied the variable is not
  *  copied at all
  */
 extern

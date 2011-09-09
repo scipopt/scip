@@ -89,7 +89,7 @@ SCIP_Real calcShiftVal(
    /* determine shifting direction and maximal possible shifting w.r.t. corresponding bound */
    if( obj > 0.0 && SCIPisFeasGE(scip, solval - 1.0, lb) )
       shiftval = SCIPfeasFloor(scip, solval - lb);
-   else if ( obj < 0.0 && SCIPisFeasLE(scip, solval + 1.0, ub) )
+   else if( obj < 0.0 && SCIPisFeasLE(scip, solval + 1.0, ub) )
    {
       shiftval = SCIPfeasFloor(scip, ub - solval);
       shiftdown = FALSE;
@@ -346,9 +346,9 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       SCIP_Bool cutoff;
       cutoff = FALSE;
       SCIP_CALL( SCIPconstructLP(scip,&cutoff) );
-      SCIP_CALL( SCIPflushLP(scip) );       
+      SCIP_CALL( SCIPflushLP(scip) ); 
    }
-   
+
    /* we need an LP */
    if( SCIPgetNLPRows(scip) == 0 )
       return SCIP_OKAY;
@@ -597,7 +597,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 #else
          SCIP_CALL( SCIPsolveDiveLP(scip, -1, &lperror) );
 #endif
-         
+
          SCIPdebugMessage(" -> new LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
          SCIPdebugMessage(" -> error=%u, status=%d\n", lperror, SCIPgetLPSolstat(scip));
 

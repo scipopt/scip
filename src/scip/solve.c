@@ -1919,7 +1919,7 @@ SCIP_RETCODE priceAndCutLoop(
          assert(lp->solved || *lperror);
 
          /* update lower bound w.r.t. the LP solution */
-         if( !(*lperror) && !(*pricingaborted))
+         if( !(*lperror) && !(*pricingaborted) && SCIPlpIsRelax(lp) )
          {
             SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, lp) );
             SCIPdebugMessage(" -> new lower bound: %g (LP status: %d, LP obj: %g)\n",
@@ -2215,7 +2215,7 @@ SCIP_RETCODE priceAndCutLoop(
                      stalllpsolstat = SCIPlpGetSolstat(lp);
 
                      /* tell LP that we are (close to) stalling */
-                     if ( nsepastallrounds >= maxnsepastallrounds-2 )
+                     if( nsepastallrounds >= maxnsepastallrounds-2 )
                         lp->installing = TRUE;
                      SCIPdebugMessage(" -> nsepastallrounds=%d/%d\n", nsepastallrounds, maxnsepastallrounds);
                   }
@@ -2248,7 +2248,10 @@ SCIP_RETCODE priceAndCutLoop(
       assert(lp->flushed);
       assert(lp->solved);
 
-      SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, lp) );
+      if( SCIPlpIsRelax(lp) )
+      {
+         SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, lp) );
+      }
 
       /* update node estimate */
       SCIP_CALL( updateEstimate(set, stat, tree, lp, branchcand) );
@@ -2432,7 +2435,7 @@ SCIP_RETCODE solveNodeLP(
                checklprows, &stored) );
 #endif    
          /* if the solution was accepted, the root node can be cut off by bounding */
-         if( stored && SCIPprobAllColsInLP(transprob, set, lp) )
+         if( stored && SCIPprobAllColsInLP(transprob, set, lp) && SCIPlpIsRelax(lp) )
          {
             SCIPdebugMessage("root node initial LP feasible --> cut off root node, stop solution process\n");
             SCIP_CALL( SCIPnodeUpdateLowerboundLP(SCIPtreeGetFocusNode(tree), set, stat, lp) );
@@ -2456,12 +2459,12 @@ SCIP_RETCODE solveNodeLP(
    /* if there is no LP error, then *unbounded should be TRUE, iff the LP solution status is unboundedray */
    assert(*lperror || ((SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY) == *unbounded));
 
-   /* If pricing was aborted while solving the LP of the node and the node can not be cut off due to the lower bound computed by the pricer,
+   /* If pricing was aborted while solving the LP of the node and the node cannot be cut off due to the lower bound computed by the pricer,
    *  the solving of the LP might be stopped due to the objective limit, but the node may not be cut off, since the LP objective
    *  is not a feasible lower bound for the solutions in the current subtree. 
    *  In this case, the LP has to be solved to optimality by temporarily removing the cutoff bound. 
    */
-   if ( (*pricingaborted) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT && !(*cutoff) )
+   if( (*pricingaborted) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT && !(*cutoff) )
    {
       SCIP_Real tmpcutoff;
       
@@ -2485,7 +2488,7 @@ SCIP_RETCODE solveNodeLP(
       assert(SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
       /* there should be no primal ray, since the lp was dual feasible */
       assert(primal->primalray == NULL);
-      if ( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
+      if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
       {
          *cutoff = TRUE;
       }
@@ -3394,7 +3397,7 @@ SCIP_RETCODE solveNode(
        * best solution in the current subtree --> we have to do a pseudo branching,
        * so we set infeasible TRUE and add the current solution to the solution pool
        */
-      if ( pricingaborted && !(*infeasible) && !(*cutoff) )
+      if( pricingaborted && !(*infeasible) && !(*cutoff) )
       {
          SCIP_Bool stored;
          SCIP_SOL* sol;
@@ -3538,7 +3541,7 @@ SCIP_RETCODE solveNode(
                }
                else
                {
-                  if ( pricingaborted )
+                  if( pricingaborted )
                   {
                      SCIPerrorMessage("pricing was aborted, but no branching could be created!\n", result);
                      return SCIP_INVALIDRESULT;

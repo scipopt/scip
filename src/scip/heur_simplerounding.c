@@ -63,7 +63,7 @@ SCIP_DECL_HEURCOPY(heurCopySimplerounding)
 
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurSimplerounding(scip) );
- 
+
    return SCIP_OKAY;
 }
 
@@ -197,7 +197,7 @@ SCIP_DECL_HEUREXEC(heurExecSimplerounding) /*lint --e{715}*/
    /* don't call heuristic, if there are more fractional variables than roundable ones */
    if( nlpcands > heurdata->nroundablevars )
       return SCIP_OKAY;
-   
+
    *result = SCIP_DIDNOTFIND;
 
    SCIPdebugMessage("executing simple rounding heuristic: %d fractionals\n", nlpcands);
@@ -287,7 +287,7 @@ SCIP_RETCODE SCIPincludeHeurSimplerounding(
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
          heurCopySimplerounding,
-         heurFreeSimplerounding, heurInitSimplerounding, heurExitSimplerounding, 
+         heurFreeSimplerounding, heurInitSimplerounding, heurExitSimplerounding,
          heurInitsolSimplerounding, heurExitsolSimplerounding, heurExecSimplerounding,
          NULL) );
 

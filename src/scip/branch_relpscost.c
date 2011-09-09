@@ -520,7 +520,7 @@ SCIP_RETCODE execRelpscost(
             inititer, SCIPgetNStrongbranchLPIterations(scip), maxnsblpiterations);
 
          /* use strong branching on candidate */
-         if ( ! initstrongbranching )
+         if( !initstrongbranching )
          {
             initstrongbranching = TRUE;
             SCIP_CALL( SCIPstartStrongbranch(scip) );
@@ -653,7 +653,7 @@ SCIP_RETCODE execRelpscost(
          }
       }
 #ifdef SCIP_DEBUG
-      if ( bestsbcand >= 0 )
+      if( bestsbcand >= 0 )
       {
          SCIPdebugMessage(" -> best: <%s> (%g / %g / %g), lookahead=%g/%g\n",
             SCIPvarGetName(branchcands[bestsbcand]), bestsbscore, bestsbfracscore, bestsbdomainscore, 
@@ -661,7 +661,7 @@ SCIP_RETCODE execRelpscost(
       }
 #endif
 
-      if ( initstrongbranching )
+      if( initstrongbranching )
       {
          SCIP_CALL( SCIPendStrongbranch(scip) );
       }

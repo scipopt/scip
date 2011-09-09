@@ -1179,7 +1179,7 @@ SCIP_Bool SCIPlpiIsInfinity(
    SCIP_Real             val                 /**< value to be checked for infinity */
    )
 {  /*lint --e{715}*/
-   if ( val >= LPIINFINITY )
+   if( val >= LPIINFINITY )
       return TRUE;
    return FALSE;
 }
