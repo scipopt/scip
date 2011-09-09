@@ -7767,6 +7767,10 @@ SCIP_RETCODE SCIPparseVarName(
 {
    char varname[SCIP_MAXSTRLEN];
    
+   assert(str != NULL);
+   assert(var != NULL);
+   assert(endpos != NULL);
+
    SCIP_CALL( checkStage(scip, "SCIPparseVarName", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
    
    SCIPstrCopySection(str, pos, '<', '>', varname, SCIP_MAXSTRLEN, endpos); 

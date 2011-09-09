@@ -3842,7 +3842,7 @@ static
 SCIP_DECL_CONSPARSE(consParseSOC)
 {  /*lint --e{715}*/
    SCIP_VAR* var;
-   char varname[SCIP_MAXSTRLEN];
+   char varname[SCIP_MAXSTRLEN+2];
    SCIP_VAR** vars;
    SCIP_Real* coefs;
    SCIP_Real* offsets;
@@ -3855,6 +3855,7 @@ SCIP_DECL_CONSPARSE(consParseSOC)
    SCIP_Real coef;
    SCIP_Real offset;
    int parselen;
+   int namelen;
 
    assert(scip != NULL);
    assert(success != NULL);
@@ -3886,22 +3887,18 @@ SCIP_DECL_CONSPARSE(consParseSOC)
    SCIP_CALL( SCIPallocBufferArray(scip, &offsets, varssize) );
 
    /* read (coef*(var+offset))^2 on lhs, as long as possible */
-   while( sscanf(str, "+ (%lf*(<%[^>]>%lf))^2 %n", &coef, varname, &offset, &parselen) >= 3 )
+   while( sscanf(str, "+ (%lf*(<%[^>]>%lf))^2 %n", &coef, varname+1, &offset, &parselen) >= 3 )
    {
       str += parselen;
 
-      if( varname[0] == '~' )
-      {
-         var = SCIPfindVar(scip, &varname[1]);
-         if( var != NULL )
-         {
-            SCIP_CALL( SCIPgetNegatedVar(scip, var, &var) );
-         }
-      }
-      else
-      {
-         var = SCIPfindVar(scip, varname);
-      }
+      /* add '<' and '>' around variable name, so we can parse it via SCIPparseVarName */
+      namelen = strlen(varname+1);
+      varname[0] = '<';
+      varname[namelen+1] = '>';
+      varname[namelen+2] = '\0';
+      SCIP_CALL( SCIPparseVarName(scip, varname, 0, &var, &parselen) );
+      assert(parselen == namelen+2);
+
       if( var == NULL )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s>\n", varname);
@@ -3926,20 +3923,16 @@ SCIP_DECL_CONSPARSE(consParseSOC)
    if( *success )
    {
       /* read rhs coef*(var+offset) or just a constant */
-      if( sscanf(str, ") <= %lf*(<%[^>]>%lf)", &rhscoef, varname, &rhsoffset) == 3  )
+      if( sscanf(str, ") <= %lf*(<%[^>]>%lf)", &rhscoef, varname+1, &rhsoffset) == 3  )
       {
-         if( varname[0] == '~' )
-         {
-            rhsvar = SCIPfindVar(scip, &varname[1]);
-            if( rhsvar != NULL )
-            {
-               SCIP_CALL( SCIPgetNegatedVar(scip, rhsvar, &rhsvar) );
-            }
-         }
-         else
-         {
-            rhsvar = SCIPfindVar(scip, varname);
-         }
+         /* add '<' and '>' around variable name, so we can parse it via SCIPparseVarName */
+         namelen = strlen(varname+1);
+         varname[0] = '<';
+         varname[namelen+1] = '>';
+         varname[namelen+2] = '\0';
+         SCIP_CALL( SCIPparseVarName(scip, varname, 0, &rhsvar, &parselen) );
+         assert(parselen == namelen+2);
+
          if( rhsvar == NULL )
          {
             SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s>\n", varname);

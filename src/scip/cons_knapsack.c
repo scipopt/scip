@@ -8730,13 +8730,14 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
 {
    SCIP_VAR* var;
    SCIP_Longint weight;
-   char varname[SCIP_MAXSTRLEN];
+   char varname[SCIP_MAXSTRLEN+2];
    SCIP_VAR** vars;
    SCIP_Longint* weights;
    SCIP_Longint capacity;
    int nvars;
    int varssize;
    int parselen;
+   int namelen;
 
    assert(scip != NULL);
    assert(success != NULL);
@@ -8751,22 +8752,18 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
    SCIP_CALL( SCIPallocBufferArray(scip, &vars,    varssize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &weights, varssize) );
 
-   while( sscanf(str, "%"SCIP_LONGINT_FORMAT"<%[^>]>%n", &weight, varname, &parselen) >= 2 )
+   while( sscanf(str, "%"SCIP_LONGINT_FORMAT"<%[^>]>%n", &weight, varname+1, &parselen) >= 2 )
    {
       str += parselen;
 
-      if( varname[0] == '~' )
-      {
-         var = SCIPfindVar(scip, &varname[1]);
-         if( var != NULL )
-         {
-            SCIP_CALL( SCIPgetNegatedVar(scip, var, &var) );
-         }
-      }
-      else
-      {
-         var = SCIPfindVar(scip, varname);
-      }
+      /* add '<' and '>' around variable name, so we can parse it via SCIPparseVarName */
+      namelen = strlen(varname+1);
+      varname[0] = '<';
+      varname[namelen+1] = '>';
+      varname[namelen+2] = '\0';
+      SCIP_CALL( SCIPparseVarName(scip, varname, 0, &var, &parselen) );
+      assert(parselen == namelen+2);
+
       if( var == NULL )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s>\n", varname);
