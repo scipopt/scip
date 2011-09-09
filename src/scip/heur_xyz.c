@@ -190,7 +190,7 @@ SCIP_RETCODE SCIPincludeHeurXyz(
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
          heurCopyXyz,
-         heurFreeXyz, heurInitXyz, heurExitXyz, 
+         heurFreeXyz, heurInitXyz, heurExitXyz,
          heurInitsolXyz, heurExitsolXyz, heurExecXyz,
          heurdata) );
 

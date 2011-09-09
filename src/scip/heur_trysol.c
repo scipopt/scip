@@ -74,7 +74,7 @@ SCIP_DECL_HEURCOPY(heurCopyTrySol)
 
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurTrySol(scip) );
- 
+
    return SCIP_OKAY;
 }
 
@@ -197,7 +197,7 @@ SCIP_RETCODE SCIPincludeHeurTrySol(
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, 
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
          heurCopyTrySol,heurFreeTrySol, heurInitTrySol, heurExitTrySol,
          heurInitsolTrySol, heurExitsolTrySol, heurExecTrySol,
          heurdata) );
@@ -232,7 +232,7 @@ SCIP_RETCODE SCIPheurPassSolTrySol(
          if ( heurdata->sol != NULL )
             SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
 
-         SCIPdebugMessage("Received solution of value %g.\n", SCIPgetSolOrigObj(scip, sol)); 
+         SCIPdebugMessage("Received solution of value %g.\n", SCIPgetSolOrigObj(scip, sol));
          SCIP_CALL( SCIPcreateSolCopy(scip, &heurdata->sol, sol) );
          SCIP_CALL( SCIPunlinkSol(scip, heurdata->sol) );
          SCIPsolSetHeur(heurdata->sol, heur);
