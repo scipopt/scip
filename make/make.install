@@ -18,7 +18,7 @@
 #@author  Stefan Heinz
 
 .PHONY: install
-install:	$(OBJSCIPLIBFILE) $(MAINFILE) 
+install:	all 
 ifneq ($(INSTALLDIR),)
 		@echo "-> install scip headers into INSTALLDIR <$(INSTALLDIR)>"
 		@-install -m 755 -d $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(INSTALLDIR)/$(INCLUDEDIR)/objscip/

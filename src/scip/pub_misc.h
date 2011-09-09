@@ -246,25 +246,25 @@ void SCIPhashmapPrintStatistics(
    SCIP_HASHMAP*         hashmap             /**< hash map */
    );
 
-/** indicates whether an hash map has no entries */
+/** indicates whether a hash map has no entries */
 extern
 SCIP_Bool SCIPhashmapIsEmpty(
    SCIP_HASHMAP*      hashmap          /**< hash map */
 );
 
-/** gives the number of entries in an hash map */ 
+/** gives the number of entries in a hash map */ 
 extern
 int SCIPhashmapGetNEntries(
    SCIP_HASHMAP*      hashmap          /**< hash map */
 );
 
-/** gives the number of lists (buckets) in an hash map */ 
+/** gives the number of lists (buckets) in a hash map */ 
 extern
 int SCIPhashmapGetNLists(
    SCIP_HASHMAP*      hashmap          /**< hash map */
 );
 
-/** gives a specific list (bucket) in an hash map */
+/** gives a specific list (bucket) in a hash map */
 extern
 SCIP_HASHMAPLIST* SCIPhashmapGetList(
    SCIP_HASHMAP*     hashmap,          /**< hash map */
@@ -277,25 +277,25 @@ int SCIPhashmapListGetNEntries(
    SCIP_HASHMAPLIST* hashmaplist       /**< hash map list, can be NULL */
 );
 
-/** retrieves origin of given entry in an hash map */ 
+/** retrieves origin of given entry in a hash map */ 
 extern
 void* SCIPhashmapListGetOrigin(
    SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
 );
 
-/** retrieves image of given entry in an hash map */ 
+/** retrieves image of given entry in a hash map */ 
 extern
 void* SCIPhashmapListGetImage(
    SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
 );
 
-/** retrieves next entry from given entry in an hash map list, or NULL if at end of list. */ 
+/** retrieves next entry from given entry in a hash map list, or NULL if at end of list. */ 
 extern
 SCIP_HASHMAPLIST* SCIPhashmapListGetNext(
    SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
 );
 
-/** removes all entries in an hash map. */ 
+/** removes all entries in a hash map. */ 
 extern
 SCIP_RETCODE SCIPhashmapRemoveAll(
    SCIP_HASHMAP*     hashmap           /**< hash map */
@@ -3374,7 +3374,7 @@ SCIP_Bool SCIPstrGetValue(
    int*                  endpos              /**< pointer to store the final position */
    );
 
-/** copies the string between an start and end character */
+/** copies the string between a start and end character */
 extern
 void SCIPstrCopySection(
    const char*           str,                /**< string to search */

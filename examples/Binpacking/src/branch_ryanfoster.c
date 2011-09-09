@@ -25,10 +25,10 @@
  * Ryan/Foster branching is one of the branching rules which are very useful for the used integer programs model. A
  * standard variable branching has the disadvantage that the zero branch is more or less useless. This is the case since
  * we only forbid one packing out of exponential many. The one branch on the other side reduces the problem since
- * certain items are packed. This leads to an very unbalanced search tree.
+ * certain items are packed. This leads to a very unbalanced search tree.
  *
  * The idea of Ryan/Foster is to branch in a way that we say that on the one branch a certain pair of items are always
- * together and an the other branch they are never together. Note that in both case it is allowed that packings are
+ * together and on the other branch they are never together. Note that in both case it is allowed that packings are
  * used which contain none of the two items.
  *
  * There are two issue to be taken care off:
