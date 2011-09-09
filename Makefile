@@ -34,7 +34,7 @@ VERSION		:=	2.0.2.1
 
 TIME     	=  	3600
 NODES           =       2100000000
-MEM		=	1536
+MEM		=	6144
 THREADS         =       1
 DISPFREQ	=	10000
 FEASTOL		=	default
