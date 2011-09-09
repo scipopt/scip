@@ -604,6 +604,9 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
    *result = SCIP_DIDNOTFIND;
 
+   onefixvars = NULL;
+   sol = NULL;
+
    /* allocate memory */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &binvars, vars, nbinvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cliquepartition, nbinvars) );
@@ -627,6 +630,10 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
    SCIPdebugMessage("found %d cliques\n", ncliques);
 
+   /* disable conflict analysis, because we can it better than SCIP itself, cause we have more information */
+   SCIP_CALL( SCIPgetBoolParam(scip, "conflict/enable", &enabledconflicts) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "conflict/enable", FALSE) );
+
    if( ncliques == nbinvars )
    {
       heurdata->nnodefornextrun = INT_MAX;
@@ -646,10 +653,6 @@ SCIP_DECL_HEUREXEC(heurExecClique)
          goto TERMINATE;
    }
 
-   /* disable conflict analysis, because we can it better than SCIP itself, cause we have more information */
-   SCIP_CALL( SCIPgetBoolParam(scip, "conflict/enable", &enabledconflicts) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "conflict/enable", FALSE) );
-
    /* start probing */
    SCIP_CALL( SCIPstartProbing(scip) );
 
@@ -664,10 +667,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    SCIP_CALL( applyCliqueFixings(scip, heurdata, binvars, nbinvars, cliquepartition, ncliques, onefixvars, &nonefixvars, sol, &probingdepthofonefix, &cutoff, result) );
 
    if( SCIPisStopped(scip) )
-   {
-      SCIPfreeBufferArray(scip, &onefixvars);
       goto TERMINATE;
-   }
 
    backtrackcutoff = FALSE;
    backtracked = FALSE;
@@ -837,7 +837,13 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       if( !SCIPisInfinity(scip, memorylimit) )   
          memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
       if( timelimit <= 0.0 || memorylimit <= 0.0 )
-         return SCIP_OKAY;
+      {
+         /* free subproblem */
+         SCIPfreeBufferArray(scip, &subvars);
+         SCIP_CALL( SCIPfree(&subscip) );
+         
+         goto TERMINATE;
+      }
 
       /* set limits for the subproblem */
       SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", nstallnodes) );
@@ -982,19 +988,27 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
    /*************************** End Subscip Solving ***************************/
 
-   /* free conflict variables */
-   SCIPfreeBufferArray(scip, &onefixvars);
+ TERMINATE:
 
-   /* freeing solution */
-   SCIP_CALL( SCIPfreeSol(scip, &sol) );
-
-   /* end probing */
-   SCIP_CALL( SCIPendProbing(scip) );
-   
    /* reset the conflict analysis */
    SCIP_CALL( SCIPsetBoolParam(scip, "conflict/enable", enabledconflicts) );
 
- TERMINATE:
+   /* free conflict variables */
+   if( onefixvars != NULL )
+      SCIPfreeBufferArray(scip, &onefixvars);
+
+   /* freeing solution */
+   if( sol != NULL )
+   {
+      SCIP_CALL( SCIPfreeSol(scip, &sol) );
+   }
+
+   /* end probing */
+   if( SCIPinProbing(scip) )
+   {
+      SCIP_CALL( SCIPendProbing(scip) );
+   }
+
    SCIPfreeBufferArray(scip, &cliquepartition);
    SCIPfreeBufferArray(scip, &binvars);
 

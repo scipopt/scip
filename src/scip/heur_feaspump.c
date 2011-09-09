@@ -1071,7 +1071,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
       if( !SCIPisInfinity(scip, memorylimit) )   
          memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-      if( timelimit > 10.0 && memorylimit >= 0.0 )
+      if( timelimit > 0.0 && memorylimit > 0.0 )
       {
          /* do not abort subproblem on CTRL-C */
          SCIP_CALL( SCIPsetBoolParam(probingscip, "misc/catchctrlc", FALSE) );

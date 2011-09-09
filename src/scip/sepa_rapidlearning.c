@@ -335,7 +335,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    if( !SCIPisInfinity(scip, memorylimit) )   
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
    if( timelimit <= 0.0 || memorylimit <= 0.0 )
-      return SCIP_OKAY;
+      goto TERMINATE;
 
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit/5) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
@@ -637,6 +637,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
 
    SCIPhashmapFree(&varmapbw);
 
+ TERMINATE:
    /* free subproblem */
    SCIPfreeBufferArray(scip, &subvars);
    SCIP_CALL( SCIPfree(&subscip) );

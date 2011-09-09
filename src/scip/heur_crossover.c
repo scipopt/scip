@@ -817,18 +817,13 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    if( !success )
    {
       *result = SCIP_DIDNOTRUN;
-      
-      /* free memory */
-      SCIPfreeBufferArray(scip, &selection);
-      SCIPfreeBufferArray(scip, &subvars);
-      SCIP_CALL( SCIPfree(&subscip) );
 
       /* this run will be counted as a failure since no new solution tuple could be generated or the neighborhood of the 
        * solution was not fruitful in the sense that it was too big
        */
       updateFailureStatistic(scip, heurdata);  
 
-      return SCIP_OKAY;
+      goto TERMINATE;
    }
    
    /* do not abort subproblem on CTRL-C */
@@ -845,7 +840,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    if( !SCIPisInfinity(scip, memorylimit) )   
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
    if( timelimit <= 0.0 || memorylimit <= 0.0 )
-      return SCIP_OKAY;
+      goto TERMINATE;
 
    /* set limits for the subproblem */
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nstallnodes) );
@@ -975,6 +970,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
       updateFailureStatistic(scip, heurdata);
    }
    
+ TERMINATE:
    /* free subproblem */
    SCIPfreeBufferArray(scip, &selection);
    SCIPfreeBufferArray(scip, &subvars);

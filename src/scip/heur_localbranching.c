@@ -486,9 +486,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    if ( !success )
    {
       *result = SCIP_DIDNOTRUN;
-      SCIPfreeBufferArray(scip, &subvars);
-      SCIP_CALL( SCIPfree(&subscip) );
-      return SCIP_OKAY;
+      goto TERMINATE;
    }
 
    /* do not abort subproblem on CTRL-C */
@@ -507,7 +505,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    if( !SCIPisInfinity(scip, memorylimit) )   
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
    if( timelimit <= 0.0 || memorylimit <= 0.0 )
-      return SCIP_OKAY;
+      goto TERMINATE;
 
    /* set limits for the subproblem */
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nsubnodes) );
@@ -657,6 +655,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
       break;
    }
 
+ TERMINATE:
    /* free subproblem */
    SCIPfreeBufferArray(scip, &subvars);
    SCIP_CALL( SCIPfree(&subscip) );

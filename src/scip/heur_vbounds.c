@@ -504,7 +504,13 @@ SCIP_RETCODE applyVbounds(
       if( !SCIPisInfinity(scip, memorylimit) )   
          memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
       if( timelimit <= 0.0 || memorylimit <= 0.0 )
-         return SCIP_OKAY;
+      {
+         /* free subproblem */
+         SCIPfreeBufferArray(scip, &subvars);
+         SCIP_CALL( SCIPfree(&subscip) );
+
+         goto TERMINATE;
+      }
 
       /* set limits for the subproblem */
       SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", nstallnodes) );
@@ -622,6 +628,7 @@ SCIP_RETCODE applyVbounds(
       SCIP_CALL( SCIPfree(&subscip) );
    }
 
+ TERMINATE:
    /* free solution */
    SCIP_CALL( SCIPfreeSol(scip, &newsol) );
    
