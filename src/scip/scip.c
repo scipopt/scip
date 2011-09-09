@@ -1139,6 +1139,11 @@ SCIP_RETCODE SCIPgetVarCopy(
    {
       *success = FALSE;
       *targetvar = NULL;
+
+      /* free local hash map if necessary */
+      if( uselocalvarmap )
+         SCIPhashmapFree(&localvarmap);
+
       return SCIP_OKAY;
    }
 
@@ -1263,7 +1268,14 @@ SCIP_RETCODE SCIPgetVarCopy(
       /* get negation of copied negated source variable, this is the target variable */
       SCIP_CALL( SCIPgetNegatedVar(targetscip, targetnegatedvar, targetvar) );
       assert(SCIPvarGetStatus(*targetvar) == SCIP_VARSTATUS_NEGATED);
-         
+
+      /* free local hash maps if necessary */
+      if( uselocalvarmap )
+         SCIPhashmapFree(&localvarmap);
+
+      if( uselocalconsmap )
+         SCIPhashmapFree(&localconsmap);
+
       /* we have to return right away, to avoid adding the negated variable to the problem since the "not negated"
        * variable was already added */
       return SCIP_OKAY;
@@ -1278,21 +1290,16 @@ SCIP_RETCODE SCIPgetVarCopy(
    SCIP_CALL( SCIPaddVar(targetscip, var) );
 
    *targetvar = var;
-   
+
    /* remove the variable capture which was done due to the creation of the variable */
    SCIP_CALL( SCIPreleaseVar(targetscip, &var) );
-   
+
+   /* free local hash maps if necessary */
    if( uselocalvarmap )
-   {
-      /* free hash map */
       SCIPhashmapFree(&localvarmap);
-   }
 
    if( uselocalconsmap )
-   {
-      /* free hash map */
       SCIPhashmapFree(&localconsmap);
-   }
 
    return SCIP_OKAY;
 }
