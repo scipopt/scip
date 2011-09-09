@@ -18378,7 +18378,7 @@ int SCIPgetNPrioExternBranchConts(
 }
 
 /** insert variable, its score and its solution value into the external branching candidate storage
- * the relative difference of the current lower and upper bounds of a continuous variable must be at least 2*epsilon */
+ * the relative difference of the current lower and upper bounds of a continuous variable must be at least epsilon */
 SCIP_RETCODE SCIPaddExternBranchCand(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to insert */

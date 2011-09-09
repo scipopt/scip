@@ -1801,8 +1801,8 @@ SCIP_RETCODE registerBranchingCandidates(
 
          SCIPdebugMessage("cons <%s> violation: %g %g\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
 
-         /* this should never happen */
-         assert(SCIPrelDiff(SCIPvarGetUbLocal(consdata->x), SCIPvarGetLbLocal(consdata->x)) > 2.0 * SCIPepsilon(scip));
+         /* domain propagation should have removed constraints with fixed x */
+         assert(!SCIPisRelEQ(scip, SCIPvarGetLbLocal(consdata->x), SCIPvarGetUbLocal(consdata->x)));
 
          /* skip variables which sign is already fixed, if we are only interested in variables with unfixed sign here */
          if( onlynonfixedsign &&
@@ -4995,11 +4995,11 @@ SCIP_DECL_CONSENFOPS(consEnfopsSignedpower)
 
       SCIPdebugMessage("cons <%s> violation: %g %g\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
 
-      if( SCIPrelDiff(SCIPvarGetUbLocal(consdata->x), SCIPvarGetLbLocal(consdata->x)) > 2.0 * SCIPepsilon(scip) )
-      {
-         SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->x, consdata->lhsviol + consdata->rhsviol, proposeBranchingPoint(scip, conss[c], conshdlrdata->preferzerobranch, conshdlrdata->branchminconverror)) );
-         ++nnotify;
-      }
+      /* domain propagation should have removed cons when x is fixed */
+      assert(!SCIPisRelEQ(scip, SCIPvarGetLbLocal(consdata->x), SCIPvarGetUbLocal(consdata->x)));
+
+      SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->x, consdata->lhsviol + consdata->rhsviol, proposeBranchingPoint(scip, conss[c], conshdlrdata->preferzerobranch, conshdlrdata->branchminconverror)) );
+      ++nnotify;
    }
 
    if( nnotify == 0 )
