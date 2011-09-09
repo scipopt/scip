@@ -1473,7 +1473,7 @@ SCIP_RETCODE readConstraints(
       getLinearAndQuadraticCoefs(scip, exprtree, &constant, &nlinvars, linvars, lincoefs, &nquadcoefs, quadvars1, quadvars2, quadcoefs);
 
       /* assign the left and right hand side, depending on the constraint sense */
-      switch ( sense )
+      switch( sense )
       {
       case PIP_SENSE_GE:
          lhs = sidevalue - constant;
@@ -2512,7 +2512,7 @@ SCIP_RETCODE SCIPwritePip(
          consvars = SCIPgetVarsSetppc(scip, cons);
          nconsvars = SCIPgetNVarsSetppc(scip, cons);
 
-         switch ( SCIPgetTypeSetppc(scip, cons) )
+         switch( SCIPgetTypeSetppc(scip, cons) )
          {
          case SCIP_SETPPCTYPE_PARTITIONING :
             SCIP_CALL( printQuadraticCons(scip, file, consname,

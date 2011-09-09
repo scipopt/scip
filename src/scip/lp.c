@@ -11158,7 +11158,7 @@ SCIP_RETCODE lpLexDualSimplex(
             ++nruns;
          }
       }
-      while ( pos >= 0 && nDualDeg > 0 && (set->lp_lexdualmaxrounds == -1 || rounds < set->lp_lexdualmaxrounds) );
+      while( pos >= 0 && nDualDeg > 0 && (set->lp_lexdualmaxrounds == -1 || rounds < set->lp_lexdualmaxrounds) );
 
       /* reset bounds, lhs/rhs, and obj */
       SCIP_CALL( SCIPlpiChgBounds(lp->lpi, lp->nlpicols, indallcol, oldlb, oldub) );

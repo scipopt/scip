@@ -2065,11 +2065,11 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
 
    /* skip white space */
    s = str;
-   while ( *s != '\0' && isspace(*s) )
+   while( *s != '\0' && isspace(*s) )
       ++s;
 
    /* check for string "bounddisjunction" */
-   if ( strncmp(s, "bounddisjunction(", 16) != 0 )
+   if( strncmp(s, "bounddisjunction(", 16) != 0 )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "error during parsing: expected \"bounddisjunction(\" in <%s>.\n", s);
       *success = FALSE;
@@ -2088,7 +2088,7 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
    SCIP_CALL( SCIPallocBufferArray(scip, &bounds, varssize) );
 
    /* parse string until ")" */
-   while ( *s != '\0' && *s != ')' )
+   while( *s != '\0' && *s != ')' )
    {
       SCIP_VAR* var;
 
@@ -2096,7 +2096,7 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
       pos = 0;
       SCIP_CALL( SCIPparseVarName(scip, s, pos, &var, &pos) );
 
-      if ( var == NULL )
+      if( var == NULL )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "variable with name <%s> does not exist\n", SCIPvarGetName(var));
          *success = FALSE;
@@ -2105,11 +2105,11 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
 
       /* skip white space */
       s = &s[pos];
-      while ( *s != '\0' && isspace(*s) && *s != '>' && *s != '<' )
+      while( *s != '\0' && isspace(*s) && *s != '>' && *s != '<' )
          ++s;
 
       /* parse bound type */
-      switch ( *s )
+      switch( *s )
       {
       case '<':
          boundtypes[nvars] = SCIP_BOUNDTYPE_UPPER;
@@ -2124,7 +2124,7 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
       }
 
       ++s;
-      if ( *s != '=' )
+      if( *s != '=' )
       {
          SCIPdebugMessage("expected '=': %s\n", s);
          *success = FALSE;
@@ -2135,12 +2135,12 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
       ++s;
 
       /* skip white space */
-      while ( *s != '\0' && isspace(*s) )
+      while( *s != '\0' && isspace(*s) )
          ++s;
 
       /* parse bound value */
       bounds[nvars] = strtod(s, &t);
-      if ( t == NULL )
+      if( t == NULL )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error during parsing of the weight: %s\n", s);
          *success = FALSE;
@@ -2149,14 +2149,14 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
 
       /* skip white space */
       s = t;
-      while ( (*s != '\0' && isspace(*s)) || *s == ',' )
+      while( (*s != '\0' && isspace(*s)) || *s == ',' )
          ++s;
 
       /* set variable */
       vars[nvars++] = var;
       
       /* check if the size of the variable array was big enough */
-      if ( nvars > varssize )
+      if( nvars > varssize )
       {
          /* reallocate memory */
          varssize *= 2;
@@ -2168,7 +2168,7 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
    /* ignore if the string ended without ")" */
 
    /* add bounddisjunction */
-   if ( *success && nvars > 0 )
+   if( *success && nvars > 0 )
    {
       SCIP_CALL( SCIPcreateConsBounddisjunction(scip, cons, name, nvars, vars, boundtypes, bounds, 
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );

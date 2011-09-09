@@ -4821,7 +4821,7 @@ SCIP_RETCODE SCIPconsFree(
    {
       SCIP_CALL( (*cons)->conshdlr->consdelete(set->scip, (*cons)->conshdlr, *cons, &(*cons)->consdata) );
    }
-   else if ( !(*cons)->deleteconsdata )
+   else if( !(*cons)->deleteconsdata )
       (*cons)->consdata = NULL;
    assert((*cons)->consdata == NULL);
 

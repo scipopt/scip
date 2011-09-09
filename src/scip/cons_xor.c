@@ -2165,7 +2165,7 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
     */
    if( !cutoff )
    {
-      if (*nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars )
+      if( *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars )
       {
          
          if( firstchange < nconss && conshdlrdata->presolusehashing ) 

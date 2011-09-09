@@ -501,7 +501,7 @@ SCIP_RETCODE SCIPapplyRens(
       }
       else
       {
-         if ( SCIPgetUpperbound ( scip ) >= 0 )
+         if( SCIPgetUpperbound ( scip ) >= 0 )
             cutoff = ( 1 - minimprove ) * SCIPgetUpperbound ( scip );
          else
             cutoff = ( 1 + minimprove ) * SCIPgetUpperbound ( scip );

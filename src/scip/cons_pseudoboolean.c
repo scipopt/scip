@@ -1074,7 +1074,7 @@ SCIP_RETCODE chgLhs(
    assert(!SCIPisInfinity(scip, lhs));
 
    /* adjust value to not be smaller than -inf */
-   if ( SCIPisInfinity(scip, -lhs) )
+   if( SCIPisInfinity(scip, -lhs) )
       lhs = -SCIPinfinity(scip);
 
    consdata = SCIPconsGetData(cons);
@@ -1245,7 +1245,7 @@ SCIP_RETCODE chgRhs(
    assert(!SCIPisInfinity(scip, -rhs));
 
    /* adjust value to not be larger than inf */
-   if ( SCIPisInfinity(scip, rhs) )
+   if( SCIPisInfinity(scip, rhs) )
       rhs = SCIPinfinity(scip);
 
    consdata = SCIPconsGetData(cons);

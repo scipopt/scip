@@ -1564,7 +1564,7 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
       }
       else
       {
-         if ( SCIPgetUpperbound(scip) >= 0 )
+         if( SCIPgetUpperbound(scip) >= 0 )
             cutoff = ( 1.0 - minimprove ) * SCIPgetUpperbound(scip);
          else
             cutoff = ( 1.0 + minimprove ) * SCIPgetUpperbound(scip);

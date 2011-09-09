@@ -961,7 +961,7 @@ SCIP_RETCODE readCoefficients(
       if( *nlincoefs == 0 && *ntermcoefs == 0 && ntmpcoefs == 0 && havevalue && haveweightstart && isEndingSoftConstraintWeight(scip, opbinput) )
       {
          *weight = coefsign * coef;
-#if (USEINDICATOR == TRUE)
+#if( USEINDICATOR == TRUE )
          assert(*weight > 0);
 #endif
          SCIPdebugMessage("(line %d) found soft constraint weight: %g\n", opbinput->linenumber, *weight);
@@ -1141,7 +1141,7 @@ SCIP_RETCODE setObjective(
        */
       if( ntermcoefs > 0 )
       {
-#if (LINEAROBJECTIVE == TRUE) 
+#if( LINEAROBJECTIVE == TRUE )
          /* all non-linear parts are created as and constraint, even if the same non-linear part was already part of the objective function */
 
          SCIP_VAR** vars;
@@ -2604,7 +2604,7 @@ void printRow(
       }
    }
 
-   while ( !SCIPisIntegral(scip, lhs * (*mult)) )
+   while( !SCIPisIntegral(scip, lhs * (*mult)) )
    {
       assert(ABS(*mult) < ABS(*mult * 10));
       (*mult) *= 10;
@@ -2796,7 +2796,7 @@ void printPBRow(
       }
    }
 
-   while ( !SCIPisIntegral(scip, lhs * (*mult)) )
+   while( !SCIPisIntegral(scip, lhs * (*mult)) )
    {
       assert(ABS(*mult) < ABS(*mult * 10));
       (*mult) *= 10;
@@ -3134,7 +3134,7 @@ SCIP_RETCODE writeOpbConstraints(
             break;
          }
       }
-      else if ( strcmp(conshdlrname, "logicor") == 0 )
+      else if( strcmp(conshdlrname, "logicor") == 0 )
       {
          if( existands )
          {
@@ -3149,7 +3149,7 @@ SCIP_RETCODE writeOpbConstraints(
                   1.0, SCIPinfinity(scip), 0, transformed, multisymbol) );
          }
       }
-      else if ( strcmp(conshdlrname, "knapsack") == 0 )
+      else if( strcmp(conshdlrname, "knapsack") == 0 )
       {
          SCIP_Longint* weights;
 
@@ -3176,7 +3176,7 @@ SCIP_RETCODE writeOpbConstraints(
 
          SCIPfreeBufferArray(scip, &consvals);
       }
-      else if ( strcmp(conshdlrname, "varbound") == 0 )
+      else if( strcmp(conshdlrname, "varbound") == 0 )
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &consvars, 2) );
          SCIP_CALL( SCIPallocBufferArray(scip, &consvals, 2) );
@@ -3342,7 +3342,7 @@ SCIP_RETCODE writeOpbConstraints(
             SCIP_CALL( SCIPprintCons(scip, cons, file) );
          }
       }
-      else if ( strcmp(conshdlrname, "and") == 0 )
+      else if( strcmp(conshdlrname, "and") == 0 )
       {
          /* all resultants of the and constraint will be replaced by all corresponding variables of this constraint, 
           * so no and-constraint will be printed directly */

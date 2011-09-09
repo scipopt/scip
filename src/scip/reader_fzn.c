@@ -4368,7 +4368,7 @@ SCIP_RETCODE writeFzn(
          nconsvars = SCIPgetNVarsSetppc(scip, cons);
 
          /* Setppc constraints only differ in their lhs/rhs (+- INF or 1) */
-         switch ( SCIPgetTypeSetppc(scip, cons) )
+         switch( SCIPgetTypeSetppc(scip, cons) )
          {
          case SCIP_SETPPCTYPE_PARTITIONING :
             SCIP_CALL( printLinearCons(scip, &fznoutput,
@@ -4384,13 +4384,13 @@ SCIP_RETCODE writeFzn(
             break;
          }
       }
-      else if ( strcmp(conshdlrname, "logicor") == 0 )
+      else if( strcmp(conshdlrname, "logicor") == 0 )
       {
          SCIP_CALL( printLinearCons(scip, &fznoutput,
                SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons),
                1.0, SCIPinfinity(scip), transformed, FALSE) );
       }
-      else if ( strcmp(conshdlrname, "knapsack") == 0 )
+      else if( strcmp(conshdlrname, "knapsack") == 0 )
       {
          SCIP_Longint* weights;
 
@@ -4408,7 +4408,7 @@ SCIP_RETCODE writeFzn(
 
          SCIPfreeBufferArray(scip, &consvals);
       }
-      else if ( strcmp(conshdlrname, "varbound") == 0 )
+      else if( strcmp(conshdlrname, "varbound") == 0 )
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &consvars, 2) );
          SCIP_CALL( SCIPallocBufferArray(scip, &consvals, 2) );

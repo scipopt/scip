@@ -3600,7 +3600,7 @@ SCIP_RETCODE undoBdchgsDualfarkas(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &farkascoefs, nvars) );
 
    /* if solve for some reason did not produce a dual ray, e.g. because of numerical instabilities, abort conflict analysis */
-   if ( ! SCIPlpiHasDualRay(lpi) )
+   if( ! SCIPlpiHasDualRay(lpi) )
       goto TERMINATE;
 
    /* get dual Farkas values of rows */

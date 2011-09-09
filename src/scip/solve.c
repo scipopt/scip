@@ -2215,7 +2215,7 @@ SCIP_RETCODE priceAndCutLoop(
                      stalllpsolstat = SCIPlpGetSolstat(lp);
 
                      /* tell LP that we are (close to) stalling */
-                     if ( nsepastallrounds >= maxnsepastallrounds-2 )
+                     if( nsepastallrounds >= maxnsepastallrounds-2 )
                         lp->installing = TRUE;
                      SCIPdebugMessage(" -> nsepastallrounds=%d/%d\n", nsepastallrounds, maxnsepastallrounds);
                   }
@@ -2464,7 +2464,7 @@ SCIP_RETCODE solveNodeLP(
    *  is not a feasible lower bound for the solutions in the current subtree. 
    *  In this case, the LP has to be solved to optimality by temporarily removing the cutoff bound. 
    */
-   if ( (*pricingaborted) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT && !(*cutoff) )
+   if( (*pricingaborted) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT && !(*cutoff) )
    {
       SCIP_Real tmpcutoff;
       
@@ -2488,7 +2488,7 @@ SCIP_RETCODE solveNodeLP(
       assert(SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
       /* there should be no primal ray, since the lp was dual feasible */
       assert(primal->primalray == NULL);
-      if ( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
+      if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
       {
          *cutoff = TRUE;
       }
@@ -3397,7 +3397,7 @@ SCIP_RETCODE solveNode(
        * best solution in the current subtree --> we have to do a pseudo branching,
        * so we set infeasible TRUE and add the current solution to the solution pool
        */
-      if ( pricingaborted && !(*infeasible) && !(*cutoff) )
+      if( pricingaborted && !(*infeasible) && !(*cutoff) )
       {
          SCIP_Bool stored;
          SCIP_SOL* sol;
@@ -3541,7 +3541,7 @@ SCIP_RETCODE solveNode(
                }
                else
                {
-                  if ( pricingaborted )
+                  if( pricingaborted )
                   {
                      SCIPerrorMessage("pricing was aborted, but no branching could be created!\n", result);
                      return SCIP_INVALIDRESULT;

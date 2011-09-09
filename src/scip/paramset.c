@@ -2408,7 +2408,7 @@ SCIP_RETCODE SCIPparamsetWrite(
    if( comments )
    {
       /* display the SCIP version as comment in the first line */
-#if ( SCIP_SUBVERSION == 0 )
+#if( SCIP_SUBVERSION == 0 )
          SCIPmessageFPrintInfo(file, "# SCIP version %d.%d.%d\n", 
             SCIP_VERSION/100, (SCIP_VERSION/10) % 10, SCIP_VERSION % 10);
 #else

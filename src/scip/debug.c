@@ -1002,7 +1002,7 @@ void SCIPdummyDebugMethodForSun(void)
 #ifdef SCIP_DEBUG_LP_INTERFACE
 
 /* check whether coef is the r-th row of the inverse basis matrix B^-1; this is
- * the case if (coef * B) is the r-th unit vector */
+ * the case if( coef * B ) is the r-th unit vector */
 SCIP_RETCODE SCIPdebugCheckBInvRow(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   r,                  /**< row number */

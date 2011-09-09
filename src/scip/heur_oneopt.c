@@ -1,4 +1,4 @@
-!/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
@@ -89,7 +89,7 @@ SCIP_Real calcShiftVal(
    /* determine shifting direction and maximal possible shifting w.r.t. corresponding bound */
    if( obj > 0.0 && SCIPisFeasGE(scip, solval - 1.0, lb) )
       shiftval = SCIPfeasFloor(scip, solval - lb);
-   else if ( obj < 0.0 && SCIPisFeasLE(scip, solval + 1.0, ub) )
+   else if( obj < 0.0 && SCIPisFeasLE(scip, solval + 1.0, ub) )
    {
       shiftval = SCIPfeasFloor(scip, ub - solval);
       shiftdown = FALSE;

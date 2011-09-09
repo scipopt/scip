@@ -297,7 +297,7 @@ SCIP_RETCODE sepastoreAddCut(
       cutscore = SCIP_INVALID;
 
       /* initialize parallelism to objective (constant throughout filtering) */
-      if ( set->sepa_objparalfac > 0.0 )
+      if( set->sepa_objparalfac > 0.0 )
          cutobjparallelism = SCIProwGetObjParallelism(cut, set, lp);
       else
          cutobjparallelism = 0.0; /* no need to calculate it */
@@ -726,7 +726,7 @@ SCIP_RETCODE computeScore(
     * cuts which are in the cut pool.  This is because the conversion of cuts into linear
     * constraints after a restart looks at the cut pool and cannot find tight non-pool cuts.
     */
-   if ( handlepool && !SCIProwIsInGlobalCutpool(cut) )
+   if( handlepool && !SCIProwIsInGlobalCutpool(cut) )
       cutefficacy *= 0.9999;
 
    /* calculate resulting score */
@@ -790,7 +790,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    mincutorthogonality = MAX(mincutorthogonality, set->num_epsilon);
 
    /* Compute scores for all non-forced cuts and initialize orthogonalities - make sure all cuts are initialized again for the current LP solution */
-   for (pos = sepastore->nforcedcuts; pos < sepastore->ncuts; pos++)
+   for( pos = sepastore->nforcedcuts; pos < sepastore->ncuts; pos++ )
    {
       SCIP_CALL( computeScore(sepastore, set, stat, lp, TRUE, pos) );
    }
@@ -847,7 +847,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
       /* Do not add (non-forced) non-violated cuts.
        * Note: do not take SCIPsetIsEfficacious(), because constraint handlers often add cuts w.r.t. SCIPsetIsFeasPositive().
        */
-      if ( SCIPsetIsFeasPositive(set, sepastore->efficacies[bestpos]) )
+      if( SCIPsetIsFeasPositive(set, sepastore->efficacies[bestpos]) )
       {
          /* add cut to the LP and update orthogonalities */
          SCIP_CALL( sepastoreApplyCut(sepastore, blkmem, set, eventqueue, eventfilter, lp, cut, mincutorthogonality, depth, &ncutsapplied) );
@@ -931,11 +931,11 @@ SCIP_RETCODE SCIPsepastoreRemoveInefficaciousCuts(
    /* check non-forced cuts only */
    cnt = 0;
    c = sepastore->nforcedcuts;
-   while ( c < sepastore->ncuts )
+   while( c < sepastore->ncuts )
    {
       assert( sepastore->efficacies[c] == SCIP_INVALID );
       SCIP_CALL( computeScore(sepastore, set, stat, lp, FALSE, c) );
-      if ( ! SCIPsetIsEfficacious(set, root, sepastore->efficacies[c]) )
+      if( !SCIPsetIsEfficacious(set, root, sepastore->efficacies[c]) )
       {
          SCIP_CALL( sepastoreDelCut(sepastore, blkmem, set, eventqueue, eventfilter, lp, c) );
          ++cnt;

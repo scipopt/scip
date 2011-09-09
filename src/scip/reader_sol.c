@@ -192,7 +192,7 @@ SCIP_RETCODE readXMLSol(
    /* read xml file */
    start = xml_process(filename);
 
-   if ( start == NULL )
+   if( start == NULL )
    {
       SCIPerrorMessage("Some error occured during parsing the XML solution file.\n");
       return SCIP_READERROR;
@@ -205,7 +205,7 @@ SCIP_RETCODE readXMLSol(
    /* find variable sections */
    tag = "variables";
    varsnode = xml_find_node_maxdepth(start, tag, 0, 2);
-   if ( varsnode == NULL )
+   if( varsnode == NULL )
    {
       /* free xml data */
       xml_free_node(start);
@@ -216,7 +216,7 @@ SCIP_RETCODE readXMLSol(
 
    /* loop through all variables */
    unknownvariablemessage = FALSE;
-   for (varnode = xml_first_child(varsnode); varnode != NULL; varnode = xml_next_sibl(varnode))
+   for( varnode = xml_first_child(varsnode); varnode != NULL; varnode = xml_next_sibl(varnode) )
    {
       const char* varname;
       const char* varvalue;
@@ -226,7 +226,7 @@ SCIP_RETCODE readXMLSol(
 
       /* find variable name */
       varname = xml_get_attrval(varnode, "name");
-      if ( varname == NULL )
+      if( varname == NULL )
       {
          SCIPerrorMessage("Attribute \"name\" of variable not found.\n");
          error = TRUE;
@@ -235,9 +235,9 @@ SCIP_RETCODE readXMLSol(
       
       /* find the variable */
       var = SCIPfindVar(scip, varname);
-      if ( var == NULL )
+      if( var == NULL )
       {
-         if ( !unknownvariablemessage )
+         if( !unknownvariablemessage )
          {
             SCIPwarningMessage("unknown variable <%s> in XML solution file <%s>\n", varname, filename);
             SCIPwarningMessage("  (further unknown variables are ignored)\n");
@@ -248,7 +248,7 @@ SCIP_RETCODE readXMLSol(
 
       /* find value of variable */
       varvalue = xml_get_attrval(varnode, "value");
-      if ( varvalue == NULL )
+      if( varvalue == NULL )
       {
          SCIPerrorMessage("Attribute \"value\" of variable not found.\n");
          error = TRUE;
@@ -256,7 +256,7 @@ SCIP_RETCODE readXMLSol(
       }
 
       /* cast the value */
-      if ( strncasecmp(varvalue, "inv", 3) == 0 )
+      if( strncasecmp(varvalue, "inv", 3) == 0 )
          continue;
       else if( strncasecmp(varvalue, "+inf", 4) == 0 || strncasecmp(varvalue, "inf", 3) == 0 )
          value = SCIPinfinity(scip);
@@ -265,7 +265,7 @@ SCIP_RETCODE readXMLSol(
       else
       {
          nread = sscanf(varvalue, "%lf", &value);
-         if ( nread != 1 )
+         if( nread != 1 )
          {
             SCIPwarningMessage("invalid solution value <%s> for variable <%s> in XML solution file <%s>\n", varvalue, varname, filename);
             error = TRUE;
@@ -277,7 +277,7 @@ SCIP_RETCODE readXMLSol(
       SCIP_CALL( SCIPsetSolVal(scip, sol, var, value) );
    }
 
-   if ( ! error )
+   if( !error )
    {
       SCIP_Bool stored;
 
@@ -367,7 +367,7 @@ SCIP_DECL_READERREAD(readerReadSol)
 
    /* open input file in order to determine type */
    file = SCIPfopen(filename, "r");
-   if ( file == NULL )
+   if( file == NULL )
    {
       SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
       SCIPprintSysError(filename);
@@ -375,7 +375,7 @@ SCIP_DECL_READERREAD(readerReadSol)
    }
 
    /* get next line */
-   if ( SCIPfgets(buffer, sizeof(buffer), file) == NULL )
+   if( SCIPfgets(buffer, sizeof(buffer), file) == NULL )
    {
       SCIPerrorMessage("cannot parse file.\n");
       return SCIP_READERROR;
@@ -387,9 +387,9 @@ SCIP_DECL_READERREAD(readerReadSol)
    s = buffer;
    
    /* skip spaces */
-   while ( isspace(*s) )
+   while( isspace(*s) )
       ++s;
-   if ( s[0] == '<' && s[1] == '?' && s[2] == 'x' && s[3] == 'm' && s[4] == 'l' )
+   if( s[0] == '<' && s[1] == '?' && s[2] == 'x' && s[3] == 'm' && s[4] == 'l' )
    {
       /* read XML solution and add it to the solution pool */
       SCIP_CALL( readXMLSol(scip, filename) );

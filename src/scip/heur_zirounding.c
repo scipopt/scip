@@ -150,7 +150,7 @@ void calculateBounds(
     * if one of these values is significantly < 0.0, this will cause the abort of execution of the heuristic so that
     * infeasible solutions are avoided
     */
-   for ( i = 0; i < ncolvals && (*lowerbound > 0.0 || *upperbound > 0.0); ++i )
+   for( i = 0; i < ncolvals && (*lowerbound > 0.0 || *upperbound > 0.0); ++i )
    {
       SCIP_ROW* row;
       int       rowpos;
@@ -588,7 +588,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
       assert(SCIPisFeasLE(scip, lhs, activities[i]) && SCIPisFeasLE(scip, activities[i], rhs));
 
       /* in special case if LHS or RHS is (-)infinity slacks have to be initialized as infinity*/
-      if ( SCIPisInfinity(scip, -lhs) )
+      if( SCIPisInfinity(scip, -lhs) )
          downslacks[i] = SCIPinfinity(scip);
       else
          downslacks[i] = activities[i] - lhs;
@@ -794,7 +794,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
    {
       SCIP_Bool stored;
       SCIP_CALL(SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, FALSE, &stored));
-      if ( stored )
+      if( stored )
       {
 #ifdef SCIP_DEBUG
          SCIPdebugMessage("found feasible rounded solution:\n");

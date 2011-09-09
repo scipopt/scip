@@ -448,7 +448,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
    success = FALSE;
 
-   if ( heurdata->uselprows )
+   if( heurdata->uselprows )
    {
       char probname[SCIP_MAXSTRLEN];
 
@@ -483,7 +483,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    SCIPhashmapFree(&varmapfw);
 
    /* if the subproblem could not be created, free memory and return */
-   if ( !success )
+   if( !success )
    {
       *result = SCIP_DIDNOTRUN;
       goto TERMINATE;
@@ -542,7 +542,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
 
    /* copy the original problem and add the local branching constraint */
-   if ( heurdata->uselprows )
+   if( heurdata->uselprows )
    {
       SCIP_CALL( createSubproblem(scip, subscip, subvars) );
    }
@@ -559,7 +559,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    }
    else
    {
-      if ( SCIPgetUpperbound ( scip ) >= 0 )
+      if( SCIPgetUpperbound ( scip ) >= 0 )
          cutoff = ( 1 - heurdata->minimprove ) * SCIPgetUpperbound ( scip );
       else
          cutoff = ( 1 + heurdata->minimprove ) * SCIPgetUpperbound ( scip );

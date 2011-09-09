@@ -1027,7 +1027,7 @@ SCIP_RETCODE SCIPsolveKnapsackApproximatelyLT(
    /* allocate memory for temporary array used for sorting; array should contain profits divided by corresponding weights (p_1 / w_1 ... p_n / w_n )*/
    SCIP_CALL( SCIPallocBufferArray(scip, &tempsort, nitems) );
    /* initialize temporary array */ 
-   for (i = nitems - 1; i >= 0; --i)
+   for( i = nitems - 1; i >= 0; --i )
    {
       tempsort[i] = profits[i] / weights [i];
    }

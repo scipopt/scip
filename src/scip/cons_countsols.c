@@ -420,7 +420,7 @@ CUTOFF_CONSTRAINT(addBinaryCons)
       value = SCIPgetSolVal(scip, sol, var);
       assert( SCIPisFeasIntegral(scip, value) );
 
-      if (value > 0.5)
+      if( value > 0.5 )
       {
          SCIP_CALL( SCIPgetNegatedVar(scip, var, &consvars[v]) );
       }
@@ -493,7 +493,7 @@ CUTOFF_CONSTRAINT(addIntegerCons)
          value = SCIPgetSolVal(scip, sol, var);
          assert( SCIPisFeasIntegral(scip, value) );
          
-         if (value < 0.5)
+         if( value < 0.5 )
          {
             boundtypes[nconsvars] = SCIP_BOUNDTYPE_LOWER;
             bounds[nconsvars] = 1;
@@ -514,12 +514,12 @@ CUTOFF_CONSTRAINT(addIntegerCons)
          ub = (SCIP_Longint) SCIPfeasCeil(scip, SCIPvarGetUbLocal(var));
          valueInt = (SCIP_Longint) SCIPfeasCeil(scip, SCIPgetSolVal(scip, sol, var));
          
-         if (valueInt == lb)
+         if( valueInt == lb )
          {
             boundtypes[nconsvars] = SCIP_BOUNDTYPE_LOWER;
             bounds[nconsvars] = lb + 1;
          }
-         else if (valueInt == ub)
+         else if( valueInt == ub )
          {
             boundtypes[nconsvars] = SCIP_BOUNDTYPE_UPPER;
             bounds[nconsvars] = ub - 1;
@@ -541,9 +541,9 @@ CUTOFF_CONSTRAINT(addIntegerCons)
    
    /* check if only binary variables appear in the constraint; if this is the case we
     * create a set covering constraint instead of a bound disjunction constraint */
-   if (nvars == nbinvars )
+   if( nvars == nbinvars )
    {
-      for (v = nbinvars - 1; v >= 0; --v)
+      for( v = nbinvars - 1; v >= 0; --v )
       {
          /* in the case the bound is zero we have use the negated variable */
          if( bounds[v] == 0)
@@ -896,14 +896,14 @@ SCIP_RETCODE checkKnapsack(
          assert( weights[v] > -0.5 );
          assert( weights[v] >= 0);
       
-         if ( !varIsUnfixedLocal(vars[v]) ) 
+         if( !varIsUnfixedLocal(vars[v]) ) 
          {
             /* variables is fixed locally; therefore, subtract fixed variable value multiplied by
              * the weight; 
              */
             capa -= weights[v] * SCIPvarGetLbLocal(vars[v]); 
          }
-         else if (weights[v] > 0.5) 
+         else if( weights[v] > 0.5 )
          {
             /*  variable is unfixed and weight is greater than 0; therefore, subtract upper bound
              *  value multiplied by the weight 
@@ -980,7 +980,7 @@ SCIP_RETCODE checkBounddisjunction(
          assert( SCIPvarGetType(vars[v]) != SCIP_VARTYPE_CONTINUOUS );
       
          /* variable should be in right bounds to delete constraint */
-         if (boundtypes[v] == SCIP_BOUNDTYPE_LOWER )
+         if( boundtypes[v] == SCIP_BOUNDTYPE_LOWER )
             satisfiedbound = SCIPisFeasGE(scip, SCIPvarGetLbLocal(vars[v]), bounds[v]);
          else
          {
@@ -989,7 +989,7 @@ SCIP_RETCODE checkBounddisjunction(
          }
       }
     
-      if (!satisfiedbound)
+      if( !satisfiedbound )
       {
          SCIPdebugMessage("constraint %s cannot be disabled\n", SCIPconsGetName(conss[c]));
          SCIPdebug(SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
@@ -1059,8 +1059,8 @@ SCIP_RETCODE checkVarbound(
       /* variables y is fixed locally; therefore, subtract fixed variable value multiplied by
        * the coefficient; 
        */
-      if (SCIPisGT(scip, SCIPvarGetUbLocal(var_x), rhs - SCIPvarGetUbLocal(var_y) * coef ) 
-         || !SCIPisGE(scip, SCIPvarGetLbLocal(var_x), lhs - SCIPvarGetLbLocal(var_y) * coef ))
+      if(SCIPisGT(scip, SCIPvarGetUbLocal(var_x), rhs - SCIPvarGetUbLocal(var_y) * coef ) 
+         || !SCIPisGE(scip, SCIPvarGetLbLocal(var_x), lhs - SCIPvarGetLbLocal(var_y) * coef ) )
       {
          SCIPdebugMessage("constraint %s cannot be disabled\n", SCIPconsGetName(conss[c]));
          SCIPdebug(SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
@@ -1108,7 +1108,7 @@ SCIP_RETCODE checkFeasSubtree(
    assert (conshdlrs != NULL);
 
    /* check each constraint handler if there are constraints which are not enabled */
-   for (h = nconshdlrs ;  h >= 0 ; --h )
+   for( h = nconshdlrs ;  h >= 0 ; --h )
    {
       conshdlr = conshdlrs[h];
       assert( conshdlr != NULL );
@@ -1126,7 +1126,7 @@ SCIP_RETCODE checkFeasSubtree(
          SCIPdebugMessage("constraint handler %s has %d active constraint(s)\n",
             SCIPconshdlrGetName(conshdlr), nconss );
          
-         if (strcmp(SCIPconshdlrGetName(conshdlr), "logicor") == 0)
+         if( strcmp(SCIPconshdlrGetName(conshdlr), "logicor") == 0 )
          {
             
             SCIP_CALL( checkLogicor(scip, conshdlr, nconss, &satisfied) );
@@ -1136,7 +1136,7 @@ SCIP_RETCODE checkFeasSubtree(
                return SCIP_OKAY;
             }
          }
-         else if (strcmp(SCIPconshdlrGetName(conshdlr), "knapsack") == 0)
+         else if( strcmp(SCIPconshdlrGetName(conshdlr), "knapsack") == 0 )
          {
             SCIP_CALL( checkKnapsack(scip, conshdlr, nconss, &satisfied) );
             if( !satisfied )
@@ -1145,7 +1145,7 @@ SCIP_RETCODE checkFeasSubtree(
                return SCIP_OKAY;
             }
          }
-         else if (strcmp(SCIPconshdlrGetName(conshdlr), "bounddisjunction") == 0)
+         else if( strcmp(SCIPconshdlrGetName(conshdlr), "bounddisjunction") == 0 )
          {
             SCIP_CALL( checkBounddisjunction(scip, conshdlr, nconss, &satisfied) );
             if( !satisfied )
@@ -1154,7 +1154,7 @@ SCIP_RETCODE checkFeasSubtree(
                return SCIP_OKAY;
             }
          }
-         else if (strcmp(SCIPconshdlrGetName(conshdlr), "varbound") == 0)
+         else if( strcmp(SCIPconshdlrGetName(conshdlr), "varbound") == 0 )
          {
             SCIP_CALL( checkVarbound(scip, conshdlr, nconss, &satisfied) );
             if( !satisfied )
@@ -1928,13 +1928,13 @@ SCIP_Bool getNextSolution(
       lbvalue = sparsesol->lbvalues[v];
       ubvalue = sparsesol->ubvalues[v];
       
-      if (lbvalue < ubvalue) 
+      if( lbvalue < ubvalue )
       {
          singular = FALSE;
          
-         if (carryflag == FALSE) 
+         if( carryflag == FALSE ) 
          {
-            if (sol[v] < ubvalue) 
+            if( sol[v] < ubvalue )
             {
                sol[v]++;
                break;
@@ -1949,7 +1949,7 @@ SCIP_Bool getNextSolution(
          }
          else 
          {
-            if (sol[v] < ubvalue) 
+            if( sol[v] < ubvalue )
             {
                sol[v]++;
                carryflag = FALSE;
@@ -1992,7 +1992,7 @@ SCIP_RETCODE writeExpandedSolutions(
    SCIP_CALL( SCIPallocBufferArray(scip, &sol, nactivevars) );
    
    /* loop over all sparse solutions */
-   for ( s = 0; s < nsols; ++s )
+   for( s = 0; s < nsols; ++s )
    {
       sparsesol = sols[s];
       
@@ -2015,7 +2015,7 @@ SCIP_RETCODE writeExpandedSolutions(
          
          objval = 0.0;
          
-         for ( v = 0; v < nactivevars; ++v )
+         for( v = 0; v < nactivevars; ++v )
          {
             idx = perm[v];
             
@@ -2269,7 +2269,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
                /* first row: output the names of the variables in the given ordering */
                SCIPinfoMessage(scip, file, "#, ");
             
-               for ( v = 0; v < norigvars; ++v ) 
+               for( v = 0; v < norigvars; ++v ) 
                {
 #ifndef NDEBUG
                   {

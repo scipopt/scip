@@ -1304,7 +1304,7 @@ SCIP_RETCODE createIndicatorConstraint(
    
    /* assign the left and right hand side, depending on the constraint sense */
    linConsEQ = FALSE;
-   switch ( linsense )
+   switch( linsense )
    {
    case LP_SENSE_GE:
       linrhs = linsidevalue;
@@ -1455,7 +1455,7 @@ SCIP_RETCODE readConstraints(
    sidevalue *= sidesign;
 
    /* assign the left and right hand side, depending on the constraint sense */
-   switch ( sense )
+   switch( sense )
    {
    case LP_SENSE_GE:
       lhs = sidevalue;
@@ -1945,7 +1945,7 @@ SCIP_RETCODE readSos(
    dynamic = FALSE;
    removable = FALSE;
 
-   while ( getNextToken(lpinput) )
+   while( getNextToken(lpinput) )
    {
       int type = -1;
       SCIP_CONS* cons;
@@ -2039,7 +2039,7 @@ SCIP_RETCODE readSos(
       }
 
       /* parse elements of SOS constraint */
-      while ( getNextToken(lpinput) )
+      while( getNextToken(lpinput) )
       {
          SCIP_VAR* var;
          SCIP_Real weight;
@@ -2091,7 +2091,7 @@ SCIP_RETCODE readSos(
                else
                {
                   /* we now know that we have a variable/weight pair -> add variable*/
-                  switch (type)
+                  switch( type )
                   {
                   case 1: 
                      SCIP_CALL( SCIPaddVarSOS1(scip, cons, var, weight) ); 
@@ -3328,7 +3328,7 @@ SCIP_RETCODE SCIPwriteLp(
          consvars = SCIPgetVarsSetppc(scip, cons);
          nconsvars = SCIPgetNVarsSetppc(scip, cons);
 
-         switch ( SCIPgetTypeSetppc(scip, cons) )
+         switch( SCIPgetTypeSetppc(scip, cons) )
          {
          case SCIP_SETPPCTYPE_PARTITIONING :
             SCIP_CALL( printQuadraticCons(scip, file, consname,

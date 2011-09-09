@@ -224,7 +224,7 @@ Bool xlp_addcon_term(
                initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
             SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
 
-            for (i = 0; i < term_get_elements(term); i++)
+            for( i = 0; i < term_get_elements(term); i++ )
             {
                SCIP_VAR* scipvar;
                SCIP_Real scipval;
@@ -258,7 +258,7 @@ Bool xlp_addcon_term(
                initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
             SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
 
-            for (i = 0; i < term_get_elements(term); i++)
+            for( i = 0; i < term_get_elements(term); i++ )
             {
                SCIP_VAR* scipvar;
                SCIP_Real scipval;
@@ -291,7 +291,7 @@ Bool xlp_addcon_term(
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
          SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
 
-         for (i = 0; i < term_get_elements(term); i++)
+         for( i = 0; i < term_get_elements(term); i++ )
          {
             SCIP_VAR* scipvar;
             SCIP_Real scipval;
@@ -323,7 +323,7 @@ Bool xlp_addcon_term(
       SCIP_CALL_ABORT( SCIPallocBufferArray(scip_, &lincoeff,  term_get_elements(term)) );
       SCIP_CALL_ABORT( SCIPallocBufferArray(scip_, &quadcoeff, term_get_elements(term)) );
 
-      for (i = 0; i < term_get_elements(term); ++i)
+      for( i = 0; i < term_get_elements(term); ++i )
       {
          monom = term_get_element(term, i);
          assert(!numb_equal(mono_get_coeff(monom), numb_zero()));
@@ -521,7 +521,7 @@ Bool xlp_addsos_term(
             initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
       SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
 
-      for (i = 0; i < term_get_elements(term); i++)
+      for( i = 0; i < term_get_elements(term); i++ )
       {
          SCIP_VAR* var;
          SCIP_Real weight;
@@ -548,7 +548,7 @@ Bool xlp_addsos_term(
       SCIP_CALL_ABORT( SCIPcreateConsSOS2(scip_, &cons, name, 0, NULL, NULL, 
             initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
       SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
-      for (i = 0; i < term_get_elements(term); i++)
+      for( i = 0; i < term_get_elements(term); i++ )
       {
          SCIP_VAR* var;
          SCIP_Real weight;

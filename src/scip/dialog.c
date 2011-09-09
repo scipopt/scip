@@ -116,7 +116,7 @@ SCIP_RETCODE removeHistory(
 #if RL_VERSION_MAJOR >= 5
    (void)free_history_entry(entry);
 #else
-   if ( entry != NULL )
+   if( entry != NULL )
    {
       free((void*)entry->line);
       free(entry);

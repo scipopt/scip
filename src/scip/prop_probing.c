@@ -426,10 +426,10 @@ SCIP_RETCODE applyProbing(
 
       /* determine whether zero probing should happen */
       probingzero = TRUE;
-      if ( SCIPvarGetNLocksDown(vars[i]) == 0 )
+      if( SCIPvarGetNLocksDown(vars[i]) == 0 )
          probingzero = FALSE;
 
-      if ( probingzero )
+      if( probingzero )
       {
          /* apply probing for fixing the variable to zero */
          SCIP_CALL( applyProbingVar(scip, propdata, vars, nvars, i, FALSE, zeroimpllbs, zeroimplubs, zeroproplbs, zeropropubs,
@@ -471,10 +471,10 @@ SCIP_RETCODE applyProbing(
 
       /* determine whether one probing should happen */
       probingone = TRUE;
-      if ( SCIPvarGetNLocksUp(vars[i]) == 0 )
+      if( SCIPvarGetNLocksUp(vars[i]) == 0 )
          probingone = FALSE;
 
-      if ( probingone )
+      if( probingone )
       {
          /* apply probing for fixing the variable to one */
          SCIP_CALL( applyProbingVar(scip, propdata, vars, nvars, i, TRUE, oneimpllbs, oneimplubs, oneproplbs, onepropubs,
@@ -509,7 +509,7 @@ SCIP_RETCODE applyProbing(
       }
 
       /* not have to check deductions if only one probing direction has been checked */
-      if ( ! probingzero || ! probingone )
+      if( !probingzero || !probingone )
          continue;
 
       /* analyze probing deductions */

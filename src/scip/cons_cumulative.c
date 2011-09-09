@@ -1620,7 +1620,7 @@ void SCIPprofilePrintOut(
 {
    int t;
 
-   for (t=0; t <profile->ntimepoints; t++)
+   for( t=0; t <profile->ntimepoints; t++ )
    {
       SCIPdebugMessage("tp[%d]: %d -> fc=%d\n", t, profile->timepoints[t], profile-> freecapacities[t]);
    }
@@ -1771,7 +1771,7 @@ SCIP_RETCODE checkCumulativeCondition(
    SCIP_CALL( SCIPallocBufferArray(scip, &endindices, nvars) );
 
    /* assign variables, start and endpoints to arrays */
-   for ( j = 0; j < nvars; ++j )
+   for( j = 0; j < nvars; ++j )
    {
       /* the constraint of the cumulative constraint handler should be called after the integrality check */
       assert(SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, vars[j])));
@@ -1792,13 +1792,13 @@ SCIP_RETCODE checkCumulativeCondition(
    /* check if the arrays are sorted correctly */
    SCIPdebugMessage("Checking solution <%p> with starting times:\n", (void*)sol);
    SCIPdebugMessage("%i | ", startsolvalues[0]);
-   for ( j = 1; j < nvars; ++j )
+   for( j = 1; j < nvars; ++j )
    {
       assert ( startsolvalues[j-1] <= startsolvalues[j] );
       SCIPdebugPrintf("%i | ", startsolvalues[j]);
    }
    SCIPdebugPrintf("\nand end times:\n%i | ",endsolvalues[0]);
-   for ( j = 1; j < nvars; ++j )
+   for( j = 1; j < nvars; ++j )
    {
       assert ( endsolvalues[j-1] <= endsolvalues[j] );
       SCIPdebugPrintf("%i | ",endsolvalues[j]);
@@ -2064,7 +2064,7 @@ SCIP_RETCODE analyzeConflictCoreTimesCumulative(
    ncores = 0;
 
    /* compute all cores of the variables which lay in the considered time window except the inference variable */
-   for ( j = 0; j < nvars; ++j )
+   for( j = 0; j < nvars; ++j )
    {
       var = vars[j];
       assert(var != NULL);
@@ -2283,7 +2283,7 @@ SCIP_RETCODE analyzeConflictCoreTimesBinvarsCumulative(
    ncores = 0;
 
    /* compute all cores of the variables which lay in the considered time window except the inference variable */
-   for ( j = 0; j < nvars; ++j )
+   for( j = 0; j < nvars; ++j )
    {
       var = vars[j];
       assert(var != NULL);
@@ -2798,7 +2798,7 @@ SCIP_Bool checkDemands(
    capacity = consdata->capacity;
 
    /* check each activity: if demand is larger than capacity the problem is infeasible */
-   for ( j = 0; j < nvars; ++j )
+   for( j = 0; j < nvars; ++j )
    {
       if( consdata->demands[j] > capacity )
          return FALSE;
@@ -3088,7 +3088,7 @@ SCIP_RETCODE createCoverCuts(
    SCIP_CALL( SCIPallocBufferArray(scip, &endindices, nvars) );
 
    /* assign start and endpoints to arrays */
-   for ( j = 0; j < nvars; ++j )
+   for( j = 0; j < nvars; ++j )
    {
       startvalues[j] = convertBoundToInt(scip, SCIPvarGetLbLocal(consdata->vars[j]));
       startvaluessorted[j] = startvalues[j];
@@ -3239,7 +3239,7 @@ SCIP_RETCODE collectBinaryVars(
 
          minub = MIN(curtime, endtime - duration);
 
-         for (tau = MAX(curtime - duration + 1, offset); tau <= minub; ++tau )
+         for( tau = MAX(curtime - duration + 1, offset); tau <= minub; ++tau )
          {
             assert(tau >= offset && tau < nbinvars + offset);
             assert(binvars[tau-offset] != NULL);
@@ -3371,7 +3371,7 @@ void createSortedEventpoints(
    nvars = consdata->nvars;
 
    /* assign variables, start and endpoints to arrays */
-   for ( j = 0; j < nvars; ++j )
+   for( j = 0; j < nvars; ++j )
    {
       var = consdata->vars[j];
       if( local )
@@ -6361,7 +6361,7 @@ void createSortedEventpointsSol(
    *nvars = 0;
 
    /* assign variables, start and endpoints to arrays */
-   for ( j = 0; j < tmpnvars; ++j )
+   for( j = 0; j < tmpnvars; ++j )
    {
       var = consdata->vars[j];
       assert(var != NULL);
@@ -6416,14 +6416,14 @@ void createSortedEventpointsSol(
 
 #ifdef SCIP_DEBUG
    SCIPdebugMessage("sorted output\n");
-   for ( j = 0; j < *nvars; ++j )
+   for( j = 0; j < *nvars; ++j )
    {
       SCIPdebugMessage("%d: job[%d] starttime %d, endtime = %d, demand = %d\n", j,
          startindices[j], starttimes[j], starttimes[j] + consdata->durations[startindices[j]],
          consdata->demands[startindices[j]]);
    }
 
-   for ( j = 0; j < *nvars; ++j )
+   for( j = 0; j < *nvars; ++j )
    {
       SCIPdebugMessage("%d: job[%d] endtime %d,  demand = %d\n", j, endindices[j], endtimes[j],
          consdata->demands[endindices[j]]);

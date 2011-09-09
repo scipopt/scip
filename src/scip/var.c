@@ -9489,7 +9489,7 @@ SCIP_DECL_HASHGETKEY(SCIPvarGetHashkey)
 /** returns TRUE iff the indices of both variables are equal */
 SCIP_DECL_HASHKEYEQ(SCIPvarIsHashkeyEq)
 {  /*lint --e{715}*/
-   if ( key1 == key2 )
+   if( key1 == key2 )
       return TRUE;
    return FALSE;
 }
@@ -9995,13 +9995,13 @@ SCIP_Bool SCIPvarIsTransformedOrigvar(
    SCIP_VAR* parentvar;
    assert(var != NULL);
 
-   if ( ! SCIPvarIsTransformed(var) || var->nparentvars < 1 )
+   if( !SCIPvarIsTransformed(var) || var->nparentvars < 1 )
       return FALSE;
 
    parentvar = var->parentvars[0];
 
    /* we follow the aggregation tree to the root unless an original variable has been found - the first entries in the parentlist are candidates */
-   while ( parentvar->nparentvars >= 1 && SCIPvarGetStatus(parentvar) != SCIP_VARSTATUS_ORIGINAL )
+   while( parentvar->nparentvars >= 1 && SCIPvarGetStatus(parentvar) != SCIP_VARSTATUS_ORIGINAL )
       parentvar = parentvar->parentvars[0];
    assert( parentvar != NULL );
 
@@ -10531,7 +10531,7 @@ SCIP_RETCODE SCIPvarSetRelaxSol(
       
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
-      if ( updateobj )
+      if( updateobj )
          SCIPrelaxationSolObjAdd(relaxation, var->obj * (solval - var->relaxsol));
       var->relaxsol = solval;
       break;
@@ -10817,7 +10817,7 @@ void SCIPvarGetClosestVlb(
             }
          }
 
-         if ( sol == NULL )
+         if( sol == NULL )
          {
             /* update cached value */
             if( var->closestvblpcount != stat->lpcount )
@@ -10888,7 +10888,7 @@ void SCIPvarGetClosestVub(
             }
          }
 
-         if ( sol == NULL )
+         if( sol == NULL )
          {
             /* update cached value */
             if( var->closestvblpcount != stat->lpcount )

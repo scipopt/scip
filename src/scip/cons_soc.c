@@ -2244,7 +2244,7 @@ SCIP_RETCODE presolveCreateOuterApproxDim3(
    int*                  naddconss           /**< buffer where to add the number of added constraints */
 )
 {
-   if (glineur)
+   if( glineur )
    {
       SCIP_CALL( presolveCreateGlineurApproxDim3(scip, cons, x1, x2, x3, alpha1, alpha2, alpha3, offset1, offset2, offset3, N, basename, naddconss) );
    }
@@ -2814,7 +2814,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
       
       lhsconstant = SCIPgetLhsQuadratic(scip, cons);
 
-      for (i = 0; i < nquadvars; ++i)
+      for( i = 0; i < nquadvars; ++i )
       {
          term = &SCIPgetQuadVarTermsQuadratic(scip, cons)[i];
          
@@ -2860,7 +2860,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
          }
       }
       
-      if (rhsvar && lhscount >= 2 && !SCIPisNegative(scip, lhsconstant))
+      if( rhsvar && lhscount >= 2 && !SCIPisNegative(scip, lhsconstant) )
       { /* found SOC constraint, so upgrade to SOC constraint(s) (below) and relax left hand side */
          SCIPdebugMessage("found left hand side of constraint <%s> to be SOC\n", SCIPconsGetName(cons));
 
@@ -3556,7 +3556,7 @@ SCIP_DECL_CONSPROP(consPropSOC)
    for( c = 0; c < nconss && *result != SCIP_CUTOFF; ++c )
    {
       SCIP_CALL( propagateBounds(scip, conss[c], &propresult, &nchgbds) );  /*lint !e613*/
-      if (propresult != SCIP_DIDNOTFIND && propresult != SCIP_DIDNOTRUN)
+      if( propresult != SCIP_DIDNOTFIND && propresult != SCIP_DIDNOTRUN )
          *result = propresult;
    }
 

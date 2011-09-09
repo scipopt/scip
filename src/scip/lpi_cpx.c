@@ -1813,7 +1813,7 @@ SCIP_RETCODE SCIPlpiGetColNames(
 
    retcode =  CPXgetcolname(lpi->cpxenv, lpi->cpxlp, colnames, namestorage, namestoragesize, storageleft, firstcol, lastcol);
    assert( namestoragesize != 0 || retcode == CPXERR_NEGATIVE_SURPLUS );
-   if ( namestoragesize != 0 )
+   if( namestoragesize != 0 )
    {
       CHECK_ZERO( retcode );
    }
@@ -1847,7 +1847,7 @@ SCIP_RETCODE SCIPlpiGetRowNames(
 
    retcode = CPXgetrowname(lpi->cpxenv, lpi->cpxlp, rownames, namestorage, namestoragesize, storageleft, firstrow, lastrow);
    assert( namestoragesize != 0 || retcode == CPXERR_NEGATIVE_SURPLUS );
-   if ( namestoragesize != 0 )
+   if( namestoragesize != 0 )
    {
       CHECK_ZERO( retcode );
    }
@@ -2509,7 +2509,7 @@ SCIP_RETCODE SCIPlpiStrongbranchesFrac(
    SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
 
    /* initialize */
-   for (j = 0; j < ncols; ++j)
+   for( j = 0; j < ncols; ++j )
    {
       /* results of CPLEX are valid in any case */
       *downvalid = TRUE;
@@ -2566,7 +2566,7 @@ SCIP_RETCODE SCIPlpiStrongbranchInt(
 
    SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
 
-   if ( iter != NULL )
+   if( iter != NULL )
       *iter = 0;
 
    SCIP_CALL( lpiStrongbranchIntegral(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter) );
@@ -2605,11 +2605,11 @@ SCIP_RETCODE SCIPlpiStrongbranchesInt(
 
    SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
 
-   if ( iter != NULL )
+   if( iter != NULL )
       *iter = 0;
 
    /* initialize */
-   for (j = 0; j < ncols; ++j)
+   for( j = 0; j < ncols; ++j )
    {
       assert( EPSISINT(psols[j], 1e-06) );
       SCIP_CALL( lpiStrongbranchIntegral(lpi, cols[j], psols[j], itlim, &(down[j]), &(up[j]), &(downvalid[j]), &(upvalid[j]), iter) );
@@ -3857,7 +3857,7 @@ SCIP_RETCODE SCIPlpiReadLP(
    SCIPdebugMessage("reading LP from file <%s>\n", fname);
 
    restat = CPXreadcopyprob(lpi->cpxenv, lpi->cpxlp, fname, NULL);
-   if ( restat != 0 )
+   if( restat != 0 )
    {
       SCIPerrorMessage("LP Error: CPLEX returned %d\n", restat);
       return SCIP_READERROR;
@@ -3881,7 +3881,7 @@ SCIP_RETCODE SCIPlpiWriteLP(
    SCIPdebugMessage("writing LP to file <%s>\n", fname);
 
    restat = CPXwriteprob(lpi->cpxenv, lpi->cpxlp, fname, NULL);
-   if ( restat != 0 )
+   if( restat != 0 )
    {
       SCIPerrorMessage("LP Error: CPLEX returned %d\n", restat);
       return SCIP_READERROR;
