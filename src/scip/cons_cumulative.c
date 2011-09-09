@@ -7999,7 +7999,7 @@ int SCIPprofileGetEarliestFeasibleStart(
    int                   ub,                 /**< latest possible start point */
    int                   duration,           /**< duration of the job */
    int                   demand,             /**< demand of the job */
-   SCIP_Bool*            infeasible          /**< pointer store if the job can not be scheduled */
+   SCIP_Bool*            infeasible          /**< pointer store if the job cannot be scheduled */
    )
 {
    int starttime;
@@ -8063,7 +8063,7 @@ int SCIPprofileGetLatestFeasibleStart(
    int                   ub,                 /**< latest possible start point */
    int                   duration,           /**< duration of the job */
    int                   demand,             /**< demand of the job */
-   SCIP_Bool*            infeasible          /**< pointer store if the job can not be scheduled */
+   SCIP_Bool*            infeasible          /**< pointer store if the job cannot be scheduled */
    )
 {
    int starttime;

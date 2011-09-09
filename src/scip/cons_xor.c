@@ -1146,7 +1146,7 @@ SCIP_RETCODE propagateCons(
       SCIP_CALL( SCIPincConsAge(scip, cons) );
    }
 
-   /* propagation can not be applied, if we have at least two unfixed variables left;
+   /* propagation cannot be applied, if we have at least two unfixed variables left;
     * that means, we only have to watch (i.e. capture events) of two variables, and switch to other variables
     * if these ones get fixed
     */

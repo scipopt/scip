@@ -2805,7 +2805,7 @@ SCIP_RETCODE separateHeur(
                success = TRUE;
 
                /* check cycle for x-neg(x)-sub-cycles and clean them
-                *  (note that a variable can not appear twice in a cycle since it is only once in the graph)
+                *  (note that a variable cannot appear twice in a cycle since it is only once in the graph)
                 * convert parentTreeBackward and parentTree to pred&incycle structure for generateOddCycleCut
                 */
                u = graph.targetAdj[j];

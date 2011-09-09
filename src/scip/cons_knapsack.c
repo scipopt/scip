@@ -1718,7 +1718,7 @@ SCIP_Bool checkMinweightidx(
          return FALSE;
    }
 
-   /* checks if all variables before index j can not be removed, i.e. i cannot be the next minweightidx */
+   /* checks if all variables before index j cannot be removed, i.e. i cannot be the next minweightidx */
    for( i = 0; i < j; i++ )
    {
       assert(coverweight - weights[covervars[i]] <= capacity);
@@ -3649,7 +3649,7 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
          KNAPSACKRELAX_MAXDNOM, KNAPSACKRELAX_MAXSCALE, &intscalar, &success) );
    SCIPdebugMessage(" -> intscalar = %.15g\n", intscalar);
 
-   /* if coefficients can not be made integral, we have to use a scalar of 1.0 and only round fractional coefficients down */
+   /* if coefficients cannot be made integral, we have to use a scalar of 1.0 and only round fractional coefficients down */
    if( !success )
       intscalar = 1.0;
 

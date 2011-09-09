@@ -19643,7 +19643,7 @@ SCIP_RETCODE checkSolOrig(
 
    /* check original constraints
     *
-    * in general modifiable constraints can not be checked, because the variables to fulfill them might be missing in
+    * in general modifiable constraints cannot be checked, because the variables to fulfill them might be missing in
     * the original problem; however, if the solution comes from a heuristic during presolving modifiable constraints
     * have to be checked;
     */

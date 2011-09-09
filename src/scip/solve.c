@@ -2459,7 +2459,7 @@ SCIP_RETCODE solveNodeLP(
    /* if there is no LP error, then *unbounded should be TRUE, iff the LP solution status is unboundedray */
    assert(*lperror || ((SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY) == *unbounded));
 
-   /* If pricing was aborted while solving the LP of the node and the node can not be cut off due to the lower bound computed by the pricer,
+   /* If pricing was aborted while solving the LP of the node and the node cannot be cut off due to the lower bound computed by the pricer,
    *  the solving of the LP might be stopped due to the objective limit, but the node may not be cut off, since the LP objective
    *  is not a feasible lower bound for the solutions in the current subtree. 
    *  In this case, the LP has to be solved to optimality by temporarily removing the cutoff bound. 

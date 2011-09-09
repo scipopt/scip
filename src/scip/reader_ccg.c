@@ -508,7 +508,7 @@ SCIP_RETCODE SCIPwriteCcg(
       }
       else
       {
-         SCIPwarningMessage("constraint handler <%s> can not print requested format\n", conshdlrname );
+         SCIPwarningMessage("constraint handler <%s> cannot print requested format\n", conshdlrname );
          SCIPinfoMessage(scip, file, "\\ ");
          SCIP_CALL( SCIPprintCons(scip, cons, file) );
       }

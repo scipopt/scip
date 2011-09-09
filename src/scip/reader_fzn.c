@@ -4479,7 +4479,7 @@ SCIP_RETCODE writeFzn(
       }
       else
       {
-         SCIPwarningMessage("constraint handler <%s> can not print flatzinc format\n", conshdlrname );
+         SCIPwarningMessage("constraint handler <%s> cannot print flatzinc format\n", conshdlrname );
       }
    }
 

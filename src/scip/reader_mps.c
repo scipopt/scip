@@ -1654,9 +1654,15 @@ SCIP_RETCODE readSOS(
             assert( consType == 1 || consType == 2 );
             switch (consType)
             {
-            case 1: SCIP_CALL( SCIPaddVarSOS1(scip, cons, var, weight) ); break;
-            case 2: SCIP_CALL( SCIPaddVarSOS2(scip, cons, var, weight) ); break;
-            default: abort(); /* should not happen */
+            case 1: 
+               SCIP_CALL( SCIPaddVarSOS1(scip, cons, var, weight) );
+               break;
+            case 2: 
+               SCIP_CALL( SCIPaddVarSOS2(scip, cons, var, weight) );
+               break;
+            default: 
+               SCIPerrorMessage("unknown SOS type: <%d>\n", type); /* should not happen */
+               SCIPABORT();
             }
             SCIPdebugMessage("added variable <%s> with weight %g.\n", SCIPvarGetName(var), weight);
          }

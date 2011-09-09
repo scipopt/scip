@@ -299,7 +299,7 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
    maxdivedepth *= 10;
 
    /* get best solution that should guide the search; if this solution lives in the original variable space,
-    * we can not use it since it might violate the global bounds of the current problem
+    * we cannot use it since it might violate the global bounds of the current problem
     */
    if( SCIPsolGetOrigin(SCIPgetBestSol(scip)) == SCIP_SOLORIGIN_ORIGINAL )
       return SCIP_OKAY;

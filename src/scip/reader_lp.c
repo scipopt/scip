@@ -2093,9 +2093,15 @@ SCIP_RETCODE readSos(
                   /* we now know that we have a variable/weight pair -> add variable*/
                   switch (type)
                   {
-                  case 1: SCIP_CALL( SCIPaddVarSOS1(scip, cons, var, weight) ); break;
-                  case 2: SCIP_CALL( SCIPaddVarSOS2(scip, cons, var, weight) ); break;
-                  default: abort(); /* should not happen */
+                  case 1: 
+                     SCIP_CALL( SCIPaddVarSOS1(scip, cons, var, weight) ); 
+                     break;
+                  case 2: 
+                     SCIP_CALL( SCIPaddVarSOS2(scip, cons, var, weight) );
+                     break;
+                  default: 
+                     SCIPerrorMessage("unknown SOS type: <%d>\n", type); /* should not happen */
+                     SCIPABORT();
                   }
                   SCIPdebugMessage("added variable <%s> with weight %g.\n", SCIPvarGetName(var), weight);
                }
@@ -3474,7 +3480,7 @@ SCIP_RETCODE SCIPwriteLp(
       }
       else
       {
-         SCIPwarningMessage("constraint handler <%s> can not print requested format\n", conshdlrname );
+         SCIPwarningMessage("constraint handler <%s> cannot print requested format\n", conshdlrname );
          SCIPinfoMessage(scip, file, "\\ ");
          SCIP_CALL( SCIPprintCons(scip, cons, file) );
       }

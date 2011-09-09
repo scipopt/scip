@@ -553,7 +553,7 @@ void probInsertVar(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   /* original variables can not go into transformed problem and transformed variables cannot go into original problem */
+   /* original variables cannot go into transformed problem and transformed variables cannot go into original problem */
    assert((SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL) == prob->transformed);
 
    /* insert variable in array */
@@ -733,7 +733,7 @@ SCIP_RETCODE SCIPprobAddVar(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   /* original variables can not go into transformed problem and transformed variables cannot go into original problem */
+   /* original variables cannot go into transformed problem and transformed variables cannot go into original problem */
    assert((SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL) == prob->transformed);
 
 #ifndef NDEBUG

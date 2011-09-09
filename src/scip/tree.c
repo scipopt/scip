@@ -2551,7 +2551,7 @@ void treeFindSwitchForks(
    }
    tree->cutoffdepth = INT_MAX;
 
-   /* if not already found, continue searching the LP defining fork; it can not be deeper than the common fork */
+   /* if not already found, continue searching the LP defining fork; it cannot be deeper than the common fork */
    if( lpfork == NULL )
    {
       if( tree->focuslpfork != NULL && (int)(tree->focuslpfork->depth) > fork->depth )
@@ -2581,7 +2581,7 @@ void treeFindSwitchForks(
       || SCIPnodeGetType(lpfork) == SCIP_NODETYPE_SUBROOT);
    SCIPdebugMessage("find switch forks: lpforkdepth=%d\n", lpfork == NULL ? -1 : (int)(lpfork->depth));
 
-   /* if not already found, continue searching the LP state defining fork; it can not be deeper than the
+   /* if not already found, continue searching the LP state defining fork; it cannot be deeper than the
     * LP defining fork and the common fork
     */
    if( lpstatefork == NULL )

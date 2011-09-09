@@ -430,7 +430,7 @@ void checkImplics(
       {
          int cmp;
 
-         /* in case of implication we can not use SCIPvarIsBinary() to check for binaries since the implication are
+         /* in case of implication we cannot use SCIPvarIsBinary() to check for binaries since the implication are
           * sorted with respect to variable type; this means first the binary variables (SCIPvarGetType(var) ==
           * SCIP_VARTYPE_BINARY) and second all others;
           */
@@ -451,7 +451,7 @@ void checkImplics(
       {
          int cmp;
          
-         /* in case of implication we can not use SCIPvarIsBinary() to check for binaries since the implication are
+         /* in case of implication we cannot use SCIPvarIsBinary() to check for binaries since the implication are
           * sorted with respect to variable type; this means first the binary variables (SCIPvarGetType(var) ==
           * SCIP_VARTYPE_BINARY) and second all others;
           */
