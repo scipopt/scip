@@ -1919,7 +1919,7 @@ SCIP_RETCODE priceAndCutLoop(
          assert(lp->solved || *lperror);
 
          /* update lower bound w.r.t. the LP solution */
-         if( !(*lperror) && !(*pricingaborted))
+         if( !(*lperror) && !(*pricingaborted) && SCIPlpIsRelax(lp) )
          {
             SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, lp) );
             SCIPdebugMessage(" -> new lower bound: %g (LP status: %d, LP obj: %g)\n",
@@ -2248,7 +2248,10 @@ SCIP_RETCODE priceAndCutLoop(
       assert(lp->flushed);
       assert(lp->solved);
 
-      SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, lp) );
+      if( SCIPlpIsRelax(lp) )
+      {
+         SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, lp) );
+      }
 
       /* update node estimate */
       SCIP_CALL( updateEstimate(set, stat, tree, lp, branchcand) );
@@ -2432,7 +2435,7 @@ SCIP_RETCODE solveNodeLP(
                checklprows, &stored) );
 #endif    
          /* if the solution was accepted, the root node can be cut off by bounding */
-         if( stored && SCIPprobAllColsInLP(transprob, set, lp) )
+         if( stored && SCIPprobAllColsInLP(transprob, set, lp) && SCIPlpIsRelax(lp) )
          {
             SCIPdebugMessage("root node initial LP feasible --> cut off root node, stop solution process\n");
             SCIP_CALL( SCIPnodeUpdateLowerboundLP(SCIPtreeGetFocusNode(tree), set, stat, lp) );

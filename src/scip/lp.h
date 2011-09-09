@@ -1002,13 +1002,15 @@ void SCIPlpSetIsRelax(
    SCIP_Bool             isrelax             /**< is the current lp a relaxation? */
    );
 
-/** returns whether the current lp is a relaxation of the current problem and its optimal objective value is a local lower bound */
+/** returns whether the current LP is a relaxation of the problem for which it has been solved and its 
+ *  solution value a valid local lower bound? 
+ */
 extern
 SCIP_Bool SCIPlpIsRelax(
    SCIP_LP*              lp                  /**< LP data */
    );
 
-/** sets whether the root lp is a relaxation of the problem and its optimal objective value is a global lower bound */
+/** sets whether the root LP is a relaxation of the problem and its optimal objective value is a global lower bound */
 extern
 void SCIPlpSetRootLPIsRelax(
    SCIP_LP*              lp,                 /**< LP data */

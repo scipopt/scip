@@ -12565,7 +12565,7 @@ SCIP_LPSOLSTAT SCIPlpGetSolstat(
    return (lp->flushed ? lp->lpsolstat : SCIP_LPSOLSTAT_NOTSOLVED);
 }
 
-/** sets whether the current lp is a relaxation of the current problem and its optimal objective value is a local lower bound */
+/** sets whether the current LP is a relaxation of the current problem and its optimal objective value is a local lower bound */
 void SCIPlpSetIsRelax(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_Bool             isrelax             /**< is the current lp a relaxation? */
@@ -12576,7 +12576,9 @@ void SCIPlpSetIsRelax(
    lp->isrelax = isrelax;
 }
 
-/** returns whether the current lp is a relaxation of the current problem and its optimal objective value is a local lower bound */
+/** returns whether the current LP is a relaxation of the problem for which it has been solved and its 
+ *  solution value a valid local lower bound? 
+ */
 SCIP_Bool SCIPlpIsRelax(
    SCIP_LP*              lp                  /**< LP data */
    )
