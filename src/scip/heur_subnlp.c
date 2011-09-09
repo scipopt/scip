@@ -1733,8 +1733,7 @@ SCIP_RETCODE SCIPresolveSolHeurSubNlp(
       }
    }
 
-   /* if there is already a solution, add an objective cutoff in subSCIP
-    * @todo may add objective value of sol + epsilon as cutoff */
+   /* if there is already a solution, add an objective cutoff in subSCIP */
    cutoff = SCIPgetSolOrigObj(scip, sol);
    if( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE )
    {
@@ -1746,6 +1745,7 @@ SCIP_RETCODE SCIPresolveSolHeurSubNlp(
    }
    cutoff = SCIPtransformObj(scip, cutoff);
    SCIPdebugMessage("set objective limit %g\n", cutoff);
+   SCIP_CALL( SCIPsetObjlimit(heurdata->subscip, cutoff) );
 
    /* solve the subNLP and try to add solution to SCIP */
    SCIP_CALL( solveSubNLP(scip, heur, &result, sol, itercontingent, timelimit, NULL, FALSE, sol) );
