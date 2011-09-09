@@ -44,6 +44,7 @@
 #include "scip/cons_quadratic.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_signedpower.h"
+#include "scip/cons_and.h"
 #include "scip/pub_misc.h"
 
 #define READER_NAME             "pipreader"
@@ -2411,7 +2412,7 @@ void printRowNl(
 
          case SCIP_EXPR_PRODUCT:
          {
-            (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g ", exprtreecoefs[e]);
+            (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g", exprtreecoefs[e]);
             appendLine(scip, file, linebuffer, &linecnt, buffer);
 
             for( c = 0; c < nchildren; ++c )
@@ -2420,7 +2421,7 @@ void printRowNl(
                if( linecnt == 0 )
                   appendLine(scip, file, linebuffer, &linecnt, " ");
 
-               (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[c])]));
+               (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, " %s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[c])]));
                (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, varname);
 
                appendLine(scip, file, linebuffer, &linecnt, buffer);
@@ -2938,7 +2939,6 @@ void checkConsnames(
 }
 
 /** writes problem to file
- * @todo add writing cons_and
  * @todo add writing cons_pseudoboolean
  */
 SCIP_RETCODE SCIPwritePip(
@@ -2980,6 +2980,8 @@ SCIP_RETCODE SCIPwritePip(
    int nConsNonlinear;
    SCIP_CONS** consSignedpower;
    int nConsSignedpower;
+   SCIP_CONS** consAnd;
+   int nConsAnd;
    char consname[PIP_MAX_NAMELEN];
 
    SCIP_VAR** aggregatedVars;
@@ -3003,6 +3005,7 @@ SCIP_RETCODE SCIPwritePip(
    nConsQuadratic = 0;
    nConsNonlinear = 0;
    nConsSignedpower = 0;
+   nConsAnd = 0;
 
    /* check if the variable names are not to long */
    checkVarnames(scip, vars, nvars);
@@ -3057,6 +3060,7 @@ SCIP_RETCODE SCIPwritePip(
    SCIP_CALL( SCIPallocBufferArray(scip, &consQuadratic, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consNonlinear, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consSignedpower, nconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &consAnd, nconss) );
 
    for (c = 0; c < nconss; ++c)
    {
@@ -3317,6 +3321,8 @@ SCIP_RETCODE SCIPwritePip(
                &z, &zcoef, 1, &exprtree, &treecoef, 1,
                SCIPgetLhsSignedpower(scip, cons), SCIPgetRhsSignedpower(scip, cons), transformed) );
 
+            SCIP_CALL( SCIPexprtreeFree(&exprtree) );
+
             consSignedpower[nConsSignedpower++] = cons;
          }
          else
@@ -3324,6 +3330,34 @@ SCIP_RETCODE SCIPwritePip(
             SCIPinfoMessage(scip, file, "\\ ");
             SCIP_CALL( SCIPprintCons(scip, cons, file) );
          }
+      }
+      else if( strcmp(conshdlrname, "and") == 0 )
+      {
+         SCIP_EXPR** children;
+         SCIP_VAR* resultant;
+         SCIP_Real minusone;
+         SCIP_Real one;
+
+         /* create expression for product of binaries */
+         SCIP_CALL( SCIPallocBufferArray(scip, &children, SCIPgetNVarsAnd(scip, cons)) );
+         for( v = 0; v < SCIPgetNVarsAnd(scip, cons); ++v )
+         {
+            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &children[v], SCIP_EXPR_VARIDX, v) );
+         }
+         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_PRODUCT, SCIPgetNVarsAnd(scip, cons), children) );
+         SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree, expr, SCIPgetNVarsAnd(scip, cons), 0, NULL) );
+         SCIP_CALL( SCIPexprtreeSetVars(exprtree, SCIPgetNVarsAnd(scip, cons), SCIPgetVarsAnd(scip, cons)) );
+
+         resultant = SCIPgetResultantAnd(scip, cons);
+         minusone = -1.0;
+
+         one = 1.0;
+         SCIP_CALL( printNonlinearCons(scip, file, consname, &resultant, &minusone, 1, &exprtree, &one, 1, 0.0, 0.0, transformed) );
+
+         SCIPexprtreeFree(&exprtree);
+         SCIPfreeBufferArray(scip, &children);
+
+         consAnd[nConsAnd++] = cons;
       }
       else
       {
@@ -3375,6 +3409,19 @@ SCIP_RETCODE SCIPwritePip(
       spvars[0] = SCIPgetNonlinearVarSignedpower(scip, cons);
       spvars[1] = SCIPgetLinearVarSignedpower(scip, cons);
       SCIP_CALL( collectAggregatedVars(scip, 2, spvars, &nAggregatedVars, &aggregatedVars, &varAggregated) );
+   }
+
+   /* check for aggregated variables in and constraints and output aggregations as linear constraints */
+   for (c = 0; c < nConsAnd; ++c)
+   {
+      SCIP_VAR* resultant;
+
+      cons = consAnd[c];
+
+      SCIP_CALL( collectAggregatedVars(scip, SCIPgetNVarsAnd(scip, cons), SCIPgetVarsAnd(scip, cons), &nAggregatedVars, &aggregatedVars, &varAggregated) );
+
+      resultant = SCIPgetResultantAnd(scip, cons);
+      SCIP_CALL( collectAggregatedVars(scip, 1, &resultant, &nAggregatedVars, &aggregatedVars, &varAggregated) );
    }
 
    /* print aggregation constraints */
@@ -3491,6 +3538,7 @@ SCIP_RETCODE SCIPwritePip(
    SCIPfreeBufferArray(scip, &consQuadratic);
    SCIPfreeBufferArray(scip, &consNonlinear);
    SCIPfreeBufferArray(scip, &consSignedpower);
+   SCIPfreeBufferArray(scip, &consAnd);
 
    /* end of lp format */
    SCIPinfoMessage(scip, file, "%s\n", "End");
