@@ -17582,6 +17582,7 @@ SCIP_RETCODE SCIPstartDive(
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPstartDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   assert(SCIPnodeGetType(SCIPgetCurrentNode(scip)) == SCIP_NODETYPE_FOCUSNODE);
 
    if( SCIPlpDiving(scip->lp) )
    {
@@ -17595,11 +17596,12 @@ SCIP_RETCODE SCIPstartDive(
       return SCIP_INVALIDCALL;
    }
 
-   if( !SCIPtreeHasCurrentNodeLP(scip->tree) )
+   if( !SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
    {
-      SCIPerrorMessage("cannot start diving at a pseudo node\n");
+      SCIPerrorMessage("cannot start diving if LP has not been constructed\n");
       return SCIP_INVALIDCALL;
    }
+   assert(SCIPtreeHasCurrentNodeLP(scip->tree));
 
    SCIP_CALL( SCIPlpStartDive(scip->lp, scip->mem->probmem, scip->set) );
 
@@ -17624,8 +17626,9 @@ SCIP_RETCODE SCIPendDive(
          scip->transprob, scip->transprob->vars, scip->transprob->nvars) );
 
    /* the lower bound may have changed slightly due to LP resolve in SCIPlpEndDive() */
-   if( !scip->lp->resolvelperror && scip->tree->focusnode != NULL )
+   if( !scip->lp->resolvelperror && scip->tree->focusnode != NULL && SCIPlpIsRelax(scip->lp) )
    {
+      assert(SCIPtreeIsFocusNodeLPConstructed(scip->tree));
       SCIP_CALL( SCIPnodeUpdateLowerboundLP(scip->tree->focusnode, scip->set, scip->stat, scip->lp) );
    }
    /* reset the probably changed LP's cutoff bound */
