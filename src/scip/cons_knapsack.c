@@ -1210,6 +1210,15 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       for( d = currminweight; d < intweight && d < intcap; ++d )
          optvalues[IDX(j,d)] = optvalues[IDX(j-1,d)];
 
+      /* if we found a new smallest weight we need to initialize some entries in our optvalues array to avoid reading an
+       * uninitialized value later on
+       */
+      if( intweight < currminweight )
+      {
+         for( d = intweight; d < currminweight; ++d )
+            optvalues[IDX(j-1,d)] = 0.0;
+      }
+
       /* update corresponding row */
       for( d = intweight; d < intcap; ++d )
       {
