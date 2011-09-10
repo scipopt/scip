@@ -2129,7 +2129,7 @@ SCIP_RETCODE checkAltLPInfeasible(
    {
       /* check estimated condition number of basis matrix */
       SCIP_CALL( SCIPlpiGetRealSolQuality(lp, SCIP_LPSOLQUALITY_ESTIMCONDITION, &condition) );
-      if ( condition != SCIP_INVALID && condition > maxcondition )
+      if ( condition != SCIP_INVALID && condition > maxcondition )  /*lint !e777*/
       {
          SCIPdebugMessage("estim. condition number of basis matrix (%e) exceeds maximal allowance (%e).\n", condition, maxcondition);
 
@@ -2137,7 +2137,7 @@ SCIP_RETCODE checkAltLPInfeasible(
 
          return SCIP_OKAY;
       }
-      else if ( condition != SCIP_INVALID )
+      else if ( condition != SCIP_INVALID )  /*lint !e777*/
       {
          SCIPdebugMessage("estim. condition number of basis matrix (%e) is below maximal allowance (%e).\n", condition, maxcondition);
       }
@@ -2457,7 +2457,7 @@ SCIP_RETCODE consdataCreate(
    const char*           consname,           /**< name of constraint (or NULL) */
    SCIP_CONSDATA**       consdata,           /**< pointer to linear constraint data */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */   
-   SCIP_VAR*             binvar,             /**< binary variable */
+   SCIP_VAR*             binvar,             /**< binary variable (or NULL) */
    SCIP_VAR*             slackvar,           /**< slack variable */
    SCIP_CONS*            lincons,            /**< linear constraint (or NULL) */
    SCIP_Bool             linconsactive,      /**< whether the linear constraint is active */
@@ -2466,6 +2466,7 @@ SCIP_RETCODE consdataCreate(
 {
    assert( scip != NULL );
    assert( consdata != NULL );
+   assert( slackvar != NULL );
 
    /* create constraint data */
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
@@ -2482,9 +2483,7 @@ SCIP_RETCODE consdataCreate(
       SCIP_VAR* var;
 
       /* handle binary variable */
-      if ( binvar == NULL )
-         (*consdata)->binvar = NULL;
-      else
+      if ( binvar != NULL )
       {
          SCIP_CALL( SCIPgetTransformedVar(scip, binvar, &var) );
          assert( var != NULL );
@@ -2509,21 +2508,18 @@ SCIP_RETCODE consdataCreate(
       }
 
       /* handle slack variable */
-      if ( slackvar != NULL )
+      SCIP_CALL( SCIPgetTransformedVar(scip, slackvar, &var) );
+      assert( var != NULL );
+      (*consdata)->slackvar = var;
+
+      /* catch bound change events on slack variable and adjust nFixedNonzero */
+      if ( linconsactive )
       {
-         SCIP_CALL( SCIPgetTransformedVar(scip, slackvar, &var) );
-         assert( var != NULL );
-         (*consdata)->slackvar = var;
-
-         /* catch bound change events on slack variable and adjust nFixedNonzero */
-         if ( linconsactive )
-         {
-            SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)*consdata, NULL) );
-
-            /* if slack variable is fixed to be nonzero */
-            if ( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var)) )
-               ++((*consdata)->nFixedNonzero);
-         }
+         SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)*consdata, NULL) );
+         
+         /* if slack variable is fixed to be nonzero */
+         if ( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var)) )
+            ++((*consdata)->nFixedNonzero);
       }
 
       /* add corresponding column to alternative LP if the constraint is new */
@@ -2538,7 +2534,7 @@ SCIP_RETCODE consdataCreate(
          SCIP_CALL( addAltLPConstraint(scip, conshdlr, lincons, var, 1.0, &(*consdata)->colIndex) );
          SCIPdebugMessage("Colum index for <%s>: %d\n", consname, (*consdata)->colIndex);
       }
-      
+
 #ifdef SCIP_DEBUG
       if ( (*consdata)->nFixedNonzero > 0 )
       {
@@ -4607,7 +4603,7 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
       assert( targetslackvar != NULL );
 
       SCIP_CALL( SCIPcreateConsIndicatorLinCons(scip, cons, consname, targetbinvar, targetlincons, targetslackvar,
-            initial, separate, enforce, check, propagate, local, dynamic, modifiable, stickingatnode) );
+            initial, separate, enforce, check, propagate, local, dynamic, modifiable, stickingatnode) );  /*lint !e644*/
    }
 
    if ( !(*valid) )
@@ -5125,7 +5121,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorLinCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   SCIP_VAR*             binvar,             /**< binary indicator variable */
+   SCIP_VAR*             binvar,             /**< binary indicator variable (or NULL) */
    SCIP_CONS*            lincons,            /**< linear constraint */
    SCIP_VAR*             slackvar,           /**< slack variable */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? Usually set to TRUE. */
