@@ -15,8 +15,6 @@
 
 #@file    Makefile
 #@brief   Makefile for C example project featuring a linear ordering solver
-#@author  Thorsten Koch
-#@author  Tobias Achterberg
 #@author  Marc Pfetsch
 
 
@@ -26,14 +24,11 @@
 
 SCIPDIR         =       ../..
 
-
 #-----------------------------------------------------------------------------
 # include default project Makefile from SCIP
 #-----------------------------------------------------------------------------
+
 include $(SCIPDIR)/make/make.project
-
-
-
 
 #-----------------------------------------------------------------------------
 # Main Program
@@ -48,7 +43,6 @@ MAIN		=	$(MAINNAME).$(BASE).$(LPS)$(EXEEXTENSION)
 MAINFILE	=	$(BINDIR)/$(MAIN)
 MAINSHORTLINK	=	$(BINDIR)/$(MAINNAME)
 MAINOBJFILES	=	$(addprefix $(OBJDIR)/,$(MAINOBJ))
-
 
 #-----------------------------------------------------------------------------
 # Rules
@@ -88,10 +82,23 @@ $(BINDIR):
 .PHONY: clean
 clean:
 ifneq ($(OBJDIR),)
-		-rm -f $(OBJDIR)/*.o
-		-rmdir $(OBJDIR)
+		@-(rm -f $(OBJDIR)/*.o && rmdir $(OBJDIR));
+		@echo "-> remove main objective files"
 endif
-		-rm -f $(MAINFILE)
+		@-rm -f $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
+		@echo "-> remove binary"
+
+.PHONY: test
+test:           $(MAINFILE)
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.awk);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/getlastprob.awk);
+		cd check; \
+		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS);
+
+.PHONY: tags
+tags:
+		rm -f TAGS; ctags -e src/*.c src/*.h $(SCIPDIR)/src/scip/*.c $(SCIPDIR)/src/scip/*.h;
 
 .PHONY: depend
 depend:		$(SCIPDIR)
@@ -101,6 +108,8 @@ depend:		$(SCIPDIR)
 
 -include	$(MAINDEP)
 
+
+# main target
 $(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINOBJFILES)
 		@echo "-> linking $@"
 ifeq ($(VERBOSE),true)
@@ -117,6 +126,8 @@ else
 		$(LDFLAGS) $(LINKCXX_o)$@
 endif
 
+
+# target for generating random instances
 genRandomLOPInstance: $(BINDIR)/genRandomLOPInstance
 $(BINDIR)/genRandomLOPInstance: $(BINDIR) $(OBJDIR) $(OBJDIR)/genRandomLOPInstance.o
 		@echo "-> linking $@"
