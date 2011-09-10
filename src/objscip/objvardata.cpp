@@ -145,7 +145,7 @@ SCIP_DECL_VARCOPY(varCopyObj)
    else
    {
       assert(*result == SCIP_DIDNOTRUN);
-      *targetdata = NULL;
+      *targetdata = 0;
    }
    
    return SCIP_OKAY;
