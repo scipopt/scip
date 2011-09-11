@@ -60,7 +60,8 @@
  */
 
 /** number types */
-enum FznNumberType {
+enum FznNumberType 
+{
    FZN_BOOL, 
    FZN_INT, 
    FZN_FLOAT
@@ -68,7 +69,8 @@ enum FznNumberType {
 typedef enum FznNumberType FZNNUMBERTYPE;
 
 /** Expression type in FlatZinc File */
-enum FznExpType {
+enum FznExpType 
+{
    FZN_EXP_NONE,
    FZN_EXP_UNSIGNED,
    FZN_EXP_SIGNED

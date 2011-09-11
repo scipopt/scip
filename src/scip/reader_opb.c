@@ -74,8 +74,6 @@
 /* Our parser should also be lax by handling variable names and it's possible to read doubles instead of integer and 
  * possible some more :). */
 
-
-
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <stdlib.h>
@@ -120,39 +118,46 @@
 #define OPB_INIT_COEFSSIZE     8192
 
 /** Section in OPB File */
-enum OpbExpType {
-   OPB_EXP_NONE, OPB_EXP_UNSIGNED, OPB_EXP_SIGNED
+enum OpbExpType 
+{
+   OPB_EXP_NONE,
+   OPB_EXP_UNSIGNED,
+   OPB_EXP_SIGNED
 };
 typedef enum OpbExpType OPBEXPTYPE;
 
-enum OpbSense {
-   OPB_SENSE_NOTHING, OPB_SENSE_LE, OPB_SENSE_GE, OPB_SENSE_EQ
+enum OpbSense 
+{
+   OPB_SENSE_NOTHING,
+   OPB_SENSE_LE,
+   OPB_SENSE_GE,
+   OPB_SENSE_EQ
 };
 typedef enum OpbSense OPBSENSE;
 
 /** OPB reading data */
 struct OpbInput
 {
-   SCIP_FILE*           file;
-   char                 linebuf[OPB_MAX_LINELEN+1];
-   char*                token;
-   char*                tokenbuf;
-   char*                pushedtokens[OPB_MAX_PUSHEDTOKENS];
-   int                  npushedtokens;
-   int                  linenumber;
-   int                  linepos;
-   int                  bufpos;
-   SCIP_OBJSENSE        objsense;
-   SCIP_Bool            comment;
-   SCIP_Bool            endline;
-   SCIP_Bool            eof;
-   SCIP_Bool            haserror;
-   int                  nproblemcoeffs;
-   SCIP_Bool            wbo;
-   SCIP_Real            topcost;
-   int                  nindvars;
+   SCIP_FILE*            file;
+   char                  linebuf[OPB_MAX_LINELEN+1];
+   char*                 token;
+   char*                 tokenbuf;
+   char*                 pushedtokens[OPB_MAX_PUSHEDTOKENS];
+   int                   npushedtokens;
+   int                   linenumber;
+   int                   linepos;
+   int                   bufpos;
+   SCIP_OBJSENSE         objsense;
+   SCIP_Bool             comment;
+   SCIP_Bool             endline;
+   SCIP_Bool             eof;
+   SCIP_Bool             haserror;
+   int                   nproblemcoeffs;
+   SCIP_Bool             wbo;
+   SCIP_Real             topcost;
+   int                   nindvars;
 #if GENCONSNAMES == TRUE
-   int                  consnumber;
+   int                   consnumber;
 #endif
 };
 
@@ -200,7 +205,7 @@ void syntaxError(
 /** returns whether a syntax error was detected */
 static
 SCIP_Bool hasError(
-   OPBINPUT*              opbinput           /**< OPB reading data */
+   OPBINPUT*             opbinput            /**< OPB reading data */
    )
 {
    assert(opbinput != NULL);
@@ -273,7 +278,7 @@ SCIP_Bool isValueChar(
  */
 static
 SCIP_Bool getNextLine(
-   OPBINPUT*              opbinput           /**< OPB reading data */
+   OPBINPUT*             opbinput            /**< OPB reading data */
    )
 {
    int i;
@@ -386,7 +391,7 @@ void swapPointers(
 /** reads the next token from the input file into the token buffer; returns whether a token was read */
 static
 SCIP_Bool getNextToken(
-   OPBINPUT*              opbinput           /**< OPB reading data */
+   OPBINPUT*             opbinput            /**< OPB reading data */
    )
 {
    SCIP_Bool hasdot;
@@ -491,7 +496,7 @@ SCIP_Bool getNextToken(
 /** puts the current token on the token stack, such that it is read at the next call to getNextToken() */
 static
 void pushToken(
-   OPBINPUT*              opbinput           /**< OPB reading data */
+   OPBINPUT*             opbinput            /**< OPB reading data */
    )
 {
    assert(opbinput != NULL);
@@ -504,7 +509,7 @@ void pushToken(
 /** puts the buffered token on the token stack, such that it is read at the next call to getNextToken() */
 static
 void pushBufferToken(
-   OPBINPUT*              opbinput           /**< OPB reading data */
+   OPBINPUT*             opbinput            /**< OPB reading data */
    )
 {
    assert(opbinput != NULL);
@@ -517,7 +522,7 @@ void pushBufferToken(
 /** swaps the current token with the token buffer */
 static
 void swapTokenBuffer(
-   OPBINPUT*              opbinput           /**< OPB reading data */
+   OPBINPUT*             opbinput            /**< OPB reading data */
    )
 {
    assert(opbinput != NULL);
@@ -528,7 +533,7 @@ void swapTokenBuffer(
 /** checks whether the current token is a section identifier, and if yes, switches to the corresponding section */
 static
 SCIP_Bool isEndLine(
-   OPBINPUT*              opbinput           /**< OPB reading data */
+   OPBINPUT*             opbinput            /**< OPB reading data */
    )
 {
    assert(opbinput != NULL);
@@ -601,8 +606,8 @@ SCIP_Bool isValue(
 /** returns whether the current token is an equation sense */
 static
 SCIP_Bool isSense(
-   OPBINPUT*              opbinput,          /**< OPB reading data */
-   OPBSENSE*              sense              /**< pointer to store the equation sense, or NULL */
+   OPBINPUT*             opbinput,           /**< OPB reading data */
+   OPBSENSE*             sense               /**< pointer to store the equation sense, or NULL */
    )
 {
    assert(opbinput != NULL);
@@ -3569,7 +3574,7 @@ SCIP_RETCODE writeOpb(
    SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
    SCIP_OBJSENSE         objsense,           /**< objective sense */
    SCIP_Real             objscale,           /**< scalar applied to objective function; external objective value is
-                                                extobj = objsense * objscale * (intobj + objoffset) */
+                                              *   extobj = objsense * objscale * (intobj + objoffset) */
    SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
    SCIP_VAR**            vars,               /**< array with active (binary) variables */
    int                   nvars,              /**< number of mutable variables in the problem */
@@ -3703,7 +3708,7 @@ SCIP_RETCODE SCIPwriteOpb(
    SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
    SCIP_OBJSENSE         objsense,           /**< objective sense */
    SCIP_Real             objscale,           /**< scalar applied to objective function; external objective value is
-                                                extobj = objsense * objscale * (intobj + objoffset) */
+                                              *   extobj = objsense * objscale * (intobj + objoffset) */
    SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
    SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
    int                   nvars,              /**< number of mutable variables in the problem */
