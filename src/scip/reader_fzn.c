@@ -20,8 +20,6 @@
  * @author Stefan Heinz
  *
  * @todo Test for uniqueness of variable and constraint names (after cutting down).
- * @todo remove pushBufferToken() staff since it is not used in this reader
- * @todo remove swapTokenBuffer() staff since it is not used in this reader
  * @todo Support more general constraint types
  */
 
@@ -3452,8 +3450,8 @@ SCIP_RETCODE parseConstraint(
       token = SCIPstrtok(NULL, "_", &nexttoken);
    }
 
-   assert(token == NULL || tokens[0] != NULL);
-   for( i = 1; i < ntokens; ++i )
+   assert(token == NULL || tokens[0] != NULL); /*lint !e771*/
+   for( i = 0; i < ntokens; ++i )
    {
       SCIPdebugPrintf("%s ", tokens[i]);
    }
@@ -4720,7 +4718,7 @@ SCIP_DECL_READERREAD(readerReadFzn)
 
    for( i = 0; i < FZN_MAX_PUSHEDTOKENS; ++i )
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &(fzninput.pushedtokens[i]), FZN_BUFFERLEN) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &(fzninput.pushedtokens[i]), FZN_BUFFERLEN) ); /*lint !e866*/
    }
 
    fzninput.npushedtokens = 0;
