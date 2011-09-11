@@ -1116,6 +1116,20 @@ SCIP_RETCODE SCIPgetVarCopy(
    uselocalconsmap = (consmap == NULL);
    *success = TRUE;
 
+   /* if the target SCIP is already in solving stage we currently are not copying the variable!
+    * this has to be done because we cannot simply add variables to SCIP during solving and thereby enlarge the search
+    * space. 
+    * unlike column generation we cannot assume here that the variable could be implicitly set to zero in all prior
+    * computations
+    */
+   if( SCIPgetStage(targetscip) > SCIP_STAGE_PROBLEM )
+   {
+      *success = FALSE;
+      *targetvar = NULL;
+
+      return SCIP_OKAY;
+   }
+
    if( uselocalvarmap )
    {
       /* create the variable mapping hash map */
@@ -1129,22 +1143,6 @@ SCIP_RETCODE SCIPgetVarCopy(
       *targetvar = (SCIP_VAR*) SCIPhashmapGetImage(localvarmap, sourcevar);
       if( *targetvar != NULL )
          return SCIP_OKAY;
-   }
-
-   /* if the target SCIP is already in solving stage and the target variable is not in the hash map, abort!
-    * this has to be done because we cannot simply add variables to SCIP during solving and thereby enlarge the search space.
-    * unlike column generation we cannot assume here that the variable could be implicitly set to zero in all prior computations 
-    */
-   if( SCIPgetStage(targetscip) > SCIP_STAGE_PROBLEM )
-   {
-      *success = FALSE;
-      *targetvar = NULL;
-
-      /* free local hash map if necessary */
-      if( uselocalvarmap )
-         SCIPhashmapFree(&localvarmap);
-
-      return SCIP_OKAY;
    }
 
    if( uselocalconsmap )
