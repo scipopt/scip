@@ -4604,8 +4604,8 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
    if ( *valid )
    {
       assert( targetlincons != NULL );
-      assert( targetbinvar != NULL );
-      assert( targetslackvar != NULL );
+      assert( targetbinvar != NULL );    /*lint !e644*/
+      assert( targetslackvar != NULL );  /*lint !e644*/
 
       SCIP_CALL( SCIPcreateConsIndicatorLinCons(scip, cons, consname, targetbinvar, targetlincons, targetslackvar,
             initial, separate, enforce, check, propagate, local, dynamic, modifiable, stickingatnode) );  /*lint !e644*/
