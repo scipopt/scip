@@ -3420,7 +3420,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    SCIP_CALL( checkConsnames(scip, conss, nconss, transformed, &maxnamelen, &consnames, &error) );
    if( error )
    {
-      /* todo call writing with generic names */
+      /* call writing with generic names */
       if( transformed )
       {
          SCIPwarningMessage("write transformed problem with generic variable and constraint names\n");
