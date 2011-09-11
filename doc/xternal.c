@@ -473,9 +473,9 @@
  *
  * If you want to download the SCIP standard distribution, we recommend to go to the <a
  * href="http://zibopt.zib.de/download.shtml">ZIBopt download section</a>, download the latest release (version 2.0.1 as
- * of this writing), inflate the tarball (e.g., with "tar xzf ziboptsuite-<version>.tgz"), and follow the instructions
+ * of this writing), inflate the tarball (e.g., with "tar xzf ziboptsuite-[version].tgz"), and follow the instructions
  * in the INSTALL file. The instance stein27, which will serve as an example in this tutorial, can be found under
- * ziboptsuite-<version>/scip-<version>/check/instances/MIP/stein27.mps.
+ * ziboptsuite-[version]/scip-[version]/check/instances/MIP/stein27.mps.
  *
  * If you want to download a precompiled binary, go to the <a href="http://scip.zib.de/download.shtml">SCIP download
  * section</a> and download an appropriate binary for your operating system. To follow this tutorial, we recommend to download the instances 
@@ -4762,6 +4762,8 @@
  * One can use SCIPvarGetUbAtIndex() or SCIPvarGetLbAtIndex() to detect the bounds before or after
  * the propagation that should be investigated. Then the bounds that were involved should be passed
  * to SCIP via SCIPaddConflictLb() and SCIPaddConflictUb().
+ *
+ * Details and (more) examples are given in Sections @ref CONSRESPROP and @ref PROPRESPROP.
  *
  * @section Example
  *
