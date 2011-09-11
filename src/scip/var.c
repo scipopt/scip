@@ -170,8 +170,8 @@ SCIP_RETCODE domAddHole(
 }
 
 /** merges overlapping holes into single holes, computes and moves lower and upper bound, respectively */
-/**@todo: the domMerge() method is currently called if a lower or an upper bound locally or globally changed; this could
- *        be more efficient if perform this merge with knowledge if it was a lower or an upper bound which tricker this
+/**@todo  the domMerge() method is currently called if a lower or an upper bound locally or globally changed; this could
+ *        be more efficient if performed with the knowledge if it was a lower or an upper bound which triggered this
  *        merge */
 static
 void domMerge(
