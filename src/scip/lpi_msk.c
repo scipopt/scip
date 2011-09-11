@@ -3911,28 +3911,28 @@ SCIP_RETCODE SCIPlpiGetIntpar(
 
    switch (type)
    {
-   case SCIP_LPPAR_FROMSCRATCH:               /**< solver should start from scratch at next call? */
+   case SCIP_LPPAR_FROMSCRATCH:               /* solver should start from scratch at next call? */
       MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_SIM_HOTSTART, ival) );
       *ival = (*ival == MSK_SIM_HOTSTART_NONE); 
       break;
-   case SCIP_LPPAR_FASTMIP:                   /**< fast mip setting of LP solver */
+   case SCIP_LPPAR_FASTMIP:                   /* fast mip setting of LP solver */
       return  SCIP_PARAMETERUNKNOWN;
-   case SCIP_LPPAR_SCALING:                   /**< should LP solver use scaling? */
+   case SCIP_LPPAR_SCALING:                   /* should LP solver use scaling? */
       MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_SIM_SCALING, ival) );
       *ival = (*ival != MSK_SCALING_NONE);
       break;
-   case SCIP_LPPAR_PRESOLVING:                /**< should LP solver use presolving? */
+   case SCIP_LPPAR_PRESOLVING:                /* should LP solver use presolving? */
       MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_PRESOLVE_USE, ival) );
       *ival = (*ival != MSK_PRESOLVE_MODE_OFF); 
       break;
-   case SCIP_LPPAR_PRICING:                   /**< pricing strategy */
+   case SCIP_LPPAR_PRICING:                   /* pricing strategy */
       *ival = lpi->pricing; 
       break;
-   case SCIP_LPPAR_LPINFO:                    /**< should LP solver output information to the screen? */
+   case SCIP_LPPAR_LPINFO:                    /* should LP solver output information to the screen? */
       MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_LOG, ival) );
       *ival = (*ival == MSK_ON); 
       break;
-   case SCIP_LPPAR_LPITLIM:                   /**< LP iteration limit */
+   case SCIP_LPPAR_LPITLIM:                   /* LP iteration limit */
       MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_SIM_MAX_ITERATIONS, ival) );
       break;
    default:
@@ -3982,18 +3982,18 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    
    switch (type)
    {
-   case SCIP_LPPAR_FROMSCRATCH:               /**< solver should start from scratch at next call? */
+   case SCIP_LPPAR_FROMSCRATCH:               /* solver should start from scratch at next call? */
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_HOTSTART,
             ival ? MSK_SIM_HOTSTART_NONE : MSK_SIM_HOTSTART_STATUS_KEYS ) );
       break;
-   case SCIP_LPPAR_FASTMIP:                   /**< fast mip setting of LP solver */
+   case SCIP_LPPAR_FASTMIP:                   /* fast mip setting of LP solver */
       return SCIP_PARAMETERUNKNOWN;
-   case SCIP_LPPAR_SCALING:                   /**< should LP solver use scaling? */
+   case SCIP_LPPAR_SCALING:                   /* should LP solver use scaling? */
       scaling = (ival ? MSK_SCALING_FREE : MSK_SCALING_NONE);
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SCALING, scaling) );
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_INTPNT_SCALING, scaling) );
       break;
-   case SCIP_LPPAR_PRESOLVING:                /**< should LP solver use presolving? */
+   case SCIP_LPPAR_PRESOLVING:                /* should LP solver use presolving? */
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_PRESOLVE_USE, 
             ival ? MSK_PRESOLVE_MODE_FREE : MSK_PRESOLVE_MODE_OFF) );
 
@@ -4004,7 +4004,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       }
 #endif
       break;
-   case SCIP_LPPAR_PRICING:                   /**< pricing strategy */
+   case SCIP_LPPAR_PRICING:                   /* pricing strategy */
       assert(ival >= 0 && ival <= SCIP_PRICING_DEVEX);
       lpi->pricing = (SCIP_PRICING)ival;
 
@@ -4054,14 +4054,14 @@ SCIP_RETCODE SCIPlpiSetIntpar(
 #endif
       break;
    case SCIP_LPPAR_LPINFO:                    
-      /**< should LP solver output information to the screen? */
+      /* should LP solver output information to the screen? */
 #if FORCE_MOSEK_LOG
       SCIPdebugMessage("Ignoring log setting!\n");
 #else
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG, ival ? MSK_ON : MSK_OFF) );
 #endif
       break;
-   case SCIP_LPPAR_LPITLIM:                   /**< LP iteration limit */
+   case SCIP_LPPAR_LPITLIM:                   /* LP iteration limit */
 #if DEBUG_PARAM_SETTING
       if( ival )
       {
@@ -4094,26 +4094,26 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    switch (type)
    {
 #if SCIP_CONTROLS_TOLERANCES
-   case SCIP_LPPAR_FEASTOL:                   /**< feasibility tolerance for primal variables and slacks */
+   case SCIP_LPPAR_FEASTOL:                   /* feasibility tolerance for primal variables and slacks */
       MOSEK_CALL( MSK_getdouparam(lpi->task, MSK_DPAR_BASIS_TOL_X, dval) );
       break;
-   case SCIP_LPPAR_DUALFEASTOL:               /**< feasibility tolerance for dual variables and reduced costs */
+   case SCIP_LPPAR_DUALFEASTOL:               /* feasibility tolerance for dual variables and reduced costs */
       MOSEK_CALL( MSK_getdouparam(lpi->task, MSK_DPAR_BASIS_TOL_S, dval) );
       break;
-   case SCIP_LPPAR_BARRIERCONVTOL:            /**< convergence tolerance used in barrier algorithm */
+   case SCIP_LPPAR_BARRIERCONVTOL:            /* convergence tolerance used in barrier algorithm */
       MOSEK_CALL( MSK_getdouparam(lpi->task, MSK_DPAR_INTPNT_TOL_REL_GAP, dval) );
       break;
 #endif
-   case SCIP_LPPAR_LOBJLIM:                   /**< lower objective limit */
+   case SCIP_LPPAR_LOBJLIM:                   /* lower objective limit */
       MOSEK_CALL( MSK_getdouparam(lpi->task, MSK_DPAR_LOWER_OBJ_CUT, dval) );
       break;
-   case SCIP_LPPAR_UOBJLIM:                   /**< upper objective limit */
+   case SCIP_LPPAR_UOBJLIM:                   /* upper objective limit */
       MOSEK_CALL( MSK_getdouparam(lpi->task, MSK_DPAR_UPPER_OBJ_CUT, dval) );
       break;
-   case SCIP_LPPAR_LPTILIM:                   /**< LP time limit */
+   case SCIP_LPPAR_LPTILIM:                   /* LP time limit */
       MOSEK_CALL( MSK_getdouparam(lpi->task, MSK_DPAR_OPTIMIZER_MAX_TIME, dval) );
       break;
-   case SCIP_LPPAR_MARKOWITZ:                 /**< Markowitz tolerance */
+   case SCIP_LPPAR_MARKOWITZ:                 /* Markowitz tolerance */
    default:
       return SCIP_PARAMETERUNKNOWN;
    } /*lint !e788*/ 
@@ -4139,36 +4139,35 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch (type)
    {
 #if SCIP_CONTROLS_TOLERANCES
-   case SCIP_LPPAR_FEASTOL:                   /**< feasibility tolerance for primal variables and slacks */
+   case SCIP_LPPAR_FEASTOL:                   /* feasibility tolerance for primal variables and slacks */
       if (dval < 1e-9) 
          dval = 1e-9;
       
       MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_BASIS_TOL_X, dval) );
       break;
-   case SCIP_LPPAR_DUALFEASTOL:               /**< feasibility tolerance for dual variables and reduced costs */
+   case SCIP_LPPAR_DUALFEASTOL:               /* feasibility tolerance for dual variables and reduced costs */
       if (dval < 1e-9) 
          return SCIP_PARAMETERUNKNOWN;
       //         dval = 1e-9;
 
       MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_BASIS_TOL_S, dval) );
       break;
-   case SCIP_LPPAR_BARRIERCONVTOL:            /**< convergence tolerance used in barrier algorithm */
+   case SCIP_LPPAR_BARRIERCONVTOL:            /* convergence tolerance used in barrier algorithm */
       MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_INTPNT_TOL_REL_GAP, dval) );
       break;
 #endif
-   case SCIP_LPPAR_LOBJLIM:                   /**< lower objective limit */
+   case SCIP_LPPAR_LOBJLIM:                   /* lower objective limit */
       MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_LOWER_OBJ_CUT, dval) );
       break;
-   case SCIP_LPPAR_UOBJLIM:                   /**< upper objective limit */
+   case SCIP_LPPAR_UOBJLIM:                   /* upper objective limit */
       MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_UPPER_OBJ_CUT, dval) );
       break;
-   case SCIP_LPPAR_LPTILIM:                   /**< LP time limit */
+   case SCIP_LPPAR_LPTILIM:                   /* LP time limit */
       MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_OPTIMIZER_MAX_TIME, dval) );
       break;
-   case SCIP_LPPAR_MARKOWITZ:                 /**< Markowitz tolerance */
+   case SCIP_LPPAR_MARKOWITZ:                 /* Markowitz tolerance */
    default:
       return SCIP_PARAMETERUNKNOWN;
-
    }  /*lint !e788*/
    
    return SCIP_OKAY;
