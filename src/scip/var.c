@@ -16,6 +16,13 @@
 /**@file   var.c
  * @brief  methods for problem variables
  * @author Tobias Achterberg
+ * @author Timo Berthold
+ * @author Gerald Gamrath
+ * @author Stefan Heinz
+ * @author Marc Pfetsch
+ * @author Michael Winkler
+ * @author Kati Wolter
+ * @author Stefan Vigerske
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -9501,11 +9508,7 @@ SCIP_DECL_HASHKEYVAL(SCIPvarGetHashkeyVal)
    return (unsigned int) SCIPvarGetIndex((SCIP_VAR*) key);
 }
 
-/** gets corresponding active, fixed, or multi-aggregated problem variable of a variable
- *
- * @todo Handle multi-aggregated variables which consist of at most one variable -- which may be caused by 
- *    SCIPvarFlattenAggregationGraph()
- */
+/** gets corresponding active, fixed, or multi-aggregated problem variable of a variable */
 SCIP_VAR* SCIPvarGetProbvar(
    SCIP_VAR*             var                 /**< problem variable */
    )
@@ -9527,7 +9530,12 @@ SCIP_VAR* SCIPvarGetProbvar(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_FIXED:
+      return var;
+
    case SCIP_VARSTATUS_MULTAGGR:
+      /* handle multi-aggregated variables depending on one variable only (possibly caused by SCIPvarFlattenAggregationGraph()) */
+      if ( var->data.multaggr.nvars == 1 )
+         return SCIPvarGetProbvar(var->data.multaggr.vars[0]);
       return var;
 
    case SCIP_VARSTATUS_AGGREGATED:
@@ -9545,9 +9553,6 @@ SCIP_VAR* SCIPvarGetProbvar(
 
 /** gets corresponding active, fixed, or multi-aggregated problem variables of binary variables and updates the given
  *  negation status of each variable
- *
- *  @todo Handle multi-aggregated variables which consist of at most one variable -- which may be caused by 
- *     SCIPvarFlattenAggregationGraph()
  */
 SCIP_RETCODE SCIPvarsGetProbvarBinary(
    SCIP_VAR***           vars,               /**< pointer to binary problem variables */
@@ -9588,7 +9593,20 @@ SCIP_RETCODE SCIPvarsGetProbvarBinary(
          case SCIP_VARSTATUS_COLUMN:
          case SCIP_VARSTATUS_FIXED:
          case SCIP_VARSTATUS_MULTAGGR:
-            resolved = TRUE;
+            /* handle multi-aggregated variables depending on one variable only (possibly caused by SCIPvarFlattenAggregationGraph()) */
+            if ( (*var)->data.multaggr.nvars == 1 )
+            {
+               assert( (*var)->data.multaggr.vars != NULL );
+               assert( (*var)->data.multaggr.scalars != NULL );
+               assert( SCIPvarIsBinary((*var)->data.multaggr.vars[0]) );
+               assert( EPSEQ((*var)->data.multaggr.constant, 0.0, 1e-06) || EPSEQ((*var)->data.multaggr.constant, 1.0, 1e-06) ); /*lint !e835*/
+               assert( EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06) || EPSEQ((*var)->data.multaggr.scalars[0], -1.0, 1e-06));
+               assert( EPSEQ((*var)->data.multaggr.constant, 0.0, 1e-06) == EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06)); /*lint !e835*/
+               *negated = (*negated != ((*var)->data.multaggr.scalars[0] < 0.0));
+               *var = (*var)->data.multaggr.vars[0];
+            }
+            else
+               resolved = TRUE;
             break;
             
          case SCIP_VARSTATUS_AGGREGATED:  /* x = a'*x' + c'  =>  a*x + c == (a*a')*x' + (a*c' + c) */
@@ -9625,9 +9643,6 @@ SCIP_RETCODE SCIPvarsGetProbvarBinary(
 /** gets corresponding active, fixed, or multi-aggregated problem variable of a binary variable and updates the given
  *  negation status (this means you have to assign a value to SCIP_Bool negated before calling this method, usually
  *  FALSE is used)
- *
- *  @todo Handle multi-aggregated variables which consist of at most one variable -- which may be caused by 
- *    SCIPvarFlattenAggregationGraph()
  */
 SCIP_RETCODE SCIPvarGetProbvarBinary(
    SCIP_VAR**            var,                /**< pointer to binary problem variable */
@@ -9653,7 +9668,22 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_COLUMN:
       case SCIP_VARSTATUS_FIXED:
+         return SCIP_OKAY;
+
       case SCIP_VARSTATUS_MULTAGGR:
+         /* handle multi-aggregated variables depending on one variable only (possibly caused by SCIPvarFlattenAggregationGraph()) */
+         if ( (*var)->data.multaggr.nvars == 1 )
+         {
+            assert( (*var)->data.multaggr.vars != NULL );
+            assert( (*var)->data.multaggr.scalars != NULL );
+            assert( SCIPvarIsBinary((*var)->data.multaggr.vars[0]) );
+            assert( EPSEQ((*var)->data.multaggr.constant, 0.0, 1e-06) || EPSEQ((*var)->data.multaggr.constant, 1.0, 1e-06) ); /*lint !e835*/
+            assert( EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06) || EPSEQ((*var)->data.multaggr.scalars[0], -1.0, 1e-06));
+            assert( EPSEQ((*var)->data.multaggr.constant, 0.0, 1e-06) == EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06)); /*lint !e835*/
+            *negated = (*negated != ((*var)->data.multaggr.scalars[0] < 0.0));
+            *var = (*var)->data.multaggr.vars[0];
+            break;
+         }
          return SCIP_OKAY;
 
       case SCIP_VARSTATUS_AGGREGATED:  /* x = a'*x' + c'  =>  a*x + c == (a*a')*x' + (a*c' + c) */
@@ -9684,9 +9714,6 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
 
 /** transforms given variable, boundtype and bound to the corresponding active, fixed, or multi-aggregated variable
  *  values
- *
- *  @todo Handle multi-aggregated variables which consist of at most one variable -- which may be caused by 
- *    SCIPvarFlattenAggregationGraph()
  */
 SCIP_RETCODE SCIPvarGetProbvarBound(
    SCIP_VAR**            var,                /**< pointer to problem variable */
@@ -9716,9 +9743,30 @@ SCIP_RETCODE SCIPvarGetProbvarBound(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_FIXED:
-   case SCIP_VARSTATUS_MULTAGGR:
       break;
-      
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      /* handle multi-aggregated variables depending on one variable only (possibly caused by SCIPvarFlattenAggregationGraph()) */
+      if ( (*var)->data.multaggr.nvars == 1 )
+      {
+         assert( (*var)->data.multaggr.vars != NULL );
+         assert( (*var)->data.multaggr.scalars != NULL );
+         assert( (*var)->data.multaggr.scalars[0] != 0.0 );
+
+         (*bound) /= (*var)->data.multaggr.scalars[0];
+         (*bound) -= (*var)->data.multaggr.constant/(*var)->data.multaggr.scalars[0];
+         if ( (*var)->data.multaggr.scalars[0] < 0.0 )
+         {
+            if ( *boundtype == SCIP_BOUNDTYPE_LOWER )
+               *boundtype = SCIP_BOUNDTYPE_UPPER;
+            else
+               *boundtype = SCIP_BOUNDTYPE_LOWER;
+         }
+         *var = (*var)->data.multaggr.vars[0];
+         SCIP_CALL( SCIPvarGetProbvarBound(var, bound, boundtype) );
+      }
+      break;
+
    case SCIP_VARSTATUS_AGGREGATED:  /* x = a*y + c  ->  y = x/a - c/a */
       assert((*var)->data.aggregate.var != NULL);
       assert((*var)->data.aggregate.scalar != 0.0);
@@ -9759,9 +9807,6 @@ SCIP_RETCODE SCIPvarGetProbvarBound(
 
 /** transforms given variable and domain hole to the corresponding active, fixed, or multi-aggregated variable
  *  values
- *
- *  @todo Handle multi-aggregated variables which consist of at most one variable -- which may be caused by 
- *    SCIPvarFlattenAggregationGraph()
  */
 SCIP_RETCODE SCIPvarGetProbvarHole(
    SCIP_VAR**            var,                /**< pointer to problem variable */
@@ -9842,13 +9887,9 @@ SCIP_RETCODE SCIPvarGetProbvarHole(
    return SCIP_OKAY;
 }
 
-/** transforms given variable, scalar and constant to the corresponding active, fixed, or multi-aggregated variable,
- *  scalar and constant;
- *  if the variable resolves to a fixed variable, "scalar" will be 0.0 and the value of the sum will be stored
- *  in "constant"
- *
- *  @todo Handle multi-aggregated variables which consist of at most one variable -- which may be caused by
- *         SCIPvarFlattenAggregationGraph()
+/** transforms given variable, scalar and constant to the corresponding active, fixed, or
+ *  multi-aggregated variable, scalar and constant; if the variable resolves to a fixed variable,
+ *  "scalar" will be 0.0 and the value of the sum will be stored in "constant"
  */
 SCIP_RETCODE SCIPvarGetProbvarSum(
    SCIP_VAR**            var,                /**< pointer to problem variable x in sum a*x + c */
@@ -9875,12 +9916,25 @@ SCIP_RETCODE SCIPvarGetProbvarSum(
 
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_COLUMN:
-      case SCIP_VARSTATUS_MULTAGGR:
          return SCIP_OKAY;
 
       case SCIP_VARSTATUS_FIXED:       /* x = c'          =>  a*x + c ==             (a*c' + c) */
          (*constant) += *scalar * (*var)->glbdom.lb;
          *scalar = 0.0;
+         return SCIP_OKAY;
+
+      case SCIP_VARSTATUS_MULTAGGR:
+         /* handle multi-aggregated variables depending on one variable only (possibly caused by SCIPvarFlattenAggregationGraph()) */
+         if ( (*var)->data.multaggr.nvars == 1 )
+         {
+            assert( (*var)->data.multaggr.vars != NULL );
+            assert( (*var)->data.multaggr.scalars != NULL );
+            assert( (*var)->data.multaggr.vars[0] != NULL );
+            (*constant) += *scalar * (*var)->data.multaggr.constant;
+            (*scalar) *= (*var)->data.multaggr.scalars[0];
+            *var = (*var)->data.multaggr.vars[0];
+            break;
+         }
          return SCIP_OKAY;
 
       case SCIP_VARSTATUS_AGGREGATED:  /* x = a'*x' + c'  =>  a*x + c == (a*a')*x' + (a*c' + c) */
@@ -9909,9 +9963,8 @@ SCIP_RETCODE SCIPvarGetProbvarSum(
    return SCIP_OKAY;
 }
 
-/** retransforms given variable, scalar and constant to the corresponding original variable, scalar and constant,
- *  if possible;
- *  if the retransformation is impossible, NULL is returned as variable
+/** retransforms given variable, scalar and constant to the corresponding original variable, scalar
+ *  and constant, if possible; if the retransformation is impossible, NULL is returned as variable
  */
 SCIP_RETCODE SCIPvarGetOrigvarSum(
    SCIP_VAR**            var,                /**< pointer to problem variable x in sum a*x + c */
