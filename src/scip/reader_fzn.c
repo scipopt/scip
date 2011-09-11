@@ -19,7 +19,6 @@
  * @author Timo Berthold
  * @author Stefan Heinz
  *
- * @todo Test for uniqueness of variable and constraint names (after cutting down).
  * @todo Support more general constraint types
  */
 
