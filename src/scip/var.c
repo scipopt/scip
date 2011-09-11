@@ -9592,6 +9592,8 @@ SCIP_RETCODE SCIPvarsGetProbvarBinary(
          case SCIP_VARSTATUS_LOOSE:
          case SCIP_VARSTATUS_COLUMN:
          case SCIP_VARSTATUS_FIXED:
+            resolved = TRUE;
+            break;
          case SCIP_VARSTATUS_MULTAGGR:
             /* handle multi-aggregated variables depending on one variable only (possibly caused by SCIPvarFlattenAggregationGraph()) */
             if ( (*var)->data.multaggr.nvars == 1 )
