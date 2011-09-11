@@ -20,8 +20,6 @@
  * @author Marc Pfetsch
  * @author Stefan Heinz
  * @author Stefan Vigerske
- *
- * @todo Test for uniqueness of variable names (after cutting down).
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -67,21 +65,21 @@
 
 /** Section in LP File */
 enum LpSection
-   {
-      LP_START, LP_OBJECTIVE, LP_CONSTRAINTS, LP_BOUNDS, LP_GENERALS, LP_BINARIES, LP_SEMICONTINUOUS, LP_SOS, LP_END
-   };
+{
+   LP_START, LP_OBJECTIVE, LP_CONSTRAINTS, LP_BOUNDS, LP_GENERALS, LP_BINARIES, LP_SEMICONTINUOUS, LP_SOS, LP_END
+};
 typedef enum LpSection LPSECTION;
 
 enum LpExpType
-   {
-      LP_EXP_NONE, LP_EXP_UNSIGNED, LP_EXP_SIGNED
-   };
+{
+   LP_EXP_NONE, LP_EXP_UNSIGNED, LP_EXP_SIGNED
+};
 typedef enum LpExpType LPEXPTYPE;
 
 enum LpSense
-   {
-      LP_SENSE_NOTHING, LP_SENSE_LE, LP_SENSE_GE, LP_SENSE_EQ
-   };
+{
+   LP_SENSE_NOTHING, LP_SENSE_LE, LP_SENSE_GE, LP_SENSE_EQ
+};
 typedef enum LpSense LPSENSE;
 
 /** LP reading data */
