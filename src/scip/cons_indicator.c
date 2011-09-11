@@ -3002,7 +3002,10 @@ SCIP_RETCODE enforceIndicators(
 }
 
 
-/** separate IIS-cuts via rounding */
+/** separate IIS-cuts via rounding 
+ *
+ *  @todo Check whether the cover produced at the end is a feasible solution.
+ */
 static
 SCIP_RETCODE separateIISRounding(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -3108,9 +3111,11 @@ SCIP_RETCODE separateIISRounding(
          ++rounds;
       }
 
-      SCIPdebugMessage("Produced cover of size %d with value %f\n", size, value);
+      /* Possibly check whether the cover is a feasible solution at this point: This only works if
+         all non-indicator variables are continuous. We would need to fix the indicator variables
+         and solve an LP. */
 
-      /* todo: check whether the cover is a feasible solution */
+      SCIPdebugMessage("Produced cover of size %d with value %f\n", size, value);
 
       /* reset bounds */
       SCIP_CALL( unfixAltLPVariables(scip, lp, nconss, conss, S) );
