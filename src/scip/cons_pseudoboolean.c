@@ -117,7 +117,7 @@ struct SCIP_ConsData
    unsigned int          changed:1;          /**< was constraint changed since last aggregation round in preprocessing? */
    unsigned int          normalized:1;       /**< is the constraint in normalized form? */
    unsigned int          upgradetried:1;     /**< was the constraint already tried to be upgraded? */
-   unsigned int          upgraded:1;         /**< is the constraint upgraded and will it be removed after preprocessing? */
+   //   unsigned int          upgraded:1;         /**< is the constraint upgraded and will it be removed after preprocessing? */
    unsigned int          merged:1;           /**< are the constraint's equal linear variables already merged? */
    unsigned int          cliquesadded:1;     /**< were the cliques of the constraint already extracted? */
 };
@@ -1920,6 +1920,11 @@ SCIP_RETCODE applyFixingsLinear(
 
             SCIP_CALL( delCoefLinear(scip, cons, v) );
             break;
+#else
+         case SCIP_VARSTATUS_MULTAGGR:
+            SCIPerrorMessage("binary variable should not be multi-aggregated\n");
+            SCIPABORT();
+            break;
 #endif
          case SCIP_VARSTATUS_NEGATED:
             SCIP_CALL( addCoefLinear(scip, cons, SCIPvarGetNegationVar(var), -val) );
@@ -2045,10 +2050,10 @@ SCIP_RETCODE applyFixingsNonLinear(
          if( fixedval > 0.5 )
          {
             if( !SCIPisInfinity(scip, -consdata->lhs) )
-               lhssubtrahend += val * fixedval;
+               lhssubtrahend += val;
             
             if( !SCIPisInfinity(scip, consdata->rhs) )
-               rhssubtrahend += val * fixedval;
+               rhssubtrahend += val;
 
             for( v = nvars - 1; v >= 0; --v )
             {
@@ -2156,10 +2161,10 @@ SCIP_RETCODE applyFixingsNonLinear(
             delterm = TRUE;
 
             if( !SCIPisInfinity(scip, -consdata->lhs) )
-               lhssubtrahend += val * 1;
+               lhssubtrahend += val;
          
             if( !SCIPisInfinity(scip, consdata->rhs) )
-               rhssubtrahend += val * 1;
+               rhssubtrahend += val;
          }
          
          /* if only one variable is left, convert the non-linear term into a linear part */
@@ -2196,6 +2201,33 @@ SCIP_RETCODE applyFixingsNonLinear(
       }
       else
          ++t;
+   }
+
+   /* update left hand side */
+   if( !SCIPisInfinity(scip, -consdata->lhs) )
+   {
+      if( SCIPisFeasEQ(scip, lhssubtrahend, consdata->lhs ) )
+      {
+         SCIP_CALL( chgLhs(scip, cons, 0.0) );
+      }
+      else
+      {
+         assert(!SCIPisInfinity(scip, consdata->lhs - lhssubtrahend));
+         SCIP_CALL( chgLhs(scip, cons, consdata->lhs - lhssubtrahend) );
+      }
+   }
+   /* update right hand side */
+   if( !SCIPisInfinity(scip, consdata->rhs) )
+   {
+      if( SCIPisFeasEQ(scip, rhssubtrahend, consdata->rhs ) )
+      {
+         SCIP_CALL( chgRhs(scip, cons, 0.0) );
+      }
+      else
+      {
+         assert(!SCIPisInfinity(scip, consdata->rhs - rhssubtrahend));
+         SCIP_CALL( chgRhs(scip, cons, consdata->rhs - rhssubtrahend) );
+      }
    }
 
 #ifndef NDEBUG
@@ -2381,6 +2413,8 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+
+   *result = SCIP_FEASIBLE;
 
    /* decompose all pseudo boolean constraints into a "linear" constraint and "and" constraints */
    if( conshdlrdata->decompose )
@@ -3464,7 +3498,6 @@ SCIP_RETCODE SCIPaddCoefPseudoboolean(
 
 
 /** adds nonlinear term to pseudo boolean constraint (if it is not zero) */
-extern
 SCIP_RETCODE SCIPaddTermPseudoboolean(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */

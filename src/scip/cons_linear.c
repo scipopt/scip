@@ -2717,6 +2717,7 @@ SCIP_RETCODE consdataSort(
          int*       perm;
 
          assert(lastbin == consdata->nbinvars);
+         assert(lastbin <= nvars);
 
          /* initialize absolute coefficients and the target permutation for binary variables */
          SCIP_CALL( SCIPallocBufferArray(scip, &absvals, lastbin) );
@@ -6910,7 +6911,6 @@ SCIP_RETCODE aggregateConstraints(
          /* setup best* variables that were not setup above because we are in the commonvarlindependent case */
          bestvarweight = diffidx0minus1weight + diffidx1minus0weight;
          bestnvars = consdata0->nvars + consdata1->nvars - 2*nvarscommon;
-         bestscalarsum = REALABS(a) + REALABS(b);
       }
 
       SCIPdebugMessage("aggregate linear constraints <%s> := %.15g*<%s> + %.15g*<%s>  ->  nvars: %d -> %d, weight: %d -> %d\n",
@@ -7456,9 +7456,9 @@ SCIP_RETCODE preprocessConstraintPairs(
       int diffidx1minus0weight;
       int v0;
       int v1;
-      
-      assert(cons0lhs == consdata0->lhs);
-      assert(cons0rhs == consdata0->rhs);
+
+      assert(cons0lhs == consdata0->lhs);  /*lint !e777*/
+      assert(cons0rhs == consdata0->rhs);  /*lint !e777*/
       assert(cons0upgraded == consdata0->upgraded);
 
       cons1 = conss[c];
@@ -10276,13 +10276,12 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLinear)
  * Quadratic constraint upgrading
  */
 
-
 #ifdef QUADCONSUPGD_PRIORITY
 /** upgrades quadratic constraints with only and at least one linear variables into a linear constraint
  */
 static
 SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
-{
+{  /*lint --e{715}*/
    assert(scip != NULL);
    assert(cons != NULL);
    assert(nupgdconss != NULL);
