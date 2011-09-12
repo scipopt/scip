@@ -130,6 +130,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             assumeconvex;       /**< whether functions in inequalities should be assumed to be convex */
    int                   maxproprounds;      /**< limit on number of propagation rounds for a single constraint within one round of SCIP propagation */
    SCIP_Bool             reformulate;        /**< whether to reformulate expression graph */
+   int                   maxexpansionexponent;/**< maximal exponent where still expanding non-monomial polynomials in expression simplification */
 
    SCIP_HEUR*            subnlpheur;         /**< a pointer to the subNLP heuristic, if available */
    SCIP_HEUR*            trysolheur;         /**< a pointer to the TRYSOL heuristic, if available */
@@ -6382,7 +6383,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreNonlinear)
    }
 
    /* if undefined expressions in exprgraph, then declare problem as infeasible */
-   SCIP_CALL( SCIPexprgraphSimplify(conshdlrdata->exprgraph, SCIPepsilon(scip), &havechange, &domainerror) );
+   SCIP_CALL( SCIPexprgraphSimplify(conshdlrdata->exprgraph, SCIPepsilon(scip), conshdlrdata->maxexpansionexponent, &havechange, &domainerror) );
    SCIPdebugMessage("expression graph simplifier found %schange, domain error = %d\n", havechange ? "" : "no ", domainerror);
    havegraphchange |= havechange;
 
@@ -7238,7 +7239,7 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
       havegraphchange = TRUE;
    }
 
-   SCIP_CALL( SCIPexprgraphSimplify(conshdlrdata->exprgraph, SCIPepsilon(scip), &havechange, &domainerror) );
+   SCIP_CALL( SCIPexprgraphSimplify(conshdlrdata->exprgraph, SCIPepsilon(scip), conshdlrdata->maxexpansionexponent, &havechange, &domainerror) );
    SCIPdebugMessage("expression graph simplifier found %schange, domain error = %d\n", havechange ? "" : "no ", domainerror);
    havegraphchange |= havechange;
 
@@ -7891,6 +7892,10 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/reformulate",
          "whether to reformulate expression graph",
          &conshdlrdata->reformulate, FALSE, TRUE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxexpansionexponent",
+         "maximal exponent where still expanding non-monomial polynomials in expression simplification",
+         &conshdlrdata->maxexpansionexponent, TRUE, 10, 1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_boundchange", "signals a bound change to a nonlinear constraint",
          NULL, NULL, NULL, NULL, NULL, NULL, NULL, processLinearVarEvent, NULL) );

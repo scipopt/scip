@@ -32,8 +32,6 @@
 #include "scip/pub_misc.h"
 
 #define SCIP_EXPRESSION_MAXCHILDEST 20       /**< estimate on maximal number of children */
-/* @todo check whether > 2 is really good */
-#define MAXEXPANSIONEXPONENT        10       /**< maximal exponent for which we still expand polynomials */
 
 /** sign of a value (-1 or +1)
  * 0.0 has sign +1
@@ -1149,6 +1147,7 @@ SCIP_RETCODE polynomialdataExpandMonomialFactor(
    int                   factorpos,          /**< position of factor in monomial to expand */
    SCIP_EXPRDATA_POLYNOMIAL* factorpolynomial,/**< polynomial that should replace factor */
    int*                  childmap,           /**< map of child indices in factorpolynomial to children of polynomial */
+   int                   maxexpansionexponent,/**< maximal exponent for which polynomials (with > 1 summands) are expanded */
    SCIP_Bool*            success             /**< buffer to store whether expansion has been done */
    )
 {
@@ -1274,7 +1273,7 @@ SCIP_RETCODE polynomialdataExpandMonomialFactor(
       return SCIP_OKAY;
    }
 
-   if( monomial->exponents[factorpos] > MAXEXPANSIONEXPONENT )
+   if( monomial->exponents[factorpos] > maxexpansionexponent )
    {
       /* if exponent is too large, skip expansion */
       *success = FALSE;
@@ -4256,7 +4255,8 @@ static
 SCIP_RETCODE exprsimplifyFlattenPolynomials(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_EXPR*            expr,               /**< expression */
-   SCIP_Real             eps                 /**< threshold, under which values are treat as 0 */
+   SCIP_Real             eps,                /**< threshold, under which values are treat as 0 */
+   int                   maxexpansionexponent/**< maximal exponent for which we still expand non-monomial polynomials */
    )
 {
    int i;
@@ -4265,7 +4265,7 @@ SCIP_RETCODE exprsimplifyFlattenPolynomials(
 
    for( i = 0; i < expr->nchildren; ++i )
    {
-      SCIP_CALL( exprsimplifyFlattenPolynomials(blkmem, expr->children[i], eps) );
+      SCIP_CALL( exprsimplifyFlattenPolynomials(blkmem, expr->children[i], eps, maxexpansionexponent) );
    }
 
    switch( SCIPexprGetOperator(expr) )
@@ -4457,7 +4457,7 @@ SCIP_RETCODE exprsimplifyFlattenPolynomials(
                   }
                   else
                   {
-                     SCIP_CALL( polynomialdataExpandMonomialFactor(blkmem, polynomialdata, j, factorpos, (SCIP_EXPRDATA_POLYNOMIAL*)expr->children[i]->data.data, childmap, &success) );
+                     SCIP_CALL( polynomialdataExpandMonomialFactor(blkmem, polynomialdata, j, factorpos, (SCIP_EXPRDATA_POLYNOMIAL*)expr->children[i]->data.data, childmap, maxexpansionexponent, &success) );
                   }
 
                   if( !success )
@@ -6320,6 +6320,7 @@ SCIP_RETCODE SCIPexprSimplify(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_EXPR*            expr,               /**< expression */
    SCIP_Real             eps,                /**< threshold, under which positive values are treat as 0 */
+   int                   maxexpansionexponent,/**< maximal exponent for which we still expand non-monomial polynomials */
    int                   nvars,              /**< number of variables in expression */
    int*                  nlinvars,           /**< buffer to store number of linear variables in linear part, or NULL if linear part should not be separated */
    int*                  linidxs,            /**< array to store indices of variables in expression tree which belong to linear part, or NULL */
@@ -6340,7 +6341,7 @@ SCIP_RETCODE SCIPexprSimplify(
    SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL, NULL) );
    SCIPdebugPrintf("\n");
 
-   SCIP_CALL( exprsimplifyFlattenPolynomials(blkmem, expr, eps) );
+   SCIP_CALL( exprsimplifyFlattenPolynomials(blkmem, expr, eps, maxexpansionexponent) );
 
    SCIPdebugMessage("polynomials flattened: ");
    SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL, NULL) );
@@ -7148,6 +7149,7 @@ void SCIPexprtreeGetVarsUsage(
 SCIP_RETCODE SCIPexprtreeSimplify(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    SCIP_Real             eps,                /**< threshold, under which positive values are treat as 0 */
+   int                   maxexpansionexponent,/**< maximal exponent for which we still expand non-monomial polynomials */
    int*                  nlinvars,           /**< buffer to store number of linear variables in linear part, or NULL if linear part should not be separated */
    int*                  linidxs,            /**< array to store indices of variables in expression tree which belong to linear part, or NULL */
    SCIP_Real*            lincoefs            /**< array to store coefficients of linear part, or NULL */
@@ -7172,7 +7174,7 @@ SCIP_RETCODE SCIPexprtreeSimplify(
 #endif
 
    /* we should be careful about declaring numbers close to zero as zero, so take eps^2 as tolerance */
-   SCIP_CALL( SCIPexprSimplify(tree->blkmem, tree->root, eps*eps, tree->nvars, nlinvars, linidxs, lincoefs) );
+   SCIP_CALL( SCIPexprSimplify(tree->blkmem, tree->root, eps*eps, maxexpansionexponent, tree->nvars, nlinvars, linidxs, lincoefs) );
 
 #ifndef NDEBUG
    SCIP_CALL( SCIPexprtreeEval(tree, testx, &testval_after) );
@@ -9588,6 +9590,7 @@ SCIP_RETCODE exprgraphNodeSimplify(
    SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
    SCIP_EXPRGRAPHNODE*   node,               /**< expression graph node */
    SCIP_Real             eps,                /**< threshold, under which positive values are treat as 0 */
+   int                   maxexpansionexponent,/**< maximal exponent for which we still expand non-monomial polynomials */
    SCIP_Bool*            havechange          /**< flag to set if the node has been changed */
 )
 {
@@ -9762,7 +9765,7 @@ SCIP_RETCODE exprgraphNodeSimplify(
             }
             else
             {
-               SCIP_CALL( polynomialdataExpandMonomialFactor(blkmem, polynomialdata, j, factorpos, (SCIP_EXPRDATA_POLYNOMIAL*)node->children[i]->data.data, childmap, &success) );
+               SCIP_CALL( polynomialdataExpandMonomialFactor(blkmem, polynomialdata, j, factorpos, (SCIP_EXPRDATA_POLYNOMIAL*)node->children[i]->data.data, childmap, maxexpansionexponent, &success) );
             }
 
             if( !success )
@@ -13715,6 +13718,7 @@ SCIP_RETCODE SCIPexprgraphCheckCurvature(
 SCIP_RETCODE SCIPexprgraphSimplify(
    SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
    SCIP_Real             eps,                /**< threshold, under which positive values are treat as 0 */
+   int                   maxexpansionexponent,/**< maximal exponent for which we still expand non-monomial polynomials */
    SCIP_Bool*            havechange,         /**< buffer to indicate whether the graph has been modified */
    SCIP_Bool*            domainerror         /**< buffer to indicate whether a domain error has been encountered, i.e., some expressions turned into NaN */
 )
@@ -13802,7 +13806,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
             allsimplified = FALSE;  /* looks like we found a node that has not been simplified */
 
             /* we should be careful about declaring numbers close to zero as zero, so take eps^2 as tolerance */
-            SCIP_CALL( exprgraphNodeSimplify(exprgraph, node, eps*eps, &havechangenode) );
+            SCIP_CALL( exprgraphNodeSimplify(exprgraph, node, eps*eps, maxexpansionexponent, &havechangenode) );
             assert(node->simplified == TRUE);
             *havechange |= havechangenode;
          }

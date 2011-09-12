@@ -501,6 +501,7 @@ SCIP_RETCODE SCIPexprSimplify(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_EXPR*            expr,               /**< expression */
    SCIP_Real             eps,                /**< threshold, under which positive values are treat as 0 */
+   int                   maxexpansionexponent,/**< maximal exponent for which we still expand non-monomial polynomials */
    int                   nvars,              /**< number of variables in expression */
    int*                  nlinvars,           /**< buffer to store number of linear variables in linear part, or NULL if linear part should not be separated */
    int*                  linidxs,            /**< array to store indices of variables in expression tree which belong to linear part, or NULL */
@@ -695,6 +696,7 @@ extern
 SCIP_RETCODE SCIPexprtreeSimplify(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    SCIP_Real             eps,                /**< threshold, under which positive values are treat as 0 */
+   int                   maxexpansionexponent,/**< maximal exponent for which we still expand non-monomial polynomials */
    int*                  nlinvars,           /**< buffer to store number of linear variables in linear part, or NULL if linear part should not be separated */
    int*                  linidxs,            /**< array to store indices of variables in expression tree which belong to linear part, or NULL */
    SCIP_Real*            lincoefs            /**< array to store coefficients of linear part, or NULL */
@@ -1366,6 +1368,7 @@ extern
 SCIP_RETCODE SCIPexprgraphSimplify(
    SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
    SCIP_Real             eps,                /**< threshold, under which positive values are treat as 0 */
+   int                   maxexpansionexponent,/**< maximal exponent for which we still expand non-monomial polynomials */
    SCIP_Bool*            havechange,         /**< buffer to indicate whether the graph has been modified */
    SCIP_Bool*            domainerror         /**< buffer to indicate whether a domain error has been encountered, i.e., some expressions turned into NaN */
 );
