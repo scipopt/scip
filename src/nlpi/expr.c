@@ -289,7 +289,7 @@ SCIP_EXPRCURV SCIPexprcurvPower(
       /* base^(exponent-2) is negative, if base < 0.0 and exponent is odd */
       sign = exponent * (exponent - 1.0);
       assert(basebounds.inf >= 0.0 || expisint);
-      if( basebounds.inf < 0.0 && ((int)exponent)%2 == 1 )
+      if( basebounds.inf < 0.0 && ((int)exponent)%2 != 0 )
          sign *= -1.0;
       assert(sign != 0.0);
 
