@@ -11537,6 +11537,7 @@ SCIP_RETCODE SCIPexprgraphNodeSplitOffLinear(
          if( coefs[(*node)->nchildren] != 0.0 )
          {
             *constant = coefs[(*node)->nchildren];
+            coefs[(*node)->nchildren] = 0.0;
             havechange = TRUE;
          }
 
@@ -14582,12 +14583,12 @@ SCIP_RETCODE SCIPexprgraphGetSumTrees(
             exprtreecoefs[i] = nodecoefs[i];
          }
 
-         /* add constant to first summand, if nonzero */
+         /* add constant to first summand, if nonzero; need to divide by coef of this exprtree */
          if( nodecoefs[node->nchildren] != 0.0 )
          {
             SCIP_EXPR* constexpr;
 
-            SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, &constexpr, SCIP_EXPR_CONST, nodecoefs[node->nchildren]) );
+            SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, &constexpr, SCIP_EXPR_CONST, nodecoefs[node->nchildren] / exprtreecoefs[0]) );
             SCIP_CALL( SCIPexprtreeAddExpr(exprtrees[0], constexpr, FALSE) );
          }
 
@@ -14674,13 +14675,13 @@ SCIP_RETCODE SCIPexprgraphGetSumTrees(
             ++*nexprtrees;
          }
 
-         /* add constant to first summand, if nonzero */
+         /* add constant to first summand, if nonzero; need to divide by coef of this exprtree */
          if( nodedata->constant != 0.0 )
          {
             SCIP_EXPR* constexpr;
 
             assert(*nexprtrees > 0);
-            SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, &constexpr, SCIP_EXPR_CONST, nodedata->constant) );
+            SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, &constexpr, SCIP_EXPR_CONST, nodedata->constant / exprtreecoefs[0]) );
             SCIP_CALL( SCIPexprtreeAddExpr(exprtrees[0], constexpr, FALSE) );
          }
 
@@ -14767,9 +14768,11 @@ SCIP_RETCODE SCIPexprgraphGetSumTrees(
                   childidxs[f] = f;
                }
 
-               /* create monomial and polynomial expression for this monomial */
+               /* create monomial and polynomial expression for this monomial
+                * add also constant here, but need to divide by monomial coefficient, since we set the exprtreecoefs to monomial coef
+                */
                SCIP_CALL( SCIPexprCreateMonomial(exprgraph->blkmem, &monomial, 1.0, monomials[i]->nfactors, childidxs, monomials[i]->exponents) );
-               SCIP_CALL( SCIPexprCreatePolynomial(exprgraph->blkmem, &expr, monomials[i]->nfactors, exprs, 1, &monomial, constant, FALSE) );
+               SCIP_CALL( SCIPexprCreatePolynomial(exprgraph->blkmem, &expr, monomials[i]->nfactors, exprs, 1, &monomial, constant / monomials[i]->coef, FALSE) );
                constant = 0.0;
 
                BMSfreeBlockMemoryArray(exprgraph->blkmem, &exprs,     monomials[i]->nfactors);
@@ -14797,13 +14800,13 @@ SCIP_RETCODE SCIPexprgraphGetSumTrees(
             ++*nexprtrees;
          }
 
-         /* add constant to first summand, if still nonzero */
+         /* add constant to first summand, if still nonzero; need to divide by coefficient of the this exprtree */
          if( constant != 0.0 )
          {
             SCIP_EXPR* constexpr;
 
             assert(*nexprtrees > 0);
-            SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, &constexpr, SCIP_EXPR_CONST, nodedata->constant) );
+            SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, &constexpr, SCIP_EXPR_CONST, constant / exprtreecoefs[0]) );
             SCIP_CALL( SCIPexprtreeAddExpr(exprtrees[0], constexpr, FALSE) );
          }
 
