@@ -117,7 +117,9 @@ struct SCIP_ConsData
    unsigned int          changed:1;          /**< was constraint changed since last aggregation round in preprocessing? */
    unsigned int          normalized:1;       /**< is the constraint in normalized form? */
    unsigned int          upgradetried:1;     /**< was the constraint already tried to be upgraded? */
-   //   unsigned int          upgraded:1;         /**< is the constraint upgraded and will it be removed after preprocessing? */
+#if 0
+   unsigned int          upgraded:1;         /**< is the constraint upgraded and will it be removed after preprocessing? */
+#endif
    unsigned int          merged:1;           /**< are the constraint's equal linear variables already merged? */
    unsigned int          cliquesadded:1;     /**< were the cliques of the constraint already extracted? */
 };
