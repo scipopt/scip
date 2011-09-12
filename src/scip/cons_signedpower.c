@@ -33,6 +33,7 @@
 #include "scip/intervalarith.h"
 #include "scip/heur_subnlp.h"
 #include "scip/heur_trysol.h"
+#include "scip/debug.h"
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "signedpower"
@@ -3583,6 +3584,24 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdSignedpower)
 
       ++*nupgdconss;
 
+      /* compute and set value of auxvar in debug solution */
+#ifdef SCIP_DEBUG_SOLUTION
+      {
+         SCIP_Real debugval;
+         SCIP_Real debugvarval;
+         int i;
+
+         debugval = 0.0;
+         for( i = 0; i < SCIPgetNLinearVarsQuadratic(scip, cons); ++i )
+         {
+            SCIP_CALL( SCIPdebugGetSolVal(scip, SCIPgetLinearVarsQuadratic(scip, cons)[i], &debugvarval) );
+            debugval += SCIPgetCoefsLinearVarsQuadratic(scip, cons)[i] * debugvarval;
+         }
+
+         SCIP_CALL( SCIPdebugAddSolVal(auxvar, debugval) );
+      }
+#endif
+
       SCIP_CALL( SCIPreleaseVar(scip, &auxvar) );
    }
    else
@@ -3885,6 +3904,9 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdSignedpower)
       x = auxvar;
       xoffset = 0.0;
 
+      /* compute and set value of auxvar in debug solution, if debugging is enabled */
+      SCIP_CALL( SCIPdebugAddSolVal(auxvar, SCIPexprgraphGetNodeVal(child)) );
+
       SCIP_CALL( SCIPreleaseVar(scip, &auxvar) );
    }
 
@@ -3915,6 +3937,24 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdSignedpower)
       zcoef = 1.0;
 
       ++*nupgdconss;
+
+      /* compute and set value of auxvar in debug solution */
+#ifdef SCIP_DEBUG_SOLUTION
+      {
+         SCIP_Real debugval;
+         SCIP_Real debugvarval;
+         int i;
+
+         debugval = 0.0;
+         for( i = 0; i < SCIPgetNLinearVarsNonlinear(scip, cons); ++i )
+         {
+            SCIP_CALL( SCIPdebugGetSolVal(scip, SCIPgetLinearVarsNonlinear(scip, cons)[i], &debugvarval) );
+            debugval += SCIPgetLinearCoefsNonlinear(scip, cons)[i] * debugvarval;
+         }
+
+         SCIP_CALL( SCIPdebugAddSolVal(auxvar, debugval) );
+      }
+#endif
 
       SCIP_CALL( SCIPreleaseVar(scip, &auxvar) );
    }
@@ -4157,6 +4197,8 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformSignedpower)
       x = auxvar;
       xoffset = 0.0;
 
+      SCIP_CALL( SCIPdebugAddSolVal(auxvar, SCIPexprgraphGetNodeVal(child)) );
+
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       SCIP_CALL( SCIPreleaseVar(scip, &auxvar) );
    }
@@ -4178,6 +4220,20 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformSignedpower)
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIPdebug( SCIPprintCons(scip, cons, NULL) );
       ++*naddcons;
+
+      /* compute value of z and reformnode and set in debug solution and expression graph, resp. */
+#ifdef SCIP_DEBUG_SOLUTION
+      {
+         SCIP_Real xval;
+         SCIP_Real zval;
+
+         SCIP_CALL( SCIPdebugGetSolVal(scip, x, &xval) );
+         zval = signpowcoef * SIGN(xval + xoffset) * pow(REALABS(xval + xoffset), exponent) + constant;
+
+         SCIP_CALL( SCIPdebugAddSolVal(z, zval) );
+         SCIPexprgraphSetVarNodeValue(*reformnode, zval);
+      }
+#endif
    }
    else
    {
@@ -4191,6 +4247,20 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformSignedpower)
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIPdebug( SCIPprintCons(scip, cons, NULL) );
       ++*naddcons;
+
+      /* compute value of z and reformnode and set in debug solution and expression graph, resp. */
+#ifdef SCIP_DEBUG_SOLUTION
+      {
+         SCIP_Real xval;
+         SCIP_Real zval;
+
+         SCIP_CALL( SCIPdebugGetSolVal(scip, x, &xval) );
+         zval = SIGN(xval + xoffset) * pow(REALABS(xval + xoffset), exponent);
+
+         SCIP_CALL( SCIPdebugAddSolVal(z, zval) );
+         SCIPexprgraphSetVarNodeValue(*reformnode, zval);
+      }
+#endif
 
       SCIP_CALL( SCIPexprgraphCreateNodeLinear(SCIPblkmem(scip), &linnode, 1, &signpowcoef, constant) );
       SCIP_CALL( SCIPexprgraphAddNode(exprgraph, linnode, -1, 1, reformnode) );

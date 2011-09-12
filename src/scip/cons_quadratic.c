@@ -44,6 +44,7 @@
 #include "scip/intervalarith.h"
 #include "scip/heur_subnlp.h"
 #include "scip/heur_trysol.h"
+#include "scip/debug.h"
 #include "nlpi/nlpi.h"
 #include "nlpi/nlpi_ipopt.h"
 
@@ -3128,6 +3129,15 @@ SCIP_RETCODE presolveTryAddAND(
       SCIP_CALL( SCIPcreateVar(scip, &auxvar, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, 
             TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, auxvar) );
+#ifdef SCIP_DEBUG_SOLUTION
+      {
+         SCIP_Real var0val;
+         SCIP_Real var1val;
+         SCIP_CALL( SCIPdebugGetSolVal(scip, vars[0], &var0val) );
+         SCIP_CALL( SCIPdebugGetSolVal(scip, vars[0], &var1val) );
+         SCIP_CALL( SCIPdebugAddSolVal(auxvar, var0val * var1val) );
+      }
+#endif
 
       /* create and constraint auxvar = x and y */
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%sAND%s", SCIPvarGetName(vars[0]), SCIPvarGetName(vars[1]));
@@ -3409,6 +3419,16 @@ SCIP_RETCODE presolveTryAddLinearReform(
                   TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(scip, auxvar) );
 
+#ifdef SCIP_DEBUG_SOLUTION
+            {
+               SCIP_Real var0val;
+               SCIP_Real var1val;
+               SCIP_CALL( SCIPdebugGetSolVal(scip, xvars[0], &var0val) );
+               SCIP_CALL( SCIPdebugGetSolVal(scip, y, &var1val) );
+               SCIP_CALL( SCIPdebugAddSolVal(auxvar, var0val * var1val) );
+            }
+#endif
+
             /* add constraint z = x and y */
             xvars[1] = y;
             (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%sAND%s", SCIPvarGetName(y), SCIPvarGetName(xvars[0]));
@@ -3483,6 +3503,32 @@ SCIP_RETCODE presolveTryAddLinearReform(
             SCIP_CALL( SCIPcreateVar(scip, &auxvar, name, MIN(0., SCIPintervalGetInf(xbndsone)), MAX(0., SCIPintervalGetSup(xbndsone)),
                   0.0, integral ? SCIP_VARTYPE_IMPLINT : SCIP_VARTYPE_CONTINUOUS, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(scip, auxvar) );
+
+            /* compute value of auxvar in debug solution */
+#ifdef SCIP_DEBUG_SOLUTION
+            {
+               SCIP_Real debugval;
+               SCIP_Real varval;
+
+               SCIP_CALL( SCIPdebugGetSolVal(scip, y, &varval) );
+               if( SCIPisZero(scip, varval) )
+               {
+                  SCIP_CALL( SCIPdebugAddSolVal(auxvar, 0.0) );
+               }
+               else
+               {
+                  assert(SCIPisEQ(scip, varval, 1.0));
+
+                  debugval = 0.0;
+                  for( k = 0; k < nxvars; ++k )
+                  {
+                     SCIP_CALL( SCIPdebugGetSolVal(scip, xvars[k], &varval) );
+                     debugval += xcoef[k] * varval;
+                  }
+                  SCIP_CALL( SCIPdebugAddSolVal(auxvar, debugval) );
+               }
+            }
+#endif
 
             /* add auxiliary constraints
              * it seems to be advantageous to make the varbound constraints initial and the linear constraints not initial
@@ -3963,7 +4009,9 @@ SCIP_RETCODE presolveDisaggregate(
 
    /* add auxiliary variables to auxiliary constraints
     * add aux vars and constraints to SCIP 
-    * add aux vars to this constraint */
+    * add aux vars to this constraint
+    * @todo compute debug solution values and set for auxvars
+    */
    SCIPdebugMessage("add %d constraints for disaggregation of quadratic constraint <%s>\n", ncomponents, SCIPconsGetName(cons));
    SCIP_CALL( consdataEnsureLinearVarsSize(scip, consdata, consdata->nlinvars + ncomponents) );
    for( comp = 0; comp < ncomponents; ++comp )

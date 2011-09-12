@@ -28,6 +28,7 @@
 #include "scip/heur_trysol.h"
 #include "scip/heur_subnlp.h"
 #include "nlpi/exprinterpret.h"
+#include "scip/debug.h"
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "nonlinear"
@@ -1851,6 +1852,22 @@ SCIP_RETCODE presolveUpgrade(
    if( conshdlrdata->nnlconsupgrades == 0 )
       return SCIP_OKAY;
 
+   /* set debug solution in expression graph and evaluate nodes, so reformulation methods can compute debug solution values for new auxiliary variables */
+#ifdef SCIP_DEBUG_SOLUTION
+   {
+      SCIP_Real* varvals;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &varvals, SCIPexprgraphGetNVars(conshdlrdata->exprgraph)) );
+
+      for( i = 0; i < SCIPexprgraphGetNVars(conshdlrdata->exprgraph); ++i )
+         SCIP_CALL( SCIPdebugGetSolVal(scip, (SCIP_VAR*)SCIPexprgraphGetVars(conshdlrdata->exprgraph)[i], &varvals[i]) );
+
+      SCIP_CALL( SCIPexprgraphEval(conshdlrdata->exprgraph, varvals) );
+
+      SCIPfreeBufferArray(scip, &varvals);
+   }
+#endif
+
    upgdconsssize = 2;
    SCIP_CALL( SCIPallocBufferArray(scip, &upgdconss, upgdconsssize) );
 
@@ -2093,6 +2110,11 @@ SCIP_RETCODE reformNode2Var(
       SCIP_VARTYPE_CONTINUOUS, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, auxvar) );
    SCIP_CALL( SCIPexprgraphAddVars(exprgraph, 1, (void**)&auxvar, &auxvarnode) );
+#ifdef SCIP_DEBUG_SOLUTION
+   /* store debug sol value of node as value for auxvar in debug solution and as value for auxvarnode */
+   SCIPexprgraphSetVarNodeValue(auxvarnode, SCIPexprgraphGetNodeVal(node));
+   SCIP_CALL( SCIPdebugAddSolVal(auxvar, SCIPexprgraphGetNodeVal(node)) );
+#endif
 
    if( donotmultaggr )
    {
@@ -2227,6 +2249,19 @@ SCIP_RETCODE reformMonomial(
       SCIP_CALL( SCIPaddVar(scip, auxvar) );
       SCIP_CALL( SCIPexprgraphAddVars(exprgraph, 1, (void**)&auxvar, resultnode) );
 
+#ifdef SCIP_DEBUG_SOLUTION
+      /* store debug sol value of node as value for auxvar in debug solution and as value for resultnode */
+      {
+         SCIP_Real debugval;
+         debugval = pow(SCIPexprgraphGetNodeVal(factors[0]), exponents[0]);
+         SCIPexprgraphSetVarNodeValue(*resultnode, debugval);
+         SCIP_CALL( SCIPdebugAddSolVal(auxvar, debugval) );
+      }
+#endif
+
+      /* increase naddcons before next call to reformMonomial, to avoid duplicate variable names, which is bad for debugging */
+      ++*naddcons;
+
       /* add reformulation for resultnode(=auxvar) * factor^(-exponent) = 1.0
        * if exponent != -1.0, then factor^(-exponent) should be moved into extra variable
        * finally one should get an EXPR_MUL node */
@@ -2242,8 +2277,6 @@ SCIP_RETCODE reformMonomial(
 
       SCIP_CALL( SCIPreleaseCons(scip, &auxcons) );
       SCIP_CALL( SCIPreleaseVar(scip, &auxvar) );
-
-      ++*naddcons;
 
       return SCIP_OKAY;
    }
@@ -2298,6 +2331,11 @@ SCIP_RETCODE reformMonomial(
             SCIP_VARTYPE_CONTINUOUS, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, auxvar) );
          SCIP_CALL( SCIPexprgraphAddVars(exprgraph, 1, (void**)&auxvar, resultnode) );
+
+#ifdef SCIP_DEBUG_SOLUTION
+         SCIPexprgraphSetVarNodeValue(*resultnode, SCIPexprgraphGetNodeVal(expnode));
+         SCIP_CALL( SCIPdebugAddSolVal(auxvar, SCIPexprgraphGetNodeVal(expnode)) );
+#endif
 
          /* add new constraint resultnode(=auxvar) = expnode */
          minusone = -1.0;
@@ -2387,6 +2425,11 @@ SCIP_RETCODE reformMonomial(
          SCIP_CALL( SCIPaddVar(scip, auxvar) );
          SCIP_CALL( SCIPexprgraphAddVars(exprgraph, 1, (void**)&auxvar, resultnode) );
 
+#ifdef SCIP_DEBUG_SOLUTION
+         SCIPexprgraphSetVarNodeValue(*resultnode, SCIPexprgraphGetNodeVal(productnode));
+         SCIP_CALL( SCIPdebugAddSolVal(auxvar, SCIPexprgraphGetNodeVal(productnode)) );
+#endif
+
          /* add new constraint resultnode(= auxvar) == left * right */
          minusone = -1.0;
          SCIP_CALL( SCIPcreateConsNonlinear2(scip, &auxcons, name, 1, &auxvar, &minusone, productnode, 0.0, 0.0, TRUE, TRUE, TRUE, TRUE, TRUE,
@@ -2455,6 +2498,22 @@ SCIP_RETCODE reformulate(
    /* make sure current variable bounds are variable nodes of exprgraph */
    SCIP_CALL( SCIPexprgraphPropagateVarBounds(exprgraph, INTERVALINFTY, FALSE, &domainerror) );
    assert(!domainerror); /* should have been found by domain propagation */
+
+   /* set debug solution in expression graph and evaluate nodes, so we can compute debug solution values for auxiliary variables */
+#ifdef SCIP_DEBUG_SOLUTION
+   {
+      SCIP_Real* varvals;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &varvals, SCIPexprgraphGetNVars(exprgraph)) );
+
+      for( i = 0; i < SCIPexprgraphGetNVars(exprgraph); ++i )
+         SCIP_CALL( SCIPdebugGetSolVal(scip, (SCIP_VAR*)SCIPexprgraphGetVars(exprgraph)[i], &varvals[i]) );
+
+      SCIP_CALL( SCIPexprgraphEval(exprgraph, varvals) );
+
+      SCIPfreeBufferArray(scip, &varvals);
+   }
+#endif
 
    for( d = 1; d < SCIPexprgraphGetDepth(exprgraph); ++d )
    {
@@ -2615,6 +2674,15 @@ SCIP_RETCODE reformulate(
                   SCIP_VARTYPE_CONTINUOUS, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
                SCIP_CALL( SCIPaddVar(scip, auxvar) );
                SCIP_CALL( SCIPexprgraphAddVars(exprgraph, 1, (void**)&auxvar, &auxvarnode) );
+
+#ifdef SCIP_DEBUG_SOLUTION
+               {
+                  SCIP_Real debugval;
+                  debugval = SCIPexprgraphGetNodeVal(children[0]) / SCIPexprgraphGetNodeVal(children[1]);
+                  SCIPexprgraphSetVarNodeValue(auxvarnode, debugval);
+                  SCIP_CALL( SCIPdebugAddSolVal(auxvar, debugval) );
+               }
+#endif
 
                /* add new constraint auxvar * child[1] - child[0] == 0 */
                auxchildren[0] = children[0];
@@ -3682,6 +3750,43 @@ SCIP_RETCODE addLinearization(
 
             grad[i] *= treecoef;
             constant -= grad[i] * x[i];
+
+            /* coefficients smaller than epsilon are rounded to 0.0 when added to row, this can be wrong if variable value is very large (bad numerics)
+             * in this case, set gradient to 0.0 here, but modify constant so that cut is still valid (if possible)
+             * i.e., estimate grad[i]*x >= grad[i] * bound(x) or grad[i]*x <= grad[i] * bound(x), depending on whether we compute an underestimator (convex) or an overestimator (concave)
+             * if required bound of x is not finite, then give up
+             */
+            if( grad[i] != 0.0 && SCIPisZero(scip, grad[i]) )
+            {
+               SCIP_VAR* var;
+               SCIP_Real xbnd;
+
+               var = SCIPexprtreeGetVars(exprtree)[i];
+               if( consdata->curvatures[i] & SCIP_EXPRCURV_CONVEX )
+               {
+                  xbnd = grad[i] > 0.0 ? SCIPvarGetLbGlobal(var) : SCIPvarGetUbGlobal(var);
+               }
+               else
+               {
+                  assert(consdata->curvatures[i] & SCIP_EXPRCURV_CONCAVE);
+                  xbnd = grad[i] > 0.0 ? SCIPvarGetUbGlobal(var) : SCIPvarGetLbGlobal(var);
+               }
+               if( !SCIPisInfinity(scip, REALABS(xbnd)) )
+               {
+                  SCIPdebugMessage("var <%s> [%g,%g] has tiny gradient %g, replace coefficient by constant %g\n",
+                     SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), grad[i], grad[i] * xbnd);
+                  constant += grad[i] * xbnd;
+                  grad[i] = 0.0;
+               }
+               else
+               {
+                  *success = FALSE;
+                  SCIPdebugMessage("skipping linearization, var <%s> [%g,%g] has tiny gradient %g but no finite bound in this direction\n",
+                     SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), grad[i]);
+                  SCIPfreeBufferArray(scip, &grad);
+                  return SCIP_OKAY;
+               }
+            }
          }
 
          if( i == nvars )

@@ -1276,6 +1276,13 @@ SCIP_RETCODE SCIPexprgraphEval(
    SCIP_Real*            varvals             /**< values for variables */
 );
 
+/** sets value for a single variable given as expression graph node */
+extern
+void SCIPexprgraphSetVarNodeValue(
+   SCIP_EXPRGRAPHNODE*   varnode,            /**< expression graph node corresponding to variable */
+   SCIP_Real             value               /**< new value for variable */
+);
+
 /** sets bounds for variables */
 extern
 void SCIPexprgraphSetVarsBounds(

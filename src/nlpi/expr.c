@@ -12766,6 +12766,7 @@ SCIP_RETCODE SCIPexprgraphAddNode(
    SCIP_EXPRGRAPHNODE**  children            /**< children nodes, or NULL if no children */
    )
 {
+   SCIP_Bool childvalsvalid;
    int depth;
    int i;
 
@@ -12799,10 +12800,13 @@ SCIP_RETCODE SCIPexprgraphAddNode(
    exprgraph->nodes[depth][node->pos] = node;
    ++exprgraph->nnodes[depth];
 
-   /* add as parent to children */
+   /* add as parent to children
+    * and check if children has valid values */
+   childvalsvalid = TRUE;
    for( i = 0; i < nchildren; ++i )
    {
       SCIP_CALL( exprgraphNodeAddParent(exprgraph->blkmem, children[i], node) );
+      childvalsvalid &= (children[i]->value != SCIP_INVALID);
    }
    /* store children */
    if( nchildren > 0 )
@@ -12823,6 +12827,12 @@ SCIP_RETCODE SCIPexprgraphAddNode(
       node->boundstatus = SCIP_EXPRBOUNDSTATUS_CHILDTIGHTENED;
       SCIPintervalSetEntire(SCIP_REAL_MAX, &node->bounds);
       exprgraph->needvarboundprop = TRUE;
+   }
+
+   /* if not a variable, set value of node according to values of children (if all have valid values) */
+   if( node->op != SCIP_EXPR_VARIDX && childvalsvalid )
+   {
+      SCIP_CALL( exprgraphNodeEval(node, NULL) );
    }
 
    return SCIP_OKAY;
@@ -13459,6 +13469,18 @@ SCIP_RETCODE SCIPexprgraphEval(
       }
 
    return SCIP_OKAY;
+}
+
+/** sets value for a single variable given as expression graph node */
+void SCIPexprgraphSetVarNodeValue(
+   SCIP_EXPRGRAPHNODE*   varnode,            /**< expression graph node corresponding to variable */
+   SCIP_Real             value               /**< new value for variable */
+)
+{
+   assert(varnode != NULL);
+   assert(varnode->op == SCIP_EXPR_VARIDX);
+
+   varnode->value = value;
 }
 
 /** sets bounds for variables */
