@@ -3249,6 +3249,7 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
       SCIP_INTERVAL pos;
       SCIP_INTERVAL neg;
 
+      SCIPintervalSet(&lincoef, by);
       SCIPintervalQuad(infinity, &ytermrng, ay, lincoef, ybnds);
       SCIPintervalSub(infinity, &rhs, rhs, ytermrng);
 
