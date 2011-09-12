@@ -119,10 +119,8 @@ SCIP_VAR* SCIPvarGetProbvar(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** @todo: Handle multi-aggregated variables which consist of at most one variable -- which may be caused by 
- *  SCIPvarFlattenAggregationGraph()
- *  gets corresponding active, fixed, or multi-aggregated problem variables of binary variables and updates the given
- *  negation status of each variable
+/** gets corresponding active, fixed, or multi-aggregated problem variables of binary variables and
+ *  updates the given negation status of each variable
  */
 extern
 SCIP_RETCODE SCIPvarsGetProbvarBinary(
@@ -131,10 +129,8 @@ SCIP_RETCODE SCIPvarsGetProbvarBinary(
    int                   nvars               /**< number of variables and values in vars and negated array */
    );
 
-/** @todo: Handle multi-aggregated variables which consist of at most one variable -- which may be caused by 
- *  SCIPvarFlattenAggregationGraph()
- *  gets corresponding active, fixed, or multi-aggregated problem variable of a binary variable and updates the given
- *  negation status
+/** gets corresponding active, fixed, or multi-aggregated problem variable of a binary variable and
+ *  updates the given negation status
  */
 extern
 SCIP_RETCODE SCIPvarGetProbvarBinary(
@@ -162,10 +158,9 @@ SCIP_RETCODE SCIPvarGetProbvarHole(
    SCIP_Real*            right               /**< pointer to right bound of open interval in hole to transform */
    );
 
-/** transforms given variable, scalar and constant to the corresponding active, fixed, or multi-aggregated variable,
- *  scalar and constant;
- *  if the variable resolves to a fixed variable, "scalar" will be 0.0 and the value of the sum will be stored
- *  in "constant"
+/** transforms given variable, scalar and constant to the corresponding active, fixed, or
+ *  multi-aggregated variable, scalar and constant; if the variable resolves to a fixed variable,
+ *  "scalar" will be 0.0 and the value of the sum will be stored in "constant"
  */
 extern
 SCIP_RETCODE SCIPvarGetProbvarSum(
@@ -174,9 +169,8 @@ SCIP_RETCODE SCIPvarGetProbvarSum(
    SCIP_Real*            constant            /**< pointer to constant c in sum a*x + c */
    );
 
-/** retransforms given variable, scalar and constant to the corresponding original variable, scalar and constant,
- *  if possible;
- *  if the retransformation is impossible, NULL is returned as variable
+/** retransforms given variable, scalar and constant to the corresponding original variable, scalar
+ *  and constant, if possible; if the retransformation is impossible, NULL is returned as variable
  */
 extern
 SCIP_RETCODE SCIPvarGetOrigvarSum(

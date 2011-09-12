@@ -19,8 +19,6 @@
  * @author Stefan Vigerske
  * @author Marc Pfetsch
  *
- * @todo Test for uniqueness of variable names (after cutting down).
- * 
  * reader_lp has been used as a starting point for this reader.
  */
 
@@ -67,38 +65,49 @@
 /** Section in PIP File */
 enum PipSection
 {
-   PIP_START, PIP_OBJECTIVE, PIP_CONSTRAINTS, PIP_BOUNDS, PIP_GENERALS, PIP_BINARIES, PIP_END
+   PIP_START,
+   PIP_OBJECTIVE,
+   PIP_CONSTRAINTS,
+   PIP_BOUNDS,
+   PIP_GENERALS,
+   PIP_BINARIES,
+   PIP_END
 };
 typedef enum PipSection PIPSECTION;
 
 enum PipExpType
 {
-   PIP_EXP_NONE, PIP_EXP_UNSIGNED, PIP_EXP_SIGNED
+   PIP_EXP_NONE,
+   PIP_EXP_UNSIGNED,
+   PIP_EXP_SIGNED
 };
 typedef enum PipExpType PIPEXPTYPE;
 
 enum PipSense
 {
-   PIP_SENSE_NOTHING, PIP_SENSE_LE, PIP_SENSE_GE, PIP_SENSE_EQ
+   PIP_SENSE_NOTHING,
+   PIP_SENSE_LE,
+   PIP_SENSE_GE,
+   PIP_SENSE_EQ
 };
 typedef enum PipSense PIPSENSE;
 
 /** PIP reading data */
 struct PipInput
 {
-   SCIP_FILE*           file;
-   char                 linebuf[PIP_MAX_LINELEN+1];
-   char                 probname[PIP_MAX_LINELEN];
-   char                 objname[PIP_MAX_LINELEN];
-   char*                token;
-   char*                tokenbuf;
-   char*                pushedtokens[PIP_MAX_PUSHEDTOKENS];
-   int                  npushedtokens;
-   int                  linenumber;
-   int                  linepos;
-   PIPSECTION           section;
-   SCIP_OBJSENSE        objsense;
-   SCIP_Bool            haserror;
+   SCIP_FILE*            file;
+   char                  linebuf[PIP_MAX_LINELEN+1];
+   char                  probname[PIP_MAX_LINELEN];
+   char                  objname[PIP_MAX_LINELEN];
+   char*                 token;
+   char*                 tokenbuf;
+   char*                 pushedtokens[PIP_MAX_PUSHEDTOKENS];
+   int                   npushedtokens;
+   int                   linenumber;
+   int                   linepos;
+   PIPSECTION            section;
+   SCIP_OBJSENSE         objsense;
+   SCIP_Bool             haserror;
 };
 typedef struct PipInput PIPINPUT;
 
@@ -2942,23 +2951,23 @@ void checkConsnames(
  * @todo add writing cons_pseudoboolean
  */
 SCIP_RETCODE SCIPwritePip(
-   SCIP*              scip,               /**< SCIP data structure */
-   FILE*              file,               /**< output file, or NULL if standard output should be used */
-   const char*        name,               /**< problem name */
-   SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
-   SCIP_OBJSENSE      objsense,           /**< objective sense */
-   SCIP_Real          objscale,           /**< scalar applied to objective function; external objective value is
-                                                  extobj = objsense * objscale * (intobj + objoffset) */
-   SCIP_Real          objoffset,          /**< objective offset from bound shifting and fixing */
-   SCIP_VAR**         vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
-   int                nvars,              /**< number of mutable variables in the problem */
-   int                nbinvars,           /**< number of binary variables */
-   int                nintvars,           /**< number of general integer variables */
-   int                nimplvars,          /**< number of implicit integer variables */
-   int                ncontvars,          /**< number of continuous variables */
-   SCIP_CONS**        conss,              /**< array with constraints of the problem */
-   int                nconss,             /**< number of constraints in the problem */
-   SCIP_RESULT*       result              /**< pointer to store the result of the file writing call */
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file, or NULL if standard output should be used */
+   const char*           name,               /**< problem name */
+   SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
+   SCIP_OBJSENSE         objsense,           /**< objective sense */
+   SCIP_Real             objscale,           /**< scalar applied to objective function; external objective value is
+                                              *   extobj = objsense * objscale * (intobj + objoffset) */
+   SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
+   SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
+   int                   nvars,              /**< number of mutable variables in the problem */
+   int                   nbinvars,           /**< number of binary variables */
+   int                   nintvars,           /**< number of general integer variables */
+   int                   nimplvars,          /**< number of implicit integer variables */
+   int                   ncontvars,          /**< number of continuous variables */
+   SCIP_CONS**           conss,              /**< array with constraints of the problem */
+   int                   nconss,             /**< number of constraints in the problem */
+   SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
    )
 {
    int c;
@@ -3630,10 +3639,10 @@ SCIP_RETCODE SCIPincludeReaderPip(
 
 /* reads problem from file */
 SCIP_RETCODE SCIPreadPip(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_READER*       reader,             /**< the file reader itself */
-   const char*        filename,           /**< full path and name of file to read, or NULL if stdin should be used */
-   SCIP_RESULT*       result              /**< pointer to store the result of the file reading call */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER*          reader,             /**< the file reader itself */
+   const char*           filename,           /**< full path and name of file to read, or NULL if stdin should be used */
+   SCIP_RESULT*          result              /**< pointer to store the result of the file reading call */
    )
 {  /*lint --e{715}*/
    PIPINPUT pipinput;
@@ -3683,4 +3692,3 @@ SCIP_RETCODE SCIPreadPip(
 
    return SCIP_OKAY;
 }
-

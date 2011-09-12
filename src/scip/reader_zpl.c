@@ -959,8 +959,8 @@ void xlp_setdir(Bool minimize)
 
 /** changes objective coefficient of a variable */
 void xlp_addtocost(
-   Var*            var,                /**< variable */
-   const Numb*     cost                /**< objective coefficient */
+   Var*                  var,                /**< variable */
+   const Numb*           cost                /**< objective coefficient */
    )
 {
    SCIP_VAR* scipvar;

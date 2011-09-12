@@ -16,7 +16,8 @@
 /**@file   reader_cip.c
  * @ingroup FILEREADERS 
  * @brief  CIP file reader
- * @author Tobias Achterberg
+ * @author Stefan Heinz
+ * @authro Michael Winkler
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -54,14 +55,14 @@ typedef enum CipSection CIPSECTION;          /**< Section of the in CIP files */
 /** CIP reading data */
 struct CipInput
 {
-   SCIP_FILE*           file;                /**< input file */
-   char*                strbuf;              /**< string buffer for input lines */
-   int                  len;                 /**< length of strbuf */
-   int                  readingsize;         /**< size of block in which len is increased if necessary */
-   int                  linenumber;          /**< number of line in input file */
-   CIPSECTION           section;             /**< current section */
-   SCIP_Bool            haserror;            /**< some error occurred */
-   SCIP_Bool            endfile;             /**< we have reached the end of the file */
+   SCIP_FILE*            file;               /**< input file */
+   char*                 strbuf;             /**< string buffer for input lines */
+   int                   len;                /**< length of strbuf */
+   int                   readingsize;        /**< size of block in which len is increased if necessary */
+   int                   linenumber;         /**< number of line in input file */
+   CIPSECTION            section;            /**< current section */
+   SCIP_Bool             haserror;           /**< some error occurred */
+   SCIP_Bool             endfile;            /**< we have reached the end of the file */
 };
 typedef struct CipInput CIPINPUT;            /**< CIP reading data */
 

@@ -937,6 +937,8 @@ SCIP_RETCODE propagateCons(
             /* if entry is fixed to one -> infeasible node */
             if ( *infeasible )
             {
+               int k;
+
                SCIPdebugMessage(" -> Infeasible node: row %d, 1 in column %d beyond rightmost position %d\n", i, j, lastoneinrow);
 
                /* perform conflict analysis */
@@ -946,13 +948,13 @@ SCIP_RETCODE propagateCons(
                SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
 
                /* add bounds that result in the last one - pass through rows */
-               for (j = 0; j < i; ++j)
+               for (k = 0; k < i; ++k)
                {
                   int l;
-                  l = lastones[j] + 1;
-                  if ( l < nblocks-1 && SCIPvarGetUbLocal(vars[j][l]) < 0.5 )
+                  l = lastones[k] + 1;
+                  if ( l < nblocks-1 && SCIPvarGetUbLocal(vars[k][l]) < 0.5 )
                   {
-                     SCIP_CALL( SCIPaddConflictBinvar(scip, vars[j][l]) );
+                     SCIP_CALL( SCIPaddConflictBinvar(scip, vars[k][l]) );
                   }
                }
                SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );

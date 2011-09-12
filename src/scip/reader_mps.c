@@ -27,7 +27,6 @@
  * name lengths and coefficients are considerably relaxed. The columns
  * in the format are then separated by whitespaces.
  *
- * @todo Test for uniqueness of variable and constraint names (after cutting down).
  * @todo Check whether constructing the names for aggregated constraint yields name clashes (aggrXXX).
  */
 
@@ -71,56 +70,56 @@
 
 /** enum containing all mps sections */
 enum MpsSection
-   {
-      MPS_NAME,
-      MPS_OBJSEN,
-      MPS_OBJNAME,
-      MPS_ROWS,
-      MPS_USERCUTS,
-      MPS_LAZYCONS,
-      MPS_COLUMNS,
-      MPS_RHS,
-      MPS_RANGES,
-      MPS_BOUNDS,
-      MPS_SOS,
-      MPS_QUADOBJ,
-      MPS_QMATRIX,
-      MPS_QCMATRIX,
-      MPS_INDICATORS,
-      MPS_ENDATA
-   };
+{
+   MPS_NAME,
+   MPS_OBJSEN,
+   MPS_OBJNAME,
+   MPS_ROWS,
+   MPS_USERCUTS,
+   MPS_LAZYCONS,
+   MPS_COLUMNS,
+   MPS_RHS,
+   MPS_RANGES,
+   MPS_BOUNDS,
+   MPS_SOS,
+   MPS_QUADOBJ,
+   MPS_QMATRIX,
+   MPS_QCMATRIX,
+   MPS_INDICATORS,
+   MPS_ENDATA
+};
 typedef enum MpsSection MPSSECTION;
 
 /** mps input structure */
 struct MpsInput
 {
-   MPSSECTION           section;
-   SCIP_FILE*           fp;
-   int                  lineno;
-   SCIP_OBJSENSE        objsense;
-   SCIP_Bool            haserror;
-   char                 buf[MPS_MAX_LINELEN];
-   const char*          f0;
-   const char*          f1;
-   const char*          f2;
-   const char*          f3;
-   const char*          f4;
-   const char*          f5;
-   char                 probname[MPS_MAX_NAMELEN];
-   char                 objname [MPS_MAX_NAMELEN];
-   SCIP_Bool            isinteger;
-   SCIP_Bool            isnewformat;
+   MPSSECTION            section;
+   SCIP_FILE*            fp;
+   int                   lineno;
+   SCIP_OBJSENSE         objsense;
+   SCIP_Bool             haserror;
+   char                  buf[MPS_MAX_LINELEN];
+   const char*           f0;
+   const char*           f1;
+   const char*           f2;
+   const char*           f3;
+   const char*           f4;
+   const char*           f5;
+   char                  probname[MPS_MAX_NAMELEN];
+   char                  objname [MPS_MAX_NAMELEN];
+   SCIP_Bool             isinteger;
+   SCIP_Bool             isnewformat;
 };
 typedef struct MpsInput MPSINPUT;
 
 /** sparse matrix representation */
 struct SparseMatrix
 {
-   SCIP_Real*            values;           /**< matrix element */
-   SCIP_VAR**            columns;          /**< corresponding variables */
-   const char**          rows;             /**< corresponding constraint names */ 
-   int                   nentries;         /**< number of elements in the arrays */
-   int                   sentries;         /**< number of slots in the arrays */
+   SCIP_Real*            values;             /**< matrix element */
+   SCIP_VAR**            columns;            /**< corresponding variables */
+   const char**          rows;               /**< corresponding constraint names */ 
+   int                   nentries;           /**< number of elements in the arrays */
+   int                   sentries;           /**< number of slots in the arrays */
 };
 typedef struct SparseMatrix SPARSEMATRIX;
 
@@ -177,19 +176,6 @@ MPSSECTION mpsinputSection(
 
    return mpsi->section;
 }
-
-#if 0
-/** return the current line number */
-static
-int mpsinputLineno(
-   const MPSINPUT*       mpsi                /**< mps input structure */
-   )
-{
-   assert(mpsi != NULL);
-
-   return mpsi->lineno;
-}
-#endif
 
 /** return the current value of field 0 */
 static
@@ -2472,13 +2458,13 @@ void printStart(
 /** prints the given data as column entry */
 static
 void printEntry(
-   SCIP*              scip,               /**< SCIP data structure */
-   FILE*              file,               /**< output file (or NULL for standard output) */
-   const char*        varname,            /**< variable name */
-   const char*        consname,           /**< constraint name */
-   SCIP_Real          value,              /**< value to display */
-   int*               recordcnt,          /**< pointer to store the number of records per line */
-   unsigned int       maxnamelen          /**< maximum name length */
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           varname,            /**< variable name */
+   const char*           consname,           /**< constraint name */
+   SCIP_Real             value,              /**< value to display */
+   int*                  recordcnt,          /**< pointer to store the number of records per line */
+   unsigned int          maxnamelen          /**< maximum name length */
    )
 {
    char valuestr[MPS_MAX_VALUELEN] = { '\0' };
@@ -2552,9 +2538,9 @@ void printRowType(
 /** initializes the sparse matrix */
 static
 SCIP_RETCODE initializeMatrix(
-   SCIP*              scip,               /**< SCIP data structure */
-   SPARSEMATRIX**     matrix,             /**< pointer to sparse matrix containing the entries */
-   int                slots               /**< number of slots */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SPARSEMATRIX**        matrix,             /**< pointer to sparse matrix containing the entries */
+   int                   slots               /**< number of slots */
    )
 {
    SCIP_CALL( SCIPallocBuffer(scip, matrix) );
@@ -2588,8 +2574,8 @@ SCIP_RETCODE checkSparseMatrixCapacity(
 /** frees the sparse matrix */
 static
 void freeMatrix(
-   SCIP*              scip,               /**< SCIP data structure */
-   SPARSEMATRIX*      matrix              /**< sparse matrix to free */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SPARSEMATRIX*         matrix              /**< sparse matrix to free */
    )
 {
    SCIPfreeBufferArray(scip, &matrix->rows);
@@ -2697,13 +2683,13 @@ SCIP_RETCODE getLinearCoeffs(
 /** check whether given variables are aggregated and put them into an array without duplication */
 static
 SCIP_RETCODE collectAggregatedVars(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_VAR**         vars,               /**< variable array */
-   int                nvars,              /**< number of mutable variables in the problem */
-   SCIP_VAR***        aggvars,            /**< pointer to array storing the aggregated variables on output */
-   int*               naggvars,           /**< pointer to number of aggregated variables on output */
-   int*               saggvars,           /**< pointer to number of slots in aggvars array */
-   SCIP_HASHTABLE*    varAggregated       /**< hashtable for checking duplicates */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< variable array */
+   int                   nvars,              /**< number of mutable variables in the problem */
+   SCIP_VAR***           aggvars,            /**< pointer to array storing the aggregated variables on output */
+   int*                  naggvars,           /**< pointer to number of aggregated variables on output */
+   int*                  saggvars,           /**< pointer to number of slots in aggvars array */
+   SCIP_HASHTABLE*       varAggregated       /**< hashtable for checking duplicates */
    )
 {
    int v;
@@ -2751,12 +2737,12 @@ SCIP_RETCODE collectAggregatedVars(
 /** method check if the variable names are not longer than MPS_MAX_NAMELEN - 1*/
 static
 SCIP_RETCODE checkVarnames(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_VAR**         vars,               /**< array of variables */
-   int                nvars,              /**< number of variables */
-   unsigned int*      maxnamelen,         /**< pointer to store the maximum name length */
-   const char***      varnames,           /**< pointer to array of variable names */
-   SCIP_HASHMAP**     varnameHashmap      /**< pointer to hash map storing variable, variable name mapping */      
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< array of variables */
+   int                   nvars,              /**< number of variables */
+   unsigned int*         maxnamelen,         /**< pointer to store the maximum name length */
+   const char***         varnames,           /**< pointer to array of variable names */
+   SCIP_HASHMAP**        varnameHashmap      /**< pointer to hash map storing variable, variable name mapping */      
    )
 {
    int v;
@@ -2815,13 +2801,13 @@ SCIP_RETCODE checkVarnames(
 /** method check if the constraint names are not longer than MPS_MAX_NAMELEN - 1 */
 static
 SCIP_RETCODE checkConsnames(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_CONS**        conss,              /**< array of all constraints */
-   int                nconss,             /**< number of all constraints */
-   SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
-   unsigned int*      maxnamelen,         /**< pointer to store the maximum name length */
-   const char***      consnames,          /**< pointer to array of constraint names */
-   SCIP_Bool*         error               /**< pointer to store whether all constraint names exist */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           conss,              /**< array of all constraints */
+   int                   nconss,             /**< number of all constraints */
+   SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
+   unsigned int*         maxnamelen,         /**< pointer to store the maximum name length */
+   const char***         consnames,          /**< pointer to array of constraint names */
+   SCIP_Bool*            error               /**< pointer to store whether all constraint names exist */
    )
 {
    SCIP_CONS* cons;
@@ -2893,12 +2879,12 @@ SCIP_RETCODE checkConsnames(
 /** outputs the COLUMNS section of the MPS format */
 static
 void printColumnSection(
-   SCIP*              scip,               /**< SCIP data structure */
-   FILE*              file,               /**<  output file, or NULL if standard output should be used */
-   SPARSEMATRIX*      matrix,             /**< sparse matrix containing the entries */
-   SCIP_HASHMAP*      varnameHashmap,     /**< map from SCIP_VAR* to variable name */
-   SCIP_HASHTABLE*    indicatorSlackHash, /**< hashtable containing slack variables from indicators (or NULL) */
-   unsigned int       maxnamelen          /**< maximum name length */
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**<  output file, or NULL if standard output should be used */
+   SPARSEMATRIX*         matrix,             /**< sparse matrix containing the entries */
+   SCIP_HASHMAP*         varnameHashmap,     /**< map from SCIP_VAR* to variable name */
+   SCIP_HASHTABLE*       indicatorSlackHash, /**< hashtable containing slack variables from indicators (or NULL) */
+   unsigned int          maxnamelen          /**< maximum name length */
    )
 {
    SCIP_Bool intSection;
@@ -2976,14 +2962,14 @@ void printColumnSection(
 /** outputs the right hand side section */
 static
 void printRhsSection(
-   SCIP*              scip,               /**< SCIP data structure */
-   FILE*              file,               /**<  output file, or NULL if standard output should be used */
-   SCIP_CONS**        conss,              /**< constraint array */
-   int                nconss,             /**< number of constraints */
-   const char**       consnames,          /**< constraint names */
-   SCIP_Real*         rhss,               /**< right hand side array */
-   SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
-   unsigned int       maxnamelen          /**< maximum name length */
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**<  output file, or NULL if standard output should be used */
+   SCIP_CONS**           conss,              /**< constraint array */
+   int                   nconss,             /**< number of constraints */
+   const char**          consnames,          /**< constraint names */
+   SCIP_Real*            rhss,               /**< right hand side array */
+   SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
+   unsigned int          maxnamelen          /**< maximum name length */
    )
 {
    int c;
@@ -3030,13 +3016,13 @@ void printRhsSection(
 /** outputs the range section */
 static
 void printRangeSection(
-   SCIP*              scip,               /**< SCIP data structure */
-   FILE*              file,               /**<  output file, or NULL if standard output should be used */
-   SCIP_CONS**        conss,              /**< constraint array */
-   int                nconss,             /**< number of constraints */
-   const char**       consnames,          /**< constraint names */
-   SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
-   unsigned int       maxnamelen          /**< maximum name length */
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**<  output file, or NULL if standard output should be used */
+   SCIP_CONS**           conss,              /**< constraint array */
+   int                   nconss,             /**< number of constraints */
+   const char**          consnames,          /**< constraint names */
+   SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
+   unsigned int          maxnamelen          /**< maximum name length */
    )
 {   
    int c;
@@ -3098,8 +3084,8 @@ void printRangeSection(
 /** print bound section name */
 static
 void printBoundSectionName(
-   SCIP*              scip,               /**< SCIP data structure */
-   FILE*              file                /**<  output file, or NULL if standard output should be used */
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file                /**<  output file, or NULL if standard output should be used */
    )   
 {
    SCIPinfoMessage(scip, file, "BOUNDS\n");
@@ -3109,16 +3095,16 @@ void printBoundSectionName(
 /** output bound section */
 static
 void printBoundSection(
-   SCIP*              scip,               /**< SCIP data structure */
-   FILE*              file,               /**<  output file, or NULL if standard output should be used */
-   SCIP_VAR**         vars,               /**< active variables */
-   int                nvars,              /**< number of active variables */
-   SCIP_VAR**         aggvars,            /**< needed aggregated variables */
-   int                naggvars,           /**< number of aggregated variables */
-   SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
-   const char**       varnames,           /**< array with variable names */
-   SCIP_HASHTABLE*    indicatorSlackHash, /**< hashtable containing slack variables from indicators (or NULL) */
-   unsigned int       maxnamelen          /**< maximum name length */
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**<  output file, or NULL if standard output should be used */
+   SCIP_VAR**            vars,               /**< active variables */
+   int                   nvars,              /**< number of active variables */
+   SCIP_VAR**            aggvars,            /**< needed aggregated variables */
+   int                   naggvars,           /**< number of aggregated variables */
+   SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
+   const char**          varnames,           /**< array with variable names */
+   SCIP_HASHTABLE*       indicatorSlackHash, /**< hashtable containing slack variables from indicators (or NULL) */
+   unsigned int          maxnamelen          /**< maximum name length */
    )
 {
    int v;
@@ -3420,7 +3406,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    SCIP_CALL( checkConsnames(scip, conss, nconss, transformed, &maxnamelen, &consnames, &error) );
    if( error )
    {
-      /* todo call writing with generic names */
+      /* call writing with generic names */
       if( transformed )
       {
          SCIPwarningMessage("write transformed problem with generic variable and constraint names\n");

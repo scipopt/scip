@@ -1213,13 +1213,24 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       /* update corresponding row */
       for( d = intweight; d < intcap; ++d )
       {
-         SCIP_Real sumprofit;
-
-         if( d - myweights[j] < currminweight )
-            sumprofit = myprofits[j];
+         /* if index d is smaller the the current minweight then optvalues[IDX(j-1,d)] is not initialized, i.e. should
+          * be 0
+          */
+         if( d < currminweight )
+         {
+            optvalues[IDX(j,d)] = myprofits[j];
+         }
          else
-            sumprofit = optvalues[IDX(j-1,d-myweights[j])] + myprofits[j];
-         optvalues[IDX(j,d)] = MAX(sumprofit, optvalues[IDX(j-1,d)]);
+         {
+            SCIP_Real sumprofit;
+
+            if( d - myweights[j] < currminweight )
+               sumprofit = myprofits[j];
+            else
+               sumprofit = optvalues[IDX(j-1,d-myweights[j])] + myprofits[j];
+
+            optvalues[IDX(j,d)] = MAX(sumprofit, optvalues[IDX(j-1,d)]);
+         }
       }
       /* update currminweight */
       if( intweight < currminweight )

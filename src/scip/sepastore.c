@@ -626,9 +626,9 @@ SCIP_RETCODE sepastoreUpdateOrthogonalities(
          {
             /* recalculate score */
             sepastore->orthogonalities[pos] = thisortho;
-            assert( sepastore->objparallelisms[pos] != SCIP_INVALID );
-            assert( sepastore->scores[pos] != SCIP_INVALID );
-            assert( sepastore->efficacies[pos] != SCIP_INVALID );
+            assert( sepastore->objparallelisms[pos] != SCIP_INVALID ); /*lint !e777*/
+            assert( sepastore->scores[pos] != SCIP_INVALID ); /*lint !e777*/
+            assert( sepastore->efficacies[pos] != SCIP_INVALID ); /*lint !e777*/
             sepastore->scores[pos] = sepastore->efficacies[pos]
                + set->sepa_objparalfac * sepastore->objparallelisms[pos]
                + set->sepa_orthofac * thisortho;
@@ -691,7 +691,7 @@ int sepastoreGetBestCut(
    for( pos = sepastore->nforcedcuts; pos < sepastore->ncuts; pos++ )
    {
       /* check if cut is current best cut */
-      assert( sepastore->scores[pos] != SCIP_INVALID );
+      assert( sepastore->scores[pos] != SCIP_INVALID ); /*lint !e777*/
       if( sepastore->scores[pos] > bestscore )
       {
          bestscore = sepastore->scores[pos];
@@ -730,7 +730,7 @@ SCIP_RETCODE computeScore(
       cutefficacy *= 0.9999;
 
    /* calculate resulting score */
-   assert( sepastore->objparallelisms[pos] != SCIP_INVALID );
+   assert( sepastore->objparallelisms[pos] != SCIP_INVALID ); /*lint !e777*/
    cutscore = cutefficacy + set->sepa_objparalfac * sepastore->objparallelisms[pos] + set->sepa_orthofac * 1.0;
    assert( !SCIPsetIsInfinity(set, cutscore) );
 
@@ -827,8 +827,8 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
       /* get best non-forced cut */
       bestpos = sepastoreGetBestCut(sepastore);
       assert(sepastore->nforcedcuts <= bestpos && bestpos < sepastore->ncuts);
-      assert(sepastore->scores[bestpos] != SCIP_INVALID );
-      assert(sepastore->efficacies[bestpos] != SCIP_INVALID );
+      assert(sepastore->scores[bestpos] != SCIP_INVALID ); /*lint !e777*/
+      assert(sepastore->efficacies[bestpos] != SCIP_INVALID ); /*lint !e777*/
       cut = sepastore->cuts[bestpos];
       assert(SCIProwIsModifiable(cut) || SCIProwGetNNonz(cut) != 1); /* bound changes are forced cuts */
       assert(!SCIPsetIsInfinity(set, sepastore->scores[bestpos]));
@@ -933,7 +933,7 @@ SCIP_RETCODE SCIPsepastoreRemoveInefficaciousCuts(
    c = sepastore->nforcedcuts;
    while( c < sepastore->ncuts )
    {
-      assert( sepastore->efficacies[c] == SCIP_INVALID );
+      assert( sepastore->efficacies[c] == SCIP_INVALID ); /*lint !e777*/
       SCIP_CALL( computeScore(sepastore, set, stat, lp, FALSE, c) );
       if( !SCIPsetIsEfficacious(set, root, sepastore->efficacies[c]) )
       {

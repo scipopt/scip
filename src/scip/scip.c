@@ -22,8 +22,8 @@
  * @author Marc Pfetsch
  * @author Kati Wolter
  *
- *@todo check all checkStage() calls, use bit flags instead of the SCIP_Bool parameters
- *@todo check all SCIP_STAGE_* switches, and include the new stages TRANSFORMED and INITSOLVE 
+ * @todo check all checkStage() calls, use bit flags instead of the SCIP_Bool parameters
+ * @todo check all SCIP_STAGE_* switches, and include the new stages TRANSFORMED and INITSOLVE 
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1116,6 +1116,20 @@ SCIP_RETCODE SCIPgetVarCopy(
    uselocalconsmap = (consmap == NULL);
    *success = TRUE;
 
+   /* if the target SCIP is already in solving stage we currently are not copying the variable!
+    * this has to be done because we cannot simply add variables to SCIP during solving and thereby enlarge the search
+    * space. 
+    * unlike column generation we cannot assume here that the variable could be implicitly set to zero in all prior
+    * computations
+    */
+   if( SCIPgetStage(targetscip) > SCIP_STAGE_PROBLEM )
+   {
+      *success = FALSE;
+      *targetvar = NULL;
+
+      return SCIP_OKAY;
+   }
+
    if( uselocalvarmap )
    {
       /* create the variable mapping hash map */
@@ -1129,22 +1143,6 @@ SCIP_RETCODE SCIPgetVarCopy(
       *targetvar = (SCIP_VAR*) SCIPhashmapGetImage(localvarmap, sourcevar);
       if( *targetvar != NULL )
          return SCIP_OKAY;
-   }
-
-   /* if the target SCIP is already in solving stage and the target variable is not in the hash map, abort!
-    * this has to be done because we cannot simply add variables to SCIP during solving and thereby enlarge the search space.
-    * unlike column generation we cannot assume here that the variable could be implicitly set to zero in all prior computations 
-    */
-   if( SCIPgetStage(targetscip) > SCIP_STAGE_PROBLEM )
-   {
-      *success = FALSE;
-      *targetvar = NULL;
-
-      /* free local hash map if necessary */
-      if( uselocalvarmap )
-         SCIPhashmapFree(&localvarmap);
-
-      return SCIP_OKAY;
    }
 
    if( uselocalconsmap )
@@ -4869,8 +4867,7 @@ SCIP_RETCODE SCIPdelVar(
          SCIPerrorMessage("cannot remove transformed variables from original problem\n");
          return SCIP_INVALIDDATA;
       }
-      SCIP_CALL( SCIPprobDelVar(scip->origprob, scip->mem->probmem, scip->set, scip->eventfilter, scip->eventqueue,
-            var) );
+      SCIP_CALL( SCIPprobDelVar(scip->origprob, scip->mem->probmem, scip->set, scip->eventfilter, scip->eventqueue, var) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
@@ -4895,8 +4892,7 @@ SCIP_RETCODE SCIPdelVar(
       /* in FREETRANS stage, we don't need to remove the variable, because the transformed problem is freed anyways */
       if( scip->set->stage != SCIP_STAGE_FREETRANS )
       {
-         SCIP_CALL( SCIPprobDelVar(scip->transprob, scip->mem->probmem, scip->set, scip->eventfilter, scip->eventqueue,
-               var) );
+         SCIP_CALL( SCIPprobDelVar(scip->transprob, scip->mem->probmem, scip->set, scip->eventfilter, scip->eventqueue, var) );
       }
       return SCIP_OKAY;
 
@@ -8095,8 +8091,8 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
                   state = SCIPPARSEPOLYNOMIAL_STATE_ERROR;
                   break;
                }
-               /* @todo we could check errno whether an over- or underflow occured, but I am not sure that this works on every platform
-                * also since we expect that the string was written by SCIPwriteVarsPolynomial, we can assume that the numbers are parsable
+               /* We could check errno to whether an over- or underflow occured, but this might not work on every platform.
+                * Moreover, since we expect that the string was written by SCIPwriteVarsPolynomial, the numbers are should be parsable.
                 */
 
                assert(endptr > str+pos);
@@ -21538,7 +21534,7 @@ void printConstraintStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   /**@todo add constraint statistics: how many constraints (instead of cuts) have been added? */
+   /** Add maximal number of constraints of the same type? So far this information is not added because of lack of space. */
    SCIPmessageFPrintInfo(file, "Constraints        :     Number  #Separate #Propagate    #EnfoLP    #EnfoPS     #Check   #Resprop    Cutoffs    DomReds       Cuts      Conss   Children\n");
 
    for( i = 0; i < scip->set->nconshdlrs; ++i )

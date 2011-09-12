@@ -2005,7 +2005,7 @@ SCIP_DECL_CONSPRINT(consPrintBounddisjunction)
 /** constraint copying method of constraint handler */
 static
 SCIP_DECL_CONSCOPY(consCopyBounddisjunction)
-{
+{  /*lint --e{715}*/
    SCIP_VAR** sourcevars;
    SCIP_VAR** targetvars;
    SCIP_BOUNDTYPE* boundtypes;

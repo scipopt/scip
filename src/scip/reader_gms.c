@@ -19,10 +19,8 @@
  * @author Ambros Gleixner
  * @author Stefan Vigerske
  *
- * @todo Test for uniqueness of variable names (after cutting down).
  * @todo Check for words reserved for GAMS.
  * @todo Routines for reading.
- * @todo Indicator constraints.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -203,7 +201,7 @@ void appendLineWithIndent(
 /** checks string for occurences of '#', '*', '+', '/', and '-' and replaces those by '_' */
 static
 void conformName(
-   char*                      name                /**< string to adjust */
+   char*                 name                /**< string to adjust */
    )
 {
    const char* badchar;
@@ -1691,9 +1689,9 @@ SCIP_RETCODE printNonlinearCons(
 /** method check if the variable names are not longer than GMS_MAX_NAMELEN */
 static
 SCIP_RETCODE checkVarnames(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_VAR**         vars,               /**< array of variables */
-   int                nvars               /**< number of variables */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< array of variables */
+   int                   nvars               /**< number of variables */
    )
 {
    int v;
@@ -1738,7 +1736,7 @@ SCIP_RETCODE checkVarnames(
 
       if( strlen(SCIPvarGetName(var)) > GMS_MAX_NAMELEN )
       {
-         SCIPwarningMessage("there is a variable name which has to be cut down to %d characters; GAMS model might be corrupted\n", 
+         SCIPwarningMessage("there is a variable name which has to be cut down to %d characters; GAMS model might be corrupted.\n", 
             GMS_MAX_NAMELEN - 1);
          break;
       }
@@ -1750,10 +1748,10 @@ SCIP_RETCODE checkVarnames(
 /** method check if the constraint names are not longer than GMS_MAX_NAMELEN */
 static
 SCIP_RETCODE checkConsnames(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_CONS**        conss,              /**< array of constraints */
-   int                nconss,             /**< number of constraints */
-   SCIP_Bool          transformed         /**< TRUE iff problem is the transformed problem */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           conss,              /**< array of constraints */
+   int                   nconss,             /**< number of constraints */
+   SCIP_Bool             transformed         /**< TRUE iff problem is the transformed problem */
    )
 {
    int c;
@@ -1922,24 +1920,23 @@ SCIP_RETCODE SCIPincludeReaderGms(
 
 /* writes problem to gms file */
 SCIP_RETCODE SCIPwriteGms(
-   SCIP*              scip,               /**< SCIP data structure */
-   FILE*              file,               /**< output file, or NULL if standard output should be used */
-   const char*        name,               /**< problem name */
-   SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
-   SCIP_OBJSENSE      objsense,           /**< objective sense */
-   SCIP_Real          objscale,           /**< scalar applied to objective function; external objective value is
-                                           *   extobj = objsense * objscale * (intobj + objoffset)
-                                           */
-   SCIP_Real          objoffset,          /**< objective offset from bound shifting and fixing */
-   SCIP_VAR**         vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
-   int                nvars,              /**< number of mutable variables in the problem */
-   int                nbinvars,           /**< number of binary variables */
-   int                nintvars,           /**< number of general integer variables */
-   int                nimplvars,          /**< number of implicit integer variables */
-   int                ncontvars,          /**< number of continuous variables */
-   SCIP_CONS**        conss,              /**< array with constraints of the problem */
-   int                nconss,             /**< number of constraints in the problem */
-   SCIP_RESULT*       result              /**< pointer to store the result of the file writing call */
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file, or NULL if standard output should be used */
+   const char*           name,               /**< problem name */
+   SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
+   SCIP_OBJSENSE         objsense,           /**< objective sense */
+   SCIP_Real             objscale,           /**< scalar applied to objective function; external objective value is
+                                              *   extobj = objsense * objscale * (intobj + objoffset) */
+   SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
+   SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
+   int                   nvars,              /**< number of mutable variables in the problem */
+   int                   nbinvars,           /**< number of binary variables */
+   int                   nintvars,           /**< number of general integer variables */
+   int                   nimplvars,          /**< number of implicit integer variables */
+   int                   ncontvars,          /**< number of continuous variables */
+   SCIP_CONS**           conss,              /**< array with constraints of the problem */
+   int                   nconss,             /**< number of constraints in the problem */
+   SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
    )
 {
    int c,v;

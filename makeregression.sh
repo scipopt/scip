@@ -49,7 +49,7 @@ do
         for TEST in ${TESTS[@]}
         do
             # run test
-            make OPT=$OPT VERSION=$GITHASH TIME=$TIME LOCK=$LOCK CONTINUE=$CONTINUE TEST=$TEST test
+            make OPT=$OPT VERSION=$GITHASH TIME=$TIME LOCK=$LOCK CONTINUE=$CONTINUE TEST=$TEST MEM=6144 test
 
             # remove tex and pav file
             rm -f check/results/check.$TEST.*$GITHASH*tex

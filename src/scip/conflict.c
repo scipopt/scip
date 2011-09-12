@@ -17,68 +17,66 @@
  * @brief  methods and datastructures for conflict analysis
  * @author Tobias Achterberg
  *
- * The following description of the algorithm is outdated! We now also use bound changes
- * of non-binary variables in the conflict sets.
- *
- *@todo update conflict analysis description
- *
  * This file implements a conflict analysis method like the one used in modern
  * SAT solvers like zchaff. The algorithm works as follows:
  *
- * Given is a set of bound changes that are not allowed being applied simultaneously,
- * because they render the current node infeasible (e.g. because a single constraint
- * is infeasible in the these bounds, or because the LP relaxation is infeasible).
- * The goal is to deduce a clause on binary variables -- a conflict clause -- representing
- * the "reason" for this conflict, i.e. the branching decisions or the deductions
- * (applied e.g. in domain propagation) that lead to the conflict. This clause
- * can then be added to the constraint set to help cutting off similar parts
- * of the branch and bound tree, that would lead to the same conflict.
- * A conflict clause can also be generated, if the conflict was detected by a
- * locally valid constraint. In this case, the resulting conflict clause is
- * also locally valid in the same depth as the conflict detecting constraint.
+ * Given is a set of bound changes that are not allowed being applied simultaneously, because they
+ * render the current node infeasible (e.g. because a single constraint is infeasible in the these
+ * bounds, or because the LP relaxation is infeasible).  The goal is to deduce a clause on variables
+ * -- a conflict clause -- representing the "reason" for this conflict, i.e., the branching decisions
+ * or the deductions (applied e.g. in domain propagation) that lead to the conflict. This clause can
+ * then be added to the constraint set to help cutting off similar parts of the branch and bound
+ * tree, that would lead to the same conflict.  A conflict clause can also be generated, if the
+ * conflict was detected by a locally valid constraint. In this case, the resulting conflict clause
+ * is also locally valid in the same depth as the conflict detecting constraint. If all involved
+ * variables are binary, a linear (set covering) constraint can be generated, otherwise a bound
+ * disjunction constraint is generated. Details are given in
  *
- *  1. Put all the given bound changes to a priority queue, which is ordered,
+ * Tobias Achterberg, Conflict Analysis in Mixed Integer Programming@n
+ * Discrete Optimization, 4, 4-20 (2007)
+ *
+ * See also @ref CONF. Here is an outline of the algorithm:
+ *
+ * -#  Put all the given bound changes to a priority queue, which is ordered,
  *     such that the bound change that was applied last due to branching or deduction
  *     is at the top of the queue. The variables in the queue are always active
- *     problem variables. Because non-binary variables must not exist in the final
- *     conflict clause, they are resolved first and put on the priority queue prior
- *     to the binary variables.
- *     Create an empty conflict set.
- *  2. Remove the top bound change b from the priority queue.
- *  3. (a) If the remaining queue is non-empty, and bound change b' (the one that is now
+ *     problem variables. Because binary variables are prefered over general integer 
+ *     variables, integer variables are put on the priority queue prior to the binary 
+ *     variables. Create an empty conflict set.
+ * -#  Remove the top bound change b from the priority queue.
+ * -#  Perform the following case distinction:
+ *     -#  If the remaining queue is non-empty, and bound change b' (the one that is now
  *         on the top of the queue) was applied at the same depth level as b, and if
  *         b was a deduction with known inference reason, and if the inference constraint's
  *         valid depth is smaller or equal to the conflict detecting constraint's valid
  *         depth:
- *          - Resolve bound change b by asking the constraint that infered the
+ *          - Resolve bound change b by asking the constraint that inferred the
  *            bound change to put all the bound changes on the priority queue, that
  *            lead to the deduction of b.
  *            Note that these bound changes have at most the same inference depth
  *            level as b, and were deduced earlier than b.
- *     (b) Otherwise, the bound change b was a branching decision or a deduction with
+ *     -#  Otherwise, the bound change b was a branching decision or a deduction with
  *         missing inference reason, or the inference constraint's validity is more local
  *         than the one of the conflict detecing constraint.
- *          - If b was a bound change on a non-binary variable, abort -- unresolved
- *            bound changes on non-binary variables cannot be handled, because the
- *            final conflict set must consist of only binary variables.
- *          - Otherwise, put the binary variable that was changed, or the negation of it
- *            into the conflict set, depending on which of them is currently fixed to
+ *          - If a the bound changed corresponds to a binary variable, add it or its 
+ *            negation to the conflict set, depending on which of them is currently fixed to
  *            FALSE (i.e., the conflict set consists of literals that cannot be FALSE
  *            altogether at the same time).
- *            Note that if the bound change was a branching, all deduced bound changes
- *            remaining in the priority queue have smaller inference depth level than b,
- *            since deductions are always applied after the branching decisions. However,
- *            there is the possibility, that b was a deduction, where the inference
- *            reason was not given or the inference constraint was too local.
- *            With this lack of information, we must treat the deduced bound change like
- *            a branching, and there may exist other deduced bound changes of the same
- *            inference depth level in the priority queue.
- *  4. If priority queue is non-empty, goto step 2.
- *  5. The conflict set represents the conflict clause saying that at least one
- *     of the binary conflict variables must be set to TRUE.
- *     The conflict set is then passed to the conflict handlers, that may create
- *     a corresponding constraint (e.g. a logicor constraint) out of these conflict
- *     variables and add it to the problem.
+ *          - Otherwise put the bound change iinto the conflict set.
+ *         Note that if the bound change was a branching, all deduced bound changes
+ *         remaining in the priority queue have smaller inference depth level than b,
+ *         since deductions are always applied after the branching decisions. However,
+ *         there is the possibility, that b was a deduction, where the inference
+ *         reason was not given or the inference constraint was too local.
+ *         With this lack of information, we must treat the deduced bound change like
+ *         a branching, and there may exist other deduced bound changes of the same
+ *         inference depth level in the priority queue.
+ * -#  If priority queue is non-empty, goto step 2.
+ * -#  The conflict set represents the conflict clause saying that at least one
+ *     of the conflict variables must take a different value. The conflict set is then passed
+ *     to the conflict handlers, that may create a corresponding constraint (e.g. a logicor 
+ *     constraint or bound disjunction constraint) out of these conflict variables and 
+ *     add it to the problem.
  *
  * If all deduced bound changes come with (global) inference information, depending on
  * the conflict analyzing strategy, the resulting conflict set has the following property:

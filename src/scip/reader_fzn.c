@@ -19,9 +19,6 @@
  * @author Timo Berthold
  * @author Stefan Heinz
  *
- * @todo Test for uniqueness of variable and constraint names (after cutting down).
- * @todo remove pushBufferToken() staff since it is not used in this reader
- * @todo remove swapTokenBuffer() staff since it is not used in this reader
  * @todo Support more general constraint types
  */
 
@@ -62,62 +59,68 @@
  */
 
 /** number types */
-enum FznNumberType {
-   FZN_BOOL, FZN_INT, FZN_FLOAT
+enum FznNumberType 
+{
+   FZN_BOOL, 
+   FZN_INT, 
+   FZN_FLOAT
 };
 typedef enum FznNumberType FZNNUMBERTYPE;
 
 /** Expression type in FlatZinc File */
-enum FznExpType {
-   FZN_EXP_NONE, FZN_EXP_UNSIGNED, FZN_EXP_SIGNED
+enum FznExpType 
+{
+   FZN_EXP_NONE,
+   FZN_EXP_UNSIGNED,
+   FZN_EXP_SIGNED
 };
 typedef enum FznExpType FZNEXPTYPE;
 
 /* structures to store the dimension information */
 struct Dimensions
 {
-   int*                  lbs;           /**< lower bounds */
-   int*                  ubs;           /**< upper bounds */
-   int                   ndims;         /**< number of dimensions */
+   int*                  lbs;                /**< lower bounds */
+   int*                  ubs;                /**< upper bounds */
+   int                   ndims;              /**< number of dimensions */
 };
 typedef struct Dimensions DIMENSIONS;
 
 /** FlatZinc constant */
 struct FznConstant
 {
-   const char*          name;           /**< constant name */
-   FZNNUMBERTYPE        type;           /**< constant type */
-   SCIP_Real            value;          /**< constant value */
+   const char*           name;               /**< constant name */
+   FZNNUMBERTYPE         type;               /**< constant type */
+   SCIP_Real             value;              /**< constant value */
 };
 typedef struct FznConstant FZNCONSTANT;
 
 /* structure to store information for an array variable */
 struct ConstArray
 {
-   FZNCONSTANT**         constants;     /**< array of constants */
-   char*                 name;          /**< name of constant array */
-   int                   nconstants;    /**< number of constants */
-   FZNNUMBERTYPE         type;          /**< constant type */ 
+   FZNCONSTANT**         constants;          /**< array of constants */
+   char*                 name;               /**< name of constant array */
+   int                   nconstants;         /**< number of constants */
+   FZNNUMBERTYPE         type;               /**< constant type */ 
 };
 typedef struct ConstArray CONSTARRAY;
 
 /* structure to store information for an array variable */
 struct VarArray
 {
-   SCIP_VAR**            vars;          /**< variable belonging to the variable array */
-   char*                 name;          /**< name of the array variable */
-   DIMENSIONS*           info;          /**< dimension information */
-   int                   nvars;         /**< number of variables */
-   FZNNUMBERTYPE         type;          /**< variable type */ 
+   SCIP_VAR**            vars;               /**< variable belonging to the variable array */
+   char*                 name;               /**< name of the array variable */
+   DIMENSIONS*           info;               /**< dimension information */
+   int                   nvars;              /**< number of variables */
+   FZNNUMBERTYPE         type;               /**< variable type */ 
 };
 typedef struct VarArray VARARRAY;
 
 /** data for FlatZinc reader */
 struct SCIP_ReaderData
 {
-   VARARRAY**            vararrays;     /**< variable arrays to output */
-   int                   nvararrays;    /**< number of variables */
-   int                   vararrayssize; /**< size of variable array */
+   VARARRAY**            vararrays;          /**< variable arrays to output */
+   int                   nvararrays;         /**< number of variables */
+   int                   vararrayssize;      /**< size of variable array */
 };
 
 /** tries to creates and adds a constraint; sets parameter created to TRUE if method was successful 
@@ -171,17 +174,17 @@ typedef struct FznInput FZNINPUT;
 /** FlatZinc writing data */
 struct FznOutput
 {
-   char*                varbuffer;           /* buffer for auxiliary variables (float representatives of discrete variables) */
-   int                  varbufferlen;        /* current length of the above buffer */
-   int                  varbufferpos;        /* current filling position in the above buffer */
-   char*                castbuffer;          /* buffer for int2float conversion constraints */
-   int                  castbufferlen;       /* current length of the above buffer */          
-   int                  castbufferpos;       /* current filling position in the above buffer */
-   char*                consbuffer;          /* buffer for all problem constraints */
-   int                  consbufferlen;       /* current length of the above buffer */          
-   int                  consbufferpos;       /* current filling position in the above buffer */
-   int                  ndiscretevars;       /* number of discrete variables in the problem */    
-   SCIP_Bool*           varhasfloat;         /* array which indicates, whether a discrete variable already has a float representative */
+   char*                 varbuffer;          /* buffer for auxiliary variables (float representatives of discrete variables) */
+   int                   varbufferlen;       /* current length of the above buffer */
+   int                   varbufferpos;       /* current filling position in the above buffer */
+   char*                 castbuffer;         /* buffer for int2float conversion constraints */
+   int                   castbufferlen;      /* current length of the above buffer */          
+   int                   castbufferpos;      /* current filling position in the above buffer */
+   char*                 consbuffer;         /* buffer for all problem constraints */
+   int                   consbufferlen;      /* current length of the above buffer */          
+   int                   consbufferpos;      /* current filling position in the above buffer */
+   int                   ndiscretevars;      /* number of discrete variables in the problem */    
+   SCIP_Bool*            varhasfloat;        /* array which indicates, whether a discrete variable already has a float representative */
 };
 typedef struct FznOutput FZNOUTPUT;
 
@@ -260,8 +263,8 @@ SCIP_Bool isTokenChar(
 /** check if the current token is equal to give char */
 static
 SCIP_Bool isChar(
-   const char*            token,           /**< token to be checked */
-   char                   c                /**< char to compare */
+   const char*           token,              /**< token to be checked */
+   char                  c                   /**< char to compare */
    )
 {
    if( strlen(token) == 1 && *token == c )
@@ -273,8 +276,8 @@ SCIP_Bool isChar(
 /** check if the current token is Bool expression, this means false or true */
 static
 SCIP_Bool isBoolExp(
-   const char*            name,                /**< name to check */
-   SCIP_Bool*             value                /**< pointer to store the Bool value */
+   const char*           name,               /**< name to check */
+   SCIP_Bool*            value               /**< pointer to store the Bool value */
    )
 {
    /* check if the identifier starts with a letter */
@@ -296,7 +299,7 @@ SCIP_Bool isBoolExp(
 /** check if the current token is an identifier, this means [A-Za-z][A-Za-z0-9_]* */
 static
 SCIP_Bool isIdentifier(
-   const char*            name                 /**< name to check */
+   const char*           name                /**< name to check */
    )
 {
    int i;
@@ -363,8 +366,8 @@ SCIP_Bool isValueChar(
 /** compares two token if they are equal */
 static
 SCIP_Bool equalTokens(
-   const char*            token1,              /**< first token */
-   const char*            token2               /**< second token */
+   const char*           token1,             /**< first token */
+   const char*           token2              /**< second token */
    )
 {
    assert(token1 != NULL);
@@ -381,7 +384,7 @@ SCIP_Bool equalTokens(
  */
 static
 SCIP_Bool getNextLine(
-   FZNINPUT*              fzninput             /**< FZN reading data */
+   FZNINPUT*             fzninput            /**< FZN reading data */
    )
 {
    int i;
@@ -479,7 +482,7 @@ SCIP_Bool getNextLine(
 /** reads the next token from the input file into the token buffer; returns whether a token was read */
 static
 SCIP_Bool getNextToken(
-   FZNINPUT*              fzninput             /**< FZN reading data */
+   FZNINPUT*             fzninput            /**< FZN reading data */
    )
 {
    SCIP_Bool hasdot;
@@ -597,7 +600,7 @@ SCIP_Bool getNextToken(
 /** puts the current token on the token stack, such that it is read at the next call to getNextToken() */
 static
 void pushToken(
-   FZNINPUT*              fzninput             /**< FZN reading data */
+   FZNINPUT*             fzninput            /**< FZN reading data */
    )
 {
    assert(fzninput != NULL);
@@ -610,7 +613,7 @@ void pushToken(
 /** checks whether the current token is a semicolon which closes a statement */
 static
 SCIP_Bool isEndStatement(
-   FZNINPUT*              fzninput             /**< FZN reading data */
+   FZNINPUT*             fzninput            /**< FZN reading data */
    )
 {
    assert(fzninput != NULL);
@@ -666,7 +669,7 @@ void syntaxError(
 /** returns whether a syntax error was detected */
 static
 SCIP_Bool hasError(
-   FZNINPUT*              fzninput             /**< FZN reading data */
+   FZNINPUT*             fzninput            /**< FZN reading data */
    )
 {
    assert(fzninput != NULL);
@@ -864,7 +867,6 @@ SCIP_RETCODE createVararray(
    DIMENSIONS*           info                /**< dimension information for output */
    )
 {
-   
    /* allocate memory for the new vararray struct */
    SCIP_CALL( SCIPallocMemory(scip, vararray) );
    
@@ -1450,7 +1452,7 @@ SCIP_RETCODE parseList(
             break;
          
          /* store assignment */
-         SCIP_CALL( SCIPduplicateBufferArray(scip, &(*elements)[(*nelements)], assignment, (int) strlen(assignment) + 1) );
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &(*elements)[(*nelements)], assignment, (int) strlen(assignment) + 1) ); /*lint !e866*/
          
          (*nelements)++;
       }
@@ -2094,7 +2096,6 @@ SCIP_RETCODE parseConstantArray(
 static
 SCIP_RETCODE parsePredicate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_READERDATA*      readerdata,         /**< reader data */
    FZNINPUT*             fzninput            /**< FZN reading data */
    )
 {
@@ -3444,17 +3445,16 @@ SCIP_RETCODE parseConstraint(
       if( ntokens == 4 )
          break;
       
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &tokens[ntokens], token, (int) strlen(token) + 1) );
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &(tokens[ntokens]), token, (int) strlen(token) + 1) ); /*lint !e866*/
       ntokens++;
       
       token = SCIPstrtok(NULL, "_", &nexttoken);
    }
 
-   assert(token == NULL || tokens[0] != NULL);
-   SCIPdebugMessage("%s", tokens[0]);
-   for( i = 1; i < ntokens; ++i )
+   assert(token == NULL || tokens[0] != NULL); /*lint !e771*/
+   for( i = 0; i < ntokens; ++i )
    {
-      SCIPdebugPrintf(" %s", tokens[i]);
+      SCIPdebugPrintf("%s ", tokens[i]);
    }
    SCIPdebugPrintf("\n");
    
@@ -3688,7 +3688,7 @@ SCIP_RETCODE readFZNFile(
          if( equalTokens(fzninput->token, "predicate") )
          {
             /* parse array expression containing constants or variables */
-            SCIP_CALL( parsePredicate(scip, readerdata, fzninput) );
+            SCIP_CALL( parsePredicate(scip, fzninput) );
          }
          else if( equalTokens(fzninput->token, "array") )
          {
@@ -4170,23 +4170,23 @@ SCIP_RETCODE printLinearCons(
 /* writes problem to a flatzinc conform file, including introduction of several auxiliary variables and constraints */
 static
 SCIP_RETCODE writeFzn(
-   SCIP*              scip,               /**< SCIP data structure */
-   FILE*              file,               /**< output file, or NULL if standard output should be used */
-   const char*        name,               /**< problem name */
-   SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
-   SCIP_OBJSENSE      objsense,           /**< objective sense */
-   SCIP_Real          objscale,           /**< scalar applied to objective function; external objective value is
-                                            *   extobj = objsense * objscale * (intobj + objoffset) */
-   SCIP_Real          objoffset,          /**< objective offset from bound shifting and fixing */
-   SCIP_VAR**         vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
-   int                nvars,              /**< number of mutable variables in the problem */
-   int                nbinvars,           /**< number of binary variables */
-   int                nintvars,           /**< number of general integer variables */
-   int                nimplvars,          /**< number of implicit integer variables */
-   int                ncontvars,          /**< number of continuous variables */
-   SCIP_CONS**        conss,              /**< array with constraints of the problem */
-   int                nconss,             /**< number of constraints in the problem */
-   SCIP_RESULT*       result              /**< pointer to store the result of the file writing call */
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file, or NULL if standard output should be used */
+   const char*           name,               /**< problem name */
+   SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
+   SCIP_OBJSENSE         objsense,           /**< objective sense */
+   SCIP_Real             objscale,           /**< scalar applied to objective function; external objective value is
+                                              *   extobj = objsense * objscale * (intobj + objoffset) */
+   SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
+   SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
+   int                   nvars,              /**< number of mutable variables in the problem */
+   int                   nbinvars,           /**< number of binary variables */
+   int                   nintvars,           /**< number of general integer variables */
+   int                   nimplvars,          /**< number of implicit integer variables */
+   int                   ncontvars,          /**< number of continuous variables */
+   SCIP_CONS**           conss,              /**< array with constraints of the problem */
+   int                   nconss,             /**< number of constraints in the problem */
+   SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
    )
 {
    FZNOUTPUT fznoutput;                   /* data structure for writing in fzn format */
@@ -4719,7 +4719,7 @@ SCIP_DECL_READERREAD(readerReadFzn)
 
    for( i = 0; i < FZN_MAX_PUSHEDTOKENS; ++i )
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &fzninput.pushedtokens[i], FZN_BUFFERLEN) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &(fzninput.pushedtokens[i]), FZN_BUFFERLEN) ); /*lint !e866*/
    }
 
    fzninput.npushedtokens = 0;

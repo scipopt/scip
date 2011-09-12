@@ -40,8 +40,8 @@
 /** reads a given bound file, problem has to be in problem stage */
 static
 SCIP_RETCODE readBounds(
-   SCIP*                 scip,              /**< SCIP data structure */
-   const char*           fname              /**< name of the input file */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           fname               /**< name of the input file */
    )
 {
    SCIP_FILE* file;
