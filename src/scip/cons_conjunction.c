@@ -31,7 +31,7 @@
 /* constraint handler properties */
 #define CONSHDLR_NAME          "conjunction"
 #define CONSHDLR_DESC          "conjunction of constraints"
-#define CONSHDLR_SEPAPRIORITY   +000000 /**< priority of the constraint handler for separation */
+#define CONSHDLR_SEPAPRIORITY         0 /**< priority of the constraint handler for separation */
 #define CONSHDLR_ENFOPRIORITY   +900000 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY  -900000 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_SEPAFREQ            -1 /**< frequency for separating cuts; zero means to separate only in the root node */
@@ -44,6 +44,7 @@
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
 
 
 
@@ -553,6 +554,7 @@ SCIP_RETCODE SCIPincludeConshdlrConjunction(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         CONSHDLR_PROP_TIMING,
          conshdlrCopyConjunction,
          consFreeConjunction, consInitConjunction, consExitConjunction, 
          consInitpreConjunction, consExitpreConjunction, consInitsolConjunction, consExitsolConjunction,
@@ -585,7 +587,7 @@ SCIP_RETCODE SCIPcreateConsConjunction(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic             /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    )
 {
    SCIP_CONSHDLR* conshdlr;

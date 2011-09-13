@@ -38,9 +38,9 @@
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_MAXROUNDINGLOOPS   2      /**< delimits the number of main loops, can be set to -1 for no limit */
-#define DEFAULT_STOPZIROUND        TRUE   /**< deactivation check is enabled by default */     
+#define DEFAULT_STOPZIROUND        TRUE   /**< deactivation check is enabled by default */
 #define DEFAULT_STOPPERCENTAGE     0.02   /**< the tolerance percentage after which zirounding will not be executed anymore */
-#define DEFAULT_MINSTOPNCALLS      1000   /**< number of heuristic calls before deactivation check */   
+#define DEFAULT_MINSTOPNCALLS      1000   /**< number of heuristic calls before deactivation check */
 
 /* enable statistic output by defining macro STATISTIC_INFORMATION */
 #ifdef STATISTIC_INFORMATION
@@ -58,10 +58,10 @@ struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
    SCIP_Longint          lastlp;             /**< the number of the last LP for which ZIRounding was called */
-   int                   maxroundingloops;   /**< limits rounding loops in execution */ 
+   int                   maxroundingloops;   /**< limits rounding loops in execution */
    SCIP_Bool             stopziround;        /**< sets deactivation check */
    SCIP_Real             stoppercentage;     /**< threshold for deactivation check */
-   int                   minstopncalls;      /**< number of heuristic calls before deactivation check */   
+   int                   minstopncalls;      /**< number of heuristic calls before deactivation check */
 };
 
 enum Direction
@@ -76,21 +76,21 @@ typedef enum Direction DIRECTION;
  */
 
 /** returns the fractionality of a value x, which is calculated as zivalue(x) = min(x-floor(x), ceil(x)-x) */
-static 
+static
 SCIP_Real getZiValue(
    SCIP*                 scip,               /**< pointer to current SCIP data structure */
-   SCIP_Real             val                 /**< the value for which the fractionality should be computed */ 
+   SCIP_Real             val                 /**< the value for which the fractionality should be computed */
    )
 {
    SCIP_Real upgap;     /* the gap between val and ceil(val) */
    SCIP_Real downgap;   /* the gap between val and floor(val) */
-   
+
    assert(scip != NULL);
-      
+
    upgap   = SCIPfeasCeil(scip, val) - val;
    downgap = val - SCIPfeasFloor(scip, val);
 
-   return MIN(upgap, downgap);   
+   return MIN(upgap, downgap);
 }
 
 /** determines shifting bounds for variable; */
@@ -104,7 +104,7 @@ void calculateBounds(
    SCIP_Real*            upslacks,           /**< array that contains the slacks between row activities and the right hand sides of the rows */
    SCIP_Real*            downslacks,         /**< array that contains lhs slacks */
    int                   nslacks,            /**< current number of slacks */
-   SCIP_Bool*            numericalerror      /**< flag to determine wether a numerical error occurred */
+   SCIP_Bool*            numericalerror      /**< flag to determine whether a numerical error occurred */
    )
 {
    SCIP_COL*      col;
@@ -112,24 +112,24 @@ void calculateBounds(
    SCIP_Real*     colvals;
    int            ncolvals;
    int i;
-  
+
    assert(scip != NULL);
    assert(var != NULL);
-   assert(upslacks != NULL || nslacks == 0);
-   assert(downslacks != NULL || nslacks == 0);
+   assert(upslacks != NULL);
+   assert(downslacks != NULL);
    assert(upperbound != NULL);
    assert(lowerbound != NULL);
 
-   /* get the column associated to the variable, the nonzero rows and the nonzero coefficients */  
+   /* get the column associated to the variable, the nonzero rows and the nonzero coefficients */
    col       = SCIPvarGetCol(var);
    colrows   = SCIPcolGetRows(col);
    colvals   = SCIPcolGetVals(col);
    ncolvals  = SCIPcolGetNLPNonz(col);
 
    /* only proceed, when variable has nonzero coefficients */
-   if( ncolvals == 0 )   
+   if( ncolvals == 0 )
       return;
-   
+
    assert(colvals != NULL);
    assert(colrows != NULL);
 
@@ -143,31 +143,31 @@ void calculateBounds(
       *lowerbound = SCIPinfinity(scip);
    else
       *lowerbound = currentvalue - SCIPvarGetLbGlobal(var);
-  
+
    /* go through every nonzero row coefficient corresponding to var to determine bounds for shifting
     * in such a way that shifting maintains feasibility in every LP row.
     * a lower or upper bound as it is calculated in zirounding always has to be >= 0.0.
-    * if one of these values is significantly < 0.0, this will cause the abort of execution of the heuristic so that 
-    * infeasible solutions are avoided 
+    * if one of these values is significantly < 0.0, this will cause the abort of execution of the heuristic so that
+    * infeasible solutions are avoided
     */
-   for ( i = 0; i < ncolvals && (*lowerbound > 0.0 || *upperbound > 0.0); ++i )
+   for( i = 0; i < ncolvals && (*lowerbound > 0.0 || *upperbound > 0.0); ++i )
    {
       SCIP_ROW* row;
       int       rowpos;
 
       row = colrows[i];
       rowpos = SCIProwGetLPPos(row);
-      
+
       /* the row might currently not be in the LP, ignore it! */
       if( rowpos == -1 )
          continue;
 
       assert(0 <= rowpos && rowpos < nslacks);
 
-      /** all bounds and slacks as they are calculated in zirounding always have to be greater euqal zero.
+      /** all bounds and slacks as they are calculated in zirounding always have to be greater equal zero.
        * It might however be due to numerical issues, e.g. with scaling, that they are not. Better abort in this case.
-       */      
-      if( SCIPisFeasLT(scip, *lowerbound, 0.0) || SCIPisFeasLT(scip, *upperbound, 0.0) 
+       */
+      if( SCIPisFeasLT(scip, *lowerbound, 0.0) || SCIPisFeasLT(scip, *upperbound, 0.0)
          || SCIPisFeasLT(scip, upslacks[rowpos], 0.0) || SCIPisFeasLT(scip, downslacks[rowpos] , 0.0) )
       {
          *numericalerror = TRUE;
@@ -176,7 +176,7 @@ void calculateBounds(
 
       /* if coefficient > 0, rounding up might violate up slack and rounding down might violate down slack
        * thus search for the minimum so that no constraint is violated;
-       * if coefficient < 0, it is the other way around unless at least one row slack is infinity 
+       * if coefficient < 0, it is the other way around unless at least one row slack is infinity
        * which has to be excluded explicitly so as not to corrupt calculations
        */
       if( colvals[i] > 0 )
@@ -190,7 +190,7 @@ void calculateBounds(
       else
       {
          assert(colvals[i] != 0.0);
-            
+
          if( !SCIPisInfinity(scip, upslacks[rowpos] ) )
             *lowerbound = MIN(*lowerbound, -upslacks[rowpos]/colvals[i]);
 
@@ -228,10 +228,10 @@ SCIP_RETCODE updateSlacks(
    assert(downslacks != NULL);
    assert(activities != NULL);
    assert(nslacks >= 0);
-        
+
    col = SCIPvarGetCol(var);
    assert(col != NULL);
-    
+
    rows     = SCIPcolGetRows(col);
    nrows    = SCIPcolGetNLPNonz(col);
    colvals  = SCIPcolGetVals(col);
@@ -240,7 +240,7 @@ SCIP_RETCODE updateSlacks(
    /* go through all rows the shifted variable appears in */
    for( i = 0; i < nrows; ++i )
    {
-      int rowpos;       
+      int rowpos;
 
       rowpos = SCIProwGetLPPos(rows[i]);
       assert(-1 <= rowpos && rowpos < nslacks);
@@ -253,24 +253,24 @@ SCIP_RETCODE updateSlacks(
          val = colvals[i] * shiftvalue;
 
          /* if the row is an equation, we update its slack variable instead of its activities */
-         if( SCIPisFeasEQ(scip, SCIProwGetLhs(rows[i]), SCIProwGetRhs(rows[i])) ) 
+         if( SCIPisFeasEQ(scip, SCIProwGetLhs(rows[i]), SCIProwGetRhs(rows[i])) )
          {
             SCIP_Real slackvarshiftval;
             SCIP_Real slackvarsolval;
 
             assert(slackvars[rowpos] != NULL);
             assert(!SCIPisFeasZero(scip, slackcoeffs[rowpos]));
-            
+
             slackvarsolval = SCIPgetSolVal(scip, sol, slackvars[rowpos]);
             slackvarshiftval = -val / slackcoeffs[rowpos];
-            
+
             assert(SCIPisFeasGE(scip, slackvarsolval + slackvarshiftval, SCIPvarGetLbGlobal(slackvars[rowpos])));
             assert(SCIPisFeasLE(scip, slackvarsolval + slackvarshiftval, SCIPvarGetUbGlobal(slackvars[rowpos])));
-            
+
             SCIP_CALL( SCIPsetSolVal(scip, sol, slackvars[rowpos], slackvarsolval + slackvarshiftval) );
          }
          else
-            activities[rowpos] += val; 
+            activities[rowpos] += val;
 
          /* the slacks of the row now can be updated independently of its type */
          if( !SCIPisInfinity(scip, upslacks[rowpos]) )
@@ -298,7 +298,7 @@ void rowFindSlackVar(
    SCIP_COL** rowcols;
    SCIP_Real* rowvals;
    int nrowvals;
-   
+
    assert(row != NULL);
    assert(varpointer != NULL);
    assert(coeffpointer != NULL);
@@ -317,18 +317,18 @@ void rowFindSlackVar(
 
       assert(rowcols[v] != NULL);
       if( SCIPcolGetLPPos(rowcols[v]) == -1 )
-	 continue;
+         continue;
 
       colvar = SCIPcolGetVar(rowcols[v]);
 
-      if( SCIPvarGetType(colvar) == SCIP_VARTYPE_CONTINUOUS 
+      if( SCIPvarGetType(colvar) == SCIP_VARTYPE_CONTINUOUS
          && !SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(colvar), SCIPvarGetUbGlobal(colvar))
          && SCIPcolGetNLPNonz(rowcols[v]) == 1 )
       {
-	 SCIPdebugMessage("  slack variable for row %s found: %s\n", SCIProwGetName(row), SCIPvarGetName(colvar));
+         SCIPdebugMessage("  slack variable for row %s found: %s\n", SCIProwGetName(row), SCIPvarGetName(colvar));
 
          *coeffpointer = rowvals[v];
-	 *varpointer = colvar;
+         *varpointer = colvar;
 
          return;
       }
@@ -354,7 +354,7 @@ SCIP_DECL_HEURCOPY(heurCopyZirounding)
 
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurZirounding(scip) );
- 
+
    return SCIP_OKAY;
 }
 
@@ -389,7 +389,7 @@ SCIP_DECL_HEURINIT(heurInitZirounding)
 
    /* create working solution */
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
-         
+
    return SCIP_OKAY;
 }
 
@@ -406,7 +406,7 @@ SCIP_DECL_HEUREXIT(heurExitZirounding)  /*lint --e{715}*/
 
    /* free working solution */
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
-  
+
    return SCIP_OKAY;
 }
 
@@ -422,8 +422,8 @@ SCIP_DECL_HEURINITSOL(heurInitsolZirounding)
    assert(heurdata != NULL);
 
    heurdata->lastlp = -1;
-   
-   return SCIP_OKAY; 
+
+   return SCIP_OKAY;
 }
 
 /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
@@ -436,53 +436,53 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
    SCIP_HEURDATA*     heurdata;
    SCIP_SOL*          sol;
    SCIP_VAR**         lpcands;
-   SCIP_VAR**         zilpcands;     
+   SCIP_VAR**         zilpcands;
    SCIP_VAR**         slackvars;
-   SCIP_ROW**         rows;              
-   SCIP_Real*         lpcandssol;    
-   SCIP_Real*         solarray;      
-   SCIP_Real*         upslacks;       
-   SCIP_Real*         downslacks;     
-   SCIP_Real*         activities;  
+   SCIP_ROW**         rows;
+   SCIP_Real*         lpcandssol;
+   SCIP_Real*         solarray;
+   SCIP_Real*         upslacks;
+   SCIP_Real*         downslacks;
+   SCIP_Real*         activities;
    SCIP_Real*         slackvarcoeffs;
    SCIP_Bool*         rowneedsslackvar;
-   
-   SCIP_Longint       nlps;          
-   int                currentlpcands; 
-   int                nlpcands;       
+
+   SCIP_Longint       nlps;
+   int                currentlpcands;
+   int                nlpcands;
    int                i;
    int                c;
-   int                nslacks;        
-   int                nroundings;  
-     
-   SCIP_Bool          improvementfound; 
-   SCIP_Bool          numericalerror;   
-   
+   int                nslacks;
+   int                nroundings;
+
+   SCIP_Bool          improvementfound;
+   SCIP_Bool          numericalerror;
+
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(result != NULL);
    assert(SCIPhasCurrentNodeLP(scip));
 
    *result = SCIP_DIDNOTRUN;
- 
+
    /* only call heuristic if an optimal LP-solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
-   
+
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* Do not call heuristic if deactivation check is enabled and percentage of found solutions in relation 
+   /* Do not call heuristic if deactivation check is enabled and percentage of found solutions in relation
     * to number of calls falls below heurdata->stoppercentage */
-   if( heurdata->stopziround && SCIPheurGetNCalls(heur) >= heurdata->minstopncalls 
+   if( heurdata->stopziround && SCIPheurGetNCalls(heur) >= heurdata->minstopncalls
       && SCIPheurGetNSolsFound(heur)/(SCIP_Real)SCIPheurGetNCalls(heur) < heurdata->stoppercentage )
       return SCIP_OKAY;
-   
+
    /* assure that heuristic has not already been called after the last LP had been solved */
    nlps = SCIPgetNLPs(scip);
    if( nlps == heurdata->lastlp )
       return SCIP_OKAY;
-   
+
    heurdata->lastlp = nlps;
 
    /* get fractional variables */
@@ -491,11 +491,11 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
    /* make sure that there is at least one fractional variable that should be integral */
    if( nlpcands == 0 )
       return SCIP_OKAY;
-   
+
    assert(nlpcands > 0);
    assert(lpcands != NULL);
    assert(lpcandssol != NULL);
-   
+
    /* get the working solution from heuristic's local data */
    sol = heurdata->sol;
    assert(sol != NULL);
@@ -508,12 +508,18 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
    /* copy necessary data to local arrays */
    BMScopyMemoryArray(solarray, lpcandssol, nlpcands);
    BMScopyMemoryArray(zilpcands, lpcands, nlpcands);
-   
+
    /* get LP rows data */
    rows    = SCIPgetLPRows(scip);
    nslacks = SCIPgetNLPRows(scip);
-   assert(rows != NULL || nslacks == 0);
-     
+
+   /* cannot do anything if LP is empty */
+   if( nslacks == 0 )
+      return SCIP_OKAY;
+
+   assert(rows != NULL);
+   assert(nslacks > 0);
+
    SCIP_CALL( SCIPallocBufferArray(scip, &upslacks, nslacks) );
    SCIP_CALL( SCIPallocBufferArray(scip, &downslacks, nslacks) );
    SCIP_CALL( SCIPallocBufferArray(scip, &activities, nslacks) );
@@ -526,7 +532,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
    BMSclearMemoryArray(rowneedsslackvar, nslacks);
 
    numericalerror = FALSE;
-   nroundings = 0; 
+   nroundings = 0;
 
    for( c = 0; c < nlpcands; ++c )
    {
@@ -543,14 +549,15 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
       ncandrows = SCIPcolGetNLPNonz(SCIPvarGetCol(cand));
 
       assert(candrows == NULL || ncandrows > 0);
-      
+
       for( r = 0; r < ncandrows; ++r )
       {
          int rowpos;
 
+         assert(candrows != NULL); /* to please flexelint */
          assert(candrows[r] != NULL);
          rowpos = SCIProwGetLPPos(candrows[r]);
-         
+
          if( rowpos >= 0 && SCIPisFeasEQ(scip, SCIProwGetLhs(candrows[r]), SCIProwGetRhs(candrows[r])) )
          {
             rowneedsslackvar[rowpos] = TRUE;
@@ -560,30 +567,30 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
    }
 
    /* calculate row slacks for every every row that belongs to the current LP and ensure, that the current solution
-    * has no violated constraint -- if any constraint is violated, i.e. a slack is significantly smaller than zero, 
-    * this will cause the termination of the heuristic because Zirounding does not provide feasibility recovering 
+    * has no violated constraint -- if any constraint is violated, i.e. a slack is significantly smaller than zero,
+    * this will cause the termination of the heuristic because Zirounding does not provide feasibility recovering
     */
-   for( i = 0; i < nslacks; ++i ) 
+   for( i = 0; i < nslacks; ++i )
    {
       SCIP_ROW*          row;
-      SCIP_Real          lhs;      
+      SCIP_Real          lhs;
       SCIP_Real          rhs;
-             
+
       row = rows[i];
-      
+
       assert(row != NULL);
-      
+
       lhs = SCIProwGetLhs(row);
       rhs = SCIProwGetRhs(row);
-       
+
       /* get row activity */
       activities[i] = SCIPgetRowActivity(scip, row);
       assert(SCIPisFeasLE(scip, lhs, activities[i]) && SCIPisFeasLE(scip, activities[i], rhs));
-      
+
       /* in special case if LHS or RHS is (-)infinity slacks have to be initialized as infinity*/
-      if ( SCIPisInfinity(scip, -lhs) ) 
+      if( SCIPisInfinity(scip, -lhs) )
          downslacks[i] = SCIPinfinity(scip);
-      else 
+      else
          downslacks[i] = activities[i] - lhs;
 
       if( SCIPisInfinity(scip, rhs) )
@@ -591,75 +598,75 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
       else
          upslacks[i] = rhs - activities[i];
 
-      /* row is an equation. Try to find a slack variable in the row, i.e., 
+      /* row is an equation. Try to find a slack variable in the row, i.e.,
        * a continuous variable which occurs only in this row. If no such variable exists,
-       * there is no hope for an IP-feasible solution in this round 
+       * there is no hope for an IP-feasible solution in this round
        */
-      if( SCIPisFeasEQ(scip, lhs, rhs) && rowneedsslackvar[i] ) 
+      if( SCIPisFeasEQ(scip, lhs, rhs) && rowneedsslackvar[i] )
       {
          /* @todo: This is only necessary for rows containing fractional variables. */
-	 rowFindSlackVar(scip, row, &(slackvars[i]), &(slackvarcoeffs[i]));
+         rowFindSlackVar(scip, row, &(slackvars[i]), &(slackvarcoeffs[i]));
 
          if( slackvars[i] == NULL )
-	 {
-	    SCIPdebugMessage("No slack variable found for equality row %s, terminating ZI Round heuristic\n", SCIProwGetName(row));
-	    goto TERMINATE;
-	 }
-	 else
-	 {
-	    SCIP_Real ubslackvar;
-	    SCIP_Real lbslackvar;
-	    SCIP_Real solvalslackvar;
-	    SCIP_Real coeffslackvar;
-	    SCIP_Real ubgap;
-	    SCIP_Real lbgap;
+         {
+            SCIPdebugMessage("No slack variable found for equality row %s, terminating ZI Round heuristic\n", SCIProwGetName(row));
+            goto TERMINATE;
+         }
+         else
+         {
+            SCIP_Real ubslackvar;
+            SCIP_Real lbslackvar;
+            SCIP_Real solvalslackvar;
+            SCIP_Real coeffslackvar;
+            SCIP_Real ubgap;
+            SCIP_Real lbgap;
 
-	    assert(SCIPvarGetType(slackvars[i]) == SCIP_VARTYPE_CONTINUOUS);
-	    solvalslackvar = SCIPgetSolVal(scip, sol, slackvars[i]);
-	    ubslackvar = SCIPvarGetUbGlobal(slackvars[i]);
-	    lbslackvar = SCIPvarGetLbGlobal(slackvars[i]);
+            assert(SCIPvarGetType(slackvars[i]) == SCIP_VARTYPE_CONTINUOUS);
+            solvalslackvar = SCIPgetSolVal(scip, sol, slackvars[i]);
+            ubslackvar = SCIPvarGetUbGlobal(slackvars[i]);
+            lbslackvar = SCIPvarGetLbGlobal(slackvars[i]);
 
-	    coeffslackvar = slackvarcoeffs[i];
-	    assert(!SCIPisFeasZero(scip, coeffslackvar));
+            coeffslackvar = slackvarcoeffs[i];
+            assert(!SCIPisFeasZero(scip, coeffslackvar));
 
-	    ubgap = ubslackvar - solvalslackvar;
-	    lbgap = solvalslackvar - lbslackvar;
+            ubgap = ubslackvar - solvalslackvar;
+            lbgap = solvalslackvar - lbslackvar;
 
-	    if( SCIPisFeasZero(scip, ubgap) )
-	      ubgap = 0.0;
-	    if( SCIPisFeasZero(scip, lbgap) )
-	      lbgap = 0.0;
-	 
-	    if( SCIPisFeasPositive(scip, coeffslackvar) )
-	    {
-	      if( !SCIPisInfinity(scip, lbslackvar) )
-		upslacks[i] += coeffslackvar * lbgap;
-	      else
-		upslacks[i] = SCIPinfinity(scip);
-	      if( !SCIPisInfinity(scip, ubslackvar) )
-		downslacks[i] += coeffslackvar * ubgap;
-	      else 
-		downslacks[i] = SCIPinfinity(scip);
-	    }
-	    else
-	    {
-	       if( !SCIPisInfinity(scip, lbslackvar) )
-		  upslacks[i] -= coeffslackvar * ubgap;
-	       else
-		  upslacks[i] = SCIPinfinity(scip);
-	       if( !SCIPisInfinity(scip, ubslackvar) )
-		  downslacks[i] -= coeffslackvar * lbgap;
-	       else
-		  downslacks[i] = SCIPinfinity(scip);
-	    }
-	    SCIPdebugMessage("  Slack variable for row %s at pos %d: %g <= %s = %g <= %g; Coeff %g, upslack = %g, downslack = %g  \n", 
+            if( SCIPisFeasZero(scip, ubgap) )
+              ubgap = 0.0;
+            if( SCIPisFeasZero(scip, lbgap) )
+              lbgap = 0.0;
+
+            if( SCIPisFeasPositive(scip, coeffslackvar) )
+            {
+              if( !SCIPisInfinity(scip, lbslackvar) )
+                upslacks[i] += coeffslackvar * lbgap;
+              else
+                upslacks[i] = SCIPinfinity(scip);
+              if( !SCIPisInfinity(scip, ubslackvar) )
+                downslacks[i] += coeffslackvar * ubgap;
+              else
+                downslacks[i] = SCIPinfinity(scip);
+            }
+            else
+            {
+               if( !SCIPisInfinity(scip, lbslackvar) )
+                  upslacks[i] -= coeffslackvar * ubgap;
+               else
+                  upslacks[i] = SCIPinfinity(scip);
+               if( !SCIPisInfinity(scip, ubslackvar) )
+                  downslacks[i] -= coeffslackvar * lbgap;
+               else
+                  downslacks[i] = SCIPinfinity(scip);
+            }
+            SCIPdebugMessage("  Slack variable for row %s at pos %d: %g <= %s = %g <= %g; Coeff %g, upslack = %g, downslack = %g  \n",
                SCIProwGetName(row), SCIProwGetLPPos(row), lbslackvar, SCIPvarGetName(slackvars[i]), solvalslackvar, ubslackvar, coeffslackvar,
                upslacks[i], downslacks[i]);
-	 }
+         }
       }
-      /* due to numerical inaccuracies, the rows might be feasible, even if the slacks are 
-       * significantly smaller than zero -> terminate 
-       */      
+      /* due to numerical inaccuracies, the rows might be feasible, even if the slacks are
+       * significantly smaller than zero -> terminate
+       */
       if( SCIPisFeasLT(scip, upslacks[i], 0.0) || SCIPisFeasLT(scip, downslacks[i], 0.0) )
          goto TERMINATE;
    }
@@ -668,14 +675,14 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
 
    /* initialize number of remaining variables and flag to enter the main loop */
    currentlpcands = nlpcands;
-   improvementfound = TRUE;           
+   improvementfound = TRUE;
    *result = SCIP_DIDNOTFIND;
 
-   /* check if fractional rounding candidates are left in each round, 
+   /* check if fractional rounding candidates are left in each round,
     * whereas number of rounds is limited by parameter maxroundingloops
     */
    while( currentlpcands > 0 && improvementfound && (heurdata->maxroundingloops == -1 || nroundings < heurdata->maxroundingloops) )
-   { 
+   {  /*lint --e{850}*/
       improvementfound = FALSE;
       nroundings++;
       SCIPdebugMessage("zirounding enters while loop for %d time with %d candidates left. \n", nroundings, currentlpcands);
@@ -687,16 +694,16 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
          SCIP_Real oldsolval;
          SCIP_Real upperbound;
          SCIP_Real lowerbound;
-         SCIP_Real up;          
-         SCIP_Real down;        
-         SCIP_Real ziup;        
-         SCIP_Real zidown;      
-         SCIP_Real zicurrent;   
+         SCIP_Real up;
+         SCIP_Real down;
+         SCIP_Real ziup;
+         SCIP_Real zidown;
+         SCIP_Real zicurrent;
          SCIP_Real shiftval;
 
          DIRECTION direction;
 
-         /* get values from local data */ 
+         /* get values from local data */
          oldsolval = solarray[c];
          var = zilpcands[c];
 
@@ -710,7 +717,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
 
          if( numericalerror )
             goto TERMINATE;
-            
+
          /* calculate the possible values after shifting */
          up   = oldsolval + upperbound;
          down = oldsolval - lowerbound;
@@ -743,14 +750,14 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
                direction = DIRECTION_DOWN;
             else
                direction = DIRECTION_UP;
-      
+
             /* once a possible shifting direction and value have been found, variable value is updated */
             shiftval = (direction == DIRECTION_UP ? up - oldsolval : down - oldsolval);
-            
+
             /* update the solution */
             solarray[c] = oldsolval + shiftval;
             SCIP_CALL( SCIPsetSolVal(scip, sol, var, solarray[c]) );
-  
+
             /* update the rows activities and slacks */
             SCIP_CALL( updateSlacks(scip, sol, var, shiftval, upslacks,
                   downslacks, activities, slackvars, slackvarcoeffs, nslacks) );
@@ -760,34 +767,34 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
             /* since at least one improvement has been found, heuristic will enter main loop for another time because the improvement
              * might affect many LP rows and their current slacks and thus make further rounding steps possible */
             improvementfound = TRUE;
-         } 
+         }
 
          /* if solution value of variable has become feasibly integral due to rounding step,
           * variable is put at the end of remaining candidates array so as not to be considered in future loops
           */
          if( SCIPisFeasIntegral(scip, solarray[c]) )
-         { 
+         {
             zilpcands[c] = zilpcands[currentlpcands - 1];
             solarray[c] = solarray[currentlpcands - 1];
             currentlpcands--;
-            
+
             /* counter is decreased if end of candidates array has not been reached yet */
             if( c < currentlpcands )
                c--;
-         } 
+         }
          else if( nroundings == heurdata->maxroundingloops - 1 )
-            goto TERMINATE;	
+            goto TERMINATE;
       }
    }
 
-   /* in case that no candidate is left for rounding after the final main loop 
+   /* in case that no candidate is left for rounding after the final main loop
     * the found solution has to be checked for feasibility in the original problem
     */
    if( currentlpcands == 0 )
-   {           
+   {
       SCIP_Bool stored;
       SCIP_CALL(SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, FALSE, &stored));
-      if ( stored )
+      if( stored )
       {
 #ifdef SCIP_DEBUG
          SCIPdebugMessage("found feasible rounded solution:\n");
@@ -832,7 +839,7 @@ SCIP_RETCODE SCIPincludeHeurZirounding(
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
          heurCopyZirounding,
-         heurFreeZirounding, heurInitZirounding, heurExitZirounding, 
+         heurFreeZirounding, heurInitZirounding, heurExitZirounding,
          heurInitsolZirounding, heurExitsolZirounding, heurExecZirounding,
          heurdata) );
 
@@ -840,13 +847,13 @@ SCIP_RETCODE SCIPincludeHeurZirounding(
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/zirounding/maxroundingloops",
          "determines maximum number of rounding loops",
          &heurdata->maxroundingloops, TRUE, DEFAULT_MAXROUNDINGLOOPS, -1, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/zirounding/stopziround", 
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/zirounding/stopziround",
          "flag to determine if Zirounding is deactivated after a certain percentage of unsuccessful calls",
          &heurdata->stopziround, TRUE, DEFAULT_STOPZIROUND, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip,"heuristics/zirounding/stoppercentage", 
+   SCIP_CALL( SCIPaddRealParam(scip,"heuristics/zirounding/stoppercentage",
          "if percentage of found solutions falls below this parameter, Zirounding will be deactivated",
          &heurdata->stoppercentage, TRUE, DEFAULT_STOPPERCENTAGE, 0.0, 1.0, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/zirounding/minstopncalls", 
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/zirounding/minstopncalls",
          "determines the minimum number of calls before percentage-based deactivation of"
          " Zirounding is applied", &heurdata->minstopncalls, TRUE, DEFAULT_MINSTOPNCALLS, 1, INT_MAX, NULL, NULL) );
 

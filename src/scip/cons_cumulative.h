@@ -75,15 +75,15 @@ SCIP_RETCODE SCIPcreateConsCumulative(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node?
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
-   
+
 /** returns the activities of the cumulative constraint */
 extern
 SCIP_VAR** SCIPgetVarsCumulative(
@@ -120,7 +120,7 @@ int* SCIPgetDemandsCumulative(
    );
 
 /** check for the given starting time variables with their demands and durations if the cumulative conditions for the
- *  given solution is satisfied 
+ *  given solution is satisfied
  */
 extern
 SCIP_RETCODE SCIPcheckCumulativeCondition(
@@ -135,7 +135,7 @@ SCIP_RETCODE SCIPcheckCumulativeCondition(
    SCIP_CONS*            cons,               /**< constraint which is checked */
    SCIP_Bool             printreason         /**< should the reason for the violation be printed? */
    );
-   
+
 /** propagate the given cumulative condition */
 extern
 SCIP_RETCODE SCIPpropCumulativeCondition(
@@ -172,7 +172,7 @@ SCIP_RETCODE SCIPprofileCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    CUMULATIVEPROFILE**   profile,            /**< pointer to store the create profile */
    int                   capacity,           /**< Capacity for this profile */
-   int                   maxtimepoints       /**< maximium number time points */
+   int                   maxtimepoints       /**< maximum number of time points */
    );
 
 /** frees given profile */
@@ -200,8 +200,8 @@ void SCIPprofileInsertCore(
    SCIP_VAR*             var,                /**< integer variable which corresponds to the starting point of the job */
    int                   duration,           /**< duration of the job */
    int                   demand,             /**< demand of the job */
-   SCIP_Bool*            core,               /**< pointer to store if the corresponds job has a core */       
-   SCIP_Bool*	         fixed,              /**< poiner to store if the job is fixed due to its bounds */ 
+   SCIP_Bool*            core,               /**< pointer to store if the corresponds job has a core */  
+   SCIP_Bool*            fixed,              /**< pointer to store if the job is fixed due to its bounds */
    SCIP_Bool*            infeasible          /**< pointer to store if the job does not fit due to capacity */
    );
 
@@ -213,7 +213,7 @@ void SCIPprofileDeleteCore(
    SCIP_VAR*             var,                /**< integer variable which corresponds to the starting point of the job */
    int                   duration,           /**< duration of the job */
    int                   demand,             /**< demand of the job */
-   SCIP_Bool*            core                /**< pointer to store if the corresponds job has a core, or NULL */       
+   SCIP_Bool*            core                /**< pointer to store if the corresponds job has a core, or NULL */  
    );
 
 /** print profile to the given file stream (for debugging) */
@@ -270,7 +270,7 @@ int SCIPprofileGetEarliestFeasibleStart(
    int                   ub,                 /**< latest possible start point */
    int                   duration,           /**< duration of the job */
    int                   demand,             /**< demand of the job */
-   SCIP_Bool*            infeasible          /**< pointer store if the job can not be scheduled */
+   SCIP_Bool*            infeasible          /**< pointer store if the job cannot be scheduled */
    );
 
 /** return the latest possible starting point within the time interval [lb,ub] for a given job (given by its duration
@@ -282,7 +282,7 @@ int SCIPprofileGetLatestFeasibleStart(
    int                   ub,                 /**< latest possible start point */
    int                   duration,           /**< duration of the job */
    int                   demand,             /**< demand of the job */
-   SCIP_Bool*            infeasible          /**< pointer store if the job can not be scheduled */
+   SCIP_Bool*            infeasible          /**< pointer store if the job cannot be scheduled */
    );
 
 #ifdef __cplusplus

@@ -12,6 +12,8 @@ TAGS
 release/
 check/results/
 check/locks
+check/MINLP
+check/IP
 cplex.log
 doc/html/
 doc/html_devel/
@@ -19,3 +21,5 @@ doc/html_devel/
 .project
 hooks/
 localhooks/
+src/scip/githash.c
+doc/doxygen

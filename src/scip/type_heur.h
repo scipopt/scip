@@ -28,36 +28,11 @@
 #include "scip/def.h"
 #include "scip/type_scip.h"
 #include "scip/type_result.h"
+#include "scip/type_timing.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/** heuristics execution timing flags */
-#define SCIP_HEURTIMING_BEFORENODE        0x001 /**< call heuristic before the processing of the node starts */
-#define SCIP_HEURTIMING_DURINGLPLOOP      0x002 /**< call heuristic after each LP solving during cut-and-price loop */
-#define SCIP_HEURTIMING_AFTERLPLOOP       0x004 /**< call heuristic after the cut-and-price loop was finished */
-#define SCIP_HEURTIMING_AFTERLPNODE       0x008 /**< call heuristic after the processing of a node with solved LP was
-                                                 *   finished */
-#define SCIP_HEURTIMING_AFTERPSEUDONODE   0x010 /**< call heuristic after the processing of a node without solved LP was
-                                                 *   finished */
-#define SCIP_HEURTIMING_AFTERLPPLUNGE     0x020 /**< call heuristic after the processing of the last node in the current
-                                                 *   plunge was finished, and only if the LP was solved for this node */
-#define SCIP_HEURTIMING_AFTERPSEUDOPLUNGE 0x040 /**< call heuristic after the processing of the last node in the current
-                                                 *   plunge was finished, and only if the LP was not solved for this node */
-#define SCIP_HEURTIMING_DURINGPRICINGLOOP 0x080 /**< call heuristic during pricing loop */
-#define SCIP_HEURTIMING_BEFOREPRESOL      0x100 /**< call heuristic before presolving */
-#define SCIP_HEURTIMING_DURINGPRESOLLOOP  0x200 /**< call heuristic during presolving loop */
-#define SCIP_HEURTIMING_AFTERPROPLOOP     0x400 /**< call heuristic after propagation for this node was finished */
-/* it turned out that a heuristic timing DURINGPROPLOOP causes severe troubles with the resolving of propagations */
-
-typedef unsigned int SCIP_HEURTIMING;
-
-/** call heuristic after the processing of a node was finished */
-#define SCIP_HEURTIMING_AFTERNODE (SCIP_HEURTIMING_AFTERLPNODE | SCIP_HEURTIMING_AFTERPSEUDONODE)
-
-/** call heuristic after the processing of the last node in the current plunge was finished */
-#define SCIP_HEURTIMING_AFTERPLUNGE (SCIP_HEURTIMING_AFTERLPPLUNGE | SCIP_HEURTIMING_AFTERPSEUDOPLUNGE)
 
 typedef struct SCIP_Heur SCIP_HEUR;               /**< primal heuristic */
 typedef struct SCIP_HeurData SCIP_HEURDATA;       /**< locally defined primal heuristic data */

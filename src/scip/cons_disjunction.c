@@ -46,6 +46,7 @@
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
 
 
 
@@ -172,7 +173,7 @@ SCIP_RETCODE consdataAddCons(
    return SCIP_OKAY;
 }
 
-/** branches disjuctive constraint */
+/** branches on disjunctive constraint */
 static
 SCIP_RETCODE branchCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -189,7 +190,7 @@ SCIP_RETCODE branchCons(
 
    assert(result != NULL);
 
-   /* can branch modifiable constraint */
+   /* cannot branch on modifiable constraint */
    if( SCIPconsIsModifiable(cons) )
       return SCIP_OKAY;
    
@@ -510,7 +511,7 @@ SCIP_DECL_CONSPRESOL(consPresolDisjunction)
 
       if( !SCIPconsIsModifiable(conss[c]) && consdata->nconss == 1 )
       {
-         /* add constaint to the problem */
+         /* add constraint to the problem */
          if( !SCIPconsIsActive(consdata->conss[0]) )
          {
             SCIP_CALL( SCIPaddCons(scip, consdata->conss[0]) );
@@ -674,6 +675,7 @@ SCIP_RETCODE SCIPincludeConshdlrDisjunction(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         CONSHDLR_PROP_TIMING,
          conshdlrCopyDisjunction,
          consFreeDisjunction, consInitDisjunction, consExitDisjunction, 
          consInitpreDisjunction, consExitpreDisjunction, consInitsolDisjunction, consExitsolDisjunction,
@@ -708,7 +710,7 @@ SCIP_RETCODE SCIPcreateConsDisjunction(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic             /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    )
 {
    SCIP_CONSHDLR* conshdlr;

@@ -115,21 +115,27 @@
 #ifdef SORTTPL_PTRCOMP
 #ifdef SORTTPL_BACKWARDS
 #define SORTTPL_ISBETTER(x,y) (ptrcomp((x), (y)) > 0)
+#define SORTTPL_ISWORSE(x,y) (ptrcomp((x), (y)) < 0)
 #else
 #define SORTTPL_ISBETTER(x,y) (ptrcomp((x), (y)) < 0)
+#define SORTTPL_ISWORSE(x,y) (ptrcomp((x), (y)) > 0)
 #endif
 #else
 #ifdef SORTTPL_INDCOMP
 #ifdef SORTTPL_BACKWARDS
 #define SORTTPL_ISBETTER(x,y) (indcomp(dataptr, (x), (y)) > 0)
+#define SORTTPL_ISWORSE(x,y) (indcomp(dataptr, (x), (y)) < 0)
 #else
 #define SORTTPL_ISBETTER(x,y) (indcomp(dataptr, (x), (y)) < 0)
+#define SORTTPL_ISWORSE(x,y) (indcomp(dataptr, (x), (y)) > 0)
 #endif
 #else
 #ifdef SORTTPL_BACKWARDS
 #define SORTTPL_ISBETTER(x,y) ((x) > (y))
+#define SORTTPL_ISWORSE(x,y) ((x) < (y))
 #else
 #define SORTTPL_ISBETTER(x,y) ((x) < (y))
+#define SORTTPL_ISWORSE(x,y) ((x) > (y))
 #endif
 #endif
 #endif
@@ -143,7 +149,7 @@
    }
 
 
-/** shellsort an array of data elements; use it only for arrays smaller than 25 entries */
+/** shell-sort an array of data elements; use it only for arrays smaller than 25 entries */
 static
 void SORTTPL_NAME(sorttpl_shellSort, SORTTPL_NAMEEXT)
 (
@@ -204,7 +210,7 @@ void SORTTPL_NAME(sorttpl_shellSort, SORTTPL_NAMEEXT)
 }
 
 
-/** quicksort an array of pointers; pivot is the medial element */
+/** quick-sort an array of pointers; pivot is the medial element */
 static
 void SORTTPL_NAME(sorttpl_qSort, SORTTPL_NAMEEXT)
 (
@@ -218,12 +224,13 @@ void SORTTPL_NAME(sorttpl_qSort, SORTTPL_NAMEEXT)
    SORTTPL_HASINDCOMPPAR( SCIP_DECL_SORTINDCOMP((*indcomp)) )  /**< data element comparator */
    SORTTPL_HASINDCOMPPAR( void*                  dataptr    )  /**< pointer to data field that is given to the external compare method */
    int                   start,              /**< starting index */
-   int                   end                 /**< ending index */
+   int                   end,                /**< ending index */
+   SCIP_Bool             type                /**< TRUE, if quick-sort should start with with key[lo] < pivot <= key[hi], key[lo] <= pivot < key[hi] otherwise */
    )
 {
    assert(start <= end);
 
-   /* use quick sort for long lists */
+   /* use quick-sort for long lists */
    while( end - start >= SORTTPL_SHELLSORTMAX )
    {
       SORTTPL_KEYTYPE pivotkey;
@@ -240,11 +247,21 @@ void SORTTPL_NAME(sorttpl_qSort, SORTTPL_NAMEEXT)
       hi = end;
       for( ;; )
       {
-         while( lo < end && SORTTPL_ISBETTER(key[lo], pivotkey) )
-            lo++;
-         while( hi > start && !SORTTPL_ISBETTER(key[hi], pivotkey) )
-            hi--;
-         
+         if( type )
+         {
+            while( lo < end && SORTTPL_ISBETTER(key[lo], pivotkey) )
+               lo++;
+            while( hi > start && !SORTTPL_ISBETTER(key[hi], pivotkey) )
+               hi--;
+         }
+         else
+         {
+            while( lo < end && !SORTTPL_ISWORSE(key[lo], pivotkey) )
+               lo++;
+            while( hi > start && SORTTPL_ISWORSE(key[hi], pivotkey) )
+               hi--;
+         }
+
          if( lo >= hi )
             break;
          
@@ -258,27 +275,50 @@ void SORTTPL_NAME(sorttpl_qSort, SORTTPL_NAMEEXT)
          lo++;
          hi--;
       }
-      assert(hi == lo-1 || hi == start);
+      assert((hi == lo-1) || (type && hi == start) || (!type && lo == end));
       
       /* skip entries which are equal to the pivot element (three partitions, <, =, > than pivot)*/
-      while( lo < end && !SORTTPL_ISBETTER(pivotkey, key[lo]) )
-         lo++;
-      
-      /* make sure that we have at least one element in the smaller partition */
-      if( lo == start )
+      if( type )
       {
-         /* everything is greater or equal than the pivot element: move pivot to the left (degenerate case) */
-         assert(!SORTTPL_ISBETTER(key[mid], pivotkey)); /* the pivot element did not change its position */
-         assert(!SORTTPL_ISBETTER(pivotkey, key[mid]));
-         SORTTPL_SWAP(SORTTPL_KEYTYPE, key[lo], key[mid]);
-         SORTTPL_HASFIELD1( SORTTPL_SWAP(SORTTPL_FIELD1TYPE, field1[lo], field1[mid]); )
-         SORTTPL_HASFIELD2( SORTTPL_SWAP(SORTTPL_FIELD2TYPE, field2[lo], field2[mid]); )
-         SORTTPL_HASFIELD3( SORTTPL_SWAP(SORTTPL_FIELD3TYPE, field3[lo], field3[mid]); )
-         SORTTPL_HASFIELD4( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field4[lo], field4[mid]); )
-         SORTTPL_HASFIELD5( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field5[lo], field5[mid]); )
-         lo++;
-      }
+         while( lo < end && !SORTTPL_ISBETTER(pivotkey, key[lo]) )
+            lo++;
          
+         /* make sure that we have at least one element in the smaller partition */
+         if( lo == start )
+         {
+            /* everything is greater or equal than the pivot element: move pivot to the left (degenerate case) */
+            assert(!SORTTPL_ISBETTER(key[mid], pivotkey)); /* the pivot element did not change its position */
+            assert(!SORTTPL_ISBETTER(pivotkey, key[mid]));
+            SORTTPL_SWAP(SORTTPL_KEYTYPE, key[lo], key[mid]);
+            SORTTPL_HASFIELD1( SORTTPL_SWAP(SORTTPL_FIELD1TYPE, field1[lo], field1[mid]); )
+            SORTTPL_HASFIELD2( SORTTPL_SWAP(SORTTPL_FIELD2TYPE, field2[lo], field2[mid]); )
+            SORTTPL_HASFIELD3( SORTTPL_SWAP(SORTTPL_FIELD3TYPE, field3[lo], field3[mid]); )
+            SORTTPL_HASFIELD4( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field4[lo], field4[mid]); )
+            SORTTPL_HASFIELD5( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field5[lo], field5[mid]); )
+            lo++;
+         }
+      }
+      else
+      {
+         while( hi > start && !SORTTPL_ISWORSE(pivotkey, key[hi]) )
+            hi--;
+
+         /* make sure that we have at least one element in the smaller partition */
+         if( hi == end )
+         {
+            /* everything is greater or equal than the pivot element: move pivot to the left (degenerate case) */
+            assert(!SORTTPL_ISBETTER(key[mid], pivotkey)); /* the pivot element did not change its position */
+            assert(!SORTTPL_ISBETTER(pivotkey, key[mid]));
+            SORTTPL_SWAP(SORTTPL_KEYTYPE, key[hi], key[mid]);
+            SORTTPL_HASFIELD1( SORTTPL_SWAP(SORTTPL_FIELD1TYPE, field1[hi], field1[mid]); )
+            SORTTPL_HASFIELD2( SORTTPL_SWAP(SORTTPL_FIELD2TYPE, field2[hi], field2[mid]); )
+            SORTTPL_HASFIELD3( SORTTPL_SWAP(SORTTPL_FIELD3TYPE, field3[hi], field3[mid]); )
+            SORTTPL_HASFIELD4( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field4[hi], field4[mid]); )
+            SORTTPL_HASFIELD5( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field5[hi], field5[mid]); )
+            hi--;
+         }
+      }
+
       /* sort the smaller partition by a recursive call, sort the larger part without recursion */
       if( hi - start <= end - lo )
       {
@@ -295,7 +335,7 @@ void SORTTPL_NAME(sorttpl_qSort, SORTTPL_NAMEEXT)
                 SORTTPL_HASPTRCOMPPAR(ptrcomp)
                 SORTTPL_HASINDCOMPPAR(indcomp)
                 SORTTPL_HASINDCOMPPAR(dataptr)
-                start, hi);
+                  start, hi, !type);
          }
 
          /* now focus on the larger part [lo,end] */
@@ -316,12 +356,13 @@ void SORTTPL_NAME(sorttpl_qSort, SORTTPL_NAMEEXT)
                 SORTTPL_HASPTRCOMPPAR(ptrcomp)
                 SORTTPL_HASINDCOMPPAR(indcomp)
                 SORTTPL_HASINDCOMPPAR(dataptr)
-                lo, end);
+                  lo, end, !type);
          }
 
          /* now focus on the larger part [start,hi] */
          end = hi;
       }
+      type = !type;
    }
    
    /* use shell sort on the remaining small list */
@@ -408,7 +449,7 @@ void SORTTPL_NAME(SCIPsort, SORTTPL_NAMEEXT)
             SORTTPL_HASPTRCOMPPAR(ptrcomp)
             SORTTPL_HASINDCOMPPAR(indcomp)
             SORTTPL_HASINDCOMPPAR(dataptr)
-            0, len-1);
+            0, len-1, TRUE);
    }
 #ifndef NDEBUG
    SORTTPL_NAME(sorttpl_checkSort, SORTTPL_NAMEEXT)
@@ -582,6 +623,7 @@ SCIP_Bool SORTTPL_NAME(SCIPsortedvecFind, SORTTPL_NAMEEXT)
 #undef SORTTPL_HASPTRCOMPPAR
 #undef SORTTPL_HASINDCOMPPAR
 #undef SORTTPL_ISBETTER
+#undef SORTTPL_ISWORSE
 #undef SORTTPL_SWAP
 #undef SORTTPL_SHELLSORTMAX
 #undef SORTTPL_BACKWARDS

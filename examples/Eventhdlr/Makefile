@@ -90,11 +90,12 @@ endif
 		-rm -f $(MAINFILE)
 
 .PHONY: test
-test:           
+test:           $(MAINFILE)
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.awk);
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/getlastproblem.awk);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/getlastprob.awk);
+		@-(cd check/testset && ln -fs ../../$(SCIPDIR)/check/testset/short.solu);
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS);
 

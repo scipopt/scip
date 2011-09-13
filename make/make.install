@@ -1,0 +1,53 @@
+#* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#*                                                                           *
+#*                  This file is part of the program and library             *
+#*         SCIP --- Solving Constraint Integer Programs                      *
+#*                                                                           *
+#*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            *
+#*                            fuer Informationstechnik Berlin                *
+#*                                                                           *
+#*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
+#*                                                                           *
+#*  You should have received a copy of the ZIB Academic License              *
+#*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
+#*                                                                           *
+#* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+#@file    make.install
+#@brief   Makefile targets for installing and removing SCIP
+#@author  Stefan Heinz
+
+.PHONY: install
+install:	all 
+ifneq ($(INSTALLDIR),)
+		@echo "-> install scip headers into INSTALLDIR <$(INSTALLDIR)>"
+		@-install -m 755 -d $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(INSTALLDIR)/$(INCLUDEDIR)/objscip/
+		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(SCIPPLUGININCSRC) 
+		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(SRCDIR)/scip/pub_*h 
+		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(SRCDIR)/scip/struct_*h 
+		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(SRCDIR)/scip/type_*h 
+		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(SRCDIR)/scip/scip.h
+		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/objscip/ $(OBJSCIPINCSRC) 
+		@echo "-> install binary into INSTALLDIR <$(INSTALLDIR)>"
+		@-install -m 755 -d $(INSTALLDIR)/$(BINDIR)/
+		@-install -m 755 -p -t $(INSTALLDIR)/$(BINDIR)/ $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK) 
+		@echo "-> install libraries into INSTALLDIR <$(INSTALLDIR)>"
+		@-install -m 755 -d $(INSTALLDIR)/$(LIBDIR)/
+		@-install -m 644 -p -t $(INSTALLDIR)/$(LIBDIR)/ $(LPILIBFILE) $(NLPILIBFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) 
+endif
+
+.PHONY: uninstall
+uninstall:
+ifneq ($(INSTALLDIR),)
+		@echo "-> remove scip headers from INSTALLDIR <$(INSTALLDIR)>"
+		@-mkdir -p $(INSTALLDIR)/$(INCLUDEDIR)/scip
+		@-rm -f $(INSTALLDIR)/$(INCLUDEDIR)/scip/*.h
+		@-mkdir -p $(INSTALLDIR)/$(INCLUDEDIR)/objscip
+		@-rm -f $(INSTALLDIR)/$(INCLUDEDIR)/objscip/*.h
+		@-rmdir $(INSTALLDIR)/$(INCLUDEDIR)/scip $(INSTALLDIR)/$(INCLUDEDIR)/objscip
+		@echo "-> remove binary from INSTALLDIR <$(INSTALLDIR)>"
+		@-(cd $(INSTALLDIR) && rm -f $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK));
+		@echo "-> remove libraries from INSTALLDIR <$(INSTALLDIR)>"
+		@-(cd $(INSTALLDIR) && rm -f $(LPILIBFILE) $(NLPILIBFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE)); 
+endif
+

@@ -44,6 +44,8 @@
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
+
 #define EVENTHDLR_NAME         "xor"
 #define EVENTHDLR_DESC         "event handler for xor constraints"
 
@@ -136,7 +138,7 @@ SCIP_RETCODE unlockRounding(
    return SCIP_OKAY;
 }
 
-/** creates constaint handler data */
+/** creates constraint handler data */
 static
 SCIP_RETCODE conshdlrdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1144,7 +1146,7 @@ SCIP_RETCODE propagateCons(
       SCIP_CALL( SCIPincConsAge(scip, cons) );
    }
 
-   /* propagation can not be applied, if we have at least two unfixed variables left;
+   /* propagation cannot be applied, if we have at least two unfixed variables left;
     * that means, we only have to watch (i.e. capture events) of two variables, and switch to other variables
     * if these ones get fixed
     */
@@ -1344,7 +1346,7 @@ SCIP_RETCODE detectRedundantConstraints(
       assert(conshdlrdata != NULL);
 
       /* it can happen that during preprocessing some variables got aggregated and a constraint now has not active
-       * variables inside so we need to remove them for sortation
+       * variables inside so we need to remove them for sorting
        */
       /* remove all variables that are fixed to zero and all pairs of variables fixed to one;
        * merge multiple entries of the same or negated variables
@@ -1452,7 +1454,7 @@ SCIP_RETCODE preprocessConstraintPairs(
    assert(conshdlrdata != NULL);
 
    /* it can happen that during preprocessing some variables got aggregated and a constraint now has not active
-    * variables inside so we need to remove them for sortation
+    * variables inside so we need to remove them for sorting
     */
    /* remove all variables that are fixed to zero and all pairs of variables fixed to one;
     * merge multiple entries of the same or negated variables
@@ -1489,7 +1491,7 @@ SCIP_RETCODE preprocessConstraintPairs(
       assert(consdata1 != NULL);
 
       /* it can happen that during preprocessing some variables got aggregated and a constraint now has not active
-       * variables inside so we need to remove them for sortation
+       * variables inside so we need to remove them for sorting
        */
       /* remove all variables that are fixed to zero and all pairs of variables fixed to one;
        * merge multiple entries of the same or negated variables
@@ -2163,7 +2165,7 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
     */
    if( !cutoff )
    {
-      if (*nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars )
+      if( *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars )
       {
          
          if( firstchange < nconss && conshdlrdata->presolusehashing ) 
@@ -2456,6 +2458,7 @@ SCIP_RETCODE SCIPincludeConshdlrXor(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         CONSHDLR_PROP_TIMING,
          conshdlrCopyXor,
          consFreeXor, consInitXor, consExitXor, 
          consInitpreXor, consExitpreXor, consInitsolXor, consExitsolXor,
@@ -2505,7 +2508,7 @@ SCIP_RETCODE SCIPcreateConsXor(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even

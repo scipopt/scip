@@ -58,7 +58,7 @@ SCIP_RETCODE SCIPcreateConsDisjunction(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic             /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    );
 
 /** adds constraint to the disjunction of constraints */

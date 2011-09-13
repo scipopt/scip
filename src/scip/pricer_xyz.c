@@ -164,7 +164,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostXyz)
 
 
 #if 0
-/** farkas pricing method of variable pricer for infeasible LPs */
+/** Farkas pricing method of variable pricer for infeasible LPs */
 static
 SCIP_DECL_PRICERFARKAS(pricerFarkasXyz)
 {  /*lint --e{715}*/

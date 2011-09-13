@@ -1,18 +1,4 @@
-$(LIBOBJDIR)/scip/lpi_clp.o: src/scip/lpi_clp.cpp lib/clpinc/ClpSimplex.hpp \
- lib/clpinc/ClpModel.hpp lib/clpinc/ClpConfig.h lib/clpinc/config_clp.h \
- lib/clpinc/ClpPackedMatrix.hpp lib/clpinc/CoinPragma.hpp \
- lib/clpinc/ClpMatrixBase.hpp lib/clpinc/CoinFinite.hpp \
- lib/clpinc/CoinUtilsConfig.h lib/clpinc/config_coinutils.h \
- lib/clpinc/CoinPackedMatrix.hpp lib/clpinc/CoinError.hpp \
- lib/clpinc/CoinPackedVectorBase.hpp lib/clpinc/CoinFloatEqual.hpp \
- lib/clpinc/CoinShallowPackedVector.hpp lib/clpinc/CoinMessageHandler.hpp \
- lib/clpinc/CoinHelperFunctions.hpp lib/clpinc/ClpParameters.hpp \
- lib/clpinc/ClpObjective.hpp lib/clpinc/ClpSolve.hpp \
- lib/clpinc/ClpPrimalColumnSteepest.hpp \
- lib/clpinc/ClpPrimalColumnPivot.hpp lib/clpinc/ClpDualRowSteepest.hpp \
- lib/clpinc/ClpDualRowPivot.hpp lib/clpinc/CoinIndexedVector.hpp \
- lib/clpinc/CoinSort.hpp lib/clpinc/CoinDistance.hpp \
- lib/clpinc/config_clp.h src/scip/lpi.h src/scip/def.h \
+$(LIBOBJDIR)/scip/lpi_clp.o: src/scip/lpi_clp.cpp src/scip/lpi.h src/scip/def.h \
  src/scip/type_retcode.h src/scip/message.h src/scip/type_message.h \
  src/scip/struct_message.h src/scip/pub_message.h \
  src/blockmemshell/memory.h src/scip/type_lpi.h src/scip/bitencode.h

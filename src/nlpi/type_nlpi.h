@@ -85,10 +85,11 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
 /** copy method of NLP interface (called when SCIP copies plugins)
  *
  * input:
+ *  - blkmem block memory of target SCIP
  *  - sourcenlpi the NLP interface to copy
  *  - targetnlpi buffer to store pointer to copy of NLP interface
  */
-#define SCIP_DECL_NLPICOPY(x) SCIP_RETCODE x (SCIP_NLPI* sourcenlpi, SCIP_NLPI** targetnlpi)
+#define SCIP_DECL_NLPICOPY(x) SCIP_RETCODE x (BMS_BLKMEM* blkmem, SCIP_NLPI* sourcenlpi, SCIP_NLPI** targetnlpi)
 
 /** destructor of NLP interface to free nlpi data
  * 
@@ -320,9 +321,13 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  * input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
- *  - values initial starting solution, or NULL to clear previous starting solution
+ *  - primalvalues initial primal values for variables, or NULL to clear previous values
+ *  - consdualvalues initial dual values for constraints, or NULL to clear previous values
+ *  - varlbdualvalues  initial dual values for variable lower bounds, or NULL to clear previous values
+ *  - varubdualvalues  initial dual values for variable upper bounds, or NULL to clear previous values
  */
-#define SCIP_DECL_NLPISETINITIALGUESS(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, SCIP_Real* values)
+#define SCIP_DECL_NLPISETINITIALGUESS(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, SCIP_Real* primalvalues, \
+   SCIP_Real* consdualvalues, SCIP_Real* varlbdualvalues, SCIP_Real* varubdualvalues)
 
 /** tries to solve NLP
  * 
@@ -352,17 +357,21 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  */
 #define SCIP_DECL_NLPIGETTERMSTAT(x) SCIP_NLPTERMSTAT x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem)
 
-/** gives primal solution
+/** gives primal and dual solution values
  * 
+ * solver can return NULL in dual values if not available
+ * but if solver provides dual values for one side of variable bounds, then it must also provide those for the other side
+ *
  * input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
- *  - primalvalues pointer to store primal values
- * 
- * output:
- *  - primalvalues primal values of solution
+ *  - primalvalues buffer to store pointer to array to primal values, or NULL if not needed
+ *  - consdualvalues buffer to store pointer to array to dual values of constraints, or NULL if not needed
+ *  - varlbdualvalues buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed
+ *  - varubdualvalues buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed
  */
-#define SCIP_DECL_NLPIGETSOLUTION(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, SCIP_Real** primalvalues)
+#define SCIP_DECL_NLPIGETSOLUTION(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, SCIP_Real** primalvalues, \
+   SCIP_Real** consdualvalues, SCIP_Real** varlbdualvalues, SCIP_Real** varubdualvalues)
 
 /** gives solve statistics
  * 

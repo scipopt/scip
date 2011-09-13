@@ -35,18 +35,15 @@ do
     OUTFILE=$DIR/$NAME.out
     RESFILE=$DIR/$NAME.res
     TEXFILE=$DIR/$NAME.tex
-    TMPFILE=$NAME.tmp
 
-    echo $NAME >$TMPFILE
-    TSTNAME=`sed 's/check.\([a-zA-Z0-9_-]*\).*/\1/g' $TMPFILE`
-    rm $TMPFILE
+    TSTNAME=`echo $NAME | sed 's/check.\([a-zA-Z0-9_-]*\).*/\1/g'`
 
-    if test -f $TSTNAME.solu
+    if test -f testset/$TSTNAME.solu
     then
-	SOLUFILE=$TSTNAME.solu
-    else if test -f all.solu
+	SOLUFILE=testset/$TSTNAME.solu
+    else if test -f testset/all.solu
     then
-	SOLUFILE=all.solu
+	SOLUFILE=testset/all.solu
     else
         SOLUFILE=""
     fi

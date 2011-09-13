@@ -87,9 +87,6 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
    if( SCIPgetNRuns(scip) > 1 )
       return SCIP_OKAY;
 
-   if( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) == 0 )
-      return SCIP_OKAY;
-
    *result = SCIP_DIDNOTFIND;
    success = FALSE;
 
@@ -98,24 +95,24 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
    SCIP_CALL( SCIPcreateSol(scip, &ubsol, heur) );
    SCIP_CALL( SCIPcreateSol(scip, &zerosol, heur) );
    SCIP_CALL( SCIPcreateSol(scip, &locksol, heur) );
-   
+
    infinity = SCIPinfinity(scip);
    infinity = MIN(100000.0, infinity);
-   
+
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, NULL, NULL, NULL) );
 
    /* if the problem is binary, we do not have to check the zero solution, since it is equal to the lower bound
     * solution */
-   zerovalid = (nvars != nbinvars);   
+   zerovalid = (nvars != nbinvars);
    assert(vars != NULL || nvars == 0);
 
    for( i = 0; i < nvars; i++ )
    {
       SCIP_Real lb;
       SCIP_Real ub;
-      
+
       assert(vars != NULL); /* this assert is needed for flexelint */
-      
+
       lb = SCIPvarGetLbLocal(vars[i]);
       ub = SCIPvarGetUbLocal(vars[i]);
 
@@ -141,7 +138,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
             SCIP_CALL( SCIPsetSolVal(scip, zerosol, vars[i], 0.0) );
          }
          else
-            zerovalid = FALSE;         
+            zerovalid = FALSE;
       }
 
       /* set variables to the bound with fewer locks, if tie choose an average value */
@@ -152,22 +149,22 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
       else if( SCIPvarGetNLocksDown(vars[i]) <  SCIPvarGetNLocksUp(vars[i]) )
       {
          SCIP_CALL( SCIPsetSolVal(scip, locksol, vars[i], lb) );
-      }      
+      }
       else
       {
          SCIP_Real solval;
          solval = (lb+ub)/2.0;
-         
+
          /* if a tie occurs, roughly every third integer variable will be rounded up */
          if( SCIPvarGetType(vars[i]) != SCIP_VARTYPE_CONTINUOUS )
             solval = i % 3 == 0 ? SCIPceil(scip,solval) : SCIPfloor(scip,solval);
 
          assert(SCIPisFeasLE(scip,SCIPvarGetLbLocal(vars[i]),solval) && SCIPisFeasLE(scip,solval,SCIPvarGetUbLocal(vars[i])));
-         
+
          SCIP_CALL( SCIPsetSolVal(scip, locksol, vars[i], solval) );
       }
    }
-   
+
    /* try lower bound solution */
    SCIPdebugMessage("try lower bound solution\n");
    SCIP_CALL( SCIPtrySol(scip, lbsol, FALSE, FALSE, TRUE, TRUE, &success) );
@@ -180,7 +177,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
       *result = SCIP_FOUNDSOL;
    }
 
-   /* try upper bound solution */   
+   /* try upper bound solution */
    SCIPdebugMessage("try upper bound solution\n");
    SCIP_CALL( SCIPtrySol(scip, ubsol, FALSE, FALSE, TRUE, TRUE, &success) );
 
@@ -197,7 +194,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
    {
       SCIPdebugMessage("try zero solution\n");
       SCIP_CALL( SCIPtrySol(scip, zerosol, FALSE, FALSE, TRUE, TRUE, &success) );
-      
+
       if( success )
       {
          SCIPdebugMessage("found feasible zero solution:\n");
@@ -242,7 +239,7 @@ SCIP_RETCODE SCIPincludeHeurTrivial(
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
          heurCopyTrivial,
-         heurFreeTrivial, heurInitTrivial, heurExitTrivial, 
+         heurFreeTrivial, heurInitTrivial, heurExitTrivial,
          heurInitsolTrivial, heurExitsolTrivial, heurExecTrivial,
          NULL) );
 

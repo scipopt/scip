@@ -118,6 +118,7 @@ struct SCIP_Set
    SCIP_Bool             relaxssorted;       /**< are the relaxators sorted by priority? */
    SCIP_Bool             sepassorted;        /**< are the separators sorted by priority? */
    SCIP_Bool             propssorted;        /**< are the propagators sorted by priority? */
+   SCIP_Bool             propspresolsorted;  /**< are the propagators sorted by priority for presolving? */
    SCIP_Bool             heurssorted;        /**< are the heuristics sorted by priority? */
    SCIP_Bool             branchrulessorted;  /**< are the branching rules sorted by priority? */
    SCIP_Bool             nlpissorted;        /**< are the NLPIs sorted by priority? */
@@ -282,8 +283,8 @@ struct SCIP_Set
    int                   presol_maxrestarts; /**< maximal number of restarts (-1: unlimited) */
    SCIP_Real             presol_restartfac;  /**< fraction of integer variables that were fixed in the root node
                                               *   triggering a restart with preprocessing after root node evaluation */
-   SCIP_Real             presol_immrestartfac;/**< fraction of integer variables that were fixed in the root node triggereing an
-                                               *   immediate restart with preprcessing */
+   SCIP_Real             presol_immrestartfac;/**< fraction of integer variables that were fixed in the root node triggering an
+                                               *   immediate restart with preprocessing */
    SCIP_Real             presol_subrestartfac;/**< fraction of integer variables that were globally fixed during the
                                                *   solving process triggering a restart with preprocessing */
    SCIP_Real             presol_restartminred;/**< minimal fraction of integer variables removed after restart to allow for

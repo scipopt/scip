@@ -1,6 +1,6 @@
 <div id="authors">
              
-    <h2><a name="zib">Current developers at ZIB</a></h2>
+    <h2><a name="main"></a>Current main developers</h2>
 
         <table class="desc">
 	    <tr>
@@ -8,7 +8,7 @@
 		<a href="http://www.zib.de/berthold/">Timo Berthold</a>
 	      </td>
 	      <td>
-		Primal heuristics, further development
+		Primal heuristics, branching rules
 	      </td>
 	    </tr>
 	    <tr>
@@ -16,84 +16,22 @@
 		<a href="http://www.zib.de/gamrath/">Gerald Gamrath</a>
 	      </td>
 	      <td>
-                Column generation, further development
+                Column generation
 	      </td>
 	    </tr>
 	    <tr>
 	      <td>
 		<a href="http://www.zib.de/heinz/">Stefan Heinz</a>
 	      </td>
-	      <td> Solution counting, further development
+	      <td> Solution counting, global constraints
 	      </td>
 	    </tr>
 	    <tr>
 	      <td>
-		<a href="http://www.zib.de/en/people/staff/member.html?mail=hendel">Gregor Hendel</a>
+		<a href="http://www.math.tu-bs.de/~pfetsch/">Marc Pfetsch</a>
 	      </td>
 	      <td>
-                Student assistant
-              </td>
-	    </tr>
-	    <tr>
-	      <td>
-		<a href="http://www.zib.de/koch/">Thorsten Koch</a>
-	      </td>
-	      <td>
-                Project head
-	      </td>
-	    </tr>		   
-	    <tr>
-	      <td>
-		<a href="http://www.zib.de/en/people/staff/member.html?mail=waniek">Robert Waniek</a>
-	      </td>
-	      <td>
-                Student assistant
-              </td>
-	    </tr>
-	    <tr>
-	      <td>
-		<a href="http://www.zib.de/en/people/staff/member.html?mail=michael.winkler">Michael Winkler</a>
-	      </td>
-	      <td>
-                Student assistant
-	      </td>
-	    </tr>
-	    <tr>
-	      <td>
-		<a href="http://www.zib.de/wolter/">Kati Wolter</a>
-	      </td>
-	      <td>
-		Cutting planes, further development
-	      </td>
-	    </tr>
-	</table>
-
-    <h2><a name="programmers">Other developers</a></h2>
-
-    	<table class="desc">
-	    <tr>
-	      <td width="180px">
-		<a href="http://www.zib.de/en/people/staff/member.html?mail=achterberg">Tobias Achterberg</a>&nbsp;
-	      </td>
-	      <td>
-		Main SCIP developer &ndash; now at <a href="http://www-01.ibm.com/software/integration/optimization/cplex-optimizer/">IBM</a>
-	      </td>
-	    </tr>
-	    <tr>
-	      <td>
-		<a href="http://fauam2m.am.uni-erlangen.de/optimization/edom/staff-members/martin-alexander/prof-dr-alexander-martin.html">Alexander Martin</a>
-	      </td>
-	      <td>
-		Developer of SIP &ndash; the predecessor of SCIP
-		&ndash; now at 	<a href="http://www.uni-erlangen.org/">University of Erlangen-N&uuml;rnberg</a>	
-	      </td>
-	    </tr>
-	    <tr>
-	      <td>
-		<a href="http://www.math.tu-bs.de/~pfetsch/">Marc Pfetsch</a> 
-	      </td>
-	      <td>
-		Former project head &ndash; now at <a href="http://www.tu-braunschweig.de/">TU Braunschweig</a>
+		Special math programming constraints, former project head
 	      </td>
 	      <td>
 	      </td>
@@ -106,9 +44,78 @@
                Mixed integer nonlinear programming
 	      </td>
 	    </tr>
+	    <tr>
+	      <td>
+		<a href="http://www.zib.de/wolter/">Kati Wolter</a>
+	      </td>
+	      <td>
+		Cutting planes, exact integer programming
+	      </td>
+	    </tr>
 	</table>
 
-        <h2><a name="contributors">Contributors</a></h2>
+    <h2><a name="further"></a>Further developers</h2>
+
+    	<table class="desc">
+	    <tr>
+	      <td width="180px">Tobias Achterberg
+	      </td>
+	      <td>
+		Former main developer
+	      </td>
+	    </tr>
+	    <tr>
+	      <td>
+		<a href="http://www.zib.de/en/people/staff/member.html?mail=hendel">Gregor Hendel</a>
+	      </td>
+	      <td>
+                Student assistant
+              </td>
+	    </tr>
+            <tr>
+	      <td>
+		<a href="http://www.zib.de/gleixner/">Ambros Gleixner</a>
+	      </td>
+	      <td>
+                SoPlex interface, mixed integer nonlinear programming
+	      </td>
+	    </tr>
+	    <tr>
+	      <td>
+		<a href="http://www.zib.de/koch/">Thorsten Koch</a>
+	      </td>
+	      <td>
+                Project head
+	      </td>
+	    </tr>		   
+	    <tr>
+	      <td>
+		<a href="http://fauam2m.am.uni-erlangen.de/optimization/edom/staff-members/martin-alexander/prof-dr-alexander-martin.html">Alexander Martin</a>
+	      </td>
+	      <td>
+		Developer of SIP &ndash; the predecessor of SCIP
+	      </td>
+	    </tr>
+	    <tr>
+	      <td>
+              Robert Waniek 
+	      </td>
+	      <td>
+                Former student assistant
+              </td>
+	    </tr>
+	    <tr>
+	      <td>
+		<a href="http://www.zib.de/en/people/staff/member.html?mail=michael.winkler">Michael Winkler</a>
+	      </td>
+	      <td>
+                Student assistant
+	      </td>
+	    </tr>
+
+	</table>
+
+        <h2><a name="contributors"></a>Contributors</h2>
 
     	<table class="desc">
            <tr>
@@ -159,14 +166,6 @@
 	      <td>
 	      </td>
 	    </tr>
-            <tr>
-	      <td>
-		<a href="http://www.zib.de/gleixner/">Ambros Gleixner</a>&nbsp;
-	      </td>
-	      <td>
-                SoPlex interface, mixed integer nonlinear programming
-	      </td>
-	    </tr>
 	    <tr>
 	      <td>
                  Bo Jensen
@@ -183,6 +182,14 @@
 	      </td>
               <td>
                  Separator for {0,1/2}-cuts
+	      </td>
+	    </tr>
+            <tr>
+	      <td>
+		<a href="http://www.zib.de/en/people/staff/member.html?mail=miltenberger">Matthias Miltenberger</a>
+	      </td>
+	      <td>
+                Probing propagator
 	      </td>
 	    </tr>
             <tr>
@@ -239,6 +246,22 @@
                  Queens example
 	      </td>
 	      <td>
+	      </td>
+	    </tr>
+            <tr>
+	      <td>
+		<a href="http://www.zib.de/en/people/staff/member.html?mail=shinano">Yuji Shinano</a>
+	      </td>
+	      <td>
+                Parallel extension of SCIP
+	      </td>
+	    </tr>
+            <tr>
+	      <td>
+		<a href="http://www.zib.de/en/people/staff/member.html?mail=steffy">Dan Steffy</a>
+	      </td>
+	      <td>
+                Exact integer programming
 	      </td>
 	    </tr>
             <tr>

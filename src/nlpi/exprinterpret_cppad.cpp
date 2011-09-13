@@ -30,6 +30,18 @@
 #include <vector>
 using std::vector;
 
+/* CppAD is not thread-safe by itself, but uses some static datastructures
+ * To run it in a multithreading environment, a special CppAD memory allocator that is aware of the multiple threads has to be used.
+ * This allocator requires to know the number of threads and a thread number for each thread.
+ * Conveniently, SCIPs message handler has currently still the same issue, so we can use its routines here.
+ */
+#ifndef NPARASCIP
+#include "scip/message.h"
+
+/** CppAD needs to know a fixed upper bound on the number of threads at compile time. */
+#define CPPAD_MAX_NUM_THREADS 48
+#endif
+
 /** sign of a value (-1 or +1)
  * 
  * 0.0 has sign +1
@@ -38,17 +50,51 @@ using std::vector;
 
 /* in order to use intervals as operands in CppAD,
  * we need to include the intervalarith.hpp very early and require the interval operations to be in the CppAD namespace */
-namespace CppAD
-{
+#define SCIPInterval_NAMESPACE CppAD
 #include "nlpi/intervalarith.h"
-}
-SCIP_Real CppAD::SCIPInterval::infinity = SCIP_DEFAULT_INFINITY;
-using CppAD::SCIPInterval;
+
+SCIP_Real SCIPInterval_NAMESPACE::SCIPInterval::infinity = SCIP_DEFAULT_INFINITY;
+using SCIPInterval_NAMESPACE::SCIPInterval;
 
 #include <cppad/cppad.hpp>
-#include <cppad/config.h>  // to get PACKAGE_STRING define
-#include <cppad/declare.hpp>
+#ifndef CPPAD_PACKAGE_STRING
+#include <cppad/config.h>
+#define CPPAD_PACKAGE_STRING PACKAGE_STRING
+#endif
 #include <cppad/error_handler.hpp>
+
+#ifndef NPARASCIP
+
+/** CppAD callback function that indicates whether we are running in parallel mode */
+static bool in_parallel(void)
+{
+   return SCIPmessagehdlrGetNThreads() > 0;
+}
+
+/** CppAD callback function that returns the number of the current thread */
+size_t thread_num(void)
+{
+   return SCIPmessagehdlrGetThreadNum();
+}
+
+/** sets up CppAD's datastructures for running in multithreading mode
+ * it must be called once before multithreading is started
+ */
+static char init_parallel(void)
+{
+   CppAD::thread_alloc::parallel_setup(CPPAD_MAX_NUM_THREADS, in_parallel, thread_num);
+   CppAD::parallel_ad<double>();
+   CppAD::parallel_ad<SCIPInterval>();
+
+   return 0;
+}
+
+/** a dummy variable that can is initialized to the result of init_parallel
+ * the purpose is to make sure that init_parallel() is called before any multithreading is started
+ */
+static char init_parallel_return = init_parallel();
+
+#endif // NPARASCIP
 
 /* Brad recomends using the discrete function feature of CppAD for sign, since it avoids the need for retaping
  * It can be used since it's derivative is almost everywhere 0.0 */
@@ -717,7 +763,7 @@ bool needAlwaysRetape(SCIP_EXPR* expr)
 /** gets name and version of expression interpreter */
 const char* SCIPexprintGetName(void)
 {
-   return PACKAGE_STRING;
+   return CPPAD_PACKAGE_STRING;
 }
 
 /** gets descriptive text of expression interpreter */

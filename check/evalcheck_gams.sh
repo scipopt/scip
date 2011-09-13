@@ -41,14 +41,15 @@ do
 
     TSTNAME=`echo $NAME | sed 's/check.\([a-zA-Z0-9_-]*\).*/\1/g'`
 
-    if test -f $TSTNAME.solu
+    if test -f testset/$TSTNAME.solu
     then
-        SOLUFILE=$TSTNAME.solu
-    elif test -f all.solu
+	SOLUFILE=testset/$TSTNAME.solu
+    else if test -f testset/all.solu
     then
-        SOLUFILE=all.solu
+	SOLUFILE=testset/all.solu
     else
         SOLUFILE=""
+    fi
     fi
 
     awk -f check_gams.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" $AWKARGS $SOLUFILE $TRCFILE | tee $RESFILE

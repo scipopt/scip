@@ -19,8 +19,6 @@
  * @author Stefan Vigerske
  * @author Marc Pfetsch
  *
- * @todo Test for uniqueness of variable names (after cutting down).
- * 
  * reader_lp has been used as a starting point for this reader.
  */
 
@@ -64,38 +62,49 @@
 /** Section in PIP File */
 enum PipSection
 {
-   PIP_START, PIP_OBJECTIVE, PIP_CONSTRAINTS, PIP_BOUNDS, PIP_GENERALS, PIP_BINARIES, PIP_END
+   PIP_START,
+   PIP_OBJECTIVE,
+   PIP_CONSTRAINTS,
+   PIP_BOUNDS,
+   PIP_GENERALS,
+   PIP_BINARIES,
+   PIP_END
 };
 typedef enum PipSection PIPSECTION;
 
 enum PipExpType
 {
-   PIP_EXP_NONE, PIP_EXP_UNSIGNED, PIP_EXP_SIGNED
+   PIP_EXP_NONE,
+   PIP_EXP_UNSIGNED,
+   PIP_EXP_SIGNED
 };
 typedef enum PipExpType PIPEXPTYPE;
 
 enum PipSense
 {
-   PIP_SENSE_NOTHING, PIP_SENSE_LE, PIP_SENSE_GE, PIP_SENSE_EQ
+   PIP_SENSE_NOTHING,
+   PIP_SENSE_LE,
+   PIP_SENSE_GE,
+   PIP_SENSE_EQ
 };
 typedef enum PipSense PIPSENSE;
 
 /** PIP reading data */
 struct PipInput
 {
-   SCIP_FILE*           file;
-   char                 linebuf[PIP_MAX_LINELEN+1];
-   char                 probname[PIP_MAX_LINELEN];
-   char                 objname[PIP_MAX_LINELEN];
-   char*                token;
-   char*                tokenbuf;
-   char*                pushedtokens[PIP_MAX_PUSHEDTOKENS];
-   int                  npushedtokens;
-   int                  linenumber;
-   int                  linepos;
-   PIPSECTION           section;
-   SCIP_OBJSENSE        objsense;
-   SCIP_Bool            haserror;
+   SCIP_FILE*            file;
+   char                  linebuf[PIP_MAX_LINELEN+1];
+   char                  probname[PIP_MAX_LINELEN];
+   char                  objname[PIP_MAX_LINELEN];
+   char*                 token;
+   char*                 tokenbuf;
+   char*                 pushedtokens[PIP_MAX_PUSHEDTOKENS];
+   int                   npushedtokens;
+   int                   linenumber;
+   int                   linepos;
+   PIPSECTION            section;
+   SCIP_OBJSENSE         objsense;
+   SCIP_Bool             haserror;
 };
 typedef struct PipInput PIPINPUT;
 
@@ -1473,7 +1482,7 @@ SCIP_RETCODE readConstraints(
       getLinearAndQuadraticCoefs(scip, exprtree, &constant, &nlinvars, linvars, lincoefs, &nquadcoefs, quadvars1, quadvars2, quadcoefs);
 
       /* assign the left and right hand side, depending on the constraint sense */
-      switch ( sense )
+      switch( sense )
       {
       case PIP_SENSE_GE:
          lhs = sidevalue - constant;
@@ -1687,12 +1696,12 @@ SCIP_RETCODE readBounds(
 
       /* change the bounds of the variable if bounds have been given (do not destroy earlier specification of bounds) */
       if ( lb != 0.0 )
-	 SCIP_CALL( SCIPchgVarLb(scip, var, lb) );
+         SCIP_CALL( SCIPchgVarLb(scip, var, lb) );
       /*lint --e{777}*/
       if ( ub != SCIPinfinity(scip) )
-	 SCIP_CALL( SCIPchgVarUb(scip, var, ub) );
+         SCIP_CALL( SCIPchgVarUb(scip, var, ub) );
       SCIPdebugMessage("(line %d) new bounds: <%s>[%g,%g]\n", pipinput->linenumber, SCIPvarGetName(var),
-	 SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+         SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
    }
 
    return SCIP_OKAY;
@@ -1916,7 +1925,7 @@ SCIP_RETCODE getActiveVariables(
 static
 void clearLine(
    char*                 linebuffer,         /**< line */
-   int*                  linecnt             /**< number of charaters in line */
+   int*                  linecnt             /**< number of characters in line */
    )
 {
    assert( linebuffer != NULL );
@@ -1932,7 +1941,7 @@ void endLine(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    char*                 linebuffer,         /**< line */
-   int*                  linecnt             /**< number of charaters in line */
+   int*                  linecnt             /**< number of characters in line */
    )
 {
    assert( scip != NULL );
@@ -1954,7 +1963,7 @@ void appendLine(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    char*                 linebuffer,         /**< line */
-   int*                  linecnt,            /**< number of charaters in line */
+   int*                  linecnt,            /**< number of characters in line */
    const char*           extension           /**< string to extent the line */
    )
 {
@@ -2005,7 +2014,7 @@ void printRow(
    SCIP_VAR* var;
    char varname[PIP_MAX_NAMELEN];
    char varname2[PIP_MAX_NAMELEN];
-   char consname[PIP_MAX_NAMELEN + 1]; /* an extra chararter for ':' */
+   char consname[PIP_MAX_NAMELEN + 1]; /* an extra character for ':' */
    char buffer[PIP_MAX_PRINTLEN];
 
    assert( scip != NULL );
@@ -2241,10 +2250,10 @@ SCIP_RETCODE collectAggregatedVars(
             status == SCIP_VARSTATUS_NEGATED );
          
          if ( ! SCIPhashtableExists(*varAggregated, (void*) var) )
-	 {
-	    (*aggregatedVars)[(*nAggregatedVars)++] = var;
-	    SCIP_CALL( SCIPhashtableInsert(*varAggregated, (void*) var) );
-	 }
+         {
+            (*aggregatedVars)[(*nAggregatedVars)++] = var;
+            SCIP_CALL( SCIPhashtableInsert(*varAggregated, (void*) var) );
+         }
       }
    }
 
@@ -2385,23 +2394,23 @@ void checkConsnames(
 
 /** writes problem to file */
 SCIP_RETCODE SCIPwritePip(
-   SCIP*              scip,               /**< SCIP data structure */
-   FILE*              file,               /**< output file, or NULL if standard output should be used */
-   const char*        name,               /**< problem name */
-   SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
-   SCIP_OBJSENSE      objsense,           /**< objective sense */
-   SCIP_Real          objscale,           /**< scalar applied to objective function; external objective value is
-   					       extobj = objsense * objscale * (intobj + objoffset) */
-   SCIP_Real          objoffset,          /**< objective offset from bound shifting and fixing */
-   SCIP_VAR**         vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
-   int                nvars,              /**< number of mutable variables in the problem */
-   int                nbinvars,           /**< number of binary variables */
-   int                nintvars,           /**< number of general integer variables */
-   int                nimplvars,          /**< number of implicit integer variables */
-   int                ncontvars,          /**< number of continuous variables */
-   SCIP_CONS**        conss,              /**< array with constraints of the problem */
-   int                nconss,             /**< number of constraints in the problem */
-   SCIP_RESULT*       result              /**< pointer to store the result of the file writing call */
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file, or NULL if standard output should be used */
+   const char*           name,               /**< problem name */
+   SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
+   SCIP_OBJSENSE         objsense,           /**< objective sense */
+   SCIP_Real             objscale,           /**< scalar applied to objective function; external objective value is
+                                              *   extobj = objsense * objscale * (intobj + objoffset) */
+   SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
+   SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
+   int                   nvars,              /**< number of mutable variables in the problem */
+   int                   nbinvars,           /**< number of binary variables */
+   int                   nintvars,           /**< number of general integer variables */
+   int                   nimplvars,          /**< number of implicit integer variables */
+   int                   ncontvars,          /**< number of continuous variables */
+   SCIP_CONS**           conss,              /**< array with constraints of the problem */
+   int                   nconss,             /**< number of constraints in the problem */
+   SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
    )
 {
    int c;
@@ -2512,7 +2521,7 @@ SCIP_RETCODE SCIPwritePip(
          consvars = SCIPgetVarsSetppc(scip, cons);
          nconsvars = SCIPgetNVarsSetppc(scip, cons);
 
-         switch ( SCIPgetTypeSetppc(scip, cons) )
+         switch( SCIPgetTypeSetppc(scip, cons) )
          {
          case SCIP_SETPPCTYPE_PARTITIONING :
             SCIP_CALL( printQuadraticCons(scip, file, consname,
@@ -2582,7 +2591,7 @@ SCIP_RETCODE SCIPwritePip(
       }
       else
       {
-         SCIPwarningMessage("constraint handler <%s> can not print requested format\n", conshdlrname );
+         SCIPwarningMessage("constraint handler <%s> cannot print requested format\n", conshdlrname );
          SCIPinfoMessage(scip, file, "\\ ");
          SCIP_CALL( SCIPprintCons(scip, cons, file) );
       }
@@ -2633,15 +2642,15 @@ SCIP_RETCODE SCIPwritePip(
          /* print lower bound */
          if ( SCIPisInfinity(scip, -lb) )
             SCIPinfoMessage(scip, file, " -inf <= ");
-	 else
+         else
          {
             if ( SCIPisZero(scip, lb) )
-	    {
-	       /* variables are nonnegative by default - so we skip these variables */
-	       if ( SCIPisInfinity(scip, ub) )
-		  continue;
+            {
+               /* variables are nonnegative by default - so we skip these variables */
+               if ( SCIPisInfinity(scip, ub) )
+                  continue;
                lb = 0.0;
-	    }
+            }
 
             SCIPinfoMessage(scip, file, " %.15g <= ", lb);
          }
@@ -2682,12 +2691,12 @@ SCIP_RETCODE SCIPwritePip(
          var = vars[v];
          assert( var != NULL );
 
-	 if ( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
-	 {
+         if ( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+         {
             (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
             (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %s", varname);
             appendLine(scip, file, linebuffer, &linecnt, buffer);
-	 }
+         }
       }
 
       endLine(scip, file, linebuffer, &linecnt);
@@ -2704,11 +2713,11 @@ SCIP_RETCODE SCIPwritePip(
          assert( var != NULL );
 
          if ( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
-	 {
+         {
             (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
             (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %s", varname);
             appendLine(scip, file, linebuffer, &linecnt, buffer);
-	 }
+         }
       }
       endLine(scip, file, linebuffer, &linecnt);
    }
@@ -2806,10 +2815,10 @@ SCIP_RETCODE SCIPincludeReaderPip(
 
 /* reads problem from file */
 SCIP_RETCODE SCIPreadPip(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_READER*       reader,             /**< the file reader itself */
-   const char*        filename,           /**< full path and name of file to read, or NULL if stdin should be used */
-   SCIP_RESULT*       result              /**< pointer to store the result of the file reading call */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER*          reader,             /**< the file reader itself */
+   const char*           filename,           /**< full path and name of file to read, or NULL if stdin should be used */
+   SCIP_RESULT*          result              /**< pointer to store the result of the file reading call */
    )
 {  /*lint --e{715}*/
    PIPINPUT pipinput;
@@ -2859,4 +2868,3 @@ SCIP_RETCODE SCIPreadPip(
 
    return SCIP_OKAY;
 }
-

@@ -51,7 +51,7 @@
  * - If an empty constraint is created and then variables are added with SCIPaddVarSOS2(), weights
  *   are needed and stored.
  *
- * - All other calls ignore the weights, i.e., if an nonempty constraint is created or variables are
+ * - All other calls ignore the weights, i.e., if a nonempty constraint is created or variables are
  *   added with SCIPappendVarSOS2().
  *
  * @todo Allow to adapt the order of the constraints, e.g. by priorities. This for instance
@@ -87,6 +87,8 @@
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
+
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
 
 /* event handler properties */
 #define EVENTHDLR_NAME         "SOS2"
@@ -491,7 +493,7 @@ SCIP_RETCODE propSOS2(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_CONSDATA*        consdata,           /**< constraint data */
-   SCIP_Bool*            cutoff,             /**< whether a cutoff happend */
+   SCIP_Bool*            cutoff,             /**< whether a cutoff happened */
    int*                  nGen                /**< number of domain changes */
    )
 {
@@ -828,7 +830,7 @@ SCIP_RETCODE enforceSOS2(
    SCIPdebugMessage("Branching on variable <%s> in constraint <%s> (nonzeros: %d).\n", SCIPvarGetName(vars[maxInd]),
       SCIPconsGetName(branchCons), maxNonzeros);
 
-   /* calc node selection and objective estimate for node 1 */
+   /* calculate node selection and objective estimate for node 1 */
    nodeselest = 0.0;
    objest = 0.0;
    for (j = 0; j < maxInd; ++j)
@@ -848,7 +850,7 @@ SCIP_RETCODE enforceSOS2(
       assert( ! infeasible );
    }
 
-   /* calc node selection and objective estimate for node 2 */
+   /* calculate node selection and objective estimate for node 2 */
    nodeselest = 0.0;
    objest = 0.0;
    for (j = maxInd+1; j < nvars; ++j)
@@ -1087,7 +1089,7 @@ SCIP_DECL_CONSDELETE(consDeleteSOS2)
 
    SCIPdebugMessage("Deleting SOS2 constraint <%s>.\n", SCIPconsGetName(cons) );
 
-   /* drop events on transfromed variables */
+   /* drop events on transformed variables */
    if ( SCIPconsIsTransformed(cons) )
    {
       SCIP_CONSHDLRDATA* conshdlrdata;
@@ -1266,7 +1268,7 @@ SCIP_DECL_CONSPRESOL(consPresolSOS2)
 
       *result = SCIP_DIDNOTFIND;
 
-      /* only run if sucess is possible */
+      /* only run if success is possible */
       if ( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || nnewchgcoefs > 0 || *nfixedvars > oldnfixedvars )
       {
          SCIP_VAR** vars;
@@ -2104,6 +2106,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS2(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         CONSHDLR_PROP_TIMING,
          conshdlrCopySOS2, consFreeSOS2, consInitSOS2, consExitSOS2,
          consInitpreSOS2, consExitpreSOS2, consInitsolSOS2, consExitsolSOS2,
          consDeleteSOS2, consTransSOS2, consInitlpSOS2,
@@ -2144,7 +2147,7 @@ SCIP_RETCODE SCIPcreateConsSOS2(
                                               *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even

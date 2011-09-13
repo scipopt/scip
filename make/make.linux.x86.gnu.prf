@@ -4,7 +4,7 @@ OFLAGS		+=	-O2 -mtune=native -g -pg -fno-inline
 CFLAGS		+=	-m32 $(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
 CXXFLAGS	+=	-m32 $(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
 ARFLAGS		=	crs
-LDFLAGS		+=	-m32 -pg -Wl,-rpath,$(SCIPDIR)/$(LIBDIR)
+LDFLAGS		+=	-m32 -pg
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
 GMP_FLAGS	=

@@ -1,1 +1,1 @@
-src/scip/misc.c src/scip/fileio.c src/scip/misc.c src/xml/xmlparse.c
+src/scip/fileio.c src/scip/misc.c src/scip/scip.c src/xml/xmlparse.c

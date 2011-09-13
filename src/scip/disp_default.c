@@ -301,7 +301,7 @@ SCIP_DECL_DISPCOPY(dispCopyDefault)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' for chararcter of best solution */
+/** output method of display column to output file stream 'file' for character of best solution */
 static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputSolFound)
 {  /*lint --e{715}*/
@@ -424,7 +424,7 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputLPCondition)
 
    SCIP_CALL( SCIPlpiGetRealSolQuality(lpi, SCIP_LPSOLQUALITY_ESTIMCONDITION, &cond) );
 
-   if( cond == SCIP_INVALID )
+   if( cond == SCIP_INVALID )  /*lint !e777*/
       SCIPinfoMessage(scip, file, "   n/a ", cond);
    else
       SCIPinfoMessage(scip, file, "%.1e", cond);

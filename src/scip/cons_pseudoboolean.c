@@ -21,9 +21,9 @@
  *
  *
  * The constraint handler deals with pseudo Boolean constraints. These are constraints of the form 
- *
- * lhs <= \sum_{k=0}^m c_k * x_k  +  \sum_{i=0}^n c_i * \prod_{j\in I_i} x_j <= rhs
- *
+ * \f[
+ * \mbox{lhs} \leq \sum_{k=0}^m c_k \cdot x_k  +  \sum_{i=0}^n c_i \cdot \prod_{j \in I_i} x_j \leq \mbox{rhs}
+ * \f]
  * where all x are binary and all c are integer
  */
 
@@ -63,6 +63,9 @@
 
 #define DEFAULT_DECOMPOSENORMALPBCONS FALSE /**< decompose all normal pseudo boolean constraint into a "linear" constraint "and" constrainst */
 #define DEFAULT_DECOMPOSEINDICATORPBCONS TRUE /**< decompose all indicator pseudo boolean constraint into a "linear" constraint "and" constrainst */
+
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
+
 #define DEFAULT_SEPARATENONLINEAR  TRUE /**< if decomposed, should the nonlinear constraints be separated during LP processing */
 #define DEFAULT_PROPAGATENONLINEAR TRUE /**< if decomposed, should the nonlinear constraints be propagated during node processing */
 #define DEFAULT_REMOVABLENONLINEAR TRUE /**< if decomposed, should the nonlinear constraints be removable */
@@ -156,7 +159,7 @@ struct SCIP_ConsData
 
    SCIP_VAR*             intvar;             /**< a artificial variable which was added only for the objective function,
                                               *   if this variable is not NULL this constraint (without this integer
-                                              *   variable) describes the objective funktion */
+                                              *   variable) describes the objective function */
 
    SCIP_VAR*             indvar;             /**< indicator variable if it's a soft constraint, or NULL */
    SCIP_Real             weight;             /**< weight of the soft constraint, if it is one */
@@ -295,7 +298,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValAndConsDatas)
    return (cdata->nvars << 29) + (minidx << 22) + (mididx << 11) + maxidx; /*lint !e701*/
 }
 
-/** creates constaint handler data for pseudo boolean constraint handler */
+/** creates constraint handler data for pseudo boolean constraint handler */
 static
 SCIP_RETCODE conshdlrdataCreate(
    SCIP*const            scip,               /**< SCIP data structure */
@@ -730,7 +733,7 @@ SCIP_RETCODE consdataCreate(
    SCIP_Bool const       issoftcons,         /**< is this a soft constraint */
    SCIP_VAR* const       intvar,             /**< a artificial variable which was added only for the objective function,
                                               *   if this variable is not NULL this constraint (without this integer
-                                              *   variable) describes the objective funktion */
+                                              *   variable) describes the objective function */
    SCIP_Real             lhs,                /**< left hand side of row */
    SCIP_Real             rhs                 /**< right hand side of row */
    )
@@ -1753,7 +1756,7 @@ SCIP_RETCODE chgRhs(
    assert(!SCIPisInfinity(scip, -rhs));
 
    /* adjust value to not be larger than inf */
-   if ( SCIPisInfinity(scip, rhs) )
+   if( SCIPisInfinity(scip, rhs) )
       rhs = SCIPinfinity(scip);
 
    consdata = SCIPconsGetData(cons);
@@ -4963,7 +4966,7 @@ SCIP_RETCODE tryUpgradingSetppc(
       /* now we only want to handle the easy case where nminvars == neqvars + 1 
        * @todo: implement for the othercase too
        */
-      if( nminvars > neqvars + 1 )
+      if( nminvars > neqvars + 1 && type != SCIP_SETPPCTYPE_PARTITIONING)
          break;
 
       if( neqvars == 0 )
@@ -4974,10 +4977,13 @@ SCIP_RETCODE tryUpgradingSetppc(
     * the linear constraint and fix some variables in setpartitioning case
     *
     * e.g. x1 * x2 + x1 * x3 + x1 * x4 <= 1
-    * =>   3 * x1 + x2 + x3 + x4 <= 4
+    * =>  3x1 + x2 + x3 + x4 <= 4
     *
     * e.g. x1 * x2 * x3 + x1 * x2 * x4 <= 1
     * =>  2x1 + 2x2 + x3 + x4 <= 5
+    *
+    * e.g. x1 * x2 + x1 * x2 * x3 + x1 * x2 * x4 <= 1
+    * =>  3x1 + 3x2 + x3 + x4 <= 6
     *
     * e.g. x1 * x2 + x1 * x3 == 1
     * =>   x1 = 1 /\ x2 + x3 == 1
@@ -4997,7 +5003,7 @@ SCIP_RETCODE tryUpgradingSetppc(
     * =>  2x1 + 2x2 + x3 + x4 + x5 <= 5
     *
     */
-   if( neqvars > 0 && ((nminvars == nmaxvars && nminvars == neqvars + 1) || (neqvars == nminvars) || (type == SCIP_SETPPCTYPE_PARTITIONING)) )
+   if( neqvars > 0 && ((nminvars == nmaxvars && nminvars == neqvars + 1) || (nminvars == neqvars) || (type == SCIP_SETPPCTYPE_PARTITIONING)) )
    {
       SCIP_CONS* lincons;
       SCIP_CONS* newcons;
@@ -5028,12 +5034,11 @@ SCIP_RETCODE tryUpgradingSetppc(
       if( neqvars == nminvars )
          rhs -= 1.0; 
 
-      createcons = (SCIPisLE(scip, lhs, rhs) && nminvars == nmaxvars && nminvars == neqvars + 1);
+      createcons = (SCIPisLE(scip, lhs, rhs) && ((nminvars == nmaxvars && nminvars == neqvars + 1) || (nminvars == neqvars)));
       assert(createcons || type == SCIP_SETPPCTYPE_PARTITIONING);
 
-      deletecons = (nminvars != nmaxvars || nminvars != neqvars + 1) && (neqvars != nminvars);
-      assert(!deletecons || type == SCIP_SETPPCTYPE_PARTITIONING);
-      
+      deletecons = (type == SCIP_SETPPCTYPE_PARTITIONING && nminvars == neqvars);
+
       lincons = consdata->lincons;
 
       if( createcons )
@@ -5076,7 +5081,7 @@ SCIP_RETCODE tryUpgradingSetppc(
          assert(nvars > 0 && vars != NULL);
 
          /* if the consanddata object has at least two more different variables then the equal variables we have to fix the resultant to zero */
-         if( type == SCIP_SETPPCTYPE_PARTITIONING && neqvars + 1 < nvars )
+         if( deletecons && neqvars + 1 < nvars )
          {
             assert(SCIPgetResultantAnd(scip, consanddata->cons) != NULL);
 
@@ -5114,10 +5119,8 @@ SCIP_RETCODE tryUpgradingSetppc(
                {
                   SCIP_CALL( SCIPaddCoefLinear(scip, newcons, vars[v2], 1.0) );
                }
-               else
+               else if( deletecons )
                {
-                  assert(type == SCIP_SETPPCTYPE_PARTITIONING);
-
                   /* fix the variable which cannot be one */
                   SCIP_CALL( SCIPfixVar(scip, vars[v2], 0.0, &infeasible, &fixed) );
                   if( infeasible )
@@ -5150,10 +5153,8 @@ SCIP_RETCODE tryUpgradingSetppc(
                {
                   SCIP_CALL( SCIPaddCoefLinear(scip, newcons, vars[v2], 1.0) );
                }
-               else
+               else if( deletecons )
                {
-                  assert(type == SCIP_SETPPCTYPE_PARTITIONING);
-
                   /* fix the variable which cannot be one */
                   SCIP_CALL( SCIPfixVar(scip, vars[v2], 0.0, &infeasible, &fixed) );
                   if( infeasible )
@@ -5198,7 +5199,6 @@ SCIP_RETCODE tryUpgradingSetppc(
       /* correct right hand side for set packing constraint */
       if( type == SCIP_SETPPCTYPE_PACKING )
       {
-         assert(SCIPisEQ(scip, rhs, 1.0));
          assert(createcons);
          
          SCIP_CALL( SCIPchgRhsLinear(scip, newcons, rhs + (SCIP_Real)((nconsanddatas - 1) * neqvars)) );
@@ -5217,6 +5217,9 @@ SCIP_RETCODE tryUpgradingSetppc(
 
          SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
          ++(*naddconss);
+
+         assert(!deletecons);
+         deletecons = TRUE;
       }
 
       if( deletecons )
@@ -5667,6 +5670,8 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   *result = SCIP_FEASIBLE;
+
    /* decompose all pseudo boolean constraints into a "linear" constraint and "and" constraints */
    if( conshdlrdata->decomposeindicatorpbcons || conshdlrdata->decomposenormalpbcons )
    {
@@ -5758,7 +5763,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
             /* first soft constraints for lhs */
             if( !SCIPisInfinity(scip, -lhs) )
             {
-               /* first we are modelling the feasibility of the soft contraint by adding a slack variable */
+               /* first we are modelling the feasibility of the soft constraint by adding a slack variable */
                /* we ensure that if indvar == 1 => (a^T*x + ub*indvar >= lhs) */
                ub = lhs - minact;
 
@@ -6728,6 +6733,7 @@ SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         CONSHDLR_PROP_TIMING,
          conshdlrCopyPseudoboolean,
          consFreePseudoboolean, consInitPseudoboolean, consExitPseudoboolean, 
          consInitprePseudoboolean, consExitprePseudoboolean, consInitsolPseudoboolean, consExitsolPseudoboolean,
@@ -6971,7 +6977,11 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
    return SCIP_OKAY;
 }
 
-/** creates and captures a pseudoboolean constraint */
+/** creates and captures a pseudoboolean constraint 
+ *
+ *  @note linear and nonlinear terms can be added using SCIPaddCoefPseudoboolean() and SCIPaddTermPseudoboolean(),
+ *        respectively
+ */
 SCIP_RETCODE SCIPcreateConsPseudoboolean(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -6988,7 +6998,7 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
    SCIP_Bool             issoftcons,         /**< is this a soft constraint */
    SCIP_VAR*             intvar,             /**< a artificial variable which was added only for the objective function,
                                               *   if this variable is not NULL this constraint (without this integer
-                                              *   variable) describes the objective funktion */
+                                              *   variable) describes the objective function */
    SCIP_Real             lhs,                /**< left hand side of constraint */
    SCIP_Real             rhs,                /**< right hand side of constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
@@ -7008,7 +7018,7 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
@@ -7180,7 +7190,6 @@ SCIP_RETCODE SCIPaddCoefPseudoboolean(
 /** @todo: if adding a coefficient would change the type of the special linear constraint, we need to erase it and
  *         create a new linear constraint */
 /** adds nonlinear term to pseudo boolean constraint (if it is not zero) */
-extern
 SCIP_RETCODE SCIPaddTermPseudoboolean(
    SCIP*const            scip,               /**< SCIP data structure */
    SCIP_CONS*const       cons,               /**< pseudoboolean constraint */

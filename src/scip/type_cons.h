@@ -30,6 +30,7 @@
 #include "scip/type_var.h"
 #include "scip/type_sol.h"
 #include "scip/type_scip.h"
+#include "scip/type_timing.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -104,7 +105,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  possible return values for *result:
  *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
  *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
- *  - SCIP_FEASIBLE   : no infeasibility nor unboundness could be found
+ *  - SCIP_FEASIBLE   : no infeasibility nor unboundedness could be found
  */
 #define SCIP_DECL_CONSINITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, SCIP_RESULT* result)
 
@@ -129,7 +130,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  possible return values for *result:
  *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
  *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
- *  - SCIP_FEASIBLE   : no infeasibility nor unboundness could be found
+ *  - SCIP_FEASIBLE   : no infeasibility nor unboundedness could be found
  */
 #define SCIP_DECL_CONSEXITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, SCIP_RESULT* result)
 
@@ -417,7 +418,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - nnewfixedvars   : number of variables fixed since the last call to the presolving method
  *  - nnewaggrvars    : number of variables aggregated since the last call to the presolving method
  *  - nnewchgvartypes : number of variable type changes since the last call to the presolving method
- *  - nnewchgbds      : number of variable bounds tightend since the last call to the presolving method
+ *  - nnewchgbds      : number of variable bounds tightened since the last call to the presolving method
  *  - nnewholes       : number of domain holes added since the last call to the presolving method
  *  - nnewdelconss    : number of deleted constraints since the last call to the presolving method
  *  - nnewaddconss    : number of added constraints since the last call to the presolving method

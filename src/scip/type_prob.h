@@ -126,7 +126,7 @@ typedef struct SCIP_ProbData SCIP_PROBDATA;       /**< user problem data set by 
  *  - sourcescip      : source SCIP main data structure
  *  - sourcedata      : source user problem data
  *  - varmap,         : a hashmap which stores the mapping of source variables to corresponding target variables
- *  - consmap,        : a hashmap which stores the mapping of source contraints to corresponding target constraints
+ *  - consmap,        : a hashmap which stores the mapping of source constraints to corresponding target constraints
  *  - targetdata      : pointer to the target user problem data to create
  *  - global          : create a global or a local copy? 
  *

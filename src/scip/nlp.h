@@ -233,7 +233,7 @@ SCIP_RETCODE SCIPnlrowChgExprtreeParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_NLP*             nlp,                /**< current NLP data */
-   int                   paramidx,           /**< index of paramater in expression tree's parameter array */
+   int                   paramidx,           /**< index of parameter in expression tree's parameter array */
    SCIP_Real             paramval            /**< new value of parameter */
    );
 
@@ -278,7 +278,7 @@ SCIP_RETCODE SCIPnlrowChgRhs(
    SCIP_Real             rhs                 /**< new right hand side */
    );
 
-/** removes (or substitutes) all fixed, negated, aggregated, multiaggregated variables from the linear, quadratic, and nonquadratic terms of a nonlinear row */
+/** removes (or substitutes) all fixed, negated, aggregated, multi-aggregated variables from the linear, quadratic, and nonquadratic terms of a nonlinear row */
 extern
 SCIP_RETCODE SCIPnlrowRemoveFixedVars(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
@@ -675,6 +675,25 @@ SCIP_VAR** SCIPnlpGetVars(
 /** gets current number of variables in NLP */
 extern
 int SCIPnlpGetNVars(
+   SCIP_NLP*             nlp                 /**< current NLP data */
+   );
+
+/** computes for each variables the number of NLP rows in which the variable appears in a nonlinear var */
+extern
+SCIP_RETCODE SCIPnlpGetVarsNonlinearity(
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   int*                  nlcount             /**< an array of length at least SCIPnlpGetNVars() to store nonlinearity counts of variables */
+   );
+
+/** gives dual solution values associated with lower bounds of NLP variables */
+extern
+SCIP_Real* SCIPnlpGetVarsLbDualsol(
+   SCIP_NLP*             nlp                 /**< current NLP data */
+   );
+
+/** gives dual solution values associated with upper bounds of NLP variables */
+extern
+SCIP_Real* SCIPnlpGetVarsUbDualsol(
    SCIP_NLP*             nlp                 /**< current NLP data */
    );
 

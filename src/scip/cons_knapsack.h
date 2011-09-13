@@ -62,7 +62,7 @@ SCIP_RETCODE SCIPcreateConsKnapsack(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
@@ -114,7 +114,7 @@ SCIP_Real SCIPgetDualsolKnapsack(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
-/** gets the dual farkas value of the knapsack constraint in the current infeasible LP */
+/** gets the dual Farkas value of the knapsack constraint in the current infeasible LP */
 extern
 SCIP_Real SCIPgetDualfarkasKnapsack(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -198,7 +198,7 @@ SCIP_RETCODE SCIPsolveKnapsack(
    );
 
 /** lifts given cardinality inequality sum(j in C1) x_j <= |C1| to a valid inequality of the full dimensional knapsack 
- *  polytop by using uplifting for all variables not in the cover and downlifting for all variables in the cover that 
+ *  polytope by using uplifting for all variables not in the cover and downlifting for all variables in the cover that 
  *  are fixed to one (C2)
  */
 extern
@@ -230,7 +230,7 @@ SCIP_RETCODE SCIPseparateKnapsackCover(
    SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
    SCIP_Longint          capacity,           /**< capacity of knapsack */
    SCIP_SOL*             sol,                /**< primal CIP solution to separate, NULL for current LP solution */
-   int                   maxnumcardlift,     /**< maximal number of cardinality inequ. lifted per sepa round (-1: unlimited) */
+   int                   maxnumcardlift,     /**< maximal number of cardinality inequalities lifted per sepa round (-1: unlimited) */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    );
 
@@ -241,11 +241,12 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
    SCIP_CONS*            cons,               /**< constraint that originates the linear constraint, or NULL */
    int                   nknapvars,          /**< number of variables in the continuous knapsack constraint */
    SCIP_VAR**            knapvars,           /**< variables in the continuous knapsack constraint */
-   SCIP_Real*            knapvals,           /**< coefficientce of the variables in the continuous knapsack constraint */
+   SCIP_Real*            knapvals,           /**< coefficients of the variables in the continuous knapsack constraint */
    SCIP_Real             valscale,           /**< -1.0 if lhs of row is used as rhs of c. k. constraint, +1.0 otherwise */
    SCIP_Real             rhs,                /**< right hand side of the continuous knapsack constraint */
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
-   int*                  ncuts               /**< pointer to add up the number of found cuts */
+   int*                  ncuts,              /**< pointer to add up the number of found cuts */
+   SCIP_Bool*            cutoff              /**< pointer to store whether a cutoff was found */
    );
 
 #ifdef __cplusplus

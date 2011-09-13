@@ -45,6 +45,8 @@
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
+
 #define EVENTHDLR_NAME         "or"
 #define EVENTHDLR_DESC         "event handler for or constraints"
 
@@ -69,7 +71,7 @@ struct SCIP_ConsData
    int                   filterpos1;         /**< event filter position of first watched operator variable */
    int                   filterpos2;         /**< event filter position of second watched operator variable */
    unsigned int          propagated:1;       /**< is constraint already preprocessed/propagated? */
-   unsigned int          nofixedone:1;       /**< is none of the opereator variables fixed to TRUE? */
+   unsigned int          nofixedone:1;       /**< is none of the operator variables fixed to TRUE? */
    unsigned int          impladded:1;        /**< were the implications of the constraint already added? */
    unsigned int          opimpladded:1;      /**< was the implication for 2 operands with fixed resultant added? */
 };
@@ -132,7 +134,7 @@ SCIP_RETCODE unlockRounding(
    return SCIP_OKAY;
 }
 
-/** creates constaint handler data */
+/** creates constraint handler data */
 static
 SCIP_RETCODE conshdlrdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1061,7 +1063,7 @@ SCIP_RETCODE propagateCons(
    if( SCIPconsIsModifiable(cons) )
       return SCIP_OKAY;
 
-   /* rules (3) and (4) can not be applied, if we have at least two unfixed variables left;
+   /* rules (3) and (4) cannot be applied, if we have at least two unfixed variables left;
     * that means, we only have to watch (i.e. capture events) of two variables, and switch to other variables
     * if these ones get fixed
     */
@@ -1854,7 +1856,7 @@ SCIP_DECL_CONSPARSE(consParseOr)
    int nvars;
    int pos;
    
-   SCIPdebugMessage("pasre <%s> as or constraint\n", str);
+   SCIPdebugMessage("parse <%s> as or constraint\n", str);
 
    /* copy string for truncating it */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, str, (int)(strlen(str)+1)));
@@ -1884,7 +1886,7 @@ SCIP_DECL_CONSPARSE(consParseOr)
       /* allocate buffer array for variables */
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
 
-      /* pasre string */
+      /* parse string */
       SCIP_CALL( SCIPparseVarsList(scip, token, 0, vars, &nvars, varssize, &requiredsize, &pos, ',', success) );
    
       if( *success )
@@ -1973,6 +1975,7 @@ SCIP_RETCODE SCIPincludeConshdlrOr(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         CONSHDLR_PROP_TIMING,
          conshdlrCopyOr,
          consFreeOr, consInitOr, consExitOr, 
          consInitpreOr, consExitpreOr, consInitsolOr, consExitsolOr,
@@ -2012,7 +2015,7 @@ SCIP_RETCODE SCIPcreateConsOr(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even

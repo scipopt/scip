@@ -115,7 +115,7 @@ SCIP_RETCODE SCIPcreateConsLinear(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
@@ -237,7 +237,7 @@ SCIP_Real SCIPgetDualsolLinear(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
-/** gets the dual farkas value of the linear constraint in the current infeasible LP */
+/** gets the dual Farkas value of the linear constraint in the current infeasible LP */
 extern
 SCIP_Real SCIPgetDualfarkasLinear(
    SCIP*                 scip,               /**< SCIP data structure */

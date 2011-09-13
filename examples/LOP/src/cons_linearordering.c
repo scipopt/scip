@@ -49,6 +49,8 @@
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
+#define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP
+
 
 /** constraint data for linear ordering constraints */
 struct SCIP_ConsData
@@ -745,6 +747,9 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
 	       if ( infeasible )
 	       {
 		  SCIPdebugMessage(" -> node infeasible.\n");
+                  SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
+                  SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
 		  *result = SCIP_CUTOFF;
 		  return SCIP_OKAY;
 	       }
@@ -760,6 +765,9 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
 	       if ( infeasible )
 	       {
 		  SCIPdebugMessage(" -> node infeasible.\n");
+                  SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
+                  SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
 		  *result = SCIP_CUTOFF;
 		  return SCIP_OKAY;
 	       }
@@ -780,6 +788,10 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
 		  if ( infeasible )
 		  {
 		     SCIPdebugMessage(" -> node infeasible.\n");
+                     SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+                     SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
+                     SCIP_CALL( SCIPaddConflictBinvar(scip, vars[j][k]) );
+                     SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
 		     *result = SCIP_CUTOFF;
 		     return SCIP_OKAY;
 		  }
@@ -1064,8 +1076,8 @@ SCIP_RETCODE SCIPincludeConshdlrLinearOrdering(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         conshdlrCopyLinearOrdering,
-         consFreeLinearOrdering, consInitLinearOrdering, consExitLinearOrdering,
+         CONSHDLR_PROP_TIMING,
+         conshdlrCopyLinearOrdering, consFreeLinearOrdering, consInitLinearOrdering, consExitLinearOrdering,
          consInitpreLinearOrdering, consExitpreLinearOrdering, consInitsolLinearOrdering, consExitsolLinearOrdering,
          consDeleteLinearOrdering, consTransLinearOrdering, consInitlpLinearOrdering,
          consSepalpLinearOrdering, consSepasolLinearOrdering, consEnfolpLinearOrdering, consEnfopsLinearOrdering,

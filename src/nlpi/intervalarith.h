@@ -25,9 +25,19 @@
 
 #include "scip/intervalarith.h"
 
+/* In some cases, a user may need the SCIPInterval class to be defined in some namespace.
+ * To allow this, the symbol SCIPInterval_NAMESPACE should be defined to the name of that namespace
+ * before inclusion of this header file
+ * It is in the users responsibility to implement the corresponding symbols from nlpi/intervalarith.c.
+ */
+#ifdef SCIPInterval_NAMESPACE
+namespace SCIPInterval_NAMESPACE {
+#endif
+
 /** an interval that extends the SCIP_INTERVAL struct
  * by various methods to allow calculating with intervals as with ordinary numbers */
-class SCIPInterval : public SCIP_INTERVAL {
+class SCIPInterval : public SCIP_INTERVAL
+{
 public:
    /** value to use for infinity
     * currently a global variable, thus use with care!
@@ -240,7 +250,7 @@ SCIPInterval cos(
    /* @todo implement cosinus for intervals */
    SCIPwarningMessage("Cosinus of interval not implemented. Returning trivial interval [-1,1].\n");
 
-   return SCIPInterval(-1., 1.);
+   return SCIPInterval(-1.0, 1.0);
 }
 
 /** exponential of an interval */
@@ -292,7 +302,7 @@ SCIPInterval sin(
    /* @todo implement cosinus for intervals */
    SCIPwarningMessage("Sinus of interval not implemented. Returning trivial interval [-1,1].\n");
 
-   return SCIPInterval(-1., 1.);
+   return SCIPInterval(-1.0, 1.0);
 }
 
 /** square root of an interval */
@@ -345,12 +355,18 @@ SCIPInterval function(                                                          
    return SCIPInterval();                                                       \
 }
 
+SCIP_INTERVALARITH_UNDEFFUNC(tan)
 SCIP_INTERVALARITH_UNDEFFUNC(acos)
 SCIP_INTERVALARITH_UNDEFFUNC(asin)
 SCIP_INTERVALARITH_UNDEFFUNC(atan)
 SCIP_INTERVALARITH_UNDEFFUNC(cosh)
 SCIP_INTERVALARITH_UNDEFFUNC(sinh)
+SCIP_INTERVALARITH_UNDEFFUNC(tanh)
 SCIP_INTERVALARITH_UNDEFFUNC(erf)
 #undef SCIP_INTERVALARITH_UNDEFFUNC
+
+#ifdef SCIPInterval_NAMESPACE
+} /* namespace SCIPInterval_NAMESPACE */
+#endif
 
 #endif

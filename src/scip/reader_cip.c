@@ -16,7 +16,8 @@
 /**@file   reader_cip.c
  * @ingroup FILEREADERS 
  * @brief  CIP file reader
- * @author Tobias Achterberg
+ * @author Stefan Heinz
+ * @authro Michael Winkler
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -54,14 +55,14 @@ typedef enum CipSection CIPSECTION;          /**< Section of the in CIP files */
 /** CIP reading data */
 struct CipInput
 {
-   SCIP_FILE*           file;                /**< input file */
-   char*                strbuf;              /**< string buffer for input lines */
-   int                  len;                 /**< length of strbuf */
-   int                  readingsize;         /**< size of block in which len is increased if necessary */
-   int                  linenumber;          /**< number of line in input file */
-   CIPSECTION           section;             /**< current section */
-   SCIP_Bool            haserror;            /**< some error occurred */
-   SCIP_Bool            endfile;             /**< we have reached the end of the file */
+   SCIP_FILE*            file;               /**< input file */
+   char*                 strbuf;             /**< string buffer for input lines */
+   int                   len;                /**< length of strbuf */
+   int                   readingsize;        /**< size of block in which len is increased if necessary */
+   int                   linenumber;         /**< number of line in input file */
+   CIPSECTION            section;            /**< current section */
+   SCIP_Bool             haserror;           /**< some error occurred */
+   SCIP_Bool             endfile;            /**< we have reached the end of the file */
 };
 typedef struct CipInput CIPINPUT;            /**< CIP reading data */
 
@@ -118,8 +119,8 @@ SCIP_RETCODE getInputString(
       }
       
       /* read next line */
-      cipinput->endfile = (SCIPfgets(&(cipinput->strbuf[pos]), cipinput->readingsize, cipinput->file) == NULL);
-      
+      cipinput->endfile = (SCIPfgets(&(cipinput->strbuf[pos]), cipinput->len - pos, cipinput->file) == NULL);
+
       if( cipinput->endfile )
          return SCIP_OKAY;
 
@@ -210,11 +211,16 @@ SCIP_RETCODE getStatistic(
 static
 SCIP_RETCODE getObjective(
    SCIP*                 scip,               /**< SCIP data structure */
-   CIPINPUT*             cipinput            /**< CIP parsing data */
+   CIPINPUT*             cipinput,           /**< CIP parsing data */
+   SCIP_Real*            objscale,           /**< buffer where to multiply with objective scale */
+   SCIP_Real*            objoffset           /**< buffer where to add with objective offset */
    )
 {
    char* buf;
    char* name;
+
+   assert(objscale != NULL);
+   assert(objoffset != NULL);
 
    buf = cipinput->strbuf;
 
@@ -263,7 +269,6 @@ SCIP_RETCODE getObjective(
    }
    else if( strncmp(buf, "  Offset", 7) == 0 )
    {
-      double offset;
       char* endptr;
 
       if( SCIPstrtok(buf, ":", &name) == NULL || name == NULL )
@@ -276,12 +281,10 @@ SCIP_RETCODE getObjective(
       while(isspace(*name))
          name++;
          
-      offset = strtod(name, &endptr);
-      SCIPwarningMessage("ignore objective offset of <%g>\n", offset);
+      *objoffset += strtod(name, &endptr);
    }
    else if( strncmp(buf, "  Scale", 7) == 0 )
    {
-      double scale;
       char* endptr;
 
       if( SCIPstrtok(buf, ":", &name) == NULL || name == NULL )
@@ -294,8 +297,7 @@ SCIP_RETCODE getObjective(
       while(isspace(*name))
          name++;
          
-      scale = strtod(name, &endptr);
-      SCIPwarningMessage("ignore objective scale of <%g>\n", scale);
+      *objscale *= strtod(name, &endptr);
    }
 
    return SCIP_OKAY;
@@ -307,7 +309,8 @@ SCIP_RETCODE getVariable(
    SCIP*                 scip,               /**< SCIP data structure */
    CIPINPUT*             cipinput,           /**< CIP parsing data */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
-   SCIP_Bool             removable           /**< is var's column removable from the LP (due to aging or cleanup)? */
+   SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
+   SCIP_Real             objscale            /**< objective scale */
    )
 {
    SCIP_VAR* var;
@@ -337,6 +340,11 @@ SCIP_RETCODE getVariable(
       return SCIP_OKAY;
    }
    
+   if( objscale != 1.0 )
+   {
+      SCIP_CALL( SCIPchgVarObj(scip, var, SCIPvarGetObj(var) * objscale) );
+   }
+
    SCIP_CALL( SCIPaddVar(scip, var) );
 
    SCIPdebug(SCIPprintVar(scip, var, NULL) );
@@ -381,7 +389,7 @@ SCIP_RETCODE getConstraints(
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             dynamic,            /**< Is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    )
@@ -461,6 +469,8 @@ SCIP_DECL_READERREAD(readerReadCip)
 {  /*lint --e{715}*/
 
    CIPINPUT cipinput;
+   SCIP_Real objscale;
+   SCIP_Real objoffset;
    SCIP_Bool dynamicconss;
    SCIP_Bool dynamiccols;
    SCIP_Bool dynamicrows;
@@ -498,6 +508,8 @@ SCIP_DECL_READERREAD(readerReadCip)
    initialcons = !dynamicrows;
    removablecons = dynamicrows;
 
+   objscale = 1.0;
+   objoffset = 0.0;
 
    while( cipinput.section != CIP_END && !cipinput.haserror )
    {
@@ -516,10 +528,10 @@ SCIP_DECL_READERREAD(readerReadCip)
          SCIP_CALL( getStatistic(scip, &cipinput) );
          break;
       case CIP_OBJECTIVE:
-         SCIP_CALL( getObjective(scip, &cipinput) );
+         SCIP_CALL( getObjective(scip, &cipinput, &objscale, &objoffset) );
          break;
       case CIP_VARS:
-         SCIP_CALL( getVariable(scip, &cipinput, initialvar, removablevar) );
+         SCIP_CALL( getVariable(scip, &cipinput, initialvar, removablevar, objscale) );
          break;
       case CIP_FIXEDVARS:
          SCIP_CALL( getFixedVariables(scip, &cipinput) );
@@ -530,7 +542,19 @@ SCIP_DECL_READERREAD(readerReadCip)
       default:
          SCIPerrorMessage("invalid CIP state\n");
          SCIPABORT();
-      }	/*lint !e788*/ 
+      } /*lint !e788*/ 
+   }
+
+   if( !SCIPisZero(scip, objoffset) )
+   {
+      SCIP_VAR* objoffsetvar;
+
+      objoffset *= objscale;
+      SCIP_CALL( SCIPcreateVar(scip, &objoffsetvar, "objoffset", objoffset, objoffset, 1.0, SCIP_VARTYPE_CONTINUOUS,
+         TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPaddVar(scip, objoffsetvar) );
+      SCIP_CALL( SCIPreleaseVar(scip, &objoffsetvar) );
+      SCIPdebugMessage("added variables <objoffset> for objective offset of <%g>\n", objoffset);
    }
 
    /* close file stream */

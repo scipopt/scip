@@ -20,8 +20,6 @@
  * @author Marc Pfetsch
  * @author Stefan Heinz
  * @author Stefan Vigerske
- *
- * @todo Test for uniqueness of variable names (after cutting down).
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -350,7 +348,7 @@ SCIP_Bool getNextToken(
       }
       while( !isDelimChar(buf[lpinput->linepos]) && !isTokenChar(buf[lpinput->linepos]) );
 
-      /* if the token is an power sign '^', skip a following '2'
+      /* if the token is a power sign '^', skip a following '2'
        * if the token is an equation sense '<', '>', or '=', skip a following '='
        * if the token is an equality token '=' and the next character is a '<' or '>', replace the token by the inequality sense
        */
@@ -950,11 +948,11 @@ SCIP_RETCODE readCoefficients(
                syntaxError(scip, lpinput, "expected '/2' after end of quadratic part in objective");
                return SCIP_OKAY;
             }
-            if (strcmp(lpinput->token, "/2") == 0)
+            if( strcmp(lpinput->token, "/2") == 0 )
             {
                SCIPdebugMessage("(line %d) saw '/2' after quadratic part in objective\n", lpinput->linenumber);
             }
-            else if (strcmp(lpinput->token, "/") == 0)
+            else if( strcmp(lpinput->token, "/") == 0 )
             {
                /* maybe it says '/ 2' */
                if( !getNextToken(lpinput) || strcmp(lpinput->token, "2") != 0 )
@@ -1149,7 +1147,7 @@ SCIP_RETCODE readObjective(
                SCIP_VARTYPE_CONTINUOUS, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, quadobjvar) );
          
-         if ( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE )
+         if( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE )
          {
             lhs = -SCIPinfinity(scip);
             rhs = 0.0;
@@ -1162,7 +1160,7 @@ SCIP_RETCODE readObjective(
          
          minusone = -1.0;
          SCIP_CALL( SCIPcreateConsQuadratic(scip, &quadobjcons, "quadobj", 1, &quadobjvar, &minusone, nquadcoefs, quadvars1, quadvars2, quadcoefs, lhs, rhs,
-            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE) );
+               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE) );
          
          SCIP_CALL( SCIPaddCons(scip, quadobjcons) );
          SCIPdebugMessage("(line %d) added constraint <%s> to represent quadratic objective: ", lpinput->linenumber, SCIPconsGetName(quadobjcons));
@@ -1225,20 +1223,20 @@ SCIP_RETCODE createIndicatorConstraint(
    assert( binvar != NULL );
 
    /* check that binvalue is 0 or 1 */
-   if (!SCIPisFeasEQ(scip, binvalue, 0.0) && ! SCIPisFeasEQ(scip, binvalue, 1.0))
+   if( !SCIPisFeasEQ(scip, binvalue, 0.0) && !SCIPisFeasEQ(scip, binvalue, 1.0) )
    {
       syntaxError(scip, lpinput, "value for binary variable must be '0' or '1'");
       return SCIP_OKAY;
    }
 
-   if ( SCIPisFeasEQ(scip, binvalue, 0.0) )
+   if( SCIPisFeasEQ(scip, binvalue, 0.0) )
    {
       SCIP_VAR* negbinvar;
       SCIP_Bool infeasible;
 
-      /* At this point we force the variable binvar to be binary, since we need the negated
-	 variable. We have to check later whether the type of the variable specified in the file
-	 agrees with this specification. */
+      /* At this point we force the variable binvar to be binary, since we need the negated variable. We have to check
+       * later whether the type of the variable specified in the file agrees with this specification. 
+       */
       /* check whether bounds are correct - might already been set if variable is used in another indicator constraint */
       if( SCIPvarGetLbGlobal(binvar) < 0.0 )
          SCIP_CALL( SCIPchgVarLb(scip, binvar, 0.0) );
@@ -1254,27 +1252,27 @@ SCIP_RETCODE createIndicatorConstraint(
 
    /* read linear constraint */
    SCIP_CALL( readCoefficients(scip, lpinput, FALSE, name2, &linvars, &lincoefs, &nlincoefs, &quadvars1, &quadvars2, &quadcoefs, &nquadcoefs, &newsection) );
-   if ( hasError(lpinput) )
+   if( hasError(lpinput) )
       goto TERMINATE;
-   if ( newsection )
+   if( newsection )
    {
       syntaxError(scip, lpinput, "expected constraint");
       goto TERMINATE;
    }
-   if ( nquadcoefs > 0 )
+   if( nquadcoefs > 0 )
    {
       /* @todo could introduce auxiliary variable and move quadratic part into quadratic constraint? */
       syntaxError(scip, lpinput, "quadratic indicator constraints not supported");
       goto TERMINATE;
    }
-   if ( name2[0] != '\0' )
+   if( name2[0] != '\0' )
    {
       syntaxError(scip, lpinput, "did not expect name for linear constraint");
       goto TERMINATE;
    }
    
    /* read the constraint sense */
-   if ( !getNextToken(lpinput) || !isSense(lpinput, &linsense) )
+   if( !getNextToken(lpinput) || !isSense(lpinput, &linsense) )
    {
       syntaxError(scip, lpinput, "expected constraint sense '<=', '=', or '>='");
       goto TERMINATE;
@@ -1282,20 +1280,20 @@ SCIP_RETCODE createIndicatorConstraint(
    
    /* read the right hand side */
    linsidesign = +1;
-   if ( !getNextToken(lpinput) )
+   if( !getNextToken(lpinput) )
    {
       syntaxError(scip, lpinput, "missing right hand side");
       goto TERMINATE;
    }
-   if ( isSign(lpinput, &linsidesign) )
+   if( isSign(lpinput, &linsidesign) )
    {
-      if ( !getNextToken(lpinput) )
+      if( !getNextToken(lpinput) )
       {
-	 syntaxError(scip, lpinput, "missing value of right hand side");
-	 goto TERMINATE;
+         syntaxError(scip, lpinput, "missing value of right hand side");
+         goto TERMINATE;
       }
    }
-   if ( !isValue(scip, lpinput, &linsidevalue) )
+   if( !isValue(scip, lpinput, &linsidevalue) )
    {
       syntaxError(scip, lpinput, "expected value as right hand side");
       goto TERMINATE;
@@ -1304,12 +1302,12 @@ SCIP_RETCODE createIndicatorConstraint(
    
    /* assign the left and right hand side, depending on the constraint sense */
    linConsEQ = FALSE;
-   switch ( linsense )
+   switch( linsense )
    {
    case LP_SENSE_GE:
       linrhs = linsidevalue;
-      for (j = 0; j < nlincoefs; ++j)
-	 lincoefs[j] *= -1;
+      for( j = 0; j < nlincoefs; ++j )
+         lincoefs[j] *= -1;
       break;
    case LP_SENSE_LE:
       linrhs = linsidevalue;
@@ -1337,7 +1335,7 @@ SCIP_RETCODE createIndicatorConstraint(
    removable = dynamicrows || lpinput->inusercuts;
    
    SCIP_CALL( SCIPcreateConsIndicator(scip, &cons, name, binvar, nlincoefs, linvars, lincoefs, linrhs,
-	 initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
+         initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIPdebugMessage("(line %d) created constraint%s: ", lpinput->linenumber,
       lpinput->inlazyconstraints ? " (lazy)" : (lpinput->inusercuts ? " (user cut)" : ""));
@@ -1345,13 +1343,13 @@ SCIP_RETCODE createIndicatorConstraint(
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    
    /* create second constraint if it was an equation */
-   if ( linConsEQ )
+   if( linConsEQ )
    {
-      for (j = 0; j < nlincoefs; ++j)
+      for( j = 0; j < nlincoefs; ++j )
          lincoefs[j] *= -1;
       linrhs *= -1;
       SCIP_CALL( SCIPcreateConsIndicator(scip, &cons, name, binvar, nlincoefs, linvars, lincoefs, linrhs,
-         initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
+            initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIPdebugMessage("(line %d) created constraint%s: ", lpinput->linenumber,
          lpinput->inlazyconstraints ? " (lazy)" : (lpinput->inusercuts ? " (user cut)" : ""));
@@ -1416,17 +1414,17 @@ SCIP_RETCODE readConstraints(
 
    /* read coefficients */
    SCIP_CALL( readCoefficients(scip, lpinput, FALSE, name, &vars, &coefs, &ncoefs, &quadvars1, &quadvars2, &quadcoefs, &nquadcoefs, &newsection) );
-   if ( hasError(lpinput) )
+   if( hasError(lpinput) )
       goto TERMINATE;
-   if ( newsection )
+   if( newsection )
    {
-      if ( ncoefs > 0 || nquadcoefs > 0 )
+      if( ncoefs > 0 || nquadcoefs > 0 )
          syntaxError(scip, lpinput, "expected constraint sense '<=', '=', or '>='");
       goto TERMINATE;
    }
 
    /* read the constraint sense */
-   if ( !getNextToken(lpinput) || !isSense(lpinput, &sense) )
+   if( !getNextToken(lpinput) || !isSense(lpinput, &sense) )
    {
       syntaxError(scip, lpinput, "expected constraint sense '<=', '=', or '>='");
       goto TERMINATE;
@@ -1434,12 +1432,12 @@ SCIP_RETCODE readConstraints(
 
    /* read the right hand side */
    sidesign = +1;
-   if ( !getNextToken(lpinput) )
+   if( !getNextToken(lpinput) )
    {
       syntaxError(scip, lpinput, "missing right hand side");
       goto TERMINATE;
    }
-   if ( isSign(lpinput, &sidesign) )
+   if( isSign(lpinput, &sidesign) )
    {
       if( !getNextToken(lpinput) )
       {
@@ -1447,7 +1445,7 @@ SCIP_RETCODE readConstraints(
          goto TERMINATE;
       }
    }
-   if ( !isValue(scip, lpinput, &sidevalue) )
+   if( !isValue(scip, lpinput, &sidevalue) )
    {
       syntaxError(scip, lpinput, "expected value as right hand side");
       goto TERMINATE;
@@ -1455,7 +1453,7 @@ SCIP_RETCODE readConstraints(
    sidevalue *= sidesign;
 
    /* assign the left and right hand side, depending on the constraint sense */
-   switch ( sense )
+   switch( sense )
    {
    case LP_SENSE_GE:
       lhs = sidevalue;
@@ -1477,34 +1475,34 @@ SCIP_RETCODE readConstraints(
 
    /* check whether we read the first part of an indicator constraint */
    isIndicatorCons = FALSE;
-   if ( getNextToken(lpinput) && ! isNewSection(lpinput) )
+   if( getNextToken(lpinput) && !isNewSection(lpinput) )
    {
-      if ( strcmp(lpinput->token, "-") == 0 )
+      if( strcmp(lpinput->token, "-") == 0 )
       {
-	 /* remember '-' in token buffer */
-	 swapTokenBuffer(lpinput);
+         /* remember '-' in token buffer */
+         swapTokenBuffer(lpinput);
 
-	 /* check next token - cannot be a new section */
-	 if ( getNextToken(lpinput) )
-	 {
-	    /* check for "->" */
-	    if ( strcmp(lpinput->token, ">") == 0 )
-	       isIndicatorCons = TRUE;
-	    else
-	    {
-	       /* push back last token and '-' */
-	       pushToken(lpinput);
-	       pushBufferToken(lpinput);
-	    }
-	 }
-	 else
-	    pushToken(lpinput);
+         /* check next token - cannot be a new section */
+         if( getNextToken(lpinput) )
+         {
+            /* check for "->" */
+            if( strcmp(lpinput->token, ">") == 0 )
+               isIndicatorCons = TRUE;
+            else
+            {
+               /* push back last token and '-' */
+               pushToken(lpinput);
+               pushBufferToken(lpinput);
+            }
+         }
+         else
+            pushToken(lpinput);
       }
       else
-	 pushToken(lpinput);
+         pushToken(lpinput);
    }
 
-   if ( ! isIndicatorCons )
+   if( !isIndicatorCons )
    {
       /* create and add the linear constraint */
       SCIP_CALL( SCIPgetBoolParam(scip, "reading/lpreader/dynamicconss", &dynamicconss) );
@@ -1521,13 +1519,13 @@ SCIP_RETCODE readConstraints(
       if( nquadcoefs == 0 )
       {
          SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, ncoefs, vars, coefs, lhs, rhs,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
       }
       else
       {
          SCIP_CALL( SCIPcreateConsQuadratic(scip, &cons, name, ncoefs, vars, coefs,
-            nquadcoefs, quadvars1, quadvars2, quadcoefs, lhs, rhs,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
+               nquadcoefs, quadvars1, quadvars2, quadcoefs, lhs, rhs,
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
       }
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIPdebugMessage("(line %d) created constraint%s: ", lpinput->linenumber,
@@ -1538,17 +1536,17 @@ SCIP_RETCODE readConstraints(
    else
    {
       /* now we should have an indicator constraint */
-      if ( ncoefs != 1 || nquadcoefs > 0 )
+      if( ncoefs != 1 || nquadcoefs > 0 )
       {
          syntaxError(scip, lpinput, "Indicator part can only consist of one binary variable");
          goto TERMINATE;
       }
-      if ( ! SCIPisEQ(scip, coefs[0], 1.0) )
+      if( !SCIPisEQ(scip, coefs[0], 1.0) )
       {
          syntaxError(scip, lpinput, "There cannot be a coefficient before the binary indicator variable");
          goto TERMINATE;
       }
-      if ( sense != LP_SENSE_EQ )
+      if( sense != LP_SENSE_EQ )
       {
          syntaxError(scip, lpinput, "Indicator part can only handle equations");
          goto TERMINATE;
@@ -1727,13 +1725,13 @@ SCIP_RETCODE readBounds(
       }
 
       /* change the bounds of the variable if bounds have been given (do not destroy earlier specification of bounds) */
-      if ( lb != 0.0 )
-	 SCIP_CALL( SCIPchgVarLb(scip, var, lb) );
+      if( lb != 0.0 )
+         SCIP_CALL( SCIPchgVarLb(scip, var, lb) );
       /*lint --e{777}*/
-      if ( ub != SCIPinfinity(scip) )
-	 SCIP_CALL( SCIPchgVarUb(scip, var, ub) );
+      if( ub != SCIPinfinity(scip) )
+         SCIP_CALL( SCIPchgVarUb(scip, var, ub) );
       SCIPdebugMessage("(line %d) new bounds: <%s>[%g,%g]\n", lpinput->linenumber, SCIPvarGetName(var),
-	 SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+         SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
    }
 
    return SCIP_OKAY;
@@ -1817,7 +1815,7 @@ SCIP_RETCODE readBinaries(
    return SCIP_OKAY;
 }
 
-/** reads the semicontinuous section */
+/** reads the semi-continuous section */
 static
 SCIP_RETCODE readSemicontinuous(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1880,7 +1878,7 @@ SCIP_RETCODE readSemicontinuous(
       
       if( SCIPvarGetLbGlobal(var) <= 0.0 )
       {
-         SCIPdebugMessage("ignore semicontinuity of variable <%s> with negative lower bound %g\n", SCIPvarGetName(var), SCIPvarGetLbGlobal(var));
+         SCIPdebugMessage("ignore semi-continuity of variable <%s> with negative lower bound %g\n", SCIPvarGetName(var), SCIPvarGetLbGlobal(var));
          continue;
       }
       
@@ -1900,10 +1898,10 @@ SCIP_RETCODE readSemicontinuous(
       bounds[1] = oldlb;
       
       SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, 2, vars, boundtypes, bounds,
-         !dynamiccols, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamiccols, FALSE) );
+            !dynamiccols, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamiccols, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, cons) );
       
-      SCIPdebugMessage("add bound disjunction constraint for semicontinuity of <%s>:\n\t", SCIPvarGetName(var));
+      SCIPdebugMessage("add bound disjunction constraint for semi-continuity of <%s>:\n\t", SCIPvarGetName(var));
       SCIPdebug( SCIPprintCons(scip, cons, NULL) );
       
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -1945,13 +1943,13 @@ SCIP_RETCODE readSos(
    dynamic = FALSE;
    removable = FALSE;
 
-   while ( getNextToken(lpinput) )
+   while( getNextToken(lpinput) )
    {
       int type = -1;
       SCIP_CONS* cons;
 
       /* check if we reached a new section */
-      if ( isNewSection(lpinput) )
+      if( isNewSection(lpinput) )
          return SCIP_OKAY;
 
       /* check for an SOS constraint name */
@@ -1961,9 +1959,9 @@ SCIP_RETCODE readSos(
       swapTokenBuffer(lpinput);
 
       /* get the next token and check, whether it is a colon */
-      if ( getNextToken(lpinput) )
+      if( getNextToken(lpinput) )
       {
-         if ( strcmp(lpinput->token, ":") == 0 )
+         if( strcmp(lpinput->token, ":") == 0 )
          {
             /* the second token was a colon: the first token is the constraint name */
             (void)strncpy(name, lpinput->tokenbuf, SCIP_MAXSTRLEN);
@@ -1983,124 +1981,130 @@ SCIP_RETCODE readSos(
       }
 
       /* get type */
-      if ( ! getNextToken(lpinput) )
+      if( !getNextToken(lpinput) )
       {
-	 syntaxError(scip, lpinput, "expected SOS type: 'S1::' or 'S2::'");
-	 return SCIP_OKAY;
+         syntaxError(scip, lpinput, "expected SOS type: 'S1::' or 'S2::'");
+         return SCIP_OKAY;
       }
       /* check whether constraint name was left out */
-      if ( strcmp(lpinput->token, ":") == 0 )
+      if( strcmp(lpinput->token, ":") == 0 )
       {
-	 /* we have to push twice ':' and once the type: */
-	 pushToken(lpinput);
-	 lpinput->token[0] = ':';
-	 lpinput->token[1] = '\0';
-	 pushToken(lpinput);
-	 swapTokenBuffer(lpinput);
+         /* we have to push twice ':' and once the type: */
+         pushToken(lpinput);
+         lpinput->token[0] = ':';
+         lpinput->token[1] = '\0';
+         pushToken(lpinput);
+         swapTokenBuffer(lpinput);
 
-	 /* set artificial name */
-	 (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "SOS%d", ++cnt);
+         /* set artificial name */
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "SOS%d", ++cnt);
       }
 
       /* check whether it is type 1 or type 2 */
-      if ( strcmp(lpinput->token, "S1") == 0 )
+      if( strcmp(lpinput->token, "S1") == 0 )
       {
-	 type = 1;
-	 SCIP_CALL( SCIPcreateConsSOS1(scip, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
-				       local, modifiable, dynamic, removable) );
+         type = 1;
+         SCIP_CALL( SCIPcreateConsSOS1(scip, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
+               local, modifiable, dynamic, removable) );
       }
-      else if ( strcmp(lpinput->token, "S2") == 0 )
+      else if( strcmp(lpinput->token, "S2") == 0 )
       {
-	 type = 2;
-	 SCIP_CALL( SCIPcreateConsSOS2(scip, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
-				       local, modifiable, dynamic, removable) );
+         type = 2;
+         SCIP_CALL( SCIPcreateConsSOS2(scip, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
+               local, modifiable, dynamic, removable) );
       }
       else
       {
-	 syntaxError(scip, lpinput, "SOS constraint type other than 1 or 2 appeared");
-	 return SCIP_OKAY;
+         syntaxError(scip, lpinput, "SOS constraint type other than 1 or 2 appeared");
+         return SCIP_OKAY;
       }
       assert( type == 1 || type == 2 );
 
       SCIPdebugMessage("created SOS%d constraint <%s>\n", type, name);
 
       /* make sure that a colons follows */
-      if ( ! getNextToken(lpinput) || strcmp(lpinput->token, ":") != 0 )
+      if( !getNextToken(lpinput) || strcmp(lpinput->token, ":") != 0 )
       {
-	 syntaxError(scip, lpinput, "SOS constraint type has to be followed by two colons");
-	 return SCIP_OKAY;
+         syntaxError(scip, lpinput, "SOS constraint type has to be followed by two colons");
+         return SCIP_OKAY;
       }
 
       /* make sure that another colons follows */
-      if ( ! getNextToken(lpinput) || strcmp(lpinput->token, ":") != 0 )
+      if( !getNextToken(lpinput) || strcmp(lpinput->token, ":") != 0 )
       {
-	 syntaxError(scip, lpinput, "SOS constraint type has to be followed by two colons");
-	 return SCIP_OKAY;
+         syntaxError(scip, lpinput, "SOS constraint type has to be followed by two colons");
+         return SCIP_OKAY;
       }
 
       /* parse elements of SOS constraint */
-      while ( getNextToken(lpinput) )
+      while( getNextToken(lpinput) )
       {
-	 SCIP_VAR* var;
-	 SCIP_Real weight;
+         SCIP_VAR* var;
+         SCIP_Real weight;
 
-	 /* check if we reached a new section */
-	 if ( isNewSection(lpinput) )
-	 {
-	    break;
-	 }
+         /* check if we reached a new section */
+         if( isNewSection(lpinput) )
+         {
+            break;
+         }
 
-	 /* remember the token in the token buffer */
-	 swapTokenBuffer(lpinput);
+         /* remember the token in the token buffer */
+         swapTokenBuffer(lpinput);
 
-	 /* get variable and colon */
-	 var = SCIPfindVar(scip, lpinput->tokenbuf);
+         /* get variable and colon */
+         var = SCIPfindVar(scip, lpinput->tokenbuf);
 
-	 /* if token is a variable name */
-	 if ( var == NULL )
-	 {
-	    pushBufferToken(lpinput);
-	    break;
-	 }
-	 else
-	 {
-	    SCIPdebugMessage("found variable <%s>\n", SCIPvarGetName(var));
-	    if ( ! getNextToken(lpinput) || strcmp(lpinput->token, ":") != 0 )
-	    {
-	       syntaxError(scip, lpinput, "expected colon and weight.");
-	       return SCIP_OKAY;
-	    }
-	    /* check next token */
-	    if ( ! getNextToken(lpinput) )
-	    {
-	       /* push back token, since it could be the name of a new constraint */
-	       pushToken(lpinput);
-	       pushBufferToken(lpinput);
-	       break;
-	    }
-	    else
-	    {
-	       /* get weight */
-	       if ( ! isValue(scip, lpinput, &weight) )
-	       {
-		  /* push back token, since it could be the name of a new constraint */
-		  pushToken(lpinput);
-		  pushBufferToken(lpinput);
-		  break;
-	       }
-	       else
-	       {
-		  /* we now know that we have a variable/weight pair -> add variable*/
-		  switch (type)
-		  {
-		  case 1: SCIP_CALL( SCIPaddVarSOS1(scip, cons, var, weight) ); break;
-		  case 2: SCIP_CALL( SCIPaddVarSOS2(scip, cons, var, weight) ); break;
-		  default: abort(); /* should not happen */
-		  }
-		  SCIPdebugMessage("added variable <%s> with weight %g.\n", SCIPvarGetName(var), weight);
-	       }
-	    }
-	 }
+         /* if token is a variable name */
+         if( var == NULL )
+         {
+            pushBufferToken(lpinput);
+            break;
+         }
+         else
+         {
+            SCIPdebugMessage("found variable <%s>\n", SCIPvarGetName(var));
+            if( !getNextToken(lpinput) || strcmp(lpinput->token, ":") != 0 )
+            {
+               syntaxError(scip, lpinput, "expected colon and weight.");
+               return SCIP_OKAY;
+            }
+            /* check next token */
+            if( !getNextToken(lpinput) )
+            {
+               /* push back token, since it could be the name of a new constraint */
+               pushToken(lpinput);
+               pushBufferToken(lpinput);
+               break;
+            }
+            else
+            {
+               /* get weight */
+               if( !isValue(scip, lpinput, &weight) )
+               {
+                  /* push back token, since it could be the name of a new constraint */
+                  pushToken(lpinput);
+                  pushBufferToken(lpinput);
+                  break;
+               }
+               else
+               {
+                  /* we now know that we have a variable/weight pair -> add variable*/
+                  switch( type )
+                  {
+                  case 1: 
+                     SCIP_CALL( SCIPaddVarSOS1(scip, cons, var, weight) ); 
+                     break;
+                  case 2: 
+                     SCIP_CALL( SCIPaddVarSOS2(scip, cons, var, weight) );
+                     break;
+                  default: 
+                     SCIPerrorMessage("unknown SOS type: <%d>\n", type); /* should not happen */
+                     SCIPABORT();
+                  }
+                  SCIPdebugMessage("added variable <%s> with weight %g.\n", SCIPvarGetName(var), weight);
+               }
+            }
+         }
       }
 
       /* add the SOS constraint */
@@ -2154,7 +2158,7 @@ SCIP_RETCODE readLPFile(
          break;
 
       case LP_CONSTRAINTS:
-	 SCIP_CALL( readConstraints(scip, lpinput) );
+         SCIP_CALL( readConstraints(scip, lpinput) );
          break;
 
       case LP_BOUNDS:
@@ -2206,7 +2210,7 @@ SCIP_DECL_HASHGETKEY(hashGetKeyVar)
 static
 SCIP_DECL_HASHKEYEQ(hashKeyEqVar)
 {  /*lint --e{715}*/
-   if ( key1 == key2 )
+   if( key1 == key2 )
       return TRUE;
    return FALSE;
 }
@@ -2300,7 +2304,7 @@ SCIP_RETCODE getActiveVariables(
 static
 void clearLine(
    char*                 linebuffer,         /**< line */
-   int*                  linecnt             /**< number of charaters in line */
+   int*                  linecnt             /**< number of characters in line */
    )
 {
    assert( linebuffer != NULL );
@@ -2316,7 +2320,7 @@ void endLine(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    char*                 linebuffer,         /**< line */
-   int*                  linecnt             /**< number of charaters in line */
+   int*                  linecnt             /**< number of characters in line */
    )
 {
    assert( scip != NULL );
@@ -2338,7 +2342,7 @@ void appendLine(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    char*                 linebuffer,         /**< line */
-   int*                  linecnt,            /**< number of charaters in line */
+   int*                  linecnt,            /**< number of characters in line */
    const char*           extension           /**< string to extent the line */
    )
 {
@@ -2389,7 +2393,7 @@ void printRow(
    SCIP_VAR* var;
    char varname[LP_MAX_NAMELEN];
    char varname2[LP_MAX_NAMELEN];
-   char consname[LP_MAX_NAMELEN + 1]; /* an extra chararter for ':' */
+   char consname[LP_MAX_NAMELEN + 1]; /* an extra character for ':' */
    char buffer[LP_MAX_PRINTLEN];
 
    assert( scip != NULL );
@@ -2406,7 +2410,7 @@ void printRow(
    appendLine(scip, file, linebuffer, &linecnt, " ");
 
    /* print row name */
-   if ( strlen(rowname) > 0 || strlen(rownameextension) > 0 )
+   if( strlen(rowname) > 0 || strlen(rownameextension) > 0 )
    {
       (void) SCIPsnprintf(consname, LP_MAX_NAMELEN + 1, "%s%s:", rowname, rownameextension);
       appendLine(scip, file, linebuffer, &linecnt, consname);
@@ -2419,7 +2423,7 @@ void printRow(
       assert( var != NULL );
 
       /* we start a new line; therefore we tab this line */
-      if ( linecnt == 0 )
+      if( linecnt == 0 )
          appendLine(scip, file, linebuffer, &linecnt, " ");
 
       (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
@@ -2438,7 +2442,7 @@ void printRow(
             continue;
 
          /* we start a new line; therefore we tab this line */
-         if (linecnt == 0 )
+         if( linecnt == 0 )
             appendLine(scip, file, linebuffer, &linecnt, " ");
 
          (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(quadvarterms[v].var));
@@ -2457,7 +2461,7 @@ void printRow(
             continue;
 
          /* we start a new line; therefore we tab this line */
-         if (linecnt == 0 )
+         if( linecnt == 0 )
             appendLine(scip, file, linebuffer, &linecnt, " ");
 
          (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(quadvarterms[v].var));
@@ -2470,7 +2474,7 @@ void printRow(
       for( v = 0; v < nbilinterms; ++v )
       {
          /* we start a new line; therefore we tab this line */
-         if (linecnt == 0 )
+         if( linecnt == 0 )
             appendLine(scip, file, linebuffer, &linecnt, " ");
 
          (void) SCIPsnprintf(varname,  LP_MAX_NAMELEN, "%s", SCIPvarGetName(bilinterms[v].var1));
@@ -2491,7 +2495,7 @@ void printRow(
    (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s %+.15g", type, rhs);
 
    /* we start a new line; therefore we tab this line */
-   if (linecnt == 0 )
+   if( linecnt == 0 )
       appendLine(scip, file, linebuffer, &linecnt, " ");
    appendLine(scip, file, linebuffer, &linecnt, buffer);
 
@@ -2628,7 +2632,7 @@ void printSosCons(
    appendLine(scip, file, linebuffer, &linecnt, " ");
    assert( strlen(rowname) < LP_MAX_NAMELEN );
 
-   if ( strlen(rowname) > 0 )
+   if( strlen(rowname) > 0 )
    {
       (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, "%s:", rowname);
       appendLine(scip, file, linebuffer, &linecnt, buffer);
@@ -2638,16 +2642,16 @@ void printSosCons(
    (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " S%d::", type);
    appendLine(scip, file, linebuffer, &linecnt, buffer);
 
-   for (v = 0; v < nvars; ++v)
+   for( v = 0; v < nvars; ++v )
    {
       (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[v]));
 
-      if ( weights != NULL )
+      if( weights != NULL )
          (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s:%.15g", varname, weights[v]);
       else
          (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s:%d", varname, v);
 
-      if (linecnt == 0 )
+      if(linecnt == 0 )
       {
          /* we start a new line; therefore we tab this line */
          appendLine(scip, file, linebuffer, &linecnt, " ");
@@ -2674,7 +2678,7 @@ SCIP_RETCODE printSOCCons(
    SCIP_Real coef;
    SCIP_Real offset;
    char varname[LP_MAX_NAMELEN];
-   char consname[LP_MAX_NAMELEN + 1]; /* an extra chararter for ':' */
+   char consname[LP_MAX_NAMELEN + 1]; /* an extra character for ':' */
    char buffer[LP_MAX_PRINTLEN];
    
    SCIP_Real rhs;
@@ -2699,7 +2703,7 @@ SCIP_RETCODE printSOCCons(
    appendLine(scip, file, linebuffer, &linecnt, " ");
 
    /* print row name */
-   if ( strlen(rowname) > 0 )
+   if( strlen(rowname) > 0 )
    {
       (void) SCIPsnprintf(consname, LP_MAX_NAMELEN + 1, "%s:", rowname);
       appendLine(scip, file, linebuffer, &linecnt, consname);
@@ -2721,7 +2725,7 @@ SCIP_RETCODE printSOCCons(
          continue;
 
       /* we start a new line; therefore we tab this line */
-      if (linecnt == 0 )
+      if( linecnt == 0 )
          appendLine(scip, file, linebuffer, &linecnt, " ");
       
       (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
@@ -2740,7 +2744,7 @@ SCIP_RETCODE printSOCCons(
       
       rhs += coef * coef * offset * offset; 
       
-      if (linecnt == 0 )
+      if( linecnt == 0 )
          appendLine(scip, file, linebuffer, &linecnt, " ");
 
       (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
@@ -2763,7 +2767,7 @@ SCIP_RETCODE printSOCCons(
          continue;
 
       /* we start a new line; therefore we tab this line */
-      if (linecnt == 0 )
+      if( linecnt == 0 )
          appendLine(scip, file, linebuffer, &linecnt, " ");
       
       (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
@@ -2780,7 +2784,7 @@ SCIP_RETCODE printSOCCons(
       assert( var != NULL );
 
       /* we start a new line; therefore we tab this line */
-      if (linecnt == 0 )
+      if( linecnt == 0 )
          appendLine(scip, file, linebuffer, &linecnt, " ");
       
       (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
@@ -2799,7 +2803,7 @@ SCIP_RETCODE printSOCCons(
    (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " <= %+.15g", rhs);
 
    /* we start a new line; therefore we tab this line */
-   if (linecnt == 0 )
+   if( linecnt == 0 )
       appendLine(scip, file, linebuffer, &linecnt, " ");
    appendLine(scip, file, linebuffer, &linecnt, buffer);
 
@@ -2822,7 +2826,7 @@ SCIP_RETCODE collectAggregatedVars(
    int j;
 
    /* check variables */
-   for (j = 0; j < nvars; ++j)
+   for( j = 0; j < nvars; ++j )
    {
       SCIP_VARSTATUS status;
       SCIP_VAR* var;
@@ -2837,11 +2841,11 @@ SCIP_RETCODE collectAggregatedVars(
             status == SCIP_VARSTATUS_MULTAGGR ||
             status == SCIP_VARSTATUS_NEGATED );
          
-         if ( ! SCIPhashtableExists(*varAggregated, (void*) var) )
-	 {
-	    (*aggregatedVars)[(*nAggregatedVars)++] = var;
-	    SCIP_CALL( SCIPhashtableInsert(*varAggregated, (void*) var) );
-	 }
+         if( !SCIPhashtableExists(*varAggregated, (void*) var) )
+         {
+            (*aggregatedVars)[(*nAggregatedVars)++] = var;
+            SCIP_CALL( SCIPhashtableInsert(*varAggregated, (void*) var) );
+         }
       }
    }
 
@@ -2874,7 +2878,7 @@ SCIP_RETCODE printAggregatedCons(
    SCIP_CALL( SCIPallocBufferArray(scip, &activevars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &activevals, nvars) );
 
-   for (j = 0; j < nAggregatedVars; ++j)
+   for( j = 0; j < nAggregatedVars; ++j )
    {
       /* set up list to obtain substitution variables */
       nactivevars = 1;
@@ -3019,7 +3023,7 @@ static
 SCIP_DECL_READERWRITE(readerWriteLp)
 {  /*lint --e{715}*/
    SCIP_CALL( SCIPwriteLp(scip, file, name, transformed, objsense, objscale, objoffset, vars,
-			  nvars, nbinvars, nintvars, nimplvars, ncontvars, conss, nconss, result) );
+         nvars, nbinvars, nintvars, nimplvars, ncontvars, conss, nconss, result) );
 
    return SCIP_OKAY;
 }
@@ -3127,7 +3131,7 @@ SCIP_RETCODE SCIPwriteLp(
    SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
    SCIP_OBJSENSE      objsense,           /**< objective sense */
    SCIP_Real          objscale,           /**< scalar applied to objective function; external objective value is
-   					       extobj = objsense * objscale * (intobj + objoffset) */
+                                             extobj = objsense * objscale * (intobj + objoffset) */
    SCIP_Real          objoffset,          /**< objective offset from bound shifting and fixing */
    SCIP_VAR**         vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
    int                nvars,              /**< number of mutable variables in the problem */
@@ -3183,13 +3187,13 @@ SCIP_RETCODE SCIPwriteLp(
    consHidden = NULL;
 
    /* if indicator constraint handler is present */
-   if ( conshdlrInd != NULL )
+   if( conshdlrInd != NULL )
    {
       /* create hashtable storing linear constraints that should not be output */
       SCIP_CALL( SCIPhashmapCreate(&consHidden, SCIPblkmem(scip), SCIPcalcHashtableSize(1000)) );
 
       /* loop through indicator constraints (works only in transformed problem) */
-      if ( transformed )
+      if( transformed )
       {
          SCIP_CONS** consInd;
          int nConsInd;
@@ -3198,12 +3202,12 @@ SCIP_RETCODE SCIPwriteLp(
          nConsInd = SCIPconshdlrGetNConss(conshdlrInd);
          SCIPdebugMessage("Number of indicator constraints: %d\n", nConsInd);
 
-         for (c = 0; c < nConsInd; ++c)
+         for( c = 0; c < nConsInd; ++c )
          {
             assert( consInd[c] != NULL );
             cons = SCIPgetLinearConsIndicator(consInd[c]);
 
-            assert( ! SCIPhashmapExists(consHidden, (void*) cons) );
+            assert( !SCIPhashmapExists(consHidden, (void*) cons) );
             SCIP_CALL( SCIPhashmapSetImage(consHidden, (void*) cons, (void*) TRUE) );
             SCIPdebugMessage("Marked linear constraint <%s> as hidden.\n", SCIPconsGetName(cons));
          }
@@ -3211,7 +3215,7 @@ SCIP_RETCODE SCIPwriteLp(
       else
       {
          /* otherwise we have to pass through all constraints */
-         for (c = 0; c < nconss; ++c)
+         for( c = 0; c < nconss; ++c )
          {
             cons = conss[c];
             assert( cons != NULL);
@@ -3227,7 +3231,7 @@ SCIP_RETCODE SCIPwriteLp(
                lincons = SCIPgetLinearConsIndicator(cons);
                assert( lincons != NULL );
 
-               assert( ! SCIPhashmapExists(consHidden, (void*) lincons) );
+               assert( !SCIPhashmapExists(consHidden, (void*) lincons) );
                SCIP_CALL( SCIPhashmapSetImage(consHidden, (void*) lincons, (void*) TRUE) );
                SCIPdebugMessage("Marked linear constraint <%s> as hidden.\n", SCIPconsGetName(lincons));
             }
@@ -3255,21 +3259,21 @@ SCIP_RETCODE SCIPwriteLp(
    clearLine(linebuffer, &linecnt);
    appendLine(scip, file, linebuffer, &linecnt, " Obj:");
 
-   for (v = 0; v < nvars; ++v)
+   for( v = 0; v < nvars; ++v )
    {
       var = vars[v];
 
 #ifndef NDEBUG
       /* in case the original problem has to be posted the variables have to be either "original" or "negated" */
-      if ( !transformed )
+      if( !transformed )
          assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED );
 #endif
       
-      if ( SCIPisZero(scip, SCIPvarGetObj(var)) )
+      if( SCIPisZero(scip, SCIPvarGetObj(var)) )
          continue;
 
       /* we start a new line; therefore we tab this line */
-      if ( linecnt == 0 )
+      if( linecnt == 0 )
          appendLine(scip, file, linebuffer, &linecnt, "     ");
 
       (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
@@ -3289,7 +3293,7 @@ SCIP_RETCODE SCIPwriteLp(
    SCIP_CALL( SCIPallocBufferArray(scip, &consQuadratic, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consSOC, nconss) );
 
-   for (c = 0; c < nconss; ++c)
+   for( c = 0; c < nconss; ++c )
    {
       cons = conss[c];
       assert( cons != NULL);
@@ -3298,7 +3302,7 @@ SCIP_RETCODE SCIPwriteLp(
       assert(!transformed || SCIPconsIsEnabled(cons));
       
       /* skip marked constraints in connection with indicator constraints */
-      if ( conshdlrInd != NULL && SCIPhashmapExists(consHidden, (void*) cons) )
+      if( conshdlrInd != NULL && SCIPhashmapExists(consHidden, (void*) cons) )
       {
          assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "linear") == 0 );
          continue;
@@ -3322,7 +3326,7 @@ SCIP_RETCODE SCIPwriteLp(
          consvars = SCIPgetVarsSetppc(scip, cons);
          nconsvars = SCIPgetNVarsSetppc(scip, cons);
 
-         switch ( SCIPgetTypeSetppc(scip, cons) )
+         switch( SCIPgetTypeSetppc(scip, cons) )
          {
          case SCIP_SETPPCTYPE_PARTITIONING :
             SCIP_CALL( printQuadraticCons(scip, file, consname,
@@ -3338,13 +3342,13 @@ SCIP_RETCODE SCIPwriteLp(
             break;
          }
       }
-      else if ( strcmp(conshdlrname, "logicor") == 0 )
+      else if( strcmp(conshdlrname, "logicor") == 0 )
       {
          SCIP_CALL( printQuadraticCons(scip, file, consname,
                SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons),
                NULL, 0, NULL, 0, 1.0, SCIPinfinity(scip), transformed) );
       }
-      else if ( strcmp(conshdlrname, "knapsack") == 0 )
+      else if( strcmp(conshdlrname, "knapsack") == 0 )
       {
          SCIP_Longint* weights;
 
@@ -3358,11 +3362,11 @@ SCIP_RETCODE SCIPwriteLp(
             consvals[v] = weights[v];
 
          SCIP_CALL( printQuadraticCons(scip, file, consname, consvars, consvals, nconsvars,
-            NULL, 0, NULL, 0, -SCIPinfinity(scip), (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), transformed) );
+               NULL, 0, NULL, 0, -SCIPinfinity(scip), (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), transformed) );
 
          SCIPfreeBufferArray(scip, &consvals);
       }
-      else if ( strcmp(conshdlrname, "varbound") == 0 )
+      else if( strcmp(conshdlrname, "varbound") == 0 )
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &consvars, 2) );
          SCIP_CALL( SCIPallocBufferArray(scip, &consvals, 2) );
@@ -3379,17 +3383,17 @@ SCIP_RETCODE SCIPwriteLp(
          SCIPfreeBufferArray(scip, &consvars);
          SCIPfreeBufferArray(scip, &consvals);
       }
-      else if ( strcmp(conshdlrname, "SOS1") == 0 )
+      else if( strcmp(conshdlrname, "SOS1") == 0 )
       {
          /* store constraint */
          consSOS1[nConsSOS1++] = cons;
       }
-      else if ( strcmp(conshdlrname, "SOS2") == 0 )
+      else if( strcmp(conshdlrname, "SOS2") == 0 )
       {
          /* store constraint */
          consSOS2[nConsSOS2++] = cons;
       }
-      else if ( strcmp(conshdlrname, "indicator") == 0 )
+      else if( strcmp(conshdlrname, "indicator") == 0 )
       {
          SCIP_CONS* lincons;
          SCIP_VAR* binvar;
@@ -3411,7 +3415,7 @@ SCIP_RETCODE SCIPwriteLp(
          assert( slackvar != NULL );
 
          rhs = 1;
-         if ( SCIPvarGetStatus(binvar) == SCIP_VARSTATUS_NEGATED )
+         if( SCIPvarGetStatus(binvar) == SCIP_VARSTATUS_NEGATED )
          {
             rhs = 0;
             binvar = SCIPvarGetNegatedVar(binvar);
@@ -3425,10 +3429,10 @@ SCIP_RETCODE SCIPwriteLp(
          assert( linvals != NULL );
 
          /* linvars always contains slack variable, thus nlinvars >= 1 */
-         if ( nlinvars > 1 && ! SCIPconsIsDeleted(lincons) )
+         if( nlinvars > 1 && !SCIPconsIsDeleted(lincons) )
          {
             (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(binvar) );
-            if ( strlen(consname) > 0 )
+            if( strlen(consname) > 0 )
                SCIPinfoMessage(scip, file, " %s: %s = %d ->", consname, varname, rhs);
             else
                SCIPinfoMessage(scip, file, " %s = %d ->", varname, rhs);
@@ -3437,10 +3441,10 @@ SCIP_RETCODE SCIPwriteLp(
             SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nlinvars-1) );
 
             cnt = 0;
-            for (v = 0; v < nlinvars; ++v)
+            for( v = 0; v < nlinvars; ++v )
             {
                var = linvars[v];
-               if ( var != slackvar )
+               if( var != slackvar )
                {
                   consvars[cnt] = var;
                   consvals[cnt++] = linvals[v];
@@ -3474,7 +3478,7 @@ SCIP_RETCODE SCIPwriteLp(
       }
       else
       {
-         SCIPwarningMessage("constraint handler <%s> can not print requested format\n", conshdlrname );
+         SCIPwarningMessage("constraint handler <%s> cannot print requested format\n", conshdlrname );
          SCIPinfoMessage(scip, file, "\\ ");
          SCIP_CALL( SCIPprintCons(scip, cons, file) );
       }
@@ -3485,7 +3489,7 @@ SCIP_RETCODE SCIPwriteLp(
    SCIP_CALL( SCIPhashtableCreate(&varAggregated, SCIPblkmem(scip), 1000, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
 
    /* check for aggregated variables in SOS1 constraints and output aggregations as linear constraints */
-   for (c = 0; c < nConsSOS1; ++c)
+   for( c = 0; c < nConsSOS1; ++c )
    {
       cons = consSOS1[c];
       consvars = SCIPgetVarsSOS1(scip, cons);
@@ -3495,7 +3499,7 @@ SCIP_RETCODE SCIPwriteLp(
    }
 
    /* check for aggregated variables in SOS2 constraints and output aggregations as linear constraints */
-   for (c = 0; c < nConsSOS2; ++c)
+   for( c = 0; c < nConsSOS2; ++c )
    {
       cons = consSOS2[c];
       consvars = SCIPgetVarsSOS2(scip, cons);
@@ -3505,7 +3509,7 @@ SCIP_RETCODE SCIPwriteLp(
    }
    
    /* check for aggregated variables in quadratic parts of quadratic constraints and output aggregations as linear constraints */
-   for (c = 0; c < nConsQuadratic; ++c)
+   for( c = 0; c < nConsQuadratic; ++c )
    {
       cons = consQuadratic[c];
       for( v = 0; v < SCIPgetNQuadVarTermsQuadratic(scip, cons); ++v )
@@ -3516,7 +3520,7 @@ SCIP_RETCODE SCIPwriteLp(
    }
 
    /* check for aggregated variables in second order cone constraints and output aggregations as linear constraints */
-   for (c = 0; c < nConsSOC; ++c)
+   for( c = 0; c < nConsSOC; ++c )
    {
       cons = consSOC[c];
       
@@ -3531,7 +3535,7 @@ SCIP_RETCODE SCIPwriteLp(
 
    /* print "Bounds" section */
    SCIPinfoMessage(scip, file, "Bounds\n");
-   for (v = 0; v < nvars; ++v)
+   for( v = 0; v < nvars; ++v )
    {
       var = vars[v];
       assert( var != NULL );
@@ -3549,22 +3553,22 @@ SCIP_RETCODE SCIPwriteLp(
          ub = SCIPvarGetUbOriginal(var);
       }
 
-      if ( SCIPisInfinity(scip, -lb) && SCIPisInfinity(scip, ub) )
+      if( SCIPisInfinity(scip, -lb) && SCIPisInfinity(scip, ub) )
          SCIPinfoMessage(scip, file, " %s free\n", varname);
       else
       {
          /* print lower bound */
-         if ( SCIPisInfinity(scip, -lb) )
+         if( SCIPisInfinity(scip, -lb) )
             SCIPinfoMessage(scip, file, " -inf <= ");
-	 else
+         else
          {
-            if ( SCIPisZero(scip, lb) )
-	    {
-	       /* variables are nonnegative by default - so we skip these variables */
-	       if ( SCIPisInfinity(scip, ub) )
-		  continue;
+            if( SCIPisZero(scip, lb) )
+            {
+               /* variables are nonnegative by default - so we skip these variables */
+               if( SCIPisInfinity(scip, ub) )
+                  continue;
                lb = 0.0;
-	    }
+            }
 
             SCIPinfoMessage(scip, file, " %.15g <= ", lb);
          }
@@ -3580,7 +3584,7 @@ SCIP_RETCODE SCIPwriteLp(
    }
 
    /* output aggregated variables as 'free' */
-   for (v = 0; v < nAggregatedVars; ++v)
+   for( v = 0; v < nAggregatedVars; ++v )
    {
       var = aggregatedVars[v];
       assert( var != NULL );
@@ -3592,77 +3596,77 @@ SCIP_RETCODE SCIPwriteLp(
    /* free space */
    SCIPfreeBufferArray(scip, &aggregatedVars);
    SCIPhashtableFree(&varAggregated);
-   if ( conshdlrInd != NULL )
+   if( conshdlrInd != NULL )
       SCIPhashmapFree(&consHidden);
 
    /* print binaries section */
-   if ( nbinvars > 0 )
+   if( nbinvars > 0 )
    {
       SCIPinfoMessage(scip, file, "Binaries\n");
 
       clearLine(linebuffer, &linecnt);
 
-      for (v = 0; v < nvars; ++v)
+      for( v = 0; v < nvars; ++v )
       {
          var = vars[v];
          assert( var != NULL );
 
-	 if ( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
-	 {
+         if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+         {
             (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
             (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s", varname);
             appendLine(scip, file, linebuffer, &linecnt, buffer);
-	 }
+         }
       }
 
       endLine(scip, file, linebuffer, &linecnt);
    }
 
    /* print generals section */
-   if ( nintvars > 0 )
+   if( nintvars > 0 )
    {
       SCIPinfoMessage(scip, file, "Generals\n");
 
-      for (v = 0; v < nvars; ++v)
+      for( v = 0; v < nvars; ++v )
       {
          var = vars[v];
          assert( var != NULL );
 
-         if ( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
-	 {
+         if( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
+         {
             (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
             (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s", varname);
             appendLine(scip, file, linebuffer, &linecnt, buffer);
-	 }
+         }
       }
       endLine(scip, file, linebuffer, &linecnt);
    }
 
    /* print SOS section */
-   if ( nConsSOS1 > 0 || nConsSOS2 > 0 )
+   if( nConsSOS1 > 0 || nConsSOS2 > 0 )
    {
       SCIP_Real* weights;
       SCIPinfoMessage(scip, file, "SOS\n");
 
       /* first output SOS1 constraints */
-      for (c = 0; c < nConsSOS1; ++c)
+      for( c = 0; c < nConsSOS1; ++c )
       {
-	 cons = consSOS1[c];
-	 consvars = SCIPgetVarsSOS1(scip, cons);
-	 nconsvars = SCIPgetNVarsSOS1(scip, cons);
-	 weights = SCIPgetWeightsSOS1(scip, cons);
+         cons = consSOS1[c];
+         consvars = SCIPgetVarsSOS1(scip, cons);
+         nconsvars = SCIPgetNVarsSOS1(scip, cons);
+         weights = SCIPgetWeightsSOS1(scip, cons);
 
          (void) SCIPsnprintf(consname, LP_MAX_NAMELEN, "%s", SCIPconsGetName(cons) );
          printSosCons(scip, file, consname, consvars, weights, nconsvars, 1);
       }
 
       /* next output SOS2 constraints */
-      for (c = 0; c < nConsSOS2; ++c)
+      for( c = 0; c < nConsSOS2; ++c )
       {
-	 cons = consSOS2[c];
-	 consvars = SCIPgetVarsSOS2(scip, cons);
-	 nconsvars = SCIPgetNVarsSOS2(scip, cons);
-	 weights = SCIPgetWeightsSOS2(scip, cons);
+         cons = consSOS2[c];
+         consvars = SCIPgetVarsSOS2(scip, cons);
+         nconsvars = SCIPgetNVarsSOS2(scip, cons);
+         weights = SCIPgetWeightsSOS2(scip, cons);
 
          (void) SCIPsnprintf(consname, LP_MAX_NAMELEN, "%s", SCIPconsGetName(cons) );
          printSosCons(scip, file, consname, consvars, weights, nconsvars, 2);

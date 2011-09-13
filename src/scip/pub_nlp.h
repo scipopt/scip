@@ -165,7 +165,7 @@ void SCIPnlrowGetQuadData(
    int*                  nquadvars,          /**< buffer to store number of variables in quadratic term, or NULL if not of interest */
    SCIP_VAR***           quadvars,           /**< buffer to store pointer to array of variables in quadratic term, or NULL if not of interest */
    int*                  nquadelems,         /**< buffer to store number of entries in quadratic term, or NULL if not of interest */
-   SCIP_QUADELEM**       quadelems           /**< buffer to store pointer to arrau of entries in quadratic term, or NULL if not of interest */
+   SCIP_QUADELEM**       quadelems           /**< buffer to store pointer to array of entries in quadratic term, or NULL if not of interest */
    );
 
 /** gets expression tree */
@@ -201,6 +201,12 @@ int SCIPnlrowGetNLPPos(
 /** returns TRUE iff row is member of current NLP */
 extern
 SCIP_Bool SCIPnlrowIsInNLP(
+   SCIP_NLROW*           nlrow               /**< NLP row */
+   );
+
+/** gets the dual NLP solution of a nlrow */
+extern
+SCIP_Real SCIPnlrowGetDualsol(
    SCIP_NLROW*           nlrow               /**< NLP row */
    );
 

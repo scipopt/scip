@@ -63,7 +63,7 @@ SCIP_RETCODE SCIPreaderCreate(
    const char*           name,               /**< name of reader */
    const char*           desc,               /**< description of reader */
    const char*           extension,          /**< file extension that reader processes */
-   SCIP_DECL_READERCOPY  ((*readercopy)),    /**< copy method of reader or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_READERCOPY  ((*readercopy)),    /**< copy method of reader or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_READERFREE  ((*readerfree)),    /**< destructor of reader */
    SCIP_DECL_READERREAD  ((*readerread)),    /**< read method */
    SCIP_DECL_READERWRITE ((*readerwrite)),   /**< write method */
@@ -319,9 +319,9 @@ SCIP_RETCODE SCIPreaderWrite(
          SCIP_ALLOC( BMSallocMemoryArray(&consnames, nconss) );
 
          /* compute length of the generic variable names:
-	  * - nvars + 1 to avoid log of zero
-	  * - +3 (zero at end + 'x' + 1 because we round down)
-	  * Example: 10 -> need 4 chars ("x10\0") 
+          * - nvars + 1 to avoid log of zero
+          * - +3 (zero at end + 'x' + 1 because we round down)
+          * Example: 10 -> need 4 chars ("x10\0") 
           */
          size = (int) log10(nvars+1.0) + 3;
 

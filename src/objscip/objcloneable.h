@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   objcloneable.h
+ * @brief  definition of base class for all clonable classes
  * @author Michael Winkler
  */
 
@@ -32,7 +33,7 @@ namespace scip
    {
       virtual ~ObjCloneable() {}
 
-      /** clone method, used to copy plugins which are not a constraint handlers or a variable pricer plugins */
+      /** clone method, used to copy plugins which are not constraint handlers or variable pricer plugins */
       virtual ObjCloneable* clone(
          SCIP*           scip                /**< SCIP data structure */
          ) const

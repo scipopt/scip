@@ -380,7 +380,7 @@ SCIP_RETCODE SCIPbranchcandGetExternCands(
    int*                  nprioexterncands,   /**< pointer to store the number of candidates with maximal priority, or NULL */
    int*                  nprioexternbins,    /**< pointer to store the number of binary candidates with maximal priority, or NULL */
    int*                  nprioexternints,    /**< pointer to store the number of integer candidates with maximal priority, or NULL */
-   int*                  nprioexternimpls    /**< pointer to store the number of implicit integercandidates with maximal priority, 
+   int*                  nprioexternimpls    /**< pointer to store the number of implicit integer candidates with maximal priority, 
                                               *   or NULL */
    )
 {
@@ -486,7 +486,7 @@ SCIP_RETCODE SCIPbranchcandAddExternCand(
    assert(branchcand != NULL);
    assert(var != NULL);
    assert(!SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var))); /* the variable should not be fixed yet */
-   assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR || !SCIPsetIsEQ(set, SCIPvarGetMultaggrLbLocal(var, set), SCIPvarGetMultaggrUbLocal(var, set))); /* also the current bounds of a multiaggregated variable should not be fixed yet */
+   assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR || !SCIPsetIsEQ(set, SCIPvarGetMultaggrLbLocal(var, set), SCIPvarGetMultaggrUbLocal(var, set))); /* also the current bounds of a multi-aggregated variable should not be fixed yet */
    assert(branchcand->nprioexterncands <= branchcand->nexterncands);
    assert(branchcand->nexterncands <= branchcand->externcandssize);
 
@@ -523,7 +523,7 @@ SCIP_RETCODE SCIPbranchcandAddExternCand(
    {
       /* candidate has equal priority as the current maximum:
        * move away the first non-maximal priority candidate, move the current candidate to the correct
-       * slot (binaries first, integers next, implicits next, continuous last) and increase the number 
+       * slot (binaries first, integers next, implicit integers next, continuous last) and increase the number 
        * of maximal priority candidates
        */
       if( insertpos != branchcand->nprioexterncands )
@@ -611,6 +611,7 @@ void SCIPbranchcandClearExternCands(
    branchcand->nprioexternbins = 0;
    branchcand->nprioexternints = 0;
    branchcand->nprioexternimpls = 0;
+   branchcand->externmaxpriority = INT_MIN;
 }
 
 /** checks whether the given variable is contained in the candidate storage for external branching */
@@ -643,7 +644,7 @@ SCIP_Bool SCIPbranchcandContainsExternCand(
    if( branchpriority == branchcand->externmaxpriority )
    {
       /* variable has equal priority as the current maximum:
-       * look for it in the correct slot (binaries first, integers next, implicits next, continuous last)
+       * look for it in the correct slot (binaries first, integers next, implicit integers next, continuous last)
        */
       if( vartype == SCIP_VARTYPE_BINARY )
       {
@@ -687,7 +688,7 @@ SCIP_Bool SCIPbranchcandContainsExternCand(
    return FALSE;
 }
 
-/** gets branching candidates for pseudo solution branching (nonfixed variables) */
+/** gets branching candidates for pseudo solution branching (non-fixed variables) */
 SCIP_RETCODE SCIPbranchcandGetPseudoCands(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -749,7 +750,7 @@ SCIP_RETCODE SCIPbranchcandGetPseudoCands(
    return SCIP_OKAY;
 }
 
-/** gets number of branching candidates for pseudo solution branching (nonfixed variables) */
+/** gets number of branching candidates for pseudo solution branching (non-fixed variables) */
 int SCIPbranchcandGetNPseudoCands(
    SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
    )
@@ -846,7 +847,7 @@ void branchcandInsertPseudoCand(
    {
       /* candidate has equal priority as the current maximum:
        * move away the first non-maximal priority candidate, move the current candidate to the correct
-       * slot (binaries first, integers next, implicits last) and increase the number of maximal priority candidates
+       * slot (binaries first, integers next, implicit integers last) and increase the number of maximal priority candidates
        */
       if( insertpos != branchcand->npriopseudocands )
       {
@@ -1134,7 +1135,7 @@ SCIP_RETCODE SCIPbranchruleCreate(
    SCIP_DECL_BRANCHINITSOL((*branchinitsol)),/**< solving process initialization method of branching rule */
    SCIP_DECL_BRANCHEXITSOL((*branchexitsol)),/**< solving process deinitialization method of branching rule */
    SCIP_DECL_BRANCHEXECLP((*branchexeclp)),  /**< branching execution method for fractional LP solutions */
-   SCIP_DECL_BRANCHEXECEXT((*branchexecext)),/**< branching execution method for externation solutions */
+   SCIP_DECL_BRANCHEXECEXT((*branchexecext)),/**< branching execution method for external solutions */
    SCIP_DECL_BRANCHEXECPS((*branchexecps)),  /**< branching execution method for not completely fixed pseudo solutions */
    SCIP_BRANCHRULEDATA*  branchruledata      /**< branching rule data */
    )

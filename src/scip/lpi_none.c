@@ -541,7 +541,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    return SCIP_PLUGINNOTFOUND;
 }
 
-/** start strong branching - call before any strongbranching */
+/** start strong branching - call before any strong branching */
 SCIP_RETCODE SCIPlpiStartStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
@@ -550,7 +550,7 @@ SCIP_RETCODE SCIPlpiStartStrongbranch(
    return SCIP_OKAY;
 }
 
-/** end strong branching - call after any strongbranching */
+/** end strong branching - call after any strong branching */
 SCIP_RETCODE SCIPlpiEndStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
@@ -888,10 +888,10 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
    return SCIP_PLUGINNOTFOUND;
 }
 
-/** gets dual farkas proof for infeasibility */
+/** gets dual Farkas proof for infeasibility */
 SCIP_RETCODE SCIPlpiGetDualfarkas(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_Real*            dualfarkas          /**< dual farkas row multipliers */
+   SCIP_Real*            dualfarkas          /**< dual Farkas row multipliers */
    )
 {  /*lint --e{715}*/
    assert(dualfarkas != NULL);
@@ -1179,7 +1179,7 @@ SCIP_Bool SCIPlpiIsInfinity(
    SCIP_Real             val                 /**< value to be checked for infinity */
    )
 {  /*lint --e{715}*/
-   if ( val >= LPIINFINITY )
+   if( val >= LPIINFINITY )
       return TRUE;
    return FALSE;
 }

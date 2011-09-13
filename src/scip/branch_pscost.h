@@ -30,7 +30,7 @@
 extern "C" {
 #endif
 
-/** creates the pseudo cost braching rule and includes it in SCIP */
+/** creates the pseudo cost branching rule and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludeBranchrulePscost(
    SCIP*                 scip                /**< SCIP data structure */
@@ -41,7 +41,7 @@ SCIP_RETCODE SCIPincludeBranchrulePscost(
 extern
 SCIP_RETCODE SCIPselectBranchVarPscost(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            branchcands,        /**< brancing candidates */
+   SCIP_VAR**            branchcands,        /**< branching candidates */
    SCIP_Real*            branchcandssol,     /**< solution value for the branching candidates */
    SCIP_Real*            branchcandsscore,   /**< array of candidate scores */
    int                   nbranchcands,       /**< number of branching candidates */

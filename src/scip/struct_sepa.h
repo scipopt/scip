@@ -45,7 +45,7 @@ struct SCIP_Sepa
                                               *   to best node's dual bound for applying separation */
    char*                 name;               /**< name of separator */
    char*                 desc;               /**< description of separator */
-   SCIP_DECL_SEPACOPY    ((*sepacopy));      /**< copy method of separator or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_SEPACOPY    ((*sepacopy));      /**< copy method of separator or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_SEPAFREE    ((*sepafree));      /**< destructor of separator */
    SCIP_DECL_SEPAINIT    ((*sepainit));      /**< initialize separator */
    SCIP_DECL_SEPAEXIT    ((*sepaexit));      /**< deinitialize separator */

@@ -90,7 +90,7 @@ SCIP_RETCODE SCIPpresolCreate(
    int                   priority,           /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
    int                   maxrounds,          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
    SCIP_Bool             delay,              /**< should presolver be delayed, if other presolvers found reductions? */
-   SCIP_DECL_PRESOLCOPY  ((*presolcopy)),    /**< copy method of presolver or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_PRESOLCOPY  ((*presolcopy)),    /**< copy method of presolver or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver to free user data (called when SCIP is exiting) */
    SCIP_DECL_PRESOLINIT  ((*presolinit)),    /**< initialization method of presolver (called after problem was transformed) */
    SCIP_DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialization method of presolver (called before transformed problem is freed) */
@@ -206,7 +206,7 @@ SCIP_RETCODE SCIPpresolInit(
       presol->nupgdconss = 0;
       presol->nchgcoefs = 0;
       presol->nchgsides = 0;
-      presol->wasdelayed = 0;
+      presol->wasdelayed = FALSE;
    }
    
    /* call initialization method of presolver */
@@ -267,7 +267,7 @@ SCIP_RETCODE SCIPpresolInitpre(
    presol->lastnupgdconss = 0;
    presol->lastnchgcoefs = 0;
    presol->lastnchgsides = 0;
-   presol->wasdelayed = 0;
+   presol->wasdelayed = FALSE;
 
    /* call presolving initialization method of presolver */
    if( presol->presolinitpre != NULL )
@@ -329,7 +329,7 @@ SCIP_RETCODE SCIPpresolExec(
    int*                  nfixedvars,         /**< pointer to total number of variables fixed of all presolvers */
    int*                  naggrvars,          /**< pointer to total number of variables aggregated of all presolvers */
    int*                  nchgvartypes,       /**< pointer to total number of variable type changes of all presolvers */
-   int*                  nchgbds,            /**< pointer to total number of variable bounds tightend of all presolvers */
+   int*                  nchgbds,            /**< pointer to total number of variable bounds tightened of all presolvers */
    int*                  naddholes,          /**< pointer to total number of domain holes added of all presolvers */
    int*                  ndelconss,          /**< pointer to total number of deleted constraints of all presolvers */
    int*                  naddconss,          /**< pointer to total number of added constraints of all presolvers */

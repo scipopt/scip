@@ -20,6 +20,12 @@
 #@author  Timo Berthold 
 
 #-----------------------------------------------------------------------------
+# get real path to SCIP
+#-----------------------------------------------------------------------------
+SCIPREALPATH	=	$(realpath $(SCIPDIR))
+
+
+#-----------------------------------------------------------------------------
 # detect host architecture
 #-----------------------------------------------------------------------------
 include $(SCIPDIR)/make/make.detecthost
@@ -48,6 +54,7 @@ STATICLIBEXT	=	a
 SHAREDLIBEXT	=	so
 LIBEXT		=	$(STATICLIBEXT)
 
+SHARED		=	false
 READLINE	=	true
 ZLIB		=	true
 GMP             =       auto
@@ -72,6 +79,7 @@ LINKCXX_L	=	-L
 LINKCXX_l	=	-l
 LINKCXX_o	=	-o # the trailing space is important
 LINKLIBSUFFIX	=
+LINKRPATH	=	-Wl,-rpath,
 DCC		=	gcc
 DCXX		=	g++
 AR		=	ar
@@ -94,6 +102,7 @@ GAMS            =       gams
 
 SHELL		= 	bash
 READ		=	read -e
+LN_s		= 	ln -s
 
 FLAGS		=	-I$(SRCDIR) -DWITH_SCIPDEF -I$(SCIPDIR)/src
 OFLAGS		=
@@ -129,6 +138,7 @@ ALLSRC		=
 
 #-----------------------------------------------------------------------------
 include $(SCIPDIR)/make/make.$(BASE)
+-include $(SCIPDIR)/make/make.$(OSTYPE).$(COMP).$(OPT)
 -include $(SCIPDIR)/make/local/make.$(HOSTNAME)
 -include $(SCIPDIR)/make/local/make.$(HOSTNAME).$(COMP)
 -include $(SCIPDIR)/make/local/make.$(HOSTNAME).$(COMP).$(OPT)
@@ -149,6 +159,23 @@ DFLAGS		+=	$(USRDFLAGS)
 #FLAGS		+=	-DNOSAFEMEM
 #FLAGS		+=	-DNOBLOCKMEM
 
+#-----------------------------------------------------------------------------
+# SHARED Libaries
+#-----------------------------------------------------------------------------
+
+ifeq ($(SHARED),true)
+FLAGS		+=	-fPIC
+LIBEXT		=	$(SHAREDLIBEXT)
+LIBBUILD	=	$(LINKCC)
+LIBBUILDFLAGS	=      -shared -fPIC
+LIBBUILD_o	= 	-o # the trailing space is important
+ARFLAGS		=
+RANLIB		=
+endif
+
+ifneq ($(LINKRPATH),)
+LDFLAGS		+=	$(LINKRPATH)$(SCIPREALPATH)/$(LIBDIR)
+endif
 
 #-----------------------------------------------------------------------------
 # LP Solver Interface
@@ -190,9 +217,20 @@ LPSLDFLAGS	=	$(LINKCXX_l)gurobi.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
 endif
 
 ifeq ($(LPS),clp)
-LPSLDFLAGS	=	$(LINKCXX_L)$(LIBDIR) $(LINKCXX_l)clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX) \
-			$(LINKCXX_l)coinutils.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX) \
+# for newer Clp versions all linker flags are in share/coin/doc/Clp/clp_addlibs.txt
+CLPDIR		= 	$(SCIPREALPATH)/$(LIBDIR)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
+LPSLDFLAGS	=	$(shell test -e $(CLPDIR)/share/coin/doc/Clp/clp_addlibs.txt && cat $(CLPDIR)/share/coin/doc/Clp/clp_addlibs.txt)
+# if we could not find clp_addlibs file, try to guess linker flags
+ifeq ($(LPSLDFLAGS),)
+LPSLDFLAGS	=	$(LINKCXX_L)$(CLPDIR)/lib $(LINKCXX_l)Clp$(LINKLIBSUFFIX) \
+			$(LINKCXX_l)CoinUtils$(LINKLIBSUFFIX) \
 			$(LINKCXX_l)bz2$(LINKLIBSUFFIX) $(LINKCXX_l)lapack$(LINKLIBSUFFIX)
+endif
+# ensure that also shared libraries are found while running the binary
+ifneq ($(LINKRPATH),)
+CLPFULLPATH	:=	$(realpath $(CLPDIR))
+LPSLDFLAGS	+=	$(LINKRPATH)$(CLPFULLPATH)/lib
+endif
 endif
 
 ifeq ($(LPS),qso)
@@ -204,7 +242,7 @@ LPSLDFLAGS	=
 endif
 
 LPILIB		=	$(LPILIBNAME).$(BASE)
-LPILIBFILE	=	$(SCIPDIR)/lib/lib$(LPILIB).$(LIBEXT)
+LPILIBFILE	=	$(SCIPREALPATH)/lib/lib$(LPILIB).$(LIBEXT)
 
 
 #-----------------------------------------------------------------------------
@@ -250,12 +288,21 @@ LDFLAGS		+=	$(LINKCC_l)zimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT)$(LINKLIBSUFFI
 endif
 
 ifeq ($(IPOPT),true)
-FLAGS		+=	-DWITH_IPOPT -I$(SCIPDIR)/$(LIBDIR)/ipoptinc $(IPOPT_FLAGS)
-LDFLAGS		+=	$(LINKCXX_l)ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)$(LINKLIBSUFFIX) $(IPOPT_LDFLAGS)
-ifeq ($(LIBEXT),$(STATICLIBEXT))
-LDFLAGS		+=	`cat $(SCIPDIR)/$(LIBDIR)/ipopt_addlibs.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(STATICLIBEXT)`
-else
-LDFLAGS		+=	`cat $(SCIPDIR)/$(LIBDIR)/ipopt_addlibs.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(SHAREDLIBEXT)`
+FLAGS		+=	-I$(SCIPDIR)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/include/coin $(IPOPT_FLAGS)
+# for Ipopt >= 3.9.0, all linker flags are in share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt
+# for Ipopt < 3.9.0, we need to link against libipopt from the lib directory, plus the additional flags given in share/doc/coin/Ipopt/ipopt_addlibs_cpp.txt
+LDFLAGS		+=	$(shell test -e $(SCIPDIR)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt && \
+  cat $(SCIPDIR)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt)
+LDFLAGS		+=	$(shell test -e $(SCIPDIR)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/share/doc/coin/Ipopt/ipopt_addlibs_cpp.txt && \
+  (echo $(LINKCXX_L)$(SCIPDIR)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib $(LINKCXX_l)ipopt; cat $(SCIPDIR)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/share/doc/coin/Ipopt/ipopt_addlibs_cpp.txt))
+# ensure that also shared libraries are found while running the binary
+# for Ipopt 3.9.x, the libraries are installed in the lib/coin and lib/coin/ThirdParty subdirectories
+# for Ipopt != 3.9.x, they are installed into the lib subdirectory
+ifneq ($(LINKRPATH),)
+IPOPTFULLPATH	:=	$(realpath $(SCIPDIR)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT))
+LDFLAGS		+=	$(LINKRPATH)$(IPOPTFULLPATH)/lib
+LDFLAGS		+=	$(shell test -e $(IPOPTFULLPATH)/lib/coin && echo $(LINKRPATH)$(IPOPTFULLPATH)/lib/coin)
+LDFLAGS		+=	$(shell test -e $(IPOPTFULLPATH)/lib/coin/ThirdParty && echo $(LINKRPATH)$(IPOPTFULLPATH)/lib/coin/ThirdParty)
 endif
 NLPILIBSHORTNAMEIPOPT = .ipopt
 endif
@@ -270,7 +317,7 @@ endif
 
 SCIPLIBNAME	=	scip
 SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
-SCIPLIBFILE	=	$(SCIPDIR)/lib/lib$(SCIPLIB).$(LIBEXT)
+SCIPLIBFILE	=	$(SCIPREALPATH)/lib/lib$(SCIPLIB).$(LIBEXT)
 
 
 #-----------------------------------------------------------------------------
@@ -279,7 +326,7 @@ SCIPLIBFILE	=	$(SCIPDIR)/lib/lib$(SCIPLIB).$(LIBEXT)
 
 OBJSCIPLIBNAME	=	objscip
 OBJSCIPLIB	=	$(OBJSCIPLIBNAME).$(BASE)
-OBJSCIPLIBFILE	=	$(SCIPDIR)/lib/lib$(OBJSCIPLIB).$(LIBEXT)
+OBJSCIPLIBFILE	=	$(SCIPREALPATH)/lib/lib$(OBJSCIPLIB).$(LIBEXT)
 
 
 #-----------------------------------------------------------------------------
@@ -288,4 +335,4 @@ OBJSCIPLIBFILE	=	$(SCIPDIR)/lib/lib$(OBJSCIPLIB).$(LIBEXT)
 
 NLPILIBNAME	=	nlpi$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAMEIPOPT)
 NLPILIB		=	$(NLPILIBNAME).$(BASE)
-NLPILIBFILE	=	$(SCIPDIR)/lib/lib$(NLPILIB).$(LIBEXT)
+NLPILIBFILE	=	$(SCIPREALPATH)/lib/lib$(NLPILIB).$(LIBEXT)

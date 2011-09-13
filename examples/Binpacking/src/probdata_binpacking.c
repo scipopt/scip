@@ -194,7 +194,6 @@ SCIP_RETCODE createInitialColumns(
 
    int* ids;
    SCIP_Longint* weights;
-   SCIP_Longint capacity;
    int nitems;
    
    int i;
@@ -202,7 +201,6 @@ SCIP_RETCODE createInitialColumns(
    conss = probdata->conss;
    ids = probdata->ids;
    weights = probdata->weights;
-   capacity = probdata->capacity;
    nitems = probdata->nitems;
    
    /* create start solution each item in exactly one bin */

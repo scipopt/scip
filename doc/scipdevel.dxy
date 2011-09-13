@@ -502,7 +502,7 @@ SHOW_FILES             = YES
 # This will remove the Namespaces entry from the Quick Index
 # and from the Folder Tree View (if specified). The default is YES.
 
-SHOW_NAMESPACES        = YES
+SHOW_NAMESPACES        = NO
 
 # The FILE_VERSION_FILTER tag can be used to specify a program or script that
 # doxygen should invoke to get the current version for each file (typically from
@@ -1385,7 +1385,13 @@ INCLUDE_FILE_PATTERNS  =
 # undefined via #undef or recursively expanded use the := operator
 # instead of the = operator.
 
-PREDEFINED             =
+PREDEFINED             = "SCIP_CALL=" \
+                         "SCIP_CALL_ABORT=" \
+			 "SCIP_CALL_ABORT_QUIET=" \
+			 "SCIP_ALLOC=" \
+                         "SCIP_ALLOC_ABORT=" \
+			 "SCIP_ALLOC_ABORT_QUIET=" \
+			 "SCIPABORT="
 
 # If the MACRO_EXPANSION and EXPAND_ONLY_PREDEF tags are set to YES then
 # this tag can be used to specify a list of macro names that should be expanded.

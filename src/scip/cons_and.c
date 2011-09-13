@@ -48,6 +48,8 @@
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
+
 #define EVENTHDLR_NAME         "and"
 #define EVENTHDLR_DESC         "bound change event handler for and constraints"
 
@@ -58,8 +60,8 @@
 
 #define HASHSIZE_ANDCONS         131101 /**< minimal size of hash table in and constraint tables */
 #define DEFAULT_PRESOLUSEHASHING   TRUE /**< should hash table be used for detecting redundant constraints in advance */
-#define NMINCOMPARISONS          200000 /**< number for minimal pairwise presol comparisons */
-#define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presol comparisons to repeat pairwise comparison round */
+#define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
+#define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise comparison round */
 
 
 /*
@@ -80,7 +82,7 @@ struct SCIP_ConsData
    int                   filterpos1;         /**< event filter position of first watched operator variable */
    int                   filterpos2;         /**< event filter position of second watched operator variable */
    unsigned int          propagated:1;       /**< is constraint already preprocessed/propagated? */
-   unsigned int          nofixedzero:1;      /**< is none of the opereator variables fixed to FALSE? */
+   unsigned int          nofixedzero:1;      /**< is none of the operator variables fixed to FALSE? */
    unsigned int          impladded:1;        /**< were the implications of the constraint already added? */
    unsigned int          opimpladded:1;      /**< was the implication for 2 operands with fixed resultant added? */
    unsigned int          sorted:1;           /**< are the constraint's variables sorted? */
@@ -155,7 +157,7 @@ SCIP_RETCODE unlockRounding(
    return SCIP_OKAY;
 }
 
-/** creates constaint handler data */
+/** creates constraint handler data */
 static
 SCIP_RETCODE conshdlrdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -862,11 +864,11 @@ SCIP_RETCODE addRelaxation(
 
    char rowname[SCIP_MAXSTRLEN];
    
-   /* in the root LP we only add the weaker relaxation which contains of two rows:
+   /* in the root LP we only add the weaker relaxation which consists of two rows:
     *   - one additional row:             resvar - v1 - ... - vn >= 1-n
     *   - aggregated row:               n*resvar - v1 - ... - vn <= 0.0
     *
-    * during separation we separate the stronger relaxation whcih contains of n+1 row:
+    * during separation we separate the stronger relaxation which consists of n+1 row:
     *   - one additional row:             resvar - v1 - ... - vn >= 1-n
     *   - for each operator variable vi:  resvar - vi            <= 0
     */
@@ -1321,7 +1323,7 @@ SCIP_RETCODE propagateCons(
    if( SCIPconsIsModifiable(cons) )
       return SCIP_OKAY;
 
-   /* rules (3) and (4) can not be applied, if we have at least two unfixed variables left;
+   /* rules (3) and (4) cannot be applied, if we have at least two unfixed variables left;
     * that means, we only have to watch (i.e. capture events) of two variables, and switch to other variables
     * if these ones get fixed
     */
@@ -1483,7 +1485,7 @@ SCIP_RETCODE propagateCons(
          /* remove the "and" constraint globally */
          SCIP_CALL( SCIPdelCons(scip, cons) );
 
-	 (*nupgdconss)++;
+         (*nupgdconss)++;
 
          SCIPfreeBufferArrayNull(scip, &consvars);
       }
@@ -2486,7 +2488,7 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
       SCIP_CALL( propagateCons(scip, cons, conshdlrdata->eventhdlr, &cutoff, nfixedvars, nupgdconss) );
 
       /* remove all variables that are fixed to one; merge multiple entries of the same variable;
-       * fix resuntant to zero if a pair of negated variables is contained in the operand variables
+       * fix resultant to zero if a pair of negated variables is contained in the operand variables
        */
       if( !cutoff && !SCIPconsIsDeleted(cons) )
       {
@@ -2561,24 +2563,24 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
    {
       if( *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars )
       {
-	 if( firstchange < nconss ) 
-	 {
-	    /* detect redundant constraints; fast version with hash table instead of pairwise comparison */
-	    SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &firstchange, &cutoff, naggrvars, ndelconss) );
+         if( firstchange < nconss ) 
+         {
+            /* detect redundant constraints; fast version with hash table instead of pairwise comparison */
+            SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &firstchange, &cutoff, naggrvars, ndelconss) );
             oldnaggrvars = *naggrvars;
-	 }
+         }
       }
       else
-	 delay = TRUE;
+         delay = TRUE;
    }
 
    if( !cutoff && conshdlrdata->presolpairwise )
    {
       if( *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars )
       {
-	 SCIP_Longint npaircomparisons;
-	 npaircomparisons = 0;
-	 oldndelconss = *ndelconss;
+         SCIP_Longint npaircomparisons;
+         npaircomparisons = 0;
+         oldndelconss = *ndelconss;
          
          for( c = firstchange; c < nconss && !cutoff && !SCIPisStopped(scip); ++c )
          {
@@ -2591,13 +2593,13 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
                
                if( npaircomparisons > NMINCOMPARISONS )
                {
-		  if( ((*ndelconss - oldndelconss) + (*naggrvars - oldnaggrvars) + (*nchgbds - oldnchgbds)/2) / (npaircomparisons + 0.0) < MINGAINPERNMINCOMPARISONS )
+                  if( ((*ndelconss - oldndelconss) + (*naggrvars - oldnaggrvars) + (*nchgbds - oldnchgbds)/2) / (npaircomparisons + 0.0) < MINGAINPERNMINCOMPARISONS )
                      break;
-		  oldndelconss = *ndelconss;
+                  oldndelconss = *ndelconss;
                   oldnaggrvars = *naggrvars;
                   oldnchgbds = *nchgbds;
 
-		  npaircomparisons = 0;
+                  npaircomparisons = 0;
                }
             }
          }
@@ -2612,7 +2614,7 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
    else if( delay )
       *result = SCIP_DELAYED;
    else if( *nfixedvars > oldnfixedvars || *naggrvars > oldnaggrvars || *nchgbds > oldnchgbds
-	    || *ndelconss > oldndelconss || *nupgdconss > oldnupgdconss )
+            || *ndelconss > oldndelconss || *nupgdconss > oldnupgdconss )
       *result = SCIP_SUCCESS;
    else
       *result = SCIP_DIDNOTFIND;
@@ -2753,7 +2755,7 @@ SCIP_DECL_CONSPARSE(consParseAnd)
    int nvars;
    int pos;
    
-   SCIPdebugMessage("pasre <%s> as and constraint\n", str);
+   SCIPdebugMessage("parse <%s> as and constraint\n", str);
 
    pos = 0;
 
@@ -2773,7 +2775,7 @@ SCIP_DECL_CONSPARSE(consParseAnd)
       /* allocate buffer array for variables */
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
 
-      /* pasre string */
+      /* parse string */
       SCIP_CALL( SCIPparseVarsList(scip, str, pos, vars, &nvars, varssize, &requiredsize, &pos, ',', success) );
    
       if( *success )
@@ -2857,6 +2859,7 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         CONSHDLR_PROP_TIMING,
          conshdlrCopyAnd,
          consFreeAnd, consInitAnd, consExitAnd, 
          consInitpreAnd, consExitpreAnd, consInitsolAnd, consExitsolAnd,
@@ -2918,7 +2921,7 @@ SCIP_RETCODE SCIPcreateConsAnd(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even

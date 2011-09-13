@@ -34,7 +34,7 @@ extern "C" {
 /** user interface dialog */
 struct SCIP_Dialog
 {
-   SCIP_DECL_DIALOGCOPY  ((*dialogcopy));    /**< copy method of dialog or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_DIALOGCOPY  ((*dialogcopy));    /**< copy method of dialog or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_DIALOGEXEC  ((*dialogexec));    /**< execution method of dialog */
    SCIP_DECL_DIALOGDESC  ((*dialogdesc));    /**< description output method of dialog, or NULL */
    SCIP_DECL_DIALOGFREE  ((*dialogfree));    /**< destructor of dialog to free user data, or NULL */

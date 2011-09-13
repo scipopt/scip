@@ -444,7 +444,7 @@ SCIP_Real SCIPtreeCalcChildEstimate(
  *  if x is a continuous variable, then two child nodes will be created
  *  (x <= x', x >= x')
  *  but if the bounds of x are such that their relative difference is smaller than epsilon,
- *  the variable is fixed to val (if not SCIP_INVALID) or a well choosen alternative in the current node,
+ *  the variable is fixed to val (if not SCIP_INVALID) or a well chosen alternative in the current node,
  *  i.e., no children are created
  *  if x is not a continuous variable, then:
  *  if solution value x' is fractional, two child nodes will be created
@@ -471,6 +471,41 @@ SCIP_RETCODE SCIPtreeBranchVar(
    SCIP_NODE**           downchild,          /**< pointer to return the left child with variable rounded down, or NULL */
    SCIP_NODE**           eqchild,            /**< pointer to return the middle child with variable fixed, or NULL */
    SCIP_NODE**           upchild             /**< pointer to return the right child with variable rounded up, or NULL */
+   );
+
+/** n-ary branching on a variable x
+ * Branches on variable x such that up to n/2 children are created on each side of the usual branching value.
+ * The branching value is selected as in SCIPtreeBranchVar().
+ * If n is 2 or the variables local domain is too small for a branching into n pieces, SCIPtreeBranchVar() is called.
+ * The parameters minwidth and widthfactor determine the domain width of the branching variable in the child nodes.
+ * If n is odd, one child with domain width 'width' and having the branching value in the middle is created.
+ * Otherwise, two children with domain width 'width' and being left and right of the branching value are created.
+ * Next further nodes to the left and right are created, where width is multiplied by widthfactor with increasing distance from the first nodes.
+ * The initial width is calculated such that n/2 nodes are created to the left and to the right of the branching value.
+ * If this value is below minwidth, the initial width is set to minwidth, which may result in creating less than n nodes.
+ *
+ * Giving a large value for widthfactor results in creating children with small domain when close to the branching value
+ * and large domain when closer to the current variable bounds. That is, setting widthfactor to a very large value and n to 3
+ * results in a ternary branching where the branching variable is mostly fixed in the middle child.
+ * Setting widthfactor to 1.0 results in children where the branching variable always has the same domain width
+ * (except for one child if the branching value is not in the middle).
+ */
+extern
+SCIP_RETCODE SCIPtreeBranchVarNary(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_VAR*             var,                /**< variable to branch on */
+   SCIP_Real             val,                /**< value to branch on or SCIP_INVALID for branching on current LP/pseudo solution.
+                                              *   A branching value is required for branching on continuous variables */
+   int                   n,                  /**< attempted number of children to be created, must be >= 2 */
+   SCIP_Real             minwidth,           /**< minimal domain width in children */
+   SCIP_Real             widthfactor,        /**< multiplier for children domain width with increasing distance from val, must be >= 1.0 */
+   int*                  nchildren           /**< buffer to store number of created children, or NULL */
    );
 
 /** switches to probing mode and creates a probing root */

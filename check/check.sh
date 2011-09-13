@@ -121,7 +121,7 @@ HARDMEMLIMIT=`expr $HARDMEMLIMIT \* 1024`
 echo "hard time limit: $HARDTIMELIMIT s" >>$OUTFILE
 echo "hard mem limit: $HARDMEMLIMIT k" >>$OUTFILE
 
-for i in `cat $TSTNAME.test` DONE
+for i in `cat testset/$TSTNAME.test` DONE
 do
     if test "$i" = "DONE"
     then
@@ -148,7 +148,7 @@ do
             echo set limits time $TIMELIMIT        >> $TMPFILE
             echo set limits nodes $NODELIMIT       >> $TMPFILE
             echo set limits memory $MEMLIMIT       >> $TMPFILE
-	    echo set lp advanced threads $THREADS  >> $TMPFILE
+            echo set lp advanced threads $THREADS  >> $TMPFILE
             echo set timing clocktype 1            >> $TMPFILE
             echo set display verblevel 4           >> $TMPFILE
             echo set display freq $DISPFREQ        >> $TMPFILE
@@ -159,6 +159,8 @@ do
             fi
             echo set save $SETFILE                 >> $TMPFILE
             echo read $i                           >> $TMPFILE
+#            echo write genproblem cipreadparsetest.cip >> $TMPFILE
+#            echo read cipreadparsetest.cip         >> $TMPFILE
             echo optimize                          >> $TMPFILE
             echo display statistics                >> $TMPFILE
 #           echo display solution                  >> $TMPFILE
@@ -191,6 +193,7 @@ do
 done | tee -a $OUTFILE
 
 rm -f $TMPFILE
+rm -f cipreadparsetest.cip
 
 date >>$OUTFILE
 date >>$ERRFILE

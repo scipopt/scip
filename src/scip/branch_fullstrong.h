@@ -30,7 +30,7 @@
 extern "C" {
 #endif
 
-/** creates the full strong LP braching rule and includes it in SCIP */
+/** creates the full strong LP branching rule and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludeBranchruleFullstrong(
    SCIP*                 scip                /**< SCIP data structure */

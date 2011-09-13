@@ -183,11 +183,11 @@ SCIP_RETCODE readCol(
       SCIP_CALL( SCIPallocMemoryArray(scip, &(edges[i]), 2) );
    }
    /* fill array for edges */
-   SCIPfgets(buf, sizeof(buf), fp);
-   line_nr++;
    i = 0;
    while ( !SCIPfeof(fp) )
    {
+      SCIPfgets(buf, sizeof(buf), fp);
+      line_nr++;
       if ( buf[0] == 'e')
       {
          duplicateedge = FALSE;
@@ -214,13 +214,8 @@ SCIP_RETCODE readCol(
             i++;
          }
       }
-      SCIPfgets(buf, sizeof(buf), fp);
-      line_nr++;
    }
-   if ( nduplicateedges > 0 )
-   {
-      printf("%d duplicate edges!\n", nduplicateedges);
-   }
+   printf("Read graph: %ld nodes, %ld edges (%d duplicates)\n", nnodes, nedges, nduplicateedges);
    
    /* create problem data */
    SCIP_CALL( SCIPcreateProbColoring(scip, probname, nnodes, nedges-nduplicateedges, edges) );

@@ -212,22 +212,22 @@ SCIP_RETCODE SCIPprobCopy(
    SCIP_CALL( SCIPprobCreate(prob, blkmem, set, name, NULL, NULL, NULL, NULL, NULL, NULL, NULL, FALSE) );
    
    /* call user copy callback method */
-   if ( sourceprob->probdata != NULL && sourceprob->probcopy != NULL )
+   if( sourceprob->probdata != NULL && sourceprob->probcopy != NULL )
    {
       SCIP_CALL( sourceprob->probcopy(set->scip, sourcescip, sourceprob->probdata, varmap, consmap, &targetdata, global, &result) );
 
       /* evaluate result */
-      if ( result != SCIP_DIDNOTRUN && result != SCIP_SUCCESS )
+      if( result != SCIP_DIDNOTRUN && result != SCIP_SUCCESS )
       {
-         SCIPerrorMessage("prodata copying method returned invalid result <%d>\n", result);
+         SCIPerrorMessage("probdata copying method returned invalid result <%d>\n", result);
          return SCIP_INVALIDRESULT;
       }
 
       assert(targetdata == NULL || result == SCIP_SUCCESS);
    }
 
-   /* if copying was successfull, add data and callbacks */
-   if ( result == SCIP_SUCCESS )
+   /* if copying was successful, add data and callbacks */
+   if( result == SCIP_SUCCESS )
    {
       assert( targetdata != NULL );
       (*prob)->probdelorig = sourceprob->probdelorig;
@@ -487,7 +487,7 @@ SCIP_RETCODE SCIPprobTransform(
    /* objective value is always integral, iff original objective value is always integral and shift is integral */
    (*target)->objisintegral = source->objisintegral && SCIPsetIsIntegral(set, (*target)->objoffset);
 
-   /* check, wheter objective value is always integral by inspecting the problem */
+   /* check, whether objective value is always integral by inspecting the problem */
    SCIPprobCheckObjIntegral(*target, set);
 
    return SCIP_OKAY;
@@ -553,7 +553,7 @@ void probInsertVar(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   /* original variables can not go into transformed problem and transformed variables cannot go into original problem */
+   /* original variables cannot go into transformed problem and transformed variables cannot go into original problem */
    assert((SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL) == prob->transformed);
 
    /* insert variable in array */
@@ -733,7 +733,7 @@ SCIP_RETCODE SCIPprobAddVar(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   /* original variables can not go into transformed problem and transformed variables cannot go into original problem */
+   /* original variables cannot go into transformed problem and transformed variables cannot go into original problem */
    assert((SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL) == prob->transformed);
 
 #ifndef NDEBUG
@@ -1379,7 +1379,7 @@ SCIP_RETCODE SCIPprobExitPresolve(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
-   /* check, wheter objective value is always integral */
+   /* check, whether objective value is always integral */
    SCIPprobCheckObjIntegral(prob, set);
 
    return SCIP_OKAY;
@@ -1642,4 +1642,6 @@ void SCIPprobPrintStatistics(
    SCIPmessageFPrintInfo(file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
       prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars);
    SCIPmessageFPrintInfo(file, "  Constraints      : %d initial, %d maximal\n", prob->startnconss, prob->maxnconss);
+   if( ! prob->transformed )
+      SCIPmessageFPrintInfo(file, "  Objective sense  : %s\n", prob->objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");
 }

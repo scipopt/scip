@@ -69,6 +69,8 @@
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
+
 #define EVENTHDLR_NAME         "linear"
 #define EVENTHDLR_DESC         "bound change event handler for linear constraints"
 
@@ -83,8 +85,8 @@
 #define DEFAULT_MAXSEPACUTSROOT       200 /**< maximal number of cuts separated per separation round in root node */
 #define DEFAULT_PRESOLPAIRWISE       TRUE /**< should pairwise constraint comparison be performed in presolving? */
 #define DEFAULT_PRESOLUSEHASHING     TRUE /**< should hash table be used for detecting redundant constraints in advance */
-#define DEFAULT_NMINCOMPARISONS    200000 /**< number for minimal pairwise presol comparisons */
-#define DEFAULT_MINGAINPERNMINCOMP  1e-06 /**< minimal gain per minimal pairwise presol comparisons to repeat pairwise 
+#define DEFAULT_NMINCOMPARISONS    200000 /**< number for minimal pairwise presolving comparisons */
+#define DEFAULT_MINGAINPERNMINCOMP  1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise 
                                            *   comparison round */
 #define DEFAULT_SORTVARS             TRUE /**< should variables be sorted after presolve w.r.t their coefficient absolute for faster
                                            *  propagation? */
@@ -96,7 +98,7 @@
                                            *   the ones with non-zero dual value? */
 #define DEFAULT_AGGREGATEVARIABLES   TRUE /**< should presolving search for redundant variables in equations */
 #define DEFAULT_SIMPLIFYINEQUALITIES FALSE/**< should presolving try to simplify inequalities */
-#define DEFAULT_DUALPRESOLVING       TRUE /**< should dual presolving steps be preformed? */
+#define DEFAULT_DUALPRESOLVING       TRUE /**< should dual presolving steps be performed? */
 
 #define MAXDNOM                   10000LL /**< maximal denominator for simple rational fixed values */
 #define MAXSCALEDCOEF               1e+03 /**< maximal coefficient value after scaling */
@@ -205,7 +207,7 @@ struct SCIP_ConshdlrData
                                               *   (0.0: disable constraint aggregation) */
    SCIP_Real             maxcardbounddist;   /**< maximal relative distance from current node's dual bound to primal bound compared
                                               *   to best node's dual bound for separating knapsack cardinality cuts */
-   SCIP_Real             mingainpernmincomp; /**< minimal gain per minimal pairwise presol comparisons to repeat pairwise comparison round */
+   SCIP_Real             mingainpernmincomp; /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise comparison round */
    int                   linconsupgradessize;/**< size of linconsupgrade array */
    int                   nlinconsupgrades;   /**< number of linear constraint upgrade methods */
    int                   tightenboundsfreq;  /**< multiplier on propagation frequency, how often the bounds are tightened */
@@ -213,14 +215,14 @@ struct SCIP_ConshdlrData
    int                   maxroundsroot;      /**< maximal number of separation rounds in the root node (-1: unlimited) */
    int                   maxsepacuts;        /**< maximal number of cuts separated per separation round */
    int                   maxsepacutsroot;    /**< maximal number of cuts separated per separation round in root node */
-   int                   nmincomparisons;    /**< number for minimal pairwise presol comparisons */
+   int                   nmincomparisons;    /**< number for minimal pairwise presolving comparisons */
    SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
    SCIP_Bool             presolusehashing;   /**< should hash table be used for detecting redundant constraints in advance */
    SCIP_Bool             separateall;        /**< should all constraints be subject to cardinality cut generation instead of only
                                               *   the ones with non-zero dual value? */
    SCIP_Bool             aggregatevariables; /**< should presolving search for redundant variables in equations */
    SCIP_Bool             simplifyinequalities;/**< should presolving try to cancel down or delete coefficients in inequalities */
-   SCIP_Bool             dualpresolving;      /**< should dual presolving steps be preformed? */
+   SCIP_Bool             dualpresolving;      /**< should dual presolving steps be performed? */
    SCIP_Bool             sortvars;            /**< should binary variables be sorted for faster propagation? */
 };
 
@@ -231,23 +233,6 @@ struct SCIP_LinConsUpgrade
    int                   priority;           /**< priority of upgrading method */
    SCIP_Bool             active;             /**< is upgrading enabled */
 };
-
-/** data structure to for tokenizing strings */
-struct SCIP_Tokenizer
-{
-   const char* strbuf;                       /**< string to be tokenized */
-   char* token;                              /**< current token */
-   char* tokenbuf;                           /**< token buffer */
-   int strpos;                               /**< current position in string */
-};
-typedef struct SCIP_Tokenizer SCIP_TOKENIZER;     /**< data structure for tokenizing a string */
-
-/** enum type for constraint sense */
-enum CipSense
-{
-   CIP_SENSE_NOTHING, CIP_SENSE_LE, CIP_SENSE_GE, CIP_SENSE_EQ
-};
-typedef enum CipSense CIPSENSE;                   /**< enum type for constraint sense */
 
 
 /*
@@ -448,7 +433,7 @@ void linconsupgradeFree(
    SCIPfreeMemory(scip, linconsupgrade);
 }
 
-/** creates constaint handler data for linear constraint handler */
+/** creates constraint handler data for linear constraint handler */
 static
 SCIP_RETCODE conshdlrdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -553,295 +538,6 @@ SCIP_RETCODE conshdlrdataIncludeUpgrade(
 
    return SCIP_OKAY;
 }
-
-/*
- * local methods for handling parsing 
- */
-
-static const char delimchars[] = " \f\n\r\t\v";
-static const char tokenchars[] = "-+<>=";
-
-/** returns whether the given character is a token delimiter */
-static
-SCIP_Bool isDelimChar(
-   char                  c                   /**< input character */
-   )
-{
-   return (c == '\0') || (strchr(delimchars, c) != NULL);
-}
-
-/** returns whether the given character is a single token */
-static
-SCIP_Bool isTokenChar(
-   char                  c                   /**< input character */
-   )
-{
-   return (strchr(tokenchars, c) != NULL);
-}
-
-/** returns whether the current token is an equation sense */
-static
-SCIP_Bool isSense(
-   SCIP_TOKENIZER*       tokenizer,          /**< LP reading data */
-   CIPSENSE*             sense               /**< pointer to store the equation sense */
-   )
-{
-   assert(tokenizer != NULL);
-   assert(sense != NULL);
-
-   if( strcmp(tokenizer->token, "<=") == 0 )
-   {
-      *sense = CIP_SENSE_LE;
-      return TRUE;
-   }
-   else if( strcmp(tokenizer->token, ">=") == 0 )
-   {
-      *sense = CIP_SENSE_GE;
-      return TRUE;
-   }
-   else if( strcmp(tokenizer->token, "==") == 0 )
-   {
-      *sense = CIP_SENSE_EQ;
-      return TRUE;
-   }
-
-   return FALSE;
-}
-
-/** returns whether the current token is a sign */
-static
-SCIP_Bool isSign(
-   SCIP_TOKENIZER*       tokenizer,          /**< LP reading data */
-   int*                  sign                /**< pointer to update the sign */
-   )
-{
-   assert(tokenizer != NULL);
-   assert(sign != NULL);
-   assert(*sign == +1 || *sign == -1);
-
-   if( tokenizer->token[1] == '\0' )
-   {
-      if( *tokenizer->token == '+' )
-         return TRUE;
-      else if( *tokenizer->token == '-' )
-      {
-         *sign *= -1;
-         return TRUE;
-      }
-   }
-
-   return FALSE;
-}
-
-/** returns whether the current token is a value */
-static
-SCIP_Bool isValue(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_TOKENIZER*       lpinput,            /**< LP reading data */
-   SCIP_Real*            value               /**< pointer to store the value (unchanged, if token is no value) */
-   )
-{
-   assert(scip != NULL);
-   assert(lpinput != NULL);
-   assert(value != NULL);
-
-   if( strcasecmp(lpinput->token, "INFINITY") == 0 || strcasecmp(lpinput->token, "INF") == 0 )
-   {
-      *value = SCIPinfinity(scip);
-      return TRUE;
-   }
-   else
-   {
-      double val;
-      char* endptr;
-
-      val = strtod(lpinput->token, &endptr);
-      if( endptr != lpinput->token && *endptr == '\0' )
-      {
-         *value = val;
-         return TRUE;
-      }
-   }
-
-   return FALSE;
-}
-
-/** returns whether the current character is member of a value string */
-static
-SCIP_Bool isValueChar(
-   char                  c,                  /**< input character */
-   char                  nextc,              /**< next input character */
-   SCIP_Bool*            hasdot,             /**< pointer to update the dot flag */
-   char*                 hasexp              /**< pointer to update the exponent flag */
-   )
-{
-   assert(hasdot != NULL);
-   assert(hasexp != NULL);
-   assert(*hasexp == 0 || *hasexp == 1 || *hasexp == 2);
-
-   /* hasexp = 0 means, that we did not had an 'e', 'E', 'd', or 'D' yet
-    * hasexp = 1 means, that we just had an 'e', 'E', 'd', or 'D'; in this case, an '-' is allowed to follow
-    * hasexp = 2 means, that we already had an 'e', 'E', 'd', or 'D', but it is more than 1 character away
-    */
-
-   if( *hasexp == 1 )
-   { /* we just had an 'e', 'E', 'd', or 'D', so we set *hasexp to 2
-        this is now the only case where an '-' or '+' is allowed */
-      *hasexp = 2;
-      if( (c == '-' || c == '+') && isdigit(nextc) )
-         return TRUE;
-   }
-
-   if( isdigit(c) )
-      return TRUE;
-   else if( !(*hasdot) && !(*hasexp) && (c == '.') && isdigit(nextc) )
-   {
-      *hasdot = TRUE;
-      return TRUE;
-   }
-   else if( (*hasexp == 0) && (c == 'e' || c == 'E' || c == 'd' || c == 'D') && (isdigit(nextc) || nextc == '-' || nextc == '+') )
-   {
-      *hasexp = 1;
-      return TRUE;
-   }
-
-   return FALSE;
-}
-
-/** reads the next token from the string into the token buffer; returns whether a token was read */
-static
-SCIP_Bool getNextToken(
-   SCIP_TOKENIZER*       tokenizer           /**< string tokenizer */
-   )
-{
-   SCIP_Bool hasdot;
-   char hasexp;
-   int tokenlen;
-   const char* buf;
-   
-   /* skip delimiters */
-   buf = tokenizer->strbuf;
-   while( isDelimChar(buf[tokenizer->strpos]) )
-   {
-      if( buf[tokenizer->strpos] == '\0' )
-      {
-         SCIPdebugMessage("end of string\n");
-         return FALSE;
-      }
-      
-      tokenizer->strpos++;
-   }
-
-   assert(!isDelimChar(buf[tokenizer->strpos]));
-
-   /* check if the token is a value */
-   hasdot = FALSE;
-   hasexp = 0;
-   if( isValueChar(buf[tokenizer->strpos], buf[tokenizer->strpos+1], &hasdot, &hasexp) )
-   {
-      /* read value token */
-      tokenlen = 0;
-      do
-      {
-         assert(tokenlen < SCIP_MAXSTRLEN);
-         assert(!isDelimChar(buf[tokenizer->strpos]));
-         tokenizer->token[tokenlen] = buf[tokenizer->strpos];
-         tokenlen++;
-         tokenizer->strpos++;
-      }
-      while( isValueChar(buf[tokenizer->strpos], buf[tokenizer->strpos+1], &hasdot, &hasexp) );
-   }
-   else
-   {
-      /* read non-value token */
-      tokenlen = 0;
-      do
-      {
-         assert(tokenlen < SCIP_MAXSTRLEN);
-         tokenizer->token[tokenlen] = buf[tokenizer->strpos];
-         tokenlen++;
-         tokenizer->strpos++;
-         if( tokenlen == 1 && isTokenChar(tokenizer->token[0]) )
-            break;
-      }
-      while( !isDelimChar(buf[tokenizer->strpos]) && !isTokenChar(buf[tokenizer->strpos]) );
-
-      /* if the token is an equation sense '<', '>', or '=', skip a following '='
-       * if the token is an equality token '=' and the next character is a '<' or '>', replace the token by the inequality sense
-       */
-      if( tokenlen == 1
-         && (tokenizer->token[0] == '<' || tokenizer->token[0] == '>' || tokenizer->token[0] == '=')
-         && buf[tokenizer->strpos] == '=' )
-      {
-         tokenizer->token[tokenlen] = buf[tokenizer->strpos];
-         tokenlen++;
-         tokenizer->strpos++;
-      }
-      else if( tokenlen == 1 && tokenizer->token[0] == '=' && (buf[tokenizer->strpos] == '<' || buf[tokenizer->strpos] == '>') )
-      {
-         tokenlen++;
-         tokenizer->token[1] = tokenizer->token[0];
-         tokenizer->token[0] = buf[tokenizer->strpos];
-         tokenizer->token[1] = buf[tokenizer->strpos];
-         tokenizer->strpos++;
-      }
-   }
-   assert(tokenlen < SCIP_MAXSTRLEN);
-   tokenizer->token[tokenlen] = '\0';
-
-   SCIPdebugMessage("read token: '%s'\n", tokenizer->token);
-
-   return TRUE;
-}
-
-/** for a given name of a negated variable (i.e., "<original name>_neg"), tries to find the corresponding negated variable
- * returns NULL in *negvar if a variable under name "<original name>" does not exits
- * creates negated variable if not existing yet
- */
-static
-SCIP_RETCODE findNegatedVar(
-   SCIP*                 scip,               /**< SCIP data structure */
-   char*                 name,               /**< name of negated variable */
-   SCIP_VAR**            negvar              /**< buffer to store pointer to negated variable (created if not yet existing) */
-)
-{
-   char buf[SCIP_MAXSTRLEN];
-   unsigned int namelen;
-   SCIP_VAR* var;
-   
-   assert(scip   != NULL);
-   assert(name   != NULL);
-   assert(negvar != NULL);
-   
-   *negvar = NULL;
-   
-   namelen = strlen(name);
-   /* if name is too short, then it cannot be the one of a negated variable */
-   if( namelen <= 4 )
-      return SCIP_OKAY;
-      
-   /* if name does not end by _neg, then it cannot be the one of a negated variable */
-   if( strcmp(&name[namelen-4], "_neg") != 0 )
-      return SCIP_OKAY;
-   
-   assert(namelen <= SCIP_MAXSTRLEN);
-
-   /* create name of original variable by removing '_neg' */
-   strncpy(buf, name, namelen-4);
-   buf[namelen-4] = '\0';
-   
-   var = SCIPfindVar(scip, buf);
-   if( var == NULL )
-   {
-      SCIPdebugMessage("could not find original variable <%s> for negated variable <%s>\n", buf, name);
-      return SCIP_OKAY;
-   }
-   
-   SCIP_CALL( SCIPgetNegatedVar(scip, var, negvar) );
-   
-   return SCIP_OKAY;
-}
-   
 
 /*
  * local methods
@@ -1026,7 +722,7 @@ SCIP_RETCODE consdataDropAllEvents(
    return SCIP_OKAY;
 }
 
-/** returns whether we are in a stage, where the variable events should be catched */
+/** returns whether we are in a stage, where the variable events should be caught */
 static
 SCIP_Bool needEvents(
    SCIP*                 scip                /**< SCIP data structure */
@@ -1213,7 +909,7 @@ SCIP_RETCODE consdataPrint(
 
    /* print coefficients and variables */
    if( consdata->nvars == 0 )
-      SCIPinfoMessage(scip, file, "0 ");
+      SCIPinfoMessage(scip, file, "0");
    else
    {
       /* post linear sum of the linear constraint */
@@ -1222,11 +918,11 @@ SCIP_RETCODE consdataPrint(
    
    /* print right hand side */
    if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
-      SCIPinfoMessage(scip, file, "== %.15g", consdata->rhs);
+      SCIPinfoMessage(scip, file, " == %.15g", consdata->rhs);
    else if( !SCIPisInfinity(scip, consdata->rhs) )
-      SCIPinfoMessage(scip, file, "<= %.15g", consdata->rhs);
+      SCIPinfoMessage(scip, file, " <= %.15g", consdata->rhs);
    else if( !SCIPisInfinity(scip, -consdata->lhs) )
-      SCIPinfoMessage(scip, file, ">= %.15g", consdata->lhs);
+      SCIPinfoMessage(scip, file, " >= %.15g", consdata->lhs);
    else
       SCIPinfoMessage(scip, file, " [free]");
 
@@ -1266,7 +962,7 @@ static
 SCIP_Bool isNewActivityUnreliable(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             newactivity,        /**< new, updated activity */
-   SCIP_Real             reliableactivity    /**< last activity which was computed completly */
+   SCIP_Real             reliableactivity    /**< last activity which was computed completely */
    )
 {
    SCIP_Real quotient;
@@ -2695,21 +2391,53 @@ SCIP_Real consdataGetActivity(
    else
    {
       SCIP_Real solval;
+      int nposinf;
+      int nneginf;
+      SCIP_Bool negsign;
       int v;
 
       activity = 0.0;
+      nposinf = 0;
+      nneginf = 0;
+      negsign = 0;
+
       for( v = 0; v < consdata->nvars; ++v )
       {
          solval = SCIPgetSolVal(scip, sol, consdata->vars[v]);
-         activity += consdata->vals[v] * solval;
-      }
 
-      SCIPdebugMessage("activity of linear constraint: %.15g\n", activity);
+         if( consdata->vals[v] < 0 )
+            negsign = TRUE;
+         else 
+            negsign = FALSE;
+
+         if( (SCIPisInfinity(scip, solval) && !negsign) || (SCIPisInfinity(scip, -solval) && negsign) )
+            ++nposinf;
+         else if( (SCIPisInfinity(scip, solval) && negsign) || (SCIPisInfinity(scip, -solval) && !negsign) )
+            ++nneginf;
+         else
+            activity += consdata->vals[v] * solval;
+      }
+      assert(nneginf >= 0 && nposinf >= 0);
+
+      SCIPdebugMessage("activity of linear constraint: %.15g, %d positive infinity values, %d negative infinity values \n", activity, nposinf, nneginf);
+
+      /* check for amount of infinity values and correct the activity */
+      if( nposinf > 0 && nneginf > 0 )
+         activity = (consdata->rhs + consdata->lhs) / 2;
+      else if( nposinf > 0 )
+         activity = SCIPinfinity(scip);
+      else if( nneginf > 0 )
+         activity = -SCIPinfinity(scip);
+     
+      SCIPdebugMessage("corrected activity of linear constraint: %.15g\n", activity);
    }
 
    scipinf = SCIPinfinity(scip);
-   activity = MAX(activity, -scipinf);
-   activity = MIN(activity, +scipinf);
+
+   if( activity < 0 )
+      activity = MAX(activity, -scipinf);
+   else
+      activity = MIN(activity, +scipinf);
 
    return activity;
 }
@@ -2809,7 +2537,8 @@ static
 void permSortConsdata(
    SCIP_CONSDATA*        consdata,           /**< the constraint data */
    int*                  perm,               /**< the target permutation */
-   int                   nvars               /**< the number of variables */
+   int                   nvars,              /**< the number of variables */
+   SCIP_Bool             isinpresolving      /**< is the scip stage before initsolve */
    )
 {
    SCIP_VAR* varv;
@@ -2831,7 +2560,7 @@ void permSortConsdata(
          varv = consdata->vars[v];
          valv = consdata->vals[v];
          if( consdata->eventdatas != NULL )
-	    eventdatav = consdata->eventdatas[v];
+            eventdatav = consdata->eventdatas[v];
          i = v;
          do
          {
@@ -2863,7 +2592,10 @@ void permSortConsdata(
    /* check sorting */
    for( v = 0; v < nvars; ++v )
    {
-      assert(v == nvars-1 || SCIPvarCompare(consdata->vars[v], consdata->vars[v+1]) <= 0);
+      if( isinpresolving )
+      {
+         assert(v == nvars-1 || SCIPvarCompare(consdata->vars[v], consdata->vars[v+1]) <= 0);
+      }
       assert(perm[v] == v);
       assert(consdata->eventdatas == NULL || consdata->eventdatas[v]->varpos == v);
    }
@@ -2888,7 +2620,7 @@ SCIP_RETCODE consdataSort(
    assert(scip != NULL);
    assert(consdata != NULL);
 
-   /* check if there are variables for sortation */
+   /* check if there are variables for sorting */
    if( consdata->nvars == 0 )
    {
       consdata->sorted = TRUE;
@@ -2901,10 +2633,10 @@ SCIP_RETCODE consdataSort(
       /* get temporary memory to store the sorted permutation */
       SCIP_CALL( SCIPallocBufferArray(scip, &perm, consdata->nvars) );
 
-      /* call sortation method  */
+      /* call sorting method  */
       SCIPsort(perm, consdataCompVar, (void*)consdata, consdata->nvars);
 
-      permSortConsdata(consdata, perm, consdata->nvars);
+      permSortConsdata(consdata, perm, consdata->nvars, TRUE);
 
       /* free temporary memory */
       SCIPfreeBufferArray(scip, &perm);
@@ -2932,25 +2664,25 @@ SCIP_RETCODE consdataSort(
       /* count binary variables and permute variables such that binaries appear first in the sorted vars array */
       for( v = 0; v < nvars; ++v )
       {
-	 if( SCIPvarIsBinary(vars[v]) )
-	 {
+         if( SCIPvarIsBinary(vars[v]) )
+         {
             /* swap variable at the end of the binary variables, if necessary */
             if( lastbin < v )
             {
-	       SCIP_VAR* tmpvar;
-	       SCIP_Real tmpval;
+               SCIP_VAR* tmpvar;
+               SCIP_Real tmpval;
                
-	       tmpvar = vars[lastbin];
-	       tmpval = vals[lastbin];
+               tmpvar = vars[lastbin];
+               tmpval = vals[lastbin];
 
-	       vars[lastbin] = vars[v];
-	       vals[lastbin] = vals[v];
+               vars[lastbin] = vars[v];
+               vals[lastbin] = vals[v];
 
-	       vars[v] = tmpvar;
-	       vals[v] = tmpval;
+               vars[v] = tmpvar;
+               vals[v] = tmpval;
 
-	       if( eventdatas != NULL )
-	       {
+               if( eventdatas != NULL )
+               {
                   SCIP_EVENTDATA* tmpeventdata;
                   
                   tmpeventdata = eventdatas[lastbin];
@@ -2958,15 +2690,15 @@ SCIP_RETCODE consdataSort(
                   eventdatas[lastbin]->varpos = lastbin;
                   eventdatas[v] = tmpeventdata;
                   eventdatas[v]->varpos = v;
-	       }
-	       assert(SCIPvarIsBinary(vars[lastbin]));
+               }
+               assert(SCIPvarIsBinary(vars[lastbin]));
             }
 #ifndef NDEBUG
             else
                assert(lastbin == v);
 #endif
             ++lastbin;
-	 }
+         }
       }
       consdata->nbinvars = lastbin;
 
@@ -2981,33 +2713,34 @@ SCIP_RETCODE consdataSort(
 
       if( consdata->nbinvars > 1 )
       {
-	 SCIP_Real* absvals;
-	 int*       perm;
+         SCIP_Real* absvals;
+         int*       perm;
 
          assert(lastbin == consdata->nbinvars);
+         assert(lastbin <= nvars);
 
          /* initialize absolute coefficients and the target permutation for binary variables */
-	 SCIP_CALL( SCIPallocBufferArray(scip, &absvals, lastbin) );
-	 SCIP_CALL( SCIPallocBufferArray(scip, &perm, lastbin) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &absvals, lastbin) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &perm, lastbin) );
 
-	 for( v = 0; v < lastbin; ++v )
-	 {
+         for( v = 0; v < lastbin; ++v )
+         {
              absvals[v] = ABS(vals[v]);
-	     perm[v] = v;
-	 }
-	 
-         /* execute the sortation */
-	 SCIPsortDownRealInt(absvals, perm, lastbin);
+             perm[v] = v;
+         }
 
-	 permSortConsdata(consdata, perm, lastbin);
+         /* execute the sorting */
+         SCIPsortDownRealInt(absvals, perm, lastbin);
+
+         permSortConsdata(consdata, perm, lastbin, FALSE);
 
          /* free temporary arrays */
-	 SCIPfreeBufferArray(scip, &perm);
-	 SCIPfreeBufferArray(scip, &absvals);
+         SCIPfreeBufferArray(scip, &perm);
+         SCIPfreeBufferArray(scip, &absvals);
       }
       consdata->binvarssorted = TRUE;
-	 
-      /* presolve sortation cannot be garanteed after binary sortation */
+         
+      /* presolve sorting cannot be guaranteed after binary sorting */
       consdata->sorted = (consdata->sorted && consdata->nbinvars == 0);
    }
    assert(SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE || consdata->binvarssorted);
@@ -3089,7 +2822,7 @@ SCIP_RETCODE chgLhs(
          SCIP_Real* vals;
          int v;
 
-         /* the left hand side switched from a non-infinte value to -infinity -> remove rounding locks */
+         /* the left hand side switched from a non-infinite value to -infinity -> remove rounding locks */
          vars = consdata->vars;
          vals = consdata->vals;
 
@@ -3204,7 +2937,7 @@ SCIP_RETCODE chgRhs(
          SCIP_Real* vals;
          int v;
 
-         /* the right hand side switched from a non-infinte value to infinity -> remove rounding locks */
+         /* the right hand side switched from a non-infinite value to infinity -> remove rounding locks */
          vars = consdata->vars;
          vals = consdata->vals;
 
@@ -3411,7 +3144,7 @@ SCIP_RETCODE delCoefPos(
    }
    consdata->nvars--;
 
-   /* if at most one variable is left, the activies should be recalculated (to correspond exactly to the bounds
+   /* if at most one variable is left, the activities should be recalculated (to correspond exactly to the bounds
     * of the remaining variable, or give exactly 0.0)
     */
    if( consdata->nvars <= 1 )
@@ -3712,7 +3445,7 @@ SCIP_RETCODE normalizeCons(
    {
       if( !SCIPisIntegral(scip, vals[i]) )
       {
-	 /* epsilon has been slightly decreased above - to be on the safe side */
+         /* epsilon has been slightly decreased above - to be on the safe side */
          success = SCIPrealToRational(vals[i], -epsilon, epsilon , maxmult, &nominator, &denominator);
          if( success )
             scm = SCIPcalcSmaComMul(scm, denominator);
@@ -3745,7 +3478,7 @@ SCIP_RETCODE normalizeCons(
 
       if( gcd > 1 )
       {
-         /* divide the constaint by the greatest common divisor of the coefficients */
+         /* divide the constraint by the greatest common divisor of the coefficients */
          SCIPdebugMessage("divide linear constraint by greatest common divisor %"SCIP_LONGINT_FORMAT"\n", gcd);
          SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
          SCIP_CALL( scaleCons(scip, cons, 1.0/(SCIP_Real)gcd) );
@@ -3883,38 +3616,38 @@ SCIP_RETCODE applyFixings(
             fixedval = SCIPvarGetLbGlobal(var);
             if( !SCIPisInfinity(scip, -consdata->lhs) )
             {
-	       if( SCIPisInfinity(scip, ABS(fixedval)) )
-	       {
-		  if( val * fixedval > 0.0 )
-		  {
-		     SCIP_CALL( chgLhs(scip, cons, -SCIPinfinity(scip)) );
-		  }
-		  else
-		  {
+               if( SCIPisInfinity(scip, ABS(fixedval)) )
+               {
+                  if( val * fixedval > 0.0 )
+                  {
+                     SCIP_CALL( chgLhs(scip, cons, -SCIPinfinity(scip)) );
+                  }
+                  else
+                  {
                      /* if lhs gets infinity it means that the problem is infeasible */
                      *infeasible = TRUE;
                      return SCIP_OKAY;
-		  }
-	       }
-	       else
+                  }
+               }
+               else
                   lhssubtrahend += val * fixedval;
             }
             if( !SCIPisInfinity(scip, consdata->rhs) )
             {
-	       if( SCIPisInfinity(scip, ABS(fixedval)) )
-	       {
-		  if( val * fixedval > 0.0 )
-		  {
+               if( SCIPisInfinity(scip, ABS(fixedval)) )
+               {
+                  if( val * fixedval > 0.0 )
+                  {
                      /* if rhs gets -infinity it means that the problem is infeasible */
                      *infeasible = TRUE;
                      return SCIP_OKAY;
-		  }
-		  else
-		  {
-		     SCIP_CALL( chgRhs(scip, cons, SCIPinfinity(scip)) );
-		  }
-	       }
-	       else
+                  }
+                  else
+                  {
+                     SCIP_CALL( chgRhs(scip, cons, SCIPinfinity(scip)) );
+                  }
+               }
+               else
                   rhssubtrahend += val * fixedval;
             }
             SCIP_CALL( delCoefPos(scip, cons, v) );
@@ -4293,7 +4026,7 @@ SCIP_RETCODE tightenVarBounds(
    int                   pos,                /**< position of the variable in the vars array */
    SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
    int*                  nchgbds,            /**< pointer to count the total number of tightened bounds */
-   SCIP_Bool             force               /**< should a possible boundchange be forced even if below bound strengthening tolerance */
+   SCIP_Bool             force               /**< should a possible bound change be forced even if below bound strengthening tolerance */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -4361,7 +4094,7 @@ SCIP_RETCODE tightenVarBounds(
             SCIP_Bool activityunreliable;
             activityunreliable = isNewActivityUnreliable(scip, minresactivity, consdata->lastminactivity);
 
-            /* check minresactivities for reliablility */
+            /* check minresactivities for reliability */
             if( activityunreliable )
             {
                consdataGetReliableResidualActivity(scip, consdata, var, &minresactivity, TRUE, FALSE);
@@ -4409,7 +4142,7 @@ SCIP_RETCODE tightenVarBounds(
          if( (force && SCIPisGT(scip, newlb, lb)) || (SCIPvarIsIntegral(var) && SCIPisFeasGT(scip, newlb, lb))
             || SCIPisLbBetter(scip, newlb, lb, ub) )
          {
-            /* check maxresactivities for reliablility */
+            /* check maxresactivities for reliability */
             if( isNewActivityUnreliable(scip, maxresactivity, consdata->lastmaxactivity) )
             {
                consdataGetReliableResidualActivity(scip, consdata, var, &maxresactivity, FALSE, FALSE);
@@ -4461,7 +4194,7 @@ SCIP_RETCODE tightenVarBounds(
          {
             SCIP_Bool activityunreliable;
             activityunreliable = isNewActivityUnreliable(scip, minresactivity, consdata->lastminactivity);
-            /* check minresactivities for reliablility */
+            /* check minresactivities for reliability */
             if( activityunreliable )
             {
                consdataGetReliableResidualActivity(scip, consdata, var, &minresactivity, TRUE, FALSE);
@@ -4510,7 +4243,7 @@ SCIP_RETCODE tightenVarBounds(
          if( (force && SCIPisLT(scip, newub, ub)) || (SCIPvarIsIntegral(var) && SCIPisFeasLT(scip, newub, ub))
             || SCIPisUbBetter(scip, newub, lb, ub) )
          {
-            /* check maxresactivities for reliablility */
+            /* check maxresactivities for reliability */
             if( isNewActivityUnreliable(scip, maxresactivity, consdata->lastmaxactivity) )
             {
                consdataGetReliableResidualActivity(scip, consdata, var, &maxresactivity, FALSE, FALSE);
@@ -4583,6 +4316,14 @@ SCIP_RETCODE tightenBounds(
    if( SCIPconsIsModifiable(cons) )
       return SCIP_OKAY;
 
+   /* if a constraint was created after presolve, then it may hold fixed variables
+    * if there are even multi-aggregated variables, then we cannot do bound tightening on these
+    * thus, ensure here again that variable fixings have been applied
+    */
+   SCIP_CALL( applyFixings(scip, cons, cutoff) );
+   if( *cutoff )
+      return SCIP_OKAY;
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -4604,7 +4345,7 @@ SCIP_RETCODE tightenBounds(
       consdata->boundstightened = TRUE;
 
       /* try to tighten the bounds of each variable in the constraint. During solving process, 
-       * the binary variable sortation enables skipping variables */
+       * the binary variable sorting enables skipping variables */
       for( v = 0; v < nvars && v != lastchange && !(*cutoff); ++v )
       {
          oldnchgbds = *nchgbds;
@@ -4667,9 +4408,9 @@ SCIP_RETCODE checkCons(
       activity = consdataGetActivity(scip, consdata, sol);
    
    SCIPdebugMessage("  consdata activity=%.15g (lhs=%.15g, rhs=%.15g, row=%p, checklprows=%u, rowinlp=%u, sol=%p, hascurrentnodelp=%u)\n",
-         activity, consdata->lhs, consdata->rhs, (void*)consdata->row, checklprows,
-         consdata->row == NULL ? 0 : SCIProwIsInLP(consdata->row), (void*)sol,
-         consdata->row == NULL ? FALSE : SCIPhasCurrentNodeLP(scip));
+      activity, consdata->lhs, consdata->rhs, (void*)consdata->row, checklprows,
+      consdata->row == NULL ? 0 : SCIProwIsInLP(consdata->row), (void*)sol,
+      consdata->row == NULL ? FALSE : SCIPhasCurrentNodeLP(scip));
    
    if( SCIPisFeasLT(scip, activity, consdata->lhs) || SCIPisFeasGT(scip, activity, consdata->rhs) )
    {
@@ -4752,7 +4493,8 @@ SCIP_RETCODE separateCons(
    SCIP_Bool             separatecards,      /**< should knapsack cardinality cuts be generated? */
    SCIP_Bool             separateall,        /**< should all constraints be subject to cardinality cut generation instead of only
                                               *   the ones with non-zero dual value? */
-   int*                  ncuts               /**< pointer to add up the number of found cuts */
+   int*                  ncuts,              /**< pointer to add up the number of found cuts */
+   SCIP_Bool*            cutoff              /**< pointer to store whether a cutoff was found */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -4761,13 +4503,14 @@ SCIP_RETCODE separateCons(
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(cutoff != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(ncuts != NULL);
    assert(consdata != NULL);
-   assert(cons != NULL);
 
    oldncuts = *ncuts;
+   *cutoff = FALSE;
 
    SCIP_CALL( checkCons(scip, cons, sol, (sol != NULL), &violated) );
 
@@ -4793,7 +4536,7 @@ SCIP_RETCODE separateCons(
                if( !SCIPisInfinity(scip, consdata->rhs) )
                {
                   SCIP_CALL( SCIPseparateRelaxedKnapsack(scip, cons, consdata->nvars, consdata->vars,
-                        consdata->vals, +1.0, consdata->rhs, sol, ncuts) );
+                        consdata->vals, +1.0, consdata->rhs, sol, ncuts, cutoff) );
                }
             }
             else if( SCIPisFeasPositive(scip, dualsol) )
@@ -4801,7 +4544,7 @@ SCIP_RETCODE separateCons(
                if( !SCIPisInfinity(scip, -consdata->lhs) )
                {
                   SCIP_CALL( SCIPseparateRelaxedKnapsack(scip, cons, consdata->nvars, consdata->vars,
-                        consdata->vals, -1.0, -consdata->lhs, sol, ncuts) );
+                        consdata->vals, -1.0, -consdata->lhs, sol, ncuts, cutoff) );
                }
             }
          }
@@ -4811,12 +4554,12 @@ SCIP_RETCODE separateCons(
          if( !SCIPisInfinity(scip, consdata->rhs) )
          {
             SCIP_CALL( SCIPseparateRelaxedKnapsack(scip, cons, consdata->nvars, consdata->vars,
-                  consdata->vals, +1.0, consdata->rhs, sol, ncuts) );
+                  consdata->vals, +1.0, consdata->rhs, sol, ncuts, cutoff) );
          }
          if( !SCIPisInfinity(scip, -consdata->lhs) )
          {
             SCIP_CALL( SCIPseparateRelaxedKnapsack(scip, cons, consdata->nvars, consdata->vars,
-                  consdata->vals, -1.0, -consdata->lhs, sol, ncuts) );
+                  consdata->vals, -1.0, -consdata->lhs, sol, ncuts, cutoff) );
          }
       }
    }
@@ -4835,7 +4578,7 @@ SCIP_RETCODE propagateCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linear constraint */
    SCIP_Bool             tightenbounds,      /**< should the variable's bounds be tightened? */
-   SCIP_Bool             sortvars,           /**< should variable sortation for faster propagation be used? */
+   SCIP_Bool             sortvars,           /**< should variable sorting for faster propagation be used? */
    SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
    int*                  nchgbds             /**< pointer to count the total number of tightened bounds */
    )
@@ -5666,8 +5409,8 @@ SCIP_RETCODE convertLongEquality(
    SCIP_Bool coefszeroone;
    SCIP_Bool coefsintegral;
    SCIP_Bool varsintegral;
-   SCIP_Bool supinf;                         /* might the supremum of the multiaggregation be infinite? */
-   SCIP_Bool infinf;                         /* might the infimum of the multiaggregation be infinite? */
+   SCIP_Bool supinf;                         /* might the supremum of the multi-aggregation be infinite? */
+   SCIP_Bool infinf;                         /* might the infimum of the multi-aggregation be infinite? */
    SCIP_Bool infeasible;
 
    int maxnlocksstay;
@@ -5693,7 +5436,7 @@ SCIP_RETCODE convertLongEquality(
 
    SCIPdebugMessage("linear constraint <%s>: try to multi-aggregate equality\n", SCIPconsGetName(cons));
 
-   /* We do not want to increase the total number of non-zeros due to the multiaggregation.
+   /* We do not want to increase the total number of non-zeros due to the multi-aggregation.
     * Therefore, we have to restrict the number of locks of a variable that is aggregated out.
     *   maxnlocksstay:   maximal sum of lock numbers if the constraint does not become redundant after the aggregation
     *   maxnlocksremove: maximal sum of lock numbers if the constraint can be deleted after the aggregation
@@ -5847,7 +5590,7 @@ SCIP_RETCODE convertLongEquality(
             getNewSidesAfterAggregation(scip, consdata, var, val, &newlhs, &newrhs);
             removescons = (SCIPisFeasLE(scip, newlhs, minresactivity) && SCIPisFeasLE(scip, maxresactivity, newrhs));
 
-            /* check resactivities for reliablility */
+            /* check resactivities for reliability */
             if (removescons)
             {
                if( !isminsettoinfinity && isNewActivityUnreliable(scip, minresactivity, consdata->lastminactivity) )
@@ -5895,7 +5638,7 @@ SCIP_RETCODE convertLongEquality(
    supinf = FALSE;
    infinf = FALSE;
    
-   /* check whether the the infimum and the supremum of the multiaggregation can be get infinite */
+   /* check whether the the infimum and the supremum of the multi-aggregation can be get infinite */
    for( v = 0; v < consdata->nvars; ++v )
    {
       if( v != bestslackpos )
@@ -5913,11 +5656,11 @@ SCIP_RETCODE convertLongEquality(
       }
    }
  
-   /* If the infimum and the supremum of a multiaggregation are both infinite, then the multiaggregation might not be resolvable.
+   /* If the infimum and the supremum of a multi-aggregation are both infinite, then the multi-aggregation might not be resolvable.
     * E.g., consider the equality z = x-y. If x and y are both fixed to +infinity, the value for z is not determined */     
    if( supinf && infinf )
    {      
-      SCIPdebugMessage("do not perform multiaggregation: infimum and supremum are both infinite\n");     
+      SCIPdebugMessage("do not perform multi-aggregation: infimum and supremum are both infinite\n");     
       return SCIP_OKAY;
    }
 
@@ -6234,10 +5977,10 @@ SCIP_RETCODE dualPresolve(
     * everything else would produce fill-in. Exceptions:
     * - If there are only two variables in the constraint from which the multi-aggregation arises, no fill-in will be
     *   produced.
-    * - If there are three variables in the constraint, multiaggregation in three additional constraintsw will remove
+    * - If there are three variables in the constraint, multi-aggregation in three additional constraints will remove
     *   six nonzeros (three from the constraint and the three entries of the multi-aggregated variable) and add
     *   six nonzeros (two variables per substitution).
-    * - If there at most four variables in the constraint, multiaggregation in two additional constraints will remove
+    * - If there at most four variables in the constraint, multi-aggregation in two additional constraints will remove
     *   six nonzeros (four from the constraint and the two entries of the multi-aggregated variable) and add
     *   six nonzeros (three variables per substitution). God exists! 
     */
@@ -6279,7 +6022,7 @@ SCIP_RETCODE dualPresolve(
          continue;
 
       if ( SCIPdoNotMultaggrVar(scip, var) )
-	 continue;
+         continue;
 
       val = consdata->vals[i];
       obj = SCIPvarGetObj(var);
@@ -6347,20 +6090,20 @@ SCIP_RETCODE dualPresolve(
                oldmaxresactivity = maxresactivity;
                oldminresactivity = minresactivity;
 
-               /* check minresactivity for reliablility */
+               /* check minresactivity for reliability */
                if( !isminsettoinfinity && isNewActivityUnreliable(scip, minresactivity, consdata->lastminactivity) )
                {
                   consdataGetReliableResidualActivity(scip, consdata, var, &minresactivity, TRUE, FALSE);
                   recalculated = !SCIPisEQ(scip, oldminresactivity, minresactivity);
-		  isminsettoinfinity = TRUE; /* here it means only that it was even calculated */
+                  isminsettoinfinity = TRUE; /* here it means only that it was even calculated */
                }
 
-               /* check maxresactivity for reliablility */
+               /* check maxresactivity for reliability */
                if( !ismaxsettoinfinity && isNewActivityUnreliable(scip, maxresactivity, consdata->lastmaxactivity) )
                {
                   consdataGetReliableResidualActivity(scip, consdata, var, &maxresactivity, FALSE, FALSE);
                   recalculated = recalculated || !SCIPisEQ(scip, oldmaxresactivity, maxresactivity);
-		  ismaxsettoinfinity = TRUE; /* here it means only that it was even calculated */
+                  ismaxsettoinfinity = TRUE; /* here it means only that it was even calculated */
                }
 
                /* minresactivity or maxresactivity wasn't reliable so recalculate min- and maxval*/
@@ -6406,14 +6149,14 @@ SCIP_RETCODE dualPresolve(
                oldmaxresactivity = maxresactivity;
                oldminresactivity = minresactivity;
 
-               /* check minresactivity for reliablility */
+               /* check minresactivity for reliability */
                if( !isminsettoinfinity && isNewActivityUnreliable(scip, minresactivity, consdata->lastminactivity) )
                {
                   consdataGetReliableResidualActivity(scip, consdata, var, &minresactivity, TRUE, FALSE);
                   recalculated = !SCIPisEQ(scip, oldminresactivity, minresactivity);
                }
 
-               /* check maxresactivity for reliablility */
+               /* check maxresactivity for reliability */
                if( !ismaxsettoinfinity && isNewActivityUnreliable(scip, maxresactivity, consdata->lastmaxactivity) )
                {
                   consdataGetReliableResidualActivity(scip, consdata, var, &maxresactivity, FALSE, FALSE);
@@ -6457,8 +6200,8 @@ SCIP_RETCODE dualPresolve(
       int j;
       SCIP_Bool infeasible;
       SCIP_Bool aggregated;
-      SCIP_Bool supinf;                      /* might the supremum of the multiaggregation be infinite? */
-      SCIP_Bool infinf;                      /* might the infimum of the multiaggregation be infinite? */
+      SCIP_Bool supinf;                      /* might the supremum of the multi-aggregation be infinite? */
+      SCIP_Bool infinf;                      /* might the infimum of the multi-aggregation be infinite? */
 
       assert(!bestislhs || lhsexists);
       assert(bestislhs || rhsexists);
@@ -6529,9 +6272,9 @@ SCIP_RETCODE dualPresolve(
       }
       else
       {
-         /* If the infimum and the supremum of a multiaggregation are both infinite, then the multiaggregation might not be resolvable.
+         /* If the infimum and the supremum of a multi-aggregation are both infinite, then the multi-aggregation might not be resolvable.
           * E.g., consider the equality z = x-y. If x and y are both fixed to +infinity, the value for z is not determined */
-         SCIPdebugMessage("do not perform multiaggregation: infimum and supremum are both infinite\n");
+         SCIPdebugMessage("do not perform multi-aggregation: infimum and supremum are both infinite\n");
       }
       /* free temporary memory */
       SCIPfreeBufferArray(scip, &aggrcoefs);
@@ -6556,7 +6299,7 @@ SCIP_RETCODE dualPresolve(
       }
       else
       {
-	 SCIPdebugMessage("aggregation non successful!\n");
+         SCIPdebugMessage("aggregation non successful!\n");
       }
    }
 
@@ -6738,7 +6481,7 @@ SCIP_RETCODE aggregateVariables(
          val = (SCIP_Longint)SCIPfeasFloor(scip, vals[v]);
          if( val % 2 != 0 )
          {
-            /* the odd valus have belong to binary variables */
+            /* the odd values have to belong to binary variables */
             if( !SCIPvarIsBinary(vars[v]) )
                return SCIP_OKAY;
             
@@ -6976,12 +6719,12 @@ SCIP_RETCODE simplifyInequalities(
 
          /* normalize constraint */
          SCIP_CALL( normalizeCons(scip, cons) );
-	 
-	 /* if only one var is left abort loop */
-	 if( consdata->nvars == 1 )
-	    success = FALSE;
-	 else
-	    success = TRUE;
+         
+         /* if only one var is left abort loop */
+         if( consdata->nvars == 1 )
+            success = FALSE;
+         else
+            success = TRUE;
       }
    }
    while( success );
@@ -7179,7 +6922,6 @@ SCIP_RETCODE aggregateConstraints(
          /* setup best* variables that were not setup above because we are in the commonvarlindependent case */
          bestvarweight = diffidx0minus1weight + diffidx1minus0weight;
          bestnvars = consdata0->nvars + consdata1->nvars - 2*nvarscommon;
-         bestscalarsum = REALABS(a) + REALABS(b);
       }
 
       SCIPdebugMessage("aggregate linear constraints <%s> := %.15g*<%s> + %.15g*<%s>  ->  nvars: %d -> %d, weight: %d -> %d\n",
@@ -7525,7 +7267,7 @@ SCIP_RETCODE detectRedundantConstraints(
          assert(SCIPconsIsActive(cons1));
          assert(!SCIPconsIsModifiable(cons1));
       
-         /* constraint found: create a new constraint with same coeffients and best left and right hand side; 
+         /* constraint found: create a new constraint with same coefficients and best left and right hand side; 
           * delete old constraints afterwards
           */
          consdata0 = SCIPconsGetData(cons0);
@@ -7725,9 +7467,9 @@ SCIP_RETCODE preprocessConstraintPairs(
       int diffidx1minus0weight;
       int v0;
       int v1;
-      
-      assert(cons0lhs == consdata0->lhs);
-      assert(cons0rhs == consdata0->rhs);
+
+      assert(cons0lhs == consdata0->lhs);  /*lint !e777*/
+      assert(cons0rhs == consdata0->rhs);  /*lint !e777*/
       assert(cons0upgraded == consdata0->upgraded);
 
       cons1 = conss[c];
@@ -7751,7 +7493,7 @@ SCIP_RETCODE preprocessConstraintPairs(
          continue;
       
       /* if both constraints are already upgraded, skip the pair; 
-       * because changes on these constraints can not be applied to the instance anymore */
+       * because changes on these constraints cannot be applied to the instance anymore */
       if( cons0upgraded && consdata1->upgraded )
          continue;
 
@@ -8412,11 +8154,11 @@ SCIP_RETCODE fullDualPresolve(
                /* calculate residual activity bounds if variable would be fixed to zero */
                consdataGetGlbActivityResiduals(scip, consdata, var, val, &minresactivity, &maxresactivity, &isminsettoinfinity, &ismaxsettoinfinity);
                
-               /* check minresactivity for reliablility */
+               /* check minresactivity for reliability */
                if( !isminsettoinfinity && isNewActivityUnreliable(scip, minresactivity, consdata->lastglbminactivity) )
                   consdataGetReliableResidualActivity(scip, consdata, var, &minresactivity, TRUE, TRUE);
                
-               /* check maxresactivity for reliablility */
+               /* check maxresactivity for reliability */
                if( !ismaxsettoinfinity && isNewActivityUnreliable(scip, maxresactivity, consdata->lastglbmaxactivity) )
                   consdataGetReliableResidualActivity(scip, consdata, var, &maxresactivity, FALSE, TRUE);
             }
@@ -8575,7 +8317,7 @@ SCIP_RETCODE fullDualPresolve(
             && !SCIPisInfinity(scip, -redlb[v - nbinvars])
             && redlb[v - nbinvars] < SCIPvarGetUbGlobal(var) )
          {
-	    SCIP_Real ub;
+            SCIP_Real ub;
 
             /* if x_v >= redlb[v], we can always round x_v down to x_v == redlb[v] without violating any constraint
              *  -> tighten upper bound to x_v <= redlb[v]
@@ -8586,7 +8328,7 @@ SCIP_RETCODE fullDualPresolve(
             SCIP_CALL( SCIPtightenVarUb(scip, var, redlb[v - nbinvars], FALSE, &infeasible, &tightened) );
             assert(!infeasible);
 
-	    ub = SCIPvarGetUbGlobal(var);
+            ub = SCIPvarGetUbGlobal(var);
             redub[v - nbinvars] = MIN(redub[v - nbinvars], ub);
             if( tightened )
                (*nchgbds)++;
@@ -8602,7 +8344,7 @@ SCIP_RETCODE fullDualPresolve(
             && !SCIPisInfinity(scip, redub[v - nbinvars])
             && redub[v - nbinvars] > SCIPvarGetLbGlobal(var) )
          {
-	    SCIP_Real lb;
+            SCIP_Real lb;
 
             /* if x_v <= redub[v], we can always round x_v up to x_v == redub[v] without violating any constraint
              *  -> tighten lower bound to x_v >= redub[v]
@@ -8613,7 +8355,7 @@ SCIP_RETCODE fullDualPresolve(
             SCIP_CALL( SCIPtightenVarLb(scip, var, redub[v - nbinvars], FALSE, &infeasible, &tightened) );
             assert(!infeasible);
 
-	    lb = SCIPvarGetLbGlobal(var);
+            lb = SCIPvarGetLbGlobal(var);
             redlb[v - nbinvars] = MAX(redlb[v - nbinvars], lb);
             if( tightened )
                (*nchgbds)++;
@@ -8975,7 +8717,7 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
       }
 
       /* is constraint of type SCIP_CONSTYPE_{EQKNAPSACK, BINPACKING, KNAPSACK}? */
-      /* TODO: If coefficents or rhs are not integral, we currently do not check
+      /* TODO: If coefficients or rhs are not integral, we currently do not check
        * if the constraint could be scaled (finitely), such that they are.
        */
       {
@@ -9320,6 +9062,7 @@ SCIP_DECL_CONSSEPALP(consSepalpLinear)
    SCIP_Real cutoffbound;
    SCIP_Real maxbound;
    SCIP_Bool separatecards;
+   SCIP_Bool cutoff;
    int c;
    int depth;
    int nrounds;
@@ -9358,16 +9101,19 @@ SCIP_DECL_CONSSEPALP(consSepalpLinear)
 
    *result = SCIP_DIDNOTFIND;
    ncuts = 0;
+   cutoff = FALSE;
 
    /* check all useful linear constraints for feasibility */
-   for( c = 0; c < nusefulconss && ncuts < maxsepacuts; ++c )
+   for( c = 0; c < nusefulconss && ncuts < maxsepacuts && !cutoff; ++c )
    {
       /*debugMessage("separating linear constraint <%s>\n", SCIPconsGetName(conss[c]));*/
-      SCIP_CALL( separateCons(scip, conss[c], NULL, separatecards, conshdlrdata->separateall, &ncuts) );
+      SCIP_CALL( separateCons(scip, conss[c], NULL, separatecards, conshdlrdata->separateall, &ncuts, &cutoff) );
    }
-
+   
    /* adjust return value */
-   if( ncuts > 0 )
+   if( cutoff )
+      *result = SCIP_CUTOFF;
+   else if( ncuts > 0 )
       *result = SCIP_SEPARATED;
 
    /* combine linear constraints to get more cuts */
@@ -9387,6 +9133,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolLinear)
    int nrounds;
    int maxsepacuts;
    int ncuts;
+   SCIP_Bool cutoff;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -9412,16 +9159,19 @@ SCIP_DECL_CONSSEPASOL(consSepasolLinear)
 
    *result = SCIP_DIDNOTFIND;
    ncuts = 0;
+   cutoff = FALSE;
 
    /* check all useful linear constraints for feasibility */
-   for( c = 0; c < nusefulconss && ncuts < maxsepacuts; ++c )
+   for( c = 0; c < nusefulconss && ncuts < maxsepacuts && !cutoff; ++c )
    {
       /*debugMessage("separating linear constraint <%s>\n", SCIPconsGetName(conss[c]));*/
-      SCIP_CALL( separateCons(scip, conss[c], sol, TRUE, conshdlrdata->separateall, &ncuts) );
+      SCIP_CALL( separateCons(scip, conss[c], sol, TRUE, conshdlrdata->separateall, &ncuts, &cutoff) );
    }
 
    /* adjust return value */
-   if( ncuts > 0 )
+   if( cutoff )
+      *result = SCIP_CUTOFF;
+   else if( ncuts > 0 )
       *result = SCIP_SEPARATED;
 
    /* combine linear constraints to get more cuts */
@@ -10140,350 +9890,174 @@ SCIP_DECL_CONSCOPY(consCopyLinear)
 static
 SCIP_DECL_CONSPARSE(consParseLinear)
 {  /*lint --e{715}*/
-
-   SCIP_TOKENIZER tokenizer;
    SCIP_VAR** vars;
    SCIP_Real* coefs;
-   SCIP_VAR* var;
+   int        nvars;
+   int        coefssize;
+   int        requsize;
+   int        endpos;
+   SCIP_Real  lhs;
+   SCIP_Real  rhs;
+   char*      endsum;
+   char       endchar;
 
-   SCIP_Real lhs;
-   SCIP_Real rhs;
-
-   SCIP_Bool havesign;
-   SCIP_Bool havevalue;
-   CIPSENSE sense;
-   SCIP_Real coef;
-   int coefsign;
-   int coefssize;
-   int ncoefs;
-   
    assert(scip != NULL);
    assert(success != NULL);
+   assert(str != NULL);
+   assert(name != NULL);
+   assert(cons != NULL);
 
-   /* initialize tokenizer */
-   tokenizer.strbuf = str;
-   SCIP_CALL( SCIPallocBufferArray(scip, &tokenizer.token, SCIP_MAXSTRLEN) );
-   tokenizer.token[0] = '\0';
-   SCIP_CALL( SCIPallocBufferArray(scip, &tokenizer.tokenbuf, SCIP_MAXSTRLEN) );
-   tokenizer.tokenbuf[0] = '\0';
-   tokenizer.strpos = 0;
-   
+   /* set left and right hand side to their default values */
+   lhs = -SCIPinfinity(scip);
+   rhs =  SCIPinfinity(scip);
+
+   endchar = '\0';
+   (*success) = FALSE;
+
+   /* return of string empty */
+   if( !*str )
+      return SCIP_OKAY;
+
+   /* ignore whitespace */
+   while( isspace(*str) )
+      ++str;
+
+   if( isdigit(str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit(str[1])) )
+   {
+      char* endstr;
+      /* there is a number coming, maybe it is a left-hand-side */
+
+      lhs = strtod(str, &endstr);
+      if( str == endstr )
+      {
+         SCIPerrorMessage("error parsing number from %s\n", str);
+         return SCIP_OKAY;
+      }
+
+      /* ignore whitespace */
+      while( isspace(*endstr) )
+         ++endstr;
+
+      if( endstr[0] != '<' || endstr[1] != '=' )
+      {
+         /* no '<=' coming, so it was the first coefficient, but not a left-hand-side */
+         lhs = -SCIPinfinity(scip);
+      }
+      else
+      {
+         /* it was indeed a left-hand-side, so continue parsing after it */
+         str = endstr + 2;
+
+         /* ignore whitespace */
+         while( isspace(*str) )
+            ++str;
+      }
+   }
+
+   /* search for end of linear sum: either '<=', '>=', '==', or '[free]' */
+   endsum = strrchr(str, '=');
+   if( endsum != NULL )
+   {
+      /* seem to have either '<=', '>=', or '==', so expect a value behind and parse it */
+      char* endstr;
+
+      assert(endsum > str);
+      --endsum;
+      switch( *endsum )
+      {
+         case '<':
+            rhs = strtod(endsum+2, &endstr);
+            break;
+
+         case '=':
+            if( !SCIPisInfinity(scip, -lhs) )
+            {
+               SCIPerrorMessage("cannot have == on rhs if there was a <= on lhs\n");
+               return SCIP_OKAY;
+            }
+            else
+            {
+               rhs = strtod(endsum+2, &endstr);
+               lhs = rhs;
+            }
+            break;
+
+         case '>':
+            if( !SCIPisInfinity(scip, -lhs) )
+            {
+               SCIPerrorMessage("cannot have => on rhs if there was a <= on lhs\n");
+               return SCIP_OKAY;
+            }
+            else
+            {
+               lhs = strtod(endsum+2, &endstr);
+            }
+            break;
+
+         default:
+            SCIPerrorMessage("unexpected character %c\n", *endsum);
+            return SCIP_OKAY;
+      }
+      if( endstr == endsum+2 )
+      {
+         SCIPerrorMessage("error parsing number %s\n", endsum+2);
+         return SCIP_OKAY;
+      }
+   }
+   else
+   {
+      endsum = strstr(str, "[free]");
+      if( endsum != NULL && !SCIPisInfinity(scip, -lhs) )
+      {
+         SCIPerrorMessage("cannot have [free] if there was a <= on lhs\n");
+         return SCIP_OKAY;
+      }
+   }
+
+   if( endsum != NULL )
+   {
+      /* fake end of string */
+      endchar = *endsum;
+      *endsum = '\0';
+   }
+
    /* initialize buffers for storing the coefficients */
    coefssize = 100;
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, coefssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars,  coefssize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &coefs, coefssize) );
-   
-   /* set right hand and left side to their default values */
-   lhs = -SCIPinfinity(scip);
-   rhs = SCIPinfinity(scip);
 
-   (*success) = TRUE;
+   /* parse linear sum to get variables and coefficients */
+   SCIP_CALL( SCIPparseVarsLinearsum(scip, str, 0, 0, vars, coefs, &nvars, coefssize, &requsize, &endpos, success) );
 
-   /* read the coefficients */
-   coefsign = +1;
-   coef = 1.0;
-   havesign = FALSE;
-   havevalue = FALSE;
-   sense = CIP_SENSE_NOTHING;
-   ncoefs = 0;
-   var = NULL;
-
-   SCIPdebugMessage("start parsing linear constraint expression\n");
-
-   while( getNextToken(&tokenizer) && (*success) )
+   if( *success && requsize > coefssize )
    {
-      /* if the variable type is given ignore it */
-      if( strncmp(tokenizer.token, "[B]", 3) == 0 && strlen(tokenizer.token) == 3 )
-      {
-         assert(var != NULL);
-         assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
-         SCIPdebugMessage("ignoring token <%s>\n", tokenizer.token);
-         continue;
-      }
-      if( strncmp(tokenizer.token, "[I]", 3) == 0 && strlen(tokenizer.token) == 3 )
-      {
-         assert(var != NULL);
-         /* in can be the case that the variable type is already changed to binary (for example the variable is fixed to
-          * zero in the file); hence, there could be a mismatch between the information of the file and current variable type; */
-         assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
-         SCIPdebugMessage("ignoring token <%s>\n", tokenizer.token);
-         continue;
-      }
-      if( strncmp(tokenizer.token, "[C]", 3) == 0 && strlen(tokenizer.token) == 3 )
-      {
-         assert(var != NULL);
-         assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
-         SCIPdebugMessage("ignoring token <%s>\n", tokenizer.token);
-         continue;
-      }
-      
-      if( *tokenizer.token == '>' && strlen(tokenizer.token) == 1 )
-      {
-         SCIPdebugMessage("ignoring token <%s>\n", tokenizer.token);
-         continue;
-      }
-      if( *tokenizer.token == '<' && strlen(tokenizer.token) == 1 )
-      {
-         SCIPdebugMessage("ignoring token <%s>\n", tokenizer.token);
-         continue;
-      }
-      
+      /* realloc buffers and try again */
+      coefssize = requsize;
+      SCIP_CALL( SCIPreallocBufferArray(scip, &vars,  coefssize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, coefssize) );
 
-      /* check if we reached an equation sense */
-      if( isSense(&tokenizer, &sense) )
-      {
-         if( ncoefs == 0 && havevalue )
-         {
-            /* the constraint has no variables */
-            switch(sense)
-            {
-            case CIP_SENSE_LE:
-               lhs = coefsign * coef;
-               break;
-            case CIP_SENSE_GE:
-               rhs = coefsign * coef;
-               break;
-            case CIP_SENSE_EQ:
-               lhs = coefsign * coef;
-               rhs = coefsign * coef;
-               break;
-            case CIP_SENSE_NOTHING:
-            default:
-               SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: unknown sense <%d>)\n", sense);
-               (*success) = FALSE;
-            }
-            sense = CIP_SENSE_NOTHING;
-            havevalue = FALSE;
-         }
-
-         continue;
-      }
-      
-      /* check if we read a sign */
-      if( isSign(&tokenizer, &coefsign) )
-      {
-         SCIPdebugMessage("read coefficient sign: %+d\n", coefsign);
-         havesign = TRUE;
-         continue;
-      }
-
-      /* all but the first coefficient need a sign */
-      if( ncoefs > 0 && !havesign && sense == CIP_SENSE_NOTHING )
-      {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: expected sign ('+' or '-') or sense ('<' or '>')\n");
-         (*success) = FALSE;
-         break;
-      }
-
-      /* check if we read a value */
-      if( isValue(scip, &tokenizer, &coef) )
-      {
-         SCIPdebugMessage("read coefficient value: <%g> with sign %+d\n", coef, coefsign);
-         if( havevalue )
-         {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: two consecutive values");
-            (*success) = FALSE;
-            break;
-         }
-         havevalue = TRUE;
-         
-         if( sense == CIP_SENSE_EQ ) 
-         {
-            lhs = coefsign * coef;
-            rhs = coefsign * coef;
-         }
-         else if( sense == CIP_SENSE_LE ) 
-            rhs = coefsign * coef;
-         else if( sense == CIP_SENSE_GE ) 
-            lhs = coefsign * coef;
-         
-         continue;
-      }
-
-      /* the token is a variable name: get the corresponding variable (or create a new one) */
-      var = SCIPfindVar(scip, tokenizer.token);
-      /* if a variable under this name could not be found, then maybe because it was a negated variable */
-      if( var == NULL )
-      {
-         SCIP_CALL( findNegatedVar(scip, tokenizer.token, &var) );
-      }
-      
-      if( var == NULL )
-      {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s> in linear constraint <%s>\n", tokenizer.token, name);
-         (*success) = FALSE;
-      }
-      
-      /* insert the coefficient */
-      SCIPdebugMessage("read coefficient: %+g<%s>\n", coefsign * coef, SCIPvarGetName(var));
-      if( !SCIPisZero(scip, coef) )
-      {
-         /* resize the vars and coefs array if needed */
-         if( ncoefs >= coefssize )
-         {
-            coefssize *= 2;
-            coefssize = MAX(coefssize, ncoefs+1);
-            SCIP_CALL( SCIPreallocBufferArray(scip, &vars, coefssize) );
-            SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, coefssize) );
-         }
-         assert(ncoefs < coefssize);
-
-         /* add coefficient */
-         vars[ncoefs] = var;
-         coefs[ncoefs] = coefsign * coef;
-         ncoefs++;
-      }
-
-      /* reset the flags and coefficient value for the next coefficient */
-      coefsign = +1;
-      coef = 1.0;
-      havesign = FALSE;
-      havevalue = FALSE;
+      SCIP_CALL( SCIPparseVarsLinearsum(scip, str, 0, 0, vars, coefs, &nvars, coefssize, &requsize, &endpos, success) );
+      assert(!*success || requsize <= coefssize); /* if successful, then should have had enough space now */
    }
 
-   if( sense == CIP_SENSE_NOTHING )
+   if( !*success )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: no sense found\n");
-      (*success) = FALSE;
+      SCIPerrorMessage("no luck in parsing linear sum '%s'\n", str);
    }
+
+   /* restore original character at endsum */
+   if( endsum != NULL )
+      *endsum = endchar;
 
    if( *success )
    {
-      SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, ncoefs, vars, coefs, lhs, rhs, 
+      SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, nvars, vars, coefs, lhs, rhs,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
 
    SCIPfreeBufferArray(scip, &coefs);
    SCIPfreeBufferArray(scip, &vars);
-   tokenizer.token[0] = '\0';
-   SCIPfreeBufferArray(scip, &tokenizer.tokenbuf);
-   SCIPfreeBufferArray(scip, &tokenizer.token);
-   
-#if 0
-   enum Stage {VALUE, STRING, TYPE};
-   typedef enum Stage STAGE;
 
-   SCIP_VAR** vars;
-   SCIP_Real* vals;
-   SCIP_Real lhs;
-   SCIP_Real rhs;
-   int nvars;
-   int varssize;
-
-   char* copystr;
-   char* token;
-   char* saveptr;
-   
-   SCIP_VAR* var;
-   SCIP_Real value;
-   int cnt;
-   
-   STAGE stage;
-
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(cons != NULL);
-
-   (*success) = TRUE;
-   
-   /* set values to default values */
-   lhs = -SCIPinfinity(scip);
-   rhs = SCIPinfinity(scip);
-   value = SCIPinfinity(scip);
-   nvars = 0;
-   varssize = 10;
-
-   /* copy string such that truncated */
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &copystr, str, strlen(str)+1) );
-   SCIPdebugMessage("parsing <%s>\n", copystr);
-   
-   /* allocate memory for variable and value array */
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vals, varssize) );
-   
-   /* start truncating the string */
-   token = SCIPstrtok(copystr, " ", &saveptr);
-
-   /* parse string until no token is left */
-   while ( token != NULL && (*success) )
-   {
-      /* check if we have an relation '==', '>=', or '<=' */
-      if( strncmp(token, "==", 2) == 0 && strlen(token) == 2 )
-      {
-         assert( !SCIPisInfinity(scip, value) );
-         lhs = value;
-         rhs = value;
-      }
-      else if( strncmp(token, ">=", 2) == 0 && strlen(token) == 2 )
-      {
-         assert( !SCIPisInfinity(scip, value) );
-         lhs = value;
-      }
-      else if( strncmp(token, "<=", 2) == 0 && strlen(token) == 2 )
-      {
-         assert( !SCIPisInfinity(scip, value) );
-         if( nvars == 0 )
-            lhs = value;
-         else
-            rhs = value;
-      }
-      else
-      {
-         char* varname;
-         cnt = sscanf(token, "%"SCIP_REAL_FORMAT"<%s", &value, varname);
-            
-         if( cnt == 2 )
-         {
-            char* endname;
-            
-            /* fix variable name */
-            endname = strrchr(varname, '>');
-            assert(endname != NULL);
-            (*endname) = '\0';
-
-            SCIPdebugMessage("variable name = <%s>, coefficients = <%.15g>\n", varname, value);
-            var = SCIPfindVar(scip, varname);
-            if( var != NULL )
-            {
-               /* ensure size of variable and value array */
-               if( nvars == varssize )
-               {
-                  assert(varssize > 0);
-                  varssize *= 2;
-                  SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
-                  SCIP_CALL( SCIPreallocBufferArray(scip, &vals, varssize) );
-               }
-               
-               vars[nvars] = var;
-               vals[nvars] = value;
-               nvars++;
-            }
-            else
-            {
-               SCIPwarningMessage("unknown variable <%s>\n", varname);
-               (*success) = FALSE;
-            }
-         }
-      }
-        
-      SCIPdebugMessage("token = <%s>\n", token);
-
-      /* get mnext token */
-      token = SCIPstrtok(NULL, " ", &saveptr);   
-   }
-   
-   if( *success )
-   {
-      SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, nvars, vars, vals, lhs, rhs, 
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
-   
-      SCIP_CALL( SCIPprintCons(scip, *cons, NULL) );
-   }
-
-   SCIPfreeBufferArray(scip, &vals);
-   SCIPfreeBufferArray(scip, &vars);
-   SCIPfreeMemoryArray(scip, &copystr);
-#endif   
    return SCIP_OKAY;
 }
 
@@ -10573,7 +10147,7 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
 
    if( (eventtype & SCIP_EVENTTYPE_VARUNLOCKED) != 0 )
    {
-      /* there is only one lock left: we may multiaggregate the variable as slack of an equation */
+      /* there is only one lock left: we may multi-aggregate the variable as slack of an equation */
       assert(SCIPvarGetNLocksDown(var) <= 1);
       assert(SCIPvarGetNLocksUp(var) <= 1);
       consdata->presolved = FALSE;
@@ -10713,13 +10287,12 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLinear)
  * Quadratic constraint upgrading
  */
 
-
 #ifdef QUADCONSUPGD_PRIORITY
 /** upgrades quadratic constraints with only and at least one linear variables into a linear constraint
  */
 static
 SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
-{
+{  /*lint --e{715}*/
    assert(scip != NULL);
    assert(cons != NULL);
    assert(nupgdconss != NULL);
@@ -10788,6 +10361,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         CONSHDLR_PROP_TIMING,
          conshdlrCopyLinear,
          consFreeLinear, consInitLinear, consExitLinear,
          consInitpreLinear, consExitpreLinear, consInitsolLinear, consExitsolLinear,
@@ -10866,7 +10440,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          &conshdlrdata->simplifyinequalities, TRUE, DEFAULT_SIMPLIFYINEQUALITIES, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/linear/dualpresolving",
-         "should dual presolving steps be preformed?",
+         "should dual presolving steps be performed?",
          &conshdlrdata->dualpresolving, TRUE, DEFAULT_DUALPRESOLVING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/linear/sortvars", "apply binaries sorting in decr. order of coeff abs value?",
          &conshdlrdata->sortvars, TRUE, DEFAULT_SORTVARS, NULL, NULL) );
@@ -10950,7 +10524,7 @@ SCIP_RETCODE SCIPcreateConsLinear(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< Is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
@@ -11368,7 +10942,7 @@ SCIP_Real SCIPgetDualsolLinear(
       return 0.0;
 }
 
-/** gets the dual farkas value of the linear constraint in the current infeasible LP */
+/** gets the dual Farkas value of the linear constraint in the current infeasible LP */
 SCIP_Real SCIPgetDualfarkasLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */

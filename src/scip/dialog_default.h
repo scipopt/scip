@@ -46,6 +46,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeAddCons);
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeBounds);
 
+/** dialog execution method for the freetransproblem command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeFreetransproblem);
+
 /** dialog execution method for the checksol command */
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecChecksol);

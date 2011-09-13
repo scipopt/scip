@@ -139,20 +139,20 @@
 
 /** preprocessing methods, usable within the ppmethods parameter */
 enum preprocessingmethods 
-{
-   MODGAUSSIANELIMINATION =                'G',
-   DELETEZEROROWS =                        'Z',
-   DELETEZEROCOLS =                        'z',
-   DELETECOLSINGLETONS =                   's',
-   ADDTRIVIALCUTS =                        'X',
-   DELETEIDENTROWS =                       'I',
-   MERGEIDENTCOLS =                        'i',
-   DELETELARGESLACKROWS =                  'L',
-   DELETESMALLFRACSOLCOLS =                'd',
-   DELETEROWSWRTMINSLACK =                 'M',
-   PPCOLUMNS =                             'C',
-   PPROWS =                                'R'
-};
+   {
+      MODGAUSSIANELIMINATION =                'G',
+      DELETEZEROROWS =                        'Z',
+      DELETEZEROCOLS =                        'z',
+      DELETECOLSINGLETONS =                   's',
+      ADDTRIVIALCUTS =                        'X',
+      DELETEIDENTROWS =                       'I',
+      MERGEIDENTCOLS =                        'i',
+      DELETELARGESLACKROWS =                  'L',
+      DELETESMALLFRACSOLCOLS =                'd',
+      DELETEROWSWRTMINSLACK =                 'M',
+      PPCOLUMNS =                             'C',
+      PPROWS =                                'R'
+   };
 typedef enum preprocessingmethods PREPROCESSINGMETHODS;  
 
 /** description of the ppmethods parameter */
@@ -176,15 +176,15 @@ static const char preprocessingmethodsdescription[SCIP_MAXSTRLEN] =
 
 /** separation methods, usable within the sepamethods parameter  */
 enum sepamethods 
-{
-   STOPIFCUTWASFOUND =                     '!',
-   SOLVEAUXSCIP =                          's',
-   SOLVEAUXSCIPEXACT =                     'S',
-   ENUMHEURNMAX1 =                         'e',
-   ENUMHEURNMAX2 =                         'E',
-   GAUSSHEUR =                             'g',
-   MAX2ODDENTRIESPERROW =                  '2'
-};
+   {
+      STOPIFCUTWASFOUND =                     '!',
+      SOLVEAUXSCIP =                          's',
+      SOLVEAUXSCIPEXACT =                     'S',
+      ENUMHEURNMAX1 =                         'e',
+      ENUMHEURNMAX2 =                         'E',
+      GAUSSHEUR =                             'g',
+      MAX2ODDENTRIESPERROW =                  '2'
+   };
 typedef enum sepamethods SEPAMETHODS;
 
 /** description of the sepamethods parameter */
@@ -203,9 +203,9 @@ static const char sepamethodsdescription[SCIP_MAXSTRLEN] =
 
 /** statistics: "origin" of separated cut */
 enum cutseparatedby 
-{                                                
-   AUXIP, DECOMPOSITION, PPZEROONEROW, HEURISTICSENUM, HEURISTICSGAUSS, AUXGRAPH
-};
+   {                                                
+      AUXIP, DECOMPOSITION, PPZEROONEROW, HEURISTICSENUM, HEURISTICSGAUSS, AUXGRAPH
+   };
 typedef enum cutseparatedby CUTSEPARATEDBY;
     
 
@@ -221,7 +221,7 @@ typedef enum cutseparatedby CUTSEPARATEDBY;
 #define XOR(bool1, bool2) ((bool1) ^ (bool2))
 #define DIV(value1, powerof2value) (((unsigned int)(value1)) / ((unsigned int)(powerof2value)))     /**< integer division using a power of 2 as divisor */
 #define MOD(value1, powerof2value) (((unsigned int)(value1)) % ((unsigned int)(powerof2value)))     /**< remainder of integer division using a power of 2
-                                                                       as divisor */
+                                                                                                       as divisor */
 #ifndef BMSmoveMemoryArray                                      
 #define BMSmoveMemoryArray(ptr, source, num)                    \
    {                                                            \
@@ -335,8 +335,8 @@ static const unsigned int Zerohalf_bitarraybasetypesize_nbits = sizeof(BITARRAYB
    ((((unsigned int)(nvalstostore)) % (Zerohalf_bitarraybasetypesize_nbits) == 0) \
       ? (((unsigned int)(nvalstostore)) / (Zerohalf_bitarraybasetypesize_nbits)) \
       : ((((unsigned int)(nvalstostore)) / (Zerohalf_bitarraybasetypesize_nbits)) + 1))         /**< calculates the number of array elements
-                                                                                   (w.r.t. the bitarray base type) required
-                                                                                   to create the bitarray */
+                                                                                                   (w.r.t. the bitarray base type) required
+                                                                                                   to create the bitarray */
 
 #define GETBITARRAYINDEX(pos)                DIV((pos),Zerohalf_bitarraybasetypesize_nbits) /**< get the corresponding
                                                                                                array element of a bitarray
@@ -421,7 +421,7 @@ struct SCIP_SepaData
    int*                  origrows;           /**< set of SCIP_ROW->index of all original LP rows */
 
    int                   maxnnonz;           /**< maximal number of nonzeros allowed in a zerohalf cut */
-   int                   maxtestdelta;	     /**< maximal number of different deltas to try for cmir (-1: unlimited, 0: delta=1) */
+   int                   maxtestdelta;             /**< maximal number of different deltas to try for cmir (-1: unlimited, 0: delta=1) */
    SCIP_Bool             trynegscaling;      /**< should negative values also be tested in scaling for cmir? */
 
    /* statistics */
@@ -588,7 +588,7 @@ struct Zerohalf_CutData
 
    SCIP_Bool             success;            /**< was SCIPcalcMIR successful? */
    SCIP_Bool             isfeasviolated;     /**< is zerohalf cut violated w.r.t. the feasibility tolerance? */
-   SCIP_Bool             islocal;            /**< is zerohalf cut onyl locally valid? */
+   SCIP_Bool             islocal;            /**< is zerohalf cut only locally valid? */
   
    SCIP_Real             activity;           /**< activity of the zerohalf cut */
    SCIP_Real             rhs;                /**< rhs of the zerohalf cut */
@@ -619,8 +619,8 @@ struct Zerohalf_AuxGraph_Node
    int*                      relatedrows;    /**< label mapping outgoing edges to mod 2 rows */
    int                       nneighbors;     /**< number of adjacent nodes */
   
-   SCIP_Real                 distance;       /**< actual distant from start node (used by dijkstra)*/
-   ZEROHALF_AUXGRAPH_NODE*   previous;       /**< previous node in shortest-path-tree (used by dijkstra) */
+   SCIP_Real                 distance;       /**< actual distant from start node (used by Dijkstra)*/
+   ZEROHALF_AUXGRAPH_NODE*   previous;       /**< previous node in shortest-path-tree (used by Dijkstra) */
 };
 
 
@@ -870,9 +870,9 @@ SCIP_RETCODE ZerohalfMod2DataFree(
    {
       for( i = 0 ; i < (*mod2data)->nrows ; ++i)
          if( (*mod2data)->rows[i] != NULL )
-	 {
+         {
             SCIPfreeMemoryArray(scip, &((*mod2data)->rows[i]));
-	 }
+         }
       SCIPfreeMemoryArray(scip, &((*mod2data)->rows));
    }
 
@@ -880,9 +880,9 @@ SCIP_RETCODE ZerohalfMod2DataFree(
    {
       for( i = 0 ; i < (*mod2data)->nrows ; ++i)
          if( (*mod2data)->rowaggregations[i] != NULL )
-	 {
+         {
             SCIPfreeMemoryArray(scip, &((*mod2data)->rowaggregations[i]));
-	 }
+         }
       SCIPfreeMemoryArray(scip, &((*mod2data)->rowaggregations));
    }
 
@@ -1158,9 +1158,9 @@ SCIP_RETCODE ZerohalfAuxGraphFree(
       assert((*auxgraph)->nnodes > 0);
       for( n = 0; n < (*auxgraph)->nnodes ; ++n )
          if( (*auxgraph)->nodes[n] != NULL )
-	 {
+         {
             SCIP_CALL(ZerohalfAuxGraphNodeFree(scip, &((*auxgraph)->nodes[n])));
-	 }
+         }
       SCIPfreeMemoryArray(scip, (&(*auxgraph)->nodes));
    }
     
@@ -1169,9 +1169,9 @@ SCIP_RETCODE ZerohalfAuxGraphFree(
       assert((*auxgraph)->nnodes > 0);
       for( n = 0; n < (*auxgraph)->nnodes ; ++n )
          if( (*auxgraph)->nodecopies[n] != NULL )
-	 {
+         {
             SCIP_CALL(ZerohalfAuxGraphNodeFree(scip, &((*auxgraph)->nodecopies[n])));
-	 }
+         }
       SCIPfreeMemoryArray(scip, (&(*auxgraph)->nodecopies));
    }
     
@@ -1196,7 +1196,7 @@ char* getconstantname(
    int value                                 /**< symbolic constant given as int value */
    )
 {
-   switch (value)
+   switch( value )
    {
    case IRRELEVANT: 
       (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "IRRELEVANT"); break;
@@ -1426,9 +1426,9 @@ void debugPrintMod2Data(
             SCIPdebugPrintf("1");        
          }
          else
-	 {
+         {
             SCIPdebugPrintf(".");
-	 }
+         }
       if( mod2data->rhs[mod2data->rowsind[i]] )
       {
          SCIPdebugPrintf("  1");
@@ -1444,26 +1444,26 @@ void debugPrintMod2Data(
       {
          for( j = 0 ; j < mod2data->relatedsubproblem->nrrows; ++j )
             if( BITARRAYBITISSET(mod2data->rowaggregations[mod2data->rowsind[i]], j) )
-	    {
+            {
                SCIPdebugPrintf("1");
-	    }
+            }
             else
-	    {
+            {
                SCIPdebugPrintf(".");
-	    }
+            }
       }
     
       if( mod2data->rowsind[i] < mod2data->nrows - mod2data->nvarbounds )
       {      
          SCIPdebugPrintf("  %s ", SCIProwGetName(lpdata->rows[mod2data->relatedsubproblem->rrows[mod2data->rowsind[i]]]));
          if( lpdata->rrowsindexofleftrow[mod2data->relatedsubproblem->rrows[mod2data->rowsind[i]]] == mod2data->rowsind[i] )
-	 {
+         {
             SCIPdebugPrintf(" -\n");
-	 }
+         }
          else
-	 {
+         {
             SCIPdebugPrintf(" +\n");
-	 }
+         }
       }
       else
       {
@@ -1628,7 +1628,7 @@ SCIP_RETCODE getRelevantColumns(
    problem->nrcols = 0;
    for( j = 0 ; j < lpdata->ncols ; ++j)
    {  
-      /* initialise best lb and best ub (-2: undetermined)*/
+      /* initialize best lb and best ub (-2: undetermined)*/
       lpdata->bestlbidxofcol[j] = -2;
       lpdata->bestubidxofcol[j] = -2;
  
@@ -1673,7 +1673,7 @@ SCIP_RETCODE getRelevantColumns(
             /**@todo consider general integers with negative lower bounds and transform to positive representation
              * and propagate through corresponding rows. In the current version, redundant inequalities might be 
              * considered as cut candidates and valid cuts might be missed, but no wrong cuts should be produced 
-             * (due to SCIPcalcMIR) this leads to performance detoriation in the (rare) case of general integers 
+             * (due to SCIPcalcMIR) this leads to performance deterioration in the (rare) case of general integers 
              * with negative bounds.
              */
             lpdata->subproblemsindexofcol[j] = IRRELEVANT;
@@ -1740,16 +1740,16 @@ SCIP_RETCODE getRelevantColumns(
  */
 static
 void findClosestLb(
-  SCIP*                 scip,               /**< SCIP data structure */
-  ZEROHALF_LPDATA*      lpdata,             /**< data of current LP relaxation */   
-  SCIP_COL*             col,                /**< column to get closest lower bound */
-  SCIP_Real*            bestlbsol,          /**< pointer to store value of closest lower bound */
-  int*                  bestlbtype,         /**< pointer to store type of closest lower bound */
-  SCIP_VAR**            bestzvlb,           /**< pointer to store variable z in closest variable lower bound b*z + d */
-  SCIP_Real*            bestbvlb,           /**< pointer to store coefficient b in closest variable lower bound b*z + d */
-  SCIP_Real*            bestdvlb            /**< pointer to store constant d in closest variable lower bound b*z + d */
+   SCIP*                 scip,               /**< SCIP data structure */
+   ZEROHALF_LPDATA*      lpdata,             /**< data of current LP relaxation */   
+   SCIP_COL*             col,                /**< column to get closest lower bound */
+   SCIP_Real*            bestlbsol,          /**< pointer to store value of closest lower bound */
+   int*                  bestlbtype,         /**< pointer to store type of closest lower bound */
+   SCIP_VAR**            bestzvlb,           /**< pointer to store variable z in closest variable lower bound b*z + d */
+   SCIP_Real*            bestbvlb,           /**< pointer to store coefficient b in closest variable lower bound b*z + d */
+   SCIP_Real*            bestdvlb            /**< pointer to store constant d in closest variable lower bound b*z + d */
   
-  )
+   )
 {
    SCIP_VAR* var;
    SCIP_VAR** zvlb;
@@ -1813,7 +1813,7 @@ void findClosestLb(
 
       /* if no better var bound could be found, set type to the fixed bound (-1) */
       if( *bestlbtype == -2 )
-        *bestlbtype = -1;      
+         *bestlbtype = -1;      
       
       /* store best bound for substitution */
       lpdata->bestlbidxofcol[collppos] = *bestlbtype;
@@ -1835,16 +1835,16 @@ void findClosestLb(
  */
 static
 void findClosestUb(
-  SCIP*                 scip,               /**< SCIP data structure */
-  ZEROHALF_LPDATA*      lpdata,             /**< data of current LP relaxation */   
-  SCIP_COL*             col,                /**< column to get closest upper bound */
-  SCIP_Real*            bestubsol,          /**< pointer to store value of closest upper bound */
-  int*                  bestubtype,         /**< pointer to store type of closest upper bound */
-  SCIP_VAR**            bestzvub,           /**< pointer to store variable z in closest variable upper bound b*z + d */
-  SCIP_Real*            bestbvub,           /**< pointer to store coefficient b in closest variable upper bound b*z + d */
-  SCIP_Real*            bestdvub            /**< pointer to store constant d in closest variable upper bound b*z + d */
+   SCIP*                 scip,               /**< SCIP data structure */
+   ZEROHALF_LPDATA*      lpdata,             /**< data of current LP relaxation */   
+   SCIP_COL*             col,                /**< column to get closest upper bound */
+   SCIP_Real*            bestubsol,          /**< pointer to store value of closest upper bound */
+   int*                  bestubtype,         /**< pointer to store type of closest upper bound */
+   SCIP_VAR**            bestzvub,           /**< pointer to store variable z in closest variable upper bound b*z + d */
+   SCIP_Real*            bestbvub,           /**< pointer to store coefficient b in closest variable upper bound b*z + d */
+   SCIP_Real*            bestdvub            /**< pointer to store constant d in closest variable upper bound b*z + d */
 
-  )
+   )
 {
    SCIP_VAR* var;
    SCIP_VAR** zvub;
@@ -1906,7 +1906,7 @@ void findClosestUb(
       }
       /* if no better var bound could be found, set type to the fixed bound (-1) */
       if( *bestubtype == -2 )
-        *bestubtype = -1;    
+         *bestubtype = -1;    
 
       /* store best bound for substitution */
       lpdata->bestubidxofcol[collppos] = *bestubtype;
@@ -2092,60 +2092,60 @@ SCIP_RETCODE getRelevantRows(
       /* calculate dense coeffs arrays */
       for( c = 0; c < nnonzcurrentrow; ++c)
       {
-        collppos = SCIPcolGetLPPos(colscurrentrow[c]);
-        var = SCIPcolGetVar(colscurrentrow[c]);
+         collppos = SCIPcolGetLPPos(colscurrentrow[c]);
+         var = SCIPcolGetVar(colscurrentrow[c]);
 
-        /* check if row contains a continuous variable */
-        if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
-        { 
-          bestzvbnd = NULL;
-          bestbndsol = 0.0;
-          bestbvbnd = 0.0;
-          bestdvbnd = 0.0;
-          bestbndtype = -2;
+         /* check if row contains a continuous variable */
+         if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+         { 
+            bestzvbnd = NULL;
+            bestbndsol = 0.0;
+            bestbvbnd = 0.0;
+            bestdvbnd = 0.0;
+            bestbndtype = -2;
           
-          /* Consider rhs of row and relax continuous variables by substituting for:
-           * - a_j > 0: x_j = lb  or  x_j = b*z + d with variable lower bound b*z + d with column var z >= 0
-           * - a_j < 0: x_j = ub  or  x_j = b*z + d with variable upper bound b*z + d with column var z >= 0
-           * and 
-           * consider lhs of row and relax continuous variables by substituting for:
-           * - a_j < 0: x_j = lb  or  x_j = b*z + d with variable lower bound b*z + d with column var z >= 0
-           * - a_j > 0: x_j = ub  or  x_j = b*z + d with variable upper bound b*z + d with column var z >= 0
-           */
+            /* Consider rhs of row and relax continuous variables by substituting for:
+             * - a_j > 0: x_j = lb  or  x_j = b*z + d with variable lower bound b*z + d with column var z >= 0
+             * - a_j < 0: x_j = ub  or  x_j = b*z + d with variable upper bound b*z + d with column var z >= 0
+             * and 
+             * consider lhs of row and relax continuous variables by substituting for:
+             * - a_j < 0: x_j = lb  or  x_j = b*z + d with variable lower bound b*z + d with column var z >= 0
+             * - a_j > 0: x_j = ub  or  x_j = b*z + d with variable upper bound b*z + d with column var z >= 0
+             */
 
-          findClosestLb(scip, lpdata, colscurrentrow[c],
-            &bestbndsol, &bestbndtype, &bestzvbnd, &bestbvbnd, &bestdvbnd );
-          assert( bestbndtype > -2 && lpdata->bestlbidxofcol[collppos] == bestbndtype);
+            findClosestLb(scip, lpdata, colscurrentrow[c],
+               &bestbndsol, &bestbndtype, &bestzvbnd, &bestbvbnd, &bestdvbnd );
+            assert( bestbndtype > -2 && lpdata->bestlbidxofcol[collppos] == bestbndtype);
           
-          if( bestbndtype > -1 )
-          {
-            int zlppos = SCIPcolGetLPPos(SCIPvarGetCol(bestzvbnd));            
+            if( bestbndtype > -1 )
+            {
+               int zlppos = SCIPcolGetLPPos(SCIPvarGetCol(bestzvbnd));            
 
-            if( valscurrentrow[c] > 0 )
-              densecoeffscurrentrightrow[zlppos] += valscurrentrow[c] * bestbvbnd;
-            else
-              densecoeffscurrentleftrow[zlppos] -= valscurrentrow[c] * bestbvbnd;
-          }
+               if( valscurrentrow[c] > 0 )
+                  densecoeffscurrentrightrow[zlppos] += valscurrentrow[c] * bestbvbnd;
+               else
+                  densecoeffscurrentleftrow[zlppos] -= valscurrentrow[c] * bestbvbnd;
+            }
 
-          findClosestUb(scip, lpdata, colscurrentrow[c],
-            &bestbndsol, &bestbndtype, &bestzvbnd, &bestbvbnd, &bestdvbnd );
-          assert(bestbndtype > -2 && lpdata->bestubidxofcol[collppos] == bestbndtype);
+            findClosestUb(scip, lpdata, colscurrentrow[c],
+               &bestbndsol, &bestbndtype, &bestzvbnd, &bestbvbnd, &bestdvbnd );
+            assert(bestbndtype > -2 && lpdata->bestubidxofcol[collppos] == bestbndtype);
 
-          if( bestbndtype > -1 )
-          {
-            int zlppos = SCIPcolGetLPPos(SCIPvarGetCol(bestzvbnd));    
+            if( bestbndtype > -1 )
+            {
+               int zlppos = SCIPcolGetLPPos(SCIPvarGetCol(bestzvbnd));    
 
-            if( valscurrentrow[c] > 0 )
-              densecoeffscurrentleftrow[zlppos] -= valscurrentrow[c] * bestbvbnd;
-            else
-              densecoeffscurrentrightrow[zlppos] += valscurrentrow[c] * bestbvbnd;
-          }          
-        }
-        else
-        {
-          densecoeffscurrentleftrow[collppos]  -= valscurrentrow[c];
-          densecoeffscurrentrightrow[collppos] += valscurrentrow[c];          
-        }
+               if( valscurrentrow[c] > 0 )
+                  densecoeffscurrentleftrow[zlppos] -= valscurrentrow[c] * bestbvbnd;
+               else
+                  densecoeffscurrentrightrow[zlppos] += valscurrentrow[c] * bestbvbnd;
+            }          
+         }
+         else
+         {
+            densecoeffscurrentleftrow[collppos]  -= valscurrentrow[c];
+            densecoeffscurrentrightrow[collppos] += valscurrentrow[c];          
+         }
       }
      
       /* calculate scalar that would make (left|right) row coefficients integral; 
@@ -2236,8 +2236,8 @@ SCIP_RETCODE getRelevantRows(
                {
                   if( valscurrentrow[c] * intscalarrightrow > 0 )
                   {
-                    findClosestLb(scip, lpdata, colscurrentrow[c], &bestbndsol, &bestbndtype, &bestzvbnd, &bestbvbnd, &bestdvbnd );
-                    assert(bestbndtype > -2 && lpdata->bestlbidxofcol[collppos] == bestbndtype);
+                     findClosestLb(scip, lpdata, colscurrentrow[c], &bestbndsol, &bestbndtype, &bestzvbnd, &bestbvbnd, &bestdvbnd );
+                     assert(bestbndtype > -2 && lpdata->bestlbidxofcol[collppos] == bestbndtype);
                   }
                   else
                   {                  
@@ -2257,7 +2257,7 @@ SCIP_RETCODE getRelevantRows(
                      else
                         rhs -= intscalarrightrow * REALABS(valscurrentrow[c]) * bestdvbnd;
                      rhsslack += intscalarrightrow * REALABS(valscurrentrow[c])
-                       * REALABS(SCIPcolGetPrimsol(colscurrentrow[c]) - bestbndsol);
+                        * REALABS(SCIPcolGetPrimsol(colscurrentrow[c]) - bestbndsol);
                      assert(SCIPisGE(scip, rhsslack, 0.0));
                      rhsisinfinity = rhsisinfinity || SCIPisInfinity(scip, rhs);                     
                   }  
@@ -2284,11 +2284,11 @@ SCIP_RETCODE getRelevantRows(
                   {
                      /**@todo check whether REALABS is really correct */
                      if( bestbndtype == -1 )
-                       lhs -= intscalarleftrow * REALABS(valscurrentrow[c]) * bestbndsol;
+                        lhs -= intscalarleftrow * REALABS(valscurrentrow[c]) * bestbndsol;
                      else
-                       lhs -= intscalarleftrow * REALABS(valscurrentrow[c]) * bestdvbnd;
+                        lhs -= intscalarleftrow * REALABS(valscurrentrow[c]) * bestdvbnd;
                      lhsslack += intscalarleftrow * REALABS(valscurrentrow[c])
-                       * REALABS(SCIPcolGetPrimsol(colscurrentrow[c]) - bestbndsol);
+                        * REALABS(SCIPcolGetPrimsol(colscurrentrow[c]) - bestbndsol);
                      assert(SCIPisGE(scip, lhsslack, 0.0));
                      lhsisinfinity = lhsisinfinity || SCIPisInfinity(scip, lhs);
                   }  
@@ -2297,20 +2297,20 @@ SCIP_RETCODE getRelevantRows(
                /* if both lhs and rhs became infinity, then the (relaxed) row is not relevant */
                if( lhsisinfinity && rhsisinfinity )
                {
-                 rowisrelevant = FALSE;
-                 break;
+                  rowisrelevant = FALSE;
+                  break;
                }
 
                rowisrelevant = TRUE; 
             }
 
-            /* check if row contains at least one relevant column (because k == 0 by initialisation) */
+            /* check if row contains at least one relevant column (because k == 0 by initialization) */
             if( lpdata->subproblemsindexofcol[collppos] == k )
                rowisrelevant = TRUE;
 
             /* check if row contains no relevant columns but an odd lhs or rhs value */
             if( c == nnonzcurrentrow - 1 && (!lhsiseven || !rhsiseven) )
-              rowisrelevant = TRUE;
+               rowisrelevant = TRUE;
 
          } 
          assert(SCIPisGE(scip, lhsslack, 0.0));
@@ -2368,7 +2368,7 @@ SCIP_RETCODE getRelevantRows(
 
             /* increase counter only if at least one half row had a sufficiently small slack */
             if( lpdata->rrowsindexofleftrow[r] > -1 || lpdata->rrowsindexofrightrow[r] > -1 )            
-              problem->nrrows++;
+               problem->nrrows++;
          }
          else /* case: !rowisrelevant */
          {
@@ -2420,11 +2420,11 @@ SCIP_Bool hasMatrixMax2EntriesPerRow(
       for( c = 0; c < mod2data->ncolsind ; ++c )
       {
          if( BITARRAYBITISSET(mod2data->rows[mod2data->rowsind[r]],mod2data->colsind[c]) )
-	 {
+         {
             nentries++;
-	    if( nentries > 2 )
-	       return FALSE;
-	 }
+            if( nentries > 2 )
+               return FALSE;
+         }
       }
    }
   
@@ -2458,11 +2458,11 @@ SCIP_Bool hasMatrixMax2EntriesPerColumn(
       for( r = 0; r < mod2data->nrowsind ; ++r )
       {
          if( BITARRAYBITISSET(mod2data->rows[mod2data->rowsind[r]],mod2data->colsind[c]) )
-	 {
+         {
             nentries++;
-	    if( nentries > 2 )
-	       return FALSE;
-	 }
+            if( nentries > 2 )
+               return FALSE;
+         }
       }
    }
   
@@ -2547,13 +2547,13 @@ SCIP_RETCODE storeMod2Data(
 
       if( lbslackisok && ubslackisok )
       {
-	 SCIP_Real lb;
-	 SCIP_Real ub;
+         SCIP_Real lb;
+         SCIP_Real ub;
          
          lb = SCIPcolGetLb(lpdata->cols[problem->rcols[c]]);
-	 ub = SCIPcolGetUb(lpdata->cols[problem->rcols[c]]);
+         ub = SCIPcolGetUb(lpdata->cols[problem->rcols[c]]);
 
-	 if( ISEVEN(scip, lb) != ISEVEN(scip, ub) )
+         if( ISEVEN(scip, lb) != ISEVEN(scip, ub) )
          {
             varboundstoadd[mod2data->nvarbounds] = (-1) * (c + 1);
             mod2data->nvarbounds++;
@@ -2631,14 +2631,14 @@ SCIP_RETCODE storeMod2Data(
 
       /* check if rrows corresponds to a lhs or rhs row in the LP */           
       if( lpdata->rrowsindexofleftrow[problem->rrows[i]] == i )
-        isrhsrow = FALSE;
+         isrhsrow = FALSE;
       else
       {
-        assert(lpdata->rrowsindexofrightrow[problem->rrows[i]] == i);
-        isrhsrow = TRUE;             
+         assert(lpdata->rrowsindexofrightrow[problem->rrows[i]] == i);
+         isrhsrow = TRUE;             
       }
       intscalar = isrhsrow ? lpdata->intscalarsrightrow[problem->rrows[i]]
-        : lpdata->intscalarsleftrow[problem->rrows[i]]; 
+         : lpdata->intscalarsleftrow[problem->rrows[i]]; 
     
       /* clear dense coeffs array */
       BMSclearMemoryArray(densecoeffscurrentrow, lpdata->ncols);
@@ -2677,7 +2677,7 @@ SCIP_RETCODE storeMod2Data(
                continue;
             assert(USEVARBOUNDS && bestbndtype > -1); /*lint !e774 !e506*/
 
-            /* variable bound is used: update coeffcient of non-continuous variable z that is used in substitution */
+            /* variable bound is used: update coefficient of non-continuous variable z that is used in substitution */
             densecoeffscurrentrow[SCIPcolGetLPPos(SCIPvarGetCol(bestzvbnd))] += (nonzvalscurrentrow[j] * intscalar * bestbvbnd);
          }         
          else
@@ -2731,10 +2731,10 @@ SCIP_RETCODE storeMod2Data(
       if( ignorerow )
       {
          if( tempcurrentrow != NULL )
-	 {
+         {
             SCIPfreeMemoryArray(scip, &tempcurrentrow);
-	    tempcurrentrow = NULL;
-	 }
+            tempcurrentrow = NULL;
+         }
          continue;
       }
     
@@ -3111,9 +3111,9 @@ SCIP_RETCODE getZerohalfWeightvectorFromSelectedRowsBitarray(
          assert(lpdata->rrowsindexofleftrow[lppos] == i || lpdata->rrowsindexofrightrow[lppos] == i);
          
          SCIPdebugMessage("  %1s0.5   (int scaling: %16.4f / %16.4f)  row[%d] %s\n",
-           lpdata->rrowsindexofleftrow[lppos] == i ? "-" : "+",
-           lpdata->intscalarsleftrow[lppos], lpdata->intscalarsrightrow[lppos],
-           lppos, SCIProwGetName(lpdata->rows[lppos]));          
+            lpdata->rrowsindexofleftrow[lppos] == i ? "-" : "+",
+            lpdata->intscalarsleftrow[lppos], lpdata->intscalarsrightrow[lppos],
+            lppos, SCIProwGetName(lpdata->rows[lppos]));          
       
          if( lpdata->rrowsindexofleftrow[lppos] == i )
             (*weights)[lppos] = lpdata->intscalarsleftrow[lppos] * (-0.5);
@@ -3388,7 +3388,7 @@ SCIP_RETCODE preprocessTrivialZerohalfCuts(
       for( r = firstrowsind ; r < mod2data->nrowsind && r2 < mod2data->nrowsind; ++r)
       {
          if( r < lastrowsind - firstrowsind )
-            while (removerow[r2] && r2 < mod2data->nrowsind)
+            while( removerow[r2] && r2 < mod2data->nrowsind )
                r2++;
          if( r < r2 && r2 < mod2data->nrowsind )
             mod2data->rowsind[r] = mod2data->rowsind[r2];
@@ -3472,16 +3472,16 @@ SCIP_RETCODE preprocessRows(
 
          if( removezerorows && !removerow[r1] )
             if( mod2data->rhs[mod2data->rowsind[firstrowsind + r1]] == FALSE )
-	    {
-	       assert(zerorow != NULL);
-	       if( BITARRAYSAREEQUAL(mod2data->rows[mod2data->rowsind[firstrowsind + r1]],
+            {
+               assert(zerorow != NULL);
+               if( BITARRAYSAREEQUAL(mod2data->rows[mod2data->rowsind[firstrowsind + r1]],
                      zerorow, mod2data->rowsbitarraysize) )
                {
                   markRowAsRemoved(mod2data, firstrowsind + r1, ZERO_ROW);
                   removerow[r1] = TRUE;
                   nzerorowsremoved++;
                }
-	    }
+            }
          if( removelargeslackrows && !removerow[r1] )
             if( SCIPisGT(scip, mod2data->slacks[mod2data->rowsind[firstrowsind + r1]], maxslack) )
             {
@@ -3523,7 +3523,7 @@ SCIP_RETCODE preprocessRows(
       for( r1 = firstrowsind ; r1 < mod2data->nrowsind && r2 < mod2data->nrowsind; ++r1)
       {
          if( r1 < lastrowsind - firstrowsind )
-            while (removerow[r2] && r2 < mod2data->nrowsind)
+            while( removerow[r2] && r2 < mod2data->nrowsind )
                r2++;
          if( r1 < r2 && r2 < mod2data->nrowsind )
             mod2data->rowsind[r1] = mod2data->rowsind[r2];
@@ -3707,7 +3707,7 @@ SCIP_RETCODE preprocessColumns(
          for( c = firstcolsind ; c < mod2data->ncolsind && j < mod2data->ncolsind; ++c)
          {
             if( c < nconsideredcols )
-               while (removecol[j] && j < mod2data->ncolsind)
+               while( removecol[j] && j < mod2data->ncolsind )
                   j++;
             if( c < j && j < mod2data->ncolsind )
                mod2data->colsind[c] = mod2data->colsind[j];
@@ -3757,8 +3757,8 @@ SCIP_RETCODE preprocessModGaussElim(
 
    /* determine number of slack zero rows */
    nslackzerorows = 0;
-   while (nslackzerorows < mod2data->nrowsind
-      && SCIPisZero(scip, mod2data->slacks[mod2data->rowsind[nslackzerorows]]))
+   while( nslackzerorows < mod2data->nrowsind
+      && SCIPisZero(scip, mod2data->slacks[mod2data->rowsind[nslackzerorows]]) )
       nslackzerorows++;
    /* check if at least one slack zero row exists */
    if( nslackzerorows == 0 )
@@ -3796,7 +3796,7 @@ SCIP_RETCODE preprocessModGaussElim(
       if( pivotrow == nslackzerorows )
          continue;
 
-      /* gaussian elimination step */
+      /* Gaussian elimination step */
       for( r = 0 ; r < nslackzerorows ; ++r)
       {
          if( r == pivotrow )
@@ -3811,7 +3811,7 @@ SCIP_RETCODE preprocessModGaussElim(
             mod2data->rhs[mod2data->rowsind[r]] =
                XOR(mod2data->rhs[mod2data->rowsind[pivotrow]],mod2data->rhs[mod2data->rowsind[r]]);
             /* all rows have slack zero: */
-/*            // mod2data->slacks[[mod2data->rowsind[r]] += mod2data->slacks[[mod2data->rowsind[pivotrow]];        */
+            /*            // mod2data->slacks[[mod2data->rowsind[r]] += mod2data->slacks[[mod2data->rowsind[pivotrow]];        */
          }      
       }
       
@@ -3875,14 +3875,14 @@ SCIP_RETCODE decomposeProblem(
    
 #if 0 /**@todo this is buggy in different ways.
        * 1. it might happen that we ignore a variable of the current row and of all other rows. 
-       * thus at the end, the variable will not occure in any subproblem. BUT, currently we do not update 
+       * thus at the end, the variable will not occur in any subproblem. BUT, currently we do not update 
        * lpdata->subproblemsindexofcol[lppos] and lpdata->rcolsindexofcol[lppos] accordingly. 
        * consequently, it might happen that lpdata->rcolsindexofcol[lppos] > problem->nrcols, with 
        * with problem being the subproblem still associated to our column. therefore, a corresponding assert 
        * assert(rcolsindex < problem->nrcols) in storeMod2Data() is violated 
        * [e.g., for IP/atamtuerk/mik/unbounded/mik.250-1-50.3.mps.gz].
        * we could recognize whether a variable is never added to a subproblem and update its data structures,
-       * but i'm not sure whether this will be correct, i.e., whether it is really ok to ignore some variables here.
+       * but I'm not sure whether this will be correct, i.e., whether it is really ok to ignore some variables here.
        * 2. in particular, it seems like that this method has not been adapted to that we can deal with 
        * continuous variables now. (see the below todo of Manuel)
        * 3. in case we end up with only one subproblem, we use the old problem. but in this case we do not update 
@@ -4005,7 +4005,7 @@ SCIP_RETCODE decomposeProblem(
    k = 0;
    unprocessedrowidx = 0;
 
-   while (nprocessedrows < problem->nrrows)
+   while( nprocessedrows < problem->nrrows )
    {
       ++k;
       nrrowsinsubprob = 0;
@@ -4024,7 +4024,7 @@ SCIP_RETCODE decomposeProblem(
       queuefirst = 0;
       queuelast = 1;
 
-      while (queuelast > queuefirst)
+      while( queuelast > queuefirst )
       {
          assert(queuelast <= problem->nrrows);
 
@@ -4441,7 +4441,7 @@ SCIP_RETCODE preprocessConsiderMinSlack(
             }
         
             j = 0;
-            while (j < mod2data->ncolsind && SCIPisGT(scip, mod2data->fracsol[mod2data->colsind[j]] + minslackoddrhsrows, sepadata->maxslack))
+            while( j < mod2data->ncolsind && SCIPisGT(scip, mod2data->fracsol[mod2data->colsind[j]] + minslackoddrhsrows, sepadata->maxslack) )
             {
                c = mod2data->colsind[j];
                minslackrowwithnonz = 1.0;
@@ -4477,7 +4477,7 @@ SCIP_RETCODE preprocessConsiderMinSlack(
          for( i = 0 ; i < mod2data->nrowsind && j < mod2data->nrowsind; ++i)
          {
             if( i < mod2data->nrowsind )
-               while (removerow[j] && j < mod2data->nrowsind)
+               while( removerow[j] && j < mod2data->nrowsind )
                   j++;
             if( i < j && j < mod2data->nrowsind )
                mod2data->rowsind[i] = mod2data->rowsind[j];
@@ -4559,7 +4559,7 @@ SCIP_RETCODE preprocessIdenticalColums(
       for( c2 = 0 ; c2 < mod2data->ncolsind && c1 < mod2data->ncolsind; ++c2)
       {
          if( c2 < mod2data->ncolsind )
-            while (removecol[c1] && c1 < mod2data->ncolsind)
+            while( removecol[c1] && c1 < mod2data->ncolsind )
                c1++;
          if( c2 < c1 && c1 < mod2data->ncolsind )
             mod2data->colsind[c2] = mod2data->colsind[c1];
@@ -4944,7 +4944,7 @@ SCIP_RETCODE createSubscip(
    /* create and initialize framework */
 
    SCIP_CALL( SCIPcreate(&(auxipdata->subscip)) ); 
-success = FALSE;
+   success = FALSE;
 #ifndef NDEBUG
    SCIP_CALL( SCIPcopyPlugins(scip, auxipdata->subscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
          TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, &success) );
@@ -5699,7 +5699,7 @@ SCIP_RETCODE separateByEnumerationHeuristics(
    if( SCIPisLE(scip, minslackoddrhsrows, sepadata->maxslack) )
       for( ncombinedrows = 1 ; ncombinedrows <= maxncombinedrows ; ++ncombinedrows )
       {
-         switch ( ncombinedrows )
+         switch( ncombinedrows )
          {
          case 1:
             /* check all rows r1 with rhs(r1) odd */
@@ -5966,7 +5966,7 @@ SCIP_RETCODE addEdgeToAuxGraph(
 
 
 
-/** Dijkstra's shortes path algorithm. Calculates the shortest path between
+/** Dijkstra's shortest path algorithm. Calculates the shortest path between
     sourcenode and targetnode. The calculation is aborted if the shortest path
     cannot be shorter than maxdistance */ 
 static
@@ -6025,7 +6025,7 @@ SCIP_RETCODE dijkstra(
    assert(nunprocessednodes > 0);
 
    /* for all nodes */
-   while (nunprocessednodes > 0)
+   while( nunprocessednodes > 0 )
    {
       /* get unprocessed node with minimum distance from sourcenode */
       u = 0;
@@ -6198,9 +6198,9 @@ SCIP_RETCODE separateByAuxGraph(
           
                /* free temporary memory */
                assert( weights != NULL );
-	       SCIPfreeMemoryArray(scip, &weights);
-	       weights = NULL;
-	       
+               SCIPfreeMemoryArray(scip, &weights);
+               weights = NULL;
+               
             }
          continue;
       }
@@ -6253,7 +6253,7 @@ SCIP_RETCODE separateByAuxGraph(
          nrrowsincut = 0;
          nrowsincut = 0;
          node = auxgraph->nodecopies[n];
-         while (node->previous != NULL)
+         while( node->previous != NULL )
          {
             for( i = 0 ; i < node->nneighbors ; ++i)
                if( node->neighbors[i] == node->previous )
@@ -6289,14 +6289,14 @@ SCIP_RETCODE separateByAuxGraph(
 
          /* free temporary memory */
          assert( weights != NULL );
-	 SCIPfreeMemoryArray(scip, &weights);
-	 weights = NULL;
-	 
+         SCIPfreeMemoryArray(scip, &weights);
+         weights = NULL;
+         
          if( rrowsincut != NULL )
-	 {
+         {
             SCIPfreeBufferArray(scip, &rrowsincut);
-	    rrowsincut = NULL;
-	 }
+            rrowsincut = NULL;
+         }
       }
    }
   
@@ -6366,7 +6366,7 @@ SCIP_RETCODE separateByGaussHeuristics(
 
    identsubmatrixsize = 0;
     
-   /* apply gaussian elimination mod 2 */
+   /* apply Gaussian elimination mod 2 */
 
    /* choose pivot col */
    for( pivotcol = 0; pivotcol < mod2data->ncolsind; ++pivotcol )
@@ -6391,7 +6391,7 @@ SCIP_RETCODE separateByGaussHeuristics(
       if( pivotrow == mod2data->nrowsind )
          continue;
 
-      /* gaussian elimination step */
+      /* Gaussian elimination step */
       for( r = 0 ; r < mod2data->nrowsind
               && SCIPisLE(scip, mod2data->slacks[mod2data->rowsind[r]], sepadata->maxslack) ; ++r) 
       {
@@ -6589,7 +6589,7 @@ SCIP_RETCODE process(
          strncpy(sepaname,"auxiliary ip",SCIP_MAXSTRLEN);
          if( *nzerohalfcuts == ncutsfoundbefore )
          {
-            /* no violated cut has been found. hence a proof of non-existance is given */
+            /* no violated cut has been found. hence a proof of non-existence is given */
             stop = TRUE;
          }        
          break;
@@ -6606,7 +6606,7 @@ SCIP_RETCODE process(
       case GAUSSHEUR:
          SCIP_CALL(separateByGaussHeuristics(scip, sepadata, lpdata, mod2data, normtype, maxsepacuts, maxcuts,
                nsepacuts, nzerohalfcuts, zerohalfcuts, varsolvals, result));
-         strncpy(sepaname,"gauss heur",SCIP_MAXSTRLEN);
+         strncpy(sepaname,"Gauss heur",SCIP_MAXSTRLEN);
          break;
       case MAX2ODDENTRIESPERROW:
          ncutsfoundbefore = *nzerohalfcuts;
@@ -6617,7 +6617,7 @@ SCIP_RETCODE process(
          {
             if( *nzerohalfcuts == ncutsfoundbefore )
             {
-               /* no violated cut has been found. hence a proof of non-existance is given */
+               /* no violated cut has been found. hence a proof of non-existence is given */
                stop = TRUE;
             }
          }
@@ -6713,9 +6713,9 @@ void printZerohalfCutsStatistics(
                      (cut->separatedby == HEURISTICSGAUSS ? "HG" :
                         (cut->separatedby == AUXGRAPH ? "2R" :
                            "??"
-                         )))))),
+                           )))))),
          zerohalfcutsprios != NULL ? zerohalfcutsprios[i] : 0.0
-                                );      
+         );      
    }
 }
 #endif
@@ -6919,7 +6919,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
                sepadata->origrows[i+1] = temp;                                         
                issorted = FALSE;                                             
             }                                                               
-      } while (!issorted);    
+      } while( !issorted );    
    }
 
    /* get the maximal number of cuts allowed in a separation round */
@@ -7033,7 +7033,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
       sepadata->maxslack = 1.0 - 2.0 * sepadata->minviolation; /* ignore previous changes */
 
       /* if the subproblem consists of a single row a^Tx <= b such that a = 0 and b mod 2 = 1,
-       * then a violated zerohalf cut can be generated by multipliying this row with 0.5 and rounding down. 
+       * then a violated zerohalf cut can be generated by multiplying this row with 0.5 and rounding down. 
        */
       if( lpdata->subproblems[subproblemindex]->nrrows == 1 && lpdata->subproblems[subproblemindex]->nrcols == 0 )
       {        
