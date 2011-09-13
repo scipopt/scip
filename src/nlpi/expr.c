@@ -1245,8 +1245,9 @@ SCIP_RETCODE polynomialdataExpandMonomialFactor(
       for( i = 0; i < factormonomial->nfactors; ++i )
       {
          childidx = childmap[factormonomial->childidxs[i]];
-         /* can do this because monomial->exponents[factorpos] is assumed to be integer
-          * if factormonomial->exponents[i] is fractional, then we should assume that it's argument is positive */
+         /* can do this because monomial->exponents[factorpos] is assumed to be integer or factormonomial has positive coefficient and only one factor
+          * thus, if factormonomial->exponents[i] is fractional, then we can assume that it's argument is positive
+          */
          exponent = factormonomial->exponents[i] * monomial->exponents[factorpos];
          SCIP_CALL( SCIPexprAddMonomialFactors(blkmem, monomial, 1, &childidx, &exponent) );
       }
@@ -1266,18 +1267,66 @@ SCIP_RETCODE polynomialdataExpandMonomialFactor(
       return SCIP_OKAY;
    }
 
+   /* if exponent is negative or fractional and the polynomial is not just a monomial, then we cannot do expansion */
    if( !EPSISINT(monomial->exponents[factorpos], 0.0) || monomial->exponents[factorpos] < 0.0 )
    {
-      /* if exponent is negative or fractional and the polynomial is not just a monomial, then we cannot do expansion */
       *success = FALSE;
       return SCIP_OKAY;
    }
 
+   /* if exponent is too large, skip expansion */
    if( monomial->exponents[factorpos] > maxexpansionexponent )
    {
-      /* if exponent is too large, skip expansion */
       *success = FALSE;
       return SCIP_OKAY;
+   }
+
+   /* check whether maximal degree of expansion would exceed maxexpansionexponent
+    * that is, assume monomial is f1^a1 f2^a2 ... and we want to expand f1 = (g11^beta11 g12^beta12... + g21^beta21 g22^beta22 ... + ...)
+    * then we do this only if all ai and all beta are > 0.0 and a1 max(beta11+beta12+..., beta21+beta22+..., ...) + a2 + ... < maxexpansionexponent
+    * exception (there need to one) is if monomial is just f1
+    */
+   if( maxexpansionexponent < INT_MAX && (monomial->nfactors > 1 || monomial->exponents[factorpos] != 1.0) )
+   {
+      SCIP_Real restdegree;
+      SCIP_Real degree;
+      int j;
+
+      restdegree = -monomial->exponents[factorpos];
+      for( i = 0; i < monomial->nfactors; ++i )
+      {
+         if( monomial->exponents[i] < 0.0 )
+         {
+            /* ai < 0.0 */
+            SCIPdebugMessage("skip expansion because %d'th factor in monomial is negative\n", i);
+            *success = FALSE;
+            return SCIP_OKAY;
+         }
+         restdegree += monomial->exponents[i];
+      }
+
+      for( i = 0; i < factorpolynomial->nmonomials; ++i )
+      {
+         degree = 0.0;
+         for( j = 0; j < factorpolynomial->monomials[i]->nfactors; ++j )
+         {
+            if( factorpolynomial->monomials[i]->exponents[j] < 0.0 )
+            {
+               /* beta_ij < 0.0 */
+               SCIPdebugMessage("skip expansion because %d'th factor in %d'th monomial of factorpolynomial is negative\n", i, j);
+               *success = FALSE;
+               return SCIP_OKAY;
+            }
+            degree += factorpolynomial->monomials[i]->exponents[j];
+         }
+         if( degree * monomial->exponents[factorpos] + restdegree > maxexpansionexponent )
+         {
+            /* (beta_i1+beta_i2+...)*monomial->exponents[factorpos] + rest > maxexpansion */
+            SCIPdebugMessage("skip expansion because degree of %d'th monomial would yield degree %g > max = %d in expansion\n", i, degree * monomial->exponents[factorpos] + restdegree, maxexpansionexponent);
+            *success = FALSE;
+            return SCIP_OKAY;
+         }
+      }
    }
 
    /* create a copy of factor */
@@ -4381,16 +4430,97 @@ SCIP_RETCODE exprsimplifyFlattenPolynomials(
          SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL, NULL) );
          SCIPdebugPrintf("\n");
 
-         /* resolve children that are constants or polynomials itself */
          childmap = NULL;
          childmapsize = 0;
+
+         /* resolve children that are constants
+          * we do this first, because it reduces the degree and number of factors in the monomials,
+          *   thereby allowing some expansions of polynomials that may not be possible otherwise, e.g., turning c0*c1 with c0=quadratic and c1=constant into a single monomial
+          */
          for( i = 0; i < expr->nchildren; ++i )
          {
             if( expr->children[i] == NULL )
                continue;
 
-            if( SCIPexprGetOperator(expr->children[i]) != SCIP_EXPR_POLYNOMIAL &&
-                SCIPexprGetOperator(expr->children[i]) != SCIP_EXPR_CONST )
+            if( SCIPexprGetOperator(expr->children[i]) != SCIP_EXPR_CONST )
+               continue;
+
+            removechild = TRUE; /* we intend to delete children[i] */
+
+            if( childmapsize < expr->children[i]->nchildren )
+            {
+               int newsize;
+
+               newsize = calcGrowSize(expr->children[i]->nchildren);
+               SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &childmap, childmapsize, newsize) );
+               childmapsize = newsize;
+            }
+
+            /* put constant of child i into every monomial where child i is used */
+            for( j = 0; j < polynomialdata->nmonomials; ++j )
+            {
+               int factorpos;
+               SCIP_Bool success;
+
+               monomial = polynomialdata->monomials[j];
+               /* if monomial is not sorted, then polynomial should not be sorted either, or have only one monomial */
+               assert(monomial->sorted || !polynomialdata->sorted || polynomialdata->nmonomials <= 1);
+
+               if( SCIPexprFindMonomialFactor(monomial, i, &factorpos) )
+               {
+                  assert(factorpos >= 0);
+                  assert(factorpos < monomial->nfactors);
+                  /* assert that factors have been merged */
+                  assert(factorpos == 0 || monomial->childidxs[factorpos-1] != i);
+                  assert(factorpos == monomial->nfactors-1 || monomial->childidxs[factorpos+1] != i);
+
+                  /* SCIPdebugMessage("attempt expanding child %d at monomial %d factor %d\n", i, j, factorpos);
+                  SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL) ); SCIPdebugPrintf("\n");
+                  SCIPdebug( SCIPexprPrint(expr->children[i], NULL, NULL, NULL) ); SCIPdebugPrintf("\n"); */
+
+                  if( !EPSISINT(monomial->exponents[factorpos], 0.0) && SCIPexprGetOpReal(expr->children[i]) < 0.0 )
+                  {
+                     /* if constant is negative and our exponent is not integer, then cannot do expansion */
+                     SCIPwarningMessage("got negative constant %g to the power of a noninteger exponent %g\n", SCIPexprGetOpReal(expr->children[i]), monomial->exponents[factorpos]);
+                     success = FALSE;
+                  }
+                  else
+                  {
+                     monomial->coef *= pow(SCIPexprGetOpReal(expr->children[i]), monomial->exponents[factorpos]);
+
+                     /* move last factor to position factorpos */
+                     if( factorpos < monomial->nfactors-1 )
+                     {
+                        monomial->exponents[factorpos] = monomial->exponents[monomial->nfactors-1];
+                        monomial->childidxs[factorpos] = monomial->childidxs[monomial->nfactors-1];
+                     }
+                     --monomial->nfactors;
+                     monomial->sorted = FALSE;
+                     polynomialdata->sorted = FALSE;
+
+                     success = TRUE;
+                  }
+
+                  if( !success )
+                     removechild = FALSE;
+               }
+            }
+
+            /* forget about child i, if it is not used anymore */
+            if( removechild )
+               SCIPexprFreeDeep(blkmem, &expr->children[i]);
+
+            /* simplify current polynomial again */
+            SCIPexprMergeMonomials(blkmem, expr, eps, TRUE);
+         }
+
+         /* try to resolve children that are polynomials itself */
+         for( i = 0; i < expr->nchildren; ++i )
+         {
+            if( expr->children[i] == NULL )
+               continue;
+
+            if( SCIPexprGetOperator(expr->children[i]) != SCIP_EXPR_POLYNOMIAL )
                continue;
 
             removechild = TRUE; /* we intend to delete children[i] */
@@ -4430,35 +4560,7 @@ SCIP_RETCODE exprsimplifyFlattenPolynomials(
                   SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL) ); SCIPdebugPrintf("\n");
                   SCIPdebug( SCIPexprPrint(expr->children[i], NULL, NULL, NULL) ); SCIPdebugPrintf("\n"); */
 
-                  if( expr->children[i]->op == SCIP_EXPR_CONST )
-                  {
-                     if( !EPSISINT(monomial->exponents[factorpos], 0.0) && SCIPexprGetOpReal(expr->children[i]) < 0.0 )
-                     {
-                        /* if constant is negative and our exponent is not integer, then cannot do expansion */
-                        SCIPwarningMessage("got negative constant %g to the power of a noninteger exponent %g\n", SCIPexprGetOpReal(expr->children[i]), monomial->exponents[factorpos]);
-                        success = FALSE;
-                     }
-                     else
-                     {
-                        monomial->coef *= pow(SCIPexprGetOpReal(expr->children[i]), monomial->exponents[factorpos]);
-
-                        /* move last factor to position factorpos */
-                        if( factorpos < monomial->nfactors-1 )
-                        {
-                           monomial->exponents[factorpos] = monomial->exponents[monomial->nfactors-1];
-                           monomial->childidxs[factorpos] = monomial->childidxs[monomial->nfactors-1];
-                        }
-                        --monomial->nfactors;
-                        monomial->sorted = FALSE;
-                        polynomialdata->sorted = FALSE;
-
-                        success = TRUE;
-                     }
-                  }
-                  else
-                  {
-                     SCIP_CALL( polynomialdataExpandMonomialFactor(blkmem, polynomialdata, j, factorpos, (SCIP_EXPRDATA_POLYNOMIAL*)expr->children[i]->data.data, childmap, maxexpansionexponent, &success) );
-                  }
+                  SCIP_CALL( polynomialdataExpandMonomialFactor(blkmem, polynomialdata, j, factorpos, (SCIP_EXPRDATA_POLYNOMIAL*)expr->children[i]->data.data, childmap, maxexpansionexponent, &success) );
 
                   if( !success )
                   {
@@ -9679,9 +9781,92 @@ SCIP_RETCODE exprgraphNodeSimplify(
    SCIPdebug( exprgraphPrintNodeExpression(node, NULL, NULL, FALSE) );
    SCIPdebugPrintf("\n");
 
-   /* resolve children that are constants or polynomials itself */
    childmap = NULL;
    childmapsize = 0;
+
+   /* resolve children that are constants
+    * we do this first, because it reduces the degree and number of factors in the monomials,
+    *   thereby allowing some expansions of polynomials that may not be possible otherwise, e.g., turning c0*c1 with c0=quadratic and c1=constant into a single monomial
+    */
+   for( i = 0; i < node->nchildren; ++i )
+   {
+      if( node->children[i] == NULL )
+         continue;
+
+      /* convert children to polynomial, if not constant or polynomial
+       * if child was simplified in this round, it may have already been converted, and then nothing happens
+       * but if child was already simplified, then it was not converted, and thus we try it here
+       */
+      if( node->children[i]->op != SCIP_EXPR_CONST )
+         continue;
+
+      SCIPdebugMessage("expand child %d in expression node ", i);
+      SCIPdebug( exprgraphPrintNodeExpression(node, NULL, NULL, FALSE) );
+      SCIPdebugPrintf("\n\tchild = ");
+      SCIPdebug( exprgraphPrintNodeExpression(node->children[i], NULL, NULL, FALSE) );
+      SCIPdebugPrintf("\n");
+
+      removechild = TRUE; /* we intend to release children[i] */
+
+      ensureBlockMemoryArraySize(blkmem, &childmap, &childmapsize, node->children[i]->nchildren);
+
+      /* put constant of child i into every monomial where child i is used */
+      for( j = 0; j < polynomialdata->nmonomials; ++j )
+      {
+         int factorpos;
+
+         monomial = polynomialdata->monomials[j];
+         /* if monomial is not sorted, then polynomial should not be sorted either, or have only one monomial */
+         assert(monomial->sorted || !polynomialdata->sorted || polynomialdata->nmonomials <= 1);
+
+         if( SCIPexprFindMonomialFactor(monomial, i, &factorpos) )
+         {
+            assert(factorpos >= 0);
+            assert(factorpos < monomial->nfactors);
+            /* assert that factors have been merged */
+            assert(factorpos == 0 || monomial->childidxs[factorpos-1] != i);
+            assert(factorpos == monomial->nfactors-1 || monomial->childidxs[factorpos+1] != i);
+
+            SCIPdebugMessage("attempt expanding child %d at monomial %d factor %d\n", i, j, factorpos);
+
+            if( !EPSISINT(monomial->exponents[factorpos], 0.0) && node->children[i]->data.dbl < 0.0 )
+            {
+               /* if constant is negative and our exponent is not integer, then cannot do expansion */
+               SCIPwarningMessage("got negative constant %g to the power of a noninteger exponent %g\n", node->children[i]->data.dbl, monomial->exponents[factorpos]);
+               removechild = FALSE;
+            }
+            else
+            {
+               monomial->coef *= pow(node->children[i]->data.dbl, monomial->exponents[factorpos]);
+
+               /* move last factor to position factorpos */
+               if( factorpos < monomial->nfactors-1 )
+               {
+                  monomial->exponents[factorpos] = monomial->exponents[monomial->nfactors-1];
+                  monomial->childidxs[factorpos] = monomial->childidxs[monomial->nfactors-1];
+               }
+               --monomial->nfactors;
+               monomial->sorted = FALSE;
+               polynomialdata->sorted = FALSE;
+
+               *havechange = TRUE;
+            }
+         }
+      }
+
+      /* forget about child i, if it is not used anymore */
+      if( removechild )
+      {
+         /* remove node from list of parents of child i */
+         SCIP_CALL( exprgraphNodeRemoveParent(exprgraph, &node->children[i], node) );
+         node->children[i] = NULL;
+      }
+
+      /* simplify current polynomial again */
+      polynomialdataMergeMonomials(blkmem, polynomialdata, eps, TRUE);
+   }
+
+   /* resolve children that are polynomials itself */
    for( i = 0; i < node->nchildren; ++i )
    {
       if( node->children[i] == NULL )
@@ -9700,8 +9885,7 @@ SCIP_RETCODE exprgraphNodeSimplify(
        */
       SCIP_CALL( exprConvertToPolynomial(blkmem, &node->children[i]->op, &node->children[i]->data, node->children[i]->nchildren) );
 
-      if( node->children[i]->op != SCIP_EXPR_POLYNOMIAL &&
-          node->children[i]->op != SCIP_EXPR_CONST )
+      if( node->children[i]->op != SCIP_EXPR_POLYNOMIAL )
          continue;
 
       SCIPdebugMessage("expand child %d in expression node ", i);
@@ -9728,56 +9912,29 @@ SCIP_RETCODE exprgraphNodeSimplify(
          /* if monomial is not sorted, then polynomial should not be sorted either, or have only one monomial */
          assert(monomial->sorted || !polynomialdata->sorted || polynomialdata->nmonomials <= 1);
 
-         if( SCIPexprFindMonomialFactor(monomial, i, &factorpos) )
+         if( !SCIPexprFindMonomialFactor(monomial, i, &factorpos) )
          {
-            assert(factorpos >= 0);
-            assert(factorpos < monomial->nfactors);
-            /* assert that factors have been merged */
-            assert(factorpos == 0 || monomial->childidxs[factorpos-1] != i);
-            assert(factorpos == monomial->nfactors-1 || monomial->childidxs[factorpos+1] != i);
+            ++j;
+            continue;
+         }
 
-            SCIPdebugMessage("attempt expanding child %d at monomial %d factor %d\n", i, j, factorpos);
+         assert(factorpos >= 0);
+         assert(factorpos < monomial->nfactors);
+         /* assert that factors have been merged */
+         assert(factorpos == 0 || monomial->childidxs[factorpos-1] != i);
+         assert(factorpos == monomial->nfactors-1 || monomial->childidxs[factorpos+1] != i);
 
-            if( node->children[i]->op == SCIP_EXPR_CONST )
-            {
-               if( !EPSISINT(monomial->exponents[factorpos], 0.0) && node->children[i]->data.dbl < 0.0 )
-               {
-                  /* if constant is negative and our exponent is not integer, then cannot do expansion */
-                  SCIPwarningMessage("got negative constant %g to the power of a noninteger exponent %g\n", node->children[i]->data.dbl, monomial->exponents[factorpos]);
-                  success = FALSE;
-               }
-               else
-               {
-                  monomial->coef *= pow(node->children[i]->data.dbl, monomial->exponents[factorpos]);
+         SCIPdebugMessage("attempt expanding child %d at monomial %d factor %d\n", i, j, factorpos);
 
-                  /* move last factor to position factorpos */
-                  if( factorpos < monomial->nfactors-1 )
-                  {
-                     monomial->exponents[factorpos] = monomial->exponents[monomial->nfactors-1];
-                     monomial->childidxs[factorpos] = monomial->childidxs[monomial->nfactors-1];
-                  }
-                  --monomial->nfactors;
-                  monomial->sorted = FALSE;
-                  polynomialdata->sorted = FALSE;
+         SCIP_CALL( polynomialdataExpandMonomialFactor(blkmem, polynomialdata, j, factorpos, (SCIP_EXPRDATA_POLYNOMIAL*)node->children[i]->data.data, childmap, maxexpansionexponent, &success) );
 
-                  success = TRUE;
-               }
-            }
-            else
-            {
-               SCIP_CALL( polynomialdataExpandMonomialFactor(blkmem, polynomialdata, j, factorpos, (SCIP_EXPRDATA_POLYNOMIAL*)node->children[i]->data.data, childmap, maxexpansionexponent, &success) );
-            }
-
-            if( !success )
-            {
-               removechild = FALSE;
-               ++j;
-            }
-            else
-               *havechange = TRUE;
+         if( !success )
+         {
+            removechild = FALSE;
+            ++j;
          }
          else
-            ++j;
+            *havechange = TRUE;
 
          /* expansion may remove monomials[j], move a monomial from the end to position j, or add new monomials to the end of polynomialdata
           * we thus repeat with index j, if a factor was successfully expanded
@@ -10806,7 +10963,7 @@ SCIP_RETCODE exprgraphAddExpr(
          *exprnodeisnew = FALSE;
 
          SCIPdebugMessage("reused node %p (%d,%d) for expr ", (void*)*exprnode, (*exprnode)->depth, (*exprnode)->pos);
-         SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL) );
+         SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL, NULL) );
          SCIPdebugPrintf("\n");
 
          BMSfreeBlockMemoryArray(exprgraph->blkmem, &childnodes, expr->nchildren);
@@ -10833,7 +10990,7 @@ SCIP_RETCODE exprgraphAddExpr(
    BMSfreeBlockMemoryArray(exprgraph->blkmem, &childnodes, expr->nchildren);
 
    SCIPdebugMessage("created new node %p (%d,%d) for expr ", (void*)*exprnode, (*exprnode)->depth, (*exprnode)->pos);
-   SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL) );
+   SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL, NULL) );
    SCIPdebugPrintf("\n");
 
    return SCIP_OKAY;

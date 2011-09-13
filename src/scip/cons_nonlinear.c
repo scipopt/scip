@@ -7895,7 +7895,7 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxexpansionexponent",
          "maximal exponent where still expanding non-monomial polynomials in expression simplification",
-         &conshdlrdata->maxexpansionexponent, TRUE, 10, 1, INT_MAX, NULL, NULL) );
+         &conshdlrdata->maxexpansionexponent, TRUE, 2, 1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_boundchange", "signals a bound change to a nonlinear constraint",
          NULL, NULL, NULL, NULL, NULL, NULL, NULL, processLinearVarEvent, NULL) );
