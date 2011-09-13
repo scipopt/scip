@@ -1111,22 +1111,37 @@ SCIP_RETCODE tightenBounds(
       /* check if variable can be fixed */
       if( SCIPisEQ(scip, bounds.inf, bounds.sup) )
       {
-         SCIP_Real fixval;
-
-         fixval = SCIPselectSimpleValue(bounds.inf - SCIPepsilon(scip), bounds.sup + SCIPepsilon(scip), MAXDNOM);
-         SCIP_CALL( SCIPfixVar(scip, var, fixval, &infeas, &tightened) );
-
-         if( infeas )
+         if( !SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
          {
-            SCIPdebugMessage("found %s infeasible due to fixing variable %s in constraint %s\n", SCIPconsGetName(cons), SCIPvarGetName(var), SCIPconsGetName(cons));
-            *result = SCIP_CUTOFF;
-            return SCIP_OKAY;
+            /* if variable not fixed yet, then do so now */
+            SCIP_Real fixval;
+
+            fixval = SCIPselectSimpleValue(bounds.inf - SCIPepsilon(scip), bounds.sup + SCIPepsilon(scip), MAXDNOM);
+            SCIP_CALL( SCIPfixVar(scip, var, fixval, &infeas, &tightened) );
+
+            if( infeas )
+            {
+               SCIPdebugMessage("found <%s> infeasible due to fixing variable <%s>\n", SCIPconsGetName(cons), SCIPvarGetName(var));
+               *result = SCIP_CUTOFF;
+               return SCIP_OKAY;
+            }
+            if( tightened )
+            {
+               SCIPdebugMessage("fixed variable <%s> in constraint <%s> to %g\n", SCIPvarGetName(var), SCIPconsGetName(cons), SCIPvarGetLbLocal(var));
+               ++*nfixedvars;
+               *result = SCIP_REDUCEDDOM;
+            }
          }
-         if( tightened )
+         else
          {
-            SCIPdebugMessage("fixed variable %s in constraint %s to %g\n", SCIPvarGetName(var), SCIPconsGetName(cons), SCIPvarGetLbLocal(var));
-            ++*nfixedvars;
-            *result = SCIP_REDUCEDDOM;
+            /* only check if new fixing value is consistent with variable bounds, otherwise cutoff */
+            if( SCIPisLT(scip, bounds.sup, SCIPvarGetUbLocal(var)) || SCIPisGT(scip, bounds.inf, SCIPvarGetLbLocal(var)) )
+            {
+               SCIPdebugMessage("found <%s> infeasible due to fixing fixed variable <%s>[%.20g,%.20g] to [%.20g,%.20g]\n",
+                  SCIPconsGetName(cons), SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), bounds.inf, bounds.sup);
+               *result = SCIP_CUTOFF;
+               return SCIP_OKAY;
+            }
          }
 
          return SCIP_OKAY;
