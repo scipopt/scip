@@ -11416,6 +11416,9 @@ SCIP_RETCODE SCIPexprgraphNodeSplitOffLinear(
             lincoefs[0] = 1.0;
             linvars[1]  = exprgraph->vars[(*node)->children[1]->data.intval];
             lincoefs[1] = -1.0;
+
+            SCIP_CALL( SCIPexprgraphReleaseNode(exprgraph, node) );
+
             return SCIP_OKAY;
          }
          else if( ((*node)->children[0]->op == SCIP_EXPR_VARIDX || (*node)->children[1]->op == SCIP_EXPR_VARIDX) && linvarssize >= 1 )
