@@ -833,7 +833,7 @@ END {
             line = sprintf("%s           -        -", line);
          else
          {
-            if( printgap && status[s,pidx] == "timeout" && gap[s,pidx] != "--" )
+            if( printgap && status[s,pidx] == "timeout" && gap[s,pidx] != "--" && gap[s,pidx] != "Large" )
               line = sprintf("%s %s%10d %7.2f%%", line, feasmark, nodes[s,pidx], gap[s,pidx]);
             else
               line = sprintf("%s %s%10d %s%7.1f", line, feasmark, nodes[s,pidx], marker, time[s,pidx]);
