@@ -1990,8 +1990,7 @@ void SCIPintervalPowerScalar(
          else
             resultant->sup = SCIPintervalPowerScalarIntegerSup(-operand1.sup, (int)operand2);
       }
-      assert(resultant->inf <= resultant->sup);
-
+      assert(resultant->inf <= resultant->sup || resultant->inf >= infinity || resultant->sup <= -infinity);
    }
    else
    {  /* similar difficult case: x^n with x in [<0, >0], but n is integer */
@@ -2035,6 +2034,12 @@ void SCIPintervalPowerScalar(
          resultant->sup =  infinity;
       }
    }
+
+   /* if value for infinity is too small, relax intervals so they do not appear empty */
+   if( resultant->inf > infinity )
+      resultant->inf = infinity;
+   if( resultant->sup < -infinity )
+      resultant->sup = -infinity;
 }
 
 /** given an interval for the image of a power operation, computes an interval for the origin
@@ -3025,10 +3030,19 @@ void SCIPintervalQuadBivar(
          maxval = MAX(val, maxval);
       }
    }
-   /* If denom is zero, then the whole line (x, -bx/axy - (axy/2ay) x)
-    * defines an extreme point with value -ay bx^2 / axy^2.
-    * Since this line intersects with the border of the box, we can omit an extra check.
-    */
+   else if( EPSEQ(2.0 * ay_ * bx_, axy_ * by_, 1e-9) )
+   {
+      /* The whole line (x, -bx/axy - (axy/2ay) x) defines an extreme point with value -ay bx^2 / axy^2
+       * If x is unbounded, then there is an (x,y) with y in ybnds where the extreme value is assumed.
+       * If x is bounded on at least one side, then we can rely that the checks below for x at one of its bounds will check this extreme point.
+       */
+      if( xbnds.inf <= -infinity && xbnds.sup >= infinity )
+      {
+         val = -ay_ * bx_ * bx_ / (axy_ * axy_);
+         minval = MIN(val, minval);
+         maxval = MAX(val, maxval);
+      }
+   }
 
    /* check boundary of box xbnds x ybnds */
 

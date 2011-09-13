@@ -2630,6 +2630,10 @@ SCIP_DECL_EXPRINTEVAL( exprevalIntQuadratic )
       SCIPintervalQuadBivar(infinity, result, ax, ay, axy,
          lincoefs != NULL ? lincoefs[0] : 0.0, lincoefs != NULL ? lincoefs[1] : 0.0,
          argvals[0], argvals[1]);
+      SCIPdebugMessage("%g x^2 + %g y^2 + %g x y + %g x + %g y = [%g,%g] for x = [%g,%g], y = [%g,%g]\n",
+         ax, ay, axy, lincoefs != NULL ? lincoefs[0] : 0.0, lincoefs != NULL ? lincoefs[1] : 0.0,
+         result->inf, result->sup, argvals[0].inf, argvals[0].sup, argvals[1].inf, argvals[1].sup);
+
       SCIPintervalAddScalar(infinity, result, *result, quaddata->constant);
 
       return SCIP_OKAY;
