@@ -11496,17 +11496,17 @@ SCIP_RETCODE SCIPchgVarType(
       /* we adjust variable bounds to integers first, since otherwise a later bound tightening with a fractional old
        * bound may give an assert because SCIP expects non-continuous variables to have non-fractional bounds 
        */
-      if( !SCIPisFeasIntegral(scip, SCIPvarGetLbGlobal(var)) )
+      if( !SCIPisIntegral(scip, SCIPvarGetLbGlobal(var)) )
       {
-         SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, SCIPfeasCeil(scip, SCIPvarGetLbGlobal(var)), TRUE, infeasible, &tightened) );
+         SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, SCIPceil(scip, SCIPvarGetLbGlobal(var)), TRUE, infeasible, &tightened) );
          if( *infeasible )
             return SCIP_OKAY;
 
          assert(tightened);
       }
-      if( !SCIPisFeasIntegral(scip, SCIPvarGetUbGlobal(var)) )
+      if( !SCIPisIntegral(scip, SCIPvarGetUbGlobal(var)) )
       {
-         SCIP_CALL( SCIPtightenVarUbGlobal(scip, var, SCIPfeasFloor(scip, SCIPvarGetUbGlobal(var)), TRUE, infeasible, &tightened) );
+         SCIP_CALL( SCIPtightenVarUbGlobal(scip, var, SCIPfloor(scip, SCIPvarGetUbGlobal(var)), TRUE, infeasible, &tightened) );
          if( *infeasible )
             return SCIP_OKAY;
 
