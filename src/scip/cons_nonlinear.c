@@ -3763,13 +3763,13 @@ SCIP_RETCODE addLinearization(
                SCIP_Real xbnd;
 
                var = SCIPexprtreeGetVars(exprtree)[i];
-               if( consdata->curvatures[i] & SCIP_EXPRCURV_CONVEX )
+               if( consdata->curvatures[exprtreeidx] & SCIP_EXPRCURV_CONVEX )
                {
                   xbnd = grad[i] > 0.0 ? SCIPvarGetLbGlobal(var) : SCIPvarGetUbGlobal(var);
                }
                else
                {
-                  assert(consdata->curvatures[i] & SCIP_EXPRCURV_CONCAVE);
+                  assert(consdata->curvatures[exprtreeidx] & SCIP_EXPRCURV_CONCAVE);
                   xbnd = grad[i] > 0.0 ? SCIPvarGetUbGlobal(var) : SCIPvarGetLbGlobal(var);
                }
                if( !SCIPisInfinity(scip, REALABS(xbnd)) )
