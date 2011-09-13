@@ -5084,12 +5084,6 @@ SCIP_RETCODE generateCut(
       }
    }
 
-   if( SCIPisInfinity(scip, REALABS(constant)) )
-   {
-      SCIPdebugMessage("skip cut for constraint <%s> because constant %g too large\n", SCIPconsGetName(cons), constant);
-      success = FALSE;
-   }
-
 #ifdef SCIP_DEBUG
    if( success )
    {
@@ -5197,6 +5191,12 @@ SCIP_RETCODE generateCut(
          viol = consdata->lhs - (reflinpartval + refquadpartval);
       else
          viol = reflinpartval + refquadpartval - consdata->rhs;
+   }
+
+   if( SCIPisInfinity(scip, REALABS(constant)) )
+   {
+      SCIPdebugMessage("skip cut for constraint <%s> because constant %g too large\n", SCIPconsGetName(cons), constant);
+      success = FALSE;
    }
 
    /* check if reference point violates cut sufficiently
