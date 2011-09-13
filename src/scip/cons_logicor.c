@@ -2157,6 +2157,8 @@ SCIP_DECL_CONSINITPRE(consInitpreLogicor)
       }
    }
 
+   *result = SCIP_FEASIBLE;
+
    return SCIP_OKAY;
 }
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
@@ -2184,6 +2186,8 @@ SCIP_DECL_CONSEXITPRE(consExitpreLogicor)
                (SCIP_EVENTDATA*)conss[c], -1) );
       }
    }
+
+   *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }

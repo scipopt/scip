@@ -56,7 +56,10 @@
 
 #define LINCONSUPGD_PRIORITY    +100000 /**< priority of the constraint handler for upgrading of linear constraints */
 
+#if 0
 #define MAX_DYNPROG_CAPACITY      10000 /**< maximal capacity of knapsack to apply dynamic programming */
+#endif
+
 #define MAX_USECLIQUES_SIZE        1000 /**< maximal number of items in knapsack where clique information is used */
 #define MAX_ZEROITEMS_SIZE        10000 /**< maximal number of items to store in the zero list in preprocessing */
 
@@ -5290,7 +5293,7 @@ SCIP_RETCODE detectRedundantVars(
       SCIP_CONSHDLRDATA* conshdlrdata;
       SCIP_Bool* used;
       SCIP_Longint sumfront;
-      int maxactduetoclqfront;
+      SCIP_Longint maxactduetoclqfront;
       int* clqpart;
          
       conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
@@ -8012,6 +8015,8 @@ SCIP_DECL_CONSEXITPRE(consExitpreKnapsack)
    conshdlrdata->bools3size = 0;
    conshdlrdata->bools4size = 0;
 
+   *result = SCIP_FEASIBLE;
+
    return SCIP_OKAY;
 }
 
@@ -8738,7 +8743,7 @@ SCIP_DECL_CONSCOPY(consCopyKnapsack)
 /** constraint parsing method of constraint handler */
 static
 SCIP_DECL_CONSPARSE(consParseKnapsack)
-{
+{  /*lint --e{715}*/
    SCIP_VAR* var;
    SCIP_Longint weight;
    char varname[SCIP_MAXSTRLEN+2];
@@ -8768,7 +8773,9 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
       str += parselen;
 
       /* add '<' and '>' around variable name, so we can parse it via SCIPparseVarName */
-      namelen = strlen(varname+1);
+      namelen = (int)strlen(varname+1);
+      assert(namelen > 0);
+
       varname[0] = '<';
       varname[namelen+1] = '>';
       varname[namelen+2] = '\0';

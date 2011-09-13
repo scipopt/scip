@@ -125,10 +125,10 @@ echo "hard time limit: $HARDTIMELIMIT s" >>$OUTFILE
 
 # set pf4=0 to get no default upper bounds on integer variables
 # set domlim to infinity to not stop on function evaluation errors
-# do not use scratch files (solvelink=5) if possible, GAMS resets to solvelink=2 if not supported by solver
+## do not use scratch files (solvelink=5) if possible, GAMS resets to solvelink=2 if not supported by solver
 # set logoption=3 to get default output to stdout
 # listing file: append mode, print step summary, disable solution printing, disable rows and columns output, disable page control
-GAMSOPTS="pf4=0 domlim=9999999 solvelink=5"
+GAMSOPTS="pf4=0 domlim=9999999" # solvelink=5
 GAMSOPTS="$GAMSOPTS logoption=3 output=$LSTFILE appendout=1 stepsum=1 solprint=0 limcol=0 limrow=0 pc=2 pw=255"
 GAMSOPTS="$GAMSOPTS reslim=$TIMELIMIT"
 GAMSOPTS="$GAMSOPTS nodlim=$NODELIMIT"

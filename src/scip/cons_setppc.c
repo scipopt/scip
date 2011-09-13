@@ -4154,7 +4154,7 @@ SCIP_DECL_CONSCOPY(consCopySetppc)
 /** constraint parsing method of constraint handler */
 static
 SCIP_DECL_CONSPARSE(consParseSetppc)
-{
+{  /*lint --e{715}*/
    SCIP_VAR* var;
    char varname[SCIP_MAXSTRLEN+2];
    SCIP_VAR** vars;
@@ -4188,7 +4188,9 @@ SCIP_DECL_CONSPARSE(consParseSetppc)
          str += parselen;
 
          /* add '<' and '>' around variable name, so we can parse it via SCIPparseVarName */
-         namelen = strlen(varname+1);
+         namelen = (int) strlen(varname+1);
+         assert(namelen > 0);
+
          varname[0] = '<';
          varname[namelen+1] = '>';
          varname[namelen+2] = '\0';
