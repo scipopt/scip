@@ -5100,6 +5100,8 @@ SCIP_RETCODE generateCut(
 
    /* check if range of cut coefficients is ok
     * compute cut violation */
+   maxcoef = 0.0; /* only for compiler */
+   viol = 0.0;    /* only for compiler */
    if( success )
    {
       SCIP_Real abscoef;

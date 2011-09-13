@@ -3794,7 +3794,7 @@ SCIP_RETCODE addLinearization(
             break;
       }
 
-      SCIPdebugMessage("got nonfinite value in evaluation or gradient of %s: ", SCIPconsGetName(cons));
+      SCIPdebugMessage("got nonfinite value in evaluation or gradient of <%s>: ", SCIPconsGetName(cons));
       if( !perturbedx )
       {
          SCIP_Real lb;
@@ -3837,6 +3837,9 @@ SCIP_RETCODE addLinearization(
    *success = TRUE;
 
    SCIPfreeBufferArray(scip, &grad);
+
+   SCIPdebugMessage("added linearization for tree %d of constraint <%s>\n", exprtreeidx, SCIPconsGetName(cons));
+   SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
    return SCIP_OKAY;
 }
@@ -3925,7 +3928,7 @@ SCIP_RETCODE addConcaveEstimatorUnivariate(
 
    *success = TRUE;
 
-   SCIPdebugMessage("add secant for tree %d of constraint <%s>\n", exprtreeidx, SCIPconsGetName(cons));
+   SCIPdebugMessage("added secant for tree %d of constraint <%s>, slope = %g\n", exprtreeidx, SCIPconsGetName(cons), slope);
    SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
    return SCIP_OKAY;
