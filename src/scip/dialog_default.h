@@ -211,39 +211,39 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingPriority);
 
 /** dialog execution method for the set heuristics aggressive command */
 extern
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsEmphasisAggressive);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsAggressive);
 
 /** dialog execution method for the set heuristics fast command */
 extern
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsEmphasisFast);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsFast);
 
 /** dialog execution method for the set heuristics off command */
 extern
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsEmphasisOff);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsOff);
 
 /** dialog execution method for the set presolving aggressive command */
 extern
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingEmphasisAggressive);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingAggressive);
 
 /** dialog execution method for the set presolving fast command */
 extern
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingEmphasisFast);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingFast);
 
 /** dialog execution method for the set presolving off command */
 extern
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingEmphasisOff);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingOff);
 
 /** dialog execution method for the set separating aggressive command */
 extern
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingEmphasisAggressive);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingAggressive);
 
 /** dialog execution method for the set separating fast command */
 extern
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingEmphasisFast);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingFast);
 
 /** dialog execution method for the set separating off command */
 extern
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingEmphasisOff);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingOff);
 
 /** dialog execution method for the set emphasis counter command */
 extern

@@ -3170,35 +3170,23 @@ SCIP_RETCODE paramsetSetSeparatingOff(
 SCIP_RETCODE SCIPparamsetSetEmphasis(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
+   SCIP_PARAMEMPHASIS    paramemphasis,      /**< parameter emphasis */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
    /* reset all parameter to default */
    SCIP_CALL( SCIPparamsetSetToDefaults(paramset, scip) );
       
-   switch( paramsetting )
+   switch( paramemphasis )
    {
    case SCIP_PARAMSETTING_DEFAULT:
       /* the default values are already set */
       break;
 
-   case SCIP_PARAMSETTING_COUNTER:
+   case SCIP_PARAMEMPHASIS_COUNTER:
       /* avoid logicor upgrade since the logicor constraint handler does not perform full propagation */ 
       SCIP_CALL( paramSetBool(scip, paramset, "constraints/linear/upgrade/logicor", FALSE, quiet) );
    
-#if 0 /* dual presolving should be no issue since the countsols constraint handler adds a rounding lock to all variables */
-
-      /* turn off dual presolver */
-      SCIP_CALL( paramSetInt(scip, paramset, "presolving/dualfix/maxrounds", 0, quiet) );
-   
-      /* turn off knapsack dual presolving */
-      SCIP_CALL( paramSetBool(scip, paramset, "constraints/knapsack/dualpresolving", FALSE, quiet) );
-   
-      /* turn off linear dual presolving */
-      SCIP_CALL( paramSetBool(scip, paramset, "constraints/linear/dualpresolving", FALSE, quiet) );
-#endif
-
       /* set priority for inference branching to highest possible value */
       SCIP_CALL( paramSetInt(scip, paramset, "branching/inference/priority", INT_MAX/4, quiet) );
  
@@ -3232,7 +3220,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       SCIP_CALL( paramSetInt(scip, paramset, "constraints/agelimit", 1, quiet) );       
       break;
 
-   case SCIP_PARAMSETTING_CPSOLVER:
+   case SCIP_PARAMEMPHASIS_CPSOLVER:
       /* use only first unique implication point */
       SCIP_CALL( paramSetInt(scip, paramset, "conflict/fuiplevels", 1, quiet) );
 
@@ -3256,7 +3244,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
 
       break;
 
-   case SCIP_PARAMSETTING_EASYCIP:
+   case SCIP_PARAMEMPHASIS_EASYCIP:
       /* set heuristics to fast, to avoid spending to much time for involved heuristics */
       SCIP_CALL( paramsetSetHeuristicsFast(paramset, scip, quiet) );
 
@@ -3268,7 +3256,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       
       break;
 
-   case SCIP_PARAMSETTING_FEASIBILITY:
+   case SCIP_PARAMEMPHASIS_FEASIBILITY:
       /* set heuristics aggressive */
       SCIP_CALL( paramsetSetHeuristicsAggressive(paramset, scip, quiet) );
       
@@ -3283,7 +3271,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       SCIP_CALL( paramSetInt(scip, paramset, "nodeselection/restartdfs/stdpriority", INT_MAX/4, quiet) );
       break;
 
-   case SCIP_PARAMSETTING_HARDLP:
+   case SCIP_PARAMEMPHASIS_HARDLP:
       /* set heuristics to fast, to avoid heuristics which solve also an LP */
       SCIP_CALL( paramsetSetHeuristicsFast(paramset, scip, quiet) );
 
@@ -3300,7 +3288,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
 
       break;
 
-   case SCIP_PARAMSETTING_OPTIMALITY:
+   case SCIP_PARAMEMPHASIS_OPTIMALITY:
       /* set cuts aggressive */
       SCIP_CALL( paramsetSetSeparatingAggressive(paramset, scip, quiet) );
 
@@ -3313,7 +3301,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       break;
 
    default:
-      SCIPerrorMessage("the parameter setting <%d> is not allowed for emphasis call\n", paramsetting);
+      SCIPerrorMessage("the parameter setting <%d> is not allowed for emphasis call\n", paramemphasis);
       return SCIP_INVALIDCALL;
    }  
    return SCIP_OKAY;

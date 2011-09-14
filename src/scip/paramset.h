@@ -295,7 +295,7 @@ extern
 SCIP_RETCODE SCIPparamsetSetEmphasis(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
+   SCIP_PARAMEMPHASIS    paramemphasis,      /**< parameter emphasis */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
