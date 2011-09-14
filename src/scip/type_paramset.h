@@ -60,12 +60,12 @@ enum SCIP_ParamEmphasis
 {
    SCIP_PARAMEMPHASIS_DEFAULT     = 0,        /**< use default values */
 
-   SCIP_PARAMEMPHASIS_COUNTER     = 1,        /**< get a feasible and "fast" counting process */
-   SCIP_PARAMEMPHASIS_CPSOLVER    = 2,        /**< get CP like search (e.g. no LP relaxation) */
-   SCIP_PARAMEMPHASIS_EASYCIP     = 3,        /**< solve easy problems fast */
-   SCIP_PARAMEMPHASIS_FEASIBILITY = 4,        /**< detect feasibility fast */
-   SCIP_PARAMEMPHASIS_HARDLP      = 5,        /**< be capable to handle hard LPs */
-   SCIP_PARAMEMPHASIS_OPTIMALITY  = 6         /**< prove optimality fast */
+   SCIP_PARAMEMPHASIS_CPSOLVER    = 1,        /**< get CP like search (e.g. no LP relaxation) */
+   SCIP_PARAMEMPHASIS_EASYCIP     = 2,        /**< solve easy problems fast */
+   SCIP_PARAMEMPHASIS_FEASIBILITY = 3,        /**< detect feasibility fast */
+   SCIP_PARAMEMPHASIS_HARDLP      = 4,        /**< be capable to handle hard LPs */
+   SCIP_PARAMEMPHASIS_OPTIMALITY  = 5,        /**< prove optimality fast */
+   SCIP_PARAMEMPHASIS_COUNTER     = 6         /**< get a feasible and "fast" counting process */
 };
 typedef enum SCIP_ParamEmphasis SCIP_PARAMEMPHASIS;
 
