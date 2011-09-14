@@ -1974,11 +1974,11 @@ SCIP_RETCODE SCIPsetResetParams(
  */
 SCIP_RETCODE SCIPsetSetEmphasis(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
+   SCIP_PARAMEMPHASIS    paramemphasis,      /**< parameter settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   SCIP_CALL( SCIPparamsetSetEmphasis(set->paramset, set->scip, paramsetting, quiet) );
+   SCIP_CALL( SCIPparamsetSetEmphasis(set->paramset, set->scip, paramemphasis, quiet) );
    
    return SCIP_OKAY;
 }
