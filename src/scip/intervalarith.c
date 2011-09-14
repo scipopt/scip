@@ -3272,7 +3272,7 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
       /* get positive solutions, if of interest */
       if( xbnds.sup >= 0.0 )
       {
-         SCIPintervalSet(&sqrcoef, bx);
+         SCIPintervalSet(&lincoef, bx);
          SCIPintervalSolveUnivariateQuadExpressionPositive(infinity, &pos, sqrcoef, lincoef, rhs);
          SCIPintervalIntersect(&pos, pos, xbnds);
       }
