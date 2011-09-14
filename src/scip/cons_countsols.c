@@ -2660,6 +2660,6 @@ SCIP_RETCODE SCIPsetParamsCountsols(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMSETTING_COUNTER, TRUE) );
+   SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMEMPHASIS_COUNTER, TRUE) );
    return SCIP_OKAY;
 }
