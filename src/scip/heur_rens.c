@@ -217,7 +217,6 @@ SCIP_RETCODE createSubproblem(
       return SCIP_OKAY;
    }
 
-   /**@todo it might be also of interest to copy the cuts, like in case of restart (see cons_linear.c) */
    if( uselprows )
    {
       SCIP_ROW** rows;                          /* original scip rows                         */
