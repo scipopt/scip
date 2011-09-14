@@ -3187,18 +3187,6 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       /* avoid logicor upgrade since the logicor constraint handler does not perform full propagation */ 
       SCIP_CALL( paramSetBool(scip, paramset, "constraints/linear/upgrade/logicor", FALSE, quiet) );
    
-#if 0 /* dual presolving should be no issue since the countsols constraint handler adds a rounding lock to all variables */
-
-      /* turn off dual presolver */
-      SCIP_CALL( paramSetInt(scip, paramset, "presolving/dualfix/maxrounds", 0, quiet) );
-   
-      /* turn off knapsack dual presolving */
-      SCIP_CALL( paramSetBool(scip, paramset, "constraints/knapsack/dualpresolving", FALSE, quiet) );
-   
-      /* turn off linear dual presolving */
-      SCIP_CALL( paramSetBool(scip, paramset, "constraints/linear/dualpresolving", FALSE, quiet) );
-#endif
-
       /* set priority for inference branching to highest possible value */
       SCIP_CALL( paramSetInt(scip, paramset, "branching/inference/priority", INT_MAX/4, quiet) );
  
