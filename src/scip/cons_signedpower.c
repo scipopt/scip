@@ -764,6 +764,15 @@ SCIP_RETCODE presolveFindDuplicates(
                SCIP_CALL( SCIPreleaseCons(scip, &auxcons) );
                ++*naddconss;
 
+#ifdef SCIP_DEBUG_SOLUTION
+               {
+                  SCIP_Real xval;
+
+                  SCIP_CALL( SCIPdebugGetSolVal(scip, consdata0->x, &xval) );
+                  SCIP_CALL( SCIPdebugAddSolVal(auxvar, SIGN(xval + consdata0->xoffset) * pow(REALABS(xval + consdata0->xoffset), consdata0->exponent)) );
+               }
+#endif
+
                /* create linear constraint equivalent for cons0 */
                vars[0]  = auxvar;
                vars[1]  = consdata0->z;
