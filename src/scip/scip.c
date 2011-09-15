@@ -2347,13 +2347,13 @@ SCIP_RETCODE SCIPresetParams(
  */
 SCIP_RETCODE SCIPsetEmphasis(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
+   SCIP_PARAMEMPHASIS    paramemphasis,      /**< parameter settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetEmphasis", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPsetSetEmphasis(scip->set, paramsetting, quiet) );
+   SCIP_CALL( SCIPsetSetEmphasis(scip->set, paramemphasis, quiet) );
    
    return SCIP_OKAY;
 }

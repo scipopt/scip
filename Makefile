@@ -42,6 +42,7 @@ TEST		=	short
 SETTINGS        =       default
 CONTINUE	=	false
 LOCK		=	false
+VALGRIND	=	false
 
 VERBOSE		=	false
 OPT		=	opt
@@ -787,7 +788,7 @@ check:		test
 .PHONY: test
 test:
 		cd check; \
-		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS);
+		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(VALGRIND);
 
 .PHONY: testcount
 testcount:		

@@ -53,7 +53,7 @@
 #define DEFAULT_DEPTHFACNOSOL       2.0 /**< maximal diving depth factor if no feasible solution was found yet */
 
 #define MINLPITER                 10000 /**< minimal number of LP iterations allowed in each LP solving call */
-
+#define DEFAULT_ALPHA               0.9 /**< soft rounding factor to fade out objective coefficients */
 
 
 /* locally defined heuristic data */
@@ -68,9 +68,11 @@ struct SCIP_HeurData
                                               *   (-1: no limit) */
    SCIP_Real             depthfac;           /**< maximal diving depth: number of binary/integer variables times depthfac */
    SCIP_Real             depthfacnosol;      /**< maximal diving depth factor if no feasible solution was found yet */
+   SCIP_Real             alpha;              /**< soft rounding factor to fade out objective coefficients */
    SCIP_Longint          nlpiterations;      /**< LP iterations used in this heuristic */
    int                   nsuccess;           /**< number of runs that produced at least one feasible solution */
 };
+
 
 /*
  * Callback methods
@@ -297,7 +299,7 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
    lperror = FALSE;
    divedepth = 0;
    lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
-   alpha = 0.9; /**@todo make this constant a parameter setting */
+   alpha = heurdata->alpha;
    ncycles = 0;
    lpsolchanged = TRUE;
    startnlpcands = nlpcands;
@@ -615,6 +617,10 @@ SCIP_RETCODE SCIPincludeHeurRootsoldiving(
          "heuristics/rootsoldiving/depthfacnosol",
          "maximal diving depth factor if no feasible solution was found yet",
          &heurdata->depthfacnosol, TRUE, DEFAULT_DEPTHFACNOSOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "heuristics/rootsoldiving/alpha",
+         "soft rounding factor to fade out objective coefficients",
+         &heurdata->alpha, TRUE, DEFAULT_ALPHA, 0.0, 1.0, NULL, NULL) );
 
    return SCIP_OKAY;
 }

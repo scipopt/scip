@@ -531,17 +531,8 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       {
          SCIP_Bool success;
 
-#if 1
          SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, &success) );
-#else
-         /* We have to check the bounds of the work solution since it might be that these are violated w.r.t. to the
-          * "current" global bounds. This can be the case if we shift one variable down and the corresponding
-          * constraint/row which would enforce this shifting to an other variable is deleted due to the "current" global
-          * bounds. Note, that the global bounds change during solution process. It can even happen that the best
-          * solution which we have at hand is not feasible anymore in the current transformed problem.
-          */
-         SCIP_CALL( SCIPtrySol(scip, worksol, TRUE, FALSE, FALSE, &success) );
-#endif
+
          if( success )
          {
             SCIPdebugMessage("found feasible shifted solution:\n");
@@ -605,20 +596,11 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          if( !lperror && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
          {
             SCIP_Bool success;
+
             /* copy the current LP solution to the working solution */
             SCIP_CALL( SCIPlinkLPSol(scip, worksol) );
-
-#if 1
             SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, &success) );
-#else
-            /* We have to check the bounds of the work solution since it might be that these are violated w.r.t. to the
-             * "current" global bounds. This can be the case if we shift one variable down and the corresponding
-             * constraint/row which would enforce this shifting to an other variable is deleted due to the "current" global
-             * bounds. Note, that the global bounds change during solution process. It can even happen that the best
-             * solution which we have at hand is not feasible anymore in the current transformed problem.
-             */
-            SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, TRUE, FALSE, FALSE, &success) );
-#endif
+
             /* check solution for feasibility */
             if( success )
             {

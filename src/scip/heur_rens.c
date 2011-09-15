@@ -217,7 +217,6 @@ SCIP_RETCODE createSubproblem(
       return SCIP_OKAY;
    }
 
-   /**@todo it might be also of interest to copy the cuts, like in case of restart (see cons_linear.c) */
    if( uselprows )
    {
       SCIP_ROW** rows;                          /* original scip rows                         */
@@ -525,18 +524,6 @@ SCIP_RETCODE SCIPapplyRens(
    }
 
    SCIPdebugMessage("RENS presolved subproblem: %d vars, %d cons, success=%u\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), success);
-
-#if 0
-   {
-   char fname[SCIP_MAXSTRLEN];
-   (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "test/%s.lp", SCIPgetProbName(scip));
-   SCIPsetNodeLimit(subscip, 1);
-   SCIP_CALL( SCIPsolve(subscip) );
-   SCIP_CALL( SCIPwriteMIP(subscip,fname,TRUE,TRUE) );
-   SCIPmessagePrintInfo("wrote RENS-sub-SCIP to file <%s>\n",fname);
-   SCIPsetNodeLimit(subscip, maxnodes);
-   }
-#endif
 
    /* after presolving, we should have at least reached a certain fixing rate over ALL variables (including continuous)
     * to ensure that not only the MIP but also the LP relaxation is easy enough

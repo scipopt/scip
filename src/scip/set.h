@@ -346,7 +346,7 @@ SCIP_RETCODE SCIPsetResetParams(
 extern
 SCIP_RETCODE SCIPsetSetEmphasis(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
+   SCIP_PARAMEMPHASIS    paramemphasis,      /**< parameter settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 

@@ -549,7 +549,7 @@ SCIP_RETCODE forkFree(
    return SCIP_OKAY;
 }
 
-#if 0 /*???????? should subroots be created ?*/
+#ifdef WITHSUBROOTS /** @todo test whether subroots should be created */
 /** creates subroot data */
 static
 SCIP_RETCODE subrootCreate(
@@ -3495,7 +3495,7 @@ SCIP_RETCODE focusnodeToFork(
    return SCIP_OKAY;
 }
 
-#if 0 /*???????? should subroots be created ?*/
+#ifdef WITHSUBROOTS  /** @todo test whether subroots should be created */
 /** converts the focus node into a subroot node */
 static
 SCIP_RETCODE focusnodeToSubroot(
@@ -3821,8 +3821,7 @@ SCIP_RETCODE SCIPnodeFocus(
       {
          assert(tree->focuslpconstructed);
 
-         /**@todo decide: old focus node becomes fork or subroot */
-#if 0 /*???????? should subroots be created ?*/
+#ifdef WITHSUBROOTS  /** @todo test whether subroots should be created, decide: old focus node becomes fork or subroot */
          if( tree->focusnode->depth > 0 && tree->focusnode->depth % 25 == 0 )
          {
             /* convert old focus node into a subroot node */

@@ -230,6 +230,7 @@ Makefile
 - to link against Clp, only the base directory of an Clp installation needs to be specified now
 - moved *.test and *.solu files to folder testset in check folder and adjusted test scripts
 - adjusted all test scripts to use the same new optimality gap computation as in SCIP
+- added Makefile option "VALGRIND=true" to enable running the SCIP checks (make test) through valgrind; valgrind errors and memory leaks are reported as fails
 
 SCIP version 2.0.2
 ==================
