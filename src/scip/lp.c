@@ -11897,15 +11897,6 @@ SCIP_RETCODE lpSolve(
    }
    else if( SCIPlpiIsObjlimExc(lp->lpi) )
    {
-#if 0 /* SOPLEX may return with objective limit reached in any case, because it doesn't distinct between primal and dual */
-      if( lp->lastlpalgo == SCIP_LPALGO_PRIMALSIMPLEX )
-      {
-         SCIPerrorMessage("objective limit exceeded in primal simplex - this should not happen, because no lower limit exists\n");
-         lp->lpsolstat = SCIP_LPSOLSTAT_ERROR;
-         lp->lpobjval = -SCIPsetInfinity(set);
-         return SCIP_LPERROR;
-      }
-#endif
       lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
       lp->lpobjval = SCIPsetInfinity(set);
    }
