@@ -266,6 +266,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             removable;          /**< whether the separated cuts should be removable */
    SCIP_Bool             scaled;             /**< if first row of alt. LP has been scaled */
    SCIP_Bool             objindicatoronly;   /**< whether the objective is nonzero only for indicator variables */
+   SCIP_Real             minabsobj;          /**< minimum absolute nonzero objective of indicator variables */
    SCIP_LPI*             altLP;              /**< alternative LP for cut separation */
    int                   nRows;              /**< # rows in the alt. LP corr. to original variables in linear constraints and slacks */
    int                   nLbBounds;          /**< # lower bounds of original variables */
@@ -401,11 +402,16 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorRestart)
    conshdlrdata = (SCIP_CONSHDLRDATA*)eventdata;
    assert( conshdlrdata != NULL );
    assert( conshdlrdata->objindicatoronly );
+   assert( SCIPisIntegral(scip, conshdlrdata->minabsobj) );
+   assert( SCIPisGE(scip, conshdlrdata->minabsobj, 1.0 ) );
 
-   /* if the absolute gap is 1 */
-   if ( SCIPisEQ(scip, REALABS(SCIPgetPrimalbound(scip) - SCIPgetDualbound(scip)), 1.0) )
+   if ( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
+
+   /* if the absolute gap is equal to minabsobj */
+   if ( SCIPisEQ(scip, REALABS(SCIPgetPrimalbound(scip) - SCIPgetDualbound(scip)), conshdlrdata->minabsobj) )
    {
-      SCIPdebugMessage("Forcing restart, since the absolute gap is 1.\n");
+      SCIPdebugMessage("Forcing restart, since the absolute gap is %f.\n", conshdlrdata->minabsobj);
       SCIP_CALL( SCIPrestartSolve(scip) );
 
       /* use inference branching, since the objective is not meaningful */
@@ -3328,6 +3334,7 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
       vars = SCIPgetVars(scip);
 
       conshdlrdata->objindicatoronly = FALSE;
+      conshdlrdata->minabsobj = SCIP_REAL_MAX;
 
       /* unmark all variables */
       SCIP_CALL( SCIPallocBufferArray(scip, &covered, nvars) );
@@ -3343,6 +3350,10 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
          assert( conss != NULL );
          assert( conss[c] != NULL );
 
+         /* avoid non-active indicator constraints */
+         if ( ! SCIPconsIsActive(conss[c]) )
+            continue;
+
          consdata = SCIPconsGetData(conss[c]);
          assert( consdata != NULL );
          assert( consdata->binvar != NULL );
@@ -3354,40 +3365,56 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
          }
          else
             probindex = SCIPvarGetProbindex(consdata->binvar);
-         assert( 0 <= probindex && probindex < nvars );
+
+         /* avoid removed indicator variables (may happen if presolving/propagation) was incomplete */
+         if ( probindex < 0 )
+            continue;
+
+         assert( probindex < nvars );
          covered[probindex] = TRUE;
       }
          
       /* check all variables */
       for (j = 0; j < nvars; ++j)
-      {      
-         if ( ! SCIPisZero(scip, SCIPvarGetObj(vars[j])) )
+      {
+         SCIP_Real obj;
+         obj = SCIPvarGetObj(vars[j]);
+         if ( ! SCIPisZero(scip, obj) )
          {
             if ( ! covered[j] )
                break;
-            if ( ! SCIPisIntegral(scip, SCIPvarGetObj(vars[j])) )
+            if ( ! SCIPisIntegral(scip, obj) )
                break;
+            if ( obj < conshdlrdata->minabsobj )
+               conshdlrdata->minabsobj = obj;
          }
       }
 
-      /* if all variables have 0/1 objective and only indicator variables have nonzero objective */
+      /* if all variables have integral objective and only indicator variables have nonzero objective */
       if ( j >= nvars )
       {
          SCIP_EVENTHDLR* eventhdlr;
 
-         conshdlrdata->objindicatoronly = TRUE;
-
-         /* get event handler for bound change events */
-         eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_RESTART_NAME);
-         if ( eventhdlr == NULL )
+         /* if there are variables with nonerzo objective */
+         if ( conshdlrdata->minabsobj < SCIP_REAL_MAX )
          {
-            SCIPerrorMessage("event handler for restarting indicator constraints not found.\n");
-            return SCIP_PLUGINNOTFOUND;
+            assert( SCIPisIntegral(scip, conshdlrdata->minabsobj) );
+            assert( SCIPisGE(scip, conshdlrdata->minabsobj, 1.0) );
+
+            conshdlrdata->objindicatoronly = TRUE;
+
+            /* get event handler for bound change events */
+            eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_RESTART_NAME);
+            if ( eventhdlr == NULL )
+            {
+               SCIPerrorMessage("event handler for restarting indicator constraints not found.\n");
+               return SCIP_PLUGINNOTFOUND;
+            }
+            SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, (SCIP_EVENTDATA*) conshdlrdata, NULL) );
+            
+            /* set force restart to false */
+            SCIP_CALL( SCIPsetBoolParam(scip, "constraints/indicator/forcerestart", FALSE) );
          }
-         SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, (SCIP_EVENTDATA*) conshdlrdata, NULL) );
-         
-         /* set force restart to false */
-         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/indicator/forcerestart", FALSE) );
       }
 
       SCIPfreeBufferArray(scip, &covered);
@@ -4848,6 +4875,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    conshdlrdata->maxAddLinCons = 0;
    conshdlrdata->generateBilinear = FALSE;
    conshdlrdata->objindicatoronly = FALSE;
+   conshdlrdata->minabsobj = 0.0;
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
