@@ -2344,7 +2344,17 @@ SCIP_RETCODE createAndAddLinearCons(
             else if( (SCIPisEQ(scip, lhs, 1.0 - ncoeffsnone) && SCIPisInfinity(scip, rhs))
                || (SCIPisInfinity(scip, -lhs) && SCIPisEQ(scip, rhs, ncoeffspone - 1.0)) )
             {
-               SCIPwarningMessage("Does not expect this, because this constraint should be a logicor constraint.\n");
+               if( nvars != 1 )
+               {
+                  if( nvars == 2 )
+                  {
+                     SCIPwarningMessage("Does not expect this, because this constraint should be a set packing constraint.\n");
+                  }
+                  else
+                  {
+                     SCIPwarningMessage("Does not expect this, because this constraint should be a logicor constraint.\n");
+                  }
+               }
                SCIPdebugMessage("linear pseudoboolean constraint will be a set covering constraint\n");
 
                /* check, if we have to multiply with -1 (negate the positive vars) or with +1 (negate the negative vars) */
@@ -2379,7 +2389,7 @@ SCIP_RETCODE createAndAddLinearCons(
 
                /* create the constraint */
                assert(!modifiable);
-               SCIP_CALL( SCIPcreateConsSetpack(scip, &cons, name, nvars, transvars,
+               SCIP_CALL( SCIPcreateConsSetcover(scip, &cons, name, nvars, transvars,
                      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
                created = TRUE;
