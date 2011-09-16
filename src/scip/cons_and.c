@@ -30,6 +30,7 @@
 #include "scip/cons_logicor.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/pub_misc.h"
+#include "scip/debug.h"
 
 
 /* constraint handler properties */
@@ -1988,11 +1989,27 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAnd)
 
    /* create variable for resultant
     * cons_and wants to add implications for resultant, which is only possible for binary variables currently
-    * so choose binary as vartype, even though implicit integer had been sufficient */
+    * so choose binary as vartype, even though implicit integer had been sufficient
+    */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nlreform%dand", *naddcons);
    SCIP_CALL( SCIPcreateVar(scip, &var, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY,
       TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, var) );
+
+#ifdef SCIP_DEBUG_SOLUTION
+   {
+      SCIP_Bool debugval;
+      SCIP_Real varval;
+
+      debugval = TRUE;
+      for( c = 0; c < nchildren; ++c )
+      {
+         SCIP_CALL( SCIPdebugGetSolVal(scip, vars[c], &varval) );
+         debugval &= varval > 0.5;
+      }
+      SCIP_CALL( SCIPdebugAddSolVal(var, debugval ? 1.0 : 0.0) );
+   }
+#endif
 
    /* create and constraint */
    SCIP_CALL( SCIPcreateConsAnd(scip, &cons, name, var, nchildren, vars,
