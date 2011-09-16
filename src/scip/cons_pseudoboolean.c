@@ -211,6 +211,19 @@ SCIP_DECL_SORTPTRCOMP(resvarCompWithInactive)
    consanddata1 = (CONSANDDATA*)elem1;
    consanddata2 = (CONSANDDATA*)elem2;
 
+   /* check if and constraint data object is still valid */
+   if( consanddata1->deleted )
+   {
+      if( consanddata2->deleted )
+      {
+         return 0;
+      }
+      else
+         return -1;
+   }
+   else if( consanddata2->deleted )
+      return +1;
+
    assert(consanddata1->cons != NULL);
    assert(consanddata2->cons != NULL);
 
@@ -225,9 +238,7 @@ SCIP_DECL_SORTPTRCOMP(resvarCompWithInactive)
          return -1;
    }
    else if( SCIPconsIsDeleted(consanddata2->cons) )
-   {
       return +1;
-   }
    else
    {
       SCIP_VAR* var1;
