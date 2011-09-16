@@ -1448,24 +1448,54 @@ SCIP_RETCODE propagateCons(
          
          SCIP_VAR** consvars;
          SCIP_CONS* lincons;
+         SCIP_Bool conscreated;
 
          assert(SCIPvarGetUbGlobal(resvar) < 0.5);
+
+         conscreated = FALSE;
+
+         /* allocate memory for variables for updated constraint */
+         SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nvars) );
 
          /* if we only have two variables, we prefer a set packing constraint instead of a logicor constraint */
          if( nvars == 2 )
          {
-            consvars = NULL;
+            SCIP_Bool* negated;
 
-            /* create, add, and release the setppc constraint */
-            SCIP_CALL( SCIPcreateConsSetpack(scip, &lincons, SCIPconsGetName(cons), nvars, vars,
-                  SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), consdata->checkwhenupgr | SCIPconsIsChecked(cons),
-                  SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), 
-                  SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+            /* get active representation */
+            SCIP_CALL( SCIPallocBufferArray(scip, &negated, nvars) );
+            SCIP_CALL( SCIPgetBinvarRepresentatives(scip, nvars, vars, consvars, negated) );
+            SCIPfreeBufferArray(scip, &negated);
+
+            if( SCIPvarGetLbGlobal(consvars[0]) > 0.5 )
+            {
+               SCIP_CALL( SCIPfixVar(scip, consvars[1], 0.0, &infeasible, &tightened) );
+               if( infeasible )
+                  *cutoff = TRUE;
+               else if( tightened )
+                  ++(*nfixedvars);
+            }
+            else if( SCIPvarGetLbGlobal(consvars[1]) > 0.5 )
+            {
+               SCIP_CALL( SCIPfixVar(scip, consvars[1], 0.0, &infeasible, &tightened) );
+               if( infeasible )
+                  *cutoff = TRUE;
+               else if( tightened )
+                  ++(*nfixedvars);
+            }
+            else if( SCIPvarGetUbGlobal(consvars[0]) > 0.5 && SCIPvarGetUbGlobal(consvars[1]) > 0.5 )
+            {
+               /* create, add, and release the setppc constraint */
+               SCIP_CALL( SCIPcreateConsSetpack(scip, &lincons, SCIPconsGetName(cons), nvars, consvars,
+                     SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), consdata->checkwhenupgr | SCIPconsIsChecked(cons),
+                     SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons),
+                     SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+
+               conscreated = TRUE;
+            }
          }
          else
          {
-            SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nvars) );
-            
             /* collect negated variables */
             for( i = 0; i < nvars; ++i )
             {
@@ -1477,17 +1507,27 @@ SCIP_RETCODE propagateCons(
                   SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), consdata->checkwhenupgr | SCIPconsIsChecked(cons),
                   SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), 
                   SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+
+               conscreated = TRUE;
          }
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, lincons, NULL) ) );
-         SCIP_CALL( SCIPaddCons(scip, lincons) );
-         SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+
+         /* add and release new constraint */
+         if( conscreated )
+         {
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, lincons, NULL) ) );
+            SCIP_CALL( SCIPaddCons(scip, lincons) );
+            SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+
+            ++(*nupgdconss);
+         }
+
+         /* delete temporary memory */
+         SCIPfreeBufferArray(scip, &consvars);
 
          /* remove the "and" constraint globally */
          SCIP_CALL( SCIPdelCons(scip, cons) );
 
-         (*nupgdconss)++;
-
-         SCIPfreeBufferArrayNull(scip, &consvars);
+         return SCIP_OKAY;
       }
    }
 
@@ -3009,7 +3049,6 @@ SCIP_VAR* SCIPgetResultantAnd(
 {
    SCIP_CONSDATA* consdata;
    
-   assert(scip != NULL);
    assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )

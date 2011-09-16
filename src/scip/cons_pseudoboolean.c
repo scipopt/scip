@@ -198,6 +198,60 @@ struct SCIP_ConshdlrData
  */
 
 
+/** comparison method for sorting consanddatas according to the index of their corresponding resultant variables, if a
+ *  consanddata object is delete it is handled like it has an inactive resultant, so this will be put in front while
+ *  sorting
+ */
+static
+SCIP_DECL_SORTPTRCOMP(resvarCompWithInactive)
+{
+   CONSANDDATA* consanddata1;
+   CONSANDDATA* consanddata2;
+
+   consanddata1 = (CONSANDDATA*)elem1;
+   consanddata2 = (CONSANDDATA*)elem2;
+
+   assert(consanddata1->cons != NULL);
+   assert(consanddata2->cons != NULL);
+
+   /* check if and constraint is still active */
+   if( SCIPconsIsDeleted(consanddata1->cons) )
+   {
+      if( SCIPconsIsDeleted(consanddata2->cons) )
+      {
+         return 0;
+      }
+      else
+         return -1;
+   }
+   else if( SCIPconsIsDeleted(consanddata2->cons) )
+   {
+      return +1;
+   }
+   else
+   {
+      SCIP_VAR* var1;
+      SCIP_VAR* var2;
+
+      /* hack with setting the first pointer to NULL */
+      var1 = SCIPgetResultantAnd(NULL, consanddata1->cons);
+      var2 = SCIPgetResultantAnd(NULL, consanddata2->cons);
+
+      assert(var1 != NULL);
+      assert(var2 != NULL);
+
+      if( SCIPvarGetIndex(var1) < SCIPvarGetIndex(var2) )
+         return -1;
+      else if( SCIPvarGetIndex(var1) > SCIPvarGetIndex(var2) )
+         return +1;
+      else
+      {
+         assert(var1 == var2);
+         return 0;
+      }
+   }
+}
+
 /** gets the key of the given element */
 static
 SCIP_DECL_HASHGETKEY(hashGetKeyAndConsDatas)
@@ -632,7 +686,7 @@ SCIP_RETCODE getLinearConsVarsData(
    }
 
    /* sort variables after indices */
-   SCIPsortPtr((void**)vars, SCIPvarComp, *nvars);
+   SCIPsortPtrReal((void**)vars, coefs, SCIPvarComp, *nvars);
 
    return SCIP_OKAY;
 }
@@ -3234,6 +3288,9 @@ SCIP_RETCODE correctLocksAndCaptures(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
+   /* sort and-constraints after indices of corresponding and-resultants */
+   SCIPsortPtrReal((void**)(consdata->consanddatas), consdata->andcoefs, resvarCompWithInactive, consdata->nconsanddatas);
+
    consanddatas = consdata->consanddatas;
    oldandcoefs = consdata->andcoefs;
    nconsanddatas = consdata->nconsanddatas;
@@ -3266,6 +3323,9 @@ SCIP_RETCODE correctLocksAndCaptures(
          continue;
 
       assert(!SCIPisZero(scip, oldandcoefs[c - 1]));
+
+      if( SCIPconsIsDeleted(consanddatas[c]->cons) || SCIPconsIsDeleted(consanddatas[c - 1]->cons) )
+         continue;
 
       assert(consanddatas[c]->cons != NULL);
       res1 = SCIPgetResultantAnd(scip, consanddatas[c]->cons);
@@ -7109,7 +7169,7 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
-   
+
    return SCIP_OKAY;
 }
 
