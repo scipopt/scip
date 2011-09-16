@@ -11627,12 +11627,12 @@ SCIP_RETCODE SCIPfixVar(
       /*lint -fallthrough*/
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
-      if( SCIPsetIsGT(scip->set, fixedval, SCIPvarGetLbLocal(var)) )
+      if( SCIPsetIsFeasGT(scip->set, fixedval, SCIPvarGetLbLocal(var)) )
       {
          SCIP_CALL( SCIPchgVarLb(scip, var, fixedval) );
          *fixed = TRUE;
       }
-      if( SCIPsetIsLT(scip->set, fixedval, SCIPvarGetUbLocal(var)) )
+      if( SCIPsetIsFeasLT(scip->set, fixedval, SCIPvarGetUbLocal(var)) )
       {
          SCIP_CALL( SCIPchgVarUb(scip, var, fixedval) );
          *fixed = TRUE;
