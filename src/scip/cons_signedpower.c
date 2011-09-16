@@ -5314,6 +5314,10 @@ SCIP_DECL_CONSPRESOL(consPresolSignedpower)
             *result = SCIP_CUTOFF;
             return SCIP_OKAY;
          }
+         else
+         {
+            ++*nchgvartypes;
+         }
       }
    }
 
@@ -5657,9 +5661,9 @@ SCIP_DECL_CONSPARSE(consParseSignedpower)
 {
    SCIP_Real lhs;
    SCIP_Real rhs;
-
-   char      varx[SCIP_MAXSTRLEN];
-   char      varz[SCIP_MAXSTRLEN];
+   char      varx[SCIP_MAXSTRLEN+2];
+   char      varz[SCIP_MAXSTRLEN+2];
+   int       namelen;
    SCIP_Real xoffset;
    SCIP_Real exponent;
    SCIP_Real zcoef;
@@ -5676,7 +5680,7 @@ SCIP_DECL_CONSPARSE(consParseSignedpower)
 
    SCIPdebugMessage("start parsing signedpower constraint expression %s\n", str);
 
-   if( strncmp(str, "signpower", 11) != 0 )
+   if( strncmp(str, "signpower", 9) != 0 )
    {
       /* str does not start with signpower string, so may be left-hand-side of ranged constraint */
       char* nextstr;
@@ -5684,17 +5688,17 @@ SCIP_DECL_CONSPARSE(consParseSignedpower)
       lhs = strtod(str, &nextstr);
       if( str == nextstr )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: left-hand-side or 'signpower' expected\n");
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: left-hand-side or 'signpower' expected at begin on '%s'\n", str);
          (*success) = FALSE;
          return SCIP_OKAY;
       }
       str = nextstr;
    }
 
-   if( sscanf(str, "signedpower(<%[^>]> %lg, %lg) %lg<%[^>]> %c= %lg", varx, &xoffset, &exponent, &zcoef, varz, &sense, &rhs_) == EOF )
+   if( sscanf(str, "signpower(<%[^>]> %lg, %lg) %lg<%[^>]> %c= %lg", varx+1, &xoffset, &exponent, &zcoef, varz+1, &sense, &rhs_) == EOF )
    {
       /* if that does not match, then it may be a 'free' constraint (quite unlikely) */
-      if( sscanf(str, "signedpower(<%[^>]> %lg, %lg) %lg<%[^>]> [free]", varx, &xoffset, &exponent, &zcoef, varz) == EOF )
+      if( sscanf(str, "signpower(<%[^>]> %lg, %lg) %lg<%[^>]> [free]", varx+1, &xoffset, &exponent, &zcoef, varz+1) == EOF )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error while parsing constraint expression\n");
          (*success) = FALSE;
@@ -5717,40 +5721,32 @@ SCIP_DECL_CONSPARSE(consParseSignedpower)
       }
    }
 
-   if( varx[0] == '~' )
-   {
-      x = SCIPfindVar(scip, &varx[1]);
-      if( x != NULL )
-      {
-         SCIP_CALL( SCIPgetNegatedVar(scip, x, &x) );
-      }
-   }
-   else
-   {
-      x = SCIPfindVar(scip, varx);
-   }
+   /* add '<' and '>' around variable names, so we can parse it via SCIPparseVarName */
+   namelen = (int) strlen(varx+1);
+   assert(namelen > 0);
+   varx[0] = '<';
+   varx[namelen+1] = '>';
+   varx[namelen+2] = '\0';
+
+   SCIP_CALL( SCIPparseVarName(scip, varx, 0, &x, &namelen) );
    if( x == NULL )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s>", varx);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable %s", varx);
       *success = FALSE;
       return SCIP_OKAY;
    }
 
-   if( varz[0] == '~' )
-   {
-      z = SCIPfindVar(scip, &varz[1]);
-      if( z != NULL )
-      {
-         SCIP_CALL( SCIPgetNegatedVar(scip, z, &z) );
-      }
-   }
-   else
-   {
-      z = SCIPfindVar(scip, varz);
-   }
+   /* add '<' and '>' around variable names, so we can parse it via SCIPparseVarName */
+   namelen = (int) strlen(varz+1);
+   assert(namelen > 0);
+   varz[0] = '<';
+   varz[namelen+1] = '>';
+   varz[namelen+2] = '\0';
+
+   SCIP_CALL( SCIPparseVarName(scip, varz, 0, &z, &namelen) );
    if( z == NULL )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s>", varz);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable %s", varz);
       *success = FALSE;
       return SCIP_OKAY;
    }
