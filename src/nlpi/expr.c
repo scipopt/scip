@@ -186,7 +186,7 @@ SCIP_EXPRCURV SCIPexprcurvAdd(
    SCIP_EXPRCURV         curv2               /**< curvature of second summand */
    )
 {
-   return curv1 & curv2;
+   return (SCIP_EXPRCURV) (curv1 & curv2);
 }
 
 /** gives the curvature for the negation of a function with given curvature */
@@ -194,8 +194,9 @@ SCIP_EXPRCURV SCIPexprcurvNegate(
    SCIP_EXPRCURV         curvature           /**< curvature of function */
    )
 {
-   return ((curvature & SCIP_EXPRCURV_CONVEX)  ? SCIP_EXPRCURV_CONCAVE : SCIP_EXPRCURV_UNKNOWN) |
-          ((curvature & SCIP_EXPRCURV_CONCAVE) ? SCIP_EXPRCURV_CONVEX  : SCIP_EXPRCURV_UNKNOWN);
+   return (SCIP_EXPRCURV)
+      ((curvature & SCIP_EXPRCURV_CONVEX)  ? SCIP_EXPRCURV_CONCAVE : SCIP_EXPRCURV_UNKNOWN) |
+      ((curvature & SCIP_EXPRCURV_CONCAVE) ? SCIP_EXPRCURV_CONVEX  : SCIP_EXPRCURV_UNKNOWN);
 }
 
 /* gives curvature for a functions with given curvature multiplied by a constant factor */
@@ -253,7 +254,7 @@ SCIP_EXPRCURV SCIPexprcurvPower(
       SCIPintervalSetBounds(&leftbounds,  basebounds.inf, 0.0);
       SCIPintervalSetBounds(&rightbounds, 0.0, basebounds.sup);
 
-      return SCIPexprcurvPower(leftbounds,  basecurv, exponent) & SCIPexprcurvPower(rightbounds, basecurv, exponent);
+      return (SCIP_EXPRCURV) (SCIPexprcurvPower(leftbounds,  basecurv, exponent) & SCIPexprcurvPower(rightbounds, basecurv, exponent));
    }
    assert(basebounds.inf >= 0.0 || basebounds.sup <= 0.0);
 
@@ -1932,7 +1933,7 @@ SCIP_DECL_EXPRCURV( exprcurvSignPower )
       right = SCIP_EXPRCURV_LINEAR;
    }
 
-   *result = left & right;
+   *result = (SCIP_EXPRCURV) (left & right);
 
    return SCIP_OKAY;
 } /*lint !e715*/
