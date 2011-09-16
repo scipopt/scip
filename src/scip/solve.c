@@ -2012,6 +2012,7 @@ SCIP_RETCODE priceAndCutLoop(
                
                mustprice = TRUE;
             }
+            mustprice &= !(*cutoff);
          }
 
          /* call primal heuristics that are applicable during node LP solving loop */
