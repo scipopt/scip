@@ -1116,6 +1116,14 @@ SCIP_RETCODE SCIPgetVarCopy(
    uselocalconsmap = (consmap == NULL);
    *success = TRUE;
 
+   /* try to retrieve copied variable from hashmap */
+   if( !uselocalvarmap )
+   {
+      *targetvar = (SCIP_VAR*) SCIPhashmapGetImage(varmap, sourcevar);
+      if( *targetvar != NULL )
+         return SCIP_OKAY;
+   }
+
    /* if the target SCIP is already in solving stage we currently are not copying the variable!
     * this has to be done because we cannot simply add variables to SCIP during solving and thereby enlarge the search
     * space. 
@@ -1130,20 +1138,13 @@ SCIP_RETCODE SCIPgetVarCopy(
       return SCIP_OKAY;
    }
 
+   /* create the variable mapping hash map */
    if( uselocalvarmap )
    {
-      /* create the variable mapping hash map */
       SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
    }
    else
-   {
       localvarmap = varmap;
-      
-      /* try to retrieve copied variable from hashmap */
-      *targetvar = (SCIP_VAR*) SCIPhashmapGetImage(localvarmap, sourcevar);
-      if( *targetvar != NULL )
-         return SCIP_OKAY;
-   }
 
    if( uselocalconsmap )
    {
@@ -1506,7 +1507,10 @@ SCIP_RETCODE SCIPgetConsCopy(
       /* try to retrieve copied constraint from hash map */
       *targetcons = (SCIP_CONS*) SCIPhashmapGetImage(localconsmap, sourcecons);
       if( *targetcons != NULL )
+      {
+         *success =TRUE;
          return SCIP_OKAY;
+      }
    }
 
    /*  copy the constraint */
@@ -2343,13 +2347,13 @@ SCIP_RETCODE SCIPresetParams(
  */
 SCIP_RETCODE SCIPsetEmphasis(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
+   SCIP_PARAMEMPHASIS    paramemphasis,      /**< parameter settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetEmphasis", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPsetSetEmphasis(scip->set, paramsetting, quiet) );
+   SCIP_CALL( SCIPsetSetEmphasis(scip->set, paramemphasis, quiet) );
    
    return SCIP_OKAY;
 }
@@ -18388,7 +18392,7 @@ int SCIPgetNPrioExternBranchConts(
 }
 
 /** insert variable, its score and its solution value into the external branching candidate storage
- * the relative difference of the current lower and upper bounds of a continuous variable must be at least 2*epsilon */
+ * the relative difference of the current lower and upper bounds of a continuous variable must be at least epsilon */
 SCIP_RETCODE SCIPaddExternBranchCand(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to insert */

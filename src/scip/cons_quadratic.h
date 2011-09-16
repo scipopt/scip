@@ -107,6 +107,7 @@ SCIP_RETCODE SCIPincludeQuadconsUpgrade(
    SCIP*                   scip,               /**< SCIP data structure */
    SCIP_DECL_QUADCONSUPGD((*quadconsupgd)),    /**< method to call for upgrading quadratic constraint */
    int                     priority,           /**< priority of upgrading method */
+   SCIP_Bool               active,             /**< should the upgrading method be active by default? */
    const char*             conshdlrname        /**< name of the constraint handler */
    );
 

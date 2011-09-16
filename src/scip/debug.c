@@ -44,6 +44,7 @@
 static char** solnames = NULL;
 static SCIP_Real* solvals = NULL;
 static int nsolvals = 0;
+static int solsize = 0;
 static SCIP_SET* mainscipset = NULL;
 static SCIP_HASHMAP* solinnode = NULL;       /**< maps nodes to bools, storing whether the solution is valid for the node */
 static SCIP_Bool falseptr = FALSE;
@@ -58,11 +59,11 @@ SCIP_RETCODE readSolfile(
    const char*           solfilename,        /**< solution filename to read */
    char***               names,              /**< pointer to store the array of variable names */
    SCIP_Real**           vals,               /**< pointer to store the array of solution values */
-   int*                  nvals               /**< pointer to store the number of non-zero elements */
+   int*                  nvals,              /**< pointer to store the number of non-zero elements */
+   int*                  valssize            /**< pointer to store the length of the variable names and solution values arrays */
    )
 {
    FILE* file;
-   int solsize;
    int nonvalues;
    int i;
 
@@ -73,6 +74,7 @@ SCIP_RETCODE readSolfile(
    assert(vals != NULL);
    assert(*vals == NULL);
    assert(nvals != NULL);
+   assert(valssize != NULL);
 
    printf("***** debug: reading solution file <%s>\n", solfilename);
 
@@ -86,8 +88,8 @@ SCIP_RETCODE readSolfile(
    }
 
    /* read data */
-   solsize = 0;
    nonvalues = 0;
+   *valssize = 0;
 
    while( !feof(file) )
    {
@@ -129,14 +131,13 @@ SCIP_RETCODE readSolfile(
       }
 
       /* allocate memory */
-      if( *nvals >= solsize )
+      if( *nvals >= *valssize )
       {
-         solsize *= 2;
-         solsize = MAX(solsize, (*nvals)+1);
-         SCIP_ALLOC( BMSreallocMemoryArray(names, solsize) );
-         SCIP_ALLOC( BMSreallocMemoryArray(vals, solsize) );
+         *valssize = MAX(2 * *valssize, (*nvals)+1);
+         SCIP_ALLOC( BMSreallocMemoryArray(names, *valssize) );
+         SCIP_ALLOC( BMSreallocMemoryArray(vals, *valssize) );
       }
-      assert(*nvals < solsize);
+      assert(*nvals < *valssize);
 
       /* store solution value in sorted list */
       for( i = *nvals; i > 0 && strcmp(name, (*names)[i-1]) < 0; --i )
@@ -184,7 +185,7 @@ SCIP_RETCODE readSolution(
    if( nsolvals > 0 )
       return SCIP_OKAY;
 
-   SCIP_CALL( readSolfile(set, SCIP_DEBUG_SOLUTION, &solnames, &solvals, &nsolvals) );
+   SCIP_CALL( readSolfile(set, SCIP_DEBUG_SOLUTION, &solnames, &solvals, &nsolvals, &solsize) );
 
    return SCIP_OKAY;
 }
@@ -235,9 +236,17 @@ SCIP_RETCODE getSolutionValue(
       SCIP_CALL( SCIPvarGetOrigvarSum(&solvar, &scalar, &constant) );
       if( solvar == NULL )
       {
-         SCIPwarningMessage("variable <%s> has no original counterpart\n", SCIPvarGetName(var));
-         *val = SCIP_UNKNOWN;
-         return SCIP_OKAY;
+         /* if no original counterpart, then maybe someone added a value for the transformed variable, so search for var (or its negation) */
+         SCIPdebugMessage("variable <%s> has no original counterpart\n", SCIPvarGetName(var));
+         solvar = var;
+         scalar = 1.0;
+         constant = 0.0;
+         if( SCIPvarIsNegated(solvar) )
+         {
+            scalar = -1.0;
+            constant = SCIPvarGetNegationConstant(solvar);
+            solvar = SCIPvarGetNegationVar(solvar);
+         }
       }
    }
    /* perform a binary search for the variable */
@@ -265,6 +274,21 @@ SCIP_RETCODE getSolutionValue(
       SCIPwarningMessage("invalid solution value %.15g for variable <%s>[%.15g,%.15g]\n",
          *val, SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
    }
+
+   return SCIP_OKAY;
+}
+
+/** gets value for a variable in the debug solution
+ * if no value is stored for the variable, gives 0.0
+ */
+extern
+SCIP_RETCODE SCIPdebugGetSolVal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable for which to get the value */
+   SCIP_Real*            val                 /**< buffer to store solution value */
+   )
+{
+   SCIP_CALL( getSolutionValue(scip->set, var, val) );
 
    return SCIP_OKAY;
 }
@@ -980,6 +1004,80 @@ SCIP_RETCODE SCIPdebugIncludeProp(
    SCIP_CALL( SCIPincludeProp(scip, "debug", "debugging propagator", 99999999, -1, FALSE,
          SCIP_PROPTIMING_ALWAYS, 99999999, 0, FALSE, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
          NULL, propExecDebug, NULL, NULL) );
+
+   return SCIP_OKAY;
+}
+
+/** adds a solution value for a new variable in the transformed problem that has no original counterpart
+ * a value can only be set if no value has been set for this variable before
+ */
+extern
+SCIP_RETCODE SCIPdebugAddSolVal(
+   SCIP_VAR*             var,                /**< variable for which to add a value */
+   SCIP_Real             val                 /**< solution value for variable */
+   )
+{
+   const char* varname;
+   int i;
+
+   assert(var != NULL);
+
+   if( SCIPvarIsOriginal(var) )
+   {
+      SCIPerrorMessage("adding solution values for original variables is forbidden\n");
+      return SCIP_ERROR;
+   }
+
+   if( SCIPvarIsTransformedOrigvar(var) )
+   {
+      SCIPerrorMessage("adding solution values for variable that are direct counterparts of original variables is forbidden\n");
+      return SCIP_ERROR;
+   }
+
+   /* allocate memory */
+   if( nsolvals >= solsize )
+   {
+      solsize = MAX(2*solsize, nsolvals+1);
+      SCIP_ALLOC( BMSreallocMemoryArray(&solnames, solsize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&solvals,  solsize) );
+   }
+   assert(nsolvals < solsize);
+
+   /* store solution value in sorted list */
+   varname = SCIPvarGetName(var);
+   for( i = nsolvals; i > 0 && strcmp(varname, solnames[i-1]) < 0; --i )
+   {
+      solnames[i] = solnames[i-1];
+      solvals[i]  = solvals[i-1];
+   }
+   if( i > 0 && strcmp(varname, solnames[i-1]) == 0 )
+   {
+      if( REALABS(solvals[i-1] - val) > 1e-9 )
+      {
+         SCIPerrorMessage("already have stored different debugging solution value (%g) for variable <%s>, cannot store %g\n", solvals[i-1], varname, val);
+         return SCIP_ERROR;
+      }
+      else
+      {
+         SCIPdebugMessage("already have stored debugging solution value %g for variable <%s>, do not store same value again\n", val, varname);
+         for( ; i < nsolvals; ++i )
+         {
+            solnames[i] = solnames[i+1];
+            solvals[i]  = solvals[i+1];
+         }
+         return SCIP_OKAY;
+      }
+   }
+
+   /* insert new solution value */
+   SCIP_ALLOC( BMSduplicateMemoryArray(&solnames[i], varname, strlen(varname)+1) );
+   SCIPdebugMessage("add variable <%s>: value <%g>\n", solnames[i], val);
+   solvals[i] = val;
+   nsolvals++;
+
+   /* update objective function value of debug solution */
+   debugsolval += solvals[i] * SCIPvarGetObj(var);
+   SCIPdebugMessage("Debug Solution value is now %g.\n", debugsolval);
 
    return SCIP_OKAY;
 }

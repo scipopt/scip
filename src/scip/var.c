@@ -23,6 +23,13 @@
  * @author Michael Winkler
  * @author Kati Wolter
  * @author Stefan Vigerske
+ *
+ * @todo Possibly implement the access of bounds of multi-aggregated variables by accessing the
+ * corresponding linear constraint if it exists. This seems to require some work, since the linear
+ * constraint has to be stored. Moreover, it has even to be created in case the original constraint
+ * was deleted after multi-aggregation, but the bounds of the multi-aggregated variable should be
+ * changed. This has to be done with care in order to not loose the performance gains of
+ * multi-aggregation.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -4406,7 +4413,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
          goto TERMINATE;
       }
 
-      /**@todo currently we don't perform the multi aggregation if the multi aggregation variable has a none
+      /**@todo currently we don't perform the multi aggregation if the multi aggregation variable has a non
        *  empty hole list; this should be changed in the future  */
       if( SCIPvarGetHolelistGlobal(var) != NULL )
          goto TERMINATE;
@@ -5728,8 +5735,7 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
       break;
          
    case SCIP_VARSTATUS_MULTAGGR:
-      /**@todo change the sides of the corresponding linear constraint */
-      SCIPerrorMessage("changing the bounds of a multiple aggregated variable is not implemented yet\n");
+      SCIPerrorMessage("cannot change the bounds of a multi-aggregated variable.\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
@@ -5849,8 +5855,7 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
       break;
          
    case SCIP_VARSTATUS_MULTAGGR:
-      /**@todo change the sides of the corresponding linear constraint */
-      SCIPerrorMessage("changing the bounds of a multiple aggregated variable is not implemented yet\n");
+      SCIPerrorMessage("cannot change the bounds of a multi-aggregated variable.\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
@@ -6396,8 +6401,7 @@ SCIP_RETCODE SCIPvarChgLbLocal(
       break;
          
    case SCIP_VARSTATUS_MULTAGGR:
-      /**@todo change the sides of the corresponding linear constraint */
-      SCIPerrorMessage("changing the bounds of a multiple aggregated variable is not implemented yet\n");
+      SCIPerrorMessage("cannot change the bounds of a multi-aggregated variable.\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
@@ -6510,8 +6514,7 @@ SCIP_RETCODE SCIPvarChgUbLocal(
       break;
          
    case SCIP_VARSTATUS_MULTAGGR:
-      /**@todo change the sides of the corresponding linear constraint */
-      SCIPerrorMessage("changing the bounds of a multiple aggregated variable is not implemented yet\n");
+      SCIPerrorMessage("cannot change the bounds of a multi-aggregated variable.\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
@@ -6628,8 +6631,7 @@ SCIP_RETCODE SCIPvarChgLbDive(
       break;
       
    case SCIP_VARSTATUS_MULTAGGR:
-      /**@todo change the sides of the corresponding linear constraint */
-      SCIPerrorMessage("changing the bounds of a multiple aggregated variable is not implemented yet\n");
+      SCIPerrorMessage("cannot change the bounds of a multi-aggregated variable.\n");
       return SCIP_INVALIDDATA;
       
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
@@ -6717,8 +6719,7 @@ SCIP_RETCODE SCIPvarChgUbDive(
       break;
       
    case SCIP_VARSTATUS_MULTAGGR:
-      /**@todo change the sides of the corresponding linear constraint */
-      SCIPerrorMessage("changing the bounds of a multiple aggregated variable is not implemented yet\n");
+      SCIPerrorMessage("cannot change the bounds of a multi-aggregated variable.\n");
       return SCIP_INVALIDDATA;
       
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
@@ -7189,8 +7190,7 @@ SCIP_RETCODE SCIPvarAddHoleGlobal(
       break;
       
    case SCIP_VARSTATUS_MULTAGGR:
-      /**@todo change the sides of the corresponding linear constraint */
-      SCIPerrorMessage("adding a hole of a multiple aggregated variable is not implemented yet\n");
+      SCIPerrorMessage("cannot add a hole of a multi-aggregated variable.\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
@@ -7428,8 +7428,7 @@ SCIP_RETCODE SCIPvarAddHoleLocal(
       break;
       
    case SCIP_VARSTATUS_MULTAGGR:
-      /**@todo change the sides of the corresponding linear constraint */
-      SCIPerrorMessage("adding domain hole to a multiple aggregated variable is not implemented yet\n");
+      SCIPerrorMessage("cannot add domain hole to a multi-aggregated variable.\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
@@ -10217,8 +10216,7 @@ SCIP_Real SCIPvarGetUbLP(
       }
       
    case SCIP_VARSTATUS_MULTAGGR:
-      /**@todo get the sides of the corresponding linear constraint */
-      SCIPerrorMessage("getting the bounds of a multiple aggregated variable is not implemented yet\n");
+      SCIPerrorMessage("cannot get the bounds of a multi-aggregated variable.\n");
       SCIPABORT();
       return 0.0; /*lint !e527*/
       
@@ -12693,8 +12691,7 @@ SCIP_Real SCIPvarGetLbAtIndex(
       }
       
    case SCIP_VARSTATUS_MULTAGGR:
-      /**@todo get the sides of the corresponding linear constraint */
-      SCIPerrorMessage("getting the bounds of a multiple aggregated variable is not implemented yet\n");
+      SCIPerrorMessage("cannot get the bounds of a multi-aggregated variable.\n");
       SCIPABORT();
       return 0.0; /*lint !e527*/
       
@@ -12770,8 +12767,7 @@ SCIP_Real SCIPvarGetUbAtIndex(
       }
       
    case SCIP_VARSTATUS_MULTAGGR:
-      /**@todo get the sides of the corresponding linear constraint */
-      SCIPerrorMessage("getting the bounds of a multiple aggregated variable is not implemented yet\n");
+      SCIPerrorMessage("cannot get the bounds of a multiple aggregated variable.\n");
       SCIPABORT();
       return 0.0; /*lint !e527*/
       

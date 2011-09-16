@@ -52,6 +52,7 @@
 #include "scip/cons_linear.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_quadratic.h"
+#include "scip/cons_nonlinear.h"
 #include "scip/pub_misc.h"
 
 #define CONSHDLR_NAME          "linear"
@@ -106,6 +107,7 @@
 #define HASHSIZE_LINEARCONS        131101 /**< minimal size of hash table in linear constraint tables */
 
 #define QUADCONSUPGD_PRIORITY     1000000 /**< priority of the constraint handler for upgrading of quadratic constraints */
+#define NONLINCONSUPGD_PRIORITY   1000000 /**< priority of the constraint handler for upgrading of nonlinear constraints */
 
 #ifdef WITH_PRINTORIGCONSTYPES
 /** constraint type */
@@ -10287,7 +10289,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLinear)
  * Quadratic constraint upgrading
  */
 
-#ifdef QUADCONSUPGD_PRIORITY
+
 /** upgrades quadratic constraints with only and at least one linear variables into a linear constraint
  */
 static
@@ -10330,7 +10332,42 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 
    return SCIP_OKAY;
 }
-#endif
+
+/** tries to upgrade a nonlinear constraint into a linear constraint */
+static
+SCIP_DECL_NONLINCONSUPGD(upgradeConsNonlinear)
+{
+   assert(nupgdconss != NULL);
+   assert(upgdconss != NULL);
+
+   *nupgdconss = 0;
+
+   /* no interest in nonlinear constraints */
+   if( SCIPgetExprgraphNodeNonlinear(scip, cons) != NULL )
+      return SCIP_OKAY;
+
+   /* no interest in constant constraints */
+   if( SCIPgetNLinearVarsNonlinear(scip, cons) == 0 )
+      return SCIP_OKAY;
+
+   if( upgdconsssize < 1 )
+   {
+      /* request larger upgdconss array */
+      *nupgdconss = -1;
+      return SCIP_OKAY;
+   }
+
+   *nupgdconss = 1;
+   SCIP_CALL( SCIPcreateConsLinear(scip, &upgdconss[0], SCIPconsGetName(cons),
+      SCIPgetNLinearVarsNonlinear(scip, cons), SCIPgetLinearVarsNonlinear(scip, cons), SCIPgetLinearCoefsNonlinear(scip, cons),
+      SCIPgetLhsNonlinear(scip, cons), SCIPgetRhsNonlinear(scip, cons),
+      SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+      SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+      SCIPconsIsStickingAtNode(cons)) );
+
+   return SCIP_OKAY;
+}
 
 /*
  * constraint specific interface methods
@@ -10373,13 +10410,17 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          consPrintLinear, consCopyLinear, consParseLinear,
          conshdlrdata) );
 
-#ifdef QUADCONSUPGD_PRIORITY
    if( SCIPfindConshdlr(scip, "quadratic") != NULL )
    {
       /* include function that upgrades quadratic constraint to linear constraints */
-      SCIP_CALL( SCIPincludeQuadconsUpgrade(scip, upgradeConsQuadratic, QUADCONSUPGD_PRIORITY, CONSHDLR_NAME) );
+      SCIP_CALL( SCIPincludeQuadconsUpgrade(scip, upgradeConsQuadratic, QUADCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
    }
-#endif
+
+   if( SCIPfindConshdlr(scip, "nonlinear") != NULL )
+   {
+      /* include the linear constraint upgrade in the nonlinear constraint handler */
+      SCIP_CALL( SCIPincludeNonlinconsUpgrade(scip, upgradeConsNonlinear, NULL, NONLINCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
+   }
 
    /* add linear constraint handler parameters */
    SCIP_CALL( SCIPaddIntParam(scip,

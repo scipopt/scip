@@ -1474,7 +1474,8 @@ void SCIPintervalSquareRoot(
 
 /** stores operand1 to the power of operand2 in resultant
  * 
- * uses SCIPintervalPowerScalar if operand2 is a scalar, otherwise computes exp(op2*log(op1)) */
+ * uses SCIPintervalPowerScalar if operand2 is a scalar, otherwise computes exp(op2*log(op1))
+ */
 void SCIPintervalPower(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -1846,14 +1847,6 @@ void SCIPintervalPowerScalar(
       return;
    }
 
-   if( operand2 == 0.0 )
-   {
-      /* x^0 = 1 */
-      resultant->inf = 1.0;
-      resultant->sup = 1.0;
-      return;
-   }
-
    if( operand2 == 1.0 )
    {
       /* x^1 = x */
@@ -1997,8 +1990,7 @@ void SCIPintervalPowerScalar(
          else
             resultant->sup = SCIPintervalPowerScalarIntegerSup(-operand1.sup, (int)operand2);
       }
-      assert(resultant->inf <= resultant->sup);
-
+      assert(resultant->inf <= resultant->sup || resultant->inf >= infinity || resultant->sup <= -infinity);
    }
    else
    {  /* similar difficult case: x^n with x in [<0, >0], but n is integer */
@@ -2041,6 +2033,86 @@ void SCIPintervalPowerScalar(
          resultant->inf = -infinity;
          resultant->sup =  infinity;
       }
+   }
+
+   /* if value for infinity is too small, relax intervals so they do not appear empty */
+   if( resultant->inf > infinity )
+      resultant->inf = infinity;
+   if( resultant->sup < -infinity )
+      resultant->sup = -infinity;
+}
+
+/** given an interval for the image of a power operation, computes an interval for the origin
+ * that is, for y = x^p with p = exponent a given scalar and y = image a given interval,
+ * computes a subinterval x of basedomain such that y in x^p and such that for all z in basedomain less x, z^p not in y
+ */
+extern
+void SCIPintervalPowerScalarInverse(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         basedomain,         /**< domain of base */
+   SCIP_Real             exponent,           /**< exponent */
+   SCIP_INTERVAL         image               /**< interval image of power */
+   )
+{
+   SCIP_INTERVAL tmp;
+   SCIP_INTERVAL exprecip;
+
+   assert(resultant != NULL);
+   assert(image.inf <= image.sup);
+   assert(basedomain.inf <= basedomain.sup);
+
+   if( exponent == 0.0 )
+   {
+      /* exponent is 0.0 */
+      if( image.inf <= 1.0 && image.sup >= 1.0 )
+      {
+         /* 1 in image -> resultant = entire */
+         *resultant = basedomain;
+      }
+      else if( image.inf <= 0.0 && image.sup >= 0.0 )
+      {
+         /* 0 in image, 1 not in image -> resultant = 0   (provided 0^0 = 0 ???)
+          * -> resultant = {0} intersected with basedomain */
+         SCIPintervalSetBounds(resultant, MAX(0.0, basedomain.inf), MIN(0.0, basedomain.sup));
+      }
+      else
+      {
+         /* 0 and 1 not in image -> resultant = empty */
+         SCIPintervalSetEmpty(resultant);
+      }
+      return;
+   }
+
+   /* i = b^e
+    *   i >= 0 -> b = i^(1/e) [union -i^(1/e), if e is even]
+    *   i < 0, e odd integer -> b = -(-i)^(1/e)
+    *   i < 0, e even integer or fractional -> empty
+    */
+
+   SCIPintervalSetBounds(&exprecip, exponent, exponent);
+   SCIPintervalReciprocal(infinity, &exprecip, exprecip);
+
+   /* invert positive part of image, if any */
+   if( image.sup >= 0.0 )
+   {
+      SCIPintervalSetBounds(&tmp, MAX(image.inf, 0.0), image.sup);
+      SCIPintervalPower(infinity, resultant, tmp, exprecip);
+      if( basedomain.inf <= -resultant->inf && EPSISINT(exponent, 0.0) && (int)exponent % 2 == 0 )
+         SCIPintervalSetBounds(resultant, -resultant->sup, resultant->sup);
+      SCIPintervalIntersect(resultant, *resultant, basedomain);
+   }
+   else
+      SCIPintervalSetEmpty(resultant);
+
+   /* invert negative part of image, if any and if base can take negative value and if exponent is such that negative values are possible */
+   if( image.inf < 0.0 && basedomain.inf < 0.0 && EPSISINT(exponent, 0.0) && ((int)exponent % 2 != 0) )
+   {
+      SCIPintervalSetBounds(&tmp, MAX(-image.sup, 0.0), -image.inf);
+      SCIPintervalPower(infinity, &tmp, tmp, exprecip);
+      SCIPintervalSetBounds(&tmp, MAX(basedomain.inf, -tmp.sup), MIN(basedomain.sup, -tmp.inf));
+
+      SCIPintervalUnify(resultant, *resultant, tmp);
    }
 }
 
@@ -2319,18 +2391,32 @@ void SCIPintervalExp(
 
    if( operand.inf == operand.sup )
    {
-      SCIP_Real tmp;
+      if( operand.inf == 0.0 )
+      {
+         resultant->inf = 1.0;
+         resultant->sup = 1.0;
+      }
+      else
+      {
+         SCIP_Real tmp;
 
-      assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
-      tmp = exp(operand.inf);
-      resultant->inf = nextafter(tmp, SCIP_REAL_MIN);
-      resultant->sup = nextafter(tmp, SCIP_REAL_MAX);
+         assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
+         tmp = exp(operand.inf);
+         resultant->inf = nextafter(tmp, SCIP_REAL_MIN);
+         resultant->sup = nextafter(tmp, SCIP_REAL_MAX);
 
-      return;
+         return;
+      }
    }
 
    if( operand.inf <= -infinity )
+   {
       resultant->inf = 0.0;
+   }
+   else if( operand.inf == 0.0 )
+   {
+      resultant->inf = 1.0;
+   }
    else
    {
       assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
@@ -2339,9 +2425,15 @@ void SCIPintervalExp(
       if( resultant->inf >= infinity )
          resultant->inf = infinity;
    }
-  
+
    if( operand.sup >=  infinity )
+   {
       resultant->sup = infinity;
+   }
+   else if( operand.sup == 0.0 )
+   {
+      resultant->sup = 1.0;
+   }
    else
    {
       assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
@@ -2376,6 +2468,11 @@ void SCIPintervalLog(
          resultant->inf = -infinity;
          resultant->sup = -infinity;
       }
+      else if( operand.sup == 1.0 )
+      {
+         resultant->inf = 0.0;
+         resultant->sup = 0.0;
+      }
       else
       {
          SCIP_Real tmp;
@@ -2393,6 +2490,10 @@ void SCIPintervalLog(
    {
       resultant->inf = -infinity;
    }
+   else if( operand.inf == 1.0 )
+   {
+      resultant->inf = 0.0;
+   }
    else
    {
       assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
@@ -2402,6 +2503,10 @@ void SCIPintervalLog(
    if( operand.sup >= infinity )
    {
       resultant->sup =  infinity;
+   }
+   else if( operand.sup == 1.0 )
+   {
+      resultant->sup = 0.0;
    }
    else if( operand.sup == 0.0 )
    {
@@ -2638,7 +2743,7 @@ void SCIPintervalQuad(
 
 /** computes interval with positive solutions of a quadratic equation with interval coefficients
  * 
- * Given intervals a, b, and c, this function computes an interval that contains all positive solutions of \f$ a x^2 + b x \geq c\f$.
+ * Given intervals a, b, and c, this function computes an interval that contains all positive solutions of \f$ a x^2 + b x \in c\f$.
  */
 void SCIPintervalSolveUnivariateQuadExpressionPositive(
    SCIP_Real             infinity,           /**< value for infinity */
@@ -2850,4 +2955,958 @@ void SCIPintervalSolveUnivariateQuadExpression(
 
    SCIPintervalUnify(resultant, xpos, xneg);
    SCIPdebugMessage("  unify gives [%g,%g]\n", SCIPintervalGetInf(*resultant), SCIPintervalGetSup(*resultant));
+}
+
+/** stores range of bivariate quadratic term in resultant
+ * given scalars ax, ay, axy, bx, and by and intervals for x and y, computes interval for \f$ ax x^2 + ay y^2 + axy x y + bx x + by y \f$
+ * NOTE: the operations are not applied rounding-safe here
+ */
+void SCIPintervalQuadBivar(
+   SCIP_Real             infinity,           /**< value for infinity in interval arithmetics */
+   SCIP_INTERVAL*        resultant,          /**< buffer where to store result of operation */
+   SCIP_Real             ax,                 /**< square coefficient of x */
+   SCIP_Real             ay,                 /**< square coefficient of y */
+   SCIP_Real             axy,                /**< bilinear coefficients */
+   SCIP_Real             bx,                 /**< linear coefficient of x */
+   SCIP_Real             by,                 /**< linear coefficient of y */
+   SCIP_INTERVAL         xbnds,              /**< bounds on x */
+   SCIP_INTERVAL         ybnds               /**< bounds on y */
+)
+{
+   /* we use double double precision and finally widen the computed range by 1e-8% to compensate for not computing rounding-safe here */
+   long double minval;
+   long double maxval;
+   long double val;
+   long double x;
+   long double y;
+   long double denom;
+   long double ax_;
+   long double ay_;
+   long double axy_;
+   long double bx_;
+   long double by_;
+
+   assert(resultant != NULL);
+   assert(xbnds.inf <= xbnds.sup);
+   assert(ybnds.inf <= ybnds.sup);
+
+   /* if we are separable, then fall back to use SCIPintervalQuad two times and add */
+   if( axy == 0.0 )
+   {
+      SCIP_INTERVAL tmp;
+
+      SCIPintervalSet(&tmp, bx);
+      SCIPintervalQuad(infinity, resultant, ax, tmp, xbnds);
+
+      SCIPintervalSet(&tmp, by);
+      SCIPintervalQuad(infinity, &tmp, ay, tmp, ybnds);
+
+      SCIPintervalAdd(infinity, resultant, *resultant, tmp);
+
+      return;
+   }
+
+   SCIPintervalSet(resultant, 0.0);
+
+   ax_ = ax;
+   ay_ = ay;
+   axy_ = axy;
+   bx_ = bx;
+   by_ = by;
+
+   minval =  infinity;
+   maxval = -infinity;
+
+   /* check minima/maxima of expression */
+   denom = 4.0 * ax_ * ay_ - axy_ * axy_;
+   if( !EPSZ(denom, 1e-9) )
+   {
+      x = (axy_ * by_ - 2.0 * ay_ * bx_) / denom;
+      y = (axy_ * bx_ - 2.0 * ax_ * by_) / denom;
+      if( xbnds.inf <= x && x <= xbnds.sup && ybnds.inf <= y && y <= ybnds.sup )
+      {
+         val = (axy_ * bx_ * by_ - ay_ * bx_ * bx_ - ax_ * by_ * by_) / denom;
+         minval = MIN(val, minval);
+         maxval = MAX(val, maxval);
+      }
+   }
+   else if( EPSEQ(2.0 * ay_ * bx_, axy_ * by_, 1e-9) )
+   {
+      /* The whole line (x, -bx/axy - (axy/2ay) x) defines an extreme point with value -ay bx^2 / axy^2
+       * If x is unbounded, then there is an (x,y) with y in ybnds where the extreme value is assumed.
+       * If x is bounded on at least one side, then we can rely that the checks below for x at one of its bounds will check this extreme point.
+       */
+      if( xbnds.inf <= -infinity && xbnds.sup >= infinity )
+      {
+         val = -ay_ * bx_ * bx_ / (axy_ * axy_);
+         minval = MIN(val, minval);
+         maxval = MAX(val, maxval);
+      }
+   }
+
+   /* check boundary of box xbnds x ybnds */
+
+   if( xbnds.inf <= -infinity )
+   {
+      /* check value for x -> -infinity */
+      if( ax_ > 0.0 )
+         maxval =  infinity;
+      else if( ax_ < 0.0 )
+         minval = -infinity;
+      else if( ax_ == 0.0 )
+      {
+         /* bivar(x,y) tends to -(bx+axy y) * infinity */
+
+         if( ybnds.inf <= -infinity )
+            val = (axy_ < 0.0 ? -infinity : infinity);
+         else if( bx_ + axy_ * ybnds.inf < 0.0 )
+            val = infinity;
+         else
+            val = -infinity;
+         minval = MIN(val, minval);
+         maxval = MAX(val, maxval);
+
+         if( ybnds.sup >= infinity )
+            val = (axy_ < 0.0 ? infinity : -infinity);
+         else if( bx_ + axy * ybnds.sup < 0.0 )
+            val = infinity;
+         else
+            val = -infinity;
+         minval = MIN(val, minval);
+         maxval = MAX(val, maxval);
+      }
+   }
+   else
+   {
+      /* get range of bivar(xbnds.inf, y) for y in ybnds */
+      SCIP_INTERVAL tmp;
+      SCIP_INTERVAL ycoef;
+
+      SCIPintervalSet(&ycoef, axy * xbnds.inf + by);
+      SCIPintervalQuad(infinity, &tmp, ay, ycoef, ybnds);
+      SCIPintervalAddScalar(infinity, &tmp, tmp, ax_ * xbnds.inf * xbnds.inf + bx_ * xbnds.inf);
+      minval = MIN(tmp.inf, minval);
+      maxval = MAX(tmp.sup, maxval);
+   }
+
+   if( xbnds.sup >= infinity )
+   {
+      /* check value for x -> infinity */
+      if( ax_ > 0.0 )
+         maxval =  infinity;
+      else if( ax_ < 0.0 )
+         minval = -infinity;
+      else if( ax_ == 0.0 )
+      {
+         /* bivar(x,y) tends to (bx+axy y) * infinity */
+
+         if( ybnds.inf <= -infinity )
+            val = (axy_ > 0.0 ? -infinity : infinity);
+         else if( bx_ + axy_ * ybnds.inf > 0.0 )
+            val = infinity;
+         else
+            val = -infinity;
+         minval = MIN(val, minval);
+         maxval = MAX(val, maxval);
+
+         if( ybnds.sup >= infinity )
+            val = (axy_ > 0.0 ? infinity : -infinity);
+         else if( bx + axy_ * ybnds.sup > 0.0 )
+            val = infinity;
+         else
+            val = -infinity;
+         minval = MIN(val, minval);
+         maxval = MAX(val, maxval);
+      }
+   }
+   else
+   {
+      /* get range of bivar(xbnds.sup, y) for y in ybnds */
+      SCIP_INTERVAL tmp;
+      SCIP_INTERVAL ycoef;
+
+      SCIPintervalSet(&ycoef, axy * xbnds.sup + by);
+      SCIPintervalQuad(infinity, &tmp, ay, ycoef, ybnds);
+      SCIPintervalAddScalar(infinity, &tmp, tmp, ax_ * xbnds.sup * xbnds.sup + bx * xbnds.sup);
+      minval = MIN(tmp.inf, minval);
+      maxval = MAX(tmp.sup, maxval);
+   }
+
+   if( ybnds.inf <= -infinity )
+   {
+      /* check value for y -> -infinity */
+      if( ay_ > 0.0 )
+         maxval =  infinity;
+      else if( ay_ < 0.0 )
+         minval = -infinity;
+      else if( ay_ == 0.0 )
+      {
+         /* bivar(x,y) tends to -(by+axy x) * infinity */
+
+         if( xbnds.inf <= -infinity )
+            val = (axy_ < 0.0 ? -infinity : infinity);
+         else if( by_ + axy_ * xbnds.inf < 0.0 )
+            val = infinity;
+         else
+            val = -infinity;
+         minval = MIN(val, minval);
+         maxval = MAX(val, maxval);
+
+         if( xbnds.sup >= infinity )
+            val = (axy_ < 0.0 ? infinity : -infinity);
+         else if( by_ + axy_ * xbnds.sup < 0.0 )
+            val = infinity;
+         else
+            val = -infinity;
+         minval = MIN(val, minval);
+         maxval = MAX(val, maxval);
+      }
+   }
+   else
+   {
+      /* get range of bivar(x, ybnds.inf) for x in xbnds */
+      SCIP_INTERVAL tmp;
+      SCIP_INTERVAL xcoef;
+
+      SCIPintervalSet(&xcoef, axy * ybnds.inf + bx);
+      SCIPintervalQuad(infinity, &tmp, ax, xcoef, xbnds);
+      SCIPintervalAddScalar(infinity, &tmp, tmp, ay * ybnds.inf * ybnds.inf + by * ybnds.inf);
+      minval = MIN(tmp.inf, minval);
+      maxval = MAX(tmp.sup, maxval);
+   }
+
+   if( ybnds.sup >= infinity )
+   {
+      /* check value for y -> infinity */
+      if( ay_ > 0.0 )
+         maxval =  infinity;
+      else if( ay_ < 0.0 )
+         minval = -infinity;
+      else if( ay_ == 0.0 )
+      {
+         /* bivar(x,y) tends to (by+axy x) * infinity */
+
+         if( xbnds.inf <= -infinity )
+            val = (axy_ > 0.0 ? -infinity : infinity);
+         else if( by_ + axy_ * xbnds.inf > 0.0 )
+            val = infinity;
+         else
+            val = -infinity;
+         minval = MIN(val, minval);
+         maxval = MAX(val, maxval);
+
+         if( xbnds.sup >= infinity )
+            val = (axy_ > 0.0 ? infinity : -infinity);
+         else if( by_ + axy_ * xbnds.sup > 0.0 )
+            val = infinity;
+         else
+            val = -infinity;
+         minval = MIN(val, minval);
+         maxval = MAX(val, maxval);
+      }
+   }
+   else
+   {
+      /* get range of bivar(x, ybnds.sup) for x in xbnds */
+      SCIP_INTERVAL tmp;
+      SCIP_INTERVAL xcoef;
+
+      SCIPintervalSet(&xcoef, axy * ybnds.sup + bx);
+      SCIPintervalQuad(infinity, &tmp, ax, xcoef, xbnds);
+      SCIPintervalAddScalar(infinity, &tmp, tmp, ay * ybnds.sup * ybnds.sup + by * ybnds.sup);
+      minval = MIN(tmp.inf, minval);
+      maxval = MAX(tmp.sup, maxval);
+   }
+
+   minval -= 1e-10 * REALABS(minval);
+   maxval += 1e-10 * REALABS(maxval);
+   SCIPintervalSetBounds(resultant, minval, maxval);
+
+   SCIPdebugMessage("range for %gx^2 + %gy^2 + %gxy + %gx + %gy = [%Lg, %Lg] for x = [%g, %g], y=[%g, %g]\n",
+      ax, ay, axy, bx, by, minval, maxval, xbnds.inf, xbnds.sup, ybnds.inf, ybnds.sup);
+}
+
+/** solves a bivariate quadratic equation for the first variable
+ * given scalars ax, ay, axy, bx and by, and intervals for x, y, and rhs,
+ * computes \f$ \{ x \in \mathbf{x} : \exists y \in \mathbf{y} : a_x x^2 + a_y y^2 + a_{xy} x y + b_x x + b_y y \in \mathbf{\mbox{rhs}} \} \f$
+ * NOTE: the operations are not applied rounding-safe here
+ */
+void SCIPintervalSolveBivariateQuadExpressionAllScalar(
+   SCIP_Real             infinity,           /**< value for infinity in interval arithmetics */
+   SCIP_INTERVAL*        resultant,          /**< buffer where to store result of operation */
+   SCIP_Real             ax,                 /**< square coefficient of x */
+   SCIP_Real             ay,                 /**< square coefficient of y */
+   SCIP_Real             axy,                /**< bilinear coefficients */
+   SCIP_Real             bx,                 /**< linear coefficient of x */
+   SCIP_Real             by,                 /**< linear coefficient of y */
+   SCIP_INTERVAL         rhs,                /**< right-hand-side of equation */
+   SCIP_INTERVAL         xbnds,              /**< bounds on x */
+   SCIP_INTERVAL         ybnds               /**< bounds on y */
+)
+{
+   /* we use double double precision and finally widen the computed range by 1e-8% to compensate for not computing rounding-safe here */
+   long double val;
+   long double ax_;
+   long double ay_;
+   long double axy_;
+   long double bx_;
+   long double by_;
+
+   assert(resultant != NULL);
+
+   if( axy == 0.0 )
+   {
+      /* if axy == 0, fall back to SCIPintervalSolveUnivariateQuadExpression */
+      SCIP_INTERVAL ytermrng;
+      SCIP_INTERVAL sqrcoef;
+      SCIP_INTERVAL lincoef;
+      SCIP_INTERVAL pos;
+      SCIP_INTERVAL neg;
+
+      SCIPintervalSet(&lincoef, by);
+      SCIPintervalQuad(infinity, &ytermrng, ay, lincoef, ybnds);
+      SCIPintervalSub(infinity, &rhs, rhs, ytermrng);
+
+      SCIPintervalSet(&sqrcoef, ax);
+
+      /* get positive solutions, if of interest */
+      if( xbnds.sup >= 0.0 )
+      {
+         SCIPintervalSet(&lincoef, bx);
+         SCIPintervalSolveUnivariateQuadExpressionPositive(infinity, &pos, sqrcoef, lincoef, rhs);
+         SCIPintervalIntersect(&pos, pos, xbnds);
+      }
+      else
+         SCIPintervalSetEmpty(&pos);
+
+      /* get negative solutions, if of interest */
+      if( xbnds.inf < 0.0 )
+      {
+         SCIPintervalSet(&lincoef, -bx);
+         SCIPintervalSolveUnivariateQuadExpressionPositive(infinity, &neg, sqrcoef, lincoef, rhs);
+         SCIPintervalSetBounds(&neg, -neg.sup, -neg.inf);
+         SCIPintervalIntersect(&neg, neg, xbnds);
+      }
+      else
+         SCIPintervalSetEmpty(&neg);
+
+      SCIPintervalUnify(resultant, pos, neg);
+
+      return;
+   }
+
+   if( ax < 0.0 )
+   {
+      SCIP_Real tmp;
+      tmp = rhs.inf;
+      rhs.inf = -rhs.sup;
+      rhs.sup = -tmp;
+
+      SCIPintervalSolveBivariateQuadExpressionAllScalar(infinity, resultant, -ax, -ay, -axy, -bx, -by, rhs, xbnds, ybnds);
+      return;
+   }
+   assert(ax >= 0.0);
+
+   ax_  = ax;
+   ay_  = ay;
+   axy_ = axy;
+   bx_  = bx;
+   by_  = by;
+
+   *resultant = xbnds;
+
+   if( ax > 0.0 )
+   {
+      long double sqrtax;
+      long double minvalleft;
+      long double maxvalleft;
+      long double minvalright;
+      long double maxvalright;
+      long double ymin;
+      long double rcoef_y;
+      long double rcoef_yy;
+      long double rcoef_const;
+
+      sqrtax = sqrt(ax_);
+
+      /* rewrite equation as (sqrt(ax)x + b(y))^2 \in r(rhs,y), where
+       * b(y) = (bx + axy y)/(2sqrt(ax)), r(rhs,y) = rhs - ay y^2 - by y + b(y)^2
+       *
+       * -> r(rhs,y) = bx^2/(4ax) + rhs + (axy bx/(2ax) - by)*y + (axy^2/(4ax) - ay)*y^2
+       */
+      rcoef_y     = axy_ * bx_  / (2.0*ax_) - by_;
+      rcoef_yy    = axy_ * axy_ / (4.0*ax_) - ay_;
+      rcoef_const = bx_  * bx_  / (4.0*ax_);
+
+#define CALCB(y)    ((bx_ + axy_ * (y)) / (2.0 * sqrtax))
+#define CALCR(c,y)  (rcoef_const + (c) + (rcoef_y + rcoef_yy * (y)) * (y))
+
+      /* check whether r(rhs,y) is always negative */
+      if( rhs.sup < infinity )
+      {
+         SCIP_INTERVAL ycoef;
+         SCIP_Real ub;
+
+         SCIPintervalSet(&ycoef, rcoef_y);
+         ub = SCIPintervalQuadUpperBound(infinity, rcoef_yy, ycoef, ybnds);
+         ub += rhs.sup + rcoef_const;
+
+         if( EPSN(ub, 1e-9) )
+         {
+            SCIPintervalSetEmpty(resultant);
+            return;
+         }
+      }
+
+      /* we have sqrt(ax)x \in (-sqrt(r(rhs,y))-b(y)) \cup (sqrt(r(rhs,y))-b(y))
+       * compute minima and maxima of both functions such that
+       *
+       * [minvalleft,  maxvalleft ] = -sqrt(r(rhs,y))-b(y)
+       * [minvalright, maxvalright] =  sqrt(r(rhs,y))-b(y)
+       */
+
+      minvalleft  =  infinity;
+      maxvalleft  = -infinity;
+      minvalright =  infinity;
+      maxvalright = -infinity;
+
+      if( rhs.sup >= infinity )
+      {
+         /* we can't do much if rhs.sup is infinite
+          * but we may to a bit of xbnds isn't too huge and rhs.inf > -infinity  */
+         minvalleft  = -infinity;
+         maxvalright =  infinity;
+      }
+
+      /* evaluate at lower bound of y, as long as r(rhs,ylb) > 0 */
+      if( ybnds.inf <= -infinity )
+      {
+         /* check limit of +/-sqrt(r(rhs,y))-b(y) for y -> -infty */
+         if( !EPSZ(ay, 1e-9) && axy_ * axy_ >= 4.0 * ax_ * ay_ )
+         {
+            if( axy_ < 0.0 || ay_ < 0.0 )
+               minvalleft = -infinity;
+
+            if( axy_ > 0.0 || ay_ < 0.0 )
+               maxvalright = infinity;
+         }
+         else if( !EPSZ(ay, 1e-9) )
+         {
+            /* here axy * axy < 4 * ax * ay, so need to check for zeros of r(rhs,y), which is done below */
+         }
+         else
+         {
+            /* here ay = 0.0, which gives a limit of -by/2 for -sqrt(r(rhs,y))-b(y) */
+            minvalleft = -by_ / 2.0;
+            maxvalleft = -by_ / 2.0;
+            /* here ay = 0.0, which gives a limit of +infinity for sqrt(r(rhs,y))-b(y) */
+            maxvalright = infinity;
+         }
+      }
+      else
+      {
+         long double b;
+         long double c;
+
+         b = CALCB(ybnds.inf);
+
+         if( rhs.sup <  infinity )
+         {
+            c = CALCR(rhs.sup, ybnds.inf);
+
+            if( c > 0.0 )
+            {
+               minvalleft  = MIN(-sqrt(c) - b, minvalleft);
+               maxvalright = MAX( sqrt(c) - b, maxvalright);
+            }
+         }
+
+         if( rhs.inf > -infinity )
+         {
+            c = CALCR(rhs.inf, ybnds.inf);
+
+            if( c > 0.0 )
+            {
+               maxvalleft  = MAX(-sqrt(c) - b, maxvalleft);
+               minvalright = MIN( sqrt(c) - b, minvalright);
+            }
+         }
+      }
+
+      /* evaluate at upper bound of y, as long as r(rhs, yub) > 0 */
+      if( ybnds.sup >= infinity )
+      {
+         /* check limit of +/-sqrt(r(rhs,y))-b(y) for y -> +infty */
+         if( !EPSZ(ay, 1e-9) && axy_ * axy_ >= 4.0 * ax_ * ay_ )
+         {
+            if( axy > 0.0 || ay < 0.0 )
+               minvalleft  = -infinity;
+
+            if( axy < 0.0 || ay < 0.0 )
+               maxvalright =  infinity;
+         }
+         else if( !EPSZ(ay, 1e-9) )
+         {
+            /* here axy * axy < 4 * ax * ay, so need to check for zeros of r(rhs,y), which will happen below */
+         }
+         else
+         {
+            /* here ay = 0.0, which gives a limit of -infinity for -sqrt(r(rhs,y))-b(y) */
+            minvalleft = -infinity;
+            /* here ay = 0.0, which gives a limit of -by/2 for sqrt(r(rhs,y))-b(y) */
+            minvalright = MIN(minvalright, -by / 2.0);
+            maxvalright = MAX(maxvalright, -by / 2.0);
+         }
+      }
+      else
+      {
+         long double b;
+         long double c;
+
+         b = CALCB(ybnds.sup);
+
+         if( rhs.sup <  infinity )
+         {
+            c = CALCR(rhs.sup, ybnds.sup);
+
+            if( c > 0.0 )
+            {
+               minvalleft  = MIN(-sqrt(c) - b, minvalleft);
+               maxvalright = MAX( sqrt(c) - b, maxvalright);
+            }
+         }
+
+         if( rhs.inf > -infinity )
+         {
+            c = CALCR(rhs.inf, ybnds.sup);
+
+            if( c > 0.0 )
+            {
+               maxvalleft  = MAX(-sqrt(c) - b, maxvalleft);
+               minvalright = MIN( sqrt(c) - b, minvalright);
+            }
+         }
+      }
+
+      /* evaluate at ymin = y_{_,+}, if inside ybnds
+       * if ay = 0 or 2ay*bx == axy*by, then there is no ymin */
+      if( !EPSZ(ay, 1e-9) )
+      {
+         if( !EPSEQ(axy_*axy_, 4.0*ax_*ay_, 1e-9) )
+         {
+            long double sqrtterm;
+
+            if( rhs.sup < infinity )
+            {
+               sqrtterm = axy_ * axy_ * ay_ * (ay_ * bx_ * bx_ - axy_ * bx_ * by_ + ax_ * by_ * by_ - axy_ * axy_ * rhs.sup + 4.0 * ax_ * ay_ * rhs.sup);
+               if( !EPSN(sqrtterm, 1e-9) )
+               {
+                  sqrtterm = sqrt(MAX(sqrtterm, 0.0));
+                  /* check first candidate for extreme points of +/-sqrt(rhs(r,y))-b(y) */
+                  ymin = axy_ * ay_ * bx_ - 2.0 * ax_ * ay_ * by_ - sqrtterm;
+                  ymin /= ay_;
+                  ymin /= 4.0 * ax_ * ay_ - axy_ * axy_;
+
+                  if( ymin > ybnds.inf && ymin < ybnds.sup )
+                  {
+                     long double b;
+                     long double c;
+
+                     b = CALCB(ymin);
+                     c = CALCR(rhs.sup, ymin);
+
+                     if( c > 0.0 )
+                     {
+                        minvalleft  = MIN(-sqrt(c) - b, minvalleft);
+                        maxvalright = MAX( sqrt(c) - b, maxvalright);
+                     }
+                  }
+
+                  /* check second candidate for extreme points of +/-sqrt(rhs(r,y))-b(y) */
+                  ymin = axy_ * ay_ * bx_ - 2.0 * ax_ * ay_ * by_ + sqrtterm;
+                  ymin /= ay_;
+                  ymin /= 4.0 * ax_ * ay_ - axy_ * axy_;
+
+                  if( ymin > ybnds.inf && ymin < ybnds.sup )
+                  {
+                     long double b;
+                     long double c;
+
+                     b = CALCB(ymin);
+                     c = CALCR(rhs.sup, ymin);
+
+                     if( c > 0.0 )
+                     {
+                        minvalleft  = MIN(-sqrt(c) - b, minvalleft);
+                        maxvalright = MAX( sqrt(c) - b, maxvalright);
+                     }
+                  }
+               }
+            }
+
+            if( rhs.inf > -infinity )
+            {
+               sqrtterm = axy_ * axy_ * ay_ * (ay_ * bx_ * bx_ - axy_ * bx_ * by_ + ax_ * by_ * by_ - axy_ * axy_ * rhs.inf + 4.0 * ax_ * ay_ * rhs.inf);
+               if( !EPSN(sqrtterm, 1e-9) )
+               {
+                  sqrtterm = sqrt(MAX(sqrtterm, 0.0));
+                  /* check first candidate for extreme points of +/-sqrt(r(rhs,y))-b(y) */
+                  ymin = axy_ * ay_ * bx_ - 2.0 * ax_ * ay_ * by_ - sqrtterm;
+                  ymin /= ay_;
+                  ymin /= 4.0 * ax_ * ay_ - axy_ * axy_;
+
+                  if( ymin > ybnds.inf && ymin < ybnds.sup )
+                  {
+                     long double b;
+                     long double c;
+
+                     b = CALCB(ymin);
+                     c = CALCR(rhs.inf, ymin);
+
+                     if( c > 0.0 )
+                     {
+                        maxvalleft  = MAX(-sqrt(c) - b, maxvalleft);
+                        minvalright = MIN( sqrt(c) - b, minvalright);
+                     }
+                  }
+
+                  /* check second candidate for extreme points of +/-sqrt(c(y))-b(y) */
+                  ymin = axy_ * ay_ * bx_ - 2.0 * ax_ * ay_ * by_ + sqrtterm;
+                  ymin /= ay_;
+                  ymin /= 4.0 * ax_ * ay_ - axy_ * axy_;
+
+                  if( ymin > ybnds.inf && ymin < ybnds.sup )
+                  {
+                     long double b;
+                     long double c;
+
+                     b = CALCB(ymin);
+                     c = CALCR(rhs.inf, ymin);
+
+                     if( c > 0.0 )
+                     {
+                        maxvalleft  = MAX(-sqrt(c) - b, maxvalleft);
+                        minvalright = MIN( sqrt(c) - b, minvalright);
+                     }
+                  }
+               }
+            }
+
+         }
+         else if( !EPSEQ(2.0 * ay_ * bx_, axy_ * by_, 1e-9) )
+         {
+            if( rhs.sup < infinity )
+            {
+               ymin = - (4.0 * ay_ * bx_ * by_ - axy_ * by_ * by_ + 4.0 * axy_ * ay_ * rhs.sup);
+               ymin /= 4.0 * ay_;
+               ymin /= 2.0 * ay_ * bx_ - axy_ * by_;
+
+               if( ymin > ybnds.inf && ymin < ybnds.sup )
+               {
+                  long double b;
+                  long double c;
+
+                  b = CALCB(ymin);
+                  c = CALCR(rhs.sup, ymin);
+
+                  if( c > 0.0 )
+                  {
+                     minvalleft  = MIN(-sqrt(c) - b, minvalleft);
+                     maxvalright = MAX( sqrt(c) - b, maxvalright);
+                  }
+               }
+            }
+
+            if( rhs.inf > -infinity )
+            {
+               ymin = - (4.0 * ay_ * bx_ * by_ - axy_ * by_ * by_ + 4.0 * axy_ * ay_ * rhs.inf);
+               ymin /= 4.0 * ay_;
+               ymin /= 2.0 * ay_ * bx_ - axy_ * by_;
+
+               if( ymin > ybnds.inf && ymin < ybnds.sup )
+               {
+                  long double b;
+                  long double c;
+
+                  b = CALCB(ymin);
+                  c = CALCR(rhs.inf, ymin);
+
+                  if( c > 0.0 )
+                  {
+                     maxvalleft  = MAX(-sqrt(c) - b, maxvalleft);
+                     minvalright = MIN( sqrt(c) - b, minvalright);
+                  }
+               }
+            }
+         }
+      }
+
+      /* evaluate the case r(rhs,y) = 0, which is to min/max -b(y) w.r.t. r(rhs,y) = 0, y in ybnds
+       * with the above assigments
+       *   rcoef_y     = axy * bx  / (2.0*ax) - by;
+       *   rcoef_yy    = axy * axy / (4.0*ax) - ay;
+       *   rcoef_const = bx  * bx  / (4.0*ax);
+       * we have r(rhs,y) = rhs + rcoef_const + rcoef_y * y + rcoef_yy * y^2
+       *
+       * thus, r(rhs,y) = 0 <-> rcoef_y * y + rcoef_yy * y^2 in -rhs - rcoef_const
+       *
+       */
+      {
+         SCIP_INTERVAL rcoef_yy_int;
+         SCIP_INTERVAL rcoef_y_int;
+         SCIP_INTERVAL rhs2;
+         long double b;
+
+         /* setup rcoef_yy, rcoef_y and -rhs-rcoef_const as intervals */
+         SCIPintervalSet(&rcoef_yy_int, rcoef_yy);
+         SCIPintervalSet(&rcoef_y_int, rcoef_y);
+         SCIPintervalSetBounds(&rhs2, -rhs.sup - rcoef_const, -rhs.inf - rcoef_const);
+
+         /* first find all y >= 0 such that rcoef_y * y + rcoef_yy * y^2 in -rhs2, if ybnds.sup > 0.0
+          * and evaluate -b(y) w.r.t. these values */
+         if( ybnds.sup > 0.0 )
+         {
+            SCIP_INTERVAL ypos;
+
+            SCIPintervalSolveUnivariateQuadExpressionPositive(infinity, &ypos, rcoef_yy_int, rcoef_y_int, rhs2);
+            SCIPintervalIntersect(&ypos, ypos, ybnds);
+            if( !SCIPintervalIsEmpty(ypos) )
+            {
+               assert(ypos.inf >= 0.0); /* we computed only positive solutions above */
+               b = CALCB(ypos.inf);
+               minvalleft  = MIN(minvalleft, -b);
+               maxvalleft  = MAX(maxvalleft, -b);
+               minvalright = MIN(minvalright, -b);
+               maxvalright = MAX(maxvalright, -b);
+
+               if( ypos.sup < infinity )
+               {
+                  b = CALCB(ypos.sup);
+                  minvalleft  = MIN(minvalleft, -b);
+                  maxvalleft  = MAX(maxvalleft, -b);
+                  minvalright = MIN(minvalright, -b);
+                  maxvalright = MAX(maxvalright, -b);
+               }
+               else
+               {
+                  /* -b(y) = - (bx + axy * y) / (2.0 * sqrt(ax)) -> -sign(axy)*infinity for y -> infinity */
+                  if( axy > 0.0 )
+                  {
+                     minvalleft  = -infinity;
+                     minvalright = -infinity;
+                  }
+                  else
+                  {
+                     maxvalleft  =  infinity;
+                     maxvalright =  infinity;
+                  }
+               }
+            }
+         }
+
+         /* next find all y <= 0 such that rcoef_y * y + rcoef_yy * y^2 in -rhs2, if ybnds.inf < 0.0
+          * and evaluate -b(y) w.r.t. these values */
+         if( ybnds.inf < 0.0 )
+         {
+            SCIP_INTERVAL yneg;
+
+            /* find all y >= 0 such that -rcoef_y * y + rcoef_yy * y^2 in -rhs2 and then negate y */
+            SCIPintervalSet(&rcoef_y_int, -rcoef_y);
+            SCIPintervalSolveUnivariateQuadExpressionPositive(infinity, &yneg, rcoef_yy_int, rcoef_y_int, rhs2);
+            if( !SCIPintervalIsEmpty(yneg) )
+            {
+               SCIPintervalSetBounds(&yneg, -yneg.sup, -yneg.inf);
+               SCIPintervalIntersect(&yneg, yneg, ybnds);
+            }
+            if( !SCIPintervalIsEmpty(yneg) )
+            {
+               if( yneg.inf > -infinity )
+               {
+                  b = CALCB(yneg.inf);
+                  minvalleft  = MIN(minvalleft,  -b);
+                  maxvalleft  = MAX(maxvalleft,  -b);
+                  minvalright = MIN(minvalright, -b);
+                  maxvalright = MAX(maxvalright, -b);
+               }
+               else
+               {
+                  /* -b(y) = - (bx + axy * y) / (2.0 * sqrt(ax)) -> sign(axy)*infinity for y -> -infinity */
+                  if( axy > 0.0 )
+                  {
+                     maxvalleft  =  infinity;
+                     maxvalright =  infinity;
+                  }
+                  else
+                  {
+                     minvalleft  = -infinity;
+                     minvalright = -infinity;
+                  }
+               }
+
+               assert(yneg.sup <= 0.0); /* we computed only negative solutions above */
+               b = CALCB(yneg.sup);
+               minvalleft  = MIN(minvalleft,  -b);
+               maxvalleft  = MAX(maxvalleft,  -b);
+               minvalright = MIN(minvalright, -b);
+               maxvalright = MAX(maxvalright, -b);
+            }
+         }
+      }
+
+      if( rhs.inf > -infinity && xbnds.inf > -infinity && EPSGT(xbnds.inf, maxvalleft / sqrtax, 1e-9) )
+      {
+         /* if sqrt(ax)*x > -sqrt(r(rhs,y))-b(y), then tighten lower bound of sqrt(ax)*x to lower bound of sqrt(r(rhs,y))-b(y)
+          * this is only possible if rhs.inf > -infinity, otherwise the value for maxvalleft is not valid (but tightening wouldn't be possible for sure anyway) */
+         assert(EPSGE(minvalright, minvalleft, 1e-9)); /* right interval should not be above lower bound of left interval */
+         if( minvalright > -infinity )
+            resultant->inf = minvalright / sqrtax;
+      }
+      else
+      {
+         /* otherwise, tighten lower bound of sqrt(ax)*x to lower bound of -sqrt(r(rhs,y))-b(y) */
+         if( minvalleft > -infinity )
+            resultant->inf = minvalleft / sqrtax;
+      }
+
+      if( rhs.inf > -infinity && xbnds.sup < infinity && EPSLT(xbnds.sup, minvalright / sqrtax, 1e-9) )
+      {
+         /* if sqrt(ax)*x < sqrt(r(rhs,y))-b(y), then tighten upper bound of sqrt(ax)*x to upper bound of -sqrt(r(rhs,y))-b(y)
+          * this is only possible if rhs.inf > -infinity, otherwise the value for minvalright is not valid (but tightening wouldn't be possible for sure anyway) */
+         assert(EPSLE(maxvalleft, maxvalright, 1e-9)); /* left interval should not be above upper bound of right interval */
+         if( maxvalleft < infinity )
+            resultant->sup = maxvalleft / sqrtax;
+      }
+      else
+      {
+         /* otherwise, tighten upper bound of sqrt(ax)*x to upper bound of sqrt(r(rhs,y))-b(y) */
+         if( maxvalright < infinity )
+            resultant->sup = maxvalright / sqrtax;
+      }
+
+      resultant->inf -= 1e-10 * REALABS(resultant->inf);
+      resultant->sup += 1e-10 * REALABS(resultant->sup);
+
+#undef CALCB
+#undef CALCR
+   }
+   else
+   {
+      /* case ax == 0 */
+
+      long double c;
+      long double d;
+      long double ymin;
+      long double minval;
+      long double maxval;
+
+      /* if -bx / axy in ybnds, we do nothing */
+      if( EPSGE(-bx_ / axy_, ybnds.inf, 1e-9) && EPSLE(-bx_ / axy_, ybnds.sup, 1e-9) )
+         return;
+
+      minval =  infinity;
+      maxval = -infinity;
+
+      /* compute a lower bound on x */
+      if( bx_ + axy_ * (axy > 0.0 ? ybnds.inf : ybnds.sup) > 0.0 )
+         c = rhs.inf;
+      else
+         c = rhs.sup;
+
+      if( ybnds.inf <= -infinity )
+      {
+         /* limit is ay/axy * infinity if ay != 0.0 and -by/axy otherwise */
+         if( EPSZ(ay, 1e-9) )
+            minval = -by_ / axy_;
+         else if( ay * axy < 0.0 )
+            minval = -infinity;
+      }
+      else
+      {
+         val = (c - ay_ * ybnds.inf * ybnds.inf - by_ * ybnds.inf) / (bx_ + axy_ * ybnds.inf);
+         minval = MIN(val, minval);
+      }
+
+      if( ybnds.sup >= infinity )
+      {
+         /* limit is -ay/axy * infinity if ay != 0.0 and -by/axy otherwise */
+         if( EPSZ(ay, 1e-9) )
+            minval = MIN(minval, -by_ / axy_);
+         else if( ay * axy > 0.0 )
+            minval = -infinity;
+      }
+      else
+      {
+         val = (c - ay_ * ybnds.sup * ybnds.sup - by_ * ybnds.sup) / (bx_ + axy_ * ybnds.sup);
+         minval = MIN(val, minval);
+      }
+
+      d = ay_ * (ay_ * bx_ * bx_ - axy_ * (bx_ * by_ + axy_ * c));
+      if( !EPSN(d, 1e-9) )
+      {
+         ymin = ay_ * bx_ + sqrt(MAX(d, 0.0));
+         ymin /= axy_ * ay_;
+
+         val = (c - ay_ * ymin * ymin - by_ * ymin) / (bx_ + axy_ * ymin);
+         minval = MIN(val, minval);
+
+         ymin = ay_ * bx_ - sqrt(MAX(d, 0.0));
+         ymin /= axy_ * ay_;
+
+         val = (c - ay_ * ymin * ymin - by_ * ymin) / (bx_ + axy_ * ymin);
+         minval = MIN(val, minval);
+      }
+
+      /* compute an upper bound on x */
+      if( bx_ + axy_ * (axy > 0.0 ? ybnds.inf : ybnds.sup) > 0.0 )
+         c = rhs.sup;
+      else
+         c = rhs.inf;
+
+      if( ybnds.inf <= -infinity )
+      {
+         /* limit is ay/axy * infinity if ay != 0.0 and -by/axy otherwise */
+         if( EPSZ(ay, 1e-9) )
+            maxval = -by_ / axy_;
+         else if( ay * axy > 0.0 )
+            maxval = infinity;
+      }
+      else
+      {
+         val = (c - ay_ * ybnds.inf * ybnds.inf - by_ * ybnds.inf) / (bx_ + axy_ * ybnds.inf);
+         maxval = MAX(val, maxval);
+      }
+
+      if( ybnds.sup >= infinity )
+      {
+         /* limit is -ay/axy * infinity if ay != 0.0 and -by/axy otherwise */
+         if( EPSZ(ay, 1e-9) )
+            maxval = MAX(maxval, -by_ / axy_);
+         else if( ay * axy < 0.0 )
+            maxval = infinity;
+      }
+      else
+      {
+         val = (c - ay_ * ybnds.sup * ybnds.sup - by_ * ybnds.sup) / (bx_ + axy_ * ybnds.sup);
+         maxval = MAX(val, maxval);
+      }
+
+      d = ay_ * (ay_ * bx_ * bx_ - axy_ * (bx_ * by_ + axy_ * c));
+      if( !EPSN(d, 1e-9) )
+      {
+         ymin = ay_ * bx_ + sqrt(MAX(d, 0.0));
+         ymin /= axy_ * ay_;
+
+         val = (c - ay_ * ymin * ymin - by_ * ymin) / (bx_ + axy_ * ymin);
+         maxval = MAX(val, maxval);
+
+         ymin = ay_ * bx_ - sqrt(MAX(d, 0.0));
+         ymin /= axy_ * ay_;
+
+         val = (c - ay_ * ymin * ymin - by_ * ymin) / (bx_ + axy_ * ymin);
+         maxval = MAX(val, maxval);
+      }
+
+      resultant->inf = minval - 1e-10 * REALABS(minval);
+      resultant->sup = maxval + 1e-10 * REALABS(maxval);
+   }
 }

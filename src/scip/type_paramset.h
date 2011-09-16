@@ -44,7 +44,7 @@ enum SCIP_ParamType
 };
 typedef enum SCIP_ParamType SCIP_PARAMTYPE;
 
-/** possible parameter settings */
+/** possible parameter settings - used to determine the behavior of different SCIP components, e.g., heuristics, separtors, ... */
 enum SCIP_ParamSetting
 {
    SCIP_PARAMSETTING_DEFAULT     = 0,        /**< use default values */
@@ -52,15 +52,22 @@ enum SCIP_ParamSetting
    SCIP_PARAMSETTING_AGGRESSIVE  = 1,        /**< set to aggressive settings */
    SCIP_PARAMSETTING_FAST        = 2,        /**< set to fast settings */
    SCIP_PARAMSETTING_OFF         = 3,        /**< turn off */
-
-   SCIP_PARAMSETTING_COUNTER     = 4,        /**< get a feasible and "fast" counting process */
-   SCIP_PARAMSETTING_CPSOLVER    = 5,        /**< get CP like search (e.g. no LP relaxation) */
-   SCIP_PARAMSETTING_EASYCIP     = 6,        /**< solve easy problems fast */
-   SCIP_PARAMSETTING_FEASIBILITY = 7,        /**< detect feasibility fast */
-   SCIP_PARAMSETTING_HARDLP      = 8,        /**< be capable to handle hard LPs */
-   SCIP_PARAMSETTING_OPTIMALITY  = 9         /**< prove optimality fast */
 };
 typedef enum SCIP_ParamSetting SCIP_PARAMSETTING;
+
+/** possible parameter emphases - used to determine the general SCIP behavior */
+enum SCIP_ParamEmphasis
+{
+   SCIP_PARAMEMPHASIS_DEFAULT     = 0,        /**< use default values */
+
+   SCIP_PARAMEMPHASIS_CPSOLVER    = 1,        /**< get CP like search (e.g. no LP relaxation) */
+   SCIP_PARAMEMPHASIS_EASYCIP     = 2,        /**< solve easy problems fast */
+   SCIP_PARAMEMPHASIS_FEASIBILITY = 3,        /**< detect feasibility fast */
+   SCIP_PARAMEMPHASIS_HARDLP      = 4,        /**< be capable to handle hard LPs */
+   SCIP_PARAMEMPHASIS_OPTIMALITY  = 5,        /**< prove optimality fast */
+   SCIP_PARAMEMPHASIS_COUNTER     = 6         /**< get a feasible and "fast" counting process */
+};
+typedef enum SCIP_ParamEmphasis SCIP_PARAMEMPHASIS;
 
 typedef struct SCIP_Param SCIP_PARAM;             /**< single parameter */
 typedef struct SCIP_ParamData SCIP_PARAMDATA;     /**< locally defined parameter specific data */

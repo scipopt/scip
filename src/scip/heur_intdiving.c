@@ -419,12 +419,6 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
          /* get the LP solution value */
          solval = SCIPvarGetLPSol(var);
 
-#if 0
-         /* ignore binary variables that are currently integral */
-         if( SCIPisFeasIntegral(scip, solval) )
-            continue;
-#endif
-
          if( solval > bestsolval )
          {
             bestcand = c;

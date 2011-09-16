@@ -2818,6 +2818,16 @@ void SCIPsort(
 #include "scip/sorttpl.c" /*lint !e451*/
 
 
+/* SCIPsortPtrPtrRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     PtrPtrRealInt
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_PTRCOMP
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
 /* SCIPsortPtrPtrLongInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     PtrPtrLongInt
 #define SORTTPL_KEYTYPE     void*

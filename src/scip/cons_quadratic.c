@@ -36,6 +36,7 @@
 #include <string.h> /* for strcmp */ 
 #include <ctype.h>  /* for isspace */
 
+#include "scip/cons_nonlinear.h"
 #include "scip/cons_quadratic.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_and.h"
@@ -43,6 +44,7 @@
 #include "scip/intervalarith.h"
 #include "scip/heur_subnlp.h"
 #include "scip/heur_trysol.h"
+#include "scip/debug.h"
 #include "nlpi/nlpi.h"
 #include "nlpi/nlpi_ipopt.h"
 
@@ -62,10 +64,10 @@
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
-#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
+#define CONSHDLR_PROP_TIMING SCIP_PROPTIMING_BEFORELP
 
 #define MAXDNOM                 10000LL /**< maximal denominator for simple rational fixed values */
-
+#define NONLINCONSUPGD_PRIORITY   40000 /**< priority of upgrading nonlinear constraints */
 /*
  * Data structures
  */
@@ -3127,6 +3129,15 @@ SCIP_RETCODE presolveTryAddAND(
       SCIP_CALL( SCIPcreateVar(scip, &auxvar, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, 
             TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, auxvar) );
+#ifdef SCIP_DEBUG_SOLUTION
+      {
+         SCIP_Real var0val;
+         SCIP_Real var1val;
+         SCIP_CALL( SCIPdebugGetSolVal(scip, vars[0], &var0val) );
+         SCIP_CALL( SCIPdebugGetSolVal(scip, vars[0], &var1val) );
+         SCIP_CALL( SCIPdebugAddSolVal(auxvar, var0val * var1val) );
+      }
+#endif
 
       /* create and constraint auxvar = x and y */
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%sAND%s", SCIPvarGetName(vars[0]), SCIPvarGetName(vars[1]));
@@ -3408,6 +3419,16 @@ SCIP_RETCODE presolveTryAddLinearReform(
                   TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(scip, auxvar) );
 
+#ifdef SCIP_DEBUG_SOLUTION
+            {
+               SCIP_Real var0val;
+               SCIP_Real var1val;
+               SCIP_CALL( SCIPdebugGetSolVal(scip, xvars[0], &var0val) );
+               SCIP_CALL( SCIPdebugGetSolVal(scip, y, &var1val) );
+               SCIP_CALL( SCIPdebugAddSolVal(auxvar, var0val * var1val) );
+            }
+#endif
+
             /* add constraint z = x and y */
             xvars[1] = y;
             (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%sAND%s", SCIPvarGetName(y), SCIPvarGetName(xvars[0]));
@@ -3482,6 +3503,32 @@ SCIP_RETCODE presolveTryAddLinearReform(
             SCIP_CALL( SCIPcreateVar(scip, &auxvar, name, MIN(0., SCIPintervalGetInf(xbndsone)), MAX(0., SCIPintervalGetSup(xbndsone)),
                   0.0, integral ? SCIP_VARTYPE_IMPLINT : SCIP_VARTYPE_CONTINUOUS, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(scip, auxvar) );
+
+            /* compute value of auxvar in debug solution */
+#ifdef SCIP_DEBUG_SOLUTION
+            {
+               SCIP_Real debugval;
+               SCIP_Real varval;
+
+               SCIP_CALL( SCIPdebugGetSolVal(scip, y, &varval) );
+               if( SCIPisZero(scip, varval) )
+               {
+                  SCIP_CALL( SCIPdebugAddSolVal(auxvar, 0.0) );
+               }
+               else
+               {
+                  assert(SCIPisEQ(scip, varval, 1.0));
+
+                  debugval = 0.0;
+                  for( k = 0; k < nxvars; ++k )
+                  {
+                     SCIP_CALL( SCIPdebugGetSolVal(scip, xvars[k], &varval) );
+                     debugval += xcoef[k] * varval;
+                  }
+                  SCIP_CALL( SCIPdebugAddSolVal(auxvar, debugval) );
+               }
+            }
+#endif
 
             /* add auxiliary constraints
              * it seems to be advantageous to make the varbound constraints initial and the linear constraints not initial
@@ -3962,7 +4009,9 @@ SCIP_RETCODE presolveDisaggregate(
 
    /* add auxiliary variables to auxiliary constraints
     * add aux vars and constraints to SCIP 
-    * add aux vars to this constraint */
+    * add aux vars to this constraint
+    * @todo compute debug solution values and set for auxvars
+    */
    SCIPdebugMessage("add %d constraints for disaggregation of quadratic constraint <%s>\n", ncomponents, SCIPconsGetName(cons));
    SCIP_CALL( consdataEnsureLinearVarsSize(scip, consdata, consdata->nlinvars + ncomponents) );
    for( comp = 0; comp < ncomponents; ++comp )
@@ -5035,12 +5084,6 @@ SCIP_RETCODE generateCut(
       }
    }
 
-   if( SCIPisInfinity(scip, REALABS(constant)) )
-   {
-      SCIPdebugMessage("skip cut for constraint <%s> because constant %g too large\n", SCIPconsGetName(cons), constant);
-      success = FALSE;
-   }
-
 #ifdef SCIP_DEBUG
    if( success )
    {
@@ -5057,6 +5100,8 @@ SCIP_RETCODE generateCut(
 
    /* check if range of cut coefficients is ok
     * compute cut violation */
+   maxcoef = 0.0; /* only for compiler */
+   viol = 0.0;    /* only for compiler */
    if( success )
    {
       SCIP_Real abscoef;
@@ -5148,6 +5193,12 @@ SCIP_RETCODE generateCut(
          viol = consdata->lhs - (reflinpartval + refquadpartval);
       else
          viol = reflinpartval + refquadpartval - consdata->rhs;
+   }
+
+   if( SCIPisInfinity(scip, REALABS(constant)) )
+   {
+      SCIPdebugMessage("skip cut for constraint <%s> because constant %g too large\n", SCIPconsGetName(cons), constant);
+      success = FALSE;
    }
 
    /* check if reference point violates cut sufficiently
@@ -7107,6 +7158,187 @@ SCIP_RETCODE proposeFeasibleSolution(
    return SCIP_OKAY;
 }
 
+/** tries to upgrade a nonlinear constraint into a quadratic constraint */
+static
+SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdQuadratic)
+{
+   SCIP_EXPRGRAPH* exprgraph;
+   SCIP_EXPRGRAPHNODE* node;
+   int i;
+
+   assert(nupgdconss != NULL);
+   assert(upgdconss != NULL);
+
+   *nupgdconss = 0;
+
+   node = SCIPgetExprgraphNodeNonlinear(scip, cons);
+
+   /* no interest in linear constraints */
+   if( node == NULL )
+      return SCIP_OKAY;
+
+   /* if a quadratic expression has been simplified, then all children of the node should be variables */
+   if( !SCIPexprgraphAreAllNodeChildrenVars(node) )
+      return SCIP_OKAY;
+
+   switch( SCIPexprgraphGetNodeOperator(node) )
+   {
+      case SCIP_EXPR_VARIDX:
+      case SCIP_EXPR_CONST:
+      case SCIP_EXPR_PLUS:
+      case SCIP_EXPR_MINUS:
+      case SCIP_EXPR_SUM:
+      case SCIP_EXPR_LINEAR:
+         /* these should not appear as exprgraphnodes after constraint presolving */
+         return SCIP_OKAY;
+
+      case SCIP_EXPR_DIV:
+      case SCIP_EXPR_SQRT:
+      case SCIP_EXPR_REALPOWER:
+      case SCIP_EXPR_INTPOWER:
+      case SCIP_EXPR_SIGNPOWER:
+      case SCIP_EXPR_EXP:
+      case SCIP_EXPR_LOG:
+      case SCIP_EXPR_SIN:
+      case SCIP_EXPR_COS:
+      case SCIP_EXPR_TAN:
+         /* case SCIP_EXPR_ERF: */
+         /* case SCIP_EXPR_ERFI: */
+      case SCIP_EXPR_MIN:
+      case SCIP_EXPR_MAX:
+      case SCIP_EXPR_ABS:
+      case SCIP_EXPR_SIGN:
+      case SCIP_EXPR_PRODUCT:
+      case SCIP_EXPR_POLYNOMIAL:
+         /* these do not look like an quadratic expression (assuming the expression graph simplifier did run) */
+         return SCIP_OKAY;
+
+      case SCIP_EXPR_MUL:
+      case SCIP_EXPR_SQUARE:
+      case SCIP_EXPR_QUADRATIC:
+         /* these mean that we have something quadratic */
+         break;
+
+      case SCIP_EXPR_PARAM:
+      case SCIP_EXPR_LAST:
+      default:
+         SCIPwarningMessage("unexpected expression operator %d in nonlinear constraint <%s>\n", SCIPexprgraphGetNodeOperator(node), SCIPconsGetName(cons));
+         return SCIP_OKAY;
+   }
+
+   /* setup a quadratic constraint */
+
+   if( upgdconsssize < 1 )
+   {
+      /* request larger upgdconss array */
+      *nupgdconss = -1;
+      return SCIP_OKAY;
+   }
+
+   *nupgdconss = 1;
+   SCIP_CALL( SCIPcreateConsQuadratic(scip, &upgdconss[0], SCIPconsGetName(cons),
+      SCIPgetNLinearVarsNonlinear(scip, cons), SCIPgetLinearVarsNonlinear(scip, cons), SCIPgetLinearCoefsNonlinear(scip, cons),
+      0, NULL, 0, NULL,
+      SCIPgetLhsNonlinear(scip, cons), SCIPgetRhsNonlinear(scip, cons),
+      SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+      SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
+   assert(!SCIPconsIsStickingAtNode(cons));
+
+   exprgraph = SCIPgetExprgraphNonlinear(scip, SCIPconsGetHdlr(cons));
+
+   /* add variables from expression tree as "quadratic" variables to quadratic constraint */
+   for( i = 0; i < SCIPexprgraphGetNodeNChildren(node); ++i )
+   {
+      assert(SCIPexprgraphGetNodeChildren(node)[i] != NULL);
+      SCIP_CALL( SCIPaddQuadVarQuadratic(scip, upgdconss[0], SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[i]), 0.0, 0.0) );
+   }
+
+   switch( SCIPexprgraphGetNodeOperator(node) )
+   {
+      case SCIP_EXPR_MUL:
+      {
+         /* expression is product of two variables, so add bilinear term to constraint */
+         assert(SCIPexprgraphGetNodeNChildren(node) == 2);
+
+         SCIP_CALL( SCIPaddBilinTermQuadratic(scip, upgdconss[0],
+            SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[0]),
+            SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[1]),
+            1.0) );
+
+         break;
+      }
+
+      case SCIP_EXPR_SQUARE:
+      {
+         /* expression is square of a variable, so change square coefficient of quadratic variable */
+         assert(SCIPexprgraphGetNodeNChildren(node) == 1);
+
+         SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, upgdconss[0],
+            SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[0]),
+            1.0) );
+
+         break;
+      }
+
+      case SCIP_EXPR_QUADRATIC:
+      {
+         /* expression is quadratic */
+         SCIP_QUADELEM* quadelems;
+         int nquadelems;
+         SCIP_Real* lincoefs;
+
+         quadelems  = SCIPexprgraphGetNodeQuadraticQuadElements(node);
+         nquadelems = SCIPexprgraphGetNodeQuadraticNQuadElements(node);
+         lincoefs   = SCIPexprgraphGetNodeQuadraticLinearCoefs(node);
+
+         SCIPaddConstantQuadratic(scip, upgdconss[0], SCIPexprgraphGetNodeQuadraticConstant(node));
+
+         if( lincoefs != NULL )
+            for( i = 0; i < SCIPexprgraphGetNodeNChildren(node); ++i )
+               if( lincoefs[i] != 0.0 )
+               {
+                  /* linear term */
+                  SCIP_CALL( SCIPaddQuadVarLinearCoefQuadratic(scip, upgdconss[0],
+                     SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[i]),
+                     lincoefs[i]) );
+               }
+
+         for( i = 0; i < nquadelems; ++i )
+         {
+            assert(quadelems[i].idx1 < SCIPexprgraphGetNodeNChildren(node));
+            assert(quadelems[i].idx2 < SCIPexprgraphGetNodeNChildren(node));
+
+            if( quadelems[i].idx1 == quadelems[i].idx2 )
+            {
+               /* square term */
+               SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, upgdconss[0],
+                  SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[quadelems[i].idx1]),
+                  quadelems[i].coef) );
+            }
+            else
+            {
+               /* bilinear term */
+               SCIP_CALL( SCIPaddBilinTermQuadratic(scip, upgdconss[0],
+                  SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[quadelems[i].idx1]),
+                  SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[quadelems[i].idx2]),
+                  quadelems[i].coef) );
+            }
+         }
+
+         break;
+      }
+
+      default:
+      {
+         SCIPerrorMessage("you should not be here\n");
+         return SCIP_ERROR;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of constraint handler
  */
@@ -7340,7 +7572,7 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
       }
 
       /* add nlrow representation to NLP, if NLP had been constructed */
-      if( SCIPisNLPConstructed(scip) )
+      if( SCIPisNLPConstructed(scip) && SCIPconsIsChecked(conss[c]) )
       {
          if( consdata->nlrow == NULL )
          {
@@ -9002,6 +9234,9 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          NULL,
          NULL, NULL, NULL, NULL, NULL, NULL, processNewSolutionEvent, NULL) );
 
+   /* include the quadratic constraint upgrade in the nonlinear constraint handler */
+   SCIP_CALL( SCIPincludeNonlinconsUpgrade(scip, nonlinconsUpgdQuadratic, NULL, NONLINCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
+
    return SCIP_OKAY;
 }
 
@@ -9010,6 +9245,7 @@ SCIP_RETCODE SCIPincludeQuadconsUpgrade(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECL_QUADCONSUPGD((*quadconsupgd)),  /**< method to call for upgrading quadratic constraint */
    int                   priority,           /**< priority of upgrading method */
+   SCIP_Bool             active,             /**< should the upgrading method be active by default? */
    const char*           conshdlrname        /**< name of the constraint handler */
    )
 {
@@ -9040,7 +9276,7 @@ SCIP_RETCODE SCIPincludeQuadconsUpgrade(
       SCIP_CALL( SCIPallocMemory(scip, &quadconsupgrade) );
       quadconsupgrade->quadconsupgd = quadconsupgd;
       quadconsupgrade->priority     = priority;
-      quadconsupgrade->active       = TRUE;
+      quadconsupgrade->active       = active;
 
       /* insert quadratic constraint upgrade method into constraint handler data */
       assert(conshdlrdata->nquadconsupgrades <= conshdlrdata->quadconsupgradessize);
@@ -9065,7 +9301,7 @@ SCIP_RETCODE SCIPincludeQuadconsUpgrade(
       (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "enable quadratic upgrading for constraint handler <%s>", conshdlrname);
       SCIP_CALL( SCIPaddBoolParam(scip,
             paramname, paramdesc,
-            &quadconsupgrade->active, FALSE, TRUE, NULL, NULL) );
+            &quadconsupgrade->active, FALSE, active, NULL, NULL) );
    }
 
    return SCIP_OKAY;

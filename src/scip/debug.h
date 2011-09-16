@@ -128,6 +128,25 @@ SCIP_RETCODE SCIPdebugIncludeProp(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** adds a solution value for a new variable in the transformed problem that has no original counterpart
+ * a value can only be set if no value has been set for this variable before
+ */
+extern
+SCIP_RETCODE SCIPdebugAddSolVal(
+   SCIP_VAR*             var,                /**< variable for which to add a value */
+   SCIP_Real             val                 /**< solution value for variable */
+   );
+
+/** gets value for a variable in the debug solution
+ * if no value is stored for the variable, gives 0.0
+ */
+extern
+SCIP_RETCODE SCIPdebugGetSolVal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable for which to get the value */
+   SCIP_Real*            val                 /**< buffer to store solution value */
+   );
+
 #else
 
 #define SCIPdebugFreeDebugData(set) SCIP_OKAY
@@ -140,6 +159,8 @@ SCIP_RETCODE SCIPdebugIncludeProp(
 #define SCIPdebugCheckImplic(set,var,varfixing,implvar,impltype,implbound) SCIP_OKAY
 #define SCIPdebugCheckConflict(blkmem,set,node,conflictset,nliterals) SCIP_OKAY
 #define SCIPdebugIncludeProp(scip) SCIP_OKAY
+#define SCIPdebugAddSolVal(var,val) SCIP_OKAY
+#define SCIPdebugGetSolVal(scip,var,val) SCIP_OKAY
 #endif
 
 

@@ -54,7 +54,7 @@
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
-#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
+#define CONSHDLR_PROP_TIMING  SCIP_PROPTIMING_BEFORELP
 
 #define QUADCONSUPGD_PRIORITY         0 /**< priority of the constraint handler for upgrading of quadratic constraints */
 
@@ -4011,13 +4011,11 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
          consPrintSOC, consCopySOC, consParseSOC,
          conshdlrdata) );
 
-#ifdef QUADCONSUPGD_PRIORITY
    if( SCIPfindConshdlr(scip,"quadratic") != NULL )
    {
       /* notify function that upgrades quadratic constraint to SOC's */
-      SCIP_CALL( SCIPincludeQuadconsUpgrade(scip, upgradeConsQuadratic, QUADCONSUPGD_PRIORITY, CONSHDLR_NAME) );
+      SCIP_CALL( SCIPincludeQuadconsUpgrade(scip, upgradeConsQuadratic, QUADCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
    }
-#endif
 
    /* add soc constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/scaling",

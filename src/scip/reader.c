@@ -279,7 +279,9 @@ SCIP_RETCODE SCIPreaderWrite(
          nconss = 0;
          for( i = 0; i < nconshdlrs; ++i )
             nconss += SCIPconshdlrGetNEnfoConss(conshdlrs[i]);
-         
+      
+         SCIPdebugMessage("Writing %d constraints.\n", nconss);
+   
          SCIP_ALLOC( BMSallocMemoryArray(&conss, nconss) );
 
          /* copy the constraints */
@@ -292,6 +294,8 @@ SCIP_RETCODE SCIPreaderWrite(
             
             conshdlrconss = SCIPconshdlrGetEnfoConss(conshdlrs[i]);
             nconshdlrconss = SCIPconshdlrGetNEnfoConss(conshdlrs[i]);
+
+            SCIPdebugMessage("Conshdlr <%s> has %d constraints to write from all in all %d constraints.\n", SCIPconshdlrGetName(conshdlrs[i]), nconshdlrconss, SCIPconshdlrGetNConss(conshdlrs[i]));
             
             for( c = 0; c < nconshdlrconss; ++c )
             {

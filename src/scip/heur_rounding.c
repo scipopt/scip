@@ -35,8 +35,11 @@
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_DURINGLPLOOP
-#define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
+#define HEUR_USESSUBSCIP      FALSE          /**< does the heuristic use a secondary SCIP instance? */
 
+#define DEFAULT_SUCCESSFACTOR 100            /**< number of calls per found solution that are considered as standard success, 
+                                              * a higher factor causes the heuristic to be called more often 
+                                              */
 
 
 /* locally defined heuristic data */
@@ -44,6 +47,9 @@ struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
    SCIP_Longint          lastlp;             /**< last LP number where the heuristic was applied */
+   int                   successfactor;      /**< number of calls per found solution that are considered as standard success, 
+                                              * a higher factor causes the heuristic to be called more often 
+                                              */
 };
 
 
@@ -415,8 +421,23 @@ SCIP_DECL_HEURCOPY(heurCopyRounding)
 }
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
-#define heurFreeRounding NULL
+static
+SCIP_DECL_HEURFREE(heurFreeRounding) /*lint --e{715}*/
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
 
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+   assert(scip != NULL);
+
+   /* free heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+   SCIPfreeMemory(scip, &heurdata);
+   SCIPheurSetData(heur, NULL);
+
+   return SCIP_OKAY;
+}
 
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
@@ -425,13 +446,13 @@ SCIP_DECL_HEURINIT(heurInitRounding) /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
-   assert(SCIPheurGetData(heur) == NULL);
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
 
    /* create heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
    heurdata->lastlp = -1;
-   SCIPheurSetData(heur, heurdata);
 
    return SCIP_OKAY;
 }
@@ -448,8 +469,6 @@ SCIP_DECL_HEUREXIT(heurExitRounding) /*lint --e{715}*/
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
-   SCIPfreeMemory(scip, &heurdata);
-   SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
 }
@@ -500,9 +519,6 @@ SCIP_DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
    SCIP_Longint nsolsfound;
    SCIP_Longint nnodes;
 
-   /**@todo try to shift continuous variables to stay feasible */
-   /**@todo improve rounding heuristic */
-
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
@@ -528,7 +544,7 @@ SCIP_DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
    ncalls = SCIPheurGetNCalls(heur);
    nsolsfound = 10*SCIPheurGetNBestSolsFound(heur) + SCIPheurGetNSolsFound(heur);
    nnodes = SCIPgetNNodes(scip);
-   if( nnodes % ((ncalls/100)/(nsolsfound+1)+1) != 0 )  /*?????????? /10000 */
+   if( nnodes % ((ncalls/heurdata->successfactor)/(nsolsfound+1)+1) != 0 )
       return SCIP_OKAY;
 
    /* get fractional variables, that should be integral */
@@ -712,13 +728,23 @@ SCIP_RETCODE SCIPincludeHeurRounding(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_HEURDATA* heurdata;
+
+   /* create heuristic data */
+   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+
    /* include heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
          heurCopyRounding,
          heurFreeRounding, heurInitRounding, heurExitRounding, 
          heurInitsolRounding, heurExitsolRounding, heurExecRounding,
-         NULL) );
+         heurdata) );
+
+   /* add rounding primal heuristic parameters */
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/successfactor",
+         "number of calls per found solution that are considered as standard success, a higher factor causes the heuristic to be called more often",
+         &heurdata->successfactor, TRUE, DEFAULT_SUCCESSFACTOR, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

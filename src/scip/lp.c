@@ -11897,15 +11897,6 @@ SCIP_RETCODE lpSolve(
    }
    else if( SCIPlpiIsObjlimExc(lp->lpi) )
    {
-#if 0 /* SOPLEX may return with objective limit reached in any case, because it doesn't distinct between primal and dual */
-      if( lp->lastlpalgo == SCIP_LPALGO_PRIMALSIMPLEX )
-      {
-         SCIPerrorMessage("objective limit exceeded in primal simplex - this should not happen, because no lower limit exists\n");
-         lp->lpsolstat = SCIP_LPSOLSTAT_ERROR;
-         lp->lpobjval = -SCIPsetInfinity(set);
-         return SCIP_LPERROR;
-      }
-#endif
       lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
       lp->lpobjval = SCIPsetInfinity(set);
    }
@@ -13623,8 +13614,8 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    {
       assert(lpicols[c] != NULL);
       assert(lpicols[c]->var != NULL);
-      assert(ray[c] >= 0 || SCIPsetIsInfinity(set, -lpicols[c]->lb));
-      assert(ray[c] <= 0 || SCIPsetIsInfinity(set, lpicols[c]->ub));
+      assert(!SCIPsetIsNegative(set, ray[c]) || SCIPsetIsInfinity(set, -lpicols[c]->lb));
+      assert(!SCIPsetIsPositive(set, ray[c]) || SCIPsetIsInfinity(set,  lpicols[c]->ub));
       rayobjval += ray[c] * lpicols[c]->obj;
    }
    /* TODO: How to check for negative objective value here? */

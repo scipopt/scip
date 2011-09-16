@@ -5129,6 +5129,7 @@
  *  \arg <code>FEASTOL</code> - LP feasibility tolerance for constraints [default: "default"]
  *  \arg <code>LOCK</code> - should the test run be locked to avoid other machines to perform the same test run [default: "false"]
  *  \arg <code>CONTINUE</code> - continue the test run if it was previously aborted [default: "false"]
+ *  \arg <code>VALGRIND</code> - run valgrind on the SCIP binary; errors and memory leaks found by valgrind are reported as fails [default: "false"]
  * 
  * 
  *  @section COMPARE Comparing test runs for different settings

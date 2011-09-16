@@ -168,6 +168,8 @@ BEGIN {
    timelimit = 0.0;
    inoriginalprob = 1;
    incons = 0;
+   valgrinderror = 0;
+   valgrindleaks = 0;
 }
 
 /@03/ { starttime = $2; }
@@ -375,6 +377,13 @@ BEGIN {
 #
 /^Solving Time       :/ { tottime = $4 } # for older scip version ( < 2.0.1.3 )
 /^  solving          :/ { tottime = $3 } 
+#
+# valgrind check
+#
+/^==[0-9]*== ERROR SUMMARY:/       { valgrinderror = $4 }
+/^==[0-9]*==    definitely lost:/  { valgrindleaks += $4 }
+/^==[0-9]*==    indirectly lost:/  { valgrindleaks += $4 }
+/^==[0-9]*==    possibly lost:/    { valgrindleaks += $4 }
 #
 # solver status overview (in order of priority): 
 # 1) solver broke before returning solution => abort
@@ -752,6 +761,16 @@ BEGIN {
             else
                status = "unknown";
          }
+      }
+
+      if( valgrinderror > 0 ) {
+         status = "fail"
+         failtime += tottime;
+         fail++;
+      } else if( valgrindleaks > 0 ) {
+         status = "fail"
+         failtime += tottime;
+         fail++;
       }
 
       if( writesolufile ) {
