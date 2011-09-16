@@ -361,7 +361,6 @@ Bool xlp_addcon_term(
       SCIP_VAR** linvars;
       SCIP_Real* lincoefs;
       int        nlinvars;
-      int        linvarssize;
       SCIP_VAR** polyvars;
       int        npolyvars;
       int        polyvarssize;
@@ -387,7 +386,6 @@ Bool xlp_addcon_term(
       linvars = NULL;
       lincoefs = NULL;
       nlinvars = 0;
-      linvarssize = 0;
 
       vars = NULL;
       nvars = 0;

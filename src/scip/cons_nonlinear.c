@@ -1518,14 +1518,11 @@ SCIP_RETCODE removeFixedLinearVariables(
    int i;
    int j;
 
-   SCIP_Bool have_change;
-
    assert(scip != NULL);
    assert(cons != NULL);
 
    consdata = SCIPconsGetData(cons);
 
-   have_change = FALSE;
    if( !consdata->isremovedfixingslin )
    {
       i = 0;
@@ -1538,8 +1535,6 @@ SCIP_RETCODE removeFixedLinearVariables(
             ++i;
             continue;
          }
-
-         have_change = TRUE;
 
          coef = consdata->lincoefs[i];
          offset = 0.0;
@@ -7208,7 +7203,6 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
    SCIP_Bool          havechange;
    SCIP_Bool          domainerror;
    SCIP_Bool          havegraphchange;
-   SCIP_Bool          firstprop;
    SCIP_Bool          doreformulations;
    int                c;
 
@@ -7268,7 +7262,6 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
       }
    }
 
-   firstprop = TRUE;
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL);

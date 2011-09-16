@@ -3287,7 +3287,7 @@ SCIP_RETCODE SCIPwritePip(
          exponent = SCIPgetExponentSignedpower(scip, cons);
 
          /* see if we formulate signpower(x+offset,exponent) as usual polynomial */
-         if( !SCIPisZero(scip, SCIPgetOffsetSignedpower(scip, cons)) )
+         if( !SCIPisZero(scip, xoffset) )
          {
             SCIPwarningMessage("nonzero offset for nonlinear variable in constraint <%s>, cannot write in pip format\n", SCIPconsGetName(cons));
          }
