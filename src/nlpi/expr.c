@@ -31,7 +31,7 @@
 #include "scip/intervalarith.h"
 #include "scip/pub_misc.h"
 
-#define SCIP_EXPRESSION_MAXCHILDEST 20       /**< estimate on maximal number of children */
+#define SCIP_EXPRESSION_MAXCHILDEST 16       /**< estimate on maximal number of children */
 
 /** sign of a value (-1 or +1)
  * 0.0 has sign +1
@@ -2557,7 +2557,7 @@ SCIP_DECL_EXPREVAL( exprevalQuadratic )
       for( i = nargs-1; i >= 0; --i )
          *result += lincoefs[i] * argvals[i];
 
-   for( i = nquadelems; i > 0 ; --i, ++quadelems )  /*lint !e613*/
+   for( i = 0; i < nquadelems; ++i, ++quadelems )  /*lint !e613*/
       *result += quadelems->coef * argvals[quadelems->idx1] * argvals[quadelems->idx2];  /*lint !e613*/
 
    return SCIP_OKAY;
@@ -2729,9 +2729,10 @@ SCIP_DECL_EXPRCURV( exprcurvQuadratic )
         )
       {
          /* both factors are constants -> curvature does not change */
-         ;
+         continue;
       }
-      else if( argbounds[quadelems[i].idx1].inf == argbounds[quadelems[i].idx1].sup )
+
+      if( argbounds[quadelems[i].idx1].inf == argbounds[quadelems[i].idx1].sup )
       {
          /* first factor is constant, second is not -> add curvature of second */
          *result = SCIPexprcurvAdd(*result, SCIPexprcurvMultiply(quadelems[i].coef * argbounds[quadelems[i].idx1].inf, argcurv[quadelems[i].idx2]));
