@@ -3365,12 +3365,7 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
          }
          else
             probindex = SCIPvarGetProbindex(consdata->binvar);
-
-         /* avoid removed indicator variables (may happen if presolving/propagation) was incomplete */
-         if ( probindex < 0 )
-            continue;
-
-         assert( probindex < nvars );
+         assert( 0 <= probindex && probindex < nvars );
          covered[probindex] = TRUE;
       }
          
@@ -3893,6 +3888,8 @@ static
 SCIP_DECL_CONSEXITPRE(consExitpreIndicator)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   int ndelconss;
+   int nfixed;
    int c;
 
    assert( scip != NULL );
@@ -3917,19 +3914,109 @@ SCIP_DECL_CONSEXITPRE(consExitpreIndicator)
       conshdlrdata->addedCouplingCons = TRUE;
    }
 
-   /* add implications */
+   /* perform one more round of presolving and add implications */
+   nfixed = 0;
+   ndelconss = 0;
    for (c = 0; c < nconss; ++c)
    {
       SCIP_CONSDATA* consdata;
+      SCIP_CONS* cons;
       SCIP_Bool infeasible;
+      SCIP_Bool fixed;
       int nbdchgs;
 
-      consdata = SCIPconsGetData(conss[c]);
+      cons = conss[c];
+      assert( cons != NULL );
+
+      consdata = SCIPconsGetData(cons);
       assert( consdata != NULL );
       
       if ( ! consdata->linconsActive )
          continue;
-      
+
+      /* if the binary variable is fixed to nonzero */
+      if ( SCIPvarGetLbLocal(consdata->binvar) > 0.5 )
+      {
+         SCIPdebugMessage("Exitpre <%s>: Binary variable fixed to 1.\n", SCIPconsGetName(cons));
+
+         /* if slack variable is fixed to nonzero, we are infeasible */
+         if ( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(consdata->slackvar)) )
+         {
+            SCIPdebugMessage("The problem is infeasible: binary and slack variable are fixed to be nonzero.\n");
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
+
+         /* otherwise fix slack variable to 0 */
+         SCIPdebugMessage("Fix slack variable to 0 and delete constraint.\n");
+         SCIP_CALL( SCIPfixVar(scip, consdata->slackvar, 0.0, &infeasible, &fixed) );
+         assert( ! infeasible );
+         if ( fixed )
+            ++nfixed;
+
+         /* delete indicator constraint (leave linear constraint) */
+         assert( ! SCIPconsIsModifiable(cons) );
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+         ++ndelconss;
+         continue;
+      }
+
+      /* if the binary variable is fixed to zero */
+      if ( SCIPvarGetUbLocal(consdata->binvar) < 0.5 )
+      {
+         SCIPdebugMessage("Exitpre <%s>: Binary variable fixed to 0, deleting indicator and linear constraints.\n", SCIPconsGetName(cons));
+
+         /* delete indicator constraint */
+         assert( ! SCIPconsIsModifiable(cons) );
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+         ++ndelconss;
+         continue;
+      }
+
+      /* if the slack variable is fixed to nonzero */
+      if ( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(consdata->slackvar)) )
+      {
+         SCIPdebugMessage("Exitpre <%s>: Slack variable fixed to nonzero.\n", SCIPconsGetName(cons));
+
+         /* if binary variable is fixed to nonzero, we are infeasible */
+         if ( SCIPvarGetLbLocal(consdata->binvar) > 0.5 )
+         {
+            SCIPdebugMessage("The problem is infeasible: binary and slack variable are fixed to be nonzero.\n");
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
+
+         /* otherwise fix binary variable to 0 */
+         SCIPdebugMessage("Fix binary variable to 0 and delete indicator constraint.\n");
+         SCIP_CALL( SCIPfixVar(scip, consdata->binvar, 0.0, &infeasible, &fixed) );
+         assert( ! infeasible );
+         if ( fixed )
+            ++nfixed;
+
+         /* delete constraint */
+         assert( ! SCIPconsIsModifiable(cons) );
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+         ++ndelconss;
+         continue;
+      }
+
+      /* if the slack variable is fixed to zero */
+      if ( SCIPisFeasZero(scip, SCIPvarGetUbLocal(consdata->slackvar)) )
+      {
+         SCIPdebugMessage("Exitpre <%s>: Slack variable fixed to zero, delete redundant indicator constraint.\n", SCIPconsGetName(cons));
+
+         /* delete constraint */
+         assert( ! SCIPconsIsModifiable(cons) );
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+         ++ndelconss;
+         continue;
+      }
+
+      /* Note that because of possible multi-aggregation we cannot simply remove the indicator
+       * constraint if the linear constraint is not active or disabled - see the note in @ref
+       * PREPROC.
+       */
+
       /* add implications */
       SCIP_CALL( SCIPaddVarImplication(scip, consdata->binvar, TRUE, consdata->slackvar, SCIP_BOUNDTYPE_UPPER, 0.0, &infeasible, &nbdchgs) );
       
@@ -3937,10 +4024,12 @@ SCIP_DECL_CONSEXITPRE(consExitpreIndicator)
       if ( infeasible )
       {
          *result = SCIP_CUTOFF;
-         break;
+         return SCIP_OKAY;
       }
       /* note: nbdchgs == 0 is not necessarily true, because preprocessing might be truncated. */
    }
+
+   SCIPdebugMessage("Exitpre handled %d constraints, fixed %d variables, and deleted %d constraints.\n", nconss, nfixed, ndelconss);
 
    return SCIP_OKAY;
 }
