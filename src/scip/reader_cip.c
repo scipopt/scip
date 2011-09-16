@@ -17,7 +17,7 @@
  * @ingroup FILEREADERS 
  * @brief  CIP file reader
  * @author Stefan Heinz
- * @authro Michael Winkler
+ * @author Michael Winkler
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

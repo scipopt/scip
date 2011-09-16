@@ -647,7 +647,7 @@ void SCIPintervalQuadBivar(
 
 /** solves a bivariate quadratic equation for the first variable
  * given scalars ax, ay, axy, bx and by, and intervals for x, y, and rhs,
- * computes \f$ \{ x \in \mathbf{x} : \exists y \in \mathbf{y} : a_x x^2 + a_y y^2 + a_{xy} x y + b_x x + b_y y \in \mathbf{\text{rhs}} \} \f$
+ * computes \f$ \{ x \in \mathbf{x} : \exists y \in \mathbf{y} : a_x x^2 + a_y y^2 + a_{xy} x y + b_x x + b_y y \in \mathbf{\mbox{rhs}} \} \f$
  * NOTE: the operations are not applied rounding-safe here
  */
 extern
