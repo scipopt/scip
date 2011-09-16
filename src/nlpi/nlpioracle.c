@@ -2398,7 +2398,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalObjectiveValue(
    
    SCIPdebugMessage("%p eval obj value\n", (void*)oracle);
 
-   SCIP_CALL( evalFunctionValue(oracle, oracle->objective, x, objval) );
+   SCIP_CALL_QUIET( evalFunctionValue(oracle, oracle->objective, x, objval) );
    
    assert(oracle->objective->lhs == oracle->objective->rhs);
    *objval += oracle->objective->lhs;
@@ -2420,7 +2420,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintValue(
    
    SCIPdebugMessage("%p eval cons value\n", (void*)oracle);
 
-   SCIP_CALL( evalFunctionValue(oracle, oracle->conss[considx], x, conval) );
+   SCIP_CALL_QUIET( evalFunctionValue(oracle, oracle->conss[considx], x, conval) );
    
    return SCIP_OKAY;
 }
@@ -2442,7 +2442,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintValues(
 
    for( i = 0; i < oracle->nconss; ++i )
    {
-      SCIP_CALL( evalFunctionValue(oracle, oracle->conss[i], x, &convals[i]) );
+      SCIP_CALL_QUIET( evalFunctionValue(oracle, oracle->conss[i], x, &convals[i]) );
    }
    
    return SCIP_OKAY;
@@ -2461,7 +2461,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalObjectiveGradient(
    
    SCIPdebugMessage("%p eval obj grad\n", (void*)oracle);
 
-   SCIP_CALL( evalFunctionGradient(oracle, oracle->objective, x, isnewx, objval, objgrad) );
+   SCIP_CALL_QUIET( evalFunctionGradient(oracle, oracle->objective, x, isnewx, objval, objgrad) );
    
    assert(oracle->objective->lhs == oracle->objective->rhs);
    *objval += oracle->objective->lhs;
@@ -2485,7 +2485,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintGradient(
    
    SCIPdebugMessage("%p eval cons grad\n", (void*)oracle);
 
-   SCIP_CALL( evalFunctionGradient(oracle, oracle->conss[considx], x, isnewx, conval, congrad) );
+   SCIP_CALL_QUIET( evalFunctionGradient(oracle, oracle->conss[considx], x, isnewx, conval, congrad) );
    
    return SCIP_OKAY;
 }
@@ -2898,7 +2898,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
    if( objfactor != 0.0 )
    {
       SCIP_CALL( hessLagAddQuad(objfactor, oracle->objective->nquadelems, oracle->objective->quadelems, oracle->heslagoffsets, oracle->heslagcols, hessian) );
-      SCIP_CALL( hessLagAddExprtree(oracle, objfactor, x, isnewx, oracle->objective->exprvaridxs, oracle->objective->exprtree, oracle->heslagoffsets, oracle->heslagcols, hessian) );
+      SCIP_CALL_QUIET( hessLagAddExprtree(oracle, objfactor, x, isnewx, oracle->objective->exprvaridxs, oracle->objective->exprtree, oracle->heslagoffsets, oracle->heslagcols, hessian) );
    }
    
    for( i = 0; i < oracle->nconss; ++i )
@@ -2906,7 +2906,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
       if( lambda[i] == 0.0 )
          continue;
       SCIP_CALL( hessLagAddQuad(lambda[i], oracle->conss[i]->nquadelems, oracle->conss[i]->quadelems, oracle->heslagoffsets, oracle->heslagcols, hessian) );
-      SCIP_CALL( hessLagAddExprtree(oracle, lambda[i], x, isnewx, oracle->conss[i]->exprvaridxs, oracle->conss[i]->exprtree, oracle->heslagoffsets, oracle->heslagcols, hessian) );
+      SCIP_CALL_QUIET( hessLagAddExprtree(oracle, lambda[i], x, isnewx, oracle->conss[i]->exprvaridxs, oracle->conss[i]->exprtree, oracle->heslagoffsets, oracle->heslagcols, hessian) );
    }
    
    return SCIP_OKAY;

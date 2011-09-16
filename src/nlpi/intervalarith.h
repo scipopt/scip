@@ -293,6 +293,34 @@ SCIPInterval pow(
    return resultant;
 }
 
+/** power of an interval to a scalar */
+inline
+SCIPInterval pow(
+   const SCIPInterval&   x,                  /**< first operand */
+   const SCIP_Real&      y                   /**< exponent */
+   )
+{
+   SCIPInterval resultant;
+
+   SCIPintervalPowerScalar(SCIPInterval::infinity, &resultant, x, y);
+
+   return resultant;
+}
+
+/** signpower of an interval to a scalar */
+inline
+SCIPInterval signpow(
+   const SCIPInterval&   x,                  /**< first operand */
+   const SCIP_Real       p                   /**< exponent */
+   )
+{
+   SCIPInterval resultant;
+
+   SCIPintervalSignPowerScalar(SCIPInterval::infinity, &resultant, x, p);
+
+   return resultant;
+}
+
 /** sinus of an interval */
 inline
 SCIPInterval sin(
@@ -303,6 +331,19 @@ SCIPInterval sin(
    SCIPwarningMessage("Sinus of interval not implemented. Returning trivial interval [-1,1].\n");
 
    return SCIPInterval(-1.0, 1.0);
+}
+
+/** square an interval */
+inline
+SCIPInterval square(
+   const SCIPInterval&   x                   /**< operand */
+   )
+{
+   SCIPInterval resultant;
+
+   SCIPintervalSquare(SCIPInterval::infinity, &resultant, x);
+
+   return resultant;
 }
 
 /** square root of an interval */
