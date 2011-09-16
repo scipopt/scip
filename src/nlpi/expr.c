@@ -7750,8 +7750,10 @@ SCIP_RETCODE exprgraphNodeRemoveParent(
    )
 {
    SCIP_EXPRGRAPHNODE* node_;
-   SCIP_Bool isparent;
    int pos;
+#ifndef NDEBUG
+   SCIP_Bool isparent;
+#endif
 
    assert(exprgraph != NULL);
    assert(node != NULL);
@@ -7766,8 +7768,12 @@ SCIP_RETCODE exprgraphNodeRemoveParent(
 
    /* find parent */
    exprgraphNodeSortParents(*node);
+#ifndef NDEBUG
    isparent = SCIPsortedvecFindPtr((void**)(*node)->parents, ptrcomp, (void*)parent, (*node)->nparents, &pos);
    assert(isparent);
+#else
+   (void) SCIPsortedvecFindPtr((void**)(*node)->parents, ptrcomp, (void*)parent, (*node)->nparents, &pos);
+#endif
    assert(pos >= 0);
    assert(pos < (*node)->nparents);
 
@@ -12164,10 +12170,15 @@ SCIP_RETCODE SCIPexprgraphReleaseNode(
    else if( (*node)->op == SCIP_EXPR_CONST && (*node)->depth == 0 )
    {
       int constidx;
+
+#ifndef NDEBUG
       SCIP_Bool foundnode;
 
       foundnode = exprgraphFindConstNodePos(exprgraph, *node, &constidx);
       assert(foundnode);
+#else
+      (void) exprgraphFindConstNodePos(exprgraph, *node, &constidx);
+#endif
       assert(constidx >= 0);
       assert(constidx < exprgraph->nconsts);
 
