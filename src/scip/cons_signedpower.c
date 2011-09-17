@@ -133,8 +133,7 @@ struct SCIP_ConshdlrData
 {
    SCIP_Real             mincutefficacysepa; /**< minimal efficacy of a cut in order to add it to relaxation during separation */
    SCIP_Real             mincutefficacyenfofac;/**< minimal target efficacy of a cut in order to add it to relaxation during enforcement as factor of feasibility tolerance (may be ignored) */
-   SCIP_Real             cutmaxrange;        /**< maximal range (maximal coef / minimal coef) of a cut in order to be added to LP */
-   SCIP_Real             cutmaxrhs;          /**< maximal right hand side of a cut in order to be added to LP */
+   SCIP_Real             cutmaxrange;        /**< maximal coef range (maximal abs coef / minimal abs coef) of a cut in order to be added to LP */
    SCIP_Bool             projectrefpoint;    /**< whether to project the reference point when linearizing a signedpower constraint in a convex region */
    int                   preferzerobranch;   /**< how much we prefer to branch on 0.0 first */
    SCIP_Bool             branchminconverror; /**< whether to compute branching point such that the convexification error is minimized after branching on 0.0 */
@@ -3110,16 +3109,16 @@ SCIP_RETCODE generateCut(
          SCIPgetRowMinCoef(scip, *row), SCIPgetRowMaxCoef(scip, *row),
          SCIPgetRowMaxCoef(scip, *row)/SCIPgetRowMinCoef(scip, *row));
 
-      if( SCIProwGetRhs(*row) >= conshdlrdata->cutmaxrhs )
+      if( SCIPisInfinity(scip, REALABS(SCIProwGetRhs(*row))) )
       {
-         SCIPdebugMessage("skip cut for constraint %s because of very large right hand side: %g\n", SCIPconsGetName(cons), SCIProwGetRhs(*row));
+         SCIPdebugMessage("skip cut for constraint <%s> because of very large right hand side: %g\n", SCIPconsGetName(cons), SCIProwGetRhs(*row));
          SCIP_CALL( SCIPreleaseRow(scip, row) );
          return SCIP_OKAY;
       }
 
       if( SCIPgetRowMaxCoef(scip, *row) / SCIPgetRowMinCoef(scip, *row) >= conshdlrdata->cutmaxrange )
       {
-         SCIPdebugMessage("skip cut for constraint %s because of very large range: %g\n", SCIPconsGetName(cons), SCIPgetRowMaxCoef(scip, *row)/SCIPgetRowMinCoef(scip, *row));
+         SCIPdebugMessage("skip cut for constraint <%s> because of very large range: %g\n", SCIPconsGetName(cons), SCIPgetRowMaxCoef(scip, *row)/SCIPgetRowMinCoef(scip, *row));
          SCIP_CALL( SCIPreleaseRow(scip, row) );
          return SCIP_OKAY;
       }
@@ -5792,12 +5791,8 @@ SCIP_RETCODE SCIPincludeConshdlrSignedpower(
          &conshdlrdata->mincutefficacyenfofac, FALSE, 2.0, 1.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/cutmaxrange",
-         "maximal range of a cut (maximal coefficient divided by minimal coefficient) in order to be added to LP relaxation",
-         &conshdlrdata->cutmaxrange, FALSE, 1e+10, 0.0, SCIPinfinity(scip), NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/cutmaxrhs",
-         "maximal right hand side of a cut in order to be added to LP relaxation",
-         &conshdlrdata->cutmaxrhs, FALSE, SCIPinfinity(scip), 0.0, SCIPinfinity(scip), NULL, NULL) );
+         "maximal coef range of a cut (maximal coefficient divided by minimal coefficient) in order to be added to LP relaxation",
+         &conshdlrdata->cutmaxrange, FALSE, 1e+7, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/projectrefpoint",
          "whether to project the reference point when linearizing a signedpower constraint in a convex region",
