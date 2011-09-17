@@ -849,9 +849,6 @@ SCIP_RETCODE consdataSetExprtrees(
    SCIP_Bool             copytrees           /**< whether trees should be copied or ownership should be assumed */
    )
 {
-#ifndef NDEBUG
-   int nvars;
-#endif
    int i;
 
    assert(scip != NULL);
@@ -910,11 +907,8 @@ SCIP_RETCODE consdataSetExprtrees(
    for( i = 0; i < nexprtrees; ++i )
    {
       assert(exprtrees[i] != NULL);
-
-#ifndef NDEBUG
-      nvars = SCIPexprtreeGetNVars(exprtrees[i]);
-      assert(nvars == 0 || SCIPexprtreeGetVars(exprtrees[i]) != NULL); /* the expression tree need to have SCIP_VAR*'s stored */
-#endif
+      /* the expression tree need to have SCIP_VAR*'s stored */
+      assert(SCIPexprtreeGetNVars(exprtrees[i]) == 0 || SCIPexprtreeGetVars(exprtrees[i]) != NULL);
 
       if( copytrees )
       {
@@ -1826,14 +1820,11 @@ SCIP_RETCODE presolveUpgrade(
    int*                  naddconss           /**< buffer to increase with number of additional constraints created during upgrade */
    )
 {
-#ifndef NDEBUG
-   SCIP_CONSDATA* consdata;
-#endif
    SCIP_CONSHDLRDATA* conshdlrdata;
-   int i;
    SCIP_CONS** upgdconss;
    int upgdconsssize;
    int nupgdconss_;
+   int i;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -1872,11 +1863,6 @@ SCIP_RETCODE presolveUpgrade(
 
    upgdconsssize = 2;
    SCIP_CALL( SCIPallocBufferArray(scip, &upgdconss, upgdconsssize) );
-
-#ifndef NDEBUG
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-#endif
 
    /* call the upgrading methods */
 
@@ -5155,11 +5141,8 @@ SCIP_RETCODE registerBranchingVariables(
    int*                  nnotify             /**< counter for number of notifications performed */
    )
 {
-#ifndef NDEBUG
-   SCIP_CONSHDLRDATA* conshdlrdata;
-#endif
-   SCIP_CONSDATA*     consdata;
-   SCIP_VAR*          var;
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR* var;
    int c;
    int i;
    int j;
@@ -5167,11 +5150,6 @@ SCIP_RETCODE registerBranchingVariables(
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(conss != NULL || nconss == 0);
-
-#ifndef NDEBUG
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-#endif
 
    *nnotify = 0;
 
@@ -5493,9 +5471,6 @@ SCIP_RETCODE propagateBoundsCons(
    SCIP_Bool*            redundant           /**< buffer where to store whether constraint has been found to be redundant */
   )
 {  /*lint --e{666}*/
-#ifndef NDEBUG
-   SCIP_CONSHDLRDATA* conshdlrdata;
-#endif
    SCIP_CONSDATA*     consdata;
    SCIP_INTERVAL      consbounds;    /* lower and upper bounds of constraint */
    SCIP_INTERVAL      consactivity;  /* activity of linear plus nonlinear part */
@@ -5511,11 +5486,6 @@ SCIP_RETCODE propagateBoundsCons(
    assert(cons != NULL);
    assert(result != NULL);
    assert(nchgbds != NULL);
-
-#ifndef NDEBUG
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-#endif
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -6338,20 +6308,12 @@ SCIP_DECL_CONSEXIT(consExitNonlinear)
 static
 SCIP_DECL_CONSINITPRE(consInitpreNonlinear)
 {
-#ifndef NDEBUG
-   SCIP_CONSHDLRDATA* conshdlrdata;
-#endif
    SCIP_CONSDATA* consdata;
    int c;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(conss != NULL || nconss == 0);
-
-#ifndef NDEBUG
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-#endif
 
    *result = SCIP_FEASIBLE;
 
@@ -6604,21 +6566,12 @@ SCIP_DECL_CONSEXITSOL(consExitsolNonlinear)
 static
 SCIP_DECL_CONSDELETE(consDeleteNonlinear)
 {
-#ifndef NDEBUG
-   SCIP_CONSHDLRDATA* conshdlrdata;
-#endif
-
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(cons != NULL);
    assert(!SCIPconsIsActive(cons));
    assert(consdata != NULL);
    assert(SCIPconsGetData(cons) == *consdata);
-
-#ifndef NDEBUG
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-#endif
 
    SCIPdebugMessage("consDelete for cons <%s>\n", SCIPconsGetName(cons));
 

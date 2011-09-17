@@ -327,13 +327,6 @@ SCIP_DECL_HASHKEYEQ(presolveFindDuplicatesKeyEQ)
    SCIP_CONSDATA* consdata1;
    SCIP_CONSDATA* consdata2;
 
-#ifndef NDEBUG
-   SCIP* scip;
-
-   scip = (SCIP*)userptr;
-   assert(scip != NULL);
-#endif
-
    consdata1 = SCIPconsGetData((SCIP_CONS*)key1);
    consdata2 = SCIPconsGetData((SCIP_CONS*)key2);
    assert(consdata1 != NULL);
@@ -369,13 +362,6 @@ SCIP_DECL_HASHKEYEQ(presolveFindDuplicatesKeyEQ2)
 {
    SCIP_CONSDATA* consdata1;
    SCIP_CONSDATA* consdata2;
-
-#ifndef NDEBUG
-   SCIP* scip;
-
-   scip = (SCIP*)userptr;
-   assert(scip != NULL);
-#endif
 
    consdata1 = SCIPconsGetData((SCIP_CONS*)key1);
    consdata2 = SCIPconsGetData((SCIP_CONS*)key2);
@@ -2007,18 +1993,9 @@ SCIP_RETCODE analyzeConflict(
    SCIP_BOUNDTYPE        boundtype           /**< the type of the changed bound (lower or upper bound) */
    )
 {
-#ifndef NDEBUG
-   SCIP_CONSDATA* consdata;
-#endif
-
    /* conflict analysis can only be applied in solving stage */
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
       return SCIP_OKAY;
-
-#ifndef NDEBUG
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-#endif
 
    /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
    SCIP_CALL( SCIPinitConflictAnalysis(scip) );
@@ -2058,9 +2035,6 @@ SCIP_RETCODE propagateCons(
    int*                  naddconss           /**< pointer to count number of added constraints */
    )
 {
-#ifndef NDEBUG
-   SCIP_CONSHDLRDATA* conshdlrdata;
-#endif
    SCIP_CONSDATA* consdata;
    SCIP_Real xlb;
    SCIP_Real xub;
@@ -2078,11 +2052,6 @@ SCIP_RETCODE propagateCons(
    assert(nchgbds != NULL);
    assert(ndelconss != NULL);
    assert(naddconss != NULL);
-
-#ifndef NDEBUG
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-#endif
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -3028,8 +2997,9 @@ SCIP_RETCODE generateCut(
    SCIP_CONSDATA* consdata;
    SCIP_SIDETYPE  violside;
    SCIP_Real      c;
-   SCIP_Real      xlb, xglb;
-   SCIP_Real      xub, xgub;
+   SCIP_Real      xlb;
+   SCIP_Real      xglb;
+   SCIP_Real      xub;
    SCIP_Real      xval;
    SCIP_Real      xoffset;
    SCIP_Real      xmult;
@@ -3058,7 +3028,6 @@ SCIP_RETCODE generateCut(
    if( violside == SCIP_SIDETYPE_RIGHT )
    {
       xglb  = SCIPvarGetLbGlobal(consdata->x);
-      xgub  = SCIPvarGetUbGlobal(consdata->x);
       xlb   = SCIPvarGetLbLocal(consdata->x);
       xub   = SCIPvarGetUbLocal(consdata->x);
       xval  = SCIPgetSolVal(scip, sol, consdata->x);
@@ -3070,7 +3039,6 @@ SCIP_RETCODE generateCut(
    else
    {
       xglb  = -SCIPvarGetUbGlobal(consdata->x);
-      xgub  = -SCIPvarGetLbGlobal(consdata->x);
       xlb   = -SCIPvarGetUbLocal(consdata->x);
       xub   = -SCIPvarGetLbLocal(consdata->x);
       xval  = -SCIPgetSolVal(scip, sol, consdata->x);
@@ -3089,7 +3057,9 @@ SCIP_RETCODE generateCut(
    if( !SCIPisNegative(scip, xlb+xoffset) )
    {
       /* [xlb, xub] completely in positive orthant -> function is convex on whole domain */
-      SCIP_Bool islocal = (!SCIPconsIsGlobal(cons) || SCIPisNegative(scip, xglb+xoffset)) && SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) > 0;
+      SCIP_Bool islocal;
+
+      islocal = (!SCIPconsIsGlobal(cons) || SCIPisNegative(scip, xglb+xoffset)) && SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) > 0;
       if( conshdlrdata->projectrefpoint && !onlyinbounds )
          SCIP_CALL( generateLinearizationCutProject(scip, row, xval, SCIPgetSolVal(scip, sol, consdata->z), -xoffset, consdata->exponent, xoffset, xmult, zcoef, rhs, consdata->x, consdata->z, islocal) );
       else if( !onlyinbounds )
@@ -4583,19 +4553,11 @@ SCIP_DECL_CONSINITSOL(consInitsolSignedpower)
 static
 SCIP_DECL_CONSEXITSOL(consExitsolSignedpower)
 {  /*lint --e{715}*/
-#ifndef NDEBUG
-   SCIP_CONSHDLRDATA* conshdlrdata;
-#endif
-   SCIP_CONSDATA*     consdata;
-   int                c;
+   SCIP_CONSDATA* consdata;
+   int c;
 
    assert(scip  != NULL);
    assert(conss != NULL || nconss == 0);
-
-#ifndef NDEBUG
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-#endif
 
    for( c = 0; c < nconss; ++c )
    {
