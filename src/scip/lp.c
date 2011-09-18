@@ -10702,12 +10702,11 @@ SCIP_RETCODE lpDualSimplex(
  *  We stop the process once we do not find candidates or have performed a maximum number of
  *  iterations.
  *
- *  ToDo: 
- *  - Does this really produce a lexicographically minimal solution? 
- *  - Can we skip the consideration of basic variables that are at their lower bound? How can we
+ *  @todo Does this really produce a lexicographically minimal solution? 
+ *  @todo Can we skip the consideration of basic variables that are at their lower bound? How can we
  *    guarantee that these variables will not be changed in later stages? We can fix these variables
  *    to their lower bound, but this destroys the basis.
- *  - Should we use lexicographical minimization in diving/probing or not?
+ *  @todo Should we use lexicographical minimization in diving/probing or not?
  */
 static
 SCIP_RETCODE lpLexDualSimplex(
@@ -13618,7 +13617,7 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
       assert(!SCIPsetIsPositive(set, ray[c]) || SCIPsetIsInfinity(set,  lpicols[c]->ub));
       rayobjval += ray[c] * lpicols[c]->obj;
    }
-   /* TODO: How to check for negative objective value here? */
+   /* @todo How to check for negative objective value here? */
    assert(rayobjval < 0);
    /* assert(SCIPsetIsNegative(set, rayobjval)); */
 

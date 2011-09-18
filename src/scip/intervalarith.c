@@ -2881,7 +2881,7 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
             z += negate(b);
             resultant->sup = negate(rhs/z);
          }
-         /* @TODO actually we could generate a hole here
+         /* @todo actually we could generate a hole here
          if( delta >= 0.0 )
          {
             z = -b + sqrt(delta);
