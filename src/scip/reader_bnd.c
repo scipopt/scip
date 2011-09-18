@@ -166,6 +166,10 @@ SCIP_RETCODE readBounds(
    /* close input file */
    SCIPfclose(file);
 
+   /* return error if necessary */
+   if ( error )
+      return SCIP_READERROR;
+
    return SCIP_OKAY;
 }
 

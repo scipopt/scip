@@ -479,16 +479,14 @@ BEGIN {
          }
       }
       else if( solstatus[prob] == "feas" ) {
-         if( feasible ) {
-            if( timeout ) {
-               printf("timeout\n");
-               timeouttime += tottime;
-               timeouts++;
-            }
-            else {
-               printf("ok\n");
-               pass++;
-            }
+         if( timeout ) {
+            printf("timeout\n");
+            timeouttime += tottime;
+            timeouts++;
+         }
+         else if( feasible ) {
+            printf("ok\n");
+            pass++;
          }
          else {
             printf("fail\n");

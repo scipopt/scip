@@ -1827,15 +1827,15 @@ SCIP_DECL_CONSCOPY(consCopyOr)
    {
       SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourceresvar, &resvar, varmap, consmap, global, valid) );
       assert(!(*valid) || resvar != NULL);
+
+      /* only create the target constraint, if all variables could be copied */
+      if( *valid )
+      {
+         SCIP_CALL( SCIPcreateConsOr(scip, cons, SCIPconsGetName(sourcecons), resvar, nvars, vars, 
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      }
    }
 
-   /* only create the target constraint, if all variables could be copied */
-   if( *valid )
-   {
-      SCIP_CALL( SCIPcreateConsOr(scip, cons, SCIPconsGetName(sourcecons), resvar, nvars, vars, 
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
-   }
-   
    /* free buffer array */
    SCIPfreeBufferArray(scip, &vars);
    

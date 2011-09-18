@@ -190,18 +190,20 @@ SCIP_EXPRCURV SCIPexprcurvNegate(
 {
    switch( curvature )
    {
-      case SCIP_EXPRCURV_CONCAVE:
-         return SCIP_EXPRCURV_CONVEX;
+   case SCIP_EXPRCURV_CONCAVE:
+      return SCIP_EXPRCURV_CONVEX;
+      
+   case SCIP_EXPRCURV_CONVEX:
+      return SCIP_EXPRCURV_CONCAVE;
+      
+   case SCIP_EXPRCURV_LINEAR:
+   case SCIP_EXPRCURV_UNKNOWN:
+      /* can return curvature, do this below */
+      break;
 
-      case SCIP_EXPRCURV_CONVEX:
-         return SCIP_EXPRCURV_CONCAVE;
-
-      case SCIP_EXPRCURV_LINEAR:
-      case SCIP_EXPRCURV_UNKNOWN:
-         /* can return curvature, do this below */
-         break;
-
-      /* there are no other cases, so no default-case */
+   default:
+      SCIPerrorMessage("unknown curvature status.\n");
+      SCIPABORT();
    }
 
    return curvature;

@@ -545,7 +545,7 @@ SCIP_DECL_READERREAD(readerReadCip)
       } /*lint !e788*/ 
    }
 
-   if( !SCIPisZero(scip, objoffset) )
+   if( !SCIPisZero(scip, objoffset) && !cipinput.haserror )
    {
       SCIP_VAR* objoffsetvar;
 
@@ -570,7 +570,7 @@ SCIP_DECL_READERREAD(readerReadCip)
    if( cipinput.haserror )
       return SCIP_READERROR;
    
-   /* successfully parse cip format */
+   /* successfully parsed cip format */
    *result = SCIP_SUCCESS;
    return SCIP_OKAY;
 }
@@ -646,13 +646,10 @@ SCIP_RETCODE SCIPincludeReaderCip(
 
    /* create cip reader data */
    readerdata = NULL;
-   /* TODO: (optional) create reader specific data here */
    
    /* include cip reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyCip,
-         readerFreeCip, readerReadCip, readerWriteCip,
-         readerdata) );
+         readerCopyCip, readerFreeCip, readerReadCip, readerWriteCip, readerdata) );
 
    /* add cip reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

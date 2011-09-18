@@ -15,4 +15,6 @@ typedef char *va_list;
 #define va_arg(a,b) (*( (b *) ( ((a) += sizeof(b)) - sizeof(b) )))
 #define va_end(a)  ( (void) 0 )
 
+int vsnprintf(char *str, size_t size, const char *format, va_list ap);
+
 #endif
