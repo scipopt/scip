@@ -63,8 +63,6 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary primal heuristic data */
-
 /** primal heuristic data */
 struct SCIP_HeurData
 {
@@ -289,7 +287,7 @@ SCIP_RETCODE applyCliqueFixings(
    nsolstried = 0;
 #endif
    v = 0;
-   /* @todo: maybe try to fix more than one variable to one in each probing node, to gain faster results */
+   /* @todo maybe try to fix more than one variable to one in each probing node, to gain faster results */
    for( c = 0; c < ncliques; ++c )
    {
       alreadyone = FALSE;
@@ -351,7 +349,7 @@ SCIP_RETCODE applyCliqueFixings(
       if( *cutoff )
          break;
 
-      /* @todo: need to be check if it's ok to always try to round and check the solution in each probing step */
+      /* @todo need to be check if it's ok to always try to round and check the solution in each probing step */
 #if 0
 
 #ifdef SCIP_DEBUG
@@ -612,7 +610,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    SCIP_CALL( SCIPallocBufferArray(scip, &cliquepartition, nbinvars) );
 
 #if 1
-   /* @todo: change sorting after some attempts to random variable order */
+   /* @todo change sorting after some attempts to random variable order */
    if( SCIPgetNNodes(scip) == 1 )
    {
       /* sort variables after increasing objective value */
@@ -626,7 +624,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
    /* get clique partitions */
    SCIP_CALL( SCIPcalcCliquePartition(scip, binvars, nbinvars, cliquepartition, &ncliques) );
-   /* @todo: get negated clique partition and use this too, or maybe mix both */
+   /* @todo get negated clique partition and use this too, or maybe mix both */
 
    SCIPdebugMessage("found %d cliques\n", ncliques);
 

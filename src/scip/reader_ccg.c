@@ -54,12 +54,12 @@
 /* graph data structure */
 struct sparseGraph
 {
-   unsigned int n;        /**< number of nodes */
-   unsigned int m;        /**< number of edges */
-   int** A;               /**< adjacency list (= adjacent nodes) for each node (-1 for end of list) */
-   SCIP_Real** W;         /**< weights for each edge */
-   unsigned int* deg;     /**< degree each node */
-   unsigned int* size;    /**< size of A/w for each node */
+   unsigned int          n;                  /**< number of nodes */
+   unsigned int          m;                  /**< number of edges */
+   int**                 A;                  /**< adjacency list (= adjacent nodes) for each node (-1 for end of list) */
+   SCIP_Real**           W;                  /**< weights for each edge */
+   unsigned int*         deg;                /**< degree each node */
+   unsigned int*         size;               /**< size of A/w for each node */
 };
 
 typedef struct sparseGraph SparseGraph;
@@ -73,10 +73,10 @@ typedef struct sparseGraph SparseGraph;
 /** initialize graph */
 static
 SCIP_RETCODE initGraph(
-   SCIP*              scip,           /**< SCIP data structure */
-   SparseGraph*       G,              /**< graph to free */
-   unsigned int       nNodes,         /**< number of nodes */
-   unsigned int       initSize        /**< initial size of lists */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SparseGraph*          G,                  /**< graph to free */
+   unsigned int          nNodes,             /**< number of nodes */
+   unsigned int          initSize            /**< initial size of lists */
    )
 {
    unsigned int i;
@@ -107,8 +107,8 @@ SCIP_RETCODE initGraph(
 /** frees graph */
 static
 void freeGraph(
-   SCIP*              scip,           /**< SCIP data structure */
-   SparseGraph*       G               /**< graph to free */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SparseGraph*          G                   /**< graph to free */
    )
 {
    unsigned int i;
@@ -129,9 +129,9 @@ void freeGraph(
 /** check whether there is enough capacity for one additional edge in the given adjacency list */
 static
 SCIP_RETCODE ensureEdgeCapacity(
-   SCIP*                 scip,          /**< SCIP data structure */
-   SparseGraph*          G,             /**< graph */
-   unsigned int          node           /**< list for node */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SparseGraph*          G,                  /**< graph */
+   unsigned int          node                /**< list for node */
    )
 {
    if( G->deg[node] + 2 > G->size[node] )
@@ -375,9 +375,7 @@ SCIP_RETCODE SCIPincludeReaderCcg(
 {
    /* include ccg reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyCcg,
-         readerFreeCcg, readerReadCcg, readerWriteCcg, 
-         NULL) );
+         readerCopyCcg, readerFreeCcg, readerReadCcg, readerWriteCcg, NULL) );
 
    return SCIP_OKAY;
 }
@@ -390,15 +388,15 @@ SCIP_RETCODE SCIPincludeReaderCcg(
 
 /* writes problem to file */
 SCIP_RETCODE SCIPwriteCcg(
-   SCIP*              scip,               /**< SCIP data structure */
-   FILE*              file,               /**< output file, or NULL if standard output should be used */
-   const char*        name,               /**< problem name */
-   SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
-   SCIP_VAR**         vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
-   int                nvars,              /**< number of mutable variables in the problem */
-   SCIP_CONS**        conss,              /**< array with constraints of the problem */
-   int                nconss,             /**< number of constraints in the problem */
-   SCIP_RESULT*       result              /**< pointer to store the result of the file writing call */
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file, or NULL if standard output should be used */
+   const char*           name,               /**< problem name */
+   SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
+   SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
+   int                   nvars,              /**< number of mutable variables in the problem */
+   SCIP_CONS**           conss,              /**< array with constraints of the problem */
+   int                   nconss,             /**< number of constraints in the problem */
+   SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
    )
 {  /*lint --e{715}*/
    int c;

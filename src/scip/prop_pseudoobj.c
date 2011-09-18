@@ -141,12 +141,12 @@ SCIP_RETCODE resolvePropagation(
    return SCIP_OKAY;
 }
 
-/** propagates the cutoff bound for the given variables */
+/** propagates the cutoff bound for the given variable */
 static
 SCIP_RETCODE propagateCutoffboundVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROP*            prop,               /**< propagator */
-   SCIP_VAR*             var,                /**< variables to propagate */
+   SCIP_VAR*             var,                /**< variable to propagate */
    SCIP_Real             cutoffbound,        /**< cutoff bound to use */
    SCIP_Real             pseudoobjval,       /**< pseudo objective value to use */
    int*                  nchgbds             /**< pointer to store the number of changed bounds */
@@ -695,20 +695,18 @@ SCIP_DECL_PROPEXITSOL(propExitsolPseudoobj)
       /* drop bound change event */
       if( obj > 0.0 )
       {
-         SCIP_CALL( SCIPdropVarEvent(scip, var, 
-               SCIP_EVENTTYPE_GUBCHANGED, eventhdlr, (SCIP_EVENTDATA*)propdata, -1) );
+         SCIP_CALL( SCIPdropVarEvent(scip, var, SCIP_EVENTTYPE_GUBCHANGED, eventhdlr, (SCIP_EVENTDATA*)propdata, -1) );
       }
       else
       {
-         SCIP_CALL( SCIPdropVarEvent(scip, var, 
-               SCIP_EVENTTYPE_GLBCHANGED, eventhdlr, (SCIP_EVENTDATA*)propdata, -1) );
+         SCIP_CALL( SCIPdropVarEvent(scip, var, SCIP_EVENTTYPE_GLBCHANGED, eventhdlr, (SCIP_EVENTDATA*)propdata, -1) );
       }
 
       /* release variable */
       SCIP_CALL( SCIPreleaseVar(scip, &objvars[k]) );
    }
-
    propdata->nobjvars = 0;
+
    /* free memory for non-zero objective variables */
    SCIPfreeMemoryArrayNull(scip, &propdata->objvars);
 
@@ -860,8 +858,7 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
 
    /* include event handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL,
-         NULL, NULL, NULL, NULL, NULL, NULL, eventExecPseudoobj, NULL) );
+         NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventExecPseudoobj, NULL) );
 
    /* create pseudoobj propagator data */
    SCIP_CALL( SCIPallocMemory(scip, &propdata) );
@@ -883,8 +880,7 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
 
    /* include propagator */
    SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY,
-         propCopyPseudoobj,
-         propFreePseudoobj, propInitPseudoobj, propExitPseudoobj, propInitprePseudoobj, propExitprePseudoobj, 
+         propCopyPseudoobj, propFreePseudoobj, propInitPseudoobj, propExitPseudoobj, propInitprePseudoobj, propExitprePseudoobj, 
          propInitsolPseudoobj, propExitsolPseudoobj, propPresolPseudoobj, propExecPseudoobj, propRespropPseudoobj,
          propdata) );
 

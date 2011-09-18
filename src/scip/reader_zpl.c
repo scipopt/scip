@@ -309,20 +309,23 @@ Bool xlp_addcon_term(
    }
    else if (maxdegree == 2)
    {
-      int        n_linvar   = 0;
-      int        n_quadterm = 0;
-      SCIP_VAR** linvar;
+      int        nlinvars;
+      int        nquadterms;
+      SCIP_VAR** linvars;
       SCIP_VAR** quadvar1;
       SCIP_VAR** quadvar2;
-      SCIP_Real* lincoeff;
-      SCIP_Real* quadcoeff;
+      SCIP_Real* lincoefs;
+      SCIP_Real* quadcoefs;
       Mono*      monom;
 
-      SCIP_CALL_ABORT( SCIPallocBufferArray(scip_, &linvar,    term_get_elements(term)) );
+      nlinvars   = 0;
+      nquadterms = 0;
+
+      SCIP_CALL_ABORT( SCIPallocBufferArray(scip_, &linvars,   term_get_elements(term)) );
       SCIP_CALL_ABORT( SCIPallocBufferArray(scip_, &quadvar1,  term_get_elements(term)) );
       SCIP_CALL_ABORT( SCIPallocBufferArray(scip_, &quadvar2,  term_get_elements(term)) );
-      SCIP_CALL_ABORT( SCIPallocBufferArray(scip_, &lincoeff,  term_get_elements(term)) );
-      SCIP_CALL_ABORT( SCIPallocBufferArray(scip_, &quadcoeff, term_get_elements(term)) );
+      SCIP_CALL_ABORT( SCIPallocBufferArray(scip_, &lincoefs,  term_get_elements(term)) );
+      SCIP_CALL_ABORT( SCIPallocBufferArray(scip_, &quadcoefs, term_get_elements(term)) );
 
       for( i = 0; i < term_get_elements(term); ++i )
       {
@@ -332,35 +335,32 @@ Bool xlp_addcon_term(
          assert(mono_get_degree(monom) > 0);
          if (mono_get_degree(monom) == 1)
          {
-            linvar  [n_linvar] = (SCIP_VAR*)mono_get_var(monom, 0);
-            lincoeff[n_linvar] = numb_todbl(mono_get_coeff(monom));
-            ++n_linvar;
+            linvars [nlinvars] = (SCIP_VAR*)mono_get_var(monom, 0);
+            lincoefs[nlinvars] = numb_todbl(mono_get_coeff(monom));
+            ++nlinvars;
          }
          else
          {
             assert(mono_get_degree(monom) == 2);
-            quadvar1 [n_quadterm] = (SCIP_VAR*)mono_get_var(monom, 0);
-            quadvar2 [n_quadterm] = (SCIP_VAR*)mono_get_var(monom, 1);
-            quadcoeff[n_quadterm] = numb_todbl(mono_get_coeff(monom));
-            ++n_quadterm;
+            quadvar1 [nquadterms] = (SCIP_VAR*)mono_get_var(monom, 0);
+            quadvar2 [nquadterms] = (SCIP_VAR*)mono_get_var(monom, 1);
+            quadcoefs[nquadterms] = numb_todbl(mono_get_coeff(monom));
+            ++nquadterms;
          }
       }
 
-      SCIP_CALL_ABORT( SCIPcreateConsQuadratic(scip_, &cons, name, n_linvar, linvar, lincoeff, n_quadterm, quadvar1, quadvar2, quadcoeff, sciplhs, sciprhs,
+      SCIP_CALL_ABORT( SCIPcreateConsQuadratic(scip_, &cons, name, nlinvars, linvars, lincoefs, nquadterms, quadvar1, quadvar2, quadcoefs, sciplhs, sciprhs,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
       SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
       
-      SCIPfreeBufferArray(scip_, &linvar);
+      SCIPfreeBufferArray(scip_, &linvars);
       SCIPfreeBufferArray(scip_, &quadvar1);
       SCIPfreeBufferArray(scip_, &quadvar2);
-      SCIPfreeBufferArray(scip_, &lincoeff);
-      SCIPfreeBufferArray(scip_, &quadcoeff);
+      SCIPfreeBufferArray(scip_, &lincoefs);
+      SCIPfreeBufferArray(scip_, &quadcoefs);
    }
    else
    {
-      SCIP_VAR** linvars;
-      SCIP_Real* lincoefs;
-      int        nlinvars;
       SCIP_VAR** polyvars;
       int        npolyvars;
       int        polyvarssize;
@@ -382,10 +382,6 @@ Bool xlp_addcon_term(
       int j;
 
       fail = FALSE;
-
-      linvars = NULL;
-      lincoefs = NULL;
-      nlinvars = 0;
 
       vars = NULL;
       nvars = 0;
@@ -417,7 +413,7 @@ Bool xlp_addcon_term(
 
          if( mono_get_function(monomial) == MFUN_NONE )
          {
-            // nonlinear monomial without extra function around it
+            /* nonlinear monomial without extra function around it */
             SCIP_Real one;
 
             one = 1.0;
@@ -437,7 +433,7 @@ Bool xlp_addcon_term(
 
             for( j = 0; j < mono_get_degree(monomial); ++j )
             {
-               // get variable index in polyvars; add to polyvars if not existing yet
+               /* get variable index in polyvars; add to polyvars if not existing yet */
                if( !SCIPhashmapExists(polyvarmap, (void*)mono_get_var(monomial, j)) )
                {
                   if( polyvarssize == 0 )
@@ -470,7 +466,7 @@ Bool xlp_addcon_term(
          }
          else
          {
-            // nonlinear monomial with extra function around it, put into new expression
+            /* nonlinear monomial with extra function around it, put into new expression */
             SCIP_EXPR** children;
             SCIP_EXPR* expr;
             SCIP_EXPROP op;
@@ -558,8 +554,9 @@ Bool xlp_addcon_term(
 
          nchildren = npolyvars + nextramonomials;
          SCIP_CALL_ABORT( SCIPallocBufferArray(scip_, &children, nchildren) );
-         // add polynomial variables to vars
-         // create children expressions for polynomial variables
+         /* add polynomial variables to vars
+          * create children expressions for polynomial variables
+          */
          for( i = 0; i < npolyvars; ++i )
          {
             /* get variable index in vars; add to vars if not existing yet */
@@ -590,12 +587,12 @@ Bool xlp_addcon_term(
             SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip_), &children[i], SCIP_EXPR_VARIDX, varpos) );
          }
 
-         // add simple monomials as additional children
+         /* add simple monomials as additional children */
          BMScopyMemoryArray(&children[npolyvars], extramonomials, nextramonomials);
 
-         // create polynomial expression including simple monomials
+         /* create polynomial expression including simple monomials */
          SCIP_CALL_ABORT( SCIPexprCreatePolynomial(SCIPblkmem(scip_), &polynomial, nchildren, children, nsimplemonomials, simplemonomials, 0.0, FALSE) );
-         // add extra monomials
+         /* add extra monomials */
          for( i = 0; i < nextramonomials; ++i )
          {
             SCIP_EXPRDATA_MONOMIAL* monomialdata;
@@ -610,24 +607,22 @@ Bool xlp_addcon_term(
 
          SCIPfreeBufferArray(scip_, &children);
 
-         // create expression tree
+         /* create expression tree */
          SCIP_CALL_ABORT( SCIPexprtreeCreate(SCIPblkmem(scip_), &exprtree, polynomial, nvars, 0, NULL) );
          SCIP_CALL_ABORT( SCIPexprtreeSetVars(exprtree, nvars, vars) );
 
-         // create constraint
-         SCIP_CALL_ABORT( SCIPcreateConsNonlinear(scip_, &cons, name, nlinvars, linvars, lincoefs, 1, &exprtree, NULL, sciplhs, sciprhs,
+         /* create constraint */
+         SCIP_CALL_ABORT( SCIPcreateConsNonlinear(scip_, &cons, name, 0, NULL, NULL, 1, &exprtree, NULL, sciplhs, sciprhs,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
          SCIP_CALL( SCIPexprtreeFree(&exprtree) );
          SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
       }
 
-      // free memory
+      /* free memory */
       SCIPhashmapFree(&varmap);
       SCIPfreeBufferArrayNull(scip_, &vars);
       SCIPhashmapFree(&polyvarmap);
       SCIPfreeBufferArrayNull(scip_, &polyvars);
-      SCIPfreeBufferArrayNull(scip_, &linvars);
-      SCIPfreeBufferArrayNull(scip_, &lincoefs);
       SCIPfreeBufferArrayNull(scip_, &simplemonomials);
       SCIPfreeBufferArrayNull(scip_, &extramonomials);
       SCIPfreeBufferArrayNull(scip_, &extracoefs);

@@ -44,15 +44,14 @@
 #define ensureBlockMemoryArraySize(blkmem, array1, cursize, minsize) \
     do { \
        int __newsize; \
-       assert(blkmem  != NULL); \
-       assert(array1  != NULL); \
-       assert(cursize != NULL); \
-       if( *cursize >= minsize ) \
+       assert((blkmem)  != NULL); \
+       assert((cursize) != NULL); \
+       if( *(cursize) >= (minsize) ) \
           break; \
        __newsize = calcGrowSize(minsize); \
-       assert(__newsize >= minsize); \
-       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, array1, *cursize, __newsize) ); \
-       *cursize = __newsize; \
+       assert(__newsize >= (minsize)); \
+       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, array1, *(cursize), __newsize) ); \
+       *(cursize) = __newsize; \
     } while( FALSE )
 
 /** ensures that two block memory arrays have at least a given size
@@ -61,17 +60,15 @@
 #define ensureBlockMemoryArraySize2(blkmem, array1, array2, cursize, minsize) \
     do { \
        int __newsize; \
-       assert(blkmem  != NULL); \
-       assert(array1  != NULL); \
-       assert(array2  != NULL); \
-       assert(cursize != NULL); \
-       if( *cursize >= minsize ) \
+       assert((blkmem)  != NULL); \
+       assert((cursize) != NULL); \
+       if( *(cursize) >= (minsize) ) \
           break; \
        __newsize = calcGrowSize(minsize); \
-       assert(__newsize >= minsize); \
-       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, array1, *cursize, __newsize) ); \
-       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, array2, *cursize, __newsize) ); \
-       *cursize = __newsize; \
+       assert(__newsize >= (minsize)); \
+       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, array1, *(cursize), __newsize) ); \
+       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, array2, *(cursize), __newsize) ); \
+       *(cursize) = __newsize; \
     } while( FALSE )
 
 /** ensures that three block memory arrays have at least a given size
@@ -80,19 +77,16 @@
 #define ensureBlockMemoryArraySize3(blkmem, array1, array2, array3, cursize, minsize) \
     do { \
        int __newsize; \
-       assert(blkmem  != NULL); \
-       assert(array1  != NULL); \
-       assert(array2  != NULL); \
-       assert(array3  != NULL); \
-       assert(cursize != NULL); \
-       if( *cursize >= minsize ) \
+       assert((blkmem)  != NULL); \
+       assert((cursize) != NULL); \
+       if( *(cursize) >= (minsize) ) \
           break; \
        __newsize = calcGrowSize(minsize); \
-       assert(__newsize >= minsize); \
-       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, array1, *cursize, __newsize) ); \
-       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, array2, *cursize, __newsize) ); \
-       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, array3, *cursize, __newsize) ); \
-       *cursize = __newsize; \
+       assert(__newsize >= (minsize)); \
+       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, array1, *(cursize), __newsize) ); \
+       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, array2, *(cursize), __newsize) ); \
+       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, array3, *(cursize), __newsize) ); \
+       *(cursize) = __newsize; \
     } while( FALSE )
 
 /**@name Miscellaneous private methods */
@@ -186,7 +180,7 @@ SCIP_EXPRCURV SCIPexprcurvAdd(
    SCIP_EXPRCURV         curv2               /**< curvature of second summand */
    )
 {
-   return curv1 & curv2;
+   return (SCIP_EXPRCURV) (curv1 & curv2);
 }
 
 /** gives the curvature for the negation of a function with given curvature */
@@ -194,8 +188,25 @@ SCIP_EXPRCURV SCIPexprcurvNegate(
    SCIP_EXPRCURV         curvature           /**< curvature of function */
    )
 {
-   return ((curvature & SCIP_EXPRCURV_CONVEX)  ? SCIP_EXPRCURV_CONCAVE : SCIP_EXPRCURV_UNKNOWN) |
-          ((curvature & SCIP_EXPRCURV_CONCAVE) ? SCIP_EXPRCURV_CONVEX  : SCIP_EXPRCURV_UNKNOWN);
+   switch( curvature )
+   {
+   case SCIP_EXPRCURV_CONCAVE:
+      return SCIP_EXPRCURV_CONVEX;
+      
+   case SCIP_EXPRCURV_CONVEX:
+      return SCIP_EXPRCURV_CONCAVE;
+      
+   case SCIP_EXPRCURV_LINEAR:
+   case SCIP_EXPRCURV_UNKNOWN:
+      /* can return curvature, do this below */
+      break;
+
+   default:
+      SCIPerrorMessage("unknown curvature status.\n");
+      SCIPABORT();
+   }
+
+   return curvature;
 }
 
 /* gives curvature for a functions with given curvature multiplied by a constant factor */
@@ -253,7 +264,7 @@ SCIP_EXPRCURV SCIPexprcurvPower(
       SCIPintervalSetBounds(&leftbounds,  basebounds.inf, 0.0);
       SCIPintervalSetBounds(&rightbounds, 0.0, basebounds.sup);
 
-      return SCIPexprcurvPower(leftbounds,  basecurv, exponent) & SCIPexprcurvPower(rightbounds, basecurv, exponent);
+      return (SCIP_EXPRCURV) (SCIPexprcurvPower(leftbounds,  basecurv, exponent) & SCIPexprcurvPower(rightbounds, basecurv, exponent));
    }
    assert(basebounds.inf >= 0.0 || basebounds.sup <= 0.0);
 
@@ -1932,7 +1943,7 @@ SCIP_DECL_EXPRCURV( exprcurvSignPower )
       right = SCIP_EXPRCURV_LINEAR;
    }
 
-   *result = left & right;
+   *result = (SCIP_EXPRCURV) (left & right);
 
    return SCIP_OKAY;
 } /*lint !e715*/
@@ -7751,9 +7762,6 @@ SCIP_RETCODE exprgraphNodeRemoveParent(
 {
    SCIP_EXPRGRAPHNODE* node_;
    int pos;
-#ifndef NDEBUG
-   SCIP_Bool isparent;
-#endif
 
    assert(exprgraph != NULL);
    assert(node != NULL);
@@ -7768,14 +7776,10 @@ SCIP_RETCODE exprgraphNodeRemoveParent(
 
    /* find parent */
    exprgraphNodeSortParents(*node);
-#ifndef NDEBUG
-   isparent = SCIPsortedvecFindPtr((void**)(*node)->parents, ptrcomp, (void*)parent, (*node)->nparents, &pos);
-   assert(isparent);
-#else
    (void) SCIPsortedvecFindPtr((void**)(*node)->parents, ptrcomp, (void*)parent, (*node)->nparents, &pos);
-#endif
    assert(pos >= 0);
    assert(pos < (*node)->nparents);
+   assert((*node)->parents[pos] == parent);
 
    /* move last parent to pos, if pos is before last
     * update sorted flag */
@@ -12171,16 +12175,10 @@ SCIP_RETCODE SCIPexprgraphReleaseNode(
    {
       int constidx;
 
-#ifndef NDEBUG
-      SCIP_Bool foundnode;
-
-      foundnode = exprgraphFindConstNodePos(exprgraph, *node, &constidx);
-      assert(foundnode);
-#else
       (void) exprgraphFindConstNodePos(exprgraph, *node, &constidx);
-#endif
       assert(constidx >= 0);
       assert(constidx < exprgraph->nconsts);
+      assert(exprgraph->constnodes[constidx] == *node);
 
       /* move last constant to position constidx */
       if( constidx < exprgraph->nconsts-1 )

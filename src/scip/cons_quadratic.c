@@ -4281,9 +4281,10 @@ SCIP_RETCODE checkCurvature(
       }
 
       SCIP_CALL( SCIPallocBufferArray(scip, &alleigval, n) );
-      /* TODO can we compute only min and max eigen value?
-      TODO can we estimate the numerical error? 
-      TODO trying a cholesky factorization may be much faster */
+      /* @todo Can we compute only min and max eigen value?
+       * @todo Can we estimate the numerical error? 
+       * @todo Trying a cholesky factorization may be much faster. 
+       */
       if( LapackDsyev(FALSE, n, matrix, alleigval) != SCIP_OKAY )
       {
          SCIPwarningMessage("Failed to compute eigenvalues of quadratic coefficient matrix of constraint %s. Assuming matrix is indefinite.\n", SCIPconsGetName(cons));
@@ -4516,7 +4517,7 @@ SCIP_RETCODE computeViolation(
    consdata->activity = 0.0;
    varval = 0.0;
    
-   /* TODO take better care of variables at +/- infinity: e.g., run instance waste in debug mode with a short timelimit (30s) */
+   /* @todo Take better care of variables at +/- infinity: e.g., run instance waste in debug mode with a short timelimit (30s). */
    for( i = 0; i < consdata->nlinvars; ++i )
    {
       if( SCIPisInfinity(scip, ABS(SCIPgetSolVal(scip, sol, consdata->linvars[i]))) )
@@ -5542,9 +5543,9 @@ SCIP_RETCODE separatePoint(
          }
          else
          {
-            /* @todo if convex, can we easily move the refpoint closer to the feasible region to get a stronger cut? */
+            /* @todo If convex, can we easily move the refpoint closer to the feasible region to get a stronger cut? */
             SCIP_CALL( generateCutSol(scip, conss[c], sol, violside, &row, &efficacy, conshdlrdata->cutmaxrange, conshdlrdata->checkcurvature, actminefficacy) );
-            /* @todo if generation failed not because of low efficacy, then probably because of numerical issues;
+            /* @todo If generation failed not because of low efficacy, then probably because of numerical issues;
              * if the constraint is convex and we are desperate to get a cut, then we may try again with a better chosen reference point */
          }
 
@@ -6370,7 +6371,7 @@ void propagateBoundsGetQuadActivity(
          else if( SCIPisInfinity(scip, -bnd) )
          {
             /* if maximal activity is below value for -infinity, let's take -1e10 as upper bound on maximal activity
-             * @todo something better?
+             * @todo Something better?
              */
             bnd = -sqrt(SCIPinfinity(scip));
             *maxquadactivity += bnd;
@@ -6399,7 +6400,7 @@ void propagateBoundsGetQuadActivity(
          else if( SCIPisInfinity(scip, bnd) )
          {
             /* if minimal activity is above value for infinity, let's take 1e10 as lower bound on minimal activity
-             * @todo something better?
+             * @todo Something better?
              */
             bnd = sqrt(SCIPinfinity(scip));
             *minquadactivity += bnd;
@@ -7611,7 +7612,7 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
       eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_newsolution");
       assert(eventhdlr != NULL);
 
-      /* @todo should be catch every new solution or only new *best* solutions */
+      /* @todo Should we catch every new solution or only new *best* solutions */
       SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_SOLFOUND, eventhdlr, (SCIP_EVENTDATA*)conshdlr, &conshdlrdata->newsoleventfilterpos) );
    }
 
@@ -8252,7 +8253,7 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
          havechange = TRUE;
       }
 
-      /* @todo divide constraint by gcd of coefficients if all are integral */
+      /* @todo Divide constraint by gcd of coefficients if all are integral. */
 
       if( doreformulations )
       {
@@ -8506,7 +8507,7 @@ SCIP_DECL_CONSLOCK(consLockQuadratic)
    }
 
    for( i = 0; i < consdata->nquadvars; ++i )
-   { /* TODO try to be more clever */
+   {  /* @todo Try to be more clever! */
       SCIP_CALL( SCIPaddVarLocks(scip, consdata->quadvarterms[i].var, nlockspos+nlocksneg, nlockspos+nlocksneg) );
    }
 
@@ -9198,8 +9199,8 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          &conshdlrdata->defaultbound, TRUE, SCIPinfinity(scip), 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/cutmaxrange",
-         "maximal range of a cut (maximal coefficient divided by minimal coefficient) in order to be added to LP relaxation",
-         &conshdlrdata->cutmaxrange, TRUE, 1e+10, 0.0, SCIPinfinity(scip), NULL, NULL) );
+         "maximal coef range of a cut (maximal coefficient divided by minimal coefficient) in order to be added to LP relaxation",
+         &conshdlrdata->cutmaxrange, TRUE, 1e+7, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/linearizeheursol",
          "whether linearizations of convex quadratic constraints should be added to cutpool in a solution found by some heuristic",

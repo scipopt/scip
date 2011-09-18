@@ -8719,7 +8719,7 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
       }
 
       /* is constraint of type SCIP_CONSTYPE_{EQKNAPSACK, BINPACKING, KNAPSACK}? */
-      /* TODO: If coefficients or rhs are not integral, we currently do not check
+      /* @todo If coefficients or rhs are not integral, we currently do not check
        * if the constraint could be scaled (finitely), such that they are.
        */
       {

@@ -722,16 +722,14 @@ BEGIN {
          }
       }
       else if( solstatus[prob] == "feas" ) {
-         if( feasible ) {
-            if( timeout ) {
-               status = "timeout";
-               timeouttime += tottime;
-               timeouts++;
-            }
-            else {
-               status = "ok";
-               pass++;
-            }
+         if( timeout ) {
+            status = "timeout";
+            timeouttime += tottime;
+            timeouts++;
+         }
+         else if( feasible ) {
+            status = "ok";
+            pass++;
          }
          else {
             status = "fail";
