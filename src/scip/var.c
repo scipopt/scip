@@ -3452,14 +3452,13 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
     */
    for( v = ntmpvars - 1; v >= 0; --v )
    {
-      var = tmpvars[v];
-      scalar = tmpscalars[v];
+      var = tmpvars[v];       /*lint !e644*/
+      scalar = tmpscalars[v]; /*lint !e644*/
 
       assert( var != NULL );
-      /* transforms given variable, scalar and constant to the corresponding active, fixed, or multi-aggregated variable,
-       * scalar and constant;
-       * if the variable resolves to a fixed variable, "scalar" will be 0.0 and the value of the sum will be stored
-       * in "constant"
+      /* transforms given variable, scalar and constant to the corresponding active, fixed, or
+       * multi-aggregated variable, scalar and constant; if the variable resolves to a fixed
+       * variable, "scalar" will be 0.0 and the value of the sum will be stored in "constant".
        */
       SCIP_CALL( SCIPvarGetProbvarSum(&var, &scalar, &activeconstant) );
       assert( var != NULL );
@@ -3471,9 +3470,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
       
       tmpvars[v] = var;
       tmpscalars[v] = scalar;
-      
    }
-   
    noldtmpvars = ntmpvars;
 
    /* sort all variables to combine equal variables easily */
@@ -3524,8 +3521,8 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
             SCIP_CALL( SCIPsetReallocBufferArray(set, &activescalars, activevarssize) );
             assert(nactivevars < activevarssize);
          }
-         activevars[nactivevars] = var;
-         activescalars[nactivevars] = scalar;
+         activevars[nactivevars] = var;       /*lint !e644*/
+         activescalars[nactivevars] = scalar; /*lint !e644*/
          nactivevars++;
          break;
 
@@ -3579,8 +3576,8 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
             }
             else
             {
-               tmpvars2[ntmpvars2] = multvar;
-               tmpscalars2[ntmpvars2] = scalar * multscalar;
+               tmpvars2[ntmpvars2] = multvar;                /*lint !e644*/
+               tmpscalars2[ntmpvars2] = scalar * multscalar; /*lint !e644*/
                ++(ntmpvars2);
                assert(ntmpvars2 <= tmpvarssize2);
             }
@@ -3667,7 +3664,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
       for( v = 0; v < *nvars; ++v )
       {
          vars[v] = activevars[v];
-         scalars[v] = activescalars[v];
+         scalars[v] = activescalars[v];  /*lint !e613*/
       }
    }
 
@@ -6753,7 +6750,7 @@ SCIP_Real SCIPvarGetMultaggrLbLocal(
 
    assert(var != NULL);
    assert(set != NULL);
-   assert(var->varstatus == SCIP_VARSTATUS_MULTAGGR);
+   assert((SCIP_VARSTATUS) var->varstatus == SCIP_VARSTATUS_MULTAGGR);
 
    lb = var->data.multaggr.constant;
    for( i = var->data.multaggr.nvars-1 ; i >= 0 ; --i )
@@ -6798,7 +6795,7 @@ SCIP_Real SCIPvarGetMultaggrUbLocal(
 
    assert(var != NULL);
    assert(set != NULL);
-   assert(var->varstatus == SCIP_VARSTATUS_MULTAGGR);
+   assert((SCIP_VARSTATUS) var->varstatus == SCIP_VARSTATUS_MULTAGGR);
 
    ub = var->data.multaggr.constant;
    for( i = var->data.multaggr.nvars-1 ; i >= 0 ; --i )
@@ -6843,7 +6840,7 @@ SCIP_Real SCIPvarGetMultaggrLbGlobal(
 
    assert(var != NULL);
    assert(set != NULL);
-   assert(var->varstatus == SCIP_VARSTATUS_MULTAGGR);
+   assert((SCIP_VARSTATUS) var->varstatus == SCIP_VARSTATUS_MULTAGGR);
 
    lb = var->data.multaggr.constant;
    for( i = var->data.multaggr.nvars-1 ; i >= 0 ; --i )
@@ -6888,7 +6885,7 @@ SCIP_Real SCIPvarGetMultaggrUbGlobal(
 
    assert(var != NULL);
    assert(set != NULL);
-   assert(var->varstatus == SCIP_VARSTATUS_MULTAGGR);
+   assert((SCIP_VARSTATUS) var->varstatus == SCIP_VARSTATUS_MULTAGGR);
 
    ub = var->data.multaggr.constant;
    for( i = var->data.multaggr.nvars-1 ; i >= 0 ; --i )
@@ -7930,7 +7927,8 @@ SCIP_RETCODE varAddTransitiveBinaryClosureImplic(
     * deleted; in this case, the subsequent elements are moved to the front; if we iterate from back to front, the
     * only thing that can happen is that we add the same implication twice - this does no harm
     */
-   for( i = nimpls-1; i >= 0 && !(*infeasible); --i )
+   i = nimpls-1;
+   while ( i >= 0 && !(*infeasible) )
    {
       SCIP_Bool added;
 
@@ -7947,6 +7945,7 @@ SCIP_RETCODE varAddTransitiveBinaryClosureImplic(
          nimpls = SCIPimplicsGetNImpls(implvar->implics, implvarfixing);
          i = MIN(i, nimpls); /* some elements from the array could have been removed */  /*lint !e850*/
       }
+      --i;
    }
 
    return SCIP_OKAY;
@@ -8033,7 +8032,8 @@ SCIP_RETCODE varAddTransitiveImplic(
           * subsequent elements are moved to the front; if we iterate from back to front, the only thing that can happen
           * is that we add the same implication twice - this does no harm
           */
-         for( i = nvlbvars-1; i >= 0 && !(*infeasible); --i )
+         i = nvlbvars-1;
+         while ( i >= 0 && !(*infeasible) )
          {
             assert(vlbvars[i] != implvar);
             assert(!SCIPsetIsZero(set, vlbcoefs[i]));
@@ -8075,6 +8075,7 @@ SCIP_RETCODE varAddTransitiveImplic(
                nvlbvars = SCIPvboundsGetNVbds(implvar->vlbs);
                i = MIN(i, nvlbvars); /* some elements from the array could have been removed */  /*lint !e850*/
             }
+            --i;
          }
       }
 
@@ -8098,7 +8099,8 @@ SCIP_RETCODE varAddTransitiveImplic(
           * subsequent elements are moved to the front; if we iterate from back to front, the only thing that can happen
           * is that we add the same implication twice - this does no harm
           */
-         for( i = nvubvars-1; i >= 0 && !(*infeasible); --i )
+         i = nvubvars-1;
+         while ( i >= 0 && !(*infeasible) )
          {
             assert(vubvars[i] != implvar);
             assert(!SCIPsetIsZero(set, vubcoefs[i]));
@@ -8140,6 +8142,7 @@ SCIP_RETCODE varAddTransitiveImplic(
                nvubvars = SCIPvboundsGetNVbds(implvar->vubs);
                i = MIN(i, nvubvars); /* some elements from the array could have been removed */  /*lint !e850*/
             }
+            --i;
          }
       }
    }

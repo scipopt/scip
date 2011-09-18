@@ -1351,7 +1351,7 @@ SCIP_RETCODE SCIPrealarrayExtend(
          assert(realarray->maxusedidx - realarray->minusedidx + 1 > 0);
 
          BMScopyMemoryArray(&newvals[realarray->minusedidx - newfirstidx],
-            &realarray->vals[realarray->minusedidx - realarray->firstidx],
+            &(realarray->vals[realarray->minusedidx - realarray->firstidx]),
             realarray->maxusedidx - realarray->minusedidx + 1);
          for( i = realarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
             newvals[i] = 0.0;
@@ -2438,7 +2438,7 @@ SCIP_RETCODE SCIPptrarrayExtend(
          assert(ptrarray->maxusedidx - ptrarray->minusedidx + 1 > 0);
 
          BMScopyMemoryArray(&newvals[ptrarray->minusedidx - newfirstidx],
-            &ptrarray->vals[ptrarray->minusedidx - ptrarray->firstidx],
+            &(ptrarray->vals[ptrarray->minusedidx - ptrarray->firstidx]),
             ptrarray->maxusedidx - ptrarray->minusedidx + 1);
          for( i = ptrarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
             newvals[i] = NULL;
@@ -3625,7 +3625,7 @@ void stairmapUpdate(
          *infeasible = TRUE;
 
          /* remove infeasible core */
-         for( ; i >= startpos; --i )
+         for( ; i >= startpos; --i ) /*lint !e445*/
             stairmap->freecapacities[i] += height;
          
          break;
@@ -3905,12 +3905,12 @@ SCIP_Longint SCIPcalcGreComDiv(
    /* if val1 is even, divide it by 2 */
    while( !(val1 & 1) )
    {
-      val1 >>= 1;
+      val1 >>= 1; /*lint !e704*/
       
       /* if val2 is even too, divide it by 2 and increase t(=number of e */
       if( !(val2 & 1) )
       {
-         val2 >>= 1;
+         val2 >>= 1; /*lint !e704*/
          ++t;
       }
       /* only val1 can be odd */
@@ -3918,24 +3918,25 @@ SCIP_Longint SCIPcalcGreComDiv(
       {
          /* while val1 is even, divide it by 2 */
          while( !(val1 & 1) )
-            val1 >>= 1;
+            val1 >>= 1; /*lint !e704*/
          
          break;
       }
    }
    /* while val2 is even, divide it by 2 */
    while( !(val2 & 1) )
-      val2 >>= 1;
+      val2 >>= 1; /*lint !e704*/
    
    /* val1 and val 2 are odd */
    while( val1 != val2 )
+   {
       if( val1 > val2 )
       {
          val1 -= val2;
          /* val1 is now even, divide it by 2  */
          do 
          {
-            val1 >>= 1;
+            val1 >>= 1;   /*lint !e704*/
          } while( !(val1 & 1) );
       }
       else 
@@ -3944,11 +3945,12 @@ SCIP_Longint SCIPcalcGreComDiv(
          /* val2 is now even, divide it by 2  */
          do 
          {
-            val2 >>= 1;
+            val2 >>= 1;  /*lint !e704*/
          } while( !(val2 & 1) );
       }
+   }
 
-   return (val1 << t);
+   return (val1 << t);  /*lint !e704*/
 }
 
 /** calculates the smallest common multiple of the two given values */
@@ -4574,7 +4576,7 @@ SCIP_RETCODE SCIPgetRandomSubset(
       {
          if( subset[i] == subset[j] ) 
          {
-            i--;
+            i--;  /*lint !e850*/
             break;
          }
       }
@@ -4755,9 +4757,7 @@ SCIP_Bool SCIPstrGetValue(
       do
       {
          assert(tokenlen < SCIP_MAXSTRLEN);
-         token[tokenlen] = str[pos];
-         tokenlen++;
-         pos++;
+         token[tokenlen++] = str[pos++];
       }
       while( isValueChar(str[pos], str[pos+1], FALSE, &hasdot, &exptype) );
 
