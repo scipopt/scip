@@ -3179,7 +3179,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       
    switch( paramemphasis )
    {
-   case SCIP_PARAMSETTING_DEFAULT:
+   case SCIP_PARAMEMPHASIS_DEFAULT:
       /* the default values are already set */
       break;
 
