@@ -846,6 +846,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    int nmyitems;
    SCIP_Longint gcd;
    SCIP_Longint minweight;
+   SCIP_Longint maxweight;
    SCIP_Longint currminweight;
    SCIP_Longint greedycap;
    SCIP_Longint greedysolweight;
@@ -892,6 +893,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    nmyitems = 0;
    weightsum = 0;
    minweight = SCIP_LONGINT_MAX;
+   maxweight = 0;
 
    /* remove unnecessary items */
    for( j = 0; j < nitems; ++j )
@@ -937,6 +939,10 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
          if( myweights[nmyitems] < minweight )
             minweight = myweights[nmyitems];
 
+         /* remember bigest item */
+         if( myweights[nmyitems] > maxweight )
+            maxweight = myweights[nmyitems];
+
          weightsum += myweights[nmyitems];
          ++nmyitems;
       }
@@ -968,27 +974,38 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       goto TERMINATE;
    }
 
-   /* determine greatest common divisor */
-   gcd = myweights[nmyitems - 1];
-   for( j = nmyitems - 2; j >= 0 && gcd >= 2; --j )
-      gcd = SCIPcalcGreComDiv(gcd, myweights[j]);
+   assert(minweight > 0);
+   assert(maxweight > 0);
 
-   SCIPdebugMessage("Gcd is %"SCIP_LONGINT_FORMAT".\n", gcd);
-
-   /* divide by greatest common divisor */
-   if( gcd > 1 )
+   if( maxweight > 1 )
    {
-      eqweights = TRUE;
-      for( j = nmyitems - 1; j >= 0; --j )
+      /* determine greatest common divisor */
+      gcd = myweights[nmyitems - 1];
+      for( j = nmyitems - 2; j >= 0 && gcd >= 2; --j )
+         gcd = SCIPcalcGreComDiv(gcd, myweights[j]);
+
+      SCIPdebugMessage("Gcd is %"SCIP_LONGINT_FORMAT".\n", gcd);
+
+      /* divide by greatest common divisor */
+      if( gcd > 1 )
       {
-         myweights[j] /= gcd;
-         eqweights &= (myweights[j] == 1);
+         eqweights = TRUE;
+         for( j = nmyitems - 1; j >= 0; --j )
+         {
+            myweights[j] /= gcd;
+            eqweights &= (myweights[j] == 1);
+         }
+         capacity /= gcd;
+         minweight /= gcd;
       }
-      capacity /= gcd;
-      minweight /= gcd;
+      else
+         eqweights = FALSE;
    }
    else
-      eqweights = FALSE;
+   {
+      assert(maxweight == 1);
+      eqweights = TRUE;
+   }
 
    assert(minweight <= capacity);
 
