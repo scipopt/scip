@@ -3950,7 +3950,7 @@ SCIP_Longint SCIPcalcGreComDiv(
       }
    }
 
-   return (val1 << t);  /*lint !e704*/
+   return (val1 << t);  /*lint !e703*/
 }
 
 /** calculates the smallest common multiple of the two given values */
