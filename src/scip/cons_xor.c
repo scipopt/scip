@@ -813,10 +813,8 @@ SCIP_RETCODE applyFixings(
          v = MIN(v, consdata->nvars-1);
       }
       else
-      {
          assert(SCIPvarGetProbvar(consdata->vars[v]) != SCIPvarGetProbvar(consdata->vars[v+1]));
-         --v;
-      }
+      --v;
    }
 
    SCIPdebugMessage("after fixings : ");
