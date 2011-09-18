@@ -240,8 +240,8 @@ SCIP_RETCODE readXMLSol(
       {
          if( !unknownvariablemessage )
          {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "unknown variable <%s> in line %d of solution file <%s>\n", 
-               varname, lineno, fname);
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "unknown variable <%s> of solution file <%s>\n", 
+               varname, filename);
             SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  (further unknown variables are ignored)\n");
             unknownvariablemessage = TRUE;
          }
@@ -269,7 +269,7 @@ SCIP_RETCODE readXMLSol(
          nread = sscanf(varvalue, "%lf", &value);
          if( nread != 1 )
          {
-            SCIPerrorMessage("invalid solution value <%s> for variable <%s> in XML solution file <%s>\n", varvalue, varname, filename);
+            SCIPwarningMessage("invalid solution value <%s> for variable <%s> in XML solution file <%s>\n", varvalue, varname, filename);
             error = TRUE;
             break;
          }
