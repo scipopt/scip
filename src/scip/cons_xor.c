@@ -788,7 +788,8 @@ SCIP_RETCODE applyFixings(
    /* delete pairs of equal or negated variables; scan from back to front because deletion doesn't affect the
     * order of the front variables
     */
-   for( v = consdata->nvars-2; v >= 0; --v )
+   v = consdata->nvars-2;
+   while ( v >= 0 )
    {
       if( consdata->vars[v] == consdata->vars[v+1] )
       {
@@ -812,7 +813,10 @@ SCIP_RETCODE applyFixings(
          v = MIN(v, consdata->nvars-1);
       }
       else
+      {
          assert(SCIPvarGetProbvar(consdata->vars[v]) != SCIPvarGetProbvar(consdata->vars[v+1]));
+         --v;
+      }
    }
 
    SCIPdebugMessage("after fixings : ");
@@ -2167,7 +2171,6 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
    {
       if( *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars )
       {
-         
          if( firstchange < nconss && conshdlrdata->presolusehashing ) 
          {
             /* detect redundant constraints; fast version with hash table instead of pairwise comparison */
@@ -2179,20 +2182,19 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
             int lastndelconss;
             npaircomparisons = 0;
             lastndelconss = *ndelconss;
-            
-            
+
             for( c = firstchange; c < nconss && !cutoff && !SCIPisStopped(scip); ++c )
             {
                if( SCIPconsIsActive(conss[c]) && !SCIPconsIsModifiable(conss[c]) )
                {
-                  npaircomparisons += (SCIPconsGetData(conss[c])->changed) ? c : (c - firstchange);
+                  npaircomparisons += (SCIP_Longint) (SCIPconsGetData(conss[c])->changed) ? c : (c - firstchange);
 
                   SCIP_CALL( preprocessConstraintPairs(scip, conss, firstchange, c,
                         &cutoff, nfixedvars, naggrvars, ndelconss, nchgcoefs) );
 
                   if( npaircomparisons > NMINCOMPARISONS )
                   {
-                     if( (*ndelconss - lastndelconss) / (npaircomparisons + 0.0) < MINGAINPERNMINCOMPARISONS )
+                     if( ((SCIP_Real) (*ndelconss - lastndelconss)) / ((SCIP_Real) npaircomparisons) < MINGAINPERNMINCOMPARISONS )
                         break;
                      lastndelconss = *ndelconss;
                      npaircomparisons = 0;
@@ -2391,8 +2393,9 @@ SCIP_DECL_CONSPARSE(consParseXor)
 
       if( SCIPstrGetValue(str, pos, &rhs, &pos) )
       {
+         assert( SCIPisZero(scip, rhs) || SCIPisEQ(scip, rhs, 1.0) );
          /* create or constraint */
-         SCIP_CALL( SCIPcreateConsXor(scip, cons, name, rhs, nvars, vars, 
+         SCIP_CALL( SCIPcreateConsXor(scip, cons, name, (SCIP_Bool) rhs, nvars, vars, 
                initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
   
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *cons, NULL) ) ); 

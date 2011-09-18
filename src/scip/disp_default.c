@@ -658,7 +658,7 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputLPObjval)
    else
       lpobj = SCIPgetLPObjval(scip);
 
-   if( SCIPisInfinity(scip, -lpobj ) || lpobj == SCIP_INVALID )
+   if( SCIPisInfinity(scip, -lpobj ) || lpobj == SCIP_INVALID ) /*lint !e777*/
       SCIPinfoMessage(scip, file, "      --      ");
    else if( SCIPisInfinity(scip, lpobj) )
       SCIPinfoMessage(scip, file, "    cutoff    ");

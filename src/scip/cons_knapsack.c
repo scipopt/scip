@@ -809,7 +809,7 @@ SCIP_RETCODE checkCons(
 }
 
 /* IDX computes the integer index for the optimal solution array */
-#define IDX(j,d) ((j)*(intcap)+(d))
+#define IDX(j,d) ((SCIP_Longint) (j)*(intcap)+(d))
 
 /** solves knapsack problem in maximization form exactly using dynamic programming;
  *  if needed, one can provide arrays to store all selected items and all not selected items
@@ -1968,7 +1968,7 @@ SCIP_RETCODE getLiftingSequence(
     */
    for( j = 0; j < nvarsF; j++ )
    {
-      sortkeypairsF[j] =&(sortkeypairsFstore[j]);
+      sortkeypairsF[j] = &(sortkeypairsFstore[j]); /*lint !e644*/
       sortkeypairsF[j]->key1 = solvals[varsF[j]]; 
       sortkeypairsF[j]->key2 = (SCIP_Real) weights[varsF[j]]; 
    }
@@ -3035,7 +3035,7 @@ SCIP_RETCODE makeCoverMinimal(
    {
       for( j = 0; j < *ncovervars; j++ )
       {
-         SCIP_CALL( SCIPallocBlockMemory(scip, &sortkeypairs[j]) );
+         SCIP_CALL( SCIPallocBlockMemory(scip, &(sortkeypairs[j])) );  /*lint !e644*/
          
          sortkeypairs[j]->key1 = solvals[covervars[j]]; 
          sortkeypairs[j]->key2 = (SCIP_Real) weights[covervars[j]]; 
@@ -3045,7 +3045,7 @@ SCIP_RETCODE makeCoverMinimal(
    {
       for( j = 0; j < *ncovervars; j++ )
       {
-         SCIP_CALL( SCIPallocBlockMemory(scip, &sortkeypairs[j]) );
+         SCIP_CALL( SCIPallocBlockMemory(scip, &(sortkeypairs[j])) );
          
          sortkeypairs[j]->key1 = (solvals[covervars[j]] - 1.0) / weights[covervars[j]]; 
          sortkeypairs[j]->key2 = (SCIP_Real) (-weights[covervars[j]]); 
@@ -3116,7 +3116,7 @@ SCIP_RETCODE makeCoverMinimal(
    
    /* frees temporary memory */
    for( j = nsortkeypairs-1; j >= 0; j-- )
-      SCIPfreeBlockMemory(scip, &sortkeypairs[j]);
+      SCIPfreeBlockMemory(scip, &(sortkeypairs[j]));
    SCIPfreeBlockMemoryArray(scip, &sortkeypairs, nsortkeypairs);
    
    return SCIP_OKAY;
@@ -3446,7 +3446,7 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
          while( conshdlrdata->reals1size < nbinvars )
             conshdlrdata->reals1size *= 2;
          SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->reals1, conshdlrdata->reals1size) );
-         BMSclearMemoryArray(&conshdlrdata->reals1[oldsize], conshdlrdata->reals1size - oldsize);
+         BMSclearMemoryArray(&(conshdlrdata->reals1[oldsize]), conshdlrdata->reals1size - oldsize);
       }
       binvals = conshdlrdata->reals1;
 
@@ -3983,7 +3983,7 @@ SCIP_RETCODE delCoefPos(
             else if( oldcliqenum < consdata->cliquepartition[pos] )
             {
                cliquenumbefore = consdata->cliquepartition[pos] - 1;
-               for( i = pos - 1; i >= 0 && i >= cliquenumbefore && consdata->cliquepartition[i] < cliquenumbefore; --i );
+               for( i = pos - 1; i >= 0 && i >= cliquenumbefore && consdata->cliquepartition[i] < cliquenumbefore; --i ); /*lint !e722*/
 
                if( i < cliquenumbefore )
                   consdata->cliquepartitioned = FALSE; /* recalculate the clique partition after a coefficient was removed */
@@ -3992,7 +3992,7 @@ SCIP_RETCODE delCoefPos(
             else if( pos == consdata->nvars - 1)
             {
                cliquenumbefore = consdata->cliquepartition[pos];
-               for( i = pos - 1; i >= 0 && i >= cliquenumbefore && consdata->cliquepartition[i] < cliquenumbefore; --i );
+               for( i = pos - 1; i >= 0 && i >= cliquenumbefore && consdata->cliquepartition[i] < cliquenumbefore; --i ); /*lint !e722*/
 
                if( i < cliquenumbefore )
                   --(consdata->ncliques);
@@ -4047,7 +4047,7 @@ SCIP_RETCODE delCoefPos(
             else if( oldcliqenum < consdata->negcliquepartition[pos] )
             {
                cliquenumbefore = consdata->negcliquepartition[pos] - 1;
-               for( i = pos - 1; i >= 0 && i >= cliquenumbefore && consdata->negcliquepartition[i] < cliquenumbefore; --i );
+               for( i = pos - 1; i >= 0 && i >= cliquenumbefore && consdata->negcliquepartition[i] < cliquenumbefore; --i ); /*lint !e722*/
 
                if( i < cliquenumbefore )
                   consdata->negcliquepartitioned = FALSE; /* recalculate the negated clique partition after a coefficient was removed */
@@ -4056,7 +4056,7 @@ SCIP_RETCODE delCoefPos(
             else if( pos == consdata->nvars - 1)
             {
                cliquenumbefore = consdata->negcliquepartition[pos];
-               for( i = pos - 1; i >= 0 && i >= cliquenumbefore && consdata->negcliquepartition[i] < cliquenumbefore; --i );
+               for( i = pos - 1; i >= 0 && i >= cliquenumbefore && consdata->negcliquepartition[i] < cliquenumbefore; --i ); /*lint !e722*/ 
 
                if( i < cliquenumbefore )
                   --(consdata->nnegcliques);
@@ -4483,9 +4483,9 @@ SCIP_RETCODE stableSort(
    /* now we copy all variable and weights to the right order */
    for( v = 0; v < norigvars; ++v )
    {
-      *(varpointers[cliquepartition[v]]) = origvars[v];
+      *(varpointers[cliquepartition[v]]) = origvars[v];  /*lint !e613*/
       ++(varpointers[cliquepartition[v]]);
-      *(weightpointers[cliquepartition[v]]) = origweights[v];
+      *(weightpointers[cliquepartition[v]]) = origweights[v];  /*lint !e613*/
       ++(weightpointers[cliquepartition[v]]);
    }
 #ifndef NDEBUG
@@ -4559,9 +4559,13 @@ SCIP_RETCODE propagateCons(
 
    /* we need a merged constraint cause without it the negated clique information could be invalid */
    usenegatedclique = usenegatedclique && consdata->merged;
-   secondmaxweights = NULL;
    nnegcliques = -1;
 
+   /* init for debugging */
+   myvars = NULL;
+   myweights = NULL;
+   cliquestartposs = NULL;
+   secondmaxweights = NULL;
    do
    {
       zerosweightsum = 0;
@@ -6001,7 +6005,7 @@ SCIP_RETCODE tightenWeightsLift(
       while( conshdlrdata->ints1size < nbinvars )
          conshdlrdata->ints1size *= 2;
       SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->ints1, conshdlrdata->ints1size) );
-      BMSclearMemoryArray(&conshdlrdata->ints1[oldsize], conshdlrdata->ints1size - oldsize);
+      BMSclearMemoryArray(&(conshdlrdata->ints1[oldsize]), conshdlrdata->ints1size - oldsize);
    }
    if( conshdlrdata->ints2size < nbinvars )
    {
@@ -6011,7 +6015,7 @@ SCIP_RETCODE tightenWeightsLift(
       while( conshdlrdata->ints2size < nbinvars )
          conshdlrdata->ints2size *= 2;
       SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->ints2, conshdlrdata->ints2size) );
-      BMSclearMemoryArray(&conshdlrdata->ints2[oldsize], conshdlrdata->ints2size - oldsize);
+      BMSclearMemoryArray(&(conshdlrdata->ints2[oldsize]), conshdlrdata->ints2size - oldsize);
    }
    if( conshdlrdata->longints1size < nbinvars )
    {
@@ -6021,7 +6025,7 @@ SCIP_RETCODE tightenWeightsLift(
       while( conshdlrdata->longints1size < nbinvars )
          conshdlrdata->longints1size *= 2;
       SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->longints1, conshdlrdata->longints1size) );
-      BMSclearMemoryArray(&conshdlrdata->longints1[oldsize], conshdlrdata->longints1size - oldsize);
+      BMSclearMemoryArray(&(conshdlrdata->longints1[oldsize]), conshdlrdata->longints1size - oldsize);
    }
    if( conshdlrdata->longints2size < nbinvars )
    {
@@ -6031,7 +6035,7 @@ SCIP_RETCODE tightenWeightsLift(
       while( conshdlrdata->longints2size < nbinvars )
          conshdlrdata->longints2size *= 2;
       SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->longints2, conshdlrdata->longints2size) );
-      BMSclearMemoryArray(&conshdlrdata->longints2[oldsize], conshdlrdata->longints2size - oldsize);
+      BMSclearMemoryArray(&(conshdlrdata->longints2[oldsize]), conshdlrdata->longints2size - oldsize);
    }
 
    firstidxs[0] = conshdlrdata->ints1;
@@ -6074,7 +6078,7 @@ SCIP_RETCODE tightenWeightsLift(
       while( conshdlrdata->bools1size < nbinvars )
          conshdlrdata->bools1size *= 2;
       SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->bools1, conshdlrdata->bools1size) );
-      BMSclearMemoryArray(&conshdlrdata->bools1[oldsize], conshdlrdata->bools1size - oldsize);
+      BMSclearMemoryArray(&(conshdlrdata->bools1[oldsize]), conshdlrdata->bools1size - oldsize);
    }
    if( conshdlrdata->bools2size < nbinvars )
    {
@@ -6084,7 +6088,7 @@ SCIP_RETCODE tightenWeightsLift(
       while( conshdlrdata->bools2size < nbinvars )
          conshdlrdata->bools2size *= 2;
       SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->bools2, conshdlrdata->bools2size) );
-      BMSclearMemoryArray(&conshdlrdata->bools2[oldsize], conshdlrdata->bools2size - oldsize);
+      BMSclearMemoryArray(&(conshdlrdata->bools2[oldsize]), conshdlrdata->bools2size - oldsize);
    }
 
    zeroiteminserted[0] = conshdlrdata->bools1;
@@ -6277,11 +6281,11 @@ SCIP_RETCODE tightenWeightsLift(
    {
       int oldsize;
       oldsize = conshdlrdata->bools3size;
-
+      
       while( conshdlrdata->bools3size < consdata->nvars )
          conshdlrdata->bools3size *= 2;
       SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->bools3, conshdlrdata->bools3size) );
-      BMSclearMemoryArray(&conshdlrdata->bools3[oldsize], conshdlrdata->bools3size - oldsize);
+      BMSclearMemoryArray(&(conshdlrdata->bools3[oldsize]), conshdlrdata->bools3size - oldsize);
    }
 
    cliqueused = conshdlrdata->bools3;
@@ -8532,16 +8536,16 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
          if( !SCIPconsIsActive(cons) || SCIPconsIsModifiable(cons) )
             continue;
          
-         npaircomparisons += (!SCIPconsGetData(cons)->presolved) ? c : (c - firstchange);
+         npaircomparisons += (SCIP_Longint) (!SCIPconsGetData(cons)->presolved) ? c : (c - firstchange);
          
          SCIP_CALL( preprocessConstraintPairs(scip, conss, firstchange, c, ndelconss) );
          
          if( npaircomparisons > NMINCOMPARISONS )
          {
-
             if( (*ndelconss != oldndelconss) || (*nchgsides != oldnchgsides) || (*nchgcoefs != oldnchgcoefs) )
                success = TRUE;
-            if( ((*ndelconss - oldndelconss) + (*nchgsides - oldnchgsides)/2 + (*nchgcoefs - oldnchgcoefs)/10) / (npaircomparisons + 0.0) < MINGAINPERNMINCOMPARISONS )
+            if( ((SCIP_Real) (*ndelconss - oldndelconss) + ((SCIP_Real) (*nchgsides - oldnchgsides))/2.0 +
+                  ((SCIP_Real) (*nchgcoefs - oldnchgcoefs))/10.0) / ((SCIP_Real) npaircomparisons) < MINGAINPERNMINCOMPARISONS )
                break;
             oldndelconss = *ndelconss;
             oldnchgsides = *nchgsides;
@@ -8808,12 +8812,12 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
          SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "error parsing capacity\n");
          *success = FALSE;
       }
-   }
 
-   if( *success )
-   {
-      SCIP_CALL( SCIPcreateConsKnapsack(scip, cons, name, nvars, vars, weights, capacity,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      if( *success )
+      {
+         SCIP_CALL( SCIPcreateConsKnapsack(scip, cons, name, nvars, vars, weights, capacity,
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      }
    }
 
    SCIPfreeBufferArray(scip, &vars);
