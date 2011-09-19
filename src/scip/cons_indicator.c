@@ -296,6 +296,7 @@ struct SCIP_ConshdlrData
    SCIP_Real             maxConditionAltLP;  /**< maximum estimated condition number of the alternative LP to trust its solution */
    SCIP_Bool             generateBilinear;   /**< do not generate indicator constraint, but a bilinear constraint instead */
    SCIP_Bool             forcerestart;       /**< force restart if we have a max FS instance and gap is 1? */
+   SCIP_Bool             performedrestart;   /**< whether a restart has been performed already */
    int                   nbinvarszero;       /**< binary variables globally fixed to zero */
    int                   ninitconss;         /**< initial number of indicator constraints (needed in event handlers) */
    SCIP_Real             restartfrac;        /**< fraction of binary variables that need to be fixed before restart occurs (in forcerestart) */
@@ -351,28 +352,28 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorBound)
    switch ( eventtype )
    {
    case SCIP_EVENTTYPE_LBTIGHTENED:
-      /* if variable is now fixed to be nonzero */
+      /* if variable is now fixed to be positive */
       if ( ! SCIPisFeasPositive(scip, oldbound) && SCIPisFeasPositive(scip, newbound) )
          ++(consdata->nFixedNonzero);
       SCIPdebugMessage("changed lower bound of variable <%s> from %g to %g (nFixedNonzero: %d).\n",
          SCIPvarGetName(SCIPeventGetVar(event)), oldbound, newbound, consdata->nFixedNonzero);
       break;
    case SCIP_EVENTTYPE_UBTIGHTENED:
-      /* if variable is now fixed to be zero */
+      /* if variable is now fixed to be negative */
       if ( ! SCIPisFeasNegative(scip, oldbound) && SCIPisFeasNegative(scip, newbound) )
          ++(consdata->nFixedNonzero);
       SCIPdebugMessage("changed upper bound of variable <%s> from %g to %g (nFixedNonzero: %d).\n",
          SCIPvarGetName(SCIPeventGetVar(event)), oldbound, newbound, consdata->nFixedNonzero);
       break;
    case SCIP_EVENTTYPE_LBRELAXED:
-      /* if variable is not fixed to be nonzero anymore */
+      /* if variable is not fixed to be positive anymore */
       if ( SCIPisFeasPositive(scip, oldbound) && ! SCIPisFeasPositive(scip, newbound) )
          --(consdata->nFixedNonzero);
       SCIPdebugMessage("changed lower bound of variable <%s> from %g to %g (nFixedNonzero: %d).\n",
          SCIPvarGetName(SCIPeventGetVar(event)), oldbound, newbound, consdata->nFixedNonzero);
       break;
    case SCIP_EVENTTYPE_UBRELAXED:
-      /* if variable is not fixed to be nonzero anymore */
+      /* if variable is not fixed to be negative anymore */
       if ( SCIPisFeasNegative(scip, oldbound) && ! SCIPisFeasNegative(scip, newbound) )
          --(consdata->nFixedNonzero);
       SCIPdebugMessage("changed upper bound of variable <%s> from %g to %g (nFixedNonzero: %d).\n",
@@ -413,6 +414,11 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorRestart)
 
    conshdlrdata = (SCIP_CONSHDLRDATA*)eventdata;
    assert( conshdlrdata != NULL );
+   assert( conshdlrdata->forcerestart );
+
+   /* do not care if we have performed a restart already */
+   if ( conshdlrdata->performedrestart )
+      return SCIP_OKAY;
 
    eventtype = SCIPeventGetType(event);
    switch ( eventtype )
@@ -424,18 +430,14 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorRestart)
       newbound = SCIPeventGetNewbound(event);
       assert( SCIPisIntegral(scip, oldbound) );
       assert( SCIPisIntegral(scip, newbound) );
+      assert( ! SCIPisEQ(scip, oldbound, newbound) );
       assert( SCIPisZero(scip, oldbound) || SCIPisEQ(scip, oldbound, 1.0) );
       assert( SCIPisZero(scip, newbound) || SCIPisEQ(scip, newbound, 1.0) );
 
-      /* do not care if forcerestart has been turned off */
-      if ( ! conshdlrdata->forcerestart )
-         break;
-
-      /* if variable is now fixed to be zero */
-      if ( ! SCIPisEQ(scip, oldbound, newbound) )
-         ++(conshdlrdata->nbinvarszero);
-      SCIPdebugMessage("fixed variable <%s> (nbinvarszero: %d).\n",
-         SCIPvarGetName(SCIPeventGetVar(event)), conshdlrdata->nbinvarszero);
+      /* variable is now fixed */
+      ++(conshdlrdata->nbinvarszero);
+      SCIPdebugMessage("fixed variable <%s> (nbinvarszero: %d, total: %d).\n",
+         SCIPvarGetName(SCIPeventGetVar(event)), conshdlrdata->nbinvarszero, conshdlrdata->ninitconss);
 
       if ( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
          break;
@@ -449,16 +451,18 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorRestart)
 
          /* drop event */
          SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, (SCIP_EVENTDATA*) conshdlrdata, -1) );
-         conshdlrdata->forcerestart = FALSE;
+         conshdlrdata->performedrestart = TRUE;
       }
       break;
       
    case SCIP_EVENTTYPE_BESTSOLFOUND:
-      assert( conshdlrdata->objindicatoronly );
       assert( SCIPisIntegral(scip, conshdlrdata->minabsobj) );
       assert( SCIPisGE(scip, conshdlrdata->minabsobj, 1.0 ) );
 
       if ( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+         break;
+
+      if ( ! conshdlrdata->objindicatoronly )
          break;
 
       /* if the absolute gap is equal to minabsobj */
@@ -475,7 +479,7 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorRestart)
 
          /* drop event */
          SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, (SCIP_EVENTDATA*) conshdlrdata, -1) );
-         conshdlrdata->forcerestart = FALSE;
+         conshdlrdata->performedrestart = TRUE;
       }
       break;
 
@@ -2733,6 +2737,12 @@ SCIP_RETCODE presolRoundIndicator(
       if ( fixed )
          ++(*nfixedvars);
 
+      /* mark linear constraint to be update-able */
+      if ( SCIPconsIsActive(consdata->lincons) )
+      {
+         SCIP_CALL( SCIPsetUpgradeConsLinear(scip, consdata->lincons, TRUE) );
+      }
+
       /* delete indicator constraint (leave linear constraint) */
       assert( ! SCIPconsIsModifiable(cons) );
       SCIP_CALL( SCIPdelCons(scip, cons) );
@@ -2744,8 +2754,13 @@ SCIP_RETCODE presolRoundIndicator(
    /* if the binary variable is fixed to zero */
    if ( SCIPvarGetUbLocal(consdata->binvar) < 0.5 )
    {
-      SCIPdebugMessage("Presolving <%s>: Binary variable fixed to 0, deleting indicator and linear constraints.\n", 
-         SCIPconsGetName(cons));
+      SCIPdebugMessage("Presolving <%s>: Binary variable fixed to 0, deleting indicator constraint.\n", SCIPconsGetName(cons));
+
+      /* mark linear constraint to be update-able */
+      if ( SCIPconsIsActive(consdata->lincons) )
+      {
+         SCIP_CALL( SCIPsetUpgradeConsLinear(scip, consdata->lincons, TRUE) );
+      }
 
       /* delete indicator constraint */
       assert( ! SCIPconsIsModifiable(cons) );
@@ -2775,6 +2790,12 @@ SCIP_RETCODE presolRoundIndicator(
       if ( fixed )
          ++(*nfixedvars);
 
+      /* mark linear constraint to be update-able */
+      if ( SCIPconsIsActive(consdata->lincons) )
+      {
+         SCIP_CALL( SCIPsetUpgradeConsLinear(scip, consdata->lincons, TRUE) );
+      }
+
       /* delete constraint */
       assert( ! SCIPconsIsModifiable(cons) );
       SCIP_CALL( SCIPdelCons(scip, cons) );
@@ -2787,6 +2808,12 @@ SCIP_RETCODE presolRoundIndicator(
    if ( SCIPisFeasZero(scip, SCIPvarGetUbLocal(consdata->slackvar)) )
    {
       SCIPdebugMessage("Presolving <%s>: Slack variable fixed to zero, delete redundant indicator constraint.\n", SCIPconsGetName(cons));
+
+      /* mark linear constraint to be update-able */
+      if ( SCIPconsIsActive(consdata->lincons) )
+      {
+         SCIP_CALL( SCIPsetUpgradeConsLinear(scip, consdata->lincons, TRUE) );
+      }
 
       /* delete constraint */
       assert( ! SCIPconsIsModifiable(cons) );
@@ -3603,9 +3630,6 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
 
             assert( conshdlrdata->eventhdlrrestart != NULL );
             SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, conshdlrdata->eventhdlrrestart, (SCIP_EVENTDATA*) conshdlrdata, NULL) );
-            
-            /* set force restart to false */
-            SCIP_CALL( SCIPsetBoolParam(scip, "constraints/indicator/forcerestart", FALSE) );
          }
       }
 
@@ -3723,7 +3747,7 @@ SCIP_DECL_CONSDELETE(consDeleteIndicator)
       assert( conshdlrdata->eventhdlrrestart != NULL );
       if ( conshdlrdata->forcerestart )
       {
-         SCIP_CALL( SCIPdropVarEvent(scip, (*consdata)->binvar, SCIP_EVENTTYPE_GUBCHANGED, conshdlrdata->eventhdlrrestart,
+         SCIP_CALL( SCIPdropVarEvent(scip, (*consdata)->binvar, SCIP_EVENTTYPE_GBDCHANGED, conshdlrdata->eventhdlrrestart,
                (SCIP_EVENTDATA*) conshdlrdata, -1) );
       }
 
@@ -5023,6 +5047,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    conshdlrdata->addLinCons = NULL;
    conshdlrdata->nbinvarszero = 0;
    conshdlrdata->ninitconss = 0;
+   conshdlrdata->performedrestart = FALSE;
    conshdlrdata->nAddLinCons = 0;
    conshdlrdata->maxAddLinCons = 0;
    conshdlrdata->generateBilinear = FALSE;
@@ -5631,7 +5656,7 @@ SCIP_RETCODE SCIPsetBinaryVarIndicator(
       }
 
       /* catch global bound change events on binary variable */
-      if ( conshdlrdata->forcerestart && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+      if ( conshdlrdata->forcerestart )
       {
          SCIP_CALL( SCIPcatchVarEvent(scip, consdata->binvar, SCIP_EVENTTYPE_GBDCHANGED, conshdlrdata->eventhdlrrestart, (SCIP_EVENTDATA*) conshdlrdata, NULL) );
       }
