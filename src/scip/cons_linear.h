@@ -268,6 +268,17 @@ SCIP_RETCODE SCIPmarkDoNotUpgradeConsLinear(
    SCIP_CONS*            cons                /**< linear constraint to mark */
    );
 
+/** sets upgrading flag of linear constraint 
+ *
+ *  @note the donotupgrade flag should only be changed from TRUE to FALSE, by the caller who set it to TRUE
+ */
+extern
+SCIP_RETCODE SCIPsetUpgradeConsLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< linear constraint to mark */
+   SCIP_Bool             upgradeallowed      /**< allow upgrading? */
+   );
+
 #ifdef __cplusplus
 }
 #endif

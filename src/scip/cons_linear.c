@@ -11261,3 +11261,50 @@ SCIP_RETCODE SCIPmarkDoNotUpgradeConsLinear(
 
    return SCIP_OKAY;
 }
+
+/** sets upgrading flag of linear constraint 
+ *
+ *  @note the donotupgrade flag should only be changed from TRUE to FALSE, by the caller who set it to TRUE
+ */
+SCIP_RETCODE SCIPsetUpgradeConsLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< linear constraint to mark */
+   SCIP_Bool             upgradeallowed      /**< allow upgrading? */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+
+   /* get the constraint handler and check, if it's really a linear constraint */
+   conshdlr = SCIPconsGetHdlr(cons);
+   if ( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not linear\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   /* get data */
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(!consdata->upgraded);
+
+   if( upgradeallowed && consdata->donotupgrade )
+   {
+      consdata->donotupgrade = FALSE;
+
+      /* update the upgrade flag to try again */
+      consdata->upgradetried = FALSE;
+   }
+   else if( !upgradeallowed )
+   {
+      if( consdata->donotupgrade )
+      {
+         /* @todo: change donotupgrade flag to a counter */
+         SCIPwarningMessage("constraint is already mark not to be upgraded\n");
+      }
+      consdata->donotupgrade = TRUE;
+   }
+   return SCIP_OKAY;
+}
