@@ -159,6 +159,7 @@ class SPxSCIP : public SPxSolver
    char*            m_probname;         /**< problem name */
    bool             m_fromscratch;      /**< use old basis indicator */
    bool             m_scaling;          /**< use lp scaling */
+   bool             m_presolving;       /**< use lp presolving */
    Real             m_objLoLimit;       /**< lower objective limit */
    Real             m_objUpLimit;       /**< upper objective limit */
    Status           m_stat;             /**< solving status */
@@ -182,6 +183,7 @@ public:
           m_probname(0),
           m_fromscratch(false),
           m_scaling(false),
+          m_presolving(false),
           m_objLoLimit(-soplex::infinity),
           m_objUpLimit(soplex::infinity),
           m_stat(NO_PROBLEM),
@@ -279,6 +281,16 @@ public:
    void setScaling(bool s)
    {
       m_scaling = s;
+   }
+
+   bool getPresolving() const
+   {
+      return m_presolving;
+   }
+
+   void setPresolving(bool p)
+   {
+      m_presolving = p;
    }
 
    bool getLpInfo() const
@@ -630,10 +642,10 @@ public:
    {
       assert(m_sense == sense());
 
-      SPxSolver::VarStatus* cstat = NULL;
-      SPxSolver::VarStatus* rstat = NULL;
-      SPxLP unscaledlp;
-      bool applyscaling;
+      SPxEquiliSC* scaler = NULL;
+      SPxMainSM* simplifier = NULL;
+      SPxLP origlp;
+      SPxSimplifier::Result result = SPxSimplifier::OKAY;
 
       /* delete starting basis if solving from scratch */
       if ( getFromScratch() )
@@ -653,50 +665,83 @@ public:
       }
       assert(!getFromScratch() || getBasisStatus() == SPxBasis::NO_PROBLEM);
 
-      /* use scaler if no basis is loaded, i.e., if solving for the first time or from scratch */
-      applyscaling = SPxSolver::getBasisStatus() == SPxBasis::NO_PROBLEM && getScaling();
-      if( applyscaling )
+      /* use scaler and simplifier if no basis is loaded, i.e., if solving for the first time or from scratch */
+      if( SPxSolver::getBasisStatus() == SPxBasis::NO_PROBLEM && getScaling() && nCols() > 0 && nRows() > 0 )
       {
-         SPxEquiliSC scaler;
+         scaler = new SPxEquiliSC();
+         assert(scaler != NULL);
+      }
 
-         /* store original lp */
-         unscaledlp = SPxLP(*this);
+      if( SPxSolver::getBasisStatus() == SPxBasis::NO_PROBLEM && getPresolving() && nCols() > 0 && nRows() > 0 )
+      {
+         simplifier = new SPxMainSM();
+         assert(simplifier != NULL);
+      }
 
-         /* perform scaling */
-	 try
-	 {
-            scaler.scale(*this);
-	 }
-	 catch(SPxException x)
-	 {
-            /* reload unscaled lp */
-            try
-            {
-               SPxSolver::loadLP(unscaledlp);
-               m_sense = sense();
-            }
-            catch(SPxException e)
-            {
-               /* if the original lp cannot be reloaded, we are in trouble */
-               std::string s = e.what();      
-               SCIPerrorMessage("SoPlex threw an exception when restoring original lp after unsuccessful scaling: %s\n", s.c_str());
-               m_stat = SPxSolver::status();
-               return m_stat;
-            }
-            applyscaling = false;
+      /* store original lp */
+      if( scaler != NULL || simplifier != NULL )
+         origlp = SPxLP(*this);
+
+   SOLVEAGAIN:
+      /* perform scaling and presolving */
+      if( scaler != NULL )
+      {
+         SCIPdebugMessage("scaling LP\n");
+         scaler->scale(*this);
+      }
+
+      if( simplifier != NULL )
+      {
+         SCIPdebugMessage("simplifying LP\n");
+         result = simplifier->simplify(*this, epsilon(), delta());
+         SCIPdebugMessage("simplifier ended with status %u (0: OKAY, 1: INFEASIBLE, 2: DUAL_INFEASIBLE, 3: UNBOUNDED, 4: VANISHED)\n", result);
+
+         /* unsimplification is not designed for these cases, thus reload original/scaled lp */
+         if( result == SPxSimplifier::INFEASIBLE || result == SPxSimplifier::DUAL_INFEASIBLE )
+         {
+            SCIPdebugMessage("simplifier detected primal or dual infeasibility - reloading and solving unsimplified LP\n");
+
+            delete simplifier;
+            simplifier = NULL;
+
+            SPxSolver::loadLP(origlp);
+            m_sense = sense();
+
+            goto SOLVEAGAIN;
          }
       }
 
       /* solve */
       m_autophase1iters = 0;
-      doSolve();
-
-      /* if scaling was applied, restore unscaled lp */
-      if( applyscaling )
+      if( result != SPxSimplifier::VANISHED )
       {
+         doSolve();
+      }
+
+      /* unsimplification not designed for infeasible basis */
+      if( (SPxSolver::getBasisStatus() == SPxBasis::INFEASIBLE || m_stat == SPxSolver::INFEASIBLE) && simplifier != NULL )
+      {
+         SCIPdebugMessage("presolved LP infeasible - reloading and solving original LP\n");
+
+         delete simplifier;
+         simplifier = NULL;
+
+         SPxSolver::loadLP(origlp);
+         m_sense = sense();
+
+         goto SOLVEAGAIN;
+      }
+
+      /* if scaling or presolving was applied, restore original lp */
+      if( scaler != NULL || simplifier != NULL )
+      {
+         SPxSolver::VarStatus* cstat = NULL;
+         SPxSolver::VarStatus* rstat = NULL;
+
          /* get basis if at least regular */
-         if( SPxSolver::getBasisStatus() >= SPxBasis::REGULAR )
+         if( (simplifier == NULL || result != SPxSimplifier::VANISHED) && SPxSolver::getBasisStatus() >= SPxBasis::REGULAR )
          {
+            SCIPdebugMessage("get basis of presolved LP\n");
             rstat = new SPxSolver::VarStatus[nRows()];
             cstat = new SPxSolver::VarStatus[nCols()];
             SPxSolver::getBasis(rstat, cstat);
@@ -705,37 +750,85 @@ public:
          /* save iteration count */
          m_autophase1iters += SPxSolver::iterations();
 
-         /* reload unscaled lp */
-         try
+         /* unsimplify */
+         if( simplifier != NULL )
          {
-            SPxSolver::loadLP(unscaledlp);
-            m_sense = sense();
-         }
-         catch(SPxException x)
-         {
-            /* if the original lp cannot be reloaded, we are in trouble */
-            std::string s = x.what();      
-            SCIPerrorMessage("SoPlex threw an exception when restoring original lp after scaling: %s\n", s.c_str());
-            if ( rstat != NULL )
-               delete [] rstat;
-            if ( cstat != NULL ) 
-               delete [] cstat;
-            m_stat = SPxSolver::status();
-            return m_stat;
+            assert((result == SPxSimplifier::VANISHED) == (cstat == NULL));
+            assert((result == SPxSimplifier::VANISHED) == (rstat == NULL));
+
+            /* dimension of presolved lp */
+            int ncols = result == SPxSimplifier::VANISHED ? 0 : nCols();
+            int nrows = result == SPxSimplifier::VANISHED ? 0 : nRows();
+
+            /* get solution of presolved lp */
+            DVector primals(ncols);
+            DVector duals(nrows);
+            DVector slacks(nrows);
+            DVector redcosts(ncols);
+            if( result != SPxSimplifier::VANISHED )
+            {
+               SPxSolver::getPrimal(primals);
+               SPxSolver::getDual(duals);
+               SPxSolver::getSlacks(slacks);
+               SPxSolver::getRedCost(redcosts);
+            }
+
+            /* perform unsimplification */
+            SCIPdebugMessage("unsimplify\n");
+            try
+            {
+               simplifier->unsimplify(primals, duals, slacks, redcosts, rstat, cstat);
+            }
+            catch(SPxException x)
+            {
+               std::string s = x.what();
+               SCIPwarningMessage("SoPlex simplifier threw an exception: %s\n", s.c_str());
+            }
+
+            if( cstat != NULL )
+            {
+               delete[] cstat;
+               cstat = NULL;
+            }
+            if( rstat != NULL )
+            {
+               delete[] rstat;
+               rstat = NULL;
+            }
+
+            if( simplifier->isUnsimplified() )
+            {
+               /* get basis for original lp */
+               rstat = new SPxSolver::VarStatus[origlp.nRows()];
+               cstat = new SPxSolver::VarStatus[origlp.nCols()];
+               simplifier->getBasis(rstat, cstat);
+            }
          }
 
-         /* set basis from scaled lp and reoptimize */
+         /* reload original lp */
+         SCIPdebugMessage("reload original LP\n");
+         SPxSolver::loadLP(origlp);
+         m_sense = sense();
+
+         /* set basis from preprocessed lp and reoptimize */
          if( rstat != NULL && cstat != NULL )
          {
+            SCIPdebugMessage("load unsimplified basis into original LP\n");
             SPxSolver::setBasis(rstat, cstat);
-            doSolve();
          }
 
-         /* free basis arrays */
-         if ( rstat != NULL )
-            delete [] rstat;
-         if ( cstat != NULL ) 
-            delete [] cstat;
+         SCIPdebugMessage("solve original LP\n");
+         doSolve();
+
+         /* free allocated memory */
+         if( cstat != NULL )
+            delete[] cstat;
+         if( rstat != NULL )
+            delete[] rstat;
+         if( scaler != NULL )
+            delete scaler;
+         if( simplifier != NULL )
+            delete simplifier;
       }
 
       if( m_stat == OPTIMAL )
@@ -1197,6 +1290,7 @@ const char* SCIPlpiGetSolverName(
 #else
    snprintf(spxname, SCIP_MAXSTRLEN, "SoPlex %d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10);
 #endif
+
    return spxname;
 }
 
@@ -3675,7 +3769,6 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
-
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
    nrows = lpi->spx->nRows();
@@ -3720,6 +3813,8 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
 
    try 
    {
+      assert(lpi != NULL);
+      assert(lpi->spx != NULL);
       SPxSolver* spx = lpi->spx;
 
       Vector x(spx->nRows(), coef); /* row of B^-1 has nrows entries - note that x is based on coef */
@@ -3983,6 +4078,9 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    case SCIP_LPPAR_LPITLIM:
       *ival = lpi->spx->terminationIter();
       break;
+   case SCIP_LPPAR_PRESOLVING:
+      *ival = lpi->spx->getPresolving();
+      break;
    case SCIP_LPPAR_PRICING:
       *ival = (int)lpi->pricing;
       break;
@@ -4020,6 +4118,10 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       break;
    case SCIP_LPPAR_LPITLIM:
       lpi->spx->setTerminationIter(ival);
+      break;
+   case SCIP_LPPAR_PRESOLVING:
+      assert(ival == TRUE || ival == FALSE);
+      lpi->spx->setPresolving(bool(ival));
       break;
    case SCIP_LPPAR_PRICING:
       lpi->pricing = (SCIP_PRICING)ival;

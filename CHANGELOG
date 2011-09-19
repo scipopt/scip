@@ -91,6 +91,7 @@ performance improvements:
 - if during probing mode the LP relaxation is solved from scratch, e.g., when calling the shiftandpropagate heuristic
   before root node solving, then we clear the resulting LP state, since it might be a bad starting basis for the next
   solve of the LP relaxation (controlled by new parameter <lp/clearinitialprobinglp>)
+- included LP simplifier into SoPlex LP interface, applied when solving from scratch (lpi_spx.cpp)
 
 fixed bugs:
 - fixed bug in propagation of indicator constraints: cannot fix slack variable to 0 if linear constraint is disabled/not active
