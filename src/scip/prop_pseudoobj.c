@@ -408,7 +408,7 @@ void calcMaxObjPseudoactivity(
       else if( SCIPisNegative(scip, obj) )
       {
          contrib = SCIPvarGetLbGlobal(vars[v]);
-         if( !SCIPisInfinity(scip, contrib) )
+         if( !SCIPisInfinity(scip, -contrib) )
             contrib *= obj;
          else
             contrib *= -1.0;
