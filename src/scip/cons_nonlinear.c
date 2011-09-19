@@ -2807,8 +2807,7 @@ SCIP_RETCODE reformulate(
             /* case SCIP_EXPR_ERFI  : */
             {
                SCIPerrorMessage("no support for trigonometric or sign operands yet\n");
-               SCIPABORT();
-               break;
+               return SCIP_ERROR;
             }
 
             case SCIP_EXPR_PRODUCT:
