@@ -23,6 +23,7 @@
 
 #include <stdarg.h>
 #include <string.h>
+#include <math.h>
 
 #include "nlpi/pub_expr.h"
 #include "nlpi/struct_expr.h"
@@ -45,7 +46,6 @@
     do { \
        int __newsize; \
        assert((blkmem)  != NULL); \
-       assert((cursize) != NULL); \
        if( *(cursize) >= (minsize) ) \
           break; \
        __newsize = calcGrowSize(minsize); \
@@ -61,7 +61,6 @@
     do { \
        int __newsize; \
        assert((blkmem)  != NULL); \
-       assert((cursize) != NULL); \
        if( *(cursize) >= (minsize) ) \
           break; \
        __newsize = calcGrowSize(minsize); \
@@ -78,7 +77,6 @@
     do { \
        int __newsize; \
        assert((blkmem)  != NULL); \
-       assert((cursize) != NULL); \
        if( *(cursize) >= (minsize) ) \
           break; \
        __newsize = calcGrowSize(minsize); \

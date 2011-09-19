@@ -22,6 +22,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <math.h>
 
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_linear.h"
@@ -2806,8 +2807,7 @@ SCIP_RETCODE reformulate(
             /* case SCIP_EXPR_ERFI  : */
             {
                SCIPerrorMessage("no support for trigonometric or sign operands yet\n");
-               SCIPABORT();
-               break;
+               return SCIP_ERROR;
             }
 
             case SCIP_EXPR_PRODUCT:

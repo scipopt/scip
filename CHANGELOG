@@ -69,6 +69,7 @@ interface:
 - added parmaeter to SCIPincludeQuadconsUpgrade() to indicates whether the given upgrade method should be active by default
 - new methods SCIPdebugAddSolVal() and SCIPdebugGetSolVal() to add/get values to/from a debug solution
 - various extensions and modifications for expressions and expression trees (too much to state here)
+- added new method to linear constraint handler SCIPsetUpgradeConsLinear(), which (de-)activates the possibility to upgrade a linear constraint to a specialized linear constraint (e.g. knapsack)
 
 performance improvements:
 - performance improvements in prop_vbounds

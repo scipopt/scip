@@ -2654,7 +2654,7 @@ SCIP_RETCODE SCIPdeactivatePricer(
    SCIP_PRICER*          pricer              /**< variable pricer */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPdeactivatePricer", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPdeactivatePricer", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE) );
 
    SCIP_CALL( SCIPpricerDeactivate(pricer, scip->set) );
 
@@ -13275,7 +13275,7 @@ SCIP_RETCODE SCIPsetConsModifiable(
    SCIP_Bool             modifiable          /**< new value */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPsetConsModifiable", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetConsModifiable", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE) );
 
    SCIPconsSetModifiable(cons, modifiable);
 

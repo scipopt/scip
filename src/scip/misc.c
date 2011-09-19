@@ -4747,7 +4747,9 @@ SCIP_Bool isValueChar(
    return FALSE;
 }
 
-/** extract the next token as value */
+/** extract the next token as a value if it is one; in case a value is parsed the endpos is set behind the parsed
+ *  value 
+ */
 SCIP_Bool SCIPstrGetValue(
    const char*           str,                /**< string to search */
    int                   pos,                /**< position in string to start */
@@ -4761,6 +4763,7 @@ SCIP_Bool SCIPstrGetValue(
 
    exptype = EXP_NONE;
    hasdot = FALSE;
+   *endpos = pos;
 
    /* truncate white space in front */
    while( isspace(str[pos]) )
@@ -4776,7 +4779,10 @@ SCIP_Bool SCIPstrGetValue(
 
       do
       {
-         assert(tokenlen < SCIP_MAXSTRLEN);
+         /* in case the next token is longer than SCIP_MAXSTRLEN we stop parsing and retrun */
+         if( tokenlen >= SCIP_MAXSTRLEN )
+            return FALSE;
+         
          token[tokenlen++] = str[pos++];
       }
       while( isValueChar(str[pos], str[pos+1], FALSE, &hasdot, &exptype) );
@@ -4784,10 +4790,11 @@ SCIP_Bool SCIPstrGetValue(
       token[tokenlen] = '\0';
 
       val = strtod(token, &endptr);
-
+      
       if( endptr != token && *endptr == '\0' )
       {
          *value = val;
+         *endpos = pos;
          return TRUE;
       }
    }
