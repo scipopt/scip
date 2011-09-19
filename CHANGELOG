@@ -69,6 +69,7 @@ interface:
 - added parmaeter to SCIPincludeQuadconsUpgrade() to indicates whether the given upgrade method should be active by default
 - new methods SCIPdebugAddSolVal() and SCIPdebugGetSolVal() to add/get values to/from a debug solution
 - various extensions and modifications for expressions and expression trees (too much to state here)
+- split off PARAMEMPHASIS from PARAMSETTING (in pub_paramset.c/paramset.c)
 - added new method to linear constraint handler SCIPsetUpgradeConsLinear(), which (de-)activates the possibility to upgrade a linear constraint to a specialized linear constraint (e.g. knapsack)
 
 performance improvements:
@@ -162,6 +163,7 @@ parameters:
 - added parameter <propagating/%s/presoldelay> for all propagators which allows to change if the presolving call of the given propagator should be delayed
 - added parameter <propagating/pseudoobj/propfullinroot> for allowing to propagate all variables in the root node, instead of stopping after 'maxcands' which is set by a parameter as well
 - added parameter <reading/gmsreader/signpower> to enable writing sign(x)abs(x)^n as the rarely used gams function signpower(x,n)
+- added parameters <constraints/indicator/forcerestart> and <constraints/indicator/restartfrac> to control forced restart in cons_indicator
 
 features:
 - flatzinc reader is now capable to read cumulative constraints
@@ -221,6 +223,8 @@ features:
 - new method SCIPintervalSolveBivariateQuadExpressionAllScalar() to compute tight bounds on the solutions of a bivariate quadratic equation
 - the gams writer can now write nonlinear and signedpower constraints 
 - the pip and zimpl reader now create nonlinear constraints for polynomials of degree > 2
+- implement presolving in exitpre() in cons_orbitope and cons_indicator
+- implement possibility to force a restart in cons_indicator if enough indicator variables have been fixed
 
 design:
 - SCIP_HASHMAP now works also without block memory
