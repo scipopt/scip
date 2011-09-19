@@ -809,7 +809,7 @@ SCIP_RETCODE checkCons(
 }
 
 /* IDX computes the integer index for the optimal solution array */
-#define IDX(j,d) ((SCIP_Longint) (j)*(intcap)+(d))
+#define IDX(j,d) ((j)*(intcap)+(d))
 
 /** solves knapsack problem in maximization form exactly using dynamic programming;
  *  if needed, one can provide arrays to store all selected items and all not selected items
@@ -836,18 +836,18 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    SCIP_Real* tempsort;
    SCIP_Real* optvalues;
    int intcap;
-   SCIP_Longint d;
+   int d;
    int j;
    SCIP_Longint weightsum;
    int* myitems;
    SCIP_Longint* myweights;
-   SCIP_Longint* allcurrminweight;
+   int* allcurrminweight;
    SCIP_Real* myprofits;
    int nmyitems;
    SCIP_Longint gcd;
    SCIP_Longint minweight;
    SCIP_Longint maxweight;
-   SCIP_Longint currminweight;
+   int currminweight;
    SCIP_Longint greedycap;
    SCIP_Longint greedysolweight;
    SCIP_Real greedysolvalue;
@@ -993,7 +993,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
          for( j = nmyitems - 1; j >= 0; --j )
          {
             myweights[j] /= gcd;
-            eqweights &= (myweights[j] == 1);
+            eqweights = eqweights && (myweights[j] == 1);
          }
          capacity /= gcd;
          minweight /= gcd;
@@ -1055,15 +1055,17 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       /* update solution information */
       if( solitems != NULL)
       {
+         SCIP_Longint i;
+
          /* if all items would fit we had handled this case before */
          assert(nmyitems > capacity);
 
          /* take the first best items into the solution */
-         for( d = capacity - 1; d >= 0; --d )
+         for( i = capacity - 1; i >= 0; --i )
          {
-            solitems[*nsolitems] = myitems[d];
+            solitems[*nsolitems] = myitems[i];
             ++(*nsolitems);
-            addval += myprofits[d];
+            addval += myprofits[i];
          }
 
          /* the rest are not in the solution */
@@ -1211,9 +1213,10 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
     * 'nmyitem' values
     */
    SCIP_CALL( SCIPallocBufferArray(scip, &allcurrminweight, nmyitems) );
-   allcurrminweight[0] = myweights[0] - minweight;
+   assert(myweights[0] - minweight < INT_MAX);
+   currminweight = (int) (myweights[0] - minweight);
+   allcurrminweight[0] = currminweight;
 
-   currminweight = myweights[0] - minweight;
    /* fills first row of dynamic programming table with optimal values */
    for( d = currminweight; d < intcap; ++d )
       optvalues[d] = myprofits[0];
@@ -1247,7 +1250,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
             if( d - myweights[j] < currminweight )
                sumprofit = myprofits[j];
             else
-               sumprofit = optvalues[IDX(j-1,d-myweights[j])] + myprofits[j];
+               sumprofit = optvalues[IDX(j-1,(int)(d-myweights[j]))] + myprofits[j];
 
             optvalues[IDX(j,d)] = MAX(sumprofit, optvalues[IDX(j-1,d)]);
          }
@@ -1283,7 +1286,10 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
          {
             solitems[*nsolitems] = myitems[j];
             ++(*nsolitems);
-            d -= myweights[j];
+
+            /* check that we do not have an underflow */
+            assert(myweights[j] <= (INT_MAX + (SCIP_Longint) d));
+            d = (int)(d - myweights[j]);
          } 
          /* collect non-solution items */
          else
