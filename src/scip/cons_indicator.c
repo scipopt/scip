@@ -241,6 +241,7 @@
 #define DEFAULT_MAXCONDITIONALTLP  0.0
 #define DEFAULT_GENERATEBILINEAR   FALSE
 #define DEFAULT_FORCERESTART       FALSE
+#define DEFAULT_RESTARTFRAC        0.9
 
 
 /* other values */
@@ -262,7 +263,8 @@ struct SCIP_ConsData
 /** indicator constraint handler data */
 struct SCIP_ConshdlrData
 {
-   SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
+   SCIP_EVENTHDLR*       eventhdlrbound;     /**< event handler for bound change events */
+   SCIP_EVENTHDLR*       eventhdlrrestart;   /**< event handler for performing restarts */
    SCIP_Bool             removable;          /**< whether the separated cuts should be removable */
    SCIP_Bool             scaled;             /**< if first row of alt. LP has been scaled */
    SCIP_Bool             objindicatoronly;   /**< whether the objective is nonzero only for indicator variables */
@@ -294,6 +296,9 @@ struct SCIP_ConshdlrData
    SCIP_Real             maxConditionAltLP;  /**< maximum estimated condition number of the alternative LP to trust its solution */
    SCIP_Bool             generateBilinear;   /**< do not generate indicator constraint, but a bilinear constraint instead */
    SCIP_Bool             forcerestart;       /**< force restart if we have a max FS instance and gap is 1? */
+   int                   nbinvarszero;       /**< binary variables globally fixed to zero */
+   int                   ninitconss;         /**< initial number of indicator constraints (needed in event handlers) */
+   SCIP_Real             restartfrac;        /**< fraction of binary variables that need to be fixed before restart occurs (in forcerestart) */
    SCIP_HEUR*            heurTrySol;         /**< trysol heuristic */
    SCIP_Bool             addedCouplingCons;  /**< whether the coupling constraints have been added already */
    SCIP_CONS**           addLinCons;         /**< additional linear constraints that should be added to the alternative LP */
@@ -326,7 +331,8 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorBound)
 {
    SCIP_EVENTTYPE eventtype;
    SCIP_CONSDATA* consdata;
-   SCIP_Real oldbound, newbound;
+   SCIP_Real oldbound;
+   SCIP_Real newbound;
 
    assert( eventhdlr != NULL );
    assert( eventdata != NULL );
@@ -352,7 +358,7 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorBound)
          SCIPvarGetName(SCIPeventGetVar(event)), oldbound, newbound, consdata->nFixedNonzero);
       break;
    case SCIP_EVENTTYPE_UBTIGHTENED:
-      /* if variable is now fixed to be nonzero */
+      /* if variable is now fixed to be zero */
       if ( ! SCIPisFeasNegative(scip, oldbound) && SCIPisFeasNegative(scip, newbound) )
          ++(consdata->nFixedNonzero);
       SCIPdebugMessage("changed upper bound of variable <%s> from %g to %g (nFixedNonzero: %d).\n",
@@ -384,45 +390,98 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorBound)
 
 /* exec the event handler for forcing a restart
  *
- * If we have a max FS instance, i.e., the objective is 1 for indicator variables and 0 otherwise,
- * we can force a restart if the gap is 1. In this case, the remaining work consists of proving
- * infeasibility of the non-fixed indicators.
+ * There are two case in which we perform a (user) restart:
+ * - If we have a max FS instance, i.e., the objective is 1 for indicator variables and 0 otherwise,
+ *   we can force a restart if the gap is 1. In this case, the remaining work consists of proving
+ *   infeasibility of the non-fixed indicators.
+ * - If a large fraction of the binary indicator variables have been globally fixed, it makes sense
+ *   to force a restart.
  */
 static
 SCIP_DECL_EVENTEXEC(eventExecIndicatorRestart)
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_EVENTTYPE eventtype;
+   SCIP_Real oldbound;
+   SCIP_Real newbound;
 
+   assert( scip != NULL );
    assert( eventhdlr != NULL );
    assert( eventdata != NULL );
    assert( strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_RESTART_NAME) == 0 );
    assert( event != NULL );
-   assert( SCIPeventGetType(event) == SCIP_EVENTTYPE_BESTSOLFOUND );
 
    conshdlrdata = (SCIP_CONSHDLRDATA*)eventdata;
    assert( conshdlrdata != NULL );
-   assert( conshdlrdata->objindicatoronly );
-   assert( SCIPisIntegral(scip, conshdlrdata->minabsobj) );
-   assert( SCIPisGE(scip, conshdlrdata->minabsobj, 1.0 ) );
 
-   if ( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
-      return SCIP_OKAY;
-
-   /* if the absolute gap is equal to minabsobj */
-   if ( SCIPisEQ(scip, REALABS(SCIPgetPrimalbound(scip) - SCIPgetDualbound(scip)), conshdlrdata->minabsobj) )
+   eventtype = SCIPeventGetType(event);
+   switch ( eventtype )
    {
-      SCIPdebugMessage("Forcing restart, since the absolute gap is %f.\n", conshdlrdata->minabsobj);
-      SCIP_CALL( SCIPrestartSolve(scip) );
+   case SCIP_EVENTTYPE_GUBCHANGED:
+   case SCIP_EVENTTYPE_GLBCHANGED:
+      assert( SCIPvarGetType(SCIPeventGetVar(event)) == SCIP_VARTYPE_BINARY );
+      oldbound = SCIPeventGetOldbound(event);
+      newbound = SCIPeventGetNewbound(event);
+      assert( SCIPisIntegral(scip, oldbound) );
+      assert( SCIPisIntegral(scip, newbound) );
+      assert( SCIPisZero(scip, oldbound) || SCIPisEQ(scip, oldbound, 1.0) );
+      assert( SCIPisZero(scip, newbound) || SCIPisEQ(scip, newbound, 1.0) );
 
-      /* use inference branching, since the objective is not meaningful */
-      if ( SCIPfindBranchrule(scip, "inference") != NULL )
+      /* do not care if forcerestart has been turned off */
+      if ( ! conshdlrdata->forcerestart )
+         break;
+
+      /* if variable is now fixed to be zero */
+      if ( ! SCIPisEQ(scip, oldbound, newbound) )
+         ++(conshdlrdata->nbinvarszero);
+      SCIPdebugMessage("fixed variable <%s> (nbinvarszero: %d).\n",
+         SCIPvarGetName(SCIPeventGetVar(event)), conshdlrdata->nbinvarszero);
+
+      if ( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+         break;
+
+      /* if enough variables have been fixed */
+      if ( conshdlrdata->nbinvarszero > (int) ((SCIP_Real) conshdlrdata->ninitconss * conshdlrdata->restartfrac) )
       {
-         SCIP_CALL( SCIPsetIntParam(scip, "branching/inference/priority", INT_MAX/4) );
-      }
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
+            "Forcing restart, since %d binary variables among %d have been fixed.\n", conshdlrdata->nbinvarszero, conshdlrdata->ninitconss);
+         SCIP_CALL( SCIPrestartSolve(scip) );
 
-      /* drop event */
-      SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, (SCIP_EVENTDATA*) conshdlrdata, -1) );
-      conshdlrdata->forcerestart = FALSE;
+         /* drop event */
+         SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, (SCIP_EVENTDATA*) conshdlrdata, -1) );
+         conshdlrdata->forcerestart = FALSE;
+      }
+      break;
+      
+   case SCIP_EVENTTYPE_BESTSOLFOUND:
+      assert( conshdlrdata->objindicatoronly );
+      assert( SCIPisIntegral(scip, conshdlrdata->minabsobj) );
+      assert( SCIPisGE(scip, conshdlrdata->minabsobj, 1.0 ) );
+
+      if ( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+         break;
+
+      /* if the absolute gap is equal to minabsobj */
+      if ( SCIPisEQ(scip, REALABS(SCIPgetPrimalbound(scip) - SCIPgetDualbound(scip)), conshdlrdata->minabsobj) )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Forcing restart, since the absolute gap is %f.\n", conshdlrdata->minabsobj);
+         SCIP_CALL( SCIPrestartSolve(scip) );
+         
+         /* use inference branching, since the objective is not meaningful */
+         if ( SCIPfindBranchrule(scip, "inference") != NULL )
+         {
+            SCIP_CALL( SCIPsetIntParam(scip, "branching/inference/priority", INT_MAX/4) );
+         }
+
+         /* drop event */
+         SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, (SCIP_EVENTDATA*) conshdlrdata, -1) );
+         conshdlrdata->forcerestart = FALSE;
+      }
+      break;
+
+   default:
+      SCIPerrorMessage("invalid event type.\n");
+      return SCIP_INVALIDDATA;
    }
 
    return SCIP_OKAY;
@@ -2462,7 +2521,7 @@ SCIP_RETCODE consdataCreate(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    const char*           consname,           /**< name of constraint (or NULL) */
    SCIP_CONSDATA**       consdata,           /**< pointer to linear constraint data */
-   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */   
+   SCIP_EVENTHDLR*       eventhdlrbound,     /**< event handler for bound change events */
    SCIP_VAR*             binvar,             /**< binary variable (or NULL) */
    SCIP_VAR*             slackvar,           /**< slack variable */
    SCIP_CONS*            lincons,            /**< linear constraint (or NULL) */
@@ -2502,10 +2561,10 @@ SCIP_RETCODE consdataCreate(
             return SCIP_ERROR;
          }
 
-         /* catch bound change events on binary variable */
+         /* catch local bound change events on binary variable */
          if ( linconsactive )
          {
-            SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)*consdata, NULL) );
+            SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlrbound, (SCIP_EVENTDATA*)*consdata, NULL) );
          }
 
          /* if binary variable is fixed to be nonzero */
@@ -2521,7 +2580,7 @@ SCIP_RETCODE consdataCreate(
       /* catch bound change events on slack variable and adjust nFixedNonzero */
       if ( linconsactive )
       {
-         SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)*consdata, NULL) );
+         SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlrbound, (SCIP_EVENTDATA*)*consdata, NULL) );
          
          /* if slack variable is fixed to be nonzero */
          if ( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var)) )
@@ -3450,6 +3509,32 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
       int nvars;
       int j;
 
+      /* stor number of initial constraints */
+      conshdlrdata->ninitconss = SCIPconshdlrGetNActiveConss(conshdlr);
+
+      /* catch events for binary variables */
+      assert( conshdlrdata->eventhdlrrestart != NULL );
+      for (c = 0; c < nconss; ++c)
+      {
+         SCIP_CONSDATA* consdata;
+         
+         assert( conss != NULL );
+         assert( conss[c] != NULL );
+         assert( SCIPconsIsTransformed(conss[c]) );
+
+         consdata = SCIPconsGetData(conss[c]);
+         assert( consdata != NULL );
+
+         if ( ! SCIPconsIsActive(conss[c]) )
+            continue;
+
+         /* catch local bound change events on binary variable */
+         assert( consdata->binvar != NULL );
+         assert( SCIPvarIsTransformed(consdata->binvar) );
+         SCIP_CALL( SCIPcatchVarEvent(scip, consdata->binvar, SCIP_EVENTTYPE_GBDCHANGED, conshdlrdata->eventhdlrrestart, (SCIP_EVENTDATA*) conshdlrdata, NULL) );
+      }
+
+      /* loop through variables */
       nvars = SCIPgetNVars(scip);
       vars = SCIPgetVars(scip);
 
@@ -3508,8 +3593,6 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
       /* if all variables have integral objective and only indicator variables have nonzero objective */
       if ( j >= nvars )
       {
-         SCIP_EVENTHDLR* eventhdlr;
-
          /* if there are variables with nonerzo objective */
          if ( conshdlrdata->minabsobj < SCIP_REAL_MAX )
          {
@@ -3518,14 +3601,8 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
 
             conshdlrdata->objindicatoronly = TRUE;
 
-            /* get event handler for bound change events */
-            eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_RESTART_NAME);
-            if ( eventhdlr == NULL )
-            {
-               SCIPerrorMessage("event handler for restarting indicator constraints not found.\n");
-               return SCIP_PLUGINNOTFOUND;
-            }
-            SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, (SCIP_EVENTDATA*) conshdlrdata, NULL) );
+            assert( conshdlrdata->eventhdlrrestart != NULL );
+            SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, conshdlrdata->eventhdlrrestart, (SCIP_EVENTDATA*) conshdlrdata, NULL) );
             
             /* set force restart to false */
             SCIP_CALL( SCIPsetBoolParam(scip, "constraints/indicator/forcerestart", FALSE) );
@@ -3637,11 +3714,17 @@ SCIP_DECL_CONSDELETE(consDeleteIndicator)
 
       if ( (*consdata)->linconsActive )
       {
-         assert( conshdlrdata->eventhdlr != NULL );
-         SCIP_CALL( SCIPdropVarEvent(scip, (*consdata)->binvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr,
+         assert( conshdlrdata->eventhdlrbound != NULL );
+         SCIP_CALL( SCIPdropVarEvent(scip, (*consdata)->binvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound,
                (SCIP_EVENTDATA*)*consdata, -1) );
-         SCIP_CALL( SCIPdropVarEvent(scip, (*consdata)->slackvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr,
+         SCIP_CALL( SCIPdropVarEvent(scip, (*consdata)->slackvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound,
                (SCIP_EVENTDATA*)*consdata, -1) );
+      }
+      assert( conshdlrdata->eventhdlrrestart != NULL );
+      if ( conshdlrdata->forcerestart )
+      {
+         SCIP_CALL( SCIPdropVarEvent(scip, (*consdata)->binvar, SCIP_EVENTTYPE_GUBCHANGED, conshdlrdata->eventhdlrrestart,
+               (SCIP_EVENTDATA*) conshdlrdata, -1) );
       }
 
       /* Can there be cases where lincons is NULL, e.g., if presolve found the problem infeasible? */
@@ -3684,7 +3767,7 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
-   assert( conshdlrdata->eventhdlr != NULL );
+   assert( conshdlrdata->eventhdlrbound != NULL );
 
    SCIPdebugMessage("Transforming indicator constraint: <%s>.\n", SCIPconsGetName(sourcecons) );
 
@@ -3711,7 +3794,7 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
 
    /* create constraint data */
    consdata = NULL;
-   SCIP_CALL( consdataCreate(scip, conshdlr, SCIPconsGetName(sourcecons), &consdata, conshdlrdata->eventhdlr, 
+   SCIP_CALL( consdataCreate(scip, conshdlr, SCIPconsGetName(sourcecons), &consdata, conshdlrdata->eventhdlrbound, 
          sourcedata->binvar, sourcedata->slackvar, sourcedata->lincons, sourcedata->linconsActive, conshdlrdata->sepaAlternativeLP) );
    assert( consdata != NULL );
 
@@ -4900,12 +4983,21 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
 
    /* get event handler for bound change events */
-   conshdlrdata->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_BOUND_NAME);
-   if ( conshdlrdata->eventhdlr == NULL )
+   conshdlrdata->eventhdlrbound = SCIPfindEventhdlr(scip, EVENTHDLR_BOUND_NAME);
+   if ( conshdlrdata->eventhdlrbound == NULL )
    {
       SCIPerrorMessage("event handler for indicator constraints not found.\n");
       return SCIP_PLUGINNOTFOUND;
    }
+
+   /* get event handler for bound change events */
+   conshdlrdata->eventhdlrrestart = SCIPfindEventhdlr(scip, EVENTHDLR_RESTART_NAME);
+   if ( conshdlrdata->eventhdlrrestart == NULL )
+   {
+      SCIPerrorMessage("event handler for restarting indicator constraints not found.\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
    conshdlrdata->removable = TRUE;
    conshdlrdata->scaled = FALSE;
    conshdlrdata->altLP = NULL;
@@ -4929,6 +5021,8 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    conshdlrdata->heurTrySol = NULL;
    conshdlrdata->addedCouplingCons = FALSE;
    conshdlrdata->addLinCons = NULL;
+   conshdlrdata->nbinvarszero = 0;
+   conshdlrdata->ninitconss = 0;
    conshdlrdata->nAddLinCons = 0;
    conshdlrdata->maxAddLinCons = 0;
    conshdlrdata->generateBilinear = FALSE;
@@ -5020,6 +5114,11 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
          "constraints/indicator/forcerestart",
          "force restart if we have a max FS instance and gap is 1?",
          &conshdlrdata->forcerestart, TRUE, DEFAULT_FORCERESTART, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "constraints/indicator/restartfrac",
+         "fraction of binary variables that need to be fixed before restart occurs (in forcerestart)",
+         &conshdlrdata->restartfrac, TRUE, DEFAULT_RESTARTFRAC, 0.0, 1.0, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -5187,7 +5286,7 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    {
       /* create constraint data */
       consdata = NULL;
-      SCIP_CALL( consdataCreate(scip, conshdlr, name, &consdata, conshdlrdata->eventhdlr, 
+      SCIP_CALL( consdataCreate(scip, conshdlr, name, &consdata, conshdlrdata->eventhdlrbound, 
             binvar, slackvar, lincons, linconsactive, conshdlrdata->sepaAlternativeLP) );
       assert( consdata != NULL );
       
@@ -5326,7 +5425,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorLinCons(
    {
       /* create constraint data */
       consdata = NULL;
-      SCIP_CALL( consdataCreate(scip, conshdlr, name, &consdata, conshdlrdata->eventhdlr, 
+      SCIP_CALL( consdataCreate(scip, conshdlr, name, &consdata, conshdlrdata->eventhdlrbound,
             binvar, slackvar, lincons, linconsactive, conshdlrdata->sepaAlternativeLP) );
       assert( consdata != NULL );
       
@@ -5522,11 +5621,19 @@ SCIP_RETCODE SCIPsetBinaryVarIndicator(
       assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
       conshdlrdata = SCIPconshdlrGetData(conshdlr);
       assert( conshdlrdata != NULL );
+      assert( conshdlrdata->eventhdlrbound != NULL );
+      assert( conshdlrdata->eventhdlrrestart != NULL );
 
-      /* catch bound change events on binary variable */
+      /* catch local bound change events on binary variable */
       if ( consdata->linconsActive )
       {
-         SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr, (SCIP_EVENTDATA*) consdata, NULL) );
+         SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, NULL) );
+      }
+
+      /* catch global bound change events on binary variable */
+      if ( conshdlrdata->forcerestart && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+      {
+         SCIP_CALL( SCIPcatchVarEvent(scip, consdata->binvar, SCIP_EVENTTYPE_GBDCHANGED, conshdlrdata->eventhdlrrestart, (SCIP_EVENTDATA*) conshdlrdata, NULL) );
       }
 
       /* if binary variable is fixed to be nonzero */
@@ -5593,7 +5700,7 @@ SCIP_RETCODE SCIPsetSlackVarIndicator(
       conshdlrdata = SCIPconshdlrGetData(conshdlr);
       assert( conshdlrdata != NULL );
       
-      SCIP_CALL( SCIPdropVarEvent(scip, consdata->slackvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr, (SCIP_EVENTDATA*) consdata, -1) );
+      SCIP_CALL( SCIPdropVarEvent(scip, consdata->slackvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, -1) );
    }
 
    /* free old slack variable */
@@ -5618,7 +5725,7 @@ SCIP_RETCODE SCIPsetSlackVarIndicator(
       if ( consdata->linconsActive )
       {
          assert( conshdlrdata != NULL );
-         SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr, (SCIP_EVENTDATA*) consdata, NULL) );
+         SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, NULL) );
 
          /* if slack variable is fixed to be nonzero */
          if ( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var)) )
