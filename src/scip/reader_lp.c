@@ -184,9 +184,9 @@ SCIP_Bool isValueChar(
    assert(hasdot != NULL);
    assert(exptype != NULL);
 
-   if( isdigit(c) )
+   if( isdigit((unsigned char)c) )
       return TRUE;
-   else if( (*exptype == LP_EXP_NONE) && !(*hasdot) && (c == '.') && isdigit(nextc) )
+   else if( (*exptype == LP_EXP_NONE) && !(*hasdot) && (c == '.') && isdigit((unsigned char)nextc) )
    {
       *hasdot = TRUE;
       return TRUE;
@@ -198,7 +198,7 @@ SCIP_Bool isValueChar(
          *exptype = LP_EXP_SIGNED;
          return TRUE;
       }
-      else if( isdigit(nextc) )
+      else if( isdigit((unsigned char)nextc) )
       {
          *exptype = LP_EXP_UNSIGNED;
          return TRUE;
@@ -2251,7 +2251,7 @@ void printVarName(
       SCIPinfoMessage(scip, file, "x%d", SCIPvarGetProbindex(var) + 1);
    else
    {
-      if( isdigit(name[0]) || name[0] == 'e' || name[0] == 'E' )
+      if( isdigit((unsigned char)name[0]) || name[0] == 'e' || name[0] == 'E' )
          SCIPinfoMessage(scip, file, "_%s", name);
       else
          SCIPinfoMessage(scip, file, "%s", name);

@@ -2120,7 +2120,7 @@ SCIP_DECL_CONSPARSE(consParseOrbitope)
    s = str;
 
    /* skip white space */
-   while ( *s != '\0' && isspace(*s) )
+   while ( *s != '\0' && isspace((unsigned char)*s) )
       ++s;
 
    ispart = FALSE;
@@ -2151,7 +2151,7 @@ SCIP_DECL_CONSPARSE(consParseOrbitope)
    {
       /* find variable name */
       k = 0;
-      while ( *s != '\0' && ! isspace(*s) && *s != ',' && *s != '.' && *s != ')' )
+      while ( *s != '\0' && ! isspace((unsigned char)*s) && *s != ',' && *s != '.' && *s != ')' )
          varname[k++] = *s++;
       varname[k] = '\0';
 
@@ -2184,7 +2184,7 @@ SCIP_DECL_CONSPARSE(consParseOrbitope)
       }
 
       /* skip white space and ',' */
-      while ( *s != '\0' && ( isspace(*s) ||  *s == ',' ) )
+      while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' ) )
          ++s;
       
       /* begin new row if required */

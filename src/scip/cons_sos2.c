@@ -1916,7 +1916,7 @@ SCIP_DECL_CONSPARSE(consParseSOS2)
    s = str;
 
    /* skip white space and '<' */
-   while ( (*s != '\0' && isspace(*s)) || *s == '<' )
+   while ( (*s != '\0' && isspace((unsigned char)*s)) || *s == '<' )
       ++s;
 
    /* create empty SOS2 constraint */
@@ -1927,7 +1927,7 @@ SCIP_DECL_CONSPARSE(consParseSOS2)
    {
       /* find variable name */
       k = 0;
-      while ( *s != '\0' && ! isspace(*s) && *s != ',' && *s != '(' && *s != '>' )
+      while ( *s != '\0' && ! isspace((unsigned char)*s) && *s != ',' && *s != '(' && *s != '>' )
          varname[k++] = *s++;
       varname[k] = '\0';
 
@@ -1962,7 +1962,7 @@ SCIP_DECL_CONSPARSE(consParseSOS2)
       s = t;
 
       /* skip white space, ',', '(', and '<' */
-      while ( *s != '\0' && ( isspace(*s) ||  *s == ',' || *s == ')' || *s == '<' ) )
+      while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' || *s == ')' || *s == '<' ) )
          ++s;
 
       /* get variable */

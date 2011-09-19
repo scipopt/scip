@@ -8955,7 +8955,7 @@ SCIP_DECL_CONSPARSE(consParseQuadratic)
       return SCIP_OKAY;
 
    /* ignore whitespace */
-   while( isspace(*str) )
+   while( isspace((unsigned char)*str) )
       ++str;
 
    if( *str != '[' )
@@ -8971,7 +8971,7 @@ SCIP_DECL_CONSPARSE(consParseQuadratic)
       }
       str = endstr;
 
-      while( isspace(*str) )
+      while( isspace((unsigned char)*str) )
          ++str;
 
       if( str[0] == '\0' || str[0] != '<' || str[1] != '=' )
@@ -8983,7 +8983,7 @@ SCIP_DECL_CONSPARSE(consParseQuadratic)
       str += 2;
 
       /* ignore whitespace */
-      while( isspace(*str) )
+      while( isspace((unsigned char)*str) )
          ++str;
    }
 
@@ -9006,7 +9006,7 @@ SCIP_DECL_CONSPARSE(consParseQuadratic)
       ++str;
 
       /* ignore whitespace */
-      while( isspace(*str) )
+      while( isspace((unsigned char)*str) )
          ++str;
 
       if( *str && str[0] == '<' && str[1] == '=' )

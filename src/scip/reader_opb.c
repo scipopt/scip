@@ -244,7 +244,7 @@ SCIP_Bool isValueChar(
    assert(hasdot != NULL);
    assert(exptype != NULL);
 
-   if( isdigit(c) )
+   if( isdigit((unsigned char)c) )
       return TRUE;
    else if( (*exptype == OPB_EXP_NONE) && !(*hasdot) && (c == '.') )
    {
@@ -258,7 +258,7 @@ SCIP_Bool isValueChar(
          *exptype = OPB_EXP_SIGNED;
          return TRUE;
       }
-      else if( isdigit(nextc) )
+      else if( isdigit((unsigned char)nextc) )
       {
          *exptype = OPB_EXP_UNSIGNED;
          return TRUE;
@@ -724,7 +724,7 @@ SCIP_RETCODE getVariableOrTerm(
    assert(name != NULL);
    
    /* parse AND terms */
-   while(!isdigit( *name ) && !isTokenChar(*name) && !opbinput->haserror )
+   while(!isdigit((unsigned char) *name ) && !isTokenChar(*name) && !opbinput->haserror )
    {
       SCIP_VAR* var;
 

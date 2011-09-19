@@ -305,13 +305,13 @@ SCIP_Bool isIdentifier(
    int i;
    
    /* check if the identifier starts with a letter */
-   if( strlen(name) == 0 || !isalpha(name[0]) )
+   if( strlen(name) == 0 || !isalpha((unsigned char)name[0]) )
       return FALSE;
    
    i = 1;
    while( name[i] )
    {
-      if( !isalnum(name[i]) && name[i] != '_' )
+      if( !isalnum((unsigned char)name[i]) && name[i] != '_' )
          return FALSE;
       i++;
    }
@@ -332,11 +332,11 @@ SCIP_Bool isValueChar(
    assert(hasdot != NULL);
    assert(exptype != NULL);
 
-   if( isdigit(c) )
+   if( isdigit((unsigned char)c) )
       return TRUE;
    else if( firstchar && (c == '+' || c == '-') )
       return TRUE;
-   else if( (*exptype == FZN_EXP_NONE) && !(*hasdot) && (c == '.') && (isdigit(nextc)))
+   else if( (*exptype == FZN_EXP_NONE) && !(*hasdot) && (c == '.') && (isdigit((unsigned char)nextc)))
    {
       *hasdot = TRUE;
       return TRUE;
@@ -348,7 +348,7 @@ SCIP_Bool isValueChar(
          *exptype = FZN_EXP_SIGNED;
          return TRUE;
       }
-      else if( isdigit(nextc) )
+      else if( isdigit((unsigned char)nextc) )
       {
          *exptype = FZN_EXP_UNSIGNED;
          return TRUE;

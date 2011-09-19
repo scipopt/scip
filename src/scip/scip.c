@@ -7874,7 +7874,7 @@ SCIP_RETCODE SCIPparseVarsList(
       ntmpvars++;
 
       /* skip white space */
-      while( isspace(str[pos]) )
+      while( isspace((unsigned char)str[pos]) )
          pos++;
    }
    while( str[pos] == delimiter );
@@ -7950,7 +7950,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
    assert(str != NULL);
    assert(pos >= 0);
    assert(pos <= (int)strlen(str));
-   assert(!isspace(endchar));
+   assert(!isspace((unsigned char)endchar));
    assert(monomialvars != NULL);
    assert(monomialexps != NULL);
    assert(monomialnvars != NULL);
@@ -7983,7 +7983,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
    while( str[pos] && str[pos] != endchar && state != SCIPPARSEPOLYNOMIAL_STATE_ERROR )
    {
       /* skip white space */
-      while( isspace(str[pos]) )
+      while( isspace((unsigned char)str[pos]) )
          pos++;
 
       if( str[pos] == endchar )
@@ -8034,7 +8034,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
                coef = 1.0;
                break;
             }
-            if( str[pos] == '-' || str[pos] == '+' || isdigit(str[pos]) )
+            if( str[pos] == '-' || str[pos] == '+' || isdigit((unsigned char)str[pos]) )
             {
                state = SCIPPARSEPOLYNOMIAL_STATE_COEF;
                break;
@@ -8055,7 +8055,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
                break;
             }
 
-            if( str[pos] == '-' || str[pos] == '+' || isdigit(str[pos]) )
+            if( str[pos] == '-' || str[pos] == '+' || isdigit((unsigned char)str[pos]) )
             {
                /* there seem to come a coefficient, which means the next monomial */
                state = SCIPPARSEPOLYNOMIAL_STATE_BEGIN;
@@ -8073,13 +8073,13 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
             char* endptr;
 
             assert(coef == SCIP_INVALID);
-            if( str[pos] == '+' && !isdigit(str[pos+1]) )
+            if( str[pos] == '+' && !isdigit((unsigned char)str[pos+1]) )
             {
                /* only a plus sign, without number */
                coef =  1.0;
                ++pos;
             }
-            else if( str[pos] == '-' && !isdigit(str[pos+1]) )
+            else if( str[pos] == '-' && !isdigit((unsigned char)str[pos+1]) )
             {
                /* only a minus sign, without number */
                coef = -1.0;

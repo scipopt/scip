@@ -4698,9 +4698,9 @@ SCIP_Bool isValueChar(
    assert(hasdot != NULL);
    assert(exptype != NULL);
 
-   if( isdigit(c) )
+   if( isdigit((unsigned char)c) )
       return TRUE;
-   else if( (*exptype == EXP_NONE) && !(*hasdot) && (c == '.') && isdigit(nextc) )
+   else if( (*exptype == EXP_NONE) && !(*hasdot) && (c == '.') && isdigit((unsigned char)nextc) )
    {
       *hasdot = TRUE;
       return TRUE;
@@ -4712,7 +4712,7 @@ SCIP_Bool isValueChar(
          *exptype = EXP_SIGNED;
          return TRUE;
       }
-      else if( isdigit(nextc) )
+      else if( isdigit((unsigned char)nextc) )
       {
          *exptype = EXP_UNSIGNED;
          return TRUE;
@@ -4746,7 +4746,7 @@ SCIP_Bool SCIPstrGetValue(
    *endpos = pos;
 
    /* truncate white space in front */
-   while( isspace(str[pos]) )
+   while( isspace((unsigned char)str[pos]) )
       pos++;
 
    if( isValueChar(str[pos], str[pos+1], TRUE, &hasdot, &exptype) )

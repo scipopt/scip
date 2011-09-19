@@ -389,7 +389,7 @@ SCIP_DECL_READERREAD(readerReadSol)
    s = buffer;
    
    /* skip spaces */
-   while( isspace(*s) )
+   while( isspace((unsigned char)*s) )
       ++s;
    if( s[0] == '<' && s[1] == '?' && s[2] == 'x' && s[3] == 'm' && s[4] == 'l' )
    {

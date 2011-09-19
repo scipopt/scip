@@ -9910,10 +9910,10 @@ SCIP_DECL_CONSPARSE(consParseLinear)
       return SCIP_OKAY;
 
    /* ignore whitespace */
-   while( isspace(*str) )
+   while( isspace((unsigned char)*str) )
       ++str;
 
-   if( isdigit(str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit(str[1])) )
+   if( isdigit((unsigned char)str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit((unsigned char)str[1])) )
    {
       char* endstr;
       /* there is a number coming, maybe it is a left-hand-side */
@@ -9926,7 +9926,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
       }
 
       /* ignore whitespace */
-      while( isspace(*endstr) )
+      while( isspace((unsigned char)*endstr) )
          ++endstr;
 
       if( endstr[0] != '<' || endstr[1] != '=' )
@@ -9940,7 +9940,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
          str = endstr + 2;
 
          /* ignore whitespace */
-         while( isspace(*str) )
+         while( isspace((unsigned char)*str) )
             ++str;
       }
    }

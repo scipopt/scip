@@ -195,7 +195,7 @@ SCIP_RETCODE getStatistic(
          *s = '\0';
       
       /* remove white space in front of the name */
-      while(isspace(*name))
+      while(isspace((unsigned char)*name))
          name++;
          
       /* set problem name */
@@ -249,7 +249,7 @@ SCIP_RETCODE getObjective(
       }
       
       /* remove white space in front of the name */
-      while(isspace(*name))
+      while(isspace((unsigned char)*name))
          name++;
       
       if( strncmp(name, "minimize", 3) == 0 )
@@ -278,7 +278,7 @@ SCIP_RETCODE getObjective(
       }
 
       /* remove white space in front of the name */
-      while(isspace(*name))
+      while(isspace((unsigned char)*name))
          name++;
          
       *objoffset += strtod(name, &endptr);
@@ -294,7 +294,7 @@ SCIP_RETCODE getObjective(
       }
 
       /* remove white space in front of the name */
-      while(isspace(*name))
+      while(isspace((unsigned char)*name))
          name++;
          
       *objscale *= strtod(name, &endptr);

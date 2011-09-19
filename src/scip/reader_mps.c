@@ -500,12 +500,12 @@ SCIP_Bool mpsinputReadLine(
              */
             SCIP_Bool number;
             
-            number = isdigit(mpsi->buf[24]) || isdigit(mpsi->buf[25])
-               || isdigit(mpsi->buf[26]) || isdigit(mpsi->buf[27])
-               || isdigit(mpsi->buf[28]) || isdigit(mpsi->buf[29])
-               || isdigit(mpsi->buf[30]) || isdigit(mpsi->buf[31])
-               || isdigit(mpsi->buf[32]) || isdigit(mpsi->buf[33])
-               || isdigit(mpsi->buf[34]) || isdigit(mpsi->buf[35]);
+            number = isdigit((unsigned char)mpsi->buf[24]) || isdigit((unsigned char)mpsi->buf[25])
+               || isdigit((unsigned char)mpsi->buf[26]) || isdigit((unsigned char)mpsi->buf[27])
+               || isdigit((unsigned char)mpsi->buf[28]) || isdigit((unsigned char)mpsi->buf[29])
+               || isdigit((unsigned char)mpsi->buf[30]) || isdigit((unsigned char)mpsi->buf[31])
+               || isdigit((unsigned char)mpsi->buf[32]) || isdigit((unsigned char)mpsi->buf[33])
+               || isdigit((unsigned char)mpsi->buf[34]) || isdigit((unsigned char)mpsi->buf[35]);
 
             /* len < 13 is handle ROW lines with embedded spaces
              * in the names correctly
