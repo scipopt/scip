@@ -724,7 +724,7 @@ SCIP_RETCODE presolveFindDuplicates(
             else
             {
                /* introduce a new equality constraint for sign(x+offset)|x+offset|^n and use it to replace cons0 and cons1 */
-               /* @TODO maybe we could be more clever by looking which constraint sides are finite */
+               /* @todo maybe we could be more clever by looking which constraint sides are finite */
                SCIP_VAR*  auxvar;
                SCIP_CONS* auxcons;
                char       name[SCIP_MAXSTRLEN];
@@ -813,7 +813,7 @@ SCIP_RETCODE presolveFindDuplicates(
             /* If we have two equality constraints with the same variables and the same exponent and compatible constants,
              * then this system of equations should have either no or a single solution.
              * Thus, we can report cutoff or fix the variables to this solution, and forget about the constraints.
-             * @TODO think about inequalities, differing exponents, and exponents != 2
+             * @todo think about inequalities, differing exponents, and exponents != 2
              */
             
             SCIP_Real xval;
@@ -950,7 +950,7 @@ SCIP_RETCODE presolveFindDuplicates(
       assert(consdata0 != NULL);
 
       /* consider only equality constraints so far
-       * @TODO do also something with inequalities
+       * @todo do also something with inequalities
        */
       if( !SCIPisEQ(scip, consdata0->lhs, consdata0->rhs) )
          continue;
@@ -3278,7 +3278,7 @@ SCIP_RETCODE proposeFeasibleSolution(
       if( !SCIPisFeasPositive(scip, consdata->lhsviol) && !SCIPisFeasPositive(scip, consdata->rhsviol) )
          continue;
 
-      /* @TODO could also adjust x while keeping z fixed */
+      /* @todo could also adjust x while keeping z fixed */
 
       /* if variable is multiaggregated, then cannot set its solution value, so give up */
       if( SCIPvarGetStatus(consdata->z) == SCIP_VARSTATUS_MULTAGGR )
@@ -4517,7 +4517,7 @@ SCIP_DECL_CONSINITSOL(consInitsolSignedpower)
             return SCIP_ERROR;
          }
          SCIPdebugMessage("root for %g is %.20g, certainty = %g\n", consdata->exponent, root, polyval);
-         /* @TODO cache root value?? (they are actually really fast to compute...) */
+         /* @todo cache root value?? (they are actually really fast to compute...) */
 
          consdata->root = root;
       }

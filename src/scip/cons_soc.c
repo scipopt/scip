@@ -1110,7 +1110,7 @@ SCIP_RETCODE generateSparseCut(
 
    do
    {
-      /* TODO speed up a bit by computing efficacy of new cut from efficacy of old cut
+      /* @todo speed up a bit by computing efficacy of new cut from efficacy of old cut
        * generate row only if efficient enough */
       SCIP_CALL( generateCutPoint(scip, cons, x, row) );
       
