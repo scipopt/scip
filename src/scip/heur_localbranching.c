@@ -47,7 +47,7 @@
 #define DEFAULT_MINNODES      1000      /* minimum number of nodes required to start the subproblem                 */
 #define DEFAULT_NODESQUOT     0.05      /* contingent of sub problem nodes in relation to original nodes            */
 #define DEFAULT_NWAITINGNODES 200       /* number of nodes without incumbent change that heuristic should wait      */
-#define DEFAULT_USELPROWS     TRUE      /* should subproblem be created out of the rows in the LP rows,
+#define DEFAULT_USELPROWS    FALSE      /* should subproblem be created out of the rows in the LP rows,
                                          * otherwise, the copy constructors of the constraints handlers are used    */
 #define DEFAULT_COPYCUTS      TRUE      /* if DEFAULT_USELPROWS is FALSE, then should all active cuts from the cutpool
                                          * of the original scip be copied to constraints of the subscip
