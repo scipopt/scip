@@ -2789,6 +2789,7 @@ SCIP_DECL_CONSPARSE(consParseAnd)
 {  /*lint --e{715}*/
    SCIP_VAR** vars;
    SCIP_VAR* resvar;
+   char* endptr;
    int requiredsize;
    int varssize;
    int nvars;
@@ -2799,7 +2800,8 @@ SCIP_DECL_CONSPARSE(consParseAnd)
    pos = 0;
 
    /* parse variable name */ 
-   SCIP_CALL( SCIPparseVarName(scip, str, pos, &resvar, &pos) );
+   SCIP_CALL( SCIPparseVarName(scip, str, &resvar, &endptr) );
+   str = endptr;
 
    if( resvar == NULL )
    {
@@ -2815,8 +2817,9 @@ SCIP_DECL_CONSPARSE(consParseAnd)
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
 
       /* parse string */
-      SCIP_CALL( SCIPparseVarsList(scip, str, pos, vars, &nvars, varssize, &requiredsize, &pos, ',', success) );
-   
+      SCIP_CALL( SCIPparseVarsList(scip, str, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
+      str = endptr;
+
       if( *success )
       {
          /* check if the size of the variable array was great enough */
@@ -2827,7 +2830,7 @@ SCIP_DECL_CONSPARSE(consParseAnd)
             SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
             
             /* parse string again with the correct size of the variable array */
-            SCIP_CALL( SCIPparseVarsList(scip, str, pos, vars, &nvars, varssize, &requiredsize, &pos, ',', success) );
+            SCIP_CALL( SCIPparseVarsList(scip, str, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
          }
          
          assert(*success);

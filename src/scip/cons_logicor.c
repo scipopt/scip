@@ -3060,10 +3060,10 @@ SCIP_DECL_CONSPARSE(consParseLogicor)
    char* strcopy;
    char* token;
    char* saveptr;
+   char* endptr;
    int requiredsize;
    int varssize;
    int nvars;
-   int pos;
    
    SCIPdebugMessage("parse <%s> as logicor constraint\n", str);
 
@@ -3083,7 +3083,7 @@ SCIP_DECL_CONSPARSE(consParseLogicor)
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
 
    /* parse string */
-   SCIP_CALL( SCIPparseVarsList(scip, token, 0, vars, &nvars, varssize, &requiredsize, &pos, ',', success) );
+   SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
    
    if( *success )
    {
@@ -3095,7 +3095,7 @@ SCIP_DECL_CONSPARSE(consParseLogicor)
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
          
          /* parse string again with the correct size of the variable array */
-         SCIP_CALL( SCIPparseVarsList(scip, token, 0, vars, &nvars, varssize, &requiredsize, &pos, ',', success) );
+         SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
       }
       
       assert(*success);

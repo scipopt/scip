@@ -4746,24 +4746,26 @@ SCIP_RETCODE SCIPconsParse(
    pos = 0;
  
    /* scan constant handler name */
-   SCIPstrCopySection(str, pos, '[', ']', conshdlrname, SCIP_MAXSTRLEN, &pos);
+   SCIPstrCopySection(str, '[', ']', conshdlrname, SCIP_MAXSTRLEN, &saveptr);
+   assert(str != NULL);
    SCIPdebugMessage("constraint handler name <%s>\n", conshdlrname);
 
    /* scan constraint name */
-   SCIPstrCopySection(str, pos, '<', '>', consname, SCIP_MAXSTRLEN, &pos);
+   SCIPstrCopySection(str, '<', '>', consname, SCIP_MAXSTRLEN, &str);
+   assert(str != NULL);
    SCIPdebugMessage("constraint name <%s>\n", consname);
    
    /* skip colon */
-   if( str[pos] != ':' )
+   if( *str != ':' )
       return SCIP_OKAY;
    
-   pos++;
+   str++;
 
    /* skip space */
-   if( str[pos] != ' ')
+   if( *str != ' ')
       return SCIP_OKAY;
 
-   pos++;
+   str++;
    
    /* check if a constraint handler with parsed name exists */
    conshdlr = SCIPsetFindConshdlr(set, conshdlrname);

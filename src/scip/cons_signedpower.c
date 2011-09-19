@@ -5648,7 +5648,8 @@ SCIP_DECL_CONSPARSE(consParseSignedpower)
    SCIP_Real xoffset;
    SCIP_Real exponent;
    SCIP_Real zcoef;
-   SCIP_Real rhs_;
+   SCIP_Real value;
+   char*     endptr;
    char      sense;
    SCIP_VAR* x;
    SCIP_VAR* z;
@@ -5658,25 +5659,22 @@ SCIP_DECL_CONSPARSE(consParseSignedpower)
    /* set right hand and left side to their default values */
    lhs = -SCIPinfinity(scip);
    rhs =  SCIPinfinity(scip);
-
+   
    SCIPdebugMessage("start parsing signedpower constraint expression %s\n", str);
-
+   
    if( strncmp(str, "signpower", 9) != 0 )
    {
       /* str does not start with signpower string, so may be left-hand-side of ranged constraint */
-      char* nextstr;
-
-      lhs = strtod(str, &nextstr);
-      if( str == nextstr )
+      if( !SCIPstrToRealValue(str, &lhs, &endptr) )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: left-hand-side or 'signpower' expected at begin on '%s'\n", str);
          (*success) = FALSE;
          return SCIP_OKAY;
       }
-      str = nextstr;
+      str = endptr;
    }
 
-   if( sscanf(str, "signpower(<%[^>]> %lg, %lg) %lg<%[^>]> %c= %lg", varx+1, &xoffset, &exponent, &zcoef, varz+1, &sense, &rhs_) == EOF )
+   if( sscanf(str, "signpower(<%[^>]> %lg, %lg) %lg<%[^>]> %c= %lg", varx+1, &xoffset, &exponent, &zcoef, varz+1, &sense, &value) == EOF )
    {
       /* if that does not match, then it may be a 'free' constraint (quite unlikely) */
       if( sscanf(str, "signpower(<%[^>]> %lg, %lg) %lg<%[^>]> [free]", varx+1, &xoffset, &exponent, &zcoef, varz+1) == EOF )
@@ -5691,13 +5689,13 @@ SCIP_DECL_CONSPARSE(consParseSignedpower)
       switch( sense )
       {
          case '<' :
-            rhs = rhs_;
+            rhs = value;
             break;
          case '>' :
-            lhs = rhs_;
+            lhs = value;
             break;
          case '=' :
-            lhs = rhs = rhs_;
+            lhs = rhs = value;
             break;
       }
    }
@@ -5709,7 +5707,7 @@ SCIP_DECL_CONSPARSE(consParseSignedpower)
    varx[namelen+1] = '>';
    varx[namelen+2] = '\0';
 
-   SCIP_CALL( SCIPparseVarName(scip, varx, 0, &x, &namelen) );
+   SCIP_CALL( SCIPparseVarName(scip, varx, &x, &endptr) );
    if( x == NULL )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable %s", varx);
@@ -5724,7 +5722,7 @@ SCIP_DECL_CONSPARSE(consParseSignedpower)
    varz[namelen+1] = '>';
    varz[namelen+2] = '\0';
 
-   SCIP_CALL( SCIPparseVarName(scip, varz, 0, &z, &namelen) );
+   SCIP_CALL( SCIPparseVarName(scip, varz, &z, &endptr) );
    if( z == NULL )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable %s", varz);

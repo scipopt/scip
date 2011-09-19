@@ -8771,6 +8771,7 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
    SCIP_VAR** vars;
    SCIP_Longint* weights;
    SCIP_Longint capacity;
+   char* endptr;
    int nvars;
    int varssize;
    int parselen;
@@ -8800,8 +8801,7 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
       varname[0] = '<';
       varname[namelen+1] = '>';
       varname[namelen+2] = '\0';
-      SCIP_CALL( SCIPparseVarName(scip, varname, 0, &var, &parselen) );
-      assert(parselen == namelen+2);
+      SCIP_CALL( SCIPparseVarName(scip, varname, &var, &endptr) );
 
       if( var == NULL )
       {

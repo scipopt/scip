@@ -8931,9 +8931,9 @@ SCIP_DECL_CONSPARSE(consParseQuadratic)
    SCIP_VAR*** monomialvars;
    SCIP_Real** monomialexps;
    SCIP_Real*  monomialcoefs;
+   char*       endptr;
    int*        monomialnvars;
    int         nmonomials;
-   int         endpos;
 
    SCIP_Real lhs;
    SCIP_Real rhs;
@@ -8994,14 +8994,12 @@ SCIP_DECL_CONSPARSE(consParseQuadratic)
    }
    ++str;
 
-   SCIP_CALL( SCIPparseVarsPolynomial(scip, str, 0, ']', &monomialvars, &monomialexps, &monomialcoefs, &monomialnvars, &nmonomials, &endpos, success) );
+   SCIP_CALL( SCIPparseVarsPolynomial(scip, str, ']', &monomialvars, &monomialexps, &monomialcoefs, &monomialnvars, &nmonomials, &endptr, success) );
 
    if( *success )
    {
       /* check what comes after quadratic function */
-      char* endstr;
-
-      str += endpos;
+      str = endptr;
       assert(*str == ']');
       ++str;
 
@@ -9014,14 +9012,13 @@ SCIP_DECL_CONSPARSE(consParseQuadratic)
          /* we seem to get a right-hand-side */
          str += 2;
 
-         rhs = strtod(str, &endstr);
-         if( str == endstr )
+         if( !SCIPstrToRealValue(str, &rhs,  &endptr) )
          {
             SCIPerrorMessage("error parsing right-hand-side from %s\n", str);
             *success = FALSE;
          }
          else
-            str = endstr;
+            str = endptr;
       }
       else if( *str && str[0] == '>' && str[1] == '=' )
       {
@@ -9031,14 +9028,13 @@ SCIP_DECL_CONSPARSE(consParseQuadratic)
          /* we should not have a left-hand-side already */
          assert(SCIPisInfinity(scip, -lhs));
 
-         lhs = strtod(str, &endstr);
-         if( str == endstr )
+         if( !SCIPstrToRealValue(str, &lhs, &endptr) )
          {
             SCIPerrorMessage("error parsing left-hand-side from %s\n", str);
             *success = FALSE;
          }
          else
-            str = endstr;
+            str = endptr;
       }
       else if( *str && str[0] == '=' && str[1] == '=' )
       {
@@ -9048,15 +9044,16 @@ SCIP_DECL_CONSPARSE(consParseQuadratic)
          /* we should not have a left-hand-side already */
          assert(SCIPisInfinity(scip, -lhs));
 
-         lhs = strtod(str, &endstr);
-         rhs = lhs;
-         if( str == endstr )
+         if( !SCIPstrToRealValue(str, &lhs, &endptr) )
          {
             SCIPerrorMessage("error parsing left-hand-side from %s\n", str);
             *success = FALSE;
          }
          else
-            str = endstr;
+         {
+            rhs = lhs;
+            str = endptr;
+         }
       }
    }
 

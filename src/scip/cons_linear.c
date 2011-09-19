@@ -9886,10 +9886,10 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    int        nvars;
    int        coefssize;
    int        requsize;
-   int        endpos;
    SCIP_Real  lhs;
    SCIP_Real  rhs;
    char*      endsum;
+   char*      endptr;
    char       endchar;
 
    assert(scip != NULL);
@@ -9915,21 +9915,20 @@ SCIP_DECL_CONSPARSE(consParseLinear)
 
    if( isdigit(str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit(str[1])) )
    {
-      char* endstr;
       /* there is a number coming, maybe it is a left-hand-side */
-
-      lhs = strtod(str, &endstr);
-      if( str == endstr )
+      
+      if( !SCIPstrToRealValue(str, &lhs, &endptr) )
       {
          SCIPerrorMessage("error parsing number from %s\n", str);
          return SCIP_OKAY;
       }
+      str = endptr;
 
       /* ignore whitespace */
-      while( isspace(*endstr) )
-         ++endstr;
+      while( isspace(*str) )
+         ++str;
 
-      if( endstr[0] != '<' || endstr[1] != '=' )
+      if( str[0] != '<' || str[1] != '=' )
       {
          /* no '<=' coming, so it was the first coefficient, but not a left-hand-side */
          lhs = -SCIPinfinity(scip);
@@ -9937,7 +9936,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
       else
       {
          /* it was indeed a left-hand-side, so continue parsing after it */
-         str = endstr + 2;
+         str += 2;
 
          /* ignore whitespace */
          while( isspace(*str) )
@@ -10018,7 +10017,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    SCIP_CALL( SCIPallocBufferArray(scip, &coefs, coefssize) );
 
    /* parse linear sum to get variables and coefficients */
-   SCIP_CALL( SCIPparseVarsLinearsum(scip, str, 0, 0, vars, coefs, &nvars, coefssize, &requsize, &endpos, success) );
+   SCIP_CALL( SCIPparseVarsLinearsum(scip, str, 0, vars, coefs, &nvars, coefssize, &requsize, &endptr, success) );
 
    if( *success && requsize > coefssize )
    {
@@ -10027,7 +10026,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
       SCIP_CALL( SCIPreallocBufferArray(scip, &vars,  coefssize) );
       SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, coefssize) );
 
-      SCIP_CALL( SCIPparseVarsLinearsum(scip, str, 0, 0, vars, coefs, &nvars, coefssize, &requsize, &endpos, success) );
+      SCIP_CALL( SCIPparseVarsLinearsum(scip, str, 0, vars, coefs, &nvars, coefssize, &requsize, &endptr, success) );
       assert(!*success || requsize <= coefssize); /* if successful, then should have had enough space now */
    }
 
