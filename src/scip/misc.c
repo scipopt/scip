@@ -4765,7 +4765,7 @@ SCIP_Bool SCIPstrGetValue(
          
          token[tokenlen++] = str[pos++];
       }
-      while( isValueChar(str[pos], str[pos+1], FALSE, &hasdot, &exptype));
+      while( isValueChar(str[pos], str[pos+1], FALSE, &hasdot, &exptype) );
 
       token[tokenlen] = '\0';
 
