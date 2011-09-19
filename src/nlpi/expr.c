@@ -23,6 +23,7 @@
 
 #include <stdarg.h>
 #include <string.h>
+#include <math.h>
 
 #include "nlpi/pub_expr.h"
 #include "nlpi/struct_expr.h"
