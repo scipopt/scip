@@ -2420,9 +2420,15 @@ SCIP_RETCODE SCIPparamsetWrite(
    }
    
    /* write the parameters to the file */
+   SCIP_RETCODE retcode;
    for( i = 0; i < paramset->nparams; ++i )
    {
-      SCIP_CALL( paramWrite(paramset->params[i], file, comments, onlychanged) );
+      retcode = paramWrite(paramset->params[i], file, comments, onlychanged);
+      if( retcode != SCIP_OKAY )
+      {
+          fclose(file);
+          SCIP_CALL( retcode );
+      }
    }
 
    /* close output file */

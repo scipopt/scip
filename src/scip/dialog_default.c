@@ -2499,10 +2499,21 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteSolution)
       }
       else
       {
+         SCIP_RETCODE retcode;
          SCIPinfoMessage(scip, file, "solution status: ");
-         SCIP_CALL( SCIPprintStatus(scip, file) );
+         retcode = SCIPprintStatus(scip, file);
+         if( retcode != SCIP_OKAY )
+         {
+             fclose(file);
+             SCIP_CALL( retcode );
+         }
          SCIPinfoMessage(scip, file, "\n");
-         SCIP_CALL( SCIPprintBestSol(scip, file, FALSE) );
+         retcode = SCIPprintBestSol(scip, file, FALSE);
+         if( retcode != SCIP_OKAY )
+         {
+             fclose(file);
+             SCIP_CALL( retcode );
+         }
          SCIPdialogMessage(scip, NULL, "written solution information to file <%s>\n", filename);
          fclose(file);
       }
@@ -2545,7 +2556,13 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteStatistics)
       }
       else
       {
-         SCIP_CALL( SCIPprintStatistics(scip, file) );
+         SCIP_RETCODE retcode;
+         retcode = SCIPprintStatistics(scip, file);
+         if( retcode != SCIP_OKAY )
+         {
+             fclose(file);
+             SCIP_CALL( retcode );
+         }
          SCIPdialogMessage(scip, NULL, "written statistics to file <%s>\n", filename);
          fclose(file);
       }

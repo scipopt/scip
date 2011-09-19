@@ -2240,13 +2240,20 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
                int norigvars;
                int nvars;
                int v;
-               
+
+               SCIP_RETCODE retcode;
+
                /* get sparse solutions defined over the active variables */
                nvars = conshdlrdata->nvars;
                sparsesols = conshdlrdata->solutions;
 
                /* get original problem variables */
-               SCIP_CALL( SCIPallocBufferArray(scip, &origvars, SCIPgetNOrigVars(scip)) );
+               retcode = SCIPallocBufferArray(scip, &origvars, SCIPgetNOrigVars(scip));
+               if( retcode != SCIP_OKAY )
+               {
+                   fclose(file);
+                   SCIP_CALL( retcode );
+               }
 
                norigvars = 0;
                
@@ -2259,16 +2266,31 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
                   }
                }
                assert(norigvars == conshdlrdata->nallvars);
-               
-               SCIP_CALL( SCIPduplicateBufferArray(scip, &allvars, conshdlrdata->allvars, norigvars) );
-               
+
+               retcode = SCIPduplicateBufferArray(scip, &allvars, conshdlrdata->allvars, norigvars);
+               if( retcode != SCIP_OKAY )
+               {
+                   fclose(file);
+                   SCIP_CALL( retcode );
+               }
+
                /* sort original variables array and the corresponding transformed variables w.r.t. the problem index */
                SCIPsortDownPtrPtr((void**)allvars, (void**)origvars, varCompProbindex, norigvars);
 
                /* copy variable array of the sparse solutions */
-               SCIP_CALL( SCIPallocBufferArray(scip, &perm, nvars) );
-               SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, conshdlrdata->vars, nvars) );
-               
+               retcode = SCIPallocBufferArray(scip, &perm, nvars);
+               if( retcode != SCIP_OKAY )
+               {
+                   fclose(file);
+                   SCIP_CALL( retcode );
+               }
+               retcode = SCIPduplicateBufferArray(scip, &vars, conshdlrdata->vars, nvars);
+               if( retcode != SCIP_OKAY )
+               {
+                   fclose(file);
+                   SCIP_CALL( retcode );
+               }
+
                /* create identity permutation */
                for( v = 0; v < nvars; ++v )
                   perm[v] = v;
@@ -2306,7 +2328,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
                SCIPinfoMessage(scip, file, "objval\n");
             
                /* expand and write solution */
-               SCIP_CALL( writeExpandedSolutions(scip, file, allvars, nvars, conshdlrdata->nallvars, perm, sparsesols, nsparsesols) );
+               retcode = writeExpandedSolutions(scip, file, allvars, nvars, conshdlrdata->nallvars, perm, sparsesols, nsparsesols);
+               if( retcode != SCIP_OKAY )
+               {
+                   fclose(file);
+                   SCIP_CALL( retcode );
+               }
                SCIPdialogMessage(scip, NULL, "written solutions information to file <%s>\n", filename);
                
                SCIPfreeBufferArray(scip, &perm);
