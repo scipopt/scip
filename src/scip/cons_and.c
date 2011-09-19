@@ -2625,14 +2625,14 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
          {
             if( SCIPconsIsActive(conss[c]) && !SCIPconsIsModifiable(conss[c]) )
             {
-               npaircomparisons += (SCIPconsGetData(conss[c])->changed) ? c : (c - firstchange);
+               npaircomparisons += (SCIP_Longint) ((SCIPconsGetData(conss[c])->changed) ? c : (c - firstchange));
                
                SCIP_CALL( preprocessConstraintPairs(scip, conss, firstchange, c,
                                                     &cutoff, naggrvars, nchgbds, ndelconss) );
                
                if( npaircomparisons > NMINCOMPARISONS )
                {
-                  if( ((*ndelconss - oldndelconss) + (*naggrvars - oldnaggrvars) + (*nchgbds - oldnchgbds)/2) / (npaircomparisons + 0.0) < MINGAINPERNMINCOMPARISONS )
+                  if( ((*ndelconss - oldndelconss) + (*naggrvars - oldnaggrvars) + (*nchgbds - oldnchgbds)/2.0) / ((SCIP_Real) npaircomparisons) < MINGAINPERNMINCOMPARISONS )
                      break;
                   oldndelconss = *ndelconss;
                   oldnaggrvars = *naggrvars;

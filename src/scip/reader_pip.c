@@ -2559,7 +2559,7 @@ void printRowNl(
             /* this should have been caught in SCIPwritePip before */
             SCIPerrorMessage("unsupported operator <%s> in writing of polynomial nonlinear constraint\n", SCIPexpropGetName(SCIPexprGetOperator(expr)));
             return;
-         }
+         } /*lint !e788*/
       }
    }
 
@@ -3363,7 +3363,7 @@ SCIP_RETCODE SCIPwritePip(
          one = 1.0;
          SCIP_CALL( printNonlinearCons(scip, file, consname, &resultant, &minusone, 1, &exprtree, &one, 1, 0.0, 0.0, transformed) );
 
-         SCIPexprtreeFree(&exprtree);
+         SCIP_CALL( SCIPexprtreeFree(&exprtree) );
          SCIPfreeBufferArray(scip, &children);
 
          consAnd[nConsAnd++] = cons;
@@ -3653,13 +3653,13 @@ SCIP_RETCODE SCIPreadPip(
    pipinput.linebuf[0] = '\0';
    pipinput.probname[0] = '\0';
    pipinput.objname[0] = '\0';
-   SCIP_CALL( SCIPallocMemoryArray(scip, &pipinput.token, PIP_MAX_LINELEN) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &pipinput.token, PIP_MAX_LINELEN) ); /*lint !e506*/
    pipinput.token[0] = '\0';
-   SCIP_CALL( SCIPallocMemoryArray(scip, &pipinput.tokenbuf, PIP_MAX_LINELEN) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &pipinput.tokenbuf, PIP_MAX_LINELEN) ); /*lint !e506*/
    pipinput.tokenbuf[0] = '\0';
    for( i = 0; i < PIP_MAX_PUSHEDTOKENS; ++i )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &((pipinput.pushedtokens)[i]), PIP_MAX_LINELEN) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &((pipinput.pushedtokens)[i]), PIP_MAX_LINELEN) ); /*lint !e866*/  /*lint !e506*/
    }
 
    pipinput.npushedtokens = 0;
