@@ -45,7 +45,6 @@
     do { \
        int __newsize; \
        assert((blkmem)  != NULL); \
-       assert((cursize) != NULL); \
        if( *(cursize) >= (minsize) ) \
           break; \
        __newsize = calcGrowSize(minsize); \
@@ -61,7 +60,6 @@
     do { \
        int __newsize; \
        assert((blkmem)  != NULL); \
-       assert((cursize) != NULL); \
        if( *(cursize) >= (minsize) ) \
           break; \
        __newsize = calcGrowSize(minsize); \
@@ -78,7 +76,6 @@
     do { \
        int __newsize; \
        assert((blkmem)  != NULL); \
-       assert((cursize) != NULL); \
        if( *(cursize) >= (minsize) ) \
           break; \
        __newsize = calcGrowSize(minsize); \
