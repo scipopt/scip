@@ -2371,6 +2371,7 @@ SCIP_RETCODE varFreeParents(
          break;
 
 #if 0
+      /* The following code is unclear: should the current variable be removed from its parents? */
       case SCIP_VARSTATUS_MULTAGGR:
          assert(parentvar->data.multaggr.vars != NULL);
          for( v = 0; v < parentvar->data.multaggr.nvars && parentvar->data.multaggr.vars[v] != *var; ++v )

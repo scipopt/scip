@@ -116,7 +116,7 @@ date >>$ERRFILE
 HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 10\` + \`expr $TIMELIMIT / 10\``
 
 # we add 10% to the hard memory limit and additional 100mb to the hard memory limit
-HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` + \`expr $MEMLIMIT / 10\``
+HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 1000\` + \`expr $MEMLIMIT / 10\``
 HARDMEMLIMIT=`expr $HARDMEMLIMIT \* 1024`
 
 echo "hard time limit: $HARDTIMELIMIT s" >>$OUTFILE
