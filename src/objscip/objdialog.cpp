@@ -161,6 +161,7 @@ SCIP_RETCODE SCIPincludeObjDialog(
    {
       SCIP_DIALOGDATA* dialogdata;
       SCIP_DIALOG* dialog;
+      SCIP_RETCODE retcode;
       dialog = 0;
 
       /* create dialog data */
@@ -168,10 +169,15 @@ SCIP_RETCODE SCIPincludeObjDialog(
       dialogdata->objdialog = objdialog;
       dialogdata->deleteobject = deleteobject;
 
-      SCIP_CALL( SCIPincludeDialog(scip, &dialog, 
-            dialogCopyObj,
-            dialogExecObj, dialogDescObj, dialogFreeObj,
-            objdialog->scip_name_, objdialog->scip_desc_, objdialog->scip_issubmenu_, dialogdata) );
+      retcode = SCIPincludeDialog(scip, &dialog,
+                                  dialogCopyObj,
+                                  dialogExecObj, dialogDescObj, dialogFreeObj,
+                                  objdialog->scip_name_, objdialog->scip_desc_, objdialog->scip_issubmenu_, dialogdata);
+      if( retcode != SCIP_OKAY )
+      {
+          delete dialogdata;
+          SCIP_CALL( retcode );
+      }
       SCIP_CALL( SCIPaddDialogEntry(scip, parentdialog, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
