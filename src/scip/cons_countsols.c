@@ -127,6 +127,7 @@ struct SCIP_ConshdlrData
    SCIP_VAR**            vars;               /**< array containing a copy of all active variables (after presolving) */
    int                   nallvars;           /**< number of all variables in the problem */
    int                   nvars;              /**< number of all active variables in the problem */
+   SCIP_Bool             continuous;         /**< are there continuous variables */
 };
 
 
@@ -296,6 +297,7 @@ SCIP_RETCODE conshdlrdataCreate(
    (*conshdlrdata)->vars = NULL;
    (*conshdlrdata)->nallvars = 0;
    (*conshdlrdata)->nvars = 0;
+   (*conshdlrdata)->continuous = FALSE;
 
    return SCIP_OKAY;
 }
@@ -403,9 +405,9 @@ CUTOFF_CONSTRAINT(addBinaryCons)
    assert( sol != NULL );
    assert( conshdlrdata != NULL );
     
-   SCIP_CALL( SCIPgetPseudoBranchCands(scip, &vars, &nvars, NULL) );
-   assert( nvars > 0 );
-   
+   vars = conshdlrdata->vars;
+   nvars = conshdlrdata->nvars;
+
    /* allocate buffer memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nvars) );
    
@@ -415,8 +417,7 @@ CUTOFF_CONSTRAINT(addBinaryCons)
     
       assert( var != NULL );
       assert( SCIPvarIsBinary(var) );
-      assert( varIsUnfixedLocal(var) );
-
+      
       value = SCIPgetSolVal(scip, sol, var);
       assert( SCIPisFeasIntegral(scip, value) );
 
@@ -430,10 +431,10 @@ CUTOFF_CONSTRAINT(addBinaryCons)
     
    /* create constraint */
    SCIP_CALL( SCIPcreateConsSetcover(scip, &cons, "Setcovering created by countsols", nvars, consvars,
-         FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE));
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    
    /* add and release constraint */
-   SCIP_CALL( SCIPaddConsLocal(scip, cons, NULL) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    
    /* free buffer array */
@@ -469,7 +470,9 @@ CUTOFF_CONSTRAINT(addIntegerCons)
    assert( sol != NULL );
    assert( conshdlrdata != NULL );
   
-   SCIP_CALL( SCIPgetPseudoBranchCands(scip, &vars, &nvars, NULL) );
+   vars = conshdlrdata->vars;
+   nvars = conshdlrdata->nvars;
+
    nconsvars = nvars * 2;
    assert( nvars > 0 );
 
@@ -540,7 +543,8 @@ CUTOFF_CONSTRAINT(addIntegerCons)
    }
    
    /* check if only binary variables appear in the constraint; if this is the case we
-    * create a set covering constraint instead of a bound disjunction constraint */
+    * create a set covering constraint instead of a bound disjunction constraint 
+    */
    if( nvars == nbinvars )
    {
       for( v = nbinvars - 1; v >= 0; --v )
@@ -553,17 +557,17 @@ CUTOFF_CONSTRAINT(addIntegerCons)
       }
     
       SCIP_CALL( SCIPcreateConsSetcover(scip, &cons, "Setcovering created by countsols", nbinvars, consvars,
-            FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE));
+            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    }
    else
    {
       SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, "Bounddisjunction created by countsols", 
             nconsvars, consvars, boundtypes, bounds,
-            FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+            FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    }
   
    /* add and release constraint locally */
-   SCIP_CALL( SCIPaddConsLocal(scip, cons, NULL) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
   
    /* free buffer memory */
@@ -1252,10 +1256,18 @@ SCIP_RETCODE checkSolution(
          SCIP_CALL( collectSolution(scip, conshdlrdata, sol) );
       }
 
+      /* in case of continuous variables are present we explicitly cutoff the integer assignment since in case of
+       * nonlinear constraint we want to avoid the count that integer assignment again
+       */
+      if( conshdlrdata->continuous )
+      {
+         conshdlrdata->cutoffSolution(scip, sol, conshdlrdata);
+      }
+            
       /* since all integer are fixed we cut off the subtree */
       *result = SCIP_CUTOFF;
    }
-   else if( conshdlrdata->sparsetest )
+   else if( conshdlrdata->sparsetest && !conshdlrdata->continuous )
    {
       SCIP_CALL( checkFeasSubtree(scip, sol, &feasible) ) ;
       SCIP_CALL( countSparsesol(scip, sol, feasible, conshdlrdata, result) );
@@ -1381,6 +1393,9 @@ SCIP_DECL_CONSINIT(consInitCountsols)
          }
       }
       assert(nallvars == conshdlrdata->nallvars);
+ 
+      /* check if continuous variables are present */
+      conshdlrdata->continuous = SCIPgetNContVars(scip) > 0;
    }
 
    return SCIP_OKAY;
@@ -1433,6 +1448,8 @@ SCIP_DECL_CONSEXIT(consExitCountsols)
 
          assert( conshdlrdata->solutions == NULL );
       }
+  
+      conshdlrdata->continuous = FALSE;
    }
 
    assert( conshdlrdata->solutions == NULL );
@@ -1496,8 +1513,8 @@ SCIP_DECL_CONSINITSOL(consInitsolCountsols)
       conshdlrdata->vars = vars;
       conshdlrdata->nvars = nvars;
 
-      /* check if the problem is binary */
-      if( SCIPgetNBinVars(scip) == SCIPgetNVars(scip) )
+      /* check if the problem is binary (ignoring continuous variables) */
+      if( SCIPgetNBinVars(scip) == (SCIPgetNVars(scip) - SCIPgetNContVars(scip)) )
          conshdlrdata->cutoffSolution = addBinaryCons;
       else
          conshdlrdata->cutoffSolution = addIntegerCons;
