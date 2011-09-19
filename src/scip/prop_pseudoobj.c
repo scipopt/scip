@@ -961,18 +961,3 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
 
    return SCIP_OKAY;
 }
-
-/** propagates the cutoff bound for the given variables */
-SCIP_RETCODE SCIPpropagateCutoffboundVar(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PROP*            prop,               /**< propagator, or NULL */
-   SCIP_VAR*             var,                /**< variables to propagate */
-   SCIP_Real             cutoffbound,        /**< cutoff bound to use */
-   SCIP_Real             pseudoobjval,       /**< pseudo objective value to use */
-   int*                  nchgbds             /**< pointer to store the number of changed bounds */
-   )
-{
-   SCIP_CALL( propagateCutoffboundVar(scip, prop, var, cutoffbound, pseudoobjval, nchgbds) );
-
-   return SCIP_OKAY;
-}
