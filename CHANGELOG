@@ -227,6 +227,7 @@ features:
 - the pip and zimpl reader now create nonlinear constraints for polynomials of degree > 2
 - implement presolving in exitpre() in cons_orbitope and cons_indicator
 - implement possibility to force a restart in cons_indicator if enough indicator variables have been fixed
+- functionality to use the bound flipping ratio test of SoPlex is available (requires at least version 1.5.0.7)
 
 design:
 - SCIP_HASHMAP now works also without block memory
