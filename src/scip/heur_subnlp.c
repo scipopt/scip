@@ -1664,6 +1664,8 @@ SCIP_RETCODE SCIPresolveSolHeurSubNlp(
    assert(heurdata->var_subscip2scip != NULL);
    assert(!SCIPisTransformed(heurdata->subscip));
 
+   result = SCIP_DIDNOTRUN;
+
    /* fix discrete variables in subSCIP */
    if( SCIPgetNBinVars(heurdata->subscip) || SCIPgetNIntVars(heurdata->subscip) )
    {

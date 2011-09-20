@@ -435,6 +435,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
          /* get the row of B^-1 for this basic integer variable with fractional solution value */
          SCIP_CALL( SCIPgetLPBInvRow(scip, i, binvrow) );
 
+#ifdef SCIP_DEBUG
+         /* initialize variables, that might not have been initialized in SCIPcalcMIR if success == FALSE */
+         cutact = 0.0;
+         cutrhs = SCIPinfinity(scip);
+#endif
          /* create a strong CG cut out of the weighted LP rows using the B^-1 row as weights */
          SCIP_CALL( SCIPcalcStrongCG(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, (int) MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC,
                binvrow, 1.0, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );

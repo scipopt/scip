@@ -613,8 +613,12 @@ SCIP_RETCODE collectSolution(
    nvars = conshdlrdata->nvars;
    
    /* get memory for storing the solution */
+   lbvalues = NULL;
+   ubvalues = NULL;
    SCIP_CALL( SCIPallocMemoryArray(scip, &lbvalues, nvars) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &ubvalues, nvars) );
+   assert(ubvalues != NULL);
+   assert(lbvalues != NULL);
 
    for( v = nvars - 1; v >= 0; --v )
    {
@@ -640,6 +644,7 @@ SCIP_RETCODE collectSolution(
    }
    
    SCIP_CALL( SCIPallocMemory(scip, &solution) );
+   assert(solution != NULL);
  
    solution->lbvalues = lbvalues;
    solution->ubvalues = ubvalues;

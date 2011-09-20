@@ -3287,6 +3287,7 @@ CREATE_CONSTRAINT(createCumulativeOpCons)
    nvars = 0;
    ndurations = 0;
    ndemads = 0;
+   demands = NULL;
 
    SCIPdebugMessage("parse cumulative expression\n");
 
@@ -3359,7 +3360,7 @@ CREATE_CONSTRAINT(createCumulativeOpCons)
 
  TERMINATE:
    /* free buffers */
-   SCIPfreeBufferArray(scip, &demands);
+   SCIPfreeBufferArrayNull(scip, &demands);
    SCIPfreeBufferArray(scip, &durations);
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &vars);

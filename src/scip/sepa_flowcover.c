@@ -1439,6 +1439,10 @@ SCIP_RETCODE getFlowCover(
             &scalesuccess) );
    }
 
+   /* initialize number of (non-)solution items, should be changed to a nonnegative number in all possible paths below */
+   nsolitems = -1;
+   nnonsolitems = -1;
+
    /* suitable factor C was found*/
    if( scalesuccess )
    {
@@ -1499,6 +1503,9 @@ SCIP_RETCODE getFlowCover(
             items, solitems, nonsolitems, &nsolitems, &nnonsolitems, NULL));
       assert(!kpexact);
    }
+
+   assert(nsolitems != -1);
+   assert(nnonsolitems != -1);
 
    /* build the flow cover from the solution of KP^SNF_rat and KP^SNF_int, respectively and the fixing */
    assert(*nflowcovervars + *nnonflowcovervars + nsolitems + nnonsolitems == nvars);

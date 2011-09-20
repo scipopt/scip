@@ -438,6 +438,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
          /* get the row of B^-1 for this basic integer variable with fractional solution value */
          SCIP_CALL( SCIPgetLPBInvRow(scip, i, binvrow) );
 
+#ifdef SCIP_DEBUG
+         /* initialize variables, that might not have been initialized in SCIPcalcMIR if success == FALSE */
+         cutact = 0.0;
+         cutrhs = SCIPinfinity(scip);
+#endif
+
          /* create a MIR cut out of the weighted LP rows using the B^-1 row as weights */
          SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS, NULL, NULL,
                (int) MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC,

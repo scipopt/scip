@@ -12065,6 +12065,8 @@ SCIP_RETCODE checkLazyBounds(
    
    assert(lp->flushed);
 
+   *primalfeasible = TRUE;
+
    for( c = 0; c < lp->nlazycols; ++c )
    {
       col = lp->lazycols[c];
