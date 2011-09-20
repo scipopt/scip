@@ -387,9 +387,6 @@ SCIP_DECL_READERREAD(readerReadSol)
       return SCIP_OKAY;
    }
 
-   /* transform the problem such that adding primal solutions is possible */
-   //   SCIP_CALL( SCIPtransformProb(scip) );
-
    /* open input file in order to determine type */
    file = SCIPfopen(filename, "r");
    if( file == NULL )
