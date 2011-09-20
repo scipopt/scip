@@ -4751,10 +4751,12 @@ SCIP_RETCODE SCIPconsParse(
    SCIPdebugMessage("constraint handler name <%s>\n", conshdlrname);
 
    /* scan constraint name */
-   SCIPstrCopySection(str, '<', '>', consname, SCIP_MAXSTRLEN, &str);
-   assert(str != NULL);
+   SCIPstrCopySection(str, '<', '>', consname, SCIP_MAXSTRLEN, &saveptr);
+   assert(str != saveptr);
    SCIPdebugMessage("constraint name <%s>\n", consname);
    
+   str = saveptr;
+
    /* skip colon */
    if( *str != ':' )
       return SCIP_OKAY;
