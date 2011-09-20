@@ -8091,14 +8091,11 @@ int SCIPprofileGetLatestFeasibleStart(
          (*infeasible) = FALSE;
          return starttime;
       }
+      assert(pos >= 0);
 
       /* the job did not fit into the profile since at time point "pos" not enough capacity is available;
        * therefore we can proceed with the next time point  */
       assert(profile->freecapacities[pos] < demand);
-
-      /* check if we exceed the time point array */
-      if( pos < 0  )
-         break;
 
       starttime = profile->timepoints[pos] - duration;
    }
