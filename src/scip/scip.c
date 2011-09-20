@@ -8051,7 +8051,7 @@ SCIP_RETCODE SCIPparseVarsList(
 
       str = *endptr;
       
-      while( isspace(*str) )
+      while( isspace((unsigned char)*str) )
          str++;
    }
    while( *str == delimiter );
@@ -8126,7 +8126,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
 
    assert(scip != NULL);
    assert(str != NULL);
-   assert(!isspace(endchar));
+   assert(!isspace((unsigned char)endchar));
    assert(monomialvars != NULL);
    assert(monomialexps != NULL);
    assert(monomialnvars != NULL);
@@ -8158,7 +8158,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
    while( *str && *str != endchar && state != SCIPPARSEPOLYNOMIAL_STATE_ERROR )
    {
       /* skip white space */
-      while( isspace(*str) )
+      while( isspace((unsigned char)*str) )
          str++;
 
       if( *str == endchar )

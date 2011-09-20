@@ -9925,7 +9925,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
       str = endptr;
 
       /* ignore whitespace */
-      while( isspace(*str) )
+      while( isspace((unsigned char)*str) )
          ++str;
 
       if( str[0] != '<' || str[1] != '=' )
