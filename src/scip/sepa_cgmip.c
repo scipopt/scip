@@ -166,9 +166,9 @@ struct CGMIP_MIPData
    SCIP_VAR*             beta;               /**< rhs of cut */
    SCIP_VAR**            fracalpha;          /**< fractional part of lhs of cut (NULL if not present) */
    SCIP_VAR*             fracbeta;           /**< fractional part of rhs of cut */
-   CGMIP_COLTYPE*        colType;            /**< type for the columns */
-   SCIP_Bool*            isComplemented;     /**< whether the variable was complemented */
-   SCIP_Bool*            isShifted;          /**< whether the variable was shifted to have 0 lower bound */
+   CGMIP_COLTYPE*        coltype;            /**< type for the columns */
+   SCIP_Bool*            iscomplemented;     /**< whether the variable was complemented */
+   SCIP_Bool*            isshifted;          /**< whether the variable was shifted to have 0 lower bound */
 
    SCIP_VAR**            ylhs;               /**< auxiliary row variables for lhs (NULL if not present) */
    SCIP_VAR**            yrhs;               /**< auxiliary row variables for rhs (NULL if not present) */
@@ -820,9 +820,9 @@ SCIP_RETCODE createSubscip(
    /* alloc memory for subscipdata elements */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mipdata->alpha), ncols) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mipdata->fracalpha), ncols) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mipdata->colType), ncols) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mipdata->isComplemented), ncols) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mipdata->isShifted), ncols) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mipdata->coltype), ncols) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mipdata->iscomplemented), ncols) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mipdata->isshifted), ncols) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mipdata->ylhs), nrows) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mipdata->yrhs), nrows) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mipdata->z), 2*ncols) );
@@ -884,21 +884,21 @@ SCIP_RETCODE createSubscip(
       if ( sepadata->allowlocal && SCIPisLT(scip, SCIPvarGetUbLocal(var), ub[j]) )
          ub[j] = SCIPvarGetUbLocal(var);
 
-      mipdata->colType[j] = colPresent;
-      mipdata->isComplemented[j] = FALSE;
-      mipdata->isShifted[j] = FALSE;
+      mipdata->coltype[j] = colPresent;
+      mipdata->iscomplemented[j] = FALSE;
+      mipdata->isshifted[j] = FALSE;
 
       /* detect continuous variables, but perform preprocessing for them */
       if ( ! SCIPcolIsIntegral(col) )
-         mipdata->colType[j] = colContinuous;
+         mipdata->coltype[j] = colContinuous;
 
       /* if integer variable is at its upper bound -> complementing (this also generates a 0 lower bound) */
-      if ( mipdata->colType[j] == colPresent && SCIPisFeasEQ(scip, primsol[j], ub[j]) )
+      if ( mipdata->coltype[j] == colPresent && SCIPisFeasEQ(scip, primsol[j], ub[j]) )
       {
          assert( ! SCIPisInfinity(scip, ub[j]) );
          SCIP_CALL( transformColumn(scip, sepadata, mipdata, col, ub[j], -1.0, lhs, rhs, &(lb[j]), &(ub[j]), &(primsol[j])) );
-         mipdata->isComplemented[j] = TRUE;
-         mipdata->colType[j] = colAtUb;
+         mipdata->iscomplemented[j] = TRUE;
+         mipdata->coltype[j] = colAtUb;
          ++nubounds;
       }
       else
@@ -910,14 +910,14 @@ SCIP_RETCODE createSubscip(
             {
                SCIP_CALL( transformColumn(scip, sepadata, mipdata, col, -lb[j], 1.0, lhs, rhs, &(lb[j]), &(ub[j]), &(primsol[j])) );
                assert( SCIPisZero(scip, lb[j]) );
-               mipdata->isShifted[j] = TRUE;
+               mipdata->isshifted[j] = TRUE;
                ++nshifted;
             }
 
             /* if integer variable is at its lower bound */
-            if ( mipdata->colType[j] == colPresent && SCIPisZero(scip, primsol[j]) )
+            if ( mipdata->coltype[j] == colPresent && SCIPisZero(scip, primsol[j]) )
             {
-               mipdata->colType[j] = colAtLb;
+               mipdata->coltype[j] = colAtLb;
                ++nlbounds;
             }
          }
@@ -929,13 +929,13 @@ SCIP_RETCODE createSubscip(
                /* complement variable */
                SCIP_CALL( transformColumn(scip, sepadata, mipdata, col, ub[j], -1.0, lhs, rhs, &(lb[j]), &(ub[j]), &(primsol[j])) );
                assert( SCIPisZero(scip, lb[j]) );
-               mipdata->isComplemented[j] = TRUE;
+               mipdata->iscomplemented[j] = TRUE;
                ++ncomplemented;
 
                /* if integer variable is at its lower bound */
-               if ( mipdata->colType[j] == colPresent && SCIPisZero(scip, primsol[j]) )
+               if ( mipdata->coltype[j] == colPresent && SCIPisZero(scip, primsol[j]) )
                {
-                  mipdata->colType[j] = colAtLb;
+                  mipdata->coltype[j] = colAtLb;
                   ++nlbounds;
                }
             }
@@ -1037,7 +1037,7 @@ SCIP_RETCODE createSubscip(
       mipdata->alpha[j] = NULL;
       mipdata->fracalpha[j] = NULL;
 
-      if ( mipdata->colType[j] == colPresent )
+      if ( mipdata->coltype[j] == colPresent )
       {
          SCIP_Real obj;
 
@@ -1115,7 +1115,7 @@ SCIP_RETCODE createSubscip(
       SCIP_Real* colvals;
 
       /* create ordinary part for all selected variables */
-      if ( mipdata->colType[j] == colPresent )
+      if ( mipdata->coltype[j] == colPresent )
       {
          SCIP_Real sigma;
 
@@ -1124,7 +1124,7 @@ SCIP_RETCODE createSubscip(
          colvals = SCIPcolGetVals(cols[j]);
          nconsvars = 0;
 
-         if ( mipdata->isComplemented[j] )
+         if ( mipdata->iscomplemented[j] )
             sigma = -1.0;
          else
             sigma = 1.0;
@@ -1190,7 +1190,7 @@ SCIP_RETCODE createSubscip(
          ++cnt;
       }
       /* generate part that makes sure that cut is valid for continuous variables */
-      else if ( mipdata->colType[j] == colContinuous )
+      else if ( mipdata->coltype[j] == colContinuous )
       {
          SCIP_Real sigma;
          SCIP_Real r;
@@ -1200,7 +1200,7 @@ SCIP_RETCODE createSubscip(
          colvals = SCIPcolGetVals(cols[j]);
          nconsvars = 0;
 
-         if ( mipdata->isComplemented[j] )
+         if ( mipdata->iscomplemented[j] )
             sigma = -1.0;
          else
             sigma = 1.0;
@@ -1292,7 +1292,7 @@ SCIP_RETCODE createSubscip(
       /* if ub is there */
       if ( mipdata->z[j] != NULL && ! SCIPisZero(scip, ub[j]) )
       {
-         assert( mipdata->colType[j] == colPresent );
+         assert( mipdata->coltype[j] == colPresent );
          assert( ! SCIPisInfinity(scip, ub[j]) );
          consvars[nconsvars] = mipdata->z[j];
          consvals[nconsvars] = ub[j];
@@ -1331,7 +1331,7 @@ SCIP_RETCODE createSubscip(
             if ( mipdata->alpha[j] != NULL )
             {
                SCIP_Real val;
-               assert( mipdata->colType[j] == colPresent );
+               assert( mipdata->coltype[j] == colPresent );
                
                val = SCIPgetSolVal(scip, bestsol, SCIPcolGetVar(cols[j]));
                consvars[nconsvars] = mipdata->alpha[j];
@@ -1859,7 +1859,7 @@ SCIP_RETCODE computeCut(
       assert( cols[j] != NULL );
       if ( mipdata->z[j] != NULL )
       {
-         assert( mipdata->colType[j] == colPresent );
+         assert( mipdata->coltype[j] == colPresent );
 
          val = SCIPgetSolVal(subscip, sol, mipdata->z[j]);
          assert( ! SCIPisFeasNegative(subscip, val) );
@@ -1881,7 +1881,7 @@ SCIP_RETCODE computeCut(
             assert( 0 <= idx && idx < nvars );
 
             /* check whether variable is complemented */
-            if ( mipdata->isComplemented[j] )
+            if ( mipdata->iscomplemented[j] )
             {
                SCIP_Real lbnd;
                lbnd = SCIPvarGetLbGlobal(var);
@@ -1943,9 +1943,9 @@ SCIP_RETCODE computeCut(
          assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN );
 
          /* check whether variable is complemented */
-         if ( mipdata->isComplemented[pos] )
+         if ( mipdata->iscomplemented[pos] )
          {
-            assert( ! mipdata->isShifted[pos] );
+            assert( ! mipdata->isshifted[pos] );
             /* if the variable is complemented, the multiplier for the upper bound arises from the
                lower bound multiplier for the transformed problem - because of the minus-sign in the
                transformation this yields a round-up operation. */
@@ -2155,7 +2155,7 @@ SCIP_RETCODE createCGCutsDirect(
          SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
          for (j = 0; j < mipdata->ncols; ++j)
          {
-            if ( mipdata->colType[j] == colPresent )
+            if ( mipdata->coltype[j] == colPresent )
             {
                int idx;
                assert( mipdata->alpha[j] != NULL );
@@ -2167,7 +2167,7 @@ SCIP_RETCODE createCGCutsDirect(
             }
             else
             {
-               if ( mipdata->colType[j] == colContinuous && mipdata->isShifted[j] )
+               if ( mipdata->coltype[j] == colContinuous && mipdata->isshifted[j] )
                   contVarShifted = TRUE;
             }
          }
@@ -2423,7 +2423,7 @@ SCIP_RETCODE createCGCutsCMIR(
                boundsfortrans[k] = typefortrans;
 
                /* check whether variable is complemented */
-               if ( ! mipdata->isComplemented[pos] )
+               if ( ! mipdata->iscomplemented[pos] )
                   boundtypesfortrans[k] = SCIP_BOUNDTYPE_UPPER;
                /* otherwise use lower bound */
             }
@@ -2433,7 +2433,7 @@ SCIP_RETCODE createCGCutsCMIR(
                boundsfortrans[k] = typefortrans;
 
                /* check whether variable is complemented */
-               if ( mipdata->isComplemented[pos] )
+               if ( mipdata->iscomplemented[pos] )
                   boundtypesfortrans[k] = SCIP_BOUNDTYPE_UPPER;
                /* otherwise use lower bound */
             }
@@ -2559,7 +2559,7 @@ SCIP_RETCODE freeSubscip(
 
    for (j = 0; j < mipdata->ncols; ++j)
    {
-      if ( mipdata->colType[j] == colPresent )
+      if ( mipdata->coltype[j] == colPresent )
       {
          assert( mipdata->alpha[j] != NULL );
          SCIP_CALL( SCIPreleaseVar(subscip, &(mipdata->alpha[j])) );
@@ -2597,9 +2597,9 @@ SCIP_RETCODE freeSubscip(
    SCIPfreeBlockMemoryArray(scip, &(mipdata->z), 2*mipdata->ncols);
    SCIPfreeBlockMemoryArray(scip, &(mipdata->yrhs), mipdata->nrows);
    SCIPfreeBlockMemoryArray(scip, &(mipdata->ylhs), mipdata->nrows);
-   SCIPfreeBlockMemoryArray(scip, &(mipdata->isShifted), mipdata->ncols);
-   SCIPfreeBlockMemoryArray(scip, &(mipdata->isComplemented), mipdata->ncols);
-   SCIPfreeBlockMemoryArray(scip, &(mipdata->colType), mipdata->ncols);
+   SCIPfreeBlockMemoryArray(scip, &(mipdata->isshifted), mipdata->ncols);
+   SCIPfreeBlockMemoryArray(scip, &(mipdata->iscomplemented), mipdata->ncols);
+   SCIPfreeBlockMemoryArray(scip, &(mipdata->coltype), mipdata->ncols);
    SCIPfreeBlockMemoryArray(scip, &(mipdata->fracalpha), mipdata->ncols);
    SCIPfreeBlockMemoryArray(scip, &(mipdata->alpha), mipdata->ncols);
 
@@ -2731,9 +2731,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
    mipdata->fracalpha = NULL;
    mipdata->beta = NULL;
    mipdata->fracbeta = NULL;
-   mipdata->colType = NULL;
-   mipdata->isComplemented = NULL;
-   mipdata->isShifted = NULL;
+   mipdata->coltype = NULL;
+   mipdata->iscomplemented = NULL;
+   mipdata->isshifted = NULL;
    mipdata->ylhs = NULL;
    mipdata->yrhs = NULL;
    mipdata->z = NULL;

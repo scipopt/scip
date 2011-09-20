@@ -99,9 +99,9 @@ struct SCIP_ConsData
 /** SOS1 constraint handler data */
 struct SCIP_ConshdlrData
 {
-   SCIP_Bool             branchSOS;          /**< Branch on SOS condition in enforcing? */
-   SCIP_Bool             branchNonzeros;     /**< Branch on SOS cons. with most number of nonzeros? */
-   SCIP_Bool             branchWeight;       /**< Branch on SOS cons. with highest nonzero-variable weight for branching - needs branchNonzeros to be false */
+   SCIP_Bool             branchsos;          /**< Branch on SOS condition in enforcing? */
+   SCIP_Bool             branchnonzeros;     /**< Branch on SOS cons. with most number of nonzeros? */
+   SCIP_Bool             branchweight;       /**< Branch on SOS cons. with highest nonzero-variable weight for branching - needs branchnonzeros to be false */
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
 };
 
@@ -587,20 +587,20 @@ SCIP_RETCODE propSOS1(
  *
  *  If the constraint contains two variables, the branching of course simplifies.
  *
- *  Depending on the parameters (@c branchNonzeros, @c branchWeight) there are three ways to choose
+ *  Depending on the parameters (@c branchnonzeros, @c branchweight) there are three ways to choose
  *  the branching constraint.
  *
  *  <TABLE>
- *  <TR><TD>@c branchNonzeros</TD><TD>@c branchWeight</TD><TD>constraint chosen</TD></TR>
+ *  <TR><TD>@c branchnonzeros</TD><TD>@c branchweight</TD><TD>constraint chosen</TD></TR>
  *  <TR><TD>@c true          </TD><TD> ?             </TD><TD>most number of nonzeros</TD></TR>
  *  <TR><TD>@c false         </TD><TD> @c true       </TD><TD>maximal weight corresponding to nonzero variable</TD></TR>
  *  <TR><TD>@c false         </TD><TD> @c true       </TD><TD>largest sum of variable values</TD></TR>
  *  </TABLE>
  *
- *  @c branchNonzeros = @c false, @c branchWeight = @c true allows the user to specify an order for
+ *  @c branchnonzeros = @c false, @c branchweight = @c true allows the user to specify an order for
  *  the branching importance of the constraints (setting the weights accordingly).
  *
- *  Constraint branching can also be turned off using parameter @c branchSOS.
+ *  Constraint branching can also be turned off using parameter @c branchsos.
  */
 static
 SCIP_RETCODE enforceSOS1(
@@ -683,11 +683,11 @@ SCIP_RETCODE enforceSOS1(
 
          if ( ! SCIPisFeasZero(scip, val) )
          {
-            if ( conshdlrdata->branchNonzeros )
+            if ( conshdlrdata->branchnonzeros )
                weight += 1.0;
             else
             {
-               if ( conshdlrdata->branchWeight )
+               if ( conshdlrdata->branchweight )
                {
                   /* choose maximum nonzero-variable weight */
                   if ( consdata->weights[j] > weight )
@@ -715,7 +715,7 @@ SCIP_RETCODE enforceSOS1(
    }
 
    /* if we should leave branching decision to branching rules */
-   if ( ! conshdlrdata->branchSOS )
+   if ( ! conshdlrdata->branchsos )
    {
       *result = SCIP_INFEASIBLE;
       return SCIP_OKAY;
@@ -2003,7 +2003,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
 
    /* create constraint handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
-   conshdlrdata->branchSOS = TRUE;
+   conshdlrdata->branchsos = TRUE;
 
    /* get event handler for bound change events */
    conshdlrdata->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
@@ -2029,15 +2029,17 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
          consPrintSOS1, consCopySOS1, consParseSOS1, conshdlrdata) );
 
    /* add SOS1 constraint handler parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/SOS1/branchSOS", "Use SOS1 branching in enforcing (otherwise leave decision to branching rules)?",
-         &conshdlrdata->branchSOS, FALSE, TRUE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/SOS1/branchsos",
+         "Use SOS1 branching in enforcing (otherwise leave decision to branching rules)?",
+         &conshdlrdata->branchsos, FALSE, TRUE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/SOS1/branchNonzeros", "Branch on SOS constraint with most number of nonzeros?",
-         &conshdlrdata->branchNonzeros, FALSE, FALSE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/SOS1/branchnonzeros",
+         "Branch on SOS constraint with most number of nonzeros?",
+         &conshdlrdata->branchnonzeros, FALSE, FALSE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/SOS1/branchWeight",
-         "Branch on SOS cons. with highest nonzero-variable weight for branching (needs branchNonzeros = false)?",
-         &conshdlrdata->branchWeight, FALSE, FALSE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/SOS1/branchweight",
+         "Branch on SOS cons. with highest nonzero-variable weight for branching (needs branchnonzeros = false)?",
+         &conshdlrdata->branchweight, FALSE, FALSE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
