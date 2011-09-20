@@ -2523,19 +2523,26 @@ static
 SCIP_RETCODE consdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    const char*           consname,           /**< name of constraint (or NULL) */
    SCIP_CONSDATA**       consdata,           /**< pointer to linear constraint data */
    SCIP_EVENTHDLR*       eventhdlrbound,     /**< event handler for bound change events */
+   SCIP_EVENTHDLR*       eventhdlrrestart,   /**< event handler for handling restarts */
    SCIP_VAR*             binvar,             /**< binary variable (or NULL) */
    SCIP_VAR*             slackvar,           /**< slack variable */
    SCIP_CONS*            lincons,            /**< linear constraint (or NULL) */
    SCIP_Bool             linconsactive,      /**< whether the linear constraint is active */
-   SCIP_Bool             sepaAlternativeLP   /**< whether the alternative lp is used for separation */
+   SCIP_Bool             sepaAlternativeLP,  /**< whether the alternative lp is used for separation */
+   SCIP_Bool             forcerestart        /**< whether a restart should be forced */
    )
 {
    assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( conshdlrdata != NULL );
    assert( consdata != NULL );
    assert( slackvar != NULL );
+   assert( eventhdlrbound != NULL );
+   assert( eventhdlrrestart != NULL );
 
    /* create constraint data */
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
@@ -2569,6 +2576,13 @@ SCIP_RETCODE consdataCreate(
          if ( linconsactive )
          {
             SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlrbound, (SCIP_EVENTDATA*)*consdata, NULL) );
+         }
+
+         /* catch global bound change events on binary variable */
+         if ( forcerestart )
+         {
+            SCIPdebugMessage("Catching GBDCHANGED event for <%s>.\n", SCIPvarGetName(var));
+            SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_GBDCHANGED, eventhdlrrestart, (SCIP_EVENTDATA*) conshdlrdata, NULL) );
          }
 
          /* if binary variable is fixed to be nonzero */
@@ -3536,30 +3550,13 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
       int nvars;
       int j;
 
-      /* stor number of initial constraints */
-      conshdlrdata->ninitconss = SCIPconshdlrGetNActiveConss(conshdlr);
-
-      /* catch events for binary variables */
       assert( conshdlrdata->eventhdlrrestart != NULL );
-      for (c = 0; c < nconss; ++c)
-      {
-         SCIP_CONSDATA* consdata;
-         
-         assert( conss != NULL );
-         assert( conss[c] != NULL );
-         assert( SCIPconsIsTransformed(conss[c]) );
 
-         consdata = SCIPconsGetData(conss[c]);
-         assert( consdata != NULL );
-
-         if ( ! SCIPconsIsActive(conss[c]) )
-            continue;
-
-         /* catch local bound change events on binary variable */
-         assert( consdata->binvar != NULL );
-         assert( SCIPvarIsTransformed(consdata->binvar) );
-         SCIP_CALL( SCIPcatchVarEvent(scip, consdata->binvar, SCIP_EVENTTYPE_GBDCHANGED, conshdlrdata->eventhdlrrestart, (SCIP_EVENTDATA*) conshdlrdata, NULL) );
-      }
+      /* store number of initial constraints */
+      conshdlrdata->ninitconss = SCIPconshdlrGetNActiveConss(conshdlr);
+      
+      /* reset number of fixed binary variables */
+      conshdlrdata->nbinvarszero = 0;
 
       /* loop through variables */
       nvars = SCIPgetNVars(scip);
@@ -3597,6 +3594,11 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
          }
          else
             probindex = SCIPvarGetProbindex(consdata->binvar);
+
+         /* if presolving detected infeasibility it might be that the binary variables are non active */
+         if ( probindex < 0 )
+            continue;
+
          assert( 0 <= probindex && probindex < nvars );
          covered[probindex] = TRUE;
       }
@@ -3736,19 +3738,23 @@ SCIP_DECL_CONSDELETE(consDeleteIndicator)
       assert( (*consdata)->slackvar != NULL );
       assert( (*consdata)->binvar != NULL );
 
-      if ( (*consdata)->linconsActive )
+      /* free events only in correct stages */
+      if ( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMING && SCIPgetStage(scip) <= SCIP_STAGE_SOLVED )
       {
-         assert( conshdlrdata->eventhdlrbound != NULL );
-         SCIP_CALL( SCIPdropVarEvent(scip, (*consdata)->binvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound,
-               (SCIP_EVENTDATA*)*consdata, -1) );
-         SCIP_CALL( SCIPdropVarEvent(scip, (*consdata)->slackvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound,
-               (SCIP_EVENTDATA*)*consdata, -1) );
-      }
-      assert( conshdlrdata->eventhdlrrestart != NULL );
-      if ( conshdlrdata->forcerestart )
-      {
-         SCIP_CALL( SCIPdropVarEvent(scip, (*consdata)->binvar, SCIP_EVENTTYPE_GBDCHANGED, conshdlrdata->eventhdlrrestart,
-               (SCIP_EVENTDATA*) conshdlrdata, -1) );
+         if ( (*consdata)->linconsActive )
+         {
+            assert( conshdlrdata->eventhdlrbound != NULL );
+            SCIP_CALL( SCIPdropVarEvent(scip, (*consdata)->binvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound,
+                  (SCIP_EVENTDATA*)*consdata, -1) );
+            SCIP_CALL( SCIPdropVarEvent(scip, (*consdata)->slackvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound,
+                  (SCIP_EVENTDATA*)*consdata, -1) );
+         }
+         if ( conshdlrdata->forcerestart )
+         {
+            assert( conshdlrdata->eventhdlrrestart != NULL );
+            SCIP_CALL( SCIPdropVarEvent(scip, (*consdata)->binvar, SCIP_EVENTTYPE_GBDCHANGED, conshdlrdata->eventhdlrrestart,
+                  (SCIP_EVENTDATA*) conshdlrdata, -1) );
+         }
       }
 
       /* Can there be cases where lincons is NULL, e.g., if presolve found the problem infeasible? */
@@ -3818,8 +3824,9 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
 
    /* create constraint data */
    consdata = NULL;
-   SCIP_CALL( consdataCreate(scip, conshdlr, SCIPconsGetName(sourcecons), &consdata, conshdlrdata->eventhdlrbound, 
-         sourcedata->binvar, sourcedata->slackvar, sourcedata->lincons, sourcedata->linconsActive, conshdlrdata->sepaAlternativeLP) );
+   SCIP_CALL( consdataCreate(scip, conshdlr, conshdlrdata, SCIPconsGetName(sourcecons), &consdata, conshdlrdata->eventhdlrbound, 
+         conshdlrdata->eventhdlrrestart, sourcedata->binvar, sourcedata->slackvar, sourcedata->lincons, sourcedata->linconsActive,
+         conshdlrdata->sepaAlternativeLP, conshdlrdata->forcerestart) );
    assert( consdata != NULL );
 
    /* check if slack variable can be made implicit integer. We repeat the check from
@@ -5311,8 +5318,8 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    {
       /* create constraint data */
       consdata = NULL;
-      SCIP_CALL( consdataCreate(scip, conshdlr, name, &consdata, conshdlrdata->eventhdlrbound, 
-            binvar, slackvar, lincons, linconsactive, conshdlrdata->sepaAlternativeLP) );
+      SCIP_CALL( consdataCreate(scip, conshdlr, conshdlrdata, name, &consdata, conshdlrdata->eventhdlrbound, conshdlrdata->eventhdlrrestart,
+            binvar, slackvar, lincons, linconsactive, conshdlrdata->sepaAlternativeLP, conshdlrdata->forcerestart) );
       assert( consdata != NULL );
       
       /* create constraint */
@@ -5450,8 +5457,8 @@ SCIP_RETCODE SCIPcreateConsIndicatorLinCons(
    {
       /* create constraint data */
       consdata = NULL;
-      SCIP_CALL( consdataCreate(scip, conshdlr, name, &consdata, conshdlrdata->eventhdlrbound,
-            binvar, slackvar, lincons, linconsactive, conshdlrdata->sepaAlternativeLP) );
+      SCIP_CALL( consdataCreate(scip, conshdlr, conshdlrdata, name, &consdata, conshdlrdata->eventhdlrbound, conshdlrdata->eventhdlrrestart,
+            binvar, slackvar, lincons, linconsactive, conshdlrdata->sepaAlternativeLP, conshdlrdata->forcerestart) );
       assert( consdata != NULL );
       
       /* create constraint */
@@ -5658,7 +5665,7 @@ SCIP_RETCODE SCIPsetBinaryVarIndicator(
       /* catch global bound change events on binary variable */
       if ( conshdlrdata->forcerestart )
       {
-         SCIP_CALL( SCIPcatchVarEvent(scip, consdata->binvar, SCIP_EVENTTYPE_GBDCHANGED, conshdlrdata->eventhdlrrestart, (SCIP_EVENTDATA*) conshdlrdata, NULL) );
+         SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_GBDCHANGED, conshdlrdata->eventhdlrrestart, (SCIP_EVENTDATA*) conshdlrdata, NULL) );
       }
 
       /* if binary variable is fixed to be nonzero */
@@ -5724,8 +5731,11 @@ SCIP_RETCODE SCIPsetSlackVarIndicator(
       assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
       conshdlrdata = SCIPconshdlrGetData(conshdlr);
       assert( conshdlrdata != NULL );
-      
-      SCIP_CALL( SCIPdropVarEvent(scip, consdata->slackvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, -1) );
+
+      if ( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMING && SCIPgetStage(scip) <= SCIP_STAGE_SOLVED )
+      {
+         SCIP_CALL( SCIPdropVarEvent(scip, consdata->slackvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, -1) );
+      }
    }
 
    /* free old slack variable */
