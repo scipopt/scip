@@ -4683,8 +4683,7 @@ int SCIPsnprintf(
 SCIP_Bool SCIPstrToRealValue(
    const char*           str,                /**< string to search */
    SCIP_Real*            value,              /**< pointer to store the parsed value */
-   char**                endptr              /**< pointer to store the final string position if successfully parsed
-                                              *   otherwise NULL */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed */
    )
 {
    assert(str != NULL);
@@ -4696,7 +4695,7 @@ SCIP_Bool SCIPstrToRealValue(
    if( *endptr != str && *endptr != NULL )
       return TRUE;
  
-   *endptr = str;
+   *endptr = (char*)str;
    
    return FALSE;
 }
@@ -4708,41 +4707,44 @@ void SCIPstrCopySection(
    char                  endchar,            /**< character which defines the ending */
    char*                 token,              /**< string to store the copy */
    int                   size,               /**< size of the token char array */
-   char**                endptr              /**< pointer to store the final string position if successfully parsed
-                                              *   otherwise NULL */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed */
    )
 {
-   char* ptr;
    int len;
    int nchars;
   
+   assert(str != NULL);
+   assert(token != NULL);
    assert(size > 0);
-   
-   ptr = str;
-   len = strlen(ptr);
+   assert(endptr != NULL);
+ 
+   *endptr = (char*)str;
+  
+   len = strlen(str);
    nchars = 0;
+   
 
    /* find starting character */
-   while( *ptr != '\0' && *ptr != startchar )
-      ++ptr;
+   while( *str != '\0' && *str != startchar )
+      ++str;
    
    /* did not find start character */
-   if( *ptr == '\0' )
+   if( *str == '\0' )
    {
       *endptr = NULL;
       return;
    }
 
    /* skip start character */
-   ++ptr;
+   ++str;
 
    /* copy string */
-   while( *ptr != '\0' && *ptr != endchar && nchars < size-1 )
+   while( *str != '\0' && *str != endchar && nchars < size-1 )
    {
       assert(nchars < SCIP_MAXSTRLEN);
-      token[nchars] = *ptr;
+      token[nchars] = *str;
       nchars++;
-      ++ptr;
+      ++str;
    }
 
    /* add end to token */
@@ -4750,20 +4752,20 @@ void SCIPstrCopySection(
 
    /* if section was longer than size, we want to reach the end of the parsing section anyway */
    if( nchars == size )
-      while( *ptr != '\0' && *ptr != endchar )
-         ++ptr;
+      while( *str != '\0' && *str != endchar )
+         ++str;
 
    /* did not find end character */
-   if( *ptr == '\0' )
+   if( *str == '\0' )
    {
       *endptr = NULL;
       return;
    }
 
    /* skip end character */
-   ++ptr;
+   ++str;
 
-   *endptr = ptr;
+   *endptr = (char*) str;
 }
 
 /*

@@ -645,7 +645,6 @@ int primalSearchOrigSolPos(
 }
 
 /** returns whether the given primal solution is already existant in the solution storage */
->>>>>>> added solution candidate store
 static
 SCIP_Bool primalExistsSol(
    SCIP_PRIMAL*          primal,             /**< primal data */
