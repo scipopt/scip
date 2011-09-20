@@ -1570,7 +1570,7 @@ SCIP_VAR* SCIPprobFindVar(
    {
       SCIPerrorMessage("Cannot find variable if variable-names hashtable was disabled (due to parameter <misc/usevartable>)\n");
       SCIPABORT();/*lint --e{527}*/ /* only in debug mode */
-      return (SCIP_VAR*) NULL;
+      return NULL;
    }
 
    return (SCIP_VAR*)(SCIPhashtableRetrieve(prob->varnames, (char*)name));
@@ -1589,7 +1589,7 @@ SCIP_CONS* SCIPprobFindCons(
    {
       SCIPerrorMessage("Cannot find constraint if constraint-names hashtable was disabled (due to parameter <misc/useconstable>)\n");
       SCIPABORT();/*lint --e{527}*/ /* only in debug mode */
-      return (SCIP_CONS*) NULL;
+      return NULL;
    }
 
    return (SCIP_CONS*)(SCIPhashtableRetrieve(prob->consnames, (char*)name));

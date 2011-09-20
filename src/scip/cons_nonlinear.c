@@ -6185,7 +6185,6 @@ SCIP_RETCODE proposeFeasibleSolution(
  */
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
-#if 1
 static
 SCIP_DECL_CONSHDLRCOPY(conshdlrCopyNonlinear)
 {
@@ -6200,12 +6199,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define conshdlrCopyNonlinear NULL
-#endif
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
-#if 1
 static
 SCIP_DECL_CONSFREE(consFreeNonlinear)
 {
@@ -6239,13 +6234,8 @@ SCIP_DECL_CONSFREE(consFreeNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consFreeNonlinear NULL
-#endif
-
 
 /** initialization method of constraint handler (called after problem was transformed) */
-#if 1
 static
 SCIP_DECL_CONSINIT(consInitNonlinear)
 {
@@ -6275,13 +6265,8 @@ SCIP_DECL_CONSINIT(consInitNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consInitNonlinear NULL
-#endif
-
 
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
-#if 1
 static
 SCIP_DECL_CONSEXIT(consExitNonlinear)
 {
@@ -6298,13 +6283,9 @@ SCIP_DECL_CONSEXIT(consExitNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consExitNonlinear NULL
-#endif
 
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#if 1
 static
 SCIP_DECL_CONSINITPRE(consInitpreNonlinear)
 {
@@ -6329,13 +6310,9 @@ SCIP_DECL_CONSINITPRE(consInitpreNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consInitpreNonlinear NULL
-#endif
 
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#if 1
 static
 SCIP_DECL_CONSEXITPRE(consExitpreNonlinear)
 {
@@ -6445,13 +6422,8 @@ SCIP_DECL_CONSEXITPRE(consExitpreNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consExitpreNonlinear NULL
-#endif
-
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#if 1
 static
 SCIP_DECL_CONSINITSOL(consInitsolNonlinear)
 {
@@ -6510,13 +6482,8 @@ SCIP_DECL_CONSINITSOL(consInitsolNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consInitsolNonlinear NULL
-#endif
-
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
-#if 1
 static
 SCIP_DECL_CONSEXITSOL(consExitsolNonlinear)
 {
@@ -6556,13 +6523,9 @@ SCIP_DECL_CONSEXITSOL(consExitsolNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consExitsolNonlinear NULL
-#endif
 
 
 /** frees specific constraint data */
-#if 1
 static
 SCIP_DECL_CONSDELETE(consDeleteNonlinear)
 {
@@ -6584,13 +6547,8 @@ SCIP_DECL_CONSDELETE(consDeleteNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consDeleteNonlinear NULL
-#endif
-
 
 /** transforms constraint data into data belonging to the transformed problem */ 
-#if 1
 static
 SCIP_DECL_CONSTRANS(consTransNonlinear)
 {
@@ -6638,13 +6596,8 @@ SCIP_DECL_CONSTRANS(consTransNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consTransNonlinear NULL
-#endif
-
 
 /** LP initialization method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSINITLP(consInitlpNonlinear)
 {
@@ -6757,13 +6710,8 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consInitlpNonlinear NULL
-#endif
-
 
 /** separation method of constraint handler for LP solutions */
-#if 1
 static
 SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
 {
@@ -6788,13 +6736,8 @@ SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consSepalpNonlinear NULL
-#endif
-
 
 /** separation method of constraint handler for arbitrary primal solutions */
-#if 1
 static
 SCIP_DECL_CONSSEPASOL(consSepasolNonlinear)
 {
@@ -6820,10 +6763,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consSepasolNonlinear NULL
-#endif
-
 
 /** constraint enforcing method of constraint handler for LP solutions */
 static
@@ -7153,7 +7092,6 @@ SCIP_DECL_CONSCHECK(consCheckNonlinear)
 
 
 /** domain propagation method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSPROP(consPropNonlinear)
 {
@@ -7169,12 +7107,8 @@ SCIP_DECL_CONSPROP(consPropNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consPropNonlinear NULL
-#endif
 
 /** presolving method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSPRESOL(consPresolNonlinear)
 {
@@ -7347,25 +7281,9 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consPresolNonlinear NULL
-#endif
-
 
 /** propagation conflict resolving method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSRESPROP(consRespropNonlinear)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of nonlinear constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define consRespropNonlinear NULL
-#endif
-
 
 /** variable rounding lock method of constraint handler */
 static
@@ -7415,7 +7333,6 @@ SCIP_DECL_CONSLOCK(consLockNonlinear)
 }
 
 /** constraint activation notification method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSACTIVE(consActiveNonlinear)
 {  /*lint --e{715}*/
@@ -7434,7 +7351,7 @@ SCIP_DECL_CONSACTIVE(consActiveNonlinear)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   SCIPdebugMessage("activate %scons <%s>\n", SCIPconsIsTransformed(cons) ? "transformed " : "", SCIPconsGetName(cons));
+   SCIPdebugMessage("activate cons <%s>\n", SCIPconsGetName(cons));
 
    if( consdata->nexprtrees > 0 )
    {
@@ -7464,13 +7381,8 @@ SCIP_DECL_CONSACTIVE(consActiveNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consActiveNonlinear NULL
-#endif
-
 
 /** constraint deactivation notification method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSDEACTIVE(consDeactiveNonlinear)
 {  /*lint --e{715}*/
@@ -7490,7 +7402,7 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveNonlinear)
    assert(consdata != NULL);
    assert(consdata->exprgraphnode != NULL || consdata->nexprtrees == 0);
 
-   SCIPdebugMessage("deactivate %scons <%s>\n", SCIPconsIsTransformed(cons) ? "transformed " : "", SCIPconsGetName(cons));
+   SCIPdebugMessage("deactivate cons <%s>\n", SCIPconsGetName(cons));
 
    if( consdata->exprgraphnode != NULL )
    {
@@ -7511,13 +7423,8 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consDeactiveNonlinear NULL
-#endif
-
 
 /** constraint enabling notification method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSENABLE(consEnableNonlinear)
 {  /*lint --e{715}*/
@@ -7538,7 +7445,7 @@ SCIP_DECL_CONSENABLE(consEnableNonlinear)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   SCIPdebugMessage("enable %scons <%s>\n", SCIPconsIsTransformed(cons) ? "transformed " : "", SCIPconsGetName(cons));
+   SCIPdebugMessage("enable cons <%s>\n", SCIPconsGetName(cons));
 
    if( consdata->exprgraphnode != NULL )
    {
@@ -7557,13 +7464,8 @@ SCIP_DECL_CONSENABLE(consEnableNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consEnableNonlinear NULL
-#endif
-
 
 /** constraint disabling notification method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSDISABLE(consDisableNonlinear)
 {  /*lint --e{715}*/
@@ -7584,7 +7486,7 @@ SCIP_DECL_CONSDISABLE(consDisableNonlinear)
    assert(consdata != NULL);
    assert(consdata->lineventdata != NULL || consdata->nlinvars == 0);
 
-   SCIPdebugMessage("disable %scons <%s>\n", SCIPconsIsTransformed(cons) ? "transformed " : "", SCIPconsGetName(cons));
+   SCIPdebugMessage("disable cons <%s>\n", SCIPconsGetName(cons));
 
    /* disable node of expression in expression graph */
    if( consdata->exprgraphnode != NULL )
@@ -7599,13 +7501,8 @@ SCIP_DECL_CONSDISABLE(consDisableNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consDisableNonlinear NULL
-#endif
-
 
 /** constraint display method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSPRINT(consPrintNonlinear)
 {
@@ -7683,13 +7580,8 @@ SCIP_DECL_CONSPRINT(consPrintNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consPrintNonlinear NULL
-#endif
-
 
 /** constraint copying method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSCOPY(consCopyNonlinear)
 {
@@ -7784,13 +7676,8 @@ SCIP_DECL_CONSCOPY(consCopyNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consCopyNonlinear NULL
-#endif
-
 
 /** constraint parsing method of constraint handler */
-#if 0
 static
 SCIP_DECL_CONSPARSE(consParseNonlinear)
 {  /*lint --e{715}*/
@@ -7799,9 +7686,6 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consParseNonlinear NULL
-#endif
 
 /*
  * constraint specific interface methods

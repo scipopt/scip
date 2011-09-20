@@ -248,8 +248,7 @@ SCIP_Bool getNextLine(
       pipinput->haserror = TRUE;
       return FALSE;
    }
-   pipinput->linebuf[PIP_MAX_LINELEN-1] = '\0';
-   pipinput->linebuf[PIP_MAX_LINELEN-2] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
+   pipinput->linebuf[PIP_MAX_LINELEN-1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
 
    /* skip characters after comment symbol */
    for( i = 0; commentchars[i] != '\0'; ++i )

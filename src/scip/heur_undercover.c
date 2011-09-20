@@ -986,7 +986,7 @@ SCIP_RETCODE createNogood(
    isbinary = TRUE;
    for( i = bdlen-1; i >= 0 && isbinary; i-- )
    {
-      isbinary = isbinary && SCIPvarIsBinary(bdvars[i]);
+      isbinary = SCIPvarIsBinary(bdvars[i]);
    }
 
    /* if all variables in the cover are binary, then we create a logicor constraint */

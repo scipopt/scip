@@ -455,9 +455,7 @@ SCIP_Bool getNextLine(
       fzninput->endline = TRUE;
    }
    
-   fzninput->linebuf[FZN_BUFFERLEN-1] = '\0';
-   fzninput->linebuf[FZN_BUFFERLEN-2] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
-
+   fzninput->linebuf[FZN_BUFFERLEN-1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
    fzninput->comment = FALSE;
 
    /* skip characters after comment symbol */
@@ -3287,6 +3285,7 @@ CREATE_CONSTRAINT(createCumulativeOpCons)
    nvars = 0;
    ndurations = 0;
    ndemads = 0;
+   demands = NULL;
 
    SCIPdebugMessage("parse cumulative expression\n");
 
@@ -3359,7 +3358,7 @@ CREATE_CONSTRAINT(createCumulativeOpCons)
 
  TERMINATE:
    /* free buffers */
-   SCIPfreeBufferArray(scip, &demands);
+   SCIPfreeBufferArrayNull(scip, &demands);
    SCIPfreeBufferArray(scip, &durations);
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &vars);

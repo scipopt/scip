@@ -6746,7 +6746,6 @@ static
 SCIP_DECL_SEPAFREE(sepaFreeZerohalf)
 {  
    SCIP_SEPADATA* sepadata;
-   int i;
 
    assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
 
@@ -6756,24 +6755,36 @@ SCIP_DECL_SEPAFREE(sepaFreeZerohalf)
   
    if( sepadata->pptimers != NULL )
    {
+#ifdef ZEROHALF__PRINT_STATISTICS   
+      int i;
+
       for( i = 0 ; i < sepadata->nppmethods + 1 ; ++i)
       {
          ZEROHALFfreeTimer((sepadata->pptimers[i]));
       }
+#endif
       SCIPfreeMemoryArray(scip, &(sepadata->pptimers));
    }
+
    if( sepadata->sepatimers != NULL )
    {
+#ifdef ZEROHALF__PRINT_STATISTICS   
+      int i;
+
       for( i = 0 ; i < sepadata->nsepamethods + 1 ; ++i)
       {
          ZEROHALFfreeTimer((sepadata->sepatimers[i]));
       }
+#endif
       SCIPfreeMemoryArray(scip, &(sepadata->sepatimers));
    }
+
+#ifdef ZEROHALF__PRINT_STATISTICS   
    if( sepadata->dtimer != NULL )
    {
       ZEROHALFfreeTimer((sepadata->dtimer));
    }  
+#endif
 
    if( sepadata->nsepacutsalgo != NULL )
    {

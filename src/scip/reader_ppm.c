@@ -272,7 +272,7 @@ void printRow(
    int indexvar = 0;
 
    char buffer[PPM_MAX_LINELEN];
-   char max = (char)255;
+   const unsigned char max = (unsigned char)255;
    char white[4];
 
    assert( scip != NULL );
@@ -325,7 +325,7 @@ void printRow(
          if(red == 35 || red == 0) red++;
          if(green==35 || green == 0) green++;
          if(blue==35 || blue == 0) blue++;
-         (void) SCIPsnprintf(buffer, PPM_MAX_LINELEN, "%c%c%c", (char)red, (char)green, (char)blue);
+         (void) SCIPsnprintf(buffer, PPM_MAX_LINELEN, "%c%c%c", (unsigned char)red, (unsigned char)green, (unsigned char)blue);
       }
       else
          (void) SCIPsnprintf(buffer, PPM_MAX_LINELEN, " %d %d %d ", red, green, blue);

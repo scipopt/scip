@@ -806,11 +806,11 @@ SCIP_RETCODE nodeReleaseParent(
             || SCIPnodeGetType(node) == SCIP_NODETYPE_LEAF);
          if( SCIPnodeGetType(node) == SCIP_NODETYPE_CHILD )
             treeRemoveChild(tree, node);
-         freeParent = FALSE; /* don't kill the focus node at this point */
+         /* don't kill the focus node at this point => freeParent = FALSE */
          break;
       case SCIP_NODETYPE_PROBINGNODE:
          assert(SCIPtreeProbing(tree));
-         freeParent = FALSE; /* probing nodes have to be freed individually */
+         /* probing nodes have to be freed individually => freeParent = FALSE */
          break;
       case SCIP_NODETYPE_SIBLING:
          SCIPerrorMessage("sibling cannot be a parent node\n");
@@ -854,11 +854,10 @@ SCIP_RETCODE nodeReleaseParent(
       case SCIP_NODETYPE_REFOCUSNODE:
          /* the only possible child a refocused node can have in its refocus state is the probing root node;
           * we don't want to free the refocused node, because we first have to convert it back to its original
-          * type (where it possibly has children)
+          * type (where it possibly has children) => freeParent = FALSE
           */
          assert(SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
          assert(!SCIPtreeProbing(tree));
-         freeParent = FALSE;
          break;
       default:
          SCIPerrorMessage("unknown node type %d\n", SCIPnodeGetType(parent));

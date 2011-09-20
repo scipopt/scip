@@ -3846,15 +3846,12 @@ int SCIPstairmapGetLatestFeasibleStart(
          (*infeasible) = FALSE;
          return starttime;
       }
-    
+      assert(pos >= 0);
+
       /* the core did not fit into the stair map since at time point "pos" not enough capacity is available; 
        * therefore we can proceed with the next time point  */
       assert(stairmap->freecapacities[pos] < height);
-      
-      /* check if we exceed the time point array */
-      if( pos < 0  )
-         break;
-      
+            
       starttime = stairmap->timepoints[pos] - duration;
    }
 
