@@ -5804,16 +5804,17 @@ SCIP_RETCODE dualPresolving(
       {
          /* copy optimal as dual reduction into the original SCIP instance */
          SCIP_SOL* sol;
-         SCIP_VAR* subvar;
-         SCIP_VAR* var;
-         SCIP_Real fixval;
-         SCIP_Bool infeasible;
-         SCIP_Bool fixed;
 
          sol = SCIPgetBestSol(subscip);
 
          for( v = 0; v < nvars; ++v )
          {
+            SCIP_VAR* subvar;
+            SCIP_VAR* var;
+            SCIP_Real fixval;
+            SCIP_Bool infeasible;
+            SCIP_Bool fixed;
+
             var = vars[v];
 
             subvar = (SCIP_VAR*)SCIPhashmapGetImage(varmapfw, var);

@@ -1844,13 +1844,6 @@ SCIP_RETCODE addAltLPRow(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
-   /* get row data */
-   rowcols = SCIProwGetCols(row);
-   rowvals = SCIProwGetVals(row);
-   nrowcols = SCIProwGetNNonz(row);
-   rowlhs = SCIProwGetLhs(row) - SCIProwGetConstant(row);
-   rowrhs = SCIProwGetRhs(row) - SCIProwGetConstant(row);
-
    if ( conshdlrdata->altLP == NULL )
    {
       SCIP_CALL( initAlternativeLP(scip, conshdlr) );
@@ -1867,6 +1860,13 @@ SCIP_RETCODE addAltLPRow(
       assert( nRows == conshdlrdata->nRows );
    }
 #endif
+
+   /* get row data */
+   rowcols = SCIProwGetCols(row);
+   rowvals = SCIProwGetVals(row);
+   nrowcols = SCIProwGetNNonz(row);
+   rowlhs = SCIProwGetLhs(row) - SCIProwGetConstant(row);
+   rowrhs = SCIProwGetRhs(row) - SCIProwGetConstant(row);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &matbeg, nrowcols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matind, 4*nrowcols) );
