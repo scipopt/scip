@@ -602,6 +602,7 @@ SCIP_RETCODE collectSolution(
       }
       else
       {
+         assert( conshdlrdata->ssolutions < INT_MAX / 2);
          conshdlrdata->ssolutions *= 2;
          SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->solutions,  conshdlrdata->ssolutions) );
       }
