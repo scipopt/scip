@@ -851,7 +851,7 @@ void conshdlrDelEnfocons(
        */
       if( delpos >= conshdlr->lastnusefulenfoconss )
          conshdlr->lastnusefulenfoconss = cons->enfoconsspos;
-      conshdlr->lastnusefulenfoconss = MAX(conshdlr->lastnusefulenfoconss, 0);
+
       assert(conshdlr->nusefulenfoconss >= 0);
       assert(conshdlr->lastnusefulenfoconss >= 0);
    }

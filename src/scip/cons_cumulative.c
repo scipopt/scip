@@ -871,8 +871,6 @@ SCIP_RETCODE tltreeCreateThetaLeaf(
    (*node)->var = var;
    (*node)->energy = energy;
    (*node)->envelop = envelop;
-   (*node)->energy = energy;
-   (*node)->envelop = envelop;
    (*node)->energyL = INT_MIN;
    (*node)->envelopL = INT_MIN;
    (*node)->inTheta = TRUE;

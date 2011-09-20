@@ -455,9 +455,7 @@ SCIP_Bool getNextLine(
       fzninput->endline = TRUE;
    }
    
-   fzninput->linebuf[FZN_BUFFERLEN-1] = '\0';
-   fzninput->linebuf[FZN_BUFFERLEN-2] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
-
+   fzninput->linebuf[FZN_BUFFERLEN-1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
    fzninput->comment = FALSE;
 
    /* skip characters after comment symbol */

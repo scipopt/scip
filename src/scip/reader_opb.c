@@ -349,8 +349,7 @@ SCIP_Bool getNextLine(
       opbinput->endline = TRUE;
    }
    
-   opbinput->linebuf[OPB_MAX_LINELEN-1] = '\0';
-   opbinput->linebuf[OPB_MAX_LINELEN-2] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
+   opbinput->linebuf[OPB_MAX_LINELEN-1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
 
    opbinput->comment = FALSE;
 
