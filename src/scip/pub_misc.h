@@ -3441,27 +3441,26 @@ int SCIPsnprintf(
    ...                      /**< further parameters           */
    );
 
-/** extract the next token as value */
-extern
-SCIP_Bool SCIPstrGetValue(
+/** extract the next token as a value if it is one; in case a value is parsed the endptr is set to NULL */
+extern 
+SCIP_Bool SCIPstrToRealValue(
    const char*           str,                /**< string to search */
-   int                   pos,                /**< position in string to start */
    SCIP_Real*            value,              /**< pointer to store the parsed value */
-   int*                  endpos              /**< pointer to store the final position */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed
+                                              *   otherwise NULL */
    );
 
 /** copies the string between a start and end character */
 extern
 void SCIPstrCopySection(
    const char*           str,                /**< string to search */
-   int                   pos,                /**< position in string to start */
    char                  startchar,          /**< character which defines the beginning */
    char                  endchar,            /**< character which defines the ending */
    char*                 token,              /**< string to store the copy */
    int                   size,               /**< size of the token char array */
-   int*                  endpos              /**< pointer to store the final position */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed
+                                              *   otherwise NULL */
    );
-
 
 /*
  * File methods

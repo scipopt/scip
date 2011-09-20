@@ -2460,9 +2460,8 @@ extern
 SCIP_RETCODE SCIPparseVarName(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           str,                /**< string to parse */
-   int                   pos,                /**< position to start */
    SCIP_VAR**            var,                /**< pointer to store the problem variable, or NULL if it does not exit */
-   int*                  endpos              /**< position where the parsing stopped */
+   char**                endptr              /**< pointer to store the final string position if successfully */
    );
 
 /** parse the given string as variable list (here ',' is the delimiter)) (\<x1\>, \<x2\>, ..., \<xn\>) (see
@@ -2479,12 +2478,11 @@ extern
 SCIP_RETCODE SCIPparseVarsList( 
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           str,                /**< string to parse */
-   int                   pos,                /**< position to start */
    SCIP_VAR**            vars,               /**< array to store the parsed variable */
    int*                  nvars,              /**< pointer to store number of parsed variables */
    int                   varssize,           /**< size of the variable array */
    int*                  requiredsize,       /**< pointer to store the required array size for the active variables */
-   int*                  endpos,             /**< position where the parsing stopped */
+   char**                endptr,             /**< pointer to store the final string position if successfully */
    char                  delimiter,          /**< character which is used for delimitation */
    SCIP_Bool*            success             /**< pointer to store the whether the parsing was successfully or not */
    );
@@ -2502,14 +2500,13 @@ SCIP_RETCODE SCIPparseVarsList(
 SCIP_RETCODE SCIPparseVarsLinearsum(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           str,                /**< string to parse */
-   int                   pos,                /**< position to start parsing the string */
    char                  endchar,            /**< character where to stop parsing, or 0 */
    SCIP_VAR**            vars,               /**< array to store the parsed variables */
    SCIP_Real*            vals,               /**< array to store the parsed coefficients */
    int*                  nvars,              /**< pointer to store number of parsed variables */
    int                   varssize,           /**< size of the variable array */
    int*                  requiredsize,       /**< pointer to store the required array size for the active variables */
-   int*                  endpos,             /**< pointer to store where the parsing ended */
+   char**                endptr,             /**< pointer to store the final string position if successfully */
    SCIP_Bool*            success             /**< pointer to store the whether the parsing was successfully or not */
    );
 
@@ -2530,14 +2527,13 @@ extern
 SCIP_RETCODE SCIPparseVarsPolynomial(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           str,                /**< string to parse */
-   int                   pos,                /**< position to start parsing the string */
    char                  endchar,            /**< character where to stop parsing */
    SCIP_VAR****          monomialvars,       /**< pointer to store arrays with variables for each monomial */
    SCIP_Real***          monomialexps,       /**< pointer to store arrays with variable exponents */
    SCIP_Real**           monomialcoefs,      /**< pointer to store array with monomial coefficients */
    int**                 monomialnvars,      /**< pointer to store array with number of variables for each monomial */
    int*                  nmonomials,         /**< pointer to store number of parsed monomials */
-   int*                  endpos,             /**< pointer to store where the parsing ended */
+   char**                endptr,             /**< pointer to store the final string position if successfully */
    SCIP_Bool*            success             /**< pointer to store the whether the parsing was successfully or not */
    );
 

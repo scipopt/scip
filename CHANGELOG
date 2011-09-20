@@ -5,13 +5,12 @@ interface:
 - new method SCIPstartSolvingTime() and SCIPstopSolvingTime() which can be used to start or stop the solving time clock
 - new methods SCIPcheckCumulativeCondition(), SCIPpropCumulativeCondition, and SCIPrespropCumulativeCondition in cons_cumulative.h;
   these methods can be used to check, propagate, or resolve the propagation of a cumulative condition
-- new methods SCIPstrGetValue() and SCIPstrCopySection() in pub_misc.h; these methods can be used to 
+- new methods SCIPstrToRealValue() and SCIPstrCopySection() in pub_misc.h; these methods can be used to 
   convert a string into a SCIP_Real value and to copy a substring.
 - the methods SCIPwriteVarName() SCIPwriteVarsList(), and SCIPwriteVarsLinearsum() have new parameter named "type" 
   of type SCIP_Bool; these parameter determines if the variable type should be written or not
-- the methods SCIPparseVarName() and SCIPparseVarsList() got two new parameters names "pos" and "endpos"; the parameter pos 
-  determines the current position in the the string which gets parsed and the pointer to an int (endpos) returns
-  the position where the current parsing stopped
+- the methods SCIPparseVarName() and SCIPparseVarsList() got one new parameters names "endptr"; the parameter  
+  should be filled with the final parsing position where the parsing stopped
 - new functions SCIPround() and SCIPfeasRound() to round to nearest integer
 - new functions SCIPcomputeVarCurrent{L,U}b{Local,Global}() to compute local or global lower or upper bounds of a multiaggregated variable
   from the bounds of the aggregation variables
