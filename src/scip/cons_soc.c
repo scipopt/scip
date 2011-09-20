@@ -3854,6 +3854,7 @@ SCIP_DECL_CONSPARSE(consParseSOC)
    SCIP_Real constant;
    SCIP_Real coef;
    SCIP_Real offset;
+   char* endptr;
    int parselen;
    int namelen;
 
@@ -3896,7 +3897,7 @@ SCIP_DECL_CONSPARSE(consParseSOC)
       varname[0] = '<';
       varname[namelen+1] = '>';
       varname[namelen+2] = '\0';
-      SCIP_CALL( SCIPparseVarName(scip, varname, 0, &var, &parselen) );
+      SCIP_CALL( SCIPparseVarName(scip, varname, &var, &endptr) );
       assert(parselen == namelen+2);
 
       if( var == NULL )
@@ -3930,8 +3931,7 @@ SCIP_DECL_CONSPARSE(consParseSOC)
          varname[0] = '<';
          varname[namelen+1] = '>';
          varname[namelen+2] = '\0';
-         SCIP_CALL( SCIPparseVarName(scip, varname, 0, &rhsvar, &parselen) );
-         assert(parselen == namelen+2);
+         SCIP_CALL( SCIPparseVarName(scip, varname, &rhsvar, &endptr) );
 
          if( rhsvar == NULL )
          {

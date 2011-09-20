@@ -251,7 +251,10 @@ void solStamp(
       sol->time = SCIPclockGetLastTime(stat->solvingtime);
    sol->nodenum = stat->nnodes;
    sol->runnum = stat->nruns;
-   sol->depth = SCIPtreeGetCurrentDepth(tree);
+   if( tree == NULL )
+      sol->depth = -1;
+   else
+      sol->depth = SCIPtreeGetCurrentDepth(tree);
 }
 
 /** creates primal CIP solution, initialized to zero */
@@ -309,7 +312,7 @@ SCIP_RETCODE SCIPsolCreateOriginal(
    (*sol)->primalindex = -1;
    (*sol)->index = stat->solindex;
    stat->solindex++;
-   solStamp(*sol, stat, tree,TRUE);
+   solStamp(*sol, stat, tree, TRUE);
 
    SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
 
@@ -483,7 +486,7 @@ SCIP_RETCODE SCIPsolCreateUnknown(
    (*sol)->primalindex = -1;
    (*sol)->index = stat->solindex;
    stat->solindex++;
-   solStamp(*sol, stat, tree,TRUE);
+   solStamp(*sol, stat, tree, TRUE);
 
    SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
 
@@ -1368,7 +1371,8 @@ SCIP_Bool SCIPsolsAreEqual(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            origprob,           /**< original problem */
-   SCIP_PROB*            transprob           /**< transformed problem after presolve */
+   SCIP_PROB*            transprob           /**< transformed problem after presolve, or NULL if both solution are
+                                              *   defines in the original problem space */
    )
 {
    SCIP_PROB* prob;
@@ -1378,7 +1382,8 @@ SCIP_Bool SCIPsolsAreEqual(
    
    assert(sol1 != NULL);
    assert(sol2 != NULL);
-   assert(transprob != NULL);  
+   assert((sol1->solorigin == SCIP_SOLORIGIN_ORIGINAL && sol2->solorigin == SCIP_SOLORIGIN_ORIGINAL) 
+      || transprob != NULL);  
 
    obj1 = sol1->obj;
    obj2 = sol2->obj;
@@ -1536,6 +1541,7 @@ SCIP_RETCODE SCIPsolPrint(
  */
 
 #undef SCIPsolGetOrigin
+#undef SCIPsolGetOrigObj
 #undef SCIPsolGetTime
 #undef SCIPsolGetNodenum
 #undef SCIPsolGetRunnum
@@ -1554,6 +1560,17 @@ SCIP_SOLORIGIN SCIPsolGetOrigin(
    assert(sol != NULL);
 
    return sol->solorigin;
+}
+
+/** gets objective value of primal CIP solution which lives in the original problem space */
+SCIP_Real SCIPsolGetOrigObj(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   assert(sol != NULL);
+   assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL);
+
+   return sol->obj;
 }
 
 /** gets clock time, when this solution was found */

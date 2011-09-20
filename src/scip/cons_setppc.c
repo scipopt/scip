@@ -461,32 +461,26 @@ SCIP_RETCODE consdataPrint(
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
-   int v;
-
    assert(consdata != NULL);
 
    /* print coefficients */
    if( consdata->nvars == 0 )
       SCIPinfoMessage(scip, file, "0 ");
-   for( v = 0; v < consdata->nvars; ++v )
-   {
-      assert(consdata->vars[v] != NULL);
-      SCIPinfoMessage(scip, file, "+");
-      SCIP_CALL( SCIPwriteVarName(scip, file, consdata->vars[v], FALSE) );
-      SCIPinfoMessage(scip, file, " ");
-   }
-
+ 
+   /* write linear sum */
+   SCIP_CALL( SCIPwriteVarsLinearsum(scip, file, consdata->vars, NULL, consdata->nvars, FALSE) );
+   
    /* print right hand side */
    switch( consdata->setppctype )
    {
    case SCIP_SETPPCTYPE_PARTITIONING:
-      SCIPinfoMessage(scip, file, "== 1");
+      SCIPinfoMessage(scip, file, " == 1");
       break;
    case SCIP_SETPPCTYPE_PACKING:
-      SCIPinfoMessage(scip, file, "<= 1");
+      SCIPinfoMessage(scip, file, " <= 1");
       break;
    case SCIP_SETPPCTYPE_COVERING:
-      SCIPinfoMessage(scip, file, ">= 1");
+      SCIPinfoMessage(scip, file, " >= 1");
       break;
    default:
       SCIPerrorMessage("unknown setppc type\n");
@@ -4155,14 +4149,9 @@ SCIP_DECL_CONSCOPY(consCopySetppc)
 static
 SCIP_DECL_CONSPARSE(consParseSetppc)
 {  /*lint --e{715}*/
-   SCIP_VAR* var;
-   char varname[SCIP_MAXSTRLEN+2];
    SCIP_VAR** vars;
    int nvars;
-   int varssize;
-   int parselen;
-   int namelen;
-
+   
    assert(scip != NULL);
    assert(success != NULL);
    assert(str != NULL);
@@ -4172,9 +4161,8 @@ SCIP_DECL_CONSPARSE(consParseSetppc)
    *success = TRUE;
 
    nvars = 0;
-   varssize = 5;
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
-
+   vars = NULL;
+   
    /* check if lhs is just 0 */
    if( str[0] == '0' )
    {
@@ -4183,36 +4171,37 @@ SCIP_DECL_CONSPARSE(consParseSetppc)
    }
    else
    {
-      while( sscanf(str, "+<%[^>]> %n", varname+1, &parselen) >= 1 )
+      SCIP_Real* coefs;
+      char* endptr;
+      int coefssize;
+      int requsize;
+      
+      /* initialize buffers for storing the coefficients */
+      coefssize = 100;
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars,  coefssize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &coefs, coefssize) );
+
+      /* parse linear sum to get variables and coefficients */
+      SCIP_CALL( SCIPparseVarsLinearsum(scip, str, 0, vars, coefs, &nvars, coefssize, &requsize, &endptr, success) );
+
+      if( *success && requsize > coefssize )
       {
-         str += parselen;
+         /* realloc buffers and try again */
+         coefssize = requsize;
+         SCIP_CALL( SCIPreallocBufferArray(scip, &vars,  coefssize) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, coefssize) );
 
-         /* add '<' and '>' around variable name, so we can parse it via SCIPparseVarName */
-         namelen = (int) strlen(varname+1);
-         assert(namelen > 0);
-
-         varname[0] = '<';
-         varname[namelen+1] = '>';
-         varname[namelen+2] = '\0';
-         SCIP_CALL( SCIPparseVarName(scip, varname, 0, &var, &parselen) );
-         assert(parselen == namelen+2);
-
-         if( var == NULL )
-         {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable %s\n", varname);
-            *success = FALSE;
-            break;
-         }
-
-         if( varssize <= nvars )
-         {
-            varssize = SCIPcalcMemGrowSize(scip, varssize+1);
-            SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
-         }
-
-         vars[nvars] = var;
-         ++nvars;
+         SCIP_CALL( SCIPparseVarsLinearsum(scip, str, 0, vars, coefs, &nvars, coefssize, &requsize, &endptr, success) );
+         assert(!*success || requsize <= coefssize); /* if successful, then should have had enough space now */
       }
+
+      if( !*success )
+      {
+         SCIPerrorMessage("no luck in parsing linear sum '%s'\n", str);
+      }
+  
+      /* free coefficient array */
+      SCIPfreeBufferArray(scip, &coefs);
    }
 
    if( *success )
@@ -4238,7 +4227,8 @@ SCIP_DECL_CONSPARSE(consParseSetppc)
       }
    }
 
-   SCIPfreeBufferArray(scip, &vars);
+   /* free variable array */
+   SCIPfreeBufferArrayNull(scip, &vars);
 
    return SCIP_OKAY;
 }

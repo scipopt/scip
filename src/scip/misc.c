@@ -4676,153 +4676,91 @@ int SCIPsnprintf(
    return n;
 }
 
-enum ExpType
-{
-   EXP_NONE, EXP_UNSIGNED, EXP_SIGNED
-};
-typedef enum ExpType EXPTYPE;
-
-/** returns whether the current character is member of a value string */
-static
-SCIP_Bool isValueChar(
-   char                  c,                  /**< input character */
-   char                  nextc,              /**< next input character */
-   SCIP_Bool             firstchar,          /**< is the given character the first char of the token? */
-   SCIP_Bool*            hasdot,             /**< pointer to update the dot flag */
-   EXPTYPE*              exptype             /**< pointer to update the exponent type */
-   )
-{
-   assert(hasdot != NULL);
-   assert(exptype != NULL);
-
-   if( isdigit((unsigned char)c) )
-      return TRUE;
-   else if( (*exptype == EXP_NONE) && !(*hasdot) && (c == '.') && isdigit((unsigned char)nextc) )
-   {
-      *hasdot = TRUE;
-      return TRUE;
-   }
-   else if( !firstchar && (*exptype == EXP_NONE) && (c == 'e' || c == 'E') )
-   {
-      if( nextc == '+' || nextc == '-' )
-      {
-         *exptype = EXP_SIGNED;
-         return TRUE;
-      }
-      else if( isdigit((unsigned char)nextc) )
-      {
-         *exptype = EXP_UNSIGNED;
-         return TRUE;
-      }
-   }
-   else if( (*exptype == EXP_SIGNED) && (c == '+' || c == '-') )
-   {
-      *exptype = EXP_UNSIGNED;
-      return TRUE;
-   }
-
-   return FALSE;
-}
-
-/** extract the next token as a value if it is one; in case a value is parsed the endpos is set behind the parsed
- *  value 
- */
-SCIP_Bool SCIPstrGetValue(
+/** extract the next token as a value if it is one; in case no value is parsed the endptr is set to str */
+SCIP_Bool SCIPstrToRealValue(
    const char*           str,                /**< string to search */
-   int                   pos,                /**< position in string to start */
    SCIP_Real*            value,              /**< pointer to store the parsed value */
-   int*                  endpos              /**< pointer to store the final position */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed
+                                              *   otherwise NULL */
    )
 {
-   char token[SCIP_MAXSTRLEN];
-   SCIP_Bool hasdot;
-   EXPTYPE exptype;
-
-   exptype = EXP_NONE;
-   hasdot = FALSE;
-   *endpos = pos;
-
-   /* truncate white space in front */
-   while( isspace((unsigned char)str[pos]) )
-      pos++;
-
-   if( isValueChar(str[pos], str[pos+1], TRUE, &hasdot, &exptype) )
-   {
-      double val;
-      char* endptr;
-      int tokenlen;
-
-      tokenlen = 0;
-
-      do
-      {
-         /* in case the next token is longer than SCIP_MAXSTRLEN we stop parsing and retrun */
-         if( tokenlen >= SCIP_MAXSTRLEN )
-            return FALSE;
-         
-         token[tokenlen++] = str[pos++];
-      }
-      while( isValueChar(str[pos], str[pos+1], FALSE, &hasdot, &exptype) );
-
-      token[tokenlen] = '\0';
-
-      val = strtod(token, &endptr);
-      
-      if( endptr != token && *endptr == '\0' )
-      {
-         *value = val;
-         *endpos = pos;
-         return TRUE;
-      }
-   }
-
+   assert(str != NULL);
+   assert(value != NULL);
+   assert(endptr != NULL);
+   
+   *value = strtod(str, endptr);
+   
+   if( *endptr != str && *endptr != NULL )
+      return TRUE;
+ 
+   *endptr = str;
+   
    return FALSE;
 }
 
 /** copies the string between a start and end character */
 void SCIPstrCopySection(
    const char*           str,                /**< string to search */
-   int                   pos,                /**< position in string to start */
    char                  startchar,          /**< character which defines the beginning */
    char                  endchar,            /**< character which defines the ending */
    char*                 token,              /**< string to store the copy */
    int                   size,               /**< size of the token char array */
-   int*                  endpos              /**< pointer to store the final position */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed
+                                              *   otherwise NULL */
    )
 {
+   char* ptr;
    int len;
    int nchars;
   
    assert(size > 0);
    
-   len = strlen(str);
+   ptr = str;
+   len = strlen(ptr);
    nchars = 0;
 
    /* find starting character */
-   while( pos < len && str[pos] != startchar )
-      pos++;
+   while( *ptr != '\0' && *ptr != startchar )
+      ++ptr;
    
+   /* did not find start character */
+   if( *ptr == '\0' )
+   {
+      *endptr = NULL;
+      return;
+   }
+
    /* skip start character */
-   pos++;
+   ++ptr;
 
    /* copy string */
-   while( pos < len && nchars < size-1 && str[pos] != endchar )
+   while( *ptr != '\0' && *ptr != endchar && nchars < size-1 )
    {
       assert(nchars < SCIP_MAXSTRLEN);
-      token[nchars] = str[pos];
+      token[nchars] = *ptr;
       nchars++;
-      pos++;
+      ++ptr;
    }
+
+   /* add end to token */
    token[nchars] = '\0';
-   
-   /* find the position after the end character */
-   while( pos < len && str[pos] != endchar )
-      pos++;
+
+   /* if section was longer than size, we want to reach the end of the parsing section anyway */
+   if( nchars == size )
+      while( *ptr != '\0' && *ptr != endchar )
+         ++ptr;
+
+   /* did not find end character */
+   if( *ptr == '\0' )
+   {
+      *endptr = NULL;
+      return;
+   }
 
    /* skip end character */
-   pos++;
+   ++ptr;
 
-   *endpos = pos;
+   *endptr = ptr;
 }
 
 /*

@@ -488,10 +488,9 @@ char SCIPheurGetDispchar(
    SCIP_HEUR*            heur                /**< primal heuristic */
    )
 {
-   if( heur == NULL )
-      return '*';
-   else
-      return heur->dispchar;
+   assert(heur != NULL);
+
+   return heur->dispchar;
 }
 
 /** returns the timing mask of the heuristic */

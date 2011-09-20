@@ -74,9 +74,9 @@ SCIP_RETCODE readSol(
       return SCIP_NOFILE;
    }
 
-   /* create primal solution */
+   /* create zero solution */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
-
+   
    /* read the file */
    error = FALSE;
    unknownvariablemessage = FALSE;
@@ -155,11 +155,22 @@ SCIP_RETCODE readSol(
    if( !error )
    {
       /* add and free the solution */
-      SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, TRUE, &stored) );
+      if( SCIPisTransformed(scip) )
+      {
+         SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, TRUE, &stored) );
 
-      /* display result */
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "primal solution from solution file <%s> was %s\n",
-         fname, stored ? "accepted" : "rejected - solution is infeasible or objective too poor");
+         /* display result */
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "primal solution from solution file <%s> was %s\n",
+            fname, stored ? "accepted" : "rejected - solution is infeasible or objective too poor");
+      }
+      else
+      {
+         SCIP_CALL( SCIPaddSolFree(scip, &sol, &stored) );
+
+         /* display result */
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "primal solution from solution file <%s> was %s\n",
+            fname, stored ? "accepted as candidate" : "rejected - solution objective too poor");
+      }
 
       return SCIP_OKAY;
    }
@@ -198,11 +209,12 @@ SCIP_RETCODE readXMLSol(
       SCIPerrorMessage("Some error occured during parsing the XML solution file.\n");
       return SCIP_READERROR;
    }
-
-   /* create primal solution */
+   
+   /* create zero solution */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+   
    error = FALSE;
-
+   
    /* find variable sections */
    tag = "variables";
    varsnode = xml_find_node_maxdepth(start, tag, 0, 2);
@@ -284,11 +296,22 @@ SCIP_RETCODE readXMLSol(
       SCIP_Bool stored;
 
       /* add and free the solution */
-      SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, TRUE, &stored) );
+      if( SCIPisTransformed(scip) )
+      {
+         SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, TRUE, &stored) );
 
-      /* display result */
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "primal solution from solution file <%s> was %s\n",
-         filename, stored ? "accepted" : "rejected - solution is infeasible or objective too poor");
+         /* display result */
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "primal solution from solution file <%s> was %s\n",
+            filename, stored ? "accepted" : "rejected - solution is infeasible or objective too poor");
+      }
+      else
+      {
+         SCIP_CALL( SCIPaddSolFree(scip, &sol, &stored) );
+
+         /* display result */
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "primal solution from solution file <%s> was %s\n",
+            filename, stored ? "accepted as candidate" : "rejected - solution objective too poor");
+      }
    }
    else
    {
@@ -365,7 +388,7 @@ SCIP_DECL_READERREAD(readerReadSol)
    }
 
    /* transform the problem such that adding primal solutions is possible */
-   SCIP_CALL( SCIPtransformProb(scip) );
+   //   SCIP_CALL( SCIPtransformProb(scip) );
 
    /* open input file in order to determine type */
    file = SCIPfopen(filename, "r");

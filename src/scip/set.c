@@ -138,6 +138,7 @@
 #define SCIP_DEFAULT_LIMIT_BESTSOL           -1 /**< solving stops, if given number of solution improvements were found
                                                  *   (-1: no limit) */
 #define SCIP_DEFAULT_LIMIT_MAXSOL           100 /**< maximal number of solutions to store in the solution storage */
+#define SCIP_DEFAULT_LIMIT_MAXORIGSOL        10 /**< maximal number of solutions candidates to store in the solution storage of the original problem */
 #define SCIP_DEFAULT_LIMIT_RESTARTS          -1 /**< solving stops, if the given number of restarts was triggered (-1: no limit) */
 
 
@@ -957,6 +958,11 @@ SCIP_RETCODE SCIPsetCreate(
          "limits/maxsol",
          "maximal number of solutions to store in the solution storage",
          &(*set)->limit_maxsol, FALSE, SCIP_DEFAULT_LIMIT_MAXSOL, 1, INT_MAX,
+         SCIPparamChgdLimit, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
+         "limits/maxorigsol",
+         "maximal number of solutions candidates to store in the solution storage of the original problem",
+         &(*set)->limit_maxorigsol, FALSE, SCIP_DEFAULT_LIMIT_MAXORIGSOL, 0, INT_MAX,
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "limits/restarts",
@@ -1963,6 +1969,108 @@ SCIP_RETCODE SCIPsetResetParams(
    return SCIP_OKAY;
 }
 
+/** set the time limit to given value */
+void SCIPsetSetTimeLimit(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             limit               /**< time limit to set */
+   )
+{
+   assert(SCIPsetIsGE(set, limit, 0.0));
+   set->limit_time = limit;
+}
+
+/** set the memory limit to the given value */
+void SCIPsetSetMemoryLimit(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             limit               /**< memory limit */
+   )
+{
+   assert(SCIPsetIsGE(set, limit, 0.0));
+   set->limit_memory = limit;
+}
+
+
+/** set the gap limit to the given value */
+void SCIPsetSetGapLimit(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             limit               /**< gap limit */
+   )
+{
+   assert(SCIPsetIsGE(set, limit, 0.0));
+   set->limit_gap = limit;
+}
+
+/** set the absolute gap limit to the given value */
+void SCIPsetSetAbsgapLimit(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             limit               /**< absolute gap limit */
+   )
+{
+   assert(SCIPsetIsGE(set, limit, 0.0));
+   set->limit_absgap = limit;
+}
+
+/** set the node limit to the given value */
+void SCIPsetSetNodeLimit(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Longint          limit               /**< node limit */
+   )
+{
+   assert( limit >= -1LL );
+   set->limit_nodes = limit;
+}
+
+/** set the stall node limit to the given value */
+void SCIPsetSetStallnodeLimit(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Longint          limit               /**< stall node limit */
+   )
+{
+   assert( limit >= -1LL );
+   set->limit_stallnodes = limit;
+}
+
+/** set the solution limit to the given value */
+void SCIPsetSetSolutionLimit(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   limit               /**< solution limit */
+   )
+{
+   assert( limit >= -1 );
+   set->limit_solutions = limit;
+}
+
+/** set the best solution limit to the given value */
+void SCIPsetSetBestsolutionLimit(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   limit               /**< best solution limit */
+   )
+{
+   assert( limit >= -1 );
+   set->limit_bestsol = limit;
+}
+
+/** set the maximum number of solution stored */
+void SCIPsetSetMaxsolutionStored(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   limit               /**< maximum number of solution stored */
+   )
+{
+   assert( limit >= -1 );
+   set->limit_maxsol = limit;
+}
+
+/** set the maximum number of restarts until the solution process is stopped (-1: no limit) */
+void SCIPsetSetRestartLimit(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   limit               /**< maximum number of solution stored */
+   )
+{
+   assert( limit >= -1 );
+   set->limit_restarts = limit;
+}
+
+>>>>>>> added solution candidate store
 /** sets parameters to 
  *  - SCIP_PARAMSETTING_DEFAULT to use default values (see also SCIPsetResetParams())
  *  - SCIP_PARAMSETTING_COUNTER to get feasible and "fast" counting process
