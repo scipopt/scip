@@ -1160,6 +1160,7 @@ void consdataSortLinearVars(
    consdata->linvarssorted = TRUE;
 }
 
+/* this function is currently not needed, but also to nice to be deleted, so it is only deactivated */
 #if 0
 /** returns the position of variable in the linear coefficients array of a constraint, or -1 if not found */
 static
@@ -2626,7 +2627,7 @@ SCIP_RETCODE reformulate(
                /* if we have nonlinear parents or a sibling, then add add auxiliary variable for this node, so an upgrade to cons_quadratic should take place
                 * we assume that siblings are non-linear and non-quadratic, which should be the case if simplifier was run, and also if this node was created during reformulating a polynomial
                 * @todo we could also add auxvars for the sibling nodes, e.g., if there is only one
-                * @todo if sibiling nodes are quadratic (or even linear) due to reformulation, then we do not need to reform here... (-> nvs16)
+                * @todo if sibling nodes are quadratic (or even linear) due to reformulation, then we do not need to reform here... (-> nvs16)
                 *       maybe this step should not be done here at all if havenonlinparent is FALSE? e.g., move into upgrade from quadratic?
                 */
                if( havenonlinparent || SCIPexprgraphHasNodeSibling(node) )
@@ -2863,7 +2864,7 @@ SCIP_RETCODE reformulate(
                   SCIP_EXPRGRAPHNODE** monomialnodes;
                   int m;
 
-                 /* @todo if a monomial is a factor of another monomials, then we could (and should?) replace it there by the node we create for it here -> ex7_2_1
+                 /* @todo if a monomial is a factor of another monomial, then we could (and should?) replace it there by the node we create for it here -> ex7_2_1
                   * @todo factorizing the polynomial could be beneficial
                   */
 
@@ -3232,7 +3233,8 @@ SCIP_RETCODE reformulate(
    }
 
    /* for constraints with concave f(g(x)) with linear g:R^n -> R, n>1, reformulate to get a univariate concave function, since this is easier to underestimate
-    * @todo this does not work yet for sums of functions, e.g., polynomials with more than one monomial */
+    * @todo this does not work yet for sums of functions, e.g., polynomials with more than one monomial
+    */
    for( c = 0; c < nconss; ++c )
    {
       SCIP_EXPRGRAPHNODE* multivarnode;
@@ -3283,82 +3285,6 @@ SCIP_RETCODE reformulate(
 
    return SCIP_OKAY;
 }
-
-#if 0
-/** gets euclidean norm of gradient of nonlinear function */
-static
-SCIP_RETCODE getGradientNorm(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPRINT*         exprint,            /**< expressions interpreter */
-   SCIP_CONS*            cons,               /**< constraint */
-   SCIP_SOL*             sol,                /**< solution or NULL if LP solution should be used */
-   SCIP_Real*            norm                /**< buffer to store norm */
-   )
-{
-   SCIP_CONSDATA* consdata;
-   int            i;
-
-   assert(scip != NULL);
-   assert(cons != NULL);
-   assert(norm != NULL);
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   assert(exprint != NULL);
-   assert(consdata->exprtree == NULL || SCIPexprtreeGetInterpreterData(consdata->exprtree) != NULL);
-
-   *norm = 0.0;
-
-   for( i = 0; i < consdata->nlinvars; ++i )
-      *norm += consdata->lincoefs[i] * consdata->lincoefs[i];
-
-   if( consdata->exprtree != NULL )
-   {
-      int nvars;
-      SCIP_Real val;
-
-      nvars = SCIPexprtreeGetNVars(consdata->exprtree);
-
-      /* we assume here, that the expression interpreter has been used to evaluate the expression in the current point before */
-
-      if( nvars == 1 )
-      {
-         SCIP_Real grad;
-
-         SCIP_CALL( SCIPexprintGrad(exprint, consdata->exprtree, NULL, FALSE, &val, &grad) );
-         if( SCIPisInfinity(scip, REALABS(grad)) )
-            *norm = SCIPinfinity(scip);
-         else
-            *norm += grad * grad;
-      }
-      else
-      {
-         SCIP_Real* grad;
-
-         SCIP_CALL( SCIPallocBufferArray(scip, &grad, nvars) );
-
-         SCIP_CALL( SCIPexprintGrad(exprint, consdata->exprtree, NULL, FALSE, &val, grad) );
-
-         for( i = 0; i < nvars; ++i )
-         {
-            if( SCIPisInfinity(scip, REALABS(grad[i])) )
-            {
-               *norm = SCIPinfinity(scip);
-               break;
-            }
-            *norm += grad[i] * grad[i];
-         }
-
-         SCIPfreeBufferArray(scip, &grad);
-      }
-   }
-
-   if( !SCIPisInfinity(scip, *norm) )
-      *norm = sqrt(*norm);
-
-   return SCIP_OKAY;
-}
-#endif
 
 /** gets maximal absolute element of gradient of nonlinear function */
 static
@@ -4487,7 +4413,6 @@ SCIP_RETCODE addConcaveEstimatorMultivariate(
 
    /* SCIPdebug( SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPINFO, 1) ) ); */
 
-   /* @todo correct that dual is better if nrows >> ncols? */
    lpret = SCIPlpiSolveDual(lpi);
    if( lpret != SCIP_OKAY )
    {
@@ -5753,7 +5678,7 @@ SCIP_RETCODE propagateConstraintSides(
 
    SCIPdebugMessage("start backward propagation in expression graph\n");
 
-#if 0
+#if SCIP_OUTPUT
    {
       FILE* file;
       file = fopen("exprgraph_propconss1.dot", "w");
@@ -5804,7 +5729,7 @@ SCIP_RETCODE propagateConstraintSides(
    /* compute bound tightenings for nonlinear variables */
    SCIPexprgraphPropagateNodeBounds(conshdlrdata->exprgraph, INTERVALINFTY, BOUNDTIGHTENING_MINSTRENGTH, &cutoff);
 
-#if 0
+#if SCIP_OUTPUT
    {
       FILE* file;
       file = fopen("exprgraph_propconss2.dot", "w");
@@ -5898,7 +5823,7 @@ SCIP_RETCODE propagateBounds(
        */
       SCIP_CALL( SCIPexprgraphPropagateVarBounds(conshdlrdata->exprgraph, INTERVALINFTY, roundnr == 0, &domainerror) );
 
-#if 0
+#if SCIP_OUTPUT
       {
          FILE* file;
          file = fopen("exprgraph_propvars.dot", "w");
@@ -6253,7 +6178,7 @@ SCIP_DECL_CONSINIT(consInitNonlinear)
    /* reset counter, since we have a new problem */
    conshdlrdata->naddedreformconss = 0;
 
-#if 0
+#if SCIP_OUTPUT
    {
       FILE* file;
       file = fopen("exprgraph_init.dot", "w");
@@ -7736,7 +7661,7 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
          "whether to try to make solutions in check function feasible by shifting a linear variable (esp. useful if constraint was actually objective function)",
          &conshdlrdata->linfeasshift, FALSE, TRUE, NULL, NULL) );
 
-#if 0 /* don't have any expensive checks yet */
+#if 0 /* don't have any expensive checks yet, so we disable this parameter for now */
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/checkconvexexpensive",
          "whether to apply expensive curvature checking methods",
          &conshdlrdata->checkconvexexpensive, FALSE, TRUE, NULL, NULL) );

@@ -2541,7 +2541,8 @@ SCIP_RETCODE propagateVarbounds(
          b = SCIPvarGetVubConstants(consdata->x)[i];
 
          /* skip variable bound if y is not integer or its valid values are not {0,1}
-          * @todo extend to arbitrary integer variables */
+          * @todo extend to arbitrary integer variables
+          */
          if( !SCIPvarIsBinary(y) || SCIPvarGetLbGlobal(y) > 0.5 || SCIPvarGetUbGlobal(y) < 0.5 )
             continue;
 
@@ -2585,7 +2586,8 @@ SCIP_RETCODE propagateVarbounds(
          b = SCIPvarGetVlbConstants(consdata->x)[i];
 
          /* skip variable bound if y is not integer or its valid values are not {0,1}
-          * @todo extend to arbitrary integer variables */
+          * @todo extend to arbitrary integer variables
+          */
          if( !SCIPvarIsBinary(y) || SCIPvarGetLbGlobal(y) > 0.5 || SCIPvarGetUbGlobal(y) < 0.5 )
             continue;
 
@@ -2631,7 +2633,8 @@ SCIP_RETCODE propagateVarbounds(
          SCIPdebugMessage("propagate variable bound %g*<%s> %c= %g*<%s> + %g\n", consdata->zcoef, SCIPvarGetName(consdata->z), consdata->zcoef > 0 ? '<' : '>', a, SCIPvarGetName(y), b);
 
          /* skip variable bound if y is not integer or its valid values are not {0,1}
-          * @todo extend to arbitrary integer variables */
+          * @todo extend to arbitrary integer variables
+          */
          if( !SCIPvarIsBinary(y) || SCIPvarGetLbGlobal(y) > 0.5 || SCIPvarGetUbGlobal(y) < 0.5 )
             continue;
 
@@ -2670,7 +2673,8 @@ SCIP_RETCODE propagateVarbounds(
          SCIPdebugMessage("propagate variable bound %g*<%s> %c= %g*<%s> + %g\n", consdata->zcoef, SCIPvarGetName(consdata->z), consdata->zcoef > 0 ? '>' : '<', a, SCIPvarGetName(y), b);
 
          /* skip variable bound if y is not integer or its valid values are not {0,1}
-          * @todo extend to arbitrary integer variables */
+          * @todo extend to arbitrary integer variables
+          */
          if( !SCIPvarIsBinary(y) || SCIPvarGetLbGlobal(y) > 0.5 || SCIPvarGetUbGlobal(y) < 0.5 )
             continue;
 
@@ -3458,35 +3462,6 @@ SCIP_RETCODE createNlRow(
 
       SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree, expr, 1, 0, NULL) );
    }
-
-#if 0
-   {
-      /* exponent is even, generate expression tree for |x+offset|*(x+offset)^(n-1) */
-      SCIP_EXPR* expr;
-      SCIP_EXPR* expr2;
-      SCIP_EXPR* absexpr;
-
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_VARIDX, 0) ); /* x */
-      if( consdata->xoffset != 0.0 )
-      {
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr2, SCIP_EXPR_CONST, consdata->xoffset) );
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_PLUS, expr, expr2) ); /* x + offset */
-      }
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr,  SCIP_EXPR_INTPOWER, expr, n-1) ); /* (x+offset)^(n-1) */
-
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &absexpr, SCIP_EXPR_VARIDX, 0) );       /* x again */
-      if( consdata->xoffset != 0.0 )
-      {
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr2, SCIP_EXPR_CONST, consdata->xoffset) );
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &absexpr, SCIP_EXPR_PLUS, absexpr, expr2) ); /* x + offset */
-      }
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &absexpr, SCIP_EXPR_ABS, absexpr) ); /* |x+offset| */
-
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_MUL, absexpr, expr) ); /* |x+offset|(x+offset)^(n-1) */
-
-      SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree, expr, 1, 0, NULL) );
-   }
-#endif
    assert(exprtree != NULL || nquadelems > 0);
 
    /* tell expression tree, which is its variable */
@@ -3835,7 +3810,8 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdSignedpower)
    {
       /* if node has known curvature and we would add auxiliary var for child, then don't upgrade
        * it's not really necessary, but may introduce more numerical troubles
-       * @todo maybe still do if child is linear? */
+       * @todo maybe still do if child is linear?
+       */
       if( SCIPexprgraphGetNodeCurvature(node) != SCIP_EXPRCURV_UNKNOWN )
       {
          *nupgdconss = 0;

@@ -1100,7 +1100,7 @@ SCIP_RETCODE polynomialdataPower(
 
    assert(exponent >= 2); /* negative exponents not allowed if more than one monom */
 
-   /* todo improve, look into intervalarith.c */
+   /* todo improve, look how SCIPintervalPowerScalar in intervalarith.c does it */
 
    /* get copy of our polynomial */
    SCIP_CALL( polynomialdataCopy(blkmem, &factor, polynomialdata) );
@@ -1205,19 +1205,6 @@ SCIP_RETCODE polynomialdataExpandMonomialFactor(
       return SCIP_OKAY;
    }
 
-#if 0
-   /* @todo taking the power of a monomial to a fractional exponent can be possible,
-    * but we need to make sure that for even numbers p, (x^p)^(1/p) expands to |x|, or -x if x<=0, or x if x>=0
-    * also, e.g., (cx^p)^(1/p) for c<0, p odd, and x<=0, is equivalent to ((-c)(-x)^p)^(1/p), and thus should be expanded to (-c)^(1/p)(-x)
-    */
-   if( !EPSISINT(monomial->exponents[factorpos], 0.0) )
-   {
-      /* if exponent is not a natural number, then we skip expansion for now */
-      *success = FALSE;
-      return SCIP_OKAY;
-   }
-#endif
-
    if( factorpolynomial->constant == 0.0 && factorpolynomial->nmonomials == 1 )
    {
       /* factorpolynomial is a single monomial */
@@ -1233,7 +1220,7 @@ SCIP_RETCODE polynomialdataExpandMonomialFactor(
          if( factormonomial->coef < 0.0 )
          {
             /* if coefficient of monomial is negative and our exponent is not integer, then do not do expansion
-             * @todo the only case this makes sense is if the factors can be negative, i.e., when we have negative arguments with an odd exponent: (-x^a)^b = (-x)^(ab) for a odd
+             * @todo the only case where this could make sense is if the factors can be negative, i.e., when we have negative arguments with an odd exponent: (-x^a)^b = (-x)^(ab) for a odd
              */
             *success = FALSE;
             return SCIP_OKAY;
@@ -1242,7 +1229,7 @@ SCIP_RETCODE polynomialdataExpandMonomialFactor(
          {
             /* @todo if there is an even number of factors in factormonomial that are negative, then they always multiply to something positive
              * however, we cannot expand them as below, since we cannot compute the single powers
-             * this we do not have the bounds on the factors here, we skip expansion in this case
+             * since we do not have the bounds on the factors here, we skip expansion in this case
              */
             *success = FALSE;
             return SCIP_OKAY;
@@ -2106,6 +2093,7 @@ SCIP_DECL_EXPREVAL( exprevalTan )
 /* @todo implement exprcurvTan */
 #define exprcurvTan exprcurvDefault
 
+/* erf and erfi do not seem to exists on every system, and we cannot really handle them anyway, so they are currently disabled */
 #if 0
 static
 SCIP_DECL_EXPREVAL( exprevalErf )
@@ -2655,7 +2643,7 @@ SCIP_DECL_EXPRINTEVAL( exprevalIntQuadratic )
 
    /* for each argument, we collect it's linear index from lincoefs, it's square coefficients and all factors from bilinear terms
     * then we compute the interval sqrcoef*x^2 + lincoef*x and add it to result
-    * @todo we may also split into bivariate quadratic terms and apply the above method ?
+    * @todo split quadratic expression into bivariate quadratic terms and apply the above method
     */
    i = 0;
    for( argidx = 0; argidx < nargs; ++argidx )
@@ -2727,7 +2715,8 @@ SCIP_DECL_EXPRCURV( exprcurvQuadratic )
          *result = SCIPexprcurvAdd(*result, SCIPexprcurvMultiply(lincoefs[i], argcurv[i]));
 
    /* @todo could try cholesky factorization if all children linear...
-    * @todo should cache result */
+    * @todo should then cache the result
+    */
    for( i = 0; i < nquadelems && *result != SCIP_EXPRCURV_UNKNOWN; ++i )
    {
       if( quadelems[i].coef == 0.0 )
@@ -9327,7 +9316,8 @@ void exprgraphNodePropagateBounds(
             SCIPintervalSubScalar(infinity, &c, c, quaddata->constant);
 
             /* move linear terms not corresponding to i into c
-             * @todo do this faster, see EXPR_LINEAR */
+             * @todo do this faster, see EXPR_LINEAR
+             */
             if( lincoefs != NULL )
                for( k = 0; k < node->nchildren; ++k )
                   if( i != k && lincoefs[k] != 0.0 )
@@ -9884,13 +9874,6 @@ SCIP_RETCODE exprgraphNodeSimplify(
    {
       if( node->children[i] == NULL )
          continue;
-
-      /* @todo is that good? if a child is in use, we couldn't release it anyway, so we don't integrate it into this node
-       * for now, still do this, since it may lead to not recognizing some structure (like quadratic)
-       * in principle it would be nice to replace the child by a single variable if the child is used by a constraint that allows to find such a variable
-       */
-      /* if( node->children[i]->nuses > 0 )
-         continue; */
 
       /* convert children to polynomial, if not constant or polynomial
        * if child was simplified in this round, it may have already been converted, and then nothing happens
@@ -10800,9 +10783,7 @@ SCIP_RETCODE exprgraphFindParentByOperator(
          break;
       }
 
-      /* @todo in one GlobalLib instance, two polynoms differ only in the sign of all coefficients,
-       * it would be nice to recognize this somehow
-       */
+      /* @todo in one GlobalLib instance, two polynoms differ only in the sign of all coefficients, it would be nice to recognize this somehow */
       case SCIP_EXPR_POLYNOMIAL:
       {
          SCIP_EXPRDATA_POLYNOMIAL* exprdata;
@@ -13836,7 +13817,6 @@ void SCIPexprgraphPropagateNodeBounds(
          node = exprgraph->nodes[d][i];
          exprgraphNodePropagateBounds(exprgraph, node, infinity, minstrength, cutoff);
       }
-      /* @todo at depth 0, store variables which bounds have changed somewhere */
    }
    if( *cutoff )
       return;
@@ -13944,7 +13924,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
       }
 #endif
 
-#if 0
+#if SCIP_OUTPUT
    {
       FILE* file;
       file = fopen("exprgraph_beforesimplify.dot", "w");
@@ -14090,7 +14070,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
       }
    }
 
-#if 0
+#if SCIP_OUTPUT
    {
       FILE* file;
       file = fopen("exprgraph_aftersimplify.dot", "w");

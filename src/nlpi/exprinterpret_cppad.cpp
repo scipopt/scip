@@ -303,7 +303,7 @@ public:
    bool                  need_retape_always; /**< will retaping be always required? */
 
    BMS_BLKMEM*           blkmem;             /**< block memory used to allocate expresstion tree */
-   SCIP_EXPR*            root;               /**< copy of expression tree; @todo do we really need to make a copy? */
+   SCIP_EXPR*            root;               /**< copy of expression tree; @todo we should not need to make a copy */
 };
 
 #ifdef CPPAD_USER_ATOMIC
@@ -566,168 +566,6 @@ void posintpower(size_t exp, vector<Type>& in, vector<Type>& out)
 {
    out[0] = pow(in[0], (int)exp);
 }
-#endif
-
-# if 0
-/** forward sweep of operator */
-bool forward_square(
-   size_t                   id,
-   size_t                    k,
-   size_t                    n,
-   size_t                          m,
-   const CppAD::vector<bool>&      vx,
-   CppAD::vector<bool>&            vy,
-   const CppAD::vector<double>&    tx,
-   CppAD::vector<double>&          ty
-   )
-{
-   assert(n == 1);
-   assert(m == 1);
-
-   if( vx.size() > 0 )
-   {
-      assert(vx.size() == 1);
-      assert(vy.size() == 1);
-      assert(k == 0);
-
-      vy[0] = vx[0];
-   }
-
-   switch( k )
-   {
-      case 0:
-         ty[0] = tx[0] * tx[0];
-         break;
-      case 1:
-         ty[1] = 2.0 * tx[0] * tx[1];
-         break;
-      case 2:
-         ty[2] = 2.0 * (tx[1] * tx[1] + tx[0] * tx[2]);
-         break;
-      default:
-         return false;
-   }
-
-   return true;
-}
-
-bool reverse_square(
-   size_t                   id ,
-   size_t                    k ,
-   size_t                    n ,
-   size_t                    m ,
-   const CppAD::vector<double>&    tx ,
-   const CppAD::vector<double>&    ty ,
-   CppAD::vector<double>&          px ,
-   const CppAD::vector<double>&    py
-)
-{
-   assert(n == 1);
-   assert(m == 1);
-   assert(px.size() >= k);
-   assert(py.size() >= k);
-   assert(tx.size() >= k);
-
-   if( k == 0 )
-   {
-      px[0] = py[0] * 2 * tx[0];
-      return true;
-   }
-   else if( k == 1 )
-   {
-      px[0] = py[0] * 2 * tx[0] + py[1] * 2 * tx[1];
-      px[1] = py[0] * 0         + py[1] * 2 * tx[0];
-      return true;
-   }
-
-   return false;
-}
-
-bool for_jac_sparse_square(
-   size_t                               id ,
-   size_t                                n ,
-   size_t                                m ,
-   size_t                                q ,
-   const CppAD::vector< std::set<size_t> >&     r ,
-   CppAD::vector< std::set<size_t> >&           s )
-{
-   assert(n == 1);
-   assert(m == 1);
-   assert(r.size() == 1);
-   assert(s.size() == 1);
-
-   s[0] = r[0];
-
-   return true;
-}
-
-bool rev_jac_sparse_square(
-   size_t                               id ,
-   size_t                                n ,
-   size_t                                m ,
-   size_t                                q ,
-   CppAD::vector< std::set<size_t> >&           r ,
-   const CppAD::vector< std::set<size_t> >&     s )
-{
-   assert(n == 1);
-   assert(m == 1);
-   assert(r.size() == 1);
-   assert(s.size() == 1);
-
-   r[0] = s[0];
-
-   return true;
-}
-
-bool rev_hes_sparse_square(
-   size_t                               id ,
-   size_t                                n ,
-   size_t                                m ,
-   size_t                                q ,
-   const CppAD::vector< std::set<size_t> >&     r ,
-   const CppAD::vector<bool>&                   s ,
-   CppAD::vector<bool>&                         t ,
-   const CppAD::vector< std::set<size_t> >&     u ,
-   CppAD::vector< std::set<size_t> >&           v )
-{
-   assert(n == 1);
-   assert(m == 1);
-   assert(r.size() == 1);
-   assert(s.size() == 1);
-   assert(t.size() == 1);
-   assert(u.size() == 1);
-   assert(v.size() == 1);
-
-   // consider V(x) = (g(f(x)))'' R  with f(x) = x^2
-   // we have to specify the sparsity pattern of T(x) = (g(f(x)))' in t
-   // and the sparsity pattern of V(x) in v
-   //
-   // given are the sparsity of R in r,
-   // the sparsity of S = g'(y) in s,
-   // the sparsity of U(x) = g''(f(x)) f'(x) R in u
-
-   // T(x) = g'(f(x)) f'(x) = S * f'(x), and f' is not identically 0
-   t[0] = s[0];
-
-   // V(x) = g''(f(x)) f'(x) f'(x) R + g'(f(x)) f''(x) R
-   //      = f'(x) U + S f''(x) R, with f'(x) not identically 0 and f''(x) = 2
-   v[0] = u[0];
-   if( s[0] )
-      v[0].insert(r[0].begin(), r[0].end());
-
-   return true;
-}
-
-CPPAD_USER_ATOMIC(
-   square                 ,
-   vector                 ,
-   double                 ,
-   forward_square         ,
-   reverse_square         ,
-   for_jac_sparse_square  ,
-   rev_jac_sparse_square  ,
-   rev_hes_sparse_square
-)
 #endif
 
 #ifdef CPPAD_USER_ATOMIC
@@ -1450,7 +1288,7 @@ SCIP_RETCODE eval(
       case SCIP_EXPR_TAN:
          val = tan(buf[0]);
          break;
-#if 0
+#if 0 /* these operators are currently disabled */
       case SCIP_EXPR_ERF:
          val = erf(buf[0]);
          break;
@@ -1864,7 +1702,7 @@ SCIP_RETCODE SCIPexprintEval(
       data->val = Value(data->Y[0]);
       SCIPdebugMessage("Eval retaped and computed value %g\n", data->val);
 
-      // @todo need this if I want to compute gradient by a reverse sweep later
+      // the following is required if the gradient shall be computed by a reverse sweep later
       // data->val = data->f.Forward(0, data->x)[0];
 
       data->need_retape = false;

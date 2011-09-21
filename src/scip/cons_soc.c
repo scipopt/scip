@@ -777,9 +777,7 @@ SCIP_RETCODE computeViolation(
    {
       SCIP_Real norm = getGradientNorm(scip, cons, sol);
       if( norm > 1.0 )
-      { /* @todo scale only if > 1.0, or should it be larger SCIPsumepsilon? */
          consdata->violation /= norm;
-      }
    }
 
    return SCIP_OKAY;

@@ -116,7 +116,6 @@ struct SCIP_Nlp
    int                   nunflushednlrowadd; /**< number of nonlinear row additions not flushed to NLPI problem yet */
    int                   nunflushednlrowdel; /**< number of nonlinear row deletions not flushed to NLPI problem yet */
    SCIP_Bool             isrelax;            /**< is the current NLP a relaxation of a SCIP problem? */
-   SCIP_Bool             isconvex;           /**< is the current NLP a convex problem? */
    SCIP_Bool             indiving;           /**< are we currently in diving mode? */
 
    /* variables in problem */

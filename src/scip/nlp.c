@@ -3772,7 +3772,7 @@ SCIP_RETCODE nlpAddVars(
       /* catch events on variable */
       SCIP_CALL( SCIPvarCatchEvent(var, blkmem, set,
          SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_OBJCHANGED,
-         nlp->eventhdlr, (SCIP_EVENTDATA*)nlp, NULL) ); /* @todo should store event filter position is nlp? */
+         nlp->eventhdlr, (SCIP_EVENTDATA*)nlp, NULL) ); /* @todo should store event filter position in nlp? */
    }
 
    nlp->nvars += nvars;
@@ -4621,7 +4621,8 @@ SCIP_RETCODE nlpSolve(
 
    /* set initial guess, if available */
    if( nlp->haveinitguess )
-   { /* @todo should we not set it if we had set it already? (initguessflushed...) */
+   {
+      /* @todo should we not set it if we had set it already? (initguessflushed...) */
       SCIP_Real* initialguess_solver;
       int nlpidx;
 
@@ -5014,7 +5015,6 @@ SCIP_RETCODE SCIPnlpCreate(
    (*nlp)->nunflushednlrowadd = 0;
    (*nlp)->nunflushednlrowdel = 0;
    (*nlp)->isrelax    = TRUE;
-   (*nlp)->isconvex   = TRUE;
    (*nlp)->indiving   = FALSE;
 
    /* variables in problem and NLPI problem */
@@ -5680,29 +5680,6 @@ SCIP_RETCODE SCIPnlpWrite(
 
    return SCIP_OKAY;
 }
-
-#if 0
-/** sets whether the current NLP is a convex problem, i.e., all restrictions are defined by convex functions w.r.t. current bounds */
-void SCIPnlpSetIsConvex(
-   SCIP_NLP*             nlp,                /**< NLP data */
-   SCIP_Bool             isconvex            /**< is the current NLP a convex problem? */
-   )
-{
-   assert(nlp != NULL);
-
-   nlp->isconvex = isconvex;
-}
-
-/** returns whether the current NLP is a convex problem, i.e., all restrictions are defined by convex functions w.r.t. current bounds */
-SCIP_Bool SCIPnlpIsConvex(
-   SCIP_NLP*             nlp                 /**< NLP data */
-   )
-{
-   assert(nlp != NULL);
-
-   return nlp->isconvex;
-}
-#endif
 
 /** gets array with variables of the NLP */
 SCIP_VAR** SCIPnlpGetVars(

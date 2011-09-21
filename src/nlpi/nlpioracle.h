@@ -285,7 +285,8 @@ int SCIPnlpiOracleGetConstraintDegree(
  * Thus, if this function returns 0, then the objective and all constraints are constant.
  * If it returns 1, then the problem in linear.
  * If it returns 2, then its a QP, QCP, or QCQP.
- * And if it returns > 2, then it is an NLP. */
+ * And if it returns > 2, then it is an NLP.
+ */
 extern
 int SCIPnlpiOracleGetMaxDegree(
    SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */

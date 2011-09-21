@@ -703,30 +703,6 @@ void clearDeletedQuadElements(
    *nquadelems -= offset;
 }
 
-#if 0
-/** applies a mapping of indices to two array of indices (of the same length) */
-static
-void mapIndices2(
-   int*                  indexmap,           /**< mapping from old variable indices to new indices */
-   int                   nindices,           /**< number of indices in indices1 and indices2 */
-   int*                  indices1,           /**< first array of indices to adjust */
-   int*                  indices2            /**< second array of indices to adjust */
-   )
-{
-   assert(indexmap != NULL);
-   assert(nindices == 0 || indices1 != NULL);
-   assert(nindices == 0 || indices2 != NULL);
-
-   for( ; nindices ; --nindices, ++indices1, ++indices2 )
-   {
-      assert(indexmap[*indices1] >= 0);
-      assert(indexmap[*indices2] >= 0);
-      *indices1 = indexmap[*indices1];
-      *indices2 = indexmap[*indices2];
-   }
-}
-#endif
-
 /** applies a mapping of indices to an array of quadratic elements */
 static
 void mapIndicesQuad(
@@ -2361,7 +2337,8 @@ int SCIPnlpiOracleGetConstraintDegree(
  * Thus, if this function returns 0, then the objective and all constraints are constant.
  * If it returns 1, then the problem in linear.
  * If it returns 2, then its a QP, QCP, or QCQP.
- * And if it returns > 2, then it is an NLP. */
+ * And if it returns > 2, then it is an NLP.
+ */
 int SCIPnlpiOracleGetMaxDegree(
    SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
    )
@@ -2579,7 +2556,8 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
       }
 
       /* check which variables appear in constraint i
-       * @todo this could be done faster for very sparse constraint by assembling all appearing variables, sorting, and removing duplicates */
+       * @todo this could be done faster for very sparse constraint by assembling all appearing variables, sorting, and removing duplicates
+       */
       BMSclearMemoryArray(nzflag, oracle->nvars);
       
       for( j = 0; j < cons->nlinidxs; ++j )

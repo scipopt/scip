@@ -31,7 +31,8 @@ extern "C" {
 #endif
 
 /** create solver interface for Ipopt solver
- * set *nlpi to NULL if Ipopt is not available */
+ * sets *nlpi to NULL if Ipopt is not available
+ */
 extern
 SCIP_RETCODE SCIPcreateNlpSolverIpopt(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */

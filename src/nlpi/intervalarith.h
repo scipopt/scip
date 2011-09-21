@@ -125,7 +125,7 @@ public:
       return *this;
    }
 
-   /** substracts an interval from this one */
+   /** subtracts an interval from this one */
    SCIPInterval& operator-=(
       const SCIPInterval& y                  /**< interval to substract */
       )
@@ -327,7 +327,7 @@ SCIPInterval sin(
    const SCIPInterval&   x                   /**< operand */
    )
 {
-   /* @todo implement cosinus for intervals */
+   /* @todo implement sinus for intervals */
    SCIPwarningMessage("Sinus of interval not implemented. Returning trivial interval [-1,1].\n");
 
    return SCIPInterval(-1.0, 1.0);
