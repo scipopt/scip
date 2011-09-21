@@ -359,7 +359,7 @@ void mpsinputSyntaxerror(
 {
    assert(mpsi != NULL);
 
-   SCIPwarningMessage("Syntax error in line %d\n", mpsi->lineno);
+   SCIPerrorMessage("Syntax error in line %d\n", mpsi->lineno);
    mpsi->section  = MPS_ENDATA;
    mpsi->haserror = TRUE;
 }
@@ -2114,6 +2114,7 @@ SCIP_RETCODE readIndicators(
       if( strcmp(SCIPconshdlrGetName(conshdlr), "linear") != 0 )
       {
          SCIPerrorMessage("constraint <%s> is not linear.\n", mpsinputField2(mpsi));
+         mpsinputSyntaxerror(mpsi);
          return SCIP_OKAY;
       }
 

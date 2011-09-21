@@ -126,8 +126,7 @@ void syntaxError(
 
    assert(lpinput != NULL);
 
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error in line %d: %s ('%s')\n",
-      lpinput->linenumber, msg, lpinput->token);
+   SCIPerrorMessage("Syntax error in line %d: %s ('%s')\n", lpinput->linenumber, msg, lpinput->token);
    if( lpinput->linebuf[strlen(lpinput->linebuf)-1] == '\n' )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "  input: %s", lpinput->linebuf);

@@ -486,9 +486,7 @@ SCIP_RETCODE SCIPincludeReaderPpm(
 
    /* include ppm reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyPpm,
-         readerFreePpm, readerReadPpm, readerWritePpm, 
-         readerdata) );
+         readerCopyPpm, readerFreePpm, readerReadPpm, readerWritePpm, readerdata) );
 
    /* add lp reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

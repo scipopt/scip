@@ -134,8 +134,7 @@ void syntaxError(
 
    assert(pipinput != NULL);
 
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error in line %d: %s ('%s')\n",
-      pipinput->linenumber, msg, pipinput->token);
+   SCIPerrorMessage("Syntax error in line %d: %s ('%s')\n", pipinput->linenumber, msg, pipinput->token);
    if( pipinput->linebuf[strlen(pipinput->linebuf)-1] == '\n' )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "  input: %s", pipinput->linebuf);
@@ -3617,9 +3616,7 @@ SCIP_RETCODE SCIPincludeReaderPip(
 
    /* include lp reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyPip,
-         readerFreePip, readerReadPip, readerWritePip, 
-         readerdata) );
+         readerCopyPip, readerFreePip, readerReadPip, readerWritePip, readerdata) );
 
    /* add lp reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

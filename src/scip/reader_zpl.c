@@ -213,7 +213,7 @@ Bool xlp_addcon_term(
             case CON_FREE:
                /*lint -fallthrough*/
             default:
-               SCIPwarningMessage("invalid constraint type <%d> in ZIMPL callback xlp_addcon()\n", type);
+               SCIPerrorMessage("invalid constraint type <%d> in ZIMPL callback xlp_addcon()\n", type);
                readerror_ = TRUE;
                break;
          }
@@ -460,7 +460,7 @@ Bool xlp_addcon_term(
 
                SCIP_CALL_ABORT( SCIPexprAddMonomialFactors(SCIPblkmem(scip_), simplemonomials[nsimplemonomials], 1, &varpos, &one) );
             }
-             SCIPexprMergeMonomialFactors(simplemonomials[nsimplemonomials], 0.0);
+            SCIPexprMergeMonomialFactors(simplemonomials[nsimplemonomials], 0.0);
 
             ++nsimplemonomials;
          }
@@ -835,7 +835,7 @@ Bool xlp_addsos_term(
    case SOS_ERR:
       /*lint -fallthrough*/
    default:
-      SCIPwarningMessage("invalid SOS type <%d> in ZIMPL callback xlp_addsos_term()\n", type);
+      SCIPerrorMessage("invalid SOS type <%d> in ZIMPL callback xlp_addsos_term()\n", type);
       readerror_ = TRUE;
       break;
    }
@@ -869,7 +869,7 @@ VarClass xlp_getclass(
    case SCIP_VARTYPE_CONTINUOUS:
       return VAR_CON;
    default:
-      SCIPwarningMessage("invalid SCIP variable type <%d> in ZIMPL callback xlp_getclass()\n", SCIPvarGetType(scipvar));
+      SCIPerrorMessage("invalid SCIP variable type <%d> in ZIMPL callback xlp_getclass()\n", SCIPvarGetType(scipvar));
       readerror_ = TRUE;
       break;
    }
@@ -1262,9 +1262,7 @@ SCIP_RETCODE SCIPincludeReaderZpl(
 
    /* include zpl reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyZpl,
-         readerFreeZpl, readerReadZpl, readerWriteZpl,
-         readerdata) );
+         readerCopyZpl, readerFreeZpl, readerReadZpl, readerWriteZpl, readerdata) );
 
    /* add zpl reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

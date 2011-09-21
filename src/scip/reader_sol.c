@@ -372,11 +372,12 @@ SCIP_DECL_READERREAD(readerReadSol)
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
    assert(result != NULL);
 
+   *result = SCIP_DIDNOTRUN;
+
    if( SCIPgetStage(scip) < SCIP_STAGE_PROBLEM )
    {
-      SCIPwarningMessage("reading of solution file is only possible after a problem was created\n");
-      *result = SCIP_DIDNOTRUN;
-      return SCIP_OKAY;
+      SCIPerrorMessage("reading of solution file is only possible after a problem was created\n");
+      return SCIP_READERROR;
    }
 
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVED )

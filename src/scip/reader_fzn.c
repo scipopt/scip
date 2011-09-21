@@ -655,11 +655,8 @@ void syntaxError(
 {
    assert(fzninput != NULL);
 
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error in line %d: %s found <%s>\n",
-      fzninput->linenumber, msg, fzninput->token);
-
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "  input: %s", fzninput->linebuf);
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "\n");
+   SCIPerrorMessage("Syntax error in line %d: %s found <%s>\n", fzninput->linenumber, msg, fzninput->token);
+   SCIPerrorMessage("  input: %s\n", fzninput->linebuf);
 
    fzninput->haserror = TRUE;
 }

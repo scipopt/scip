@@ -178,26 +178,17 @@ void syntaxError(
    const char*           msg                 /**< error message */
    )
 {
-#if 0
-   char formatstr[256];
-#endif
    assert(opbinput != NULL);
 
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error in line %d: %s found <%s>\n",
-      opbinput->linenumber, msg, opbinput->token);
+   SCIPerrorMessage("Syntax error in line %d: %s found <%s>\n", opbinput->linenumber, msg, opbinput->token);
    if( opbinput->linebuf[strlen(opbinput->linebuf)-1] == '\n' )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "  input: %s", opbinput->linebuf);
+      SCIPerrorMessage("  input: %s", opbinput->linebuf);
    }
    else
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "  input: %s\n", opbinput->linebuf);
+      SCIPerrorMessage("  input: %s\n", opbinput->linebuf);
    }
-
-#if 0
-   (void) SCIPsnprintf(formatstr, 256, "         %%%ds\n", opbinput->linepos);
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, formatstr, "^");
-#endif
 
    opbinput->haserror = TRUE;
 }

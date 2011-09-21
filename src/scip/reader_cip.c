@@ -136,7 +136,7 @@ SCIP_RETCODE getInputString(
    {
       SCIPerrorMessage("Constraint line has to end with ';\\n'.\n");
       cipinput->haserror = TRUE;
-      return SCIP_OKAY;
+      return SCIP_OKAY; /* return error at hightest level */
    }
 
    *endline = '\0';
@@ -187,7 +187,7 @@ SCIP_RETCODE getStatistic(
       if( SCIPstrtok(buf, ":", &name) == NULL || name == NULL )
       {
          SCIPwarningMessage("did not find problem name\n");
-         return SCIP_OKAY;
+         return SCIP_OKAY;  /* no error, might work with empty problem name */
       }
       
       /* remove tabs new line form string */
@@ -245,7 +245,7 @@ SCIP_RETCODE getObjective(
       if( SCIPstrtok(buf, ":", &name) == NULL || name == NULL )
       {
          SCIPwarningMessage("did not find objective sense\n");
-         return SCIP_OKAY;
+         return SCIP_OKAY; /* no error - might work with default */
       }
       
       /* remove white space in front of the name */
@@ -259,13 +259,12 @@ SCIP_RETCODE getObjective(
       else
       {
          SCIPwarningMessage("unknown objective sense\n");
-         return SCIP_OKAY;
+         return SCIP_OKAY; /* no error - might work with default */
       }
-      
+
       /* set problem name */
       SCIP_CALL( SCIPsetObjsense(scip, objsense) );
-      SCIPdebugMessage("objective sense <%s>\n", objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");
-         
+      SCIPdebugMessage("objective sense <%s>\n", objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");         
    }
    else if( strncmp(buf, "  Offset", 7) == 0 )
    {
@@ -564,12 +563,12 @@ SCIP_DECL_READERREAD(readerReadCip)
    {
       SCIPerrorMessage("unexpected EOF\n");
    }
-   
+
    SCIPfreeBufferArray(scip, &cipinput.strbuf);
-   
+
    if( cipinput.haserror )
       return SCIP_READERROR;
-   
+
    /* successfully parsed cip format */
    *result = SCIP_SUCCESS;
    return SCIP_OKAY;
