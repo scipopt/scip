@@ -2935,8 +2935,11 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
          "should an aggregated linearization be used?",
          &conshdlrdata->aggrlinearization, TRUE, DEFAULT_AGGRLINEARIZATION, NULL, NULL) );
 
-   /* include the and-constraint upgrade in the nonlinear constraint handler */
-   SCIP_CALL( SCIPincludeNonlinconsUpgrade(scip, NULL, exprgraphnodeReformAnd, EXPRGRAPHREFORM_PRIORITY, TRUE, CONSHDLR_NAME) );
+   if( SCIPfindConshdlr(scip, "nonlinear") != NULL )
+   {
+      /* include the and-constraint upgrade in the nonlinear constraint handler */
+      SCIP_CALL( SCIPincludeNonlinconsUpgrade(scip, NULL, exprgraphnodeReformAnd, EXPRGRAPHREFORM_PRIORITY, TRUE, CONSHDLR_NAME) );
+   }
 
    return SCIP_OKAY;
 }
