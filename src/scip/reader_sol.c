@@ -165,6 +165,7 @@ SCIP_RETCODE readSol(
       }
       else
       {
+         /* add primal solution to solution candidate storage, frees the solution afterwards */
          SCIP_CALL( SCIPaddSolFree(scip, &sol, &stored) );
 
          /* display result */

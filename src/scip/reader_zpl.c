@@ -1017,7 +1017,6 @@ SCIP_DECL_READERREAD(readerReadZpl)
    int i;
    SCIP_Bool changedir;
    SCIP_Bool usestartsol;
-   SCIP_Bool success;
    
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/zplreader/changedir", &changedir) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/zplreader/usestartsol", &usestartsol) );
@@ -1200,8 +1199,9 @@ SCIP_DECL_READERREAD(readerReadZpl)
       /* if read failed, transformProb might fail also, due to lack of a problem */
       if( nstartvals_ > 0 && !readerror_ )
       {
+         SCIP_Bool stored;
+
          /* transform the problem such that adding primal solutions is possible */
-         SCIP_CALL( SCIPtransformProb(scip) );
          SCIP_CALL( SCIPcreateSol(scip, &startsol, NULL) );
          for( i = 0; i < nstartvals_; i++ )
          {
@@ -1209,10 +1209,15 @@ SCIP_DECL_READERREAD(readerReadZpl)
             SCIP_CALL( SCIPreleaseVar(scip, &startvars_[i]) );
          }
    
-         success = FALSE;
-         SCIP_CALL( SCIPtrySolFree(scip, &startsol, FALSE, TRUE, TRUE, TRUE, &success) );
-         if( success && SCIPgetVerbLevel(scip) >= SCIP_VERBLEVEL_FULL )
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "ZIMPL starting solution accepted\n");
+         stored = FALSE;
+
+         /* add primal solution to solution candidate storage, frees the solution afterwards */
+         SCIP_CALL( SCIPaddSolFree(scip, &startsol, &stored) );
+         
+         if( stored )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "ZIMPL starting solution candidate accepted\n");
+         }
       }
       
       SCIPfreeMemoryArray(scip_, &startvals_);
