@@ -47,7 +47,7 @@
 #include "scip/reader_fzn.h"
 
 #define READER_NAME             "fznreader"
-#define READER_DESC             "FlatZinc file reader"
+#define READER_DESC             "file reader for FlatZinc format"
 #define READER_EXTENSION        "fzn"
 
 
