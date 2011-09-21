@@ -646,7 +646,7 @@ Var* xlp_addvar(
    const Bound*          lower,              /**< lower bound */
    const Bound*          upper,              /**< upper bound */
    const Numb*           priority,           /**< branching priority */
-   const Numb*           startval            /**< */
+   const Numb*           startval            /**< start value for the variable within in the start solution */
    )
 {  /*lint --e{715}*/
    SCIP_VAR* var;
