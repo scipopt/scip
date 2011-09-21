@@ -610,7 +610,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayRelaxators)
    nrelaxs = SCIPgetNRelaxs(scip);
 
    /* copy relaxs array into temporary memory for sorting */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &sorted, relaxs, nrelaxs) );
+   if( nrelaxs != 0 )
+   {
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &sorted, relaxs, nrelaxs) );
+   }
+   else
+      sorted = NULL;
 
    /* sort the relaxators */
    SCIPsortPtr((void**)sorted, SCIPrelaxComp, nrelaxs);
@@ -632,7 +637,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayRelaxators)
    SCIPdialogMessage(scip, NULL, "\n");
 
    /* free temporary memory */
-   SCIPfreeBufferArray(scip, &sorted);
+   SCIPfreeBufferArrayNull(scip, &sorted);
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
