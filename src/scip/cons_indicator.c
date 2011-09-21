@@ -284,18 +284,15 @@ struct SCIP_ConshdlrData
    SCIP_Real             roundingoffset;     /**< offset for rounding in separation */
    SCIP_Bool             branchindicators;   /**< Branch on indicator constraints in enforcing? */
    SCIP_Bool             genlogicor;         /**< Generate logicor constraints instead of cuts? */
-   SCIP_Bool             sepaalternativelp;  /**< Separate using the alternative LP? */
    SCIP_Bool             addcoupling;        /**< whether the coupling inequalities should be added */
    SCIP_Bool             addcouplingcons;    /**< whether coupling inequalities should be variable bounds, if 'addcoupling' is true*/
    SCIP_Bool             removeindicators;   /**< remove indicator constraint if corresponding variable bound constraint has been added? */
    SCIP_Bool             updatebounds;       /**< whether the bounds of the original variables should be changed for separation */
    SCIP_Bool             trysolutions;       /**< Try to make solutions feasible by setting indicator variables? */
-   SCIP_Bool             nolinconscont;      /**< decompose problem - do not generate linear constraint if all variables are continuous */
    SCIP_Bool             enforcecuts;        /**< in enforcing try to generate cuts (only if sepaalternativelp is true) */
    SCIP_Real             maxcouplingvalue;   /**< maximum coefficient for binary variable in coupling constraint */
    SCIP_Real             maxconditionaltlp;  /**< maximum estimated condition number of the alternative LP to trust its solution */
    SCIP_Bool             generatebilinear;   /**< do not generate indicator constraint, but a bilinear constraint instead */
-   SCIP_Bool             forcerestart;       /**< force restart if we have a max FS instance and gap is 1? */
    SCIP_Bool             performedrestart;   /**< whether a restart has been performed already */
    int                   nbinvarszero;       /**< binary variables globally fixed to zero */
    int                   ninitconss;         /**< initial number of indicator constraints (needed in event handlers) */
@@ -305,6 +302,13 @@ struct SCIP_ConshdlrData
    SCIP_CONS**           addlincons;         /**< additional linear constraints that should be added to the alternative LP */
    int                   naddlincons;        /**< number of additional constraints */
    int                   maxaddlincons;      /**< maximal number of additional constraints */
+   /* parameters that should not be changed after problem stage: */
+   SCIP_Bool             sepaalternativelp;  /**< Separate using the alternative LP? */
+   SCIP_Bool             sepaalternativelp_; /**< used to store the sepaalternativelp parameter */
+   SCIP_Bool             nolinconscont;      /**< decompose problem - do not generate linear constraint if all variables are continuous */
+   SCIP_Bool             nolinconscont_;     /**< used to store the nolinconscont parameter */
+   SCIP_Bool             forcerestart;       /**< force restart if we have a max FS instance and gap is 1? */
+   SCIP_Bool             forcerestart_;      /**< used to strore the forcerestart parameter */
 };
 
 
@@ -490,6 +494,80 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorRestart)
 
    return SCIP_OKAY;
 }
+
+
+/* ------------------------ parameter handling ---------------------------------*/
+
+/** check parameter */
+static
+SCIP_RETCODE checkParam(
+   SCIP*                 scip,               /**< SCIP data structure */   
+   SCIP_PARAM*           param,              /**< parameter */
+   const char*           name,               /**< parameter name to check */
+   SCIP_Bool             oldvalue,           /**< old value of parameter */
+   SCIP_Bool*            newvalue            /**< new value after call */
+)
+{
+   const char* paramname;
+
+   assert( scip != NULL );
+   assert( param != NULL );
+   assert( name != NULL );
+   assert( newvalue != NULL );
+
+   paramname = SCIPparamGetName(param);
+   assert( paramname != NULL );
+
+   /* check whether the change parameter corresponds to our name to check */
+   if ( strcmp(paramname, name) == 0 )
+   {
+      /* check stage */
+      if ( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM )
+      {
+         SCIPwarningMessage("Cannot change parameter <%s> stage %d - reset to old value %s.\n", name, SCIPgetStage(scip), oldvalue ? "true" : "false");
+         /* reset parameter (NULL = do not recursively call paramchd function) */
+         SCIP_CALL( SCIPparamSetBool(param, NULL, oldvalue, FALSE) );
+         *newvalue = oldvalue;
+      }
+   }
+   return SCIP_OKAY;
+}
+
+
+/** called after a parameter has been changed */
+static
+SCIP_DECL_PARAMCHGD(paramChangedIndicator)
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool value;
+
+   assert( scip != NULL );
+   assert( param != NULL );
+
+   /* get indicator constraint handler */
+   conshdlr = SCIPfindConshdlr(scip, "indicator");
+   assert( conshdlr != NULL );
+   
+   /* get constraint handler data */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   value = conshdlrdata->sepaalternativelp_;
+   SCIP_CALL( checkParam(scip, param, "constraints/indicator/sepaalternativelp", conshdlrdata->sepaalternativelp, &value) );
+   conshdlrdata->sepaalternativelp = value;
+
+   value = conshdlrdata->forcerestart_;
+   SCIP_CALL( checkParam(scip, param, "constraints/indicator/forcerestart", conshdlrdata->forcerestart, &value) );
+   conshdlrdata->forcerestart = value;
+
+   value = conshdlrdata->nolinconscont;
+   SCIP_CALL( checkParam(scip, param, "constraints/indicator/nolinconscont", conshdlrdata->nolinconscont, &value) );
+   conshdlrdata->nolinconscont = value;
+
+   return SCIP_OKAY;
+}
+
 
 
 /* ------------------------ debugging routines ---------------------------------*/
@@ -5046,7 +5124,6 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    conshdlrdata->roundingoffset = 0.1;
    conshdlrdata->branchindicators = TRUE;
    conshdlrdata->genlogicor = TRUE;
-   conshdlrdata->sepaalternativelp = TRUE;
    conshdlrdata->addcoupling = FALSE;
    conshdlrdata->addcouplingcons = FALSE;
    conshdlrdata->heurtrysol = NULL;
@@ -5061,14 +5138,17 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    conshdlrdata->objindicatoronly = FALSE;
    conshdlrdata->minabsobj = 0.0;
 
+   conshdlrdata->sepaalternativelp = DEFAULT_SEPAALTERNATIVELP;
+   conshdlrdata->nolinconscont = DEFAULT_NOLINCONSCONT;
+   conshdlrdata->forcerestart = DEFAULT_FORCERESTART;
+
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopyIndicator,
-         consFreeIndicator, consInitIndicator, consExitIndicator,
+         conshdlrCopyIndicator, consFreeIndicator, consInitIndicator, consExitIndicator,
          consInitpreIndicator, consExitpreIndicator, consInitsolIndicator, consExitsolIndicator,
          consDeleteIndicator, consTransIndicator, consInitlpIndicator, consSepalpIndicator,
          consSepasolIndicator, consEnfolpIndicator, consEnfopsIndicator, consCheckIndicator,
@@ -5086,11 +5166,6 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
          "constraints/indicator/genlogicor",
          "Generate logicor constraints instead of cuts?",
          &conshdlrdata->genlogicor, TRUE, DEFAULT_GENLOGICOR, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/indicator/sepaalternativelp",
-         "Separate using the alternative LP?",
-         &conshdlrdata->sepaalternativelp, TRUE, DEFAULT_SEPAALTERNATIVELP, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/indicator/addcoupling",
@@ -5118,11 +5193,6 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
          &conshdlrdata->trysolutions, TRUE, DEFAULT_TRYSOLUTIONS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/indicator/nolinconscont",
-         "decompose problem - do not generate linear constraint if all variables are continuous",
-         &conshdlrdata->nolinconscont, TRUE, DEFAULT_NOLINCONSCONT, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/indicator/enforcecuts",
          "in enforcing try to generate cuts (only if sepaalternativelp is true)",
          &conshdlrdata->enforcecuts, TRUE, DEFAULT_ENFORCECUTS, NULL, NULL) );
@@ -5142,15 +5212,26 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
          "do not generate indicator constraint, but a bilinear constraint instead",
          &conshdlrdata->generatebilinear, TRUE, DEFAULT_GENERATEBILINEAR, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/indicator/forcerestart",
-         "force restart if we have a max FS instance and gap is 1?",
-         &conshdlrdata->forcerestart, TRUE, DEFAULT_FORCERESTART, NULL, NULL) );
-
    SCIP_CALL( SCIPaddRealParam(scip,
          "constraints/indicator/restartfrac",
          "fraction of binary variables that need to be fixed before restart occurs (in forcerestart)",
          &conshdlrdata->restartfrac, TRUE, DEFAULT_RESTARTFRAC, 0.0, 1.0, NULL, NULL) );
+
+   /* parameters that should not be changed after problem stage: */
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/indicator/sepaalternativelp",
+         "Separate using the alternative LP?",
+         &conshdlrdata->sepaalternativelp_, TRUE, DEFAULT_SEPAALTERNATIVELP, paramChangedIndicator, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/indicator/forcerestart",
+         "force restart if we have a max FS instance and gap is 1?",
+         &conshdlrdata->forcerestart_, TRUE, DEFAULT_FORCERESTART, paramChangedIndicator, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/indicator/nolinconscont",
+         "decompose problem - do not generate linear constraint if all variables are continuous",
+         &conshdlrdata->nolinconscont_, TRUE, DEFAULT_NOLINCONSCONT, paramChangedIndicator, NULL) );
 
    return SCIP_OKAY;
 }
