@@ -2817,7 +2817,7 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
          {
             if( SCIPconsIsActive(conss[c]) && !SCIPconsIsModifiable(conss[c]) )
             {
-               npaircomparisons += (SCIPconsGetData(conss[c])->changed) ? c : (c - firstchange);
+               npaircomparisons += (SCIPconsGetData(conss[c])->changed) ? (SCIP_Longint) c : ((SCIP_Longint) c - (SCIP_Longint) firstchange);
                
                SCIP_CALL( removeRedundantConstraints(scip, conss, &firstchange, c, ndelconss) );
                

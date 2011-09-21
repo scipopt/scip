@@ -8559,7 +8559,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
          if( !SCIPconsIsActive(cons) || SCIPconsIsModifiable(cons) )
             continue;
          
-         npaircomparisons += (SCIP_Longint) ((!SCIPconsGetData(cons)->presolved) ? c : (c - firstchange));
+         npaircomparisons += ((!SCIPconsGetData(cons)->presolved) ? (SCIP_Longint) c : ((SCIP_Longint) c - (SCIP_Longint) firstchange));
          
          SCIP_CALL( preprocessConstraintPairs(scip, conss, firstchange, c, ndelconss) );
          

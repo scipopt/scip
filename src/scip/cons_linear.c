@@ -9638,7 +9638,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
                if( usefulconss[c] == NULL )
                   continue;
               
-               npaircomparisons += (SCIP_Longint) ((SCIPconsGetData(conss[c])->changed) ? c : (c - firstchange));
+               npaircomparisons += ((SCIPconsGetData(conss[c])->changed) ? (SCIP_Longint) c : ((SCIP_Longint) c - (SCIP_Longint) firstchange));
 
                assert(SCIPconsIsActive(usefulconss[c]) && !SCIPconsIsModifiable(usefulconss[c]));
                SCIP_CALL( preprocessConstraintPairs(scip, usefulconss, firstchange, c, conshdlrdata->maxaggrnormscale,

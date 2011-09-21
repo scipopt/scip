@@ -2625,7 +2625,7 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
          {
             if( SCIPconsIsActive(conss[c]) && !SCIPconsIsModifiable(conss[c]) )
             {
-               npaircomparisons += (SCIP_Longint) ((SCIPconsGetData(conss[c])->changed) ? c : (c - firstchange));
+               npaircomparisons += ((SCIPconsGetData(conss[c])->changed) ? (SCIP_Longint) c : ((SCIP_Longint) c - (SCIP_Longint) firstchange));
                
                SCIP_CALL( preprocessConstraintPairs(scip, conss, firstchange, c,
                                                     &cutoff, naggrvars, nchgbds, ndelconss) );
