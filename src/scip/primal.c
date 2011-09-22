@@ -791,11 +791,7 @@ SCIP_Bool origsolOfInterest(
    int*                  insertpos           /**< pointer to store the insert position of that solution */
    )
 {
-   SCIP_Real obj;
-
    assert(SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL);
-   
-   obj = SCIPsolGetOrigObj(sol);
    
    /* find insert position for the solution */
    (*insertpos) = primalSearchOrigSolPos(primal, sol);

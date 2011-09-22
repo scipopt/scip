@@ -4697,7 +4697,9 @@ SCIP_Bool SCIPstrToRealValue(
    return FALSE;
 }
 
-/** copies the string between a start and end character */
+/** copies the first size characters between a start and end character of str into token, if no error occured endptr
+ *  will point to the position after the read part, otherwise it will point to NULL
+ */
 void SCIPstrCopySection(
    const char*           str,                /**< string to search */
    char                  startchar,          /**< character which defines the beginning */
@@ -4707,7 +4709,6 @@ void SCIPstrCopySection(
    char**                endptr              /**< pointer to store the final string position if successfully parsed */
    )
 {
-   int len;
    int nchars;
   
    assert(str != NULL);
@@ -4715,11 +4716,7 @@ void SCIPstrCopySection(
    assert(size > 0);
    assert(endptr != NULL);
  
-   *endptr = (char*)str;
-  
-   len = strlen(str);
    nchars = 0;
-   
 
    /* find starting character */
    while( *str != '\0' && *str != startchar )

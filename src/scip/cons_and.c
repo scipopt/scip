@@ -2793,11 +2793,8 @@ SCIP_DECL_CONSPARSE(consParseAnd)
    int requiredsize;
    int varssize;
    int nvars;
-   int pos;
    
    SCIPdebugMessage("parse <%s> as and constraint\n", str);
-
-   pos = 0;
 
    /* parse variable name */ 
    SCIP_CALL( SCIPparseVarName(scip, str, &resvar, &endptr) );

@@ -407,8 +407,6 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorRestart)
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_EVENTTYPE eventtype;
-   SCIP_Real oldbound;
-   SCIP_Real newbound;
 
    assert( scip != NULL );
    assert( eventhdlr != NULL );
@@ -429,6 +427,11 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorRestart)
    {
    case SCIP_EVENTTYPE_GUBCHANGED:
    case SCIP_EVENTTYPE_GLBCHANGED:
+   {
+#ifndef NDEBUG
+      SCIP_Real oldbound;
+      SCIP_Real newbound;
+
       assert( SCIPvarGetType(SCIPeventGetVar(event)) == SCIP_VARTYPE_BINARY );
       oldbound = SCIPeventGetOldbound(event);
       newbound = SCIPeventGetNewbound(event);
@@ -437,7 +440,7 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorRestart)
       assert( ! SCIPisEQ(scip, oldbound, newbound) );
       assert( SCIPisZero(scip, oldbound) || SCIPisEQ(scip, oldbound, 1.0) );
       assert( SCIPisZero(scip, newbound) || SCIPisEQ(scip, newbound, 1.0) );
-
+#endif
       /* variable is now fixed */
       ++(conshdlrdata->nbinvarszero);
       SCIPdebugMessage("fixed variable <%s> (nbinvarszero: %d, total: %d).\n",
@@ -458,7 +461,7 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorRestart)
          conshdlrdata->performedrestart = TRUE;
       }
       break;
-      
+   }
    case SCIP_EVENTTYPE_BESTSOLFOUND:
       assert( SCIPisIntegral(scip, conshdlrdata->minabsobj) );
       assert( SCIPisGE(scip, conshdlrdata->minabsobj, 1.0 ) );

@@ -4746,13 +4746,14 @@ SCIP_RETCODE SCIPconsParse(
    pos = 0;
  
    /* scan constant handler name */
-   SCIPstrCopySection(str, '[', ']', conshdlrname, SCIP_MAXSTRLEN, &saveptr);
    assert(str != NULL);
+   SCIPstrCopySection(str, '[', ']', conshdlrname, SCIP_MAXSTRLEN, &saveptr);
+   assert(saveptr != NULL);
    SCIPdebugMessage("constraint handler name <%s>\n", conshdlrname);
 
    /* scan constraint name */
    SCIPstrCopySection(str, '<', '>', consname, SCIP_MAXSTRLEN, &saveptr);
-   assert(str != saveptr);
+   assert(saveptr != NULL);
    SCIPdebugMessage("constraint name <%s>\n", consname);
    
    str = saveptr;
