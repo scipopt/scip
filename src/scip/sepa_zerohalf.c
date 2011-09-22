@@ -1784,6 +1784,10 @@ void findClosestLb(
       zvlb = SCIPvarGetVlbVars(var);
       bvlb = SCIPvarGetVlbCoefs(var);
       dvlb = SCIPvarGetVlbConstants(var);
+
+      assert(zvlb == NULL || nvlb == 0);
+      assert(bvlb == NULL || nvlb == 0);
+      assert(dvlb == NULL || nvlb == 0);
    }
 
    if( *bestlbtype == -2 )
@@ -1823,6 +1827,7 @@ void findClosestLb(
    if( *bestlbtype >= 0 )
    {
       assert(USEVARBOUNDS); /*lint !e774 !e506*/
+      assert(*bestlbtype < nvlb);
       *bestzvlb = zvlb[*bestlbtype];
       *bestbvlb = bvlb[*bestlbtype];
       *bestdvlb = dvlb[*bestlbtype];      
@@ -1878,6 +1883,10 @@ void findClosestUb(
       zvub = SCIPvarGetVubVars(var);
       bvub = SCIPvarGetVubCoefs(var);
       dvub = SCIPvarGetVubConstants(var);
+
+      assert(zvub == NULL || nvub == 0);
+      assert(bvub == NULL || nvub == 0);
+      assert(dvub == NULL || nvub == 0);
    }
 
    if( *bestubtype == -2 )
@@ -1916,6 +1925,7 @@ void findClosestUb(
    if( *bestubtype >= 0 )
    {
       assert(USEVARBOUNDS); /*lint !e774 !e506*/
+      assert(*bestubtype < nvub);
       *bestzvub = zvub[*bestubtype];
       *bestbvub = bvub[*bestubtype];
       *bestdvub = dvub[*bestubtype];      
@@ -2600,7 +2610,7 @@ SCIP_RETCODE storeMod2Data(
    SCIP_CALL( SCIPallocMemoryArray(scip, &(mod2data->colstatistics), problem->nrcols) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(mod2data->rowsind), mod2data->nrows) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(mod2data->colsind), problem->nrcols) );
-   SCIP_CALL(SCIPallocBufferArray(scip, &densecoeffscurrentrow, lpdata->ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &densecoeffscurrentrow, lpdata->ncols) );
   
    /* initialize temporary memory */
    mod2data->relatedsubproblem = problem;
@@ -2717,7 +2727,7 @@ SCIP_RETCODE storeMod2Data(
             {
                if( tempcurrentrow == NULL )
                {
-                  SCIP_CALL(SCIPallocMemoryArray(scip, &tempcurrentrow, mod2data->rowsbitarraysize));
+                  SCIP_CALL( SCIPallocMemoryArray(scip, &tempcurrentrow, mod2data->rowsbitarraysize) );
                   BITARRAYCLEAR(tempcurrentrow, mod2data->rowsbitarraysize);
                }
                assert(rcolsindex < problem->nrcols);
@@ -2746,7 +2756,7 @@ SCIP_RETCODE storeMod2Data(
     
       if( tempcurrentrow == NULL && tempmod2rhs )
       {
-         SCIP_CALL(SCIPallocMemoryArray(scip, &tempcurrentrow, mod2data->rowsbitarraysize));
+         SCIP_CALL( SCIPallocMemoryArray(scip, &tempcurrentrow, mod2data->rowsbitarraysize) );
          BITARRAYCLEAR(tempcurrentrow, mod2data->rowsbitarraysize);
       }
       assert(tempcurrentrow != NULL || !tempmod2rhs);
@@ -2757,7 +2767,7 @@ SCIP_RETCODE storeMod2Data(
          mod2data->rows[i] = tempcurrentrow;
          mod2data->rhs[i] = tempmod2rhs;
       
-         SCIP_CALL(SCIPallocMemoryArray(scip, &(mod2data->rowaggregations[i]), mod2data->rowaggregationsbitarraysize));
+         SCIP_CALL( SCIPallocMemoryArray(scip, &(mod2data->rowaggregations[i]), mod2data->rowaggregationsbitarraysize) );
          BITARRAYCLEAR(mod2data->rowaggregations[i], mod2data->rowaggregationsbitarraysize);
          BITARRAYBITSET(mod2data->rowaggregations[i], i);
 

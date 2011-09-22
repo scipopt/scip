@@ -715,6 +715,8 @@ SCIP_RETCODE addKnapsackConstraints(
 
    for( i = 0; i < nconss; ++i )
    {
+      SCIP_Longint* weights;
+
       /* skip local and redundant constraints */
       if( !SCIPconsIsEnabled(conss[i]) || !SCIPconsIsChecked(conss[i]) )
          continue;
@@ -734,8 +736,9 @@ SCIP_RETCODE addKnapsackConstraints(
          coefssize = nvars;
       }
 
+      weights = SCIPgetWeightsKnapsack(scip, conss[i]);
       for( j = 0; j < nvars; ++j )
-         coefs[j] = (SCIP_Real)SCIPgetWeightsKnapsack(scip, conss[i])[j];  /*lint !e613*/
+         coefs[j] = (SCIP_Real)weights[j];  /*lint !e613*/
 
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
          nvars, SCIPgetVarsKnapsack(scip, conss[i]), coefs,
@@ -1332,11 +1335,11 @@ SCIP_RETCODE forbidFixation(
          if( fixval == 0.0 )
          {
             /* variable fixed at lower bound */
-            consvars[i] = var;
+            consvars[nconsvars] = var;
          }
          else
          {
-            SCIP_CALL( SCIPgetNegatedVar(scip, var, &consvars[i]) );
+            SCIP_CALL( SCIPgetNegatedVar(scip, var, &consvars[nconsvars]) );
          }
 
          ++nconsvars;
@@ -1386,6 +1389,8 @@ SCIP_RETCODE forbidFixation(
 
          if( SCIPvarGetLbGlobal(var) < fixval )
          {
+            assert(nconsvars < nsubbinvars + 2*nsubintvars);
+
             /* literal x_i <= fixval-1 */
             boundtypes[nconsvars] = SCIP_BOUNDTYPE_UPPER;
             bounds[nconsvars]     = fixval - 1.0;
@@ -1395,6 +1400,8 @@ SCIP_RETCODE forbidFixation(
 
          if( SCIPvarGetUbGlobal(var) > fixval )
          {
+            assert(nconsvars < nsubbinvars + 2*nsubintvars);
+
             /* literal x_i >= fixval+1 */
             boundtypes[nconsvars] = SCIP_BOUNDTYPE_LOWER;
             bounds[nconsvars]     = fixval + 1.0;

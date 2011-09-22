@@ -760,6 +760,8 @@ void printCommodities(
       }
    }
 
+   assert(capacityrows != NULL || mcfdata->narcs == 0);
+
    MCFdebugMessage("capacities:\n");
    for( a = 0; a < mcfdata->narcs; a++ )
    {
@@ -778,6 +780,8 @@ void printCommodities(
    }
    MCFdebugMessage("\n");
 
+   assert(colcommodity != NULL || ncols == 0);
+
    MCFdebugMessage("unused columns:\n");
    for( c = 0; c < ncols; c++ )
    {
@@ -792,6 +796,8 @@ void printCommodities(
    MCFdebugMessage("unused rows:\n");
    for( r = 0; r < nrows; r++ )
    {
+      assert(rowcommodity != NULL);
+
       if( rowcommodity[r] == -1 && (capacityrowsigns == NULL || (capacityrowsigns[r] & (LHSASSIGNED | RHSASSIGNED)) == 0) )
       {
          MCFdebugMessage(" row <%s>\n", SCIProwGetName(rows[r]));
@@ -2079,6 +2085,8 @@ SCIP_RETCODE extractFlow(
    for( r = 0; r < nrows; r++ )
       rowcommodity[r] = -1;
 
+   assert(flowcands != NULL || mcfdata->nflowcands == 0);
+
    /*    (b) As long as there are flow conservation candidates left:
     *        (i) Create new commodity and use first flow conservation constraint as new row.
     *       (ii) Add new row to commodity, update pluscom/minuscom accordingly.
@@ -2238,6 +2246,7 @@ SCIP_RETCODE extractCapacities(
    int        ncapacitycands     = mcfdata->ncapacitycands;
 
    assert(mcfdata->narcs == 0);
+   assert(capacitycands != NULL || ncapacitycands == 0);
 
    /* get LP data */
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
@@ -2721,6 +2730,8 @@ SCIP_RETCODE extractNodes(
    for( c = 0; c < ncols; c++ )
       colisincident[c] = FALSE;
 
+   assert(flowcands != NULL || nflowcands == 0);
+
    /* process all flow conservation constraints that have been used */
    for( n = 0; n < nflowcands; n++ )
    {
@@ -3094,6 +3105,8 @@ SCIP_RETCODE findUncapacitatedArcs(
    rows = SCIPgetLPRows(scip);
    cols = SCIPgetLPCols(scip);
    ncols = SCIPgetNLPCols(scip);
+   assert(rows != NULL);
+   assert(cols != NULL || ncols == 0);
 
    /* allocate temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &sortedflowcands, nflowcands) );
@@ -3434,6 +3447,8 @@ SCIP_RETCODE cleanupNetwork(
 
    /** @todo remove nodes without any incoming and outgoing arcs */
 
+   assert(flowcands != NULL || nflowcands == 0);
+
    /* count the number of nodes in each commodity */
    for( i = 0; i < nflowcands; i++ )
    {
@@ -3448,6 +3463,8 @@ SCIP_RETCODE cleanupNetwork(
          nnodespercom[rowcommodity[r]]++;
       }
    }
+
+   assert(capacityrows != NULL || narcs == 0);
 
    /* count the number of arcs in each commodity */
    for( a = 0; a < narcs; a++ )
@@ -4075,6 +4092,11 @@ SCIP_RETCODE identifyComponent(
    nstacknodes = 1;
    nodevisited[startv] = ONSTACK;
 
+   assert(firstoutarcs != NULL || nstacknodes == 0);
+   assert(firstinarcs != NULL || nstacknodes == 0);
+   assert(nextoutarcs != NULL || nstacknodes == 0);
+   assert(nextinarcs != NULL || nstacknodes == 0);
+
    /* perform depth-first search */
    while( nstacknodes > 0 )
    {
@@ -4099,6 +4121,7 @@ SCIP_RETCODE identifyComponent(
          int targetv;
 
          assert(0 <= a && a < mcfdata->narcs);
+         assert(arctargets != NULL);
 
          targetv = arctargets[a];
 
@@ -4127,6 +4150,7 @@ SCIP_RETCODE identifyComponent(
          int sourcev;
 
          assert(0 <= a && a < mcfdata->narcs);
+         assert(arcsources != NULL);
 
          sourcev = arcsources[a];
 

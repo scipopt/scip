@@ -2097,7 +2097,8 @@ SCIP_RETCODE varParse(
    SCIP_ALLOC( BMSduplicateMemoryArray(&copystr, str, strlen(str)+1) );
    
    token = SCIPstrtok(copystr, " []", &saveptr);
-   
+   assert(token != NULL);
+
    /* get variable type */
    if( strncmp(token, "binary", 3) == 0 )
       (*vartype) = SCIP_VARTYPE_BINARY;
@@ -2116,10 +2117,13 @@ SCIP_RETCODE varParse(
    
    /* get variable name */
    token = SCIPstrtok(NULL, " <>:", &saveptr);
+   assert(token != NULL);
    (void) SCIPsnprintf(name, (int)strlen(token)+1, "%s", token);
    
    /* get objective coefficient */
    token = SCIPstrtok(NULL, " ,:", &saveptr);
+   assert(token != NULL);
+
 #ifndef NDEBUG
    cnt = sscanf(token, "obj=%"SCIP_REAL_FORMAT",", obj);
 #else
@@ -2127,6 +2131,7 @@ SCIP_RETCODE varParse(
 #endif
    assert(cnt == 1);
    
+#ifdef NDEBUG
    /* get global bound */
    (void) SCIPstrtok(NULL, "[", &saveptr);
    token = SCIPstrtok(NULL, ",", &saveptr);
@@ -2137,9 +2142,30 @@ SCIP_RETCODE varParse(
    /* get local bound */
    (void) SCIPstrtok(NULL, "[", &saveptr);
    token = SCIPstrtok(NULL, ",", &saveptr);
+#else
+   /* get global bound */
+   token = SCIPstrtok(NULL, "[", &saveptr);
+   assert(token != NULL);
+   token = SCIPstrtok(NULL, ",", &saveptr);
+   assert(token != NULL);
+   parseValue(set, token, lb);
+   token = SCIPstrtok(NULL, "]", &saveptr);
+   assert(token != NULL);
+   parseValue(set, token, ub);
+
+   /* get local bound */
+   token = SCIPstrtok(NULL, "[", &saveptr);
+   assert(token != NULL);
+   token = SCIPstrtok(NULL, ",", &saveptr);
+   assert(token != NULL);
+#endif
+
    if( local )
       parseValue(set, token, lb);
+
    token = SCIPstrtok(NULL, "]", &saveptr);
+   assert(token != NULL);
+
    if( local )
       parseValue(set, token, ub);
 
@@ -2154,8 +2180,10 @@ SCIP_RETCODE varParse(
    else
    {
       token = SCIPstrtok(NULL, ",", &saveptr);
+      assert(token != NULL);
       parseValue(set, token, lazylb);
       token = SCIPstrtok(NULL, "]", &saveptr);
+      assert(token != NULL);
       parseValue(set, token, lazyub);
    }
    

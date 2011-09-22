@@ -10073,12 +10073,14 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
       case SCIP_EXPR_REALPOWER:
       case SCIP_EXPR_SIGNPOWER:
       {
+         assert(childexprs != NULL);
          SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, expr, node->op, childexprs[0], node->data.dbl) );  /*lint !e613*/
          break;
       }
 
       case SCIP_EXPR_INTPOWER:
       {
+         assert(childexprs != NULL);
          SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, expr, node->op, childexprs[0], node->data.intval) );  /*lint !e613*/
          break;
       }
@@ -14099,6 +14101,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
             assert(SCIPhashmapExists(testvalidx, (void*)node));
 
             idx = (int)(size_t)(void*)SCIPhashmapGetImage(testvalidx, (void*)node);
+            assert(idx < ntestvals);
 
             testval_before = testvals[idx];  /*lint !e613*/
             testval_after = SCIPexprgraphGetNodeVal(node);

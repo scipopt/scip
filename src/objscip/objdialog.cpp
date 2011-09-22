@@ -162,7 +162,8 @@ SCIP_RETCODE SCIPincludeObjDialog(
       SCIP_DIALOGDATA* dialogdata;
       SCIP_DIALOG* dialog;
       SCIP_RETCODE retcode;
-      dialog = 0;
+
+      dialog = NULL;
 
       /* create dialog data */
       dialogdata = new SCIP_DIALOGDATA;

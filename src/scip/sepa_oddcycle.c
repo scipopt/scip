@@ -508,6 +508,11 @@ SCIP_Bool isNeighbor(
 #ifndef NDEBUG
          implbounds = SCIPvarGetImplBounds(vars[a], originala);
 #endif
+
+         assert(implvars != NULL || nbinimpls == 0);
+         assert(impltypes != NULL || nbinimpls == 0);
+         assert(implbounds != NULL || nbinimpls == 0);
+
          for( i = 0; i < nbinimpls; ++i )
          {
             if( SCIPvarGetProbindex(vars[b]) == SCIPvarGetProbindex(implvars[i]) )
@@ -532,11 +537,17 @@ SCIP_Bool isNeighbor(
          /* check whether a and b are contained in a clique */
          ncliques =  (unsigned int) SCIPvarGetNCliques(vars[a],originala);
          cliques = SCIPvarGetCliques(vars[a],originala);
+
+         assert(cliques != NULL || ncliques == 0);
+
          for( i = 0; i < ncliques; ++i )
          {
             ncliquevars = (unsigned int) SCIPcliqueGetNVars(cliques[i]);
             cliquevars = SCIPcliqueGetVars(cliques[i]);
             cliquevals = SCIPcliqueGetValues(cliques[i]);
+
+            assert(cliquevars != NULL || ncliquevars == 0);
+            assert(cliquevals != NULL || ncliquevars == 0);
       
             for( j = 0; j < ncliquevars; ++j )
             { 
@@ -1487,6 +1498,9 @@ SCIP_RETCODE addNextLevelBinImpls(
    implvars = SCIPvarGetImplVars(vars[varsidx], varfixing);
    impltypes = SCIPvarGetImplTypes(vars[varsidx], varfixing);
 
+   assert(implvars != NULL || nbinimpls == 0);
+   assert(impltypes != NULL || nbinimpls == 0);
+
    for( j = 0; j < nbinimpls; ++j )
    {
       unsigned int k;
@@ -1647,11 +1661,16 @@ SCIP_RETCODE addNextLevelCliques(
       return SCIP_OKAY;
 
    cliques = SCIPvarGetCliques(vars[varsidx], varfixing);
+   assert(cliques != NULL);
+
    for( j = 0; j < ncliques; ++j )
    {
       ncliquevars = (unsigned int) SCIPcliqueGetNVars(cliques[j]);
       cliquevars = SCIPcliqueGetVars(cliques[j]);
       cliquevals = SCIPcliqueGetValues(cliques[j]);
+
+      assert(cliquevars != NULL || ncliquevars == 0);
+      assert(cliquevals != NULL || ncliquevars == 0);
 
       for( k = 0; k < ncliquevars; ++k )
       {
@@ -1829,6 +1848,9 @@ SCIP_RETCODE insertSortedRootNeighbors(
             
       implvars = SCIPvarGetImplVars(vars[varsidx], varfixing);
       impltypes = SCIPvarGetImplTypes(vars[varsidx], varfixing);
+      assert(implvars != NULL);
+      assert(impltypes != NULL);
+
       for( j = 0; j < nbinimpls ; ++j )
       {
          jidx = sepadata->mapping[SCIPvarGetProbindex(implvars[j])];
@@ -1868,11 +1890,16 @@ SCIP_RETCODE insertSortedRootNeighbors(
    if( ncliques > 0 )
    {
       cliques = SCIPvarGetCliques(vars[varsidx], varfixing);
+      assert(cliques != NULL);
+
       for( j = 0; j < ncliques; ++j )
       {
          ncliquevars = (unsigned int) SCIPcliqueGetNVars(cliques[j]);
          cliquevars = SCIPcliqueGetVars(cliques[j]);
          cliquevals = SCIPcliqueGetValues(cliques[j]);
+
+         assert(cliquevars != NULL || ncliquevars == 0);
+         assert(cliquevals != NULL || ncliquevars == 0);
             
          for( k = 0; k < ncliquevars; ++k )
          {
@@ -3056,6 +3083,10 @@ SCIP_RETCODE addGLSBinImpls(
    implbounds = SCIPvarGetImplBounds(vars[varsidx], original);
 #endif
 
+   assert(implvars != NULL || nbinimpls == 0);
+   assert(impltypes != NULL || nbinimpls == 0);
+   assert(implbounds != NULL || nbinimpls == 0);
+
    /* add all implications to the graph */
    for( m = 0; m < nbinimpls; ++m )
    {
@@ -3187,12 +3218,17 @@ SCIP_RETCODE addGLSCliques(
 
    /* if current variable has cliques of current clique-type */
    cliques = SCIPvarGetCliques(vars[varsidx], original);
+   assert(cliques != NULL || ncliques == 0);
+
    for( k = 0; k < ncliques; ++k )
    {
       /* get clique data */
       cliquevars = SCIPcliqueGetVars(cliques[k]);
       ncliquevars = (unsigned int) SCIPcliqueGetNVars(cliques[k]);
       cliquevals = SCIPcliqueGetValues(cliques[k]);
+
+      assert(cliquevars != NULL || ncliquevars == 0);
+      assert(cliquevals != NULL || ncliquevars == 0);
 
       /* add arcs for all fractional variables in clique */
       for( m = 0; m < ncliquevars; ++m )

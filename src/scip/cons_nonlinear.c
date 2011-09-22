@@ -2905,6 +2905,7 @@ SCIP_RETCODE reformulate(
                            SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs, nchildren) );
                            BMSclearMemoryArray(lincoefs, nchildren);
                         }
+                        assert(0 <= childidxs[0] && childidxs[0] < nchildren);
                         assert(lincoefs[childidxs[0]] == 0.0); /* monomials should have been merged */
                         lincoefs[childidxs[0]] = coef;
                      }
@@ -2947,6 +2948,7 @@ SCIP_RETCODE reformulate(
                         {
                            SCIP_CALL( SCIPallocBufferArray(scip, &childrennew, nchildren) );
                         }
+                        assert(nfactors <= nchildren);
                         for( f = 0; f < nfactors; ++f )
                            childrennew[f] = children[childidxs[f]];
 

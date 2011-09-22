@@ -959,12 +959,12 @@ SCIP_RETCODE SCIPparamSetString(
    if( param->data.stringparam.valueptr != NULL )
    {
       BMSfreeMemoryArrayNull(param->data.stringparam.valueptr);
-      BMSduplicateMemoryArray(param->data.stringparam.valueptr, value, strlen(value)+1);
+      SCIP_ALLOC( BMSduplicateMemoryArray(param->data.stringparam.valueptr, value, strlen(value)+1) );
    }
    else
    {
       BMSfreeMemoryArrayNull(&param->data.stringparam.curvalue);
-      BMSduplicateMemoryArray(&param->data.stringparam.curvalue, value, strlen(value)+1);
+      SCIP_ALLOC( BMSduplicateMemoryArray(&param->data.stringparam.curvalue, value, strlen(value)+1) );
    }
 
    /* call the parameter's change information method */
@@ -2426,8 +2426,12 @@ SCIP_RETCODE SCIPparamsetWrite(
       retcode = paramWrite(paramset->params[i], file, comments, onlychanged);
       if( retcode != SCIP_OKAY )
       {
-          fclose(file);
-          SCIP_CALL( retcode );
+         if( filename != NULL )
+         {
+            assert(file != NULL);
+            fclose(file);
+         }
+         SCIP_CALL( retcode );
       }
    }
 

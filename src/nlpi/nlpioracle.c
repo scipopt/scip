@@ -894,7 +894,7 @@ SCIP_RETCODE evalFunctionGradient(
       
       SCIPdebugMessage("eval gradient of ");
       SCIPdebug( SCIPexprtreePrint(cons->exprtree, NULL, NULL, NULL) );
-      SCIPdebug( printf("\nx ="); for( i = 0; i < nvars; ++i) printf(" %g", xx[i]); printf("\n"); )
+      SCIPdebug( if( isnewx ) {printf("\nx ="); for( i = 0; i < nvars; ++i) printf(" %g", xx[i]); printf("\n");} )
       
       SCIP_CALL( SCIPexprintGrad(oracle->exprinterpreter, cons->exprtree, xx, isnewx, &nlval, g) );  /*lint !e644*/
       
@@ -1258,7 +1258,7 @@ SCIP_RETCODE printFunction(
       for( i = 0; i < SCIPexprtreeGetNVars(cons->exprtree); ++i )
       {
          assert(cons->exprvaridxs[i] < 1e+20);
-         BMSallocBlockMemoryArray(oracle->blkmem, &varnames[i], 70);  /*lint !e866 !e506 !e644*/
+         SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &varnames[i], 70) );  /*lint !e866 !e506 !e644*/
          printName(varnames[i], oracle->varnames != NULL ? oracle->varnames[cons->exprvaridxs[i]] : NULL, cons->exprvaridxs[i], 'x', NULL, longvarnames);
       }
 
@@ -2688,7 +2688,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
 
             SCIPdebugMessage("eval gradient of ");
             SCIPdebug( SCIPexprtreePrint(cons->exprtree, NULL, NULL, NULL) );
-            SCIPdebug( printf("\nx ="); for( l = 0; l < nvars; ++l) printf(" %g", xx[l]); printf("\n"); )
+            SCIPdebug( if( isnewx ) {printf("\nx ="); for( l = 0; l < nvars; ++l) printf(" %g", xx[l]); printf("\n");} )
 
             SCIP_CALL( SCIPexprintGrad(oracle->exprinterpreter, cons->exprtree, xx, isnewx, &nlval, grad) );  /*lint !e644*/
 

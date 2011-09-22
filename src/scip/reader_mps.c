@@ -2136,20 +2136,23 @@ SCIP_RETCODE readIndicators(
       }
 
       /* check whether we need the negated variable */
-      if( *mpsinputField4(mpsi) == '0' )
+      if( mpsinputField4(mpsi) != NULL )
       {
-         SCIP_VAR* var;
-         SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &var) );
-         binvar = var;
-         assert( binvar != NULL );
-      }
-      else
-      {
-         if( *mpsinputField4(mpsi) != '1' )
+         if( *mpsinputField4(mpsi) == '0' )
          {
-            SCIPerrorMessage("binary variable <%s> can only take values 0/1 (%s).\n", mpsinputField3(mpsi), mpsinputField4(mpsi));
-            mpsinputSyntaxerror(mpsi);
-            return SCIP_OKAY;
+            SCIP_VAR* var;
+            SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &var) );
+            binvar = var;
+            assert( binvar != NULL );
+         }
+         else
+         {
+            if( *mpsinputField4(mpsi) != '1' )
+            {
+               SCIPerrorMessage("binary variable <%s> can only take values 0/1 (%s).\n", mpsinputField3(mpsi), mpsinputField4(mpsi));
+               mpsinputSyntaxerror(mpsi);
+               return SCIP_OKAY;
+            }
          }
       }
 

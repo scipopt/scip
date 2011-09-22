@@ -7330,6 +7330,7 @@ void checkLazyColArray(
    for( i = 0; i < lp->nlazycols; ++i )
    {
       /* check if each lazy column has at least on lazy bound */
+      assert(lp->lazycols[i] != NULL);
       assert(!SCIPsetIsInfinity(set, lp->lazycols[i]->lazyub) || !SCIPsetIsInfinity(set, -lp->lazycols[i]->lazylb));
 
       contained = FALSE;
@@ -7349,6 +7350,8 @@ void checkLazyColArray(
    for( c = 0; c < lp->ncols; ++c )
    {
       contained = FALSE;
+      assert(lp->cols[c] != NULL);
+
       for( i = 0; i < lp->nlazycols; ++i )
       {
          if( lp->lazycols[i] == lp->cols[c] )
@@ -7425,7 +7428,6 @@ SCIP_RETCODE SCIPlpShrinkCols(
        *  in the lazycols array  */
       checkLazyColArray(lp, set);
 #endif
-
 
       /* mark the current LP unflushed */
       lp->flushed = FALSE;
@@ -8335,7 +8337,10 @@ SCIP_RETCODE transformMIRRow(
                vlbcoefs = SCIPvarGetVlbCoefs(var);
                vlbconsts = SCIPvarGetVlbConstants(var);
                k = boundsfortrans[v];
-               assert(k >= 0 && k <  SCIPvarGetNVlbs(var));
+               assert(k >= 0 && k < SCIPvarGetNVlbs(var));
+               assert(vlbvars != NULL);
+               assert(vlbcoefs != NULL);
+               assert(vlbconsts != NULL);
 
                /* we have to avoid cyclic variable bound usage, so we enforce to use only variable bounds variables of smaller index */
                if( SCIPvarGetProbindex(vlbvars[k]) < v )
@@ -8375,7 +8380,10 @@ SCIP_RETCODE transformMIRRow(
                vubcoefs = SCIPvarGetVubCoefs(var);
                vubconsts = SCIPvarGetVubConstants(var);
                k = boundsfortrans[v];
-               assert(k >= 0 && k <  SCIPvarGetNVubs(var));
+               assert(k >= 0 && k < SCIPvarGetNVubs(var));
+               assert(vubvars != NULL);
+               assert(vubcoefs != NULL);
+               assert(vubconsts != NULL);
 
                /* we have to avoid cyclic variable bound usage, so we enforce to use only variable bounds variables of smaller index */
                if( SCIPvarGetProbindex(vubvars[k]) < v )
@@ -8457,10 +8465,17 @@ SCIP_RETCODE transformMIRRow(
          }
          else
          {
-            SCIP_VAR** vlbvars = SCIPvarGetVlbVars(var);
-            SCIP_Real* vlbcoefs = SCIPvarGetVlbCoefs(var);
-            SCIP_Real* vlbconsts = SCIPvarGetVlbConstants(var);
+            SCIP_VAR** vlbvars;
+            SCIP_Real* vlbcoefs; 
+            SCIP_Real* vlbconsts;
             int zidx;
+
+            vlbvars = SCIPvarGetVlbVars(var);
+            vlbcoefs = SCIPvarGetVlbCoefs(var);
+            vlbconsts = SCIPvarGetVlbConstants(var);
+            assert(vlbvars != NULL);
+            assert(vlbcoefs != NULL);
+            assert(vlbconsts != NULL);
 
             assert(0 <= bestlbtype && bestlbtype < SCIPvarGetNVlbs(var));
             assert(SCIPvarIsActive(vlbvars[bestlbtype]));
@@ -8496,10 +8511,17 @@ SCIP_RETCODE transformMIRRow(
          }
          else
          {
-            SCIP_VAR** vubvars = SCIPvarGetVubVars(var);
-            SCIP_Real* vubcoefs = SCIPvarGetVubCoefs(var);
-            SCIP_Real* vubconsts = SCIPvarGetVubConstants(var);
+            SCIP_VAR** vubvars;
+            SCIP_Real* vubcoefs; 
+            SCIP_Real* vubconsts;
             int zidx;
+
+            vubvars = SCIPvarGetVubVars(var);
+            vubcoefs = SCIPvarGetVubCoefs(var);
+            vubconsts = SCIPvarGetVubConstants(var);
+            assert(vubvars != NULL);
+            assert(vubcoefs != NULL);
+            assert(vubconsts != NULL);
 
             assert(0 <= bestubtype && bestubtype < SCIPvarGetNVubs(var));
             assert(SCIPvarIsActive(vubvars[bestubtype]));
@@ -8520,6 +8542,22 @@ SCIP_RETCODE transformMIRRow(
          }
       }
 
+#ifdef SCIP_DEBUG
+      if( bestlbtype >= 0 )
+      {
+         assert(bestlbtype < SCIPvarGetNVlbs(var));
+         assert(SCIPvarGetVlbVars(var) != NULL);
+         assert(SCIPvarGetVlbCoefs(var) != NULL);
+         assert(SCIPvarGetVlbConstants(var) != NULL);
+      }
+      if( bestubtype >= 0 )
+      {
+         assert(bestubtype < SCIPvarGetNVubs(var));
+         assert(SCIPvarGetVubVars(var) != NULL);
+         assert(SCIPvarGetVubCoefs(var) != NULL);
+         assert(SCIPvarGetVubConstants(var) != NULL);
+      }
+      
       SCIPdebugMessage("MIR var <%s>: varsign=%d, boundtype=%d, mircoef=%g, base=%d, sol=%g, lb=%g, ub=%g, vlb=%g<%s>%+g, vub=%g<%s>%+g -> rhs=%g\n", 
          SCIPvarGetName(var), varsign[v], boundtype[v], mircoef[v],
          SCIPvarGetCol(var) != NULL ? SCIPcolGetBasisStatus(SCIPvarGetCol(var)) : SCIP_BASESTAT_ZERO,
@@ -8531,6 +8569,7 @@ SCIP_RETCODE transformMIRRow(
          bestubtype >= 0 ? SCIPvarGetName(SCIPvarGetVubVars(var)[bestubtype]) : "-",
          bestubtype >= 0 ? SCIPvarGetVubConstants(var)[bestubtype] : bestub,
          *mirrhs);
+#endif
    }
 
    if( fixintegralrhs )

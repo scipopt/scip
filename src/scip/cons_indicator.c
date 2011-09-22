@@ -1313,6 +1313,7 @@ SCIP_RETCODE updateFirstRow(
       if ( SCIPhashmapExists(lbhash, var) )
       {
          int col;
+
          col = (int) (size_t) SCIPhashmapGetImage(lbhash, var);
          SCIP_CALL( SCIPlpiChgCoef(altlp, 0, col, -SCIPvarGetLbLocal(var)) );
          if ( ! SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetLbGlobal(var)) )
@@ -1320,7 +1321,9 @@ SCIP_RETCODE updateFirstRow(
       }
       if ( SCIPhashmapExists(ubhash, var) )
       {
-         int col = (int) (size_t) SCIPhashmapGetImage(ubhash, var);
+         int col;
+
+         col = (int) (size_t) SCIPhashmapGetImage(ubhash, var);
          SCIP_CALL( SCIPlpiChgCoef(altlp, 0, col, SCIPvarGetUbLocal(var)) );
          if ( ! SCIPisEQ(scip, SCIPvarGetUbLocal(var), SCIPvarGetUbGlobal(var)) )
             ++cnt;
@@ -1381,7 +1384,8 @@ SCIP_RETCODE updateFirstRowGlobal(
       }
       if ( SCIPhashmapExists(ubhash, var) )
       {
-         int col = (int) (size_t) SCIPhashmapGetImage(ubhash, var);
+         int col;
+         col = (int) (size_t) SCIPhashmapGetImage(ubhash, var);
          SCIP_CALL( SCIPlpiChgCoef(altlp, 0, col, SCIPvarGetUbGlobal(var)) );
          ++cnt;
       }
@@ -1692,7 +1696,10 @@ SCIP_RETCODE addAltLPConstraint(
          /* to avoid trivial rows: only add row corresponding to slack variable if it appears outside its own constraint */
          if ( var != slackvar )
          {
-            int ind = (int) (size_t) SCIPhashmapGetImage(conshdlrdata->slackhash, var);
+            int ind;
+
+            ind = (int) (size_t) SCIPhashmapGetImage(conshdlrdata->slackhash, var);
+
             if ( ind < INT_MAX )
                matind[cnt] = ind;
             else
@@ -1991,7 +1998,10 @@ SCIP_RETCODE addAltLPRow(
       /* if variable is a slack variable */
       if ( SCIPhashmapExists(conshdlrdata->slackhash, var) )
       {
-         int ind = (int) (size_t) SCIPhashmapGetImage(conshdlrdata->slackhash, var);
+         int ind;
+
+         ind = (int) (size_t) SCIPhashmapGetImage(conshdlrdata->slackhash, var);
+
          if ( ind < INT_MAX )
             matind[cnt] = ind;
          else
@@ -2383,9 +2393,9 @@ SCIP_RETCODE extendToCover(
    int*                  nGen                /**< number of generated cuts */
    )
 {
-   int step = 0;
-   SCIP_Real* primsol = NULL;
-   int nCols = 0;
+   SCIP_Real* primsol;
+   int step;
+   int nCols;
 
    assert( scip != NULL );
    assert( lp != NULL );
@@ -2399,17 +2409,24 @@ SCIP_RETCODE extendToCover(
    SCIP_CALL( SCIPallocBufferArray(scip, &primsol, nCols) );
    assert( nconss <= nCols );
 
+   step = 0;
    *nGen = 0;
    *error = FALSE;
    do
    {
-      SCIP_Bool infeasible = FALSE;
-      SCIP_Real sum = 0.0;
-      int sizeIIS = 0;
-      int candidate = -1;
-      int candIndex = -1;
-      SCIP_Real candObj = -1.0;
+      SCIP_Bool infeasible;
+      SCIP_Real sum;
+      int sizeIIS;
+      int candidate;
+      int candIndex;
+      SCIP_Real candObj;
       int j;
+
+      sum = 0.0;
+      sizeIIS = 0;
+      candidate = -1;
+      candIndex = -1;
+      candObj = -1.0;
 
       if ( step == 0 )
       {
@@ -2484,7 +2501,7 @@ SCIP_RETCODE extendToCover(
       /* if cut is violated, i.e., sum - sizeIIS + 1 > 0 */
       if ( SCIPisEfficacious(scip, sum - (SCIP_Real) (sizeIIS - 1)) )
       {
-         SCIP_Bool isLocal = TRUE;
+         SCIP_Bool isLocal;
 
 #ifdef SCIP_ENABLE_IISCHECK
          /* check whether we really have an infeasible subsystem */
@@ -2498,7 +2515,9 @@ SCIP_RETCODE extendToCover(
          {
             SCIP_CONS* cons;
             SCIP_VAR** vars;
-            int cnt =0;
+            int cnt;
+            
+            cnt = 0;
 
             SCIP_CALL( SCIPallocBufferArray(scip, &vars, nconss) );
 
@@ -2507,6 +2526,7 @@ SCIP_RETCODE extendToCover(
             {
                int ind;
                SCIP_CONSDATA* consdata;
+
                consdata = SCIPconsGetData(conss[j]);
                ind = consdata->colindex;
 
@@ -2551,6 +2571,7 @@ SCIP_RETCODE extendToCover(
             {
                int ind;
                SCIP_CONSDATA* consdata;
+
                consdata = SCIPconsGetData(conss[j]);
                ind = consdata->colindex;
 
@@ -3183,7 +3204,7 @@ SCIP_RETCODE enforceIndicators(
    {
       SCIP_Bool cutoff;
       SCIP_Real valSlack;
-      int cnt = 0;
+      int cnt;
 
       assert( conss[c] != NULL );
       consdata = SCIPconsGetData(conss[c]);
@@ -3592,7 +3613,9 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
    if ( conshdlrdata->sepaalternativelp )
    {
       int colindex;
-      int cnt = 0;
+      int cnt;
+
+      cnt = 0;
       for (c = 0; c < conshdlrdata->naddlincons; ++c)
       {
          SCIP_CONS* cons;
@@ -3688,6 +3711,7 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
       for (j = 0; j < nvars; ++j)
       {
          SCIP_Real obj;
+
          obj = SCIPvarGetObj(vars[j]);
          if ( ! SCIPisZero(scip, obj) )
          {
@@ -5048,6 +5072,7 @@ SCIP_DECL_CONSDISABLE(consDisableIndicator)
    if ( conshdlrdata->altlp != NULL )
    {
       SCIP_CONSDATA* consdata;
+
       consdata = SCIPconsGetData(cons);
       assert( consdata != NULL );
       assert( conshdlrdata->sepaalternativelp );
@@ -5342,10 +5367,12 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    linconsactive = TRUE;
    if ( conshdlrdata->nolinconscont )
    {
-      SCIP_Bool onlyCont = TRUE;
+      SCIP_Bool onlyCont;
       int v;
 
       assert( ! conshdlrdata->generatebilinear );
+
+      onlyCont = TRUE;
 
       /* check whether call variables are non-integer */
       for (v = 0; v < nvars; ++v)
@@ -5499,13 +5526,14 @@ SCIP_RETCODE SCIPcreateConsIndicatorLinCons(
    linconsactive = TRUE;
    if ( conshdlrdata->nolinconscont )
    {
-      SCIP_Bool onlyCont = TRUE;
+      SCIP_Bool onlyCont;
       int v;
       int nvars;
       SCIP_VAR** vars;
 
       nvars = SCIPgetNVarsLinear(scip, lincons);
       vars = SCIPgetVarsLinear(scip, lincons);
+      onlyCont = TRUE;
 
       /* check whether call variables are non-integer */
       for (v = 0; v < nvars; ++v)
@@ -5642,11 +5670,12 @@ SCIP_RETCODE SCIPsetLinearConsIndicator(
    /* if the problem should be decomposed if only non-integer variables are present */
    if ( conshdlrdata->nolinconscont )
    {
-      SCIP_Bool onlyCont = TRUE;
+      SCIP_Bool onlyCont;
       int v;
       int nvars;
       SCIP_VAR** vars;
 
+      onlyCont = TRUE;
       nvars = SCIPgetNVarsLinear(scip, lincons);
       vars = SCIPgetVarsLinear(scip, lincons);
       assert( vars != NULL );
