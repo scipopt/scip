@@ -620,7 +620,6 @@ SCIP_Bool SCIPbranchcandContainsExternCand(
    SCIP_VAR*             var                 /**< variable to look for */
    )
 {
-   SCIP_VARTYPE vartype;
    int branchpriority;
    int i;
 
@@ -629,7 +628,6 @@ SCIP_Bool SCIPbranchcandContainsExternCand(
    assert(branchcand->nprioexterncands <= branchcand->nexterncands);
    assert(branchcand->nexterncands <= branchcand->externcandssize);
 
-   vartype = SCIPvarGetType(var);
    branchpriority = SCIPvarGetBranchPriority(var);
 
    /* look for the variable in the externcands, using the fact, that the highest priority candidates are at the front
@@ -643,6 +641,10 @@ SCIP_Bool SCIPbranchcandContainsExternCand(
    }
    if( branchpriority == branchcand->externmaxpriority )
    {
+      SCIP_VARTYPE vartype;
+      
+      vartype = SCIPvarGetType(var);
+
       /* variable has equal priority as the current maximum:
        * look for it in the correct slot (binaries first, integers next, implicit integers next, continuous last)
        */
@@ -2250,11 +2252,8 @@ SCIP_RETCODE SCIPbranchExecExtern(
    {
       SCIP_VAR* var;
       SCIP_Real val;
-      SCIP_Real factor;
-      SCIP_Real domain;
       SCIP_Real bestfactor;
       SCIP_Real bestdomain;
-      int priority;
       int bestpriority;
       int bestcand;
 
@@ -2270,9 +2269,22 @@ SCIP_RETCODE SCIPbranchExecExtern(
       bestdomain = 0.0;
       for( i = 0; i < branchcand->nexterncands; ++i )
       {
-         priority = SCIPvarGetBranchPriority(branchcand->externcands[i]);
-         factor = SCIPvarGetBranchFactor(branchcand->externcands[i]);
-         domain = (SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(branchcand->externcands[i])) || SCIPsetIsInfinity(set, SCIPvarGetUbLocal(branchcand->externcands[i]))) ? SCIPsetInfinity(set) : SCIPvarGetUbLocal(branchcand->externcands[i])-SCIPvarGetLbLocal(branchcand->externcands[i]);
+         SCIP_VAR* cand;
+         SCIP_Real domain;
+         SCIP_Real factor;
+         int priority;
+
+         cand = branchcand->externcands[i];
+         priority = SCIPvarGetBranchPriority(cand);
+         factor = SCIPvarGetBranchFactor(cand);
+
+         /* the domain size is infinite, iff one of the bounds is infinite */
+         if( SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(cand)) || SCIPsetIsInfinity(set, SCIPvarGetUbLocal(cand)) )
+            domain = SCIPsetInfinity(set);
+         else
+            domain = SCIPvarGetUbLocal(cand) - SCIPvarGetLbLocal(cand);
+
+         /* choose variable with higher priority, higher factor, larger domain (in that order) */
          if( priority > bestpriority || (priority == bestpriority && factor > bestfactor) || (priority == bestpriority && factor == bestfactor && domain > bestdomain) ) /*lint !e777*/
          {
             bestcand = i;

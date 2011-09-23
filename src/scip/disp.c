@@ -399,7 +399,7 @@ SCIP_RETCODE SCIPdispPrintLine(
                fillspace = set->disps[i]->width - (int)strlen(set->disps[i]->header);
                for( j = 0; j < (fillspace)/2; ++j )
                   SCIPmessageFPrintInfo(file, " ");
-               SCIPmessageFPrintInfo(file, set->disps[i]->header);
+               SCIPmessageFPrintInfo(file, (const char*)set->disps[i]->header);
                for( j = 0; j < (fillspace+1)/2; ++j )
                   SCIPmessageFPrintInfo(file, " ");
                stripline = set->disps[i]->stripline;
@@ -540,7 +540,7 @@ void SCIPdispLongint(
       if( width == 2 && val < 0 )
          SCIPmessageFPrintInfo(file, "-%c", decpowerchar[decpower]);
       else
-         SCIPmessageFPrintInfo(file, format, val);
+         SCIPmessageFPrintInfo(file, (const char*)format, val);
    }
 }
 
@@ -604,6 +604,6 @@ void SCIPdispTime(
       if( width == 2 && val < 0.0 )
          SCIPmessageFPrintInfo(file, "-%c", timepowerchar[timepower]);
       else
-         SCIPmessageFPrintInfo(file, format, val);
+         SCIPmessageFPrintInfo(file, (const char*)format, val);
    }
 }

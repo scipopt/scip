@@ -748,35 +748,24 @@ SCIP_Real retransformVariable(
    )
 {
    TRANSFORMSTATUS status;
-#ifndef NDEBUG
-   SCIP_Real lb;
-   SCIP_Real ub;
-#endif
 
    assert(matrix != NULL);
    assert(var != NULL);
 
    status = matrix->transformstatus[varindex];
-
-#ifndef NDEBUG
-   /* get variables position and status */
-   lb = SCIPvarGetLbLocal(var);
-   ub = SCIPvarGetUbLocal(var);
-#endif
-
    assert(status != TRANSFORMSTATUS_NONE);
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
 
    /* check if original variable has different bounds and transform solution value correspondingly */
    if( status == TRANSFORMSTATUS_LB )
    {
-      assert(!SCIPisInfinity(scip, -lb));
+      assert(!SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)));
 
       return solvalue += matrix->transformshiftvals[varindex];
    }
    else if( status == TRANSFORMSTATUS_NEG )
    {
-      assert(!SCIPisInfinity(scip, ub));
+      assert(!SCIPisInfinity(scip, SCIPvarGetUbLocal(var)));
       return matrix->transformshiftvals[varindex] - solvalue;
    }
    return solvalue;
@@ -1155,29 +1144,23 @@ void shiftVariable(
    {
       SCIP_Real oldlhs;
       SCIP_Real oldrhs;
-      SCIP_Bool lhsviolated;
-      SCIP_Bool rhsviolated;
       SCIP_Bool update;
 
       update = FALSE;
 
       oldlhs = matrix->lhs[rows[i]];
       oldrhs = matrix->rhs[rows[i]];
-
-      /* store if row is violated by solution before shift */
-      lhsviolated = SCIPisFeasLT(scip, -oldlhs, 0.0);
-      rhsviolated = SCIPisFeasLT(scip, oldrhs, 0.0);
-
+     
       /* perform the shift, i.e., update lhs and rhs and check whether violation status changes */
       if( !SCIPisInfinity(scip, -oldlhs) )
       {
          matrix->lhs[rows[i]] -= vals[i] * shiftvalue;
-         update = (SCIPisFeasLT(scip, -matrix->lhs[rows[i]], 0.0) != lhsviolated);
+         update = (SCIPisFeasLT(scip, -matrix->lhs[rows[i]], 0.0) != SCIPisFeasLT(scip, -oldlhs, 0.0));
       }
       if( !SCIPisInfinity(scip, oldrhs) )
       {
          matrix->rhs[rows[i]] -= vals[i] * shiftvalue;
-         update = update !=(SCIPisFeasLT(scip, matrix->rhs[rows[i]], 0.0) != rhsviolated);
+         update = update != (SCIPisFeasLT(scip, matrix->rhs[rows[i]], 0.0) != SCIPisFeasLT(scip, oldrhs, 0.0));
       }
 
       /* update violated row information */

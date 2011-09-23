@@ -23042,10 +23042,10 @@ void SCIPprintReal(
    else
    {
       (void) SCIPsnprintf(strformat, SCIP_MAXSTRLEN, "%%.%dg", precision);
-      (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, strformat, val);
+      (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, (const char*)strformat, val);
    }
    (void) SCIPsnprintf(strformat, SCIP_MAXSTRLEN, "%%%ds", width);
-   SCIPmessageFPrintInfo(file, strformat, s);
+   SCIPmessageFPrintInfo(file, (const char*)strformat, s);
 }
 
 

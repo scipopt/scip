@@ -545,8 +545,10 @@ SCIP_Bool isSign(
    assert(sign != NULL);
    assert(*sign == +1 || *sign == -1);
 
-   if( strlen(opbinput->token) == 1 && opbinput->token[1] == '\0' )
+   if( strlen(opbinput->token) == 1 )
    {
+      assert(opbinput->token[1] == '\0');
+
       if( *opbinput->token == '+' )
          return TRUE;
       else if( *opbinput->token == '-' )
@@ -1958,25 +1960,25 @@ static
 void appendBuffer(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
-   char*                 linebuffer,         /**< line */
+   char*                 linebuffer,         /**< line buffer */
    int*                  linecnt,            /**< number of characters in line */
    const char*           extension           /**< string to extent the line */
    )
 {
-   assert( scip != NULL );
-   assert( linebuffer != NULL );
-   assert( linecnt != NULL );
-   assert( extension != NULL );
+   assert(scip != NULL);
+   assert(linebuffer != NULL);
+   assert(linecnt != NULL);
+   assert(extension != NULL);
    
-   if( (*linecnt) + strlen(extension) >= OPB_MAX_LINELEN )
+   if( (*linecnt) + strlen(extension) >= OPB_MAX_LINELEN - 1 )
       writeBuffer(scip, file, linebuffer, linecnt);
    
    /* append extension to linebuffer */
-   strncat(linebuffer, extension, OPB_MAX_LINELEN - (unsigned int)(*linecnt));
+   strncat(linebuffer, extension, OPB_MAX_LINELEN - (unsigned int)(*linecnt) - 1);
    (*linecnt) += (int) strlen(extension);
 }
 
-/* write objective function */
+/** write objective function */
 static
 SCIP_RETCODE writeOpbObjective(
    SCIP*const            scip,               /**< SCIP data structure */

@@ -242,7 +242,6 @@ SCIP_RETCODE selectShifting(
       SCIP_Bool isinteger;
       SCIP_Bool isfrac;
       SCIP_Bool increase;
-      int probindex;
 
       col = rowcols[c];
       var = SCIPcolGetVar(col);
@@ -253,7 +252,6 @@ SCIP_RETCODE selectShifting(
       isinteger = (SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
       isfrac = isinteger && !SCIPisFeasIntegral(scip, solval);
       increase = (direction * val > 0.0);
-      probindex = SCIPvarGetProbindex(var);
 
       /* calculate the score of the shifting (prefer smaller values) */
       if( isfrac )
@@ -261,6 +259,9 @@ SCIP_RETCODE selectShifting(
             -1.0 / (SCIPvarGetNLocksDown(var) + 1.0);
       else
       {
+         int probindex;
+         probindex = SCIPvarGetProbindex(var);
+
          if( increase )
             shiftscore = ndecreases[probindex]/increaseweight;
          else

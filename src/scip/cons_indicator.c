@@ -226,6 +226,11 @@
 #define EVENTHDLR_RESTART_NAME     "indicator restart"
 #define EVENTHDLR_RESTART_DESC     "force restart if absolute gap is 1"
 
+/* conflict handler properties */
+#define CONFLICTHDLR_NAME          "indicator conflict"
+#define CONFLICTHDLR_DESC          "replace slack variables and generate logicor constraints"
+#define CONFLICTHDLR_PRIORITY      200000
+
 /* default values for parameters */
 #define DEFAULT_BRANCHINDICATORS   FALSE
 #define DEFAULT_GENLOGICOR         FALSE
@@ -240,6 +245,7 @@
 #define DEFAULT_ENFORCECUTS        FALSE
 #define DEFAULT_MAXCONDITIONALTLP  0.0
 #define DEFAULT_GENERATEBILINEAR   FALSE
+#define DEFAULT_CONFLICTSUPGRADE   FALSE
 #define DEFAULT_FORCERESTART       FALSE
 #define DEFAULT_RESTARTFRAC        0.9
 
@@ -293,6 +299,7 @@ struct SCIP_ConshdlrData
    SCIP_Real             maxcouplingvalue;   /**< maximum coefficient for binary variable in coupling constraint */
    SCIP_Real             maxconditionaltlp;  /**< maximum estimated condition number of the alternative LP to trust its solution */
    SCIP_Bool             generatebilinear;   /**< do not generate indicator constraint, but a bilinear constraint instead */
+   SCIP_Bool             conflictsupgrade;   /**< Try to upgrade bounddisjunction conflicts by replacing slack variables? */
    SCIP_Bool             performedrestart;   /**< whether a restart has been performed already */
    int                   nbinvarszero;       /**< binary variables globally fixed to zero */
    int                   ninitconss;         /**< initial number of indicator constraints (needed in event handlers) */
@@ -309,6 +316,14 @@ struct SCIP_ConshdlrData
    SCIP_Bool             nolinconscont_;     /**< used to store the nolinconscont parameter */
    SCIP_Bool             forcerestart;       /**< force restart if we have a max FS instance and gap is 1? */
    SCIP_Bool             forcerestart_;      /**< used to strore the forcerestart parameter */
+};
+
+
+/** indicator conflict handler data */
+struct SCIP_ConflicthdlrData
+{
+   SCIP_CONSHDLR*        conshdlr;           /**< indicator constraint handler */
+   SCIP_CONSHDLRDATA*    conshdlrdata;       /**< indicator constraint handler data */
 };
 
 
@@ -418,10 +433,6 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorRestart)
    assert( conshdlrdata != NULL );
    assert( conshdlrdata->forcerestart );
 
-   /* do not care if we have performed a restart already */
-   if ( conshdlrdata->performedrestart )
-      return SCIP_OKAY;
-
    eventtype = SCIPeventGetType(event);
    switch ( eventtype )
    {
@@ -441,6 +452,11 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorRestart)
       assert( SCIPisZero(scip, oldbound) || SCIPisEQ(scip, oldbound, 1.0) );
       assert( SCIPisZero(scip, newbound) || SCIPisEQ(scip, newbound, 1.0) );
 #endif
+
+      /* do not treat this case if we have performed a restart already */
+      if ( conshdlrdata->performedrestart )
+         return SCIP_OKAY;
+
       /* variable is now fixed */
       ++(conshdlrdata->nbinvarszero);
       SCIPdebugMessage("fixed variable <%s> (nbinvarszero: %d, total: %d).\n",
@@ -493,6 +509,194 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorRestart)
    default:
       SCIPerrorMessage("invalid event type.\n");
       return SCIP_INVALIDDATA;
+   }
+
+   return SCIP_OKAY;
+}
+
+
+
+/* ------------------------ conflict handler ---------------------------------*/
+
+/** destructor of conflict handler to free conflict handler data (called when SCIP is exiting) */
+static
+SCIP_DECL_CONFLICTFREE(conflictFreeIndicator)
+{
+   SCIP_CONFLICTHDLRDATA* conflicthdlrdata;
+
+   assert( scip != NULL );
+   assert( conflicthdlr != NULL );
+   assert( strcmp(SCIPconflicthdlrGetName(conflicthdlr), CONFLICTHDLR_NAME) == 0 );
+
+   conflicthdlrdata = SCIPconflicthdlrGetData(conflicthdlr);
+   SCIPfreeMemory(scip, &conflicthdlrdata);
+   
+   return SCIP_OKAY;
+}
+
+
+/** conflict processing method of conflict handler (called when conflict was found)
+ *
+ *  In this conflict handler we try to replace slack variables by binary indicator variables and
+ *  generate a logicor constraint if possible.
+ *
+ *  @todo Extend to integral case.
+ */
+static
+SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
+{  /*lint --e{715}*/
+   SCIP_CONFLICTHDLRDATA* conflicthdlrdata;
+   SCIP_Bool haveslack;
+   SCIP_VAR* var;
+   int i;
+
+   assert( conflicthdlr != NULL );
+   assert( strcmp(SCIPconflicthdlrGetName(conflicthdlr), CONFLICTHDLR_NAME) == 0 );
+   assert( bdchginfos != NULL || nbdchginfos == 0 );
+   assert( result != NULL );
+
+   /* don't process already resolved conflicts */
+   if ( resolved )
+   {
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
+
+   SCIPdebugMessage("Indictor conflict handler.\n");
+
+   conflicthdlrdata = SCIPconflicthdlrGetData(conflicthdlr);
+
+   /* possible skip conflict handler */
+   if ( ! ((SCIP_CONSHDLRDATA*) conflicthdlrdata)->conflictsupgrade )
+      return SCIP_OKAY;
+
+   *result = SCIP_DIDNOTFIND;
+
+   /* check whether there seems to be one slack variable and all other variables are binary */
+   haveslack = FALSE;
+   for (i = 0; i < nbdchginfos; ++i)
+   {
+      assert( bdchginfos[i] != NULL );
+
+      var = SCIPbdchginfoGetVar(bdchginfos[i]);
+
+      /* quick check for slack variable that is implicitly integral or continuous */
+      if ( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+      {
+         char* posstr;
+
+         /* check string */
+         posstr = strstr(SCIPvarGetName(var), "indslack");
+         if ( posstr != NULL )
+         {
+            /* make sure that the slack variable occurs with its lower bound */
+            if ( SCIPboundtypeOpposite(SCIPbdchginfoGetBoundtype(bdchginfos[i])) != SCIP_BOUNDTYPE_LOWER )
+               break;
+
+            /* make sure that the lower bound is 0 */ 
+            if ( ! SCIPisFeasZero(scip, SCIPbdchginfoGetNewbound(bdchginfos[i])) )
+               break;
+
+            haveslack = TRUE;
+            continue;
+         }
+      }
+
+      /* we only treat binary variables (other than slack variables) */
+      if ( ! SCIPvarIsBinary(var) )
+         break;
+   }
+
+   /* if we have found at least one slack variable and all other variables are binary */
+   if ( haveslack && i == nbdchginfos )
+   {
+      SCIP_CONS** conss;
+      SCIP_VAR** vars;
+      int nconss;
+      int j;
+
+      SCIPdebugMessage("Found conflict involving slack variables that can be remodelled.\n");
+
+      nconss = SCIPconshdlrGetNConss(conflicthdlrdata->conshdlr);
+      conss = SCIPconshdlrGetConss(conflicthdlrdata->conshdlr);
+
+      /* create array of variables in conflict constraint */
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars, nbdchginfos) );
+      for (i = 0; i < nbdchginfos; ++i)
+      {
+         assert( bdchginfos[i] != NULL );
+
+         var = SCIPbdchginfoGetVar(bdchginfos[i]);
+
+         /* quick check for slack variable that is implicitly integral or continuous */
+         if ( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+         {
+            char* posstr;
+            SCIP_VAR* slackvar;
+            
+            /* check string */
+            posstr = strstr(SCIPvarGetName(var), "indslack");
+            if ( posstr != NULL )
+            {
+               /* search for slack variable */
+               for (j = 0; j < nconss; ++j)
+               {
+                  assert( conss[j] != NULL );
+                  slackvar = SCIPgetSlackVarIndicator(conss[j]);
+                  assert( slackvar != NULL );
+
+                  /* check whether we found the variable */
+                  if ( slackvar == var )
+                  {
+                     /* replace slack variable by binary variable */
+                     var = SCIPgetBinaryVarIndicator(conss[j]);   /* negated ??????????? */
+                     break;
+                  }
+               }
+
+               /* check whether we found the slack variable */
+               if ( j >= nconss )
+               {
+                  SCIPdebugMessage("Could not find slack variable <%s>.\n", SCIPvarGetName(var));
+                  break;
+               }
+            }
+         }
+         else
+         {
+            /* if the variable is fixed to one in the conflict set, we have to use its negation */
+            if ( SCIPbdchginfoGetNewbound(bdchginfos[i]) > 0.5 )
+            {
+               SCIP_CALL( SCIPgetNegatedVar(scip, vars[i], &vars[i]) );
+            }
+         }
+
+         vars[i] = var;
+      }
+
+      /* whether all slack variables have been found */
+      if ( i == nbdchginfos )
+      {
+         SCIP_CONS* cons;
+         char consname[SCIP_MAXSTRLEN];
+
+         SCIPdebugMessage("Generated logicor conflict constraint.\n");
+      
+         /* create a logicor constraint out of the conflict set */
+         (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
+         SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, consname, nbdchginfos, vars, 
+               FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
+         SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
+#ifdef SCIP_OUTPUT
+         SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+#endif
+         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      
+         *result = SCIP_CONSADDED;
+      }
+
+      /* free temporary memory */
+      SCIPfreeBufferArray(scip, &vars);
    }
 
    return SCIP_OKAY;
@@ -4072,6 +4276,8 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
    /* only run if success is possible */
    if ( nrounds == 0 || nnewfixedvars > 0 || nnewchgbds > 0 || nnewaggrvars > 0 || *nfixedvars > oldnfixedvars )
    {
+      *result = SCIP_DIDNOTFIND;
+
       /* check each constraint */
       for (c = 0; c < nconss; ++c)
       {
@@ -4089,7 +4295,6 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
          assert( ! SCIPconsIsModifiable(cons) );
          
          /* SCIPdebugMessage("Presolving indicator constraint <%s>.\n", SCIPconsGetName(cons) ); */
-         *result = SCIP_DIDNOTFIND;
 
          /* do nothing if the linear constraint is not active */
          if ( ! consdata->linconsactive )
@@ -5106,7 +5311,11 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_CONFLICTHDLRDATA* conflicthdlrdata;
    SCIP_CONSHDLRDATA* conshdlrdata;
+
+   /* create constraint handler data (used in conflicthdlrdata) */
+   SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
 
    /* create event handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_BOUND_NAME, EVENTHDLR_BOUND_DESC,
@@ -5115,9 +5324,6 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    /* create event handler for restart events */
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_RESTART_NAME, EVENTHDLR_RESTART_DESC,
          NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventExecIndicatorRestart, NULL) );
-
-   /* create constraint handler data */
-   SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
 
    /* get event handler for bound change events */
    conshdlrdata->eventhdlrbound = SCIPfindEventhdlr(scip, EVENTHDLR_BOUND_NAME);
@@ -5184,6 +5390,16 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
          consActiveIndicator, consDeactiveIndicator, consEnableIndicator, consDisableIndicator,
          consPrintIndicator, consCopyIndicator, consParseIndicator, conshdlrdata) );
 
+   /* create conflict handler data */
+   SCIP_CALL( SCIPallocMemory(scip, &conflicthdlrdata) );
+   conflicthdlrdata->conshdlrdata = conshdlrdata;
+   conflicthdlrdata->conshdlr = SCIPfindConshdlr(scip, "indicator");
+   assert( conflicthdlrdata->conshdlr != NULL );
+
+   /* create conflict handler for indicator constraints */
+   SCIP_CALL( SCIPincludeConflicthdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
+         NULL, conflictFreeIndicator, NULL, NULL, NULL, NULL, conflictExecIndicator, conflicthdlrdata) );
+
    /* add indicator constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/indicator/branchindicators",
@@ -5239,6 +5455,11 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
          "constraints/indicator/generatebilinear",
          "do not generate indicator constraint, but a bilinear constraint instead",
          &conshdlrdata->generatebilinear, TRUE, DEFAULT_GENERATEBILINEAR, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/indicator/conflictsupgrade",
+         "Try to upgrade bounddisjunction conflicts by replacing slack variables?",
+         &conshdlrdata->conflictsupgrade, TRUE, DEFAULT_CONFLICTSUPGRADE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
          "constraints/indicator/restartfrac",
