@@ -57,7 +57,7 @@
 #define CONFLICTHDLR_DESC      "conflict handler creating bound disjunction constraints"
 #define CONFLICTHDLR_PRIORITY  -3000000
 
-#define DEFAULT_CONTINUOUS         TRUE /**< should conflicts with continuous variables be used? */
+#define DEFAULT_CONTINUOUSFRAC      1.0 /**< maximal percantage of continuous variables within a conflict */
 
 #define QUADCONSUPGD_PRIORITY    500000 /**< priority of the constraint handler for upgrading of quadratic constraints */
 
@@ -2459,7 +2459,7 @@ SCIP_DECL_EVENTEXEC(eventExecBounddisjunction)
 /** conflict handler data struct */
 struct SCIP_ConflicthdlrData
 {
-   SCIP_Bool             continuous;         /**< should conflicts with continuous variables be used? */
+   SCIP_Real             continuousfrac;     /**< maximal percantage of continuous variables within a conflict */
 };
 
 /** conflict processing method of conflict handler (called when conflict was found) */
@@ -2472,6 +2472,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
    SCIP_Real* bounds;
    SCIP_CONS* cons;
    char consname[SCIP_MAXSTRLEN];
+   int ncontinuous;
    int i;
 
    assert(conflicthdlr != NULL);
@@ -2488,6 +2489,8 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
 
    conflicthdlrdata = SCIPconflicthdlrGetData(conflicthdlr);
    assert(conflicthdlrdata != NULL);
+
+   ncontinuous = 0;
 
    /* create array of variables, boundtypes, and bound values in conflict constraint */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nbdchginfos) );
@@ -2506,7 +2509,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
          assert(SCIPisIntegral(scip, bounds[i]));
          bounds[i] += (boundtypes[i] == SCIP_BOUNDTYPE_LOWER ? +1.0 : -1.0);
       }
-      else if( !(conflicthdlrdata->continuous) || (boundtypes[i] == SCIP_BOUNDTYPE_LOWER && SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(vars[i]), bounds[i]))
+      else if( (boundtypes[i] == SCIP_BOUNDTYPE_LOWER && SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(vars[i]), bounds[i]))
          || (boundtypes[i] == SCIP_BOUNDTYPE_UPPER && SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(vars[i]), bounds[i])) )
       {
          /* the literal is satisfied in global bounds (may happen due to weak "negation" of continuous variables)
@@ -2514,10 +2517,12 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
           */
          break;
       }
+      else
+         ncontinuous++;
    }
       
    /* create a constraint out of the conflict set */
-   if( i == nbdchginfos )
+   if( i == nbdchginfos && ncontinuous < conflicthdlrdata->continuousfrac * nbdchginfos + 0.5 )
    {
       (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, consname, nbdchginfos, vars, boundtypes, bounds,
@@ -2571,14 +2576,14 @@ SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
    /* create event handler for events on watched variables */
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
          NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventExecBounddisjunction, NULL) );
-
+   
    /* allocate memory for conflict handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conflicthdlrdata) );
 
    /* create conflict handler parameter */
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "conflict/"CONSHDLR_NAME"/continuous", "should conflicts with continuous variables be used?",
-         &conflicthdlrdata->continuous, FALSE, DEFAULT_CONTINUOUS, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "conflict/"CONSHDLR_NAME"/continuousfrac", "maximal percantage of continuous variables within a conflict",
+         &conflicthdlrdata->continuousfrac, FALSE, DEFAULT_CONTINUOUSFRAC, 0.0, 1.0, NULL, NULL) );
 
    /* create conflict handler for bound disjunction constraints */
    SCIP_CALL( SCIPincludeConflicthdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
