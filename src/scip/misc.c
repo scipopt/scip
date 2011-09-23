@@ -4587,12 +4587,13 @@ SCIP_RETCODE SCIPgetRandomSubset(
  * Strings
  */
 
-/** prints an error message containing of the given string followed by a string describing the current system error; 
-    prefers to use the strerror_r method, which is threadsafe; 
-    on systems where this method does not exist, NO_STRERROR_R should be defined (see INSTALL), 
-    in this case, srerror is used which is not guaranteed to be threadsafe (on SUN-systems, it actually is) */
+/** prints an error message containing of the given string followed by a string describing the current system error;
+ *  prefers to use the strerror_r method, which is threadsafe; on systems where this method does not exist,
+ *  NO_STRERROR_R should be defined (see INSTALL), in this case, srerror is used which is not guaranteed to be
+ *  threadsafe (on SUN-systems, it actually is) 
+ */
 void SCIPprintSysError(
-   const char*                 message             /**< first part of the error message, e.g. the filename */
+   const char*           message             /**< first part of the error message, e.g. the filename */
    )
 {
 #ifdef NO_STRERROR_R
@@ -4649,10 +4650,10 @@ void SCIPescapeString(
 
 /* safe version of snprintf */
 int SCIPsnprintf(
-   char*            t,     /**< target string                  */
-   int              len,   /**< length of t                    */
-   const char*      s,     /**< source string or format string */
-   ...                     /**< further parameters             */
+   char*                 t,                  /**< target string */
+   int                   len,                /**< length of the string to copy */
+   const char*           s,                  /**< source string */
+   ...                                       /**< further parameters */
    )
 {
    va_list ap;
@@ -4676,7 +4677,7 @@ int SCIPsnprintf(
    return n;
 }
 
-/** extract the next token as a value if it is one; in case no value is parsed the endptr is set to str */
+/** extract the next token as a double value if it is one; in case no value is parsed the endptr is set to str */
 SCIP_Bool SCIPstrToRealValue(
    const char*           str,                /**< string to search */
    SCIP_Real*            value,              /**< pointer to store the parsed value */
