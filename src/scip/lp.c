@@ -12096,15 +12096,14 @@ static
 SCIP_RETCODE checkLazyBounds(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool*            primalfeasible      /**< pointer to store whether the lazy bound are primal feasible or not */
+   SCIP_Bool*            lazyboundsvalid     /**< pointer to store whether the lazy bound are primal feasible or not */
    )
 {
    SCIP_COL* col;
    int c;
    
    assert(lp->flushed);
-
-   *primalfeasible = TRUE;
+   assert(*lazyboundsvalid == TRUE); /* pointer has to be initialized */
 
    for( c = 0; c < lp->nlazycols; ++c )
    {
@@ -12125,7 +12124,7 @@ SCIP_RETCODE checkLazyBounds(
          /* remove lazy flag */
          col->lazylb = -SCIPsetInfinity(set);
 
-         (*primalfeasible) = FALSE;
+         (*lazyboundsvalid) = FALSE;
       }
          
       /* check upper bound */
@@ -12143,7 +12142,7 @@ SCIP_RETCODE checkLazyBounds(
          /* remove lazy flag */
          col->lazyub = SCIPsetInfinity(set);
 
-         (*primalfeasible) = FALSE;
+         (*lazyboundsvalid) = FALSE;
       }
 
       /* remove lazy column entry if both columns are in the LP */
@@ -12230,7 +12229,6 @@ SCIP_RETCODE SCIPlpSolveAndEval(
       SCIP_Bool dualfeasible;
       SCIP_Bool tightfeastol;
       SCIP_Bool fromscratch;
-      SCIP_Bool lazyboundsvalid;
       int fastmip;
       int oldnlps;
 
@@ -12280,6 +12278,9 @@ SCIP_RETCODE SCIPlpSolveAndEval(
           * denote the corresponding column bounds as not lazy and resolve the LP */
          if( !primalfeasible && lp->nlazycols > 0 )
          {
+            SCIP_Bool lazyboundsvalid;
+
+            lazyboundsvalid = TRUE;
             SCIP_CALL( checkLazyBounds(lp, set, &lazyboundsvalid) );
             
             if( !lazyboundsvalid )
@@ -12385,6 +12386,9 @@ SCIP_RETCODE SCIPlpSolveAndEval(
           * bound as not lazy and resolve the LP */
          if( lp->nlazycols > 0 )
          {
+            SCIP_Bool lazyboundsvalid;
+
+            lazyboundsvalid = TRUE;
             SCIP_CALL( checkLazyBounds(lp, set, &lazyboundsvalid) );
             
             if( !lazyboundsvalid )
