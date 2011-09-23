@@ -780,7 +780,7 @@ SCIP_RETCODE checkCons(
       SCIP_CALL( SCIPincConsAge(scip, cons) );
 
       sum = 0.0;
-      for( i = 0; i < consdata->nvars && sum <= consdata->capacity + 0.1; ++i )
+      for( i = 0; i < consdata->nvars; ++i )
       {
          sum += consdata->weights[i] * SCIPgetSolVal(scip, sol, consdata->vars[i]);
       }
