@@ -724,6 +724,9 @@ SCIP_RETCODE checkParam(
    assert( name != NULL );
    assert( newvalue != NULL );
 
+   if ( oldvalue == *newvalue )
+      return SCIP_OKAY;
+
    paramname = SCIPparamGetName(param);
    assert( paramname != NULL );
 
@@ -4135,7 +4138,7 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
 
    /* create constraint data */
    consdata = NULL;
-   SCIP_CALL( consdataCreate(scip, conshdlr, conshdlrdata, SCIPconsGetName(sourcecons), &consdata, conshdlrdata->eventhdlrbound, 
+   SCIP_CALL( consdataCreate(scip, conshdlr, conshdlrdata, SCIPconsGetName(sourcecons), &consdata, conshdlrdata->eventhdlrbound,
          conshdlrdata->eventhdlrrestart, sourcedata->binvar, sourcedata->slackvar, sourcedata->lincons, sourcedata->linconsactive,
          conshdlrdata->sepaalternativelp, conshdlrdata->forcerestart) );
    assert( consdata != NULL );
