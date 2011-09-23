@@ -2390,9 +2390,9 @@ SCIP_DECL_CONSPARSE(consParseXor)
       
       if( SCIPstrToRealValue(str, &rhs, &endptr) )
       {
-         assert( SCIPisZero(scip, rhs) || SCIPisEQ(scip, rhs, 1.0) );
+         assert(SCIPisZero(scip, rhs) || SCIPisEQ(scip, rhs, 1.0));
          /* create or constraint */
-         SCIP_CALL( SCIPcreateConsXor(scip, cons, name, (SCIP_Bool) rhs, nvars, vars, 
+         SCIP_CALL( SCIPcreateConsXor(scip, cons, name, (rhs > 0.5 ? TRUE : FALSE), nvars, vars,
                initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
   
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *cons, NULL) ) ); 

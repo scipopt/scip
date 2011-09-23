@@ -29,7 +29,7 @@
 #include <string.h>
 #if defined(_WIN32) || defined(_WIN64)
 #else
-#include <strings.h>
+#include <strings.h> /*lint --e{766}*/ /* needed for strncasecmp() */
 #endif
 #include <ctype.h>
 
@@ -3078,13 +3078,13 @@ SCIP_RETCODE SCIPreadLp(
    lpinput.linebuf[0] = '\0';
    lpinput.probname[0] = '\0';
    lpinput.objname[0] = '\0';
-   SCIP_CALL( SCIPallocMemoryArray(scip, &lpinput.token, LP_MAX_LINELEN) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &lpinput.token, LP_MAX_LINELEN) ); /*lint !e506*/
    lpinput.token[0] = '\0';
-   SCIP_CALL( SCIPallocMemoryArray(scip, &lpinput.tokenbuf, LP_MAX_LINELEN) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &lpinput.tokenbuf, LP_MAX_LINELEN) ); /*lint !e506*/
    lpinput.tokenbuf[0] = '\0';
    for( i = 0; i < LP_MAX_PUSHEDTOKENS; ++i )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(lpinput.pushedtokens[i]), LP_MAX_LINELEN) );  /*lint !e866 */
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(lpinput.pushedtokens[i]), LP_MAX_LINELEN) );  /*lint !e866 !e506*/
    }
 
    lpinput.npushedtokens = 0;

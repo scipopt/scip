@@ -1521,7 +1521,7 @@ SCIP_RETCODE getFlowCover(
       /* solve KP^SNF_rat approximately */
       SCIP_CALL(SCIPsolveKnapsackApproximatelyLT(scip, nitems, transweightsreal, transprofitsreal, transcapacityreal, 
             items, solitems, nonsolitems, &nsolitems, &nnonsolitems, NULL));
-#if !defined(NDEBUG) || defined(SCIP_DEBUG)
+#ifdef SCIP_DEBUG /* this time only for SCIP_DEBUG, because only then, the variable is used again  */
       kpexact = FALSE;
 #endif
       
@@ -1569,7 +1569,6 @@ SCIP_RETCODE getFlowCover(
    SCIPfreeBufferArray(scip, &items);
 
    return SCIP_OKAY;
-
 }
 
 /** for a given flow cover and a given value of delta, choose L1 subset N1 \ C1 and L2 subset N2 \ C2 by comparison such that 

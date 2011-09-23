@@ -4098,7 +4098,8 @@ SCIP_RETCODE rowScale(
     * this rounding can lead to
     */
    row->integral = TRUE;
-   for( c = 0; c < row->len; ++c )
+   c = 0;
+   while( c < row->len )
    {
       col = row->cols[c];
       val = row->vals[c];
@@ -4165,6 +4166,8 @@ SCIP_RETCODE rowScale(
       }
       else
          row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPsetIsIntegral(set, val);
+
+      ++c;
    }
 
    /* scale the row sides, and move the constant to the sides; relax the sides with accumulated delta in order
@@ -6090,7 +6093,7 @@ SCIP_RETCODE lpFlushAddCols(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &ind, naddcoefs) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &val, naddcoefs) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &name, naddcols) );
-   
+
    /* fill temporary memory with column data */
    nnonz = 0;
    for( pos = 0, c = lp->nlpicols; c < lp->ncols; ++pos, ++c )
@@ -12172,7 +12175,7 @@ int lpGetResolveItlim(
    if( itlim == -1 )
       itlim = INT_MAX;
    /* return resolveiterfac * average iteration number per call after root, but at least resolveitermin and at most the hard iteration limit */
-   return MIN(itlim, MAX(set->lp_resolveitermin, 
+   return (int) MIN(itlim, MAX(set->lp_resolveitermin,
          (set->lp_resolveiterfac * (stat->nlpiterations - stat->nrootlpiterations) / (SCIP_Real)(stat->nlps - stat->nrootlps))));
 }
 

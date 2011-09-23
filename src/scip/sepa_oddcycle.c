@@ -2677,9 +2677,9 @@ SCIP_RETCODE separateHeur(
       vals[i] = 1 - vals[i-nbinvars];
 
    /* determine the number of level graph roots */
-   maxroots = (unsigned int) SCIPceil(scip, sepadata->offset_testvars + (2 * nbinvars * sepadata->percent_testvars) * 0.01);
+   maxroots = (unsigned int) SCIPceil(scip, sepadata->offset_testvars + (0.02 * nbinvars * sepadata->percent_testvars));
    sepadata->maxlevelsize = (unsigned int) SCIPceil(scip, sepadata->offset_graphnodes_per_level
-      + 0.01 * (sepadata->percent_graphnodes_per_level * graph.n));
+      + 0.01 * sepadata->percent_graphnodes_per_level * graph.n);
    rootcounter = 0;
    
    /* check each node as root */
@@ -3661,7 +3661,7 @@ SCIP_RETCODE separateGLS(
    assert(Dijsktra_graphIsValid(&graph));
 
    /* determine the number of start nodes */
-   maxstarts = (unsigned int) SCIPceil(scip, sepadata->offset_testvars + (2 * nbinvars * sepadata->percent_testvars) * 0.01);
+   maxstarts = (unsigned int) SCIPceil(scip, sepadata->offset_testvars + (0.02 * nbinvars * sepadata->percent_testvars));
    startcounter = 0;
 
    /* separate odd cycle inequalities by GLS method */

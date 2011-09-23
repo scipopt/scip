@@ -1991,7 +1991,7 @@ SCIP_RETCODE getLiftingSequence(
     */
    for( j = 0; j < nvarsF; j++ )
    {
-      sortkeypairsF[j] = &(sortkeypairsFstore[j]); /*lint !e644*/
+      sortkeypairsF[j] = &(sortkeypairsFstore[j]);
       sortkeypairsF[j]->key1 = solvals[varsF[j]]; 
       sortkeypairsF[j]->key2 = (SCIP_Real) weights[varsF[j]]; 
    }
@@ -3058,7 +3058,7 @@ SCIP_RETCODE makeCoverMinimal(
    {
       for( j = 0; j < *ncovervars; j++ )
       {
-         SCIP_CALL( SCIPallocBlockMemory(scip, &(sortkeypairs[j])) );  /*lint !e644*/
+         SCIP_CALL( SCIPallocBlockMemory(scip, &(sortkeypairs[j])) );
          
          sortkeypairs[j]->key1 = solvals[covervars[j]]; 
          sortkeypairs[j]->key2 = (SCIP_Real) weights[covervars[j]]; 

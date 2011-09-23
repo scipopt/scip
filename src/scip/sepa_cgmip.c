@@ -867,8 +867,7 @@ SCIP_RETCODE createSubscip(
       assert( var != NULL );
 
       primsol[j] = SCIPcolGetPrimsol(col);
-      assert( SCIPcolGetVar(col) != NULL );
-      assert( SCIPgetVarSol(scip, var) == primsol[j] );
+      assert(SCIPisEQ(scip, SCIPgetVarSol(scip, var), primsol[j]) );
 
       lb[j] = SCIPvarGetLbGlobal(var);
       assert( SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPcolGetLb(col)) );

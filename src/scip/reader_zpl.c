@@ -26,9 +26,9 @@
 
 #ifdef WITH_ZIMPL
 
+#include <assert.h>
 #include <unistd.h>
 #include <string.h>
-#include <assert.h>
 
 #include "scip/cons_linear.h"
 #include "scip/cons_setppc.h"

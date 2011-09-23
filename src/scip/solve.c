@@ -703,7 +703,7 @@ SCIP_RETCODE updatePseudocost(
                {
                   assert(!updates[i]->redundant);
 
-                  if( updates[i]->boundtype == SCIP_BOUNDTYPE_UPPER )
+                  if( (SCIP_BOUNDTYPE)updates[i]->boundtype == SCIP_BOUNDTYPE_UPPER )
                   {
                      nbdchginfos = SCIPvarGetNBdchgInfosUb(var);
 
@@ -720,9 +720,9 @@ SCIP_RETCODE updatePseudocost(
                             * if bdchginfo->boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING, then this should be because the branching domain change has not been applied to the variable due to redundancy
                             * in this case, i.e., if there was another boundchange coming from somewhere else, I am not sure whether oldbound is an accurate value to compute the old domain size, so we skip the pseudocosts update
                             */
-                           if( bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
+                           if( (SCIP_BOUNDCHGTYPE)bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
                            {
-                              assert(bdchginfo->newbound == updates[i]->newbound);
+                              assert(bdchginfo->newbound == updates[i]->newbound); /*lint !e777*/
                               oldbound = bdchginfo->oldbound;
                            }
                            else
@@ -734,7 +734,7 @@ SCIP_RETCODE updatePseudocost(
                      /* if the bound change was redundant (e.g., due to a change in the global bound), then it was not applied, so there exists no corresponding bound change info
                       * if it is not redundant, then we should have found at least one corresponding boundchange */
                      assert(j >= 0 || updates[i]->redundant);
-                     if( oldbound != SCIP_INVALID )
+                     if( oldbound != SCIP_INVALID ) /*lint !e777*/
                      {
                         assert(!SCIPsetIsInfinity(set, -oldbound)); /* branching on a variable fixed to -infinity does not make sense */
                         assert(!SCIPsetIsInfinity(set, updates[i]->newbound)); /* branching to infinity does not make sense */
@@ -751,7 +751,7 @@ SCIP_RETCODE updatePseudocost(
                   }
                   else
                   {
-                     assert(updates[i]->boundtype == SCIP_BOUNDTYPE_LOWER);
+                     assert((SCIP_BOUNDTYPE)updates[i]->boundtype == SCIP_BOUNDTYPE_LOWER);
                      nbdchginfos = SCIPvarGetNBdchgInfosLb(var);
 
                      /* walk backwards through bound change information array to find the bound change corresponding to branching in updates[i]
@@ -767,9 +767,9 @@ SCIP_RETCODE updatePseudocost(
                             * if bdchginfo->boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING, then this should be because the branching domain change has not been applied to the variable due to redundancy
                             * in this case, i.e., if there was another boundchange coming from somewhere else, I am not sure whether oldbound is an accurate value to compute the old domain size, so we skip the pseudocosts update
                             */
-                           if( bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
+                           if( (SCIP_BOUNDCHGTYPE)bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
                            {
-                              assert(bdchginfo->newbound == updates[i]->newbound);
+                              assert(bdchginfo->newbound == updates[i]->newbound); /*lint !e777*/
                               oldbound = bdchginfo->oldbound;
                            }
                            else
@@ -781,7 +781,7 @@ SCIP_RETCODE updatePseudocost(
                      /* if the bound change was redundant (e.g., due to a change in the global bound), then it was not applied, so there exists no corresponding bound change info
                       * if it is not redundant, then we should have found at least one corresponding boundchange */
                      assert(j >= 0 || updates[i]->redundant);
-                     if( oldbound != SCIP_INVALID )
+                     if( oldbound != SCIP_INVALID ) /*lint !e777*/
                      {
                         assert(!SCIPsetIsInfinity(set, oldbound)); /* branching on a variable fixed to +infinity does not make sense */
                         assert(!SCIPsetIsInfinity(set, -updates[i]->newbound)); /* branching to infinity does not make sense */
@@ -809,7 +809,7 @@ SCIP_RETCODE updatePseudocost(
                    * Thus, we have oldwidth = c-a, newwidth = b-a, and oldwidth - newwidth = c-b.
                    * Conveniently, we just use the current upper bound for c (it may have been tightened, though).
                    */
-                  if( updates[i]->boundtype == SCIP_BOUNDTYPE_UPPER )
+                  if( (SCIP_BOUNDTYPE)updates[i]->boundtype == SCIP_BOUNDTYPE_UPPER )
                   {
                      assert(!SCIPsetIsInfinity(set, updates[i]->newbound)); /* branching on a variable fixed to +infinity does not make sense */
                      assert(!SCIPsetIsInfinity(set, SCIPvarGetLbLocal(var))); /* branching to infinity does not make sense */
@@ -820,7 +820,7 @@ SCIP_RETCODE updatePseudocost(
                   }
                   else
                   {
-                     assert(updates[i]->boundtype == SCIP_BOUNDTYPE_LOWER);
+                     assert((SCIP_BOUNDTYPE)updates[i]->boundtype == SCIP_BOUNDTYPE_LOWER);
                      assert(!SCIPsetIsInfinity(set, -updates[i]->newbound)); /* branching on a variable fixed to -infinity does not make sense */
                      assert(!SCIPsetIsInfinity(set, -SCIPvarGetUbLocal(var))); /* branching to -infinity does not make sense */
                      if( SCIPsetIsInfinity(set, updates[i]->newbound) || SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var)) )
@@ -830,15 +830,15 @@ SCIP_RETCODE updatePseudocost(
                   }
                }
 
-               if( delta != SCIP_INVALID )
+               if( delta != SCIP_INVALID ) /*lint !e777*/
                {
                   SCIPdebugMessage("updating pseudocosts of <%s> with strategy %c: domain: [%g,%g] -> [%g,%g], LP: %e -> %e => "
                      "delta = %g, gain=%g, weight: %g\n",
                      SCIPvarGetName(var), set->branch_lpgainnorm,
-                     updates[i]->boundtype == SCIP_BOUNDTYPE_UPPER ? SCIPvarGetLbLocal(var) : oldbound,
-                     updates[i]->boundtype == SCIP_BOUNDTYPE_UPPER ? oldbound : SCIPvarGetUbLocal(var),
-                     updates[i]->boundtype == SCIP_BOUNDTYPE_UPPER ? SCIPvarGetLbLocal(var) : updates[i]->newbound,
-                     updates[i]->boundtype == SCIP_BOUNDTYPE_UPPER ? updates[i]->newbound : SCIPvarGetUbLocal(var),
+                     (SCIP_BOUNDTYPE)updates[i]->boundtype == SCIP_BOUNDTYPE_UPPER ? SCIPvarGetLbLocal(var) : oldbound,
+                     (SCIP_BOUNDTYPE)updates[i]->boundtype == SCIP_BOUNDTYPE_UPPER ? oldbound : SCIPvarGetUbLocal(var),
+                     (SCIP_BOUNDTYPE)updates[i]->boundtype == SCIP_BOUNDTYPE_UPPER ? SCIPvarGetLbLocal(var) : updates[i]->newbound,
+                     (SCIP_BOUNDTYPE)updates[i]->boundtype == SCIP_BOUNDTYPE_UPPER ? updates[i]->newbound : SCIPvarGetUbLocal(var),
                      tree->focuslpstatefork->lowerbound, SCIPlpGetObjval(lp, set),
                      delta, lpgain, weight);
 

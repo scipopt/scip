@@ -158,7 +158,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
    char**                     argv,               /**< array with shell parameters */
    const char*                defaultsetname      /**< name of default settings file */
    )
-{
+{  /*lint --e{850}*/
    char* probname = NULL;
    char* settingsname = NULL;
    char* logname = NULL;

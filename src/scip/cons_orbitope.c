@@ -2323,6 +2323,7 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
             SCIP_VAR* var;
 
             var = vars[i][j];
+            assert(var != NULL);
 
             /* all variables need to be binary */
             assert( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY );
@@ -2337,7 +2338,7 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
                obj = SCIPvarGetObj(var);
             else
             {
-               assert( fixedZero || SCIPisEQ(scip, obj, SCIPvarGetObj(var)) );    /*lint !e644*/
+               assert( fixedZero || SCIPisEQ(scip, obj, SCIPvarGetObj(var)) );
             }
          }
       }

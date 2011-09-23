@@ -1352,7 +1352,7 @@ SCIP_RETCODE SCIPrealarrayExtend(
 
          BMScopyMemoryArray(&newvals[realarray->minusedidx - newfirstidx],
             &(realarray->vals[realarray->minusedidx - realarray->firstidx]),
-            realarray->maxusedidx - realarray->minusedidx + 1);
+            realarray->maxusedidx - realarray->minusedidx + 1); /*lint !e866*/
          for( i = realarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
             newvals[i] = 0.0;
       }
@@ -1721,7 +1721,7 @@ SCIP_RETCODE SCIPintarrayExtend(
 
          BMScopyMemoryArray(&newvals[intarray->minusedidx - newfirstidx],
             &intarray->vals[intarray->minusedidx - intarray->firstidx],
-            intarray->maxusedidx - intarray->minusedidx + 1);
+            intarray->maxusedidx - intarray->minusedidx + 1); /*lint !e866*/
          for( i = intarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
             newvals[i] = 0;
       }
@@ -2086,7 +2086,7 @@ SCIP_RETCODE SCIPboolarrayExtend(
 
          BMScopyMemoryArray(&newvals[boolarray->minusedidx - newfirstidx],
             &boolarray->vals[boolarray->minusedidx - boolarray->firstidx],
-            boolarray->maxusedidx - boolarray->minusedidx + 1);
+            boolarray->maxusedidx - boolarray->minusedidx + 1); /*lint !e866*/
          for( i = boolarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
             newvals[i] = FALSE;
       }
@@ -2439,7 +2439,7 @@ SCIP_RETCODE SCIPptrarrayExtend(
 
          BMScopyMemoryArray(&newvals[ptrarray->minusedidx - newfirstidx],
             &(ptrarray->vals[ptrarray->minusedidx - ptrarray->firstidx]),
-            ptrarray->maxusedidx - ptrarray->minusedidx + 1);
+            ptrarray->maxusedidx - ptrarray->minusedidx + 1); /*lint !e866*/
          for( i = ptrarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
             newvals[i] = NULL;
       }
@@ -3904,7 +3904,7 @@ SCIP_Longint SCIPcalcGreComDiv(
    {
       val1 >>= 1; /*lint !e704*/
       
-      /* if val2 is even too, divide it by 2 and increase t(=number of e */
+      /* if val2 is even too, divide it by 2 and increase t(=number of e) */
       if( !(val2 & 1) )
       {
          val2 >>= 1; /*lint !e704*/
@@ -4561,7 +4561,8 @@ SCIP_RETCODE SCIPgetRandomSubset(
 #endif   
 
    /* draw each element individually */
-   for( i = 0; i < nsubelems; i++ ) 
+   i = 0;
+   while( i < nsubelems )
    {
       int r;
 
@@ -4573,10 +4574,11 @@ SCIP_RETCODE SCIPgetRandomSubset(
       {
          if( subset[i] == subset[j] ) 
          {
-            i--;  /*lint !e850*/
+            --i;
             break;
          }
       }
+      ++i;
    }
    return SCIP_OKAY;
 }
@@ -4716,7 +4718,7 @@ void SCIPstrCopySection(
    assert(token != NULL);
    assert(size > 0);
    assert(endptr != NULL);
- 
+
    nchars = 0;
 
    /* find starting character */

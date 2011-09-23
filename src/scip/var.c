@@ -3481,8 +3481,8 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
     */
    for( v = ntmpvars - 1; v >= 0; --v )
    {
-      var = tmpvars[v];       /*lint !e644*/
-      scalar = tmpscalars[v]; /*lint !e644*/
+      var = tmpvars[v];
+      scalar = tmpscalars[v];
 
       assert( var != NULL );
       /* transforms given variable, scalar and constant to the corresponding active, fixed, or
@@ -3519,11 +3519,10 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    if( noldtmpvars > ntmpvars )
       SCIPsortPtrReal((void**)tmpvars, tmpscalars, SCIPvarComp, ntmpvars);
    
-
-   --ntmpvars;
    /* collect for each variable the representation in active variables */
-   for( ; ntmpvars >= 0; --ntmpvars )
+   while( ntmpvars >= 1 )
    {
+      --ntmpvars;
       ntmpvars2 = 0;
       var = tmpvars[ntmpvars];
       scalar = tmpscalars[ntmpvars];
@@ -3550,8 +3549,8 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
             SCIP_CALL( SCIPsetReallocBufferArray(set, &activescalars, activevarssize) );
             assert(nactivevars < activevarssize);
          }
-         activevars[nactivevars] = var;       /*lint !e644*/
-         activescalars[nactivevars] = scalar; /*lint !e644*/
+         activevars[nactivevars] = var;
+         activescalars[nactivevars] = scalar;
          nactivevars++;
          break;
 
@@ -3605,8 +3604,8 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
             }
             else
             {
-               tmpvars2[ntmpvars2] = multvar;                /*lint !e644*/
-               tmpscalars2[ntmpvars2] = scalar * multscalar; /*lint !e644*/
+               tmpvars2[ntmpvars2] = multvar;
+               tmpscalars2[ntmpvars2] = scalar * multscalar;
                ++(ntmpvars2);
                assert(ntmpvars2 <= tmpvarssize2);
             }
@@ -3630,7 +3629,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
          {
             tmpvars[ntmpvars] = tmpvars2[v];
             tmpscalars[ntmpvars] = tmpscalars2[v];
-            ++(ntmpvars);  /*lint !e850*/
+            ++(ntmpvars);
             assert(ntmpvars <= tmpvarssize);
          }
          SCIPsortPtrReal((void**)tmpvars, tmpscalars, SCIPvarComp, ntmpvars);
@@ -3655,7 +3654,8 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
       SCIPsortPtrReal((void**)activevars, activescalars, SCIPvarComp, nactivevars);
 
       /* eliminate duplicates and count required size */
-      for( v = nactivevars - 1; v > 0; --v )
+      v = nactivevars - 1;
+      while( v > 0 )
       {
          /* combine both variable since they are the same */
          if( SCIPvarCompare(activevars[v - 1], activevars[v]) == 0 )
@@ -3673,11 +3673,12 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
                activevars[v] = activevars[nactivevars];
                activescalars[v] = activescalars[nactivevars];
                --nactivevars;
-               --v;  /*lint !e850*/
+               --v;
                activevars[v] = activevars[nactivevars];
                activescalars[v] = activescalars[nactivevars];
             }
          }
+         --v;
       }
    }
    *requiredsize = nactivevars;
@@ -3693,7 +3694,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
       for( v = 0; v < *nvars; ++v )
       {
          vars[v] = activevars[v];
-         scalars[v] = activescalars[v];  /*lint !e613*/
+         scalars[v] = activescalars[v]; /*lint !e613*/
       }
    }
 
@@ -7972,7 +7973,7 @@ SCIP_RETCODE varAddTransitiveBinaryClosureImplic(
                varfixing, implvars[i], impltypes[i], implbounds[i], infeasible, nbdchgs, &added) );
          assert(SCIPimplicsGetNImpls(implvar->implics, implvarfixing) <= nimpls);
          nimpls = SCIPimplicsGetNImpls(implvar->implics, implvarfixing);
-         i = MIN(i, nimpls); /* some elements from the array could have been removed */  /*lint !e850*/
+         i = MIN(i, nimpls); /* some elements from the array could have been removed */
       }
       --i;
    }
@@ -8102,7 +8103,7 @@ SCIP_RETCODE varAddTransitiveImplic(
                         varfixing, vlbvars[i], SCIP_BOUNDTYPE_LOWER, vbimplbound, infeasible, nbdchgs, &added) );
                }
                nvlbvars = SCIPvboundsGetNVbds(implvar->vlbs);
-               i = MIN(i, nvlbvars); /* some elements from the array could have been removed */  /*lint !e850*/
+               i = MIN(i, nvlbvars); /* some elements from the array could have been removed */
             }
             --i;
          }
@@ -8169,7 +8170,7 @@ SCIP_RETCODE varAddTransitiveImplic(
                         varfixing, vubvars[i], SCIP_BOUNDTYPE_UPPER, vbimplbound, infeasible, nbdchgs, &added) );
                }
                nvubvars = SCIPvboundsGetNVbds(implvar->vubs);
-               i = MIN(i, nvubvars); /* some elements from the array could have been removed */  /*lint !e850*/
+               i = MIN(i, nvubvars); /* some elements from the array could have been removed */
             }
             --i;
          }

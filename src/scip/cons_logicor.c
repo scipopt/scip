@@ -1859,6 +1859,8 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
    {
       int v;
 
+      assert(conss != NULL); /* for flexelint */
+
       cons = conss[c];
       assert(cons != NULL);
          
@@ -2823,7 +2825,7 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
                
                if( npaircomparisons > NMINCOMPARISONS )
                {
-                  if( (*ndelconss - oldndelconss) / (npaircomparisons + 0.0) < MINGAINPERNMINCOMPARISONS )
+                  if( (*ndelconss - oldndelconss) / ((SCIP_Real)npaircomparisons) < MINGAINPERNMINCOMPARISONS )
                      break;
                   oldndelconss = *ndelconss;
                   npaircomparisons = 0;
@@ -3194,6 +3196,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLogicor)
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nbdchginfos) );
    for( i = 0; i < nbdchginfos; ++i )
    {
+      assert(bdchginfos != NULL); /* for flexelint */
       assert(bdchginfos[i] != NULL);
 
       vars[i] = SCIPbdchginfoGetVar(bdchginfos[i]);

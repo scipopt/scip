@@ -2044,22 +2044,30 @@ SCIP_Real SCIPbranchGetBranchingPoint(
       else if( !SCIPsetIsRelLT(set, lb, branchpoint) )
       {
          SCIP_Real lbabs;
+         SCIP_Real delta1;
+         SCIP_Real delta2;
 
          /* if branching point is too close to the lower bound and there is no upper bound, then move it to somewhere above the lower bound, but not above infinity */
          assert(!SCIPsetIsInfinity(set, -lb));
          assert( SCIPsetIsInfinity(set,  ub));
          lbabs = REALABS(lb);
-         branchpoint = lb + MIN(MAX(0.5 * lbabs, 1000), 0.9*(SCIPsetInfinity(set)-lb));
+         delta1 = MAX(0.5 * lbabs, 1000);
+         delta2 = 0.9*(SCIPsetInfinity(set)-lb);
+         branchpoint = lb + MIN(delta1, delta2);
       }
       else if( !SCIPsetIsGT(set, ub, branchpoint) )
       { 
          SCIP_Real ubabs;
+         SCIP_Real delta1;
+         SCIP_Real delta2;
 
          /* if branching point is too close to the upper bound and there is no lower bound, then move it to somewhere away from the upper bound, but not below infinity */
          assert( SCIPsetIsInfinity(set, -lb));
          assert(!SCIPsetIsInfinity(set,  ub));
          ubabs = REALABS(ub);
-         branchpoint = ub - MIN(MAX(0.5 * ubabs, 1000), 0.9*(ub+SCIPsetInfinity(set)));
+         delta1 = MAX(0.5 * ubabs, 1000);
+         delta2 = 0.9*(ub+SCIPsetInfinity(set));
+         branchpoint = ub - MIN(delta1, delta2);
       }
 
       return branchpoint;

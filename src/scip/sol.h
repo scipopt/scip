@@ -179,7 +179,6 @@ SCIP_RETCODE SCIPsolLinkLPSol(
 extern
 SCIP_RETCODE SCIPsolLinkNLPSol(
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_NLP*             nlp                 /**< current NLP data */

@@ -1806,6 +1806,7 @@ SCIP_DECL_CONSCOPY(consCopyOr)
 
    assert(valid != NULL);
    (*valid) = TRUE;
+   resvar = NULL;
    
    /* get variables that need to be copied */
    sourceresvar = SCIPgetResultantOr(sourcescip, sourcecons); 
@@ -1828,9 +1829,9 @@ SCIP_DECL_CONSCOPY(consCopyOr)
       SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourceresvar, &resvar, varmap, consmap, global, valid) );
       assert(!(*valid) || resvar != NULL);
 
-      /* only create the target constraint, if all variables could be copied */
       if( *valid )
       {
+         assert(resvar != NULL);
          SCIP_CALL( SCIPcreateConsOr(scip, cons, SCIPconsGetName(sourcecons), resvar, nvars, vars, 
                initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
       }

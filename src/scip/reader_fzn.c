@@ -27,10 +27,6 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
-#else
-#include <strings.h>
-#endif
 #include <ctype.h>
 
 #include "scip/cons_and.h"

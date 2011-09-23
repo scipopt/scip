@@ -1378,7 +1378,6 @@ SCIP_Bool SCIPsetIsSumRelGE(
 
 #endif
 
-/* Check for integer overflow in allocation size */
 #ifdef NDEBUG
 #define SCIPsetAllocBufferArray(set,ptr,num)    ( SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), \
                                                                      (int)((num)*sizeof(**(ptr))))      )
@@ -1388,16 +1387,17 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetReallocBufferArray(set,ptr,num)  ( SCIPbufferReallocMem((set)->buffer, set, (void**)(ptr), \
          (int)((num)*sizeof(**(ptr)))) )
 #else
+/* Check for integer overflow in allocation size */
 #define SCIPsetAllocBufferArray(set,ptr,num)    ( ( ((size_t)(num)) > (UINT_MAX / sizeof(**(ptr))) ) \
-                                                  ? SCIP_NOMEMORY                                          \
+                                                  ? ((*ptr = NULL) ? SCIP_NOMEMORY : SCIP_ERROR)     \
                                                   : SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), \
-                                                                       (int)((num)*sizeof(**(ptr))))      )
+                                                     (int)((num)*sizeof(**(ptr))))      )
 #define SCIPsetDuplicateBufferArray(set,ptr,source,num) ( ( ((size_t)(num)) > (UINT_MAX / sizeof(**(ptr)))) \
-                                                          ? SCIP_NOMEMORY                                               \
+                                                  ? ((*ptr = NULL) ? SCIP_NOMEMORY : SCIP_ERROR)     \
                                                           : SCIPbufferDuplicateMem((set)->buffer, set, (void**)(ptr),   \
                                                                                    source, (int)((num)*sizeof(**(ptr)))))
 #define SCIPsetReallocBufferArray(set,ptr,num)  ( ( ((size_t)(num)) > (UINT_MAX / sizeof(**(ptr))) ) \
-                                                  ? SCIP_NOMEMORY                                           \
+                                                  ? ((*ptr = NULL) ? SCIP_NOMEMORY : SCIP_ERROR)     \
                                                   : SCIPbufferReallocMem((set)->buffer, set, (void**)(ptr), \
                                                                          (int)((num)*sizeof(**(ptr))))      )
 #endif

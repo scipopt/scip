@@ -4267,7 +4267,8 @@ SCIP_RETCODE SCIPconssetchgApply(
       (void*)conssetchg, conssetchg->naddedconss, conssetchg->ndisabledconss);
 
    /* apply constraint additions */
-   for( i = 0; i < conssetchg->naddedconss; ++i )
+   i = 0;
+   while( i < conssetchg->naddedconss )
    {
       cons = conssetchg->addedconss[i];
       assert(cons != NULL);
@@ -4293,10 +4294,12 @@ SCIP_RETCODE SCIPconssetchgApply(
          cons->addconssetchg = conssetchg;
          cons->addarraypos = i;
       }
+      ++i;
    }
 
    /* apply constraint disablings */
-   for( i = 0; i < conssetchg->ndisabledconss; ++i )
+   i = 0;
+   while( i < conssetchg->ndisabledconss )
    {
       cons = conssetchg->disabledconss[i];
       assert(cons != NULL);
@@ -4310,7 +4313,7 @@ SCIP_RETCODE SCIPconssetchgApply(
             
          /* release and remove constraint from the disabledconss array */
          SCIP_CALL( conssetchgDelDisabledCons(conssetchg, blkmem, set, i) );
-         i--; /* the empty slot is now used by the next constraint, and ndisabledconss was decreased */
+         --i; /* the empty slot is now used by the next constraint, and ndisabledconss was decreased */
       }
       else
       {
@@ -4320,6 +4323,7 @@ SCIP_RETCODE SCIPconssetchgApply(
          assert(!cons->update);
          assert(!cons->enabled);
       }
+      ++i;
    }
 
    return SCIP_OKAY;

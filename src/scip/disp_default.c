@@ -670,16 +670,18 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputLPObjval)
    assert(scip != NULL);
 
    if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_NOTSOLVED )
-      lpobj = SCIP_INVALID;
+      SCIPinfoMessage(scip, file, "      --      ");
    else
+   {
       lpobj = SCIPgetLPObjval(scip);
 
-   if( SCIPisInfinity(scip, -lpobj ) || lpobj == SCIP_INVALID ) /*lint !e777*/
-      SCIPinfoMessage(scip, file, "      --      ");
-   else if( SCIPisInfinity(scip, lpobj) )
-      SCIPinfoMessage(scip, file, "    cutoff    ");
-   else
-      SCIPinfoMessage(scip, file, "%13.6e ", lpobj);
+      if( SCIPisInfinity(scip, -lpobj) )
+         SCIPinfoMessage(scip, file, "      --      ");
+      else if( SCIPisInfinity(scip, lpobj) )
+         SCIPinfoMessage(scip, file, "    cutoff    ");
+      else
+         SCIPinfoMessage(scip, file, "%13.6e ", lpobj);
+   }
 
    return SCIP_OKAY;
 }

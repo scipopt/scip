@@ -389,7 +389,7 @@ SCIP_RETCODE SCIPsolCreateNLPSol(
    assert(nlp != NULL);
 
    SCIP_CALL( SCIPsolCreate(sol, blkmem, set, stat, primal, tree, heur) );
-   SCIP_CALL( SCIPsolLinkNLPSol(*sol, set, stat, tree, nlp) );
+   SCIP_CALL( SCIPsolLinkNLPSol(*sol, stat, tree, nlp) );
 
    return SCIP_OKAY;
 }
@@ -573,7 +573,6 @@ SCIP_RETCODE SCIPsolLinkLPSol(
 /** copies current NLP solution into CIP solution by linking */
 SCIP_RETCODE SCIPsolLinkNLPSol(
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_NLP*             nlp                 /**< current NLP data */
@@ -1064,7 +1063,7 @@ SCIP_Real SCIPsolGetRayVal(
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
       solval = SCIPsolGetVal(sol, set, stat, SCIPvarGetAggrVar(var));
-      assert(solval != SCIP_UNKNOWN);
+      assert(solval != SCIP_UNKNOWN); /*lint !e777*/
       assert(!SCIPsetIsInfinity(set, REALABS(solval)));
       return SCIPvarGetAggrScalar(var) * solval; /* constants are ignored for computing the ray direction */
 
@@ -1076,7 +1075,7 @@ SCIP_Real SCIPsolGetRayVal(
       for( i = 0; i < nvars; ++i )
       {
          solval = SCIPsolGetVal(sol, set, stat, vars[i]);
-         assert(solval != SCIP_UNKNOWN );
+         assert(solval != SCIP_UNKNOWN ); /*lint !e777*/
          assert(!SCIPsetIsInfinity(set, REALABS(solval)));
          solvalsum += scalars[i] * solval;
       }
@@ -1084,7 +1083,7 @@ SCIP_Real SCIPsolGetRayVal(
 
    case SCIP_VARSTATUS_NEGATED:
       solval = SCIPsolGetVal(sol, set, stat, SCIPvarGetNegationVar(var));
-      assert(solval != SCIP_UNKNOWN);
+      assert(solval != SCIP_UNKNOWN); /*lint !e777*/
       assert(!SCIPsetIsInfinity(set, REALABS(solval)));
       return -solval; /* constants are ignored for computing the ray direction */
 
@@ -1334,7 +1333,8 @@ SCIP_RETCODE SCIPsolRetransform(
    nvars = origprob->nvars;
 
    /* allocate temporary memory for storing the original solution values */
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &solvals, origprob->nvars) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &solvals, nvars) );
+   assert(solvals != NULL); /* for flexelint */
 
    /* get the solution in original problem variables */
    for( v = 0; v < nvars; ++v )

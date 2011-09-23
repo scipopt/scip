@@ -930,10 +930,10 @@ SCIP_RETCODE SCIPmessagehdlrCreate(
    /* allocate buffer for buffered output */
    if( bufferedoutput )
    {
-      SCIP_ALLOC( BMSallocMemoryArray(&(*messagehdlr)->errorbuffer, SCIP_MAXSTRLEN) );
-      SCIP_ALLOC( BMSallocMemoryArray(&(*messagehdlr)->warningbuffer, SCIP_MAXSTRLEN) );
-      SCIP_ALLOC( BMSallocMemoryArray(&(*messagehdlr)->dialogbuffer, SCIP_MAXSTRLEN) );
-      SCIP_ALLOC( BMSallocMemoryArray(&(*messagehdlr)->infobuffer, SCIP_MAXSTRLEN) );
+      SCIP_ALLOC( BMSallocMemoryArray(&(*messagehdlr)->errorbuffer, SCIP_MAXSTRLEN) ); /*lint !e506*/
+      SCIP_ALLOC( BMSallocMemoryArray(&(*messagehdlr)->warningbuffer, SCIP_MAXSTRLEN) ); /*lint !e506*/
+      SCIP_ALLOC( BMSallocMemoryArray(&(*messagehdlr)->dialogbuffer, SCIP_MAXSTRLEN) ); /*lint !e506*/
+      SCIP_ALLOC( BMSallocMemoryArray(&(*messagehdlr)->infobuffer, SCIP_MAXSTRLEN) ); /*lint !e506*/
       (*messagehdlr)->errorbuffer[0] = '\0';
       (*messagehdlr)->warningbuffer[0] = '\0';
       (*messagehdlr)->dialogbuffer[0] = '\0';

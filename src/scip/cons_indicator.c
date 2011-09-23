@@ -576,6 +576,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
    haveslack = FALSE;
    for (i = 0; i < nbdchginfos; ++i)
    {
+      assert( bdchginfos != NULL ); /* for flexelint */
       assert( bdchginfos[i] != NULL );
 
       var = SCIPbdchginfoGetVar(bdchginfos[i]);
@@ -624,6 +625,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, nbdchginfos) );
       for (i = 0; i < nbdchginfos; ++i)
       {
+         assert( bdchginfos != NULL ); /* for flexelint */
          assert( bdchginfos[i] != NULL );
 
          var = SCIPbdchginfoGetVar(bdchginfos[i]);
@@ -5113,11 +5115,11 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
    if ( *valid )
    {
       assert( targetlincons != NULL );
-      assert( targetbinvar != NULL );    /*lint !e644*/
-      assert( targetslackvar != NULL );  /*lint !e644*/
+      assert( targetbinvar != NULL ); /*lint !e644*/
+      assert( targetslackvar != NULL ); /*lint !e644*/
 
       SCIP_CALL( SCIPcreateConsIndicatorLinCons(scip, cons, consname, targetbinvar, targetlincons, targetslackvar,
-            initial, separate, enforce, check, propagate, local, dynamic, modifiable, stickingatnode) );  /*lint !e644*/
+            initial, separate, enforce, check, propagate, local, dynamic, modifiable, stickingatnode) );
    }
 
    if ( !(*valid) )

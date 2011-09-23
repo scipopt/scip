@@ -3655,7 +3655,7 @@ SCIP_RETCODE SCIPreadPip(
    pipinput.tokenbuf[0] = '\0';
    for( i = 0; i < PIP_MAX_PUSHEDTOKENS; ++i )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &((pipinput.pushedtokens)[i]), PIP_MAX_LINELEN) ); /*lint !e866*/  /*lint !e506*/
+      SCIP_CALL( SCIPallocMemoryArray(scip, &((pipinput.pushedtokens)[i]), PIP_MAX_LINELEN) ); /*lint !e866 !e506*/
    }
 
    pipinput.npushedtokens = 0;

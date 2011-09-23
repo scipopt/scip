@@ -47,7 +47,7 @@
 
 #define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
 
-#define LINCONSUPGD_PRIORITY    +000000 /**< priority of the constraint handler for upgrading of linear constraints */
+#define LINCONSUPGD_PRIORITY     000000 /**< priority of the constraint handler for upgrading of linear constraints */
 
 
 

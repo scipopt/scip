@@ -1013,6 +1013,7 @@ SCIP_RETCODE extractFlowRows(
             dualsol = ABS(dualsol);
          else if( flowrowsigns[r] == RHSPOSSIBLE )
             dualsol = -dualsol;
+         assert(maxdualflow > 0.0); /*for flexelint*/
          flowrowscores[r] += dualsol/maxdualflow + 1.0;
          assert(flowrowscores[r] > 0.0);
       }
@@ -1374,6 +1375,7 @@ SCIP_RETCODE extractCapacityRows(
             dualsol = ABS(dualsol);
          else if( capacityrowsigns[r] == RHSPOSSIBLE )
             dualsol = -dualsol;
+         assert(maxdualcapacity > 0.0); /*for flexelint*/
          capacityrowscores[r] += MAX(dualsol, 0.0)/maxdualcapacity;
          assert(capacityrowscores[r] > 0.0);
       }
@@ -3158,7 +3160,7 @@ SCIP_RETCODE findUncapacitatedArcs(
    /* for each node s, count for each other node t the number of flow variables that are not yet assigned
     * to an arc and that give rise to an (s,t) arc or an (t,s) arc
     */
-   for( v = 0; n < nflowcands; v++ )
+   for( v = 0; n < nflowcands; v++ ) /*lint !e440*/ /* for flexelint: n is used as abort criterion for loop */
    {
       int l;
 
@@ -5344,7 +5346,7 @@ SCIP_Bool nodeInPartition(
 
       cluster = nodepartition->nodeclusters[v];
       assert(0 <= cluster && cluster < nodepartition->nclusters);
-      clusterbit = (1 << cluster);
+      clusterbit = (1 << cluster); /*lint !e701*/
 
       return (((partition & clusterbit) != 0) == !inverted);
    }
@@ -5906,7 +5908,7 @@ SCIP_RETCODE generateClusterCuts(
        * one with regular S-T and one with inverted partitions.
        */
       startpartition = 1;
-      allpartitions = (1 << (nclusters-1));
+      allpartitions = (1 << (nclusters-1)); /*lint !e701*/
    }
    useinverted = (mcfnetwork->modeltype == SCIP_MCFMODELTYPE_DIRECTED);
 
@@ -6148,7 +6150,7 @@ SCIP_RETCODE generateClusterCuts(
                   {
                      int mid = (left+right)/2;
                      /* take deltas that are not too close */
-                     if( REALABS( deltas[mid] / coef - 1.0 ) <  1e-03 )
+                     if( REALABS( deltas[mid] / coef - 1.0 ) <  1e-03 ) /*lint !e771*/
                      {
                         exists = TRUE;
                         break;
@@ -6644,7 +6646,7 @@ SCIP_RETCODE separateCuts(
             nodepartitionFree(scip, &nodepartition);
          }
 
-         MCFdebugMessage("MCF network has %d nodes, %d arcs, %d commodities. Found %d MCF network cuts and %d cutoffs.\n",
+         MCFdebugMessage("MCF network has %d nodes, %d arcs, %d commodities. Found %d MCF network cuts, cutoff = %u.\n",
                          mcfnetwork->nnodes, mcfnetwork->narcs, mcfnetwork->ncommodities, ncuts, cutoff);
 
          /* adjust result code */

@@ -499,7 +499,7 @@ SCIP_Longint getVarSignature(
    int sigidx;
 
    sigidx = SCIPvarGetIndex(var) % (int)(8*sizeof(SCIP_Longint));
-   return ((SCIP_Longint)1) << sigidx;
+   return ((SCIP_Longint)1) << sigidx; /*lint !e703*/
 }
 
 /** returns the bit signature of the given constraint data */
@@ -3849,7 +3849,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
 
                if( npaircomparisons > NMINCOMPARISONS )
                {
-                  if( (*ndelconss - oldndelconss + *nfixedvars - oldnfixedvars) / (npaircomparisons + 0.0) < MINGAINPERNMINCOMPARISONS )
+                  if( (*ndelconss - oldndelconss + *nfixedvars - oldnfixedvars) / ((SCIP_Real)npaircomparisons) < MINGAINPERNMINCOMPARISONS )
                      break;
                   oldndelconss = *ndelconss;
                   oldnfixedvars = *nfixedvars;

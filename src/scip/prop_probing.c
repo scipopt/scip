@@ -165,10 +165,13 @@ SCIP_RETCODE sortVariables(
 
    assert(vars != NULL || nvars == 0);
 
-   sortedvars = &(vars[firstidx]);
    nsortedvars = nvars - firstidx;
    if( nsortedvars <= 0 )
       return SCIP_OKAY;
+
+   assert(vars != NULL);
+
+   sortedvars = &(vars[firstidx]);
 
    SCIPdebugMessage("resorting probing variables %d to %d\n", firstidx, nvars-1);
 
@@ -306,7 +309,6 @@ SCIP_RETCODE applyProbing(
    int*                  nfixedvars,         /**< pointer to store number of fixed variables */
    int*                  naggrvars,          /**< pointer to store number of aggregated variables */
    int*                  nchgbds,            /**< pointer to store number of changed bounds */
-   int*                  nimplications,      /**< pointer to store number of implications */
    int                   oldnfixedvars,      /**< number of previously fixed variables */
    int                   oldnaggrvars,       /**< number of previously aggregated variables */
    SCIP_Bool*            delay,              /**< pointer to store whether propagator should be delayed */
@@ -784,7 +786,7 @@ SCIP_DECL_PROPPRESOL(propPresolProbing)
    oldnimplications = propdata->nimplications;
 
    /* start probing on variables */
-   SCIP_CALL( applyProbing(scip, propdata, propdata->sortedvars, propdata->nsortedvars, propdata->nsortedbinvars, &(propdata->startidx), nfixedvars, naggrvars, nchgbds, &(propdata->nimplications), oldnfixedvars, oldnaggrvars, &delay, &cutoff) );
+   SCIP_CALL( applyProbing(scip, propdata, propdata->sortedvars, propdata->nsortedvars, propdata->nsortedbinvars, &(propdata->startidx), nfixedvars, naggrvars, nchgbds, oldnfixedvars, oldnaggrvars, &delay, &cutoff) );
 
    /* adjust result code */
    if( cutoff )
@@ -893,7 +895,7 @@ SCIP_DECL_PROPEXEC(propExecProbing)
    oldnimplications = propdata->nimplications;
    
    /* start probing on found variables */
-   SCIP_CALL( applyProbing(scip, propdata, binvars, nbinvars, nbinvars, &startidx, &nfixedvars, &naggrvars, &nchgbds, &(propdata->nimplications), oldnfixedvars, oldnaggrvars, &delay, &cutoff) );
+   SCIP_CALL( applyProbing(scip, propdata, binvars, nbinvars, nbinvars, &startidx, &nfixedvars, &naggrvars, &nchgbds, oldnfixedvars, oldnaggrvars, &delay, &cutoff) );
    SCIPdebugMessage("probing propagation found %d fixings, %d aggregation, %d nchgbds, and %d implications\n", nfixedvars, naggrvars, nchgbds, (propdata->nimplications) - oldnimplications);
 
    if( delay )
@@ -1052,6 +1054,9 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
    {
       SCIP_Real newlb;
       SCIP_Real newub;
+
+      assert(vars != NULL); /* for flexelint */
+      assert(vars[j] != NULL);
 
       /* @todo: add holes, and even add holes if x was the probing variable and it followed a better bound on x itself */
       /* @todo: check if we probed on an integer variable, that this maybe led to aggregation on two other variables, i.e
@@ -1290,7 +1295,7 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
                (*nimplications)++;
                (*nchgbds) += nboundchanges;
             }
-            if( rightpropubs[j] < newub - 0.5 && (rightpropubs == NULL || rightpropubs[j] < rightimplubs[j]) && !*cutoff )
+            if( rightpropubs[j] < newub - 0.5 && (rightimplubs == NULL || rightpropubs[j] < rightimplubs[j]) && !*cutoff )
             {
                /* insert implication: probingvar == 1  =>  vars[j] <= rightpropubs[j] */
                /*SCIPdebugMessage("found implication <%s> == 1  =>  <%s>[%g,%g] <= %g\n",
@@ -1300,7 +1305,7 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
                (*nimplications)++;
                (*nchgbds) += nboundchanges;
             }
-            if( rightproplbs[j] > newlb + 0.5 && (rightproplbs == NULL || rightproplbs[j] > rightimpllbs[j]) && !*cutoff )
+            if( rightproplbs[j] > newlb + 0.5 && (rightimpllbs == NULL || rightproplbs[j] > rightimpllbs[j]) && !*cutoff )
             {
                /* insert implication: probingvar == 1  =>  vars[j] >= rightproplbs[j] */
                /*SCIPdebugMessage("found implication <%s> == 1  =>  <%s>[%g,%g] >= %g\n",

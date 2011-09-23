@@ -3725,10 +3725,10 @@ SCIP_RETCODE SCIPnodeFocus(
     * thereby checking, if the new node can be cut off
     */
    treeFindSwitchForks(tree, *node, &fork, &lpfork, &lpstatefork, &subroot, cutoff);
-   SCIPdebugMessage("focus node: focusnodedepth=%d, forkdepth=%d, lpforkdepth=%d, lpstateforkdepth=%d, subrootdepth=%d, cutoff=%d\n",
-      *node != NULL ? (*node)->depth : -1, fork != NULL ? fork->depth : -1,
-      lpfork != NULL ? lpfork->depth : -1, lpstatefork != NULL ? lpstatefork->depth : -1,
-      subroot != NULL ? subroot->depth : -1, *cutoff);
+   SCIPdebugMessage("focus node: focusnodedepth=%d, forkdepth=%d, lpforkdepth=%d, lpstateforkdepth=%d, subrootdepth=%d, cutoff=%u\n",
+      *node != NULL ? (*node)->depth : -1, fork != NULL ? fork->depth : -1, /*lint !e705 */
+      lpfork != NULL ? lpfork->depth : -1, lpstatefork != NULL ? lpstatefork->depth : -1, /*lint !e705 */
+      subroot != NULL ? subroot->depth : -1, *cutoff); /*lint !e705 */
    
    /* free the new node, if it is located in a cut off subtree */
    if( *cutoff )
@@ -4533,6 +4533,7 @@ SCIP_Real SCIPtreeCalcNodeselPriority(
    case SCIP_BRANCHDIR_FIXED:
       prio = SCIPsetInfinity(set);
       break;
+   case SCIP_BRANCHDIR_AUTO:
    default:
       SCIPerrorMessage("invalid branching direction <%d> of variable <%s>\n", 
          SCIPvarGetBranchDirection(var), SCIPvarGetName(var));
@@ -4770,8 +4771,8 @@ SCIP_RETCODE SCIPtreeBranchVar(
           */
          SCIPdebugMessage("continuous branch on variable <%s> with value %g, priority %d (current lower bound: %g)\n",
             SCIPvarGetName(var), val, SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
-         downub = MIN(val, SCIPvarGetUbLocal(var) - SCIPsetEpsilon(set));
-         uplb   = MAX(val, SCIPvarGetLbLocal(var) + SCIPsetEpsilon(set));
+         downub = MIN(val, SCIPvarGetUbLocal(var) - SCIPsetEpsilon(set)); /*lint !e666*/
+         uplb   = MAX(val, SCIPvarGetLbLocal(var) + SCIPsetEpsilon(set)); /*lint !e666*/
       }
    }
    else if( SCIPsetIsFeasIntegral(set, val) )
@@ -5050,10 +5051,10 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
    }
    if( !SCIPsetIsInfinity(set,  SCIPvarGetUbLocal(var)) )
    {
-      width = MIN(width, SCIPvarGetUbLocal(var) - val);
+      width = MIN(width, SCIPvarGetUbLocal(var) - val); /*lint !e666*/
    }
    /* calculate initial domain width of child nodes
-    * if we have at least one finite bounds, choose width such that we have roughly the same number of nodes left and right of val
+    * if we have at least one finite bound, choose width such that we have roughly the same number of nodes left and right of val
     */
    if( width == SCIP_REAL_MAX )
    {
@@ -5063,7 +5064,7 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
    else if( widthfactor == 1.0 )
    {
       /* most domains get same size */
-      width /= n/2;
+      width /= n/2; /*lint !e653*/ /* rounding is ok at this point */
    }
    else
    {
@@ -5080,9 +5081,9 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
        */
       assert(widthfactor > 1.0);
       if( n % 2 == 0 )
-         width *= (widthfactor - 1.0) / (pow(widthfactor, n/2) - 1.0);
+         width *= (widthfactor - 1.0) / (pow(widthfactor, (SCIP_Real)(n/2)) - 1.0); /*lint !e653*/
       else
-         width /= 0.5 + widthfactor * (pow(widthfactor, n/2) - 1.0) / (widthfactor - 1.0);
+         width /= 0.5 + widthfactor * (pow(widthfactor, (SCIP_Real)(n/2)) - 1.0) / (widthfactor - 1.0); /*lint !e653*/
    }
    if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
       minwidth = MAX(1.0, minwidth);
@@ -5145,7 +5146,7 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
       {
          left  = SCIPsetFloor(set, val);
          right = SCIPsetCeil(set, val);
-         if( left == right )
+         if( right - left < 0.5 )
             left -= 1.0;
       }
       else if( SCIPsetIsZero(set, val) )
@@ -5178,7 +5179,7 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
          {
             bnd = left - width;
             SCIPvarAdjustLb(var, set, &bnd);
-            bnd = MAX(SCIPvarGetLbLocal(var), bnd);
+            bnd = MAX(SCIPvarGetLbLocal(var), bnd); /*lint !e666*/
          }
          assert(SCIPsetIsRelLT(set, bnd, left));
 
@@ -5225,7 +5226,7 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
          {
             bnd = right + width;
             SCIPvarAdjustUb(var, set, &bnd);
-            bnd = MIN(SCIPvarGetUbLocal(var), bnd);
+            bnd = MIN(SCIPvarGetUbLocal(var), bnd); /*lint !e666*/
          }
          assert(SCIPsetIsRelGT(set, bnd, right));
 

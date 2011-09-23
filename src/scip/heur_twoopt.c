@@ -716,7 +716,7 @@ SCIP_RETCODE presolveTwoOpt(
 
    heurdata->nbinvars = nbinvars;
 
-   heurdata->execute = nbinvars > 1 && heurdata->nbinblocks > 0; /*lint !e644 */
+   heurdata->execute = nbinvars > 1 && heurdata->nbinblocks > 0;
 
 #ifdef STATISTIC_INFORMATION
    /* update statistics */

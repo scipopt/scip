@@ -300,7 +300,7 @@ SCIP_RETCODE SCIPdialoghdlrCreate(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_DIALOGHDLR**     dialoghdlr          /**< pointer to store dialog handler */
    )
-{
+{  /*lint --e{715}*/
 #ifdef WITH_READLINE
    char readlineversion[20];
 #endif
@@ -313,7 +313,7 @@ SCIP_RETCODE SCIPdialoghdlrCreate(
    (*dialoghdlr)->inputlistptr = &(*dialoghdlr)->inputlist;
    (*dialoghdlr)->buffersize = SCIP_MAXSTRLEN;
    (*dialoghdlr)->nprotectedhistelems = -1;
-   SCIP_ALLOC( BMSallocMemoryArray(&(*dialoghdlr)->buffer, (*dialoghdlr)->buffersize) );
+   SCIP_ALLOC( BMSallocMemoryArray(&(*dialoghdlr)->buffer, (*dialoghdlr)->buffersize) ); /*lint !e316*/
 
    SCIPdialoghdlrClearBuffer(*dialoghdlr);
 

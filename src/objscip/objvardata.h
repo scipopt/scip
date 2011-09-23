@@ -137,8 +137,8 @@ public:
       ObjVardata**       objvardata,         /**< pointer to store the copied variable data object */
       SCIP_RESULT*       result              /**< pointer to store the result of the call */
       )
-   {
-      *objvardata = NULL;
+   {  /*lint --e{715}*/
+      (*objvardata) = NULL;
       (*result) = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
    }
