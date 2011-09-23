@@ -1819,7 +1819,7 @@ SCIP_DECL_HEURFREE(heurFreeSubNlp)
    assert(heurdata->var_scip2subscip == NULL);
    assert(heurdata->startcand == NULL);
 
-   SCIPfreeMemoryNull(scip, &heurdata);
+   SCIPfreeMemory(scip, &heurdata);
 
    return SCIP_OKAY;
 }
