@@ -2537,9 +2537,9 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
    return SCIP_OKAY;
 }
 
-/** deinitialization method of conflict handler (called before transformed problem is freed) */
+/** free method of conflict handler */
 static
-SCIP_DECL_CONFLICTEXIT(conflictExitBounddisjunction)
+SCIP_DECL_CONFLICTFREE(conflictFreeBounddisjunction)
 {
    SCIP_CONFLICTHDLRDATA* conflicthdlrdata;
 
@@ -2582,7 +2582,7 @@ SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
 
    /* create conflict handler for bound disjunction constraints */
    SCIP_CALL( SCIPincludeConflicthdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
-         NULL, NULL, NULL, conflictExitBounddisjunction, NULL, NULL, conflictExecBounddisjunction, conflicthdlrdata) );
+         NULL, conflictFreeBounddisjunction, NULL, NULL, NULL, NULL, conflictExecBounddisjunction, conflicthdlrdata) );
 
    /* create constraint handler data */
    SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
