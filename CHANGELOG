@@ -115,6 +115,7 @@ fixed bugs:
 - fixed bugs in changing the initial and checked flags for constraints in original problem
 - fixed bug using wrong sign in infinity check in prop_pseudoobj
 - fixed bug trying to tighten multiaggregated variables, which have only one active representation, and this variable is already tightened
+- fixed bug in ZI round heuristic that led to infeasible shiftings for numerically slightly infeasible rows with close-to-zero coefficients
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})

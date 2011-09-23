@@ -54,13 +54,6 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeConshdlrSOC(scip) ); /* SOC needs to be after quadratic due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrVarbound(scip) );
    SCIP_CALL( SCIPincludeConshdlrXor(scip) );
-
-#if 0
-   SCIP_CALL( SCIPincludeConshdlrEqknapsack(scip) );
-   SCIP_CALL( SCIPincludeConshdlrInvarknapsack(scip) );
-   SCIP_CALL( SCIPincludeConshdlrBinpack(scip) );
-#endif
-
    SCIP_CALL( SCIPincludeReaderBnd(scip) );
    SCIP_CALL( SCIPincludeReaderCcg(scip) );
    SCIP_CALL( SCIPincludeReaderCip(scip) );
