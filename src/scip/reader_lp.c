@@ -136,7 +136,7 @@ void syntaxError(
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "  input: %s\n", lpinput->linebuf);
    }
    (void) SCIPsnprintf(formatstr, 256, "         %%%ds\n", lpinput->linepos);
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, formatstr, "^");
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, (const char*)formatstr, "^");
    lpinput->section  = LP_END;
    lpinput->haserror = TRUE;
 }

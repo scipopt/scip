@@ -2422,7 +2422,7 @@ void printRecord(
    fieldwidth = computeFieldWidth(maxnamelen);
    (void) SCIPsnprintf(format, 32," %%-%ds %%%ds ", fieldwidth, MPS_MAX_VALUELEN - 1);
 
-   SCIPinfoMessage(scip, file, format, col1, col2);
+   SCIPinfoMessage(scip, file, (const char *)format, col1, col2);
 }
 
 /** output two strings in columns 1 (width 2) and 2 (width 8) */
@@ -2456,7 +2456,7 @@ void printStart(
       (void) SCIPsnprintf(format, 32, " %%-2.2s %%-%ds ", fieldwidth);
    }
 
-   SCIPinfoMessage(scip, file, format, col1, col2);
+   SCIPinfoMessage(scip, file, (const char*)format, col1, col2);
 }
 
 /** prints the given data as column entry */
