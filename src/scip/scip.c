@@ -10295,8 +10295,8 @@ SCIP_RETCODE SCIPtightenVarLb(
    SCIPvarAdjustLb(var, scip->set, &newbound);
 
    /* get current bounds */
-   lb = SCIPvarGetLbLocal(var);
-   ub = SCIPvarGetUbLocal(var);
+   lb = SCIPcomputeVarLbLocal(scip, var);
+   ub = SCIPcomputeVarUbLocal(scip, var);
    assert(SCIPsetIsLE(scip->set, lb, ub));
 
    if( SCIPsetIsFeasGT(scip->set, newbound, ub) )
@@ -10365,8 +10365,8 @@ SCIP_RETCODE SCIPtightenVarUb(
    SCIPvarAdjustUb(var, scip->set, &newbound);
 
    /* get current bounds */
-   lb = SCIPvarGetLbLocal(var);
-   ub = SCIPvarGetUbLocal(var);
+   lb = SCIPcomputeVarLbLocal(scip, var);
+   ub = SCIPcomputeVarUbLocal(scip, var);
    assert(SCIPsetIsLE(scip->set, lb, ub));
 
    if( SCIPsetIsFeasLT(scip->set, newbound, lb) )

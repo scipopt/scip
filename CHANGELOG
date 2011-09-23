@@ -114,6 +114,7 @@ fixed bugs:
 - fixed bug in debug.c: removed tree nodes had not been checked if they were pruned due to an incumbent solution found by a diving heuristic
 - fixed bugs in changing the initial and checked flags for constraints in original problem
 - fixed bug using wrong sign in infinity check in prop_pseudoobj
+- fixed bug trying to tighten multiaggregated variables, which have only one active representation, and this variable is already tightened
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})
