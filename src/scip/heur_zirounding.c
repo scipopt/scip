@@ -174,6 +174,10 @@ void calculateBounds(
          return;
       }
 
+
+      SCIPdebugMessage("colval: %15.8f, downslack: %15.8f, upslack: %5.2f, lb: %5.2f, ub: %5.2f\n", colvals[i], downslacks[rowpos], upslacks[rowpos],
+         *lowerbound, *upperbound);
+
       /* if coefficient > 0, rounding up might violate up slack and rounding down might violate down slack
        * thus search for the minimum so that no constraint is violated;
        * if coefficient < 0, it is the other way around unless at least one row slack is infinity
@@ -182,20 +186,36 @@ void calculateBounds(
       if( colvals[i] > 0 )
       {
          if( !SCIPisInfinity(scip, upslacks[rowpos]) )
-            *upperbound = MIN(*upperbound, upslacks[rowpos]/colvals[i]);
+         {
+            SCIP_Real upslack;
+            upslack = MAX(upslacks[rowpos], 0.0); /* avoid errors due to numerically slightly infeasible rows */
+            *upperbound = MIN(*upperbound, upslack/colvals[i]);
+         }
 
          if( !SCIPisInfinity(scip, downslacks[rowpos]) )
-            *lowerbound = MIN(*lowerbound, downslacks[rowpos]/colvals[i]);
+         {
+            SCIP_Real downslack;
+            downslack = MAX(downslacks[rowpos], 0.0); /* avoid errors due to numerically slightly infeasible rows */
+            *lowerbound = MIN(*lowerbound, downslack/colvals[i]);
+         }
       }
       else
       {
          assert(colvals[i] != 0.0);
 
          if( !SCIPisInfinity(scip, upslacks[rowpos] ) )
-            *lowerbound = MIN(*lowerbound, -upslacks[rowpos]/colvals[i]);
+         {
+            SCIP_Real upslack;
+            upslack = MAX(upslacks[rowpos], 0.0); /* avoid errors due to numerically slightly infeasible rows */
+            *lowerbound = MIN(*lowerbound, -upslack/colvals[i]);
+         }
 
          if( !SCIPisInfinity(scip, downslacks[rowpos] ) )
-            *upperbound = MIN(*upperbound,-downslacks[rowpos]/colvals[i]);
+         {
+            SCIP_Real downslack;
+            downslack = MAX(downslacks[rowpos], 0.0); /* avoid errors due to numerically slightly infeasible rows */
+            *upperbound = MIN(*upperbound,-downslack/colvals[i]);
+         }
       }
    }
 }
@@ -597,6 +617,8 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
          upslacks[i] = SCIPinfinity(scip);
       else
          upslacks[i] = rhs - activities[i];
+
+      SCIPdebugMessage("lhs:%5.2f <= act:%5.2f <= rhs:%5.2f --> down: %5.2f, up:%5.2f\n", lhs, activities[i], rhs, downslacks[i], upslacks[i]);
 
       /* row is an equation. Try to find a slack variable in the row, i.e.,
        * a continuous variable which occurs only in this row. If no such variable exists,
