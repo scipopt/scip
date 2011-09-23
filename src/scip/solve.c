@@ -1942,6 +1942,7 @@ SCIP_RETCODE priceAndCutLoop(
          if( !(*lperror) )
          {
             SCIP_Real newlowerbound;
+            unsigned int timingmask;
 
             /* if the global lower bound changed, propagate domains again since this may trigger reductions 
              * propagation only has to be performed if the node is not cut off by bounding anyway 
@@ -1951,7 +1952,23 @@ SCIP_RETCODE priceAndCutLoop(
             {
                SCIPdebugMessage(" -> global lower bound changed from %g to %g: propagate domains again\n",
                   oldlowerbound, newlowerbound);
-               SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, FALSE, SCIP_PROPTIMING_BEFORELP, cutoff) );
+
+               timingmask = SCIP_PROPTIMING_BEFORELP;
+            }
+            else
+               timingmask = 0x000;
+
+            /* call propagators that are applicable during node LP solving loop */
+            if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
+            {
+               SCIPdebugMessage(" -> LP solved to optimality: call propagators that are applicable during LP solving loop\n");
+
+               timingmask = timingmask | SCIP_PROPTIMING_DURINGLPLOOP;
+            }
+
+            if( timingmask != 0 )
+            {
+               SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, FALSE, timingmask, cutoff) );
                assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
                /* if we found something, solve LP again */
@@ -1977,40 +1994,6 @@ SCIP_RETCODE priceAndCutLoop(
 
                   mustprice = TRUE;
                }
-            }
-         }
-
-         /* call propagators that are applicable during node LP solving loop */
-         if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
-         {
-            assert(!(*lperror));
-
-            /* call propagators which are during lp loop */
-            SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, FALSE, SCIP_PROPTIMING_DURINGLPLOOP, cutoff) );
-            assert(SCIPbufferGetNUsed(set->buffer) == 0);
-            
-            /* if we found something, solve LP again */
-            if( !lp->flushed && !(*cutoff) )
-            {
-               SCIPdebugMessage("    -> found reduction: resolve LP\n");
-               
-               /* in the root node, remove redundant rows permanently from the LP */
-               if( root )
-               {
-                  SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
-                  SCIP_CALL( SCIPlpRemoveRedundantRows(lp, blkmem, set, stat, eventqueue, eventfilter) );
-               }
-                  
-               /* resolve LP */
-               SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, eventqueue, eventfilter, prob, 
-                     -1, FALSE, TRUE, FALSE, lperror) );
-               assert(lp->flushed);
-               assert(lp->solved || *lperror);
-               
-               /* remove previous primal ray, store new one if LP is unbounded */
-               SCIP_CALL( updatePrimalRay(blkmem, set, stat, prob, primal, tree, lp, *lperror) );
-               
-               mustprice = TRUE;
             }
          }
 
