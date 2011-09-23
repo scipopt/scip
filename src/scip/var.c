@@ -2154,11 +2154,17 @@ SCIP_RETCODE varParse(
    parseValue(set, token, ub);
 
    /* get local bound */
-   token = SCIPstrtok(NULL, "[", &saveptr);
-   assert(token != NULL);
+   (void) SCIPstrtok(NULL, "[", &saveptr);
    token = SCIPstrtok(NULL, ",", &saveptr);
-   assert(token != NULL);
 #endif
+
+   if( token == NULL )
+   {
+      /* the local and lazy bounds are not present */
+      *lazylb = -SCIPsetInfinity(set);
+      *lazyub =  SCIPsetInfinity(set);
+      goto TERMINATE;
+   }
 
    if( local )
       parseValue(set, token, lb);
