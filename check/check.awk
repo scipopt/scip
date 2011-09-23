@@ -83,6 +83,7 @@ BEGIN {
    lpsname = "?";
    lpsversion = "?";
    scipversion = "?";
+   githash = "?";
    conftottime = 0.0;
    overheadtottime = 0.0;
    
@@ -203,6 +204,12 @@ BEGIN {
    if( NF >= 14 ) {
       split($14, v, "]");
       lpsversion = v[1];
+   }
+
+   # get git hash 
+   if( $(NF-1) == "[GitHash:" ) {
+      split($NF, v, "]");
+      githash = v[1];
    }
 }
 /^SCIP> SCIP> / { $0 = substr($0, 13, length($0)-12); }
@@ -911,5 +918,9 @@ END {
    }
 
    printf("@02 timelimit: %g\n", timelimit);
-   printf("@01 SCIP(%s)%s(%s):%s\n", scipversion, lpsname, lpsversion, settings);
+   printf("@01 SCIP(%s)%s(%s):%s", scipversion, lpsname, lpsversion, settings);
+   if( githash != "?" )
+      printf(" [GitHash: %s]\n", githash);
+   else
+      printf("\n");
 }
