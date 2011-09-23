@@ -4521,8 +4521,6 @@ SCIP_RETCODE addIntervalGradientEstimator(
    assert(exprtree != NULL);
    assert(newx || SCIPexprtreeGetInterpreterData(exprtree) != NULL);
 
-   treecoef = consdata->nonlincoefs[exprtreeidx];
-
    *success = FALSE;
 
    /* skip interval gradient if expression interpreter cannot compute interval gradients */
@@ -4577,6 +4575,8 @@ SCIP_RETCODE addIntervalGradientEstimator(
       SCIPdebugMessage("Got nonfinite function value from evaluation of constraint %s tree %d. skipping interval gradient estimator.\n", SCIPconsGetName(cons), exprtreeidx);
       goto INTGRADESTIMATOR_CLEANUP;
    }
+
+   treecoef = consdata->nonlincoefs[exprtreeidx];
    val *= treecoef;
    constant = val;
 

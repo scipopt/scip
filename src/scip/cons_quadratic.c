@@ -4925,7 +4925,7 @@ void addBilinMcCormick(
          coefx    = -coefx;
          coefy    = -coefy;
          constant = -constant;
-         bilincoef = -bilincoef;
+         /* bilincoef = -bilincoef; correct, but currently not used */
       }
    }
 
