@@ -2438,7 +2438,7 @@ SCIP_RETCODE SCIPparamsetWrite(
    /* close output file */
    if( filename != NULL )
    {
-      assert(file != NULL);  /*lint !e499*/
+      assert(file != NULL);  /*lint !e449*/
       fclose(file);
    }
 

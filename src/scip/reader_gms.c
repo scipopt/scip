@@ -1096,8 +1096,10 @@ SCIP_RETCODE printSignpowerRow(
 
    /* print right hand side */
    if( linecnt == 0 )
+   {
       /* we start a new line; therefore we tab this line */
       appendLine(scip, file, linebuffer, &linecnt, "     ");
+   }
 
    if( SCIPisZero(scip, rhs) )
       rhs = 0.0;
@@ -1549,7 +1551,7 @@ SCIP_RETCODE printExpr(
       default:
          SCIPerrorMessage("unexpected operand %d in expression\n", SCIPexprGetOperator(expr));
          return SCIP_OKAY;
-   }
+   } /*lint !e788*/
 
    return SCIP_OKAY;
 }
@@ -2223,7 +2225,7 @@ SCIP_RETCODE SCIPwriteGms(
       else if( strcmp(conshdlrname, "indicator") == 0 )
       {
          if( indicatorform == 'b' )
-         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", consname, (c < nconss - 1) ? "," : ";");
+            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", consname, (c < nconss - 1) ? "," : ";");
          else
             (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s(sosset)%s", consname, (c < nconss - 1) ? "," : ";");
          appendLine(scip, file, linebuffer, &linecnt, buffer);
@@ -2244,7 +2246,7 @@ SCIP_RETCODE SCIPwriteGms(
    if( transformed && SCIPgetTransObjoffset(scip) != 0.0 )
       (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " objequ .. objvar =e= %.15g + ", SCIPgetTransObjoffset(scip));
    else
-   (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " objequ .. objvar =e= ");
+      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " objequ .. objvar =e= ");
    appendLine(scip, file, linebuffer, &linecnt, buffer);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &objcoeffs, nvars) );

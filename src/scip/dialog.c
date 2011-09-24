@@ -313,7 +313,7 @@ SCIP_RETCODE SCIPdialoghdlrCreate(
    (*dialoghdlr)->inputlistptr = &(*dialoghdlr)->inputlist;
    (*dialoghdlr)->buffersize = SCIP_MAXSTRLEN;
    (*dialoghdlr)->nprotectedhistelems = -1;
-   SCIP_ALLOC( BMSallocMemoryArray(&(*dialoghdlr)->buffer, (*dialoghdlr)->buffersize) ); /*lint !e316*/
+   SCIP_ALLOC( BMSallocMemoryArray(&(*dialoghdlr)->buffer, (*dialoghdlr)->buffersize) ); /*lint !e685*/
 
    SCIPdialoghdlrClearBuffer(*dialoghdlr);
 
