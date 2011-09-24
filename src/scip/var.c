@@ -6770,9 +6770,11 @@ SCIP_RETCODE SCIPvarChgUbDive(
    return SCIP_OKAY;
 }
 
-/** for a multi-aggregated variable, gives the local lower bound computed by adding the local bounds from all aggregation variables
- * this lower bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multi-aggregated variable is not allowed
+/** for a multi-aggregated variable, gives the local lower bound computed by adding the local bounds from all
+ *  aggregation variables, this lower bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is
+ *  not updated if bounds of aggregation variables are changing
+ *
+ *  calling this function for a non-multi-aggregated variable is not allowed
  */
 SCIP_Real SCIPvarGetMultaggrLbLocal(
    SCIP_VAR*             var,                /**< problem variable */
@@ -6783,11 +6785,15 @@ SCIP_Real SCIPvarGetMultaggrLbLocal(
    SCIP_Real lb;
    SCIP_Real bnd;
    SCIP_VAR* aggrvar;
+   SCIP_Bool posinf;
+   SCIP_Bool neginf;
 
    assert(var != NULL);
    assert(set != NULL);
    assert((SCIP_VARSTATUS) var->varstatus == SCIP_VARSTATUS_MULTAGGR);
 
+   posinf = FALSE;
+   neginf = FALSE;
    lb = var->data.multaggr.constant;
    for( i = var->data.multaggr.nvars-1 ; i >= 0 ; --i )
    {
@@ -6796,28 +6802,44 @@ SCIP_Real SCIPvarGetMultaggrLbLocal(
       {
          bnd = SCIPvarGetStatus(aggrvar) == SCIP_VARSTATUS_MULTAGGR ? SCIPvarGetMultaggrLbLocal(aggrvar, set) : SCIPvarGetLbLocal(aggrvar);
 
-         if( SCIPsetIsInfinity(set, bnd) || SCIPsetIsInfinity(set, -bnd) )
-            return bnd;
-
-         lb += var->data.multaggr.scalars[i] * bnd;
+         if( SCIPsetIsInfinity(set, bnd) )
+            posinf = TRUE;
+         else if( SCIPsetIsInfinity(set, -bnd) )
+            neginf = TRUE;
+         else
+            lb += var->data.multaggr.scalars[i] * bnd;
       }
       else
       {
          bnd = SCIPvarGetStatus(aggrvar) == SCIP_VARSTATUS_MULTAGGR ? SCIPvarGetMultaggrUbLocal(aggrvar, set) : SCIPvarGetUbLocal(aggrvar);
 
-         if( SCIPsetIsInfinity(set, bnd) || SCIPsetIsInfinity(set, -bnd) )
-            return -bnd;
-
-         lb += var->data.multaggr.scalars[i] * bnd;
+         if( SCIPsetIsInfinity(set, -bnd) )
+            posinf = TRUE;
+         else if( SCIPsetIsInfinity(set, bnd) )
+            neginf = TRUE;
+         else
+            lb += var->data.multaggr.scalars[i] * bnd;
       }
+
+      /* stop if two diffrent infinities (or a -infinity) were found and return local lower bound of multi aggregated
+       * variable
+       */
+      if( neginf )
+         return SCIPvarGetLbLocal(var);
    }
 
-   return lb;
+   /* if positive infinity flag was set to true return infinity */
+   if( posinf )
+      return SCIPsetInfinity(set);
+
+   return (MAX(lb, SCIPvarGetLbLocal(var)));
 }
 
-/** for a multi-aggregated variable, gives the local upper bound computed by adding the local bounds from all aggregation variables
- * this upper bound may be tighter than the one given by SCIPvarGetUbLocal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multi-aggregated variable is not allowed
+/** for a multi-aggregated variable, gives the local upper bound computed by adding the local bounds from all
+ *  aggregation variables, this upper bound may be tighter than the one given by SCIPvarGetUbLocal, since the latter is
+ *  not updated if bounds of aggregation variables are changing
+ *
+ *  calling this function for a non-multi-aggregated variable is not allowed
  */
 SCIP_Real SCIPvarGetMultaggrUbLocal(
    SCIP_VAR*             var,                /**< problem variable */
@@ -6828,11 +6850,15 @@ SCIP_Real SCIPvarGetMultaggrUbLocal(
    SCIP_Real ub;
    SCIP_Real bnd;
    SCIP_VAR* aggrvar;
+   SCIP_Bool posinf;
+   SCIP_Bool neginf;
 
    assert(var != NULL);
    assert(set != NULL);
    assert((SCIP_VARSTATUS) var->varstatus == SCIP_VARSTATUS_MULTAGGR);
 
+   posinf = FALSE;
+   neginf = FALSE;
    ub = var->data.multaggr.constant;
    for( i = var->data.multaggr.nvars-1 ; i >= 0 ; --i )
    {
@@ -6841,28 +6867,44 @@ SCIP_Real SCIPvarGetMultaggrUbLocal(
       {
          bnd = SCIPvarGetStatus(aggrvar) == SCIP_VARSTATUS_MULTAGGR ? SCIPvarGetMultaggrUbLocal(aggrvar, set) : SCIPvarGetUbLocal(aggrvar);
 
-         if( SCIPsetIsInfinity(set, bnd) || SCIPsetIsInfinity(set, -bnd) )
-            return bnd;
-
-         ub += var->data.multaggr.scalars[i] * bnd;
+         if( SCIPsetIsInfinity(set, bnd) )
+            posinf = TRUE;
+         else if( SCIPsetIsInfinity(set, -bnd) )
+            neginf = TRUE;
+         else
+            ub += var->data.multaggr.scalars[i] * bnd;
       }
       else
       {
          bnd = SCIPvarGetStatus(aggrvar) == SCIP_VARSTATUS_MULTAGGR ? SCIPvarGetMultaggrLbLocal(aggrvar, set) : SCIPvarGetLbLocal(aggrvar);
 
-         if( SCIPsetIsInfinity(set, bnd) || SCIPsetIsInfinity(set, -bnd) )
-            return -bnd;
-
-         ub += var->data.multaggr.scalars[i] * bnd;
+         if( SCIPsetIsInfinity(set, -bnd) )
+            posinf = TRUE;
+         else if( SCIPsetIsInfinity(set, bnd) )
+            neginf = TRUE;
+         else
+            ub += var->data.multaggr.scalars[i] * bnd;
       }
+
+      /* stop if two diffrent infinities (or a -infinity) were found and return local upper bound of multi aggregated
+       * variable
+       */
+      if( posinf )
+         return SCIPvarGetUbLocal(var);
    }
 
-   return ub;
+   /* if negative infinity flag was set to true return -infinity */
+   if( neginf )
+      return -SCIPsetInfinity(set);
+
+   return (MIN(ub, SCIPvarGetUbLocal(var)));
 }
 
-/** for a multi-aggregated variable, gives the global lower bound computed by adding the global bounds from all aggregation variables
- * this global bound may be tighter than the one given by SCIPvarGetLbGlobal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multi-aggregated variable is not allowed
+/** for a multi-aggregated variable, gives the global lower bound computed by adding the global bounds from all
+ *  aggregation variables, this global bound may be tighter than the one given by SCIPvarGetLbGlobal, since the latter is
+ *  not updated if bounds of aggregation variables are changing
+ *
+ *  calling this function for a non-multi-aggregated variable is not allowed
  */
 SCIP_Real SCIPvarGetMultaggrLbGlobal(
    SCIP_VAR*             var,                /**< problem variable */
@@ -6873,11 +6915,15 @@ SCIP_Real SCIPvarGetMultaggrLbGlobal(
    SCIP_Real lb;
    SCIP_Real bnd;
    SCIP_VAR* aggrvar;
+   SCIP_Bool posinf;
+   SCIP_Bool neginf;
 
    assert(var != NULL);
    assert(set != NULL);
    assert((SCIP_VARSTATUS) var->varstatus == SCIP_VARSTATUS_MULTAGGR);
 
+   posinf = FALSE;
+   neginf = FALSE;
    lb = var->data.multaggr.constant;
    for( i = var->data.multaggr.nvars-1 ; i >= 0 ; --i )
    {
@@ -6886,28 +6932,44 @@ SCIP_Real SCIPvarGetMultaggrLbGlobal(
       {
          bnd = SCIPvarGetStatus(aggrvar) == SCIP_VARSTATUS_MULTAGGR ? SCIPvarGetMultaggrLbGlobal(aggrvar, set) : SCIPvarGetLbGlobal(aggrvar);
 
-         if( SCIPsetIsInfinity(set, bnd) || SCIPsetIsInfinity(set, -bnd) )
-            return bnd;
-
-         lb += var->data.multaggr.scalars[i] * bnd;
+         if( SCIPsetIsInfinity(set, bnd) )
+            posinf = TRUE;
+         else if( SCIPsetIsInfinity(set, -bnd) )
+            neginf = TRUE;
+         else
+            lb += var->data.multaggr.scalars[i] * bnd;
       }
       else
       {
          bnd = SCIPvarGetStatus(aggrvar) == SCIP_VARSTATUS_MULTAGGR ? SCIPvarGetMultaggrUbGlobal(aggrvar, set) : SCIPvarGetUbGlobal(aggrvar);
 
-         if( SCIPsetIsInfinity(set, bnd) || SCIPsetIsInfinity(set, -bnd) )
-            return -bnd;
-
-         lb += var->data.multaggr.scalars[i] * bnd;
+         if( SCIPsetIsInfinity(set, -bnd) )
+            posinf = TRUE;
+         else if( SCIPsetIsInfinity(set, bnd) )
+            neginf = TRUE;
+         else
+            lb += var->data.multaggr.scalars[i] * bnd;
       }
+
+      /* stop if two diffrent infinities (or a -infinity) were found and return global lower bound of multi aggregated
+       * variable
+       */
+      if( neginf )
+         return SCIPvarGetLbGlobal(var);
    }
 
-   return lb;
+   /* if positive infinity flag was set to true return infinity */
+   if( posinf )
+      return SCIPsetInfinity(set);
+
+   return (MAX(lb, SCIPvarGetLbGlobal(var)));
 }
 
-/** for a multi-aggregated variable, gives the global upper bound computed by adding the global bounds from all aggregation variables
- * this upper bound may be tighter than the one given by SCIPvarGetUbGlobal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multi-aggregated variable is not allowed
+/** for a multi-aggregated variable, gives the global upper bound computed by adding the global bounds from all
+ *  aggregation variables, this upper bound may be tighter than the one given by SCIPvarGetUbGlobal, since the latter is
+ *  not updated if bounds of aggregation variables are changing
+ *
+ *  calling this function for a non-multi-aggregated variable is not allowed
  */
 SCIP_Real SCIPvarGetMultaggrUbGlobal(
    SCIP_VAR*             var,                /**< problem variable */
@@ -6918,11 +6980,15 @@ SCIP_Real SCIPvarGetMultaggrUbGlobal(
    SCIP_Real ub;
    SCIP_Real bnd;
    SCIP_VAR* aggrvar;
+   SCIP_Bool posinf;
+   SCIP_Bool neginf;
 
    assert(var != NULL);
    assert(set != NULL);
    assert((SCIP_VARSTATUS) var->varstatus == SCIP_VARSTATUS_MULTAGGR);
 
+   posinf = FALSE;
+   neginf = FALSE;
    ub = var->data.multaggr.constant;
    for( i = var->data.multaggr.nvars-1 ; i >= 0 ; --i )
    {
@@ -6931,23 +6997,37 @@ SCIP_Real SCIPvarGetMultaggrUbGlobal(
       {
          bnd = SCIPvarGetStatus(aggrvar) == SCIP_VARSTATUS_MULTAGGR ? SCIPvarGetMultaggrUbGlobal(aggrvar, set) : SCIPvarGetUbGlobal(aggrvar);
 
-         if( SCIPsetIsInfinity(set, bnd) || SCIPsetIsInfinity(set, -bnd) )
-            return bnd;
-
-         ub += var->data.multaggr.scalars[i] * bnd;
+         if( SCIPsetIsInfinity(set, bnd) )
+            posinf = TRUE;
+         else if( SCIPsetIsInfinity(set, -bnd) )
+            neginf = TRUE;
+         else
+            ub += var->data.multaggr.scalars[i] * bnd;
       }
       else
       {
          bnd = SCIPvarGetStatus(aggrvar) == SCIP_VARSTATUS_MULTAGGR ? SCIPvarGetMultaggrLbGlobal(aggrvar, set) : SCIPvarGetLbGlobal(aggrvar);
 
-         if( SCIPsetIsInfinity(set, bnd) || SCIPsetIsInfinity(set, -bnd) )
-            return -bnd;
-
-         ub += var->data.multaggr.scalars[i] * bnd;
+         if( SCIPsetIsInfinity(set, -bnd) )
+            posinf = TRUE;
+         else if( SCIPsetIsInfinity(set, bnd) )
+            neginf = TRUE;
+         else
+            ub += var->data.multaggr.scalars[i] * bnd;
       }
+
+      /* stop if two diffrent infinities (or a -infinity) were found and return local upper bound of multi aggregated
+       * variable
+       */
+      if( posinf )
+         return SCIPvarGetUbGlobal(var);
    }
 
-   return ub;
+   /* if negative infinity flag was set to true return -infinity */
+   if( neginf )
+      return -SCIPsetInfinity(set);
+
+   return (MIN(ub, SCIPvarGetUbGlobal(var)));
 }
 
 /** adds a hole to the original domain of the variable */
