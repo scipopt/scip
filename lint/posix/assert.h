@@ -3,7 +3,8 @@
     Copyright 1992, Gimpel Software, All Rights Reserved
  */
 
-#if defined(_lint)
+#if defined(_lint) && !defined(__ASSERT_H)
+#define __ASSERT_H
 
 #ifdef NDEBUG
 #define assert(p) ((void)0)

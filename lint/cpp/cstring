@@ -1,5 +1,11 @@
 /* added: */
-extern "C" 
+extern "C"
 {
 #include <string.h>
+}
+
+/* explicitly add functions to be in namespace std */
+namespace std
+{
+size_t strlen(const char *);
 }
