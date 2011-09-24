@@ -585,11 +585,8 @@ SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
       /* quick check for slack variable that is implicitly integral or continuous */
       if ( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
       {
-         char* posstr;
-
          /* check string */
-         posstr = strstr(SCIPvarGetName(var), "indslack");
-         if ( posstr != NULL )
+         if ( strstr(SCIPvarGetName(var), "indslack") != NULL )
          {
             /* make sure that the slack variable occurs with its lower bound */
             if ( SCIPboundtypeOpposite(SCIPbdchginfoGetBoundtype(bdchginfos[i])) != SCIP_BOUNDTYPE_LOWER )
