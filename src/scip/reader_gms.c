@@ -1012,7 +1012,6 @@ SCIP_RETCODE printSignpowerRow(
    SCIP_Real             exponent,           /**< exponent of nonlinear variable */
    SCIP_Real             offset,             /**< offset of nonlinear variable */
    SCIP_Real             coeflinear,         /**< coefficient of linear variable */
-   SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs,                /**< right hand side */
    SCIP_Bool             transformed,        /**< transformed constraint? */
    SCIP_Bool             signpowerallowed    /**< allowed to use signpower operator in GAMS? */
@@ -1141,7 +1140,7 @@ SCIP_RETCODE printSignpowerCons(
 
       /* print equality constraint */
       SCIP_CALL( printSignpowerRow(scip, file, rowname, "", "=e=",
-         nonlinvar, linvar, exponent, offset, coeflinear, lhs, rhs, transformed, signpowerallowed) );
+         nonlinvar, linvar, exponent, offset, coeflinear, rhs, transformed, signpowerallowed) );
    }
    else
    {
@@ -1149,13 +1148,13 @@ SCIP_RETCODE printSignpowerCons(
       {
          /* print inequality ">=" */
          SCIP_CALL( printSignpowerRow(scip, file, rowname, SCIPisInfinity(scip, rhs) ? "" : "_lhs", "=g=",
-            nonlinvar, linvar, exponent, offset, coeflinear, lhs, rhs, transformed, signpowerallowed) );
+            nonlinvar, linvar, exponent, offset, coeflinear, lhs, transformed, signpowerallowed) );
       }
       if( !SCIPisInfinity(scip, rhs) )
       {
          /* print inequality "<=" */
          SCIP_CALL( printSignpowerRow(scip, file, rowname, SCIPisInfinity(scip, -lhs) ? "" : "_rhs", "=l=",
-            nonlinvar, linvar, exponent, offset, coeflinear, lhs, rhs, transformed, signpowerallowed) );
+            nonlinvar, linvar, exponent, offset, coeflinear, rhs, transformed, signpowerallowed) );
       }
    }
 
