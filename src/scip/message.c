@@ -1037,9 +1037,9 @@ void SCIPmessagePrintError(
       
       va_start(aq, formatstr); /*lint !e826*/
 #ifndef NDEBUG
-      m = vsnprintf(bigmsg, n+1, formatstr, aq); /*lint !e718 !e746*/
+      m = vsnprintf(bigmsg, (size_t) n+1, formatstr, aq); /*lint !e718 !e746*/
 #else
-      vsnprintf(bigmsg, n+1, formatstr, aq); /*lint !e718 !e746*/
+      vsnprintf(bigmsg, (size_t) n+1, formatstr, aq); /*lint !e718 !e746*/
 #endif
       assert(m == n);
       va_end(aq);
@@ -1093,9 +1093,9 @@ void SCIPmessagePrintWarning(
 
       va_start(aq, formatstr); /*lint !e826*/
 #ifndef NDEBUG
-      m = vsnprintf(bigmsg, n+1, formatstr, aq);  /*lint !e718 !e746*/
+      m = vsnprintf(bigmsg, (size_t) n+1, formatstr, aq);  /*lint !e718 !e746*/
 #else
-      vsnprintf(bigmsg, n+1, formatstr, aq);  /*lint !e718 !e746*/
+      vsnprintf(bigmsg, (size_t) n+1, formatstr, aq);  /*lint !e718 !e746*/
 #endif
       assert(m == n);
       va_end(aq);
@@ -1172,9 +1172,9 @@ void SCIPmessageVFPrintDialog(
       }
 
 #ifndef NDEBUG
-      m = vsnprintf(bigmsg, n+1, formatstr, aq);
+      m = vsnprintf(bigmsg, (size_t) n+1, formatstr, aq);
 #else
-      vsnprintf(bigmsg, n+1, formatstr, aq);
+      vsnprintf(bigmsg, (size_t) n+1, formatstr, aq);
 #endif
       assert(m == n);
       va_end(aq);
@@ -1252,9 +1252,9 @@ void SCIPmessageVFPrintInfo(
       }
 
 #ifndef NDEBUG
-      m = vsnprintf(bigmsg, n+1, formatstr, aq);
+      m = vsnprintf(bigmsg, (size_t) n+1, formatstr, aq);
 #else
-      vsnprintf(bigmsg, n+1, formatstr, aq);
+      vsnprintf(bigmsg, (size_t) n+1, formatstr, aq);
 #endif
       assert(m == n);
       va_end(aq);
@@ -1346,9 +1346,9 @@ void SCIPmessageVFPrintVerbInfo(
          }
          
 #ifndef NDEBUG
-         m = vsnprintf(bigmsg, n+1, formatstr, aq);
+         m = vsnprintf(bigmsg, (size_t) n+1, formatstr, aq);
 #else
-         vsnprintf(bigmsg, n+1, formatstr, aq);
+         vsnprintf(bigmsg, (size_t) n+1, formatstr, aq);
 #endif
          assert(m == n);
          va_end(aq);

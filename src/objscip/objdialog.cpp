@@ -177,9 +177,9 @@ SCIP_RETCODE SCIPincludeObjDialog(
           delete dialogdata;
           SCIP_CALL( retcode );
       }
-      SCIP_CALL( SCIPaddDialogEntry(scip, parentdialog, dialog) );
-      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, parentdialog, dialog) );  /*lint !e593*/
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );                /*lint !e593*/
    }
 
-   return SCIP_OKAY;
+   return SCIP_OKAY;  /*lint !e593*/
 }
