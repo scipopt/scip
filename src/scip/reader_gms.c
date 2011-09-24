@@ -1569,7 +1569,6 @@ SCIP_RETCODE printNonlinearRow(
    int                   nexprtrees,         /**< number of expression trees */
    SCIP_EXPRTREE**       exprtrees,          /**< expression trees */
    SCIP_Real*            exprtreecoefs,      /**< expression tree coefficients */
-   SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs,                /**< right hand side */
    SCIP_Bool             transformed         /**< transformed constraint? */
    )
@@ -1662,7 +1661,7 @@ SCIP_RETCODE printNonlinearCons(
 
       /* print equality constraint */
       SCIP_CALL( printNonlinearRow(scip, file, rowname, "", "=e=",
-         nlinvars, linvars, lincoeffs, nexprtrees, exprtrees, exprtreecoefs, lhs, rhs, transformed) );
+         nlinvars, linvars, lincoeffs, nexprtrees, exprtrees, exprtreecoefs, rhs, transformed) );
    }
    else
    {
@@ -1670,13 +1669,13 @@ SCIP_RETCODE printNonlinearCons(
       {
          /* print inequality ">=" */
          SCIP_CALL( printNonlinearRow(scip, file, rowname, SCIPisInfinity(scip, rhs) ? "" : "_lhs", "=g=",
-            nlinvars, linvars, lincoeffs, nexprtrees, exprtrees, exprtreecoefs, lhs, rhs, transformed) );
+            nlinvars, linvars, lincoeffs, nexprtrees, exprtrees, exprtreecoefs, lhs, transformed) );
       }
       if( !SCIPisInfinity(scip, rhs) )
       {
          /* print inequality "<=" */
          SCIP_CALL( printNonlinearRow(scip, file, rowname, SCIPisInfinity(scip, -lhs) ? "" : "_rhs", "=l=",
-            nlinvars, linvars, lincoeffs, nexprtrees, exprtrees, exprtreecoefs, lhs, rhs, transformed) );
+            nlinvars, linvars, lincoeffs, nexprtrees, exprtrees, exprtreecoefs, rhs, transformed) );
       }
    }
 
