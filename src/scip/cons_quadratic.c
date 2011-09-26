@@ -6699,9 +6699,10 @@ SCIP_RETCODE generateCut(
             {
                var = consdata->quadvarterms[mincoefidx].var;
                /* try to eliminate coefficient with minimal absolute value by weakening cut and try again
-                * since we use local bounds, we need to make the row local if they are different from their global counterpart */
-               if( ((coef[mincoefidx] > 0.0 && violside == SCIP_SIDETYPE_RIGHT) ||
-                    (coef[mincoefidx] < 0.0 && violside == SCIP_SIDETYPE_LEFT )) &&
+                * since we use local bounds, we need to make the row local if they are different from their global counterpart
+                */
+               if( ((coef[mincoefidx] > 0.0 && !SCIPisInfinity(scip,  rhs)) ||
+                    (coef[mincoefidx] < 0.0 && !SCIPisInfinity(scip, -lhs))) &&
                    !SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
                {
                   SCIPdebugMessage("eliminate coefficient %g for <%s> [%g, %g]\n", coef[mincoefidx], SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
@@ -6710,8 +6711,8 @@ SCIP_RETCODE generateCut(
                   islocal |= SCIPisGT(scip, SCIPvarGetLbLocal(var), SCIPvarGetLbGlobal(var));
                   continue;
                }
-               else if( ((coef[mincoefidx] < 0.0 && violside == SCIP_SIDETYPE_RIGHT) ||
-                         (coef[mincoefidx] > 0.0 && violside == SCIP_SIDETYPE_LEFT )) &&
+               else if( ((coef[mincoefidx] < 0.0 && !SCIPisInfinity(scip,  rhs)) ||
+                         (coef[mincoefidx] > 0.0 && !SCIPisInfinity(scip, -lhs))) &&
                         !SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
                {
                   SCIPdebugMessage("eliminate coefficient %g for <%s> [%g, %g]\n", coef[mincoefidx], SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
