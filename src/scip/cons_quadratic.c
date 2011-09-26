@@ -5721,6 +5721,8 @@ SCIP_RETCODE generateCutLTI(
    assert(islocal != NULL);
    assert(success != NULL);
    assert(name != NULL);
+   /* currently only separate LP solution or solutions given as SCIP_SOL, i.e., no cutgeneration during initlp */
+   assert(sol != NULL || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -5737,8 +5739,6 @@ SCIP_RETCODE generateCutLTI(
    rhsminactivity = consdata->lhs;
    rhsmaxactivity = consdata->rhs;
    rhsrefactivity = (violside == SCIP_SIDETYPE_LEFT ? consdata->lhs : consdata->rhs);
-
-   /* @todo computing refactivity via sol is bad during initlp, need ref also for lin vars */
 
    for( i = 0; i < consdata->nlinvars; ++i )
    {
@@ -6569,8 +6569,9 @@ SCIP_RETCODE generateCut(
       {
          SCIP_CALL( generateCutFactorable(scip, cons, violside, ref, coef, &lhs, &rhs, &islocal, &success, cutname) );
       }
-      else
+      else if( sol != NULL || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
       {
+         /* generateCutLTI needs reference values also for the linear variables, which we only have if sol is given or LP has been solved */
          SCIP_CALL( generateCutLTI(scip, cons, violside, ref, sol, &lincoefs, coef, &lhs, &rhs, &islocal, &success, cutname) );
       }
    }
