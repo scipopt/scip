@@ -1144,9 +1144,11 @@ void shiftVariable(
    {
       SCIP_Real oldlhs;
       SCIP_Real oldrhs;
-      SCIP_Bool update;
+      SCIP_Bool updatelhs;
+      SCIP_Bool updaterhs;
 
-      update = FALSE;
+      updatelhs = FALSE;
+      updaterhs = FALSE;
 
       oldlhs = matrix->lhs[rows[i]];
       oldrhs = matrix->rhs[rows[i]];
@@ -1155,16 +1157,16 @@ void shiftVariable(
       if( !SCIPisInfinity(scip, -oldlhs) )
       {
          matrix->lhs[rows[i]] -= vals[i] * shiftvalue;
-         update = (SCIPisFeasLT(scip, -matrix->lhs[rows[i]], 0.0) != SCIPisFeasLT(scip, -oldlhs, 0.0));
+         updatelhs = (SCIPisFeasLT(scip, -matrix->lhs[rows[i]], 0.0) != SCIPisFeasLT(scip, -oldlhs, 0.0));
       }
       if( !SCIPisInfinity(scip, oldrhs) )
       {
          matrix->rhs[rows[i]] -= vals[i] * shiftvalue;
-         update = update != (SCIPisFeasLT(scip, matrix->rhs[rows[i]], 0.0) != SCIPisFeasLT(scip, oldrhs, 0.0));
+         updaterhs = SCIPisFeasLT(scip, matrix->rhs[rows[i]], 0.0) != SCIPisFeasLT(scip, oldrhs, 0.0);
       }
 
       /* update violated row information */
-      if( update )
+      if( updatelhs != updaterhs )
          updateViolations(scip, matrix, rows[i], violatedrows, violatedrowpos, nviolatedrows);
 
       /* decrease number of variables with solution value not set in row */
