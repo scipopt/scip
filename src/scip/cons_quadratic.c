@@ -3934,7 +3934,8 @@ SCIP_RETCODE presolveDisaggregate(
    assert(ncomponents >= 1);
    
    /* if there is only one component, we cannot disaggregate
-    * @todo we could still split the constraint into several while keeping the number of variables sharing several constraints as small as possible */
+    * @todo we could still split the constraint into several while keeping the number of variables sharing several constraints as small as possible
+    */
    if( ncomponents == 1 )
    {
       SCIPhashmapFree(&var2component);
@@ -4027,7 +4028,7 @@ SCIP_RETCODE presolveDisaggregate(
       SCIP_CALL( SCIPaddCons(scip, auxconss[comp]) );
       SCIPdebug( SCIPprintCons(scip, auxconss[comp], NULL) );
       
-      SCIP_CALL( addLinearCoef(scip, cons, auxvars[comp], 1.0 / auxcoefs[comp]) );
+      SCIP_CALL( addLinearCoef(scip, cons, auxvars[comp], auxcoefs[comp]) );
       
       SCIP_CALL( SCIPreleaseCons(scip, &auxconss[comp]) );
       SCIP_CALL( SCIPreleaseVar(scip, &auxvars[comp]) );
