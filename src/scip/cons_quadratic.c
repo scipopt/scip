@@ -3411,7 +3411,9 @@ SCIP_RETCODE presolveTryAddLinearReform(
 #ifdef SCIP_DEBUG
          if( SCIPintervalGetInf(xbndszero) != SCIPintervalGetInf(xbndsone) ||
              SCIPintervalGetSup(xbndszero) != SCIPintervalGetSup(xbndsone) )
+         {
             SCIPdebugMessage("got different bounds for y = 0: [%g, %g] and y = 1: [%g, %g]\n", xbndszero.inf, xbndszero.sup, xbndsone.inf, xbndsone.sup);
+         }
 #endif
 
          if( nxvars == 1 && conshdlrdata->empathy4and >= 1 && SCIPvarIsBinary(xvars[0]) )
@@ -3914,6 +3916,10 @@ SCIP_RETCODE presolveDisaggregate(
    
    if( consdata->nquadvars <= 1 )
       return SCIP_OKAY;
+
+   /* make sure there are no quadratic variables without coefficients */
+   SCIP_CALL( mergeAndCleanBilinearTerms(scip, cons) );
+   SCIP_CALL( mergeAndCleanQuadVarTerms(scip, cons) );
 
    /* sort quadratic variable terms here, so we can later search in it without reordering the array */
    SCIP_CALL( consdataSortQuadVarTerms(scip, consdata) );
