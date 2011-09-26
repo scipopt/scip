@@ -5716,6 +5716,12 @@ SCIP_RETCODE generateCutLTI(
       rhsrefactivity -= consdata->lincoefs[i] * SCIPgetSolVal(scip, sol, consdata->linvars[i]);
    }
 
+   if( SCIPisInfinity(scip, -rhsminactivity) || SCIPisInfinity(scip, rhsmaxactivity) )
+   {
+      /* if right hand side is unbounded, then cannot do LTI */
+      return SCIP_OKAY;
+   }
+
    if( !SCIPisFeasPositive(scip, rhsminactivity) && !SCIPisFeasNegative(scip, rhsmaxactivity) )
    {
       /* if right hand side has 0 inside activity, then cannot do anything
@@ -5766,7 +5772,7 @@ SCIP_RETCODE generateCutLTI(
                leftmaxactivity += consdata->factorleft[i] * SCIPvarGetLbLocal(consdata->quadvarterms[i].var);
          }
       }
-      leftrefactivity += consdata->factorleft[i] * SCIPgetSolVal(scip, sol, consdata->quadvarterms[i].var);
+      leftrefactivity += consdata->factorleft[i] * ref[i];
 
       if( !SCIPisInfinity(scip, -rightminactivity) )
       {
@@ -5802,7 +5808,7 @@ SCIP_RETCODE generateCutLTI(
                rightmaxactivity += consdata->factorright[i] * SCIPvarGetLbLocal(consdata->quadvarterms[i].var);
          }
       }
-      rightrefactivity += consdata->factorright[i] * SCIPgetSolVal(scip, sol, consdata->quadvarterms[i].var);
+      rightrefactivity += consdata->factorright[i] * ref[i];
    }
 
    /* success can only be expected for separation of violated x*y <= w, assuming x>=0, y>=0
