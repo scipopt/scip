@@ -584,7 +584,7 @@ SCIP_RETCODE updatePseudocost(
       /* get a buffer for the collected bound changes; start with a size twice as large as the number of nodes between
        * current node and LP fork
        */
-      SCIP_CALL( SCIPsetAllocBufferArray(set, &updates, 2*(actdepth - tree->focuslpstatefork->depth)) );
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &updates, (int)(2*(actdepth - tree->focuslpstatefork->depth))) );
       nupdates = 0;
       nvalidupdates = 0;
 

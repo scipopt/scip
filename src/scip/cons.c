@@ -4277,8 +4277,10 @@ SCIP_RETCODE SCIPconssetchgApply(
       /* if constraint is already active, or if constraint is globally deleted, it can be removed from addedconss array */
       if( cons->active || cons->deleted )
       {
+         /* delete constraint from addedcons array, the empty slot is now used by the next constraint,
+          * and naddedconss was decreased, so do not increase i
+          */
          SCIP_CALL( conssetchgDelAddedCons(conssetchg, blkmem, set, i) );
-         i--; /* the empty slot is now used by the next constraint, and naddedconss was decreased */
       }
       else
       {
@@ -4293,8 +4295,9 @@ SCIP_RETCODE SCIPconssetchgApply(
          /* remember, that this constraint set change data was responsible for the constraint's addition */
          cons->addconssetchg = conssetchg;
          cons->addarraypos = i;
+
+         ++i; /* handle the next constraint */
       }
-      ++i;
    }
 
    /* apply constraint disablings */
@@ -4311,9 +4314,10 @@ SCIP_RETCODE SCIPconssetchgApply(
          SCIPdebugMessage("constraint <%s> of handler <%s> was deactivated -> remove it from disabledconss array\n",
             cons->name, cons->conshdlr->name);
             
-         /* release and remove constraint from the disabledconss array */
+         /* release and remove constraint from the disabledconss array, the empty slot is now used by the next constraint
+          * and ndisabledconss was decreased, so do not increase i
+          */
          SCIP_CALL( conssetchgDelDisabledCons(conssetchg, blkmem, set, i) );
-         --i; /* the empty slot is now used by the next constraint, and ndisabledconss was decreased */
       }
       else
       {
@@ -4322,8 +4326,9 @@ SCIP_RETCODE SCIPconssetchgApply(
          SCIP_CALL( SCIPconsDisable(conssetchg->disabledconss[i], set, stat) );
          assert(!cons->update);
          assert(!cons->enabled);
+
+         ++i; /* handle the next constraint */
       }
-      ++i;
    }
 
    return SCIP_OKAY;

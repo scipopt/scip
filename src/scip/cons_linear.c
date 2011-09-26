@@ -4364,11 +4364,15 @@ SCIP_RETCODE tightenBounds(
          
          /* if there was no progress, skip the rest of the binary variables */
          if( *nchgbds > oldnchgbds )
+         {
             lastchange = v;
+            v++;
+         }
          else if( consdata->binvarssorted && v < consdata->nbinvars - 1
             && !SCIPisFeasEQ(scip, SCIPvarGetUbLocal(consdata->vars[v]), SCIPvarGetLbLocal(consdata->vars[v])) )
-            v = consdata->nbinvars - 1;
-         ++v;
+            v = consdata->nbinvars;
+         else
+            ++v;
       }
    }
 #ifndef NDEBUG

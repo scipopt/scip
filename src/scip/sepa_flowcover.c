@@ -1944,7 +1944,7 @@ SCIP_RETCODE addCut(
 
       SCIPdebugMessage(" -> found potential flowcover cut <%s>: activity=%f, rhs=%f, norm=%f, eff=%f\n",
          cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut));
-      SCIPdebug(SCIPprintRow(scip, cut, NULL));
+      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
       
 #if 0 /* tries to scale the cut to integral values */
       SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
@@ -1953,7 +1953,7 @@ SCIP_RETCODE addCut(
       {
          SCIPdebugMessage(" -> flowcover cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
             cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut));
-         SCIPdebug(SCIPprintRow(scip, cut, NULL));
+         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
          success = FALSE;
       }
 #else
@@ -1967,7 +1967,7 @@ SCIP_RETCODE addCut(
             cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut),
             SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
             SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
-         SCIPdebug(SCIPprintRow(scip, cut, NULL));
+         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
          SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE) );
          if( !cutislocal )
          {
@@ -2528,7 +2528,7 @@ SCIP_RETCODE separateCuts(
 
       SCIPdebugMessage("===================== flow cover separation for row <%s> (%d of %d) ===================== \n",
          SCIProwGetName(rows[roworder[r]]), r, nrows);
-      SCIPdebug(SCIPprintRow(scip, rows[roworder[r]], NULL));
+      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rows[roworder[r]], NULL) ) );
       SCIPdebugMessage("rowact=%g is closer to %s --> rowweight=%g\n", rowact, 
          rowweights[roworder[r]] == 1 ? "rhs" : "lhs", rowweights[roworder[r]]);
 

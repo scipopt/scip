@@ -186,7 +186,7 @@ void updateNeighbor(
    /* try to reduce the number of intervals */
    pgsd->satdeg = 0;
    apciv = head.next;
-   while( (pciv = apciv->next) != NULL )
+   while( (pciv = apciv->next) != NULL ) /*lint !e838*/
    {
       if( apciv->itv.sup < (pciv->itv.inf - 1) )
       {
