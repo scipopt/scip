@@ -11581,6 +11581,7 @@ SCIP_RETCODE SCIPexprgraphNodeSplitOffLinear(
             SCIP_ALLOC( BMSreallocBlockMemoryArray(exprgraph->blkmem, &(*node)->children, 2, 1) );  /*lint !e506*/
             (*node)->children[0] = otherchild;
             (*node)->nchildren = 1;
+            (*node)->op = SCIP_EXPR_LINEAR;
 
             /* setup linear data -1.0 * child0 + 0.0 */
             SCIP_ALLOC( BMSallocBlockMemoryArray(exprgraph->blkmem, &lindata, 2) );  /*lint !e506*/
