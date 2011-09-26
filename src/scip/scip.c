@@ -22090,27 +22090,33 @@ void printLPStatistics(
    assert(scip->stat != NULL);
    assert(scip->lp != NULL);
 
-   SCIPmessageFPrintInfo(file, "LP                 :       Time      Calls Iterations  Iter/call   Iter/sec\n");
+   SCIPmessageFPrintInfo(file, "LP                 :       Time      Calls Iterations  Iter/call   Iter/sec  Time-0-It Calls-0-It\n");
 
    SCIPmessageFPrintInfo(file, "  primal LP        : %10.2f %10d %10"SCIP_LONGINT_FORMAT" %10.2f",
       SCIPclockGetTime(scip->stat->primallptime),
-      scip->stat->nprimallps,
+      scip->stat->nprimallps + scip->stat->nprimalzeroitlps,
       scip->stat->nprimallpiterations,
       scip->stat->nprimallps > 0 ? (SCIP_Real)scip->stat->nprimallpiterations/(SCIP_Real)scip->stat->nprimallps : 0.0);
    if( SCIPclockGetTime(scip->stat->primallptime) >= 0.01 )
-      SCIPmessageFPrintInfo(file, " %10.2f\n", (SCIP_Real)scip->stat->nprimallpiterations/SCIPclockGetTime(scip->stat->primallptime));
+      SCIPmessageFPrintInfo(file, " %10.2f", (SCIP_Real)scip->stat->nprimallpiterations/SCIPclockGetTime(scip->stat->primallptime));
    else
-      SCIPmessageFPrintInfo(file, "          -\n");
+      SCIPmessageFPrintInfo(file, "          -");
+   SCIPmessageFPrintInfo(file, " %10.2f %10d\n",
+      scip->stat->primalzeroittime,
+      scip->stat->nprimalzeroitlps);
 
    SCIPmessageFPrintInfo(file, "  dual LP          : %10.2f %10d %10"SCIP_LONGINT_FORMAT" %10.2f",
       SCIPclockGetTime(scip->stat->duallptime),
-      scip->stat->nduallps,
+      scip->stat->nduallps + scip->stat->ndualzeroitlps,
       scip->stat->nduallpiterations,
       scip->stat->nduallps > 0 ? (SCIP_Real)scip->stat->nduallpiterations/(SCIP_Real)scip->stat->nduallps : 0.0);
    if( SCIPclockGetTime(scip->stat->duallptime) >= 0.01 )
-      SCIPmessageFPrintInfo(file, " %10.2f\n", (SCIP_Real)scip->stat->nduallpiterations/SCIPclockGetTime(scip->stat->duallptime));
+      SCIPmessageFPrintInfo(file, " %10.2f", (SCIP_Real)scip->stat->nduallpiterations/SCIPclockGetTime(scip->stat->duallptime));
    else
       SCIPmessageFPrintInfo(file, "          -\n");
+   SCIPmessageFPrintInfo(file, " %10.2f %10d\n",
+      scip->stat->dualzeroittime,
+      scip->stat->ndualzeroitlps);
 
    SCIPmessageFPrintInfo(file, "  lex dual LP      : %10.2f %10d %10"SCIP_LONGINT_FORMAT" %10.2f",
       SCIPclockGetTime(scip->stat->lexduallptime),
@@ -22128,9 +22134,12 @@ void printLPStatistics(
       scip->stat->nbarrierlpiterations,
       scip->stat->nbarrierlps > 0 ? (SCIP_Real)scip->stat->nbarrierlpiterations/(SCIP_Real)scip->stat->nbarrierlps : 0.0);
    if( SCIPclockGetTime(scip->stat->barrierlptime) >= 0.01 )
-      SCIPmessageFPrintInfo(file, " %10.2f\n", (SCIP_Real)scip->stat->nbarrierlpiterations/SCIPclockGetTime(scip->stat->barrierlptime));
+      SCIPmessageFPrintInfo(file, " %10.2f", (SCIP_Real)scip->stat->nbarrierlpiterations/SCIPclockGetTime(scip->stat->barrierlptime));
    else
-      SCIPmessageFPrintInfo(file, "          -\n");
+      SCIPmessageFPrintInfo(file, "          -");
+   SCIPmessageFPrintInfo(file, " %10.2f %10d\n",
+      scip->stat->barrierzeroittime,
+      scip->stat->nbarrierzeroitlps);
 
    SCIPmessageFPrintInfo(file, "  diving/probing LP: %10.2f %10d %10"SCIP_LONGINT_FORMAT" %10.2f",
       SCIPclockGetTime(scip->stat->divinglptime),

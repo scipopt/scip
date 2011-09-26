@@ -10525,6 +10525,7 @@ SCIP_RETCODE lpPrimalSimplex(
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
 {
+   SCIP_Real timedelta;
    SCIP_RETCODE retcode;
    int iterations;
 
@@ -10553,9 +10554,15 @@ SCIP_RETCODE lpPrimalSimplex(
 
    /* start timing */
    if( lp->diving || lp->probing )
+   {
       SCIPclockStart(stat->divinglptime, set);
+      timedelta = 0.0;   /* unused for diving or probing */
+   }
    else
+   {
       SCIPclockStart(stat->primallptime, set);
+      timedelta = -SCIPclockGetTime(stat->primallptime);
+   }
 
    /* call primal simplex */
    retcode = SCIPlpiSolvePrimal(lp->lpi);
@@ -10575,7 +10582,10 @@ SCIP_RETCODE lpPrimalSimplex(
    if( lp->diving || lp->probing )
       SCIPclockStop(stat->divinglptime, set);
    else
+   {
+      timedelta += SCIPclockGetTime(stat->primallptime);
       SCIPclockStop(stat->primallptime, set);
+   }
 
    /* count number of iterations */
    stat->lpcount++;
@@ -10601,13 +10611,22 @@ SCIP_RETCODE lpPrimalSimplex(
          stat->nprimallpiterations += iterations;
       }
    }
-   else if( keepsol && !(*lperror) )
+   else
    {
-      /* the solution didn't change: if the solution was valid before resolve, it is still valid */
-      if( lp->validsollp == stat->lpcount-1 )
-         lp->validsollp = stat->lpcount;
-      if( lp->validfarkaslp == stat->lpcount-1 )
-         lp->validfarkaslp = stat->lpcount;
+      if ( ! lp->diving && ! lp->probing )
+      {
+         stat->nprimalzeroitlps++;
+         stat->primalzeroittime += timedelta;
+      }
+
+      if ( keepsol && !(*lperror) )
+      {
+         /* the solution didn't change: if the solution was valid before resolve, it is still valid */
+         if( lp->validsollp == stat->lpcount-1 )
+            lp->validsollp = stat->lpcount;
+         if( lp->validfarkaslp == stat->lpcount-1 )
+            lp->validfarkaslp = stat->lpcount;
+      }
    }
 
    SCIPdebugMessage("solved primal LP %d in %d iterations\n", stat->lpcount, iterations);
@@ -10626,6 +10645,7 @@ SCIP_RETCODE lpDualSimplex(
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
 {
+   SCIP_Real timedelta;
    SCIP_RETCODE retcode;
    int iterations;
 
@@ -10654,9 +10674,15 @@ SCIP_RETCODE lpDualSimplex(
 
    /* start timing */
    if( lp->diving || lp->probing )
+   {
       SCIPclockStart(stat->divinglptime, set);
+      timedelta = 0.0;   /* unused for diving or probing */
+   }
    else
+   {
       SCIPclockStart(stat->duallptime, set);
+      timedelta = -SCIPclockGetTime(stat->duallptime);      
+   }
 
    /* call dual simplex */
    retcode = SCIPlpiSolveDual(lp->lpi);
@@ -10676,7 +10702,10 @@ SCIP_RETCODE lpDualSimplex(
    if( lp->diving || lp->probing )
       SCIPclockStop(stat->divinglptime, set);
    else
+   {
+      timedelta += SCIPclockGetTime(stat->duallptime);
       SCIPclockStop(stat->duallptime, set);
+   }
 
    /* count number of iterations */
    stat->lpcount++;
@@ -10702,13 +10731,22 @@ SCIP_RETCODE lpDualSimplex(
          stat->nduallpiterations += iterations;
       }
    }
-   else if( keepsol && !(*lperror) )
+   else
    {
-      /* the solution didn't change: if the solution was valid before resolve, it is still valid */
-      if( lp->validsollp == stat->lpcount-1 )
-         lp->validsollp = stat->lpcount;
-      if( lp->validfarkaslp == stat->lpcount-1 )
-         lp->validfarkaslp = stat->lpcount;
+      if ( ! lp->diving && ! lp->probing )
+      {
+         stat->ndualzeroitlps++;
+         stat->dualzeroittime += timedelta;
+      }
+
+      if( keepsol && !(*lperror) )
+      {
+         /* the solution didn't change: if the solution was valid before resolve, it is still valid */
+         if( lp->validsollp == stat->lpcount-1 )
+            lp->validsollp = stat->lpcount;
+         if( lp->validfarkaslp == stat->lpcount-1 )
+            lp->validfarkaslp = stat->lpcount;
+      }
    }
 
    SCIPdebugMessage("solved dual LP %d in %d iterations\n", stat->lpcount, iterations);
@@ -10760,6 +10798,7 @@ SCIP_RETCODE lpLexDualSimplex(
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
 {
+   SCIP_Real timedelta;
    SCIP_RETCODE retcode;
    int totalIterations;
    int lexIterations;
@@ -10778,9 +10817,15 @@ SCIP_RETCODE lpLexDualSimplex(
 
    /* start timing */
    if( lp->diving || lp->probing )
+   {
       SCIPclockStart(stat->divinglptime, set);
+      timedelta = 0.0;   /* unused for diving or probing */
+   }
    else
+   {
       SCIPclockStart(stat->duallptime, set);
+      timedelta = -SCIPclockGetTime(stat->duallptime);      
+   }
 
    /* call dual simplex for first lp */
    retcode = SCIPlpiSolveDual(lp->lpi);
@@ -10800,7 +10845,10 @@ SCIP_RETCODE lpLexDualSimplex(
    if( lp->diving || lp->probing )
       SCIPclockStop(stat->divinglptime, set);
    else
+   {
+      timedelta += SCIPclockGetTime(stat->duallptime);
       SCIPclockStop(stat->duallptime, set);
+   }
 
    /* count number of iterations */
    stat->lpcount++;
@@ -10822,6 +10870,14 @@ SCIP_RETCODE lpLexDualSimplex(
       {
          stat->nduallps++;
          stat->nduallpiterations += iterations;
+      }
+   }
+   else
+   {
+      if ( ! lp->diving && ! lp->probing )
+      {
+         stat->ndualzeroitlps++;
+         stat->dualzeroittime += timedelta;
       }
    }
    lexIterations = 0;
@@ -11308,6 +11364,7 @@ SCIP_RETCODE lpBarrier(
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
 {
+   SCIP_Real timedelta;
    SCIP_RETCODE retcode;
    int iterations;
 
@@ -11336,9 +11393,15 @@ SCIP_RETCODE lpBarrier(
 
    /* start timing */
    if( lp->diving || lp->probing )
+   {
       SCIPclockStart(stat->divinglptime, set);
+      timedelta = 0.0;   /* unused for diving or probing */
+   }
    else
+   {
       SCIPclockStart(stat->barrierlptime, set);
+      timedelta = -SCIPclockGetTime(stat->duallptime);      
+   }
 
    /* call barrier algorithm */
    retcode = SCIPlpiSolveBarrier(lp->lpi, crossover);
@@ -11358,7 +11421,10 @@ SCIP_RETCODE lpBarrier(
    if( lp->diving || lp->probing )
       SCIPclockStop(stat->divinglptime, set);
    else
+   {
       SCIPclockStop(stat->barrierlptime, set);
+      timedelta = -SCIPclockGetTime(stat->duallptime);      
+   }
 
    /* count number of iterations */
    stat->lpcount++;
@@ -11379,13 +11445,22 @@ SCIP_RETCODE lpBarrier(
          stat->nbarrierlpiterations += iterations;
       }
    }
-   else if( keepsol && !(*lperror) )
+   else
    {
-      /* the solution didn't change: if the solution was valid before resolve, it is still valid */
-      if( lp->validsollp == stat->lpcount-1 )
-         lp->validsollp = stat->lpcount;
-      if( lp->validfarkaslp == stat->lpcount-1 )
-         lp->validfarkaslp = stat->lpcount;
+      if ( ! lp->diving && ! lp->probing )
+      {
+         stat->nbarrierzeroitlps++;
+         stat->barrierzeroittime += timedelta;
+      }
+
+      if( keepsol && !(*lperror) )
+      {
+         /* the solution didn't change: if the solution was valid before resolve, it is still valid */
+         if( lp->validsollp == stat->lpcount-1 )
+            lp->validsollp = stat->lpcount;
+         if( lp->validfarkaslp == stat->lpcount-1 )
+            lp->validfarkaslp = stat->lpcount;
+      }
    }
 
    SCIPdebugMessage("solved barrier LP %d in %d iterations\n", stat->lpcount, iterations);
