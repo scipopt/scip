@@ -5423,6 +5423,10 @@ void generateCutLTIcomputeCoefs(
       }
    }
 
+   /* if x or y is fixed now or even infeasible, then do not think about a cut */
+   if( SCIPisGE(scip, xl, xu) || SCIPisGE(scip, yl, yu) )
+      return;
+
    /* reduce to positive orthant by flipping variables */
    if( xl < 0.0 )
    {
@@ -5502,7 +5506,6 @@ void generateCutLTIcomputeCoefs(
       c0x = *cx * xlow;
       c0y = *cy * ylow;
       c0w = *cw * wl;
-      /* todo since we linearize in wl, it is not sure that the computed cut actually cuts off the desired point */
    }
    else if( xlow >= xl && ylow >= yl && (xupp > xu || yupp > yu) )
    {
