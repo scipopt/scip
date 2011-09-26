@@ -62,12 +62,6 @@
 -emacro(681,SCIPdebugPrintf) // Loop is not entered
 -emacro(506,SCIPdebugCheckRow) // Constant value Boolean
 -emacro(506,SCIPdebugCheckImplic) // Constant value Boolean
--emacro(506,SCIPsetAllocBufferArray) // Constant value Boolean
--emacro(820,SCIPsetAllocBufferArray) // Boolean test of a parenthesized assignment
--emacro(506,SCIPsetReallocBufferArray) // Constant value Boolean
--emacro(820,SCIPsetReallocBufferArray) // Boolean test of a parenthesized assignment
--emacro(506,SCIPsetDuplicateBufferArray) // Constant value Boolean
--emacro(820,SCIPsetDuplicateBufferArray) // Boolean test of a parenthesized assignment
 -emacro(506,assert)       // Constant value Boolean
 
 -esym(578,clock)          // Declaration of symbol hides symbol
