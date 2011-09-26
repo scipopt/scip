@@ -26,6 +26,7 @@
 #include <string.h>
 #include <limits.h>
 #include <stdio.h>
+#include <ctype.h>
 
 #include "scip/cons_setppc.h"
 #include "scip/cons_linear.h"
