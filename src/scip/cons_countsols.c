@@ -319,6 +319,8 @@ void checkSolutionOrig(
    conshdlrdata->active = FALSE;
 
    SCIPdebugMessage("check solution in original space before counting\n");
+
+   feasible = FALSE;
    
    /* check solution in original space */
    retcode = SCIPcheckSolOrig(scip, sol, &feasible, TRUE, TRUE);

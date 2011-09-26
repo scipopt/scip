@@ -1625,7 +1625,6 @@ SCIP_RETCODE getRelevantColumns(
    lpdata->ndelvarbounds = 0;
   
    /* check all cols */
-   problem->nrcols = 0;
    for( j = 0 ; j < lpdata->ncols ; ++j)
    {  
       /* initialize best lb and best ub (-2: undetermined)*/

@@ -854,6 +854,8 @@ SCIP_RETCODE extractFlowRows(
    flowrowscores     = mcfdata->flowrowscores;
    flowcands         = mcfdata->flowcands;
 
+   assert(mcfdata->nflowcands == 0);
+
    maxdualflow = 0.0;
    for( r = 0; r < nrows; r++ )
    {
@@ -1072,6 +1074,8 @@ SCIP_RETCODE extractCapacityRows(
    capacityrowsigns  = mcfdata->capacityrowsigns;
    capacityrowscores = mcfdata->capacityrowscores;
    capacitycands     = mcfdata->capacitycands;
+
+   assert(mcfdata->ncapacitycands == 0);
 
    /* allocate temporary memory for model type identification */
    SCIP_CALL( SCIPallocBufferArray(scip, &ncolspercommodity, ncommodities) );

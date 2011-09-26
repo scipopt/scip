@@ -5629,6 +5629,7 @@ SCIP_DECL_CONSPARSE(consParseSignedpower)
    char      sense;
    SCIP_VAR* x;
    SCIP_VAR* z;
+   int ret;
 
    *success = TRUE;
 
@@ -5650,10 +5651,12 @@ SCIP_DECL_CONSPARSE(consParseSignedpower)
       str = endptr;
    }
 
-   if( sscanf(str, "signpower(<%[^>]> %lg, %lg) %lg<%[^>]> %c= %lg", varx+1, &xoffset, &exponent, &zcoef, varz+1, &sense, &value) == EOF )
+   ret = sscanf(str, "signpower(<%[^>]> %lg, %lg) %lg<%[^>]> %c= %lg", varx+1, &xoffset, &exponent, &zcoef, varz+1, &sense, &value);
+   if( ret != 7 )
    {
       /* if that does not match, then it may be a 'free' constraint (quite unlikely) */
-      if( sscanf(str, "signpower(<%[^>]> %lg, %lg) %lg<%[^>]> [free]", varx+1, &xoffset, &exponent, &zcoef, varz+1) == EOF )
+      ret = sscanf(str, "signpower(<%[^>]> %lg, %lg) %lg<%[^>]> [free]", varx+1, &xoffset, &exponent, &zcoef, varz+1);
+      if( ret != 5 )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error while parsing constraint expression\n");
          (*success) = FALSE;

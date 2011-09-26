@@ -4602,8 +4602,9 @@ void SCIPprintSysError(
    char* buf;
    buf = strerror(errno);
 #else
-   char buf[1024];
-   (void) strerror_r(errno, buf, 1024);
+   char buf[SCIP_MAXSTRLEN];
+   (void) strerror_r(errno, buf, SCIP_MAXSTRLEN);
+   buf[SCIP_MAXSTRLEN - 1] = '\0';
 #endif
    SCIPmessagePrintError("%s: %s\n", message, buf);
 }

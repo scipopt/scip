@@ -1885,6 +1885,9 @@ void parseArrayDimension(
 
    /* get array dimension */
    parseRange(scip, fzninput, &type, &left, &right);
+
+   if( fzninput->haserror )
+      return;  
    
    if( type != FZN_INT || left != 1.0  || right <= 0.0 )
    {
@@ -2349,6 +2352,8 @@ SCIP_RETCODE parseConstantArrayAssignment(
       for( c = 0; c < nelements && !hasError(fzninput); ++c )
       {
          parseValue(scip, fzninput, &value, elements[c]);
+         assert(!hasError(fzninput));
+
          (*vals)[(*nvals)] = value;
          (*nvals)++;
       }
@@ -2573,7 +2578,10 @@ SCIP_RETCODE parseQuadratic(
          
          /* parse the numeric value otherwise */
          if( vars[v] == NULL )
+         {
             parseValue(scip, fzninput, &vals[v], elements[v]);
+            assert(!hasError(fzninput));
+         }
          else
             vals[v] = SCIP_INVALID;                
       }
@@ -2704,6 +2712,8 @@ SCIP_RETCODE parseAggregation(
       if( vars[nvars] == NULL )
       {
          parseValue(scip, fzninput, &value, elements[0]);
+         assert(!hasError(fzninput));
+
          rhs -= value;
       }
       else
@@ -2717,6 +2727,8 @@ SCIP_RETCODE parseAggregation(
       if( vars[nvars] == NULL )
       {
          parseValue(scip, fzninput, &value, elements[1]);
+         assert(!hasError(fzninput));
+
          if( equalTokens(type, "minus") )
             rhs += value;
          else
@@ -2742,6 +2754,8 @@ SCIP_RETCODE parseAggregation(
          if( vars[nvars] == NULL )
          {
             parseValue(scip, fzninput, &value, elements[2]);
+            assert(!hasError(fzninput));
+
             rhs += value;
          }
          else
@@ -3331,6 +3345,8 @@ CREATE_CONSTRAINT(createCumulativeOpCons)
    /* parse cumulative capacity */
    flattenAssignment(scip, fzninput, assignment);
    parseValue(scip, fzninput, &val, assignment);
+   assert(!hasError(fzninput));
+
    capacity = (int)val;
    
    assert(nvars == ndurations);

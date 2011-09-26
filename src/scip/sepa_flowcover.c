@@ -1095,7 +1095,6 @@ SCIP_Longint getIntegralVal(
    )
 {
    SCIP_Real sval;
-   SCIP_Real downval;
    SCIP_Real upval;
    SCIP_Longint intval;
 
@@ -1103,13 +1102,12 @@ SCIP_Longint getIntegralVal(
    assert(maxdelta >= 0.0);
 
    sval = val * scalar;
-   downval = floor(sval);
    upval = ceil(sval);
 
    if( SCIPrelDiff(sval, upval) >= mindelta )
       intval = (SCIP_Longint) upval;
    else
-      intval = (SCIP_Longint) downval;
+      intval = (SCIP_Longint) (floor(sval));
    
    return intval;
 }

@@ -1048,11 +1048,14 @@ void SCIPdialogGetPath(
    assert(dialog != NULL);
 
    (void)strncpy(path, dialog->name, SCIP_MAXSTRLEN);
+   path[SCIP_MAXSTRLEN - 1] = '\0';
+
    dialog = dialog->parent;
    while( dialog != NULL )
    {
       (void)SCIPsnprintf(s, SCIP_MAXSTRLEN, "%s%c%s", dialog->name, sepchar, path);
       (void)strncpy(path, s, SCIP_MAXSTRLEN);
+      path[SCIP_MAXSTRLEN - 1] = '\0';
       dialog = dialog->parent;
    }
 }

@@ -1160,7 +1160,7 @@ void shiftVariable(
       if( !SCIPisInfinity(scip, oldrhs) )
       {
          matrix->rhs[rows[i]] -= vals[i] * shiftvalue;
-         update = update != (SCIPisFeasLT(scip, matrix->rhs[rows[i]], 0.0) != SCIPisFeasLT(scip, oldrhs, 0.0));
+         update = update != ((SCIP_Bool)(SCIPisFeasLT(scip, matrix->rhs[rows[i]], 0.0) != SCIPisFeasLT(scip, oldrhs, 0.0)));
       }
 
       /* update violated row information */

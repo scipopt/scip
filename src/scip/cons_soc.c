@@ -1175,7 +1175,8 @@ SCIP_RETCODE separatePoint(
    assert(success != NULL);
    
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   
+   assert(conshdlrdata != NULL);
+
    *success = FALSE;
    
    minefficacy = addweakcuts ? SCIPfeastol(scip) : conshdlrdata->minefficacy;
@@ -1187,6 +1188,8 @@ SCIP_RETCODE separatePoint(
 
       if( SCIPisFeasPositive(scip, consdata->violation) && !SCIPisInfinity(scip, consdata->violation) )
       {
+         row = NULL;
+
          /* generate cut */
          if( conshdlrdata->sparsify )
          {
@@ -3150,7 +3153,6 @@ SCIP_DECL_CONSEXITSOL(consExitsolSOC)
 static
 SCIP_DECL_CONSDELETE(consDeleteSOC)
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
    int i;
 
    assert(scip      != NULL);
@@ -3161,12 +3163,15 @@ SCIP_DECL_CONSDELETE(consDeleteSOC)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert((*consdata)->nlrow == NULL); /* should have been freed in exitsol */
    
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-
    SCIPdebugMessage("Deleting SOC constraint <%s>.\n", SCIPconsGetName(cons) );
    
    if( SCIPconsIsTransformed(cons) )
    {
+      SCIP_CONSHDLRDATA* conshdlrdata;
+
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+
       SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, cons) );
    }
    

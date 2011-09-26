@@ -6710,6 +6710,10 @@ void SCIPexprPrint(
 
    switch( expr->op )
    {
+      /* @Note: 'expr->data.intval' is either between 0 and number of variables-1, if it uses the varnames array, or
+       *        between 0 and number of params in the expression tree, if it uses the paramnames array
+       *        because, here, we cannot get the values above we cannot assert them
+       */
       case SCIP_EXPR_VARIDX:
          if( varnames != NULL )
          {
@@ -7273,7 +7277,7 @@ SCIP_RETCODE SCIPexprtreeSimplify(
 
 #ifndef NDEBUG
    seed = 42;
-   BMSallocMemoryArray(&testx, SCIPexprtreeGetNVars(tree));  /*lint !e666*/
+   SCIP_ALLOC( BMSallocMemoryArray(&testx, SCIPexprtreeGetNVars(tree)) );  /*lint !e666*/
    for( i = 0; i < SCIPexprtreeGetNVars(tree); ++i )
       testx[i] = SCIPgetRandomReal(-100.0, 100.0, &seed);  /*lint !e644*/
    SCIP_CALL( SCIPexprtreeEval(tree, testx, &testval_before) );
@@ -13477,6 +13481,8 @@ SCIP_Bool SCIPexprgraphFindConstNode(
    /* find node using binary search */
    left = 0;
    right = exprgraph->nconsts-1;
+   *constnode = NULL;
+
    while( left <= right )
    {
       middle = (left+right)/2;

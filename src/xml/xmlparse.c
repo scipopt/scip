@@ -98,20 +98,49 @@ static void xml_errmsg(
    int                   line
    )
 {
+#ifndef NDEBUG
+   int ret;
    assert(ppos != NULL);
 
    if ( ! msg_only )
    {
-      fprintf(stderr, "%s(%d) Error in file %s line %d\n", file, line, ppos->filename, ppos->lineno);
+      ret = fprintf(stderr, "%s(%d) Error in file %s line %d\n", file, line, ppos->filename, ppos->lineno);
+      assert(ret >= 0);
 
-      fprintf(stderr, "%s", ppos->buf);
+      ret = fprintf(stderr, "%s", ppos->buf);
+      assert(ret >= 0);
 
       if (strchr(ppos->buf, '\n') == NULL)
-         fputc('\n', stderr);
+      {
+         char retc;
 
-      fprintf(stderr, "%*s\n", ppos->pos, "^");
+         retc = fputc('\n', stderr);
+         assert(retc != EOF);
+      }
+
+      ret = fprintf(stderr, "%*s\n", ppos->pos, "^");
+      assert(ret >= 0);
    }
-   fprintf(stderr, "%s\n\n", msg);
+   ret = fprintf(stderr, "%s\n\n", msg);
+   assert(ret >= 0);
+
+#else
+
+   if ( ! msg_only )
+   {
+      (void) fprintf(stderr, "%s(%d) Error in file %s line %d\n", file, line, ppos->filename, ppos->lineno);
+
+      (void) fprintf(stderr, "%s", ppos->buf);
+
+      if (strchr(ppos->buf, '\n') == NULL)
+      {
+         (void) fputc('\n', stderr);
+      }
+
+      (void) fprintf(stderr, "%*s\n", ppos->pos, "^");
+   }
+   (void) fprintf(stderr, "%s\n\n", msg);
+#endif
 }
 
 

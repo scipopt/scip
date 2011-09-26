@@ -8209,7 +8209,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
                coef = 1.0;
                break;
             }
-            if( *str == '-' || *str == '+' || isdigit(*str) )
+            if( *str == '-' || *str == '+' || isdigit((unsigned char)*str) )
             {
                state = SCIPPARSEPOLYNOMIAL_STATE_COEF;
                break;
@@ -8230,7 +8230,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
                break;
             }
 
-            if( *str == '-' || *str == '+' || isdigit(*str) )
+            if( *str == '-' || *str == '+' || isdigit((unsigned char)*str) )
             {
                /* there seem to come a coefficient, which means the next monomial */
                state = SCIPPARSEPOLYNOMIAL_STATE_BEGIN;
@@ -8246,13 +8246,13 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
          case SCIPPARSEPOLYNOMIAL_STATE_COEF:
          {
             assert(coef == SCIP_INVALID);
-            if( *str == '+' && !isdigit(str[1]) )
+            if( *str == '+' && !isdigit((unsigned char)str[1]) )
             {
                /* only a plus sign, without number */
                coef =  1.0;
                ++str;
             }
-            else if( *str == '-' && !isdigit(str[1]) )
+            else if( *str == '-' && !isdigit((unsigned char)str[1]) )
             {
                /* only a minus sign, without number */
                coef = -1.0;

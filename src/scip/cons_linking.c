@@ -1284,7 +1284,7 @@ SCIP_RETCODE aggregateVariables(
          if( aggrcons != NULL )
          {
             aggrconsdata = SCIPconsGetData(aggrcons);
-            assert(aggrcons != NULL);
+            assert(aggrconsdata != NULL);
 
             aggrconst = SCIPvarGetAggrConstant(intvar);
             aggrscalar = SCIPvarGetAggrScalar(intvar);

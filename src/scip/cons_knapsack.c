@@ -3421,10 +3421,7 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
    tmpindices = NULL;
 
    SCIPdebugMessage("separate linear constraint <%s> relaxed to knapsack\n", cons != NULL ? SCIPconsGetName(cons) : "-");
-   if( cons != NULL )
-   {
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-   }
+   SCIPdebug( if( cons != NULL ) { SCIP_CALL( SCIPprintCons(scip, cons, NULL) ); } );
 
    binvars = SCIPgetVars(scip);
 

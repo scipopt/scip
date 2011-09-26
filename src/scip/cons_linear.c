@@ -9427,6 +9427,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
 
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    /* process single constraints */
    firstchange = INT_MAX;
