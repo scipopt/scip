@@ -4921,7 +4921,7 @@ void generateCutFactorableDo(
 
    /* @todo does not always need to be local */
    *islocal = TRUE;
-   *success = FALSE;
+   *success = TRUE;
 }
 
 /** tries to generate a cut if constraint quadratic function is factorable and there are no linear variables
@@ -5136,8 +5136,6 @@ SCIP_RETCODE generateCutFactorable(
       /* generate cut for multleft * factorright * multright <= rhs / (factorleft * multright) */
       generateCutFactorableDo(scip, cons, ref, multleft, consdata->factorright, multright, consdata->factorleft, leftminactivity, leftmaxactivity, rhs, cutcoef, cutrhs, islocal, success, name);
    }
-
-   *success = TRUE;
 
    return SCIP_OKAY;
 }
