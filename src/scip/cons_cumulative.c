@@ -5298,7 +5298,6 @@ SCIP_RETCODE removeVariable(
    SCIP_CONS*            cons,               /**< cumulative constraint */
    int                   pos,                /**< position to remove */
    int                   nvars,              /**< number of variables */
-   int*                  nchgbds,            /**< pointer to store the number changed variable bounds */
    int*                  perm                /**< permutation array to adjust */
    )
 {
@@ -5422,7 +5421,7 @@ SCIP_RETCODE removeIrrelevantJobs(
          }
 
          /* remove the variable and adjust the permutation array */
-         SCIP_CALL( removeVariable(scip, cons, idx, consdata->nvars, nchgbds, perm) );
+         SCIP_CALL( removeVariable(scip, cons, idx, consdata->nvars, perm) );
       }
       else if( ect <= est )
       {
@@ -5441,7 +5440,7 @@ SCIP_RETCODE removeIrrelevantJobs(
          {
             SCIPdebugMessage("variable <%s> is irrelevant\n", SCIPvarGetName(consdata->vars[idx]));
 
-            SCIP_CALL( removeVariable(scip, cons, idx, consdata->nvars, nchgbds, perm) );
+            SCIP_CALL( removeVariable(scip, cons, idx, consdata->nvars, perm) );
          }
          else
             break;
@@ -5550,7 +5549,7 @@ SCIP_RETCODE removeIrrelevantJobs(
             SCIP_CALL( fixIntegerVariable(scip, var, nchgbds) );
          }
 
-         SCIP_CALL( removeVariable(scip, cons, idx, consdata->nvars, nchgbds, perm) );
+         SCIP_CALL( removeVariable(scip, cons, idx, consdata->nvars, perm) );
       }
       else if( lst >= lct )
       {
@@ -5568,7 +5567,7 @@ SCIP_RETCODE removeIrrelevantJobs(
          {
             SCIPdebugMessage("variable <%s> is irrelevant\n", SCIPvarGetName(consdata->vars[idx]));
 
-            SCIP_CALL( removeVariable(scip, cons, idx, consdata->nvars, nchgbds, perm) );
+            SCIP_CALL( removeVariable(scip, cons, idx, consdata->nvars, perm) );
          }
          else
             break;
