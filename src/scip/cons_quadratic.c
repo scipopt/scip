@@ -4579,10 +4579,10 @@ SCIP_RETCODE checkFactorable(
 
       /* on off-diagonal elements, only the sum of corresponding entries need to coincide */
       for( j = 0; j < i; ++j )
-         assert(SCIPisEQ(scip, consdata->factorleft[i] * consdata->factorright[j] + consdata->factorleft[j] * consdata->factorright[i], 2*a[j*n+i]));
+         assert(SCIPisRelEQ(scip, consdata->factorleft[i] * consdata->factorright[j] + consdata->factorleft[j] * consdata->factorright[i], 2*a[j*n+i]));
 
       /* check diagonal elements */
-      assert(SCIPisEQ(scip, consdata->factorleft[i] * consdata->factorright[i], a[i*n+i]));
+      assert(SCIPisRelEQ(scip, consdata->factorleft[i] * consdata->factorright[i], a[i*n+i]));
    }
 #endif
 
@@ -5152,24 +5152,22 @@ SCIP_Bool generateCutLTIfindIntersection(
    SCIP_Real             y0_,
    SCIP_Real             x1,
    SCIP_Real             y1_,
-   SCIP_Real*            wl,
-   SCIP_Real*            wu,
-   SCIP_Real*            xa,
-   SCIP_Real*            ya,
-   SCIP_Real*            xb,
-   SCIP_Real*            yb
+   SCIP_Real             wl,
+   SCIP_Real             wu,
+   SCIP_Real*            xl,
+   SCIP_Real*            yl,
+   SCIP_Real*            xu,
+   SCIP_Real*            yu
    )
 {
-   SCIP_Real a;
-   SCIP_Real b;
-   SCIP_Real c;
-   SCIP_Real tl1;
-   SCIP_Real tl2;
-   SCIP_Real tu1;
-   SCIP_Real tu2;
-   SCIP_Real tl;
-   SCIP_Real tu;
-   SCIP_Real denom;
+   long double a;
+   long double b;
+   long double c;
+   long double tl;
+   long double tu;
+
+   assert(wl == SCIP_INVALID || (xl != NULL && yl != NULL));
+   assert(wu == SCIP_INVALID || (xu != NULL && yu != NULL));
 
    /* The parametric line is of the form
     *
@@ -5189,39 +5187,76 @@ SCIP_Bool generateCutLTIfindIntersection(
     */
 
    a = (x1 - x0) * (y1_ - y0_);
-   if( SCIPisZero(scip, a) )
-      return TRUE;
-
    c = x0 * y0_;
    b = x0 * y1_ + y0_ * x1 - 2.0 * c;
 
    tl = 0.0;
    tu = 0.0;
 
-   if( wl != NULL )
+   if( !SCIPisZero(scip, a) )
    {
-      denom = sqrt(b * b - 4.0 * a * (c - *wl));
-      tl1 = (-b - denom) / (2.0 * a);
-      tl2 = (-b + denom) / (2.0 * a);
-      tl = (tl1 < 0.0) ? tl2 : tl1;
+      if( wl != SCIP_INVALID )
+      {
+         long double tl1;
+         long double tl2;
+         long double denom;
+
+         assert(b * b - 4.0 * a * (c - wl) >= 0.0);
+         denom = sqrt(b * b - 4.0 * a * (c - wl));
+         tl1 = (-b - denom) / (2.0 * a);
+         tl2 = (-b + denom) / (2.0 * a);
+         tl = (tl1 < 0.0) ? tl2 : tl1;
+      }
+
+      if( wu != SCIP_INVALID )
+      {
+         long double tu1;
+         long double tu2;
+         long double denom;
+
+         assert(b * b - 4.0 * a * (c - wu) >= 0.0);
+         denom = sqrt(b * b - 4.0 * a * (c - wu));
+         tu1 = (-b - denom) / (2.0 * a);
+         tu2 = (-b + denom) / (2.0 * a);
+         tu = (tu1 < 0.0) ? tu2 : tu1;
+      }
+   }
+   else if( !SCIPisZero(scip, b) )
+   {
+      if( wl != SCIP_INVALID )
+         tl = (wl - c) / b;
+      if( wu != SCIP_INVALID )
+         tu = (wu - c) / b;
+   }
+   else
+   {
+      /* no or infinitely many solutions */
+      return SCIP_OKAY;
    }
 
-   if( wu != NULL )
+   if( wl != SCIP_INVALID )
    {
-      denom = sqrt(b * b - 4.0 * a * (c - *wu));
-      tu1 = (-b - denom) / (2.0 * a);
-      tu2 = (-b + denom) / (2.0 * a);
-      tu = (tu1 < 0.0) ? tu2 : tu1;
+      *xl = x0  + tl * (x1  - x0 );
+      *yl = y0_ + tl * (y1_ - y0_);
+
+      if( !SCIPisRelEQ(scip, *xl * *yl, wl) )
+      {
+         SCIPdebugMessage("probable numerical difficulties, give up\n");
+         return TRUE;
+      }
    }
 
-   if( xa != NULL )
-      *xa = x0 + tl * (x1 - x0);
-   if( ya != NULL )
-      *ya = y0_ + tl * (y1_ - y0_);
-   if( xb != NULL )
-      *xb = x0 + tu * (x1 - x0);
-   if( yb != NULL )
-      *yb = y0_ + tu * (y1_ - y0_);
+   if( wu != SCIP_INVALID )
+   {
+      *xu = x0  + tu * (x1 -  x0);
+      *yu = y0_ + tu * (y1_ - y0_);
+
+      if( !SCIPisRelEQ(scip, *xu * *yu, wu) )
+      {
+         SCIPdebugMessage("probable numerical difficulties, give up\n");
+         return TRUE;
+      }
+   }
 
    return FALSE;
 }
@@ -5338,8 +5373,11 @@ void generateCutLTIcomputeCoefs(
    SCIPdebugMessage("y: %9g\t[%9g\t%9g]\n", y0_, yl, yu);
    SCIPdebugMessage("w: %9g\t[%9g\t%9g]\n", w0, wl, wu);
 
-   /* generateCutLTI should have recognized this */
+   /* generateCutLTI should have recognized these */
    assert(wl >= 0.0 || wu <= 0.0);
+   assert(!SCIPisInfinity(scip, -wl));
+   assert(!SCIPisInfinity(scip,  wu));
+
    assert(SCIPisFeasGE(scip, x0, xl));
    assert(SCIPisFeasLE(scip, x0, xu));
    assert(SCIPisFeasGE(scip, y0_, yl));
@@ -5358,7 +5396,13 @@ void generateCutLTIcomputeCoefs(
          xu = MIN(xu, 0.0);
          yu = MIN(yu, 0.0);
       }
-      /* ???????????? and else ????? */
+      else
+      {
+         /* both variables have mixed sign (xl < 0 && xu > 0 && yl < 0 && yu > 0) and both xl*yl and xu*yu are feasible
+          * cannot generate cut for this
+          */
+         return;
+      }
    }
    else
    {
@@ -5372,7 +5416,13 @@ void generateCutLTIcomputeCoefs(
          xu = MIN(xu, 0.0);
          yl = MAX(yl, 0.0);
       }
-      /* ???????????? and else ????? */
+      else
+      {
+         /* both variables have mixed sign (xl < 0 && xu > 0 && yl < 0 && yu > 0) and both xl*yu and xu*yl are feasible
+          * cannot generate cut for this
+          */
+         return;
+      }
    }
 
    /* reduce to positive orthant by flipping variables */
@@ -5409,6 +5459,11 @@ void generateCutLTIcomputeCoefs(
    else
       flipw = FALSE;
 
+   /* project refpoint into box not only for numerical reasons, but also due to preliminary bound tightening above */
+   x0 = MIN(xu, MAX(x0, xl));
+   y0_ = MIN(yu, MAX(y0_, yl));
+   w0 = MIN(wu, MAX(w0, wl));
+
    SCIPdebugMessage("reduced points:\n");
    SCIPdebugMessage("x: %9g\t[%9g\t%9g]\n", x0, xl, xu);
    SCIPdebugMessage("y: %9g\t[%9g\t%9g]\n", y0_, yl, yu);
@@ -5428,7 +5483,7 @@ void generateCutLTIcomputeCoefs(
    /* find intersections of halfline from origin
     * return if no proper point could be found
     */
-   if( generateCutLTIfindIntersection(scip, 0.0, 0.0, x0, y0_, &wl, &wu, &xlow, &ylow, &xupp, &yupp) )
+   if( generateCutLTIfindIntersection(scip, 0.0, 0.0, x0, y0_, wl, wu, &xlow, &ylow, &xupp, &yupp) )
       return;
 
    SCIPdebugMessage("intersections:\n");
@@ -5457,18 +5512,20 @@ void generateCutLTIcomputeCoefs(
       if( yupp > yu )
       {
          /* upper intersect is North; place it within box */
+         assert(!SCIPisInfinity(scip, yu));
          yupp = yu;
          xupp = wu / yu;
       }
       else
       {
          /* upper intersect is East; place it within box */
+         assert(!SCIPisInfinity(scip, xu));
          xupp = xu;
          yupp = wu / xu;
       }
 
       /* find intersection on low curve on half line through new point and (x0,y0_) */
-      if( generateCutLTIfindIntersection(scip, xupp, yupp, x0, y0_, &wl, NULL, &xlow, &ylow, NULL, NULL) )
+      if( generateCutLTIfindIntersection(scip, xupp, yupp, x0, y0_, wl, SCIP_INVALID, &xlow, &ylow, NULL, NULL) )
          return;
 
       /* check whether McCormick is sufficient */
@@ -5489,18 +5546,20 @@ void generateCutLTIcomputeCoefs(
       if( ylow < yl )
       {
          /* upper intersect is South; place it within box */
+         assert(!SCIPisZero(scip, yl));
          ylow = yl;
          xlow = wl / yl;
       }
       else
       {
          /* upper intersect is West; place it within box */
+         assert(!SCIPisZero(scip, xl));
          xlow = xl;
          ylow = wl / xl;
       }
 
       /* find intersection on low curve on half line through new point and (x0,y0) */
-      if( generateCutLTIfindIntersection(scip, xlow, ylow, x0, y0_, NULL, &wu, NULL, NULL, &xupp, &yupp) )
+      if( generateCutLTIfindIntersection(scip, xlow, ylow, x0, y0_, SCIP_INVALID, wu, NULL, NULL, &xupp, &yupp) )
          return;
 
       /* check whether McCormick is sufficient */
@@ -5528,6 +5587,8 @@ void generateCutLTIcomputeCoefs(
       if( ylow < yl )
       {
          /* upper intersect is South; place it within box */
+         assert(!SCIPisZero(scip, yl));
+         assert(!SCIPisZero(scip, yu));
          ylow = yl;
          yupp = yu;
          xlow = wl / yl;
@@ -5536,6 +5597,8 @@ void generateCutLTIcomputeCoefs(
       else
       {
          /* upper intersect is West; place it within box */
+         assert(!SCIPisZero(scip, xl));
+         assert(!SCIPisZero(scip, xu));
          xlow = xl;
          xupp = xu;
          ylow = wl / xl;
@@ -5568,10 +5631,10 @@ void generateCutLTIcomputeCoefs(
       /* find the intersection on the lower (upper) curve on the line through xLP and the upper (lower) point
        * this does not seem to work (cuts off solution at nous2)
        */
-      if( generateCutLTIfindIntersection(scip, xlow, ylow, x0, y0_, NULL, &wu, NULL, NULL, &xupp2, &yupp2) ||
+      if( generateCutLTIfindIntersection(scip, xlow, ylow, x0, y0_, SCIP_INVALID, wu, NULL, NULL, &xupp2, &yupp2) ||
          generateCutLTIgenMulCoeff(scip, xlow, ylow, xupp2, yupp2, FALSE, cx, cx, cw) )
       {
-         if( generateCutLTIfindIntersection(scip, xupp, yupp, x0, y0_, &wl, NULL, &xlow2, &ylow2, NULL, NULL) ||
+         if( generateCutLTIfindIntersection(scip, xupp, yupp, x0, y0_, wl, SCIP_INVALID, &xlow2, &ylow2, NULL, NULL) ||
             generateCutLTIgenMulCoeff(scip, xlow2, ylow2, xupp, yupp, TRUE, cx, cy, cw) )
             return;
 
@@ -5665,6 +5728,7 @@ SCIP_RETCODE generateCutLTI(
    assert(consdata->factorright != NULL);
 
    *success = FALSE;
+   *cutlhs = -SCIPinfinity(scip); /* for compiler */
 
    /* write violated constraints as factorleft * factorright '==' rhs
     * where rhs are constraint sides - activity bound of linear part
