@@ -486,6 +486,7 @@ SCIP_RETCODE SCIPbranchcandAddExternCand(
    assert(branchcand != NULL);
    assert(var != NULL);
    assert(!SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var))); /* the variable should not be fixed yet */
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetCeil(set, SCIPvarGetLbLocal(var)) != SCIPsetFloor(set, SCIPvarGetUbLocal(var))); /* a discrete variable should also not be fixed, even after rounding bounds to integral values */
    assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR || !SCIPsetIsEQ(set, SCIPvarGetMultaggrLbLocal(var, set), SCIPvarGetMultaggrUbLocal(var, set))); /* also the current bounds of a multi-aggregated variable should not be fixed yet */
    assert(branchcand->nprioexterncands <= branchcand->nexterncands);
    assert(branchcand->nexterncands <= branchcand->externcandssize);

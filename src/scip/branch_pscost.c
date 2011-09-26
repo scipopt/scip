@@ -228,8 +228,8 @@ SCIP_RETCODE updateBestCandidate(
    
    /* select branching point for this variable */
    candbrpoint = SCIPgetBranchingPoint(scip, cand, candsol);
-   assert(SCIPvarGetType(cand) != SCIP_VARTYPE_CONTINUOUS || candbrpoint >= SCIPvarGetLbLocal(cand));
-   assert(SCIPvarGetType(cand) != SCIP_VARTYPE_CONTINUOUS || candbrpoint <= SCIPvarGetUbLocal(cand));
+   assert(candbrpoint >= SCIPvarGetLbLocal(cand));
+   assert(candbrpoint <= SCIPvarGetUbLocal(cand));
    assert(SCIPvarGetType(cand) == SCIP_VARTYPE_CONTINUOUS || !SCIPisIntegral(scip, candbrpoint));
 
    if( SCIPvarGetType(cand) == SCIP_VARTYPE_CONTINUOUS )
@@ -296,8 +296,8 @@ SCIP_RETCODE updateBestCandidate(
       branchscore = SCIPgetBranchScore(scip, cand, pscostdown, pscostup);
       assert(!SCIPisNegative(scip, branchscore));
    }
-   SCIPdebugMessage("branching score variable <%s> = %g; score = %g; type=%d bestbrscore=%g\n", 
-      SCIPvarGetName(cand), branchscore, WEIGHTEDSCORING(branchruledata, candscoremin, candscoremax, candscoresum), 
+   SCIPdebugMessage("branching score variable <%s>[%g,%g] = %g; score = %g; type=%d bestbrscore=%g\n",
+      SCIPvarGetName(cand), SCIPvarGetLbLocal(cand), SCIPvarGetUbLocal(cand), branchscore, WEIGHTEDSCORING(branchruledata, candscoremin, candscoremax, candscoresum),
       SCIPvarGetType(cand), *bestscore);
 
    if( SCIPisInfinity(scip, branchscore) )
