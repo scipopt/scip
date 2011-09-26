@@ -6216,10 +6216,10 @@ void addBilinMcCormick(
    if( bilincoef == 0.0 )
       return;
 
-   if( SCIPisEQ(scip, lbx, ubx) )
+   if( SCIPisRelEQ(scip, lbx, ubx) )
    {
       /* x is fixed, so bilinear term is at most linear */
-      if( SCIPisEQ(scip, lby, uby) )
+      if( SCIPisRelEQ(scip, lby, uby) )
       {
          /* also y is fixed, so bilinear term is constant */
          coefx    = 0.0;
@@ -6233,7 +6233,7 @@ void addBilinMcCormick(
          constant = 0.0;
       }
    }
-   else if( SCIPisEQ(scip, lby, uby) )
+   else if( SCIPisRelEQ(scip, lby, uby) )
    {
       /* y is fixed, so bilinear term is linear */
       coefx    = bilincoef * refpointy;
@@ -7252,7 +7252,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
          {
             xlb = SCIPvarGetLbLocal(x);
             xub = SCIPvarGetUbLocal(x);
-            if( SCIPisEQ(scip, xlb, xub) )
+            if( SCIPisRelEQ(scip, xlb, xub) )
             {
                SCIPdebugMessage("ignore fixed variable <%s>[%g, %g], diff %g\n", SCIPvarGetName(x), xlb, xub, xub-xlb);
                continue;
@@ -7281,13 +7281,13 @@ SCIP_RETCODE registerVariableInfeasibilities(
          x = consdata->bilinterms[j].var1;
          xlb = SCIPvarGetLbLocal(x);
          xub = SCIPvarGetUbLocal(x);
-         if( SCIPisEQ(scip, xlb, xub) )
+         if( SCIPisRelEQ(scip, xlb, xub) )
             continue;
 
          y = consdata->bilinterms[j].var2;
          ylb = SCIPvarGetLbLocal(y);
          yub = SCIPvarGetUbLocal(y);
-         if( SCIPisEQ(scip, ylb, yub) )
+         if( SCIPisRelEQ(scip, ylb, yub) )
             continue;
 
          xunbounded = SCIPisInfinity(scip, -xlb) || SCIPisInfinity(scip, xub);
@@ -7431,7 +7431,7 @@ SCIP_RETCODE registerLargeLPValueVariableForBranching(
       for( i = 0; i < consdata->nquadvars; ++i )
       {
          /* do not propose fixed variables */
-         if( SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->quadvarterms[i].var), SCIPvarGetUbLocal(consdata->quadvarterms[i].var)) )
+         if( SCIPisRelEQ(scip, SCIPvarGetLbLocal(consdata->quadvarterms[i].var), SCIPvarGetUbLocal(consdata->quadvarterms[i].var)) )
             continue;
          val = SCIPgetSolVal(scip, NULL, consdata->quadvarterms[i].var);
          if( ABS(val) > brvarval )
@@ -9688,7 +9688,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsQuadratic)
       for( i = 0; i < consdata->nlinvars; ++i )
       {
          var = consdata->linvars[i];
-         if( !SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+         if( !SCIPisRelEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
          {
             SCIP_CALL( SCIPaddExternBranchCand(scip, var, MAX(consdata->lhsviol, consdata->rhsviol), SCIP_INVALID) );
          }
@@ -9697,7 +9697,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsQuadratic)
       for( i = 0; i < consdata->nquadvars; ++i )
       {
          var = consdata->quadvarterms[i].var;
-         if( !SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+         if( !SCIPisRelEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
          {
             SCIP_CALL( SCIPaddExternBranchCand(scip, var, MAX(consdata->lhsviol, consdata->rhsviol), SCIP_INVALID) );
          }
