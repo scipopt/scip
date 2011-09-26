@@ -1436,7 +1436,7 @@ SCIP_RETCODE SCIPsolPrint(
 
    assert(sol != NULL);
    assert(prob != NULL);
-   assert(prob->transformed || transprob != NULL);
+   assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL || prob->transformed || transprob != NULL);
 
    /* display variables of problem data */
    for( v = 0; v < prob->nfixedvars; ++v )

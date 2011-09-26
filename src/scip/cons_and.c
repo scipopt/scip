@@ -2005,7 +2005,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAnd)
       for( c = 0; c < nchildren; ++c )
       {
          SCIP_CALL( SCIPdebugGetSolVal(scip, vars[c], &varval) );
-         debugval &= varval > 0.5;
+         debugval = debugval && (varval > 0.5);
       }
       SCIP_CALL( SCIPdebugAddSolVal(var, debugval ? 1.0 : 0.0) );
    }

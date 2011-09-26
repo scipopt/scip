@@ -6832,7 +6832,7 @@ SCIP_Real SCIPvarGetMultaggrLbLocal(
    if( posinf )
       return SCIPsetInfinity(set);
 
-   return (MAX(lb, SCIPvarGetLbLocal(var)));
+   return (MAX(lb, SCIPvarGetLbLocal(var))); /*lint !e666*/
 }
 
 /** for a multi-aggregated variable, gives the local upper bound computed by adding the local bounds from all
@@ -6897,7 +6897,7 @@ SCIP_Real SCIPvarGetMultaggrUbLocal(
    if( neginf )
       return -SCIPsetInfinity(set);
 
-   return (MIN(ub, SCIPvarGetUbLocal(var)));
+   return (MIN(ub, SCIPvarGetUbLocal(var))); /*lint !e666*/
 }
 
 /** for a multi-aggregated variable, gives the global lower bound computed by adding the global bounds from all
@@ -6962,7 +6962,7 @@ SCIP_Real SCIPvarGetMultaggrLbGlobal(
    if( posinf )
       return SCIPsetInfinity(set);
 
-   return (MAX(lb, SCIPvarGetLbGlobal(var)));
+   return (MAX(lb, SCIPvarGetLbGlobal(var))); /*lint !e666*/
 }
 
 /** for a multi-aggregated variable, gives the global upper bound computed by adding the global bounds from all
@@ -7027,7 +7027,7 @@ SCIP_Real SCIPvarGetMultaggrUbGlobal(
    if( neginf )
       return -SCIPsetInfinity(set);
 
-   return (MIN(ub, SCIPvarGetUbGlobal(var)));
+   return (MIN(ub, SCIPvarGetUbGlobal(var))); /*lint !e666*/
 }
 
 /** adds a hole to the original domain of the variable */

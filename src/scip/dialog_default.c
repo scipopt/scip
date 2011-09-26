@@ -626,6 +626,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayRelaxators)
    SCIPdialogMessage(scip, NULL, " --------------       -------- ----  -----------\n");
    for( i = 0; i < nrelaxs; ++i )
    {
+      assert(sorted != NULL); /* for flexelint */
       SCIPdialogMessage(scip, NULL, " %-20s ", SCIPrelaxGetName(sorted[i]));
       if( strlen(SCIPrelaxGetName(sorted[i])) > 20 )
          SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
@@ -2512,15 +2513,21 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteSolution)
              fclose(file);
              SCIP_CALL( retcode );
          }
-         SCIPinfoMessage(scip, file, "\n");
-         retcode = SCIPprintBestSol(scip, file, FALSE);
-         if( retcode != SCIP_OKAY )
+         else
          {
-             fclose(file);
-             SCIP_CALL( retcode );
+            SCIPinfoMessage(scip, file, "\n");
+            retcode = SCIPprintBestSol(scip, file, FALSE);
+            if( retcode != SCIP_OKAY )
+            {
+               fclose(file);
+               SCIP_CALL( retcode );
+            }
+            else
+            {
+               SCIPdialogMessage(scip, NULL, "written solution information to file <%s>\n", filename);
+               fclose(file);
+            }
          }
-         SCIPdialogMessage(scip, NULL, "written solution information to file <%s>\n", filename);
-         fclose(file);
       }
    }
 
@@ -2568,8 +2575,11 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteStatistics)
              fclose(file);
              SCIP_CALL( retcode );
          }
-         SCIPdialogMessage(scip, NULL, "written statistics to file <%s>\n", filename);
-         fclose(file);
+         else
+         {
+            SCIPdialogMessage(scip, NULL, "written statistics to file <%s>\n", filename);
+            fclose(file);
+         }
       }
    }
 

@@ -7942,7 +7942,8 @@ void sumMIRRow(
 
    /* calculate the row summation */
    BMSclearMemoryArray(mircoef, prob->nvars);
-   for( i = 0; i < *nrowinds; i++ )
+   i = 0;
+   while( i < *nrowinds )
    {
       SCIP_ROW* row;
       SCIP_Real weight;
@@ -7987,13 +7988,14 @@ void sumMIRRow(
             r, SCIProwGetName(row), row->lhs - row->constant, row->rhs - row->constant, 
             scale, weights[r], slacksign[r], *mirrhs);
          SCIPdebug(SCIProwPrint(row, NULL));
+
+         ++i; /* handle next row */
       }
       else
       {
-         /* remove row from sparsity pattern */
+         /* remove row from sparsity pattern, do not increase i (i-th position is filled with last entry) */
          rowinds[i] = rowinds[(*nrowinds)-1];
          (*nrowinds)--;
-         i--;
 #ifndef NDEBUG
          slacksign[r] = 0;
 #endif
@@ -8031,7 +8033,8 @@ void cleanupMIRRow(
    assert(nvarinds != NULL);
 
    rhsinf = SCIPsetIsInfinity(set, *mirrhs);
-   for( i = 0; i < *nvarinds; i++ )
+   i = 0;
+   while( i < *nvarinds )
    {
       int v;
 
@@ -8062,12 +8065,13 @@ void cleanupMIRRow(
          *mirrhs -= bd * mircoef[v];
          mircoef[v] = 0.0;
 
-         /* remove variable from sparsity pattern */
+         /* remove variable from sparsity pattern, do not increase i (i-th position is filled with last entry) */
          varused[v] = FALSE;
          varinds[i] = varinds[(*nvarinds)-1];
          (*nvarinds)--;
-         i--;
       }
+      else
+         ++i;
    }
    if( rhsinf )
       *mirrhs = SCIPsetInfinity(set);
@@ -8284,7 +8288,8 @@ SCIP_RETCODE transformMIRRow(
    /* substitute continuous variables with best standard or variable bound (lb, ub, vlb or vub),
     * substitute integral variables with best standard bound (lb, ub)
     */
-   for( i = 0; i < *nvarinds; i++ )
+   i = 0;
+   while( i < *nvarinds )
    {
       SCIP_VAR* var;
       SCIP_Real bestlb;
@@ -8301,7 +8306,9 @@ SCIP_RETCODE transformMIRRow(
       var = prob->vars[v];
       assert(v == SCIPvarGetProbindex(var));
 
-      /* due to variable bound usage cancellation may occur */
+      /* due to variable bound usage cancellation may occur,
+       * do not increase i, since last element is copied to the i-th position
+       */
       if( SCIPsetIsZero(set, mircoef[v]) )
       {
          varsign[v] = +1;
@@ -8310,7 +8317,6 @@ SCIP_RETCODE transformMIRRow(
          varused[v] = FALSE;
          varinds[i] = varinds[(*nvarinds)-1];
          (*nvarinds)--;
-         i--;
          continue;
       }
 
@@ -8544,6 +8550,7 @@ SCIP_RETCODE transformMIRRow(
             }
          }
       }
+      ++i; /* increase iterator */
 
 #ifdef SCIP_DEBUG
       if( bestlbtype >= 0 )
@@ -9419,7 +9426,8 @@ void sumStrongCGRow(
 
    /* calculate the row summation */
    BMSclearMemoryArray(strongcgcoef, prob->nvars);
-   for( i = 0; i < *nrowinds; i++ )
+   i = 0;
+   while( i < *nrowinds )
    {
       SCIP_ROW* row;
       SCIP_Real weight;
@@ -9494,14 +9502,15 @@ void sumStrongCGRow(
 
       if( skiprow )
       {
-         /* remove row from sparsity pattern */
+         /* remove row from sparsity pattern, do not increase i, since the i-th position is filled with the last element */
          rowinds[i] = rowinds[(*nrowinds)-1];
          (*nrowinds)--;
-         i--;
 #ifndef NDEBUG
          slacksign[r] = 0;
 #endif
       }
+      else
+         ++i;
    }
 
    /* check if the total number of non-zeros is too large */
@@ -9589,7 +9598,8 @@ void transformStrongCGRow(
    /* substitute continuous variables with best standard or variable bound (lb, ub, vlb or vub),
     * substitute integral variables with best standard bound (lb, ub)
     */
-   for( i = 0; i < *nvarinds; i++ )
+   i = 0;
+   while( i < *nvarinds )
    {
       SCIP_VAR* var;
       SCIP_Real varsol;
@@ -9607,7 +9617,9 @@ void transformStrongCGRow(
       var = prob->vars[v];
       assert(v == SCIPvarGetProbindex(var));
 
-      /* due to variable bound usage cancellation may occur */
+      /* due to variable bound usage cancellation may occur;
+       * do not increase i, since last element is copied to the i-th position
+       */
       if( SCIPsetIsZero(set, strongcgcoef[v]) )
       {
          varsign[v] = +1;
@@ -9616,7 +9628,6 @@ void transformStrongCGRow(
          varused[v] = FALSE;
          varinds[i] = varinds[(*nvarinds)-1];
          (*nvarinds)--;
-         i--;
          continue;
       }
 
@@ -9801,6 +9812,8 @@ void transformStrongCGRow(
 
       SCIPdebugMessage("strong CG var <%s>: varsign=%d, boundtype=%d, strongcgcoef=%g, lb=%g, ub=%g -> rhs=%g\n", 
          SCIPvarGetName(var), varsign[v], boundtype[v], strongcgcoef[v], bestlb, bestub, *strongcgrhs);
+
+      ++i; /*increase iterator */
    }
 }
 
@@ -12183,7 +12196,8 @@ SCIP_RETCODE checkLazyBounds(
    assert(lp->flushed);
    assert(*lazyboundsvalid == TRUE); /* pointer has to be initialized */
 
-   for( c = 0; c < lp->nlazycols; ++c )
+   c = 0;
+   while( c < lp->nlazycols )
    {
       col = lp->lazycols[c];
 
@@ -12223,13 +12237,14 @@ SCIP_RETCODE checkLazyBounds(
          (*lazyboundsvalid) = FALSE;
       }
 
-      /* remove lazy column entry if both columns are in the LP */
+      /* remove lazy column entry if both columns are in the LP, do not increase iterator, since last element is copied to i-th position */
       if( SCIPsetIsInfinity(set, -col->lazylb) && SCIPsetIsInfinity(set, -col->lazyub) )
       {
          lp->nlazycols--;
          lp->lazycols[c] = lp->lazycols[lp->nlazycols];
-         c--;
       }
+      else
+         ++c; /* increase iterator */
    }
 
    return SCIP_OKAY;

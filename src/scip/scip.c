@@ -14287,7 +14287,7 @@ SCIP_RETCODE SCIPreadSol(
    const char*           fname              /**< name of the input file */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPreadSol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPreadSol", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    /* we pass the reading of the solution file on to reader_sol via the following call */
    SCIP_CALL( SCIPreadProb(scip, fname, "sol") );
@@ -19559,21 +19559,31 @@ SCIP_RETCODE SCIPprintSol(
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    )
 {
+   SCIP_Real objvalue;
    SCIP_Bool currentsol;
 
-   SCIP_CALL( checkStage(scip, "SCIPprintSol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   assert(SCIPisTransformed(scip) || sol != NULL);
 
+   SCIP_CALL( checkStage(scip, "SCIPprintSol", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   
    currentsol = (sol == NULL);
    if( currentsol )
    {
+      SCIP_CALL( checkStage(scip, "SCIPprintSol(sol==NULL)",
+            FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+      
       /* create a temporary solution that is linked to the current solution */
       SCIP_CALL( SCIPsolCreateCurrentSol(&sol, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree,
             scip->lp, NULL) );
    }
 
    SCIPmessageFPrintInfo(file, "objective value:                 ");
-   SCIPprintReal(scip, file,
-      SCIPprobExternObjval(scip->transprob, scip->set, SCIPsolGetObj(sol, scip->set, scip->transprob)), 20, 15);
+   if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+      objvalue = SCIPsolGetOrigObj(sol);
+   else
+      objvalue = SCIPprobExternObjval(scip->transprob, scip->set, SCIPsolGetObj(sol, scip->set, scip->transprob));
+
+   SCIPprintReal(scip, file, objvalue, 20, 15);
    SCIPmessageFPrintInfo(file, "\n");
 
    SCIP_CALL( SCIPsolPrint(sol, scip->set, scip->stat, scip->origprob, scip->transprob, file, printzeros) );
@@ -19694,7 +19704,7 @@ SCIP_SOL** SCIPgetSols(
    }  /*lint !e788*/
 }
 
-/** gets best feasible primal solution found so far if the problem is transformed; in case the the problem is problem
+/** gets best feasible primal solution found so far if the problem is transformed; in case the the problem is in problem
  *  stage it returns the best solution candidate, or NULL if no solution has been found or the candidate store is empty;
  */
 SCIP_SOL* SCIPgetBestSol(
