@@ -14287,7 +14287,7 @@ SCIP_RETCODE SCIPreadSol(
    const char*           fname              /**< name of the input file */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPreadSol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPreadSol", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    /* we pass the reading of the solution file on to reader_sol via the following call */
    SCIP_CALL( SCIPreadProb(scip, fname, "sol") );
