@@ -2558,7 +2558,7 @@ void printRowNl(
             SCIPerrorMessage("unsupported operator <%s> in writing of polynomial nonlinear constraint\n", SCIPexpropGetName(SCIPexprGetOperator(expr)));
             return;
          } /*lint !e788*/
-      }
+      }  /*lint !e788*/
    }
 
    /* print right hand side */
@@ -3240,7 +3240,7 @@ SCIP_RETCODE SCIPwritePip(
                   SCIPwarningMessage("expression operand <%s> in %dth expression tree of constraint <%s> cannot be written in pip format\n", SCIPexpropGetName(SCIPexprGetOperator(expr)), e, SCIPconsGetName(cons));
                   ispolynomial = FALSE;
                   break;
-            }
+            } /*lint !e788*/
 
             /* check if all children of root expression correspond to variables */
             for( v = 0; v < SCIPexprGetNChildren(expr); ++v )

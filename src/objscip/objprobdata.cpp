@@ -65,7 +65,7 @@ SCIP_DECL_PROBDELORIG(probDelorigObj)
 
    /* free probdata data */
    delete *probdata;
-   *probdata = NULL; /*lint !e64*/
+   *probdata = 0; /*lint !e64*/
    
    return SCIP_OKAY;
 }
@@ -114,8 +114,8 @@ SCIP_DECL_PROBDELTRANS(probDeltransObj)
 
    /* free probdata data */
    delete *probdata;
-   *probdata = NULL; /*lint !e64*/
-   
+   *probdata = 0; /*lint !e64*/
+
    return SCIP_OKAY;
 }
 

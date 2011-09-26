@@ -1385,21 +1385,12 @@ SCIP_Bool SCIPsetIsSumRelGE(
    ( SCIPbufferDuplicateMem((set)->buffer, set, (void**)(ptr), source,  \
                             (int)((num)*sizeof(**(ptr)))) )
 #define SCIPsetReallocBufferArray(set,ptr,num)  ( SCIPbufferReallocMem((set)->buffer, set, (void**)(ptr), \
-         (int)((num)*sizeof(**(ptr)))) )
+                                                                       (int)((num)*sizeof(**(ptr)))) )
 #else
 /* Check for integer overflow in allocation size */
-#define SCIPsetAllocBufferArray(set,ptr,num)    ( ( ((size_t)(num)) > (UINT_MAX / sizeof(**(ptr))) ) \
-                                                  ? ((*ptr = NULL) ? SCIP_NOMEMORY : SCIP_ERROR)     \
-                                                  : SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), \
-                                                     (int)((num)*sizeof(**(ptr))))      )
-#define SCIPsetDuplicateBufferArray(set,ptr,source,num) ( ( ((size_t)(num)) > (UINT_MAX / sizeof(**(ptr)))) \
-                                                  ? ((*ptr = NULL) ? SCIP_NOMEMORY : SCIP_ERROR)     \
-                                                          : SCIPbufferDuplicateMem((set)->buffer, set, (void**)(ptr),   \
-                                                                                   source, (int)((num)*sizeof(**(ptr)))))
-#define SCIPsetReallocBufferArray(set,ptr,num)  ( ( ((size_t)(num)) > (UINT_MAX / sizeof(**(ptr))) ) \
-                                                  ? ((*ptr = NULL) ? SCIP_NOMEMORY : SCIP_ERROR)     \
-                                                  : SCIPbufferReallocMem((set)->buffer, set, (void**)(ptr), \
-                                                                         (int)((num)*sizeof(**(ptr))))      )
+#define SCIPsetAllocBufferArray(set,ptr,num)    ( SCIPbufferAllocMemSave(set, (void**)(ptr), num, sizeof(**(ptr))) )
+#define SCIPsetDuplicateBufferArray(set,ptr,source,num) ( SCIPbufferDuplicateMemSave(set, (void**)(ptr), source, num, sizeof(**(ptr))) )
+#define SCIPsetReallocBufferArray(set,ptr,num)  ( SCIPbufferReallocMemSave(set, (void**)(ptr), num, sizeof(**(ptr))) )
 #endif
 #define SCIPsetFreeBufferArray(set,ptr)         ( SCIPbufferFreeMem((set)->buffer, (void**)(ptr), 0) ) 
 #define SCIPsetAllocBufferSize(set,ptr,size)    ( SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), size) )

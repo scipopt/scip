@@ -565,9 +565,10 @@ SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
    SCIPdebugMessage("Indictor conflict handler.\n");
 
    conflicthdlrdata = SCIPconflicthdlrGetData(conflicthdlr);
+   assert( conflicthdlrdata != NULL );
 
    /* possible skip conflict handler */
-   if ( ! ((SCIP_CONSHDLRDATA*) conflicthdlrdata)->conflictsupgrade )
+   if ( ! ((SCIP_CONFLICTHDLRDATA*) conflicthdlrdata)->conshdlrdata->conflictsupgrade )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
@@ -584,11 +585,8 @@ SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
       /* quick check for slack variable that is implicitly integral or continuous */
       if ( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
       {
-         char* posstr;
-
          /* check string */
-         posstr = strstr(SCIPvarGetName(var), "indslack");
-         if ( posstr != NULL )
+         if ( strstr(SCIPvarGetName(var), "indslack") != NULL )
          {
             /* make sure that the slack variable occurs with its lower bound */
             if ( SCIPboundtypeOpposite(SCIPbdchginfoGetBoundtype(bdchginfos[i])) != SCIP_BOUNDTYPE_LOWER )
@@ -633,12 +631,10 @@ SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
          /* quick check for slack variable that is implicitly integral or continuous */
          if ( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
          {
-            char* posstr;
             SCIP_VAR* slackvar;
             
             /* check string */
-            posstr = strstr(SCIPvarGetName(var), "indslack");
-            if ( posstr != NULL )
+            if ( strstr(SCIPvarGetName(var), "indslack") != NULL )
             {
                /* search for slack variable */
                for (j = 0; j < nconss; ++j)
@@ -5149,7 +5145,7 @@ SCIP_DECL_CONSPARSE(consParseIndicator)
    SCIP_VAR* binvar;
    SCIP_VAR* slackvar;
    SCIP_CONS* lincons;
-   char* posstr;
+   const char* posstr;
    int zeroone;
    int nargs;
 

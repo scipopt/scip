@@ -138,7 +138,7 @@ public:
       SCIP_RESULT*       result              /**< pointer to store the result of the call */
       )
    {  /*lint --e{715}*/
-      (*objvardata) = NULL;
+      (*objvardata) = 0;
       (*result) = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
    }
