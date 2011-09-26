@@ -3411,7 +3411,9 @@ SCIP_RETCODE presolveTryAddLinearReform(
 #ifdef SCIP_DEBUG
          if( SCIPintervalGetInf(xbndszero) != SCIPintervalGetInf(xbndsone) ||
              SCIPintervalGetSup(xbndszero) != SCIPintervalGetSup(xbndsone) )
+         {
             SCIPdebugMessage("got different bounds for y = 0: [%g, %g] and y = 1: [%g, %g]\n", xbndszero.inf, xbndszero.sup, xbndsone.inf, xbndsone.sup);
+         }
 #endif
 
          if( nxvars == 1 && conshdlrdata->empathy4and >= 1 && SCIPvarIsBinary(xvars[0]) )
@@ -3915,6 +3917,10 @@ SCIP_RETCODE presolveDisaggregate(
    if( consdata->nquadvars <= 1 )
       return SCIP_OKAY;
 
+   /* make sure there are no quadratic variables without coefficients */
+   SCIP_CALL( mergeAndCleanBilinearTerms(scip, cons) );
+   SCIP_CALL( mergeAndCleanQuadVarTerms(scip, cons) );
+
    /* sort quadratic variable terms here, so we can later search in it without reordering the array */
    SCIP_CALL( consdataSortQuadVarTerms(scip, consdata) );
    
@@ -3934,7 +3940,8 @@ SCIP_RETCODE presolveDisaggregate(
    assert(ncomponents >= 1);
    
    /* if there is only one component, we cannot disaggregate
-    * @todo we could still split the constraint into several while keeping the number of variables sharing several constraints as small as possible */
+    * @todo we could still split the constraint into several while keeping the number of variables sharing several constraints as small as possible
+    */
    if( ncomponents == 1 )
    {
       SCIPhashmapFree(&var2component);
@@ -4027,7 +4034,7 @@ SCIP_RETCODE presolveDisaggregate(
       SCIP_CALL( SCIPaddCons(scip, auxconss[comp]) );
       SCIPdebug( SCIPprintCons(scip, auxconss[comp], NULL) );
       
-      SCIP_CALL( addLinearCoef(scip, cons, auxvars[comp], 1.0 / auxcoefs[comp]) );
+      SCIP_CALL( addLinearCoef(scip, cons, auxvars[comp], auxcoefs[comp]) );
       
       SCIP_CALL( SCIPreleaseCons(scip, &auxconss[comp]) );
       SCIP_CALL( SCIPreleaseVar(scip, &auxvars[comp]) );
@@ -4431,11 +4438,7 @@ SCIP_RETCODE checkFactorable(
    if( consdata->nbilinterms == 0 )
       return SCIP_OKAY;
 
-   /* we don't need this if there are also purely linear variables */
-   if( consdata->nlinvars > 0 )
-      return SCIP_OKAY;
-
-   /* write constraint as lhs <= x'^T A x' <= rhs where x' = (x,1) and
+   /* write constraint as lhs <= linear + x'^T A x' <= rhs where x' = (x,1) and
     * A = ( Q     b/2 )
     *     ( b^T/2  0  )
     * compute an eigenvalue factorization of A and check if there are one positive and one negative eigenvalue
@@ -4451,7 +4454,7 @@ SCIP_RETCODE checkFactorable(
 
    n = consdata->nquadvars + 1;
 
-   /* @todo handle case n=3 explicitely */
+   /* @todo handle case n=3 explicitly */
 
    /* skip too large matrices */
    if( n > 50 )
@@ -4480,7 +4483,7 @@ SCIP_RETCODE checkFactorable(
       a[MIN(idx1,idx2) * n + MAX(idx1,idx2)] = bilinterm->coef / 2.0;
    }
 
-   /* set lower triagonal entries of A corresponding to square and linear terms */
+   /* set lower triangle entries of A corresponding to square and linear terms */
    for( i = 0; i < consdata->nquadvars; ++i )
    {
       a[i*n + i]   = consdata->quadvarterms[i].sqrcoef;
@@ -4541,7 +4544,7 @@ SCIP_RETCODE checkFactorable(
          consdata->factorright[i] = 0.0;
    }
 
-   SCIPdebugMessage("constraint <%s> has factorable quadratic form: %g <= (%g", SCIPconsGetName(cons), consdata->lhs, consdata->factorleft[n-1]);
+   SCIPdebugMessage("constraint <%s> has factorable quadratic form: (%g", SCIPconsGetName(cons), consdata->factorleft[n-1]);
    for( i = 0; i < consdata->nquadvars; ++i )
       if( consdata->factorleft[i] != 0.0 )
          SCIPdebugPrintf(" %+g<%s>", consdata->factorleft[i], SCIPvarGetName(consdata->quadvarterms[i].var));
@@ -4549,7 +4552,7 @@ SCIP_RETCODE checkFactorable(
    for( i = 0; i < consdata->nquadvars; ++i )
       if( consdata->factorright[i] != 0.0 )
          SCIPdebugPrintf(" %+g<%s>", consdata->factorright[i], SCIPvarGetName(consdata->quadvarterms[i].var));
-   SCIPdebugPrintf(") <= %g\n", consdata->rhs);
+   SCIPdebugPrintf(")\n");
 
 #ifndef NDEBUG
    /* check whether factorleft * factorright^T is matrix of augmented quadratic form */
@@ -4572,7 +4575,7 @@ SCIP_RETCODE checkFactorable(
    /* set lower triagonal entries of A corresponding to square and linear terms */
    for( i = 0; i < consdata->nquadvars; ++i )
    {
-      a[i*n + i]     = consdata->quadvarterms[i].sqrcoef;
+      a[i*n + i]   = consdata->quadvarterms[i].sqrcoef;
       a[i*n + n-1] = consdata->quadvarterms[i].lincoef / 2.0;
    }
 
@@ -4583,10 +4586,10 @@ SCIP_RETCODE checkFactorable(
 
       /* on off-diagonal elements, only the sum of corresponding entries need to coincide */
       for( j = 0; j < i; ++j )
-         assert(SCIPisEQ(scip, consdata->factorleft[i] * consdata->factorright[j] + consdata->factorleft[j] * consdata->factorright[i], 2*a[j*n+i]));
+         assert(SCIPisRelEQ(scip, consdata->factorleft[i] * consdata->factorright[j] + consdata->factorleft[j] * consdata->factorright[i], 2*a[j*n+i]));
 
       /* check diagonal elements */
-      assert(SCIPisEQ(scip, consdata->factorleft[i] * consdata->factorright[i], a[i*n+i]));
+      assert(SCIPisRelEQ(scip, consdata->factorleft[i] * consdata->factorright[i], a[i*n+i]));
    }
 #endif
 
@@ -4925,10 +4928,10 @@ void generateCutFactorableDo(
 
    /* @todo does not always need to be local */
    *islocal = TRUE;
-   *success = FALSE;
+   *success = TRUE;
 }
 
-/** tries to generate a cut if constraint function is factorable
+/** tries to generate a cut if constraint quadratic function is factorable and there are no linear variables
  * (ax+b)(cx+d) <= rhs and cx+d >= 0 -> (ax+b) <= rhs / (cx+d), where the right hand side is concave and can be linearized
  */
 static
@@ -5141,6 +5144,875 @@ SCIP_RETCODE generateCutFactorable(
       generateCutFactorableDo(scip, cons, ref, multleft, consdata->factorright, multright, consdata->factorleft, leftminactivity, leftmaxactivity, rhs, cutcoef, cutrhs, islocal, success, name);
    }
 
+   return SCIP_OKAY;
+}
+
+/* finds intersections of a parametric line (x,y) = (x0,y0) + t [(x1,y1) - (x0,y0)] on curves x*y = wl and x*y = wu
+ * returns TRUE if unsuccessful and FALSE otherwise
+ */
+static
+SCIP_Bool generateCutLTIfindIntersection(
+   SCIP*                 scip,
+   SCIP_Real             x0,
+   SCIP_Real             y0_,
+   SCIP_Real             x1,
+   SCIP_Real             y1_,
+   SCIP_Real             wl,
+   SCIP_Real             wu,
+   SCIP_Real*            xl,
+   SCIP_Real*            yl,
+   SCIP_Real*            xu,
+   SCIP_Real*            yu
+   )
+{
+   long double a;
+   long double b;
+   long double c;
+   long double tl;
+   long double tu;
+
+   assert(wl == SCIP_INVALID || (xl != NULL && yl != NULL));
+   assert(wu == SCIP_INVALID || (xu != NULL && yu != NULL));
+
+   /* The parametric line is of the form
+    *
+    *  x = x0 + t (x1-x0)
+    *  y = y0 + t (y1-y0)
+    *
+    * and for that to satisfy xy = wl and xy = wu we must have
+    *
+    * x0 y0 + t [x0 (y1-y0) + y0 (x1-x0)] + t^2 (x1-x0) (y1-y0) = wl
+    *                                                           = wu
+    *
+    * or a t^2 + b t + c - wl = 0 for proper values of a,b,c.
+    *    a t^2 + b t + c - wu = 0
+    *
+    * Because of the way this procedure will be used, one of the two
+    * solutions found we must always use the minimum nonnegative one
+    */
+
+   a = (x1 - x0) * (y1_ - y0_);
+   c = x0 * y0_;
+   b = x0 * y1_ + y0_ * x1 - 2.0 * c;
+
+   tl = 0.0;
+   tu = 0.0;
+
+   if( !SCIPisZero(scip, a) )
+   {
+      if( wl != SCIP_INVALID )
+      {
+         long double tl1;
+         long double tl2;
+         long double denom;
+
+         assert(b * b - 4.0 * a * (c - wl) >= 0.0);
+         denom = sqrt(b * b - 4.0 * a * (c - wl));
+         tl1 = (-b - denom) / (2.0 * a);
+         tl2 = (-b + denom) / (2.0 * a);
+         tl = (tl1 < 0.0) ? tl2 : tl1;
+      }
+
+      if( wu != SCIP_INVALID )
+      {
+         long double tu1;
+         long double tu2;
+         long double denom;
+
+         assert(b * b - 4.0 * a * (c - wu) >= 0.0);
+         denom = sqrt(b * b - 4.0 * a * (c - wu));
+         tu1 = (-b - denom) / (2.0 * a);
+         tu2 = (-b + denom) / (2.0 * a);
+         tu = (tu1 < 0.0) ? tu2 : tu1;
+      }
+   }
+   else if( !SCIPisZero(scip, b) )
+   {
+      if( wl != SCIP_INVALID )
+         tl = (wl - c) / b;
+      if( wu != SCIP_INVALID )
+         tu = (wu - c) / b;
+   }
+   else
+   {
+      /* no or infinitely many solutions */
+      return SCIP_OKAY;
+   }
+
+   if( wl != SCIP_INVALID )
+   {
+      *xl = x0  + tl * (x1  - x0 );
+      *yl = y0_ + tl * (y1_ - y0_);
+
+      if( !SCIPisRelEQ(scip, *xl * *yl, wl) )
+      {
+         SCIPdebugMessage("probable numerical difficulties, give up\n");
+         return TRUE;
+      }
+   }
+
+   if( wu != SCIP_INVALID )
+   {
+      *xu = x0  + tu * (x1 -  x0);
+      *yu = y0_ + tu * (y1_ - y0_);
+
+      if( !SCIPisRelEQ(scip, *xu * *yu, wu) )
+      {
+         SCIPdebugMessage("probable numerical difficulties, give up\n");
+         return TRUE;
+      }
+   }
+
+   return FALSE;
+}
+
+/* generate coefficients for a plane through points (x1, y1_, x1*y1) and (x2, y2, x2*y2)
+ * such that intersecting it with one of them (the first if whichuse is FALSE, the second otherwise)
+ * gives a tangent to the curve x*y = k
+ *
+ * returns TRUE on error and FALSE on success
+ */
+static
+SCIP_Bool generateCutLTIgenMulCoeff(
+   SCIP*                 scip,
+   SCIP_Real             x1,
+   SCIP_Real             y1_,
+   SCIP_Real             x2,
+   SCIP_Real             y2,
+   SCIP_Bool             whichuse,
+   SCIP_Real*            cx,
+   SCIP_Real*            cy,
+   SCIP_Real*            cw
+   )
+{
+   SCIP_Real xd;
+   SCIP_Real yd;
+   SCIP_Real xo;
+   SCIP_Real yo;
+
+   assert(cx != NULL);
+   assert(cy != NULL);
+   assert(cw != NULL);
+
+   /* the x-y slope of this constraint must be tangent to a curve x*y = k at (xD,yD) */
+   if( !whichuse )
+   {
+      xd = x1;
+      xo = x2;
+      yd = y1_;
+      yo = y2;
+   }
+   else
+   {
+      xd = x2;
+      xo = x1;
+      yd = y2;
+      yo = y1_;
+   }
+
+   *cx = yd;
+   *cy = xd;
+
+   /* lift it so that it touches the other curve */
+
+   /* if the two points are on the same curve, then no cut */
+   if( SCIPisZero(scip, xo * yo - xd * yd) )
+      return TRUE;
+
+   /* should ALWAYS be negative */
+   *cw = (2.0 * xd * yd - (*cx * xo + *cy * yo)) / (xo * yo - xd * yd);
+
+   return FALSE;
+}
+
+/** computes coefficients of a lifted-tangent inequality for x*y = w
+ * The code is an adaptation of the methods in exprMul-upperHull.cpp in Couenne/stable/0.4 rev773,
+ * written by P. Belotti and licensed under Eclipse Public License.
+ */
+static
+void generateCutLTIcomputeCoefs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             xl,
+   SCIP_Real             xu,
+   SCIP_Real             x0,
+   SCIP_Real             yl,
+   SCIP_Real             yu,
+   SCIP_Real             y0_,
+   SCIP_Real             wl,
+   SCIP_Real             wu,
+   SCIP_Real             w0,
+   SCIP_Real*            cx,
+   SCIP_Real*            cy,
+   SCIP_Real*            cw,
+   SCIP_Real*            c0,
+   SCIP_Bool*            success
+   )
+{
+   SCIP_Bool flipx;
+   SCIP_Bool flipy;
+   SCIP_Bool flipw;
+   SCIP_Real tmp;
+   SCIP_Real xlow;
+   SCIP_Real ylow;
+   SCIP_Real xupp;
+   SCIP_Real yupp;
+   SCIP_Real c0x;
+   SCIP_Real c0y;
+   SCIP_Real c0w;
+
+   assert(scip != NULL);
+   assert(cx != NULL);
+   assert(cy != NULL);
+   assert(cw != NULL);
+   assert(c0 != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+   *cx = 0.0;
+   *cy = 0.0;
+   *cw = 0.0;
+   *c0 = 0.0;
+
+   SCIPdebugMessage("entering points:\n");
+   SCIPdebugMessage("x: %9g\t[%9g\t%9g]\n", x0, xl, xu);
+   SCIPdebugMessage("y: %9g\t[%9g\t%9g]\n", y0_, yl, yu);
+   SCIPdebugMessage("w: %9g\t[%9g\t%9g]\n", w0, wl, wu);
+
+   /* generateCutLTI should have recognized these */
+   assert(wl >= 0.0 || wu <= 0.0);
+   assert(!SCIPisInfinity(scip, -wl));
+   assert(!SCIPisInfinity(scip,  wu));
+
+   assert(SCIPisFeasGE(scip, x0, xl));
+   assert(SCIPisFeasLE(scip, x0, xu));
+   assert(SCIPisFeasGE(scip, y0_, yl));
+   assert(SCIPisFeasLE(scip, y0_, yu));
+
+   /* preliminary bound tightening */
+   if( wl >= 0.0 )
+   {
+      if( xl >= 0.0 || yl >= 0.0 || SCIPisLT(scip, xl * yl, wl) )
+      {
+         xl = MAX(xl, 0.0);
+         yl = MAX(yl, 0.0);
+      }
+      else if( xu <= 0.0 || yu <= 0.0 || SCIPisLT(scip, xu * yu, wl) )
+      {
+         xu = MIN(xu, 0.0);
+         yu = MIN(yu, 0.0);
+      }
+      else
+      {
+         /* both variables have mixed sign (xl < 0 && xu > 0 && yl < 0 && yu > 0) and both xl*yl and xu*yu are feasible
+          * cannot generate cut for this
+          */
+         return;
+      }
+   }
+   else
+   {
+      if( xl >= 0.0 || yu <= 0.0 || SCIPisGT(scip, xl * yu, wu) )
+      {
+         xl = MAX(xl, 0.0);
+         yu = MIN(yu, 0.0);
+      }
+      else if( xu <= 0.0 || yl >= 0.0 || SCIPisGT(scip, xu * yl, wu))
+      {
+         xu = MIN(xu, 0.0);
+         yl = MAX(yl, 0.0);
+      }
+      else
+      {
+         /* both variables have mixed sign (xl < 0 && xu > 0 && yl < 0 && yu > 0) and both xl*yu and xu*yl are feasible
+          * cannot generate cut for this
+          */
+         return;
+      }
+   }
+
+   /* if x or y is fixed now or even infeasible, then do not think about a cut */
+   if( SCIPisGE(scip, xl, xu) || SCIPisGE(scip, yl, yu) )
+      return;
+
+   /* reduce to positive orthant by flipping variables */
+   if( xl < 0.0 )
+   {
+      flipx = TRUE;
+      tmp = xu;
+      xu = -xl;
+      xl = -tmp;
+      x0 = -x0;
+   }
+   else
+      flipx = FALSE;
+
+   if( yl < 0.0 )
+   {
+      flipy = TRUE;
+      tmp = yu;
+      yu = -yl;
+      yl = -tmp;
+      y0_ = -y0_;
+   }
+   else
+      flipy = FALSE;
+
+   if( flipx ^ flipy )
+   {
+      flipw = TRUE;
+      tmp = wu;
+      wu = -wl;
+      wl = -tmp;
+      w0 = -w0;
+   }
+   else
+      flipw = FALSE;
+
+   /* project refpoint into box not only for numerical reasons, but also due to preliminary bound tightening above */
+   x0 = MIN(xu, MAX(x0, xl));
+   y0_ = MIN(yu, MAX(y0_, yl));
+   w0 = MIN(wu, MAX(w0, wl));
+
+   SCIPdebugMessage("reduced points:\n");
+   SCIPdebugMessage("x: %9g\t[%9g\t%9g]\n", x0, xl, xu);
+   SCIPdebugMessage("y: %9g\t[%9g\t%9g]\n", y0_, yl, yu);
+   SCIPdebugMessage("w: %9g\t[%9g\t%9g]\n", w0, wl, wu);
+
+   if( SCIPisGE(scip, xl * yl, wl) && SCIPisLE(scip, xu * yu, wu) )
+   {
+      SCIPdebugMessage("box for x and y inside feasible region -> nothing to separate\n");
+      return;
+   }
+   if( SCIPisGE(scip, x0 * y0_, w0) )
+   {
+      SCIPdebugMessage("point to separate not below curve -> cannot separate\n");
+      return;
+   }
+
+   /* find intersections of halfline from origin
+    * return if no proper point could be found
+    */
+   if( generateCutLTIfindIntersection(scip, 0.0, 0.0, x0, y0_, wl, wu, &xlow, &ylow, &xupp, &yupp) )
+      return;
+
+   SCIPdebugMessage("intersections:\n");
+   SCIPdebugMessage("lower: %9g\t%9g\tprod %9g\n", xlow, ylow, xlow*ylow);
+   SCIPdebugMessage("upper: %9g\t%9g\tprod %9g\n", xupp, yupp, xupp*yupp);
+
+   /* Case 1: If both are outside of bounding box, either NW or SE, then McCormick is sufficient, so return */
+   if( (xlow <= xl && yupp >= yu) || (ylow <= yl && xupp >= xu) )
+      return;
+
+   /* There will be at least one cut. Define coefficients and rhs ---will have to change them back if (flipX || flipY) */
+   if( xlow >= xl && xupp <= xu && ylow >= yl && yupp <= yu )
+   {
+      /* Case 2: both are inside. Easy lifting... */
+      if( generateCutLTIgenMulCoeff(scip, xlow, ylow, xupp, yupp, FALSE, cx, cy, cw) )
+         return;
+
+      c0x = *cx * xlow;
+      c0y = *cy * ylow;
+      c0w = *cw * wl;
+   }
+   else if( xlow >= xl && ylow >= yl && (xupp > xu || yupp > yu) )
+   {
+      /* Case 3a and 3b: through lower curve, but not upper. */
+      if( yupp > yu )
+      {
+         /* upper intersect is North; place it within box */
+         assert(!SCIPisInfinity(scip, yu));
+         yupp = yu;
+         xupp = wu / yu;
+      }
+      else
+      {
+         /* upper intersect is East; place it within box */
+         assert(!SCIPisInfinity(scip, xu));
+         xupp = xu;
+         yupp = wu / xu;
+      }
+
+      /* find intersection on low curve on half line through new point and (x0,y0_) */
+      if( generateCutLTIfindIntersection(scip, xupp, yupp, x0, y0_, wl, SCIP_INVALID, &xlow, &ylow, NULL, NULL) )
+         return;
+
+      /* check whether McCormick is sufficient */
+      if( xlow < xl || ylow < yl )
+         return;
+
+      /* lift inequality on lower point */
+      if( generateCutLTIgenMulCoeff(scip, xlow, ylow, xupp, yupp, FALSE, cx, cy, cw) )
+         return;
+
+      c0x = *cx * xlow;
+      c0y = *cy * ylow;
+      c0w = *cw * wl;
+   }
+   else if( xupp <= xu && yupp <= yu && (xlow < xl || ylow < yl) )
+   {
+      /* Case 4a and 4b: viceversa (lift for validity) */
+      if( ylow < yl )
+      {
+         /* upper intersect is South; place it within box */
+         assert(!SCIPisZero(scip, yl));
+         ylow = yl;
+         xlow = wl / yl;
+      }
+      else
+      {
+         /* upper intersect is West; place it within box */
+         assert(!SCIPisZero(scip, xl));
+         xlow = xl;
+         ylow = wl / xl;
+      }
+
+      /* find intersection on low curve on half line through new point and (x0,y0) */
+      if( generateCutLTIfindIntersection(scip, xlow, ylow, x0, y0_, SCIP_INVALID, wu, NULL, NULL, &xupp, &yupp) )
+         return;
+
+      /* check whether McCormick is sufficient */
+      if( xupp > xu || yupp > yu )
+         return;
+
+      /* lift inequality on UPPER point */
+      if( generateCutLTIgenMulCoeff(scip, xlow, ylow, xupp, yupp, TRUE, cx, cy, cw) )
+         return;
+
+      c0x = *cx * xupp;
+      c0y = *cy * yupp;
+      c0w = *cw * wu;
+   }
+   else if( (xlow < xl && xupp > xu) || (ylow < yl && yupp > yu) )
+   {
+      /* Case 5: both outside of bounding box, N and S or W and E. */
+#if 0
+      SCIP_Real xlow2;
+      SCIP_Real ylow2;
+      SCIP_Real xupp2;
+      SCIP_Real yupp2;
+#endif
+
+      if( ylow < yl )
+      {
+         /* upper intersect is South; place it within box */
+         assert(!SCIPisZero(scip, yl));
+         assert(!SCIPisZero(scip, yu));
+         ylow = yl;
+         yupp = yu;
+         xlow = wl / yl;
+         xupp = wu / yu;
+      }
+      else
+      {
+         /* upper intersect is West; place it within box */
+         assert(!SCIPisZero(scip, xl));
+         assert(!SCIPisZero(scip, xu));
+         xlow = xl;
+         xupp = xu;
+         ylow = wl / xl;
+         yupp = wu / xu;
+      }
+
+      SCIPdebugMessage("New intersections:\n");
+      SCIPdebugMessage("lower: %9g\t%9g\tprod %9g\n", xlow, ylow, xlow*ylow);
+      SCIPdebugMessage("upper: %9g\t%9g\tprod %9g\n", xupp, yupp, xupp*yupp);
+
+#if 1
+      /* Nothing to find. Just separate two inequalities at the same point, just using different support */
+      if( generateCutLTIgenMulCoeff(scip, xlow, ylow, xupp, yupp, FALSE, cx, cy, cw) )
+      {
+         if( generateCutLTIgenMulCoeff(scip, xlow, ylow, xupp, yupp, TRUE, cx, cy, cw) )
+            return;
+
+         c0x = *cx * xupp;
+         c0y = *cy * yupp;
+         c0w = *cw * wu;
+      }
+      else
+      {
+         c0x = *cx * xlow;
+         c0y = *cy * ylow;
+         c0w = *cw * wl;
+      }
+
+#else
+      /* find the intersection on the lower (upper) curve on the line through xLP and the upper (lower) point
+       * this does not seem to work (cuts off solution at nous2)
+       */
+      if( generateCutLTIfindIntersection(scip, xlow, ylow, x0, y0_, SCIP_INVALID, wu, NULL, NULL, &xupp2, &yupp2) ||
+         generateCutLTIgenMulCoeff(scip, xlow, ylow, xupp2, yupp2, FALSE, cx, cx, cw) )
+      {
+         if( generateCutLTIfindIntersection(scip, xupp, yupp, x0, y0_, wl, SCIP_INVALID, &xlow2, &ylow2, NULL, NULL) ||
+            generateCutLTIgenMulCoeff(scip, xlow2, ylow2, xupp, yupp, TRUE, cx, cy, cw) )
+            return;
+
+         c0x = *cx * xupp;
+         c0y = *cy * yupp;
+         c0w = *cw * wu;
+      }
+      else
+      {
+         c0x = *cx * xlow;
+         c0y = *cy * ylow;
+         c0w = *cw * wl;
+      }
+#endif
+   }
+   else
+   {
+      SCIPdebugMessage("points are in a weird position:\n");
+      SCIPdebugMessage("lower: %9g\t%9g\tprod %9g\n", xlow, ylow, xlow*ylow);
+      SCIPdebugMessage("upper: %9g\t%9g\tprod %9g\n", xupp, yupp, xupp*yupp);
+
+      return;
+   }
+
+   SCIPdebugMessage("cut w.r.t. reduced points: %gx-%g %+gy-%g %+gw-%g >= 0\n",
+       *cx, c0x, *cy, c0y, *cw, c0w);
+
+   /* re-transform back into original variables */
+   if( flipx )
+      *cx = -*cx;
+   if( flipy )
+      *cy = -*cy;
+   if( flipw )
+      *cw = -*cw;
+
+   *c0 = c0x + c0y + c0w;
+
+   *success = TRUE;
+}
+
+/** tries to generate a cut if constraint quadratic function is factorable and there are linear variables
+ * computes what is called a lifted tangent inequality described in
+ *   Belotti, Miller, Namazifar, Lifted inequalities for bounded products of variables, SIAG/OPT Views-and-News 22:1, 2011
+ */
+static
+SCIP_RETCODE generateCutLTI(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SIDETYPE         violside,           /**< for which side a cut should be generated */
+   SCIP_Real*            ref,                /**< reference solution where to generate the cut */
+   SCIP_SOL*             sol,                /**< solution that shall be cutoff, NULL for LP solution */
+   SCIP_Real**           cutcoeflin,         /**< buffer to store pointer to array with coefficients for linear variables */
+   SCIP_Real*            cutcoefquad,        /**< array to store cut coefficients for quadratic variables */
+   SCIP_Real*            cutlhs,             /**< buffer to store cut lhs */
+   SCIP_Real*            cutrhs,             /**< buffer to store cut rhs */
+   SCIP_Bool*            islocal,            /**< buffer to set to TRUE if local information was used */
+   SCIP_Bool*            success,            /**< buffer to indicate whether a cut was successfully computed */
+   char*                 name                /**< buffer to store name of cut */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Real leftminactivity;
+   SCIP_Real leftmaxactivity;
+   SCIP_Real leftrefactivity;
+   SCIP_Real rightminactivity;
+   SCIP_Real rightmaxactivity;
+   SCIP_Real rightrefactivity;
+   SCIP_Real rhsminactivity;
+   SCIP_Real rhsmaxactivity;
+   SCIP_Real rhsrefactivity;
+   SCIP_Real coefleft;
+   SCIP_Real coefright;
+   SCIP_Real coefrhs;
+   int i;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(ref  != NULL);
+   assert(cutcoeflin != NULL);
+   assert(cutcoefquad != NULL);
+   assert(cutlhs  != NULL);
+   assert(cutrhs  != NULL);
+   assert(islocal != NULL);
+   assert(success != NULL);
+   assert(name != NULL);
+   /* currently only separate LP solution or solutions given as SCIP_SOL, i.e., no cutgeneration during initlp */
+   assert(sol != NULL || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->nlinvars > 0);
+   assert(consdata->factorleft != NULL);
+   assert(consdata->factorright != NULL);
+
+   *success = FALSE;
+   *cutlhs = -SCIPinfinity(scip); /* for compiler */
+
+   /* write violated constraints as factorleft * factorright '==' rhs
+    * where rhs are constraint sides - activity bound of linear part
+    */
+   rhsminactivity = consdata->lhs;
+   rhsmaxactivity = consdata->rhs;
+   rhsrefactivity = (violside == SCIP_SIDETYPE_LEFT ? consdata->lhs : consdata->rhs);
+
+   for( i = 0; i < consdata->nlinvars; ++i )
+   {
+      if( !SCIPisInfinity(scip, -rhsminactivity) )
+      {
+         if( consdata->lincoefs[i] < 0.0 )
+         {
+            if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->linvars[i])) )
+               rhsminactivity = -SCIPinfinity(scip);
+            else
+               rhsminactivity -= consdata->lincoefs[i] * SCIPvarGetLbLocal(consdata->linvars[i]);
+         }
+         else
+         {
+            assert(consdata->lincoefs[i] > 0.0);
+            if( SCIPisInfinity(scip, SCIPvarGetUbLocal(consdata->linvars[i])) )
+               rhsminactivity = -SCIPinfinity(scip);
+            else
+               rhsminactivity -= consdata->lincoefs[i] * SCIPvarGetUbLocal(consdata->linvars[i]);
+         }
+      }
+      if( !SCIPisInfinity(scip, rhsmaxactivity) )
+      {
+         if( consdata->lincoefs[i] < 0.0 )
+         {
+            if( SCIPisInfinity(scip, SCIPvarGetUbLocal(consdata->linvars[i])) )
+               rhsmaxactivity = SCIPinfinity(scip);
+            else
+               rhsmaxactivity -= consdata->lincoefs[i] * SCIPvarGetUbLocal(consdata->linvars[i]);
+         }
+         else
+         {
+            assert(consdata->lincoefs[i] > 0.0);
+            if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->linvars[i])) )
+               rhsmaxactivity = SCIPinfinity(scip);
+            else
+               rhsmaxactivity -= consdata->lincoefs[i] * SCIPvarGetLbLocal(consdata->linvars[i]);
+         }
+      }
+      rhsrefactivity -= consdata->lincoefs[i] * SCIPgetSolVal(scip, sol, consdata->linvars[i]);
+   }
+
+   if( SCIPisInfinity(scip, -rhsminactivity) || SCIPisInfinity(scip, rhsmaxactivity) )
+   {
+      /* if right hand side is unbounded, then cannot do LTI */
+      return SCIP_OKAY;
+   }
+
+   if( !SCIPisFeasPositive(scip, rhsminactivity) && !SCIPisFeasNegative(scip, rhsmaxactivity) )
+   {
+      /* if right hand side has 0 inside activity, then cannot do anything
+       * if it has 0.0 as min or max activity, then a usual McCormick should be sufficient, too
+       */
+      return SCIP_OKAY;
+   }
+
+   leftminactivity = consdata->factorleft[consdata->nquadvars];
+   leftmaxactivity = consdata->factorleft[consdata->nquadvars];
+   leftrefactivity = consdata->factorleft[consdata->nquadvars];
+   rightminactivity = consdata->factorright[consdata->nquadvars];
+   rightmaxactivity = consdata->factorright[consdata->nquadvars];
+   rightrefactivity = consdata->factorright[consdata->nquadvars];
+   for( i = 0; i < consdata->nquadvars; ++i )
+   {
+      if( !SCIPisInfinity(scip, -leftminactivity) )
+      {
+         if( consdata->factorleft[i] > 0.0 )
+         {
+            if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->quadvarterms[i].var)) )
+               leftminactivity = -SCIPinfinity(scip);
+            else
+               leftminactivity += consdata->factorleft[i] * SCIPvarGetLbLocal(consdata->quadvarterms[i].var);
+         }
+         else if( consdata->factorleft[i] < 0.0 )
+         {
+            if( SCIPisInfinity(scip, SCIPvarGetUbLocal(consdata->quadvarterms[i].var)) )
+               leftminactivity = -SCIPinfinity(scip);
+            else
+               leftminactivity += consdata->factorleft[i] * SCIPvarGetUbLocal(consdata->quadvarterms[i].var);
+         }
+      }
+      if( !SCIPisInfinity(scip, leftmaxactivity) )
+      {
+         if( consdata->factorleft[i] > 0.0 )
+         {
+            if( SCIPisInfinity(scip, SCIPvarGetUbLocal(consdata->quadvarterms[i].var)) )
+               leftmaxactivity = SCIPinfinity(scip);
+            else
+               leftmaxactivity += consdata->factorleft[i] * SCIPvarGetUbLocal(consdata->quadvarterms[i].var);
+         }
+         else if( consdata->factorleft[i] < 0.0 )
+         {
+            if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->quadvarterms[i].var)) )
+               leftmaxactivity = SCIPinfinity(scip);
+            else
+               leftmaxactivity += consdata->factorleft[i] * SCIPvarGetLbLocal(consdata->quadvarterms[i].var);
+         }
+      }
+      leftrefactivity += consdata->factorleft[i] * ref[i];
+
+      if( !SCIPisInfinity(scip, -rightminactivity) )
+      {
+         if( consdata->factorright[i] > 0.0 )
+         {
+            if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->quadvarterms[i].var)) )
+               rightminactivity = -SCIPinfinity(scip);
+            else
+               rightminactivity += consdata->factorright[i] * SCIPvarGetLbLocal(consdata->quadvarterms[i].var);
+         }
+         else if( consdata->factorright[i] < 0.0 )
+         {
+            if( SCIPisInfinity(scip, SCIPvarGetUbLocal(consdata->quadvarterms[i].var)) )
+               rightminactivity = -SCIPinfinity(scip);
+            else
+               rightminactivity += consdata->factorright[i] * SCIPvarGetUbLocal(consdata->quadvarterms[i].var);
+         }
+      }
+      if( !SCIPisInfinity(scip, rightmaxactivity) )
+      {
+         if( consdata->factorright[i] > 0.0 )
+         {
+            if( SCIPisInfinity(scip, SCIPvarGetUbLocal(consdata->quadvarterms[i].var)) )
+               rightmaxactivity = SCIPinfinity(scip);
+            else
+               rightmaxactivity += consdata->factorright[i] * SCIPvarGetUbLocal(consdata->quadvarterms[i].var);
+         }
+         else if( consdata->factorright[i] < 0.0 )
+         {
+            if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->quadvarterms[i].var)) )
+               rightmaxactivity = SCIPinfinity(scip);
+            else
+               rightmaxactivity += consdata->factorright[i] * SCIPvarGetLbLocal(consdata->quadvarterms[i].var);
+         }
+      }
+      rightrefactivity += consdata->factorright[i] * ref[i];
+   }
+
+   /* success can only be expected for separation of violated x*y <= w, assuming x>=0, y>=0
+    * @todo we should check this early? */
+
+   /* call Couenne magic */
+   generateCutLTIcomputeCoefs(scip,
+      leftminactivity, leftmaxactivity, leftrefactivity,
+      rightminactivity, rightmaxactivity, rightrefactivity,
+      rhsminactivity, rhsmaxactivity, rhsrefactivity,
+      &coefleft, &coefright, &coefrhs, cutlhs,
+      success);
+
+   if( !*success )
+      return SCIP_OKAY;
+
+   SCIPdebugMessage("LTI for x[%g,%g] * y[%g,%g] = w[%g,%g]: %gx %+gy %+gw >= %g;  feas: %g\n",
+      leftminactivity, leftmaxactivity, rightminactivity, rightmaxactivity, rhsminactivity, rhsmaxactivity,
+      coefleft, coefright, coefrhs, *cutlhs,
+      coefleft * leftrefactivity + coefright * rightrefactivity + coefrhs * rhsrefactivity - *cutlhs
+      );
+
+   if( coefleft * leftrefactivity + coefright * rightrefactivity + coefrhs * rhsrefactivity >= *cutlhs )
+   {
+      SCIPdebugMessage("does not cutoff point? :-(\n");
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   /* setup cut coefs for
+    *   coefleft * leftfactor + coefright * rightfactor + coefrhs * w >= cutlhs, where conslhs - lincoefs <= w <= consrhs - lincoefs
+    */
+   for( i = 0; i < consdata->nquadvars; ++i )
+      cutcoefquad[i] = coefleft * consdata->factorleft[i] + coefright * consdata->factorright[i];
+   assert(i == consdata->nquadvars);
+   *cutlhs -= coefleft * consdata->factorleft[i] + coefright * consdata->factorright[i];
+
+   SCIP_CALL( SCIPallocBufferArray(scip, cutcoeflin, consdata->nlinvars) );
+   for( i = 0; i < consdata->nlinvars; ++i )
+      (*cutcoeflin)[i] = -coefrhs * consdata->lincoefs[i];
+   if( coefrhs > 0.0 )
+   {
+      /* use coefrhs * w <= coefrhs * (consrhs - lincoefs) */
+      assert(!SCIPisInfinity(scip, consdata->rhs));
+      *cutlhs -= coefrhs * consdata->rhs;
+   }
+   else
+   {
+      /* use coefrhs * w <= coeflhs * (conslhs - lincoefs) */
+      assert(!SCIPisInfinity(scip, -consdata->lhs));
+      *cutlhs -= coefrhs * consdata->lhs;
+   }
+
+   *cutrhs = SCIPinfinity(scip);
+   *islocal = TRUE;
+
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_lti_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
+
+#if 0
+   if( !SCIPisFeasPositive(scip, leftminactivity) && !SCIPisFeasNegative(scip, leftmaxactivity) )
+   {
+      /* left factor has 0 within activity bounds, or is very close, at least */
+      if( !SCIPisFeasPositive(scip, rightminactivity) && !SCIPisFeasNegative(scip, rightmaxactivity) )
+      {
+         /* right factor also has 0 within activity bounds, or is very close, at least
+          * -> cannot separate
+          */
+         return SCIP_OKAY;
+      }
+
+      /* write violated constraint as multleft * factorleft * multright * (multright * factorright) <= rhs
+       *   such that multright * factorright > 0.0
+       */
+      if( rightminactivity < 0.0 )
+         multright = -1.0;
+      else
+         multright =  1.0;
+
+      /* generate cut for multleft * factorleft * multright <= rhs / (factorright * multright) */
+      generateCutFactorableDo(scip, cons, ref, multleft, consdata->factorleft, multright, consdata->factorright, rightminactivity, rightmaxactivity, rhs, cutcoef, cutrhs, islocal, success, name);
+   }
+   else if( !SCIPisFeasPositive(scip, rightminactivity) && !SCIPisFeasNegative(scip, rightmaxactivity) )
+   {
+      /* left factor is bounded away from 0
+       * right factor has 0 within activity bounds, or is very close, at least
+       * -> so divide by left factor
+       */
+
+      /* write violated constraint as multleft * factorright * multright * (multright * factorleft) <= rhs
+       *   such that multright * factorleft > 0.0
+       */
+      if( leftminactivity < 0.0 )
+         multright = -1.0;
+      else
+         multright =  1.0;
+
+      /* generate cut for multleft * factorright * multright <= rhs / (factorleft * multright) */
+      generateCutFactorableDo(scip, cons, ref, multleft, consdata->factorright, multright, consdata->factorleft, leftminactivity, leftmaxactivity, rhs, cutcoef, cutrhs, islocal, success, name);
+   }
+   else if( SCIPisInfinity(scip, -leftminactivity) || SCIPisInfinity(scip, leftmaxactivity) ||
+           (!SCIPisInfinity(scip, -rightminactivity) && !SCIPisInfinity(scip, rightmaxactivity) && rightmaxactivity - rightminactivity < leftmaxactivity - leftminactivity) )
+   {
+      /* both factors are bounded away from 0, but the right one has a smaller activity range, so divide by that one */
+
+      /* write violated constraint as multleft * factorleft * multright * (multright * factorright) <= rhs
+       *   such that multright * factorright > 0.0
+       */
+      if( rightminactivity < 0.0 )
+         multright = -1.0;
+      else
+         multright =  1.0;
+
+      /* generate cut for multleft * factorleft * multright <= rhs / (factorright * multright) */
+      generateCutFactorableDo(scip, cons, ref, multleft, consdata->factorleft, multright, consdata->factorright, rightminactivity, rightmaxactivity, rhs, cutcoef, cutrhs, islocal, success, name);
+   }
+   else
+   {
+      /* both factors are bounded away from 0, but the left one has a smaller activity range, so divide by that one */
+
+      /* write violated constraint as multleft * factorright * multright * (multright * factorleft) <= rhs
+       *   such that multright * factorleft > 0.0
+       */
+      if( leftminactivity < 0.0 )
+         multright = -1.0;
+      else
+         multright =  1.0;
+
+      /* generate cut for multleft * factorright * multright <= rhs / (factorleft * multright) */
+      generateCutFactorableDo(scip, cons, ref, multleft, consdata->factorright, multright, consdata->factorleft, leftminactivity, leftmaxactivity, rhs, cutcoef, cutrhs, islocal, success, name);
+   }
+#endif
+
    *success = TRUE;
 
    return SCIP_OKAY;
@@ -5351,10 +6223,10 @@ void addBilinMcCormick(
    if( bilincoef == 0.0 )
       return;
 
-   if( SCIPisEQ(scip, lbx, ubx) )
+   if( SCIPisRelEQ(scip, lbx, ubx) )
    {
       /* x is fixed, so bilinear term is at most linear */
-      if( SCIPisEQ(scip, lby, uby) )
+      if( SCIPisRelEQ(scip, lby, uby) )
       {
          /* also y is fixed, so bilinear term is constant */
          coefx    = 0.0;
@@ -5368,7 +6240,7 @@ void addBilinMcCormick(
          constant = 0.0;
       }
    }
-   else if( SCIPisEQ(scip, lby, uby) )
+   else if( SCIPisRelEQ(scip, lby, uby) )
    {
       /* y is fixed, so bilinear term is linear */
       coefx    = bilincoef * refpointy;
@@ -5703,7 +6575,15 @@ SCIP_RETCODE generateCut(
    /* if constraint function is factorable, then try to use factorable form to generate cut */
    if( consdata->factorleft != NULL )
    {
-      SCIP_CALL( generateCutFactorable(scip, cons, violside, ref, coef, &lhs, &rhs, &islocal, &success, cutname) );
+      if( consdata->nlinvars == 0 )
+      {
+         SCIP_CALL( generateCutFactorable(scip, cons, violside, ref, coef, &lhs, &rhs, &islocal, &success, cutname) );
+      }
+      else if( sol != NULL || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
+      {
+         /* generateCutLTI needs reference values also for the linear variables, which we only have if sol is given or LP has been solved */
+         SCIP_CALL( generateCutLTI(scip, cons, violside, ref, sol, &lincoefs, coef, &lhs, &rhs, &islocal, &success, cutname) );
+      }
    }
 
    /* if constraint is not factorable or failed to generate cut, try default method */
@@ -5781,7 +6661,7 @@ SCIP_RETCODE generateCut(
 
                if( !SCIPisInfinity(scip, REALABS(xbnd)) )
                {
-                  SCIPdebugMessage("var <%s> [%g,%g] has tiny gradient %g, replace coefficient by constant %g\n",
+                  SCIPdebugMessage("var <%s> [%g,%g] has tiny coef %g, replace coefficient by constant %g\n",
                      SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), coef[j], coef[j] * xbnd);
                   constant += coef[j] * xbnd;
                   coef[j] = 0.0;
@@ -5833,9 +6713,10 @@ SCIP_RETCODE generateCut(
             {
                var = consdata->quadvarterms[mincoefidx].var;
                /* try to eliminate coefficient with minimal absolute value by weakening cut and try again
-                * since we use local bounds, we need to make the row local if they are different from their global counterpart */
-               if( ((coef[mincoefidx] > 0.0 && violside == SCIP_SIDETYPE_RIGHT) ||
-                    (coef[mincoefidx] < 0.0 && violside == SCIP_SIDETYPE_LEFT )) &&
+                * since we use local bounds, we need to make the row local if they are different from their global counterpart
+                */
+               if( ((coef[mincoefidx] > 0.0 && !SCIPisInfinity(scip,  rhs)) ||
+                    (coef[mincoefidx] < 0.0 && !SCIPisInfinity(scip, -lhs))) &&
                    !SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
                {
                   SCIPdebugMessage("eliminate coefficient %g for <%s> [%g, %g]\n", coef[mincoefidx], SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
@@ -5844,8 +6725,8 @@ SCIP_RETCODE generateCut(
                   islocal |= SCIPisGT(scip, SCIPvarGetLbLocal(var), SCIPvarGetLbGlobal(var));
                   continue;
                }
-               else if( ((coef[mincoefidx] < 0.0 && violside == SCIP_SIDETYPE_RIGHT) ||
-                         (coef[mincoefidx] > 0.0 && violside == SCIP_SIDETYPE_LEFT )) &&
+               else if( ((coef[mincoefidx] < 0.0 && !SCIPisInfinity(scip,  rhs)) ||
+                         (coef[mincoefidx] > 0.0 && !SCIPisInfinity(scip, -lhs))) &&
                         !SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
                {
                   SCIPdebugMessage("eliminate coefficient %g for <%s> [%g, %g]\n", coef[mincoefidx], SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
@@ -6382,7 +7263,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
          {
             xlb = SCIPvarGetLbLocal(x);
             xub = SCIPvarGetUbLocal(x);
-            if( SCIPisEQ(scip, xlb, xub) )
+            if( SCIPisRelEQ(scip, xlb, xub) )
             {
                SCIPdebugMessage("ignore fixed variable <%s>[%g, %g], diff %g\n", SCIPvarGetName(x), xlb, xub, xub-xlb);
                continue;
@@ -6411,13 +7292,13 @@ SCIP_RETCODE registerVariableInfeasibilities(
          x = consdata->bilinterms[j].var1;
          xlb = SCIPvarGetLbLocal(x);
          xub = SCIPvarGetUbLocal(x);
-         if( SCIPisEQ(scip, xlb, xub) )
+         if( SCIPisRelEQ(scip, xlb, xub) )
             continue;
 
          y = consdata->bilinterms[j].var2;
          ylb = SCIPvarGetLbLocal(y);
          yub = SCIPvarGetUbLocal(y);
-         if( SCIPisEQ(scip, ylb, yub) )
+         if( SCIPisRelEQ(scip, ylb, yub) )
             continue;
 
          xunbounded = SCIPisInfinity(scip, -xlb) || SCIPisInfinity(scip, xub);
@@ -6561,7 +7442,7 @@ SCIP_RETCODE registerLargeLPValueVariableForBranching(
       for( i = 0; i < consdata->nquadvars; ++i )
       {
          /* do not propose fixed variables */
-         if( SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->quadvarterms[i].var), SCIPvarGetUbLocal(consdata->quadvarterms[i].var)) )
+         if( SCIPisRelEQ(scip, SCIPvarGetLbLocal(consdata->quadvarterms[i].var), SCIPvarGetUbLocal(consdata->quadvarterms[i].var)) )
             continue;
          val = SCIPgetSolVal(scip, NULL, consdata->quadvarterms[i].var);
          if( ABS(val) > brvarval )
@@ -8818,7 +9699,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsQuadratic)
       for( i = 0; i < consdata->nlinvars; ++i )
       {
          var = consdata->linvars[i];
-         if( !SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+         if( !SCIPisRelEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
          {
             SCIP_CALL( SCIPaddExternBranchCand(scip, var, MAX(consdata->lhsviol, consdata->rhsviol), SCIP_INVALID) );
          }
@@ -8827,7 +9708,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsQuadratic)
       for( i = 0; i < consdata->nquadvars; ++i )
       {
          var = consdata->quadvarterms[i].var;
-         if( !SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+         if( !SCIPisRelEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
          {
             SCIP_CALL( SCIPaddExternBranchCand(scip, var, MAX(consdata->lhsviol, consdata->rhsviol), SCIP_INVALID) );
          }
