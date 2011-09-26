@@ -164,6 +164,7 @@ BEGIN {
    gapreached = 0;
    sollimitreached = 0;
    memlimitreached = 0;
+   nodelimitreached = 0;
    starttime = 0.0;
    endtime = 0.0;
    timelimit = 0.0;
@@ -338,6 +339,7 @@ BEGIN {
 /gap limit reached/ { gapreached = 1; }
 /solution limit reached/ { sollimitreached = 1; }
 /memory limit reached/ { memlimitreached = 1; }
+/node limit reached/ { nodelimitreached = 1; }
 /problem is solved/ { timeout = 0; }
 /^  First Solution   :/ {
    timetofirst = $11;
@@ -547,8 +549,9 @@ BEGIN {
          aborted = 0;
          tottime = endtime - starttime;
       }
-      else if( gapreached || sollimitreached )
+      else if( gapreached || sollimitreached || memlimitreached || nodelimitreached )
          timeout = 0;
+
       if( aborted && tottime == 0.0 )
          tottime = timelimit;
       if( timelimit > 0.0 )
@@ -613,13 +616,19 @@ BEGIN {
             fail++;
          }
          else {
-            if( timeout || gapreached || sollimitreached ) {
+            if( timeout || gapreached || sollimitreached || memlimitreached || nodelimitreached ) 
+	    {
                if( timeout )
                   status = "timeout";
                else if( gapreached )
                   status = "gaplimit";
                else if( sollimitreached )
                   status = "sollimit";
+               else if( memlimitreached )
+                  status = "memlimit";
+               else if( nodelimitreached )
+                  status = "nodelimit";
+
                timeouttime += tottime;
                timeouts++;
             }
@@ -647,7 +656,7 @@ BEGIN {
             fail++;
          }
          else {
-            if( timeout || gapreached || sollimitreached ) {
+            if( timeout || gapreached || sollimitreached || memlimitreached || nodelimitreached ) {
                if( (objsense == 1 && sol[prob]-pb > reltol) || (objsense == -1 && pb-sol[prob] > reltol) ) {
                   status = "better";
                   timeouttime += tottime;
@@ -660,6 +669,10 @@ BEGIN {
                      status = "gaplimit";
                   else if( sollimitreached )
                      status = "sollimit";
+                  else if( memlimitreached )
+                     status = "memlimit";
+                  else if( nodelimitreached )
+                     status = "nodelimit";
                   timeouttime += tottime;
                   timeouts++;
                }
@@ -695,13 +708,17 @@ BEGIN {
                timeouts++;
             }
             else {
-               if( timeout || gapreached || sollimitreached ) {
+               if( timeout || gapreached || sollimitreached || memlimitreached || nodelimitreached ) {
                   if( timeout )
                      status = "timeout";
                   else if( gapreached )
                      status = "gaplimit";
                   else if( sollimitreached )
                      status = "sollimit";
+                  else if( memlimitreached )
+                     status = "memlimit";
+                  else if( nodelimitreached )
+                     status = "nodelimit";
                   timeouttime += tottime;
                   timeouts++;
                }
@@ -760,6 +777,10 @@ BEGIN {
                   status = "gaplimit";
                else if( sollimitreached )
                   status = "sollimit";
+	       else if( memlimitreached )
+		  status = "memlimit";
+	       else if( nodelimitreached )
+		  status = "nodelimit";
                timeouttime += tottime;
                timeouts++;
             }
