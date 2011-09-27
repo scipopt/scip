@@ -469,9 +469,9 @@
  *
  * First of all, we need a SCIP binary and an example problem file to work with.  Therefore, you can either download the
  * SCIP standard distribution (which includes problem files) and compile it on your own or you can download a
- * precompiled binary and an example problem separately.
+ * precompiled binary and an example problem separately. SCIP can read files in LP, MPS, ZPL, WBO, FZN, PIP, and other formats.
  *
- * If you want to download the SCIP standard distribution, we recommend to go to the <a
+ * If you want to download the source code of the SCIP standard distribution, we recommend to go to the <a
  * href="http://zibopt.zib.de/download.shtml">ZIBopt download section</a>, download the latest release (version 2.0.1 as
  * of this writing), inflate the tarball (e.g., with "tar xzf ziboptsuite-[version].tgz"), and follow the instructions
  * in the INSTALL file. The instance stein27, which will serve as an example in this tutorial, can be found under
@@ -562,18 +562,20 @@
  *
  * What do we see here? After "optimize", SCIP first goes into presolving. Not much happening for this instance, just
  * the linear constraints get upgraded to more specific types. Each round of presolving will be displayed in a single
- * line, with a short summary at the end.  Then, we see the actual solving process. The first three output lines
- * indicate that new incumbent solutions were found by the primal heuristics with display characters "t", "R", and "s";
- * see, how the "primalbound" column goes down from 27 to 25. In the fourth line, two "cuts" are added.  Up to here, we
- * needed 44 "LP iter"ations (34 for the first LP and 10 more to resolve after adding cuts). Little later, the root node
- * processing is finished. We see that there are now two open nodes in the "left" column. From now on, we will see an
- * output line every hundredth node or whenever a new incumbent is found (e.g. at node 14 in the above output). After
- * some more nodes, the "dualbound" starts moving, too. At one point, both will be the same, and the solving process
- * terminates, showing us some wrap-up information. 
+ * line, with a short summary at the end. Here, there has only been one round with actual changes, the second round did
+ * not bring any further reductions.  Thus, it is not displayed and presolving is stopped. Then, we see the actual
+ * solving process. The first three output lines indicate that new incumbent solutions were found by the primal
+ * heuristics with display characters "t", "R", and "s"; see, how the "primalbound" column goes down from 27 to 25. In
+ * the fourth line, two "cuts" are added.  Up to here, we needed 44 "LP iter"ations (34 for the first LP and 10 more to
+ * resolve after adding cuts). Little later, the root node processing is finished. We see that there are now two open
+ * nodes in the "left" column. From now on, we will see an output line every hundredth node or whenever a new incumbent
+ * is found (e.g. at node 14 in the above output). After some more nodes, the "dualbound" starts moving, too. At one
+ * point, both will be the same, and the solving process terminates, showing us some wrap-up information.
  *
  * The exact performance varies amongst different architectures, operating systems, and so on. Do not be worried, if
  * your installation needs more or less time or nodes to solve. Also, this instance has more than 2000 different optimal
- * solutions. The optimal objective value always has to be 18, but the solution vector may differ.
+ * solutions. The optimal objective value always has to be 18, but the solution vector may differ. If you are interested
+ * in this behavior which is called "performance variability", you may have a look at the MIPLIB2010 paper.
  *
  * We might want to have some more information now. Which were the heuristics that found the solutions? What plugins
  *  were called during the solutions process and how much time did they spend? How did the instance that we were solving
@@ -667,7 +669,8 @@
  * "set" to change settings, "heuristics" to change settings of primal heuristics, "shifting" for that particular
  * heuristic. Then we see a list of parameters (and yet another submenu for advanced parameters), and disable this
  * heuristic by setting its calling frequency to -1. If we already know the path to a certain setting, we can directly
- * type it. Note that we do not have to use the full names, but we may use short versions, as long as they are unique.
+ * type it (as for the rounding heuristic in the above example). Note that we do not have to use the full names, but we
+ * may use short versions, as long as they are unique.
  *
  * To solve a problem a second time, we have to read it and start the optimization process again.
  *
@@ -709,12 +712,13 @@
  * \endcode
  *
  * Okay, what happened here? First, we reset all parameters to their default values, using "set default". Next, we
- * loaded some meta-parameter settings, to apply primal heuristics more aggressively. SCIP shows us, which single
- * parameters it changed therefor. Now, the optimal solution is already found at the root node, by a heuristic which is
- * deactivated by default.  Then, after node 200, the user pressed CTRL-C which interrupts the solving process, We see
- * that now in the short status report, primal and dual bound are different, thus, the problem is not solved yet.
- * Nevertheless, we could access statistics, see the current incumbent solution, change parameters and so on. Entering
- * "optimize" we continue the solving process from the point on at which it has been interrupted.
+ * loaded some meta-parameter settings (also see <a href="FAQ.html#Section2">the FAQ</a>), to apply primal heuristics
+ * more aggressively. SCIP shows us, which single parameters it changed therefor. Now, the optimal solution is already
+ * found at the root node, by a heuristic which is deactivated by default.  Then, after node 200, the user pressed
+ * CTRL-C which interrupts the solving process, We see that now in the short status report, primal and dual bound are
+ * different, thus, the problem is not solved yet.  Nevertheless, we could access statistics, see the current incumbent
+ * solution, change parameters and so on. Entering "optimize" we continue the solving process from the point on at which
+ * it has been interrupted.
  *
  * SCIP can also write information to files. E.g., we could store the incumbent solution to a file, or output the
  * problem instance in another files format (th LP format is much better human readable than the MPS format, for example).
