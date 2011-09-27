@@ -5840,17 +5840,16 @@ SCIP_RETCODE separateByEnumerationHeuristics(
 
 
 
-#ifdef SCIP_DEBUG
+#if 0
 /** prints a node of the auxiliary graph */
 static
 void debugPrintAuxGraphNode(
    ZEROHALF_AUXGRAPH_NODE* node              /**< node to be printed */
    )
 {
-   int                   i;
+   int i;
 
    assert(node != NULL);
-
 
    SCIPdebugMessage("\nnode: %p\n", node);
    for( i = 0 ; i < node->nneighbors ; ++i)
