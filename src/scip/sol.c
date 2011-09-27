@@ -809,7 +809,7 @@ SCIP_RETCODE SCIPsolSetVal(
             if( val != SCIP_UNKNOWN ) /*lint !e777*/
                sol->obj += obj * val;
 
-            solStamp(sol, stat, tree,FALSE);
+            solStamp(sol, stat, tree, FALSE);
          }
          return SCIP_OKAY;
       }
@@ -833,7 +833,7 @@ SCIP_RETCODE SCIPsolSetVal(
          if( val != SCIP_UNKNOWN ) /*lint !e777*/
             sol->obj += obj * val;
 
-         solStamp(sol, stat, tree,FALSE);
+         solStamp(sol, stat, tree, FALSE);
       }
       return SCIP_OKAY;
 
@@ -1362,6 +1362,40 @@ SCIP_RETCODE SCIPsolRetransform(
    SCIPsetFreeBufferArray(set, &solvals);
 
    return SCIP_OKAY;
+}
+
+/** recomputes the objective value of an original solution, e.g., when transferring solutions
+ *  from the solution pool (objective coefficients might have changed in the meantime)
+ */
+void SCIPsolRecomputeObj(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            origprob            /**< original problem */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_Real solval;
+   int nvars;
+   int v;
+
+   assert(sol != NULL);
+   assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL);
+   assert(origprob != NULL);
+
+   vars = origprob->vars;
+   nvars = origprob->nvars;
+
+   /* recompute the objective value */
+   sol->obj = 0.0;
+   for( v = 0; v < nvars; ++v )
+   {
+      solval = SCIPsolGetVal(sol, set, stat, vars[v]);
+      if( !SCIPsetIsZero(set, solval) && solval != SCIP_UNKNOWN ) /*lint !e777*/
+      {
+         sol->obj += SCIPvarGetObj(vars[v]) * solval;
+      }
+   }
 }
 
 /** returns whether the given solutions are equal */

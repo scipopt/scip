@@ -6119,6 +6119,8 @@ SCIP_RETCODE SCIPtransformProb(
       
       if( feasible )
       {
+         SCIPsolRecomputeObj(sol, scip->set, scip->stat, scip->origprob);
+
          /* add primal solution to solution storage by copying it */
          SCIP_CALL( SCIPprimalAddSol(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->transprob,
                scip->tree, scip->lp, scip->eventfilter, sol, &stored) );
