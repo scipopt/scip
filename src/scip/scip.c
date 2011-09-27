@@ -8111,6 +8111,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
       SCIPPARSEPOLYNOMIAL_STATE_COEF,        /* we parse the coefficient of a monomial */
       SCIPPARSEPOLYNOMIAL_STATE_VARS,        /* we parse monomial variables */
       SCIPPARSEPOLYNOMIAL_STATE_EXPONENT,    /* we parse the exponent of a variable */
+      SCIPPARSEPOLYNOMIAL_STATE_END,         /* we are at the end the polynomial */
       SCIPPARSEPOLYNOMIAL_STATE_ERROR        /* a parsing error occured */
    } SCIPPARSEPOLYNOMIAL_STATES;
 
@@ -8123,6 +8124,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
    SCIP_VAR** vars;
    SCIP_Real* exponents;
    SCIP_Real coef;
+   int sign;
 
    assert(scip != NULL);
    assert(str != NULL);
@@ -8152,10 +8154,11 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
    vars = NULL;
    exponents = NULL;
    coef = SCIP_INVALID;
+   sign = 1.0;
 
    SCIPdebugMessage("parsing polynomial from '%s', endchar = <%c>\n", str, endchar);
 
-   while( *str && *str != endchar && state != SCIPPARSEPOLYNOMIAL_STATE_ERROR )
+   while( *str && *str != endchar && state != SCIPPARSEPOLYNOMIAL_STATE_END && state != SCIPPARSEPOLYNOMIAL_STATE_ERROR )
    {
       /* skip white space */
       while( isspace((unsigned char)*str) )
@@ -8164,176 +8167,183 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
       if( *str == endchar )
          break;
 
+      assert(state != SCIPPARSEPOLYNOMIAL_STATE_END);
+
       switch( state )
       {
-         case SCIPPARSEPOLYNOMIAL_STATE_BEGIN:
+      case SCIPPARSEPOLYNOMIAL_STATE_BEGIN:
+      {
+         if( coef != SCIP_INVALID  )
          {
-            if( coef != SCIP_INVALID )
+            SCIPdebugMessage("push monomial with coefficient <%g> and <%d> vars\n", coef, nvars);
+            /* push previous monomial */
+            if( monomialssize <= *nmonomials )
             {
-               SCIPdebugMessage("push monomial with coef %g and %d vars\n", coef, nvars);
-               /* push previous monomial */
-               if( monomialssize <= *nmonomials )
-               {
-                  monomialssize = SCIPcalcMemGrowSize(scip, *nmonomials+1);
+               monomialssize = SCIPcalcMemGrowSize(scip, *nmonomials+1);
 
-                  SCIP_CALL( SCIPreallocBufferArray(scip, monomialvars,  monomialssize) );
-                  SCIP_CALL( SCIPreallocBufferArray(scip, monomialexps,  monomialssize) );
-                  SCIP_CALL( SCIPreallocBufferArray(scip, monomialnvars, monomialssize) );
-                  SCIP_CALL( SCIPreallocBufferArray(scip, monomialcoefs, monomialssize) );
-               }
-
-               if( nvars > 0 )
-               {
-                  SCIP_CALL( SCIPduplicateBufferArray(scip, &(*monomialvars)[*nmonomials], vars, nvars) );
-                  SCIP_CALL( SCIPduplicateBufferArray(scip, &(*monomialexps)[*nmonomials], exponents, nvars) );
-               }
-               else
-               {
-                  (*monomialvars)[*nmonomials] = NULL;
-                  (*monomialexps)[*nmonomials] = NULL;
-               }
-               (*monomialcoefs)[*nmonomials] = coef;
-               (*monomialnvars)[*nmonomials] = nvars;
-               ++*nmonomials;
-
-               nvars = 0;
-               coef = SCIP_INVALID;
+               SCIP_CALL( SCIPreallocBufferArray(scip, monomialvars,  monomialssize) );
+               SCIP_CALL( SCIPreallocBufferArray(scip, monomialexps,  monomialssize) );
+               SCIP_CALL( SCIPreallocBufferArray(scip, monomialnvars, monomialssize) );
+               SCIP_CALL( SCIPreallocBufferArray(scip, monomialcoefs, monomialssize) );
             }
 
-            if( *str == '<' )
+            if( nvars > 0 )
             {
-               /* there seem to come a variable at the beginning of a monomial
-                * so assume the coefficient is 1.0
-                */
-               state = SCIPPARSEPOLYNOMIAL_STATE_VARS;
-               coef = 1.0;
-               break;
-            }
-            if( *str == '-' || *str == '+' || isdigit((unsigned char)*str) )
-            {
-               state = SCIPPARSEPOLYNOMIAL_STATE_COEF;
-               break;
-            }
-
-            SCIPerrorMessage("unexpected token '%c'\n", str);
-            state = SCIPPARSEPOLYNOMIAL_STATE_ERROR;
-            
-            break;
-         }
-
-         case SCIPPARSEPOLYNOMIAL_STATE_INTERMED:
-         {
-            if( *str == '<' )
-            {
-               /* there seem to come another variable */
-               state = SCIPPARSEPOLYNOMIAL_STATE_VARS;
-               break;
-            }
-
-            if( *str == '-' || *str == '+' || isdigit((unsigned char)*str) )
-            {
-               /* there seem to come a coefficient, which means the next monomial */
-               state = SCIPPARSEPOLYNOMIAL_STATE_BEGIN;
-               break;
-            }
-
-            SCIPerrorMessage("unexpected token '%c'\n", *str);
-            state = SCIPPARSEPOLYNOMIAL_STATE_ERROR;
-
-            break;
-         }
-
-         case SCIPPARSEPOLYNOMIAL_STATE_COEF:
-         {
-            assert(coef == SCIP_INVALID);
-            if( *str == '+' && !isdigit((unsigned char)str[1]) )
-            {
-               /* only a plus sign, without number */
-               coef =  1.0;
-               ++str;
-            }
-            else if( *str == '-' && !isdigit((unsigned char)str[1]) )
-            {
-               /* only a minus sign, without number */
-               coef = -1.0;
-               ++str;
+               SCIP_CALL( SCIPduplicateBufferArray(scip, &(*monomialvars)[*nmonomials], vars, nvars) );
+               SCIP_CALL( SCIPduplicateBufferArray(scip, &(*monomialexps)[*nmonomials], exponents, nvars) );
             }
             else
             {
-               if( !SCIPstrToRealValue(str, &coef, endptr) )
-               {
-                  SCIPerrorMessage("could not parse number in the beginning of '%s'\n", str);
-                  state = SCIPPARSEPOLYNOMIAL_STATE_ERROR;
-                  break;
-               }
-               /* We could check errno to whether an over- or underflow occured, but this might not work on every platform.
-                * Moreover, since we expect that the string was written by SCIPwriteVarsPolynomial, the numbers are should be parsable.
-                */
-               str = *endptr;
+               (*monomialvars)[*nmonomials] = NULL;
+               (*monomialexps)[*nmonomials] = NULL;
             }
+            (*monomialcoefs)[*nmonomials] = coef;
+            (*monomialnvars)[*nmonomials] = nvars;
+            ++*nmonomials;
 
-            /* after the coefficient we go into the intermediate state, i.e., expecting next variables */
-            state = SCIPPARSEPOLYNOMIAL_STATE_INTERMED;
+            sign = 1.0;
+            nvars = 0;
+            coef = SCIP_INVALID;
+         }
 
+         if( *str == '<' )
+         {
+            /* there seem to come a variable at the beginning of a monomial
+             * so assume the coefficient is 1.0
+             */
+            state = SCIPPARSEPOLYNOMIAL_STATE_VARS;
+            coef = 1.0;
+            break;
+         }
+         if( *str == '-' || *str == '+' || isdigit(*str) )
+         {
+            state = SCIPPARSEPOLYNOMIAL_STATE_COEF;
             break;
          }
 
-         case SCIPPARSEPOLYNOMIAL_STATE_VARS:
+         state = SCIPPARSEPOLYNOMIAL_STATE_END;
+
+         break;
+      }
+
+      case SCIPPARSEPOLYNOMIAL_STATE_INTERMED:
+      {
+         if( *str == '<' )
          {
-            SCIP_VAR* var;
-
-            assert(*str == '<');
-
-            /* parse variable name */
-            SCIP_CALL( SCIPparseVarName(scip, str, &var, endptr) );
-            str = *endptr;
-
-            if( var == NULL )
-            {
-               SCIPerrorMessage("did not find variable in the beginning of %s\n", str);
-               state = SCIPPARSEPOLYNOMIAL_STATE_ERROR;
-               break;
-            }
-
-            /* add variable to vars array */
-            if( nvars + 1 > varssize )
-            {
-               varssize = SCIPcalcMemGrowSize(scip, nvars+1);
-               SCIP_CALL( SCIPreallocBufferArray(scip, &vars,      varssize) );
-               SCIP_CALL( SCIPreallocBufferArray(scip, &exponents, varssize) );
-            }
-            vars[nvars] = var;
-            exponents[nvars] = 1.0;
-            ++nvars;
-
-            str = *endptr;
- 
-            if( *str == '^' )
-               state = SCIPPARSEPOLYNOMIAL_STATE_EXPONENT;
-            else
-               state = SCIPPARSEPOLYNOMIAL_STATE_INTERMED;
-
+            /* there seem to come another variable */
+            state = SCIPPARSEPOLYNOMIAL_STATE_VARS;
             break;
          }
 
-         case SCIPPARSEPOLYNOMIAL_STATE_EXPONENT:
+         if( *str == '-' || *str == '+' || isdigit(*str) )
          {
-            assert(*str == '^');
-            assert(nvars > 0); /* we should be in a monomial that has already a variable */
+            /* there seem to come a coefficient, which means the next monomial */
+            state = SCIPPARSEPOLYNOMIAL_STATE_BEGIN;
+            break;
+         }
+
+         /* since we cannot detect the symbols we stop parsing the polynomial */
+         state = SCIPPARSEPOLYNOMIAL_STATE_END;
+         break;
+      }
+
+      case SCIPPARSEPOLYNOMIAL_STATE_COEF:
+      {
+         if( *str == '+' && !isdigit(str[1]) )
+         {
+            /* only a plus sign, without number */
+            sign = 1.0;
+            coef =  1.0;
             ++str;
-
-            if( !SCIPstrToRealValue(str, &exponents[nvars-1], endptr) )
+         }
+         else if( *str == '-' && !isdigit(str[1]) )
+         {
+            /* only a minus sign, without number */
+            sign = -1.0;
+            ++str;
+         }
+         else
+         {
+            if( !SCIPstrToRealValue(str, &coef, endptr) )
             {
                SCIPerrorMessage("could not parse number in the beginning of '%s'\n", str);
                state = SCIPPARSEPOLYNOMIAL_STATE_ERROR;
                break;
             }
+
+            coef *= sign;
             str = *endptr;
-            
-            /* after the exponent we go into the intermediate state, i.e., expecting next variables */
-            state = SCIPPARSEPOLYNOMIAL_STATE_INTERMED;
+         }
+
+         /* after the coefficient we go into the intermediate state, i.e., expecting next variables */
+         state = SCIPPARSEPOLYNOMIAL_STATE_INTERMED;
+
+         break;
+      }
+
+      case SCIPPARSEPOLYNOMIAL_STATE_VARS:
+      {
+         SCIP_VAR* var;
+
+         assert(*str == '<');
+
+         /* parse variable name */
+         SCIP_CALL( SCIPparseVarName(scip, str, &var, endptr) );
+
+         /* check if variable name was parsed */
+         if( *endptr == str )
+         {
+            state = SCIPPARSEPOLYNOMIAL_STATE_END;
             break;
          }
+         str = *endptr;
+
+         if( var == NULL )
+         {
+            SCIPerrorMessage("did not find variable in the beginning of %s\n", str);
+            state = SCIPPARSEPOLYNOMIAL_STATE_ERROR;
+            break;
+         }
+
+         /* add variable to vars array */
+         if( nvars + 1 > varssize )
+         {
+            varssize = SCIPcalcMemGrowSize(scip, nvars+1);
+            SCIP_CALL( SCIPreallocBufferArray(scip, &vars,      varssize) );
+            SCIP_CALL( SCIPreallocBufferArray(scip, &exponents, varssize) );
+         }
+         vars[nvars] = var;
+         exponents[nvars] = 1.0;
+         ++nvars;
+
+         str = *endptr;
+
+         if( *str == '^' )
+            state = SCIPPARSEPOLYNOMIAL_STATE_EXPONENT;
+         else
+            state = SCIPPARSEPOLYNOMIAL_STATE_INTERMED;
+
+         break;
+      }
+
+      case SCIPPARSEPOLYNOMIAL_STATE_EXPONENT:
+      {
+         assert(*str == '^');
+         assert(nvars > 0); /* we should be in a monomial that has already a variable */
+         ++str;
+
+         if( !SCIPstrToRealValue(str, &exponents[nvars-1], endptr) )
+         {
+            SCIPerrorMessage("could not parse number in the beginning of '%s'\n", str);
+            state = SCIPPARSEPOLYNOMIAL_STATE_ERROR;
+            break;
+         }
+         str = *endptr;
+
+         /* after the exponent we go into the intermediate state, i.e., expecting next variables */
+         state = SCIPPARSEPOLYNOMIAL_STATE_INTERMED;
+         break;
+      }
 
       default:
          SCIPerrorMessage("unexpected state\n");
@@ -8348,12 +8358,13 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
    switch( state )
    {
    case SCIPPARSEPOLYNOMIAL_STATE_BEGIN:
+   case SCIPPARSEPOLYNOMIAL_STATE_END:
    case SCIPPARSEPOLYNOMIAL_STATE_INTERMED:
    {
       if( coef != SCIP_INVALID )
       {
          /* push last monomial */
-         SCIPdebugMessage("push monomial with coef %g and %d vars\n", coef, nvars);
+         SCIPdebugMessage("push monomial with coefficient <%g> and <%d> vars\n", coef, nvars);
          if( monomialssize <= *nmonomials )
          {
             monomialssize = *nmonomials+1;
@@ -8396,7 +8407,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
    }
 
    case SCIPPARSEPOLYNOMIAL_STATE_ERROR:
-      ;
+      break;
    }
 
    /* free memory to store current monomial, if still existing */

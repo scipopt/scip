@@ -2027,37 +2027,70 @@ SCIP_RETCODE SCIPvarCopy(
       (*var)->vardeltrans = sourcevar->vardeltrans;
       (*var)->vardata = targetdata;
    }
-   
+
    SCIPdebugMessage("created copy <%s> of variable <%s>\n", SCIPvarGetName(*var), SCIPvarGetName(sourcevar));
-   
+
    return SCIP_OKAY;
 }
 
 /** parse given string for a SCIP_Real bound */
 static
-void parseValue(
+SCIP_RETCODE parseValue(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           str,                /**< string to parse */
-   SCIP_Real*            value               /**< pointer to store the parsed value */
-   )
-{                                                
-#ifndef NDEBUG
-   int cnt;
-#endif
-   
-   if(strncmp(str, "+inf", 4) == 0 )
-      *value = SCIPsetInfinity(set);
-   else if(strncmp(str, "-inf", 4) == 0 )
-      *value = -SCIPsetInfinity(set);
-   else 
+   SCIP_Real*            value,              /**< pointer to store the parsed value */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed */
+  )
+{
+   /* first check for infinity value */
+   if( strncmp(str, "+inf", 4) == 0 )
    {
-#ifndef NDEBUG
-      cnt = sscanf(str, "%"SCIP_REAL_FORMAT"", value);
-      assert(cnt == 1);
-#else
-      sscanf(str, "%"SCIP_REAL_FORMAT"", value);
-#endif
+      *value = SCIPsetInfinity(set);
+      (*endptr) += 4;
    }
+   else if( strncmp(str, "-inf", 4) == 0 )
+   {
+      *value = -SCIPsetInfinity(set);
+      (*endptr) += 4;
+   }
+   else
+   {
+      if( !SCIPstrToRealValue(str, value, endptr) )
+         return SCIP_READERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** parse the characters as bounds */
+static
+SCIP_RETCODE parseBounds(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           str,                /**< string to parse */
+   char*                 type,               /**< bound type (global, local, or lazy) */
+   SCIP_Real*            lb,                 /**< pointer to store the lower bound */
+   SCIP_Real*            ub,                 /**< pointer to store the upper bound */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed */
+   )
+{
+   char token[SCIP_MAXSTRLEN];
+
+   /* get bound type */
+   SCIPstrCopySection(str, ' ', ' ', type, SCIP_MAXSTRLEN, endptr);
+   SCIPdebugMessage("parsed bound type <%s>\n", type);
+
+   /* get lower bound */
+   SCIPstrCopySection(str, '[', ',', token, SCIP_MAXSTRLEN, endptr);
+   str = *endptr;
+
+   SCIP_CALL( parseValue(set, token, lb, endptr) );
+
+   SCIPdebugMessage("str <%s>\n", str);
+
+   /* get upper bound */
+   SCIP_CALL( parseValue(set, str, ub, endptr) );
+
+   return SCIP_OKAY;
 }
 
 /** parses a given string for a variable informations */
@@ -2067,21 +2100,20 @@ SCIP_RETCODE varParse(
    const char*           str,                /**< string to parse */
    char*                 name,               /**< pointer to store the variable name */
    SCIP_Real*            lb,                 /**< pointer to store the lower bound */
-   SCIP_Real*            ub,                 /**< pointer to store the upper bound */  
-   SCIP_Real*            obj,                /**< pointer to store the objective coefficient */  
-   SCIP_VARTYPE*         vartype,            /**< pointer to store the variable type */   
+   SCIP_Real*            ub,                 /**< pointer to store the upper bound */
+   SCIP_Real*            obj,                /**< pointer to store the objective coefficient */
+   SCIP_VARTYPE*         vartype,            /**< pointer to store the variable type */
    SCIP_Real*            lazylb,             /**< pointer to store if the lower bound is lazy */
    SCIP_Real*            lazyub,             /**< pointer to store if the upper bound is lazy */
-   SCIP_Bool             local,              /**< should the local bound be applied */            
+   SCIP_Bool             local,              /**< should the local bound be applied */
    SCIP_Bool*            success             /**< pointer store if the paring process was successful */
    )
 {
-   char* copystr;
-   char* token;
-   char* saveptr;
-#ifndef NDEBUG
-   int cnt;
-#endif
+   SCIP_Real parsedlb;
+   SCIP_Real parsedub;
+   char token[SCIP_MAXSTRLEN];
+   char* endptr;
+   int i;
 
    assert(lb != NULL);
    assert(ub != NULL);
@@ -2090,14 +2122,13 @@ SCIP_RETCODE varParse(
    assert(lazylb != NULL);
    assert(lazyub != NULL);
    assert(success != NULL);
-   
+
    (*success) = TRUE;
-   
-   /* copy string */
-   SCIP_ALLOC( BMSduplicateMemoryArray(&copystr, str, strlen(str)+1) );
-   
-   token = SCIPstrtok(copystr, " []", &saveptr);
-   assert(token != NULL);
+
+   /* copy variable type */
+   SCIPstrCopySection(str, '[', ']', token, SCIP_MAXSTRLEN, &endptr);
+   assert(str != endptr);
+   SCIPdebugMessage("parsed variable type <%s>\n", token);
 
    /* get variable type */
    if( strncmp(token, "binary", 3) == 0 )
@@ -2112,90 +2143,61 @@ SCIP_RETCODE varParse(
    {
       SCIPwarningMessage("unknown variable type\n");
       (*success) = FALSE;
-      goto TERMINATE;
+      return SCIP_OKAY;
    }
-   
+
+   /* move string pointer behind variable type */
+   str = endptr;
+
    /* get variable name */
-   token = SCIPstrtok(NULL, " <>:", &saveptr);
-   assert(token != NULL);
-   (void) SCIPsnprintf(name, (int)strlen(token)+1, "%s", token);
-   
+   SCIPstrCopySection(str, '<', '>', name, SCIP_MAXSTRLEN, &endptr);
+   assert(endptr != NULL);
+   SCIPdebugMessage("parsed variable name <%s>\n", name);
+
+   /* move string pointer behind variable name */
+   str = endptr;
+
+   /* cut out objective coefficient */
+   SCIPstrCopySection(str, '=', ',', token, SCIP_MAXSTRLEN, &endptr);
+
+   /* move string pointer behind objective coefficient */
+   str = endptr;
+
    /* get objective coefficient */
-   token = SCIPstrtok(NULL, " ,:", &saveptr);
-   assert(token != NULL);
+   if( !SCIPstrToRealValue(token,  obj, &endptr) )
+      return SCIP_READERROR;
 
-#ifndef NDEBUG
-   cnt = sscanf(token, "obj=%"SCIP_REAL_FORMAT",", obj);
-#else
-   sscanf(token, "obj=%"SCIP_REAL_FORMAT",", obj);
-#endif
-   assert(cnt == 1);
-   
-#ifdef NDEBUG
-   /* get global bound */
-   (void) SCIPstrtok(NULL, "[", &saveptr);
-   token = SCIPstrtok(NULL, ",", &saveptr);
-   parseValue(set, token, lb);
-   token = SCIPstrtok(NULL, "]", &saveptr);
-   parseValue(set, token, ub);
+   SCIPdebugMessage("parsed objective coefficient <%g>\n", *obj);
 
-   /* get local bound */
-   (void) SCIPstrtok(NULL, "[", &saveptr);
-   token = SCIPstrtok(NULL, ",", &saveptr);
-#else
-   /* get global bound */
-   token = SCIPstrtok(NULL, "[", &saveptr);
-   assert(token != NULL);
-   token = SCIPstrtok(NULL, ",", &saveptr);
-   assert(token != NULL);
-   parseValue(set, token, lb);
-   token = SCIPstrtok(NULL, "]", &saveptr);
-   assert(token != NULL);
-   parseValue(set, token, ub);
+   /* parse global/original bounds */
+   SCIP_CALL( parseBounds(set, str, token, lb, ub, &endptr) );
+   assert(strncmp(token, "global", 6) == 0 || strncmp(token, "original", 8) == 0);
 
-   /* get local bound */
-   (void) SCIPstrtok(NULL, "[", &saveptr);
-   token = SCIPstrtok(NULL, ",", &saveptr);
-#endif
+   /* initialize the lazy bound */
+   *lazylb = -SCIPsetInfinity(set);
+   *lazyub =  SCIPsetInfinity(set);
 
-   if( token == NULL )
+   /* parse optional local and lazy bounds */
+   for( i = 0; i < 2; ++i )
    {
-      /* the local and lazy bounds are not present */
-      *lazylb = -SCIPsetInfinity(set);
-      *lazyub =  SCIPsetInfinity(set);
-      goto TERMINATE;
+      /* parse global bounds */
+      SCIP_CALL( parseBounds(set, str, token, &parsedlb, &parsedub, &endptr) );
+
+      if( str != endptr )
+         break;
+
+      if( strncmp(token, "local", 5) == 0 && local )
+      {
+         *lb = parsedlb;
+         *ub = parsedub;
+      }
+      else if( strncmp(token, "lazy", 4) == 0 )
+      {
+         *lazylb = parsedlb;
+         *lazyub = parsedub;
+      }
    }
 
-   if( local )
-      parseValue(set, token, lb);
-
-   token = SCIPstrtok(NULL, "]", &saveptr);
-   assert(token != NULL);
-
-   if( local )
-      parseValue(set, token, ub);
-
-   /* get lazy bound */
-   token = SCIPstrtok(NULL, "[", &saveptr);
-   if( token == NULL )
-   {
-      /* the lazy bounds are not present; hence the have the default values */
-      *lazylb = -SCIPsetInfinity(set);
-      *lazyub = SCIPsetInfinity(set);
-   }
-   else
-   {
-      token = SCIPstrtok(NULL, ",", &saveptr);
-      assert(token != NULL);
-      parseValue(set, token, lazylb);
-      token = SCIPstrtok(NULL, "]", &saveptr);
-      assert(token != NULL);
-      parseValue(set, token, lazyub);
-   }
-   
- TERMINATE:
-   BMSfreeMemoryArray(&copystr);
-   
    return SCIP_OKAY;
 }
 

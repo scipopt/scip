@@ -9915,9 +9915,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    int        requsize;
    SCIP_Real  lhs;
    SCIP_Real  rhs;
-   char*      endsum;
    char*      endptr;
-   char       endchar;
 
    assert(scip != NULL);
    assert(success != NULL);
@@ -9929,7 +9927,6 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    lhs = -SCIPinfinity(scip);
    rhs =  SCIPinfinity(scip);
 
-   endchar = '\0';
    (*success) = FALSE;
 
    /* return of string empty */
@@ -9940,13 +9937,13 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    while( isspace((unsigned char)*str) )
       ++str;
 
+   /* check for left hand side */
    if( isdigit((unsigned char)str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit((unsigned char)str[1])) )
    {
       /* there is a number coming, maybe it is a left-hand-side */
-      
       if( !SCIPstrToRealValue(str, &lhs, &endptr) )
       {
-         SCIPerrorMessage("error parsing number from %s\n", str);
+         SCIPerrorMessage("error parsing number from <%s>\n", str);
          return SCIP_OKAY;
       }
       str = endptr;
@@ -9971,74 +9968,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
       }
    }
 
-   /* search for end of linear sum: either '<=', '>=', '==', or '[free]' */
-   endsum = (char*) strrchr(str, (int) '=');
-   if( endsum != NULL )
-   {
-      /* seem to have either '<=', '>=', or '==', so expect a value behind and parse it */
-      char* endstr;
-
-      assert(endsum > str);
-      --endsum;
-      switch( *endsum )
-      {
-         case '<':
-            rhs = strtod(endsum+2, &endstr);
-            break;
-
-         case '=':
-            if( !SCIPisInfinity(scip, -lhs) )
-            {
-               SCIPerrorMessage("cannot have == on rhs if there was a <= on lhs\n");
-               return SCIP_OKAY;
-            }
-            else
-            {
-               rhs = strtod(endsum+2, &endstr);
-               lhs = rhs;
-            }
-            break;
-
-         case '>':
-            if( !SCIPisInfinity(scip, -lhs) )
-            {
-               SCIPerrorMessage("cannot have => on rhs if there was a <= on lhs\n");
-               return SCIP_OKAY;
-            }
-            else
-            {
-               lhs = strtod(endsum+2, &endstr);
-            }
-            break;
-
-         default:
-            SCIPerrorMessage("unexpected character %c\n", *endsum);
-            return SCIP_OKAY;
-      }
-      if( endstr == endsum+2 )
-      {
-         SCIPerrorMessage("error parsing number %s\n", endsum+2);
-         return SCIP_OKAY;
-      }
-   }
-   else
-   {
-      endsum = strstr(str, "[free]");  /*lint !e158*/
-      if( endsum != NULL && !SCIPisInfinity(scip, -lhs) )
-      {
-         SCIPerrorMessage("cannot have [free] if there was a <= on lhs\n");
-         return SCIP_OKAY;
-      }
-   }
-
-   if( endsum != NULL )
-   {
-      /* fake end of string */
-      endchar = *endsum;
-      *endsum = '\0';
-   }
-
-   /* initialize buffers for storing the coefficients */
+   /* initialize buffers for storing the variables and coefficients */
    coefssize = 100;
    SCIP_CALL( SCIPallocBufferArray(scip, &vars,  coefssize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &coefs, coefssize) );
@@ -10061,15 +9991,69 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    {
       SCIPerrorMessage("no luck in parsing linear sum '%s'\n", str);
    }
-
-   /* restore original character at endsum */
-   if( endsum != NULL )
-      *endsum = endchar;
-
-   if( *success )
+   else
    {
-      SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, nvars, vars, coefs, lhs, rhs,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      (*success) = FALSE;
+      str = endptr;
+
+     /* check for left or right hand side */
+      while( isspace((unsigned char)*str) )
+         ++str;
+
+      /* check for free constraint */
+      if( strncmp(str, "[free]", 6) == 0 )
+      {
+         if( !SCIPisInfinity(scip, -lhs) )
+         {
+            SCIPerrorMessage("cannot have left hand side and [free] status \n");
+            return SCIP_OKAY;
+         }
+         (*success) = TRUE;
+      }
+      else
+      {
+         switch( *str )
+         {
+         case '<':
+            *success = SCIPstrToRealValue(str+2, &rhs, &endptr);
+            break;
+         case '=':
+            if( !SCIPisInfinity(scip, -lhs) )
+            {
+               SCIPerrorMessage("cannot have == on rhs if there was a <= on lhs\n");
+               return SCIP_OKAY;
+            }
+            else
+            {
+               *success = SCIPstrToRealValue(str+2, &rhs, &endptr);
+               lhs = rhs;
+            }
+            break;
+         case '>':
+            if( !SCIPisInfinity(scip, -lhs) )
+            {
+               SCIPerrorMessage("cannot have => on rhs if there was a <= on lhs\n");
+               return SCIP_OKAY;
+            }
+            else
+            {
+               *success = SCIPstrToRealValue(str+2, &lhs, &endptr);
+               break;
+            }
+         case '\0':
+            *success = TRUE;
+            break;
+         default:
+            SCIPerrorMessage("unexpected character %c\n", *str);
+            return SCIP_OKAY;
+         }
+      }
+
+      if( *success )
+      {
+         SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, nvars, vars, coefs, lhs, rhs,
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      }
    }
 
    SCIPfreeBufferArray(scip, &coefs);

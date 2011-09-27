@@ -4200,10 +4200,16 @@ SCIP_DECL_CONSPARSE(consParseSetppc)
       {
          SCIPerrorMessage("no luck in parsing linear sum '%s'\n", str);
       }
-  
+      else
+         str = endptr;
+
       /* free coefficient array */
       SCIPfreeBufferArray(scip, &coefs);
    }
+
+   /* remove white spaces */
+   while( isspace((unsigned char)*str) )
+      str++;
 
    if( *success )
    {
