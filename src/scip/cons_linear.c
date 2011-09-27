@@ -630,7 +630,7 @@ SCIP_RETCODE consdataCatchEvent(
    assert(consdata->eventdatas != NULL);
    assert(consdata->eventdatas[pos] == NULL);
 
-   SCIP_CALL( SCIPallocBlockMemory(scip, &consdata->eventdatas[pos]) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &(consdata->eventdatas[pos])) ); /*lint !e866*/
    consdata->eventdatas[pos]->consdata = consdata;
    consdata->eventdatas[pos]->varpos = pos;
 
@@ -664,7 +664,7 @@ SCIP_RETCODE consdataDropEvent(
          SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_VARUNLOCKED | SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_OBJCHANGED,
          eventhdlr, consdata->eventdatas[pos], consdata->eventdatas[pos]->filterpos) );
 
-   SCIPfreeBlockMemory(scip, &consdata->eventdatas[pos]);
+   SCIPfreeBlockMemory(scip, &consdata->eventdatas[pos]); /*lint !e866*/
 
    return SCIP_OKAY;
 }
@@ -2473,7 +2473,7 @@ SCIP_Longint getVarSignature(
    assert(var != NULL);
 
    sigidx = SCIPvarGetIndex(var) % (int)(8*sizeof(SCIP_Longint));
-   return ((SCIP_Longint)1) << sigidx;
+   return ((SCIP_Longint)1) << sigidx; /*lint !e703*/
 }
 
 /** updates bit signatures after adding a single coefficient */
@@ -2542,7 +2542,7 @@ void permSortConsdata(
    int                   nvars,              /**< the number of variables */
    SCIP_Bool             isinpresolving      /**< is the scip stage before initsolve */
    )
-{
+{  /*lint --e{715}*/
    SCIP_VAR* varv;
    SCIP_EVENTDATA* eventdatav;
    SCIP_Real valv;
@@ -2666,7 +2666,7 @@ SCIP_RETCODE consdataSort(
       /* count binary variables and permute variables such that binaries appear first in the sorted vars array */
       for( v = 0; v < nvars; ++v )
       {
-         if( SCIPvarIsBinary(vars[v]) )
+         if( SCIPvarIsBinary(vars[v]) ) /*lint !e613*/
          {
             /* swap variable at the end of the binary variables, if necessary */
             if( lastbin < v )
@@ -2675,7 +2675,7 @@ SCIP_RETCODE consdataSort(
                SCIP_Real tmpval;
                
                tmpvar = vars[lastbin];
-               tmpval = vals[lastbin];
+               tmpval = vals[lastbin]; /*lint !e613*/
 
                vars[lastbin] = vars[v];
                vals[lastbin] = vals[v];
@@ -9649,7 +9649,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
                if( usefulconss[c] == NULL )
                   continue;
               
-               npaircomparisons += (SCIPconsGetData(conss[c])->changed) ? c : (c - firstchange);
+               npaircomparisons += (SCIP_Longint) ((SCIPconsGetData(conss[c])->changed) ? c : (c - firstchange));
 
                assert(SCIPconsIsActive(usefulconss[c]) && !SCIPconsIsModifiable(usefulconss[c]));
                SCIP_CALL( preprocessConstraintPairs(scip, usefulconss, firstchange, c, conshdlrdata->maxaggrnormscale,
@@ -9657,7 +9657,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
 
                if( npaircomparisons > conshdlrdata->nmincomparisons )
                {
-                  if( ((*ndelconss - oldndelconss) + (*nchgsides - oldnchgsides)/2 + (*nchgcoefs - oldnchgcoefs)/10) / (npaircomparisons + 0.0) < conshdlrdata->mingainpernmincomp )
+                  if( ((*ndelconss - oldndelconss) + (*nchgsides - oldnchgsides)/2.0 + (*nchgcoefs - oldnchgcoefs)/10.0) / ((SCIP_Real) npaircomparisons) < conshdlrdata->mingainpernmincomp )
                      break;
                   oldndelconss = *ndelconss;
                   oldnchgsides = *nchgsides;
@@ -9957,7 +9957,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    }
 
    /* search for end of linear sum: either '<=', '>=', '==', or '[free]' */
-   endsum = strrchr(str, '=');
+   endsum = strrchr(str, (int) '=');
    if( endsum != NULL )
    {
       /* seem to have either '<=', '>=', or '==', so expect a value behind and parse it */
@@ -10008,7 +10008,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    }
    else
    {
-      endsum = strstr(str, "[free]");
+      endsum = strstr(str, "[free]");  /*lint !e158*/
       if( endsum != NULL && !SCIPisInfinity(scip, -lhs) )
       {
          SCIPerrorMessage("cannot have [free] if there was a <= on lhs\n");

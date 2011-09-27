@@ -21,12 +21,12 @@
  * @todo SCIP might fix linear variables on +/- infinity; remove them in presolve and take care later
  * @todo round constraint sides to integers if all coefficients and variables are (impl.) integer
  * @todo constraints in one variable should be replaced by linear variable or similar
- * @todo recognize and reformulate complementarity constraints (x*y = 0)
  * @todo check if some quadratic terms appear in several constraints and try to simplify (e.g., nous1)
  * @todo skip separation in enfolp if for current LP (check LP id) was already separated
  * @todo watch unbounded variables to enable/disable propagation
  * @todo sort order in bilinvar1/bilinvar2 such that the var which is involved in more terms is in bilinvar1, and use this info propagate and AddLinearReform
  * @todo catch/drop events in consEnable/consDisable, do initsol/exitsol stuff also when a constraint is enabled/disabled during solve
+ * @todo underestimate for multivariate concave quadratic terms as in cons_nonlinear
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

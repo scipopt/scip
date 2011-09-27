@@ -24,11 +24,12 @@
 =opt=  mcf2                       65.6666667 
 =opt=  neos-799838                   1308000 
 =opt=  newdano                    65.6666667 
-=best= pg                        -8638.08931 
+=opt=  pg	       -8.67434260711701e+03
 =best= d15900                          55413 
 =opt=  e15900                         102421 
 =opt=  e201600                        180645 
 =opt=  nh97_potential                   1418 
 =opt=  markshare_5_3                       0 
 =opt=  seq10_184_relaxed              134136 
+=opt=  seq12_167_relaxed	      135103
 =opt=  seq11_185                      138565 

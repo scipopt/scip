@@ -11,10 +11,15 @@
 typedef char *va_list;
 #endif
 
+#ifndef __SIZE_T
+#define __SIZE_T
+typedef unsigned size_t;
+#endif
+
 #define va_start(a,b) ((void) ((a) = (char *) ( & (b) + 1)))
 #define va_arg(a,b) (*( (b *) ( ((a) += sizeof(b)) - sizeof(b) )))
 #define va_end(a)  ( (void) 0 )
 
-int vsnprintf(char *str, size_t size, const char *format, va_list ap);
+int vsnprintf(char *, size_t, const char *, va_list);
 
 #endif
