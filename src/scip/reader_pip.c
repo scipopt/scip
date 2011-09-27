@@ -2337,7 +2337,7 @@ void printRowNl(
          case SCIP_EXPR_PLUS:
          {
             (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[0])]));
-            (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[1])]));
+            (void) SCIPsnprintf(varname2, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[1])]));
             (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g %s %+.15g %s", exprtreecoefs[e], varname, exprtreecoefs[e], varname2);
 
             appendLine(scip, file, linebuffer, &linecnt, buffer);
@@ -2347,7 +2347,7 @@ void printRowNl(
          case SCIP_EXPR_MINUS:
          {
             (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[0])]));
-            (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[1])]));
+            (void) SCIPsnprintf(varname2, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[1])]));
             (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g %s %+.15g %s", exprtreecoefs[e], varname, -exprtreecoefs[e], varname2);
 
             appendLine(scip, file, linebuffer, &linecnt, buffer);
@@ -2357,7 +2357,7 @@ void printRowNl(
          case SCIP_EXPR_MUL:
          {
             (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[0])]));
-            (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[1])]));
+            (void) SCIPsnprintf(varname2, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[1])]));
             (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g %s %s", exprtreecoefs[e], varname, varname2);
 
             appendLine(scip, file, linebuffer, &linecnt, buffer);
