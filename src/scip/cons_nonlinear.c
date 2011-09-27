@@ -2466,8 +2466,10 @@ SCIP_RETCODE reformulate(
    int c;
    int d;
    int i;
-   int j;
    int u;
+#ifndef NDEBUG
+   int j;
+#endif
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
