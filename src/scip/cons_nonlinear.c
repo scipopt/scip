@@ -3102,7 +3102,7 @@ SCIP_RETCODE reformulate(
                      if( nnegative == nfactors || (nnegative == nfactors-1 && SCIPisGE(scip, sum, 1.0)) )
                      {
                         /* if exponents are such that we can be convex, but children curvature does not fit, make some children linear */
-                        SCIPdebugMessage("%d-variate monomial %d is convex (modulo sign), child curv fits = %d\n", nfactors, j, expcurvpos);
+                        SCIPdebugMessage("%d-variate monomial is convex (modulo sign), child curv fits = %d\n", nfactors, expcurvpos);
                         /* since current node curvature is set to unknown, there must be such a child, since otherwise the node curvature had to be convex */
                         assert(!expcurvpos);
                         desiredcurv = SCIP_EXPRCURV_CONVEX;
@@ -3110,7 +3110,7 @@ SCIP_RETCODE reformulate(
                      else if( npositive == nfactors && SCIPisLE(scip, sum, 1.0) )
                      {
                         /* if exponents are such that we can be concave, but children curvature does not fit, make some children linear */
-                        SCIPdebugMessage("%d-variate monomial %d is concave (modulo sign), child curv fits = %d\n", nfactors, j, expcurvneg);
+                        SCIPdebugMessage("%d-variate monomial is concave (modulo sign), child curv fits = %d\n", nfactors, expcurvneg);
                         /* since current node curvature is set to unknown, there must be such a child, since otherwise the node curvature had to be concave */
                         assert(!expcurvneg);
                         desiredcurv = SCIP_EXPRCURV_CONCAVE;
