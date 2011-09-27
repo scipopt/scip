@@ -709,6 +709,8 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
       return SCIP_OKAY;
 
    sols = SCIPgetSols(scip);
+   assert(sols != NULL);
+
    /* if one good solution was found, heuristic should not be delayed any longer */
    if( sols[nusedsols-1] != heurdata->prevlastsol )
    {
@@ -811,7 +813,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    SCIP_CALL( setupSubproblem(scip, subscip, subvars, selection, heurdata, &success) );
 
    heurdata->prevbestsol = SCIPgetBestSol(scip);
-   heurdata->prevlastsol = SCIPgetSols(scip)[heurdata->nusedsols-1];
+   heurdata->prevlastsol = sols[heurdata->nusedsols-1];
 
    /* if creation of sub-SCIP was aborted (e.g. due to number of fixings), free sub-SCIP and abort */
    if( !success )
