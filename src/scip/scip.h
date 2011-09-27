@@ -6602,6 +6602,13 @@ SCIP_RETCODE SCIProundSol(
    SCIP_Bool*            success             /**< pointer to store whether rounding was successful */
    );
 
+/** retransforms solution to original problem space */
+extern
+SCIP_RETCODE SCIPretransformSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
 /** adds feasible primal solution to solution storage by copying it */
 extern
 SCIP_RETCODE SCIPaddSol(

@@ -71,6 +71,7 @@ interface:
 - split off PARAMEMPHASIS from PARAMSETTING (in pub_paramset.c/paramset.c)
 - added new method to linear constraint handler SCIPsetUpgradeConsLinear(), which (de-)activates the possibility to upgrade a linear constraint to a specialized linear constraint (e.g. knapsack)
 - new method SCIPsolGetOrigObj() in pub_sol.h which returns for a solution in the original problem space the objective value
+- new method SCIPretransformSol() in scip.h that allows to retransform a solution to the original space
 
 performance improvements:
 - performance improvements in prop_vbounds
