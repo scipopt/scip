@@ -116,6 +116,8 @@ fixed bugs:
 - fixed bug using wrong sign in infinity check in prop_pseudoobj
 - fixed bug trying to tighten multiaggregated variables, which have only one active representation, and this variable is already tightened
 - fixed bug in ZI round heuristic that led to infeasible shiftings for numerically slightly infeasible rows with close-to-zero coefficients
+- fixed memory leak in coloring part of maximum clique algorithm (tclique_coloring.c) in a better way
+- fixed assert in sepa_clique.c which is currently not valid because implicit binary variables in cliques are ignored
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})

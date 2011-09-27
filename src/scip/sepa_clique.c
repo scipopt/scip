@@ -774,7 +774,12 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
       vars = SCIPcliqueGetVars(cliques[i]);
       vals = SCIPcliqueGetValues(cliques[i]);
       nvars = SCIPcliqueGetNVars(cliques[i]);
+#if 0  /**@todo this assert is currently not valid since implicit binary variables in cliques are ignored, 
+        * i.e., corresponding nodes and edges are not added to the tclique graph. Enable assert again if 
+        * this feature it incorporated. 
+        */
       assert(nvars <= tcliquegraph->nnodes);
+#endif
 
       /* get the node numbers of the variables */
       for( u = 0; u < nvars && !SCIPisStopped(scip); ++u )
