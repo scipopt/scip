@@ -1030,7 +1030,7 @@ SCIP_RETCODE hessLagSparsitySetNzFlagForExprtree(
 
          if( colnz[row] == NULL || !SCIPsortedvecFindInt(colnz[row], col, colnnz[row], &pos) )
          {
-            SCIP_CALL( ensureIntArraySize(oracle->blkmem, &colnz[row], &collen[row], collen[row]+1) );
+            SCIP_CALL( ensureIntArraySize(oracle->blkmem, &colnz[row], &collen[row], colnnz[row]+1) );
             SCIPsortedvecInsertInt(colnz[row], col, &colnnz[row]);
             ++(*nzcount);
          }
