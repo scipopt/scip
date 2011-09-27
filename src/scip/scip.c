@@ -6096,7 +6096,7 @@ SCIP_RETCODE SCIPtransformProb(
    SCIP_CALL( SCIPcliquetableCreate(&scip->cliquetable) );
 
    /* copy problem in solve memory */
-   SCIP_CALL( SCIPprobTransform(scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+   SCIP_CALL( SCIPprobTransform(scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree, scip->lp,
          scip->branchcand, scip->eventfilter, scip->eventqueue, &scip->transprob) );
 
    /* switch stage to TRANSFORMED */
@@ -6319,11 +6319,15 @@ SCIP_RETCODE exitPresolve(
       }
    }
 
-   /* replace variables in variable bounds with active problem variables, and
-    * check, whether the objective value is always integral
-    */
-   SCIP_CALL( SCIPprobExitPresolve(scip->transprob, scip->set) );
+   /* exit presolving */
+   SCIP_CALL( SCIPprobExitPresolve(scip->transprob,  scip->set) );
    assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
+   
+   /* check, whether objective value is always integral by inspecting the problem, if it is the case adjust the
+    * cutoff bound if primal solution is already known 
+    */
+   SCIP_CALL( SCIPprobCheckObjIntegral(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,
+         scip->tree, scip->lp) );
 
    /* if possible, scale objective function such that it becomes integral with gcd 1 */
    SCIP_CALL( SCIPprobScaleObj(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,

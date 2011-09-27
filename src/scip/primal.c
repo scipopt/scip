@@ -237,7 +237,7 @@ SCIP_RETCODE primalSetUpperbound(
       SCIP_Real delta;
 
       delta = 100.0*SCIPsetFeastol(set);
-      delta = MIN(delta, 0.1);
+      delta = MIN(delta, 0.0001);
       cutoffbound = SCIPsetFeasCeil(set, upperbound) - (1.0 - delta);
       cutoffbound = MIN(cutoffbound, upperbound); /* SCIPsetFeasCeil() can increase bound by almost 1.0 due to numerics
                                                    * and very large upperbound value */
@@ -544,7 +544,6 @@ SCIP_RETCODE primalAddOrigSol(
    assert(0 <= insertpos && insertpos < set->limit_maxorigsol);
 
    SCIPdebugMessage("insert primal solution candidate %p with obj %g at position %d:\n", (void*)sol, SCIPsolGetObj(sol, set, prob), insertpos);
-   SCIPdebug( SCIPsolPrint(sol, set, stat, prob, NULL, NULL, FALSE) );
 
    /* allocate memory for solution storage */
    SCIP_CALL( ensureSolsSize(primal, set, set->limit_maxorigsol) );
