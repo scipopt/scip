@@ -19838,6 +19838,46 @@ SCIP_RETCODE SCIProundSol(
    return SCIP_OKAY;
 }
 
+/** retransforms solution to original problem space */
+SCIP_RETCODE SCIPretransformSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPretransformSol", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   switch ( SCIPsolGetOrigin(sol) )
+   {
+   case SCIP_SOLORIGIN_ORIGINAL:
+      /* nothing to do */
+      return SCIP_OKAY;
+
+   case SCIP_SOLORIGIN_LPSOL:
+   case SCIP_SOLORIGIN_NLPSOL:
+   case SCIP_SOLORIGIN_RELAXSOL:
+   case SCIP_SOLORIGIN_PSEUDOSOL:
+
+      /* first unlink solution */
+      SCIP_CALL( SCIPunlinkSol(scip, sol) );
+      
+      /*lint -fallthrough*/
+   case SCIP_SOLORIGIN_ZERO:
+
+      SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob) );
+      break;
+
+   case SCIP_SOLORIGIN_UNKNOWN:
+      SCIPerrorMessage("unkown solution origin.\n");
+      return SCIP_INVALIDCALL;
+
+   default:
+      SCIPerrorMessage("invalid solution origin <%d>\n", SCIPsolGetOrigin(sol));
+      return SCIP_ERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** adds feasible primal solution to solution storage by copying it */
 SCIP_RETCODE SCIPaddSol(
    SCIP*                 scip,               /**< SCIP data structure */
