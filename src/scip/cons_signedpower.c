@@ -1445,8 +1445,12 @@ SCIP_RETCODE checkFixedVariables(
 
          if( !SCIPisInfinity(scip,  consdata->rhs) )
             consdata->lhs = consdata->rhs / factor;
+         else
+            consdata->lhs = -SCIPinfinity(scip);
          if( !SCIPisInfinity(scip, -oldlhs) )
             consdata->rhs = oldlhs / factor;
+         else
+            consdata->rhs = SCIPinfinity(scip);
          consdata->zcoef /= factor;
          consdata->xoffset /= scalar;
          /* since we flip both constraint sides and the sign of zcoef, the events catched for z remain the same, so update necessary there */
@@ -1454,6 +1458,8 @@ SCIP_RETCODE checkFixedVariables(
 
       SCIP_CALL( SCIPlockVarCons(scip, consdata->x, cons, !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip, consdata->rhs)) );
       SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, cons) );
+
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
 
       /* rerun constraint comparison */
       conshdlrdata->comparedpairwise = FALSE;
