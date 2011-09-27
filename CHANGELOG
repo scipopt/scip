@@ -239,7 +239,7 @@ features:
 - there exists now a solution candidate store for the original problem;  during transformation these solutions are tried; during free the
   transformed problem the best feasible solution of the transformed problem  are copied to the solution candidate store of the original problem; this
   useful if you solve several problems iteratively, solutions get now carried over automatically.
-- solution which are given by the user are form the outside a now marke by '#' in the ouput 	   
+- solutions which are given by the user form the outside are now marked by '#' in the output
 
 design:
 - SCIP_HASHMAP now works also without block memory
