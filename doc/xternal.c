@@ -4717,8 +4717,9 @@
  * change in question. The graph also contains source nodes for each bound that has been changed during branching and an
  * artificial target node representing the conflict, i.e., the infeasibility. Essentially, SCIP heuristically constructs
  * a cut in this graph that involves few "branching nodes". For details on the techniques that SCIP uses,
- * we refer to the paper@par Tobias Achterberg, Conflict Analysis in Mixed Integer Programming@n Discrete
- * Optimization, 4, 4-20 (2007)
+ * we refer to the paper @par
+ * Tobias Achterberg, Conflict Analysis in Mixed Integer Programming@n
+ * Discrete Optimization, 4, 4-20 (2007)
  *
  * For conflict analysis to work well, the author of a constraint handler or a propagator has to
  * implement three kinds of functionality: 
@@ -4727,11 +4728,11 @@
  * -# During propagation, one should call the right functions to fix variables.
  * -# One should implement the <em>so-called reverse propagation</em>.
  *
- * If this functionality is not implemented, SCIP will work correctly, but cannot use the information of the constraint
+ * If this functionality is not implemented, SCIP will still work correctly, but cannot use the information of the constraint
  * handler or the propagator for conflict analysis. In this case, each bound reduction performed by the constraint
  * handler/propagator will be treated as if it had been a branching decision.
  *
- * @section Initiating Conflict Analysis
+ * @section INITCONFS Initiating Conflict Analysis
  *
  * If one detects infeasibility within propagation, one should do the following:
  * -# Call SCIPinitConflictAnalysis().
@@ -4742,7 +4743,7 @@
  * -# Call SCIPanalyzeConflict() from a propagator or SCIPanalyzeConflictCons() from a constraint
  * handler.
  *
- * This functionality allows SCIP to add the artificial node that represents infeasibility.
+ * This functionality allows SCIP to set up the conflict graph and perform a conflict analysis.
  *
  * @section Propagation
  *
@@ -4753,10 +4754,10 @@
  * information that should indicate the reason of the propagation and can be used in reverse
  * propagation, see the next section.
  *
- * @section Reverse Propagation
+ * @section RESPROP Reverse Propagation
  *
  * Reverse Propagation allows to build up the conflict graph. Essentially, it provides an algorithm to detect the arcs
- * leading to a node in the conflict graph, i.e., the bound changes responsible for the new bound change duduced during
+ * leading to a node in the conflict graph, i.e., the bound changes responsible for the new bound change deduced during
  * propagation. Reverse Propagation needs to be implemented in the RESPROP callback functions of constraint handlers or
  * propagators. These callbacks receive the following information: the variable which is under investigation (@p
  * infervar), the corresponding bound change (@p bdchgidx, @p boundtype), and the integer (@p inferinfo) that has been
@@ -4779,7 +4780,7 @@
  * \code
  *    SCIP_CALL( SCIPinferBinvarCons(scip, vars[j][i], FALSE, cons, i*n + j, &infeasible, &tightened) );
  * \endcode
- * Thus, variable @p vars[j][i] is fixed to 0 and it passes @p i*n + @p j as @p inferinfo. 
+ * Thus, variable @p vars[j][i] is fixed to 0 (@p FALSE), and it passes @p i*n + @p j as @p inferinfo. 
  *
  * When it propagates the triangle inequality and @p vars[i][j] and @p vars[j[k] are fixed to 1, the constraint handler uses
  * \code
@@ -4792,9 +4793,9 @@
  * n*n, we deal with an equation, otherwise with a triangle inequality. The constraint handler can then extract the
  * indices @p i, @p j (and @p k in the second case) from inferinfo.
  *
- * In the first case it has to distinguish whether @p vars[i][j] is fixed to 0 or 1 &ndash; to call SCIPaddConflictLb()
+ * In the first case it has to distinguish whether @p vars[i][j] is fixed to 0 or 1 &ndash; by calling SCIPaddConflictLb()
  * or SCIPaddConflictUb(), respectively, with variable @p vars[j][i]. In the second case, it is clear that the only
- * possible propagation is to fix @p vars[i][j] when @p vars[k][i] and @p vars[j][k] are fixed to 1. It then calls
+ * possible propagation is to fix @p vars[i][j] to 0 when @p vars[k][i] and @p vars[j][k] are fixed to 1. It then calls
  * SCIPaddConflictLb() for both @p vars[k][i] and @p vars[j][k].
  */
 
