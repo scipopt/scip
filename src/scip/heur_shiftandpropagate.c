@@ -41,7 +41,7 @@
 #define DEFAULT_WEIGHT_EQUALITY     3   /**< the heuristic row weight for equations */
 #define DEFAULT_RELAX            TRUE   /**< Should continuous variables be relaxed from the problem? */
 #define DEFAULT_PROBING          TRUE   /**< Is propagation of solution values enabled? */
-#define DEFAULT_NPROPROUNDS         1   /**< The default number of propagation rounds for each propagation used */
+#define DEFAULT_NPROPROUNDS        20   /**< The default number of propagation rounds for each propagation used */
 #define DEFAULT_PROPBREAKER      65000   /**< fixed maximum number of propagations */
 #define DEFAULT_CUTOFFBREAKER      15   /**< fixed maximum number of allowed cutoffs before the heuristic stops */
 #define DEFAULT_RANDSEED            3141598   /**< the default random seed for random number generation */
@@ -1338,9 +1338,9 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    if( ndiscvars == 0 )
       return SCIP_OKAY;
 
-   /* /\* stop execution method if there is already a primarily feasible solution at hand *\/ */
-   /* if( SCIPgetBestSol(scip) != NULL ) */
-   /*    return SCIP_OKAY; */
+   /* stop execution method if there is already a primarily feasible solution at hand */
+   if( SCIPgetBestSol(scip) != NULL )
+      return SCIP_OKAY;
 
    if( !SCIPisLPConstructed(scip) && SCIPhasCurrentNodeLP(scip) )
    {
