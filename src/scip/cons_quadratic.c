@@ -8801,7 +8801,7 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdQuadratic)
    for( i = 0; i < SCIPexprgraphGetNodeNChildren(node); ++i )
    {
       assert(SCIPexprgraphGetNodeChildren(node)[i] != NULL);
-      SCIP_CALL( SCIPaddQuadVarQuadratic(scip, upgdconss[0], SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[i]), 0.0, 0.0) );
+      SCIP_CALL( SCIPaddQuadVarQuadratic(scip, upgdconss[0], (SCIP_VAR*)SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[i]), 0.0, 0.0) );
    }
 
    switch( SCIPexprgraphGetNodeOperator(node) )
@@ -8812,8 +8812,8 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdQuadratic)
          assert(SCIPexprgraphGetNodeNChildren(node) == 2);
 
          SCIP_CALL( SCIPaddBilinTermQuadratic(scip, upgdconss[0],
-            SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[0]),
-            SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[1]),
+            (SCIP_VAR*)SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[0]),
+            (SCIP_VAR*)SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[1]),
             1.0) );
 
          break;
@@ -8825,7 +8825,7 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdQuadratic)
          assert(SCIPexprgraphGetNodeNChildren(node) == 1);
 
          SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, upgdconss[0],
-            SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[0]),
+            (SCIP_VAR*)SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[0]),
             1.0) );
 
          break;
@@ -8850,7 +8850,7 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdQuadratic)
                {
                   /* linear term */
                   SCIP_CALL( SCIPaddQuadVarLinearCoefQuadratic(scip, upgdconss[0],
-                     SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[i]),
+                     (SCIP_VAR*)SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[i]),
                      lincoefs[i]) );
                }
 
@@ -8863,15 +8863,15 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdQuadratic)
             {
                /* square term */
                SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, upgdconss[0],
-                  SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[quadelems[i].idx1]),
+                  (SCIP_VAR*)SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[quadelems[i].idx1]),
                   quadelems[i].coef) );
             }
             else
             {
                /* bilinear term */
                SCIP_CALL( SCIPaddBilinTermQuadratic(scip, upgdconss[0],
-                  SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[quadelems[i].idx1]),
-                  SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[quadelems[i].idx2]),
+                  (SCIP_VAR*)SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[quadelems[i].idx1]),
+                  (SCIP_VAR*)SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[quadelems[i].idx2]),
                   quadelems[i].coef) );
             }
          }

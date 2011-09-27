@@ -19711,7 +19711,7 @@ SCIP_SOL** SCIPgetSols(
    case SCIP_STAGE_FREETRANS:
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      return SCIP_ERROR;
+      return NULL;
    }  /*lint !e788*/
 }
 
@@ -19756,7 +19756,7 @@ SCIP_SOL* SCIPgetBestSol(
    case SCIP_STAGE_FREETRANS:
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      return SCIP_ERROR;
+      return NULL;
    }
 
    return NULL;

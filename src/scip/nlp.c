@@ -60,10 +60,18 @@
 #define EVENTHDLR_DESC   "handles all events necessary for maintaining NLP data"  /**< description of NLP event handler */
 #define ADDNAMESTONLPI   0                   /**< whether to give variable and row names to NLPI */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* avoid inclusion of scip.h */
 BMS_BLKMEM* SCIPblkmem(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 /*
  * forward declarations

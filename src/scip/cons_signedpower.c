@@ -4856,7 +4856,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpSignedpower)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS*         maxviolcons;
    SCIP_CONSDATA*     consdata;
-   SCIP_RESULT        success;
+   SCIP_Bool          success;
    SCIP_Real          minefficacy;
    SCIP_Real          sepaefficacy;
    SCIP_Real          maxviol;

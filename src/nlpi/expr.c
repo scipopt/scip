@@ -791,7 +791,7 @@ void polynomialdataSortMonomials(
    }
 
    if( polynomialdata->nmonomials > 0 )
-      SCIPsortPtr((void*)polynomialdata->monomials, monomialdataCompare, polynomialdata->nmonomials);
+      SCIPsortPtr((void**)polynomialdata->monomials, monomialdataCompare, polynomialdata->nmonomials);
 
    polynomialdata->sorted = TRUE;
 }
@@ -8069,7 +8069,7 @@ static
 SCIP_RETCODE exprgraphCreateNode(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_EXPRGRAPHNODE**  node,               /**< buffer to store expression graph node */
-   SCIP_EXPROP           operator,           /**< operator type of expression */
+   SCIP_EXPROP           op,                 /**< operator type of expression */
    SCIP_EXPROPDATA       opdata              /**< operator data of expression */
    )
 {
@@ -8079,7 +8079,7 @@ SCIP_RETCODE exprgraphCreateNode(
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, node) );
    BMSclearMemory(*node);
 
-   (*node)->op   = operator;
+   (*node)->op   = op;
    (*node)->data = opdata;
 
    /* mark graph position as not in graph yet */
@@ -8097,7 +8097,7 @@ SCIP_RETCODE exprgraphCreateNode(
    (*node)->value = SCIP_INVALID;
 
    /* set initial curvature to linear for variables, parameters, and constants and unknown otherwise */
-   if( operator == SCIP_EXPR_VARIDX || operator == SCIP_EXPR_CONST || operator == SCIP_EXPR_PARAM )
+   if( op == SCIP_EXPR_VARIDX || op == SCIP_EXPR_CONST || op == SCIP_EXPR_PARAM )
       (*node)->curv = SCIP_EXPRCURV_LINEAR;
    else
       (*node)->curv = SCIP_EXPRCURV_UNKNOWN;
@@ -10715,7 +10715,7 @@ SCIP_RETCODE exprgraphFindParentByOperator(
                exprdata->quadelems[i].idx2 = tmp;
             }
          }
-         SCIPquadelemSort((void*)exprdata->quadelems, exprdata->nquadelems);
+         SCIPquadelemSort(exprdata->quadelems, exprdata->nquadelems);
          exprdata->sorted = TRUE;
 
          for( p = 0; p < nparentcands; ++p )
@@ -10754,7 +10754,7 @@ SCIP_RETCODE exprgraphFindParentByOperator(
                   canddata->quadelems[i].idx2 = tmp;
                }
             }
-            SCIPquadelemSort((void*)canddata->quadelems, canddata->nquadelems);
+            SCIPquadelemSort(canddata->quadelems, canddata->nquadelems);
             canddata->sorted = TRUE;
 
             /* check if children and linear coefficients in parent candidate and expression are the same */
@@ -14750,10 +14750,10 @@ SCIP_RETCODE SCIPexprgraphGetSumTrees(
          /* add constant to first summand, if nonzero; need to divide by coef of this exprtree */
          if( nodecoefs[node->nchildren] != 0.0 )
          {
-            SCIP_EXPR* constexpr;
+            SCIP_EXPR* constexpr_;
 
-            SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, &constexpr, SCIP_EXPR_CONST, nodecoefs[node->nchildren] / exprtreecoefs[0]) );
-            SCIP_CALL( SCIPexprtreeAddExpr(exprtrees[0], constexpr, FALSE) );
+            SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, &constexpr_, SCIP_EXPR_CONST, nodecoefs[node->nchildren] / exprtreecoefs[0]) );
+            SCIP_CALL( SCIPexprtreeAddExpr(exprtrees[0], constexpr_, FALSE) );
          }
 
          *nexprtrees = node->nchildren;
@@ -14842,11 +14842,11 @@ SCIP_RETCODE SCIPexprgraphGetSumTrees(
          /* add constant to first summand, if nonzero; need to divide by coef of this exprtree */
          if( nodedata->constant != 0.0 )
          {
-            SCIP_EXPR* constexpr;
+            SCIP_EXPR* constexpr_;
 
             assert(*nexprtrees > 0);
-            SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, &constexpr, SCIP_EXPR_CONST, nodedata->constant / exprtreecoefs[0]) );
-            SCIP_CALL( SCIPexprtreeAddExpr(exprtrees[0], constexpr, FALSE) );
+            SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, &constexpr_, SCIP_EXPR_CONST, nodedata->constant / exprtreecoefs[0]) );
+            SCIP_CALL( SCIPexprtreeAddExpr(exprtrees[0], constexpr_, FALSE) );
          }
 
          BMSfreeBlockMemoryArray(exprgraph->blkmem, &varidx, exprgraph->nvars);
@@ -14967,11 +14967,11 @@ SCIP_RETCODE SCIPexprgraphGetSumTrees(
          /* add constant to first summand, if still nonzero; need to divide by coefficient of the this exprtree */
          if( constant != 0.0 )
          {
-            SCIP_EXPR* constexpr;
+            SCIP_EXPR* constexpr_;
 
             assert(*nexprtrees > 0);
-            SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, &constexpr, SCIP_EXPR_CONST, constant / exprtreecoefs[0]) );
-            SCIP_CALL( SCIPexprtreeAddExpr(exprtrees[0], constexpr, FALSE) );
+            SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, &constexpr_, SCIP_EXPR_CONST, constant / exprtreecoefs[0]) );
+            SCIP_CALL( SCIPexprtreeAddExpr(exprtrees[0], constexpr_, FALSE) );
          }
 
          BMSfreeBlockMemoryArray(exprgraph->blkmem, &varidx, exprgraph->nvars);
