@@ -97,7 +97,7 @@ public:
       SCIP_DIALOG*       dialog              /**< the dialog itself */
       )
    {  /*lint --e{715}*/
-      SCIPdialogMessage(scip, NULL, "%s", scip_desc_);
+      SCIPdialogMessage(scip, 0, "%s", scip_desc_);
       return SCIP_OKAY;
    }
 

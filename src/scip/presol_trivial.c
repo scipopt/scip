@@ -33,8 +33,9 @@
 #define PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_DELAY              FALSE /**< should presolver be delayed, if other presolvers found reductions? */
 
+#ifdef FIXSIMPLEVALUE
 #define MAXDNOM                 10000LL /**< maximal denominator for simple rational fixed values */
-
+#endif
 
 
 
@@ -178,7 +179,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTrivial)
          {
             SCIP_Real fixval;
 
-#if 0            
+#ifdef FIXSIMPLEVALUE
             fixval = SCIPselectSimpleValue(lb - SCIPepsilon(scip), ub + SCIPepsilon(scip), MAXDNOM);
 #else
             fixval = (lb + ub)/2;

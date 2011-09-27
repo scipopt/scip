@@ -1095,7 +1095,6 @@ SCIP_Longint getIntegralVal(
    )
 {
    SCIP_Real sval;
-   SCIP_Real downval;
    SCIP_Real upval;
    SCIP_Longint intval;
 
@@ -1103,13 +1102,12 @@ SCIP_Longint getIntegralVal(
    assert(maxdelta >= 0.0);
 
    sval = val * scalar;
-   downval = floor(sval);
    upval = ceil(sval);
 
    if( SCIPrelDiff(sval, upval) >= mindelta )
       intval = (SCIP_Longint) upval;
    else
-      intval = (SCIP_Longint) downval;
+      intval = (SCIP_Longint) (floor(sval));
    
    return intval;
 }
@@ -1439,6 +1437,10 @@ SCIP_RETCODE getFlowCover(
             &scalesuccess) );
    }
 
+   /* initialize number of (non-)solution items, should be changed to a nonnegative number in all possible paths below */
+   nsolitems = -1;
+   nnonsolitems = -1;
+
    /* suitable factor C was found*/
    if( scalesuccess )
    {
@@ -1500,6 +1502,9 @@ SCIP_RETCODE getFlowCover(
       assert(!kpexact);
    }
 
+   assert(nsolitems != -1);
+   assert(nnonsolitems != -1);
+
    /* build the flow cover from the solution of KP^SNF_rat and KP^SNF_int, respectively and the fixing */
    assert(*nflowcovervars + *nnonflowcovervars + nsolitems + nnonsolitems == nvars);
    buildFlowCover(scip, coefs, vubcoefs, rhs, solitems, nonsolitems, nsolitems, nnonsolitems, nflowcovervars,
@@ -1514,7 +1519,7 @@ SCIP_RETCODE getFlowCover(
       /* solve KP^SNF_rat approximately */
       SCIP_CALL(SCIPsolveKnapsackApproximatelyLT(scip, nitems, transweightsreal, transprofitsreal, transcapacityreal, 
             items, solitems, nonsolitems, &nsolitems, &nnonsolitems, NULL));
-#if !defined(NDEBUG) || defined(SCIP_DEBUG)
+#ifdef SCIP_DEBUG /* this time only for SCIP_DEBUG, because only then, the variable is used again  */
       kpexact = FALSE;
 #endif
       
@@ -1562,7 +1567,6 @@ SCIP_RETCODE getFlowCover(
    SCIPfreeBufferArray(scip, &items);
 
    return SCIP_OKAY;
-
 }
 
 /** for a given flow cover and a given value of delta, choose L1 subset N1 \ C1 and L2 subset N2 \ C2 by comparison such that 
@@ -1938,7 +1942,7 @@ SCIP_RETCODE addCut(
 
       SCIPdebugMessage(" -> found potential flowcover cut <%s>: activity=%f, rhs=%f, norm=%f, eff=%f\n",
          cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut));
-      SCIPdebug(SCIPprintRow(scip, cut, NULL));
+      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
       
 #if 0 /* tries to scale the cut to integral values */
       SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
@@ -1947,7 +1951,7 @@ SCIP_RETCODE addCut(
       {
          SCIPdebugMessage(" -> flowcover cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
             cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut));
-         SCIPdebug(SCIPprintRow(scip, cut, NULL));
+         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
          success = FALSE;
       }
 #else
@@ -1961,7 +1965,7 @@ SCIP_RETCODE addCut(
             cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut),
             SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
             SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
-         SCIPdebug(SCIPprintRow(scip, cut, NULL));
+         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
          SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE) );
          if( !cutislocal )
          {
@@ -2522,7 +2526,7 @@ SCIP_RETCODE separateCuts(
 
       SCIPdebugMessage("===================== flow cover separation for row <%s> (%d of %d) ===================== \n",
          SCIProwGetName(rows[roworder[r]]), r, nrows);
-      SCIPdebug(SCIPprintRow(scip, rows[roworder[r]], NULL));
+      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rows[roworder[r]], NULL) ) );
       SCIPdebugMessage("rowact=%g is closer to %s --> rowweight=%g\n", rowact, 
          rowweights[roworder[r]] == 1 ? "rhs" : "lhs", rowweights[roworder[r]]);
 

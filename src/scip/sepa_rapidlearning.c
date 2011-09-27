@@ -206,7 +206,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    int nfixedvars;                           /* number of variables that could be fixed by rapid learning */
    int nvars;                                /* number of variables                                       */           
    int restartnum;                           /* maximal number of conflicts that should be created        */
-   int restarts;                             /* maximal number of restarts that should be performed       */
    int i;                                    /* counter                                                   */
 
    SCIP_Bool success;                        /* was problem creation / copying constraint successful? */
@@ -324,7 +323,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    nodelimit = MAX(sepadata->minnodes, nodelimit);
    nodelimit = MIN(sepadata->maxnodes, nodelimit);
 
-   restarts = 0;
    restartnum = 1000;
    
    /* check whether there is enough time and memory left */
@@ -340,7 +338,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit/5) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "limits/restarts", restarts) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "limits/restarts", 0) );
    SCIP_CALL( SCIPsetIntParam(subscip, "conflict/restartnum", restartnum) );
 
    /* forbid recursive call of heuristics and separators solving subMIPs */
@@ -412,7 +410,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    }
  
    /* abort solving, if limit of applied conflicts is reached */
-   if( SCIPgetNConflictConssApplied(subscip) >= restartnum && restarts == 0 )
+   if( SCIPgetNConflictConssApplied(subscip) >= restartnum )
    {
       SCIPdebugMessage("finish after %lld successful conflict calls.\n", SCIPgetNConflictConssApplied(subscip)); 
    }
@@ -508,10 +506,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    {
       SCIP_HASHMAP* consmap;
       int hashtablesize;
-      
-      assert(SCIPgetNConflictConssApplied(subscip) < INT_MAX);
-      hashtablesize = MIN(5*SCIPgetNConflictConssApplied(subscip), INT_MAX);
-      hashtablesize = MAX(hashtablesize, SCIPgetNConflictConssApplied(subscip));
+
+      assert(SCIPgetNConflictConssApplied(subscip) < (SCIP_Longint) INT_MAX);
+      hashtablesize = (int) SCIPgetNConflictConssApplied(subscip);
+      assert(hashtablesize < INT_MAX/5);
+      hashtablesize *= 5;
 
       /* create the variable mapping hash map */
       SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(scip), SCIPcalcHashtableSize(hashtablesize)) );

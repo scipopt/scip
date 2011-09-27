@@ -506,16 +506,13 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/branch_random.o \
 			scip/branch_relpscost.o \
 			scip/cons_and.o \
-			scip/cons_binpack.o \
 			scip/cons_bounddisjunction.o \
 			scip/cons_conjunction.o \
 			scip/cons_countsols.o \
 			scip/cons_cumulative.o \
 			scip/cons_disjunction.o \
-			scip/cons_eqknapsack.o \
 			scip/cons_indicator.o \
 			scip/cons_integral.o \
-			scip/cons_invarknapsack.o \
 			scip/cons_knapsack.o \
 			scip/cons_linear.o \
 			scip/cons_linking.o \
@@ -941,6 +938,7 @@ lpidepend:
 ifeq ($(LINKER),C)
 		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(LPILIBSRC) \
 		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
+		| sed '\''s|$(LIBDIR)/cpxinc/cpxconst.h||g'\'' \
 		>$(LPILIBDEP)'
 endif
 ifeq ($(LINKER),CPP)

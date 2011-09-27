@@ -93,9 +93,7 @@ SCIP_RETCODE SCIPincludeReaderWbo(
 
    /* include lp reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyWbo,
-         readerFreeWbo, readerReadWbo, readerWriteWbo,
-         readerdata) );
+         readerCopyWbo, readerFreeWbo, readerReadWbo, readerWriteWbo, readerdata) );
 
    return SCIP_OKAY;
 }

@@ -26,9 +26,9 @@
 
 #ifdef WITH_ZIMPL
 
+#include <assert.h>
 #include <unistd.h>
 #include <string.h>
-#include <assert.h>
 
 #include "scip/cons_linear.h"
 #include "scip/cons_setppc.h"
@@ -213,7 +213,7 @@ Bool xlp_addcon_term(
             case CON_FREE:
                /*lint -fallthrough*/
             default:
-               SCIPwarningMessage("invalid constraint type <%d> in ZIMPL callback xlp_addcon()\n", type);
+               SCIPerrorMessage("invalid constraint type <%d> in ZIMPL callback xlp_addcon()\n", type);
                readerror_ = TRUE;
                break;
          }
@@ -460,7 +460,7 @@ Bool xlp_addcon_term(
 
                SCIP_CALL_ABORT( SCIPexprAddMonomialFactors(SCIPblkmem(scip_), simplemonomials[nsimplemonomials], 1, &varpos, &one) );
             }
-             SCIPexprMergeMonomialFactors(simplemonomials[nsimplemonomials], 0.0);
+            SCIPexprMergeMonomialFactors(simplemonomials[nsimplemonomials], 0.0);
 
             ++nsimplemonomials;
          }
@@ -646,7 +646,7 @@ Var* xlp_addvar(
    const Bound*          lower,              /**< lower bound */
    const Bound*          upper,              /**< upper bound */
    const Numb*           priority,           /**< branching priority */
-   const Numb*           startval            /**< */
+   const Numb*           startval            /**< start value for the variable within in the start solution */
    )
 {  /*lint --e{715}*/
    SCIP_VAR* var;
@@ -835,7 +835,7 @@ Bool xlp_addsos_term(
    case SOS_ERR:
       /*lint -fallthrough*/
    default:
-      SCIPwarningMessage("invalid SOS type <%d> in ZIMPL callback xlp_addsos_term()\n", type);
+      SCIPerrorMessage("invalid SOS type <%d> in ZIMPL callback xlp_addsos_term()\n", type);
       readerror_ = TRUE;
       break;
    }
@@ -869,7 +869,7 @@ VarClass xlp_getclass(
    case SCIP_VARTYPE_CONTINUOUS:
       return VAR_CON;
    default:
-      SCIPwarningMessage("invalid SCIP variable type <%d> in ZIMPL callback xlp_getclass()\n", SCIPvarGetType(scipvar));
+      SCIPerrorMessage("invalid SCIP variable type <%d> in ZIMPL callback xlp_getclass()\n", SCIPvarGetType(scipvar));
       readerror_ = TRUE;
       break;
    }
@@ -1017,7 +1017,6 @@ SCIP_DECL_READERREAD(readerReadZpl)
    int i;
    SCIP_Bool changedir;
    SCIP_Bool usestartsol;
-   SCIP_Bool success;
    
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/zplreader/changedir", &changedir) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/zplreader/usestartsol", &usestartsol) );
@@ -1200,8 +1199,9 @@ SCIP_DECL_READERREAD(readerReadZpl)
       /* if read failed, transformProb might fail also, due to lack of a problem */
       if( nstartvals_ > 0 && !readerror_ )
       {
+         SCIP_Bool stored;
+
          /* transform the problem such that adding primal solutions is possible */
-         SCIP_CALL( SCIPtransformProb(scip) );
          SCIP_CALL( SCIPcreateSol(scip, &startsol, NULL) );
          for( i = 0; i < nstartvals_; i++ )
          {
@@ -1209,10 +1209,15 @@ SCIP_DECL_READERREAD(readerReadZpl)
             SCIP_CALL( SCIPreleaseVar(scip, &startvars_[i]) );
          }
    
-         success = FALSE;
-         SCIP_CALL( SCIPtrySolFree(scip, &startsol, FALSE, TRUE, TRUE, TRUE, &success) );
-         if( success && SCIPgetVerbLevel(scip) >= SCIP_VERBLEVEL_FULL )
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "ZIMPL starting solution accepted\n");
+         stored = FALSE;
+
+         /* add primal solution to solution candidate storage, frees the solution afterwards */
+         SCIP_CALL( SCIPaddSolFree(scip, &startsol, &stored) );
+         
+         if( stored )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "ZIMPL starting solution candidate accepted\n");
+         }
       }
       
       SCIPfreeMemoryArray(scip_, &startvals_);
@@ -1257,9 +1262,7 @@ SCIP_RETCODE SCIPincludeReaderZpl(
 
    /* include zpl reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyZpl,
-         readerFreeZpl, readerReadZpl, readerWriteZpl,
-         readerdata) );
+         readerCopyZpl, readerFreeZpl, readerReadZpl, readerWriteZpl, readerdata) );
 
    /* add zpl reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

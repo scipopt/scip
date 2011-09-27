@@ -94,7 +94,7 @@ SCIP_RETCODE readBounds(
       nread = sscanf(buffer, "%s %s %s\n", varname, lbstring, ubstring);
       if( nread < 2 )
       {
-         SCIPwarningMessage("invalid input line %d in bounds file <%s>: <%s>\n", lineno, fname, buffer);
+         SCIPerrorMessage("invalid input line %d in bounds file <%s>: <%s>\n", lineno, fname, buffer);
          error = TRUE;
          break;
       }
@@ -124,7 +124,7 @@ SCIP_RETCODE readBounds(
          nread = sscanf(lbstring, "%lf", &lb);
          if( nread != 1 )
          {
-            SCIPwarningMessage("invalid lower bound value <%s> for variable <%s> in line %d of bounds file <%s>\n",
+            SCIPerrorMessage("invalid lower bound value <%s> for variable <%s> in line %d of bounds file <%s>\n",
                lbstring, varname, lineno, fname);
             error = TRUE;
             break;
@@ -143,7 +143,7 @@ SCIP_RETCODE readBounds(
          nread = sscanf(ubstring, "%lf", &ub);
          if( nread != 1 )
          {
-            SCIPwarningMessage("invalid lower bound value <%s> for variable <%s> in line %d of bounds file <%s>\n",
+            SCIPerrorMessage("invalid lower bound value <%s> for variable <%s> in line %d of bounds file <%s>\n",
                ubstring, varname, lineno, fname);
             error = TRUE;
             break;
@@ -210,18 +210,18 @@ SCIP_DECL_READERREAD(readerReadBnd)
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
    assert(result != NULL);
 
+   *result = SCIP_DIDNOTRUN;
+
    if( SCIPgetStage(scip) < SCIP_STAGE_PROBLEM )
    {
-      SCIPwarningMessage("reading of bounds file is only possible after a problem was created\n");
-      *result = SCIP_DIDNOTRUN;
-      return SCIP_OKAY;
+      SCIPerrorMessage("reading of bounds file is only possible after a problem was created\n");
+      return SCIP_READERROR;
    }
 
    if( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM )
    {
-      SCIPwarningMessage("reading of bounds file is only possible during problem creation stage\n");
-      *result = SCIP_DIDNOTRUN;
-      return SCIP_OKAY;
+      SCIPerrorMessage("reading of bounds file is only possible during problem creation stage\n");
+      return SCIP_READERROR;
    }
 
    /* read bounds file */
@@ -258,4 +258,3 @@ SCIP_RETCODE SCIPincludeReaderBnd(
 
    return SCIP_OKAY;
 }
-

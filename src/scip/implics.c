@@ -1495,7 +1495,7 @@ SCIP_Bool SCIPcliquelistsHaveCommonClique(
       }
     
       /* check whether both clique lists have a same clique */
-      while( TRUE )
+      while( TRUE )  /*lint !e716*/
       {
          cliqueid = SCIPcliqueGetId(cliques2[i2]);
 

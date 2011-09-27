@@ -651,21 +651,6 @@ SCIP_RETCODE SCIPnlpSolveDive(
    SCIP_STAT*            stat                /**< problem statistics */
    );
 
-#if 0
-/** sets whether the current NLP is a convex problem, i.e., all restrictions are defined by convex functions w.r.t. current bounds */
-extern
-void SCIPnlpSetIsConvex(
-   SCIP_NLP*             nlp,                /**< NLP data */
-   SCIP_Bool             isconvex            /**< is the current NLP a convex problem? */
-   );
-
-/** returns whether the current NLP is a convex problem, i.e., all restrictions are defined by convex functions w.r.t. current bounds */
-extern
-SCIP_Bool SCIPnlpIsConvex(
-   SCIP_NLP*             nlp                 /**< NLP data */
-   );
-#endif
-
 /** gets array with variables of the NLP */
 extern
 SCIP_VAR** SCIPnlpGetVars(

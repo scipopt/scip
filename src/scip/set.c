@@ -138,6 +138,7 @@
 #define SCIP_DEFAULT_LIMIT_BESTSOL           -1 /**< solving stops, if given number of solution improvements were found
                                                  *   (-1: no limit) */
 #define SCIP_DEFAULT_LIMIT_MAXSOL           100 /**< maximal number of solutions to store in the solution storage */
+#define SCIP_DEFAULT_LIMIT_MAXORIGSOL        10 /**< maximal number of solutions candidates to store in the solution storage of the original problem */
 #define SCIP_DEFAULT_LIMIT_RESTARTS          -1 /**< solving stops, if the given number of restarts was triggered (-1: no limit) */
 
 
@@ -957,6 +958,11 @@ SCIP_RETCODE SCIPsetCreate(
          "limits/maxsol",
          "maximal number of solutions to store in the solution storage",
          &(*set)->limit_maxsol, FALSE, SCIP_DEFAULT_LIMIT_MAXSOL, 1, INT_MAX,
+         SCIPparamChgdLimit, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
+         "limits/maxorigsol",
+         "maximal number of solutions candidates to store in the solution storage of the original problem",
+         &(*set)->limit_maxorigsol, FALSE, SCIP_DEFAULT_LIMIT_MAXORIGSOL, 0, INT_MAX,
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "limits/restarts",

@@ -777,9 +777,7 @@ SCIP_RETCODE computeViolation(
    {
       SCIP_Real norm = getGradientNorm(scip, cons, sol);
       if( norm > 1.0 )
-      { /* @todo scale only if > 1.0, or should it be larger SCIPsumepsilon? */
          consdata->violation /= norm;
-      }
    }
 
    return SCIP_OKAY;
@@ -1177,7 +1175,8 @@ SCIP_RETCODE separatePoint(
    assert(success != NULL);
    
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   
+   assert(conshdlrdata != NULL);
+
    *success = FALSE;
    
    minefficacy = addweakcuts ? SCIPfeastol(scip) : conshdlrdata->minefficacy;
@@ -1189,6 +1188,8 @@ SCIP_RETCODE separatePoint(
 
       if( SCIPisFeasPositive(scip, consdata->violation) && !SCIPisInfinity(scip, consdata->violation) )
       {
+         row = NULL;
+
          /* generate cut */
          if( conshdlrdata->sparsify )
          {
@@ -3152,7 +3153,6 @@ SCIP_DECL_CONSEXITSOL(consExitsolSOC)
 static
 SCIP_DECL_CONSDELETE(consDeleteSOC)
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
    int i;
 
    assert(scip      != NULL);
@@ -3163,12 +3163,15 @@ SCIP_DECL_CONSDELETE(consDeleteSOC)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert((*consdata)->nlrow == NULL); /* should have been freed in exitsol */
    
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-
    SCIPdebugMessage("Deleting SOC constraint <%s>.\n", SCIPconsGetName(cons) );
    
    if( SCIPconsIsTransformed(cons) )
    {
+      SCIP_CONSHDLRDATA* conshdlrdata;
+
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+
       SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, cons) );
    }
    
@@ -3854,6 +3857,7 @@ SCIP_DECL_CONSPARSE(consParseSOC)
    SCIP_Real constant;
    SCIP_Real coef;
    SCIP_Real offset;
+   char* endptr;
    int parselen;
    int namelen;
 
@@ -3896,7 +3900,7 @@ SCIP_DECL_CONSPARSE(consParseSOC)
       varname[0] = '<';
       varname[namelen+1] = '>';
       varname[namelen+2] = '\0';
-      SCIP_CALL( SCIPparseVarName(scip, varname, 0, &var, &parselen) );
+      SCIP_CALL( SCIPparseVarName(scip, varname, &var, &endptr) );
       assert(parselen == namelen+2);
 
       if( var == NULL )
@@ -3930,8 +3934,7 @@ SCIP_DECL_CONSPARSE(consParseSOC)
          varname[0] = '<';
          varname[namelen+1] = '>';
          varname[namelen+2] = '\0';
-         SCIP_CALL( SCIPparseVarName(scip, varname, 0, &rhsvar, &parselen) );
-         assert(parselen == namelen+2);
+         SCIP_CALL( SCIPparseVarName(scip, varname, &rhsvar, &endptr) );
 
          if( rhsvar == NULL )
          {

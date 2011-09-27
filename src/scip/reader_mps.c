@@ -359,7 +359,7 @@ void mpsinputSyntaxerror(
 {
    assert(mpsi != NULL);
 
-   SCIPwarningMessage("Syntax error in line %d\n", mpsi->lineno);
+   SCIPerrorMessage("Syntax error in line %d\n", mpsi->lineno);
    mpsi->section  = MPS_ENDATA;
    mpsi->haserror = TRUE;
 }
@@ -500,12 +500,12 @@ SCIP_Bool mpsinputReadLine(
              */
             SCIP_Bool number;
             
-            number = isdigit(mpsi->buf[24]) || isdigit(mpsi->buf[25])
-               || isdigit(mpsi->buf[26]) || isdigit(mpsi->buf[27])
-               || isdigit(mpsi->buf[28]) || isdigit(mpsi->buf[29])
-               || isdigit(mpsi->buf[30]) || isdigit(mpsi->buf[31])
-               || isdigit(mpsi->buf[32]) || isdigit(mpsi->buf[33])
-               || isdigit(mpsi->buf[34]) || isdigit(mpsi->buf[35]);
+            number = isdigit((unsigned char)mpsi->buf[24]) || isdigit((unsigned char)mpsi->buf[25])
+               || isdigit((unsigned char)mpsi->buf[26]) || isdigit((unsigned char)mpsi->buf[27])
+               || isdigit((unsigned char)mpsi->buf[28]) || isdigit((unsigned char)mpsi->buf[29])
+               || isdigit((unsigned char)mpsi->buf[30]) || isdigit((unsigned char)mpsi->buf[31])
+               || isdigit((unsigned char)mpsi->buf[32]) || isdigit((unsigned char)mpsi->buf[33])
+               || isdigit((unsigned char)mpsi->buf[34]) || isdigit((unsigned char)mpsi->buf[35]);
 
             /* len < 13 is handle ROW lines with embedded spaces
              * in the names correctly
@@ -2114,6 +2114,7 @@ SCIP_RETCODE readIndicators(
       if( strcmp(SCIPconshdlrGetName(conshdlr), "linear") != 0 )
       {
          SCIPerrorMessage("constraint <%s> is not linear.\n", mpsinputField2(mpsi));
+         mpsinputSyntaxerror(mpsi);
          return SCIP_OKAY;
       }
 
@@ -2135,20 +2136,23 @@ SCIP_RETCODE readIndicators(
       }
 
       /* check whether we need the negated variable */
-      if( *mpsinputField4(mpsi) == '0' )
+      if( mpsinputField4(mpsi) != NULL )
       {
-         SCIP_VAR* var;
-         SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &var) );
-         binvar = var;
-         assert( binvar != NULL );
-      }
-      else
-      {
-         if( *mpsinputField4(mpsi) != '1' )
+         if( *mpsinputField4(mpsi) == '0' )
          {
-            SCIPerrorMessage("binary variable <%s> can only take values 0/1 (%s).\n", mpsinputField3(mpsi), mpsinputField4(mpsi));
-            mpsinputSyntaxerror(mpsi);
-            return SCIP_OKAY;
+            SCIP_VAR* var;
+            SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &var) );
+            binvar = var;
+            assert( binvar != NULL );
+         }
+         else
+         {
+            if( *mpsinputField4(mpsi) != '1' )
+            {
+               SCIPerrorMessage("binary variable <%s> can only take values 0/1 (%s).\n", mpsinputField3(mpsi), mpsinputField4(mpsi));
+               mpsinputSyntaxerror(mpsi);
+               return SCIP_OKAY;
+            }
          }
       }
 
@@ -2418,7 +2422,7 @@ void printRecord(
    fieldwidth = computeFieldWidth(maxnamelen);
    (void) SCIPsnprintf(format, 32," %%-%ds %%%ds ", fieldwidth, MPS_MAX_VALUELEN - 1);
 
-   SCIPinfoMessage(scip, file, format, col1, col2);
+   SCIPinfoMessage(scip, file, (const char *)format, col1, col2);
 }
 
 /** output two strings in columns 1 (width 2) and 2 (width 8) */
@@ -2452,7 +2456,7 @@ void printStart(
       (void) SCIPsnprintf(format, 32, " %%-2.2s %%-%ds ", fieldwidth);
    }
 
-   SCIPinfoMessage(scip, file, format, col1, col2);
+   SCIPinfoMessage(scip, file, (const char*)format, col1, col2);
 }
 
 /** prints the given data as column entry */

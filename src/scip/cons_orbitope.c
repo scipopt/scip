@@ -2120,7 +2120,7 @@ SCIP_DECL_CONSPARSE(consParseOrbitope)
    s = str;
 
    /* skip white space */
-   while ( *s != '\0' && isspace(*s) )
+   while ( *s != '\0' && isspace((unsigned char)*s) )
       ++s;
 
    ispart = FALSE;
@@ -2151,7 +2151,7 @@ SCIP_DECL_CONSPARSE(consParseOrbitope)
    {
       /* find variable name */
       k = 0;
-      while ( *s != '\0' && ! isspace(*s) && *s != ',' && *s != '.' && *s != ')' )
+      while ( *s != '\0' && ! isspace((unsigned char)*s) && *s != ',' && *s != '.' && *s != ')' )
          varname[k++] = *s++;
       varname[k] = '\0';
 
@@ -2184,7 +2184,7 @@ SCIP_DECL_CONSPARSE(consParseOrbitope)
       }
 
       /* skip white space and ',' */
-      while ( *s != '\0' && ( isspace(*s) ||  *s == ',' ) )
+      while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' ) )
          ++s;
       
       /* begin new row if required */
@@ -2323,6 +2323,7 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
             SCIP_VAR* var;
 
             var = vars[i][j];
+            assert(var != NULL);
 
             /* all variables need to be binary */
             assert( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY );
@@ -2337,7 +2338,7 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
                obj = SCIPvarGetObj(var);
             else
             {
-               assert( fixedZero || SCIPisEQ(scip, obj, SCIPvarGetObj(var)) );    /*lint !e644*/
+               assert( fixedZero || SCIPisEQ(scip, obj, SCIPvarGetObj(var)) );
             }
          }
       }

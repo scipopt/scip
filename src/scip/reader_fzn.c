@@ -27,10 +27,6 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
-#else
-#include <strings.h>
-#endif
 #include <ctype.h>
 
 #include "scip/cons_and.h"
@@ -47,7 +43,7 @@
 #include "scip/reader_fzn.h"
 
 #define READER_NAME             "fznreader"
-#define READER_DESC             "FlatZinc file reader"
+#define READER_DESC             "file reader for FlatZinc format"
 #define READER_EXTENSION        "fzn"
 
 
@@ -305,13 +301,13 @@ SCIP_Bool isIdentifier(
    int i;
    
    /* check if the identifier starts with a letter */
-   if( strlen(name) == 0 || !isalpha(name[0]) )
+   if( strlen(name) == 0 || !isalpha((unsigned char)name[0]) )
       return FALSE;
    
    i = 1;
    while( name[i] )
    {
-      if( !isalnum(name[i]) && name[i] != '_' )
+      if( !isalnum((unsigned char)name[i]) && name[i] != '_' )
          return FALSE;
       i++;
    }
@@ -332,11 +328,11 @@ SCIP_Bool isValueChar(
    assert(hasdot != NULL);
    assert(exptype != NULL);
 
-   if( isdigit(c) )
+   if( isdigit((unsigned char)c) )
       return TRUE;
    else if( firstchar && (c == '+' || c == '-') )
       return TRUE;
-   else if( (*exptype == FZN_EXP_NONE) && !(*hasdot) && (c == '.') && (isdigit(nextc)))
+   else if( (*exptype == FZN_EXP_NONE) && !(*hasdot) && (c == '.') && (isdigit((unsigned char)nextc)))
    {
       *hasdot = TRUE;
       return TRUE;
@@ -348,7 +344,7 @@ SCIP_Bool isValueChar(
          *exptype = FZN_EXP_SIGNED;
          return TRUE;
       }
-      else if( isdigit(nextc) )
+      else if( isdigit((unsigned char)nextc) )
       {
          *exptype = FZN_EXP_UNSIGNED;
          return TRUE;
@@ -455,9 +451,7 @@ SCIP_Bool getNextLine(
       fzninput->endline = TRUE;
    }
    
-   fzninput->linebuf[FZN_BUFFERLEN-1] = '\0';
-   fzninput->linebuf[FZN_BUFFERLEN-2] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
-
+   fzninput->linebuf[FZN_BUFFERLEN-1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
    fzninput->comment = FALSE;
 
    /* skip characters after comment symbol */
@@ -657,11 +651,8 @@ void syntaxError(
 {
    assert(fzninput != NULL);
 
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error in line %d: %s found <%s>\n",
-      fzninput->linenumber, msg, fzninput->token);
-
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "  input: %s", fzninput->linebuf);
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "\n");
+   SCIPerrorMessage("Syntax error in line %d: %s found <%s>\n", fzninput->linenumber, msg, fzninput->token);
+   SCIPerrorMessage("  input: %s\n", fzninput->linebuf);
 
    fzninput->haserror = TRUE;
 }
@@ -1602,7 +1593,7 @@ SCIP_RETCODE parseName(
    }   
    
    /* copy identifier name */
-   (void)SCIPsnprintf(name, FZN_BUFFERLEN-1, fzninput->token);
+   (void)SCIPsnprintf(name, FZN_BUFFERLEN-1, (const char*)fzninput->token);
    
    /* search for an assignment; therefore, skip annotations */
    do 
@@ -1894,6 +1885,9 @@ void parseArrayDimension(
 
    /* get array dimension */
    parseRange(scip, fzninput, &type, &left, &right);
+
+   if( fzninput->haserror )
+      return;  
    
    if( type != FZN_INT || left != 1.0  || right <= 0.0 )
    {
@@ -2358,6 +2352,8 @@ SCIP_RETCODE parseConstantArrayAssignment(
       for( c = 0; c < nelements && !hasError(fzninput); ++c )
       {
          parseValue(scip, fzninput, &value, elements[c]);
+         assert(!hasError(fzninput));
+
          (*vals)[(*nvals)] = value;
          (*nvals)++;
       }
@@ -2582,7 +2578,10 @@ SCIP_RETCODE parseQuadratic(
          
          /* parse the numeric value otherwise */
          if( vars[v] == NULL )
+         {
             parseValue(scip, fzninput, &vals[v], elements[v]);
+            assert(!hasError(fzninput));
+         }
          else
             vals[v] = SCIP_INVALID;                
       }
@@ -2713,6 +2712,8 @@ SCIP_RETCODE parseAggregation(
       if( vars[nvars] == NULL )
       {
          parseValue(scip, fzninput, &value, elements[0]);
+         assert(!hasError(fzninput));
+
          rhs -= value;
       }
       else
@@ -2726,6 +2727,8 @@ SCIP_RETCODE parseAggregation(
       if( vars[nvars] == NULL )
       {
          parseValue(scip, fzninput, &value, elements[1]);
+         assert(!hasError(fzninput));
+
          if( equalTokens(type, "minus") )
             rhs += value;
          else
@@ -2751,6 +2754,8 @@ SCIP_RETCODE parseAggregation(
          if( vars[nvars] == NULL )
          {
             parseValue(scip, fzninput, &value, elements[2]);
+            assert(!hasError(fzninput));
+
             rhs += value;
          }
          else
@@ -3287,6 +3292,7 @@ CREATE_CONSTRAINT(createCumulativeOpCons)
    nvars = 0;
    ndurations = 0;
    ndemads = 0;
+   demands = NULL;
 
    SCIPdebugMessage("parse cumulative expression\n");
 
@@ -3339,6 +3345,8 @@ CREATE_CONSTRAINT(createCumulativeOpCons)
    /* parse cumulative capacity */
    flattenAssignment(scip, fzninput, assignment);
    parseValue(scip, fzninput, &val, assignment);
+   assert(!hasError(fzninput));
+
    capacity = (int)val;
    
    assert(nvars == ndurations);
@@ -3359,7 +3367,7 @@ CREATE_CONSTRAINT(createCumulativeOpCons)
 
  TERMINATE:
    /* free buffers */
-   SCIPfreeBufferArray(scip, &demands);
+   SCIPfreeBufferArrayNull(scip, &demands);
    SCIPfreeBufferArray(scip, &durations);
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &vars);

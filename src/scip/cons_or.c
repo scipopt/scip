@@ -1806,6 +1806,7 @@ SCIP_DECL_CONSCOPY(consCopyOr)
 
    assert(valid != NULL);
    (*valid) = TRUE;
+   resvar = NULL;
    
    /* get variables that need to be copied */
    sourceresvar = SCIPgetResultantOr(sourcescip, sourcecons); 
@@ -1828,9 +1829,9 @@ SCIP_DECL_CONSCOPY(consCopyOr)
       SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourceresvar, &resvar, varmap, consmap, global, valid) );
       assert(!(*valid) || resvar != NULL);
 
-      /* only create the target constraint, if all variables could be copied */
       if( *valid )
       {
+         assert(resvar != NULL);
          SCIP_CALL( SCIPcreateConsOr(scip, cons, SCIPconsGetName(sourcecons), resvar, nvars, vars, 
                initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
       }
@@ -1851,10 +1852,10 @@ SCIP_DECL_CONSPARSE(consParseOr)
    char* strcopy;
    char* token;
    char* saveptr;
+   char* endptr;
    int requiredsize;
    int varssize;
    int nvars;
-   int pos;
    
    SCIPdebugMessage("parse <%s> as or constraint\n", str);
 
@@ -1865,7 +1866,7 @@ SCIP_DECL_CONSPARSE(consParseOr)
    token = SCIPstrtok(strcopy, "=", &saveptr ); 
 
    /* parse variable name */ 
-   SCIP_CALL( SCIPparseVarName(scip, token, 0, &resvar, &pos) );
+   SCIP_CALL( SCIPparseVarName(scip, token, &resvar, &endptr) );
 
    if( resvar == NULL )
    {
@@ -1887,7 +1888,7 @@ SCIP_DECL_CONSPARSE(consParseOr)
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
 
       /* parse string */
-      SCIP_CALL( SCIPparseVarsList(scip, token, 0, vars, &nvars, varssize, &requiredsize, &pos, ',', success) );
+      SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
    
       if( *success )
       {
@@ -1899,7 +1900,7 @@ SCIP_DECL_CONSPARSE(consParseOr)
             SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
             
             /* parse string again with the correct size of the variable array */
-            SCIP_CALL( SCIPparseVarsList(scip, token, 0, vars, &nvars, varssize, &requiredsize, &pos, ',', success) );
+            SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
          }
          
          assert(*success);

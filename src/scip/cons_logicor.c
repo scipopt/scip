@@ -1859,6 +1859,8 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
    {
       int v;
 
+      assert(conss != NULL); /* for flexelint */
+
       cons = conss[c];
       assert(cons != NULL);
          
@@ -2817,13 +2819,13 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
          {
             if( SCIPconsIsActive(conss[c]) && !SCIPconsIsModifiable(conss[c]) )
             {
-               npaircomparisons += (SCIPconsGetData(conss[c])->changed) ? c : (c - firstchange);
+               npaircomparisons += (SCIPconsGetData(conss[c])->changed) ? (SCIP_Longint) c : ((SCIP_Longint) c - (SCIP_Longint) firstchange);
                
                SCIP_CALL( removeRedundantConstraints(scip, conss, &firstchange, c, ndelconss) );
                
                if( npaircomparisons > NMINCOMPARISONS )
                {
-                  if( (*ndelconss - oldndelconss) / (npaircomparisons + 0.0) < MINGAINPERNMINCOMPARISONS )
+                  if( (*ndelconss - oldndelconss) / ((SCIP_Real)npaircomparisons) < MINGAINPERNMINCOMPARISONS )
                      break;
                   oldndelconss = *ndelconss;
                   npaircomparisons = 0;
@@ -3060,10 +3062,10 @@ SCIP_DECL_CONSPARSE(consParseLogicor)
    char* strcopy;
    char* token;
    char* saveptr;
+   char* endptr;
    int requiredsize;
    int varssize;
    int nvars;
-   int pos;
    
    SCIPdebugMessage("parse <%s> as logicor constraint\n", str);
 
@@ -3083,7 +3085,7 @@ SCIP_DECL_CONSPARSE(consParseLogicor)
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
 
    /* parse string */
-   SCIP_CALL( SCIPparseVarsList(scip, token, 0, vars, &nvars, varssize, &requiredsize, &pos, ',', success) );
+   SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
    
    if( *success )
    {
@@ -3095,7 +3097,7 @@ SCIP_DECL_CONSPARSE(consParseLogicor)
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
          
          /* parse string again with the correct size of the variable array */
-         SCIP_CALL( SCIPparseVarsList(scip, token, 0, vars, &nvars, varssize, &requiredsize, &pos, ',', success) );
+         SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
       }
       
       assert(*success);
@@ -3194,6 +3196,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLogicor)
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nbdchginfos) );
    for( i = 0; i < nbdchginfos; ++i )
    {
+      assert(bdchginfos != NULL); /* for flexelint */
       assert(bdchginfos[i] != NULL);
 
       vars[i] = SCIPbdchginfoGetVar(bdchginfos[i]);

@@ -780,7 +780,7 @@ SCIP_RETCODE checkCons(
       SCIP_CALL( SCIPincConsAge(scip, cons) );
 
       sum = 0.0;
-      for( i = 0; i < consdata->nvars && sum <= consdata->capacity + 0.1; ++i )
+      for( i = 0; i < consdata->nvars; ++i )
       {
          sum += consdata->weights[i] * SCIPgetSolVal(scip, sol, consdata->vars[i]);
       }
@@ -1991,7 +1991,7 @@ SCIP_RETCODE getLiftingSequence(
     */
    for( j = 0; j < nvarsF; j++ )
    {
-      sortkeypairsF[j] = &(sortkeypairsFstore[j]); /*lint !e644*/
+      sortkeypairsF[j] = &(sortkeypairsFstore[j]);
       sortkeypairsF[j]->key1 = solvals[varsF[j]]; 
       sortkeypairsF[j]->key2 = (SCIP_Real) weights[varsF[j]]; 
    }
@@ -3058,7 +3058,7 @@ SCIP_RETCODE makeCoverMinimal(
    {
       for( j = 0; j < *ncovervars; j++ )
       {
-         SCIP_CALL( SCIPallocBlockMemory(scip, &(sortkeypairs[j])) );  /*lint !e644*/
+         SCIP_CALL( SCIPallocBlockMemory(scip, &(sortkeypairs[j])) );
          
          sortkeypairs[j]->key1 = solvals[covervars[j]]; 
          sortkeypairs[j]->key2 = (SCIP_Real) weights[covervars[j]]; 
@@ -3421,10 +3421,7 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
    tmpindices = NULL;
 
    SCIPdebugMessage("separate linear constraint <%s> relaxed to knapsack\n", cons != NULL ? SCIPconsGetName(cons) : "-");
-   if( cons != NULL )
-   {
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-   }
+   SCIPdebug( if( cons != NULL ) { SCIP_CALL( SCIPprintCons(scip, cons, NULL) ); } );
 
    binvars = SCIPgetVars(scip);
 
@@ -8559,7 +8556,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
          if( !SCIPconsIsActive(cons) || SCIPconsIsModifiable(cons) )
             continue;
          
-         npaircomparisons += (SCIP_Longint) ((!SCIPconsGetData(cons)->presolved) ? c : (c - firstchange));
+         npaircomparisons += ((!SCIPconsGetData(cons)->presolved) ? (SCIP_Longint) c : ((SCIP_Longint) c - (SCIP_Longint) firstchange));
          
          SCIP_CALL( preprocessConstraintPairs(scip, conss, firstchange, c, ndelconss) );
          
@@ -8777,6 +8774,7 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
    SCIP_VAR** vars;
    SCIP_Longint* weights;
    SCIP_Longint capacity;
+   char* endptr;
    int nvars;
    int varssize;
    int parselen;
@@ -8806,8 +8804,7 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
       varname[0] = '<';
       varname[namelen+1] = '>';
       varname[namelen+2] = '\0';
-      SCIP_CALL( SCIPparseVarName(scip, varname, 0, &var, &parselen) );
-      assert(parselen == namelen+2);
+      SCIP_CALL( SCIPparseVarName(scip, varname, &var, &endptr) );
 
       if( var == NULL )
       {

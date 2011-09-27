@@ -144,12 +144,6 @@
 
 #include "nlpi/nlpi_ipopt.h"
 
-#if 0
-#include "scip/cons_binpack.h"
-#include "scip/cons_eqknapsack.h"
-#include "scip/cons_invarknapsack.h"
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif

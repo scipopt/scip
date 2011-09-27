@@ -1371,7 +1371,7 @@ SCIP_RETCODE SCIPrealarrayExtend(
 
          BMScopyMemoryArray(&newvals[realarray->minusedidx - newfirstidx],
             &(realarray->vals[realarray->minusedidx - realarray->firstidx]),
-            realarray->maxusedidx - realarray->minusedidx + 1);
+            realarray->maxusedidx - realarray->minusedidx + 1); /*lint !e866*/
          for( i = realarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
             newvals[i] = 0.0;
       }
@@ -1740,7 +1740,7 @@ SCIP_RETCODE SCIPintarrayExtend(
 
          BMScopyMemoryArray(&newvals[intarray->minusedidx - newfirstidx],
             &intarray->vals[intarray->minusedidx - intarray->firstidx],
-            intarray->maxusedidx - intarray->minusedidx + 1);
+            intarray->maxusedidx - intarray->minusedidx + 1); /*lint !e866*/
          for( i = intarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
             newvals[i] = 0;
       }
@@ -2105,7 +2105,7 @@ SCIP_RETCODE SCIPboolarrayExtend(
 
          BMScopyMemoryArray(&newvals[boolarray->minusedidx - newfirstidx],
             &boolarray->vals[boolarray->minusedidx - boolarray->firstidx],
-            boolarray->maxusedidx - boolarray->minusedidx + 1);
+            boolarray->maxusedidx - boolarray->minusedidx + 1); /*lint !e866*/
          for( i = boolarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
             newvals[i] = FALSE;
       }
@@ -2458,7 +2458,7 @@ SCIP_RETCODE SCIPptrarrayExtend(
 
          BMScopyMemoryArray(&newvals[ptrarray->minusedidx - newfirstidx],
             &(ptrarray->vals[ptrarray->minusedidx - ptrarray->firstidx]),
-            ptrarray->maxusedidx - ptrarray->minusedidx + 1);
+            ptrarray->maxusedidx - ptrarray->minusedidx + 1); /*lint !e866*/
          for( i = ptrarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
             newvals[i] = NULL;
       }
@@ -3865,15 +3865,12 @@ int SCIPstairmapGetLatestFeasibleStart(
          (*infeasible) = FALSE;
          return starttime;
       }
-    
+      assert(pos >= 0);
+
       /* the core did not fit into the stair map since at time point "pos" not enough capacity is available; 
        * therefore we can proceed with the next time point  */
       assert(stairmap->freecapacities[pos] < height);
-      
-      /* check if we exceed the time point array */
-      if( pos < 0  )
-         break;
-      
+            
       starttime = stairmap->timepoints[pos] - duration;
    }
 
@@ -3926,7 +3923,7 @@ SCIP_Longint SCIPcalcGreComDiv(
    {
       val1 >>= 1; /*lint !e704*/
       
-      /* if val2 is even too, divide it by 2 and increase t(=number of e */
+      /* if val2 is even too, divide it by 2 and increase t(=number of e) */
       if( !(val2 & 1) )
       {
          val2 >>= 1; /*lint !e704*/
@@ -4584,7 +4581,8 @@ SCIP_RETCODE SCIPgetRandomSubset(
 #endif   
 
    /* draw each element individually */
-   for( i = 0; i < nsubelems; i++ ) 
+   i = 0;
+   while( i < nsubelems )
    {
       int r;
 
@@ -4596,10 +4594,11 @@ SCIP_RETCODE SCIPgetRandomSubset(
       {
          if( subset[i] == subset[j] ) 
          {
-            i--;  /*lint !e850*/
+            --i;
             break;
          }
       }
+      ++i;
    }
    return SCIP_OKAY;
 }
@@ -4610,20 +4609,22 @@ SCIP_RETCODE SCIPgetRandomSubset(
  * Strings
  */
 
-/** prints an error message containing of the given string followed by a string describing the current system error; 
-    prefers to use the strerror_r method, which is threadsafe; 
-    on systems where this method does not exist, NO_STRERROR_R should be defined (see INSTALL), 
-    in this case, srerror is used which is not guaranteed to be threadsafe (on SUN-systems, it actually is) */
+/** prints an error message containing of the given string followed by a string describing the current system error;
+ *  prefers to use the strerror_r method, which is threadsafe; on systems where this method does not exist,
+ *  NO_STRERROR_R should be defined (see INSTALL), in this case, srerror is used which is not guaranteed to be
+ *  threadsafe (on SUN-systems, it actually is) 
+ */
 void SCIPprintSysError(
-   const char*                 message             /**< first part of the error message, e.g. the filename */
+   const char*           message             /**< first part of the error message, e.g. the filename */
    )
 {
 #ifdef NO_STRERROR_R
    char* buf;
    buf = strerror(errno);
 #else
-   char buf[1024];
-   (void) strerror_r(errno, buf, 1024);
+   char buf[SCIP_MAXSTRLEN];
+   (void) strerror_r(errno, buf, SCIP_MAXSTRLEN);
+   buf[SCIP_MAXSTRLEN - 1] = '\0';
 #endif
    SCIPmessagePrintError("%s: %s\n", message, buf);
 }
@@ -4672,10 +4673,10 @@ void SCIPescapeString(
 
 /* safe version of snprintf */
 int SCIPsnprintf(
-   char*            t,     /**< target string                  */
-   int              len,   /**< length of t                    */
-   const char*      s,     /**< source string or format string */
-   ...                     /**< further parameters             */
+   char*                 t,                  /**< target string */
+   int                   len,                /**< length of the string to copy */
+   const char*           s,                  /**< source string */
+   ...                                       /**< further parameters */
    )
 {
    va_list ap;
@@ -4699,153 +4700,100 @@ int SCIPsnprintf(
    return n;
 }
 
-enum ExpType
-{
-   EXP_NONE, EXP_UNSIGNED, EXP_SIGNED
-};
-typedef enum ExpType EXPTYPE;
-
-/** returns whether the current character is member of a value string */
-static
-SCIP_Bool isValueChar(
-   char                  c,                  /**< input character */
-   char                  nextc,              /**< next input character */
-   SCIP_Bool             firstchar,          /**< is the given character the first char of the token? */
-   SCIP_Bool*            hasdot,             /**< pointer to update the dot flag */
-   EXPTYPE*              exptype             /**< pointer to update the exponent type */
-   )
-{
-   assert(hasdot != NULL);
-   assert(exptype != NULL);
-
-   if( isdigit(c) )
-      return TRUE;
-   else if( (*exptype == EXP_NONE) && !(*hasdot) && (c == '.') && isdigit(nextc) )
-   {
-      *hasdot = TRUE;
-      return TRUE;
-   }
-   else if( !firstchar && (*exptype == EXP_NONE) && (c == 'e' || c == 'E') )
-   {
-      if( nextc == '+' || nextc == '-' )
-      {
-         *exptype = EXP_SIGNED;
-         return TRUE;
-      }
-      else if( isdigit(nextc) )
-      {
-         *exptype = EXP_UNSIGNED;
-         return TRUE;
-      }
-   }
-   else if( (*exptype == EXP_SIGNED) && (c == '+' || c == '-') )
-   {
-      *exptype = EXP_UNSIGNED;
-      return TRUE;
-   }
-
-   return FALSE;
-}
-
-/** extract the next token as a value if it is one; in case a value is parsed the endpos is set behind the parsed
- *  value 
- */
-SCIP_Bool SCIPstrGetValue(
+/** extract the next token as a double value if it is one; in case no value is parsed the endptr is set to str */
+SCIP_Bool SCIPstrToRealValue(
    const char*           str,                /**< string to search */
-   int                   pos,                /**< position in string to start */
    SCIP_Real*            value,              /**< pointer to store the parsed value */
-   int*                  endpos              /**< pointer to store the final position */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed */
    )
 {
-   char token[SCIP_MAXSTRLEN];
-   SCIP_Bool hasdot;
-   EXPTYPE exptype;
+   assert(str != NULL);
+   assert(value != NULL);
+   assert(endptr != NULL);
 
-   exptype = EXP_NONE;
-   hasdot = FALSE;
-   *endpos = pos;
+   *value = strtod(str, endptr);
 
-   /* truncate white space in front */
-   while( isspace(str[pos]) )
-      pos++;
-
-   if( isValueChar(str[pos], str[pos+1], TRUE, &hasdot, &exptype) )
+   if( *endptr != str && *endptr != NULL )
    {
-      double val;
-      char* endptr;
-      int tokenlen;
-
-      tokenlen = 0;
-
-      do
-      {
-         /* in case the next token is longer than SCIP_MAXSTRLEN we stop parsing and retrun */
-         if( tokenlen >= SCIP_MAXSTRLEN )
-            return FALSE;
-         
-         token[tokenlen++] = str[pos++];
-      }
-      while( isValueChar(str[pos], str[pos+1], FALSE, &hasdot, &exptype) );
-
-      token[tokenlen] = '\0';
-
-      val = strtod(token, &endptr);
-      
-      if( endptr != token && *endptr == '\0' )
-      {
-         *value = val;
-         *endpos = pos;
-         return TRUE;
-      }
+      SCIPdebugMessage("parsed real value <%g>\n", *value);
+      return TRUE;
    }
+   *endptr = (char*)str;
+
+   SCIPdebugMessage("failed parseing real value <%s>\n", str);
 
    return FALSE;
 }
 
-/** copies the string between a start and end character */
+/** copies the first size characters between a start and end character of str into token, if no error occured endptr
+ *  will point to the position after the read part, otherwise it will point to NULL
+ */
 void SCIPstrCopySection(
    const char*           str,                /**< string to search */
-   int                   pos,                /**< position in string to start */
    char                  startchar,          /**< character which defines the beginning */
    char                  endchar,            /**< character which defines the ending */
    char*                 token,              /**< string to store the copy */
    int                   size,               /**< size of the token char array */
-   int*                  endpos              /**< pointer to store the final position */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed,
+                                              *   otherwise str */
    )
 {
-   int len;
+   const char* copystr;
    int nchars;
-  
+
+   assert(str != NULL);
+   assert(token != NULL);
    assert(size > 0);
-   
-   len = strlen(str);
+   assert(endptr != NULL);
+
    nchars = 0;
 
+   copystr = str;
+
    /* find starting character */
-   while( pos < len && str[pos] != startchar )
-      pos++;
-   
+   while( *str != '\0' && *str != startchar )
+      ++str;
+
+   /* did not find start character */
+   if( *str == '\0' )
+   {
+      *endptr = (char*)copystr;
+      return;
+   }
+
    /* skip start character */
-   pos++;
+   ++str;
 
    /* copy string */
-   while( pos < len && nchars < size-1 && str[pos] != endchar )
+   while( *str != '\0' && *str != endchar && nchars < size-1 )
    {
       assert(nchars < SCIP_MAXSTRLEN);
-      token[nchars] = str[pos];
+      token[nchars] = *str;
       nchars++;
-      pos++;
+      ++str;
    }
+
+   /* add end to token */
    token[nchars] = '\0';
-   
-   /* find the position after the end character */
-   while( pos < len && str[pos] != endchar )
-      pos++;
+
+   /* if section was longer than size, we want to reach the end of the parsing section anyway */
+   if( nchars == size )
+      while( *str != '\0' && *str != endchar )
+         ++str;
+
+   /* did not find end character */
+   if( *str == '\0' )
+   {
+      *endptr = (char*)copystr;
+      return;
+   }
 
    /* skip end character */
-   pos++;
+   ++str;
 
-   *endpos = pos;
+   SCIPdebugMessage("parsed section <%s>\n", token);
+
+   *endptr = (char*) str;
 }
 
 /*

@@ -50,6 +50,12 @@ SCIP_SOLORIGIN SCIPsolGetOrigin(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
+/** gets objective value of primal CIP solution which lives in the original problem space */
+extern
+SCIP_Real SCIPsolGetOrigObj(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
 /** gets clock time, when this solution was found */
 extern
 SCIP_Real SCIPsolGetTime(
@@ -101,6 +107,7 @@ int SCIPsolGetIndex(
  */
 
 #define SCIPsolGetOrigin(sol)           ((sol)->solorigin)
+#define SCIPsolGetOrigObj(sol)          (sol)->obj
 #define SCIPsolGetTime(sol)             (sol)->time
 #define SCIPsolGetNodenum(sol)          (sol)->nodenum
 #define SCIPsolGetRunnum(sol)           (sol)->runnum

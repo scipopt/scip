@@ -74,9 +74,9 @@ SCIP_RETCODE readSol(
       return SCIP_NOFILE;
    }
 
-   /* create primal solution */
+   /* create zero solution */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
-
+   
    /* read the file */
    error = FALSE;
    unknownvariablemessage = FALSE;
@@ -155,11 +155,23 @@ SCIP_RETCODE readSol(
    if( !error )
    {
       /* add and free the solution */
-      SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, TRUE, &stored) );
+      if( SCIPisTransformed(scip) )
+      {
+         SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, TRUE, &stored) );
 
-      /* display result */
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "primal solution from solution file <%s> was %s\n",
-         fname, stored ? "accepted" : "rejected - solution is infeasible or objective too poor");
+         /* display result */
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "primal solution from solution file <%s> was %s\n",
+            fname, stored ? "accepted" : "rejected - solution is infeasible or objective too poor");
+      }
+      else
+      {
+         /* add primal solution to solution candidate storage, frees the solution afterwards */
+         SCIP_CALL( SCIPaddSolFree(scip, &sol, &stored) );
+
+         /* display result */
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "primal solution from solution file <%s> was %s\n",
+            fname, stored ? "accepted as candidate" : "rejected - solution objective too poor");
+      }
 
       return SCIP_OKAY;
    }
@@ -198,11 +210,12 @@ SCIP_RETCODE readXMLSol(
       SCIPerrorMessage("Some error occured during parsing the XML solution file.\n");
       return SCIP_READERROR;
    }
-
-   /* create primal solution */
+   
+   /* create zero solution */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+   
    error = FALSE;
-
+   
    /* find variable sections */
    tag = "variables";
    varsnode = xml_find_node_maxdepth(start, tag, 0, 2);
@@ -284,11 +297,22 @@ SCIP_RETCODE readXMLSol(
       SCIP_Bool stored;
 
       /* add and free the solution */
-      SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, TRUE, &stored) );
+      if( SCIPisTransformed(scip) )
+      {
+         SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, TRUE, &stored) );
 
-      /* display result */
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "primal solution from solution file <%s> was %s\n",
-         filename, stored ? "accepted" : "rejected - solution is infeasible or objective too poor");
+         /* display result */
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "primal solution from solution file <%s> was %s\n",
+            filename, stored ? "accepted" : "rejected - solution is infeasible or objective too poor");
+      }
+      else
+      {
+         SCIP_CALL( SCIPaddSolFree(scip, &sol, &stored) );
+
+         /* display result */
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "primal solution from solution file <%s> was %s\n",
+            filename, stored ? "accepted as candidate" : "rejected - solution objective too poor");
+      }
    }
    else
    {
@@ -348,11 +372,12 @@ SCIP_DECL_READERREAD(readerReadSol)
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
    assert(result != NULL);
 
+   *result = SCIP_DIDNOTRUN;
+
    if( SCIPgetStage(scip) < SCIP_STAGE_PROBLEM )
    {
-      SCIPwarningMessage("reading of solution file is only possible after a problem was created\n");
-      *result = SCIP_DIDNOTRUN;
-      return SCIP_OKAY;
+      SCIPerrorMessage("reading of solution file is only possible after a problem was created\n");
+      return SCIP_READERROR;
    }
 
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVED )
@@ -363,9 +388,6 @@ SCIP_DECL_READERREAD(readerReadSol)
       *result = SCIP_SUCCESS;
       return SCIP_OKAY;
    }
-
-   /* transform the problem such that adding primal solutions is possible */
-   SCIP_CALL( SCIPtransformProb(scip) );
 
    /* open input file in order to determine type */
    file = SCIPfopen(filename, "r");
@@ -389,7 +411,7 @@ SCIP_DECL_READERREAD(readerReadSol)
    s = buffer;
    
    /* skip spaces */
-   while( isspace(*s) )
+   while( isspace((unsigned char)*s) )
       ++s;
    if( s[0] == '<' && s[1] == '?' && s[2] == 'x' && s[3] == 'm' && s[4] == 'l' )
    {

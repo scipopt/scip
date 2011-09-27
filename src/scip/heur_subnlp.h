@@ -103,6 +103,13 @@ SCIP_VAR** SCIPgetVarMappingSubScip2ScipHeurSubNlp(
    SCIP_HEUR*            heur                /**< heuristic data structure                                       */
    );
 
+/** gets startpoint candidate to be used in next call to NLP heuristic, or NULL if none */
+extern
+SCIP_SOL* SCIPgetStartCandidateHeurSubNlp(
+   SCIP*                 scip,               /**< original SCIP data structure                                   */
+   SCIP_HEUR*            heur                /**< heuristic data structure                                       */
+   );
+
 #ifdef __cplusplus
 }
 #endif

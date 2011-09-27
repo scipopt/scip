@@ -134,8 +134,7 @@ void syntaxError(
 
    assert(pipinput != NULL);
 
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error in line %d: %s ('%s')\n",
-      pipinput->linenumber, msg, pipinput->token);
+   SCIPerrorMessage("Syntax error in line %d: %s ('%s')\n", pipinput->linenumber, msg, pipinput->token);
    if( pipinput->linebuf[strlen(pipinput->linebuf)-1] == '\n' )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "  input: %s", pipinput->linebuf);
@@ -192,9 +191,9 @@ SCIP_Bool isValueChar(
    assert(hasdot != NULL);
    assert(exptype != NULL);
 
-   if( isdigit(c) )
+   if( isdigit((unsigned char)c) )
       return TRUE;
-   else if( (*exptype == PIP_EXP_NONE) && !(*hasdot) && (c == '.') && isdigit(nextc) )
+   else if( (*exptype == PIP_EXP_NONE) && !(*hasdot) && (c == '.') && isdigit((unsigned char)nextc) )
    {
       *hasdot = TRUE;
       return TRUE;
@@ -206,7 +205,7 @@ SCIP_Bool isValueChar(
          *exptype = PIP_EXP_SIGNED;
          return TRUE;
       }
-      else if( isdigit(nextc) )
+      else if( isdigit((unsigned char)nextc) )
       {
          *exptype = PIP_EXP_UNSIGNED;
          return TRUE;
@@ -248,8 +247,7 @@ SCIP_Bool getNextLine(
       pipinput->haserror = TRUE;
       return FALSE;
    }
-   pipinput->linebuf[PIP_MAX_LINELEN-1] = '\0';
-   pipinput->linebuf[PIP_MAX_LINELEN-2] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
+   pipinput->linebuf[PIP_MAX_LINELEN-1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
 
    /* skip characters after comment symbol */
    for( i = 0; commentchars[i] != '\0'; ++i )
@@ -2339,7 +2337,7 @@ void printRowNl(
          case SCIP_EXPR_PLUS:
          {
             (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[0])]));
-            (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[1])]));
+            (void) SCIPsnprintf(varname2, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[1])]));
             (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g %s %+.15g %s", exprtreecoefs[e], varname, exprtreecoefs[e], varname2);
 
             appendLine(scip, file, linebuffer, &linecnt, buffer);
@@ -2349,7 +2347,7 @@ void printRowNl(
          case SCIP_EXPR_MINUS:
          {
             (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[0])]));
-            (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[1])]));
+            (void) SCIPsnprintf(varname2, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[1])]));
             (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g %s %+.15g %s", exprtreecoefs[e], varname, -exprtreecoefs[e], varname2);
 
             appendLine(scip, file, linebuffer, &linecnt, buffer);
@@ -2359,7 +2357,7 @@ void printRowNl(
          case SCIP_EXPR_MUL:
          {
             (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[0])]));
-            (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[1])]));
+            (void) SCIPsnprintf(varname2, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[1])]));
             (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g %s %s", exprtreecoefs[e], varname, varname2);
 
             appendLine(scip, file, linebuffer, &linecnt, buffer);
@@ -2560,7 +2558,7 @@ void printRowNl(
             SCIPerrorMessage("unsupported operator <%s> in writing of polynomial nonlinear constraint\n", SCIPexpropGetName(SCIPexprGetOperator(expr)));
             return;
          } /*lint !e788*/
-      }
+      }  /*lint !e788*/
    }
 
    /* print right hand side */
@@ -3242,7 +3240,7 @@ SCIP_RETCODE SCIPwritePip(
                   SCIPwarningMessage("expression operand <%s> in %dth expression tree of constraint <%s> cannot be written in pip format\n", SCIPexpropGetName(SCIPexprGetOperator(expr)), e, SCIPconsGetName(cons));
                   ispolynomial = FALSE;
                   break;
-            }
+            } /*lint !e788*/
 
             /* check if all children of root expression correspond to variables */
             for( v = 0; v < SCIPexprGetNChildren(expr); ++v )
@@ -3618,9 +3616,7 @@ SCIP_RETCODE SCIPincludeReaderPip(
 
    /* include lp reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyPip,
-         readerFreePip, readerReadPip, readerWritePip, 
-         readerdata) );
+         readerCopyPip, readerFreePip, readerReadPip, readerWritePip, readerdata) );
 
    /* add lp reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -3659,7 +3655,7 @@ SCIP_RETCODE SCIPreadPip(
    pipinput.tokenbuf[0] = '\0';
    for( i = 0; i < PIP_MAX_PUSHEDTOKENS; ++i )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &((pipinput.pushedtokens)[i]), PIP_MAX_LINELEN) ); /*lint !e866*/  /*lint !e506*/
+      SCIP_CALL( SCIPallocMemoryArray(scip, &((pipinput.pushedtokens)[i]), PIP_MAX_LINELEN) ); /*lint !e866 !e506*/
    }
 
    pipinput.npushedtokens = 0;

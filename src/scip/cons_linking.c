@@ -227,7 +227,7 @@ void consdataPrint(
    
    for( b = 0; b < nbinvars; ++b )
    {
-      SCIPinfoMessage(scip, file, "%+d<%s> ", offset + b, SCIPvarGetName(binvars[b]));
+      SCIPinfoMessage(scip, file, "%+d<%s> ", offset + b, SCIPvarGetName(binvars[b])); /*lint !e613*/
    }
 }
 
@@ -1284,7 +1284,7 @@ SCIP_RETCODE aggregateVariables(
          if( aggrcons != NULL )
          {
             aggrconsdata = SCIPconsGetData(aggrcons);
-            assert(aggrcons != NULL);
+            assert(aggrconsdata != NULL);
 
             aggrconst = SCIPvarGetAggrConstant(intvar);
             aggrscalar = SCIPvarGetAggrScalar(intvar);
@@ -2682,7 +2682,7 @@ SCIP_DECL_CONSLOCK(consLockLinking)
 /** constraint enabling notification method of constraint handler */
 static
 SCIP_DECL_CONSENABLE(consEnableLinking)
-{
+{  /*lint --e{715}*/
 #if 0
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
@@ -2765,6 +2765,7 @@ SCIP_DECL_CONSCOPY(consCopyLinking)
    /* get copy for the binary variables */
    for( v = 0; v < nbinvars && *valid; ++v )
    {
+      assert(binvars != NULL); /* for flexelint */
       SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, binvars[v], &binvars[v], varmap, consmap, global, valid) );
       assert(!(*valid) || binvars[v] != NULL);
    }

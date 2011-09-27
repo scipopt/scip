@@ -2185,7 +2185,7 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
             {
                if( SCIPconsIsActive(conss[c]) && !SCIPconsIsModifiable(conss[c]) )
                {
-                  npaircomparisons += (SCIP_Longint) (SCIPconsGetData(conss[c])->changed) ? c : (c - firstchange);
+                  npaircomparisons += (SCIPconsGetData(conss[c])->changed) ? (SCIP_Longint) c : ((SCIP_Longint) c - (SCIP_Longint) firstchange);
 
                   SCIP_CALL( preprocessConstraintPairs(scip, conss, firstchange, c,
                         &cutoff, nfixedvars, naggrvars, ndelconss, nchgcoefs) );
@@ -2346,22 +2346,21 @@ static
 SCIP_DECL_CONSPARSE(consParseXor)
 {  /*lint --e{715}*/
    SCIP_VAR** vars;
+   char* endptr;
    int requiredsize;
    int varssize;
    int nvars;
-   int pos;
 
    SCIPdebugMessage("parse <%s> as xor constraint\n", str);
 
    varssize = 100;
    nvars = 0;
-   pos = 0;
 
    /* allocate buffer array for variables */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
 
    /* parse string */
-   SCIP_CALL( SCIPparseVarsList(scip, str, pos, vars, &nvars, varssize, &requiredsize, &pos, ',', success) );
+   SCIP_CALL( SCIPparseVarsList(scip, str, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
 
    if( *success )
    {
@@ -2375,25 +2374,25 @@ SCIP_DECL_CONSPARSE(consParseXor)
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
 
          /* parse string again with the correct size of the variable array */
-         SCIP_CALL( SCIPparseVarsList(scip, str, pos, vars, &nvars, varssize, &requiredsize, &pos, ',', success) );
+         SCIP_CALL( SCIPparseVarsList(scip, str, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
       }
-
+      
       assert(*success);
       assert(varssize >= requiredsize);
 
       SCIPdebugMessage("successfully parsed %d variables\n", nvars);
 
+      str = endptr;
+
       /* search for the equal symbol */
-      while( str[pos] != '=' )
-         pos++;
-
-      pos++;
-
-      if( SCIPstrGetValue(str, pos, &rhs, &pos) )
+      while( *str != '=' )
+         str++;
+      
+      if( SCIPstrToRealValue(str, &rhs, &endptr) )
       {
-         assert( SCIPisZero(scip, rhs) || SCIPisEQ(scip, rhs, 1.0) );
+         assert(SCIPisZero(scip, rhs) || SCIPisEQ(scip, rhs, 1.0));
          /* create or constraint */
-         SCIP_CALL( SCIPcreateConsXor(scip, cons, name, (SCIP_Bool) rhs, nvars, vars, 
+         SCIP_CALL( SCIPcreateConsXor(scip, cons, name, (rhs > 0.5 ? TRUE : FALSE), nvars, vars,
                initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
   
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *cons, NULL) ) ); 

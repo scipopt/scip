@@ -2727,18 +2727,6 @@ void SCIPintervalQuad(
    resultant->inf = -SCIPintervalQuadUpperBound(infinity, -sqrcoeff, lincoeff, xrng);
    
    assert(resultant->sup >= resultant->inf);
-#if 0
-   if( resultant->sup < resultant->inf )
-   { /* in case upper bound is below -infinity */
-      assert(resultant->inf <= -infinity);
-      resultant->sup = resultant->inf;
-   }
-   else if( resultant->inf > resultant->sup )
-   { /* in case lower bound is above  infinity */
-      assert(resultant->sup >= infinity);
-      resultant->inf = resultant->sup;
-   }
-#endif
 }
 
 /** computes interval with positive solutions of a quadratic equation with interval coefficients

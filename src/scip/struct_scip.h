@@ -61,6 +61,7 @@ struct Scip
    /* PROBLEM */
    SCIP_STAT*            stat;               /**< dynamic problem statistics */
    SCIP_PROB*            origprob;           /**< original problem data */
+   SCIP_PRIMAL*          origprimal;         /**< primal data and solution storage for solution candidates */
 
    /* TRANSFORMED */
    SCIP_EVENTFILTER*     eventfilter;        /**< event filter for global (not variable dependent) events */

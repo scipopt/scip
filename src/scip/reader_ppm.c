@@ -174,11 +174,11 @@ void appendLine(
    assert( linecnt != NULL );
    assert( extension != NULL );
    
-   if( *linecnt + strlen(extension) > PPM_MAX_LINELEN )
+   if( *linecnt + strlen(extension) > PPM_MAX_LINELEN - 1 )
       endLine(scip, file, readerdata, linebuffer, linecnt);
    
    /* append extension to linebuffer */
-   strncat(linebuffer, extension, PPM_MAX_LINELEN - (unsigned int)(*linecnt));
+   strncat(linebuffer, extension, PPM_MAX_LINELEN - (unsigned int)(*linecnt) - 1);
    (*linecnt) += (int) strlen(extension);
 }
 
@@ -272,7 +272,7 @@ void printRow(
    int indexvar = 0;
 
    char buffer[PPM_MAX_LINELEN];
-   char max = (char)255;
+   const unsigned char max = (unsigned char)255;
    char white[4];
 
    assert( scip != NULL );
@@ -325,7 +325,7 @@ void printRow(
          if(red == 35 || red == 0) red++;
          if(green==35 || green == 0) green++;
          if(blue==35 || blue == 0) blue++;
-         (void) SCIPsnprintf(buffer, PPM_MAX_LINELEN, "%c%c%c", (char)red, (char)green, (char)blue);
+         (void) SCIPsnprintf(buffer, PPM_MAX_LINELEN, "%c%c%c", (unsigned char)red, (unsigned char)green, (unsigned char)blue);
       }
       else
          (void) SCIPsnprintf(buffer, PPM_MAX_LINELEN, " %d %d %d ", red, green, blue);
@@ -486,9 +486,7 @@ SCIP_RETCODE SCIPincludeReaderPpm(
 
    /* include ppm reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyPpm,
-         readerFreePpm, readerReadPpm, readerWritePpm, 
-         readerdata) );
+         readerCopyPpm, readerFreePpm, readerReadPpm, readerWritePpm, readerdata) );
 
    /* add lp reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

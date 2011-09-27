@@ -238,6 +238,7 @@ SCIP_RETCODE initializeCandsLists(
    }
    if( nlbvars > nlbimpvars && nubvars > nubimpvars && nlbimpvars + nubimpvars >= heurdata->minfixingrate * nallvars )
    {
+      assert(nlbimpvars < INT_MAX - nubimpvars);
       SCIP_CALL( SCIPduplicateMemoryArray(scip, &heurdata->impvars, impvars, nlbimpvars + nubimpvars) );
       heurdata->nlbimpvars = nlbimpvars;
       heurdata->nubimpvars = nubimpvars;

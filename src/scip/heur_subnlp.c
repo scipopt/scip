@@ -715,6 +715,8 @@ SCIP_RETCODE addKnapsackConstraints(
 
    for( i = 0; i < nconss; ++i )
    {
+      SCIP_Longint* weights;
+
       /* skip local and redundant constraints */
       if( !SCIPconsIsEnabled(conss[i]) || !SCIPconsIsChecked(conss[i]) )
          continue;
@@ -734,8 +736,9 @@ SCIP_RETCODE addKnapsackConstraints(
          coefssize = nvars;
       }
 
+      weights = SCIPgetWeightsKnapsack(scip, conss[i]);
       for( j = 0; j < nvars; ++j )
-         coefs[j] = (SCIP_Real)SCIPgetWeightsKnapsack(scip, conss[i])[j];  /*lint !e613*/
+         coefs[j] = (SCIP_Real)weights[j];  /*lint !e613*/
 
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
          nvars, SCIPgetVarsKnapsack(scip, conss[i]), coefs,
@@ -1332,11 +1335,11 @@ SCIP_RETCODE forbidFixation(
          if( fixval == 0.0 )
          {
             /* variable fixed at lower bound */
-            consvars[i] = var;
+            consvars[nconsvars] = var;
          }
          else
          {
-            SCIP_CALL( SCIPgetNegatedVar(scip, var, &consvars[i]) );
+            SCIP_CALL( SCIPgetNegatedVar(scip, var, &consvars[nconsvars]) );
          }
 
          ++nconsvars;
@@ -1386,6 +1389,8 @@ SCIP_RETCODE forbidFixation(
 
          if( SCIPvarGetLbGlobal(var) < fixval )
          {
+            assert(nconsvars < nsubbinvars + 2*nsubintvars);
+
             /* literal x_i <= fixval-1 */
             boundtypes[nconsvars] = SCIP_BOUNDTYPE_UPPER;
             bounds[nconsvars]     = fixval - 1.0;
@@ -1395,6 +1400,8 @@ SCIP_RETCODE forbidFixation(
 
          if( SCIPvarGetUbGlobal(var) > fixval )
          {
+            assert(nconsvars < nsubbinvars + 2*nsubintvars);
+
             /* literal x_i >= fixval+1 */
             boundtypes[nconsvars] = SCIP_BOUNDTYPE_LOWER;
             bounds[nconsvars]     = fixval + 1.0;
@@ -1664,6 +1671,8 @@ SCIP_RETCODE SCIPresolveSolHeurSubNlp(
    assert(heurdata->var_subscip2scip != NULL);
    assert(!SCIPisTransformed(heurdata->subscip));
 
+   result = SCIP_DIDNOTRUN;
+
    /* fix discrete variables in subSCIP */
    if( SCIPgetNBinVars(heurdata->subscip) || SCIPgetNIntVars(heurdata->subscip) )
    {
@@ -1810,7 +1819,7 @@ SCIP_DECL_HEURFREE(heurFreeSubNlp)
    assert(heurdata->var_scip2subscip == NULL);
    assert(heurdata->startcand == NULL);
 
-   SCIPfreeMemoryNull(scip, &heurdata);
+   SCIPfreeMemory(scip, &heurdata);
 
    return SCIP_OKAY;
 }
@@ -2284,4 +2293,21 @@ SCIP_VAR** SCIPgetVarMappingSubScip2ScipHeurSubNlp(
    assert(heurdata != NULL);
 
    return heurdata->var_subscip2scip;
+}
+
+/** gets startpoint candidate to be used in next call to NLP heuristic, or NULL if none */
+SCIP_SOL* SCIPgetStartCandidateHeurSubNlp(
+   SCIP*                 scip,               /**< original SCIP data structure                                   */
+   SCIP_HEUR*            heur                /**< heuristic data structure                                       */
+   )
+{
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   return heurdata->startcand;
 }

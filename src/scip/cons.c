@@ -851,7 +851,7 @@ void conshdlrDelEnfocons(
        */
       if( delpos >= conshdlr->lastnusefulenfoconss )
          conshdlr->lastnusefulenfoconss = cons->enfoconsspos;
-      conshdlr->lastnusefulenfoconss = MAX(conshdlr->lastnusefulenfoconss, 0);
+
       assert(conshdlr->nusefulenfoconss >= 0);
       assert(conshdlr->lastnusefulenfoconss >= 0);
    }
@@ -4269,7 +4269,8 @@ SCIP_RETCODE SCIPconssetchgApply(
       (void*)conssetchg, conssetchg->naddedconss, conssetchg->ndisabledconss);
 
    /* apply constraint additions */
-   for( i = 0; i < conssetchg->naddedconss; ++i )
+   i = 0;
+   while( i < conssetchg->naddedconss )
    {
       cons = conssetchg->addedconss[i];
       assert(cons != NULL);
@@ -4278,8 +4279,10 @@ SCIP_RETCODE SCIPconssetchgApply(
       /* if constraint is already active, or if constraint is globally deleted, it can be removed from addedconss array */
       if( cons->active || cons->deleted )
       {
+         /* delete constraint from addedcons array, the empty slot is now used by the next constraint,
+          * and naddedconss was decreased, so do not increase i
+          */
          SCIP_CALL( conssetchgDelAddedCons(conssetchg, blkmem, set, i) );
-         i--; /* the empty slot is now used by the next constraint, and naddedconss was decreased */
       }
       else
       {
@@ -4294,11 +4297,14 @@ SCIP_RETCODE SCIPconssetchgApply(
          /* remember, that this constraint set change data was responsible for the constraint's addition */
          cons->addconssetchg = conssetchg;
          cons->addarraypos = i;
+
+         ++i; /* handle the next constraint */
       }
    }
 
    /* apply constraint disablings */
-   for( i = 0; i < conssetchg->ndisabledconss; ++i )
+   i = 0;
+   while( i < conssetchg->ndisabledconss )
    {
       cons = conssetchg->disabledconss[i];
       assert(cons != NULL);
@@ -4310,9 +4316,10 @@ SCIP_RETCODE SCIPconssetchgApply(
          SCIPdebugMessage("constraint <%s> of handler <%s> was deactivated -> remove it from disabledconss array\n",
             cons->name, cons->conshdlr->name);
             
-         /* release and remove constraint from the disabledconss array */
+         /* release and remove constraint from the disabledconss array, the empty slot is now used by the next constraint
+          * and ndisabledconss was decreased, so do not increase i
+          */
          SCIP_CALL( conssetchgDelDisabledCons(conssetchg, blkmem, set, i) );
-         i--; /* the empty slot is now used by the next constraint, and ndisabledconss was decreased */
       }
       else
       {
@@ -4321,6 +4328,8 @@ SCIP_RETCODE SCIPconssetchgApply(
          SCIP_CALL( SCIPconsDisable(conssetchg->disabledconss[i], set, stat) );
          assert(!cons->update);
          assert(!cons->enabled);
+
+         ++i; /* handle the next constraint */
       }
    }
 
@@ -4748,24 +4757,29 @@ SCIP_RETCODE SCIPconsParse(
    pos = 0;
  
    /* scan constant handler name */
-   SCIPstrCopySection(str, pos, '[', ']', conshdlrname, SCIP_MAXSTRLEN, &pos);
+   assert(str != NULL);
+   SCIPstrCopySection(str, '[', ']', conshdlrname, SCIP_MAXSTRLEN, &saveptr);
+   assert(saveptr != NULL);
    SCIPdebugMessage("constraint handler name <%s>\n", conshdlrname);
 
    /* scan constraint name */
-   SCIPstrCopySection(str, pos, '<', '>', consname, SCIP_MAXSTRLEN, &pos);
+   SCIPstrCopySection(str, '<', '>', consname, SCIP_MAXSTRLEN, &saveptr);
+   assert(saveptr != NULL);
    SCIPdebugMessage("constraint name <%s>\n", consname);
    
+   str = saveptr;
+
    /* skip colon */
-   if( str[pos] != ':' )
+   if( *str != ':' )
       return SCIP_OKAY;
    
-   pos++;
+   str++;
 
    /* skip space */
-   if( str[pos] != ' ')
+   if( *str != ' ')
       return SCIP_OKAY;
 
-   pos++;
+   str++;
    
    /* check if a constraint handler with parsed name exists */
    conshdlr = SCIPsetFindConshdlr(set, conshdlrname);

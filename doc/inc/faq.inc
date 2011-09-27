@@ -340,12 +340,27 @@
 	How do I do this?</a>
     </p>
     <p class="a">
-      First you have to build your problem, then you have to transform your problem (SCIP only accepts solutions if it
-      is at least in the transformed stage, see <a href="#Q15">here</a>) via calling
-      <code>SCIPtransformProb()</code>. Next, you create a new SCIP primal solution by calling
-      <code>SCIPcreateSol()</code> and set all nonzero values by calling <code>SCIPsetSolVal()</code>. <br> After that,
-      you add this solution by calling <code>SCIPtrySol()</code> (the variable <code>success</code> should be true
-      afterwards, if your solution was correct) and then release it by calling <code>SCIPsolFree()</code>.
+      First you have to build your problem (at least all variables have to
+      exist), then there are two options:
+      <ul>
+	<li>
+	  You have the solution in file which fits the solution format of
+	  SCIP, then you can use <code>SCIPreadSol()</code> to pass that
+	  solution to SCIP.
+	</li>
+	<li>
+	  You create a new SCIP primal solution candidate by
+	  calling <code>SCIPcreateSol()</code> and set all nonzero values by
+	  calling <code>SCIPsetSolVal()</code>. After that, you add this
+	  solution by calling <code>SCIPaddSol()</code> (the variable
+	  <code>stored</code> should be true afterwards, if your solution was
+	  added to solution candidate store) and then release it by calling
+	  <code>SCIPsolFree()</code>. Instead of adding and releasing
+	  sequentially, you can use <code>SCIPaddSolFree()</code> which
+	  does both try to add the solution to the candidate store and
+	  frees the solution afterwards.
+	</li>
+      </ul>
     </p>
     <p class="q">
       <a name="Q14">What operational stages of SCIP are there and are they important for me?</a>

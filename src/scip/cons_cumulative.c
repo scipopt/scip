@@ -871,8 +871,6 @@ SCIP_RETCODE tltreeCreateThetaLeaf(
    (*node)->var = var;
    (*node)->energy = energy;
    (*node)->envelop = envelop;
-   (*node)->energy = energy;
-   (*node)->envelop = envelop;
    (*node)->energyL = INT_MIN;
    (*node)->envelopL = INT_MIN;
    (*node)->inTheta = TRUE;
@@ -5300,7 +5298,6 @@ SCIP_RETCODE removeVariable(
    SCIP_CONS*            cons,               /**< cumulative constraint */
    int                   pos,                /**< position to remove */
    int                   nvars,              /**< number of variables */
-   int*                  nchgbds,            /**< pointer to store the number changed variable bounds */
    int*                  perm                /**< permutation array to adjust */
    )
 {
@@ -5424,7 +5421,7 @@ SCIP_RETCODE removeIrrelevantJobs(
          }
 
          /* remove the variable and adjust the permutation array */
-         SCIP_CALL( removeVariable(scip, cons, idx, consdata->nvars, nchgbds, perm) );
+         SCIP_CALL( removeVariable(scip, cons, idx, consdata->nvars, perm) );
       }
       else if( ect <= est )
       {
@@ -5443,7 +5440,7 @@ SCIP_RETCODE removeIrrelevantJobs(
          {
             SCIPdebugMessage("variable <%s> is irrelevant\n", SCIPvarGetName(consdata->vars[idx]));
 
-            SCIP_CALL( removeVariable(scip, cons, idx, consdata->nvars, nchgbds, perm) );
+            SCIP_CALL( removeVariable(scip, cons, idx, consdata->nvars, perm) );
          }
          else
             break;
@@ -5552,7 +5549,7 @@ SCIP_RETCODE removeIrrelevantJobs(
             SCIP_CALL( fixIntegerVariable(scip, var, nchgbds) );
          }
 
-         SCIP_CALL( removeVariable(scip, cons, idx, consdata->nvars, nchgbds, perm) );
+         SCIP_CALL( removeVariable(scip, cons, idx, consdata->nvars, perm) );
       }
       else if( lst >= lct )
       {
@@ -5570,7 +5567,7 @@ SCIP_RETCODE removeIrrelevantJobs(
          {
             SCIPdebugMessage("variable <%s> is irrelevant\n", SCIPvarGetName(consdata->vars[idx]));
 
-            SCIP_CALL( removeVariable(scip, cons, idx, consdata->nvars, nchgbds, perm) );
+            SCIP_CALL( removeVariable(scip, cons, idx, consdata->nvars, perm) );
          }
          else
             break;
@@ -5806,16 +5803,17 @@ SCIP_RETCODE dualPresolving(
       {
          /* copy optimal as dual reduction into the original SCIP instance */
          SCIP_SOL* sol;
-         SCIP_VAR* subvar;
-         SCIP_VAR* var;
-         SCIP_Real fixval;
-         SCIP_Bool infeasible;
-         SCIP_Bool fixed;
 
          sol = SCIPgetBestSol(subscip);
 
          for( v = 0; v < nvars; ++v )
          {
+            SCIP_VAR* subvar;
+            SCIP_VAR* var;
+            SCIP_Real fixval;
+            SCIP_Bool infeasible;
+            SCIP_Bool fixed;
+
             var = vars[v];
 
             subvar = (SCIP_VAR*)SCIPhashmapGetImage(varmapfw, var);
@@ -8093,14 +8091,11 @@ int SCIPprofileGetLatestFeasibleStart(
          (*infeasible) = FALSE;
          return starttime;
       }
+      assert(pos >= 0);
 
       /* the job did not fit into the profile since at time point "pos" not enough capacity is available;
        * therefore we can proceed with the next time point  */
       assert(profile->freecapacities[pos] < demand);
-
-      /* check if we exceed the time point array */
-      if( pos < 0  )
-         break;
 
       starttime = profile->timepoints[pos] - duration;
    }

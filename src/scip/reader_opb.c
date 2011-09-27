@@ -178,26 +178,17 @@ void syntaxError(
    const char*           msg                 /**< error message */
    )
 {
-#if 0
-   char formatstr[256];
-#endif
    assert(opbinput != NULL);
 
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error in line %d: %s found <%s>\n",
-      opbinput->linenumber, msg, opbinput->token);
+   SCIPerrorMessage("Syntax error in line %d: %s found <%s>\n", opbinput->linenumber, msg, opbinput->token);
    if( opbinput->linebuf[strlen(opbinput->linebuf)-1] == '\n' )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "  input: %s", opbinput->linebuf);
+      SCIPerrorMessage("  input: %s", opbinput->linebuf);
    }
    else
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "  input: %s\n", opbinput->linebuf);
+      SCIPerrorMessage("  input: %s\n", opbinput->linebuf);
    }
-
-#if 0
-   (void) SCIPsnprintf(formatstr, 256, "         %%%ds\n", opbinput->linepos);
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, formatstr, "^");
-#endif
 
    opbinput->haserror = TRUE;
 }
@@ -244,7 +235,7 @@ SCIP_Bool isValueChar(
    assert(hasdot != NULL);
    assert(exptype != NULL);
 
-   if( isdigit(c) )
+   if( isdigit((unsigned char)c) )
       return TRUE;
    else if( (*exptype == OPB_EXP_NONE) && !(*hasdot) && (c == '.') )
    {
@@ -258,7 +249,7 @@ SCIP_Bool isValueChar(
          *exptype = OPB_EXP_SIGNED;
          return TRUE;
       }
-      else if( isdigit(nextc) )
+      else if( isdigit((unsigned char)nextc) )
       {
          *exptype = OPB_EXP_UNSIGNED;
          return TRUE;
@@ -349,8 +340,7 @@ SCIP_Bool getNextLine(
       opbinput->endline = TRUE;
    }
    
-   opbinput->linebuf[OPB_MAX_LINELEN-1] = '\0';
-   opbinput->linebuf[OPB_MAX_LINELEN-2] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
+   opbinput->linebuf[OPB_MAX_LINELEN-1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
 
    opbinput->comment = FALSE;
 
@@ -555,8 +545,10 @@ SCIP_Bool isSign(
    assert(sign != NULL);
    assert(*sign == +1 || *sign == -1);
 
-   if( strlen(opbinput->token) == 1 && opbinput->token[1] == '\0' )
+   if( strlen(opbinput->token) == 1 )
    {
+      assert(opbinput->token[1] == '\0');
+
       if( *opbinput->token == '+' )
          return TRUE;
       else if( *opbinput->token == '-' )
@@ -724,7 +716,7 @@ SCIP_RETCODE getVariableOrTerm(
    assert(name != NULL);
    
    /* parse AND terms */
-   while(!isdigit( *name ) && !isTokenChar(*name) && !opbinput->haserror )
+   while(!isdigit((unsigned char) *name ) && !isTokenChar(*name) && !opbinput->haserror )
    {
       SCIP_VAR* var;
 
@@ -2004,25 +1996,25 @@ static
 void appendBuffer(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
-   char*                 linebuffer,         /**< line */
+   char*                 linebuffer,         /**< line buffer */
    int*                  linecnt,            /**< number of characters in line */
    const char*           extension           /**< string to extent the line */
    )
 {
-   assert( scip != NULL );
-   assert( linebuffer != NULL );
-   assert( linecnt != NULL );
-   assert( extension != NULL );
+   assert(scip != NULL);
+   assert(linebuffer != NULL);
+   assert(linecnt != NULL);
+   assert(extension != NULL);
    
-   if( (*linecnt) + strlen(extension) >= OPB_MAX_LINELEN )
+   if( (*linecnt) + strlen(extension) >= OPB_MAX_LINELEN - 1 )
       writeBuffer(scip, file, linebuffer, linecnt);
    
    /* append extension to linebuffer */
-   strncat(linebuffer, extension, OPB_MAX_LINELEN - (unsigned int)(*linecnt));
+   strncat(linebuffer, extension, OPB_MAX_LINELEN - (unsigned int)(*linecnt) - 1);
    (*linecnt) += (int) strlen(extension);
 }
 
-/* write objective function */
+/** write objective function */
 static
 SCIP_RETCODE writeOpbObjective(
    SCIP*const            scip,               /**< SCIP data structure */

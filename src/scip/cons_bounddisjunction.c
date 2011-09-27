@@ -57,6 +57,8 @@
 #define CONFLICTHDLR_DESC      "conflict handler creating bound disjunction constraints"
 #define CONFLICTHDLR_PRIORITY  -3000000
 
+#define DEFAULT_CONTINUOUSFRAC      0.4 /**< maximal percantage of continuous variables within a conflict */
+
 #define QUADCONSUPGD_PRIORITY    500000 /**< priority of the constraint handler for upgrading of quadratic constraints */
 
 
@@ -2253,7 +2255,6 @@ SCIP_DECL_CONSCOPY(consCopyBounddisjunction)
    SCIP_VAR** targetvars;
    SCIP_BOUNDTYPE* boundtypes;
    SCIP_Real* bounds;
-
    int nvars;
    int v;
    
@@ -2295,11 +2296,9 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
    SCIP_BOUNDTYPE* boundtypes;
    SCIP_Real* bounds;
    SCIP_VAR** vars;
-   const char* s;
-   char* t;
+   char* endptr;
    int varssize;
    int nvars;
-   int pos;
 
    assert( success != NULL );
    *success = TRUE;
@@ -2307,20 +2306,19 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
    SCIPdebugMessage("parse <%s> as bounddisjunction constraint\n", str);
 
    /* skip white space */
-   s = str;
-   while( *s != '\0' && isspace(*s) )
-      ++s;
+   while( *str != '\0' && isspace((unsigned char)*str) )
+      ++str;
 
    /* check for string "bounddisjunction" */
-   if( strncmp(s, "bounddisjunction(", 16) != 0 )
+   if( strncmp(str, "bounddisjunction(", 16) != 0 )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "error during parsing: expected \"bounddisjunction(\" in <%s>.\n", s);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "error during parsing: expected \"bounddisjunction(\" in <%s>.\n", str);
       *success = FALSE;
       return SCIP_OKAY;
    }
 
    /* skip "bounddisjunction(" */
-   s += 17;
+   str += 17;
 
    varssize = 100;
    nvars = 0;
@@ -2331,13 +2329,13 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
    SCIP_CALL( SCIPallocBufferArray(scip, &bounds, varssize) );
 
    /* parse string until ")" */
-   while( *s != '\0' && *s != ')' )
+   while( *str != '\0' && *str != ')' )
    {
       SCIP_VAR* var;
 
       /* parse variable name */ 
-      pos = 0;
-      SCIP_CALL( SCIPparseVarName(scip, s, pos, &var, &pos) );
+      SCIP_CALL( SCIPparseVarName(scip, str, &var, &endptr) );
+      str = endptr;
 
       if( var == NULL )
       {
@@ -2347,12 +2345,11 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
       }
 
       /* skip white space */
-      s = &s[pos];
-      while( *s != '\0' && isspace(*s) && *s != '>' && *s != '<' )
-         ++s;
+      while( *str != '\0' && isspace((unsigned char)*str) && *str != '>' && *str != '<' )
+         ++str;
 
       /* parse bound type */
-      switch( *s )
+      switch( *str )
       {
       case '<':
          boundtypes[nvars] = SCIP_BOUNDTYPE_UPPER;
@@ -2366,34 +2363,33 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
          goto TERMINATE;
       }
 
-      ++s;
-      if( *s != '=' )
+      ++str;
+      if( *str != '=' )
       {
-         SCIPdebugMessage("expected '=': %s\n", s);
+         SCIPdebugMessage("expected '=': %s\n", str);
          *success = FALSE;
          goto TERMINATE;
       }
 
       /* skip '=' */
-      ++s;
+      ++str;
 
       /* skip white space */
-      while( *s != '\0' && isspace(*s) )
-         ++s;
+      while( *str != '\0' && isspace((unsigned char)*str) )
+         ++str;
 
       /* parse bound value */
-      bounds[nvars] = strtod(s, &t);
-      if( t == NULL )
+      if( !SCIPstrToRealValue(str, &bounds[nvars], &endptr) )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error during parsing of the weight: %s\n", s);
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error during parsing of the weight: %s\n", str);
          *success = FALSE;
          goto TERMINATE;
       }
 
       /* skip white space */
-      s = t;
-      while( (*s != '\0' && isspace(*s)) || *s == ',' )
-         ++s;
+      str = endptr;
+      while( (*str != '\0' && isspace((unsigned char)*str)) || *str == ',' )
+         ++str;
 
       /* set variable */
       vars[nvars++] = var;
@@ -2460,14 +2456,23 @@ SCIP_DECL_EVENTEXEC(eventExecBounddisjunction)
  * Callback methods of conflict handler
  */
 
+/** conflict handler data struct */
+struct SCIP_ConflicthdlrData
+{
+   SCIP_Real             continuousfrac;     /**< maximal percantage of continuous variables within a conflict */
+};
+
+/** conflict processing method of conflict handler (called when conflict was found) */
 static
 SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
 {  /*lint --e{715}*/
    SCIP_VAR** vars;
+   SCIP_CONFLICTHDLRDATA* conflicthdlrdata;
    SCIP_BOUNDTYPE* boundtypes;
    SCIP_Real* bounds;
    SCIP_CONS* cons;
    char consname[SCIP_MAXSTRLEN];
+   int ncontinuous;
    int i;
 
    assert(conflicthdlr != NULL);
@@ -2481,6 +2486,11 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
       *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
    }
+
+   conflicthdlrdata = SCIPconflicthdlrGetData(conflicthdlr);
+   assert(conflicthdlrdata != NULL);
+
+   ncontinuous = 0;
 
    /* create array of variables, boundtypes, and bound values in conflict constraint */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nbdchginfos) );
@@ -2507,10 +2517,12 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
           */
          break;
       }
+      else
+         ncontinuous++;
    }
       
    /* create a constraint out of the conflict set */
-   if( i == nbdchginfos )
+   if( i == nbdchginfos && ncontinuous < conflicthdlrdata->continuousfrac * nbdchginfos + 0.5 )
    {
       (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, consname, nbdchginfos, vars, boundtypes, bounds,
@@ -2530,7 +2542,23 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
    return SCIP_OKAY;
 }
 
+/** free method of conflict handler */
+static
+SCIP_DECL_CONFLICTFREE(conflictFreeBounddisjunction)
+{
+   SCIP_CONFLICTHDLRDATA* conflicthdlrdata;
 
+   assert(conflicthdlr != NULL);
+
+   /* get conflict handler data */
+   conflicthdlrdata = SCIPconflicthdlrGetData(conflicthdlr);
+   assert(conflicthdlrdata != NULL);
+
+   /* free conflict handler structure */
+   SCIPfreeMemory(scip, &conflicthdlrdata);
+
+   return SCIP_OKAY;
+}
 
 
 /*
@@ -2543,14 +2571,23 @@ SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONFLICTHDLRDATA* conflicthdlrdata;
 
    /* create event handler for events on watched variables */
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
          NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventExecBounddisjunction, NULL) );
+   
+   /* allocate memory for conflict handler data */
+   SCIP_CALL( SCIPallocMemory(scip, &conflicthdlrdata) );
+
+   /* create conflict handler parameter */
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "conflict/"CONSHDLR_NAME"/continuousfrac", "maximal percantage of continuous variables within a conflict",
+         &conflicthdlrdata->continuousfrac, FALSE, DEFAULT_CONTINUOUSFRAC, 0.0, 1.0, NULL, NULL) );
 
    /* create conflict handler for bound disjunction constraints */
    SCIP_CALL( SCIPincludeConflicthdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
-         NULL, NULL, NULL, NULL, NULL, NULL, conflictExecBounddisjunction, NULL) );
+         NULL, conflictFreeBounddisjunction, NULL, NULL, NULL, NULL, conflictExecBounddisjunction, conflicthdlrdata) );
 
    /* create constraint handler data */
    SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );

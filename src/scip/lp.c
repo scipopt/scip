@@ -4098,7 +4098,8 @@ SCIP_RETCODE rowScale(
     * this rounding can lead to
     */
    row->integral = TRUE;
-   for( c = 0; c < row->len; ++c )
+   c = 0;
+   while( c < row->len )
    {
       col = row->cols[c];
       val = row->vals[c];
@@ -4165,6 +4166,8 @@ SCIP_RETCODE rowScale(
       }
       else
          row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPsetIsIntegral(set, val);
+
+      ++c;
    }
 
    /* scale the row sides, and move the constant to the sides; relax the sides with accumulated delta in order
@@ -6090,7 +6093,7 @@ SCIP_RETCODE lpFlushAddCols(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &ind, naddcoefs) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &val, naddcoefs) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &name, naddcols) );
-   
+
    /* fill temporary memory with column data */
    nnonz = 0;
    for( pos = 0, c = lp->nlpicols; c < lp->ncols; ++pos, ++c )
@@ -7330,6 +7333,7 @@ void checkLazyColArray(
    for( i = 0; i < lp->nlazycols; ++i )
    {
       /* check if each lazy column has at least on lazy bound */
+      assert(lp->lazycols[i] != NULL);
       assert(!SCIPsetIsInfinity(set, lp->lazycols[i]->lazyub) || !SCIPsetIsInfinity(set, -lp->lazycols[i]->lazylb));
 
       contained = FALSE;
@@ -7349,6 +7353,8 @@ void checkLazyColArray(
    for( c = 0; c < lp->ncols; ++c )
    {
       contained = FALSE;
+      assert(lp->cols[c] != NULL);
+
       for( i = 0; i < lp->nlazycols; ++i )
       {
          if( lp->lazycols[i] == lp->cols[c] )
@@ -7425,7 +7431,6 @@ SCIP_RETCODE SCIPlpShrinkCols(
        *  in the lazycols array  */
       checkLazyColArray(lp, set);
 #endif
-
 
       /* mark the current LP unflushed */
       lp->flushed = FALSE;
@@ -7937,7 +7942,8 @@ void sumMIRRow(
 
    /* calculate the row summation */
    BMSclearMemoryArray(mircoef, prob->nvars);
-   for( i = 0; i < *nrowinds; i++ )
+   i = 0;
+   while( i < *nrowinds )
    {
       SCIP_ROW* row;
       SCIP_Real weight;
@@ -7982,13 +7988,14 @@ void sumMIRRow(
             r, SCIProwGetName(row), row->lhs - row->constant, row->rhs - row->constant, 
             scale, weights[r], slacksign[r], *mirrhs);
          SCIPdebug(SCIProwPrint(row, NULL));
+
+         ++i; /* handle next row */
       }
       else
       {
-         /* remove row from sparsity pattern */
+         /* remove row from sparsity pattern, do not increase i (i-th position is filled with last entry) */
          rowinds[i] = rowinds[(*nrowinds)-1];
          (*nrowinds)--;
-         i--;
 #ifndef NDEBUG
          slacksign[r] = 0;
 #endif
@@ -8026,7 +8033,8 @@ void cleanupMIRRow(
    assert(nvarinds != NULL);
 
    rhsinf = SCIPsetIsInfinity(set, *mirrhs);
-   for( i = 0; i < *nvarinds; i++ )
+   i = 0;
+   while( i < *nvarinds )
    {
       int v;
 
@@ -8057,12 +8065,13 @@ void cleanupMIRRow(
          *mirrhs -= bd * mircoef[v];
          mircoef[v] = 0.0;
 
-         /* remove variable from sparsity pattern */
+         /* remove variable from sparsity pattern, do not increase i (i-th position is filled with last entry) */
          varused[v] = FALSE;
          varinds[i] = varinds[(*nvarinds)-1];
          (*nvarinds)--;
-         i--;
       }
+      else
+         ++i;
    }
    if( rhsinf )
       *mirrhs = SCIPsetInfinity(set);
@@ -8279,7 +8288,8 @@ SCIP_RETCODE transformMIRRow(
    /* substitute continuous variables with best standard or variable bound (lb, ub, vlb or vub),
     * substitute integral variables with best standard bound (lb, ub)
     */
-   for( i = 0; i < *nvarinds; i++ )
+   i = 0;
+   while( i < *nvarinds )
    {
       SCIP_VAR* var;
       SCIP_Real bestlb;
@@ -8296,7 +8306,9 @@ SCIP_RETCODE transformMIRRow(
       var = prob->vars[v];
       assert(v == SCIPvarGetProbindex(var));
 
-      /* due to variable bound usage cancellation may occur */
+      /* due to variable bound usage cancellation may occur,
+       * do not increase i, since last element is copied to the i-th position
+       */
       if( SCIPsetIsZero(set, mircoef[v]) )
       {
          varsign[v] = +1;
@@ -8305,7 +8317,6 @@ SCIP_RETCODE transformMIRRow(
          varused[v] = FALSE;
          varinds[i] = varinds[(*nvarinds)-1];
          (*nvarinds)--;
-         i--;
          continue;
       }
 
@@ -8335,7 +8346,10 @@ SCIP_RETCODE transformMIRRow(
                vlbcoefs = SCIPvarGetVlbCoefs(var);
                vlbconsts = SCIPvarGetVlbConstants(var);
                k = boundsfortrans[v];
-               assert(k >= 0 && k <  SCIPvarGetNVlbs(var));
+               assert(k >= 0 && k < SCIPvarGetNVlbs(var));
+               assert(vlbvars != NULL);
+               assert(vlbcoefs != NULL);
+               assert(vlbconsts != NULL);
 
                /* we have to avoid cyclic variable bound usage, so we enforce to use only variable bounds variables of smaller index */
                if( SCIPvarGetProbindex(vlbvars[k]) < v )
@@ -8375,7 +8389,10 @@ SCIP_RETCODE transformMIRRow(
                vubcoefs = SCIPvarGetVubCoefs(var);
                vubconsts = SCIPvarGetVubConstants(var);
                k = boundsfortrans[v];
-               assert(k >= 0 && k <  SCIPvarGetNVubs(var));
+               assert(k >= 0 && k < SCIPvarGetNVubs(var));
+               assert(vubvars != NULL);
+               assert(vubcoefs != NULL);
+               assert(vubconsts != NULL);
 
                /* we have to avoid cyclic variable bound usage, so we enforce to use only variable bounds variables of smaller index */
                if( SCIPvarGetProbindex(vubvars[k]) < v )
@@ -8457,10 +8474,17 @@ SCIP_RETCODE transformMIRRow(
          }
          else
          {
-            SCIP_VAR** vlbvars = SCIPvarGetVlbVars(var);
-            SCIP_Real* vlbcoefs = SCIPvarGetVlbCoefs(var);
-            SCIP_Real* vlbconsts = SCIPvarGetVlbConstants(var);
+            SCIP_VAR** vlbvars;
+            SCIP_Real* vlbcoefs; 
+            SCIP_Real* vlbconsts;
             int zidx;
+
+            vlbvars = SCIPvarGetVlbVars(var);
+            vlbcoefs = SCIPvarGetVlbCoefs(var);
+            vlbconsts = SCIPvarGetVlbConstants(var);
+            assert(vlbvars != NULL);
+            assert(vlbcoefs != NULL);
+            assert(vlbconsts != NULL);
 
             assert(0 <= bestlbtype && bestlbtype < SCIPvarGetNVlbs(var));
             assert(SCIPvarIsActive(vlbvars[bestlbtype]));
@@ -8496,10 +8520,17 @@ SCIP_RETCODE transformMIRRow(
          }
          else
          {
-            SCIP_VAR** vubvars = SCIPvarGetVubVars(var);
-            SCIP_Real* vubcoefs = SCIPvarGetVubCoefs(var);
-            SCIP_Real* vubconsts = SCIPvarGetVubConstants(var);
+            SCIP_VAR** vubvars;
+            SCIP_Real* vubcoefs; 
+            SCIP_Real* vubconsts;
             int zidx;
+
+            vubvars = SCIPvarGetVubVars(var);
+            vubcoefs = SCIPvarGetVubCoefs(var);
+            vubconsts = SCIPvarGetVubConstants(var);
+            assert(vubvars != NULL);
+            assert(vubcoefs != NULL);
+            assert(vubconsts != NULL);
 
             assert(0 <= bestubtype && bestubtype < SCIPvarGetNVubs(var));
             assert(SCIPvarIsActive(vubvars[bestubtype]));
@@ -8519,7 +8550,24 @@ SCIP_RETCODE transformMIRRow(
             }
          }
       }
+      ++i; /* increase iterator */
 
+#ifdef SCIP_DEBUG
+      if( bestlbtype >= 0 )
+      {
+         assert(bestlbtype < SCIPvarGetNVlbs(var));
+         assert(SCIPvarGetVlbVars(var) != NULL);
+         assert(SCIPvarGetVlbCoefs(var) != NULL);
+         assert(SCIPvarGetVlbConstants(var) != NULL);
+      }
+      if( bestubtype >= 0 )
+      {
+         assert(bestubtype < SCIPvarGetNVubs(var));
+         assert(SCIPvarGetVubVars(var) != NULL);
+         assert(SCIPvarGetVubCoefs(var) != NULL);
+         assert(SCIPvarGetVubConstants(var) != NULL);
+      }
+      
       SCIPdebugMessage("MIR var <%s>: varsign=%d, boundtype=%d, mircoef=%g, base=%d, sol=%g, lb=%g, ub=%g, vlb=%g<%s>%+g, vub=%g<%s>%+g -> rhs=%g\n", 
          SCIPvarGetName(var), varsign[v], boundtype[v], mircoef[v],
          SCIPvarGetCol(var) != NULL ? SCIPcolGetBasisStatus(SCIPvarGetCol(var)) : SCIP_BASESTAT_ZERO,
@@ -8531,6 +8579,7 @@ SCIP_RETCODE transformMIRRow(
          bestubtype >= 0 ? SCIPvarGetName(SCIPvarGetVubVars(var)[bestubtype]) : "-",
          bestubtype >= 0 ? SCIPvarGetVubConstants(var)[bestubtype] : bestub,
          *mirrhs);
+#endif
    }
 
    if( fixintegralrhs )
@@ -9377,7 +9426,8 @@ void sumStrongCGRow(
 
    /* calculate the row summation */
    BMSclearMemoryArray(strongcgcoef, prob->nvars);
-   for( i = 0; i < *nrowinds; i++ )
+   i = 0;
+   while( i < *nrowinds )
    {
       SCIP_ROW* row;
       SCIP_Real weight;
@@ -9452,14 +9502,15 @@ void sumStrongCGRow(
 
       if( skiprow )
       {
-         /* remove row from sparsity pattern */
+         /* remove row from sparsity pattern, do not increase i, since the i-th position is filled with the last element */
          rowinds[i] = rowinds[(*nrowinds)-1];
          (*nrowinds)--;
-         i--;
 #ifndef NDEBUG
          slacksign[r] = 0;
 #endif
       }
+      else
+         ++i;
    }
 
    /* check if the total number of non-zeros is too large */
@@ -9547,7 +9598,8 @@ void transformStrongCGRow(
    /* substitute continuous variables with best standard or variable bound (lb, ub, vlb or vub),
     * substitute integral variables with best standard bound (lb, ub)
     */
-   for( i = 0; i < *nvarinds; i++ )
+   i = 0;
+   while( i < *nvarinds )
    {
       SCIP_VAR* var;
       SCIP_Real varsol;
@@ -9565,7 +9617,9 @@ void transformStrongCGRow(
       var = prob->vars[v];
       assert(v == SCIPvarGetProbindex(var));
 
-      /* due to variable bound usage cancellation may occur */
+      /* due to variable bound usage cancellation may occur;
+       * do not increase i, since last element is copied to the i-th position
+       */
       if( SCIPsetIsZero(set, strongcgcoef[v]) )
       {
          varsign[v] = +1;
@@ -9574,7 +9628,6 @@ void transformStrongCGRow(
          varused[v] = FALSE;
          varinds[i] = varinds[(*nvarinds)-1];
          (*nvarinds)--;
-         i--;
          continue;
       }
 
@@ -9759,6 +9812,8 @@ void transformStrongCGRow(
 
       SCIPdebugMessage("strong CG var <%s>: varsign=%d, boundtype=%d, strongcgcoef=%g, lb=%g, ub=%g -> rhs=%g\n", 
          SCIPvarGetName(var), varsign[v], boundtype[v], strongcgcoef[v], bestlb, bestub, *strongcgrhs);
+
+      ++i; /*increase iterator */
    }
 }
 
@@ -10483,6 +10538,7 @@ SCIP_RETCODE lpPrimalSimplex(
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
 {
+   SCIP_Real timedelta;
    SCIP_RETCODE retcode;
    int iterations;
 
@@ -10511,9 +10567,15 @@ SCIP_RETCODE lpPrimalSimplex(
 
    /* start timing */
    if( lp->diving || lp->probing )
+   {
       SCIPclockStart(stat->divinglptime, set);
+      timedelta = 0.0;   /* unused for diving or probing */
+   }
    else
+   {
       SCIPclockStart(stat->primallptime, set);
+      timedelta = -SCIPclockGetTime(stat->primallptime);
+   }
 
    /* call primal simplex */
    retcode = SCIPlpiSolvePrimal(lp->lpi);
@@ -10533,7 +10595,10 @@ SCIP_RETCODE lpPrimalSimplex(
    if( lp->diving || lp->probing )
       SCIPclockStop(stat->divinglptime, set);
    else
+   {
+      timedelta += SCIPclockGetTime(stat->primallptime);
       SCIPclockStop(stat->primallptime, set);
+   }
 
    /* count number of iterations */
    stat->lpcount++;
@@ -10559,13 +10624,22 @@ SCIP_RETCODE lpPrimalSimplex(
          stat->nprimallpiterations += iterations;
       }
    }
-   else if( keepsol && !(*lperror) )
+   else
    {
-      /* the solution didn't change: if the solution was valid before resolve, it is still valid */
-      if( lp->validsollp == stat->lpcount-1 )
-         lp->validsollp = stat->lpcount;
-      if( lp->validfarkaslp == stat->lpcount-1 )
-         lp->validfarkaslp = stat->lpcount;
+      if ( ! lp->diving && ! lp->probing )
+      {
+         stat->nprimalzeroitlps++;
+         stat->primalzeroittime += timedelta;
+      }
+
+      if ( keepsol && !(*lperror) )
+      {
+         /* the solution didn't change: if the solution was valid before resolve, it is still valid */
+         if( lp->validsollp == stat->lpcount-1 )
+            lp->validsollp = stat->lpcount;
+         if( lp->validfarkaslp == stat->lpcount-1 )
+            lp->validfarkaslp = stat->lpcount;
+      }
    }
 
    SCIPdebugMessage("solved primal LP %d in %d iterations\n", stat->lpcount, iterations);
@@ -10584,6 +10658,7 @@ SCIP_RETCODE lpDualSimplex(
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
 {
+   SCIP_Real timedelta;
    SCIP_RETCODE retcode;
    int iterations;
 
@@ -10612,9 +10687,15 @@ SCIP_RETCODE lpDualSimplex(
 
    /* start timing */
    if( lp->diving || lp->probing )
+   {
       SCIPclockStart(stat->divinglptime, set);
+      timedelta = 0.0;   /* unused for diving or probing */
+   }
    else
+   {
       SCIPclockStart(stat->duallptime, set);
+      timedelta = -SCIPclockGetTime(stat->duallptime);      
+   }
 
    /* call dual simplex */
    retcode = SCIPlpiSolveDual(lp->lpi);
@@ -10634,7 +10715,10 @@ SCIP_RETCODE lpDualSimplex(
    if( lp->diving || lp->probing )
       SCIPclockStop(stat->divinglptime, set);
    else
+   {
+      timedelta += SCIPclockGetTime(stat->duallptime);
       SCIPclockStop(stat->duallptime, set);
+   }
 
    /* count number of iterations */
    stat->lpcount++;
@@ -10660,13 +10744,22 @@ SCIP_RETCODE lpDualSimplex(
          stat->nduallpiterations += iterations;
       }
    }
-   else if( keepsol && !(*lperror) )
+   else
    {
-      /* the solution didn't change: if the solution was valid before resolve, it is still valid */
-      if( lp->validsollp == stat->lpcount-1 )
-         lp->validsollp = stat->lpcount;
-      if( lp->validfarkaslp == stat->lpcount-1 )
-         lp->validfarkaslp = stat->lpcount;
+      if ( ! lp->diving && ! lp->probing )
+      {
+         stat->ndualzeroitlps++;
+         stat->dualzeroittime += timedelta;
+      }
+
+      if( keepsol && !(*lperror) )
+      {
+         /* the solution didn't change: if the solution was valid before resolve, it is still valid */
+         if( lp->validsollp == stat->lpcount-1 )
+            lp->validsollp = stat->lpcount;
+         if( lp->validfarkaslp == stat->lpcount-1 )
+            lp->validfarkaslp = stat->lpcount;
+      }
    }
 
    SCIPdebugMessage("solved dual LP %d in %d iterations\n", stat->lpcount, iterations);
@@ -10718,6 +10811,7 @@ SCIP_RETCODE lpLexDualSimplex(
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
 {
+   SCIP_Real timedelta;
    SCIP_RETCODE retcode;
    int totalIterations;
    int lexIterations;
@@ -10736,9 +10830,15 @@ SCIP_RETCODE lpLexDualSimplex(
 
    /* start timing */
    if( lp->diving || lp->probing )
+   {
       SCIPclockStart(stat->divinglptime, set);
+      timedelta = 0.0;   /* unused for diving or probing */
+   }
    else
+   {
       SCIPclockStart(stat->duallptime, set);
+      timedelta = -SCIPclockGetTime(stat->duallptime);      
+   }
 
    /* call dual simplex for first lp */
    retcode = SCIPlpiSolveDual(lp->lpi);
@@ -10758,7 +10858,10 @@ SCIP_RETCODE lpLexDualSimplex(
    if( lp->diving || lp->probing )
       SCIPclockStop(stat->divinglptime, set);
    else
+   {
+      timedelta += SCIPclockGetTime(stat->duallptime);
       SCIPclockStop(stat->duallptime, set);
+   }
 
    /* count number of iterations */
    stat->lpcount++;
@@ -10780,6 +10883,14 @@ SCIP_RETCODE lpLexDualSimplex(
       {
          stat->nduallps++;
          stat->nduallpiterations += iterations;
+      }
+   }
+   else
+   {
+      if ( ! lp->diving && ! lp->probing )
+      {
+         stat->ndualzeroitlps++;
+         stat->dualzeroittime += timedelta;
       }
    }
    lexIterations = 0;
@@ -11266,6 +11377,7 @@ SCIP_RETCODE lpBarrier(
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
 {
+   SCIP_Real timedelta;
    SCIP_RETCODE retcode;
    int iterations;
 
@@ -11294,9 +11406,15 @@ SCIP_RETCODE lpBarrier(
 
    /* start timing */
    if( lp->diving || lp->probing )
+   {
       SCIPclockStart(stat->divinglptime, set);
+      timedelta = 0.0;   /* unused for diving or probing */
+   }
    else
+   {
       SCIPclockStart(stat->barrierlptime, set);
+      timedelta = -SCIPclockGetTime(stat->duallptime);      
+   }
 
    /* call barrier algorithm */
    retcode = SCIPlpiSolveBarrier(lp->lpi, crossover);
@@ -11316,7 +11434,10 @@ SCIP_RETCODE lpBarrier(
    if( lp->diving || lp->probing )
       SCIPclockStop(stat->divinglptime, set);
    else
+   {
       SCIPclockStop(stat->barrierlptime, set);
+      timedelta = -SCIPclockGetTime(stat->duallptime);      
+   }
 
    /* count number of iterations */
    stat->lpcount++;
@@ -11337,13 +11458,22 @@ SCIP_RETCODE lpBarrier(
          stat->nbarrierlpiterations += iterations;
       }
    }
-   else if( keepsol && !(*lperror) )
+   else
    {
-      /* the solution didn't change: if the solution was valid before resolve, it is still valid */
-      if( lp->validsollp == stat->lpcount-1 )
-         lp->validsollp = stat->lpcount;
-      if( lp->validfarkaslp == stat->lpcount-1 )
-         lp->validfarkaslp = stat->lpcount;
+      if ( ! lp->diving && ! lp->probing )
+      {
+         stat->nbarrierzeroitlps++;
+         stat->barrierzeroittime += timedelta;
+      }
+
+      if( keepsol && !(*lperror) )
+      {
+         /* the solution didn't change: if the solution was valid before resolve, it is still valid */
+         if( lp->validsollp == stat->lpcount-1 )
+            lp->validsollp = stat->lpcount;
+         if( lp->validfarkaslp == stat->lpcount-1 )
+            lp->validfarkaslp = stat->lpcount;
+      }
    }
 
    SCIPdebugMessage("solved barrier LP %d in %d iterations\n", stat->lpcount, iterations);
@@ -12057,15 +12187,17 @@ static
 SCIP_RETCODE checkLazyBounds(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool*            primalfeasible      /**< pointer to store whether the lazy bound are primal feasible or not */
+   SCIP_Bool*            lazyboundsvalid     /**< pointer to store whether the lazy bound are primal feasible or not */
    )
 {
    SCIP_COL* col;
    int c;
    
    assert(lp->flushed);
+   assert(*lazyboundsvalid == TRUE); /* pointer has to be initialized */
 
-   for( c = 0; c < lp->nlazycols; ++c )
+   c = 0;
+   while( c < lp->nlazycols )
    {
       col = lp->lazycols[c];
 
@@ -12084,7 +12216,7 @@ SCIP_RETCODE checkLazyBounds(
          /* remove lazy flag */
          col->lazylb = -SCIPsetInfinity(set);
 
-         (*primalfeasible) = FALSE;
+         (*lazyboundsvalid) = FALSE;
       }
          
       /* check upper bound */
@@ -12102,16 +12234,17 @@ SCIP_RETCODE checkLazyBounds(
          /* remove lazy flag */
          col->lazyub = SCIPsetInfinity(set);
 
-         (*primalfeasible) = FALSE;
+         (*lazyboundsvalid) = FALSE;
       }
 
-      /* remove lazy column entry if both columns are in the LP */
+      /* remove lazy column entry if both columns are in the LP, do not increase iterator, since last element is copied to i-th position */
       if( SCIPsetIsInfinity(set, -col->lazylb) && SCIPsetIsInfinity(set, -col->lazyub) )
       {
          lp->nlazycols--;
          lp->lazycols[c] = lp->lazycols[lp->nlazycols];
-         c--;
       }
+      else
+         ++c; /* increase iterator */
    }
 
    return SCIP_OKAY;
@@ -12132,7 +12265,7 @@ int lpGetResolveItlim(
    if( itlim == -1 )
       itlim = INT_MAX;
    /* return resolveiterfac * average iteration number per call after root, but at least resolveitermin and at most the hard iteration limit */
-   return MIN(itlim, MAX(set->lp_resolveitermin, 
+   return (int) MIN(itlim, MAX(set->lp_resolveitermin,
          (set->lp_resolveiterfac * (stat->nlpiterations - stat->nrootlpiterations) / (SCIP_Real)(stat->nlps - stat->nrootlps))));
 }
 
@@ -12189,7 +12322,6 @@ SCIP_RETCODE SCIPlpSolveAndEval(
       SCIP_Bool dualfeasible;
       SCIP_Bool tightfeastol;
       SCIP_Bool fromscratch;
-      SCIP_Bool lazyboundsvalid;
       int fastmip;
       int oldnlps;
 
@@ -12239,6 +12371,9 @@ SCIP_RETCODE SCIPlpSolveAndEval(
           * denote the corresponding column bounds as not lazy and resolve the LP */
          if( !primalfeasible && lp->nlazycols > 0 )
          {
+            SCIP_Bool lazyboundsvalid;
+
+            lazyboundsvalid = TRUE;
             SCIP_CALL( checkLazyBounds(lp, set, &lazyboundsvalid) );
             
             if( !lazyboundsvalid )
@@ -12344,6 +12479,9 @@ SCIP_RETCODE SCIPlpSolveAndEval(
           * bound as not lazy and resolve the LP */
          if( lp->nlazycols > 0 )
          {
+            SCIP_Bool lazyboundsvalid;
+
+            lazyboundsvalid = TRUE;
             SCIP_CALL( checkLazyBounds(lp, set, &lazyboundsvalid) );
             
             if( !lazyboundsvalid )

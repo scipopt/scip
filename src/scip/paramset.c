@@ -959,12 +959,12 @@ SCIP_RETCODE SCIPparamSetString(
    if( param->data.stringparam.valueptr != NULL )
    {
       BMSfreeMemoryArrayNull(param->data.stringparam.valueptr);
-      BMSduplicateMemoryArray(param->data.stringparam.valueptr, value, strlen(value)+1);
+      SCIP_ALLOC( BMSduplicateMemoryArray(param->data.stringparam.valueptr, value, strlen(value)+1) );
    }
    else
    {
       BMSfreeMemoryArrayNull(&param->data.stringparam.curvalue);
-      BMSduplicateMemoryArray(&param->data.stringparam.curvalue, value, strlen(value)+1);
+      SCIP_ALLOC( BMSduplicateMemoryArray(&param->data.stringparam.curvalue, value, strlen(value)+1) );
    }
 
    /* call the parameter's change information method */
@@ -2420,15 +2420,25 @@ SCIP_RETCODE SCIPparamsetWrite(
    }
    
    /* write the parameters to the file */
+   SCIP_RETCODE retcode;
    for( i = 0; i < paramset->nparams; ++i )
    {
-      SCIP_CALL( paramWrite(paramset->params[i], file, comments, onlychanged) );
+      retcode = paramWrite(paramset->params[i], file, comments, onlychanged);
+      if( retcode != SCIP_OKAY )
+      {
+         if( filename != NULL )
+         {
+            assert(file != NULL);
+            fclose(file);
+         }
+         SCIP_CALL( retcode );
+      }
    }
 
    /* close output file */
    if( filename != NULL )
    {
-      assert(file != NULL);
+      assert(file != NULL);  /*lint !e449*/
       fclose(file);
    }
 

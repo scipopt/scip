@@ -2541,7 +2541,8 @@ SCIP_RETCODE propagateVarbounds(
          b = SCIPvarGetVubConstants(consdata->x)[i];
 
          /* skip variable bound if y is not integer or its valid values are not {0,1}
-          * @todo extend to arbitrary integer variables */
+          * @todo extend to arbitrary integer variables
+          */
          if( !SCIPvarIsBinary(y) || SCIPvarGetLbGlobal(y) > 0.5 || SCIPvarGetUbGlobal(y) < 0.5 )
             continue;
 
@@ -2585,7 +2586,8 @@ SCIP_RETCODE propagateVarbounds(
          b = SCIPvarGetVlbConstants(consdata->x)[i];
 
          /* skip variable bound if y is not integer or its valid values are not {0,1}
-          * @todo extend to arbitrary integer variables */
+          * @todo extend to arbitrary integer variables
+          */
          if( !SCIPvarIsBinary(y) || SCIPvarGetLbGlobal(y) > 0.5 || SCIPvarGetUbGlobal(y) < 0.5 )
             continue;
 
@@ -2631,7 +2633,8 @@ SCIP_RETCODE propagateVarbounds(
          SCIPdebugMessage("propagate variable bound %g*<%s> %c= %g*<%s> + %g\n", consdata->zcoef, SCIPvarGetName(consdata->z), consdata->zcoef > 0 ? '<' : '>', a, SCIPvarGetName(y), b);
 
          /* skip variable bound if y is not integer or its valid values are not {0,1}
-          * @todo extend to arbitrary integer variables */
+          * @todo extend to arbitrary integer variables
+          */
          if( !SCIPvarIsBinary(y) || SCIPvarGetLbGlobal(y) > 0.5 || SCIPvarGetUbGlobal(y) < 0.5 )
             continue;
 
@@ -2670,7 +2673,8 @@ SCIP_RETCODE propagateVarbounds(
          SCIPdebugMessage("propagate variable bound %g*<%s> %c= %g*<%s> + %g\n", consdata->zcoef, SCIPvarGetName(consdata->z), consdata->zcoef > 0 ? '>' : '<', a, SCIPvarGetName(y), b);
 
          /* skip variable bound if y is not integer or its valid values are not {0,1}
-          * @todo extend to arbitrary integer variables */
+          * @todo extend to arbitrary integer variables
+          */
          if( !SCIPvarIsBinary(y) || SCIPvarGetLbGlobal(y) > 0.5 || SCIPvarGetUbGlobal(y) < 0.5 )
             continue;
 
@@ -3458,35 +3462,6 @@ SCIP_RETCODE createNlRow(
 
       SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree, expr, 1, 0, NULL) );
    }
-
-#if 0
-   {
-      /* exponent is even, generate expression tree for |x+offset|*(x+offset)^(n-1) */
-      SCIP_EXPR* expr;
-      SCIP_EXPR* expr2;
-      SCIP_EXPR* absexpr;
-
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_VARIDX, 0) ); /* x */
-      if( consdata->xoffset != 0.0 )
-      {
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr2, SCIP_EXPR_CONST, consdata->xoffset) );
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_PLUS, expr, expr2) ); /* x + offset */
-      }
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr,  SCIP_EXPR_INTPOWER, expr, n-1) ); /* (x+offset)^(n-1) */
-
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &absexpr, SCIP_EXPR_VARIDX, 0) );       /* x again */
-      if( consdata->xoffset != 0.0 )
-      {
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr2, SCIP_EXPR_CONST, consdata->xoffset) );
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &absexpr, SCIP_EXPR_PLUS, absexpr, expr2) ); /* x + offset */
-      }
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &absexpr, SCIP_EXPR_ABS, absexpr) ); /* |x+offset| */
-
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_MUL, absexpr, expr) ); /* |x+offset|(x+offset)^(n-1) */
-
-      SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree, expr, 1, 0, NULL) );
-   }
-#endif
    assert(exprtree != NULL || nquadelems > 0);
 
    /* tell expression tree, which is its variable */
@@ -3835,7 +3810,8 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdSignedpower)
    {
       /* if node has known curvature and we would add auxiliary var for child, then don't upgrade
        * it's not really necessary, but may introduce more numerical troubles
-       * @todo maybe still do if child is linear? */
+       * @todo maybe still do if child is linear?
+       */
       if( SCIPexprgraphGetNodeCurvature(node) != SCIP_EXPRCURV_UNKNOWN )
       {
          *nupgdconss = 0;
@@ -4880,7 +4856,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpSignedpower)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS*         maxviolcons;
    SCIP_CONSDATA*     consdata;
-   SCIP_RESULT        success;
+   SCIP_Bool          success;
    SCIP_Real          minefficacy;
    SCIP_Real          sepaefficacy;
    SCIP_Real          maxviol;
@@ -5648,38 +5624,39 @@ SCIP_DECL_CONSPARSE(consParseSignedpower)
    SCIP_Real xoffset;
    SCIP_Real exponent;
    SCIP_Real zcoef;
-   SCIP_Real rhs_;
+   SCIP_Real value;
+   char*     endptr;
    char      sense;
    SCIP_VAR* x;
    SCIP_VAR* z;
+   int ret;
 
    *success = TRUE;
 
    /* set right hand and left side to their default values */
    lhs = -SCIPinfinity(scip);
    rhs =  SCIPinfinity(scip);
-
+   
    SCIPdebugMessage("start parsing signedpower constraint expression %s\n", str);
-
+   
    if( strncmp(str, "signpower", 9) != 0 )
    {
       /* str does not start with signpower string, so may be left-hand-side of ranged constraint */
-      char* nextstr;
-
-      lhs = strtod(str, &nextstr);
-      if( str == nextstr )
+      if( !SCIPstrToRealValue(str, &lhs, &endptr) )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: left-hand-side or 'signpower' expected at begin on '%s'\n", str);
          (*success) = FALSE;
          return SCIP_OKAY;
       }
-      str = nextstr;
+      str = endptr;
    }
 
-   if( sscanf(str, "signpower(<%[^>]> %lg, %lg) %lg<%[^>]> %c= %lg", varx+1, &xoffset, &exponent, &zcoef, varz+1, &sense, &rhs_) == EOF )
+   ret = sscanf(str, "signpower(<%[^>]> %lg, %lg) %lg<%[^>]> %c= %lg", varx+1, &xoffset, &exponent, &zcoef, varz+1, &sense, &value);
+   if( ret != 7 )
    {
       /* if that does not match, then it may be a 'free' constraint (quite unlikely) */
-      if( sscanf(str, "signpower(<%[^>]> %lg, %lg) %lg<%[^>]> [free]", varx+1, &xoffset, &exponent, &zcoef, varz+1) == EOF )
+      ret = sscanf(str, "signpower(<%[^>]> %lg, %lg) %lg<%[^>]> [free]", varx+1, &xoffset, &exponent, &zcoef, varz+1);
+      if( ret != 5 )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error while parsing constraint expression\n");
          (*success) = FALSE;
@@ -5691,13 +5668,13 @@ SCIP_DECL_CONSPARSE(consParseSignedpower)
       switch( sense )
       {
          case '<' :
-            rhs = rhs_;
+            rhs = value;
             break;
          case '>' :
-            lhs = rhs_;
+            lhs = value;
             break;
          case '=' :
-            lhs = rhs = rhs_;
+            lhs = rhs = value;
             break;
       }
    }
@@ -5709,7 +5686,7 @@ SCIP_DECL_CONSPARSE(consParseSignedpower)
    varx[namelen+1] = '>';
    varx[namelen+2] = '\0';
 
-   SCIP_CALL( SCIPparseVarName(scip, varx, 0, &x, &namelen) );
+   SCIP_CALL( SCIPparseVarName(scip, varx, &x, &endptr) );
    if( x == NULL )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable %s", varx);
@@ -5724,7 +5701,7 @@ SCIP_DECL_CONSPARSE(consParseSignedpower)
    varz[namelen+1] = '>';
    varz[namelen+2] = '\0';
 
-   SCIP_CALL( SCIPparseVarName(scip, varz, 0, &z, &namelen) );
+   SCIP_CALL( SCIPparseVarName(scip, varz, &z, &endptr) );
    if( z == NULL )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable %s", varz);

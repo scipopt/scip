@@ -22,7 +22,6 @@
 
 #include <stdio.h>
 #include <assert.h>
-#include <string.h>
 
 #include "blockmemshell/memory.h"
 #include "scip/set.h"

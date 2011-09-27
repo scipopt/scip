@@ -334,7 +334,7 @@ SCIP_RETCODE SCIPreaderWrite(
             var = vars[i];
             varnames[i] = SCIPvarGetName(var);
             
-            SCIP_ALLOC( BMSallocMemoryArray(&name, size) );
+            SCIP_ALLOC( BMSallocMemoryArray(&name, size) ); /*lint !e685*/
             (void) SCIPsnprintf(name, size, "x%d", i);
             SCIPvarSetNamePointer(var, name);
          }  
@@ -347,7 +347,7 @@ SCIP_RETCODE SCIPreaderWrite(
             var = fixedvars[i];
             fixedvarnames[i] = SCIPvarGetName(var);
             
-            SCIP_ALLOC( BMSallocMemoryArray(&name, size) );
+            SCIP_ALLOC( BMSallocMemoryArray(&name, size) ); /*lint !e685*/
             (void) SCIPsnprintf(name, size, "y%d", i);
             SCIPvarSetNamePointer(var, name);
          }
@@ -360,7 +360,7 @@ SCIP_RETCODE SCIPreaderWrite(
             cons = conss[i];
             consnames[i] = SCIPconsGetName(cons);
 
-            SCIP_ALLOC( BMSallocMemoryArray(&name, size) );
+            SCIP_ALLOC( BMSallocMemoryArray(&name, size) ); /*lint !e685*/
             (void) SCIPsnprintf(name, size, "c%d", i);
             SCIPconsSetNamePointer(cons, name);
          }

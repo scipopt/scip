@@ -2496,7 +2496,7 @@ void ScipNLP::finalize_solution(
    }
 }
 
-/* Future Ipopt versions do not reveal defines like F77_FUNC.
+/* Ipopt >= 3.10 do not reveal defines like F77_FUNC.
  * However, they install IpLapack.hpp, so Ipopt's Lapack interface is available.
  * Thus, we use IpLapack if F77_FUNC is not defined and access Lapack's Dsyev directly if F77_FUNC is defined.
  */

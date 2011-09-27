@@ -199,6 +199,7 @@ struct SCIP_Set
    int                   limit_bestsol;      /**< solving stops, if the given number of solution improvements were found
                                               *   (-1: no limit) */
    int                   limit_maxsol;       /**< maximal number of solutions to store in the solution storage */
+   int                   limit_maxorigsol;   /**< maximal number of solutions candidates to store in the solution storage of the original problem */
    int                   limit_restarts;     /**< solving stops, if the given number of restarts was triggered (-1: no limit) */
 
    /* LP settings */

@@ -1625,7 +1625,6 @@ SCIP_RETCODE getRelevantColumns(
    lpdata->ndelvarbounds = 0;
   
    /* check all cols */
-   problem->nrcols = 0;
    for( j = 0 ; j < lpdata->ncols ; ++j)
    {  
       /* initialize best lb and best ub (-2: undetermined)*/
@@ -1784,6 +1783,10 @@ void findClosestLb(
       zvlb = SCIPvarGetVlbVars(var);
       bvlb = SCIPvarGetVlbCoefs(var);
       dvlb = SCIPvarGetVlbConstants(var);
+
+      assert(zvlb == NULL || nvlb == 0);
+      assert(bvlb == NULL || nvlb == 0);
+      assert(dvlb == NULL || nvlb == 0);
    }
 
    if( *bestlbtype == -2 )
@@ -1823,6 +1826,7 @@ void findClosestLb(
    if( *bestlbtype >= 0 )
    {
       assert(USEVARBOUNDS); /*lint !e774 !e506*/
+      assert(*bestlbtype < nvlb);
       *bestzvlb = zvlb[*bestlbtype];
       *bestbvlb = bvlb[*bestlbtype];
       *bestdvlb = dvlb[*bestlbtype];      
@@ -1878,6 +1882,10 @@ void findClosestUb(
       zvub = SCIPvarGetVubVars(var);
       bvub = SCIPvarGetVubCoefs(var);
       dvub = SCIPvarGetVubConstants(var);
+
+      assert(zvub == NULL || nvub == 0);
+      assert(bvub == NULL || nvub == 0);
+      assert(dvub == NULL || nvub == 0);
    }
 
    if( *bestubtype == -2 )
@@ -1916,6 +1924,7 @@ void findClosestUb(
    if( *bestubtype >= 0 )
    {
       assert(USEVARBOUNDS); /*lint !e774 !e506*/
+      assert(*bestubtype < nvub);
       *bestzvub = zvub[*bestubtype];
       *bestbvub = bvub[*bestubtype];
       *bestdvub = dvub[*bestubtype];      
@@ -2600,7 +2609,7 @@ SCIP_RETCODE storeMod2Data(
    SCIP_CALL( SCIPallocMemoryArray(scip, &(mod2data->colstatistics), problem->nrcols) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(mod2data->rowsind), mod2data->nrows) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(mod2data->colsind), problem->nrcols) );
-   SCIP_CALL(SCIPallocBufferArray(scip, &densecoeffscurrentrow, lpdata->ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &densecoeffscurrentrow, lpdata->ncols) );
   
    /* initialize temporary memory */
    mod2data->relatedsubproblem = problem;
@@ -2717,7 +2726,7 @@ SCIP_RETCODE storeMod2Data(
             {
                if( tempcurrentrow == NULL )
                {
-                  SCIP_CALL(SCIPallocMemoryArray(scip, &tempcurrentrow, mod2data->rowsbitarraysize));
+                  SCIP_CALL( SCIPallocMemoryArray(scip, &tempcurrentrow, mod2data->rowsbitarraysize) );
                   BITARRAYCLEAR(tempcurrentrow, mod2data->rowsbitarraysize);
                }
                assert(rcolsindex < problem->nrcols);
@@ -2746,7 +2755,7 @@ SCIP_RETCODE storeMod2Data(
     
       if( tempcurrentrow == NULL && tempmod2rhs )
       {
-         SCIP_CALL(SCIPallocMemoryArray(scip, &tempcurrentrow, mod2data->rowsbitarraysize));
+         SCIP_CALL( SCIPallocMemoryArray(scip, &tempcurrentrow, mod2data->rowsbitarraysize) );
          BITARRAYCLEAR(tempcurrentrow, mod2data->rowsbitarraysize);
       }
       assert(tempcurrentrow != NULL || !tempmod2rhs);
@@ -2757,7 +2766,7 @@ SCIP_RETCODE storeMod2Data(
          mod2data->rows[i] = tempcurrentrow;
          mod2data->rhs[i] = tempmod2rhs;
       
-         SCIP_CALL(SCIPallocMemoryArray(scip, &(mod2data->rowaggregations[i]), mod2data->rowaggregationsbitarraysize));
+         SCIP_CALL( SCIPallocMemoryArray(scip, &(mod2data->rowaggregations[i]), mod2data->rowaggregationsbitarraysize) );
          BITARRAYCLEAR(mod2data->rowaggregations[i], mod2data->rowaggregationsbitarraysize);
          BITARRAYBITSET(mod2data->rowaggregations[i], i);
 
@@ -5831,17 +5840,16 @@ SCIP_RETCODE separateByEnumerationHeuristics(
 
 
 
-#ifdef SCIP_DEBUG
+#if 0
 /** prints a node of the auxiliary graph */
 static
 void debugPrintAuxGraphNode(
    ZEROHALF_AUXGRAPH_NODE* node              /**< node to be printed */
    )
 {
-   int                   i;
+   int i;
 
    assert(node != NULL);
-
 
    SCIPdebugMessage("\nnode: %p\n", node);
    for( i = 0 ; i < node->nneighbors ; ++i)
@@ -6746,7 +6754,6 @@ static
 SCIP_DECL_SEPAFREE(sepaFreeZerohalf)
 {  
    SCIP_SEPADATA* sepadata;
-   int i;
 
    assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
 
@@ -6756,24 +6763,36 @@ SCIP_DECL_SEPAFREE(sepaFreeZerohalf)
   
    if( sepadata->pptimers != NULL )
    {
+#ifdef ZEROHALF__PRINT_STATISTICS   
+      int i;
+
       for( i = 0 ; i < sepadata->nppmethods + 1 ; ++i)
       {
          ZEROHALFfreeTimer((sepadata->pptimers[i]));
       }
+#endif
       SCIPfreeMemoryArray(scip, &(sepadata->pptimers));
    }
+
    if( sepadata->sepatimers != NULL )
    {
+#ifdef ZEROHALF__PRINT_STATISTICS   
+      int i;
+
       for( i = 0 ; i < sepadata->nsepamethods + 1 ; ++i)
       {
          ZEROHALFfreeTimer((sepadata->sepatimers[i]));
       }
+#endif
       SCIPfreeMemoryArray(scip, &(sepadata->sepatimers));
    }
+
+#ifdef ZEROHALF__PRINT_STATISTICS   
    if( sepadata->dtimer != NULL )
    {
       ZEROHALFfreeTimer((sepadata->dtimer));
    }  
+#endif
 
    if( sepadata->nsepacutsalgo != NULL )
    {

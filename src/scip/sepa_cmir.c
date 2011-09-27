@@ -480,6 +480,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
    bestdelta = 0.0;
    bestefficacy = 0.0;
    maxabsmksetcoef = 0.0;
+   mksetcoefsvalid = FALSE;
 
    /* try delta = 1 and get the coefficients of all variables in the constructed mixed knapsack set;
     * if the aggregated row contains too many nonzero elements the generation of the c-MIR cut is aborted,

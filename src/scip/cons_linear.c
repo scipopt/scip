@@ -2666,7 +2666,9 @@ SCIP_RETCODE consdataSort(
       /* count binary variables and permute variables such that binaries appear first in the sorted vars array */
       for( v = 0; v < nvars; ++v )
       {
-         if( SCIPvarIsBinary(vars[v]) ) /*lint !e613*/
+         assert( vars != NULL); /* for flexelint */
+         assert( vals != NULL); /* for flexelint */
+         if( SCIPvarIsBinary(vars[v]) )
          {
             /* swap variable at the end of the binary variables, if necessary */
             if( lastbin < v )
@@ -2675,7 +2677,7 @@ SCIP_RETCODE consdataSort(
                SCIP_Real tmpval;
                
                tmpvar = vars[lastbin];
-               tmpval = vals[lastbin]; /*lint !e613*/
+               tmpval = vals[lastbin];
 
                vars[lastbin] = vars[v];
                vals[lastbin] = vals[v];
@@ -2708,6 +2710,7 @@ SCIP_RETCODE consdataSort(
       /* check sorting */
       for( v = 0; v < nvars; ++v )
       {
+         assert(vars != NULL); /* for flexelint */
          assert(eventdatas == NULL || eventdatas[v]->varpos == v);
          assert((v >= consdata->nbinvars && !SCIPvarIsBinary(vars[v])) || (v < consdata->nbinvars && SCIPvarIsBinary(vars[v])));
       }
@@ -2720,6 +2723,7 @@ SCIP_RETCODE consdataSort(
 
          assert(lastbin == consdata->nbinvars);
          assert(lastbin <= nvars);
+         assert(vals != NULL);
 
          /* initialize absolute coefficients and the target permutation for binary variables */
          SCIP_CALL( SCIPallocBufferArray(scip, &absvals, lastbin) );
@@ -3524,7 +3528,8 @@ SCIP_RETCODE mergeMultiples(
     * backward direction is necessary, since delCoefPos() modifies the given position and
     * the subsequent ones
     */
-   for( v = consdata->nvars-1; v >= 1; --v )
+   v = consdata->nvars-1;
+   while( v >= 1 )
    {
       var = consdata->vars[v];
       if( consdata->vars[v-1] == var )
@@ -3549,6 +3554,7 @@ SCIP_RETCODE mergeMultiples(
             SCIP_CALL( chgCoefPos(scip, cons, v, valsum) );
          }
       }
+      --v;
    }
 
    consdata->merged = TRUE;
@@ -3784,7 +3790,7 @@ SCIP_RETCODE addConflictBounds(
    assert(vals != NULL || nvars == 0);
    assert(-1 <= inferpos && inferpos < nvars);
    assert((infervar == NULL) == (inferpos == -1));
-   assert(inferpos == -1 || vars[inferpos] == infervar);
+   assert(inferpos == -1 || vars[inferpos] == infervar); /*lint !e613*/
 
    /* for each variable, add the bound to the conflict queue, that is responsible for the minimal or maximal
     * residual value, depending on whether the left or right hand side is responsible for the bound change:
@@ -3806,6 +3812,7 @@ SCIP_RETCODE addConflictBounds(
       /* calculate the minimal and maximal global activity of all other variables involved in the constraint */
       if( infervar != NULL )
       {
+         assert(vals != NULL); /* for flexelint */
          if( reasonisrhs )
             consdataGetGlbActivityResiduals(scip, consdata, infervar, vals[inferpos], &minresactivity, NULL, &isminsettoinfinity, NULL);
          else
@@ -3828,6 +3835,8 @@ SCIP_RETCODE addConflictBounds(
           */
          if( infervar != NULL )
          {
+            assert(vals != NULL); /* for flexelint */
+
             if( reasonisrhs )
             {
                if( isNewActivityUnreliable(scip, minresactivity, consdata->lastglbminactivity) )
@@ -3852,13 +3861,16 @@ SCIP_RETCODE addConflictBounds(
             if( reasonisrhs == (vals[inferpos] > 0.0) )
                rescap -= vals[inferpos] * (SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) + 1.0);
             else
-               rescap -= vals[inferpos] * (SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) - 1.0);            
+               rescap -= vals[inferpos] * (SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) - 1.0);
          }
          else
             rescap = (reasonisrhs ? consdata->rhs - minresactivity : consdata->lhs - maxresactivity);
 
          if( !resactisinf )
          {
+            assert(vars != NULL); /* for flexelint */
+            assert(vals != NULL); /* for flexelint */
+
             /* now add bounds as reasons until the residual capacity is exceeded */
             for( i = 0; i < nvars; ++i )
             {
@@ -3893,6 +3905,9 @@ SCIP_RETCODE addConflictBounds(
    /* for a bound change on a continuous variable, all locally changed bounds are responsible */
    for( i = 0; i < nvars; ++i )
    {
+      assert(vars != NULL); /* for flexelint */
+      assert(vals != NULL); /* for flexelint */
+
       /* zero coefficients and the infered variable can be ignored */
       if( vars[i] == infervar || SCIPisZero(scip, vals[i]) )
          continue;
@@ -4348,7 +4363,8 @@ SCIP_RETCODE tightenBounds(
 
       /* try to tighten the bounds of each variable in the constraint. During solving process, 
        * the binary variable sorting enables skipping variables */
-      for( v = 0; v < nvars && v != lastchange && !(*cutoff); ++v )
+      v = 0;
+      while( v < nvars && v != lastchange && !(*cutoff) )
       {
          oldnchgbds = *nchgbds;
 
@@ -4358,10 +4374,15 @@ SCIP_RETCODE tightenBounds(
          
          /* if there was no progress, skip the rest of the binary variables */
          if( *nchgbds > oldnchgbds )
+         {
             lastchange = v;
+            v++;
+         }
          else if( consdata->binvarssorted && v < consdata->nbinvars - 1
             && !SCIPisFeasEQ(scip, SCIPvarGetUbLocal(consdata->vars[v]), SCIPvarGetLbLocal(consdata->vars[v])) )
-            v = consdata->nbinvars - 1;
+            v = consdata->nbinvars;
+         else
+            ++v;
       }
    }
 #ifndef NDEBUG
@@ -4882,7 +4903,8 @@ SCIP_RETCODE consdataTightenCoefs(
    maxleftactivity = 0.0;
  
    /* try to tighten each coefficient */
-   for( i = 0; i < consdata->nvars; ++i )
+   i = 0;
+   while( i < consdata->nvars )
    {
       var = consdata->vars[i];
 
@@ -5099,9 +5121,10 @@ SCIP_RETCODE consdataTightenCoefs(
             }
          }
       }
+      ++i;
    }
 
-   SCIPdebugMessage("minleftactivity = %.15g, rhs = %.15g\n", 
+   SCIPdebugMessage("minleftactivity = %.15g, rhs = %.15g\n",
       minleftactivity, consdata->rhs);
    SCIPdebugMessage("maxleftactivity = %.15g, lhs = %.15g\n", 
       maxleftactivity, consdata->lhs);
@@ -5141,7 +5164,8 @@ SCIP_RETCODE consdataTightenCoefs(
       assert(!SCIPisInfinity(scip, -consdata->lhs) || !SCIPisInfinity(scip, consdata->rhs));
       
       /* try to remove redundant variables from constraint */
-      for( i = 0; i < consdata->nvars; ++i )
+      i = 0;
+      while( i < consdata->nvars )
       {
          var = consdata->vars[i];
          minleftactivitypart = 0.0;
@@ -5217,6 +5241,7 @@ SCIP_RETCODE consdataTightenCoefs(
             ++(*nchgsides);
             assert(SCIPisEQ(scip, consdata->rhs, newrhs));
          }
+         ++i;
       }
    }
    
@@ -5938,7 +5963,7 @@ SCIP_RETCODE dualPresolve(
    int*                  naggrvars,          /**< pointer to count number of aggregated variables */
    int*                  ndelconss           /**< pointer to count number of deleted constraints */
    )
-{  /*lint --e{715}*/
+{
    SCIP_CONSDATA* consdata;
    SCIP_Bool lhsexists;
    SCIP_Bool rhsexists;
@@ -9417,6 +9442,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
 
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    /* process single constraints */
    firstchange = INT_MAX;
@@ -9649,7 +9675,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
                if( usefulconss[c] == NULL )
                   continue;
               
-               npaircomparisons += (SCIP_Longint) ((SCIPconsGetData(conss[c])->changed) ? c : (c - firstchange));
+               npaircomparisons += (SCIPconsGetData(conss[c])->changed) ? c : (c - firstchange); /*lint !e776*/
 
                assert(SCIPconsIsActive(usefulconss[c]) && !SCIPconsIsModifiable(usefulconss[c]));
                SCIP_CALL( preprocessConstraintPairs(scip, usefulconss, firstchange, c, conshdlrdata->maxaggrnormscale,
@@ -9657,6 +9683,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
 
                if( npaircomparisons > conshdlrdata->nmincomparisons )
                {
+                  assert(npaircomparisons > 0);
                   if( ((*ndelconss - oldndelconss) + (*nchgsides - oldnchgsides)/2.0 + (*nchgcoefs - oldnchgcoefs)/10.0) / ((SCIP_Real) npaircomparisons) < conshdlrdata->mingainpernmincomp )
                      break;
                   oldndelconss = *ndelconss;
@@ -9897,11 +9924,9 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    int        nvars;
    int        coefssize;
    int        requsize;
-   int        endpos;
    SCIP_Real  lhs;
    SCIP_Real  rhs;
-   char*      endsum;
-   char       endchar;
+   char*      endptr;
 
    assert(scip != NULL);
    assert(success != NULL);
@@ -9913,7 +9938,6 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    lhs = -SCIPinfinity(scip);
    rhs =  SCIPinfinity(scip);
 
-   endchar = '\0';
    (*success) = FALSE;
 
    /* return of string empty */
@@ -9921,26 +9945,25 @@ SCIP_DECL_CONSPARSE(consParseLinear)
       return SCIP_OKAY;
 
    /* ignore whitespace */
-   while( isspace(*str) )
+   while( isspace((unsigned char)*str) )
       ++str;
 
-   if( isdigit(str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit(str[1])) )
+   /* check for left hand side */
+   if( isdigit((unsigned char)str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit((unsigned char)str[1])) )
    {
-      char* endstr;
       /* there is a number coming, maybe it is a left-hand-side */
-
-      lhs = strtod(str, &endstr);
-      if( str == endstr )
+      if( !SCIPstrToRealValue(str, &lhs, &endptr) )
       {
-         SCIPerrorMessage("error parsing number from %s\n", str);
+         SCIPerrorMessage("error parsing number from <%s>\n", str);
          return SCIP_OKAY;
       }
+      str = endptr;
 
       /* ignore whitespace */
-      while( isspace(*endstr) )
-         ++endstr;
+      while( isspace((unsigned char)*str) )
+         ++str;
 
-      if( endstr[0] != '<' || endstr[1] != '=' )
+      if( str[0] != '<' || str[1] != '=' )
       {
          /* no '<=' coming, so it was the first coefficient, but not a left-hand-side */
          lhs = -SCIPinfinity(scip);
@@ -9948,88 +9971,21 @@ SCIP_DECL_CONSPARSE(consParseLinear)
       else
       {
          /* it was indeed a left-hand-side, so continue parsing after it */
-         str = endstr + 2;
+         str += 2;
 
          /* ignore whitespace */
-         while( isspace(*str) )
+         while( isspace((unsigned char)*str) )
             ++str;
       }
    }
 
-   /* search for end of linear sum: either '<=', '>=', '==', or '[free]' */
-   endsum = strrchr(str, (int) '=');
-   if( endsum != NULL )
-   {
-      /* seem to have either '<=', '>=', or '==', so expect a value behind and parse it */
-      char* endstr;
-
-      assert(endsum > str);
-      --endsum;
-      switch( *endsum )
-      {
-         case '<':
-            rhs = strtod(endsum+2, &endstr);
-            break;
-
-         case '=':
-            if( !SCIPisInfinity(scip, -lhs) )
-            {
-               SCIPerrorMessage("cannot have == on rhs if there was a <= on lhs\n");
-               return SCIP_OKAY;
-            }
-            else
-            {
-               rhs = strtod(endsum+2, &endstr);
-               lhs = rhs;
-            }
-            break;
-
-         case '>':
-            if( !SCIPisInfinity(scip, -lhs) )
-            {
-               SCIPerrorMessage("cannot have => on rhs if there was a <= on lhs\n");
-               return SCIP_OKAY;
-            }
-            else
-            {
-               lhs = strtod(endsum+2, &endstr);
-            }
-            break;
-
-         default:
-            SCIPerrorMessage("unexpected character %c\n", *endsum);
-            return SCIP_OKAY;
-      }
-      if( endstr == endsum+2 )
-      {
-         SCIPerrorMessage("error parsing number %s\n", endsum+2);
-         return SCIP_OKAY;
-      }
-   }
-   else
-   {
-      endsum = strstr(str, "[free]");  /*lint !e158*/
-      if( endsum != NULL && !SCIPisInfinity(scip, -lhs) )
-      {
-         SCIPerrorMessage("cannot have [free] if there was a <= on lhs\n");
-         return SCIP_OKAY;
-      }
-   }
-
-   if( endsum != NULL )
-   {
-      /* fake end of string */
-      endchar = *endsum;
-      *endsum = '\0';
-   }
-
-   /* initialize buffers for storing the coefficients */
+   /* initialize buffers for storing the variables and coefficients */
    coefssize = 100;
    SCIP_CALL( SCIPallocBufferArray(scip, &vars,  coefssize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &coefs, coefssize) );
 
    /* parse linear sum to get variables and coefficients */
-   SCIP_CALL( SCIPparseVarsLinearsum(scip, str, 0, 0, vars, coefs, &nvars, coefssize, &requsize, &endpos, success) );
+   SCIP_CALL( SCIPparseVarsLinearsum(scip, str, 0, vars, coefs, &nvars, coefssize, &requsize, &endptr, success) );
 
    if( *success && requsize > coefssize )
    {
@@ -10038,7 +9994,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
       SCIP_CALL( SCIPreallocBufferArray(scip, &vars,  coefssize) );
       SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, coefssize) );
 
-      SCIP_CALL( SCIPparseVarsLinearsum(scip, str, 0, 0, vars, coefs, &nvars, coefssize, &requsize, &endpos, success) );
+      SCIP_CALL( SCIPparseVarsLinearsum(scip, str, 0, vars, coefs, &nvars, coefssize, &requsize, &endptr, success) );
       assert(!*success || requsize <= coefssize); /* if successful, then should have had enough space now */
    }
 
@@ -10046,15 +10002,69 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    {
       SCIPerrorMessage("no luck in parsing linear sum '%s'\n", str);
    }
-
-   /* restore original character at endsum */
-   if( endsum != NULL )
-      *endsum = endchar;
-
-   if( *success )
+   else
    {
-      SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, nvars, vars, coefs, lhs, rhs,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      (*success) = FALSE;
+      str = endptr;
+
+     /* check for left or right hand side */
+      while( isspace((unsigned char)*str) )
+         ++str;
+
+      /* check for free constraint */
+      if( strncmp(str, "[free]", 6) == 0 )
+      {
+         if( !SCIPisInfinity(scip, -lhs) )
+         {
+            SCIPerrorMessage("cannot have left hand side and [free] status \n");
+            return SCIP_OKAY;
+         }
+         (*success) = TRUE;
+      }
+      else
+      {
+         switch( *str )
+         {
+         case '<':
+            *success = SCIPstrToRealValue(str+2, &rhs, &endptr);
+            break;
+         case '=':
+            if( !SCIPisInfinity(scip, -lhs) )
+            {
+               SCIPerrorMessage("cannot have == on rhs if there was a <= on lhs\n");
+               return SCIP_OKAY;
+            }
+            else
+            {
+               *success = SCIPstrToRealValue(str+2, &rhs, &endptr);
+               lhs = rhs;
+            }
+            break;
+         case '>':
+            if( !SCIPisInfinity(scip, -lhs) )
+            {
+               SCIPerrorMessage("cannot have => on rhs if there was a <= on lhs\n");
+               return SCIP_OKAY;
+            }
+            else
+            {
+               *success = SCIPstrToRealValue(str+2, &lhs, &endptr);
+               break;
+            }
+         case '\0':
+            *success = TRUE;
+            break;
+         default:
+            SCIPerrorMessage("unexpected character %c\n", *str);
+            return SCIP_OKAY;
+         }
+      }
+
+      if( *success )
+      {
+         SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, nvars, vars, coefs, lhs, rhs,
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      }
    }
 
    SCIPfreeBufferArray(scip, &coefs);

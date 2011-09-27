@@ -29,7 +29,7 @@
 #include <string.h>
 #if defined(_WIN32) || defined(_WIN64)
 #else
-#include <strings.h>
+#include <strings.h> /*lint --e{766}*/ /* needed for strncasecmp() */
 #endif
 #include <ctype.h>
 
@@ -126,8 +126,7 @@ void syntaxError(
 
    assert(lpinput != NULL);
 
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error in line %d: %s ('%s')\n",
-      lpinput->linenumber, msg, lpinput->token);
+   SCIPerrorMessage("Syntax error in line %d: %s ('%s')\n", lpinput->linenumber, msg, lpinput->token);
    if( lpinput->linebuf[strlen(lpinput->linebuf)-1] == '\n' )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "  input: %s", lpinput->linebuf);
@@ -137,7 +136,7 @@ void syntaxError(
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "  input: %s\n", lpinput->linebuf);
    }
    (void) SCIPsnprintf(formatstr, 256, "         %%%ds\n", lpinput->linepos);
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, formatstr, "^");
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, (const char*)formatstr, "^");
    lpinput->section  = LP_END;
    lpinput->haserror = TRUE;
 }
@@ -184,9 +183,9 @@ SCIP_Bool isValueChar(
    assert(hasdot != NULL);
    assert(exptype != NULL);
 
-   if( isdigit(c) )
+   if( isdigit((unsigned char)c) )
       return TRUE;
-   else if( (*exptype == LP_EXP_NONE) && !(*hasdot) && (c == '.') && isdigit(nextc) )
+   else if( (*exptype == LP_EXP_NONE) && !(*hasdot) && (c == '.') && isdigit((unsigned char)nextc) )
    {
       *hasdot = TRUE;
       return TRUE;
@@ -198,7 +197,7 @@ SCIP_Bool isValueChar(
          *exptype = LP_EXP_SIGNED;
          return TRUE;
       }
-      else if( isdigit(nextc) )
+      else if( isdigit((unsigned char)nextc) )
       {
          *exptype = LP_EXP_UNSIGNED;
          return TRUE;
@@ -240,8 +239,7 @@ SCIP_Bool getNextLine(
       lpinput->haserror = TRUE;
       return FALSE;
    }
-   lpinput->linebuf[LP_MAX_LINELEN-1] = '\0';
-   lpinput->linebuf[LP_MAX_LINELEN-2] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
+   lpinput->linebuf[LP_MAX_LINELEN-1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
 
    /* skip characters after comment symbol */
    for( i = 0; commentchars[i] != '\0'; ++i )
@@ -2251,7 +2249,7 @@ void printVarName(
       SCIPinfoMessage(scip, file, "x%d", SCIPvarGetProbindex(var) + 1);
    else
    {
-      if( isdigit(name[0]) || name[0] == 'e' || name[0] == 'E' )
+      if( isdigit((unsigned char)name[0]) || name[0] == 'e' || name[0] == 'E' )
          SCIPinfoMessage(scip, file, "_%s", name);
       else
          SCIPinfoMessage(scip, file, "%s", name);
@@ -3080,13 +3078,13 @@ SCIP_RETCODE SCIPreadLp(
    lpinput.linebuf[0] = '\0';
    lpinput.probname[0] = '\0';
    lpinput.objname[0] = '\0';
-   SCIP_CALL( SCIPallocMemoryArray(scip, &lpinput.token, LP_MAX_LINELEN) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &lpinput.token, LP_MAX_LINELEN) ); /*lint !e506*/
    lpinput.token[0] = '\0';
-   SCIP_CALL( SCIPallocMemoryArray(scip, &lpinput.tokenbuf, LP_MAX_LINELEN) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &lpinput.tokenbuf, LP_MAX_LINELEN) ); /*lint !e506*/
    lpinput.tokenbuf[0] = '\0';
    for( i = 0; i < LP_MAX_PUSHEDTOKENS; ++i )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(lpinput.pushedtokens[i]), LP_MAX_LINELEN) );  /*lint !e866 */
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(lpinput.pushedtokens[i]), LP_MAX_LINELEN) );  /*lint !e866 !e506*/
    }
 
    lpinput.npushedtokens = 0;

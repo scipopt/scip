@@ -2027,37 +2027,70 @@ SCIP_RETCODE SCIPvarCopy(
       (*var)->vardeltrans = sourcevar->vardeltrans;
       (*var)->vardata = targetdata;
    }
-   
+
    SCIPdebugMessage("created copy <%s> of variable <%s>\n", SCIPvarGetName(*var), SCIPvarGetName(sourcevar));
-   
+
    return SCIP_OKAY;
 }
 
 /** parse given string for a SCIP_Real bound */
 static
-void parseValue(
+SCIP_RETCODE parseValue(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           str,                /**< string to parse */
-   SCIP_Real*            value               /**< pointer to store the parsed value */
-   )
-{                                                
-#ifndef NDEBUG
-   int cnt;
-#endif
-   
-   if(strncmp(str, "+inf", 4) == 0 )
-      *value = SCIPsetInfinity(set);
-   else if(strncmp(str, "-inf", 4) == 0 )
-      *value = -SCIPsetInfinity(set);
-   else 
+   SCIP_Real*            value,              /**< pointer to store the parsed value */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed */
+  )
+{
+   /* first check for infinity value */
+   if( strncmp(str, "+inf", 4) == 0 )
    {
-#ifndef NDEBUG
-      cnt = sscanf(str, "%"SCIP_REAL_FORMAT"", value);
-      assert(cnt == 1);
-#else
-      sscanf(str, "%"SCIP_REAL_FORMAT"", value);
-#endif
+      *value = SCIPsetInfinity(set);
+      (*endptr) += 4;
    }
+   else if( strncmp(str, "-inf", 4) == 0 )
+   {
+      *value = -SCIPsetInfinity(set);
+      (*endptr) += 4;
+   }
+   else
+   {
+      if( !SCIPstrToRealValue(str, value, endptr) )
+         return SCIP_READERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** parse the characters as bounds */
+static
+SCIP_RETCODE parseBounds(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           str,                /**< string to parse */
+   char*                 type,               /**< bound type (global, local, or lazy) */
+   SCIP_Real*            lb,                 /**< pointer to store the lower bound */
+   SCIP_Real*            ub,                 /**< pointer to store the upper bound */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed */
+   )
+{
+   char token[SCIP_MAXSTRLEN];
+
+   /* get bound type */
+   SCIPstrCopySection(str, ' ', ' ', type, SCIP_MAXSTRLEN, endptr);
+   SCIPdebugMessage("parsed bound type <%s>\n", type);
+
+   /* get lower bound */
+   SCIPstrCopySection(str, '[', ',', token, SCIP_MAXSTRLEN, endptr);
+   str = *endptr;
+
+   SCIP_CALL( parseValue(set, token, lb, endptr) );
+
+   SCIPdebugMessage("str <%s>\n", str);
+
+   /* get upper bound */
+   SCIP_CALL( parseValue(set, str, ub, endptr) );
+
+   return SCIP_OKAY;
 }
 
 /** parses a given string for a variable informations */
@@ -2067,21 +2100,20 @@ SCIP_RETCODE varParse(
    const char*           str,                /**< string to parse */
    char*                 name,               /**< pointer to store the variable name */
    SCIP_Real*            lb,                 /**< pointer to store the lower bound */
-   SCIP_Real*            ub,                 /**< pointer to store the upper bound */  
-   SCIP_Real*            obj,                /**< pointer to store the objective coefficient */  
-   SCIP_VARTYPE*         vartype,            /**< pointer to store the variable type */   
+   SCIP_Real*            ub,                 /**< pointer to store the upper bound */
+   SCIP_Real*            obj,                /**< pointer to store the objective coefficient */
+   SCIP_VARTYPE*         vartype,            /**< pointer to store the variable type */
    SCIP_Real*            lazylb,             /**< pointer to store if the lower bound is lazy */
    SCIP_Real*            lazyub,             /**< pointer to store if the upper bound is lazy */
-   SCIP_Bool             local,              /**< should the local bound be applied */            
+   SCIP_Bool             local,              /**< should the local bound be applied */
    SCIP_Bool*            success             /**< pointer store if the paring process was successful */
    )
 {
-   char* copystr;
-   char* token;
-   char* saveptr;
-#ifndef NDEBUG
-   int cnt;
-#endif
+   SCIP_Real parsedlb;
+   SCIP_Real parsedub;
+   char token[SCIP_MAXSTRLEN];
+   char* endptr;
+   int i;
 
    assert(lb != NULL);
    assert(ub != NULL);
@@ -2090,14 +2122,14 @@ SCIP_RETCODE varParse(
    assert(lazylb != NULL);
    assert(lazyub != NULL);
    assert(success != NULL);
-   
+
    (*success) = TRUE;
-   
-   /* copy string */
-   SCIP_ALLOC( BMSduplicateMemoryArray(&copystr, str, strlen(str)+1) );
-   
-   token = SCIPstrtok(copystr, " []", &saveptr);
-   
+
+   /* copy variable type */
+   SCIPstrCopySection(str, '[', ']', token, SCIP_MAXSTRLEN, &endptr);
+   assert(str != endptr);
+   SCIPdebugMessage("parsed variable type <%s>\n", token);
+
    /* get variable type */
    if( strncmp(token, "binary", 3) == 0 )
       (*vartype) = SCIP_VARTYPE_BINARY;
@@ -2111,57 +2143,61 @@ SCIP_RETCODE varParse(
    {
       SCIPwarningMessage("unknown variable type\n");
       (*success) = FALSE;
-      goto TERMINATE;
+      return SCIP_OKAY;
    }
-   
+
+   /* move string pointer behind variable type */
+   str = endptr;
+
    /* get variable name */
-   token = SCIPstrtok(NULL, " <>:", &saveptr);
-   (void) SCIPsnprintf(name, (int)strlen(token)+1, "%s", token);
-   
+   SCIPstrCopySection(str, '<', '>', name, SCIP_MAXSTRLEN, &endptr);
+   assert(endptr != NULL);
+   SCIPdebugMessage("parsed variable name <%s>\n", name);
+
+   /* move string pointer behind variable name */
+   str = endptr;
+
+   /* cut out objective coefficient */
+   SCIPstrCopySection(str, '=', ',', token, SCIP_MAXSTRLEN, &endptr);
+
+   /* move string pointer behind objective coefficient */
+   str = endptr;
+
    /* get objective coefficient */
-   token = SCIPstrtok(NULL, " ,:", &saveptr);
-#ifndef NDEBUG
-   cnt = sscanf(token, "obj=%"SCIP_REAL_FORMAT",", obj);
-#else
-   sscanf(token, "obj=%"SCIP_REAL_FORMAT",", obj);
-#endif
-   assert(cnt == 1);
-   
-   /* get global bound */
-   (void) SCIPstrtok(NULL, "[", &saveptr);
-   token = SCIPstrtok(NULL, ",", &saveptr);
-   parseValue(set, token, lb);
-   token = SCIPstrtok(NULL, "]", &saveptr);
-   parseValue(set, token, ub);
+   if( !SCIPstrToRealValue(token,  obj, &endptr) )
+      return SCIP_READERROR;
 
-   /* get local bound */
-   (void) SCIPstrtok(NULL, "[", &saveptr);
-   token = SCIPstrtok(NULL, ",", &saveptr);
-   if( local )
-      parseValue(set, token, lb);
-   token = SCIPstrtok(NULL, "]", &saveptr);
-   if( local )
-      parseValue(set, token, ub);
+   SCIPdebugMessage("parsed objective coefficient <%g>\n", *obj);
 
-   /* get lazy bound */
-   token = SCIPstrtok(NULL, "[", &saveptr);
-   if( token == NULL )
+   /* parse global/original bounds */
+   SCIP_CALL( parseBounds(set, str, token, lb, ub, &endptr) );
+   assert(strncmp(token, "global", 6) == 0 || strncmp(token, "original", 8) == 0);
+
+   /* initialize the lazy bound */
+   *lazylb = -SCIPsetInfinity(set);
+   *lazyub =  SCIPsetInfinity(set);
+
+   /* parse optional local and lazy bounds */
+   for( i = 0; i < 2; ++i )
    {
-      /* the lazy bounds are not present; hence the have the default values */
-      *lazylb = -SCIPsetInfinity(set);
-      *lazyub = SCIPsetInfinity(set);
+      /* parse global bounds */
+      SCIP_CALL( parseBounds(set, str, token, &parsedlb, &parsedub, &endptr) );
+
+      if( str != endptr )
+         break;
+
+      if( strncmp(token, "local", 5) == 0 && local )
+      {
+         *lb = parsedlb;
+         *ub = parsedub;
+      }
+      else if( strncmp(token, "lazy", 4) == 0 )
+      {
+         *lazylb = parsedlb;
+         *lazyub = parsedub;
+      }
    }
-   else
-   {
-      token = SCIPstrtok(NULL, ",", &saveptr);
-      parseValue(set, token, lazylb);
-      token = SCIPstrtok(NULL, "]", &saveptr);
-      parseValue(set, token, lazyub);
-   }
-   
- TERMINATE:
-   BMSfreeMemoryArray(&copystr);
-   
+
    return SCIP_OKAY;
 }
 
@@ -3453,8 +3489,8 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
     */
    for( v = ntmpvars - 1; v >= 0; --v )
    {
-      var = tmpvars[v];       /*lint !e644*/
-      scalar = tmpscalars[v]; /*lint !e644*/
+      var = tmpvars[v];
+      scalar = tmpscalars[v];
 
       assert( var != NULL );
       /* transforms given variable, scalar and constant to the corresponding active, fixed, or
@@ -3491,11 +3527,10 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    if( noldtmpvars > ntmpvars )
       SCIPsortPtrReal((void**)tmpvars, tmpscalars, SCIPvarComp, ntmpvars);
    
-
-   --ntmpvars;
    /* collect for each variable the representation in active variables */
-   for( ; ntmpvars >= 0; --ntmpvars )
+   while( ntmpvars >= 1 )
    {
+      --ntmpvars;
       ntmpvars2 = 0;
       var = tmpvars[ntmpvars];
       scalar = tmpscalars[ntmpvars];
@@ -3522,8 +3557,8 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
             SCIP_CALL( SCIPsetReallocBufferArray(set, &activescalars, activevarssize) );
             assert(nactivevars < activevarssize);
          }
-         activevars[nactivevars] = var;       /*lint !e644*/
-         activescalars[nactivevars] = scalar; /*lint !e644*/
+         activevars[nactivevars] = var;
+         activescalars[nactivevars] = scalar;
          nactivevars++;
          break;
 
@@ -3577,8 +3612,8 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
             }
             else
             {
-               tmpvars2[ntmpvars2] = multvar;                /*lint !e644*/
-               tmpscalars2[ntmpvars2] = scalar * multscalar; /*lint !e644*/
+               tmpvars2[ntmpvars2] = multvar;
+               tmpscalars2[ntmpvars2] = scalar * multscalar;
                ++(ntmpvars2);
                assert(ntmpvars2 <= tmpvarssize2);
             }
@@ -3602,7 +3637,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
          {
             tmpvars[ntmpvars] = tmpvars2[v];
             tmpscalars[ntmpvars] = tmpscalars2[v];
-            ++(ntmpvars);  /*lint !e850*/
+            ++(ntmpvars);
             assert(ntmpvars <= tmpvarssize);
          }
          SCIPsortPtrReal((void**)tmpvars, tmpscalars, SCIPvarComp, ntmpvars);
@@ -3627,7 +3662,8 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
       SCIPsortPtrReal((void**)activevars, activescalars, SCIPvarComp, nactivevars);
 
       /* eliminate duplicates and count required size */
-      for( v = nactivevars - 1; v > 0; --v )
+      v = nactivevars - 1;
+      while( v > 0 )
       {
          /* combine both variable since they are the same */
          if( SCIPvarCompare(activevars[v - 1], activevars[v]) == 0 )
@@ -3645,11 +3681,12 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
                activevars[v] = activevars[nactivevars];
                activescalars[v] = activescalars[nactivevars];
                --nactivevars;
-               --v;  /*lint !e850*/
+               --v;
                activevars[v] = activevars[nactivevars];
                activescalars[v] = activescalars[nactivevars];
             }
          }
+         --v;
       }
    }
    *requiredsize = nactivevars;
@@ -3665,7 +3702,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
       for( v = 0; v < *nvars; ++v )
       {
          vars[v] = activevars[v];
-         scalars[v] = activescalars[v];  /*lint !e613*/
+         scalars[v] = activescalars[v]; /*lint !e613*/
       }
    }
 
@@ -6735,9 +6772,11 @@ SCIP_RETCODE SCIPvarChgUbDive(
    return SCIP_OKAY;
 }
 
-/** for a multi-aggregated variable, gives the local lower bound computed by adding the local bounds from all aggregation variables
- * this lower bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multi-aggregated variable is not allowed
+/** for a multi-aggregated variable, gives the local lower bound computed by adding the local bounds from all
+ *  aggregation variables, this lower bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is
+ *  not updated if bounds of aggregation variables are changing
+ *
+ *  calling this function for a non-multi-aggregated variable is not allowed
  */
 SCIP_Real SCIPvarGetMultaggrLbLocal(
    SCIP_VAR*             var,                /**< problem variable */
@@ -6748,11 +6787,15 @@ SCIP_Real SCIPvarGetMultaggrLbLocal(
    SCIP_Real lb;
    SCIP_Real bnd;
    SCIP_VAR* aggrvar;
+   SCIP_Bool posinf;
+   SCIP_Bool neginf;
 
    assert(var != NULL);
    assert(set != NULL);
    assert((SCIP_VARSTATUS) var->varstatus == SCIP_VARSTATUS_MULTAGGR);
 
+   posinf = FALSE;
+   neginf = FALSE;
    lb = var->data.multaggr.constant;
    for( i = var->data.multaggr.nvars-1 ; i >= 0 ; --i )
    {
@@ -6761,28 +6804,44 @@ SCIP_Real SCIPvarGetMultaggrLbLocal(
       {
          bnd = SCIPvarGetStatus(aggrvar) == SCIP_VARSTATUS_MULTAGGR ? SCIPvarGetMultaggrLbLocal(aggrvar, set) : SCIPvarGetLbLocal(aggrvar);
 
-         if( SCIPsetIsInfinity(set, bnd) || SCIPsetIsInfinity(set, -bnd) )
-            return bnd;
-
-         lb += var->data.multaggr.scalars[i] * bnd;
+         if( SCIPsetIsInfinity(set, bnd) )
+            posinf = TRUE;
+         else if( SCIPsetIsInfinity(set, -bnd) )
+            neginf = TRUE;
+         else
+            lb += var->data.multaggr.scalars[i] * bnd;
       }
       else
       {
          bnd = SCIPvarGetStatus(aggrvar) == SCIP_VARSTATUS_MULTAGGR ? SCIPvarGetMultaggrUbLocal(aggrvar, set) : SCIPvarGetUbLocal(aggrvar);
 
-         if( SCIPsetIsInfinity(set, bnd) || SCIPsetIsInfinity(set, -bnd) )
-            return -bnd;
-
-         lb += var->data.multaggr.scalars[i] * bnd;
+         if( SCIPsetIsInfinity(set, -bnd) )
+            posinf = TRUE;
+         else if( SCIPsetIsInfinity(set, bnd) )
+            neginf = TRUE;
+         else
+            lb += var->data.multaggr.scalars[i] * bnd;
       }
+
+      /* stop if two diffrent infinities (or a -infinity) were found and return local lower bound of multi aggregated
+       * variable
+       */
+      if( neginf )
+         return SCIPvarGetLbLocal(var);
    }
 
-   return lb;
+   /* if positive infinity flag was set to true return infinity */
+   if( posinf )
+      return SCIPsetInfinity(set);
+
+   return (MAX(lb, SCIPvarGetLbLocal(var))); /*lint !e666*/
 }
 
-/** for a multi-aggregated variable, gives the local upper bound computed by adding the local bounds from all aggregation variables
- * this upper bound may be tighter than the one given by SCIPvarGetUbLocal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multi-aggregated variable is not allowed
+/** for a multi-aggregated variable, gives the local upper bound computed by adding the local bounds from all
+ *  aggregation variables, this upper bound may be tighter than the one given by SCIPvarGetUbLocal, since the latter is
+ *  not updated if bounds of aggregation variables are changing
+ *
+ *  calling this function for a non-multi-aggregated variable is not allowed
  */
 SCIP_Real SCIPvarGetMultaggrUbLocal(
    SCIP_VAR*             var,                /**< problem variable */
@@ -6793,11 +6852,15 @@ SCIP_Real SCIPvarGetMultaggrUbLocal(
    SCIP_Real ub;
    SCIP_Real bnd;
    SCIP_VAR* aggrvar;
+   SCIP_Bool posinf;
+   SCIP_Bool neginf;
 
    assert(var != NULL);
    assert(set != NULL);
    assert((SCIP_VARSTATUS) var->varstatus == SCIP_VARSTATUS_MULTAGGR);
 
+   posinf = FALSE;
+   neginf = FALSE;
    ub = var->data.multaggr.constant;
    for( i = var->data.multaggr.nvars-1 ; i >= 0 ; --i )
    {
@@ -6806,28 +6869,44 @@ SCIP_Real SCIPvarGetMultaggrUbLocal(
       {
          bnd = SCIPvarGetStatus(aggrvar) == SCIP_VARSTATUS_MULTAGGR ? SCIPvarGetMultaggrUbLocal(aggrvar, set) : SCIPvarGetUbLocal(aggrvar);
 
-         if( SCIPsetIsInfinity(set, bnd) || SCIPsetIsInfinity(set, -bnd) )
-            return bnd;
-
-         ub += var->data.multaggr.scalars[i] * bnd;
+         if( SCIPsetIsInfinity(set, bnd) )
+            posinf = TRUE;
+         else if( SCIPsetIsInfinity(set, -bnd) )
+            neginf = TRUE;
+         else
+            ub += var->data.multaggr.scalars[i] * bnd;
       }
       else
       {
          bnd = SCIPvarGetStatus(aggrvar) == SCIP_VARSTATUS_MULTAGGR ? SCIPvarGetMultaggrLbLocal(aggrvar, set) : SCIPvarGetLbLocal(aggrvar);
 
-         if( SCIPsetIsInfinity(set, bnd) || SCIPsetIsInfinity(set, -bnd) )
-            return -bnd;
-
-         ub += var->data.multaggr.scalars[i] * bnd;
+         if( SCIPsetIsInfinity(set, -bnd) )
+            posinf = TRUE;
+         else if( SCIPsetIsInfinity(set, bnd) )
+            neginf = TRUE;
+         else
+            ub += var->data.multaggr.scalars[i] * bnd;
       }
+
+      /* stop if two diffrent infinities (or a -infinity) were found and return local upper bound of multi aggregated
+       * variable
+       */
+      if( posinf )
+         return SCIPvarGetUbLocal(var);
    }
 
-   return ub;
+   /* if negative infinity flag was set to true return -infinity */
+   if( neginf )
+      return -SCIPsetInfinity(set);
+
+   return (MIN(ub, SCIPvarGetUbLocal(var))); /*lint !e666*/
 }
 
-/** for a multi-aggregated variable, gives the global lower bound computed by adding the global bounds from all aggregation variables
- * this global bound may be tighter than the one given by SCIPvarGetLbGlobal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multi-aggregated variable is not allowed
+/** for a multi-aggregated variable, gives the global lower bound computed by adding the global bounds from all
+ *  aggregation variables, this global bound may be tighter than the one given by SCIPvarGetLbGlobal, since the latter is
+ *  not updated if bounds of aggregation variables are changing
+ *
+ *  calling this function for a non-multi-aggregated variable is not allowed
  */
 SCIP_Real SCIPvarGetMultaggrLbGlobal(
    SCIP_VAR*             var,                /**< problem variable */
@@ -6838,11 +6917,15 @@ SCIP_Real SCIPvarGetMultaggrLbGlobal(
    SCIP_Real lb;
    SCIP_Real bnd;
    SCIP_VAR* aggrvar;
+   SCIP_Bool posinf;
+   SCIP_Bool neginf;
 
    assert(var != NULL);
    assert(set != NULL);
    assert((SCIP_VARSTATUS) var->varstatus == SCIP_VARSTATUS_MULTAGGR);
 
+   posinf = FALSE;
+   neginf = FALSE;
    lb = var->data.multaggr.constant;
    for( i = var->data.multaggr.nvars-1 ; i >= 0 ; --i )
    {
@@ -6851,28 +6934,44 @@ SCIP_Real SCIPvarGetMultaggrLbGlobal(
       {
          bnd = SCIPvarGetStatus(aggrvar) == SCIP_VARSTATUS_MULTAGGR ? SCIPvarGetMultaggrLbGlobal(aggrvar, set) : SCIPvarGetLbGlobal(aggrvar);
 
-         if( SCIPsetIsInfinity(set, bnd) || SCIPsetIsInfinity(set, -bnd) )
-            return bnd;
-
-         lb += var->data.multaggr.scalars[i] * bnd;
+         if( SCIPsetIsInfinity(set, bnd) )
+            posinf = TRUE;
+         else if( SCIPsetIsInfinity(set, -bnd) )
+            neginf = TRUE;
+         else
+            lb += var->data.multaggr.scalars[i] * bnd;
       }
       else
       {
          bnd = SCIPvarGetStatus(aggrvar) == SCIP_VARSTATUS_MULTAGGR ? SCIPvarGetMultaggrUbGlobal(aggrvar, set) : SCIPvarGetUbGlobal(aggrvar);
 
-         if( SCIPsetIsInfinity(set, bnd) || SCIPsetIsInfinity(set, -bnd) )
-            return -bnd;
-
-         lb += var->data.multaggr.scalars[i] * bnd;
+         if( SCIPsetIsInfinity(set, -bnd) )
+            posinf = TRUE;
+         else if( SCIPsetIsInfinity(set, bnd) )
+            neginf = TRUE;
+         else
+            lb += var->data.multaggr.scalars[i] * bnd;
       }
+
+      /* stop if two diffrent infinities (or a -infinity) were found and return global lower bound of multi aggregated
+       * variable
+       */
+      if( neginf )
+         return SCIPvarGetLbGlobal(var);
    }
 
-   return lb;
+   /* if positive infinity flag was set to true return infinity */
+   if( posinf )
+      return SCIPsetInfinity(set);
+
+   return (MAX(lb, SCIPvarGetLbGlobal(var))); /*lint !e666*/
 }
 
-/** for a multi-aggregated variable, gives the global upper bound computed by adding the global bounds from all aggregation variables
- * this upper bound may be tighter than the one given by SCIPvarGetUbGlobal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multi-aggregated variable is not allowed
+/** for a multi-aggregated variable, gives the global upper bound computed by adding the global bounds from all
+ *  aggregation variables, this upper bound may be tighter than the one given by SCIPvarGetUbGlobal, since the latter is
+ *  not updated if bounds of aggregation variables are changing
+ *
+ *  calling this function for a non-multi-aggregated variable is not allowed
  */
 SCIP_Real SCIPvarGetMultaggrUbGlobal(
    SCIP_VAR*             var,                /**< problem variable */
@@ -6883,11 +6982,15 @@ SCIP_Real SCIPvarGetMultaggrUbGlobal(
    SCIP_Real ub;
    SCIP_Real bnd;
    SCIP_VAR* aggrvar;
+   SCIP_Bool posinf;
+   SCIP_Bool neginf;
 
    assert(var != NULL);
    assert(set != NULL);
    assert((SCIP_VARSTATUS) var->varstatus == SCIP_VARSTATUS_MULTAGGR);
 
+   posinf = FALSE;
+   neginf = FALSE;
    ub = var->data.multaggr.constant;
    for( i = var->data.multaggr.nvars-1 ; i >= 0 ; --i )
    {
@@ -6896,23 +6999,37 @@ SCIP_Real SCIPvarGetMultaggrUbGlobal(
       {
          bnd = SCIPvarGetStatus(aggrvar) == SCIP_VARSTATUS_MULTAGGR ? SCIPvarGetMultaggrUbGlobal(aggrvar, set) : SCIPvarGetUbGlobal(aggrvar);
 
-         if( SCIPsetIsInfinity(set, bnd) || SCIPsetIsInfinity(set, -bnd) )
-            return bnd;
-
-         ub += var->data.multaggr.scalars[i] * bnd;
+         if( SCIPsetIsInfinity(set, bnd) )
+            posinf = TRUE;
+         else if( SCIPsetIsInfinity(set, -bnd) )
+            neginf = TRUE;
+         else
+            ub += var->data.multaggr.scalars[i] * bnd;
       }
       else
       {
          bnd = SCIPvarGetStatus(aggrvar) == SCIP_VARSTATUS_MULTAGGR ? SCIPvarGetMultaggrLbGlobal(aggrvar, set) : SCIPvarGetLbGlobal(aggrvar);
 
-         if( SCIPsetIsInfinity(set, bnd) || SCIPsetIsInfinity(set, -bnd) )
-            return -bnd;
-
-         ub += var->data.multaggr.scalars[i] * bnd;
+         if( SCIPsetIsInfinity(set, -bnd) )
+            posinf = TRUE;
+         else if( SCIPsetIsInfinity(set, bnd) )
+            neginf = TRUE;
+         else
+            ub += var->data.multaggr.scalars[i] * bnd;
       }
+
+      /* stop if two diffrent infinities (or a -infinity) were found and return local upper bound of multi aggregated
+       * variable
+       */
+      if( posinf )
+         return SCIPvarGetUbGlobal(var);
    }
 
-   return ub;
+   /* if negative infinity flag was set to true return -infinity */
+   if( neginf )
+      return -SCIPsetInfinity(set);
+
+   return (MIN(ub, SCIPvarGetUbGlobal(var))); /*lint !e666*/
 }
 
 /** adds a hole to the original domain of the variable */
@@ -7944,7 +8061,7 @@ SCIP_RETCODE varAddTransitiveBinaryClosureImplic(
                varfixing, implvars[i], impltypes[i], implbounds[i], infeasible, nbdchgs, &added) );
          assert(SCIPimplicsGetNImpls(implvar->implics, implvarfixing) <= nimpls);
          nimpls = SCIPimplicsGetNImpls(implvar->implics, implvarfixing);
-         i = MIN(i, nimpls); /* some elements from the array could have been removed */  /*lint !e850*/
+         i = MIN(i, nimpls); /* some elements from the array could have been removed */
       }
       --i;
    }
@@ -8074,7 +8191,7 @@ SCIP_RETCODE varAddTransitiveImplic(
                         varfixing, vlbvars[i], SCIP_BOUNDTYPE_LOWER, vbimplbound, infeasible, nbdchgs, &added) );
                }
                nvlbvars = SCIPvboundsGetNVbds(implvar->vlbs);
-               i = MIN(i, nvlbvars); /* some elements from the array could have been removed */  /*lint !e850*/
+               i = MIN(i, nvlbvars); /* some elements from the array could have been removed */
             }
             --i;
          }
@@ -8141,7 +8258,7 @@ SCIP_RETCODE varAddTransitiveImplic(
                         varfixing, vubvars[i], SCIP_BOUNDTYPE_UPPER, vbimplbound, infeasible, nbdchgs, &added) );
                }
                nvubvars = SCIPvboundsGetNVbds(implvar->vubs);
-               i = MIN(i, nvubvars); /* some elements from the array could have been removed */  /*lint !e850*/
+               i = MIN(i, nvubvars); /* some elements from the array could have been removed */
             }
             --i;
          }

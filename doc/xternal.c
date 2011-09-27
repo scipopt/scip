@@ -469,9 +469,9 @@
  *
  * First of all, we need a SCIP binary and an example problem file to work with.  Therefore, you can either download the
  * SCIP standard distribution (which includes problem files) and compile it on your own or you can download a
- * precompiled binary and an example problem separately.
+ * precompiled binary and an example problem separately. SCIP can read files in LP, MPS, ZPL, WBO, FZN, PIP, and other formats.
  *
- * If you want to download the SCIP standard distribution, we recommend to go to the <a
+ * If you want to download the source code of the SCIP standard distribution, we recommend to go to the <a
  * href="http://zibopt.zib.de/download.shtml">ZIBopt download section</a>, download the latest release (version 2.0.1 as
  * of this writing), inflate the tarball (e.g., with "tar xzf ziboptsuite-[version].tgz"), and follow the instructions
  * in the INSTALL file. The instance stein27, which will serve as an example in this tutorial, can be found under
@@ -562,18 +562,20 @@
  *
  * What do we see here? After "optimize", SCIP first goes into presolving. Not much happening for this instance, just
  * the linear constraints get upgraded to more specific types. Each round of presolving will be displayed in a single
- * line, with a short summary at the end.  Then, we see the actual solving process. The first three output lines
- * indicate that new incumbent solutions were found by the primal heuristics with display characters "t", "R", and "s";
- * see, how the "primalbound" column goes down from 27 to 25. In the fourth line, two "cuts" are added.  Up to here, we
- * needed 44 "LP iter"ations (34 for the first LP and 10 more to resolve after adding cuts). Little later, the root node
- * processing is finished. We see that there are now two open nodes in the "left" column. From now on, we will see an
- * output line every hundredth node or whenever a new incumbent is found (e.g. at node 14 in the above output). After
- * some more nodes, the "dualbound" starts moving, too. At one point, both will be the same, and the solving process
- * terminates, showing us some wrap-up information. 
+ * line, with a short summary at the end. Here, there has only been one round with actual changes, the second round did
+ * not bring any further reductions.  Thus, it is not displayed and presolving is stopped. Then, we see the actual
+ * solving process. The first three output lines indicate that new incumbent solutions were found by the primal
+ * heuristics with display characters "t", "R", and "s"; see, how the "primalbound" column goes down from 27 to 25. In
+ * the fourth line, two "cuts" are added.  Up to here, we needed 44 "LP iter"ations (34 for the first LP and 10 more to
+ * resolve after adding cuts). Little later, the root node processing is finished. We see that there are now two open
+ * nodes in the "left" column. From now on, we will see an output line every hundredth node or whenever a new incumbent
+ * is found (e.g. at node 14 in the above output). After some more nodes, the "dualbound" starts moving, too. At one
+ * point, both will be the same, and the solving process terminates, showing us some wrap-up information.
  *
  * The exact performance varies amongst different architectures, operating systems, and so on. Do not be worried, if
  * your installation needs more or less time or nodes to solve. Also, this instance has more than 2000 different optimal
- * solutions. The optimal objective value always has to be 18, but the solution vector may differ.
+ * solutions. The optimal objective value always has to be 18, but the solution vector may differ. If you are interested
+ * in this behavior which is called "performance variability", you may have a look at the MIPLIB2010 paper.
  *
  * We might want to have some more information now. Which were the heuristics that found the solutions? What plugins
  *  were called during the solutions process and how much time did they spend? How did the instance that we were solving
@@ -667,7 +669,8 @@
  * "set" to change settings, "heuristics" to change settings of primal heuristics, "shifting" for that particular
  * heuristic. Then we see a list of parameters (and yet another submenu for advanced parameters), and disable this
  * heuristic by setting its calling frequency to -1. If we already know the path to a certain setting, we can directly
- * type it. Note that we do not have to use the full names, but we may use short versions, as long as they are unique.
+ * type it (as for the rounding heuristic in the above example). Note that we do not have to use the full names, but we
+ * may use short versions, as long as they are unique.
  *
  * To solve a problem a second time, we have to read it and start the optimization process again.
  *
@@ -709,12 +712,13 @@
  * \endcode
  *
  * Okay, what happened here? First, we reset all parameters to their default values, using "set default". Next, we
- * loaded some meta-parameter settings, to apply primal heuristics more aggressively. SCIP shows us, which single
- * parameters it changed therefor. Now, the optimal solution is already found at the root node, by a heuristic which is
- * deactivated by default.  Then, after node 200, the user pressed CTRL-C which interrupts the solving process, We see
- * that now in the short status report, primal and dual bound are different, thus, the problem is not solved yet.
- * Nevertheless, we could access statistics, see the current incumbent solution, change parameters and so on. Entering
- * "optimize" we continue the solving process from the point on at which it has been interrupted.
+ * loaded some meta-parameter settings (also see <a href="FAQ.html#Section2">the FAQ</a>), to apply primal heuristics
+ * more aggressively. SCIP shows us, which single parameters it changed therefor. Now, the optimal solution is already
+ * found at the root node, by a heuristic which is deactivated by default.  Then, after node 200, the user pressed
+ * CTRL-C which interrupts the solving process, We see that now in the short status report, primal and dual bound are
+ * different, thus, the problem is not solved yet.  Nevertheless, we could access statistics, see the current incumbent
+ * solution, change parameters and so on. Entering "optimize" we continue the solving process from the point on at which
+ * it has been interrupted.
  *
  * SCIP can also write information to files. E.g., we could store the incumbent solution to a file, or output the
  * problem instance in another files format (th LP format is much better human readable than the MPS format, for example).
@@ -4696,45 +4700,45 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-/**@page CONF How to add use conflict analysis
+/**@page CONF How to use conflict analysis
  *
  * Conflict analysis is a way to automatically use the information obtained from infeasible nodes
  * in the branch-and-bound tree. 
  *
- * Once a node is declared infeasible, SCIP automatically tries to infer a constraint that
- * essentially states that at least one of the variables that are fixed at the current infeasible
- * node during branching has to take a different value, because their current setting leads to
- * infeasibility. Clearly, all variables that are fixed in the current infeasible node would yield
- * such a constraint (since this leads to infeasibility). Thus, the key point is to infer a "small"
- * constraint that does the same job. SCIP handles this by several heuristics. For these heuristics
- * SCIP needs the so-called (directed) conflict graph. The nodes in this graph correspond to bound
- * changes of variables and an arc (@a u, @a v) means that the bound change corresponding to @a v is
- * based on the bound change of @a u. In general, a node will have several ingoing arcs which
- * represent all bound changes that have been used to infer (propagate) the bound change in
- * question. The graph also contains nodes for each bound that has been changed during branching and
- * an artificial target node representing the conflict, i.e., the infeasibility. Essentially SCIP
- * heuristically constructs a cut in this graph that involves few "branching nodes". We cannot in
- * detail explain the techniques that SCIP uses, but have to refer to the paper@par
- * Tobias Achterberg, Conflict Analysis in Mixed Integer Programming@n
- * Discrete Optimization, 4, 4-20 (2007)
+ * Once a node is declared infeasible, SCIP automatically tries to infer a constraint that explains the reason of the
+ * infeasibility, in order to avoid similar situations later in the search.  This explanation essentially consists of a
+ * constraint stating that at least one of its variables should have a bound different from the current infeasible node,
+ * because the current setting led to infeasibility. Clearly, all variables that are fixed in the current infeasible
+ * node would yield such a constraint (since this leads to infeasibility). The key point rather is to infer a "small"
+ * constraint that does the same job. SCIP handles this by several heuristics. For this, SCIP sets up a
+ * so-called (directed) conflict graph. The nodes in this graph correspond to bound changes of variables and an arc (@a
+ * u, @a v) means that the bound change corresponding to @a v is based on the bound change of @a u. In general, a node
+ * will have several ingoing arcs which represent all bound changes that have been used to infer (propagate) the bound
+ * change in question. The graph also contains source nodes for each bound that has been changed during branching and an
+ * artificial target node representing the conflict, i.e., the infeasibility. Essentially, SCIP heuristically constructs
+ * a cut in this graph that involves few "branching nodes". For details on the techniques that SCIP uses,
+ * we refer to the paper@par Tobias Achterberg, Conflict Analysis in Mixed Integer Programming@n Discrete
+ * Optimization, 4, 4-20 (2007)
  *
- * For conflict analysis to work well, the author of a constraint or propagator has to
+ * For conflict analysis to work well, the author of a constraint handler or a propagator has to
  * implement three kinds of functionality: 
  *
  * -# If one detects infeasibility, one should initiate conflict analysis, see below.
  * -# During propagation, one should call the right functions to fix variables.
  * -# One should implement the <em>so-called reverse propagation</em>.
  *
- * If this functionality is not implemented, SCIP will still work correctly, but cannot use the
- * information of the constraint or propagator for conflict analysis.
+ * If this functionality is not implemented, SCIP will work correctly, but cannot use the information of the constraint
+ * handler or the propagator for conflict analysis. In this case, each bound reduction performed by the constraint
+ * handler/propagator will be treated as if it had been a branching decision.
  *
  * @section Initiating Conflict Analysis
  *
  * If one detects infeasibility within propagation, one should do the following:
  * -# Call SCIPinitConflictAnalysis().
- * -# Inform SCIP about all variable bounds that are the reason for the detection of infeasibility
+ * -# Inform SCIP about the variable bounds that are the reason for the detection of infeasibility
  * via the functions SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(), or
- * SCIPaddConflictBinvar().
+ * SCIPaddConflictBinvar(). If there is more than one valid explanation of infeasibility, either one can be used. 
+ * Typically, smaller explanations tend to be better.
  * -# Call SCIPanalyzeConflict() from a propagator or SCIPanalyzeConflictCons() from a constraint
  * handler.
  *
@@ -4742,7 +4746,7 @@
  *
  * @section Propagation
  *
- * When propagating (fixing) variables, SCIP needs to be informed that the variable bounds should be
+ * When propagating variable domains, SCIP needs to be informed that the deduced variable bounds should be
  * used in conflict analysis. This can be done by the functions SCIPinferVarLbCons(),
  * SCIPinferVarUbCons(), and SCIPinferBinvarCons() for constraint handlers and SCIPinferVarLbProp(),
  * SCIPinferVarUbProp(), and SCIPinferBinvarProp() for propagators. You can pass one integer of
@@ -4751,17 +4755,17 @@
  *
  * @section Reverse Propagation
  *
- * Reverse Propagation allows to build up the conflict graph. Essentially, it provides an algorithm
- * to detect the arcs leading to a node in the conflict graph, i.e., the bound changes responsible
- * for the new bound change during propagation. Reverse Propagation needs to be implemented in the
- * respop() callback functions of constraint handlers or propagators. These callbacks receive the
- * following information: the variable which is under investigation (@p infervar), the corresponding
- * bound change (@p bdchgidx, @p boundtype), and the integer (@p inferinfo) that has been supplied
- * during propagation.
+ * Reverse Propagation allows to build up the conflict graph. Essentially, it provides an algorithm to detect the arcs
+ * leading to a node in the conflict graph, i.e., the bound changes responsible for the new bound change duduced during
+ * propagation. Reverse Propagation needs to be implemented in the RESPROP callback functions of constraint handlers or
+ * propagators. These callbacks receive the following information: the variable which is under investigation (@p
+ * infervar), the corresponding bound change (@p bdchgidx, @p boundtype), and the integer (@p inferinfo) that has been
+ * supplied during propagation.
  *
- * One can use SCIPvarGetUbAtIndex() or SCIPvarGetLbAtIndex() to detect the bounds before or after
- * the propagation that should be investigated. Then the bounds that were involved should be passed
- * to SCIP via SCIPaddConflictLb() and SCIPaddConflictUb().
+ * One can use SCIPvarGetUbAtIndex() or SCIPvarGetLbAtIndex() to detect the bounds before or after the propagation that
+ * should be investigated. Then the bounds that were involved should be passed to SCIP via SCIPaddConflictLb() and
+ * SCIPaddConflictUb().  If there is more than one valid explanation of infeasibility, either one can be used.
+ * Typically, smaller explanations tend to be better.
  *
  * Details and (more) examples are given in Sections @ref CONSRESPROP and @ref PROPRESPROP.
  *
@@ -4771,13 +4775,13 @@
  * example/LOP directory). This constraint handler propagates the equations \f$x_{ij} + x_{ji} =
  * 1\f$ and triangle inequalities \f$x_{ij} + x_{jk} + x_{ki} \leq 2\f$.
  * 
- * When propagating the equation and @p vars[i][j] is fixed to 1, it uses
+ * When propagating the equation and @p vars[i][j] is fixed to 1, the constraint handler uses
  * \code
  *    SCIP_CALL( SCIPinferBinvarCons(scip, vars[j][i], FALSE, cons, i*n + j, &infeasible, &tightened) );
  * \endcode
  * Thus, variable @p vars[j][i] is fixed to 0 and it passes @p i*n + @p j as @p inferinfo. 
  *
- * When it propagates the triangle inequality and @p vars[i][j] and @p vars[j[k] are fixed to 1, it uses
+ * When it propagates the triangle inequality and @p vars[i][j] and @p vars[j[k] are fixed to 1, the constraint handler uses
  * \code
  *    SCIP_CALL( SCIPinferBinvarCons(scip, vars[k][i], FALSE, cons, n*n + i*n*n + j*n + k, &infeasible, &tightened) );
  * \endcode
@@ -4785,13 +4789,13 @@
  * passed as inferinfo.
  *
  * In reverse propagation, the two cases can be distinguished by @p inferinfo: if it is less than @p
- * n*n, we deal with an equation, otherwise with a triangle inequality. It can then extract the
+ * n*n, we deal with an equation, otherwise with a triangle inequality. The constraint handler can then extract the
  * indices @p i, @p j (and @p k in the second case) from inferinfo.
  *
- * In the first case it has to distinguish whether @p vars[i][j] is fixed to 0 or 1 - it then calls
- * SCIPaddConflictLb() or SCIPaddConflictUb(), respectively, with variable @p vars[i][j]. In the
- * second case, it is clear that @p vars[i][j] and @p vars[j[k] are fixed to 1. It then calls
- * SCIPaddConflictLb() for both @p vars[i][j] and @p vars[j[k].
+ * In the first case it has to distinguish whether @p vars[i][j] is fixed to 0 or 1 &ndash; to call SCIPaddConflictLb()
+ * or SCIPaddConflictUb(), respectively, with variable @p vars[j][i]. In the second case, it is clear that the only
+ * possible propagation is to fix @p vars[i][j] when @p vars[k][i] and @p vars[j][k] are fixed to 1. It then calls
+ * SCIPaddConflictLb() for both @p vars[k][i] and @p vars[j][k].
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

@@ -237,7 +237,7 @@ SCIP_RETCODE primalSetUpperbound(
       SCIP_Real delta;
 
       delta = 100.0*SCIPsetFeastol(set);
-      delta = MIN(delta, 0.1);
+      delta = MIN(delta, 0.0001);
       cutoffbound = SCIPsetFeasCeil(set, upperbound) - (1.0 - delta);
       cutoffbound = MIN(cutoffbound, upperbound); /* SCIPsetFeasCeil() can increase bound by almost 1.0 due to numerics
                                                    * and very large upperbound value */
@@ -525,6 +525,52 @@ SCIP_RETCODE primalAddSol(
    return SCIP_OKAY;
 }
 
+/** adds primal solution to solution storage at given position */
+static
+SCIP_RETCODE primalAddOrigSol(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   int                   insertpos           /**< position in solution storage to add solution to */
+   )
+{
+   int pos;
+
+   assert(primal != NULL);
+   assert(set != NULL);
+   assert(sol != NULL);
+   assert(0 <= insertpos && insertpos < set->limit_maxorigsol);
+
+   SCIPdebugMessage("insert primal solution candidate %p with obj %g at position %d:\n", (void*)sol, SCIPsolGetObj(sol, set, prob), insertpos);
+
+   /* allocate memory for solution storage */
+   SCIP_CALL( ensureSolsSize(primal, set, set->limit_maxorigsol) );
+
+   /* if the solution storage is full, free the last solution(s)
+    * more than one solution may be freed, if set->limit_maxorigsol was decreased in the meantime
+    */
+   for( pos = set->limit_maxorigsol-1; pos < primal->nsols; ++pos )
+   {
+      SCIP_CALL( SCIPsolFree(&primal->sols[pos], blkmem, primal) );
+   }
+
+   /* insert solution at correct position */
+   primal->nsols = MIN(primal->nsols+1, set->limit_maxsol);
+   for( pos = primal->nsols-1; pos > insertpos; --pos )
+      primal->sols[pos] = primal->sols[pos-1];
+
+   assert(0 <= insertpos && insertpos < primal->nsols);
+   primal->sols[insertpos] = sol;
+   primal->nsolsfound++;
+
+   SCIPdebugMessage(" -> stored at position %d of %d solutions, found %"SCIP_LONGINT_FORMAT" solutions\n",
+      insertpos, primal->nsols, primal->nsolsfound);
+
+   return SCIP_OKAY;
+}
+
 /** uses binary search to find position in solution storage */
 static
 int primalSearchSolPos(
@@ -552,6 +598,41 @@ int primalSearchSolPos(
       assert(left < middle && middle < right);
       assert(0 <= middle && middle < primal->nsols);
       middleobj = SCIPsolGetObj(primal->sols[middle], set, prob);
+      if( obj < middleobj )
+         right = middle;
+      else
+         left = middle;
+   }
+   assert(left == right-1);
+
+   return right;
+}
+
+/** uses binary search to find position in solution storage */
+static
+int primalSearchOrigSolPos(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_SOL*             sol                 /**< primal solution to search position for */
+   )
+{
+   SCIP_Real obj;
+   SCIP_Real middleobj;
+   int left;
+   int right;
+   int middle;
+
+   assert(primal != NULL);
+
+   obj = SCIPsolGetOrigObj(sol);
+   
+   left = -1;
+   right = primal->nsols;
+   while( left < right-1 )
+   {
+      middle = (left+right)/2;
+      assert(left < middle && middle < right);
+      assert(0 <= middle && middle < primal->nsols);
+      middleobj = SCIPsolGetOrigObj(primal->sols[middle]);
       if( obj < middleobj )
          right = middle;
       else
@@ -615,6 +696,58 @@ SCIP_Bool primalExistsSol(
    return FALSE;
 }
 
+/** returns whether the given primal solution is already existent in the original solution candidate storage */
+static
+SCIP_Bool primalExistsOrigSol(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< original problem */
+   SCIP_SOL*             sol,                /**< primal solution to search position for */
+   int                   insertpos           /**< insertion position returned by primalSearchOrigSolPos() */
+   )
+{
+   SCIP_Real obj;
+   int i;
+
+   assert(primal != NULL);
+   assert(0 <= insertpos && insertpos <= primal->nsols);
+
+   obj = SCIPsolGetOrigObj(sol);
+
+   /* search in the better solutions */
+   for( i = insertpos-1; i >= 0; --i )
+   {
+      SCIP_Real solobj;
+
+      solobj = SCIPsolGetOrigObj(primal->sols[i]);
+      assert( SCIPsetIsLE(set, solobj, obj) );
+
+      if( SCIPsetIsLT(set, solobj, obj) )
+         break;
+
+      if( SCIPsolsAreEqual(sol, primal->sols[i], set, stat, prob, NULL) )
+         return TRUE;
+   }
+
+   /* search in the worse solutions */
+   for( i = insertpos; i < primal->nsols; ++i )
+   {
+      SCIP_Real solobj;
+
+      solobj = SCIPsolGetOrigObj(primal->sols[i]);
+      assert( SCIPsetIsGE(set, solobj, obj) );
+
+      if( SCIPsetIsGT(set, solobj, obj) )
+         break;
+
+      if( SCIPsolsAreEqual(sol, primal->sols[i], set, stat, prob, NULL) )
+         return TRUE;
+   }
+
+   return FALSE;
+}
+
 /** check if we are willing to check the solution for feasibility */
 static
 SCIP_Bool solOfInterest(
@@ -642,6 +775,28 @@ SCIP_Bool solOfInterest(
       if( (*insertpos) < set->limit_maxsol && !primalExistsSol(primal, set, stat, origprob, transprob, sol, *insertpos) )
          return TRUE;
    }
+   
+   return FALSE;
+}
+
+/** check if we are willing to store the solution candidate for later checking */
+static
+SCIP_Bool origsolOfInterest(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   int*                  insertpos           /**< pointer to store the insert position of that solution */
+   )
+{
+   assert(SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL);
+   
+   /* find insert position for the solution */
+   (*insertpos) = primalSearchOrigSolPos(primal, sol);
+      
+   if( (*insertpos) < set->limit_maxorigsol && !primalExistsOrigSol(primal, set, stat, origprob, sol, *insertpos) )
+      return TRUE;
    
    return FALSE;
 }
@@ -723,6 +878,91 @@ SCIP_RETCODE SCIPprimalAddSolFree(
       /* clear the pointer, such that the user cannot access the solution anymore */
       *sol = NULL;
 
+      *stored = TRUE;
+   }
+   else
+   {
+      /* the solution is too bad -> free it immediately */
+      SCIP_CALL( SCIPsolFree(sol, blkmem, primal) );
+
+      *stored = FALSE;
+   }
+   assert(*sol == NULL);
+
+   return SCIP_OKAY;
+}
+
+/** adds primal solution to solution candidate storage of original problem space */
+SCIP_RETCODE SCIPprimalAddOrigSol(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< original problem */
+   SCIP_SOL*             sol,                /**< primal CIP solution; is cleared in function call */
+   SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
+   )
+{
+   int insertpos;
+
+   assert(primal != NULL);
+   assert(sol != NULL);
+   assert(SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL);
+   assert(stored != NULL);
+
+   insertpos = -1;
+
+   if( origsolOfInterest(primal, set, stat, prob, sol, &insertpos) )
+   {
+      SCIP_SOL* solcopy;
+
+      assert(insertpos >= 0 && insertpos < set->limit_maxorigsol);
+
+      /* create a copy of the solution */
+      SCIP_CALL( SCIPsolCopy(&solcopy, blkmem, set, stat, primal, sol) );
+
+      /* insert solution into solution storage */
+      SCIP_CALL( primalAddOrigSol(primal, blkmem, set, prob, solcopy, insertpos) );
+
+      *stored = TRUE;
+   }
+   else
+      *stored = FALSE;
+   
+   return SCIP_OKAY;
+}
+
+/** adds primal solution to solution candidate storage of original problem space, frees the solution afterwards */
+SCIP_RETCODE SCIPprimalAddOrigSolFree(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< original problem */
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
+   SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
+   )
+{
+   int insertpos;
+
+   assert(primal != NULL);
+   assert(sol != NULL);
+   assert(*sol != NULL);
+   assert(SCIPsolGetOrigin(*sol) == SCIP_SOLORIGIN_ORIGINAL);
+   assert(stored != NULL);
+
+   insertpos = -1;
+
+   if( origsolOfInterest(primal, set, stat, prob, *sol, &insertpos) )
+   {
+      assert(insertpos >= 0 && insertpos < set->limit_maxorigsol);
+
+      /* insert solution into solution storage */
+      SCIP_CALL( primalAddOrigSol(primal, blkmem, set, prob, *sol, insertpos) );
+
+      /* clear the pointer, such that the user cannot access the solution anymore */
+      *sol = NULL;
+      
       *stored = TRUE;
    }
    else

@@ -1160,6 +1160,7 @@ void consdataSortLinearVars(
    consdata->linvarssorted = TRUE;
 }
 
+/* this function is currently not needed, but also to nice to be deleted, so it is only deactivated */
 #if 0
 /** returns the position of variable in the linear coefficients array of a constraint, or -1 if not found */
 static
@@ -1643,7 +1644,7 @@ SCIP_RETCODE removeFixedNonlinearVariables(
    i = 0;
    while( i < SCIPexprgraphGetNVars(conshdlrdata->exprgraph) )
    {
-      var = SCIPexprgraphGetVars(conshdlrdata->exprgraph)[i];
+      var = (SCIP_VAR*)SCIPexprgraphGetVars(conshdlrdata->exprgraph)[i];
       if( SCIPvarIsActive(var) )
       {
          ++i;
@@ -2465,8 +2466,10 @@ SCIP_RETCODE reformulate(
    int c;
    int d;
    int i;
-   int j;
    int u;
+#ifndef NDEBUG
+   int j;
+#endif
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -2626,7 +2629,7 @@ SCIP_RETCODE reformulate(
                /* if we have nonlinear parents or a sibling, then add add auxiliary variable for this node, so an upgrade to cons_quadratic should take place
                 * we assume that siblings are non-linear and non-quadratic, which should be the case if simplifier was run, and also if this node was created during reformulating a polynomial
                 * @todo we could also add auxvars for the sibling nodes, e.g., if there is only one
-                * @todo if sibiling nodes are quadratic (or even linear) due to reformulation, then we do not need to reform here... (-> nvs16)
+                * @todo if sibling nodes are quadratic (or even linear) due to reformulation, then we do not need to reform here... (-> nvs16)
                 *       maybe this step should not be done here at all if havenonlinparent is FALSE? e.g., move into upgrade from quadratic?
                 */
                if( havenonlinparent || SCIPexprgraphHasNodeSibling(node) )
@@ -2863,7 +2866,7 @@ SCIP_RETCODE reformulate(
                   SCIP_EXPRGRAPHNODE** monomialnodes;
                   int m;
 
-                 /* @todo if a monomial is a factor of another monomials, then we could (and should?) replace it there by the node we create for it here -> ex7_2_1
+                 /* @todo if a monomial is a factor of another monomial, then we could (and should?) replace it there by the node we create for it here -> ex7_2_1
                   * @todo factorizing the polynomial could be beneficial
                   */
 
@@ -2904,6 +2907,7 @@ SCIP_RETCODE reformulate(
                            SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs, nchildren) );
                            BMSclearMemoryArray(lincoefs, nchildren);
                         }
+                        assert(0 <= childidxs[0] && childidxs[0] < nchildren);
                         assert(lincoefs[childidxs[0]] == 0.0); /* monomials should have been merged */
                         lincoefs[childidxs[0]] = coef;
                      }
@@ -2946,6 +2950,7 @@ SCIP_RETCODE reformulate(
                         {
                            SCIP_CALL( SCIPallocBufferArray(scip, &childrennew, nchildren) );
                         }
+                        assert(nfactors <= nchildren);
                         for( f = 0; f < nfactors; ++f )
                            childrennew[f] = children[childidxs[f]];
 
@@ -3099,7 +3104,7 @@ SCIP_RETCODE reformulate(
                      if( nnegative == nfactors || (nnegative == nfactors-1 && SCIPisGE(scip, sum, 1.0)) )
                      {
                         /* if exponents are such that we can be convex, but children curvature does not fit, make some children linear */
-                        SCIPdebugMessage("%d-variate monomial %d is convex (modulo sign), child curv fits = %d\n", nfactors, j, expcurvpos);
+                        SCIPdebugMessage("%d-variate monomial is convex (modulo sign), child curv fits = %d\n", nfactors, expcurvpos);
                         /* since current node curvature is set to unknown, there must be such a child, since otherwise the node curvature had to be convex */
                         assert(!expcurvpos);
                         desiredcurv = SCIP_EXPRCURV_CONVEX;
@@ -3107,7 +3112,7 @@ SCIP_RETCODE reformulate(
                      else if( npositive == nfactors && SCIPisLE(scip, sum, 1.0) )
                      {
                         /* if exponents are such that we can be concave, but children curvature does not fit, make some children linear */
-                        SCIPdebugMessage("%d-variate monomial %d is concave (modulo sign), child curv fits = %d\n", nfactors, j, expcurvneg);
+                        SCIPdebugMessage("%d-variate monomial is concave (modulo sign), child curv fits = %d\n", nfactors, expcurvneg);
                         /* since current node curvature is set to unknown, there must be such a child, since otherwise the node curvature had to be concave */
                         assert(!expcurvneg);
                         desiredcurv = SCIP_EXPRCURV_CONCAVE;
@@ -3232,7 +3237,8 @@ SCIP_RETCODE reformulate(
    }
 
    /* for constraints with concave f(g(x)) with linear g:R^n -> R, n>1, reformulate to get a univariate concave function, since this is easier to underestimate
-    * @todo this does not work yet for sums of functions, e.g., polynomials with more than one monomial */
+    * @todo this does not work yet for sums of functions, e.g., polynomials with more than one monomial
+    */
    for( c = 0; c < nconss; ++c )
    {
       SCIP_EXPRGRAPHNODE* multivarnode;
@@ -3283,82 +3289,6 @@ SCIP_RETCODE reformulate(
 
    return SCIP_OKAY;
 }
-
-#if 0
-/** gets euclidean norm of gradient of nonlinear function */
-static
-SCIP_RETCODE getGradientNorm(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPRINT*         exprint,            /**< expressions interpreter */
-   SCIP_CONS*            cons,               /**< constraint */
-   SCIP_SOL*             sol,                /**< solution or NULL if LP solution should be used */
-   SCIP_Real*            norm                /**< buffer to store norm */
-   )
-{
-   SCIP_CONSDATA* consdata;
-   int            i;
-
-   assert(scip != NULL);
-   assert(cons != NULL);
-   assert(norm != NULL);
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   assert(exprint != NULL);
-   assert(consdata->exprtree == NULL || SCIPexprtreeGetInterpreterData(consdata->exprtree) != NULL);
-
-   *norm = 0.0;
-
-   for( i = 0; i < consdata->nlinvars; ++i )
-      *norm += consdata->lincoefs[i] * consdata->lincoefs[i];
-
-   if( consdata->exprtree != NULL )
-   {
-      int nvars;
-      SCIP_Real val;
-
-      nvars = SCIPexprtreeGetNVars(consdata->exprtree);
-
-      /* we assume here, that the expression interpreter has been used to evaluate the expression in the current point before */
-
-      if( nvars == 1 )
-      {
-         SCIP_Real grad;
-
-         SCIP_CALL( SCIPexprintGrad(exprint, consdata->exprtree, NULL, FALSE, &val, &grad) );
-         if( SCIPisInfinity(scip, REALABS(grad)) )
-            *norm = SCIPinfinity(scip);
-         else
-            *norm += grad * grad;
-      }
-      else
-      {
-         SCIP_Real* grad;
-
-         SCIP_CALL( SCIPallocBufferArray(scip, &grad, nvars) );
-
-         SCIP_CALL( SCIPexprintGrad(exprint, consdata->exprtree, NULL, FALSE, &val, grad) );
-
-         for( i = 0; i < nvars; ++i )
-         {
-            if( SCIPisInfinity(scip, REALABS(grad[i])) )
-            {
-               *norm = SCIPinfinity(scip);
-               break;
-            }
-            *norm += grad[i] * grad[i];
-         }
-
-         SCIPfreeBufferArray(scip, &grad);
-      }
-   }
-
-   if( !SCIPisInfinity(scip, *norm) )
-      *norm = sqrt(*norm);
-
-   return SCIP_OKAY;
-}
-#endif
 
 /** gets maximal absolute element of gradient of nonlinear function */
 static
@@ -4487,7 +4417,6 @@ SCIP_RETCODE addConcaveEstimatorMultivariate(
 
    /* SCIPdebug( SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPINFO, 1) ) ); */
 
-   /* @todo correct that dual is better if nrows >> ncols? */
    lpret = SCIPlpiSolveDual(lpi);
    if( lpret != SCIP_OKAY )
    {
@@ -4594,8 +4523,6 @@ SCIP_RETCODE addIntervalGradientEstimator(
    assert(exprtree != NULL);
    assert(newx || SCIPexprtreeGetInterpreterData(exprtree) != NULL);
 
-   treecoef = consdata->nonlincoefs[exprtreeidx];
-
    *success = FALSE;
 
    /* skip interval gradient if expression interpreter cannot compute interval gradients */
@@ -4650,6 +4577,8 @@ SCIP_RETCODE addIntervalGradientEstimator(
       SCIPdebugMessage("Got nonfinite function value from evaluation of constraint %s tree %d. skipping interval gradient estimator.\n", SCIPconsGetName(cons), exprtreeidx);
       goto INTGRADESTIMATOR_CLEANUP;
    }
+
+   treecoef = consdata->nonlincoefs[exprtreeidx];
    val *= treecoef;
    constant = val;
 
@@ -5753,7 +5682,7 @@ SCIP_RETCODE propagateConstraintSides(
 
    SCIPdebugMessage("start backward propagation in expression graph\n");
 
-#if 0
+#if SCIP_OUTPUT
    {
       FILE* file;
       file = fopen("exprgraph_propconss1.dot", "w");
@@ -5804,7 +5733,7 @@ SCIP_RETCODE propagateConstraintSides(
    /* compute bound tightenings for nonlinear variables */
    SCIPexprgraphPropagateNodeBounds(conshdlrdata->exprgraph, INTERVALINFTY, BOUNDTIGHTENING_MINSTRENGTH, &cutoff);
 
-#if 0
+#if SCIP_OUTPUT
    {
       FILE* file;
       file = fopen("exprgraph_propconss2.dot", "w");
@@ -5898,7 +5827,7 @@ SCIP_RETCODE propagateBounds(
        */
       SCIP_CALL( SCIPexprgraphPropagateVarBounds(conshdlrdata->exprgraph, INTERVALINFTY, roundnr == 0, &domainerror) );
 
-#if 0
+#if SCIP_OUTPUT
       {
          FILE* file;
          file = fopen("exprgraph_propvars.dot", "w");
@@ -6185,7 +6114,6 @@ SCIP_RETCODE proposeFeasibleSolution(
  */
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
-#if 1
 static
 SCIP_DECL_CONSHDLRCOPY(conshdlrCopyNonlinear)
 {
@@ -6200,12 +6128,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define conshdlrCopyNonlinear NULL
-#endif
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
-#if 1
 static
 SCIP_DECL_CONSFREE(consFreeNonlinear)
 {
@@ -6239,13 +6163,8 @@ SCIP_DECL_CONSFREE(consFreeNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consFreeNonlinear NULL
-#endif
-
 
 /** initialization method of constraint handler (called after problem was transformed) */
-#if 1
 static
 SCIP_DECL_CONSINIT(consInitNonlinear)
 {
@@ -6263,7 +6182,7 @@ SCIP_DECL_CONSINIT(consInitNonlinear)
    /* reset counter, since we have a new problem */
    conshdlrdata->naddedreformconss = 0;
 
-#if 0
+#if SCIP_OUTPUT
    {
       FILE* file;
       file = fopen("exprgraph_init.dot", "w");
@@ -6275,13 +6194,8 @@ SCIP_DECL_CONSINIT(consInitNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consInitNonlinear NULL
-#endif
-
 
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
-#if 1
 static
 SCIP_DECL_CONSEXIT(consExitNonlinear)
 {
@@ -6298,13 +6212,9 @@ SCIP_DECL_CONSEXIT(consExitNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consExitNonlinear NULL
-#endif
 
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#if 1
 static
 SCIP_DECL_CONSINITPRE(consInitpreNonlinear)
 {
@@ -6329,13 +6239,9 @@ SCIP_DECL_CONSINITPRE(consInitpreNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consInitpreNonlinear NULL
-#endif
 
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#if 1
 static
 SCIP_DECL_CONSEXITPRE(consExitpreNonlinear)
 {
@@ -6445,13 +6351,8 @@ SCIP_DECL_CONSEXITPRE(consExitpreNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consExitpreNonlinear NULL
-#endif
-
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#if 1
 static
 SCIP_DECL_CONSINITSOL(consInitsolNonlinear)
 {
@@ -6510,13 +6411,8 @@ SCIP_DECL_CONSINITSOL(consInitsolNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consInitsolNonlinear NULL
-#endif
-
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
-#if 1
 static
 SCIP_DECL_CONSEXITSOL(consExitsolNonlinear)
 {
@@ -6556,13 +6452,9 @@ SCIP_DECL_CONSEXITSOL(consExitsolNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consExitsolNonlinear NULL
-#endif
 
 
 /** frees specific constraint data */
-#if 1
 static
 SCIP_DECL_CONSDELETE(consDeleteNonlinear)
 {
@@ -6584,13 +6476,8 @@ SCIP_DECL_CONSDELETE(consDeleteNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consDeleteNonlinear NULL
-#endif
-
 
 /** transforms constraint data into data belonging to the transformed problem */ 
-#if 1
 static
 SCIP_DECL_CONSTRANS(consTransNonlinear)
 {
@@ -6638,13 +6525,8 @@ SCIP_DECL_CONSTRANS(consTransNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consTransNonlinear NULL
-#endif
-
 
 /** LP initialization method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSINITLP(consInitlpNonlinear)
 {
@@ -6757,13 +6639,8 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consInitlpNonlinear NULL
-#endif
-
 
 /** separation method of constraint handler for LP solutions */
-#if 1
 static
 SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
 {
@@ -6788,13 +6665,8 @@ SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consSepalpNonlinear NULL
-#endif
-
 
 /** separation method of constraint handler for arbitrary primal solutions */
-#if 1
 static
 SCIP_DECL_CONSSEPASOL(consSepasolNonlinear)
 {
@@ -6820,10 +6692,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consSepasolNonlinear NULL
-#endif
-
 
 /** constraint enforcing method of constraint handler for LP solutions */
 static
@@ -7153,7 +7021,6 @@ SCIP_DECL_CONSCHECK(consCheckNonlinear)
 
 
 /** domain propagation method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSPROP(consPropNonlinear)
 {
@@ -7169,12 +7036,8 @@ SCIP_DECL_CONSPROP(consPropNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consPropNonlinear NULL
-#endif
 
 /** presolving method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSPRESOL(consPresolNonlinear)
 {
@@ -7347,25 +7210,9 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consPresolNonlinear NULL
-#endif
-
 
 /** propagation conflict resolving method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSRESPROP(consRespropNonlinear)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of nonlinear constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define consRespropNonlinear NULL
-#endif
-
 
 /** variable rounding lock method of constraint handler */
 static
@@ -7415,7 +7262,6 @@ SCIP_DECL_CONSLOCK(consLockNonlinear)
 }
 
 /** constraint activation notification method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSACTIVE(consActiveNonlinear)
 {  /*lint --e{715}*/
@@ -7434,7 +7280,7 @@ SCIP_DECL_CONSACTIVE(consActiveNonlinear)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   SCIPdebugMessage("activate %scons <%s>\n", SCIPconsIsTransformed(cons) ? "transformed " : "", SCIPconsGetName(cons));
+   SCIPdebugMessage("activate cons <%s>\n", SCIPconsGetName(cons));
 
    if( consdata->nexprtrees > 0 )
    {
@@ -7464,13 +7310,8 @@ SCIP_DECL_CONSACTIVE(consActiveNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consActiveNonlinear NULL
-#endif
-
 
 /** constraint deactivation notification method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSDEACTIVE(consDeactiveNonlinear)
 {  /*lint --e{715}*/
@@ -7490,7 +7331,7 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveNonlinear)
    assert(consdata != NULL);
    assert(consdata->exprgraphnode != NULL || consdata->nexprtrees == 0);
 
-   SCIPdebugMessage("deactivate %scons <%s>\n", SCIPconsIsTransformed(cons) ? "transformed " : "", SCIPconsGetName(cons));
+   SCIPdebugMessage("deactivate cons <%s>\n", SCIPconsGetName(cons));
 
    if( consdata->exprgraphnode != NULL )
    {
@@ -7511,13 +7352,8 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consDeactiveNonlinear NULL
-#endif
-
 
 /** constraint enabling notification method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSENABLE(consEnableNonlinear)
 {  /*lint --e{715}*/
@@ -7538,7 +7374,7 @@ SCIP_DECL_CONSENABLE(consEnableNonlinear)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   SCIPdebugMessage("enable %scons <%s>\n", SCIPconsIsTransformed(cons) ? "transformed " : "", SCIPconsGetName(cons));
+   SCIPdebugMessage("enable cons <%s>\n", SCIPconsGetName(cons));
 
    if( consdata->exprgraphnode != NULL )
    {
@@ -7557,13 +7393,8 @@ SCIP_DECL_CONSENABLE(consEnableNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consEnableNonlinear NULL
-#endif
-
 
 /** constraint disabling notification method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSDISABLE(consDisableNonlinear)
 {  /*lint --e{715}*/
@@ -7584,7 +7415,7 @@ SCIP_DECL_CONSDISABLE(consDisableNonlinear)
    assert(consdata != NULL);
    assert(consdata->lineventdata != NULL || consdata->nlinvars == 0);
 
-   SCIPdebugMessage("disable %scons <%s>\n", SCIPconsIsTransformed(cons) ? "transformed " : "", SCIPconsGetName(cons));
+   SCIPdebugMessage("disable cons <%s>\n", SCIPconsGetName(cons));
 
    /* disable node of expression in expression graph */
    if( consdata->exprgraphnode != NULL )
@@ -7599,13 +7430,8 @@ SCIP_DECL_CONSDISABLE(consDisableNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consDisableNonlinear NULL
-#endif
-
 
 /** constraint display method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSPRINT(consPrintNonlinear)
 {
@@ -7683,13 +7509,8 @@ SCIP_DECL_CONSPRINT(consPrintNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consPrintNonlinear NULL
-#endif
-
 
 /** constraint copying method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSCOPY(consCopyNonlinear)
 {
@@ -7784,13 +7605,8 @@ SCIP_DECL_CONSCOPY(consCopyNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consCopyNonlinear NULL
-#endif
-
 
 /** constraint parsing method of constraint handler */
-#if 0
 static
 SCIP_DECL_CONSPARSE(consParseNonlinear)
 {  /*lint --e{715}*/
@@ -7799,9 +7615,6 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
 
    return SCIP_OKAY;
 }
-#else
-#define consParseNonlinear NULL
-#endif
 
 /*
  * constraint specific interface methods
@@ -7852,7 +7665,7 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
          "whether to try to make solutions in check function feasible by shifting a linear variable (esp. useful if constraint was actually objective function)",
          &conshdlrdata->linfeasshift, FALSE, TRUE, NULL, NULL) );
 
-#if 0 /* don't have any expensive checks yet */
+#if 0 /* don't have any expensive checks yet, so we disable this parameter for now */
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/checkconvexexpensive",
          "whether to apply expensive curvature checking methods",
          &conshdlrdata->checkconvexexpensive, FALSE, TRUE, NULL, NULL) );

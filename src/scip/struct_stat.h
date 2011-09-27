@@ -79,6 +79,9 @@ struct SCIP_Stat
    SCIP_Real             vsidsweight;        /**< current weight to use for updating VSIDS in history */
    SCIP_Real             firstprimalbound;   /**< objective value of first primal solution */
    SCIP_Real             firstprimaltime;    /**< time (in seconds) needed for first primal solution */
+   SCIP_Real             primalzeroittime;   /**< time used in primal simplex calls without iterations */
+   SCIP_Real             dualzeroittime;     /**< time used in dual simplex calls without iterations */
+   SCIP_Real             barrierzeroittime;  /**< time used in barrier calls without iterations */
    SCIP_CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */
    SCIP_CLOCK*           presolvingtime;     /**< total time used for presolving the current problem */
    SCIP_CLOCK*           primallptime;       /**< primal LP solution time */
@@ -115,10 +118,13 @@ struct SCIP_Stat
    int                   lpcount;            /**< internal counter, where all simplex calls are counted */
    int                   nlps;               /**< total number of LPs solved with at least 1 iteration */
    int                   nrootlps;           /**< number of LPs solved at the root node with at least 1 iteration */
-   int                   nprimallps;         /**< number of primal LPs solved */
-   int                   nduallps;           /**< number of dual LPs solved */
+   int                   nprimallps;         /**< number of primal LPs solved with at least 1 iteration */
+   int                   nprimalzeroitlps;   /**< number of primal LPs with 0 iterations */
+   int                   nduallps;           /**< number of dual LPs solved with at least 1 iteration */
+   int                   ndualzeroitlps;     /**< number of dual LPs with 0 iterations */
    int                   nlexduallps;        /**< number of lexicographic dual LPs solved */
-   int                   nbarrierlps;        /**< number of barrier LPs solved */
+   int                   nbarrierlps;        /**< number of barrier LPs solved with at least 1 iteration */
+   int                   nbarrierzeroitlps;  /**< number of barrier LPs with 1 iteration */
    int                   nprimalresolvelps;  /**< number of primal LPs solved with advanced start basis and at least 1 iteration */
    int                   ndualresolvelps;    /**< number of dual LPs solved with advanced start basis and at least 1 iteration */
    int                   nlexdualresolvelps; /**< number of lexicographic dual LPs solved with advanced start basis and at least 1 iteration */

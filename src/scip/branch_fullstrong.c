@@ -190,11 +190,11 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
       int i;
       int c;
 
-      /* get current node number */
-      nodenum = SCIPgetNNodes(scip);
-
       /* initialize strong branching */
       SCIP_CALL( SCIPstartStrongbranch(scip) );
+
+      /* get current node number */
+      nodenum = SCIPgetNNodes(scip);
 
       /* search the full strong candidate
        * cycle through the candidates, starting with the position evaluated in the last run

@@ -57,7 +57,7 @@
 #define DEFAULT_ONLYCONVEXIFY   FALSE        /**< should we only fix/dom.red. variables creating nonconvexity? */
 #define DEFAULT_POSTNLP         TRUE         /**< should the nlp heuristic be called to polish a feasible solution? */
 #define DEFAULT_MAXBACKTRACKS   6            /**< maximum number of backtracks */
-#define DEFAULT_MAXRECOVERS     1            /**< maximum number of recoverings */
+#define DEFAULT_MAXRECOVERS     0            /**< maximum number of recoverings */
 #define DEFAULT_MAXREORDERS     1            /**< maximum number of reorderings of the fixing order */
 #define DEFAULT_COVERINGOBJ     'u'          /**< objective function of the covering problem */
 #define DEFAULT_COPYCUTS        TRUE         /**< should all active cuts from the cutpool of the original scip be copied
@@ -520,23 +520,23 @@ SCIP_RETCODE createCoveringProblem(
             probindex = SCIPvarGetProbindex(andvars[v]);
             if( probindex == -1 )
             {
-#if 1
                SCIP_VAR* repvar;
 
                /* get binary representative of variable */
-               SCIP_CALL( SCIPgetBinvarRepresentative(scip, SCIPgetResultantAnd(scip, andcons), &repvar, &negated) );
+               SCIP_CALL( SCIPgetBinvarRepresentative(scip, andvars[v], &repvar, &negated) );
                assert(repvar != NULL);
+               assert(SCIPvarGetStatus(repvar) != SCIP_VARSTATUS_FIXED);
 
                if( SCIPvarGetStatus(repvar) == SCIP_VARSTATUS_MULTAGGR )
                {
-                  SCIPdebugMessage("strange: multiaggregated variable found <%s>\n", SCIPvarGetName(SCIPgetResultantAnd(scip, andcons)));
+                  SCIPdebugMessage("strange: multiaggregated variable found <%s>\n", SCIPvarGetName(andvars[v]));
                   SCIPdebugMessage("inactive variables detected in constraint <%s>\n", SCIPconsGetName(andcons));
                   SCIPfreeBufferArray(coveringscip, &coveringconsvals);
                   SCIPfreeBufferArray(coveringscip, &coveringconsvars);
                   goto TERMINATE;
                }
-            
-               /* check for multiaggregation */
+
+               /* check for negation */
                if( SCIPvarIsNegated(repvar) )
                {
                   probindex = SCIPvarGetProbindex(SCIPvarGetNegationVar(repvar));
@@ -548,13 +548,8 @@ SCIP_RETCODE createCoveringProblem(
                   probindex = SCIPvarGetProbindex(repvar);
                   negated = FALSE;
                }
-#else
-               SCIPdebugMessage("inactive variables detected in constraint <%s>\n", SCIPconsGetName(andcons));
-               SCIPfreeBufferArray(coveringscip, &coveringconsvals);
-               SCIPfreeBufferArray(coveringscip, &coveringconsvars);
-               goto TERMINATE;
-#endif
             }
+            assert(probindex >= 0);
 
             /* add covering variable for unfixed original variable */
             if( negated )
@@ -570,9 +565,10 @@ SCIP_RETCODE createCoveringProblem(
 
          /* if constraints with inactive variables are present, we will have difficulties creating the sub-CIP later */
          probindex = SCIPvarGetProbindex(SCIPgetResultantAnd(scip, andcons));
+         negated = FALSE;
+
          if( probindex == -1 )
          {
-#if 1
             SCIP_VAR* repvar;
 
             /* get binary representative of variable */
@@ -596,7 +592,7 @@ SCIP_RETCODE createCoveringProblem(
                continue;
             }
 
-            /* check for multiaggregation */
+            /* check for negation */
             if( SCIPvarIsNegated(repvar) )
             {
                probindex = SCIPvarGetProbindex(SCIPvarGetNegationVar(repvar));
@@ -608,22 +604,14 @@ SCIP_RETCODE createCoveringProblem(
                probindex = SCIPvarGetProbindex(repvar);
                negated = FALSE;
             }
-#else
-            SCIP_CALL( SCIPprintVar(scip, SCIPgetResultantAnd(scip, andcons), NULL) );
-            SCIPdebugMessage("inactive variables detected in constraint <%s>\n", SCIPconsGetName(andcons));
-            SCIPfreeBufferArray(coveringscip, &coveringconsvals);
-            SCIPfreeBufferArray(coveringscip, &coveringconsvars);
-            goto TERMINATE;
-#endif
          }
+         assert(probindex >= 0);
+         assert(!termIsConstant(scip, (negated ? SCIPvarGetNegatedVar(vars[probindex]) : vars[probindex]), 1.0, globalbounds));
 
-#if 1
-         /* if less than 2 variables are unfixed or the resultant variable is fixed, the entire constraint can be linearized anyway */
-         if( ntofix >= 2 && !termIsConstant(scip, (negated ? SCIPvarGetNegatedVar(vars[probindex]) : vars[probindex]), 1.0, globalbounds) )
-#else
-         /* if less than 2 variables are unfixed or the resultant variable is fixed, the entire constraint can be linearized anyway */
-         if( ntofix >= 2 && !termIsConstant(scip, vars[probindex], 1.0, globalbounds) )
-#endif
+         /* if less than 2 variables are unfixed or the resultant variable is fixed, the entire constraint can be
+          * linearized anyway
+          */
+         if( ntofix >= 2 )
          {
             assert(ntofix <= SCIPgetNVarsAnd(scip, andcons));
 
@@ -657,14 +645,10 @@ SCIP_RETCODE createCoveringProblem(
 
             /* update counters */
             for( v = ntofix-1; v >= 0; v-- )
-#if 1
                if( SCIPvarIsNegated(coveringconsvars[v]) )
                   incCounters(termcounter, conscounter, consmarker, SCIPvarGetProbindex(SCIPvarGetNegationVar(coveringconsvars[v])));
                else
                   incCounters(termcounter, conscounter, consmarker, SCIPvarGetProbindex(coveringconsvars[v]));
-#else
-               incCounters(termcounter, conscounter, consmarker, SCIPvarGetProbindex(coveringconsvars[v]));
-#endif
          }
 
          /* free memory for covering constraint */
@@ -1080,7 +1064,7 @@ SCIP_RETCODE createNogood(
    isbinary = TRUE;
    for( i = bdlen-1; i >= 0 && isbinary; i-- )
    {
-      isbinary = isbinary && SCIPvarIsBinary(bdvars[i]);
+      isbinary = SCIPvarIsBinary(bdvars[i]);
    }
 
    /* if all variables in the cover are binary, then we create a logicor constraint */
@@ -1172,6 +1156,12 @@ SCIP_RETCODE solveCoveringProblem(
 
    /* forbid call of heuristics and separators solving sub-CIPs */
    SCIP_CALL( SCIPsetSubscipsOff(coveringscip, TRUE) );
+
+   /* set separation to fast */
+   SCIP_CALL( SCIPsetSeparating(coveringscip, SCIP_PARAMSETTING_FAST, TRUE) );
+
+   /* only solve root */
+   SCIP_CALL( SCIPsetLongintParam(coveringscip, "limits/nodes", 1) );
 
    SCIPdebugMessage("timelimit = %g, memlimit = %g\n", timelimit, memorylimit);
 
@@ -1738,6 +1728,8 @@ SCIP_RETCODE solveSubproblem(
    /* forbid recursive call of undercover heuristic */
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/"HEUR_NAME"/freq", -1) );
    
+   SCIPdebugMessage("timelimit = %g, memlimit = %g, nodelimit = %"SCIP_LONGINT_FORMAT", nstallnodes = %"SCIP_LONGINT_FORMAT"\n", timelimit, memorylimit, nodelimit, nstallnodes);
+
    SCIPdebugMessage("timelimit = %g, memlimit = %g, nodelimit = %"SCIP_LONGINT_FORMAT", nstallnodes = %"SCIP_LONGINT_FORMAT"\n", timelimit, memorylimit, nodelimit, nstallnodes);
 
    /* set time, memory and node limits */

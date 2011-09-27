@@ -300,7 +300,7 @@ SCIP_RETCODE SCIPdialoghdlrCreate(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_DIALOGHDLR**     dialoghdlr          /**< pointer to store dialog handler */
    )
-{
+{  /*lint --e{715}*/
 #ifdef WITH_READLINE
    char readlineversion[20];
 #endif
@@ -313,7 +313,7 @@ SCIP_RETCODE SCIPdialoghdlrCreate(
    (*dialoghdlr)->inputlistptr = &(*dialoghdlr)->inputlist;
    (*dialoghdlr)->buffersize = SCIP_MAXSTRLEN;
    (*dialoghdlr)->nprotectedhistelems = -1;
-   SCIP_ALLOC( BMSallocMemoryArray(&(*dialoghdlr)->buffer, (*dialoghdlr)->buffersize) );
+   SCIP_ALLOC( BMSallocMemoryArray(&(*dialoghdlr)->buffer, (*dialoghdlr)->buffersize) ); /*lint !e685*/
 
    SCIPdialoghdlrClearBuffer(*dialoghdlr);
 
@@ -471,7 +471,7 @@ SCIP_RETCODE SCIPdialoghdlrGetWord(
       len = (int)strlen(&dialoghdlr->buffer[dialoghdlr->bufferpos]);
       if( len > 0 )
       {
-         while( isspace(dialoghdlr->buffer[dialoghdlr->bufferpos + len - 1]) )
+         while( isspace((unsigned char)dialoghdlr->buffer[dialoghdlr->bufferpos + len - 1]) )
          {
             dialoghdlr->buffer[dialoghdlr->bufferpos + len - 1] = '\0';
             len--;
@@ -489,12 +489,12 @@ SCIP_RETCODE SCIPdialoghdlrGetWord(
    dialoghdlr->buffer[dialoghdlr->buffersize-1] = '\0';
 
    /* skip leading spaces: find start of first word */
-   while( isspace(dialoghdlr->buffer[dialoghdlr->bufferpos]) )
+   while( isspace((unsigned char)dialoghdlr->buffer[dialoghdlr->bufferpos]) )
       dialoghdlr->bufferpos++;
    firstword = &dialoghdlr->buffer[dialoghdlr->bufferpos];
 
    pos = dialoghdlr->bufferpos;
-   while( dialoghdlr->buffer[dialoghdlr->bufferpos] != '\0' && !isspace(dialoghdlr->buffer[dialoghdlr->bufferpos]) )
+   while( dialoghdlr->buffer[dialoghdlr->bufferpos] != '\0' && !isspace((unsigned char)dialoghdlr->buffer[dialoghdlr->bufferpos]) )
    {
       assert(pos <= dialoghdlr->bufferpos);
 
@@ -567,7 +567,7 @@ SCIP_RETCODE SCIPdialoghdlrGetWord(
       dialoghdlr->buffer[pos] = '\0';
 
    /* remove additional spaces */
-   while( isspace(dialoghdlr->buffer[dialoghdlr->bufferpos]) )
+   while( isspace((unsigned char)dialoghdlr->buffer[dialoghdlr->bufferpos]) )
       dialoghdlr->bufferpos++;
 
    *inputword = firstword;
@@ -1048,11 +1048,14 @@ void SCIPdialogGetPath(
    assert(dialog != NULL);
 
    (void)strncpy(path, dialog->name, SCIP_MAXSTRLEN);
+   path[SCIP_MAXSTRLEN - 1] = '\0';
+
    dialog = dialog->parent;
    while( dialog != NULL )
    {
       (void)SCIPsnprintf(s, SCIP_MAXSTRLEN, "%s%c%s", dialog->name, sepchar, path);
       (void)strncpy(path, s, SCIP_MAXSTRLEN);
+      path[SCIP_MAXSTRLEN - 1] = '\0';
       dialog = dialog->parent;
    }
 }

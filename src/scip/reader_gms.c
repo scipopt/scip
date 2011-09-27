@@ -28,10 +28,6 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
-#else
-#include <strings.h>
-#endif
 
 #include "scip/reader_gms.h"
 #include "scip/cons_knapsack.h"
@@ -1016,7 +1012,6 @@ SCIP_RETCODE printSignpowerRow(
    SCIP_Real             exponent,           /**< exponent of nonlinear variable */
    SCIP_Real             offset,             /**< offset of nonlinear variable */
    SCIP_Real             coeflinear,         /**< coefficient of linear variable */
-   SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs,                /**< right hand side */
    SCIP_Bool             transformed,        /**< transformed constraint? */
    SCIP_Bool             signpowerallowed    /**< allowed to use signpower operator in GAMS? */
@@ -1100,8 +1095,10 @@ SCIP_RETCODE printSignpowerRow(
 
    /* print right hand side */
    if( linecnt == 0 )
+   {
       /* we start a new line; therefore we tab this line */
       appendLine(scip, file, linebuffer, &linecnt, "     ");
+   }
 
    if( SCIPisZero(scip, rhs) )
       rhs = 0.0;
@@ -1143,7 +1140,7 @@ SCIP_RETCODE printSignpowerCons(
 
       /* print equality constraint */
       SCIP_CALL( printSignpowerRow(scip, file, rowname, "", "=e=",
-         nonlinvar, linvar, exponent, offset, coeflinear, lhs, rhs, transformed, signpowerallowed) );
+         nonlinvar, linvar, exponent, offset, coeflinear, rhs, transformed, signpowerallowed) );
    }
    else
    {
@@ -1151,13 +1148,13 @@ SCIP_RETCODE printSignpowerCons(
       {
          /* print inequality ">=" */
          SCIP_CALL( printSignpowerRow(scip, file, rowname, SCIPisInfinity(scip, rhs) ? "" : "_lhs", "=g=",
-            nonlinvar, linvar, exponent, offset, coeflinear, lhs, rhs, transformed, signpowerallowed) );
+            nonlinvar, linvar, exponent, offset, coeflinear, lhs, transformed, signpowerallowed) );
       }
       if( !SCIPisInfinity(scip, rhs) )
       {
          /* print inequality "<=" */
          SCIP_CALL( printSignpowerRow(scip, file, rowname, SCIPisInfinity(scip, -lhs) ? "" : "_rhs", "=l=",
-            nonlinvar, linvar, exponent, offset, coeflinear, lhs, rhs, transformed, signpowerallowed) );
+            nonlinvar, linvar, exponent, offset, coeflinear, rhs, transformed, signpowerallowed) );
       }
    }
 
@@ -1553,7 +1550,7 @@ SCIP_RETCODE printExpr(
       default:
          SCIPerrorMessage("unexpected operand %d in expression\n", SCIPexprGetOperator(expr));
          return SCIP_OKAY;
-   }
+   } /*lint !e788*/
 
    return SCIP_OKAY;
 }
@@ -1572,7 +1569,6 @@ SCIP_RETCODE printNonlinearRow(
    int                   nexprtrees,         /**< number of expression trees */
    SCIP_EXPRTREE**       exprtrees,          /**< expression trees */
    SCIP_Real*            exprtreecoefs,      /**< expression tree coefficients */
-   SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs,                /**< right hand side */
    SCIP_Bool             transformed         /**< transformed constraint? */
    )
@@ -1665,7 +1661,7 @@ SCIP_RETCODE printNonlinearCons(
 
       /* print equality constraint */
       SCIP_CALL( printNonlinearRow(scip, file, rowname, "", "=e=",
-         nlinvars, linvars, lincoeffs, nexprtrees, exprtrees, exprtreecoefs, lhs, rhs, transformed) );
+         nlinvars, linvars, lincoeffs, nexprtrees, exprtrees, exprtreecoefs, rhs, transformed) );
    }
    else
    {
@@ -1673,13 +1669,13 @@ SCIP_RETCODE printNonlinearCons(
       {
          /* print inequality ">=" */
          SCIP_CALL( printNonlinearRow(scip, file, rowname, SCIPisInfinity(scip, rhs) ? "" : "_lhs", "=g=",
-            nlinvars, linvars, lincoeffs, nexprtrees, exprtrees, exprtreecoefs, lhs, rhs, transformed) );
+            nlinvars, linvars, lincoeffs, nexprtrees, exprtrees, exprtreecoefs, lhs, transformed) );
       }
       if( !SCIPisInfinity(scip, rhs) )
       {
          /* print inequality "<=" */
          SCIP_CALL( printNonlinearRow(scip, file, rowname, SCIPisInfinity(scip, -lhs) ? "" : "_rhs", "=l=",
-            nlinvars, linvars, lincoeffs, nexprtrees, exprtrees, exprtreecoefs, lhs, rhs, transformed) );
+            nlinvars, linvars, lincoeffs, nexprtrees, exprtrees, exprtreecoefs, rhs, transformed) );
       }
    }
 
@@ -2227,7 +2223,7 @@ SCIP_RETCODE SCIPwriteGms(
       else if( strcmp(conshdlrname, "indicator") == 0 )
       {
          if( indicatorform == 'b' )
-         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", consname, (c < nconss - 1) ? "," : ";");
+            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", consname, (c < nconss - 1) ? "," : ";");
          else
             (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s(sosset)%s", consname, (c < nconss - 1) ? "," : ";");
          appendLine(scip, file, linebuffer, &linecnt, buffer);
@@ -2248,7 +2244,7 @@ SCIP_RETCODE SCIPwriteGms(
    if( transformed && SCIPgetTransObjoffset(scip) != 0.0 )
       (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " objequ .. objvar =e= %.15g + ", SCIPgetTransObjoffset(scip));
    else
-   (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " objequ .. objvar =e= ");
+      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " objequ .. objvar =e= ");
    appendLine(scip, file, linebuffer, &linecnt, buffer);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &objcoeffs, nvars) );
