@@ -12,18 +12,9 @@ SCRIPTNAME="makeregression.sh"
 SCIPDIR=$1
 
 # check if the SCIP directory is given
-if [ -z ${SCIPDIR} ]
+if [ -z ${SCIPDIR} ];
 then
     SCIPDIR=`pwd`
-fi
-
-# move into the SCIP directory; this is necessary due the cron job 
-cd $SCIPDIR
-
-# check if the script exist; if not we have the stop
-if [ ! -f $SCRIPTNAME ] 
-then
-    exit;
 fi
 
 # email variables
@@ -48,16 +39,37 @@ CONTINUE=true
 OPTS=(dbg opt)
 TESTS=(short miplib2010)
 
-# find last git hash for which a complete test was running 
+# move into the SCIP directory; this is necessary due the cron job 
+cd $SCIPDIR
+
+# first delete cron jobs if one exists
+crontab -r
+
+# check if the script exist; if not we have the stop 
+if [ ! -f $SCRIPTNAME ];
+then
+    SUBJECT="[$HOSTNAME] killed $SCRIPTNAME"
+    echo "kill script due to not exists of file $SCRIPTNAME in directory $SCIPDIR" 
+    echo "killed" | mailx -s "$SUBJECT" -r "$EMAILFROM" $ADMINEMAIL
+    exit;
+fi
+
+# if file named "kill" exist, stop the regression test
+if [ -f "kill" ];
+then
+    SUBJECT="[$HOSTNAME] killed $SCRIPTNAME"
+    echo "kill script due to exists of file \"kill\" (rm kill)" 
+    echo "killed" | mailx -s "$SUBJECT" -r "$EMAILFROM" $ADMINEMAIL
+    exit;
+fi
+
+# find last git hash for which a complete test was performed
 if [ -f $GITHASHFILE ];
 then
     LASTGITHASH=`tail -1 $GITHASHFILE`
 else
     LASTGITHASH=0
 fi
-
-# delete cron jobs if one exists
-crontab -r
 
 # send mail to admin to indicate that makeregression.sh (re)start 
 SUBJECT="[$HOSTNAME] (Re)Start $SCRIPTNAME"
@@ -75,11 +87,20 @@ GITHASH=`git describe --always --dirty`
 # continue testing if makeregression.sh did not change
 while [ $NEWSCRIPTTIMESTAMP -eq $SCRIPTTIMESTAMP ]
 do
+    # if file named "kill" exist, stop the regression test
+    if [ -f "kill" ];
+    then
+	SUBJECT="[$HOSTNAME] killed $SCRIPTNAME"
+	echo "kill script due to exists of file \"kill\" (rm kill)" 
+	echo "killed" | mailx -s "$SUBJECT" -r "$EMAILFROM" $ADMINEMAIL
+	exit;
+    fi
+
     echo "run regression test"
 
     for OPT in ${OPTS[@]}
     do
-        # compile SCIP in debug and opt mode
+        # compile SCIP in debug or opt mode
         make OPT=$OPT VERSION=$GITHASH ZIMPL=false clean
         make OPT=$OPT VERSION=$GITHASH ZIMPL=false -j2
 	
@@ -151,7 +172,7 @@ do
     LASTGITHASH=$GITHASH
     
     # wait until new version is available
-    while [ "$GITHASH" = "$LASTGITHASH" ]
+    while [ "$GITHASH" == "$LASTGITHASH" ]
     do
         echo "wait for new version"
 	sleep 60
