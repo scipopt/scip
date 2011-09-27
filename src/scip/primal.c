@@ -237,7 +237,7 @@ SCIP_RETCODE primalSetUpperbound(
       SCIP_Real delta;
 
       delta = 100.0*SCIPsetFeastol(set);
-      delta = MIN(delta, 0.1);
+      delta = MIN(delta, 0.0001);
       cutoffbound = SCIPsetFeasCeil(set, upperbound) - (1.0 - delta);
       cutoffbound = MIN(cutoffbound, upperbound); /* SCIPsetFeasCeil() can increase bound by almost 1.0 due to numerics
                                                    * and very large upperbound value */
