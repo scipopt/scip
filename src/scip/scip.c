@@ -12193,6 +12193,10 @@ SCIP_RETCODE SCIPaggregateVars(
    }
    assert(SCIPtreeGetCurrentDepth(scip->tree) == 0);
 
+   /* do not perform aggregation if it is globally deactivated */
+   if( scip->set->presol_donotaggr )
+      return SCIP_OKAY;
+
    /* get the corresponding equality in active problem variable space:
     * transform both expressions "a*x + 0" and "b*y + 0" into problem variable space
     */
@@ -12304,6 +12308,16 @@ SCIP_RETCODE SCIPmultiaggregateVar(
          naggvars, aggvars, scalars, constant, infeasible, aggregated) );
 
    return SCIP_OKAY;
+}
+
+/** returns whether aggregation of variables is not allowed */
+SCIP_Bool SCIPdoNotAggr(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   return scip->set->presol_donotaggr;
 }
 
 /** returns whether variable is not allowed to be multi-aggregated */

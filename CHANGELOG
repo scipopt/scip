@@ -177,6 +177,7 @@ parameters:
 - all parameters in cons_indicator and cons_sos1 have been converted to lower case!
 - new parameters "conflict/bounddisjunction/continuousfrac" which defines the maximum percantage of continuous variables 
   within a conflict create by the bounddisjunction consflict handler
+- added paramater <presolving/donotaggr> to deactivate aggregation of variables globally
 
 features:
 - flatzinc reader is now capable to read cumulative constraints

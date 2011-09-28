@@ -453,8 +453,8 @@ SCIP_RETCODE presolveFindDuplicatesUpgradeCons(
          /* if redundant is TRUE, then either the aggregation has been done, or it was redundant */
          if( aggregated )
             ++*naggrvars;
-         else
-            ++*ndelconss;
+
+         ++*ndelconss;
 
          SCIP_CALL( SCIPdelCons(scip, cons1) );
          return SCIP_OKAY;
@@ -1019,8 +1019,8 @@ SCIP_RETCODE presolveFindDuplicates(
                /* if redundant is TRUE, then either the aggregation has been done, or it was redundant */
                if( aggregated )
                   ++*naggrvars;
-               else
-                  ++*ndelconss;
+
+               ++*ndelconss;
             }
             else
             {

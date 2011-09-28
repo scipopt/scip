@@ -3556,6 +3556,12 @@ SCIP_RETCODE SCIPmultiaggregateVar(
    SCIP_Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
    );
 
+/** returns whether aggregation of variables is not allowed */
+extern
+SCIP_Bool SCIPdoNotAggr(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** returns whether variable is not allowed to be multi-aggregated */
 extern
 SCIP_Bool SCIPdoNotMultaggrVar(

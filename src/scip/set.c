@@ -228,6 +228,7 @@
 #define SCIP_DEFAULT_PRESOL_RESTARTMINRED  0.10 /**< minimal fraction of integer variables removed after restart to allow
                                                  *   for an additional restart */
 #define SCIP_DEFAULT_PRESOL_DONOTMULTAGGR FALSE /**< should multi-aggregation of variables be forbidden? */
+#define SCIP_DEFAULT_PRESOL_DONOTAGGR     FALSE /**< should aggregation of variables be forbidden? */
 
 /* Pricing */
 
@@ -1289,6 +1290,11 @@ SCIP_RETCODE SCIPsetCreate(
          "presolving/donotmultaggr",
          "should multi-aggregation of variables be forbidden?",
          &(*set)->presol_donotmultaggr, TRUE, SCIP_DEFAULT_PRESOL_DONOTMULTAGGR,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "presolving/donotaggr",
+         "should aggregation of variables be forbidden?",
+         &(*set)->presol_donotaggr, TRUE, SCIP_DEFAULT_PRESOL_DONOTAGGR,
          NULL, NULL) );
 
 

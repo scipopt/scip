@@ -2185,10 +2185,11 @@ SCIP_RETCODE applyFixingsNonLinear(
                /* @todo: check for the correct aggregation order to throw the resultant away */
                SCIPdebugMessage("aggregating last unfixed variable <%s> in a non-linear part with the and-resultant <%s>\n", SCIPvarGetName(vars[0]), SCIPvarGetName(resultant));
                SCIP_CALL( SCIPaggregateVars(scip, vars[0], resultant, 1.0, -1.0, 0.0, infeasible, &redundant, &aggregated) );
-               assert(aggregated);
+               assert(aggregated || SCIPdoNotAggr(scip));
                assert(!redundant);
                assert(!(*infeasible));
-               ++(*naggrvars);
+               if( aggregated )
+                  ++(*naggrvars);
             }
             delterm = TRUE;
          }

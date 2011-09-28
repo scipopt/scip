@@ -1685,6 +1685,8 @@ SCIP_RETCODE detectRedundantConstraints(
       if( cons1 != NULL )
       {
          SCIP_CONSDATA* consdata1;
+         SCIP_Bool redundant;
+
 
          assert(SCIPconsIsActive(cons1));
          assert(!SCIPconsIsModifiable(cons1));
@@ -1699,27 +1701,33 @@ SCIP_RETCODE detectRedundantConstraints(
 
          /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
          SCIP_CALL( updateFlags(scip, cons1, cons0) ); 
+         redundant = FALSE;
 
          if( consdata0->resvar != consdata1->resvar )
          {
             SCIP_Bool aggregated;
-            SCIP_Bool redundant;
             
             assert(SCIPvarCompare(consdata0->resvar, consdata1->resvar) != 0); 
          
             /* aggregate resultants */
             SCIP_CALL( SCIPaggregateVars(scip, consdata0->resvar, consdata1->resvar, 1.0, -1.0, 0.0,
                   cutoff, &redundant, &aggregated) );
-            assert(redundant);
+            assert(redundant == aggregated);
+
             if( aggregated )
                ++(*naggrvars);
             if( *cutoff )
                goto TERMINATE;
          }
+         else 
+            redundant = TRUE;
 
          /* delete consdel */
-         SCIP_CALL( SCIPdelCons(scip, cons0) );
-         (*ndelconss)++;
+         if( redundant )
+         {
+            SCIP_CALL( SCIPdelCons(scip, cons0) );
+            (*ndelconss)++;
+         }
 
          /* update the first changed constraint to begin the next aggregation round with */
          if( consdata0->changed && SCIPconsGetPos(cons1) < *firstchange )
@@ -1878,14 +1886,19 @@ SCIP_RETCODE preprocessConstraintPairs(
             /* aggregate resultants */
             SCIP_CALL( SCIPaggregateVars(scip, consdata0->resvar, consdata1->resvar, 1.0, -1.0, 0.0,
                   &infeasible, &redundant, &aggregated) );
-            assert(redundant);
-            if( aggregated )
-               (*naggrvars)++;
-            *cutoff = *cutoff || infeasible;
+                    assert(redundant == aggregated);
 
-            /* delete cons1 */
-            SCIP_CALL( SCIPdelCons(scip, cons1) );
-            (*ndelconss)++;
+            if( aggregated )
+            {
+               assert(redundant);
+               (*naggrvars)++;
+
+               /* delete constraint */
+               SCIP_CALL( SCIPdelCons(scip, cons1) );
+               (*ndelconss)++;
+            }
+
+            *cutoff = *cutoff || infeasible;
          }
          else if( cons0superset )
          {
@@ -2556,13 +2569,17 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
             /* aggregate variables: resultant - operand == 0 */
             SCIP_CALL( SCIPaggregateVars(scip, consdata->resvar, consdata->vars[0], 1.0, -1.0, 0.0,
                   &cutoff, &redundant, &aggregated) );
-            assert(redundant);
+            assert(redundant == aggregated);
+
             if( aggregated )
+            {
+               assert(redundant);
                (*naggrvars)++;
 
-            /* delete constraint */
-            SCIP_CALL( SCIPdelCons(scip, cons) );
-            (*ndelconss)++;
+               /* delete constraint */
+               SCIP_CALL( SCIPdelCons(scip, cons) );
+               (*ndelconss)++;
+            }
          }
          else if( !consdata->impladded )
          {

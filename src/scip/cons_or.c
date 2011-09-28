@@ -1683,13 +1683,17 @@ SCIP_DECL_CONSPRESOL(consPresolOr)
             /* aggregate variables: resultant - operand == 0 */
             SCIP_CALL( SCIPaggregateVars(scip, consdata->resvar, consdata->vars[0], 1.0, -1.0, 0.0,
                   &cutoff, &redundant, &aggregated) );
-            assert(redundant);
+            assert(redundant == aggregated);
+
             if( aggregated )
+            {
+               assert(redundant);
                (*naggrvars)++;
 
-            /* delete constraint */
-            SCIP_CALL( SCIPdelCons(scip, cons) );
-            (*ndelconss)++;
+               /* delete constraint */
+               SCIP_CALL( SCIPdelCons(scip, cons) );
+               (*ndelconss)++;
+            }
          }
          else if( !consdata->impladded )
          {
