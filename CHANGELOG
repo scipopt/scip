@@ -122,6 +122,7 @@ fixed bugs:
 - fixed memory leak in coloring part of maximum clique algorithm (tclique_coloring.c) in a better way
 - fixed assert in sepa_clique.c which is currently not valid because implicit binary variables in cliques are ignored
 - fixed bug in redcost propagator: can only be called if the current node has an LP
+- fixed numerical issue in octane heuristic: close-to-zero values for ray direction could have led to bad computations
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})
