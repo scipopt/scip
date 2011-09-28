@@ -5068,8 +5068,10 @@ SCIP_RETCODE addLinearizationCuts(
 static
 SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
 {
-   SCIP_CONSHDLR* conshdlr;
+#ifndef NDEBUG
    SCIP_CONSHDLRDATA* conshdlrdata;
+#endif
+   SCIP_CONSHDLR* conshdlr;
    SCIP_CONS**    conss;
    int            nconss;
    SCIP_SOL*      sol;
@@ -5088,8 +5090,10 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    if( nconss == 0 )
       return SCIP_OKAY;
 
+#ifndef NDEBUG
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+#endif
 
    sol = SCIPeventGetSol(event);
    assert(sol != NULL);

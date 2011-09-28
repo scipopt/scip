@@ -3264,7 +3264,9 @@ SCIP_RETCODE addLinearizationCuts(
    SCIP_Real             minefficacy         /**< minimal efficacy of a cut when checking for separation of LP solution */
 )
 {
+#ifndef NDEBUG
    SCIP_CONSHDLRDATA* conshdlrdata;
+#endif
    SCIP_CONSDATA* consdata;
    SCIP_ROW* row;
    int c;
@@ -3273,8 +3275,10 @@ SCIP_RETCODE addLinearizationCuts(
    assert(conshdlr != NULL);
    assert(conss != NULL || nconss == 0);
 
+#ifndef NDEBUG
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+#endif
 
    if( separatedlpsol != NULL )
       *separatedlpsol = FALSE;
@@ -3348,8 +3352,10 @@ SCIP_RETCODE addLinearizationCuts(
 static
 SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
 {
-   SCIP_CONSHDLR* conshdlr;
+#ifndef NDEBUG
    SCIP_CONSHDLRDATA* conshdlrdata;
+#endif
+   SCIP_CONSHDLR* conshdlr;
    SCIP_CONS**    conss;
    int            nconss;
    SCIP_SOL*      sol;
@@ -3368,8 +3374,10 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    if( nconss == 0 )
       return SCIP_OKAY;
 
+#ifndef NDEBUG
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+#endif
 
    sol = SCIPeventGetSol(event);
    assert(sol != NULL);
