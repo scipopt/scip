@@ -10192,9 +10192,6 @@ SCIP_DECL_CONSPRINT(consPrintQuadratic)
       && !SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
       SCIPinfoMessage(scip, file, "%.15g <= ", consdata->lhs);
 
-   /* print marker that constraint function starts now */
-   SCIPinfoMessage(scip, file, "[ ");
-
    /* print coefficients and variables */
    if( consdata->nlinvars == 0 && consdata->nquadvars == 0 )
    {
@@ -10287,9 +10284,6 @@ SCIP_DECL_CONSPRINT(consPrintQuadratic)
       SCIPfreeBufferArray(scip, &monomialcoefs);
       SCIPfreeBufferArray(scip, &monomialnvars);
    }
-
-   /* print marker that constraint function ends now */
-   SCIPinfoMessage(scip, file, " ]");
 
    /* print right hand side */
    if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
@@ -10557,50 +10551,42 @@ SCIP_DECL_CONSPARSE(consParseQuadratic)
    while( isspace((unsigned char)*str) )
       ++str;
 
-   if( *str != '[' )
+   /* check for left hand side */
+   if( isdigit((unsigned char)str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit((unsigned char)str[1])) )
    {
-      /* we seem to have a left-hand-side */
-      char* endstr;
-
-      lhs = strtod(str, &endstr);
-      if( str == endstr )
+      /* there is a number coming, maybe it is a left-hand-side */
+      if( !SCIPstrToRealValue(str, &lhs, &endptr) )
       {
-         SCIPerrorMessage("error parsing left-hand-side from %s\n", str);
+         SCIPerrorMessage("error parsing number from <%s>\n", str);
          return SCIP_OKAY;
       }
-      str = endstr;
-
-      while( isspace((unsigned char)*str) )
-         ++str;
-
-      if( str[0] == '\0' || str[0] != '<' || str[1] != '=' )
-      {
-         SCIPerrorMessage("expected '<=' at %s\n", str);
-         return SCIP_OKAY;
-      }
-
-      str += 2;
 
       /* ignore whitespace */
-      while( isspace((unsigned char)*str) )
-         ++str;
+      while( isspace((unsigned char)*endptr) )
+         ++endptr;
+
+      if( endptr[0] != '<' || endptr[1] != '=' )
+      {
+         /* no '<=' coming, so it was the first coefficient, but not a left-hand-side */
+         lhs = -SCIPinfinity(scip);
+      }
+      else
+      {
+         /* it was indeed a left-hand-side, so continue parsing after it */
+         str = endptr + 2;
+
+         /* ignore whitespace */
+         while( isspace((unsigned char)*str) )
+            ++str;
+      }
    }
 
-   if( *str != '[' )
-   {
-      SCIPerrorMessage("expected '[' at %s\n", str);
-      return SCIP_OKAY;
-   }
-   ++str;
-
-   SCIP_CALL( SCIPparseVarsPolynomial(scip, str, ']', &monomialvars, &monomialexps, &monomialcoefs, &monomialnvars, &nmonomials, &endptr, success) );
+   SCIP_CALL( SCIPparseVarsPolynomial(scip, str, 0, &monomialvars, &monomialexps, &monomialcoefs, &monomialnvars, &nmonomials, &endptr, success) );
 
    if( *success )
    {
-      /* check what comes after quadratic function */
+      /* check for right hand side */
       str = endptr;
-      assert(*str == ']');
-      ++str;
 
       /* ignore whitespace */
       while( isspace((unsigned char)*str) )
