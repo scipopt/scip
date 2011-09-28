@@ -137,6 +137,10 @@ SCIP_DECL_PROPEXEC(propExecRedcost)
    if( SCIPisExactSolve(scip) )
       return SCIP_OKAY;
 
+   /* only call separator, if the current node has an LP */
+   if( !SCIPhasCurrentNodeLP(scip) )
+      return SCIP_OKAY;
+
    /* only call propagator, if an optimal LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
