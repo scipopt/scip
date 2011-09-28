@@ -14312,20 +14312,6 @@ SCIP_RETCODE SCIPcalcStrongCG(
    return SCIP_OKAY;
 }
 
-/** reads a given solution file, problem has to be transformed in advance */
-SCIP_RETCODE SCIPreadSol(
-   SCIP*                 scip,              /**< SCIP data structure */
-   const char*           fname              /**< name of the input file */
-   )
-{
-   SCIP_CALL( checkStage(scip, "SCIPreadSol", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-
-   /* we pass the reading of the solution file on to reader_sol via the following call */
-   SCIP_CALL( SCIPreadProb(scip, fname, "sol") );
-
-   return SCIP_OKAY;
-}
-
 /** writes current LP to a file */
 SCIP_RETCODE SCIPwriteLP(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -19890,6 +19876,20 @@ SCIP_RETCODE SCIPretransformSol(
       SCIPerrorMessage("invalid solution origin <%d>\n", SCIPsolGetOrigin(sol));
       return SCIP_ERROR;
    }
+
+   return SCIP_OKAY;
+}
+
+/** reads a given solution file, problem has to be transformed in advance */
+SCIP_RETCODE SCIPreadSol(
+   SCIP*                 scip,              /**< SCIP data structure */
+   const char*           fname              /**< name of the input file */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPreadSol", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* we pass the reading of the solution file on to reader_sol via the following call */
+   SCIP_CALL( SCIPreadProb(scip, fname, "sol") );
 
    return SCIP_OKAY;
 }

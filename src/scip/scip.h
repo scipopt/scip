@@ -4578,13 +4578,6 @@ SCIP_RETCODE SCIPcalcStrongCG(
    SCIP_Bool*            cutislocal          /**< pointer to store whether the returned cut is only valid locally */
    );
 
-/** reads a given solution file, problem has to be transformed in advance */
-extern
-SCIP_RETCODE SCIPreadSol(
-   SCIP*                 scip,              /**< SCIP data structure */   
-   const char*           fname              /**< name of the input file */
-   );
-
 /** writes current LP to a file */
 extern
 SCIP_RETCODE SCIPwriteLP(
@@ -6613,6 +6606,13 @@ extern
 SCIP_RETCODE SCIPretransformSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** reads a given solution file, problem has to be transformed in advance */
+extern
+SCIP_RETCODE SCIPreadSol(
+   SCIP*                 scip,              /**< SCIP data structure */
+   const char*           fname              /**< name of the input file */
    );
 
 /** adds feasible primal solution to solution storage by copying it */
