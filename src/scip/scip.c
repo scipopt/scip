@@ -17935,7 +17935,7 @@ SCIP_Real SCIPgetVarLbDive(
       SCIPABORT();
    }
 
-   return SCIPvarGetLbLP(var);
+   return SCIPvarGetLbLP(var, scip->set);
 }
 
 /** gets variable's upper bound in current dive */
@@ -17952,7 +17952,7 @@ SCIP_Real SCIPgetVarUbDive(
       SCIPABORT();
    }
 
-   return SCIPvarGetUbLP(var);
+   return SCIPvarGetUbLP(var, scip->set);
 }
 
 /** solves the LP of the current dive; no separation or pricing is applied */

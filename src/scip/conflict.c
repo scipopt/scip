@@ -3114,8 +3114,8 @@ SCIP_RETCODE addBdchg(
          assert(*bdchgnewubs != NULL);
 
          (*bdchginds)[*nbdchgs] = c;
-         (*bdchgoldlbs)[*nbdchgs] = SCIPvarGetLbLP(var);
-         (*bdchgoldubs)[*nbdchgs] = SCIPvarGetUbLP(var);
+         (*bdchgoldlbs)[*nbdchgs] = SCIPvarGetLbLP(var, set);
+         (*bdchgoldubs)[*nbdchgs] = SCIPvarGetUbLP(var, set);
          (*bdchgnewlbs)[*nbdchgs] = newlb;
          (*bdchgnewubs)[*nbdchgs] = newub;
          (*nbdchgs)++;
@@ -3214,7 +3214,7 @@ SCIP_RETCODE addCand(
       if( ubchginfopos == var->nubchginfos )
       {
          /* current bound is the strong branching or diving bound */
-         oldbound = SCIPvarGetUbLP(var);
+         oldbound = SCIPvarGetUbLP(var, set);
          newbound = SCIPvarGetUbLocal(var);
          depth = currentdepth+1;
          resolvable = FALSE;
@@ -3236,7 +3236,7 @@ SCIP_RETCODE addCand(
       if( lbchginfopos == var->nlbchginfos )
       {
          /* current bound is the strong branching or diving bound */
-         oldbound = SCIPvarGetLbLP(var);
+         oldbound = SCIPvarGetLbLP(var, set);
          newbound = SCIPvarGetLbLocal(var);
          depth = currentdepth+1;
          resolvable = FALSE;
@@ -3697,7 +3697,7 @@ SCIP_RETCODE undoBdchgsDualfarkas(
       else if( farkascoefs[v] > 0.0 )
       {
          assert((SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN && SCIPcolGetLPPos(SCIPvarGetCol(var)) >= 0)
-            || !SCIPsetIsPositive(set, SCIPvarGetUbLP(var)));
+            || !SCIPsetIsPositive(set, SCIPvarGetUbLP(var, set)));
          if( SCIPsetIsInfinity(set, curvarubs[v]) )
             goto TERMINATE;
          farkasact += farkascoefs[v] * curvarubs[v];
@@ -3707,7 +3707,7 @@ SCIP_RETCODE undoBdchgsDualfarkas(
       else
       {
          assert((SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN && SCIPcolGetLPPos(SCIPvarGetCol(var)) >= 0)
-            || !SCIPsetIsNegative(set, SCIPvarGetLbLP(var)));
+            || !SCIPsetIsNegative(set, SCIPvarGetLbLP(var, set)));
          if( SCIPsetIsInfinity(set, -curvarlbs[v]) )
             goto TERMINATE;
          farkasact += farkascoefs[v] * curvarlbs[v];
@@ -4061,8 +4061,8 @@ SCIP_RETCODE conflictAnalyzeRemainingBdchgs(
           * it cannot be resolved and therefore has to be directly put into the conflict set
           */
          assert((lbchginfoposs[v] == var->nlbchginfos) != (ubchginfoposs[v] == var->nubchginfos)); /* only one can be tight in the dual! */
-         assert(lbchginfoposs[v] < var->nlbchginfos || SCIPvarGetLbLP(var) > SCIPvarGetLbLocal(var));
-         assert(ubchginfoposs[v] < var->nubchginfos || SCIPvarGetUbLP(var) < SCIPvarGetUbLocal(var));
+         assert(lbchginfoposs[v] < var->nlbchginfos || SCIPvarGetLbLP(var, set) > SCIPvarGetLbLocal(var));
+         assert(ubchginfoposs[v] < var->nubchginfos || SCIPvarGetUbLP(var, set) < SCIPvarGetUbLocal(var));
 
          /* create an artificial bound change information for the diving/strong branching bound change;
           * they are freed in the SCIPconflictFlushConss() call
@@ -4070,18 +4070,18 @@ SCIP_RETCODE conflictAnalyzeRemainingBdchgs(
          if( lbchginfoposs[v] == var->nlbchginfos )
          {
             SCIP_CALL( conflictCreateTmpBdchginfo(conflict, blkmem, set, var, SCIP_BOUNDTYPE_LOWER,
-                  SCIPvarGetLbLocal(var), SCIPvarGetLbLP(var), &bdchginfo) );
+                  SCIPvarGetLbLocal(var), SCIPvarGetLbLP(var, set), &bdchginfo) );
          }
          else
          {
             SCIP_CALL( conflictCreateTmpBdchginfo(conflict, blkmem, set, var, SCIP_BOUNDTYPE_UPPER,
-                  SCIPvarGetUbLocal(var), SCIPvarGetUbLP(var), &bdchginfo) );
+                  SCIPvarGetUbLocal(var), SCIPvarGetUbLP(var, set), &bdchginfo) );
          }
 
          /* put variable into the conflict set */
          SCIPdebugMessage("   force: <%s> %s %g [status: %d, type: %d, dive/strong]\n",
             SCIPvarGetName(var), lbchginfoposs[v] == var->nlbchginfos ? ">=" : "<=",
-            lbchginfoposs[v] == var->nlbchginfos ? SCIPvarGetLbLP(var) : SCIPvarGetUbLP(var),
+            lbchginfoposs[v] == var->nlbchginfos ? SCIPvarGetLbLP(var, set) : SCIPvarGetUbLP(var, set),
             SCIPvarGetStatus(var), SCIPvarGetType(var));
          SCIP_CALL( conflictAddConflictBound(conflict, blkmem, set, bdchginfo) );
          SCIP_CALL( incVSIDS(stat, var, SCIPbdchginfoGetBoundtype(bdchginfo)) );
@@ -4316,8 +4316,8 @@ SCIP_RETCODE conflictAnalyzeLP(
 
       var = vars[v];
 
-      curvarlbs[v] = SCIPvarGetLbLP(var);
-      curvarubs[v] = SCIPvarGetUbLP(var);
+      curvarlbs[v] = SCIPvarGetLbLP(var, set);
+      curvarubs[v] = SCIPvarGetUbLP(var, set);
       lbchginfoposs[v] = var->nlbchginfos-1;
       ubchginfoposs[v] = var->nubchginfos-1;
       assert(diving || SCIPsetIsEQ(set, curvarlbs[v], SCIPvarGetLbLocal(var)));

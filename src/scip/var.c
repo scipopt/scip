@@ -10233,7 +10233,8 @@ SCIP_Real SCIPvarGetObjLP(
  *  data due to diving or conflict analysis, that operate only on the LP without updating the variables
  */
 SCIP_Real SCIPvarGetLbLP(
-   SCIP_VAR*             var                 /**< problem variable */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(var != NULL);
@@ -10243,7 +10244,7 @@ SCIP_Real SCIPvarGetLbLP(
    {
    case SCIP_VARSTATUS_ORIGINAL:
       assert(var->data.original.transvar != NULL);
-      return SCIPvarGetLbLP(var->data.original.transvar);
+      return SCIPvarGetLbLP(var->data.original.transvar, set);
          
    case SCIP_VARSTATUS_COLUMN:
       assert(var->data.col != NULL);
@@ -10255,16 +10256,20 @@ SCIP_Real SCIPvarGetLbLP(
       
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
       assert(var->data.aggregate.var != NULL);
-      /**@todo case distinction if LP bound is infinite */
-      if( var->data.aggregate.scalar > 0.0 )
+      if( (var->data.aggregate.scalar > 0.0 && SCIPsetIsInfinity(set, -SCIPvarGetLbLP(var->data.aggregate.var, set)))
+         || (var->data.aggregate.scalar < 0.0 && SCIPsetIsInfinity(set, SCIPvarGetUbLP(var->data.aggregate.var, set))) )
+      {
+         return -SCIPsetInfinity(set);
+      }
+      else if( var->data.aggregate.scalar > 0.0 )
       {
          /* a > 0 -> get lower bound of y */
-         return var->data.aggregate.scalar * SCIPvarGetLbLP(var->data.aggregate.var) + var->data.aggregate.constant;
+         return var->data.aggregate.scalar * SCIPvarGetLbLP(var->data.aggregate.var, set) + var->data.aggregate.constant;
       }
       else if( var->data.aggregate.scalar < 0.0 )
       {
          /* a < 0 -> get upper bound of y */
-         return var->data.aggregate.scalar * SCIPvarGetUbLP(var->data.aggregate.var) + var->data.aggregate.constant;
+         return var->data.aggregate.scalar * SCIPvarGetUbLP(var->data.aggregate.var, set) + var->data.aggregate.constant;
       }
       else
       {
@@ -10283,7 +10288,7 @@ SCIP_Real SCIPvarGetLbLP(
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
-      return var->data.negate.constant - SCIPvarGetUbLP(var->negatedvar);
+      return var->data.negate.constant - SCIPvarGetUbLP(var->negatedvar, set);
       
    default:
       SCIPerrorMessage("unknown variable status\n");
@@ -10296,7 +10301,8 @@ SCIP_Real SCIPvarGetLbLP(
  *  data due to diving or conflict analysis, that operate only on the LP without updating the variables
  */
 SCIP_Real SCIPvarGetUbLP(
-   SCIP_VAR*             var                 /**< problem variable */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(var != NULL);
@@ -10306,7 +10312,7 @@ SCIP_Real SCIPvarGetUbLP(
    {
    case SCIP_VARSTATUS_ORIGINAL:
       assert(var->data.original.transvar != NULL);
-      return SCIPvarGetUbLP(var->data.original.transvar);
+      return SCIPvarGetUbLP(var->data.original.transvar, set);
          
    case SCIP_VARSTATUS_COLUMN:
       assert(var->data.col != NULL);
@@ -10318,16 +10324,20 @@ SCIP_Real SCIPvarGetUbLP(
       
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
       assert(var->data.aggregate.var != NULL);
-      /**@todo case distinction if LP bound is infinite */
+      if( (var->data.aggregate.scalar > 0.0 && SCIPsetIsInfinity(set, SCIPvarGetUbLP(var->data.aggregate.var, set)))
+         || (var->data.aggregate.scalar < 0.0 && SCIPsetIsInfinity(set, -SCIPvarGetLbLP(var->data.aggregate.var, set))) )
+      {
+         return SCIPsetInfinity(set);
+      }
       if( var->data.aggregate.scalar > 0.0 )
       {
          /* a > 0 -> get upper bound of y */
-         return var->data.aggregate.scalar * SCIPvarGetUbLP(var->data.aggregate.var) + var->data.aggregate.constant;
+         return var->data.aggregate.scalar * SCIPvarGetUbLP(var->data.aggregate.var, set) + var->data.aggregate.constant;
       }
       else if( var->data.aggregate.scalar < 0.0 )
       {
          /* a < 0 -> get lower bound of y */
-         return var->data.aggregate.scalar * SCIPvarGetLbLP(var->data.aggregate.var) + var->data.aggregate.constant;
+         return var->data.aggregate.scalar * SCIPvarGetLbLP(var->data.aggregate.var, set) + var->data.aggregate.constant;
       }
       else
       {
@@ -10345,7 +10355,7 @@ SCIP_Real SCIPvarGetUbLP(
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
-      return var->data.negate.constant - SCIPvarGetLbLP(var->negatedvar);
+      return var->data.negate.constant - SCIPvarGetLbLP(var->negatedvar, set);
       
    default:
       SCIPerrorMessage("unknown variable status\n");
