@@ -1730,12 +1730,12 @@ SCIP_RETCODE preprocessConstraintPairs(
             SCIP_CALL( SCIPaggregateVars(scip, singlevar1, singlevar0, 1.0, 1.0, 1.0,
                   &infeasible, &redundant, &aggregated) );
          }
-         assert(infeasible || redundant);
-         assert(infeasible || aggregated);
+         assert(infeasible || redundant || SCIPdoNotAggr(scip));
 
          *cutoff = *cutoff || infeasible;
          if( aggregated )
             (*naggrvars)++;
+
          if( redundant )
          {
             SCIP_CALL( SCIPdelCons(scip, cons1) );
@@ -2155,11 +2155,16 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
                SCIP_CALL( SCIPaggregateVars(scip, consdata->vars[0], consdata->vars[1], 1.0, 1.0, 1.0,
                      &cutoff, &redundant, &aggregated) );
             }
-            assert(redundant == aggregated);
+            assert(redundant || SCIPdoNotAggr(scip));
+
             if( aggregated )
             {
+               assert(redundant);
                (*naggrvars)++;
+            }
 
+            if( redundant )
+            {
                /* delete constraint */
                SCIP_CALL( SCIPdelCons(scip, cons) );
                (*ndelconss)++;

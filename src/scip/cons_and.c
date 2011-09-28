@@ -1712,7 +1712,7 @@ SCIP_RETCODE detectRedundantConstraints(
             /* aggregate resultants */
             SCIP_CALL( SCIPaggregateVars(scip, consdata0->resvar, consdata1->resvar, 1.0, -1.0, 0.0,
                   cutoff, &redundant, &aggregated) );
-            assert(redundant == aggregated);
+            assert(redundant || SCIPdoNotAggr(scip));
 
             if( aggregated )
                ++(*naggrvars);
@@ -1886,13 +1886,16 @@ SCIP_RETCODE preprocessConstraintPairs(
             /* aggregate resultants */
             SCIP_CALL( SCIPaggregateVars(scip, consdata0->resvar, consdata1->resvar, 1.0, -1.0, 0.0,
                   &infeasible, &redundant, &aggregated) );
-                    assert(redundant == aggregated);
+            assert(redundant || SCIPdoNotAggr(scip));
 
             if( aggregated )
             {
                assert(redundant);
                (*naggrvars)++;
-
+            }
+            
+            if( redundant )
+            {
                /* delete constraint */
                SCIP_CALL( SCIPdelCons(scip, cons1) );
                (*ndelconss)++;
@@ -2569,13 +2572,16 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
             /* aggregate variables: resultant - operand == 0 */
             SCIP_CALL( SCIPaggregateVars(scip, consdata->resvar, consdata->vars[0], 1.0, -1.0, 0.0,
                   &cutoff, &redundant, &aggregated) );
-            assert(redundant == aggregated);
+            assert(redundant || SCIPdoNotAggr(scip));
 
             if( aggregated )
             {
                assert(redundant);
                (*naggrvars)++;
-
+            }
+            
+            if( redundant )
+            {
                /* delete constraint */
                SCIP_CALL( SCIPdelCons(scip, cons) );
                (*ndelconss)++;

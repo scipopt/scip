@@ -3780,8 +3780,10 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
                *result = SCIP_CUTOFF;
                return SCIP_OKAY;
             }
+
             if( aggregated )
                (*naggrvars)++;
+
             if( redundant )
             {
                SCIP_CALL( SCIPdelCons(scip, cons) );
