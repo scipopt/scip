@@ -9946,13 +9946,12 @@ SCIP_DECL_CONSPARSE(consParseLinear)
          SCIPerrorMessage("error parsing number from <%s>\n", str);
          return SCIP_OKAY;
       }
-      str = endptr;
 
       /* ignore whitespace */
-      while( isspace((unsigned char)*str) )
-         ++str;
+      while( isspace((unsigned char)*endptr) )
+         ++endptr;
 
-      if( str[0] != '<' || str[1] != '=' )
+      if( endptr[0] != '<' || endptr[1] != '=' )
       {
          /* no '<=' coming, so it was the first coefficient, but not a left-hand-side */
          lhs = -SCIPinfinity(scip);
@@ -9960,7 +9959,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
       else
       {
          /* it was indeed a left-hand-side, so continue parsing after it */
-         str += 2;
+         str = endptr + 2;
 
          /* ignore whitespace */
          while( isspace((unsigned char)*str) )
