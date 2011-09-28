@@ -8111,7 +8111,8 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
    SCIP_Bool*            success             /**< pointer to store the whether the parsing was successfully or not */
    )
 {
-   typedef enum {
+   typedef enum
+   {
       SCIPPARSEPOLYNOMIAL_STATE_BEGIN,       /* we are at the beginning of a monomial */
       SCIPPARSEPOLYNOMIAL_STATE_INTERMED,    /* we are in between the factors of a monomial */
       SCIPPARSEPOLYNOMIAL_STATE_COEF,        /* we parse the coefficient of a monomial */
@@ -8130,7 +8131,6 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
    SCIP_VAR** vars;
    SCIP_Real* exponents;
    SCIP_Real coef;
-   int sign;
 
    assert(scip != NULL);
    assert(str != NULL);
@@ -8160,7 +8160,6 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
    vars = NULL;
    exponents = NULL;
    coef = SCIP_INVALID;
-   sign = 1.0;
 
    SCIPdebugMessage("parsing polynomial from '%s', endchar = <%c>\n", str, endchar);
 
@@ -8207,7 +8206,6 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
             (*monomialnvars)[*nmonomials] = nvars;
             ++*nmonomials;
 
-            sign = 1.0;
             nvars = 0;
             coef = SCIP_INVALID;
          }
@@ -8258,27 +8256,24 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
          if( *str == '+' && !isdigit(str[1]) )
          {
             /* only a plus sign, without number */
-            sign = 1.0;
             coef =  1.0;
             ++str;
          }
          else if( *str == '-' && !isdigit(str[1]) )
          {
             /* only a minus sign, without number */
-            sign = -1.0;
+            coef = -1.0;
             ++str;
+         }
+         else if( SCIPstrToRealValue(str, &coef, endptr) )
+         {
+            str = *endptr;
          }
          else
          {
-            if( !SCIPstrToRealValue(str, &coef, endptr) )
-            {
-               SCIPerrorMessage("could not parse number in the beginning of '%s'\n", str);
-               state = SCIPPARSEPOLYNOMIAL_STATE_ERROR;
-               break;
-            }
-
-            coef *= sign;
-            str = *endptr;
+            SCIPerrorMessage("could not parse number in the beginning of '%s'\n", str);
+            state = SCIPPARSEPOLYNOMIAL_STATE_ERROR;
+            break;
          }
 
          /* after the coefficient we go into the intermediate state, i.e., expecting next variables */
