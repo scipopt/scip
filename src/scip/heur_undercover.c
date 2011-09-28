@@ -516,7 +516,7 @@ SCIP_RETCODE createCoveringProblem(
                continue;
             }
 
-            /* if constraints with inactive variables are present, we will have difficulties creating the sub-CIP later */
+            /* if constraints with inactive variables are present, we have to find the corresponding active variable */
             probindex = SCIPvarGetProbindex(andvars[v]);
             if( probindex == -1 )
             {
@@ -562,7 +562,7 @@ SCIP_RETCODE createCoveringProblem(
             ntofix++;
          }
 
-         /* if constraints with inactive variables are present, we will have difficulties creating the sub-CIP later */
+         /* if constraints with inactive variables are present, we have to find the corresponding active variable */
          probindex = SCIPvarGetProbindex(SCIPgetResultantAnd(scip, andcons));
          negated = FALSE;
 
@@ -738,7 +738,7 @@ SCIP_RETCODE createCoveringProblem(
          BMSclearMemoryArray(consmarker, nvars);
          ntofix = 0;
 
-         /* if constraints with inactive variables are present, we will have difficulties creating the sub-CIP later */
+         /* soc constraints should contain only active and multi-aggregated variables; the later we do not handle */
          probindex = SCIPvarGetProbindex(socrhsvar);
          if( probindex == -1 )
          {
@@ -759,7 +759,7 @@ SCIP_RETCODE createCoveringProblem(
          {
             assert(soclhsvars[v] != NULL);
 
-            /* if constraints with inactive variables are present, we will have difficulties creating the sub-CIP later */
+            /* soc constraints should contain only active and multi-aggregated variables; the later we do not handle */
             probindex = SCIPvarGetProbindex(soclhsvars[v]);
             if( probindex == -1 )
             {
