@@ -3365,6 +3365,7 @@ SCIP_RETCODE SCIPvarFix(
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_FIXED:
+      assert(FALSE); /* case is already handled in earlier if condition */
       SCIPerrorMessage("cannot fix a fixed variable again\n");
       return SCIP_INVALIDDATA;
 
@@ -10173,7 +10174,9 @@ SCIP_Bool SCIPvarIsTransformedOrigvar(
    if( !SCIPvarIsTransformed(var) || var->nparentvars < 1 )
       return FALSE;
 
+   assert(var->parentvars != NULL);
    parentvar = var->parentvars[0];
+   assert(parentvar != NULL);
 
    /* we follow the aggregation tree to the root unless an original variable has been found - the first entries in the parentlist are candidates */
    while( parentvar->nparentvars >= 1 && SCIPvarGetStatus(parentvar) != SCIP_VARSTATUS_ORIGINAL )
@@ -12137,6 +12140,7 @@ SCIP_Real SCIPvarGetVSIDS_rec(
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
+      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE); /* column case already handled in if condition above */
       return SCIPhistoryGetVSIDS(var->history, dir)/stat->vsidsweight;
 
    case SCIP_VARSTATUS_FIXED:

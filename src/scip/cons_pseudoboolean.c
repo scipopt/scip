@@ -1731,7 +1731,7 @@ SCIP_RETCODE copyConsPseudoboolean(
 
       /* allocate nonlinear array of variable array */
       SCIP_CALL( SCIPallocBufferArray(targetscip, &termvars, nterms) );
-      BMSclearMemoryArray(&termvars, nterms);
+      BMSclearMemoryArray(termvars, nterms);
 
       /* allocate array for length for all nonlinear variable array */
       SCIP_CALL( SCIPallocBufferArray(targetscip, &ntermvars, nterms) );

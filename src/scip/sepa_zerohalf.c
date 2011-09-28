@@ -5883,7 +5883,7 @@ SCIP_RETCODE addEdgeToAuxGraph(
    int                     n1;
    int                     n2;
 
-   const int maxnumberofneighbors = 2 * graph->nnodes - 2;
+   int maxnumberofneighbors;
 
    assert(scip != NULL);
    assert(graph != NULL);
@@ -5892,6 +5892,8 @@ SCIP_RETCODE addEdgeToAuxGraph(
    assert(node2index >= 0);
    assert(node2index < graph->nnodes);
    assert(!SCIPisNegative(scip, weight));
+
+   maxnumberofneighbors = 2 * graph->nnodes - 2;
 
    if( isodd )
    {

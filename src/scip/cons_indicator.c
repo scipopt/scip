@@ -4275,7 +4275,7 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
    SCIPdebugMessage("Presolving indicator constraints.\n");
 
    /* only run if success is possible */
-   if ( nrounds == 0 || nnewfixedvars > 0 || nnewchgbds > 0 || nnewaggrvars > 0 || *nfixedvars > oldnfixedvars )
+   if( nrounds == 0 || nnewfixedvars > 0 || nnewchgbds > 0 || nnewaggrvars > 0 )
    {
       *result = SCIP_DIDNOTFIND;
 

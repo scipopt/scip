@@ -4291,6 +4291,11 @@ SCIP_RETCODE mcfnetworkExtract(
     * 2. Sort flow conservation candidates by a ranking on how sure we are that it is indeed a constraint of the desired type
     */
    SCIP_CALL( extractFlowRows(scip, &mcfdata) );
+   assert(mcfdata.flowrowsigns != NULL);
+   assert(mcfdata.flowrowscalars != NULL);
+   assert(mcfdata.flowrowscores != NULL);
+   assert(mcfdata.flowcands != NULL);
+
    if( mcfdata.nflowcands == 0 )
       failed = TRUE;
 
@@ -4298,6 +4303,11 @@ SCIP_RETCODE mcfnetworkExtract(
    {
       /* 3. extract network structure of flow conservation constraints. */
       SCIP_CALL( extractFlow(scip, &mcfdata, MAXFLOWVARFLOWROWRATIO, &failed) );
+      assert(mcfdata.plusflow != NULL);
+      assert(mcfdata.minusflow != NULL);
+      assert(mcfdata.colcommodity != NULL);
+      assert(mcfdata.rowcommodity != NULL);
+      assert(mcfdata.newcols != NULL);
    }
 
    if( !failed )
@@ -4310,6 +4320,10 @@ SCIP_RETCODE mcfnetworkExtract(
        * 5. sort capacity constraint candidates by a ranking on how sure we are that it is indeed a constraint of the desired type
        */
       SCIP_CALL( extractCapacityRows(scip, &mcfdata) );
+      assert(mcfdata.capacityrowsigns != NULL);
+      assert(mcfdata.capacityrowscores != NULL);
+      assert(mcfdata.capacitycands != NULL);
+
       if( mcfdata.ncapacitycands == 0 )
          failed = TRUE;
    }
@@ -4318,9 +4332,14 @@ SCIP_RETCODE mcfnetworkExtract(
    {
       /* 6. arc-detection -- identify capacity constraints for the arcs and assign arc ids to columns and capacity constraints */
       SCIP_CALL( extractCapacities(scip, &mcfdata) );
+      assert(mcfdata.colarcid != NULL);
+      assert(mcfdata.rowarcid != NULL);
 
       /* 7. node-detection -- assign node ids to flow conservation constraints */
       SCIP_CALL( extractNodes(scip, &mcfdata) );
+      assert(mcfdata.rownodeid != NULL);
+      assert(mcfdata.colisincident != NULL);
+      assert(mcfdata.zeroarcarray != NULL);
 
       /* 8. postprocessing */
       /* 8.a if there are still undecided commodity signs, fix them to +1 */
@@ -4331,6 +4350,14 @@ SCIP_RETCODE mcfnetworkExtract(
 
       /* 8.c construct incidence function -- assign source and target nodes to capacitated arcs */
       SCIP_CALL( identifySourcesTargets(scip, &mcfdata, sepadata, effortlevel) );
+      assert(mcfdata.arcsources != NULL);
+      assert(mcfdata.arctargets != NULL);
+      assert(mcfdata.colsources != NULL);
+      assert(mcfdata.coltargets != NULL);
+      assert(mcfdata.firstoutarcs != NULL);
+      assert(mcfdata.firstinarcs != NULL);
+      assert(mcfdata.nextoutarcs != NULL);
+      assert(mcfdata.nextinarcs != NULL);
    }
 
    if( !failed && *effortlevel != MCFEFFORTLEVEL_OFF)
@@ -4806,15 +4833,15 @@ SCIP_RETCODE nodepairqueueCreate(
     * The weight of uncapacitated arcs (without capacity constraints) is infinite.
     */
 #ifdef BETTERWEIGHTFORDEMANDNODES
-   int          ncommodities   = mcfnetwork->ncommodities;
-   SCIP_ROW***  nodeflowrows   = mcfnetwork->nodeflowrows;
-   SCIP_Real**  nodeflowscales = mcfnetwork->nodeflowscales;
+   int          ncommodities;
+   SCIP_ROW***  nodeflowrows;
+   SCIP_Real**  nodeflowscales;
    SCIP_Real    maxweight;
    SCIP_Real    minweight;
 #endif
 
 #ifdef TIEBREAKING
-   int*         colcommodity   = mcfnetwork->colcommodity;
+   int*         colcommodity;
 #endif
 
 
@@ -4827,6 +4854,17 @@ SCIP_RETCODE nodepairqueueCreate(
    int n;
 
    assert(mcfnetwork != NULL);
+
+#ifdef BETTERWEIGHTFORDEMANDNODES
+   ncommodities   = mcfnetwork->ncommodities;
+   nodeflowrows   = mcfnetwork->nodeflowrows;
+   nodeflowscales = mcfnetwork->nodeflowscales;
+#endif
+
+#ifdef TIEBREAKING
+   colcommodity   = mcfnetwork->colcommodity;
+#endif
+
    assert(nodepairqueue != NULL);
 
    SCIP_CALL( SCIPallocMemory(scip, nodepairqueue) );
@@ -5368,13 +5406,14 @@ nodepartitionIsConnected
    const int* arcsources   = mcfnetwork->arcsources;
    const int* arctargets   = mcfnetwork->arctargets;
    int        narcs        = mcfnetwork->narcs;
-   int        nclusters    = nodepartition->nclusters;
+   int        nclusters;
 
    int  ncomponents;
    int  a;
    int* rep;
 
    assert(nodepartition != NULL);
+   nclusters = nodepartition->nclusters;
 
    if( SCIPallocBufferArray(scip, &rep, nclusters) != SCIP_OKAY )
       return 0;

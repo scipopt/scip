@@ -411,6 +411,10 @@ SCIP_RETCODE presolveFindDuplicatesUpgradeCons(
    assert(scip  != NULL);
    assert(cons1 != NULL);
    assert(cons2 != NULL);
+   assert(infeas != NULL);
+   assert(nupgdconss != NULL);
+   assert(ndelconss != NULL);
+   assert(naggrvars != NULL);
 
    consdata1 = SCIPconsGetData(cons1);
    consdata2 = SCIPconsGetData(cons2);
@@ -445,7 +449,7 @@ SCIP_RETCODE presolveFindDuplicatesUpgradeCons(
       SCIP_CALL( SCIPaggregateVars(scip, consdata1->z, consdata2->z, consdata1->zcoef, -consdata2->zcoef, rhs, infeas, &redundant, &aggregated) );
 
       /* if infeasibility has been detected, stop here */
-      if( infeas )
+      if( *infeas )
          return SCIP_OKAY;
 
       if( redundant )
@@ -1009,7 +1013,7 @@ SCIP_RETCODE presolveFindDuplicates(
 
             /* try aggregation */
             SCIP_CALL( SCIPaggregateVars(scip, consdata0->x, consdata1->x, 1.0, -coef, rhs, infeas, &redundant, &aggregated) );
-            if( infeas )
+            if( *infeas )
             {
                /* if infeasibility has been detected, stop here */
                break;

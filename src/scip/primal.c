@@ -663,6 +663,9 @@ SCIP_Bool primalExistsSol(
 
    obj = SCIPsolGetObj(sol, set, transprob);
 
+   assert(primal->sols != NULL || primal->nsols == 0);
+   assert(primal->sols != NULL || insertpos == 0);
+
    /* search in the better solutions */
    for( i = insertpos-1; i >= 0; --i )
    {

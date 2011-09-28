@@ -1128,13 +1128,15 @@ SCIP_RETCODE processBinvarFixings(
          *cutoff = TRUE;
       }
    }
-   else if( consdata->nfixedzeros == consdata->nbinvars - 1 && consdata->nfixedones == 0 )
+   else if( consdata->nfixedzeros == consdata->nbinvars - 1 )
    {
       /* all variables except one are fixed to zero:
        * - an unmodifiable set partitioning constraint is feasible and can be disabled after the
        *   remaining variable is fixed to one
        * - a modifiable set partitioning constraint must be checked manually
        */
+      assert(consdata->nfixedones == 0);
+
       if( !SCIPconsIsModifiable(cons) )
       {
          SCIP_VAR** vars;

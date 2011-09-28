@@ -578,17 +578,16 @@ char* do_cdata(
 
       data[len++] = (char)c;
    }
+   assert(data != NULL);
+
    if (c != EOF)
    {
-      assert(data != NULL);
       assert(len  >= 2);
 
       data[len - 2] = '\0';
    }
    else
    {
-      assert(data != NULL);
-
       BMSfreeMemoryArray(&data);
       data = NULL;
       xml_error(ppos, "Unexpected EOF in CDATA");

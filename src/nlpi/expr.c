@@ -8125,7 +8125,9 @@ void exprgraphPrintNodeExpression(
    {
       case SCIP_EXPR_VARIDX:
          if( varnames != NULL )
-            SCIPmessageFPrintInfo(file, (const char*)varnames[node->data.intval]);
+         {
+            SCIPmessageFPrintInfo(file, "%s", (const char*)varnames[node->data.intval]);
+         }
          else
             SCIPmessageFPrintInfo(file, "x%d", node->data.intval);
          break;
@@ -8209,7 +8211,7 @@ void exprgraphPrintNodeExpression(
       case SCIP_EXPR_MAX:
       case SCIP_EXPR_ABS:
       case SCIP_EXPR_SIGN:
-         SCIPmessageFPrintInfo(file, (const char*)SCIPexpropGetName(node->op));
+         SCIPmessageFPrintInfo(file, "%s", (const char*)SCIPexpropGetName(node->op));
          if( printchildrenbounds )
          {
             SCIPmessageFPrintInfo(file, "(c0[%10g,%10g]", node->children[0]->bounds.inf, node->children[0]->bounds.sup);
