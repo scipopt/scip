@@ -3138,7 +3138,7 @@ SCIP_RETCODE presolveTryAddAND(
          SCIP_Real var0val;
          SCIP_Real var1val;
          SCIP_CALL( SCIPdebugGetSolVal(scip, vars[0], &var0val) );
-         SCIP_CALL( SCIPdebugGetSolVal(scip, vars[0], &var1val) );
+         SCIP_CALL( SCIPdebugGetSolVal(scip, vars[1], &var1val) );
          SCIP_CALL( SCIPdebugAddSolVal(auxvar, var0val * var1val) );
       }
 #endif
@@ -7467,11 +7467,13 @@ static
 SCIP_RETCODE replaceByLinearConstraints(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< constraints */
-   int                   nconss              /**< number of constraints */
+   int                   nconss,             /**< number of constraints */
+   SCIP_Bool*            addedcons           /**< buffer to store whether a linear constraint was added */
    )
 {
    SCIP_CONS*          cons;
    SCIP_CONSDATA*      consdata;
+   SCIP_RESULT         checkresult;
    SCIP_Real           constant;
    SCIP_Real           val1;
    SCIP_Real           val2;
@@ -7480,6 +7482,9 @@ SCIP_RETCODE replaceByLinearConstraints(
 
    assert(scip  != NULL);
    assert(conss != NULL || nconss == 0);
+   assert(addedcons != NULL);
+
+   *addedcons = FALSE;
 
    for( c = 0; c < nconss; ++c )
    {
@@ -7519,9 +7524,19 @@ SCIP_RETCODE replaceByLinearConstraints(
 
       SCIPdebugMessage("replace quadratic constraint <%s> by linear constraint after all quadratic vars have been fixed\n", SCIPconsGetName(conss[c]) );
       SCIPdebug( SCIPprintCons(scip, cons, NULL) );
-      SCIP_CALL( SCIPaddConsLocal(scip, cons, NULL) );
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
+      SCIP_CALL( SCIPcheckCons(scip, cons, NULL, FALSE, FALSE, FALSE, &checkresult) );
+
+      if( checkresult != SCIP_INFEASIBLE )
+      {
+         SCIPdebugMessage("linear constraint is feasible, thus do not add\n");
+      }
+      else
+      {
+         SCIP_CALL( SCIPaddConsLocal(scip, cons, NULL) );
+         *addedcons = TRUE;
+      }
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
    }
 
@@ -9622,23 +9637,39 @@ SCIP_DECL_CONSENFOLP(consEnfolpQuadratic)
    }
 
    if( nnotify == 0 && !solinfeasible )
-   { /* fallback 2: separation probably failed because of numerical difficulties with a convex constraint;
-        if noone declared solution infeasible yet and we had not even found a weak cut, try to resolve by branching */
+   {
+      /* fallback 2: separation probably failed because of numerical difficulties with a convex constraint;
+       *  if noone declared solution infeasible yet and we had not even found a weak cut, try to resolve by branching
+       */
       SCIP_VAR* brvar = NULL;
       SCIP_CALL( registerLargeLPValueVariableForBranching(scip, conss, nconss, &brvar) );
       if( brvar == NULL )
       {
          /* fallback 3: all quadratic variables seem to be fixed -> replace by linear constraint */
-         SCIP_CALL( replaceByLinearConstraints(scip, conss, nconss) );
-         *result = SCIP_CONSADDED;
+         SCIP_Bool addedcons;
+
+         SCIP_CALL( replaceByLinearConstraints(scip, conss, nconss, &addedcons) );
+         /* if the linear constraints are actually feasible, then adding them and returning SCIP_CONSADDED confuses SCIP when it enforces the new constraints again and nothing resolves the infeasiblity that we declare here
+          * thus, we only add them if considered violated, and otherwise claim the solution is feasible (but print a warning) */
+         if( addedcons )
+         {
+            *result = SCIP_CONSADDED;
+         }
+         else
+         {
+            *result = SCIP_FEASIBLE;
+            SCIPwarningMessage("could not enforce feasibility by separating or branching; declaring solution with viol %g as feasible\n", maxviol);
+         }
          return SCIP_OKAY;
       }
       else
       {
          SCIPdebugMessage("Could not find any usual branching variable candidate. Proposed variable <%s> with LP value %g for branching.\n", SCIPvarGetName(brvar), SCIPgetSolVal(scip, NULL, brvar));
+         nnotify = 1;
       }
    }
    
+   assert(*result == SCIP_INFEASIBLE && (solinfeasible || nnotify > 0));
    return SCIP_OKAY;
 }
 
@@ -9655,6 +9686,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsQuadratic)
    int                c;
    int                i;
    int                nchgbds;
+   int                nnotify;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -9686,7 +9718,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsQuadratic)
    /* we are not feasible and we cannot proof that the whole node is infeasible
     * -> collect all variables in violated constraints for branching
     */
-
+   nnotify = 0;
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL);
@@ -9702,6 +9734,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsQuadratic)
          if( !SCIPisRelEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
          {
             SCIP_CALL( SCIPaddExternBranchCand(scip, var, MAX(consdata->lhsviol, consdata->rhsviol), SCIP_INVALID) );
+            ++nnotify;
          }
       }
 
@@ -9711,10 +9744,18 @@ SCIP_DECL_CONSENFOPS(consEnfopsQuadratic)
          if( !SCIPisRelEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
          {
             SCIP_CALL( SCIPaddExternBranchCand(scip, var, MAX(consdata->lhsviol, consdata->rhsviol), SCIP_INVALID) );
+            ++nnotify;
          }
       }
    }
 
+   if( nnotify == 0 )
+   {
+      SCIPdebugMessage("All variables in violated constraints fixed (up to epsilon). Cannot find branching candidate. Forcing solution of LP.\n");
+      *result = SCIP_SOLVELP;
+   }
+
+   assert(*result == SCIP_SOLVELP || (*result == SCIP_INFEASIBLE && nnotify > 0));
    return SCIP_OKAY;
 }
 
