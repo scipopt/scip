@@ -523,14 +523,19 @@ SCIP_Bool isZero(
    )
 {
    int v;
+   SCIP_Bool iszero;
 
    assert(scip != NULL);
    assert(raydirection != NULL);
-
+   iszero = TRUE; 
    for( v = nsubspacevars - 1; v >= 0; --v )
-      if( !SCIPisFeasZero(scip, raydirection[v]) )
-         return FALSE;
-   return TRUE;
+   {
+      if( !SCIPisFeasZero(scip, raydirection[v]/100) )
+         iszero = FALSE;
+      else
+         raydirection[v] = 0.0;
+   }
+   return iszero;
 }
 
 
@@ -892,6 +897,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
       /* assert necessary for flexelint */
       assert(q > 0);
       lambda[0] = p / q;
+
       nfacets = 1;
 
       /* find the first facets hit by the ray */

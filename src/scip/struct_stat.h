@@ -115,7 +115,7 @@ struct SCIP_Stat
    int                   marked_nvaridx;     /**< number of used variable indices before solving started */
    int                   marked_ncolidx;     /**< number of used column indices before solving started */
    int                   marked_nrowidx;     /**< number of used row indices before solving started */
-   int                   lpcount;            /**< internal counter, where all simplex calls are counted */
+   int                   lpcount;            /**< internal counter, where all lp calls are counted; this includes the restored lps after diving and probing */
    int                   nlps;               /**< total number of LPs solved with at least 1 iteration */
    int                   nrootlps;           /**< number of LPs solved at the root node with at least 1 iteration */
    int                   nprimallps;         /**< number of primal LPs solved with at least 1 iteration */
