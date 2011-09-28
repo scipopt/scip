@@ -72,7 +72,6 @@ interface:
 - added new method to linear constraint handler SCIPsetUpgradeConsLinear(), which (de-)activates the possibility to upgrade a linear constraint to a specialized linear constraint (e.g. knapsack)
 - new method SCIPsolGetOrigObj() in pub_sol.h which returns for a solution in the original problem space the objective value
 - new method SCIPretransformSol() in scip.h that allows to retransform a solution to the original space
-- added SCIP_SET pointer to internal methods SCIPvarGetLbLP() and SCIPvarGetUbLP() in order to handle infinite values correctly
 
 performance improvements:
 - performance improvements in prop_vbounds
@@ -182,6 +181,8 @@ parameters:
 - added parameter <presolving/donotaggr> to deactivate aggregation of variables globally
 - added parameter <lp/resolverestore> controlling how LP solution is restored after diving: if TRUE by resolving them,
   if FALSE by buffering them; if <lp/freesolvalbuffers> is TRUE, we free the buffer memory each time (FALSE by default)
+- added parameter <constraints/quadratic/checkfactorable> to enable check for factorable quadratic functions (xAx = (ax+b)*(cx+d)) in quadratic constraints and use of this information in separation (generates lifted tangent inequalities according to Belotti/Miller/Namazifar if also linear vars are present)
+- added parameters <constraints/{nonlinear,quadratic,soc,signedpower}/maxsepanlprounds> to enable solving NLP relaxation in root node and adding cuts from linearizations of convex nonlinear constraints into cutpool
 
 features:
 - flatzinc reader is now capable to read cumulative constraints
