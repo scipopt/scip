@@ -173,7 +173,7 @@ SCIP_RETCODE consdataAddCons(
    return SCIP_OKAY;
 }
 
-/** branches disjuctive constraint */
+/** branches on disjunctive constraint */
 static
 SCIP_RETCODE branchCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -190,7 +190,7 @@ SCIP_RETCODE branchCons(
 
    assert(result != NULL);
 
-   /* can branch modifiable constraint */
+   /* cannot branch on modifiable constraint */
    if( SCIPconsIsModifiable(cons) )
       return SCIP_OKAY;
    
@@ -511,7 +511,7 @@ SCIP_DECL_CONSPRESOL(consPresolDisjunction)
 
       if( !SCIPconsIsModifiable(conss[c]) && consdata->nconss == 1 )
       {
-         /* add constaint to the problem */
+         /* add constraint to the problem */
          if( !SCIPconsIsActive(consdata->conss[0]) )
          {
             SCIP_CALL( SCIPaddCons(scip, consdata->conss[0]) );
@@ -714,7 +714,7 @@ SCIP_RETCODE SCIPcreateConsDisjunction(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic             /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    )
 {
    SCIP_CONSHDLR* conshdlr;

@@ -114,7 +114,7 @@ struct SCIP_Conshdlr
    SCIP_Longint          nenfopscalls;       /**< number of times, the pseudo enforcer was called */
    SCIP_Longint          npropcalls;         /**< number of times, the propagator was called */
    SCIP_Longint          ncheckcalls;        /**< number of times, the feasibility check was called */
-   SCIP_Longint          nrespropcalls;      /**< number of times, the resolve propagtion was called */
+   SCIP_Longint          nrespropcalls;      /**< number of times, the resolve propagation was called */
    SCIP_Longint          ncutoffs;           /**< number of cutoffs found so far by this constraint handler */
    SCIP_Longint          ncutsfound;         /**< number of cuts found by this constraint handler */
    SCIP_Longint          nconssfound;        /**< number of additional constraints added by this constraint handler */
@@ -128,7 +128,7 @@ struct SCIP_Conshdlr
    SCIP_Real             ageresetavg;        /**< exp. decaying weighted average of constraint ages at moment of age reset */
    char*                 name;               /**< name of constraint handler */
    char*                 desc;               /**< description of constraint handler */
-   SCIP_DECL_CONSHDLRCOPY((*conshdlrcopy));  /**< copy method of constraint handler or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_CONSHDLRCOPY((*conshdlrcopy));  /**< copy method of constraint handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_CONSFREE    ((*consfree));      /**< destructor of constraint handler */
    SCIP_DECL_CONSINIT    ((*consinit));      /**< initialize constraint handler */
    SCIP_DECL_CONSEXIT    ((*consexit));      /**< deinitialize constraint handler */
@@ -157,7 +157,7 @@ struct SCIP_Conshdlr
    SCIP_DECL_CONSCOPY    ((*conscopy));      /**< constraint copying method */
    SCIP_DECL_CONSPARSE   ((*consparse));     /**< constraint parsing method */
    SCIP_CONSHDLRDATA*    conshdlrdata;       /**< constraint handler data */
-   SCIP_CONS**           conss;              /**< array with all transformed constraints, active ones preceed incative
+   SCIP_CONS**           conss;              /**< array with all transformed constraints, active ones preceed inactive
                                               *   ones; a constraint is active if it is global and was not removed
                                               *   during presolving or it was added locally (in that case the local flag
                                               *   is TRUE) and the current node belongs to the corresponding sub tree */
@@ -212,7 +212,7 @@ struct SCIP_Conshdlr
    int                   lastnfixedvars;     /**< number of variables fixed before the last call to the presolver */
    int                   lastnaggrvars;      /**< number of variables aggregated before the last call to the presolver */
    int                   lastnchgvartypes;   /**< number of variable type changes before the last call to the presolver */
-   int                   lastnchgbds;        /**< number of variable bounds tightend before the last call to the presolver */
+   int                   lastnchgbds;        /**< number of variable bounds tightened before the last call to the presolver */
    int                   lastnaddholes;      /**< number of domain holes added before the last call to the presolver */
    int                   lastndelconss;      /**< number of deleted constraints before the last call to the presolver */
    int                   lastnaddconss;      /**< number of added constraints before the last call to the presolver */
@@ -222,7 +222,7 @@ struct SCIP_Conshdlr
    int                   nfixedvars;         /**< total number of variables fixed by this presolver */
    int                   naggrvars;          /**< total number of variables aggregated by this presolver */
    int                   nchgvartypes;       /**< total number of variable type changes by this presolver */
-   int                   nchgbds;            /**< total number of variable bounds tightend by this presolver */
+   int                   nchgbds;            /**< total number of variable bounds tightened by this presolver */
    int                   naddholes;          /**< total number of domain holes added by this presolver */
    int                   ndelconss;          /**< total number of deleted constraints by this presolver */
    int                   naddconss;          /**< total number of added constraints by this presolver */

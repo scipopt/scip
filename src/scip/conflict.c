@@ -17,68 +17,66 @@
  * @brief  methods and datastructures for conflict analysis
  * @author Tobias Achterberg
  *
- * The following description of the algorithm is outdated! We now also use bound changes
- * of non-binary variables in the conflict sets.
- *
- *@todo update conflict analysis description
- *
  * This file implements a conflict analysis method like the one used in modern
  * SAT solvers like zchaff. The algorithm works as follows:
  *
- * Given is a set of bound changes that are not allowed being applied simultaneously,
- * because they render the current node infeasible (e.g. because a single constraint
- * is infeasible in the these bounds, or because the LP relaxation is infeasible).
- * The goal is to deduce a clause on binary variables -- a conflict clause -- representing
- * the "reason" for this conflict, i.e. the branching decisions or the deductions
- * (applied e.g. in domain propagation) that lead to the conflict. This clause
- * can then be added to the constraint set to help cutting off similar parts
- * of the branch and bound tree, that would lead to the same conflict.
- * A conflict clause can also be generated, if the conflict was detected by a
- * locally valid constraint. In this case, the resulting conflict clause is
- * also locally valid in the same depth as the conflict detecting constraint.
+ * Given is a set of bound changes that are not allowed being applied simultaneously, because they
+ * render the current node infeasible (e.g. because a single constraint is infeasible in the these
+ * bounds, or because the LP relaxation is infeasible).  The goal is to deduce a clause on variables
+ * -- a conflict clause -- representing the "reason" for this conflict, i.e., the branching decisions
+ * or the deductions (applied e.g. in domain propagation) that lead to the conflict. This clause can
+ * then be added to the constraint set to help cutting off similar parts of the branch and bound
+ * tree, that would lead to the same conflict.  A conflict clause can also be generated, if the
+ * conflict was detected by a locally valid constraint. In this case, the resulting conflict clause
+ * is also locally valid in the same depth as the conflict detecting constraint. If all involved
+ * variables are binary, a linear (set covering) constraint can be generated, otherwise a bound
+ * disjunction constraint is generated. Details are given in
  *
- *  1. Put all the given bound changes to a priority queue, which is ordered,
+ * Tobias Achterberg, Conflict Analysis in Mixed Integer Programming@n
+ * Discrete Optimization, 4, 4-20 (2007)
+ *
+ * See also @ref CONF. Here is an outline of the algorithm:
+ *
+ * -#  Put all the given bound changes to a priority queue, which is ordered,
  *     such that the bound change that was applied last due to branching or deduction
  *     is at the top of the queue. The variables in the queue are always active
- *     problem variables. Because non-binary variables must not exist in the final
- *     conflict clause, they are resolved first and put on the priority queue prior
- *     to the binary variables.
- *     Create an empty conflict set.
- *  2. Remove the top bound change b from the priority queue.
- *  3. (a) If the remaining queue is non-empty, and bound change b' (the one that is now
+ *     problem variables. Because binary variables are prefered over general integer 
+ *     variables, integer variables are put on the priority queue prior to the binary 
+ *     variables. Create an empty conflict set.
+ * -#  Remove the top bound change b from the priority queue.
+ * -#  Perform the following case distinction:
+ *     -#  If the remaining queue is non-empty, and bound change b' (the one that is now
  *         on the top of the queue) was applied at the same depth level as b, and if
  *         b was a deduction with known inference reason, and if the inference constraint's
  *         valid depth is smaller or equal to the conflict detecting constraint's valid
  *         depth:
- *          - Resolve bound change b by asking the constraint that infered the
+ *          - Resolve bound change b by asking the constraint that inferred the
  *            bound change to put all the bound changes on the priority queue, that
  *            lead to the deduction of b.
  *            Note that these bound changes have at most the same inference depth
  *            level as b, and were deduced earlier than b.
- *     (b) Otherwise, the bound change b was a branching decision or a deduction with
+ *     -#  Otherwise, the bound change b was a branching decision or a deduction with
  *         missing inference reason, or the inference constraint's validity is more local
  *         than the one of the conflict detecing constraint.
- *          - If b was a bound change on a non-binary variable, abort -- unresolved
- *            bound changes on non-binary variables cannot be handled, because the
- *            final conflict set must consist of only binary variables.
- *          - Otherwise, put the binary variable that was changed, or the negation of it
- *            into the conflict set, depending on which of them is currently fixed to
+ *          - If a the bound changed corresponds to a binary variable, add it or its 
+ *            negation to the conflict set, depending on which of them is currently fixed to
  *            FALSE (i.e., the conflict set consists of literals that cannot be FALSE
  *            altogether at the same time).
- *            Note that if the bound change was a branching, all deduced bound changes
- *            remaining in the priority queue have smaller inference depth level than b,
- *            since deductions are always applied after the branching decisions. However,
- *            there is the possibility, that b was a deduction, where the inference
- *            reason was not given or the inference constraint was too local.
- *            With this lack of information, we must treat the deduced bound change like
- *            a branching, and there may exist other deduced bound changes of the same
- *            inference depth level in the priority queue.
- *  4. If priority queue is non-empty, goto step 2.
- *  5. The conflict set represents the conflict clause saying that at least one
- *     of the binary conflict variables must be set to TRUE.
- *     The conflict set is then passed to the conflict handlers, that may create
- *     a corresponding constraint (e.g. a logicor constraint) out of these conflict
- *     variables and add it to the problem.
+ *          - Otherwise put the bound change iinto the conflict set.
+ *         Note that if the bound change was a branching, all deduced bound changes
+ *         remaining in the priority queue have smaller inference depth level than b,
+ *         since deductions are always applied after the branching decisions. However,
+ *         there is the possibility, that b was a deduction, where the inference
+ *         reason was not given or the inference constraint was too local.
+ *         With this lack of information, we must treat the deduced bound change like
+ *         a branching, and there may exist other deduced bound changes of the same
+ *         inference depth level in the priority queue.
+ * -#  If priority queue is non-empty, goto step 2.
+ * -#  The conflict set represents the conflict clause saying that at least one
+ *     of the conflict variables must take a different value. The conflict set is then passed
+ *     to the conflict handlers, that may create a corresponding constraint (e.g. a logicor 
+ *     constraint or bound disjunction constraint) out of these conflict variables and 
+ *     add it to the problem.
  *
  * If all deduced bound changes come with (global) inference information, depending on
  * the conflict analyzing strategy, the resulting conflict set has the following property:
@@ -394,7 +392,7 @@ SCIP_RETCODE SCIPconflicthdlrCreate(
    const char*           name,               /**< name of conflict handler */
    const char*           desc,               /**< description of conflict handler */
    int                   priority,           /**< priority of the conflict handler */
-   SCIP_DECL_CONFLICTCOPY((*conflictcopy)),  /**< copy method of conflict handler or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_CONFLICTCOPY((*conflictcopy)),  /**< copy method of conflict handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_CONFLICTFREE((*conflictfree)),  /**< destructor of conflict handler */
    SCIP_DECL_CONFLICTINIT((*conflictinit)),  /**< initialize conflict handler */
    SCIP_DECL_CONFLICTEXIT((*conflictexit)),  /**< deinitialize conflict handler */
@@ -459,7 +457,7 @@ SCIP_RETCODE SCIPconflicthdlrFree(
    return SCIP_OKAY;
 }
 
-/** calls init method of conflict handler */
+/** calls initialization method of conflict handler */
 SCIP_RETCODE SCIPconflicthdlrInit(
    SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -1104,7 +1102,7 @@ SCIP_RETCODE conflictInsertConflictset(
    assert((*conflictset)->validdepth <= (*conflictset)->insertdepth);
    assert(set->conf_allowlocal || (*conflictset)->validdepth == 0);
 
-   /* calculate conflict and repropatation depth */
+   /* calculate conflict and repropagation depth */
    conflictsetCalcConflictDepth(*conflictset);
 
    /* if we apply repropagations, the conflict set should be inserted at most at its repropdepth */
@@ -3163,15 +3161,15 @@ SCIP_RETCODE ensureCandsSize(
  *  variable can relaxed to global bounds immediately without increasing the proof's activity;
  *  the candidates are sorted with respect to the following two criteria:
  *  - prefer bound changes that have been applied deeper in the tree, to get a more global conflict
- *  - prefer variables with small farkas coefficient to get rid of as many bound changes as possible
+ *  - prefer variables with small Farkas coefficient to get rid of as many bound changes as possible
  */
 static
 SCIP_RETCODE addCand(
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   currentdepth,       /**< current depth in the tree */
    SCIP_VAR*             var,                /**< variable to add to candidate array */
-   int                   lbchginfopos,       /**< positions of currently active lower bound change infos in variable's array */
-   int                   ubchginfopos,       /**< positions of currently active upper bound change infos in variable's array */
+   int                   lbchginfopos,       /**< positions of currently active lower bound change information in variable's array */
+   int                   ubchginfopos,       /**< positions of currently active upper bound change information in variable's array */
    SCIP_Real             proofcoef,          /**< coefficient of variable in infeasibility/bound proof */
    SCIP_Real             prooflhs,           /**< left hand side of infeasibility/bound proof */
    SCIP_Real             proofact,           /**< activity of infeasibility/bound proof row */
@@ -3332,7 +3330,7 @@ void skipRedundantBdchginfos(
    }
 }
 
-/** undos bound changes on variables, still leaving the given infeasibility proof valid */
+/** undoes bound changes on variables, still leaving the given infeasibility proof valid */
 static
 SCIP_RETCODE undoBdchgsProof(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -3343,8 +3341,8 @@ SCIP_RETCODE undoBdchgsProof(
    SCIP_Real             proofact,           /**< current activity of proof */
    SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables */
    SCIP_Real*            curvarubs,          /**< current upper bounds of active problem variables */
-   int*                  lbchginfoposs,      /**< positions of currently active lower bound change infos in variables' arrays */
-   int*                  ubchginfoposs,      /**< positions of currently active upper bound change infos in variables' arrays */
+   int*                  lbchginfoposs,      /**< positions of currently active lower bound change information in variables' arrays */
+   int*                  ubchginfoposs,      /**< positions of currently active upper bound change information in variables' arrays */
    int**                 bdchginds,          /**< pointer to bound change index array, or NULL */
    SCIP_Real**           bdchgoldlbs,        /**< pointer to bound change old lower bounds array, or NULL */
    SCIP_Real**           bdchgoldubs,        /**< pointer to bound change old upper bounds array, or NULL */
@@ -3528,7 +3526,7 @@ SCIP_RETCODE undoBdchgsProof(
 /* because calculations might cancel out some values, we stop the infeasibility analysis if a value is bigger than
  * 2^53 = 9007199254740992
  */
-#define NUMSTOP 9007199254740992
+#define NUMSTOP 9007199254740992.0
 
 /** analyzes an infeasible LP and undoes additional bound changes while staying infeasible */
 static
@@ -3539,8 +3537,8 @@ SCIP_RETCODE undoBdchgsDualfarkas(
    int                   currentdepth,       /**< current depth in the tree */
    SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables */
    SCIP_Real*            curvarubs,          /**< current upper bounds of active problem variables */
-   int*                  lbchginfoposs,      /**< positions of currently active lower bound change infos in variables' arrays */
-   int*                  ubchginfoposs,      /**< positions of currently active upper bound change infos in variables' arrays */
+   int*                  lbchginfoposs,      /**< positions of currently active lower bound change information in variables' arrays */
+   int*                  ubchginfoposs,      /**< positions of currently active upper bound change information in variables' arrays */
    int**                 bdchginds,          /**< pointer to bound change index array, or NULL */
    SCIP_Real**           bdchgoldlbs,        /**< pointer to bound change old lower bounds array, or NULL */
    SCIP_Real**           bdchgoldubs,        /**< pointer to bound change old upper bounds array, or NULL */
@@ -3600,16 +3598,16 @@ SCIP_RETCODE undoBdchgsDualfarkas(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &farkascoefs, nvars) );
 
    /* if solve for some reason did not produce a dual ray, e.g. because of numerical instabilities, abort conflict analysis */
-   if ( ! SCIPlpiHasDualRay(lpi) )
+   if( ! SCIPlpiHasDualRay(lpi) )
       goto TERMINATE;
 
-   /* get dual farkas values of rows */
+   /* get dual Farkas values of rows */
    retcode = SCIPlpiGetDualfarkas(lpi, dualfarkas);
    if( retcode == SCIP_LPERROR ) /* on an error in the LP solver, just abort the conflict analysis */
       goto TERMINATE;
    SCIP_CALL( retcode );
 
-   /* calculate the farkas row */
+   /* calculate the Farkas row */
    BMSclearMemoryArray(farkascoefs, nvars);
    farkaslhs = 0.0;
    for( r = 0; r < nrows; ++r )
@@ -3620,7 +3618,7 @@ SCIP_RETCODE undoBdchgsDualfarkas(
       assert(row->len == 0 || row->vals != NULL);
       assert(row == lp->lpirows[r]);
 
-      /* ignore local rows and rows with farkas value 0.0 */
+      /* ignore local rows and rows with Farkas value 0.0 */
       if( !row->local && !SCIPsetIsZero(set, dualfarkas[r]) )
       {
 #ifndef NDEBUG
@@ -3636,10 +3634,10 @@ SCIP_RETCODE undoBdchgsDualfarkas(
          }
 #endif
 
-         /* add row side to farkas row lhs: dualfarkas > 0 -> lhs, dualfarkas < 0 -> rhs */
+         /* add row side to Farkas row lhs: dualfarkas > 0 -> lhs, dualfarkas < 0 -> rhs */
          if( dualfarkas[r] > 0.0 )
          {
-            /* check if sign of dual farkas value is valid */
+            /* check if sign of dual Farkas value is valid */
             if( SCIPsetIsInfinity(set, -row->lhs) )
                continue;
 
@@ -3651,7 +3649,7 @@ SCIP_RETCODE undoBdchgsDualfarkas(
          }
          else
          {
-            /* check if sign of dual farkas value is valid */
+            /* check if sign of dual Farkas value is valid */
             if( SCIPsetIsInfinity(set, row->rhs) )
                continue;
 
@@ -3668,7 +3666,7 @@ SCIP_RETCODE undoBdchgsDualfarkas(
          if( REALABS(farkaslhs) > NUMSTOP )
             goto TERMINATE;
 
-         /* add row coefficients to farkas row */
+         /* add row coefficients to Farkas row */
          for( i = 0; i < row->len; ++i )
          {
             v = SCIPvarGetProbindex(SCIPcolGetVar(row->cols[i]));
@@ -3679,27 +3677,23 @@ SCIP_RETCODE undoBdchgsDualfarkas(
 #ifdef SCIP_DEBUG
       else if( !SCIPsetIsZero(set, dualfarkas[r]) )
       {
-         SCIPdebugMessage(" -> ignoring %s row <%s> with dual farkas value %.10f (lhs=%g, rhs=%g)\n",
+         SCIPdebugMessage(" -> ignoring %s row <%s> with dual Farkas value %.10f (lhs=%g, rhs=%g)\n",
             row->local ? "local" : "global", SCIProwGetName(row), dualfarkas[r],
             row->lhs - row->constant, row->rhs - row->constant);
       }
 #endif
    }
 
-   /* calculate the current farkas activity, always using the best bound w.r.t. the farkas coefficient */
+   /* calculate the current Farkas activity, always using the best bound w.r.t. the Farkas coefficient */
    farkasact = 0.0;
    for( v = 0; v < nvars; ++v )
    {
       var = vars[v];
       assert(SCIPvarGetProbindex(var) == v);
 
-      /* ignore coefs close to 0.0 */
+      /* ignore coefficients close to 0.0 */
       if( SCIPsetIsZero(set, farkascoefs[v]) )
-      {
-         /*debugMessage(" -> ignoring zero farkas coefficient <%s> [%g,%g]: %.10f\n",
-           SCIPvarGetName(var), curvarlbs[v], curvarubs[v], farkascoefs[v]);*/
          farkascoefs[v] = 0.0;
-      }
       else if( farkascoefs[v] > 0.0 )
       {
          assert((SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN && SCIPcolGetLPPos(SCIPvarGetCol(var)) >= 0)
@@ -3723,7 +3717,7 @@ SCIP_RETCODE undoBdchgsDualfarkas(
    }
    SCIPdebugMessage(" -> farkaslhs=%g, farkasact=%g\n", farkaslhs, farkasact);
 
-   /* check, if the farkas row is still violated (using current bounds and ignoring local rows) */
+   /* check, if the Farkas row is still violated (using current bounds and ignoring local rows) */
    if( SCIPsetIsFeasGT(set, farkaslhs, farkasact) )
    {
       /* undo bound changes while keeping the infeasibility proof valid */
@@ -3757,8 +3751,8 @@ SCIP_RETCODE undoBdchgsDualsol(
    int                   currentdepth,       /**< current depth in the tree */
    SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables */
    SCIP_Real*            curvarubs,          /**< current upper bounds of active problem variables */
-   int*                  lbchginfoposs,      /**< positions of currently active lower bound change infos in variables' arrays */
-   int*                  ubchginfoposs,      /**< positions of currently active upper bound change infos in variables' arrays */
+   int*                  lbchginfoposs,      /**< positions of currently active lower bound change information in variables' arrays */
+   int*                  ubchginfoposs,      /**< positions of currently active upper bound change information in variables' arrays */
    int**                 bdchginds,          /**< pointer to bound change index array, or NULL */
    SCIP_Real**           bdchgoldlbs,        /**< pointer to bound change old lower bounds array, or NULL */
    SCIP_Real**           bdchgoldubs,        /**< pointer to bound change old upper bounds array, or NULL */
@@ -3972,8 +3966,6 @@ SCIP_RETCODE undoBdchgsDualsol(
             goto TERMINATE;
          dualact += dualcoefs[v] * curvarlbs[v];
       }
-      /*debugMessage(" -> col <%s> [%g,%g]: redcost=%g, coef=%g -> activity=%g\n",
-        SCIPvarGetName(var), curvarlbs[v], curvarubs[v], varredcosts[v], dualcoefs[v], dualact);*/
    }
    SCIPdebugMessage(" -> final dual values: lhs=%g, act=%g\n", duallhs, dualact);
 
@@ -4012,8 +4004,8 @@ SCIP_RETCODE conflictAnalyzeRemainingBdchgs(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_Bool             diving,             /**< are we in strong branching or diving mode? */
-   int*                  lbchginfoposs,      /**< positions of currently active lower bound change infos in variables' arrays */
-   int*                  ubchginfoposs,      /**< positions of currently active upper bound change infos in variables' arrays */
+   int*                  lbchginfoposs,      /**< positions of currently active lower bound change information in variables' arrays */
+   int*                  ubchginfoposs,      /**< positions of currently active upper bound change information in variables' arrays */
    int*                  nconss,             /**< pointer to store the number of generated conflict constraints */
    int*                  nliterals,          /**< pointer to store the number of literals in generated conflict constraints */
    int*                  nreconvconss,       /**< pointer to store the number of generated reconvergence constraints */
@@ -5009,7 +5001,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
 
          SCIPdebugMessage("analyzing conflict on infeasible downwards strongbranch for variable <%s>[%g,%g] in depth %d\n",
             SCIPvarGetName(SCIPcolGetVar(col)), SCIPvarGetLbLocal(SCIPcolGetVar(col)), SCIPvarGetUbLocal(SCIPcolGetVar(col)), 
-	    SCIPtreeGetCurrentDepth(tree));
+            SCIPtreeGetCurrentDepth(tree));
 
          conflict->nsbcalls++;
 
@@ -5070,7 +5062,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
 
          SCIPdebugMessage("analyzing conflict on infeasible upwards strongbranch for variable <%s>[%g,%g] in depth %d\n",
             SCIPvarGetName(SCIPcolGetVar(col)), SCIPvarGetLbLocal(SCIPcolGetVar(col)), SCIPvarGetUbLocal(SCIPcolGetVar(col)), 
-	    SCIPtreeGetCurrentDepth(tree));
+            SCIPtreeGetCurrentDepth(tree));
 
          conflict->nsbcalls++;
 

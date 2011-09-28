@@ -402,7 +402,7 @@ SCIP_RETCODE paramCopyBool(
    assert(sourceparam != NULL);
    assert(targetparam != NULL);
 
-   /* gett value of source parameter and copy it to target parameter */
+   /* get value of source parameter and copy it to target parameter */
    value = SCIPparamGetBool(sourceparam);
    SCIP_CALL( SCIPparamSetBool(targetparam, targetscip, value, TRUE) );
 
@@ -959,12 +959,12 @@ SCIP_RETCODE SCIPparamSetString(
    if( param->data.stringparam.valueptr != NULL )
    {
       BMSfreeMemoryArrayNull(param->data.stringparam.valueptr);
-      BMSduplicateMemoryArray(param->data.stringparam.valueptr, value, strlen(value)+1);
+      SCIP_ALLOC( BMSduplicateMemoryArray(param->data.stringparam.valueptr, value, strlen(value)+1) );
    }
    else
    {
       BMSfreeMemoryArrayNull(&param->data.stringparam.curvalue);
-      BMSduplicateMemoryArray(&param->data.stringparam.curvalue, value, strlen(value)+1);
+      SCIP_ALLOC( BMSduplicateMemoryArray(&param->data.stringparam.curvalue, value, strlen(value)+1) );
    }
 
    /* call the parameter's change information method */
@@ -1739,7 +1739,7 @@ SCIP_RETCODE SCIPparamsetAddString(
    return SCIP_OKAY;
 }
 
-/** returns the name of the given paramter type */
+/** returns the name of the given parameter type */
 static
 const char* paramtypeGetName(
    SCIP_PARAMTYPE        paramtype           /**< type of parameter */
@@ -2397,7 +2397,7 @@ SCIP_RETCODE SCIPparamsetWrite(
       file = fopen(filename, "w");
       if( file == NULL )
       {
-	 SCIPerrorMessage("cannot open file <%s> for writing\n", filename);
+         SCIPerrorMessage("cannot open file <%s> for writing\n", filename);
          SCIPprintSysError(filename);
          return SCIP_FILECREATEERROR;
       }
@@ -2408,7 +2408,7 @@ SCIP_RETCODE SCIPparamsetWrite(
    if( comments )
    {
       /* display the SCIP version as comment in the first line */
-#if ( SCIP_SUBVERSION == 0 )
+#if( SCIP_SUBVERSION == 0 )
          SCIPmessageFPrintInfo(file, "# SCIP version %d.%d.%d\n", 
             SCIP_VERSION/100, (SCIP_VERSION/10) % 10, SCIP_VERSION % 10);
 #else
@@ -2420,15 +2420,25 @@ SCIP_RETCODE SCIPparamsetWrite(
    }
    
    /* write the parameters to the file */
+   SCIP_RETCODE retcode;
    for( i = 0; i < paramset->nparams; ++i )
    {
-      SCIP_CALL( paramWrite(paramset->params[i], file, comments, onlychanged) );
+      retcode = paramWrite(paramset->params[i], file, comments, onlychanged);
+      if( retcode != SCIP_OKAY )
+      {
+         if( filename != NULL )
+         {
+            assert(file != NULL);
+            fclose(file);
+         }
+         SCIP_CALL( retcode );
+      }
    }
 
    /* close output file */
    if( filename != NULL )
    {
-      assert(file != NULL);
+      assert(file != NULL);  /*lint !e449*/
       fclose(file);
    }
 
@@ -2503,7 +2513,7 @@ SCIP_RETCODE paramsetSetDefault(
    return SCIP_OKAY;
 }
 
-/** resets parameters changed by other SCIPparamsetSetToHeuristicsXxx functions to their default values */
+/** resets parameters changed by other SCIPparamsetSetToHeuristicsXyz functions to their default values */
 static
 SCIP_RETCODE paramsetSetHeuristicsDefault(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
@@ -2879,7 +2889,7 @@ SCIP_RETCODE paramsetSetPresolvingOff(
    return SCIP_OKAY;
 }
 
-/** reset parameters that may have been changed by other SCIPparamsetSetToSeparatingXxx to their default values */
+/** reset parameters that may have been changed by other SCIPparamsetSetToSeparatingXyz to their default values */
 static
 SCIP_RETCODE paramsetSetSeparatingDefault(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
@@ -3170,35 +3180,23 @@ SCIP_RETCODE paramsetSetSeparatingOff(
 SCIP_RETCODE SCIPparamsetSetEmphasis(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
+   SCIP_PARAMEMPHASIS    paramemphasis,      /**< parameter emphasis */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
    /* reset all parameter to default */
    SCIP_CALL( SCIPparamsetSetToDefaults(paramset, scip) );
       
-   switch( paramsetting )
+   switch( paramemphasis )
    {
-   case SCIP_PARAMSETTING_DEFAULT:
+   case SCIP_PARAMEMPHASIS_DEFAULT:
       /* the default values are already set */
       break;
 
-   case SCIP_PARAMSETTING_COUNTER:
+   case SCIP_PARAMEMPHASIS_COUNTER:
       /* avoid logicor upgrade since the logicor constraint handler does not perform full propagation */ 
       SCIP_CALL( paramSetBool(scip, paramset, "constraints/linear/upgrade/logicor", FALSE, quiet) );
    
-#if 0 /* dual presolving should be no issue since the countsols constraint handler adds a rounding lock to all variables */
-
-      /* turn off dual presolver */
-      SCIP_CALL( paramSetInt(scip, paramset, "presolving/dualfix/maxrounds", 0, quiet) );
-   
-      /* turn off knapsack dual presolving */
-      SCIP_CALL( paramSetBool(scip, paramset, "constraints/knapsack/dualpresolving", FALSE, quiet) );
-   
-      /* turn off linear dual presolving */
-      SCIP_CALL( paramSetBool(scip, paramset, "constraints/linear/dualpresolving", FALSE, quiet) );
-#endif
-
       /* set priority for inference branching to highest possible value */
       SCIP_CALL( paramSetInt(scip, paramset, "branching/inference/priority", INT_MAX/4, quiet) );
  
@@ -3232,7 +3230,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       SCIP_CALL( paramSetInt(scip, paramset, "constraints/agelimit", 1, quiet) );       
       break;
 
-   case SCIP_PARAMSETTING_CPSOLVER:
+   case SCIP_PARAMEMPHASIS_CPSOLVER:
       /* use only first unique implication point */
       SCIP_CALL( paramSetInt(scip, paramset, "conflict/fuiplevels", 1, quiet) );
 
@@ -3242,7 +3240,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       /* perform a restart after 100 conflict analysis calls were successfully */
       SCIP_CALL( paramSetInt(scip, paramset, "conflict/restartnum", 100, quiet) );
 
-      /* do not check pseudo solution (for performance reaseons) */
+      /* do not check pseudo solution (for performance reasons) */
       SCIP_CALL( paramSetBool(scip, paramset, "constraints/disableenfops", TRUE, quiet) );
 
       /* turn of LP relaxation */
@@ -3256,7 +3254,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
 
       break;
 
-   case SCIP_PARAMSETTING_EASYCIP:
+   case SCIP_PARAMEMPHASIS_EASYCIP:
       /* set heuristics to fast, to avoid spending to much time for involved heuristics */
       SCIP_CALL( paramsetSetHeuristicsFast(paramset, scip, quiet) );
 
@@ -3268,7 +3266,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       
       break;
 
-   case SCIP_PARAMSETTING_FEASIBILITY:
+   case SCIP_PARAMEMPHASIS_FEASIBILITY:
       /* set heuristics aggressive */
       SCIP_CALL( paramsetSetHeuristicsAggressive(paramset, scip, quiet) );
       
@@ -3283,7 +3281,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       SCIP_CALL( paramSetInt(scip, paramset, "nodeselection/restartdfs/stdpriority", INT_MAX/4, quiet) );
       break;
 
-   case SCIP_PARAMSETTING_HARDLP:
+   case SCIP_PARAMEMPHASIS_HARDLP:
       /* set heuristics to fast, to avoid heuristics which solve also an LP */
       SCIP_CALL( paramsetSetHeuristicsFast(paramset, scip, quiet) );
 
@@ -3300,7 +3298,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
 
       break;
 
-   case SCIP_PARAMSETTING_OPTIMALITY:
+   case SCIP_PARAMEMPHASIS_OPTIMALITY:
       /* set cuts aggressive */
       SCIP_CALL( paramsetSetSeparatingAggressive(paramset, scip, quiet) );
 
@@ -3313,7 +3311,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       break;
 
    default:
-      SCIPerrorMessage("the parameter setting <%d> is not allowed for emphasis call\n", paramsetting);
+      SCIPerrorMessage("the parameter setting <%d> is not allowed for emphasis call\n", paramemphasis);
       return SCIP_INVALIDCALL;
    }  
    return SCIP_OKAY;
@@ -3536,26 +3534,26 @@ SCIP_RETCODE SCIPparamsetCopyParams(
       /* set value of target parameter to value of source parameter */
       switch( SCIPparamGetType(sourceparamset->params[i]) )
       {
-      case SCIP_PARAMTYPE_BOOL:	
-	 SCIP_CALL( paramCopyBool(sourceparamset->params[i], targetparam, targetscip) );
-	 break;
+      case SCIP_PARAMTYPE_BOOL:
+         SCIP_CALL( paramCopyBool(sourceparamset->params[i], targetparam, targetscip) );
+         break;
 
       case SCIP_PARAMTYPE_INT:
-	 SCIP_CALL( paramCopyInt(sourceparamset->params[i], targetparam, targetscip) );
-	 break;
+         SCIP_CALL( paramCopyInt(sourceparamset->params[i], targetparam, targetscip) );
+         break;
 
       case SCIP_PARAMTYPE_LONGINT:
-	 SCIP_CALL( paramCopyLongint(sourceparamset->params[i], targetparam, targetscip) );
-	 break;
-	 
+         SCIP_CALL( paramCopyLongint(sourceparamset->params[i], targetparam, targetscip) );
+         break;
+         
       case SCIP_PARAMTYPE_REAL:
-	 SCIP_CALL( paramCopyReal(sourceparamset->params[i], targetparam, targetscip) );
-	 break;
-	 
+         SCIP_CALL( paramCopyReal(sourceparamset->params[i], targetparam, targetscip) );
+         break;
+         
       case SCIP_PARAMTYPE_CHAR:
-	 SCIP_CALL( paramCopyChar(sourceparamset->params[i], targetparam, targetscip) );
-	 break;
-	 
+         SCIP_CALL( paramCopyChar(sourceparamset->params[i], targetparam, targetscip) );
+         break;
+         
       case SCIP_PARAMTYPE_STRING:
          /* the vbc parameters are explicitly not copied to avoid that the vbc file of the original SCIP is over
           * written; to avoid that hard coded comparison, each parameter could get a Bool flag which tells if the value
@@ -3564,11 +3562,11 @@ SCIP_RETCODE SCIPparamsetCopyParams(
          {
             SCIP_CALL( paramCopyString(sourceparamset->params[i], targetparam, targetscip) ); 
          }
-	 break;
-	 
+         break;
+         
       default:
-	 SCIPerrorMessage("unknown parameter type\n");
-	 return SCIP_INVALIDDATA;
+         SCIPerrorMessage("unknown parameter type\n");
+         return SCIP_INVALIDDATA;
       }
    }   
   

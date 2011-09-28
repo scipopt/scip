@@ -105,7 +105,7 @@ echo > $EVALFILE
 # counter to define file names for a test set uniquely 
 COUNT=1
 
-for i in `cat $TSTNAME.test` DONE
+for i in `cat testset/$TSTNAME.test` DONE
 do
   if test "$i" = "DONE"
       then
@@ -122,7 +122,7 @@ do
       # 1900 jobs) to submit the next job.
       if test "$NOWAITCLUSTER" != "1"
       then
-	  ./waitcluster.sh 1500 $QUEUE 200
+	  ./waitcluster.sh 1600 $QUEUE 200
       fi
 
       SHORTFILENAME=`basename $i .gz`
@@ -175,8 +175,9 @@ do
 #            echo display solution                  >> $TMPFILE
       echo checksol                          >> $TMPFILE
       echo quit                              >> $TMPFILE
-      
-      qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTFILENAME -v SOLVERPATH=$SCIPPATH,BINNAME=$BINNAME,FILENAME=$i,BASENAME=$FILENAME,CLIENTTMPDIR=$CLIENTTMPDIR -q $QUEUE -o /dev/null -e /dev/null runcluster.sh
+
+# -v to set local variables explicitly -V to copy all environment variables      
+      qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTFILENAME -v SOLVERPATH=$SCIPPATH,BINNAME=$BINNAME,FILENAME=$i,BASENAME=$FILENAME,CLIENTTMPDIR=$CLIENTTMPDIR  -V -q $QUEUE -o /dev/null -e /dev/null runcluster.sh 
   else
       echo "input file "$SCIPPATH/$i" not found!"
   fi

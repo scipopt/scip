@@ -428,15 +428,15 @@ SCIP_RETCODE SCIPpricestoreAddProbVars(
                
                if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
                {
-                  /* The LP was proven infeasible, so we have an infeasibility proof by the dual farkas multipliers y.
+                  /* The LP was proven infeasible, so we have an infeasibility proof by the dual Farkas multipliers y.
                    * The valid inequality  y^T A x >= y^T b  is violated by all x, especially by the (for this
                    * inequality most feasible solution) x' defined by 
                    *    x'_i = ub_i, if y^T A_i > 0
                    *    x'_i = lb_i, if y^T A_i <= 0.
-                   * Pricing in this case means to add variables i with positive farkas value, i.e. y^T A_i x'_i > 0
+                   * Pricing in this case means to add variables i with positive Farkas value, i.e. y^T A_i x'_i > 0
                    */
                   feasibility = -SCIPcolGetFarkasValue(col, stat, lp);
-                  SCIPdebugMessage("  <%s> farkas feasibility: %e\n", SCIPvarGetName(col->var), feasibility);
+                  SCIPdebugMessage("  <%s> Farkas feasibility: %e\n", SCIPvarGetName(col->var), feasibility);
                }
                else
                {

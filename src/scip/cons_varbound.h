@@ -64,7 +64,7 @@ SCIP_RETCODE SCIPcreateConsVarbound(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
@@ -114,7 +114,7 @@ SCIP_Real SCIPgetDualsolVarbound(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
-/** gets the dual farkas value of the variable bound constraint in the current infeasible LP */
+/** gets the dual Farkas value of the variable bound constraint in the current infeasible LP */
 extern
 SCIP_Real SCIPgetDualfarkasVarbound(
    SCIP*                 scip,               /**< SCIP data structure */

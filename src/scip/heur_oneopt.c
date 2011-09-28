@@ -86,10 +86,10 @@ SCIP_Real calcShiftVal(
    shiftval = 0.0;
    shiftdown = TRUE;
 
-   /* determine shifting direction and maximal possible shifting wrt. corresponding bound */
+   /* determine shifting direction and maximal possible shifting w.r.t. corresponding bound */
    if( obj > 0.0 && SCIPisFeasGE(scip, solval - 1.0, lb) )
       shiftval = SCIPfeasFloor(scip, solval - lb);
-   else if ( obj < 0.0 && SCIPisFeasLE(scip, solval + 1.0, ub) )
+   else if( obj < 0.0 && SCIPisFeasLE(scip, solval + 1.0, ub) )
    {
       shiftval = SCIPfeasFloor(scip, ub - solval);
       shiftdown = FALSE;
@@ -326,7 +326,14 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
    /* get problem variables */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
-   nintvars = nbinvars + nintvars;
+   nintvars += nbinvars;
+
+   /* do not run if there are no discrete variables */
+   if( nintvars == 0 )
+   {
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
 
    /* we need to be able to start diving from current node in order to resolve the LP
     * with continuous or implicit integer variables
@@ -339,9 +346,9 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       SCIP_Bool cutoff;
       cutoff = FALSE;
       SCIP_CALL( SCIPconstructLP(scip,&cutoff) );
-      SCIP_CALL( SCIPflushLP(scip) );       
+      SCIP_CALL( SCIPflushLP(scip) ); 
    }
-   
+
    /* we need an LP */
    if( SCIPgetNLPRows(scip) == 0 )
       return SCIP_OKAY;
@@ -524,17 +531,8 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       {
          SCIP_Bool success;
 
-#if 1
          SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, &success) );
-#else
-         /* We have to check the bounds of the work solution since it might be that these are violated w.r.t. to the
-          * "current" global bounds. This can be the case if we shift one variable down and the corresponding
-          * constraint/row which would enforce this shifting to an other variable is deleted due to the "current" global
-          * bounds. Note, that the global bounds change during solution process. It can even happen that the best
-          * solution which we have at hand is not feasible anymore in the current transformed problem.
-          */
-         SCIP_CALL( SCIPtrySol(scip, worksol, TRUE, FALSE, FALSE, &success) );
-#endif
+
          if( success )
          {
             SCIPdebugMessage("found feasible shifted solution:\n");
@@ -579,7 +577,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          SCIPdebugMessage(" -> old LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
 
          /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
-          * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+          * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
           */
 #ifdef NDEBUG
          retstat = SCIPsolveDiveLP(scip, -1, &lperror);
@@ -590,7 +588,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 #else
          SCIP_CALL( SCIPsolveDiveLP(scip, -1, &lperror) );
 #endif
-         
+
          SCIPdebugMessage(" -> new LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
          SCIPdebugMessage(" -> error=%u, status=%d\n", lperror, SCIPgetLPSolstat(scip));
 
@@ -598,20 +596,11 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          if( !lperror && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
          {
             SCIP_Bool success;
+
             /* copy the current LP solution to the working solution */
             SCIP_CALL( SCIPlinkLPSol(scip, worksol) );
-
-#if 1
             SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, &success) );
-#else
-            /* We have to check the bounds of the work solution since it might be that these are violated w.r.t. to the
-             * "current" global bounds. This can be the case if we shift one variable down and the corresponding
-             * constraint/row which would enforce this shifting to an other variable is deleted due to the "current" global
-             * bounds. Note, that the global bounds change during solution process. It can even happen that the best
-             * solution which we have at hand is not feasible anymore in the current transformed problem.
-             */
-            SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, TRUE, FALSE, FALSE, &success) );
-#endif
+
             /* check solution for feasibility */
             if( success )
             {

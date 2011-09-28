@@ -1120,7 +1120,7 @@ void SCIPhashmapPrintStatistics(
    SCIPmessagePrintInfo("\n");
 }
 
-/** indicates whether an hash map has no entries */
+/** indicates whether a hash map has no entries */
 SCIP_Bool SCIPhashmapIsEmpty(
    SCIP_HASHMAP*      hashmap          /**< hash map */
 )
@@ -1135,7 +1135,7 @@ SCIP_Bool SCIPhashmapIsEmpty(
    return TRUE;
 }
 
-/** gives the number of entries in an hash map */ 
+/** gives the number of entries in a hash map */ 
 int SCIPhashmapGetNEntries(
    SCIP_HASHMAP*      hashmap          /**< hash map */
 )
@@ -1150,7 +1150,7 @@ int SCIPhashmapGetNEntries(
    return count;
 }
 
-/** gives the number of lists (buckets) in an hash map */ 
+/** gives the number of lists (buckets) in a hash map */ 
 int SCIPhashmapGetNLists(
    SCIP_HASHMAP*      hashmap          /**< hash map */
 )
@@ -1160,7 +1160,7 @@ int SCIPhashmapGetNLists(
    return hashmap->nlists;
 }
 
-/** gives a specific list (bucket) in an hash map */
+/** gives a specific list (bucket) in a hash map */
 SCIP_HASHMAPLIST* SCIPhashmapGetList(
    SCIP_HASHMAP*     hashmap,          /**< hash map */
    int               listindex         /**< index of hash map list */
@@ -1186,7 +1186,7 @@ int SCIPhashmapListGetNEntries(
    return count;
 }
 
-/** retrieves origin of given entry in an hash map */ 
+/** retrieves origin of given entry in a hash map */ 
 void* SCIPhashmapListGetOrigin(
    SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
 )
@@ -1196,7 +1196,7 @@ void* SCIPhashmapListGetOrigin(
    return hashmaplist->origin;
 }
 
-/** retrieves image of given entry in an hash map */ 
+/** retrieves image of given entry in a hash map */ 
 void* SCIPhashmapListGetImage(
    SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
 )
@@ -1206,7 +1206,7 @@ void* SCIPhashmapListGetImage(
    return hashmaplist->image;
 }
 
-/** retrieves next entry from given entry in an hash map list, or NULL if at end of list. */ 
+/** retrieves next entry from given entry in a hash map list, or NULL if at end of list. */ 
 SCIP_HASHMAPLIST* SCIPhashmapListGetNext(
    SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
 )
@@ -1216,7 +1216,7 @@ SCIP_HASHMAPLIST* SCIPhashmapListGetNext(
    return hashmaplist->next;
 }
 
-/** removes all entries in an hash map. */ 
+/** removes all entries in a hash map. */ 
 SCIP_RETCODE SCIPhashmapRemoveAll(
    SCIP_HASHMAP*     hashmap           /**< hash map */
 )
@@ -1351,8 +1351,8 @@ SCIP_RETCODE SCIPrealarrayExtend(
          assert(realarray->maxusedidx - realarray->minusedidx + 1 > 0);
 
          BMScopyMemoryArray(&newvals[realarray->minusedidx - newfirstidx],
-            &realarray->vals[realarray->minusedidx - realarray->firstidx],
-            realarray->maxusedidx - realarray->minusedidx + 1);
+            &(realarray->vals[realarray->minusedidx - realarray->firstidx]),
+            realarray->maxusedidx - realarray->minusedidx + 1); /*lint !e866*/
          for( i = realarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
             newvals[i] = 0.0;
       }
@@ -1721,7 +1721,7 @@ SCIP_RETCODE SCIPintarrayExtend(
 
          BMScopyMemoryArray(&newvals[intarray->minusedidx - newfirstidx],
             &intarray->vals[intarray->minusedidx - intarray->firstidx],
-            intarray->maxusedidx - intarray->minusedidx + 1);
+            intarray->maxusedidx - intarray->minusedidx + 1); /*lint !e866*/
          for( i = intarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
             newvals[i] = 0;
       }
@@ -2086,7 +2086,7 @@ SCIP_RETCODE SCIPboolarrayExtend(
 
          BMScopyMemoryArray(&newvals[boolarray->minusedidx - newfirstidx],
             &boolarray->vals[boolarray->minusedidx - boolarray->firstidx],
-            boolarray->maxusedidx - boolarray->minusedidx + 1);
+            boolarray->maxusedidx - boolarray->minusedidx + 1); /*lint !e866*/
          for( i = boolarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
             newvals[i] = FALSE;
       }
@@ -2438,8 +2438,8 @@ SCIP_RETCODE SCIPptrarrayExtend(
          assert(ptrarray->maxusedidx - ptrarray->minusedidx + 1 > 0);
 
          BMScopyMemoryArray(&newvals[ptrarray->minusedidx - newfirstidx],
-            &ptrarray->vals[ptrarray->minusedidx - ptrarray->firstidx],
-            ptrarray->maxusedidx - ptrarray->minusedidx + 1);
+            &(ptrarray->vals[ptrarray->minusedidx - ptrarray->firstidx]),
+            ptrarray->maxusedidx - ptrarray->minusedidx + 1); /*lint !e866*/
          for( i = ptrarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
             newvals[i] = NULL;
       }
@@ -2794,6 +2794,16 @@ void SCIPsort(
 #define SORTTPL_KEYTYPE     void*
 #define SORTTPL_FIELD1TYPE  SCIP_Real
 #define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_PTRCOMP
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortPtrPtrRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     PtrPtrRealInt
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  SCIP_Real
 #define SORTTPL_FIELD3TYPE  int
 #define SORTTPL_PTRCOMP
 #include "scip/sorttpl.c" /*lint !e451*/
@@ -3615,7 +3625,7 @@ void stairmapUpdate(
          *infeasible = TRUE;
 
          /* remove infeasible core */
-         for( ; i >= startpos; --i )
+         for( ; i >= startpos; --i ) /*lint !e445*/
             stairmap->freecapacities[i] += height;
          
          break;
@@ -3771,7 +3781,7 @@ int SCIPstairmapGetEarliestFeasibleStart(
    assert(stairmap->timepoints[pos] <= starttime);
    
    (*infeasible) = TRUE;
-	
+
    while( (*infeasible) && starttime <= ub )
    {
       if( SCIPstairmapIsFeasibleStart(stairmap, starttime, duration, height, &pos) )
@@ -3811,7 +3821,7 @@ int SCIPstairmapGetLatestFeasibleStart(
 {
    int starttime;
    int pos;
-	
+
    assert(stairmap != NULL);
    assert(lb >= 0);
    assert(lb <= ub);
@@ -3828,7 +3838,7 @@ int SCIPstairmapGetLatestFeasibleStart(
    assert(stairmap->timepoints[pos] <= starttime);
    
    (*infeasible) = TRUE;
-	
+
    while( (*infeasible) && starttime >= lb )
    {
       if( SCIPstairmapIsFeasibleStart(stairmap, starttime, duration, height, &pos) )
@@ -3836,15 +3846,12 @@ int SCIPstairmapGetLatestFeasibleStart(
          (*infeasible) = FALSE;
          return starttime;
       }
-    
+      assert(pos >= 0);
+
       /* the core did not fit into the stair map since at time point "pos" not enough capacity is available; 
        * therefore we can proceed with the next time point  */
       assert(stairmap->freecapacities[pos] < height);
-      
-      /* check if we exceed the time point array */
-      if( pos < 0  )
-         break;
-      
+            
       starttime = stairmap->timepoints[pos] - duration;
    }
 
@@ -3895,12 +3902,12 @@ SCIP_Longint SCIPcalcGreComDiv(
    /* if val1 is even, divide it by 2 */
    while( !(val1 & 1) )
    {
-      val1 >>= 1;
+      val1 >>= 1; /*lint !e704*/
       
-      /* if val2 is even too, divide it by 2 and increase t(=number of e */
+      /* if val2 is even too, divide it by 2 and increase t(=number of e) */
       if( !(val2 & 1) )
       {
-         val2 >>= 1;
+         val2 >>= 1; /*lint !e704*/
          ++t;
       }
       /* only val1 can be odd */
@@ -3908,25 +3915,26 @@ SCIP_Longint SCIPcalcGreComDiv(
       {
          /* while val1 is even, divide it by 2 */
          while( !(val1 & 1) )
-            val1 >>= 1;
+            val1 >>= 1; /*lint !e704*/
          
          break;
       }
    }
    /* while val2 is even, divide it by 2 */
    while( !(val2 & 1) )
-      val2 >>= 1;
+      val2 >>= 1; /*lint !e704*/
    
    /* val1 and val 2 are odd */
-   while (val1 != val2)
-      if (val1 > val2)
+   while( val1 != val2 )
+   {
+      if( val1 > val2 )
       {
          val1 -= val2;
          /* val1 is now even, divide it by 2  */
          do 
          {
-            val1 >>= 1;
-         } while ( !(val1 & 1) );
+            val1 >>= 1;   /*lint !e704*/
+         } while( !(val1 & 1) );
       }
       else 
       {
@@ -3934,11 +3942,12 @@ SCIP_Longint SCIPcalcGreComDiv(
          /* val2 is now even, divide it by 2  */
          do 
          {
-            val2 >>= 1;
-         } while ( !(val2 & 1) );
+            val2 >>= 1;  /*lint !e704*/
+         } while( !(val2 & 1) );
       }
+   }
 
-   return (val1 << t);
+   return (val1 << t);  /*lint !e703*/
 }
 
 /** calculates the smallest common multiple of the two given values */
@@ -4349,7 +4358,7 @@ SCIP_Bool SCIPfindSimpleRational(
 
    center = 0.5*(lb+ub);
 
-   /* in order to compute a rational number that is exactly withing the bounds (as the user expects),
+   /* in order to compute a rational number that is exactly within the bounds (as the user expects),
     * we computed the allowed delta with downward rounding, if available
     */
    if( SCIPintervalHasRoundingControl() )
@@ -4552,7 +4561,8 @@ SCIP_RETCODE SCIPgetRandomSubset(
 #endif   
 
    /* draw each element individually */
-   for( i = 0; i < nsubelems; i++ ) 
+   i = 0;
+   while( i < nsubelems )
    {
       int r;
 
@@ -4564,10 +4574,11 @@ SCIP_RETCODE SCIPgetRandomSubset(
       {
          if( subset[i] == subset[j] ) 
          {
-            i--;
+            --i;
             break;
          }
       }
+      ++i;
    }
    return SCIP_OKAY;
 }
@@ -4578,20 +4589,22 @@ SCIP_RETCODE SCIPgetRandomSubset(
  * Strings
  */
 
-/** prints an error message containing of the given string followed by a string describing the current system error; 
-    prefers to use the strerror_r method, which is threadsafe; 
-    on systems where this method does not exist, NO_STRERROR_R should be defined (see INSTALL), 
-    in this case, srerror is used which is not guaranteed to be threadsafe (on SUN-systems, it actually is) */
+/** prints an error message containing of the given string followed by a string describing the current system error;
+ *  prefers to use the strerror_r method, which is threadsafe; on systems where this method does not exist,
+ *  NO_STRERROR_R should be defined (see INSTALL), in this case, srerror is used which is not guaranteed to be
+ *  threadsafe (on SUN-systems, it actually is) 
+ */
 void SCIPprintSysError(
-   const char*                 message             /**< first part of the error message, e.g. the filename */
+   const char*           message             /**< first part of the error message, e.g. the filename */
    )
 {
 #ifdef NO_STRERROR_R
    char* buf;
    buf = strerror(errno);
 #else
-   char buf[1024];
-   (void) strerror_r(errno, buf, 1024);
+   char buf[SCIP_MAXSTRLEN];
+   (void) strerror_r(errno, buf, SCIP_MAXSTRLEN);
+   buf[SCIP_MAXSTRLEN - 1] = '\0';
 #endif
    SCIPmessagePrintError("%s: %s\n", message, buf);
 }
@@ -4640,10 +4653,10 @@ void SCIPescapeString(
 
 /* safe version of snprintf */
 int SCIPsnprintf(
-   char*            t,     /**< target string                  */
-   int              len,   /**< length of t                    */
-   const char*      s,     /**< source string or format string */
-   ...                     /**< further parameters             */
+   char*                 t,                  /**< target string */
+   int                   len,                /**< length of the string to copy */
+   const char*           s,                  /**< source string */
+   ...                                       /**< further parameters */
    )
 {
    va_list ap;
@@ -4667,148 +4680,100 @@ int SCIPsnprintf(
    return n;
 }
 
-enum ExpType
-{
-   EXP_NONE, EXP_UNSIGNED, EXP_SIGNED
-};
-typedef enum ExpType EXPTYPE;
-
-/** returns whether the current character is member of a value string */
-static
-SCIP_Bool isValueChar(
-   char                  c,                  /**< input character */
-   char                  nextc,              /**< next input character */
-   SCIP_Bool             firstchar,          /**< is the given character the first char of the token? */
-   SCIP_Bool*            hasdot,             /**< pointer to update the dot flag */
-   EXPTYPE*              exptype             /**< pointer to update the exponent type */
-   )
-{
-   assert(hasdot != NULL);
-   assert(exptype != NULL);
-
-   if( isdigit(c) )
-      return TRUE;
-   else if( (*exptype == EXP_NONE) && !(*hasdot) && (c == '.') && isdigit(nextc) )
-   {
-      *hasdot = TRUE;
-      return TRUE;
-   }
-   else if( !firstchar && (*exptype == EXP_NONE) && (c == 'e' || c == 'E') )
-   {
-      if( nextc == '+' || nextc == '-' )
-      {
-         *exptype = EXP_SIGNED;
-         return TRUE;
-      }
-      else if( isdigit(nextc) )
-      {
-         *exptype = EXP_UNSIGNED;
-         return TRUE;
-      }
-   }
-   else if( (*exptype == EXP_SIGNED) && (c == '+' || c == '-') )
-   {
-      *exptype = EXP_UNSIGNED;
-      return TRUE;
-   }
-
-   return FALSE;
-}
-
-/** extrat the next token as value */
-SCIP_Bool SCIPstrGetValue(
+/** extract the next token as a double value if it is one; in case no value is parsed the endptr is set to str */
+SCIP_Bool SCIPstrToRealValue(
    const char*           str,                /**< string to search */
-   int                   pos,                /**< position in string to start */
    SCIP_Real*            value,              /**< pointer to store the parsed value */
-   int*                  endpos              /**< pointer to store the final position */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed */
    )
 {
-   char token[SCIP_MAXSTRLEN];
-   SCIP_Bool hasdot;
-   EXPTYPE exptype;
-   
-   exptype = EXP_NONE;
-   hasdot = FALSE;
-   
-   /* truncate white space in front */
-   while( isspace(str[pos]) )
-      pos++;
-   
-   if( isValueChar(str[pos], str[pos+1], TRUE, &hasdot, &exptype) )
-   {
-      double val;
-      char* endptr;
-      int tokenlen;
+   assert(str != NULL);
+   assert(value != NULL);
+   assert(endptr != NULL);
 
-      tokenlen = 0;
-  
-      do
-      {
-         assert(tokenlen < SCIP_MAXSTRLEN);
-         token[tokenlen] = str[pos];
-         tokenlen++;
-         pos++;
-      }
-      while( isValueChar(str[pos], str[pos+1], FALSE, &hasdot, &exptype) );
-   
-      token[tokenlen] = '\0';
-      
-      val = strtod(token, &endptr);
-      
-      if( endptr != token && *endptr == '\0' )
-      {
-         *value = val;
-         return TRUE;
-      }
+   *value = strtod(str, endptr);
+
+   if( *endptr != str && *endptr != NULL )
+   {
+      SCIPdebugMessage("parsed real value <%g>\n", *value);
+      return TRUE;
    }
-   
+   *endptr = (char*)str;
+
+   SCIPdebugMessage("failed parseing real value <%s>\n", str);
+
    return FALSE;
 }
 
-/** copies the string between an start and end character */
+/** copies the first size characters between a start and end character of str into token, if no error occured endptr
+ *  will point to the position after the read part, otherwise it will point to NULL
+ */
 void SCIPstrCopySection(
    const char*           str,                /**< string to search */
-   int                   pos,                /**< position in string to start */
    char                  startchar,          /**< character which defines the beginning */
    char                  endchar,            /**< character which defines the ending */
    char*                 token,              /**< string to store the copy */
    int                   size,               /**< size of the token char array */
-   int*                  endpos              /**< pointer to store the final position */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed,
+                                              *   otherwise str */
    )
 {
-   int len;
+   const char* copystr;
    int nchars;
-  
+
+   assert(str != NULL);
+   assert(token != NULL);
    assert(size > 0);
-   
-   len = strlen(str);
+   assert(endptr != NULL);
+
    nchars = 0;
 
+   copystr = str;
+
    /* find starting character */
-   while( pos < len && str[pos] != startchar )
-      pos++;
-   
+   while( *str != '\0' && *str != startchar )
+      ++str;
+
+   /* did not find start character */
+   if( *str == '\0' )
+   {
+      *endptr = (char*)copystr;
+      return;
+   }
+
    /* skip start character */
-   pos++;
+   ++str;
 
    /* copy string */
-   while( pos < len && nchars < size-1 && str[pos] != endchar )
+   while( *str != '\0' && *str != endchar && nchars < size-1 )
    {
       assert(nchars < SCIP_MAXSTRLEN);
-      token[nchars] = str[pos];
+      token[nchars] = *str;
       nchars++;
-      pos++;
+      ++str;
    }
+
+   /* add end to token */
    token[nchars] = '\0';
-   
-   /* find the position after the end character */
-   while( pos < len && str[pos] != endchar )
-      pos++;
+
+   /* if section was longer than size, we want to reach the end of the parsing section anyway */
+   if( nchars == size )
+      while( *str != '\0' && *str != endchar )
+         ++str;
+
+   /* did not find end character */
+   if( *str == '\0' )
+   {
+      *endptr = (char*)copystr;
+      return;
+   }
 
    /* skip end character */
-   pos++;
+   ++str;
 
-   *endpos = pos;
+   SCIPdebugMessage("parsed section <%s>\n", token);
+
+   *endptr = (char*) str;
 }
 
 /*

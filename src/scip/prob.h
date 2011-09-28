@@ -105,6 +105,8 @@ SCIP_RETCODE SCIPprobTransform(
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
@@ -250,12 +252,18 @@ void SCIPprobSetObjIntegral(
    );
 
 /** sets integral objective value flag, if all variables with non-zero objective values are integral and have 
- *  integral objective value
+ *  integral objective value and also updates the cutoff bound if primal solution is already known
  */
 extern
-void SCIPprobCheckObjIntegral(
+SCIP_RETCODE SCIPprobCheckObjIntegral(
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    );
 
 /** if possible, scales objective function such that it is integral with gcd = 1 */

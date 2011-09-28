@@ -25,6 +25,8 @@
  * \mbox{lhs} \leq \sum_{k=0}^m c_k \cdot x_k  +  \sum_{i=0}^n c_i \cdot \prod_{j \in I_i} x_j \leq \mbox{rhs}
  * \f]
  * where all x are binary and all c are integer
+ *
+ * @todo Add eventhandling.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -58,7 +60,7 @@
 #define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
 
 
-#define DEFAULT_DECOMPOSE          TRUE /**< decompose the pseudo boolean constraint into a "linear" constraint "and" constrainst */
+#define DEFAULT_DECOMPOSE          TRUE /**< decompose the pseudo boolean constraint into a "linear" constraint "and" constraints */
 #define DEFAULT_SEPARATENONLINEAR  TRUE /**< if decomposed, should the nonlinear constraints be separated during LP processing */
 #define DEFAULT_PROPAGATENONLINEAR TRUE /**< if decomposed, should the nonlinear constraints be propagated during node processing */
 #define DEFAULT_REMOVABLENONLINEAR TRUE /**< if decomposed, should the nonlinear constraints be removable */
@@ -69,9 +71,8 @@
  */
 #define HASHSIZE_PSEUDOBOOLEANNONLINEARTERMS 131101 /**< minimal size of hash table in and constraint tables */
 
-/* TODO: add eventhandling */
 
-/* struct used to find fast whether an and-constraint is new or already existing, and to memorise the non-linear parts
+/* struct used to find fast whether an and-constraint is new or already existing, and to memorize the non-linear parts
  * inside the opb constraints */
 struct Term
 {
@@ -103,7 +104,7 @@ struct SCIP_ConsData
    
    SCIP_VAR*             intvar;             /**< a artificial variable which was added only for the objective function,
                                               *   if this variable is not NULL this constraint (without this integer
-                                              *   variable) describes the objective funktion */
+                                              *   variable) describes the objective function */
 
    SCIP_VAR*             indvar;             /**< indicator variable if it's a soft constraint, or NULL */
    SCIP_Real             weight;             /**< weight of the soft constraint, if it is one */
@@ -117,7 +118,9 @@ struct SCIP_ConsData
    unsigned int          changed:1;          /**< was constraint changed since last aggregation round in preprocessing? */
    unsigned int          normalized:1;       /**< is the constraint in normalized form? */
    unsigned int          upgradetried:1;     /**< was the constraint already tried to be upgraded? */
+#if 0
    unsigned int          upgraded:1;         /**< is the constraint upgraded and will it be removed after preprocessing? */
+#endif
    unsigned int          merged:1;           /**< are the constraint's equal linear variables already merged? */
    unsigned int          cliquesadded:1;     /**< were the cliques of the constraint already extracted? */
 };
@@ -126,11 +129,11 @@ struct SCIP_ConsData
 struct SCIP_ConshdlrData
 {
    TERM**                allnonlinterms;     /**< array of nonlinterms terms inside the whole problem */ 
-   int                   nallnonlinterms;    /**< number of nonlinerar terms inside the whole problem */
-   int                   sallnonlinterms;    /**< size for all nonlinerar terms inside the whole problem */
+   int                   nallnonlinterms;    /**< number of nonlinear terms inside the whole problem */
+   int                   sallnonlinterms;    /**< size for all nonlinear terms inside the whole problem */
    SCIP_HASHTABLE*       hashtable;          /**< hash table of the nonlinear terms */
    int                   hashtablesize;      /**< size for hash table of the nonlinear terms */
-   SCIP_Bool             decompose;          /**< decompose the pseudo boolean constraint into a "linear" constraint "and" constrainst */
+   SCIP_Bool             decompose;          /**< decompose the pseudo boolean constraint into a "linear" constraint "and" constraints */
 };
 
 /*
@@ -260,7 +263,7 @@ void sortTerm(
    term->sorted = TRUE;
 }
 
-/** creates constaint handler data for pseudo boolean constraint handler */
+/** creates constraint handler data for pseudo boolean constraint handler */
 static
 SCIP_RETCODE conshdlrdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -294,7 +297,7 @@ static
 SCIP_RETCODE createTerms(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR***           terms,              /**< nonlinear terms of variables, or NULL */
-   SCIP_Real*            coefs,              /**< array with coefficients for the nonlinerar terms */
+   SCIP_Real*            coefs,              /**< array with coefficients for the nonlinear terms */
    int                   nterms,             /**< number of terms of variables of nonlinear term */
    int*                  ntermvars,          /**< number of variables in nonlinear terms, or NULL */
    TERM***               pbterms,            /**< pointer to store all created terms */
@@ -375,18 +378,18 @@ static
 SCIP_RETCODE consdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA**       consdata,           /**< pointer to linear constraint data */
-   SCIP_VAR**            linvars,            /**< array with variables for the linerar terms */
-   SCIP_Real*            lincoefs,           /**< array with coefficients for the linerar terms */
-   int                   nlinvars,           /**< number of linerar terms in the constraint */
+   SCIP_VAR**            linvars,            /**< array with variables for the linear terms */
+   SCIP_Real*            lincoefs,           /**< array with coefficients for the linear terms */
+   int                   nlinvars,           /**< number of linear terms in the constraint */
    TERM**                nonlinterms,        /**< array with nonlinvars terms */
-   SCIP_Real*            nonlincoefs,        /**< array with coefficients for the nonlinerar terms */
-   int                   nnonlinterms,       /**< number of nonlinerar terms in the constraint */
+   SCIP_Real*            nonlincoefs,        /**< array with coefficients for the nonlinear terms */
+   int                   nnonlinterms,       /**< number of nonlinear terms in the constraint */
    SCIP_VAR*             indvar,             /**< indicator variable if it's a soft constraint, or NULL */
    SCIP_Real             weight,             /**< weight of the soft constraint, if it is one */
    SCIP_Bool             issoftcons,         /**< is this a soft constraint */
    SCIP_VAR*             intvar,             /**< a artificial variable which was added only for the objective function,
                                               *   if this variable is not NULL this constraint (without this integer
-                                              *   variable) describes the objective funktion */
+                                              *   variable) describes the objective function */
    SCIP_Real             lhs,                /**< left hand side of row */
    SCIP_Real             rhs                 /**< right hand side of row */
    )
@@ -1074,7 +1077,7 @@ SCIP_RETCODE chgLhs(
    assert(!SCIPisInfinity(scip, lhs));
 
    /* adjust value to not be smaller than -inf */
-   if ( SCIPisInfinity(scip, -lhs) )
+   if( SCIPisInfinity(scip, -lhs) )
       lhs = -SCIPinfinity(scip);
 
    consdata = SCIPconsGetData(cons);
@@ -1245,7 +1248,7 @@ SCIP_RETCODE chgRhs(
    assert(!SCIPisInfinity(scip, -rhs));
 
    /* adjust value to not be larger than inf */
-   if ( SCIPisInfinity(scip, rhs) )
+   if( SCIPisInfinity(scip, rhs) )
       rhs = SCIPinfinity(scip);
 
    consdata = SCIPconsGetData(cons);
@@ -1839,7 +1842,7 @@ SCIP_RETCODE applyFixingsLinear(
       SCIP_Real aggrconst;
       SCIP_Real lhssubtrahend;
       SCIP_Real rhssubtrahend;
-#if 0 /* only for multi-aggegated variables, should not be needed here */
+#if 0 /* only for multi-aggregated variables, should not be needed here */
       SCIP_VAR** aggrvars;
       SCIP_Real* aggrscalars;
       int naggrvars;
@@ -1901,7 +1904,7 @@ SCIP_RETCODE applyFixingsLinear(
             SCIP_CALL( delCoefLinear(scip, cons, v) );
             break;
 
-#if 0 /* binary variables should not be multiaggregated */
+#if 0 /* binary variables should not be multi-aggregated */
          case SCIP_VARSTATUS_MULTAGGR:
             SCIP_CALL( SCIPflattenVarAggregationGraph(scip,var) );
             naggrvars = SCIPvarGetMultaggrNVars(var);
@@ -1919,6 +1922,11 @@ SCIP_RETCODE applyFixingsLinear(
                rhssubtrahend += val * aggrconst;
 
             SCIP_CALL( delCoefLinear(scip, cons, v) );
+            break;
+#else
+         case SCIP_VARSTATUS_MULTAGGR:
+            SCIPerrorMessage("binary variable should not be multi-aggregated\n");
+            SCIPABORT();
             break;
 #endif
          case SCIP_VARSTATUS_NEGATED:
@@ -2045,10 +2053,10 @@ SCIP_RETCODE applyFixingsNonLinear(
          if( fixedval > 0.5 )
          {
             if( !SCIPisInfinity(scip, -consdata->lhs) )
-               lhssubtrahend += val * fixedval;
+               lhssubtrahend += val;
             
             if( !SCIPisInfinity(scip, consdata->rhs) )
-               rhssubtrahend += val * fixedval;
+               rhssubtrahend += val;
 
             for( v = nvars - 1; v >= 0; --v )
             {
@@ -2156,10 +2164,10 @@ SCIP_RETCODE applyFixingsNonLinear(
             delterm = TRUE;
 
             if( !SCIPisInfinity(scip, -consdata->lhs) )
-               lhssubtrahend += val * 1;
+               lhssubtrahend += val;
          
             if( !SCIPisInfinity(scip, consdata->rhs) )
-               rhssubtrahend += val * 1;
+               rhssubtrahend += val;
          }
          
          /* if only one variable is left, convert the non-linear term into a linear part */
@@ -2196,6 +2204,33 @@ SCIP_RETCODE applyFixingsNonLinear(
       }
       else
          ++t;
+   }
+
+   /* update left hand side */
+   if( !SCIPisInfinity(scip, -consdata->lhs) )
+   {
+      if( SCIPisFeasEQ(scip, lhssubtrahend, consdata->lhs ) )
+      {
+         SCIP_CALL( chgLhs(scip, cons, 0.0) );
+      }
+      else
+      {
+         assert(!SCIPisInfinity(scip, consdata->lhs - lhssubtrahend));
+         SCIP_CALL( chgLhs(scip, cons, consdata->lhs - lhssubtrahend) );
+      }
+   }
+   /* update right hand side */
+   if( !SCIPisInfinity(scip, consdata->rhs) )
+   {
+      if( SCIPisFeasEQ(scip, rhssubtrahend, consdata->rhs ) )
+      {
+         SCIP_CALL( chgRhs(scip, cons, 0.0) );
+      }
+      else
+      {
+         assert(!SCIPisInfinity(scip, consdata->rhs - rhssubtrahend));
+         SCIP_CALL( chgRhs(scip, cons, consdata->rhs - rhssubtrahend) );
+      }
    }
 
 #ifndef NDEBUG
@@ -2382,6 +2417,8 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   *result = SCIP_FEASIBLE;
+
    /* decompose all pseudo boolean constraints into a "linear" constraint and "and" constraints */
    if( conshdlrdata->decompose )
    {
@@ -2475,7 +2512,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
             /* first soft constraints for lhs */
             if( !SCIPisInfinity(scip, -lhs) )
             {
-               /* first we are modelling the feasibility of the soft contraint by adding a slack variable */
+               /* first we are modelling the feasibility of the soft constraint by adding a slack variable */
                /* we ensure that if indvar == 1 => (a^T*x + ub*indvar >= lhs) */
                ub = lhs - minact;
 
@@ -2695,7 +2732,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
                   SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), 
                   SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
          
-            /* create all and-constraints and gt all and-resultants */
+            /* create all and-constraints and get all and-resultants */
             SCIP_CALL( createAnds(scip, cons, conshdlr, &andvars, &nandvars) );
             assert(nandvars == 0 || andvars != NULL);
             assert(nandvars == consdata->nnonlinterms);
@@ -3329,7 +3366,7 @@ SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
    /* add pseudoboolean constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/decompose",
-         "decompose the pseudo boolean constraint into a \"linear\" constraint \"and\" constrainst",
+         "decompose the pseudo boolean constraint into a \"linear\" constraint \"and\" constraints",
          &conshdlrdata->decompose, TRUE, DEFAULT_DECOMPOSE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -3347,7 +3384,7 @@ SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
 
 /** creates and captures a pseudoboolean constraint 
  *
- *  @note linear and nonlinerar terms can be added using SCIPaddCoefPseudoboolean() and SCIPaddTermPseudoboolean(),
+ *  @note linear and nonlinear terms can be added using SCIPaddCoefPseudoboolean() and SCIPaddTermPseudoboolean(),
  *        respectively
  */
 SCIP_RETCODE SCIPcreateConsPseudoboolean(
@@ -3366,7 +3403,7 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
    SCIP_Bool             issoftcons,         /**< is this a soft constraint */
    SCIP_VAR*             intvar,             /**< a artificial variable which was added only for the objective function,
                                               *   if this variable is not NULL this constraint (without this integer
-                                              *   variable) describes the objective funktion */
+                                              *   variable) describes the objective function */
    SCIP_Real             lhs,                /**< left hand side of constraint */
    SCIP_Real             rhs,                /**< right hand side of constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
@@ -3386,7 +3423,7 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
@@ -3467,7 +3504,6 @@ SCIP_RETCODE SCIPaddCoefPseudoboolean(
 
 
 /** adds nonlinear term to pseudo boolean constraint (if it is not zero) */
-extern
 SCIP_RETCODE SCIPaddTermPseudoboolean(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */

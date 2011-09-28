@@ -28,7 +28,9 @@
 #include "scip/cons_and.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
+#include "scip/cons_nonlinear.h"
 #include "scip/pub_misc.h"
+#include "scip/debug.h"
 
 
 /* constraint handler properties */
@@ -59,9 +61,9 @@
 
 #define HASHSIZE_ANDCONS         131101 /**< minimal size of hash table in and constraint tables */
 #define DEFAULT_PRESOLUSEHASHING   TRUE /**< should hash table be used for detecting redundant constraints in advance */
-#define NMINCOMPARISONS          200000 /**< number for minimal pairwise presol comparisons */
-#define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presol comparisons to repeat pairwise comparison round */
-
+#define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
+#define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise comparison round */
+#define EXPRGRAPHREFORM_PRIORITY 100000 /**< priority of expression graph node reformulation method */
 
 /*
  * Data structures
@@ -81,7 +83,7 @@ struct SCIP_ConsData
    int                   filterpos1;         /**< event filter position of first watched operator variable */
    int                   filterpos2;         /**< event filter position of second watched operator variable */
    unsigned int          propagated:1;       /**< is constraint already preprocessed/propagated? */
-   unsigned int          nofixedzero:1;      /**< is none of the opereator variables fixed to FALSE? */
+   unsigned int          nofixedzero:1;      /**< is none of the operator variables fixed to FALSE? */
    unsigned int          impladded:1;        /**< were the implications of the constraint already added? */
    unsigned int          opimpladded:1;      /**< was the implication for 2 operands with fixed resultant added? */
    unsigned int          sorted:1;           /**< are the constraint's variables sorted? */
@@ -151,7 +153,7 @@ SCIP_RETCODE unlockRounding(
    return SCIP_OKAY;
 }
 
-/** creates constaint handler data */
+/** creates constraint handler data */
 static
 SCIP_RETCODE conshdlrdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -930,11 +932,11 @@ SCIP_RETCODE addRelaxation(
 
    char rowname[SCIP_MAXSTRLEN];
    
-   /* in the root LP we only add the weaker relaxation which contains of two rows:
+   /* in the root LP we only add the weaker relaxation which consists of two rows:
     *   - one additional row:             resvar - v1 - ... - vn >= 1-n
     *   - aggregated row:               n*resvar - v1 - ... - vn <= 0.0
     *
-    * during separation we separate the stronger relaxation whcih contains of n+1 row:
+    * during separation we separate the stronger relaxation which consists of n+1 row:
     *   - one additional row:             resvar - v1 - ... - vn >= 1-n
     *   - for each operator variable vi:  resvar - vi            <= 0
     */
@@ -1286,7 +1288,7 @@ SCIP_RETCODE propagateCons(
    if( SCIPconsIsModifiable(cons) )
       return SCIP_OKAY;
 
-   /* rules (3) and (4) can not be applied, if we have at least two unfixed variables left;
+   /* rules (3) and (4) cannot be applied, if we have at least two unfixed variables left;
     * that means, we only have to watch (i.e. capture events) of two variables, and switch to other variables
     * if these ones get fixed
     */
@@ -1433,7 +1435,7 @@ SCIP_RETCODE propagateCons(
          /* remove the "and" constraint globally */
          SCIP_CALL( SCIPdelCons(scip, cons) );
 
-	 (*nupgdconss)++;
+         (*nupgdconss)++;
 
          SCIPfreeBufferArray(scip, &consvars);
       }
@@ -1952,6 +1954,126 @@ SCIP_RETCODE preprocessConstraintPairs(
    return SCIP_OKAY;
 }
 
+/** tries to reformulate an expression graph node that is a product of binary variables via introducing an and constraint */
+static
+SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAnd)
+{
+   SCIP_EXPRGRAPHNODE* child;
+   char name[SCIP_MAXSTRLEN];
+   int nchildren;
+   SCIP_CONS* cons;
+   SCIP_VAR** vars;
+   SCIP_VAR* var;
+   int c;
+
+   assert(scip != NULL);
+   assert(exprgraph != NULL);
+   assert(node != NULL);
+   assert(naddcons != NULL);
+   assert(reformnode != NULL);
+
+   *reformnode = NULL;
+
+   /* allow only products given as EXPR_PRODUCT or EXPR_POLYNOMIAL with only 1 monomial */
+   if( SCIPexprgraphGetNodeOperator(node) != SCIP_EXPR_PRODUCT &&
+       (SCIPexprgraphGetNodeOperator(node) != SCIP_EXPR_POLYNOMIAL || SCIPexprgraphGetNodePolynomialNMonomials(node) > 1)
+     )
+      return SCIP_OKAY;
+
+   nchildren = SCIPexprgraphGetNodeNChildren(node);
+
+   /* for a polynomial with only one monomial, all children should appear as factors in the monomial
+    * since we assume that the factors have been merged, this means that the number of factors in the monomial should equal the number of children of the node
+    */
+   assert(SCIPexprgraphGetNodeOperator(node) != SCIP_EXPR_POLYNOMIAL || SCIPexprGetMonomialNFactors(SCIPexprgraphGetNodePolynomialMonomials(node)[0]) == nchildren);
+
+   /* check only products with at least 3 variables (2 variables are taken of by cons_quadratic) */
+   if( nchildren <= 2 )
+      return SCIP_OKAY;
+
+   /* check if all factors correspond to binary variables, and if so, setup vars array */
+   for( c = 0; c < nchildren; ++c )
+   {
+      child = SCIPexprgraphGetNodeChildren(node)[c];
+
+      if( SCIPexprgraphGetNodeOperator(child) != SCIP_EXPR_VARIDX )
+         return SCIP_OKAY;
+
+      var = (SCIP_VAR*)SCIPexprgraphGetNodeVar(exprgraph, child);
+      if( !SCIPvarIsBinary(var) )
+         return SCIP_OKAY;
+   }
+
+   /* node corresponds to product of binary variables (maybe with coefficient and constant, if polynomial) */
+   SCIPdebugMessage("reformulate node %p via and constraint\n", (void*)node);
+
+   /* collect variables in product */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nchildren) );
+   for( c = 0; c < nchildren; ++c )
+   {
+      child = SCIPexprgraphGetNodeChildren(node)[c];
+      vars[c] = (SCIP_VAR*)SCIPexprgraphGetNodeVar(exprgraph, child);
+   }
+
+   /* create variable for resultant
+    * cons_and wants to add implications for resultant, which is only possible for binary variables currently
+    * so choose binary as vartype, even though implicit integer had been sufficient
+    */
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nlreform%dand", *naddcons);
+   SCIP_CALL( SCIPcreateVar(scip, &var, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY,
+      TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPaddVar(scip, var) );
+
+#ifdef SCIP_DEBUG_SOLUTION
+   {
+      SCIP_Bool debugval;
+      SCIP_Real varval;
+
+      debugval = TRUE;
+      for( c = 0; c < nchildren; ++c )
+      {
+         SCIP_CALL( SCIPdebugGetSolVal(scip, vars[c], &varval) );
+         debugval = debugval && (varval > 0.5);
+      }
+      SCIP_CALL( SCIPdebugAddSolVal(var, debugval ? 1.0 : 0.0) );
+   }
+#endif
+
+   /* create and constraint */
+   SCIP_CALL( SCIPcreateConsAnd(scip, &cons, name, var, nchildren, vars,
+      TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   ++*naddcons;
+
+   SCIPfreeBufferArray(scip, &vars);
+
+   /* add var to exprgraph */
+   SCIP_CALL( SCIPexprgraphAddVars(exprgraph, 1, (void**)&var, reformnode) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var) );
+
+   /* if we have coefficient and constant, then replace reformnode by linear expression in reformnode */
+   if( SCIPexprgraphGetNodeOperator(node) == SCIP_EXPR_POLYNOMIAL )
+   {
+      SCIP_Real coef;
+      SCIP_Real constant;
+
+      coef = SCIPexprGetMonomialCoef(SCIPexprgraphGetNodePolynomialMonomials(node)[0]);
+      constant = SCIPexprgraphGetNodePolynomialConstant(node);
+
+      if( coef != 1.0 || constant != 0.0 )
+      {
+         SCIP_EXPRGRAPHNODE* linnode;
+         SCIP_CALL( SCIPexprgraphCreateNodeLinear(SCIPblkmem(scip), &linnode, 1, &coef, constant) );
+         SCIP_CALL( SCIPexprgraphAddNode(exprgraph, linnode, -1, 1, reformnode) );
+         *reformnode = linnode;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of constraint handler
  */
@@ -2435,7 +2557,7 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
       SCIP_CALL( propagateCons(scip, cons, conshdlrdata->eventhdlr, &cutoff, nfixedvars, nupgdconss) );
 
       /* remove all variables that are fixed to one; merge multiple entries of the same variable;
-       * fix resuntant to zero if a pair of negated variables is contained in the operand variables
+       * fix resultant to zero if a pair of negated variables is contained in the operand variables
        */
       if( !cutoff && !SCIPconsIsDeleted(cons) )
       {
@@ -2507,43 +2629,43 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
    {
       if( *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars )
       {
-	 if( firstchange < nconss ) 
-	 {
-	    /* detect redundant constraints; fast version with hash table instead of pairwise comparison */
-	    SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &firstchange, &cutoff, naggrvars, ndelconss) );
+         if( firstchange < nconss ) 
+         {
+            /* detect redundant constraints; fast version with hash table instead of pairwise comparison */
+            SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &firstchange, &cutoff, naggrvars, ndelconss) );
             oldnaggrvars = *naggrvars;
-	 }
+         }
       }
       else
-	 delay = TRUE;
+         delay = TRUE;
    }
 
    if( !cutoff && conshdlrdata->presolpairwise )
    {
       if( *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars )
       {
-	 SCIP_Longint npaircomparisons;
-	 npaircomparisons = 0;
-	 oldndelconss = *ndelconss;
+         SCIP_Longint npaircomparisons;
+         npaircomparisons = 0;
+         oldndelconss = *ndelconss;
          
          for( c = firstchange; c < nconss && !cutoff && !SCIPisStopped(scip); ++c )
          {
             if( SCIPconsIsActive(conss[c]) && !SCIPconsIsModifiable(conss[c]) )
             {
-               npaircomparisons += (SCIPconsGetData(conss[c])->changed) ? c : (c - firstchange);
+               npaircomparisons += ((SCIPconsGetData(conss[c])->changed) ? (SCIP_Longint) c : ((SCIP_Longint) c - (SCIP_Longint) firstchange));
                
                SCIP_CALL( preprocessConstraintPairs(scip, conss, firstchange, c,
                                                     &cutoff, naggrvars, nchgbds, ndelconss) );
                
                if( npaircomparisons > NMINCOMPARISONS )
                {
-		  if( ((*ndelconss - oldndelconss) + (*naggrvars - oldnaggrvars) + (*nchgbds - oldnchgbds)/2) / (npaircomparisons + 0.0) < MINGAINPERNMINCOMPARISONS )
+                  if( ((*ndelconss - oldndelconss) + (*naggrvars - oldnaggrvars) + (*nchgbds - oldnchgbds)/2.0) / ((SCIP_Real) npaircomparisons) < MINGAINPERNMINCOMPARISONS )
                      break;
-		  oldndelconss = *ndelconss;
+                  oldndelconss = *ndelconss;
                   oldnaggrvars = *naggrvars;
                   oldnchgbds = *nchgbds;
 
-		  npaircomparisons = 0;
+                  npaircomparisons = 0;
                }
             }
          }
@@ -2558,7 +2680,7 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
    else if( delay )
       *result = SCIP_DELAYED;
    else if( *nfixedvars > oldnfixedvars || *naggrvars > oldnaggrvars || *nchgbds > oldnchgbds
-	    || *ndelconss > oldndelconss || *nupgdconss > oldnupgdconss )
+            || *ndelconss > oldndelconss || *nupgdconss > oldnupgdconss )
       *result = SCIP_SUCCESS;
    else
       *result = SCIP_DIDNOTFIND;
@@ -2698,17 +2820,16 @@ SCIP_DECL_CONSPARSE(consParseAnd)
 {  /*lint --e{715}*/
    SCIP_VAR** vars;
    SCIP_VAR* resvar;
+   char* endptr;
    int requiredsize;
    int varssize;
    int nvars;
-   int pos;
    
-   SCIPdebugMessage("pasre <%s> as and constraint\n", str);
-
-   pos = 0;
+   SCIPdebugMessage("parse <%s> as and constraint\n", str);
 
    /* parse variable name */ 
-   SCIP_CALL( SCIPparseVarName(scip, str, pos, &resvar, &pos) );
+   SCIP_CALL( SCIPparseVarName(scip, str, &resvar, &endptr) );
+   str = endptr;
 
    if( resvar == NULL )
    {
@@ -2723,9 +2844,10 @@ SCIP_DECL_CONSPARSE(consParseAnd)
       /* allocate buffer array for variables */
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
 
-      /* pasre string */
-      SCIP_CALL( SCIPparseVarsList(scip, str, pos, vars, &nvars, varssize, &requiredsize, &pos, ',', success) );
-   
+      /* parse string */
+      SCIP_CALL( SCIPparseVarsList(scip, str, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
+      str = endptr;
+
       if( *success )
       {
          /* check if the size of the variable array was great enough */
@@ -2736,7 +2858,7 @@ SCIP_DECL_CONSPARSE(consParseAnd)
             SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
             
             /* parse string again with the correct size of the variable array */
-            SCIP_CALL( SCIPparseVarsList(scip, str, pos, vars, &nvars, varssize, &requiredsize, &pos, ',', success) );
+            SCIP_CALL( SCIPparseVarsList(scip, str, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
          }
          
          assert(*success);
@@ -2841,6 +2963,12 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
          "should an aggregated linearization be used?",
          &conshdlrdata->aggrlinearization, TRUE, DEFAULT_AGGRLINEARIZATION, NULL, NULL) );
 
+   if( SCIPfindConshdlr(scip, "nonlinear") != NULL )
+   {
+      /* include the and-constraint upgrade in the nonlinear constraint handler */
+      SCIP_CALL( SCIPincludeNonlinconsUpgrade(scip, NULL, exprgraphnodeReformAnd, EXPRGRAPHREFORM_PRIORITY, TRUE, CONSHDLR_NAME) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -2869,7 +2997,7 @@ SCIP_RETCODE SCIPcreateConsAnd(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even

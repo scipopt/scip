@@ -153,6 +153,28 @@ SCIP_RETCODE SCIPprimalAddSolFree(
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    );
 
+/** adds primal solution to solution candidate storage of original problem space */
+SCIP_RETCODE SCIPprimalAddOrigSol(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< original problem */
+   SCIP_SOL*             sol,                /**< primal CIP solution; is cleared in function call */
+   SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
+   );
+
+/** adds primal solution to solution candidate storage of original problem space, frees the solution afterwards */
+SCIP_RETCODE SCIPprimalAddOrigSolFree(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< original problem */
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
+   SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
+   );
+
 /** adds current LP/pseudo solution to solution storage */
 extern
 SCIP_RETCODE SCIPprimalAddCurrentSol(

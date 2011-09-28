@@ -1,0 +1,17 @@
+Notes for SCIP Release 2.0.2
+
+Performance Improvements
+========================
+
+- knapsack constraints are now propagated and separated faster;
+  SCIPsolveKnapsackExactly() now works faster and requires less memory
+
+- reduced memory usage of shift-and-propagate heuristic
+
+- improved twoopt-heuristic by considering larger search domains
+
+- the SoPlex interface now has the capability to provide a primal ray,
+  provided it is compiled against the next SoPlex release (>= 1.5.0.2)
+
+
+See the CHANGELOG file for a list of bugfixes.

@@ -49,11 +49,13 @@
 #include "scip/cons_linear.h"
 #include "scip/cons_linking.h"
 #include "scip/cons_logicor.h"
+#include "scip/cons_nonlinear.h"
 #include "scip/cons_or.h"
 #include "scip/cons_orbitope.h"
 #include "scip/cons_pseudoboolean.h"
 #include "scip/cons_quadratic.h"
 #include "scip/cons_setppc.h"
+#include "scip/cons_signedpower.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
 #include "scip/cons_soc.h"
@@ -109,6 +111,7 @@
 #include "scip/prop_redcost.h"
 #include "scip/prop_rootredcost.h"
 #include "scip/prop_vbounds.h"
+#include "scip/reader_bnd.h"
 #include "scip/reader_ccg.h"
 #include "scip/reader_cip.h"
 #include "scip/reader_cnf.h"
@@ -140,12 +143,6 @@
 #include "scip/scipshell.h"
 
 #include "nlpi/nlpi_ipopt.h"
-
-#if 0
-#include "scip/cons_binpack.h"
-#include "scip/cons_eqknapsack.h"
-#include "scip/cons_invarknapsack.h"
-#endif
 
 #ifdef __cplusplus
 extern "C" {

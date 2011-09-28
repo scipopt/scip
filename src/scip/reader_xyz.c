@@ -138,9 +138,7 @@ SCIP_RETCODE SCIPincludeReaderXyz(
    
    /* include xyz reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyXyz,
-         readerFreeXyz, readerReadXyz, readerWriteXyz,
-         readerdata) );
+         readerCopyXyz, readerFreeXyz, readerReadXyz, readerWriteXyz, readerdata) );
 
    /* add xyz reader parameters */
    /* TODO: (optional) add reader specific parameters with SCIPaddTypeParam() here */

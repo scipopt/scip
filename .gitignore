@@ -11,13 +11,17 @@ obj/
 TAGS
 release/
 check/results/
+check/results*/
 check/locks
 check/MINLP
 check/IP
 cplex.log
 doc/html/
 doc/html_devel/
+doc/doxygen
+doc/scip.tag
 .cproject
 .project
 hooks/
 localhooks/
+src/scip/githash.c

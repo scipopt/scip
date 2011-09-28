@@ -227,7 +227,7 @@ void consdataPrint(
    
    for( b = 0; b < nbinvars; ++b )
    {
-      SCIPinfoMessage(scip, file, "%+d<%s> ", offset + b, SCIPvarGetName(binvars[b]));
+      SCIPinfoMessage(scip, file, "%+d<%s> ", offset + b, SCIPvarGetName(binvars[b])); /*lint !e613*/
    }
 }
 
@@ -488,7 +488,7 @@ SCIP_RETCODE consdataCreate(
    SCIP_VAR*             intvar,             /**< integer variable which is linked */
    SCIP_VAR**            binvars,            /**< binary variables */
    int                   nbinvars,           /**< number of binary starting variables */
-   int                   offset              /**< offset ot the binary variable representation */
+   int                   offset              /**< offset of the binary variable representation */
    )
 {
    assert(scip!= NULL);
@@ -889,7 +889,7 @@ SCIP_RETCODE tightenedIntvar(
 
          nvars = ub - newub;
          
-         /* unlock the fixe binary which we remove */
+         /* unlock the fixed binary which we remove */
          SCIP_CALL( unlockRounding(scip, cons, &consdata->binvars[newub - offset + 1], nvars) );
          consdata->nbinvars -= nvars;
          consdata->nfixedzeros -= nvars;
@@ -1284,7 +1284,7 @@ SCIP_RETCODE aggregateVariables(
          if( aggrcons != NULL )
          {
             aggrconsdata = SCIPconsGetData(aggrcons);
-            assert(aggrcons != NULL);
+            assert(aggrconsdata != NULL);
 
             aggrconst = SCIPvarGetAggrConstant(intvar);
             aggrscalar = SCIPvarGetAggrScalar(intvar);
@@ -1356,7 +1356,7 @@ SCIP_RETCODE createRows(
    assert(consdata->row2 == NULL);
    assert(consdata->nbinvars > 1);
 
-   /* create the LP row which capturs the linking between the integer and binary variables */
+   /* create the LP row which captures the linking between the integer and binary variables */
    (void)SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s[link]", SCIPconsGetName(cons));
 
    SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->row1, rowname, -(SCIP_Real)consdata->offset, -(SCIP_Real)consdata->offset,
@@ -2200,7 +2200,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
       if( consdata->nfixedones >= 2 )
       {
          /* at least two variables are fixed to 1:
-          * - a linkink constraint is infeasible due to the set partitioning condition
+          * - a linking constraint is infeasible due to the set partitioning condition
           */
          SCIPdebugMessage(""CONSHDLR_NAME" constraint <%s> is infeasible\n", SCIPconsGetName(cons));
          *result = SCIP_CUTOFF;
@@ -2252,7 +2252,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
             }
          }
 
-	 /* now all other variables are fixed to zero:
+         /* now all other variables are fixed to zero:
           * the constraint is feasible, and if it's not modifiable, it is redundant
           */
          SCIPdebugMessage(""CONSHDLR_NAME" constraint <%s> is redundant\n", SCIPconsGetName(cons));
@@ -2682,7 +2682,7 @@ SCIP_DECL_CONSLOCK(consLockLinking)
 /** constraint enabling notification method of constraint handler */
 static
 SCIP_DECL_CONSENABLE(consEnableLinking)
-{
+{  /*lint --e{715}*/
 #if 0
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
@@ -2753,7 +2753,7 @@ SCIP_DECL_CONSCOPY(consCopyLinking)
    sourceconsdata = SCIPconsGetData(sourcecons);
    assert(sourceconsdata != NULL);
 
-   /* get number of binary variables, intger variables, and offset of the source constraint */
+   /* get number of binary variables, integer variables, and offset of the source constraint */
    nbinvars = sourceconsdata->nbinvars;
    intvar = sourceconsdata->intvar;
    offset = sourceconsdata->offset;
@@ -2769,6 +2769,7 @@ SCIP_DECL_CONSCOPY(consCopyLinking)
    /* get copy for the binary variables */
    for( v = 0; v < nbinvars && *valid; ++v )
    {
+      assert(binvars != NULL); /* for flexelint */
       SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, binvars[v], &binvars[v], varmap, consmap, global, valid) );
       assert(!(*valid) || binvars[v] != NULL);
    }
@@ -2899,7 +2900,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinking(
    return SCIP_OKAY;
 }
 
-/** creates and captures an linking constraint */
+/** creates and captures a linking constraint */
 SCIP_RETCODE SCIPcreateConsLinking(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -2907,7 +2908,7 @@ SCIP_RETCODE SCIPcreateConsLinking(
    SCIP_VAR*             intvar,             /**< integer variable which should be linked */
    SCIP_VAR**            binvars,            /**< binary variables, or NULL */
    int                   nbinvars,           /**< number of binary variables */
-   int                   offset,             /**< offset ot the binary variable representation */
+   int                   offset,             /**< offset of the binary variable representation */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -2925,7 +2926,7 @@ SCIP_RETCODE SCIPcreateConsLinking(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
@@ -2956,7 +2957,7 @@ SCIP_RETCODE SCIPcreateConsLinking(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   /* check if the linking for the requestes integer variable already exists */
+   /* check if the linking for the requests integer variable already exists */
    assert(!SCIPhashmapExists(conshdlrdata->varmap, getHashmapKey(intvar)));
 
    /* create the constraint specific data */

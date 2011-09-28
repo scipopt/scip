@@ -219,7 +219,7 @@ SCIP_RETCODE SCIPincludeBranchruleXyz(
 
    /* include branching rule */
    SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH, 
-	 BRANCHRULE_MAXBOUNDDIST,
+         BRANCHRULE_MAXBOUNDDIST,
          branchCopyXyz,
          branchFreeXyz, branchInitXyz, branchExitXyz,
          branchInitsolXyz, branchExitsolXyz,

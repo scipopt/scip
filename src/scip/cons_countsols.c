@@ -127,6 +127,7 @@ struct SCIP_ConshdlrData
    SCIP_VAR**            vars;               /**< array containing a copy of all active variables (after presolving) */
    int                   nallvars;           /**< number of all variables in the problem */
    int                   nvars;              /**< number of all active variables in the problem */
+   SCIP_Bool             continuous;         /**< are there continuous variables */
 };
 
 
@@ -161,7 +162,7 @@ void setInt(
 }
 
 
-/** free memoy */
+/** free memory */
 static
 void freeInt(
    Int*          value                      /**< pointer to the value to free */
@@ -202,7 +203,7 @@ void addInt(
 }
 
 
-/** multiplies the factor to the given vakue */
+/** multiplies the factor by the given value */
 static
 void multInt(
    Int*          value,                     /**< pointer to the value to increase */
@@ -296,6 +297,7 @@ SCIP_RETCODE conshdlrdataCreate(
    (*conshdlrdata)->vars = NULL;
    (*conshdlrdata)->nallvars = 0;
    (*conshdlrdata)->nvars = 0;
+   (*conshdlrdata)->continuous = FALSE;
 
    return SCIP_OKAY;
 }
@@ -317,6 +319,8 @@ void checkSolutionOrig(
    conshdlrdata->active = FALSE;
 
    SCIPdebugMessage("check solution in original space before counting\n");
+
+   feasible = FALSE;
    
    /* check solution in original space */
    retcode = SCIPcheckSolOrig(scip, sol, &feasible, TRUE, TRUE);
@@ -403,9 +407,9 @@ CUTOFF_CONSTRAINT(addBinaryCons)
    assert( sol != NULL );
    assert( conshdlrdata != NULL );
     
-   SCIP_CALL( SCIPgetPseudoBranchCands(scip, &vars, &nvars, NULL) );
-   assert( nvars > 0 );
-   
+   vars = conshdlrdata->vars;
+   nvars = conshdlrdata->nvars;
+
    /* allocate buffer memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nvars) );
    
@@ -415,12 +419,11 @@ CUTOFF_CONSTRAINT(addBinaryCons)
     
       assert( var != NULL );
       assert( SCIPvarIsBinary(var) );
-      assert( varIsUnfixedLocal(var) );
-
+      
       value = SCIPgetSolVal(scip, sol, var);
       assert( SCIPisFeasIntegral(scip, value) );
 
-      if (value > 0.5)
+      if( value > 0.5 )
       {
          SCIP_CALL( SCIPgetNegatedVar(scip, var, &consvars[v]) );
       }
@@ -430,10 +433,10 @@ CUTOFF_CONSTRAINT(addBinaryCons)
     
    /* create constraint */
    SCIP_CALL( SCIPcreateConsSetcover(scip, &cons, "Setcovering created by countsols", nvars, consvars,
-         FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE));
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    
    /* add and release constraint */
-   SCIP_CALL( SCIPaddConsLocal(scip, cons, NULL) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    
    /* free buffer array */
@@ -469,7 +472,9 @@ CUTOFF_CONSTRAINT(addIntegerCons)
    assert( sol != NULL );
    assert( conshdlrdata != NULL );
   
-   SCIP_CALL( SCIPgetPseudoBranchCands(scip, &vars, &nvars, NULL) );
+   vars = conshdlrdata->vars;
+   nvars = conshdlrdata->nvars;
+
    nconsvars = nvars * 2;
    assert( nvars > 0 );
 
@@ -493,7 +498,7 @@ CUTOFF_CONSTRAINT(addIntegerCons)
          value = SCIPgetSolVal(scip, sol, var);
          assert( SCIPisFeasIntegral(scip, value) );
          
-         if (value < 0.5)
+         if( value < 0.5 )
          {
             boundtypes[nconsvars] = SCIP_BOUNDTYPE_LOWER;
             bounds[nconsvars] = 1;
@@ -514,12 +519,12 @@ CUTOFF_CONSTRAINT(addIntegerCons)
          ub = (SCIP_Longint) SCIPfeasCeil(scip, SCIPvarGetUbLocal(var));
          valueInt = (SCIP_Longint) SCIPfeasCeil(scip, SCIPgetSolVal(scip, sol, var));
          
-         if (valueInt == lb)
+         if( valueInt == lb )
          {
             boundtypes[nconsvars] = SCIP_BOUNDTYPE_LOWER;
             bounds[nconsvars] = lb + 1;
          }
-         else if (valueInt == ub)
+         else if( valueInt == ub )
          {
             boundtypes[nconsvars] = SCIP_BOUNDTYPE_UPPER;
             bounds[nconsvars] = ub - 1;
@@ -540,10 +545,11 @@ CUTOFF_CONSTRAINT(addIntegerCons)
    }
    
    /* check if only binary variables appear in the constraint; if this is the case we
-    * create a set covering constraint instead of a bound disjunction constraint */
-   if (nvars == nbinvars )
+    * create a set covering constraint instead of a bound disjunction constraint 
+    */
+   if( nvars == nbinvars )
    {
-      for (v = nbinvars - 1; v >= 0; --v)
+      for( v = nbinvars - 1; v >= 0; --v )
       {
          /* in the case the bound is zero we have use the negated variable */
          if( bounds[v] == 0)
@@ -553,17 +559,17 @@ CUTOFF_CONSTRAINT(addIntegerCons)
       }
     
       SCIP_CALL( SCIPcreateConsSetcover(scip, &cons, "Setcovering created by countsols", nbinvars, consvars,
-            FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE));
+            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    }
    else
    {
       SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, "Bounddisjunction created by countsols", 
             nconsvars, consvars, boundtypes, bounds,
-            FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+            FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    }
   
    /* add and release constraint locally */
-   SCIP_CALL( SCIPaddConsLocal(scip, cons, NULL) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
   
    /* free buffer memory */
@@ -598,6 +604,7 @@ SCIP_RETCODE collectSolution(
       }
       else
       {
+         assert( conshdlrdata->ssolutions < INT_MAX / 2);
          conshdlrdata->ssolutions *= 2;
          SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->solutions,  conshdlrdata->ssolutions) );
       }
@@ -608,8 +615,12 @@ SCIP_RETCODE collectSolution(
    nvars = conshdlrdata->nvars;
    
    /* get memory for storing the solution */
+   lbvalues = NULL;
+   ubvalues = NULL;
    SCIP_CALL( SCIPallocMemoryArray(scip, &lbvalues, nvars) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &ubvalues, nvars) );
+   assert(ubvalues != NULL);
+   assert(lbvalues != NULL);
 
    for( v = nvars - 1; v >= 0; --v )
    {
@@ -635,6 +646,7 @@ SCIP_RETCODE collectSolution(
    }
    
    SCIP_CALL( SCIPallocMemory(scip, &solution) );
+   assert(solution != NULL);
  
    solution->lbvalues = lbvalues;
    solution->ubvalues = ubvalues;
@@ -651,7 +663,7 @@ static
 SCIP_RETCODE countSparsesol(
    SCIP*                      scip,             /**< SCIP data structure */
    SCIP_SOL*                  sol,              /**< solution */
-   SCIP_Bool                  feasible,         /**< bool if solution is feasible */
+   SCIP_Bool                  feasible,         /**< is solution feasible? */
    SCIP_CONSHDLRDATA*         conshdlrdata,     /**< constraint handler data */
    SCIP_RESULT*               result            /**< pointer to store the result of the checking process */
    )
@@ -695,18 +707,18 @@ SCIP_RETCODE countSparsesol(
       if( SCIPgetNBinVars(scip) == SCIPgetNVars(scip) )
       {
          SCIP_Longint nsols;
-         int npseudocans;
+         int npseudocands;
          
          nsols = 1;
-         npseudocans = SCIPgetNPseudoBranchCands(scip);
-         assert(npseudocans < 64);
+         npseudocands = SCIPgetNPseudoBranchCands(scip);
+         assert(npseudocands < 64);
          
-         /* bit shift the factor by npseudocans; this means factor = 2^npseudocans */
-         nsols <<= npseudocans;
+         /* bit shift the factor by npseudocands; this means factor = 2^npseudocands */
+         nsols <<= npseudocands;
          
          /* set newsols to the computed number */
          setInt(&newsols, nsols);
-         SCIPdebugMessage("-> add 2^%d to number of solutions\n", npseudocans);
+         SCIPdebugMessage("-> add 2^%d to number of solutions\n", npseudocands);
       }
       else
       {
@@ -782,7 +794,7 @@ SCIP_RETCODE checkLogicor(
    int c;
    int v;
 
-   SCIPdebugMessage("check logicor %d contraints\n", nconss);
+   SCIPdebugMessage("check logicor %d constraints\n", nconss);
   
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -797,7 +809,7 @@ SCIP_RETCODE checkLogicor(
          
    for( ; c >= 0 && nconss > 0 && (*satisfied); --c )
    {
-      SCIPdebugMessage("logicor contraint %d\n", c);
+      SCIPdebugMessage("logicor constraint %d\n", c);
     
       if( !SCIPconsIsEnabled(conss[c]) )
          continue;
@@ -855,7 +867,7 @@ SCIP_RETCODE checkKnapsack(
    int c;
    int v;
 
-   SCIPdebugMessage("check knapsack %d contraints\n", nconss);
+   SCIPdebugMessage("check knapsack %d constraints\n", nconss);
   
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -870,7 +882,7 @@ SCIP_RETCODE checkKnapsack(
 
    for( ; c >= 0 && nconss > 0 && (*satisfied); --c )
    {
-      SCIPdebugMessage("knapsack contraint %d\n", c);
+      SCIPdebugMessage("knapsack constraint %d\n", c);
     
       if( !SCIPconsIsEnabled(conss[c]) )
          continue;
@@ -896,14 +908,14 @@ SCIP_RETCODE checkKnapsack(
          assert( weights[v] > -0.5 );
          assert( weights[v] >= 0);
       
-         if ( !varIsUnfixedLocal(vars[v]) ) 
+         if( !varIsUnfixedLocal(vars[v]) ) 
          {
             /* variables is fixed locally; therefore, subtract fixed variable value multiplied by
              * the weight; 
              */
             capa -= weights[v] * SCIPvarGetLbLocal(vars[v]); 
          }
-         else if (weights[v] > 0.5) 
+         else if( weights[v] > 0.5 )
          {
             /*  variable is unfixed and weight is greater than 0; therefore, subtract upper bound
              *  value multiplied by the weight 
@@ -980,7 +992,7 @@ SCIP_RETCODE checkBounddisjunction(
          assert( SCIPvarGetType(vars[v]) != SCIP_VARTYPE_CONTINUOUS );
       
          /* variable should be in right bounds to delete constraint */
-         if (boundtypes[v] == SCIP_BOUNDTYPE_LOWER )
+         if( boundtypes[v] == SCIP_BOUNDTYPE_LOWER )
             satisfiedbound = SCIPisFeasGE(scip, SCIPvarGetLbLocal(vars[v]), bounds[v]);
          else
          {
@@ -989,7 +1001,7 @@ SCIP_RETCODE checkBounddisjunction(
          }
       }
     
-      if (!satisfiedbound)
+      if( !satisfiedbound )
       {
          SCIPdebugMessage("constraint %s cannot be disabled\n", SCIPconsGetName(conss[c]));
          SCIPdebug(SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
@@ -1025,7 +1037,7 @@ SCIP_RETCODE checkVarbound(
    SCIP_Real coef;
    int c;
 
-   SCIPdebugMessage("check varbound %d contraints\n", nconss);
+   SCIPdebugMessage("check varbound %d constraints\n", nconss);
   
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -1040,7 +1052,7 @@ SCIP_RETCODE checkVarbound(
 
    for( ; c >= 0 && nconss > 0 && (*satisfied); --c )
    {
-      SCIPdebugMessage("varbound contraint %d\n", c);
+      SCIPdebugMessage("varbound constraint %d\n", c);
     
       if( !SCIPconsIsEnabled(conss[c]) )
          continue;
@@ -1059,8 +1071,8 @@ SCIP_RETCODE checkVarbound(
       /* variables y is fixed locally; therefore, subtract fixed variable value multiplied by
        * the coefficient; 
        */
-      if (SCIPisGT(scip, SCIPvarGetUbLocal(var_x), rhs - SCIPvarGetUbLocal(var_y) * coef ) 
-         || !SCIPisGE(scip, SCIPvarGetLbLocal(var_x), lhs - SCIPvarGetLbLocal(var_y) * coef ))
+      if(SCIPisGT(scip, SCIPvarGetUbLocal(var_x), rhs - SCIPvarGetUbLocal(var_y) * coef ) 
+         || !SCIPisGE(scip, SCIPvarGetLbLocal(var_x), lhs - SCIPvarGetLbLocal(var_y) * coef ) )
       {
          SCIPdebugMessage("constraint %s cannot be disabled\n", SCIPconsGetName(conss[c]));
          SCIPdebug(SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
@@ -1108,7 +1120,7 @@ SCIP_RETCODE checkFeasSubtree(
    assert (conshdlrs != NULL);
 
    /* check each constraint handler if there are constraints which are not enabled */
-   for (h = nconshdlrs ;  h >= 0 ; --h )
+   for( h = nconshdlrs ;  h >= 0 ; --h )
    {
       conshdlr = conshdlrs[h];
       assert( conshdlr != NULL );
@@ -1126,7 +1138,7 @@ SCIP_RETCODE checkFeasSubtree(
          SCIPdebugMessage("constraint handler %s has %d active constraint(s)\n",
             SCIPconshdlrGetName(conshdlr), nconss );
          
-         if (strcmp(SCIPconshdlrGetName(conshdlr), "logicor") == 0)
+         if( strcmp(SCIPconshdlrGetName(conshdlr), "logicor") == 0 )
          {
             
             SCIP_CALL( checkLogicor(scip, conshdlr, nconss, &satisfied) );
@@ -1136,7 +1148,7 @@ SCIP_RETCODE checkFeasSubtree(
                return SCIP_OKAY;
             }
          }
-         else if (strcmp(SCIPconshdlrGetName(conshdlr), "knapsack") == 0)
+         else if( strcmp(SCIPconshdlrGetName(conshdlr), "knapsack") == 0 )
          {
             SCIP_CALL( checkKnapsack(scip, conshdlr, nconss, &satisfied) );
             if( !satisfied )
@@ -1145,7 +1157,7 @@ SCIP_RETCODE checkFeasSubtree(
                return SCIP_OKAY;
             }
          }
-         else if (strcmp(SCIPconshdlrGetName(conshdlr), "bounddisjunction") == 0)
+         else if( strcmp(SCIPconshdlrGetName(conshdlr), "bounddisjunction") == 0 )
          {
             SCIP_CALL( checkBounddisjunction(scip, conshdlr, nconss, &satisfied) );
             if( !satisfied )
@@ -1154,7 +1166,7 @@ SCIP_RETCODE checkFeasSubtree(
                return SCIP_OKAY;
             }
          }
-         else if (strcmp(SCIPconshdlrGetName(conshdlr), "varbound") == 0)
+         else if( strcmp(SCIPconshdlrGetName(conshdlr), "varbound") == 0 )
          {
             SCIP_CALL( checkVarbound(scip, conshdlr, nconss, &satisfied) );
             if( !satisfied )
@@ -1252,10 +1264,18 @@ SCIP_RETCODE checkSolution(
          SCIP_CALL( collectSolution(scip, conshdlrdata, sol) );
       }
 
+      /* in case of continuous variables are present we explicitly cutoff the integer assignment since in case of
+       * nonlinear constraint we want to avoid the count that integer assignment again
+       */
+      if( conshdlrdata->continuous )
+      {
+         conshdlrdata->cutoffSolution(scip, sol, conshdlrdata);
+      }
+            
       /* since all integer are fixed we cut off the subtree */
       *result = SCIP_CUTOFF;
    }
-   else if( conshdlrdata->sparsetest )
+   else if( conshdlrdata->sparsetest && !conshdlrdata->continuous )
    {
       SCIP_CALL( checkFeasSubtree(scip, sol, &feasible) ) ;
       SCIP_CALL( countSparsesol(scip, sol, feasible, conshdlrdata, result) );
@@ -1264,7 +1284,7 @@ SCIP_RETCODE checkSolution(
    /* transform the current number of solutions into a SCIP_Longint */
    nsols = getNCountedSols(conshdlrdata->nsols, &valid);
    
-   /* check if the solution limit is achived and stop SCIP if this is the case */
+   /* check if the solution limit is hit and stop SCIP if this is the case */
    if( conshdlrdata->sollimit > -1 && (!valid || conshdlrdata->sollimit <= nsols) )
    {
       SCIP_CALL( SCIPinterruptSolve(scip) );
@@ -1361,7 +1381,7 @@ SCIP_DECL_CONSINIT(consInitCountsols)
       
       nallvars = 0;
 
-      /* capture and lcok all variables */
+      /* capture and lock all variables */
       for( v = 0; v < norigvars; ++v )
       {
          if( SCIPvarGetType(origvars[v]) != SCIP_VARTYPE_CONTINUOUS )
@@ -1381,6 +1401,9 @@ SCIP_DECL_CONSINIT(consInitCountsols)
          }
       }
       assert(nallvars == conshdlrdata->nallvars);
+ 
+      /* check if continuous variables are present */
+      conshdlrdata->continuous = SCIPgetNContVars(scip) > 0;
    }
 
    return SCIP_OKAY;
@@ -1433,6 +1456,8 @@ SCIP_DECL_CONSEXIT(consExitCountsols)
 
          assert( conshdlrdata->solutions == NULL );
       }
+  
+      conshdlrdata->continuous = FALSE;
    }
 
    assert( conshdlrdata->solutions == NULL );
@@ -1496,8 +1521,8 @@ SCIP_DECL_CONSINITSOL(consInitsolCountsols)
       conshdlrdata->vars = vars;
       conshdlrdata->nvars = nvars;
 
-      /* check if the problem is binary */
-      if( SCIPgetNBinVars(scip) == SCIPgetNVars(scip) )
+      /* check if the problem is binary (ignoring continuous variables) */
+      if( SCIPgetNBinVars(scip) == (SCIPgetNVars(scip) - SCIPgetNContVars(scip)) )
          conshdlrdata->cutoffSolution = addBinaryCons;
       else
          conshdlrdata->cutoffSolution = addIntegerCons;
@@ -1931,13 +1956,13 @@ SCIP_Bool getNextSolution(
       lbvalue = sparsesol->lbvalues[v];
       ubvalue = sparsesol->ubvalues[v];
       
-      if (lbvalue < ubvalue) 
+      if( lbvalue < ubvalue )
       {
          singular = FALSE;
          
-         if (carryflag == FALSE) 
+         if( carryflag == FALSE ) 
          {
-            if (sol[v] < ubvalue) 
+            if( sol[v] < ubvalue )
             {
                sol[v]++;
                break;
@@ -1952,7 +1977,7 @@ SCIP_Bool getNextSolution(
          }
          else 
          {
-            if (sol[v] < ubvalue) 
+            if( sol[v] < ubvalue )
             {
                sol[v]++;
                carryflag = FALSE;
@@ -1995,7 +2020,7 @@ SCIP_RETCODE writeExpandedSolutions(
    SCIP_CALL( SCIPallocBufferArray(scip, &sol, nactivevars) );
    
    /* loop over all sparse solutions */
-   for ( s = 0; s < nsols; ++s )
+   for( s = 0; s < nsols; ++s )
    {
       sparsesol = sols[s];
       
@@ -2018,7 +2043,7 @@ SCIP_RETCODE writeExpandedSolutions(
          
          objval = 0.0;
          
-         for ( v = 0; v < nactivevars; ++v )
+         for( v = 0; v < nactivevars; ++v )
          {
             idx = perm[v];
             
@@ -2226,13 +2251,20 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
                int norigvars;
                int nvars;
                int v;
-               
+
+               SCIP_RETCODE retcode;
+
                /* get sparse solutions defined over the active variables */
                nvars = conshdlrdata->nvars;
                sparsesols = conshdlrdata->solutions;
 
                /* get original problem variables */
-               SCIP_CALL( SCIPallocBufferArray(scip, &origvars, SCIPgetNOrigVars(scip)) );
+               retcode = SCIPallocBufferArray(scip, &origvars, SCIPgetNOrigVars(scip));
+               if( retcode != SCIP_OKAY )
+               {
+                   fclose(file);
+                   SCIP_CALL( retcode );
+               }
 
                norigvars = 0;
                
@@ -2245,21 +2277,36 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
                   }
                }
                assert(norigvars == conshdlrdata->nallvars);
-               
-               SCIP_CALL( SCIPduplicateBufferArray(scip, &allvars, conshdlrdata->allvars, norigvars) );
-               
-               /* sort original variables array and the corresponding transformed variables w.r.t. the prob index */
+
+               retcode = SCIPduplicateBufferArray(scip, &allvars, conshdlrdata->allvars, norigvars);
+               if( retcode != SCIP_OKAY )
+               {
+                   fclose(file);
+                   SCIP_CALL( retcode );
+               }
+
+               /* sort original variables array and the corresponding transformed variables w.r.t. the problem index */
                SCIPsortDownPtrPtr((void**)allvars, (void**)origvars, varCompProbindex, norigvars);
 
                /* copy variable array of the sparse solutions */
-               SCIP_CALL( SCIPallocBufferArray(scip, &perm, nvars) );
-               SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, conshdlrdata->vars, nvars) );
-               
+               retcode = SCIPallocBufferArray(scip, &perm, nvars);
+               if( retcode != SCIP_OKAY )
+               {
+                   fclose(file);
+                   SCIP_CALL( retcode );
+               }
+               retcode = SCIPduplicateBufferArray(scip, &vars, conshdlrdata->vars, nvars);
+               if( retcode != SCIP_OKAY )
+               {
+                   fclose(file);
+                   SCIP_CALL( retcode );
+               }
+
                /* create identity permutation */
                for( v = 0; v < nvars; ++v )
                   perm[v] = v;
 
-               /* create permutation for variables of the sparse solution w.r.t. the prob index */
+               /* create permutation for variables of the sparse solution w.r.t. the problem index */
                SCIPsortDownPtrInt((void**)vars, perm, varCompProbindex, nvars);
 
                /* free variable array copy (this copy was only used to get the permutation array */
@@ -2272,7 +2319,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
                /* first row: output the names of the variables in the given ordering */
                SCIPinfoMessage(scip, file, "#, ");
             
-               for ( v = 0; v < norigvars; ++v ) 
+               for( v = 0; v < norigvars; ++v ) 
                {
 #ifndef NDEBUG
                   {
@@ -2292,7 +2339,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
                SCIPinfoMessage(scip, file, "objval\n");
             
                /* expand and write solution */
-               SCIP_CALL( writeExpandedSolutions(scip, file, allvars, nvars, conshdlrdata->nallvars, perm, sparsesols, nsparsesols) );
+               retcode = writeExpandedSolutions(scip, file, allvars, nvars, conshdlrdata->nallvars, perm, sparsesols, nsparsesols);
+               if( retcode != SCIP_OKAY )
+               {
+                   fclose(file);
+                   SCIP_CALL( retcode );
+               }
                SCIPdialogMessage(scip, NULL, "written solutions information to file <%s>\n", filename);
                
                SCIPfreeBufferArray(scip, &perm);
@@ -2405,7 +2457,7 @@ SCIP_DECL_DISPOUTPUT(dispOutputSols)
    
    if( !valid )
    {
-      SCIPinfoMessage(scip, file, "ToMany");
+      SCIPinfoMessage(scip, file, "TooMany");
    }
    else
    {
@@ -2452,6 +2504,10 @@ SCIP_RETCODE SCIPincludeConshdlrCountsols(
    /* create countsol constraint handler data */
    SCIP_CONSHDLRDATA* conshdlrdata;
    
+#ifdef WITH_GMP
+   char gmpversion[20];
+#endif
+
    /* create constraint handler specific data here */
    SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
    
@@ -2505,6 +2561,12 @@ SCIP_RETCODE SCIPincludeConshdlrCountsols(
          NULL, NULL, NULL, NULL, NULL, NULL, dispOutputFeasSubtrees, 
          NULL, DISP_CUTS_WIDTH, DISP_CUTS_PRIORITY, DISP_CUTS_POSITION, DISP_CUTS_STRIPLINE) );
    
+#ifdef WITH_GMP
+   /* add info that about using GMP to external codes information */
+   (void) SCIPsnprintf(gmpversion, sizeof(gmpversion), "GMP %d.%d.%d", __GNU_MP_VERSION, __GNU_MP_VERSION_MINOR, __GNU_MP_VERSION_PATCHLEVEL);
+   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, gmpversion, "GNU Multiple Precision Arithmetic Library developed by T. Granlund (gmplib.org)") );
+#endif
+
    return SCIP_OKAY;
 }
 
@@ -2625,7 +2687,7 @@ SCIP_Longint SCIPgetNCountedFeasSubtrees(
 void SCIPgetCountedSparseSolutions( 
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR***           vars,               /**< pointer to active variable array defining to variable order */
-   int*                  nvars,              /**< number of active varibales */
+   int*                  nvars,              /**< number of active variables */
    SPARSESOLUTION***     sols,               /**< pointer to the solutions */
    int*                  nsols               /**< pointer to number of solutions */
    )
@@ -2653,6 +2715,6 @@ SCIP_RETCODE SCIPsetParamsCountsols(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMSETTING_COUNTER, TRUE) );
+   SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMEMPHASIS_COUNTER, TRUE) );
    return SCIP_OKAY;
 }

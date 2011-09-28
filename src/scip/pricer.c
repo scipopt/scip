@@ -96,14 +96,14 @@ SCIP_RETCODE SCIPpricerCreate(
    int                   priority,           /**< priority of the variable pricer */
    SCIP_Bool             delay,              /**< should the pricer be delayed until no other pricers or already existing
                                               *   problem variables with negative reduced costs are found */
-   SCIP_DECL_PRICERCOPY  ((*pricercopy)),    /**< copy method of pricer or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_PRICERCOPY  ((*pricercopy)),    /**< copy method of pricer or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_PRICERFREE  ((*pricerfree)),    /**< destructor of variable pricer */
    SCIP_DECL_PRICERINIT  ((*pricerinit)),    /**< initialize variable pricer */
    SCIP_DECL_PRICEREXIT  ((*pricerexit)),    /**< deinitialize variable pricer */
    SCIP_DECL_PRICERINITSOL((*pricerinitsol)),/**< solving process initialization method of variable pricer */
    SCIP_DECL_PRICEREXITSOL((*pricerexitsol)),/**< solving process deinitialization method of variable pricer */
    SCIP_DECL_PRICERREDCOST((*pricerredcost)),/**< reduced cost pricing method of variable pricer for feasible LPs */
-   SCIP_DECL_PRICERFARKAS((*pricerfarkas)),  /**< farkas pricing method of variable pricer for infeasible LPs */
+   SCIP_DECL_PRICERFARKAS((*pricerfarkas)),  /**< Farkas pricing method of variable pricer for infeasible LPs */
    SCIP_PRICERDATA*      pricerdata          /**< variable pricer data */
    )
 {
@@ -343,7 +343,7 @@ SCIP_RETCODE SCIPpricerRedcost(
    return SCIP_OKAY;
 }
 
-/** calls farkas pricing method of variable pricer */
+/** calls Farkas pricing method of variable pricer */
 SCIP_RETCODE SCIPpricerFarkas(
    SCIP_PRICER*          pricer,             /**< variable pricer */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -357,11 +357,11 @@ SCIP_RETCODE SCIPpricerFarkas(
    assert(set != NULL);
    assert(prob != NULL);
 
-   /* check, if pricer implemented a farkas pricing algorithm */
+   /* check, if pricer implemented a Farkas pricing algorithm */
    if( pricer->pricerfarkas == NULL )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("executing farkas pricing of variable pricer <%s>\n", pricer->name);
+   SCIPdebugMessage("executing Farkas pricing of variable pricer <%s>\n", pricer->name);
    
    oldnvars = prob->nvars;
    
@@ -381,7 +381,7 @@ SCIP_RETCODE SCIPpricerFarkas(
    return SCIP_OKAY;
 }
 
-/** depending on the LP's solution status, calls reduced cost or farkas pricing method of variable pricer */
+/** depending on the LP's solution status, calls reduced cost or Farkas pricing method of variable pricer */
 SCIP_RETCODE SCIPpricerExec(
    SCIP_PRICER*          pricer,             /**< variable pricer */
    SCIP_SET*             set,                /**< global SCIP settings */

@@ -178,11 +178,11 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
       assert( SCIPisLE(scip, lb, ub) );
       if( SCIPisEQ(scip, lb, ub) )
          continue;
-      if (presoldata->integer && !SCIPisIntegral(scip, ub - lb)) 
+      if( presoldata->integer && !SCIPisIntegral(scip, ub - lb) ) 
          continue;
 
       /* check if bounds are shiftable */
-      if ( !SCIPisEQ(scip, lb, 0.0) &&                          /* lower bound != 0.0 */
+      if( !SCIPisEQ(scip, lb, 0.0) &&                           /* lower bound != 0.0 */
          SCIPisLT(scip, ub, SCIPinfinity(scip)) &&              /* upper bound != infinity */
          SCIPisGT(scip, lb, -SCIPinfinity(scip)) &&             /* lower bound != -infinity */
 #if 0
@@ -205,9 +205,9 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
          SCIP_CALL( SCIPaddVar(scip, newvar) );
 
          /* aggregate old variable with new variable */
-         if (presoldata->flipping)
+         if( presoldata->flipping )
          {
-            if ( REALABS(ub) < REALABS(lb) )
+            if( REALABS(ub) < REALABS(lb) )
             {
                SCIP_CALL( SCIPaggregateVars(scip, var, newvar, 1.0, 1.0, ub, &infeasible, &redundant, &aggregated) );
             }

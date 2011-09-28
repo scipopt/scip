@@ -73,7 +73,7 @@ void getRandomVariable(
    assert(idx >= 0);
    
    /* handle case where cands[idx] is fixed by selecting next idx with unfixed var
-    * this may happen if we are inside a multiaggregation */
+    * this may happen if we are inside a multi-aggregation */
    firstidx = idx;
    while( SCIPisEQ(scip, SCIPvarGetLbLocal(cands[idx]), SCIPvarGetUbLocal(cands[idx])) )
    {
@@ -88,13 +88,13 @@ void getRandomVariable(
       }
    }
    
-   /* a branching variable candidate should either be an active problem variable or a multiaggregated variable */
+   /* a branching variable candidate should either be an active problem variable or a multi-aggregated variable */
    assert(SCIPvarIsActive(SCIPvarGetProbvar(cands[idx])) ||
       SCIPvarGetStatus(SCIPvarGetProbvar(cands[idx])) == SCIP_VARSTATUS_MULTAGGR);
    
    if( SCIPvarGetStatus(SCIPvarGetProbvar(cands[idx])) == SCIP_VARSTATUS_MULTAGGR )
    {
-      /* for a multiaggregated variable, we call the getRandomVariable function recursively with all variables in the multiaggregation */
+      /* for a multi-aggregated variable, we call the getRandomVariable function recursively with all variables in the multi-aggregation */
       SCIP_VAR* cand;
       
       cand = SCIPvarGetProbvar(cands[idx]);
@@ -323,7 +323,7 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsRandom)
  * branching specific interface methods
  */
 
-/** creates the most infeasible LP braching rule and includes it in SCIP */
+/** creates the random branching rule and includes it in SCIP */
 SCIP_RETCODE SCIPincludeBranchruleRandom(
    SCIP*                 scip                /**< SCIP data structure */
    )

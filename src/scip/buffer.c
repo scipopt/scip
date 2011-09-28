@@ -181,7 +181,7 @@ SCIP_RETCODE SCIPbufferReallocMem(
    assert(buffer->firstfree >= 1);
 
    /* Search the pointer in the buffer list
-    * Usally, buffers are allocated and freed like a stack, such that the currently used pointer is
+    * Usually, buffers are allocated and freed like a stack, such that the currently used pointer is
     * most likely at the end of the buffer list.
     */
    for( bufnum = buffer->firstfree-1; bufnum >= 0 && buffer->data[bufnum] != *ptr; --bufnum )
@@ -216,6 +216,66 @@ SCIP_RETCODE SCIPbufferReallocMem(
    return SCIP_OKAY;
 }
 
+#ifndef NDEBUG
+/** allocates the next unused buffer; checks for integer overflow */
+SCIP_RETCODE SCIPbufferAllocMemSave(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   void**                ptr,                /**< pointer to store the allocated memory buffer */
+   int                   num,                /**< number of entries to allocate */
+   size_t                elemsize            /**< size of one element in the array */
+   )
+{
+   if( ((size_t)(num)) > (UINT_MAX / elemsize) )
+   {
+      *ptr = NULL;
+      return SCIP_NOMEMORY;
+   }
+
+   SCIP_CALL( SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), (int)(num*elemsize)) );
+
+   return SCIP_OKAY;
+}
+
+/** allocates the next unused buffer and copies the given memory into the buffer; checks for integer overflows */
+SCIP_RETCODE SCIPbufferDuplicateMemSave(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   void**                ptr,                /**< pointer to store the allocated memory buffer */
+   const void*           source,             /**< memory block to copy into the buffer */
+   int                   num,                /**< number of entries to copy */
+   size_t                elemsize            /**< size of one element in the array */
+   )
+{
+   if( ((size_t)(num)) > (UINT_MAX / elemsize) )
+   {
+      *ptr = NULL;
+      return SCIP_NOMEMORY;
+   }
+
+   SCIP_CALL( SCIPbufferDuplicateMem((set)->buffer, set, (void**)(ptr), source, (int)(num*elemsize)) );
+
+   return SCIP_OKAY;
+}
+
+/** reallocates the buffer to at least the given size; checks for integer overflows */
+SCIP_RETCODE SCIPbufferReallocMemSave(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   void**                ptr,                /**< pointer to the allocated memory buffer */
+   int                   num,                /**< number of entries to get memory for */
+   size_t                elemsize            /**< size of one element in the array */
+   )
+{
+   if( ((size_t)(num)) > (UINT_MAX / elemsize) )
+   {
+      *ptr = NULL;
+      return SCIP_NOMEMORY;
+   }
+
+   SCIP_CALL( SCIPbufferReallocMem((set)->buffer, set, (void**)(ptr), (int)(num*elemsize)) );
+
+   return SCIP_OKAY;
+}
+#endif
+
 /** frees a buffer */
 void SCIPbufferFreeMem(
    SCIP_BUFFER*          buffer,             /**< memory buffer storage */
@@ -232,7 +292,7 @@ void SCIPbufferFreeMem(
    assert(dummysize == 0);
 
    /* Search the pointer in the buffer list
-    * Usally, buffers are allocated and freed like a stack, such that the freed pointer is
+    * Usually, buffers are allocated and freed like a stack, such that the freed pointer is
     * most likely at the end of the buffer list.
     */
    for( bufnum = buffer->firstfree-1; bufnum >= 0 && buffer->data[bufnum] != *ptr; --bufnum )

@@ -99,13 +99,13 @@ SCIP_RETCODE updateBestCandidate(
    assert(bestscore != NULL);
    assert(cand != NULL);
 
-   /* a branching variable candidate should either be an active problem variable or a multiaggregated variable */
+   /* a branching variable candidate should either be an active problem variable or a multi-aggregated variable */
    assert(SCIPvarIsActive(SCIPvarGetProbvar(cand)) ||
       SCIPvarGetStatus(SCIPvarGetProbvar(cand)) == SCIP_VARSTATUS_MULTAGGR);
    
    if( SCIPvarGetStatus(SCIPvarGetProbvar(cand)) == SCIP_VARSTATUS_MULTAGGR )
    {
-      /* for a multiaggregated variable, we call updateBestCandidate function recursively with all variables in the multiaggregation */
+      /* for a multi-aggregated variable, we call updateBestCandidate function recursively with all variables in the multi-aggregation */
       SCIP_VAR** multvars;
       int nmultvars;
       int i;
@@ -122,7 +122,7 @@ SCIP_RETCODE updateBestCandidate(
        * if this fails, then register all (unfixed) aggregation variables, thereby forgetting about candsol
        */
       success = FALSE;
-      if( candsol != SCIP_INVALID )
+      if( candsol != SCIP_INVALID ) /*lint !e777*/
       {
          SCIP_Real* multscalars;
          SCIP_Real minact;
@@ -131,7 +131,7 @@ SCIP_RETCODE updateBestCandidate(
 
          multscalars = SCIPvarGetMultaggrScalars(cand);
 
-         /* for computing the branching point, we need the current bounds of the multiaggregated variable */
+         /* for computing the branching point, we need the current bounds of the multi-aggregated variable */
          minact = SCIPcomputeVarLbLocal(scip, cand);
          maxact = SCIPcomputeVarUbLocal(scip, cand);
 
@@ -228,8 +228,8 @@ SCIP_RETCODE updateBestCandidate(
    
    /* select branching point for this variable */
    candbrpoint = SCIPgetBranchingPoint(scip, cand, candsol);
-   assert(SCIPvarGetType(cand) != SCIP_VARTYPE_CONTINUOUS || candbrpoint >= SCIPvarGetLbLocal(cand));
-   assert(SCIPvarGetType(cand) != SCIP_VARTYPE_CONTINUOUS || candbrpoint <= SCIPvarGetUbLocal(cand));
+   assert(candbrpoint >= SCIPvarGetLbLocal(cand));
+   assert(candbrpoint <= SCIPvarGetUbLocal(cand));
    assert(SCIPvarGetType(cand) == SCIP_VARTYPE_CONTINUOUS || !SCIPisIntegral(scip, candbrpoint));
 
    if( SCIPvarGetType(cand) == SCIP_VARTYPE_CONTINUOUS )
@@ -296,8 +296,8 @@ SCIP_RETCODE updateBestCandidate(
       branchscore = SCIPgetBranchScore(scip, cand, pscostdown, pscostup);
       assert(!SCIPisNegative(scip, branchscore));
    }
-   SCIPdebugMessage("branching score variable <%s> = %g; score = %g; type=%d bestbrscore=%g\n", 
-      SCIPvarGetName(cand), branchscore, WEIGHTEDSCORING(branchruledata, candscoremin, candscoremax, candscoresum), 
+   SCIPdebugMessage("branching score variable <%s>[%g,%g] = %g; score = %g; type=%d bestbrscore=%g\n",
+      SCIPvarGetName(cand), SCIPvarGetLbLocal(cand), SCIPvarGetUbLocal(cand), branchscore, WEIGHTEDSCORING(branchruledata, candscoremin, candscoremax, candscoresum),
       SCIPvarGetType(cand), *bestscore);
 
    if( SCIPisInfinity(scip, branchscore) )
@@ -312,7 +312,7 @@ SCIP_RETCODE updateBestCandidate(
    else if( SCIPisSumEQ(scip, branchscore, *bestscore)
       && !(SCIPisInfinity(scip, -SCIPvarGetLbLocal(*bestvar)) && SCIPisInfinity(scip, SCIPvarGetUbLocal(*bestvar))) )
    {
-      /* if best candidate so far is bounded or unbounded at atmost one side, maybe take new candidate */
+      /* if best candidate so far is not unbounded to both sides, maybe take new candidate */
       if( (SCIPisInfinity(scip, -SCIPvarGetLbLocal(cand))     || SCIPisInfinity(scip, SCIPvarGetUbLocal(cand))) &&
           (SCIPisInfinity(scip, -SCIPvarGetLbLocal(*bestvar)) || SCIPisInfinity(scip, SCIPvarGetUbLocal(*bestvar))) )
       { 
@@ -355,7 +355,7 @@ SCIP_RETCODE selectBranchVar(
    SCIP_VAR**            brvar,              /**< pointer to store the selected branching candidate or NULL if none */
    SCIP_Real*            brpoint             /**< pointer to store branching point of selected branching variable */
    )
-{
+{ /*lint --e{850}*/ 
    SCIP_BRANCHRULEDATA* branchruledata;
 
    SCIP_VAR* cand;
@@ -418,8 +418,8 @@ SCIP_RETCODE selectBranchVar(
          if( SCIPisInfinity(scip, REALABS(candsol)) )
             candsol = candssol[candsorigidx[j]];
       }
-      /* set i to last occurence of cand in candssorted (instead of first one as before), so in next round we look at another variable */
-      i = j-1; /*lint !e850*/ 
+      /* set i to last occurrence of cand in candssorted (instead of first one as before), so in next round we look at another variable */
+      i = j-1;
       assert(candssorted[i] == cand);
       
       /* check if new candidate is better than previous candidate (if any) */
@@ -572,7 +572,7 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextPscost)
       SCIP_CALL( SCIPgetCharParam(scip, "branching/lpgainnormalize", &branchruledata->updatestrategy) );
    }
 
-   /* select braching variable */
+   /* select branching variable */
    SCIP_CALL( selectBranchVar(scip, branchrule, externcands, externcandssol, externcandsscore, nprioexterncands, &brvar, &brpoint) );
    
    if( brvar == NULL )
@@ -628,7 +628,7 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextPscost)
  * branching specific interface methods
  */
 
-/** creates the pseudo cost braching rule and includes it in SCIP */
+/** creates the pseudo cost branching rule and includes it in SCIP */
 SCIP_RETCODE SCIPincludeBranchrulePscost(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -685,7 +685,7 @@ SCIP_RETCODE SCIPincludeBranchrulePscost(
  *  with a branching point */
 SCIP_RETCODE SCIPselectBranchVarPscost(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            branchcands,        /**< brancing candidates */
+   SCIP_VAR**            branchcands,        /**< branching candidates */
    SCIP_Real*            branchcandssol,     /**< solution value for the branching candidates */
    SCIP_Real*            branchcandsscore,   /**< array of candidate scores */
    int                   nbranchcands,       /**< number of branching candidates */
@@ -701,7 +701,7 @@ SCIP_RETCODE SCIPselectBranchVarPscost(
    branchrule = SCIPfindBranchrule(scip, BRANCHRULE_NAME);
    assert(branchrule != NULL);
    
-   /* select braching variable */
+   /* select branching variable */
    SCIP_CALL( selectBranchVar(scip, branchrule, branchcands, branchcandssol, branchcandsscore, nbranchcands, var, brpoint) );
 
    return SCIP_OKAY;

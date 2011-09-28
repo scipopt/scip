@@ -1,4 +1,12 @@
+#ifndef __CASSERT_H
+#define __CASSERT_H
+
+#if defined(_lint)
+
 extern "C" 
 {
 #include <assert.h>
 }
+
+#endif
+#endif

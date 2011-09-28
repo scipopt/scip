@@ -44,7 +44,7 @@
 #define SCIP_DEFAULT_INCLOBJCUTOFF          FALSE /**< include the objective cutoff when computing the relative interior? */
 #define SCIP_DEFAULT_RECOMPUTERELINT        FALSE /**< recompute relative interior in each separation call? */
 #define SCIP_DEFAULT_RELINTNORMTYPE           'o' /**< type of norm to use when computing relative interior */
-#define SCIP_DEFAULT_MAXUNSUCCESSFULL           0 /**< turn off separation in current node after unsuccessful calls (-1 never turn off) */
+#define SCIP_DEFAULT_MAXUNSUCCESSFUL            0 /**< turn off separation in current node after unsuccessful calls (-1 never turn off) */
 
 
 /** separator data */
@@ -57,7 +57,7 @@ struct SCIP_SepaData
    SCIP_Bool             inclobjcutoff;      /**< include the objective cutoff when computing the relative interior? */
    SCIP_Bool             recomputerelint;    /**< recompute relative interior in each separation call? */
    char                  relintnormtype;     /**< type of norm to use when computing relative interior */
-   int                   maxunsucessful;     /**< turn off separation in current node after unsuccessful calls (-1 never turn off) */
+   int                   maxunsuccessful;    /**< turn off separation in current node after unsuccessful calls (-1 never turn off) */
    SCIP_SOL*             sepasol;            /**< solution that can be used for generating close cuts */
    SCIP_Longint          discardnode;        /**< number of node for which separation is discarded */
    int                   nunsuccessful;      /**< number of consecutive unsuccessful calls */
@@ -205,6 +205,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpClosecuts)
 
    *result = SCIP_DIDNOTRUN;
 
+   /* only call separator, if there are fractional variables */
+   if ( SCIPgetNLPBranchCands(scip) == 0 )
+      return SCIP_OKAY;
+
    sepadata = SCIPsepaGetData(sepa);
    assert( sepadata != NULL );
 
@@ -299,12 +303,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpClosecuts)
                }
             }
 
-            SCIPdebugMessage("Separated close cuts: %d (enoughcuts: %d, unsuccessfull: %d).\n", SCIPgetNCuts(scip) - noldcuts,
+            SCIPdebugMessage("Separated close cuts: %d (enoughcuts: %d, unsuccessful: %d).\n", SCIPgetNCuts(scip) - noldcuts,
                SCIPgetNCuts(scip) - noldcuts > sepadata->sepathreshold, sepadata->nunsuccessful);
 
-            if ( sepadata->maxunsucessful >= 0 && sepadata->nunsuccessful > sepadata->maxunsucessful )
+            if ( sepadata->maxunsuccessful >= 0 && sepadata->nunsuccessful > sepadata->maxunsuccessful )
             {
-               SCIPdebugMessage("Turn off close cut separation, because of %d unsuccessfull calls.\n", sepadata->nunsuccessful);
+               SCIPdebugMessage("Turn off close cut separation, because of %d unsuccessful calls.\n", sepadata->nunsuccessful);
                sepadata->discardnode = currentnodenumber;
             }
          }
@@ -381,9 +385,9 @@ SCIP_RETCODE SCIPincludeSepaClosecuts(
          &sepadata->relintnormtype, TRUE, SCIP_DEFAULT_RELINTNORMTYPE, "oi", NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/closecuts/maxunsucessful",
+         "separating/closecuts/maxunsuccessful",
          "turn off separation in current node after unsuccessful calls (-1 never turn off)",
-         &sepadata->maxunsucessful, TRUE, SCIP_DEFAULT_MAXUNSUCCESSFULL, -1, INT_MAX, NULL, NULL) );
+         &sepadata->maxunsuccessful, TRUE, SCIP_DEFAULT_MAXUNSUCCESSFUL, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

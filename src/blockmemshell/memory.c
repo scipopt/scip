@@ -880,6 +880,8 @@ int createChunk(
 
    /* create new chunk */
    assert(BMSisAligned(sizeof(CHUNK)));
+   assert( chkmem->elemsize < INT_MAX / storesize );
+   assert( sizeof(CHUNK) < UINT_MAX - (size_t)(storesize * chkmem->elemsize) );
    BMSallocMemorySize(&newchunk, sizeof(CHUNK) + storesize * chkmem->elemsize);
    if( newchunk == NULL )
       return FALSE;

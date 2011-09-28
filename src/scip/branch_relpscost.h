@@ -30,7 +30,7 @@
 extern "C" {
 #endif
 
-/** creates the reliable pseudo cost braching rule and includes it in SCIP */
+/** creates the reliable pseudo cost branching rule and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    SCIP*                 scip                /**< SCIP data structure */
@@ -42,7 +42,7 @@ SCIP_RETCODE SCIPexecRelpscostBranching(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             allowaddcons,       /**< is the branching rule allowed to add constraints to the current node
                                               *   in order to cut off the current solution instead of creating a branching? */
-   SCIP_VAR**            branchcands,        /**< brancing candidates */
+   SCIP_VAR**            branchcands,        /**< branching candidates */
    SCIP_Real*            branchcandssol,     /**< solution value for the branching candidates */
    SCIP_Real*            branchcandsfrac,    /**< fractional part of the branching candidates */
    int                   nbranchcands,       /**< number of branching candidates */

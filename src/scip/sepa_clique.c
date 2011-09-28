@@ -68,7 +68,7 @@ struct SCIP_SepaData
    SCIP_Real             cliquetablemem;     /**< maximal memory size of dense clique table (in kb) */
    SCIP_Real             cliquedensity;      /**< minimal density of cliques to use a dense clique table */
    int                   ncuts;              /**< number of cuts found */
-   SCIP_Bool             tcliquegraphloaded; /**< TRUE if tcliquegraph is allready loaded (tcliquegraph can be NULL),
+   SCIP_Bool             tcliquegraphloaded; /**< TRUE if tcliquegraph is already loaded (tcliquegraph can be NULL),
                                               *   FALSE otherwise */
 };
 
@@ -688,7 +688,7 @@ SCIP_RETCODE tcliquegraphAddImplics(
             assert((implvalue == TRUE && tcliquegraph->vars[graphidx] == implvars[j])
                || (implvalue == FALSE && SCIPvarGetNegationVar(tcliquegraph->vars[graphidx]) == implvars[j]));
 
-            /* allocate memory for addional arc */
+            /* allocate memory for additional arc */
             SCIP_CALL( tcliquegraphEnsureAdjnodesSize(scip, tcliquegraph, nadjnodes+1) );
 
             /* store the adjacent node in the tclique graph data structure, sorted by index */
@@ -774,7 +774,12 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
       vars = SCIPcliqueGetVars(cliques[i]);
       vals = SCIPcliqueGetValues(cliques[i]);
       nvars = SCIPcliqueGetNVars(cliques[i]);
+#if 0  /**@todo this assert is currently not valid since implicit binary variables in cliques are ignored, 
+        * i.e., corresponding nodes and edges are not added to the tclique graph. Enable assert again if 
+        * this feature it incorporated. 
+        */
       assert(nvars <= tcliquegraph->nnodes);
+#endif
 
       /* get the node numbers of the variables */
       for( u = 0; u < nvars && !SCIPisStopped(scip); ++u )
@@ -792,7 +797,7 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
          varids[u] = v;
       }
 
-      /* flag the edges in the indicence matrix (excluding diagonal entries) */
+      /* flag the edges in the incidence matrix (excluding diagonal entries) */
       for( u = 0; u < nvars-1 && !SCIPisStopped(scip); ++u )
       {
          int nu;
@@ -806,7 +811,7 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
          nu = varids[u];
          rowstart = nu*tablewidth;
          colofs = nu/nbits;
-         colmask = 1 << (nu % nbits);
+         colmask = 1 << (nu % nbits); /*lint !e701*/
          for( v = u+1; v < nvars; ++v )
          {
             int nv;
@@ -816,7 +821,7 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
                continue;
 
             nv = varids[v];
-            mask = 1 << (nv % nbits);
+            mask = 1 << (nv % nbits); /*lint !e701*/
             cliquetable[rowstart+nv/nbits] |= mask;
             cliquetable[nv*tablewidth+colofs] |= colmask;
          }
@@ -956,10 +961,10 @@ SCIP_Bool nodesHaveCommonClique(
 
       /* check entry in the table */
       nbits = 8*sizeof(unsigned int);
-      mask = (1 << (node2 % nbits));
+      mask = (1 << (node2 % nbits)); /*lint !e701*/
       colofs = node2 / nbits;
       assert(((tcliquegraph->cliquetable[node1*tcliquegraph->tablewidth + colofs] & mask) != 0)
-         == ((tcliquegraph->cliquetable[node2*tcliquegraph->tablewidth + node1/nbits] & (1 << (node1 % nbits))) != 0));
+         == ((tcliquegraph->cliquetable[node2*tcliquegraph->tablewidth + node1/nbits] & (1 << (node1 % nbits))) != 0)); /*lint !e701*/
       return ((tcliquegraph->cliquetable[node1*tcliquegraph->tablewidth + colofs] & mask) != 0);
    }
    else

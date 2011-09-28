@@ -67,14 +67,12 @@
  *  
  *  <comment_or_constraint>::=<comment>|<constraint>|<softconstraint> 
  *
- *  <softconstraint>::= "[" <zeroOrMoreSpace> <unsigned integer> <zeroOrMoreSpace> "]" <contraint>
+ *  <softconstraint>::= "[" <zeroOrMoreSpace> <unsigned integer> <zeroOrMoreSpace> "]" <constraint>
  *  
  */
 
 /* Our parser should also be lax by handling variable names and it's possible to read doubles instead of integer and 
  * possible some more :). */
-
-
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -120,39 +118,46 @@
 #define OPB_INIT_COEFSSIZE     8192
 
 /** Section in OPB File */
-enum OpbExpType {
-   OPB_EXP_NONE, OPB_EXP_UNSIGNED, OPB_EXP_SIGNED
+enum OpbExpType 
+{
+   OPB_EXP_NONE,
+   OPB_EXP_UNSIGNED,
+   OPB_EXP_SIGNED
 };
 typedef enum OpbExpType OPBEXPTYPE;
 
-enum OpbSense {
-   OPB_SENSE_NOTHING, OPB_SENSE_LE, OPB_SENSE_GE, OPB_SENSE_EQ
+enum OpbSense 
+{
+   OPB_SENSE_NOTHING,
+   OPB_SENSE_LE,
+   OPB_SENSE_GE,
+   OPB_SENSE_EQ
 };
 typedef enum OpbSense OPBSENSE;
 
 /** OPB reading data */
 struct OpbInput
 {
-   SCIP_FILE*           file;
-   char                 linebuf[OPB_MAX_LINELEN+1];
-   char*                token;
-   char*                tokenbuf;
-   char*                pushedtokens[OPB_MAX_PUSHEDTOKENS];
-   int                  npushedtokens;
-   int                  linenumber;
-   int                  linepos;
-   int                  bufpos;
-   SCIP_OBJSENSE        objsense;
-   SCIP_Bool            comment;
-   SCIP_Bool            endline;
-   SCIP_Bool            eof;
-   SCIP_Bool            haserror;
-   int                  nproblemcoeffs;
-   SCIP_Bool            wbo;
-   SCIP_Real            topcost;
-   int                  nindvars;
+   SCIP_FILE*            file;
+   char                  linebuf[OPB_MAX_LINELEN+1];
+   char*                 token;
+   char*                 tokenbuf;
+   char*                 pushedtokens[OPB_MAX_PUSHEDTOKENS];
+   int                   npushedtokens;
+   int                   linenumber;
+   int                   linepos;
+   int                   bufpos;
+   SCIP_OBJSENSE         objsense;
+   SCIP_Bool             comment;
+   SCIP_Bool             endline;
+   SCIP_Bool             eof;
+   SCIP_Bool             haserror;
+   int                   nproblemcoeffs;
+   SCIP_Bool             wbo;
+   SCIP_Real             topcost;
+   int                   nindvars;
 #if GENCONSNAMES == TRUE
-   int                  consnumber;
+   int                   consnumber;
 #endif
 };
 
@@ -173,26 +178,17 @@ void syntaxError(
    const char*           msg                 /**< error message */
    )
 {
-#if 0
-   char formatstr[256];
-#endif
    assert(opbinput != NULL);
 
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error in line %d: %s found <%s>\n",
-      opbinput->linenumber, msg, opbinput->token);
+   SCIPerrorMessage("Syntax error in line %d: %s found <%s>\n", opbinput->linenumber, msg, opbinput->token);
    if( opbinput->linebuf[strlen(opbinput->linebuf)-1] == '\n' )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "  input: %s", opbinput->linebuf);
+      SCIPerrorMessage("  input: %s", opbinput->linebuf);
    }
    else
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "  input: %s\n", opbinput->linebuf);
+      SCIPerrorMessage("  input: %s\n", opbinput->linebuf);
    }
-
-#if 0
-   (void) SCIPsnprintf(formatstr, 256, "         %%%ds\n", opbinput->linepos);
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, formatstr, "^");
-#endif
 
    opbinput->haserror = TRUE;
 }
@@ -200,7 +196,7 @@ void syntaxError(
 /** returns whether a syntax error was detected */
 static
 SCIP_Bool hasError(
-   OPBINPUT*              opbinput           /**< OPB reading data */
+   OPBINPUT*             opbinput            /**< OPB reading data */
    )
 {
    assert(opbinput != NULL);
@@ -239,7 +235,7 @@ SCIP_Bool isValueChar(
    assert(hasdot != NULL);
    assert(exptype != NULL);
 
-   if( isdigit(c) )
+   if( isdigit((unsigned char)c) )
       return TRUE;
    else if( (*exptype == OPB_EXP_NONE) && !(*hasdot) && (c == '.') )
    {
@@ -253,7 +249,7 @@ SCIP_Bool isValueChar(
          *exptype = OPB_EXP_SIGNED;
          return TRUE;
       }
-      else if( isdigit(nextc) )
+      else if( isdigit((unsigned char)nextc) )
       {
          *exptype = OPB_EXP_UNSIGNED;
          return TRUE;
@@ -273,7 +269,7 @@ SCIP_Bool isValueChar(
  */
 static
 SCIP_Bool getNextLine(
-   OPBINPUT*              opbinput           /**< OPB reading data */
+   OPBINPUT*             opbinput            /**< OPB reading data */
    )
 {
    int i;
@@ -326,16 +322,16 @@ SCIP_Bool getNextLine(
 
       if( last == NULL )
       {
-	 SCIPwarningMessage("we read %d character from the file; these might indicates an corrupted input file!", 
+         SCIPwarningMessage("we read %d character from the file; these might indicates a corrupted input file!", 
             OPB_MAX_LINELEN - 2);
-	 opbinput->linebuf[OPB_MAX_LINELEN-2] = '\0';
-	 SCIPdebugMessage("the buffer might be corrupted\n");
+         opbinput->linebuf[OPB_MAX_LINELEN-2] = '\0';
+         SCIPdebugMessage("the buffer might be corrupted\n");
       }
       else 
       {
-	 SCIPfseek(opbinput->file, -(long) strlen(last) - 1, SEEK_CUR);
-	 SCIPdebugMessage("correct buffer, reread the last %ld characters\n", (long) strlen(last) + 1);
-	 *last = '\0';
+         SCIPfseek(opbinput->file, -(long) strlen(last) - 1, SEEK_CUR);
+         SCIPdebugMessage("correct buffer, reread the last %ld characters\n", (long) strlen(last) + 1);
+         *last = '\0';
       }
    }
    else 
@@ -344,8 +340,7 @@ SCIP_Bool getNextLine(
       opbinput->endline = TRUE;
    }
    
-   opbinput->linebuf[OPB_MAX_LINELEN-1] = '\0';
-   opbinput->linebuf[OPB_MAX_LINELEN-2] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
+   opbinput->linebuf[OPB_MAX_LINELEN-1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
 
    opbinput->comment = FALSE;
 
@@ -386,7 +381,7 @@ void swapPointers(
 /** reads the next token from the input file into the token buffer; returns whether a token was read */
 static
 SCIP_Bool getNextToken(
-   OPBINPUT*              opbinput           /**< OPB reading data */
+   OPBINPUT*             opbinput            /**< OPB reading data */
    )
 {
    SCIP_Bool hasdot;
@@ -491,7 +486,7 @@ SCIP_Bool getNextToken(
 /** puts the current token on the token stack, such that it is read at the next call to getNextToken() */
 static
 void pushToken(
-   OPBINPUT*              opbinput           /**< OPB reading data */
+   OPBINPUT*             opbinput            /**< OPB reading data */
    )
 {
    assert(opbinput != NULL);
@@ -504,7 +499,7 @@ void pushToken(
 /** puts the buffered token on the token stack, such that it is read at the next call to getNextToken() */
 static
 void pushBufferToken(
-   OPBINPUT*              opbinput           /**< OPB reading data */
+   OPBINPUT*             opbinput            /**< OPB reading data */
    )
 {
    assert(opbinput != NULL);
@@ -517,7 +512,7 @@ void pushBufferToken(
 /** swaps the current token with the token buffer */
 static
 void swapTokenBuffer(
-   OPBINPUT*              opbinput           /**< OPB reading data */
+   OPBINPUT*             opbinput            /**< OPB reading data */
    )
 {
    assert(opbinput != NULL);
@@ -528,7 +523,7 @@ void swapTokenBuffer(
 /** checks whether the current token is a section identifier, and if yes, switches to the corresponding section */
 static
 SCIP_Bool isEndLine(
-   OPBINPUT*              opbinput           /**< OPB reading data */
+   OPBINPUT*             opbinput            /**< OPB reading data */
    )
 {
    assert(opbinput != NULL);
@@ -550,8 +545,10 @@ SCIP_Bool isSign(
    assert(sign != NULL);
    assert(*sign == +1 || *sign == -1);
 
-   if( strlen(opbinput->token) == 1 && opbinput->token[1] == '\0' )
+   if( strlen(opbinput->token) == 1 )
    {
+      assert(opbinput->token[1] == '\0');
+
       if( *opbinput->token == '+' )
          return TRUE;
       else if( *opbinput->token == '-' )
@@ -601,8 +598,8 @@ SCIP_Bool isValue(
 /** returns whether the current token is an equation sense */
 static
 SCIP_Bool isSense(
-   OPBINPUT*              opbinput,          /**< OPB reading data */
-   OPBSENSE*              sense              /**< pointer to store the equation sense, or NULL */
+   OPBINPUT*             opbinput,           /**< OPB reading data */
+   OPBSENSE*             sense               /**< pointer to store the equation sense, or NULL */
    )
 {
    assert(opbinput != NULL);
@@ -719,7 +716,7 @@ SCIP_RETCODE getVariableOrTerm(
    assert(name != NULL);
    
    /* parse AND terms */
-   while(!isdigit( *name ) && !isTokenChar(*name) && !opbinput->haserror )
+   while(!isdigit((unsigned char) *name ) && !isTokenChar(*name) && !opbinput->haserror )
    {
       SCIP_VAR* var;
 
@@ -784,9 +781,9 @@ SCIP_RETCODE readCoefficients(
    int**                 ntermvars,          /**< pointer to store the number of nonlinear variables in the terms (must be freed by caller) */
    int*const             ntermcoefs,         /**< pointer to store the number of nonlinear coefficients */
    SCIP_Bool*const       newsection,         /**< pointer to store whether a new section was encountered */
-   SCIP_Bool*const       isNonlinear,        /**< pointer to store if we have an nonlinear constraint */
+   SCIP_Bool*const       isNonlinear,        /**< pointer to store if we have a nonlinear constraint */
    SCIP_Bool*const       issoftcons,         /**< pointer to store whether it is a soft constraint (for wbo files) */
-   SCIP_Real*const       weight              /**< pointer to store the weight of the softconstraint */
+   SCIP_Real*const       weight              /**< pointer to store the weight of the soft constraint */
    )
 {
    SCIP_VAR** tmpvars;
@@ -935,7 +932,7 @@ SCIP_RETCODE readCoefficients(
          }
          havevalue = TRUE;
 
-         /* if we read a wbo file, the first line should be sth. like "soft: <weight>;", where weight is a value or nothing */
+         /* if we read a wbo file, the first line should be something like "soft: <weight>;", where weight is a value or nothing */
          if( strcmp(name, "soft") == 0 )
          {
             assert(ntmpcoefs == 0);
@@ -961,9 +958,6 @@ SCIP_RETCODE readCoefficients(
       if( *nlincoefs == 0 && *ntermcoefs == 0 && ntmpcoefs == 0 && havevalue && haveweightstart && isEndingSoftConstraintWeight(scip, opbinput) )
       {
          *weight = coefsign * coef;
-#if (USEINDICATOR == TRUE)
-         assert(*weight > 0);
-#endif
          SCIPdebugMessage("(line %d) found soft constraint weight: %g\n", opbinput->linenumber, *weight);
 
          coefsign = +1;
@@ -1135,13 +1129,13 @@ SCIP_RETCODE setObjective(
       
       /* @todo: what todo with non-linear objectives, maybe create the necessary and-constraints and add the arising linear
        * objective (with and-resultants) or add a integer variable to this constraint and put only this variable in the
-       * objective, for this we need to expand the pseudo-boolean constraints to handle interger variables 
+       * objective, for this we need to expand the pseudo-boolean constraints to handle integer variables 
        *
        * integer variant is not implemented 
        */
       if( ntermcoefs > 0 )
       {
-#if (LINEAROBJECTIVE == TRUE) 
+#if( LINEAROBJECTIVE == TRUE )
          /* all non-linear parts are created as and constraint, even if the same non-linear part was already part of the objective function */
 
          SCIP_VAR** vars;
@@ -1240,7 +1234,7 @@ SCIP_RETCODE setObjective(
       /* set the objective values */
       for( v = 0; v < ncoefs; ++v )
       {
-	SCIP_CALL( SCIPchgVarObj(scip, linvars[v], SCIPvarGetObj(linvars[v]) + coefs[v]) );
+         SCIP_CALL( SCIPchgVarObj(scip, linvars[v], SCIPvarGetObj(linvars[v]) + coefs[v]) );
       }
    }
 
@@ -1414,21 +1408,21 @@ SCIP_RETCODE readConstraints(
       indvar = NULL;
 
 #if GENCONSNAMES == TRUE
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "pseudoboolean%d", opbinput->consnumber);
-      ++(opbinput->consnumber);
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "pseudoboolean%d", opbinput->consnumber);
+   ++(opbinput->consnumber);
 #else
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "pseudoboolean");
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "pseudoboolean");
 #endif
-      SCIP_CALL( SCIPcreateConsPseudoboolean(scip, &cons, name, linvars, nlincoefs, lincoefs, terms, ntermcoefs,
-            ntermvars, termcoefs, indvar, weight, issoftcons, NULL, lhs, rhs, 
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
-      SCIP_CALL( SCIPaddCons(scip, cons) );
-      SCIPdebugMessage("(line %d) created constraint: ", opbinput->linenumber);
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   SCIP_CALL( SCIPcreateConsPseudoboolean(scip, &cons, name, linvars, nlincoefs, lincoefs, terms, ntermcoefs,
+         ntermvars, termcoefs, indvar, weight, issoftcons, NULL, lhs, rhs, 
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIPdebugMessage("(line %d) created constraint: ", opbinput->linenumber);
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       
-      if( isNonlinear )
-         ++(*nNonlinearConss);
+   if( isNonlinear )
+      ++(*nNonlinearConss);
 
  TERMINATE:
 
@@ -1478,10 +1472,10 @@ SCIP_RETCODE getMaxAndConsDim(
       {
          commentstart = strchr(opbinput->linebuf, commentchars[i]);
          
-         /* found a commentline */
+         /* found a commen tline */
          if( commentstart != NULL )
          { 
-	    /* search for "#product= xyz" in commentline, where xyz represents the number of and constraints */
+            /* search for "#product= xyz" in comment line, where xyz represents the number of and constraints */
             nproducts = strstr(opbinput->linebuf, "#product= ");
             if( nproducts != NULL )
             {
@@ -1516,7 +1510,7 @@ SCIP_RETCODE getMaxAndConsDim(
 
    opbinput->linebuf[0] = '\0';
 
-#if 0 /* following lines should be correct, but gzseek seems to not reseting status beeing at the end of file */
+#if 0 /* following lines should be correct, but it seems that gzseek does not reset the position if standing at the end of a file */
    /* reset filereader pointer to the beginning */
    (void) SCIPfseek(opbinput->file, 0, SEEK_SET);
 #else
@@ -1664,7 +1658,7 @@ SCIP_RETCODE getBinVarsRepresentatives(
 
          if( vars[v] == NULL )
          {
-            SCIPdebugMessage("A variable coundn't retransformed to an original variable.\n");
+            SCIPdebugMessage("A variable couldn't retransformed to an original variable.\n");
             return SCIP_INVALIDDATA;
          }
          if( SCIPisEQ(scip, scalar, -1.0) && SCIPisEQ(scip, constant, 1.0) )
@@ -1675,7 +1669,7 @@ SCIP_RETCODE getBinVarsRepresentatives(
          {
             if( !SCIPisEQ(scip, scalar, 1.0) || !SCIPisZero(scip, constant) )
             {
-               SCIPdebugMessage("A variable coundn't retransformed to an original variable or a negated variable of an original variable (scalar = %g, constant = %g).\n", scalar, constant);
+               SCIPdebugMessage("A variable couldn't retransformed to an original variable or a negated variable of an original variable (scalar = %g, constant = %g).\n", scalar, constant);
                return SCIP_INVALIDDATA;
             }
          }
@@ -1699,11 +1693,11 @@ SCIP_RETCODE getActiveVariables(
    int requiredsize;
    int v;
 
-   assert( scip != NULL );
-   assert( vars != NULL );
-   assert( scalars != NULL );
-   assert( nvars != NULL );
-   assert( constant != NULL );
+   assert(scip != NULL);
+   assert(vars != NULL);
+   assert(scalars != NULL);
+   assert(nvars != NULL);
+   assert(constant != NULL);
 
    if( transformed )
    {
@@ -1730,7 +1724,7 @@ SCIP_RETCODE getActiveVariables(
    return SCIP_OKAY;
 }
 
-/* computes all and-resultants and their corresonding constraint variables */
+/* computes all and-resultants and their corresponding constraint variables */
 static
 SCIP_RETCODE computeAndConstraintInfos(
    SCIP*const            scip,               /**< SCIP data structure */
@@ -1815,6 +1809,8 @@ SCIP_RETCODE computeAndConstraintInfos(
       {
          *existands = TRUE;
 
+         assert(andconss != NULL);
+
          SCIP_CALL( SCIPallocMemoryArray(scip, resvars, *nresvars) );
          SCIP_CALL( SCIPallocMemoryArray(scip, andvars, *nresvars) );
          SCIP_CALL( SCIPallocMemoryArray(scip, nandvars, *nresvars) );
@@ -1822,11 +1818,13 @@ SCIP_RETCODE computeAndConstraintInfos(
          /* collect all and-constraint variables */
          for( c = nandconss - 1; c >= 0; --c )
          {
-	    (*nandvars)[c] = SCIPgetNVarsAnd(scip, andconss[c]);
-	    SCIP_CALL( SCIPduplicateMemoryArray(scip, &((*andvars)[c]), SCIPgetVarsAnd(scip, andconss[c]), (*nandvars)[c]) );
-	    SCIP_CALL( getBinVarsRepresentatives(scip, (*andvars)[c], (*nandvars)[c], transformed) );
+            assert(andconss[c] != NULL);
 
-	    (*resvars)[c] = SCIPgetResultantAnd(scip, andconss[c]);
+            (*nandvars)[c] = SCIPgetNVarsAnd(scip, andconss[c]);
+            SCIP_CALL( SCIPduplicateMemoryArray(scip, &((*andvars)[c]), SCIPgetVarsAnd(scip, andconss[c]), (*nandvars)[c]) );
+            SCIP_CALL( getBinVarsRepresentatives(scip, (*andvars)[c], (*nandvars)[c], transformed) );
+
+            (*resvars)[c] = SCIPgetResultantAnd(scip, andconss[c]);
 
             assert((*andvars)[c] != NULL && (*nandvars)[c] > 0);
             assert((*resvars)[c] != NULL);
@@ -1881,7 +1879,7 @@ SCIP_RETCODE computeAndConstraintInfos(
                      }
                      return SCIP_INVALIDDATA;
                   }
-               SCIPdebugMessage("Another and-contraint contains and-resultant:");
+               SCIPdebugMessage("Another and-constraint contains and-resultant:");
                SCIPdebug( SCIP_CALL( SCIPprintVar(scip, (*resvars)[pos], NULL) ) );
                SCIPdebugMessage("Trying to resolve.\n");
                
@@ -1924,7 +1922,7 @@ SCIP_RETCODE computeAndConstraintInfos(
 static
 void clearBuffer(
    char*                 linebuffer,         /**< line */
-   int*                  linecnt             /**< number of charaters in line */
+   int*                  linecnt             /**< number of characters in line */
    )
 {
    assert( linebuffer != NULL );
@@ -1941,7 +1939,7 @@ void writeBuffer(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    char*                 linebuffer,         /**< line */
-   int*                  linecnt             /**< number of charaters in line */
+   int*                  linecnt             /**< number of characters in line */
    )
 {
    assert( scip != NULL );
@@ -1962,25 +1960,25 @@ static
 void appendBuffer(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
-   char*                 linebuffer,         /**< line */
-   int*                  linecnt,            /**< number of charaters in line */
+   char*                 linebuffer,         /**< line buffer */
+   int*                  linecnt,            /**< number of characters in line */
    const char*           extension           /**< string to extent the line */
    )
 {
-   assert( scip != NULL );
-   assert( linebuffer != NULL );
-   assert( linecnt != NULL );
-   assert( extension != NULL );
+   assert(scip != NULL);
+   assert(linebuffer != NULL);
+   assert(linecnt != NULL);
+   assert(extension != NULL);
    
-   if( (*linecnt) + strlen(extension) >= OPB_MAX_LINELEN )
+   if( (*linecnt) + strlen(extension) >= OPB_MAX_LINELEN - 1 )
       writeBuffer(scip, file, linebuffer, linecnt);
    
    /* append extension to linebuffer */
-   strncat(linebuffer, extension, OPB_MAX_LINELEN - (unsigned int)(*linecnt));
+   strncat(linebuffer, extension, OPB_MAX_LINELEN - (unsigned int)(*linecnt) - 1);
    (*linecnt) += (int) strlen(extension);
 }
 
-/* write objective function */
+/** write objective function */
 static
 SCIP_RETCODE writeOpbObjective(
    SCIP*const            scip,               /**< SCIP data structure */
@@ -2013,7 +2011,7 @@ SCIP_RETCODE writeOpbObjective(
    assert(file != NULL);
    assert(vars != NULL || nvars == 0);
    assert(resvars != NULL || nresvars == 0);
-   assert(andvars != NULL || nandvars == 0);
+   assert(andvars != NULL || nandvars == NULL);
    assert(multisymbol != NULL);
 
    mult = 1;
@@ -2029,10 +2027,10 @@ SCIP_RETCODE writeOpbObjective(
       
 #ifndef NDEBUG
       {
-	 /* in case the original problem has to be posted the variables have to be either "original" or "negated" */
+         /* in case the original problem has to be posted the variables have to be either "original" or "negated" */
          if( !transformed )
-	    assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL ||
-		    SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED );
+            assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL ||
+               SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED );
       }
 #endif
       
@@ -2255,10 +2253,10 @@ SCIP_RETCODE writeOpbObjective(
       {
          objective = TRUE;
          while( !SCIPisIntegral(scip, SCIPvarGetObj(var) * mult) ) 
-	 {
-	    assert(mult * 10 > mult);
-	    mult *= 10;
-	 }
+         {
+            assert(mult * 10 > mult);
+            mult *= 10;
+         }
       }
    }
    
@@ -2274,7 +2272,7 @@ SCIP_RETCODE writeOpbObjective(
       if( objsense == SCIP_OBJSENSE_MAXIMIZE )
          mult *= -1;
       
-      SCIPdebugMessage("print objective function multiplyed with %"SCIP_LONGINT_FORMAT"\n", mult);
+      SCIPdebugMessage("print objective function multiplied with %"SCIP_LONGINT_FORMAT"\n", mult);
       
       appendBuffer(scip, file, linebuffer, &linecnt, "min:");
 
@@ -2305,30 +2303,33 @@ SCIP_RETCODE writeOpbObjective(
          /* replace and-resultant with corresponding variables */
          if( existands && SCIPsortedvecFindPtr((void**)resvars, SCIPvarComp, var, nresvars, &pos) )
          {
-	    int a;
+            int a;
 
+            assert(andvars != NULL);
+            assert(nandvars != NULL);
             assert(pos >= 0 && nandvars[pos] > 0 && andvars[pos] != NULL);
+            assert(andvars[pos][nandvars[pos] - 1] != NULL);
 
-	    negated = SCIPvarIsNegated(andvars[pos][nandvars[pos] - 1]);
+            negated = SCIPvarIsNegated(andvars[pos][nandvars[pos] - 1]);
 
             /* print and-vars */
             (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, " %+"SCIP_LONGINT_FORMAT"%s%s%s", 
-	       (SCIP_Longint) (SCIPvarGetObj(var) * mult), multisymbol, negated ? "~" : "",
-	       strstr(SCIPvarGetName(negated ? SCIPvarGetNegationVar(andvars[pos][nandvars[pos] - 1]) : andvars[pos][nandvars[pos] - 1]), "x"));
+               (SCIP_Longint) (SCIPvarGetObj(var) * mult), multisymbol, negated ? "~" : "",
+               strstr(SCIPvarGetName(negated ? SCIPvarGetNegationVar(andvars[pos][nandvars[pos] - 1]) : andvars[pos][nandvars[pos] - 1]), "x"));
             appendBuffer(scip, file, linebuffer, &linecnt, buffer);
          
             for(a = nandvars[pos] - 2; a >= 0; --a )
             {
-	       negated = SCIPvarIsNegated(andvars[pos][a]);
+               negated = SCIPvarIsNegated(andvars[pos][a]);
 
                (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%s%s%s", multisymbol, negated ? "~" : "", strstr(SCIPvarGetName(negated ? SCIPvarGetNegationVar(andvars[pos][a]) : andvars[pos][a]), "x"));
                appendBuffer(scip, file, linebuffer, &linecnt, buffer);
             }
-	 }
+         }
          else
          {
             (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, " %+"SCIP_LONGINT_FORMAT"%s%s%s", 
-	       (SCIP_Longint) (SCIPvarGetObj(var) * mult), multisymbol, negated ? "~" : "", strstr(SCIPvarGetName(negated ? SCIPvarGetNegationVar(var) : var), "x"));
+               (SCIP_Longint) (SCIPvarGetObj(var) * mult), multisymbol, negated ? "~" : "", strstr(SCIPvarGetName(negated ? SCIPvarGetNegationVar(var) : var), "x"));
             appendBuffer(scip, file, linebuffer, &linecnt, buffer);
          }
       }
@@ -2422,27 +2423,30 @@ SCIP_RETCODE printNLRow(
       /* replace and-resultant with corresponding variables */
       if( SCIPsortedvecFindPtr((void**)resvars, SCIPvarComp, var, nresvars, &pos) )
       {
-	 int a;
-	 
-	 assert(pos >= 0 && nandvars[pos] > 0 && andvars[pos] != NULL);
-	 
-	 negated = SCIPvarIsNegated(andvars[pos][nandvars[pos] - 1]);
-
-	 /* print and-vars */
-	 (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%+"SCIP_LONGINT_FORMAT"%s%s%s", 
-	    (SCIP_Longint) SCIPround(scip, vals[v] * (*mult)), multisymbol, negated ? "~" : "",
-	    strstr(SCIPvarGetName(negated ? SCIPvarGetNegationVar(andvars[pos][nandvars[pos] - 1]) : andvars[pos][nandvars[pos] - 1]), "x") );
-	 appendBuffer(scip, file, linebuffer, &linecnt, buffer);
+         int a;
          
-	 for(a = nandvars[pos] - 2; a >= 0; --a )
-	 {
-	    negated = SCIPvarIsNegated(andvars[pos][a]);
-	    
-	    (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%s%s%s", multisymbol, negated ? "~" : "", strstr(SCIPvarGetName(negated ? SCIPvarGetNegationVar(andvars[pos][a]) : andvars[pos][a]), "x"));
-	    appendBuffer(scip, file, linebuffer, &linecnt, buffer);
-	 }
+         assert(andvars != NULL);
+         assert(nandvars != NULL);
+         assert(pos >= 0 && nandvars[pos] > 0 && andvars[pos] != NULL);
+         assert(andvars[pos][nandvars[pos] - 1] != NULL);
+         
+         negated = SCIPvarIsNegated(andvars[pos][nandvars[pos] - 1]);
+
+         /* print and-vars */
+         (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%+"SCIP_LONGINT_FORMAT"%s%s%s", 
+            (SCIP_Longint) SCIPround(scip, vals[v] * (*mult)), multisymbol, negated ? "~" : "",
+            strstr(SCIPvarGetName(negated ? SCIPvarGetNegationVar(andvars[pos][nandvars[pos] - 1]) : andvars[pos][nandvars[pos] - 1]), "x") );
+         appendBuffer(scip, file, linebuffer, &linecnt, buffer);
+         
+         for(a = nandvars[pos] - 2; a >= 0; --a )
+         {
+            negated = SCIPvarIsNegated(andvars[pos][a]);
             
-	 appendBuffer(scip, file, linebuffer, &linecnt, " ");
+            (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%s%s%s", multisymbol, negated ? "~" : "", strstr(SCIPvarGetName(negated ? SCIPvarGetNegationVar(andvars[pos][a]) : andvars[pos][a]), "x"));
+            appendBuffer(scip, file, linebuffer, &linecnt, buffer);
+         }
+            
+         appendBuffer(scip, file, linebuffer, &linecnt, " ");
       }
       else
       {
@@ -2604,7 +2608,7 @@ void printRow(
       }
    }
 
-   while ( !SCIPisIntegral(scip, lhs * (*mult)) )
+   while( !SCIPisIntegral(scip, lhs * (*mult)) )
    {
       assert(ABS(*mult) < ABS(*mult * 10));
       (*mult) *= 10;
@@ -2796,7 +2800,7 @@ void printPBRow(
       }
    }
 
-   while ( !SCIPisIntegral(scip, lhs * (*mult)) )
+   while( !SCIPisIntegral(scip, lhs * (*mult)) )
    {
       assert(ABS(*mult) < ABS(*mult * 10));
       (*mult) *= 10;
@@ -2909,10 +2913,15 @@ SCIP_RETCODE printPseudobooleanCons(
    {
       SCIP_CALL( SCIPduplicateBufferArray(scip, &activelinvars, linvars, nactivelinvars ) );
       SCIP_CALL( SCIPduplicateBufferArray(scip, &activelinvals, linvals, nactivelinvars ) );
-   }
 
-   /* retransform given variables to active variables */
-   SCIP_CALL( getActiveVariables(scip, activelinvars, activelinvals, &nactivelinvars, &activelinconstant, transformed) );
+      /* retransform given variables to active variables */
+      SCIP_CALL( getActiveVariables(scip, activelinvars, activelinvals, &nactivelinvars, &activelinconstant, transformed) );
+   }
+   else
+   {
+      activelinvars = NULL;
+      activelinvals = NULL;
+   }
 
    /* create non-linear information for printing */
    if( ntermvals > 0 )
@@ -2928,6 +2937,11 @@ SCIP_RETCODE printPseudobooleanCons(
          /* get binary representatives of binary variables in non-linear terms */
          SCIP_CALL( SCIPgetBinvarRepresentatives(scip, ntermvars[v], termvars[v], activetermvars[v], negatedarrays[v]) );
       }
+   }
+   else
+   {
+      activetermvars = NULL;
+      negatedarrays = NULL;
    }
       
    mult = 1;
@@ -3020,7 +3034,7 @@ SCIP_RETCODE writeOpbConstraints(
    conshdlr = SCIPfindConshdlr(scip, "indicator");
    linconssofindicatorsmap = NULL;
 
-   /* find artifical linear constraints which correspond to indicator constraints to avoid double printing */
+   /* find artificial linear constraints which correspond to indicator constraints to avoid double printing */
    if( conshdlr != NULL )
    {
       SCIP_CONS** indconss;
@@ -3077,13 +3091,13 @@ SCIP_RETCODE writeOpbConstraints(
                SCIP_CALL( printNonLinearCons(scip, file,
                      SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons), SCIPgetNVarsLinear(scip, cons),
                      SCIPgetLhsLinear(scip, cons),  SCIPgetRhsLinear(scip, cons), resvars, nresvars, andvars, nandvars, 
-                     0, transformed, multisymbol) );
+                     0LL, transformed, multisymbol) );
             }            
             else
             {
                SCIP_CALL( printLinearCons(scip, file,
                      SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons), SCIPgetNVarsLinear(scip, cons),
-                     SCIPgetLhsLinear(scip, cons),  SCIPgetRhsLinear(scip, cons), 0, transformed, multisymbol) );
+                     SCIPgetLhsLinear(scip, cons),  SCIPgetRhsLinear(scip, cons), 0LL, transformed, multisymbol) );
             }
          }
       }
@@ -3098,12 +3112,12 @@ SCIP_RETCODE writeOpbConstraints(
             if( existands )
             {
                SCIP_CALL( printNonLinearCons(scip, file,
-                     consvars, NULL, nconsvars, 1.0, 1.0, resvars, nresvars, andvars, nandvars, 0, transformed, multisymbol) );
+                     consvars, NULL, nconsvars, 1.0, 1.0, resvars, nresvars, andvars, nandvars, 0LL, transformed, multisymbol) );
             }            
             else
             {
                SCIP_CALL( printLinearCons(scip, file,
-                     consvars, NULL, nconsvars, 1.0, 1.0, 0, transformed, multisymbol) );
+                     consvars, NULL, nconsvars, 1.0, 1.0, 0LL, transformed, multisymbol) );
             }
             break;
          case SCIP_SETPPCTYPE_PACKING :
@@ -3111,12 +3125,12 @@ SCIP_RETCODE writeOpbConstraints(
             {
                SCIP_CALL( printNonLinearCons(scip, file,
                      consvars, NULL, nconsvars, -SCIPinfinity(scip), 1.0, resvars, nresvars, andvars, nandvars,
-                     0, transformed, multisymbol) );
+                     0LL, transformed, multisymbol) );
             }            
             else
             {
                SCIP_CALL( printLinearCons(scip, file,
-                     consvars, NULL, nconsvars, -SCIPinfinity(scip), 1.0, 0, transformed, multisymbol) );
+                     consvars, NULL, nconsvars, -SCIPinfinity(scip), 1.0, 0LL, transformed, multisymbol) );
             }
             break;
          case SCIP_SETPPCTYPE_COVERING :
@@ -3124,34 +3138,34 @@ SCIP_RETCODE writeOpbConstraints(
             {
                SCIP_CALL( printNonLinearCons(scip, file,
                      consvars, NULL, nconsvars, 1.0, SCIPinfinity(scip), resvars, nresvars, andvars, nandvars,
-                     0, transformed, multisymbol) );
+                     0LL, transformed, multisymbol) );
             }            
             else
             {
                SCIP_CALL( printLinearCons(scip, file,
-                     consvars, NULL, nconsvars, 1.0, SCIPinfinity(scip), 0, transformed, multisymbol) );
+                     consvars, NULL, nconsvars, 1.0, SCIPinfinity(scip), 0LL, transformed, multisymbol) );
             }
             break;
          }
       }
-      else if ( strcmp(conshdlrname, "logicor") == 0 )
+      else if( strcmp(conshdlrname, "logicor") == 0 )
       {
          if( existands )
          {
             SCIP_CALL( printNonLinearCons(scip, file,
                   SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons), 1.0, SCIPinfinity(scip), 
-                  resvars, nresvars, andvars, nandvars, 0, transformed, multisymbol) );
+                  resvars, nresvars, andvars, nandvars, 0LL, transformed, multisymbol) );
          }     
          else
          {       
             SCIP_CALL( printLinearCons(scip, file,
                   SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons),
-                  1.0, SCIPinfinity(scip), 0, transformed, multisymbol) );
+                  1.0, SCIPinfinity(scip), 0LL, transformed, multisymbol) );
          }
       }
-      else if ( strcmp(conshdlrname, "knapsack") == 0 )
+      else if( strcmp(conshdlrname, "knapsack") == 0 )
       {
-	 SCIP_Longint* weights;
+         SCIP_Longint* weights;
 
          consvars = SCIPgetVarsKnapsack(scip, cons);
          nconsvars = SCIPgetNVarsKnapsack(scip, cons);
@@ -3166,17 +3180,17 @@ SCIP_RETCODE writeOpbConstraints(
          {
             SCIP_CALL( printNonLinearCons(scip, file, consvars, consvals, nconsvars, -SCIPinfinity(scip), 
                   (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), resvars, nresvars, andvars, nandvars,
-                   0, transformed, multisymbol) );
+                  0LL, transformed, multisymbol) );
          }     
          else
          {       
             SCIP_CALL( printLinearCons(scip, file, consvars, consvals, nconsvars, -SCIPinfinity(scip), 
-                  (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), 0, transformed, multisymbol) );
+                  (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), 0LL, transformed, multisymbol) );
          }
 
          SCIPfreeBufferArray(scip, &consvals);
       }
-      else if ( strcmp(conshdlrname, "varbound") == 0 )
+      else if( strcmp(conshdlrname, "varbound") == 0 )
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &consvars, 2) );
          SCIP_CALL( SCIPallocBufferArray(scip, &consvals, 2) );
@@ -3190,12 +3204,12 @@ SCIP_RETCODE writeOpbConstraints(
          if( existands )
          {
             SCIP_CALL( printNonLinearCons(scip, file, consvars, consvals, 2, SCIPgetLhsVarbound(scip, cons), 
-                  SCIPgetRhsVarbound(scip, cons), resvars, nresvars, andvars, nandvars, 0, transformed, multisymbol) );
+                  SCIPgetRhsVarbound(scip, cons), resvars, nresvars, andvars, nandvars, 0LL, transformed, multisymbol) );
          }     
          else
          {       
             SCIP_CALL( printLinearCons(scip, file, consvars, consvals, 2, SCIPgetLhsVarbound(scip, cons), 
-                  SCIPgetRhsVarbound(scip, cons), 0, transformed, multisymbol) );
+                  SCIPgetRhsVarbound(scip, cons), 0LL, transformed, multisymbol) );
          }
 
          SCIPfreeBufferArray(scip, &consvars);
@@ -3250,7 +3264,7 @@ SCIP_RETCODE writeOpbConstraints(
          assert(slackvar != NULL);
 
          /* only need to print indicator constraints with weights on their indicator variable */
-         if( !SCIPisZero(scip, weight) )
+         if( weight != 0 )
          {
             SCIP_Bool cont;
             int nonbinarypos;
@@ -3342,15 +3356,15 @@ SCIP_RETCODE writeOpbConstraints(
             SCIP_CALL( SCIPprintCons(scip, cons, file) );
          }
       }
-      else if ( strcmp(conshdlrname, "and") == 0 )
+      else if( strcmp(conshdlrname, "and") == 0 )
       {
          /* all resultants of the and constraint will be replaced by all corresponding variables of this constraint, 
           * so no and-constraint will be printed directly */
-	 assert(existandconshdlr);
+         assert(existandconshdlr);
       }
       else
       {
-         SCIPwarningMessage("constraint handler <%s> can not print requested format\n", conshdlrname );
+         SCIPwarningMessage("constraint handler <%s> cannot print requested format\n", conshdlrname );
          SCIPinfoMessage(scip, file, "* ");
          SCIP_CALL( SCIPprintCons(scip, cons, file) );
       }
@@ -3365,7 +3379,7 @@ SCIP_RETCODE writeOpbConstraints(
    return SCIP_OKAY;
 }
 
-/* write and constraints of inactive but relevant and-resulants and and variables which are fixed to one */
+/* write and constraints of inactive but relevant and-resultants and and variables which are fixed to one */
 static
 SCIP_RETCODE writeOpbRelevantAnds(
    SCIP*const            scip,               /**< SCIP data structure */
@@ -3388,7 +3402,8 @@ SCIP_RETCODE writeOpbRelevantAnds(
    assert(scip != NULL);
    assert(file != NULL);
    assert(resvars != NULL || nresvars == 0);
-   assert(andvars != NULL || nandvars == 0);
+   assert(nandvars != NULL || nresvars == 0);
+   assert(andvars != NULL || nandvars == NULL);
    assert(multisymbol != NULL);
 
    clearBuffer(linebuffer, &linecnt);
@@ -3411,6 +3426,8 @@ SCIP_RETCODE writeOpbRelevantAnds(
          appendBuffer(scip, file, linebuffer, &linecnt, buffer);
       }
 
+      assert(andvars[r] != NULL || nandvars[r] == 0);
+
       /* print fixed and-variables */
       for( v = nandvars[r] - 1; v >= 0; --v )
       {
@@ -3420,12 +3437,12 @@ SCIP_RETCODE writeOpbRelevantAnds(
          {
             assert(SCIPisFeasIntegral(scip, SCIPvarGetLbLocal(var)));
             (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%s%s = %g;\n", neg ? "~" : "", strstr(SCIPvarGetName(neg ? SCIPvarGetNegationVar(var) : var), "x"), SCIPvarGetLbLocal(var));
-	    appendBuffer(scip, file, linebuffer, &linecnt, buffer);
+            appendBuffer(scip, file, linebuffer, &linecnt, buffer);
          }
       }   
    }
 
-   /* print and-constraints with fixed andresultant to zero and all and-constraints with 
+   /* print and-constraints with fixed and-resultant to zero and all and-constraints with 
     * aggregated resultant, otherwise we would loose this information 
     */
    for( r = nresvars - 1; r >= 0; --r )
@@ -3439,15 +3456,18 @@ SCIP_RETCODE writeOpbRelevantAnds(
          SCIP_Bool cont;
       
          cont = FALSE;
-         /* if resultant variable and one other and variable is already zero, so we did'nt need to print this and
+
+         assert(andvars[r] != NULL || nandvars[r] == 0);
+
+         /* if resultant variable and one other and variable is already zero, so we did not need to print this and
           * constraint because all other variables are free 
           */
          for( v = nandvars[r] - 1; v >= 0; --v )
-             if( SCIPvarGetUbLocal(andvars[r][v]) < 0.5 )
-             {
-                cont = TRUE;
-                break;
-             }
+            if( SCIPvarGetUbLocal(andvars[r][v]) < 0.5 )
+            {
+               cont = TRUE;
+               break;
+            }
 
          if( cont )
             continue;
@@ -3458,12 +3478,15 @@ SCIP_RETCODE writeOpbRelevantAnds(
          SCIP_Bool cont;
       
          cont = TRUE;
-         /* if resultant variable and one other and variable is already zero, so we did'nt need to print this and
+
+         assert(andvars[r] != NULL || nandvars[r] == 0);
+
+         /* if resultant variable and one other and variable is already zero, so we did not need to print this and
           * constraint because all other variables are free 
           */
          for( v = nandvars[r] - 1; v >= 0; --v )
-             if( SCIPvarGetLbLocal(andvars[r][v]) < 0.5 )
-                break;
+            if( SCIPvarGetLbLocal(andvars[r][v]) < 0.5 )
+               break;
 
          if( cont )
             continue;
@@ -3471,89 +3494,94 @@ SCIP_RETCODE writeOpbRelevantAnds(
 
 
       /* print and with fixed or aggregated and-resultant */
-      /* rhslhs equals to 0 means the and constraint is relavant due to it's not clear on which values the and variables are
-       * rhslhs equals to 1 means the and constraint is irrelavant cause all and variables have to be 1 too
-       * rhslhs equals to -1 means the and constraint is relavant cause the variable is only aggregated */
+      /* rhslhs equals to 0 means the and constraint is relevant due to it's not clear on which values the and variables are
+       * rhslhs equals to 1 means the and constraint is irrelevant cause all and variables have to be 1 too
+       * rhslhs equals to -1 means the and constraint is relevant cause the variable is only aggregated */
       if( !SCIPvarIsActive(resvar) )
       {
-	 SCIP_VAR* var;
+         SCIP_VAR* var;
          SCIP_Bool neg;
          SCIP_Bool firstprinted;
 
          firstprinted = FALSE;
 
-	 for( v = nandvars[r] - 1; v >= 0; --v )
-	 {
+         assert(andvars[r] != NULL || nandvars[r] == 0);
+
+         for( v = nandvars[r] - 1; v >= 0; --v )
+         {
             SCIP_CALL( SCIPgetBinvarRepresentative(scip, andvars[r][v], &var, &neg) );
             
             (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%s%s%s", (firstprinted) ? multisymbol : "", neg ? "~" : "", strstr(SCIPvarGetName(neg ? SCIPvarGetNegationVar(var) : var), "x"));
-	    appendBuffer(scip, file, linebuffer, &linecnt, buffer);
+            appendBuffer(scip, file, linebuffer, &linecnt, buffer);
             
             firstprinted = TRUE;
-	 }
+         }
          
-	 /* if the resultant is aggregated we need to print his binary representation */
-	 if( rhslhs == -1 )
-	 {
-	    int pos;
+         /* if the resultant is aggregated we need to print his binary representation */
+         if( rhslhs == -1 )
+         {
+            int pos;
 
-	    assert(transformed);
+            assert(transformed);
 
-	    SCIP_CALL( SCIPgetBinvarRepresentative(scip, resvar, &resvar, &neg) );
+            SCIP_CALL( SCIPgetBinvarRepresentative(scip, resvar, &resvar, &neg) );
 
 #ifndef NDEBUG
-	    if( neg )
-	       assert(SCIPvarIsActive(SCIPvarGetNegationVar(resvar)));
-	    else
-	       assert(SCIPvarIsActive(resvar));
+            if( neg )
+               assert(SCIPvarIsActive(SCIPvarGetNegationVar(resvar)));
+            else
+               assert(SCIPvarIsActive(resvar));
 #endif
 
-	    /* replace and-resultant with corresponding variables */
-	    if( SCIPsortedvecFindPtr((void**)resvars, SCIPvarComp, neg ? SCIPvarGetNegationVar(resvar) : resvar, nresvars, &pos) )
-	    {
-	       SCIP_Bool negated;
-	       int a;
-	 
-	       assert(pos >= 0 && nandvars[pos] > 0 && andvars[pos] != NULL);
-	 
-	       negated = SCIPvarIsNegated(andvars[pos][nandvars[pos] - 1]);
-
-	       /* print and-vars */
-	       (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, neg ? " +1%s%s%s" : " -1%s%s%s", multisymbol, negated ? "~" : "",
-                  strstr(SCIPvarGetName(negated ? SCIPvarGetNegationVar(andvars[pos][nandvars[pos] - 1]) : andvars[pos][nandvars[pos] - 1]), "x"));
-	       appendBuffer(scip, file, linebuffer, &linecnt, buffer);
-	       
-	       for(a = nandvars[pos] - 2; a >= 0; --a )
-	       {
-		  negated = SCIPvarIsNegated(andvars[pos][a]);
-	    
-		  (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%s%s%s", multisymbol, negated ? "~" : "", strstr(SCIPvarGetName(negated ? SCIPvarGetNegationVar(andvars[pos][a]) : andvars[pos][a]), "x"));
-		  appendBuffer(scip, file, linebuffer, &linecnt, buffer);
-	       }
-            
-	       appendBuffer(scip, file, linebuffer, &linecnt, " ");
-	       
-	       if( neg )
-		  rhslhs = 1;
-	       else
-		  rhslhs = 0;
-	    }
-	    else
-	    {
-	       (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, " -1%s%s%s", multisymbol, neg ? "~" : "", 
-		  strstr(SCIPvarGetName(neg ? SCIPvarGetNegationVar(resvar) : resvar), "x"));
-	       appendBuffer(scip, file, linebuffer, &linecnt, buffer);
-
-	       rhslhs = 0;
-	    }
-	 }
-	 
-	 /* print rhslhs */
-	 (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, " = %"SCIP_LONGINT_FORMAT" ;\n", rhslhs);
-	 appendBuffer(scip, file, linebuffer, &linecnt, buffer);
+            /* replace and-resultant with corresponding variables */
+            if( SCIPsortedvecFindPtr((void**)resvars, SCIPvarComp, neg ? SCIPvarGetNegationVar(resvar) : resvar, nresvars, &pos) )
+            {
+               SCIP_Bool negated;
+               int a;
          
-	 writeBuffer(scip, file, linebuffer, &linecnt);
-	 
+               assert(andvars != NULL);
+               assert(nandvars != NULL);
+               assert(pos >= 0 && nandvars[pos] > 0 && andvars[pos] != NULL);
+               assert(andvars[pos][nandvars[pos] - 1] != NULL);
+
+               negated = SCIPvarIsNegated(andvars[pos][nandvars[pos] - 1]);
+
+               /* print and-vars */
+               (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, neg ? " +1%s%s%s" : " -1%s%s%s", multisymbol, negated ? "~" : "",
+                  strstr(SCIPvarGetName(negated ? SCIPvarGetNegationVar(andvars[pos][nandvars[pos] - 1]) : andvars[pos][nandvars[pos] - 1]), "x"));
+               appendBuffer(scip, file, linebuffer, &linecnt, buffer);
+               
+               for(a = nandvars[pos] - 2; a >= 0; --a )
+               {
+                  negated = SCIPvarIsNegated(andvars[pos][a]);
+            
+                  (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%s%s%s", multisymbol, negated ? "~" : "", strstr(SCIPvarGetName(negated ? SCIPvarGetNegationVar(andvars[pos][a]) : andvars[pos][a]), "x"));
+                  appendBuffer(scip, file, linebuffer, &linecnt, buffer);
+               }
+            
+               appendBuffer(scip, file, linebuffer, &linecnt, " ");
+               
+               if( neg )
+                  rhslhs = 1;
+               else
+                  rhslhs = 0;
+            }
+            else
+            {
+               (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, " -1%s%s%s", multisymbol, neg ? "~" : "", 
+                  strstr(SCIPvarGetName(neg ? SCIPvarGetNegationVar(resvar) : resvar), "x"));
+               appendBuffer(scip, file, linebuffer, &linecnt, buffer);
+
+               rhslhs = 0;
+            }
+         }
+         
+         /* print rhslhs */
+         (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, " = %"SCIP_LONGINT_FORMAT" ;\n", rhslhs);
+         appendBuffer(scip, file, linebuffer, &linecnt, buffer);
+         
+         writeBuffer(scip, file, linebuffer, &linecnt);
+         
       }
    }
 
@@ -3569,7 +3597,7 @@ SCIP_RETCODE writeOpb(
    SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
    SCIP_OBJSENSE         objsense,           /**< objective sense */
    SCIP_Real             objscale,           /**< scalar applied to objective function; external objective value is
-					          extobj = objsense * objscale * (intobj + objoffset) */
+                                              *   extobj = objsense * objscale * (intobj + objoffset) */
    SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
    SCIP_VAR**            vars,               /**< array with active (binary) variables */
    int                   nvars,              /**< number of mutable variables in the problem */
@@ -3604,15 +3632,15 @@ SCIP_RETCODE writeOpb(
 
    /* write objective function */
    SCIP_CALL( writeOpbObjective(scip, file, vars, nvars, resvars, nresvars, andvars, nandvars, 
-				objsense, objscale, objoffset, multisymbol, existands, transformed) );
+         objsense, objscale, objoffset, multisymbol, existands, transformed) );
 
    /* write constraints */
    SCIP_CALL( writeOpbConstraints(scip, file, conss, nconss, vars, nvars, resvars, nresvars, andvars, nandvars, 
-				  multisymbol, existandconshdlr, existands, transformed) );
+         multisymbol, existandconshdlr, existands, transformed) );
 
    if( existands )
    {
-      /* write and constraints of inactive but relevant and-resulants and and-variables which are fixed to one 
+      /* write and constraints of inactive but relevant and-resultants and and-variables which are fixed to one 
          with no fixed and resultant */
       SCIP_CALL( writeOpbRelevantAnds(scip, file, resvars, nresvars, andvars, nandvars, multisymbol, transformed) );
    }
@@ -3703,7 +3731,7 @@ SCIP_RETCODE SCIPwriteOpb(
    SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
    SCIP_OBJSENSE         objsense,           /**< objective sense */
    SCIP_Real             objscale,           /**< scalar applied to objective function; external objective value is
-                                                  extobj = objsense * objscale * (intobj + objoffset) */
+                                              *   extobj = objsense * objscale * (intobj + objoffset) */
    SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
    SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
    int                   nvars,              /**< number of mutable variables in the problem */
@@ -3733,7 +3761,7 @@ SCIP_RETCODE SCIPwriteOpb(
       int nresvars;
       int v;
 
-      /* computes all and-resultants and their corresonding constraint variables */
+      /* computes all and-resultants and their corresponding constraint variables */
       SCIP_CALL( computeAndConstraintInfos(scip, transformed, &resvars, &nresvars, &andvars, &nandvars, &existandconshdlr, &existands) );
 
       if( genericnames )
@@ -3755,7 +3783,7 @@ SCIP_RETCODE SCIPwriteOpb(
             assert(sscanf(SCIPvarGetName(vars[v]), "x%d", &idx) == 1);
          }
 #endif
-	 SCIP_CALL( writeOpb(scip, file, name, transformed, objsense, objscale, objoffset, vars,
+         SCIP_CALL( writeOpb(scip, file, name, transformed, objsense, objscale, objoffset, vars,
                nvars, conss, nconss, resvars, nresvars, andvars, nandvars, existandconshdlr, existands, result) );
       }
       else

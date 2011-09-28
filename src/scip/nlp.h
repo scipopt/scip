@@ -233,7 +233,7 @@ SCIP_RETCODE SCIPnlrowChgExprtreeParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_NLP*             nlp,                /**< current NLP data */
-   int                   paramidx,           /**< index of paramater in expression tree's parameter array */
+   int                   paramidx,           /**< index of parameter in expression tree's parameter array */
    SCIP_Real             paramval            /**< new value of parameter */
    );
 
@@ -278,7 +278,7 @@ SCIP_RETCODE SCIPnlrowChgRhs(
    SCIP_Real             rhs                 /**< new right hand side */
    );
 
-/** removes (or substitutes) all fixed, negated, aggregated, multiaggregated variables from the linear, quadratic, and nonquadratic terms of a nonlinear row */
+/** removes (or substitutes) all fixed, negated, aggregated, multi-aggregated variables from the linear, quadratic, and nonquadratic terms of a nonlinear row */
 extern
 SCIP_RETCODE SCIPnlrowRemoveFixedVars(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
@@ -650,21 +650,6 @@ SCIP_RETCODE SCIPnlpSolveDive(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat                /**< problem statistics */
    );
-
-#if 0
-/** sets whether the current NLP is a convex problem, i.e., all restrictions are defined by convex functions w.r.t. current bounds */
-extern
-void SCIPnlpSetIsConvex(
-   SCIP_NLP*             nlp,                /**< NLP data */
-   SCIP_Bool             isconvex            /**< is the current NLP a convex problem? */
-   );
-
-/** returns whether the current NLP is a convex problem, i.e., all restrictions are defined by convex functions w.r.t. current bounds */
-extern
-SCIP_Bool SCIPnlpIsConvex(
-   SCIP_NLP*             nlp                 /**< NLP data */
-   );
-#endif
 
 /** gets array with variables of the NLP */
 extern

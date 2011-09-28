@@ -65,7 +65,7 @@ SCIP_DECL_VARDELORIG(varDelorigObj)
 
    /* free vardata data */
    delete *vardata;
-   *vardata = NULL; /*lint !e64*/
+   *vardata = 0; /*lint !e64*/
    
    return SCIP_OKAY;
 }
@@ -114,8 +114,8 @@ SCIP_DECL_VARDELTRANS(varDeltransObj)
 
    /* free vardata data */
    delete *vardata;
-   *vardata = NULL; /*lint !e64*/
-   
+   *vardata = 0; /*lint !e64*/
+
    return SCIP_OKAY;
 }
 
@@ -133,7 +133,7 @@ SCIP_DECL_VARCOPY(varCopyObj)
    /* call virtual method of probdata object */
    SCIP_CALL( sourcedata->objvardata->scip_copy(scip, sourcescip, sourcevar, varmap, consmap, targetvar, &objvardata, result) ); /*lint !e40*/
    
-   if( objvardata != NULL )
+   if( objvardata != 0 )
    {
       assert(*result == SCIP_SUCCESS);
       
@@ -145,7 +145,7 @@ SCIP_DECL_VARCOPY(varCopyObj)
    else
    {
       assert(*result == SCIP_DIDNOTRUN);
-      *targetdata = NULL;
+      *targetdata = 0;
    }
    
    return SCIP_OKAY;

@@ -95,6 +95,8 @@ BEGIN {
    vars       = 0;
    cons       = 0;
    timeout    = 0;
+   memout     = 0;
+   nodeout    = 0;
    opti       = 0;
    feasible   = 1;
    cuts       = 0;
@@ -195,7 +197,7 @@ BEGIN {
 #
 # solution
 #
-/^CPLEX Error  1001: Out of memory./ { timeout = 1; }
+/^CPLEX Error  1001: Out of memory./ { memout = 1; }
 /^Dual simplex - Optimal:/ {
    db = $NF;
    pb = $NF;
@@ -250,19 +252,19 @@ BEGIN {
 }
 /^Memory limit exceeded, integer feasible:/ {
    pb = $8;
-   timeout = 1;
+   memout = 1;
 }
 /^MIP - Memory limit exceeded, integer feasible:/ {
    pb = $10;
-   timeout = 1;
+   memout = 1;
 }
 /^Node / {
    pb = ($4 == "no") ? +infty : $8;
-   timeout = 1;
+   nodeout = 1;
 }
 /^MIP - Node / {  # since CPLEX 10.0
    pb = ($6 == "no") ? +infty : $10;
-   timeout = 1;
+   nodeout = 1;
 }
 /^Tree / {
    pb = ($4 == "no") ? +infty : $8;
@@ -361,6 +363,8 @@ BEGIN {
       }
       else if( abs(db) < 1e-06 )
          gap = -1.0;
+      else if( abs(pb) < 1e-06 )
+         gap = -1.0;
       else if( pb*db < 0.0 )
          gap = -1.0;
       else if( abs(db) >= +infty )
@@ -368,7 +372,7 @@ BEGIN {
       else if( abs(pb) >= +infty )
          gap = -1.0;
       else
-         gap = 100.0*abs((pb-db)/db);
+         gap = 100.0*abs((pb-db)/min(abs(db),abs(pb)));
       if( gap < 0.0 )
          gapstr = "  --  ";
       else if( gap < 1e+04 )
@@ -404,10 +408,10 @@ BEGIN {
          tottime = min(tottime, timelimit);
 
       printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s &%s%8d &%s%7.1f \\\\\n",
-         pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
+	     pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
 
       printf("%-19s %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %8d %7d %7.1f ",
-         shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, iters, bbnodes, tottime);
+	     shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, iters, bbnodes, tottime);
 
       if( aborted ) {
          printf("abort\n");
@@ -426,6 +430,16 @@ BEGIN {
          else {
             if (timeout) {
                printf("timeout\n");
+               timeouttime += tottime;
+               timeouts++;
+            }
+            else if (memout) {
+               printf("memlimit\n");
+               timeouttime += tottime;
+               timeouts++;
+            }
+            else if (nodeout) {
+               printf("nodelimit\n");
                timeouttime += tottime;
                timeouts++;
             }
@@ -452,12 +466,22 @@ BEGIN {
             fail++;
          }
          else {
-            if (timeout) {
+            if (timeout || memout || nodeout) {
                if( (pb-db > max(abstol,reltol) && sol[prob]-pb > reltol) || (db-pb > max(abstol,reltol) && pb-sol[prob] > reltol) ) {
                   printf("better\n");
                   timeouttime += tottime;
                   timeouts++;
                }
+	       else if (memout) {
+		  printf("memlimit\n");
+		  timeouttime += tottime;
+		  timeouts++;
+	       }
+	       else if (nodeout) {
+		  printf("nodelimit\n");
+		  timeouttime += tottime;
+		  timeouts++;
+	       }
                else {
                   printf("timeout\n");
                   timeouttime += tottime;
@@ -497,6 +521,16 @@ BEGIN {
                   timeouttime += tottime;
                   timeouts++;
                }
+	       else if (memout) {
+		  printf("memlimit\n");
+		  timeouttime += tottime;
+		  timeouts++;
+	       }
+	       else if (nodeout) {
+		  printf("nodelimit\n");
+		  timeouttime += tottime;
+		  timeouts++;
+	       }
                else
                   printf("unknown\n");
             }
@@ -513,6 +547,16 @@ BEGIN {
                timeouttime += tottime;
                timeouts++;
             }
+	    else if (memout) {
+               printf("memlimit\n");
+               timeouttime += tottime;
+               timeouts++;
+            }
+            else if (nodeout) {
+               printf("nodelimit\n");
+               timeouttime += tottime;
+               timeouts++;
+            }
             else {
                printf("fail\n");
                failtime += tottime;
@@ -521,16 +565,24 @@ BEGIN {
          }
       }
       else if( solstatus[prob] == "feas" ) {
-         if( feasible ) {
-            if( timeout ) {
-               printf("timeout\n");
-               timeouttime += tottime;
-               timeouts++;
-            }
-            else {
-               printf("ok\n");
-               pass++;
-            }
+         if( timeout ) {
+            printf("timeout\n");
+            timeouttime += tottime;
+            timeouts++;
+         }
+	 else if (memout) {
+	    printf("memlimit\n");
+	    timeouttime += tottime;
+	    timeouts++;
+	 }
+	 else if (nodeout) {
+	    printf("nodelimit\n");
+	    timeouttime += tottime;
+	    timeouts++;
+	 }
+         else if( feasible ) {
+            printf("ok\n");
+            pass++;
          }
          else {
             printf("fail\n");
@@ -551,6 +603,16 @@ BEGIN {
             timeouttime += tottime;
             timeouts++;
          }
+	 else if (memout) {
+	    printf("memlimit\n");
+	    timeouttime += tottime;
+	    timeouts++;
+	 }
+	 else if (nodeout) {
+	    printf("nodelimit\n");
+	    timeouttime += tottime;
+	    timeouts++;
+	 }
          else
             printf("unknown\n");
       }
@@ -581,11 +643,11 @@ END {
 
    printf("\\midrule\n")                                                 >TEXFILE;
    printf("%-14s (%2d) &        &        &                &                &        & %9d & %8.1f \\\\\n",
-      "Total", nprobs, sbab, stottime) >TEXFILE;
+	  "Total", nprobs, sbab, stottime) >TEXFILE;
    printf("%-14s      &        &        &                &                &        & %9d & %8.1f \\\\\n",
-      "Geom. Mean", nodegeom, timegeom) >TEXFILE;
+	  "Geom. Mean", nodegeom, timegeom) >TEXFILE;
    printf("%-14s      &        &        &                &                &        & %9d & %8.1f \\\\\n",
-      "Shifted Geom.", shiftednodegeom, shiftedtimegeom) >TEXFILE;
+	  "Shifted Geom.", shiftednodegeom, shiftedtimegeom) >TEXFILE;
    printf("\\bottomrule\n")                                              >TEXFILE;
    printf("\\noalign{\\vspace{6pt}}\n")                                  >TEXFILE;
    printf("\\end{supertabular*}\n")                                      >TEXFILE;
@@ -599,9 +661,9 @@ END {
    printf("  Cnt  Pass  Time  Fail  total(k)     geom.     total     geom. \n");
    printf("----------------------------------------------------------------\n");
    printf("%5d %5d %5d %5d %9d %9.1f %9.1f %9.1f\n",
-      nprobs, pass, timeouts, fail, sbab / 1000, nodegeom, stottime, timegeom);
+	  nprobs, pass, timeouts, fail, sbab / 1000, nodegeom, stottime, timegeom);
    printf(" shifted geom. [%5d/%5.1f]      %9.1f           %9.1f\n",
-      nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);
+	  nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);
    printf("----------------------------------------------------------------\n");
 
    printf("@02 threads: %g\n", threads);

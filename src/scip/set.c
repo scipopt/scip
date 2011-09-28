@@ -138,6 +138,7 @@
 #define SCIP_DEFAULT_LIMIT_BESTSOL           -1 /**< solving stops, if given number of solution improvements were found
                                                  *   (-1: no limit) */
 #define SCIP_DEFAULT_LIMIT_MAXSOL           100 /**< maximal number of solutions to store in the solution storage */
+#define SCIP_DEFAULT_LIMIT_MAXORIGSOL        10 /**< maximal number of solutions candidates to store in the solution storage of the original problem */
 #define SCIP_DEFAULT_LIMIT_RESTARTS          -1 /**< solving stops, if the given number of restarts was triggered (-1: no limit) */
 
 
@@ -173,13 +174,13 @@
 #define SCIP_DEFAULT_LP_ROWREPSWITCH      1e+20 /**< simplex algorithm shall use row representation of the basis
                                                  *   if number of rows divided by number of columns exceeds this value */
 #define SCIP_DEFAULT_LP_THREADS               0 /**< number of threads used for solving the LP (0: automatic) */
-#define SCIP_DEFAULT_LP_RESOLVEITERFAC       -1 /**< factor of average LP iterations that is used as LP iteration limit             
-                                                 *   for LP resolve (-1: unlimited) */                                              
+#define SCIP_DEFAULT_LP_RESOLVEITERFAC     -1.0 /**< factor of average LP iterations that is used as LP iteration limit             
+                                                 *   for LP resolve (-1.0: unlimited) */
 #define SCIP_DEFAULT_LP_RESOLVEITERMIN     1000 /**< minimum number of iterations that are allowed for LP resolve */
 
 /* NLP */
 
-#define SCIP_DEFAULT_NLP_SOLVER              "" /**< name of NLP solver to use, or "" if solver should be choosen by priority */
+#define SCIP_DEFAULT_NLP_SOLVER              "" /**< name of NLP solver to use, or "" if solver should be chosen by priority */
 #define SCIP_DEFAULT_NLP_DISABLE          FALSE /**< should the NLP be disabled? */
 
 /* Memory */
@@ -220,8 +221,8 @@
 #define SCIP_DEFAULT_PRESOL_MAXRESTARTS      -1 /**< maximal number of restarts (-1: unlimited) */
 #define SCIP_DEFAULT_PRESOL_RESTARTFAC     0.05 /**< fraction of integer variables that were fixed in the root node
                                                  *   triggering a restart with preprocessing after root node evaluation */
-#define SCIP_DEFAULT_PRESOL_IMMRESTARTFAC  0.20 /**< fraction of integer variables that were fixed in the root node triggereing an
-                                                 *   immediate restart with preprcessing */
+#define SCIP_DEFAULT_PRESOL_IMMRESTARTFAC  0.20 /**< fraction of integer variables that were fixed in the root node triggering an
+                                                 *   immediate restart with preprocessing */
 #define SCIP_DEFAULT_PRESOL_SUBRESTARTFAC  1.00 /**< fraction of integer variables that were globally fixed during the
                                                  *   solving process triggering a restart with preprocessing */
 #define SCIP_DEFAULT_PRESOL_RESTARTMINRED  0.10 /**< minimal fraction of integer variables removed after restart to allow
@@ -460,7 +461,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
 
    /* copy all constraint handler plugins */
    if( copyconshdlrs && sourceset->conshdlrs_include != NULL )
-   {	
+   {
       /* copy them in order they were added to the sourcescip
        *
        * @note we only have to set the valid pointer to FALSE in case that a constraint handler, which does not need
@@ -963,6 +964,11 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->limit_maxsol, FALSE, SCIP_DEFAULT_LIMIT_MAXSOL, 1, INT_MAX,
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
+         "limits/maxorigsol",
+         "maximal number of solutions candidates to store in the solution storage of the original problem",
+         &(*set)->limit_maxorigsol, FALSE, SCIP_DEFAULT_LIMIT_MAXORIGSOL, 0, INT_MAX,
+         SCIPparamChgdLimit, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "limits/restarts",
          "solving stops, if the given number of restarts was triggered (-1: no limit)",
          &(*set)->limit_restarts, FALSE, SCIP_DEFAULT_LIMIT_RESTARTS, -1, INT_MAX,
@@ -1196,7 +1202,7 @@ SCIP_RETCODE SCIPsetCreate(
    /* node selection */
    SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
          "nodeselection/childsel",
-         "child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value, 'r'oot LP value difference, 'h'brid inference/root LP value difference)",
+         "child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value, 'r'oot LP value difference, 'h'ybrid inference/root LP value difference)",
          &(*set)->nodesel_childsel, FALSE, SCIP_DEFAULT_NODESEL_CHILDSEL, "dupilrh",
          NULL, NULL) );
 
@@ -1977,107 +1983,6 @@ SCIP_RETCODE SCIPsetResetParams(
    return SCIP_OKAY;
 }
 
-/** set the time limit to given value */
-void SCIPsetSetTimeLimit(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Real             limit               /**< time limit to set */
-   )
-{
-   assert(SCIPsetIsGE(set, limit, 0.0));
-   set->limit_time = limit;
-}
-
-/** set the memory limit to the given value */
-void SCIPsetSetMemoryLimit(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Real             limit               /**< memory limit */
-   )
-{
-   assert(SCIPsetIsGE(set, limit, 0.0));
-   set->limit_memory = limit;
-}
-
-
-/** set the gap limit to the given value */
-void SCIPsetSetGapLimit(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Real             limit               /**< gap limit */
-   )
-{
-   assert(SCIPsetIsGE(set, limit, 0.0));
-   set->limit_gap = limit;
-}
-
-/** set the absolute gap limit to the given value */
-void SCIPsetSetAbsgapLimit(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Real             limit               /**< absolute gap limit */
-   )
-{
-   assert(SCIPsetIsGE(set, limit, 0.0));
-   set->limit_absgap = limit;
-}
-
-/** set the node limit to the given value */
-void SCIPsetSetNodeLimit(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Longint          limit               /**< node limit */
-   )
-{
-   assert( limit >= -1LL );
-   set->limit_nodes = limit;
-}
-
-/** set the stall node limit to the given value */
-void SCIPsetSetStallnodeLimit(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Longint          limit               /**< stall node limit */
-   )
-{
-   assert( limit >= -1LL );
-   set->limit_stallnodes = limit;
-}
-
-/** set the solution limit to the given value */
-void SCIPsetSetSolutionLimit(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   int                   limit               /**< solution limit */
-   )
-{
-   assert( limit >= -1 );
-   set->limit_solutions = limit;
-}
-
-/** set the best solution limit to the given value */
-void SCIPsetSetBestsolutionLimit(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   int                   limit               /**< best solution limit */
-   )
-{
-   assert( limit >= -1 );
-   set->limit_bestsol = limit;
-}
-
-/** set the maximum number of solution stored */
-void SCIPsetSetMaxsolutionStored(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   int                   limit               /**< maximum number of solution stored */
-   )
-{
-   assert( limit >= -1 );
-   set->limit_maxsol = limit;
-}
-   
-/** set the maximum number of restarts until the solution process is stopped (-1: no limit) */
-void SCIPsetSetRestartLimit(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   int                   limit               /**< maximum number of solution stored */
-   )
-{
-   assert( limit >= -1 );
-   set->limit_restarts = limit;
-}
-
 /** sets parameters to 
  *  - SCIP_PARAMSETTING_DEFAULT to use default values (see also SCIPsetResetParams())
  *  - SCIP_PARAMSETTING_COUNTER to get feasible and "fast" counting process
@@ -2089,11 +1994,11 @@ void SCIPsetSetRestartLimit(
  */
 SCIP_RETCODE SCIPsetSetEmphasis(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
+   SCIP_PARAMEMPHASIS    paramemphasis,      /**< parameter settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   SCIP_CALL( SCIPparamsetSetEmphasis(set->paramset, set->scip, paramsetting, quiet) );
+   SCIP_CALL( SCIPparamsetSetEmphasis(set->paramset, set->scip, paramemphasis, quiet) );
    
    return SCIP_OKAY;
 }
@@ -3289,7 +3194,7 @@ SCIP_RETCODE SCIPsetInitprePlugins(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundness */
+   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundedness */
    SCIP_Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
    )
 {
@@ -3314,7 +3219,7 @@ SCIP_RETCODE SCIPsetInitprePlugins(
       {
          *unbounded = TRUE;
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpresolGetName(set->presols[i]));
+            "presolver <%s> detected unboundedness (or infeasibility)\n", SCIPpresolGetName(set->presols[i]));
       }
    }
 
@@ -3332,7 +3237,7 @@ SCIP_RETCODE SCIPsetInitprePlugins(
       {
          *unbounded = TRUE;
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "propagator <%s> detected unboundness (or infeasibility)\n", SCIPpropGetName(set->props[i]));
+            "propagator <%s> detected unboundedness (or infeasibility)\n", SCIPpropGetName(set->props[i]));
       }
    }
 
@@ -3350,7 +3255,7 @@ SCIP_RETCODE SCIPsetInitprePlugins(
       {
          *unbounded = TRUE;
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "constraint handler <%s> detected unboundness (or infeasibility)\n",
+            "constraint handler <%s> detected unboundedness (or infeasibility)\n",
             SCIPconshdlrGetName(set->conshdlrs[i]));
       }
    }
@@ -3363,7 +3268,7 @@ SCIP_RETCODE SCIPsetExitprePlugins(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundness */
+   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundedness */
    SCIP_Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
    )
 {
@@ -3388,7 +3293,7 @@ SCIP_RETCODE SCIPsetExitprePlugins(
       {
          *unbounded = TRUE;
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpresolGetName(set->presols[i]));
+            "presolver <%s> detected unboundedness (or infeasibility)\n", SCIPpresolGetName(set->presols[i]));
       }
    }
 
@@ -3406,7 +3311,7 @@ SCIP_RETCODE SCIPsetExitprePlugins(
       {
          *unbounded = TRUE;
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpropGetName(set->props[i]));
+            "presolver <%s> detected unboundedness (or infeasibility)\n", SCIPpropGetName(set->props[i]));
       }
    }
 
@@ -3424,7 +3329,7 @@ SCIP_RETCODE SCIPsetExitprePlugins(
       {
          *unbounded = TRUE;
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "constraint handler <%s> detected unboundness (or infeasibility)\n",
+            "constraint handler <%s> detected unboundedness (or infeasibility)\n",
             SCIPconshdlrGetName(set->conshdlrs[i]));
       }
    }

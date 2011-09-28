@@ -224,7 +224,7 @@ SCIP_BOUNDTYPE SCIPboundtypeOpposite(
 #define SCIPcolGetVar(col)              (col)->var
 #define SCIPcolGetIndex(col)            (col)->index
 #define SCIPcolIsIntegral(col)          (col)->integral
-#define SCIPcolIsRemovable(col)        (col)->removable
+#define SCIPcolIsRemovable(col)         (col)->removable
 #define SCIPcolGetLPPos(col)            (col)->lppos
 #define SCIPcolGetLPDepth(col)          (col)->lpdepth
 #define SCIPcolIsInLP(col)              ((col)->lppos >= 0)
@@ -271,7 +271,7 @@ SCIP_Real SCIProwGetScalarProduct(
 
 /** returns the degree of parallelism between the hyperplanes defined by the two row vectors v, w:
  *  p = |v*w|/(|v|*|w|);
- *  the hyperplanes are parellel, iff p = 1, they are orthogonal, iff p = 0
+ *  the hyperplanes are parallel, iff p = 1, they are orthogonal, iff p = 0
  */
 extern
 SCIP_Real SCIProwGetParallelism(
@@ -345,7 +345,7 @@ SCIP_Real SCIProwGetConstant(
    SCIP_ROW*             row                 /**< LP row */
    );
 
-/** gets euclidean norm of row vector */
+/** gets Euclidean norm of row vector */
 extern
 SCIP_Real SCIProwGetNorm(
    SCIP_ROW*             row                 /**< LP row */
@@ -375,7 +375,7 @@ SCIP_Real SCIProwGetDualsol(
    SCIP_ROW*             row                 /**< LP row */
    );
 
-/** gets the dual farkas coefficient of a row in an infeasible LP */
+/** gets the dual Farkas coefficient of a row in an infeasible LP */
 extern
 SCIP_Real SCIProwGetDualfarkas(
    SCIP_ROW*             row                 /**< LP row */
@@ -398,6 +398,12 @@ const char* SCIProwGetName(
 /** gets unique index of row */
 extern
 int SCIProwGetIndex(
+   SCIP_ROW*             row                 /**< LP row */
+   );
+
+/** gets age of row */
+extern
+int SCIProwGetAge(
    SCIP_ROW*             row                 /**< LP row */
    );
 
@@ -469,6 +475,7 @@ SCIP_Bool SCIProwIsInLP(
 #define SCIProwGetBasisStatus(row)      (row)->basisstatus
 #define SCIProwGetName(row)             (row)->name
 #define SCIProwGetIndex(row)            (row)->index
+#define SCIProwGetAge(row)            (row)->age
 #define SCIProwIsIntegral(row)          (row)->integral
 #define SCIProwIsLocal(row)             (row)->local
 #define SCIProwIsModifiable(row)        (row)->modifiable

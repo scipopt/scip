@@ -125,7 +125,7 @@ SCIP_RETCODE branch(
       int i;
       int c;
 
-      /* init strong branching */
+      /* initialize strong branching */
       SCIP_CALL( SCIPstartStrongbranch(scip) );
 
       /* search the full strong candidate:
@@ -148,7 +148,7 @@ SCIP_RETCODE branch(
             integral ? "integral" : "fractional", SCIPvarGetName(pseudocands[c]), SCIPvarGetLbLocal(pseudocands[c]), 
             SCIPvarGetUbLocal(pseudocands[c]), solval);
 
-         if ( integral )
+         if( integral )
          {
             SCIP_CALL( SCIPgetVarStrongbranchInt(scip, pseudocands[c], INT_MAX, 
                   &down, &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
@@ -403,7 +403,7 @@ SCIP_DECL_BRANCHINIT(branchInitAllfullstrong)
 {  /*lint --e{715}*/
    SCIP_BRANCHRULEDATA* branchruledata;
 
-   /* init branching rule data */
+   /* initialize branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
    branchruledata->lastcand = 0;
 
@@ -468,7 +468,7 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsAllfullstrong)
  * branching specific interface methods
  */
 
-/** creates the all variables full strong LP braching rule and includes it in SCIP */
+/** creates the all variables full strong LP branching rule and includes it in SCIP */
 SCIP_RETCODE SCIPincludeBranchruleAllfullstrong(
    SCIP*                 scip                /**< SCIP data structure */
    )

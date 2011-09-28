@@ -35,13 +35,11 @@ SCIP_RETCODE SCIPincludeHeurRens(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** main procedure of the RENS heuristic, creates and solves a subMIP */
+/** main procedure of the RENS heuristic, creates and solves a sub-SCIP */
 SCIP_RETCODE SCIPapplyRens(
    SCIP*                 scip,               /**< original SCIP data structure                                        */
    SCIP_HEUR*            heur,               /**< heuristic data structure                                            */
    SCIP_RESULT*          result,             /**< result data structure                                               */
-   SCIP_Real             timelimit,          /**< timelimit for the subproblem                                        */
-   SCIP_Real             memorylimit,        /**< memorylimit for the subproblem                                      */
    SCIP_Real             minfixingrate,      /**< minimum percentage of integer variables that have to be fixed       */
    SCIP_Real             minimprove,         /**< factor by which RENS should at least improve the incumbent          */
    SCIP_Longint          maxnodes,           /**< maximum number of  nodes for the subproblem                         */

@@ -59,7 +59,7 @@ SCIP_RETCODE SCIPsepaCreate(
                                               *   to best node's dual bound for applying separation */
    SCIP_Bool             usessubscip,        /**< does the separator use a secondary SCIP instance? */
    SCIP_Bool             delay,              /**< should separator be delayed, if other separators found cuts? */
-   SCIP_DECL_SEPACOPY    ((*sepacopy)),      /**< copy method of separator or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_SEPACOPY    ((*sepacopy)),      /**< copy method of separator or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_SEPAFREE    ((*sepafree)),      /**< destructor of separator */
    SCIP_DECL_SEPAINIT    ((*sepainit)),      /**< initialize separator */
    SCIP_DECL_SEPAEXIT    ((*sepaexit)),      /**< deinitialize separator */

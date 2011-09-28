@@ -215,7 +215,7 @@ SCIP_RETCODE SCIPvarCreateOriginal(
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data, or NULL */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable, or NULL */
-   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copys variable data if wanted to subscip, or NULL */
+   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copies variable data if wanted to subscip, or NULL */
    SCIP_VARDATA*         vardata             /**< user data for this specific variable */
    );
 
@@ -238,12 +238,12 @@ SCIP_RETCODE SCIPvarCreateTransformed(
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data, or NULL */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable, or NULL */
-   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copys variable data if wanted to subscip, or NULL */
+   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copies variable data if wanted to subscip, or NULL */
    SCIP_VARDATA*         vardata             /**< user data for this specific variable */
    );
 
 /** copies and captures a variable from source to target SCIP; an integer variable with bounds zero and one is
- *  automatically converted into a binary variable; in case the variable data can not be copied the variable is not
+ *  automatically converted into a binary variable; in case the variable data cannot be copied the variable is not
  *  copied at all
  */
 extern
@@ -271,10 +271,10 @@ SCIP_RETCODE SCIPvarParseOriginal(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   const char*           str,                /**< stirng to parse */
+   const char*           str,                /**< string to parse */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
-   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copys variable data if wanted to subscip, or NULL */
+   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copies variable data if wanted to subscip, or NULL */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
@@ -292,10 +292,10 @@ SCIP_RETCODE SCIPvarParseTransformed(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   const char*           str,                /**< stirng to parse */
+   const char*           str,                /**< string to parse */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
-   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copys variable data if wanted to subscip, or NULL */
+   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copies variable data if wanted to subscip, or NULL */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
@@ -415,7 +415,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    SCIP_Bool             mergemultiples      /**< should multiple occurrences of a var be replaced by a single coeff? */
    );
 
-/** flattens aggeregation graph of multiaggregated variable in order to avoid exponential recursion lateron */
+/** flattens aggregation graph of multi-aggregated variable in order to avoid exponential recursion later-on */
 extern
 SCIP_RETCODE SCIPvarFlattenAggregationGraph(
    SCIP_VAR*             var,                /**< problem variable */
@@ -502,7 +502,7 @@ void SCIPvarSetNamePointer(
 
 /** informs variable that it will be removed from the problem; adjusts probindex and removes variable from the
  *  implication graph;
- *  If 'final' is TRUE, the thorough implication graph removal is not performend. Instead, only the
+ *  If 'final' is TRUE, the thorough implication graph removal is not performed. Instead, only the
  *  variable bounds and implication data structures of the variable are freed. Since in the final removal
  *  of all variables from the transformed problem, this deletes the implication graph completely and is faster
  *  than removing the variables one by one, each time updating all lists of the other variables.
@@ -747,9 +747,9 @@ SCIP_RETCODE SCIPvarChgUbDive(
    SCIP_Real             newbound            /**< new bound for variable */
    );
 
-/** for a multiaggregated variable, gives the local lower bound computed by adding the local bounds from all aggregation variables
+/** for a multi-aggregated variable, gives the local lower bound computed by adding the local bounds from all aggregation variables
  * this lower bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multiaggregated variable is not allowed
+ * calling this function for a non-multi-aggregated variable is not allowed
  */
 extern
 SCIP_Real SCIPvarGetMultaggrLbLocal(
@@ -757,9 +757,9 @@ SCIP_Real SCIPvarGetMultaggrLbLocal(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** for a multiaggregated variable, gives the local upper bound computed by adding the local bounds from all aggregation variables
+/** for a multi-aggregated variable, gives the local upper bound computed by adding the local bounds from all aggregation variables
  * this upper bound may be tighter than the one given by SCIPvarGetUbLocal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multiaggregated variable is not allowed
+ * calling this function for a non-multi-aggregated variable is not allowed
  */
 extern
 SCIP_Real SCIPvarGetMultaggrUbLocal(
@@ -767,9 +767,9 @@ SCIP_Real SCIPvarGetMultaggrUbLocal(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** for a multiaggregated variable, gives the global lower bound computed by adding the global bounds from all aggregation variables
+/** for a multi-aggregated variable, gives the global lower bound computed by adding the global bounds from all aggregation variables
  * this global bound may be tighter than the one given by SCIPvarGetLbGlobal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multiaggregated variable is not allowed
+ * calling this function for a non-multi-aggregated variable is not allowed
  */
 extern
 SCIP_Real SCIPvarGetMultaggrLbGlobal(
@@ -777,9 +777,9 @@ SCIP_Real SCIPvarGetMultaggrLbGlobal(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** for a multiaggregated variable, gives the global upper bound computed by adding the global bounds from all aggregation variables
+/** for a multi-aggregated variable, gives the global upper bound computed by adding the global bounds from all aggregation variables
  * this upper bound may be tighter than the one given by SCIPvarGetUbGlobal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multiaggregated variable is not allowed
+ * calling this function for a non-multi-aggregated variable is not allowed
  */
 extern
 SCIP_Real SCIPvarGetMultaggrUbGlobal(

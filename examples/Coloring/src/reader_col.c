@@ -215,6 +215,7 @@ SCIP_RETCODE readCol(
          }
       }
    }
+
    printf("Read graph: %d nodes, %d edges (%d duplicates)\n", nnodes, nedges, nduplicateedges);
 
    /* create problem data */

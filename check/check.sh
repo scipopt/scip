@@ -27,6 +27,7 @@ CONTINUE=${11}
 LOCK=${12}
 VERSION=${13}
 LPS=${14}
+VALGRIND=${15}
 
 SETDIR=../settings
 
@@ -115,13 +116,19 @@ date >>$ERRFILE
 HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 10\` + \`expr $TIMELIMIT / 10\``
 
 # we add 10% to the hard memory limit and additional 100mb to the hard memory limit
-HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` + \`expr $MEMLIMIT / 10\``
+HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 1000\` + \`expr $MEMLIMIT / 10\``
 HARDMEMLIMIT=`expr $HARDMEMLIMIT \* 1024`
 
 echo "hard time limit: $HARDTIMELIMIT s" >>$OUTFILE
 echo "hard mem limit: $HARDMEMLIMIT k" >>$OUTFILE
 
-for i in `cat $TSTNAME.test` DONE
+VALGRINDCMD=
+if test "$VALGRIND" = "true"
+then
+   VALGRINDCMD="valgrind --log-fd=1 --leak-check=full"
+fi
+
+for i in `cat testset/$TSTNAME.test` DONE
 do
     if test "$i" = "DONE"
     then
@@ -171,7 +178,7 @@ do
             date >>$ERRFILE
             echo -----------------------------
             date +"@03 %s"
-            bash -c " ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; ../$BINNAME < $TMPFILE" 2>>$ERRFILE
+            bash -c " ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; $VALGRINDCMD ../$BINNAME < $TMPFILE" 2>>$ERRFILE
             date +"@04 %s"
             echo -----------------------------
             date

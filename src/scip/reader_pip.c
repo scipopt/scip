@@ -19,8 +19,6 @@
  * @author Stefan Vigerske
  * @author Marc Pfetsch
  *
- * @todo Test for uniqueness of variable names (after cutting down).
- * 
  * reader_lp has been used as a starting point for this reader.
  */
 
@@ -42,6 +40,9 @@
 #include "scip/cons_setppc.h"
 #include "scip/cons_varbound.h"
 #include "scip/cons_quadratic.h"
+#include "scip/cons_nonlinear.h"
+#include "scip/cons_signedpower.h"
+#include "scip/cons_and.h"
 #include "scip/pub_misc.h"
 
 #define READER_NAME             "pipreader"
@@ -64,38 +65,49 @@
 /** Section in PIP File */
 enum PipSection
 {
-   PIP_START, PIP_OBJECTIVE, PIP_CONSTRAINTS, PIP_BOUNDS, PIP_GENERALS, PIP_BINARIES, PIP_END
+   PIP_START,
+   PIP_OBJECTIVE,
+   PIP_CONSTRAINTS,
+   PIP_BOUNDS,
+   PIP_GENERALS,
+   PIP_BINARIES,
+   PIP_END
 };
 typedef enum PipSection PIPSECTION;
 
 enum PipExpType
 {
-   PIP_EXP_NONE, PIP_EXP_UNSIGNED, PIP_EXP_SIGNED
+   PIP_EXP_NONE,
+   PIP_EXP_UNSIGNED,
+   PIP_EXP_SIGNED
 };
 typedef enum PipExpType PIPEXPTYPE;
 
 enum PipSense
 {
-   PIP_SENSE_NOTHING, PIP_SENSE_LE, PIP_SENSE_GE, PIP_SENSE_EQ
+   PIP_SENSE_NOTHING,
+   PIP_SENSE_LE,
+   PIP_SENSE_GE,
+   PIP_SENSE_EQ
 };
 typedef enum PipSense PIPSENSE;
 
 /** PIP reading data */
 struct PipInput
 {
-   SCIP_FILE*           file;
-   char                 linebuf[PIP_MAX_LINELEN+1];
-   char                 probname[PIP_MAX_LINELEN];
-   char                 objname[PIP_MAX_LINELEN];
-   char*                token;
-   char*                tokenbuf;
-   char*                pushedtokens[PIP_MAX_PUSHEDTOKENS];
-   int                  npushedtokens;
-   int                  linenumber;
-   int                  linepos;
-   PIPSECTION           section;
-   SCIP_OBJSENSE        objsense;
-   SCIP_Bool            haserror;
+   SCIP_FILE*            file;
+   char                  linebuf[PIP_MAX_LINELEN+1];
+   char                  probname[PIP_MAX_LINELEN];
+   char                  objname[PIP_MAX_LINELEN];
+   char*                 token;
+   char*                 tokenbuf;
+   char*                 pushedtokens[PIP_MAX_PUSHEDTOKENS];
+   int                   npushedtokens;
+   int                   linenumber;
+   int                   linepos;
+   PIPSECTION            section;
+   SCIP_OBJSENSE         objsense;
+   SCIP_Bool             haserror;
 };
 typedef struct PipInput PIPINPUT;
 
@@ -122,8 +134,7 @@ void syntaxError(
 
    assert(pipinput != NULL);
 
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error in line %d: %s ('%s')\n",
-      pipinput->linenumber, msg, pipinput->token);
+   SCIPerrorMessage("Syntax error in line %d: %s ('%s')\n", pipinput->linenumber, msg, pipinput->token);
    if( pipinput->linebuf[strlen(pipinput->linebuf)-1] == '\n' )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "  input: %s", pipinput->linebuf);
@@ -180,9 +191,9 @@ SCIP_Bool isValueChar(
    assert(hasdot != NULL);
    assert(exptype != NULL);
 
-   if( isdigit(c) )
+   if( isdigit((unsigned char)c) )
       return TRUE;
-   else if( (*exptype == PIP_EXP_NONE) && !(*hasdot) && (c == '.') && isdigit(nextc) )
+   else if( (*exptype == PIP_EXP_NONE) && !(*hasdot) && (c == '.') && isdigit((unsigned char)nextc) )
    {
       *hasdot = TRUE;
       return TRUE;
@@ -194,7 +205,7 @@ SCIP_Bool isValueChar(
          *exptype = PIP_EXP_SIGNED;
          return TRUE;
       }
-      else if( isdigit(nextc) )
+      else if( isdigit((unsigned char)nextc) )
       {
          *exptype = PIP_EXP_UNSIGNED;
          return TRUE;
@@ -236,8 +247,7 @@ SCIP_Bool getNextLine(
       pipinput->haserror = TRUE;
       return FALSE;
    }
-   pipinput->linebuf[PIP_MAX_LINELEN-1] = '\0';
-   pipinput->linebuf[PIP_MAX_LINELEN-2] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
+   pipinput->linebuf[PIP_MAX_LINELEN-1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
 
    /* skip characters after comment symbol */
    for( i = 0; commentchars[i] != '\0'; ++i )
@@ -1285,6 +1295,17 @@ SCIP_RETCODE readObjective(
          SCIP_CONS* quadobjcons;
          SCIP_Real  lhs;
          SCIP_Real  rhs;
+         SCIP_Bool dynamicconss;
+         SCIP_Bool dynamicrows;
+         SCIP_Bool initial;
+         SCIP_Bool separate;
+         SCIP_Bool enforce;
+         SCIP_Bool check;
+         SCIP_Bool propagate;
+         SCIP_Bool local;
+         SCIP_Bool modifiable;
+         SCIP_Bool dynamic;
+         SCIP_Bool removable;
          
          SCIP_Real constant;
          int nlinvars;
@@ -1303,8 +1324,20 @@ SCIP_RETCODE readObjective(
 
          getLinearAndQuadraticCoefs(scip, exprtree, &constant, &nlinvars, linvars, lincoefs, &nquadterms, quadvars1, quadvars2, quadcoefs);
 
+         SCIP_CALL( SCIPgetBoolParam(scip, "reading/pipreader/dynamicconss", &dynamicconss) );
+         SCIP_CALL( SCIPgetBoolParam(scip, "reading/pipreader/dynamicrows", &dynamicrows) );
+         initial = !dynamicrows;
+         separate = TRUE;
+         enforce = TRUE;
+         check = TRUE;
+         propagate = TRUE;
+         local = FALSE;
+         modifiable = FALSE;
+         dynamic = dynamicconss;
+         removable = dynamicrows;
+
          SCIP_CALL( SCIPcreateVar(scip, &quadobjvar, "quadobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, 
-               SCIP_VARTYPE_CONTINUOUS, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
+               SCIP_VARTYPE_CONTINUOUS, initial, removable, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, quadobjvar) );
 
          if ( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE )
@@ -1319,7 +1352,7 @@ SCIP_RETCODE readObjective(
          }
 
          SCIP_CALL( SCIPcreateConsQuadratic(scip, &quadobjcons, "quadobj", nlinvars, linvars, lincoefs, nquadterms, quadvars1, quadvars2, quadcoefs, lhs, rhs,
-            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE) );
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
          
          SCIP_CALL( SCIPaddLinearVarQuadratic(scip, quadobjcons, quadobjvar, -1.0) );
 
@@ -1339,9 +1372,64 @@ SCIP_RETCODE readObjective(
       }
       else if( degree > 2 )
       {
-         SCIPerrorMessage("polynomial constraints of degree > 2 not yet supported by SCIP\n");
+         /* insert dummy variable and constraint to represent nonlinear part of objective */
+
+         SCIP_VAR*  nonlinobjvar;
+         SCIP_CONS* nonlinobjcons;
+         SCIP_Real  minusone;
+         SCIP_Real  lhs;
+         SCIP_Real  rhs;
+         SCIP_Bool dynamicconss;
+         SCIP_Bool dynamicrows;
+         SCIP_Bool initial;
+         SCIP_Bool separate;
+         SCIP_Bool enforce;
+         SCIP_Bool check;
+         SCIP_Bool propagate;
+         SCIP_Bool local;
+         SCIP_Bool modifiable;
+         SCIP_Bool dynamic;
+         SCIP_Bool removable;
+
+         SCIP_CALL( SCIPgetBoolParam(scip, "reading/pipreader/dynamicconss", &dynamicconss) );
+         SCIP_CALL( SCIPgetBoolParam(scip, "reading/pipreader/dynamicrows", &dynamicrows) );
+         initial = !dynamicrows;
+         separate = TRUE;
+         enforce = TRUE;
+         check = TRUE;
+         propagate = TRUE;
+         local = FALSE;
+         modifiable = FALSE;
+         dynamic = dynamicconss;
+         removable = dynamicrows;
+
+         SCIP_CALL( SCIPcreateVar(scip, &nonlinobjvar, "nonlinobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
+               SCIP_VARTYPE_CONTINUOUS, initial, removable, NULL, NULL, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPaddVar(scip, nonlinobjvar) );
+
+         minusone = -1.0;
+
+         if ( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE )
+         {
+            lhs = -SCIPinfinity(scip);
+            rhs = 0.0;
+         }
+         else
+         {
+            lhs = 0.0;
+            rhs = SCIPinfinity(scip);
+         }
+
+         SCIP_CALL( SCIPcreateConsNonlinear(scip, &nonlinobjcons, "nonlinobj", 1, &nonlinobjvar, &minusone, 1, &exprtree, NULL, lhs, rhs,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
          SCIP_CALL( SCIPexprtreeFree(&exprtree) );
-         return SCIP_ERROR;
+
+         SCIP_CALL( SCIPaddCons(scip, nonlinobjcons) );
+         SCIPdebugMessage("(line %d) added constraint <%s> to represent nonlinear objective: ", pipinput->linenumber, SCIPconsGetName(nonlinobjcons));
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, nonlinobjcons, NULL) ) );
+
+         SCIP_CALL( SCIPreleaseCons(scip, &nonlinobjcons) );
+         SCIP_CALL( SCIPreleaseVar(scip, &nonlinobjvar) );
       }
    }
    
@@ -1454,8 +1542,30 @@ SCIP_RETCODE readConstraints(
    
    if( degree > 2 )
    {
-      SCIPerrorMessage("polynomial constraints of degree > 2 not supported by SCIP yet\n");
-      return SCIP_ERROR;
+      /* assign the left and right hand side, depending on the constraint sense */
+      switch ( sense )
+      {
+      case PIP_SENSE_GE:
+         lhs = sidevalue;
+         rhs = SCIPinfinity(scip);
+         break;
+      case PIP_SENSE_LE:
+         lhs = -SCIPinfinity(scip);
+         rhs = sidevalue;
+         break;
+      case PIP_SENSE_EQ:
+         lhs = sidevalue;
+         rhs = sidevalue;
+         break;
+      case PIP_SENSE_NOTHING:
+      default:
+         SCIPerrorMessage("invalid constraint sense <%d>\n", sense);
+         return SCIP_INVALIDDATA;
+      }
+
+      SCIP_CALL( SCIPcreateConsNonlinear(scip, &cons, name, 0, NULL, NULL, 1, &exprtree, NULL, lhs, rhs,
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
+      SCIP_CALL( SCIPexprtreeFree(&exprtree) );
    }
    else
    {
@@ -1473,7 +1583,7 @@ SCIP_RETCODE readConstraints(
       getLinearAndQuadraticCoefs(scip, exprtree, &constant, &nlinvars, linvars, lincoefs, &nquadcoefs, quadvars1, quadvars2, quadcoefs);
 
       /* assign the left and right hand side, depending on the constraint sense */
-      switch ( sense )
+      switch( sense )
       {
       case PIP_SENSE_GE:
          lhs = sidevalue - constant;
@@ -1511,12 +1621,12 @@ SCIP_RETCODE readConstraints(
       SCIPfreeBufferArray(scip, &quadvars1);
       SCIPfreeBufferArray(scip, &quadvars2);
       SCIPfreeBufferArray(scip, &quadcoefs);
-      
-      SCIP_CALL( SCIPaddCons(scip, cons) );
-      SCIPdebugMessage("(line %d) created constraint: ", pipinput->linenumber);
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
+      
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIPdebugMessage("(line %d) created constraint: ", pipinput->linenumber);
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    
 TERMINATE:
    if( exprtree != NULL )
@@ -1687,12 +1797,12 @@ SCIP_RETCODE readBounds(
 
       /* change the bounds of the variable if bounds have been given (do not destroy earlier specification of bounds) */
       if ( lb != 0.0 )
-	 SCIP_CALL( SCIPchgVarLb(scip, var, lb) );
+         SCIP_CALL( SCIPchgVarLb(scip, var, lb) );
       /*lint --e{777}*/
       if ( ub != SCIPinfinity(scip) )
-	 SCIP_CALL( SCIPchgVarUb(scip, var, ub) );
+         SCIP_CALL( SCIPchgVarUb(scip, var, ub) );
       SCIPdebugMessage("(line %d) new bounds: <%s>[%g,%g]\n", pipinput->linenumber, SCIPvarGetName(var),
-	 SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+         SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
    }
 
    return SCIP_OKAY;
@@ -1916,7 +2026,7 @@ SCIP_RETCODE getActiveVariables(
 static
 void clearLine(
    char*                 linebuffer,         /**< line */
-   int*                  linecnt             /**< number of charaters in line */
+   int*                  linecnt             /**< number of characters in line */
    )
 {
    assert( linebuffer != NULL );
@@ -1932,7 +2042,7 @@ void endLine(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    char*                 linebuffer,         /**< line */
-   int*                  linecnt             /**< number of charaters in line */
+   int*                  linecnt             /**< number of characters in line */
    )
 {
    assert( scip != NULL );
@@ -1954,7 +2064,7 @@ void appendLine(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    char*                 linebuffer,         /**< line */
-   int*                  linecnt,            /**< number of charaters in line */
+   int*                  linecnt,            /**< number of characters in line */
    const char*           extension           /**< string to extent the line */
    )
 {
@@ -1980,7 +2090,7 @@ void appendLine(
 
 
 
-/* print row in LP format to file stream */
+/* print row in PIP format to file stream */
 static
 void printRow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2005,7 +2115,7 @@ void printRow(
    SCIP_VAR* var;
    char varname[PIP_MAX_NAMELEN];
    char varname2[PIP_MAX_NAMELEN];
-   char consname[PIP_MAX_NAMELEN + 1]; /* an extra chararter for ':' */
+   char consname[PIP_MAX_NAMELEN + 1]; /* an extra character for ':' */
    char buffer[PIP_MAX_PRINTLEN];
 
    assert( scip != NULL );
@@ -2097,7 +2207,361 @@ void printRow(
       }
    }
 
-   /* print left hand side */
+   /* print right hand side */
+   if( SCIPisZero(scip, rhs) )
+      rhs = 0.0;
+
+   (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %s %+.15g", type, rhs);
+
+   /* we start a new line; therefore we tab this line */
+   if (linecnt == 0 )
+      appendLine(scip, file, linebuffer, &linecnt, " ");
+   appendLine(scip, file, linebuffer, &linecnt, buffer);
+
+   endLine(scip, file, linebuffer, &linecnt);
+}
+
+
+/* print row in PIP format to file stream */
+static
+void printRowNl(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           rowname,            /**< row name */
+   const char*           rownameextension,   /**< row name extension */
+   const char*           type,               /**< row type ("=", "<=", or ">=") */
+   SCIP_VAR**            linvars,            /**< array of linear variables */
+   SCIP_Real*            linvals,            /**< array of linear coefficient values */
+   int                   nlinvars,           /**< number of linear variables */
+   SCIP_EXPRTREE**       exprtrees,          /**< expression trees */
+   SCIP_Real*            exprtreecoefs,      /**< coefficients of expression trees */
+   int                   nexprtrees,         /**< number of expression trees */
+   SCIP_Real             rhs                 /**< right hand side */
+   )
+{
+   int v;
+   int c;
+   int e;
+   char linebuffer[PIP_MAX_PRINTLEN] = { '\0' };
+   int linecnt;
+
+   SCIP_VAR* var;
+   char varname[PIP_MAX_NAMELEN];
+   char varname2[PIP_MAX_NAMELEN];
+   char consname[PIP_MAX_NAMELEN + 1]; /* an extra character for ':' */
+   char buffer[PIP_MAX_PRINTLEN];
+
+   assert( scip != NULL );
+   assert( strcmp(type, "=") == 0 || strcmp(type, "<=") == 0 || strcmp(type, ">=") == 0 );
+   assert( nlinvars == 0 || (linvars != NULL && linvals != NULL) );
+   assert( nexprtrees == 0 || exprtrees != NULL );
+   assert( nexprtrees == 0 || exprtreecoefs != NULL );
+
+   clearLine(linebuffer, &linecnt);
+
+   /* start each line with a space */
+   appendLine(scip, file, linebuffer, &linecnt, " ");
+
+   /* print row name */
+   if ( strlen(rowname) > 0 || strlen(rownameextension) > 0 )
+   {
+      (void) SCIPsnprintf(consname, PIP_MAX_NAMELEN + 1, "%s%s:", rowname, rownameextension);
+      appendLine(scip, file, linebuffer, &linecnt, consname);
+   }
+
+   /* print coefficients */
+   for( v = 0; v < nlinvars; ++v )
+   {
+      var = linvars[v];
+      assert( var != NULL );
+
+      /* we start a new line; therefore we tab this line */
+      if ( linecnt == 0 )
+         appendLine(scip, file, linebuffer, &linecnt, " ");
+
+      (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
+      (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g %s", linvals[v], varname);
+
+      appendLine(scip, file, linebuffer, &linecnt, buffer);
+   }
+
+   /* print nonlinear part */
+   for( e = 0; e < nexprtrees; ++e )
+   {
+      SCIP_VAR** vars;
+      SCIP_EXPR* expr;
+      SCIP_EXPR** children;
+      int nchildren;
+
+      vars = SCIPexprtreeGetVars(exprtrees[e]);
+      expr = SCIPexprtreeGetRoot(exprtrees[e]);
+      children = SCIPexprGetChildren(expr);
+      nchildren = SCIPexprGetNChildren(expr);
+      assert(nchildren == 0 || children != NULL);
+
+      /* we start a new line; therefore we tab this line */
+      if( linecnt == 0 )
+         appendLine(scip, file, linebuffer, &linecnt, " ");
+
+      /* assert that all children of expr correspond to variables */
+#ifndef NDEBUG
+      for( c = 0; c < nchildren; ++c )
+      {
+         assert(SCIPexprGetOperator(children[c]) == SCIP_EXPR_VARIDX);
+         assert(SCIPexprGetOpIndex(children[c]) >= 0);
+         assert(SCIPexprGetOpIndex(children[c]) < SCIPexprtreeGetNVars(exprtrees[e]));
+      }
+#endif
+
+      switch( SCIPexprGetOperator(expr) )
+      {
+         case SCIP_EXPR_CONST:
+         {
+            (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g", exprtreecoefs[e] * SCIPexprGetOpReal(expr), varname);
+            appendLine(scip, file, linebuffer, &linecnt, buffer);
+
+            break;
+         }
+
+         case SCIP_EXPR_VARIDX:
+         {
+            assert(SCIPexprGetOpIndex(expr) >= 0);
+            assert(SCIPexprGetOpIndex(expr) < SCIPexprtreeGetNVars(exprtrees[e]));
+            (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(expr)]));
+            (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g %s", exprtreecoefs[e], varname);
+
+            appendLine(scip, file, linebuffer, &linecnt, buffer);
+            break;
+         }
+
+         case SCIP_EXPR_PLUS:
+         {
+            (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[0])]));
+            (void) SCIPsnprintf(varname2, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[1])]));
+            (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g %s %+.15g %s", exprtreecoefs[e], varname, exprtreecoefs[e], varname2);
+
+            appendLine(scip, file, linebuffer, &linecnt, buffer);
+            break;
+         }
+
+         case SCIP_EXPR_MINUS:
+         {
+            (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[0])]));
+            (void) SCIPsnprintf(varname2, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[1])]));
+            (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g %s %+.15g %s", exprtreecoefs[e], varname, -exprtreecoefs[e], varname2);
+
+            appendLine(scip, file, linebuffer, &linecnt, buffer);
+            break;
+         }
+
+         case SCIP_EXPR_MUL:
+         {
+            (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[0])]));
+            (void) SCIPsnprintf(varname2, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[1])]));
+            (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g %s %s", exprtreecoefs[e], varname, varname2);
+
+            appendLine(scip, file, linebuffer, &linecnt, buffer);
+            break;
+         }
+
+         case SCIP_EXPR_SQUARE:
+         {
+            (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[0])]));
+            (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g %s^2", exprtreecoefs[e], varname);
+
+            appendLine(scip, file, linebuffer, &linecnt, buffer);
+            break;
+         }
+
+         case SCIP_EXPR_SQRT:
+         {
+            (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[0])]));
+            (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g %s^0.5", exprtreecoefs[e], varname);
+
+            appendLine(scip, file, linebuffer, &linecnt, buffer);
+            break;
+         }
+
+         case SCIP_EXPR_INTPOWER:
+         {
+            (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[0])]));
+            (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g %s^%d", exprtreecoefs[e], varname, SCIPexprGetIntPowerExponent(expr));
+
+            appendLine(scip, file, linebuffer, &linecnt, buffer);
+            break;
+         }
+
+         case SCIP_EXPR_REALPOWER:
+         {
+            (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[0])]));
+            (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g %s^%.15g", exprtreecoefs[e], varname, SCIPexprGetRealPowerExponent(expr));
+
+            appendLine(scip, file, linebuffer, &linecnt, buffer);
+            break;
+         }
+
+         case SCIP_EXPR_SUM:
+         {
+            for( c = 0; c < nchildren; ++c )
+            {
+               /* we start a new line; therefore we tab this line */
+               if( linecnt == 0 )
+                  appendLine(scip, file, linebuffer, &linecnt, " ");
+
+               (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[c])]));
+               (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g %s", exprtreecoefs[e], varname);
+
+               appendLine(scip, file, linebuffer, &linecnt, buffer);
+            }
+
+            break;
+         }
+
+         case SCIP_EXPR_PRODUCT:
+         {
+            (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g", exprtreecoefs[e]);
+            appendLine(scip, file, linebuffer, &linecnt, buffer);
+
+            for( c = 0; c < nchildren; ++c )
+            {
+               /* we start a new line; therefore we tab this line */
+               if( linecnt == 0 )
+                  appendLine(scip, file, linebuffer, &linecnt, " ");
+
+               (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, " %s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[c])]));
+               (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, varname);
+
+               appendLine(scip, file, linebuffer, &linecnt, buffer);
+            }
+
+            break;
+         }
+
+         case SCIP_EXPR_LINEAR:
+         {
+            if( SCIPexprGetLinearConstant(expr) != 0.0 )
+            {
+               (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g ", exprtreecoefs[e] * SCIPexprGetLinearConstant(expr));
+               appendLine(scip, file, linebuffer, &linecnt, buffer);
+            }
+
+            for( c = 0; c < nchildren; ++c )
+            {
+               /* we start a new line; therefore we tab this line */
+               if( linecnt == 0 )
+                  appendLine(scip, file, linebuffer, &linecnt, " ");
+
+               (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[c])]));
+               (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g %s", exprtreecoefs[e] * SCIPexprGetLinearCoefs(expr)[c], varname);
+
+               appendLine(scip, file, linebuffer, &linecnt, buffer);
+            }
+
+            break;
+         }
+
+         case SCIP_EXPR_QUADRATIC:
+         {
+            int q;
+
+            if( SCIPexprGetQuadConstant(expr) != 0.0 )
+            {
+               (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g ", exprtreecoefs[e] * SCIPexprGetQuadConstant(expr));
+               appendLine(scip, file, linebuffer, &linecnt, buffer);
+            }
+
+            if( SCIPexprGetQuadLinearCoefs(expr) != NULL )
+            {
+               for( c = 0; c < nchildren; ++c )
+               {
+                  if( SCIPexprGetQuadLinearCoefs(expr)[c] == 0.0 )
+                     continue;
+
+                  /* we start a new line; therefore we tab this line */
+                  if( linecnt == 0 )
+                     appendLine(scip, file, linebuffer, &linecnt, " ");
+
+                  (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[c])]));
+                  (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g %s", exprtreecoefs[e] * SCIPexprGetQuadLinearCoefs(expr)[c], varname);
+
+                  appendLine(scip, file, linebuffer, &linecnt, buffer);
+               }
+            }
+
+            for( q = 0; q < SCIPexprGetNQuadElements(expr); ++q )
+            {
+               /* we start a new line; therefore we tab this line */
+               if( linecnt == 0 )
+                  appendLine(scip, file, linebuffer, &linecnt, " ");
+
+               (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[SCIPexprGetQuadElements(expr)[q].idx1])]));
+
+               if( SCIPexprGetQuadElements(expr)[q].idx1 == SCIPexprGetQuadElements(expr)[q].idx2 )
+               {
+                  /* square term */
+                  (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g %s^2", exprtreecoefs[e] * SCIPexprGetQuadElements(expr)[q].coef, varname);
+               }
+               else
+               {
+                  /* bilinear term */
+                  (void) SCIPsnprintf(varname2, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[SCIPexprGetQuadElements(expr)[q].idx2])]));
+                  (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g %s %s", exprtreecoefs[e] * SCIPexprGetQuadElements(expr)[q].coef, varname, varname2);
+               }
+
+               appendLine(scip, file, linebuffer, &linecnt, buffer);
+            }
+
+            break;
+         }
+
+         case SCIP_EXPR_POLYNOMIAL:
+         {
+            SCIP_EXPRDATA_MONOMIAL* monomial;
+            int m;
+            int f;
+
+            if( SCIPexprGetPolynomialConstant(expr) != 0.0 )
+            {
+               (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g ", exprtreecoefs[e] * SCIPexprGetPolynomialConstant(expr));
+               appendLine(scip, file, linebuffer, &linecnt, buffer);
+            }
+
+            for( m = 0; m < SCIPexprGetNMonomials(expr); ++m )
+            {
+               monomial = SCIPexprGetMonomials(expr)[m];
+               assert(monomial != NULL);
+
+               (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g", exprtreecoefs[e] * SCIPexprGetMonomialCoef(monomial));
+               appendLine(scip, file, linebuffer, &linecnt, buffer);
+
+               for( f = 0; f < SCIPexprGetMonomialNFactors(monomial); ++f )
+               {
+                  /* we start a new line; therefore we tab this line */
+                  if( linecnt == 0 )
+                     appendLine(scip, file, linebuffer, &linecnt, " ");
+
+                  (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[SCIPexprGetMonomialChildIndices(monomial)[f]])]));
+                  if( SCIPexprGetMonomialExponents(monomial)[f] != 1.0 )
+                     (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %s^%.15g", varname, SCIPexprGetMonomialExponents(monomial)[f]);
+                  else
+                     (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %s", varname);
+                  appendLine(scip, file, linebuffer, &linecnt, buffer);
+               }
+            }
+
+            break;
+         }
+
+         default:
+         {
+            /* this should have been caught in SCIPwritePip before */
+            SCIPerrorMessage("unsupported operator <%s> in writing of polynomial nonlinear constraint\n", SCIPexpropGetName(SCIPexprGetOperator(expr)));
+            return;
+         } /*lint !e788*/
+      }  /*lint !e788*/
+   }
+
+   /* print right hand side */
    if( SCIPisZero(scip, rhs) )
       rhs = 0.0;
 
@@ -2211,6 +2675,104 @@ SCIP_RETCODE printQuadraticCons(
    return SCIP_OKAY;
 }
 
+/** prints given nonlinear constraint information in LP format to file stream */
+static
+SCIP_RETCODE printNonlinearCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           rowname,            /**< name of the row */
+   SCIP_VAR**            linvars,            /**< array of linear variables */
+   SCIP_Real*            linvals,            /**< array of linear coefficients values (or NULL if all linear coefficient values are 1) */
+   int                   nlinvars,           /**< number of linear variables */
+   SCIP_EXPRTREE**       exprtrees,          /**< expression trees */
+   SCIP_Real*            exprtreecoefs,      /**< coefficients of expression trees */
+   int                   nexprtrees,         /**< number of expression trees */
+   SCIP_Real             lhs,                /**< left hand side */
+   SCIP_Real             rhs,                /**< right hand side */
+   SCIP_Bool             transformed         /**< transformed constraint? */
+   )
+{
+   int v;
+   SCIP_VAR** activevars = NULL;
+   SCIP_Real* activevals = NULL;
+   int nactivevars;
+   SCIP_Real activeconstant = 0.0;
+
+   assert( scip != NULL );
+   assert( rowname != NULL );
+
+   /* The LP format does not forbid that the variable array is empty */
+   assert( nlinvars == 0 || linvars != NULL );
+   assert( nlinvars > 0 || linvars == NULL );
+   assert( nexprtrees == 0 || exprtrees != NULL );
+   assert( nexprtrees == 0 || exprtreecoefs != NULL );
+
+   assert( lhs <= rhs );
+
+   if( SCIPisInfinity(scip, -lhs) && SCIPisInfinity(scip, rhs) )
+      return SCIP_OKAY;
+
+   nactivevars = nlinvars;
+   if( nlinvars > 0 )
+   {
+      /* duplicate variable and value array */
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &activevars, linvars, nactivevars ) );
+      if( linvals != NULL )
+      {
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &activevals, linvals, nactivevars ) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPallocBufferArray(scip, &activevals, nactivevars) );
+
+         for( v = 0; v < nactivevars; ++v )
+            activevals[v] = 1.0;
+      }
+
+      /* retransform given variables to active variables */
+      SCIP_CALL( getActiveVariables(scip, activevars, activevals, &nactivevars, &activeconstant, transformed) );
+   }
+
+   /* print row(s) in LP format */
+   if( SCIPisEQ(scip, lhs, rhs) )
+   {
+      assert( !SCIPisInfinity(scip, rhs) );
+
+      /* equal constraint */
+      printRowNl(scip, file, rowname, "", "=", activevars, activevals, nactivevars,
+         exprtrees, exprtreecoefs, nexprtrees,
+         rhs - activeconstant);
+   }
+   else
+   {
+      if( !SCIPisInfinity(scip, -lhs) )
+      {
+         /* print inequality ">=" */
+         printRowNl(scip, file, rowname, SCIPisInfinity(scip, rhs) ? "" : "_lhs", ">=",
+            activevars, activevals, nactivevars,
+            exprtrees, exprtreecoefs, nexprtrees,
+            lhs - activeconstant);
+      }
+      if( !SCIPisInfinity(scip, rhs) )
+      {
+         /* print inequality "<=" */
+         printRowNl(scip, file, rowname, SCIPisInfinity(scip, -lhs) ? "" : "_rhs", "<=",
+            activevars, activevals, nactivevars,
+            exprtrees, exprtreecoefs, nexprtrees,
+            rhs - activeconstant);
+      }
+   }
+
+   if( nlinvars > 0 )
+   {
+      /* free buffer arrays */
+      SCIPfreeBufferArray(scip, &activevars);
+      SCIPfreeBufferArray(scip, &activevals);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** check whether given variables are aggregated and put them into an array without duplication */
 static
 SCIP_RETCODE collectAggregatedVars(
@@ -2241,10 +2803,10 @@ SCIP_RETCODE collectAggregatedVars(
             status == SCIP_VARSTATUS_NEGATED );
          
          if ( ! SCIPhashtableExists(*varAggregated, (void*) var) )
-	 {
-	    (*aggregatedVars)[(*nAggregatedVars)++] = var;
-	    SCIP_CALL( SCIPhashtableInsert(*varAggregated, (void*) var) );
-	 }
+         {
+            (*aggregatedVars)[(*nAggregatedVars)++] = var;
+            SCIP_CALL( SCIPhashtableInsert(*varAggregated, (void*) var) );
+         }
       }
    }
 
@@ -2383,29 +2945,32 @@ void checkConsnames(
    }
 }
 
-/** writes problem to file */
+/** writes problem to file
+ * @todo add writing cons_pseudoboolean
+ */
 SCIP_RETCODE SCIPwritePip(
-   SCIP*              scip,               /**< SCIP data structure */
-   FILE*              file,               /**< output file, or NULL if standard output should be used */
-   const char*        name,               /**< problem name */
-   SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
-   SCIP_OBJSENSE      objsense,           /**< objective sense */
-   SCIP_Real          objscale,           /**< scalar applied to objective function; external objective value is
-   					       extobj = objsense * objscale * (intobj + objoffset) */
-   SCIP_Real          objoffset,          /**< objective offset from bound shifting and fixing */
-   SCIP_VAR**         vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
-   int                nvars,              /**< number of mutable variables in the problem */
-   int                nbinvars,           /**< number of binary variables */
-   int                nintvars,           /**< number of general integer variables */
-   int                nimplvars,          /**< number of implicit integer variables */
-   int                ncontvars,          /**< number of continuous variables */
-   SCIP_CONS**        conss,              /**< array with constraints of the problem */
-   int                nconss,             /**< number of constraints in the problem */
-   SCIP_RESULT*       result              /**< pointer to store the result of the file writing call */
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file, or NULL if standard output should be used */
+   const char*           name,               /**< problem name */
+   SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
+   SCIP_OBJSENSE         objsense,           /**< objective sense */
+   SCIP_Real             objscale,           /**< scalar applied to objective function; external objective value is
+                                              *   extobj = objsense * objscale * (intobj + objoffset) */
+   SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
+   SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
+   int                   nvars,              /**< number of mutable variables in the problem */
+   int                   nbinvars,           /**< number of binary variables */
+   int                   nintvars,           /**< number of general integer variables */
+   int                   nimplvars,          /**< number of implicit integer variables */
+   int                   ncontvars,          /**< number of continuous variables */
+   SCIP_CONS**           conss,              /**< array with constraints of the problem */
+   int                   nconss,             /**< number of constraints in the problem */
+   SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
    )
 {
    int c;
    int v;
+   int e;
 
    int linecnt;
    char linebuffer[PIP_MAX_PRINTLEN];
@@ -2417,11 +2982,17 @@ SCIP_RETCODE SCIPwritePip(
    const char* conshdlrname;
    SCIP_CONS* cons;
    SCIP_CONS** consQuadratic;
-   int nConsQuadratic = 0;
+   int nConsQuadratic;
+   SCIP_CONS** consNonlinear;
+   int nConsNonlinear;
+   SCIP_CONS** consSignedpower;
+   int nConsSignedpower;
+   SCIP_CONS** consAnd;
+   int nConsAnd;
    char consname[PIP_MAX_NAMELEN];
 
    SCIP_VAR** aggregatedVars;
-   int nAggregatedVars = 0;
+   int nAggregatedVars;
    SCIP_HASHTABLE* varAggregated;
 
    SCIP_VAR** consvars;
@@ -2432,7 +3003,16 @@ SCIP_RETCODE SCIPwritePip(
    SCIP_Real lb;
    SCIP_Real ub;
 
+   SCIP_EXPRTREE* exprtree;
+   SCIP_EXPR* expr;
+
    assert( scip != NULL );
+
+   nAggregatedVars = 0;
+   nConsQuadratic = 0;
+   nConsNonlinear = 0;
+   nConsSignedpower = 0;
+   nConsAnd = 0;
 
    /* check if the variable names are not to long */
    checkVarnames(scip, vars, nvars);
@@ -2483,8 +3063,11 @@ SCIP_RETCODE SCIPwritePip(
    /* print "Subject to" section */
    SCIPinfoMessage(scip, file, "Subject to\n");
 
-   /* collect SOS, quadratic, and SOC constraints in array for later output */
+   /* collect quadratic, nonlinear, and signedpower constraints in arrays */
    SCIP_CALL( SCIPallocBufferArray(scip, &consQuadratic, nconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &consNonlinear, nconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &consSignedpower, nconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &consAnd, nconss) );
 
    for (c = 0; c < nconss; ++c)
    {
@@ -2512,7 +3095,7 @@ SCIP_RETCODE SCIPwritePip(
          consvars = SCIPgetVarsSetppc(scip, cons);
          nconsvars = SCIPgetNVarsSetppc(scip, cons);
 
-         switch ( SCIPgetTypeSetppc(scip, cons) )
+         switch( SCIPgetTypeSetppc(scip, cons) )
          {
          case SCIP_SETPPCTYPE_PARTITIONING :
             SCIP_CALL( printQuadraticCons(scip, file, consname,
@@ -2580,9 +3163,212 @@ SCIP_RETCODE SCIPwritePip(
          
          consQuadratic[nConsQuadratic++] = cons;
       }
+      else if( strcmp(conshdlrname, "nonlinear") == 0 )
+      {
+         SCIP_Bool ispolynomial;
+
+         /* check whether expressions are polynomials (assumed simplified exprtrees) */
+         ispolynomial = TRUE;
+         for( e = 0; e < SCIPgetNExprtreesNonlinear(scip, cons) && ispolynomial; ++e )
+         {
+            exprtree = SCIPgetExprtreesNonlinear(scip, cons)[e];
+            expr = SCIPexprtreeGetRoot(exprtree);
+            assert(expr != NULL);
+
+            /* check if operator is something polynomial */
+            switch( SCIPexprGetOperator(expr) )
+            {
+               case SCIP_EXPR_CONST:
+               case SCIP_EXPR_VARIDX:
+               case SCIP_EXPR_PLUS:
+               case SCIP_EXPR_MINUS:
+               case SCIP_EXPR_MUL:
+               case SCIP_EXPR_SQUARE:
+               case SCIP_EXPR_SQRT:
+               case SCIP_EXPR_SUM:
+               case SCIP_EXPR_PRODUCT:
+               case SCIP_EXPR_LINEAR:
+               case SCIP_EXPR_QUADRATIC:
+                  break;
+
+               case SCIP_EXPR_INTPOWER:
+               {
+                  if( SCIPexprGetIntPowerExponent(expr) < 0 )
+                  {
+                     SCIPwarningMessage("negative exponent %d in intpower in %dth expression tree of constraint <%s> cannot be written in pip format\n", SCIPexprGetIntPowerExponent(expr), e, SCIPconsGetName(cons));
+                     ispolynomial = FALSE;
+                  }
+
+                  break;
+               }
+
+               case SCIP_EXPR_REALPOWER:
+               {
+                  if( SCIPexprGetRealPowerExponent(expr) < 0.0 )
+                  {
+                     SCIPwarningMessage("negative exponent %g in realpower in %dth expression tree of constraint <%s> cannot be written in pip format\n", SCIPexprGetRealPowerExponent(expr), e, SCIPconsGetName(cons));
+                     ispolynomial = FALSE;
+                  }
+
+                  break;
+               }
+
+               case SCIP_EXPR_POLYNOMIAL:
+               {
+                  SCIP_EXPRDATA_MONOMIAL* monomial;
+                  int m;
+                  int f;
+
+                  for( m = 0; m < SCIPexprGetNMonomials(expr) && ispolynomial; ++m )
+                  {
+                     monomial = SCIPexprGetMonomials(expr)[m];
+                     for( f = 0; f < SCIPexprGetMonomialNFactors(monomial); ++f )
+                     {
+                        if( SCIPexprGetMonomialExponents(monomial)[f] < 0.0 )
+                        {
+                           SCIPwarningMessage("negative exponent %g in polynomial in %dth expression tree of constraint <%s> cannot be written in pip format\n", SCIPexprGetMonomialExponents(monomial)[f], e, SCIPconsGetName(cons));
+                           ispolynomial = FALSE;
+                           break;
+                        }
+                     }
+                  }
+
+                  break;
+               }
+
+               default:
+                  SCIPwarningMessage("expression operand <%s> in %dth expression tree of constraint <%s> cannot be written in pip format\n", SCIPexpropGetName(SCIPexprGetOperator(expr)), e, SCIPconsGetName(cons));
+                  ispolynomial = FALSE;
+                  break;
+            } /*lint !e788*/
+
+            /* check if all children of root expression correspond to variables */
+            for( v = 0; v < SCIPexprGetNChildren(expr); ++v )
+            {
+               if( SCIPexprGetOperator(SCIPexprGetChildren(expr)[v]) != SCIP_EXPR_VARIDX )
+               {
+                  SCIPwarningMessage("%dth expression tree of constraint <%s> is not simplified, cannot write in pip format\n", e, SCIPconsGetName(cons));
+                  ispolynomial = FALSE;
+                  break;
+               }
+            }
+         }
+
+         if( ispolynomial )
+         {
+            SCIP_CALL( printNonlinearCons(scip, file, consname,
+               SCIPgetLinearVarsNonlinear(scip, cons), SCIPgetLinearCoefsNonlinear(scip, cons),
+               SCIPgetNLinearVarsNonlinear(scip, cons), SCIPgetExprtreesNonlinear(scip, cons),
+               SCIPgetExprtreeCoefsNonlinear(scip, cons), SCIPgetNExprtreesNonlinear(scip, cons),
+               SCIPgetLhsNonlinear(scip, cons), SCIPgetRhsNonlinear(scip, cons), transformed) );
+
+            consNonlinear[nConsNonlinear++] = cons;
+         }
+         else
+         {
+            SCIPinfoMessage(scip, file, "\\ ");
+            SCIP_CALL( SCIPprintCons(scip, cons, file) );
+         }
+      }
+      else if( strcmp(conshdlrname, "signedpower") == 0 )
+      {
+         SCIP_VAR* x;
+         SCIP_Real xoffset;
+         SCIP_Real exponent;
+         SCIP_Real treecoef;
+
+         expr = NULL;
+         treecoef = 1.0;
+
+         x = SCIPgetNonlinearVarSignedpower(scip, cons);
+         xoffset = SCIPgetOffsetSignedpower(scip, cons);
+         exponent = SCIPgetExponentSignedpower(scip, cons);
+
+         /* see if we formulate signpower(x+offset,exponent) as usual polynomial */
+         if( !SCIPisZero(scip, xoffset) )
+         {
+            SCIPwarningMessage("nonzero offset for nonlinear variable in constraint <%s>, cannot write in pip format\n", SCIPconsGetName(cons));
+         }
+         if( SCIPisIntegral(scip, exponent) && ((int)SCIPround(scip, exponent) % 2 == 1) )
+         {
+            /* exponent is odd integer, so signedpower(x,exponent) = x^exponent */
+            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_VARIDX, 0) );
+            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_INTPOWER, expr, (int)SCIPround(scip, exponent)) );
+         }
+         else if( SCIPisIntegral(scip, exponent) && ((int)SCIPround(scip, exponent) % 2 == 0) && !SCIPisPositive(scip, SCIPvarGetUbGlobal(x)) )
+         {
+            /* exponent is even integer and x is negative, so signedpower(x,exponent) = -x^exponent */
+            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_VARIDX, 0) );
+            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_INTPOWER, expr, (int)SCIPround(scip, exponent)) );
+            treecoef = -1.0;
+         }
+         else if( !SCIPisNegative(scip, SCIPvarGetLbGlobal(x)) )
+         {
+            /* x is positive, so signedpower(x,exponent) = x^exponent */
+            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_VARIDX, 0) );
+            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_REALPOWER, expr, exponent) );
+         }
+         else
+         {
+            SCIPwarningMessage("cannot formulate signedpower(<%s>, %g) in constraint <%s> as polynomial, cannot write in pip format\n", SCIPvarGetName(x), exponent, SCIPconsGetName(cons));
+         }
+
+         if( expr != NULL )
+         {
+            SCIP_VAR* z;
+            SCIP_Real zcoef;
+
+            SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree, expr, 1, 0, NULL) );
+            SCIP_CALL( SCIPexprtreeSetVars(exprtree, 1, &x) );
+
+            z = SCIPgetLinearVarSignedpower(scip, cons);
+            zcoef = SCIPgetCoefLinearSignedpower(scip, cons);
+
+            SCIP_CALL( printNonlinearCons(scip, file, consname,
+               &z, &zcoef, 1, &exprtree, &treecoef, 1,
+               SCIPgetLhsSignedpower(scip, cons), SCIPgetRhsSignedpower(scip, cons), transformed) );
+
+            SCIP_CALL( SCIPexprtreeFree(&exprtree) );
+
+            consSignedpower[nConsSignedpower++] = cons;
+         }
+         else
+         {
+            SCIPinfoMessage(scip, file, "\\ ");
+            SCIP_CALL( SCIPprintCons(scip, cons, file) );
+         }
+      }
+      else if( strcmp(conshdlrname, "and") == 0 )
+      {
+         SCIP_EXPR** children;
+         SCIP_VAR* resultant;
+         SCIP_Real minusone;
+         SCIP_Real one;
+
+         /* create expression for product of binaries */
+         SCIP_CALL( SCIPallocBufferArray(scip, &children, SCIPgetNVarsAnd(scip, cons)) );
+         for( v = 0; v < SCIPgetNVarsAnd(scip, cons); ++v )
+         {
+            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &children[v], SCIP_EXPR_VARIDX, v) );
+         }
+         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_PRODUCT, SCIPgetNVarsAnd(scip, cons), children) );
+         SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree, expr, SCIPgetNVarsAnd(scip, cons), 0, NULL) );
+         SCIP_CALL( SCIPexprtreeSetVars(exprtree, SCIPgetNVarsAnd(scip, cons), SCIPgetVarsAnd(scip, cons)) );
+
+         resultant = SCIPgetResultantAnd(scip, cons);
+         minusone = -1.0;
+
+         one = 1.0;
+         SCIP_CALL( printNonlinearCons(scip, file, consname, &resultant, &minusone, 1, &exprtree, &one, 1, 0.0, 0.0, transformed) );
+
+         SCIP_CALL( SCIPexprtreeFree(&exprtree) );
+         SCIPfreeBufferArray(scip, &children);
+
+         consAnd[nConsAnd++] = cons;
+      }
       else
       {
-         SCIPwarningMessage("constraint handler <%s> can not print requested format\n", conshdlrname );
+         SCIPwarningMessage("constraint handler <%s> cannot print requested format\n", conshdlrname );
          SCIPinfoMessage(scip, file, "\\ ");
          SCIP_CALL( SCIPprintCons(scip, cons, file) );
       }
@@ -2601,6 +3387,48 @@ SCIP_RETCODE SCIPwritePip(
          SCIP_CALL( collectAggregatedVars(scip, 1, &SCIPgetQuadVarTermsQuadratic(scip, cons)[v].var, 
                &nAggregatedVars, &aggregatedVars, &varAggregated) );
       }         
+   }
+
+   /* check for aggregated variables in expression trees of nonlinear constraints and output aggregations as linear constraints */
+   for (c = 0; c < nConsNonlinear; ++c)
+   {
+      cons = consNonlinear[c];
+      for( e = 0; e < SCIPgetNExprtreesNonlinear(scip, cons); ++e )
+      {
+         exprtree = SCIPgetExprtreesNonlinear(scip, cons)[e];
+         assert(exprtree != NULL);
+
+         for( v = 0; v < SCIPexprtreeGetNVars(exprtree); ++v )
+         {
+            SCIP_CALL( collectAggregatedVars(scip, 1, &SCIPexprtreeGetVars(exprtree)[v],
+               &nAggregatedVars, &aggregatedVars, &varAggregated) );
+         }
+      }
+   }
+
+   /* check for aggregated variables in signedpower constraints and output aggregations as linear constraints */
+   for (c = 0; c < nConsSignedpower; ++c)
+   {
+      SCIP_VAR* spvars[2];
+
+      cons = consSignedpower[c];
+
+      spvars[0] = SCIPgetNonlinearVarSignedpower(scip, cons);
+      spvars[1] = SCIPgetLinearVarSignedpower(scip, cons);
+      SCIP_CALL( collectAggregatedVars(scip, 2, spvars, &nAggregatedVars, &aggregatedVars, &varAggregated) );
+   }
+
+   /* check for aggregated variables in and constraints and output aggregations as linear constraints */
+   for (c = 0; c < nConsAnd; ++c)
+   {
+      SCIP_VAR* resultant;
+
+      cons = consAnd[c];
+
+      SCIP_CALL( collectAggregatedVars(scip, SCIPgetNVarsAnd(scip, cons), SCIPgetVarsAnd(scip, cons), &nAggregatedVars, &aggregatedVars, &varAggregated) );
+
+      resultant = SCIPgetResultantAnd(scip, cons);
+      SCIP_CALL( collectAggregatedVars(scip, 1, &resultant, &nAggregatedVars, &aggregatedVars, &varAggregated) );
    }
 
    /* print aggregation constraints */
@@ -2633,15 +3461,15 @@ SCIP_RETCODE SCIPwritePip(
          /* print lower bound */
          if ( SCIPisInfinity(scip, -lb) )
             SCIPinfoMessage(scip, file, " -inf <= ");
-	 else
+         else
          {
             if ( SCIPisZero(scip, lb) )
-	    {
-	       /* variables are nonnegative by default - so we skip these variables */
-	       if ( SCIPisInfinity(scip, ub) )
-		  continue;
+            {
+               /* variables are nonnegative by default - so we skip these variables */
+               if ( SCIPisInfinity(scip, ub) )
+                  continue;
                lb = 0.0;
-	    }
+            }
 
             SCIPinfoMessage(scip, file, " %.15g <= ", lb);
          }
@@ -2682,12 +3510,12 @@ SCIP_RETCODE SCIPwritePip(
          var = vars[v];
          assert( var != NULL );
 
-	 if ( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
-	 {
+         if ( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+         {
             (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
             (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %s", varname);
             appendLine(scip, file, linebuffer, &linecnt, buffer);
-	 }
+         }
       }
 
       endLine(scip, file, linebuffer, &linecnt);
@@ -2704,17 +3532,20 @@ SCIP_RETCODE SCIPwritePip(
          assert( var != NULL );
 
          if ( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
-	 {
+         {
             (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
             (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %s", varname);
             appendLine(scip, file, linebuffer, &linecnt, buffer);
-	 }
+         }
       }
       endLine(scip, file, linebuffer, &linecnt);
    }
 
    /* free space */
    SCIPfreeBufferArray(scip, &consQuadratic);
+   SCIPfreeBufferArray(scip, &consNonlinear);
+   SCIPfreeBufferArray(scip, &consSignedpower);
+   SCIPfreeBufferArray(scip, &consAnd);
 
    /* end of lp format */
    SCIPinfoMessage(scip, file, "%s\n", "End");
@@ -2785,9 +3616,7 @@ SCIP_RETCODE SCIPincludeReaderPip(
 
    /* include lp reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyPip,
-         readerFreePip, readerReadPip, readerWritePip, 
-         readerdata) );
+         readerCopyPip, readerFreePip, readerReadPip, readerWritePip, readerdata) );
 
    /* add lp reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -2806,10 +3635,10 @@ SCIP_RETCODE SCIPincludeReaderPip(
 
 /* reads problem from file */
 SCIP_RETCODE SCIPreadPip(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_READER*       reader,             /**< the file reader itself */
-   const char*        filename,           /**< full path and name of file to read, or NULL if stdin should be used */
-   SCIP_RESULT*       result              /**< pointer to store the result of the file reading call */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER*          reader,             /**< the file reader itself */
+   const char*           filename,           /**< full path and name of file to read, or NULL if stdin should be used */
+   SCIP_RESULT*          result              /**< pointer to store the result of the file reading call */
    )
 {  /*lint --e{715}*/
    PIPINPUT pipinput;
@@ -2820,13 +3649,13 @@ SCIP_RETCODE SCIPreadPip(
    pipinput.linebuf[0] = '\0';
    pipinput.probname[0] = '\0';
    pipinput.objname[0] = '\0';
-   SCIP_CALL( SCIPallocMemoryArray(scip, &pipinput.token, PIP_MAX_LINELEN) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &pipinput.token, PIP_MAX_LINELEN) ); /*lint !e506*/
    pipinput.token[0] = '\0';
-   SCIP_CALL( SCIPallocMemoryArray(scip, &pipinput.tokenbuf, PIP_MAX_LINELEN) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &pipinput.tokenbuf, PIP_MAX_LINELEN) ); /*lint !e506*/
    pipinput.tokenbuf[0] = '\0';
    for( i = 0; i < PIP_MAX_PUSHEDTOKENS; ++i )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &((pipinput.pushedtokens)[i]), PIP_MAX_LINELEN) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &((pipinput.pushedtokens)[i]), PIP_MAX_LINELEN) ); /*lint !e866 !e506*/
    }
 
    pipinput.npushedtokens = 0;
@@ -2859,4 +3688,3 @@ SCIP_RETCODE SCIPreadPip(
 
    return SCIP_OKAY;
 }
-

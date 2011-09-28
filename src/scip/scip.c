@@ -22,8 +22,8 @@
  * @author Marc Pfetsch
  * @author Kati Wolter
  *
- *@todo check all checkStage() calls, use bit flags instead of the SCIP_Bool parameters
- *@todo check all SCIP_STAGE_* switches, and include the new stages TRANSFORMED and INITSOLVE 
+ * @todo check all checkStage() calls, use bit flags instead of the SCIP_Bool parameters
+ * @todo check all SCIP_STAGE_* switches, and include the new stages TRANSFORMED and INITSOLVE 
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -36,6 +36,10 @@
 #ifndef NPARASCIP
 #include <pthread.h>
 #include <time.h>
+#endif
+
+#ifdef WITH_ZLIB
+#include <zlib.h>
 #endif
 
 #include "scip/def.h"
@@ -404,7 +408,7 @@ SCIP_Real getDualbound(
        * since -infinity is the only valid lower bound
        */
       if( SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD || SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED )
-         return (-SCIPinfinity(scip));
+         return SCIPprobExternObjval(scip->transprob, scip->set, -SCIPinfinity(scip));
       else
          return getPrimalbound(scip);
    }
@@ -532,11 +536,12 @@ SCIP_RETCODE SCIPcreate(
    SCIP_CALL( SCIPmemCreate(&(*scip)->mem) );
    SCIP_CALL( SCIPsetCreate(&(*scip)->set, (*scip)->mem->setmem, *scip) );
    SCIP_CALL( SCIPinterruptCreate(&(*scip)->interrupt) );
-   SCIP_CALL( SCIPdialoghdlrCreate(&(*scip)->dialoghdlr) );
+   SCIP_CALL( SCIPdialoghdlrCreate((*scip)->set, &(*scip)->dialoghdlr) );
    SCIP_CALL( SCIPclockCreate(&(*scip)->totaltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIPclockStart((*scip)->totaltime, (*scip)->set);
    (*scip)->stat = NULL;
    (*scip)->origprob = NULL;
+   (*scip)->origprimal = NULL;
    (*scip)->eventfilter = NULL;
    (*scip)->eventqueue = NULL;
    (*scip)->branchcand = NULL;
@@ -560,6 +565,10 @@ SCIP_RETCODE SCIPcreate(
    {
       SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, SCIPexprintGetName(), SCIPexprintGetDesc()) );
    }
+
+#ifdef WITH_ZLIB
+   SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, "ZLIB " ZLIB_VERSION, "General purpose compression library by J. Gailly and M. Adler (zlib.net)") );
+#endif
 
    return SCIP_OKAY;
 }
@@ -790,7 +799,7 @@ SCIP_Bool SCIPisStopped(
  * message output methods
  */
 
-/** creates a message handler; this method can already be called before SCIPcreate()c */
+/** creates a message handler; this method can already be called before SCIPcreate() */
 SCIP_RETCODE SCIPcreateMessagehdlr(
    SCIP_MESSAGEHDLR**    messagehdlr,        /**< pointer to store the message handler */
    SCIP_Bool             bufferedoutput,     /**< should the output be buffered up to the next newline? */
@@ -1053,9 +1062,13 @@ SCIP_RETCODE SCIPcopyProb(
    /* create the statistics data structure */
    SCIP_CALL( SCIPstatCreate(&targetscip->stat, targetscip->mem->probmem, targetscip->set) );
 
-   /* create the problem by copying the source problme */
+   /* create the problem by copying the source problem */
    SCIP_CALL( SCIPprobCopy(&targetscip->origprob, targetscip->mem->probmem, targetscip->set, name, sourcescip, sourceprob, localvarmap, localconsmap, global) );
 
+   /* creating the solution candidates storage */
+   /**@todo copy solution of source SCIP as candidates for the target SCIP */
+   SCIP_CALL( SCIPprimalCreate(&targetscip->origprimal) );
+   
    if( uselocalvarmap )
    {
       /* free hash map */
@@ -1108,31 +1121,35 @@ SCIP_RETCODE SCIPgetVarCopy(
    uselocalconsmap = (consmap == NULL);
    *success = TRUE;
 
-   if( uselocalvarmap )
+   /* try to retrieve copied variable from hashmap */
+   if( !uselocalvarmap )
    {
-      /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
-   }
-   else
-   {
-      localvarmap = varmap;
-      
-      /* try to retrieve copied variable from hashmap */
-      *targetvar = (SCIP_VAR*) SCIPhashmapGetImage(localvarmap, sourcevar);
+      *targetvar = (SCIP_VAR*) SCIPhashmapGetImage(varmap, sourcevar);
       if( *targetvar != NULL )
          return SCIP_OKAY;
    }
 
-   /* if the target SCIP is already in solving stage and the target variable is not in the hash map, abort!
-    * this has to be done because we cannot simply add variables to SCIP during solving and thereby enlarge the search space.
-    * unlike column generation we cannot assume here that the variable could be implicitly set to zero in all prior computations 
+   /* if the target SCIP is already in solving stage we currently are not copying the variable!
+    * this has to be done because we cannot simply add variables to SCIP during solving and thereby enlarge the search
+    * space. 
+    * unlike column generation we cannot assume here that the variable could be implicitly set to zero in all prior
+    * computations
     */
    if( SCIPgetStage(targetscip) > SCIP_STAGE_PROBLEM )
    {
       *success = FALSE;
       *targetvar = NULL;
+
       return SCIP_OKAY;
    }
+
+   /* create the variable mapping hash map */
+   if( uselocalvarmap )
+   {
+      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
+   }
+   else
+      localvarmap = varmap;
 
    if( uselocalconsmap )
    {
@@ -1205,7 +1222,7 @@ SCIP_RETCODE SCIPgetVarCopy(
       /* get the active representation */
       SCIP_CALL( SCIPflattenVarAggregationGraph(sourcescip, sourcevar) );
     
-      /* get multiaggregation data */
+      /* get multi-aggregation data */
       naggrvars = SCIPvarGetMultaggrNVars(sourcevar);
       sourceaggrvars = SCIPvarGetMultaggrVars(sourcevar);
       aggrcoefs = SCIPvarGetMultaggrScalars(sourcevar);
@@ -1213,20 +1230,20 @@ SCIP_RETCODE SCIPgetVarCopy(
    
       SCIP_CALL( SCIPallocBufferArray(targetscip, &targetaggrvars, naggrvars) );
             
-      /* get copies of the active variables of the multiaggregation */
+      /* get copies of the active variables of the multi-aggregation */
       for( i = 0; i < naggrvars; ++i )
       {
          SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourceaggrvars[i], &targetaggrvars[i], localvarmap, localconsmap, global, success) );
          assert(*success);
       }
 
-      /* create copy of the multiaggregated variable */
+      /* create copy of the multi-aggregated variable */
       SCIP_CALL( SCIPvarCopy(&var, targetscip->mem->probmem, targetscip->set, targetscip->stat, 
             sourcescip, sourcevar, localvarmap, localconsmap, global) );
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_multaggr", SCIPvarGetName(sourcevar));
          
-      /* add multiaggregation x = a^T y + c as linear constraint a^T y - x = -c */
+      /* add multi-aggregation x = a^T y + c as linear constraint a^T y - x = -c */
       SCIP_CALL( SCIPcreateConsLinear(targetscip, &cons, name, naggrvars, targetaggrvars, aggrcoefs, -constant,
             -constant, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCoefLinear(targetscip, cons, var, -1.0) );
@@ -1255,8 +1272,15 @@ SCIP_RETCODE SCIPgetVarCopy(
       /* get negation of copied negated source variable, this is the target variable */
       SCIP_CALL( SCIPgetNegatedVar(targetscip, targetnegatedvar, targetvar) );
       assert(SCIPvarGetStatus(*targetvar) == SCIP_VARSTATUS_NEGATED);
-         
-      /* we have to retrun right away, to avoid adding the negated variable to the problem since the "not negated"
+
+      /* free local hash maps if necessary */
+      if( uselocalvarmap )
+         SCIPhashmapFree(&localvarmap);
+
+      if( uselocalconsmap )
+         SCIPhashmapFree(&localconsmap);
+
+      /* we have to return right away, to avoid adding the negated variable to the problem since the "not negated"
        * variable was already added */
       return SCIP_OKAY;
    }
@@ -1270,21 +1294,16 @@ SCIP_RETCODE SCIPgetVarCopy(
    SCIP_CALL( SCIPaddVar(targetscip, var) );
 
    *targetvar = var;
-   
+
    /* remove the variable capture which was done due to the creation of the variable */
    SCIP_CALL( SCIPreleaseVar(targetscip, &var) );
-   
+
+   /* free local hash maps if necessary */
    if( uselocalvarmap )
-   {
-      /* free hash map */
       SCIPhashmapFree(&localvarmap);
-   }
 
    if( uselocalconsmap )
-   {
-      /* free hash map */
       SCIPhashmapFree(&localconsmap);
-   }
 
    return SCIP_OKAY;
 }
@@ -1422,7 +1441,7 @@ SCIP_RETCODE SCIPcopyVars(
 }
 
 /** returns copy of the source constraint; if there already is a copy of the source constraint in the constraint hash
- *  map, it is just returned as target constrint; elsewise a new constraint will be created in the target SCIP; this
+ *  map, it is just returned as target constraint; elsewise a new constraint will be created in the target SCIP; this
  *  created constraint is added to the constraint hash map and returned as target constraint; the variable map is used
  *  to map the variables of the source SCIP to the variables of the target SCIP;
  *
@@ -1493,7 +1512,10 @@ SCIP_RETCODE SCIPgetConsCopy(
       /* try to retrieve copied constraint from hash map */
       *targetcons = (SCIP_CONS*) SCIPhashmapGetImage(localconsmap, sourcecons);
       if( *targetcons != NULL )
+      {
+         *success =TRUE;
          return SCIP_OKAY;
+      }
    }
 
    /*  copy the constraint */
@@ -1604,7 +1626,7 @@ SCIP_RETCODE SCIPcopyConss(
 #if 0
       /* @todo using the following might reduce the number of copied constraints - check whether this is better */
       /* Get all checked constraints for copying; this included local constraints */
-      if ( ! global )
+      if( !global )
       {
          nsourceconss = SCIPconshdlrGetNCheckConss(sourceconshdlrs[i]);
          sourceconss = SCIPconshdlrGetCheckConss(sourceconshdlrs[i]);
@@ -1613,7 +1635,7 @@ SCIP_RETCODE SCIPcopyConss(
 
       assert(nsourceconss == 0 || sourceconss != NULL);
 
-      if ( nsourceconss > 0 )
+      if( nsourceconss > 0 )
       {
          SCIPdebugMessage("Attempting to copy %d %s constraints\n", nsourceconss, SCIPconshdlrGetName(sourceconshdlrs[i]));
       }
@@ -1651,7 +1673,7 @@ SCIP_RETCODE SCIPcopyConss(
 
             /* add constraint to target SCIP */
             SCIP_CALL( SCIPaddCons(targetscip, targetcons) );
-	      
+
             /* insert constraint into mapping between source SCIP and the target SCIP */
             SCIP_CALL( SCIPhashmapInsert(localconsmap, sourceconss[c], targetcons) );
 
@@ -1748,7 +1770,7 @@ SCIP_RETCODE SCIPconvertCutsToConss(
          for( i = 0; i < ncols; ++i )
             vars[i] = SCIPcolGetVar(cols[i]);
 
-         /* get corresponding variables in targetscip if neccessary */
+         /* get corresponding variables in targetscip if necessary */
          if( sourcescip != targetscip )
          {
             SCIP_Bool success;
@@ -2330,13 +2352,13 @@ SCIP_RETCODE SCIPresetParams(
  */
 SCIP_RETCODE SCIPsetEmphasis(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
+   SCIP_PARAMEMPHASIS    paramemphasis,      /**< parameter settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetEmphasis", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPsetSetEmphasis(scip->set, paramsetting, quiet) );
+   SCIP_CALL( SCIPsetSetEmphasis(scip->set, paramemphasis, quiet) );
    
    return SCIP_OKAY;
 }
@@ -2452,7 +2474,7 @@ SCIP_RETCODE SCIPincludeReader(
    const char*           name,               /**< name of reader */
    const char*           desc,               /**< description of reader */
    const char*           extension,          /**< file extension that reader processes */
-   SCIP_DECL_READERCOPY  ((*readercopy)),    /**< copy method of reader or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_READERCOPY  ((*readercopy)),    /**< copy method of reader or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_READERFREE  ((*readerfree)),    /**< destructor of reader */
    SCIP_DECL_READERREAD  ((*readerread)),    /**< read method */
    SCIP_DECL_READERWRITE ((*readerwrite)),   /**< write method */
@@ -2524,7 +2546,7 @@ SCIP_RETCODE SCIPincludePricer(
                                               *   that already exist in the problem (which are also priced in by the
                                               *   default problem variable pricing in the same round)
                                               */
-   SCIP_DECL_PRICERCOPY  ((*pricercopy)),    /**< copy method of variable pricer or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_PRICERCOPY  ((*pricercopy)),    /**< copy method of variable pricer or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_PRICERFREE  ((*pricerfree)),    /**< destructor of variable pricer */
    SCIP_DECL_PRICERINIT  ((*pricerinit)),    /**< initialize variable pricer */
    SCIP_DECL_PRICEREXIT  ((*pricerexit)),    /**< deinitialize variable pricer */
@@ -2637,7 +2659,7 @@ SCIP_RETCODE SCIPdeactivatePricer(
    SCIP_PRICER*          pricer              /**< variable pricer */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPdeactivatePricer", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPdeactivatePricer", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE) );
 
    SCIP_CALL( SCIPpricerDeactivate(pricer, scip->set) );
 
@@ -2662,7 +2684,7 @@ SCIP_RETCODE SCIPincludeConshdlr(
    SCIP_Bool             delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
    SCIP_Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
    SCIP_PROPTIMING       timingmask,         /**< positions in the node solving loop where propagators should be executed */
-   SCIP_DECL_CONSHDLRCOPY((*conshdlrcopy)),  /**< copy method of constraint handler or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_CONSHDLRCOPY((*conshdlrcopy)),  /**< copy method of constraint handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
    SCIP_DECL_CONSINIT    ((*consinit)),      /**< initialize constraint handler */
    SCIP_DECL_CONSEXIT    ((*consexit)),      /**< deinitialize constraint handler */
@@ -2757,7 +2779,7 @@ SCIP_RETCODE SCIPincludeConflicthdlr(
    const char*           name,               /**< name of conflict handler */
    const char*           desc,               /**< description of conflict handler */
    int                   priority,           /**< priority of the conflict handler */
-   SCIP_DECL_CONFLICTCOPY((*conflictcopy)),  /**< copy method of conflict handler or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_CONFLICTCOPY((*conflictcopy)),  /**< copy method of conflict handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_CONFLICTFREE((*conflictfree)),  /**< destructor of conflict handler */
    SCIP_DECL_CONFLICTINIT((*conflictinit)),  /**< initialize conflict handler */
    SCIP_DECL_CONFLICTEXIT((*conflictexit)),  /**< deinitialize conflict handler */
@@ -2844,7 +2866,7 @@ SCIP_RETCODE SCIPincludePresol(
    int                   priority,           /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
    int                   maxrounds,          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
    SCIP_Bool             delay,              /**< should presolver be delayed, if other presolvers found reductions? */
-   SCIP_DECL_PRESOLCOPY  ((*presolcopy)),    /**< copy method of presolver or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_PRESOLCOPY  ((*presolcopy)),    /**< copy method of presolver or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver to free user data (called when SCIP is exiting) */
    SCIP_DECL_PRESOLINIT  ((*presolinit)),    /**< initialization method of presolver (called after problem was transformed) */
    SCIP_DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialization method of presolver (called before transformed problem is freed) */
@@ -2929,7 +2951,7 @@ SCIP_RETCODE SCIPincludeRelax(
    const char*           desc,               /**< description of relaxator */
    int                   priority,           /**< priority of the relaxator (negative: after LP, non-negative: before LP) */
    int                   freq,               /**< frequency for calling relaxator */
-   SCIP_DECL_RELAXCOPY   ((*relaxcopy)),     /**< copy method of relaxator or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_RELAXCOPY   ((*relaxcopy)),     /**< copy method of relaxator or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_RELAXFREE   ((*relaxfree)),     /**< destructor of relaxator */
    SCIP_DECL_RELAXINIT   ((*relaxinit)),     /**< initialize relaxator */
    SCIP_DECL_RELAXEXIT   ((*relaxexit)),     /**< deinitialize relaxator */
@@ -3019,7 +3041,7 @@ SCIP_RETCODE SCIPincludeSepa(
                                               *   to best node's dual bound for applying separation */
    SCIP_Bool             usessubscip,        /**< does the separator use a secondary SCIP instance? */
    SCIP_Bool             delay,              /**< should separator be delayed, if other separators found cuts? */
-   SCIP_DECL_SEPACOPY    ((*sepacopy)),      /**< copy method of separator or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_SEPACOPY    ((*sepacopy)),      /**< copy method of separator or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_SEPAFREE    ((*sepafree)),      /**< destructor of separator */
    SCIP_DECL_SEPAINIT    ((*sepainit)),      /**< initialize separator */
    SCIP_DECL_SEPAEXIT    ((*sepaexit)),      /**< deinitialize separator */
@@ -3111,7 +3133,7 @@ SCIP_RETCODE SCIPincludeProp(
    int                   presolpriority,     /**< presolving priority of the propagator (>= 0: before, < 0: after constraint handlers) */
    int                   presolmaxrounds,    /**< maximal number of presolving rounds the propagator participates in (-1: no limit) */
    SCIP_Bool             presoldelay,        /**< should presolving be delayed, if other presolvers found reductions? */
-   SCIP_DECL_PROPCOPY    ((*propcopy)),      /**< copy method of propagator or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_PROPCOPY    ((*propcopy)),      /**< copy method of propagator or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_PROPFREE    ((*propfree)),      /**< destructor of propagator */
    SCIP_DECL_PROPINIT    ((*propinit)),      /**< initialize propagator */
    SCIP_DECL_PROPEXIT    ((*propexit)),      /**< deinitialize propagator */
@@ -3221,7 +3243,7 @@ SCIP_RETCODE SCIPincludeHeur(
    int                   maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
    unsigned int          timingmask,         /**< positions in the node solving loop where heuristic should be executed */
    SCIP_Bool             usessubscip,        /**< does the heuristic use a secondary SCIP instance? */
-   SCIP_DECL_HEURCOPY    ((*heurcopy)),      /**< copy method of primal heuristic or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_HEURCOPY    ((*heurcopy)),      /**< copy method of primal heuristic or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    SCIP_DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
    SCIP_DECL_HEUREXIT    ((*heurexit)),      /**< deinitialize primal heuristic */
@@ -3304,7 +3326,7 @@ SCIP_RETCODE SCIPincludeEventhdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of event handler */
    const char*           desc,               /**< description of event handler */
-   SCIP_DECL_EVENTCOPY   ((*eventcopy)),     /**< copy method of event handler or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_EVENTCOPY   ((*eventcopy)),     /**< copy method of event handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_EVENTFREE   ((*eventfree)),     /**< destructor of event handler */
    SCIP_DECL_EVENTINIT   ((*eventinit)),     /**< initialize event handler */
    SCIP_DECL_EVENTEXIT   ((*eventexit)),     /**< deinitialize event handler */
@@ -3375,7 +3397,7 @@ SCIP_RETCODE SCIPincludeNodesel(
    const char*           desc,               /**< description of node selector */
    int                   stdpriority,        /**< priority of the node selector in standard mode */
    int                   memsavepriority,    /**< priority of the node selector in memory saving mode */
-   SCIP_DECL_NODESELCOPY ((*nodeselcopy)),   /**< copy method of node selector or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_NODESELCOPY ((*nodeselcopy)),   /**< copy method of node selector or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_NODESELFREE ((*nodeselfree)),   /**< destructor of node selector */
    SCIP_DECL_NODESELINIT ((*nodeselinit)),   /**< initialize node selector */
    SCIP_DECL_NODESELEXIT ((*nodeselexit)),   /**< deinitialize node selector */
@@ -3487,7 +3509,7 @@ SCIP_RETCODE SCIPincludeBranchrule(
    SCIP_Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound
                                               *   compared to best node's dual bound for applying branching rule
                                               *   (0.0: only on current best node, 1.0: on all nodes) */
-   SCIP_DECL_BRANCHCOPY  ((*branchcopy)),    /**< copy method of branching rule or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_BRANCHCOPY  ((*branchcopy)),    /**< copy method of branching rule or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_BRANCHFREE  ((*branchfree)),    /**< destructor of branching rule */
    SCIP_DECL_BRANCHINIT  ((*branchinit)),    /**< initialize branching rule */
    SCIP_DECL_BRANCHEXIT  ((*branchexit)),    /**< deinitialize branching rule */
@@ -3602,7 +3624,7 @@ SCIP_RETCODE SCIPincludeDisp(
    const char*           desc,               /**< description of display column */
    const char*           header,             /**< head line of display column */
    SCIP_DISPSTATUS       dispstatus,         /**< display activation status of display column */
-   SCIP_DECL_DISPCOPY    ((*dispcopy)),      /**< copy method of display column or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_DISPCOPY    ((*dispcopy)),      /**< copy method of display column or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_DISPFREE    ((*dispfree)),      /**< destructor of display column */
    SCIP_DECL_DISPINIT    ((*dispinit)),      /**< initialize display column */
    SCIP_DECL_DISPEXIT    ((*dispexit)),      /**< deinitialize display column */
@@ -3613,7 +3635,7 @@ SCIP_RETCODE SCIPincludeDisp(
    int                   width,              /**< width of display column (no. of chars used) */
    int                   priority,           /**< priority of display column */
    int                   position,           /**< relative position of display column */
-   SCIP_Bool             stripline           /**< should the column be separated with a line from its right neighbour? */
+   SCIP_Bool             stripline           /**< should the column be separated with a line from its right neighbor? */
    )
 {
    SCIP_DISP* disp;
@@ -3858,7 +3880,7 @@ void SCIPprintExternalCodes(
 SCIP_RETCODE SCIPincludeDialog(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIALOG**         dialog,             /**< pointer to store the dialog */
-   SCIP_DECL_DIALOGCOPY  ((*dialogcopy)),    /**< copy method of dialog or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_DIALOGCOPY  ((*dialogcopy)),    /**< copy method of dialog or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_DIALOGEXEC  ((*dialogexec)),    /**< execution method of dialog */
    SCIP_DECL_DIALOGDESC  ((*dialogdesc)),    /**< description output method of dialog, or NULL */
    SCIP_DECL_DIALOGFREE  ((*dialogfree)),    /**< destructor of dialog to free user data, or NULL */
@@ -4040,6 +4062,9 @@ SCIP_RETCODE SCIPcreateProb(
    SCIP_CALL( SCIPprobCreate(&scip->origprob, scip->mem->probmem, scip->set, name,
          probdelorig, probtrans, probdeltrans, probinitsol, probexitsol, probcopy, probdata, FALSE) );
 
+   /* create solution pool for original solution candidates */
+   SCIP_CALL( SCIPprimalCreate(&scip->origprimal) );
+   
    return SCIP_OKAY;
 }
 
@@ -4199,7 +4224,7 @@ SCIP_RETCODE writeProblem(
       if( compression != NULL )
       {
          SCIPwarningMessage("currently it is not possible to write files with any compression\n");
-	 BMSfreeMemoryArray(&tmpfilename);
+         BMSfreeMemoryArray(&tmpfilename);
          (void) fclose(file);
          return SCIP_FILECREATEERROR;
       }
@@ -4326,7 +4351,8 @@ SCIP_RETCODE SCIPfreeProb(
       }
       assert(scip->set->nactivepricers == 0);
 
-      /* free problem and problem statistics data structures */
+      /* free original primal solution candidate pool, original problem and problem statistics data structures */
+      SCIP_CALL( SCIPprimalFree(&scip->origprimal, scip->mem->probmem) );
       SCIP_CALL( SCIPprobFree(&scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
       SCIP_CALL( SCIPstatFree(&scip->stat, scip->mem->probmem) );
 
@@ -4379,7 +4405,7 @@ SCIP_RETCODE SCIPpermuteProb(
    
    /*@note the constraint handler should not be permuted since they are called w.r.t. to certain properties; besides
     *      that the "conshdlrs" array should stay in the order as it is since this array is used to copy the plugins for
-    *      subscips and contains the dependencies between the constraint handlers; for example the linear constraint
+    *      sub-SCIPs and contains the dependencies between the constraint handlers; for example the linear constraint
     *      handler stays in front of all constraint handler which can upgrade a linear constraint (such as logicor,
     *      setppc, and knapsack)
     */
@@ -4856,6 +4882,7 @@ SCIP_RETCODE SCIPdelVar(
          return SCIP_INVALIDDATA;
       }
       SCIP_CALL( SCIPprobDelVar(scip->origprob, scip->mem->probmem, scip->set, scip->eventqueue, var) );
+
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
@@ -5967,12 +5994,113 @@ SCIP_RETCODE SCIPchgChildPrio(
  * solve methods
  */
 
+/** checks solution for feasibility in original problem without adding it to the solution store */
+static
+SCIP_RETCODE checkSolOrig(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Bool*            feasible,           /**< stores whether given solution is feasible */
+   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
+   SCIP_Bool             completely,         /**< should all violation be checked? */
+   SCIP_Bool             checkbounds,        /**< should the bounds of the variables be checked? */
+   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
+   SCIP_Bool             checkmodifiable     /**< have modifiable constraint to be checked? */
+   )
+{
+   SCIP_RESULT result;
+   int v;
+   int c;
+   int h;
+
+   assert(scip != NULL);
+   assert(sol != NULL);
+   assert(feasible != NULL);
+
+   SCIP_CALL( checkStage(scip, "checkSolOrig", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   *feasible = TRUE;
+
+   /* check bounds */
+   if( checkbounds )
+   {
+      for( v = 0; v < scip->origprob->nvars && (*feasible || printreason); ++v )
+      {
+         SCIP_VAR* var;
+         SCIP_Real solval;
+         SCIP_Real lb;
+         SCIP_Real ub;
+         
+         var = scip->origprob->vars[v];
+         solval = SCIPsolGetVal(sol, scip->set, scip->stat, var);
+         lb = SCIPvarGetLbOriginal(var);
+         ub = SCIPvarGetUbOriginal(var);
+         if( SCIPsetIsFeasLT(scip->set, solval, lb) || SCIPsetIsFeasGT(scip->set, solval, ub) )
+         {
+            *feasible = FALSE;
+            
+            if( printreason )
+            {
+               SCIPmessagePrintInfo("solution violates original bounds of variable <%s> [%g,%g] solution value <%g>\n",
+                  SCIPvarGetName(var), lb, ub, solval);
+            }
+            
+            if( !completely )
+               return SCIP_OKAY;
+         }
+      }
+   }
+
+   /* check original constraints
+    *
+    * in general modifiable constraints can not be checked, because the variables to fulfill them might be missing in
+    * the original problem; however, if the solution comes from a heuristic during presolving modifiable constraints
+    * have to be checked;
+    */
+   for( c = 0; c < scip->origprob->nconss; ++c )
+   {
+      if( SCIPconsIsChecked(scip->origprob->conss[c]) && (checkmodifiable || !SCIPconsIsModifiable(scip->origprob->conss[c])) )
+      {
+         /* check solution */
+         SCIP_CALL( SCIPconsCheck(scip->origprob->conss[c], scip->set, sol, 
+               checkintegrality, checklprows, printreason, &result) );
+
+         if( result != SCIP_FEASIBLE )
+         {
+            *feasible = FALSE;
+            if( !completely )
+               return SCIP_OKAY;
+         }
+      }
+   }
+
+   /* call constraint handlers that don't need constraints */
+   for( h = 0; h < scip->set->nconshdlrs; ++h )
+   {
+      if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
+      {
+         SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
+               checkintegrality, checklprows, printreason, &result) );
+         if( result != SCIP_FEASIBLE )
+         {
+            *feasible = FALSE;
+            if( !completely) 
+               return SCIP_OKAY;
+         }
+      }
+   }
+   
+   return SCIP_OKAY;
+}
+
 /** initializes solving data structures and transforms problem */
 SCIP_RETCODE SCIPtransformProb(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   int nfeassols;
    int h;
+   int s;
 
    SCIP_CALL( checkStage(scip, "SCIPtransformProb", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
@@ -6014,12 +6142,51 @@ SCIP_RETCODE SCIPtransformProb(
    SCIP_CALL( SCIPcliquetableCreate(&scip->cliquetable) );
 
    /* copy problem in solve memory */
-   SCIP_CALL( SCIPprobTransform(scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+   SCIP_CALL( SCIPprobTransform(scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree, scip->lp,
          scip->branchcand, scip->eventfilter, scip->eventqueue, &scip->transprob) );
 
    /* switch stage to TRANSFORMED */
    scip->set->stage = SCIP_STAGE_TRANSFORMED;
   
+   /* check solution of solution candidate storage */
+   nfeassols = 0;
+   for( s = scip->origprimal->nsols - 1; s >= 0; --s )
+   {
+      SCIP_Bool feasible;
+      SCIP_Bool stored;
+      SCIP_SOL* sol ;
+
+      sol =  scip->origprimal->sols[s];
+
+      /* SCIPprimalTrySol() can only be called on transformed solutions; therefore check solutions in original problem
+       * including modifiable constraints
+       */
+      SCIP_CALL( checkSolOrig(scip, sol, &feasible, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE) );
+      
+      if( feasible )
+      {
+         SCIPsolRecomputeObj(sol, scip->set, scip->stat, scip->origprob);
+
+         /* add primal solution to solution storage by copying it */
+         SCIP_CALL( SCIPprimalAddSol(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->transprob,
+               scip->tree, scip->lp, scip->eventqueue, scip->eventfilter, sol, &stored) );
+
+         if( stored )
+            nfeassols++;
+      }
+
+      SCIP_CALL( SCIPsolFree(&sol, scip->mem->probmem, scip->origprimal) );
+      scip->origprimal->nsols--;
+   }
+   
+   assert(scip->origprimal->nsols == 0);
+   assert(scip->origprimal->nexistingsols == 0);
+   
+   if( nfeassols > 0 )
+   {
+      SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "%d feasible solutions given by solution candidate storage\n", nfeassols);                    
+   }
+
    /* update upper bound and cutoff bound due to objective limit in primal data */
    SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
          scip->transprob, scip->tree, scip->lp) );
@@ -6043,7 +6210,7 @@ SCIP_RETCODE SCIPtransformProb(
    }
    SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL, "\n");
 
-   /* call init methods of plugins */
+   /* call initialization methods of plugins */
    SCIP_CALL( SCIPsetInitPlugins(scip->set, scip->mem->probmem, scip->stat) );
 
    /* in case the permutation seed is different to -1, permute the transformed problem */
@@ -6062,7 +6229,7 @@ SCIP_RETCODE SCIPtransformProb(
 static
 SCIP_RETCODE initPresolve(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool*            unbounded,          /**< pointer to store whether presolving detected unboundness */
+   SCIP_Bool*            unbounded,          /**< pointer to store whether presolving detected unboundedness */
    SCIP_Bool*            infeasible          /**< pointer to store whether presolving detected infeasibility */
    )
 {
@@ -6130,7 +6297,7 @@ SCIP_RETCODE initPresolve(
 static
 SCIP_RETCODE exitPresolve(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool*            unbounded,          /**< pointer to store whether presolving detected unboundness */
+   SCIP_Bool*            unbounded,          /**< pointer to store whether presolving detected unboundedness */
    SCIP_Bool*            infeasible          /**< pointer to store whether presolving detected infeasibility */
    )
 {
@@ -6162,7 +6329,7 @@ SCIP_RETCODE exitPresolve(
 
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
       {
-         /** flattens aggregation graph of multiaggregated variable in order to avoid exponential recursion lateron */
+         /** flattens aggregation graph of multi-aggregated variable in order to avoid exponential recursion later-on */
          SCIP_CALL( SCIPvarFlattenAggregationGraph(var, scip->mem->probmem, scip->set) );
 
 #ifndef NDEBUG      
@@ -6200,11 +6367,15 @@ SCIP_RETCODE exitPresolve(
       }
    }
 
-   /* replace variables in variable bounds with active problem variables, and
-    * check, whether the objective value is always integral
-    */
-   SCIP_CALL( SCIPprobExitPresolve(scip->transprob, scip->set) );
+   /* exit presolving */
+   SCIP_CALL( SCIPprobExitPresolve(scip->transprob,  scip->set) );
    assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
+   
+   /* check, whether objective value is always integral by inspecting the problem, if it is the case adjust the
+    * cutoff bound if primal solution is already known 
+    */
+   SCIP_CALL( SCIPprobCheckObjIntegral(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,
+         scip->tree, scip->lp, scip->eventqueue) );
 
    /* if possible, scale objective function such that it becomes integral with gcd 1 */
    SCIP_CALL( SCIPprobScaleObj(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,
@@ -6238,7 +6409,7 @@ SCIP_Bool isPresolveFinished(
    int                   lastnchgsides,      /**< number of changed sides in last presolving round */
    /*int                   lastnimplications,*/  /**< number of implications in last presolving round */
    /*int                   lastncliques,*/       /**< number of cliques in last presolving round */
-   SCIP_Bool             unbounded,          /**< has presolving detected unboundness? */
+   SCIP_Bool             unbounded,          /**< has presolving detected unboundedness? */
    SCIP_Bool             infeasible          /**< has presolving detected infeasibility? */
    )
 {
@@ -6293,7 +6464,7 @@ SCIP_RETCODE presolveRound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             onlydelayed,        /**< should only delayed presolvers be called? */
    SCIP_Bool*            delayed,            /**< pointer to store whether a presolver was delayed */
-   SCIP_Bool*            unbounded,          /**< pointer to store whether presolving detected unboundness */
+   SCIP_Bool*            unbounded,          /**< pointer to store whether presolving detected unboundedness */
    SCIP_Bool*            infeasible          /**< pointer to store whether presolving detected infeasibility */
    )
 {
@@ -6304,6 +6475,7 @@ SCIP_RETCODE presolveRound(
    int j;
    int priopresol;
    int prioprop;
+   SCIP_Bool lastranpresol;
 
    assert(scip != NULL);
    assert(scip->set != NULL);
@@ -6315,6 +6487,7 @@ SCIP_RETCODE presolveRound(
    *unbounded = FALSE;
    *infeasible = FALSE;
    aborted = FALSE;
+   lastranpresol = FALSE;
 
    /* call included presolvers with nonnegative priority */
    for( i = 0, j = 0; !(*unbounded) && !(*infeasible) && !aborted && (i < scip->set->npresols || j < scip->set->nprops);  )
@@ -6350,6 +6523,7 @@ SCIP_RETCODE presolveRound(
                &scip->stat->npresolchgsides, &result) );
          assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
 
+         lastranpresol = FALSE;
          ++j;
       }
       else
@@ -6372,20 +6546,31 @@ SCIP_RETCODE presolveRound(
                &scip->stat->npresolchgsides, &result) );
          assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
 
+         lastranpresol = TRUE;
          ++i;
       }
 
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
-         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "presolver <%s> detected infeasibility\n", SCIPpresolGetName(scip->set->presols[i]));
+
+         if( lastranpresol )
+            SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               "presolver <%s> detected infeasibility\n", SCIPpresolGetName(scip->set->presols[i-1]));
+         else
+            SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               "propagator <%s> detected infeasibility\n", SCIPpropGetName(scip->set->props[j-1]));
       }
       else if( result == SCIP_UNBOUNDED )
       {
          *unbounded = TRUE;
-         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpresolGetName(scip->set->presols[i]));
+
+         if( lastranpresol )
+            SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               "presolver <%s> detected unboundedness (or infeasibility)\n", SCIPpresolGetName(scip->set->presols[i-1]));
+         else
+            SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               "propagator <%s> detected infeasibility\n", SCIPpropGetName(scip->set->props[j-1]));
       }
       *delayed = *delayed || (result == SCIP_DELAYED);
 
@@ -6426,7 +6611,7 @@ SCIP_RETCODE presolveRound(
       {
          *unbounded = TRUE;
          SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "constraint handler <%s> detected unboundness (or infeasibility)\n",
+            "constraint handler <%s> detected unboundedness (or infeasibility)\n",
             SCIPconshdlrGetName(scip->set->conshdlrs[i]));
       }
       *delayed = *delayed || (result == SCIP_DELAYED);
@@ -6474,6 +6659,7 @@ SCIP_RETCODE presolveRound(
                &scip->stat->npresolchgsides, &result) );
          assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
 
+         lastranpresol = FALSE;
          ++j;
       }
       else
@@ -6493,20 +6679,31 @@ SCIP_RETCODE presolveRound(
                &scip->stat->npresolchgsides, &result) );
          assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
 
+         lastranpresol = TRUE;
          ++i;
       }
 
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
-         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "presolver <%s> detected infeasibility\n", SCIPpresolGetName(scip->set->presols[i]));
+
+         if( lastranpresol )
+            SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               "presolver <%s> detected infeasibility\n", SCIPpresolGetName(scip->set->presols[i-1]));
+         else
+            SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               "propagator <%s> detected infeasibility\n", SCIPpropGetName(scip->set->props[j-1]));
       }
       else if( result == SCIP_UNBOUNDED )
       {
          *unbounded = TRUE;
-         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpresolGetName(scip->set->presols[i]));
+
+         if( lastranpresol )
+            SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               "presolver <%s> detected unboundedness (or infeasibility)\n", SCIPpresolGetName(scip->set->presols[i-1]));
+         else
+            SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               "propagator <%s> detected infeasibility\n", SCIPpropGetName(scip->set->props[j-1]));
       }
       *delayed = *delayed || (result == SCIP_DELAYED);
 
@@ -6576,7 +6773,7 @@ SCIP_RETCODE presolveRound(
 static
 SCIP_RETCODE presolve(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool*            unbounded,          /**< pointer to store whether presolving detected unboundness */
+   SCIP_Bool*            unbounded,          /**< pointer to store whether presolving detected unboundedness */
    SCIP_Bool*            infeasible          /**< pointer to store whether presolving detected infeasibility */
    )
 {
@@ -6773,7 +6970,7 @@ SCIP_RETCODE presolve(
       assert(vars != NULL);
       assert(nbinvars + nintvars + nimplvars + ncontvars == nvars);
 
-      SCIPdebugMessage("entering sortation with respect to original block structure! \n");
+      SCIPdebugMessage("entering sorting with respect to original block structure! \n");
      
       /* check for every variable type whether it appears in the presolved problem. if yes, sort the specific part of
        * the variables array */
@@ -6814,7 +7011,7 @@ SCIP_RETCODE presolve(
       {
          *unbounded = TRUE;
          SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "presolve deinitialization detected unboundness\n");
+            "presolve deinitialization detected unboundedness\n");
       }
    }
    assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
@@ -6866,7 +7063,7 @@ SCIP_RETCODE initSolve(
    scip->set->stage = SCIP_STAGE_INITSOLVE;
 
    /* initialize NLP if there are nonlinearities and there is someone who can make use of it and the user did not switch it off */
-   assert(!scip->set->continnonlinpresent || scip->set->nonlinearitypresent); /* if there is continous nonlinearity, then there should be nonlinearity in general */
+   assert(!scip->set->continnonlinpresent || scip->set->nonlinearitypresent); /* if there is continuous nonlinearity, then there should be nonlinearity in general */
    if( scip->set->nonlinearitypresent && !scip->set->nlp_disable )
    {
       SCIPdebugMessage("constructing empty NLP\n");
@@ -6880,7 +7077,7 @@ SCIP_RETCODE initSolve(
    /* create VBC output file */
    SCIP_CALL( SCIPvbcInit(scip->stat->vbc, scip->mem->probmem, scip->set) );
 
-   /* init solution process data structures */
+   /* initialize solution process data structures */
    SCIP_CALL( SCIPpricestoreCreate(&scip->pricestore) );
    SCIP_CALL( SCIPsepastoreCreate(&scip->sepastore) );
    SCIP_CALL( SCIPcutpoolCreate(&scip->cutpool, scip->mem->probmem, scip->set, scip->set->sepa_cutagelimit, TRUE) );
@@ -6946,8 +7143,8 @@ SCIP_RETCODE freeSolve(
    assert(scip->stat != NULL);
    assert(scip->set->stage == SCIP_STAGE_SOLVING || scip->set->stage == SCIP_STAGE_SOLVED);
 
-   /* mark that we are currenlty restarting */
-   if ( restart )
+   /* mark that we are currently restarting */
+   if( restart )
       scip->stat->inrestart = TRUE;
 
    /* remove focus from the current focus node */
@@ -7017,6 +7214,10 @@ SCIP_RETCODE freeTransform(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_Bool stored;
+   int nsols;
+   int s;
+   
    assert(scip != NULL);
    assert(scip->mem != NULL);
    assert(scip->stat != NULL);
@@ -7027,7 +7228,30 @@ SCIP_RETCODE freeTransform(
 
    /* switch stage to FREETRANS */
    scip->set->stage = SCIP_STAGE_FREETRANS;
+   
+   assert(scip->origprimal->nsols == 0);
 
+   nsols = MIN(scip->set->limit_maxorigsol, scip->primal->nsols);
+   stored = TRUE;
+   
+   /* copy best primal solution to original solution candidate list */
+   for( s = 0; s < nsols && stored; ++s )
+   {
+      SCIP_SOL* sol;
+
+      sol = scip->primal->sols[s];
+      assert(sol != NULL);
+      
+      if( SCIPsolGetOrigin(sol) != SCIP_SOLORIGIN_ORIGINAL )
+      {
+         /* retransform solution into the original problem space */
+         SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob) );
+      }
+   
+      /* add solution to original candidate solution storage */
+      SCIP_CALL( SCIPaddSol(scip, sol, &stored) );
+   }
+   
    /* free transformed problem data structures */
    SCIP_CALL( SCIPprobFree(&scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
    SCIP_CALL( SCIPcliquetableFree(&scip->cliquetable, scip->mem->probmem) );
@@ -7128,7 +7352,7 @@ SCIP_RETCODE SCIPpresolve(
             else if( scip->primal->nsols >= 1 )
             {
                SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
-                  "presolving detected unboundness\n");
+                  "presolving detected unboundedness\n");
 
                /* switch status to UNBOUNDED */
                scip->stat->status = SCIP_STATUS_UNBOUNDED;
@@ -7136,7 +7360,7 @@ SCIP_RETCODE SCIPpresolve(
             else
             {
                SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
-                  "presolving detected unboundness (or infeasibility)\n");
+                  "presolving detected unboundedness (or infeasibility)\n");
 
                /* switch status to INFORUNBD */
                scip->stat->status = SCIP_STATUS_INFORUNBD;
@@ -7576,9 +7800,9 @@ SCIP_RETCODE SCIPwriteVarName(
    {
       /* print variable type */
       SCIPinfoMessage(scip, file, "[%c]", 
-         SCIPvarGetType(var) == SCIP_VARTYPE_BINARY ? 'B' :
-         SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER ? 'I' :
-         SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT ? 'I' : 'C');
+         SCIPvarGetType(var) == SCIP_VARTYPE_BINARY ? SCIP_VARTYPE_BINARY_CHAR :
+         SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER ? SCIP_VARTYPE_INTEGER_CHAR :
+         SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT ? SCIP_VARTYPE_IMPLINT_CHAR : SCIP_VARTYPE_CONTINUOUS_CHAR);
    }
    
    return SCIP_OKAY;
@@ -7625,7 +7849,7 @@ SCIP_RETCODE SCIPwriteVarsList(
 SCIP_RETCODE SCIPwriteVarsLinearsum(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< the text file to store the information into, or NULL for stdout */
-   SCIP_VAR**            vars,               /**< variable array to outpout */
+   SCIP_VAR**            vars,               /**< variable array to output */
    SCIP_Real*            vals,               /**< array of coefficients or NULL if all coefficients are 1.0 */
    int                   nvars,              /**< number of variables */
    SCIP_Bool             type                /**< should the variable type be also posted */
@@ -7769,16 +7993,20 @@ SCIP_RETCODE SCIPparseVar(
 SCIP_RETCODE SCIPparseVarName(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           str,                /**< string to parse */
-   int                   pos,                /**< position to start */
    SCIP_VAR**            var,                /**< pointer to store the problem variable, or NULL if it does not exit */
-   int*                  endpos              /**< position where the parsing stopped */
+   char**                endptr              /**< pointer to store the final string position if successfully */
    )
 {
    char varname[SCIP_MAXSTRLEN];
    
+   assert(str != NULL);
+   assert(var != NULL);
+   assert(endptr != NULL);
+
    SCIP_CALL( checkStage(scip, "SCIPparseVarName", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
    
-   SCIPstrCopySection(str, pos, '<', '>', varname, SCIP_MAXSTRLEN, endpos); 
+   SCIPstrCopySection(str, '<', '>', varname, SCIP_MAXSTRLEN, endptr); 
+   assert(*endptr != NULL);
 
    if( *varname == '\0' )
    {
@@ -7807,12 +8035,14 @@ SCIP_RETCODE SCIPparseVarName(
       (*var) = SCIPfindVar(scip, varname);
    }
 
-   /* skip additional variable type marker */
-   if( str[*endpos] == '[' &&
-       (str[*endpos+1] == 'B' || str[*endpos+1] == 'I' || str[*endpos+1] == 'C') &&
-       str[*endpos+2] == ']' )
-      *endpos += 3;
+   str = *endptr;
    
+   /* skip additional variable type marker */
+   if( *str == '[' &&
+      (str[1] == SCIP_VARTYPE_BINARY_CHAR || str[1] == SCIP_VARTYPE_INTEGER_CHAR || 
+         str[1] == SCIP_VARTYPE_IMPLINT_CHAR || str[1] == SCIP_VARTYPE_CONTINUOUS_CHAR )  && str[2] == ']' )
+      (*endptr) += 3;
+      
    return SCIP_OKAY;
 }
 
@@ -7829,12 +8059,11 @@ SCIP_RETCODE SCIPparseVarName(
 SCIP_RETCODE SCIPparseVarsList( 
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           str,                /**< string to parse */
-   int                   pos,                /**< position to start */
    SCIP_VAR**            vars,               /**< array to store the parsed variable */
    int*                  nvars,              /**< pointer to store number of parsed variables */
    int                   varssize,           /**< size of the variable array */
    int*                  requiredsize,       /**< pointer to store the required array size for the active variables */
-   int*                  endpos,             /**< position where the parsing stopped */
+   char**                endptr,             /**< pointer to store the final string position if successfully */
    char                  delimiter,          /**< character which is used for delimitation */
    SCIP_Bool*            success             /**< pointer to store the whether the parsing was successfully or not */
    )
@@ -7847,15 +8076,17 @@ SCIP_RETCODE SCIPparseVarsList(
    SCIP_CALL( checkStage(scip, "SCIPparseVarsList", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    /* allocate buffer memory for temporary storing the parsed variables */
-   SCIP_CALL (SCIPallocBufferArray(scip, &tmpvars, varssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpvars, varssize) );
 
    ntmpvars = 0;
    (*success) = TRUE;
    
    do
    {
+      *endptr = (char*)str;
+      
       /* parse variable name */ 
-      SCIP_CALL( SCIPparseVarName(scip, str, pos, &var, &pos) );
+      SCIP_CALL( SCIPparseVarName(scip, str, &var, endptr) );
 
       if( var == NULL )
       {
@@ -7870,11 +8101,14 @@ SCIP_RETCODE SCIPparseVarsList(
       
       ntmpvars++;
 
-      /* skip white space */
-      while( isspace(str[pos]) )
-         pos++;
+      str = *endptr;
+      
+      while( isspace((unsigned char)*str) )
+         str++;
    }
-   while( str[pos] == delimiter );
+   while( *str == delimiter );
+   
+   *endptr = (char*)str;
 
    /* if all variable name searches were successfully and the variable array has enough slots copy the collected
     * variables 
@@ -7890,7 +8124,7 @@ SCIP_RETCODE SCIPparseVarsList(
       (*nvars) = 0;
    
    (*requiredsize) = ntmpvars;
-
+   
    /* free buffer arrays */
    SCIPfreeBufferArray(scip, &tmpvars);
 
@@ -7913,14 +8147,13 @@ SCIP_RETCODE SCIPparseVarsList(
 SCIP_RETCODE SCIPparseVarsPolynomial(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           str,                /**< string to parse */
-   int                   pos,                /**< position to start parsing the string */
    char                  endchar,            /**< character where to stop parsing */
    SCIP_VAR****          monomialvars,       /**< pointer to store arrays with variables for each monomial */
    SCIP_Real***          monomialexps,       /**< pointer to store arrays with variable exponents */
    SCIP_Real**           monomialcoefs,      /**< pointer to store array with monomial coefficients */
    int**                 monomialnvars,      /**< pointer to store array with number of variables for each monomial */
    int*                  nmonomials,         /**< pointer to store number of parsed monomials */
-   int*                  endpos,             /**< pointer to store where the parsing ended */
+   char**                endptr,             /**< pointer to store the final string position if successfully */
    SCIP_Bool*            success             /**< pointer to store the whether the parsing was successfully or not */
    )
 {
@@ -7930,6 +8163,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
       SCIPPARSEPOLYNOMIAL_STATE_COEF,        /* we parse the coefficient of a monomial */
       SCIPPARSEPOLYNOMIAL_STATE_VARS,        /* we parse monomial variables */
       SCIPPARSEPOLYNOMIAL_STATE_EXPONENT,    /* we parse the exponent of a variable */
+      SCIPPARSEPOLYNOMIAL_STATE_END,         /* we are at the end the polynomial */
       SCIPPARSEPOLYNOMIAL_STATE_ERROR        /* a parsing error occured */
    } SCIPPARSEPOLYNOMIAL_STATES;
 
@@ -7942,24 +8176,22 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
    SCIP_VAR** vars;
    SCIP_Real* exponents;
    SCIP_Real coef;
+   int sign;
 
    assert(scip != NULL);
    assert(str != NULL);
-   assert(pos >= 0);
-   assert(pos <= (int)strlen(str));
-   assert(!isspace(endchar));
+   assert(!isspace((unsigned char)endchar));
    assert(monomialvars != NULL);
    assert(monomialexps != NULL);
    assert(monomialnvars != NULL);
    assert(monomialcoefs != NULL);
    assert(nmonomials != NULL);
-   assert(endpos != NULL);
+   assert(endptr != NULL);
    assert(success != NULL);
 
    SCIP_CALL( checkStage(scip, "SCIPparseVarsPolynomial", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    *success = FALSE;
-   *endpos = pos;
    *nmonomials = 0;
    monomialssize = 0;
    *monomialvars = NULL;
@@ -7974,217 +8206,33 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
    vars = NULL;
    exponents = NULL;
    coef = SCIP_INVALID;
+   sign = 1.0;
 
-   SCIPdebugMessage("parsing polynomial from '%s', endchar = %c\n", str, endchar);
+   SCIPdebugMessage("parsing polynomial from '%s', endchar = <%c>\n", str, endchar);
 
-   while( str[pos] && str[pos] != endchar && state != SCIPPARSEPOLYNOMIAL_STATE_ERROR )
+   while( *str && *str != endchar && state != SCIPPARSEPOLYNOMIAL_STATE_END && state != SCIPPARSEPOLYNOMIAL_STATE_ERROR )
    {
       /* skip white space */
-      while( isspace(str[pos]) )
-         pos++;
+      while( isspace((unsigned char)*str) )
+         str++;
 
-      if( str[pos] == endchar )
+      if( *str == endchar )
          break;
+
+      assert(state != SCIPPARSEPOLYNOMIAL_STATE_END);
 
       switch( state )
       {
-         case SCIPPARSEPOLYNOMIAL_STATE_BEGIN:
-         {
-            if( coef != SCIP_INVALID )
-            {
-               SCIPdebugMessage("push monomial with coef %g and %d vars\n", coef, nvars);
-               /* push previous monomial */
-               if( monomialssize <= *nmonomials )
-               {
-                  monomialssize = SCIPcalcMemGrowSize(scip, *nmonomials+1);
-
-                  SCIP_CALL( SCIPreallocBufferArray(scip, monomialvars,  monomialssize) );
-                  SCIP_CALL( SCIPreallocBufferArray(scip, monomialexps,  monomialssize) );
-                  SCIP_CALL( SCIPreallocBufferArray(scip, monomialnvars, monomialssize) );
-                  SCIP_CALL( SCIPreallocBufferArray(scip, monomialcoefs, monomialssize) );
-               }
-
-               if( nvars > 0 )
-               {
-                  SCIP_CALL( SCIPduplicateBufferArray(scip, &(*monomialvars)[*nmonomials], vars, nvars) );
-                  SCIP_CALL( SCIPduplicateBufferArray(scip, &(*monomialexps)[*nmonomials], exponents, nvars) );
-               }
-               else
-               {
-                  (*monomialvars)[*nmonomials] = NULL;
-                  (*monomialexps)[*nmonomials] = NULL;
-               }
-               (*monomialcoefs)[*nmonomials] = coef;
-               (*monomialnvars)[*nmonomials] = nvars;
-               ++*nmonomials;
-
-               nvars = 0;
-               coef = SCIP_INVALID;
-            }
-
-            if( str[pos] == '<' )
-            {
-               /* there seem to come a variable at the beginning of a monomial
-                * so assume the coefficient is 1.0
-                */
-               state = SCIPPARSEPOLYNOMIAL_STATE_VARS;
-               coef = 1.0;
-               break;
-            }
-            if( str[pos] == '-' || str[pos] == '+' || isdigit(str[pos]) )
-            {
-               state = SCIPPARSEPOLYNOMIAL_STATE_COEF;
-               break;
-            }
-
-            SCIPerrorMessage("unexpected token '%c'\n", str[pos]);
-            state = SCIPPARSEPOLYNOMIAL_STATE_ERROR;
-
-            break;
-         }
-
-         case SCIPPARSEPOLYNOMIAL_STATE_INTERMED:
-         {
-            if( str[pos] == '<' )
-            {
-               /* there seem to come another variable */
-               state = SCIPPARSEPOLYNOMIAL_STATE_VARS;
-               break;
-            }
-
-            if( str[pos] == '-' || str[pos] == '+' || isdigit(str[pos]) )
-            {
-               /* there seem to come a coefficient, which means the next monomial */
-               state = SCIPPARSEPOLYNOMIAL_STATE_BEGIN;
-               break;
-            }
-
-            SCIPerrorMessage("unexpected token '%c'\n", str[pos]);
-            state = SCIPPARSEPOLYNOMIAL_STATE_ERROR;
-
-            break;
-         }
-
-         case SCIPPARSEPOLYNOMIAL_STATE_COEF:
-         {
-            char* endptr;
-
-            assert(coef == SCIP_INVALID);
-            if( str[pos] == '+' && !isdigit(str[pos+1]) )
-            {
-               /* only a plus sign, without number */
-               coef =  1.0;
-               ++pos;
-            }
-            else if( str[pos] == '-' && !isdigit(str[pos+1]) )
-            {
-               /* only a minus sign, without number */
-               coef = -1.0;
-               ++pos;
-            }
-            else
-            {
-               coef = strtod(str+pos, &endptr);
-
-               if( endptr == str+pos )
-               {
-                  SCIPerrorMessage("could not parse number in the beginning of '%s'\n", str+pos);
-                  state = SCIPPARSEPOLYNOMIAL_STATE_ERROR;
-                  break;
-               }
-               /* @todo we could check errno whether an over- or underflow occured, but I am not sure that this works on every platform
-                * also since we expect that the string was written by SCIPwriteVarsPolynomial, we can assume that the numbers are parsable
-                */
-
-               assert(endptr > str+pos);
-               pos = endptr - str;
-            }
-
-            /* after the coefficient we go into the intermediate state, i.e., expecting next variables */
-            state = SCIPPARSEPOLYNOMIAL_STATE_INTERMED;
-
-            break;
-         }
-
-         case SCIPPARSEPOLYNOMIAL_STATE_VARS:
-         {
-            SCIP_VAR* var;
-
-            assert(str[pos] == '<');
-
-            /* parse variable name */
-            SCIP_CALL( SCIPparseVarName(scip, str, pos, &var, &pos) );
-
-            if( var == NULL )
-            {
-               SCIPerrorMessage("did not find variable in the beginning of %s\n", str+pos);
-               state = SCIPPARSEPOLYNOMIAL_STATE_ERROR;
-               break;
-            }
-
-            /* add variable to vars array */
-            if( nvars + 1 > varssize )
-            {
-               varssize = SCIPcalcMemGrowSize(scip, nvars+1);
-               SCIP_CALL( SCIPreallocBufferArray(scip, &vars,      varssize) );
-               SCIP_CALL( SCIPreallocBufferArray(scip, &exponents, varssize) );
-            }
-            vars[nvars] = var;
-            exponents[nvars] = 1.0;
-            ++nvars;
-
-            if( str[pos] == '^' )
-               state = SCIPPARSEPOLYNOMIAL_STATE_EXPONENT;
-            else
-               state = SCIPPARSEPOLYNOMIAL_STATE_INTERMED;
-
-            break;
-         }
-
-         case SCIPPARSEPOLYNOMIAL_STATE_EXPONENT:
-         {
-            char* endptr;
-
-            assert(str[pos] == '^');
-            assert(nvars > 0); /* we should be in a monomial that has already a variable */
-            ++pos;
-
-            exponents[nvars-1] = strtod(str+pos, &endptr);
-
-            if( endptr == str+pos )
-            {
-               SCIPerrorMessage("could not parse number in the beginning of '%s'\n", str+pos);
-               state = SCIPPARSEPOLYNOMIAL_STATE_ERROR;
-               break;
-            }
-
-            assert(endptr > str+pos);
-            pos = endptr - str;
-
-            /* after the exponent we go into the intermediate state, i.e., expecting next variables */
-            state = SCIPPARSEPOLYNOMIAL_STATE_INTERMED;
-            break;
-         }
-
-         default:
-            SCIPerrorMessage("unexpected state\n");
-            return SCIP_ERROR;
-      }
-   }
-
-   /* check state at end of string */
-   switch( state )
-   {
       case SCIPPARSEPOLYNOMIAL_STATE_BEGIN:
-      case SCIPPARSEPOLYNOMIAL_STATE_INTERMED:
       {
-         if( coef != SCIP_INVALID )
+         if( coef != SCIP_INVALID  )
          {
-            /* push last monomial */
-            SCIPdebugMessage("push monomial with coef %g and %d vars\n", coef, nvars);
+            SCIPdebugMessage("push monomial with coefficient <%g> and <%d> vars\n", coef, nvars);
+            /* push previous monomial */
             if( monomialssize <= *nmonomials )
             {
-               monomialssize = *nmonomials+1;
+               monomialssize = SCIPcalcMemGrowSize(scip, *nmonomials+1);
+
                SCIP_CALL( SCIPreallocBufferArray(scip, monomialvars,  monomialssize) );
                SCIP_CALL( SCIPreallocBufferArray(scip, monomialexps,  monomialssize) );
                SCIP_CALL( SCIPreallocBufferArray(scip, monomialnvars, monomialssize) );
@@ -8193,14 +8241,8 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
 
             if( nvars > 0 )
             {
-               /* shrink vars and exponents array to needed size and take over ownership */
-               SCIP_CALL( SCIPreallocBufferArray(scip, &vars,      nvars) );
-               SCIP_CALL( SCIPreallocBufferArray(scip, &exponents, nvars) );
-               (*monomialvars)[*nmonomials] = vars;
-               (*monomialexps)[*nmonomials] = exponents;
-               vars = NULL;
-               exponents = NULL;
-               varssize = 0;
+               SCIP_CALL( SCIPduplicateBufferArray(scip, &(*monomialvars)[*nmonomials], vars, nvars) );
+               SCIP_CALL( SCIPduplicateBufferArray(scip, &(*monomialexps)[*nmonomials], exponents, nvars) );
             }
             else
             {
@@ -8210,21 +8252,214 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
             (*monomialcoefs)[*nmonomials] = coef;
             (*monomialnvars)[*nmonomials] = nvars;
             ++*nmonomials;
+
+            sign = 1.0;
+            nvars = 0;
+            coef = SCIP_INVALID;
          }
 
-         *success = TRUE;
+         if( *str == '<' )
+         {
+            /* there seem to come a variable at the beginning of a monomial
+             * so assume the coefficient is 1.0
+             */
+            state = SCIPPARSEPOLYNOMIAL_STATE_VARS;
+            coef = 1.0;
+            break;
+         }
+         if( *str == '-' || *str == '+' || isdigit(*str) )
+         {
+            state = SCIPPARSEPOLYNOMIAL_STATE_COEF;
+            break;
+         }
+
+         state = SCIPPARSEPOLYNOMIAL_STATE_END;
+
+         break;
+      }
+
+      case SCIPPARSEPOLYNOMIAL_STATE_INTERMED:
+      {
+         if( *str == '<' )
+         {
+            /* there seem to come another variable */
+            state = SCIPPARSEPOLYNOMIAL_STATE_VARS;
+            break;
+         }
+
+         if( *str == '-' || *str == '+' || isdigit(*str) )
+         {
+            /* there seem to come a coefficient, which means the next monomial */
+            state = SCIPPARSEPOLYNOMIAL_STATE_BEGIN;
+            break;
+         }
+
+         /* since we cannot detect the symbols we stop parsing the polynomial */
+         state = SCIPPARSEPOLYNOMIAL_STATE_END;
          break;
       }
 
       case SCIPPARSEPOLYNOMIAL_STATE_COEF:
-      case SCIPPARSEPOLYNOMIAL_STATE_VARS:
-      case SCIPPARSEPOLYNOMIAL_STATE_EXPONENT:
       {
-         SCIPerrorMessage("unexpected parsing state at end of polynomial string\n");
+         if( *str == '+' && !isdigit(str[1]) )
+         {
+            /* only a plus sign, without number */
+            sign = 1.0;
+            coef =  1.0;
+            ++str;
+         }
+         else if( *str == '-' && !isdigit(str[1]) )
+         {
+            /* only a minus sign, without number */
+            sign = -1.0;
+            ++str;
+         }
+         else
+         {
+            if( !SCIPstrToRealValue(str, &coef, endptr) )
+            {
+               SCIPerrorMessage("could not parse number in the beginning of '%s'\n", str);
+               state = SCIPPARSEPOLYNOMIAL_STATE_ERROR;
+               break;
+            }
+
+            coef *= sign;
+            str = *endptr;
+         }
+
+         /* after the coefficient we go into the intermediate state, i.e., expecting next variables */
+         state = SCIPPARSEPOLYNOMIAL_STATE_INTERMED;
+
+         break;
       }
 
-      case SCIPPARSEPOLYNOMIAL_STATE_ERROR:
-         ;
+      case SCIPPARSEPOLYNOMIAL_STATE_VARS:
+      {
+         SCIP_VAR* var;
+
+         assert(*str == '<');
+
+         /* parse variable name */
+         SCIP_CALL( SCIPparseVarName(scip, str, &var, endptr) );
+
+         /* check if variable name was parsed */
+         if( *endptr == str )
+         {
+            state = SCIPPARSEPOLYNOMIAL_STATE_END;
+            break;
+         }
+         str = *endptr;
+
+         if( var == NULL )
+         {
+            SCIPerrorMessage("did not find variable in the beginning of %s\n", str);
+            state = SCIPPARSEPOLYNOMIAL_STATE_ERROR;
+            break;
+         }
+
+         /* add variable to vars array */
+         if( nvars + 1 > varssize )
+         {
+            varssize = SCIPcalcMemGrowSize(scip, nvars+1);
+            SCIP_CALL( SCIPreallocBufferArray(scip, &vars,      varssize) );
+            SCIP_CALL( SCIPreallocBufferArray(scip, &exponents, varssize) );
+         }
+         vars[nvars] = var;
+         exponents[nvars] = 1.0;
+         ++nvars;
+
+         str = *endptr;
+
+         if( *str == '^' )
+            state = SCIPPARSEPOLYNOMIAL_STATE_EXPONENT;
+         else
+            state = SCIPPARSEPOLYNOMIAL_STATE_INTERMED;
+
+         break;
+      }
+
+      case SCIPPARSEPOLYNOMIAL_STATE_EXPONENT:
+      {
+         assert(*str == '^');
+         assert(nvars > 0); /* we should be in a monomial that has already a variable */
+         ++str;
+
+         if( !SCIPstrToRealValue(str, &exponents[nvars-1], endptr) )
+         {
+            SCIPerrorMessage("could not parse number in the beginning of '%s'\n", str);
+            state = SCIPPARSEPOLYNOMIAL_STATE_ERROR;
+            break;
+         }
+         str = *endptr;
+
+         /* after the exponent we go into the intermediate state, i.e., expecting next variables */
+         state = SCIPPARSEPOLYNOMIAL_STATE_INTERMED;
+         break;
+      }
+
+      default:
+         SCIPerrorMessage("unexpected state\n");
+         return SCIP_ERROR;
+      }
+   }
+
+   /* set end pointer */
+   *endptr = (char*)str;
+
+   /* check state at end of string */
+   switch( state )
+   {
+   case SCIPPARSEPOLYNOMIAL_STATE_BEGIN:
+   case SCIPPARSEPOLYNOMIAL_STATE_END:
+   case SCIPPARSEPOLYNOMIAL_STATE_INTERMED:
+   {
+      if( coef != SCIP_INVALID )
+      {
+         /* push last monomial */
+         SCIPdebugMessage("push monomial with coefficient <%g> and <%d> vars\n", coef, nvars);
+         if( monomialssize <= *nmonomials )
+         {
+            monomialssize = *nmonomials+1;
+            SCIP_CALL( SCIPreallocBufferArray(scip, monomialvars,  monomialssize) );
+            SCIP_CALL( SCIPreallocBufferArray(scip, monomialexps,  monomialssize) );
+            SCIP_CALL( SCIPreallocBufferArray(scip, monomialnvars, monomialssize) );
+            SCIP_CALL( SCIPreallocBufferArray(scip, monomialcoefs, monomialssize) );
+         }
+
+         if( nvars > 0 )
+         {
+            /* shrink vars and exponents array to needed size and take over ownership */
+            SCIP_CALL( SCIPreallocBufferArray(scip, &vars,      nvars) );
+            SCIP_CALL( SCIPreallocBufferArray(scip, &exponents, nvars) );
+            (*monomialvars)[*nmonomials] = vars;
+            (*monomialexps)[*nmonomials] = exponents;
+            vars = NULL;
+            exponents = NULL;
+            varssize = 0;
+         }
+         else
+         {
+            (*monomialvars)[*nmonomials] = NULL;
+            (*monomialexps)[*nmonomials] = NULL;
+         }
+         (*monomialcoefs)[*nmonomials] = coef;
+         (*monomialnvars)[*nmonomials] = nvars;
+         ++*nmonomials;
+      }
+
+      *success = TRUE;
+      break;
+   }
+
+   case SCIPPARSEPOLYNOMIAL_STATE_COEF:
+   case SCIPPARSEPOLYNOMIAL_STATE_VARS:
+   case SCIPPARSEPOLYNOMIAL_STATE_EXPONENT:
+   {
+      SCIPerrorMessage("unexpected parsing state at end of polynomial string\n");
+   }
+
+   case SCIPPARSEPOLYNOMIAL_STATE_ERROR:
+      break;
    }
 
    /* free memory to store current monomial, if still existing */
@@ -8249,8 +8484,6 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
       SCIPfreeParseVarsPolynomialData(scip, monomialvars, monomialexps, monomialcoefs, monomialnvars, *nmonomials);
       *nmonomials = 0;
    }
-
-   *endpos = pos;
 
    return SCIP_OKAY;
 }
@@ -8307,14 +8540,13 @@ void SCIPfreeParseVarsPolynomialData(
 SCIP_RETCODE SCIPparseVarsLinearsum(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           str,                /**< string to parse */
-   int                   pos,                /**< position to start parsing the string */
    char                  endchar,            /**< character where to stop parsing, or 0 */
    SCIP_VAR**            vars,               /**< array to store the parsed variables */
    SCIP_Real*            vals,               /**< array to store the parsed coefficients */
    int*                  nvars,              /**< pointer to store number of parsed variables */
    int                   varssize,           /**< size of the variable array */
    int*                  requiredsize,       /**< pointer to store the required array size for the active variables */
-   int*                  endpos,             /**< pointer to store where the parsing ended */
+   char**                endptr,             /**< pointer to store the final string position if successfully */
    SCIP_Bool*            success             /**< pointer to store the whether the parsing was successfully or not */
    )
 {
@@ -8332,12 +8564,12 @@ SCIP_RETCODE SCIPparseVarsLinearsum(
    assert(vals != NULL || varssize == 0);
    assert(nvars != NULL);
    assert(requiredsize != NULL);
-   assert(endpos != NULL);
+   assert(endptr != NULL);
    assert(success != NULL);
 
    *requiredsize = 0;
 
-   SCIP_CALL( SCIPparseVarsPolynomial(scip, str, pos, endchar, &monomialvars, &monomialexps, &monomialcoefs, &monomialnvars, &nmonomials, endpos, success) );
+   SCIP_CALL( SCIPparseVarsPolynomial(scip, str, endchar, &monomialvars, &monomialexps, &monomialcoefs, &monomialnvars, &nmonomials, endptr, success) );
 
    if( !*success )
    {
@@ -8350,6 +8582,9 @@ SCIP_RETCODE SCIPparseVarsLinearsum(
    {
       *nvars = 0;
       *requiredsize = 0;
+
+      SCIPfreeParseVarsPolynomialData(scip, &monomialvars, &monomialexps, &monomialcoefs, &monomialnvars, nmonomials);
+
       return SCIP_OKAY;
    }
 
@@ -8662,7 +8897,7 @@ SCIP_RETCODE SCIPgetBinvarRepresentatives(
    return SCIP_OKAY;
 }
 
-/** flattens aggregation graph of multiaggregated variable in order to avoid exponential recursion lateron */
+/** flattens aggregation graph of multi-aggregated variable in order to avoid exponential recursion later-on */
 SCIP_RETCODE SCIPflattenVarAggregationGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< problem variable */
@@ -9035,7 +9270,7 @@ SCIP_Real SCIPgetRelaxSolObj(
    return SCIPrelaxationGetSolObj(scip->relaxation);
 }
 
-/** start strong branching - call before any strongbranching */
+/** start strong branching - call before any strong branching */
 SCIP_RETCODE SCIPstartStrongbranch(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -9048,7 +9283,7 @@ SCIP_RETCODE SCIPstartStrongbranch(
    return SCIP_OKAY;
 }
 
-/** end strong branching - call after any strongbranching */
+/** end strong branching - call after any strong branching */
 SCIP_RETCODE SCIPendStrongbranch(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -9299,7 +9534,7 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesFrac(
    cols = NULL;
    SCIP_CALL( SCIPallocBufferArray(scip, &cols, nvars) );
    assert(cols != NULL);
-   for (j = 0; j < nvars; ++j)
+   for( j = 0; j < nvars; ++j )
    {
       SCIP_VAR* var;
       SCIP_COL* col;
@@ -9355,7 +9590,7 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesFrac(
        */
       if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !scip->set->misc_exactsolve )
       {
-         for (j = 0; j < nvars; ++j)
+         for( j = 0; j < nvars; ++j )
          {
             SCIP_Bool downcutoff;
             SCIP_Bool upcutoff;
@@ -9428,7 +9663,7 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesInt(
    cols = NULL;
    SCIP_CALL( SCIPallocBufferArray(scip, &cols, nvars) );
    assert(cols != NULL);
-   for (j = 0; j < nvars; ++j)
+   for( j = 0; j < nvars; ++j )
    {
       SCIP_VAR* var;
       SCIP_COL* col;
@@ -9484,7 +9719,7 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesInt(
        */
       if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !scip->set->misc_exactsolve )
       {
-         for (j = 0; j < nvars; ++j)
+         for( j = 0; j < nvars; ++j )
          {
             SCIP_Bool downcutoff;
             SCIP_Bool upcutoff;
@@ -10123,8 +10358,8 @@ SCIP_RETCODE SCIPtightenVarLb(
    SCIPvarAdjustLb(var, scip->set, &newbound);
 
    /* get current bounds */
-   lb = SCIPvarGetLbLocal(var);
-   ub = SCIPvarGetUbLocal(var);
+   lb = SCIPcomputeVarLbLocal(scip, var);
+   ub = SCIPcomputeVarUbLocal(scip, var);
    assert(SCIPsetIsLE(scip->set, lb, ub));
 
    if( SCIPsetIsFeasGT(scip->set, newbound, ub) )
@@ -10193,8 +10428,8 @@ SCIP_RETCODE SCIPtightenVarUb(
    SCIPvarAdjustUb(var, scip->set, &newbound);
 
    /* get current bounds */
-   lb = SCIPvarGetLbLocal(var);
-   ub = SCIPvarGetUbLocal(var);
+   lb = SCIPcomputeVarLbLocal(scip, var);
+   ub = SCIPcomputeVarUbLocal(scip, var);
    assert(SCIPsetIsLE(scip->set, lb, ub));
 
    if( SCIPsetIsFeasLT(scip->set, newbound, lb) )
@@ -10869,9 +11104,9 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
 #undef SCIPcomputeVarLbLocal
 #undef SCIPcomputeVarUbLocal
 
-/** for a multiaggregated variable, returns the global lower bound computed by adding the global bounds from all aggregation variables
+/** for a multi-aggregated variable, returns the global lower bound computed by adding the global bounds from all aggregation variables
  * this global bound may be tighter than the one given by SCIPvarGetLbGlobal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multiaggregated variable results in a call to SCIPvarGetLbGlobal
+ * calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetLbGlobal
  */
 SCIP_Real SCIPcomputeVarLbGlobal(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10888,9 +11123,9 @@ SCIP_Real SCIPcomputeVarLbGlobal(
       return SCIPvarGetLbGlobal(var);
 }
 
-/** for a multiaggregated variable, returns the global upper bound computed by adding the global bounds from all aggregation variables
+/** for a multi-aggregated variable, returns the global upper bound computed by adding the global bounds from all aggregation variables
  * this global bound may be tighter than the one given by SCIPvarGetUbGlobal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multiaggregated variable results in a call to SCIPvarGetUbGlobal
+ * calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetUbGlobal
  */
 SCIP_Real SCIPcomputeVarUbGlobal(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10907,9 +11142,9 @@ SCIP_Real SCIPcomputeVarUbGlobal(
       return SCIPvarGetUbGlobal(var);
 }
 
-/** for a multiaggregated variable, returns the local lower bound computed by adding the local bounds from all aggregation variables
+/** for a multi-aggregated variable, returns the local lower bound computed by adding the local bounds from all aggregation variables
  * this local bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multiaggregated variable results in a call to SCIPvarGetLbLocal
+ * calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetLbLocal
  */
 SCIP_Real SCIPcomputeVarLbLocal(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10926,9 +11161,9 @@ SCIP_Real SCIPcomputeVarLbLocal(
       return SCIPvarGetLbLocal(var);
 }
 
-/** for a multiaggregated variable, returns the local upper bound computed by adding the local bounds from all aggregation variables
+/** for a multi-aggregated variable, returns the local upper bound computed by adding the local bounds from all aggregation variables
  * this local bound may be tighter than the one given by SCIPvarGetUbLocal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multiaggregated variable results in a call to SCIPvarGetUbLocal
+ * calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetUbLocal
  */
 SCIP_Real SCIPcomputeVarUbLocal(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -11233,8 +11468,8 @@ SCIP_RETCODE SCIPcalcCliquePartition(
             /* greedily fill up the clique */
             for( j = i+1; j < nvars; ++j )
             {
-	       /* if variable is not active (multi-aggregated or fixed), it cannot be in any clique */
-	       if( cliquepartition[j] == -1 && SCIPvarIsActive(tmpvars[j]) )
+               /* if variable is not active (multi-aggregated or fixed), it cannot be in any clique */
+               if( cliquepartition[j] == -1 && SCIPvarIsActive(tmpvars[j]) )
                {
                   int k;
 
@@ -11304,7 +11539,6 @@ SCIP_RETCODE SCIPcalcNegatedCliquePartition(
    int v;
 
    assert(scip != NULL);
-   assert(vars != NULL || nvars == 0);
    assert(cliquepartition != NULL || nvars == 0);
    assert(ncliques != NULL);
 
@@ -11313,8 +11547,6 @@ SCIP_RETCODE SCIPcalcNegatedCliquePartition(
       *ncliques = 0;
       return SCIP_OKAY;
    }
-
-   /* to satisfy flexlint */
    assert(vars != NULL);
    
    /* allocate temporary memory */
@@ -11938,7 +12170,7 @@ SCIP_RETCODE aggregateActiveVars(
        */
       if( SCIPvarGetType(varx) == SCIP_VARTYPE_IMPLINT && !SCIPsetIsFeasIntegral(scip->set, scalar) )
       {
-	 return SCIP_OKAY;
+         return SCIP_OKAY;
       }
 
       /* aggregate the variable */
@@ -12015,7 +12247,7 @@ SCIP_RETCODE SCIPaggregateVars(
    SCIP_CALL( SCIPvarGetProbvarSum(&varx, &scalarx, &constantx) );
    SCIP_CALL( SCIPvarGetProbvarSum(&vary, &scalary, &constanty) );
 
-   /* we cannot aggregate multiaggregated variables */
+   /* we cannot aggregate multi-aggregated variables */
    if( SCIPvarGetStatus(varx) == SCIP_VARSTATUS_MULTAGGR || SCIPvarGetStatus(vary) == SCIP_VARSTATUS_MULTAGGR )
       return SCIP_OKAY;
 
@@ -12086,7 +12318,7 @@ SCIP_RETCODE SCIPaggregateVars(
 
 /** converts variable into multi-aggregated variable; this changes the vars array returned from
  *  SCIPgetVars() and SCIPgetVarsData(); Warning! The integrality condition is not checked anymore on
- *  the multiaggregated variable. You must not multiaggregate an integer variable without being sure,
+ *  the multi-aggregated variable. You must not multi-aggregate an integer variable without being sure,
  *  that integrality on the aggregation variables implies integrality on the aggregated variable.
  *
  *  The output flags have the following meaning:
@@ -12702,7 +12934,7 @@ SCIP_RETCODE SCIPwriteVarsVboundGraph(
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
    
-   /* create hash table for variables whcih are (still) connected */
+   /* create hash table for variables which are (still) connected */
    SCIP_CALL( SCIPhashtableCreate(&connected, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * nvars), SCIPvarGetHashkey, SCIPvarIsHashkeyEq, SCIPvarGetHashkeyVal, NULL) );
 
    /* detect isolated variables; mark all variables which have at least one entering or leaving arc as connected */
@@ -13272,7 +13504,7 @@ SCIP_RETCODE SCIPsetConsModifiable(
    SCIP_Bool             modifiable          /**< new value */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPsetConsModifiable", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetConsModifiable", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE) );
 
    SCIPconsSetModifiable(cons, modifiable);
 
@@ -14118,7 +14350,7 @@ SCIP_RETCODE SCIPreadSol(
    const char*           fname              /**< name of the input file */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPreadSol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPreadSol", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    /* we pass the reading of the solution file on to reader_sol via the following call */
    SCIP_CALL( SCIPreadProb(scip, fname, "sol") );
@@ -14316,13 +14548,13 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
 
    SCIP_CALL( checkStage(scip, "SCIPcomputeLPRelIntPoint", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   /* init point */
+   /* initialize point */
    *point = NULL;
 
    /* exit if there are no columns */
    lp = scip->lp;
    assert( lp->nrows >= 0 && lp->ncols >= 0 );
-   if ( lp->ncols == 0 )
+   if( lp->ncols == 0 )
       return SCIP_OKAY;
 
    /* disable objective cutoff if we have none */
@@ -14332,7 +14564,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
    SCIPdebugMessage("Computing relative interior point to current LP.\n");
 
    /* if there are no rows, we return the zero point */
-   if ( lp->nrows == 0 && !inclobjcutoff )
+   if( lp->nrows == 0 && !inclobjcutoff )
    {
       /* create zero point */
       SCIP_CALL( SCIPcreateSol(scip, point, NULL) );
@@ -14349,7 +14581,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
    SCIP_CALL( SCIPallocBufferArray(scip, &obj, nnewcols) );
 
    /* create original columns (bounds are relaxed below, unless the variable is fixed) */
-   for (j = 0; j < lp->ncols; ++j)
+   for( j = 0; j < lp->ncols; ++j )
    {
       /* note: if the variable is fixed we cannot simply fix the variables (because alpha scales the problem) */
       obj[j] = 0.0;
@@ -14365,35 +14597,35 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
    ++nnewcols;
    
    /* create slacks for rows */
-   for (i = 0; i < lp->nrows; ++i)
+   for( i = 0; i < lp->nrows; ++i )
    {
       SCIP_ROW* row;
 
       row = lp->rows[i];
       assert( row != NULL );
 
-      if ( SCIProwIsModifiable(row) )
+      if( SCIProwIsModifiable(row) )
          continue;
 
       /* check whether we have an equation */
-      if ( SCIPisEQ(scip, row->lhs, row->rhs) )
+      if( SCIPisEQ(scip, row->lhs, row->rhs) )
       {
          assert( !SCIPisInfinity(scip, ABS(row->lhs)) );
          assert( !SCIPisInfinity(scip, ABS(row->rhs)) );
       }
       else
       {
-         if ( relaxrows )
+         if( relaxrows )
          {
             /* otherwise add slacks for each side if necessary */
-            if ( !SCIPisInfinity(scip, ABS(row->lhs)) )
+            if( !SCIPisInfinity(scip, ABS(row->lhs)) )
             {
                obj[nnewcols] = 1.0;
                lb[nnewcols] = 0.0;
                ub[nnewcols] = 1.0;
                ++nnewcols;
             }
-            if ( !SCIPisInfinity(scip, ABS(row->rhs)) )
+            if( !SCIPisInfinity(scip, ABS(row->rhs)) )
             {
                obj[nnewcols] = 1.0;
                lb[nnewcols] = 0.0;
@@ -14407,7 +14639,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
    /* create slacks for objective cutoff row */
    if( inclobjcutoff )
    {
-      if ( relaxrows )
+      if( relaxrows )
       {
          /* add slacks for right hand side */
          obj[nnewcols] = 1.0;
@@ -14418,7 +14650,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
    }
 
    /* create slacks for bounds */
-   for (j = 0; j < lp->ncols; ++j)
+   for( j = 0; j < lp->ncols; ++j )
    {
       SCIP_COL* col;
 
@@ -14426,14 +14658,14 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
       assert( col != NULL );
 
       /* add slacks for each bound if necessary */
-      if ( !SCIPisInfinity(scip, ABS(col->lb)) )
+      if( !SCIPisInfinity(scip, ABS(col->lb)) )
       {
          obj[nnewcols] = 1.0;
          lb[nnewcols] = 0.0;
          ub[nnewcols] = 1.0;
          ++nnewcols;
       }
-      if ( !SCIPisInfinity(scip, ABS(col->ub)) )
+      if( !SCIPisInfinity(scip, ABS(col->ub)) )
       {
          obj[nnewcols] = 1.0;
          lb[nnewcols] = 0.0;
@@ -14466,7 +14698,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
    zero = 0.0;
    minusinf = -SCIPlpiInfinity(lpi);
    plusinf = SCIPlpiInfinity(lpi);
-   for (i = 0; i < lp->nrows; ++i)
+   for( i = 0; i < lp->nrows; ++i )
    {
       SCIP_ROW* row;
       SCIP_COL** rowcols;
@@ -14478,7 +14710,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
       row = lp->rows[i];
       assert( row != NULL );
 
-      if ( SCIProwIsModifiable(row) )
+      if( SCIProwIsModifiable(row) )
          continue;
 
       /* get row data */
@@ -14490,7 +14722,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
       rowvals = row->vals;
 
       /* set up indices */
-      for (j = 0; j < nnonz; ++j)
+      for( j = 0; j < nnonz; ++j )
       {
          assert( rowcols[j] != NULL );
          assert( 0 <= rowcols[j]->lppos && rowcols[j]->lppos < lp->ncols );
@@ -14500,7 +14732,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
       }
 
       /* if we have an equation */
-      if ( SCIPisEQ(scip, lhs, rhs) )
+      if( SCIPisEQ(scip, lhs, rhs) )
       {
          /* add artificial variable */
          colinds[nnonz] = lp->ncols;
@@ -14512,7 +14744,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
       else
       {
          /* treat lhs */
-         if ( !SCIPisInfinity(scip, ABS(lhs)) )
+         if( !SCIPisInfinity(scip, ABS(lhs)) )
          {
             assert( ! SCIPisEQ(scip, lhs, rhs) );
 
@@ -14520,7 +14752,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
             colinds[nnonz] = lp->ncols;
             colvals[nnonz] = -lhs;
 
-            if ( relaxrows )
+            if( relaxrows )
             {
                /* add slack variable */
                colinds[nnonz+1] = lp->ncols + 1 + cnt;
@@ -14535,7 +14767,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
          }
 
          /* treat rhs */
-         if ( !SCIPisInfinity(scip, ABS(rhs)) )
+         if( !SCIPisInfinity(scip, ABS(rhs)) )
          {
             assert( ! SCIPisEQ(scip, lhs, rhs) );
 
@@ -14543,7 +14775,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
             colinds[nnonz] = lp->ncols;
             colvals[nnonz] = -rhs;
 
-            if ( relaxrows )
+            if( relaxrows )
             {
                /* add slack variable */
                colinds[nnonz+1] = lp->ncols + 1 + cnt;
@@ -14570,7 +14802,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
 
       /* set up indices and coefficients */
       nnonz = 0;
-      for (j = 0; j < lp->ncols; ++j)
+      for( j = 0; j < lp->ncols; ++j )
       {
          assert( lp->cols[j] != NULL );
          assert( 0 <= lp->cols[j]->lppos && lp->cols[j]->lppos < lp->ncols );
@@ -14588,7 +14820,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
       colvals[nnonz] = -rhs;
       ++nnonz;
 
-      if ( relaxrows )
+      if( relaxrows )
       {
          /* add slack variable */
          colinds[nnonz] = lp->ncols + 1 + cnt;
@@ -14600,7 +14832,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
    }
 
    /* create rows arising from bounds */
-   for (j = 0; j < lp->ncols; ++j)
+   for( j = 0; j < lp->ncols; ++j )
    {
       SCIP_COL* col;
 
@@ -14613,7 +14845,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
       colvals[0] = 1.0;
       
       /* lower bound */
-      if ( !SCIPisInfinity(scip, ABS(col->lb)) )
+      if( !SCIPisInfinity(scip, ABS(col->lb)) )
       {
          /* add artificial variable */
          colinds[1] = lp->ncols;
@@ -14627,7 +14859,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
       }
 
       /* upper bound */
-      if ( !SCIPisInfinity(scip, ABS(col->ub)) )
+      if( !SCIPisInfinity(scip, ABS(col->ub)) )
       {
          /* add artificial variable */
          colinds[1] = lp->ncols;
@@ -14654,7 +14886,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
    /* SCIP_CALL( SCIPlpiSolvePrimal(lpi) ); */
    SCIP_CALL( SCIPlpiSolveDual(lpi) );  /* dual is usually faster */
 
-   if ( SCIPlpiIsOptimal(lpi) )
+   if( SCIPlpiIsOptimal(lpi) )
    {   
       /* get primal solution */
       SCIP_CALL( SCIPallocBufferArray(scip, &primal, nnewcols) );
@@ -14666,9 +14898,9 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
 
       /* construct relative interior point */
       SCIP_CALL( SCIPcreateSol(scip, point, NULL) );
-      for (j = 0; j < lp->ncols; ++j)
+      for( j = 0; j < lp->ncols; ++j )
       {
-         if ( ! SCIPisFeasZero(scip, primal[j]) )
+         if( !SCIPisFeasZero(scip, primal[j]) )
          {
             SCIP_VAR* var;
             var = lp->cols[j]->var;
@@ -14679,9 +14911,9 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
 #ifdef SCIP_DEBUG
       /* check whether the point is a relative interior point */
       cnt = 0;
-      if ( relaxrows )
+      if( relaxrows )
       {
-         for (i = 0; i < lp->nrows; ++i)
+         for( i = 0; i < lp->nrows; ++i )
          {
             SCIP_ROW* row;
             SCIP_COL** rowcols;
@@ -14703,25 +14935,25 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
             rowvals = row->vals;
 
             sum = 0.0;
-            for (j = 0; j < nnonz; ++j)
+            for( j = 0; j < nnonz; ++j )
                sum += rowvals[j] * primal[rowcols[j]->lppos];
             sum /= alpha;
 
             /* if we have an equation */
-            if ( SCIPisEQ(scip, lhs, rhs) )
+            if( SCIPisEQ(scip, lhs, rhs) )
             {
                assert( SCIPisFeasEQ(scip, sum, lhs) );
             }
             else
             {
                /* treat lhs */
-               if ( !SCIPisInfinity(scip, ABS(lhs)) )
+               if( !SCIPisInfinity(scip, ABS(lhs)) )
                {
                   assert( SCIPisFeasZero(scip, primal[lp->ncols+1+cnt]) || SCIPisFeasGT(scip, sum, lhs) );
                   ++cnt;
                }
                /* treat rhs */
-               if ( !SCIPisInfinity(scip, ABS(rhs)) )
+               if( !SCIPisInfinity(scip, ABS(rhs)) )
                {
                   assert( SCIPisFeasZero(scip, primal[lp->ncols+1+cnt]) || SCIPisFeasLT(scip, sum, rhs) );
                   ++cnt;
@@ -14734,7 +14966,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
             SCIP_Real rhs;
 
             sum = 0.0;
-            for (j = 0; j < lp->ncols; ++j)
+            for( j = 0; j < lp->ncols; ++j )
                sum += lp->cols[j]->obj * primal[lp->cols[j]->lppos];
             sum /= alpha;
 
@@ -14744,7 +14976,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
          }
       }
       /* check bounds */
-      for (j = 0; j < lp->ncols; ++j)
+      for( j = 0; j < lp->ncols; ++j )
       {
          SCIP_COL* col;
          SCIP_Real val;
@@ -14754,16 +14986,16 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
          val = primal[col->lppos] / alpha;
 
          /* if the variable is not fixed */
-         if ( ! SCIPisEQ(scip, col->lb, col->ub) )
+         if( !SCIPisEQ(scip, col->lb, col->ub) )
          {
             /* treat lb */
-            if ( !SCIPisInfinity(scip, ABS(col->lb)) )
+            if( !SCIPisInfinity(scip, ABS(col->lb)) )
             {
                assert( SCIPisFeasZero(scip, primal[lp->ncols+1+cnt]) || SCIPisFeasGT(scip, val, col->lb) );
                ++cnt;
             }
             /* treat rhs */
-            if ( !SCIPisInfinity(scip, ABS(col->ub)) )
+            if( !SCIPisInfinity(scip, ABS(col->ub)) )
             {
                assert( SCIPisFeasZero(scip, primal[lp->ncols+1+cnt]) || SCIPisFeasLT(scip, val, col->ub) );
                ++cnt;
@@ -14834,7 +15066,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointSupNorm(
 
    SCIP_CALL( checkStage(scip, "SCIPcomputeLPRelIntPointSup", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   /* init point */
+   /* initialize point */
    *point = NULL;
 
    /* exit if there are no columns */
@@ -14867,7 +15099,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointSupNorm(
    SCIP_CALL( SCIPallocBufferArray(scip, &obj, ncols) );
 
    /* create original columns (bounds are relaxed below, unless the variable is fixed) */
-   for (j = 0; j < lp->ncols; ++j)
+   for( j = 0; j < lp->ncols; ++j )
    {
       obj[j] = 0.0;
       lb[j]  = lp->cols[j]->lb;
@@ -14895,7 +15127,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointSupNorm(
    beg = 0;
    minusinf = -SCIPlpiInfinity(lpi);
    plusinf  =  SCIPlpiInfinity(lpi);
-   for (i = 0; i < lp->nrows; ++i)
+   for( i = 0; i < lp->nrows; ++i )
    {
       SCIP_ROW* row;
       SCIP_COL** rowcols;
@@ -14919,7 +15151,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointSupNorm(
       rowvals = row->vals;
 
       /* set up indices */
-      for (j = 0; j < nnonz; ++j)
+      for( j = 0; j < nnonz; ++j )
       {
          assert( rowcols[j] != NULL );
          assert( 0 <= rowcols[j]->lppos && rowcols[j]->lppos < lp->ncols );
@@ -14968,7 +15200,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointSupNorm(
       /* set up indices and coefficients */
       nnonz = 0;
       norm = 0.0;
-      for (j = 0; j < lp->ncols; ++j)
+      for( j = 0; j < lp->ncols; ++j )
       {
          assert( lp->cols[j] != NULL );
          assert( 0 <= lp->cols[j]->lppos && lp->cols[j]->lppos < lp->ncols );
@@ -14990,7 +15222,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointSupNorm(
    }
 
    /* create rows arising from bounds */
-   for (j = 0; j < lp->ncols; ++j)
+   for( j = 0; j < lp->ncols; ++j )
    {
       SCIP_COL* col;
 
@@ -15061,7 +15293,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointSupNorm(
 
 #ifdef SCIP_DEBUG
       /* check whether the point is a relative interior point */
-      for (i = 0; i < lp->nrows; ++i)
+      for( i = 0; i < lp->nrows; ++i )
       {
          SCIP_ROW* row;
          SCIP_COL** rowcols;
@@ -15083,11 +15315,11 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointSupNorm(
          rowvals = row->vals;
 
          sum = 0.0;
-         for (j = 0; j < nnonz; ++j)
+         for( j = 0; j < nnonz; ++j )
             sum += rowvals[j] * primal[rowcols[j]->lppos];
 
          /* if we have an equation */
-         if ( SCIPisEQ(scip, lhs, rhs) )
+         if( SCIPisEQ(scip, lhs, rhs) )
          {
             assert( SCIPisFeasEQ(scip, sum, lhs) );
          }
@@ -15103,7 +15335,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointSupNorm(
          SCIP_Real rhs;
 
          sum = 0.0;
-         for (j = 0; j < lp->ncols; ++j)
+         for( j = 0; j < lp->ncols; ++j )
             sum += lp->cols[j]->obj * primal[lp->cols[j]->lppos];
 
          rhs = SCIPgetCutoffbound(scip) - SCIPlpGetLooseObjval(lp, scip->set);
@@ -15607,7 +15839,7 @@ SCIP_Real SCIPgetRowSolActivity(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetRowSolActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetRowSolActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    if( sol != NULL )
       return SCIProwGetSolActivity(row, scip->set, scip->stat, sol);
@@ -16492,7 +16724,7 @@ SCIP_RETCODE SCIPcreateNlRow(
    int                   nquadvars,          /**< number variables in quadratic terms */
    SCIP_VAR**            quadvars,           /**< variables in quadratic terms, or NULL if nquadvars == 0 */
    int                   nquadelems,         /**< number of elements in quadratic term */
-   SCIP_QUADELEM*        quadelems,          /**< elements (i.e., monoms) in quadratic term, or NULL if nquadelems == 0 */
+   SCIP_QUADELEM*        quadelems,          /**< elements (i.e., monomials) in quadratic term, or NULL if nquadelems == 0 */
    SCIP_EXPRTREE*        expression,         /**< nonlinear expression, or NULL */
    SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs                 /**< right hand side */
@@ -17538,7 +17770,7 @@ SCIP_RETCODE SCIPremoveInefficaciousCuts(
    SCIP_CALL( checkStage(scip, "SCIPremoveInefficaciousCuts", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    isroot = FALSE;
-   if ( SCIPtreeGetCurrentDepth(scip->tree) == 0 )
+   if( SCIPtreeGetCurrentDepth(scip->tree) == 0 )
       isroot = TRUE;
    SCIP_CALL( SCIPsepastoreRemoveInefficaciousCuts(scip->sepastore, scip->mem->probmem, scip->set, scip->stat, 
          scip->eventqueue, scip->eventfilter, scip->lp, isroot) );
@@ -17590,6 +17822,7 @@ SCIP_RETCODE SCIPstartDive(
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPstartDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   assert(SCIPnodeGetType(SCIPgetCurrentNode(scip)) == SCIP_NODETYPE_FOCUSNODE);
 
    if( SCIPlpDiving(scip->lp) )
    {
@@ -17603,11 +17836,12 @@ SCIP_RETCODE SCIPstartDive(
       return SCIP_INVALIDCALL;
    }
 
-   if( !SCIPtreeHasCurrentNodeLP(scip->tree) )
+   if( !SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
    {
-      SCIPerrorMessage("cannot start diving at a pseudo node\n");
+      SCIPerrorMessage("cannot start diving if LP has not been constructed\n");
       return SCIP_INVALIDCALL;
    }
+   assert(SCIPtreeHasCurrentNodeLP(scip->tree));
 
    SCIP_CALL( SCIPlpStartDive(scip->lp, scip->mem->probmem, scip->set) );
 
@@ -17632,8 +17866,9 @@ SCIP_RETCODE SCIPendDive(
          scip->transprob, scip->transprob->vars, scip->transprob->nvars) );
 
    /* the lower bound may have changed slightly due to LP resolve in SCIPlpEndDive() */
-   if( !scip->lp->resolvelperror && scip->tree->focusnode != NULL )
+   if( !scip->lp->resolvelperror && scip->tree->focusnode != NULL && SCIPlpIsRelax(scip->lp) )
    {
+      assert(SCIPtreeIsFocusNodeLPConstructed(scip->tree));
       SCIP_CALL( SCIPnodeUpdateLowerboundLP(scip->tree->focusnode, scip->set, scip->stat, scip->lp) );
    }
    /* reset the probably changed LP's cutoff bound */
@@ -17965,6 +18200,8 @@ SCIP_RETCODE SCIPchgVarLbProbing(
    }
    assert(SCIPnodeGetType(SCIPtreeGetCurrentNode(scip->tree)) == SCIP_NODETYPE_PROBINGNODE);
 
+   SCIPvarAdjustLb(var, scip->set, &newbound);
+
    SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
          scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER, TRUE) );
 
@@ -17989,6 +18226,8 @@ SCIP_RETCODE SCIPchgVarUbProbing(
    }
    assert(SCIPnodeGetType(SCIPtreeGetCurrentNode(scip->tree)) == SCIP_NODETYPE_PROBINGNODE);
 
+   SCIPvarAdjustUb(var, scip->set, &newbound);
+
    SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
          scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER, TRUE) );
 
@@ -18005,8 +18244,8 @@ SCIP_RETCODE SCIPfixVarProbing(
    SCIP_Real             fixedval            /**< value to fix variable to */
    )
 {
-   SCIP_Real lb;
-   SCIP_Real ub;
+   SCIP_Real fixlb;
+   SCIP_Real fixub;
 
    SCIP_CALL( checkStage(scip, "SCIPfixVarProbing", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
@@ -18017,17 +18256,26 @@ SCIP_RETCODE SCIPfixVarProbing(
    }
    assert(SCIPnodeGetType(SCIPtreeGetCurrentNode(scip->tree)) == SCIP_NODETYPE_PROBINGNODE);
 
-   lb = SCIPvarGetLbLocal(var);
-   ub = SCIPvarGetUbLocal(var);
-   if( SCIPsetIsGT(scip->set, fixedval, lb) )
+   /** we adjust the fixing value here and compare the old bound with the adjusted values because otherwise, 
+    *  it might happen that the unadjusted value is better and we add the boundchange,
+    *  but within SCIPnodeAddBoundchg() the bounds are adjusted - using the feasibility epsilon for integer variables -
+    *  and it is asserted, that the bound is still better than the old one which might then be incorrect.
+    */
+   fixlb = fixedval;
+   fixub = fixedval;
+   SCIPvarAdjustLb(var, scip->set, &fixlb);
+   SCIPvarAdjustUb(var, scip->set, &fixub);
+   assert(SCIPsetIsEQ(scip->set, fixlb, fixub));
+
+   if( SCIPsetIsGT(scip->set, fixlb, SCIPvarGetLbLocal(var)) )
    {
       SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
-            scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, fixedval, SCIP_BOUNDTYPE_LOWER, TRUE) );
+            scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, fixlb, SCIP_BOUNDTYPE_LOWER, TRUE) );
    }
-   if( SCIPsetIsLT(scip->set, fixedval, ub) )
+   if( SCIPsetIsLT(scip->set, fixub, SCIPvarGetUbLocal(var)) )
    {
       SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
-            scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, fixedval, SCIP_BOUNDTYPE_UPPER, TRUE) );
+            scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, fixub, SCIP_BOUNDTYPE_UPPER, TRUE) );
    }
 
    return SCIP_OKAY;
@@ -18137,11 +18385,11 @@ SCIP_RETCODE solveProbingLP(
                scip->pricestore, scip->sepastore, scip->branchcand, scip->eventqueue, scip->eventfilter, pretendroot, displayinfo, maxpricerounds,
                &npricedcolvars, &mustsepa, &lowerbound, lperror, &result) );
 
-	 /* mark the probing node again to update the LP size in the node and the tree path */
-	 if( !(*lperror) )
-	 {
-	    SCIP_CALL( SCIPtreeMarkProbingNodeHasLP(scip->tree, scip->mem->probmem, scip->lp) );
-	 }
+         /* mark the probing node again to update the LP size in the node and the tree path */
+         if( !(*lperror) )
+         {
+            SCIP_CALL( SCIPtreeMarkProbingNodeHasLP(scip->tree, scip->mem->probmem, scip->lp) );
+         }
       }
    }
 
@@ -18374,7 +18622,7 @@ int SCIPgetNPrioExternBranchConts(
 }
 
 /** insert variable, its score and its solution value into the external branching candidate storage
- * the relative difference of the current lower and upper bounds of a continuous variable must be at least 2*epsilon */
+ * the relative difference of the current lower and upper bounds of a continuous variable must be at least epsilon */
 SCIP_RETCODE SCIPaddExternBranchCand(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to insert */
@@ -18391,7 +18639,7 @@ SCIP_RETCODE SCIPaddExternBranchCand(
    return SCIP_OKAY;
 }
 
-/** removes all exteral candidates from the storage for external branching */
+/** removes all external candidates from the storage for external branching */
 void SCIPclearExternBranchCands(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -18418,7 +18666,7 @@ SCIP_Bool SCIPcontainsExternBranchCand(
 
 
 
-/** gets branching candidates for pseudo solution branching (nonfixed variables) along with the number of candidates */
+/** gets branching candidates for pseudo solution branching (non-fixed variables) along with the number of candidates */
 SCIP_RETCODE SCIPgetPseudoBranchCands(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR***           pseudocands,        /**< pointer to store the array of pseudo branching candidates, or NULL */
@@ -18434,7 +18682,7 @@ SCIP_RETCODE SCIPgetPseudoBranchCands(
    return SCIP_OKAY;
 }
 
-/** gets branching candidates for pseudo solution branching (nonfixed variables) */
+/** gets branching candidates for pseudo solution branching (non-fixed variables) */
 int SCIPgetNPseudoBranchCands(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -18560,7 +18808,7 @@ SCIP_RETCODE SCIPcreateChild(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE**           node,               /**< pointer to node data structure */
    SCIP_Real             nodeselprio,        /**< node selection priority of new node */
-   SCIP_Real             estimate            /**< estimate for (transformed) objective value of best feasible solution in subtree */
+   SCIP_Real             estimate            /**< estimate for(transformed) objective value of best feasible solution in subtree */
    )
 {
    assert(node != NULL);
@@ -18760,9 +19008,30 @@ SCIP_RETCODE SCIPcreateSol(
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPcreateSol", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-
-   SCIP_CALL( SCIPsolCreate(sol, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree, heur) );
+   SCIP_CALL( checkStage(scip, "SCIPcreateSol", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      SCIP_CALL( SCIPsolCreateOriginal(sol, scip->mem->probmem, scip->set, scip->stat, scip->origprimal, NULL, heur) );
+      return SCIP_OKAY;
+      
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_SOLVING:
+      SCIP_CALL( SCIPsolCreate(sol, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree, heur) );
+      return SCIP_OKAY;
+      
+   case SCIP_STAGE_SOLVED:
+   case SCIP_STAGE_FREESOLVE:
+   case SCIP_STAGE_FREETRANS:
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_ERROR;
+   }  /*lint !e788*/
 
    return SCIP_OKAY;
 }
@@ -18892,9 +19161,30 @@ SCIP_RETCODE SCIPcreateOrigSol(
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPcreateOrigSol", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPcreateOrigSol", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPsolCreateOriginal(sol, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree, heur) );
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      SCIP_CALL( SCIPsolCreateOriginal(sol, scip->mem->probmem, scip->set, scip->stat, scip->origprimal, NULL, heur) );
+      return SCIP_OKAY;
+      
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_SOLVING:
+      SCIP_CALL( SCIPsolCreateOriginal(sol, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree, heur) );
+      return SCIP_OKAY;
+      
+   case SCIP_STAGE_SOLVED:
+   case SCIP_STAGE_FREESOLVE:
+   case SCIP_STAGE_FREETRANS:
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_ERROR;
+   }  /*lint !e788*/
 
    return SCIP_OKAY;
 }
@@ -19034,7 +19324,7 @@ SCIP_RETCODE SCIPsetSolVal(
    SCIP_Real             val                 /**< solution value of variable */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPsetSolVal", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetSolVal", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL && SCIPvarIsTransformed(var) )
    {
@@ -19320,7 +19610,7 @@ SCIP_Bool SCIPareSolsEqual(
    SCIP_SOL*             sol2                /**< second primal CIP solution */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPareSolsEqual", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPareSolsEqual", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    return SCIPsolsAreEqual(sol1, sol2, scip->set, scip->stat, scip->origprob, scip->transprob);
 }
@@ -19333,21 +19623,31 @@ SCIP_RETCODE SCIPprintSol(
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    )
 {
+   SCIP_Real objvalue;
    SCIP_Bool currentsol;
 
-   SCIP_CALL( checkStage(scip, "SCIPprintSol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   assert(SCIPisTransformed(scip) || sol != NULL);
 
+   SCIP_CALL( checkStage(scip, "SCIPprintSol", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   
    currentsol = (sol == NULL);
    if( currentsol )
    {
+      SCIP_CALL( checkStage(scip, "SCIPprintSol(sol==NULL)",
+            FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+      
       /* create a temporary solution that is linked to the current solution */
       SCIP_CALL( SCIPsolCreateCurrentSol(&sol, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree,
             scip->lp, NULL) );
    }
 
    SCIPmessageFPrintInfo(file, "objective value:                 ");
-   SCIPprintReal(scip, file,
-      SCIPprobExternObjval(scip->transprob, scip->set, SCIPsolGetObj(sol, scip->set, scip->transprob)), 20, 15);
+   if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+      objvalue = SCIPsolGetOrigObj(sol);
+   else
+      objvalue = SCIPprobExternObjval(scip->transprob, scip->set, SCIPsolGetObj(sol, scip->set, scip->transprob));
+
+   SCIPprintReal(scip, file, objvalue, 20, 15);
    SCIPmessageFPrintInfo(file, "\n");
 
    SCIP_CALL( SCIPsolPrint(sol, scip->set, scip->stat, scip->origprob, scip->transprob, file, printzeros) );
@@ -19402,39 +19702,116 @@ SCIP_RETCODE SCIPprintTransSol(
    return SCIP_OKAY;
 }
 
-/** gets number of feasible primal solutions stored in the solution storage */
+/** gets number of feasible primal solutions stored in the solution storage in case the problem is transformed; in case
+ *  if the problem stage is SCIP_STAGE_PROBLEM, it returns the number solution in the original solution candidate
+ *  storage
+ */
 int SCIPgetNSols(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNSols", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNSols", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSols", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   return scip->primal->nsols;
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      return scip->origprimal->nsols;
+      
+   case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_SOLVED:
+   case SCIP_STAGE_FREESOLVE:
+      return scip->primal->nsols;
+      
+   case SCIP_STAGE_INIT:
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_FREETRANS:
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_ERROR;
+   }  /*lint !e788*/
 }
 
-/** gets array of feasible primal solutions stored in the solution storage */
+/** gets array of feasible primal solutions stored in the solution storage in case the problem is transformed; in case
+ *  if the problem stage is in SCIP_STAGE_PROBLEM, it returns the number array of solution candidate stored
+ */
 SCIP_SOL** SCIPgetSols(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSols", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSols", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   return scip->primal->sols;
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      return scip->origprimal->sols;
+      
+   case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_SOLVED:
+   case SCIP_STAGE_FREESOLVE:
+      return scip->primal->sols;
+      
+   case SCIP_STAGE_INIT:
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_FREETRANS:
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return NULL;
+   }  /*lint !e788*/
 }
 
-/** gets best feasible primal solution found so far, or NULL if no solution has been found */
+/** gets best feasible primal solution found so far if the problem is transformed; in case the the problem is in problem
+ *  stage it returns the best solution candidate, or NULL if no solution has been found or the candidate store is empty;
+ */
 SCIP_SOL* SCIPgetBestSol(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetBestSol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
-
-   if( scip->primal != NULL && scip->primal->nsols > 0 )
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetBestSol", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   switch( scip->set->stage )
    {
-      assert(scip->primal->sols != NULL);
-      assert(scip->primal->sols[0] != NULL);
-      return scip->primal->sols[0];
+   case SCIP_STAGE_PROBLEM:
+      assert(scip->origprimal != NULL);
+      if(  scip->origprimal->nsols > 0 )
+      {
+         assert(scip->origprimal->sols != NULL);
+         assert(scip->origprimal->sols[0] != NULL);
+         return scip->origprimal->sols[0];
+      }
+      break;
+      
+   case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_SOLVED:
+   case SCIP_STAGE_FREESOLVE:
+      assert(scip->primal != NULL);
+      if(  scip->primal->nsols > 0 )
+      {
+         assert(scip->primal->sols != NULL);
+         assert(scip->primal->sols[0] != NULL);
+         return scip->primal->sols[0];
+      }
+      break;
+      
+   case SCIP_STAGE_INIT:
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_FREETRANS:
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return NULL;
    }
+
    return NULL;
 }
 
@@ -19510,6 +19887,46 @@ SCIP_RETCODE SCIProundSol(
    return SCIP_OKAY;
 }
 
+/** retransforms solution to original problem space */
+SCIP_RETCODE SCIPretransformSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPretransformSol", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   switch ( SCIPsolGetOrigin(sol) )
+   {
+   case SCIP_SOLORIGIN_ORIGINAL:
+      /* nothing to do */
+      return SCIP_OKAY;
+
+   case SCIP_SOLORIGIN_LPSOL:
+   case SCIP_SOLORIGIN_NLPSOL:
+   case SCIP_SOLORIGIN_RELAXSOL:
+   case SCIP_SOLORIGIN_PSEUDOSOL:
+
+      /* first unlink solution */
+      SCIP_CALL( SCIPunlinkSol(scip, sol) );
+      
+      /*lint -fallthrough*/
+   case SCIP_SOLORIGIN_ZERO:
+
+      SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob) );
+      break;
+
+   case SCIP_SOLORIGIN_UNKNOWN:
+      SCIPerrorMessage("unkown solution origin.\n");
+      return SCIP_INVALIDCALL;
+
+   default:
+      SCIPerrorMessage("invalid solution origin <%d>\n", SCIPsolGetOrigin(sol));
+      return SCIP_ERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** adds feasible primal solution to solution storage by copying it */
 SCIP_RETCODE SCIPaddSol(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -19517,19 +19934,40 @@ SCIP_RETCODE SCIPaddSol(
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPaddSol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPaddSol", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE) );
 
-   /* if the solution is added during presolving and it is not defined on original variables, 
-    * presolving operations will destroy its validity, so we retransform it to the original space
-    */
-   if( scip->set->stage == SCIP_STAGE_PRESOLVING && SCIPsolGetOrigin(sol) != SCIP_SOLORIGIN_ORIGINAL )
+   switch( scip->set->stage )
    {
-      SCIP_CALL( SCIPsolUnlink(sol, scip->set, scip->transprob) );
-      SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob) );      
-   }
+   case SCIP_STAGE_PROBLEM:
+   case SCIP_STAGE_FREETRANS:
+      assert( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL );
+      SCIP_CALL( SCIPprimalAddOrigSol(scip->origprimal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, sol, stored) );
+      return SCIP_OKAY;
 
-   SCIP_CALL( SCIPprimalAddSol(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->transprob, scip->tree,
-         scip->lp, scip->eventqueue, scip->eventfilter, sol, stored) );
+   case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_PRESOLVING:
+      /* if the solution is added during presolving and it is not defined on original variables, 
+       * presolving operations will destroy its validity, so we retransform it to the original space
+       */
+      if( SCIPsolGetOrigin(sol) != SCIP_SOLORIGIN_ORIGINAL )
+      {
+         SCIP_CALL( SCIPsolUnlink(sol, scip->set, scip->transprob) );
+         SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob) );      
+      }
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_SOLVING:
+      SCIP_CALL( SCIPprimalAddSol(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->transprob, scip->tree,
+            scip->lp, scip->eventqueue, scip->eventfilter, sol, stored) );
+      return SCIP_OKAY;
+      
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_SOLVED:
+   case SCIP_STAGE_FREESOLVE:
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_ERROR;
+   }  /*lint !e788*/
 
    return SCIP_OKAY;
 }
@@ -19541,19 +19979,40 @@ SCIP_RETCODE SCIPaddSolFree(
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPaddSolFree", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPaddSolFree", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE) );
 
-   /* if the solution is added during presolving and it is not defined on original variables, 
-    * presolving operations will destroy its validity, so we retransform it to the original space
-    */
-   if( scip->set->stage == SCIP_STAGE_PRESOLVING && SCIPsolGetOrigin(*sol) != SCIP_SOLORIGIN_ORIGINAL )
+   switch( scip->set->stage )
    {
-      SCIP_CALL( SCIPsolUnlink(*sol, scip->set, scip->transprob) );
-      SCIP_CALL( SCIPsolRetransform(*sol, scip->set, scip->stat, scip->origprob) );      
-   }
+   case SCIP_STAGE_PROBLEM:
+   case SCIP_STAGE_FREETRANS:
+      assert( SCIPsolGetOrigin(*sol) == SCIP_SOLORIGIN_ORIGINAL );
+      SCIP_CALL( SCIPprimalAddOrigSolFree(scip->origprimal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, sol, stored) );
+      return SCIP_OKAY;
 
-   SCIP_CALL( SCIPprimalAddSolFree(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->transprob, scip->tree,
-         scip->lp, scip->eventqueue, scip->eventfilter, sol, stored) );
+   case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_PRESOLVING:
+      /* if the solution is added during presolving and it is not defined on original variables, 
+       * presolving operations will destroy its validity, so we retransform it to the original space
+       */
+      if( SCIPsolGetOrigin(*sol) != SCIP_SOLORIGIN_ORIGINAL )
+      {
+         SCIP_CALL( SCIPsolUnlink(*sol, scip->set, scip->transprob) );
+         SCIP_CALL( SCIPsolRetransform(*sol, scip->set, scip->stat, scip->origprob) );      
+      }
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_SOLVING:
+      SCIP_CALL( SCIPprimalAddSolFree(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->transprob, scip->tree,
+            scip->lp, scip->eventqueue, scip->eventfilter, sol, stored) );
+      return SCIP_OKAY;
+      
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_SOLVED:
+   case SCIP_STAGE_FREESOLVE:
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_ERROR;
+   }  /*lint !e788*/
 
    return SCIP_OKAY;
 }
@@ -19570,105 +20029,6 @@ SCIP_RETCODE SCIPaddCurrentSol(
    SCIP_CALL( SCIPprimalAddCurrentSol(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->transprob,
          scip->tree, scip->lp, scip->eventqueue, scip->eventfilter, heur, stored) );
 
-   return SCIP_OKAY;
-}
-
-/** checks solution for feasibility in original problem without adding it to the solution store */
-static
-SCIP_RETCODE checkSolOrig(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Bool*            feasible,           /**< stores whether given solution is feasible */
-   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
-   SCIP_Bool             completely,         /**< should all violation be checked? */
-   SCIP_Bool             checkbounds,        /**< should the bounds of the variables be checked? */
-   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
-   SCIP_Bool             checkmodifiable     /**< have modifiable constraint to be checked? */
-   )
-{
-   SCIP_RESULT result;
-   int v;
-   int c;
-   int h;
-
-   assert(scip != NULL);
-   assert(sol != NULL);
-   assert(feasible != NULL);
-
-   SCIP_CALL( checkStage(scip, "checkSolOrig", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
-
-   *feasible = TRUE;
-
-   /* check bounds */
-   if( checkbounds )
-   {
-      for( v = 0; v < scip->origprob->nvars && (*feasible || printreason); ++v )
-      {
-         SCIP_VAR* var;
-         SCIP_Real solval;
-         SCIP_Real lb;
-         SCIP_Real ub;
-         
-         var = scip->origprob->vars[v];
-         solval = SCIPsolGetVal(sol, scip->set, scip->stat, var);
-         lb = SCIPvarGetLbOriginal(var);
-         ub = SCIPvarGetUbOriginal(var);
-         if( SCIPsetIsFeasLT(scip->set, solval, lb) || SCIPsetIsFeasGT(scip->set, solval, ub) )
-         {
-            *feasible = FALSE;
-            
-            if( printreason )
-            {
-               SCIPmessagePrintInfo("solution violates original bounds of variable <%s> [%g,%g] solution value <%g>\n",
-                  SCIPvarGetName(var), lb, ub, solval);
-            }
-            
-            if( !completely )
-               return SCIP_OKAY;
-         }
-      }
-   }
-
-   /* check original constraints
-    *
-    * in general modifiable constraints can not be checked, because the variables to fulfill them might be missing in
-    * the original problem; however, if the solution comes from a heuristic during presolving modifiable constraints
-    * have to be checked;
-    */
-   for( c = 0; c < scip->origprob->nconss; ++c )
-   {
-      if( SCIPconsIsChecked(scip->origprob->conss[c]) && (checkmodifiable || !SCIPconsIsModifiable(scip->origprob->conss[c])) )
-      {
-         /* check solution */
-         SCIP_CALL( SCIPconsCheck(scip->origprob->conss[c], scip->set, sol, 
-               checkintegrality, checklprows, printreason, &result) );
-
-         if( result != SCIP_FEASIBLE )
-         {
-            *feasible = FALSE;
-            if( !completely )
-               return SCIP_OKAY;
-         }
-      }
-   }
-
-   /* call constraint handlers that don't need constraints */
-   for( h = 0; h < scip->set->nconshdlrs; ++h )
-   {
-      if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
-      {
-         SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
-               checkintegrality, checklprows, printreason, &result) );
-         if( result != SCIP_FEASIBLE )
-         {
-            *feasible = FALSE;
-            if( !completely) 
-               return SCIP_OKAY;
-         }
-      }
-   }
-   
    return SCIP_OKAY;
 }
 
@@ -19689,7 +20049,7 @@ SCIP_RETCODE SCIPtrySol(
 
    /* if the solution is added during presolving and it is not defined on original variables, 
     * presolving operations will destroy its validity, so we retransform it to the original space
-    */
+    */ 
    if( scip->set->stage == SCIP_STAGE_PRESOLVING && SCIPsolGetOrigin(sol) != SCIP_SOLORIGIN_ORIGINAL )
    {
       SCIP_CALL( SCIPsolUnlink(sol, scip->set, scip->transprob) );
@@ -19750,7 +20110,8 @@ SCIP_RETCODE SCIPtrySolFree(
       SCIP_Bool feasible;
 
       /* SCIPprimalTrySol() can only be called on transformed solutions; therefore check solutions in original problem 
-       *  including modifiable constraints */
+       * including modifiable constraints 
+       */
       SCIP_CALL( checkSolOrig(scip, *sol, &feasible, printreason, FALSE, checkbounds, checkintegrality, checklprows, TRUE) );
       
       if( feasible )
@@ -19961,7 +20322,7 @@ SCIP_RETCODE SCIPdropVarEvent(
    return SCIP_OKAY;
 }
 
-/** catches an row coefficient, constant, or side change event on the given row */
+/** catches a row coefficient, constant, or side change event on the given row */
 SCIP_RETCODE SCIPcatchRowEvent(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row,                /**< linear row to catch event for */
@@ -19984,7 +20345,7 @@ SCIP_RETCODE SCIPcatchRowEvent(
    return SCIP_OKAY;
 }
 
-/** drops an row coefficient, constant, or side change event (stops to track event) on the given row */
+/** drops a row coefficient, constant, or side change event (stops to track event) on the given row */
 SCIP_RETCODE SCIPdropRowEvent(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row,                /**< linear row to drop event for */
@@ -20294,7 +20655,7 @@ SCIP_RETCODE SCIPprintNodeRootPath(
          else 
             end =  nodeswitches[j+1];
          
-         for( i = nodeswitches[j]; i < end; ++i)
+         for( i = nodeswitches[j]; i < end; ++i )
          {
             if( i > nodeswitches[j] )
                SCIPmessageFPrintInfo(file, " AND ");
@@ -20796,7 +21157,7 @@ SCIP_Longint SCIPgetNBacktracks(
    return scip->stat->nbacktracks;
 }
 
-/** gets current plunging depth (succ. times, a child was selected as next node) */
+/** gets current plunging depth (successive times, a child was selected as next node) */
 int SCIPgetPlungeDepth(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -20936,8 +21297,8 @@ SCIP_Bool SCIPisPrimalboundSol(
    return SCIPprimalUpperboundIsSol(scip->primal, scip->set, scip->transprob);
 }
 
-/** gets current gap |(primalbound - dualbound)/dualbound| if both bounds have same sign, or infinity, if they have
- *  opposite sign
+/** gets current gap |(primalbound - dualbound)/min(|primalbound|,|dualbound|)| if both bounds have same sign,
+ *  or infinity, if they have opposite sign
  */
 SCIP_Real SCIPgetGap(
    SCIP*                 scip                /**< SCIP data structure */
@@ -20950,8 +21311,8 @@ SCIP_Real SCIPgetGap(
 
    if( SCIPsetIsInfinity(scip->set, getLowerbound(scip)) )
    {
-      /* in case we could not prove whether the problem is unbounded or infeasible, we want to terminate with 
-       * gap = +inf instead of gap = 0 
+      /* in case we could not prove whether the problem is unbounded or infeasible, we want to terminate with
+       * gap = +inf instead of gap = 0
        */
       if( SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD )
          return SCIPsetInfinity(scip->set);
@@ -20965,14 +21326,16 @@ SCIP_Real SCIPgetGap(
    if( SCIPsetIsEQ(scip->set, primalbound, dualbound) )
       return 0.0;
    else if( SCIPsetIsZero(scip->set, dualbound)
+      || SCIPsetIsZero(scip->set, primalbound)
       || SCIPsetIsInfinity(scip->set, REALABS(primalbound))
+      || SCIPsetIsInfinity(scip->set, REALABS(dualbound))
       || primalbound * dualbound < 0.0 )
       return SCIPsetInfinity(scip->set);
    else
-      return REALABS((primalbound - dualbound)/dualbound);
+      return REALABS((primalbound - dualbound)/MIN(REALABS(dualbound),REALABS(primalbound)));
 }
 
-/** gets current gap |(upperbound - lowerbound)/lowerbound| in transformed problem if both bounds have same sign,
+/** gets current gap |(upperbound - lowerbound)/min(|upperbound|,|lowerbound|)| in transformed problem if both bounds have same sign,
  *  or infinity, if they have opposite sign
  */
 SCIP_Real SCIPgetTransGap(
@@ -20988,15 +21351,25 @@ SCIP_Real SCIPgetTransGap(
    lowerbound = getLowerbound(scip);
 
    if( SCIPsetIsInfinity(scip->set, lowerbound) )
-      return 0.0;
+      /* in case we could not prove whether the problem is unbounded or infeasible, we want to terminate with
+       * gap = +inf instead of gap = 0
+       */
+      if( SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD )
+         return SCIPsetInfinity(scip->set);
+      else
+         return 0.0;
    else if( SCIPsetIsEQ(scip->set, upperbound, lowerbound) )
       return 0.0;
    else if( SCIPsetIsZero(scip->set, lowerbound)
+      || SCIPsetIsZero(scip->set, upperbound)
       || SCIPsetIsInfinity(scip->set, upperbound)
+      || SCIPsetIsInfinity(scip->set, -lowerbound)
       || lowerbound * upperbound < 0.0 )
       return SCIPsetInfinity(scip->set);
-   else
+   else if( lowerbound > 0 )
       return REALABS((upperbound - lowerbound)/lowerbound);
+   else
+      return REALABS((upperbound - lowerbound)/upperbound);
 }
 
 /** gets number of feasible primal solutions found so far */
@@ -21289,7 +21662,7 @@ SCIP_RETCODE printProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROB*            prob,               /**< problem data */
    FILE*                 file,               /**< output file (or NULL for standard output) */
-   const char*           extension,          /**< file format (or NULL for defaul CIP format)*/
+   const char*           extension,          /**< file format (or NULL for default CIP format) */
    SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
    )
 {
@@ -21298,9 +21671,6 @@ SCIP_RETCODE printProblem(
    assert(scip != NULL);
    assert(prob != NULL);
 
-   assert( scip != NULL );
-   assert( prob != NULL );
-
    /* try all readers until one could read the file */
    result = SCIP_DIDNOTRUN;
    for( i = 0; i < scip->set->nreaders && result == SCIP_DIDNOTRUN; ++i )
@@ -21308,13 +21678,9 @@ SCIP_RETCODE printProblem(
       SCIP_RETCODE retcode;
 
       if( extension != NULL )
-      {
          retcode = SCIPreaderWrite(scip->set->readers[i], prob, scip->set, file, extension, genericnames, &result);
-      }
       else
-      {
          retcode = SCIPreaderWrite(scip->set->readers[i], prob, scip->set, file, "cip", genericnames, &result);
-      }
 
       /* check for reader errors */
       if( retcode == SCIP_WRITEERROR )
@@ -21515,7 +21881,7 @@ void printConstraintStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   /**@todo add constraint statistics: how many constraints (instead of cuts) have been added? */
+   /** Add maximal number of constraints of the same type? So far this information is not added because of lack of space. */
    SCIPmessageFPrintInfo(file, "Constraints        :     Number  #Separate #Propagate    #EnfoLP    #EnfoPS     #Check   #Resprop    Cutoffs    DomReds       Cuts      Conss   Children\n");
 
    for( i = 0; i < scip->set->nconshdlrs; ++i )
@@ -21743,7 +22109,7 @@ void printSeparatorStatistics(
          SCIPsepaGetNCalls(scip->set->sepas[i]),
          SCIPsepaGetNCutoffs(scip->set->sepas[i]),
          SCIPsepaGetNDomredsFound(scip->set->sepas[i]),
-	 SCIPsepaGetNCutsFound(scip->set->sepas[i]),
+         SCIPsepaGetNCutsFound(scip->set->sepas[i]),
          SCIPsepaGetNConssFound(scip->set->sepas[i]));
 }
 
@@ -21838,27 +22204,33 @@ void printLPStatistics(
    assert(scip->stat != NULL);
    assert(scip->lp != NULL);
 
-   SCIPmessageFPrintInfo(file, "LP                 :       Time      Calls Iterations  Iter/call   Iter/sec\n");
+   SCIPmessageFPrintInfo(file, "LP                 :       Time      Calls Iterations  Iter/call   Iter/sec  Time-0-It Calls-0-It\n");
 
    SCIPmessageFPrintInfo(file, "  primal LP        : %10.2f %10d %10"SCIP_LONGINT_FORMAT" %10.2f",
       SCIPclockGetTime(scip->stat->primallptime),
-      scip->stat->nprimallps,
+      scip->stat->nprimallps + scip->stat->nprimalzeroitlps,
       scip->stat->nprimallpiterations,
       scip->stat->nprimallps > 0 ? (SCIP_Real)scip->stat->nprimallpiterations/(SCIP_Real)scip->stat->nprimallps : 0.0);
    if( SCIPclockGetTime(scip->stat->primallptime) >= 0.01 )
-      SCIPmessageFPrintInfo(file, " %10.2f\n", (SCIP_Real)scip->stat->nprimallpiterations/SCIPclockGetTime(scip->stat->primallptime));
+      SCIPmessageFPrintInfo(file, " %10.2f", (SCIP_Real)scip->stat->nprimallpiterations/SCIPclockGetTime(scip->stat->primallptime));
    else
-      SCIPmessageFPrintInfo(file, "          -\n");
+      SCIPmessageFPrintInfo(file, "          -");
+   SCIPmessageFPrintInfo(file, " %10.2f %10d\n",
+      scip->stat->primalzeroittime,
+      scip->stat->nprimalzeroitlps);
 
    SCIPmessageFPrintInfo(file, "  dual LP          : %10.2f %10d %10"SCIP_LONGINT_FORMAT" %10.2f",
       SCIPclockGetTime(scip->stat->duallptime),
-      scip->stat->nduallps,
+      scip->stat->nduallps + scip->stat->ndualzeroitlps,
       scip->stat->nduallpiterations,
       scip->stat->nduallps > 0 ? (SCIP_Real)scip->stat->nduallpiterations/(SCIP_Real)scip->stat->nduallps : 0.0);
    if( SCIPclockGetTime(scip->stat->duallptime) >= 0.01 )
-      SCIPmessageFPrintInfo(file, " %10.2f\n", (SCIP_Real)scip->stat->nduallpiterations/SCIPclockGetTime(scip->stat->duallptime));
+      SCIPmessageFPrintInfo(file, " %10.2f", (SCIP_Real)scip->stat->nduallpiterations/SCIPclockGetTime(scip->stat->duallptime));
    else
       SCIPmessageFPrintInfo(file, "          -\n");
+   SCIPmessageFPrintInfo(file, " %10.2f %10d\n",
+      scip->stat->dualzeroittime,
+      scip->stat->ndualzeroitlps);
 
    SCIPmessageFPrintInfo(file, "  lex dual LP      : %10.2f %10d %10"SCIP_LONGINT_FORMAT" %10.2f",
       SCIPclockGetTime(scip->stat->lexduallptime),
@@ -21876,9 +22248,12 @@ void printLPStatistics(
       scip->stat->nbarrierlpiterations,
       scip->stat->nbarrierlps > 0 ? (SCIP_Real)scip->stat->nbarrierlpiterations/(SCIP_Real)scip->stat->nbarrierlps : 0.0);
    if( SCIPclockGetTime(scip->stat->barrierlptime) >= 0.01 )
-      SCIPmessageFPrintInfo(file, " %10.2f\n", (SCIP_Real)scip->stat->nbarrierlpiterations/SCIPclockGetTime(scip->stat->barrierlptime));
+      SCIPmessageFPrintInfo(file, " %10.2f", (SCIP_Real)scip->stat->nbarrierlpiterations/SCIPclockGetTime(scip->stat->barrierlptime));
    else
-      SCIPmessageFPrintInfo(file, "          -\n");
+      SCIPmessageFPrintInfo(file, "          -");
+   SCIPmessageFPrintInfo(file, " %10.2f %10d\n",
+      scip->stat->barrierzeroittime,
+      scip->stat->nbarrierzeroitlps);
 
    SCIPmessageFPrintInfo(file, "  diving/probing LP: %10.2f %10d %10"SCIP_LONGINT_FORMAT" %10.2f",
       SCIPclockGetTime(scip->stat->divinglptime),
@@ -22042,7 +22417,7 @@ void printSolutionStatistics(
    {
       if( scip->primal->nsols == 0 )
       {
-	 SCIPmessageFPrintInfo(file, "  Primal Bound     : %+21.14e", primalbound);
+         SCIPmessageFPrintInfo(file, "  Primal Bound     : %+21.14e", primalbound);
          SCIPmessageFPrintInfo(file, "   (user objective limit)\n");
       }
       else
@@ -22790,10 +23165,10 @@ void SCIPprintReal(
    else
    {
       (void) SCIPsnprintf(strformat, SCIP_MAXSTRLEN, "%%.%dg", precision);
-      (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, strformat, val);
+      (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, (const char*)strformat, val);
    }
    (void) SCIPsnprintf(strformat, SCIP_MAXSTRLEN, "%%%ds", width);
-   SCIPmessageFPrintInfo(file, strformat, s);
+   SCIPmessageFPrintInfo(file, (const char*)strformat, s);
 }
 
 
@@ -23749,7 +24124,7 @@ SCIP_Bool SCIPisRelGE(
    return SCIPsetIsRelGE(scip->set, val1, val2);
 }
 
-/** checks, if rel. difference of values is in range of sumepsilon */
+/** checks, if relative difference of values is in range of sumepsilon */
 SCIP_Bool SCIPisSumRelEQ(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -23768,7 +24143,7 @@ SCIP_Bool SCIPisSumRelEQ(
    return SCIPsetIsSumRelEQ(scip->set, val1, val2);
 }
 
-/** checks, if rel. difference of val1 and val2 is lower than sumepsilon */
+/** checks, if relative difference of val1 and val2 is lower than sumepsilon */
 SCIP_Bool SCIPisSumRelLT(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -23787,7 +24162,7 @@ SCIP_Bool SCIPisSumRelLT(
    return SCIPsetIsSumRelLT(scip->set, val1, val2);
 }
 
-/** checks, if rel. difference of val1 and val2 is not greater than sumepsilon */
+/** checks, if relative difference of val1 and val2 is not greater than sumepsilon */
 SCIP_Bool SCIPisSumRelLE(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -23806,7 +24181,7 @@ SCIP_Bool SCIPisSumRelLE(
    return SCIPsetIsSumRelLE(scip->set, val1, val2);
 }
 
-/** checks, if rel. difference of val1 and val2 is greater than sumepsilon */
+/** checks, if relative difference of val1 and val2 is greater than sumepsilon */
 SCIP_Bool SCIPisSumRelGT(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -23825,7 +24200,7 @@ SCIP_Bool SCIPisSumRelGT(
    return SCIPsetIsSumRelGT(scip->set, val1, val2);
 }
 
-/** checks, if rel. difference of val1 and val2 is not lower than -sumepsilon */
+/** checks, if relative difference of val1 and val2 is not lower than -sumepsilon */
 SCIP_Bool SCIPisSumRelGE(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val1,               /**< first value to be compared */

@@ -85,7 +85,7 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *  possible return values for *result:
  *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
  *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
- *  - SCIP_FEASIBLE   : no infeasibility nor unboundness could be found
+ *  - SCIP_FEASIBLE   : no infeasibility nor unboundedness could be found
  */
 #define SCIP_DECL_PROPINITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop, SCIP_RESULT* result)
 
@@ -105,7 +105,7 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *  possible return values for *result:
  *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
  *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
- *  - SCIP_FEASIBLE   : no infeasibility nor unboundness could be found
+ *  - SCIP_FEASIBLE   : no infeasibility nor unboundedness could be found
  */
 #define SCIP_DECL_PROPEXITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop, SCIP_RESULT* result)
 
@@ -143,7 +143,7 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *  - nnewfixedvars   : number of variables fixed since the last call to the presolver
  *  - nnewaggrvars    : number of variables aggregated since the last call to the presolver
  *  - nnewchgvartypes : number of variable type changes since the last call to the presolver
- *  - nnewchgbds      : number of variable bounds tightend since the last call to the presolver
+ *  - nnewchgbds      : number of variable bounds tightened since the last call to the presolver
  *  - nnewholes       : number of domain holes added since the last call to the presolver
  *  - nnewdelconss    : number of deleted constraints since the last call to the presolver
  *  - nnewaddconss    : number of added constraints since the last call to the presolver
@@ -155,7 +155,7 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *  - nfixedvars      : pointer to total number of variables fixed of all presolvers
  *  - naggrvars       : pointer to total number of variables aggregated of all presolvers
  *  - nchgvartypes    : pointer to total number of variable type changes of all presolvers
- *  - nchgbds         : pointer to total number of variable bounds tightend of all presolvers
+ *  - nchgbds         : pointer to total number of variable bounds tightened of all presolvers
  *  - naddholes       : pointer to total number of domain holes added of all presolvers
  *  - ndelconss       : pointer to total number of deleted constraints of all presolvers
  *  - naddconss       : pointer to total number of added constraints of all presolvers
@@ -174,10 +174,10 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *  - SCIP_DIDNOTRUN  : the presolver was skipped
  *  - SCIP_DELAYED    : the presolver was skipped, but should be called again
  */
-#define SCIP_DECL_PROPPRESOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop, int nrounds,              \
-   int nnewfixedvars, int nnewaggrvars, int nnewchgvartypes, int nnewchgbds, int nnewholes, \
+#define SCIP_DECL_PROPPRESOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop, int nrounds, \
+      int nnewfixedvars, int nnewaggrvars, int nnewchgvartypes, int nnewchgbds, int nnewholes, \
       int nnewdelconss, int nnewaddconss, int nnewupgdconss, int nnewchgcoefs, int nnewchgsides, \
-   int* nfixedvars, int* naggrvars, int* nchgvartypes, int* nchgbds, int* naddholes,        \
+      int* nfixedvars, int* naggrvars, int* nchgvartypes, int* nchgbds, int* naddholes, \
       int* ndelconss, int* naddconss, int* nupgdconss, int* nchgcoefs, int* nchgsides, SCIP_RESULT* result)
 
 /** execution method of propagator
@@ -212,7 +212,7 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *  rule and thus identify the "reason" bounds. The bounds that form the reason of the assignment must then be provided
  *  by calls to SCIPaddConflictLb() and SCIPaddConflictUb() in the propagation conflict resolving method.
  *
- *  See the description of the propagation conflict resulving method of constraint handlers for further details.
+ *  See the description of the propagation conflict resolving method of constraint handlers for further details.
  *
  *  input:
  *  - scip            : SCIP main data structure

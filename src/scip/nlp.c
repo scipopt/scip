@@ -60,10 +60,18 @@
 #define EVENTHDLR_DESC   "handles all events necessary for maintaining NLP data"  /**< description of NLP event handler */
 #define ADDNAMESTONLPI   0                   /**< whether to give variable and row names to NLPI */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* avoid inclusion of scip.h */
 BMS_BLKMEM* SCIPblkmem(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 /*
  * forward declarations
@@ -111,12 +119,10 @@ SCIP_RETCODE SCIPexprtreeSetVars(
 
    if( nvars == 0 )
    {
-      BMSfreeBlockMemoryArray(tree->blkmem, &tree->vars, tree->nvars);
+      BMSfreeBlockMemoryArrayNull(tree->blkmem, &tree->vars, tree->nvars);
       tree->nvars = 0;
-      return SCIP_OKAY;
    }
-
-   if( tree->vars != NULL )
+   else if( tree->vars != NULL )
    {
       SCIP_ALLOC( BMSreallocBlockMemoryArray(tree->blkmem, &tree->vars, tree->nvars, nvars) );
       BMScopyMemoryArray(tree->vars, (void**)vars, nvars);
@@ -127,6 +133,8 @@ SCIP_RETCODE SCIPexprtreeSetVars(
    }
 
    tree->nvars = nvars;
+
+   assert(tree->vars != NULL || tree->nvars == 0);
 
    return SCIP_OKAY;
 }
@@ -242,7 +250,7 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
    if( tree->nvars == 0 )
       return SCIP_OKAY;
 
-   /* create hash map from variable to indices in tree->vars and check if there is a nonfixed variable */
+   /* create hash map from variable to indices in tree->vars and check if there is a non-fixed variable */
    havefixedvar = FALSE;
    SCIP_CALL( SCIPhashmapCreate(&varhash, tree->blkmem, SCIPcalcHashtableSize(5 * tree->nvars)) );
    for( i = 0; i < tree->nvars; ++i )
@@ -323,7 +331,7 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
          SCIP_VAR*   mvar;
          SCIP_Real   mscalar;
 
-         /* var is now multiaggregated, thus replace by scalar * (multaggrconst + sum_j multaggrscalar_j*multaggrvar_j) + constant */
+         /* var is now multi-aggregated, thus replace by scalar * (multaggrconst + sum_j multaggrscalar_j*multaggrvar_j) + constant */
          assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR );
 
          /* allocate array for children and coefficients */
@@ -332,7 +340,7 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
          nchildren = 0;
 
          /* linear part
-          * turn each variable in SCIPvarGetMultaggrVars(var) into an active or multiaggregated one and add corresponding term to summands */
+          * turn each variable in SCIPvarGetMultaggrVars(var) into an active or multi-aggregated one and add corresponding term to summands */
          for( j = 0; j < SCIPvarGetMultaggrNVars(var); ++j )
          {
             mvar      = SCIPvarGetMultaggrVars(var)[j];
@@ -407,7 +415,7 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
    {
       if( SCIPvarIsActive((SCIP_VAR*)tree->vars[i]) || i >= nvarsold )
       {
-         /* a new variable need to be either active or multiaggregated */
+         /* a new variable need to be either active or multi-aggregated */
          assert(i < nvarsold || SCIPvarIsActive((SCIP_VAR*)tree->vars[i]) || SCIPvarGetStatus((SCIP_VAR*)tree->vars[i]) == SCIP_VARSTATUS_MULTAGGR);
          newpos[i] = i - offset;
       }
@@ -459,7 +467,7 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
 
    if( havefixedvar )
    {
-      /* if there are still fixed variables left, then this are newly added multiaggregated variables
+      /* if there are still fixed variables left, then this are newly added multi-aggregated variables
        * it is then save to call this function recursively, since the original active variables should not be moved,
        * i.e., varpos and *newvarsstart will remain valid
        */
@@ -952,7 +960,7 @@ SCIP_RETCODE nlrowAddToLinearCoef(
       {
          int j;
 
-         /* if var is still not active, then it is multiaggregated */
+         /* if var is still not active, then it is multi-aggregated */
          assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
 
          if( SCIPvarGetMultaggrConstant(var) != 0.0 )
@@ -1403,7 +1411,7 @@ SCIP_RETCODE nlrowRemoveFixedLinearCoefPos(
       SCIP_Real coef;
       int i;
 
-      /* if not removed or active, the new variable should be multiaggregated */
+      /* if not removed or active, the new variable should be multi-aggregated */
       assert(SCIPvarGetStatus(nlrow->linvars[pos]) == SCIP_VARSTATUS_MULTAGGR);
 
       var  = nlrow->linvars[pos];
@@ -1412,7 +1420,7 @@ SCIP_RETCODE nlrowRemoveFixedLinearCoefPos(
       /* remove the variable from the row */
       SCIP_CALL( nlrowDelLinearCoefPos(nlrow, set, stat, nlp, pos) );
 
-      /* add multiaggregated term to row */
+      /* add multi-aggregated term to row */
       if( SCIPvarGetMultaggrConstant(var) != 0.0 )
       {
          nlrow->constant += coef * SCIPvarGetMultaggrConstant(var);
@@ -1600,7 +1608,7 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
          assert(SCIPvarGetStatus(var1) == SCIP_VARSTATUS_MULTAGGR);
          assert(coef1 == coef2);  /*lint !e777*/
          assert(constant1 == constant2);  /*lint !e777*/
-         /* square term which variable is multiaggregated
+         /* square term which variable is multi-aggregated
           * elem.coef * x^2 -> elem.coef * (coef1 * (multaggrconstant + sum_i multaggrscalar_i*multaggrvar_i) + constant1)^2
           *    = elem.coef * ( (coef1 * multaggrconstant + constant1)^2 +
           *                    2 * (coef1 * multaggrconstant + constant1) * coef1 * (sum_j multaggrscalar_j*multaggrvar_j) +
@@ -1626,7 +1634,7 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
             }
          }
 
-         /* setup array with indices of multiaggregated variables in quadvars */
+         /* setup array with indices of multi-aggregated variables in quadvars */
          SCIP_CALL( SCIPsetAllocBufferArray(set, &multaggrvaridxs, SCIPvarGetMultaggrNVars(var1)) );
          for( j = 0; j < SCIPvarGetMultaggrNVars(var1); ++j )
          {
@@ -1669,7 +1677,7 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
       assert(var2 != NULL);
       if( SCIPvarIsActive(var1) && !SCIPvarIsActive(var2) )
       {
-         /* if the second variable is multiaggregated, but the first one is not, swap both terms */
+         /* if the second variable is multi-aggregated, but the first one is not, swap both terms */
          SCIP_VAR* tmpvar;
          SCIP_Real tmpcoef;
          SCIP_Real tmpconstant;
@@ -1692,7 +1700,7 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
 
          assert(SCIPvarGetStatus(var1) == SCIP_VARSTATUS_MULTAGGR);
 
-         /* the first variable is multiaggregated, add a constant and sequences of linear and quadratic terms:
+         /* the first variable is multi-aggregated, add a constant and sequences of linear and quadratic terms:
           * elem.coef * x * y -> elem.coef * (coef1 * (multaggrconstant + sum_i multaggrscalar_i*multaggrvar_i) + constant1) * (coef2 * var2 + constant2)
           *    = elem.coef * ( (coef1 * multaggrconstant + constant1) * constant2 +
           *                    (coef1 * multaggrconstant + constant1) * coef2 * var2 +
@@ -1848,7 +1856,7 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
       {
          if( !SCIPvarIsActive(nlrow->quadvars[i]) )
          {
-            /* it can have happened that a new quadratic variable was added that is multiaggregated (when multiplying two multiaggregations)
+            /* it can have happened that a new quadratic variable was added that is multi-aggregated (when multiplying two multi-aggregations)
              * in this case, the variable was only temporarily used and should not be used anymore, thus we can remove it */
             assert(SCIPvarGetStatus(nlrow->quadvars[i]) == SCIP_VARSTATUS_MULTAGGR);
             newpos[i] = -1;
@@ -1925,7 +1933,7 @@ SCIP_RETCODE nlrowRemoveFixedExprtreeVars(
 
    if( SCIPexprtreeGetNVars(nlrow->exprtree) == 0 && SCIPexprtreeGetNParams(nlrow->exprtree) == 0 )
    {
-      /* if expression tree is constant and not parametrized now, remove it */
+      /* if expression tree is constant and not parameterized now, remove it */
       SCIP_Real exprval;
       SCIP_CALL( SCIPexprtreeEval(nlrow->exprtree, NULL, &exprval) );
       SCIP_CALL( SCIPnlrowChgConstant(nlrow, set, stat, nlp, nlrow->constant + exprval) );
@@ -1960,14 +1968,14 @@ SCIP_RETCODE nlrowRemoveFixedVar(
       SCIP_CALL( nlrowRemoveFixedLinearCoefPos(nlrow, blkmem, set, stat, nlp, pos) );
    }
 
-   /* search for variable in quadratic part and remove all fixed quad. vars if existing */
+   /* search for variable in quadratic part and remove all fixed quadratic variables if existing */
    pos = SCIPnlrowSearchQuadVar(nlrow, var);
    if( pos >= 0 )
    {
       SCIP_CALL( nlrowRemoveFixedQuadVars(nlrow, blkmem, set, stat, nlp) );
    }
 
-   /* search for variable in nonquadratic part and remove all fixed vars in exprtree if existing */
+   /* search for variable in non-quadratic part and remove all fixed variables in expression tree if existing */
    if( nlrow->exprtree != NULL && SCIPexprtreeFindVar(nlrow->exprtree, var) >= 0 )
    {
       SCIP_CALL( nlrowRemoveFixedExprtreeVars(nlrow, set, stat, nlp) );
@@ -2093,7 +2101,7 @@ SCIP_RETCODE SCIPnlrowCreate(
       (*nlrow)->quadelemssorted = TRUE;
    }
 
-   /* nonquadratic part */
+   /* non-quadratic part */
    if( exprtree != NULL )
    {
       SCIP_CALL( SCIPexprtreeCopy( blkmem, &(*nlrow)->exprtree, exprtree) );
@@ -2103,7 +2111,7 @@ SCIP_RETCODE SCIPnlrowCreate(
       (*nlrow)->exprtree = NULL;
    }
 
-   /* left and right hand sides, asserted above that lhs is relle than rhs */
+   /* left and right hand sides, asserted above that lhs is relatively less equal than rhs */
    (*nlrow)->lhs = MIN(lhs, rhs);
    (*nlrow)->rhs = MAX(rhs, rhs);
 
@@ -2252,7 +2260,7 @@ SCIP_RETCODE SCIPnlrowFree(
    if( (*nlrow)->quadvarshash != NULL )
       SCIPhashmapFree(&(*nlrow)->quadvarshash);
 
-   /* nonquadratic part */
+   /* non-quadratic part */
    if( (*nlrow)->exprtree != NULL )
    {
       SCIP_CALL( SCIPexprtreeFree(&(*nlrow)->exprtree) );
@@ -2343,7 +2351,7 @@ SCIP_RETCODE SCIPnlrowAddLinearCoef(
    {
       SCIP_Real constant;
 
-      /* get corresponding active or multiaggregated variable */
+      /* get corresponding active or multi-aggregated variable */
       constant = 0.0;
       SCIP_CALL( SCIPvarGetProbvarSum(&var, &val, &constant) );
 
@@ -2356,7 +2364,7 @@ SCIP_RETCODE SCIPnlrowAddLinearCoef(
 
       if( !SCIPvarIsActive(var) )
       {
-         /* var should be multiaggregated, so call this function recursively */
+         /* var should be multi-aggregated, so call this function recursively */
          int i;
 
          assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
@@ -2389,7 +2397,7 @@ SCIP_RETCODE SCIPnlrowDelLinearCoef(
    assert(nlrow != NULL);
    assert(var   != NULL);
 
-   /* if the row is in the NLP already, we can only have active variables, so var should also be active; in non-debugmode, one gets an error below */
+   /* if the row is in the NLP already, we can only have active variables, so var should also be active; in non-debug mode, one gets an error below */
    assert(nlrow->nlpindex == -1 || SCIPvarIsActive(var) );
 
    /* search the position of the variable in the row's variable vector */
@@ -2656,7 +2664,7 @@ SCIP_RETCODE SCIPnlrowChgExprtreeParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_NLP*             nlp,                /**< current NLP data */
-   int                   paramidx,           /**< index of paramater in expression tree's parameter array */
+   int                   paramidx,           /**< index of parameter in expression tree's parameter array */
    SCIP_Real             paramval            /**< new value of parameter */
    )
 {
@@ -2686,7 +2694,7 @@ SCIP_RETCODE SCIPnlrowChgExprtreeParams(
    assert(blkmem != NULL);
    assert(nlrow->exprtree != NULL);
 
-   SCIPexprtreeSetParamVals(nlrow->exprtree, paramvals);
+   SCIP_CALL( SCIPexprtreeSetParams(nlrow->exprtree, SCIPexprtreeGetNParams(nlrow->exprtree), paramvals) );
 
    /* notify row about the change */
    SCIP_CALL( nlrowExprtreeParamChanged(nlrow, set, stat, -1, nlp) );
@@ -2754,7 +2762,7 @@ SCIP_RETCODE SCIPnlrowChgRhs(
    return SCIP_OKAY;
 }
 
-/** removes (or substitutes) all fixed, negated, aggregated, multiaggregated variables from the linear, quadratic, and nonquadratic terms of a nonlinear row */
+/** removes (or substitutes) all fixed, negated, aggregated, multi-aggregated variables from the linear, quadratic, and non-quadratic terms of a nonlinear row */
 SCIP_RETCODE SCIPnlrowRemoveFixedVars(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -3198,7 +3206,7 @@ SCIP_RETCODE SCIPnlrowPrint(
          SCIPmessageFPrintInfo(file, "%+.15g<%s><%s> ", nlrow->quadelems[i].coef, SCIPvarGetName(nlrow->quadvars[nlrow->quadelems[i].idx1]), SCIPvarGetName(nlrow->quadvars[nlrow->quadelems[i].idx2]));
    }
 
-   /* print nonquadratic part */
+   /* print non-quadratic part */
    if( nlrow->exprtree != NULL )
    {
       SCIPmessageFPrintInfo(file, " + ");
@@ -3324,7 +3332,7 @@ void SCIPnlrowGetQuadData(
    int*                  nquadvars,          /**< buffer to store number of variables in quadratic term, or NULL if not of interest */
    SCIP_VAR***           quadvars,           /**< buffer to store pointer to array of variables in quadratic term, or NULL if not of interest */
    int*                  nquadelems,         /**< buffer to store number of entries in quadratic term, or NULL if not of interest */
-   SCIP_QUADELEM**       quadelems           /**< buffer to store pointer to arrau of entries in quadratic term, or NULL if not of interest */
+   SCIP_QUADELEM**       quadelems           /**< buffer to store pointer to array of entries in quadratic term, or NULL if not of interest */
    )
 {
    assert(nlrow != NULL);
@@ -3772,7 +3780,7 @@ SCIP_RETCODE nlpAddVars(
       /* catch events on variable */
       SCIP_CALL( SCIPvarCatchEvent(var, blkmem, set,
          SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_OBJCHANGED,
-         nlp->eventhdlr, (SCIP_EVENTDATA*)nlp, NULL) ); /* @todo should store event filter position is nlp? */
+         nlp->eventhdlr, (SCIP_EVENTDATA*)nlp, NULL) ); /* @todo should store event filter position in nlp? */
    }
 
    nlp->nvars += nvars;
@@ -3939,7 +3947,7 @@ SCIP_RETCODE nlpSetupNlpiIndices(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
    int**                 linidxs,            /**< buffer to store pointer to NLPI indices of linear variables */
-   SCIP_QUADELEM**       quadelems,          /**< buffer to store pointer to quadratic elements w.r.t. NLPI inidices */
+   SCIP_QUADELEM**       quadelems,          /**< buffer to store pointer to quadratic elements w.r.t. NLPI indices */
    int**                 nlinidxs            /**< buffer to store pointer to NLPI indices of nonlinear variables */
 )
 {
@@ -4621,7 +4629,8 @@ SCIP_RETCODE nlpSolve(
 
    /* set initial guess, if available */
    if( nlp->haveinitguess )
-   { /* @todo should we not set it if we had set it already? (initguessflushed...) */
+   {
+      /* @todo should we not set it if we had set it already? (initguessflushed...) */
       SCIP_Real* initialguess_solver;
       int nlpidx;
 
@@ -4908,7 +4917,7 @@ SCIP_DECL_EVENTEXEC(eventExecNlp)
    }
    else if( SCIP_EVENTTYPE_VARFIXED & etype )
    {
-      /* variable was fixed, aggregated, or multiaggregated */
+      /* variable was fixed, aggregated, or multi-aggregated */
       SCIPdebugMessage( "-> handling variable fixation event, variable <%s>\n", SCIPvarGetName(var) );
       SCIP_CALL( nlpRemoveFixedVar(scip->nlp, SCIPblkmem(scip), scip->set, scip->stat, scip->eventqueue, scip->lp, var) );
    }
@@ -5014,7 +5023,6 @@ SCIP_RETCODE SCIPnlpCreate(
    (*nlp)->nunflushednlrowadd = 0;
    (*nlp)->nunflushednlrowdel = 0;
    (*nlp)->isrelax    = TRUE;
-   (*nlp)->isconvex   = TRUE;
    (*nlp)->indiving   = FALSE;
 
    /* variables in problem and NLPI problem */
@@ -5120,6 +5128,8 @@ SCIP_RETCODE SCIPnlpFree(
    BMSfreeBlockMemoryArrayNull(blkmem, &(*nlp)->varmap_nlpi2nlp, (*nlp)->sizevars_solver);
    SCIPhashmapFree(&(*nlp)->varhash);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*nlp)->vars, (*nlp)->sizevars);
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*nlp)->varlbdualvals, (*nlp)->sizevars);
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*nlp)->varubdualvals, (*nlp)->sizevars);
 
    /* free NLPI problem */
    if( (*nlp)->problem != NULL )
@@ -5679,29 +5689,6 @@ SCIP_RETCODE SCIPnlpWrite(
    return SCIP_OKAY;
 }
 
-#if 0
-/** sets whether the current NLP is a convex problem, i.e., all restrictions are defined by convex functions w.r.t. current bounds */
-void SCIPnlpSetIsConvex(
-   SCIP_NLP*             nlp,                /**< NLP data */
-   SCIP_Bool             isconvex            /**< is the current NLP a convex problem? */
-   )
-{
-   assert(nlp != NULL);
-
-   nlp->isconvex = isconvex;
-}
-
-/** returns whether the current NLP is a convex problem, i.e., all restrictions are defined by convex functions w.r.t. current bounds */
-SCIP_Bool SCIPnlpIsConvex(
-   SCIP_NLP*             nlp                 /**< NLP data */
-   )
-{
-   assert(nlp != NULL);
-
-   return nlp->isconvex;
-}
-#endif
-
 /** gets array with variables of the NLP */
 SCIP_VAR** SCIPnlpGetVars(
    SCIP_NLP*             nlp                 /**< current NLP data */
@@ -6014,7 +6001,7 @@ SCIP_RETCODE SCIPnlpStartDive(
 
    if( nlp->solver == NULL )
    {
-      /* In diving mode we do not cache changes but put them directly in the NLPI problem, which does not exsts if there is no solver.
+      /* In diving mode we do not cache changes but put them directly in the NLPI problem, which does not exist if there is no solver.
        * So we forbid diving of no solver is available. */
       SCIPerrorMessage("Cannot start diving if no NLP solver is available\n");
       return SCIP_ERROR;

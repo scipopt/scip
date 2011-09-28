@@ -79,7 +79,7 @@ HARDMEMLIMIT=`expr $HARDMEMLIMIT \* 1024000`
 EVALFILE=$SCIPPATH/results/check.$QUEUE.$TSTNAME.$BINID.$SETNAME.eval
 echo > $EVALFILE
 
-for i in `cat $TSTNAME.test` DONE
+for i in `cat testset/$TSTNAME.test` DONE
 do
   if test "$i" = "DONE"
       then

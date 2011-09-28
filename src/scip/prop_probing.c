@@ -165,10 +165,13 @@ SCIP_RETCODE sortVariables(
 
    assert(vars != NULL || nvars == 0);
 
-   sortedvars = &(vars[firstidx]);
    nsortedvars = nvars - firstidx;
    if( nsortedvars <= 0 )
       return SCIP_OKAY;
+
+   assert(vars != NULL);
+
+   sortedvars = &(vars[firstidx]);
 
    SCIPdebugMessage("resorting probing variables %d to %d\n", firstidx, nvars-1);
 
@@ -304,9 +307,8 @@ SCIP_RETCODE applyProbing(
    int                   nbinvars,           /**< number of binary variables */
    int*                  startidx,           /**< pointer to store starting variable index of next call */
    int*                  nfixedvars,         /**< pointer to store number of fixed variables */
-   int*                  naggrvars,          /**< pointer to store number of aggrgated variables */
+   int*                  naggrvars,          /**< pointer to store number of aggregated variables */
    int*                  nchgbds,            /**< pointer to store number of changed bounds */
-   int*                  nimplications,      /**< pointer to store number of implications */
    int                   oldnfixedvars,      /**< number of previously fixed variables */
    int                   oldnaggrvars,       /**< number of previously aggregated variables */
    SCIP_Bool*            delay,              /**< pointer to store whether propagator should be delayed */
@@ -426,10 +428,10 @@ SCIP_RETCODE applyProbing(
 
       /* determine whether zero probing should happen */
       probingzero = TRUE;
-      if ( SCIPvarGetNLocksDown(vars[i]) == 0 )
+      if( SCIPvarGetNLocksDown(vars[i]) == 0 )
          probingzero = FALSE;
 
-      if ( probingzero )
+      if( probingzero )
       {
          /* apply probing for fixing the variable to zero */
          SCIP_CALL( applyProbingVar(scip, propdata, vars, nvars, i, FALSE, zeroimpllbs, zeroimplubs, zeroproplbs, zeropropubs,
@@ -471,10 +473,10 @@ SCIP_RETCODE applyProbing(
 
       /* determine whether one probing should happen */
       probingone = TRUE;
-      if ( SCIPvarGetNLocksUp(vars[i]) == 0 )
+      if( SCIPvarGetNLocksUp(vars[i]) == 0 )
          probingone = FALSE;
 
-      if ( probingone )
+      if( probingone )
       {
          /* apply probing for fixing the variable to one */
          SCIP_CALL( applyProbingVar(scip, propdata, vars, nvars, i, TRUE, oneimpllbs, oneimplubs, oneproplbs, onepropubs,
@@ -509,7 +511,7 @@ SCIP_RETCODE applyProbing(
       }
 
       /* not have to check deductions if only one probing direction has been checked */
-      if ( ! probingzero || ! probingone )
+      if( !probingzero || !probingone )
          continue;
 
       /* analyze probing deductions */
@@ -784,7 +786,7 @@ SCIP_DECL_PROPPRESOL(propPresolProbing)
    oldnimplications = propdata->nimplications;
 
    /* start probing on variables */
-   SCIP_CALL( applyProbing(scip, propdata, propdata->sortedvars, propdata->nsortedvars, propdata->nsortedbinvars, &(propdata->startidx), nfixedvars, naggrvars, nchgbds, &(propdata->nimplications), oldnfixedvars, oldnaggrvars, &delay, &cutoff) );
+   SCIP_CALL( applyProbing(scip, propdata, propdata->sortedvars, propdata->nsortedvars, propdata->nsortedbinvars, &(propdata->startidx), nfixedvars, naggrvars, nchgbds, oldnfixedvars, oldnaggrvars, &delay, &cutoff) );
 
    /* adjust result code */
    if( cutoff )
@@ -893,7 +895,7 @@ SCIP_DECL_PROPEXEC(propExecProbing)
    oldnimplications = propdata->nimplications;
    
    /* start probing on found variables */
-   SCIP_CALL( applyProbing(scip, propdata, binvars, nbinvars, nbinvars, &startidx, &nfixedvars, &naggrvars, &nchgbds, &(propdata->nimplications), oldnfixedvars, oldnaggrvars, &delay, &cutoff) );
+   SCIP_CALL( applyProbing(scip, propdata, binvars, nbinvars, nbinvars, &startidx, &nfixedvars, &naggrvars, &nchgbds, oldnfixedvars, oldnaggrvars, &delay, &cutoff) );
    SCIPdebugMessage("probing propagation found %d fixings, %d aggregation, %d nchgbds, and %d implications\n", nfixedvars, naggrvars, nchgbds, (propdata->nimplications) - oldnimplications);
 
    if( delay )
@@ -947,7 +949,7 @@ SCIP_RETCODE SCIPincludePropProbing(
          propCopyProbing,
          propFreeProbing, propInitProbing, propExitProbing, propInitpreProbing, propExitpreProbing, propInitsolProbing, propExitsolProbing, propPresolProbing, propExecProbing, propRespropProbing, propdata) );
 
-   /* add probing propagater parameters */
+   /* add probing propagator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/probing/maxruns",
          "maximal number of runs, probing participates in (-1: no limit)",
@@ -1053,6 +1055,9 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
       SCIP_Real newlb;
       SCIP_Real newub;
 
+      assert(vars != NULL); /* for flexelint */
+      assert(vars[j] != NULL);
+
       /* @todo: add holes, and even add holes if x was the probing variable and it followed a better bound on x itself */
       /* @todo: check if we probed on an integer variable, that this maybe led to aggregation on two other variables, i.e
        *        probing on x <= 1 and x >= 2 led to y = 1, z = 1 and y = 0, z = 0 resp., which means y = Z
@@ -1155,7 +1160,7 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
           * check for case where both variables are binary: leftub = 1, rightlb = 0
           * case leftproplbs[j] = 0, rightproplbs[j] = 1, i.e., vars[j] and probingvar are fixed to same value
           *    -> aggregation is 1 * vars[j] - 1 * probingvar = 0 * 1 - 1 * 0 = 0 -> correct
-          * case leftproplbs[j] = 1, rightproblbs[j] = 0, i.e., vars[j] and probingvar are fixed to oppositve values
+          * case leftproplbs[j] = 1, rightproblbs[j] = 0, i.e., vars[j] and probingvar are fixed to opposite values
           *    -> aggregation is 1 * vars[j] + 1 * probingvar = 1 * 1 - 0 * 0 = 0 -> correct
           */
          if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
@@ -1290,7 +1295,7 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
                (*nimplications)++;
                (*nchgbds) += nboundchanges;
             }
-            if( rightpropubs[j] < newub - 0.5 && (rightpropubs == NULL || rightpropubs[j] < rightimplubs[j]) && !*cutoff )
+            if( rightpropubs[j] < newub - 0.5 && (rightimplubs == NULL || rightpropubs[j] < rightimplubs[j]) && !*cutoff )
             {
                /* insert implication: probingvar == 1  =>  vars[j] <= rightpropubs[j] */
                /*SCIPdebugMessage("found implication <%s> == 1  =>  <%s>[%g,%g] <= %g\n",
@@ -1300,7 +1305,7 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
                (*nimplications)++;
                (*nchgbds) += nboundchanges;
             }
-            if( rightproplbs[j] > newlb + 0.5 && (rightproplbs == NULL || rightproplbs[j] > rightimpllbs[j]) && !*cutoff )
+            if( rightproplbs[j] > newlb + 0.5 && (rightimpllbs == NULL || rightproplbs[j] > rightimpllbs[j]) && !*cutoff )
             {
                /* insert implication: probingvar == 1  =>  vars[j] >= rightproplbs[j] */
                /*SCIPdebugMessage("found implication <%s> == 1  =>  <%s>[%g,%g] >= %g\n",

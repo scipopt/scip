@@ -219,7 +219,7 @@ struct SCIP_Var
       SCIP_NEGATE        negate;             /**< negation information (for negated variables) */
    } data;
    char*                 name;               /**< name of the variable */
-   SCIP_DECL_VARCOPY     ((*varcopy));       /**< copys variable data if wanted to subscip, or NULL */
+   SCIP_DECL_VARCOPY     ((*varcopy));       /**< copies variable data if wanted to subscip, or NULL */
    SCIP_DECL_VARDELORIG  ((*vardelorig));    /**< frees user data of original variable */
    SCIP_DECL_VARTRANS    ((*vartrans));      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans));   /**< frees user data of transformed variable */

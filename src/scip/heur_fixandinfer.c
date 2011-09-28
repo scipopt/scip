@@ -109,12 +109,12 @@ SCIP_RETCODE fixVariable(
       }
    }
    assert(bestcand != -1);
-   
+
    /* fix variable to its current pseudo solution value */
    var = pseudocands[bestcand];
    solval = SCIPgetVarSol(scip, var);
    assert(SCIPisFeasIntegral(scip, solval)); /* in probing, we always have the pseudo solution */
-   SCIPdebugMessage(" -> fixed variable <%s>[%g,%g] = %g (%d candidates left)\n", 
+   SCIPdebugMessage(" -> fixed variable <%s>[%g,%g] = %g (%d candidates left)\n",
       SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), solval, npseudocands - 1);
    SCIP_CALL( SCIPfixVarProbing(scip, var, solval) );
 
@@ -138,7 +138,7 @@ SCIP_DECL_HEURCOPY(heurCopyFixandinfer)
 
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurFixandinfer(scip) );
- 
+
    return SCIP_OKAY;
 }
 
@@ -207,15 +207,15 @@ SCIP_DECL_HEUREXEC(heurExecFixandinfer)
    /* start probing */
    SCIP_CALL( SCIPstartProbing(scip) );
 
-   /* fix variables and propagate inferences as long as the problem is still feasible and there are 
+   /* fix variables and propagate inferences as long as the problem is still feasible and there are
     * unfixed integral variables
     */
    cutoff = FALSE;
    divedepth = 0;
    startncands = ncands;
    while( !cutoff && ncands > 0
-      && (divedepth < heurdata->minfixings || (startncands - ncands) * 2 * MAXDIVEDEPTH >= startncands * divedepth) 
-	  && !SCIPisStopped(scip) )
+      && (divedepth < heurdata->minfixings || (startncands - ncands) * 2 * MAXDIVEDEPTH >= startncands * divedepth)
+      && !SCIPisStopped(scip) )
    {
       divedepth++;
 
@@ -292,17 +292,17 @@ SCIP_RETCODE SCIPincludeHeurFixandinfer(
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
          heurCopyFixandinfer,
-         heurFreeFixandinfer, heurInitFixandinfer, heurExitFixandinfer, 
+         heurFreeFixandinfer, heurInitFixandinfer, heurExitFixandinfer,
          heurInitsolFixandinfer, heurExitsolFixandinfer, heurExecFixandinfer,
          heurdata) );
 
    /* fixandinfer heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/fixandinfer/proprounds", 
+         "heuristics/fixandinfer/proprounds",
          "maximal number of propagation rounds in probing subproblems (-1: no limit, 0: auto)",
          &heurdata->proprounds, TRUE, DEFAULT_PROPROUNDS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/fixandinfer/minfixings", 
+         "heuristics/fixandinfer/minfixings",
          "minimal number of fixings to apply before dive may be aborted",
          &heurdata->minfixings, TRUE, DEFAULT_MINFIXINGS, 0, INT_MAX, NULL, NULL) );
 

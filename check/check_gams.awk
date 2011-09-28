@@ -63,10 +63,10 @@ BEGIN  {
    sbab = 0;
    ssim = 0;
    stottime = 0.0;
-   nodegeom = 0.0;
-   timegeom = 0.0;
-   shiftednodegeom = nodegeomshift;
-   shiftedtimegeom = timegeomshift;
+   nodegeom = 1.0;
+   timegeom = 1.0;
+   shiftednodegeom = 1.0;
+   shiftedtimegeom = 1.0;
    timeouttime = 0.0;
    timeouts = 0;
    failtime = 0.0;
@@ -160,6 +160,9 @@ END {
      aborted = 0;
      if( solstat[m] >= 4 && solstat[m] != 8 )
        aborted = 1;
+       
+     if( nodes[m] == "NA" )
+       nodes[m] = 0;
 
      # TODO consider gaplimit
      gapreached = 0
@@ -183,14 +186,16 @@ END {
        }
        else if( abs(db) < 1e-06 )
          gap = -1.0;
+      else if( abs(pb) < 1e-06 )
+         gap = -1.0;
        else if( pb*db < 0.0 )
          gap = -1.0;
        else if( abs(db) >= +infty )
          gap = -1.0;
        else if( abs(pb) >= +infty )
          gap = -1.0;
-       else
-         gap = 100.0*abs((pb-db)/db);
+      else
+         gap = 100.0*abs((pb-db)/min(abs(db),abs(pb)));
        if( gap < 0.0 )
          gapstr = "  --  ";
        else if( gap < 1e+04 )
@@ -200,10 +205,9 @@ END {
       
        probtype = type[m];
 
-       if( time[m] > timelimit && timelimit > 0.0 ) {
+       tottime = time[m];
+       if( time[m] > timelimit && timelimit > 0.0 )
          timeout = 1;
-         tottime = time[m];
-       }
        else if( gapreached )
          timeout = 0;
        if( tottime == 0.0 )
@@ -344,16 +348,14 @@ END {
          }
        }
        else if( solstatus[prob] == "feas" ) {
-         if( feasible ) {
-           if( timeout ) {
-             status = "timeout";
-             timeouttime += tottime;
-             timeouts++;
-           }
-           else {
-             status = "ok";
-             pass++;
-           }
+         if( timeout ) {
+           status = "timeout";
+           timeouttime += tottime;
+           timeouts++;
+         }
+         else if( feasible ) {
+           status = "ok";
+           pass++;
          }
          else {
            status = "fail";
@@ -432,6 +434,9 @@ END {
        printf("%d,%d,%d,%d\n", nodes[m], iters[m], cons[m], vars[m]) > PAVFILE;
      }
    }
+   shiftednodegeom -= nodegeomshift;
+   shiftedtimegeom -= timegeomshift;
+   
    printf("------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+-------\n");
    printf("\n");
    printf("------------------------------[Nodes]---------------[Time]------\n");

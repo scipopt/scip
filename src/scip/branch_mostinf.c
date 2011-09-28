@@ -59,13 +59,13 @@ void updateBestCandidate(
    assert(*bestobj >= 0.0);
    assert(cand != NULL);
    
-   /* a branching variable candidate should either be an active problem variable or a multiaggregated variable */
+   /* a branching variable candidate should either be an active problem variable or a multi-aggregated variable */
    assert(SCIPvarIsActive(SCIPvarGetProbvar(cand)) ||
       SCIPvarGetStatus(SCIPvarGetProbvar(cand)) == SCIP_VARSTATUS_MULTAGGR);
    
    if( SCIPvarGetStatus(SCIPvarGetProbvar(cand)) == SCIP_VARSTATUS_MULTAGGR )
    {
-      /* for a multiaggregated variable, we call updateBestCandidate function recursively with all variables in the multiaggregation */
+      /* for a multi-aggregated variable, we call updateBestCandidate function recursively with all variables in the multi-aggregation */
       SCIP_VAR** multvars;
       int nmultvars;
       int i;
@@ -82,7 +82,7 @@ void updateBestCandidate(
        * if this fails, then register all (unfixed) aggregation variables, thereby forgetting about candsol
        */
       success = FALSE;
-      if( candsol != SCIP_INVALID )
+      if( candsol != SCIP_INVALID ) /*lint !e777*/
       {
          SCIP_Real* multscalars;
          SCIP_Real minact;
@@ -91,7 +91,7 @@ void updateBestCandidate(
 
          multscalars = SCIPvarGetMultaggrScalars(cand);
 
-         /* for computing the branching point, we need the current bounds of the multiaggregated variable */
+         /* for computing the branching point, we need the current bounds of the multi-aggregated variable */
          minact = SCIPcomputeVarLbLocal(scip, cand);
          maxact = SCIPcomputeVarUbLocal(scip, cand);
 
@@ -379,7 +379,7 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextMostinf)
  * branching specific interface methods
  */
 
-/** creates the most infeasible LP braching rule and includes it in SCIP */
+/** creates the most infeasible LP branching rule and includes it in SCIP */
 SCIP_RETCODE SCIPincludeBranchruleMostinf(
    SCIP*                 scip                /**< SCIP data structure */
    )

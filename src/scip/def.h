@@ -49,19 +49,27 @@
 extern "C" {
 #endif
 
-#define SCIP_VERSION                201 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               7 /**< SCIP sub version number */
+#define SCIP_VERSION                202 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_SUBVERSION               1 /**< SCIP sub version number */
 #define SCIP_COPYRIGHT   "Copyright (c) 2002-2011 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
+/*
+ * CIP format variable characters
+ */
+
+#define SCIP_VARTYPE_BINARY_CHAR 'B'
+#define SCIP_VARTYPE_INTEGER_CHAR 'I'
+#define SCIP_VARTYPE_IMPLINT_CHAR 'M'
+#define SCIP_VARTYPE_CONTINUOUS_CHAR 'C'
 
 /*
  * Long Integer values
  */
 
 #ifndef LLONG_MAX
-#define LLONG_MAX	9223372036854775807LL
-#define LLONG_MIN	(-LLONG_MAX - 1LL)
+#define LLONG_MAX        9223372036854775807LL
+#define LLONG_MIN        (-LLONG_MAX - 1LL)
 #endif
 
 #define SCIP_Longint long long                         /**< type used for long integer values */

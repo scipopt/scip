@@ -1515,7 +1515,7 @@ SCIP_RETCODE lpiStrongbranch(
    assert(downvalid != NULL);
    assert(upvalid != NULL);
 
-   /**@todo remember, whether the last solve call was strong branching, and save/restore basis only once */
+   /** remember, whether the last solve call was strong branching, and save/restore basis only once */
    spx = lpi->spx;
    rowstat = new SoPlex::VarStatus[spx->nRows()];
    colstat = new SoPlex::VarStatus[spx->nCols()]; 
@@ -2361,7 +2361,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    Vector x(lpi->spx->nRows(), coef); /* column of B^-1 has nrows entries */
    DVector e(lpi->spx->nRows());
 
-   /**@todo make this faster by pregenerating all dense unit vectors */
+   /** make this faster by pregenerating all dense unit vectors */
    e = lpi->spx->unitVector(c);
 
    /* solve system "x = B^-1 * e_c" to get c'th column of B^-1 */
@@ -2526,7 +2526,7 @@ SCIP_RETCODE SCIPlpiSetState(
 
    /* extend the basis to the current LP */
    for( i = lpistate->ncols; i < lpncols; ++i )
-      lpi->cstat[i] = SCIP_BASESTAT_LOWER; /**@todo this has to be corrected for lb = -infinity */
+      lpi->cstat[i] = SCIP_BASESTAT_LOWER; /** this has to be corrected for lb = -infinity */
    for( i = lpistate->nrows; i < lpnrows; ++i )
       lpi->rstat[i] = SCIP_BASESTAT_BASIC;
 

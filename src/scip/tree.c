@@ -279,7 +279,7 @@ SCIP_RETCODE SCIPnodeReleaseLPIState(
    }  /*lint !e788*/
 }
 
-/** creates probingnode data wihtout LP information */
+/** creates probingnode data without LP information */
 static
 SCIP_RETCODE probingnodeCreate(
    SCIP_PROBINGNODE**    probingnode,        /**< pointer to probingnode data */
@@ -553,7 +553,7 @@ SCIP_RETCODE forkFree(
    return SCIP_OKAY;
 }
 
-#if 0 /*???????? should subroots be created ?*/
+#ifdef WITHSUBROOTS /** @todo test whether subroots should be created */
 /** creates subroot data */
 static
 SCIP_RETCODE subrootCreate(
@@ -811,11 +811,11 @@ SCIP_RETCODE nodeReleaseParent(
             || SCIPnodeGetType(node) == SCIP_NODETYPE_LEAF);
          if( SCIPnodeGetType(node) == SCIP_NODETYPE_CHILD )
             treeRemoveChild(tree, node);
-         freeParent = FALSE; /* don't kill the focus node at this point */
+         /* don't kill the focus node at this point => freeParent = FALSE */
          break;
       case SCIP_NODETYPE_PROBINGNODE:
          assert(SCIPtreeProbing(tree));
-         freeParent = FALSE; /* probing nodes have to be freed individually */
+         /* probing nodes have to be freed individually => freeParent = FALSE */
          break;
       case SCIP_NODETYPE_SIBLING:
          SCIPerrorMessage("sibling cannot be a parent node\n");
@@ -827,7 +827,7 @@ SCIP_RETCODE nodeReleaseParent(
          SCIPerrorMessage("leaf cannot be a parent node\n");
          return SCIP_INVALIDDATA;
       case SCIP_NODETYPE_DEADEND:
-         SCIPerrorMessage("deadend cannot be a parent node\n");
+         SCIPerrorMessage("dead-end cannot be a parent node\n");
          return SCIP_INVALIDDATA;
       case SCIP_NODETYPE_JUNCTION:
          assert(parent->data.junction.nchildren > 0);
@@ -859,11 +859,10 @@ SCIP_RETCODE nodeReleaseParent(
       case SCIP_NODETYPE_REFOCUSNODE:
          /* the only possible child a refocused node can have in its refocus state is the probing root node;
           * we don't want to free the refocused node, because we first have to convert it back to its original
-          * type (where it possibly has children)
+          * type (where it possibly has children) => freeParent = FALSE
           */
          assert(SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
          assert(!SCIPtreeProbing(tree));
-         freeParent = FALSE;
          break;
       default:
          SCIPerrorMessage("unknown node type %d\n", SCIPnodeGetType(parent));
@@ -1421,7 +1420,7 @@ SCIP_RETCODE nodeDeactivate(
    if( !SCIPtreeProbing(tree) )
       stat->ndeactivatednodes++;
 
-   /* free node if it is a deadend node, i.e., has no children */
+   /* free node if it is a dead-end node, i.e., has no children */
    freeNode = FALSE;
    switch( SCIPnodeGetType(node) )   
    {
@@ -2080,8 +2079,6 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    {
       SCIP_CALL( SCIPlpGetProvedLowerbound(lp, set, &lpobjval) );
    }
-   else if ( !(lp->isrelax) )
-      return SCIP_OKAY;
    else
       lpobjval = SCIPlpGetObjval(lp, set);
 
@@ -2357,7 +2354,7 @@ void treeUpdatePathLPSize(
          SCIPerrorMessage("leaf cannot be in the active path\n");
          SCIPABORT();
       case SCIP_NODETYPE_DEADEND:
-         SCIPerrorMessage("deadend cannot be in the active path\n");
+         SCIPerrorMessage("dead-end cannot be in the active path\n");
          SCIPABORT();
       case SCIP_NODETYPE_JUNCTION:
          break;
@@ -2565,7 +2562,7 @@ void treeFindSwitchForks(
    }
    tree->cutoffdepth = INT_MAX;
 
-   /* if not already found, continue searching the LP defining fork; it can not be deeper than the common fork */
+   /* if not already found, continue searching the LP defining fork; it cannot be deeper than the common fork */
    if( lpfork == NULL )
    {
       if( tree->focuslpfork != NULL && (int)(tree->focuslpfork->depth) > fork->depth )
@@ -2595,7 +2592,7 @@ void treeFindSwitchForks(
       || SCIPnodeGetType(lpfork) == SCIP_NODETYPE_SUBROOT);
    SCIPdebugMessage("find switch forks: lpforkdepth=%d\n", lpfork == NULL ? -1 : (int)(lpfork->depth));
 
-   /* if not already found, continue searching the LP state defining fork; it can not be deeper than the
+   /* if not already found, continue searching the LP state defining fork; it cannot be deeper than the
     * LP defining fork and the common fork
     */
    if( lpstatefork == NULL )
@@ -3385,7 +3382,7 @@ SCIP_RETCODE focusnodeCleanupVars(
    return SCIP_OKAY;
 }
 
-/** converts the focus node into a deadend node */
+/** converts the focus node into a dead-end node */
 static
 SCIP_RETCODE focusnodeToDeadend(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
@@ -3405,7 +3402,7 @@ SCIP_RETCODE focusnodeToDeadend(
    assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
    assert(tree->nchildren == 0);
 
-   SCIPdebugMessage("focusnode #%"SCIP_LONGINT_FORMAT" to deadend at depth %d\n",
+   SCIPdebugMessage("focusnode #%"SCIP_LONGINT_FORMAT" to dead-end at depth %d\n",
       SCIPnodeGetNumber(tree->focusnode), SCIPnodeGetDepth(tree->focusnode));
 
    /* remove variables from the problem that are marked as deletable and were created at this node */
@@ -3564,7 +3561,7 @@ SCIP_RETCODE focusnodeToFork(
     *  - The primal heuristics (called after the current node's LP was solved) found a new 
     *    solution, that is better than the current node's lower bound.
     *    (But in this case, all children should be cut off and the node should be converted
-    *    into a deadend instead of a fork.)
+    *    into a dead-end instead of a fork.)
     *  - Something numerically weird happened after cleaning up or after resolving a diving or probing LP.
     * The only thing we can do, is to completely forget about the LP and treat the node as
     * if it was only a pseudo-solution node. Therefore we have to remove all additional
@@ -3621,7 +3618,7 @@ SCIP_RETCODE focusnodeToFork(
    return SCIP_OKAY;
 }
 
-#if 0 /*???????? should subroots be created ?*/
+#ifdef WITHSUBROOTS  /** @todo test whether subroots should be created */
 /** converts the focus node into a subroot node */
 static
 SCIP_RETCODE focusnodeToSubroot(
@@ -3685,7 +3682,7 @@ SCIP_RETCODE focusnodeToSubroot(
     *  - The primal heuristics (called after the current node's LP was solved) found a new 
     *    solution, that is better than the current node's lower bound.
     *    (But in this case, all children should be cut off and the node should be converted
-    *    into a deadend instead of a subroot.)
+    *    into a dead-end instead of a subroot.)
     *  - Something numerically weird happened after cleaning up.
     * The only thing we can do, is to completely forget about the LP and treat the node as
     * if it was only a pseudo-solution node. Therefore we have to remove all additional
@@ -3850,7 +3847,7 @@ SCIP_RETCODE SCIPnodeFocus(
    assert(lp != NULL);
    assert(cutoff != NULL);
 
-   SCIPdebugMessage("focussing node #%"SCIP_LONGINT_FORMAT" of type %d in depth %d\n",
+   SCIPdebugMessage("focusing node #%"SCIP_LONGINT_FORMAT" of type %d in depth %d\n",
       *node != NULL ? SCIPnodeGetNumber(*node) : -1, *node != NULL ? (int)SCIPnodeGetType(*node) : 0,
       *node != NULL ? SCIPnodeGetDepth(*node) : -1);
 
@@ -3861,10 +3858,10 @@ SCIP_RETCODE SCIPnodeFocus(
     * thereby checking, if the new node can be cut off
     */
    treeFindSwitchForks(tree, *node, &fork, &lpfork, &lpstatefork, &subroot, cutoff);
-   SCIPdebugMessage("focus node: focusnodedepth=%d, forkdepth=%d, lpforkdepth=%d, lpstateforkdepth=%d, subrootdepth=%d, cutoff=%d\n",
-      *node != NULL ? (*node)->depth : -1, fork != NULL ? fork->depth : -1,
-      lpfork != NULL ? lpfork->depth : -1, lpstatefork != NULL ? lpstatefork->depth : -1,
-      subroot != NULL ? subroot->depth : -1, *cutoff);
+   SCIPdebugMessage("focus node: focusnodedepth=%d, forkdepth=%d, lpforkdepth=%d, lpstateforkdepth=%d, subrootdepth=%d, cutoff=%u\n",
+      *node != NULL ? (*node)->depth : -1, fork != NULL ? fork->depth : -1, /*lint !e705 */
+      lpfork != NULL ? lpfork->depth : -1, lpstatefork != NULL ? lpstatefork->depth : -1, /*lint !e705 */
+      subroot != NULL ? subroot->depth : -1, *cutoff); /*lint !e705 */
    
    /* free the new node, if it is located in a cut off subtree */
    if( *cutoff )
@@ -3938,7 +3935,7 @@ SCIP_RETCODE SCIPnodeFocus(
    }
 
    /* convert the old focus node into a fork or subroot node, if it has children;
-    * otherwise, convert it into a deadend, which will be freed later in treeSwitchPath()
+    * otherwise, convert it into a dead-end, which will be freed later in treeSwitchPath()
     */
    childrenlpstatefork = tree->focuslpstatefork;
    if( tree->nchildren > 0 )
@@ -3956,8 +3953,7 @@ SCIP_RETCODE SCIPnodeFocus(
       {
          assert(tree->focuslpconstructed);
 
-         /**@todo decide: old focus node becomes fork or subroot */
-#if 0 /*???????? should subroots be created ?*/
+#ifdef WITHSUBROOTS  /** @todo test whether subroots should be created, decide: old focus node becomes fork or subroot */
          if( tree->focusnode->depth > 0 && tree->focusnode->depth % 25 == 0 )
          {
             /* convert old focus node into a subroot node */
@@ -4674,6 +4670,7 @@ SCIP_Real SCIPtreeCalcNodeselPriority(
    case SCIP_BRANCHDIR_FIXED:
       prio = SCIPsetInfinity(set);
       break;
+   case SCIP_BRANCHDIR_AUTO:
    default:
       SCIPerrorMessage("invalid branching direction <%d> of variable <%s>\n", 
          SCIPvarGetBranchDirection(var), SCIPvarGetName(var));
@@ -4906,13 +4903,13 @@ SCIP_RETCODE SCIPtreeBranchVar(
       else
       {
          /* in the general case, there is enough space for two branches
-          * a sophisticated user should have also choosen the branching value such that it is not very close to the bounds
+          * a sophisticated user should have also chosen the branching value such that it is not very close to the bounds
           * so here we only ensure that it is at least epsilon away from both bounds
           */
          SCIPdebugMessage("continuous branch on variable <%s> with value %g, priority %d (current lower bound: %g)\n",
             SCIPvarGetName(var), val, SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
-         downub = MIN(val, SCIPvarGetUbLocal(var) - SCIPsetEpsilon(set));
-         uplb   = MAX(val, SCIPvarGetLbLocal(var) + SCIPsetEpsilon(set));
+         downub = MIN(val, SCIPvarGetUbLocal(var) - SCIPsetEpsilon(set)); /*lint !e666*/
+         uplb   = MAX(val, SCIPvarGetLbLocal(var) + SCIPsetEpsilon(set)); /*lint !e666*/
       }
    }
    else if( SCIPsetIsFeasIntegral(set, val) )
@@ -4931,7 +4928,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
          SCIP_Real center;
 
          /* create child nodes with x <= x", and x >= x"+1 with x" = floor((lb + ub)/2);
-          * if x" is integral, make the interval smaller in the child in which the current soluton x'
+          * if x" is integral, make the interval smaller in the child in which the current solution x'
           * is still feasible
           */
          center = (ub + lb) / 2.0;
@@ -5191,10 +5188,10 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
    }
    if( !SCIPsetIsInfinity(set,  SCIPvarGetUbLocal(var)) )
    {
-      width = MIN(width, SCIPvarGetUbLocal(var) - val);
+      width = MIN(width, SCIPvarGetUbLocal(var) - val); /*lint !e666*/
    }
    /* calculate initial domain width of child nodes
-    * if we have at least one finite bounds, choose width such that we have roughly the same number of nodes left and right of val
+    * if we have at least one finite bound, choose width such that we have roughly the same number of nodes left and right of val
     */
    if( width == SCIP_REAL_MAX )
    {
@@ -5204,7 +5201,7 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
    else if( widthfactor == 1.0 )
    {
       /* most domains get same size */
-      width /= n/2;
+      width /= n/2; /*lint !e653*/ /* rounding is ok at this point */
    }
    else
    {
@@ -5221,9 +5218,9 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
        */
       assert(widthfactor > 1.0);
       if( n % 2 == 0 )
-         width *= (widthfactor - 1.0) / (pow(widthfactor, n/2) - 1.0);
+         width *= (widthfactor - 1.0) / (pow(widthfactor, (SCIP_Real)(n/2)) - 1.0); /*lint !e653*/
       else
-         width /= 0.5 + widthfactor * (pow(widthfactor, n/2) - 1.0) / (widthfactor - 1.0);
+         width /= 0.5 + widthfactor * (pow(widthfactor, (SCIP_Real)(n/2)) - 1.0) / (widthfactor - 1.0); /*lint !e653*/
    }
    if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
       minwidth = MAX(1.0, minwidth);
@@ -5286,7 +5283,7 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
       {
          left  = SCIPsetFloor(set, val);
          right = SCIPsetCeil(set, val);
-         if( left == right )
+         if( right - left < 0.5 )
             left -= 1.0;
       }
       else if( SCIPsetIsZero(set, val) )
@@ -5319,7 +5316,7 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
          {
             bnd = left - width;
             SCIPvarAdjustLb(var, set, &bnd);
-            bnd = MAX(SCIPvarGetLbLocal(var), bnd);
+            bnd = MAX(SCIPvarGetLbLocal(var), bnd); /*lint !e666*/
          }
          assert(SCIPsetIsRelLT(set, bnd, left));
 
@@ -5366,7 +5363,7 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
          {
             bnd = right + width;
             SCIPvarAdjustUb(var, set, &bnd);
-            bnd = MIN(SCIPvarGetUbLocal(var), bnd);
+            bnd = MIN(SCIPvarGetUbLocal(var), bnd); /*lint !e666*/
          }
          assert(SCIPsetIsRelGT(set, bnd, right));
 
@@ -5676,12 +5673,12 @@ SCIP_RETCODE treeBacktrackProbing(
 
       while( tree->pathlen > newpathlen )
       {
-	 assert(SCIPnodeGetType(tree->path[tree->pathlen-1]) == SCIP_NODETYPE_PROBINGNODE);
-	 assert(tree->pathlen-1 == SCIPnodeGetDepth(tree->path[tree->pathlen-1]));
-	 assert(tree->pathlen-1 >= SCIPnodeGetDepth(tree->probingroot));
+         assert(SCIPnodeGetType(tree->path[tree->pathlen-1]) == SCIP_NODETYPE_PROBINGNODE);
+         assert(tree->pathlen-1 == SCIPnodeGetDepth(tree->path[tree->pathlen-1]));
+         assert(tree->pathlen-1 >= SCIPnodeGetDepth(tree->probingroot));
 
-	 /* undo bound changes by deactivating the probing node */
-	 SCIP_CALL( nodeDeactivate(tree->path[tree->pathlen-1], blkmem, set, stat, tree, lp, branchcand, eventqueue) );
+         /* undo bound changes by deactivating the probing node */
+         SCIP_CALL( nodeDeactivate(tree->path[tree->pathlen-1], blkmem, set, stat, tree, lp, branchcand, eventqueue) );
 
 	 /* free the probing node */
 	 SCIP_CALL( SCIPnodeFree(&tree->path[tree->pathlen-1], blkmem, set, stat, eventqueue, tree, lp) );
@@ -5692,11 +5689,11 @@ SCIP_RETCODE treeBacktrackProbing(
       /* reset the path LP size to the initial size of the probing node */
       if( SCIPnodeGetType(tree->path[tree->pathlen-1]) == SCIP_NODETYPE_PROBINGNODE )
       {
-	 tree->pathnlpcols[tree->pathlen-1] = tree->path[tree->pathlen-1]->data.probingnode->ninitialcols;
-	 tree->pathnlprows[tree->pathlen-1] = tree->path[tree->pathlen-1]->data.probingnode->ninitialrows;
+         tree->pathnlpcols[tree->pathlen-1] = tree->path[tree->pathlen-1]->data.probingnode->ninitialcols;
+         tree->pathnlprows[tree->pathlen-1] = tree->path[tree->pathlen-1]->data.probingnode->ninitialrows;
       }
       else
-	 assert(SCIPnodeGetType(tree->path[tree->pathlen-1]) == SCIP_NODETYPE_FOCUSNODE);
+         assert(SCIPnodeGetType(tree->path[tree->pathlen-1]) == SCIP_NODETYPE_FOCUSNODE);
       treeCheckPath(tree);
 
       /* undo LP extensions */
@@ -5713,9 +5710,9 @@ SCIP_RETCODE treeBacktrackProbing(
        * reset them to infinity
        */
       if( tree->cutoffdepth >= tree->pathlen )
-	 tree->cutoffdepth = INT_MAX;
+         tree->cutoffdepth = INT_MAX;
       if( tree->repropdepth >= tree->pathlen )
-	 tree->repropdepth = INT_MAX;
+         tree->repropdepth = INT_MAX;
    }
 
    SCIPdebugMessage("probing backtracked to depth %d (%d cols, %d rows)\n", 
@@ -5802,6 +5799,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
          SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, tree->probinglpistate) );
          SCIP_CALL( SCIPlpFreeState(lp, blkmem, &tree->probinglpistate) );
          SCIPlpSetIsRelax(lp, tree->probinglpwasrelax);
+
          /* resolve LP to reset solution */
          SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, eventqueue, eventfilter, prob, -1, FALSE, FALSE, FALSE, &lperror) );
          if( lperror )
@@ -5820,7 +5818,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
                "LP was not resolved to a sufficient status after diving\n");
             lp->resolvelperror = TRUE;      
          }
-         else
+         else if( tree->focuslpconstructed && SCIPlpIsRelax(lp) )
          {
             SCIP_CALL( SCIPnodeUpdateLowerboundLP(tree->focusnode, set, stat, lp) );
          }
@@ -6361,7 +6359,7 @@ void SCIPnodeGetAncestorBranchingPath(
       int start;
       int size;
 
-      /* calculate the start position for the current node ans the maximum remaining slots in the arrays */
+      /* calculate the start position for the current node and the maximum remaining slots in the arrays */
       start = *nbranchvars < branchvarssize - 1 ? *nbranchvars : branchvarssize - 1;
       size = *nbranchvars > branchvarssize ? 0 : branchvarssize-(*nbranchvars);
       if( *nnodes < nodeswitchsize )         

@@ -199,6 +199,7 @@ struct SCIP_Set
    int                   limit_bestsol;      /**< solving stops, if the given number of solution improvements were found
                                               *   (-1: no limit) */
    int                   limit_maxsol;       /**< maximal number of solutions to store in the solution storage */
+   int                   limit_maxorigsol;   /**< maximal number of solutions candidates to store in the solution storage of the original problem */
    int                   limit_restarts;     /**< solving stops, if the given number of restarts was triggered (-1: no limit) */
 
    /* LP settings */
@@ -283,8 +284,8 @@ struct SCIP_Set
    int                   presol_maxrestarts; /**< maximal number of restarts (-1: unlimited) */
    SCIP_Real             presol_restartfac;  /**< fraction of integer variables that were fixed in the root node
                                               *   triggering a restart with preprocessing after root node evaluation */
-   SCIP_Real             presol_immrestartfac;/**< fraction of integer variables that were fixed in the root node triggereing an
-                                               *   immediate restart with preprcessing */
+   SCIP_Real             presol_immrestartfac;/**< fraction of integer variables that were fixed in the root node triggering an
+                                               *   immediate restart with preprocessing */
    SCIP_Real             presol_subrestartfac;/**< fraction of integer variables that were globally fixed during the
                                                *   solving process triggering a restart with preprocessing */
    SCIP_Real             presol_restartminred;/**< minimal fraction of integer variables removed after restart to allow for

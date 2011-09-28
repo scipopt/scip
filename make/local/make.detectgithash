@@ -18,12 +18,12 @@
 #@author  Stefan Heinz
 
 SCIPGITHASHFILE	= 	$(SRCDIR)/scip/githash.c
-SCIPGITHASH	=	`git log -1 --pretty=%h`
+SCIPGITHASH	=	$(shell git describe --always --dirty)
 
 .PHONY: githash
 githash::	# do not remove the double-colon
-		@rm -f $(SCIPGITHASHFILE)
-		@echo "#define SCIP_GITHASH \"$(SCIPGITHASH)\"" >> $(SCIPGITHASHFILE)
+		@echo "#define SCIP_GITHASH \"$(SCIPGITHASH)\"" > $(SCIPGITHASHFILE)
 
+# rule for generating the githash.c
 $(SCIPGITHASHFILE): githash
 

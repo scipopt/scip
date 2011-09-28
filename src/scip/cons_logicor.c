@@ -63,9 +63,9 @@
 
 #define HASHSIZE_LOGICORCONS     131101 /**< minimal size of hash table in logicor constraint tables */
 #define DEFAULT_PRESOLUSEHASHING   TRUE /**< should hash table be used for detecting redundant constraints in advance */
-#define NMINCOMPARISONS          200000 /**< number for minimal pairwise presol comparisons */
-#define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presol comparisons to repeat pairwise comparison round */
-#define DEFAULT_DUALPRESOLVING     TRUE /**< should dual presolving steps be preformed? */
+#define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
+#define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise comparison round */
+#define DEFAULT_DUALPRESOLVING     TRUE /**< should dual presolving steps be performed? */
 #define DEFAULT_NEGATEDCLIQUE     FALSE /**< should negated clique information be used in presolving */
 
 /* @todo make this a parameter setting */
@@ -83,7 +83,7 @@ struct SCIP_ConshdlrData
    SCIP_CONSHDLR*        conshdlrlinear;     /**< pointer to linear constraint handler or NULL if not included */
    SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
    SCIP_Bool             presolusehashing;   /**< should hash table be used for detecting redundant constraints in advance */
-   SCIP_Bool             dualpresolving;     /**< should dual presolving steps be preformed? */
+   SCIP_Bool             dualpresolving;     /**< should dual presolving steps be performed? */
    SCIP_Bool             usenegatedclique;   /**< should negated clique information be used in presolving */
    int                   nlastcliques;       /**< number of cliques after last negated clique presolving round */
    int                   nlastimpls;         /**< number of implications after last negated clique presolving round */
@@ -141,7 +141,7 @@ SCIP_RETCODE unlockRounding(
    return SCIP_OKAY;
 }
 
-/** creates constaint handler data for logic or constraint handler */
+/** creates constraint handler data for logic or constraint handler */
 static
 SCIP_RETCODE conshdlrdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -718,7 +718,7 @@ SCIP_RETCODE dualPresolving(
       SCIPdebugMessage(" -> fixed <%s> == 1.0\n", SCIPvarGetName(vars[idx]));
       ++(*nfixedvars);
 
-      /* remnove constraint since i*/
+      /* remove constraint since i*/
       SCIP_CALL( SCIPdelCons(scip, cons) );
       ++(*ndelconss);
    }
@@ -1881,6 +1881,8 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
    {
       int v;
 
+      assert(conss != NULL); /* for flexelint */
+
       cons = conss[c];
       assert(cons != NULL);
          
@@ -2024,7 +2026,7 @@ SCIP_RETCODE createNormalizedLogicor(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? 
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? 
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
@@ -2179,6 +2181,8 @@ SCIP_DECL_CONSINITPRE(consInitpreLogicor)
       }
    }
 
+   *result = SCIP_FEASIBLE;
+
    return SCIP_OKAY;
 }
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
@@ -2206,6 +2210,8 @@ SCIP_DECL_CONSEXITPRE(consExitpreLogicor)
                (SCIP_EVENTDATA*)conss[c], -1) );
       }
    }
+
+   *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }
@@ -2767,7 +2773,7 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
             values[0] = FALSE;
             values[1] = FALSE;
             /* a two-variable logicor constraint x + y >= 1 yields the implication x == 0 -> y == 1, and is represented
-             * by the clique inequaltity ~x + ~y <= 1 
+             * by the clique inequality ~x + ~y <= 1 
              */
             SCIP_CALL( SCIPaddClique(scip, consdata->vars, values, consdata->nvars, &implinfeasible, &nimplbdchgs) );
             *nchgbds += nimplbdchgs;
@@ -2796,7 +2802,7 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
          }
       }
       
-      /* perform for dual redundantions */
+      /* perform dual reductions */
       if( conshdlrdata->dualpresolving )
       {
          SCIP_CALL( dualPresolving(scip, cons, nfixedvars, ndelconss, result) );
@@ -2820,31 +2826,31 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
       
       if( firstchange < nconss && conshdlrdata->presolusehashing ) 
       {
-	 /* detect redundant constraints; fast version with hash table instead of pairwise comparison */
+         /* detect redundant constraints; fast version with hash table instead of pairwise comparison */
          SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &firstchange, ndelconss) );
       }
       
       /* check constraints for redundancy */
       if( conshdlrdata->presolpairwise ) /* && oldndelconss == *ndelconss ) */
       {
-	SCIP_Longint npaircomparisons;
-	npaircomparisons = 0;
-	oldndelconss = *ndelconss;
+        SCIP_Longint npaircomparisons;
+        npaircomparisons = 0;
+        oldndelconss = *ndelconss;
 
-	for( c = firstchange; c < nconss && !SCIPisStopped(scip); ++c )
+        for( c = firstchange; c < nconss && !SCIPisStopped(scip); ++c )
          {
             if( SCIPconsIsActive(conss[c]) && !SCIPconsIsModifiable(conss[c]) )
             {
-               npaircomparisons += (SCIPconsGetData(conss[c])->changed) ? c : (c - firstchange);
+               npaircomparisons += (SCIPconsGetData(conss[c])->changed) ? (SCIP_Longint) c : ((SCIP_Longint) c - (SCIP_Longint) firstchange);
                
                SCIP_CALL( removeRedundantConstraints(scip, conss, &firstchange, c, ndelconss) );
                
                if( npaircomparisons > NMINCOMPARISONS )
                {
-		  if( (*ndelconss - oldndelconss) / (npaircomparisons + 0.0) < MINGAINPERNMINCOMPARISONS )
+                  if( (*ndelconss - oldndelconss) / ((SCIP_Real)npaircomparisons) < MINGAINPERNMINCOMPARISONS )
                      break;
-		  oldndelconss = *ndelconss;
-		  npaircomparisons = 0;
+                  oldndelconss = *ndelconss;
+                  npaircomparisons = 0;
                }
             }
          }
@@ -3082,10 +3088,10 @@ SCIP_DECL_CONSPARSE(consParseLogicor)
    char* strcopy;
    char* token;
    char* saveptr;
+   char* endptr;
    int requiredsize;
    int varssize;
    int nvars;
-   int pos;
    
    SCIPdebugMessage("parse <%s> as logicor constraint\n", str);
 
@@ -3105,7 +3111,7 @@ SCIP_DECL_CONSPARSE(consParseLogicor)
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
 
    /* parse string */
-   SCIP_CALL( SCIPparseVarsList(scip, token, 0, vars, &nvars, varssize, &requiredsize, &pos, ',', success) );
+   SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
    
    if( *success )
    {
@@ -3117,7 +3123,7 @@ SCIP_DECL_CONSPARSE(consParseLogicor)
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
          
          /* parse string again with the correct size of the variable array */
-         SCIP_CALL( SCIPparseVarsList(scip, token, 0, vars, &nvars, varssize, &requiredsize, &pos, ',', success) );
+         SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
       }
       
       assert(*success);
@@ -3216,6 +3222,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLogicor)
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nbdchginfos) );
    for( i = 0; i < nbdchginfos; ++i )
    {
+      assert(bdchginfos != NULL); /* for flexelint */
       assert(bdchginfos[i] != NULL);
 
       vars[i] = SCIPbdchginfoGetVar(bdchginfos[i]);
@@ -3314,7 +3321,7 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
          &conshdlrdata->presolusehashing, TRUE, DEFAULT_PRESOLUSEHASHING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/logicor/dualpresolving",
-         "should dual presolving steps be preformed?",
+         "should dual presolving steps be performed?",
          &conshdlrdata->dualpresolving, TRUE, DEFAULT_DUALPRESOLVING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/logicor/negatedclique",
@@ -3349,7 +3356,7 @@ SCIP_RETCODE SCIPcreateConsLogicor(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
@@ -3481,7 +3488,7 @@ SCIP_Real SCIPgetDualsolLogicor(
       return 0.0;
 }
 
-/** gets the dual farkas value of the logic or constraint in the current infeasible LP */
+/** gets the dual Farkas value of the logic or constraint in the current infeasible LP */
 SCIP_Real SCIPgetDualfarkasLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */

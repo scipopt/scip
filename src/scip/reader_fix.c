@@ -25,7 +25,7 @@
 #include <string.h>
 #if defined(_WIN32) || defined(_WIN64)
 #else
-#include <strings.h>
+#include <strings.h> /*lint --e{766}*/ /* needed for strncasecmp() */
 #endif
 
 #include "scip/reader_fix.h"
@@ -96,7 +96,7 @@ SCIP_RETCODE readSol(
       nread = sscanf(buffer, "%s %s %s\n", varname, valuestring, objstring);
       if( nread < 2 )
       {
-         SCIPwarningMessage("invalid input line %d in solution file <%s>: <%s>\n", lineno, filename, buffer);
+         SCIPerrorMessage("invalid input line %d in solution file <%s>: <%s>\n", lineno, filename, buffer);
          error = TRUE;
          break;
       }
@@ -126,7 +126,7 @@ SCIP_RETCODE readSol(
          nread = sscanf(valuestring, "%lf", &value);
          if( nread != 1 )
          {
-            SCIPwarningMessage("invalid solution value <%s> for variable <%s> in line %d of solution file <%s>\n",
+            SCIPerrorMessage("invalid solution value <%s> for variable <%s> in line %d of solution file <%s>\n",
                valuestring, varname, lineno, filename);
             error = TRUE;
             break;
@@ -137,7 +137,7 @@ SCIP_RETCODE readSol(
       SCIP_CALL( SCIPfixVar(scip, var, value, &infeasible, &fixed) );
       if( infeasible )
       {
-         SCIPwarningMessage("infeasible solution value of <%s>[%.15g,%.15g] to %.15g in line %d of solution file <%s>\n",
+         SCIPerrorMessage("infeasible solution value of <%s>[%.15g,%.15g] to %.15g in line %d of solution file <%s>\n",
             varname, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), value, lineno, filename);
          error = TRUE;
          break;
@@ -192,11 +192,12 @@ SCIP_DECL_READERREAD(readerReadFix)
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
    assert(result != NULL);
 
+   *result = SCIP_DIDNOTRUN;
+
    if( SCIPgetStage(scip) < SCIP_STAGE_PROBLEM )
    {
-      SCIPwarningMessage("reading of fixing file is only possible after a problem was created\n");
-      *result = SCIP_DIDNOTRUN;
-      return SCIP_OKAY;
+      SCIPerrorMessage("reading of fixing file is only possible after a problem was created\n");
+      return SCIP_READERROR;
    }
 
    /* free transformed problem, s.t. fixings are applied to the original problem */
@@ -232,10 +233,7 @@ SCIP_RETCODE SCIPincludeReaderFix(
 
    /* include fix reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyFix,
-         readerFreeFix, readerReadFix, readerWriteFix,
-         readerdata) );
+         readerCopyFix, readerFreeFix, readerReadFix, readerWriteFix, readerdata) );
 
    return SCIP_OKAY;
 }
-

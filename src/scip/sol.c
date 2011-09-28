@@ -257,7 +257,10 @@ void solStamp(
       sol->time = SCIPclockGetLastTime(stat->solvingtime);
    sol->nodenum = stat->nnodes;
    sol->runnum = stat->nruns;
-   sol->depth = SCIPtreeGetCurrentDepth(tree);
+   if( tree == NULL )
+      sol->depth = -1;
+   else
+      sol->depth = SCIPtreeGetCurrentDepth(tree);
 }
 
 /** creates primal CIP solution, initialized to zero */
@@ -315,7 +318,7 @@ SCIP_RETCODE SCIPsolCreateOriginal(
    (*sol)->primalindex = -1;
    (*sol)->index = stat->solindex;
    stat->solindex++;
-   solStamp(*sol, stat, tree,TRUE);
+   solStamp(*sol, stat, tree, TRUE);
 
    SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
 
@@ -392,7 +395,7 @@ SCIP_RETCODE SCIPsolCreateNLPSol(
    assert(nlp != NULL);
 
    SCIP_CALL( SCIPsolCreate(sol, blkmem, set, stat, primal, tree, heur) );
-   SCIP_CALL( SCIPsolLinkNLPSol(*sol, set, stat, tree, nlp) );
+   SCIP_CALL( SCIPsolLinkNLPSol(*sol, stat, tree, nlp) );
 
    return SCIP_OKAY;
 }
@@ -489,7 +492,7 @@ SCIP_RETCODE SCIPsolCreateUnknown(
    (*sol)->primalindex = -1;
    (*sol)->index = stat->solindex;
    stat->solindex++;
-   solStamp(*sol, stat, tree,TRUE);
+   solStamp(*sol, stat, tree, TRUE);
 
    SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
 
@@ -576,7 +579,6 @@ SCIP_RETCODE SCIPsolLinkLPSol(
 /** copies current NLP solution into CIP solution by linking */
 SCIP_RETCODE SCIPsolLinkNLPSol(
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_NLP*             nlp                 /**< current NLP data */
@@ -813,7 +815,7 @@ SCIP_RETCODE SCIPsolSetVal(
             if( val != SCIP_UNKNOWN ) /*lint !e777*/
                sol->obj += obj * val;
 
-            solStamp(sol, stat, tree,FALSE);
+            solStamp(sol, stat, tree, FALSE);
          }
          return SCIP_OKAY;
       }
@@ -837,7 +839,7 @@ SCIP_RETCODE SCIPsolSetVal(
          if( val != SCIP_UNKNOWN ) /*lint !e777*/
             sol->obj += obj * val;
 
-         solStamp(sol, stat, tree,FALSE);
+         solStamp(sol, stat, tree, FALSE);
       }
       return SCIP_OKAY;
 
@@ -1067,7 +1069,7 @@ SCIP_Real SCIPsolGetRayVal(
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
       solval = SCIPsolGetVal(sol, set, stat, SCIPvarGetAggrVar(var));
-      assert(solval != SCIP_UNKNOWN);
+      assert(solval != SCIP_UNKNOWN); /*lint !e777*/
       assert(!SCIPsetIsInfinity(set, REALABS(solval)));
       return SCIPvarGetAggrScalar(var) * solval; /* constants are ignored for computing the ray direction */
 
@@ -1079,7 +1081,7 @@ SCIP_Real SCIPsolGetRayVal(
       for( i = 0; i < nvars; ++i )
       {
          solval = SCIPsolGetVal(sol, set, stat, vars[i]);
-         assert(solval != SCIP_UNKNOWN );
+         assert(solval != SCIP_UNKNOWN ); /*lint !e777*/
          assert(!SCIPsetIsInfinity(set, REALABS(solval)));
          solvalsum += scalars[i] * solval;
       }
@@ -1087,7 +1089,7 @@ SCIP_Real SCIPsolGetRayVal(
 
    case SCIP_VARSTATUS_NEGATED:
       solval = SCIPsolGetVal(sol, set, stat, SCIPvarGetNegationVar(var));
-      assert(solval != SCIP_UNKNOWN);
+      assert(solval != SCIP_UNKNOWN); /*lint !e777*/
       assert(!SCIPsetIsInfinity(set, REALABS(solval)));
       return -solval; /* constants are ignored for computing the ray direction */
 
@@ -1337,7 +1339,8 @@ SCIP_RETCODE SCIPsolRetransform(
    nvars = origprob->nvars;
 
    /* allocate temporary memory for storing the original solution values */
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &solvals, origprob->nvars) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &solvals, nvars) );
+   assert(solvals != NULL); /* for flexelint */
 
    /* get the solution in original problem variables */
    for( v = 0; v < nvars; ++v )
@@ -1367,6 +1370,40 @@ SCIP_RETCODE SCIPsolRetransform(
    return SCIP_OKAY;
 }
 
+/** recomputes the objective value of an original solution, e.g., when transferring solutions
+ *  from the solution pool (objective coefficients might have changed in the meantime)
+ */
+void SCIPsolRecomputeObj(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            origprob            /**< original problem */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_Real solval;
+   int nvars;
+   int v;
+
+   assert(sol != NULL);
+   assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL);
+   assert(origprob != NULL);
+
+   vars = origprob->vars;
+   nvars = origprob->nvars;
+
+   /* recompute the objective value */
+   sol->obj = 0.0;
+   for( v = 0; v < nvars; ++v )
+   {
+      solval = SCIPsolGetVal(sol, set, stat, vars[v]);
+      if( !SCIPsetIsZero(set, solval) && solval != SCIP_UNKNOWN ) /*lint !e777*/
+      {
+         sol->obj += SCIPvarGetObj(vars[v]) * solval;
+      }
+   }
+}
+
 /** returns whether the given solutions are equal */
 SCIP_Bool SCIPsolsAreEqual(
    SCIP_SOL*             sol1,               /**< first primal CIP solution */
@@ -1374,7 +1411,8 @@ SCIP_Bool SCIPsolsAreEqual(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            origprob,           /**< original problem */
-   SCIP_PROB*            transprob           /**< transformed problem after presolve */
+   SCIP_PROB*            transprob           /**< transformed problem after presolve, or NULL if both solution are
+                                              *   defines in the original problem space */
    )
 {
    SCIP_PROB* prob;
@@ -1384,7 +1422,8 @@ SCIP_Bool SCIPsolsAreEqual(
    
    assert(sol1 != NULL);
    assert(sol2 != NULL);
-   assert(transprob != NULL);  
+   assert((sol1->solorigin == SCIP_SOLORIGIN_ORIGINAL && sol2->solorigin == SCIP_SOLORIGIN_ORIGINAL) 
+      || transprob != NULL);  
 
    obj1 = sol1->obj;
    obj2 = sol2->obj;
@@ -1437,7 +1476,7 @@ SCIP_RETCODE SCIPsolPrint(
 
    assert(sol != NULL);
    assert(prob != NULL);
-   assert(prob->transformed || transprob != NULL);
+   assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL || prob->transformed || transprob != NULL);
 
    /* display variables of problem data */
    for( v = 0; v < prob->nfixedvars; ++v )
@@ -1542,6 +1581,7 @@ SCIP_RETCODE SCIPsolPrint(
  */
 
 #undef SCIPsolGetOrigin
+#undef SCIPsolGetOrigObj
 #undef SCIPsolGetTime
 #undef SCIPsolGetNodenum
 #undef SCIPsolGetRunnum
@@ -1560,6 +1600,17 @@ SCIP_SOLORIGIN SCIPsolGetOrigin(
    assert(sol != NULL);
 
    return sol->solorigin;
+}
+
+/** gets objective value of primal CIP solution which lives in the original problem space */
+SCIP_Real SCIPsolGetOrigObj(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   assert(sol != NULL);
+   assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL);
+
+   return sol->obj;
 }
 
 /** gets clock time, when this solution was found */

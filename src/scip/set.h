@@ -83,7 +83,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool*            allvalid            /**< pointer to store whether all plugins  were validly copied */
    );
 
-/** copies parameterss from sourcescip to targetscip */
+/** copies parameters from sourcescip to targetscip */
 extern
 SCIP_RETCODE SCIPsetCopyParams(
    SCIP_SET*             sourceset,          /**< source SCIP_SET data structure */
@@ -334,76 +334,6 @@ SCIP_RETCODE SCIPsetResetParams(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** set the time limit to given value */
-extern
-void SCIPsetSetTimeLimit(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Real             limit               /**< time limit to set */
-   );
-
-/** set the memory limit to the given value */
-extern 
-void SCIPsetSetMemoryLimit(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Real             limit               /**< memory limit */
-   );
-
-/** set the gap limit to the given value */
-extern 
-void SCIPsetSetGapLimit(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Real             limit               /**< gap limit */
-   );
-
-/** set the absolute gap limit to the given value */
-extern 
-void SCIPsetSetAbsgapLimit(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Real             limit               /**< absolute gap limit */
-   );
-
-/** set the node limit to the given value */
-extern 
-void SCIPsetSetNodeLimit(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Longint          limit               /**< node limit */
-   );
-
-/** set the stall node limit to the given value */
-extern 
-void SCIPsetSetStallnodeLimit(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Longint          limit               /**< stall node limit */
-   );
-
-/** set the solution limit to the given value */
-extern 
-void SCIPsetSetSolutionLimit(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   int                   limit               /**< solution limit */
-   );
-
-/** set the best solution limit to the given value */
-extern 
-void SCIPsetSetBestsolutionLimit(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   int                   limit               /**< best solution limit */
-   );
-
-/** set the maximum number of solution stored */
-extern 
-void SCIPsetSetMaxsolutionStored(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   int                   limit               /**< maximum number of solution stored */
-   );
-   
-/** set the maximum number of restarts until the solution process is stopped (-1: no limit) */
-extern 
-void SCIPsetSetRestartLimit(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   int                   limit               /**< maximum number of solution stored */
-   );
-
 /** sets parameters to 
  *  - SCIP_PARAMSETTING_DEFAULT to use default values (see also SCIPsetResetParams())
  *  - SCIP_PARAMSETTING_COUNTER to get feasible and "fast" counting process
@@ -416,7 +346,7 @@ void SCIPsetSetRestartLimit(
 extern
 SCIP_RETCODE SCIPsetSetEmphasis(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
+   SCIP_PARAMEMPHASIS    paramemphasis,      /**< parameter settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
@@ -795,7 +725,7 @@ SCIP_RETCODE SCIPsetInitprePlugins(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundness */
+   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundedness */
    SCIP_Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
    );
 
@@ -805,7 +735,7 @@ SCIP_RETCODE SCIPsetExitprePlugins(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundness */
+   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundedness */
    SCIP_Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
    );
 
@@ -1448,28 +1378,19 @@ SCIP_Bool SCIPsetIsSumRelGE(
 
 #endif
 
-/* Check for integer overflow in allocation size */
 #ifdef NDEBUG
 #define SCIPsetAllocBufferArray(set,ptr,num)    ( SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), \
-								     (int)((num)*sizeof(**(ptr))))      )
+                                                                     (int)((num)*sizeof(**(ptr))))      )
 #define SCIPsetDuplicateBufferArray(set,ptr,source,num)                 \
    ( SCIPbufferDuplicateMem((set)->buffer, set, (void**)(ptr), source,  \
-			    (int)((num)*sizeof(**(ptr)))) )
+                            (int)((num)*sizeof(**(ptr)))) )
 #define SCIPsetReallocBufferArray(set,ptr,num)  ( SCIPbufferReallocMem((set)->buffer, set, (void**)(ptr), \
-         (int)((num)*sizeof(**(ptr)))) )
+                                                                       (int)((num)*sizeof(**(ptr)))) )
 #else
-#define SCIPsetAllocBufferArray(set,ptr,num)    ( ( ((size_t)(num)) > (UINT_MAX / sizeof(**(ptr))) ) \
-						  ? SCIP_NOMEMORY	                                  \
-						  : SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), \
-								       (int)((num)*sizeof(**(ptr))))      )
-#define SCIPsetDuplicateBufferArray(set,ptr,source,num) ( ( ((size_t)(num)) > (UINT_MAX / sizeof(**(ptr)))) \
-							  ? SCIP_NOMEMORY                                               \
-							  : SCIPbufferDuplicateMem((set)->buffer, set, (void**)(ptr),   \
-										   source, (int)((num)*sizeof(**(ptr)))))
-#define SCIPsetReallocBufferArray(set,ptr,num)  ( ( ((size_t)(num)) > (UINT_MAX / sizeof(**(ptr))) ) \
-						  ? SCIP_NOMEMORY                                           \
-						  : SCIPbufferReallocMem((set)->buffer, set, (void**)(ptr), \
-									 (int)((num)*sizeof(**(ptr))))      )
+/* Check for integer overflow in allocation size */
+#define SCIPsetAllocBufferArray(set,ptr,num)    ( SCIPbufferAllocMemSave(set, (void**)(ptr), num, sizeof(**(ptr))) )
+#define SCIPsetDuplicateBufferArray(set,ptr,source,num) ( SCIPbufferDuplicateMemSave(set, (void**)(ptr), source, num, sizeof(**(ptr))) )
+#define SCIPsetReallocBufferArray(set,ptr,num)  ( SCIPbufferReallocMemSave(set, (void**)(ptr), num, sizeof(**(ptr))) )
 #endif
 #define SCIPsetFreeBufferArray(set,ptr)         ( SCIPbufferFreeMem((set)->buffer, (void**)(ptr), 0) ) 
 #define SCIPsetAllocBufferSize(set,ptr,size)    ( SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), size) )

@@ -13,6 +13,9 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#
+# File modified from the original check.sh.
+#
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -20,14 +23,15 @@ BINID=$4
 TIMELIMIT=$5
 NODELIMIT=$6
 MEMLIMIT=$7
-FEASTOL=$8
-DISPFREQ=$9
-CONTINUE=${10}
-LOCK=${11}
-VERSION=${12}
-LPS=${13}
+THREADS=$8
+FEASTOL=$9
+DISPFREQ=${10}
+CONTINUE=${11}
+LOCK=${12}
+VERSION=${13}
+LPS=${14}
 
-SETDIR=../settings
+SETDIR=../data
 
 if test ! -e results
 then
@@ -38,18 +42,23 @@ then
     mkdir locks
 fi
 
-LOCKFILE=locks/count.$TSTNAME.$SETNAME.$VERSION.$LPS.lock
-RUNFILE=locks/count.$TSTNAME.$SETNAME.$VERSION.$LPS.run.$BINID
-DONEFILE=locks/count.$TSTNAME.$SETNAME.$VERSION.$LPS.done
+LOCKFILE=locks/$TSTNAME.$SETNAME.$VERSION.$LPS.lock
+RUNFILE=locks/$TSTNAME.$SETNAME.$VERSION.$LPS.run.$BINID
+DONEFILE=locks/$TSTNAME.$SETNAME.$VERSION.$LPS.done
 
-OUTFILE=results/checkcount.$TSTNAME.$BINID.$SETNAME.out
-ERRFILE=results/checkcount.$TSTNAME.$BINID.$SETNAME.err
-RESFILE=results/checkcount.$TSTNAME.$BINID.$SETNAME.res
-TEXFILE=results/checkcount.$TSTNAME.$BINID.$SETNAME.tex
-TMPFILE=results/checkcount.$TSTNAME.$BINID.$SETNAME.tmp
-SETFILE=results/checkcount.$TSTNAME.$BINID.$SETNAME.set
+OUTFILE=results/check.$TSTNAME.$BINID.$SETNAME.out
+ERRFILE=results/check.$TSTNAME.$BINID.$SETNAME.err
+RESFILE=results/check.$TSTNAME.$BINID.$SETNAME.res
+TEXFILE=results/check.$TSTNAME.$BINID.$SETNAME.tex
+TMPFILE=results/check.$TSTNAME.$BINID.$SETNAME.tmp
+SETFILE=results/check.$TSTNAME.$BINID.$SETNAME.set
 
-SETTINGS=$SETDIR/$SETNAME.set
+if test "$SETNAME" = "default"
+then
+    SETTINGS="-s $SETDIR/scip.set"
+else
+    SETTINGS="-s $SETDIR/$SETNAME.set"
+fi
 
 if test "$LOCK" = "true"
 then
@@ -96,7 +105,7 @@ fi
 
 if test "$CONTINUE" = "true"
 then
-    LASTPROB=`getlastprob.awk $OUTFILE`
+    LASTPROB=`./getlastprob.awk $OUTFILE`
     echo Continuing benchmark. Last solved instance: $LASTPROB
     echo "" >> $OUTFILE
     echo "----- Continuing from here. Last solved: $LASTPROB -----" >> $OUTFILE
@@ -120,7 +129,7 @@ HARDMEMLIMIT=`expr $HARDMEMLIMIT \* 1024`
 echo "hard time limit: $HARDTIMELIMIT s" >>$OUTFILE
 echo "hard mem limit: $HARDMEMLIMIT k" >>$OUTFILE
 
-for i in `cat $TSTNAME.test` DONE
+for i in `cat testset/$TSTNAME.test` DONE
 do
     if test "$i" = "DONE"
     then
@@ -135,44 +144,12 @@ do
         then
             echo @01 $i ===========
             echo @01 $i ===========                >> $ERRFILE
-            echo > $TMPFILE
-            if test $SETTINGS != "default"
-            then
-                echo set load $SETTINGS                >>  $TMPFILE
-            fi
-            if test $FEASTOL != "default"
-            then
-                echo set numerics feastol $FEASTOL    >> $TMPFILE
-            fi
-            echo set limits time $TIMELIMIT        >> $TMPFILE
-            echo set limits nodes $NODELIMIT       >> $TMPFILE
-            echo set limits memory $MEMLIMIT       >> $TMPFILE
-            echo set timing clocktype 1            >> $TMPFILE
-            echo set display verblevel 4           >> $TMPFILE
-            echo set display freq $DISPFREQ        >> $TMPFILE
-            echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
-            if test "$LPS" == "none"      
-            then
-                echo set lp solvefreq -1           >> $TMPFILE # avoid solving LPs in case of LPS=none
-
-            fi
-            echo set save $SETFILE                 >> $TMPFILE
-            echo read $i                           >> $TMPFILE
-            echo count                             >> $TMPFILE
-            echo display statistics                >> $TMPFILE
-            echo quit                              >> $TMPFILE
-
-#            if test "$LPS" == "cpx"      
-#            then
-#                waitcplex.sh # ??????????????????
-#            fi
-
             echo -----------------------------
             date
             date >>$ERRFILE
             echo -----------------------------
             date +"@03 %s"
-            bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 200000; ../$BINNAME < $TMPFILE" 2>>$ERRFILE
+            bash -c " ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; ../$BINNAME $i $SETTINGS -t $TIMELIMIT -n $NODELIMIT -m $MEMLIMIT -d $DISPFREQ" 2>>$ERRFILE
             date +"@04 %s"
             echo -----------------------------
             date
@@ -194,14 +171,15 @@ do
 done | tee -a $OUTFILE
 
 rm -f $TMPFILE
+rm -f cipreadparsetest.cip
 
 date >>$OUTFILE
 date >>$ERRFILE
 
 if test -e $DONEFILE
 then
-    ./evalcheckcount.sh $OUTFILE
-
+    ./evalcheck.sh $OUTFILE
+    
     if test "$LOCK" = "true"
     then
         rm -f $RUNFILE

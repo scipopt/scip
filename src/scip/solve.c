@@ -264,7 +264,7 @@ SCIP_RETCODE propagationRound(
    SCIP_Bool             onlydelayed,        /**< should only delayed propagators be called? */
    SCIP_Bool*            delayed,            /**< pointer to store whether a propagator was delayed */
    SCIP_Bool*            propagain,          /**< pointer to store whether propagation should be applied again */
-   unsigned int          timingmask,         /**< timing mask to decide which propagaters are executed */
+   unsigned int          timingmask,         /**< timing mask to decide which propagators are executed */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    )
 {  /*lint --e{715}*/
@@ -391,7 +391,7 @@ SCIP_RETCODE propagateDomains(
    int                   depth,              /**< depth level to use for propagator frequency checks */
    int                   maxproprounds,      /**< maximal number of propagation rounds (-1: no limit, 0: parameter settings) */
    SCIP_Bool             fullpropagation,    /**< should all constraints be propagated (or only new ones)? */
-   unsigned int          timingmask,         /**< timing mask to decide which propagaters are executed */
+   unsigned int          timingmask,         /**< timing mask to decide which propagators are executed */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    )
 {
@@ -462,7 +462,7 @@ SCIP_RETCODE SCIPpropagateDomains(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    int                   depth,              /**< depth level to use for propagator frequency checks */
    int                   maxproprounds,      /**< maximal number of propagation rounds (-1: no limit, 0: parameter settings) */
-   unsigned int          timingmask,         /**< timing mask to decide which propagaters are executed */
+   unsigned int          timingmask,         /**< timing mask to decide which propagators are executed */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    )
 {
@@ -584,7 +584,7 @@ SCIP_RETCODE updatePseudocost(
       /* get a buffer for the collected bound changes; start with a size twice as large as the number of nodes between
        * current node and LP fork
        */
-      SCIP_CALL( SCIPsetAllocBufferArray(set, &updates, 2*(actdepth - tree->focuslpstatefork->depth)) );
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &updates, (int)(2*(actdepth - tree->focuslpstatefork->depth))) );
       nupdates = 0;
       nvalidupdates = 0;
 
@@ -613,7 +613,7 @@ SCIP_RETCODE updatePseudocost(
                 * and therefore should be regarded in the pseudocost updates
                 *
                 * however, if the variable is continuous and we normalize the pseudo costs by the domain reduction,
-                * then getting the variable bound before the branching is not possible by looking at the variables branching infos (since redundant branchings are not applied)
+                * then getting the variable bound before the branching is not possible by looking at the variables branching information (since redundant branchings are not applied)
                 * thus, in this case we ignore the boundchange
                 */
                if( (SCIP_BOUNDCHGTYPE)boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING &&
@@ -703,11 +703,11 @@ SCIP_RETCODE updatePseudocost(
                {
                   assert(!updates[i]->redundant);
 
-                  if( updates[i]->boundtype == SCIP_BOUNDTYPE_UPPER )
+                  if( (SCIP_BOUNDTYPE)updates[i]->boundtype == SCIP_BOUNDTYPE_UPPER )
                   {
                      nbdchginfos = SCIPvarGetNBdchgInfosUb(var);
 
-                     /* walk backwards through bound change infos array to find the bound change corresponding to branching in updates[i]
+                     /* walk backwards through bound change information array to find the bound change corresponding to branching in updates[i]
                       * usually it will be the first one we look at */
                      for( j = nbdchginfos-1; j >= 0; --j )
                      {
@@ -720,9 +720,9 @@ SCIP_RETCODE updatePseudocost(
                             * if bdchginfo->boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING, then this should be because the branching domain change has not been applied to the variable due to redundancy
                             * in this case, i.e., if there was another boundchange coming from somewhere else, I am not sure whether oldbound is an accurate value to compute the old domain size, so we skip the pseudocosts update
                             */
-                           if( bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
+                           if( (SCIP_BOUNDCHGTYPE)bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
                            {
-                              assert(bdchginfo->newbound == updates[i]->newbound);
+                              assert(bdchginfo->newbound == updates[i]->newbound); /*lint !e777*/
                               oldbound = bdchginfo->oldbound;
                            }
                            else
@@ -734,7 +734,7 @@ SCIP_RETCODE updatePseudocost(
                      /* if the bound change was redundant (e.g., due to a change in the global bound), then it was not applied, so there exists no corresponding bound change info
                       * if it is not redundant, then we should have found at least one corresponding boundchange */
                      assert(j >= 0 || updates[i]->redundant);
-                     if( oldbound != SCIP_INVALID )
+                     if( oldbound != SCIP_INVALID ) /*lint !e777*/
                      {
                         assert(!SCIPsetIsInfinity(set, -oldbound)); /* branching on a variable fixed to -infinity does not make sense */
                         assert(!SCIPsetIsInfinity(set, updates[i]->newbound)); /* branching to infinity does not make sense */
@@ -751,10 +751,10 @@ SCIP_RETCODE updatePseudocost(
                   }
                   else
                   {
-                     assert(updates[i]->boundtype == SCIP_BOUNDTYPE_LOWER);
+                     assert((SCIP_BOUNDTYPE)updates[i]->boundtype == SCIP_BOUNDTYPE_LOWER);
                      nbdchginfos = SCIPvarGetNBdchgInfosLb(var);
 
-                     /* walk backwards through bound change infos array to find the bound change corresponding to branching in updates[i]
+                     /* walk backwards through bound change information array to find the bound change corresponding to branching in updates[i]
                       * usually it will be the first one we look at */
                      for( j = nbdchginfos-1; j >= 0; --j )
                      {
@@ -767,9 +767,9 @@ SCIP_RETCODE updatePseudocost(
                             * if bdchginfo->boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING, then this should be because the branching domain change has not been applied to the variable due to redundancy
                             * in this case, i.e., if there was another boundchange coming from somewhere else, I am not sure whether oldbound is an accurate value to compute the old domain size, so we skip the pseudocosts update
                             */
-                           if( bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
+                           if( (SCIP_BOUNDCHGTYPE)bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
                            {
-                              assert(bdchginfo->newbound == updates[i]->newbound);
+                              assert(bdchginfo->newbound == updates[i]->newbound); /*lint !e777*/
                               oldbound = bdchginfo->oldbound;
                            }
                            else
@@ -781,7 +781,7 @@ SCIP_RETCODE updatePseudocost(
                      /* if the bound change was redundant (e.g., due to a change in the global bound), then it was not applied, so there exists no corresponding bound change info
                       * if it is not redundant, then we should have found at least one corresponding boundchange */
                      assert(j >= 0 || updates[i]->redundant);
-                     if( oldbound != SCIP_INVALID )
+                     if( oldbound != SCIP_INVALID ) /*lint !e777*/
                      {
                         assert(!SCIPsetIsInfinity(set, oldbound)); /* branching on a variable fixed to +infinity does not make sense */
                         assert(!SCIPsetIsInfinity(set, -updates[i]->newbound)); /* branching to infinity does not make sense */
@@ -809,7 +809,7 @@ SCIP_RETCODE updatePseudocost(
                    * Thus, we have oldwidth = c-a, newwidth = b-a, and oldwidth - newwidth = c-b.
                    * Conveniently, we just use the current upper bound for c (it may have been tightened, though).
                    */
-                  if( updates[i]->boundtype == SCIP_BOUNDTYPE_UPPER )
+                  if( (SCIP_BOUNDTYPE)updates[i]->boundtype == SCIP_BOUNDTYPE_UPPER )
                   {
                      assert(!SCIPsetIsInfinity(set, updates[i]->newbound)); /* branching on a variable fixed to +infinity does not make sense */
                      assert(!SCIPsetIsInfinity(set, SCIPvarGetLbLocal(var))); /* branching to infinity does not make sense */
@@ -820,7 +820,7 @@ SCIP_RETCODE updatePseudocost(
                   }
                   else
                   {
-                     assert(updates[i]->boundtype == SCIP_BOUNDTYPE_LOWER);
+                     assert((SCIP_BOUNDTYPE)updates[i]->boundtype == SCIP_BOUNDTYPE_LOWER);
                      assert(!SCIPsetIsInfinity(set, -updates[i]->newbound)); /* branching on a variable fixed to -infinity does not make sense */
                      assert(!SCIPsetIsInfinity(set, -SCIPvarGetUbLocal(var))); /* branching to -infinity does not make sense */
                      if( SCIPsetIsInfinity(set, updates[i]->newbound) || SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var)) )
@@ -830,15 +830,15 @@ SCIP_RETCODE updatePseudocost(
                   }
                }
 
-               if( delta != SCIP_INVALID )
+               if( delta != SCIP_INVALID ) /*lint !e777*/
                {
                   SCIPdebugMessage("updating pseudocosts of <%s> with strategy %c: domain: [%g,%g] -> [%g,%g], LP: %e -> %e => "
                      "delta = %g, gain=%g, weight: %g\n",
                      SCIPvarGetName(var), set->branch_lpgainnorm,
-                     updates[i]->boundtype == SCIP_BOUNDTYPE_UPPER ? SCIPvarGetLbLocal(var) : oldbound,
-                     updates[i]->boundtype == SCIP_BOUNDTYPE_UPPER ? oldbound : SCIPvarGetUbLocal(var),
-                     updates[i]->boundtype == SCIP_BOUNDTYPE_UPPER ? SCIPvarGetLbLocal(var) : updates[i]->newbound,
-                     updates[i]->boundtype == SCIP_BOUNDTYPE_UPPER ? updates[i]->newbound : SCIPvarGetUbLocal(var),
+                     (SCIP_BOUNDTYPE)updates[i]->boundtype == SCIP_BOUNDTYPE_UPPER ? SCIPvarGetLbLocal(var) : oldbound,
+                     (SCIP_BOUNDTYPE)updates[i]->boundtype == SCIP_BOUNDTYPE_UPPER ? oldbound : SCIPvarGetUbLocal(var),
+                     (SCIP_BOUNDTYPE)updates[i]->boundtype == SCIP_BOUNDTYPE_UPPER ? SCIPvarGetLbLocal(var) : updates[i]->newbound,
+                     (SCIP_BOUNDTYPE)updates[i]->boundtype == SCIP_BOUNDTYPE_UPPER ? updates[i]->newbound : SCIPvarGetUbLocal(var),
                      tree->focuslpstatefork->lowerbound, SCIPlpGetObjval(lp, set),
                      delta, lpgain, weight);
 
@@ -1919,7 +1919,7 @@ SCIP_RETCODE priceAndCutLoop(
          assert(lp->solved || *lperror);
 
          /* update lower bound w.r.t. the LP solution */
-         if( !(*lperror) && !(*pricingaborted))
+         if( !(*lperror) && !(*pricingaborted) && SCIPlpIsRelax(lp) )
          {
             SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, lp) );
             SCIPdebugMessage(" -> new lower bound: %g (LP status: %d, LP obj: %g)\n",
@@ -1942,6 +1942,7 @@ SCIP_RETCODE priceAndCutLoop(
          if( !(*lperror) )
          {
             SCIP_Real newlowerbound;
+            unsigned int timingmask;
 
             /* if the global lower bound changed, propagate domains again since this may trigger reductions 
              * propagation only has to be performed if the node is not cut off by bounding anyway 
@@ -1951,7 +1952,23 @@ SCIP_RETCODE priceAndCutLoop(
             {
                SCIPdebugMessage(" -> global lower bound changed from %g to %g: propagate domains again\n",
                   oldlowerbound, newlowerbound);
-               SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, FALSE, SCIP_PROPTIMING_BEFORELP, cutoff) );
+
+               timingmask = SCIP_PROPTIMING_BEFORELP;
+            }
+            else
+               timingmask = 0x000;
+
+            /* call propagators that are applicable during node LP solving loop */
+            if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
+            {
+               SCIPdebugMessage(" -> LP solved to optimality: call propagators that are applicable during LP solving loop\n");
+
+               timingmask = timingmask | SCIP_PROPTIMING_DURINGLPLOOP;
+            }
+
+            if( timingmask != 0 )
+            {
+               SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, FALSE, timingmask, cutoff) );
                assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
                /* if we found something, solve LP again */
@@ -1977,40 +1994,6 @@ SCIP_RETCODE priceAndCutLoop(
 
                   mustprice = TRUE;
                }
-            }
-         }
-
-         /* call propagators that are applicable during node LP solving loop */
-         if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
-         {
-            assert(!(*lperror));
-
-            /* call propagaters which are during lp loop */
-            SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, FALSE, SCIP_PROPTIMING_DURINGLPLOOP, cutoff) );
-            assert(SCIPbufferGetNUsed(set->buffer) == 0);
-            
-            /* if we found something, solve LP again */
-            if( !lp->flushed && !(*cutoff) )
-            {
-               SCIPdebugMessage("    -> found reduction: resolve LP\n");
-               
-               /* in the root node, remove redundant rows permanently from the LP */
-               if( root )
-               {
-                  SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
-                  SCIP_CALL( SCIPlpRemoveRedundantRows(lp, blkmem, set, stat, eventqueue, eventfilter) );
-               }
-                  
-               /* resolve LP */
-               SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, eventqueue, eventfilter, prob, 
-                     -1, FALSE, TRUE, FALSE, lperror) );
-               assert(lp->flushed);
-               assert(lp->solved || *lperror);
-               
-               /* remove previous primal ray, store new one if LP is unbounded */
-               SCIP_CALL( updatePrimalRay(blkmem, set, stat, prob, primal, tree, lp, *lperror) );
-               
-               mustprice = TRUE;
             }
          }
 
@@ -2215,7 +2198,7 @@ SCIP_RETCODE priceAndCutLoop(
                      stalllpsolstat = SCIPlpGetSolstat(lp);
 
                      /* tell LP that we are (close to) stalling */
-                     if ( nsepastallrounds >= maxnsepastallrounds-2 )
+                     if( nsepastallrounds >= maxnsepastallrounds-2 )
                         lp->installing = TRUE;
                      SCIPdebugMessage(" -> nsepastallrounds=%d/%d\n", nsepastallrounds, maxnsepastallrounds);
                   }
@@ -2248,7 +2231,10 @@ SCIP_RETCODE priceAndCutLoop(
       assert(lp->flushed);
       assert(lp->solved);
 
-      SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, lp) );
+      if( SCIPlpIsRelax(lp) )
+      {
+         SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, lp) );
+      }
 
       /* update node estimate */
       SCIP_CALL( updateEstimate(set, stat, tree, lp, branchcand) );
@@ -2398,7 +2384,9 @@ SCIP_RETCODE solveNodeLP(
        * separators; in case the root LP is aborted, e.g, by hitting the time limit, we do not check the LP solution
        * since the corresponding data structures have not been updated 
        */
-      if( SCIPtreeGetCurrentDepth(tree) == 0 && !(*cutoff) && !(*lperror) && !SCIPsolveIsStopped(set, stat, FALSE) )
+      if( SCIPtreeGetCurrentDepth(tree) == 0 && !(*cutoff) && !(*lperror)
+         && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY)
+         && !SCIPsolveIsStopped(set, stat, FALSE) )
       {
          SCIP_Bool checklprows;
          SCIP_Bool stored;
@@ -2430,7 +2418,7 @@ SCIP_RETCODE solveNodeLP(
                eventqueue, eventfilter, &sol, FALSE, TRUE, TRUE, checklprows, &stored) );
 #endif    
          /* if the solution was accepted, the root node can be cut off by bounding */
-         if( stored && SCIPprobAllColsInLP(transprob, set, lp) )
+         if( stored && SCIPprobAllColsInLP(transprob, set, lp) && SCIPlpIsRelax(lp) )
          {
             SCIPdebugMessage("root node initial LP feasible --> cut off root node, stop solution process\n");
             SCIP_CALL( SCIPnodeUpdateLowerboundLP(SCIPtreeGetFocusNode(tree), set, stat, lp) );
@@ -2454,12 +2442,12 @@ SCIP_RETCODE solveNodeLP(
    /* if there is no LP error, then *unbounded should be TRUE, iff the LP solution status is unboundedray */
    assert(*lperror || ((SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY) == *unbounded));
 
-   /* If pricing was aborted while solving the LP of the node and the node can not be cut off due to the lower bound computed by the pricer,
+   /* If pricing was aborted while solving the LP of the node and the node cannot be cut off due to the lower bound computed by the pricer,
    *  the solving of the LP might be stopped due to the objective limit, but the node may not be cut off, since the LP objective
    *  is not a feasible lower bound for the solutions in the current subtree. 
    *  In this case, the LP has to be solved to optimality by temporarily removing the cutoff bound. 
    */
-   if ( (*pricingaborted) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT && !(*cutoff) )
+   if( (*pricingaborted) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT && !(*cutoff) )
    {
       SCIP_Real tmpcutoff;
       
@@ -2483,7 +2471,7 @@ SCIP_RETCODE solveNodeLP(
       assert(SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
       /* there should be no primal ray, since the lp was dual feasible */
       assert(primal->primalray == NULL);
-      if ( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
+      if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
       {
          *cutoff = TRUE;
       }
@@ -3393,7 +3381,7 @@ SCIP_RETCODE solveNode(
        * best solution in the current subtree --> we have to do a pseudo branching,
        * so we set infeasible TRUE and add the current solution to the solution pool
        */
-      if ( pricingaborted && !(*infeasible) && !(*cutoff) )
+      if( pricingaborted && !(*infeasible) && !(*cutoff) )
       {
          SCIP_Bool stored;
          SCIP_SOL* sol;
@@ -3538,7 +3526,7 @@ SCIP_RETCODE solveNode(
                }
                else
                {
-                  if ( pricingaborted )
+                  if( pricingaborted )
                   {
                      SCIPerrorMessage("pricing was aborted, but no branching could be created!\n", result);
                      return SCIP_INVALIDRESULT;

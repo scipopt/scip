@@ -95,8 +95,8 @@ struct SCIP_NlRow
    int                   validactivitynlp;   /**< NLP number for which activity value is valid */
    SCIP_Real             pseudoactivity;     /**< row activity value in pseudo solution, or SCIP_INVALID if not yet calculated */
    SCIP_Longint          validpsactivitydomchg; /**< domain change number for which pseudo activity value is valid */
-   SCIP_Real             minactivity;        /**< minimal activity value w.r.t. the variables's bounds, or SCIP_INVALID */
-   SCIP_Real             maxactivity;        /**< maximal activity value w.r.t. the variables's bounds, or SCIP_INVALID */
+   SCIP_Real             minactivity;        /**< minimal activity value w.r.t. the variables' bounds, or SCIP_INVALID */
+   SCIP_Real             maxactivity;        /**< maximal activity value w.r.t. the variables' bounds, or SCIP_INVALID */
    SCIP_Longint          validactivitybdsdomchg; /**< domain change number for which activity bound values are valid */
    int                   nlpindex;           /**< index of this row in NLP, or -1 if not added */
    int                   nlpiindex;          /**< index of this row in NLPI problem, or -1 if not in there */
@@ -116,7 +116,6 @@ struct SCIP_Nlp
    int                   nunflushednlrowadd; /**< number of nonlinear row additions not flushed to NLPI problem yet */
    int                   nunflushednlrowdel; /**< number of nonlinear row deletions not flushed to NLPI problem yet */
    SCIP_Bool             isrelax;            /**< is the current NLP a relaxation of a SCIP problem? */
-   SCIP_Bool             isconvex;           /**< is the current NLP a convex problem? */
    SCIP_Bool             indiving;           /**< are we currently in diving mode? */
 
    /* variables in problem */
@@ -163,7 +162,7 @@ struct SCIP_Nlp
    SCIP_Real*            fracvarssol;        /**< values of the fractional variables */
    SCIP_Real*            fracvarsfrac;       /**< fractionality of the fractional variables  */
    int                   nfracvars;          /**< number of fractional variables */
-   int                   npriofracvars;      /**< number of fractional variables with hightest branching priority */
+   int                   npriofracvars;      /**< number of fractional variables with highest branching priority */
    int                   fracvarssize;       /**< size of fracvars* arrays */
    int                   validfracvars;      /**< the NLP solve for which the fractional variables are valid, or -1 if never setup */
 

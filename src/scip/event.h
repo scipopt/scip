@@ -59,7 +59,7 @@ SCIP_RETCODE SCIPeventhdlrCreate(
    SCIP_EVENTHDLR**      eventhdlr,          /**< pointer to event handler data structure */
    const char*           name,               /**< name of event handler */
    const char*           desc,               /**< description of event handler */
-   SCIP_DECL_EVENTCOPY   ((*eventcopy)),     /**< copy method of event handler or NULL if you don't want to copy your plugin into subscips */
+   SCIP_DECL_EVENTCOPY   ((*eventcopy)),     /**< copy method of event handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_EVENTFREE   ((*eventfree)),     /**< destructor of event handler */
    SCIP_DECL_EVENTINIT   ((*eventinit)),     /**< initialize event handler */
    SCIP_DECL_EVENTEXIT   ((*eventexit)),     /**< deinitialize event handler */
@@ -353,7 +353,7 @@ SCIP_RETCODE SCIPeventProcess(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PRIMAL*          primal,             /**< primal data; only needed for objchanged events, or NULL */
    SCIP_LP*              lp,                 /**< current LP data; only needed for obj/boundchanged events, or NULL */
-   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for boundchange events, or NULL */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for bound change events, or NULL */
    SCIP_EVENTFILTER*     eventfilter         /**< event filter for global events; not needed for variable specific events */
    );
 
@@ -422,7 +422,7 @@ SCIP_RETCODE SCIPeventqueueCreate(
    SCIP_EVENTQUEUE**     eventqueue          /**< pointer to store the event queue */
    );
 
-/** frees event queue; there must not be any unprocessed eventy in the queue! */
+/** frees event queue; there must not be any unprocessed events in the queue! */
 extern
 SCIP_RETCODE SCIPeventqueueFree(
    SCIP_EVENTQUEUE**     eventqueue          /**< pointer to the event queue */
@@ -436,7 +436,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PRIMAL*          primal,             /**< primal data; only needed for objchanged events, or NULL */
    SCIP_LP*              lp,                 /**< current LP data; only needed for obj/boundchanged events, or NULL */
-   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for boundchange events, or NULL */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for bound change events, or NULL */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events; not needed for variable specific events */
    SCIP_EVENT**          event               /**< pointer to event to add to the queue; will be NULL after queue addition */
    );

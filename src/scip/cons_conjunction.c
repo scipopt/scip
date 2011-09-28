@@ -31,7 +31,7 @@
 /* constraint handler properties */
 #define CONSHDLR_NAME          "conjunction"
 #define CONSHDLR_DESC          "conjunction of constraints"
-#define CONSHDLR_SEPAPRIORITY   +000000 /**< priority of the constraint handler for separation */
+#define CONSHDLR_SEPAPRIORITY         0 /**< priority of the constraint handler for separation */
 #define CONSHDLR_ENFOPRIORITY   +900000 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY  -900000 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_SEPAFREQ            -1 /**< frequency for separating cuts; zero means to separate only in the root node */
@@ -592,7 +592,7 @@ SCIP_RETCODE SCIPcreateConsConjunction(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic             /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    )
 {
    SCIP_CONSHDLR* conshdlr;

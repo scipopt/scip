@@ -110,9 +110,7 @@ SCIP_RETCODE SCIPincludeReaderRlp(
 
    /* include lp reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyRlp,
-         readerFreeRlp, readerReadRlp, readerWriteRlp,
-         readerdata) );
+         readerCopyRlp, readerFreeRlp, readerReadRlp, readerWriteRlp, readerdata) );
 
    return SCIP_OKAY;
 }

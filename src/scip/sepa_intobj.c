@@ -400,7 +400,7 @@ SCIP_DECL_EVENTEXIT(eventExitIntobj)
 /** frees specific event data */
 #define eventDeleteIntobj NULL
 
-/** execution methode of objective change event handler */
+/** execution method of objective change event handler */
 static
 SCIP_DECL_EVENTEXEC(eventExecIntobj)
 {  /*lint --e{715}*/

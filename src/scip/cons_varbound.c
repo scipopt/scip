@@ -65,7 +65,7 @@ struct SCIP_ConsData
    SCIP_ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
    unsigned int          propagated:1;       /**< is the variable bound constraint already propagated? */
    unsigned int          presolved:1;        /**< is the variable bound constraint already presolved? */
-   unsigned int          addvarbounds:1;     /**< are the globbaly valid variable bound are added? */
+   unsigned int          addvarbounds:1;     /**< are the globally valid variable bound are added? */
 };
 
 
@@ -877,7 +877,7 @@ SCIP_RETCODE applyFixings(
          SCIPdebugMessage("variable bound constraint <%s>: variable <%s> is fixed to %.15g\n",
             SCIPconsGetName(cons), SCIPvarGetName(consdata->var), varconstant);
 
-         /* can not change bounds on multi-aggregated variables */
+         /* cannot change bounds on multi-aggregated variables */
          if( SCIPvarGetStatus(vbdvar) != SCIP_VARSTATUS_MULTAGGR )
          {
             /* x is fixed to varconstant: update bounds of y and delete the variable bound constraint */
@@ -985,7 +985,7 @@ SCIP_RETCODE applyFixings(
          SCIPdebugMessage("variable bound constraint <%s>: vbd variable <%s> is fixed to %.15g\n",
             SCIPconsGetName(cons), SCIPvarGetName(consdata->vbdvar), vbdvarconstant);
 
-         /* can not change bounds on multi-aggregated variables */
+         /* cannot change bounds on multi-aggregated variables */
          if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
          {
             /* y is fixed to vbdvarconstant: update bounds of x and delete the variable bound constraint */
@@ -1051,7 +1051,7 @@ SCIP_RETCODE applyFixings(
    return SCIP_OKAY;
 }
 
-/** tightes variable bound coefficient by inspecting the global bounds of the involved variables;
+/** tightens variable bound coefficient by inspecting the global bounds of the involved variables;
  *  note: this is also performed by the linear constraint handler - only necessary if the user directly creates variable bound constraints
  */
 static
@@ -1147,7 +1147,7 @@ SCIP_RETCODE tightenCoefs(
       }
    }
 
-   /* if something a coefficient or side of the varbaount constraint was changed, ensure that the variable lower or
+   /* if something a coefficient or side of the varbound constraint was changed, ensure that the variable lower or
     * upper bounds of the variables are informed */
    if( *nchgcoefs > oldnchgcoefs || *nchgsides > oldnchgsides )
       consdata->addvarbounds = FALSE;
@@ -1829,7 +1829,7 @@ SCIP_DECL_CONSCOPY(consCopyVarbound)
  * Event Handler
  */
 
-/** execution methode of bound change event handler */
+/** execution method of bound change event handler */
 static
 SCIP_DECL_EVENTEXEC(eventExecVarbound)
 {  /*lint --e{715}*/
@@ -1922,7 +1922,7 @@ SCIP_RETCODE SCIPcreateConsVarbound(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
@@ -2074,7 +2074,7 @@ SCIP_Real SCIPgetDualsolVarbound(
       return 0.0;
 }
 
-/** gets the dual farkas value of the variable bound constraint in the current infeasible LP */
+/** gets the dual Farkas value of the variable bound constraint in the current infeasible LP */
 SCIP_Real SCIPgetDualfarkasVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */

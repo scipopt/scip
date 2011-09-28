@@ -30,11 +30,11 @@ include make/make.detecthost
 # default settings
 #-----------------------------------------------------------------------------
 
-VERSION		:=	2.0.1.7
+VERSION		:=	2.0.2.1
 
 TIME     	=  	3600
 NODES           =       2100000000
-MEM		=	1536
+MEM		=	6144
 THREADS         =       1
 DISPFREQ	=	10000
 FEASTOL		=	default
@@ -42,6 +42,7 @@ TEST		=	short
 SETTINGS        =       default
 CONTINUE	=	false
 LOCK		=	false
+VALGRIND	=	false
 
 VERBOSE		=	false
 OPT		=	opt
@@ -505,25 +506,24 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/branch_random.o \
 			scip/branch_relpscost.o \
 			scip/cons_and.o \
-			scip/cons_binpack.o \
 			scip/cons_bounddisjunction.o \
 			scip/cons_conjunction.o \
 			scip/cons_countsols.o \
 			scip/cons_cumulative.o \
 			scip/cons_disjunction.o \
-			scip/cons_eqknapsack.o \
 			scip/cons_indicator.o \
 			scip/cons_integral.o \
-			scip/cons_invarknapsack.o \
 			scip/cons_knapsack.o \
 			scip/cons_linear.o \
 			scip/cons_linking.o \
 			scip/cons_logicor.o \
+			scip/cons_nonlinear.o \
 			scip/cons_or.o \
 			scip/cons_orbitope.o \
 			scip/cons_pseudoboolean.o \
 			scip/cons_quadratic.o \
 			scip/cons_setppc.o \
+			scip/cons_signedpower.o \
 			scip/cons_soc.o \
 			scip/cons_sos1.o \
 			scip/cons_sos2.o \
@@ -579,6 +579,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/prop_redcost.o \
 			scip/prop_rootredcost.o \
 			scip/prop_vbounds.o \
+			scip/reader_bnd.o \
 			scip/reader_ccg.o \
 			scip/reader_cip.o \
 			scip/reader_cnf.o \
@@ -784,12 +785,12 @@ check:		test
 .PHONY: test
 test:
 		cd check; \
-		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS);
+		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(VALGRIND);
 
 .PHONY: testcount
 testcount:		
 		cd check; \
-		$(SHELL) ./checkcount.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS);
+		$(SHELL) ./check_count.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS);
 
 .PHONY: testcplex
 testcplex:		
@@ -937,6 +938,7 @@ lpidepend:
 ifeq ($(LINKER),C)
 		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(LPILIBSRC) \
 		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
+		| sed '\''s|$(LIBDIR)/cpxinc/cpxconst.h||g'\'' \
 		>$(LPILIBDEP)'
 endif
 ifeq ($(LINKER),CPP)

@@ -55,9 +55,10 @@ $(OBJDIR)/cmain.o: src/cmain.c ../../src/scip/scip.h ../../src/scip/def.h \
  ../../src/scip/cons_indicator.h ../../src/scip/cons_integral.h \
  ../../src/scip/cons_knapsack.h ../../src/scip/cons_linear.h \
  ../../src/scip/cons_linking.h ../../src/scip/cons_logicor.h \
- ../../src/scip/cons_or.h ../../src/scip/cons_orbitope.h \
- ../../src/scip/cons_pseudoboolean.h ../../src/scip/cons_quadratic.h \
- ../../src/scip/cons_setppc.h ../../src/scip/cons_sos1.h \
+ ../../src/scip/cons_nonlinear.h ../../src/scip/cons_or.h \
+ ../../src/scip/cons_orbitope.h ../../src/scip/cons_pseudoboolean.h \
+ ../../src/scip/cons_quadratic.h ../../src/scip/cons_setppc.h \
+ ../../src/scip/cons_signedpower.h ../../src/scip/cons_sos1.h \
  ../../src/scip/cons_sos2.h ../../src/scip/cons_soc.h \
  ../../src/scip/cons_varbound.h ../../src/scip/cons_xor.h \
  ../../src/scip/dialog_default.h ../../src/scip/disp_default.h \
@@ -85,22 +86,22 @@ $(OBJDIR)/cmain.o: src/cmain.c ../../src/scip/scip.h ../../src/scip/def.h \
  ../../src/scip/presol_trivial.h ../../src/scip/prop_probing.h \
  ../../src/scip/prop_pseudoobj.h ../../src/scip/prop_redcost.h \
  ../../src/scip/prop_rootredcost.h ../../src/scip/prop_vbounds.h \
- ../../src/scip/reader_ccg.h ../../src/scip/reader_cip.h \
- ../../src/scip/reader_cnf.h ../../src/scip/reader_fix.h \
- ../../src/scip/reader_fzn.h ../../src/scip/reader_gms.h \
- ../../src/scip/reader_lp.h ../../src/scip/reader_mps.h \
- ../../src/scip/reader_opb.h ../../src/scip/reader_pip.h \
- ../../src/scip/reader_ppm.h ../../src/scip/reader_rlp.h \
- ../../src/scip/reader_sol.h ../../src/scip/reader_wbo.h \
- ../../src/scip/reader_zpl.h ../../src/scip/sepa_clique.h \
- ../../src/scip/sepa_closecuts.h ../../src/scip/sepa_cgmip.h \
- ../../src/scip/sepa_cmir.h ../../src/scip/sepa_flowcover.h \
- ../../src/scip/sepa_gomory.h ../../src/scip/sepa_impliedbounds.h \
- ../../src/scip/sepa_intobj.h ../../src/scip/sepa_mcf.h \
- ../../src/scip/sepa_oddcycle.h ../../src/scip/sepa_rapidlearning.h \
- ../../src/scip/sepa_strongcg.h ../../src/scip/sepa_zerohalf.h \
- ../../src/scip/scipshell.h ../../src/nlpi/nlpi_ipopt.h \
- src/probdata_lop.h src/cons_linearordering.h
+ ../../src/scip/reader_bnd.h ../../src/scip/reader_ccg.h \
+ ../../src/scip/reader_cip.h ../../src/scip/reader_cnf.h \
+ ../../src/scip/reader_fix.h ../../src/scip/reader_fzn.h \
+ ../../src/scip/reader_gms.h ../../src/scip/reader_lp.h \
+ ../../src/scip/reader_mps.h ../../src/scip/reader_opb.h \
+ ../../src/scip/reader_pip.h ../../src/scip/reader_ppm.h \
+ ../../src/scip/reader_rlp.h ../../src/scip/reader_sol.h \
+ ../../src/scip/reader_wbo.h ../../src/scip/reader_zpl.h \
+ ../../src/scip/sepa_clique.h ../../src/scip/sepa_closecuts.h \
+ ../../src/scip/sepa_cgmip.h ../../src/scip/sepa_cmir.h \
+ ../../src/scip/sepa_flowcover.h ../../src/scip/sepa_gomory.h \
+ ../../src/scip/sepa_impliedbounds.h ../../src/scip/sepa_intobj.h \
+ ../../src/scip/sepa_mcf.h ../../src/scip/sepa_oddcycle.h \
+ ../../src/scip/sepa_rapidlearning.h ../../src/scip/sepa_strongcg.h \
+ ../../src/scip/sepa_zerohalf.h ../../src/scip/scipshell.h \
+ ../../src/nlpi/nlpi_ipopt.h src/probdata_lop.h src/cons_linearordering.h
 $(OBJDIR)/probdata_lop.o: src/probdata_lop.c src/probdata_lop.h \
  ../../src/scip/scip.h ../../src/scip/def.h ../../src/scip/type_retcode.h \
  ../../src/scip/message.h ../../src/scip/type_message.h \

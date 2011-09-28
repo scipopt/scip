@@ -30,7 +30,7 @@
 extern "C" {
 #endif
 
-/** creates the inference history braching rule and includes it in SCIP */
+/** creates the inference history branching rule and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludeBranchruleInference(
    SCIP*                 scip                /**< SCIP data structure */

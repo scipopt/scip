@@ -36,7 +36,7 @@
 
 
 #ifndef va_copy
-#define va_copy(dest, src) do { BMScopyMemory(&dest, &src); } while (0)
+#define va_copy(dest, src) do { BMScopyMemory(&dest, &src); } while( 0 )
 #endif
 
 /** error message print method of default message handler */
@@ -429,13 +429,16 @@ static pthread_mutex_t  messagemutex = PTHREAD_MUTEX_INITIALIZER;
 /* hashmap which identifies for each thread the corresponding messagehandler */
 static SCIP_HASHMAP* messagepthreadhashmap = NULL;
 
-/** static array that should contain all messagehanlders in multiple thread case;
+/** static array that should contain all messagehandlers in multiple thread case;
  *  if the handler is set to NULL, messages are suppressed;
  *
  *  @note: in this case it is mandatory to call SCIPcreateMesshdlrPThreads
  */
 static SCIP_MESSAGEHDLR** curmessagehdlrs = NULL;
 static size_t ncurmessagehdlrs = 0;
+
+/** number of threads for which curmessagehdlrs allocates space, i.e., size of curmessagehdlrs array */
+static size_t nthreads = 0;
 
 /* standard message handler when not initializing the array above by calling */
 static SCIP_MESSAGEHDLR* emergencycurmessagehdlr = &messagehdlrDefault;
@@ -459,6 +462,7 @@ void messagePrintError(
          assert(messagepthreadhashmap != NULL);
          assert(curmessagehdlrs != NULL);
          assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) > 0);
+         assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) <= nthreads);
          assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) <= ncurmessagehdlrs);
          
          curmessagehdlr = curmessagehdlrs[((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) - 1];
@@ -526,6 +530,7 @@ void messagePrintWarning(
          assert(messagepthreadhashmap != NULL);
          assert(curmessagehdlrs != NULL);
          assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) > 0);
+         assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) <= nthreads);
          assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) <= ncurmessagehdlrs);
 
          curmessagehdlr = curmessagehdlrs[((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) - 1];
@@ -594,6 +599,7 @@ void messagePrintDialog(
          assert(messagepthreadhashmap != NULL);
          assert(curmessagehdlrs != NULL);
          assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) > 0);
+         assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) <= nthreads);
          assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) <= ncurmessagehdlrs);
 
          curmessagehdlr = curmessagehdlrs[((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) - 1];
@@ -671,6 +677,7 @@ void messagePrintInfo(
          assert(messagepthreadhashmap != NULL);
          assert(curmessagehdlrs != NULL);
          assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) > 0);
+         assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) <= nthreads);
          assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) <= ncurmessagehdlrs);
 
          curmessagehdlr = curmessagehdlrs[((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) - 1];
@@ -744,6 +751,7 @@ void SCIPmessageSetHandler(
       SCIP_CALL_ABORT( SCIPhashmapInsert(messagepthreadhashmap, (void*) pthread_self(), (void*) ncurmessagehdlrs) );
    }   
    assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) > 0);
+   assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) <= nthreads);
    assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) <= ncurmessagehdlrs);
 
    curmessagehdlrs[((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) - 1] = messagehdlr;
@@ -767,6 +775,7 @@ void SCIPmessageSetDefaultHandler(
       SCIP_CALL_ABORT( SCIPhashmapInsert(messagepthreadhashmap, (void*) pthread_self(), (void*) ncurmessagehdlrs) );
    }
    assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) > 0);
+   assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) <= nthreads);
    assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) <= ncurmessagehdlrs);
    
    curmessagehdlrs[((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) - 1] = &messagehdlrDefault;
@@ -786,6 +795,7 @@ SCIP_MESSAGEHDLR* SCIPmessageGetHandler(
    assert(messagepthreadhashmap != NULL);
    assert(curmessagehdlrs != NULL);
    assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) > 0);
+   assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) <= nthreads);
    assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) <= ncurmessagehdlrs);
 
    curmessagehdlr = curmessagehdlrs[((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) - 1];
@@ -799,14 +809,15 @@ SCIP_MESSAGEHDLR* SCIPmessageGetHandler(
 
 /** allocates memory for all message handlers for number of given threads */
 SCIP_RETCODE SCIPmesshdlrCreatePThreads(
-   int                   nthreads            /**< number of threads to allocate memory for */
+   int                   nthreads_           /**< number of threads to allocate memory for */
    )
 {
    pthread_mutex_lock(&messagemutex);
 
-   assert(nthreads > 0);
+   assert(nthreads_ > 0);
    assert(messagepthreadhashmap == NULL);
    assert(curmessagehdlrs == NULL);
+   assert(nthreads == 0);
    assert(ncurmessagehdlrs == 0);
 
    /* check that we only create the hashmap and array once */
@@ -814,6 +825,8 @@ SCIP_RETCODE SCIPmesshdlrCreatePThreads(
    {
       return SCIP_INVALIDCALL;
    }
+
+   nthreads = nthreads_;
 
    /* create hashmap and message handler array */
    SCIP_CALL( SCIPhashmapCreate(&messagepthreadhashmap, NULL, HASHMAPSIZE_FACTOR * nthreads) );
@@ -838,8 +851,51 @@ void SCIPmesshdlrFreePThreads(
    SCIPhashmapFree(&messagepthreadhashmap);
    BMSfreeMemoryArray(&curmessagehdlrs);
    ncurmessagehdlrs = 0;
+   nthreads = 0;
 
    pthread_mutex_unlock(&messagemutex);
+}
+
+/** gets maximal number of threads for which message handler space has been allocated
+ * returned value is the one given by SCIPmesshdlrCreatePThreads(), or 0 if that hasn't been called
+ */
+extern
+size_t SCIPmessagehdlrGetNThreads(
+   void
+   )
+{
+   return nthreads;
+}
+
+/** gets number of current thread as assigned by message handler hashmap
+ * assigns a new number to the thread if new */
+extern
+size_t SCIPmessagehdlrGetThreadNum(
+   void
+   )
+{
+   if( nthreads == 0 )
+      return 0;
+
+   assert(messagepthreadhashmap != NULL);
+
+   if( SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self()) == NULL )
+   {
+      pthread_mutex_lock(&messagemutex);
+
+      ++ncurmessagehdlrs;
+      SCIP_CALL_ABORT( SCIPhashmapInsert(messagepthreadhashmap, (void*) pthread_self(), (void*) ncurmessagehdlrs) );
+
+      assert(ncurmessagehdlrs <= nthreads);
+      curmessagehdlrs[((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) - 1] = &messagehdlrDefault;
+
+      pthread_mutex_unlock(&messagemutex);
+   }
+   assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) > 0);
+   assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) <= nthreads);
+   assert(((size_t) SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self())) <= ncurmessagehdlrs);
+
+   return (size_t)SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self()) - 1;
 }
 
 #endif //NPARASCIP
@@ -874,10 +930,10 @@ SCIP_RETCODE SCIPmessagehdlrCreate(
    /* allocate buffer for buffered output */
    if( bufferedoutput )
    {
-      SCIP_ALLOC( BMSallocMemoryArray(&(*messagehdlr)->errorbuffer, SCIP_MAXSTRLEN) );
-      SCIP_ALLOC( BMSallocMemoryArray(&(*messagehdlr)->warningbuffer, SCIP_MAXSTRLEN) );
-      SCIP_ALLOC( BMSallocMemoryArray(&(*messagehdlr)->dialogbuffer, SCIP_MAXSTRLEN) );
-      SCIP_ALLOC( BMSallocMemoryArray(&(*messagehdlr)->infobuffer, SCIP_MAXSTRLEN) );
+      SCIP_ALLOC( BMSallocMemoryArray(&(*messagehdlr)->errorbuffer, SCIP_MAXSTRLEN) ); /*lint !e506*/
+      SCIP_ALLOC( BMSallocMemoryArray(&(*messagehdlr)->warningbuffer, SCIP_MAXSTRLEN) ); /*lint !e506*/
+      SCIP_ALLOC( BMSallocMemoryArray(&(*messagehdlr)->dialogbuffer, SCIP_MAXSTRLEN) ); /*lint !e506*/
+      SCIP_ALLOC( BMSallocMemoryArray(&(*messagehdlr)->infobuffer, SCIP_MAXSTRLEN) ); /*lint !e506*/
       (*messagehdlr)->errorbuffer[0] = '\0';
       (*messagehdlr)->warningbuffer[0] = '\0';
       (*messagehdlr)->dialogbuffer[0] = '\0';
@@ -981,9 +1037,9 @@ void SCIPmessagePrintError(
       
       va_start(aq, formatstr); /*lint !e826*/
 #ifndef NDEBUG
-      m = vsnprintf(bigmsg, n+1, formatstr, aq); /*lint !e718 !e746*/
+      m = vsnprintf(bigmsg, (size_t) n+1, formatstr, aq); /*lint !e718 !e746*/
 #else
-      vsnprintf(bigmsg, n+1, formatstr, aq); /*lint !e718 !e746*/
+      vsnprintf(bigmsg, (size_t) n+1, formatstr, aq); /*lint !e718 !e746*/
 #endif
       assert(m == n);
       va_end(aq);
@@ -1037,9 +1093,9 @@ void SCIPmessagePrintWarning(
 
       va_start(aq, formatstr); /*lint !e826*/
 #ifndef NDEBUG
-      m = vsnprintf(bigmsg, n+1, formatstr, aq);  /*lint !e718 !e746*/
+      m = vsnprintf(bigmsg, (size_t) n+1, formatstr, aq);  /*lint !e718 !e746*/
 #else
-      vsnprintf(bigmsg, n+1, formatstr, aq);  /*lint !e718 !e746*/
+      vsnprintf(bigmsg, (size_t) n+1, formatstr, aq);  /*lint !e718 !e746*/
 #endif
       assert(m == n);
       va_end(aq);
@@ -1116,9 +1172,9 @@ void SCIPmessageVFPrintDialog(
       }
 
 #ifndef NDEBUG
-      m = vsnprintf(bigmsg, n+1, formatstr, aq);
+      m = vsnprintf(bigmsg, (size_t) n+1, formatstr, aq);
 #else
-      vsnprintf(bigmsg, n+1, formatstr, aq);
+      vsnprintf(bigmsg, (size_t) n+1, formatstr, aq);
 #endif
       assert(m == n);
       va_end(aq);
@@ -1196,9 +1252,9 @@ void SCIPmessageVFPrintInfo(
       }
 
 #ifndef NDEBUG
-      m = vsnprintf(bigmsg, n+1, formatstr, aq);
+      m = vsnprintf(bigmsg, (size_t) n+1, formatstr, aq);
 #else
-      vsnprintf(bigmsg, n+1, formatstr, aq);
+      vsnprintf(bigmsg, (size_t) n+1, formatstr, aq);
 #endif
       assert(m == n);
       va_end(aq);
@@ -1290,9 +1346,9 @@ void SCIPmessageVFPrintVerbInfo(
          }
          
 #ifndef NDEBUG
-         m = vsnprintf(bigmsg, n+1, formatstr, aq);
+         m = vsnprintf(bigmsg, (size_t) n+1, formatstr, aq);
 #else
-         vsnprintf(bigmsg, n+1, formatstr, aq);
+         vsnprintf(bigmsg, (size_t) n+1, formatstr, aq);
 #endif
          assert(m == n);
          va_end(aq);

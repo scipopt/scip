@@ -1,0 +1,8 @@
+check/check.awk
+check/check.sh
+check/evalcheck.sh
+check/getlastprob.awk
+check/locks/
+check/results/
+check/testset/short.solu
+doc/html/

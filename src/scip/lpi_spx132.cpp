@@ -1580,7 +1580,7 @@ SCIP_RETCODE lpiStrongbranch(
    assert(downvalid != NULL);
    assert(upvalid != NULL);
 
-   /**@todo remember, whether the last solve call was strong branching, and save/restore basis only once */
+   /** remember, whether the last solve call was strong branching, and save/restore basis only once */
    spx = lpi->spx;
    rowstat = new SPxSolver::VarStatus[spx->nRows()];
    colstat = new SPxSolver::VarStatus[spx->nCols()];
@@ -2617,7 +2617,7 @@ SCIP_RETCODE SCIPlpiSetState(
 
    /* extend the basis to the current LP */
    for( i = lpistate->ncols; i < lpncols; ++i )
-      lpi->cstat[i] = SCIP_BASESTAT_LOWER; /*lint !e641*/ /**@todo this has to be corrected for lb = -infinity */
+      lpi->cstat[i] = SCIP_BASESTAT_LOWER; /*lint !e641*/ /** this has to be corrected for lb = -infinity */
    for( i = lpistate->nrows; i < lpnrows; ++i )
       lpi->rstat[i] = SCIP_BASESTAT_BASIC; /*lint !e641*/
 

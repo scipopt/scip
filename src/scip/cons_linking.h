@@ -46,7 +46,7 @@ SCIP_RETCODE SCIPcreateConsLinking(
    SCIP_VAR*             intvar,             /**< integer variable which should be linked */
    SCIP_VAR**            binvars,            /**< binary variables */
    int                   nbinvars,           /**< number of binary starting variables */
-   int                   offset,             /**< offset ot the binary variable representation */
+   int                   offset,             /**< offset of the binary variable representation */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -64,7 +64,7 @@ SCIP_RETCODE SCIPcreateConsLinking(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even

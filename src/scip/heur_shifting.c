@@ -85,7 +85,7 @@ void updateViolations(
    {
       int rowpos;
       int violpos;
-      
+
       rowpos = SCIProwGetLPPos(row);
       assert(rowpos >= 0);
 
@@ -150,7 +150,7 @@ SCIP_RETCODE updateActivities(
    {
       SCIP_ROW* row;
       int rowpos;
-      
+
       row = colrows[r];
       rowpos = SCIProwGetLPPos(row);
       assert(-1 <= rowpos && rowpos < nlprows);
@@ -159,9 +159,9 @@ SCIP_RETCODE updateActivities(
       {
          SCIP_Real oldactivity;
          SCIP_Real newactivity;
-         
+
          assert(SCIProwIsInLP(row));
-         
+
          /* update row activity */
          oldactivity = activities[rowpos];
          newactivity = oldactivity + delta * colvals[r];
@@ -170,10 +170,10 @@ SCIP_RETCODE updateActivities(
          else if( SCIPisInfinity(scip, -newactivity) )
             newactivity = -SCIPinfinity(scip);
          activities[rowpos] = newactivity;
-         
+
          /* update row violation arrays */
          updateViolations(scip, row, violrows, violrowpos, nviolrows, oldactivity, newactivity);
-      }            
+      }
    }
 
    return SCIP_OKAY;
@@ -242,7 +242,6 @@ SCIP_RETCODE selectShifting(
       SCIP_Bool isinteger;
       SCIP_Bool isfrac;
       SCIP_Bool increase;
-      int probindex;
 
       col = rowcols[c];
       var = SCIPcolGetVar(col);
@@ -253,7 +252,6 @@ SCIP_RETCODE selectShifting(
       isinteger = (SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
       isfrac = isinteger && !SCIPisFeasIntegral(scip, solval);
       increase = (direction * val > 0.0);
-      probindex = SCIPvarGetProbindex(var);
 
       /* calculate the score of the shifting (prefer smaller values) */
       if( isfrac )
@@ -261,6 +259,9 @@ SCIP_RETCODE selectShifting(
             -1.0 / (SCIPvarGetNLocksDown(var) + 1.0);
       else
       {
+         int probindex;
+         probindex = SCIPvarGetProbindex(var);
+
          if( increase )
             shiftscore = ndecreases[probindex]/increaseweight;
          else
@@ -282,7 +283,7 @@ SCIP_RETCODE selectShifting(
             else
             {
                SCIP_Real lb;
-               
+
                assert(activitydelta/val < 0.0);
                shiftval = solval + activitydelta/val;
                assert(shiftval <= solval); /* may be equal due to numerical digit erasement in the subtraction */
@@ -369,7 +370,7 @@ SCIP_RETCODE selectEssentialRounding(
    {
       var = lpcands[v];
       assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
-      
+
       solval = SCIPgetSolVal(scip, sol, var);
       if( !SCIPisFeasIntegral(scip, solval) )
       {
@@ -432,7 +433,7 @@ void addFracCounter(
    for( r = 0; r < nrows; ++r )
    {
       int rowidx;
-      
+
       rowidx = SCIProwGetLPPos(rows[r]);
       assert(0 <= rowidx && rowidx < nlprows);
       nfracsinrow[rowidx] += incval;
@@ -743,7 +744,7 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
       SCIPdebugMessage("shifting heuristic:  -> shift var <%s>[%g,%g], type=%d, oldval=%g, newval=%g, obj=%g\n",
          SCIPvarGetName(shiftvar), SCIPvarGetLbGlobal(shiftvar), SCIPvarGetUbGlobal(shiftvar), SCIPvarGetType(shiftvar),
          oldsolval, newsolval, SCIPvarGetObj(shiftvar));
-         
+
       /* update row activities of globally valid rows */
       SCIP_CALL( updateActivities(scip, activities, violrows, violrowpos, &nviolrows, nlprows, 
             shiftvar, oldsolval, newsolval) );
@@ -796,7 +797,7 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
          if( increaseweight >= 1e+09 )
          {
             int i;
-            
+
             for( i = 0; i < nvars; ++i )
             {
                nincreases[i] /= increaseweight;

@@ -182,9 +182,12 @@ void SCIPstatReset(
    stat->nlps = 0;
    stat->nrootlps = 0;
    stat->nprimallps = 0;
+   stat->nprimalzeroitlps = 0;
    stat->nduallps = 0;
+   stat->ndualzeroitlps = 0;
    stat->nlexduallps = 0;
    stat->nbarrierlps = 0;
+   stat->nbarrierzeroitlps = 0;
    stat->nprimalresolvelps = 0;
    stat->ndualresolvelps = 0;
    stat->nlexdualresolvelps = 0;
@@ -205,6 +208,9 @@ void SCIPstatReset(
    stat->firstprimalheur = NULL; 
    stat->firstprimaltime = SCIP_DEFAULT_INFINITY;
    stat->firstprimalbound = SCIP_DEFAULT_INFINITY;
+   stat->primalzeroittime = 0.0;
+   stat->dualzeroittime = 0.0;
+   stat->barrierzeroittime = 0.0;
    stat->marked_nvaridx = -1;
    stat->marked_ncolidx = -1;
    stat->marked_nrowidx = -1;

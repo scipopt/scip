@@ -5,13 +5,12 @@ interface:
 - new method SCIPstartSolvingTime() and SCIPstopSolvingTime() which can be used to start or stop the solving time clock
 - new methods SCIPcheckCumulativeCondition(), SCIPpropCumulativeCondition, and SCIPrespropCumulativeCondition in cons_cumulative.h;
   these methods can be used to check, propagate, or resolve the propagation of a cumulative condition
-- new methods SCIPstrGetValue() and SCIPstrCopySection() in pub_misc.h; these methods can be used to 
+- new methods SCIPstrToRealValue() and SCIPstrCopySection() in pub_misc.h; these methods can be used to 
   convert a string into a SCIP_Real value and to copy a substring.
 - the methods SCIPwriteVarName() SCIPwriteVarsList(), and SCIPwriteVarsLinearsum() have new parameter named "type" 
   of type SCIP_Bool; these parameter determines if the variable type should be written or not
-- the methods SCIPparseVarName() and SCIPparseVarsList() got two new parameters names "pos" and "endpos"; the parameter pos 
-  determines the current position in the the string which gets parsed and the pointer to an int (endpos) returns
-  the position where the current parsing stopped
+- the methods SCIPparseVarName() and SCIPparseVarsList() got one new parameters names "endptr"; the parameter  
+  should be filled with the final parsing position where the parsing stopped
 - new functions SCIPround() and SCIPfeasRound() to round to nearest integer
 - new functions SCIPcomputeVarCurrent{L,U}b{Local,Global}() to compute local or global lower or upper bounds of a multiaggregated variable
   from the bounds of the aggregation variables
@@ -44,7 +43,7 @@ interface:
 - added method SCIPsortRealRealIntInt() and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines in misc.c
 - added SCIPconvertCutsToConss() and SCIPcopyCuts() to scip.{c,h} for copying cuts to linear constraints
 - new method SCIPnodeGetParent() to get parent node of a node
-- added method SCIPsortRealIntLong() and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines in misc.c
+- added methods SCIPsortRealIntLong(), SCIPsortPtrPtrRealInt() and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines in misc.c
 - new method SCIPnodesSharePath() in pub_tree.h that determines whether two nodes are on the same leaf-root path
 - new method SCIPnodesGetCommonAncestor() in pub_tree.h that finds the common ancestor node for two given nodes
 - new method SCIPgetNLPFracVars() to get the fractional variables in an NLP solution
@@ -63,6 +62,16 @@ interface:
 - due to adding SCIP_DECL_PROPINITPRE, SCIP_DECL_PROPEXITPRE, SCIP_DECL_PROPPRESOL, new timing flag and presolving paramters for propagators the SCIPincludeProp() method has a new list of parameters
 - new methods SCIPpropInitpre, SCIPpropExitpre, SCIPpropPresol which initializes, exists and executes the presolving phase
 - due to the new timingmask for propagation calls SCIPincludeConshdlr() has the timingmask as a new parameter
+- new method SCIProwGetAge() to access the age of a row (pub_lp.h/lp.c)
+- allowed calling SCIPgetRowSolActivity() in SCIP_STAGE_SOLVED, since LP is still available
+- removed parameters timelimit and memorylimit from SCIPapplyRens()
+- added parmaeter to SCIPincludeQuadconsUpgrade() to indicates whether the given upgrade method should be active by default
+- new methods SCIPdebugAddSolVal() and SCIPdebugGetSolVal() to add/get values to/from a debug solution
+- various extensions and modifications for expressions and expression trees (too much to state here)
+- split off PARAMEMPHASIS from PARAMSETTING (in pub_paramset.c/paramset.c)
+- added new method to linear constraint handler SCIPsetUpgradeConsLinear(), which (de-)activates the possibility to upgrade a linear constraint to a specialized linear constraint (e.g. knapsack)
+- new method SCIPsolGetOrigObj() in pub_sol.h which returns for a solution in the original problem space the objective value
+- new method SCIPretransformSol() in scip.h that allows to retransform a solution to the original space
 
 performance improvements:
 - performance improvements in prop_vbounds
@@ -73,8 +82,10 @@ performance improvements:
 - performance and memory consumption improvements in xmlparse.c
 - avoid very long separation times of LEWIs in cons_knapsack for very large minimal covers
 - used SCIPallocMemoryArray instead of SCIPallocBlockMemoryArray which leads to fewer memory consumption in getLiftingSequence() in cons_knapsack, also improved cache use bei using an extra array instead blockmemory chunks
-- switched FASTMIP from 1 to 2 for CPLEX and changed default pricing rule back to steepest edge pricing instead of qucikstart steepest edge pricing
+- switched FASTMIP from 1 to 2 for CPLEX and changed default pricing rule back to steepest edge pricing instead of quickstart steepest edge pricing
 - made sorting method more robust
+- LNS heuristics now use SCIPcopy() by default
+- considering inactive variables in undercover heuristic; limiting effort for solving covering problem
 
 fixed bugs:
 - fixed bug in propagation of indicator constraints: cannot fix slack variable to 0 if linear constraint is disabled/not active
@@ -98,6 +109,17 @@ fixed bugs:
 - fixed bug w.r.t. counting feasible solutions and turned of sparse solution test
 - fixed wrong changing of wasdelayed flag for propagators
 - fixed bug in cons_countsols.c w.r.t. none active variables
+- deactived checking of zero solution in Zimpl reader when no starting values are provided
+- LP solution status is now checked when checking root LP solution. Otherwise, due to different time measurements, 
+  it might happen that the LP solving was stopped due to the time limit, but SCIP did not reach the limit, yet.
+- fixed memory leak in coloring part of maximum clique algorithm (tclique_coloring.c)
+- fixed bug in debug.c: removed tree nodes had not been checked if they were pruned due to an incumbent solution found by a diving heuristic
+- fixed bugs in changing the initial and checked flags for constraints in original problem
+- fixed bug using wrong sign in infinity check in prop_pseudoobj
+- fixed bug trying to tighten multiaggregated variables, which have only one active representation, and this variable is already tightened
+- fixed bug in ZI round heuristic that led to infeasible shiftings for numerically slightly infeasible rows with close-to-zero coefficients
+- fixed memory leak in coloring part of maximum clique algorithm (tclique_coloring.c) in a better way
+- fixed assert in sepa_clique.c which is currently not valid because implicit binary variables in cliques are ignored
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})
@@ -106,6 +128,9 @@ plugins:
 - all C template files are now called <plugintype>_xyz.{c,h} instead of <plugintype>_xxx.{c,h}
 - added first version of cons_disjunction.{c,h} which allows a disjunctions of constraints
 - added first version of sepa_closecuts.{c,h} to separate cuts w.r.t. to a point that is closer to the integral polyhedron
+- added reader for variable bounds (reader_bnd.{c,h})
+- added BETA version of constraint handler for nonlinear constraints (cons_nonlinear.{c,h}) to handle nonlinear equations given by algebraic expressions using operands like addition, multiplication, power, exp, log; currently no trigonometric functions
+- added constraint handler for (signed) power constraints (cons_signedpower.{c,h}) to handle equations like z = sign(x)abs(x)^n, n > 1
 
 parameters:
 - added parameter <constraints/quadratic/disaggregate> to split a block-separable quadratic constraint into several quadratic constraint
@@ -145,6 +170,12 @@ parameters:
 - added parameter <propagating/%s/maxprerounds> for all propagators which allows to change to maximal number of rounds of presolving where this propagator participates in
 - added parameter <propagating/%s/presoldelay> for all propagators which allows to change if the presolving call of the given propagator should be delayed
 - added parameter <propagating/pseudoobj/propfullinroot> for allowing to propagate all variables in the root node, instead of stopping after 'maxcands' which is set by a parameter as well
+- added parameter <reading/gmsreader/signpower> to enable writing sign(x)abs(x)^n as the rarely used gams function signpower(x,n)
+- added parameters <constraints/indicator/forcerestart> and <constraints/indicator/restartfrac> to control forced restart in cons_indicator
+- new parameter <limit/maxorigsol> which defines the size of the solution candidate store (default value is 10)
+- all parameters in cons_indicator and cons_sos1 have been converted to lower case!
+- new parameters "conflict/bounddisjunction/continuousfrac" which defines the maximum percantage of continuous variables 
+  within a conflict create by the bounddisjunction consflict handler
 
 features:
 - flatzinc reader is now capable to read cumulative constraints
@@ -177,7 +208,7 @@ features:
   within a propagator  or a constraint handler
 - LP iterations in resolving calls can now be limited w.r.t. the average number of LP iterations in previous calls (after the root node);
   this is currently only done for the initial LP solve at a node and the corresponding parameter resolveiterfac is set to -1 (no limit) per default
-- added writing for pip files
+- added writing for pip files (linear, quadratic, polynomial nonlinear, polynomial signedpower, and and constraints)
 - reorganized computation of scores in cut filtering: instead of the computation at the time of addition, scores are now only computed w.r.t. the current LP solution and when cut filtering is performed; one can now fill the cut storage with cuts that were separated for different solutions
 - it is possible to change bounds of a variable in the interactive shell
 - it is possible to add a constraint to a problem in the interactive shell
@@ -193,6 +224,24 @@ features:
 - improved output of propagators in display statistics
 - new method SCIPpropSetPresolPriority which changes the presolving priority of a given propagator
 - new methods SCIPpropGetPresolPriority, SCIPpropGetPresolTime, SCIPpropWasPresolDelayed, SCIPpropGetNFixedVars, SCIPpropGetNAggrVars, SCIPpropGetNChgVarTypes, SCIPpropGetNChgBds, SCIPpropGetNAddHoles, SCIPpropGetNDelConss, SCIPpropGetNAddConss, SCIPpropGetNUpgdConss, SCIPpropGetNChgCoefs, SCIPpropGetNChgSides, SCIPpropGetTimingmask, SCIPpropDoesPresolve which return corresponding presolving information
+- changed computation of optimality gap which is now done in the same way as described in the MIPLIB 2010 paper:
+  the gap is 0, if primalbound (pb) and dualbound (db) are equal (within tolerances), it is infinity if pb and db have opposite signs,
+  and (this changed), if both have the same sign, the difference between pb and db is devided by the minimum of the absolute values of pb and db
+  (instead of always the dual bound)
+- new dialog "change freetransproblem" to free transformed problem in the interactive shell before changing the problem
+- the knapsack, setppc, and soc constraint handler can now parse their constraints
+- new method SCIPintervalPowerScalarInverse() to solve an equation y = x^p for given bounds on y and scalar exponent p
+- new method SCIPintervalQuadBivar() to compute tight bounds on a bivariate quadratic form
+- new method SCIPintervalSolveBivariateQuadExpressionAllScalar() to compute tight bounds on the solutions of a bivariate quadratic equation
+- the gams writer can now write nonlinear and signedpower constraints 
+- the pip and zimpl reader now create nonlinear constraints for polynomials of degree > 2
+- implement presolving in exitpre() in cons_orbitope and cons_indicator
+- implement possibility to force a restart in cons_indicator if enough indicator variables have been fixed
+- functionality to use the bound flipping ratio test of SoPlex is available (requires at least version 1.5.0.7)
+- there exists now a solution candidate store for the original problem;  during transformation these solutions are tried; during free the
+  transformed problem the best feasible solution of the transformed problem  are copied to the solution candidate store of the original problem; this
+  useful if you solve several problems iteratively, solutions get now carried over automatically.
+- solutions which are given by the user form the outside are now marked by '#' in the output
 
 design:
 - SCIP_HASHMAP now works also without block memory
@@ -200,6 +249,8 @@ design:
 - the old redcost separator sepa_redcost.{c.h} is now a propagator prop_redcost.{c,h}, all corresponding  parameters moved as well
 - moved all timings to type_timing.h
 - outsourced propAndSolve() method in solve.c which calls domain propagation and solving of the lp and relaxation
+- CIP format variable characters defined, e.g. SCIP_VARTYPE_INTEGER_CHAR
+- add expresssion graph data structures and methods for reformulation, domain propagation, and simple convexity check on nonlinear expressions
 
 Makefile
 - via "PARASCIP=true" as a "Makefile" option it is possible to compile SCIP threadsafe in DEBUG-mode, (in OPT-mode it's not necessary)
@@ -212,7 +263,9 @@ Makefile
   additionally, if building with gnu compilers, the Ipopt libraries directory is stored in the SCIP binary, which should make it easier to run with Ipopt shared libraries
 - new target "make libs" which compiles only the libraries
 - to link against Clp, only the base directory of an Clp installation needs to be specified now
-
+- moved *.test and *.solu files to folder testset in check folder and adjusted test scripts
+- adjusted all test scripts to use the same new optimality gap computation as in SCIP
+- added Makefile option "VALGRIND=true" to enable running the SCIP checks (make test) through valgrind; valgrind errors and memory leaks are reported as fails
 
 SCIP version 2.0.2
 ==================

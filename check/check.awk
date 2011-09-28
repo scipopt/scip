@@ -83,6 +83,7 @@ BEGIN {
    lpsname = "?";
    lpsversion = "?";
    scipversion = "?";
+   githash = "?";
    conftottime = 0.0;
    overheadtottime = 0.0;
    
@@ -163,11 +164,14 @@ BEGIN {
    gapreached = 0;
    sollimitreached = 0;
    memlimitreached = 0;
+   nodelimitreached = 0;
    starttime = 0.0;
    endtime = 0.0;
    timelimit = 0.0;
    inoriginalprob = 1;
    incons = 0;
+   valgrinderror = 0;
+   valgrindleaks = 0;
 }
 
 /@03/ { starttime = $2; }
@@ -201,6 +205,12 @@ BEGIN {
    if( NF >= 14 ) {
       split($14, v, "]");
       lpsversion = v[1];
+   }
+
+   # get git hash 
+   if( $(NF-1) == "[GitHash:" ) {
+      split($NF, v, "]");
+      githash = v[1];
    }
 }
 /^SCIP> SCIP> / { $0 = substr($0, 13, length($0)-12); }
@@ -329,6 +339,7 @@ BEGIN {
 /gap limit reached/ { gapreached = 1; }
 /solution limit reached/ { sollimitreached = 1; }
 /memory limit reached/ { memlimitreached = 1; }
+/node limit reached/ { nodelimitreached = 1; }
 /problem is solved/ { timeout = 0; }
 /^  First Solution   :/ {
    timetofirst = $11;
@@ -375,6 +386,13 @@ BEGIN {
 #
 /^Solving Time       :/ { tottime = $4 } # for older scip version ( < 2.0.1.3 )
 /^  solving          :/ { tottime = $3 } 
+#
+# valgrind check
+#
+/^==[0-9]*== ERROR SUMMARY:/       { valgrinderror = $4 }
+/^==[0-9]*==    definitely lost:/  { valgrindleaks += $4 }
+/^==[0-9]*==    indirectly lost:/  { valgrindleaks += $4 }
+/^==[0-9]*==    possibly lost:/    { valgrindleaks += $4 }
 #
 # solver status overview (in order of priority): 
 # 1) solver broke before returning solution => abort
@@ -490,6 +508,8 @@ BEGIN {
       }
       else if( abs(db) < 1e-06 )
          gap = -1.0;
+      else if( abs(pb) < 1e-06 )
+         gap = -1.0;
       else if( pb*db < 0.0 )
          gap = -1.0;
       else if( abs(db) >= +infty )
@@ -497,7 +517,7 @@ BEGIN {
       else if( abs(pb) >= +infty )
          gap = -1.0;
       else
-         gap = 100.0*abs((pb-db)/db);
+         gap = 100.0*abs((pb-db)/min(abs(db),abs(pb)));
       if( gap < 0.0 )
          gapstr = "  --  ";
       else if( gap < 1e+04 )
@@ -529,8 +549,9 @@ BEGIN {
          aborted = 0;
          tottime = endtime - starttime;
       }
-      else if( gapreached || sollimitreached )
+      else if( gapreached || sollimitreached || memlimitreached || nodelimitreached )
          timeout = 0;
+
       if( aborted && tottime == 0.0 )
          tottime = timelimit;
       if( timelimit > 0.0 )
@@ -595,13 +616,19 @@ BEGIN {
             fail++;
          }
          else {
-            if( timeout || gapreached || sollimitreached ) {
+            if( timeout || gapreached || sollimitreached || memlimitreached || nodelimitreached ) 
+	    {
                if( timeout )
                   status = "timeout";
                else if( gapreached )
                   status = "gaplimit";
                else if( sollimitreached )
                   status = "sollimit";
+               else if( memlimitreached )
+                  status = "memlimit";
+               else if( nodelimitreached )
+                  status = "nodelimit";
+
                timeouttime += tottime;
                timeouts++;
             }
@@ -629,7 +656,7 @@ BEGIN {
             fail++;
          }
          else {
-            if( timeout || gapreached || sollimitreached ) {
+            if( timeout || gapreached || sollimitreached || memlimitreached || nodelimitreached ) {
                if( (objsense == 1 && sol[prob]-pb > reltol) || (objsense == -1 && pb-sol[prob] > reltol) ) {
                   status = "better";
                   timeouttime += tottime;
@@ -642,6 +669,10 @@ BEGIN {
                      status = "gaplimit";
                   else if( sollimitreached )
                      status = "sollimit";
+                  else if( memlimitreached )
+                     status = "memlimit";
+                  else if( nodelimitreached )
+                     status = "nodelimit";
                   timeouttime += tottime;
                   timeouts++;
                }
@@ -677,13 +708,17 @@ BEGIN {
                timeouts++;
             }
             else {
-               if( timeout || gapreached || sollimitreached ) {
+               if( timeout || gapreached || sollimitreached || memlimitreached || nodelimitreached ) {
                   if( timeout )
                      status = "timeout";
                   else if( gapreached )
                      status = "gaplimit";
                   else if( sollimitreached )
                      status = "sollimit";
+                  else if( memlimitreached )
+                     status = "memlimit";
+                  else if( nodelimitreached )
+                     status = "nodelimit";
                   timeouttime += tottime;
                   timeouts++;
                }
@@ -711,16 +746,14 @@ BEGIN {
          }
       }
       else if( solstatus[prob] == "feas" ) {
-         if( feasible ) {
-            if( timeout ) {
-               status = "timeout";
-               timeouttime += tottime;
-               timeouts++;
-            }
-            else {
-               status = "ok";
-               pass++;
-            }
+         if( timeout ) {
+            status = "timeout";
+            timeouttime += tottime;
+            timeouts++;
+         }
+         else if( feasible ) {
+            status = "ok";
+            pass++;
          }
          else {
             status = "fail";
@@ -744,12 +777,26 @@ BEGIN {
                   status = "gaplimit";
                else if( sollimitreached )
                   status = "sollimit";
+	       else if( memlimitreached )
+		  status = "memlimit";
+	       else if( nodelimitreached )
+		  status = "nodelimit";
                timeouttime += tottime;
                timeouts++;
             }
             else
                status = "unknown";
          }
+      }
+
+      if( valgrinderror > 0 ) {
+         status = "fail"
+         failtime += tottime;
+         fail++;
+      } else if( valgrindleaks > 0 ) {
+         status = "fail"
+         failtime += tottime;
+         fail++;
       }
 
       if( writesolufile ) {
@@ -892,5 +939,9 @@ END {
    }
 
    printf("@02 timelimit: %g\n", timelimit);
-   printf("@01 SCIP(%s)%s(%s):%s\n", scipversion, lpsname, lpsversion, settings);
+   printf("@01 SCIP(%s)%s(%s):%s", scipversion, lpsname, lpsversion, settings);
+   if( githash != "?" )
+      printf(" [GitHash: %s]\n", githash);
+   else
+      printf("\n");
 }

@@ -301,7 +301,7 @@ SCIP_DECL_DISPCOPY(dispCopyDefault)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' for chararcter of best solution */
+/** output method of display column to output file stream 'file' for character of best solution */
 static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputSolFound)
 {  /*lint --e{715}*/
@@ -319,7 +319,23 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputSolFound)
    dispdata = SCIPdispGetData(disp);
    if( sol != (SCIP_SOL*)dispdata )
    {
-      SCIPinfoMessage(scip, file, "%c", SCIPheurGetDispchar(SCIPgetSolHeur(scip, sol)));
+      SCIP_HEUR* heur;
+      char c;
+
+      heur = SCIPgetSolHeur(scip, sol);
+      
+      if( heur == NULL )
+      {
+         if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+            c = '#';
+         else
+            c = '*';
+      }
+      else
+         c = SCIPheurGetDispchar(heur);
+      
+      SCIPinfoMessage(scip, file, "%c", c);
+
       SCIPdispSetData(disp, (SCIP_DISPDATA*)sol);
    }
    else
@@ -424,7 +440,7 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputLPCondition)
 
    SCIP_CALL( SCIPlpiGetRealSolQuality(lpi, SCIP_LPSOLQUALITY_ESTIMCONDITION, &cond) );
 
-   if( cond == SCIP_INVALID )
+   if( cond == SCIP_INVALID )  /*lint !e777*/
       SCIPinfoMessage(scip, file, "   n/a ", cond);
    else
       SCIPinfoMessage(scip, file, "%.1e", cond);
@@ -654,16 +670,18 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputLPObjval)
    assert(scip != NULL);
 
    if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_NOTSOLVED )
-      lpobj = SCIP_INVALID;
+      SCIPinfoMessage(scip, file, "      --      ");
    else
+   {
       lpobj = SCIPgetLPObjval(scip);
 
-   if( SCIPisInfinity(scip, -lpobj ) || lpobj == SCIP_INVALID )
-      SCIPinfoMessage(scip, file, "      --      ");
-   else if( SCIPisInfinity(scip, lpobj) )
-      SCIPinfoMessage(scip, file, "    cutoff    ");
-   else
-      SCIPinfoMessage(scip, file, "%13.6e ", lpobj);
+      if( SCIPisInfinity(scip, -lpobj) )
+         SCIPinfoMessage(scip, file, "      --      ");
+      else if( SCIPisInfinity(scip, lpobj) )
+         SCIPinfoMessage(scip, file, "    cutoff    ");
+      else
+         SCIPinfoMessage(scip, file, "%13.6e ", lpobj);
+   }
 
    return SCIP_OKAY;
 }

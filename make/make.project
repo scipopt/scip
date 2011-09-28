@@ -20,6 +20,12 @@
 #@author  Timo Berthold 
 
 #-----------------------------------------------------------------------------
+# get real path to SCIP
+#-----------------------------------------------------------------------------
+SCIPREALPATH	=	$(realpath $(SCIPDIR))
+
+
+#-----------------------------------------------------------------------------
 # detect host architecture
 #-----------------------------------------------------------------------------
 include $(SCIPDIR)/make/make.detecthost
@@ -168,7 +174,7 @@ RANLIB		=
 endif
 
 ifneq ($(LINKRPATH),)
-LDFLAGS		+=	$(LINKRPATH)$(SCIPDIR)/$(LIBDIR)
+LDFLAGS		+=	$(LINKRPATH)$(SCIPREALPATH)/$(LIBDIR)
 endif
 
 #-----------------------------------------------------------------------------
@@ -212,7 +218,7 @@ endif
 
 ifeq ($(LPS),clp)
 # for newer Clp versions all linker flags are in share/coin/doc/Clp/clp_addlibs.txt
-CLPDIR		= 	$(SCIPDIR)/$(LIBDIR)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
+CLPDIR		= 	$(SCIPREALPATH)/$(LIBDIR)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
 LPSLDFLAGS	=	$(shell test -e $(CLPDIR)/share/coin/doc/Clp/clp_addlibs.txt && cat $(CLPDIR)/share/coin/doc/Clp/clp_addlibs.txt)
 # if we could not find clp_addlibs file, try to guess linker flags
 ifeq ($(LPSLDFLAGS),)
@@ -236,7 +242,7 @@ LPSLDFLAGS	=
 endif
 
 LPILIB		=	$(LPILIBNAME).$(BASE)
-LPILIBFILE	=	$(SCIPDIR)/lib/lib$(LPILIB).$(LIBEXT)
+LPILIBFILE	=	$(SCIPREALPATH)/lib/lib$(LPILIB).$(LIBEXT)
 
 
 #-----------------------------------------------------------------------------
@@ -311,7 +317,7 @@ endif
 
 SCIPLIBNAME	=	scip
 SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
-SCIPLIBFILE	=	$(SCIPDIR)/lib/lib$(SCIPLIB).$(LIBEXT)
+SCIPLIBFILE	=	$(SCIPREALPATH)/lib/lib$(SCIPLIB).$(LIBEXT)
 
 
 #-----------------------------------------------------------------------------
@@ -320,7 +326,7 @@ SCIPLIBFILE	=	$(SCIPDIR)/lib/lib$(SCIPLIB).$(LIBEXT)
 
 OBJSCIPLIBNAME	=	objscip
 OBJSCIPLIB	=	$(OBJSCIPLIBNAME).$(BASE)
-OBJSCIPLIBFILE	=	$(SCIPDIR)/lib/lib$(OBJSCIPLIB).$(LIBEXT)
+OBJSCIPLIBFILE	=	$(SCIPREALPATH)/lib/lib$(OBJSCIPLIB).$(LIBEXT)
 
 
 #-----------------------------------------------------------------------------
@@ -329,4 +335,4 @@ OBJSCIPLIBFILE	=	$(SCIPDIR)/lib/lib$(OBJSCIPLIB).$(LIBEXT)
 
 NLPILIBNAME	=	nlpi$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAMEIPOPT)
 NLPILIB		=	$(NLPILIBNAME).$(BASE)
-NLPILIBFILE	=	$(SCIPDIR)/lib/lib$(NLPILIB).$(LIBEXT)
+NLPILIBFILE	=	$(SCIPREALPATH)/lib/lib$(NLPILIB).$(LIBEXT)

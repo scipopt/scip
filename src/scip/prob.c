@@ -212,22 +212,22 @@ SCIP_RETCODE SCIPprobCopy(
    SCIP_CALL( SCIPprobCreate(prob, blkmem, set, name, NULL, NULL, NULL, NULL, NULL, NULL, NULL, FALSE) );
    
    /* call user copy callback method */
-   if ( sourceprob->probdata != NULL && sourceprob->probcopy != NULL )
+   if( sourceprob->probdata != NULL && sourceprob->probcopy != NULL )
    {
       SCIP_CALL( sourceprob->probcopy(set->scip, sourcescip, sourceprob->probdata, varmap, consmap, &targetdata, global, &result) );
 
       /* evaluate result */
-      if ( result != SCIP_DIDNOTRUN && result != SCIP_SUCCESS )
+      if( result != SCIP_DIDNOTRUN && result != SCIP_SUCCESS )
       {
-         SCIPerrorMessage("prodata copying method returned invalid result <%d>\n", result);
+         SCIPerrorMessage("probdata copying method returned invalid result <%d>\n", result);
          return SCIP_INVALIDRESULT;
       }
 
       assert(targetdata == NULL || result == SCIP_SUCCESS);
    }
 
-   /* if copying was successfull, add data and callbacks */
-   if ( result == SCIP_SUCCESS )
+   /* if copying was successful, add data and callbacks */
+   if( result == SCIP_SUCCESS )
    {
       assert( targetdata != NULL );
       (*prob)->probdelorig = sourceprob->probdelorig;
@@ -418,6 +418,8 @@ SCIP_RETCODE SCIPprobTransform(
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
@@ -483,12 +485,14 @@ SCIP_RETCODE SCIPprobTransform(
          SCIP_CALL( SCIPconshdlrLockVars(set->conshdlrs[h], set) );
       }
    }
-
+   
    /* objective value is always integral, iff original objective value is always integral and shift is integral */
    (*target)->objisintegral = source->objisintegral && SCIPsetIsIntegral(set, (*target)->objoffset);
 
-   /* check, wheter objective value is always integral by inspecting the problem */
-   SCIPprobCheckObjIntegral(*target, set);
+   /* check, whether objective value is always integral by inspecting the problem, if it is the case adjust the
+    * cutoff bound if primal solution is already known 
+    */
+   SCIP_CALL( SCIPprobCheckObjIntegral(*target, blkmem, set, stat, primal, tree, lp, eventqueue) );
 
    return SCIP_OKAY;
 }
@@ -553,7 +557,7 @@ void probInsertVar(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   /* original variables can not go into transformed problem and transformed variables cannot go into original problem */
+   /* original variables cannot go into transformed problem and transformed variables cannot go into original problem */
    assert((SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL) == prob->transformed);
 
    /* insert variable in array */
@@ -733,7 +737,7 @@ SCIP_RETCODE SCIPprobAddVar(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   /* original variables can not go into transformed problem and transformed variables cannot go into original problem */
+   /* original variables cannot go into transformed problem and transformed variables cannot go into original problem */
    assert((SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL) == prob->transformed);
 
 #ifndef NDEBUG
@@ -1179,11 +1183,17 @@ void SCIPprobSetObjIntegral(
 }
 
 /** sets integral objective value flag, if all variables with non-zero objective values are integral and have 
- *  integral objective value
+ *  integral objective value and also updates the cutoff bound if primal solution is already known
  */
-void SCIPprobCheckObjIntegral(
+SCIP_RETCODE SCIPprobCheckObjIntegral(
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
    SCIP_Real obj;
@@ -1193,15 +1203,15 @@ void SCIPprobCheckObjIntegral(
    
    /* if we know already, that the objective value is integral, nothing has to be done */
    if( prob->objisintegral )
-      return;
-
+      return SCIP_OKAY;
+   
    /* if there exist unknown variables, we cannot conclude that the objective value is always integral */
    if( set->nactivepricers != 0 )
-      return;
+      return SCIP_OKAY;
 
    /* if the objective value offset is fractional, the value itself is possibly fractional */
    if( !SCIPsetIsIntegral(set, prob->objoffset) )
-      return;
+      return SCIP_OKAY;
 
    /* scan through the variables */
    for( v = 0; v < prob->nvars; ++v )
@@ -1223,7 +1233,15 @@ void SCIPprobCheckObjIntegral(
    }
 
    /* objective value is integral, if the variable loop scanned all variables */
-   prob->objisintegral = (v == prob->nvars);
+   if( v == prob->nvars )
+   {
+      prob->objisintegral = TRUE;
+
+      /* update upper bound and cutoff bound in primal data structure due to new internality information */
+      SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, prob, tree, lp) );
+   }
+
+   return SCIP_OKAY;
 }
 
 /** if possible, scales objective function such that it is integral with gcd = 1 */
@@ -1249,7 +1267,7 @@ SCIP_RETCODE SCIPprobScaleObj(
       return SCIP_OKAY;
 
    nints = prob->nvars - prob->ncontvars;
-   
+
    /* scan through the continuous variables */
    for( v = nints; v < prob->nvars; ++v )
    {
@@ -1378,9 +1396,6 @@ SCIP_RETCODE SCIPprobExitPresolve(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
-   /* check, wheter objective value is always integral */
-   SCIPprobCheckObjIntegral(prob, set);
-
    return SCIP_OKAY;
 }
 
@@ -1569,7 +1584,7 @@ SCIP_VAR* SCIPprobFindVar(
    {
       SCIPerrorMessage("Cannot find variable if variable-names hashtable was disabled (due to parameter <misc/usevartable>)\n");
       SCIPABORT();/*lint --e{527}*/ /* only in debug mode */
-      return (SCIP_VAR*) NULL;
+      return NULL;
    }
 
    return (SCIP_VAR*)(SCIPhashtableRetrieve(prob->varnames, (char*)name));
@@ -1588,7 +1603,7 @@ SCIP_CONS* SCIPprobFindCons(
    {
       SCIPerrorMessage("Cannot find constraint if constraint-names hashtable was disabled (due to parameter <misc/useconstable>)\n");
       SCIPABORT();/*lint --e{527}*/ /* only in debug mode */
-      return (SCIP_CONS*) NULL;
+      return NULL;
    }
 
    return (SCIP_CONS*)(SCIPhashtableRetrieve(prob->consnames, (char*)name));
@@ -1641,6 +1656,6 @@ void SCIPprobPrintStatistics(
    SCIPmessageFPrintInfo(file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
       prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars);
    SCIPmessageFPrintInfo(file, "  Constraints      : %d initial, %d maximal\n", prob->startnconss, prob->maxnconss);
-   if ( ! prob->transformed )
+   if( ! prob->transformed )
       SCIPmessageFPrintInfo(file, "  Objective sense  : %s\n", prob->objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");
 }

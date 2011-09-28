@@ -30,8 +30,9 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
 {
    SCIP_NLPI* nlpi;
 
+   SCIP_CALL( SCIPincludeConshdlrNonlinear(scip) ); /* nonlinear must be before linear, quadratic, signedpower, and and due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrQuadratic(scip) ); /* quadratic must be before linear due to constraint upgrading */
-   SCIP_CALL( SCIPincludeConshdlrLinear(scip) ); /* linear must be before its specialisations due to constraint upgrading */
+   SCIP_CALL( SCIPincludeConshdlrLinear(scip) ); /* linear must be before its specializations due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrAnd(scip) );
    SCIP_CALL( SCIPincludeConshdlrBounddisjunction(scip) );
    SCIP_CALL( SCIPincludeConshdlrConjunction(scip) );
@@ -47,18 +48,13 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeConshdlrOrbitope(scip) );
    SCIP_CALL( SCIPincludeConshdlrPseudoboolean(scip) );
    SCIP_CALL( SCIPincludeConshdlrSetppc(scip) );
+   SCIP_CALL( SCIPincludeConshdlrSignedpower(scip) );
    SCIP_CALL( SCIPincludeConshdlrSOS1(scip) );
    SCIP_CALL( SCIPincludeConshdlrSOS2(scip) );
-   SCIP_CALL( SCIPincludeConshdlrSOC(scip) ); /* SOC need to be after quadratic due to constraint upgrading */
+   SCIP_CALL( SCIPincludeConshdlrSOC(scip) ); /* SOC needs to be after quadratic due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrVarbound(scip) );
    SCIP_CALL( SCIPincludeConshdlrXor(scip) );
-
-#if 0
-   SCIP_CALL( SCIPincludeConshdlrEqknapsack(scip) );
-   SCIP_CALL( SCIPincludeConshdlrInvarknapsack(scip) );
-   SCIP_CALL( SCIPincludeConshdlrBinpack(scip) );
-#endif
-
+   SCIP_CALL( SCIPincludeReaderBnd(scip) );
    SCIP_CALL( SCIPincludeReaderCcg(scip) );
    SCIP_CALL( SCIPincludeReaderCip(scip) );
    SCIP_CALL( SCIPincludeReaderCnf(scip) );

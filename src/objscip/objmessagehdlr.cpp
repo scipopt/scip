@@ -121,6 +121,7 @@ SCIP_RETCODE SCIPcreateObjMessagehdlr(
    )
 {
    SCIP_MESSAGEHDLRDATA* messagehdlrdata;
+   SCIP_RETCODE retcode;
 
    /* create file messagehdlr data */
    messagehdlrdata = new SCIP_MESSAGEHDLRDATA;
@@ -128,9 +129,19 @@ SCIP_RETCODE SCIPcreateObjMessagehdlr(
    messagehdlrdata->deleteobject = deleteobject;
 
    /* create message handler */
-   SCIP_CALL( SCIPcreateMessagehdlr(messagehdlr, objmessagehdlr->scip_bufferedoutput_,
-         messagehdlrErrorObj, messagehdlrWarningObj, messagehdlrDialogObj, messagehdlrInfoObj,
-         messagehdlrdata) ); /*lint !e429*/
+   retcode = SCIPcreateMessagehdlr(messagehdlr, objmessagehdlr->scip_bufferedoutput_,
+      messagehdlrErrorObj, messagehdlrWarningObj, messagehdlrDialogObj, messagehdlrInfoObj,
+      messagehdlrdata); /*lint !e429*/
+
+   if( retcode != SCIP_OKAY )
+   {
+      /* free message handler object */
+      if( messagehdlrdata->deleteobject )
+         delete messagehdlrdata->objmessagehdlr;
+
+      delete messagehdlrdata;
+      SCIP_CALL( retcode );
+   }
 
    return SCIP_OKAY; /*lint !e429*/
 }
