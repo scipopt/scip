@@ -46,6 +46,7 @@ BEGIN {
    useshortnames = 1;           # should problem name be truncated to fit into column?
    writesolufile = 0;           # should a solution file be created from the results
    printsoltimes = 0;           # should the times until first and best solution be shown
+   checksol = 1;                # should the solution check of SCIP be parsed and counted as a fail if best solution is not feasible?
    NEWSOLUFILE = "new_solufile.solu";
    infty = +1e+20;
    headerprinted = 0;
@@ -172,6 +173,7 @@ BEGIN {
    incons = 0;
    valgrinderror = 0;
    valgrindleaks = 0;
+   bestsolfeas = 1;
 }
 
 /@03/ { starttime = $2; }
@@ -341,6 +343,8 @@ BEGIN {
 /memory limit reached/ { memlimitreached = 1; }
 /node limit reached/ { nodelimitreached = 1; }
 /problem is solved/ { timeout = 0; }
+/best solution is not feasible in original problem/  { bestsolfeas = 0; }
+
 /^  First Solution   :/ {
    timetofirst = $11;
    firstpb = $4;
@@ -602,6 +606,12 @@ BEGIN {
       }
       else if( aborted ) {
          status = "abort";
+         failtime += tottime;
+         fail++;
+      }
+
+      else if( checksol && !bestsolfeas ) {
+         status = "fail";
          failtime += tottime;
          fail++;
       }
