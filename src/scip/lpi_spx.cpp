@@ -3923,14 +3923,10 @@ SCIP_RETCODE SCIPlpiReadState(
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
-   bool res;
-   SOPLEX_TRY( res = lpi->spx->readBasisFile(fname, 0, 0) );
+   bool success;
+   SOPLEX_TRY( success = lpi->spx->readBasisFile(fname, 0, 0) );
 
-   if ( ! res )
-      return SCIP_ERROR;
-   return SCIP_OKAY;
-
-   return SCIP_INVALIDCALL;
+   return success ? SCIP_OKAY : SCIP_ERROR;
 }
 
 /** writes LP state (like basis information) to a file */
