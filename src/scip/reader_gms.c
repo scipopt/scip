@@ -38,7 +38,7 @@
 #include "scip/cons_setppc.h"
 #include "scip/cons_varbound.h"
 #include "scip/cons_indicator.h"
-#include "scip/cons_signedpower.h"
+#include "scip/cons_abspower.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_bivariate.h"
 #include "scip/pub_misc.h"
@@ -2199,9 +2199,9 @@ SCIP_RETCODE SCIPwriteGms(
       rangedrow = rangedrow || (strcmp(conshdlrname, "nonlinear") == 0
          && !SCIPisInfinity(scip, -SCIPgetLhsNonlinear(scip, cons)) && !SCIPisInfinity(scip, SCIPgetRhsNonlinear(scip, cons))
          && !SCIPisEQ(scip, SCIPgetLhsNonlinear(scip, cons), SCIPgetRhsNonlinear(scip, cons)));
-      rangedrow = rangedrow || (strcmp(conshdlrname, "signedpower") == 0
-         && !SCIPisInfinity(scip, -SCIPgetLhsSignedpower(scip, cons)) && !SCIPisInfinity(scip, SCIPgetRhsSignedpower(scip, cons))
-         && !SCIPisEQ(scip, SCIPgetLhsSignedpower(scip, cons), SCIPgetRhsSignedpower(scip, cons)));
+      rangedrow = rangedrow || (strcmp(conshdlrname, "abspower") == 0
+         && !SCIPisInfinity(scip, -SCIPgetLhsAbspower(scip, cons)) && !SCIPisInfinity(scip, SCIPgetRhsAbspower(scip, cons))
+         && !SCIPisEQ(scip, SCIPgetLhsAbspower(scip, cons), SCIPgetRhsAbspower(scip, cons)));
       rangedrow = rangedrow || (strcmp(conshdlrname, "bivariate") == 0
          && !SCIPisInfinity(scip, -SCIPgetLhsBivariate(scip, cons)) && !SCIPisInfinity(scip, SCIPgetRhsBivariate(scip, cons))
          && !SCIPisEQ(scip, SCIPgetLhsBivariate(scip, cons), SCIPgetRhsBivariate(scip, cons)));
@@ -2220,7 +2220,7 @@ SCIP_RETCODE SCIPwriteGms(
       }
       else if( strcmp(conshdlrname, "knapsack") == 0 || strcmp(conshdlrname, "logicor") == 0 || strcmp(conshdlrname, "setppc") == 0
             || strcmp(conshdlrname, "linear") == 0 || strcmp(conshdlrname, "quadratic") == 0 || strcmp(conshdlrname, "varbound") == 0
-            || strcmp(conshdlrname, "soc") == 0 || strcmp(conshdlrname, "signedpower") == 0 || strcmp(conshdlrname, "bivariate") == 0
+            || strcmp(conshdlrname, "soc") == 0 || strcmp(conshdlrname, "abspower") == 0 || strcmp(conshdlrname, "bivariate") == 0
             || strcmp(conshdlrname, "nonlinear") == 0 )
       {
          (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", consname, (c < nconss - 1) ? "," : ";");
@@ -2419,12 +2419,12 @@ SCIP_RETCODE SCIPwriteGms(
             SCIPgetBinaryVarIndicator(cons), SCIPgetSlackVarIndicator(cons),
             transformed) );
       }
-      else if( strcmp(conshdlrname, "signedpower") == 0 )
+      else if( strcmp(conshdlrname, "abspower") == 0 )
       {
          SCIP_CALL( printSignpowerCons(scip, file, consname,
-            SCIPgetNonlinearVarSignedpower(scip, cons), SCIPgetLinearVarSignedpower(scip, cons),
-            SCIPgetExponentSignedpower(scip, cons), SCIPgetOffsetSignedpower(scip, cons), SCIPgetCoefLinearSignedpower(scip, cons),
-            SCIPgetLhsSignedpower(scip, cons),  SCIPgetRhsSignedpower(scip, cons), transformed, signpowerallowed) );
+            SCIPgetNonlinearVarAbspower(scip, cons), SCIPgetLinearVarAbspower(scip, cons),
+            SCIPgetExponentAbspower(scip, cons), SCIPgetOffsetAbspower(scip, cons), SCIPgetCoefLinearAbspower(scip, cons),
+            SCIPgetLhsAbspower(scip, cons),  SCIPgetRhsAbspower(scip, cons), transformed, signpowerallowed) );
 
          nlcons = TRUE;
          nqcons = TRUE;

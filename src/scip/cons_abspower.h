@@ -13,10 +13,10 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_signedpower.h
- * @brief  constraint handler for signedpower constraints
+/**@file   cons_abspower.h
+ * @brief  constraint handler for absolute power constraints
  * @author Stefan Vigerske
- * 
+ *
  * This constraint handler handles constraints of the form
  * \f[
  *   lhs \leq sign(x+offset) |x+offset|^n + c z \leq rhs
@@ -27,8 +27,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_CONS_SIGNEDPOWER_H__
-#define __SCIP_CONS_SIGNEDPOWER_H__
+#ifndef __SCIP_CONS_ABSPOWER_H__
+#define __SCIP_CONS_ABSPOWER_H__
 
 #include "scip/scip.h"
 
@@ -36,15 +36,15 @@
 extern "C" {
 #endif
 
-/** creates the handler for signedpower constraints and includes it in SCIP */
+/** creates the handler for absolute power constraints and includes it in SCIP */
 extern
-SCIP_RETCODE SCIPincludeConshdlrSignedpower(
+SCIP_RETCODE SCIPincludeConshdlrAbspower(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates and captures a signedpower constraint */
+/** creates and captures a absolute power constraint */
 extern
-SCIP_RETCODE SCIPcreateConsSignedpower(
+SCIP_RETCODE SCIPcreateConsAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
@@ -71,7 +71,7 @@ SCIP_RETCODE SCIPcreateConsSignedpower(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are seperated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -80,68 +80,68 @@ SCIP_RETCODE SCIPcreateConsSignedpower(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
-/** gets the signedpower constraint as a nonlinear row representation */
+/** gets the absolute power constraint as a nonlinear row representation */
 extern
-SCIP_RETCODE SCIPgetNlRowSignedpower(
+SCIP_RETCODE SCIPgetNlRowAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_NLROW**          nlrow               /**< a buffer where to store pointer to nonlinear row */
 );
 
-/** gets nonlinear variable x in signedpower constraint */
+/** gets nonlinear variable x in absolute power constraint */
 extern
-SCIP_VAR* SCIPgetNonlinearVarSignedpower(
+SCIP_VAR* SCIPgetNonlinearVarAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< signedpower constraint */
+   SCIP_CONS*            cons                /**< absolute power constraint */
 );
 
-/** gets linear variable z in signedpower constraint */
+/** gets linear variable z in absolute power constraint */
 extern
-SCIP_VAR* SCIPgetLinearVarSignedpower(
+SCIP_VAR* SCIPgetLinearVarAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< signedpower constraint */
+   SCIP_CONS*            cons                /**< absolute power constraint */
 );
 
-/** gets exponent in power term in signedpower constraint */
+/** gets exponent in power term in absolute power constraint */
 extern
-SCIP_Real SCIPgetExponentSignedpower(
+SCIP_Real SCIPgetExponentAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< signedpower constraint */
+   SCIP_CONS*            cons                /**< absolute power constraint */
 );
 
-/** gets offset in power term in signedpower constraint */
+/** gets offset in power term in absolute power constraint */
 extern
-SCIP_Real SCIPgetOffsetSignedpower(
+SCIP_Real SCIPgetOffsetAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< signedpower constraint */
+   SCIP_CONS*            cons                /**< absolute power constraint */
 );
 
-/** gets coefficient of linear variable in signedpower constraint */
+/** gets coefficient of linear variable in absolute power constraint */
 extern
-SCIP_Real SCIPgetCoefLinearSignedpower(
+SCIP_Real SCIPgetCoefLinearAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< signedpower constraint */
+   SCIP_CONS*            cons                /**< absolute power constraint */
 );
 
-/** gets left hand side in signedpower constraint */
+/** gets left hand side in absolute power constraint */
 extern
-SCIP_Real SCIPgetLhsSignedpower(
+SCIP_Real SCIPgetLhsAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< signedpower constraint */
+   SCIP_CONS*            cons                /**< absolute power constraint */
 );
 
-/** gets right hand side in signedpower constraint */
+/** gets right hand side in absolute power constraint */
 extern
-SCIP_Real SCIPgetRhsSignedpower(
+SCIP_Real SCIPgetRhsAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< signedpower constraint */
+   SCIP_CONS*            cons                /**< absolute power constraint */
 );
 
-/** gets the absolute violation of a signedpower constraint by a solution */
+/** gets the absolute violation of a absolute power constraint by a solution */
 extern
-SCIP_Real SCIPgetViolationSignedpower(
+SCIP_Real SCIPgetViolationAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< signedpower constraint */
+   SCIP_CONS*            cons,               /**< absolute power constraint */
    SCIP_SOL*             sol                 /**< LP solution */
    );
 

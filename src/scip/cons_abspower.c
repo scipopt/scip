@@ -13,9 +13,9 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_signedpower.c
+/**@file   cons_abspower.c
  * @ingroup CONSHDLRS
- * @brief  constraint handler for signedpower constraints
+ * @brief  constraint handler for absolute power constraints
  * @author Stefan Vigerske
  */
 
@@ -24,7 +24,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/cons_signedpower.h"
+#include "scip/cons_abspower.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_indicator.h"
 #include "scip/cons_quadratic.h"
@@ -36,8 +36,8 @@
 #include "scip/debug.h"
 
 /* constraint handler properties */
-#define CONSHDLR_NAME          "signedpower"
-#define CONSHDLR_DESC          "constraint handler for signedpower constraints lhs <= sign(x+offset)|x+offset|^n + c*z <= rhs"
+#define CONSHDLR_NAME          "abspower"
+#define CONSHDLR_DESC          "constraint handler for absolute power constraints lhs <= sign(x+offset)abs(x+offset)^n + c*z <= rhs"
 #define CONSHDLR_SEPAPRIORITY         0 /**< priority of the constraint handler for separation */
 #define CONSHDLR_ENFOPRIORITY       -30 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY -3500000 /**< priority of the constraint handler for checking feasibility */
@@ -102,7 +102,7 @@ SCIP_Real roots[ROOTS_KNOWN+1] = {
     0.73192937842370733350    /**< root for n=10 */
 };
 
-/** constraint data for signedpower constraints */
+/** constraint data for absolute power constraints */
 struct SCIP_ConsData
 {
    SCIP_VAR*             x;                  /**< variable x in sign(x+offset)|x+offset|^n term */
@@ -134,7 +134,7 @@ struct SCIP_ConshdlrData
    SCIP_Real             mincutefficacysepa; /**< minimal efficacy of a cut in order to add it to relaxation during separation */
    SCIP_Real             mincutefficacyenfofac;/**< minimal target efficacy of a cut in order to add it to relaxation during enforcement as factor of feasibility tolerance (may be ignored) */
    SCIP_Real             cutmaxrange;        /**< maximal coef range (maximal abs coef / minimal abs coef) of a cut in order to be added to LP */
-   SCIP_Bool             projectrefpoint;    /**< whether to project the reference point when linearizing a signedpower constraint in a convex region */
+   SCIP_Bool             projectrefpoint;    /**< whether to project the reference point when linearizing a absolute power constraint in a convex region */
    int                   preferzerobranch;   /**< how much we prefer to branch on 0.0 first */
    SCIP_Bool             branchminconverror; /**< whether to compute branching point such that the convexification error is minimized after branching on 0.0 */
    SCIP_Bool             addvarbounds;       /**< will variable bounds be added to the cutpool? */
@@ -147,7 +147,7 @@ struct SCIP_ConshdlrData
    SCIP_EVENTHDLR*       eventhdlr;          /**< our handler for bound change events on variable x */
    SCIP_CONSHDLR*        conshdlrindicator;  /**< a pointer to the indicator constraint handler */
    int                   newsoleventfilterpos;/**< filter position of new solution event handler, if catched */
-   SCIP_Bool             comparedpairwise;   /**< did we compare signedpower constraints pairwise in this run? */
+   SCIP_Bool             comparedpairwise;   /**< did we compare absolute power constraints pairwise in this run? */
    int                   sepanlprounds;      /**< number of root node separation rounds in current run in which the NLP relaxation solution was used as reference point */
 };
 
@@ -490,23 +490,23 @@ SCIP_RETCODE presolveFindDuplicatesUpgradeCons(
    return SCIP_OKAY;
 }
 
-/** solves a system of two signedpower equations
+/** solves a system of two absolute power equations
  * Given:   (x+xoffset1)|x+xoffset1|^{exponent-1} + zcoef1 * z == rhs1
  *      and (x+xoffset2)|x+xoffset2|^{exponent-1} + zcoef2 * z == rhs2
  * with xoffset1 != xoffset2 and zcoef1 * rhs2 == zcoef2 * rhs1 and exponent == 2,
  * finds values for x and z that satisfy these equations, or reports infeasibility if no solution exists.
- * 
+ *
  * Multiplying the second equation by -zcoef1/zcoef2 and adding it to the first one gives
  *   (x+xoffset1)|x+xoffset1| - zcoef1/zcoef2 (x+offset2)|x+offset2| == 0
- * 
+ *
  * If zcoef1 == zcoef2, then there exists, due to monotonicity of x|x|, no x such that
  *   (x+xoffset1)|x+xoffset1| == (x+xoffset2)|x+xoffset2|.
- * 
+ *
  * In general, for zcoef1 / zcoef2 > 0.0, we get
  *   x = (xoffset2 - xoffset1) / (sqrt(zcoef2 / zcoef1) - 1.0) - xoffset1,
  * and for zcoef1 / zcoef2 < 0.0, we get
  *   x = (xoffset2 - xoffset1) / (-sqrt(-zcoef2 / zcoef1) - 1.0) - xoffset1.
- * 
+ *
  * This then yields z = (rhs1 - (x+xoffset1)|x+xoffset1|) / zcoef1.
  */
 static
@@ -515,13 +515,13 @@ void presolveFindDuplicatesSolveEquations(
    SCIP_Bool*            infeas,             /**< buffer to indicate if the system of equations has no solution */
    SCIP_Real*            xval,               /**< buffer to store value of x in the solution, if any */
    SCIP_Real*            zval,               /**< buffer to store value of z in the solution, if any */
-   SCIP_Real             exponent,           /**< exponent in signedpower equations */
-   SCIP_Real             xoffset1,           /**< offset for x in first signedpower equation */
-   SCIP_Real             zcoef1,             /**< coefficient of z in first signedpower equation */
-   SCIP_Real             rhs1,               /**< right-hand-side in first signedpower equation */
-   SCIP_Real             xoffset2,           /**< offset for x in second signedpower equation */
-   SCIP_Real             zcoef2,             /**< coefficient of z in second signedpower equation */
-   SCIP_Real             rhs2                /**< right-hand-side in second signedpower equation */
+   SCIP_Real             exponent,           /**< exponent in absolute power equations */
+   SCIP_Real             xoffset1,           /**< offset for x in first absolute power equation */
+   SCIP_Real             zcoef1,             /**< coefficient of z in first absolute power equation */
+   SCIP_Real             rhs1,               /**< right-hand-side in first absolute power equation */
+   SCIP_Real             xoffset2,           /**< offset for x in second absolute power equation */
+   SCIP_Real             zcoef2,             /**< coefficient of z in second absolute power equation */
+   SCIP_Real             rhs2                /**< right-hand-side in second absolute power equation */
 )
 {
    assert(scip != NULL);
@@ -539,13 +539,13 @@ void presolveFindDuplicatesSolveEquations(
       presolveFindDuplicatesSolveEquations(scip, infeas, xval, zval, exponent, xoffset2, zcoef2, rhs2, xoffset1, zcoef1, rhs1);
       return;
    }
-   
+
    if( SCIPisEQ(scip, zcoef1, zcoef2) )
    {
       *infeas = TRUE;
       return;
    }
-   
+
    *infeas = FALSE;
 
    if( SCIPisEQ(scip, zcoef1, -zcoef2) )
@@ -564,16 +564,16 @@ void presolveFindDuplicatesSolveEquations(
 
    *zval = rhs1 - (*xval + xoffset1) * REALABS(*xval + xoffset1);
    *zval /= zcoef1;
-   
+
    assert(SCIPisFeasEQ(scip, (*xval + xoffset1) * REALABS(*xval + xoffset1) + zcoef1 * *zval, rhs1));
    assert(SCIPisFeasEQ(scip, (*xval + xoffset2) * REALABS(*xval + xoffset2) + zcoef2 * *zval, rhs2));
 }
 
-/** finds and removes duplicates in a set of signedpower constraints */
+/** finds and removes duplicates in a set of absolute power constraints */
 static
 SCIP_RETCODE presolveFindDuplicates(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler for signedpower constraints */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler for absolute power constraints */
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
    int*                  nupgdconss,         /**< pointer where to add number of upgraded constraints */
@@ -622,17 +622,17 @@ SCIP_RETCODE presolveFindDuplicates(
 
       cons0 = conss[c];
 
-      assert(!SCIPconsIsModifiable(cons0));  /* signedpower constraints aren't modifiable */
+      assert(!SCIPconsIsModifiable(cons0));  /* absolute power constraints aren't modifiable */
       assert(!SCIPconsIsLocal(cons0));       /* shouldn't have local constraints in presolve */
       assert(SCIPconsIsActive(cons0));       /* shouldn't get inactive constraints here */
 
       hashtablelist = NULL;
-      
+
       do
       {
          SCIP_CONSDATA* consdata0;
          SCIP_CONSDATA* consdata1;
-         
+
          /* get constraint from current hash table with same x variable as cons0 and same exponent */
          cons1 = (SCIP_CONS*)(SCIPhashtableRetrieveNext(hashtable, &hashtablelist, (void*)cons0));
          if( cons1 == NULL )
@@ -654,7 +654,7 @@ SCIP_RETCODE presolveFindDuplicates(
 
          assert(consdata0->x        == consdata1->x);
          assert(consdata0->exponent == consdata1->exponent);
-         
+
          if( SCIPisEQ(scip, consdata0->xoffset, consdata1->xoffset) )
          {
             /* we have two constraints with the same (x+offset)|x+offset|^n term */
@@ -738,17 +738,17 @@ SCIP_RETCODE presolveFindDuplicates(
                SCIP_VAR*  vars[2];
                SCIP_Real  coefs[2];
 
-               SCIPdebugMessage("introduce new auxvar for signedpower(%s, %g, %g) to make <%s> and <%s> linear constraint\n", SCIPvarGetName(consdata0->x), consdata0->exponent, consdata0->xoffset, SCIPconsGetName(cons0), SCIPconsGetName(cons1));
+               SCIPdebugMessage("introduce new auxvar for signpower(%s+%g, %g) to make <%s> and <%s> linear constraint\n", SCIPvarGetName(consdata0->x), consdata0->exponent, consdata0->xoffset, SCIPconsGetName(cons0), SCIPconsGetName(cons1));
 
                /* create auxiliary variable to represent sign(x+offset)|x+offset|^n */
-               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "auxvar_signedpower%s_%g_%g", SCIPvarGetName(consdata0->x), consdata0->exponent, consdata0->xoffset);
+               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "auxvar_abspower%s_%g_%g", SCIPvarGetName(consdata0->x), consdata0->exponent, consdata0->xoffset);
                SCIP_CALL( SCIPcreateVar(scip, &auxvar, name, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS,
                   TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
                SCIP_CALL( SCIPaddVar(scip, auxvar) );
 
                /* create auxiliary constraint auxvar = sign(x+offset)|x+offset|^n */
-               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "auxcons_signedpower%s_%g_%g", SCIPvarGetName(consdata0->x), consdata0->exponent, consdata0->xoffset);
-               SCIP_CALL( SCIPcreateConsSignedpower(scip, &auxcons, name, consdata0->x, auxvar, consdata0->exponent, consdata0->xoffset, -1.0, 0.0, 0.0,
+               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "auxcons_abspower%s_%g_%g", SCIPvarGetName(consdata0->x), consdata0->exponent, consdata0->xoffset);
+               SCIP_CALL( SCIPcreateConsAbspower(scip, &auxcons, name, consdata0->x, auxvar, consdata0->exponent, consdata0->xoffset, -1.0, 0.0, 0.0,
                   SCIPconsIsInitial(cons0) || SCIPconsIsInitial(cons1),
                   SCIPconsIsSeparated(cons0) || SCIPconsIsSeparated(cons1),
                   SCIPconsIsEnforced(cons0) || SCIPconsIsEnforced(cons1),
@@ -805,15 +805,15 @@ SCIP_RETCODE presolveFindDuplicates(
                SCIP_CALL( SCIPdelCons(scip, cons1) );
                SCIP_CALL( SCIPhashtableRemove(hashtable, cons1) );
                *success = TRUE;
-               
+
                break;
             }
          }
-         else if( consdata0->z == consdata1->z && 
+         else if( consdata0->z == consdata1->z &&
             consdata0->exponent == 2.0 &&
             !SCIPisZero(scip, consdata0->zcoef) &&
             !SCIPisZero(scip, consdata1->zcoef) &&
-            SCIPisEQ(scip, consdata0->lhs, consdata0->rhs) && 
+            SCIPisEQ(scip, consdata0->lhs, consdata0->rhs) &&
             SCIPisEQ(scip, consdata1->lhs, consdata1->rhs) &&
             SCIPisEQ(scip, consdata0->lhs * consdata1->zcoef, consdata1->lhs * consdata0->zcoef) )
          {
@@ -822,14 +822,14 @@ SCIP_RETCODE presolveFindDuplicates(
              * Thus, we can report cutoff or fix the variables to this solution, and forget about the constraints.
              * @todo think about inequalities, differing exponents, and exponents != 2
              */
-            
+
             SCIP_Real xval;
             SCIP_Real zval;
-            
+
             assert(consdata0->x == consdata1->x);
             assert(consdata0->exponent == consdata1->exponent);
             assert(!SCIPisEQ(scip, consdata0->xoffset, consdata1->xoffset));
-            
+
             presolveFindDuplicatesSolveEquations(scip, infeas, &xval, &zval,
                consdata0->exponent,
                consdata0->xoffset, consdata0->zcoef, consdata0->lhs,
@@ -855,7 +855,7 @@ SCIP_RETCODE presolveFindDuplicates(
 
                SCIP_CALL( SCIPfixVar(scip, consdata0->x, xval, infeas, &fixed) );
                ++*ndelconss;
-               
+
                if( fixed )
                   ++*nfixedvars;
 
@@ -884,7 +884,7 @@ SCIP_RETCODE presolveFindDuplicates(
 
                SCIP_CALL( SCIPfixVar(scip, consdata0->z, zval, infeas, &fixed) );
                ++*ndelconss;
-               
+
                if( fixed )
                   ++*nfixedvars;
 
@@ -914,7 +914,7 @@ SCIP_RETCODE presolveFindDuplicates(
 
             break;
          }
-         
+
          if( hashtablelist == NULL )
          {
             /* processed all constraints like cons0 from hash table, but cons0 could not be removed, so insert cons0 into hashmap and go to conss[c+1] */
@@ -922,7 +922,7 @@ SCIP_RETCODE presolveFindDuplicates(
             break;
          }
       }
-      while( TRUE ); 
+      while( TRUE );
    }
 
    /* free hash table */
@@ -945,7 +945,7 @@ SCIP_RETCODE presolveFindDuplicates(
 
       cons0 = conss[c];
 
-      assert(!SCIPconsIsModifiable(cons0));  /* signedpower constraints aren't modifiable */
+      assert(!SCIPconsIsModifiable(cons0));  /* absolute power constraints aren't modifiable */
       assert(!SCIPconsIsLocal(cons0));       /* shouldn't have local constraints in presolve */
 
       /* do not consider constraints that we have deleted in the above loop */
@@ -993,9 +993,9 @@ SCIP_RETCODE presolveFindDuplicates(
 
          if( SCIPisEQ(scip, consdata0->lhs*consdata1->zcoef, consdata1->lhs*consdata0->zcoef) )
          {
-            /* have two signedpower equations with same z and compatible constants
-             * we can then reduce this to one signedpower and one linear equation
-             * -> x0 + xoffset0 = signedpower(zcoef0/zcoef1, 1/exponent) (x1 + xoffset1)
+            /* have two absolute power equations with same z and compatible constants
+             * we can then reduce this to one absolute power and one linear equation
+             * -> x0 + xoffset0 = signpower(zcoef0/zcoef1, 1/exponent) (x1 + xoffset1)
              * -> keep cons1
              * the latter can be realized as an aggregation (if x0 and x1 are not multiaggregated) or linear constraint
              */
@@ -1004,7 +1004,7 @@ SCIP_RETCODE presolveFindDuplicates(
             SCIP_Real coef;
             SCIP_Real rhs;
 
-            SCIPdebugMessage("<%s> and <%s> can be reformulated to one signedpower and one aggregation\n", SCIPconsGetName(cons0), SCIPconsGetName(cons1));
+            SCIPdebugMessage("<%s> and <%s> can be reformulated to one abspower and one aggregation\n", SCIPconsGetName(cons0), SCIPconsGetName(cons1));
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
 
@@ -1227,7 +1227,7 @@ SCIP_RETCODE tightenBounds(
    return SCIP_OKAY;
 }
 
-/** computes bounds on z in a signedpower constraints for given bounds on x */
+/** computes bounds on z in a absolute power constraints for given bounds on x */
 static
 void computeBoundsZ(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1280,7 +1280,7 @@ void computeBoundsZ(
    assert(!SCIPintervalIsEmpty(*zbnds));
 }
 
-/** computes bounds on x in a signedpower constraints for given bounds on z */
+/** computes bounds on x in a absolute power constraints for given bounds on z */
 static
 void computeBoundsX(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1337,7 +1337,7 @@ void computeBoundsX(
 static
 SCIP_RETCODE checkFixedVariables(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler for signedpower constraints */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler for absolute power constraints */
    SCIP_CONS*            cons,               /**< constraint */
    int*                  ndelconss,          /**< counter for number of deleted constraints */
    int*                  nupgdconss,         /**< counter for number of upgraded constraints */
@@ -1796,7 +1796,7 @@ SCIP_Real proposeBranchingPoint(
 }
 
 /** registers branching variable candidates
- * registers x for all violated signedpower constraints where x is not in convex region
+ * registers x for all violated absolute power constraints where x is not in convex region
  */
 static
 SCIP_RETCODE registerBranchingCandidates(
@@ -1848,7 +1848,7 @@ SCIP_RETCODE registerBranchingCandidates(
              )
           || (SCIPisFeasPositive(scip, consdata->lhsviol) &&
               (SCIPisInfinity(scip,  SCIPvarGetUbLocal(consdata->x)) ||
-               SCIPgetSolVal(scip, NULL, consdata->x) + consdata->xoffset >= -consdata->root * (SCIPvarGetUbLocal(consdata->x) + consdata->xoffset) ) 
+               SCIPgetSolVal(scip, NULL, consdata->x) + consdata->xoffset >= -consdata->root * (SCIPvarGetUbLocal(consdata->x) + consdata->xoffset) )
              )
          )
          {
@@ -1988,7 +1988,7 @@ SCIP_RETCODE resolvePropagation(
 
       case PROPRULE_INVALID:
       default:
-         SCIPerrorMessage("invalid inference information %d in signedpower constraint <%s>\n", proprule, SCIPconsGetName(cons));
+         SCIPerrorMessage("invalid inference information %d in absolute power constraint <%s>\n", proprule, SCIPconsGetName(cons));
          return SCIP_INVALIDDATA;
    }
 
@@ -2032,7 +2032,7 @@ SCIP_RETCODE analyzeConflict(
    return SCIP_OKAY;
 }
 
-/** propagation method for signedpower constraint
+/** propagation method for absolute power constraint
  * SCIPinferVarXbCons to allow for repropagation
  */
 static
@@ -2068,7 +2068,7 @@ SCIP_RETCODE propagateCons(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   SCIPdebugMessage("propagating signedpower constraint <%s>\n", SCIPconsGetName(cons));
+   SCIPdebugMessage("propagating absolute power constraint <%s>\n", SCIPconsGetName(cons));
 
    *cutoff = FALSE;
 
@@ -2358,7 +2358,7 @@ SCIP_RETCODE propagateCons(
 
    if( SCIPisFeasGE(scip, minact, consdata->lhs) && SCIPisFeasLE(scip, maxact, consdata->rhs) )
    {
-      SCIPdebugMessage("signedpower constraint <%s> is redundant: <%s>[%.15g,%.15g], <%s>[%.15g,%.15g]\n",
+      SCIPdebugMessage("absolute power constraint <%s> is redundant: <%s>[%.15g,%.15g], <%s>[%.15g,%.15g]\n",
          SCIPconsGetName(cons),
          SCIPvarGetName(consdata->x), SCIPvarGetLbLocal(consdata->x), SCIPvarGetUbLocal(consdata->x),
          SCIPvarGetName(consdata->z), SCIPvarGetLbLocal(consdata->z), SCIPvarGetUbLocal(consdata->z));
@@ -2424,7 +2424,7 @@ SCIP_RETCODE propagateCons(
 static
 SCIP_RETCODE addVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< signedpower constraint this variable bound is derived form */
+   SCIP_CONS*            cons,               /**< absolute power constraint this variable bound is derived form */
    SCIP_VAR*             var,                /**< variable x for which we want to add a variable bound */
    SCIP_VAR*             vbdvar,             /**< variable y which makes the bound a variable bound */
    SCIP_Real             vbdcoef,            /**< coefficient c of bounding variable vbdvar */
@@ -2514,7 +2514,7 @@ static
 SCIP_RETCODE propagateVarbounds(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_CONS*            cons,               /**< signedpower constraint */
+   SCIP_CONS*            cons,               /**< absolute power constraint */
    SCIP_Bool*            infeas,             /**< pointer to store whether an infeasibility was detected */
    int*                  nbdchgs             /**< pointer where to add number of performed bound changes, or NULL */
    )
@@ -3183,7 +3183,7 @@ SCIP_RETCODE separatePoint(
 
    if( bestefficacy != NULL )
       *bestefficacy = 0.0;
-         
+
    for( c = 0; c < nconss; ++c )
    {
       consdata = SCIPconsGetData(conss[c]);
@@ -3379,7 +3379,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    return SCIP_OKAY;
 }
 
-/** given a solution, try to make signedpower constraints feasible by shifting the linear variable z and pass this solution to the trysol heuristic */
+/** given a solution, try to make absolute power constraints feasible by shifting the linear variable z and pass this solution to the trysol heuristic */
 static
 SCIP_RETCODE proposeFeasibleSolution(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3460,7 +3460,7 @@ SCIP_RETCODE proposeFeasibleSolution(
       }
    }
 
-   /* if we have a solution that should satisfy all signedpower constraints and has a better objective than the current upper bound, then pass it to the trysol heuristic */
+   /* if we have a solution that should satisfy all absolute power constraints and has a better objective than the current upper bound, then pass it to the trysol heuristic */
    if( c == nconss )
    {
       SCIP_CONSHDLRDATA* conshdlrdata;
@@ -3483,7 +3483,7 @@ SCIP_RETCODE proposeFeasibleSolution(
 static
 SCIP_RETCODE createNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< signedpower constraint */
+   SCIP_CONS*            cons                /**< absolute power constraint */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -3634,7 +3634,7 @@ SCIP_RETCODE createNlRow(
 
 /** upgrades a quadratic constraint where the quadratic part is only a single square term and the quadratic variable sign is fixed to a signpower constraint */
 static
-SCIP_DECL_QUADCONSUPGD(quadconsUpgdSignedpower)
+SCIP_DECL_QUADCONSUPGD(quadconsUpgdAbspower)
 {  /*lint --e{715}*/
    SCIP_QUADVARTERM quadvarterm;
    SCIP_VAR* x;
@@ -3677,7 +3677,7 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdSignedpower)
 
    *nupgdconss = 0;
 
-   SCIPdebugMessage("upgrade quadratic constraint <%s> to signedpower, x = [%g,%g], offset = %g\n", SCIPconsGetName(cons), SCIPvarGetLbGlobal(x), SCIPvarGetUbGlobal(x), xoffset);
+   SCIPdebugMessage("upgrade quadratic constraint <%s> to absolute power, x = [%g,%g], offset = %g\n", SCIPconsGetName(cons), SCIPvarGetLbGlobal(x), SCIPvarGetUbGlobal(x), xoffset);
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
 
    lhs = SCIPgetLhsQuadratic(scip, cons);
@@ -3772,8 +3772,8 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdSignedpower)
    }
    zcoef /= signpowcoef;
 
-   /* create the signedpower constraint */
-   SCIP_CALL( SCIPcreateConsSignedpower(scip, &upgdconss[*nupgdconss], SCIPconsGetName(cons), x, z, 2.0,
+   /* create the absolute power constraint */
+   SCIP_CALL( SCIPcreateConsAbspower(scip, &upgdconss[*nupgdconss], SCIPconsGetName(cons), x, z, 2.0,
       xoffset, zcoef, lhs, rhs,
       SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
       SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
@@ -3785,9 +3785,9 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdSignedpower)
    return SCIP_OKAY;
 }
 
-/** tries to upgrade a nonlinear constraint into a signedpower constraint */
+/** tries to upgrade a nonlinear constraint into a absolute power constraint */
 static
-SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdSignedpower)
+SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdAbspower)
 {
    SCIP_EXPRGRAPH* exprgraph;
    SCIP_EXPRGRAPHNODE* node;
@@ -3807,7 +3807,7 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdSignedpower)
 
    *nupgdconss = 0;
 
-   /* signedpower needs at least one linear variable (constraint is trivial, otherwise) */
+   /* absolute power needs at least one linear variable (constraint is trivial, otherwise) */
    if( SCIPgetNLinearVarsNonlinear(scip, cons) == 0 )
       return SCIP_OKAY;
 
@@ -3826,7 +3826,7 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdSignedpower)
 
    child = SCIPexprgraphGetNodeChildren(node)[0];
 
-   /* check if node expression fits to signedpower constraint */
+   /* check if node expression fits to absolute power constraint */
    switch( SCIPexprgraphGetNodeOperator(node) )
    {
       case SCIP_EXPR_REALPOWER:
@@ -3942,9 +3942,9 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdSignedpower)
    }
 
    /* count how many constraints we need to add (use negative numbers, for convenience):
-    * one constraint for signedpower,
+    * one constraint for absolute power,
     * plus one if we need to replace the linear part by single variable,
-    * plus one if we need to replace the argument of signedpower by a single variable
+    * plus one if we need to replace the argument of absolute power by a single variable
     */
    *nupgdconss = -1;
 
@@ -4027,7 +4027,7 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdSignedpower)
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       ++*nupgdconss;
 
-      /* use auxvar to setup signedpower constraint */
+      /* use auxvar to setup absolute power constraint */
       x = auxvar;
       xoffset = 0.0;
 
@@ -4100,7 +4100,7 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdSignedpower)
          rhs -= constant;
    }
 
-   /* divide signedpower constraint by signpowcoef */
+   /* divide absolute power constraint by signpowcoef */
    if( signpowcoef != 1.0 )
    {
       zcoef /= signpowcoef;
@@ -4122,10 +4122,10 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdSignedpower)
       signpowcoef = 1.0;
    }
 
-   /* finally setup a signedpower constraint */
+   /* finally setup a absolute power constraint */
 
    assert(*nupgdconss < upgdconsssize);
-   SCIP_CALL( SCIPcreateConsSignedpower(scip, &upgdconss[*nupgdconss], SCIPconsGetName(cons),
+   SCIP_CALL( SCIPcreateConsAbspower(scip, &upgdconss[*nupgdconss], SCIPconsGetName(cons),
       x, z, exponent, xoffset, zcoef, lhs, rhs,
       SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
       SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
@@ -4136,15 +4136,15 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdSignedpower)
    return SCIP_OKAY;
 }
 
-/** tries to reformulate a expression graph node via introducing a signedpower constraint
- * if node fits to signedpower and has indefinte curvature and has no nonlinear parents and has siblings, then replace by auxvar and signedpower constraint
+/** tries to reformulate a expression graph node via introducing a absolute power constraint
+ * if node fits to absolute power and has indefinte curvature and has no nonlinear parents and has siblings, then replace by auxvar and absolute power constraint
  * if it still has nonlinear parents, then we wait to see if reformulation code move node into auxiliary constraint,
  *   so we do not add unnessary auxiliary variables for something like an x^2 in an exp(x^2)
  * if it has no siblings, then we let the upgrading for nonlinear constraints take care of it,
  *   since it may be able to upgrade the constraint as a whole and can take the constraint sides into account too (may need only <=/>= auxcons)
  */
 static
-SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformSignedpower)
+SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAbspower)
 {
    SCIP_EXPRGRAPHNODE* child;
    char name[SCIP_MAXSTRLEN];
@@ -4170,12 +4170,12 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformSignedpower)
    constant = 0.0;
    signpowcoef = 1.0; /* coefficient of sign(x)abs(x)^n term, to be move in from of z... */
 
-   /* check if node expression fits to signedpower constraint */
+   /* check if node expression fits to absolute power constraint */
    switch( SCIPexprgraphGetNodeOperator(node) )
    {
       case SCIP_EXPR_REALPOWER:
       {
-         /* realpower with exponent > 1.0 can always be signedpower, since it assumes that argument is >= 0.0 */
+         /* realpower with exponent > 1.0 can always be absolute power, since it assumes that argument is >= 0.0 */
          exponent = SCIPexprgraphGetNodeRealPowerExponent(node);
          if( exponent <= 1.0 )
             return SCIP_OKAY;
@@ -4337,11 +4337,11 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformSignedpower)
    SCIP_CALL( SCIPaddVar(scip, z) );
    SCIP_CALL( SCIPexprgraphAddVars(exprgraph, 1, (void**)&z, reformnode) );
 
-   /* setup a signedpower constraint */
+   /* setup a absolute power constraint */
    if( REALABS(signpowcoef) * SCIPfeastol(scip) < 1.0 )
    {
-      /* if signpowcoef is not huge (<10^6), then put it into signedpower constraint */
-      SCIP_CALL( SCIPcreateConsSignedpower(scip, &cons, name,
+      /* if signpowcoef is not huge (<10^6), then put it into absolute power constraint */
+      SCIP_CALL( SCIPcreateConsAbspower(scip, &cons, name,
          x, z, exponent, xoffset, -1.0/signpowcoef, -constant/signpowcoef, -constant/signpowcoef,
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -4368,7 +4368,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformSignedpower)
        * instead create additional node on top of current reformnode */
       SCIP_EXPRGRAPHNODE* linnode;
 
-      SCIP_CALL( SCIPcreateConsSignedpower(scip, &cons, name,
+      SCIP_CALL( SCIPcreateConsAbspower(scip, &cons, name,
          x, z, exponent, xoffset, -1.0, 0.0, 0.0,
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -4408,27 +4408,27 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformSignedpower)
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
 #if 1
 static
-SCIP_DECL_CONSHDLRCOPY(conshdlrCopySignedpower)
+SCIP_DECL_CONSHDLRCOPY(conshdlrCopyAbspower)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
 
    /* call inclusion method of constraint handler */
-   SCIP_CALL( SCIPincludeConshdlrSignedpower(scip) );
+   SCIP_CALL( SCIPincludeConshdlrAbspower(scip) );
 
    *valid = TRUE;
 
    return SCIP_OKAY;
 }
 #else
-#define conshdlrCopySignedpower NULL
+#define conshdlrCopyAbspower NULL
 #endif
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 #if 1
 static
-SCIP_DECL_CONSFREE(consFreeSignedpower)
+SCIP_DECL_CONSFREE(consFreeAbspower)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
 
@@ -4443,14 +4443,14 @@ SCIP_DECL_CONSFREE(consFreeSignedpower)
    return SCIP_OKAY;
 }
 #else
-#define consFreeSignedpower NULL
+#define consFreeAbspower NULL
 #endif
 
 
 /** initialization method of constraint handler (called after problem was transformed) */
 #if 1
 static
-SCIP_DECL_CONSINIT(consInitSignedpower)
+SCIP_DECL_CONSINIT(consInitAbspower)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
 
@@ -4467,14 +4467,14 @@ SCIP_DECL_CONSINIT(consInitSignedpower)
    return SCIP_OKAY;
 }
 #else
-#define consInitSignedpower NULL
+#define consInitAbspower NULL
 #endif
 
 
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
 #if 1
 static
-SCIP_DECL_CONSEXIT(consExitSignedpower)
+SCIP_DECL_CONSEXIT(consExitAbspower)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
 
@@ -4491,14 +4491,14 @@ SCIP_DECL_CONSEXIT(consExitSignedpower)
    return SCIP_OKAY;
 }
 #else
-#define consExitSignedpower NULL
+#define consExitAbspower NULL
 #endif
 
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
 #if 1
 static
-SCIP_DECL_CONSINITPRE(consInitpreSignedpower)
+SCIP_DECL_CONSINITPRE(consInitpreAbspower)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
 
@@ -4513,14 +4513,14 @@ SCIP_DECL_CONSINITPRE(consInitpreSignedpower)
    return SCIP_OKAY;
 }
 #else
-#define consInitpreSignedpower NULL
+#define consInitpreAbspower NULL
 #endif
 
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
 #if 1
 static
-SCIP_DECL_CONSEXITPRE(consExitpreSignedpower)
+SCIP_DECL_CONSEXITPRE(consExitpreAbspower)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    SCIP_RESULT replaceresult;
@@ -4560,14 +4560,14 @@ SCIP_DECL_CONSEXITPRE(consExitpreSignedpower)
    return SCIP_OKAY;
 }
 #else
-#define consExitpreSignedpower NULL
+#define consExitpreAbspower NULL
 #endif
 
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
 #if 1
 static
-SCIP_DECL_CONSINITSOL(consInitsolSignedpower)
+SCIP_DECL_CONSINITSOL(consInitsolAbspower)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
@@ -4672,14 +4672,14 @@ SCIP_DECL_CONSINITSOL(consInitsolSignedpower)
    return SCIP_OKAY;
 }
 #else
-#define consInitsolSignedpower NULL
+#define consInitsolAbspower NULL
 #endif
 
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 #if 1
 static
-SCIP_DECL_CONSEXITSOL(consExitsolSignedpower)
+SCIP_DECL_CONSEXITSOL(consExitsolAbspower)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
@@ -4720,14 +4720,14 @@ SCIP_DECL_CONSEXITSOL(consExitsolSignedpower)
    return SCIP_OKAY;
 }
 #else
-#define consExitsolSignedpower NULL
+#define consExitsolAbspower NULL
 #endif
 
 
 /** frees specific constraint data */
 #if 1
 static
-SCIP_DECL_CONSDELETE(consDeleteSignedpower)
+SCIP_DECL_CONSDELETE(consDeleteAbspower)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -4748,14 +4748,14 @@ SCIP_DECL_CONSDELETE(consDeleteSignedpower)
    return SCIP_OKAY;
 }
 #else
-#define consDeleteSignedpower NULL
+#define consDeleteAbspower NULL
 #endif
 
 
 /** transforms constraint data into data belonging to the transformed problem */
 #if 1
 static
-SCIP_DECL_CONSTRANS(consTransSignedpower)
+SCIP_DECL_CONSTRANS(consTransAbspower)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* sourcedata;
    SCIP_CONSDATA* targetdata;
@@ -4788,7 +4788,7 @@ SCIP_DECL_CONSTRANS(consTransSignedpower)
    return SCIP_OKAY;
 }
 #else
-#define consTransSignedpower NULL
+#define consTransAbspower NULL
 #endif
 
 
@@ -4798,7 +4798,7 @@ SCIP_DECL_CONSTRANS(consTransSignedpower)
  */
 #if 1
 static
-SCIP_DECL_CONSINITLP(consInitlpSignedpower)
+SCIP_DECL_CONSINITLP(consInitlpAbspower)
 {  /*lint --e{715}*/
    SCIP_CONSDATA*     consdata;
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -4947,14 +4947,14 @@ SCIP_DECL_CONSINITLP(consInitlpSignedpower)
    return SCIP_OKAY;
 }
 #else
-#define consInitlpSignedpower NULL
+#define consInitlpAbspower NULL
 #endif
 
 
 /** separation method of constraint handler for LP solutions */
 #if 1
 static
-SCIP_DECL_CONSSEPALP(consSepalpSignedpower)
+SCIP_DECL_CONSSEPALP(consSepalpAbspower)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS*         maxviolcon;
@@ -5080,14 +5080,14 @@ SCIP_DECL_CONSSEPALP(consSepalpSignedpower)
    return SCIP_OKAY;
 }
 #else
-#define consSepalpSignedpower NULL
+#define consSepalpAbspower NULL
 #endif
 
 
 /** separation method of constraint handler for arbitrary primal solutions */
 #if 1
 static
-SCIP_DECL_CONSSEPASOL(consSepasolSignedpower)
+SCIP_DECL_CONSSEPASOL(consSepasolAbspower)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS*         maxviolcon;
@@ -5115,13 +5115,13 @@ SCIP_DECL_CONSSEPASOL(consSepasolSignedpower)
    return SCIP_OKAY;
 }
 #else
-#define consSepasolSignedpower NULL
+#define consSepasolAbspower NULL
 #endif
 
 
 /** constraint enforcing method of constraint handler for LP solutions */
 static
-SCIP_DECL_CONSENFOLP(consEnfolpSignedpower)
+SCIP_DECL_CONSENFOLP(consEnfolpAbspower)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS*         maxviolcons;
@@ -5245,7 +5245,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpSignedpower)
 
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
-SCIP_DECL_CONSENFOPS(consEnfopsSignedpower)
+SCIP_DECL_CONSENFOPS(consEnfopsAbspower)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS*         maxviolcon;
@@ -5337,7 +5337,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsSignedpower)
 /** domain propagation method of constraint handler */
 #if 1
 static
-SCIP_DECL_CONSPROP(consPropSignedpower)
+SCIP_DECL_CONSPROP(consPropAbspower)
 {  /*lint --e{715}*/
    int         c;
    int         nchgbds;
@@ -5379,13 +5379,13 @@ SCIP_DECL_CONSPROP(consPropSignedpower)
    return SCIP_OKAY;
 }
 #else
-#define consPropSignedpower NULL
+#define consPropAbspower NULL
 #endif
 
 /** presolving method of constraint handler */
 #if 1
 static
-SCIP_DECL_CONSPRESOL(consPresolSignedpower)
+SCIP_DECL_CONSPRESOL(consPresolAbspower)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
@@ -5406,7 +5406,7 @@ SCIP_DECL_CONSPRESOL(consPresolSignedpower)
 
    *result = SCIP_DIDNOTFIND;
 
-   /* check for duplicates, if not done yet or if signedpower constraints were modified (variable fixings) or new signedpower constraints had been added */
+   /* check for duplicates, if not done yet or if absolute power constraints were modified (variable fixings) or new absolute power constraints had been added */
    if( !conshdlrdata->comparedpairwise )
    {
       SCIP_CALL( presolveFindDuplicates(scip, conshdlr, conss, nconss, nupgdconss, ndelconss, naddconss, nfixedvars, naggrvars, &success, &infeas) );
@@ -5551,7 +5551,7 @@ SCIP_DECL_CONSPRESOL(consPresolSignedpower)
    return SCIP_OKAY;
 }
 #else
-#define consPresolSignedpower NULL
+#define consPresolAbspower NULL
 #endif
 
 
@@ -5564,7 +5564,7 @@ SCIP_DECL_CONSPRESOL(consPresolSignedpower)
  */
 #if 1
 static
-SCIP_DECL_CONSRESPROP(consRespropSignedpower)
+SCIP_DECL_CONSRESPROP(consRespropAbspower)
 {
    assert(result != NULL);
 
@@ -5575,13 +5575,13 @@ SCIP_DECL_CONSRESPROP(consRespropSignedpower)
    return SCIP_OKAY;
 }
 #else
-#define consRespropSignedpower NULL
+#define consRespropAbspower NULL
 #endif
 
 
 /** variable rounding lock method of constraint handler */
 static
-SCIP_DECL_CONSLOCK(consLockSignedpower)
+SCIP_DECL_CONSLOCK(consLockAbspower)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    SCIP_Bool      haslb;
@@ -5641,7 +5641,7 @@ SCIP_DECL_CONSLOCK(consLockSignedpower)
 /** constraint activation notification method of constraint handler */
 #if 1
 static
-SCIP_DECL_CONSACTIVE(consActiveSignedpower)
+SCIP_DECL_CONSACTIVE(consActiveAbspower)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
 
@@ -5656,29 +5656,29 @@ SCIP_DECL_CONSACTIVE(consActiveSignedpower)
    return SCIP_OKAY;
 }
 #else
-#define consActiveSignedpower NULL
+#define consActiveAbspower NULL
 #endif
 
 
 /** constraint deactivation notification method of constraint handler */
 #if 0
 static
-SCIP_DECL_CONSDEACTIVE(consDeactiveSignedpower)
+SCIP_DECL_CONSDEACTIVE(consDeactiveAbspower)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of signedpower constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of absolute power constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define consDeactiveSignedpower NULL
+#define consDeactiveAbspower NULL
 #endif
 
 
 /** constraint enabling notification method of constraint handler */
 #if 1
 static
-SCIP_DECL_CONSENABLE(consEnableSignedpower)
+SCIP_DECL_CONSENABLE(consEnableAbspower)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
 
@@ -5695,14 +5695,14 @@ SCIP_DECL_CONSENABLE(consEnableSignedpower)
    return SCIP_OKAY;
 }
 #else
-#define consEnableSignedpower NULL
+#define consEnableAbspower NULL
 #endif
 
 
 /** constraint disabling notification method of constraint handler */
 #if 1
 static
-SCIP_DECL_CONSDISABLE(consDisableSignedpower)
+SCIP_DECL_CONSDISABLE(consDisableAbspower)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
 
@@ -5719,14 +5719,14 @@ SCIP_DECL_CONSDISABLE(consDisableSignedpower)
    return SCIP_OKAY;
 }
 #else
-#define consDisableSignedpower NULL
+#define consDisableAbspower NULL
 #endif
 
 
 /** constraint display method of constraint handler */
 #if 1
 static
-SCIP_DECL_CONSPRINT(consPrintSignedpower)
+SCIP_DECL_CONSPRINT(consPrintAbspower)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
 
@@ -5771,12 +5771,12 @@ SCIP_DECL_CONSPRINT(consPrintSignedpower)
    return SCIP_OKAY;
 }
 #else
-#define consPrintSignedpower NULL
+#define consPrintAbspower NULL
 #endif
 
 /** feasibility check method of constraint handler for integral solutions */
 static
-SCIP_DECL_CONSCHECK(consCheckSignedpower)
+SCIP_DECL_CONSCHECK(consCheckAbspower)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
@@ -5812,9 +5812,9 @@ SCIP_DECL_CONSCHECK(consCheckSignedpower)
 
          if( printreason )
          {
-            SCIPinfoMessage(scip, NULL, "signedpower constraint <%s> violated by %g (scaled = %g)\n\t",
+            SCIPinfoMessage(scip, NULL, "absolute power constraint <%s> violated by %g (scaled = %g)\n\t",
                SCIPconsGetName(conss[c]), viol, MAX(consdata->lhsviol, consdata->rhsviol));
-            SCIP_CALL( consPrintSignedpower(scip, conshdlr, conss[c], NULL) );
+            SCIP_CALL( consPrintAbspower(scip, conshdlr, conss[c], NULL) );
             SCIPinfoMessage(scip, NULL, "\n");
          }
 
@@ -5841,7 +5841,7 @@ SCIP_DECL_CONSCHECK(consCheckSignedpower)
 /** constraint copying method of constraint handler */
 #if 1
 static
-SCIP_DECL_CONSCOPY(consCopySignedpower)
+SCIP_DECL_CONSCOPY(consCopyAbspower)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    SCIP_VAR*      x;
@@ -5869,7 +5869,7 @@ SCIP_DECL_CONSCOPY(consCopySignedpower)
 
    if( *valid )
    {
-      SCIP_CALL( SCIPcreateConsSignedpower(scip, cons, name != NULL ? name : SCIPconsGetName(sourcecons),
+      SCIP_CALL( SCIPcreateConsAbspower(scip, cons, name != NULL ? name : SCIPconsGetName(sourcecons),
          x, z, consdata->exponent, consdata->xoffset, consdata->zcoef, consdata->lhs, consdata->rhs,
          initial, separate, enforce, check, propagate, local, FALSE, dynamic, removable, stickingatnode) );
    }
@@ -5877,14 +5877,14 @@ SCIP_DECL_CONSCOPY(consCopySignedpower)
    return SCIP_OKAY;
 }
 #else
-#define consCopySignedpower NULL
+#define consCopyAbspower NULL
 #endif
 
 
 /** constraint parsing method of constraint handler */
 #if 1
 static
-SCIP_DECL_CONSPARSE(consParseSignedpower)
+SCIP_DECL_CONSPARSE(consParseAbspower)
 {
    SCIP_Real lhs;
    SCIP_Real rhs;
@@ -5906,9 +5906,9 @@ SCIP_DECL_CONSPARSE(consParseSignedpower)
    /* set right hand and left side to their default values */
    lhs = -SCIPinfinity(scip);
    rhs =  SCIPinfinity(scip);
-   
-   SCIPdebugMessage("start parsing signedpower constraint expression %s\n", str);
-   
+
+   SCIPdebugMessage("start parsing absolute power constraint expression %s\n", str);
+
    if( strncmp(str, "signpower", 9) != 0 )
    {
       /* str does not start with signpower string, so may be left-hand-side of ranged constraint */
@@ -5979,27 +5979,27 @@ SCIP_DECL_CONSPARSE(consParseSignedpower)
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( SCIPcreateConsSignedpower(scip, cons, name, x, z, exponent, xoffset, zcoef, lhs, rhs,
+   SCIP_CALL( SCIPcreateConsAbspower(scip, cons, name, x, z, exponent, xoffset, zcoef, lhs, rhs,
       initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
    return SCIP_OKAY;
 }
 #else
-#define consParseSignedpower NULL
+#define consParseAbspower NULL
 #endif
 
 /*
  * constraint specific interface methods
  */
 
-/** creates the handler for signedpower constraints and includes it in SCIP */
-SCIP_RETCODE SCIPincludeConshdlrSignedpower(
+/** creates the handler for absolute power constraints and includes it in SCIP */
+SCIP_RETCODE SCIPincludeConshdlrAbspower(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
 
-   /* create signedpower constraint handler data */
+   /* create absolute power constraint handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
    BMSclearMemory(conshdlrdata);
 
@@ -6009,26 +6009,26 @@ SCIP_RETCODE SCIPincludeConshdlrSignedpower(
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopySignedpower,
-         consFreeSignedpower, consInitSignedpower, consExitSignedpower,
-         consInitpreSignedpower, consExitpreSignedpower, consInitsolSignedpower, consExitsolSignedpower,
-         consDeleteSignedpower, consTransSignedpower, consInitlpSignedpower,
-         consSepalpSignedpower, consSepasolSignedpower, consEnfolpSignedpower, consEnfopsSignedpower, consCheckSignedpower,
-         consPropSignedpower, consPresolSignedpower, consRespropSignedpower, consLockSignedpower,
-         consActiveSignedpower, consDeactiveSignedpower,
-         consEnableSignedpower, consDisableSignedpower,
-         consPrintSignedpower, consCopySignedpower, consParseSignedpower,
+         conshdlrCopyAbspower,
+         consFreeAbspower, consInitAbspower, consExitAbspower,
+         consInitpreAbspower, consExitpreAbspower, consInitsolAbspower, consExitsolAbspower,
+         consDeleteAbspower, consTransAbspower, consInitlpAbspower,
+         consSepalpAbspower, consSepasolAbspower, consEnfolpAbspower, consEnfopsAbspower, consCheckAbspower,
+         consPropAbspower, consPresolAbspower, consRespropAbspower, consLockAbspower,
+         consActiveAbspower, consDeactiveAbspower,
+         consEnableAbspower, consDisableAbspower,
+         consPrintAbspower, consCopyAbspower, consParseAbspower,
          conshdlrdata) );
 
    /* include the quadratic constraint upgrade in the quadratic constraint handler */
-   SCIP_CALL( SCIPincludeQuadconsUpgrade(scip, quadconsUpgdSignedpower, QUADCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
+   SCIP_CALL( SCIPincludeQuadconsUpgrade(scip, quadconsUpgdAbspower, QUADCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
 
-   /* include the signedpower constraint upgrade and node reform in the nonlinear constraint handler
+   /* include the absolute power constraint upgrade and node reform in the nonlinear constraint handler
     * we give it higher priority as quadratic, so it also takes care of x^2 constraints, if possible
     */
-   SCIP_CALL( SCIPincludeNonlinconsUpgrade(scip, nonlinconsUpgdSignedpower, exprgraphnodeReformSignedpower, NONLINCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
+   SCIP_CALL( SCIPincludeNonlinconsUpgrade(scip, nonlinconsUpgdAbspower, exprgraphnodeReformAbspower, NONLINCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
 
-   /* add signedpower constraint handler parameters */
+   /* add absolute power constraint handler parameters */
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacysepa",
          "minimal efficacy for a cut to be added to the LP during separation; overwrites separating/efficacy",
          &conshdlrdata->mincutefficacysepa, FALSE, 0.0001, 0.0, SCIPinfinity(scip), NULL, NULL) );
@@ -6042,7 +6042,7 @@ SCIP_RETCODE SCIPincludeConshdlrSignedpower(
          &conshdlrdata->cutmaxrange, FALSE, 1e+7, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/projectrefpoint",
-         "whether to project the reference point when linearizing a signedpower constraint in a convex region",
+         "whether to project the reference point when linearizing an absolute power constraint in a convex region",
          &conshdlrdata->projectrefpoint, FALSE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/preferzerobranch",
@@ -6069,7 +6069,7 @@ SCIP_RETCODE SCIPincludeConshdlrSignedpower(
          "limit on number of separation rounds at root node in which to use the NLP relaxation solution as reference point",
          &conshdlrdata->maxsepanlprounds, FALSE, 0, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME, "signals a bound change on a variable to a signedpower constraint",
+   SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME, "signals a bound change on a variable to an absolute power constraint",
       NULL, NULL, NULL, NULL, NULL, NULL, NULL, processVarEvent, NULL) );
    conshdlrdata->eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME);
 
@@ -6079,8 +6079,8 @@ SCIP_RETCODE SCIPincludeConshdlrSignedpower(
    return SCIP_OKAY;
 }
 
-/** creates and captures a signedpower constraint */
-SCIP_RETCODE SCIPcreateConsSignedpower(
+/** creates and captures a absolute power constraint */
+SCIP_RETCODE SCIPcreateConsAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
@@ -6126,11 +6126,11 @@ SCIP_RETCODE SCIPcreateConsSignedpower(
    assert(!SCIPisInfinity(scip, REALABS(zcoef)));
    assert(!modifiable); /* we do not support column generation */
 
-   /* find the signedpower constraint handler */
+   /* find the absolute power constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
-      SCIPerrorMessage("signedpower constraint handler not found\n");
+      SCIPerrorMessage("absolute power constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
 
@@ -6173,9 +6173,8 @@ SCIP_RETCODE SCIPcreateConsSignedpower(
    return SCIP_OKAY;
 }
 
-/** Gets the signedpower constraint as a nonlinear row representation.
- */
-SCIP_RETCODE SCIPgetNlRowSignedpower(
+/** gets the absolute power constraint as a nonlinear row representation */
+SCIP_RETCODE SCIPgetNlRowAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_NLROW**          nlrow               /**< a buffer where to store pointer to nonlinear row */
@@ -6200,10 +6199,10 @@ SCIP_RETCODE SCIPgetNlRowSignedpower(
    return SCIP_OKAY;
 }
 
-/** gets nonlinear variable x in signedpower constraint */
-SCIP_VAR* SCIPgetNonlinearVarSignedpower(
+/** gets nonlinear variable x in absolute power constraint */
+SCIP_VAR* SCIPgetNonlinearVarAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< signedpower constraint */
+   SCIP_CONS*            cons                /**< absolute power constraint */
 )
 {
    SCIP_CONSDATA* consdata;
@@ -6217,10 +6216,10 @@ SCIP_VAR* SCIPgetNonlinearVarSignedpower(
    return consdata->x;
 }
 
-/** gets linear variable z in signedpower constraint */
-SCIP_VAR* SCIPgetLinearVarSignedpower(
+/** gets linear variable z in absolute power constraint */
+SCIP_VAR* SCIPgetLinearVarAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< signedpower constraint */
+   SCIP_CONS*            cons                /**< absolute power constraint */
 )
 {
    SCIP_CONSDATA* consdata;
@@ -6234,10 +6233,10 @@ SCIP_VAR* SCIPgetLinearVarSignedpower(
    return consdata->z;
 }
 
-/** gets exponent in power term in signedpower constraint */
-SCIP_Real SCIPgetExponentSignedpower(
+/** gets exponent in power term in absolute power constraint */
+SCIP_Real SCIPgetExponentAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< signedpower constraint */
+   SCIP_CONS*            cons                /**< absolute power constraint */
 )
 {
    SCIP_CONSDATA* consdata;
@@ -6251,10 +6250,10 @@ SCIP_Real SCIPgetExponentSignedpower(
    return consdata->exponent;
 }
 
-/** gets offset in power term in signedpower constraint */
-SCIP_Real SCIPgetOffsetSignedpower(
+/** gets offset in power term in absolute power constraint */
+SCIP_Real SCIPgetOffsetAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< signedpower constraint */
+   SCIP_CONS*            cons                /**< absolute power constraint */
 )
 {
    SCIP_CONSDATA* consdata;
@@ -6268,10 +6267,10 @@ SCIP_Real SCIPgetOffsetSignedpower(
    return consdata->xoffset;
 }
 
-/** gets coefficient of linear variable in signedpower constraint */
-SCIP_Real SCIPgetCoefLinearSignedpower(
+/** gets coefficient of linear variable in absolute power constraint */
+SCIP_Real SCIPgetCoefLinearAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< signedpower constraint */
+   SCIP_CONS*            cons                /**< absolute power constraint */
 )
 {
    SCIP_CONSDATA* consdata;
@@ -6285,10 +6284,10 @@ SCIP_Real SCIPgetCoefLinearSignedpower(
    return consdata->zcoef;
 }
 
-/** gets left hand side in signedpower constraint */
-SCIP_Real SCIPgetLhsSignedpower(
+/** gets left hand side in absolute power constraint */
+SCIP_Real SCIPgetLhsAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< signedpower constraint */
+   SCIP_CONS*            cons                /**< absolute power constraint */
 )
 {
    SCIP_CONSDATA* consdata;
@@ -6302,10 +6301,10 @@ SCIP_Real SCIPgetLhsSignedpower(
    return consdata->lhs;
 }
 
-/** gets right hand side in signedpower constraint */
-SCIP_Real SCIPgetRhsSignedpower(
+/** gets right hand side in absolute power constraint */
+SCIP_Real SCIPgetRhsAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< signedpower constraint */
+   SCIP_CONS*            cons                /**< absolute power constraint */
 )
 {
    SCIP_CONSDATA* consdata;
@@ -6319,10 +6318,10 @@ SCIP_Real SCIPgetRhsSignedpower(
    return consdata->rhs;
 }
 
-/** gets the absolute violation of a signedpower constraint by a solution */
-SCIP_Real SCIPgetViolationSignedpower(
+/** gets the absolute violation of a absolute power constraint by a solution */
+SCIP_Real SCIPgetViolationAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< signedpower constraint */
+   SCIP_CONS*            cons,               /**< absolute power constraint */
    SCIP_SOL*             sol                 /**< LP solution */
    )
 {

@@ -41,7 +41,7 @@
 #include "scip/cons_varbound.h"
 #include "scip/cons_quadratic.h"
 #include "scip/cons_nonlinear.h"
-#include "scip/cons_signedpower.h"
+#include "scip/cons_abspower.h"
 #include "scip/cons_and.h"
 #include "scip/cons_bivariate.h"
 #include "scip/pub_misc.h"
@@ -2986,8 +2986,8 @@ SCIP_RETCODE SCIPwritePip(
    int nConsQuadratic;
    SCIP_CONS** consNonlinear;
    int nConsNonlinear;
-   SCIP_CONS** consSignedpower;
-   int nConsSignedpower;
+   SCIP_CONS** consAbspower;
+   int nConsAbspower;
    SCIP_CONS** consAnd;
    int nConsAnd;
    SCIP_CONS** consBivariate;
@@ -3014,7 +3014,7 @@ SCIP_RETCODE SCIPwritePip(
    nAggregatedVars = 0;
    nConsQuadratic = 0;
    nConsNonlinear = 0;
-   nConsSignedpower = 0;
+   nConsAbspower = 0;
    nConsAnd = 0;
    nConsBivariate = 0;
 
@@ -3067,10 +3067,10 @@ SCIP_RETCODE SCIPwritePip(
    /* print "Subject to" section */
    SCIPinfoMessage(scip, file, "Subject to\n");
 
-   /* collect quadratic, nonlinear, signedpower, and, and bivariate constraints in arrays */
+   /* collect quadratic, nonlinear, absolute power, and, and bivariate constraints in arrays */
    SCIP_CALL( SCIPallocBufferArray(scip, &consQuadratic, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consNonlinear, nconss) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &consSignedpower, nconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &consAbspower, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consAnd, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consBivariate, nconss) );
 
@@ -3275,7 +3275,7 @@ SCIP_RETCODE SCIPwritePip(
             SCIP_CALL( SCIPprintCons(scip, cons, file) );
          }
       }
-      else if( strcmp(conshdlrname, "signedpower") == 0 )
+      else if( strcmp(conshdlrname, "abspower") == 0 )
       {
          SCIP_VAR* x;
          SCIP_Real xoffset;
@@ -3285,9 +3285,9 @@ SCIP_RETCODE SCIPwritePip(
          expr = NULL;
          treecoef = 1.0;
 
-         x = SCIPgetNonlinearVarSignedpower(scip, cons);
-         xoffset = SCIPgetOffsetSignedpower(scip, cons);
-         exponent = SCIPgetExponentSignedpower(scip, cons);
+         x = SCIPgetNonlinearVarAbspower(scip, cons);
+         xoffset = SCIPgetOffsetAbspower(scip, cons);
+         exponent = SCIPgetExponentAbspower(scip, cons);
 
          /* see if we formulate signpower(x+offset,exponent) as usual polynomial */
          if( !SCIPisZero(scip, xoffset) )
@@ -3296,26 +3296,26 @@ SCIP_RETCODE SCIPwritePip(
          }
          if( SCIPisIntegral(scip, exponent) && ((int)SCIPround(scip, exponent) % 2 == 1) )
          {
-            /* exponent is odd integer, so signedpower(x,exponent) = x^exponent */
+            /* exponent is odd integer, so signpower(x,exponent) = x^exponent */
             SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_VARIDX, 0) );
             SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_INTPOWER, expr, (int)SCIPround(scip, exponent)) );
          }
          else if( SCIPisIntegral(scip, exponent) && ((int)SCIPround(scip, exponent) % 2 == 0) && !SCIPisPositive(scip, SCIPvarGetUbGlobal(x)) )
          {
-            /* exponent is even integer and x is negative, so signedpower(x,exponent) = -x^exponent */
+            /* exponent is even integer and x is negative, so signpower(x,exponent) = -x^exponent */
             SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_VARIDX, 0) );
             SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_INTPOWER, expr, (int)SCIPround(scip, exponent)) );
             treecoef = -1.0;
          }
          else if( !SCIPisNegative(scip, SCIPvarGetLbGlobal(x)) )
          {
-            /* x is positive, so signedpower(x,exponent) = x^exponent */
+            /* x is positive, so signpower(x,exponent) = x^exponent */
             SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_VARIDX, 0) );
             SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_REALPOWER, expr, exponent) );
          }
          else
          {
-            SCIPwarningMessage("cannot formulate signedpower(<%s>, %g) in constraint <%s> as polynomial, cannot write in pip format\n", SCIPvarGetName(x), exponent, SCIPconsGetName(cons));
+            SCIPwarningMessage("cannot formulate signpower(<%s>, %g) in constraint <%s> as polynomial, cannot write in pip format\n", SCIPvarGetName(x), exponent, SCIPconsGetName(cons));
          }
 
          if( expr != NULL )
@@ -3326,16 +3326,16 @@ SCIP_RETCODE SCIPwritePip(
             SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree, expr, 1, 0, NULL) );
             SCIP_CALL( SCIPexprtreeSetVars(exprtree, 1, &x) );
 
-            z = SCIPgetLinearVarSignedpower(scip, cons);
-            zcoef = SCIPgetCoefLinearSignedpower(scip, cons);
+            z = SCIPgetLinearVarAbspower(scip, cons);
+            zcoef = SCIPgetCoefLinearAbspower(scip, cons);
 
             SCIP_CALL( printNonlinearCons(scip, file, consname,
                &z, &zcoef, 1, &exprtree, &treecoef, 1,
-               SCIPgetLhsSignedpower(scip, cons), SCIPgetRhsSignedpower(scip, cons), transformed) );
+               SCIPgetLhsAbspower(scip, cons), SCIPgetRhsAbspower(scip, cons), transformed) );
 
             SCIP_CALL( SCIPexprtreeFree(&exprtree) );
 
-            consSignedpower[nConsSignedpower++] = cons;
+            consAbspower[nConsAbspower++] = cons;
          }
          else
          {
@@ -3524,15 +3524,15 @@ SCIP_RETCODE SCIPwritePip(
       }
    }
 
-   /* check for aggregated variables in signedpower constraints and output aggregations as linear constraints */
-   for (c = 0; c < nConsSignedpower; ++c)
+   /* check for aggregated variables in absolute power constraints and output aggregations as linear constraints */
+   for (c = 0; c < nConsAbspower; ++c)
    {
       SCIP_VAR* spvars[2];
 
-      cons = consSignedpower[c];
+      cons = consAbspower[c];
 
-      spvars[0] = SCIPgetNonlinearVarSignedpower(scip, cons);
-      spvars[1] = SCIPgetLinearVarSignedpower(scip, cons);
+      spvars[0] = SCIPgetNonlinearVarAbspower(scip, cons);
+      spvars[1] = SCIPgetLinearVarAbspower(scip, cons);
       SCIP_CALL( collectAggregatedVars(scip, 2, spvars, &nAggregatedVars, &aggregatedVars, &varAggregated) );
    }
 
@@ -3679,7 +3679,7 @@ SCIP_RETCODE SCIPwritePip(
    /* free space */
    SCIPfreeBufferArray(scip, &consQuadratic);
    SCIPfreeBufferArray(scip, &consNonlinear);
-   SCIPfreeBufferArray(scip, &consSignedpower);
+   SCIPfreeBufferArray(scip, &consAbspower);
    SCIPfreeBufferArray(scip, &consAnd);
    SCIPfreeBufferArray(scip, &consBivariate);
 

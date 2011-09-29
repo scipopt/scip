@@ -448,7 +448,7 @@ $(LIBOBJDIR)/scip/cons_cumulative.o: src/scip/cons_cumulative.c src/scip/scipdef
  src/scip/cons_linking.h src/scip/cons_logicor.h \
  src/scip/cons_nonlinear.h src/scip/cons_or.h src/scip/cons_orbitope.h \
  src/scip/cons_pseudoboolean.h src/scip/cons_quadratic.h \
- src/scip/cons_setppc.h src/scip/cons_signedpower.h src/scip/cons_sos1.h \
+ src/scip/cons_setppc.h src/scip/cons_abspower.h src/scip/cons_sos1.h \
  src/scip/cons_sos2.h src/scip/cons_soc.h src/scip/cons_varbound.h \
  src/scip/cons_xor.h src/scip/dialog_default.h src/scip/disp_default.h \
  src/scip/heur_actconsdiving.h src/scip/heur_clique.h \
@@ -923,8 +923,8 @@ $(LIBOBJDIR)/scip/cons_setppc.o: src/scip/cons_setppc.c src/scip/cons_setppc.h \
  src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons_linear.h
-$(LIBOBJDIR)/scip/cons_signedpower.o: src/scip/cons_signedpower.c \
- src/scip/cons_signedpower.h src/scip/scip.h src/scip/def.h \
+$(LIBOBJDIR)/scip/cons_abspower.o: src/scip/cons_abspower.c \
+ src/scip/cons_abspower.h src/scip/scip.h src/scip/def.h \
  src/scip/type_retcode.h src/scip/message.h src/scip/type_message.h \
  src/scip/struct_message.h src/scip/pub_message.h \
  src/blockmemshell/memory.h src/scip/type_result.h src/scip/type_clock.h \
@@ -1337,7 +1337,7 @@ $(LIBOBJDIR)/scip/heur_crossover.o: src/scip/heur_crossover.c src/scip/scip.h \
  src/scip/cons_linking.h src/scip/cons_logicor.h \
  src/scip/cons_nonlinear.h src/scip/cons_or.h src/scip/cons_orbitope.h \
  src/scip/cons_pseudoboolean.h src/scip/cons_quadratic.h \
- src/scip/cons_setppc.h src/scip/cons_signedpower.h src/scip/cons_sos1.h \
+ src/scip/cons_setppc.h src/scip/cons_abspower.h src/scip/cons_sos1.h \
  src/scip/cons_sos2.h src/scip/cons_soc.h src/scip/cons_varbound.h \
  src/scip/cons_xor.h src/scip/dialog_default.h src/scip/disp_default.h \
  src/scip/heur_actconsdiving.h src/scip/heur_clique.h \
@@ -1418,7 +1418,7 @@ $(LIBOBJDIR)/scip/heur_dins.o: src/scip/heur_dins.c src/scip/scip.h src/scip/def
  src/scip/cons_linking.h src/scip/cons_logicor.h \
  src/scip/cons_nonlinear.h src/scip/cons_or.h src/scip/cons_orbitope.h \
  src/scip/cons_pseudoboolean.h src/scip/cons_quadratic.h \
- src/scip/cons_setppc.h src/scip/cons_signedpower.h src/scip/cons_sos1.h \
+ src/scip/cons_setppc.h src/scip/cons_abspower.h src/scip/cons_sos1.h \
  src/scip/cons_sos2.h src/scip/cons_soc.h src/scip/cons_varbound.h \
  src/scip/cons_xor.h src/scip/dialog_default.h src/scip/disp_default.h \
  src/scip/heur_actconsdiving.h src/scip/heur_clique.h \
@@ -1499,7 +1499,7 @@ $(LIBOBJDIR)/scip/heur_feaspump.o: src/scip/heur_feaspump.c src/scip/heur_feaspu
  src/scip/cons_linking.h src/scip/cons_logicor.h \
  src/scip/cons_nonlinear.h src/scip/cons_or.h src/scip/cons_orbitope.h \
  src/scip/cons_pseudoboolean.h src/scip/cons_quadratic.h \
- src/scip/cons_setppc.h src/scip/cons_signedpower.h src/scip/cons_sos1.h \
+ src/scip/cons_setppc.h src/scip/cons_abspower.h src/scip/cons_sos1.h \
  src/scip/cons_sos2.h src/scip/cons_soc.h src/scip/cons_varbound.h \
  src/scip/cons_xor.h src/scip/dialog_default.h src/scip/disp_default.h \
  src/scip/heur_actconsdiving.h src/scip/heur_clique.h \
@@ -1782,7 +1782,7 @@ $(LIBOBJDIR)/scip/heur_localbranching.o: src/scip/heur_localbranching.c src/scip
  src/scip/cons_linking.h src/scip/cons_logicor.h \
  src/scip/cons_nonlinear.h src/scip/cons_or.h src/scip/cons_orbitope.h \
  src/scip/cons_pseudoboolean.h src/scip/cons_quadratic.h \
- src/scip/cons_setppc.h src/scip/cons_signedpower.h src/scip/cons_sos1.h \
+ src/scip/cons_setppc.h src/scip/cons_abspower.h src/scip/cons_sos1.h \
  src/scip/cons_sos2.h src/scip/cons_soc.h src/scip/cons_varbound.h \
  src/scip/cons_xor.h src/scip/dialog_default.h src/scip/disp_default.h \
  src/scip/heur_actconsdiving.h src/scip/heur_clique.h \
@@ -1863,7 +1863,7 @@ $(LIBOBJDIR)/scip/heur_mutation.o: src/scip/heur_mutation.c src/scip/scip.h src/
  src/scip/cons_linking.h src/scip/cons_logicor.h \
  src/scip/cons_nonlinear.h src/scip/cons_or.h src/scip/cons_orbitope.h \
  src/scip/cons_pseudoboolean.h src/scip/cons_quadratic.h \
- src/scip/cons_setppc.h src/scip/cons_signedpower.h src/scip/cons_sos1.h \
+ src/scip/cons_setppc.h src/scip/cons_abspower.h src/scip/cons_sos1.h \
  src/scip/cons_sos2.h src/scip/cons_soc.h src/scip/cons_varbound.h \
  src/scip/cons_xor.h src/scip/dialog_default.h src/scip/disp_default.h \
  src/scip/heur_actconsdiving.h src/scip/heur_clique.h \
@@ -2078,7 +2078,7 @@ $(LIBOBJDIR)/scip/heur_rens.o: src/scip/heur_rens.c src/scip/scip.h src/scip/def
  src/scip/cons_linking.h src/scip/cons_logicor.h \
  src/scip/cons_nonlinear.h src/scip/cons_or.h src/scip/cons_orbitope.h \
  src/scip/cons_pseudoboolean.h src/scip/cons_quadratic.h \
- src/scip/cons_setppc.h src/scip/cons_signedpower.h src/scip/cons_sos1.h \
+ src/scip/cons_setppc.h src/scip/cons_abspower.h src/scip/cons_sos1.h \
  src/scip/cons_sos2.h src/scip/cons_soc.h src/scip/cons_varbound.h \
  src/scip/cons_xor.h src/scip/dialog_default.h src/scip/disp_default.h \
  src/scip/heur_actconsdiving.h src/scip/heur_clique.h \
@@ -2159,7 +2159,7 @@ $(LIBOBJDIR)/scip/heur_rins.o: src/scip/heur_rins.c src/scip/scip.h src/scip/def
  src/scip/cons_linking.h src/scip/cons_logicor.h \
  src/scip/cons_nonlinear.h src/scip/cons_or.h src/scip/cons_orbitope.h \
  src/scip/cons_pseudoboolean.h src/scip/cons_quadratic.h \
- src/scip/cons_setppc.h src/scip/cons_signedpower.h src/scip/cons_sos1.h \
+ src/scip/cons_setppc.h src/scip/cons_abspower.h src/scip/cons_sos1.h \
  src/scip/cons_sos2.h src/scip/cons_soc.h src/scip/cons_varbound.h \
  src/scip/cons_xor.h src/scip/dialog_default.h src/scip/disp_default.h \
  src/scip/heur_actconsdiving.h src/scip/heur_clique.h \
@@ -2541,7 +2541,7 @@ $(LIBOBJDIR)/scip/heur_undercover.o: src/scip/heur_undercover.c src/scip/scip.h 
  src/scip/cons_linking.h src/scip/cons_logicor.h \
  src/scip/cons_nonlinear.h src/scip/cons_or.h src/scip/cons_orbitope.h \
  src/scip/cons_pseudoboolean.h src/scip/cons_quadratic.h \
- src/scip/cons_setppc.h src/scip/cons_signedpower.h src/scip/cons_sos1.h \
+ src/scip/cons_setppc.h src/scip/cons_abspower.h src/scip/cons_sos1.h \
  src/scip/cons_sos2.h src/scip/cons_soc.h src/scip/cons_varbound.h \
  src/scip/cons_xor.h src/scip/dialog_default.h src/scip/disp_default.h \
  src/scip/heur_actconsdiving.h src/scip/heur_clique.h \
@@ -2622,7 +2622,7 @@ $(LIBOBJDIR)/scip/heur_vbounds.o: src/scip/heur_vbounds.c src/scip/scip.h src/sc
  src/scip/cons_linking.h src/scip/cons_logicor.h \
  src/scip/cons_nonlinear.h src/scip/cons_or.h src/scip/cons_orbitope.h \
  src/scip/cons_pseudoboolean.h src/scip/cons_quadratic.h \
- src/scip/cons_setppc.h src/scip/cons_signedpower.h src/scip/cons_sos1.h \
+ src/scip/cons_setppc.h src/scip/cons_abspower.h src/scip/cons_sos1.h \
  src/scip/cons_sos2.h src/scip/cons_soc.h src/scip/cons_varbound.h \
  src/scip/cons_xor.h src/scip/dialog_default.h src/scip/disp_default.h \
  src/scip/heur_actconsdiving.h src/scip/heur_clique.h \
@@ -3465,7 +3465,7 @@ $(LIBOBJDIR)/scip/reader_gms.o: src/scip/reader_gms.c src/scip/reader_gms.h src/
  src/scip/struct_event.h src/scip/cons_knapsack.h src/scip/cons_linear.h \
  src/scip/cons_logicor.h src/scip/cons_quadratic.h src/scip/cons_soc.h \
  src/scip/cons_setppc.h src/scip/cons_varbound.h \
- src/scip/cons_indicator.h src/scip/cons_signedpower.h \
+ src/scip/cons_indicator.h src/scip/cons_abspower.h \
  src/scip/cons_nonlinear.h
 $(LIBOBJDIR)/scip/reader_lp.o: src/scip/reader_lp.c src/scip/reader_lp.h src/scip/scip.h \
  src/scip/def.h src/scip/type_retcode.h src/scip/message.h \
@@ -3612,7 +3612,7 @@ $(LIBOBJDIR)/scip/reader_pip.o: src/scip/reader_pip.c src/scip/reader_pip.h src/
  src/scip/struct_event.h src/scip/cons_knapsack.h src/scip/cons_linear.h \
  src/scip/cons_logicor.h src/scip/cons_setppc.h src/scip/cons_varbound.h \
  src/scip/cons_quadratic.h src/scip/cons_nonlinear.h \
- src/scip/cons_signedpower.h src/scip/cons_and.h
+ src/scip/cons_abspower.h src/scip/cons_and.h
 $(LIBOBJDIR)/scip/reader_ppm.o: src/scip/reader_ppm.c src/scip/reader_ppm.h src/scip/scip.h \
  src/scip/def.h src/scip/type_retcode.h src/scip/message.h \
  src/scip/type_message.h src/scip/struct_message.h src/scip/pub_message.h \
@@ -4155,7 +4155,7 @@ $(LIBOBJDIR)/scip/sepa_rapidlearning.o: src/scip/sepa_rapidlearning.c \
  src/scip/cons_linking.h src/scip/cons_logicor.h \
  src/scip/cons_nonlinear.h src/scip/cons_or.h src/scip/cons_orbitope.h \
  src/scip/cons_pseudoboolean.h src/scip/cons_quadratic.h \
- src/scip/cons_setppc.h src/scip/cons_signedpower.h src/scip/cons_sos1.h \
+ src/scip/cons_setppc.h src/scip/cons_abspower.h src/scip/cons_sos1.h \
  src/scip/cons_sos2.h src/scip/cons_soc.h src/scip/cons_varbound.h \
  src/scip/cons_xor.h src/scip/dialog_default.h src/scip/disp_default.h \
  src/scip/heur_actconsdiving.h src/scip/heur_clique.h \
@@ -4269,7 +4269,7 @@ $(LIBOBJDIR)/scip/sepa_zerohalf.o: src/scip/sepa_zerohalf.c src/scip/sepa_zeroha
  src/scip/cons_linking.h src/scip/cons_logicor.h \
  src/scip/cons_nonlinear.h src/scip/cons_or.h src/scip/cons_orbitope.h \
  src/scip/cons_pseudoboolean.h src/scip/cons_quadratic.h \
- src/scip/cons_setppc.h src/scip/cons_signedpower.h src/scip/cons_sos1.h \
+ src/scip/cons_setppc.h src/scip/cons_abspower.h src/scip/cons_sos1.h \
  src/scip/cons_sos2.h src/scip/cons_soc.h src/scip/cons_varbound.h \
  src/scip/cons_xor.h src/scip/dialog_default.h src/scip/disp_default.h \
  src/scip/heur_actconsdiving.h src/scip/heur_clique.h \
@@ -5103,7 +5103,7 @@ $(LIBOBJDIR)/scip/scipdefplugins.o: src/scip/scipdefplugins.c src/scip/scipdefpl
  src/scip/cons_linking.h src/scip/cons_logicor.h \
  src/scip/cons_nonlinear.h src/scip/cons_or.h src/scip/cons_orbitope.h \
  src/scip/cons_pseudoboolean.h src/scip/cons_quadratic.h \
- src/scip/cons_setppc.h src/scip/cons_signedpower.h src/scip/cons_sos1.h \
+ src/scip/cons_setppc.h src/scip/cons_abspower.h src/scip/cons_sos1.h \
  src/scip/cons_sos2.h src/scip/cons_soc.h src/scip/cons_varbound.h \
  src/scip/cons_xor.h src/scip/dialog_default.h src/scip/disp_default.h \
  src/scip/heur_actconsdiving.h src/scip/heur_clique.h \
@@ -5186,7 +5186,7 @@ $(LIBOBJDIR)/scip/scipshell.o: src/scip/scipshell.c src/scip/scip.h src/scip/def
  src/scip/cons_linking.h src/scip/cons_logicor.h \
  src/scip/cons_nonlinear.h src/scip/cons_or.h src/scip/cons_orbitope.h \
  src/scip/cons_pseudoboolean.h src/scip/cons_quadratic.h \
- src/scip/cons_setppc.h src/scip/cons_signedpower.h src/scip/cons_sos1.h \
+ src/scip/cons_setppc.h src/scip/cons_abspower.h src/scip/cons_sos1.h \
  src/scip/cons_sos2.h src/scip/cons_soc.h src/scip/cons_varbound.h \
  src/scip/cons_xor.h src/scip/dialog_default.h src/scip/disp_default.h \
  src/scip/heur_actconsdiving.h src/scip/heur_clique.h \
