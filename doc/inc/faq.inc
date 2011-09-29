@@ -173,19 +173,20 @@
     <p class="q">
       <a name="Q45">Can I use SCIP as a pure LP-Solver?</a>
     </p>
-    <p class="a">
-      On the one hand, since LPs are only special types of MIPs and CIPs, the answer is yes. For this you need to link
-      SCIP to an LP-Solver, see <a href="#Q4">here</a>. If you feed a pure LP to SCIP, it will first apply
-      presolving and then hand this presolved problem to the underlying LP solver. If solved to optimality, you can
-      query the optimal solution values as always.<br/><br/>
+    <p class="a"> 
+      Since LPs are only special types of MIPs and CIPs, the principal answer is yes. If you feed a pure LP to SCIP, it
+      will first apply presolving and then hand this presolved problem to the underlying LP solver. If solved to
+      optimality, you can query the optimal solution values as always.<br/><br/>
 
       However, there are certain limitations to this: Dual multipliers and reduced costs are not accessible. If the LP
-      turns out to be infeasible, you cannot obtain the farkas proof. This is necessarily so, because the strong LP
-      duality theory does not have a correspondence in MIP or CIP.
+      turns out to be infeasible, you cannot obtain the farkas proof. This is, because the strong LP duality theory does
+      not have a correspondence in MIP or CIP and there is no special functionality implemented in SCIP for the case
+      that the solved problem is an LP.
 
-      Hence, if you need more than the primal solution, you need to use an LP-Solver directly. If you want to solve an
-      LP not from the command line, but within your (C) program, you could use SCIP's LP-Interface, see also
-      <a href="#Q46">here</a>.
+      Hence, if you need more, "LP specific", information than the primal solution, you better use an LP-Solver
+      directly. If you are using the ZIB Optimization Suite, youe could, e.g., use the included LP solver 
+      <a href=http://soplex.zib.de>SoPlex</a>.  If you want to solve an LP not from the command line, but within your
+      C/C++ program, you could also use SCIP's LP-Interface, see also <a href="#Q46">here</a>.
     </p>
     <p class="q">
        <a name="Q19">How can I use the SCIP makefiles?</a>
