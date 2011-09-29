@@ -506,6 +506,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/branch_random.o \
 			scip/branch_relpscost.o \
 			scip/cons_and.o \
+			scip/cons_bivariate.o \
 			scip/cons_bounddisjunction.o \
 			scip/cons_conjunction.o \
 			scip/cons_countsols.o \

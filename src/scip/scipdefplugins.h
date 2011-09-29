@@ -38,6 +38,7 @@
 #include "scip/branch_random.h"
 #include "scip/branch_relpscost.h"
 #include "scip/cons_and.h"
+#include "scip/cons_bivariate.h"
 #include "scip/cons_bounddisjunction.h"
 #include "scip/cons_conjunction.h"
 #include "scip/cons_countsols.h"

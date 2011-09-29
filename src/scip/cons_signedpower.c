@@ -52,7 +52,7 @@
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 #define CONSHDLR_PROP_TIMING   SCIP_PROPTIMING_ALWAYS /**< when should the constraint handlers propagation routines be called? */
 
-#define QUADCONSUPGD_PRIORITY        50 /**< priority of the constraint handler for upgrading of quadratic constraints */
+#define QUADCONSUPGD_PRIORITY     50000 /**< priority of the constraint handler for upgrading of quadratic constraints */
 #define NONLINCONSUPGD_PRIORITY   50000 /**< priority of the constraint handler for upgrading of nonlinear constraints and reformulating expression graph nodes */
 
 /*

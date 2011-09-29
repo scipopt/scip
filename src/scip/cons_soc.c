@@ -56,7 +56,7 @@
 
 #define CONSHDLR_PROP_TIMING  SCIP_PROPTIMING_BEFORELP
 
-#define QUADCONSUPGD_PRIORITY         0 /**< priority of the constraint handler for upgrading of quadratic constraints */
+#define QUADCONSUPGD_PRIORITY     10000 /**< priority of the constraint handler for upgrading of quadratic constraints */
 
 #ifndef M_PI
 #define M_PI           3.141592653589793238462643

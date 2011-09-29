@@ -40,6 +40,7 @@
 #include "scip/cons_indicator.h"
 #include "scip/cons_signedpower.h"
 #include "scip/cons_nonlinear.h"
+#include "scip/cons_bivariate.h"
 #include "scip/pub_misc.h"
 
 #define READER_NAME             "gmsreader"
@@ -1470,6 +1471,7 @@ SCIP_RETCODE printExpr(
             {
                appendLineWithIndent(scip, file, linebuffer, linecnt, "sqr(");
                SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, transformed, SCIPexprGetChildren(expr)[quadelems[i].idx1], exprvars) );
+               appendLineWithIndent(scip, file, linebuffer, linecnt, ")");
             }
             else
             {
@@ -2200,6 +2202,9 @@ SCIP_RETCODE SCIPwriteGms(
       rangedrow = rangedrow || (strcmp(conshdlrname, "signedpower") == 0
          && !SCIPisInfinity(scip, -SCIPgetLhsSignedpower(scip, cons)) && !SCIPisInfinity(scip, SCIPgetRhsSignedpower(scip, cons))
          && !SCIPisEQ(scip, SCIPgetLhsSignedpower(scip, cons), SCIPgetRhsSignedpower(scip, cons)));
+      rangedrow = rangedrow || (strcmp(conshdlrname, "bivariate") == 0
+         && !SCIPisInfinity(scip, -SCIPgetLhsBivariate(scip, cons)) && !SCIPisInfinity(scip, SCIPgetRhsBivariate(scip, cons))
+         && !SCIPisEQ(scip, SCIPgetLhsBivariate(scip, cons), SCIPgetRhsBivariate(scip, cons)));
       rangedrow = rangedrow || (strcmp(conshdlrname, "varbound") == 0
          && !SCIPisInfinity(scip, -SCIPgetLhsVarbound(scip, cons)) && !SCIPisInfinity(scip, SCIPgetRhsVarbound(scip, cons))
          && !SCIPisEQ(scip, SCIPgetLhsVarbound(scip, cons), SCIPgetRhsVarbound(scip, cons)));
@@ -2215,7 +2220,8 @@ SCIP_RETCODE SCIPwriteGms(
       }
       else if( strcmp(conshdlrname, "knapsack") == 0 || strcmp(conshdlrname, "logicor") == 0 || strcmp(conshdlrname, "setppc") == 0
             || strcmp(conshdlrname, "linear") == 0 || strcmp(conshdlrname, "quadratic") == 0 || strcmp(conshdlrname, "varbound") == 0
-            || strcmp(conshdlrname, "soc") == 0 || strcmp(conshdlrname, "signedpower") == 0 || strcmp(conshdlrname, "nonlinear") == 0 )
+            || strcmp(conshdlrname, "soc") == 0 || strcmp(conshdlrname, "signedpower") == 0 || strcmp(conshdlrname, "bivariate") == 0
+            || strcmp(conshdlrname, "nonlinear") == 0 )
       {
          (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", consname, (c < nconss - 1) ? "," : ";");
          appendLine(scip, file, linebuffer, &linecnt, buffer);
@@ -2333,6 +2339,31 @@ SCIP_RETCODE SCIPwriteGms(
 
          nlcons = TRUE;
          nqcons = TRUE;
+      }
+      else if( strcmp(conshdlrname, "bivariate") == 0 )
+      {
+         SCIP_EXPRTREE* exprtree;
+         SCIP_VAR* linvar;
+         SCIP_Real lincoef;
+         int exprdegree;
+         SCIP_Real one;
+
+         exprtree = SCIPgetExprtreeBivariate(scip, cons);
+         assert(exprtree != NULL);
+
+         linvar  = SCIPgetLinearVarBivariate(scip, cons);
+         lincoef = SCIPgetLinearCoefBivariate(scip, cons);
+         one = 1.0;
+         SCIP_CALL( printNonlinearCons(scip, file, consname,
+            linvar == NULL ? 0 : 1, &linvar, &lincoef,
+            1, &exprtree, &one,
+            SCIPgetLhsBivariate(scip, cons),  SCIPgetRhsBivariate(scip, cons), transformed) );
+
+         SCIP_CALL( SCIPexprtreeGetMaxDegree(exprtree, &exprdegree) );
+         if( exprdegree > 1 )
+            nlcons = TRUE;
+         if( exprdegree > 2)
+            nqcons = TRUE;
       }
       else if( strcmp(conshdlrname, "setppc") == 0 )
       {
