@@ -16255,13 +16255,9 @@ SCIP_RETCODE SCIPgetNLPStatistics(
    {
       return SCIPnlpGetStatistics(scip->nlp, statistics);
    }
-   else
-   {
-      SCIPerrorMessage("NLP has not been not constructed.\n");
-      return SCIP_ERROR;
-   }
 
-   return SCIP_OKAY;
+   SCIPerrorMessage("NLP has not been not constructed.\n");
+   return SCIP_ERROR;
 }
 
 /** gets objective value of current NLP */
@@ -18980,8 +18976,6 @@ SCIP_RETCODE SCIPcreateSol(
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
-
-   return SCIP_OKAY;
 }
 
 /** creates a primal solution, initialized to the current LP solution */
@@ -19133,8 +19127,6 @@ SCIP_RETCODE SCIPcreateOrigSol(
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
-
-   return SCIP_OKAY;
 }
 
 /** creates a copy of a primal solution; note that a copy of a linked solution is also linked and needs to be unlinked
@@ -19916,6 +19908,7 @@ SCIP_RETCODE SCIPaddSol(
          SCIP_CALL( SCIPsolUnlink(sol, scip->set, scip->transprob) );
          SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob) );      
       }
+      /*lint -fallthrough*/
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
       SCIP_CALL( SCIPprimalAddSol(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->transprob, scip->tree,
@@ -19930,8 +19923,6 @@ SCIP_RETCODE SCIPaddSol(
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
-
-   return SCIP_OKAY;
 }
 
 /** adds primal solution to solution storage, frees the solution afterwards */
@@ -19961,6 +19952,7 @@ SCIP_RETCODE SCIPaddSolFree(
          SCIP_CALL( SCIPsolUnlink(*sol, scip->set, scip->transprob) );
          SCIP_CALL( SCIPsolRetransform(*sol, scip->set, scip->stat, scip->origprob) );      
       }
+      /*lint -fallthrough*/
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
       SCIP_CALL( SCIPprimalAddSolFree(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->transprob, scip->tree,
@@ -19975,8 +19967,6 @@ SCIP_RETCODE SCIPaddSolFree(
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
-
-   return SCIP_OKAY;
 }
 
 /** adds current LP/pseudo solution to solution storage */
