@@ -7820,6 +7820,7 @@ SCIP_RETCODE propagateBoundsQuadVar(
    return SCIP_OKAY;
 }
 
+#if 1
 /** tries to deduce domain reductions for x in xsqrcoef x^2 + xlincoef x + ysqrcoef y^2 + ylincoef y + bilincoef x y \\in rhs
  * NOTE that domain reductions for y are not deduced 
  */
@@ -7906,6 +7907,77 @@ SCIP_RETCODE propagateBoundsBilinearTerm(
 
    return SCIP_OKAY;
 }
+#else
+/** tries to deduce domain reductions for x in xsqrcoef x^2 + xlincoef x + ysqrcoef y^2 + ylincoef y + bilincoef x y \\in rhs
+ * NOTE that domain reductions for y are not deduced
+ */
+static
+SCIP_RETCODE propagateBoundsBilinearTerm(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< the constraint, where the bilinear term belongs to */
+   SCIP_Real             intervalinfty,      /**< infinity value used in interval operations */
+   SCIP_VAR*             x,                  /**< first variable */
+   SCIP_Real             xsqrcoef,           /**< square coefficient of x */
+   SCIP_Real             xlincoef,           /**< linear coefficient of x */
+   SCIP_VAR*             y,                  /**< second variable */
+   SCIP_Real             ysqrcoef,           /**< square coefficient of y */
+   SCIP_Real             ylincoef,           /**< linear coefficient of y */
+   SCIP_Real             bilincoef,          /**< bilinear coefficient of x*y */
+   SCIP_INTERVAL         rhs,                /**< right hand side of quadratic equation */
+   SCIP_RESULT*          result,             /**< pointer to store result of domain propagation */
+   int*                  nchgbds             /**< counter to increment if domain reductions are found */
+   )
+{
+   SCIP_INTERVAL xbnds;
+   SCIP_INTERVAL ybnds;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(x != NULL);
+   assert(y != NULL);
+   assert(x != y);
+   assert(result != NULL);
+   assert(*result == SCIP_DIDNOTFIND || *result == SCIP_REDUCEDDOM);
+   assert(nchgbds != NULL);
+   assert(bilincoef != 0.0);
+
+   if( SCIPintervalIsEntire(intervalinfty, rhs) )
+      return SCIP_OKAY;
+
+   SCIPintervalSetBounds(&xbnds,
+      -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x))),
+       infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x))));
+   SCIPintervalSetBounds(&ybnds,
+      -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(y), SCIPvarGetUbLocal(y))),
+       infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(y), SCIPvarGetUbLocal(y))));
+
+   /* try to find domain reductions for x */
+   SCIPintervalSolveBivariateQuadExpressionAllScalar(intervalinfty, &xbnds, xsqrcoef, ysqrcoef, bilincoef, xlincoef, ylincoef, rhs, xbnds, ybnds);
+
+   if( SCIPintervalIsEmpty(xbnds) )
+   {
+      SCIPdebugMessage("found <%s> infeasible due to domain propagation for quadratic variable <%s>\n", SCIPconsGetName(cons), SCIPvarGetName(x));
+      *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
+   }
+
+   if( !SCIPisInfinity(scip, -SCIPintervalGetInf(xbnds)) )
+   {
+      SCIP_CALL( propagateBoundsTightenVarLb(scip, cons, intervalinfty, x, SCIPintervalGetInf(xbnds), result, nchgbds) );
+      if( *result == SCIP_CUTOFF )
+         return SCIP_OKAY;
+   }
+
+   if( !SCIPisInfinity(scip,  SCIPintervalGetSup(xbnds)) )
+   {
+      SCIP_CALL( propagateBoundsTightenVarUb(scip, cons, intervalinfty, x, SCIPintervalGetSup(xbnds), result, nchgbds) );
+      if( *result == SCIP_CUTOFF )
+         return SCIP_OKAY;
+   }
+
+   return SCIP_OKAY;
+}
+#endif
 
 /** computes the minimal and maximal activity for the quadratic part in a constraint data
  *  only sums up terms that contribute finite values
