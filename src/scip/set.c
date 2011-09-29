@@ -97,6 +97,7 @@
 #define SCIP_DEFAULT_CONF_REPROPAGATE      TRUE /**< should earlier nodes be repropagated in order to replace branching
                                                  *   decisions by deductions? */
 #define SCIP_DEFAULT_CONF_KEEPREPROP       TRUE /**< should constraints be kept for repropagation even if they are too long? */
+#define SCIP_DEFAULT_CONF_SEPARATE         TRUE /**< should the conflict constraints be separated? */
 #define SCIP_DEFAULT_CONF_DYNAMIC          TRUE /**< should the conflict constraints be subject to aging? */
 #define SCIP_DEFAULT_CONF_REMOVEABLE       TRUE /**< should the conflict's relaxations be subject to LP aging and cleanup? */
 #define SCIP_DEFAULT_CONF_DEPTHSCOREFAC     1.0 /**< score factor for depth level in bound relaxation heuristic of LP analysis */
@@ -838,6 +839,11 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/keepreprop",
          "should constraints be kept for repropagation even if they are too long?",
          &(*set)->conf_keepreprop, TRUE, SCIP_DEFAULT_CONF_KEEPREPROP,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "conflict/separate",
+         "should the conflict constraints be separated?",
+         &(*set)->conf_seperate, TRUE, SCIP_DEFAULT_CONF_SEPARATE,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/dynamic",

@@ -10267,7 +10267,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLinear)
       /* create a constraint out of the conflict set */
       (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%"SCIP_LONGINT_FORMAT, SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsLinear(scip, &cons, consname, nbdchginfos, vars, vals, lhs, SCIPinfinity(scip),
-            FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
+            FALSE, separate, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
 
       /** try to automatically convert a linear constraint into a more specific and more specialized constraint */
       SCIP_CALL( SCIPupgradeConsLinear(scip, cons, &upgdcons) );

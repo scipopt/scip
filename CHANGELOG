@@ -185,6 +185,7 @@ parameters:
   if FALSE by buffering them; if <lp/freesolvalbuffers> is TRUE, we free the buffer memory each time (FALSE by default)
 - added parameter <constraints/quadratic/checkfactorable> to enable check for factorable quadratic functions (xAx = (ax+b)*(cx+d)) in quadratic constraints and use of this information in separation (generates lifted tangent inequalities according to Belotti/Miller/Namazifar if also linear vars are present)
 - added parameters <constraints/{nonlinear,quadratic,soc,signedpower}/maxsepanlprounds> to enable solving NLP relaxation in root node and adding cuts from linearizations of convex nonlinear constraints into cutpool
+- added parameter <conflict/separate> which enables or disables the separation of conflict constraints
 
 features:
 - flatzinc reader is now capable to read cumulative constraints
