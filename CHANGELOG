@@ -122,13 +122,15 @@ fixed bugs:
 - fixed assert in sepa_clique.c which is currently not valid because implicit binary variables in cliques are ignored
 - fixed bug in redcost propagator: can only be called if the current node has an LP
 - fixed numerical issue in octane heuristic: close-to-zero values for ray direction could have led to bad computations
+- fixed numerical bug in linear constraint handler: polishing of coefficients after fixing variables led to wrong results for
+  continuous variables fixed to a close-to-zero value.
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})
 - added clique heuristic (heur_clique.{c,h})
 - added pseudoboolean constraint handler (cons_pseudoboolean.{c,h})
 - all C template files are now called <plugintype>_xyz.{c,h} instead of <plugintype>_xxx.{c,h}
-- added first version of cons_disjunction.{c,h} which allows a disjunctions of constraints
+- added first version of cons_disjunction.{c,h} which allows a disjunction of constraints
 - added first version of sepa_closecuts.{c,h} to separate cuts w.r.t. to a point that is closer to the integral polyhedron
 - added reader for variable bounds (reader_bnd.{c,h})
 - added BETA version of constraint handler for nonlinear constraints (cons_nonlinear.{c,h}) to handle nonlinear equations given by algebraic expressions using operands like addition, multiplication, power, exp, log; currently no trigonometric functions

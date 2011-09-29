@@ -3702,7 +3702,12 @@ SCIP_RETCODE applyFixings(
       
       if( !SCIPisInfinity(scip, -consdata->lhs) )
       {
-         if( SCIPisFeasEQ(scip, lhssubtrahend, consdata->lhs ) )
+         /** for large numbers that are relatively equal, substraction can lead to cancellation,
+          *  causing wrong fixings of other variables --> better use a real zero here;
+          *  for small numbers, polishing the difference might lead to wrong results -->
+          *  better use the exact difference in this case 
+          */
+         if( SCIPisFeasEQ(scip, lhssubtrahend, consdata->lhs) && SCIPisFeasGE(scip, REALABS(lhssubtrahend), 1.0)) )
          {
             SCIP_CALL( chgLhs(scip, cons, 0.0) );
          }
@@ -3713,7 +3718,13 @@ SCIP_RETCODE applyFixings(
       }
       if( !SCIPisInfinity(scip, consdata->rhs) )
       {
-         if( SCIPisFeasEQ(scip, rhssubtrahend, consdata->rhs ) )
+       
+         /** for large numbers that are relatively equal, substraction can lead to cancellation,
+          *  causing wrong fixings of other variables --> better use a real zero here;
+          *  for small numbers, polishing the difference might lead to wrong results -->
+          *  better use the exact difference in this case 
+          */
+         if( SCIPisFeasEQ(scip, rhssubtrahend, consdata->rhs ) && SCIPisFeasGE(scip, REALABS(rhssubtrahend), 1.0)) )
          {
             SCIP_CALL( chgRhs(scip, cons, 0.0) );
          }
