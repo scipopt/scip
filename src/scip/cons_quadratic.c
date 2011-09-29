@@ -5334,20 +5334,20 @@ SCIP_Bool generateCutLTIgenMulCoeff(
 static
 void generateCutLTIcomputeCoefs(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             xl,
-   SCIP_Real             xu,
-   SCIP_Real             x0,
-   SCIP_Real             yl,
-   SCIP_Real             yu,
-   SCIP_Real             y0_,
-   SCIP_Real             wl,
-   SCIP_Real             wu,
-   SCIP_Real             w0,
-   SCIP_Real*            cx,
-   SCIP_Real*            cy,
-   SCIP_Real*            cw,
-   SCIP_Real*            c0,
-   SCIP_Bool*            success
+   SCIP_Real             xl,                 /**< lower bound on x */
+   SCIP_Real             xu,                 /**< upper bound on x */
+   SCIP_Real             x0,                 /**< reference point for x */
+   SCIP_Real             yl,                 /**< lower bound on y */
+   SCIP_Real             yu,                 /**< upper bound on y */
+   SCIP_Real             y0_,                /**< reference point for y */
+   SCIP_Real             wl,                 /**< lower bound on w */
+   SCIP_Real             wu,                 /**< upper bound on w */
+   SCIP_Real             w0,                 /**< reference point for w */
+   SCIP_Real*            cx,                 /**< buffer where to store cut coefficient for x */
+   SCIP_Real*            cy,                 /**< buffer where to store cut coefficient for y */
+   SCIP_Real*            cw,                 /**< buffer where to store cut coefficient for w */
+   SCIP_Real*            c0,                 /**< buffer where to store cut left-hand-side */
+   SCIP_Bool*            success             /**< buffer where to indicate whether cut coefficients were computed */
    )
 {
    SCIP_Bool flipx;

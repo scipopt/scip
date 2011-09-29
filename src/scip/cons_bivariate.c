@@ -3417,7 +3417,7 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorAtBoundary(
 }
 
 /** generates a linear underestimator for f(x,y) with f(x,y) being convex in x and convex in y but indefinite
- *  This is for the case where the cone of the concave directions is (R_\geq0 x R_\leq0) union (R_\leq0 x R_\geq0).
+ *  This is for the case where the cone of the concave directions is (R_+ x R_-) union (R_\- x R_+).
  *  We consider two cases:
  *    a) the underestimating segmenent connects parallel facets
  *    b) the underestimating segmenent connects orthogonal facets where
@@ -3602,7 +3602,7 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorInTheInteriorPatternA(
 
 
 /** generates a linear underestimator for f(x,y) with f(x,y) being convex in x and convex in y but indefinite
- *  This is for the case where the cone of the concave directions is (R_\geq0 x R_\geq0) union (R_\leq0 x R_\leq0).
+ *  This is for the case where the cone of the concave directions is (R_+ x R_+) union (R_- x R_-).
  *  We consider two cases:
  *    a) the underestimating segmenent connects parallel facets
  *    b) the underestimating segmenent connects orthogonal facets where
@@ -5086,17 +5086,17 @@ SCIP_RETCODE createConsFromQuadTerm(
    SCIP_CONS*            srccons,            /**< source constraint to take attributes from */
    SCIP_CONS**           cons,               /**< pointer to store new constraint */
    const char*           name,               /**< name of new constraint */
-   SCIP_VAR*             x,
-   SCIP_VAR*             y,
-   SCIP_VAR*             z,
-   SCIP_Real             coefxx,
-   SCIP_Real             coefx,
-   SCIP_Real             coefyy,
-   SCIP_Real             coefy,
-   SCIP_Real             coefxy,
-   SCIP_Real             coefz,
-   SCIP_Real             lhs,
-   SCIP_Real             rhs
+   SCIP_VAR*             x,                  /**< first nonlinear variable */
+   SCIP_VAR*             y,                  /**< second nonlinear variable */
+   SCIP_VAR*             z,                  /**< linear variable, can be NULL */
+   SCIP_Real             coefxx,             /**< coefficient of x^2 */
+   SCIP_Real             coefx,              /**< coefficient of x */
+   SCIP_Real             coefyy,             /**< coefficient of y^2 */
+   SCIP_Real             coefy,              /**< coefficient of y */
+   SCIP_Real             coefxy,             /**< coefficient of x*y */
+   SCIP_Real             coefz,              /**< coefficient of z */
+   SCIP_Real             lhs,                /**< left-hand-side */
+   SCIP_Real             rhs                 /**< right-hand-side */
    )
 {
    SCIP_Real mult;
@@ -5249,14 +5249,14 @@ SCIP_RETCODE createConsFromQuadTerm(
 static
 SCIP_RETCODE createExprtreeFromMonomial(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             x,
-   SCIP_VAR*             y,
-   SCIP_Real             coef,
-   SCIP_Real             p,
-   SCIP_Real             q,
-   SCIP_EXPRTREE**       exprtree,
-   SCIP_Real*            mult,
-   SCIP_BIVAR_CONVEXITY* convextype
+   SCIP_VAR*             x,                  /**< first variable */
+   SCIP_VAR*             y,                  /**< second variable */
+   SCIP_Real             coef,               /**< monomial coefficient */
+   SCIP_Real             p,                  /**< exponent of x */
+   SCIP_Real             q,                  /**< exponent of y */
+   SCIP_EXPRTREE**       exprtree,           /**< buffer to store pointer to expression tree */
+   SCIP_Real*            mult,               /**< buffer to store multiplicator for generated expression tree */
+   SCIP_BIVAR_CONVEXITY* convextype          /**< buffer to store convexity type of expression tree */
    )
 {
    SCIP_Bool swapvars;
@@ -5369,15 +5369,15 @@ SCIP_RETCODE createConsFromMonomial(
    SCIP_CONS*            srccons,            /**< source constraint to take attributes from, or NULL */
    SCIP_CONS**           cons,               /**< pointer to store new constraint */
    const char*           name,               /**< name of new constraint */
-   SCIP_VAR*             x,
-   SCIP_VAR*             y,
-   SCIP_VAR*             z,
-   SCIP_Real             coef,
-   SCIP_Real             p,
-   SCIP_Real             q,
-   SCIP_Real             zcoef,
-   SCIP_Real             lhs,
-   SCIP_Real             rhs
+   SCIP_VAR*             x,                  /**< first nonlinear variable */
+   SCIP_VAR*             y,                  /**< second nonlinear variable */
+   SCIP_VAR*             z,                  /**< linear variable, can be NULL */
+   SCIP_Real             coef,               /**< monomial coefficient */
+   SCIP_Real             p,                  /**< exponent of x */
+   SCIP_Real             q,                  /**< exponent of y */
+   SCIP_Real             zcoef,              /**< coefficient of z */
+   SCIP_Real             lhs,                /**< left-hand-side */
+   SCIP_Real             rhs                 /**< right-hand-side */
    )
 {
    SCIP_Real mult;

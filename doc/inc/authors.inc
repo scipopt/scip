@@ -123,7 +123,7 @@
 		 <a href="http://www.ifor.math.ethz.ch/~balmarti">Martin Ballerstein</a>
 	      </td>
 	      <td>
-                 Constraint Handler for bivariate nonlinear constraints (esp. handling of 1-convex and convex-concave functions).
+                 Constraint Handler for bivariate nonlinear constraints
 	      </td>
 	      <td>
 	      </td>
@@ -199,7 +199,7 @@
 		 <a href="http://www.ifor.math.ethz.ch/~dennism">Dennis Michaels</a>
 	      </td>
 	      <td>
-                 Constraint Handler for bivariate nonlinear constraints (esp. handling of 1-convex and convex-concave functions).
+                 Constraint Handler for bivariate nonlinear constraints
 	      </td>
 	      <td>
 	      </td>
