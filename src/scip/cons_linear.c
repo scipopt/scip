@@ -3707,7 +3707,7 @@ SCIP_RETCODE applyFixings(
           *  for small numbers, polishing the difference might lead to wrong results -->
           *  better use the exact difference in this case 
           */
-         if( SCIPisFeasEQ(scip, lhssubtrahend, consdata->lhs) && SCIPisFeasGE(scip, REALABS(lhssubtrahend), 1.0)) )
+         if( SCIPisFeasEQ(scip, lhssubtrahend, consdata->lhs) && SCIPisFeasGE(scip, REALABS(lhssubtrahend), 1.0) ) 
          {
             SCIP_CALL( chgLhs(scip, cons, 0.0) );
          }
@@ -3724,7 +3724,7 @@ SCIP_RETCODE applyFixings(
           *  for small numbers, polishing the difference might lead to wrong results -->
           *  better use the exact difference in this case 
           */
-         if( SCIPisFeasEQ(scip, rhssubtrahend, consdata->rhs ) && SCIPisFeasGE(scip, REALABS(rhssubtrahend), 1.0)) )
+         if( SCIPisFeasEQ(scip, rhssubtrahend, consdata->rhs ) && SCIPisFeasGE(scip, REALABS(rhssubtrahend), 1.0) )
          {
             SCIP_CALL( chgRhs(scip, cons, 0.0) );
          }
