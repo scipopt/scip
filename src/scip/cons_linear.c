@@ -3702,7 +3702,12 @@ SCIP_RETCODE applyFixings(
       
       if( !SCIPisInfinity(scip, -consdata->lhs) )
       {
-         if( SCIPisFeasEQ(scip, lhssubtrahend, consdata->lhs ) )
+         /** for large numbers that are relatively equal, substraction can lead to cancellation,
+          *  causing wrong fixings of other variables --> better use a real zero here;
+          *  for small numbers, polishing the difference might lead to wrong results -->
+          *  better use the exact difference in this case 
+          */
+         if( SCIPisFeasEQ(scip, lhssubtrahend, consdata->lhs) && SCIPisFeasGE(scip, REALABS(lhssubtrahend), 1.0) ) 
          {
             SCIP_CALL( chgLhs(scip, cons, 0.0) );
          }
@@ -3713,7 +3718,13 @@ SCIP_RETCODE applyFixings(
       }
       if( !SCIPisInfinity(scip, consdata->rhs) )
       {
-         if( SCIPisFeasEQ(scip, rhssubtrahend, consdata->rhs ) )
+       
+         /** for large numbers that are relatively equal, substraction can lead to cancellation,
+          *  causing wrong fixings of other variables --> better use a real zero here;
+          *  for small numbers, polishing the difference might lead to wrong results -->
+          *  better use the exact difference in this case 
+          */
+         if( SCIPisFeasEQ(scip, rhssubtrahend, consdata->rhs ) && SCIPisFeasGE(scip, REALABS(rhssubtrahend), 1.0) )
          {
             SCIP_CALL( chgRhs(scip, cons, 0.0) );
          }
@@ -10256,7 +10267,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLinear)
       /* create a constraint out of the conflict set */
       (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%"SCIP_LONGINT_FORMAT, SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsLinear(scip, &cons, consname, nbdchginfos, vars, vals, lhs, SCIPinfinity(scip),
-            FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
+            FALSE, separate, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
 
       /** try to automatically convert a linear constraint into a more specific and more specialized constraint */
       SCIP_CALL( SCIPupgradeConsLinear(scip, cons, &upgdcons) );

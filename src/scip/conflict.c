@@ -565,7 +565,7 @@ SCIP_RETCODE SCIPconflicthdlrExec(
    if( conflicthdlr->conflictexec != NULL )
    {
       SCIP_CALL( conflicthdlr->conflictexec(set->scip, conflicthdlr, node, validnode, bdchginfos, nbdchginfos,
-            (SCIPnodeGetDepth(validnode) > 0), set->conf_dynamic, set->conf_removable, resolved, result) );
+            set->conf_seperate, (SCIPnodeGetDepth(validnode) > 0), set->conf_dynamic, set->conf_removable, resolved, result) );
 
       if( *result != SCIP_CONSADDED
          && *result != SCIP_DIDNOTFIND

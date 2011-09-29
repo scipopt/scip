@@ -10449,7 +10449,15 @@ SCIP_Real SCIPvarGetLPSol_rec(
 
    case SCIP_VARSTATUS_AGGREGATED:
       assert(var->data.aggregate.var != NULL);
-      /**@todo case distinction if value is infinite */
+      /* a correct implementation would need to check the value of var->data.aggregate.var for infinity and return the
+       * corresponding infinity value instead of performing an arithmetical transformation (compare method
+       * SCIPvarGetLbLP()); however, we do not want to introduce a SCIP or SCIP_SET pointer to this method, since it is
+       * (or is called by) a public interface method; instead, we only assert that values are finite
+       * w.r.t. SCIP_DEFAULT_INFINITY, which seems to be true in our regression tests; note that this may yield false
+       * positives and negatives if the parameter <numerics/infinity> is modified by the user
+       */
+      assert(SCIPvarGetLPSol(var->data.aggregate.var) > -SCIP_DEFAULT_INFINITY);
+      assert(SCIPvarGetLPSol(var->data.aggregate.var) < +SCIP_DEFAULT_INFINITY);
       return var->data.aggregate.scalar * SCIPvarGetLPSol(var->data.aggregate.var) + var->data.aggregate.constant;
 
    case SCIP_VARSTATUS_MULTAGGR:
@@ -10552,7 +10560,15 @@ SCIP_Real SCIPvarGetPseudoSol_rec(
 
    case SCIP_VARSTATUS_AGGREGATED:
       assert(var->data.aggregate.var != NULL);
-      /**@todo case distinction if value is infinite */
+      /* a correct implementation would need to check the value of var->data.aggregate.var for infinity and return the
+       * corresponding infinity value instead of performing an arithmetical transformation (compare method
+       * SCIPvarGetLbLP()); however, we do not want to introduce a SCIP or SCIP_SET pointer to this method, since it is
+       * (or is called by) a public interface method; instead, we only assert that values are finite
+       * w.r.t. SCIP_DEFAULT_INFINITY, which seems to be true in our regression tests; note that this may yield false
+       * positives and negatives if the parameter <numerics/infinity> is modified by the user
+       */
+      assert(SCIPvarGetPseudoSol(var->data.aggregate.var) > -SCIP_DEFAULT_INFINITY);
+      assert(SCIPvarGetPseudoSol(var->data.aggregate.var) < +SCIP_DEFAULT_INFINITY);
       return var->data.aggregate.scalar * SCIPvarGetPseudoSol(var->data.aggregate.var) + var->data.aggregate.constant;
 
    case SCIP_VARSTATUS_MULTAGGR:
@@ -10636,7 +10652,15 @@ SCIP_Real SCIPvarGetRootSol(
 
    case SCIP_VARSTATUS_AGGREGATED:
       assert(var->data.aggregate.var != NULL);
-      /**@todo case distinction if value is infinite */
+      /* a correct implementation would need to check the value of var->data.aggregate.var for infinity and return the
+       * corresponding infinity value instead of performing an arithmetical transformation (compare method
+       * SCIPvarGetLbLP()); however, we do not want to introduce a SCIP or SCIP_SET pointer to this method, since it is
+       * (or is called by) a public interface method; instead, we only assert that values are finite
+       * w.r.t. SCIP_DEFAULT_INFINITY, which seems to be true in our regression tests; note that this may yield false
+       * positives and negatives if the parameter <numerics/infinity> is modified by the user
+       */
+      assert(SCIPvarGetRootSol(var->data.aggregate.var) > -SCIP_DEFAULT_INFINITY);
+      assert(SCIPvarGetRootSol(var->data.aggregate.var) < +SCIP_DEFAULT_INFINITY);
       return var->data.aggregate.scalar * SCIPvarGetRootSol(var->data.aggregate.var) + var->data.aggregate.constant;
 
    case SCIP_VARSTATUS_MULTAGGR:
@@ -12805,16 +12829,26 @@ SCIP_Real SCIPvarGetLbAtIndex(
       
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
       assert(var->data.aggregate.var != NULL);
-      /**@todo case distinction if value is infinite */
+      /* a correct implementation would need to check the value of var->data.aggregate.var for infinity and return the
+       * corresponding infinity value instead of performing an arithmetical transformation (compare method
+       * SCIPvarGetLbLP()); however, we do not want to introduce a SCIP or SCIP_SET pointer to this method, since it is
+       * (or is called by) a public interface method; instead, we only assert that values are finite
+       * w.r.t. SCIP_DEFAULT_INFINITY, which seems to be true in our regression tests; note that this may yield false
+       * positives and negatives if the parameter <numerics/infinity> is modified by the user
+       */
       if( var->data.aggregate.scalar > 0.0 )
       {
          /* a > 0 -> get lower bound of y */
+         assert(SCIPvarGetLbAtIndex(var->data.aggregate.var, bdchgidx, after) > -SCIP_DEFAULT_INFINITY);
+         assert(SCIPvarGetLbAtIndex(var->data.aggregate.var, bdchgidx, after) < +SCIP_DEFAULT_INFINITY);
          return var->data.aggregate.scalar * SCIPvarGetLbAtIndex(var->data.aggregate.var, bdchgidx, after)
             + var->data.aggregate.constant;
       }
       else if( var->data.aggregate.scalar < 0.0 )
       {
          /* a < 0 -> get upper bound of y */
+         assert(SCIPvarGetUbAtIndex(var->data.aggregate.var, bdchgidx, after) > -SCIP_DEFAULT_INFINITY);
+         assert(SCIPvarGetUbAtIndex(var->data.aggregate.var, bdchgidx, after) < +SCIP_DEFAULT_INFINITY);
          return var->data.aggregate.scalar * SCIPvarGetUbAtIndex(var->data.aggregate.var, bdchgidx, after)
             + var->data.aggregate.constant;
       }
@@ -12881,16 +12915,26 @@ SCIP_Real SCIPvarGetUbAtIndex(
       
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
       assert(var->data.aggregate.var != NULL);
-      /**@todo case distinction if value is infinite */
+      /* a correct implementation would need to check the value of var->data.aggregate.var for infinity and return the
+       * corresponding infinity value instead of performing an arithmetical transformation (compare method
+       * SCIPvarGetLbLP()); however, we do not want to introduce a SCIP or SCIP_SET pointer to this method, since it is
+       * (or is called by) a public interface method; instead, we only assert that values are finite
+       * w.r.t. SCIP_DEFAULT_INFINITY, which seems to be true in our regression tests; note that this may yield false
+       * positives and negatives if the parameter <numerics/infinity> is modified by the user
+       */
       if( var->data.aggregate.scalar > 0.0 )
       {
          /* a > 0 -> get lower bound of y */
+         assert(SCIPvarGetUbAtIndex(var->data.aggregate.var, bdchgidx, after) > -SCIP_DEFAULT_INFINITY);
+         assert(SCIPvarGetUbAtIndex(var->data.aggregate.var, bdchgidx, after) < +SCIP_DEFAULT_INFINITY);
          return var->data.aggregate.scalar * SCIPvarGetUbAtIndex(var->data.aggregate.var, bdchgidx, after)
             + var->data.aggregate.constant;
       }
       else if( var->data.aggregate.scalar < 0.0 )
       {
          /* a < 0 -> get upper bound of y */
+         assert(SCIPvarGetLbAtIndex(var->data.aggregate.var, bdchgidx, after) > -SCIP_DEFAULT_INFINITY);
+         assert(SCIPvarGetLbAtIndex(var->data.aggregate.var, bdchgidx, after) < +SCIP_DEFAULT_INFINITY);
          return var->data.aggregate.scalar * SCIPvarGetLbAtIndex(var->data.aggregate.var, bdchgidx, after)
             + var->data.aggregate.constant;
       }
