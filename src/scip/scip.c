@@ -22179,7 +22179,7 @@ void printLPStatistics(
    if( SCIPclockGetTime(scip->stat->duallptime) >= 0.01 )
       SCIPmessageFPrintInfo(file, " %10.2f", (SCIP_Real)scip->stat->nduallpiterations/SCIPclockGetTime(scip->stat->duallptime));
    else
-      SCIPmessageFPrintInfo(file, "          -\n");
+      SCIPmessageFPrintInfo(file, "          -");
    SCIPmessageFPrintInfo(file, " %10.2f %10d\n",
       scip->stat->dualzeroittime,
       scip->stat->ndualzeroitlps);
