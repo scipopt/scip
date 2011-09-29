@@ -7132,8 +7132,8 @@ SCIP_RETCODE separatePoint(
    return SCIP_OKAY;
 }
 
-/** adds linearizations cuts for convex constraints w.r.t. a given reference point to cutpool or sepastore
- * if separatedlpsol is not NULL, then cuts that separate the LP solution are added to the sepastore instead of the cutpool
+/** adds linearizations cuts for convex constraints w.r.t. a given reference point to cutpool and sepastore
+ * if separatedlpsol is not NULL, then cuts that separate the LP solution are added to the sepastore too
  */
 static
 SCIP_RETCODE addLinearizationCuts(
@@ -7185,30 +7185,27 @@ SCIP_RETCODE addLinearizationCuts(
       if( row == NULL )
          continue;
 
-      /* if caller wants, then check if cut separates LP solution and add to sepastore
-       * otherwise add to cutpool (but only if not a local cut, which may happen when bad coefficients are eliminated with the use of local bounds)
-       */
+      /* if caller wants, then check if cut separates LP solution and add to sepastore if so */
       if( separatedlpsol != NULL )
       {
          SCIP_Real feasibility;
          SCIP_Real norm;
 
-         feasibility = SCIPgetRowLPActivity(scip, row);
+         feasibility = SCIPgetRowLPFeasibility(scip, row);
          norm = SCIPgetRowMaxCoef(scip, row);
 
          if( -feasibility / MAX(1.0, norm) >= minefficacy )
          {
             *separatedlpsol = TRUE;
             SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
-         }
-         else if( !SCIProwIsLocal(row) )
-         {
-            SCIP_CALL( SCIPaddPoolCut(scip, row) );
+            SCIPdebugMessage("added linearization cut <%s> to LP, efficacy = %g\n", SCIProwGetName(row), -feasibility / MAX(1.0, norm));
          }
       }
-      else if( !SCIProwIsLocal(row) )
+
+      if( !SCIProwIsLocal(row) )
       {
          SCIP_CALL( SCIPaddPoolCut(scip, row) );
+         SCIPdebugMessage("added linearization cut <%s> to cutpool\n", SCIProwGetName(row));
       }
 
       SCIP_CALL( SCIPreleaseRow(scip, &row) );
@@ -7221,9 +7218,7 @@ SCIP_RETCODE addLinearizationCuts(
 static
 SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
 {
-#ifndef NDEBUG
    SCIP_CONSHDLRDATA* conshdlrdata;
-#endif
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONS**    conss;
    int            nconss;
@@ -7243,16 +7238,17 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    if( nconss == 0 )
       return SCIP_OKAY;
 
-#ifndef NDEBUG
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-#endif
-
    sol = SCIPeventGetSol(event);
    assert(sol != NULL);
 
-   /* we are only interested in solution coming from some heuristic, but not from the tree */
-   if( SCIPsolGetHeur(sol) == NULL )
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* we are only interested in solution coming from some heuristic other than trysol, but not from the tree
+    * the reason for ignoring trysol solutions is that they may come from an NLP solve in sepalp, where we already added linearizations,
+    * or are from the tree, but postprocessed via proposeFeasibleSolution
+    */
+   if( SCIPsolGetHeur(sol) == NULL || SCIPsolGetHeur(sol) == conshdlrdata->trysolheur )
       return SCIP_OKAY;
 
    conss = SCIPconshdlrGetConss(conshdlr);
@@ -9588,11 +9584,13 @@ SCIP_DECL_CONSSEPALP(consSepalpQuadratic)
     */
    if( SCIPgetDepth(scip) == 0 && conshdlrdata->sepanlprounds < conshdlrdata->maxsepanlprounds && SCIPisNLPConstructed(scip) && SCIPgetNNlpis(scip) > 0 )
    {
-      SCIP_CONSDATA* consdata;
+      SCIP_CONSDATA*  consdata;
       SCIP_NLPSOLSTAT solstat;
+      SCIP_Bool       solvednlp;
       int c;
 
       solstat = SCIPgetNLPSolstat(scip);
+      solvednlp = FALSE;
       if( solstat == SCIP_NLPSOLSTAT_UNKNOWN )
       {
          /* NLP is not solved yet, so we might want to do this
@@ -9624,6 +9622,8 @@ SCIP_DECL_CONSSEPALP(consSepalpQuadratic)
 
             solstat = SCIPgetNLPSolstat(scip);
             SCIPdebugMessage("solved NLP relax, solution status: %d\n", solstat);
+
+            solvednlp = TRUE;
          }
       }
 
@@ -9642,6 +9642,24 @@ SCIP_DECL_CONSSEPALP(consSepalpQuadratic)
 
          SCIP_CALL( SCIPcreateNLPSol(scip, &nlpsol, NULL) );
          assert(nlpsol != NULL);
+
+         /* if we solved the NLP and solution is integral, then pass it to trysol heuristic */
+         if( solvednlp && conshdlrdata->trysolheur != NULL )
+         {
+            int nfracvars;
+
+            nfracvars = 0;
+            if( SCIPgetNBinVars(scip) > 0 || SCIPgetNIntVars(scip) > 0 )
+            {
+               SCIP_CALL( SCIPgetNLPFracVars(scip, NULL, NULL, NULL, &nfracvars, NULL) );
+            }
+
+            if( nfracvars == 0 )
+            {
+               SCIPdebugMessage("pass solution with obj. value %g to trysol\n", SCIPgetSolOrigObj(scip, nlpsol));
+               SCIP_CALL( SCIPheurPassSolTrySol(scip, conshdlrdata->trysolheur, nlpsol) );
+            }
+         }
 
          SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, nlpsol, &lpsolseparated, conshdlrdata->mincutefficacysepa) );
 

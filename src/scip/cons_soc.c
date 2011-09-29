@@ -102,7 +102,6 @@ struct SCIP_ConsData
 struct SCIP_ConshdlrData
 {
    SCIP_HEUR*            subnlpheur;     /**< a pointer to the subNLP heuristic, if available */
-   SCIP_HEUR*            rensheur;       /**< a pointer to the RENS heuristic, if available */
    SCIP_HEUR*            trysolheur;     /**< a pointer to the trysol heuristic, if available */
    SCIP_EVENTHDLR*       eventhdlr;      /**< event handler for bound change events */
    int                   newsoleventfilterpos; /**< filter position of new solution event handler, if caught */
@@ -113,7 +112,6 @@ struct SCIP_ConshdlrData
    SCIP_Bool             doscaling;      /**< are constraint violations scaled? */
    SCIP_Bool             projectpoint;   /**< is the point in which a cut is generated projected onto the feasible set? */
    int                   nauxvars;       /**< number of auxiliary variables to use when creating a linear outer approx. of a SOC3 constraint */
-   SCIP_Bool             linearizenlpsol;/**< whether SOC constraints should be linearized in a solution found by the NLP or RENS heuristic */
    SCIP_Real             minefficacy;    /**< minimal efficacy of a cut to be added to LP in separation loop */
    SCIP_Bool             sparsify;       /**< whether to sparsify cuts */
    SCIP_Real             sparsifymaxloss;/**< maximal loss in cut efficacy by sparsification */
@@ -1232,8 +1230,8 @@ SCIP_RETCODE separatePoint(
    return SCIP_OKAY;
 }
 
-/** adds linearizations cuts for convex constraints w.r.t. a given reference point to cutpool or sepastore
- * if separatedlpsol is not NULL, then cuts that separate the LP solution are added to the sepastore instead of the cutpool
+/** adds linearizations cuts for convex constraints w.r.t. a given reference point to cutpool and sepastore
+ * if separatedlpsol is not NULL, then cuts that separate the LP solution are added to the sepastore too
  */
 static
 SCIP_RETCODE addLinearizationCuts(
@@ -1246,9 +1244,6 @@ SCIP_RETCODE addLinearizationCuts(
    SCIP_Real             minefficacy         /**< minimal efficacy of a cut when checking for separation of LP solution */
 )
 {
-#ifndef NDEBUG
-   SCIP_CONSHDLRDATA* conshdlrdata;
-#endif
    SCIP_CONSDATA* consdata;
    SCIP_ROW* row;
    int c;
@@ -1256,11 +1251,6 @@ SCIP_RETCODE addLinearizationCuts(
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(conss != NULL || nconss == 0);
-
-#ifndef NDEBUG
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-#endif
 
    if( separatedlpsol != NULL )
       *separatedlpsol = FALSE;
@@ -1287,15 +1277,13 @@ SCIP_RETCODE addLinearizationCuts(
 
       assert(!SCIProwIsLocal(row));
 
-      /* if caller wants, then check if cut separates LP solution and add to sepastore
-       * otherwise add to cutpool (but only if not a local cut, which may happen when bad coefficients are eliminated with the use of local bounds)
-       */
+      /* if caller wants, then check if cut separates LP solution and add to sepastore if so */
       if( separatedlpsol != NULL )
       {
          SCIP_Real feasibility;
          SCIP_Real norm;
 
-         feasibility = SCIPgetRowLPActivity(scip, row);
+         feasibility = SCIPgetRowLPFeasibility(scip, row);
          norm = SCIPgetRowMaxCoef(scip, row);
 
          if( -feasibility / MAX(1.0, norm) >= minefficacy )
@@ -1303,15 +1291,9 @@ SCIP_RETCODE addLinearizationCuts(
             *separatedlpsol = TRUE;
             SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
          }
-         else
-         {
-            SCIP_CALL( SCIPaddPoolCut(scip, row) );
-         }
       }
-      else
-      {
-         SCIP_CALL( SCIPaddPoolCut(scip, row) );
-      }
+
+      SCIP_CALL( SCIPaddPoolCut(scip, row) );
 
       SCIP_CALL( SCIPreleaseRow(scip, &row) );
    }
@@ -1323,8 +1305,8 @@ SCIP_RETCODE addLinearizationCuts(
 static
 SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
 {
-   SCIP_CONSHDLR* conshdlr;
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
    SCIP_CONS**    conss;
    int            nconss;
    SCIP_SOL*      sol;
@@ -1343,22 +1325,23 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    if( nconss == 0 )
       return SCIP_OKAY;
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
    sol = SCIPeventGetSol(event);
    assert(sol != NULL);
 
-   /* we are only interested in solution coming from the NLP or RENS heuristic (is that good?) */
-   if( SCIPsolGetHeur(sol) == NULL )
-      return SCIP_OKAY;
-   if( SCIPsolGetHeur(sol) != conshdlrdata->subnlpheur && SCIPsolGetHeur(sol) != conshdlrdata->rensheur)
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* we are only interested in solution coming from some heuristic other than trysol, but not from the tree
+    * the reason for ignoring trysol solutions is that they may come from an NLP solve in sepalp, where we already added linearizations,
+    * or are from the tree, but postprocessed via proposeFeasibleSolution
+    */
+   if( SCIPsolGetHeur(sol) == NULL || SCIPsolGetHeur(sol) == conshdlrdata->trysolheur )
       return SCIP_OKAY;
 
    conss = SCIPconshdlrGetConss(conshdlr);
    assert(conss != NULL);
 
-   SCIPdebugMessage("caught new sol event %x from heur %p; have %d conss\n", SCIPeventGetType(event), (void*)SCIPsolGetHeur(sol), nconss);
+   SCIPdebugMessage("caught new sol event %x from heur <%s>; have %d conss\n", SCIPeventGetType(event), SCIPheurGetName(SCIPsolGetHeur(sol)), nconss);
 
    SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, sol, NULL, 0.0) );
 
@@ -3020,7 +3003,6 @@ SCIP_DECL_CONSINIT(consInitSOC)
    assert(conshdlrdata != NULL);
    
    conshdlrdata->subnlpheur  = SCIPfindHeur(scip, "subnlp");
-   conshdlrdata->rensheur    = SCIPfindHeur(scip, "rens");
    conshdlrdata->trysolheur  = SCIPfindHeur(scip, "trysol");
    conshdlrdata->haveexprint = (strcmp(SCIPexprintGetName(), "NONE") != 0);
 
@@ -3041,7 +3023,6 @@ SCIP_DECL_CONSEXIT(consExitSOC)
    assert(conshdlrdata != NULL);
    
    conshdlrdata->subnlpheur  = NULL;
-   conshdlrdata->rensheur    = NULL;
    conshdlrdata->trysolheur  = NULL;
    conshdlrdata->haveexprint = FALSE;
 
@@ -3151,7 +3132,7 @@ SCIP_DECL_CONSINITSOL(consInitsolSOC)
    }
    
    conshdlrdata->newsoleventfilterpos = -1;
-   if( nconss != 0 && (conshdlrdata->subnlpheur != NULL || conshdlrdata->rensheur != NULL) )
+   if( nconss != 0 )
    {
       SCIP_EVENTHDLR* eventhdlr;
 
@@ -3186,9 +3167,6 @@ SCIP_DECL_CONSEXITSOL(consExitsolSOC)
    if( conshdlrdata->newsoleventfilterpos >= 0 )
    {
       SCIP_EVENTHDLR* eventhdlr;
-
-      /* failing of the following events mean that new solution events should not have been caught */
-      assert(conshdlrdata->subnlpheur != NULL || conshdlrdata->rensheur != NULL);
 
       eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_newsolution");
       assert(eventhdlr != NULL);
@@ -3373,8 +3351,10 @@ SCIP_DECL_CONSSEPALP(consSepalpSOC)
    if( SCIPgetDepth(scip) == 0 && conshdlrdata->sepanlprounds < conshdlrdata->maxsepanlprounds && SCIPisNLPConstructed(scip) && SCIPgetNNlpis(scip) > 0 )
    {
       SCIP_NLPSOLSTAT solstat;
+      SCIP_Bool       solvednlp;
 
       solstat = SCIPgetNLPSolstat(scip);
+      solvednlp = FALSE;
       if( solstat == SCIP_NLPSOLSTAT_UNKNOWN )
       {
          /* NLP is not solved yet, so we do it now and update solstat */
@@ -3384,6 +3364,8 @@ SCIP_DECL_CONSSEPALP(consSepalpSOC)
 
          solstat = SCIPgetNLPSolstat(scip);
          SCIPdebugMessage("solved NLP relax, solution status: %d\n", solstat);
+
+         solvednlp = TRUE;
       }
 
       if( solstat == SCIP_NLPSOLSTAT_GLOBINFEASIBLE )
@@ -3401,6 +3383,23 @@ SCIP_DECL_CONSSEPALP(consSepalpSOC)
 
          SCIP_CALL( SCIPcreateNLPSol(scip, &nlpsol, NULL) );
          assert(nlpsol != NULL);
+
+         /* if we solved the NLP and solution is integral, then pass it to trysol heuristic */
+         if( solvednlp && conshdlrdata->trysolheur != NULL )
+         {
+            int nfracvars;
+
+            nfracvars = 0;
+            if( SCIPgetNBinVars(scip) > 0 || SCIPgetNIntVars(scip) > 0 )
+            {
+               SCIP_CALL( SCIPgetNLPFracVars(scip, NULL, NULL, NULL, &nfracvars, NULL) );
+            }
+
+            if( nfracvars == 0 )
+            {
+               SCIP_CALL( SCIPheurPassSolTrySol(scip, conshdlrdata->trysolheur, nlpsol) );
+            }
+         }
 
          SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, nlpsol, &lpsolseparated, conshdlrdata->minefficacy) );
 
@@ -4105,7 +4104,6 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
    /* create constraint handler data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
    conshdlrdata->subnlpheur = NULL;
-   conshdlrdata->rensheur = NULL;
    conshdlrdata->trysolheur = NULL;
    
    SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_boundchange",
@@ -4156,10 +4154,6 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/glineur",
       "whether the Glineur Outer Approximation should be used instead of Ben-Tal Nemirovski",
       &conshdlrdata->glineur,          FALSE, TRUE,          NULL, NULL) );
-   
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/linearizenlpsol",
-      "whether SOC constraints should be linearized in a solution found by the NLP or RENS heuristic",
-      &conshdlrdata->linearizenlpsol,  FALSE, TRUE,          NULL, NULL) );
    
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacy",
       "minimal efficacy of a cut to be added to LP in separation",
