@@ -5216,6 +5216,7 @@ SCIP_RETCODE nodepartitionCreate(
 
    assert(mcfnetwork != NULL);
    assert(nodepartition != NULL);
+   assert(mcfnetwork->nnodes >= 1);
 
    /* allocate and initialize memory */
    SCIP_CALL( SCIPallocMemory(scip, nodepartition) );

@@ -2219,7 +2219,7 @@ SCIP_RETCODE readIndicators(
       }
 
       /* create slack variable */
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "indslack_%s", SCIPconsGetName(lincons));
+      (void) SCIPsnprintf(name, MPS_MAX_NAMELEN, "indslack_%s", SCIPconsGetName(lincons));
       SCIP_CALL( SCIPcreateVar(scip, &slackvar, name, 0.0, SCIPinfinity(scip), 0.0, slackvartype, TRUE, FALSE,
             NULL, NULL, NULL, NULL, NULL) );
 
