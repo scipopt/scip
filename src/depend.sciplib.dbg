@@ -202,6 +202,34 @@ $(LIBOBJDIR)/scip/branch_relpscost.o: src/scip/branch_relpscost.c \
  src/scip/pub_var.h src/scip/type_history.h src/scip/lpi.h \
  src/nlpi/pub_expr.h src/nlpi/type_exprinterpret.h \
  src/scip/intervalarith.h
+$(LIBOBJDIR)/scip/cons_abspower.o: src/scip/cons_abspower.c src/scip/cons_abspower.h \
+ src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
+ src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
+ src/scip/pub_message.h src/blockmemshell/memory.h src/scip/type_result.h \
+ src/scip/type_clock.h src/scip/type_misc.h src/scip/type_timing.h \
+ src/scip/type_scip.h src/scip/type_paramset.h src/scip/type_event.h \
+ src/scip/type_lp.h src/scip/type_nlp.h src/scip/type_var.h \
+ src/scip/type_prob.h src/scip/type_tree.h src/scip/type_branch.h \
+ src/scip/type_conflict.h src/scip/type_cons.h src/scip/type_sol.h \
+ src/scip/type_dialog.h src/scip/type_disp.h src/scip/type_heur.h \
+ src/scip/type_nodesel.h src/scip/type_presol.h src/scip/type_pricer.h \
+ src/scip/type_reader.h src/scip/type_relax.h src/scip/type_sepa.h \
+ src/scip/type_prop.h src/nlpi/type_nlpi.h src/nlpi/type_expr.h \
+ src/scip/pub_branch.h src/scip/pub_conflict.h src/scip/pub_cons.h \
+ src/scip/pub_cutpool.h src/scip/type_cutpool.h src/scip/pub_dialog.h \
+ src/scip/pub_disp.h src/scip/pub_event.h src/scip/pub_fileio.h \
+ src/scip/pub_heur.h src/scip/pub_implics.h src/scip/type_implics.h \
+ src/scip/pub_lp.h src/scip/type_set.h src/scip/type_stat.h \
+ src/scip/type_lpi.h src/scip/pub_nlp.h src/scip/pub_misc.h \
+ src/scip/pub_nodesel.h src/scip/pub_paramset.h src/scip/pub_presol.h \
+ src/scip/pub_pricer.h src/scip/pub_reader.h src/scip/pub_relax.h \
+ src/scip/pub_sepa.h src/scip/pub_prop.h src/scip/pub_sol.h \
+ src/scip/pub_tree.h src/scip/pub_var.h src/scip/type_history.h \
+ src/scip/lpi.h src/nlpi/pub_expr.h src/nlpi/type_exprinterpret.h \
+ src/scip/intervalarith.h src/scip/cons_nonlinear.h \
+ src/scip/cons_indicator.h src/scip/cons_quadratic.h \
+ src/scip/cons_linear.h src/scip/cons_varbound.h src/scip/heur_subnlp.h \
+ src/scip/heur_trysol.h src/scip/debug.h
 $(LIBOBJDIR)/scip/cons_and.o: src/scip/cons_and.c src/scip/cons_and.h src/scip/scip.h \
  src/scip/def.h src/scip/type_retcode.h src/scip/message.h \
  src/scip/type_message.h src/scip/struct_message.h src/scip/pub_message.h \
@@ -228,6 +256,34 @@ $(LIBOBJDIR)/scip/cons_and.o: src/scip/cons_and.c src/scip/cons_and.h src/scip/s
  src/nlpi/pub_expr.h src/nlpi/type_exprinterpret.h \
  src/scip/intervalarith.h src/scip/cons_linear.h src/scip/cons_logicor.h \
  src/scip/cons_nonlinear.h src/scip/debug.h
+$(LIBOBJDIR)/scip/cons_bivariate.o: src/scip/cons_bivariate.c src/scip/cons_bivariate.h \
+ src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
+ src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
+ src/scip/pub_message.h src/blockmemshell/memory.h src/scip/type_result.h \
+ src/scip/type_clock.h src/scip/type_misc.h src/scip/type_timing.h \
+ src/scip/type_scip.h src/scip/type_paramset.h src/scip/type_event.h \
+ src/scip/type_lp.h src/scip/type_nlp.h src/scip/type_var.h \
+ src/scip/type_prob.h src/scip/type_tree.h src/scip/type_branch.h \
+ src/scip/type_conflict.h src/scip/type_cons.h src/scip/type_sol.h \
+ src/scip/type_dialog.h src/scip/type_disp.h src/scip/type_heur.h \
+ src/scip/type_nodesel.h src/scip/type_presol.h src/scip/type_pricer.h \
+ src/scip/type_reader.h src/scip/type_relax.h src/scip/type_sepa.h \
+ src/scip/type_prop.h src/nlpi/type_nlpi.h src/nlpi/type_expr.h \
+ src/scip/pub_branch.h src/scip/pub_conflict.h src/scip/pub_cons.h \
+ src/scip/pub_cutpool.h src/scip/type_cutpool.h src/scip/pub_dialog.h \
+ src/scip/pub_disp.h src/scip/pub_event.h src/scip/pub_fileio.h \
+ src/scip/pub_heur.h src/scip/pub_implics.h src/scip/type_implics.h \
+ src/scip/pub_lp.h src/scip/type_set.h src/scip/type_stat.h \
+ src/scip/type_lpi.h src/scip/pub_nlp.h src/scip/pub_misc.h \
+ src/scip/pub_nodesel.h src/scip/pub_paramset.h src/scip/pub_presol.h \
+ src/scip/pub_pricer.h src/scip/pub_reader.h src/scip/pub_relax.h \
+ src/scip/pub_sepa.h src/scip/pub_prop.h src/scip/pub_sol.h \
+ src/scip/pub_tree.h src/scip/pub_var.h src/scip/type_history.h \
+ src/scip/lpi.h src/nlpi/pub_expr.h src/nlpi/type_exprinterpret.h \
+ src/scip/intervalarith.h src/scip/cons_linear.h \
+ src/scip/cons_quadratic.h src/scip/cons_nonlinear.h \
+ src/scip/heur_subnlp.h src/scip/heur_trysol.h src/scip/debug.h \
+ src/nlpi/nlpi.h src/nlpi/exprinterpret.h
 $(LIBOBJDIR)/scip/cons_bounddisjunction.o: src/scip/cons_bounddisjunction.c \
  src/scip/cons_bounddisjunction.h src/scip/scip.h src/scip/def.h \
  src/scip/type_retcode.h src/scip/message.h src/scip/type_message.h \
@@ -337,15 +393,15 @@ $(LIBOBJDIR)/scip/cons_cumulative.o: src/scip/cons_cumulative.c src/scip/scipdef
  src/scip/branch_fullstrong.h src/scip/branch_inference.h \
  src/scip/branch_mostinf.h src/scip/branch_leastinf.h \
  src/scip/branch_pscost.h src/scip/branch_random.h \
- src/scip/branch_relpscost.h src/scip/cons_and.h \
- src/scip/cons_bounddisjunction.h src/scip/cons_conjunction.h \
- src/scip/cons_countsols.h src/scip/cons_cumulative.h \
- src/scip/cons_disjunction.h src/scip/cons_indicator.h \
- src/scip/cons_integral.h src/scip/cons_knapsack.h src/scip/cons_linear.h \
- src/scip/cons_linking.h src/scip/cons_logicor.h \
- src/scip/cons_nonlinear.h src/scip/cons_or.h src/scip/cons_orbitope.h \
- src/scip/cons_pseudoboolean.h src/scip/cons_quadratic.h \
- src/scip/cons_setppc.h src/scip/cons_abspower.h src/scip/cons_sos1.h \
+ src/scip/branch_relpscost.h src/scip/cons_abspower.h src/scip/cons_and.h \
+ src/scip/cons_bivariate.h src/scip/cons_bounddisjunction.h \
+ src/scip/cons_conjunction.h src/scip/cons_countsols.h \
+ src/scip/cons_cumulative.h src/scip/cons_disjunction.h \
+ src/scip/cons_indicator.h src/scip/cons_integral.h \
+ src/scip/cons_knapsack.h src/scip/cons_linear.h src/scip/cons_linking.h \
+ src/scip/cons_logicor.h src/scip/cons_nonlinear.h src/scip/cons_or.h \
+ src/scip/cons_orbitope.h src/scip/cons_pseudoboolean.h \
+ src/scip/cons_quadratic.h src/scip/cons_setppc.h src/scip/cons_sos1.h \
  src/scip/cons_sos2.h src/scip/cons_soc.h src/scip/cons_varbound.h \
  src/scip/cons_xor.h src/scip/dialog_default.h src/scip/disp_default.h \
  src/scip/heur_actconsdiving.h src/scip/heur_clique.h \
@@ -716,35 +772,6 @@ $(LIBOBJDIR)/scip/cons_setppc.o: src/scip/cons_setppc.c src/scip/cons_setppc.h \
  src/scip/pub_tree.h src/scip/pub_var.h src/scip/type_history.h \
  src/scip/lpi.h src/nlpi/pub_expr.h src/nlpi/type_exprinterpret.h \
  src/scip/intervalarith.h src/scip/cons_linear.h
-$(LIBOBJDIR)/scip/cons_abspower.o: src/scip/cons_abspower.c \
- src/scip/cons_abspower.h src/scip/scip.h src/scip/def.h \
- src/scip/type_retcode.h src/scip/message.h src/scip/type_message.h \
- src/scip/struct_message.h src/scip/pub_message.h \
- src/blockmemshell/memory.h src/scip/type_result.h src/scip/type_clock.h \
- src/scip/type_misc.h src/scip/type_timing.h src/scip/type_scip.h \
- src/scip/type_paramset.h src/scip/type_event.h src/scip/type_lp.h \
- src/scip/type_nlp.h src/scip/type_var.h src/scip/type_prob.h \
- src/scip/type_tree.h src/scip/type_branch.h src/scip/type_conflict.h \
- src/scip/type_cons.h src/scip/type_sol.h src/scip/type_dialog.h \
- src/scip/type_disp.h src/scip/type_heur.h src/scip/type_nodesel.h \
- src/scip/type_presol.h src/scip/type_pricer.h src/scip/type_reader.h \
- src/scip/type_relax.h src/scip/type_sepa.h src/scip/type_prop.h \
- src/nlpi/type_nlpi.h src/nlpi/type_expr.h src/scip/pub_branch.h \
- src/scip/pub_conflict.h src/scip/pub_cons.h src/scip/pub_cutpool.h \
- src/scip/type_cutpool.h src/scip/pub_dialog.h src/scip/pub_disp.h \
- src/scip/pub_event.h src/scip/pub_fileio.h src/scip/pub_heur.h \
- src/scip/pub_implics.h src/scip/type_implics.h src/scip/pub_lp.h \
- src/scip/type_set.h src/scip/type_stat.h src/scip/type_lpi.h \
- src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/pub_nodesel.h \
- src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
- src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
- src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
- src/scip/pub_var.h src/scip/type_history.h src/scip/lpi.h \
- src/nlpi/pub_expr.h src/nlpi/type_exprinterpret.h \
- src/scip/intervalarith.h src/scip/cons_nonlinear.h \
- src/scip/cons_indicator.h src/scip/cons_quadratic.h \
- src/scip/cons_linear.h src/scip/cons_varbound.h src/scip/heur_subnlp.h \
- src/scip/heur_trysol.h src/scip/debug.h
 $(LIBOBJDIR)/scip/cons_soc.o: src/scip/cons_soc.c src/scip/cons_soc.h src/scip/scip.h \
  src/scip/def.h src/scip/type_retcode.h src/scip/message.h \
  src/scip/type_message.h src/scip/struct_message.h src/scip/pub_message.h \
@@ -1026,7 +1053,8 @@ $(LIBOBJDIR)/scip/heur_crossover.o: src/scip/heur_crossover.c src/scip/scip.h \
  src/scip/branch_allfullstrong.h src/scip/branch_fullstrong.h \
  src/scip/branch_inference.h src/scip/branch_mostinf.h \
  src/scip/branch_leastinf.h src/scip/branch_pscost.h \
- src/scip/branch_random.h src/scip/branch_relpscost.h src/scip/cons_and.h \
+ src/scip/branch_random.h src/scip/branch_relpscost.h \
+ src/scip/cons_abspower.h src/scip/cons_and.h src/scip/cons_bivariate.h \
  src/scip/cons_bounddisjunction.h src/scip/cons_conjunction.h \
  src/scip/cons_countsols.h src/scip/cons_cumulative.h \
  src/scip/cons_disjunction.h src/scip/cons_indicator.h \
@@ -1034,9 +1062,9 @@ $(LIBOBJDIR)/scip/heur_crossover.o: src/scip/heur_crossover.c src/scip/scip.h \
  src/scip/cons_linking.h src/scip/cons_logicor.h \
  src/scip/cons_nonlinear.h src/scip/cons_or.h src/scip/cons_orbitope.h \
  src/scip/cons_pseudoboolean.h src/scip/cons_quadratic.h \
- src/scip/cons_setppc.h src/scip/cons_abspower.h src/scip/cons_sos1.h \
- src/scip/cons_sos2.h src/scip/cons_soc.h src/scip/cons_varbound.h \
- src/scip/cons_xor.h src/scip/dialog_default.h src/scip/disp_default.h \
+ src/scip/cons_setppc.h src/scip/cons_sos1.h src/scip/cons_sos2.h \
+ src/scip/cons_soc.h src/scip/cons_varbound.h src/scip/cons_xor.h \
+ src/scip/dialog_default.h src/scip/disp_default.h \
  src/scip/heur_actconsdiving.h src/scip/heur_clique.h \
  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
  src/scip/heur_dins.h src/scip/heur_feaspump.h \
@@ -1099,7 +1127,8 @@ $(LIBOBJDIR)/scip/heur_dins.o: src/scip/heur_dins.c src/scip/scip.h src/scip/def
  src/scip/branch_allfullstrong.h src/scip/branch_fullstrong.h \
  src/scip/branch_inference.h src/scip/branch_mostinf.h \
  src/scip/branch_leastinf.h src/scip/branch_pscost.h \
- src/scip/branch_random.h src/scip/branch_relpscost.h src/scip/cons_and.h \
+ src/scip/branch_random.h src/scip/branch_relpscost.h \
+ src/scip/cons_abspower.h src/scip/cons_and.h src/scip/cons_bivariate.h \
  src/scip/cons_bounddisjunction.h src/scip/cons_conjunction.h \
  src/scip/cons_countsols.h src/scip/cons_cumulative.h \
  src/scip/cons_disjunction.h src/scip/cons_indicator.h \
@@ -1107,9 +1136,9 @@ $(LIBOBJDIR)/scip/heur_dins.o: src/scip/heur_dins.c src/scip/scip.h src/scip/def
  src/scip/cons_linking.h src/scip/cons_logicor.h \
  src/scip/cons_nonlinear.h src/scip/cons_or.h src/scip/cons_orbitope.h \
  src/scip/cons_pseudoboolean.h src/scip/cons_quadratic.h \
- src/scip/cons_setppc.h src/scip/cons_abspower.h src/scip/cons_sos1.h \
- src/scip/cons_sos2.h src/scip/cons_soc.h src/scip/cons_varbound.h \
- src/scip/cons_xor.h src/scip/dialog_default.h src/scip/disp_default.h \
+ src/scip/cons_setppc.h src/scip/cons_sos1.h src/scip/cons_sos2.h \
+ src/scip/cons_soc.h src/scip/cons_varbound.h src/scip/cons_xor.h \
+ src/scip/dialog_default.h src/scip/disp_default.h \
  src/scip/heur_actconsdiving.h src/scip/heur_clique.h \
  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
  src/scip/heur_dins.h src/scip/heur_feaspump.h \
@@ -1173,17 +1202,17 @@ $(LIBOBJDIR)/scip/heur_feaspump.o: src/scip/heur_feaspump.c src/scip/heur_feaspu
  src/scip/branch_fullstrong.h src/scip/branch_inference.h \
  src/scip/branch_mostinf.h src/scip/branch_leastinf.h \
  src/scip/branch_pscost.h src/scip/branch_random.h \
- src/scip/branch_relpscost.h src/scip/cons_and.h \
- src/scip/cons_bounddisjunction.h src/scip/cons_conjunction.h \
- src/scip/cons_countsols.h src/scip/cons_cumulative.h \
- src/scip/cons_disjunction.h src/scip/cons_indicator.h \
- src/scip/cons_integral.h src/scip/cons_knapsack.h \
- src/scip/cons_linking.h src/scip/cons_logicor.h \
+ src/scip/branch_relpscost.h src/scip/cons_abspower.h src/scip/cons_and.h \
+ src/scip/cons_bivariate.h src/scip/cons_bounddisjunction.h \
+ src/scip/cons_conjunction.h src/scip/cons_countsols.h \
+ src/scip/cons_cumulative.h src/scip/cons_disjunction.h \
+ src/scip/cons_indicator.h src/scip/cons_integral.h \
+ src/scip/cons_knapsack.h src/scip/cons_linking.h src/scip/cons_logicor.h \
  src/scip/cons_nonlinear.h src/scip/cons_or.h src/scip/cons_orbitope.h \
  src/scip/cons_pseudoboolean.h src/scip/cons_quadratic.h \
- src/scip/cons_setppc.h src/scip/cons_abspower.h src/scip/cons_sos1.h \
- src/scip/cons_sos2.h src/scip/cons_soc.h src/scip/cons_varbound.h \
- src/scip/cons_xor.h src/scip/dialog_default.h src/scip/disp_default.h \
+ src/scip/cons_setppc.h src/scip/cons_sos1.h src/scip/cons_sos2.h \
+ src/scip/cons_soc.h src/scip/cons_varbound.h src/scip/cons_xor.h \
+ src/scip/dialog_default.h src/scip/disp_default.h \
  src/scip/heur_actconsdiving.h src/scip/heur_clique.h \
  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
  src/scip/heur_dins.h src/scip/heur_fixandinfer.h \
@@ -1401,17 +1430,17 @@ $(LIBOBJDIR)/scip/heur_localbranching.o: src/scip/heur_localbranching.c src/scip
  src/scip/branch_fullstrong.h src/scip/branch_inference.h \
  src/scip/branch_mostinf.h src/scip/branch_leastinf.h \
  src/scip/branch_pscost.h src/scip/branch_random.h \
- src/scip/branch_relpscost.h src/scip/cons_and.h \
- src/scip/cons_bounddisjunction.h src/scip/cons_conjunction.h \
- src/scip/cons_countsols.h src/scip/cons_cumulative.h \
- src/scip/cons_disjunction.h src/scip/cons_indicator.h \
- src/scip/cons_integral.h src/scip/cons_knapsack.h \
- src/scip/cons_linking.h src/scip/cons_logicor.h \
+ src/scip/branch_relpscost.h src/scip/cons_abspower.h src/scip/cons_and.h \
+ src/scip/cons_bivariate.h src/scip/cons_bounddisjunction.h \
+ src/scip/cons_conjunction.h src/scip/cons_countsols.h \
+ src/scip/cons_cumulative.h src/scip/cons_disjunction.h \
+ src/scip/cons_indicator.h src/scip/cons_integral.h \
+ src/scip/cons_knapsack.h src/scip/cons_linking.h src/scip/cons_logicor.h \
  src/scip/cons_nonlinear.h src/scip/cons_or.h src/scip/cons_orbitope.h \
  src/scip/cons_pseudoboolean.h src/scip/cons_quadratic.h \
- src/scip/cons_setppc.h src/scip/cons_abspower.h src/scip/cons_sos1.h \
- src/scip/cons_sos2.h src/scip/cons_soc.h src/scip/cons_varbound.h \
- src/scip/cons_xor.h src/scip/dialog_default.h src/scip/disp_default.h \
+ src/scip/cons_setppc.h src/scip/cons_sos1.h src/scip/cons_sos2.h \
+ src/scip/cons_soc.h src/scip/cons_varbound.h src/scip/cons_xor.h \
+ src/scip/dialog_default.h src/scip/disp_default.h \
  src/scip/heur_actconsdiving.h src/scip/heur_clique.h \
  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
  src/scip/heur_dins.h src/scip/heur_feaspump.h \
@@ -1474,7 +1503,8 @@ $(LIBOBJDIR)/scip/heur_mutation.o: src/scip/heur_mutation.c src/scip/scip.h src/
  src/scip/branch_allfullstrong.h src/scip/branch_fullstrong.h \
  src/scip/branch_inference.h src/scip/branch_mostinf.h \
  src/scip/branch_leastinf.h src/scip/branch_pscost.h \
- src/scip/branch_random.h src/scip/branch_relpscost.h src/scip/cons_and.h \
+ src/scip/branch_random.h src/scip/branch_relpscost.h \
+ src/scip/cons_abspower.h src/scip/cons_and.h src/scip/cons_bivariate.h \
  src/scip/cons_bounddisjunction.h src/scip/cons_conjunction.h \
  src/scip/cons_countsols.h src/scip/cons_cumulative.h \
  src/scip/cons_disjunction.h src/scip/cons_indicator.h \
@@ -1482,9 +1512,9 @@ $(LIBOBJDIR)/scip/heur_mutation.o: src/scip/heur_mutation.c src/scip/scip.h src/
  src/scip/cons_linking.h src/scip/cons_logicor.h \
  src/scip/cons_nonlinear.h src/scip/cons_or.h src/scip/cons_orbitope.h \
  src/scip/cons_pseudoboolean.h src/scip/cons_quadratic.h \
- src/scip/cons_setppc.h src/scip/cons_abspower.h src/scip/cons_sos1.h \
- src/scip/cons_sos2.h src/scip/cons_soc.h src/scip/cons_varbound.h \
- src/scip/cons_xor.h src/scip/dialog_default.h src/scip/disp_default.h \
+ src/scip/cons_setppc.h src/scip/cons_sos1.h src/scip/cons_sos2.h \
+ src/scip/cons_soc.h src/scip/cons_varbound.h src/scip/cons_xor.h \
+ src/scip/dialog_default.h src/scip/disp_default.h \
  src/scip/heur_actconsdiving.h src/scip/heur_clique.h \
  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
  src/scip/heur_dins.h src/scip/heur_feaspump.h \
@@ -1649,7 +1679,8 @@ $(LIBOBJDIR)/scip/heur_rens.o: src/scip/heur_rens.c src/scip/scip.h src/scip/def
  src/scip/branch_allfullstrong.h src/scip/branch_fullstrong.h \
  src/scip/branch_inference.h src/scip/branch_mostinf.h \
  src/scip/branch_leastinf.h src/scip/branch_pscost.h \
- src/scip/branch_random.h src/scip/branch_relpscost.h src/scip/cons_and.h \
+ src/scip/branch_random.h src/scip/branch_relpscost.h \
+ src/scip/cons_abspower.h src/scip/cons_and.h src/scip/cons_bivariate.h \
  src/scip/cons_bounddisjunction.h src/scip/cons_conjunction.h \
  src/scip/cons_countsols.h src/scip/cons_cumulative.h \
  src/scip/cons_disjunction.h src/scip/cons_indicator.h \
@@ -1657,9 +1688,9 @@ $(LIBOBJDIR)/scip/heur_rens.o: src/scip/heur_rens.c src/scip/scip.h src/scip/def
  src/scip/cons_linking.h src/scip/cons_logicor.h \
  src/scip/cons_nonlinear.h src/scip/cons_or.h src/scip/cons_orbitope.h \
  src/scip/cons_pseudoboolean.h src/scip/cons_quadratic.h \
- src/scip/cons_setppc.h src/scip/cons_abspower.h src/scip/cons_sos1.h \
- src/scip/cons_sos2.h src/scip/cons_soc.h src/scip/cons_varbound.h \
- src/scip/cons_xor.h src/scip/dialog_default.h src/scip/disp_default.h \
+ src/scip/cons_setppc.h src/scip/cons_sos1.h src/scip/cons_sos2.h \
+ src/scip/cons_soc.h src/scip/cons_varbound.h src/scip/cons_xor.h \
+ src/scip/dialog_default.h src/scip/disp_default.h \
  src/scip/heur_actconsdiving.h src/scip/heur_clique.h \
  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
  src/scip/heur_dins.h src/scip/heur_feaspump.h \
@@ -1722,7 +1753,8 @@ $(LIBOBJDIR)/scip/heur_rins.o: src/scip/heur_rins.c src/scip/scip.h src/scip/def
  src/scip/branch_allfullstrong.h src/scip/branch_fullstrong.h \
  src/scip/branch_inference.h src/scip/branch_mostinf.h \
  src/scip/branch_leastinf.h src/scip/branch_pscost.h \
- src/scip/branch_random.h src/scip/branch_relpscost.h src/scip/cons_and.h \
+ src/scip/branch_random.h src/scip/branch_relpscost.h \
+ src/scip/cons_abspower.h src/scip/cons_and.h src/scip/cons_bivariate.h \
  src/scip/cons_bounddisjunction.h src/scip/cons_conjunction.h \
  src/scip/cons_countsols.h src/scip/cons_cumulative.h \
  src/scip/cons_disjunction.h src/scip/cons_indicator.h \
@@ -1730,9 +1762,9 @@ $(LIBOBJDIR)/scip/heur_rins.o: src/scip/heur_rins.c src/scip/scip.h src/scip/def
  src/scip/cons_linking.h src/scip/cons_logicor.h \
  src/scip/cons_nonlinear.h src/scip/cons_or.h src/scip/cons_orbitope.h \
  src/scip/cons_pseudoboolean.h src/scip/cons_quadratic.h \
- src/scip/cons_setppc.h src/scip/cons_abspower.h src/scip/cons_sos1.h \
- src/scip/cons_sos2.h src/scip/cons_soc.h src/scip/cons_varbound.h \
- src/scip/cons_xor.h src/scip/dialog_default.h src/scip/disp_default.h \
+ src/scip/cons_setppc.h src/scip/cons_sos1.h src/scip/cons_sos2.h \
+ src/scip/cons_soc.h src/scip/cons_varbound.h src/scip/cons_xor.h \
+ src/scip/dialog_default.h src/scip/disp_default.h \
  src/scip/heur_actconsdiving.h src/scip/heur_clique.h \
  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
  src/scip/heur_dins.h src/scip/heur_feaspump.h \
@@ -2025,7 +2057,8 @@ $(LIBOBJDIR)/scip/heur_undercover.o: src/scip/heur_undercover.c src/scip/scip.h 
  src/scip/branch_allfullstrong.h src/scip/branch_fullstrong.h \
  src/scip/branch_inference.h src/scip/branch_mostinf.h \
  src/scip/branch_leastinf.h src/scip/branch_pscost.h \
- src/scip/branch_random.h src/scip/branch_relpscost.h src/scip/cons_and.h \
+ src/scip/branch_random.h src/scip/branch_relpscost.h \
+ src/scip/cons_abspower.h src/scip/cons_and.h src/scip/cons_bivariate.h \
  src/scip/cons_bounddisjunction.h src/scip/cons_conjunction.h \
  src/scip/cons_countsols.h src/scip/cons_cumulative.h \
  src/scip/cons_disjunction.h src/scip/cons_indicator.h \
@@ -2033,9 +2066,9 @@ $(LIBOBJDIR)/scip/heur_undercover.o: src/scip/heur_undercover.c src/scip/scip.h 
  src/scip/cons_linking.h src/scip/cons_logicor.h \
  src/scip/cons_nonlinear.h src/scip/cons_or.h src/scip/cons_orbitope.h \
  src/scip/cons_pseudoboolean.h src/scip/cons_quadratic.h \
- src/scip/cons_setppc.h src/scip/cons_abspower.h src/scip/cons_sos1.h \
- src/scip/cons_sos2.h src/scip/cons_soc.h src/scip/cons_varbound.h \
- src/scip/cons_xor.h src/scip/dialog_default.h src/scip/disp_default.h \
+ src/scip/cons_setppc.h src/scip/cons_sos1.h src/scip/cons_sos2.h \
+ src/scip/cons_soc.h src/scip/cons_varbound.h src/scip/cons_xor.h \
+ src/scip/dialog_default.h src/scip/disp_default.h \
  src/scip/heur_actconsdiving.h src/scip/heur_clique.h \
  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
  src/scip/heur_dins.h src/scip/heur_feaspump.h \
@@ -2098,7 +2131,8 @@ $(LIBOBJDIR)/scip/heur_vbounds.o: src/scip/heur_vbounds.c src/scip/scip.h src/sc
  src/scip/branch_allfullstrong.h src/scip/branch_fullstrong.h \
  src/scip/branch_inference.h src/scip/branch_mostinf.h \
  src/scip/branch_leastinf.h src/scip/branch_pscost.h \
- src/scip/branch_random.h src/scip/branch_relpscost.h src/scip/cons_and.h \
+ src/scip/branch_random.h src/scip/branch_relpscost.h \
+ src/scip/cons_abspower.h src/scip/cons_and.h src/scip/cons_bivariate.h \
  src/scip/cons_bounddisjunction.h src/scip/cons_conjunction.h \
  src/scip/cons_countsols.h src/scip/cons_cumulative.h \
  src/scip/cons_disjunction.h src/scip/cons_indicator.h \
@@ -2106,9 +2140,9 @@ $(LIBOBJDIR)/scip/heur_vbounds.o: src/scip/heur_vbounds.c src/scip/scip.h src/sc
  src/scip/cons_linking.h src/scip/cons_logicor.h \
  src/scip/cons_nonlinear.h src/scip/cons_or.h src/scip/cons_orbitope.h \
  src/scip/cons_pseudoboolean.h src/scip/cons_quadratic.h \
- src/scip/cons_setppc.h src/scip/cons_abspower.h src/scip/cons_sos1.h \
- src/scip/cons_sos2.h src/scip/cons_soc.h src/scip/cons_varbound.h \
- src/scip/cons_xor.h src/scip/dialog_default.h src/scip/disp_default.h \
+ src/scip/cons_setppc.h src/scip/cons_sos1.h src/scip/cons_sos2.h \
+ src/scip/cons_soc.h src/scip/cons_varbound.h src/scip/cons_xor.h \
+ src/scip/dialog_default.h src/scip/disp_default.h \
  src/scip/heur_actconsdiving.h src/scip/heur_clique.h \
  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
  src/scip/heur_dins.h src/scip/heur_feaspump.h \
@@ -2758,7 +2792,7 @@ $(LIBOBJDIR)/scip/reader_gms.o: src/scip/reader_gms.c src/scip/reader_gms.h src/
  src/scip/cons_logicor.h src/scip/cons_quadratic.h src/scip/cons_soc.h \
  src/scip/cons_setppc.h src/scip/cons_varbound.h \
  src/scip/cons_indicator.h src/scip/cons_abspower.h \
- src/scip/cons_nonlinear.h
+ src/scip/cons_nonlinear.h src/scip/cons_bivariate.h
 $(LIBOBJDIR)/scip/reader_lp.o: src/scip/reader_lp.c src/scip/reader_lp.h src/scip/scip.h \
  src/scip/def.h src/scip/type_retcode.h src/scip/message.h \
  src/scip/type_message.h src/scip/struct_message.h src/scip/pub_message.h \
@@ -2872,7 +2906,7 @@ $(LIBOBJDIR)/scip/reader_pip.o: src/scip/reader_pip.c src/scip/reader_pip.h src/
  src/scip/intervalarith.h src/scip/cons_knapsack.h src/scip/cons_linear.h \
  src/scip/cons_logicor.h src/scip/cons_setppc.h src/scip/cons_varbound.h \
  src/scip/cons_quadratic.h src/scip/cons_nonlinear.h \
- src/scip/cons_abspower.h src/scip/cons_and.h
+ src/scip/cons_abspower.h src/scip/cons_and.h src/scip/cons_bivariate.h
 $(LIBOBJDIR)/scip/reader_ppm.o: src/scip/reader_ppm.c src/scip/reader_ppm.h src/scip/scip.h \
  src/scip/def.h src/scip/type_retcode.h src/scip/message.h \
  src/scip/type_message.h src/scip/struct_message.h src/scip/pub_message.h \
@@ -3279,7 +3313,8 @@ $(LIBOBJDIR)/scip/sepa_rapidlearning.o: src/scip/sepa_rapidlearning.c \
  src/scip/branch_allfullstrong.h src/scip/branch_fullstrong.h \
  src/scip/branch_inference.h src/scip/branch_mostinf.h \
  src/scip/branch_leastinf.h src/scip/branch_pscost.h \
- src/scip/branch_random.h src/scip/branch_relpscost.h src/scip/cons_and.h \
+ src/scip/branch_random.h src/scip/branch_relpscost.h \
+ src/scip/cons_abspower.h src/scip/cons_and.h src/scip/cons_bivariate.h \
  src/scip/cons_bounddisjunction.h src/scip/cons_conjunction.h \
  src/scip/cons_countsols.h src/scip/cons_cumulative.h \
  src/scip/cons_disjunction.h src/scip/cons_indicator.h \
@@ -3287,9 +3322,9 @@ $(LIBOBJDIR)/scip/sepa_rapidlearning.o: src/scip/sepa_rapidlearning.c \
  src/scip/cons_linking.h src/scip/cons_logicor.h \
  src/scip/cons_nonlinear.h src/scip/cons_or.h src/scip/cons_orbitope.h \
  src/scip/cons_pseudoboolean.h src/scip/cons_quadratic.h \
- src/scip/cons_setppc.h src/scip/cons_abspower.h src/scip/cons_sos1.h \
- src/scip/cons_sos2.h src/scip/cons_soc.h src/scip/cons_varbound.h \
- src/scip/cons_xor.h src/scip/dialog_default.h src/scip/disp_default.h \
+ src/scip/cons_setppc.h src/scip/cons_sos1.h src/scip/cons_sos2.h \
+ src/scip/cons_soc.h src/scip/cons_varbound.h src/scip/cons_xor.h \
+ src/scip/dialog_default.h src/scip/disp_default.h \
  src/scip/heur_actconsdiving.h src/scip/heur_clique.h \
  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
  src/scip/heur_dins.h src/scip/heur_feaspump.h \
@@ -3378,17 +3413,17 @@ $(LIBOBJDIR)/scip/sepa_zerohalf.o: src/scip/sepa_zerohalf.c src/scip/sepa_zeroha
  src/scip/branch_fullstrong.h src/scip/branch_inference.h \
  src/scip/branch_mostinf.h src/scip/branch_leastinf.h \
  src/scip/branch_pscost.h src/scip/branch_random.h \
- src/scip/branch_relpscost.h src/scip/cons_and.h \
- src/scip/cons_bounddisjunction.h src/scip/cons_conjunction.h \
- src/scip/cons_countsols.h src/scip/cons_cumulative.h \
- src/scip/cons_disjunction.h src/scip/cons_indicator.h \
- src/scip/cons_integral.h src/scip/cons_knapsack.h \
- src/scip/cons_linking.h src/scip/cons_logicor.h \
+ src/scip/branch_relpscost.h src/scip/cons_abspower.h src/scip/cons_and.h \
+ src/scip/cons_bivariate.h src/scip/cons_bounddisjunction.h \
+ src/scip/cons_conjunction.h src/scip/cons_countsols.h \
+ src/scip/cons_cumulative.h src/scip/cons_disjunction.h \
+ src/scip/cons_indicator.h src/scip/cons_integral.h \
+ src/scip/cons_knapsack.h src/scip/cons_linking.h src/scip/cons_logicor.h \
  src/scip/cons_nonlinear.h src/scip/cons_or.h src/scip/cons_orbitope.h \
  src/scip/cons_pseudoboolean.h src/scip/cons_quadratic.h \
- src/scip/cons_setppc.h src/scip/cons_abspower.h src/scip/cons_sos1.h \
- src/scip/cons_sos2.h src/scip/cons_soc.h src/scip/cons_varbound.h \
- src/scip/cons_xor.h src/scip/dialog_default.h src/scip/disp_default.h \
+ src/scip/cons_setppc.h src/scip/cons_sos1.h src/scip/cons_sos2.h \
+ src/scip/cons_soc.h src/scip/cons_varbound.h src/scip/cons_xor.h \
+ src/scip/dialog_default.h src/scip/disp_default.h \
  src/scip/heur_actconsdiving.h src/scip/heur_clique.h \
  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
  src/scip/heur_dins.h src/scip/heur_feaspump.h \
@@ -4122,15 +4157,15 @@ $(LIBOBJDIR)/scip/scipdefplugins.o: src/scip/scipdefplugins.c src/scip/scipdefpl
  src/scip/branch_fullstrong.h src/scip/branch_inference.h \
  src/scip/branch_mostinf.h src/scip/branch_leastinf.h \
  src/scip/branch_pscost.h src/scip/branch_random.h \
- src/scip/branch_relpscost.h src/scip/cons_and.h \
- src/scip/cons_bounddisjunction.h src/scip/cons_conjunction.h \
- src/scip/cons_countsols.h src/scip/cons_cumulative.h \
- src/scip/cons_disjunction.h src/scip/cons_indicator.h \
- src/scip/cons_integral.h src/scip/cons_knapsack.h src/scip/cons_linear.h \
- src/scip/cons_linking.h src/scip/cons_logicor.h \
- src/scip/cons_nonlinear.h src/scip/cons_or.h src/scip/cons_orbitope.h \
- src/scip/cons_pseudoboolean.h src/scip/cons_quadratic.h \
- src/scip/cons_setppc.h src/scip/cons_abspower.h src/scip/cons_sos1.h \
+ src/scip/branch_relpscost.h src/scip/cons_abspower.h src/scip/cons_and.h \
+ src/scip/cons_bivariate.h src/scip/cons_bounddisjunction.h \
+ src/scip/cons_conjunction.h src/scip/cons_countsols.h \
+ src/scip/cons_cumulative.h src/scip/cons_disjunction.h \
+ src/scip/cons_indicator.h src/scip/cons_integral.h \
+ src/scip/cons_knapsack.h src/scip/cons_linear.h src/scip/cons_linking.h \
+ src/scip/cons_logicor.h src/scip/cons_nonlinear.h src/scip/cons_or.h \
+ src/scip/cons_orbitope.h src/scip/cons_pseudoboolean.h \
+ src/scip/cons_quadratic.h src/scip/cons_setppc.h src/scip/cons_sos1.h \
  src/scip/cons_sos2.h src/scip/cons_soc.h src/scip/cons_varbound.h \
  src/scip/cons_xor.h src/scip/dialog_default.h src/scip/disp_default.h \
  src/scip/heur_actconsdiving.h src/scip/heur_clique.h \
@@ -4197,7 +4232,8 @@ $(LIBOBJDIR)/scip/scipshell.o: src/scip/scipshell.c src/scip/scip.h src/scip/def
  src/scip/branch_allfullstrong.h src/scip/branch_fullstrong.h \
  src/scip/branch_inference.h src/scip/branch_mostinf.h \
  src/scip/branch_leastinf.h src/scip/branch_pscost.h \
- src/scip/branch_random.h src/scip/branch_relpscost.h src/scip/cons_and.h \
+ src/scip/branch_random.h src/scip/branch_relpscost.h \
+ src/scip/cons_abspower.h src/scip/cons_and.h src/scip/cons_bivariate.h \
  src/scip/cons_bounddisjunction.h src/scip/cons_conjunction.h \
  src/scip/cons_countsols.h src/scip/cons_cumulative.h \
  src/scip/cons_disjunction.h src/scip/cons_indicator.h \
@@ -4205,9 +4241,9 @@ $(LIBOBJDIR)/scip/scipshell.o: src/scip/scipshell.c src/scip/scip.h src/scip/def
  src/scip/cons_linking.h src/scip/cons_logicor.h \
  src/scip/cons_nonlinear.h src/scip/cons_or.h src/scip/cons_orbitope.h \
  src/scip/cons_pseudoboolean.h src/scip/cons_quadratic.h \
- src/scip/cons_setppc.h src/scip/cons_abspower.h src/scip/cons_sos1.h \
- src/scip/cons_sos2.h src/scip/cons_soc.h src/scip/cons_varbound.h \
- src/scip/cons_xor.h src/scip/dialog_default.h src/scip/disp_default.h \
+ src/scip/cons_setppc.h src/scip/cons_sos1.h src/scip/cons_sos2.h \
+ src/scip/cons_soc.h src/scip/cons_varbound.h src/scip/cons_xor.h \
+ src/scip/dialog_default.h src/scip/disp_default.h \
  src/scip/heur_actconsdiving.h src/scip/heur_clique.h \
  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
  src/scip/heur_dins.h src/scip/heur_feaspump.h \
