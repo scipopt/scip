@@ -527,13 +527,13 @@ SCIP_RETCODE createNlRow(
          /* construct quadratic form gamma + sum_{i=1}^{n} (alpha_i (x_i + beta_i))^2 <= (alpha_{n+1} (x_{n+1} + beta_{n+1})^2 */
          SCIP_QUADELEM sqrterm;
          SCIP_Real rhs;
+         int rhsvarpos;
 
          /* create initial empty row with left hand side variables */
          SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons), 0.0,
             0, NULL, NULL,
             consdata->nvars, consdata->vars, 0, NULL,
             NULL, -SCIPinfinity(scip), 0.0) );
-         SCIP_CALL( SCIPaddQuadVarToNlRow(scip, consdata->nlrow, consdata->rhsvar) );
 
          /* add gamma + sum_{i=1}^{n} (alpha_i x_i)^2 + 2 alpha_i beta_i x_i + beta_i^2 */
          rhs = -consdata->constant;
@@ -551,9 +551,18 @@ SCIP_RETCODE createNlRow(
             }
          }
 
+         /* add rhsvar to quadvars of nlrow, if not there yet */
+         rhsvarpos = SCIPnlrowSearchQuadVar(consdata->nlrow, consdata->rhsvar);
+         if( rhsvarpos == -1 )
+         {
+            SCIP_CALL( SCIPaddQuadVarToNlRow(scip, consdata->nlrow, consdata->rhsvar) );
+            rhsvarpos = SCIPnlrowSearchQuadVar(consdata->nlrow, consdata->rhsvar);
+            assert(rhsvarpos >= 0);
+         }
+
          /* add -(alpha_{n+1} x_{n+1))^2 - 2 alpha_{n+1} beta_{n+1} x_{n+1} - beta_{n+1}^2 */
-         sqrterm.idx1 = consdata->nvars;
-         sqrterm.idx2 = consdata->nvars;
+         sqrterm.idx1 = rhsvarpos;
+         sqrterm.idx2 = rhsvarpos;
          sqrterm.coef = -consdata->rhscoeff * consdata->rhscoeff;
          SCIP_CALL( SCIPaddQuadElementToNlRow(scip, consdata->nlrow, sqrterm) );
 
