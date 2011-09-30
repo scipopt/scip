@@ -276,7 +276,7 @@ Makefile
 - via "PARASCIP=true" as a "Makefile" option it is possible to compile SCIP threadsafe in DEBUG-mode, (in OPT-mode it's not necessary)
 - new variable $(INSTALLDIR) in Makefile which define installation directory for the libraries, $(INSTALLDIR)/lib/, 
   binary, $(INSTALLDIR)/bin, and include headers, $(INSTALLDIR)/include, the default value is the empty string
-- new target in Makefile "install" performs "make" and copies the include headers, binary, and libraries
+- new target in Makefile "install" performs "make" and copies using the install command the include headers, binary, and libraries
 - new target in Makefile "uninstall" removes libraries, binary, and include headers form INSTALLDIR
 - the 'make' parameter 'PARASCIP=true' leads to threadsafe message handlers where you need to call SCIPcreateMesshdlrPThreads and SCIPmessageSetHandler/SCIPmessageSetDefaultHandler and SCIPfreeMesshdlrPThreads; therefor we need to link with pthread library
 - to link against IPOPT, only the base directory of an Ipopt installation need to be specified now;
