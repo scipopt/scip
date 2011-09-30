@@ -5686,6 +5686,10 @@ SCIP_RETCODE SCIPtreeEndProbing(
             SCIP_CALL( SCIPnodeUpdateLowerboundLP(tree->focusnode, set, stat, lp) );
          }
       }
+      else
+      {
+         /* @todo shall lp state be cleared by calling SCIPlpiClearState()? */
+      }
    }
    assert(tree->probinglpistate == NULL);
    tree->probinglpwasflushed = FALSE;

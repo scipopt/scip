@@ -41,8 +41,9 @@
 #include "scip/cons_varbound.h"
 #include "scip/cons_quadratic.h"
 #include "scip/cons_nonlinear.h"
-#include "scip/cons_signedpower.h"
+#include "scip/cons_abspower.h"
 #include "scip/cons_and.h"
+#include "scip/cons_bivariate.h"
 #include "scip/pub_misc.h"
 
 #define READER_NAME             "pipreader"
@@ -2337,7 +2338,7 @@ void printRowNl(
          case SCIP_EXPR_PLUS:
          {
             (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[0])]));
-            (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[1])]));
+            (void) SCIPsnprintf(varname2, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[1])]));
             (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g %s %+.15g %s", exprtreecoefs[e], varname, exprtreecoefs[e], varname2);
 
             appendLine(scip, file, linebuffer, &linecnt, buffer);
@@ -2347,7 +2348,7 @@ void printRowNl(
          case SCIP_EXPR_MINUS:
          {
             (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[0])]));
-            (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[1])]));
+            (void) SCIPsnprintf(varname2, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[1])]));
             (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g %s %+.15g %s", exprtreecoefs[e], varname, -exprtreecoefs[e], varname2);
 
             appendLine(scip, file, linebuffer, &linecnt, buffer);
@@ -2357,7 +2358,7 @@ void printRowNl(
          case SCIP_EXPR_MUL:
          {
             (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[0])]));
-            (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[1])]));
+            (void) SCIPsnprintf(varname2, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[SCIPexprGetOpIndex(children[1])]));
             (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g %s %s", exprtreecoefs[e], varname, varname2);
 
             appendLine(scip, file, linebuffer, &linecnt, buffer);
@@ -2985,10 +2986,12 @@ SCIP_RETCODE SCIPwritePip(
    int nConsQuadratic;
    SCIP_CONS** consNonlinear;
    int nConsNonlinear;
-   SCIP_CONS** consSignedpower;
-   int nConsSignedpower;
+   SCIP_CONS** consAbspower;
+   int nConsAbspower;
    SCIP_CONS** consAnd;
    int nConsAnd;
+   SCIP_CONS** consBivariate;
+   int nConsBivariate;
    char consname[PIP_MAX_NAMELEN];
 
    SCIP_VAR** aggregatedVars;
@@ -3011,8 +3014,9 @@ SCIP_RETCODE SCIPwritePip(
    nAggregatedVars = 0;
    nConsQuadratic = 0;
    nConsNonlinear = 0;
-   nConsSignedpower = 0;
+   nConsAbspower = 0;
    nConsAnd = 0;
+   nConsBivariate = 0;
 
    /* check if the variable names are not to long */
    checkVarnames(scip, vars, nvars);
@@ -3063,11 +3067,12 @@ SCIP_RETCODE SCIPwritePip(
    /* print "Subject to" section */
    SCIPinfoMessage(scip, file, "Subject to\n");
 
-   /* collect quadratic, nonlinear, and signedpower constraints in arrays */
+   /* collect quadratic, nonlinear, absolute power, and, and bivariate constraints in arrays */
    SCIP_CALL( SCIPallocBufferArray(scip, &consQuadratic, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consNonlinear, nconss) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &consSignedpower, nconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &consAbspower, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consAnd, nconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &consBivariate, nconss) );
 
    for (c = 0; c < nconss; ++c)
    {
@@ -3270,7 +3275,7 @@ SCIP_RETCODE SCIPwritePip(
             SCIP_CALL( SCIPprintCons(scip, cons, file) );
          }
       }
-      else if( strcmp(conshdlrname, "signedpower") == 0 )
+      else if( strcmp(conshdlrname, "abspower") == 0 )
       {
          SCIP_VAR* x;
          SCIP_Real xoffset;
@@ -3280,9 +3285,9 @@ SCIP_RETCODE SCIPwritePip(
          expr = NULL;
          treecoef = 1.0;
 
-         x = SCIPgetNonlinearVarSignedpower(scip, cons);
-         xoffset = SCIPgetOffsetSignedpower(scip, cons);
-         exponent = SCIPgetExponentSignedpower(scip, cons);
+         x = SCIPgetNonlinearVarAbspower(scip, cons);
+         xoffset = SCIPgetOffsetAbspower(scip, cons);
+         exponent = SCIPgetExponentAbspower(scip, cons);
 
          /* see if we formulate signpower(x+offset,exponent) as usual polynomial */
          if( !SCIPisZero(scip, xoffset) )
@@ -3291,26 +3296,26 @@ SCIP_RETCODE SCIPwritePip(
          }
          if( SCIPisIntegral(scip, exponent) && ((int)SCIPround(scip, exponent) % 2 == 1) )
          {
-            /* exponent is odd integer, so signedpower(x,exponent) = x^exponent */
+            /* exponent is odd integer, so signpower(x,exponent) = x^exponent */
             SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_VARIDX, 0) );
             SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_INTPOWER, expr, (int)SCIPround(scip, exponent)) );
          }
          else if( SCIPisIntegral(scip, exponent) && ((int)SCIPround(scip, exponent) % 2 == 0) && !SCIPisPositive(scip, SCIPvarGetUbGlobal(x)) )
          {
-            /* exponent is even integer and x is negative, so signedpower(x,exponent) = -x^exponent */
+            /* exponent is even integer and x is negative, so signpower(x,exponent) = -x^exponent */
             SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_VARIDX, 0) );
             SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_INTPOWER, expr, (int)SCIPround(scip, exponent)) );
             treecoef = -1.0;
          }
          else if( !SCIPisNegative(scip, SCIPvarGetLbGlobal(x)) )
          {
-            /* x is positive, so signedpower(x,exponent) = x^exponent */
+            /* x is positive, so signpower(x,exponent) = x^exponent */
             SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_VARIDX, 0) );
             SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_REALPOWER, expr, exponent) );
          }
          else
          {
-            SCIPwarningMessage("cannot formulate signedpower(<%s>, %g) in constraint <%s> as polynomial, cannot write in pip format\n", SCIPvarGetName(x), exponent, SCIPconsGetName(cons));
+            SCIPwarningMessage("cannot formulate signpower(<%s>, %g) in constraint <%s> as polynomial, cannot write in pip format\n", SCIPvarGetName(x), exponent, SCIPconsGetName(cons));
          }
 
          if( expr != NULL )
@@ -3321,16 +3326,129 @@ SCIP_RETCODE SCIPwritePip(
             SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree, expr, 1, 0, NULL) );
             SCIP_CALL( SCIPexprtreeSetVars(exprtree, 1, &x) );
 
-            z = SCIPgetLinearVarSignedpower(scip, cons);
-            zcoef = SCIPgetCoefLinearSignedpower(scip, cons);
+            z = SCIPgetLinearVarAbspower(scip, cons);
+            zcoef = SCIPgetCoefLinearAbspower(scip, cons);
 
             SCIP_CALL( printNonlinearCons(scip, file, consname,
                &z, &zcoef, 1, &exprtree, &treecoef, 1,
-               SCIPgetLhsSignedpower(scip, cons), SCIPgetRhsSignedpower(scip, cons), transformed) );
+               SCIPgetLhsAbspower(scip, cons), SCIPgetRhsAbspower(scip, cons), transformed) );
 
             SCIP_CALL( SCIPexprtreeFree(&exprtree) );
 
-            consSignedpower[nConsSignedpower++] = cons;
+            consAbspower[nConsAbspower++] = cons;
+         }
+         else
+         {
+            SCIPinfoMessage(scip, file, "\\ ");
+            SCIP_CALL( SCIPprintCons(scip, cons, file) );
+         }
+      }
+      else if( strcmp(conshdlrname, "bivariate") == 0 )
+      {
+         SCIP_Bool ispolynomial;
+
+         /* check whether expression is polynomial (simplified exprtree assumed) */
+         ispolynomial = TRUE;
+         exprtree = SCIPgetExprtreeBivariate(scip, cons);
+         expr = SCIPexprtreeGetRoot(exprtree);
+         assert(expr != NULL);
+
+         /* check if operator is something polynomial */
+         switch( SCIPexprGetOperator(expr) )
+         {
+            case SCIP_EXPR_CONST:
+            case SCIP_EXPR_VARIDX:
+            case SCIP_EXPR_PLUS:
+            case SCIP_EXPR_MINUS:
+            case SCIP_EXPR_MUL:
+            case SCIP_EXPR_SQUARE:
+            case SCIP_EXPR_SQRT:
+            case SCIP_EXPR_SUM:
+            case SCIP_EXPR_PRODUCT:
+            case SCIP_EXPR_LINEAR:
+            case SCIP_EXPR_QUADRATIC:
+               break;
+
+            case SCIP_EXPR_INTPOWER:
+            {
+               if( SCIPexprGetIntPowerExponent(expr) < 0 )
+               {
+                  SCIPwarningMessage("negative exponent %d in intpower of constraint <%s> cannot be written in pip format\n", SCIPexprGetIntPowerExponent(expr), SCIPconsGetName(cons));
+                  ispolynomial = FALSE;
+               }
+
+               break;
+            }
+
+            case SCIP_EXPR_REALPOWER:
+            {
+               if( SCIPexprGetRealPowerExponent(expr) < 0.0 )
+               {
+                  SCIPwarningMessage("negative exponent %g in realpower of constraint <%s> cannot be written in pip format\n", SCIPexprGetRealPowerExponent(expr), SCIPconsGetName(cons));
+                  ispolynomial = FALSE;
+               }
+
+               break;
+            }
+
+            case SCIP_EXPR_POLYNOMIAL:
+            {
+               SCIP_EXPRDATA_MONOMIAL* monomial;
+               int m;
+               int f;
+
+               for( m = 0; m < SCIPexprGetNMonomials(expr) && ispolynomial; ++m )
+               {
+                  monomial = SCIPexprGetMonomials(expr)[m];
+                  for( f = 0; f < SCIPexprGetMonomialNFactors(monomial); ++f )
+                  {
+                     if( SCIPexprGetMonomialExponents(monomial)[f] < 0.0 )
+                     {
+                        SCIPwarningMessage("negative exponent %g in polynomial of constraint <%s> cannot be written in pip format\n", SCIPexprGetMonomialExponents(monomial)[f], SCIPconsGetName(cons));
+                        ispolynomial = FALSE;
+                        break;
+                     }
+                  }
+               }
+
+               break;
+            }
+
+            default:
+               SCIPwarningMessage("expression operand <%s> in constraint <%s> cannot be written in pip format\n", SCIPexpropGetName(SCIPexprGetOperator(expr)), SCIPconsGetName(cons));
+               ispolynomial = FALSE;
+               break;
+         } /*lint !e788*/
+
+         if( ispolynomial )
+         {
+            /* check if all children of root expression correspond to variables */
+            for( v = 0; v < SCIPexprGetNChildren(expr); ++v )
+            {
+               if( SCIPexprGetOperator(SCIPexprGetChildren(expr)[v]) != SCIP_EXPR_VARIDX )
+               {
+                  SCIPwarningMessage("expression tree of constraint <%s> is not simplified, cannot write in pip format\n", SCIPconsGetName(cons));
+                  ispolynomial = FALSE;
+                  break;
+               }
+            }
+         }
+
+         if( ispolynomial )
+         {
+            SCIP_VAR* z;
+            SCIP_Real zcoef;
+            SCIP_Real one;
+
+            z = SCIPgetLinearVarBivariate(scip, cons);
+            zcoef = SCIPgetLinearCoefBivariate(scip, cons);
+
+            one = 1.0;
+            SCIP_CALL( printNonlinearCons(scip, file, consname,
+               &z, &zcoef, z == NULL ? 0 : 1, &exprtree, &one, 1,
+               SCIPgetLhsBivariate(scip, cons), SCIPgetRhsBivariate(scip, cons), transformed) );
+
+            consBivariate[nConsBivariate++] = cons;
          }
          else
          {
@@ -3406,15 +3524,15 @@ SCIP_RETCODE SCIPwritePip(
       }
    }
 
-   /* check for aggregated variables in signedpower constraints and output aggregations as linear constraints */
-   for (c = 0; c < nConsSignedpower; ++c)
+   /* check for aggregated variables in absolute power constraints and output aggregations as linear constraints */
+   for (c = 0; c < nConsAbspower; ++c)
    {
       SCIP_VAR* spvars[2];
 
-      cons = consSignedpower[c];
+      cons = consAbspower[c];
 
-      spvars[0] = SCIPgetNonlinearVarSignedpower(scip, cons);
-      spvars[1] = SCIPgetLinearVarSignedpower(scip, cons);
+      spvars[0] = SCIPgetNonlinearVarAbspower(scip, cons);
+      spvars[1] = SCIPgetLinearVarAbspower(scip, cons);
       SCIP_CALL( collectAggregatedVars(scip, 2, spvars, &nAggregatedVars, &aggregatedVars, &varAggregated) );
    }
 
@@ -3429,6 +3547,23 @@ SCIP_RETCODE SCIPwritePip(
 
       resultant = SCIPgetResultantAnd(scip, cons);
       SCIP_CALL( collectAggregatedVars(scip, 1, &resultant, &nAggregatedVars, &aggregatedVars, &varAggregated) );
+   }
+
+   /* check for aggregated variables in bivariate constraints and output aggregations as linear constraints */
+   for (c = 0; c < nConsBivariate; ++c)
+   {
+      SCIP_VAR* z;
+
+      cons = consBivariate[c];
+
+      assert(SCIPexprtreeGetNVars(SCIPgetExprtreeBivariate(scip, cons)) == 2);
+      SCIP_CALL( collectAggregatedVars(scip, 2, SCIPexprtreeGetVars(SCIPgetExprtreeBivariate(scip, cons)), &nAggregatedVars, &aggregatedVars, &varAggregated) );
+
+      z = SCIPgetLinearVarBivariate(scip, cons);
+      if( z != NULL )
+      {
+         SCIP_CALL( collectAggregatedVars(scip, 1, &z, &nAggregatedVars, &aggregatedVars, &varAggregated) );
+      }
    }
 
    /* print aggregation constraints */
@@ -3544,8 +3679,9 @@ SCIP_RETCODE SCIPwritePip(
    /* free space */
    SCIPfreeBufferArray(scip, &consQuadratic);
    SCIPfreeBufferArray(scip, &consNonlinear);
-   SCIPfreeBufferArray(scip, &consSignedpower);
+   SCIPfreeBufferArray(scip, &consAbspower);
    SCIPfreeBufferArray(scip, &consAnd);
+   SCIPfreeBufferArray(scip, &consBivariate);
 
    /* end of lp format */
    SCIPinfoMessage(scip, file, "%s\n", "End");

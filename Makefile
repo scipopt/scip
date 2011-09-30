@@ -505,7 +505,9 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/branch_pscost.o \
 			scip/branch_random.o \
 			scip/branch_relpscost.o \
+			scip/cons_abspower.o \
 			scip/cons_and.o \
+			scip/cons_bivariate.o \
 			scip/cons_bounddisjunction.o \
 			scip/cons_conjunction.o \
 			scip/cons_countsols.o \
@@ -523,7 +525,6 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/cons_pseudoboolean.o \
 			scip/cons_quadratic.o \
 			scip/cons_setppc.o \
-			scip/cons_signedpower.o \
 			scip/cons_soc.o \
 			scip/cons_sos1.o \
 			scip/cons_sos2.o \

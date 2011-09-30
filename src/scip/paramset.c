@@ -3113,7 +3113,6 @@ SCIP_RETCODE paramsetSetSeparatingFast(
    SCIP_CALL( paramSetInt(scip, paramset, "separating/gomory/maxroundsroot", 20, quiet) );
    SCIP_CALL( paramSetInt(scip, paramset, "separating/gomory/maxsepacutsroot", 200, quiet) );
    SCIP_CALL( paramSetInt(scip, paramset, "separating/mcf/freq", -1, quiet) );
-   SCIP_CALL( paramSetReal(scip, paramset, "separating/redcost/maxbounddist", 0.0, quiet) );
    SCIP_CALL( paramSetInt(scip, paramset, "separating/strongcg/maxroundsroot", 10, quiet) );
    SCIP_CALL( paramSetInt(scip, paramset, "separating/strongcg/maxsepacutsroot", 200, quiet) );
    

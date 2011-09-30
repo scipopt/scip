@@ -4690,14 +4690,18 @@ SCIP_Bool SCIPstrToRealValue(
    assert(str != NULL);
    assert(value != NULL);
    assert(endptr != NULL);
-   
+
    *value = strtod(str, endptr);
-   
+
    if( *endptr != str && *endptr != NULL )
+   {
+      SCIPdebugMessage("parsed real value <%g>\n", *value);
       return TRUE;
- 
+   }
    *endptr = (char*)str;
-   
+
+   SCIPdebugMessage("failed parseing real value <%s>\n", str);
+
    return FALSE;
 }
 
@@ -4710,11 +4714,13 @@ void SCIPstrCopySection(
    char                  endchar,            /**< character which defines the ending */
    char*                 token,              /**< string to store the copy */
    int                   size,               /**< size of the token char array */
-   char**                endptr              /**< pointer to store the final string position if successfully parsed */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed,
+                                              *   otherwise str */
    )
 {
+   const char* copystr;
    int nchars;
-  
+
    assert(str != NULL);
    assert(token != NULL);
    assert(size > 0);
@@ -4722,14 +4728,16 @@ void SCIPstrCopySection(
 
    nchars = 0;
 
+   copystr = str;
+
    /* find starting character */
    while( *str != '\0' && *str != startchar )
       ++str;
-   
+
    /* did not find start character */
    if( *str == '\0' )
    {
-      *endptr = NULL;
+      *endptr = (char*)copystr;
       return;
    }
 
@@ -4749,19 +4757,21 @@ void SCIPstrCopySection(
    token[nchars] = '\0';
 
    /* if section was longer than size, we want to reach the end of the parsing section anyway */
-   if( nchars == size )
+   if( nchars == (size-1) )
       while( *str != '\0' && *str != endchar )
          ++str;
 
    /* did not find end character */
    if( *str == '\0' )
    {
-      *endptr = NULL;
+      *endptr = (char*)copystr;
       return;
    }
 
    /* skip end character */
    ++str;
+
+   SCIPdebugMessage("parsed section <%s>\n", token);
 
    *endptr = (char*) str;
 }

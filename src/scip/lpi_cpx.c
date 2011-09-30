@@ -131,6 +131,8 @@ struct SCIP_LPi
    SCIP_PRICING          pricing;            /**< SCIP pricing setting  */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
    SCIP_Bool             instabilityignored; /**< was the instability of the last LP ignored? */
+   SCIP_Bool             fromscratch;        /**< shall solves be performed with CPX_PARAM_ADVIND turned off? */
+   SCIP_Bool             clearstate;         /**< shall next solve be performed with CPX_PARAM_ADVIND turned off? */
 #if (CPX_VERSION <= 1100)
    SCIP_Bool             rngfound;           /**< was ranged row found; scaling is disabled, because there is a bug 
                                               *   in the scaling algorithm for ranged rows in CPLEX up to version 11.0 */
@@ -1010,6 +1012,8 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->solisbasic = TRUE;
    (*lpi)->cpxlp = CPXcreateprob((*lpi)->cpxenv, &restat, name);
    (*lpi)->instabilityignored = FALSE;
+   (*lpi)->fromscratch = FALSE;
+   (*lpi)->clearstate = FALSE;
 #if (CPX_VERSION <= 1100)
    (*lpi)->rngfound = FALSE;
 #endif
@@ -1990,6 +1994,9 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 
    invalidateSolution(lpi);
 
+   setIntParam(lpi, CPX_PARAM_ADVIND, lpi->fromscratch || lpi->clearstate ? CPX_OFF : CPX_ON);
+   lpi->clearstate = FALSE;
+
    SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
 
    SCIPdebugMessage("calling CPXprimopt()\n");
@@ -2024,7 +2031,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
          /* switch off preprocessing */
          setIntParam(lpi, CPX_PARAM_PREIND, CPX_OFF);
          SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
-         
+
          retval = CPXprimopt(lpi->cpxenv, lpi->cpxlp);
          switch( retval  )
          {
@@ -2073,6 +2080,9 @@ SCIP_RETCODE SCIPlpiSolveDual(
 
    invalidateSolution(lpi);
 
+   setIntParam(lpi, CPX_PARAM_ADVIND, lpi->fromscratch || lpi->clearstate ? CPX_OFF : CPX_ON);
+   lpi->clearstate = FALSE;
+
    SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
 
    SCIPdebugMessage("calling CPXdualopt()\n");
@@ -2107,7 +2117,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
          /* switch off preprocessing */
          setIntParam(lpi, CPX_PARAM_PREIND, CPX_OFF);
          SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
-         
+
          retval = CPXdualopt(lpi->cpxenv, lpi->cpxlp);
          switch( retval  )
          {
@@ -2233,6 +2243,9 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
       CPXgetnumcols(lpi->cpxenv, lpi->cpxlp), CPXgetnumrows(lpi->cpxenv, lpi->cpxlp));
 
    invalidateSolution(lpi);
+
+   setIntParam(lpi, CPX_PARAM_ADVIND, lpi->fromscratch || lpi->clearstate ? CPX_OFF : CPX_ON);
+   lpi->clearstate = FALSE;
 
    SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
 
@@ -2452,6 +2465,9 @@ SCIP_RETCODE SCIPlpiStrongbranchFrac(
    *downvalid = TRUE;
    *upvalid = TRUE;
 
+   setIntParam(lpi, CPX_PARAM_ADVIND, lpi->fromscratch || lpi->clearstate ? CPX_OFF : CPX_ON);
+   lpi->clearstate = FALSE;
+
    SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
 
    retval = CPXstrongbranch(lpi->cpxenv, lpi->cpxlp, &col, 1, down, up, itlim);
@@ -2505,6 +2521,9 @@ SCIP_RETCODE SCIPlpiStrongbranchesFrac(
    assert(upvalid != NULL);
 
    SCIPdebugMessage("calling CPLEX strongbranching on %d fractional variables (%d iterations)\n", ncols, itlim);
+
+   setIntParam(lpi, CPX_PARAM_ADVIND, lpi->fromscratch || lpi->clearstate ? CPX_OFF : CPX_ON);
+   lpi->clearstate = FALSE;
 
    SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
 
@@ -2564,8 +2583,6 @@ SCIP_RETCODE SCIPlpiStrongbranchInt(
 
    assert( EPSISINT(psol, 1e-06) );
 
-   SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
-
    if( iter != NULL )
       *iter = 0;
 
@@ -2602,8 +2619,6 @@ SCIP_RETCODE SCIPlpiStrongbranchesInt(
    assert(upvalid != NULL);
 
    SCIPdebugMessage("calling CPLEX strongbranching on %d variables with integer values (%d iterations)\n", ncols, itlim);
-
-   SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
 
    if( iter != NULL )
       *iter = 0;
@@ -3375,8 +3390,10 @@ SCIP_RETCODE SCIPlpiGetState(
    assert(lpi->cpxenv != NULL);
    assert(lpistate != NULL);
 
-   /* if there is no basis information available (e.g. after barrier without crossover), no state can be saved */
-   if( !lpi->solisbasic )
+   /* if there is no basis information available (e.g. after barrier without crossover), or no state can be saved; if
+    * SCIPlpiClearState() has been called, do not return the state
+    */
+   if( !lpi->solisbasic || lpi->clearstate )
    {
       *lpistate = NULL;
       return SCIP_OKAY;
@@ -3451,6 +3468,19 @@ SCIP_RETCODE SCIPlpiSetState(
 
    /* load basis information into CPLEX */
    SCIP_CALL( setBase(lpi) );
+
+   return SCIP_OKAY;
+}
+
+/** clears current LPi state (like basis information) of the solver */
+SCIP_RETCODE SCIPlpiClearState(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert(lpi != NULL);
+
+   /* set CPX_PARAM_ADVIND to CPX_OFF for the next solve */
+   lpi->clearstate = TRUE;
 
    return SCIP_OKAY;
 }
@@ -3544,7 +3574,7 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    switch( type )
    {
    case SCIP_LPPAR_FROMSCRATCH:
-      *ival = (getIntParam(lpi, CPX_PARAM_ADVIND) == CPX_OFF);
+      *ival = lpi->fromscratch;
       break;
    case SCIP_LPPAR_FASTMIP:
       *ival = getIntParam(lpi, CPX_PARAM_FASTMIP);
@@ -3632,7 +3662,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    {
    case SCIP_LPPAR_FROMSCRATCH:
       assert(ival == TRUE || ival == FALSE);
-      setIntParam(lpi, CPX_PARAM_ADVIND, ival == FALSE ? CPX_ON : CPX_OFF);
+      lpi->fromscratch = ival;
       break;
    case SCIP_LPPAR_FASTMIP:
       assert(0 <= ival && ival <= 1);

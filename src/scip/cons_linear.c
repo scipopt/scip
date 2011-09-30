@@ -3702,7 +3702,12 @@ SCIP_RETCODE applyFixings(
       
       if( !SCIPisInfinity(scip, -consdata->lhs) )
       {
-         if( SCIPisFeasEQ(scip, lhssubtrahend, consdata->lhs ) )
+         /** for large numbers that are relatively equal, substraction can lead to cancellation,
+          *  causing wrong fixings of other variables --> better use a real zero here;
+          *  for small numbers, polishing the difference might lead to wrong results -->
+          *  better use the exact difference in this case 
+          */
+         if( SCIPisFeasEQ(scip, lhssubtrahend, consdata->lhs) && SCIPisFeasGE(scip, REALABS(lhssubtrahend), 1.0) ) 
          {
             SCIP_CALL( chgLhs(scip, cons, 0.0) );
          }
@@ -3713,7 +3718,13 @@ SCIP_RETCODE applyFixings(
       }
       if( !SCIPisInfinity(scip, consdata->rhs) )
       {
-         if( SCIPisFeasEQ(scip, rhssubtrahend, consdata->rhs ) )
+       
+         /** for large numbers that are relatively equal, substraction can lead to cancellation,
+          *  causing wrong fixings of other variables --> better use a real zero here;
+          *  for small numbers, polishing the difference might lead to wrong results -->
+          *  better use the exact difference in this case 
+          */
+         if( SCIPisFeasEQ(scip, rhssubtrahend, consdata->rhs ) && SCIPisFeasGE(scip, REALABS(rhssubtrahend), 1.0) )
          {
             SCIP_CALL( chgRhs(scip, cons, 0.0) );
          }
@@ -9915,9 +9926,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    int        requsize;
    SCIP_Real  lhs;
    SCIP_Real  rhs;
-   char*      endsum;
    char*      endptr;
-   char       endchar;
 
    assert(scip != NULL);
    assert(success != NULL);
@@ -9929,7 +9938,6 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    lhs = -SCIPinfinity(scip);
    rhs =  SCIPinfinity(scip);
 
-   endchar = '\0';
    (*success) = FALSE;
 
    /* return of string empty */
@@ -9940,22 +9948,21 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    while( isspace((unsigned char)*str) )
       ++str;
 
+   /* check for left hand side */
    if( isdigit((unsigned char)str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit((unsigned char)str[1])) )
    {
       /* there is a number coming, maybe it is a left-hand-side */
-      
       if( !SCIPstrToRealValue(str, &lhs, &endptr) )
       {
-         SCIPerrorMessage("error parsing number from %s\n", str);
+         SCIPerrorMessage("error parsing number from <%s>\n", str);
          return SCIP_OKAY;
       }
-      str = endptr;
 
       /* ignore whitespace */
-      while( isspace((unsigned char)*str) )
-         ++str;
+      while( isspace((unsigned char)*endptr) )
+         ++endptr;
 
-      if( str[0] != '<' || str[1] != '=' )
+      if( endptr[0] != '<' || endptr[1] != '=' )
       {
          /* no '<=' coming, so it was the first coefficient, but not a left-hand-side */
          lhs = -SCIPinfinity(scip);
@@ -9963,7 +9970,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
       else
       {
          /* it was indeed a left-hand-side, so continue parsing after it */
-         str += 2;
+         str = endptr + 2;
 
          /* ignore whitespace */
          while( isspace((unsigned char)*str) )
@@ -9971,74 +9978,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
       }
    }
 
-   /* search for end of linear sum: either '<=', '>=', '==', or '[free]' */
-   endsum = (char*) strrchr(str, (int) '=');
-   if( endsum != NULL )
-   {
-      /* seem to have either '<=', '>=', or '==', so expect a value behind and parse it */
-      char* endstr;
-
-      assert(endsum > str);
-      --endsum;
-      switch( *endsum )
-      {
-         case '<':
-            rhs = strtod(endsum+2, &endstr);
-            break;
-
-         case '=':
-            if( !SCIPisInfinity(scip, -lhs) )
-            {
-               SCIPerrorMessage("cannot have == on rhs if there was a <= on lhs\n");
-               return SCIP_OKAY;
-            }
-            else
-            {
-               rhs = strtod(endsum+2, &endstr);
-               lhs = rhs;
-            }
-            break;
-
-         case '>':
-            if( !SCIPisInfinity(scip, -lhs) )
-            {
-               SCIPerrorMessage("cannot have => on rhs if there was a <= on lhs\n");
-               return SCIP_OKAY;
-            }
-            else
-            {
-               lhs = strtod(endsum+2, &endstr);
-            }
-            break;
-
-         default:
-            SCIPerrorMessage("unexpected character %c\n", *endsum);
-            return SCIP_OKAY;
-      }
-      if( endstr == endsum+2 )
-      {
-         SCIPerrorMessage("error parsing number %s\n", endsum+2);
-         return SCIP_OKAY;
-      }
-   }
-   else
-   {
-      endsum = strstr(str, "[free]");  /*lint !e158*/
-      if( endsum != NULL && !SCIPisInfinity(scip, -lhs) )
-      {
-         SCIPerrorMessage("cannot have [free] if there was a <= on lhs\n");
-         return SCIP_OKAY;
-      }
-   }
-
-   if( endsum != NULL )
-   {
-      /* fake end of string */
-      endchar = *endsum;
-      *endsum = '\0';
-   }
-
-   /* initialize buffers for storing the coefficients */
+   /* initialize buffers for storing the variables and coefficients */
    coefssize = 100;
    SCIP_CALL( SCIPallocBufferArray(scip, &vars,  coefssize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &coefs, coefssize) );
@@ -10061,15 +10001,69 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    {
       SCIPerrorMessage("no luck in parsing linear sum '%s'\n", str);
    }
-
-   /* restore original character at endsum */
-   if( endsum != NULL )
-      *endsum = endchar;
-
-   if( *success )
+   else
    {
-      SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, nvars, vars, coefs, lhs, rhs,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      (*success) = FALSE;
+      str = endptr;
+
+     /* check for left or right hand side */
+      while( isspace((unsigned char)*str) )
+         ++str;
+
+      /* check for free constraint */
+      if( strncmp(str, "[free]", 6) == 0 )
+      {
+         if( !SCIPisInfinity(scip, -lhs) )
+         {
+            SCIPerrorMessage("cannot have left hand side and [free] status \n");
+            return SCIP_OKAY;
+         }
+         (*success) = TRUE;
+      }
+      else
+      {
+         switch( *str )
+         {
+         case '<':
+            *success = SCIPstrToRealValue(str+2, &rhs, &endptr);
+            break;
+         case '=':
+            if( !SCIPisInfinity(scip, -lhs) )
+            {
+               SCIPerrorMessage("cannot have == on rhs if there was a <= on lhs\n");
+               return SCIP_OKAY;
+            }
+            else
+            {
+               *success = SCIPstrToRealValue(str+2, &rhs, &endptr);
+               lhs = rhs;
+            }
+            break;
+         case '>':
+            if( !SCIPisInfinity(scip, -lhs) )
+            {
+               SCIPerrorMessage("cannot have => on rhs if there was a <= on lhs\n");
+               return SCIP_OKAY;
+            }
+            else
+            {
+               *success = SCIPstrToRealValue(str+2, &lhs, &endptr);
+               break;
+            }
+         case '\0':
+            *success = TRUE;
+            break;
+         default:
+            SCIPerrorMessage("unexpected character %c\n", *str);
+            return SCIP_OKAY;
+         }
+      }
+
+      if( *success )
+      {
+         SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, nvars, vars, coefs, lhs, rhs,
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      }
    }
 
    SCIPfreeBufferArray(scip, &coefs);
@@ -10273,7 +10267,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLinear)
       /* create a constraint out of the conflict set */
       (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%"SCIP_LONGINT_FORMAT, SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsLinear(scip, &cons, consname, nbdchginfos, vars, vals, lhs, SCIPinfinity(scip),
-            FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
+            FALSE, separate, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
 
       /** try to automatically convert a linear constraint into a more specific and more specialized constraint */
       SCIP_CALL( SCIPupgradeConsLinear(scip, cons, &upgdcons) );

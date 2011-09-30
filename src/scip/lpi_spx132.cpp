@@ -2627,6 +2627,21 @@ SCIP_RETCODE SCIPlpiSetState(
    return SCIP_OKAY;
 }
 
+/** clears current LPi state (like basis information) of the solver */
+SCIP_RETCODE SCIPlpiClearState(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{  /*lint --e{715}*/
+   SCIPdebugMessage("calling SCIPlpiClearState()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   lpi->spx->reLoad();
+
+   return SCIP_OKAY;
+}
+
 /** frees LPi state information */
 SCIP_RETCODE SCIPlpiFreeState(
    SCIP_LPI*             lpi,                /**< LP interface structure */

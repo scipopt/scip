@@ -1062,6 +1062,16 @@ SCIP_RETCODE SCIPlpiSetState(
    return SCIP_PLUGINNOTFOUND;
 }
 
+/** clears current LPi state (like basis information) of the solver */
+SCIP_RETCODE SCIPlpiClearState(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{  /*lint --e{715}*/
+   assert(lpi != NULL);
+   errorMessage();
+   return SCIP_PLUGINNOTFOUND;
+}
+
 /** frees LPi state information */
 SCIP_RETCODE SCIPlpiFreeState(
    SCIP_LPI*             lpi,                /**< LP interface structure */

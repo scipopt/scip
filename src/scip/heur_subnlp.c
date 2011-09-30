@@ -80,6 +80,7 @@ struct SCIP_HeurData
    SCIP_Real             minimprove;         /**< desired minimal improvement in objective function value when running heuristic */
    int                   maxpresolverounds;  /**< limit on number of presolve rounds in sub-SCIP */
    SCIP_Bool             forbidfixings;      /**< whether to add constraints that forbid specific fixations that turned out to be infeasible */
+   SCIP_Bool             keepcopy;           /**< whether to keep SCIP copy or to create new copy each time heuristic is applied */
 
    SCIP_Longint          iterused;           /**< number of iterations used so far */
    int                   iteroffset;         /**< number of iterations added to the contingent of the total number of iterations */
@@ -1593,10 +1594,18 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
       }
    }
 
-CLEANUP:
-   /* undo fixing of discrete variables in sub-SCIP */
-   if( SCIPgetNBinVars(heurdata->subscip) || SCIPgetNIntVars(heurdata->subscip) )
+ CLEANUP:
+   /* if the heuristic was applied before solving has started, then destroy subSCIP, since EXITSOL may not be called
+    * also if keepcopy is disabled, then destroy subSCIP
+    */
+   if( SCIPgetStage(scip) < SCIP_STAGE_SOLVING || !heurdata->keepcopy )
    {
+      SCIP_CALL( freeSubSCIP(scip, heurdata) );
+      heurdata->triedsetupsubscip = FALSE;
+   }
+   else if( SCIPgetNBinVars(heurdata->subscip) || SCIPgetNIntVars(heurdata->subscip) )
+   {
+      /* undo fixing of discrete variables in sub-SCIP */
       SCIP_VAR** subvars;
       int        nsubvars;
       int        nsubbinvars;
@@ -1617,13 +1626,6 @@ CLEANUP:
          SCIP_CALL( SCIPchgVarLbGlobal(heurdata->subscip, subvar, SCIPvarGetLbGlobal(var)) );
          SCIP_CALL( SCIPchgVarUbGlobal(heurdata->subscip, subvar, SCIPvarGetUbGlobal(var)) );
       }
-   }
-
-   /* if the heuristic was applied before solving has started, then destroy NLP, since EXITSOL may not be called */
-   if( SCIPgetStage(scip) < SCIP_STAGE_SOLVING )
-   {
-      SCIP_CALL( freeSubSCIP(scip, heurdata) );
-      heurdata->triedsetupsubscip = FALSE;
    }
 
    return SCIP_OKAY;
@@ -1750,10 +1752,18 @@ SCIP_RETCODE SCIPresolveSolHeurSubNlp(
    if( result == SCIP_FOUNDSOL )
       *success = TRUE;
 
-CLEANUP:
-   /* undo fixing of discrete variables in subSCIP */
-   if( SCIPgetNBinVars(heurdata->subscip) || SCIPgetNIntVars(heurdata->subscip) )
+ CLEANUP:
+   /* if the heuristic was applied before solving has started, then destroy subSCIP, since EXITSOL may not be called
+    * also if keepcopy is not set, then destroy subSCIP
+    */
+   if( SCIPgetStage(scip) < SCIP_STAGE_SOLVING || !heurdata->keepcopy )
    {
+      SCIP_CALL( freeSubSCIP(scip, heurdata) );
+      heurdata->triedsetupsubscip = FALSE;
+   }
+   else if( SCIPgetNBinVars(heurdata->subscip) || SCIPgetNIntVars(heurdata->subscip) )
+   {
+      /* undo fixing of discrete variables in subSCIP */
       SCIP_VAR** subvars;
       int        nsubvars;
       int        nsubbinvars;
@@ -1774,13 +1784,6 @@ CLEANUP:
          SCIP_CALL( SCIPchgVarLbGlobal(heurdata->subscip, subvar, SCIPvarGetLbGlobal(var)) );
          SCIP_CALL( SCIPchgVarUbGlobal(heurdata->subscip, subvar, SCIPvarGetUbGlobal(var)) );
       }
-   }
-
-   /* if the heuristic was applied before solving has started, then destroy NLP, since EXITSOL may not be called */
-   if( SCIPgetStage(scip) < SCIP_STAGE_SOLVING )
-   {
-      SCIP_CALL( freeSubSCIP(scip, heurdata) );
-      heurdata->triedsetupsubscip = FALSE;
    }
 
    return SCIP_OKAY;
@@ -1888,11 +1891,15 @@ SCIP_DECL_HEURINITSOL(heurInitsolSubNlp)
    assert(heurdata != NULL);
    assert(heurdata->subscip == NULL);
 
-   /* create sub-SCIP for later use */
-   SCIP_CALL( createSubSCIP(scip, heurdata) );
-   /* creating sub-SCIP may fail if the NLP solver interfaces did not copy into subscip */
-   if( heurdata->subscip == NULL )
-      return SCIP_OKAY;
+   if( heurdata->keepcopy )
+   {
+      /* create sub-SCIP for later use */
+      SCIP_CALL( createSubSCIP(scip, heurdata) );
+
+      /* creating sub-SCIP may fail if the NLP solver interfaces did not copy into subscip */
+      if( heurdata->subscip == NULL )
+         return SCIP_OKAY;
+   }
 
    /* if the heuristic is called at the root node, we want to be called directly after the initial root LP solve */
    if( SCIPheurGetFreqofs(heur) == 0 )
@@ -1956,10 +1963,14 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
    /* obviously, we did not do anything yet */
    *result = SCIP_DIDNOTRUN;
 
-   /* InitsolNlp decided that we do not need an NLP solver
-    * probably because we do not have nonlinear continuous or implicit integer variables
+   /* if keepcopy and subscip == NULL, then InitsolNlp decided that we do not need an NLP solver,
+    *   probably because we do not have nonlinear continuous or implicit integer variables
+    * if triedsetupsubscip and subscip == NULL, then we run the heuristic already, but gave up due to some serious error
+    * in both cases, we do not want to run
+    *
+    * otherwise, we continue and let SCIPapplyHeurSubNlp try to create subscip
     */
-   if( heurdata->subscip == NULL )
+   if( heurdata->subscip == NULL && (heurdata->keepcopy || heurdata->triedsetupsubscip) )
       return SCIP_OKAY;
 
    if( heurdata->startcand == NULL )
@@ -2157,6 +2168,10 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
    SCIP_CALL( SCIPaddBoolParam (scip, "heuristics/"HEUR_NAME"/forbidfixings",
          "whether to add constraints that forbid specific fixings that turned out to be infeasible",
          &heurdata->forbidfixings, FALSE, TRUE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam (scip, "heuristics/"HEUR_NAME"/keepcopy",
+         "whether to keep SCIP copy or to create new copy each time heuristic is applied",
+         &heurdata->keepcopy, TRUE, TRUE, NULL, NULL) );
 
    return SCIP_OKAY;
 }

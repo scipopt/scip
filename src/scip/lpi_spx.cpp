@@ -3861,6 +3861,31 @@ SCIP_RETCODE SCIPlpiSetState(
    return SCIP_OKAY;
 }
 
+/** clears current LPi state (like basis information) of the solver */
+SCIP_RETCODE SCIPlpiClearState(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{  /*lint --e{715}*/
+   SCIPdebugMessage("calling SCIPlpiClearState()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   try
+   {
+      lpi->spx->reLoad();
+   }
+   catch(SPxException x)
+   {
+      std::string s = x.what();
+      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      assert( lpi->spx->getStatus() != SPxSolver::OPTIMAL );
+      return SCIP_ERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** frees LPi state information */
 SCIP_RETCODE SCIPlpiFreeState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -3898,14 +3923,10 @@ SCIP_RETCODE SCIPlpiReadState(
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
-   bool res;
-   SOPLEX_TRY( res = lpi->spx->readBasisFile(fname, 0, 0) );
+   bool success;
+   SOPLEX_TRY( success = lpi->spx->readBasisFile(fname, 0, 0) );
 
-   if ( ! res )
-      return SCIP_ERROR;
-   return SCIP_OKAY;
-
-   return SCIP_INVALIDCALL;
+   return success ? SCIP_OKAY : SCIP_ERROR;
 }
 
 /** writes LP state (like basis information) to a file */

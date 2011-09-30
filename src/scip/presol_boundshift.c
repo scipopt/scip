@@ -155,6 +155,9 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
    if( nvars == 0 )
       return SCIP_OKAY;
    
+   if( SCIPdoNotAggr(scip) )
+      return SCIP_OKAY;
+
    *result = SCIP_DIDNOTFIND;
 
    /* copy the integer variables into an own array, since adding new integer variables affects the left-most slots in

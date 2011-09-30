@@ -3556,6 +3556,12 @@ SCIP_RETCODE SCIPmultiaggregateVar(
    SCIP_Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
    );
 
+/** returns whether aggregation of variables is not allowed */
+extern
+SCIP_Bool SCIPdoNotAggr(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** returns whether variable is not allowed to be multi-aggregated */
 extern
 SCIP_Bool SCIPdoNotMultaggrVar(
@@ -4570,13 +4576,6 @@ SCIP_RETCODE SCIPcalcStrongCG(
    SCIP_Real*            cutactivity,        /**< pointer to store the activity of the resulting cut */
    SCIP_Bool*            success,            /**< pointer to store whether the returned coefficients are a valid strong CG cut */
    SCIP_Bool*            cutislocal          /**< pointer to store whether the returned cut is only valid locally */
-   );
-
-/** reads a given solution file, problem has to be transformed in advance */
-extern
-SCIP_RETCODE SCIPreadSol(
-   SCIP*                 scip,              /**< SCIP data structure */   
-   const char*           fname              /**< name of the input file */
    );
 
 /** writes current LP to a file */
@@ -6600,6 +6599,20 @@ SCIP_RETCODE SCIProundSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution */
    SCIP_Bool*            success             /**< pointer to store whether rounding was successful */
+   );
+
+/** retransforms solution to original problem space */
+extern
+SCIP_RETCODE SCIPretransformSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** reads a given solution file, problem has to be transformed in advance */
+extern
+SCIP_RETCODE SCIPreadSol(
+   SCIP*                 scip,              /**< SCIP data structure */
+   const char*           fname              /**< name of the input file */
    );
 
 /** adds feasible primal solution to solution storage by copying it */

@@ -59,6 +59,44 @@
 extern "C" {
 #endif
 
+/** collected values of a column which depend on the LP solution
+ *  We store these values in each column to recover the LP solution at start of diving or probing mode, say, without
+ *  having to resolve the LP.  Note that we do not store the farkascoef value since we do expect a node with infeasible
+ *  LP to be pruned anyway.
+ */
+struct SCIP_ColSolVals
+{
+   SCIP_Real             primsol;            /**< primal solution value in LP, is 0 if col is not in LP */
+   SCIP_Real             redcost;            /**< reduced cost value in LP, or SCIP_INVALID if not yet calculated */
+   unsigned int          basisstatus:2;      /**< basis status of column in last LP solution, invalid for non-LP columns */
+};
+
+/** collected values of a row which depend on the LP solution
+ *  We store these values in each row to recover the LP solution at start of diving or probing mode, say, without
+ *  having to resolve the LP.  We have to store the dualfarkas value since there is (currently) no way to invalidate it.
+ */
+struct SCIP_RowSolVals
+{
+   SCIP_Real             dualsol;            /**< dual solution value in LP, is 0 if row is not in LP */
+   SCIP_Real             dualfarkas;         /**< multiplier value in dual farkas infeasibility proof */
+   SCIP_Real             activity;           /**< row activity value in LP, or SCIP_INVALID if not yet calculated */
+   unsigned int          basisstatus:2;      /**< basis status of row in last LP solution, invalid for non-LP rows */
+};
+
+/** collected values of the LP data which depend on the LP solution
+ *  We store these values to recover the LP solution at start of diving or probing mode, say, without having to resolve
+ *  the LP.
+ */
+struct SCIP_LpSolVals
+{
+   SCIP_LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
+   SCIP_Real             lpobjval;           /**< objective value of LP without loose variables, or SCIP_INVALID */
+   SCIP_Bool             primalfeasible;     /**< is current LP solution primal feasible? */
+   SCIP_Bool             dualfeasible;       /**< is current LP solution dual feasible? */
+   SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
+   SCIP_Bool             validfarkas;        /**< are stored row farkas coefficients valid? */
+};
+
 /** LP column;
  *  The row vector of the LP column is partitioned into two parts: The first col->nlprows rows in the rows array
  *  are the ones that belong to the current LP (col->rows[j]->lppos >= 0) and that are linked to the column
@@ -89,6 +127,7 @@ struct SCIP_Col
    SCIP_Real             sblpobjval;         /**< LP objective value at last strong branching call on the column */
    SCIP_Longint          sbnode;             /**< node number of the last strong branching call on this column */
    SCIP_Longint          obsoletenode;       /**< last node where this column was removed due to aging */
+   SCIP_COLSOLVALS*      storedsolvals;      /**< values stored before entering diving or probing mode */
    SCIP_VAR*             var;                /**< variable, this column represents; there cannot be a column without variable */
    SCIP_ROW**            rows;               /**< rows of column entries, that may have a nonzero dual solution value */
    SCIP_Real*            vals;               /**< coefficients of column entries */
@@ -151,6 +190,7 @@ struct SCIP_Row
    SCIP_Longint          validpsactivitydomchg; /**< domain change number for which pseudo activity value is valid */
    SCIP_Longint          validactivitybdsdomchg;/**< domain change number for which activity bound values are valid */
    SCIP_Longint          obsoletenode;       /**< last node where this row was removed due to aging */
+   SCIP_ROWSOLVALS*      storedsolvals;      /**< values stored before entering diving or probing mode */
    char*                 name;               /**< name of the row */
    SCIP_COL**            cols;               /**< columns of row entries, that may have a nonzero primal solution value */
    int*                  cols_index;         /**< copy of cols[i]->index for avoiding expensive dereferencing */
@@ -214,6 +254,7 @@ struct SCIP_Lp
    SCIP_COL**            lazycols;           /**< array with current LP lazy columns */
    SCIP_ROW**            rows;               /**< array with current LP rows in correct order */
    SCIP_LPISTATE*        divelpistate;       /**< stores LPI state (basis information) before diving starts */
+   SCIP_LPSOLVALS*       storedsolvals;      /**< collected values of the LP data which depend on the LP solution */
    int                   lpicolssize;        /**< available slots in lpicols vector */
    int                   nlpicols;           /**< number of columns in the LP solver */
    int                   lpifirstchgcol;     /**< first column of the LP which differs from the column in the LP solver */

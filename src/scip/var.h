@@ -986,7 +986,8 @@ SCIP_Real SCIPvarGetObjLP(
  */
 extern
 SCIP_Real SCIPvarGetLbLP(
-   SCIP_VAR*             var                 /**< problem variable */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** gets upper bound of variable in current SCIP_LP; the bound can be different from the bound stored in the variable's own
@@ -994,7 +995,8 @@ SCIP_Real SCIPvarGetLbLP(
  */
 extern
 SCIP_Real SCIPvarGetUbLP(
-   SCIP_VAR*             var                 /**< problem variable */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** returns solution value and index of variable lower bound that is closest to the variable's value in the given primal solution

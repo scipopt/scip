@@ -237,7 +237,7 @@ SCIP_RETCODE primalSetUpperbound(
       SCIP_Real delta;
 
       delta = 100.0*SCIPsetFeastol(set);
-      delta = MIN(delta, 0.1);
+      delta = MIN(delta, 0.0001);
       cutoffbound = SCIPsetFeasCeil(set, upperbound) - (1.0 - delta);
       cutoffbound = MIN(cutoffbound, upperbound); /* SCIPsetFeasCeil() can increase bound by almost 1.0 due to numerics
                                                    * and very large upperbound value */
@@ -544,13 +544,12 @@ SCIP_RETCODE primalAddOrigSol(
    assert(0 <= insertpos && insertpos < set->limit_maxorigsol);
 
    SCIPdebugMessage("insert primal solution candidate %p with obj %g at position %d:\n", (void*)sol, SCIPsolGetObj(sol, set, prob), insertpos);
-   SCIPdebug( SCIPsolPrint(sol, set, stat, prob, NULL, NULL, FALSE) );
 
    /* allocate memory for solution storage */
    SCIP_CALL( ensureSolsSize(primal, set, set->limit_maxorigsol) );
-   
+
    /* if the solution storage is full, free the last solution(s)
-    * more than one solution may be freed, if set->limit_maxsol was decreased in the meantime
+    * more than one solution may be freed, if set->limit_maxorigsol was decreased in the meantime
     */
    for( pos = set->limit_maxorigsol-1; pos < primal->nsols; ++pos )
    {
@@ -565,8 +564,8 @@ SCIP_RETCODE primalAddOrigSol(
    assert(0 <= insertpos && insertpos < primal->nsols);
    primal->sols[insertpos] = sol;
    primal->nsolsfound++;
-   
-   SCIPdebugMessage(" -> stored at position %d of %d solutions, found %"SCIP_LONGINT_FORMAT" solutions\n", 
+
+   SCIPdebugMessage(" -> stored at position %d of %d solutions, found %"SCIP_LONGINT_FORMAT" solutions\n",
       insertpos, primal->nsols, primal->nsolsfound);
 
    return SCIP_OKAY;
@@ -644,7 +643,7 @@ int primalSearchOrigSolPos(
    return right;
 }
 
-/** returns whether the given primal solution is already existant in the solution storage */
+/** returns whether the given primal solution is already existent in the solution storage */
 static
 SCIP_Bool primalExistsSol(
    SCIP_PRIMAL*          primal,             /**< primal data */
@@ -663,6 +662,9 @@ SCIP_Bool primalExistsSol(
    assert(0 <= insertpos && insertpos <= primal->nsols);
 
    obj = SCIPsolGetObj(sol, set, transprob);
+
+   assert(primal->sols != NULL || primal->nsols == 0);
+   assert(primal->sols != NULL || insertpos == 0);
 
    /* search in the better solutions */
    for( i = insertpos-1; i >= 0; --i )
@@ -697,7 +699,7 @@ SCIP_Bool primalExistsSol(
    return FALSE;
 }
 
-/** returns whether the given primal solution is already existant in the original solution candidate storage */
+/** returns whether the given primal solution is already existent in the original solution candidate storage */
 static
 SCIP_Bool primalExistsOrigSol(
    SCIP_PRIMAL*          primal,             /**< primal data */
@@ -723,10 +725,10 @@ SCIP_Bool primalExistsOrigSol(
 
       solobj = SCIPsolGetOrigObj(primal->sols[i]);
       assert( SCIPsetIsLE(set, solobj, obj) );
-     
+
       if( SCIPsetIsLT(set, solobj, obj) )
          break;
-   
+
       if( SCIPsolsAreEqual(sol, primal->sols[i], set, stat, prob, NULL) )
          return TRUE;
    }
@@ -738,14 +740,14 @@ SCIP_Bool primalExistsOrigSol(
 
       solobj = SCIPsolGetOrigObj(primal->sols[i]);
       assert( SCIPsetIsGE(set, solobj, obj) );
-      
+
       if( SCIPsetIsGT(set, solobj, obj) )
          break;
 
       if( SCIPsolsAreEqual(sol, primal->sols[i], set, stat, prob, NULL) )
          return TRUE;
    }
-   
+
    return FALSE;
 }
 
@@ -780,8 +782,8 @@ SCIP_Bool solOfInterest(
    return FALSE;
 }
 
-/** check if we are willing to store the solution candidate for lated checking */
-static 
+/** check if we are willing to store the solution candidate for later checking */
+static
 SCIP_Bool origsolOfInterest(
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_SET*             set,                /**< global SCIP settings */

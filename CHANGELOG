@@ -71,6 +71,8 @@ interface:
 - split off PARAMEMPHASIS from PARAMSETTING (in pub_paramset.c/paramset.c)
 - added new method to linear constraint handler SCIPsetUpgradeConsLinear(), which (de-)activates the possibility to upgrade a linear constraint to a specialized linear constraint (e.g. knapsack)
 - new method SCIPsolGetOrigObj() in pub_sol.h which returns for a solution in the original problem space the objective value
+- new method SCIPretransformSol() in scip.h that allows to retransform a solution to the original space
+- added method SCIPlpiClearState() to LP interfaces for clearing basis information in the LP solver
 
 performance improvements:
 - performance improvements in prop_vbounds
@@ -81,9 +83,13 @@ performance improvements:
 - performance and memory consumption improvements in xmlparse.c
 - avoid very long separation times of LEWIs in cons_knapsack for very large minimal covers
 - used SCIPallocMemoryArray instead of SCIPallocBlockMemoryArray which leads to fewer memory consumption in getLiftingSequence() in cons_knapsack, also improved cache use bei using an extra array instead blockmemory chunks
-- switched FASTMIP from 1 to 2 for CPLEX and changed default pricing rule back to steepest edge pricing instead of qucikstart steepest edge pricing
+- switched FASTMIP from 1 to 2 for CPLEX and changed default pricing rule back to steepest edge pricing instead of quickstart steepest edge pricing
 - made sorting method more robust
 - LNS heuristics now use SCIPcopy() by default
+- considering inactive variables in undercover heuristic; limiting effort for solving covering problem
+- if the shiftandpropagate heuristic has to solve the LP relaxation on the continuous variables and the LP was unsolved
+  before, e.g., when called before root node solving, then we clear the resulting LP state, since it might be a bad
+  starting basis for the next solve of the LP relaxation (controlled by new parameter <heuristics/shiftandpropagate/clearlpstate>)
 
 fixed bugs:
 - fixed bug in propagation of indicator constraints: cannot fix slack variable to 0 if linear constraint is disabled/not active
@@ -118,6 +124,10 @@ fixed bugs:
 - fixed bug in ZI round heuristic that led to infeasible shiftings for numerically slightly infeasible rows with close-to-zero coefficients
 - fixed memory leak in coloring part of maximum clique algorithm (tclique_coloring.c) in a better way
 - fixed assert in sepa_clique.c which is currently not valid because implicit binary variables in cliques are ignored
+- fixed bug in redcost propagator: can only be called if the current node has an LP
+- fixed numerical issue in octane heuristic: close-to-zero values for ray direction could have led to bad computations
+- fixed numerical bug in linear constraint handler: polishing of coefficients after fixing variables led to wrong results for
+  continuous variables fixed to a close-to-zero value.
 - fixed bug in sepa_zerohalf.c concerning inconsistent construction of solution array of variables and fixed wrong assert about variable bounds
 - fixed possible buffer overrun in tclique_graph.c
 
@@ -126,11 +136,12 @@ plugins:
 - added clique heuristic (heur_clique.{c,h})
 - added pseudoboolean constraint handler (cons_pseudoboolean.{c,h})
 - all C template files are now called <plugintype>_xyz.{c,h} instead of <plugintype>_xxx.{c,h}
-- added first version of cons_disjunction.{c,h} which allows a disjunctions of constraints
+- added first version of cons_disjunction.{c,h} which allows a disjunction of constraints
 - added first version of sepa_closecuts.{c,h} to separate cuts w.r.t. to a point that is closer to the integral polyhedron
 - added reader for variable bounds (reader_bnd.{c,h})
 - added BETA version of constraint handler for nonlinear constraints (cons_nonlinear.{c,h}) to handle nonlinear equations given by algebraic expressions using operands like addition, multiplication, power, exp, log; currently no trigonometric functions
-- added constraint handler for (signed) power constraints (cons_signedpower.{c,h}) to handle equations like z = sign(x)abs(x)^n, n > 1
+- added constraint handler for (absolute) power constraints (cons_abspower.{c,h}) to handle equations like z = sign(x)abs(x)^n, n > 1
+- added BETA version of constraint handler for bivariate nonlinear constraints (cons_bivariate.{c,h}) to compute tight estimators for 1-convex and convex-concave bivariate nonlinear functions (given as expression tree)
 
 parameters:
 - added parameter <constraints/quadratic/disaggregate> to split a block-separable quadratic constraint into several quadratic constraint
@@ -176,6 +187,13 @@ parameters:
 - all parameters in cons_indicator and cons_sos1 have been converted to lower case!
 - new parameters "conflict/bounddisjunction/continuousfrac" which defines the maximum percantage of continuous variables 
   within a conflict create by the bounddisjunction consflict handler
+- added parameter <presolving/donotaggr> to deactivate aggregation of variables globally
+- added parameter <lp/resolverestore> controlling how LP solution is restored after diving: if TRUE by resolving them,
+  if FALSE by buffering them; if <lp/freesolvalbuffers> is TRUE, we free the buffer memory each time (FALSE by default)
+- added parameter <constraints/quadratic/checkfactorable> to enable check for factorable quadratic functions (xAx = (ax+b)*(cx+d)) in quadratic constraints and use of this information in separation (generates lifted tangent inequalities according to Belotti/Miller/Namazifar if also linear vars are present)
+- added parameters <constraints/{nonlinear,quadratic,soc,abspower}/maxsepanlprounds> to enable solving NLP relaxation in root node and adding cuts from linearizations of convex nonlinear constraints into cutpool
+- added parameter <conflict/separate> which enables or disables the separation of conflict constraints
+- added parameter <heuristics/shiftandpropagate/clearlpstate> to clear LP state at end of shiftandpropagate heuristic, if LP was initially unsolved
 
 features:
 - flatzinc reader is now capable to read cumulative constraints
@@ -208,7 +226,7 @@ features:
   within a propagator  or a constraint handler
 - LP iterations in resolving calls can now be limited w.r.t. the average number of LP iterations in previous calls (after the root node);
   this is currently only done for the initial LP solve at a node and the corresponding parameter resolveiterfac is set to -1 (no limit) per default
-- added writing for pip files (linear, quadratic, polynomial nonlinear, polynomial signedpower, and and constraints)
+- added writing for pip files (linear, quadratic, polynomial nonlinear, polynomial abspower, polynomial bivariate, and and constraints)
 - reorganized computation of scores in cut filtering: instead of the computation at the time of addition, scores are now only computed w.r.t. the current LP solution and when cut filtering is performed; one can now fill the cut storage with cuts that were separated for different solutions
 - it is possible to change bounds of a variable in the interactive shell
 - it is possible to add a constraint to a problem in the interactive shell
@@ -233,7 +251,7 @@ features:
 - new method SCIPintervalPowerScalarInverse() to solve an equation y = x^p for given bounds on y and scalar exponent p
 - new method SCIPintervalQuadBivar() to compute tight bounds on a bivariate quadratic form
 - new method SCIPintervalSolveBivariateQuadExpressionAllScalar() to compute tight bounds on the solutions of a bivariate quadratic equation
-- the gams writer can now write nonlinear and signedpower constraints 
+- the gams writer can now write nonlinear, abspower, and bivariate constraints
 - the pip and zimpl reader now create nonlinear constraints for polynomials of degree > 2
 - implement presolving in exitpre() in cons_orbitope and cons_indicator
 - implement possibility to force a restart in cons_indicator if enough indicator variables have been fixed
@@ -241,7 +259,9 @@ features:
 - there exists now a solution candidate store for the original problem;  during transformation these solutions are tried; during free the
   transformed problem the best feasible solution of the transformed problem  are copied to the solution candidate store of the original problem; this
   useful if you solve several problems iteratively, solutions get now carried over automatically.
-- solution which are given by the user are form the outside a now marke by '#' in the ouput 	   
+- solutions which are given by the user form the outside are now marked by '#' in the output
+- implemented possibility to buffer and restore LP solution after diving without having to resolve the LP; currently
+  turned off, because performance impact is unclear; controlled by parameters lp/resolverestore and lp/freesolvalbuffers
 
 design:
 - SCIP_HASHMAP now works also without block memory

@@ -683,7 +683,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
          /* create a logicor constraint out of the conflict set */
          (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
          SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, consname, nbdchginfos, vars, 
-               FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
+               FALSE, separate, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
          SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
 #ifdef SCIP_OUTPUT
          SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
@@ -4275,7 +4275,7 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
    SCIPdebugMessage("Presolving indicator constraints.\n");
 
    /* only run if success is possible */
-   if ( nrounds == 0 || nnewfixedvars > 0 || nnewchgbds > 0 || nnewaggrvars > 0 || *nfixedvars > oldnfixedvars )
+   if( nrounds == 0 || nnewfixedvars > 0 || nnewchgbds > 0 || nnewaggrvars > 0 )
    {
       *result = SCIP_DIDNOTFIND;
 

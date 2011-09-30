@@ -57,7 +57,7 @@
 #define CONFLICTHDLR_DESC      "conflict handler creating bound disjunction constraints"
 #define CONFLICTHDLR_PRIORITY  -3000000
 
-#define DEFAULT_CONTINUOUSFRAC      1.0 /**< maximal percantage of continuous variables within a conflict */
+#define DEFAULT_CONTINUOUSFRAC      0.4 /**< maximal percantage of continuous variables within a conflict */
 
 #define QUADCONSUPGD_PRIORITY    500000 /**< priority of the constraint handler for upgrading of quadratic constraints */
 
@@ -2526,7 +2526,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
    {
       (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, consname, nbdchginfos, vars, boundtypes, bounds,
-            FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
+            FALSE, separate, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
       SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       *result = SCIP_CONSADDED;

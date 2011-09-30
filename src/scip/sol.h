@@ -341,6 +341,18 @@ SCIP_RETCODE SCIPsolRetransform(
    SCIP_PROB*            origprob            /**< original problem */
    );
 
+/** recomputes the objective value of an original solution, e.g., when transferring solutions
+ *  from the solution pool (objective coefficients might have changed in the meantime)
+ */
+extern
+void SCIPsolRecomputeObj(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            origprob            /**< original problem */
+   );
+
+
 /** returns whether the given solutions in transformed space are equal */
 extern
 SCIP_Bool SCIPsolsAreEqual(

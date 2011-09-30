@@ -3780,8 +3780,10 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
                *result = SCIP_CUTOFF;
                return SCIP_OKAY;
             }
+
             if( aggregated )
                (*naggrvars)++;
+
             if( redundant )
             {
                SCIP_CALL( SCIPdelCons(scip, cons) );
@@ -4200,10 +4202,16 @@ SCIP_DECL_CONSPARSE(consParseSetppc)
       {
          SCIPerrorMessage("no luck in parsing linear sum '%s'\n", str);
       }
-  
+      else
+         str = endptr;
+
       /* free coefficient array */
       SCIPfreeBufferArray(scip, &coefs);
    }
+
+   /* remove white spaces */
+   while( isspace((unsigned char)*str) )
+      str++;
 
    if( *success )
    {
@@ -4337,7 +4345,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecSetppc)
       /* create a constraint out of the conflict set */
       (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsSetcover(scip, &cons, consname, nbdchginfos, vars,
-            FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
+            FALSE, separate, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
       SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 

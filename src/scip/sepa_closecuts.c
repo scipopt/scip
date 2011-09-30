@@ -205,6 +205,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpClosecuts)
 
    *result = SCIP_DIDNOTRUN;
 
+   /* only call separator, if there are fractional variables */
+   if ( SCIPgetNLPBranchCands(scip) == 0 )
+      return SCIP_OKAY;
+
    sepadata = SCIPsepaGetData(sepa);
    assert( sepadata != NULL );
 

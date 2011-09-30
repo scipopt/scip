@@ -2765,7 +2765,8 @@ SCIP_RETCODE storeMod2Data(
       { 
          mod2data->rows[i] = tempcurrentrow;
          mod2data->rhs[i] = tempmod2rhs;
-      
+
+         assert(mod2data->rowaggregationsbitarraysize > 0);
          SCIP_CALL( SCIPallocMemoryArray(scip, &(mod2data->rowaggregations[i]), mod2data->rowaggregationsbitarraysize) );
          BITARRAYCLEAR(mod2data->rowaggregations[i], mod2data->rowaggregationsbitarraysize);
          BITARRAYBITSET(mod2data->rowaggregations[i], i);
@@ -2796,6 +2797,7 @@ SCIP_RETCODE storeMod2Data(
       else
          c = varboundstoadd[j] - 1;
 
+      assert(mod2data->rowsbitarraysize > 0);
       SCIP_CALL(SCIPallocMemoryArray(scip, &(mod2data->rows[i]), mod2data->rowsbitarraysize));
       BITARRAYCLEAR(mod2data->rows[i], mod2data->rowsbitarraysize);
       BITARRAYBITSET(mod2data->rows[i], c); 
@@ -5837,17 +5839,16 @@ SCIP_RETCODE separateByEnumerationHeuristics(
 
 
 
-#ifdef SCIP_DEBUG
+#if 0
 /** prints a node of the auxiliary graph */
 static
 void debugPrintAuxGraphNode(
    ZEROHALF_AUXGRAPH_NODE* node              /**< node to be printed */
    )
 {
-   int                   i;
+   int i;
 
    assert(node != NULL);
-
 
    SCIPdebugMessage("\nnode: %p\n", node);
    for( i = 0 ; i < node->nneighbors ; ++i)
@@ -5881,7 +5882,7 @@ SCIP_RETCODE addEdgeToAuxGraph(
    int                     n1;
    int                     n2;
 
-   const int maxnumberofneighbors = 2 * graph->nnodes - 2;
+   int maxnumberofneighbors;
 
    assert(scip != NULL);
    assert(graph != NULL);
@@ -5890,6 +5891,8 @@ SCIP_RETCODE addEdgeToAuxGraph(
    assert(node2index >= 0);
    assert(node2index < graph->nnodes);
    assert(!SCIPisNegative(scip, weight));
+
+   maxnumberofneighbors = 2 * graph->nnodes - 2;
 
    if( isodd )
    {
@@ -5908,6 +5911,7 @@ SCIP_RETCODE addEdgeToAuxGraph(
 
    if( node1->nneighbors == 0 )
    {
+      assert(maxnumberofneighbors > 0);
       SCIP_CALL(SCIPallocMemoryArray(scip, &(node1->neighbors), maxnumberofneighbors));
       SCIP_CALL(SCIPallocMemoryArray(scip, &(node1->edgeweights), maxnumberofneighbors));
       SCIP_CALL(SCIPallocMemoryArray(scip, &(node1->relatedrows), maxnumberofneighbors));
@@ -5919,6 +5923,7 @@ SCIP_RETCODE addEdgeToAuxGraph(
 
    if( node2->nneighbors == 0 )
    {
+      assert(maxnumberofneighbors > 0);
       SCIP_CALL(SCIPallocMemoryArray(scip, &(node2->neighbors), maxnumberofneighbors));
       SCIP_CALL(SCIPallocMemoryArray(scip, &(node2->edgeweights), maxnumberofneighbors));
       SCIP_CALL(SCIPallocMemoryArray(scip, &(node2->relatedrows), maxnumberofneighbors));
@@ -5938,7 +5943,9 @@ SCIP_RETCODE addEdgeToAuxGraph(
             break;
    if( n1 < node1->nneighbors )
    {
+      /* if node2 is neighbor of node1, then node1 is neighbor of node2 */
       assert(node1->neighbors[n1] == node2);
+      assert(n2 < node2->nneighbors);
       assert(node2->neighbors[n2] == node1);
       assert(node1->edgeweights[n1] == node2->edgeweights[n2]);
    }

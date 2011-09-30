@@ -1730,12 +1730,17 @@ SCIP_RETCODE preprocessConstraintPairs(
             SCIP_CALL( SCIPaggregateVars(scip, singlevar1, singlevar0, 1.0, 1.0, 1.0,
                   &infeasible, &redundant, &aggregated) );
          }
-         assert(infeasible || redundant);
+         assert(infeasible || redundant || SCIPdoNotAggr(scip));
+
          *cutoff = *cutoff || infeasible;
          if( aggregated )
             (*naggrvars)++;
-         SCIP_CALL( SCIPdelCons(scip, cons1) );
-         (*ndelconss)++;
+
+         if( redundant )
+         {
+            SCIP_CALL( SCIPdelCons(scip, cons1) );
+            (*ndelconss)++;
+         }
 #if 0
       /* if aggregation in the core of SCIP is not changed we do not need to call applyFixing, this would be the correct
        * way
@@ -2150,13 +2155,20 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
                SCIP_CALL( SCIPaggregateVars(scip, consdata->vars[0], consdata->vars[1], 1.0, 1.0, 1.0,
                      &cutoff, &redundant, &aggregated) );
             }
-            assert(redundant);
-            if( aggregated )
-               (*naggrvars)++;
+            assert(redundant || SCIPdoNotAggr(scip));
 
-            /* delete constraint */
-            SCIP_CALL( SCIPdelCons(scip, cons) );
-            (*ndelconss)++;
+            if( aggregated )
+            {
+               assert(redundant);
+               (*naggrvars)++;
+            }
+
+            if( redundant )
+            {
+               /* delete constraint */
+               SCIP_CALL( SCIPdelCons(scip, cons) );
+               (*ndelconss)++;
+            }
          }
       }
    }

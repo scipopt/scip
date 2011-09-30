@@ -89,6 +89,9 @@ SCIP_DECL_PRESOLEXEC(presolExecInttobinary)
 
    *result = SCIP_DIDNOTRUN;
 
+   if( SCIPdoNotAggr(scip) )
+      return SCIP_OKAY;
+
    /* get the problem variables */
    scipvars = SCIPgetVars(scip);
    nbinvars = SCIPgetNBinVars(scip);

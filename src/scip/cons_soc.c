@@ -56,7 +56,7 @@
 
 #define CONSHDLR_PROP_TIMING  SCIP_PROPTIMING_BEFORELP
 
-#define QUADCONSUPGD_PRIORITY         0 /**< priority of the constraint handler for upgrading of quadratic constraints */
+#define QUADCONSUPGD_PRIORITY     10000 /**< priority of the constraint handler for upgrading of quadratic constraints */
 
 #ifndef M_PI
 #define M_PI           3.141592653589793238462643
@@ -102,23 +102,23 @@ struct SCIP_ConsData
 struct SCIP_ConshdlrData
 {
    SCIP_HEUR*            subnlpheur;     /**< a pointer to the subNLP heuristic, if available */
-   SCIP_HEUR*            rensheur;       /**< a pointer to the RENS heuristic, if available */
    SCIP_HEUR*            trysolheur;     /**< a pointer to the trysol heuristic, if available */
    SCIP_EVENTHDLR*       eventhdlr;      /**< event handler for bound change events */
    int                   newsoleventfilterpos; /**< filter position of new solution event handler, if caught */
    SCIP_Bool             haveexprint;    /**< indicates whether an expression interpreter is available */
+   int                   sepanlprounds;  /**< number of root node separation rounds in current run in which the NLP relaxation solution was used as reference point */
    
    SCIP_Bool             glineur;        /**< is the Glineur outer approx preferred to Ben-Tal Nemirovski? */
    SCIP_Bool             doscaling;      /**< are constraint violations scaled? */
    SCIP_Bool             projectpoint;   /**< is the point in which a cut is generated projected onto the feasible set? */
    int                   nauxvars;       /**< number of auxiliary variables to use when creating a linear outer approx. of a SOC3 constraint */
-   SCIP_Bool             linearizenlpsol;/**< whether SOC constraints should be linearized in a solution found by the NLP or RENS heuristic */
    SCIP_Real             minefficacy;    /**< minimal efficacy of a cut to be added to LP in separation loop */
    SCIP_Bool             sparsify;       /**< whether to sparsify cuts */
    SCIP_Real             sparsifymaxloss;/**< maximal loss in cut efficacy by sparsification */
    SCIP_Real             sparsifynzgrowth;/**< growth rate of maximal allowed nonzeros in cuts in sparsification */
    SCIP_Bool             linfeasshift;   /**< whether to try to make solutions feasible in check by shifting the variable on the right hand side */
    char                  nlpform;        /**< formulation of SOC constraint in NLP */
+   int                   maxsepanlprounds;          /**< limit on number of separation rounds at root node in which to use the NLP relaxation solution as reference point */
 };
 
 
@@ -1230,18 +1230,86 @@ SCIP_RETCODE separatePoint(
    return SCIP_OKAY;
 }
 
+/** adds linearizations cuts for convex constraints w.r.t. a given reference point to cutpool and sepastore
+ * if separatedlpsol is not NULL, then cuts that separate the LP solution are added to the sepastore too
+ */
+static
+SCIP_RETCODE addLinearizationCuts(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< quadratic constraints handler */
+   SCIP_CONS**           conss,              /**< constraints */
+   int                   nconss,             /**< number of constraints */
+   SCIP_SOL*             ref,                /**< reference point where to linearize, or NULL for LP solution */
+   SCIP_Bool*            separatedlpsol,     /**< buffer to store whether a cut that separates the current LP solution was found, or NULL if not of interest */
+   SCIP_Real             minefficacy         /**< minimal efficacy of a cut when checking for separation of LP solution */
+)
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_ROW* row;
+   int c;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL || nconss == 0);
+
+   if( separatedlpsol != NULL )
+      *separatedlpsol = FALSE;
+
+   for( c = 0; c < nconss; ++c )
+   {
+      if( SCIPconsIsLocal(conss[c]) )
+         continue;
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      SCIP_CALL( evalLhs(scip, conss[c], ref) );
+      if( !SCIPisPositive(scip, consdata->lhsval) || SCIPisInfinity(scip, consdata->lhsval) )
+      {
+         SCIPdebugMessage("skip adding linearization for <%s> since lhs is %g\n", SCIPconsGetName(conss[c]), consdata->lhsval);
+         continue;
+      }
+
+      SCIP_CALL( generateCutSol(scip, conss[c], ref, &row) );
+
+      if( row == NULL )
+         continue;
+
+      assert(!SCIProwIsLocal(row));
+
+      /* if caller wants, then check if cut separates LP solution and add to sepastore if so */
+      if( separatedlpsol != NULL )
+      {
+         SCIP_Real feasibility;
+         SCIP_Real norm;
+
+         feasibility = SCIPgetRowLPFeasibility(scip, row);
+         norm = SCIPgetRowMaxCoef(scip, row);
+
+         if( -feasibility / MAX(1.0, norm) >= minefficacy )
+         {
+            *separatedlpsol = TRUE;
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+         }
+      }
+
+      SCIP_CALL( SCIPaddPoolCut(scip, row) );
+
+      SCIP_CALL( SCIPreleaseRow(scip, &row) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** processes the event that a new primal solution has been found */
 static
 SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
 {
-   SCIP_CONSHDLR* conshdlr;
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
    SCIP_CONS**    conss;
    int            nconss;
-   SCIP_CONSDATA* consdata;
-   int            c;
    SCIP_SOL*      sol;
-   SCIP_ROW*      row = NULL;
 
    assert(scip != NULL);
    assert(event != NULL);
@@ -1257,49 +1325,25 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    if( nconss == 0 )
       return SCIP_OKAY;
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
    sol = SCIPeventGetSol(event);
    assert(sol != NULL);
 
-   /* we are only interested in solution coming from the NLP or RENS heuristic (is that good?) */
-   if( SCIPsolGetHeur(sol) == NULL )
-      return SCIP_OKAY;
-   if( SCIPsolGetHeur(sol) != conshdlrdata->subnlpheur && SCIPsolGetHeur(sol) != conshdlrdata->rensheur)
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* we are only interested in solution coming from some heuristic other than trysol, but not from the tree
+    * the reason for ignoring trysol solutions is that they may come from an NLP solve in sepalp, where we already added linearizations,
+    * or are from the tree, but postprocessed via proposeFeasibleSolution
+    */
+   if( SCIPsolGetHeur(sol) == NULL || SCIPsolGetHeur(sol) == conshdlrdata->trysolheur )
       return SCIP_OKAY;
 
    conss = SCIPconshdlrGetConss(conshdlr);
    assert(conss != NULL);
 
-   SCIPdebugMessage("caught new sol event %x from heur %p; have %d conss\n", SCIPeventGetType(event), (void*)SCIPsolGetHeur(sol), nconss);
+   SCIPdebugMessage("caught new sol event %x from heur <%s>; have %d conss\n", SCIPeventGetType(event), SCIPheurGetName(SCIPsolGetHeur(sol)), nconss);
 
-   for( c = 0; c < nconss; ++c )
-   {
-      if( SCIPconsIsLocal(conss[c]) )
-         continue;
-
-      consdata = SCIPconsGetData(conss[c]);
-      assert(consdata != NULL);
-
-      SCIP_CALL( evalLhs(scip, conss[c], sol) );
-      if( !SCIPisPositive(scip, consdata->lhsval) || SCIPisInfinity(scip, consdata->lhsval) )
-      {
-         SCIPdebugMessage("skip adding linearization for <%s> since lhs is %g\n", SCIPconsGetName(conss[c]), consdata->lhsval);
-         continue;
-      }
-      
-      SCIP_CALL( generateCutSol(scip, conss[c], sol, &row) );
-
-      if( row == NULL )
-         continue;
-
-      assert(!SCIProwIsLocal(row));
-
-      SCIP_CALL( SCIPaddPoolCut(scip, row) );
-      SCIP_CALL( SCIPreleaseRow(scip, &row) );
-      SCIPdebugMessage("added linearization of constraint <%s> in solution from heuristic to cut pool\n", SCIPconsGetName(conss[c]));
-   }
+   SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, sol, NULL, 0.0) );
 
    return SCIP_OKAY;
 }
@@ -2959,7 +3003,6 @@ SCIP_DECL_CONSINIT(consInitSOC)
    assert(conshdlrdata != NULL);
    
    conshdlrdata->subnlpheur  = SCIPfindHeur(scip, "subnlp");
-   conshdlrdata->rensheur    = SCIPfindHeur(scip, "rens");
    conshdlrdata->trysolheur  = SCIPfindHeur(scip, "trysol");
    conshdlrdata->haveexprint = (strcmp(SCIPexprintGetName(), "NONE") != 0);
 
@@ -2980,7 +3023,6 @@ SCIP_DECL_CONSEXIT(consExitSOC)
    assert(conshdlrdata != NULL);
    
    conshdlrdata->subnlpheur  = NULL;
-   conshdlrdata->rensheur    = NULL;
    conshdlrdata->trysolheur  = NULL;
    conshdlrdata->haveexprint = FALSE;
 
@@ -3090,7 +3132,7 @@ SCIP_DECL_CONSINITSOL(consInitsolSOC)
    }
    
    conshdlrdata->newsoleventfilterpos = -1;
-   if( nconss != 0 && (conshdlrdata->subnlpheur != NULL || conshdlrdata->rensheur != NULL) )
+   if( nconss != 0 )
    {
       SCIP_EVENTHDLR* eventhdlr;
 
@@ -3099,6 +3141,9 @@ SCIP_DECL_CONSINITSOL(consInitsolSOC)
 
       SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_SOLFOUND, eventhdlr, (SCIP_EVENTDATA*)conshdlr, &conshdlrdata->newsoleventfilterpos) );
    }
+
+   /* reset counter */
+   conshdlrdata->sepanlprounds = 0;
 
    return SCIP_OKAY;
 }
@@ -3122,9 +3167,6 @@ SCIP_DECL_CONSEXITSOL(consExitsolSOC)
    if( conshdlrdata->newsoleventfilterpos >= 0 )
    {
       SCIP_EVENTHDLR* eventhdlr;
-
-      /* failing of the following events mean that new solution events should not have been caught */
-      assert(conshdlrdata->subnlpheur != NULL || conshdlrdata->rensheur != NULL);
 
       eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_newsolution");
       assert(eventhdlr != NULL);
@@ -3302,6 +3344,83 @@ SCIP_DECL_CONSSEPALP(consSepalpSOC)
    SCIP_CALL( computeViolations(scip, conss, nconss, NULL, conshdlrdata->doscaling, &maxviolcon) );
    if( maxviolcon == NULL )
       return SCIP_OKAY;
+
+   /* at root, check if we want to solve the NLP relaxation and use its solutions as reference point
+    * if there is something convex, then linearizing in the solution of the NLP relaxation can be very useful
+    */
+   if( SCIPgetDepth(scip) == 0 && conshdlrdata->sepanlprounds < conshdlrdata->maxsepanlprounds && SCIPisNLPConstructed(scip) && SCIPgetNNlpis(scip) > 0 )
+   {
+      SCIP_NLPSOLSTAT solstat;
+      SCIP_Bool       solvednlp;
+
+      solstat = SCIPgetNLPSolstat(scip);
+      solvednlp = FALSE;
+      if( solstat == SCIP_NLPSOLSTAT_UNKNOWN )
+      {
+         /* NLP is not solved yet, so we do it now and update solstat */
+
+         /* SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_VERBLEVEL, 1) ); */
+         SCIP_CALL( SCIPsolveNLP(scip) );
+
+         solstat = SCIPgetNLPSolstat(scip);
+         SCIPdebugMessage("solved NLP relax, solution status: %d\n", solstat);
+
+         solvednlp = TRUE;
+      }
+
+      if( solstat == SCIP_NLPSOLSTAT_GLOBINFEASIBLE )
+      {
+         SCIPdebugMessage("NLP relaxation is globally infeasible, thus can cutoff node\n");
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+
+      if( solstat <= SCIP_NLPSOLSTAT_FEASIBLE )
+      {
+         /* if we have feasible NLP solution, generate linearization cuts there */
+         SCIP_Bool lpsolseparated;
+         SCIP_SOL* nlpsol;
+
+         SCIP_CALL( SCIPcreateNLPSol(scip, &nlpsol, NULL) );
+         assert(nlpsol != NULL);
+
+         /* if we solved the NLP and solution is integral, then pass it to trysol heuristic */
+         if( solvednlp && conshdlrdata->trysolheur != NULL )
+         {
+            int nfracvars;
+
+            nfracvars = 0;
+            if( SCIPgetNBinVars(scip) > 0 || SCIPgetNIntVars(scip) > 0 )
+            {
+               SCIP_CALL( SCIPgetNLPFracVars(scip, NULL, NULL, NULL, &nfracvars, NULL) );
+            }
+
+            if( nfracvars == 0 )
+            {
+               SCIP_CALL( SCIPheurPassSolTrySol(scip, conshdlrdata->trysolheur, nlpsol) );
+            }
+         }
+
+         SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, nlpsol, &lpsolseparated, conshdlrdata->minefficacy) );
+
+         SCIP_CALL( SCIPfreeSol(scip, &nlpsol) );
+
+         ++conshdlrdata->sepanlprounds;
+
+         /* if a cut that separated the LP solution was added, then return, otherwise continue with usual separation in LP solution */
+         if( lpsolseparated )
+         {
+            SCIPdebugMessage("linearization cuts separate LP solution\n");
+
+            *result = SCIP_SEPARATED;
+
+            return SCIP_OKAY;
+         }
+      }
+   }
+   /* if we do not want to try solving the NLP, or have no NLP, or have no NLP solver, or solving the NLP failed,
+    * or separating with NLP solution as reference point failed, then try (again) with LP solution as reference point
+    */
 
    SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, FALSE, &sepasuccess) );
    if( sepasuccess )
@@ -3985,7 +4104,6 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
    /* create constraint handler data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
    conshdlrdata->subnlpheur = NULL;
-   conshdlrdata->rensheur = NULL;
    conshdlrdata->trysolheur = NULL;
    
    SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_boundchange",
@@ -4037,10 +4155,6 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
       "whether the Glineur Outer Approximation should be used instead of Ben-Tal Nemirovski",
       &conshdlrdata->glineur,          FALSE, TRUE,          NULL, NULL) );
    
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/linearizenlpsol",
-      "whether SOC constraints should be linearized in a solution found by the NLP or RENS heuristic",
-      &conshdlrdata->linearizenlpsol,  FALSE, TRUE,          NULL, NULL) );
-   
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacy",
       "minimal efficacy of a cut to be added to LP in separation",
       &conshdlrdata->minefficacy,      FALSE, 0.0001, 0.0, SCIPinfinity(scip), NULL, NULL) );
@@ -4064,6 +4178,10 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/"CONSHDLR_NAME"/nlpform",
       "which formulation to use when adding a SOC constraint to the NLP (a: automatic, q: nonconvex quadratic form, s: convex sqrt form, e: convex exponential-sqrt form, d: convex division form)",
       &conshdlrdata->nlpform,          FALSE, 'a', "aqsed", NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxsepanlprounds",
+      "limit on number of separation rounds at root node in which to use the NLP relaxation solution as reference point",
+      &conshdlrdata->maxsepanlprounds, FALSE, 0, 0, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
