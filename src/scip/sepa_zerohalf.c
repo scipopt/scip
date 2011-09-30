@@ -1784,9 +1784,9 @@ void findClosestLb(
       bvlb = SCIPvarGetVlbCoefs(var);
       dvlb = SCIPvarGetVlbConstants(var);
 
-      assert(zvlb == NULL || nvlb == 0);
-      assert(bvlb == NULL || nvlb == 0);
-      assert(dvlb == NULL || nvlb == 0);
+      assert(zvlb != NULL || nvlb == 0);
+      assert(bvlb != NULL || nvlb == 0);
+      assert(dvlb != NULL || nvlb == 0);
    }
 
    if( *bestlbtype == -2 )
@@ -1883,9 +1883,9 @@ void findClosestUb(
       bvub = SCIPvarGetVubCoefs(var);
       dvub = SCIPvarGetVubConstants(var);
 
-      assert(zvub == NULL || nvub == 0);
-      assert(bvub == NULL || nvub == 0);
-      assert(dvub == NULL || nvub == 0);
+      assert(zvub != NULL || nvub == 0);
+      assert(bvub != NULL || nvub == 0);
+      assert(dvub != NULL || nvub == 0);
    }
 
    if( *bestubtype == -2 )
@@ -3159,7 +3159,6 @@ SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
    )
 {
    SCIP_Real*            cutcoefs;
-   int                   i;
    SCIP_VAR**            cutvars;
    SCIP_Real*            cutvals;
    char                  cutname[SCIP_MAXSTRLEN];
@@ -3206,10 +3205,9 @@ SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
 
       if( *varsolvals == NULL )
       {
+         /* get the solution values for all active variables */
          SCIP_CALL(SCIPallocMemoryArray(scip, varsolvals, lpdata->nvars));
-         for( i = 0; i < lpdata->nvars; ++i)
-            if( SCIPvarGetStatus(lpdata->vars[i]) == SCIP_VARSTATUS_COLUMN )
-               (*varsolvals)[i] = SCIPvarGetLPSol(lpdata->vars[i]);
+         SCIP_CALL( SCIPgetSolVals(scip, NULL, lpdata->nvars, lpdata->vars, *varsolvals) );
       }
       assert(*varsolvals != NULL);
    
@@ -3243,10 +3241,9 @@ SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
       { 
          if( *varsolvals == NULL )
          {
+            /* get the solution values for all active variables */
             SCIP_CALL(SCIPallocMemoryArray(scip, varsolvals, lpdata->nvars));
-            for( i = 0; i < lpdata->nvars; ++i)
-               if( SCIPvarGetStatus(lpdata->vars[i]) == SCIP_VARSTATUS_COLUMN )
-                  (*varsolvals)[i] = SCIPvarGetLPSol(lpdata->vars[i]);
+            SCIP_CALL( SCIPgetSolVals(scip, NULL, lpdata->nvars, lpdata->vars, *varsolvals) );
          }
          assert(*varsolvals != NULL);
       
