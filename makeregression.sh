@@ -37,7 +37,7 @@ TIME=3600
 LOCK=false
 CONTINUE=true
 OPTS=(dbg opt)
-TESTS=(short miplib2010)
+TESTS=(short miplib2010 bugs)
 
 # move into the SCIP directory; this is necessary due the cron job 
 cd $SCIPDIR
