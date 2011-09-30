@@ -944,7 +944,7 @@ void proc_pcdata(
 
    while ((c != EOF) && (c != '<'))
    {
-      if (len == size - 1) /* leave space for terminating '\0' */
+      if (len >= size - 1) /* leave space for terminating '\0' */
       {
          size += DATA_EXT_SIZE;
 
