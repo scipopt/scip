@@ -286,6 +286,7 @@ Makefile
 - moved *.test and *.solu files to folder testset in check folder and adjusted test scripts
 - adjusted all test scripts to use the same new optimality gap computation as in SCIP
 - added Makefile option "VALGRIND=true" to enable running the SCIP checks (make test) through valgrind; valgrind errors and memory leaks are reported as fails
+- removed target "lintfiles", this target is now imitated by the "lint" target and a none empty variable FILES
 
 SCIP version 2.0.2
 ==================

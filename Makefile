@@ -758,22 +758,21 @@ libs: 		$(LINKSMARKERFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPI
 .PHONY: lint
 lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(NLPILIBSRC) $(MAINSRC)
 		-rm -f lint.out
+ifeq ($(FILES),)
 		$(SHELL) -ec 'for i in $^; \
 			do \
 			echo $$i; \
 			$(LINT) lint/$(MAINSHORTNAME).lnt +os\(lint.out\) -u -zero \
 			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE $$i; \
 			done'
-
-.PHONY: lintfiles
-lintfiles:		
-		-rm -f lint.out
+else
 		$(SHELL) -ec  'for i in $(FILES); \
 			do \
 			echo $$i; \
 			$(LINT) lint/$(MAINSHORTNAME).lnt +os\(lint.out\) -u -zero \
 			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE $$i; \
 			done'
+endif
 
 .PHONY: doc
 doc: 		
