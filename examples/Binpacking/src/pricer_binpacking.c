@@ -101,7 +101,7 @@ SCIP_RETCODE addBranchingDecisionConss(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP*                 subscip,            /**< pricing SCIP data structure */
    SCIP_VAR**            vars,               /**< variable array of the subscuip oder variables */
-   SCIP_CONSHDLR*        conshdlr            /**< comstraint handler for braching data */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler for branching data */
    )
 {
    SCIP_CONS** conss;
@@ -121,16 +121,20 @@ SCIP_RETCODE addBranchingDecisionConss(
    assert( subscip != NULL );
    assert( conshdlr != NULL );
    
+   /* collect all branching decision constraints */
    conss = SCIPconshdlrGetConss(conshdlr);
    nconss = SCIPconshdlrGetNConss(conshdlr);
 
+   /* loop over all branching decision constraints and apply the branching decision if the corresponding constraint is active */
    for( c = 0; c < nconss; ++c )
    {
       cons = conss[c];
       
+      /* ignore constraints which are not active since these are not laying on the current active path of the search tree */
       if( !SCIPconsIsActive(cons) )
          continue;
 
+      /* collect the two item ids and the branching type (SAME or DIFFER) on which the constraint branched */
       id1 = SCIPgetItemid1Samediff(scip, cons);
       id2 = SCIPgetItemid2Samediff(scip, cons);
       type = SCIPgetTypeSamediff(scip, cons);
@@ -138,6 +142,9 @@ SCIP_RETCODE addBranchingDecisionConss(
       SCIPdebugMessage("create varbound for %s(%d,%d)\n", type == SAME ? "same" : "diff", 
          SCIPprobdataGetIds(SCIPgetProbData(scip))[id1], SCIPprobdataGetIds(SCIPgetProbData(scip))[id2]);
 
+      /* depending on the branching type select the correct left and right hand side for the linear constraint which
+       * enforces this branching decision in the pricing problem MIP
+       */
       if( type == SAME )
       {
          lhs = 0.0;
@@ -156,6 +163,13 @@ SCIP_RETCODE addBranchingDecisionConss(
          return SCIP_INVALIDDATA;
       }
       
+      /* add linear (in that case a variable bound) constraint to pricing MIP depending on the branching type:
+       *
+       * - branching type SAME:  x1 = x2 <=> x1 - x2 = 0 <=> 0 <= x1 - x2 <= 0
+       *
+       * - branching type DIFFER:  x1 - x2 <= 1 <=> -inf <= x1 - x2 <= 1
+       *
+       */
       SCIP_CALL( SCIPcreateConsVarbound(subscip, &cons, SCIPconsGetName(conss[c]), 
             vars[id1], vars[id2], vbdcoef, lhs, rhs, 
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -170,7 +184,10 @@ SCIP_RETCODE addBranchingDecisionConss(
 }
 
 /** avoid to generate columns which are fixed to zero; therefore add for each variable which is fixed to zero a
- *  corresponding logicor constraint to forbid this column */
+ *  corresponding logicor constraint to forbid this column
+ *
+ * @note variable which are fixed locally to zero should not be generated again by the pricing MIP
+ */
 static
 SCIP_RETCODE addFixedVarsConss(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -199,19 +216,23 @@ SCIP_RETCODE addFixedVarsConss(
    int c;
    int o;
 
+   /* collect all variable which are currently existing */
    origvars = SCIPgetVars(scip);
    norigvars = SCIPgetNVars(scip);
    
+   /* loop over all these variables and check if they are fixed to zero */
    for( v = 0; v < norigvars; ++v )
    {
       assert(SCIPvarGetType(origvars[v]) == SCIP_VARTYPE_BINARY);
       
+      /* if the upper bound is smaller than 0.5 if follows due to the integrality that the binary variable is fixed to zero */
       if( SCIPvarGetUbLocal(origvars[v]) < 0.5 )
       {
          SCIPdebugMessage("variable <%s> glb=[%.15g,%.15g] loc=[%.15g,%.15g] is fixed to zero\n", 
             SCIPvarGetName(origvars[v]), SCIPvarGetLbGlobal(origvars[v]), SCIPvarGetUbGlobal(origvars[v]), 
             SCIPvarGetLbLocal(origvars[v]), SCIPvarGetUbLocal(origvars[v]) );
          
+         /* coolect the constraints/items the variable belongs to */
          vardata = SCIPvarGetData(origvars[v]);
          nconsids = SCIPvardataGetNConsids(vardata);
          consids = SCIPvardataGetConsids(vardata);
@@ -222,6 +243,9 @@ SCIP_RETCODE addFixedVarsConss(
          consid = consids[0];
          nvars = 0;
          
+         /* loop over these items and create a linear (logicor) constraint which forbids this item combination in the
+          * pricing problem; thereby check if this item combination is already forbidden
+          */
          for( c = 0, o = 0; o < nitems && needed; ++o )
          {
             assert(o <= consid);
@@ -315,7 +339,8 @@ SCIP_RETCODE initPricing(
       assert( !strncmp( SCIPconshdlrGetName( SCIPconsGetHdlr(cons) ), "setppc", 6) );
 
       /* constraints which are (locally) disabled/redundant are not of
-       * interest since the corresponding job is assigned to a packing */
+       * interest since the corresponding job is assigned to a packing 
+       */
       if( !SCIPconsIsEnabled(cons) )
          continue;
       
@@ -464,9 +489,12 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostBinpacking)
    SCIP_PRICERDATA* pricerdata;
    SCIP_CONS** conss;
    SCIP_VAR** vars;
-   SCIP_SOL* sol;
    int* ids;
    SCIP_Bool addvar;
+
+   SCIP_SOL** sols;
+   int nsols;
+   int s;
    
    int nitems;
    SCIP_Longint capacity;
@@ -523,23 +551,39 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostBinpacking)
       
    /* solve sub SCIP */
    SCIP_CALL( SCIPsolve(subscip) );
-   
-   sol = SCIPgetBestSol(subscip);
+
+   sols = SCIPgetSols(subscip);
+   nsols = SCIPgetNSols(subscip);
    addvar = FALSE;
 
-   if( sol != NULL )
+   /* loop over all solutions and create the corresponding column to master if the reduced cost are negative for master,
+    * that is the objective value i greater than 1.0 
+    */
+   for( s = 0; s < nsols; ++s )
    {
       SCIP_Bool feasible;
-         
+      SCIP_SOL* sol;
+
+      /* the soultion should be sorted w.r.t. the objective function value */
+      assert(s == 0 || SCIPisFeasGE(subscip, SCIPgetSolOrigObj(subscip, sols[s-1]), SCIPgetSolOrigObj(subscip, sols[s])));
+
+      sol = sols[s];
+      assert(sol != NULL);
+
       /* check if solution is feasible in original sub SCIP */
       SCIP_CALL( SCIPcheckSolOrig(subscip, sol, &feasible, FALSE, FALSE ) );
 
       if( !feasible )
       {
          SCIPwarningMessage("solution in pricing problem (capacity <%d>) is infeasible\n", capacity); 
+         continue;
       }
-      else
+
+      /* check if the solution has a value greater than 1.0 */
+      if( SCIPisFeasGT(subscip, SCIPgetSolOrigObj(subscip, sol), 1.0) )
       {
+         SCIP_VAR* var;
+         SCIP_VARDATA* vardata;
          int* consids;
          char strtmp[SCIP_MAXSTRLEN];
          char name[SCIP_MAXSTRLEN];
@@ -547,8 +591,9 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostBinpacking)
          int o;
          int v;
          
-         nconss = 0;
+         SCIPdebug( SCIP_CALL( SCIPprintSol(subscip, sol, NULL, FALSE) ) );
 
+         nconss = 0;
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "items"); 
          
          SCIP_CALL( SCIPallocBufferArray(scip, &consids, nitems) );
@@ -574,45 +619,40 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostBinpacking)
             
             v++;
          }
-           
-         if( SCIPisFeasGT(subscip, SCIPgetSolOrigObj(subscip, sol), 1.0) )
+
+         SCIP_CALL( SCIPvardataCreateBinpacking(scip, &vardata, consids, nconss) );
+            
+         /* create variable for a new column with objective function coefficient 0.0 */
+         SCIP_CALL( SCIPcreateVarBinpacking(scip, &var, name, 1.0, FALSE, TRUE, vardata) );
+
+         /* add the new variable to the pricer store */
+         SCIP_CALL( SCIPaddPricedVar(scip, var, 1.0) );
+         addvar = TRUE;
+
+         /* change the upper bound of the binary variable to lazy since the upper bound is already enforced due to
+          * the objective function the set covering constraint; The reason for doing is that, is to avoid the bound
+          * of x <= 1 in the LP relaxation since this bound constraint would produce a dual variable which might have
+          * a positive reduced cost
+          */
+         SCIP_CALL( SCIPchgVarUbLazy(scip, var, 1.0) );
+
+         /* check which variable are fixed -> which orders belong to this packing */
+         for( v = 0; v < nconss; ++v )
          {
-            SCIP_VAR* var;
-            SCIP_VARDATA* vardata;
-
-            SCIPdebug( SCIP_CALL( SCIPprintSol(subscip, sol, NULL, FALSE) ) );
-            
-            SCIP_CALL( SCIPvardataCreateBinpacking(scip, &vardata, consids, nconss) );
-            
-            /* create variable for a new column with objective function coefficient 0.0 */
-            SCIP_CALL( SCIPcreateVarBinpacking(scip, &var, name, 1.0, FALSE, TRUE, vardata) );
-            
-            /* add the new variable to the pricer store */
-            SCIP_CALL( SCIPaddPricedVar(scip, var, 1.0) );
-            addvar = TRUE;
-            
-            /* change the upper bound of the binary variable to lazy since the upper bound is already enforced due to
-             * the objective function the set covering constraint; The reason for doing is that, is to avoid the bound
-             * of x <= 1 in the LP relaxation since this bound constraint would produce a dual variable which might have
-             * a positive reduced cost
-             */
-            SCIP_CALL( SCIPchgVarUbLazy(scip, var, 1.0) );
-            
-            /* check which variable are fixed -> which orders belong to this packing */
-            for( v = 0; v < nconss; ++v )
-            {
-               assert(SCIPconsIsEnabled(conss[consids[v]]));
-               SCIP_CALL( SCIPaddCoefSetppc(scip, conss[consids[v]], var) );
-            }
-
-            SCIPdebug(SCIPprintVar(scip, var, NULL) );
-            SCIP_CALL( SCIPreleaseVar(scip, &var) );
+            assert(SCIPconsIsEnabled(conss[consids[v]]));
+            SCIP_CALL( SCIPaddCoefSetppc(scip, conss[consids[v]], var) );
          }
+
+         SCIPdebug(SCIPprintVar(scip, var, NULL) );
+         SCIP_CALL( SCIPreleaseVar(scip, &var) );
 
          SCIPfreeBufferArray(scip, &consids);
       }
+      else
+         break;
    }
 
+   /* free pricer MIP */
    SCIPfreeMemoryArray(subscip, &vars);
 
    if( addvar || SCIPgetStatus(subscip) == SCIP_STATUS_OPTIMAL )
