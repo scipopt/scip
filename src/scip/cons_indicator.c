@@ -220,14 +220,14 @@
 
 
 /* event handler properties */
-#define EVENTHDLR_BOUND_NAME       "indicator bound"
+#define EVENTHDLR_BOUND_NAME       "indicatorbound"
 #define EVENTHDLR_BOUND_DESC       "bound change event handler for indicator constraints"
 
-#define EVENTHDLR_RESTART_NAME     "indicator restart"
+#define EVENTHDLR_RESTART_NAME     "indicatorrestart"
 #define EVENTHDLR_RESTART_DESC     "force restart if absolute gap is 1"
 
 /* conflict handler properties */
-#define CONFLICTHDLR_NAME          "indicator conflict"
+#define CONFLICTHDLR_NAME          "indicatorconflict"
 #define CONFLICTHDLR_DESC          "replace slack variables and generate logicor constraints"
 #define CONFLICTHDLR_PRIORITY      200000
 
