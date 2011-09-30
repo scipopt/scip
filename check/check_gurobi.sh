@@ -13,6 +13,9 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#
+# note that currently it is not possible to set a memory limit within GUROBI
+#
 
 TSTNAME=$1
 GUROBIBIN=$2
@@ -25,8 +28,6 @@ THREADS=$8
 FEASTOL=$9
 DISPFREQ=${10}
 CONTINUE=${11}
-
-GRBNODEFILEDIR=gurobi_nodefiledir
 
 if test ! -e results
 then
@@ -89,10 +90,6 @@ HARDTIMELIMIT=`expr $HARDTIMELIMIT \* $THREADS`
 HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` + \`expr $MEMLIMIT / 10\``
 HARDMEMLIMIT=`expr $HARDMEMLIMIT \* 1024`
 
-# convert MEMLIMIT to GB for gurobi paramter (uses bc for fractional value)
-GRBMEMLIMIT=`echo "$MEMLIMIT / 1024" | bc -l`
-rm -f $TMPFILE
-
 echo "hard time limit: $HARDTIMELIMIT s" >>$OUTFILE
 echo "hard mem limit: $HARDMEMLIMIT k" >>$OUTFILE
 
@@ -125,10 +122,6 @@ do
             echo "setParam(\"DisplayInterval\",$DISPFREQ)"  >> $TMPFILE
             echo "setParam(\"MIPGap\",0.0)"           >> $TMPFILE
             echo "setParam(\"NodeLimit\",$NODELIMIT)" >> $TMPFILE
-            echo "setParam(\"NodefileStart\",$GRBMEMLIMIT)" >> $TMPFILE
-            rm -fr $GRBNODEFILEDIR
-            mkdir $GRBNODEFILEDIR
-            echo "setParam(\"NodefileDir\",\"$GRBNODEFILEDIR\")" >> $TMPFILE
             echo "setParam(\"Threads\",$THREADS)"     >> $TMPFILE
             echo "writeParams(\"$SETFILE\")"          >> $TMPFILE
             echo "problem=read(\"$i\")"               >> $TMPFILE
@@ -161,7 +154,6 @@ do
 done | tee -a $OUTFILE
 
 rm -f $TMPFILE
-rm -fr $GRBNODEFILEDIR
 
 date >>$OUTFILE
 date >>$ERRFILE
