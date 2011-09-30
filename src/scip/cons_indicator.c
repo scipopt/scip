@@ -6046,12 +6046,6 @@ SCIP_RETCODE SCIPsetSlackVarIndicator(
    assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 );
    assert( slackvar != NULL );
 
-   if ( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
-   {
-      SCIPerrorMessage("Cannot set slack variable in SCIP stage <%d>\n", SCIPgetStage(scip) );
-      return SCIP_INVALIDCALL;
-   }
-
    /* get constraint data */
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
