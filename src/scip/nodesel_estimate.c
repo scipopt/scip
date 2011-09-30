@@ -260,11 +260,9 @@ SCIP_DECL_NODESELCOMP(nodeselCompEstimate)
 
    estimate1 = SCIPnodeGetEstimate(node1);
    estimate2 = SCIPnodeGetEstimate(node2);
-   if( SCIPisLT(scip, estimate1, estimate2) )
-      return -1;
-   else if( SCIPisGT(scip, estimate1, estimate2) )
-      return +1;
-   else
+   if( (SCIPisInfinity(scip,  estimate1) && SCIPisInfinity(scip,  estimate2)) ||
+       (SCIPisInfinity(scip, -estimate1) && SCIPisInfinity(scip, -estimate2)) ||
+       SCIPisEQ(scip, estimate1, estimate2) )
    {
       SCIP_Real lowerbound1;
       SCIP_Real lowerbound2;
@@ -306,6 +304,12 @@ SCIP_DECL_NODESELCOMP(nodeselCompEstimate)
          }
       }
    }
+
+   if( SCIPisLT(scip, estimate1, estimate2) )
+      return -1;
+
+   assert(SCIPisGT(scip, estimate1, estimate2));
+   return +1;
 }
 
 
