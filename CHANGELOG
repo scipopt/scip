@@ -118,7 +118,7 @@ fixed bugs:
 - fixed bug in ZI round heuristic that led to infeasible shiftings for numerically slightly infeasible rows with close-to-zero coefficients
 - fixed memory leak in coloring part of maximum clique algorithm (tclique_coloring.c) in a better way
 - fixed assert in sepa_clique.c which is currently not valid because implicit binary variables in cliques are ignored
-- fixed bug in sepa_zerohalf.c concerning inconsistent construction of solution array of variables and fixed wrong assert about variable bounds 
+- fixed bug in sepa_zerohalf.c concerning inconsistent construction of solution array of variables and fixed wrong assert about variable bounds
 - fixed possible buffer overrun in tclique_graph.c
 
 plugins:

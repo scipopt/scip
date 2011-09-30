@@ -579,7 +579,7 @@ TCLIQUE_Bool tcliqueLoadFile(
    charresult = fgets(probname, sizeofprobname, file);
    if( charresult == NULL )
    {
-      infoMessage("Error while reading probname in file %s", filename); 
+      infoMessage("Error while reading probname in file %s", filename);
       fclose(file);
       return FALSE;
    }
@@ -597,7 +597,7 @@ TCLIQUE_Bool tcliqueLoadFile(
       
       if( charresult == NULL )
       {
-         infoMessage("Error while reading probname in file %s", filename); 
+         infoMessage("Error while reading probname in file %s", filename);
          fclose(file);
          return FALSE;
       }
