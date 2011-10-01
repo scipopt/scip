@@ -18337,6 +18337,9 @@ SCIP_RETCODE solveProbingLP(
       }
    }
 
+   /* remember that probing might have changed the LPi state; this holds even if solving returned with an LP error */
+   scip->tree->probingsolvedlp = TRUE;
+
    /* analyze an infeasible LP (not necessary in the root node)
     * the infeasibility in probing is only proven, if all columns are in the LP (and no external pricers exist)
     */
