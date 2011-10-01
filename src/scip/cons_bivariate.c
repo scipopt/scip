@@ -441,7 +441,9 @@ SCIP_RETCODE removeFixedVariables(
    SCIP_Bool*            isupgraded          /**< buffer to store whether the constraint has been upgraded (and deleted) */
    )
 {
+#ifndef NDEBUG
    SCIP_CONSHDLRDATA* conshdlrdata;
+#endif
    SCIP_CONSDATA* consdata;
    SCIP_EXPR* substexpr[2];
    SCIP_VAR* var;
@@ -456,8 +458,10 @@ SCIP_RETCODE removeFixedVariables(
    assert(ischanged != NULL);
    assert(isupgraded != NULL);
 
+#ifndef NDEBUG
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+#endif
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -1278,10 +1282,12 @@ SCIP_RETCODE generateLinearizationCut(
    SCIP_ROW**            row                 /**< storage for cut */
    )
 {
-   SCIP_CONSDATA* consdata;
-   char           rowname[SCIP_MAXSTRLEN];
+#ifndef NDEBUG
    SCIP_VAR*      x;
    SCIP_VAR*      y;
+#endif
+   SCIP_CONSDATA* consdata;
+   char           rowname[SCIP_MAXSTRLEN];
    SCIP_Real      fval;
    SCIP_Real      fgrad[2];
    SCIP_Real      rhs;
@@ -1301,8 +1307,10 @@ SCIP_RETCODE generateLinearizationCut(
       SCIP_CALL( SCIPexprintCompile(exprinterpreter, consdata->f) );
    }
 
+#ifndef NDEBUG
    x = SCIPexprtreeGetVars(consdata->f)[0];
    y = SCIPexprtreeGetVars(consdata->f)[1];
+#endif
 
    assert(consdata->convextype == SCIP_BIVAR_ALLCONVEX ||
       (consdata->convextype == SCIP_BIVAR_1CONVEX_INDEFINITE && (SCIPisEQ(scip, SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x)) || SCIPisEQ(scip, SCIPvarGetLbLocal(y), SCIPvarGetUbLocal(y)))) ||
@@ -5543,15 +5551,19 @@ SCIP_DECL_CONSEXIT(consExitBivariate)
 static
 SCIP_DECL_CONSINITPRE(consInitpreBivariate)
 {  /*lint --e{715}*/
+#ifndef NDEBUG
    SCIP_CONSHDLRDATA* conshdlrdata;
+#endif
    SCIP_CONSDATA*     consdata;
    int                c;
 
    assert(scip  != NULL);
    assert(conss != NULL || nconss == 0);
 
+#ifndef NDEBUG
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+#endif
 
    for( c = 0; c < nconss; ++c )
    {
@@ -5786,14 +5798,18 @@ SCIP_DECL_CONSEXITSOL(consExitsolBivariate)
 static
 SCIP_DECL_CONSDELETE(consDeleteBivariate)
 {  /*lint --e{715}*/
+#ifndef NDEBUG
    SCIP_CONSHDLRDATA* conshdlrdata;
+#endif
 
    assert(scip != NULL);
    assert(cons != NULL);
    assert(consdata != NULL);
 
+#ifndef NDEBUG
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+#endif
 
    /* expression should have been removed from expression graph when constraint was deactivated */
    assert((*consdata)->exprgraphnode == NULL);
@@ -6470,8 +6486,10 @@ SCIP_DECL_CONSPROP(consPropBivariate)
 static
 SCIP_DECL_CONSPRESOL(consPresolBivariate)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
+#ifndef NDEBUG
    SCIP_CONSDATA*     consdata;
+#endif
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_RESULT        propresult;
    SCIP_Bool          havechange;
    SCIP_Bool          upgraded;
@@ -6498,8 +6516,11 @@ SCIP_DECL_CONSPRESOL(consPresolBivariate)
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL);
+
+#ifndef NDEBUG
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
+#endif
 
       SCIPdebugMessage("process constraint <%s>\n", SCIPconsGetName(conss[c]));
       SCIPdebug( SCIPprintCons(scip, conss[c], NULL) );
