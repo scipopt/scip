@@ -3210,6 +3210,18 @@ SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
          /* get the solution values for all active variables */
          SCIP_CALL(SCIPallocMemoryArray(scip, varsolvals, lpdata->nvars));
          SCIP_CALL( SCIPgetSolVals(scip, NULL, lpdata->nvars, lpdata->vars, *varsolvals) );
+
+#ifndef NDEBUG
+         /* because later when calling SCIPcutGenerationHeuristicCmir() varsolvals are used, it is needed that the
+          * corresponding variables have the same order here and there, so we do the same checking and test that all
+          * variables are ordered by their problem index
+          */
+         {
+            int i;
+            for(i = lpdata->nvars - 1; i >= 0; --i )
+               assert(i == SCIPvarGetProbindex(lpdata->vars[i]));
+         }
+#endif
       }
       assert(*varsolvals != NULL);
    
