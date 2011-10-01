@@ -621,8 +621,8 @@ SCIP_DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
          nfrac, nviolrows, SCIPgetSolOrigObj(scip, sol), SCIPretransformObj(scip, minobj));
 
       /* minobj < SCIPgetCutoffbound(scip) should be true, otherwise the rounding variable selection
-       * should have returned NULL. Due to possible cancellation we use SCIPisLT. */
-      assert( SCIPisLT(scip, minobj, SCIPgetCutoffbound(scip)) );
+       * should have returned NULL. Due to possible cancellation we use SCIPisLE. */
+      assert( SCIPisLE(scip, minobj, SCIPgetCutoffbound(scip)) );
 
       /* choose next variable to process:
        *  - if a violated row exists, round a variable decreasing the violation, that has least impact on other rows
