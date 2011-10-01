@@ -308,9 +308,9 @@ SCIP_RETCODE lpRestoreSolVals(
       lp->solisbasic = storedsolvals->solisbasic;
       lp->validfarkaslp = storedsolvals->validfarkas ? validlp : -1;
    }
+   /* no values available, mark LP as unsolved */
    else
    {
-      /**@todo maybe here we should resolve? or should have resolved before and not called this function? */
       lp->solved = FALSE;
       lp->validsollp = -1;
 
