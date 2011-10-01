@@ -212,6 +212,8 @@ struct SCIP_Set
                                               *   ('s'implex, 'b'arrier, barrier with 'c'rossover) */
    char                  lp_pricing;         /**< LP pricing strategy ('a'uto, 'f'ull pricing, 's'teepest edge pricing,
                                               *   'q'uickstart steepest edge pricing, 'd'evex pricing) */
+   SCIP_Bool             lp_clearinitialprobinglp;/**< should lp state be cleared at the end of probing mode when LP
+                                              *   was initially unsolved, e.g., when called right after presolving? */
    SCIP_Bool             lp_resolverestore;  /**< should the LP be resolved to restore the state at start of diving (if
                                               *   FALSE we buffer the solution values)? */
    SCIP_Bool             lp_freesolvalbuffers; /**< should the buffers for storing LP solution values during diving be

@@ -48,8 +48,6 @@
 #define DEFAULT_SORTKEY            'u'  /**< the default key for variable sorting */
 #define DEFAULT_SORTVARS         TRUE   /**< should variables be processed in sorted order? */
 #define SORTKEYS                  "nru"  /**< options sorting key: (n)orms down, norms (u)p or (r)andom */
-#define DEFAULT_CLEARLPSTATE     TRUE   /**< should lp state be cleared afterwards when lp was initially unsolved, e.g.,
-                                         *   when called right after presolving? */
 
 /* enable statistic output by defining macro STATISTIC_INFORMATION */
 #ifdef STATISTIC_INFORMATION
@@ -73,8 +71,6 @@ struct SCIP_HeurData
    unsigned int         randseed;           /**< seed for random number generation */
    char                 sortkey;            /**< the key by which variables are sorted */
    SCIP_Bool            sortvars;           /**< should variables be processed in sorted order? */
-   SCIP_Bool            clearlpstate;       /**< should lp state be cleared afterwards when lp was initially unsolved
-                                             *   (e.g., when called right after presolving)? */
 
    STATISTIC(
       SCIP_LPSOLSTAT     lpsolstat;           /**< the probing status after probing */
@@ -1324,7 +1320,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    SCIP_Bool cutoff;              /* has current probing node been cutoff? */
    SCIP_Bool probing;             /* should probing be applied or not? */
    SCIP_Bool infeasible;          /* FALSE as long as currently infeasible rows have variables left */
-   SCIP_Bool clearlpstate;        /* shall lp state be cleared when leaving probing mode? */
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
@@ -1355,12 +1350,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       SCIP_CALL( SCIPconstructLP(scip, &nodecutoff) );
       SCIP_CALL( SCIPflushLP(scip) );
    }
-
-   /* if the LP is currently unsolved, e.g., before root node solving, we will return to this situation by clearing the
-    * lp state after probing
-    */
-   clearlpstate = heurdata->clearlpstate
-      && (SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_NOTSOLVED || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_ERROR);
 
    STATISTIC(
       heurdata->nlpiters = SCIPgetNLPIterations(scip);
@@ -1689,7 +1678,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    {
       SCIPdebugMessage("Solution constructed by heuristic is already known to be infeasible\n");
    }
-
    /* if the constructed solution might still be extendable to a feasible solution, try this by
     * solving the remaining LP
     */
@@ -1719,6 +1707,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
                   SCIPgetSolOrigObj(scip, sol));
          )
       }
+
    }
    else if( nviolatedrows == 0 && !cutoff )
    {
@@ -1753,17 +1742,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
       SCIPdebugMessage(" -> new LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
       SCIPdebugMessage(" -> error=%u, status=%d\n", lperror, SCIPgetLPSolstat(scip));
-
-      /* clear lp state */
-      if( clearlpstate )
-      {
-         SCIP_LPI* lpi;
-
-         SCIPdebugMessage("clearing lp state\n");
-         SCIP_CALL( SCIPgetLPI(scip, &lpi) );
-         assert(lpi != NULL);
-         SCIP_CALL( SCIPlpiClearState(lpi) );
-      }
 
       /* check if this is a feasible solution */
       if( !lperror && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
@@ -1862,9 +1840,5 @@ SCIP_RETCODE SCIPincludeHeurShiftandpropagate(
          &heurdata->sortkey, TRUE, DEFAULT_SORTKEY, SORTKEYS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/sortvars", "Should variables be sorted for the heuristic?",
          &heurdata->sortvars, TRUE, DEFAULT_SORTVARS, NULL, NULL));
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/clearlpstate",
-         "Should lp state be cleared afterwards when lp was initially unsolved, e.g., when called right after presolving?",
-         &heurdata->clearlpstate, TRUE, DEFAULT_CLEARLPSTATE, NULL, NULL));
-
    return SCIP_OKAY;
 }

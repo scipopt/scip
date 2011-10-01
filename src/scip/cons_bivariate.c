@@ -2787,34 +2787,30 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
       /* find xtilde in [xlb, xub] such that f'(xtilde,yub) = f'(xval,ylb) */
       SCIP_CALL( solveDerivativeEquation(scip, exprinterpreter, f_yfixed, grad[0], xlb, xub, &xtilde, success) );
 
-#if 0 /* FIXME what would be correct in this case ???????? */
       if( !*success )
       {
          SCIP_Real fxlb;
          SCIP_Real fxub;
-         SCIP_Real gradxlb[2];
-         SCIP_Real gradxub[2];
 
          /* if we could not find an xtilde such that f'(xtilde,yub) = f'(xval,ylb), then probably because f'(x,yub) is constant
-          * in this case, choose xtilde from {xlb, xub} such that it minimizes f'(xtilde, ylb)
+          * in this case, choose xtilde from {xlb, xub} such that it maximizes f'(xtilde, yub) - grad[0]*xtilde
           */
-         x0y0[0] = xlb;
-         SCIP_CALL( SCIPexprintGrad(exprinterpreter, f, x0y0, TRUE, &fxlb, gradxlb) );
-         x0y0[0] = xub;
-         SCIP_CALL( SCIPexprintGrad(exprinterpreter, f, x0y0, TRUE, &fxub, gradxub) );
+         SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xlb, &fxlb) );
+         SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xub, &fxub) );
 
-         SCIPdebugMessage("couldn't solve deriv equ, compare f'(%g,%g) = %g and f'(%g,%g) = %g\n", xlb, ylb, gradxlb[0], xub, ylb, gradxub[0]);
+         SCIPdebugMessage("couldn't solve deriv equ, compare f(%g,%g) - %g*%g = %g and f(%g,%g) - %g*%g = %g\n",
+            xlb, ylb, grad[0], xlb, fxlb - grad[0] * xlb,
+            xub, ylb, grad[0], xub, fxub - grad[0] * xub);
 
-         if( isfinite(gradxlb[0]) && isfinite(gradxub[0]) )
+         if( isfinite(fxlb) && isfinite(fxub) )
          {
-            if( gradxlb[0] > gradxub[0] )
+            if( fxlb - grad[0] * xlb > fxub - grad[0] * xub )
                xtilde = xlb;
             else
                xtilde = xub;
             *success = TRUE;
          }
       }
-#endif
 
       if( *success )
       {
@@ -2865,34 +2861,30 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
       /* find xtilde in [xlb, xub] such that f'(x,ylb) = f'(xval,yub) */
       SCIP_CALL( solveDerivativeEquation(scip, exprinterpreter, f_yfixed, grad[0], xlb, xub, &xtilde, success) );
 
-#if 0 /* FIXME what would be correct in this case ???????? */
       if( !*success )
       {
          SCIP_Real fxlb;
          SCIP_Real fxub;
-         SCIP_Real gradxlb[2];
-         SCIP_Real gradxub[2];
 
          /* if we could not find an xtilde such that f'(xtilde,ylb) = f'(xval,yub), then probably because f'(x,ylb) is constant
-          * in this case, choose xtilde from {xlb, xub} such that it maximizes f'(xtilde, yub)
+          * in this case, choose xtilde from {xlb, xub} such that it maximizes f'(xtilde, yub) - grad[0]*xtilde
           */
-         x0y0[0] = xlb;
-         SCIP_CALL( SCIPexprintGrad(exprinterpreter, f, x0y0, TRUE, &fxlb, gradxlb) );
-         x0y0[0] = xub;
-         SCIP_CALL( SCIPexprintGrad(exprinterpreter, f, x0y0, TRUE, &fxub, gradxub) );
+         SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xlb, &fxlb) );
+         SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xub, &fxub) );
 
-         SCIPdebugMessage("couldn't solve deriv equ, compare f'(%g,%g) = %g and f'(%g,%g) = %g\n", xlb, yub, gradxlb[0], xub, yub, gradxub[0]);
+         SCIPdebugMessage("couldn't solve deriv equ, compare f(%g,%g) - %g*%g = %g and f(%g,%g) - %g*%g = %g\n",
+            xlb, yub, grad[0], xlb, fxlb - grad[0] * xlb,
+            xub, yub, grad[0], xub, fxub - grad[0] * xub);
 
-         if( isfinite(gradxlb[0]) && isfinite(gradxub[0]) )
+         if( isfinite(fxlb) && isfinite(fxub) )
          {
-            if( gradxlb[0] < gradxub[0] )
+            if( fxlb - grad[0] * xlb < fxub - grad[0] * xub )
                xtilde = xlb;
             else
                xtilde = xub;
             *success = TRUE;
          }
       }
-#endif
 
       if( *success )
       {

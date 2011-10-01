@@ -87,9 +87,9 @@ performance improvements:
 - made sorting method more robust
 - LNS heuristics now use SCIPcopy() by default
 - considering inactive variables in undercover heuristic; limiting effort for solving covering problem
-- if the shiftandpropagate heuristic has to solve the LP relaxation on the continuous variables and the LP was unsolved
-  before, e.g., when called before root node solving, then we clear the resulting LP state, since it might be a bad
-  starting basis for the next solve of the LP relaxation (controlled by new parameter <heuristics/shiftandpropagate/clearlpstate>)
+- if during probing mode the LP relaxation is solved from scratch, e.g., when calling the shiftandpropagate heuristic
+  before root node solving, then we clear the resulting LP state, since it might be a bad starting basis for the next
+  solve of the LP relaxation (controlled by new parameter <lp/clearinitialprobinglp>)
 
 fixed bugs:
 - fixed bug in propagation of indicator constraints: cannot fix slack variable to 0 if linear constraint is disabled/not active
@@ -193,7 +193,7 @@ parameters:
 - added parameter <constraints/quadratic/checkfactorable> to enable check for factorable quadratic functions (xAx = (ax+b)*(cx+d)) in quadratic constraints and use of this information in separation (generates lifted tangent inequalities according to Belotti/Miller/Namazifar if also linear vars are present)
 - added parameters <constraints/{nonlinear,quadratic,soc,abspower}/maxsepanlprounds> to enable solving NLP relaxation in root node and adding cuts from linearizations of convex nonlinear constraints into cutpool
 - added parameter <conflict/separate> which enables or disables the separation of conflict constraints
-- added parameter <heuristics/shiftandpropagate/clearlpstate> to clear LP state at end of shiftandpropagate heuristic, if LP was initially unsolved
+- added parameter <lp/clearinitialprobinglp> to clear LP state at end of probing mode, if LP was initially unsolved
 
 features:
 - flatzinc reader is now capable to read cumulative constraints
