@@ -61,18 +61,18 @@
 #define DEFAULT_RECALCLIFTCOEF    TRUE      /**< whether lifting coefficients should be recomputed */
 #define DEFAULT_MAXSEPACUTS       5000      /**< maximal number of oddcycle cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT   5000      /**< maximal number of oddcycle cuts separated per separation round in root node */
-#define DEFAULT_PERCENTTESTVARS   0.0       /**< percent of variables to try the chosen method on */
+#define DEFAULT_PERCENTTESTVARS   0         /**< percent of variables to try the chosen method on [0-100] */
 #define DEFAULT_OFFSETTESTVARS    100       /**< offset of variables to try the chosen method on */
-#define DEFAULT_MAXCUTSPERROOT    1         /**< maximal number of oddcycle cuts generated per root of the levelgraph */
+#define DEFAULT_MAXCUTSROOT       1         /**< maximal number of oddcycle cuts generated per root of the levelgraph */
 #define DEFAULT_SORTSWITCH        3         /**< unsorted (0), maxlp (1), minlp (2), maxfrac (3), minfrac (4) */
 #define DEFAULT_MAXREFERENCE      0         /**< minimal weight on an edge (in level graph or Dijkstra graph) */
 #define DEFAULT_MAXROUNDS         10        /**< maximal number of rounds pre node */
 #define DEFAULT_MAXROUNDSROOT     10        /**< maximal number of rounds in the root node */
 #define DEFAULT_MAXNLEVELS        20        /**< maximal number of levels in level graph */
-#define DEFAULT_MAXFRACNODESLEVEL 100       /**< maximal percentage of nodes allowed in one level of the levelgraph */
+#define DEFAULT_MAXPERNODESLEVEL  100       /**< maximal percentage of nodes allowed in one level of the levelgraph [0-100] */
 #define DEFAULT_OFFSETNODESLEVEL  10        /**< additional offset of nodes allowed in one level of the levelgraph */
 #define DEFAULT_SORTROOTNEIGHBORS TRUE      /**< sort neighbors of the root in the level graph */
-#define DEFAULT_MAXCUTSPERLEVEL   50        /**< maximal number of cuts produced per level */
+#define DEFAULT_MAXCUTSLEVEL      50        /**< maximal number of cuts produced per level */
 
 
 /*
@@ -169,13 +169,13 @@ struct SCIP_SepaData
    SORTTYPE              sortswitch;         /*   sorted variable array: unsorted (0), maxlp (1), minlp (2), maxfrac (3), minfrac (4) */
    int                   lastroot;           /**< save root of last GLS-method run */
    SCIP_Bool             sortrootneighbors;  /**< sort neighbors of the root in the level graph */
-   int                   percenttestvars;    /**< percentage of variables to try the chosen method on */
+   int                   percenttestvars;    /**< percentage of variables to try the chosen method on [0-100] */
    int                   offsettestvars;     /**< offset of variables to try the chosen method on */
-   int                   maxfracnodeslevel;  /**< percentage of nodes allowed in the same level of the level graph */
+   int                   maxpernodeslevel;   /**< percentage of nodes allowed in the same level of the level graph [0-100] */
    int                   offsetnodeslevel;   /**< additional offset of nodes allowed in one level of the levelgraph */
    unsigned int          maxlevelsize;       /**< maximal number of nodes allowed in the same level of the level graph */
-   int                   maxcutsperroot;     /**< maximal number of oddcycle cuts generated per root of the levelgraph */
-   int                   maxcutsperlevel;    /**< maximal number of oddcycle cuts generated per level of the level graph */
+   int                   maxcutsroot;        /**< maximal number of oddcycle cuts generated per root of the levelgraph */
+   int                   maxcutslevel;       /**< maximal number of oddcycle cuts generated per level of the level graph */
    int                   maxrounds;          /**< maximal number of oddcycle separation rounds per node (-1: unlimited) */
    int                   maxroundsroot;      /**< maximal number of oddcycle separation rounds in the root node (-1: unlimited) */
    int                   maxreference;       /**< minimal weight on an edge (in level graph or Dijkstra graph) */
@@ -1850,6 +1850,8 @@ SCIP_RETCODE insertSortedRootNeighbors(
          {
             unsigned int kidx;
 
+            assert( cliquevars != NULL && cliquevals != NULL ); /* for lint */
+
             kidx = sepadata->mapping[SCIPvarGetProbindex(cliquevars[k])];
             assert(kidx < nbinvars);
 
@@ -2634,7 +2636,7 @@ SCIP_RETCODE separateHeur(
 
    /* determine the number of level graph roots */
    maxroots = (unsigned int) SCIPceil(scip, sepadata->offsettestvars + (0.02 * nbinvars * sepadata->percenttestvars));
-   sepadata->maxlevelsize = (unsigned int) SCIPceil(scip, sepadata->offsetnodeslevel + 0.01 * sepadata->maxfracnodeslevel * graph.n);
+   sepadata->maxlevelsize = (unsigned int) SCIPceil(scip, sepadata->offsetnodeslevel + 0.01 * sepadata->maxpernodeslevel * graph.n);
    rootcounter = 0;
 
    /* check each node as root */
@@ -2728,8 +2730,8 @@ SCIP_RETCODE separateHeur(
             ncutslevel = 0;
 
             /* calculate maximal cuts in this level due to cut limitations (per level, per root, per separation round) */
-            maxcutslevel = (unsigned int) sepadata->maxcutsperlevel;
-            maxcutslevel = (unsigned int) MIN(maxcutslevel, ncutsroot-sepadata->maxcutsperroot);
+            maxcutslevel = (unsigned int) sepadata->maxcutslevel;
+            maxcutslevel = (unsigned int) MIN(maxcutslevel, ncutsroot-sepadata->maxcutsroot);
             maxcutslevel = (unsigned int) MIN(maxcutslevel, sepadata->maxsepacutsround + sepadata->oldncuts - sepadata->ncuts);
 
             /* for each cross edge in this level find both shortest paths to root (as long as no limits are reached) */
@@ -2869,7 +2871,7 @@ SCIP_RETCODE separateHeur(
       /* stop level creation loop if new level is empty or any limit is reached */
       while( nnewlevel > 0 && !SCIPisStopped(scip)
          && graph.nlevels < (unsigned int) sepadata->maxnlevels
-         && ncutsroot < (unsigned int) sepadata->maxcutsperroot
+         && ncutsroot < (unsigned int) sepadata->maxcutsroot
          && sepadata->ncuts - sepadata->oldncuts < (unsigned int) sepadata->maxsepacutsround);
    }
 
@@ -3972,25 +3974,25 @@ SCIP_RETCODE SCIPincludeSepaOddcycle(
    SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/scalingfactor",
          "factor for scaling of the arc-weights",
          &sepadata->scale, TRUE, DEFAULT_SCALEFACTOR, 1, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/oddcycle/add_self_arcs",
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/oddcycle/addselfarcs",
          "add links between a variable and its negated",
          &sepadata->addselfarcs, TRUE, DEFAULT_ADDSELFARCS, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/oddcycle/repair_cycles",
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/oddcycle/repaircycles",
          "try to repair violated cycles with double appearance of a variable",
          &sepadata->repaircycles, TRUE, DEFAULT_REPAIRCYCLES, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/oddcycle/include_triangles",
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/oddcycle/includetriangles",
          "separate triangles found as 3-cycles or repaired larger cycles",
          &sepadata->includetriangles, TRUE, DEFAULT_INCLUDETRIANGLES, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/oddcycle/search_multiple_cuts_per_node",
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/oddcycle/multiplecuts",
          "even if a variable is already covered by a cut, still try it as start node for a cycle search",
          &sepadata->multiplecuts, TRUE, DEFAULT_MULTIPLECUTS, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/oddcycle/allow_multiple_cuts_per_node",
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/oddcycle/allowmultiplecuts",
          "even if a variable is already covered by a cut, still allow another cut to cover it too",
          &sepadata->allowmultiplecuts, TRUE, DEFAULT_ALLOWMULTIPLECUTS, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/oddcycle/lp-weighted_liftcoef_choice",
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/oddcycle/lpliftcoef",
          "choose lifting candidate by coef*lpvalue or only by coef",
          &sepadata->lpliftcoef, TRUE, DEFAULT_LPLIFTCOEF, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/oddcycle/calc_liftcoef_per_step",
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/oddcycle/recalcliftcoef",
          "calculate lifting coefficient of every candidate in every step (or only if its chosen)",
          &sepadata->recalcliftcoef, TRUE, DEFAULT_RECALCLIFTCOEF, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/sortswitch",
@@ -3999,28 +4001,28 @@ SCIP_RETCODE SCIPincludeSepaOddcycle(
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/oddcycle/sortrootneighbors",
          "sort level of the root neighbors by fractionality (maxfrac)",
          &sepadata->sortrootneighbors, TRUE, DEFAULT_SORTROOTNEIGHBORS, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/testvars_percent",
-         "percentage of variables to try the chosen method on",
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/percenttestvars",
+         "percentage of variables to try the chosen method on [0-100]",
          &sepadata->percenttestvars, TRUE, DEFAULT_PERCENTTESTVARS, 0, 100, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/testvars_offset",
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/offsettestvars",
          "offset of variables to try the chosen method on (additional to the percentage of testvars)",
          &sepadata->offsettestvars, TRUE, DEFAULT_OFFSETTESTVARS, 0, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/nodes_per_level_percent",
-         "percentage of nodes allowed in the same level of the level graph",
-         &sepadata->maxfracnodeslevel, TRUE, DEFAULT_MAXFRACNODESLEVEL, 0, 100, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/nodes_per_level_offset",
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/maxpernodeslevel",
+         "percentage of nodes allowed in the same level of the level graph [0-100]",
+         &sepadata->maxpernodeslevel, TRUE, DEFAULT_MAXPERNODESLEVEL, 0, 100, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/offsetnodeslevel",
          "offset of nodes allowed in the same level of the level graph (additional to the percentage of levelnodes)",
          &sepadata->offsetnodeslevel, TRUE, DEFAULT_OFFSETNODESLEVEL, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/maxnlevels",
          "maximal number of levels in level graph",
          &sepadata->maxnlevels, TRUE, DEFAULT_MAXNLEVELS, 0, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/max_cuts_per_root",
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/maxcutsroot",
          "maximal number of oddcycle cuts generated per chosen variable as root of the level graph",
-         &sepadata->maxcutsperroot, TRUE, DEFAULT_MAXCUTSPERROOT, 0, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/max_cuts_per_level",
+         &sepadata->maxcutsroot, TRUE, DEFAULT_MAXCUTSROOT, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/maxcutslevel",
          "maximal number of oddcycle cuts generated in every level of the level graph",
-         &sepadata->maxcutsperlevel, TRUE, DEFAULT_MAXCUTSPERLEVEL, 0, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/max_reference",
+         &sepadata->maxcutslevel, TRUE, DEFAULT_MAXCUTSPERLEVEL, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/maxreference",
          "minimal weight on an edge (in level graph or bipartite graph)",
          &sepadata->maxreference, TRUE, DEFAULT_MAXREFERENCE, 0, INT_MAX, NULL, NULL) );
 
