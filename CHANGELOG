@@ -73,6 +73,7 @@ interface:
 - new method SCIPsolGetOrigObj() in pub_sol.h which returns for a solution in the original problem space the objective value
 - new method SCIPretransformSol() in scip.h that allows to retransform a solution to the original space
 - added method SCIPlpiClearState() to LP interfaces for clearing basis information in the LP solver
+- new method SCIPgetSubscipDepth() to access the depth of the current SCIP as a copied subproblem
 
 performance improvements:
 - performance improvements in prop_vbounds
@@ -287,6 +288,7 @@ Makefile
 - adjusted all test scripts to use the same new optimality gap computation as in SCIP
 - added Makefile option "VALGRIND=true" to enable running the SCIP checks (make test) through valgrind; valgrind errors and memory leaks are reported as fails
 - removed target "lintfiles", this target is now imitated by the "lint" target and a none empty variable FILES
+
 
 SCIP version 2.0.2
 ==================

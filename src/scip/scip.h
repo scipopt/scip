@@ -418,6 +418,12 @@ SCIP_RETCODE SCIPcopyParamSettings(
    SCIP*                 targetscip          /**< target SCIP data structure */
    );
 
+/** gets depth of current scip instance (increased by each copy call) */
+extern
+SCIP_RETCODE SCIPgetSubscipDepth(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** copies source SCIP to target SCIP; the copying process is done in the following order:
  *  1) copy the plugins
  *  2) create problem data in target-SCIP and copy the problem data of the source-SCIP

@@ -16,6 +16,11 @@
 /**@file   stat.c
  * @brief  methods for problem statistics
  * @author Tobias Achterberg
+ * @author Stefan Heinz
+ * @author Gregor Hendel
+ * @author Gerald Gamrath
+ * @author Marc Pfetsch
+ * @author Stefan Vigerske
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -70,6 +75,7 @@ SCIP_RETCODE SCIPstatCreate(
    (*stat)->userinterrupt = FALSE;
    (*stat)->userrestart = FALSE;
    (*stat)->inrestart = FALSE;
+   (*stat)->subscipdepth = 0;
 
    SCIPstatReset(*stat);
 

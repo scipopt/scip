@@ -16,6 +16,12 @@
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
  * @author Tobias Achterberg
+ * @author Timo Berthold
+ * @author Stefan Heinz
+ * @author Gregor Hendel
+ * @author Gerald Gamrath
+ * @author Marc Pfetsch
+ * @author Stefan Vigerske
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -102,6 +108,7 @@ struct SCIP_Stat
    SCIP_HEUR*            firstprimalheur;    /**< heuristic which found the first primal solution */     
    SCIP_STATUS           status;             /**< SCIP solving status */
    SCIP_BRANCHDIR        lastbranchdir;      /**< direction of the last branching */
+   int                   subscipdepth;       /**< depth of current scip instance (increased by each copy call) */
    int                   nruns;              /**< number of branch and bound runs on current problem, including current run */
    int                   nconfrestarts;      /**< number of restarts performed due to conflict analysis */
    int                   nrootboundchgs;     /**< total number of bound changes generated in the root node */

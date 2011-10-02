@@ -1061,6 +1061,7 @@ SCIP_RETCODE SCIPcopyProb(
 
    /* create the statistics data structure */
    SCIP_CALL( SCIPstatCreate(&targetscip->stat, targetscip->mem->probmem, targetscip->set) );
+   targetscip->stat->subscipdepth = sourcescip->stat->subscipdepth + 1;
 
    /* create the problem by copying the source problem */
    SCIP_CALL( SCIPprobCopy(&targetscip->origprob, targetscip->mem->probmem, targetscip->set, name, sourcescip, sourceprob, localvarmap, localconsmap, global) );
@@ -1068,7 +1069,7 @@ SCIP_RETCODE SCIPcopyProb(
    /* creating the solution candidates storage */
    /**@todo copy solution of source SCIP as candidates for the target SCIP */
    SCIP_CALL( SCIPprimalCreate(&targetscip->origprimal) );
-   
+
    if( uselocalvarmap )
    {
       /* free hash map */
@@ -1868,6 +1869,19 @@ SCIP_RETCODE SCIPcopyParamSettings(
    return SCIP_OKAY;
 }
 
+/** gets depth of current scip instance (increased by each copy call) */
+SCIP_RETCODE SCIPgetSubscipDepth(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert( scip != NULL );
+   assert( scip->stat != NULL );
+
+   SCIP_CALL( checkStage(scip, "SCIPgetSubscipDepath", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->stat->subscipdepth;
+}
+
 /** copies source SCIP to target SCIP; the copying process is done in the following order:
  *  1) copy the plugins
  *  2) create problem data in target-SCIP and copy the problem data of the source-SCIP
@@ -1974,6 +1988,8 @@ SCIP_RETCODE SCIPcopy(
 
    return SCIP_OKAY;
 }
+
+
 
 /*
  * parameter settings
