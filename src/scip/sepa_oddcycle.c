@@ -3310,12 +3310,12 @@ SCIP_RETCODE separateGLS(
 
    unsigned int i;
    unsigned int j;
-   int temp;
 
    SCIP_VAR** varstemp;                      /* variables of the current SCIP (unsorted) */
    SCIP_VAR** vars;                          /* variables of the current SCIP (sorted if requested) */
    unsigned int nbinvars;                    /* number of binary problem variables */
    SCIP_Bool original;                       /* flag if the current variable is original or negated */
+   int ntempvars;
 
    unsigned int nbinimpls;                   /* number of binary implications of the current variable */
    unsigned int ncliques;                    /* number of cliques of the current variable */
@@ -3343,23 +3343,23 @@ SCIP_RETCODE separateGLS(
    success = TRUE;
    emptygraph = TRUE;
 
-   SCIP_CALL( SCIPgetVarsData(scip, &varstemp, NULL, &temp, NULL, NULL, NULL) );
-   assert(varstemp != NULL || temp == 0);
+   SCIP_CALL( SCIPgetVarsData(scip, &varstemp, NULL, &ntempvars, NULL, NULL, NULL) );
+   assert(varstemp != NULL || ntempvars == 0);
 
-   if( temp == 0 )
+   if( ntempvars == 0 )
       return SCIP_OKAY;
 
-   nbinvars = (unsigned int) temp;
+   nbinvars = (unsigned int) ntempvars;
 
    /* initialize flag array to avoid multiple cuts per variable, if requested by user-flag */
    SCIP_CALL( SCIPallocBufferArray(scip, &incut, (int) (2 * nbinvars)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, (int) (2 * nbinvars)) );
 
-   vars = NULL;
    /* duplicate variable data array for sorting (if requested) */
+   vars = NULL;
    if( sepadata->sortswitch != UNSORTED )
    {
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, varstemp, temp) );
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, varstemp, ntempvars) );
    }
 
    switch( sepadata->sortswitch )
@@ -3368,6 +3368,7 @@ SCIP_RETCODE separateGLS(
       /* if no sorting is requested, we use the normal variable array */
       vars = varstemp;
       break;
+
    case MAXIMAL_LPVALUE :
       assert(vars != NULL);
 
@@ -3397,7 +3398,7 @@ SCIP_RETCODE separateGLS(
       for( i = 0; i < nbinvars; ++i )
       {
          vals[i] = SCIPgetSolVal(scip, sol, vars[i]);
-         vals[i] = MIN(1-vals[i],vals[i]);
+         vals[i] = MIN(1-vals[i], vals[i]);
       }
 
       /* sort by fractionality, maximal first */
@@ -3411,7 +3412,7 @@ SCIP_RETCODE separateGLS(
       for( i = 0; i < nbinvars; ++i )
       {
          vals[i] = SCIPgetSolVal(scip, sol, vars[i]);
-         vals[i] = MIN(1-vals[i],vals[i]);
+         vals[i] = MIN(1-vals[i], vals[i]);
       }
 
       /* sort by fractionality, minimal first */
@@ -3426,15 +3427,15 @@ SCIP_RETCODE separateGLS(
 
    /* create mapping for getting the index of a variable via its probindex to the index in the sorted variable array */
    SCIP_CALL( SCIPallocBufferArray(scip, &(sepadata->mapping), (int) nbinvars) );
-
-   for( i = 0; i < nbinvars; ++i )
-      sepadata->mapping[SCIPvarGetProbindex(vars[i])] = i;
-
-   /* initialize LP value and cut flag for all variables */
    BMSclearMemoryArray(incut, 2 * nbinvars);
 
+   /* initialize LP value and cut flag for all variables */
    for( i = 0; i < nbinvars; ++i )
-      vals[i] = SCIPgetSolVal(scip, sol, vars[i]);
+   {
+      assert( 0 <= SCIPvarGetProbindex(vars[i]) && SCIPvarGetProbindex(vars[i]) < (int) nbinvars );  /* since binary variables are first */
+      sepadata->mapping[SCIPvarGetProbindex(vars[i])] = i;
+      vals[i] = SCIPgetSolVal(scip, sol, vars[i]); /* need to get new values, since they might be corrupted */
+   }
 
    for( i = nbinvars; i < 2*nbinvars; ++i )
       vals[i] = 1 - vals[i - nbinvars];
@@ -3451,7 +3452,7 @@ SCIP_RETCODE separateGLS(
     * = (nbinvars+1)*graph.nodes
     * + graph.nodes => separating entries for arclist)
     */
-   graph.arcs = (nbinvars+1)*graph.nodes;
+   graph.arcs = (nbinvars+1) * graph.nodes;
 
    /* the implication graph is redundant and therefore more implications and clique arcs may occur than should be possible
     * @todo later: filtering of edges which were already added,  maxarcs should be graph.arcs rather than INT_MAX;
@@ -3459,7 +3460,7 @@ SCIP_RETCODE separateGLS(
    maxarcs = INT_MAX;
 
    /* allocate memory for Dijkstra graph arrays */
-   arraysize = 100*graph.nodes;
+   arraysize = 100 * graph.nodes;
    SCIP_CALL( SCIPallocBufferArray(scip, &graph.outbeg, (int) graph.nodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &graph.outcnt, (int) graph.nodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &graph.head, (int) MIN(maxarcs, arraysize)) );
@@ -3519,6 +3520,7 @@ SCIP_RETCODE separateGLS(
             /* implications from x = 1/0 to y = 0/1 (I/II -> III/IV) */
             SCIP_CALL( addGLSBinImpls(scip, sepadata, vars, i, dijkindex, vals, nbinvars, nbinimpls, &graph,
                   &narcs, maxarcs, original, &emptygraph, &arraysize, &success) );
+
             if( !success )
                goto TERMINATE;
          }
@@ -3530,6 +3532,7 @@ SCIP_RETCODE separateGLS(
             /* x==1/0 -> y==0/1 (I/II -> III/IV) */
             SCIP_CALL( addGLSCliques(scip, sepadata, vars, i, dijkindex, vals, nbinvars, ncliques, &graph,
                   &narcs, maxarcs, original, &emptygraph, &arraysize, &success) );
+
             if( !success )
                goto TERMINATE;
          }
@@ -3555,6 +3558,7 @@ SCIP_RETCODE separateGLS(
          /* update minimum and maximum weight values */
          if( graph.weight[narcs] < graph.min_weight )
             graph.min_weight = graph.weight[narcs];
+
          if( graph.weight[narcs] > graph.max_weight )
             graph.max_weight = graph.weight[narcs];
 
@@ -3605,6 +3609,7 @@ SCIP_RETCODE separateGLS(
          if( arraysize == narcs )
          {
             SCIP_CALL( checkArraySizesGLS(scip, maxarcs, &arraysize, &graph, &success) );
+
             if( !success )
                goto TERMINATE;
          }
@@ -3620,6 +3625,7 @@ SCIP_RETCODE separateGLS(
       if( arraysize == narcs )
       {
          SCIP_CALL( checkArraySizesGLS(scip, maxarcs, &arraysize, &graph, &success) );
+
          if( !success )
             goto TERMINATE;
       }
@@ -3684,6 +3690,7 @@ SCIP_RETCODE separateGLS(
       /* allocate and initialize predecessor list and flag array representing odd cycle */
       SCIP_CALL( SCIPallocBufferArray(scip, &pred2, (int) (2 * nbinvars)) );
       SCIP_CALL( SCIPallocBufferArray(scip, &incycle, (int) (2 * nbinvars)) );
+
       for( j = 0; j < 2*nbinvars; ++j )
       {
          pred2[j] = DIJKSTRA_UNUSED;
@@ -3742,7 +3749,6 @@ SCIP_RETCODE separateGLS(
       /* free temporary memory */
       SCIPfreeBufferArray(scip, &incycle);
       SCIPfreeBufferArray(scip, &pred2);
-
    }
 
    /* store the last tried root (when running without sorting the variable array, we don't want
@@ -3780,6 +3786,7 @@ SCIP_RETCODE separateGLS(
 
    return SCIP_OKAY;
 }
+
 
 /*
  * Callback methods of separator
