@@ -1395,7 +1395,7 @@ SCIP_RETCODE SCIPprobExitPresolve(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
-{
+{  /*lint --e{715}*/
    return SCIP_OKAY;
 }
 

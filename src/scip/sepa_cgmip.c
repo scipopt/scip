@@ -985,7 +985,7 @@ SCIP_RETCODE createSubscip(
 #ifndef NDEBUG
    if ( sepadata->contconvert && ncols >= sepadata->contconvmin )
    {
-      SCIPdebugMessage("Converted %d integral variables to be continuous.\n", nconverted);
+      SCIPdebugMessage("Converted %u integral variables to be continuous.\n", nconverted);
    }
 #endif
 
@@ -2333,7 +2333,7 @@ SCIP_RETCODE createCGCutsCMIR(
    subscip = mipdata->subscip;
    assert( subscip != NULL );
 
-   SCIPdebugMessage("Trying to generate cuts via CMIR routines (use own bounds: %d) ...\n", sepadata->cmirownbounds);
+   SCIPdebugMessage("Trying to generate cuts via CMIR routines (use own bounds: %u) ...\n", sepadata->cmirownbounds);
    *ngen = 0;
 
    /* check if solving was successful and get solutions */

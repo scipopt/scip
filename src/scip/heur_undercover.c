@@ -1158,7 +1158,7 @@ SCIP_RETCODE solveCoveringProblem(
    SCIP_CALL( SCIPsetSeparating(coveringscip, SCIP_PARAMSETTING_FAST, TRUE) );
 
    /* only solve root */
-   SCIP_CALL( SCIPsetLongintParam(coveringscip, "limits/nodes", 1) );
+   SCIP_CALL( SCIPsetLongintParam(coveringscip, "limits/nodes", 1LL) );
 
    SCIPdebugMessage("timelimit = %g, memlimit = %g\n", timelimit, memorylimit);
 

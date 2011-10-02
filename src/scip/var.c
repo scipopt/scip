@@ -3365,9 +3365,9 @@ SCIP_RETCODE SCIPvarFix(
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_FIXED:
-      assert(FALSE); /* case is already handled in earlier if condition */
-      SCIPerrorMessage("cannot fix a fixed variable again\n");
-      return SCIP_INVALIDDATA;
+      SCIPABORT(); /* case is already handled in earlier if condition */
+      SCIPerrorMessage("cannot fix a fixed variable again\n");  /*lint !e527*/
+      return SCIP_INVALIDDATA;  /*lint !e527*/
 
    case SCIP_VARSTATUS_AGGREGATED:
       /* fix aggregation variable y in x = a*y + c, instead of fixing x directly */
