@@ -2910,7 +2910,7 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
       /* x and y are somewhere between the bounds,
        * -> envelope is generated from f(x,y) in y=ylb and in y=yub
        */
-      SCIP_Real paramvals[4] = {xval, yval, ylb, yub};
+      SCIP_Real paramvals[4];
 #ifdef SCIP_DEBUG
       const char* paramnames[4] = {"x0", "y0", "ylb", "yub"};
 #endif
@@ -2934,6 +2934,10 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
       assert(!SCIPisInfinity(scip,  yub));
 
       /* update parameter values in vred */
+      paramvals[0] = xval;
+      paramvals[1] = yval;
+      paramvals[2] = ylb;
+      paramvals[3] = yub;
       SCIPexprtreeSetParams(vred, 4, paramvals);
       SCIPexprintNewParametrization(exprinterpreter, vred);
 

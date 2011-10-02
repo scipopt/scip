@@ -2386,6 +2386,7 @@ SCIP_RETCODE SCIPparamsetWrite(
    SCIP_Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */
    )
 {
+   SCIP_RETCODE retcode;
    FILE* file;
    int i;
 
@@ -2420,7 +2421,6 @@ SCIP_RETCODE SCIPparamsetWrite(
    }
    
    /* write the parameters to the file */
-   SCIP_RETCODE retcode;
    for( i = 0; i < paramset->nparams; ++i )
    {
       retcode = paramWrite(paramset->params[i], file, comments, onlychanged);

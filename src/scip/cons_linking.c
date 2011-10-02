@@ -2192,7 +2192,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
-      if( !SCIPconsIsEnabled(cons) )//|| consdata->nbinvars <= 1 )
+      if( !SCIPconsIsEnabled(cons) /* || consdata->nbinvars <= 1 */ )
          continue;
       
       /* in case there is only at most one binary variables, the constraints should already be disabled */

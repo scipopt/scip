@@ -51,7 +51,7 @@ enum SCIP_ParamSetting
 
    SCIP_PARAMSETTING_AGGRESSIVE  = 1,        /**< set to aggressive settings */
    SCIP_PARAMSETTING_FAST        = 2,        /**< set to fast settings */
-   SCIP_PARAMSETTING_OFF         = 3,        /**< turn off */
+   SCIP_PARAMSETTING_OFF         = 3         /**< turn off */
 };
 typedef enum SCIP_ParamSetting SCIP_PARAMSETTING;
 

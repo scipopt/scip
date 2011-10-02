@@ -2291,7 +2291,6 @@ SCIP_RETCODE mergeMultiples(
    )
 {
    SCIP_CONSDATA* consdata;
-   //   int v;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -2508,7 +2507,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
             }
 
             /* @todo check whether it's better to set the initial flag to false */         
-            initial = SCIPconsIsInitial(cons); //FALSE;
+            initial = SCIPconsIsInitial(cons); /* FALSE; */
 
             /* first soft constraints for lhs */
             if( !SCIPisInfinity(scip, -lhs) )
@@ -2635,7 +2634,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
             }
 #else /* with indicator */
             /* @todo check whether it's better to set the initial flag to false */         
-            initial = SCIPconsIsInitial(cons); //FALSE;
+            initial = SCIPconsIsInitial(cons); /* FALSE; */
 
             if( !SCIPisInfinity(scip, rhs) )
             {

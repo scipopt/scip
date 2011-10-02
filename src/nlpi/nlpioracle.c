@@ -422,7 +422,7 @@ void freeConstraint(
    assert(cons   != NULL);
    assert(*cons  != NULL);
 
-   SCIPdebugMessage("free constraint %p\n", *cons);
+   SCIPdebugMessage("free constraint %p\n", (void*)*cons);
 
    BMSfreeBlockMemoryArrayNull(blkmem, &(*cons)->linidxs, (*cons)->linsize);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*cons)->lincoefs, (*cons)->linsize);

@@ -7945,7 +7945,7 @@ SCIP_RETCODE exprgraphNodeReplaceChild(
    if( *oldchild == newchild )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("replace child %p in node %p by %p\n", *oldchild, node, newchild);
+   SCIPdebugMessage("replace child %p in node %p by %p\n", (void*)*oldchild, (void*)node, (void*)newchild);
 
    /* search for oldchild in children array */
    for( i = 0; i < node->nchildren; ++i )
@@ -10358,7 +10358,7 @@ SCIP_RETCODE exprgraphMoveNode(
    if( node->depth == newdepth )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("move node %p (%d,%d) to depth %d\n", node, node->depth, node->pos, newdepth);
+   SCIPdebugMessage("move node %p (%d,%d) to depth %d\n", (void*)node, node->depth, node->pos, newdepth);
 
 #ifndef NDEBUG
    /* assert that children are at lower depth than new depth */
@@ -11291,7 +11291,7 @@ SCIP_RETCODE SCIPexprgraphNodeSplitOffLinear(
    *constant = 0.0;
    *nlinvars = 0;
 
-   SCIPdebugMessage("split off linear part for %s node %p (%d,%d)\n", SCIPexpropGetName((*node)->op), *node, (*node)->depth, (*node)->pos);
+   SCIPdebugMessage("split off linear part for %s node %p (%d,%d)\n", SCIPexpropGetName((*node)->op), (void*)*node, (*node)->depth, (*node)->pos);
 
    /* do some obvious and easy cases */
    switch( (*node)->op )
@@ -13065,7 +13065,7 @@ SCIP_RETCODE SCIPexprgraphAddVars(
       if( varnodes != NULL )
          varnodes[i] = node;
 
-      SCIPdebugMessage("added node %p (%d, %d) for new variable %d\n", node, node->depth, node->pos, node->data.intval);
+      SCIPdebugMessage("added node %p (%d, %d) for new variable %d\n", (void*)node, node->depth, node->pos, node->data.intval);
 
       /* call callback method, if set */
       if( exprgraph->exprgraphvaradded != NULL )
@@ -13116,7 +13116,7 @@ SCIP_RETCODE SCIPexprgraphAddConst(
    ++exprgraph->nconsts;
    exprgraph->constssorted = exprgraph->nconsts <= 1 || (exprgraph->constssorted && exprgraphConstNodeComp(exprgraph->constnodes[exprgraph->nconsts-2], *constnode) < 0);
 
-   SCIPdebugMessage("added node %p (%d, %d) for new constant %g\n", constnode, (*constnode)->depth, (*constnode)->pos, (*constnode)->data.dbl);
+   SCIPdebugMessage("added node %p (%d, %d) for new constant %g\n", (void*)constnode, (*constnode)->depth, (*constnode)->pos, (*constnode)->data.dbl);
 
    return SCIP_OKAY;
 }

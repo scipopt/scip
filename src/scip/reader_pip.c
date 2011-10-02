@@ -2175,7 +2175,6 @@ void printRow(
       }
       
       /* start quadratic part */
-      // appendLine(scip, file, linebuffer, &linecnt, " + [");
       
       /* print square terms */
       for( v = 0; v < nquadvarterms; ++v )
