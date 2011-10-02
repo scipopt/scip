@@ -17,6 +17,9 @@ then
     SCIPDIR=`pwd`
 fi
 
+# move into the SCIP directory; this is necessary due the cron job
+cd $SCIPDIR
+
 # email variables
 ADMINEMAIL=heinz@zib.de
 EMAILTO=lpip-developers@zib.de
@@ -38,9 +41,6 @@ LOCK=false
 CONTINUE=true
 OPTS=(dbg opt)
 TESTS=(short miplib2010 bugs)
-
-# move into the SCIP directory; this is necessary due the cron job 
-cd $SCIPDIR
 
 # first delete cron jobs if one exists
 crontab -r
@@ -73,7 +73,7 @@ fi
 
 # send mail to admin to indicate that makeregression.sh (re)start 
 SUBJECT="[$HOSTNAME] (Re)Start $SCRIPTNAME"
-echo $SCRIPTTIMESTAMP | mailx -s "$SUBJECT" -r "$EMAILFROM" $ADMINEMAIL
+echo "Time stamp $SCRIPTTIMESTAMP" | mailx -s "$SUBJECT" -r "$EMAILFROM" $ADMINEMAIL
 
 # pull new version form git repository
 git pull
@@ -198,4 +198,4 @@ rm -f $CRONTABFILE
 
 # send email to admin to indicate  that the script stopped
 SUBJECT="[$HOSTNAME] Stop $SCRIPTNAME"
-echo $NEWSCRIPTTIMESTAMP | mailx -s "$SUBJECT" -r "$EMAILFROM" $ADMINEMAIL
+echo "Time stamp $NEWSCRIPTTIMESTAMP" | mailx -s "$SUBJECT" -r "$EMAILFROM" $ADMINEMAIL
