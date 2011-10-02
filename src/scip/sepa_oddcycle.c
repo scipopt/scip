@@ -463,6 +463,7 @@ SCIP_Bool isNeighbor(
 
          for( i = 0; i < nbinimpls; ++i )
          {
+            assert( implvars != NULL && impltypes != NULL && implbounds != NULL ); /* for lint */
             if( SCIPvarGetProbindex(vars[b]) == SCIPvarGetProbindex(implvars[i]) )
             {
                if( impltypes[i] == SCIP_BOUNDTYPE_UPPER && originalb == TRUE )
@@ -486,6 +487,7 @@ SCIP_Bool isNeighbor(
 
          for( i = 0; i < ncliques; ++i )
          {
+            assert( cliques != NULL );  /* for lint */
             ncliquevars = (unsigned int) SCIPcliqueGetNVars(cliques[i]);
             cliquevars = SCIPcliqueGetVars(cliques[i]);
             cliquevals = SCIPcliqueGetValues(cliques[i]);
@@ -495,6 +497,7 @@ SCIP_Bool isNeighbor(
 
             for( j = 0; j < ncliquevars; ++j )
             {
+               assert( cliquevals != NULL &&  cliquevars != NULL ); /* for lint */
                if( SCIPvarGetProbindex(vars[b]) == SCIPvarGetProbindex(cliquevars[j]) )
                {
                   if( (cliquevals[j] == FALSE && originalb == TRUE) || ( cliquevals[j] == TRUE && originalb == FALSE ) )
@@ -1445,6 +1448,7 @@ SCIP_RETCODE addNextLevelBinImpls(
       unsigned int v;
       unsigned int weight;
 
+      assert( implvars != NULL && impltypes != NULL );
       assert(SCIPvarGetType(implvars[j]) == SCIP_VARTYPE_BINARY);
 
       k = sepadata->mapping[SCIPvarGetProbindex(implvars[j])];
@@ -1615,6 +1619,8 @@ SCIP_RETCODE addNextLevelCliques(
          unsigned int l;
          unsigned int v;
          unsigned int weight;
+
+         assert( cliquevars != NULL && cliquevals != NULL );  /* for lint */
 
          l = sepadata->mapping[SCIPvarGetProbindex(cliquevars[k])];
          assert(l < nbinvars);
@@ -3044,6 +3050,7 @@ SCIP_RETCODE addGLSBinImpls(
    {
       SCIP_Real tmp;
 
+      assert( implvars != NULL && impltypes != NULL && implbounds != NULL ); /* for lint */
       assert(SCIPvarGetType(implvars[m]) == SCIP_VARTYPE_BINARY);
 
       neighbor = implvars[m];
@@ -3077,8 +3084,7 @@ SCIP_RETCODE addGLSBinImpls(
             graph->head[*narcs] = neighindex + 3 * nbinvars;
          }
       }
-      /* add implication for x==0 */
-      else
+      else       /* add implication for x==0 */
       {
          /* implication to y=0 (II->III) */
          if( impltypes[m] == SCIP_BOUNDTYPE_UPPER )
@@ -3173,6 +3179,8 @@ SCIP_RETCODE addGLSCliques(
 
    for( k = 0; k < ncliques; ++k )
    {
+      assert( cliques != NULL ); /* for lint */
+
       /* get clique data */
       cliquevars = SCIPcliqueGetVars(cliques[k]);
       ncliquevars = (unsigned int) SCIPcliqueGetNVars(cliques[k]);
@@ -3186,6 +3194,7 @@ SCIP_RETCODE addGLSCliques(
       {
          SCIP_Real tmp;
 
+         assert( cliquevars != NULL && cliquevals != NULL ); /* for lint */
          neighbor = cliquevars[m];
 
          neighindex = sepadata->mapping[SCIPvarGetProbindex(neighbor)];
