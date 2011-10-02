@@ -4021,7 +4021,7 @@ SCIP_RETCODE SCIPincludeSepaOddcycle(
          &sepadata->maxcutsroot, TRUE, DEFAULT_MAXCUTSROOT, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/maxcutslevel",
          "maximal number of oddcycle cuts generated in every level of the level graph",
-         &sepadata->maxcutslevel, TRUE, DEFAULT_MAXCUTSPERLEVEL, 0, INT_MAX, NULL, NULL) );
+         &sepadata->maxcutslevel, TRUE, DEFAULT_MAXCUTSLEVEL, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/maxreference",
          "minimal weight on an edge (in level graph or bipartite graph)",
          &sepadata->maxreference, TRUE, DEFAULT_MAXREFERENCE, 0, INT_MAX, NULL, NULL) );
