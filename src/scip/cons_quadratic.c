@@ -11027,7 +11027,7 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/checkfactorable",
          "whether constraint functions should be checked to be factorable",
-         &conshdlrdata->checkfactorable, FALSE, FALSE, NULL, NULL) );
+         &conshdlrdata->checkfactorable, TRUE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/linfeasshift",
          "whether to try to make solutions in check function feasible by shifting a linear variable (esp. useful if constraint was actually objective function)",
