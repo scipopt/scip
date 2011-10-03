@@ -645,10 +645,10 @@ SCIP_RETCODE transformColumn(
  *
  *  Let the constraints of the original MIP be of the following form:
  *  \f[
- *    \begin{array}{l@{\;}l}
- *      a \leq A x + C r & \leq b\\
- *      \ell \leq x & \leq u\\
- *      c \leq r & \leq d\\
+ *    \begin{array}{l@{\;}ll}
+ *      a \leq A x + & C r & \leq b\\
+ *      \ell \leq x & & \leq u\\
+ *      c \leq & r & \leq d\\
  *      x \in Z^n.
  *    \end{array}
  *  \f]
@@ -668,9 +668,17 @@ SCIP_RETCODE transformColumn(
  *  \f[
  *    \tilde{A} =
  *    \left[
- *    \begin{array}{rr}
- *      -A & - C\\
- *      A & C
+ *    \begin{array}{r}
+ *      -A \\
+ *      A 
+ *    \end{array}
+ *    \right],
+ *    \quad
+ *    \tilde{C} =
+ *    \left[
+ *    \begin{array}{r}
+ *      - C\\
+ *      C
  *    \end{array}
  *    \right]
  *    \qquad\mbox{ and }\qquad
