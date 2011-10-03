@@ -2315,7 +2315,7 @@ SCIP_RETCODE SCIPlpiStartStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   // currently do nothing
+   /* currently do nothing */
    return SCIP_OKAY;
 }
 
@@ -2324,7 +2324,7 @@ SCIP_RETCODE SCIPlpiEndStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   // currently do nothing
+   /* currently do nothing */
    return SCIP_OKAY;
 }
 
