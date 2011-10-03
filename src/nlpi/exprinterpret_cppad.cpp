@@ -56,12 +56,20 @@ using std::vector;
 SCIP_Real SCIPInterval_NAMESPACE::SCIPInterval::infinity = SCIP_DEFAULT_INFINITY;
 using SCIPInterval_NAMESPACE::SCIPInterval;
 
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wshadow"
+#endif
+
 #include <cppad/cppad.hpp>
 #ifndef CPPAD_PACKAGE_STRING
 #include <cppad/config.h>
 #define CPPAD_PACKAGE_STRING PACKAGE_STRING
 #endif
 #include <cppad/error_handler.hpp>
+
+#ifdef __GNUC__
+#pragma GCC diagnostic warning "-Wshadow"
+#endif
 
 #ifndef NPARASCIP
 
