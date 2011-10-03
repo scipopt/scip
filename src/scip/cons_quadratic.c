@@ -11304,7 +11304,12 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
    }
    
    SCIPhashmapFree(&quadvaridxs);
-   
+
+   /* merge duplicate bilinear terms, move quad terms that are linear to linear vars */
+   SCIP_CALL( mergeAndCleanBilinearTerms(scip, *cons) );
+   SCIP_CALL( mergeAndCleanQuadVarTerms(scip, *cons) );
+   SCIP_CALL( mergeAndCleanLinearVars(scip, *cons) );
+
    SCIPdebugMessage("created quadratic constraint ");
    SCIPdebug( SCIPprintCons(scip, *cons, NULL) );
 
