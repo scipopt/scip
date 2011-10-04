@@ -5533,7 +5533,10 @@ SCIP_RETCODE propagateBoundsCons(
          coef = consdata->lincoefs[i];
          var  = consdata->linvars[i];
 
-         /* skip fixed variables ??????????? */
+         /* skip fixed variables
+          * @todo is that a good or a bad idea?
+          *   we can't expect much more tightening, but may detect infeasiblity, but shouldn't the check on the constraints activity detect that?
+          */
          if( SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
             continue;
 
