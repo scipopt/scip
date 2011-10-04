@@ -1591,8 +1591,8 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 
    /* handle remaining case (x + coefy) * (y + coefx) >= lhs + coefx * coefy */
    {
-      assert( SCIPisInfinity(scip, -lhs));
-      assert(!SCIPisInfinity(scip,  rhs));
+      assert(!SCIPisInfinity(scip, -lhs));
+      assert( SCIPisInfinity(scip,  rhs));
 
       /* check whether lhs + coefx * coefy == 0 */
       if( !SCIPisZero(scip, lhs + coefx * coefy) )
