@@ -4145,6 +4145,7 @@ SCIP_RETCODE tightenVarBounds(
                   ub = SCIPvarGetUbLocal(var); /* get bound again: it may be additionally modified due to integrality */
                   assert(SCIPisFeasLE(scip, ub, newub));
                   (*nchgbds)++;
+
                   SCIPdebugMessage("linear constraint <%s>: tighten <%s>, new bds=[%.15g,%.15g]\n",
                      SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub);
                }
@@ -8021,7 +8022,6 @@ SCIP_RETCODE fullDualPresolve(
    int nbinvars;
    int nintvars;
    int ncontvars;
-   int nupgdvars;
    int v;
    int c;
 
@@ -8047,6 +8047,7 @@ SCIP_RETCODE fullDualPresolve(
    assert(scip != NULL);
    assert(nconss == 0 || conss != NULL);
    assert(nchgbds != NULL);
+   assert(!SCIPinProbing(scip));
 
    /* get active variables */
    nvars = SCIPgetNVars(scip);
@@ -8061,22 +8062,27 @@ SCIP_RETCODE fullDualPresolve(
    ncontvars = SCIPgetNContVars(scip);
    nintvars = nvars - ncontvars;
 
+   /* copy the variable array since this array might change during the curse of this algorithm */
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, &(vars[nbinvars]), nvars) );
+   nvars = nvars - nbinvars;
+
    /* allocate temporary memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &redlb, nvars - nbinvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &redub, nvars - nbinvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nlocksdown, nvars - nbinvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nlocksup, nvars - nbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &redlb, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &redub, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nlocksdown, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nlocksup, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &isimplint, ncontvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &conscontvars, ncontvars) );
 
    /* initialize redundancy bounds */
-   for( v = nbinvars; v < nvars; ++v )
+   for( v = 0; v < nvars; ++v )
    {
-      redlb[v - nbinvars] = SCIPvarGetLbGlobal(vars[v]);
-      redub[v - nbinvars] = SCIPvarGetUbGlobal(vars[v]);
+      assert(!SCIPvarIsBinary(vars[v]) || SCIPvarGetType(vars[v]) == SCIP_VARTYPE_IMPLINT);
+      redlb[v] = SCIPvarGetLbGlobal(vars[v]);
+      redub[v] = SCIPvarGetUbGlobal(vars[v]);
    }
-   BMSclearMemoryArray(nlocksdown, nvars - nbinvars);
-   BMSclearMemoryArray(nlocksup, nvars - nbinvars);
+   BMSclearMemoryArray(nlocksdown, nvars);
+   BMSclearMemoryArray(nlocksup, nvars);
 
    /* Initialize isimplint array: variable may be implied integer if both bounds are integral.
     * We better not use SCIPisFeasIntegral() in these checks.
@@ -8087,7 +8093,7 @@ SCIP_RETCODE fullDualPresolve(
       SCIP_Real lb;
       SCIP_Real ub;
       
-      var = vars[nintvars+v];
+      var = vars[v + nintvars - nbinvars];
       lb = SCIPvarGetLbGlobal(var);
       ub = SCIPvarGetUbGlobal(var);
       isimplint[v] = (SCIPisInfinity(scip, -lb) || SCIPisIntegral(scip, lb))
@@ -8192,7 +8198,7 @@ SCIP_RETCODE fullDualPresolve(
 
             arrayindex = SCIPvarGetProbindex(var) - nbinvars;
 
-            assert(0 <= arrayindex && arrayindex < nvars - nbinvars); /* variable should be active due to applyFixings() */
+            assert(0 <= arrayindex && arrayindex < nvars); /* variable should be active due to applyFixings() */
 
             newredlb = redlb[arrayindex];
             newredub = redub[arrayindex];
@@ -8320,17 +8326,16 @@ SCIP_RETCODE fullDualPresolve(
    }
 
    /* check if any bounds can be tightened due to optimality */
-   for( v = nbinvars; v < nvars; ++v )
+   for( v = 0; v < nvars; ++v )
    {
       SCIP_VAR* var;
       SCIP_Real obj;
       SCIP_Bool infeasible;
       SCIP_Bool tightened;
 
-      assert(SCIPvarGetProbindex(vars[v]) == v);
-      assert(SCIPvarGetType(vars[v]) != SCIP_VARTYPE_BINARY);
-      assert(SCIPvarGetNLocksDown(vars[v]) >= nlocksdown[v - nbinvars]);
-      assert(SCIPvarGetNLocksUp(vars[v]) >= nlocksup[v - nbinvars]);
+      assert(!SCIPvarIsBinary(vars[v]) || SCIPvarGetType(vars[v]) == SCIP_VARTYPE_IMPLINT);
+      assert(SCIPvarGetNLocksDown(vars[v]) >= nlocksdown[v]);
+      assert(SCIPvarGetNLocksUp(vars[v]) >= nlocksup[v]);
 
       var = vars[v];
       obj = SCIPvarGetObj(var);
@@ -8340,9 +8345,9 @@ SCIP_RETCODE fullDualPresolve(
           * check if all down locks of the variables are due to linear constraints;
           * if largest bound to make constraints redundant is -infinity, we better do nothing for numerical reasons
           */
-         if( SCIPvarGetNLocksDown(var) == nlocksdown[v - nbinvars]
-            && !SCIPisInfinity(scip, -redlb[v - nbinvars])
-            && redlb[v - nbinvars] < SCIPvarGetUbGlobal(var) )
+         if( SCIPvarGetNLocksDown(var) == nlocksdown[v]
+            && !SCIPisInfinity(scip, -redlb[v])
+            && redlb[v] < SCIPvarGetUbGlobal(var) )
          {
             SCIP_Real ub;
 
@@ -8351,12 +8356,12 @@ SCIP_RETCODE fullDualPresolve(
              */
             SCIPdebugMessage("variable <%s> only locked down in linear constraints: dual presolve <%s>[%.15g,%.15g] <= %.15g\n",
                SCIPvarGetName(var), SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var),
-               redlb[v - nbinvars]);
-            SCIP_CALL( SCIPtightenVarUb(scip, var, redlb[v - nbinvars], FALSE, &infeasible, &tightened) );
+               redlb[v]);
+            SCIP_CALL( SCIPtightenVarUb(scip, var, redlb[v], FALSE, &infeasible, &tightened) );
             assert(!infeasible);
 
             ub = SCIPvarGetUbGlobal(var);
-            redub[v - nbinvars] = MIN(redub[v - nbinvars], ub);
+            redub[v] = MIN(redub[v], ub);
             if( tightened )
                (*nchgbds)++;
          }
@@ -8367,9 +8372,9 @@ SCIP_RETCODE fullDualPresolve(
           * check if all up locks of the variables are due to linear constraints;
           * if smallest bound to make constraints redundant is +infinity, we better do nothing for numerical reasons
           */
-         if( SCIPvarGetNLocksUp(var) == nlocksup[v - nbinvars]
-            && !SCIPisInfinity(scip, redub[v - nbinvars])
-            && redub[v - nbinvars] > SCIPvarGetLbGlobal(var) )
+         if( SCIPvarGetNLocksUp(var) == nlocksup[v]
+            && !SCIPisInfinity(scip, redub[v])
+            && redub[v] > SCIPvarGetLbGlobal(var) )
          {
             SCIP_Real lb;
 
@@ -8378,12 +8383,12 @@ SCIP_RETCODE fullDualPresolve(
              */
             SCIPdebugMessage("variable <%s> only locked up in linear constraints: dual presolve <%s>[%.15g,%.15g] >= %.15g\n",
                SCIPvarGetName(var), SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var),
-               redub[v - nbinvars]);
-            SCIP_CALL( SCIPtightenVarLb(scip, var, redub[v - nbinvars], FALSE, &infeasible, &tightened) );
+               redub[v]);
+            SCIP_CALL( SCIPtightenVarLb(scip, var, redub[v], FALSE, &infeasible, &tightened) );
             assert(!infeasible);
 
             lb = SCIPvarGetLbGlobal(var);
-            redlb[v - nbinvars] = MAX(redlb[v - nbinvars], lb);
+            redlb[v] = MAX(redlb[v], lb);
             if( tightened )
                (*nchgbds)++;
          }
@@ -8391,52 +8396,41 @@ SCIP_RETCODE fullDualPresolve(
    }
 
    /* upgrade continuous variables to implied integers */
-   nupgdvars = 0;
-   for( v = nintvars; v < nvars; ++v )
-   {
-      SCIP_VAR* var;
-
-      assert(SCIPvarGetProbindex(vars[v]) == v);
-      assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS);
-      assert(SCIPvarGetNLocksDown(vars[v]) >= nlocksdown[v - nbinvars]);
-      assert(SCIPvarGetNLocksUp(vars[v]) >= nlocksup[v - nbinvars]);
-
-      var = vars[v];
-
-      /* we can only conclude implied integrality if the variable appears in no other constraint */
-      if( isimplint[v-nintvars]
-         && SCIPvarGetNLocksDown(var) == nlocksdown[v - nbinvars]
-         && SCIPvarGetNLocksUp(var) == nlocksup[v - nbinvars] )
-      {
-         /* only collect variables here, because SCIPchgVarType() reorders vars array */
-         conscontvars[nupgdvars] = var; /* borrow this array for collecting implied integer variables */
-         nupgdvars++;
-      }
-   }
-   for( v = 0; v < nupgdvars; ++v )
+   for( v = nintvars - nbinvars; v < nvars; ++v )
    {
       SCIP_VAR* var;
       SCIP_Bool infeasible;
 
-      var = conscontvars[v];
+      var = vars[v];
+      assert(var != NULL);
 
-      /* bounds might have been tightened, but must still be integral */
-      assert(SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) || SCIPisIntegral(scip, SCIPvarGetLbGlobal(var)));
-      assert(SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) || SCIPisIntegral(scip, SCIPvarGetUbGlobal(var)));
+      assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+      assert(SCIPvarGetNLocksDown(var) >= nlocksdown[v]);
+      assert(SCIPvarGetNLocksUp(var) >= nlocksup[v]);
+      assert(0 <= v - nintvars + nbinvars && v - nintvars + nbinvars < ncontvars);
 
-      SCIPdebugMessage("dual presolve: converting continuous variable <%s>[%g,%g] to implicit integer\n",
-         SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
-      SCIP_CALL( SCIPchgVarType(scip, conscontvars[v], SCIP_VARTYPE_IMPLINT, &infeasible) );
-      if( infeasible )
+      /* we can only conclude implied integrality if the variable appears in no other constraint */
+      if( isimplint[v - nintvars + nbinvars]
+         && SCIPvarGetNLocksDown(var) == nlocksdown[v]
+         && SCIPvarGetNLocksUp(var) == nlocksup[v] )
       {
-         SCIPdebugMessage("infeasible upgrade of variable <%s> to integral type, domain is empty\n", SCIPvarGetName(conscontvars[v]));
-         *cutoff = TRUE;
+
+         /* since we locally copied the variable array we can change the variable type immediately */
+         SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_IMPLINT, &infeasible) );
+
+         if( infeasible )
+         {
+            SCIPdebugMessage("infeasible upgrade of variable <%s> to integral type, domain is empty\n", SCIPvarGetName(var));
+            *cutoff = TRUE;
+
+            break;
+         }
          
-         goto TERMINATE;
+         SCIPdebugMessage("dual presolve: converting continuous variable <%s>[%g,%g] to implicit integer\n",
+            SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
       }
    }
 
- TERMINATE:
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &conscontvars);
    SCIPfreeBufferArray(scip, &isimplint);
@@ -8444,6 +8438,8 @@ SCIP_RETCODE fullDualPresolve(
    SCIPfreeBufferArray(scip, &nlocksdown);
    SCIPfreeBufferArray(scip, &redub);
    SCIPfreeBufferArray(scip, &redlb);
+
+   SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
 }
