@@ -29,12 +29,12 @@
 SCIP_RETCODE SCIPcreateNlpSolverIpopt(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_NLPI**           nlpi                /**< pointer to buffer for nlpi address */
-)
+   )
 {
    assert(nlpi != NULL);
-   
+
    *nlpi = NULL;
-   
+
    return SCIP_OKAY;
 }  /*lint !e715*/
 

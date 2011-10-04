@@ -85,7 +85,7 @@ SCIP_DECL_NLPIFREE( nlpiFreeXyz )
 {
    SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
-   
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -103,7 +103,7 @@ SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerXyz)
 {
    SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
-   
+
    return NULL;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -119,7 +119,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemXyz)
 {
    SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
-   
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -134,7 +134,7 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemXyz)
 {
    SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
-   
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -153,7 +153,7 @@ SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerXyz)
 {
    SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
-   
+
    return NULL;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -172,7 +172,7 @@ SCIP_DECL_NLPIADDVARS( nlpiAddVarsXyz )
 {
    SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
-   
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -220,7 +220,7 @@ SCIP_DECL_NLPIADDCONSTRAINTS( nlpiAddConstraintsXyz )
 {
    SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
-   
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -256,7 +256,7 @@ SCIP_DECL_NLPISETOBJECTIVE( nlpiSetObjectiveXyz )
 {
    SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
-   
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -275,7 +275,7 @@ SCIP_DECL_NLPICHGVARBOUNDS( nlpiChgVarBoundsXyz )
 {
    SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
-   
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -294,7 +294,7 @@ SCIP_DECL_NLPICHGCONSSIDES( nlpiChgConsSidesXyz )
 {
    SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
-   
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -313,7 +313,7 @@ SCIP_DECL_NLPIDELVARSET( nlpiDelVarSetXyz )
 {
    SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
-   
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -332,7 +332,7 @@ SCIP_DECL_NLPIDELCONSSET( nlpiDelConstraintSetXyz )
 {
    SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
-   
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -351,7 +351,7 @@ SCIP_DECL_NLPICHGLINEARCOEFS( nlpiChgLinearCoefsXyz )
 {
    SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
-   
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -371,7 +371,7 @@ SCIP_DECL_NLPICHGQUADCOEFS( nlpiChgQuadraticCoefsXyz )
 {
    SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
-   
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -409,7 +409,7 @@ SCIP_DECL_NLPICHGNONLINCOEF( nlpiChgNonlinCoefXyz )
 {
    SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
-   
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -425,7 +425,7 @@ SCIP_DECL_NLPICHGOBJCONSTANT( nlpiChgObjConstantXyz )
 {
    SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
-   
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -444,7 +444,7 @@ SCIP_DECL_NLPISETINITIALGUESS( nlpiSetInitialGuessXyz )
 {
    SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
-   
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -459,7 +459,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveXyz )
 {
    SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
-   
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -476,7 +476,7 @@ SCIP_DECL_NLPIGETSOLSTAT( nlpiGetSolstatXyz )
 {
    SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
-   
+
    return SCIP_NLPSOLSTAT_UNKNOWN;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -493,7 +493,7 @@ SCIP_DECL_NLPIGETTERMSTAT( nlpiGetTermstatXyz )
 {
    SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
-   
+
    return SCIP_NLPTERMSTAT_OTHER;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -515,7 +515,7 @@ SCIP_DECL_NLPIGETSOLUTION( nlpiGetSolutionXyz )
 {
    SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
-   
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -534,7 +534,7 @@ SCIP_DECL_NLPIGETSTATISTICS( nlpiGetStatisticsXyz )
 {
    SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
-   
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -553,7 +553,7 @@ SCIP_DECL_NLPIGETWARMSTARTSIZE( nlpiGetWarmstartSizeXyz )
 {
    SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
-   
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -574,7 +574,7 @@ SCIP_DECL_NLPIGETWARMSTARTMEMO( nlpiGetWarmstartMemoXyz )
 {
    SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
-   
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -592,7 +592,7 @@ SCIP_DECL_NLPISETWARMSTARTMEMO( nlpiSetWarmstartMemoXyz )
 {
    SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
-   
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -612,7 +612,7 @@ SCIP_DECL_NLPIGETINTPAR( nlpiGetIntParXyz )
 {
    SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
-   
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -629,7 +629,7 @@ SCIP_DECL_NLPISETINTPAR( nlpiSetIntParXyz )
 {
    SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
-   
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -649,10 +649,10 @@ SCIP_DECL_NLPIGETREALPAR( nlpiGetRealParXyz )
 {
    SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
-   
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
- 
+
 /** sets floating point parameter of NLP
  * 
  * input:
@@ -666,7 +666,7 @@ SCIP_DECL_NLPISETREALPAR( nlpiSetRealParXyz )
 {
    SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
-   
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -686,7 +686,7 @@ SCIP_DECL_NLPIGETSTRINGPAR( nlpiGetStringParXyz )
 {
    SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
-   
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -703,7 +703,7 @@ SCIP_DECL_NLPISETSTRINGPAR( nlpiSetStringParXyz )
 {
    SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
-   
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -715,30 +715,30 @@ SCIP_DECL_NLPISETSTRINGPAR( nlpiSetStringParXyz )
 SCIP_RETCODE SCIPcreateNlpSolverXyz(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_NLPI**           nlpi                /**< pointer to buffer for nlpi address */
-)
+   )
 {
    SCIP_NLPIDATA* nlpidata;
-   
+
    assert(blkmem != NULL);
    assert(nlpi   != NULL);
-  
+
    /* create xyz solver interface data */
    nlpidata = NULL;
    /* TODO: (optional) create solver interface specific data here */
 
    /* create solver interface */
    SCIP_CALL( SCIPnlpiCreate(nlpi,
-      NLPI_NAME, NLPI_DESC, NLPI_PRIORITY,
-      nlpiCopyXyz, nlpiFreeXyz, nlpiGetSolverPointerXyz,
-      nlpiCreateProblemXyz, nlpiFreeProblemXyz, nlpiGetProblemPointerXyz,
-      nlpiAddVarsXyz, nlpiAddConstraintsXyz, nlpiSetObjectiveXyz, 
-      nlpiChgVarBoundsXyz, nlpiChgConsSidesXyz, nlpiDelVarSetXyz, nlpiDelConstraintSetXyz,
-      nlpiChgLinearCoefsXyz, nlpiChgQuadraticCoefsXyz, nlpiChgExprtreeXyz, nlpiChgNonlinCoefXyz,
-      nlpiChgObjConstantXyz, nlpiSetInitialGuessXyz, nlpiSolveXyz, nlpiGetSolstatXyz, nlpiGetTermstatXyz,
-      nlpiGetSolutionXyz, nlpiGetStatisticsXyz,
-      nlpiGetWarmstartSizeXyz, nlpiGetWarmstartMemoXyz, nlpiSetWarmstartMemoXyz,
-      nlpiGetIntParXyz, nlpiSetIntParXyz, nlpiGetRealParXyz, nlpiSetRealParXyz, nlpiGetStringParXyz, nlpiSetStringParXyz,
-      nlpidata) );
+         NLPI_NAME, NLPI_DESC, NLPI_PRIORITY,
+         nlpiCopyXyz, nlpiFreeXyz, nlpiGetSolverPointerXyz,
+         nlpiCreateProblemXyz, nlpiFreeProblemXyz, nlpiGetProblemPointerXyz,
+         nlpiAddVarsXyz, nlpiAddConstraintsXyz, nlpiSetObjectiveXyz,
+         nlpiChgVarBoundsXyz, nlpiChgConsSidesXyz, nlpiDelVarSetXyz, nlpiDelConstraintSetXyz,
+         nlpiChgLinearCoefsXyz, nlpiChgQuadraticCoefsXyz, nlpiChgExprtreeXyz, nlpiChgNonlinCoefXyz,
+         nlpiChgObjConstantXyz, nlpiSetInitialGuessXyz, nlpiSolveXyz, nlpiGetSolstatXyz, nlpiGetTermstatXyz,
+         nlpiGetSolutionXyz, nlpiGetStatisticsXyz,
+         nlpiGetWarmstartSizeXyz, nlpiGetWarmstartMemoXyz, nlpiSetWarmstartMemoXyz,
+         nlpiGetIntParXyz, nlpiSetIntParXyz, nlpiGetRealParXyz, nlpiSetRealParXyz, nlpiGetStringParXyz, nlpiSetStringParXyz,
+         nlpidata) );
 
    return SCIP_OKAY;
 }

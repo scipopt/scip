@@ -45,7 +45,7 @@
 #define CONSHDLR_SEPAFREQ             2 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
-                                              *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
@@ -178,7 +178,7 @@ SCIP_RETCODE catchLinearVarEvents(
    assert(consdata != NULL);
 
    if( consdata->z == NULL )
-     return SCIP_OKAY;
+      return SCIP_OKAY;
    assert(consdata->eventfilterpos == -1);
 
    eventtype = SCIP_EVENTTYPE_DISABLED;
@@ -230,7 +230,7 @@ SCIP_RETCODE dropLinearVarEvents(
    assert(consdata != NULL);
 
    if( consdata->z == NULL )
-     return SCIP_OKAY;
+      return SCIP_OKAY;
    assert(consdata->eventfilterpos >= 0);
 
    eventtype = SCIP_EVENTTYPE_DISABLED;
@@ -281,7 +281,7 @@ SCIP_DECL_EVENTEXEC(processNonlinearVarEvent)
    {
       SCIPdebugMessage("changed %s bound on expression graph variable <%s> from %g to %g\n",
          eventtype & SCIP_EVENTTYPE_LBCHANGED ? "lower" : "upper",
-            SCIPvarGetName(SCIPeventGetVar(event)), SCIPeventGetOldbound(event), SCIPeventGetNewbound(event));
+         SCIPvarGetName(SCIPeventGetVar(event)), SCIPeventGetOldbound(event), SCIPeventGetNewbound(event));
 
       if( eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED )
          conshdlrdata->ispropagated = FALSE;
@@ -294,7 +294,7 @@ SCIP_DECL_EVENTEXEC(processNonlinearVarEvent)
             -infty2infty(SCIPinfinity(scip), INTERVALINFTY, -SCIPeventGetNewbound(event)));
       else
          SCIPexprgraphSetVarNodeUb(conshdlrdata->exprgraph, (SCIP_EXPRGRAPHNODE*)eventdata,
-             infty2infty(SCIPinfinity(scip), INTERVALINFTY,  SCIPeventGetNewbound(event)));
+            +infty2infty(SCIPinfinity(scip), INTERVALINFTY,  SCIPeventGetNewbound(event)));
    }
    else
    {
@@ -330,7 +330,7 @@ SCIP_DECL_EXPRGRAPHVARADDED( exprgraphVarAdded )
    /* set current bounds in expression graph */
    SCIPintervalSetBounds(&varbounds,
       -infty2infty(SCIPinfinity(conshdlrdata->scip), INTERVALINFTY, -MIN(SCIPvarGetLbLocal(var_), SCIPvarGetUbLocal(var_))),
-       infty2infty(SCIPinfinity(conshdlrdata->scip), INTERVALINFTY,  MAX(SCIPvarGetLbLocal(var_), SCIPvarGetUbLocal(var_)))
+      +infty2infty(SCIPinfinity(conshdlrdata->scip), INTERVALINFTY,  MAX(SCIPvarGetLbLocal(var_), SCIPvarGetUbLocal(var_)))
       );
    SCIPexprgraphSetVarNodeBounds(exprgraph, varnode, varbounds);
 
@@ -507,8 +507,8 @@ SCIP_RETCODE removeFixedVariables(
    vars[1] = SCIPexprtreeGetVars(consdata->f)[1];
 
    if( SCIPvarGetStatus(SCIPvarGetProbvar(vars[0])) == SCIP_VARSTATUS_FIXED ||
-       SCIPvarGetStatus(SCIPvarGetProbvar(vars[1])) == SCIP_VARSTATUS_FIXED ||
-       SCIPvarGetProbvar(vars[0]) == SCIPvarGetProbvar(vars[1]) )
+      SCIPvarGetStatus(SCIPvarGetProbvar(vars[1])) == SCIP_VARSTATUS_FIXED ||
+      SCIPvarGetProbvar(vars[0]) == SCIPvarGetProbvar(vars[1]) )
    {
       /* if number of variable reduces, then upgrade to nonlinear constraint */
       SCIP_EXPRTREE* tree;
@@ -576,12 +576,12 @@ SCIP_RETCODE removeFixedVariables(
       SCIP_CALL( SCIPexprtreeSetVars(tree, vars[0] == NULL ? 0 : (vars[1] == NULL ? 1 : 2), vars) );
 
       SCIP_CALL( SCIPcreateConsNonlinear(scip, &nlcons, SCIPconsGetName(cons),
-         consdata->z != NULL ? 1 : 0, consdata->z != NULL ? &consdata->z : NULL, &consdata->zcoef,
-         1, &tree, NULL, consdata->lhs, consdata->rhs,
-         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
-         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-         SCIPconsIsStickingAtNode(cons)) );
+            consdata->z != NULL ? 1 : 0, consdata->z != NULL ? &consdata->z : NULL, &consdata->zcoef,
+            1, &tree, NULL, consdata->lhs, consdata->rhs,
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+            SCIPconsIsStickingAtNode(cons)) );
       SCIP_CALL( SCIPaddCons(scip, nlcons) );
       SCIP_CALL( SCIPreleaseCons(scip, &nlcons) );
 
@@ -655,7 +655,7 @@ static
 SCIP_RETCODE removeFixedNonlinearVariables(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
-)
+   )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_VAR* var;
@@ -984,137 +984,137 @@ SCIP_RETCODE initSepaData(
 
    switch( consdata->convextype )
    {
-      case SCIP_BIVAR_CONVEX_CONCAVE:
+   case SCIP_BIVAR_CONVEX_CONCAVE:
+   {
+      SCIP_VAR** xy;
+      SCIP_Real ref[2];
+      SCIP_Bool sparsity[4];
+
+      if( SCIPexprtreeGetInterpreterData(consdata->f) == NULL )
       {
-         SCIP_VAR** xy;
-         SCIP_Real ref[2];
-         SCIP_Bool sparsity[4];
-
-         if( SCIPexprtreeGetInterpreterData(consdata->f) == NULL )
-         {
-            SCIP_CALL( SCIPexprintCompile(exprinterpreter, consdata->f) );
-         }
-
-         xy = SCIPexprtreeGetVars(consdata->f);
-         assert(xy != NULL);
-
-         /* check if the function is linear in x or y */
-         ref[0] = MIN(MAX(SCIPvarGetLbLocal(xy[0]), 0.0), SCIPvarGetUbLocal(xy[0]));
-         ref[1] = MIN(MAX(SCIPvarGetLbLocal(xy[1]), 0.0), SCIPvarGetUbLocal(xy[1]));
-
-         SCIP_CALL( SCIPexprintHessianSparsityDense(exprinterpreter, consdata->f, ref, sparsity) );
-
-         consdata->sepaconvexconcave.linearinx = !sparsity[0];
-         consdata->sepaconvexconcave.lineariny = !sparsity[3];
-
-         if( !consdata->sepaconvexconcave.linearinx && !SCIPisInfinity(scip,  consdata->rhs) )
-         {
-            SCIP_EXPR* subst[2];
-            SCIP_Real one;
-
-            /* setup f(x,yfixed) for computing a convex-concave underestimator in the case where y is at one of its bounds */
-            SCIP_CALL( SCIPexprtreeCopy(SCIPblkmem(scip), &consdata->sepaconvexconcave.f_yfixed, consdata->f) );
-
-            /* x stays x, nothing to substitute
-             * y is substituted by SCIP_EXPR_PARAM
-             */
-            subst[0] = NULL;
-            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &subst[1], SCIP_EXPR_PARAM, 0) );
-
-            /* make y a parameter */
-            SCIP_CALL( SCIPexprtreeSubstituteVars(consdata->sepaconvexconcave.f_yfixed, subst) );
-
-            /* reset variables array to {x} and parameters array to {y} */
-            one = 1.0;
-            SCIP_CALL( SCIPexprtreeSetVars(consdata->sepaconvexconcave.f_yfixed, 1, &xy[0]) );
-            SCIP_CALL( SCIPexprtreeSetParams(consdata->sepaconvexconcave.f_yfixed, 1, &one) );
-
-            /* free subst[1] */
-            SCIPexprFreeDeep(SCIPblkmem(scip), &subst[1]);
-
-            SCIP_CALL( SCIPexprintCompile(exprinterpreter, consdata->sepaconvexconcave.f_yfixed) );
-
-            /* setup vred(s;x0,y0,ylb,yub) for computing a convex-concave underestimator in the case where y is not at one of its bounds
-             * vred(s;x0,y0,ylb,yub) = (yub-y0)/(yub-ylb) f((yub-ylb)/(yub-y0)x0 - (y0-ylb)/(yub-y0)*s, ylb) + (y0-ylb)/(yub-ylb) f(s,yub)
-             */
-            SCIP_CALL( initSepaDataCreateVred(scip, &consdata->sepaconvexconcave.vred, consdata->f) );
-            SCIP_CALL( SCIPexprintCompile(exprinterpreter, consdata->sepaconvexconcave.vred) );
-         }
-         else
-         {
-            consdata->sepaconvexconcave.f_yfixed = NULL;
-            consdata->sepaconvexconcave.vred = NULL;
-         }
-
-         if( !consdata->sepaconvexconcave.lineariny && !SCIPisInfinity(scip, -consdata->lhs) )
-         {
-            /* if we have a left hand side and are not linear y in, then we may need to call
-             * generateConvexConcaveUnderestimator for -f with swapped variables
-             */
-            SCIP_EXPR* minusf;
-            SCIP_EXPR* fcopy;
-            SCIP_VAR*  vars[2];
-            int        reindex[2];
-            SCIP_Real  minusone;
-            SCIP_Real  one;
-            SCIP_EXPR* subst[2];
-
-            /* create expression for -f */
-            minusone = -1.0;
-            SCIP_CALL( SCIPexprCopyDeep(SCIPblkmem(scip), &fcopy, SCIPexprtreeGetRoot(consdata->f)) );
-            SCIP_CALL( SCIPexprCreateLinear(SCIPblkmem(scip), &minusf, 1, &fcopy, &minusone, 0.0) );
-
-            /* reindex/swap variables */
-            reindex[0] = 1;
-            reindex[1] = 0;
-            SCIPexprReindexVars(minusf, reindex);
-
-            /* create expression tree for -f(y,x) */
-            SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &consdata->sepaconvexconcave.f_neg_swapped, minusf, 2, 0, NULL) );
-
-            vars[0] = xy[1];
-            vars[1] = xy[0];
-            SCIP_CALL( SCIPexprtreeSetVars(consdata->sepaconvexconcave.f_neg_swapped, 2, vars) );
-
-            SCIP_CALL( SCIPexprintCompile(exprinterpreter, consdata->sepaconvexconcave.f_neg_swapped) );
-
-            /* setup -f(y, xfixed) for computing a convex-concave overestimator in the case where x is at on of it's bounds */
-            SCIP_CALL( SCIPexprtreeCopy(SCIPblkmem(scip), &consdata->sepaconvexconcave.f_neg_swapped_yfixed, consdata->sepaconvexconcave.f_neg_swapped) );
-
-            /* y stays y, nothing to substitute
-             * x is substituted by SCIP_EXPR_PARAM
-             */
-            subst[0] = NULL;
-            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &subst[1], SCIP_EXPR_PARAM, 0) );
-
-            /* make x a parameter */
-            SCIP_CALL( SCIPexprtreeSubstituteVars(consdata->sepaconvexconcave.f_neg_swapped_yfixed, subst) );
-
-            /* reset variables array to {y} and parameters array to {x} */
-            one = 1.0;
-            SCIP_CALL( SCIPexprtreeSetVars(consdata->sepaconvexconcave.f_neg_swapped_yfixed, 1, &xy[1]) );
-            SCIP_CALL( SCIPexprtreeSetParams(consdata->sepaconvexconcave.f_neg_swapped_yfixed, 1, &one) );
-
-            /* free subst[1] */
-            SCIPexprFreeDeep(SCIPblkmem(scip), &subst[1]);
-
-            SCIP_CALL( SCIPexprintCompile(exprinterpreter, consdata->sepaconvexconcave.f_neg_swapped_yfixed) );
-
-            /* setup vred(s;y0,x0,xlb,xub) for computing a convex-concave underestimator in the case where x is not at one of its bounds */
-            SCIP_CALL( initSepaDataCreateVred(scip, &consdata->sepaconvexconcave.vred_neg_swapped, consdata->sepaconvexconcave.f_neg_swapped) );
-            SCIP_CALL( SCIPexprintCompile(exprinterpreter, consdata->sepaconvexconcave.vred_neg_swapped) );
-         }
-         else
-         {
-            consdata->sepaconvexconcave.f_neg_swapped = NULL;
-            consdata->sepaconvexconcave.f_neg_swapped_yfixed = NULL;
-            consdata->sepaconvexconcave.vred_neg_swapped = NULL;
-         }
-
-         break;
+         SCIP_CALL( SCIPexprintCompile(exprinterpreter, consdata->f) );
       }
 
-      default: ;
+      xy = SCIPexprtreeGetVars(consdata->f);
+      assert(xy != NULL);
+
+      /* check if the function is linear in x or y */
+      ref[0] = MIN(MAX(SCIPvarGetLbLocal(xy[0]), 0.0), SCIPvarGetUbLocal(xy[0]));
+      ref[1] = MIN(MAX(SCIPvarGetLbLocal(xy[1]), 0.0), SCIPvarGetUbLocal(xy[1]));
+
+      SCIP_CALL( SCIPexprintHessianSparsityDense(exprinterpreter, consdata->f, ref, sparsity) );
+
+      consdata->sepaconvexconcave.linearinx = !sparsity[0];
+      consdata->sepaconvexconcave.lineariny = !sparsity[3];
+
+      if( !consdata->sepaconvexconcave.linearinx && !SCIPisInfinity(scip,  consdata->rhs) )
+      {
+         SCIP_EXPR* subst[2];
+         SCIP_Real one;
+
+         /* setup f(x,yfixed) for computing a convex-concave underestimator in the case where y is at one of its bounds */
+         SCIP_CALL( SCIPexprtreeCopy(SCIPblkmem(scip), &consdata->sepaconvexconcave.f_yfixed, consdata->f) );
+
+         /* x stays x, nothing to substitute
+          * y is substituted by SCIP_EXPR_PARAM
+          */
+         subst[0] = NULL;
+         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &subst[1], SCIP_EXPR_PARAM, 0) );
+
+         /* make y a parameter */
+         SCIP_CALL( SCIPexprtreeSubstituteVars(consdata->sepaconvexconcave.f_yfixed, subst) );
+
+         /* reset variables array to {x} and parameters array to {y} */
+         one = 1.0;
+         SCIP_CALL( SCIPexprtreeSetVars(consdata->sepaconvexconcave.f_yfixed, 1, &xy[0]) );
+         SCIP_CALL( SCIPexprtreeSetParams(consdata->sepaconvexconcave.f_yfixed, 1, &one) );
+
+         /* free subst[1] */
+         SCIPexprFreeDeep(SCIPblkmem(scip), &subst[1]);
+
+         SCIP_CALL( SCIPexprintCompile(exprinterpreter, consdata->sepaconvexconcave.f_yfixed) );
+
+         /* setup vred(s;x0,y0,ylb,yub) for computing a convex-concave underestimator in the case where y is not at one of its bounds
+          * vred(s;x0,y0,ylb,yub) = (yub-y0)/(yub-ylb) f((yub-ylb)/(yub-y0)x0 - (y0-ylb)/(yub-y0)*s, ylb) + (y0-ylb)/(yub-ylb) f(s,yub)
+          */
+         SCIP_CALL( initSepaDataCreateVred(scip, &consdata->sepaconvexconcave.vred, consdata->f) );
+         SCIP_CALL( SCIPexprintCompile(exprinterpreter, consdata->sepaconvexconcave.vred) );
+      }
+      else
+      {
+         consdata->sepaconvexconcave.f_yfixed = NULL;
+         consdata->sepaconvexconcave.vred = NULL;
+      }
+
+      if( !consdata->sepaconvexconcave.lineariny && !SCIPisInfinity(scip, -consdata->lhs) )
+      {
+         /* if we have a left hand side and are not linear y in, then we may need to call
+          * generateConvexConcaveUnderestimator for -f with swapped variables
+          */
+         SCIP_EXPR* minusf;
+         SCIP_EXPR* fcopy;
+         SCIP_VAR*  vars[2];
+         int        reindex[2];
+         SCIP_Real  minusone;
+         SCIP_Real  one;
+         SCIP_EXPR* subst[2];
+
+         /* create expression for -f */
+         minusone = -1.0;
+         SCIP_CALL( SCIPexprCopyDeep(SCIPblkmem(scip), &fcopy, SCIPexprtreeGetRoot(consdata->f)) );
+         SCIP_CALL( SCIPexprCreateLinear(SCIPblkmem(scip), &minusf, 1, &fcopy, &minusone, 0.0) );
+
+         /* reindex/swap variables */
+         reindex[0] = 1;
+         reindex[1] = 0;
+         SCIPexprReindexVars(minusf, reindex);
+
+         /* create expression tree for -f(y,x) */
+         SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &consdata->sepaconvexconcave.f_neg_swapped, minusf, 2, 0, NULL) );
+
+         vars[0] = xy[1];
+         vars[1] = xy[0];
+         SCIP_CALL( SCIPexprtreeSetVars(consdata->sepaconvexconcave.f_neg_swapped, 2, vars) );
+
+         SCIP_CALL( SCIPexprintCompile(exprinterpreter, consdata->sepaconvexconcave.f_neg_swapped) );
+
+         /* setup -f(y, xfixed) for computing a convex-concave overestimator in the case where x is at on of it's bounds */
+         SCIP_CALL( SCIPexprtreeCopy(SCIPblkmem(scip), &consdata->sepaconvexconcave.f_neg_swapped_yfixed, consdata->sepaconvexconcave.f_neg_swapped) );
+
+         /* y stays y, nothing to substitute
+          * x is substituted by SCIP_EXPR_PARAM
+          */
+         subst[0] = NULL;
+         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &subst[1], SCIP_EXPR_PARAM, 0) );
+
+         /* make x a parameter */
+         SCIP_CALL( SCIPexprtreeSubstituteVars(consdata->sepaconvexconcave.f_neg_swapped_yfixed, subst) );
+
+         /* reset variables array to {y} and parameters array to {x} */
+         one = 1.0;
+         SCIP_CALL( SCIPexprtreeSetVars(consdata->sepaconvexconcave.f_neg_swapped_yfixed, 1, &xy[1]) );
+         SCIP_CALL( SCIPexprtreeSetParams(consdata->sepaconvexconcave.f_neg_swapped_yfixed, 1, &one) );
+
+         /* free subst[1] */
+         SCIPexprFreeDeep(SCIPblkmem(scip), &subst[1]);
+
+         SCIP_CALL( SCIPexprintCompile(exprinterpreter, consdata->sepaconvexconcave.f_neg_swapped_yfixed) );
+
+         /* setup vred(s;y0,x0,xlb,xub) for computing a convex-concave underestimator in the case where x is not at one of its bounds */
+         SCIP_CALL( initSepaDataCreateVred(scip, &consdata->sepaconvexconcave.vred_neg_swapped, consdata->sepaconvexconcave.f_neg_swapped) );
+         SCIP_CALL( SCIPexprintCompile(exprinterpreter, consdata->sepaconvexconcave.vred_neg_swapped) );
+      }
+      else
+      {
+         consdata->sepaconvexconcave.f_neg_swapped = NULL;
+         consdata->sepaconvexconcave.f_neg_swapped_yfixed = NULL;
+         consdata->sepaconvexconcave.vred_neg_swapped = NULL;
+      }
+
+      break;
+   }
+
+   default: ;
    }
 
    return SCIP_OKAY;
@@ -1138,32 +1138,32 @@ SCIP_RETCODE freeSepaData(
 
    switch( consdata->convextype )
    {
-      case SCIP_BIVAR_CONVEX_CONCAVE:
+   case SCIP_BIVAR_CONVEX_CONCAVE:
+   {
+      if( consdata->sepaconvexconcave.f_yfixed != NULL )
       {
-         if( consdata->sepaconvexconcave.f_yfixed != NULL )
-         {
-            SCIP_CALL( SCIPexprtreeFree(&consdata->sepaconvexconcave.f_yfixed) );
-         }
-         if( consdata->sepaconvexconcave.f_neg_swapped != NULL )
-         {
-            SCIP_CALL( SCIPexprtreeFree(&consdata->sepaconvexconcave.f_neg_swapped) );
-         }
-         if( consdata->sepaconvexconcave.f_neg_swapped_yfixed != NULL )
-         {
-            SCIP_CALL( SCIPexprtreeFree(&consdata->sepaconvexconcave.f_neg_swapped_yfixed) );
-         }
-         if( consdata->sepaconvexconcave.vred != NULL )
-         {
-            SCIP_CALL( SCIPexprtreeFree(&consdata->sepaconvexconcave.vred) );
-         }
-         if( consdata->sepaconvexconcave.vred_neg_swapped != NULL )
-         {
-            SCIP_CALL( SCIPexprtreeFree(&consdata->sepaconvexconcave.vred_neg_swapped) );
-         }
-         break;
+         SCIP_CALL( SCIPexprtreeFree(&consdata->sepaconvexconcave.f_yfixed) );
       }
+      if( consdata->sepaconvexconcave.f_neg_swapped != NULL )
+      {
+         SCIP_CALL( SCIPexprtreeFree(&consdata->sepaconvexconcave.f_neg_swapped) );
+      }
+      if( consdata->sepaconvexconcave.f_neg_swapped_yfixed != NULL )
+      {
+         SCIP_CALL( SCIPexprtreeFree(&consdata->sepaconvexconcave.f_neg_swapped_yfixed) );
+      }
+      if( consdata->sepaconvexconcave.vred != NULL )
+      {
+         SCIP_CALL( SCIPexprtreeFree(&consdata->sepaconvexconcave.vred) );
+      }
+      if( consdata->sepaconvexconcave.vred_neg_swapped != NULL )
+      {
+         SCIP_CALL( SCIPexprtreeFree(&consdata->sepaconvexconcave.vred_neg_swapped) );
+      }
+      break;
+   }
 
-      default: ;
+   default: ;
    }
 
    return SCIP_OKAY;
@@ -1182,7 +1182,7 @@ SCIP_RETCODE solveDerivativeEquation(
    SCIP_Real             ub,                 /**< upper bound on variable */
    SCIP_Real*            val,                /**< buffer to store solution value */
    SCIP_Bool*            success             /**< buffer to indicate whether a solution has been found */
-)
+   )
 {
    SCIP_Real fval;
    SCIP_Real grad;
@@ -1238,8 +1238,8 @@ SCIP_RETCODE solveDerivativeEquation(
       if( SCIPisEQ(scip, s, lb) && (grad - targetvalue) * hess >= 0 )
       {
          /* if we are on the left boundary and would go left (or stay), then stop
-           (multiply instead of divide by hess for the case that hess is zero and since only the sign matters
-         */
+          * (multiply instead of divide by hess for the case that hess is zero and since only the sign matters
+          */
          *val = lb;
          *success = TRUE;
          break;
@@ -1533,7 +1533,7 @@ SCIP_RETCODE generateEstimatingHyperplane(
    SCIPdebugMessage("p4 = (%g, %g), f(p4) = %g\n", p4[0], p4[1], p4val);
 
    if( !isfinite(p1val) || SCIPisInfinity(scip, REALABS(p1val)) || !isfinite(p2val) || SCIPisInfinity(scip, REALABS(p2val)) ||
-       !isfinite(p3val) || SCIPisInfinity(scip, REALABS(p3val)) || !isfinite(p4val) || SCIPisInfinity(scip, REALABS(p4val)) )
+      ! isfinite(p3val) || SCIPisInfinity(scip, REALABS(p3val)) || !isfinite(p4val) || SCIPisInfinity(scip, REALABS(p4val)) )
    {
       SCIPdebugMessage("skip hyperplane since function cannot be evaluated\n");
       return SCIP_OKAY;
@@ -1796,9 +1796,9 @@ SCIP_RETCODE generateUnderestimatorParallelYFacets(
    slb = (yval - yub) / (ylb - yval) * (xval / t - xub);
    sub = (yval - yub) / (ylb - yval) * (xval / t - xlb);
    if( slb < xlb )
-     slb = xlb;
+      slb = xlb;
    if( sub > xub )
-     sub = xub;
+      sub = xub;
 
    /* find s in [slb, sub] such that vred'(s) = 0 */
    SCIP_CALL( solveDerivativeEquation(scip, exprinterpreter, vredtree, 0.0, slb, sub, &sval, success) );
@@ -2081,12 +2081,12 @@ SCIP_RETCODE generateOrthogonal_lx_ly_Underestimator(
          cutcoeff[3] = cutcoeff[0]*xlb+cutcoeff[1]*rval-cutcoeff[2]*frval;
       }
 
-     SCIPdebugMessage("LowerLeft: Cut of (xval,yval)=(%g,%g)\n",xval,yval);
-     SCIPdebugMessage("LowerLeft: r=%g in [%g,%g], s=%g in [%g,%g], f(s,ylb)=%g, f(xlb,r)=%g\n",rval,xlb,xub,sval,ylb,yub,fsval,frval);
-     SCIPdebugMessage("(s,ylb)=(%g,%g) (xlb,r)=(%g,%g) t=%g, vredval=%g\n",sval,ylb,xlb,rval,tval,*convenvvalue);
-     SCIPdebugMessage("LowerLeft: cutcoeff[0]=%g, cutcoeff[1]=%g,cutcoeff[2]=%g,cutcoeff[3]=%g\n",cutcoeff[0],cutcoeff[1],cutcoeff[2],cutcoeff[3]);
+      SCIPdebugMessage("LowerLeft: Cut of (xval,yval)=(%g,%g)\n",xval,yval);
+      SCIPdebugMessage("LowerLeft: r=%g in [%g,%g], s=%g in [%g,%g], f(s,ylb)=%g, f(xlb,r)=%g\n",rval,xlb,xub,sval,ylb,yub,fsval,frval);
+      SCIPdebugMessage("(s,ylb)=(%g,%g) (xlb,r)=(%g,%g) t=%g, vredval=%g\n",sval,ylb,xlb,rval,tval,*convenvvalue);
+      SCIPdebugMessage("LowerLeft: cutcoeff[0]=%g, cutcoeff[1]=%g,cutcoeff[2]=%g,cutcoeff[3]=%g\n",cutcoeff[0],cutcoeff[1],cutcoeff[2],cutcoeff[3]);
 
-     SCIP_CALL( SCIPexprtreeFree(&vredtree) );
+      SCIP_CALL( SCIPexprtreeFree(&vredtree) );
    }
    else
    { /* (xval,yval) lies in the upper right triangle, i.e region A_2 */
@@ -2199,8 +2199,10 @@ SCIP_RETCODE generateOrthogonal_lx_ly_Underestimator(
          cutcoeff[3] = cutcoeff[0]*sval+cutcoeff[1]*yub-cutcoeff[2]*fsval;
       }
       else
-      { /* the point lies on the segment between (xlb,yub) and (xub,ylb)
-          due to numerics, we get into this case here instead in the LowerLeft */
+      {
+         /* the point lies on the segment between (xlb,yub) and (xub,ylb)
+          * due to numerics, we get into this case here instead in the LowerLeft
+          */
          assert(SCIPisRelLE(scip, yval, (ylb-yub) / (xub-xlb) * (xval-xlb) + yub));
 
          cutcoeff[0] = (yub-rval)*MIN(grad_sval[0],grad_rval[0]);
@@ -2745,7 +2747,7 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
       *convenvvalue = fvalylb;
 
       SCIPdebugMessage("alpha: %g, beta: %g, gamma: %g, delta: %g\n",
-		       cutcoeff[0]/cutcoeff[2], cutcoeff[1]/cutcoeff[2], cutcoeff[2]/cutcoeff[2], cutcoeff[3]/cutcoeff[2]);
+         cutcoeff[0]/cutcoeff[2], cutcoeff[1]/cutcoeff[2], cutcoeff[2]/cutcoeff[2], cutcoeff[3]/cutcoeff[2]);
 
       *success = TRUE;
       return SCIP_OKAY;
@@ -2929,7 +2931,7 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
       /* check that variables are not unbounded or fixed and reference point is in interior
        * @todo it should also work if x is unbounded, or? */
       /* assert(!SCIPisInfinity(scip, -xlb));
-      assert(!SCIPisInfinity(scip,  xub)); */
+         assert(!SCIPisInfinity(scip,  xub)); */
       assert(!SCIPisInfinity(scip, -ylb));
       assert(!SCIPisInfinity(scip,  yub));
 
@@ -2956,9 +2958,9 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
       else
          sub =  SCIPinfinity(scip);
       if( slb < xlb )
-        slb = xlb;
+         slb = xlb;
       if( sub > xub )
-        sub = xub;
+         sub = xub;
 
       /* find s in [slb, sub] such that vred'(s) = 0 */
       SCIP_CALL( solveDerivativeEquation(scip, exprinterpreter, vred, 0.0, slb, sub, &sval, success) );
@@ -3892,8 +3894,8 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimator(
    assert(SCIPisPositive(scip, cutcoeff[2])); /* assert gamma > 0 */
 
    if( SCIPisInfinity(scip, REALABS(cutcoeff[0]/cutcoeff[2])) ||
-       SCIPisInfinity(scip, REALABS(cutcoeff[1]/cutcoeff[2])) ||
-       SCIPisInfinity(scip, REALABS(cutcoeff[3]/cutcoeff[2])) )
+      SCIPisInfinity( scip, REALABS(cutcoeff[1]/cutcoeff[2])) ||
+      SCIPisInfinity( scip, REALABS(cutcoeff[3]/cutcoeff[2])) )
    {
       *row = NULL;
       return SCIP_OKAY;
@@ -3904,7 +3906,9 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimator(
    SCIP_CALL( SCIPaddVarToRow(scip, *row, SCIPexprtreeGetVars(consdata->f)[0], cutcoeff[0] / cutcoeff[2]) );
    SCIP_CALL( SCIPaddVarToRow(scip, *row, SCIPexprtreeGetVars(consdata->f)[1], cutcoeff[1] / cutcoeff[2]) );
    if( consdata->z != NULL )
-     SCIP_CALL( SCIPaddVarToRow(scip, *row, consdata->z, consdata->zcoef) );
+   {
+      SCIP_CALL( SCIPaddVarToRow(scip, *row, consdata->z, consdata->zcoef) );
+   }
 
    return SCIP_OKAY;
 }
@@ -3964,46 +3968,46 @@ SCIP_RETCODE generateCut(
 
    switch( consdata->convextype )
    {
-      case SCIP_BIVAR_ALLCONVEX:
+   case SCIP_BIVAR_ALLCONVEX:
+   {
+      if( violside == SCIP_SIDETYPE_RIGHT )
       {
-         if( violside == SCIP_SIDETYPE_RIGHT )
-         {
-            /* rhs is violated */
-            SCIP_CALL( generateLinearizationCut(scip, exprinterpreter, cons, x0y0, FALSE, row) );
-         }
-         else
-         {
-            /* lhs is violated */
-            SCIP_CALL( generateOverestimatingHyperplaneCut(scip, exprinterpreter, cons, x0y0, row) );
-         }
-
-         break;
+         /* rhs is violated */
+         SCIP_CALL( generateLinearizationCut(scip, exprinterpreter, cons, x0y0, FALSE, row) );
+      }
+      else
+      {
+         /* lhs is violated */
+         SCIP_CALL( generateOverestimatingHyperplaneCut(scip, exprinterpreter, cons, x0y0, row) );
       }
 
-      case SCIP_BIVAR_CONVEX_CONCAVE:
-      {
-         SCIP_CALL( generateConvexConcaveEstimator(scip, exprinterpreter, cons, x0y0, violside, row) );
-         break;
-      }
+      break;
+   }
 
-      case SCIP_BIVAR_1CONVEX_INDEFINITE:
+   case SCIP_BIVAR_CONVEX_CONCAVE:
+   {
+      SCIP_CALL( generateConvexConcaveEstimator(scip, exprinterpreter, cons, x0y0, violside, row) );
+      break;
+   }
+
+   case SCIP_BIVAR_1CONVEX_INDEFINITE:
+   {
+      if( violside == SCIP_SIDETYPE_RIGHT )
       {
-         if( violside == SCIP_SIDETYPE_RIGHT )
-         {
-            /* rhs is violated */
-            SCIP_CALL( generate1ConvexIndefiniteUnderestimator(scip, exprinterpreter, cons, x0y0, row) );
-         }
-         else
-         {
-            /* lhs is violated */
-            SCIP_CALL( generateOverestimatingHyperplaneCut(scip, exprinterpreter, cons, x0y0, row) );
-         }
-         break;
+         /* rhs is violated */
+         SCIP_CALL( generate1ConvexIndefiniteUnderestimator(scip, exprinterpreter, cons, x0y0, row) );
       }
-      default:
+      else
       {
-         SCIPdebugMessage("cut generation for convexity type not implemented\n");
+         /* lhs is violated */
+         SCIP_CALL( generateOverestimatingHyperplaneCut(scip, exprinterpreter, cons, x0y0, row) );
       }
+      break;
+   }
+   default:
+   {
+      SCIPdebugMessage("cut generation for convexity type not implemented\n");
+   }
    }
 
    if( *row == NULL )
@@ -4097,12 +4101,12 @@ SCIP_RETCODE generateCut(
       }
 
       if( *row != NULL &&
-           ((violside == SCIP_SIDETYPE_LEFT  && SCIPisInfinity(scip, -SCIProwGetLhs(*row))) ||
+         (  (violside == SCIP_SIDETYPE_LEFT  && SCIPisInfinity(scip, -SCIProwGetLhs(*row))) ||
             (violside == SCIP_SIDETYPE_RIGHT && SCIPisInfinity(scip,  SCIProwGetRhs(*row)))) )
-       {
-          SCIPdebugMessage("drop row for constraint <%s> because of very large side: %g\n", SCIPconsGetName(cons), violside == SCIP_SIDETYPE_LEFT ? -SCIProwGetLhs(*row) : SCIProwGetRhs(*row));
-          SCIP_CALL( SCIPreleaseRow(scip, row) );
-       }
+      {
+         SCIPdebugMessage("drop row for constraint <%s> because of very large side: %g\n", SCIPconsGetName(cons), violside == SCIP_SIDETYPE_LEFT ? -SCIProwGetLhs(*row) : SCIProwGetRhs(*row));
+         SCIP_CALL( SCIPreleaseRow(scip, row) );
+      }
    }
 
    return SCIP_OKAY;
@@ -4128,37 +4132,37 @@ SCIP_Bool isConvexLocal(
 
    switch( consdata->convextype )
    {
-      case SCIP_BIVAR_ALLCONVEX:
-         /* always convex w.r.t. right hand side and concave w.r.t. left hand side */
-         return side == SCIP_SIDETYPE_RIGHT;
+   case SCIP_BIVAR_ALLCONVEX:
+      /* always convex w.r.t. right hand side and concave w.r.t. left hand side */
+      return side == SCIP_SIDETYPE_RIGHT;
 
-      case SCIP_BIVAR_1CONVEX_INDEFINITE:
-      {
-         /* always not convex w.r.t. left hand side */
-         if( side == SCIP_SIDETYPE_LEFT )
-            return FALSE;
-
-         xy = SCIPexprtreeGetVars(consdata->f);
-         assert(xy != NULL);
-
-         /* convex w.r.t. right hand side if one of the variables is fixed */
-         return SCIPisEQ(scip, SCIPvarGetLbLocal(xy[0]), SCIPvarGetUbLocal(xy[0])) ||
-            SCIPisEQ(scip, SCIPvarGetLbLocal(xy[1]), SCIPvarGetUbLocal(xy[1]));
-      }
-
-      case SCIP_BIVAR_CONVEX_CONCAVE:
-      {
-         xy = SCIPexprtreeGetVars(consdata->f);
-         assert(xy != NULL);
-
-         /* convex w.r.t. right hand side if y is fixed and
-          * convex w.r.t. left  hand side if x is fixed */
-         return (side == SCIP_SIDETYPE_RIGHT && SCIPisEQ(scip, SCIPvarGetLbLocal(xy[1]), SCIPvarGetUbLocal(xy[1]))) ||
-            (side == SCIP_SIDETYPE_LEFT && SCIPisEQ(scip, SCIPvarGetLbLocal(xy[0]), SCIPvarGetUbLocal(xy[0])));
-      }
-
-      default:
+   case SCIP_BIVAR_1CONVEX_INDEFINITE:
+   {
+      /* always not convex w.r.t. left hand side */
+      if( side == SCIP_SIDETYPE_LEFT )
          return FALSE;
+
+      xy = SCIPexprtreeGetVars(consdata->f);
+      assert(xy != NULL);
+
+      /* convex w.r.t. right hand side if one of the variables is fixed */
+      return SCIPisEQ(scip, SCIPvarGetLbLocal(xy[0]), SCIPvarGetUbLocal(xy[0])) ||
+         SCIPisEQ(scip, SCIPvarGetLbLocal(xy[1]), SCIPvarGetUbLocal(xy[1]));
+   }
+
+   case SCIP_BIVAR_CONVEX_CONCAVE:
+   {
+      xy = SCIPexprtreeGetVars(consdata->f);
+      assert(xy != NULL);
+
+      /* convex w.r.t. right hand side if y is fixed and
+       * convex w.r.t. left  hand side if x is fixed */
+      return (side == SCIP_SIDETYPE_RIGHT && SCIPisEQ(scip, SCIPvarGetLbLocal(xy[1]), SCIPvarGetUbLocal(xy[1]))) ||
+         (side == SCIP_SIDETYPE_LEFT && SCIPisEQ(scip, SCIPvarGetLbLocal(xy[0]), SCIPvarGetUbLocal(xy[0])));
+   }
+
+   default:
+      return FALSE;
    }
 }
 
@@ -4239,8 +4243,7 @@ SCIP_RETCODE separatePoint(
 
          /* if cut is strong enough or it's weak but we separate on a convex function and accept weak cuts there, add cut to SCIP */
          if( efficacy > minefficacy ||
-             (convexalways && SCIPisFeasPositive(scip, efficacy) && isConvexLocal(scip, conss[c], violside))
-           )
+            (convexalways && SCIPisFeasPositive(scip, efficacy) && isConvexLocal(scip, conss[c], violside)) )
          {
             /* cut cuts off solution sufficiently */
             SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
@@ -4382,79 +4385,79 @@ SCIP_RETCODE registerBranchingVariables(
 
       switch( consdata->convextype )
       {
-         case SCIP_BIVAR_CONVEX_CONCAVE:
+      case SCIP_BIVAR_CONVEX_CONCAVE:
+      {
+         /* need to branch on the variable in which function is concave (or linear) */
+         if( !SCIPisFeasZero(scip, consdata->lhsviol) )
          {
-            /* need to branch on the variable in which function is concave (or linear) */
-            if( !SCIPisFeasZero(scip, consdata->lhsviol) )
-            {
-               /* regarding left hand side, we are concave in x and convex in y, so branch on x, if not fixed */
-               if( !SCIPisEQ(scip, SCIPvarGetLbLocal(xy[0]), SCIPvarGetUbLocal(xy[0])) )
-               {
-                  SCIPdebugMessage("register variable x = <%s> in convex-concave <%s> with violation %g %g\n", SCIPvarGetName(xy[0]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
-                  SCIP_CALL( SCIPaddExternBranchCand(scip, xy[0], consdata->lhsviol, SCIP_INVALID) );
-                  ++*nnotify;
-               }
-            }
-            if( !SCIPisFeasZero(scip, consdata->rhsviol) )
-            {
-               /* regarding right hand side, we are convex in x and concave in y, so branch on y, if not fixed */
-               if( !SCIPisEQ(scip, SCIPvarGetLbLocal(xy[1]), SCIPvarGetUbLocal(xy[1])) )
-               {
-                  SCIPdebugMessage("register variable y = <%s> in convex-concave <%s> with violation %g %g\n", SCIPvarGetName(xy[1]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
-                  SCIP_CALL( SCIPaddExternBranchCand(scip, xy[1], consdata->lhsviol, SCIP_INVALID) );
-                  ++*nnotify;
-               }
-            }
-            break;
-         }
-
-         case SCIP_BIVAR_1CONVEX_INDEFINITE:
-         {
-            if( !SCIPisFeasZero(scip, consdata->rhsviol) )
-               if( SCIPisEQ(scip, SCIPvarGetLbLocal(xy[0]), SCIPvarGetUbLocal(xy[0])) || SCIPisEQ(scip, SCIPvarGetLbLocal(xy[1]), SCIPvarGetUbLocal(xy[1])) )
-                  break;
-
-            /* register both variables, if not fixed */
+            /* regarding left hand side, we are concave in x and convex in y, so branch on x, if not fixed */
             if( !SCIPisEQ(scip, SCIPvarGetLbLocal(xy[0]), SCIPvarGetUbLocal(xy[0])) )
             {
-               SCIPdebugMessage("register variable x = <%s> in <%s> with violation %g %g\n", SCIPvarGetName(xy[0]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
+               SCIPdebugMessage("register variable x = <%s> in convex-concave <%s> with violation %g %g\n", SCIPvarGetName(xy[0]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
                SCIP_CALL( SCIPaddExternBranchCand(scip, xy[0], consdata->lhsviol, SCIP_INVALID) );
                ++*nnotify;
             }
-
+         }
+         if( !SCIPisFeasZero(scip, consdata->rhsviol) )
+         {
+            /* regarding right hand side, we are convex in x and concave in y, so branch on y, if not fixed */
             if( !SCIPisEQ(scip, SCIPvarGetLbLocal(xy[1]), SCIPvarGetUbLocal(xy[1])) )
             {
-               SCIPdebugMessage("register variable y = <%s> in <%s> with violation %g %g\n", SCIPvarGetName(xy[1]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
-               SCIP_CALL( SCIPaddExternBranchCand(scip, xy[1], consdata->lhsviol, SCIP_INVALID) );
-               ++*nnotify;
-            }
-
-            break;
-         }
-
-         case SCIP_BIVAR_ALLCONVEX:
-         {
-            if( SCIPisFeasZero(scip, consdata->lhsviol) )
-               continue;
-         }
-
-         default:
-         {
-            /* register both variables, if not fixed */
-            if( !SCIPisEQ(scip, SCIPvarGetLbLocal(xy[0]), SCIPvarGetUbLocal(xy[0])) )
-            {
-               SCIPdebugMessage("register variable x = <%s> in <%s> with violation %g %g\n", SCIPvarGetName(xy[0]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
-               SCIP_CALL( SCIPaddExternBranchCand(scip, xy[0], consdata->lhsviol, SCIP_INVALID) );
-               ++*nnotify;
-            }
-
-            if( !SCIPisEQ(scip, SCIPvarGetLbLocal(xy[1]), SCIPvarGetUbLocal(xy[1])) )
-            {
-               SCIPdebugMessage("register variable y = <%s> in <%s> with violation %g %g\n", SCIPvarGetName(xy[1]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
+               SCIPdebugMessage("register variable y = <%s> in convex-concave <%s> with violation %g %g\n", SCIPvarGetName(xy[1]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
                SCIP_CALL( SCIPaddExternBranchCand(scip, xy[1], consdata->lhsviol, SCIP_INVALID) );
                ++*nnotify;
             }
          }
+         break;
+      }
+
+      case SCIP_BIVAR_1CONVEX_INDEFINITE:
+      {
+         if( !SCIPisFeasZero(scip, consdata->rhsviol) )
+            if( SCIPisEQ(scip, SCIPvarGetLbLocal(xy[0]), SCIPvarGetUbLocal(xy[0])) || SCIPisEQ(scip, SCIPvarGetLbLocal(xy[1]), SCIPvarGetUbLocal(xy[1])) )
+               break;
+
+         /* register both variables, if not fixed */
+         if( !SCIPisEQ(scip, SCIPvarGetLbLocal(xy[0]), SCIPvarGetUbLocal(xy[0])) )
+         {
+            SCIPdebugMessage("register variable x = <%s> in <%s> with violation %g %g\n", SCIPvarGetName(xy[0]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
+            SCIP_CALL( SCIPaddExternBranchCand(scip, xy[0], consdata->lhsviol, SCIP_INVALID) );
+            ++*nnotify;
+         }
+
+         if( !SCIPisEQ(scip, SCIPvarGetLbLocal(xy[1]), SCIPvarGetUbLocal(xy[1])) )
+         {
+            SCIPdebugMessage("register variable y = <%s> in <%s> with violation %g %g\n", SCIPvarGetName(xy[1]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
+            SCIP_CALL( SCIPaddExternBranchCand(scip, xy[1], consdata->lhsviol, SCIP_INVALID) );
+            ++*nnotify;
+         }
+
+         break;
+      }
+
+      case SCIP_BIVAR_ALLCONVEX:
+      {
+         if( SCIPisFeasZero(scip, consdata->lhsviol) )
+            continue;
+      }
+
+      default:
+      {
+         /* register both variables, if not fixed */
+         if( !SCIPisEQ(scip, SCIPvarGetLbLocal(xy[0]), SCIPvarGetUbLocal(xy[0])) )
+         {
+            SCIPdebugMessage("register variable x = <%s> in <%s> with violation %g %g\n", SCIPvarGetName(xy[0]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
+            SCIP_CALL( SCIPaddExternBranchCand(scip, xy[0], consdata->lhsviol, SCIP_INVALID) );
+            ++*nnotify;
+         }
+
+         if( !SCIPisEQ(scip, SCIPvarGetLbLocal(xy[1]), SCIPvarGetUbLocal(xy[1])) )
+         {
+            SCIPdebugMessage("register variable y = <%s> in <%s> with violation %g %g\n", SCIPvarGetName(xy[1]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
+            SCIP_CALL( SCIPaddExternBranchCand(scip, xy[1], consdata->lhsviol, SCIP_INVALID) );
+            ++*nnotify;
+         }
+      }
       }
    }
 
@@ -4567,12 +4570,12 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
          rhs = SCIPinfinity(scip);
 
       SCIP_CALL( SCIPcreateConsLinear(scip, &cons, SCIPconsGetName(conss[c]),
-         consdata->z == NULL ? 0 : 1, consdata->z == NULL ? NULL : &consdata->z, &consdata->zcoef,
-         lhs, rhs,
-         SCIPconsIsInitial(conss[c]), SCIPconsIsSeparated(conss[c]), SCIPconsIsEnforced(conss[c]),
-         SCIPconsIsChecked(conss[c]), SCIPconsIsPropagated(conss[c]),  TRUE,
-         SCIPconsIsModifiable(conss[c]), SCIPconsIsDynamic(conss[c]), SCIPconsIsRemovable(conss[c]),
-         SCIPconsIsStickingAtNode(conss[c])) );
+            consdata->z == NULL ? 0 : 1, consdata->z == NULL ? NULL : &consdata->z, &consdata->zcoef,
+            lhs, rhs,
+            SCIPconsIsInitial(conss[c]), SCIPconsIsSeparated(conss[c]), SCIPconsIsEnforced(conss[c]),
+            SCIPconsIsChecked(conss[c]), SCIPconsIsPropagated(conss[c]),  TRUE,
+            SCIPconsIsModifiable(conss[c]), SCIPconsIsDynamic(conss[c]), SCIPconsIsRemovable(conss[c]),
+            SCIPconsIsStickingAtNode(conss[c])) );
 
       SCIPdebugMessage("replace violated nonlinear constraint <%s> by linear constraint after all nonlinear vars have been fixed\n", SCIPconsGetName(conss[c]) );
       SCIPdebug( SCIPprintCons(scip, cons, NULL) );
@@ -4604,7 +4607,7 @@ SCIP_RETCODE propagateBoundsTightenVar(
    SCIP_CONS*            cons,              /**< constraint that is propagated */
    SCIP_RESULT*          result,            /**< pointer where to update the result of the propagation call */
    int*                  nchgbds            /**< buffer where to add the the number of changed bounds */
-)
+   )
 {
    SCIP_Bool infeas;
    SCIP_Bool tightened;
@@ -4617,8 +4620,8 @@ SCIP_RETCODE propagateBoundsTightenVar(
    assert(nchgbds != NULL);
 
    if( SCIPintervalIsPositiveInfinity(SCIPinfinity(scip), bounds) ||
-       SCIPintervalIsNegativeInfinity(SCIPinfinity(scip), bounds) ||
-       SCIPintervalIsEmpty(bounds) )
+      SCIPintervalIsNegativeInfinity(SCIPinfinity(scip), bounds) ||
+      SCIPintervalIsEmpty(bounds) )
    {
       /* domain outside [-infty, +infty] or empty -> declare node infeasible */
       SCIPdebugMessage("found <%s> infeasible due to domain propagation for variable <%s>\n", cons != NULL ? SCIPconsGetName(cons) : "???", SCIPvarGetName(var));
@@ -4676,7 +4679,7 @@ SCIP_RETCODE propagateBoundsCons(
    SCIP_RESULT*          result,             /**< pointer to store the result of the propagation call */
    int*                  nchgbds,            /**< buffer where to add the the number of changed bounds */
    SCIP_Bool*            redundant           /**< buffer where to store whether constraint has been found to be redundant */
-  )
+   )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
@@ -4706,7 +4709,7 @@ SCIP_RETCODE propagateBoundsCons(
    /* extend interval by feastol to avoid cutoff in forward propagation if constraint is only almost feasible */
    SCIPintervalSetBounds(&consbounds,
       -infty2infty(SCIPinfinity(scip), INTERVALINFTY, -consdata->lhs+SCIPepsilon(scip)),
-       infty2infty(SCIPinfinity(scip), INTERVALINFTY,  consdata->rhs+SCIPepsilon(scip)) );
+      +infty2infty(SCIPinfinity(scip), INTERVALINFTY,  consdata->rhs+SCIPepsilon(scip)) );
 
    /* get activity for f(x,y) */
    ftermactivity = SCIPexprgraphGetNodeBounds(consdata->exprgraphnode);
@@ -4717,7 +4720,7 @@ SCIP_RETCODE propagateBoundsCons(
    {
       SCIPintervalSetBounds(&ztermactivity,
          -infty2infty(SCIPinfinity(scip), INTERVALINFTY, -MIN(SCIPvarGetLbLocal(consdata->z), SCIPvarGetUbLocal(consdata->z))),
-          infty2infty(SCIPinfinity(scip), INTERVALINFTY,  MAX(SCIPvarGetLbLocal(consdata->z), SCIPvarGetUbLocal(consdata->z))));
+         +infty2infty(SCIPinfinity(scip), INTERVALINFTY,  MAX(SCIPvarGetLbLocal(consdata->z), SCIPvarGetUbLocal(consdata->z))));
       SCIPintervalMulScalar(INTERVALINFTY, &ztermactivity, ztermactivity, consdata->zcoef);
    }
    else
@@ -4765,7 +4768,7 @@ SCIP_RETCODE propagateBoundsCons(
       {
          SCIPintervalSetBounds(&ztermactivity,
             -infty2infty(SCIPinfinity(scip), INTERVALINFTY, -MIN(SCIPvarGetLbLocal(consdata->z), SCIPvarGetUbLocal(consdata->z))),
-             infty2infty(SCIPinfinity(scip), INTERVALINFTY,  MAX(SCIPvarGetLbLocal(consdata->z), SCIPvarGetUbLocal(consdata->z))));
+            +infty2infty(SCIPinfinity(scip), INTERVALINFTY,  MAX(SCIPvarGetLbLocal(consdata->z), SCIPvarGetUbLocal(consdata->z))));
          SCIPintervalMulScalar(INTERVALINFTY, &ztermactivity, ztermactivity, consdata->zcoef);
       }
    }
@@ -4793,7 +4796,7 @@ SCIP_RETCODE propagateBounds(
    SCIP_RESULT*          result,             /**< pointer to store the result of the propagation calls */
    int*                  nchgbds,            /**< buffer where to add the the number of changed bounds */
    int*                  ndelconss           /**< buffer where to increase if a constraint was deleted (locally) due to redundancy */
-)
+   )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
@@ -4941,7 +4944,7 @@ SCIP_RETCODE proposeFeasibleSolution(
    int                   nconss,             /**< number of constraints */
    SCIP_SOL*             sol,                /**< solution to process */
    SCIP_Bool*            success             /**< buffer to store whether we succeeded to construct a solution that satisfies all provided constraints */
-)
+   )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
@@ -4995,7 +4998,7 @@ SCIP_RETCODE proposeFeasibleSolution(
 
       assert(viol != 0.0);
       if( consdata->mayincreasez &&
-          ((viol > 0.0 && consdata->zcoef > 0.0) || (viol < 0.0 && consdata->zcoef < 0.0)) )
+         ((viol > 0.0 && consdata->zcoef > 0.0) || (viol < 0.0 && consdata->zcoef < 0.0)) )
       {
          /* have variable where increasing makes the constraint less violated */
          var = consdata->z;
@@ -5026,7 +5029,7 @@ SCIP_RETCODE proposeFeasibleSolution(
 
       assert(viol != 0.0);
       if( consdata->maydecreasez &&
-          ((viol > 0.0 && consdata->zcoef < 0.0) || (viol < 0.0 && consdata->zcoef > 0.0)) )
+         ((viol > 0.0 && consdata->zcoef < 0.0) || (viol < 0.0 && consdata->zcoef > 0.0)) )
       {
          /* have variable where decreasing makes constraint less violated */
          var = consdata->z;
@@ -5237,11 +5240,11 @@ SCIP_RETCODE createConsFromQuadTerm(
    SCIPdebugMessage("upgrading constraint <%s> to bivariate constraint <%s> with convexity type %d\n", SCIPconsGetName(srccons), name, convextype);
 
    SCIP_CALL( SCIPcreateConsBivariate(scip, cons, name,
-      exprtree, convextype, z, coefz, lhs, rhs,
-      SCIPconsIsInitial(srccons), SCIPconsIsSeparated(srccons), SCIPconsIsEnforced(srccons),
-      SCIPconsIsChecked(srccons), SCIPconsIsPropagated(srccons), SCIPconsIsLocal(srccons),
-      SCIPconsIsModifiable(srccons), SCIPconsIsDynamic(srccons), SCIPconsIsRemovable(srccons),
-      SCIPconsIsStickingAtNode(srccons)) );
+         exprtree, convextype, z, coefz, lhs, rhs,
+         SCIPconsIsInitial(srccons), SCIPconsIsSeparated(srccons), SCIPconsIsEnforced(srccons),
+         SCIPconsIsChecked(srccons), SCIPconsIsPropagated(srccons), SCIPconsIsLocal(srccons),
+         SCIPconsIsModifiable(srccons), SCIPconsIsDynamic(srccons), SCIPconsIsRemovable(srccons),
+         SCIPconsIsStickingAtNode(srccons)) );
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *cons, NULL) ) );
 
    SCIP_CALL( SCIPexprtreeFree(&exprtree) );
@@ -5286,7 +5289,7 @@ SCIP_RETCODE createExprtreeFromMonomial(
    swapvars = FALSE;
    *convextype = SCIP_BIVAR_UNKNOWN;
    if( (p + q >= 1.0 && ((p > 1.0 && q < 0.0) || (p < 0.0 && q > 1.0))) ||
-       (p < 0.0 && q < 0.0) )
+      (p < 0.0 && q < 0.0) )
    {
       *convextype = SCIP_BIVAR_ALLCONVEX;
    }
@@ -5420,17 +5423,17 @@ SCIP_RETCODE createConsFromMonomial(
    if( srccons != NULL )
    {
       SCIP_CALL( SCIPcreateConsBivariate(scip, cons, name,
-         exprtree, convextype, z, zcoef, lhs, rhs,
-         SCIPconsIsInitial(srccons), SCIPconsIsSeparated(srccons), SCIPconsIsEnforced(srccons),
-         SCIPconsIsChecked(srccons), SCIPconsIsPropagated(srccons), SCIPconsIsLocal(srccons),
-         SCIPconsIsModifiable(srccons), SCIPconsIsDynamic(srccons), SCIPconsIsRemovable(srccons),
-         SCIPconsIsStickingAtNode(srccons)) );
+            exprtree, convextype, z, zcoef, lhs, rhs,
+            SCIPconsIsInitial(srccons), SCIPconsIsSeparated(srccons), SCIPconsIsEnforced(srccons),
+            SCIPconsIsChecked(srccons), SCIPconsIsPropagated(srccons), SCIPconsIsLocal(srccons),
+            SCIPconsIsModifiable(srccons), SCIPconsIsDynamic(srccons), SCIPconsIsRemovable(srccons),
+            SCIPconsIsStickingAtNode(srccons)) );
    }
    else
    {
       SCIP_CALL( SCIPcreateConsBivariate(scip, cons, name,
-         exprtree, convextype, z, zcoef, lhs, rhs,
-         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+            exprtree, convextype, z, zcoef, lhs, rhs,
+            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    }
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *cons, NULL) ) );
 
@@ -5627,7 +5630,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreBivariate)
       /* tell SCIP that we have something nonlinear */
       SCIPmarkNonlinearitiesPresent(scip);
       if( SCIPvarGetType(SCIPexprtreeGetVars(consdata->f)[0]) >= SCIP_VARTYPE_CONTINUOUS ||
-          SCIPvarGetType(SCIPexprtreeGetVars(consdata->f)[1]) >= SCIP_VARTYPE_CONTINUOUS )
+         SCIPvarGetType( SCIPexprtreeGetVars(consdata->f)[1]) >= SCIP_VARTYPE_CONTINUOUS )
          SCIPmarkContinuousNonlinearitiesPresent(scip);
    }
 
@@ -5705,9 +5708,9 @@ SCIP_DECL_CONSINITSOL(consInitsolBivariate)
          SCIP_NLROW* nlrow;
 
          SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[c]), 0.0,
-            consdata->z != NULL ? 1 : 0, consdata->z != NULL ? &consdata->z : NULL, &consdata->zcoef,
-            0, NULL, 0, NULL,
-            consdata->f, consdata->lhs, consdata->rhs) );
+               consdata->z != NULL ? 1 : 0, consdata->z != NULL ? &consdata->z : NULL, &consdata->zcoef,
+               0, NULL, 0, NULL,
+               consdata->f, consdata->lhs, consdata->rhs) );
 
          SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
          SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
@@ -5852,10 +5855,10 @@ SCIP_DECL_CONSTRANS(consTransBivariate)
    }
 
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
-      SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
-      SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),  SCIPconsIsLocal(sourcecons),
-      SCIPconsIsModifiable(sourcecons), SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons),
-      SCIPconsIsStickingAtNode(sourcecons)) );
+         SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
+         SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),  SCIPconsIsLocal(sourcecons),
+         SCIPconsIsModifiable(sourcecons), SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons),
+         SCIPconsIsStickingAtNode(sourcecons)) );
 
    return SCIP_OKAY;
 }
@@ -5973,64 +5976,64 @@ SCIP_DECL_CONSINITLP(consInitlpBivariate)
                SCIPvarGetLbGlobal(SCIPexprtreeGetVars(consdata->f)[0]), SCIPvarGetUbGlobal(SCIPexprtreeGetVars(consdata->f)[0]),
                SCIPvarGetName(SCIPexprtreeGetVars(consdata->f)[1]), xy[1],
                SCIPvarGetLbGlobal(SCIPexprtreeGetVars(consdata->f)[1]), SCIPvarGetUbGlobal(SCIPexprtreeGetVars(consdata->f)[1])
-            );
+               );
 
             /* try to generate one cut for each side */
             switch( consdata->convextype )
             {
-               case SCIP_BIVAR_ALLCONVEX:
+            case SCIP_BIVAR_ALLCONVEX:
+            {
+               if( !SCIPisInfinity(scip, -consdata->lhs) && !unbounded[0] && !unbounded[1] && (ix == 0 || ix == nref-1) && (iy == 0 || iy == nref-1) )
                {
-                  if( !SCIPisInfinity(scip, -consdata->lhs) && !unbounded[0] && !unbounded[1] && (ix == 0 || ix == nref-1) && (iy == 0 || iy == nref-1) )
-                  {
-                     /* lhs is finite and both variables are bounded, so can do overest. hyperplane
-                      * do this only for corner points, since we can get at most two cuts out of it
-                      * @todo generate only two cuts instead of four
-                      */
-                     SCIP_CALL( generateOverestimatingHyperplaneCut(scip, conshdlrdata->exprinterpreter, conss[c], xy, &row1) );
-                  }
-                  if( !SCIPisInfinity(scip,  consdata->rhs) )
-                  { /* rhs is finite */
-                     SCIP_CALL( generateLinearizationCut(scip, conshdlrdata->exprinterpreter, conss[c], xy, TRUE, &row2) );
-                  }
-                  break;
+                  /* lhs is finite and both variables are bounded, so can do overest. hyperplane
+                   * do this only for corner points, since we can get at most two cuts out of it
+                   * @todo generate only two cuts instead of four
+                   */
+                  SCIP_CALL( generateOverestimatingHyperplaneCut(scip, conshdlrdata->exprinterpreter, conss[c], xy, &row1) );
                }
+               if( !SCIPisInfinity(scip,  consdata->rhs) )
+               { /* rhs is finite */
+                  SCIP_CALL( generateLinearizationCut(scip, conshdlrdata->exprinterpreter, conss[c], xy, TRUE, &row2) );
+               }
+               break;
+            }
 
-               case SCIP_BIVAR_CONVEX_CONCAVE:
+            case SCIP_BIVAR_CONVEX_CONCAVE:
+            {
+               if( !SCIPisInfinity(scip, -consdata->lhs) && !unbounded[0])
                {
-                  if( !SCIPisInfinity(scip, -consdata->lhs) && !unbounded[0])
-                  {
-                     /* lhs is finite and x is bounded */
-                     SCIP_CALL( generateConvexConcaveEstimator(scip, conshdlrdata->exprinterpreter, conss[c], xy, SCIP_SIDETYPE_LEFT, &row1) );
-                  }
-                  if( !SCIPisInfinity(scip,  consdata->rhs) && !unbounded[1])
-                  {
-                     /* rhs is finite and y is bounded */
-                     SCIP_CALL( generateConvexConcaveEstimator(scip, conshdlrdata->exprinterpreter, conss[c], xy, SCIP_SIDETYPE_RIGHT, &row2) );
-                  }
-                  break;
+                  /* lhs is finite and x is bounded */
+                  SCIP_CALL( generateConvexConcaveEstimator(scip, conshdlrdata->exprinterpreter, conss[c], xy, SCIP_SIDETYPE_LEFT, &row1) );
                }
+               if( !SCIPisInfinity(scip,  consdata->rhs) && !unbounded[1])
+               {
+                  /* rhs is finite and y is bounded */
+                  SCIP_CALL( generateConvexConcaveEstimator(scip, conshdlrdata->exprinterpreter, conss[c], xy, SCIP_SIDETYPE_RIGHT, &row2) );
+               }
+               break;
+            }
 
-               case SCIP_BIVAR_1CONVEX_INDEFINITE:
+            case SCIP_BIVAR_1CONVEX_INDEFINITE:
+            {
+               if( !SCIPisInfinity(scip, -consdata->lhs) && !unbounded[0] && !unbounded[1] && (ix == 0 || ix == nref-1) && (iy == 0 || iy == nref-1) )
                {
-                  if( !SCIPisInfinity(scip, -consdata->lhs) && !unbounded[0] && !unbounded[1] && (ix == 0 || ix == nref-1) && (iy == 0 || iy == nref-1) )
-                  {
-                     /* lhs is finite and both variables are bounded
-                      * do this only for corner points, since we can get at most two cuts out of it
-                      * @todo generate only two cuts instead of four
-                      */
-                     SCIP_CALL( generateOverestimatingHyperplaneCut(scip, conshdlrdata->exprinterpreter, conss[c], xy, &row1) );
-                  }
-                  if( !SCIPisInfinity(scip,  consdata->rhs) && !unbounded[0] && !unbounded[1] )
-                  { /* rhs is finite and both variables are bounded */
-                     SCIP_CALL( generate1ConvexIndefiniteUnderestimator(scip, conshdlrdata->exprinterpreter, conss[c], xy, &row2) );
-                  }
-                  break;
+                  /* lhs is finite and both variables are bounded
+                   * do this only for corner points, since we can get at most two cuts out of it
+                   * @todo generate only two cuts instead of four
+                   */
+                  SCIP_CALL( generateOverestimatingHyperplaneCut(scip, conshdlrdata->exprinterpreter, conss[c], xy, &row1) );
                }
+               if( !SCIPisInfinity(scip,  consdata->rhs) && !unbounded[0] && !unbounded[1] )
+               { /* rhs is finite and both variables are bounded */
+                  SCIP_CALL( generate1ConvexIndefiniteUnderestimator(scip, conshdlrdata->exprinterpreter, conss[c], xy, &row2) );
+               }
+               break;
+            }
 
-               default:
-               {
-                  SCIPwarningMessage("initlp for convexity type %d not implemented\n", consdata->convextype);
-               }
+            default:
+            {
+               SCIPwarningMessage("initlp for convexity type %d not implemented\n", consdata->convextype);
+            }
             }
 
             /* check numerics */
@@ -6243,7 +6246,8 @@ SCIP_DECL_CONSENFOLP(consEnfolpBivariate)
    if( nnotify == 0 && !solinfeasible )
    {
       /* fallback 2: separation probably failed because of numerical difficulties with a convex constraint;
-        if noone declared solution infeasible yet and we had not even found a weak cut, try to resolve by branching */
+       * if noone declared solution infeasible yet and we had not even found a weak cut, try to resolve by branching
+       */
       SCIP_VAR* brvar = NULL;
       SCIP_CALL( registerLargeLPValueVariableForBranching(scip, conss, nconss, &brvar) );
       if( brvar == NULL )
@@ -6541,15 +6545,15 @@ SCIP_DECL_CONSPRESOL(consPresolBivariate)
    SCIP_CALL( propagateBounds(scip, conshdlr, conss, nconss, &propresult, nchgbds, ndelconss) );
    switch( propresult )
    {
-      case SCIP_REDUCEDDOM:
-         *result = SCIP_SUCCESS;
-         break;
-      case SCIP_CUTOFF:
-         SCIPdebugMessage("propagation says problem is infeasible in presolve\n");
-         *result = SCIP_CUTOFF;
-         return SCIP_OKAY;
-      default:
-         assert(propresult == SCIP_DIDNOTFIND || propresult == SCIP_DIDNOTRUN);
+   case SCIP_REDUCEDDOM:
+      *result = SCIP_SUCCESS;
+      break;
+   case SCIP_CUTOFF:
+      SCIPdebugMessage("propagation says problem is infeasible in presolve\n");
+      *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
+   default:
+      assert(propresult == SCIP_DIDNOTFIND || propresult == SCIP_DIDNOTRUN);
    }
 
    return SCIP_OKAY;
@@ -6818,16 +6822,16 @@ SCIP_DECL_CONSPRINT(consPrintBivariate)
    /* print convexity type, if known */
    switch( consdata->convextype )
    {
-      case SCIP_BIVAR_ALLCONVEX:
-         SCIPinfoMessage(scip, file, " [allconvex]");
-         break;
-      case SCIP_BIVAR_1CONVEX_INDEFINITE:
-         SCIPinfoMessage(scip, file, " [1-convex]");
-         break;
-      case SCIP_BIVAR_CONVEX_CONCAVE:
-         SCIPinfoMessage(scip, file, " [convex-concave]");
-         break;
-      default: ;
+   case SCIP_BIVAR_ALLCONVEX:
+      SCIPinfoMessage(scip, file, " [allconvex]");
+      break;
+   case SCIP_BIVAR_1CONVEX_INDEFINITE:
+      SCIPinfoMessage(scip, file, " [1-convex]");
+      break;
+   case SCIP_BIVAR_CONVEX_CONCAVE:
+      SCIPinfoMessage(scip, file, " [convex-concave]");
+      break;
+   default: ;
    }
 
    return SCIP_OKAY;
@@ -6891,8 +6895,8 @@ SCIP_DECL_CONSCOPY(consCopyBivariate)
    if( *valid )
    {
       SCIP_CALL( SCIPcreateConsBivariate(scip, cons, name ? name : SCIPconsGetName(sourcecons),
-         f, consdata->convextype, z, consdata->zcoef, consdata->lhs, consdata->rhs,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+            f, consdata->convextype, z, consdata->zcoef, consdata->lhs, consdata->rhs,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
 
    if( f != NULL )
@@ -7008,7 +7012,7 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdBivariate)
       }
 
       SCIP_CALL( createConsFromQuadTerm(scip, cons, &upgdconss[0], SCIPconsGetName(cons),
-         x, y, z, coefxx, coefx, coefyy, coefy, coefxy, zcoef, SCIPgetLhsQuadratic(scip, cons), SCIPgetRhsQuadratic(scip, cons)) );
+            x, y, z, coefxx, coefx, coefyy, coefy, coefxy, zcoef, SCIPgetLhsQuadratic(scip, cons), SCIPgetRhsQuadratic(scip, cons)) );
       *nupgdconss = 1;
    }
    else
@@ -7069,13 +7073,13 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdBivariate)
 
       /* initial remaining quadratic constraint: take linear part and constraint sides from original constraint */
       SCIP_CALL( SCIPcreateConsQuadratic(scip, &quadcons, SCIPconsGetName(cons),
-         SCIPgetNLinearVarsQuadratic(scip, cons), SCIPgetLinearVarsQuadratic(scip, cons), SCIPgetCoefsLinearVarsQuadratic(scip, cons),
-         0, NULL, NULL, NULL,
-         upgdlhs ? SCIPgetLhsQuadratic(scip, cons) : -SCIPinfinity(scip),
-         upgdrhs ? SCIPgetRhsQuadratic(scip, cons) :  SCIPinfinity(scip),
-         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
-         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
+            SCIPgetNLinearVarsQuadratic(scip, cons), SCIPgetLinearVarsQuadratic(scip, cons), SCIPgetCoefsLinearVarsQuadratic(scip, cons),
+            0, NULL, NULL, NULL,
+            upgdlhs ? SCIPgetLhsQuadratic(scip, cons) : -SCIPinfinity(scip),
+            upgdrhs ? SCIPgetRhsQuadratic(scip, cons) :  SCIPinfinity(scip),
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
+            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
 
       /* remember for each quadratic variable whether its linear and square part has been moved into a bivariate constraint */
       SCIP_CALL( SCIPallocBufferArray(scip, &marked, nquadvarterms) );
@@ -7133,7 +7137,7 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdBivariate)
          /* create new auxiliary variable for bilinear quad. term in x and y */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_auxvar%d", SCIPconsGetName(cons), *nupgdconss);
          SCIP_CALL( SCIPcreateVar(scip, &auxvar, name, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
-            SCIP_VARTYPE_CONTINUOUS, SCIPconsIsInitial(cons), TRUE, NULL, NULL, NULL, NULL, NULL) );
+               SCIP_VARTYPE_CONTINUOUS, SCIPconsIsInitial(cons), TRUE, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, auxvar) );
 
          /* add 1*auxvar to quadcons */
@@ -7143,9 +7147,9 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdBivariate)
          assert(*nupgdconss < upgdconsssize);
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_auxcons%d", SCIPconsGetName(cons), *nupgdconss);
          SCIP_CALL( createConsFromQuadTerm(scip, cons, &upgdconss[*nupgdconss], name,
-            x, y, auxvar, coefxx, coefx, coefyy, coefy, coefxy, -1.0,
-            SCIPisInfinity(scip, -SCIPgetLhsQuadratic(scip, cons)) ? -SCIPinfinity(scip) : 0.0,
-            SCIPisInfinity(scip,  SCIPgetRhsQuadratic(scip, cons)) ?  SCIPinfinity(scip) : 0.0) );
+               x, y, auxvar, coefxx, coefx, coefyy, coefy, coefxy, -1.0,
+               SCIPisInfinity(scip, -SCIPgetLhsQuadratic(scip, cons)) ? -SCIPinfinity(scip) : 0.0,
+               SCIPisInfinity(scip,  SCIPgetRhsQuadratic(scip, cons)) ?  SCIPinfinity(scip) : 0.0) );
          ++*nupgdconss;
 
          /* compute value of auxvar in debug solution */
@@ -7221,14 +7225,14 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdBivariate)
             assert(*nupgdconss < upgdconsssize);
             /* copy of original quadratic constraint with one of the sides relaxed */
             SCIP_CALL( SCIPcreateConsQuadratic2(scip, &upgdconss[*nupgdconss], SCIPconsGetName(cons),
-               SCIPgetNLinearVarsQuadratic(scip, cons), SCIPgetLinearVarsQuadratic(scip, cons), SCIPgetCoefsLinearVarsQuadratic(scip, cons),
-               SCIPgetNQuadVarTermsQuadratic(scip, cons), SCIPgetQuadVarTermsQuadratic(scip, cons),
-               SCIPgetNBilinTermsQuadratic(scip, cons), SCIPgetBilinTermsQuadratic(scip, cons),
-               upgdlhs ? -SCIPinfinity(scip) : SCIPgetLhsQuadratic(scip, cons),
-               upgdrhs ?  SCIPinfinity(scip) : SCIPgetRhsQuadratic(scip, cons),
-               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
-               SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
+                  SCIPgetNLinearVarsQuadratic(scip, cons), SCIPgetLinearVarsQuadratic(scip, cons), SCIPgetCoefsLinearVarsQuadratic(scip, cons),
+                  SCIPgetNQuadVarTermsQuadratic(scip, cons), SCIPgetQuadVarTermsQuadratic(scip, cons),
+                  SCIPgetNBilinTermsQuadratic(scip, cons), SCIPgetBilinTermsQuadratic(scip, cons),
+                  upgdlhs ? -SCIPinfinity(scip) : SCIPgetLhsQuadratic(scip, cons),
+                  upgdrhs ?  SCIPinfinity(scip) : SCIPgetRhsQuadratic(scip, cons),
+                  SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+                  SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
+                  SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
             ++*nupgdconss;
          }
       }
@@ -7295,7 +7299,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformBivariate)
 
    /* so far only support variables as arguments @todo could allow more here, e.g., f(x)^pg(y)^q */
    if( SCIPexprgraphGetNodeOperator(SCIPexprgraphGetNodeChildren(node)[0]) != SCIP_EXPR_VARIDX ||
-       SCIPexprgraphGetNodeOperator(SCIPexprgraphGetNodeChildren(node)[1]) != SCIP_EXPR_VARIDX )
+      (SCIPexprgraphGetNodeOperator(SCIPexprgraphGetNodeChildren(node)[1]) != SCIP_EXPR_VARIDX) )
       return SCIP_OKAY;
 
    x = (SCIP_VAR*)SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[0]);
@@ -7311,12 +7315,12 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformBivariate)
    /* create auxiliary variable */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nlreform%dbv", *naddcons);
    SCIP_CALL( SCIPcreateVar(scip, &auxvar, name, SCIPexprgraphGetNodeBounds(node).inf, SCIPexprgraphGetNodeBounds(node).sup,
-      0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
+         0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, auxvar) );
 
    /* create bivariate constraint */
    SCIP_CALL( createConsFromMonomial(scip, NULL, &cons, name, x, y, auxvar,
-      SCIPexprGetMonomialCoef(monomial), expx, expy, -1.0, -SCIPexprgraphGetNodePolynomialConstant(node), -SCIPexprgraphGetNodePolynomialConstant(node)) );
+         SCIPexprGetMonomialCoef(monomial), expx, expy, -1.0, -SCIPexprgraphGetNodePolynomialConstant(node), -SCIPexprgraphGetNodePolynomialConstant(node)) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -7400,7 +7404,7 @@ SCIP_RETCODE SCIPincludeConshdlrBivariate(
          &conshdlrdata->ninitlprefpoints, FALSE, 3, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_boundchange", "signals a bound tightening in a linear variable to a bivariate constraint",
-      NULL, NULL, NULL, NULL, NULL, NULL, NULL, processLinearVarEvent, NULL) );
+         NULL, NULL, NULL, NULL, NULL, NULL, NULL, processLinearVarEvent, NULL) );
    conshdlrdata->linvareventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_boundchange");
 
    SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_boundchange2", "signals a bound change in a nonlinear variable to the bivariate constraint handler",
@@ -7415,7 +7419,7 @@ SCIP_RETCODE SCIPincludeConshdlrBivariate(
 
    /* create expression graph */
    SCIP_CALL( SCIPexprgraphCreate(SCIPblkmem(scip), &conshdlrdata->exprgraph, -1, -1,
-      exprgraphVarAdded, exprgraphVarRemove, NULL, (void*)conshdlrdata) );
+         exprgraphVarAdded, exprgraphVarRemove, NULL, (void*)conshdlrdata) );
    conshdlrdata->isremovedfixings = TRUE;
    conshdlrdata->ispropagated = TRUE;
 
@@ -7529,7 +7533,7 @@ SCIP_Real SCIPgetLinearCoefBivariate(
 SCIP_EXPRTREE* SCIPgetExprtreeBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
-)
+   )
 {
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
@@ -7541,7 +7545,7 @@ SCIP_EXPRTREE* SCIPgetExprtreeBivariate(
 SCIP_Real SCIPgetLhsBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
-)
+   )
 {
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
@@ -7553,7 +7557,7 @@ SCIP_Real SCIPgetLhsBivariate(
 SCIP_Real SCIPgetRhsBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
-)
+   )
 {
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
