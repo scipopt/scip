@@ -131,6 +131,7 @@ fixed bugs:
   continuous variables fixed to a close-to-zero value.
 - fixed bug in sepa_zerohalf.c concerning inconsistent construction of solution array of variables and fixed wrong assert about variable bounds
 - fixed possible buffer overrun in tclique_graph.c
+- fixed bug w.r.t. infinity loop during propagation
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})
