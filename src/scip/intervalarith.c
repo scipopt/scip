@@ -1471,7 +1471,7 @@ void SCIPintervalSquareRoot(
       return;
    }
 
-   if( operand.inf == operand.sup )
+   if( operand.inf == operand.sup )  /*lint !e777 */
    {
       if( operand.inf >= infinity )
       {
@@ -1619,7 +1619,7 @@ SCIP_Real SCIPintervalPowerScalarIntegerInf(
          else
             n >>= 1;
          z = z * z;
-      } while( TRUE );
+      } while( TRUE );  /*lint !e506 */
 
       SCIPintervalSetRoundingMode(roundmode);
    }
@@ -1631,7 +1631,6 @@ SCIP_Real SCIPintervalPowerScalarIntegerInf(
  * both operands need to be finite numbers
  * need to have operand1 >= 0 and need to have operand2 >= 0 if operand1 == 0
  */
-extern
 SCIP_Real SCIPintervalPowerScalarIntegerSup(
    SCIP_Real             operand1,           /**< first operand of operation */
    int                   operand2            /**< second operand of operation */
@@ -1693,7 +1692,7 @@ SCIP_Real SCIPintervalPowerScalarIntegerSup(
          else
             n >>= 1;
          z = z * z;
-      } while( TRUE );
+      } while( TRUE );  /*lint !e506 */
 
       SCIPintervalSetRoundingMode(roundmode);
    }
@@ -1705,7 +1704,6 @@ SCIP_Real SCIPintervalPowerScalarIntegerSup(
  * both operands need to be finite numbers
  * need to have operand1 >= 0 and need to have operand2 >= 0 if operand1 == 0
  */
-extern
 void SCIPintervalPowerScalarInteger(
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_Real             operand1,           /**< first operand of operation */
@@ -1781,7 +1779,7 @@ void SCIPintervalPowerScalarInteger(
             n >>= 1;
          z_inf = negate(negate(z_inf) * z_inf);
          z_sup = z_sup * z_sup;
-      } while( TRUE );
+      } while( TRUE );  /*lint !e506 */
 
       SCIPintervalSetRoundingMode(roundmode);
 
@@ -2087,7 +2085,6 @@ void SCIPintervalPowerScalar(
  * that is, for y = x^p with p = exponent a given scalar and y = image a given interval,
  * computes a subinterval x of basedomain such that y in x^p and such that for all z in basedomain less x, z^p not in y
  */
-extern
 void SCIPintervalPowerScalarInverse(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -2139,7 +2136,7 @@ void SCIPintervalPowerScalarInverse(
    {
       SCIPintervalSetBounds(&tmp, MAX(image.inf, 0.0), image.sup);
       SCIPintervalPower(infinity, resultant, tmp, exprecip);
-      if( basedomain.inf <= -resultant->inf && EPSISINT(exponent, 0.0) && (int)exponent % 2 == 0 )
+      if( basedomain.inf <= -resultant->inf && EPSISINT(exponent, 0.0) && (int)exponent % 2 == 0 )  /*lint !e835 */
          SCIPintervalSetBounds(resultant, -resultant->sup, resultant->sup);
       SCIPintervalIntersect(resultant, *resultant, basedomain);
    }
@@ -2147,7 +2144,7 @@ void SCIPintervalPowerScalarInverse(
       SCIPintervalSetEmpty(resultant);
 
    /* invert negative part of image, if any and if base can take negative value and if exponent is such that negative values are possible */
-   if( image.inf < 0.0 && basedomain.inf < 0.0 && EPSISINT(exponent, 0.0) && ((int)exponent % 2 != 0) )
+   if( image.inf < 0.0 && basedomain.inf < 0.0 && EPSISINT(exponent, 0.0) && ((int)exponent % 2 != 0) )  /*lint !e835 */
    {
       SCIPintervalSetBounds(&tmp, MAX(-image.sup, 0.0), -image.inf);
       SCIPintervalPower(infinity, &tmp, tmp, exprecip);
@@ -2176,7 +2173,7 @@ void SCIPintervalSignPowerScalar(
    assert(operand1.inf <= operand1.sup);
    assert(operand2     >= 0.0);
 
-   if( operand2 == infinity )
+   if( operand2 == infinity )  /*lint !e777 */
    {
       /* 0^infinity =  0
        * +^infinity =  infinity
@@ -2194,7 +2191,8 @@ void SCIPintervalSignPowerScalar(
    }
 
    if( operand2 == 0.0 )
-   { /* special case, since x^0 = 1 for x != 0, but 0^0 = 0 */
+   {
+      /* special case, since x^0 = 1 for x != 0, but 0^0 = 0 */
       if( operand1.inf < 0.0 )
          resultant->inf = -1.0;
       else if( operand1.inf == 0.0 )
@@ -2430,7 +2428,7 @@ void SCIPintervalExp(
       return;
    }
 
-   if( operand.inf == operand.sup )
+   if( operand.inf == operand.sup )  /*lint !e777 */
    {
       if( operand.inf == 0.0 )
       {
@@ -2502,7 +2500,7 @@ void SCIPintervalLog(
       return;
    }
 
-   if( operand.inf == operand.sup )
+   if( operand.inf == operand.sup )  /*lint !e777 */
    {
       if( operand.sup <= 0.0 )
       {
@@ -3041,7 +3039,7 @@ void SCIPintervalQuadBivar(
 
    /* check minima/maxima of expression */
    denom = 4.0 * ax_ * ay_ - axy_ * axy_;
-   if( !EPSZ(denom, 1e-9) )
+   if( fabsl(denom) > 1e-9 )
    {
       x = (axy_ * by_ - 2.0 * ay_ * bx_) / denom;
       y = (axy_ * bx_ - 2.0 * ax_ * by_) / denom;
@@ -3052,7 +3050,7 @@ void SCIPintervalQuadBivar(
          maxval = MAX(val, maxval);
       }
    }
-   else if( EPSEQ(2.0 * ay_ * bx_, axy_ * by_, 1e-9) )
+   else if( fabsl(2.0 * ay_ * bx_ - axy_ * by_) <= 1e-9 )
    {
       /* The whole line (x, -bx/axy - (axy/2ay) x) defines an extreme point with value -ay bx^2 / axy^2
        * If x is unbounded, then there is an (x,y) with y in ybnds where the extreme value is assumed.
@@ -3106,7 +3104,7 @@ void SCIPintervalQuadBivar(
 
       SCIPintervalSet(&ycoef, axy * xbnds.inf + by);
       SCIPintervalQuad(infinity, &tmp, ay, ycoef, ybnds);
-      SCIPintervalAddScalar(infinity, &tmp, tmp, ax_ * xbnds.inf * xbnds.inf + bx_ * xbnds.inf);
+      SCIPintervalAddScalar(infinity, &tmp, tmp, (SCIP_Real)(ax_ * xbnds.inf * xbnds.inf + bx_ * xbnds.inf));
       minval = MIN(tmp.inf, minval);
       maxval = MAX(tmp.sup, maxval);
    }
@@ -3149,7 +3147,7 @@ void SCIPintervalQuadBivar(
 
       SCIPintervalSet(&ycoef, axy * xbnds.sup + by);
       SCIPintervalQuad(infinity, &tmp, ay, ycoef, ybnds);
-      SCIPintervalAddScalar(infinity, &tmp, tmp, ax_ * xbnds.sup * xbnds.sup + bx * xbnds.sup);
+      SCIPintervalAddScalar(infinity, &tmp, tmp, (SCIP_Real)(ax_ * xbnds.sup * xbnds.sup + bx * xbnds.sup));
       minval = MIN(tmp.inf, minval);
       maxval = MAX(tmp.sup, maxval);
    }
@@ -3235,14 +3233,14 @@ void SCIPintervalQuadBivar(
 
       SCIPintervalSet(&xcoef, axy * ybnds.sup + bx);
       SCIPintervalQuad(infinity, &tmp, ax, xcoef, xbnds);
-      SCIPintervalAddScalar(infinity, &tmp, tmp, ay * ybnds.sup * ybnds.sup + by * ybnds.sup);
+      SCIPintervalAddScalar(infinity, &tmp, tmp, (SCIP_Real)(ay * ybnds.sup * ybnds.sup + by * ybnds.sup));
       minval = MIN(tmp.inf, minval);
       maxval = MAX(tmp.sup, maxval);
    }
 
-   minval -= 1e-10 * REALABS(minval);
-   maxval += 1e-10 * REALABS(maxval);
-   SCIPintervalSetBounds(resultant, minval, maxval);
+   minval -= 1e-10 * fabsl(minval);
+   maxval += 1e-10 * fabsl(maxval);
+   SCIPintervalSetBounds(resultant, (SCIP_Real)minval, (SCIP_Real)maxval);
 
    SCIPdebugMessage("range for %gx^2 + %gy^2 + %gxy + %gx + %gy = [%Lg, %Lg] for x = [%g, %g], y=[%g, %g]\n",
       ax, ay, axy, bx, by, minval, maxval, xbnds.inf, xbnds.sup, ybnds.inf, ybnds.sup);
@@ -3349,7 +3347,7 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
       long double rcoef_yy;
       long double rcoef_const;
 
-      sqrtax = sqrt(ax_);
+      sqrtax = sqrtl(ax_);
 
       /* rewrite equation as (sqrt(ax)x + b(y))^2 \in r(rhs,y), where
        * b(y) = (bx + axy y)/(2sqrt(ax)), r(rhs,y) = rhs - ay y^2 - by y + b(y)^2
@@ -3369,9 +3367,8 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
          SCIP_INTERVAL ycoef;
          SCIP_Real ub;
 
-         SCIPintervalSet(&ycoef, rcoef_y);
-         ub = SCIPintervalQuadUpperBound(infinity, rcoef_yy, ycoef, ybnds);
-         ub += rhs.sup + rcoef_const;
+         SCIPintervalSet(&ycoef, (SCIP_Real)rcoef_y);
+         ub = (SCIP_Real)(SCIPintervalQuadUpperBound(infinity, (SCIP_Real)rcoef_yy, ycoef, ybnds) + rhs.sup + rcoef_const);
 
          if( EPSN(ub, 1e-9) )
          {
@@ -3438,8 +3435,11 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
 
             if( c > 0.0 )
             {
-               minvalleft  = MIN(-sqrt(c) - b, minvalleft);
-               maxvalright = MAX( sqrt(c) - b, maxvalright);
+               long double sqrtc;
+
+               sqrtc = sqrtl(c);
+               minvalleft  = MIN(-sqrtc - b, minvalleft);
+               maxvalright = MAX( sqrtc - b, maxvalright);
             }
          }
 
@@ -3449,8 +3449,11 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
 
             if( c > 0.0 )
             {
-               maxvalleft  = MAX(-sqrt(c) - b, maxvalleft);
-               minvalright = MIN( sqrt(c) - b, minvalright);
+               long double sqrtc;
+
+               sqrtc = sqrtl(c);
+               maxvalleft  = MAX(-sqrtc - b, maxvalleft);
+               minvalright = MIN( sqrtc - b, minvalright);
             }
          }
       }
@@ -3493,8 +3496,11 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
 
             if( c > 0.0 )
             {
-               minvalleft  = MIN(-sqrt(c) - b, minvalleft);
-               maxvalright = MAX( sqrt(c) - b, maxvalright);
+               long double sqrtc;
+
+               sqrtc = sqrtl(c);
+               minvalleft  = MIN(-sqrtc - b, minvalleft);
+               maxvalright = MAX( sqrtc - b, maxvalright);
             }
          }
 
@@ -3504,8 +3510,11 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
 
             if( c > 0.0 )
             {
-               maxvalleft  = MAX(-sqrt(c) - b, maxvalleft);
-               minvalright = MIN( sqrt(c) - b, minvalright);
+               long double sqrtc;
+
+               sqrtc = sqrtl(c);
+               maxvalleft  = MAX(-sqrtc - b, maxvalleft);
+               minvalright = MIN( sqrtc - b, minvalright);
             }
          }
       }
@@ -3514,7 +3523,7 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
        * if ay = 0 or 2ay*bx == axy*by, then there is no ymin */
       if( !EPSZ(ay, 1e-9) )
       {
-         if( !EPSEQ(axy_*axy_, 4.0*ax_*ay_, 1e-9) )
+         if( fabsl(axy_*axy_ - 4.0*ax_*ay_) > 1e-9 )
          {
             long double sqrtterm;
 
@@ -3523,7 +3532,7 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
                sqrtterm = axy_ * axy_ * ay_ * (ay_ * bx_ * bx_ - axy_ * bx_ * by_ + ax_ * by_ * by_ - axy_ * axy_ * rhs.sup + 4.0 * ax_ * ay_ * rhs.sup);
                if( !EPSN(sqrtterm, 1e-9) )
                {
-                  sqrtterm = sqrt(MAX(sqrtterm, 0.0));
+                  sqrtterm = sqrtl(MAX(sqrtterm, 0.0));
                   /* check first candidate for extreme points of +/-sqrt(rhs(r,y))-b(y) */
                   ymin = axy_ * ay_ * bx_ - 2.0 * ax_ * ay_ * by_ - sqrtterm;
                   ymin /= ay_;
@@ -3539,8 +3548,11 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
 
                      if( c > 0.0 )
                      {
-                        minvalleft  = MIN(-sqrt(c) - b, minvalleft);
-                        maxvalright = MAX( sqrt(c) - b, maxvalright);
+                        long double sqrtc;
+
+                        sqrtc = sqrtl(c);
+                        minvalleft  = MIN(-sqrtc - b, minvalleft);
+                        maxvalright = MAX( sqrtc - b, maxvalright);
                      }
                   }
 
@@ -3559,8 +3571,11 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
 
                      if( c > 0.0 )
                      {
-                        minvalleft  = MIN(-sqrt(c) - b, minvalleft);
-                        maxvalright = MAX( sqrt(c) - b, maxvalright);
+                        long double sqrtc;
+
+                        sqrtc = sqrtl(c);
+                        minvalleft  = MIN(-sqrtc - b, minvalleft);
+                        maxvalright = MAX( sqrtc - b, maxvalright);
                      }
                   }
                }
@@ -3571,7 +3586,7 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
                sqrtterm = axy_ * axy_ * ay_ * (ay_ * bx_ * bx_ - axy_ * bx_ * by_ + ax_ * by_ * by_ - axy_ * axy_ * rhs.inf + 4.0 * ax_ * ay_ * rhs.inf);
                if( !EPSN(sqrtterm, 1e-9) )
                {
-                  sqrtterm = sqrt(MAX(sqrtterm, 0.0));
+                  sqrtterm = sqrtl(MAX(sqrtterm, 0.0));
                   /* check first candidate for extreme points of +/-sqrt(r(rhs,y))-b(y) */
                   ymin = axy_ * ay_ * bx_ - 2.0 * ax_ * ay_ * by_ - sqrtterm;
                   ymin /= ay_;
@@ -3587,8 +3602,11 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
 
                      if( c > 0.0 )
                      {
-                        maxvalleft  = MAX(-sqrt(c) - b, maxvalleft);
-                        minvalright = MIN( sqrt(c) - b, minvalright);
+                        long double sqrtc;
+
+                        sqrtc = sqrtl(c);
+                        maxvalleft  = MAX(-sqrtc - b, maxvalleft);
+                        minvalright = MIN( sqrtc - b, minvalright);
                      }
                   }
 
@@ -3607,15 +3625,18 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
 
                      if( c > 0.0 )
                      {
-                        maxvalleft  = MAX(-sqrt(c) - b, maxvalleft);
-                        minvalright = MIN( sqrt(c) - b, minvalright);
+                        long double sqrtc;
+
+                        sqrtc = sqrtl(c);
+                        maxvalleft  = MAX(-sqrtc - b, maxvalleft);
+                        minvalright = MIN( sqrtc - b, minvalright);
                      }
                   }
                }
             }
 
          }
-         else if( !EPSEQ(2.0 * ay_ * bx_, axy_ * by_, 1e-9) )
+         else if( fabsl(2.0 * ay_ * bx_ - axy_ * by_) > 1e-9 )
          {
             if( rhs.sup < infinity )
             {
@@ -3633,8 +3654,11 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
 
                   if( c > 0.0 )
                   {
-                     minvalleft  = MIN(-sqrt(c) - b, minvalleft);
-                     maxvalright = MAX( sqrt(c) - b, maxvalright);
+                     long double sqrtc;
+
+                     sqrtc = sqrtl(c);
+                     minvalleft  = MIN(-sqrtc - b, minvalleft);
+                     maxvalright = MAX( sqrtc - b, maxvalright);
                   }
                }
             }
@@ -3655,8 +3679,11 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
 
                   if( c > 0.0 )
                   {
-                     maxvalleft  = MAX(-sqrt(c) - b, maxvalleft);
-                     minvalright = MIN( sqrt(c) - b, minvalright);
+                     long double sqrtc;
+
+                     sqrtc = sqrtl(c);
+                     maxvalleft  = MAX(-sqrtc - b, maxvalleft);
+                     minvalright = MIN( sqrtc - b, minvalright);
                   }
                }
             }
@@ -3680,9 +3707,9 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
          long double b;
 
          /* setup rcoef_yy, rcoef_y and -rhs-rcoef_const as intervals */
-         SCIPintervalSet(&rcoef_yy_int, rcoef_yy);
-         SCIPintervalSet(&rcoef_y_int, rcoef_y);
-         SCIPintervalSetBounds(&rhs2, -rhs.sup - rcoef_const, -rhs.inf - rcoef_const);
+         SCIPintervalSet(&rcoef_yy_int, (SCIP_Real)rcoef_yy);
+         SCIPintervalSet(&rcoef_y_int, (SCIP_Real)rcoef_y);
+         SCIPintervalSetBounds(&rhs2, (SCIP_Real)(-rhs.sup - rcoef_const), (SCIP_Real)(-rhs.inf - rcoef_const));
 
          /* first find all y >= 0 such that rcoef_y * y + rcoef_yy * y^2 in -rhs2, if ybnds.sup > 0.0
           * and evaluate -b(y) w.r.t. these values */
@@ -3733,7 +3760,7 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
             SCIP_INTERVAL yneg;
 
             /* find all y >= 0 such that -rcoef_y * y + rcoef_yy * y^2 in -rhs2 and then negate y */
-            SCIPintervalSet(&rcoef_y_int, -rcoef_y);
+            SCIPintervalSet(&rcoef_y_int, -(SCIP_Real)rcoef_y);
             SCIPintervalSolveUnivariateQuadExpressionPositive(infinity, &yneg, rcoef_yy_int, rcoef_y_int, rhs2);
             if( !SCIPintervalIsEmpty(yneg) )
             {
@@ -3781,13 +3808,13 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
           * this is only possible if rhs.inf > -infinity, otherwise the value for maxvalleft is not valid (but tightening wouldn't be possible for sure anyway) */
          assert(EPSGE(minvalright, minvalleft, 1e-9)); /* right interval should not be above lower bound of left interval */
          if( minvalright > -infinity )
-            resultant->inf = minvalright / sqrtax;
+            resultant->inf = (SCIP_Real)(minvalright / sqrtax);
       }
       else
       {
          /* otherwise, tighten lower bound of sqrt(ax)*x to lower bound of -sqrt(r(rhs,y))-b(y) */
          if( minvalleft > -infinity )
-            resultant->inf = minvalleft / sqrtax;
+            resultant->inf = (SCIP_Real)(minvalleft / sqrtax);
       }
 
       if( rhs.inf > -infinity && xbnds.sup < infinity && EPSLT(xbnds.sup, minvalright / sqrtax, 1e-9) )
@@ -3796,13 +3823,13 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
           * this is only possible if rhs.inf > -infinity, otherwise the value for minvalright is not valid (but tightening wouldn't be possible for sure anyway) */
          assert(EPSLE(maxvalleft, maxvalright, 1e-9)); /* left interval should not be above upper bound of right interval */
          if( maxvalleft < infinity )
-            resultant->sup = maxvalleft / sqrtax;
+            resultant->sup = (SCIP_Real)(maxvalleft / sqrtax);
       }
       else
       {
          /* otherwise, tighten upper bound of sqrt(ax)*x to upper bound of sqrt(r(rhs,y))-b(y) */
          if( maxvalright < infinity )
-            resultant->sup = maxvalright / sqrtax;
+            resultant->sup = (SCIP_Real)(maxvalright / sqrtax);
       }
 
       resultant->inf -= 1e-10 * REALABS(resultant->inf);
@@ -3865,13 +3892,13 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
       d = ay_ * (ay_ * bx_ * bx_ - axy_ * (bx_ * by_ + axy_ * c));
       if( !EPSN(d, 1e-9) )
       {
-         ymin = ay_ * bx_ + sqrt(MAX(d, 0.0));
+         ymin = ay_ * bx_ + sqrtl(MAX(d, 0.0));
          ymin /= axy_ * ay_;
 
          val = (c - ay_ * ymin * ymin - by_ * ymin) / (bx_ + axy_ * ymin);
          minval = MIN(val, minval);
 
-         ymin = ay_ * bx_ - sqrt(MAX(d, 0.0));
+         ymin = ay_ * bx_ - sqrtl(MAX(d, 0.0));
          ymin /= axy_ * ay_;
 
          val = (c - ay_ * ymin * ymin - by_ * ymin) / (bx_ + axy_ * ymin);
@@ -3915,20 +3942,20 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
       d = ay_ * (ay_ * bx_ * bx_ - axy_ * (bx_ * by_ + axy_ * c));
       if( !EPSN(d, 1e-9) )
       {
-         ymin = ay_ * bx_ + sqrt(MAX(d, 0.0));
+         ymin = ay_ * bx_ + sqrtl(MAX(d, 0.0));
          ymin /= axy_ * ay_;
 
          val = (c - ay_ * ymin * ymin - by_ * ymin) / (bx_ + axy_ * ymin);
          maxval = MAX(val, maxval);
 
-         ymin = ay_ * bx_ - sqrt(MAX(d, 0.0));
+         ymin = ay_ * bx_ - sqrtl(MAX(d, 0.0));
          ymin /= axy_ * ay_;
 
          val = (c - ay_ * ymin * ymin - by_ * ymin) / (bx_ + axy_ * ymin);
          maxval = MAX(val, maxval);
       }
 
-      resultant->inf = minval - 1e-10 * REALABS(minval);
-      resultant->sup = maxval + 1e-10 * REALABS(maxval);
+      resultant->inf = (SCIP_Real)(minval - 1e-10 * fabsl(minval));
+      resultant->sup = (SCIP_Real)(maxval + 1e-10 * fabsl(maxval));
    }
 }

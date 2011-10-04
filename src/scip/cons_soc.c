@@ -451,7 +451,7 @@ SCIP_RETCODE createNlRow(
          break;
       }
       /* if there are no left-hand-side variables, then we let the 's' case handle it */
-   }
+   } /*lint -fallthrough */
 
    case 's':
    {
@@ -610,7 +610,7 @@ SCIP_RETCODE createNlRow(
       }
 
       /* setup polynomial expression for gamma + sum_{i=1}^n alpha_i^2 (x_i+beta_i)^2 */
-      SCIP_CALL( SCIPexprCreatePolynomial(SCIPblkmem(scip), &nominator, consdata->nvars, exprs, consdata->nvars, monomials, consdata->constant, FALSE) );
+      SCIP_CALL( SCIPexprCreatePolynomial(SCIPblkmem(scip), &nominator, consdata->nvars, exprs, consdata->nvars, monomials, consdata->constant, FALSE) );  /*lint !e850 */
 
       SCIPfreeBufferArray(scip, &monomials);
       SCIPfreeBufferArray(scip, &exprs);
@@ -1265,20 +1265,22 @@ SCIP_RETCODE addLinearizationCuts(
 
    for( c = 0; c < nconss; ++c )
    {
-      if( SCIPconsIsLocal(conss[c]) )
+      assert(conss[c] != NULL);  /*lint !e613 */
+
+      if( SCIPconsIsLocal(conss[c]) )  /*lint !e613 */
          continue;
 
-      consdata = SCIPconsGetData(conss[c]);
+      consdata = SCIPconsGetData(conss[c]);  /*lint !e613 */
       assert(consdata != NULL);
 
-      SCIP_CALL( evalLhs(scip, conss[c], ref) );
+      SCIP_CALL( evalLhs(scip, conss[c], ref) );  /*lint !e613 */
       if( !SCIPisPositive(scip, consdata->lhsval) || SCIPisInfinity(scip, consdata->lhsval) )
       {
-         SCIPdebugMessage("skip adding linearization for <%s> since lhs is %g\n", SCIPconsGetName(conss[c]), consdata->lhsval);
+         SCIPdebugMessage("skip adding linearization for <%s> since lhs is %g\n", SCIPconsGetName(conss[c]), consdata->lhsval);  /*lint !e613 */
          continue;
       }
 
-      SCIP_CALL( generateCutSol(scip, conss[c], ref, &row) );
+      SCIP_CALL( generateCutSol(scip, conss[c], ref, &row) );  /*lint !e613 */
 
       if( row == NULL )
          continue;
@@ -2551,7 +2553,7 @@ SCIP_RETCODE propagateBounds(
 
    if( *result != SCIP_CUTOFF )
    {
-      SCIPintervalSub(SCIPinfinity(scip), &b, rhsrange, lhsrange);
+      SCIPintervalSub(SCIPinfinity(scip), &b, rhsrange, lhsrange);  /*lint !e644 */
       for( i = 0; i < consdata->nvars; ++i )
       {
          if( SCIPvarGetStatus(consdata->vars[i]) == SCIP_VARSTATUS_MULTAGGR )
@@ -2636,7 +2638,6 @@ SCIP_RETCODE propagateBounds(
 static
 SCIP_RETCODE polishSolution(
    SCIP*           scip,      /**< SCIP data structure */
-   SCIP_CONSHDLR*  conshdlr,  /**< constraint handler */
    SCIP_CONS*      cons,      /**< constraint */
    SCIP_SOL*       sol,       /**< solution to polish */
    SCIP_Bool*      success    /**< buffer to store whether polishing was successful */
@@ -3630,7 +3631,7 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
                }
                SCIP_CALL( SCIPunlinkSol(scip, polishedsol) );
             }
-            SCIP_CALL( polishSolution(scip, conshdlr, conss[c], polishedsol, &success) );  /*lint !e613*/
+            SCIP_CALL( polishSolution(scip, conss[c], polishedsol, &success) );  /*lint !e613*/
 
             /* disable solution polishing if we failed for this constraint */
             dolinfeasshift = success;
@@ -3957,7 +3958,7 @@ SCIP_DECL_CONSCOPY(consCopySOC)
       SCIP_CALL( SCIPcreateConsSOC(scip, cons, name ? name : SCIPconsGetName(sourcecons),
             consdata->nvars, vars, consdata->coefs, consdata->offsets, consdata->constant,
             rhsvar, consdata->rhscoeff, consdata->rhsoffset,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );  /*lint !e644 */
    }
 
    SCIPfreeBufferArray(sourcescip, &vars);
@@ -3986,7 +3987,7 @@ SCIP_DECL_CONSPARSE(consParseSOC)
    SCIP_Real offset;
    char* endptr;
    int parselen;
-   int namelen;
+   size_t namelen;
 
    assert(scip != NULL);
    assert(success != NULL);
@@ -4085,7 +4086,7 @@ SCIP_DECL_CONSPARSE(consParseSOC)
    {
       assert(!stickingatnode);
       SCIP_CALL( SCIPcreateConsSOC(scip, cons, name, nvars, vars, coefs, offsets, constant, rhsvar, rhscoef, rhsoffset,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );  /*lint !e644 */
    }
 
    SCIPfreeBufferArray(scip, &vars);

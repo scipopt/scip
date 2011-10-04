@@ -13925,7 +13925,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
          {
             ensureBlockMemoryArraySize(exprgraph->blkmem, &testvals, &testvalssize, ntestvals+1);
             SCIP_CALL( SCIPhashmapInsert(testvalidx, (void*)node, (void*)(size_t)ntestvals) );
-            testvals[ntestvals] = SCIPexprgraphGetNodeVal(node);  /*lint !e613*/
+            testvals[ntestvals] = SCIPexprgraphGetNodeVal(node);  /*lint !e613 !e794*/
             ++ntestvals;
          }
       }

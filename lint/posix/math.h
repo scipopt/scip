@@ -23,11 +23,16 @@ extern double ldexp(double , int );
 extern double log(double );
 extern double log10(double );
 extern double modf(double , double *);
+extern double nextafter(double , double );
 extern double pow(double , double );
 extern double sin(double );
 extern double sinh(double );
 extern double sqrt(double );
 extern double tan(double );
 extern double tanh(double );
+extern long double sqrtl(long double );
+extern long double fabsl(long double );
+extern int isnan(double );
+extern int isfinite(double );
 
 #endif

@@ -335,8 +335,8 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
          assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR );
 
          /* allocate array for children and coefficients */
-         SCIP_ALLOC( BMSallocBlockMemoryArray(tree->blkmem, &children, SCIPvarGetMultaggrNVars(var)) );
-         SCIP_ALLOC( BMSallocBlockMemoryArray(tree->blkmem, &coefs,    SCIPvarGetMultaggrNVars(var)) );
+         SCIP_ALLOC( BMSallocBlockMemoryArray(tree->blkmem, &children, SCIPvarGetMultaggrNVars(var)) );  /*lint !e666 */
+         SCIP_ALLOC( BMSallocBlockMemoryArray(tree->blkmem, &coefs,    SCIPvarGetMultaggrNVars(var)) );  /*lint !e666 */
          nchildren = 0;
 
          /* linear part
@@ -4680,14 +4680,14 @@ SCIP_RETCODE nlpSolve(
 
       /* get NLP solution */
       SCIP_CALL( SCIPnlpiGetSolution(nlp->solver, nlp->problem, &primalvals, &nlrowdualvals, &varlbdualvals, &varubdualvals) );
-      assert(primalvals    != NULL || nlp->nvars == 0);
+      assert(primalvals != NULL || nlp->nvars == 0);
       assert((varlbdualvals != NULL) == (varubdualvals != NULL)); /* if there are duals for one bound, then there should also be duals for the other bound */
 
       /* store solution primal values in variable and evaluate objective function */
       if( nlp->indiving && nlp->divingobj != NULL )
       {
          for( i = 0; i < nlp->nvars; ++i )
-            SCIPvarSetNLPSol(nlp->vars[i], set, primalvals[nlp->varmap_nlp2nlpi[i]]);
+            SCIPvarSetNLPSol(nlp->vars[i], set, primalvals[nlp->varmap_nlp2nlpi[i]]);  /*lint !e613 */
 
          /* evaluate modified diving objective */
          SCIP_CALL( SCIPnlrowGetNLPActivity(nlp->divingobj, set, stat, nlp, &nlp->primalsolobjval) );
@@ -4698,8 +4698,8 @@ SCIP_RETCODE nlpSolve(
          nlp->primalsolobjval = 0.0;
          for( i = 0; i < nlp->nvars; ++i )
          {
-            SCIPvarSetNLPSol(nlp->vars[i], set, primalvals[nlp->varmap_nlp2nlpi[i]]);
-            nlp->primalsolobjval += SCIPvarGetObj(nlp->vars[i]) * primalvals[nlp->varmap_nlp2nlpi[i]];
+            SCIPvarSetNLPSol(nlp->vars[i], set, primalvals[nlp->varmap_nlp2nlpi[i]]);  /*lint !e613 */
+            nlp->primalsolobjval += SCIPvarGetObj(nlp->vars[i]) * primalvals[nlp->varmap_nlp2nlpi[i]];  /*lint !e613 */
          }
       }
 
@@ -5733,9 +5733,9 @@ SCIP_RETCODE SCIPnlpGetVarsNonlinearity(
       for( i = 0; i < nlrow->nquadvars; ++i )
       {
          assert(SCIPhashmapExists(nlp->varhash, (void*)nlrow->quadvars[i]));
-         varidx = (size_t) SCIPhashmapGetImage(nlp->varhash, (void*)nlrow->quadvars[i]);
+         varidx = (int)(size_t) SCIPhashmapGetImage(nlp->varhash, (void*)nlrow->quadvars[i]);
          assert(varidx < nlp->nvars);
-         ++nlcount[varidx];
+         ++nlcount[varidx];  /*lint !e613 */
       }
 
       if( nlrow->exprtree != NULL )
@@ -5748,15 +5748,15 @@ SCIP_RETCODE SCIPnlpGetVarsNonlinearity(
          assert(exprtreevars != NULL || nexprtreevars == 0);
          for( i = 0; i < nexprtreevars; ++i )
          {
-            assert(SCIPhashmapExists(nlp->varhash, (void*)exprtreevars[i]));
+            assert(SCIPhashmapExists(nlp->varhash, (void*)exprtreevars[i]));  /*lint !e613 */
 
             /* skip variables that also appear in quadratic part, so they are not counted twice */
-            if( nlrow->quadvarshash != NULL && SCIPhashmapExists(nlrow->quadvarshash, (void*)exprtreevars[i]) )
+            if( nlrow->quadvarshash != NULL && SCIPhashmapExists(nlrow->quadvarshash, (void*)exprtreevars[i]) )  /*lint !e613 */
                continue;
 
-            varidx = (size_t) SCIPhashmapGetImage(nlp->varhash, (void*)exprtreevars[i]);
+            varidx = (int)(size_t) SCIPhashmapGetImage(nlp->varhash, (void*)exprtreevars[i]);  /*lint !e613 */
             assert(varidx < nlp->nvars);
-            ++nlcount[varidx];
+            ++nlcount[varidx];  /*lint !e613 */
          }
       }
    }
