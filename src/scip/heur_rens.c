@@ -134,7 +134,7 @@ SCIP_RETCODE createSubproblem(
       SCIP_NLPSOLSTAT stat;
       SCIPdebug( int nlpverblevel; )
 
-      /* only call this function if nlp relaxation is available ???????????? */
+      /* only call this function if nlp relaxation is available */
       assert(SCIPisNLPConstructed(scip));
 
       /* activate nlp solver output if we are in SCIP's debug mode */
