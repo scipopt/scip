@@ -1552,7 +1552,7 @@ SCIP_RETCODE readSOS(
             mpsinputSetSection(mpsi, MPS_INDICATORS);
          break;
       }
-      if( mpsinputField1(mpsi) == NULL || mpsinputField2(mpsi) == NULL )
+      if( mpsinputField1(mpsi) == NULL )
       {
          SCIPerrorMessage("empty data in a non-comment line.\n");
          mpsinputSyntaxerror(mpsi);
