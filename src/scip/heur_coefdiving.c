@@ -52,9 +52,9 @@
 #define DEFAULT_MAXLPITERQUOT      0.05 /**< maximal fraction of diving LP iterations compared to node LP iterations */
 #define DEFAULT_MAXLPITEROFS       1000 /**< additional number of allowed LP iterations */
 #define DEFAULT_MAXDIVEUBQUOT       0.8 /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
-                                              *   where diving is performed (0.0: no limit) */
+                                         *   where diving is performed (0.0: no limit) */
 #define DEFAULT_MAXDIVEAVGQUOT      0.0 /**< maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound)
-                                              *   where diving is performed (0.0: no limit) */
+                                         *   where diving is performed (0.0: no limit) */
 #define DEFAULT_MAXDIVEUBQUOTNOSOL  0.1 /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_MAXDIVEAVGQUOTNOSOL 0.0 /**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_BACKTRACK          TRUE /**< use one level of backtracking if infeasibility is encountered? */
@@ -570,7 +570,7 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
       if ( nlpcands > 0 )
       {
          SCIP_CALL( getBestCandidate(scip, lpcands, lpcandssol, lpcandsfrac, nlpcands, &bestlpcand, &bestnviolrows, &bestcandsol, &bestcandfrac,
-               &bestcandmayrounddown, &bestcandroundup, & bestcandroundup) );
+               &bestcandmayrounddown, &bestcandmayroundup, &bestcandroundup) );
          bestcandvar = lpcands[bestlpcand];
          assert( bestlpcand >= 0 );
       }
@@ -582,7 +582,7 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
          assert( indcandssol != NULL );
          assert( indcandfrac != NULL );
          SCIP_CALL( getBestCandidate(scip, indcands, indcandssol, indcandfrac, nindcands, &bestindcand, &bestnviolrows, &bestcandsol, &bestcandfrac, 
-               &bestcandmayrounddown, &bestcandroundup, &bestcandroundup) );
+               &bestcandmayrounddown, &bestcandmayroundup, &bestcandroundup) );
          if ( bestindcand >= 0 )
             bestcandvar = indcands[bestindcand];
       }
