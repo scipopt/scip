@@ -154,7 +154,7 @@ SCIP_RETCODE readLine(
       SCIPmessagePrintDialog(prompt);
       
       /* read line from stdin */
-      (void)fgets(&dialoghdlr->buffer[dialoghdlr->bufferpos], dialoghdlr->buffersize - dialoghdlr->bufferpos, stdin);
+      (void*)fgets(&dialoghdlr->buffer[dialoghdlr->bufferpos], dialoghdlr->buffersize - dialoghdlr->bufferpos, stdin);
 
       /* replace newline with \0 */
       s = strchr(&dialoghdlr->buffer[dialoghdlr->bufferpos], '\n');
