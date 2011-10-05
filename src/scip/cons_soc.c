@@ -4029,7 +4029,7 @@ SCIP_DECL_CONSPARSE(consParseSOC)
       varname[namelen+1] = '>';
       varname[namelen+2] = '\0';
       SCIP_CALL( SCIPparseVarName(scip, varname, &var, &endptr) );
-      assert(parselen == namelen+2);
+      assert(parselen == (int)namelen+2);
 
       if( var == NULL )
       {
