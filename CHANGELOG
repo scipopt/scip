@@ -92,6 +92,7 @@ performance improvements:
   before root node solving, then we clear the resulting LP state, since it might be a bad starting basis for the next
   solve of the LP relaxation (controlled by new parameter <lp/clearinitialprobinglp>)
 - included LP simplifier into SoPlex LP interface, applied when solving from scratch (lpi_spx.cpp)
+- new presolving steps in varbound constraint handler, tightening bounds, coefficients, sides and pairwise presolving
 
 fixed bugs:
 - fixed bug in propagation of indicator constraints: cannot fix slack variable to 0 if linear constraint is disabled/not active
@@ -269,6 +270,7 @@ features:
 - reworked concept of lazy bounds: they can now also be used for problems where constraints and objective together ensure the bounds; 
   to allow this also for diving heuristics that might change the objective and thus destroy this property, lazy bounds are explicitly
   put into the LP during diving and removed afterwards
+- the varbound constraint handler can now parse its constraints
 
 design:
 - SCIP_HASHMAP now works also without block memory
