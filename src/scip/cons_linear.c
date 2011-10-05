@@ -2553,7 +2553,7 @@ void permSortConsdata(
    assert(perm != NULL);
    assert(consdata != NULL);
 
-  /* permute the variables in the linear constraint according to the target permutation */
+   /* permute the variables in the linear constraint according to the target permutation */
    eventdatav = NULL;
    for( v = 0; v < nvars; ++v )
    {
@@ -2731,8 +2731,8 @@ SCIP_RETCODE consdataSort(
 
          for( v = 0; v < lastbin; ++v )
          {
-             absvals[v] = ABS(vals[v]);
-             perm[v] = v;
+            absvals[v] = ABS(vals[v]);
+            perm[v] = v;
          }
 
          /* execute the sorting */
@@ -4352,8 +4352,8 @@ SCIP_RETCODE tightenBounds(
    /* ensure that the variables are properly sorted */
    if( sortvars && SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE && !consdata->binvarssorted )
    {
-     SCIP_CALL( consdataSort(scip, consdata) );
-     assert(consdata->binvarssorted);
+      SCIP_CALL( consdataSort(scip, consdata) );
+      assert(consdata->binvarssorted);
    }
 
    /* as long as the bounds might be tightened again, try to tighten them; abort after a maximal number of rounds */
@@ -10002,7 +10002,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
       (*success) = FALSE;
       str = endptr;
 
-     /* check for left or right hand side */
+      /* check for left or right hand side */
       while( isspace((unsigned char)*str) )
          ++str;
 
@@ -10324,14 +10324,14 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 
    *nupgdconss = 1;
    SCIP_CALL( SCIPcreateConsLinear(scip, &upgdconss[0], SCIPconsGetName(cons),
-      SCIPgetNLinearVarsQuadratic(scip, cons),
-      SCIPgetLinearVarsQuadratic(scip, cons),
-      SCIPgetCoefsLinearVarsQuadratic(scip, cons),
-      SCIPgetLhsQuadratic(scip, cons), SCIPgetRhsQuadratic(scip, cons),
-      SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-      SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
-      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-      SCIPconsIsStickingAtNode(cons)) );
+         SCIPgetNLinearVarsQuadratic(scip, cons),
+         SCIPgetLinearVarsQuadratic(scip, cons),
+         SCIPgetCoefsLinearVarsQuadratic(scip, cons),
+         SCIPgetLhsQuadratic(scip, cons), SCIPgetRhsQuadratic(scip, cons),
+         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
+         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+         SCIPconsIsStickingAtNode(cons)) );
    SCIPdebugMessage("created linear constraint:\n");
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[0], NULL)) );
 
@@ -10364,12 +10364,12 @@ SCIP_DECL_NONLINCONSUPGD(upgradeConsNonlinear)
 
    *nupgdconss = 1;
    SCIP_CALL( SCIPcreateConsLinear(scip, &upgdconss[0], SCIPconsGetName(cons),
-      SCIPgetNLinearVarsNonlinear(scip, cons), SCIPgetLinearVarsNonlinear(scip, cons), SCIPgetLinearCoefsNonlinear(scip, cons),
-      SCIPgetLhsNonlinear(scip, cons), SCIPgetRhsNonlinear(scip, cons),
-      SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-      SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
-      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-      SCIPconsIsStickingAtNode(cons)) );
+         SCIPgetNLinearVarsNonlinear(scip, cons), SCIPgetLinearVarsNonlinear(scip, cons), SCIPgetLinearCoefsNonlinear(scip, cons),
+         SCIPgetLhsNonlinear(scip, cons), SCIPgetRhsNonlinear(scip, cons),
+         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+         SCIPconsIsStickingAtNode(cons)) );
 
    return SCIP_OKAY;
 }
@@ -10657,7 +10657,7 @@ SCIP_RETCODE SCIPcopyConsLinear(
    if( nvars == 0 )
    {
       SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, 0, NULL, NULL, lhs, rhs,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
       return SCIP_OKAY;
    }
    
@@ -10711,7 +10711,7 @@ SCIP_RETCODE SCIPcopyConsLinear(
       assert(!(*valid) || vars[v] != NULL);
    }
 
-    /* only create the target constraint, if all variables could be copied */
+   /* only create the target constraint, if all variables could be copied */
    if( *valid )
    {
       if( !SCIPisInfinity(scip, -lhs) )

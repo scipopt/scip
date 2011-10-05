@@ -5103,7 +5103,7 @@ extern
 SCIP_RETCODE SCIPgetNLPStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPSTATISTICS*   statistics          /**< pointer to store statistics */
-);
+   );
 
 /** gets objective value of current NLP */
 extern
@@ -5135,7 +5135,7 @@ SCIP_RETCODE SCIPgetNLPIntPar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPPARAM         type,               /**< parameter number */
    int*                  ival                /**< pointer to store the parameter value */
-);
+   );
 
 /** sets integer parameter of NLP */
 extern
@@ -5143,7 +5143,7 @@ SCIP_RETCODE SCIPsetNLPIntPar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPPARAM         type,               /**< parameter number */
    int                   ival                /**< parameter value */
-);
+   );
 
 /** gets floating point parameter of NLP */
 extern
@@ -5151,7 +5151,7 @@ SCIP_RETCODE SCIPgetNLPRealPar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPPARAM         type,               /**< parameter number */
    SCIP_Real*            dval                /**< pointer to store the parameter value */
-);
+   );
 
 /** sets floating point parameter of NLP */
 extern
@@ -5159,7 +5159,7 @@ SCIP_RETCODE SCIPsetNLPRealPar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPPARAM         type,               /**< parameter number */
    SCIP_Real             dval                /**< parameter value */
-);
+   );
 
 /** gets string parameter of NLP */
 extern
@@ -5167,7 +5167,7 @@ SCIP_RETCODE SCIPgetNLPStringPar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPPARAM         type,               /**< parameter number */
    const char**          sval                /**< pointer to store the parameter value */
-);
+   );
 
 /** sets string parameter of NLP */
 extern
@@ -5175,7 +5175,7 @@ SCIP_RETCODE SCIPsetNLPStringPar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPPARAM         type,               /**< parameter number */
    const char*           sval                /**< parameter value */
-);
+   );
 
 /** writes current NLP to a file */
 extern
@@ -5316,7 +5316,7 @@ extern
 SCIP_RETCODE SCIPreleaseNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW**          nlrow               /**< nonlinear row to release */
-);
+   );
 
 /** changes left hand side of NLP nonlinear row */
 extern
@@ -5559,7 +5559,7 @@ extern
 SCIP_RETCODE SCIPgetExprtreeTransformedVars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRTREE*        tree                /**< expression tree */
-);
+   );
 
 /** evaluates an expression tree for a primal solution or LP solution */
 extern
@@ -5568,7 +5568,7 @@ SCIP_RETCODE SCIPevalExprtreeSol(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    SCIP_SOL*             sol,                /**< a solution, or NULL for current LP solution */
    SCIP_Real*            val                 /**< buffer to store value */
-);
+   );
 
 /** evaluates an expression tree w.r.t. current global bounds */
 extern
@@ -5577,7 +5577,7 @@ SCIP_RETCODE SCIPevalExprtreeGlobalBounds(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    SCIP_Real             infinity,           /**< value to use for infinity */
    SCIP_INTERVAL*        val                 /**< buffer to store result */
-);
+   );
 
 /** evaluates an expression tree w.r.t. current local bounds */
 extern
@@ -5586,7 +5586,7 @@ SCIP_RETCODE SCIPevalExprtreeLocalBounds(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    SCIP_Real             infinity,           /**< value to use for infinity */
    SCIP_INTERVAL*        val                 /**< buffer to store result */
-);
+   );
 
 /**@} */
 

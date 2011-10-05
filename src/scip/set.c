@@ -62,7 +62,7 @@
                                                  *   in sum score function */
 #define SCIP_DEFAULT_BRANCH_PREFERBINARY  FALSE /**< should branching on binary variables be preferred? */
 #define SCIP_DEFAULT_BRANCH_CLAMP           0.2 /**< minimal fractional distance of branching point to a continuous variable'
-                                                     bounds; a value of 0.5 leads to branching always in the middle of a bounded domain */
+                                                 *   bounds; a value of 0.5 leads to branching always in the middle of a bounded domain */
 #define SCIP_DEFAULT_BRANCH_LPGAINNORMALIZE 's' /**< strategy for normalizing LP gain when updating pseudo costs of continuous variables */
 #define SCIP_DEFAULT_BRANCH_DELAYPSCOST    TRUE /**< should updating pseudo costs of continuous variables be delayed to after separation */
 
@@ -155,7 +155,7 @@
                                                  *   's'teepest edge pricing, 'q'uickstart steepest edge pricing,
                                                  *   'd'evex pricing) */
 #define SCIP_DEFAULT_LP_CLEARINITIALPROBINGLP TRUE/**< should lp state be cleared at the end of probing mode when lp
-                                                 *   was initially unsolved, e.g., when called right after presolving? */
+                                                   *   was initially unsolved, e.g., when called right after presolving? */
 #define SCIP_DEFAULT_LP_RESOLVERESTORE     TRUE /**< should the LP be resolved to restore the state at start of diving (if FALSE we buffer the solution values)? */
 #define SCIP_DEFAULT_LP_FREESOLVALBUFFERS FALSE /**< should the buffers for storing LP solution values during diving be freed at end of diving? */
 #define SCIP_DEFAULT_LP_COLAGELIMIT          10 /**< maximum age a dynamic column can reach before it is deleted from SCIP_LP
