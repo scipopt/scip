@@ -460,6 +460,7 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
    nindcands = 0;
    indcands = NULL;
    indcandssol = NULL;
+   indcandfrac = NULL;
    if ( heurdata->indconshdlr != NULL )
    {
       indconss = SCIPconshdlrGetConss(heurdata->indconshdlr);
@@ -559,6 +560,7 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
       bestindcand = -1;
       bestcandvar = NULL;
       bestnviolrows = INT_MAX;
+      bestcandsol = SCIP_INVALID;
       bestcandfrac = SCIP_INVALID;
       bestcandmayrounddown = TRUE;
       bestcandmayroundup = TRUE;
@@ -576,8 +578,11 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
       /* get best indicator candidate */
       if ( nindconss > 0 )
       {
+         assert( indcands != NULL );
+         assert( indcandssol != NULL );
+         assert( indcandfrac != NULL );
          SCIP_CALL( getBestCandidate(scip, indcands, indcandssol, indcandfrac, nindcands, &bestindcand, &bestnviolrows, &bestcandsol, &bestcandfrac, 
-               &bestcandmayrounddown, &bestcandroundup, & bestcandroundup) );
+               &bestcandmayrounddown, &bestcandroundup, &bestcandroundup) );
          if ( bestindcand >= 0 )
             bestcandvar = indcands[bestindcand];
       }
