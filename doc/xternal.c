@@ -1808,19 +1808,20 @@
  * @section PRICER_REMARKS Further remarks
  *
  * If you use your own branching rule (e.g., to branch on constraints), make sure that it is able to branch on pseudo solutions. 
- * Otherwise, SCIP will use its default branching rules, if necessary(which all branch on variables). This
+ * Otherwise, SCIP will use its default branching rules, if necessary (which all branch on variables). This
  * could disturb the pricing problem or branching might not even be possible, e.g., if all yet created variables have already been fixed.
  *
  * Note that if the original problem is a maximization problem, SCIP will transform the problem into a minimization 
  * problem by multiplying the objective function by -1. The pricer has to consider this and thus, the original 
  * objective function value of all variables created during the solving process should also be multiplied by -1.
  *
- * In some cases, bounds on variables are enforced by constraints of the problem. Therefore, these bounds do not need to be 
- * added to the LP explicitly, which has the advantage that the pricing routine does not need to respect the corresponding dual values.
+ * In some cases, bounds on variables are implicitly enforced by constraints of the problem and the objective function.
+ * Therefore, these bounds do not need to be added to the LP explicitly, which has the advantage that the pricing routine does not need to
+ * care about the corresponding dual values.
  * We call these bounds lazy bounds, they may be set by SCIPchgVarLbLazy() and SCIPchgVarUbLazy() for upper or lower bounds, respectively.
  * If the lazy bound is tighter than the local bound, the corresponding bound is not put into the LP.
- * Attention: The lazy bounds need to be valid for each feasible LP solution. If the objective function implies bounds on the variables for 
- * each optimal LP solution, but these bounds may be violated for arbitrary LP solutions, these bounds must not be declared lazy!
+ * In diving mode, lazy bounds are explicitly put into the LP, because changing the objective (which is possible only in diving)
+ * might reverse the implicitly given bounds. When diving finished, the bounds are again removed from the LP.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

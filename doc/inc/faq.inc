@@ -804,26 +804,28 @@
     <p class="a">
       In many Branch-and-Price applications, you have binary variables, but you do not want to impose
       upper bounds on these variables in the LP relaxation, because the upper bound is implicitly enforced
-      by the problem contraints, anyway. If the upper bounds are explicitly added to the LP, they lead to 
-      further dual variables, which may be hard to take into account in the pricing problem.
+      by the problem contraints and the objective, anyway. If the upper bounds are explicitly added to the LP,
+      they lead to further dual variables, which may be hard to take into account in the pricing problem.
     </p>
     <p class="a">  
-      There are two possibilities how to solve this problem. First, you could change the binary variables 
-      to general integer variables, if this does not change the problem. However, if you use special linear 
-      constraints like set partitioning/packing/covering, you can only add binary variables to these constraints. 
+      There are two possibilities how to solve this problem. First, you could change the binary variables
+      to general integer variables, if this does not change the problem. However, if you use special linear
+      constraints like set partitioning/packing/covering, you can only add binary variables to these constraints.
     </p>
     <p class="a">  
-      In order to still allow the usage of these types of constraints in a branch-and-price approach, the 
+      In order to still allow the usage of these types of constraints in a branch-and-price approach, the
       concept of lazy bounds was introduced in SCIP 2.0.
       For each variable, you can define lazy upper and lower bounds, i.e. bounds, that are implicitly enforced by
-      constraints in the problem. SCIP adds variable bounds to the LP only if the bound is tighter than the 
-      corresponding lazy bound. In order to use lazy bounds, you have to make sure, however, that each feasible
-      LP solution respects these bounds (even non-optimal LP solutions).
+      constraints and objective. SCIP adds variable bounds to the LP only if the bound is tighter than the
+      corresponding lazy bound.
+      Note that lazy bounds are explicitly put into and removed from the LP when starting and ending diving mode,
+      respectively. This is needed because changing the objective in diving might reverse the implicitly enforced
+      bounds.
     </p>
     <p class="a">  
       For instance, if you have set partioning constraints in your problem, you can define variables contained in these
       constraints as binary and set the lazy upper bound to 1, which allows you to use the better propagation methods
-      of the setppc constraint handler compared to the linear constraint handler without taking care about upper 
+      of the setppc constraint handler compared to the linear constraint handler without taking care about upper
       bounds on variables in the master.
     </p>
 
@@ -844,7 +846,6 @@
       In this case, the lp solution will not be used as a lower bound. 
       The pricer can, however, store a valid lower bound in the lowerbound pointer.
     </p>
-
 
 <h4><a name="Section6">Specific questions about the copy functionality in SCIP</a></h4>
     <p class="q">
