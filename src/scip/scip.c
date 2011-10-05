@@ -22133,7 +22133,7 @@ void printConstraintStatistics(
    assert(scip->set != NULL);
 
    /** Add maximal number of constraints of the same type? So far this information is not added because of lack of space. */
-   SCIPmessageFPrintInfo(file, "Constraints        :     Number  MaxNumber  #Separate #Propagate    #EnfoLP    #EnfoPS     #Check   #Resprop    Cutoffs    DomReds       Cuts      Conss   Children\n");
+   SCIPmessageFPrintInfo(file, "Constraints        :     Number  MaxNumber  #Separate #Propagate    #EnfoLP    #EnfoPS     #Check   #ResProp    Cutoffs    DomReds       Cuts      Conss   Children\n");
 
    for( i = 0; i < scip->set->nconshdlrs; ++i )
    {
@@ -22178,7 +22178,7 @@ void printConstraintTimingStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIPmessageFPrintInfo(file, "Constraint Timings :  TotalTime   Separate  Propagate     EnfoLP     EnfoPS      Check    Resprop\n");
+   SCIPmessageFPrintInfo(file, "Constraint Timings :  TotalTime   Separate  Propagate     EnfoLP     EnfoPS      Check    ResProp\n");
 
    for( i = 0; i < scip->set->nconshdlrs; ++i )
    {
@@ -22222,7 +22222,7 @@ void printPropagatorStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIPmessageFPrintInfo(file, "Propagators        : #Propagate   #Resprop    Cutoffs    DomReds\n");
+   SCIPmessageFPrintInfo(file, "Propagators        : #Propagate   #ResProp    Cutoffs    DomReds\n");
 
    for( i = 0; i < scip->set->nprops; ++i )
    {
@@ -22237,7 +22237,7 @@ void printPropagatorStatistics(
          SCIPpropGetNDomredsFound(prop));
    }
    
-   SCIPmessageFPrintInfo(file, "Propagator Timings :  TotalTime  Presolve   Propagate    Resprop\n");
+   SCIPmessageFPrintInfo(file, "Propagator Timings :  TotalTime  Presolve   Propagate    ResProp\n");
 
    for( i = 0; i < scip->set->nprops; ++i )
    {
