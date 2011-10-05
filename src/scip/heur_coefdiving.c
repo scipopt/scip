@@ -93,7 +93,7 @@ struct SCIP_HeurData
 
 /** get indicator candidate variables */
 static
-SCIP_RESULT getIndCandVars(
+SCIP_RETCODE getIndCandVars(
    SCIP*                 scip,                /**< SCIP data structure */
    SCIP_CONS**           indconss,            /**< indicator constraints */
    int                   nindconss,           /**< number of indicator constraints */
@@ -139,7 +139,7 @@ SCIP_RESULT getIndCandVars(
 
 /** choose best candidate variable */
 static
-SCIP_RESULT getBestCandidate(
+SCIP_RETCODE getBestCandidate(
    SCIP*                 scip,                /**< SCIP data structure */
    SCIP_VAR**            cands,               /**< candidate variables */
    SCIP_Real*            candssol,            /**< solution values of candidates */
