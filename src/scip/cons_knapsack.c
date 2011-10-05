@@ -167,6 +167,7 @@ struct SCIP_ConsData
    unsigned int          negcliquepartitioned:1;/**< is the negated clique partition valid? */
    unsigned int          merged:1;           /**< are the constraint's equal variables already merged? */
    unsigned int          cliquesadded:1;     /**< were the cliques of the knapsack already added to clique table? */
+   unsigned int          varsdeleted:1;      /**< were variables deleted after last cleanup? */
 };
 
 
@@ -425,7 +426,8 @@ SCIP_RETCODE catchEvents(
    {
       SCIP_CALL( eventdataCreate(scip, &consdata->eventdatas[i], consdata, consdata->weights[i]) );
       SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[i], 
-            SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBRELAXED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_IMPLADDED,
+            SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBRELAXED | SCIP_EVENTTYPE_VARFIXED
+            | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_IMPLADDED,
             eventhdlr, consdata->eventdatas[i], &consdata->eventdatas[i]->filterpos) );
    }
 
@@ -450,7 +452,8 @@ SCIP_RETCODE dropEvents(
    for( i = 0; i < consdata->nvars; i++)
    {
       SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[i],
-            SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBRELAXED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_IMPLADDED,
+            SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBRELAXED | SCIP_EVENTTYPE_VARFIXED
+            | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_IMPLADDED,
             eventhdlr, consdata->eventdatas[i], consdata->eventdatas[i]->filterpos) );
       SCIP_CALL( eventdataFree(scip, &consdata->eventdatas[i]) );
    }
@@ -526,6 +529,9 @@ SCIP_RETCODE consdataCreate(
       {
          assert(vars[v] != NULL);
          
+         /* capture variables */
+         SCIP_CALL( SCIPcaptureVar(scip, vars[v]) );
+
          /* all weight have to be not negative */
          assert( weights[v] >= 0 );
 
@@ -584,6 +590,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->negcliquepartitioned = FALSE;
    (*consdata)->merged = FALSE;
    (*consdata)->cliquesadded = FALSE;
+   (*consdata)->varsdeleted = FALSE;
 
    /* get transformed variables, if we are in the transformed problem */
    if( SCIPisTransformed(scip) )
@@ -640,6 +647,15 @@ SCIP_RETCODE consdataFree(
    }
    if( (*consdata)->vars != NULL )
    {
+      int v;
+
+      /* release vars */
+      for( v = 0; v < (*consdata)->nvars; v++ )
+      {
+         assert((*consdata)->vars[v] != NULL);
+         SCIP_CALL( SCIPreleaseVar(scip, &((*consdata)->vars[v])) );
+      }
+
       assert( (*consdata)->weights != NULL );
       assert( (*consdata)->varssize > 0 );
       SCIPfreeBlockMemoryArray(scip, &(*consdata)->vars, (*consdata)->varssize);
@@ -3871,6 +3887,9 @@ SCIP_RETCODE addCoef(
       consdata->weights[consdata->nvars] = weight;
       consdata->nvars++;
 
+      /* capture variable */
+      SCIP_CALL( SCIPcaptureVar(scip, var) );
+
       /* install the rounding locks of variable */
       SCIP_CALL( lockRounding(scip, cons, var) );
 
@@ -3883,7 +3902,8 @@ SCIP_RETCODE addCoef(
          assert(conshdlrdata != NULL);
          SCIP_CALL( eventdataCreate(scip, &consdata->eventdatas[consdata->nvars-1], consdata, weight) );
          SCIP_CALL( SCIPcatchVarEvent(scip, var,
-               SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBRELAXED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_IMPLADDED,
+               SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBRELAXED | SCIP_EVENTTYPE_VARFIXED
+               | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_IMPLADDED,
                conshdlrdata->eventhdlr, consdata->eventdatas[consdata->nvars-1],
                &consdata->eventdatas[consdata->nvars-1]->filterpos) );
       }
@@ -3914,20 +3934,24 @@ SCIP_RETCODE delCoefPos(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_VAR* var;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(0 <= pos && pos < consdata->nvars);
-   assert(SCIPconsIsTransformed(cons) == SCIPvarIsTransformed(consdata->vars[pos]));
+
+   var = consdata->vars[pos];
+   assert(var != NULL);
+   assert(SCIPconsIsTransformed(cons) == SCIPvarIsTransformed(var));
 
    /* delete the coefficient from the LP row */
    if( consdata->row != NULL )
    {
-      SCIP_CALL( SCIPaddVarToRow(scip, consdata->row, consdata->vars[pos], -(SCIP_Real)consdata->weights[pos]) );
+      SCIP_CALL( SCIPaddVarToRow(scip, consdata->row, var, -(SCIP_Real)consdata->weights[pos]) );
    }
 
    /* remove the rounding locks of variable */
-   SCIP_CALL( unlockRounding(scip, cons, consdata->vars[pos]) );
+   SCIP_CALL( unlockRounding(scip, cons, var) );
 
    /* drop events */
    if( SCIPconsIsTransformed(cons) )
@@ -3936,15 +3960,16 @@ SCIP_RETCODE delCoefPos(
       
       conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
       assert(conshdlrdata != NULL);
-      SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[pos],
-            SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBRELAXED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_IMPLADDED,
+      SCIP_CALL( SCIPdropVarEvent(scip, var,
+            SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBRELAXED | SCIP_EVENTTYPE_VARFIXED
+            | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_IMPLADDED,
             conshdlrdata->eventhdlr, consdata->eventdatas[pos], consdata->eventdatas[pos]->filterpos) );
       SCIP_CALL( eventdataFree(scip, &consdata->eventdatas[pos]) );
    }
 
    /* update weight sums */
    consdata->weightsum -= consdata->weights[pos];
-   if( SCIPvarGetLbLocal(consdata->vars[pos]) > 0.5 )
+   if( SCIPvarGetLbLocal(var) > 0.5 )
       consdata->onesweightsum -= consdata->weights[pos];
    assert(consdata->weightsum >= 0);
    assert(consdata->onesweightsum >= 0);
@@ -3954,6 +3979,9 @@ SCIP_RETCODE delCoefPos(
    consdata->weights[pos] = consdata->weights[consdata->nvars-1];
    if( consdata->eventdatas != NULL )
       consdata->eventdatas[pos] = consdata->eventdatas[consdata->nvars-1];
+
+   /* release variable */
+   SCIP_CALL( SCIPreleaseVar(scip, &var) );
 
    consdata->propagated = FALSE;
    consdata->presolved = FALSE;
@@ -4111,6 +4139,48 @@ SCIP_RETCODE removeZeroWeights(
       if( consdata->weights[v] == 0 )
       {
          SCIP_CALL( delCoefPos(scip, cons, v) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/* perform deletion of variables in all constraints of the constraint handler */
+static
+SCIP_RETCODE performVarDeletions(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< array of constraints */
+   int                   nconss              /**< number of constraints */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   int i;
+   int v;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL);
+   assert(nconss >= 0);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   /* iterate over all constraints */
+   for( i = 0; i < nconss; i++ )
+   {
+      consdata = SCIPconsGetData(conss[i]);
+
+      /* constraint is marked, that some of its variables were deleted */
+      if( consdata->varsdeleted )
+      {
+         /* iterate over all variables of the constraint and delete them from the constraint */
+         for( v = consdata->nvars - 1; v >= 0; --v )
+         {
+            if( SCIPvarIsDeleted(consdata->vars[v]) )
+            {
+               SCIP_CALL( delCoefPos(scip, conss[i], v) );
+            }
+         }
+         consdata->varsdeleted = FALSE;
       }
    }
 
@@ -8702,10 +8772,21 @@ SCIP_DECL_CONSLOCK(consLockKnapsack)
 /** constraint disabling notification method of constraint handler */
 #define consDisableKnapsack NULL
 
-
 /** variable deletion method of constraint handler */
-#define consDelVarsKnapsack NULL
+static
+SCIP_DECL_CONSDELVARS(consDelVarsKnapsack)
+{
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL || nconss == 0);
 
+   if( nconss > 0 )
+   {
+      SCIP_CALL( performVarDeletions(scip, conshdlr, conss, nconss) );
+   }
+
+   return SCIP_OKAY;
+}
 
 /** constraint display method of constraint handler */
 static
@@ -8895,6 +8976,8 @@ SCIP_DECL_EVENTEXEC(eventExecKnapsack)
    case SCIP_EVENTTYPE_IMPLADDED: /* further preprocessing might be possible due to additional implications */
       eventdata->consdata->presolved = FALSE;
       break;
+   case SCIP_EVENTTYPE_VARDELETED:
+      eventdata->consdata->varsdeleted = TRUE;
    default:
       SCIPerrorMessage("invalid event type %x\n", SCIPeventGetType(event));
       return SCIP_INVALIDDATA;

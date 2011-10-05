@@ -253,7 +253,7 @@ SCIP_RETCODE consdataCreate(
    for( v = 0; v < (*consdata)->nvars; v++ )
    {
       assert((*consdata)->vars[v] != NULL);
-      SCIPcaptureVar(scip, (*consdata)->vars[v]);
+      SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[v]) );
    }
 
    return SCIP_OKAY;
@@ -281,7 +281,7 @@ SCIP_RETCODE consdataFree(
    for( v = 0; v < (*consdata)->nvars; v++ )
    {
       assert((*consdata)->vars[v] != NULL);
-      SCIPreleaseVar(scip, &((*consdata)->vars[v]));
+      SCIP_CALL( SCIPreleaseVar(scip, &((*consdata)->vars[v])) );
    }
 
    SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->vars, (*consdata)->varssize);
@@ -355,7 +355,7 @@ SCIP_RETCODE switchWatchedvars(
    {
       assert(consdata->filterpos1 != -1);
       SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[consdata->watchedvar1],
-            SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED, eventhdlr, (SCIP_EVENTDATA*)cons,
+            SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED | SCIP_EVENTTYPE_VARDELETED, eventhdlr, (SCIP_EVENTDATA*)cons,
             consdata->filterpos1) );
    }
    if( consdata->watchedvar2 != -1 && consdata->watchedvar2 != watchedvar2 )
@@ -416,7 +416,7 @@ SCIP_RETCODE addCoef(
 
    SCIP_CALL( consdataEnsureVarsSize(scip, consdata, consdata->nvars + 1) );
    consdata->vars[consdata->nvars] = var;
-   SCIPcaptureVar(scip, consdata->vars[consdata->nvars]);
+   SCIP_CALL( SCIPcaptureVar(scip, consdata->vars[consdata->nvars]) );
    consdata->nvars++;
 
    /* we only catch this event in presolving stage */
@@ -495,7 +495,7 @@ SCIP_RETCODE delCoefPos(
    assert(pos != consdata->watchedvar2);
 
    /* release variable */
-   SCIPreleaseVar(scip, &consdata->vars[pos]);
+   SCIP_CALL( SCIPreleaseVar(scip, &consdata->vars[pos]) );
 
    /* move the last variable to the free slot */
    if( pos != consdata->nvars - 1 )

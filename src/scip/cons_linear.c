@@ -54,7 +54,6 @@
 #include "scip/cons_quadratic.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/pub_misc.h"
-#include "scip/var.h"
 
 #define CONSHDLR_NAME          "linear"
 #define CONSHDLR_DESC          "linear constraints of the form  lhs <= a^T x <= rhs"
@@ -192,7 +191,6 @@ struct SCIP_ConsData
    unsigned int          cliquesadded:1;     /**< were the cliques of the constraint already extracted? */
    unsigned int          binvarssorted:1;    /**< are binary variables sorted w.r.t. the absolute of their coefficient? */
    unsigned int          varsdeleted:1;      /**< were variables deleted after last cleanup? */
-   SCIP_CONS*            cons;               /**< the constraint to which the data belongs */
 };
 
 /** event data for bound change event */
@@ -665,7 +663,8 @@ SCIP_RETCODE consdataDropEvent(
    assert(consdata->eventdatas[pos]->varpos == pos);
 
    SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[pos],
-         SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_VARUNLOCKED | SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_OBJCHANGED,
+         SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_VARUNLOCKED
+         | SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_OBJCHANGED,
          eventhdlr, consdata->eventdatas[pos], consdata->eventdatas[pos]->filterpos) );
 
    SCIPfreeBlockMemory(scip, &consdata->eventdatas[pos]); /*lint !e866*/
@@ -866,7 +865,7 @@ SCIP_RETCODE consdataCreate(
    {
       assert((*consdata)->vars[v] != NULL);
       assert(!SCIPisZero(scip, (*consdata)->vals[v]));
-      SCIPcaptureVar(scip, (*consdata)->vars[v]);
+      SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[v]) );
    }
 
    return SCIP_OKAY;
@@ -906,7 +905,7 @@ SCIP_RETCODE consdataFree(
    {
       assert((*consdata)->vars[v] != NULL);
       assert(!SCIPisZero(scip, (*consdata)->vals[v]));
-      SCIPreleaseVar(scip, &((*consdata)->vars[v]));
+      SCIP_CALL( SCIPreleaseVar(scip, &((*consdata)->vars[v])) );
    }
 
    SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->vars, (*consdata)->varssize);
@@ -3041,7 +3040,7 @@ SCIP_RETCODE addCoef(
    consdata->vals[consdata->nvars] = val;
    consdata->nvars++;
    /* capture variable */
-   SCIPcaptureVar(scip, var);
+   SCIP_CALL( SCIPcaptureVar(scip, var) );
 
    /* if we are in transformed problem, the variable needs an additional event data */
    if( transformed )
@@ -3152,10 +3151,11 @@ SCIP_RETCODE delCoefPos(
    }
 
    /* move the last variable to the free slot */
-   consdata->vars[pos] = consdata->vars[consdata->nvars-1];
-   consdata->vals[pos] = consdata->vals[consdata->nvars-1];
    if( pos != consdata->nvars-1 )
    {
+      consdata->vars[pos] = consdata->vars[consdata->nvars-1];
+      consdata->vals[pos] = consdata->vals[consdata->nvars-1];
+
       if( consdata->eventdatas != NULL )
       {
          consdata->eventdatas[pos] = consdata->eventdatas[consdata->nvars-1];
@@ -3188,7 +3188,7 @@ SCIP_RETCODE delCoefPos(
    }
 
    /* release variable */
-   SCIPreleaseVar(scip, &var);
+   SCIP_CALL( SCIPreleaseVar(scip, &var) );
 
    return SCIP_OKAY;
 }
@@ -3321,18 +3321,18 @@ SCIP_RETCODE scaleCons(
    return SCIP_OKAY;
 }
 
+/* perform deletion of variables in all constraints of the constraint handler */
 static
-void performVarDeletions(
-   SCIP*                 scip,
-   SCIP_CONSHDLR*        conshdlr,
-   SCIP_CONS**           conss,
-   int                   nconss
+SCIP_RETCODE performVarDeletions(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< array of constraints */
+   int                   nconss              /**< number of constraints */
    )
 {
+   SCIP_CONSDATA* consdata;
    int i;
    int v;
-   SCIP_CONSDATA* consdata;
-   SCIP_VAR* var;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -3341,43 +3341,26 @@ void performVarDeletions(
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
 
    /* iterate over all constraints */
-   for ( i = 0; i < nconss; i++ )
+   for( i = 0; i < nconss; i++ )
    {
       consdata = SCIPconsGetData(conss[i]);
-      /* if constraint is marked, that some of the variables it contains were deleted, iterate over all variables of the constraint */
-      if ( consdata->varsdeleted )
+
+      /* constraint is marked, that some of its variables were deleted */
+      if( consdata->varsdeleted )
       {
-#if 0
-         printf("\nVariable deleted in cons %s\n", SCIPconsGetName(consdata->cons));
-         printf("nvars = %d\n", consdata->nvars);
-         for ( v = 0; v < consdata->nvars; v++ )
+         /* iterate over all variables of the constraint and delete them from the constraint */
+         for( v = consdata->nvars - 1; v >= 0; --v )
          {
-            printf("%s: %f\n", SCIPvarGetName(consdata->vars[v]), consdata->vals[v]);
-         }
-#endif
-         for ( v = consdata->nvars - 1; v >= 0; v-- )
-         {
-            if ( SCIPvarIsDeleted(consdata->vars[v]) )
+            if( SCIPvarIsDeleted(consdata->vars[v]) )
             {
-               var = consdata->vars[v];
-               //printf("counter %s: %d\n", SCIPvarGetName(var), SCIPvarGetNUses(var));
-               //printf("remove variable %s\n", SCIPvarGetName(var));
-               delCoefPos(scip, conss[i], v);
-               //printf("counter %s: %d\n", SCIPvarGetName(var), SCIPvarGetNUses(var));
+               SCIP_CALL( delCoefPos(scip, conss[i], v) );
             }
          }
-#if 0
-         printf("nvars = %d\n", consdata->nvars);
-         for ( v = 0; v < consdata->nvars; v++ )
-         {
-            printf("%s: %f\n", SCIPvarGetName(consdata->vars[v]), consdata->vals[v]);
-         }
-         printf("\n\n");
-#endif
          consdata->varsdeleted = FALSE;
       }
    }
 
+   return SCIP_OKAY;
 }
 
 
@@ -9134,8 +9117,6 @@ SCIP_DECL_CONSTRANS(consTransLinear)
          SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons),
          SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
 
-   targetdata->cons = *targetcons;
-
    return SCIP_OKAY;
 }
 
@@ -9439,9 +9420,6 @@ SCIP_DECL_CONSPROP(consPropLinear)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-
-   /* perform variable deletions */
-   //performVarDeletions(scip, conshdlr, conss, nconss);
 
    /*debugMessage("Prop method of linear constraints\n");*/
 
@@ -9958,12 +9936,14 @@ SCIP_DECL_CONSLOCK(consLockLinear)
 static
 SCIP_DECL_CONSDELVARS(consDelVarsLinear)
 {
-   assert( scip != NULL );
-   assert( conshdlr != NULL );
-   assert( conss != NULL || nconss == 0 );
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL || nconss == 0);
 
-   if ( nconss > 0 )
-      performVarDeletions(scip, conshdlr, conss, nconss);
+   if( nconss > 0 )
+   {
+      SCIP_CALL( performVarDeletions(scip, conshdlr, conss, nconss) );
+   }
 
    return SCIP_OKAY;
 }
@@ -9972,9 +9952,9 @@ SCIP_DECL_CONSDELVARS(consDelVarsLinear)
 static
 SCIP_DECL_CONSPRINT(consPrintLinear)
 {  /*lint --e{715}*/
-   assert( scip != NULL );
-   assert( conshdlr != NULL );
-   assert( cons != NULL );
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(cons != NULL);
    
    SCIP_CALL( consdataPrint(scip, SCIPconsGetData(cons), file) );
     
@@ -10193,12 +10173,6 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
    eventtype = SCIPeventGetType(event);
    var = SCIPeventGetVar(event);
 
-   if( (eventtype & SCIP_EVENTTYPE_VARDELETED) != 0 )
-   {
-      consdata->varsdeleted = TRUE;
-
-      printf("vardeleted: var = %s in cons %s\n", SCIPvarGetName(var), SCIPconsGetName(consdata->cons));
-   }
    if( (eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) != 0 )
    {
       SCIP_Real oldbound;
@@ -10252,23 +10226,21 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
          }
       }
    }
-
-   if( (eventtype & SCIP_EVENTTYPE_VARFIXED) != 0 )
+   else if( (eventtype & SCIP_EVENTTYPE_VARFIXED) != 0 )
    {
       /* we want to remove the fixed variable */
       consdata->presolved = FALSE;
       consdata->removedfixings = FALSE;
    }
 
-   if( (eventtype & SCIP_EVENTTYPE_VARUNLOCKED) != 0 )
+   else if( (eventtype & SCIP_EVENTTYPE_VARUNLOCKED) != 0 )
    {
       /* there is only one lock left: we may multi-aggregate the variable as slack of an equation */
       assert(SCIPvarGetNLocksDown(var) <= 1);
       assert(SCIPvarGetNLocksUp(var) <= 1);
       consdata->presolved = FALSE;
    }
-
-   if( (eventtype & SCIP_EVENTTYPE_GBDCHANGED) != 0 )
+   else if( (eventtype & SCIP_EVENTTYPE_GBDCHANGED) != 0 )
    {
       SCIP_Real oldbound;
       SCIP_Real newbound;
@@ -10292,8 +10264,7 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
          consdataUpdateChgGlbUb(scip, consdata, oldbound, newbound, val, TRUE);
       }
    }
-
-   if( (eventtype & SCIP_EVENTTYPE_OBJCHANGED) != 0 )
+   else if( (eventtype & SCIP_EVENTTYPE_OBJCHANGED) != 0 )
    {
       SCIP_Real             oldobj;             /**< old objective value before value changed */
       SCIP_Real             newobj;             /**< new objective value after value changed */
@@ -10304,6 +10275,12 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
       if( (oldobj >= 0.0 && newobj < 0.0) || (oldobj < 0.0 && newobj >= 0.0) )
          consdataInvalidateActivities(consdata);
    }
+   else
+   {
+      assert((eventtype & SCIP_EVENTTYPE_VARDELETED) != 0);
+      consdata->varsdeleted = TRUE;
+   }
+
    return SCIP_OKAY;
 }
 
@@ -10713,8 +10690,6 @@ SCIP_RETCODE SCIPcreateConsLinear(
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
-
-   consdata->cons = *cons;
 
    return SCIP_OKAY;
 }

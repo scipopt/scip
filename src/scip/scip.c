@@ -2733,7 +2733,7 @@ SCIP_RETCODE SCIPincludeConshdlr(
          conshdlrcopy,
          consfree, consinit, consexit, consinitpre, consexitpre, consinitsol, consexitsol,
          consdelete, constrans, consinitlp, conssepalp, conssepasol, consenfolp, consenfops, conscheck, consprop,
-         conspresol, consresprop, conslock, consactive, consdeactive, consenable, consdisable, consdelvars, consprint, 
+         conspresol, consresprop, conslock, consactive, consdeactive, consenable, consdisable, consdelvars, consprint,
          conscopy, consparse, conshdlrdata) );
    SCIP_CALL( SCIPsetIncludeConshdlr(scip->set, conshdlr) );
 
@@ -4854,24 +4854,18 @@ SCIP_RETCODE SCIPaddPricedVar(
    return SCIP_OKAY;
 }
 
-/** removes variable from the problem; however, the variable is NOT removed from the constraints */
+/** marks variable to be removed from the problem */
 SCIP_RETCODE SCIPdelVar(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var                 /**< variable to delete */
+   SCIP_VAR*             var,                /**< variable to delete */
+   SCIP_Bool*            deleted             /**< pointer to store whether variable was marked to be deleted */
    )
 {
+   assert(scip != NULL);
+   assert(var != NULL);
+   assert(deleted != NULL);
+
    SCIP_CALL( checkStage(scip, "SCIPdelVar", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE) );
-
-   /* don't remove variables that are not in the problem */
-   /**@todo what about negated variables? should the negation variable be removed instead? */
-   if( SCIPvarGetProbindex(var) == -1 )
-      return SCIP_OKAY;
-
-   /* don't remove the direct counterpart of an original variable from the transformed problem, because otherwise
-    * operations on the original variables would be applied to a NULL pointer
-    */
-   if( SCIPvarIsTransformedOrigvar(var) )
-      return SCIP_OKAY;
 
    switch( scip->set->stage )
    {
@@ -4881,7 +4875,7 @@ SCIP_RETCODE SCIPdelVar(
          SCIPerrorMessage("cannot remove transformed variables from original problem\n");
          return SCIP_INVALIDDATA;
       }
-      SCIP_CALL( SCIPprobDelVar(scip->origprob, scip->mem->probmem, scip->set, scip->eventqueue, var) );
+      SCIP_CALL( SCIPprobDelVar(scip->origprob, scip->mem->probmem, scip->set, scip->eventqueue, var, deleted) );
 
       return SCIP_OKAY;
 
@@ -4891,7 +4885,6 @@ SCIP_RETCODE SCIPdelVar(
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_FREESOLVE:
-   case SCIP_STAGE_FREETRANS:
       /* check variable's status */
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
       {
@@ -4904,23 +4897,27 @@ SCIP_RETCODE SCIPdelVar(
          return SCIP_INVALIDDATA;
       }
 
-      /* in FREETRANS stage, we don't need to remove the variable, because the transformed problem is freed anyways */
-      if( scip->set->stage != SCIP_STAGE_FREETRANS )
+      /* fix the variable to 0, first */
+      assert(!SCIPisFeasPositive(scip, SCIPvarGetLbGlobal(var)));
+      assert(!SCIPisFeasNegative(scip, SCIPvarGetUbGlobal(var)));
+
+      if ( !SCIPisFeasZero(scip, SCIPvarGetLbGlobal(var)) )
       {
-         /* fix the variable to 0 first */
-         if ( !SCIPisFeasZero(scip, SCIPvarGetLbGlobal(var)) )
-         {
-            SCIP_CALL( SCIPchgVarLbGlobal(scip, var, 0.0));
-         }
-         if ( !SCIPisFeasZero(scip, SCIPvarGetUbGlobal(var)) )
-         {
-            SCIP_CALL( SCIPchgVarUbGlobal(scip, var, 0.0));
-         }
-
-         SCIP_CALL( SCIPprobDelVar(scip->transprob, scip->mem->probmem, scip->set, scip->eventqueue, var) );
+         SCIP_CALL( SCIPchgVarLbGlobal(scip, var, 0.0));
       }
-      return SCIP_OKAY;
+      if ( !SCIPisFeasZero(scip, SCIPvarGetUbGlobal(var)) )
+      {
+         SCIP_CALL( SCIPchgVarUbGlobal(scip, var, 0.0));
+      }
 
+      SCIP_CALL( SCIPprobDelVar(scip->transprob, scip->mem->probmem, scip->set, scip->eventqueue, var, deleted) );
+
+      return SCIP_OKAY;
+   case SCIP_STAGE_FREETRANS:
+      /* in FREETRANS stage, we don't need to remove the variable, because the transformed problem is freed anyways */
+      *deleted = FALSE;
+
+      return SCIP_OKAY;
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
@@ -6271,7 +6268,7 @@ SCIP_RETCODE initPresolve(
    assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
 
    /* delete the variables from the problems that were marked to be deleted */
-   SCIP_CALL( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp, scip->branchcand) );
+   SCIP_CALL( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp, scip->branchcand) );
 
    /* remove empty and single variable cliques from the clique table, and convert all two variable cliques
     * into implications
@@ -6348,7 +6345,7 @@ SCIP_RETCODE exitPresolve(
    assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
 
    /* delete the variables from the problems that were marked to be deleted */
-   SCIP_CALL( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp, scip->branchcand) );
+   SCIP_CALL( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp, scip->branchcand) );
 
    /* remove empty and single variable cliques from the clique table, and convert all two variable cliques
     * into implications
@@ -6575,7 +6572,7 @@ SCIP_RETCODE presolveRound(
       *delayed = *delayed || (result == SCIP_DELAYED);
 
       /* delete the variables from the problems that were marked to be deleted */
-      SCIP_CALL( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp,
+      SCIP_CALL( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp,
             scip->branchcand) );
 
       /* if we work off the delayed presolvers, we stop immediately if a reduction was found */
@@ -6617,7 +6614,7 @@ SCIP_RETCODE presolveRound(
       *delayed = *delayed || (result == SCIP_DELAYED);
 
       /* delete the variables from the problems that were marked to be deleted */
-      SCIP_CALL( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp,
+      SCIP_CALL( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp,
             scip->branchcand) );
 
       /* if we work off the delayed presolvers, we stop immediately if a reduction was found */
@@ -6708,7 +6705,7 @@ SCIP_RETCODE presolveRound(
       *delayed = *delayed || (result == SCIP_DELAYED);
 
       /* delete the variables from the problems that were marked to be deleted */
-      SCIP_CALL( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp,
+      SCIP_CALL( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp,
             scip->branchcand) );
 
       /* if we work off the delayed presolvers, we stop immediately if a reduction was found */

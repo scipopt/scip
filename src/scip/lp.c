@@ -274,6 +274,47 @@ SCIP_RETCODE SCIProwEnsureSize(
 }
 
 
+#if 0
+static SCIP_Bool msgdisp = FALSE;
+
+static
+void checkRow(
+   SCIP_ROW*             row
+   )
+{
+   int i;
+
+   if( !msgdisp )
+   {
+      SCIPwarningMessage("LP ROW CHECKING ACTIVATED! THIS IS VERY SLOW!\n");
+      msgdisp = TRUE;
+   }
+
+   /* validate sorting of LP part of row */
+   if( row->lpcolssorted && row->nlpcols > 0)
+   {
+      assert(row->cols_index[0] == row->cols[0]->index);
+      for( i = 1; i < row->nlpcols; ++i )
+      {
+         assert(row->cols_index[i] == row->cols[i]->index);
+         assert(row->cols_index[i] >= row->cols_index[i-1]);
+      }
+   }
+
+   /* validate sorting of non-LP part of row */
+   if( row->nonlpcolssorted && row->len > row->nlpcols )
+   {
+      assert(row->cols_index[row->nlpcols] == row->cols[row->nlpcols]->index);
+      for( i = row->nlpcols + 1; i < row->len; ++i )
+      {
+         assert(row->cols_index[i] == row->cols[i]->index);
+         assert(row->cols_index[i] >= row->cols_index[i-1]);
+      }
+   }
+}
+#else
+#define checkRow(row) /**/
+#endif
 
 
 /*
@@ -406,6 +447,8 @@ void rowSortNonLP(
 
    assert(row != NULL);
 
+   checkRow(row);
+
    /* check, if row is already sorted in the non-LP part, or if the sorting should be delayed */
    if( row->nonlpcolssorted || row->delaysort )
       return;
@@ -423,6 +466,8 @@ void rowSortNonLP(
          row->cols[i]->linkpos[row->linkpos[i]] = i;
       }
    }
+
+   checkRow(row);
    
    row->nonlpcolssorted = TRUE;
 }
@@ -727,7 +772,7 @@ void rowMoveCoef(
       row->nonlpcolssorted = FALSE;
 }
 
-/** swaps two coefficients in a row, and updates all corresponding data structures */
+/** swaps two coefficients of different columns in a row, and updates all corresponding data structures */
 static
 void rowSwapCoefs(
    SCIP_ROW*             row,                /**< LP row */
@@ -745,9 +790,7 @@ void rowSwapCoefs(
    assert(0 <= pos2 && pos2 < row->len);
    assert(row->cols[pos1] != NULL);
    assert(row->cols[pos1]->index == row->cols_index[pos1]);
-
-   if( pos1 == pos2 )
-      return;
+   assert(pos1 != pos2);
 
    /* swap coefficients */
    tmpcol = row->cols[pos2];
@@ -889,6 +932,7 @@ SCIP_RETCODE rowEventSideChanged(
 
 static SCIP_Bool msgdisp = FALSE;
 
+
 static
 void checkLinks(
    SCIP_LP*              lp                  /**< current LP data */
@@ -953,7 +997,6 @@ void checkLinks(
 #else
 #define checkLinks(lp) /**/
 #endif
-
 
 /*
  * Changing announcements
@@ -1111,7 +1154,12 @@ SCIP_RETCODE colAddCoef(
       if( col->lppos >= 0 )
       {
          row->nlpcols++;
-         rowSwapCoefs(row, linkpos, row->nlpcols-1);
+         /* swap coefficients, if needed */
+         if( linkpos != row->nlpcols-1 )
+            rowSwapCoefs(row, linkpos, row->nlpcols-1);
+         /* if the coefficient is already at the correct place, check whether lpcols are still sorted */
+         else if( linkpos > 0 && row->cols_index[linkpos] < row->cols_index[linkpos-1] )
+            row->lpcolssorted = FALSE;
       }
    }
 
@@ -1156,8 +1204,6 @@ SCIP_RETCODE colDelCoefPos(
    assert(0 <= pos && pos < col->len);
    assert(col->rows[pos] != NULL);
    assert(col->linkpos[pos] == -1 || col->rows[pos]->cols[col->linkpos[pos]] == col);
-   assert(col->linkpos[pos] == -1 || col->rows[pos]->cols[col->linkpos[pos]] == col
-      || col->coefchanged || col->rows[pos]->coefchanged);
    assert((pos < col->nlprows) == (col->linkpos[pos] >= 0 && col->rows[pos]->lppos >= 0));
 
    row = col->rows[pos];
@@ -1201,8 +1247,6 @@ SCIP_RETCODE colChgCoefPos(
    assert(0 <= pos && pos < col->len);
    assert(col->rows[pos] != NULL);
    assert(col->linkpos[pos] == -1 || col->rows[pos]->cols[col->linkpos[pos]] == col);
-   assert(col->linkpos[pos] == -1 || col->rows[pos]->cols[col->linkpos[pos]] == col
-      || ((col->coefchanged || col->rows[pos]->coefchanged) && SCIPsetIsZero(set, val)) );
 
    /*debugMessage("changing coefficient %g * <%s> at position %d of column <%s> to %g\n", 
      col->vals[pos], col->rows[pos]->name, pos, SCIPvarGetName(col->var), val);*/
@@ -1427,6 +1471,10 @@ SCIP_RETCODE rowAddCoef(
       {
          col->nlprows++;
          colSwapCoefs(col, linkpos, col->nlprows-1);
+
+         /* if no swap was necessary, mark lprows to be unsorted */
+         if( linkpos == col->nlprows-1 )
+            col->lprowssorted = FALSE;
       }
    }
 
@@ -1483,9 +1531,9 @@ SCIP_RETCODE rowDelCoefPos(
    assert(set != NULL);
    assert(0 <= pos && pos < row->len);
    assert(row->cols[pos] != NULL);
-   assert(row->linkpos[pos] == -1 || row->cols[pos]->rows[row->linkpos[pos]] == row);
+   /*assert(row->linkpos[pos] == -1 || row->cols[pos]->rows[row->linkpos[pos]] == row);
    assert(row->linkpos[pos] == -1 || row->cols[pos]->rows[row->linkpos[pos]] == row
-      || row->coefchanged || row->cols[pos]->coefchanged);
+   || row->coefchanged || row->cols[pos]->coefchanged);*/
    assert((pos < row->nlpcols) == (row->linkpos[pos] >= 0 && row->cols[pos]->lppos >= 0));
 
    col = row->cols[pos];
@@ -1508,6 +1556,7 @@ SCIP_RETCODE rowDelCoefPos(
    if( pos < row->nlpcols )
    {
       rowMoveCoef(row, row->nlpcols-1, pos);
+      assert(!row->lpcolssorted);
       row->nlpcols--;
       pos = row->nlpcols;
    }
@@ -1541,9 +1590,9 @@ SCIP_RETCODE rowChgCoefPos(
    assert(row != NULL);
    assert(0 <= pos && pos < row->len);
    assert(row->cols[pos] != NULL);
-   assert(row->linkpos[pos] == -1 || row->cols[pos]->rows[row->linkpos[pos]] == row);
-   assert(row->linkpos[pos] == -1 || row->cols[pos]->rows[row->linkpos[pos]] == row
-      || ((row->coefchanged || row->cols[pos]->coefchanged) && SCIPsetIsZero(set, val)) );
+   //assert(row->linkpos[pos] == -1 || row->cols[pos]->rows[row->linkpos[pos]] == row);
+   /*assert(row->linkpos[pos] == -1 || row->cols[pos]->rows[row->linkpos[pos]] == row
+     || ((row->coefchanged || row->cols[pos]->coefchanged) && SCIPsetIsZero(set, val)) );*/
 
    /*debugMessage("changing coefficient %g * <%s> at position %d of row <%s> to %g\n", 
      row->vals[pos], SCIPvarGetName(row->cols[pos]->var), pos, row->name, val);*/
@@ -1786,7 +1835,7 @@ SCIP_RETCODE rowUnlink(
    }
    assert(row->nunlinked == row->len);
 
-   checkLinks(lp);
+   //checkLinks(lp);
 
    return SCIP_OKAY;
 }
@@ -6841,7 +6890,12 @@ void colUpdateAddLP(
          assert(row->nlpcols <= pos && pos < row->len);
 
          row->nlpcols++;
-         rowSwapCoefs(row, pos, row->nlpcols-1);
+         /* swap coefficients, if needed */
+         if( pos != row->nlpcols-1 )
+            rowSwapCoefs(row, pos, row->nlpcols-1);
+         /* if the coefficient is already at the correct place, check whether lpcols are still sorted */
+         else if( pos > 0 && row->cols_index[pos] < row->cols_index[pos-1] )
+            row->lpcolssorted = FALSE;
       }
    }
 }
@@ -6873,6 +6927,10 @@ void rowUpdateAddLP(
 
          col->nlprows++;
          colSwapCoefs(col, pos, col->nlprows-1);
+
+         /* if no swap was necessary, mark lprows to be unsorted */
+         if( pos == col->nlprows-1 )
+            col->lprowssorted = FALSE;
       }
    }
 }
@@ -6903,7 +6961,12 @@ void colUpdateDelLP(
          assert(0 <= pos && pos < row->nlpcols);
 
          row->nlpcols--;
-         rowSwapCoefs(row, pos, row->nlpcols);
+         /* swap coefficients, if needed */
+         if( pos != row->nlpcols )
+            rowSwapCoefs(row, pos, row->nlpcols);
+         /* if the coefficient is already at the correct place, check whether nonlpcols are still sorted */
+         else if( pos < row->len - 1 && row->cols_index[pos] > row->cols_index[pos+1] )
+            row->nonlpcolssorted = FALSE;
       }
    }
 }
@@ -6935,6 +6998,10 @@ void rowUpdateDelLP(
 
          col->nlprows--;
          colSwapCoefs(col, pos, col->nlprows);
+
+         /* if no swap was necessary, mark lprows to be unsorted */
+         if( pos == col->nlprows )
+            col->nonlprowssorted = FALSE;
       }
    }
 }
@@ -14135,7 +14202,7 @@ SCIP_RETCODE lpDelRowset(
             SCIP_CALL( SCIPeventCreateRowDeletedLP(&event, blkmem, row) );
             SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
          }
-         
+
          SCIP_CALL( SCIProwRelease(&lp->lpirows[r], blkmem, set, lp) );
          SCIProwUnlock(lp->rows[r]);
          SCIP_CALL( SCIProwRelease(&lp->rows[r], blkmem, set, lp) );

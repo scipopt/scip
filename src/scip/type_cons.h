@@ -619,7 +619,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
 
 /** variable deletion method of constraint handler
  *
- *  This method should iterate over all constraints of the constraint handler and delete all variables 
+ *  This method should iterate over all constraints of the constraint handler and delete all variables
  *  that were marked for deletion by SCIPdelVar().
  *
  *  input:

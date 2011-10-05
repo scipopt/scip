@@ -2571,7 +2571,6 @@ void SCIPvarCapture(
    assert(var->nuses >= 0);
 
    SCIPdebugMessage("capture variable <%s> with nuses=%d\n", var->name, var->nuses);
-   //printf("capture variable <%s> with nuses=%d\n", var->name, var->nuses);
    var->nuses++;
 }
 
@@ -2590,7 +2589,6 @@ SCIP_RETCODE SCIPvarRelease(
    assert(blkmem != NULL);
 
    SCIPdebugMessage("release variable <%s> with nuses=%d\n", (*var)->name, (*var)->nuses);
-   //printf("release variable <%s> with nuses=%d\n", (*var)->name, (*var)->nuses);
    (*var)->nuses--;
    if( (*var)->nuses == 0 )
    {
@@ -2600,16 +2598,6 @@ SCIP_RETCODE SCIPvarRelease(
    *var = NULL;
 
    return SCIP_OKAY;
-}
-
-/** get usage counter of variable */
-int SCIPvarGetNUses(
-   SCIP_VAR*             var                 /**< variable */
-   )
-{
-   assert(var != NULL);
-
-   return var->nuses;
 }
 
 /** initializes variable data structure for solving */
@@ -3212,7 +3200,6 @@ SCIP_RETCODE SCIPvarLoose(
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
    assert(var->data.col != NULL);
-   /* assert(var->data.col->len == var->data.col->nunlinked);*/ /* no rows can include the column */ /* TODO: is this assert correct ???? */
    assert(var->data.col->lppos == -1);
    assert(var->data.col->lpipos == -1);
 
@@ -4110,6 +4097,10 @@ SCIP_RETCODE SCIPvarAggregate(
       var->data.negate.constant = 1.0;
       var->negatedvar = aggvar;
       aggvar->negatedvar = var;
+
+      /* mark both variables to be non-deletable */
+      SCIPvarMarkNotDeletable(var);
+      SCIPvarMarkNotDeletable(aggvar);
    }
    else
    {
@@ -4118,6 +4109,10 @@ SCIP_RETCODE SCIPvarAggregate(
       var->data.aggregate.var = aggvar;
       var->data.aggregate.scalar = scalar;
       var->data.aggregate.constant = constant;
+
+      /* mark both variables to be non-deletable */
+      SCIPvarMarkNotDeletable(var);
+      SCIPvarMarkNotDeletable(aggvar);
    }
 
    /* make aggregated variable a parent of the aggregation variable */
@@ -4532,6 +4527,9 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       var->data.multaggr.nvars = ntmpvars;
       var->data.multaggr.varssize = ntmpvars;
 
+      /* mark variable to be non-deletable */
+      SCIPvarMarkNotDeletable(var);
+
       /* relock the rounding locks of the variable, thus increasing the locks of the aggregation variables */
       SCIP_CALL( SCIPvarAddLocks(var, blkmem, set, eventqueue, nlocksdown, nlocksup) );
 
@@ -4548,6 +4546,9 @@ SCIP_RETCODE SCIPvarMultiaggregate(
          tmpvars[v]->removable &= var->removable;
          branchfactor = MAX(tmpvars[v]->branchfactor, branchfactor);
          branchpriority = MAX(tmpvars[v]->branchpriority, branchpriority);
+
+         /* mark variable to be non-deletable */
+         SCIPvarMarkNotDeletable(tmpvars[v]);
       }
       for( v = 0; v < ntmpvars; ++v )
       {
@@ -4702,6 +4703,10 @@ SCIP_RETCODE SCIPvarNegate(
       /* link the variables together */
       var->negatedvar = *negvar;
       (*negvar)->negatedvar = var;
+
+      /* mark both variables to be non-deletable */
+      SCIPvarMarkNotDeletable(var);
+      SCIPvarMarkNotDeletable(*negvar);
 
       /* copy the branch factor and priority, and use the negative preferred branching direction */
       (*negvar)->branchfactor = var->branchfactor;
@@ -13556,27 +13561,30 @@ SCIP_Bool SCIPvarIsDeleted(
    return var->deleted;
 }
 
-/** marks the variable to be deletable, i.e., it may be deleted completely from the problem */
+/** marks the variable to be deletable, i.e., it may be deleted completely from the problem;
+ *  method can only be called before the variable is added to the problem by SCIPaddVar() or SCIPaddPricedVar()
+ */
 void SCIPvarMarkDeletable(
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
    assert(var != NULL);
+   assert(var->probindex == -1);
 
    var->deletable = TRUE;
 }
 
-/** marks the variable to be essential, i.e., it must not be deleted */
-void SCIPvarMarkEssential(
+/** marks the variable to be not deletable from the problem */
+void SCIPvarMarkNotDeletable(
    SCIP_VAR*             var
    )
 {
    assert(var != NULL);
 
-   var->essential = TRUE;
+   var->deletable = FALSE;
 }
 
-/** returns whether variable is allowed to be deleted completely */
+/** returns whether variable is allowed to be deleted completely from the problem */
 SCIP_Bool SCIPvarIsDeletable(
    SCIP_VAR*             var
    )
@@ -13584,16 +13592,6 @@ SCIP_Bool SCIPvarIsDeletable(
    assert(var != NULL);
 
    return var->deletable;
-}
-
-/** returns whether variable is essential, i.e. must not be deleted */
-SCIP_Bool SCIPvarIsEssential(
-   SCIP_VAR*             var
-   )
-{
-   assert(var != NULL);
-
-   return var->essential;
 }
 
 /** returns whether variable is an active (neither fixed nor aggregated) variable */

@@ -792,16 +792,34 @@ SCIP_RETCODE SCIPprobDelVar(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_VAR*             var                 /**< problem variable */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Bool*            deleted             /**< pointer to store whether variable was marked to be deleted */
    )
 {
    assert(prob != NULL);
    assert(set != NULL);
    assert(var != NULL);
+   assert(eventqueue != NULL);
+   assert(deleted != NULL);
    assert(SCIPvarGetProbindex(var) != -1);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+
+   *deleted = FALSE;
+
+   /* don't remove variables that are not in the problem */
+   /**@todo what about negated variables? should the negation variable be removed instead? */
+   if( SCIPvarGetProbindex(var) == -1 )
+      return SCIP_OKAY;
+
+   /* don't remove the direct counterpart of an original variable from the transformed problem, because otherwise
+    * operations on the original variables would be applied to a NULL pointer
+    */
+   if( SCIPvarIsTransformedOrigvar(var) )
+      return SCIP_OKAY;
+
+   assert(SCIPvarGetNegatedVar(var) == NULL);
 
    SCIPdebugMessage("deleting variable <%s> from problem (%d variables: %d binary, %d integer, %d implicit, %d continuous)\n",
       SCIPvarGetName(var), prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars);
@@ -823,6 +841,8 @@ SCIP_RETCODE SCIPprobDelVar(
    prob->deletedvars[prob->ndeletedvars] = var;
    prob->ndeletedvars++;
 
+   *deleted = TRUE;
+
    return SCIP_OKAY;
 }
 
@@ -831,6 +851,7 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data (may be NULL) */
    SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
@@ -839,6 +860,13 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
    int i;
 
    assert(prob != NULL);
+   assert(set != NULL);
+
+   /* delete variables from the constraints */
+   for( i = 0; i < set->nconshdlrs; ++i )
+   {
+      SCIP_CALL( SCIPconshdlrDelVars(set->conshdlrs[i], blkmem, set, stat) );
+   }
 
    for( i = 0; i < prob->ndeletedvars; ++i )
    {

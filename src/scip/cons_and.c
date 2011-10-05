@@ -430,11 +430,11 @@ SCIP_RETCODE consdataCreate(
    }
 
    /* capture vars */
-   SCIPcaptureVar(scip, (*consdata)->resvar);
+   SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->resvar) );
    for( v = 0; v < (*consdata)->nvars; v++ )
    {
       assert((*consdata)->vars[v] != NULL);
-      SCIPcaptureVar(scip, (*consdata)->vars[v]);
+      SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[v]) );
    }
 
 
@@ -572,7 +572,7 @@ SCIP_RETCODE addCoef(
    consdata->changed = TRUE;
 
    /* capture variable */
-   SCIPcaptureVar(scip, var);
+   SCIP_CALL( SCIPcaptureVar(scip, var) );
 
    /* if we are in transformed problem, catch the variable's events */
    if( transformed )

@@ -157,7 +157,8 @@ SCIP_RETCODE SCIPprobDelVar(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_VAR*             var                 /**< problem variable */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Bool*            deleted             /**< pointer to store whether variable was marked to be deleted */
    );
 
 /** actually removes the deleted variables from the problem and releases them */
@@ -166,6 +167,7 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data (may be NULL) */
    SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */

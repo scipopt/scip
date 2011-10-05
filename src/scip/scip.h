@@ -1905,7 +1905,8 @@ SCIP_RETCODE SCIPaddPricedVar(
 extern
 SCIP_RETCODE SCIPdelVar(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var                 /**< variable to delete */
+   SCIP_VAR*             var,                /**< variable to delete */
+   SCIP_Bool*            deleted             /**< pointer to store whether variable was marked to be deleted */
    );
 
 /** gets variables of the problem along with the numbers of different variable types; data may become invalid after

@@ -361,7 +361,9 @@ SCIP_RETCODE consdataFree(
        */
       if( SCIPvarMayRoundDown((*consdata)->intvar) && SCIPvarMayRoundUp((*consdata)->intvar) )
       {
-         SCIP_CALL( SCIPdelVar(scip, (*consdata)->intvar) );
+         SCIP_Bool deleted;
+
+         SCIP_CALL( SCIPdelVar(scip, (*consdata)->intvar, &deleted) );
       }
       SCIP_CALL( SCIPreleaseVar(scip, &(*consdata)->intvar) );
    }

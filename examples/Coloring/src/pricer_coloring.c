@@ -580,9 +580,9 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
                TRUE, TRUE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) );
 
          COLORprobAddVarForStableSet(scip, setnumber, var);
+         SCIPvarMarkDeletable(var);
          SCIP_CALL( SCIPaddPricedVar(scip, var, 1.0) );
          SCIP_CALL( SCIPchgVarUbLazy(scip, var, 1.0) );
-         SCIPvarMarkDeletable(var);
          
          /* add variable to the constraints in which it appears */
          for ( i = 0; i < nmaxstablesetnodes; i++ )
@@ -696,9 +696,9 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
                         TRUE, TRUE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) );
 
                   COLORprobAddVarForStableSet(pricerdata->scip, setnumber, var);
+                  SCIPvarMarkDeletable(var);
                   SCIP_CALL( SCIPaddPricedVar(pricerdata->scip, var, 1.0) );
                   SCIP_CALL( SCIPchgVarUbLazy(scip, var, 1.0) );
-                  SCIPvarMarkDeletable(var);
 
                   pricerdata->nstablesetsfound += 1;
                   /* add variable to the constraints in which it appears */
@@ -796,9 +796,9 @@ SCIP_DECL_PRICERFARKAS(pricerFarkasColoring)
       SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0, 1, 1, SCIP_VARTYPE_BINARY, 
             TRUE, TRUE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*) (size_t) setnumber) );
       COLORprobAddVarForStableSet(scip, setnumber, var);
+      SCIPvarMarkDeletable(var);
       SCIP_CALL( SCIPaddPricedVar(scip, var, 1.0) );
       SCIP_CALL( SCIPchgVarUbLazy(scip, var, 1.0) );
-      SCIPvarMarkDeletable(var);
 
       for ( i = 0; i < nmaxstablesetnodes; i++ )
       {

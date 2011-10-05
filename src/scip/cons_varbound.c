@@ -164,6 +164,10 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->presolved = FALSE;
    (*consdata)->addvarbounds = FALSE;
 
+   /* capture variables */
+   SCIP_CALL( SCIPcaptureVar(scip, var) );
+   SCIP_CALL( SCIPcaptureVar(scip, vbdvar) );
+
    /* if we are in the transformed problem, get transformed variables, add variable bound information, and catch events */
    if( SCIPisTransformed(scip) )
    {
@@ -198,6 +202,11 @@ SCIP_RETCODE consdataFree(
    {
       SCIP_CALL( dropEvents(scip, *consdata) );
    }
+
+   /* release variables */
+   SCIP_CALL( SCIPreleaseVar(scip, &(*consdata)->var) );
+   SCIP_CALL( SCIPreleaseVar(scip, &(*consdata)->vbdvar) );
+
 
    SCIPfreeBlockMemory(scip, consdata);
 
@@ -1753,7 +1762,10 @@ SCIP_DECL_CONSLOCK(consLockVarbound)
 #define consDisableVarbound NULL
 
 
-/** variable deletion method of constraint handler */
+/** variable deletion method of constraint handler:
+ *  varbound constraints are not modifiable and must have exactly two variables,
+ *  so is is also not allowed to delete variables from them
+ */
 #define consDelVarsVarbound NULL
 
 

@@ -6043,6 +6043,7 @@ SCIP_RETCODE SCIPsetSlackVarIndicator(
    SCIP_CONSDATA* consdata;
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool deleted;
 
    assert( cons != NULL );
    assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 );
@@ -6076,7 +6077,7 @@ SCIP_RETCODE SCIPsetSlackVarIndicator(
    }
 
    /* free old slack variable */
-   SCIP_CALL( SCIPdelVar(scip, consdata->slackvar) );
+   SCIP_CALL( SCIPdelVar(scip, consdata->slackvar, &deleted) );
    SCIP_CALL( SCIPreleaseVar(scip, &(consdata->slackvar) ) );
 
    /* mark new slack variable not to be multi-aggregated */

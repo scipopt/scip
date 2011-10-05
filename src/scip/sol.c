@@ -73,8 +73,8 @@ SCIP_RETCODE solSetArrayVal(
 
    idx = SCIPvarGetIndex(var);
 
-   /* mark variable to be essantial (non-deletable) */
-   SCIPvarMarkEssential(var);
+   /* from now on, variable must not be deleted */
+   SCIPvarMarkNotDeletable(var);
 
    /* mark the variable valid */
    SCIP_CALL( SCIPboolarraySetVal(sol->valid, set, idx, TRUE) );
@@ -100,8 +100,8 @@ SCIP_RETCODE solIncArrayVal(
 
    idx = SCIPvarGetIndex(var);
 
-   /* mark variable to be essantial (non-deletable) */
-   SCIPvarMarkEssential(var);
+   /* from now on, variable must not be deleted */
+   SCIPvarMarkNotDeletable(var);
 
    /* mark the variable valid */
    SCIP_CALL( SCIPboolarraySetVal(sol->valid, set, idx, TRUE) );

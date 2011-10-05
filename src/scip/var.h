@@ -319,12 +319,6 @@ SCIP_RETCODE SCIPvarRelease(
    SCIP_LP*              lp                  /**< current LP data (may be NULL, if it's not a column variable) */
    );
 
-/** get usage counter of variable */
-extern
-int SCIPvarGetNUses(
-   SCIP_VAR*             var                 /**< variable */
-   );
-
 /** initializes variable data structure for solving */
 extern
 void SCIPvarInitSolve(

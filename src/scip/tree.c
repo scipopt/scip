@@ -43,7 +43,6 @@
 #include "scip/debug.h"
 #include "scip/prob.h"
 #include "scip/scip.h"
-#include "scip/disp.h"
 
 
 #define MAXDEPTH          65535  /**< maximal depth level for nodes; must correspond to node data structure */
@@ -3298,7 +3297,9 @@ SCIP_RETCODE nodeToLeaf(
    return SCIP_OKAY;
 }
 
-/** */
+/** removes variables from the problem, that are marked to be deletable, not in the LP, and were created at the focusnode;
+ *  if parameter inlp is TRUE, also deletable variables in the LP are removed (e.g., when the node is cut off, anyway)
+ */
 static
 SCIP_RETCODE focusnodeCleanupVars(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
@@ -3316,6 +3317,7 @@ SCIP_RETCODE focusnodeCleanupVars(
    int i;
    int ndelvars;
    SCIP_Bool needdel;
+   SCIP_Bool deleted;
 
    assert(blkmem != NULL);
    assert(set != NULL);
@@ -3327,13 +3329,9 @@ SCIP_RETCODE focusnodeCleanupVars(
    assert(lp != NULL);
 
    /* check the settings, whether variables should be deleted */
-   needdel = (set->price_delvars && tree->focusnode != tree->root) || (set->price_delvarsroot && tree->focusnode == tree->root);
+   needdel = (tree->focusnode == tree->root ? set->price_delvarsroot : set->price_delvars);
 
    if( !needdel )
-      return SCIP_OKAY;
-
-   /* only remove variables if there are pricers present, s.t. the variable could be regenerated, if needed */
-   if( set->nactivepricers == 0 )
       return SCIP_OKAY;
 
    ndelvars = 0;
@@ -3353,31 +3351,30 @@ SCIP_RETCODE focusnodeCleanupVars(
       var = prob->vars[i];
       assert(var != NULL);
 
-      if( SCIPvarIsDeletable(var) && !SCIPvarIsEssential(var) && (inlp || !SCIPvarIsInLP(var)) )
+      /* check whether variable is deletable */
+      if( SCIPvarIsDeletable(var) )
       {
-         SCIP_CALL( SCIPdelVar(set->scip, var) );
-         ndelvars++;
-      }
+         if( !SCIPvarIsInLP(var) )
+         {
+            SCIP_CALL( SCIPdelVar(set->scip, var, &deleted) );
 
-      SCIPvarMarkEssential(var);
+            if( deleted )
+               ndelvars++;
+         }
+         else
+         {
+            /* mark variable to be non-deletable, because it will be contained in the basis information
+             * at this node and must not be deleted from now on
+             */
+            SCIPvarMarkNotDeletable(var);
+         }
+      }
    }
 
    printf("delvars at node %lld, deleted %d vars\n", stat->nnodes, ndelvars);
 
-   /* delete variables from the constraints */
-   for( i = 0; i < set->nconshdlrs; ++i )
-   {
-      SCIP_CALL( SCIPconshdlrDelVars(set->conshdlrs[i], blkmem, set, stat) );
-   }
-
    /* perform the variable deletions from the problem */
-   SCIP_CALL( SCIPprobPerformVarDeletions(prob, blkmem, set, eventqueue, lp, branchcand) );
-
-   if( ndelvars > 0 )
-   {
-      /* display node information line */
-      SCIP_CALL( SCIPdispPrintLine(set, stat, NULL, TRUE) );
-   }
+   SCIP_CALL( SCIPprobPerformVarDeletions(prob, blkmem, set, stat, eventqueue, lp, branchcand) );
 
    return SCIP_OKAY;
 }
