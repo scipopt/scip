@@ -517,6 +517,7 @@ void SCIProwRecalcLPActivity(
 extern
 SCIP_Real SCIProwGetLPActivity(
    SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp                  /**< current LP data */
    );
@@ -525,6 +526,7 @@ SCIP_Real SCIProwGetLPActivity(
 extern
 SCIP_Real SCIProwGetLPFeasibility(
    SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp                  /**< current LP data */
    );
@@ -540,6 +542,7 @@ void SCIProwRecalcPseudoActivity(
 extern
 SCIP_Real SCIProwGetPseudoActivity(
    SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat                /**< problem statistics */
    );
 
@@ -547,6 +550,7 @@ SCIP_Real SCIProwGetPseudoActivity(
 extern
 SCIP_Real SCIProwGetPseudoFeasibility(
    SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat                /**< problem statistics */
    );
 

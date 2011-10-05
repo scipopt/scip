@@ -5477,10 +5477,14 @@ void SCIProwRecalcLPActivity(
 /** returns the activity of a row in the current LP solution */
 SCIP_Real SCIProwGetLPActivity(
    SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp                  /**< current LP data */
    )
 {
+   SCIP_Real inf;
+   SCIP_Real activity;
+
    assert(row != NULL);
    assert(stat != NULL);
    assert(lp != NULL);
@@ -5492,12 +5496,18 @@ SCIP_Real SCIProwGetLPActivity(
    assert(row->validactivitylp == stat->lpcount);
    assert(row->activity < SCIP_INVALID);
 
-   return row->activity;
+   activity = row->activity;
+   inf = SCIPsetInfinity(set);
+   activity = MAX(activity, -inf);
+   activity = MIN(activity, +inf);
+
+   return activity;
 }
 
 /** returns the feasibility of a row in the current LP solution: negative value means infeasibility */
 SCIP_Real SCIProwGetLPFeasibility(
    SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp                  /**< current LP data */
    )
@@ -5506,7 +5516,7 @@ SCIP_Real SCIProwGetLPFeasibility(
 
    assert(row != NULL);
 
-   activity = SCIProwGetLPActivity(row, stat, lp);
+   activity = SCIProwGetLPActivity(row, set, stat, lp);
 
    return MIN(row->rhs - activity, activity - row->lhs);
 }
@@ -5541,9 +5551,13 @@ void SCIProwRecalcPseudoActivity(
 /** returns the pseudo activity of a row in the current pseudo solution */
 SCIP_Real SCIProwGetPseudoActivity(
    SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat                /**< problem statistics */
    )
 {
+   SCIP_Real inf;
+   SCIP_Real activity;
+
    assert(row != NULL);
    assert(stat != NULL);
    assert(row->validpsactivitydomchg <= stat->domchgcount);
@@ -5554,12 +5568,18 @@ SCIP_Real SCIProwGetPseudoActivity(
    assert(row->validpsactivitydomchg == stat->domchgcount);
    assert(row->pseudoactivity < SCIP_INVALID);
 
-   return row->pseudoactivity;
+   activity = row->pseudoactivity;
+   inf = SCIPsetInfinity(set);
+   activity = MAX(activity, -inf);
+   activity = MIN(activity, +inf);
+
+   return activity;
 }
 
 /** returns the pseudo feasibility of a row in the current pseudo solution: negative value means infeasibility */
 SCIP_Real SCIProwGetPseudoFeasibility(
    SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat                /**< problem statistics */
    )
 {
@@ -5567,7 +5587,7 @@ SCIP_Real SCIProwGetPseudoFeasibility(
 
    assert(row != NULL);
 
-   pseudoactivity = SCIProwGetPseudoActivity(row, stat);
+   pseudoactivity = SCIProwGetPseudoActivity(row, set, stat);
 
    return MIN(row->rhs - pseudoactivity, pseudoactivity - row->lhs);
 }
@@ -5865,7 +5885,7 @@ SCIP_Real SCIProwGetLPEfficacy(
 
    eps = SCIPsetSumepsilon(set);
    norm = MAX(norm, eps);
-   feasibility = SCIProwGetLPFeasibility(row, stat, lp);
+   feasibility = SCIProwGetLPFeasibility(row, set, stat, lp);
 
    return -feasibility / norm;
 }

@@ -15974,7 +15974,7 @@ SCIP_Real SCIPgetRowLPActivity(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetRowLPActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   return SCIProwGetLPActivity(row, scip->stat, scip->lp);
+   return SCIProwGetLPActivity(row, scip->set, scip->stat, scip->lp);
 }
 
 /** returns the feasibility of a row in the last LP solution: negative value means infeasibility */
@@ -15985,7 +15985,7 @@ SCIP_Real SCIPgetRowLPFeasibility(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetRowLPFeasibility", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   return SCIProwGetLPFeasibility(row, scip->stat, scip->lp);
+   return SCIProwGetLPFeasibility(row, scip->set, scip->stat, scip->lp);
 }
 
 /** recalculates the activity of a row for the current pseudo solution */
@@ -16009,7 +16009,7 @@ SCIP_Real SCIPgetRowPseudoActivity(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetRowPseudoActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   return SCIProwGetPseudoActivity(row, scip->stat);
+   return SCIProwGetPseudoActivity(row, scip->set, scip->stat);
 }
 
 /** returns the feasibility of a row for the current pseudo solution: negative value means infeasibility */
@@ -16020,7 +16020,7 @@ SCIP_Real SCIPgetRowPseudoFeasibility(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetRowPseudoFeasibility", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   return SCIProwGetPseudoFeasibility(row, scip->stat);
+   return SCIProwGetPseudoFeasibility(row, scip->set, scip->stat);
 }
 
 /** recalculates the activity of a row in the last LP or pseudo solution */
@@ -16048,9 +16048,9 @@ SCIP_Real SCIPgetRowActivity(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetRowActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    if( SCIPtreeHasCurrentNodeLP(scip->tree) )
-      return SCIProwGetLPActivity(row, scip->stat, scip->lp);
+      return SCIProwGetLPActivity(row, scip->set, scip->stat, scip->lp);
    else
-      return SCIProwGetPseudoActivity(row, scip->stat);
+      return SCIProwGetPseudoActivity(row, scip->set, scip->stat);
 }
 
 /** returns the feasibility of a row in the last LP or pseudo solution */
@@ -16062,9 +16062,9 @@ SCIP_Real SCIPgetRowFeasibility(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetRowFeasibility", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    if( SCIPtreeHasCurrentNodeLP(scip->tree) )
-      return SCIProwGetLPFeasibility(row, scip->stat, scip->lp);
+      return SCIProwGetLPFeasibility(row, scip->set, scip->stat, scip->lp);
    else
-      return SCIProwGetPseudoFeasibility(row, scip->stat);
+      return SCIProwGetPseudoFeasibility(row, scip->set, scip->stat);
 }
 
 /** returns the activity of a row for the given primal solution */
@@ -16079,9 +16079,9 @@ SCIP_Real SCIPgetRowSolActivity(
    if( sol != NULL )
       return SCIProwGetSolActivity(row, scip->set, scip->stat, sol);
    else if( SCIPtreeHasCurrentNodeLP(scip->tree) )
-      return SCIProwGetLPActivity(row, scip->stat, scip->lp);
+      return SCIProwGetLPActivity(row, scip->set, scip->stat, scip->lp);
    else
-      return SCIProwGetPseudoActivity(row, scip->stat);
+      return SCIProwGetPseudoActivity(row, scip->set, scip->stat);
 }
 
 /** returns the feasibility of a row for the given primal solution */
@@ -16096,9 +16096,9 @@ SCIP_Real SCIPgetRowSolFeasibility(
    if( sol != NULL )
       return SCIProwGetSolFeasibility(row, scip->set, scip->stat, sol);
    else if( SCIPtreeHasCurrentNodeLP(scip->tree) )
-      return SCIProwGetLPFeasibility(row, scip->stat, scip->lp);
+      return SCIProwGetLPFeasibility(row, scip->set, scip->stat, scip->lp);
    else
-      return SCIProwGetPseudoFeasibility(row, scip->stat);
+      return SCIProwGetPseudoFeasibility(row, scip->set, scip->stat);
 }
 
 /** output row to file stream */

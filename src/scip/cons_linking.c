@@ -1509,7 +1509,7 @@ SCIP_RETCODE separateCons(
             if( !SCIProwIsInLP(consdata->row2) )
             {
                tmp = SCIPgetRowLPFeasibility(scip, consdata->row2);
-               feasibility = MIN( feasibility, tmp);
+               feasibility = MIN(feasibility, tmp);
             }
             addcut = SCIPisFeasNegative(scip, feasibility);
          }

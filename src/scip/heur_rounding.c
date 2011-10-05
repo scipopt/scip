@@ -167,15 +167,18 @@ SCIP_RETCODE updateActivities(
 
          /* update row activity */
          oldactivity = activities[rowpos];
-         newactivity = oldactivity + delta * colvals[r];
-         if( SCIPisInfinity(scip, newactivity) )
-            newactivity = SCIPinfinity(scip);
-         else if( SCIPisInfinity(scip, -newactivity) )
-            newactivity = -SCIPinfinity(scip);
-         activities[rowpos] = newactivity;
+         if( !SCIPisInfinity(scip, -oldactivity) && !SCIPisInfinity(scip, oldactivity) )
+         {
+            newactivity = oldactivity + delta * colvals[r];
+            if( SCIPisInfinity(scip, newactivity) )
+               newactivity = SCIPinfinity(scip);
+            else if( SCIPisInfinity(scip, -newactivity) )
+               newactivity = -SCIPinfinity(scip);
+            activities[rowpos] = newactivity;
 
-         /* update row violation arrays */
-         updateViolations(scip, row, violrows, violrowpos, nviolrows, oldactivity, newactivity);
+            /* update row violation arrays */
+            updateViolations(scip, row, violrows, violrowpos, nviolrows, oldactivity, newactivity);
+         }
       }
    }
 
