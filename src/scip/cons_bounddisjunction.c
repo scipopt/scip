@@ -1339,15 +1339,23 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
    coefy /= coefxy;
    if( coefxy > 0.0 )
    {
-      lhs /= coefxy;
-      rhs /= coefxy;
+      if( !SCIPisInfinity(scip, -lhs) )
+         lhs /= coefxy;
+      if( !SCIPisInfinity(scip,  rhs) )
+         rhs /= coefxy;
    }
    else
    {
       SCIP_Real tmp;
 
-      tmp = rhs / coefxy;
-      rhs = lhs / coefxy;
+      if( !SCIPisInfinity(scip,  rhs) )
+         tmp = rhs / coefxy;
+      else
+         tmp = -SCIPinfinity(scip);
+      if( !SCIPisInfinity(scip, -lhs) )
+         rhs = lhs / coefxy;
+      else
+         rhs = SCIPinfinity(scip);
       lhs = tmp;
    }
 
