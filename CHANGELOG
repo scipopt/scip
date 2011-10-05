@@ -278,6 +278,18 @@ design:
 - CIP format variable characters defined, e.g. SCIP_VARTYPE_INTEGER_CHAR
 - add expresssion graph data structures and methods for reformulation, domain propagation, and simple convexity check on nonlinear expressions
 
+statistic:
+- the "Solving Time" is now spitted into presolving, solving, and reading time
+- Presolvers section has new column "AddCons" which states the number f added constraint
+- Constraints section has new column named "#ResProp" which show the number of resolve propagation calls of certain constraint handler
+- Constraint Timing section has a new column "ResProp" which states the time spend in resolve propagation method of the constraint handler
+- new section "Propagator Timing" which shows the time spend in different callbacks of the propagator
+- rearranged first two columns of Propagators section; "#Propagate" and "#ResProp" stating the number of call for propagation and resolve propagation;
+  the Time column is moved into the new section Propagator Timings
+- Constraints section has new column named "MaxNumber" which the maximum number of active constraint of a certain constraint handler
+- added two columns "Time-0-It" and Calls-0-It" in the LP section which states the number of LP call and time spend for solving LPs
+  with zero iterations (only refactorization)
+
 Makefile
 - via "PARASCIP=true" as a "Makefile" option it is possible to compile SCIP threadsafe in DEBUG-mode, (in OPT-mode it's not necessary)
 - new variable $(INSTALLDIR) in Makefile which define installation directory for the libraries, $(INSTALLDIR)/lib/, 
