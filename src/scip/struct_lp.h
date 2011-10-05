@@ -305,6 +305,7 @@ struct SCIP_Lp
    SCIP_Bool             probing;            /**< are we currently in probing mode? */
    SCIP_Bool             diving;             /**< LP is used for diving: col bounds and obj don't correspond to variables */
    SCIP_Bool             divingobjchg;       /**< objective values were changed in diving: LP objective is invalid */
+   SCIP_Bool             divinglazyapplied;  /**< lazy bounds were applied to the LP during diving */
    SCIP_Bool             resolvelperror;     /**< an error occured during resolving the LP after diving or probing */
    SCIP_Bool             lpifromscratch;     /**< current FROMSCRATCH setting in LPI */
    SCIP_Bool             lpiscaling;         /**< current SCALING setting in LPI */

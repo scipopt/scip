@@ -6270,6 +6270,44 @@ SCIP_RETCODE lpFlushDelCols(
    return SCIP_OKAY;
 }
 
+/** computes for the given column the lower and upper bound that should be flushed into the LP
+ *  depending on lazy bounds and diving mode; in diving mode, lazy bounds are ignored, i.e.,
+ *  the bounds are explicitly added to the LP in any case
+ */
+static
+void computeLPBounds(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_COL*             col,                /**< column to compute bounds for */
+   SCIP_Real             lpiinf,             /**< infinity value if the LP solver */
+   SCIP_Real*            lb,                 /**< pointer to store the new lower bound */
+   SCIP_Real*            ub                  /**< pointer to store the new upper bound */
+   )
+{
+   assert(lp != NULL);
+   assert(set != NULL);
+   assert(col != NULL);
+   assert(lb != NULL);
+   assert(ub != NULL);
+
+   /* get the correct new lower bound:
+    * if lazy lower bound exists and is larger than lower bound, set lower bound to infinity;
+    * if we are in diving mode, ignore lazy bounds and always take the lower bound
+    */
+   if( SCIPsetIsInfinity(set, -col->lb) || (SCIPsetIsLE(set, col->lb, col->lazylb) && !SCIPlpDiving(lp)) )
+      (*lb) = -lpiinf;
+   else
+      (*lb) = col->lb;
+   /* get the correct new upper bound:
+    * if lazy upper bound exists and is larger than upper bound, set upper bound to infinity;
+    * if we are in diving mode, ignore lazy bounds and always take the upper bound
+    */
+   if( SCIPsetIsInfinity(set, col->ub) || (SCIPsetIsGE(set, col->ub, col->lazyub) && !SCIPlpDiving(lp)) )
+      (*ub) = lpiinf;
+   else
+      (*ub) = col->ub;
+}
+
 /** applies all cached column additions to the LP solver */
 static
 SCIP_RETCODE lpFlushAddCols(
@@ -6367,14 +6405,10 @@ SCIP_RETCODE lpFlushAddCols(
       col->ubchanged = FALSE;
       col->coefchanged = FALSE;
       obj[pos] = col->obj;
-      if( SCIPsetIsInfinity(set, -col->lb) || SCIPsetIsLE(set, col->lb, col->lazylb) )
-         lb[pos] = -lpiinf;
-      else
-         lb[pos] = col->lb;
-      if( SCIPsetIsInfinity(set, col->ub) || SCIPsetIsGE(set, col->ub, col->lazyub) )
-         ub[pos] = lpiinf;
-      else
-         ub[pos] = col->ub;
+
+      /* compute bounds that should be flushed into the LP (taking into account lazy bounds) */
+      computeLPBounds(lp, set, col, lpiinf, &(lb[pos]), &(ub[pos]));
+
       beg[pos] = nnonz;
       name[pos] = (char*)SCIPvarGetName(col->var);
 
@@ -6721,8 +6755,9 @@ SCIP_RETCODE lpFlushChgCols(
             SCIP_Real newlb;
             SCIP_Real newub;
 
-            newlb = (SCIPsetIsInfinity(set, -col->lb) ? -lpiinf : col->lb);
-            newub = (SCIPsetIsInfinity(set, col->ub) ? lpiinf : col->ub);
+            /* compute bounds that should be flushed into the LP (taking into account lazy bounds) */
+            computeLPBounds(lp, set, col, lpiinf, &newlb, &newub);
+
             if( col->flushedlb != newlb || col->flushedub != newub ) /*lint !e777*/
             {
                assert(nbdchg < lp->ncols);
@@ -7244,6 +7279,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->probing = FALSE;
    (*lp)->diving = FALSE;
    (*lp)->divingobjchg = FALSE;
+   (*lp)->divinglazyapplied = FALSE;
    (*lp)->divelpistate = NULL;
    (*lp)->resolvelperror = FALSE;
    (*lp)->lpiuobjlim = SCIPlpiInfinity((*lp)->lpi);
@@ -7551,9 +7587,10 @@ SCIP_RETCODE SCIPlpAddRow(
 
 
 #ifndef NDEBUG
-/** method check if all columns in the lazycols array have at least one lazy bound and also have a counter part in the
- *  cols array; furthermore, it is checked if columns in the cols which have a lazy bound have a counter part in the
- *  lazycols array  */
+/** method checks if all columns in the lazycols array have at least one lazy bound and also have a counter part in the
+ *  cols array; furthermore, it is checked if columns in the cols array which have a lazy bound have a counter part in
+ *  the lazycols array
+ */
 static
 void checkLazyColArray(
    SCIP_LP*              lp,                 /**< LP data */
@@ -7603,6 +7640,8 @@ void checkLazyColArray(
       assert(contained == (!SCIPsetIsInfinity(set, lp->cols[c]->lazyub) || !SCIPsetIsInfinity(set, -lp->cols[c]->lazylb)));
    }
 }
+#else
+#define checkLazyColArray(lp, set) /**/
 #endif
 
 /** removes all columns after the given number of cols from the LP */
@@ -7662,16 +7701,10 @@ SCIP_RETCODE SCIPlpShrinkCols(
             c++;
       }
       
-#ifndef NDEBUG
-      /** method check if all columns in the lazycols array have at least one lazy bound and also have a counter part in
-       *  the cols array; furthermore, it is checked if columns in the cols which have a lazy bound have a counter part
-       *  in the lazycols array  */
-      checkLazyColArray(lp, set);
-#endif
-
       /* mark the current LP unflushed */
       lp->flushed = FALSE;
 
+      checkLazyColArray(lp, set);
       checkLinks(lp);
    }
    assert(lp->nremovablecols <= lp->ncols);
@@ -12419,70 +12452,92 @@ SCIP_RETCODE lpFlushAndSolve(
    return SCIP_OKAY;
 }
 
-/** checks if the lazy bounds are valid; if not add these bounds to the LP and resolve the LP */
+#ifndef NDEBUG
+/** checks if the lazy bounds are valid */
 static
-SCIP_RETCODE checkLazyBounds(
+void checkLazyBounds(
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool*            lazyboundsvalid     /**< pointer to store whether the lazy bound are primal feasible or not */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    SCIP_COL* col;
    int c;
    
    assert(lp->flushed);
-   assert(*lazyboundsvalid == TRUE); /* pointer has to be initialized */
 
-   c = 0;
-   while( c < lp->nlazycols )
+   for( c = 0; c < lp->nlazycols; ++c )
    {
       col = lp->lazycols[c];
 
-      /* check lower bound */
-      if( !SCIPsetIsInfinity(set, -col->lazylb) && SCIPsetIsFeasNegative(set, col->primsol - col->lazylb) )
+      /* in case lazy bounds are given, check that the primal solution satisfies them */
+      assert(SCIPsetIsInfinity(set, -col->lazylb) || SCIPsetIsFeasGE(set, col->primsol, col->lazylb));
+      assert(SCIPsetIsInfinity(set, col->lazyub) || SCIPsetIsFeasLE(set, col->primsol, col->lazyub));
+   }
+}
+#else
+#define checkLazyBounds(lp, set) /**/
+#endif
+
+/** marks all lazy columns to be changed; this is needed for reloading/removing bounds of these columns before and after
+ *  diving
+ */
+static
+SCIP_RETCODE updateLazyBounds(
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_COL* col;
+   int c;
+
+   assert(lp->nlazycols > 0);
+
+   /* return, if we are in diving, and bounds were already applied
+    * or if we are not in diving and bounds were not applied
+    */
+   if( lp->diving == lp->divinglazyapplied )
+      return SCIP_OKAY;
+
+   SCIPdebugMessage("mark all lazy columns as changed in order to reload bounds (diving=%d, applied=%d)\n",
+      lp->diving, lp->divinglazyapplied);
+
+   for( c = 0; c < lp->nlazycols; ++c )
+   {
+      col = lp->lazycols[c];
+
+      /* if the column has a lazy lower bound, mark its lower bounds as changed */
+      if( !SCIPsetIsInfinity(set, -col->lazylb) )
       {
-         SCIPwarningMessage("variable <%s>: lazy lower bound (%.15g) is violated by the current LP solution (%.15g), add lower bound to the LP!\n", 
-            SCIPvarGetName(col->var), col->lazylb, col->primsol);
+         assert((!(lp->divinglazyapplied)) || (col->flushedlb == col->lb));
+         assert(lp->divinglazyapplied || SCIPsetIsGT(set, col->lb, col->lazylb)
+            || (col->flushedlb == -SCIPlpiInfinity(lp->lpi)));
 
          /* insert column in the chgcols list (if not already there) */
          SCIP_CALL( insertColChgcols(col, set, lp) );
 
          /* mark bound change in the column */
          col->lbchanged = TRUE;
-
-         /* remove lazy flag */
-         col->lazylb = -SCIPsetInfinity(set);
-
-         (*lazyboundsvalid) = FALSE;
       }
-         
-      /* check upper bound */
-      if( !SCIPsetIsInfinity(set, col->lazyub) && SCIPsetIsFeasPositive(set, col->primsol - col->lazyub))
+
+      /* if the column has a lazy upper bound, mark its upper bounds as changed */
+      if( !SCIPsetIsInfinity(set, col->lazyub) )
       {
-         SCIPwarningMessage("variable <%s>: lazy upper bound (%.15g) is violated by the current LP solution (%.15g), add upper bound to the LP!\n", 
-            SCIPvarGetName(col->var), col->lazyub, col->primsol);
+         assert((!(lp->divinglazyapplied)) || (col->flushedub == col->ub));
+         assert(lp->divinglazyapplied || SCIPsetIsLT(set, col->ub, col->lazyub)
+            || (col->flushedub == SCIPlpiInfinity(lp->lpi)));
 
          /* insert column in the chgcols list (if not already there) */
          SCIP_CALL( insertColChgcols(col, set, lp) );
 
          /* mark bound change in the column */
          col->ubchanged = TRUE;
-
-         /* remove lazy flag */
-         col->lazyub = SCIPsetInfinity(set);
-
-         (*lazyboundsvalid) = FALSE;
       }
-
-      /* remove lazy column entry if both columns are in the LP, do not increase iterator, since last element is copied to i-th position */
-      if( SCIPsetIsInfinity(set, -col->lazylb) && SCIPsetIsInfinity(set, -col->lazyub) )
-      {
-         lp->nlazycols--;
-         lp->lazycols[c] = lp->lazycols[lp->nlazycols];
-      }
-      else
-         ++c; /* increase iterator */
    }
+
+   /* update lp->divinglazyapplied flag: if we are in diving mode, we just applied the lazy bounds,
+    * if not, we just removed them
+    */
+   lp->divinglazyapplied = lp->diving;
 
    return SCIP_OKAY;
 }
@@ -12550,6 +12605,18 @@ SCIP_RETCODE SCIPlpSolveAndEval(
    resolveitlim = ( limitresolveiters ? lpGetResolveItlim(set, stat, itlim) : itlim );
    assert(itlim == -1 || (resolveitlim <= itlim));
 
+   /* if there are lazy bounds, check whether the bounds should explicitly be put into the LP (diving was started)
+    * or removed from the LP (diving was ended)
+    */
+   if( lp->nlazycols > 0 )
+   {
+      /* @todo avoid loosing primal feasibility here after changing the objective already did destroy dual feasibility;
+       * first resolve LP?
+       */
+      SCIP_CALL( updateLazyBounds(lp, set) );
+      assert(lp->diving == lp->divinglazyapplied);
+   }
+
    /* flush changes to the LP solver */
    SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
 
@@ -12598,34 +12665,13 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             /* get LP solution believing in the feasibility of the LP solution */
             SCIP_CALL( SCIPlpGetSol(lp, set, stat, NULL, NULL) );
 
-            /* in case there are lazy bounds, then we have to check the feasibility of the lazy bounds constraint to
-             * determine primal feasibility */
-            primalfeasible = (lp->nlazycols == 0);
+            primalfeasible = TRUE;
             dualfeasible = TRUE;
-         }
-         
-         /* check if the lazy bound are the reason for the primal infeasibility; if so add these bounds to the LP and
-          * denote the corresponding column bounds as not lazy and resolve the LP */
-         if( !primalfeasible && lp->nlazycols > 0 )
-         {
-            SCIP_Bool lazyboundsvalid;
 
-            lazyboundsvalid = TRUE;
-            SCIP_CALL( checkLazyBounds(lp, set, &lazyboundsvalid) );
-            
-            if( !lazyboundsvalid )
-            {
-               SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %"SCIP_LONGINT_FORMAT") solution of LP %d not optimal (pfeas=%d, dfeas=%d) since lazy bounds are violated -- solving again with added violated lazy bounds\n",
-                  stat->nnodes, stat->nlps, primalfeasible, dualfeasible);
-               
-               goto SOLVEAGAIN;
-            }
-            
-            if( !set->lp_checkfeas )
-               primalfeasible = TRUE;
+            /* in debug mode, check that lazy bounds (if present) are not violated */
+            checkLazyBounds(lp, set);
          }
-         
+
          if( primalfeasible && dualfeasible && aging && !lp->diving && stat->nlps > oldnlps )
          {
             /* update ages and remove obsolete columns and rows from LP */
@@ -12712,32 +12758,12 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          break;
 
       case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
-         /* check if the lazy bound are valid; if not add these bounds to the LP and denote the corresponding column
-          * bound as not lazy and resolve the LP */
-         if( lp->nlazycols > 0 )
-         {
-            SCIP_Bool lazyboundsvalid;
-
-            lazyboundsvalid = TRUE;
-            SCIP_CALL( checkLazyBounds(lp, set, &lazyboundsvalid) );
-            
-            if( !lazyboundsvalid )
-            {
-               SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %"SCIP_LONGINT_FORMAT") solution of LP %d may not be unbounded (pfeas=%d, dfeas=%d) since lazy bounds are violated -- solving again with added violated lazy bounds\n",
-                  stat->nnodes, stat->nlps, primalfeasible, dualfeasible);
-
-               /* if the LP had to be solved from scratch, we have to reset this flag, since we want to resolve from the
-                * current basis */
-               fromscratch = FALSE;
-
-               goto SOLVEAGAIN;
-            }
-            
-         }
-         
          SCIP_CALL( SCIPlpGetUnboundedSol(lp, set, stat) );
          SCIPdebugMessage(" -> LP has unbounded primal ray\n");
+
+         /* in debug mode, check that lazy bounds (if present) are not violated */
+         checkLazyBounds(lp, set);
+
          break;
 
       case SCIP_LPSOLSTAT_OBJLIMIT:
@@ -12839,9 +12865,14 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                {
                   /* get new solution and objective value */
                   SCIP_CALL( SCIPlpGetSol(lp, set, stat, NULL, NULL) );
-                  /* if objective value is larger than the cutoff bound, set solution status to objective 
-                     limit reached and objective value to infinity, in case solstat = SCIP_LPSOLSTAT_OBJLIMIT,
-                     this was already done in the lpSolve() method */               
+
+                  /* in debug mode, check that lazy bounds (if present) are not violated */
+                  checkLazyBounds(lp, set);
+
+                  /* if objective value is larger than the cutoff bound, set solution status to objective
+                   * limit reached and objective value to infinity, in case solstat = SCIP_LPSOLSTAT_OBJLIMIT,
+                   * this was already done in the lpSolve() method
+                   */
                   if( SCIPsetIsGE(set, objval, lp->cutoffbound - lp->looseobjval) )
                   {
                      lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
@@ -12866,7 +12897,10 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                else if( solstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
                {
                   SCIP_CALL( SCIPlpGetUnboundedSol(lp, set, stat) );
-                  SCIPdebugMessage(" -> LP has unbounded primal ray\n");                  
+                  SCIPdebugMessage(" -> LP has unbounded primal ray\n");
+
+                  /* in debug mode, check that lazy bounds (if present) are not violated */
+                  checkLazyBounds(lp, set);
                }
                             
                assert(lp->lpsolstat != SCIP_LPSOLSTAT_ITERLIMIT);
@@ -13975,7 +14009,7 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
 
    /* get primal unbounded ray */
    SCIP_CALL( SCIPlpiGetPrimalRay(lp->lpi, ray) );
-   
+
    lpicols = lp->lpicols;
    lpirows = lp->lpirows;
    nlpicols = lp->nlpicols;
@@ -13988,6 +14022,7 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    {
       assert(lpicols[c] != NULL);
       assert(lpicols[c]->var != NULL);
+      /* if these asserts come up, it might be a lazy bounds issue */
       assert(!SCIPsetIsNegative(set, ray[c]) || SCIPsetIsInfinity(set, -lpicols[c]->lb));
       assert(!SCIPsetIsPositive(set, ray[c]) || SCIPsetIsInfinity(set,  lpicols[c]->ub));
       rayobjval += ray[c] * lpicols[c]->obj;
@@ -14282,13 +14317,6 @@ SCIP_RETCODE lpDelColset(
          c++;
    }
 
-#ifndef NDEBUG
-   /** method check if all columns in the lazycols array have at least one lazy bound and also have a counter part in
-    *  the cols array; furthermore, it is checked if columns in the cols which have a lazy bound have a counter part in
-    *  the lazycols array  */
-   checkLazyColArray(lp, set);
-#endif
-
    /* mark LP to be unsolved */
    if( lp->ncols < ncols )
    {
@@ -14305,6 +14333,7 @@ SCIP_RETCODE lpDelColset(
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
 
+   checkLazyColArray(lp, set);
    checkLinks(lp);
 
    return SCIP_OKAY;
@@ -15016,6 +15045,10 @@ SCIP_RETCODE SCIPlpEndDive(
    SCIP_CALL( SCIPlpFreeState(lp, blkmem, &lp->divelpistate) );
    assert(lp->divelpistate == NULL);
 
+   /* switch to standard (non-diving) mode */
+   lp->diving = FALSE;
+   lp->divingobjchg = FALSE;
+
    /* resolve LP to reset solution */
    if( set->lp_resolverestore )
    {
@@ -15059,10 +15092,6 @@ SCIP_RETCODE SCIPlpEndDive(
          SCIP_CALL( rowRestoreSolVals(lp->rows[r], blkmem, stat->lpcount, set->lp_freesolvalbuffers) );
       }
    }
-
-   /* switch to standard (non-diving) mode */
-   lp->diving = FALSE;
-   lp->divingobjchg = FALSE;
 
 #ifndef NDEBUG
    {

@@ -132,6 +132,7 @@ fixed bugs:
 - fixed bug in sepa_zerohalf.c concerning inconsistent construction of solution array of variables and fixed wrong assert about variable bounds
 - fixed possible buffer overrun in tclique_graph.c
 - fixed bug w.r.t. infinity loop during propagation
+- fixed bug in handling of lazy bounds that resulted in putting the bounds explicitly into the LP
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})
@@ -264,6 +265,9 @@ features:
 - solutions which are given by the user form the outside are now marked by '#' in the output
 - implemented possibility to buffer and restore LP solution after diving without having to resolve the LP; currently
   turned off, because performance impact is unclear; controlled by parameters lp/resolverestore and lp/freesolvalbuffers
+- reworked concept of lazy bounds: they can now also be used for problems where constraints and objective together ensure the bounds; 
+  to allow this also for diving heuristics that might change the objective and thus destroy this property, lazy bounds are explicitly
+  put into the LP during diving and removed afterwards
 
 design:
 - SCIP_HASHMAP now works also without block memory
