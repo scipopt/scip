@@ -3372,10 +3372,13 @@ SCIP_RETCODE focusnodeCleanupVars(
       }
    }
 
-   printf("delvars at node %lld, deleted %d vars\n", stat->nnodes, ndelvars);
+   SCIPdebugMessage("delvars at node %lld, deleted %d vars\n", stat->nnodes, ndelvars);
 
-   /* perform the variable deletions from the problem */
-   SCIP_CALL( SCIPprobPerformVarDeletions(prob, blkmem, set, stat, eventqueue, lp, branchcand) );
+   if( ndelvars > 0 )
+   {
+      /* perform the variable deletions from the problem */
+      SCIP_CALL( SCIPprobPerformVarDeletions(prob, blkmem, set, stat, eventqueue, lp, branchcand) );
+   }
 
    return SCIP_OKAY;
 }
