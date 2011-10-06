@@ -698,6 +698,7 @@ SCIP_DECL_CONSPROP(consPropStoreGraph)
 #define consSepasolStoreGraph NULL
 #define consEnableStoreGraph NULL
 #define consDisableStoreGraph NULL
+#define consDelVarsStoreGraph NULL
 #define consPrintStoreGraph NULL
 #define consCopyStoreGraph NULL
 #define consParseStoreGraph NULL
@@ -734,8 +735,8 @@ SCIP_RETCODE COLORincludeConshdlrStoreGraph(
          consSepalpStoreGraph, consSepasolStoreGraph, consEnfolpStoreGraph, consEnfopsStoreGraph, consCheckStoreGraph,
          consPropStoreGraph, consPresolStoreGraph, consRespropStoreGraph, consLockStoreGraph,
          consActiveStoreGraph, consDeactiveStoreGraph,
-         consEnableStoreGraph, consDisableStoreGraph,
-         NULL, consPrintStoreGraph, consCopyStoreGraph, consParseStoreGraph,
+         consEnableStoreGraph, consDisableStoreGraph, consDelVarsStoreGraph,
+         consPrintStoreGraph, consCopyStoreGraph, consParseStoreGraph,
          conshdlrData) );
 
    return SCIP_OKAY;

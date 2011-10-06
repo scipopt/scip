@@ -955,6 +955,9 @@ SCIP_DECL_CONSLOCK(consLockLinearOrdering)
 /** constraint disabling notification method of constraint handler */
 #define consDisableLinearOrdering NULL
 
+/** variable deletion method of constraint handler */
+#define consDelVarsLinearOrdering NULL
+
 /** constraint display method of constraint handler */
 static
 SCIP_DECL_CONSPRINT(consPrintLinearOrdering)
@@ -1083,7 +1086,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinearOrdering(
          consSepalpLinearOrdering, consSepasolLinearOrdering, consEnfolpLinearOrdering, consEnfopsLinearOrdering,
 	 consCheckLinearOrdering, consPropLinearOrdering, consPresolLinearOrdering, consRespropLinearOrdering,
          consLockLinearOrdering, consActiveLinearOrdering, consDeactiveLinearOrdering,
-         consEnableLinearOrdering, consDisableLinearOrdering,
+         consEnableLinearOrdering, consDisableLinearOrdering, consDelVarsLinearOrdering,
          consPrintLinearOrdering, consCopyLinearOrdering, consParseLinearOrdering,
          NULL) );
 
