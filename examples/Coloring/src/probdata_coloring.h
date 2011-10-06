@@ -73,7 +73,7 @@ SCIP_RETCODE COLORprobAddNewStableSet(
 
 /** adds a variable that belongs to a given stable set */
 extern
-void COLORprobAddVarForStableSet(
+SCIP_RETCODE COLORprobAddVarForStableSet(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   setindex,              /**< index of the stable set */
    SCIP_VAR*             var                 /**< pointer to the variable */

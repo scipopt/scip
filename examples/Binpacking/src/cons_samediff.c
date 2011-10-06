@@ -559,6 +559,9 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveSamediff)
 /** constraint disabling notification method of constraint handler */
 #define consDisableSamediff NULL
 
+/** variable deletion method of constraint handler */
+#define consDelVarsSamediff NULL
+
 /** constraint display method of constraint handler */
 static
 SCIP_DECL_CONSPRINT(consPrintSamediff)
@@ -606,8 +609,8 @@ SCIP_RETCODE SCIPincludeConshdlrSamediff(
          consSepalpSamediff, consSepasolSamediff, consEnfolpSamediff, consEnfopsSamediff, consCheckSamediff, 
          consPropSamediff, consPresolSamediff, consRespropSamediff, consLockSamediff,
          consActiveSamediff, consDeactiveSamediff, 
-         consEnableSamediff, consDisableSamediff, 
-         NULL, consPrintSamediff, consCopySamediff, consParseSamediff,
+         consEnableSamediff, consDisableSamediff, consDelVarsSamediff,
+         consPrintSamediff, consCopySamediff, consParseSamediff,
          conshdlrdata) );
 
    return SCIP_OKAY;

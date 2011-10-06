@@ -114,7 +114,7 @@ SCIP_RETCODE COLORcreateConsStoreGraph(
    int                   type,               /**< type of the constraint: ROOT for root-constraint, else SAME or DIFFER */
    int                   node1,              /**< the first node of the constraint or -1 if root-constraint */
    int                   node2,              /**< the second node of the constraint or -1 if root-constraint */
-   SCIP_NODE*            stickingnode        /**< the B&B-tree node at which the constraint will be sticking */     
+   SCIP_NODE*            stickingnode        /**< the B&B-tree node at which the constraint will be sticking */
    );
 
 

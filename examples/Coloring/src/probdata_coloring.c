@@ -578,15 +578,17 @@ SCIP_DECL_EVENTEXEC(eventExecProbdatavardeleted)
    assert(var != NULL);
 
    SCIPdebugMessage("remove variable %s [%d] from list of stable sets\n", SCIPvarGetName(var), (int)(size_t)SCIPvarGetData(var));
-   //printf("remove variable %s [%d] from list of stable sets\n", SCIPvarGetName(var), (int)(size_t)SCIPvarGetData(var));
 
+   /* get index of variable in stablesets array */
    idx = (int)(size_t) SCIPvarGetData(var);
 
    assert(probdata->stablesetvars[idx] == var);
 
+   /* remove variable from stablesets array and release it */
    SCIPfreeBlockMemoryArray(scip, &(probdata->stablesets[idx]), probdata->stablesetlengths[idx]);
    SCIP_CALL( SCIPreleaseVar(scip, &(probdata->stablesetvars[idx])) );
 
+   /* move all subsequent variables to the front */
    for( ; idx < probdata->nstablesets - 1; idx++)
    {
       probdata->stablesets[idx] = probdata->stablesets[idx + 1];
@@ -661,7 +663,7 @@ SCIP_RETCODE SCIPcreateProbColoring(
    probdata->maxstablesets = 2;
    probdata->nstablesets = 0;
 
-   /* include event handler into original SCIP */
+   /* include variable deleted event handler into SCIP */
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
          NULL, eventFreeProbdatavardeleted, eventInitProbdatavardeleted, eventExitProbdatavardeleted,
          eventInitsolProbdatavardeleted, eventExitsolProbdatavardeleted, eventDeleteProbdatavardeleted, eventExecProbdatavardeleted,
@@ -751,7 +753,7 @@ void COLORprobPrintStableSet(
 
 
 /** adds a variable that belongs to a given stable set */
-void COLORprobAddVarForStableSet(
+SCIP_RETCODE COLORprobAddVarForStableSet(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   setindex,           /**< index of the stable set */
    SCIP_VAR*             var                 /**< pointer to the variable */
@@ -764,9 +766,13 @@ void COLORprobAddVarForStableSet(
    assert(probdata != NULL);
    assert((setindex >= 0) && (setindex < probdata->nstablesets));
 
-   SCIP_CALL_ABORT( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_VARDELETED, SCIPfindEventhdlr(scip, EVENTHDLR_NAME), (SCIP_EVENTDATA*) probdata, NULL) );
+   /* catch variable deleted event on the variable to update the stablesetvars array in the problem data */
+   SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_VARDELETED, SCIPfindEventhdlr(scip, EVENTHDLR_NAME),
+         (SCIP_EVENTDATA*) probdata, NULL) );
 
    probdata->stablesetvars[setindex] = var;
+
+   return SCIP_OKAY;
 }
 
 
