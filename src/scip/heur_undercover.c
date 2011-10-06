@@ -328,6 +328,9 @@ SCIP_RETCODE processNlRow(
                   incCounters(termcounter, conscounter, consmarker, probidx1);
 
                   SCIPdebugMessage("fixing var <%s> in covering problem to 1\n", SCIPvarGetName(coveringvars[probidx1]));
+
+                  /* if covering variable is fixed, then no need to still check non-diagonal elements */
+                  continue;
                }
 
                /* two different variables relate nonlinearly */
@@ -338,6 +341,10 @@ SCIP_RETCODE processNlRow(
 
                   /* do not assume symmetry */
                   if( !hessiandata->sparsity[idx1*nexprtreevars + idx2] && !hessiandata->sparsity[idx2*nexprtreevars + idx1] )
+                     continue;
+
+                  /* if diagonal has entry already, then covering constraint would always be satisfied, thus no need to add */
+                  if( hessiandata->sparsity[idx2*nexprtreevars + idx2] && !termIsConstant(scip, exprtreevars[idx2], 1.0, globalbounds) )
                      continue;
 
                   /* if constraints with inactive variables are present, we will have difficulties creating the sub-CIP later */
@@ -369,6 +376,8 @@ SCIP_RETCODE processNlRow(
                   /* add and release covering constraint */
                   SCIP_CALL( SCIPaddCons(coveringscip, coveringcons) );
                   SCIP_CALL( SCIPreleaseCons(coveringscip, &coveringcons) );
+
+                  SCIPdebugMessage("added covering constraint for vars <%s> and <%s> in covering problem\n", SCIPvarGetName(coveringvars[probidx1]), SCIPvarGetName(coveringvars[probidx2]));
 
                   /* update counters for both variables */
                   incCounters(termcounter, conscounter, consmarker, probidx1);
