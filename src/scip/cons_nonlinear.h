@@ -108,7 +108,7 @@ SCIP_RETCODE SCIPcreateConsNonlinear(
    SCIP_Real*            lincoefs,           /**< array with coefficients of constraint linear entries */
    int                   nexprtrees,         /**< number of expression trees for nonlinear part of constraint */
    SCIP_EXPRTREE**       exprtrees,          /**< expression trees for nonlinear part of constraint */
-   SCIP_Real*            nonlincoefs,        /**< coefficients for expression trees for nonlinear part */
+   SCIP_Real*            nonlincoefs,        /**< coefficients for expression trees for nonlinear part, or NULL if all 1.0 */
    SCIP_Real             lhs,                /**< left hand side of constraint */
    SCIP_Real             rhs,                /**< right hand side of constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?

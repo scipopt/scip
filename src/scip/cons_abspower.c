@@ -72,12 +72,6 @@
  */
 #define SIGN(x) ((x) >= 0.0 ? 1.0 : -1.0)
 
-/** translate from one value of +infinity to another
- *
- *  if val is >= infty1, then give infty2, else give val
- */
-#define infty2infty(infty1, infty2, val) (val >= infty1 ? infty2 : val)
-
 #define ROOTS_KNOWN 10                  /**< up to which (integer) exponents precomputed roots have been stored */
 
 /*
@@ -193,7 +187,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    *ispropagated = FALSE;
 
    return SCIP_OKAY;
-}
+}  /*lint !e715*/
 
 /** catch variable bound tightening events */
 static
@@ -320,7 +314,7 @@ static
 SCIP_DECL_HASHGETKEY(presolveFindDuplicatesGetKey)
 {
    return elem;
-}
+}  /*lint !e715*/
 
 /** checks if two constraints have the same x variable, the same exponent, and either the same offset or the same linear variable and are both equality constraint */
 static
@@ -337,14 +331,14 @@ SCIP_DECL_HASHKEYEQ(presolveFindDuplicatesKeyEQ)
    if( consdata1->x != consdata2->x )
       return FALSE;
 
-   if( consdata1->exponent != consdata2->exponent )
+   if( consdata1->exponent != consdata2->exponent )  /*lint !e777*/
       return FALSE;
 
-   if( consdata1->xoffset != consdata2->xoffset && consdata1->z != consdata2->z )
+   if( consdata1->xoffset != consdata2->xoffset && consdata1->z != consdata2->z )  /*lint !e777*/
       return FALSE;
 
    return TRUE;
-}
+}  /*lint !e715*/
 
 /** get value of hash element when comparing on x */
 static
@@ -356,7 +350,7 @@ SCIP_DECL_HASHKEYVAL(presolveFindDuplicatesKeyVal)
    assert(consdata != NULL);
 
    return ((unsigned int)(size_t)consdata->x << 16) + (unsigned int)(consdata->exponent*0x80);
-}
+}  /*lint !e715*/
 
 /** checks if two constraints have the same z variable and the same exponent */
 static
@@ -373,11 +367,11 @@ SCIP_DECL_HASHKEYEQ(presolveFindDuplicatesKeyEQ2)
    if( consdata1->z != consdata2->z )
       return FALSE;
 
-   if( consdata1->exponent != consdata2->exponent )
+   if( consdata1->exponent != consdata2->exponent )  /*lint !e777*/
       return FALSE;
 
    return TRUE;
-}
+}  /*lint !e715*/
 
 /** get value of hash element when comparing on z */
 static
@@ -389,7 +383,7 @@ SCIP_DECL_HASHKEYVAL(presolveFindDuplicatesKeyVal2)
    assert(consdata != NULL);
 
    return ((unsigned int)(size_t)consdata->z << 16) + (unsigned int)(consdata->exponent*0x80);
-}
+}  /*lint !e715*/
 
 /** upgrades a signpower constraint to a linear constraint if a second signpower constraint with same nonlinear term is available */
 static
@@ -427,8 +421,8 @@ SCIP_RETCODE presolveFindDuplicatesUpgradeCons(
    assert(SCIPisEQ(scip, consdata2->lhs, consdata2->rhs));
    assert(!SCIPisInfinity(scip, consdata2->lhs));
    assert(consdata1->x        == consdata2->x);
-   assert(consdata1->exponent == consdata2->exponent);
-   assert(consdata1->xoffset  == consdata2->xoffset);
+   assert(consdata1->exponent == consdata2->exponent);  /*lint !e777*/
+   assert(consdata1->xoffset  == consdata2->xoffset);   /*lint !e777*/
 
    lhs = consdata1->lhs;
    if( !SCIPisInfinity(scip, -lhs) )
@@ -620,7 +614,7 @@ SCIP_RETCODE presolveFindDuplicates(
       SCIP_CONS* cons0;
       SCIP_CONS* cons1;
 
-      cons0 = conss[c];
+      cons0 = conss[c];  /*lint !e613*/
 
       assert(!SCIPconsIsModifiable(cons0));  /* absolute power constraints aren't modifiable */
       assert(!SCIPconsIsLocal(cons0));       /* shouldn't have local constraints in presolve */
@@ -653,7 +647,7 @@ SCIP_RETCODE presolveFindDuplicates(
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
 
          assert(consdata0->x        == consdata1->x);
-         assert(consdata0->exponent == consdata1->exponent);
+         assert(consdata0->exponent == consdata1->exponent);  /*lint !e777*/
 
          if( SCIPisEQ(scip, consdata0->xoffset, consdata1->xoffset) )
          {
@@ -827,7 +821,7 @@ SCIP_RETCODE presolveFindDuplicates(
             SCIP_Real zval;
 
             assert(consdata0->x == consdata1->x);
-            assert(consdata0->exponent == consdata1->exponent);
+            assert(consdata0->exponent == consdata1->exponent);  /*lint !e777*/
             assert(!SCIPisEQ(scip, consdata0->xoffset, consdata1->xoffset));
 
             presolveFindDuplicatesSolveEquations(scip, infeas, &xval, &zval,
@@ -922,7 +916,7 @@ SCIP_RETCODE presolveFindDuplicates(
             break;
          }
       }
-      while( TRUE );
+      while( TRUE );  /*lint !e506*/
    }
 
    /* free hash table */
@@ -943,7 +937,7 @@ SCIP_RETCODE presolveFindDuplicates(
       SCIP_CONS* cons1;
       SCIP_CONSDATA* consdata0;
 
-      cons0 = conss[c];
+      cons0 = conss[c];  /*lint !e613*/
 
       assert(!SCIPconsIsModifiable(cons0));  /* absolute power constraints aren't modifiable */
       assert(!SCIPconsIsLocal(cons0));       /* shouldn't have local constraints in presolve */
@@ -987,7 +981,7 @@ SCIP_RETCODE presolveFindDuplicates(
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
 
          assert(consdata0->z        == consdata1->z);
-         assert(consdata0->exponent == consdata1->exponent);
+         assert(consdata0->exponent == consdata1->exponent);  /*lint !e777*/
          assert(SCIPisEQ(scip, consdata1->lhs, consdata1->rhs));
          assert(!SCIPisZero(scip, consdata1->zcoef));
 
@@ -1068,7 +1062,7 @@ SCIP_RETCODE presolveFindDuplicates(
             break;
          }
       }
-      while( TRUE );
+      while( TRUE );  /*lint !e506*/
    }
 
    /* free hash table */
@@ -1100,7 +1094,6 @@ SCIP_RETCODE tightenBounds(
    assert(result  != NULL);
    assert(nchgbds != NULL);
    assert(nfixedvars != NULL);
-   assert(naddconss != NULL || !force);
 
    *result = SCIP_DIDNOTFIND;
 
@@ -1201,6 +1194,8 @@ SCIP_RETCODE tightenBounds(
       SCIP_Bool local;
       SCIP_Real one;
 
+      assert(naddconss != NULL);
+
       /* we add constraint as local constraint if we are during probing or if we are during solve and not at the root node */
       local = SCIPinProbing(scip) || (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && (SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) > 0));
 
@@ -1237,8 +1232,8 @@ void computeBoundsZ(
    )
 {
    SCIP_CONSDATA* consdata;
-   long double bnd;
-   long double x;
+   SCIP_Real bnd;
+   SCIP_Real x;
 
    assert(scip  != NULL);
    assert(cons  != NULL);
@@ -1290,8 +1285,8 @@ void computeBoundsX(
    )
 {
    SCIP_CONSDATA* consdata;
-   long double bnd;
-   long double z;
+   SCIP_Real bnd;
+   SCIP_Real z;
 
    assert(scip  != NULL);
    assert(cons  != NULL);
@@ -1583,7 +1578,7 @@ SCIP_Real getGradientMaxElement(
    else
       val = consdata->exponent * pow(REALABS(xval + consdata->xoffset), consdata->exponent - 1.0);
 
-   return MAX(val, REALABS(consdata->zcoef));
+   return MAX(val, REALABS(consdata->zcoef));  /*lint !e666*/
 }
 
 /** computes violation of a constraint */
@@ -1828,10 +1823,12 @@ SCIP_RETCODE registerBranchingCandidates(
    {
       for( c = 0; c < nconss; ++c )
       {
-         consdata = SCIPconsGetData(conss[c]);
+         assert(conss[c] != NULL);  /*lint !e613*/
+
+         consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
          assert(consdata != NULL);
 
-         SCIPdebugMessage("cons <%s> violation: %g %g\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
+         SCIPdebugMessage("cons <%s> violation: %g %g\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);  /*lint !e613*/
 
          /* domain propagation should have removed constraints with fixed x */
          assert(!SCIPisRelEQ(scip, SCIPvarGetLbLocal(consdata->x), SCIPvarGetUbLocal(consdata->x)));
@@ -1846,8 +1843,8 @@ SCIP_RETCODE registerBranchingCandidates(
          if( (SCIPisFeasPositive(scip, consdata->rhsviol) && (SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->x)) || SCIPgetSolVal(scip, NULL, consdata->x) + consdata->xoffset <= -consdata->root * (SCIPvarGetLbLocal(consdata->x) + consdata->xoffset))) ||
             ( SCIPisFeasPositive(scip, consdata->lhsviol) && (SCIPisInfinity(scip,  SCIPvarGetUbLocal(consdata->x)) || SCIPgetSolVal(scip, NULL, consdata->x) + consdata->xoffset >= -consdata->root * (SCIPvarGetUbLocal(consdata->x) + consdata->xoffset))) )
          {
-            SCIPdebugMessage("register var <%s> in cons <%s> with violation %g %g\n", SCIPvarGetName(consdata->x), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
-            SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->x, MAX(consdata->lhsviol, consdata->rhsviol), proposeBranchingPoint(scip, conss[c], conshdlrdata->preferzerobranch, conshdlrdata->branchminconverror)) );
+            SCIPdebugMessage("register var <%s> in cons <%s> with violation %g %g\n", SCIPvarGetName(consdata->x), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);  /*lint !e613*/
+            SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->x, MAX(consdata->lhsviol, consdata->rhsviol), proposeBranchingPoint(scip, conss[c], conshdlrdata->preferzerobranch, conshdlrdata->branchminconverror)) );  /*lint !e613*/
             ++*nnotify;
          }
       }
@@ -1868,7 +1865,6 @@ SCIP_RETCODE registerBranchingCandidates(
 static
 SCIP_RETCODE registerLargeLPValueVariableForBranching(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
    SCIP_VAR**            brvar               /**< buffer to store branching variable */
@@ -3180,13 +3176,15 @@ SCIP_RETCODE separatePoint(
 
    for( c = 0; c < nconss; ++c )
    {
-      consdata = SCIPconsGetData(conss[c]);
+      assert(conss[c] != NULL);  /*lint !e613*/
+
+      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
       if( SCIPisFeasPositive(scip, consdata->lhsviol) || SCIPisFeasPositive(scip, consdata->rhsviol) )
       {
          /* try to generate a cut */
-         SCIP_CALL( generateCut(scip, conss[c], sol, &row, onlyinbounds) );
+         SCIP_CALL( generateCut(scip, conss[c], sol, &row, onlyinbounds) );  /*lint !e613*/
          if( row == NULL ) /* failed to generate cut */
             continue;
 
@@ -3271,10 +3269,12 @@ SCIP_RETCODE addLinearizationCuts(
 
    for( c = 0; c < nconss; ++c )
    {
-      if( SCIPconsIsLocal(conss[c]) )
+      assert(conss[c] != NULL);  /*lint !e613*/
+
+      if( SCIPconsIsLocal(conss[c]) )  /*lint !e613*/
          continue;
 
-      consdata = SCIPconsGetData(conss[c]);
+      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
       if( !SCIPisGT(scip, SCIPvarGetUbGlobal(consdata->x), -consdata->xoffset) && !SCIPisInfinity(scip, -consdata->lhs) )
@@ -3282,14 +3282,14 @@ SCIP_RETCODE addLinearizationCuts(
          /* constraint function is concave for x+offset <= 0.0, so can linearize w.r.t. lhs */
          consdata->lhsviol = 1.0;
          consdata->rhsviol = 0.0;
-         SCIP_CALL( generateCut(scip, conss[c], ref, &row, FALSE) );
+         SCIP_CALL( generateCut(scip, conss[c], ref, &row, FALSE) );  /*lint !e613*/
       }
       else if( !SCIPisLT(scip, SCIPvarGetLbGlobal(consdata->x), -consdata->xoffset) && !SCIPisInfinity(scip, -consdata->rhs) )
       {
          /* constraint function is convex for x+offset >= 0.0, so can linearize w.r.t. rhs */
          consdata->lhsviol = 0.0;
          consdata->rhsviol = 1.0;
-         SCIP_CALL( generateCut(scip, conss[c], ref, &row, FALSE) );
+         SCIP_CALL( generateCut(scip, conss[c], ref, &row, FALSE) );  /*lint !e613*/
       }
       else
       {
@@ -3406,13 +3406,13 @@ SCIP_RETCODE proposeFeasibleSolution(
 
    for( c = 0; c < nconss; ++c )
    {
-      consdata = SCIPconsGetData(conss[c]);
+      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
       assert(consdata->z != NULL);
       assert(!SCIPisZero(scip, consdata->zcoef));
 
       /* recompute violation w.r.t. current solution */
-      SCIP_CALL( computeViolation(scip, conss[c], newsol, &viol) );
+      SCIP_CALL( computeViolation(scip, conss[c], newsol, &viol) );  /*lint !e613*/
 
       /* do nothing if constraint is satisfied */
       if( !SCIPisFeasPositive(scip, consdata->lhsviol) && !SCIPisFeasPositive(scip, consdata->rhsviol) )
@@ -3915,7 +3915,7 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdAbspower)
 
    default:
       return SCIP_OKAY;
-   }
+   }  /*lint !e788*/
    assert(SCIPexprgraphGetNodeNChildren(node) == 1);
 
    /* check magnitue of coefficient of z in signpower constraint */
@@ -4024,7 +4024,7 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdAbspower)
       xoffset = 0.0;
 
       /* compute and set value of auxvar in debug solution, if debugging is enabled */
-      SCIP_CALL( SCIPdebugAddSolVal(auxvar, SCIPexprgraphGetNodeVal(child)) );
+      SCIP_CALL( SCIPdebugAddSolVal(auxvar, SCIPexprgraphGetNodeVal(child)) );  /*lint !e506 !e774*/
 
       SCIP_CALL( SCIPreleaseVar(scip, &auxvar) );
    }
@@ -4111,7 +4111,6 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdAbspower)
          if( !SCIPisInfinity(scip,  rhs) )
             rhs /= signpowcoef;
       }
-      signpowcoef = 1.0;
    }
 
    /* finally setup a absolute power constraint */
@@ -4261,7 +4260,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAbspower)
 
    default:
       return SCIP_OKAY;
-   }
+   }  /*lint !e788*/
    assert(SCIPexprgraphGetNodeNChildren(node) == 1);
 
    if( SCIPexprgraphHasNodeNonlinearAncestor(node) )
@@ -4316,7 +4315,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAbspower)
       x = auxvar;
       xoffset = 0.0;
 
-      SCIP_CALL( SCIPdebugAddSolVal(auxvar, SCIPexprgraphGetNodeVal(child)) );
+      SCIP_CALL( SCIPdebugAddSolVal(auxvar, SCIPexprgraphGetNodeVal(child)) );  /*lint !e506 !e774*/
 
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       SCIP_CALL( SCIPreleaseVar(scip, &auxvar) );
@@ -4527,19 +4526,21 @@ SCIP_DECL_CONSEXITPRE(consExitpreAbspower)
 
    for( c = 0; c < nconss; ++c )
    {
-      consdata = SCIPconsGetData(conss[c]);
+      assert(conss[c] != NULL);  /*lint !e613*/
+
+      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
       /* ensure that there are no fixed variables in the constraint (except for multiaggregated) */
       replaceresult = SCIP_DIDNOTFIND;
-      SCIP_CALL( checkFixedVariables(scip, conshdlr, conss[c], &dummy, &dummy, &dummy, &dummy, &replaceresult) );
+      SCIP_CALL( checkFixedVariables(scip, conshdlr, conss[c], &dummy, &dummy, &dummy, &dummy, &replaceresult) );  /*lint !e613*/
       if( replaceresult == SCIP_CUTOFF )
       {
          *result = SCIP_CUTOFF;
          break;
       }
 
-      if( SCIPconsIsDeleted(conss[c]) )
+      if( SCIPconsIsDeleted(conss[c]) )  /*lint !e613*/
          continue;
 
       /* tell SCIP that we have something nonlinear, and whether we are nonlinear in a continuous variable */
@@ -4573,7 +4574,9 @@ SCIP_DECL_CONSINITSOL(consInitsolAbspower)
 
    for( c = 0; c < nconss; ++c )
    {
-      consdata = SCIPconsGetData(conss[c]);
+      assert(conss[c] != NULL);  /*lint !e613*/
+
+      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
       assert(consdata->exponent > 1.0);
@@ -4643,7 +4646,7 @@ SCIP_DECL_CONSINITSOL(consInitsolAbspower)
       {
          if( consdata->nlrow == NULL )
          {
-            SCIP_CALL( createNlRow(scip, conss[c]) );
+            SCIP_CALL( createNlRow(scip, conss[c]) );  /*lint !e613*/
             assert(consdata->nlrow != NULL);
          }
          SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
@@ -4696,7 +4699,9 @@ SCIP_DECL_CONSEXITSOL(consExitsolAbspower)
 
    for( c = 0; c < nconss; ++c )
    {
-      consdata = SCIPconsGetData(conss[c]);
+      assert(conss[c] != NULL);  /*lint !e613*/
+
+      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
       /* free nonlinear row representation */
@@ -4808,7 +4813,9 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
 
    for( c = 0; c < nconss; ++c )
    {
-      consdata = SCIPconsGetData(conss[c]);
+      assert(conss[c] != NULL);  /*lint !e613*/
+
+      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
       xlb = SCIPvarGetLbGlobal(consdata->x);
@@ -4986,7 +4993,9 @@ SCIP_DECL_CONSSEPALP(consSepalpAbspower)
           */
          for( c = 0; c < nconss; ++c )
          {
-            consdata = SCIPconsGetData(conss[c]);
+            assert(conss[c] != NULL);  /*lint !e613*/
+
+            consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
             assert(consdata != NULL);
 
             /* skip feasible constraints */
@@ -5158,7 +5167,9 @@ SCIP_DECL_CONSENFOLP(consEnfolpAbspower)
       int       ndelconss;
       int       naddconss;
 
-      consdata = SCIPconsGetData(conss[c]);
+      assert(conss[c] != NULL);  /*lint !e613*/
+
+      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
       if( !SCIPisFeasPositive(scip, consdata->lhsviol) && !SCIPisFeasPositive(scip, consdata->rhsviol) )
@@ -5167,7 +5178,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpAbspower)
       nchgbds = 0;
       ndelconss = 0;
       naddconss = 0;
-      SCIP_CALL( propagateCons(scip, conshdlr, conss[c], TRUE, &cutoff, &nchgbds, &ndelconss, &naddconss) );
+      SCIP_CALL( propagateCons(scip, conshdlr, conss[c], TRUE, &cutoff, &nchgbds, &ndelconss, &naddconss) );  /*lint !e613*/
       if( cutoff )
       {
          *result = SCIP_CUTOFF;
@@ -5191,8 +5202,8 @@ SCIP_DECL_CONSENFOLP(consEnfolpAbspower)
     * thus, in the latter case, we are also happy if the efficacy is at least, say, 75% of the maximal violation
     * but in any case we need an efficacy that is at least feastol
     */
-   minefficacy = MIN(0.75*maxviol, conshdlrdata->mincutefficacyenfofac * SCIPfeastol(scip));
-   minefficacy = MAX(minefficacy, SCIPfeastol(scip));
+   minefficacy = MIN(0.75*maxviol, conshdlrdata->mincutefficacyenfofac * SCIPfeastol(scip));  /*lint !e666*/
+   minefficacy = MAX(minefficacy, SCIPfeastol(scip));  /*lint !e666*/
    SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, minefficacy, TRUE, FALSE, &success, &sepaefficacy) );
    if( success )
    {
@@ -5223,7 +5234,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpAbspower)
       /* fallback 2: separation probably failed because of numerical difficulties with a convex constraint;
          if noone declared solution infeasible yet and we had not even found a weak cut, try to resolve by branching */
       SCIP_VAR* brvar = NULL;
-      SCIP_CALL( registerLargeLPValueVariableForBranching(scip, conshdlr, conss, nconss, &brvar) );
+      SCIP_CALL( registerLargeLPValueVariableForBranching(scip, conss, nconss, &brvar) );
       if( brvar == NULL )
       {
          SCIPwarningMessage("Could not find any branching variable candidate. Cutting off node. Max viol = %g.\n", SCIPconsGetData(maxviolcons)->lhsviol+SCIPconsGetData(maxviolcons)->rhsviol);
@@ -5276,7 +5287,9 @@ SCIP_DECL_CONSENFOPS(consEnfopsAbspower)
       int       ndelconss;
       int       naddconss;
 
-      consdata = SCIPconsGetData(conss[c]);
+      assert(conss[c] != NULL);  /*lint !e613*/
+
+      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
       if( !SCIPisFeasPositive(scip, consdata->lhsviol) && !SCIPisFeasPositive(scip, consdata->rhsviol) )
@@ -5285,7 +5298,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsAbspower)
       nchgbds = 0;
       ndelconss = 0;
       naddconss = 0;
-      SCIP_CALL( propagateCons(scip, conshdlr, conss[c], TRUE, &cutoff, &nchgbds, &ndelconss, &naddconss) );
+      SCIP_CALL( propagateCons(scip, conshdlr, conss[c], TRUE, &cutoff, &nchgbds, &ndelconss, &naddconss) );  /*lint !e613*/
       if( cutoff )
       {
          *result = SCIP_CUTOFF;
@@ -5396,9 +5409,9 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
    int            localnaddconss;
    int            c;
 
-   assert(scip     != NULL);
-   assert(conss    != NULL || nconss == 0);
-   assert(result   != NULL);
+   assert(scip   != NULL);
+   assert(conss  != NULL || nconss == 0);
+   assert(result != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -5422,14 +5435,16 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
 
    for( c = 0; c < nconss; ++c )
    {
-      if( SCIPconsIsDeleted(conss[c]) )
+      assert(conss[c] != NULL);  /*lint !e613*/
+
+      if( SCIPconsIsDeleted(conss[c]) )  /*lint !e613*/
          continue;
 
-      consdata = SCIPconsGetData(conss[c]);
+      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
-      SCIPdebugMessage("presolving constraint <%s>\n", SCIPconsGetName(conss[c]));
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
+      SCIPdebugMessage("presolving constraint <%s>\n", SCIPconsGetName(conss[c]));  /*lint !e613*/
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );  /*lint !e613*/
 
       /* check if we can upgrade to a linear constraint */
       if( consdata->exponent == 1.0 )
@@ -5455,18 +5470,18 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
                SCIPconsIsInitial(conss[c]), SCIPconsIsSeparated(conss[c]), SCIPconsIsEnforced(conss[c]),
                SCIPconsIsChecked(conss[c]), SCIPconsIsPropagated(conss[c]),  SCIPconsIsLocal(conss[c]),
                SCIPconsIsModifiable(conss[c]), SCIPconsIsDynamic(conss[c]), SCIPconsIsRemovable(conss[c]),
-               SCIPconsIsStickingAtNode(conss[c])) );
+               SCIPconsIsStickingAtNode(conss[c])) );  /*lint !e613*/
          SCIP_CALL( SCIPaddCons(scip, lincons) );
          SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
 
-         SCIP_CALL( SCIPdelCons(scip, conss[c]) );
+         SCIP_CALL( SCIPdelCons(scip, conss[c]) );  /*lint !e613*/
          ++*nupgdconss;
          continue;
       }
 
       /* check for fixed variables */
       replaceresult = SCIP_DIDNOTFIND;
-      SCIP_CALL( checkFixedVariables(scip, conshdlr, conss[c], ndelconss, nupgdconss, nchgbds, nfixedvars, &replaceresult) );
+      SCIP_CALL( checkFixedVariables(scip, conshdlr, conss[c], ndelconss, nupgdconss, nchgbds, nfixedvars, &replaceresult) );  /*lint !e613*/
       switch( replaceresult )
       {
       case SCIP_DIDNOTFIND:
@@ -5484,8 +5499,8 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
       default:
          SCIPerrorMessage("invalid result from checkFixedVariables\n");
          SCIPABORT();
-      }
-      if( SCIPconsIsDeleted(conss[c]) )
+      }  /*lint !e788*/
+      if( SCIPconsIsDeleted(conss[c]) )  /*lint !e613*/
       {
          *result = SCIP_SUCCESS;
          continue;
@@ -5495,10 +5510,10 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
       localnchgbds = 0;
       localndelconss = 0;
       localnaddconss = 0;
-      SCIP_CALL( propagateCons(scip, conshdlr, conss[c], TRUE, &infeas, &localnchgbds, &localndelconss, &localnaddconss) );
+      SCIP_CALL( propagateCons(scip, conshdlr, conss[c], TRUE, &infeas, &localnchgbds, &localndelconss, &localnaddconss) );  /*lint !e613*/
       if( infeas )
       {
-         SCIPdebugMessage("propagation on constraint <%s> says problem is infeasible in presolve\n", SCIPconsGetName(conss[c]));
+         SCIPdebugMessage("propagation on constraint <%s> says problem is infeasible in presolve\n", SCIPconsGetName(conss[c]));  /*lint !e613*/
          *result = SCIP_CUTOFF;
          return SCIP_OKAY;
       }
@@ -5513,7 +5528,7 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
       /* propagate variable bound constraints */
       if( !consdata->propvarbounds )
       {
-         SCIP_CALL( propagateVarbounds(scip, conshdlr, conss[c], &infeas, nchgbds) );
+         SCIP_CALL( propagateVarbounds(scip, conshdlr, conss[c], &infeas, nchgbds) );  /*lint !e613*/
 
          if( infeas )
          {
@@ -5531,7 +5546,7 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
          SCIPisEQ(scip, consdata->lhs, consdata->rhs) && SCIPisIntegral(scip, consdata->rhs) && SCIPisEQ(scip, REALABS(consdata->zcoef), 1.0) && SCIPisIntegral(scip, consdata->exponent)
          )
       {
-         SCIPdebugMessage("make z = <%s> implicit integer in cons <%s>\n", SCIPvarGetName(consdata->z), SCIPconsGetName(conss[c]));
+         SCIPdebugMessage("make z = <%s> implicit integer in cons <%s>\n", SCIPvarGetName(consdata->z), SCIPconsGetName(conss[c]));  /*lint !e613*/
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
          SCIP_CALL( SCIPchgVarType(scip, consdata->z, SCIP_VARTYPE_IMPLINT, &infeas) );
          if( infeas )
@@ -5572,7 +5587,7 @@ SCIP_DECL_CONSRESPROP(consRespropAbspower)
    *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
-}
+}  /*lint !e715*/
 #else
 #define consRespropAbspower NULL
 #endif
@@ -5873,7 +5888,7 @@ SCIP_DECL_CONSCOPY(consCopyAbspower)
    {
       SCIP_CALL( SCIPcreateConsAbspower(scip, cons, name != NULL ? name : SCIPconsGetName(sourcecons),
             x, z, consdata->exponent, consdata->xoffset, consdata->zcoef, consdata->lhs, consdata->rhs,
-            initial, separate, enforce, check, propagate, local, FALSE, dynamic, removable, stickingatnode) );
+            initial, separate, enforce, check, propagate, local, FALSE, dynamic, removable, stickingatnode) );  /*lint !e644*/
    }
 
    return SCIP_OKAY;
@@ -5931,7 +5946,7 @@ SCIP_DECL_CONSPARSE(consParseAbspower)
       if( ret != 5 )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error while parsing constraint expression\n");
-         (*success) = FALSE;
+         *success = FALSE;
          return SCIP_OKAY;
       }
    }
@@ -5948,6 +5963,10 @@ SCIP_DECL_CONSPARSE(consParseAbspower)
       case '=' :
          lhs = rhs = value;
          break;
+      default:
+         SCIPerrorMessage("unknown sense '%c='\n", sense);
+         *success = FALSE;
+         return SCIP_OKAY;
       }
    }
 
@@ -5985,7 +6004,7 @@ SCIP_DECL_CONSPARSE(consParseAbspower)
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
    return SCIP_OKAY;
-}
+}  /*lint !e715*/
 #else
 #define consParseAbspower NULL
 #endif

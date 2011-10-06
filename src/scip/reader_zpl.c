@@ -429,12 +429,13 @@ Bool xlp_addcon_term(
                simplemonomialssize = SCIPcalcMemGrowSize(scip_, nsimplemonomials+1);
                SCIP_CALL_ABORT( SCIPreallocBufferArray(scip_, &simplemonomials, simplemonomialssize) );
             }
+            assert(simplemonomials != NULL);
             SCIP_CALL_ABORT( SCIPexprCreateMonomial(SCIPblkmem(scip_), &simplemonomials[nsimplemonomials], numb_todbl(mono_get_coeff(monomial)), 0, NULL, NULL) );
 
             for( j = 0; j < mono_get_degree(monomial); ++j )
             {
                /* get variable index in polyvars; add to polyvars if not existing yet */
-               if( !SCIPhashmapExists(polyvarmap, (void*)mono_get_var(monomial, j)) )
+               if( !SCIPhashmapExists(polyvarmap, (void*)mono_get_var(monomial, j)) )  /*lint !e826*/
                {
                   if( polyvarssize == 0 )
                   {
@@ -446,16 +447,18 @@ Bool xlp_addcon_term(
                      polyvarssize = SCIPcalcMemGrowSize(scip_, npolyvars+1);
                      SCIP_CALL_ABORT( SCIPreallocBufferArray(scip_, &polyvars, polyvarssize) );
                   }
+                  assert(polyvars != NULL);
 
-                  polyvars[npolyvars] = (SCIP_VAR*)mono_get_var(monomial, j);
+                  polyvars[npolyvars] = (SCIP_VAR*)mono_get_var(monomial, j);  /*lint !e826*/
                   ++npolyvars;
                   varpos = npolyvars-1;
-                  SCIP_CALL_ABORT( SCIPhashmapInsert(polyvarmap, (void*)mono_get_var(monomial, j), (void*)(size_t)varpos) );
+                  SCIP_CALL_ABORT( SCIPhashmapInsert(polyvarmap, (void*)mono_get_var(monomial, j), (void*)(size_t)varpos) );  /*lint !e826*/
                }
                else
                {
-                  varpos = (int)(size_t)SCIPhashmapGetImage(polyvarmap, (void*)mono_get_var(monomial, j));
+                  varpos = (int)(size_t)SCIPhashmapGetImage(polyvarmap, (void*)mono_get_var(monomial, j));  /*lint !e826*/
                }
+               assert(polyvars != NULL);
                assert(polyvars[varpos] == (SCIP_VAR*)mono_get_var(monomial, j));
 
                SCIP_CALL_ABORT( SCIPexprAddMonomialFactors(SCIPblkmem(scip_), simplemonomials[nsimplemonomials], 1, &varpos, &one) );
@@ -486,7 +489,7 @@ Bool xlp_addcon_term(
                   SCIPerrorMessage("ZIMPL function %d not supported\n", mono_get_function(monomial));
                   fail = TRUE;
                   break;
-            }
+            }  /*lint !e788*/
             if( fail )
                break;
 
@@ -502,6 +505,8 @@ Bool xlp_addcon_term(
                SCIP_CALL_ABORT( SCIPreallocBufferArray(scip_, &extramonomials, extramonomialssize) );
                SCIP_CALL_ABORT( SCIPreallocBufferArray(scip_, &extracoefs,  extramonomialssize) );
             }
+            assert(extracoefs != NULL);
+            assert(extramonomials != NULL);
             extracoefs[nextramonomials] = numb_todbl(mono_get_coeff(monomial));
 
             /* create children expressions */
@@ -509,7 +514,7 @@ Bool xlp_addcon_term(
             for( j = 0; j < mono_get_degree(monomial); ++j )
             {
                /* get variable index in vars; add to vars if not existing yet */
-               if( !SCIPhashmapExists(varmap, (void*)mono_get_var(monomial, j)) )
+               if( !SCIPhashmapExists(varmap, (void*)mono_get_var(monomial, j)) )  /*lint !e826*/
                {
                   if( varssize == 0 )
                   {
@@ -521,16 +526,18 @@ Bool xlp_addcon_term(
                      varssize = SCIPcalcMemGrowSize(scip_, nvars+1);
                      SCIP_CALL_ABORT( SCIPreallocBufferArray(scip_, &vars, varssize) );
                   }
+                  assert(vars != NULL);
 
-                  vars[nvars] = (SCIP_VAR*)mono_get_var(monomial, j);
+                  vars[nvars] = (SCIP_VAR*)mono_get_var(monomial, j);  /*lint !e826*/
                   ++nvars;
                   varpos = nvars-1;
-                  SCIP_CALL_ABORT( SCIPhashmapInsert(varmap, (void*)mono_get_var(monomial, j), (void*)(size_t)varpos) );
+                  SCIP_CALL_ABORT( SCIPhashmapInsert(varmap, (void*)mono_get_var(monomial, j), (void*)(size_t)varpos) );  /*lint !e826*/
                }
                else
                {
-                  varpos = (int)(size_t)SCIPhashmapGetImage(varmap, (void*)mono_get_var(monomial, j));
+                  varpos = (int)(size_t)SCIPhashmapGetImage(varmap, (void*)mono_get_var(monomial, j));  /*lint !e826*/
                }
+               assert(vars != NULL);
                assert(vars[varpos] == (SCIP_VAR*)mono_get_var(monomial, j));
 
                SCIP_CALL_ABORT( SCIPexprCreate(SCIPblkmem(scip_), &children[j], SCIP_EXPR_VARIDX, varpos) );
@@ -539,7 +546,7 @@ Bool xlp_addcon_term(
             /* create expression for product of variables */
             SCIP_CALL_ABORT( SCIPexprCreate(SCIPblkmem(scip_), &expr, SCIP_EXPR_PRODUCT, mono_get_degree(monomial), children) );
             /* create expression for function of product of variables */
-            SCIP_CALL_ABORT( SCIPexprCreate(SCIPblkmem(scip_), &extramonomials[nextramonomials], op, expr) );
+            SCIP_CALL_ABORT( SCIPexprCreate(SCIPblkmem(scip_), &extramonomials[nextramonomials], op, expr) );  /*lint !e644*/
 
             ++nextramonomials;
          }
@@ -552,6 +559,8 @@ Bool xlp_addcon_term(
          SCIP_EXPR** children;
          int nchildren;
 
+         assert(polyvars != NULL || npolyvars == 0);
+
          nchildren = npolyvars + nextramonomials;
          SCIP_CALL_ABORT( SCIPallocBufferArray(scip_, &children, nchildren) );
          /* add polynomial variables to vars
@@ -560,7 +569,7 @@ Bool xlp_addcon_term(
          for( i = 0; i < npolyvars; ++i )
          {
             /* get variable index in vars; add to vars if not existing yet */
-            if( !SCIPhashmapExists(varmap, (void*)polyvars[i]) )
+            if( !SCIPhashmapExists(varmap, (void*)polyvars[i]) )  /*lint !e613*/
             {
                if( varssize == 0 )
                {
@@ -572,23 +581,27 @@ Bool xlp_addcon_term(
                   varssize = SCIPcalcMemGrowSize(scip_, nvars+1);
                   SCIP_CALL_ABORT( SCIPreallocBufferArray(scip_, &vars, varssize) );
                }
+               assert(vars != NULL);
 
-               vars[nvars] = polyvars[i];
+               vars[nvars] = polyvars[i];  /*lint !e613*/
                ++nvars;
                varpos = nvars-1;
-               SCIP_CALL_ABORT( SCIPhashmapInsert(varmap, (void*)polyvars[i], (void*)(size_t)varpos) );
+               SCIP_CALL_ABORT( SCIPhashmapInsert(varmap, (void*)polyvars[i], (void*)(size_t)varpos) );  /*lint !e613*/
             }
             else
             {
-               varpos = (int)(size_t)SCIPhashmapGetImage(varmap, (void*)polyvars[i]);
+               varpos = (int)(size_t)SCIPhashmapGetImage(varmap, (void*)polyvars[i]);  /*lint !e613*/
             }
-            assert(vars[varpos] == polyvars[i]);
+            assert(vars[varpos] == polyvars[i]);  /*lint !e613*/
 
-            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip_), &children[i], SCIP_EXPR_VARIDX, varpos) );
+            SCIP_CALL_ABORT( SCIPexprCreate(SCIPblkmem(scip_), &children[i], SCIP_EXPR_VARIDX, varpos) );  /*lint !e866*/
          }
 
          /* add simple monomials as additional children */
-         BMScopyMemoryArray(&children[npolyvars], extramonomials, nextramonomials);
+         BMScopyMemoryArray(&children[npolyvars], extramonomials, nextramonomials);  /*lint !e866*/
+
+         assert(extracoefs     != NULL || nextramonomials == 0);
+         assert(extramonomials != NULL || nextramonomials == 0);
 
          /* create polynomial expression including simple monomials */
          SCIP_CALL_ABORT( SCIPexprCreatePolynomial(SCIPblkmem(scip_), &polynomial, nchildren, children, nsimplemonomials, simplemonomials, 0.0, FALSE) );
@@ -601,7 +614,7 @@ Bool xlp_addcon_term(
 
             childidx = npolyvars + i;
             exponent = 1.0;
-            SCIP_CALL_ABORT( SCIPexprCreateMonomial(SCIPblkmem(scip_), &monomialdata, extracoefs[i], 1, &childidx, &exponent) );
+            SCIP_CALL_ABORT( SCIPexprCreateMonomial(SCIPblkmem(scip_), &monomialdata, extracoefs[i], 1, &childidx, &exponent) );  /*lint !e613*/
             SCIP_CALL_ABORT( SCIPexprAddMonomials(SCIPblkmem(scip_), polynomial, 1, &monomialdata, FALSE) );
          }
 
@@ -614,7 +627,7 @@ Bool xlp_addcon_term(
          /* create constraint */
          SCIP_CALL_ABORT( SCIPcreateConsNonlinear(scip_, &cons, name, 0, NULL, NULL, 1, &exprtree, NULL, sciplhs, sciprhs,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
-         SCIP_CALL( SCIPexprtreeFree(&exprtree) );
+         SCIP_CALL_ABORT( SCIPexprtreeFree(&exprtree) );
          SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
       }
 
@@ -1108,7 +1121,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
          int arglen;
 
          /* process next argument */
-         SCIP_CALL( SCIPallocBufferArray(scip, &argv[argc], len+1) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &argv[argc], len+1) );  /*lint !e866*/
          arglen = 0;
 
          /* skip spaces */
@@ -1157,7 +1170,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
       }
 
       /* append file name as last argument */
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &argv[argc], filename, (int) strlen(filename)+1) );
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &argv[argc], filename, (int) strlen(filename)+1) );  /*lint !e866*/
       argc++;
 
       /* display parsed arguments */
