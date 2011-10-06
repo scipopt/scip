@@ -5001,6 +5001,13 @@ SCIP_DECL_CONSSEPALP(consSepalpAbspower)
          if( c < nconss )
          {
             /* try to solve NLP and update solstat */
+
+            /* ensure linear conss are in NLP */
+            if( conshdlrdata->subnlpheur != NULL )
+            {
+               SCIP_CALL( SCIPaddLinearConsToNlpHeurSubNlp(scip, conshdlrdata->subnlpheur, TRUE, TRUE) );
+            }
+
             /* SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_VERBLEVEL, 1) ); */
             SCIP_CALL( SCIPsolveNLP(scip) );
 

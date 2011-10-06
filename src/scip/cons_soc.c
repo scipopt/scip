@@ -3368,6 +3368,12 @@ SCIP_DECL_CONSSEPALP(consSepalpSOC)
       {
          /* NLP is not solved yet, so we do it now and update solstat */
 
+         /* ensure linear conss are in NLP */
+         if( conshdlrdata->subnlpheur != NULL )
+         {
+            SCIP_CALL( SCIPaddLinearConsToNlpHeurSubNlp(scip, conshdlrdata->subnlpheur, TRUE, TRUE) );
+         }
+
          /* SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_VERBLEVEL, 1) ); */
          SCIP_CALL( SCIPsolveNLP(scip) );
 
