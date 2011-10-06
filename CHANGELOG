@@ -199,6 +199,7 @@ parameters:
 - added parameters <constraints/{nonlinear,quadratic,soc,abspower}/maxsepanlprounds> to enable solving NLP relaxation in root node and adding cuts from linearizations of convex nonlinear constraints into cutpool
 - added parameter <conflict/separate> which enables or disables the separation of conflict constraints
 - added parameter <lp/clearinitialprobinglp> to clear LP state at end of probing mode, if LP was initially unsolved
+- added parameter <constraints/varbound/presolpairwise> that allows pairwise presolving of varbound constraints, default is TRUE
 
 features:
 - flatzinc reader is now capable to read cumulative constraints
