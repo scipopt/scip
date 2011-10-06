@@ -243,6 +243,7 @@ endif
 
 LPILIB		=	$(LPILIBNAME).$(BASE)
 LPILIBFILE	=	$(SCIPREALPATH)/lib/lib$(LPILIB).$(LIBEXT)
+LPILIBSHORTLINK	=	$(SCIPREALPATH)/lib/lib$(LPILIBNAME).$(LIBEXT)
 
 
 #-----------------------------------------------------------------------------
@@ -318,6 +319,7 @@ endif
 SCIPLIBNAME	=	scip
 SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
 SCIPLIBFILE	=	$(SCIPREALPATH)/lib/lib$(SCIPLIB).$(LIBEXT)
+SCIPLIBSHARTLINK=	$(SCIPREALPATH)/lib/lib$(SCIPLIBNAME).$(LIBEXT)
 
 
 #-----------------------------------------------------------------------------
@@ -327,6 +329,7 @@ SCIPLIBFILE	=	$(SCIPREALPATH)/lib/lib$(SCIPLIB).$(LIBEXT)
 OBJSCIPLIBNAME	=	objscip
 OBJSCIPLIB	=	$(OBJSCIPLIBNAME).$(BASE)
 OBJSCIPLIBFILE	=	$(SCIPREALPATH)/lib/lib$(OBJSCIPLIB).$(LIBEXT)
+OBJSCIPLIBSHORTLINK=	$(SCIPREALPATH)/lib/lib$(OBJSCIPLIBNAME).$(LIBEXT)
 
 
 #-----------------------------------------------------------------------------
@@ -336,3 +339,4 @@ OBJSCIPLIBFILE	=	$(SCIPREALPATH)/lib/lib$(OBJSCIPLIB).$(LIBEXT)
 NLPILIBNAME	=	nlpi$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAMEIPOPT)
 NLPILIB		=	$(NLPILIBNAME).$(BASE)
 NLPILIBFILE	=	$(SCIPREALPATH)/lib/lib$(NLPILIB).$(LIBEXT)
+NLPILIBSHORTLINK=	$(SCIPREALPATH)/lib/lib$(NLPILIBNAME).$(LIBEXT)

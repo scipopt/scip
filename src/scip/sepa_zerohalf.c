@@ -1784,9 +1784,9 @@ void findClosestLb(
       bvlb = SCIPvarGetVlbCoefs(var);
       dvlb = SCIPvarGetVlbConstants(var);
 
-      assert(zvlb == NULL || nvlb == 0);
-      assert(bvlb == NULL || nvlb == 0);
-      assert(dvlb == NULL || nvlb == 0);
+      assert(zvlb != NULL || nvlb == 0);
+      assert(bvlb != NULL || nvlb == 0);
+      assert(dvlb != NULL || nvlb == 0);
    }
 
    if( *bestlbtype == -2 )
@@ -1883,9 +1883,9 @@ void findClosestUb(
       bvub = SCIPvarGetVubCoefs(var);
       dvub = SCIPvarGetVubConstants(var);
 
-      assert(zvub == NULL || nvub == 0);
-      assert(bvub == NULL || nvub == 0);
-      assert(dvub == NULL || nvub == 0);
+      assert(zvub != NULL || nvub == 0);
+      assert(bvub != NULL || nvub == 0);
+      assert(dvub != NULL || nvub == 0);
    }
 
    if( *bestubtype == -2 )
@@ -2765,7 +2765,8 @@ SCIP_RETCODE storeMod2Data(
       { 
          mod2data->rows[i] = tempcurrentrow;
          mod2data->rhs[i] = tempmod2rhs;
-      
+
+         assert(mod2data->rowaggregationsbitarraysize > 0);
          SCIP_CALL( SCIPallocMemoryArray(scip, &(mod2data->rowaggregations[i]), mod2data->rowaggregationsbitarraysize) );
          BITARRAYCLEAR(mod2data->rowaggregations[i], mod2data->rowaggregationsbitarraysize);
          BITARRAYBITSET(mod2data->rowaggregations[i], i);
@@ -2796,6 +2797,7 @@ SCIP_RETCODE storeMod2Data(
       else
          c = varboundstoadd[j] - 1;
 
+      assert(mod2data->rowsbitarraysize > 0);
       SCIP_CALL(SCIPallocMemoryArray(scip, &(mod2data->rows[i]), mod2data->rowsbitarraysize));
       BITARRAYCLEAR(mod2data->rows[i], mod2data->rowsbitarraysize);
       BITARRAYBITSET(mod2data->rows[i], c); 
@@ -3159,7 +3161,6 @@ SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
    )
 {
    SCIP_Real*            cutcoefs;
-   int                   i;
    SCIP_VAR**            cutvars;
    SCIP_Real*            cutvals;
    char                  cutname[SCIP_MAXSTRLEN];
@@ -3206,10 +3207,21 @@ SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
 
       if( *varsolvals == NULL )
       {
+         /* get the solution values for all active variables */
          SCIP_CALL(SCIPallocMemoryArray(scip, varsolvals, lpdata->nvars));
-         for( i = 0; i < lpdata->nvars; ++i)
-            if( SCIPvarGetStatus(lpdata->vars[i]) == SCIP_VARSTATUS_COLUMN )
-               (*varsolvals)[i] = SCIPvarGetLPSol(lpdata->vars[i]);
+         SCIP_CALL( SCIPgetSolVals(scip, NULL, lpdata->nvars, lpdata->vars, *varsolvals) );
+
+#ifndef NDEBUG
+         /* because later when calling SCIPcutGenerationHeuristicCmir() varsolvals are used, it is needed that the
+          * corresponding variables have the same order here and there, so we do the same checking and test that all
+          * variables are ordered by their problem index
+          */
+         {
+            int i;
+            for(i = lpdata->nvars - 1; i >= 0; --i )
+               assert(i == SCIPvarGetProbindex(lpdata->vars[i]));
+         }
+#endif
       }
       assert(*varsolvals != NULL);
    
@@ -3243,10 +3255,9 @@ SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
       { 
          if( *varsolvals == NULL )
          {
+            /* get the solution values for all active variables */
             SCIP_CALL(SCIPallocMemoryArray(scip, varsolvals, lpdata->nvars));
-            for( i = 0; i < lpdata->nvars; ++i)
-               if( SCIPvarGetStatus(lpdata->vars[i]) == SCIP_VARSTATUS_COLUMN )
-                  (*varsolvals)[i] = SCIPvarGetLPSol(lpdata->vars[i]);
+            SCIP_CALL( SCIPgetSolVals(scip, NULL, lpdata->nvars, lpdata->vars, *varsolvals) );
          }
          assert(*varsolvals != NULL);
       
@@ -5883,7 +5894,7 @@ SCIP_RETCODE addEdgeToAuxGraph(
    int                     n1;
    int                     n2;
 
-   const int maxnumberofneighbors = 2 * graph->nnodes - 2;
+   int maxnumberofneighbors;
 
    assert(scip != NULL);
    assert(graph != NULL);
@@ -5892,6 +5903,8 @@ SCIP_RETCODE addEdgeToAuxGraph(
    assert(node2index >= 0);
    assert(node2index < graph->nnodes);
    assert(!SCIPisNegative(scip, weight));
+
+   maxnumberofneighbors = 2 * graph->nnodes - 2;
 
    if( isodd )
    {
@@ -5910,6 +5923,7 @@ SCIP_RETCODE addEdgeToAuxGraph(
 
    if( node1->nneighbors == 0 )
    {
+      assert(maxnumberofneighbors > 0);
       SCIP_CALL(SCIPallocMemoryArray(scip, &(node1->neighbors), maxnumberofneighbors));
       SCIP_CALL(SCIPallocMemoryArray(scip, &(node1->edgeweights), maxnumberofneighbors));
       SCIP_CALL(SCIPallocMemoryArray(scip, &(node1->relatedrows), maxnumberofneighbors));
@@ -5921,6 +5935,7 @@ SCIP_RETCODE addEdgeToAuxGraph(
 
    if( node2->nneighbors == 0 )
    {
+      assert(maxnumberofneighbors > 0);
       SCIP_CALL(SCIPallocMemoryArray(scip, &(node2->neighbors), maxnumberofneighbors));
       SCIP_CALL(SCIPallocMemoryArray(scip, &(node2->edgeweights), maxnumberofneighbors));
       SCIP_CALL(SCIPallocMemoryArray(scip, &(node2->relatedrows), maxnumberofneighbors));
@@ -5940,7 +5955,9 @@ SCIP_RETCODE addEdgeToAuxGraph(
             break;
    if( n1 < node1->nneighbors )
    {
+      /* if node2 is neighbor of node1, then node1 is neighbor of node2 */
       assert(node1->neighbors[n1] == node2);
+      assert(n2 < node2->nneighbors);
       assert(node2->neighbors[n2] == node1);
       assert(node1->edgeweights[n1] == node2->edgeweights[n2]);
    }

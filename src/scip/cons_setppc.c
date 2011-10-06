@@ -3867,8 +3867,10 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
                *result = SCIP_CUTOFF;
                return SCIP_OKAY;
             }
+
             if( aggregated )
                (*naggrvars)++;
+
             if( redundant )
             {
                SCIP_CALL( SCIPdelCons(scip, cons) );
@@ -4289,7 +4291,7 @@ SCIP_DECL_CONSPARSE(consParseSetppc)
       SCIP_CALL( SCIPallocBufferArray(scip, &coefs, coefssize) );
 
       /* parse linear sum to get variables and coefficients */
-      SCIP_CALL( SCIPparseVarsLinearsum(scip, str, 0, vars, coefs, &nvars, coefssize, &requsize, &endptr, success) );
+      SCIP_CALL( SCIPparseVarsLinearsum(scip, str, vars, coefs, &nvars, coefssize, &requsize, &endptr, success) );
 
       if( *success && requsize > coefssize )
       {
@@ -4298,7 +4300,7 @@ SCIP_DECL_CONSPARSE(consParseSetppc)
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars,  coefssize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, coefssize) );
 
-         SCIP_CALL( SCIPparseVarsLinearsum(scip, str, 0, vars, coefs, &nvars, coefssize, &requsize, &endptr, success) );
+         SCIP_CALL( SCIPparseVarsLinearsum(scip, str, vars, coefs, &nvars, coefssize, &requsize, &endptr, success) );
          assert(!*success || requsize <= coefssize); /* if successful, then should have had enough space now */
       }
 
@@ -4453,7 +4455,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecSetppc)
       /* create a constraint out of the conflict set */
       (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsSetcover(scip, &cons, consname, nbdchginfos, vars,
-            FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
+            FALSE, separate, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
       SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 

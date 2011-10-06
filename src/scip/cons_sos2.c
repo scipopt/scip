@@ -1426,7 +1426,7 @@ SCIP_DECL_CONSPRESOL(consPresolSOS2)
    nremovedvars = 0;
 
    /* only run if success is possible */
-   if ( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || nnewchgcoefs > 0 || *nfixedvars > oldnfixedvars )
+   if( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || nnewchgcoefs > 0 )
    {
       /* get constraint handler data */
       assert( SCIPconshdlrGetData(conshdlr) != NULL );

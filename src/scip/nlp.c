@@ -100,7 +100,7 @@ SCIP_RETCODE nlpRowChanged(
 /** returns variables of expression tree */
 SCIP_VAR** SCIPexprtreeGetVars(
    SCIP_EXPRTREE*        tree                /**< expression tree */
-)
+   )
 {
    assert(tree != NULL);
 
@@ -112,7 +112,7 @@ SCIP_RETCODE SCIPexprtreeSetVars(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    int                   nvars,              /**< number of variables */
    SCIP_VAR**            vars                /**< variables */
-)
+   )
 {
    assert(tree != NULL);
    assert(vars != NULL || nvars == 0);
@@ -144,7 +144,7 @@ SCIP_RETCODE SCIPexprtreeAddVars(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    int                   nvars,              /**< number of variables */
    SCIP_VAR**            vars                /**< variables */
-)
+   )
 {
    assert(tree != NULL);
    assert(vars != NULL || nvars == 0);
@@ -172,7 +172,7 @@ SCIP_RETCODE SCIPexprtreeAddVars(
 SCIP_RETCODE SCIPexprtreePrintWithNames(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    FILE*                 file                /**< file for printing, or NULL for stdout */
-)
+   )
 {
    const char** varnames;
    int i;
@@ -204,7 +204,7 @@ SCIP_RETCODE SCIPexprtreePrintWithNames(
 int SCIPexprtreeFindVar(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    SCIP_VAR*             var                 /**< variable to search for */
-)
+   )
 {
    int i;
 
@@ -224,7 +224,7 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
    SCIP_Bool*            changed,            /**< buffer to store whether the tree was changed, i.e., whether there was a fixed variable */
    int*                  varpos,             /**< array of length at least tree->nvars to store new indices of previously existing variables in expression tree, or -1 if variable was removed; set to NULL if not of interest */
    int*                  newvarsstart        /**< buffer to store index in tree->vars array where new variables begin, or NULL if not of interest */
-)
+   )
 {
    SCIP_HASHMAP* varhash;
    int i;
@@ -335,8 +335,8 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
          assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR );
 
          /* allocate array for children and coefficients */
-         SCIP_ALLOC( BMSallocBlockMemoryArray(tree->blkmem, &children, SCIPvarGetMultaggrNVars(var)) );
-         SCIP_ALLOC( BMSallocBlockMemoryArray(tree->blkmem, &coefs,    SCIPvarGetMultaggrNVars(var)) );
+         SCIP_ALLOC( BMSallocBlockMemoryArray(tree->blkmem, &children, SCIPvarGetMultaggrNVars(var)) );  /*lint !e666 */
+         SCIP_ALLOC( BMSallocBlockMemoryArray(tree->blkmem, &coefs,    SCIPvarGetMultaggrNVars(var)) );  /*lint !e666 */
          nchildren = 0;
 
          /* linear part
@@ -844,7 +844,7 @@ int nlrowSearchLinearCoef(
 
    assert(nlrow != NULL);
    assert(var   != NULL);
-   
+
    if( nlrow->nlinvars == 0 )
       return -1;
 
@@ -1509,7 +1509,7 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
 
    SCIPdebugMessage("removing fixed quadratic variables from nlrow\n\t");
    SCIPdebug( SCIPnlrowPrint(nlrow, NULL) );
-   
+
    nvarsold = nlrow->nquadvars;
    havechange = FALSE;
 
@@ -1536,7 +1536,7 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
          ++i;
          continue;
       }
-      
+
       SCIPdebugMessage("removing fixed quadratic variables from element %g <%s> <%s>",
          elem.coef, SCIPvarGetName(nlrow->quadvars[elem.idx1]), SCIPvarGetName(nlrow->quadvars[elem.idx2]));
 
@@ -1630,7 +1630,7 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
             for( j = 0; j < SCIPvarGetMultaggrNVars(var1); ++j )
             {
                SCIP_CALL( nlrowAddToLinearCoef(nlrow, blkmem, set, stat, nlp, SCIPvarGetMultaggrVars(var1)[j],
-                  2 * elem.coef * (coef1 * SCIPvarGetMultaggrConstant(var1) + constant1) * coef1 * SCIPvarGetMultaggrScalars(var1)[j], TRUE) );
+                     2.0 * elem.coef * (coef1 * SCIPvarGetMultaggrConstant(var1) + constant1) * coef1 * SCIPvarGetMultaggrScalars(var1)[j], TRUE) );
             }
          }
 
@@ -1904,7 +1904,7 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
    }
 
    SCIPsetFreeBufferArray(set, &used);
-   
+
    SCIPdebugMessage("finished removing fixed quadratic variables\n\t");
    SCIPdebug( SCIPnlrowPrint(nlrow, NULL) );
 
@@ -2012,7 +2012,7 @@ SCIP_RETCODE SCIPnlrowCreate(
 #ifndef NDEBUG
    int i;
 #endif
-   
+
    assert(nlrow  != NULL);
    assert(blkmem != NULL);
    assert(set    != NULL);
@@ -2030,7 +2030,7 @@ SCIP_RETCODE SCIPnlrowCreate(
    /* constant part */
    assert(!SCIPsetIsInfinity(set, REALABS(constant)));
    (*nlrow)->constant = constant;
-   
+
 #ifndef NDEBUG
    for( i = 0; i < nlinvars; ++i )
    {
@@ -2038,7 +2038,7 @@ SCIP_RETCODE SCIPnlrowCreate(
       assert(!SCIPsetIsInfinity(set, REALABS(lincoefs[i])));
    }
 #endif
-   
+
    /* linear part */
    (*nlrow)->nlinvars = nlinvars;
    (*nlrow)->linvarssize = nlinvars;
@@ -2054,13 +2054,13 @@ SCIP_RETCODE SCIPnlrowCreate(
       (*nlrow)->lincoefs = NULL;
       (*nlrow)->linvarssorted = TRUE;
    }
-   
+
    /* quadratic variables */
 #ifndef NDEBUG
    for( i = 0; i < nquadvars; ++i )
       assert(quadvars[i] != NULL);
 #endif
-   
+
    (*nlrow)->nquadvars    = nquadvars;
    (*nlrow)->quadvarssize = nquadvars;
    (*nlrow)->quadvarshash = NULL;
@@ -2151,11 +2151,11 @@ SCIP_RETCODE SCIPnlrowCreateCopy(
    assert(sourcenlrow != NULL);
 
    SCIP_CALL( SCIPnlrowCreate(nlrow, blkmem, set, sourcenlrow->name,
-      sourcenlrow->constant,
-      sourcenlrow->nlinvars, sourcenlrow->linvars, sourcenlrow->lincoefs,
-      sourcenlrow->nquadvars, sourcenlrow->quadvars, sourcenlrow->nquadelems, sourcenlrow->quadelems,
-      sourcenlrow->exprtree,
-      sourcenlrow->lhs, sourcenlrow->rhs) );
+         sourcenlrow->constant,
+         sourcenlrow->nlinvars, sourcenlrow->linvars, sourcenlrow->lincoefs,
+         sourcenlrow->nquadvars, sourcenlrow->quadvars, sourcenlrow->nquadelems, sourcenlrow->quadelems,
+         sourcenlrow->exprtree,
+         sourcenlrow->lhs, sourcenlrow->rhs) );
 
    (*nlrow)->linvarssorted          = sourcenlrow->linvarssorted;
    (*nlrow)->quadelemssorted        = sourcenlrow->quadelemssorted;
@@ -2181,57 +2181,57 @@ SCIP_RETCODE SCIPnlrowCreateFromRow(
    )
 {
    int rownz;
-   
+
    assert(nlrow  != NULL);
    assert(blkmem != NULL);
    assert(set    != NULL);
    assert(row    != NULL);
-   
+
    rownz = SCIProwGetNNonz(row);
-   
+
    if( rownz > 1 )
    {
       SCIP_VAR** rowvars;
       int i;
-      
+
       SCIP_CALL( SCIPsetAllocBufferArray(set, &rowvars, rownz) );
-      
+
       for( i = 0; i < rownz; ++i )
       {
          rowvars[i] = SCIPcolGetVar(SCIProwGetCols(row)[i]);
          assert(rowvars[i] != NULL);
       }
-   
+
       SCIP_CALL( SCIPnlrowCreate(nlrow, blkmem, set, SCIProwGetName(row),
-         SCIProwGetConstant(row),
-         rownz, rowvars, SCIProwGetVals(row),
-         0, NULL, 0, NULL,
-         NULL,
-         SCIProwGetLhs(row), SCIProwGetRhs(row)) );
-      
+            SCIProwGetConstant(row),
+            rownz, rowvars, SCIProwGetVals(row),
+            0, NULL, 0, NULL,
+            NULL,
+            SCIProwGetLhs(row), SCIProwGetRhs(row)) );
+
       SCIPsetFreeBufferArray(set, &rowvars);
    }
    else if( rownz == 1 )
    {
       SCIP_VAR* rowvar;
-      
+
       rowvar = SCIPcolGetVar(SCIProwGetCols(row)[0]);
-      
+
       SCIP_CALL( SCIPnlrowCreate(nlrow, blkmem, set, SCIProwGetName(row),
-         SCIProwGetConstant(row),
-         1, &rowvar, SCIProwGetVals(row),
-         0, NULL, 0, NULL,
-         NULL,
-         SCIProwGetLhs(row), SCIProwGetRhs(row)) );
+            SCIProwGetConstant(row),
+            1, &rowvar, SCIProwGetVals(row),
+            0, NULL, 0, NULL,
+            NULL,
+            SCIProwGetLhs(row), SCIProwGetRhs(row)) );
    }
    else
    {
       SCIP_CALL( SCIPnlrowCreate(nlrow, blkmem, set, SCIProwGetName(row),
-         SCIProwGetConstant(row),
-         0, NULL, NULL,
-         0, NULL, 0, NULL,
-         NULL,
-         SCIProwGetLhs(row), SCIProwGetRhs(row)) );      
+            SCIProwGetConstant(row),
+            0, NULL, NULL,
+            0, NULL, 0, NULL,
+            NULL,
+            SCIProwGetLhs(row), SCIProwGetRhs(row)) );
    }
 
    return SCIP_OKAY;   
@@ -2291,7 +2291,7 @@ SCIP_RETCODE SCIPnlrowRelease(
    SCIP_NLROW**          nlrow,              /**< nonlinear row to free */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set                 /**< global SCIP settings */
-)
+   )
 {
    assert(blkmem != NULL);
    assert(nlrow  != NULL);
@@ -3159,7 +3159,7 @@ SCIP_RETCODE SCIPnlrowIsRedundant(
 
    *isredundant = TRUE;
    if( (!SCIPsetIsInfinity(set, -nlrow->lhs) && SCIPsetIsFeasLT(set, minactivity, nlrow->lhs)) ||
-       (!SCIPsetIsInfinity(set,  nlrow->rhs) && SCIPsetIsFeasGT(set, maxactivity, nlrow->rhs)) )
+      ( !SCIPsetIsInfinity(set,  nlrow->rhs) && SCIPsetIsFeasGT(set, maxactivity, nlrow->rhs)) )
       *isredundant = FALSE;
 
    return SCIP_OKAY;
@@ -3573,7 +3573,7 @@ SCIP_RETCODE nlpDelNlRowPos(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   pos                 /**< position of nonlinear row that is to be removed */
-)
+   )
 {
    SCIP_NLROW* nlrow;
 
@@ -3649,7 +3649,7 @@ SCIP_RETCODE nlpUpdateVarBounds(
    /* update bounds in NLPI problem */
    assert(nlp->solver != NULL);
    assert(nlp->problem != NULL);
-   
+
    pos = nlp->varmap_nlp2nlpi[pos];
    lb = SCIPvarGetLbLocal(var);
    ub = SCIPvarGetUbLocal(var);
@@ -3702,7 +3702,7 @@ SCIP_RETCODE nlpUpdateObjCoef(
     * we keep it this way by changing the coefficient of var in the NLPI problem objective */
    assert(nlp->solver != NULL);
    assert(nlp->problem != NULL);
-   
+
    pos = nlp->varmap_nlp2nlpi[pos];
    objidx = -1;
    SCIP_CALL( SCIPnlpiChgLinearCoefs(nlp->solver, nlp->problem, objidx, 1, &pos, &coef) );
@@ -3779,8 +3779,8 @@ SCIP_RETCODE nlpAddVars(
 
       /* catch events on variable */
       SCIP_CALL( SCIPvarCatchEvent(var, blkmem, set,
-         SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_OBJCHANGED,
-         nlp->eventhdlr, (SCIP_EVENTDATA*)nlp, NULL) ); /* @todo should store event filter position in nlp? */
+            SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_OBJCHANGED,
+            nlp->eventhdlr, (SCIP_EVENTDATA*)nlp, NULL) ); /* @todo should store event filter position in nlp? */
    }
 
    nlp->nvars += nvars;
@@ -3831,7 +3831,7 @@ SCIP_RETCODE nlpDelVarPos(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< SCIP LP, needed if a column-variable is freed */
    int                   pos                 /**< position of nonlinear row that is to be removed */
-)
+   )
 {
    SCIP_VAR* var;
 #ifndef NDEBUG
@@ -3894,8 +3894,8 @@ SCIP_RETCODE nlpDelVarPos(
 
    /* drop events on variable */
    SCIP_CALL( SCIPvarDropEvent(var, blkmem, set,
-      SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_OBJCHANGED,
-      nlp->eventhdlr, (SCIP_EVENTDATA*)nlp, -1) );
+         SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_OBJCHANGED,
+         nlp->eventhdlr, (SCIP_EVENTDATA*)nlp, -1) );
 
    /* move variable from end to pos */
    SCIP_CALL( nlpMoveVar(nlp, nlp->nvars-1, pos) );
@@ -3949,7 +3949,7 @@ SCIP_RETCODE nlpSetupNlpiIndices(
    int**                 linidxs,            /**< buffer to store pointer to NLPI indices of linear variables */
    SCIP_QUADELEM**       quadelems,          /**< buffer to store pointer to quadratic elements w.r.t. NLPI indices */
    int**                 nlinidxs            /**< buffer to store pointer to NLPI indices of nonlinear variables */
-)
+   )
 {
    int i;
    SCIP_VAR* var;
@@ -3986,11 +3986,11 @@ SCIP_RETCODE nlpSetupNlpiIndices(
    if( nlrow->nquadvars > 0 )
    {
       int* quadvarsidx;
-      
+
       assert(nlrow->quadvars    != NULL);
       assert(nlrow->nquadelems  > 0);
       assert(nlrow->quadelems   != NULL);
-      
+
       /* compute mapping of variable indices quadratic term -> NLPI */
       SCIP_CALL( SCIPsetAllocBufferArray(set, &quadvarsidx, nlrow->nquadvars) );
       for( i = 0; i < nlrow->nquadvars; ++i )
@@ -4002,7 +4002,7 @@ SCIP_RETCODE nlpSetupNlpiIndices(
          assert(SCIPhashmapExists(nlp->varhash, var));
          quadvarsidx[i] = nlp->varmap_nlp2nlpi[(size_t) (void*) SCIPhashmapGetImage(nlp->varhash, var)];
       }
-      
+
       /* compute quad elements using NLPI indices */
       SCIP_CALL( SCIPsetAllocBufferArray(set, quadelems, nlrow->nquadelems) );
       for( i = 0; i < nlrow->nquadelems; ++i )
@@ -4011,7 +4011,7 @@ SCIP_RETCODE nlpSetupNlpiIndices(
          assert(nlrow->quadelems[i].idx1 < nlrow->nquadvars);
          assert(nlrow->quadelems[i].idx2 >= 0);
          assert(nlrow->quadelems[i].idx2 < nlrow->nquadvars);
-         
+
          (*quadelems)[i].idx1 = quadvarsidx[nlrow->quadelems[i].idx1];
          (*quadelems)[i].idx2 = quadvarsidx[nlrow->quadelems[i].idx2];
          if( (*quadelems)[i].idx1 > (*quadelems)[i].idx2 )
@@ -4022,7 +4022,7 @@ SCIP_RETCODE nlpSetupNlpiIndices(
          }
          (*quadelems)[i].coef = nlrow->quadelems[i].coef;
       }
-      
+
       SCIPsetFreeBufferArray(set, &quadvarsidx);
    }
    else
@@ -4116,7 +4116,7 @@ SCIP_RETCODE nlpFlushNlRowDeletions(
    SCIP_NLP*             nlp,                /**< NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set                 /**< global SCIP settings */
-)
+   )
 {
    int         j;
    int         c;      /* counts the number of rows to delete */
@@ -4209,7 +4209,7 @@ SCIP_RETCODE nlpFlushVarDeletions(
    SCIP_NLP*             nlp,                /**< NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set                 /**< global SCIP settings */
-)
+   )
 {
    int  i;
    int  c;      /* counter on number of variables to remove in solver */
@@ -4303,7 +4303,7 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
    SCIP_NLP*             nlp,                /**< NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set                 /**< global SCIP settings */
-)
+   )
 {
    int c, i;
    SCIP_NLROW* nlrow;
@@ -4366,7 +4366,7 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
       if( nlrow->nlpiindex >= 0 )
          continue;
       assert(c < nlp->nunflushednlrowadd);
-      
+
       /* get indices in NLPI */
       SCIP_CALL( nlpSetupNlpiIndices(nlp, set, nlrow, &linidxs[c], &quadelems[c], &nlidxs[c]) );
       assert(linidxs[c]   != NULL || nlrow->nlinvars  == 0);
@@ -4395,7 +4395,7 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
       lincoefs[c] = nlrow->lincoefs;
 
       nquadelems[c] = nlrow->nquadelems;
-      
+
       exprtrees[c]  = nlrow->exprtree;
 
 #if ADDNAMESTONLPI
@@ -4415,10 +4415,10 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
    nlp->nnlrows_solver += c;
 
    SCIP_CALL( SCIPnlpiAddConstraints(nlp->solver, nlp->problem, c, lhss, rhss,
-      nlinvars, linidxs, lincoefs,
-      nquadelems, quadelems,
-      nlidxs, exprtrees,
-      names) );
+         nlinvars, linidxs, lincoefs,
+         nquadelems, quadelems,
+         nlidxs, exprtrees,
+         names) );
 
    for( c = 0; c < nlp->nunflushednlrowadd; ++c )
    {
@@ -4456,7 +4456,7 @@ SCIP_RETCODE nlpFlushVarAdditions(
    SCIP_NLP*             nlp,                /**< NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set                 /**< global SCIP settings */
-)
+   )
 {
    int i, c;
    SCIP_Real*  lbs;
@@ -4544,7 +4544,7 @@ SCIP_RETCODE nlpFlushObjective(
    SCIP_NLP*             nlp,                /**< NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set                 /**< global SCIP settings */
-)
+   )
 {
    int*       linindices;
    SCIP_Real* lincoefs;
@@ -4584,10 +4584,10 @@ SCIP_RETCODE nlpFlushObjective(
    }
 
    SCIP_CALL( SCIPnlpiSetObjective(nlp->solver, nlp->problem,
-      nz, linindices, lincoefs,
-      0, NULL,
-      NULL, NULL,
-      0.0) );
+         nz, linindices, lincoefs,
+         0, NULL,
+         NULL, NULL,
+         0.0) );
 
    SCIPsetFreeBufferArray(set, &linindices);
    SCIPsetFreeBufferArray(set, &lincoefs);
@@ -4617,13 +4617,13 @@ SCIP_RETCODE nlpSolve(
    if( nlp->solver == NULL )
    {
       SCIPwarningMessage("Attempted to solve NLP, but no solver available.\n");
-      
+
       nlp->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlp->termstat = SCIP_NLPTERMSTAT_OTHER;
-      
+
       return SCIP_OKAY;
    }
-   
+
    assert(nlp->solver != NULL);
    assert(nlp->problem != NULL);
 
@@ -4663,80 +4663,80 @@ SCIP_RETCODE nlpSolve(
    nlp->solstat  = SCIPnlpiGetSolstat(nlp->solver, nlp->problem);
    switch( nlp->solstat )
    {
-      case SCIP_NLPSOLSTAT_GLOBOPT:
-      case SCIP_NLPSOLSTAT_LOCOPT:
-      case SCIP_NLPSOLSTAT_FEASIBLE:
-      case SCIP_NLPSOLSTAT_LOCINFEASIBLE:
+   case SCIP_NLPSOLSTAT_GLOBOPT:
+   case SCIP_NLPSOLSTAT_LOCOPT:
+   case SCIP_NLPSOLSTAT_FEASIBLE:
+   case SCIP_NLPSOLSTAT_LOCINFEASIBLE:
+   {
+      SCIP_Real* primalvals;
+      SCIP_Real* nlrowdualvals;
+      SCIP_Real* varlbdualvals;
+      SCIP_Real* varubdualvals;
+
+      primalvals    = NULL;
+      nlrowdualvals = NULL;
+      varlbdualvals = NULL;
+      varubdualvals = NULL;
+
+      /* get NLP solution */
+      SCIP_CALL( SCIPnlpiGetSolution(nlp->solver, nlp->problem, &primalvals, &nlrowdualvals, &varlbdualvals, &varubdualvals) );
+      assert(primalvals != NULL || nlp->nvars == 0);
+      assert((varlbdualvals != NULL) == (varubdualvals != NULL)); /* if there are duals for one bound, then there should also be duals for the other bound */
+
+      /* store solution primal values in variable and evaluate objective function */
+      if( nlp->indiving && nlp->divingobj != NULL )
       {
-         SCIP_Real* primalvals;
-         SCIP_Real* nlrowdualvals;
-         SCIP_Real* varlbdualvals;
-         SCIP_Real* varubdualvals;
+         for( i = 0; i < nlp->nvars; ++i )
+            SCIPvarSetNLPSol(nlp->vars[i], set, primalvals[nlp->varmap_nlp2nlpi[i]]);  /*lint !e613 */
 
-         primalvals    = NULL;
-         nlrowdualvals = NULL;
-         varlbdualvals = NULL;
-         varubdualvals = NULL;
-
-         /* get NLP solution */
-         SCIP_CALL( SCIPnlpiGetSolution(nlp->solver, nlp->problem, &primalvals, &nlrowdualvals, &varlbdualvals, &varubdualvals) );
-         assert(primalvals    != NULL || nlp->nvars == 0);
-         assert((varlbdualvals != NULL) == (varubdualvals != NULL)); /* if there are duals for one bound, then there should also be duals for the other bound */
-
-         /* store solution primal values in variable and evaluate objective function */
-         if( nlp->indiving && nlp->divingobj != NULL )
-         {
-            for( i = 0; i < nlp->nvars; ++i )
-               SCIPvarSetNLPSol(nlp->vars[i], set, primalvals[nlp->varmap_nlp2nlpi[i]]);
-
-            /* evaluate modified diving objective */
-            SCIP_CALL( SCIPnlrowGetNLPActivity(nlp->divingobj, set, stat, nlp, &nlp->primalsolobjval) );
-         }
-         else
-         {
-            /* evaluate SCIP objective function */
-            nlp->primalsolobjval = 0.0;
-            for( i = 0; i < nlp->nvars; ++i )
-            {
-               SCIPvarSetNLPSol(nlp->vars[i], set, primalvals[nlp->varmap_nlp2nlpi[i]]);
-               nlp->primalsolobjval += SCIPvarGetObj(nlp->vars[i]) * primalvals[nlp->varmap_nlp2nlpi[i]];
-            }
-         }
-
-         /* store solution dual values in nlrows and variables */
-         for( i = 0; i < nlp->nnlrows; ++i )
-         {
-            assert(nlp->nlrows[i]->nlpiindex >= 0); /* NLP was flushed before solve, so all nlrows should be in there */
-
-            nlp->nlrows[i]->dualsol = nlrowdualvals != NULL ? nlrowdualvals[nlp->nlrows[i]->nlpiindex] : 0.0;
-
-            /* SCIPdebugMessage("dual of nlrow <%s> = %g\n", nlp->nlrows[i]->name, nlp->nlrows[i]->dualsol); */
-         }
-         assert(nlp->varlbdualvals != NULL || nlp->nvars == 0);
-         assert(nlp->varubdualvals != NULL || nlp->nvars == 0);
-         if( varlbdualvals != NULL )
-         {
-            for( i = 0; i < nlp->nvars; ++i )
-            {
-               assert(nlp->varmap_nlp2nlpi[i] >= 0); /* NLP was flushed before solve, so all vars should be in there */
-
-               nlp->varlbdualvals[i] = varlbdualvals[nlp->varmap_nlp2nlpi[i]];
-               nlp->varubdualvals[i] = varubdualvals[nlp->varmap_nlp2nlpi[i]];
-
-               /* SCIPdebugMessage("duals of var <%s> = %g %g\n", SCIPvarGetName(nlp->vars[i]), nlp->varlbdualvals[i], nlp->varubdualvals[i]); */
-            }
-         }
-         else if( nlp->nvars > 0 )
-         {
-            BMSclearMemoryArray(nlp->varlbdualvals, nlp->nvars);
-            BMSclearMemoryArray(nlp->varubdualvals, nlp->nvars);
-         }
-
-         break;
+         /* evaluate modified diving objective */
+         SCIP_CALL( SCIPnlrowGetNLPActivity(nlp->divingobj, set, stat, nlp, &nlp->primalsolobjval) );
       }
-      default:
-         nlp->primalsolobjval = SCIP_INVALID;
-         break;
+      else
+      {
+         /* evaluate SCIP objective function */
+         nlp->primalsolobjval = 0.0;
+         for( i = 0; i < nlp->nvars; ++i )
+         {
+            SCIPvarSetNLPSol(nlp->vars[i], set, primalvals[nlp->varmap_nlp2nlpi[i]]);  /*lint !e613 */
+            nlp->primalsolobjval += SCIPvarGetObj(nlp->vars[i]) * primalvals[nlp->varmap_nlp2nlpi[i]];  /*lint !e613 */
+         }
+      }
+
+      /* store solution dual values in nlrows and variables */
+      for( i = 0; i < nlp->nnlrows; ++i )
+      {
+         assert(nlp->nlrows[i]->nlpiindex >= 0); /* NLP was flushed before solve, so all nlrows should be in there */
+
+         nlp->nlrows[i]->dualsol = nlrowdualvals != NULL ? nlrowdualvals[nlp->nlrows[i]->nlpiindex] : 0.0;
+
+         /* SCIPdebugMessage("dual of nlrow <%s> = %g\n", nlp->nlrows[i]->name, nlp->nlrows[i]->dualsol); */
+      }
+      assert(nlp->varlbdualvals != NULL || nlp->nvars == 0);
+      assert(nlp->varubdualvals != NULL || nlp->nvars == 0);
+      if( varlbdualvals != NULL )
+      {
+         for( i = 0; i < nlp->nvars; ++i )
+         {
+            assert(nlp->varmap_nlp2nlpi[i] >= 0); /* NLP was flushed before solve, so all vars should be in there */
+
+            nlp->varlbdualvals[i] = varlbdualvals[nlp->varmap_nlp2nlpi[i]];
+            nlp->varubdualvals[i] = varubdualvals[nlp->varmap_nlp2nlpi[i]];
+
+            /* SCIPdebugMessage("duals of var <%s> = %g %g\n", SCIPvarGetName(nlp->vars[i]), nlp->varlbdualvals[i], nlp->varubdualvals[i]); */
+         }
+      }
+      else if( nlp->nvars > 0 )
+      {
+         BMSclearMemoryArray(nlp->varlbdualvals, nlp->nvars);
+         BMSclearMemoryArray(nlp->varubdualvals, nlp->nvars);
+      }
+
+      break;
+   }
+   default:
+      nlp->primalsolobjval = SCIP_INVALID;
+      break;
    } /*lint !e788*/
 
    return SCIP_OKAY;
@@ -4949,7 +4949,7 @@ SCIP_DECL_EVENTEXEC(eventExecNlp)
 SCIP_RETCODE SCIPnlpInclude(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem              /**< block memory */
-)
+   )
 {
    SCIP_EVENTHDLR* eventhdlr;
 
@@ -5068,8 +5068,8 @@ SCIP_RETCODE SCIPnlpCreate(
       return SCIP_PLUGINNOTFOUND;
    }
    SCIP_CALL( SCIPeventfilterAdd(set->scip->eventfilter, blkmem, set,
-      SCIP_EVENTTYPE_VARADDED | SCIP_EVENTTYPE_VARDELETED,
-      (*nlp)->eventhdlr, (SCIP_EVENTDATA*)(*nlp), &(*nlp)->globalfilterpos) );
+         SCIP_EVENTTYPE_VARADDED | SCIP_EVENTTYPE_VARDELETED,
+         (*nlp)->eventhdlr, (SCIP_EVENTDATA*)(*nlp), &(*nlp)->globalfilterpos) );
 
    /* fractional variables in last NLP solution */
    (*nlp)->fracvars     = NULL;
@@ -5107,8 +5107,8 @@ SCIP_RETCODE SCIPnlpFree(
 
    /* drop global events (variable addition and deletion) */
    SCIP_CALL( SCIPeventfilterDel(set->scip->eventfilter, blkmem, set,
-      SCIP_EVENTTYPE_VARADDED | SCIP_EVENTTYPE_VARDELETED,
-      (*nlp)->eventhdlr, (SCIP_EVENTDATA*)(*nlp), (*nlp)->globalfilterpos) );
+         SCIP_EVENTTYPE_VARADDED | SCIP_EVENTTYPE_VARDELETED,
+         (*nlp)->eventhdlr, (SCIP_EVENTDATA*)(*nlp), (*nlp)->globalfilterpos) );
 
    SCIP_CALL( SCIPnlpReset(*nlp, blkmem, set, eventqueue, lp) );
    assert((*nlp)->nnlrows == 0);
@@ -5164,7 +5164,7 @@ SCIP_RETCODE SCIPnlpReset(
    {
       SCIP_CALL( SCIPnlpEndDive(nlp, blkmem, set) );
    }
-   
+
    nlp->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
    nlp->termstat = SCIP_NLPTERMSTAT_OTHER;
 
@@ -5189,7 +5189,7 @@ SCIP_RETCODE SCIPnlpReset(
 /** currently a dummy function that always returns TRUE */
 SCIP_Bool SCIPnlpHasCurrentNodeNLP(
    SCIP_NLP*             nlp                 /**< NLP data */
-)
+   )
 {
    return TRUE;
 } /*lint !e715*/
@@ -5599,7 +5599,7 @@ SCIP_RETCODE SCIPnlpRemoveRedundantNlRows(
          SCIP_CALL( nlpDelNlRowPos(nlp, blkmem, set, i) );
       }
    }
-   
+
    nlp->solstat = solstatus;
 
    return SCIP_OKAY;
@@ -5733,9 +5733,9 @@ SCIP_RETCODE SCIPnlpGetVarsNonlinearity(
       for( i = 0; i < nlrow->nquadvars; ++i )
       {
          assert(SCIPhashmapExists(nlp->varhash, (void*)nlrow->quadvars[i]));
-         varidx = (size_t) SCIPhashmapGetImage(nlp->varhash, (void*)nlrow->quadvars[i]);
+         varidx = (int)(size_t) SCIPhashmapGetImage(nlp->varhash, (void*)nlrow->quadvars[i]);
          assert(varidx < nlp->nvars);
-         ++nlcount[varidx];
+         ++nlcount[varidx];  /*lint !e613 */
       }
 
       if( nlrow->exprtree != NULL )
@@ -5748,15 +5748,15 @@ SCIP_RETCODE SCIPnlpGetVarsNonlinearity(
          assert(exprtreevars != NULL || nexprtreevars == 0);
          for( i = 0; i < nexprtreevars; ++i )
          {
-            assert(SCIPhashmapExists(nlp->varhash, (void*)exprtreevars[i]));
+            assert(SCIPhashmapExists(nlp->varhash, (void*)exprtreevars[i]));  /*lint !e613 */
 
             /* skip variables that also appear in quadratic part, so they are not counted twice */
-            if( nlrow->quadvarshash != NULL && SCIPhashmapExists(nlrow->quadvarshash, (void*)exprtreevars[i]) )
+            if( nlrow->quadvarshash != NULL && SCIPhashmapExists(nlrow->quadvarshash, (void*)exprtreevars[i]) )  /*lint !e613 */
                continue;
 
-            varidx = (size_t) SCIPhashmapGetImage(nlp->varhash, (void*)exprtreevars[i]);
+            varidx = (int)(size_t) SCIPhashmapGetImage(nlp->varhash, (void*)exprtreevars[i]);  /*lint !e613 */
             assert(varidx < nlp->nvars);
-            ++nlcount[varidx];
+            ++nlcount[varidx];  /*lint !e613 */
          }
       }
    }
@@ -5858,7 +5858,7 @@ SCIP_NLPTERMSTAT SCIPnlpGetTermstat(
 SCIP_RETCODE SCIPnlpGetStatistics(
    SCIP_NLP*             nlp,                /**< pointer to NLP datastructure */
    SCIP_NLPSTATISTICS*   statistics          /**< pointer to store statistics */
-)
+   )
 {
    assert(nlp != NULL);
    assert(nlp->solver != NULL);
@@ -5886,7 +5886,7 @@ SCIP_RETCODE SCIPnlpGetIntPar(
    SCIP_NLP*             nlp,                /**< pointer to NLP datastructure */
    SCIP_NLPPARAM         type,               /**< parameter number */
    int*                  ival                /**< pointer to store the parameter value */
-)
+   )
 {
    assert(nlp  != NULL);
    assert(nlp->solver  != NULL);
@@ -5903,7 +5903,7 @@ SCIP_RETCODE SCIPnlpSetIntPar(
    SCIP_NLP*             nlp,                /**< pointer to NLP datastructure */
    SCIP_NLPPARAM         type,               /**< parameter number */
    int                   ival                /**< parameter value */
-)
+   )
 {
    assert(nlp  != NULL);
    assert(nlp->solver  != NULL);
@@ -5919,7 +5919,7 @@ SCIP_RETCODE SCIPnlpGetRealPar(
    SCIP_NLP*             nlp,                /**< pointer to NLP datastructure */
    SCIP_NLPPARAM         type,               /**< parameter number */
    SCIP_Real*            dval                /**< pointer to store the parameter value */
-)
+   )
 {
    assert(nlp  != NULL);
    assert(nlp->solver  != NULL);
@@ -5936,7 +5936,7 @@ SCIP_RETCODE SCIPnlpSetRealPar(
    SCIP_NLP*             nlp,                /**< pointer to NLP datastructure */
    SCIP_NLPPARAM         type,               /**< parameter number */
    SCIP_Real             dval                /**< parameter value */
-)
+   )
 {
    assert(nlp  != NULL);
    assert(nlp->solver  != NULL);
@@ -5952,7 +5952,7 @@ SCIP_RETCODE SCIPnlpGetStringPar(
    SCIP_NLP*             nlp,                /**< pointer to NLP datastructure */
    SCIP_NLPPARAM         type,               /**< parameter number */
    const char**          sval                /**< pointer to store the parameter value */
-)
+   )
 {
    assert(nlp  != NULL);
    assert(nlp->solver  != NULL);
@@ -5969,7 +5969,7 @@ SCIP_RETCODE SCIPnlpSetStringPar(
    SCIP_NLP*             nlp,                /**< pointer to NLP datastructure */
    SCIP_NLPPARAM         type,               /**< parameter number */
    const char*           sval                /**< parameter value */
-)
+   )
 {
    assert(nlp  != NULL);
    assert(nlp->solver  != NULL);
@@ -6115,11 +6115,11 @@ SCIP_RETCODE SCIPnlpChgVarObjDive(
          coefs[i] = SCIPvarGetObj(nlp->vars[i]);
 
       SCIP_CALL( SCIPnlrowCreate(&nlp->divingobj, blkmem, set, "divingobj",
-         0.0,
-         nlp->nvars, nlp->vars, coefs,
-         0, NULL, 0, NULL,
-         NULL,
-         -SCIPsetInfinity(set), SCIPsetInfinity(set)) );
+            0.0,
+            nlp->nvars, nlp->vars, coefs,
+            0, NULL, 0, NULL,
+            NULL,
+            -SCIPsetInfinity(set), SCIPsetInfinity(set)) );
 
       SCIPsetFreeBufferArray(set, &coefs);
    }

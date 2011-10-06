@@ -75,7 +75,7 @@ SCIP_RETCODE SCIPnlpiCreate(
    SCIP_DECL_NLPIGETSTRINGPAR      ((*nlpigetstringpar)),       /**< get value of string parameter */
    SCIP_DECL_NLPISETSTRINGPAR      ((*nlpisetstringpar)),       /**< set value of string parameter */
    SCIP_NLPIDATA*                  nlpidata                     /**< NLP interface local data */
-)
+   )
 {  /*lint --e{715}*/
    assert(nlpi != NULL);
 
@@ -116,7 +116,7 @@ SCIP_RETCODE SCIPnlpiCreate(
 
    if( BMSallocMemory(nlpi) == NULL )
       return SCIP_NOMEMORY;
-   
+
    (*nlpi)->name = strdup(name);
    (*nlpi)->description = strdup(description);
    (*nlpi)->priority = priority;
@@ -163,7 +163,7 @@ SCIP_RETCODE SCIPnlpiCopy(
    BMS_BLKMEM*           blkmem,             /**< block memory in target SCIP */
    SCIP_NLPI*            sourcenlpi,         /**< pointer to NLPI data structure to copy */
    SCIP_NLPI**           targetnlpi          /**< buffer to store pointer to copied NLPI data structure */
-)
+   )
 {
    assert(blkmem     != NULL);
    assert(sourcenlpi != NULL);
@@ -186,7 +186,7 @@ SCIP_RETCODE SCIPnlpiFree(
    free((*nlpi)->name);
    free((*nlpi)->description);
    BMSfreeMemory(nlpi);
-   
+
    assert(*nlpi == NULL);
 
    return SCIP_OKAY;
@@ -200,7 +200,7 @@ void* SCIPnlpiGetSolverPointer(
    )
 {
    assert(nlpi != NULL);
-   
+
    return (*nlpi->nlpigetsolverpointer)(nlpi);
 }
 
@@ -209,11 +209,11 @@ SCIP_RETCODE SCIPnlpiCreateProblem(
    SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
    SCIP_NLPIPROBLEM**    problem,            /**< pointer to store problem data */
    const char*           name                /**< name of problem, can be NULL */
-)
+   )
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
-   
+
    return (*nlpi->nlpicreateproblem)(nlpi, problem, name);
 }
 
@@ -221,11 +221,11 @@ SCIP_RETCODE SCIPnlpiCreateProblem(
 SCIP_RETCODE SCIPnlpiFreeProblem(
    SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
    SCIP_NLPIPROBLEM**    problem             /**< pointer where problem data is stored */
-)
+   )
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
-   
+
    return (*nlpi->nlpifreeproblem)(nlpi, problem);
 }
 
@@ -235,11 +235,11 @@ SCIP_RETCODE SCIPnlpiFreeProblem(
 void* SCIPnlpiGetProblemPointer(
    SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
    SCIP_NLPIPROBLEM*     problem             /**< pointer where problem data is stored */
-)
+   )
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
-   
+
    return (*nlpi->nlpigetproblempointer)(nlpi, problem);
 }
 
@@ -255,9 +255,9 @@ SCIP_RETCODE SCIPnlpiAddVars(
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
-   
+
    SCIP_CALL( (*nlpi->nlpiaddvars)(nlpi, problem, nvars, lbs, ubs, varnames) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -286,10 +286,10 @@ SCIP_RETCODE SCIPnlpiAddConstraints(
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
-   
+
    SCIP_CALL( (*nlpi->nlpiaddconstraints)(nlpi, problem, nconss, lhss, rhss, nlininds, lininds, linvals,
-      nquadelems, quadelems, exprvaridxs, exprtrees, names) );
-   
+         nquadelems, quadelems, exprvaridxs, exprtrees, names) );
+
    return SCIP_OKAY;
 }
 
@@ -311,10 +311,10 @@ SCIP_RETCODE SCIPnlpiSetObjective(
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
-   
+
    SCIP_CALL( (*nlpi->nlpisetobjective)(nlpi, problem, nlins, lininds, linvals, nquadelems, quadelems,
-      exprvaridxs, exprtree, constant) );
-   
+         exprvaridxs, exprtree, constant) );
+
    return SCIP_OKAY;
 }
 
@@ -330,9 +330,9 @@ SCIP_RETCODE SCIPnlpiChgVarBounds(
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
-   
+
    SCIP_CALL( (*nlpi->nlpichgvarbounds)(nlpi, problem, nvars, indices, lbs, ubs) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -348,9 +348,9 @@ SCIP_RETCODE SCIPnlpiChgConsSides(
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
-   
+
    SCIP_CALL( (*nlpi->nlpichgconssides)(nlpi, problem, nconss, indices, lhss, rhss) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -364,9 +364,9 @@ SCIP_RETCODE SCIPnlpiDelVarSet(
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
-   
+
    SCIP_CALL( (*nlpi->nlpidelvarset)(nlpi, problem, dstats) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -380,9 +380,9 @@ SCIP_RETCODE SCIPnlpiDelConsSet(
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
-   
+
    SCIP_CALL( (*nlpi->nlpidelconsset)(nlpi, problem, dstats) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -398,12 +398,12 @@ SCIP_RETCODE SCIPnlpiChgLinearCoefs(
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
-   
+
    SCIP_CALL( (*nlpi->nlpichglinearcoefs)(nlpi, problem, idx, nvals, varidxs, vals) );
-   
+
    return SCIP_OKAY;
 }
-  
+
 /** changes or adds coefficients in the quadratic part of a constraint or objective */
 SCIP_RETCODE SCIPnlpiChgQuadCoefs(
    SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
@@ -415,9 +415,9 @@ SCIP_RETCODE SCIPnlpiChgQuadCoefs(
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
-   
+
    SCIP_CALL( (*nlpi->nlpichgquadcoefs)(nlpi, problem, idx, nquadelems, quadelems) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -428,7 +428,7 @@ SCIP_RETCODE SCIPnlpiChgExprtree(
    int                   idxcons,            /**< index of constraint or -1 for objective */
    const int*            exprvaridxs,        /**< indices of variables in expression tree, maps variable indices in expression tree to indices in nlp, or NULL */
    SCIP_EXPRTREE*        exprtree            /**< new expression tree, or NULL for no tree */
-)
+   )
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
@@ -449,9 +449,9 @@ SCIP_RETCODE SCIPnlpiChgNonlinCoef(
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
-   
+
    SCIP_CALL( (*nlpi->nlpichgnonlincoef)(nlpi, problem, considx, paramidx, value) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -460,13 +460,13 @@ SCIP_RETCODE SCIPnlpiChgObjConstant(
    SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
    SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
    SCIP_Real             objconstant         /**< new value for objective constant */
-)
+   )
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
-   
+
    SCIP_CALL( (*nlpi->nlpichgobjconstant)(nlpi, problem, objconstant) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -482,9 +482,9 @@ SCIP_RETCODE SCIPnlpiSetInitialGuess(
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
-   
+
    SCIP_CALL( (*nlpi->nlpisetinitialguess)(nlpi, problem, primalvalues, consdualvalues, varlbdualvalues, varubdualvalues) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -496,9 +496,9 @@ SCIP_RETCODE SCIPnlpiSolve(
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
-   
+
    SCIP_CALL( (*nlpi->nlpisolve)(nlpi, problem) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -510,7 +510,7 @@ SCIP_NLPSOLSTAT SCIPnlpiGetSolstat(
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
-   
+
    return (*nlpi->nlpigetsolstat)(nlpi, problem);
 }
 
@@ -522,7 +522,7 @@ SCIP_NLPTERMSTAT SCIPnlpiGetTermstat(
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
-   
+
    return (*nlpi->nlpigettermstat)(nlpi, problem);
 }
 
@@ -538,9 +538,9 @@ SCIP_RETCODE SCIPnlpiGetSolution(
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
-   
+
    SCIP_CALL( (*nlpi->nlpigetsolution)(nlpi, problem, primalvalues, consdualvalues, varlbdualvalues, varubdualvalues) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -553,9 +553,9 @@ SCIP_RETCODE SCIPnlpiGetStatistics(
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
-   
+
    SCIP_CALL( (*nlpi->nlpigetstatistics)(nlpi, problem, statistics) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -568,9 +568,9 @@ SCIP_RETCODE SCIPnlpiGetWarmstartSize(
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
-   
+
    SCIP_CALL( (*nlpi->nlpigetwarmstartsize)(nlpi, problem, size) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -583,9 +583,9 @@ SCIP_RETCODE SCIPnlpiGetWarmstartMemo(
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
-   
+
    SCIP_CALL( (*nlpi->nlpigetwarmstartmemo)(nlpi, problem, buffer) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -598,9 +598,9 @@ SCIP_RETCODE SCIPnlpiSetWarmstartMemo(
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
-   
+
    SCIP_CALL( (*nlpi->nlpisetwarmstartmemo)(nlpi, problem, buffer) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -620,7 +620,7 @@ SCIP_RETCODE SCIPnlpiGetIntPar(
    assert(ival    != NULL);
 
    SCIP_CALL( (*nlpi->nlpigetintpar)(nlpi, problem, type, ival) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -634,9 +634,9 @@ SCIP_RETCODE SCIPnlpiSetIntPar(
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
-   
+
    SCIP_CALL( (*nlpi->nlpisetintpar)(nlpi, problem, type, ival) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -652,9 +652,9 @@ SCIP_RETCODE SCIPnlpiGetRealPar(
    assert(nlpi    != NULL);
    assert(problem != NULL);
    assert(dval    != NULL);
-   
+
    SCIP_CALL( (*nlpi->nlpigetrealpar)(nlpi, problem, type, dval) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -669,9 +669,9 @@ SCIP_RETCODE SCIPnlpiSetRealPar(
 {
    assert(nlpi    != NULL);
    assert(problem != NULL || type == SCIP_NLPPAR_INFINITY);
-   
+
    SCIP_CALL( (*nlpi->nlpisetrealpar)(nlpi, problem, type, dval) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -681,14 +681,14 @@ SCIP_RETCODE SCIPnlpiGetStringPar(
    SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
    SCIP_NLPPARAM         type,               /**< parameter number */
    const char**          sval                /**< pointer to store the parameter value, the user must not modify the string */
-)
+   )
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
    assert(sval    != NULL);
-   
+
    SCIP_CALL( (*nlpi->nlpigetstringpar)(nlpi, problem, type, sval) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -698,40 +698,40 @@ SCIP_RETCODE SCIPnlpiSetStringPar(
    SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
    SCIP_NLPPARAM         type,               /**< parameter number */
    const char*           sval                /**< parameter value */
-)
+   )
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
-   
+
    SCIP_CALL( (*nlpi->nlpisetstringpar)(nlpi, problem, type, sval) );
-   
+
    return SCIP_OKAY;
 }
 
 /** gets data of an NLPI */
 SCIP_NLPIDATA* SCIPnlpiGetData(
    SCIP_NLPI*            nlpi                /**< NLP interface structure */
-)
+   )
 {
    assert(nlpi != NULL);
-   
+
    return nlpi->nlpidata;
 }
 
 /** gets NLP solver name */
 const char* SCIPnlpiGetName(
    SCIP_NLPI*            nlpi                /**< NLP interface structure */
-)
+   )
 {
    assert(nlpi != NULL);
-   
+
    return nlpi->name;
 }
 
 /** gets NLP solver descriptions */
 const char* SCIPnlpiGetDesc(
    SCIP_NLPI*            nlpi                /**< NLP interface structure */
-)
+   )
 {
    assert(nlpi != NULL);
 
@@ -741,7 +741,7 @@ const char* SCIPnlpiGetDesc(
 /** gets NLP solver priority */
 int SCIPnlpiGetPriority(
    SCIP_NLPI*            nlpi                /**< NLP interface structure */
-)
+   )
 {
    assert(nlpi != NULL);
 
@@ -752,7 +752,7 @@ int SCIPnlpiGetPriority(
 void SCIPnlpiSetPriority(
    SCIP_NLPI*            nlpi,               /**< NLP interface structure */
    int                   priority            /**< new priority of NLPI */
-)
+   )
 {
    assert(nlpi != NULL);
 
@@ -762,49 +762,49 @@ void SCIPnlpiSetPriority(
 /** creates an NLP statistics structure */
 SCIP_RETCODE SCIPnlpStatisticsCreate(
    SCIP_NLPSTATISTICS**  statistics          /**< pointer where to store NLP statistics structure */
-)
+   )
 {
    assert(statistics != NULL);
-   
+
    if( BMSallocMemory(statistics) == NULL )
       return SCIP_NOMEMORY;
    assert(*statistics != NULL);
-   
+
    (*statistics)->niterations = -1;
    (*statistics)->totaltime = -1.0;
-   
+
    return SCIP_OKAY;
 }
 
 /** frees an NLP statistics structure */
 void SCIPnlpStatisticsFree(
    SCIP_NLPSTATISTICS**  statistics          /**< pointer where to store NLP statistics structure */
-)
+   )
 {
    assert(statistics != NULL);
-   
+
    BMSfreeMemory(statistics);
-   
+
    assert(*statistics == NULL);
 }
 
 /** gets the number of iterations from an NLP statistics structure */
 int SCIPnlpStatisticsGetNIterations(
    SCIP_NLPSTATISTICS*   statistics          /**< NLP statistics structure */
-)
+   )
 {
    assert(statistics != NULL);
-   
+
    return statistics->niterations;
 }
 
 /** gets the total time from an NLP statistics structure */
 SCIP_Real SCIPnlpStatisticsGetTotalTime(
    SCIP_NLPSTATISTICS*   statistics          /**< NLP statistics structure */
-)
+   )
 {
    assert(statistics != NULL);
-   
+
    return statistics->totaltime;
 }
 
@@ -812,7 +812,7 @@ SCIP_Real SCIPnlpStatisticsGetTotalTime(
 void SCIPnlpStatisticsSetNIterations(
    SCIP_NLPSTATISTICS*   statistics,         /**< NLP statistics structure */
    int                   niterations         /**< number of iterations to store */
-)
+   )
 {
    assert(statistics != NULL);
    statistics->niterations = niterations;
@@ -822,7 +822,7 @@ void SCIPnlpStatisticsSetNIterations(
 void SCIPnlpStatisticsSetTotalTime(
    SCIP_NLPSTATISTICS*   statistics,         /**< NLP statistics structure */
    SCIP_Real             totaltime           /**< solution time to store */
-)
+   )
 {
    assert(statistics != NULL);
    statistics->totaltime = totaltime;

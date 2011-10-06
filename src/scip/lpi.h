@@ -780,6 +780,12 @@ SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPISTATE*        lpistate            /**< LPi state information (like basis information) */
    );
 
+/** clears current LPi state (like basis information) of the solver */
+extern
+SCIP_RETCODE SCIPlpiClearState(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   );
+
 /** frees LPi state information */
 extern
 SCIP_RETCODE SCIPlpiFreeState(

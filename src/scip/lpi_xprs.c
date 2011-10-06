@@ -2019,7 +2019,7 @@ SCIP_RETCODE SCIPlpiStartStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   // currently do nothing
+   /* currently do nothing */
    return SCIP_OKAY;
 }
 
@@ -2028,7 +2028,7 @@ SCIP_RETCODE SCIPlpiEndStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   // currently do nothing
+   /* currently do nothing */
    return SCIP_OKAY;
 }
 
@@ -3117,7 +3117,7 @@ SCIP_RETCODE SCIPlpiGetBase(
       {
          assert(cstat[c] >=0 && cstat[c] <= 2);
          if (cstat[c] == 0)
-         { // Check if it might be super-basic.
+         {  /* Check if it might be super-basic. */
             double dlb;
             CHECK_ZERO( XPRSgetlb(lpi->xprslp, &dlb, c, c) );
             if (dlb <= XPRS_MINUSINFINITY)
@@ -3178,7 +3178,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    int nrows;
    int irspace;
 
-   // In the basis methods we assume that xprs basis flags coincide with scip, so assert it
+   /* In the basis methods we assume that xprs basis flags coincide with scip, so assert it */
    assert((0 == SCIP_BASESTAT_LOWER) && (1 == SCIP_BASESTAT_BASIC) && (2 == SCIP_BASESTAT_UPPER) && (3 == SCIP_BASESTAT_ZERO));
 
    assert(lpi != NULL);
@@ -3434,6 +3434,19 @@ SCIP_RETCODE SCIPlpiSetState(
 
    /* load basis information into CPLEX */
    SCIP_CALL( setBase(lpi) );
+
+   return SCIP_OKAY;
+}
+
+/** clears current LPi state (like basis information) of the solver */
+SCIP_RETCODE SCIPlpiClearState(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert(lpi != NULL);
+
+   /**@todo implement SCIPlpiClearState() for Xpress */
+   SCIPwarningMessage("Xpress interface does not implement SCIPlpiClearState()\n");
 
    return SCIP_OKAY;
 }

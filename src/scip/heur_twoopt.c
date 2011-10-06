@@ -1023,8 +1023,8 @@ SCIP_RETCODE optimize(
             else if( SCIPvarGetStatus(master) != SCIP_VARSTATUS_COLUMN )
                continue;
 
-            // /* determine the shifting direction to improve the objective function */
-            // assert(SCIPisFeasGT(scip, masterobj, slaveobj));
+            /* determine the shifting direction to improve the objective function */
+            /* assert(SCIPisFeasGT(scip, masterobj, slaveobj)); */
 
             /* the heuristic chooses the shifting direction and the corresponding maximum nonnegative
              * integer shift value for the two variables which preserves feasibility and improves

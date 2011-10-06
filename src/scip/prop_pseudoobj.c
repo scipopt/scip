@@ -568,6 +568,8 @@ SCIP_RETCODE propagateLowerbound(
             SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, newlb, FALSE, &infeasible, &tightened) );
             if( infeasible )
             {
+               /* we are done with solving since the global bound change is infeasible: cutoff root node */
+               SCIP_CALL( SCIPcutoffNode(scip, SCIPgetRootNode(scip)) );
                *result = SCIP_CUTOFF;
                return SCIP_OKAY;
             }
@@ -589,6 +591,8 @@ SCIP_RETCODE propagateLowerbound(
             SCIP_CALL( SCIPtightenVarUbGlobal(scip, var, newub, FALSE, &infeasible, &tightened) );
             if( infeasible )
             {
+               /* we are done with solving since the global bound change is infeasible: cutoff root node */
+               SCIP_CALL( SCIPcutoffNode(scip, SCIPgetRootNode(scip)) );
                *result = SCIP_CUTOFF;
                return SCIP_OKAY;
             }

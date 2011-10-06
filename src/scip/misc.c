@@ -4757,7 +4757,7 @@ void SCIPstrCopySection(
    token[nchars] = '\0';
 
    /* if section was longer than size, we want to reach the end of the parsing section anyway */
-   if( nchars == size )
+   if( nchars == (size-1) )
       while( *str != '\0' && *str != endchar )
          ++str;
 

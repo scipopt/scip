@@ -584,7 +584,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
             {
                /* insert cut in separation storage */
                SCIPdebugMessage(" -> separated cut <%s> from the cut pool (feasibility: %g)\n",
-                  SCIProwGetName(row), SCIProwGetLPFeasibility(row, stat, lp));
+                  SCIProwGetName(row), SCIProwGetLPFeasibility(row, set, stat, lp));
                SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, NULL, row, FALSE, root) );
                found = TRUE;
                cut->age = 0;

@@ -17,10 +17,15 @@
 #@brief   Makefile targets for installing and removing SCIP
 #@author  Stefan Heinz
 
+# installs headers, libraries, and binary
 .PHONY: install
-install:	all 
+install:	installheaders installlibs installbinary
+
+
+.PHONY: installheaders
+installheaders:	
 ifneq ($(INSTALLDIR),)
-		@echo "-> install scip headers into INSTALLDIR <$(INSTALLDIR)>"
+		@echo "-> install SCIP headers into INSTALLDIR <$(INSTALLDIR)>"
 		@-install -m 755 -d $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(INSTALLDIR)/$(INCLUDEDIR)/objscip/
 		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(SCIPPLUGININCSRC) 
 		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(SRCDIR)/scip/pub_*h 
@@ -28,13 +33,29 @@ ifneq ($(INSTALLDIR),)
 		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(SRCDIR)/scip/type_*h 
 		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(SRCDIR)/scip/scip.h
 		@-install -m 644 -p -t $(INSTALLDIR)/$(INCLUDEDIR)/objscip/ $(OBJSCIPINCSRC) 
-		@echo "-> install binary into INSTALLDIR <$(INSTALLDIR)>"
-		@-install -m 755 -d $(INSTALLDIR)/$(BINDIR)/
-		@-install -m 755 -p -t $(INSTALLDIR)/$(BINDIR)/ $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK) 
-		@echo "-> install libraries into INSTALLDIR <$(INSTALLDIR)>"
+endif
+
+
+
+.PHONY: installlibs
+installlibs:	libs
+ifneq ($(INSTALLDIR),)
+		@echo "-> install SCIP libraries into INSTALLDIR <$(INSTALLDIR)>"
 		@-install -m 755 -d $(INSTALLDIR)/$(LIBDIR)/
 		@-install -m 644 -p -t $(INSTALLDIR)/$(LIBDIR)/ $(LPILIBFILE) $(NLPILIBFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) 
 endif
+
+
+
+.PHONY: installbinary
+installbinary:	all 
+ifneq ($(INSTALLDIR),)
+		@echo "-> install SCIP binary into INSTALLDIR <$(INSTALLDIR)>"
+		@-install -m 755 -d $(INSTALLDIR)/$(BINDIR)/
+		@-install -m 755 -p -t $(INSTALLDIR)/$(BINDIR)/ $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK) 
+) 
+endif
+
 
 .PHONY: uninstall
 uninstall:

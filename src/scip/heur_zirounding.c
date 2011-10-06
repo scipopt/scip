@@ -289,7 +289,7 @@ SCIP_RETCODE updateSlacks(
 
             SCIP_CALL( SCIPsetSolVal(scip, sol, slackvars[rowpos], slackvarsolval + slackvarshiftval) );
          }
-         else
+         else if( !SCIPisInfinity(scip, -activities[rowpos]) && !SCIPisInfinity(scip, activities[rowpos]) )
             activities[rowpos] += val;
 
          /* the slacks of the row now can be updated independently of its type */

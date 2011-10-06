@@ -399,7 +399,7 @@ SCIP_RETCODE SCIPdispPrintLine(
                fillspace = set->disps[i]->width - (int)strlen(set->disps[i]->header);
                for( j = 0; j < (fillspace)/2; ++j )
                   SCIPmessageFPrintInfo(file, " ");
-               SCIPmessageFPrintInfo(file, (const char*)set->disps[i]->header);
+               SCIPmessageFPrintInfo(file, "%s", (const char*)set->disps[i]->header);
                for( j = 0; j < (fillspace+1)/2; ++j )
                   SCIPmessageFPrintInfo(file, " ");
                stripline = set->disps[i]->stripline;

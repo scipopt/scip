@@ -149,7 +149,238 @@
  * - Defines should be named all upper case.
  * - Document functions, parameters, and variables in a doxygen conform way.
  *
- * As an example have a look at tree.c .
+ * As an example have a look at "tree.c" and see the examples below. We also provide settings for
+ * \ref XEMACS "(x)emacs" and \ref ECLIPSE "eclipse".
+ *
+ * @section CODEEXAMPLES Examples
+ *
+ * In this section we state a few examples illustrating the \SCIP code style.
+ *
+ * \code
+ * #ifdef __cplusplus
+ * extern "C" {
+ * #endif
+ *
+ * /** SCIP operation stage */
+ * enum SCIP_Stage
+ * {
+ *    SCIP_STAGE_INIT         =  0,        /**< SCIP datastructures are initialized, no problem exists */
+ *    SCIP_STAGE_PROBLEM      =  1,        /**< the problem is being created and modified */
+ *    SCIP_STAGE_TRANSFORMING =  2,        /**< the problem is being transformed into solving data space */
+ *    SCIP_STAGE_TRANSFORMED  =  3,        /**< the problem was transformed into solving data space */
+ *    SCIP_STAGE_PRESOLVING   =  4,        /**< the problem is being presolved */
+ *    SCIP_STAGE_PRESOLVED    =  5,        /**< the problem was presolved */
+ *    SCIP_STAGE_INITSOLVE    =  6,        /**< the solving process data is being initialized */
+ *    SCIP_STAGE_SOLVING      =  7,        /**< the problem is being solved */
+ *    SCIP_STAGE_SOLVED       =  8,        /**< the problem was solved */
+ *    SCIP_STAGE_FREESOLVE    =  9,        /**< the solving process data is being freed */
+ *    SCIP_STAGE_FREETRANS    = 10         /**< the transformed problem is being freed */
+ * };
+ * typedef enum SCIP_Stage SCIP_STAGE;
+ *
+ * /** possible settings for enabling/disabling algorithms and other features */
+ * enum SCIP_Setting
+ * {
+ *    SCIP_UNDEFINED = 0,                  /**< undefined setting */
+ *    SCIP_DISABLED  = 1,                  /**< feature is disabled */
+ *    SCIP_AUTO      = 2,                  /**< feature is set to automatic mode */
+ *    SCIP_ENABLED   = 3                   /**< feature is enabled */
+ * };
+ * typedef enum SCIP_Setting SCIP_SETTING;
+ *
+ * #ifdef __cplusplus
+ * }
+ * #endif
+ * \endcode
+ *
+ * @section XEMACS Customize (x)emacs
+ *
+ * If you are using (x)emacs, you can use the following customization for the c++-mode. These settings satisfy the
+ * coding guidline of \SCIP.
+ *
+ * \code
+ * (add-hook 'c++-mode-hook
+ *   (function
+ *     (lambda ()
+ *   ;; SCIP customizations for c-mode and c++-mode
+ *   (setq-default c-basic-offset 3)
+ *   (c-set-offset 'substatement-open 0)
+ *   (c-set-offset 'statement-case-open 0)
+ *   (c-set-offset 'brace-list-open '-)
+ *   (c-set-offset 'inextern-lang '0)
+ *   (c-set-offset 'arglist-intro '+)
+ *   (c-set-offset 'arglist-cont 0)
+ *   (c-set-offset 'arglist-cont-nonempty '+)
+ *   (c-set-offset 'arglist-close '+)
+ *   (set-variable 'fill-column 120)
+ *  ;; this will make sure spaces are used instead of tabs
+ *   (setq tab-width 8 indent-tabs-mode nil)
+ *   )))
+ * \endcode
+ *
+ * @section ECLIPSE Customize eclipse
+ *
+ *
+ * Eclipse user can use the profile below. This profile does not match the \SCIP coding guideline completely.
+ *
+ * \code
+ *
+ * <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+ * <profiles version="1">
+ * <profile kind="CodeFormatterProfile" name="scip" version="1">
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_paren_in_method_declaration" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_opening_paren_in_for" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_new_line_in_empty_block" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.lineSplit" value="124"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_comma_in_base_types" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.keep_else_statement_on_same_line" value="false"/>
+ * <setting id="org.eclipse.cdt.core.formatter.indent_switchstatements_compare_to_switch" value="false"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_opening_brace_in_array_initializer" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_comma_in_method_declaration_parameters" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_opening_paren_in_if" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_opening_paren_in_exception_specification" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_closing_paren_in_parenthesized_expression" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_comma_in_base_types" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.indent_body_declarations_compare_to_access_specifier" value="true"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_closing_paren_in_exception_specification" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_comma_in_template_arguments" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_brace_in_block" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_closing_paren_in_method_declaration" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.use_tabs_only_for_leading_indentations" value="false"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_colon_in_labeled_statement" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_colon_in_case" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_comma_in_array_initializer" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_comma_in_enum_declarations" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.alignment_for_expressions_in_array_initializer" value="16"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_comma_in_declarator_list" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_bracket" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_closing_paren_in_for" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_prefix_operator" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.tabulation.size" value="3"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_new_line_before_else_in_if_statement" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.alignment_for_enumerator_list" value="48"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_opening_paren_in_parenthesized_expression" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_between_empty_parens_in_method_declaration" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.alignment_for_declarator_list" value="16"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_closing_paren_in_switch" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_paren_in_parenthesized_expression" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.indent_empty_lines" value="false"/>
+ * <setting id="org.eclipse.cdt.core.formatter.indent_switchstatements_compare_to_cases" value="true"/>
+ * <setting id="org.eclipse.cdt.core.formatter.keep_empty_array_initializer_on_one_line" value="false"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_brace_in_method_declaration" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.put_empty_statement_on_new_line" value="true"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_brace_in_switch" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_closing_paren_in_cast" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_between_empty_braces_in_array_initializer" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.brace_position_for_method_declaration" value="next_line"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_closing_paren_in_while" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_question_in_conditional" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_semicolon" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_closing_angle_bracket_in_template_arguments" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_colon_in_base_clause" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.indent_breaks_compare_to_cases" value="true"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_unary_operator" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_comma_in_declarator_list" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.alignment_for_arguments_in_method_invocation" value="16"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_paren_in_while" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_between_empty_brackets" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_opening_bracket" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.alignment_for_parameters_in_method_declaration" value="48"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_new_line_before_closing_brace_in_array_initializer" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.number_of_empty_lines_to_preserve" value="1"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_opening_paren_in_method_invocation" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_closing_brace_in_array_initializer" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_semicolon_in_for" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.brace_position_for_block" value="next_line"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_colon_in_conditional" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.brace_position_for_type_declaration" value="next_line"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_assignment_operator" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_angle_bracket_in_template_arguments" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_comma_in_expression_list" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_opening_angle_bracket_in_template_parameters" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.continuation_indentation" value="1"/>
+ * <setting id="org.eclipse.cdt.core.formatter.alignment_for_expression_list" value="0"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_opening_paren_in_method_declaration" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_comma_in_template_parameters" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_colon_in_default" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_binary_operator" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.alignment_for_conditional_expression" value="16"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_between_empty_parens_in_method_invocation" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_comma_in_array_initializer" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_closing_paren_in_if" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.format_guardian_clause_on_one_line" value="false"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_opening_paren_in_cast" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.indent_access_specifier_compare_to_type_header" value="false"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_brace_in_type_declaration" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_colon_in_labeled_statement" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.continuation_indentation_for_array_initializer" value="1"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_comma_in_method_declaration_parameters" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_semicolon_in_for" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_closing_paren_in_method_invocation" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.indent_body_declarations_compare_to_namespace_header" value="false"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_closing_brace_in_block" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_assignment_operator" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.alignment_for_compact_if" value="0"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_brace_in_array_initializer" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_new_line_at_end_of_file_if_missing" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_comma_in_template_parameters" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_comma_in_expression_list" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_question_in_conditional" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_paren_in_exception_specification" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_binary_operator" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_new_line_before_identifier_in_function_declaration" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.alignment_for_base_clause_in_type_declaration" value="80"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_comma_in_method_declaration_throws" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_between_empty_parens_in_exception_specification" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_comma_in_method_invocation_arguments" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.indent_declaration_compare_to_template_header" value="false"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_unary_operator" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_paren_in_switch" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.indent_statements_compare_to_body" value="true"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_comma_in_method_declaration_throws" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.indent_statements_compare_to_block" value="true"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_comma_in_template_arguments" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_new_line_before_catch_in_try_statement" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.alignment_for_throws_clause_in_method_declaration" value="48"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_paren_in_method_invocation" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_closing_paren_in_cast" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_closing_paren_in_catch" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_angle_bracket_in_template_parameters" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.tabulation.char" value="space"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_closing_angle_bracket_in_template_parameters" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_opening_paren_in_while" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_comma_in_method_invocation_arguments" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.brace_position_for_block_in_case" value="next_line"/>
+ * <setting id="org.eclipse.cdt.core.formatter.compact_else_if" value="true"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_postfix_operator" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_colon_in_base_clause" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_new_line_after_template_declaration" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_opening_paren_in_catch" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.keep_then_statement_on_same_line" value="false"/>
+ * <setting id="org.eclipse.cdt.core.formatter.brace_position_for_switch" value="next_line"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_paren_in_if" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_opening_paren_in_switch" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.keep_imple_if_on_one_line" value="false"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_new_line_after_opening_brace_in_array_initializer" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.indentation.size" value="3"/>
+ * <setting id="org.eclipse.cdt.core.formatter.brace_position_for_namespace_declaration" value="end_of_line"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_colon_in_conditional" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_comma_in_enum_declarations" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_prefix_operator" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_closing_angle_bracket_in_template_arguments" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.brace_position_for_array_initializer" value="end_of_line"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_colon_in_case" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_paren_in_catch" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_brace_in_namespace_declaration" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_postfix_operator" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_closing_bracket" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_new_line_before_while_in_do_statement" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_paren_in_for" value="do not insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_closing_angle_bracket_in_template_parameters" value="insert"/>
+ * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_opening_angle_bracket_in_template_arguments" value="do not insert"/>
+ * </profile>
+ * </profiles>
+ * \endcode
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1808,19 +2039,20 @@
  * @section PRICER_REMARKS Further remarks
  *
  * If you use your own branching rule (e.g., to branch on constraints), make sure that it is able to branch on pseudo solutions. 
- * Otherwise, SCIP will use its default branching rules, if necessary(which all branch on variables). This
+ * Otherwise, SCIP will use its default branching rules, if necessary (which all branch on variables). This
  * could disturb the pricing problem or branching might not even be possible, e.g., if all yet created variables have already been fixed.
  *
  * Note that if the original problem is a maximization problem, SCIP will transform the problem into a minimization 
  * problem by multiplying the objective function by -1. The pricer has to consider this and thus, the original 
  * objective function value of all variables created during the solving process should also be multiplied by -1.
  *
- * In some cases, bounds on variables are enforced by constraints of the problem. Therefore, these bounds do not need to be 
- * added to the LP explicitly, which has the advantage that the pricing routine does not need to respect the corresponding dual values.
+ * In some cases, bounds on variables are implicitly enforced by constraints of the problem and the objective function.
+ * Therefore, these bounds do not need to be added to the LP explicitly, which has the advantage that the pricing routine does not need to
+ * care about the corresponding dual values.
  * We call these bounds lazy bounds, they may be set by SCIPchgVarLbLazy() and SCIPchgVarUbLazy() for upper or lower bounds, respectively.
  * If the lazy bound is tighter than the local bound, the corresponding bound is not put into the LP.
- * Attention: The lazy bounds need to be valid for each feasible LP solution. If the objective function implies bounds on the variables for 
- * each optimal LP solution, but these bounds may be violated for arbitrary LP solutions, these bounds must not be declared lazy!
+ * In diving mode, lazy bounds are explicitly put into the LP, because changing the objective (which is possible only in diving)
+ * might reverse the implicitly given bounds. When diving finished, the bounds are again removed from the LP.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -4717,8 +4949,9 @@
  * change in question. The graph also contains source nodes for each bound that has been changed during branching and an
  * artificial target node representing the conflict, i.e., the infeasibility. Essentially, SCIP heuristically constructs
  * a cut in this graph that involves few "branching nodes". For details on the techniques that SCIP uses,
- * we refer to the paper@par Tobias Achterberg, Conflict Analysis in Mixed Integer Programming@n Discrete
- * Optimization, 4, 4-20 (2007)
+ * we refer to the paper @par
+ * Tobias Achterberg, Conflict Analysis in Mixed Integer Programming@n
+ * Discrete Optimization, 4, 4-20 (2007)
  *
  * For conflict analysis to work well, the author of a constraint handler or a propagator has to
  * implement three kinds of functionality: 
@@ -4727,11 +4960,11 @@
  * -# During propagation, one should call the right functions to fix variables.
  * -# One should implement the <em>so-called reverse propagation</em>.
  *
- * If this functionality is not implemented, SCIP will work correctly, but cannot use the information of the constraint
+ * If this functionality is not implemented, SCIP will still work correctly, but cannot use the information of the constraint
  * handler or the propagator for conflict analysis. In this case, each bound reduction performed by the constraint
  * handler/propagator will be treated as if it had been a branching decision.
  *
- * @section Initiating Conflict Analysis
+ * @section INITCONFS Initiating Conflict Analysis
  *
  * If one detects infeasibility within propagation, one should do the following:
  * -# Call SCIPinitConflictAnalysis().
@@ -4742,7 +4975,7 @@
  * -# Call SCIPanalyzeConflict() from a propagator or SCIPanalyzeConflictCons() from a constraint
  * handler.
  *
- * This functionality allows SCIP to add the artificial node that represents infeasibility.
+ * This functionality allows SCIP to set up the conflict graph and perform a conflict analysis.
  *
  * @section Propagation
  *
@@ -4753,10 +4986,10 @@
  * information that should indicate the reason of the propagation and can be used in reverse
  * propagation, see the next section.
  *
- * @section Reverse Propagation
+ * @section RESPROP Reverse Propagation
  *
  * Reverse Propagation allows to build up the conflict graph. Essentially, it provides an algorithm to detect the arcs
- * leading to a node in the conflict graph, i.e., the bound changes responsible for the new bound change duduced during
+ * leading to a node in the conflict graph, i.e., the bound changes responsible for the new bound change deduced during
  * propagation. Reverse Propagation needs to be implemented in the RESPROP callback functions of constraint handlers or
  * propagators. These callbacks receive the following information: the variable which is under investigation (@p
  * infervar), the corresponding bound change (@p bdchgidx, @p boundtype), and the integer (@p inferinfo) that has been
@@ -4779,7 +5012,7 @@
  * \code
  *    SCIP_CALL( SCIPinferBinvarCons(scip, vars[j][i], FALSE, cons, i*n + j, &infeasible, &tightened) );
  * \endcode
- * Thus, variable @p vars[j][i] is fixed to 0 and it passes @p i*n + @p j as @p inferinfo. 
+ * Thus, variable @p vars[j][i] is fixed to 0 (@p FALSE), and it passes @p i*n + @p j as @p inferinfo. 
  *
  * When it propagates the triangle inequality and @p vars[i][j] and @p vars[j[k] are fixed to 1, the constraint handler uses
  * \code
@@ -4792,9 +5025,9 @@
  * n*n, we deal with an equation, otherwise with a triangle inequality. The constraint handler can then extract the
  * indices @p i, @p j (and @p k in the second case) from inferinfo.
  *
- * In the first case it has to distinguish whether @p vars[i][j] is fixed to 0 or 1 &ndash; to call SCIPaddConflictLb()
+ * In the first case it has to distinguish whether @p vars[i][j] is fixed to 0 or 1 &ndash; by calling SCIPaddConflictLb()
  * or SCIPaddConflictUb(), respectively, with variable @p vars[j][i]. In the second case, it is clear that the only
- * possible propagation is to fix @p vars[i][j] when @p vars[k][i] and @p vars[j][k] are fixed to 1. It then calls
+ * possible propagation is to fix @p vars[i][j] to 0 when @p vars[k][i] and @p vars[j][k] are fixed to 1. It then calls
  * SCIPaddConflictLb() for both @p vars[k][i] and @p vars[j][k].
  */
 

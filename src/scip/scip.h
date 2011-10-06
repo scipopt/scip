@@ -418,6 +418,12 @@ SCIP_RETCODE SCIPcopyParamSettings(
    SCIP*                 targetscip          /**< target SCIP data structure */
    );
 
+/** gets depth of current scip instance (increased by each copy call) */
+extern
+SCIP_RETCODE SCIPgetSubscipDepth(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** copies source SCIP to target SCIP; the copying process is done in the following order:
  *  1) copy the plugins
  *  2) create problem data in target-SCIP and copy the problem data of the source-SCIP
@@ -2510,7 +2516,6 @@ SCIP_RETCODE SCIPparseVarsList(
 SCIP_RETCODE SCIPparseVarsLinearsum(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           str,                /**< string to parse */
-   char                  endchar,            /**< character where to stop parsing, or 0 */
    SCIP_VAR**            vars,               /**< array to store the parsed variables */
    SCIP_Real*            vals,               /**< array to store the parsed coefficients */
    int*                  nvars,              /**< pointer to store number of parsed variables */
@@ -2529,15 +2534,13 @@ SCIP_RETCODE SCIPparseVarsLinearsum(
  *  allocated memory again.  Do not keep the arrays created by SCIPparseVarsPolynomial around, since
  *  they use buffer memory that is intended for short term use only.
  *
- *  Parsing is stopped at the end of string (indicated by the \\0-character), or when the character
- *  stored in endchar is found (outside of variable names and numbers). Set endchar to \\0 if you
- *  want parsing until the end of str.  A space character is not allowed for endchar.
+ *  Parsing is stopped at the end of string (indicated by the \\0-character) or when no more monomials
+ *  are recognized.
  */
 extern
 SCIP_RETCODE SCIPparseVarsPolynomial(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           str,                /**< string to parse */
-   char                  endchar,            /**< character where to stop parsing */
    SCIP_VAR****          monomialvars,       /**< pointer to store arrays with variables for each monomial */
    SCIP_Real***          monomialexps,       /**< pointer to store arrays with variable exponents */
    SCIP_Real**           monomialcoefs,      /**< pointer to store array with monomial coefficients */
@@ -3566,6 +3569,12 @@ SCIP_RETCODE SCIPmultiaggregateVar(
    SCIP_Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
    );
 
+/** returns whether aggregation of variables is not allowed */
+extern
+SCIP_Bool SCIPdoNotAggr(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** returns whether variable is not allowed to be multi-aggregated */
 extern
 SCIP_Bool SCIPdoNotMultaggrVar(
@@ -4582,13 +4591,6 @@ SCIP_RETCODE SCIPcalcStrongCG(
    SCIP_Bool*            cutislocal          /**< pointer to store whether the returned cut is only valid locally */
    );
 
-/** reads a given solution file, problem has to be transformed in advance */
-extern
-SCIP_RETCODE SCIPreadSol(
-   SCIP*                 scip,              /**< SCIP data structure */   
-   const char*           fname              /**< name of the input file */
-   );
-
 /** writes current LP to a file */
 extern
 SCIP_RETCODE SCIPwriteLP(
@@ -5108,7 +5110,7 @@ extern
 SCIP_RETCODE SCIPgetNLPStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPSTATISTICS*   statistics          /**< pointer to store statistics */
-);
+   );
 
 /** gets objective value of current NLP */
 extern
@@ -5140,7 +5142,7 @@ SCIP_RETCODE SCIPgetNLPIntPar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPPARAM         type,               /**< parameter number */
    int*                  ival                /**< pointer to store the parameter value */
-);
+   );
 
 /** sets integer parameter of NLP */
 extern
@@ -5148,7 +5150,7 @@ SCIP_RETCODE SCIPsetNLPIntPar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPPARAM         type,               /**< parameter number */
    int                   ival                /**< parameter value */
-);
+   );
 
 /** gets floating point parameter of NLP */
 extern
@@ -5156,7 +5158,7 @@ SCIP_RETCODE SCIPgetNLPRealPar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPPARAM         type,               /**< parameter number */
    SCIP_Real*            dval                /**< pointer to store the parameter value */
-);
+   );
 
 /** sets floating point parameter of NLP */
 extern
@@ -5164,7 +5166,7 @@ SCIP_RETCODE SCIPsetNLPRealPar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPPARAM         type,               /**< parameter number */
    SCIP_Real             dval                /**< parameter value */
-);
+   );
 
 /** gets string parameter of NLP */
 extern
@@ -5172,7 +5174,7 @@ SCIP_RETCODE SCIPgetNLPStringPar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPPARAM         type,               /**< parameter number */
    const char**          sval                /**< pointer to store the parameter value */
-);
+   );
 
 /** sets string parameter of NLP */
 extern
@@ -5180,7 +5182,7 @@ SCIP_RETCODE SCIPsetNLPStringPar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPPARAM         type,               /**< parameter number */
    const char*           sval                /**< parameter value */
-);
+   );
 
 /** writes current NLP to a file */
 extern
@@ -5321,7 +5323,7 @@ extern
 SCIP_RETCODE SCIPreleaseNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW**          nlrow               /**< nonlinear row to release */
-);
+   );
 
 /** changes left hand side of NLP nonlinear row */
 extern
@@ -5564,7 +5566,7 @@ extern
 SCIP_RETCODE SCIPgetExprtreeTransformedVars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRTREE*        tree                /**< expression tree */
-);
+   );
 
 /** evaluates an expression tree for a primal solution or LP solution */
 extern
@@ -5573,7 +5575,7 @@ SCIP_RETCODE SCIPevalExprtreeSol(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    SCIP_SOL*             sol,                /**< a solution, or NULL for current LP solution */
    SCIP_Real*            val                 /**< buffer to store value */
-);
+   );
 
 /** evaluates an expression tree w.r.t. current global bounds */
 extern
@@ -5582,7 +5584,7 @@ SCIP_RETCODE SCIPevalExprtreeGlobalBounds(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    SCIP_Real             infinity,           /**< value to use for infinity */
    SCIP_INTERVAL*        val                 /**< buffer to store result */
-);
+   );
 
 /** evaluates an expression tree w.r.t. current local bounds */
 extern
@@ -5591,7 +5593,7 @@ SCIP_RETCODE SCIPevalExprtreeLocalBounds(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    SCIP_Real             infinity,           /**< value to use for infinity */
    SCIP_INTERVAL*        val                 /**< buffer to store result */
-);
+   );
 
 /**@} */
 
@@ -6617,6 +6619,13 @@ extern
 SCIP_RETCODE SCIPretransformSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** reads a given solution file, problem has to be transformed in advance */
+extern
+SCIP_RETCODE SCIPreadSol(
+   SCIP*                 scip,              /**< SCIP data structure */
+   const char*           fname              /**< name of the input file */
    );
 
 /** adds feasible primal solution to solution storage by copying it */

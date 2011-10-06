@@ -72,6 +72,8 @@ interface:
 - added new method to linear constraint handler SCIPsetUpgradeConsLinear(), which (de-)activates the possibility to upgrade a linear constraint to a specialized linear constraint (e.g. knapsack)
 - new method SCIPsolGetOrigObj() in pub_sol.h which returns for a solution in the original problem space the objective value
 - new method SCIPretransformSol() in scip.h that allows to retransform a solution to the original space
+- added method SCIPlpiClearState() to LP interfaces for clearing basis information in the LP solver
+- new method SCIPgetSubscipDepth() to access the depth of the current SCIP as a copied subproblem
 
 performance improvements:
 - performance improvements in prop_vbounds
@@ -86,6 +88,11 @@ performance improvements:
 - made sorting method more robust
 - LNS heuristics now use SCIPcopy() by default
 - considering inactive variables in undercover heuristic; limiting effort for solving covering problem
+- if during probing mode the LP relaxation is solved from scratch, e.g., when calling the shiftandpropagate heuristic
+  before root node solving, then we clear the resulting LP state, since it might be a bad starting basis for the next
+  solve of the LP relaxation (controlled by new parameter <lp/clearinitialprobinglp>)
+- included LP simplifier into SoPlex LP interface, applied when solving from scratch (lpi_spx.cpp)
+- new presolving steps in varbound constraint handler, tightening bounds, coefficients, sides and pairwise presolving
 
 fixed bugs:
 - fixed bug in propagation of indicator constraints: cannot fix slack variable to 0 if linear constraint is disabled/not active
@@ -120,17 +127,26 @@ fixed bugs:
 - fixed bug in ZI round heuristic that led to infeasible shiftings for numerically slightly infeasible rows with close-to-zero coefficients
 - fixed memory leak in coloring part of maximum clique algorithm (tclique_coloring.c) in a better way
 - fixed assert in sepa_clique.c which is currently not valid because implicit binary variables in cliques are ignored
+- fixed bug in redcost propagator: can only be called if the current node has an LP
+- fixed numerical issue in octane heuristic: close-to-zero values for ray direction could have led to bad computations
+- fixed numerical bug in linear constraint handler: polishing of coefficients after fixing variables led to wrong results for
+  continuous variables fixed to a close-to-zero value.
+- fixed bug in sepa_zerohalf.c concerning inconsistent construction of solution array of variables and fixed wrong assert about variable bounds
+- fixed possible buffer overrun in tclique_graph.c
+- fixed bug w.r.t. infinity loop during propagation
+- fixed bug in handling of lazy bounds that resulted in putting the bounds explicitly into the LP
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})
 - added clique heuristic (heur_clique.{c,h})
 - added pseudoboolean constraint handler (cons_pseudoboolean.{c,h})
 - all C template files are now called <plugintype>_xyz.{c,h} instead of <plugintype>_xxx.{c,h}
-- added first version of cons_disjunction.{c,h} which allows a disjunctions of constraints
+- added first version of cons_disjunction.{c,h} which allows a disjunction of constraints
 - added first version of sepa_closecuts.{c,h} to separate cuts w.r.t. to a point that is closer to the integral polyhedron
 - added reader for variable bounds (reader_bnd.{c,h})
 - added BETA version of constraint handler for nonlinear constraints (cons_nonlinear.{c,h}) to handle nonlinear equations given by algebraic expressions using operands like addition, multiplication, power, exp, log; currently no trigonometric functions
-- added constraint handler for (signed) power constraints (cons_signedpower.{c,h}) to handle equations like z = sign(x)abs(x)^n, n > 1
+- added constraint handler for (absolute) power constraints (cons_abspower.{c,h}) to handle equations like z = sign(x)abs(x)^n, n > 1
+- added BETA version of constraint handler for bivariate nonlinear constraints (cons_bivariate.{c,h}) to compute tight estimators for 1-convex and convex-concave bivariate nonlinear functions (given as expression tree)
 
 parameters:
 - added parameter <constraints/quadratic/disaggregate> to split a block-separable quadratic constraint into several quadratic constraint
@@ -176,6 +192,13 @@ parameters:
 - all parameters in cons_indicator and cons_sos1 have been converted to lower case!
 - new parameters "conflict/bounddisjunction/continuousfrac" which defines the maximum percantage of continuous variables 
   within a conflict create by the bounddisjunction consflict handler
+- added parameter <presolving/donotaggr> to deactivate aggregation of variables globally
+- added parameter <lp/resolverestore> controlling how LP solution is restored after diving: if TRUE by resolving them,
+  if FALSE by buffering them; if <lp/freesolvalbuffers> is TRUE, we free the buffer memory each time (FALSE by default)
+- added parameter <constraints/quadratic/checkfactorable> to disable check for factorable quadratic functions (xAx = (ax+b)*(cx+d)) in quadratic constraints and not to use of this information in separation (generates lifted tangent inequalities according to Belotti/Miller/Namazifar if also linear vars are present)
+- added parameters <constraints/{nonlinear,quadratic,soc,abspower}/maxsepanlprounds> to enable solving NLP relaxation in root node and adding cuts from linearizations of convex nonlinear constraints into cutpool
+- added parameter <conflict/separate> which enables or disables the separation of conflict constraints
+- added parameter <lp/clearinitialprobinglp> to clear LP state at end of probing mode, if LP was initially unsolved
 
 features:
 - flatzinc reader is now capable to read cumulative constraints
@@ -208,7 +231,7 @@ features:
   within a propagator  or a constraint handler
 - LP iterations in resolving calls can now be limited w.r.t. the average number of LP iterations in previous calls (after the root node);
   this is currently only done for the initial LP solve at a node and the corresponding parameter resolveiterfac is set to -1 (no limit) per default
-- added writing for pip files (linear, quadratic, polynomial nonlinear, polynomial signedpower, and and constraints)
+- added writing for pip files (linear, quadratic, polynomial nonlinear, polynomial abspower, polynomial bivariate, and and constraints)
 - reorganized computation of scores in cut filtering: instead of the computation at the time of addition, scores are now only computed w.r.t. the current LP solution and when cut filtering is performed; one can now fill the cut storage with cuts that were separated for different solutions
 - it is possible to change bounds of a variable in the interactive shell
 - it is possible to add a constraint to a problem in the interactive shell
@@ -233,7 +256,7 @@ features:
 - new method SCIPintervalPowerScalarInverse() to solve an equation y = x^p for given bounds on y and scalar exponent p
 - new method SCIPintervalQuadBivar() to compute tight bounds on a bivariate quadratic form
 - new method SCIPintervalSolveBivariateQuadExpressionAllScalar() to compute tight bounds on the solutions of a bivariate quadratic equation
-- the gams writer can now write nonlinear and signedpower constraints 
+- the gams writer can now write nonlinear, abspower, and bivariate constraints
 - the pip and zimpl reader now create nonlinear constraints for polynomials of degree > 2
 - implement presolving in exitpre() in cons_orbitope and cons_indicator
 - implement possibility to force a restart in cons_indicator if enough indicator variables have been fixed
@@ -242,6 +265,12 @@ features:
   transformed problem the best feasible solution of the transformed problem  are copied to the solution candidate store of the original problem; this
   useful if you solve several problems iteratively, solutions get now carried over automatically.
 - solutions which are given by the user form the outside are now marked by '#' in the output
+- implemented possibility to buffer and restore LP solution after diving without having to resolve the LP; currently
+  turned off, because performance impact is unclear; controlled by parameters lp/resolverestore and lp/freesolvalbuffers
+- reworked concept of lazy bounds: they can now also be used for problems where constraints and objective together ensure the bounds; 
+  to allow this also for diving heuristics that might change the objective and thus destroy this property, lazy bounds are explicitly
+  put into the LP during diving and removed afterwards
+- the varbound constraint handler can now parse its constraints
 
 design:
 - SCIP_HASHMAP now works also without block memory
@@ -252,11 +281,23 @@ design:
 - CIP format variable characters defined, e.g. SCIP_VARTYPE_INTEGER_CHAR
 - add expresssion graph data structures and methods for reformulation, domain propagation, and simple convexity check on nonlinear expressions
 
+statistic:
+- the "Solving Time" is now spitted into presolving, solving, and reading time
+- Presolvers section has new column "AddCons" which states the number f added constraint
+- Constraints section has new column named "#ResProp" which show the number of resolve propagation calls of certain constraint handler
+- Constraint Timing section has a new column "ResProp" which states the time spend in resolve propagation method of the constraint handler
+- new section "Propagator Timing" which shows the time spend in different callbacks of the propagator
+- rearranged first two columns of Propagators section; "#Propagate" and "#ResProp" stating the number of call for propagation and resolve propagation;
+  the Time column is moved into the new section Propagator Timings
+- Constraints section has new column named "MaxNumber" which the maximum number of active constraint of a certain constraint handler
+- added two columns "Time-0-It" and Calls-0-It" in the LP section which states the number of LP call and time spend for solving LPs
+  with zero iterations (only refactorization)
+
 Makefile
 - via "PARASCIP=true" as a "Makefile" option it is possible to compile SCIP threadsafe in DEBUG-mode, (in OPT-mode it's not necessary)
 - new variable $(INSTALLDIR) in Makefile which define installation directory for the libraries, $(INSTALLDIR)/lib/, 
   binary, $(INSTALLDIR)/bin, and include headers, $(INSTALLDIR)/include, the default value is the empty string
-- new target in Makefile "install" performs "make" and copies the include headers, binary, and libraries
+- new target in Makefile "install" performs "make" and copies using the install command the include headers, binary, and libraries
 - new target in Makefile "uninstall" removes libraries, binary, and include headers form INSTALLDIR
 - the 'make' parameter 'PARASCIP=true' leads to threadsafe message handlers where you need to call SCIPcreateMesshdlrPThreads and SCIPmessageSetHandler/SCIPmessageSetDefaultHandler and SCIPfreeMesshdlrPThreads; therefor we need to link with pthread library
 - to link against IPOPT, only the base directory of an Ipopt installation need to be specified now;
@@ -266,6 +307,8 @@ Makefile
 - moved *.test and *.solu files to folder testset in check folder and adjusted test scripts
 - adjusted all test scripts to use the same new optimality gap computation as in SCIP
 - added Makefile option "VALGRIND=true" to enable running the SCIP checks (make test) through valgrind; valgrind errors and memory leaks are reported as fails
+- removed target "lintfiles", this target is now imitated by the "lint" target and a none empty variable FILES
+
 
 SCIP version 2.0.2
 ==================

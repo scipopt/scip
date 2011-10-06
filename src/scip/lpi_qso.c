@@ -1727,7 +1727,7 @@ SCIP_RETCODE SCIPlpiStartStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   // currently do nothing
+   /* currently do nothing */
    return SCIP_OKAY;
 }
 
@@ -1736,7 +1736,7 @@ SCIP_RETCODE SCIPlpiEndStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   // currently do nothing
+   /* currently do nothing */
    return SCIP_OKAY;
 }
 
@@ -2848,6 +2848,19 @@ SCIP_RETCODE SCIPlpiSetState(
    /* set the basis */
    rval = QSload_basis_array(lpi->prob, icstat, irstat);
    QS_RETURN(rval);
+}
+
+/** clears current LPi state (like basis information) of the solver */
+SCIP_RETCODE SCIPlpiClearState(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert(lpi != NULL);
+
+   /**@todo implement SCIPlpiClearState() for QSopt */
+   SCIPwarningMessage("QSopt interface does not implement SCIPlpiClearState()\n");
+
+   return SCIP_OKAY;
 }
 
 /** frees LPi state information */

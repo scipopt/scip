@@ -1731,7 +1731,7 @@ SCIP_RETCODE copyConsPseudoboolean(
 
       /* allocate nonlinear array of variable array */
       SCIP_CALL( SCIPallocBufferArray(targetscip, &termvars, nterms) );
-      BMSclearMemoryArray(&termvars, nterms);
+      BMSclearMemoryArray(termvars, nterms);
 
       /* allocate array for length for all nonlinear variable array */
       SCIP_CALL( SCIPallocBufferArray(targetscip, &ntermvars, nterms) );
@@ -2185,10 +2185,11 @@ SCIP_RETCODE applyFixingsNonLinear(
                /* @todo: check for the correct aggregation order to throw the resultant away */
                SCIPdebugMessage("aggregating last unfixed variable <%s> in a non-linear part with the and-resultant <%s>\n", SCIPvarGetName(vars[0]), SCIPvarGetName(resultant));
                SCIP_CALL( SCIPaggregateVars(scip, vars[0], resultant, 1.0, -1.0, 0.0, infeasible, &redundant, &aggregated) );
-               assert(aggregated);
+               assert(aggregated || SCIPdoNotAggr(scip));
                assert(!redundant);
                assert(!(*infeasible));
-               ++(*naggrvars);
+               if( aggregated )
+                  ++(*naggrvars);
             }
             delterm = TRUE;
          }
@@ -2290,7 +2291,6 @@ SCIP_RETCODE mergeMultiples(
    )
 {
    SCIP_CONSDATA* consdata;
-   //   int v;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -2507,7 +2507,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
             }
 
             /* @todo check whether it's better to set the initial flag to false */         
-            initial = SCIPconsIsInitial(cons); //FALSE;
+            initial = SCIPconsIsInitial(cons); /* FALSE; */
 
             /* first soft constraints for lhs */
             if( !SCIPisInfinity(scip, -lhs) )
@@ -2634,7 +2634,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
             }
 #else /* with indicator */
             /* @todo check whether it's better to set the initial flag to false */         
-            initial = SCIPconsIsInitial(cons); //FALSE;
+            initial = SCIPconsIsInitial(cons); /* FALSE; */
 
             if( !SCIPisInfinity(scip, rhs) )
             {

@@ -92,8 +92,8 @@ typedef struct SCIP_BilinTerm SCIP_BILINTERM;
  *  - upgdconsssize   : length of the provided upgdconss array
  */
 #define SCIP_DECL_QUADCONSUPGD(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONS* cons, \
-   int nbinlin, int nbinquad, int nintlin, int nintquad, int nimpllin, int nimplquad, int ncontlin, int ncontquad, \
-   SCIP_Bool integral, int* nupgdconss, SCIP_CONS** upgdconss, int upgdconsssize)
+      int nbinlin, int nbinquad, int nintlin, int nintquad, int nimpllin, int nimplquad, int ncontlin, int ncontquad, \
+      SCIP_Bool integral, int* nupgdconss, SCIP_CONS** upgdconss, int upgdconsssize)
 
 /** creates the handler for quadratic constraints and includes it in SCIP */
 extern

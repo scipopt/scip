@@ -48,7 +48,7 @@ extern "C" {
  *  - upgdconsssize   : length of the provided upgdconss array
  */
 #define SCIP_DECL_NONLINCONSUPGD(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONS* cons, \
-   int* nupgdconss, SCIP_CONS** upgdconss, int upgdconsssize)
+      int* nupgdconss, SCIP_CONS** upgdconss, int upgdconsssize)
 
 /** reformulation method for expression graph nodes
  *
@@ -74,9 +74,9 @@ extern "C" {
  *  - naddcons        : to be increased by number of additionally added constraints
  *  - reformnode      : reformulated node to replace node with, or NULL if no reformulation
  */
-#define SCIP_DECL_EXPRGRAPHNODEREFORM(x) SCIP_RETCODE x (SCIP* scip, \
-   SCIP_EXPRGRAPH* exprgraph, SCIP_EXPRGRAPHNODE* node, \
-   int* naddcons, SCIP_EXPRGRAPHNODE** reformnode)
+#define SCIP_DECL_EXPRGRAPHNODEREFORM(x) SCIP_RETCODE x (SCIP* scip,    \
+      SCIP_EXPRGRAPH* exprgraph, SCIP_EXPRGRAPHNODE* node,              \
+      int* naddcons, SCIP_EXPRGRAPHNODE** reformnode)
 
 /** creates the handler for nonlinear constraints and includes it in SCIP */
 extern

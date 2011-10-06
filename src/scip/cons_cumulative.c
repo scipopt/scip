@@ -129,13 +129,13 @@ struct SCIP_ConshdlrData
  * Propagation rules
  */
 enum Proprule
-   {
-      PROPRULE_INVALID              = 0,        /**< propagation was applied without a specific propagation rule */
-      PROPRULE_1_CORETIMES          = 1,        /**< core-time propagator */
-      PROPRULE_2_CORETIMEHOLES      = 2,        /**< core-time propagator for holes */
-      PROPRULE_3_EDGEFINDING        = 3,        /**< edge-finder */
-      PROPRULE_4_ENERGETICREASONING = 4         /**< energetic reasoning */
-   };
+{
+   PROPRULE_INVALID              = 0,        /**< propagation was applied without a specific propagation rule */ /*lint !e830*/
+   PROPRULE_1_CORETIMES          = 1,        /**< core-time propagator */
+   PROPRULE_2_CORETIMEHOLES      = 2,        /**< core-time propagator for holes */
+   PROPRULE_3_EDGEFINDING        = 3,        /**< edge-finder */
+   PROPRULE_4_ENERGETICREASONING = 4         /**< energetic reasoning */
+};
 typedef enum Proprule PROPRULE;
 
 /** inference information */

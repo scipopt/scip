@@ -202,7 +202,8 @@ TCLIQUE_Bool tcliqueLoadFile(
    TCLIQUE_GRAPH**  tcliquegraph,       /**< pointer to store graph data structure */
    const char*      filename,           /**< name of file with graph data */
    double           scaleval,           /**< value to scale weights (only integral part of scaled weights is considered) */
-   char*            probname            /**< buffer to store the name of the problem */
+   char*            probname,           /**< buffer to store the name of the problem */
+   int              sizeofprobname      /**< size of buffer to store the name of the problem */
    );
 
 /** saves graph data structure to file */

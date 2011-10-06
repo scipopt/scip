@@ -316,6 +316,10 @@ SCIP_Bool debugSolIsAchieved(
    {
       SCIP_Real solvalue;
 
+      /* don't check solution while in problem creation stage */
+      if( SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM )
+         return TRUE;
+
       solvalue = SCIPgetSolOrigObj(scip, bestsol);
 
       /* make sure a debug solution has been read, so we do not compare against the initial debugsolval == 0 */

@@ -304,7 +304,13 @@ SCIP_RETCODE propagationRound(
       SCIP_CALL( SCIPpropExec(set->props[i], set, stat, depth, onlydelayed, &result) );
       *delayed = *delayed || (result == SCIP_DELAYED);
       *propagain = *propagain || (result == SCIP_REDUCEDDOM);
-      *cutoff = *cutoff || (result == SCIP_CUTOFF);
+
+      /* beside the result pointer of the propagator we have to check if an internal cutoff was detected; this can
+       * happen when a global bound change was applied which is globally valid and leads locally (for the current node
+       * and others) to an infeasible problem;
+       */
+      *cutoff = *cutoff || (result == SCIP_CUTOFF) || (tree->cutoffdepth <= SCIPtreeGetCurrentDepth(tree));
+
       if( result == SCIP_CUTOFF )
       {
          SCIPdebugMessage(" -> propagator <%s> detected cutoff\n", SCIPpropGetName(set->props[i]));
@@ -332,7 +338,13 @@ SCIP_RETCODE propagationRound(
             &result) );
       *delayed = *delayed || (result == SCIP_DELAYED);
       *propagain = *propagain || (result == SCIP_REDUCEDDOM);
-      *cutoff = *cutoff || (result == SCIP_CUTOFF);
+
+      /* beside the result pointer of the propagator we have to check if an internal cutoff was detected; this can
+       * happen when a global bound change was applied which is globally valid and leads locally (for the current node
+       * and others) to an infeasible problem;
+       */
+      *cutoff = *cutoff || (result == SCIP_CUTOFF) || (tree->cutoffdepth <= SCIPtreeGetCurrentDepth(tree));
+
       if( result == SCIP_CUTOFF )
       {
          SCIPdebugMessage(" -> constraint handler <%s> detected cutoff in propagation\n",
@@ -363,7 +375,13 @@ SCIP_RETCODE propagationRound(
       SCIP_CALL( SCIPpropExec(set->props[i], set, stat, depth, onlydelayed, &result) );
       *delayed = *delayed || (result == SCIP_DELAYED);
       *propagain = *propagain || (result == SCIP_REDUCEDDOM);
-      *cutoff = *cutoff || (result == SCIP_CUTOFF);
+
+      /* beside the result pointer of the propagator we have to check if an internal cutoff was detected; this can
+       * happen when a global bound change was applied which is globally valid and leads locally (for the current node
+       * and others) to an infeasible problem;
+       */
+      *cutoff = *cutoff || (result == SCIP_CUTOFF) || (tree->cutoffdepth <= SCIPtreeGetCurrentDepth(tree));
+
       if( result == SCIP_CUTOFF )
       {
          SCIPdebugMessage(" -> propagator <%s> detected cutoff\n", SCIPpropGetName(set->props[i]));

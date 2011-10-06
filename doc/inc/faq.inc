@@ -10,6 +10,7 @@
      <li><a href="#Section6">Specific questions about the copy functionality in SCIP</a></li>
     </ul>
 
+
     <h4><a name="Section1">General Questions about SCIP</a></h4>
     <p class="q">
       <a name="Q1">What is SCIP?</a>
@@ -170,6 +171,24 @@
       Furthermore, you can compile SCIP without any LP-Solver by <code>make LPS=none</code>.
     </p>    
     <p class="q">
+      <a name="Q45">Can I use SCIP as a pure LP-Solver?</a>
+    </p>
+    <p class="a"> 
+      Since LPs are only special types of MIPs and CIPs, the principal answer is yes. If you feed a pure LP to SCIP, it
+      will first apply presolving and then hand this presolved problem to the underlying LP solver. If solved to
+      optimality, you can query the optimal solution values as always.<br/><br/>
+
+      However, there are certain limitations to this: Dual multipliers and reduced costs are not accessible. If the LP
+      turns out to be infeasible, you cannot obtain the farkas proof. This is, because the strong LP duality theory does
+      not have a correspondence in MIP or CIP and there is no special functionality implemented in SCIP for the case
+      that the solved problem is an LP.
+
+      Hence, if you need more, "LP specific", information than the primal solution, you better use an LP-Solver
+      directly. If you are using the ZIB Optimization Suite, youe could, e.g., use the included LP solver 
+      <a href=http://soplex.zib.de>SoPlex</a>.  If you want to solve an LP not from the command line, but within your
+      C/C++ program, you could also use SCIP's LP-Interface, see also <a href="#Q46">here</a>.
+    </p>
+    <p class="q">
        <a name="Q19">How can I use the SCIP makefiles?</a>
     </p>
     <p class="a">
@@ -217,11 +236,6 @@
       If you do not have an idea, what pseudo solutions are, <code>SCIPgetVarSol()</code> should be just fine.<br> This
       should be the only case of 'duplicate methods'. If you find, however, another one, please contact us.
     </p>
-
-
-
-
-
 
 
 <h4><a name="Section2">Using SCIP as a standalone MIP-Solver</a></h4>
@@ -317,6 +331,8 @@
           reducing the values  you would raise for intensification and vice versa.</li>
     </ul>
     </p>
+
+
 <h4><a name="Section3">Using SCIP included in another source code</a></h4>
     <p class="q">
       <a name="Q12">How do I construct a problem instance in SCIP?</a>
@@ -431,6 +447,8 @@
       In the interactive shell, you just enter <code>SCIP> set limits time 3600</code>	
       For more examples, please have a look into heur_rens.c.      
     </p>		   
+
+
 <h4><a name="Section4">Using SCIP as a Branch-Cut-And-Price-Framework</a></h4>
     <p class="q">
       <a name="Q18">How do I start a project?</a>
@@ -616,6 +634,26 @@
       as tolerance.  It should be used to compare two results of scalar products or other &quot;long&quot; sums.
     </li>
     </ul>
+    <p class="q">
+      <a name="Q46">How do I solve an LP inside my SCIP plugin?</a>
+    </p>
+    <p class="a">
+       If the LP is only a slightly modified version of the LP relaxation - changed variable bounds or objective
+       coefficients - then you can use SCIP's diving mode: methods <code>SCIPstartDive()</code>,
+       <code>SCIPchgVarLbDive()</code>, <code>SCIPsolveDiveLP()</code>, etc.
+
+       Alternatively, SCIP's probing mode allows for a tentative depth first search in the tree and can solve the LP
+       relaxations at each node: methods <code>SCIPstartProbing()</code>, <code>SCIPnewProbingNode()</code>,
+       <code>SCIPfixVarProbing()</code>, etc. However, you cannot change objective coefficients or enlarge variable bounds
+       in probing mode.<br/><br/>
+
+       If you need to solve a separate LP, it is not recommendable to create a sub-SCIP, because of the overhead involved
+       and because dual information is not accessible (compare <a href="Q45">here</a>). Instead you can use SCIP's LP
+       interface. For this you should include <code>scip/lpi.h</code> and call the methods provided therein.
+       Note that the LPi can be used independently from SCIP.
+    </p>
+
+
 <h4><a name="Section5">Specific questions about Column Generation and Branch-And-Price with SCIP</a></h4>
     <p class="q">
       <a name="Q29">Why are not all variables in the LP?</a>
@@ -766,26 +804,28 @@
     <p class="a">
       In many Branch-and-Price applications, you have binary variables, but you do not want to impose
       upper bounds on these variables in the LP relaxation, because the upper bound is implicitly enforced
-      by the problem contraints, anyway. If the upper bounds are explicitly added to the LP, they lead to 
-      further dual variables, which may be hard to take into account in the pricing problem.
+      by the problem contraints and the objective, anyway. If the upper bounds are explicitly added to the LP,
+      they lead to further dual variables, which may be hard to take into account in the pricing problem.
     </p>
     <p class="a">  
-      There are two possibilities how to solve this problem. First, you could change the binary variables 
-      to general integer variables, if this does not change the problem. However, if you use special linear 
-      constraints like set partitioning/packing/covering, you can only add binary variables to these constraints. 
+      There are two possibilities how to solve this problem. First, you could change the binary variables
+      to general integer variables, if this does not change the problem. However, if you use special linear
+      constraints like set partitioning/packing/covering, you can only add binary variables to these constraints.
     </p>
     <p class="a">  
-      In order to still allow the usage of these types of constraints in a branch-and-price approach, the 
+      In order to still allow the usage of these types of constraints in a branch-and-price approach, the
       concept of lazy bounds was introduced in SCIP 2.0.
       For each variable, you can define lazy upper and lower bounds, i.e. bounds, that are implicitly enforced by
-      constraints in the problem. SCIP adds variable bounds to the LP only if the bound is tighter than the 
-      corresponding lazy bound. In order to use lazy bounds, you have to make sure, however, that each feasible
-      LP solution respects these bounds (even non-optimal LP solutions).
+      constraints and objective. SCIP adds variable bounds to the LP only if the bound is tighter than the
+      corresponding lazy bound.
+      Note that lazy bounds are explicitly put into and removed from the LP when starting and ending diving mode,
+      respectively. This is needed because changing the objective in diving might reverse the implicitly enforced
+      bounds.
     </p>
     <p class="a">  
       For instance, if you have set partioning constraints in your problem, you can define variables contained in these
       constraints as binary and set the lazy upper bound to 1, which allows you to use the better propagation methods
-      of the setppc constraint handler compared to the linear constraint handler without taking care about upper 
+      of the setppc constraint handler compared to the linear constraint handler without taking care about upper
       bounds on variables in the master.
     </p>
 

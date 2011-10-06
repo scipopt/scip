@@ -354,7 +354,7 @@ SCIP_RETCODE paramSetLongint(
 #ifndef NDEBUG
    else
    {
-      SCIPwarningMessage("unknown hard coded Longint parameter <%s>\n", paramname);
+      SCIPwarningMessage("unknown hard coded longint parameter <%s>\n", paramname);
    }
 #endif
 
@@ -2386,6 +2386,7 @@ SCIP_RETCODE SCIPparamsetWrite(
    SCIP_Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */
    )
 {
+   SCIP_RETCODE retcode;
    FILE* file;
    int i;
 
@@ -2420,7 +2421,6 @@ SCIP_RETCODE SCIPparamsetWrite(
    }
    
    /* write the parameters to the file */
-   SCIP_RETCODE retcode;
    for( i = 0; i < paramset->nparams; ++i )
    {
       retcode = paramWrite(paramset->params[i], file, comments, onlychanged);
@@ -2473,13 +2473,16 @@ SCIP_RETCODE SCIPparamsetSetToDefault(
 
    param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
    
-   if( param == NULL )
+   if( param != NULL )
    {
-      SCIPerrorMessage("parameter <%s> unknown\n", paramname);
-      return SCIP_PARAMETERUNKNOWN;
+      SCIP_CALL( SCIPparamSetToDefault(param, scip) );
    }
-
-   SCIP_CALL( SCIPparamSetToDefault(param, scip) );
+#ifndef NDEBUG
+   else
+   {
+      SCIPwarningMessage("unknown hard coded parameter <%s>\n", paramname);
+   }
+#endif
    
    return SCIP_OKAY;
 }
@@ -2600,15 +2603,25 @@ SCIP_RETCODE paramsetSetHeuristicsAggressive(
       }
    }  
 
-   /* set specific parameters for RENS heuristic */
-   SCIP_CALL( paramSetLongint(scip, paramset, "heuristics/rens/nodesofs", (SCIP_Longint)2000, quiet) );
-   SCIP_CALL( paramSetReal(scip, paramset, "heuristics/rens/minfixingrate", 0.3, quiet) );
+   /* set specific parameters for RENS heuristic, if the heuristic is included */
+#ifndef NDEBUG
+   if( SCIPfindHeur(scip, "rens") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetLongint(scip, paramset, "heuristics/rens/nodesofs", (SCIP_Longint)2000, quiet) );
+      SCIP_CALL( paramSetReal(scip, paramset, "heuristics/rens/minfixingrate", 0.3, quiet) );
+   }
    
-   /* set specific parameters for Crossover heuristic */
-   SCIP_CALL( paramSetLongint(scip, paramset, "heuristics/crossover/nwaitingnodes", (SCIP_Longint)20, quiet) );
-   SCIP_CALL( paramSetBool(scip, paramset, "heuristics/crossover/dontwaitatroot", TRUE, quiet) );
-   SCIP_CALL( paramSetReal(scip, paramset, "heuristics/crossover/nodesquot", 0.15, quiet) );
-   SCIP_CALL( paramSetReal(scip, paramset, "heuristics/crossover/minfixingrate", 0.5, quiet) );
+   /* set specific parameters for Crossover heuristic, if the heuristic is included */
+#ifndef NDEBUG
+   if( SCIPfindHeur(scip, "crossover") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetLongint(scip, paramset, "heuristics/crossover/nwaitingnodes", (SCIP_Longint)20, quiet) );
+      SCIP_CALL( paramSetBool(scip, paramset, "heuristics/crossover/dontwaitatroot", TRUE, quiet) );
+      SCIP_CALL( paramSetReal(scip, paramset, "heuristics/crossover/nodesquot", 0.15, quiet) );
+      SCIP_CALL( paramSetReal(scip, paramset, "heuristics/crossover/minfixingrate", 0.5, quiet) );
+   }
 
    return SCIP_OKAY;
 }
@@ -2725,11 +2738,21 @@ SCIP_RETCODE paramsetSetPresolvingDefault(
    }
 
    /* explicitly reset parameters of knapsack constraint handler, if the constraint handler is included */
-   SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "constraints/knapsack/disaggregation") );
-   SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "constraints/knapsack/simplifyinequalities") );
+#ifndef NDEBUG
+   if( SCIPfindConshdlr(scip, "knapsack") != NULL )
+#endif
+   {
+      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "constraints/knapsack/disaggregation") );
+      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "constraints/knapsack/simplifyinequalities") );
+   }
 
    /* explicitly reset parameters of linear constraint handler, if the constraint handler is included */
-   SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "constraints/linear/simplifyinequalities") );
+#ifndef NDEBUG
+   if( SCIPfindConshdlr(scip, "linear") != NULL )
+#endif
+   {
+      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "constraints/linear/simplifyinequalities") );
+   }
 
    return SCIP_OKAY;
 }
@@ -2753,13 +2776,28 @@ SCIP_RETCODE paramsetSetPresolvingAggressive(
    SCIP_CALL( paramSetReal(scip, paramset, "presolving/restartminred", 0.06, quiet) );
 
    /* explicitly change parameters of linear constraint handler, if included */
-   SCIP_CALL( paramSetBool(scip, paramset, "constraints/linear/simplifyinequalities", TRUE, quiet) );
+#ifndef NDEBUG
+   if( SCIPfindConshdlr(scip, "linear") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetBool(scip, paramset, "constraints/linear/simplifyinequalities", TRUE, quiet) );
+   }
    
    /* explicitly change parameters of knapsack constraint handler, if included */
-   SCIP_CALL( paramSetBool(scip, paramset, "constraints/knapsack/simplifyinequalities", TRUE, quiet) );
+#ifndef NDEBUG
+   if( SCIPfindConshdlr(scip, "knapsack") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetBool(scip, paramset, "constraints/knapsack/simplifyinequalities", TRUE, quiet) );
+   }
    
-   /* explicitly change parameters of presolver boundshift */
-   SCIP_CALL( paramSetInt(scip, paramset, "presolving/boundshift/maxrounds", -1, quiet) );
+   /* explicitly change parameters of presolver boundshift, if included */
+#ifndef NDEBUG
+   if( SCIPfindPresol(scip, "boundshift") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetInt(scip, paramset, "presolving/boundshift/maxrounds", -1, quiet) );
+   }
  
    /* explicitly change parameters of probing */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/probing/maxuseless");
@@ -2827,11 +2865,21 @@ SCIP_RETCODE paramsetSetPresolvingFast(
    /* explicitly turn off restarts */
    SCIP_CALL( paramSetInt(scip, paramset, "presolving/maxrestarts", 0, quiet) );
 
-   /* turn off probing */
-   SCIP_CALL( paramSetInt(scip, paramset, "propagating/probing/maxprerounds", 0, quiet) );
+   /* turn off probing, if included */
+#ifndef NDEBUG
+   if( SCIPfindProp(scip, "probing") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetInt(scip, paramset, "propagating/probing/maxprerounds", 0, quiet) );
+   }
 
    /* explicitly change parameters of knapsack constraint handler, if the constraint handler is included */
-   SCIP_CALL( paramSetBool(scip, paramset, "constraints/knapsack/disaggregation", FALSE, quiet) );
+#ifndef NDEBUG
+   if( SCIPfindConshdlr(scip, "knapsack") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetBool(scip, paramset, "constraints/knapsack/disaggregation", FALSE, quiet) );
+   }
    
    return SCIP_OKAY;
 }
@@ -2926,8 +2974,14 @@ SCIP_RETCODE paramsetSetSeparatingDefault(
       }
    }
 
-   SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "constraints/linear/separateall") );
-   
+   /* explicitly reset parameter of linear constraint handler, if the constraint handler is included */
+#ifndef NDEBUG
+   if( SCIPfindConshdlr(scip, "linear") != NULL )
+#endif
+   {
+      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "constraints/linear/separateall") );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -3076,15 +3130,30 @@ SCIP_RETCODE paramsetSetSeparatingAggressive(
    SCIP_CALL( paramSetInt(scip, paramset, "separating/maxcutsroot", 5000, quiet) );
    SCIP_CALL( paramSetInt(scip, paramset, "separating/poolfreq", 10, quiet) );
 
-   /* explicitly change a separating parameter of the linear constraint handler */
-   SCIP_CALL( paramSetBool(scip, paramset, "constraints/linear/separateall", TRUE, quiet) );
+   /* explicitly change a separating parameter of the linear constraint handler, if included */
+#ifndef NDEBUG
+   if( SCIPfindConshdlr(scip, "linear") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetBool(scip, paramset, "constraints/linear/separateall", TRUE, quiet) );
+   }
    
-   /* explicitly change a separating parameter of cmir separator */
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/cmir/maxfailsroot", 200, quiet) );
+   /* explicitly change a separating parameter of cmir separator, if included */
+#ifndef NDEBUG
+   if( SCIPfindSepa(scip, "cmir") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetInt(scip, paramset, "separating/cmir/maxfailsroot", 200, quiet) );
+   }
 
-   /* explicitly change separating parameters of mcf separator */
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/mcf/maxtestdelta", -1, quiet) );
-   SCIP_CALL( paramSetBool(scip, paramset, "separating/mcf/trynegscaling", TRUE, quiet) );
+   /* explicitly change separating parameters of mcf separator, if included */
+#ifndef NDEBUG
+   if( SCIPfindSepa(scip, "mcf") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetInt(scip, paramset, "separating/mcf/maxtestdelta", -1, quiet) );
+      SCIP_CALL( paramSetBool(scip, paramset, "separating/mcf/trynegscaling", TRUE, quiet) );
+   }
 
    return SCIP_OKAY;
 }
@@ -3103,19 +3172,48 @@ SCIP_RETCODE paramsetSetSeparatingFast(
    /* explicitly decrease maxbounddist */
    SCIP_CALL( paramSetReal(scip, paramset, "separating/maxbounddist", 0.0, quiet) );
 
-   /* explicitly turn off expensive separators */
-   SCIP_CALL( paramSetInt(scip, paramset, "constraints/and/sepafreq", 0, quiet) );
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/cmir/maxroundsroot", 5, quiet) );
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/cmir/maxtriesroot", 100, quiet) );
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/cmir/maxaggrsroot", 3, quiet) );
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/cmir/maxsepacutsroot", 200, quiet) );
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/flowcover/freq", -1, quiet) );
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/gomory/maxroundsroot", 20, quiet) );
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/gomory/maxsepacutsroot", 200, quiet) );
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/mcf/freq", -1, quiet) );
-   SCIP_CALL( paramSetReal(scip, paramset, "separating/redcost/maxbounddist", 0.0, quiet) );
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/strongcg/maxroundsroot", 10, quiet) );
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/strongcg/maxsepacutsroot", 200, quiet) );
+   /* explicitly turn off expensive separators, if included */
+#ifndef NDEBUG
+   if( SCIPfindConshdlr(scip, "and") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetInt(scip, paramset, "constraints/and/sepafreq", 0, quiet) );
+   }
+#ifndef NDEBUG
+   if( SCIPfindSepa(scip, "cmir") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetInt(scip, paramset, "separating/cmir/maxroundsroot", 5, quiet) );
+      SCIP_CALL( paramSetInt(scip, paramset, "separating/cmir/maxtriesroot", 100, quiet) );
+      SCIP_CALL( paramSetInt(scip, paramset, "separating/cmir/maxaggrsroot", 3, quiet) );
+      SCIP_CALL( paramSetInt(scip, paramset, "separating/cmir/maxsepacutsroot", 200, quiet) );
+   }
+#ifndef NDEBUG
+   if( SCIPfindSepa(scip, "flowcover") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetInt(scip, paramset, "separating/flowcover/freq", -1, quiet) );
+   }
+#ifndef NDEBUG
+   if( SCIPfindSepa(scip, "gomory") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetInt(scip, paramset, "separating/gomory/maxroundsroot", 20, quiet) );
+      SCIP_CALL( paramSetInt(scip, paramset, "separating/gomory/maxsepacutsroot", 200, quiet) );
+   }
+#ifndef NDEBUG
+   if( SCIPfindSepa(scip, "mcf") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetInt(scip, paramset, "separating/mcf/freq", -1, quiet) );
+   }
+#ifndef NDEBUG
+   if( SCIPfindSepa(scip, "strongcg") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetInt(scip, paramset, "separating/strongcg/maxroundsroot", 10, quiet) );
+      SCIP_CALL( paramSetInt(scip, paramset, "separating/strongcg/maxsepacutsroot", 200, quiet) );
+   }
    
    return SCIP_OKAY;
 }

@@ -13,22 +13,17 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_signedpower.h
- * @brief  constraint handler for signedpower constraints
+/**@file   cons_bivariate.h
+ * @brief  constraint handler for bivariate nonlinear constraints
+ * @author Martin Ballerstein
+ * @author Dennis Michaels
  * @author Stefan Vigerske
- * 
- * This constraint handler handles constraints of the form
- * \f[
- *   lhs \leq sign(x+offset) |x+offset|^n + c z \leq rhs
- * \f]
- * for n > 1.0 a rational number, c and offset arbitrary, and x and z variables.
- * x can have -offset in the interior of its domain.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_CONS_SIGNEDPOWER_H__
-#define __SCIP_CONS_SIGNEDPOWER_H__
+#ifndef __SCIP_CONS_BIVARIATE_H__
+#define __SCIP_CONS_BIVARIATE_H__
 
 #include "scip/scip.h"
 
@@ -36,23 +31,30 @@
 extern "C" {
 #endif
 
-/** creates the handler for signedpower constraints and includes it in SCIP */
+typedef enum
+{
+   SCIP_BIVAR_ALLCONVEX          = 0,        /* f(x,y) is convex */
+   SCIP_BIVAR_1CONVEX_INDEFINITE = 1,        /* f(x,y) is 1-convex and indefinite */
+   SCIP_BIVAR_CONVEX_CONCAVE     = 2,        /* f(x,y) is convex in x and concave in y */
+   SCIP_BIVAR_UNKNOWN            = 3         /* unknown */
+} SCIP_BIVAR_CONVEXITY;
+
+/** creates the handler for bivariate constraints and includes it in SCIP */
 extern
-SCIP_RETCODE SCIPincludeConshdlrSignedpower(
+SCIP_RETCODE SCIPincludeConshdlrBivariate(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates and captures a signedpower constraint */
+/** creates and captures a bivariate constraint */
 extern
-SCIP_RETCODE SCIPcreateConsSignedpower(
+SCIP_RETCODE SCIPcreateConsBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   SCIP_VAR*             x,                  /**< nonlinear variable x in constraint */
-   SCIP_VAR*             z,                  /**< linear variable z in constraint */
-   SCIP_Real             exponent,           /**< exponent n of |x+offset|^n term in constraint */
-   SCIP_Real             xoffset,            /**< offset in |x+offset|^n term in constraint */
-   SCIP_Real             zcoef,              /**< coefficient of z in constraint */
+   SCIP_EXPRTREE*        f,                  /**< expression tree specifying bivariate function f(x,y) */
+   SCIP_BIVAR_CONVEXITY  convextype,         /**< kind of convexity of f(x,y) */
+   SCIP_VAR*             z,                  /**< linear variable in constraint */
+   SCIP_Real             zcoef,              /**< coefficient of linear variable */
    SCIP_Real             lhs,                /**< left hand side of constraint */
    SCIP_Real             rhs,                /**< right hand side of constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
@@ -71,7 +73,7 @@ SCIP_RETCODE SCIPcreateConsSignedpower(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are seperated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -80,69 +82,39 @@ SCIP_RETCODE SCIPcreateConsSignedpower(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
-/** gets the signedpower constraint as a nonlinear row representation */
+/** gets the linear variable of a bivariate constraint, or NULL if no such variable */
 extern
-SCIP_RETCODE SCIPgetNlRowSignedpower(
+SCIP_VAR* SCIPgetLinearVarBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint */
-   SCIP_NLROW**          nlrow               /**< a buffer where to store pointer to nonlinear row */
-);
+   SCIP_CONS*            cons                /**< constraint */
+   );
 
-/** gets nonlinear variable x in signedpower constraint */
+/** gets the coefficients of the linear variable of a bivariate constraint */
 extern
-SCIP_VAR* SCIPgetNonlinearVarSignedpower(
+SCIP_Real SCIPgetLinearCoefBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< signedpower constraint */
-);
+   SCIP_CONS*            cons                /**< constraint */
+   );
 
-/** gets linear variable z in signedpower constraint */
+/** gets the expression tree of a bivariate constraint */
 extern
-SCIP_VAR* SCIPgetLinearVarSignedpower(
+SCIP_EXPRTREE* SCIPgetExprtreeBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< signedpower constraint */
-);
+   SCIP_CONS*            cons                /**< constraint */
+   );
 
-/** gets exponent in power term in signedpower constraint */
+/** gets the left hand side of a bivariate constraint */
 extern
-SCIP_Real SCIPgetExponentSignedpower(
+SCIP_Real SCIPgetLhsBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< signedpower constraint */
-);
+   SCIP_CONS*            cons                /**< constraint */
+   );
 
-/** gets offset in power term in signedpower constraint */
+/** gets the right hand side of a bivariate constraint */
 extern
-SCIP_Real SCIPgetOffsetSignedpower(
+SCIP_Real SCIPgetRhsBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< signedpower constraint */
-);
-
-/** gets coefficient of linear variable in signedpower constraint */
-extern
-SCIP_Real SCIPgetCoefLinearSignedpower(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< signedpower constraint */
-);
-
-/** gets left hand side in signedpower constraint */
-extern
-SCIP_Real SCIPgetLhsSignedpower(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< signedpower constraint */
-);
-
-/** gets right hand side in signedpower constraint */
-extern
-SCIP_Real SCIPgetRhsSignedpower(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< signedpower constraint */
-);
-
-/** gets the absolute violation of a signedpower constraint by a solution */
-extern
-SCIP_Real SCIPgetViolationSignedpower(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< signedpower constraint */
-   SCIP_SOL*             sol                 /**< LP solution */
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 #ifdef __cplusplus

@@ -32,6 +32,7 @@
 #include "scip/vbc.h"
 #include "scip/event.h"
 #include "scip/lp.h"
+#include "scip/lpi.h"
 #include "scip/var.h"
 #include "scip/implics.h"
 #include "scip/primal.h"
@@ -4226,6 +4227,7 @@ SCIP_RETCODE SCIPtreeCreate(
    (*tree)->probinglpwassolved = FALSE;
    (*tree)->probingloadlpistate = FALSE;
    (*tree)->probinglpwasrelax = FALSE;
+   (*tree)->probingsolvedlp = FALSE;
 
    return SCIP_OKAY;
 }
@@ -4307,6 +4309,7 @@ SCIP_RETCODE SCIPtreeClear(
    tree->probinglpwassolved = FALSE;
    tree->probingloadlpistate = FALSE;
    tree->probinglpwasrelax = FALSE;
+   tree->probingsolvedlp = FALSE;
 
    return SCIP_OKAY;
 }
@@ -5504,8 +5507,10 @@ SCIP_RETCODE SCIPtreeStartProbing(
       tree->probinglpwassolved = lp->solved;
       tree->probingloadlpistate = FALSE;
       tree->probinglpwasrelax = lp->isrelax;
+      tree->probingsolvedlp = FALSE;
 
       /* remember the LP state in order to restore the LP solution quickly after probing */
+      /**@todo could the lp state be worth storing if the LP is not flushed (and hence not solved)? */
       if( lp->flushed && lp->solved )
       {
          SCIP_CALL( SCIPlpGetState(lp, blkmem, &tree->probinglpistate) );
@@ -5812,7 +5817,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
             && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OBJLIMIT )
          {
             SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "LP was not resolved to a sufficient status after diving\n");
+               "LP was not resolved to a sufficient status after probing\n");
             lp->resolvelperror = TRUE;      
          }
          else if( tree->focuslpconstructed && SCIPlpIsRelax(lp) )
@@ -5822,10 +5827,20 @@ SCIP_RETCODE SCIPtreeEndProbing(
       }
    }
    assert(tree->probinglpistate == NULL);
+
+   /* if the LP was solved during probing, but had been unsolved before probing started, we discard the LP state */
+   if( set->lp_clearinitialprobinglp && tree->probingsolvedlp && !tree->probinglpwassolved )
+   {
+      SCIPdebugMessage("clearing lp state at end of probing mode because LP was initially unsolved\n");
+      SCIP_CALL( SCIPlpiClearState(lp->lpi) );
+   }
+
+   /* reset flags */
    tree->probinglpwasflushed = FALSE;
    tree->probinglpwassolved = FALSE;
    tree->probingloadlpistate = FALSE;
    tree->probinglpwasrelax = FALSE;
+   tree->probingsolvedlp = FALSE;
 
    /* inform LP about end of probing mode */
    SCIP_CALL( SCIPlpEndProbing(lp) );

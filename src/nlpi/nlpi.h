@@ -75,7 +75,7 @@ SCIP_RETCODE SCIPnlpiCreate(
    SCIP_DECL_NLPIGETSTRINGPAR      ((*nlpigetstringpar)),       /**< get value of string parameter */
    SCIP_DECL_NLPISETSTRINGPAR      ((*nlpisetstringpar)),       /**< set value of string parameter */
    SCIP_NLPIDATA*                  nlpidata                     /**< NLP interface local data */
-);
+   );
 
 /** copies an NLPI */
 extern

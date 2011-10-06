@@ -167,15 +167,18 @@ SCIP_RETCODE updateActivities(
 
          /* update row activity */
          oldactivity = activities[rowpos];
-         newactivity = oldactivity + delta * colvals[r];
-         if( SCIPisInfinity(scip, newactivity) )
-            newactivity = SCIPinfinity(scip);
-         else if( SCIPisInfinity(scip, -newactivity) )
-            newactivity = -SCIPinfinity(scip);
-         activities[rowpos] = newactivity;
+         if( !SCIPisInfinity(scip, -oldactivity) && !SCIPisInfinity(scip, oldactivity) )
+         {
+            newactivity = oldactivity + delta * colvals[r];
+            if( SCIPisInfinity(scip, newactivity) )
+               newactivity = SCIPinfinity(scip);
+            else if( SCIPisInfinity(scip, -newactivity) )
+               newactivity = -SCIPinfinity(scip);
+            activities[rowpos] = newactivity;
 
-         /* update row violation arrays */
-         updateViolations(scip, row, violrows, violrowpos, nviolrows, oldactivity, newactivity);
+            /* update row violation arrays */
+            updateViolations(scip, row, violrows, violrowpos, nviolrows, oldactivity, newactivity);
+         }
       }
    }
 
@@ -620,8 +623,9 @@ SCIP_DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
       SCIPdebugMessage("rounding heuristic: nfrac=%d, nviolrows=%d, obj=%g (best possible obj: %g)\n",
          nfrac, nviolrows, SCIPgetSolOrigObj(scip, sol), SCIPretransformObj(scip, minobj));
 
-      /* due to possible cancellation it is maybe better to use SCIPisLT */
-      assert(minobj < SCIPgetCutoffbound(scip)); /* otherwise, the rounding variable selection should have returned NULL */
+      /* minobj < SCIPgetCutoffbound(scip) should be true, otherwise the rounding variable selection
+       * should have returned NULL. Due to possible cancellation we use SCIPisLE. */
+      assert( SCIPisLE(scip, minobj, SCIPgetCutoffbound(scip)) );
 
       /* choose next variable to process:
        *  - if a violated row exists, round a variable decreasing the violation, that has least impact on other rows

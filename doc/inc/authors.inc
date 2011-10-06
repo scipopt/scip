@@ -120,6 +120,16 @@
     	<table class="desc">
            <tr>
 	      <td>
+		 <a href="http://www.ifor.math.ethz.ch/~balmarti">Martin Ballerstein</a>
+	      </td>
+	      <td>
+                 Constraint Handler for bivariate nonlinear constraints
+	      </td>
+	      <td>
+	      </td>
+	    </tr>
+           <tr>
+	      <td>
 		 Livio Bertacco
 	      </td>
 	      <td>
@@ -182,6 +192,16 @@
 	      </td>
               <td>
                  Separator for {0,1/2}-cuts
+	      </td>
+	    </tr>
+           <tr>
+	      <td>
+		 <a href="http://www.ifor.math.ethz.ch/~dennism">Dennis Michaels</a>
+	      </td>
+	      <td>
+                 Constraint Handler for bivariate nonlinear constraints
+	      </td>
+	      <td>
 	      </td>
 	    </tr>
             <tr>
