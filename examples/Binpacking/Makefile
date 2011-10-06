@@ -82,6 +82,9 @@ lint:		$(MAINSRC)
 			$(LINT) $(SCIPDIR)/lint/scip.lnt +os\(lint.out\) -u -zero \
 			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE $$i; \
 			done'
+.PHONY: scip
+scip:
+		@$(MAKE) -C $(SCIPDIR) libs $^
 
 .PHONY: doc
 doc:

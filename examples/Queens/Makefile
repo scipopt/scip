@@ -69,6 +69,10 @@ lint:		$(MAINSRC)
 			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE $$i; \
 			done'
 
+.PHONY: scip
+scip:
+		@$(MAKE) -C $(SCIPDIR) libs $^
+
 .PHONY: doc
 doc:
 		@-(echo ''; echo '--> running pdflatex to create documentation'; echo ''); 
