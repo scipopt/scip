@@ -282,7 +282,7 @@ SCIP_DECL_READERREAD(readerReadCsol)
       SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0, 1, 1, SCIP_VARTYPE_BINARY, 
             TRUE, FALSE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setindex) );
 
-      COLORprobAddVarForStableSet(scip, setindex, var);
+      SCIP_CALL( COLORprobAddVarForStableSet(scip, setindex, var) );
       SCIP_CALL( SCIPaddVar(scip, var) );
       SCIP_CALL( SCIPchgVarUbLazy(scip, var, 1.0) );
 

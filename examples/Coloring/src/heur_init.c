@@ -648,7 +648,7 @@ SCIP_DECL_HEUREXEC(heurExecInit)
          SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0, 1, 1, SCIP_VARTYPE_BINARY, 
                TRUE, TRUE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) );
 
-         COLORprobAddVarForStableSet(scip, setnumber, var);
+         SCIP_CALL( COLORprobAddVarForStableSet(scip, setnumber, var) );
          SCIP_CALL( SCIPaddVar(scip, var) );
          SCIP_CALL( SCIPchgVarUbLazy(scip, var, 1.0) );
          
