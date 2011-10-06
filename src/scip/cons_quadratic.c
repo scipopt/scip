@@ -10697,7 +10697,7 @@ SCIP_DECL_CONSPARSE(consParseQuadratic)
       }
    }
 
-   SCIP_CALL( SCIPparseVarsPolynomial(scip, str, 0, &monomialvars, &monomialexps, &monomialcoefs, &monomialnvars, &nmonomials, &endptr, success) );
+   SCIP_CALL( SCIPparseVarsPolynomial(scip, str, &monomialvars, &monomialexps, &monomialcoefs, &monomialnvars, &nmonomials, &endptr, success) );
 
    if( *success )
    {

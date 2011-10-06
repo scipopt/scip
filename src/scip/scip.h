@@ -2506,7 +2506,6 @@ SCIP_RETCODE SCIPparseVarsList(
 SCIP_RETCODE SCIPparseVarsLinearsum(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           str,                /**< string to parse */
-   char                  endchar,            /**< character where to stop parsing, or 0 */
    SCIP_VAR**            vars,               /**< array to store the parsed variables */
    SCIP_Real*            vals,               /**< array to store the parsed coefficients */
    int*                  nvars,              /**< pointer to store number of parsed variables */
@@ -2525,15 +2524,13 @@ SCIP_RETCODE SCIPparseVarsLinearsum(
  *  allocated memory again.  Do not keep the arrays created by SCIPparseVarsPolynomial around, since
  *  they use buffer memory that is intended for short term use only.
  *
- *  Parsing is stopped at the end of string (indicated by the \\0-character), or when the character
- *  stored in endchar is found (outside of variable names and numbers). Set endchar to \\0 if you
- *  want parsing until the end of str.  A space character is not allowed for endchar.
+ *  Parsing is stopped at the end of string (indicated by the \\0-character) or when no more monomials
+ *  are recognized.
  */
 extern
 SCIP_RETCODE SCIPparseVarsPolynomial(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           str,                /**< string to parse */
-   char                  endchar,            /**< character where to stop parsing */
    SCIP_VAR****          monomialvars,       /**< pointer to store arrays with variables for each monomial */
    SCIP_Real***          monomialexps,       /**< pointer to store arrays with variable exponents */
    SCIP_Real**           monomialcoefs,      /**< pointer to store array with monomial coefficients */

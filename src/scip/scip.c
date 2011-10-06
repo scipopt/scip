@@ -8110,14 +8110,12 @@ SCIP_RETCODE SCIPparseVarsList(
  *  allocated memory again.  Do not keep the arrays created by SCIPparseVarsPolynomial around, since
  *  they use buffer memory that is intended for short term use only.
  *
- *  Parsing is stopped at the end of string (indicated by the \\0-character), or when the character
- *  stored in endchar is found (outside of variable names and numbers). Set endchar to \\0 if you
- *  want parsing until the end of str.  A space character is not allowed for endchar.
+ *  Parsing is stopped at the end of string (indicated by the \\0-character) or when no more monomials
+ *  are recognized.
  */
 SCIP_RETCODE SCIPparseVarsPolynomial(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           str,                /**< string to parse */
-   char                  endchar,            /**< character where to stop parsing */
    SCIP_VAR****          monomialvars,       /**< pointer to store arrays with variables for each monomial */
    SCIP_Real***          monomialexps,       /**< pointer to store arrays with variable exponents */
    SCIP_Real**           monomialcoefs,      /**< pointer to store array with monomial coefficients */
@@ -8150,7 +8148,6 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
 
    assert(scip != NULL);
    assert(str != NULL);
-   assert(!isspace((unsigned char)endchar));
    assert(monomialvars != NULL);
    assert(monomialexps != NULL);
    assert(monomialnvars != NULL);
@@ -8177,16 +8174,13 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
    exponents = NULL;
    coef = SCIP_INVALID;
 
-   SCIPdebugMessage("parsing polynomial from '%s', endchar = <%c>\n", str, endchar);
+   SCIPdebugMessage("parsing polynomial from '%s'\n", str);
 
-   while( *str && *str != endchar && state != SCIPPARSEPOLYNOMIAL_STATE_END && state != SCIPPARSEPOLYNOMIAL_STATE_ERROR )
+   while( *str && state != SCIPPARSEPOLYNOMIAL_STATE_END && state != SCIPPARSEPOLYNOMIAL_STATE_ERROR )
    {
       /* skip white space */
       while( isspace((unsigned char)*str) )
          str++;
-
-      if( *str == endchar )
-         break;
 
       assert(state != SCIPPARSEPOLYNOMIAL_STATE_END);
 
@@ -8505,7 +8499,6 @@ void SCIPfreeParseVarsPolynomialData(
 SCIP_RETCODE SCIPparseVarsLinearsum(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           str,                /**< string to parse */
-   char                  endchar,            /**< character where to stop parsing, or 0 */
    SCIP_VAR**            vars,               /**< array to store the parsed variables */
    SCIP_Real*            vals,               /**< array to store the parsed coefficients */
    int*                  nvars,              /**< pointer to store number of parsed variables */
@@ -8534,7 +8527,7 @@ SCIP_RETCODE SCIPparseVarsLinearsum(
 
    *requiredsize = 0;
 
-   SCIP_CALL( SCIPparseVarsPolynomial(scip, str, endchar, &monomialvars, &monomialexps, &monomialcoefs, &monomialnvars, &nmonomials, endptr, success) );
+   SCIP_CALL( SCIPparseVarsPolynomial(scip, str, &monomialvars, &monomialexps, &monomialcoefs, &monomialnvars, &nmonomials, endptr, success) );
 
    if( !*success )
    {
