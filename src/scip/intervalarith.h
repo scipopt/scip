@@ -599,7 +599,7 @@ void SCIPintervalSolveUnivariateQuadExpressionPositive(
    SCIP_INTERVAL         sqrcoeff,           /**< coefficient of x^2 */
    SCIP_INTERVAL         lincoeff,           /**< coefficient of x */
    SCIP_INTERVAL         rhs                 /**< right hand side of equation */
-);
+   );
 
 /** computes positive solutions of a quadratic equation with scalar coefficients
  * 
@@ -613,7 +613,7 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
    SCIP_Real             sqrcoeff,           /**< coefficient of x^2 */
    SCIP_Real             lincoeff,           /**< coefficient of x */
    SCIP_Real             rhs                 /**< right hand side of equation */
-);
+   );
 
 /** solves a quadratic equation with interval coefficients
  *
@@ -626,7 +626,7 @@ void SCIPintervalSolveUnivariateQuadExpression(
    SCIP_INTERVAL         sqrcoeff,           /**< coefficient of x^2 */
    SCIP_INTERVAL         lincoeff,           /**< coefficient of x */
    SCIP_INTERVAL         rhs                 /**< right hand side of equation */
-);
+   );
 
 /** stores range of bivariate quadratic term in resultant
  * given scalars ax, ay, axy, bx, and by and intervals for x and y, computes interval for \f$ ax x^2 + ay y^2 + axy x y + bx x + by y \f$
@@ -643,7 +643,7 @@ void SCIPintervalQuadBivar(
    SCIP_Real             by,                 /**< linear coefficient of y */
    SCIP_INTERVAL         xbnds,              /**< bounds on x */
    SCIP_INTERVAL         ybnds               /**< bounds on y */
-);
+   );
 
 /** solves a bivariate quadratic equation for the first variable
  * given scalars ax, ay, axy, bx and by, and intervals for x, y, and rhs,
@@ -662,7 +662,7 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
    SCIP_INTERVAL         rhs,                /**< right-hand-side of equation */
    SCIP_INTERVAL         xbnds,              /**< bounds on x */
    SCIP_INTERVAL         ybnds               /**< bounds on y */
-);
+   );
 
 #ifdef __cplusplus
 }

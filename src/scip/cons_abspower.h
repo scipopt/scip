@@ -86,56 +86,56 @@ SCIP_RETCODE SCIPgetNlRowAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_NLROW**          nlrow               /**< a buffer where to store pointer to nonlinear row */
-);
+   );
 
 /** gets nonlinear variable x in absolute power constraint */
 extern
 SCIP_VAR* SCIPgetNonlinearVarAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
-);
+   );
 
 /** gets linear variable z in absolute power constraint */
 extern
 SCIP_VAR* SCIPgetLinearVarAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
-);
+   );
 
 /** gets exponent in power term in absolute power constraint */
 extern
 SCIP_Real SCIPgetExponentAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
-);
+   );
 
 /** gets offset in power term in absolute power constraint */
 extern
 SCIP_Real SCIPgetOffsetAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
-);
+   );
 
 /** gets coefficient of linear variable in absolute power constraint */
 extern
 SCIP_Real SCIPgetCoefLinearAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
-);
+   );
 
 /** gets left hand side in absolute power constraint */
 extern
 SCIP_Real SCIPgetLhsAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
-);
+   );
 
 /** gets right hand side in absolute power constraint */
 extern
 SCIP_Real SCIPgetRhsAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
-);
+   );
 
 /** gets the absolute violation of a absolute power constraint by a solution */
 extern

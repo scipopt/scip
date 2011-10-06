@@ -149,7 +149,7 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *  - varnames names of variables, can be NULL
  */
 #define SCIP_DECL_NLPIADDVARS(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int nvars, const SCIP_Real* lbs, \
-   const SCIP_Real* ubs, const char** varnames)
+      const SCIP_Real* ubs, const char** varnames)
 
 /** add constraints
  * quadratic coefficiens: row oriented matrix for each constraint
@@ -179,8 +179,8 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *  - names of constraints, may be NULL or entries may be NULL
  */
 #define SCIP_DECL_NLPIADDCONSTRAINTS(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int ncons, const SCIP_Real* lhss, \
-   const SCIP_Real* rhss, const int* nlininds, int* const* lininds, SCIP_Real* const* linvals, const int* nquadelems, \
-   SCIP_QUADELEM* const* quadelems, int* const* exprvaridxs, SCIP_EXPRTREE* const* exprtrees, const char** names)
+      const SCIP_Real* rhss, const int* nlininds, int* const* lininds, SCIP_Real* const* linvals, const int* nquadelems, \
+      SCIP_QUADELEM* const* quadelems, int* const* exprvaridxs, SCIP_EXPRTREE* const* exprtrees, const char** names)
 
 /** sets or overwrites objective, a minimization problem is expected
  *  May change sparsity pattern.
@@ -203,8 +203,8 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *  - constant objective value offset
  */
 #define SCIP_DECL_NLPISETOBJECTIVE(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int nlins, const int* lininds, \
-   const SCIP_Real* linvals, int nquadelems, const SCIP_QUADELEM* quadelems, const int* exprvaridxs, const SCIP_EXPRTREE* exprtree, \
-   const SCIP_Real constant)
+      const SCIP_Real* linvals, int nquadelems, const SCIP_QUADELEM* quadelems, const int* exprvaridxs, const SCIP_EXPRTREE* exprtree, \
+      const SCIP_Real constant)
 
 /** change variable bounds
  * 
@@ -217,7 +217,7 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *  - ubs new upper bounds
  */
 #define SCIP_DECL_NLPICHGVARBOUNDS(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, const int nvars, const int* indices, \
-   const SCIP_Real* lbs, const SCIP_Real* ubs)
+      const SCIP_Real* lbs, const SCIP_Real* ubs)
 
 /** change constraint sides
  *
@@ -230,7 +230,7 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *  - rhss new right hand sides
  */
 #define SCIP_DECL_NLPICHGCONSSIDES(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int nconss, const int* indices, \
-   const SCIP_Real* lhss, const SCIP_Real* rhss)
+      const SCIP_Real* lhss, const SCIP_Real* rhss)
 
 /** delete a set of variables
  * 
@@ -267,7 +267,7 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *  - vals new values for coefficients
  */
 #define SCIP_DECL_NLPICHGLINEARCOEFS(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int idx, int nvals, \
-   const int* varidxs, const SCIP_Real* vals)
+      const int* varidxs, const SCIP_Real* vals)
 
 /** changes (or adds) coefficients in the quadratic part of a constraint or objective
  * 
@@ -279,7 +279,7 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *  - quadelems new elements in quadratic matrix (replacing already existing ones or adding new ones)
  */
 #define SCIP_DECL_NLPICHGQUADCOEFS(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int idx, int nquadelems, \
-   const SCIP_QUADELEM* quadelems)
+      const SCIP_QUADELEM* quadelems)
 
 /** replaces the expression tree of a constraint or objective
  *
@@ -291,7 +291,7 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *  - exprtree new expression tree for constraint or objective, or NULL to only remove previous tree
  */
 #define SCIP_DECL_NLPICHGEXPRTREE(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int idxcons, \
-    const int* exprvaridxs, const SCIP_EXPRTREE* exprtree)
+      const int* exprvaridxs, const SCIP_EXPRTREE* exprtree)
 
 /** change the value of one parameter in the nonlinear part
  * 
@@ -305,7 +305,7 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  * return: Error if parameter does not exist
  */
 #define SCIP_DECL_NLPICHGNONLINCOEF(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int idxcons, int idxparam, \
-   SCIP_Real value)
+      SCIP_Real value)
 
 /** change the constant offset in the objective
  *
@@ -327,7 +327,7 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *  - varubdualvalues  initial dual values for variable upper bounds, or NULL to clear previous values
  */
 #define SCIP_DECL_NLPISETINITIALGUESS(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, SCIP_Real* primalvalues, \
-   SCIP_Real* consdualvalues, SCIP_Real* varlbdualvalues, SCIP_Real* varubdualvalues)
+      SCIP_Real* consdualvalues, SCIP_Real* varlbdualvalues, SCIP_Real* varubdualvalues)
 
 /** tries to solve NLP
  * 
@@ -371,7 +371,7 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *  - varubdualvalues buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed
  */
 #define SCIP_DECL_NLPIGETSOLUTION(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, SCIP_Real** primalvalues, \
-   SCIP_Real** consdualvalues, SCIP_Real** varlbdualvalues, SCIP_Real** varubdualvalues)
+      SCIP_Real** consdualvalues, SCIP_Real** varlbdualvalues, SCIP_Real** varubdualvalues)
 
 /** gives solve statistics
  * 
