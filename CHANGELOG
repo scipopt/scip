@@ -74,6 +74,10 @@ interface:
 - new method SCIPretransformSol() in scip.h that allows to retransform a solution to the original space
 - added method SCIPlpiClearState() to LP interfaces for clearing basis information in the LP solver
 - new method SCIPgetSubscipDepth() to access the depth of the current SCIP as a copied subproblem
+- new method SCIPvarMarkDeletable() to mark a variable to be deletable completely from the problem (for branch-and-price); can only be called before the variable is added to the problem
+- new method SCIPvarMarkNotDeletable() that marks a variable to be non-deleteable (used within SCIP for forbidding deletion of variables contained in solution, LP bases, (multi)aggregation, ...)
+- new method SCIPvarIsDeletable() that returns whether a variable is marked to be deletable (each variable is per default non-deletable)
+- new callback SCIP_DECL_DELVARS for constraint handlers, that is called after variables were marked for deletion and should remove these variables from its constraints
 
 performance improvements:
 - performance improvements in prop_vbounds
@@ -204,6 +208,7 @@ parameters:
 - added parameter <misc/boundwriting/freq> that defines the frequency in which a dualbound front is written
 - added parameter <misc/boundwriting/filename> that defines the name(s) of the files in which a dualbound front is written
 - added parameter <misc/boundwriting/writesubmipdualbound> that defines if a subSCIP is created to resolve the open nodes to get a dualbound for
+- added parameter <pricing/delvars> and <pricing/delvarsroot> that define, whether variables created at a node / the root node should be deleted when the node is solved in case they are not present in the LP anymore
 
 features:
 - flatzinc reader is now capable to read cumulative constraints
@@ -276,6 +281,12 @@ features:
   to allow this also for diving heuristics that might change the objective and thus destroy this property, lazy bounds are explicitly
   put into the LP during diving and removed afterwards
 - the varbound constraint handler can now parse its constraints
+- added beta version of variable deletion: for branch-and-price application, variables can now be completely deleted from the problem;
+  variables that are deletable have to be marked with SCIPvarMarkDeletable(), constraint handlers have to implement the new
+  SCIP_DECL_DELVARS callback that should remove variables from the constraints; at the moment, only the linear, the setppc, and the
+  knapsack constraint handler support this callback; furthermore, when using this feature, all used plugins have to capture and
+  release variables they store in their data, this is currently only done for the aforementioned constraint handlers as well as
+  the and, the varbound, and the logicor constraint handler; for more details about this feature, see the FAQ
 
 design:
 - SCIP_HASHMAP now works also without block memory
