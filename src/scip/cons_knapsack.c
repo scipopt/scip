@@ -529,9 +529,6 @@ SCIP_RETCODE consdataCreate(
       {
          assert(vars[v] != NULL);
          
-         /* capture variables */
-         SCIP_CALL( SCIPcaptureVar(scip, vars[v]) );
-
          /* all weight have to be not negative */
          assert( weights[v] >= 0 );
 
@@ -606,12 +603,15 @@ SCIP_RETCODE consdataCreate(
       SCIP_CALL( catchEvents(scip, *consdata, eventhdlr) );
    } 
 
-   /* calculate sum of weights */
+   /* calculate sum of weights and capture variables */
    for( i = 0; i < (*consdata)->nvars; ++i )
    {
       (*consdata)->weightsum += (*consdata)->weights[i];
       if( SCIPvarGetLbLocal((*consdata)->vars[i]) > 0.5 )
          (*consdata)->onesweightsum += (*consdata)->weights[i];
+
+      /* capture variables */
+      SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[i]) );
    }
 
    return SCIP_OKAY;

@@ -164,10 +164,6 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->presolved = FALSE;
    (*consdata)->addvarbounds = FALSE;
 
-   /* capture variables */
-   SCIP_CALL( SCIPcaptureVar(scip, var) );
-   SCIP_CALL( SCIPcaptureVar(scip, vbdvar) );
-
    /* if we are in the transformed problem, get transformed variables, add variable bound information, and catch events */
    if( SCIPisTransformed(scip) )
    {
@@ -177,6 +173,10 @@ SCIP_RETCODE consdataCreate(
       /* catch events for variables */
       SCIP_CALL( catchEvents(scip, *consdata) );
    }
+
+   /* capture variables */
+   SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->var) );
+   SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vbdvar) );
 
    return SCIP_OKAY;
 }   
@@ -206,7 +206,6 @@ SCIP_RETCODE consdataFree(
    /* release variables */
    SCIP_CALL( SCIPreleaseVar(scip, &(*consdata)->var) );
    SCIP_CALL( SCIPreleaseVar(scip, &(*consdata)->vbdvar) );
-
 
    SCIPfreeBlockMemory(scip, consdata);
 
@@ -985,7 +984,11 @@ SCIP_RETCODE applyFixings(
                consdata->rhs = (consdata->rhs + varconstant)/(-varscalar);
             consdata->vbdcoef /= varscalar;
          }
+         /* release old variable */
+         SCIP_CALL( SCIPreleaseVar(scip, &(consdata->var)) );
          consdata->var = var;
+         /* capture new variable */
+         SCIP_CALL( SCIPcaptureVar(scip, consdata->var) );
       }
 
       /* apply aggregation on y */
@@ -1039,7 +1042,12 @@ SCIP_RETCODE applyFixings(
          if( !SCIPisInfinity(scip, consdata->rhs) )
             consdata->rhs -= consdata->vbdcoef * vbdvarconstant;
          consdata->vbdcoef *= vbdvarscalar;
+
+         /* release old variable */
+         SCIP_CALL( SCIPreleaseVar(scip, &(consdata->vbdvar)) );
          consdata->vbdvar = vbdvar;
+         /* capture new variable */
+         SCIP_CALL( SCIPcaptureVar(scip, consdata->vbdvar) );
       }
 
       /* catch the events again on the new variables */

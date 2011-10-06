@@ -355,7 +355,7 @@ SCIP_RETCODE switchWatchedvars(
    {
       assert(consdata->filterpos1 != -1);
       SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[consdata->watchedvar1],
-            SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED | SCIP_EVENTTYPE_VARDELETED, eventhdlr, (SCIP_EVENTDATA*)cons,
+            SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED, eventhdlr, (SCIP_EVENTDATA*)cons,
             consdata->filterpos1) );
    }
    if( consdata->watchedvar2 != -1 && consdata->watchedvar2 != watchedvar2 )
