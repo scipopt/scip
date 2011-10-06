@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 #
 # run with bash -e makeall.sh to stop on errors
 #
@@ -16,8 +17,8 @@ do
     echo
     for OPT in ${OPTS[@]}
     do
-	echo make OPT=$OPT LPS=$LPS ZIMPL=false depend
-	make OPT=$OPT LPS=$LPS ZIMPL=false depend
+	echo make OPT=$OPT LPS=none ZIMPL=false depend
+	make OPT=$OPT LPS=none ZIMPL=false depend
 	echo
 	for LPS in ${LPSOLVERS[@]}
 	do

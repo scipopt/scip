@@ -1,4 +1,4 @@
-../../../check/Indicator/mcf128-4-1.lp
+../../../check/instances/Indicator/mcf128-4-1.lp
 ../../../check/instances/Indicator/mcf64-4-1.lp
 ../../../check/instances/MIP/bell5.mps
 ../../../check/instances/MIP/blend2.mps
@@ -15,13 +15,13 @@
 ../../../check/instances/MIP/rgn.mps
 ../../../check/instances/MIP/stein27.mps
 ../../../check/instances/MIP/vpm2.mps
-../../../check/instances/MIQCP/clay0205m.lp
-../../../check/instances/MIQCP/estein5_data1.lp
+#../../../check/instances/MIQCP/clay0205m.lp
+#../../../check/instances/MIQCP/estein5_data1.lp
 ../../../check/instances/MIQCP/ex1266.mps
 ../../../check/instances/MIQCP/meanvarx.mps
-../../../check/instances/MIQCP/robust_20_0.mps
+#../../../check/instances/MIQCP/robust_20_0.mps
 ../../../check/instances/MIQCP/sep1.mps
-../../../check/instances/MIQCP/shortfall_20_0.mps
+#../../../check/instances/MIQCP/shortfall_20_0.mps
 ../../../check/instances/MIQCP/tltr.mps
 ../../../check/instances/MIQCP/util.mps
 ../../../check/instances/PseudoBoolean/factor-mod-size=9-P0=67-P1=349-P2=67-P3=499-P4=79-P5=347-P6=307-B.opb
