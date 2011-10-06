@@ -1763,7 +1763,6 @@ SCIP_RETCODE rowDelCoefPos(
    assert(set != NULL);
    assert(0 <= pos && pos < row->len);
    assert(row->cols[pos] != NULL);
-   assert(row->linkpos[pos] == -1 || row->cols[pos]->rows[row->linkpos[pos]] == row);
    assert((pos < row->nlpcols) == (row->linkpos[pos] >= 0 && row->cols[pos]->lppos >= 0));
 
    col = row->cols[pos];
@@ -1820,7 +1819,6 @@ SCIP_RETCODE rowChgCoefPos(
    assert(row != NULL);
    assert(0 <= pos && pos < row->len);
    assert(row->cols[pos] != NULL);
-   assert(row->linkpos[pos] == -1 || row->cols[pos]->rows[row->linkpos[pos]] == row);
 
    /*debugMessage("changing coefficient %g * <%s> at position %d of row <%s> to %g\n", 
      row->vals[pos], SCIPvarGetName(row->cols[pos]->var), pos, row->name, val);*/
