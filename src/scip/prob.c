@@ -793,7 +793,7 @@ SCIP_RETCODE SCIPprobDelVar(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_VAR*             var,                /**< problem variable */
-   SCIP_Bool*            deleted             /**< pointer to store whether variable was marked to be deleted */
+   SCIP_Bool*            deleted             /**< pointer to store whether marking variable to be deleted was successful */
    )
 {
    assert(prob != NULL);

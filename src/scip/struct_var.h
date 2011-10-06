@@ -261,8 +261,6 @@ struct SCIP_Var
    unsigned int          deletable:1;        /**< TRUE iff the variable is removable from the problem */
    unsigned int          deleted:1;          /**< TRUE iff variable was marked for deletion from the problem */
    unsigned int          donotmultaggr:1;    /**< TRUE iff variable is not allowed to be multi-aggregated */
-   unsigned int          essential:1;        /**< TRUE iff the variable must not be deleted, e.g. because it is contained in
-                                              *   some basis information or a solution */
    unsigned int          vartype:2;          /**< type of variable: binary, integer, implicit integer, continuous */
    unsigned int          varstatus:3;        /**< status of variable: original, loose, column, fixed, aggregated, multiaggregated, negated */
    unsigned int          pseudocostflag:2;   /**< temporary flag used in pseudo cost update */

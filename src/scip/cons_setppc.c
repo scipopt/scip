@@ -402,7 +402,7 @@ SCIP_RETCODE consdataCreate(
       }
 
 
-      /* capture vars */
+      /* capture variables */
       for( v = 0; v < (*consdata)->nvars; v++ )
       {
          assert((*consdata)->vars[v] != NULL);
@@ -469,7 +469,7 @@ SCIP_RETCODE consdataFree(
       SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->row) );
    }
 
-   /* release vars */
+   /* release variables */
    for( v = 0; v < (*consdata)->nvars; v++ )
    {
       assert((*consdata)->vars[v] != NULL);
@@ -846,6 +846,12 @@ SCIP_RETCODE delCoefPos(
 
       /* drop bound change events of variable */
       SCIP_CALL( dropEvent(scip, cons, conshdlrdata->eventhdlr, pos) );
+   }
+
+   /* delete coefficient from the LP row */
+   if( consdata->row != NULL )
+   {
+      SCIP_CALL( SCIPaddVarToRow(scip, consdata->row, var, -1) );
    }
 
    /* move the last variable to the free slot */
@@ -2584,12 +2590,6 @@ SCIP_RETCODE performVarDeletions(
 
    return SCIP_OKAY;
 }
-
-
-
-/*
- * Callback methods of constraint handler
- */
 
 
 /*

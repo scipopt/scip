@@ -1873,7 +1873,6 @@ SCIP_RETCODE varCreate(
    (*var)->pseudocostflag = FALSE;
    (*var)->eventqueueimpl = FALSE;
    (*var)->deletable = FALSE;
-   (*var)->essential = FALSE;
    stat->nvaridx++;
 
    /* create branching and inference history entries */
@@ -13263,9 +13262,8 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarIsRemovable
 #undef SCIPvarIsDeleted
 #undef SCIPvarIsDeletable
-#undef SCIPvarIsEssential
 #undef SCIPvarMarkDeletable
-#undef SCIPvarMarkEssential
+#undef SCIPvarMarkNotDeletable
 #undef SCIPvarIsActive
 #undef SCIPvarGetIndex
 #undef SCIPvarGetProbindex

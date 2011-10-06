@@ -860,7 +860,7 @@ SCIP_RETCODE consdataCreate(
       }
    }
 
-   /* capture vars */
+   /* capture variables */
    for( v = 0; v < (*consdata)->nvars; v++ )
    {
       assert((*consdata)->vars[v] != NULL);
@@ -900,7 +900,7 @@ SCIP_RETCODE consdataFree(
    }
    assert((*consdata)->eventdatas == NULL);
 
-   /* release vars */
+   /* release variables */
    for( v = 0; v < (*consdata)->nvars; v++ )
    {
       assert((*consdata)->vars[v] != NULL);

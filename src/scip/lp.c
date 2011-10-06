@@ -1003,7 +1003,7 @@ void rowMoveCoef(
       row->nonlpcolssorted = FALSE;
 }
 
-/** swaps two coefficients of different columns in a row, and updates all corresponding data structures */
+/** swaps two coefficients in a row, and updates all corresponding data structures */
 static
 void rowSwapCoefs(
    SCIP_ROW*             row,                /**< LP row */
@@ -1021,7 +1021,9 @@ void rowSwapCoefs(
    assert(0 <= pos2 && pos2 < row->len);
    assert(row->cols[pos1] != NULL);
    assert(row->cols[pos1]->index == row->cols_index[pos1]);
-   assert(pos1 != pos2);
+
+   if( pos1 == pos2 )
+      return;
 
    /* swap coefficients */
    tmpcol = row->cols[pos2];
@@ -1385,11 +1387,10 @@ SCIP_RETCODE colAddCoef(
       if( col->lppos >= 0 )
       {
          row->nlpcols++;
-         /* swap coefficients, if needed */
-         if( linkpos != row->nlpcols-1 )
-            rowSwapCoefs(row, linkpos, row->nlpcols-1);
-         /* if the coefficient is already at the correct place, check whether lpcols are still sorted */
-         else if( linkpos > 0 && row->cols_index[linkpos] < row->cols_index[linkpos-1] )
+         rowSwapCoefs(row, linkpos, row->nlpcols-1);
+
+         /* if no swap was necessary, mark nonlpcols to be unsorted */
+         if( linkpos == row->nlpcols-1 )
             row->lpcolssorted = FALSE;
       }
    }
@@ -1762,9 +1763,7 @@ SCIP_RETCODE rowDelCoefPos(
    assert(set != NULL);
    assert(0 <= pos && pos < row->len);
    assert(row->cols[pos] != NULL);
-   /*assert(row->linkpos[pos] == -1 || row->cols[pos]->rows[row->linkpos[pos]] == row);
-   assert(row->linkpos[pos] == -1 || row->cols[pos]->rows[row->linkpos[pos]] == row
-   || row->coefchanged || row->cols[pos]->coefchanged);*/
+   assert(row->linkpos[pos] == -1 || row->cols[pos]->rows[row->linkpos[pos]] == row);
    assert((pos < row->nlpcols) == (row->linkpos[pos] >= 0 && row->cols[pos]->lppos >= 0));
 
    col = row->cols[pos];
@@ -1821,9 +1820,7 @@ SCIP_RETCODE rowChgCoefPos(
    assert(row != NULL);
    assert(0 <= pos && pos < row->len);
    assert(row->cols[pos] != NULL);
-   //assert(row->linkpos[pos] == -1 || row->cols[pos]->rows[row->linkpos[pos]] == row);
-   /*assert(row->linkpos[pos] == -1 || row->cols[pos]->rows[row->linkpos[pos]] == row
-     || ((row->coefchanged || row->cols[pos]->coefchanged) && SCIPsetIsZero(set, val)) );*/
+   assert(row->linkpos[pos] == -1 || row->cols[pos]->rows[row->linkpos[pos]] == row);
 
    /*debugMessage("changing coefficient %g * <%s> at position %d of row <%s> to %g\n", 
      row->vals[pos], SCIPvarGetName(row->cols[pos]->var), pos, row->name, val);*/
@@ -2065,8 +2062,6 @@ SCIP_RETCODE rowUnlink(
       }
    }
    assert(row->nunlinked == row->len);
-
-   //checkLinks(lp);
 
    return SCIP_OKAY;
 }
@@ -7180,11 +7175,10 @@ void colUpdateAddLP(
          assert(row->nlpcols <= pos && pos < row->len);
 
          row->nlpcols++;
-         /* swap coefficients, if needed */
-         if( pos != row->nlpcols-1 )
-            rowSwapCoefs(row, pos, row->nlpcols-1);
-         /* if the coefficient is already at the correct place, check whether lpcols are still sorted */
-         else if( pos > 0 && row->cols_index[pos] < row->cols_index[pos-1] )
+         rowSwapCoefs(row, pos, row->nlpcols-1);
+
+         /* if no swap was necessary, mark lpcols to be unsorted */
+         if( pos == row->nlpcols-1 )
             row->lpcolssorted = FALSE;
       }
    }
@@ -7251,11 +7245,10 @@ void colUpdateDelLP(
          assert(0 <= pos && pos < row->nlpcols);
 
          row->nlpcols--;
-         /* swap coefficients, if needed */
-         if( pos != row->nlpcols )
-            rowSwapCoefs(row, pos, row->nlpcols);
-         /* if the coefficient is already at the correct place, check whether nonlpcols are still sorted */
-         else if( pos < row->len - 1 && row->cols_index[pos] > row->cols_index[pos+1] )
+         rowSwapCoefs(row, pos, row->nlpcols);
+
+         /* if no swap was necessary, mark nonlpcols to be unsorted */
+         if( pos == row->nlpcols )
             row->nonlpcolssorted = FALSE;
       }
    }

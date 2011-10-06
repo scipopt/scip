@@ -3298,8 +3298,8 @@ SCIP_RETCODE nodeToLeaf(
    return SCIP_OKAY;
 }
 
-/** removes variables from the problem, that are marked to be deletable, not in the LP, and were created at the focusnode;
- *  if parameter inlp is TRUE, also deletable variables in the LP are removed (e.g., when the node is cut off, anyway)
+/** removes variables from the problem, that are marked to be deletable, and were created at the focusnode;
+ *  only removes variables that were created at the focusnode, unless inlp is TRUE (e.g., when the node is cut off, anyway)
  */
 static
 SCIP_RETCODE focusnodeCleanupVars(
@@ -5685,9 +5685,9 @@ SCIP_RETCODE treeBacktrackProbing(
          /* undo bound changes by deactivating the probing node */
          SCIP_CALL( nodeDeactivate(tree->path[tree->pathlen-1], blkmem, set, stat, tree, lp, branchcand, eventqueue) );
 
-	 /* free the probing node */
-	 SCIP_CALL( SCIPnodeFree(&tree->path[tree->pathlen-1], blkmem, set, stat, eventqueue, tree, lp) );
-	 tree->pathlen--;
+         /* free the probing node */
+         SCIP_CALL( SCIPnodeFree(&tree->path[tree->pathlen-1], blkmem, set, stat, eventqueue, tree, lp) );
+         tree->pathlen--;
       }
       assert(tree->pathlen == newpathlen);
 

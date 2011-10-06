@@ -4874,7 +4874,7 @@ SCIP_RETCODE SCIPaddPricedVar(
 SCIP_RETCODE SCIPdelVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to delete */
-   SCIP_Bool*            deleted             /**< pointer to store whether variable was marked to be deleted */
+   SCIP_Bool*            deleted             /**< pointer to store whether marking variable to be deleted was successful */
    )
 {
    assert(scip != NULL);

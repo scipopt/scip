@@ -649,7 +649,7 @@ SCIP_RETCODE consdataFree(
    {
       int v;
 
-      /* release vars */
+      /* release variables */
       for( v = 0; v < (*consdata)->nvars; v++ )
       {
          assert((*consdata)->vars[v] != NULL);

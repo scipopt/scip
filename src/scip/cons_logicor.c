@@ -249,7 +249,7 @@ SCIP_RETCODE consdataCreate(
       SCIP_CALL( SCIPgetTransformedVars(scip, (*consdata)->nvars, (*consdata)->vars, (*consdata)->vars) );
    }
 
-   /* capture vars */
+   /* capture variables */
    for( v = 0; v < (*consdata)->nvars; v++ )
    {
       assert((*consdata)->vars[v] != NULL);
@@ -277,7 +277,7 @@ SCIP_RETCODE consdataFree(
       SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->row) );
    }
 
-   /* release vars */
+   /* release variables */
    for( v = 0; v < (*consdata)->nvars; v++ )
    {
       assert((*consdata)->vars[v] != NULL);
