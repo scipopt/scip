@@ -52,8 +52,7 @@ installbinary:	all
 ifneq ($(INSTALLDIR),)
 		@echo "-> install SCIP binary into INSTALLDIR <$(INSTALLDIR)>"
 		@-install -m 755 -d $(INSTALLDIR)/$(BINDIR)/
-		@-install -m 755 -p -t $(INSTALLDIR)/$(BINDIR)/ $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK) 
-) 
+		@-install -m 755 -p -t $(INSTALLDIR)/$(BINDIR)/ $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
 endif
 
 
