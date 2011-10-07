@@ -2868,8 +2868,6 @@ SCIP_RETCODE SCIPlpiSetBase(
 
    assert(lpi != 0);
    assert(lpi->clp != 0);
-   assert(cstat != 0);
-   assert(rstat != 0);
 
    invalidateSolution(lpi);
 
@@ -2880,6 +2878,8 @@ SCIP_RETCODE SCIPlpiSetBase(
 
    const double* lhs = clp->getRowLower();
    const double* rhs = clp->getRowUpper();
+
+   assert( rstat != 0 || clp->numberRows() == 0 );
    for( int i = 0; i < clp->numberRows(); ++i )
    {
       int status = rstat[i];
@@ -2915,6 +2915,8 @@ SCIP_RETCODE SCIPlpiSetBase(
 
    const double* lb = clp->getColLower();
    const double* ub = clp->getColUpper();
+
+   assert( cstat != 0 || clp->numberColumns() == 0 );
    for( int j = 0; j < clp->numberColumns(); ++j )
    {
       int status = cstat[j];
