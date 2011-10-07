@@ -851,7 +851,7 @@ SCIP_RETCODE delCoefPos(
    /* delete coefficient from the LP row */
    if( consdata->row != NULL )
    {
-      SCIP_CALL( SCIPaddVarToRow(scip, consdata->row, var, -1) );
+      SCIP_CALL( SCIPaddVarToRow(scip, consdata->row, var, -1.0) );
    }
 
    /* move the last variable to the free slot */

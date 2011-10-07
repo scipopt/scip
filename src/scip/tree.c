@@ -3432,7 +3432,7 @@ SCIP_RETCODE focusnodeToJunction(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
    )
-{
+{  /*lint --e{715}*/
    assert(tree != NULL);
    assert(!SCIPtreeProbing(tree));
    assert(tree->focusnode != NULL);

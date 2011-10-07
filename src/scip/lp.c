@@ -12584,7 +12584,7 @@ SCIP_RETCODE updateLazyBounds(
    if( lp->diving == lp->divinglazyapplied )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("mark all lazy columns as changed in order to reload bounds (diving=%d, applied=%d)\n",
+   SCIPdebugMessage("mark all lazy columns as changed in order to reload bounds (diving=%u, applied=%u)\n",
       lp->diving, lp->divinglazyapplied);
 
    for( c = 0; c < lp->nlazycols; ++c )

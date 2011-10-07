@@ -500,9 +500,9 @@ SCIP_RETCODE consdataFree(
    for( v = 0; v < (*consdata)->nvars; v++ )
    {
       assert((*consdata)->vars[v] != NULL);
-      SCIPreleaseVar(scip, &((*consdata)->vars[v]));
+      SCIP_CALL( SCIPreleaseVar(scip, &((*consdata)->vars[v])) );
    }
-   SCIPreleaseVar(scip, &((*consdata)->resvar));
+   SCIP_CALL( SCIPreleaseVar(scip, &((*consdata)->resvar)) );
 
 
    SCIPfreeBlockMemoryArray(scip, &(*consdata)->vars, (*consdata)->varssize);
@@ -639,7 +639,7 @@ SCIP_RETCODE delCoefPos(
    assert(pos != consdata->watchedvar2);
 
    /* release variable */
-   SCIPreleaseVar(scip, &(consdata->vars[pos]));
+   SCIP_CALL( SCIPreleaseVar(scip, &(consdata->vars[pos])) );
 
    /* move the last variable to the free slot */
    consdata->vars[pos] = consdata->vars[consdata->nvars-1];
