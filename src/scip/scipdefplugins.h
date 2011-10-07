@@ -64,7 +64,6 @@
 #include "scip/cons_xor.h"
 #include "scip/dialog_default.h"
 #include "scip/disp_default.h"
-#include "scip/event_boundwriting.h"
 #include "scip/heur_actconsdiving.h"
 #include "scip/heur_clique.h"
 #include "scip/heur_coefdiving.h"

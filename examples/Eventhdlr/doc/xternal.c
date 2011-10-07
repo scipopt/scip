@@ -24,12 +24,13 @@
  * @author   Stefan Heinz
  *
  * This example illustrates the use of an event handler within <a href="http://scip.zib.de">SCIP</a>. It extends the
- * default plugins of <a href="http://scip.zib.de">SCIP</a> with one additional plugin. That is, an event handler which
- * reacts on new best solutions. You should also read the section <a href="http://scip.zib.de/doc/html/EVENT.html">How
- * to add event handler</a> in the <a href="http://scip.zib.de/doc/html/index.html">SCIP doxygen</a> documentation which
- * explains the event handling in general.
+ * default plugins of <a href="http://scip.zib.de">SCIP</a> with two additional plugin. That are, an event handler which
+ * reacts on new best solutions and an event handler that acts on processed nodes. You should also read the section <a
+ * href="http://scip.zib.de/doc/html/EVENT.html">How to add event handler</a> in the <a
+ * href="http://scip.zib.de/doc/html/index.html">SCIP doxygen</a> documentation which explains the event handling in
+ * general.
  *
- * The event handler event_bestsol.c shows how the create a customized event handler in <a
+ * The event handler event_bestsol.c and event_boundwriting.c shows how the create a customized event handler in <a
  * href="http://scip.zib.de">SCIP</a>. In case of an event handler there are two importand questions to answer. First
  * when to install the event handler and second when to remove the event handler.
  *
@@ -37,6 +38,9 @@
  * complete list.
  *
  * @section INSTALL Installing the event handler
+ *
+ * In the following we describe the implementation of the specific callback methods on the event_bestsol.c event
+ * handler.
  *
  * In case of this example, where we want to install an event handler which reacts on new best solution, we install the
  * event handler in the callback SCIP_DECL_EVENTINIT. At that point the problem was tranformed. Note that there are
@@ -137,6 +141,7 @@
  *   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
  *
  *   SCIP_CALL( SCIPincludeEventHdlrBestsol(scip) );
+ *   SCIP_CALL( SCIPincludeEventHdlrBoundwriting(scip) );
  *
  *   SCIP_CALL( SCIPprocessShellArguments(scip, argc, argv, defaultsetname) );
  *

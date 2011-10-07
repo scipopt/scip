@@ -34,7 +34,8 @@ include $(SCIPDIR)/make/make.project
 
 MAINNAME	=	scip
 MAINOBJ		=	cmain.o \
-			event_bestsol.o
+			event_bestsol.o \
+			event_boundwriting.o
 
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
 MAINDEP		=	$(SRCDIR)/depend.cmain.$(OPT)
@@ -128,3 +129,4 @@ $(OBJDIR)/%.o:	$(SRCDIR)/%.cpp
 		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< $(CXX_o)$@
 
 #---- EOF --------------------------------------------------------------------
+# DO NOT DELETE

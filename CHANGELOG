@@ -151,7 +151,6 @@ plugins:
 - added BETA version of constraint handler for nonlinear constraints (cons_nonlinear.{c,h}) to handle nonlinear equations given by algebraic expressions using operands like addition, multiplication, power, exp, log; currently no trigonometric functions
 - added constraint handler for (absolute) power constraints (cons_abspower.{c,h}) to handle equations like z = sign(x)abs(x)^n, n > 1
 - added BETA version of constraint handler for bivariate nonlinear constraints (cons_bivariate.{c,h}) to compute tight estimators for 1-convex and convex-concave bivariate nonlinear functions (given as expression tree)
-- added new event handler for writing dualbound fronts of open nodes in a given frequency (event_boundwriting.{c,h})
 
 parameters:
 - added parameter <constraints/quadratic/disaggregate> to split a block-separable quadratic constraint into several quadratic constraint
@@ -205,9 +204,6 @@ parameters:
 - added parameter <conflict/separate> which enables or disables the separation of conflict constraints
 - added parameter <lp/clearinitialprobinglp> to clear LP state at end of probing mode, if LP was initially unsolved
 - added parameter <constraints/varbound/presolpairwise> that allows pairwise presolving of varbound constraints, default is TRUE
-- added parameter <misc/boundwriting/freq> that defines the frequency in which a dualbound front is written
-- added parameter <misc/boundwriting/filename> that defines the name(s) of the files in which a dualbound front is written
-- added parameter <misc/boundwriting/writesubmipdualbound> that defines if a subSCIP is created to resolve the open nodes to get a dualbound for
 - added parameter <pricing/delvars> and <pricing/delvarsroot> that define, whether variables created at a node / the root node should be deleted when the node is solved in case they are not present in the LP anymore
 
 features:
@@ -287,6 +283,11 @@ features:
   knapsack constraint handler support this callback; furthermore, when using this feature, all used plugins have to capture and
   release variables they store in their data, this is currently only done for the aforementioned constraint handlers as well as
   the and, the varbound, and the logicor constraint handler; for more details about this feature, see the FAQ
+- added new event handler example for writing dualbound fronts of open nodes in a given frequency (event_boundwriting.{c,h})
+- added parameter <misc/boundwriting/freq> for new event handler example boundwriting that defines the frequency in which a dualbound front is written
+- added parameter <misc/boundwriting/filename> for new event handler example boundwriting that defines the name(s) of the files in which a dualbound front is written
+- added parameter <misc/boundwriting/writesubmipdualbound> for new event handler example boundwriting that defines if a subSCIP is created to resolve the open nodes to get a dualbound for
+
 
 design:
 - SCIP_HASHMAP now works also without block memory
