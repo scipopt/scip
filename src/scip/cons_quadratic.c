@@ -216,7 +216,7 @@ SCIP_Bool conshdlrdataHasUpgrade(
    {
       if( conshdlrdata->quadconsupgrades[i]->quadconsupgd == quadconsupgd )
       {
-         SCIPwarningMessage("Try to add already known upgrade message %p for constraint handler <%s>.\n", (void*)quadconsupgd, conshdlrname); /*lint !e611 */
+         SCIPwarningMessage("Try to add already known upgrade message for constraint handler <%s>.\n", conshdlrname);
          return TRUE;
       }
    }
