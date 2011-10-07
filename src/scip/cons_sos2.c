@@ -2115,7 +2115,7 @@ SCIP_DECL_CONSPARSE(consParseSOS2)
 
 
 /** variable deletion method of constraint handler */
-#define consDelVarsSOS2 NULL
+#define consDelvarsSOS2 NULL
 
 
 
@@ -2220,7 +2220,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS2(
          consSepalpSOS2, consSepasolSOS2, consEnfolpSOS2, consEnfopsSOS2, consCheckSOS2,
          consPropSOS2, consPresolSOS2, consRespropSOS2, consLockSOS2,
          consActiveSOS2, consDeactiveSOS2, consEnableSOS2, consDisableSOS2,
-         consDelVarsSOS2, consPrintSOS2, consCopySOS2, consParseSOS2, conshdlrdata) );
+         consDelvarsSOS2, consPrintSOS2, consCopySOS2, consParseSOS2, conshdlrdata) );
 
    return SCIP_OKAY;
 }

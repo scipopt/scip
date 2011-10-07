@@ -3072,7 +3072,7 @@ SCIP_DECL_CONSLOCK(consLockVarbound)
  *  varbound constraints are not modifiable and must have exactly two variables,
  *  so is is also not allowed to delete variables from them
  */
-#define consDelVarsVarbound NULL
+#define consDelvarsVarbound NULL
 
 
 /** constraint display method of constraint handler */
@@ -3328,7 +3328,7 @@ SCIP_RETCODE SCIPincludeConshdlrVarbound(
          consPropVarbound, consPresolVarbound, consRespropVarbound, consLockVarbound,
          consActiveVarbound, consDeactiveVarbound, 
          consEnableVarbound, consDisableVarbound,
-         consDelVarsVarbound, consPrintVarbound, consCopyVarbound, consParseVarbound,
+         consDelvarsVarbound, consPrintVarbound, consCopyVarbound, consParseVarbound,
          conshdlrdata) );
 
    if( SCIPfindConshdlr(scip,"linear") != NULL )

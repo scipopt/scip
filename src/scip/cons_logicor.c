@@ -3036,7 +3036,7 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveLogicor)
 
 
 /** variable deletion method of constraint handler */
-#define consDelVarsLogicor NULL
+#define consDelvarsLogicor NULL
 
 
 /** constraint display method of constraint handler */
@@ -3299,7 +3299,7 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
          consPropLogicor, consPresolLogicor, consRespropLogicor, consLockLogicor,
          consActiveLogicor, consDeactiveLogicor,
          consEnableLogicor, consDisableLogicor,
-         consDelVarsLogicor, consPrintLogicor, consCopyLogicor, consParseLogicor,
+         consDelvarsLogicor, consPrintLogicor, consCopyLogicor, consParseLogicor,
          conshdlrdata) );
 
    conshdlrdata->conshdlrlinear = SCIPfindConshdlr(scip,"linear");

@@ -6790,7 +6790,7 @@ SCIP_DECL_CONSDISABLE(consDisableBivariate)
 
 
 /** variable deletion method of constraint handler */
-#define consDelVarsBivariate NULL
+#define consDelvarsBivariate NULL
 
 /** constraint display method of constraint handler */
 #if 1
@@ -7387,7 +7387,7 @@ SCIP_RETCODE SCIPincludeConshdlrBivariate(
          consSepalpBivariate, consSepasolBivariate, consEnfolpBivariate, consEnfopsBivariate, consCheckBivariate,
          consPropBivariate, consPresolBivariate, consRespropBivariate, consLockBivariate,
          consActiveBivariate, consDeactiveBivariate,
-         consEnableBivariate, consDisableBivariate, consDelVarsBivariate,
+         consEnableBivariate, consDisableBivariate, consDelvarsBivariate,
          consPrintBivariate, consCopyBivariate, consParseBivariate,
          conshdlrdata) );
 

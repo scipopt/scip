@@ -2025,7 +2025,7 @@ SCIP_DECL_CONSPARSE(consParseSOS1)
 
 
 /** variable deletion method of constraint handler */
-#define consDelVarsSOS1 NULL
+#define consDelvarsSOS1 NULL
 
 
 
@@ -2133,7 +2133,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
          consPropSOS1, consPresolSOS1, consRespropSOS1, consLockSOS1,
          consActiveSOS1, consDeactiveSOS1,
          consEnableSOS1, consDisableSOS1,
-         consDelVarsSOS1, consPrintSOS1, consCopySOS1, consParseSOS1, conshdlrdata) );
+         consDelvarsSOS1, consPrintSOS1, consCopySOS1, consParseSOS1, conshdlrdata) );
 
    /* add SOS1 constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/SOS1/branchsos",

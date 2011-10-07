@@ -2762,7 +2762,7 @@ SCIP_DECL_CONSLOCK(consLockAnd)
 
 
 /** variable deletion method of constraint handler */
-#define consDelVarsAnd NULL
+#define consDelvarsAnd NULL
 
 
 /** constraint display method of constraint handler */
@@ -2961,7 +2961,7 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
          consPropAnd, consPresolAnd, consRespropAnd, consLockAnd,
          consActiveAnd, consDeactiveAnd, 
          consEnableAnd, consDisableAnd,
-         consDelVarsAnd, consPrintAnd, consCopyAnd, consParseAnd,
+         consDelvarsAnd, consPrintAnd, consCopyAnd, consParseAnd,
          conshdlrdata) );
 
    /* add and constraint handler parameters */

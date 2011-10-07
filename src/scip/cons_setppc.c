@@ -4173,7 +4173,7 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveSetppc)
 
 /** variable deletion method of constraint handler */
 static
-SCIP_DECL_CONSDELVARS(consDelVarsSetppc)
+SCIP_DECL_CONSDELVARS(consDelvarsSetppc)
 {
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -4507,7 +4507,7 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
          consPropSetppc, consPresolSetppc, consRespropSetppc, consLockSetppc,
          consActiveSetppc, consDeactiveSetppc,
          consEnableSetppc, consDisableSetppc,
-         consDelVarsSetppc, consPrintSetppc, consCopySetppc, consParseSetppc,
+         consDelvarsSetppc, consPrintSetppc, consCopySetppc, consParseSetppc,
          conshdlrdata) );
 
    if( SCIPfindConshdlr(scip,"linear") != NULL )

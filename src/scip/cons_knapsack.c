@@ -8774,7 +8774,7 @@ SCIP_DECL_CONSLOCK(consLockKnapsack)
 
 /** variable deletion method of constraint handler */
 static
-SCIP_DECL_CONSDELVARS(consDelVarsKnapsack)
+SCIP_DECL_CONSDELVARS(consDelvarsKnapsack)
 {
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -9033,7 +9033,7 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
          consPropKnapsack, consPresolKnapsack, consRespropKnapsack, consLockKnapsack,
          consActiveKnapsack, consDeactiveKnapsack, 
          consEnableKnapsack, consDisableKnapsack,
-         consDelVarsKnapsack, consPrintKnapsack, consCopyKnapsack, consParseKnapsack,
+         consDelvarsKnapsack, consPrintKnapsack, consCopyKnapsack, consParseKnapsack,
          conshdlrdata) );
 
    if( SCIPfindConshdlr(scip,"linear") != NULL )

@@ -465,6 +465,20 @@ SCIP_DECL_CONSDISABLE(consDisableXyz)
 #define consDisableXyz NULL
 #endif
 
+/** variable deletion of constraint handler */
+#if 0
+static
+SCIP_DECL_CONSDELVARS(consDelvarsXyz)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define consDelvarsXyz NULL
+#endif
+
 
 /** constraint display method of constraint handler */
 #if 0
@@ -541,7 +555,7 @@ SCIP_RETCODE SCIPincludeConshdlrXyz(
          consSepalpXyz, consSepasolXyz, consEnfolpXyz, consEnfopsXyz, consCheckXyz,
          consPropXyz, consPresolXyz, consRespropXyz, consLockXyz,
          consActiveXyz, consDeactiveXyz,
-         consEnableXyz, consDisableXyz,
+         consEnableXyz, consDisableXyz, consDelvarsXyz,
          consPrintXyz, consCopyXyz, consParseXyz,
          conshdlrdata) );
 

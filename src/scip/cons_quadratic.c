@@ -10299,7 +10299,7 @@ SCIP_DECL_CONSDISABLE(consDisableQuadratic)
 
 
 /** variable deletion method of constraint handler */
-#define consDelVarsQuadratic NULL
+#define consDelvarsQuadratic NULL
 
 
 /** constraint display method of constraint handler */
@@ -10871,7 +10871,7 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          consPropQuadratic, consPresolQuadratic, consRespropQuadratic, consLockQuadratic,
          consActiveQuadratic, consDeactiveQuadratic,
          consEnableQuadratic, consDisableQuadratic,
-         consDelVarsQuadratic, consPrintQuadratic, consCopyQuadratic, consParseQuadratic,
+         consDelvarsQuadratic, consPrintQuadratic, consCopyQuadratic, consParseQuadratic,
          conshdlrdata) );
 
    /* add quadratic constraint handler parameters */

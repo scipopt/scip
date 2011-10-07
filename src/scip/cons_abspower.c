@@ -5746,7 +5746,7 @@ SCIP_DECL_CONSDISABLE(consDisableAbspower)
 
 
 /** variable deletion method of constraint handler */
-#define consDelVarsAbspower NULL
+#define consDelvarsAbspower NULL
 
 /** constraint display method of constraint handler */
 #if 1
@@ -6045,7 +6045,7 @@ SCIP_RETCODE SCIPincludeConshdlrAbspower(
          consSepalpAbspower, consSepasolAbspower, consEnfolpAbspower, consEnfopsAbspower, consCheckAbspower,
          consPropAbspower, consPresolAbspower, consRespropAbspower, consLockAbspower,
          consActiveAbspower, consDeactiveAbspower,
-         consEnableAbspower, consDisableAbspower, consDelVarsAbspower,
+         consEnableAbspower, consDisableAbspower, consDelvarsAbspower,
          consPrintAbspower, consCopyAbspower, consParseAbspower,
          conshdlrdata) );
 

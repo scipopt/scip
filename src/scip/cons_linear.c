@@ -9941,7 +9941,7 @@ SCIP_DECL_CONSLOCK(consLockLinear)
 
 /** variable deletion method of constraint handler */
 static
-SCIP_DECL_CONSDELVARS(consDelVarsLinear)
+SCIP_DECL_CONSDELVARS(consDelvarsLinear)
 {
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -10502,7 +10502,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          consSepalpLinear, consSepasolLinear, consEnfolpLinear, consEnfopsLinear, consCheckLinear,
          consPropLinear, consPresolLinear, consRespropLinear, consLockLinear,
          consActiveLinear, consDeactiveLinear,
-         consEnableLinear, consDisableLinear, consDelVarsLinear,
+         consEnableLinear, consDisableLinear, consDelvarsLinear,
          consPrintLinear, consCopyLinear, consParseLinear,
          conshdlrdata) );
 

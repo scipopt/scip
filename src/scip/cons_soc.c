@@ -3884,7 +3884,7 @@ SCIP_DECL_CONSDISABLE(consDisableSOC)
 
 
 /** variable deletion method of constraint handler */
-#define consDelVarsSOC NULL
+#define consDelvarsSOC NULL
 
 
 /** constraint display method of constraint handler */
@@ -4155,7 +4155,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
          consPropSOC, consPresolSOC, consRespropSOC, consLockSOC,
          consActiveSOC, consDeactiveSOC,
          consEnableSOC, consDisableSOC,
-         consDelVarsSOC, consPrintSOC, consCopySOC, consParseSOC,
+         consDelvarsSOC, consPrintSOC, consCopySOC, consParseSOC,
          conshdlrdata) );
 
    if( SCIPfindConshdlr(scip,"quadratic") != NULL )

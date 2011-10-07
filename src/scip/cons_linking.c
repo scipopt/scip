@@ -2714,7 +2714,7 @@ SCIP_DECL_CONSENABLE(consEnableLinking)
 
 
 /** variable deletion method of constraint handler */
-#define consDelVarsLinking NULL
+#define consDelvarsLinking NULL
 
 
 /** constraint display method of constraint handler */
@@ -2886,7 +2886,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinking(
          consPropLinking, consPresolLinking, consRespropLinking, consLockLinking,
          consActiveLinking, consDeactiveLinking,
          consEnableLinking, consDisableLinking,
-         consDelVarsLinking, consPrintLinking, consCopyLinking, consParseLinking,
+         consDelvarsLinking, consPrintLinking, consCopyLinking, consParseLinking,
          conshdlrdata) );
 
 

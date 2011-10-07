@@ -7620,7 +7620,7 @@ SCIP_DECL_CONSDISABLE(consDisableNonlinear)
 }
 
 /** variable deletion method of constraint handler */
-#define consDelVarsNonlinear NULL
+#define consDelvarsNonlinear NULL
 
 /** constraint display method of constraint handler */
 static
@@ -7835,7 +7835,7 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
          consSepalpNonlinear, consSepasolNonlinear, consEnfolpNonlinear, consEnfopsNonlinear, consCheckNonlinear,
          consPropNonlinear, consPresolNonlinear, consRespropNonlinear, consLockNonlinear,
          consActiveNonlinear, consDeactiveNonlinear,
-         consEnableNonlinear, consDisableNonlinear, consDelVarsNonlinear,
+         consEnableNonlinear, consDisableNonlinear, consDelvarsNonlinear,
          consPrintNonlinear, consCopyNonlinear, consParseNonlinear,
          conshdlrdata) );
 

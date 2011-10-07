@@ -2287,7 +2287,7 @@ SCIP_DECL_CONSLOCK(consLockXor)
 
 
 /** variable deletion method of constraint handler */
-#define consDelVarsXor NULL
+#define consDelvarsXor NULL
 
 
 /** constraint display method of constraint handler */
@@ -2485,7 +2485,7 @@ SCIP_RETCODE SCIPincludeConshdlrXor(
          consPropXor, consPresolXor, consRespropXor, consLockXor,
          consActiveXor, consDeactiveXor, 
          consEnableXor, consDisableXor,
-         consDelVarsXor, consPrintXor, consCopyXor, consParseXor,
+         consDelvarsXor, consPrintXor, consCopyXor, consParseXor,
          conshdlrdata) );
 
    /* add xor constraint handler parameters */
