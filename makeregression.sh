@@ -78,6 +78,9 @@ echo "Time stamp $SCRIPTTIMESTAMP" | mailx -s "$SUBJECT" -r "$EMAILFROM" $ADMINE
 # pull new version form git repository
 git pull
 
+# to clean the local git repository perform a git st (to avoid a dirty hash)
+git st
+
 # get maybe new time stamp for makeregression.sh 
 NEWSCRIPTTIMESTAMP=`stat -c %Y $SCRIPTNAME`
 
@@ -180,6 +183,9 @@ do
         # pull new version form git repository
         git pull
 	
+        # to clean the local git repository perform a git st (to avoid a dirty hash)
+	git st
+
 	NEWSCRIPTTIMESTAMP=`stat -c %Y $SCRIPTNAME`
         
         # get current git hash
