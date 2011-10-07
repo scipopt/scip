@@ -165,7 +165,8 @@ class SPxSCIP : public SPxSolver
    Status           m_stat;             /**< solving status */
    bool             m_lpinfo;           /**< storing whether output is turned on */
    bool             m_autopricing;      /**< is automatic pricing selected? */
-   int              m_autophase1iters;  /**< number of iterations spend in phase one of auto pricing */
+   int              m_itlim;            /**< iteration limit */
+   int              m_itused;           /**< number of iterations spent in phase one of auto pricing */
    SPxSolver::VarStatus* m_rowstat;     /**< basis status of rows before starting strong branching (if available, NULL otherwise) */
    SPxSolver::VarStatus* m_colstat;     /**< basis status of columns before starting strong branching (if available, NULL otherwise) */
    NameSet*         m_rownames;         /**< row names */
@@ -189,7 +190,8 @@ public:
           m_stat(NO_PROBLEM),
           m_lpinfo(false),
           m_autopricing(true),
-          m_autophase1iters(0),
+          m_itlim(0),
+          m_itused(0),
           m_rowstat(NULL),
           m_colstat(NULL),
 	  m_rownames(0),
@@ -227,6 +229,14 @@ public:
 #endif
    }
 
+   void setIterationLimit(
+      const int          itlim
+      )
+   {
+      assert(itlim >= 0);
+      m_itlim = itlim;
+   }
+
    void setAutoPricer()
    {
       setPricer(&m_price_devex);
@@ -261,6 +271,12 @@ public:
    {
       setPricer(&m_price_devex);
       m_autopricing = false;
+   }
+
+   int getIterationLimit(
+      )
+   {
+      return m_itlim;
    }
 
    bool getFromScratch() const
@@ -476,6 +492,10 @@ public:
           */
 	 assert( m_stat != SPxSolver::OPTIMAL );
       }
+
+      /* save iteration count */
+      m_itused += SPxSolver::iterations();
+      assert(m_itused <= m_itlim);
    }
 
    virtual Status doSolve(bool printwarning = true)
@@ -493,31 +513,22 @@ public:
 #endif
 
       /* in auto pricing, do the first iterations with devex, then switch to steepest edge */
-      int olditlim = terminationIter();
-      if( m_autopricing )
-      {
-         if( olditlim > AUTOPRICING_ITERSWITCH )
-            setTerminationIter(AUTOPRICING_ITERSWITCH);
-      }
-
+      setTerminationIter(m_autopricing && m_itlim - m_itused > AUTOPRICING_ITERSWITCH ? AUTOPRICING_ITERSWITCH : m_itlim - m_itused);
+      
       trySolve(printwarning);
 
-      if( m_autopricing )
+      if( m_autopricing && m_stat == SPxSolver::ABORT_ITER && m_itlim - m_itused > 0 )
       {
-         if( m_stat == SPxSolver::ABORT_ITER && olditlim > AUTOPRICING_ITERSWITCH )
-         {
-            m_autophase1iters += SPxSolver::iterations();
-            assert(olditlim-m_autophase1iters >= 1);
-            setTerminationIter(olditlim-m_autophase1iters);
+            setTerminationIter(m_itlim - m_itused);
             setPricer(&m_price_steep);
 
             trySolve(printwarning);
 
             setPricer(&m_price_devex);
-         }
-
-         setTerminationIter(olditlim);
       }
+
+      /* for safety reset iteration limit */
+      setTerminationIter(m_itlim);
 
       if( m_stat == OPTIMAL )
       {
@@ -712,7 +723,7 @@ public:
       }
 
       /* solve */
-      m_autophase1iters = 0;
+      m_itused = 0;
       if( result != SPxSimplifier::VANISHED )
       {
          doSolve();
@@ -746,9 +757,6 @@ public:
             cstat = new SPxSolver::VarStatus[nCols()];
             SPxSolver::getBasis(rstat, cstat);
          }
-
-         /* save iteration count */
-         m_autophase1iters += SPxSolver::iterations();
 
          /* unsimplify */
          if( simplifier != NULL )
@@ -925,7 +933,7 @@ public:
 
    int iterations() const
    {
-      return SPxSolver::iterations() + m_autophase1iters;
+      return m_itused;
    }
 
    virtual void clear()
@@ -2557,7 +2565,7 @@ SCIP_RETCODE lpiStrongbranch(
    status = SPxSolver::UNKNOWN;                      
    fromparentbasis = false;
    error = false;                                 
-   oldItlim = spx->terminationIter();
+   oldItlim = spx->getIterationLimit();
 
    /* get current bounds of column */
    oldlb = spx->lower(col);
@@ -2580,7 +2588,7 @@ SCIP_RETCODE lpiStrongbranch(
 
       spx->changeUpper(col, newub);
 
-      spx->setTerminationIter(itlim);
+      spx->setIterationLimit(itlim);
       do
       {
 #ifdef WITH_LPSCHECK
@@ -2623,7 +2631,7 @@ SCIP_RETCODE lpiStrongbranch(
          if( (status == SPxSolver::ABORT_CYCLING || status == SPxSolver::SINGULAR) && !fromparentbasis && spx->iterations() < itlim )
          {
             SCIPdebugMessage(" --> Repeat strong branching down with %d iterations after restoring basis\n", itlim - spx->iterations());
-            spx->setTerminationIter(itlim - spx->iterations());
+            spx->setIterationLimit(itlim - spx->iterations());
             assert( ! spx->hasPreStrongbranchingBasis() );
             spx->restorePreStrongbranchingBasis();
             fromparentbasis = true;
@@ -2654,7 +2662,7 @@ SCIP_RETCODE lpiStrongbranch(
       
          spx->changeLower(col, newlb);
 
-         spx->setTerminationIter(itlim);
+         spx->setIterationLimit(itlim);
          do
          {
 #ifdef WITH_LPSCHECK
@@ -2699,7 +2707,7 @@ SCIP_RETCODE lpiStrongbranch(
                SCIPdebugMessage(" --> Repeat strong branching  up  with %d iterations after restoring basis\n", itlim - spx->iterations());
                assert( ! spx->hasPreStrongbranchingBasis() );
                spx->restorePreStrongbranchingBasis();
-               spx->setTerminationIter(itlim - spx->iterations());
+               spx->setIterationLimit(itlim - spx->iterations());
                error = false;
                fromparentbasis = true;
             }
@@ -2720,7 +2728,7 @@ SCIP_RETCODE lpiStrongbranch(
    }
 
    /* reset old iteration limit */
-   spx->setTerminationIter(oldItlim);
+   spx->setIterationLimit(oldItlim);
 
    if( error )
    {
@@ -4076,7 +4084,7 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       *ival = lpi->spx->getLpInfo();
       break;
    case SCIP_LPPAR_LPITLIM:
-      *ival = lpi->spx->terminationIter();
+      *ival = lpi->spx->getIterationLimit();
       break;
    case SCIP_LPPAR_PRESOLVING:
       *ival = lpi->spx->getPresolving();
@@ -4117,7 +4125,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       lpi->spx->setLpInfo(bool(ival));
       break;
    case SCIP_LPPAR_LPITLIM:
-      lpi->spx->setTerminationIter(ival);
+      assert(ival >= 0);
+      lpi->spx->setIterationLimit(ival);
       break;
    case SCIP_LPPAR_PRESOLVING:
       assert(ival == TRUE || ival == FALSE);
