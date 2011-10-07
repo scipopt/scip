@@ -101,24 +101,24 @@ struct SCIP_ConsData
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
-   SCIP_HEUR*            subnlpheur;     /**< a pointer to the subNLP heuristic, if available */
-   SCIP_HEUR*            trysolheur;     /**< a pointer to the trysol heuristic, if available */
-   SCIP_EVENTHDLR*       eventhdlr;      /**< event handler for bound change events */
-   int                   newsoleventfilterpos; /**< filter position of new solution event handler, if caught */
-   SCIP_Bool             haveexprint;    /**< indicates whether an expression interpreter is available */
-   int                   sepanlprounds;  /**< number of root node separation rounds in current run in which the NLP relaxation solution was used as reference point */
+   SCIP_HEUR*            subnlpheur;         /**< a pointer to the subNLP heuristic, if available */
+   SCIP_HEUR*            trysolheur;         /**< a pointer to the trysol heuristic, if available */
+   SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
+   int                   newsoleventfilterpos;/**< filter position of new solution event handler, if caught */
+   SCIP_Bool             haveexprint;        /**< indicates whether an expression interpreter is available */
+   SCIP_Bool             sepanlp;            /**< where linearization of the NLP relaxation solution added? */
 
-   SCIP_Bool             glineur;        /**< is the Glineur outer approx preferred to Ben-Tal Nemirovski? */
-   SCIP_Bool             doscaling;      /**< are constraint violations scaled? */
-   SCIP_Bool             projectpoint;   /**< is the point in which a cut is generated projected onto the feasible set? */
-   int                   nauxvars;       /**< number of auxiliary variables to use when creating a linear outer approx. of a SOC3 constraint */
-   SCIP_Real             minefficacy;    /**< minimal efficacy of a cut to be added to LP in separation loop */
-   SCIP_Bool             sparsify;       /**< whether to sparsify cuts */
-   SCIP_Real             sparsifymaxloss;/**< maximal loss in cut efficacy by sparsification */
-   SCIP_Real             sparsifynzgrowth;/**< growth rate of maximal allowed nonzeros in cuts in sparsification */
-   SCIP_Bool             linfeasshift;   /**< whether to try to make solutions feasible in check by shifting the variable on the right hand side */
-   char                  nlpform;        /**< formulation of SOC constraint in NLP */
-   int                   maxsepanlprounds;          /**< limit on number of separation rounds at root node in which to use the NLP relaxation solution as reference point */
+   SCIP_Bool             glineur;            /**< is the Glineur outer approx preferred to Ben-Tal Nemirovski? */
+   SCIP_Bool             doscaling;          /**< are constraint violations scaled? */
+   SCIP_Bool             projectpoint;       /**< is the point in which a cut is generated projected onto the feasible set? */
+   int                   nauxvars;           /**< number of auxiliary variables to use when creating a linear outer approx. of a SOC3 constraint */
+   SCIP_Real             minefficacy;        /**< minimal efficacy of a cut to be added to LP in separation loop */
+   SCIP_Bool             sparsify;           /**< whether to sparsify cuts */
+   SCIP_Real             sparsifymaxloss;    /**< maximal loss in cut efficacy by sparsification */
+   SCIP_Real             sparsifynzgrowth;   /**< growth rate of maximal allowed nonzeros in cuts in sparsification */
+   SCIP_Bool             linfeasshift;       /**< whether to try to make solutions feasible in check by shifting the variable on the right hand side */
+   char                  nlpform;            /**< formulation of SOC constraint in NLP */
+   SCIP_Real             sepanlpmincont;     /**< minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation */
 };
 
 
@@ -3151,8 +3151,8 @@ SCIP_DECL_CONSINITSOL(consInitsolSOC)
       SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_SOLFOUND, eventhdlr, (SCIP_EVENTDATA*)conshdlr, &conshdlrdata->newsoleventfilterpos) );
    }
 
-   /* reset counter */
-   conshdlrdata->sepanlprounds = 0;
+   /* reset flag */
+   conshdlrdata->sepanlp = FALSE;
 
    return SCIP_OKAY;
 }
@@ -3357,7 +3357,9 @@ SCIP_DECL_CONSSEPALP(consSepalpSOC)
    /* at root, check if we want to solve the NLP relaxation and use its solutions as reference point
     * if there is something convex, then linearizing in the solution of the NLP relaxation can be very useful
     */
-   if( SCIPgetDepth(scip) == 0 && conshdlrdata->sepanlprounds < conshdlrdata->maxsepanlprounds && SCIPisNLPConstructed(scip) && SCIPgetNNlpis(scip) > 0 )
+   if( SCIPgetDepth(scip) == 0 && !conshdlrdata->sepanlp &&
+      (SCIPgetNContVars(scip) >= conshdlrdata->sepanlpmincont * SCIPgetNVars(scip) || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY) &&
+      SCIPisNLPConstructed(scip) && SCIPgetNNlpis(scip) > 0 )
    {
       SCIP_NLPSOLSTAT solstat;
       SCIP_Bool       solvednlp;
@@ -3374,6 +3376,12 @@ SCIP_DECL_CONSSEPALP(consSepalpSOC)
             SCIP_CALL( SCIPaddLinearConsToNlpHeurSubNlp(scip, conshdlrdata->subnlpheur, TRUE, TRUE) );
          }
 
+         /* set LP solution as starting values, if available */
+         if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
+         {
+            SCIP_CALL( SCIPsetNLPInitialGuessSol(scip, NULL) );
+         }
+
          /* SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_VERBLEVEL, 1) ); */
          SCIP_CALL( SCIPsolveNLP(scip) );
 
@@ -3382,6 +3390,8 @@ SCIP_DECL_CONSSEPALP(consSepalpSOC)
 
          solvednlp = TRUE;
       }
+
+      conshdlrdata->sepanlp = TRUE;
 
       if( solstat == SCIP_NLPSOLSTAT_GLOBINFEASIBLE )
       {
@@ -3419,8 +3429,6 @@ SCIP_DECL_CONSSEPALP(consSepalpSOC)
          SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, nlpsol, &lpsolseparated, conshdlrdata->minefficacy) );
 
          SCIP_CALL( SCIPfreeSol(scip, &nlpsol) );
-
-         ++conshdlrdata->sepanlprounds;
 
          /* if a cut that separated the LP solution was added, then return, otherwise continue with usual separation in LP solution */
          if( lpsolseparated )
@@ -4197,9 +4205,9 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
          "which formulation to use when adding a SOC constraint to the NLP (a: automatic, q: nonconvex quadratic form, s: convex sqrt form, e: convex exponential-sqrt form, d: convex division form)",
          &conshdlrdata->nlpform,          FALSE, 'a', "aqsed", NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxsepanlprounds",
-         "limit on number of separation rounds at root node in which to use the NLP relaxation solution as reference point",
-         &conshdlrdata->maxsepanlprounds, FALSE, 0, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/sepanlpmincont",
+         "minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation",
+         &conshdlrdata->sepanlpmincont, FALSE, 1.0, 0.0, 2.0, NULL, NULL) );
 
    return SCIP_OKAY;
 }

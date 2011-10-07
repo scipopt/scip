@@ -132,7 +132,7 @@ struct SCIP_ConshdlrData
    int                   maxproprounds;      /**< limit on number of propagation rounds for a single constraint within one round of SCIP propagation */
    SCIP_Bool             reformulate;        /**< whether to reformulate expression graph */
    int                   maxexpansionexponent;/**< maximal exponent where still expanding non-monomial polynomials in expression simplification */
-   int                   maxsepanlprounds;          /**< limit on number of separation rounds at root node in which to use the NLP relaxation solution as reference point */
+   SCIP_Real             sepanlpmincont;            /**< minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation */
 
    SCIP_HEUR*            subnlpheur;         /**< a pointer to the subNLP heuristic, if available */
    SCIP_HEUR*            trysolheur;         /**< a pointer to the TRYSOL heuristic, if available */
@@ -150,7 +150,7 @@ struct SCIP_ConshdlrData
    unsigned int          ispropagated:1;     /**< have current bounds of linear variables in constraints and variables in expression graph been propagated? */
    unsigned int          isreformulated:1;   /**< has expression graph been reformulated? */
    int                   naddedreformconss;  /**< number of constraints added via reformulation */
-   int                   sepanlprounds;      /**< number of root node separation rounds in current run in which the NLP relaxation solution was used as reference point */
+   SCIP_Bool             sepanlp;            /**< where linearization of the NLP relaxation solution added? */
 };
 
 /*
@@ -6465,8 +6465,8 @@ SCIP_DECL_CONSINITSOL(consInitsolNonlinear)
       SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_SOLFOUND, eventhdlr, (SCIP_EVENTDATA*)conshdlr, &conshdlrdata->newsoleventfilterpos) );
    }
 
-   /* reset counter */
-   conshdlrdata->sepanlprounds = 0;
+   /* reset flag */
+   conshdlrdata->sepanlp = FALSE;
 
    return SCIP_OKAY;
 }
@@ -6728,7 +6728,9 @@ SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
    /* at root, check if we want to solve the NLP relaxation and use its solutions as reference point
     * if there is something convex, then linearizing in the solution of the NLP relaxation can be very useful
     */
-   if( SCIPgetDepth(scip) == 0 && conshdlrdata->sepanlprounds < conshdlrdata->maxsepanlprounds && SCIPisNLPConstructed(scip) && SCIPgetNNlpis(scip) > 0 )
+   if( SCIPgetDepth(scip) == 0 && !conshdlrdata->sepanlp &&
+      (SCIPgetNContVars(scip) >= conshdlrdata->sepanlpmincont * SCIPgetNVars(scip) || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY) &&
+      SCIPisNLPConstructed(scip) && SCIPgetNNlpis(scip) > 0 )
    {
       SCIP_CONSDATA* consdata;
       SCIP_NLPSOLSTAT solstat;
@@ -6772,6 +6774,12 @@ SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
                SCIP_CALL( SCIPaddLinearConsToNlpHeurSubNlp(scip, conshdlrdata->subnlpheur, TRUE, TRUE) );
             }
 
+            /* set LP solution as starting values, if available */
+            if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
+            {
+               SCIP_CALL( SCIPsetNLPInitialGuessSol(scip, NULL) );
+            }
+
             /* SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_VERBLEVEL, 1) ); */
             SCIP_CALL( SCIPsolveNLP(scip) );
 
@@ -6781,6 +6789,8 @@ SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
             solvednlp = TRUE;
          }
       }
+
+      conshdlrdata->sepanlp = TRUE;
 
       if( solstat == SCIP_NLPSOLSTAT_GLOBINFEASIBLE )
       {
@@ -6819,8 +6829,6 @@ SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
          newsol = TRUE;
 
          SCIP_CALL( SCIPfreeSol(scip, &nlpsol) );
-
-         ++conshdlrdata->sepanlprounds;
 
          /* if a cut that separated the LP solution was added, then return, otherwise continue with usual separation in LP solution */
          if( lpsolseparated )
@@ -7870,9 +7878,9 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
          "maximal exponent where still expanding non-monomial polynomials in expression simplification",
          &conshdlrdata->maxexpansionexponent, TRUE, 2, 1, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxsepanlprounds",
-         "limit on number of separation rounds at root node in which to use the NLP relaxation solution as reference point",
-         &conshdlrdata->maxsepanlprounds, FALSE, 0, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/sepanlpmincont",
+         "minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation",
+         &conshdlrdata->sepanlpmincont, FALSE, 1.0, 0.0, 2.0, NULL, NULL) );
 
    SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_boundchange", "signals a bound change to a nonlinear constraint",
          NULL, NULL, NULL, NULL, NULL, NULL, NULL, processLinearVarEvent, NULL) );

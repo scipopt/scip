@@ -176,13 +176,13 @@ struct SCIP_ConshdlrData
    SCIP_Bool             disaggregate;              /**< whether to disaggregate quadratic constraints */
    int                   maxproprounds;             /**< limit on number of propagation rounds for a single constraint within one round of SCIP propagation during solve */
    int                   maxproproundspresolve;     /**< limit on number of propagation rounds for a single constraint within one presolving round */
-   int                   maxsepanlprounds;          /**< limit on number of separation rounds at root node in which to use the NLP relaxation solution as reference point */
+   SCIP_Bool             sepanlp;                   /**< where linearization of the NLP relaxation solution added? */
 
    SCIP_HEUR*            subnlpheur;                /**< a pointer to the subnlp heuristic, if available */
    SCIP_HEUR*            trysolheur;                /**< a pointer to the trysol heuristic, if available */
    SCIP_EVENTHDLR*       eventhdlr;                 /**< our handler for variable bound change events */
    int                   newsoleventfilterpos;      /**< filter position of new solution event handler, if caught */
-   int                   sepanlprounds;             /**< number of root node separation rounds in current run in which the NLP relaxation solution was used as reference point */
+   SCIP_Real             sepanlpmincont;            /**< minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation */
 
    SCIP_QUADCONSUPGRADE** quadconsupgrades;         /**< quadratic constraint upgrade methods for specializing quadratic constraints */
    int                   quadconsupgradessize;      /**< size of quadconsupgrade array */
@@ -9193,8 +9193,8 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Quadratic constraint handler does not have LAPACK for eigenvalue computation. Will assume that matrices (with size > 2x2) are indefinite.\n");
    }
 
-   /* reset counter */
-   conshdlrdata->sepanlprounds = 0;
+   /* reset flag */
+   conshdlrdata->sepanlp = FALSE;
 
    return SCIP_OKAY;
 }
@@ -9527,7 +9527,9 @@ SCIP_DECL_CONSSEPALP(consSepalpQuadratic)
    /* at root, check if we want to solve the NLP relaxation and use its solutions as reference point
     * if there is something convex, then linearizing in the solution of the NLP relaxation can be very useful
     */
-   if( SCIPgetDepth(scip) == 0 && conshdlrdata->sepanlprounds < conshdlrdata->maxsepanlprounds && SCIPisNLPConstructed(scip) && SCIPgetNNlpis(scip) > 0 )
+   if( SCIPgetDepth(scip) == 0 && !conshdlrdata->sepanlp &&
+      (SCIPgetNContVars(scip) >= conshdlrdata->sepanlpmincont * SCIPgetNVars(scip) || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY) &&
+      SCIPisNLPConstructed(scip) && SCIPgetNNlpis(scip) > 0 )
    {
       SCIP_CONSDATA*  consdata;
       SCIP_NLPSOLSTAT solstat;
@@ -9571,6 +9573,12 @@ SCIP_DECL_CONSSEPALP(consSepalpQuadratic)
                SCIP_CALL( SCIPaddLinearConsToNlpHeurSubNlp(scip, conshdlrdata->subnlpheur, TRUE, TRUE) );
             }
 
+            /* set LP solution as starting values, if available */
+            if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
+            {
+               SCIP_CALL( SCIPsetNLPInitialGuessSol(scip, NULL) );
+            }
+
             /* SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_VERBLEVEL, 1) ); */
             SCIP_CALL( SCIPsolveNLP(scip) );
 
@@ -9580,6 +9588,8 @@ SCIP_DECL_CONSSEPALP(consSepalpQuadratic)
             solvednlp = TRUE;
          }
       }
+
+      conshdlrdata->sepanlp = TRUE;
 
       if( solstat == SCIP_NLPSOLSTAT_GLOBINFEASIBLE )
       {
@@ -9618,8 +9628,6 @@ SCIP_DECL_CONSSEPALP(consSepalpQuadratic)
          SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, nlpsol, &lpsolseparated, conshdlrdata->mincutefficacysepa) );
 
          SCIP_CALL( SCIPfreeSol(scip, &nlpsol) );
-
-         ++conshdlrdata->sepanlprounds;
 
          /* if a cut that separated the LP solution was added, then return, otherwise continue with usual separation in LP solution */
          if( lpsolseparated )
@@ -10927,9 +10935,9 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          "limit on number of propagation rounds for a single constraint within one round of SCIP presolve",
          &conshdlrdata->maxproproundspresolve, TRUE, 10, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxsepanlprounds",
-         "limit on number of separation rounds at root node in which to use the NLP relaxation solution as reference point",
-         &conshdlrdata->maxsepanlprounds, FALSE, 0, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/sepanlpmincont",
+         "minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation",
+         &conshdlrdata->sepanlpmincont, FALSE, 1.0, 0.0, 2.0, NULL, NULL) );
 
    SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_boundchange", "signals a bound change to a quadratic constraint",
          NULL, NULL, NULL, NULL, NULL, NULL, NULL, processVarEvent, NULL) );

@@ -201,7 +201,7 @@ parameters:
 - added parameter <lp/resolverestore> controlling how LP solution is restored after diving: if TRUE by resolving them,
   if FALSE by buffering them; if <lp/freesolvalbuffers> is TRUE, we free the buffer memory each time (FALSE by default)
 - added parameter <constraints/quadratic/checkfactorable> to disable check for factorable quadratic functions (xAx = (ax+b)*(cx+d)) in quadratic constraints and not to use of this information in separation (generates lifted tangent inequalities according to Belotti/Miller/Namazifar if also linear vars are present)
-- added parameters <constraints/{nonlinear,quadratic,soc,abspower}/maxsepanlprounds> to enable solving NLP relaxation in root node and adding cuts from linearizations of convex nonlinear constraints into cutpool
+- added parameters <constraints/{nonlinear,quadratic,soc,abspower}/sepanlpmincont> to specify minimal required fraction of continuous variables in problem to enable linearization of convex constraints in NLP relaxation solution in root
 - added parameter <conflict/separate> which enables or disables the separation of conflict constraints
 - added parameter <lp/clearinitialprobinglp> to clear LP state at end of probing mode, if LP was initially unsolved
 - added parameter <constraints/varbound/presolpairwise> that allows pairwise presolving of varbound constraints, default is TRUE
