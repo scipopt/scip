@@ -1,6 +1,9 @@
 SCIP version NEXT
 ===============
 
+SCIP version 2.1.0
+===============
+
 interface:
 - new method SCIPstartSolvingTime() and SCIPstopSolvingTime() which can be used to start or stop the solving time clock
 - new methods SCIPcheckCumulativeCondition(), SCIPpropCumulativeCondition, and SCIPrespropCumulativeCondition in cons_cumulative.h;
