@@ -3304,8 +3304,11 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
       {
          SCIPintervalSet(&lincoef, -bx);
          SCIPintervalSolveUnivariateQuadExpressionPositive(infinity, &neg, sqrcoef, lincoef, rhs);
-         SCIPintervalSetBounds(&neg, -neg.sup, -neg.inf);
-         SCIPintervalIntersect(&neg, neg, xbnds);
+         if( !SCIPintervalIsEmpty(neg) )
+         {
+            SCIPintervalSetBounds(&neg, -neg.sup, -neg.inf);
+            SCIPintervalIntersect(&neg, neg, xbnds);
+         }
       }
       else
          SCIPintervalSetEmpty(&neg);
