@@ -3920,12 +3920,12 @@ SCIP_RETCODE presolveDisaggregate(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( consdata->nquadvars <= 1 )
-      return SCIP_OKAY;
-
    /* make sure there are no quadratic variables without coefficients */
    SCIP_CALL( mergeAndCleanBilinearTerms(scip, cons) );
    SCIP_CALL( mergeAndCleanQuadVarTerms(scip, cons) );
+
+   if( consdata->nquadvars <= 1 )
+      return SCIP_OKAY;
 
    /* sort quadratic variable terms here, so we can later search in it without reordering the array */
    SCIP_CALL( consdataSortQuadVarTerms(scip, consdata) );
