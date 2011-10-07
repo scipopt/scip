@@ -55,6 +55,7 @@
 
 #define INTERVALINFTY             1E+43 /**< value for infinity in interval operations */
 #define NEWTONMAXITER              1000 /**< maximal number of iterations in newton method */
+#define INITLPMAXVARVAL          1000.0 /**< maximal absolute value of variable for still generating a linearization cut at that point in initlp */
 
 #define QUADCONSUPGD_PRIORITY      5000 /**< priority of the constraint handler for upgrading of quadratic constraints */
 #define NONLINCONSUPGD_PRIORITY   10000 /**< priority of the constraint handler for upgrading of nonlinear constraints */
@@ -5943,29 +5944,23 @@ SCIP_DECL_CONSINITLP(consInitlpBivariate)
          if( SCIPisInfinity(scip, -lb[i]) )
          {
             unbounded[i] = TRUE;
-            if( !SCIPisInfinity(scip, ub[i]) )
-            {
-               if( SCIPisPositive(scip, ub[i]) )
-                  lb[i] = -ub[i];
-               else if( SCIPisZero(scip, ub[i]) )
-                  lb[i] = -1000.0;
-               else
-                  lb[i] = 2.0 * ub[i];
-            }
+            ub[i] = MIN(INITLPMAXVARVAL, ub[i]);
+            if( SCIPisPositive(scip, ub[i]) )
+               lb[i] = -ub[i];
+            else if( SCIPisZero(scip, ub[i]) )
+               lb[i] = -INITLPMAXVARVAL;
             else
-            {
-               lb[i] = -1000.0;
-               ub[i] =  1000.0;
-            }
+               lb[i] = 2.0 * ub[i];
          }
          else if( SCIPisInfinity(scip, ub[i]) )
          {
             unbounded[i] = TRUE;
             assert(!SCIPisInfinity(scip, -lb[i]));
+            lb[i] = MAX(-INITLPMAXVARVAL, lb[i]);
             if( SCIPisNegative(scip, lb[i]) )
                ub[i] = -lb[i];
             else if( SCIPisZero(scip, lb[i]) )
-               ub[i] = 1000.0;
+               ub[i] = INITLPMAXVARVAL;
             else
                ub[i] = 2.0 * lb[i];
          }

@@ -69,6 +69,7 @@
 
 #define MAXDNOM                 10000LL /**< maximal denominator for simple rational fixed values */
 #define NONLINCONSUPGD_PRIORITY   40000 /**< priority of upgrading nonlinear constraints */
+#define INITLPMAXVARVAL          1000.0 /**< maximal absolute value of variable for still generating a linearization cut at that point in initlp */
 
 /* Activating this define enables reformulation of bilinear terms x*y with implications from x to y into linear terms.
  * However, implications are not enforced by SCIP. Thus, if, e.g., the used implication was derived from this constraint and we then reformulate the constraint,
@@ -9384,6 +9385,11 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
                var = consdata->quadvarterms[i].var;
                lb = SCIPvarGetLbGlobal(var);
                ub = SCIPvarGetUbGlobal(var);
+
+               if( ub > -INITLPMAXVARVAL )
+                  lb = MAX(lb, -INITLPMAXVARVAL);
+               if( lb <  INITLPMAXVARVAL )
+                  ub = MIN(ub,  INITLPMAXVARVAL);
 
                /* make bounds finite */
                if( SCIPisInfinity(scip, -lb) )

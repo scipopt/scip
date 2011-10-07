@@ -49,7 +49,8 @@
 #define CONSHDLR_PROP_TIMING SCIP_PROPTIMING_BEFORELP
 
 #define INTERVALINFTY             1E+43 /**< value for infinity in interval operations */
-#define BOUNDTIGHTENING_MINSTRENGTH 0.05
+#define BOUNDTIGHTENING_MINSTRENGTH 0.05/**< minimal required bound tightening strength in expression graph domain tightening for propagating bound change */
+#define INITLPMAXVARVAL          1000.0 /**< maximal absolute value of variable for still generating a linearization cut at that point in initlp */
 
 /*
  * Data structures
@@ -132,7 +133,7 @@ struct SCIP_ConshdlrData
    int                   maxproprounds;      /**< limit on number of propagation rounds for a single constraint within one round of SCIP propagation */
    SCIP_Bool             reformulate;        /**< whether to reformulate expression graph */
    int                   maxexpansionexponent;/**< maximal exponent where still expanding non-monomial polynomials in expression simplification */
-   SCIP_Real             sepanlpmincont;            /**< minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation */
+   SCIP_Real             sepanlpmincont;     /**< minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation */
 
    SCIP_HEUR*            subnlpheur;         /**< a pointer to the subNLP heuristic, if available */
    SCIP_HEUR*            trysolheur;         /**< a pointer to the TRYSOL heuristic, if available */
@@ -6659,7 +6660,14 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
                if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
                   x[j][i] = MAX(0.0, SCIPvarGetLbGlobal(var));  /*lint !e666*/
                else
+               {
                   x[j][i] = (SCIPvarGetLbGlobal(var) + SCIPvarGetUbGlobal(var)) / 2.0;
+                  /* shift refpoint into [-INITLPMAXVARVAL, INITLPMAXVARVAL], if bounds allow */
+                  if( x[j][i] < -INITLPMAXVARVAL && SCIPvarGetUbGlobal(var) >= -INITLPMAXVARVAL )
+                     x[j][i] = -INITLPMAXVARVAL;
+                  else if( x[j][i] > INITLPMAXVARVAL && SCIPvarGetLbGlobal(var) <= INITLPMAXVARVAL )
+                     x[j][i] =  INITLPMAXVARVAL;
+               }
             }
          }
       }
