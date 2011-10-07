@@ -2112,7 +2112,7 @@ SCIP_RETCODE reformNode2Var(
 #ifdef SCIP_DEBUG_SOLUTION
    /* store debug sol value of node as value for auxvar in debug solution and as value for auxvarnode */
    SCIPexprgraphSetVarNodeValue(auxvarnode, SCIPexprgraphGetNodeVal(node));
-   SCIP_CALL( SCIPdebugAddSolVal(auxvar, SCIPexprgraphGetNodeVal(node)) );
+   SCIP_CALL( SCIPdebugAddSolVal(scip, auxvar, SCIPexprgraphGetNodeVal(node)) );
 #endif
 
    if( donotmultaggr )
@@ -2254,7 +2254,7 @@ SCIP_RETCODE reformMonomial(
          SCIP_Real debugval;
          debugval = pow(SCIPexprgraphGetNodeVal(factors[0]), exponents[0]);
          SCIPexprgraphSetVarNodeValue(*resultnode, debugval);
-         SCIP_CALL( SCIPdebugAddSolVal(auxvar, debugval) );
+         SCIP_CALL( SCIPdebugAddSolVal(scip, auxvar, debugval) );
       }
 #endif
 
@@ -2333,7 +2333,7 @@ SCIP_RETCODE reformMonomial(
 
 #ifdef SCIP_DEBUG_SOLUTION
          SCIPexprgraphSetVarNodeValue(*resultnode, SCIPexprgraphGetNodeVal(expnode));
-         SCIP_CALL( SCIPdebugAddSolVal(auxvar, SCIPexprgraphGetNodeVal(expnode)) );
+         SCIP_CALL( SCIPdebugAddSolVal(scip, auxvar, SCIPexprgraphGetNodeVal(expnode)) );
 #endif
 
          /* add new constraint resultnode(=auxvar) = expnode */
@@ -2426,7 +2426,7 @@ SCIP_RETCODE reformMonomial(
 
 #ifdef SCIP_DEBUG_SOLUTION
          SCIPexprgraphSetVarNodeValue(*resultnode, SCIPexprgraphGetNodeVal(productnode));
-         SCIP_CALL( SCIPdebugAddSolVal(auxvar, SCIPexprgraphGetNodeVal(productnode)) );
+         SCIP_CALL( SCIPdebugAddSolVal(scip, auxvar, SCIPexprgraphGetNodeVal(productnode)) );
 #endif
 
          /* add new constraint resultnode(= auxvar) == left * right */
@@ -2681,7 +2681,7 @@ SCIP_RETCODE reformulate(
                SCIP_Real debugval;
                debugval = SCIPexprgraphGetNodeVal(children[0]) / SCIPexprgraphGetNodeVal(children[1]);
                SCIPexprgraphSetVarNodeValue(auxvarnode, debugval);
-               SCIP_CALL( SCIPdebugAddSolVal(auxvar, debugval) );
+               SCIP_CALL( SCIPdebugAddSolVal(scip, auxvar, debugval) );
             }
 #endif
 

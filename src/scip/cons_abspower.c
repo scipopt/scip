@@ -763,7 +763,7 @@ SCIP_RETCODE presolveFindDuplicates(
                   SCIP_Real xval;
 
                   SCIP_CALL( SCIPdebugGetSolVal(scip, consdata0->x, &xval) );
-                  SCIP_CALL( SCIPdebugAddSolVal(auxvar, SIGN(xval + consdata0->xoffset) * pow(REALABS(xval + consdata0->xoffset), consdata0->exponent)) );
+                  SCIP_CALL( SCIPdebugAddSolVal(scip, auxvar, SIGN(xval + consdata0->xoffset) * pow(REALABS(xval + consdata0->xoffset), consdata0->exponent)) );
                }
 #endif
 
@@ -3716,7 +3716,7 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdAbspower)
             debugval += SCIPgetCoefsLinearVarsQuadratic(scip, cons)[i] * debugvarval;
          }
 
-         SCIP_CALL( SCIPdebugAddSolVal(auxvar, debugval) );
+         SCIP_CALL( SCIPdebugAddSolVal(scip, auxvar, debugval) );
       }
 #endif
 
@@ -4024,7 +4024,7 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdAbspower)
       xoffset = 0.0;
 
       /* compute and set value of auxvar in debug solution, if debugging is enabled */
-      SCIP_CALL( SCIPdebugAddSolVal(auxvar, SCIPexprgraphGetNodeVal(child)) );  /*lint !e506 !e774*/
+      SCIP_CALL( SCIPdebugAddSolVal(scip, auxvar, SCIPexprgraphGetNodeVal(child)) );  /*lint !e506 !e774*/
 
       SCIP_CALL( SCIPreleaseVar(scip, &auxvar) );
    }
@@ -4071,7 +4071,7 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdAbspower)
             debugval += SCIPgetLinearCoefsNonlinear(scip, cons)[i] * debugvarval;
          }
 
-         SCIP_CALL( SCIPdebugAddSolVal(auxvar, debugval) );
+         SCIP_CALL( SCIPdebugAddSolVal(scip, auxvar, debugval) );
       }
 #endif
 
@@ -4315,7 +4315,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAbspower)
       x = auxvar;
       xoffset = 0.0;
 
-      SCIP_CALL( SCIPdebugAddSolVal(auxvar, SCIPexprgraphGetNodeVal(child)) );  /*lint !e506 !e774*/
+      SCIP_CALL( SCIPdebugAddSolVal(scip, auxvar, SCIPexprgraphGetNodeVal(child)) );  /*lint !e506 !e774*/
 
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       SCIP_CALL( SCIPreleaseVar(scip, &auxvar) );
@@ -4348,7 +4348,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAbspower)
          SCIP_CALL( SCIPdebugGetSolVal(scip, x, &xval) );
          zval = signpowcoef * SIGN(xval + xoffset) * pow(REALABS(xval + xoffset), exponent) + constant;
 
-         SCIP_CALL( SCIPdebugAddSolVal(z, zval) );
+         SCIP_CALL( SCIPdebugAddSolVal(scip, z, zval) );
          SCIPexprgraphSetVarNodeValue(*reformnode, zval);
       }
 #endif
@@ -4375,7 +4375,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAbspower)
          SCIP_CALL( SCIPdebugGetSolVal(scip, x, &xval) );
          zval = SIGN(xval + xoffset) * pow(REALABS(xval + xoffset), exponent);
 
-         SCIP_CALL( SCIPdebugAddSolVal(z, zval) );
+         SCIP_CALL( SCIPdebugAddSolVal(scip, z, zval) );
          SCIPexprgraphSetVarNodeValue(*reformnode, zval);
       }
 #endif

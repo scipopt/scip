@@ -3151,7 +3151,7 @@ SCIP_RETCODE presolveTryAddAND(
          SCIP_Real var1val;
          SCIP_CALL( SCIPdebugGetSolVal(scip, vars[0], &var0val) );
          SCIP_CALL( SCIPdebugGetSolVal(scip, vars[1], &var1val) );
-         SCIP_CALL( SCIPdebugAddSolVal(auxvar, var0val * var1val) );
+         SCIP_CALL( SCIPdebugAddSolVal(scip, auxvar, var0val * var1val) );
       }
 #endif
 
@@ -3436,7 +3436,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
                SCIP_Real var1val;
                SCIP_CALL( SCIPdebugGetSolVal(scip, xvars[0], &var0val) );
                SCIP_CALL( SCIPdebugGetSolVal(scip, y, &var1val) );
-               SCIP_CALL( SCIPdebugAddSolVal(auxvar, var0val * var1val) );
+               SCIP_CALL( SCIPdebugAddSolVal(scip, auxvar, var0val * var1val) );
             }
 #endif
 
@@ -3524,7 +3524,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
                SCIP_CALL( SCIPdebugGetSolVal(scip, y, &varval) );
                if( SCIPisZero(scip, varval) )
                {
-                  SCIP_CALL( SCIPdebugAddSolVal(auxvar, 0.0) );
+                  SCIP_CALL( SCIPdebugAddSolVal(scip, auxvar, 0.0) );
                }
                else
                {
@@ -3536,7 +3536,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
                      SCIP_CALL( SCIPdebugGetSolVal(scip, xvars[k], &varval) );
                      debugval += xcoef[k] * varval;
                   }
-                  SCIP_CALL( SCIPdebugAddSolVal(auxvar, debugval) );
+                  SCIP_CALL( SCIPdebugAddSolVal(scip, auxvar, debugval) );
                }
             }
 #endif

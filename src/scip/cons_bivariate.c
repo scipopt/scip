@@ -7178,7 +7178,7 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdBivariate)
             SCIP_Real yval;
             SCIP_CALL( SCIPdebugGetSolVal(scip, x, &xval) );
             SCIP_CALL( SCIPdebugGetSolVal(scip, y, &yval) );
-            SCIP_CALL( SCIPdebugAddSolVal(auxvar, coefxx * xval * xval + coefyy * yval * yval + coefxy * xval * yval + coefx * xval + coefy * yval) );
+            SCIP_CALL( SCIPdebugAddSolVal(scip, auxvar, coefxx * xval * xval + coefyy * yval * yval + coefxy * xval * yval + coefx * xval + coefy * yval) );
          }
 #endif
 
@@ -7350,7 +7350,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformBivariate)
 
    /* set value of auxvar and reformnode in debug solution */
 #ifdef SCIP_DEBUG_SOLUTION
-   SCIPdebugAddSolVal(auxvar, SCIPexprgraphGetNodeVal(node));
+   SCIPdebugAddSolVal(scip, auxvar, SCIPexprgraphGetNodeVal(node));
    SCIPexprgraphSetVarNodeValue(*reformnode, SCIPexprgraphGetNodeVal(node));
 #endif
 
