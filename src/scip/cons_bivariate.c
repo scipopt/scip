@@ -31,6 +31,13 @@
 #define finite(a) _finite(a)
 #endif
 
+/* on SunOS, the function finite(a) is declared in ieeefp.h
+ * but this header does not exist on every system, so include only if __sun is defined
+ */
+#ifdef __sun
+#include <ieeefp.h>
+#endif
+
 #include "scip/cons_bivariate.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_quadratic.h"
