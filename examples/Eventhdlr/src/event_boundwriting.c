@@ -58,9 +58,9 @@
 #define EVENTHDLR_NAME         "boundwriting"
 #define EVENTHDLR_DESC         "event handler for writing current primalbound and global dualbound and for all open nodes the dualbound"
 
-#define DEFAULT_FREQ                   0LL   /* frequency for writing primal and dual bounds */
-#define DEFAULT_FILENAME                ""   /* filename to write to */
-#define DEFAULT_WRITESUBMIPDUALBOUND FALSE   /* write dualbound after solving supmip root for all open node */
+#define DEFAULT_FREQ                   0LL   /**< frequency for writing primal and dual bounds */
+#define DEFAULT_FILENAME                ""   /**< filename to write to */
+#define DEFAULT_WRITESUBMIPDUALBOUND FALSE   /**< write dualbound after solving supmip root for all open node */
 
 /* should the printing be with more information */
 //#define LONGSTATS
@@ -550,15 +550,15 @@ SCIP_RETCODE SCIPincludeEventHdlrBoundwriting(
 
    /* add boundwriting parameters */
    SCIP_CALL( SCIPaddLongintParam(scip,
-         "misc/boundwriting/freq",
+         "eventhdlr/"EVENTHDLR_NAME"/freq",
          "in which frequency should all bounds be written(0: never)",
          &eventhdlrdata->freq, FALSE, DEFAULT_FREQ, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddStringParam(scip,
-         "misc/boundwriting/filename",
+         "eventhdlr/"EVENTHDLR_NAME"/filename",
          "filename to write all bounds to",
          &eventhdlrdata->filename, FALSE, DEFAULT_FILENAME, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "misc/boundwriting/writesubmipdualbound",
+         "eventhdlr/"EVENTHDLR_NAME"/writesubmipdualbound",
          "should the dualbound of the submip-root which was created out of an open node be printed",
          &eventhdlrdata->writesubmipdualbound, FALSE, DEFAULT_WRITESUBMIPDUALBOUND, NULL, NULL) );
 

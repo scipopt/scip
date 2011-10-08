@@ -45,12 +45,12 @@ SCIP_RETCODE runShell(
    /* initialize SCIP */
    SCIP_CALL( SCIPcreate(&scip) );
 
+   /* include default plugins */
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
+
    /* include event handler for best solution found */
    SCIP_CALL( SCIPincludeEventHdlrBestsol(scip) );
    SCIP_CALL( SCIPincludeEventHdlrBoundwriting(scip) );
-
-   /* include default plugins */
-   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
    /**********************************
     * Process command line arguments *
