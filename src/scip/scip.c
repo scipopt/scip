@@ -1870,14 +1870,14 @@ SCIP_RETCODE SCIPcopyParamSettings(
 }
 
 /** gets depth of current scip instance (increased by each copy call) */
-SCIP_RETCODE SCIPgetSubscipDepth(
+int SCIPgetSubscipDepth(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert( scip != NULL );
    assert( scip->stat != NULL );
 
-   SCIP_CALL( checkStage(scip, "SCIPgetSubscipDepath", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSubscipDepath", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    return scip->stat->subscipdepth;
 }
