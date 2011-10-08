@@ -35,7 +35,7 @@
 #include "scip/scip.h"
 #include "scip/scipshell.h"
 
-/** main methed strating SCIP */
+/** main method starting SCIP */
 int main(
    int                        argc,          /**< number of arguments from the shell */
    char**                     argv           /**< array of shell arguments */
