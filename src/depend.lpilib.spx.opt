@@ -1,21 +1,21 @@
-$(LIBOBJDIR)/scip/lpi_spx.o: src/scip/lpi_spx.cpp lib/spxinc/spxsolver.h \
- lib/spxinc/spxdefines.h lib/spxinc/timer.h lib/spxinc/spxlp.h \
- lib/spxinc/datakey.h lib/spxinc/spxid.h lib/spxinc/dvector.h \
- lib/spxinc/vector.h lib/spxinc/svector.h lib/spxinc/svset.h \
- lib/spxinc/dataset.h lib/spxinc/dataarray.h lib/spxinc/spxalloc.h \
- lib/spxinc/spxout.h lib/spxinc/exceptions.h lib/spxinc/message.h \
- lib/spxinc/idlist.h lib/spxinc/islist.h lib/spxinc/lprow.h \
- lib/spxinc/dsvector.h lib/spxinc/ssvector.h lib/spxinc/didxset.h \
- lib/spxinc/idxset.h lib/spxinc/lpcol.h lib/spxinc/lprowset.h \
- lib/spxinc/lpcolset.h lib/spxinc/nameset.h lib/spxinc/datahashtable.h \
- lib/spxinc/spxbasis.h lib/spxinc/slinsolver.h lib/spxinc/array.h \
- lib/spxinc/random.h lib/spxinc/unitvector.h lib/spxinc/updatevector.h \
- lib/spxinc/slufactor.h lib/spxinc/clufactor.h lib/spxinc/spxsteeppr.h \
- lib/spxinc/spxpricer.h lib/spxinc/spxsolver.h lib/spxinc/spxparmultpr.h \
- lib/spxinc/spxdevexpr.h lib/spxinc/spxfastrt.h \
- lib/spxinc/spxratiotester.h lib/spxinc/spxboundflippingrt.h \
- lib/spxinc/spxfastrt.h lib/spxinc/spxmainsm.h lib/spxinc/spxsimplifier.h \
- lib/spxinc/spxequilisc.h lib/spxinc/spxscaler.h src/scip/message.h \
+$(LIBOBJDIR)/scip/lpi_spx.o: src/scip/lpi_spx.cpp  \
+    \
+    \
+    \
+    \
+    \
+    \
+    \
+    \
+    \
+    \
+    \
+    \
+    \
+   \
+   \
+    \
+   src/scip/message.h \
  src/scip/def.h src/scip/type_retcode.h src/scip/type_message.h \
  src/scip/struct_message.h src/scip/pub_message.h src/scip/lpi.h \
  src/blockmemshell/memory.h src/scip/type_lpi.h src/scip/bitencode.h
