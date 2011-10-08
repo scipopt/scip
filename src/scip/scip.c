@@ -85,6 +85,7 @@
 #include "nlpi/nlpi.h"
 #include "nlpi/exprinterpret.h"
 #include "scip/debug.h"
+#include "scip/dialog_default.h"
 
 /* We include the linear constraint handler to be able to copy a (multi)aggregation of variables (to a linear constraint).
  * The better way would be to handle the distinction between original and transformed variables via a flag 'isoriginal' 
@@ -4035,6 +4036,9 @@ SCIP_RETCODE SCIPstartInteraction(
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPstartInteraction", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /** includes or updates the default dialog menus in SCIP */
+   SCIP_CALL( SCIPincludeDialogDefault(scip) );
 
    SCIP_CALL( SCIPdialoghdlrExec(scip->dialoghdlr, scip->set) );
 

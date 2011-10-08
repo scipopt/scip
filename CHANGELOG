@@ -139,6 +139,7 @@ fixed bugs:
 - fixed possible buffer overrun in tclique_graph.c
 - fixed bug w.r.t. infinity loop during propagation
 - fixed bug in handling of lazy bounds that resulted in putting the bounds explicitly into the LP
+- fixed issue with interactive shell in case (user) plugins are included after the default plugins
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})
