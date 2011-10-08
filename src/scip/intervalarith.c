@@ -132,8 +132,8 @@ SCIP_ROUNDMODE SCIPintervalGetRoundingMode(
 /** Microsoft rounding mode settings */
 #define SCIP_ROUND_DOWNWARDS RC_DOWN         /**< round always down */
 #define SCIP_ROUND_UPWARDS   RC_UP           /**< round always up */
-#define SCIP_ROUND_NEAREST   RC_NEAREST      /**< round always to nearest */
-#define SCIP_ROUND_ZERO      RC_TRUNCATE     /**< round always towards zero */
+#define SCIP_ROUND_NEAREST   RC_NEAR         /**< round always to nearest */
+#define SCIP_ROUND_ZERO      RC_CHOP         /**< round always towards zero */
 
 /** returns whether rounding mode control is available */
 SCIP_Bool SCIPintervalHasRoundingControl(
@@ -239,6 +239,11 @@ double negate(
          }
    return x;
 }
+
+/* for the MS compiler, the function nextafter is named _nextafter */
+#ifndef NO_NEXTAFTER
+#define nextafter(x,y) _nextafter(x,y)
+#endif
 
 #else /* unknown compiler */
 
