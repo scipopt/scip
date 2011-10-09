@@ -223,7 +223,7 @@ SCIP_RETCODE processNlRow(
    SCIP_NLROW*           nlrow,              /**< nonlinear row representation of a nonlinear constraint */
    SCIP_EXPRINT*         exprint,            /**< expression interpreter for computing sparsity pattern of the Hessian;
                                               *   if NULL, we will simply fix all variables in the expression tree */
-   struct HessianData*   hessiandata,        /** working memory for retrieving dense sparsity of Hessian matrices */
+   struct HessianData*   hessiandata,        /**< working memory for retrieving dense sparsity of Hessian matrices */
    SCIP*                 coveringscip,       /**< SCIP data structure for the covering problem */
    int                   nvars,              /**< number of variables */
    SCIP_VAR**            coveringvars,       /**< array to store the covering problem's variables */
