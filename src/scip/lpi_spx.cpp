@@ -759,7 +759,7 @@ public:
          }
 
          /* unsimplify */
-         if( simplifier != NULL )
+         if( simplifier != NULL && SPxSolver::getBasisStatus() >= SPxBasis::REGULAR )
          {
             assert((result == SPxSimplifier::VANISHED) == (cstat == NULL));
             assert((result == SPxSimplifier::VANISHED) == (rstat == NULL));
