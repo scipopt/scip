@@ -105,6 +105,7 @@
  *
  * - \ref CHANGELOG    "Change log"
  * - \ref RELEASENOTES "Release notes"
+ * - \ref CHG5         "Interface changes between version 2.0 and 2.1"
  * - \ref CHG4         "Interface changes between version 1.2 and 2.0"
  * - \ref CHG3         "Interface changes between version 1.1 and 1.2"
  * - \ref CHG2         "Interface changes between version 1.0 and 1.1"
@@ -404,7 +405,7 @@
  *
  * - <code>LPS=\<clp|cpx|msk|spx|xprs|none\></code> This determines the LP-solver, which should have been
  *   installed separately from SCIP. The options are the following:
- *      - <code>clp</code>: COIN Clp LP-solver
+ *      - <code>clp</code>: COIN-OR Clp LP-solver
  *      - <code>cpx</code>: CPLEX LP-solver
  *      - <code>grb</code>: Gurobi LP-solver (interface is in beta stage)
  *      - <code>msk</code>: Mosek LP-solver
@@ -1146,6 +1147,11 @@
  * The integrality conditions are attached to the variables, and the integrality constraint handler has to check
  * all variables that are marked to be integer for integral values.
  *
+ * \par CONSHDLR_PROP_TIMING: the propagation timing mask of the constraint handler.
+ * SCIP calls the domain propagation routines at different places in the node processing loop.
+ * This property indicates at which places the propagation routine of the constraint handler is called.
+ * Possible values are defined in type_timing.h and can be concatenated, e.g., as in SCIP_PROPTIMING_ALWAYS.
+ *
  * \par LINCONSUPGD_PRIORITY(optional): priority of the constraint handler for upgrading of linear constraints
  * This property is only needed if a certain linear constraint can be upgraded to a more specific one. In one of 
  * the first presolving rounds SCIP tries to upgrade linear constraints to more specialized constraints, such as 
@@ -1611,6 +1617,7 @@
  *    (result SCIP_DIDNOTFIND)
  *  - stating that the separator was skipped (result SCIP_DIDNOTRUN)
  *  - stating that the separator was skipped, but should be called again (result SCIP_DELAYED)
+ *  - stating that a new separation round should be started without calling the remaining separator methods (result SCIP_NEWROUND)
  * 
  * @subsection CONSSEPASOL
  *
@@ -1632,6 +1639,7 @@
  *    (result SCIP_DIDNOTFIND)
  *  - stating that the separator was skipped (result SCIP_DIDNOTRUN)
  *  - stating that the separator was skipped, but should be called again (result SCIP_DELAYED)
+ *  - stating that a new separation round should be started without calling the remaining separator methods (result SCIP_NEWROUND)
  * 
  * @subsection CONSPROP
  * 
@@ -1773,6 +1781,15 @@
  * which it generated via the CONSPRINT method and creates the corresponding constraint. If the parsing was successfully
  * the result pointer success should be set to TRUE. An example implementation can be found in the \ref cons_linear.c
  * "linear constraint handler".
+ *
+ * @subsection CONSDELVARS
+ *
+ * This method should iterate over the given constraints and delete all variables that were marked for deletion by SCIPdelVar().
+ * Variable deletion is especially interesting for branch-cut-and-price applications. If your constraint handler allows
+ * the addition of variables during the solving process (see "modifiable" attribute of constraints), then you also want to
+ * implement this callback. But also during presolving, SCIP may found that some variables are not needed anymore and tries
+ * to delete them. Thus, if you do not implement this callback, the constraint handler should capture its variables via
+ * SCIPcaptureVar() to avoid that SCIP erroneously deletes them.
  *
  * Additional documentation and the complete list of all parameters can be found in the file in type_cons.h. 
  * 
@@ -2425,6 +2442,7 @@
  *    (result SCIP_DIDNOTFIND)
  *  - stating that the separator was skipped (result SCIP_DIDNOTRUN)
  *  - stating that the separator was skipped, but should be called again (result SCIP_DELAYED)
+ *  - stating that a new separation round should be started without calling the remaining separator methods (result SCIP_NEWROUND)
  *
  * @subsection SEPAEXECSOL
  *
@@ -2451,6 +2469,7 @@
  *    (result SCIP_DIDNOTFIND)
  *  - stating that the separator was skipped (result SCIP_DIDNOTRUN)
  *  - stating that the separator was skipped, but should be called again (result SCIP_DELAYED)
+ *  - stating that a new separation round should be started without calling the remaining separator methods (result SCIP_NEWROUND)
  *
  * @subsection SEPAFREE
  *
@@ -2581,6 +2600,24 @@
  * propagation method of the propagator is very expensive, you may want to mark it to be delayed until all cheap
  * propagation methods have been executed.
  *
+ * \par PROP_TIMING: the timing mask of the propagator.
+ * SCIP calls the domain propagation routines at different places in the node processing loop.
+ * This property indicates at which places the propagator is called.
+ * Possible values are defined in type_timing.h and can be concatenated, e.g., as in SCIP_PROPTIMING_ALWAYS.
+ *
+ * \par PROP_PRESOL_PRIORITY: the priority of the presolving method.
+ * This attribute is analogous to the \ref PROP_PRIORITY flag, but deals with the preprocessing method of the presolver.
+ *
+ * \par PROP_PRESOL_MAXROUNDS: the default maximal number of presolving rounds the propagator participates in.
+ * The preprocessing is executed in rounds.
+ * If enough changes have been applied to the model, an additional preprocessing round is performed.
+ * The MAXROUNDS parameter of a propagator denotes the maximal number of preprocessing rounds, the propagator
+ * participates in.
+ * A value of -1 means, that there is no limit on the number of rounds.
+ * A value of 0 means, the preprocessing callback of the propagator is disabled.
+ *
+ * \par PROP_PRESOL_DELAY: the default for whether the presolving method should be delayed, if other propagators or constraint handlers found presolving reductions.
+ * This property is analogous to the \ref PROP_DELAY flag, but deals with the preprocessing method of the propagator.
  *
  * @section PROP_DATA Propagator Data
  *
@@ -2709,6 +2746,17 @@
  * The PROPEXIT callback is executed before the transformed problem is freed.
  * In this method, the propagator should free all resources that have been allocated for the solving process in PROPINIT.
  *
+ * @subsection PROPINITPRE
+ *
+ * The PROPINITPRE callback is executed before the preprocessing is started, even if presolving is turned off.
+ * The propagator may use this call to initialize its presolving data before the presolving process begins.
+ *
+ * @subsection PROPEXITPRE
+ *
+ * The PROPEXITPRE callback is executed after the preprocessing has been finished, even if presolving is turned off.
+ * The propagator may use this call, e.g., to clean up its presolving data.
+ * Besides clean up, no time consuming operations should be done.
+ *
  * @subsection PROPINITSOL
  *
  * The PROPINITSOL callback is executed when the presolving was finished and the branch and bound process is about to
@@ -2719,6 +2767,22 @@
  *
  * The PROPEXITSOL callback is executed before the branch and bound process is freed.
  * The propagator should use this call to clean up its branch and bound data.
+ *
+ * @subsection PROPPRESOL
+ *
+ * Seaches for domain propagations, analogous to the \ref PROPEXEC callback.
+ * However, this callback is called during preprocessing.
+ *
+ * To inform SCIP that the presolving method found a reduction the result pointer has to be set in a proper way.
+ * The following options are possible:
+ *
+ *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in objective direction
+ *  - SCIP_CUTOFF     : at least one domain reduction that renders the problem infeasible has been found
+ *  - SCIP_SUCCESS    : the presolver found a domain reduction
+ *  - SCIP_DIDNOTFIND : the presolver searched, but did not find a presolving change
+ *  - SCIP_DIDNOTRUN  : the presolver was skipped
+ *  - SCIP_DELAYED    : the presolver was skipped, but should be called again
+ *
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -4770,8 +4834,10 @@
  * 
  * @subsection NLPISETINITIALGUESS
  *
- * The NLPISETINITIALGUESS callback is executed to provide primal initial values for the variables of an NLP.
+ * The NLPISETINITIALGUESS callback is executed to provide primal and dual initial values for the variables and constraints of an NLP.
  * For a local solver, these values can be used as a starting point for the search.
+ * It is possible to pass a NULL pointer for any of the arguments (primal values of variables, dual values of variable bounds, dual values of constraints).
+ * In this case, the solver should clear previously set starting values and setup an own starting point.
  * 
  * @subsection NLPISOLVE
  *
@@ -4790,8 +4856,9 @@
  * 
  * @subsection NLPIGETSOLUTION
  *
- * The NLPIGETSOLUTION callback can be used to request the primal solution values after an NLP solve.
- * The method should pass a pointer to an array of variable values to the caller.
+ * The NLPIGETSOLUTION callback can be used to request the primal and dual solution values after an NLP solve.
+ * The method should pass pointers to arrays of variable values to the caller.
+ * It is possible to return only primal values for the variables, but no values for the dual variables, e.g., if a solver does not compute such values.
  * 
  * @subsection NLPIGETSTATISTICS
  *
@@ -5749,6 +5816,78 @@
  *
  * - Can now run a black-box lexicographic dual simplex algorithm.
  */
+
+ /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+ /**@page CHG5 Interface changes between SCIP 2.0 and SCIP 2.1
+  *
+  *
+  * <br>
+  * @section CHGCALLBACKS5 New and changed callbacks
+  *
+  * - <b>Presolving</b>:
+  *      <br>
+  *      <br>
+  *    - the new parameters nnewaddconss and naddconss were added to the constraint handler callback method SCIP_DECL_CONSPRESOL() and the presolver callback method SCIP_DECL_PRESOLEXEC();
+  *      these parameters were also added to corresponding C++ wrapper class methods
+  *    - propagators can now be called in presolve, this is supported by the new callback methods SCIP_DECL_PROPINITPRE(), SCIP_DECL_PROPEXITPRE(), and SCIP_DECL_PROPPRESOL()
+  *
+  * - <b>Constraint Handler</b>:
+  *     <br>
+  *     <br>
+  *   - the new constraint handler callback SCIP_DECL_DELVARS() is called after variables were marked for deletion, the constraint handler should then remove these variables from its constraints
+  *
+  * - <b>Problem Data</b>:
+  *     <br>
+  *     <br>
+  *   - the callback SCIP_DECL_PROBCOPY() got a new parameter global to indicate whether the global problem or a local version is copied
+  *
+  * - <b>NLP Solver Interface</b>:
+  *     <br>
+  *     <br>
+  *   - the callbacks SCIP_DECL_NLPIGETSOLUTION() and SCIP_DECL_NLPISETINITIALGUESS() got new parameters to get/set values of dual variables
+  *   - the callback SCIP_DECL_NLPICOPY() now passes the block memory of the target SCIP as additional parameter
+  *
+  * <br>
+  * @section CHGINTERFUNC5 Changed interface methods
+  *
+  * - <b>Writing and Parsing constraints</b>:
+  *      <br>
+  *      <br>
+  *    - the methods SCIPwriteVarName(), SCIPwriteVarsList(), and SCIPwriteVarsLinearsum() got a new boolean parameter "type"
+  *      which indicates whether the variable type should be written or not
+  *    - the methods SCIPparseVarName() and SCIPparseVarsList() got a new output parameter "endptr" which is filled with the position where the parsing stopped
+  *
+  * - <b>Plugin management</b>:
+  *      <br>
+  *      <br>
+  *    - SCIPincludeProp() got additional parameters to set the timing mask of the propagator and the new callbacks related to calling the propagator in presolving
+  *    - SCIPincludeConshdlr() got additional parameters to set the timing mask of the constraint handlers propagator and the variable deletion callback function
+  *
+  * - <b>Nonlinear expressions, relaxation, and solver interface</b>:
+  *      <br>
+  *      <br>
+  *    - the methods SCIPexprtreeEvalSol(), SCIPexprtreeEvalIntLocalBounds(), and SCIPexprtreeEvalIntGlobalBounds() have been renamed to SCIPevalExprtreeSol(), SCIPevalExprtreeLocalBounds(), and SCIPevalExprtreeGlobalBounds() and are now located in scip.h
+  *    - various types and functions dealing with polynomial expressions have been renamed to use the proper terms "monomial" and "polynomial"
+  *    - the methods SCIPnlpGetObjective(), SCIPnlpGetSolVals(), and SCIPnlpGetVarSolVal() have been removed, use SCIPvarGetNLPSol() and SCIPcreateNLPSol() to retrieve NLP solution values instead
+  *    - removed methods SCIPmarkRequireNLP() and SCIPisNLPRequired(), because the NLP is now always constructed if nonlinearities are present
+  *    - SCIPgetNLP() has been removed and NLP-methods from pub_nlp.h have been moved to scip.h, which resulted in some renamings too
+  *    - the functions SCIPnlpiGetSolution() and SCIPnlpiSetInitialGuess() got additional arguments to get/set dual values
+  *
+  * - <b>Others</b>:
+  *      <br>
+  *      <br>
+  *    - SCIPgetVarCopy() got a new parameter "success" that will be FALSE if method is called after problem creation stage
+  *    - SCIPchgVarType() got an extra boolean parameter to store if infeasibility is recognized while upgrading a variable from continuous type to an integer type
+  *    - the parameters timelimit and memorylimit were removed from SCIPapplyRens()
+  *
+  * <br>
+  * @section MISCELLANEOUS5 Miscellaneous
+  *
+  *  - the result value SCIP_NEWROUND has been added, it allows a separator/constraint handler to start a new separation round (without previous calls to other separators/conshdlrs)
+  *
+  * <br>
+  * For further release notes we refer the \ref RELEASENOTES "Release notes".
+  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page COUNTER How to use SCIP to count feasible solution
