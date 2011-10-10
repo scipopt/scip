@@ -4092,8 +4092,8 @@ SCIP_RETCODE analyzeConflict(
    SCIP_Bool             reasonisrhs         /**< is the right hand side responsible for the conflict? */
    )
 {
-   /* conflict analysis can only be applied in solving stage */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   /* conflict analysis can only be applied in solving stage and if it is turned on */
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
    /* initialize conflict analysis */

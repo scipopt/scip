@@ -2214,7 +2214,8 @@ SCIP_RETCODE initializeConflictAnalysisCoreTimes(
 
    SCIPdebugMessage("initialize conflict analysis\n");
 
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   /* conflict analysis can only be applied in solving stage and if it is turned on */
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPinitConflictAnalysis(scip) );
@@ -2353,7 +2354,8 @@ SCIP_RETCODE initializeConflictAnalysisCoreTimesBinvars(
 
    SCIPdebugMessage("initialize conflict analysis\n");
 
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   /* conflict analysis can only be applied in solving stage and if it is turned on */
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPinitConflictAnalysis(scip) );
@@ -3730,7 +3732,8 @@ SCIP_RETCODE initializeConflictAnalysisEnergeticReasoning(
 
    SCIPdebugMessage("initialize conflict analysis for energetic reasoning\n");
 
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   /* conflict analysis can only be applied in solving stage and if it is turned on */
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
    assert(inferInfoGetProprule(inferinfo) == PROPRULE_4_ENERGETICREASONING);
@@ -4373,7 +4376,8 @@ SCIP_RETCODE initializeConflictAnalysisEdgeFinding(
 
    assert(inferInfoGetProprule(inferinfo) == PROPRULE_3_EDGEFINDING);
 
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   /* conflict analysis can only be applied in solving stage and if it is turned on */
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPinitConflictAnalysis(scip) );

@@ -4764,10 +4764,15 @@ SCIP_RETCODE propagateCons(
                      {
                         SCIPdebugMessage(" -> fixing variable <%s> to 1, due to negated clique information\n", SCIPvarGetName(myvars[v]));
                         SCIP_CALL( SCIPinferBinvarCons(scip, myvars[v], TRUE, cons, SCIPvarGetIndex(myvars[i]), &infeasible, &tightened) );
-                        if( infeasible )
+
+                        /* analyze the infeasibility if conflict analysis is applicable */
+                        if( infeasible && SCIPisConflictAnalysisApplicable(scip))
                         {
                            assert( SCIPvarGetUbLocal(myvars[v]) < 0.5 );
-                          
+
+                           /* conflict analysis can only be applied in solving stage */
+                           assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
+
                            /* initialize the conflict analysis */
                            SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
@@ -4871,7 +4876,8 @@ SCIP_RETCODE propagateCons(
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
          *cutoff = TRUE;
 
-         if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+         /* analyze the cutoff if conflict analysis is applicable */
+         if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisConflictAnalysisApplicable(scip) )
          {
             /* start conflict analysis with the fixed-to-one variables, add only as many as need to exceed the capacity */
             SCIP_Longint weight;
@@ -4956,7 +4962,8 @@ SCIP_RETCODE propagateCons(
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
       *cutoff = TRUE;
 
-      if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+      /* analyze the cutoff in SOLVING stage and if conflict analysis is turned on */
+      if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisConflictAnalysisApplicable(scip) )
       {
          /* start conflict analysis with the fixed-to-one variables, add only as many as need to exceed the capacity */
          SCIP_Longint weight;

@@ -13369,6 +13369,18 @@ SCIP_RETCODE SCIPwriteVarsVboundGraph(
  * conflict analysis methods
  */
 
+/** return TRUE if conflict analysis is applicable; In case the function return FALSE there is no need to initialize the
+ *  conflict analysis since it will not be applied
+ */
+SCIP_Bool SCIPisConflictAnalysisApplicable(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPisConflictAnalysisApplicable", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPconflictApplicable(scip->set);
+}
+
 /** initializes the conflict analysis by clearing the conflict candidate queue; this method must be called before
  *  you enter the conflict variables by calling SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(),
  *  or SCIPaddConflictBinvar();

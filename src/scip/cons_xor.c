@@ -1085,8 +1085,8 @@ SCIP_RETCODE analyzeConflict(
    SCIP_CONSDATA* consdata;
    int v;
 
-   /* conflict analysis can only be applied in solving stage */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   /* conflict analysis can only be applied in solving stage and if it is applicable */
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);

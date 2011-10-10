@@ -767,30 +767,36 @@ SCIP_RETCODE propagateCons(
                i, firstnonzeroinrow, lastoneinrow);
          }
 #endif
-
-         /* perform conflict analysis */
-         SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-
-         /* add bounds that result in the first nonzero entry */
-         for (j = 0; j <= lastcolumn; ++j)
+         /* check if conflict analysis is applicable */
+         if( SCIPisConflictAnalysisApplicable(scip) )
          {
-            if ( ( ispart && SCIPvarGetUbLocal(vars[i][j]) > 0.5 ) || ( ! ispart && SCIPvarGetLbLocal(vars[i][j]) > 0.5 ) )
-            {
-               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
-            }
-         }
+            /* conflict analysis only applicable in SOLVING stage */
+            assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
 
-         /* add bounds that result in the last one - pass through rows */
-         for (j = 0; j < i; ++j)
-         {
-            int l;
-            l = lastones[j] + 1;
-            if ( l < nblocks-1 && SCIPvarGetUbLocal(vars[j][l]) < 0.5 )
+            /* perform conflict analysis */
+            SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+            /* add bounds that result in the first nonzero entry */
+            for (j = 0; j <= lastcolumn; ++j)
             {
-               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[j][l]) );
+               if ( ( ispart && SCIPvarGetUbLocal(vars[i][j]) > 0.5 ) || ( ! ispart && SCIPvarGetLbLocal(vars[i][j]) > 0.5 ) )
+               {
+                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
+               }
             }
+
+            /* add bounds that result in the last one - pass through rows */
+            for (j = 0; j < i; ++j)
+            {
+               int l;
+               l = lastones[j] + 1;
+               if ( l < nblocks-1 && SCIPvarGetUbLocal(vars[j][l]) < 0.5 )
+               {
+                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[j][l]) );
+               }
+            }
+            SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
          }
-         SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
 
          *infeasible = TRUE;
          goto TERMINATE;
@@ -819,27 +825,33 @@ SCIP_RETCODE propagateCons(
             /* if entry is fixed to one -> infeasible node */
             if ( *infeasible )
             {
-               int k;
-
                SCIPdebugMessage(" -> Infeasible node: row %d, 1 in column %d beyond rightmost position %d\n", i, j, lastoneinrow);
-
-               /* perform conflict analysis */
-               SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-
-               /* add current bound */
-               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
-
-               /* add bounds that result in the last one - pass through rows */
-               for (k = 0; k < i; ++k)
+               /* check if conflict analysis is applicable */
+               if( SCIPisConflictAnalysisApplicable(scip) )
                {
-                  int l;
-                  l = lastones[k] + 1;
-                  if ( l < nblocks-1 && SCIPvarGetUbLocal(vars[k][l]) < 0.5 )
+                  int k;
+
+                  /* conflict analysis only applicable in SOLVING stage */
+                  assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
+
+                  /* perform conflict analysis */
+                  SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+                  /* add current bound */
+                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
+
+                  /* add bounds that result in the last one - pass through rows */
+                  for (k = 0; k < i; ++k)
                   {
-                     SCIP_CALL( SCIPaddConflictBinvar(scip, vars[k][l]) );
+                     int l;
+                     l = lastones[k] + 1;
+                     if ( l < nblocks-1 && SCIPvarGetUbLocal(vars[k][l]) < 0.5 )
+                     {
+                        SCIP_CALL( SCIPaddConflictBinvar(scip, vars[k][l]) );
+                     }
                   }
+                  SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
                }
-               SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
 
                goto TERMINATE;
             }

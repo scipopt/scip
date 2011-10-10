@@ -1,6 +1,10 @@
 SCIP version NEXT
 ===============
 
+interface
+- new method SCIPisConflictAnalysisApplicable() which return FALSE is the conflict will not runs; can be used
+  to avoid unnecessary initialization of the conflict analysis
+
 SCIP version 2.1.0
 ===============
 

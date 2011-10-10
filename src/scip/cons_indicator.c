@@ -3184,6 +3184,13 @@ SCIP_RETCODE propIndicator(
       assert( SCIPvarGetLbLocal(consdata->binvar) > 0.5 );
       assert( SCIPisPositive(scip, SCIPvarGetLbLocal(consdata->slackvar)) );
 
+      /* check if conflict analysis is turned on */
+      if( !SCIPisConflictAnalysisApplicable(scip) )
+         return SCIP_OKAY;
+
+      /* conflict analysis can only be applied in solving stage */
+      assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
+
       /* perform conflict analysis */
       SCIP_CALL( SCIPinitConflictAnalysis(scip) );
       SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->binvar) );

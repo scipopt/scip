@@ -807,7 +807,12 @@ SCIP_RETCODE analyzeConflictLowerbound(
    assert(SCIPisEQ(scip, SCIPvarGetUbLocal(infervar), SCIPvarGetUbAtIndex(infervar, NULL, FALSE)));
    assert(SCIPisEQ(scip, SCIPvarGetUbAtIndex(infervar, NULL, TRUE), SCIPvarGetUbAtIndex(infervar, NULL, FALSE)));
    assert(SCIPisGT(scip, inferlb, SCIPvarGetUbLocal(infervar)));
-   
+   assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
+
+   /* check if conflict analysis is applicable */
+   if( SCIPisConflictAnalysisApplicable(scip) )
+      return SCIP_OKAY;
+
    if( propdata->usebdwidening )
    {
       SCIP_VAR* vbdvar;
@@ -903,7 +908,12 @@ SCIP_RETCODE analyzeConflictUpperbound(
    assert(SCIPisEQ(scip, SCIPvarGetLbLocal(infervar), SCIPvarGetLbAtIndex(infervar, NULL, FALSE)));
    assert(SCIPisEQ(scip, SCIPvarGetLbAtIndex(infervar, NULL, TRUE), SCIPvarGetLbAtIndex(infervar, NULL, FALSE)));
    assert(SCIPisLT(scip, inferub, SCIPvarGetLbLocal(infervar)));
-   
+   assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
+
+   /* check if conflict analysis is applicable */
+   if( SCIPisConflictAnalysisApplicable(scip) )
+      return SCIP_OKAY;
+
    if( propdata->usebdwidening )
    {
       SCIP_VAR* vbdvar;

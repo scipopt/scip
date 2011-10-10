@@ -533,8 +533,8 @@ SCIP_RETCODE analyzeConflict(
    SCIP_BOUNDTYPE        boundtype           /**< the type of the changed bound (lower or upper bound) */
    )
 {
-   /* conflict analysis can only be applied in solving stage */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   /* conflict analysis can only be applied in solving stage and if it is applicable */
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
    /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */

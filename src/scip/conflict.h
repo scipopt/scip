@@ -133,6 +133,14 @@ void SCIPconflicthdlrSetPriority(
  * Conflict Analysis
  */
 
+/** return TRUE if conflict analysis is applicable; In case the function return FALSE there is no need to initialize the
+ *  conflict analysis since it will not be applied
+ */
+extern
+SCIP_Bool SCIPconflictApplicable(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** creates conflict analysis data for propagation conflicts */
 extern
 SCIP_RETCODE SCIPconflictCreate(

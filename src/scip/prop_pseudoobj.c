@@ -293,13 +293,16 @@ SCIP_RETCODE propagateCutoffbound(
    {
       SCIPdebugMessage("pseudo objective value %g exceeds cutoff bound %g\n", pseudoobjval, cutoffbound);
 
-      /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
-      SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-      SCIP_CALL( resolvePropagation(scip, propdata, NULL, NULL) );
+      /* check if conflict analysis is applicable */
+      if( SCIPisConflictAnalysisApplicable(scip) )
+      {
+         /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
+         SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+         SCIP_CALL( resolvePropagation(scip, propdata, NULL, NULL) );
 
-      /* analyze the conflict */
-      SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
-      
+         /* analyze the conflict */
+         SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
+      }
       *result = SCIP_CUTOFF;
 
       return SCIP_OKAY;
