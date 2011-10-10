@@ -2537,6 +2537,13 @@ SCIP_RETCODE reformulate(
          node = SCIPexprgraphGetNodes(exprgraph)[d][i];
          assert(node != NULL);
 
+         /* skip disabled nodes, they should be removed soon */
+         if( !SCIPexprgraphIsNodeEnabled(node) )
+         {
+            ++i;
+            continue;
+         }
+
          /* make sure bounds and curvature of node are uptodate */
          SCIP_CALL( SCIPexprgraphUpdateNodeBoundsCurvature(node, INTERVALINFTY, BOUNDTIGHTENING_MINSTRENGTH, TRUE) );
          assert(!SCIPintervalIsEmpty(SCIPexprgraphGetNodeBounds(node)));
@@ -3976,14 +3983,6 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
    ylb = SCIPvarGetLbLocal(y);
    yub = SCIPvarGetUbLocal(y);
 
-   /* reference point should not be outside of bounds */
-   assert(SCIPisFeasLE(scip, xlb, ref[0]));
-   assert(SCIPisFeasGE(scip, xub, ref[0]));
-   ref[0] = MIN(xub, MAX(xlb, ref[0]));
-   assert(SCIPisFeasLE(scip, ylb, ref[1]));
-   assert(SCIPisFeasGE(scip, yub, ref[1]));
-   ref[1] = MIN(yub, MAX(ylb, ref[1]));
-
    if( SCIPisInfinity(scip, -xlb) || SCIPisInfinity(scip, xub) || SCIPisInfinity(scip, -ylb) || SCIPisInfinity(scip, yub) )
    {
       SCIPdebugMessage("skip bivariate secant since <%s> or <%s> is unbounded\n", SCIPvarGetName(x), SCIPvarGetName(y));
@@ -3995,6 +3994,14 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
       SCIPdebugMessage("skip bivariate secant since both <%s> and <%s> are fixed\n", SCIPvarGetName(x), SCIPvarGetName(y));
       return SCIP_OKAY;
    }
+
+   /* reference point should not be outside of bounds */
+   assert(SCIPisFeasLE(scip, xlb, ref[0]));
+   assert(SCIPisFeasGE(scip, xub, ref[0]));
+   ref[0] = MIN(xub, MAX(xlb, ref[0]));
+   assert(SCIPisFeasLE(scip, ylb, ref[1]));
+   assert(SCIPisFeasGE(scip, yub, ref[1]));
+   ref[1] = MIN(yub, MAX(ylb, ref[1]));
 
    /* lower left */
    p1[0] = xlb;

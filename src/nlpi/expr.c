@@ -12280,10 +12280,20 @@ void SCIPexprgraphDisableNode(
          return;
       }
 
-   SCIPdebugMessage("disabled node %p (%d,%d)\n", (void*)node, node->depth, node->pos);
+   SCIPdebugMessage("disabled node %p (%d,%d), nuses = %d\n", (void*)node, node->depth, node->pos, node->nuses);
 
    for( i = 0; i < node->nchildren; ++i )
       SCIPexprgraphDisableNode(exprgraph, node->children[i]);
+}
+
+/** returns whether a node is currently enabled */
+SCIP_Bool SCIPexprgraphIsNodeEnabled(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node to enable */
+   )
+{
+   assert(node != NULL);
+
+   return node->enabled;
 }
 
 /** gets number of children of a node in an expression graph */

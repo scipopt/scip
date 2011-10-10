@@ -7216,7 +7216,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
                gap = SCIPinfinity(scip);
             else
                gap = (xval-xlb)*(xub-xval)/(1+2*ABS(xval));
-            assert(!SCIPisNegative(scip, gap));
+            assert(!SCIPisFeasNegative(scip, gap));
             SCIP_CALL( SCIPaddExternBranchCand(scip, x, MAX(gap, 0.0), SCIP_INVALID) );
             ++*nnotify;
          }
@@ -7272,7 +7272,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
                   gap = -(xval*yval - xval*yub - yval*xlb + xlb*yub) / (1+sqrt(xval*xval + yval*yval));
             }
 
-            assert(!SCIPisNegative(scip, gap));
+            assert(!SCIPisFeasNegative(scip, gap));
             if( gap < 0.0 )
                gap = 0.0;
          }
