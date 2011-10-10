@@ -1786,8 +1786,10 @@
  *
  * This method should iterate over the given constraints and delete all variables that were marked for deletion by SCIPdelVar().
  * Variable deletion is especially interesting for branch-cut-and-price applications. If your constraint handler allows
- * the addition of variables during the solving process (see "modifiable" attribute of constraints), then you also want to
- * implement this callback. But also during presolving, SCIP may found that some variables are not needed anymore and tries
+ * the addition of variables during the solving process (see "modifiable" attribute of constraints), then you might also want to
+ * implement this callback. This would allow to not only create variables during solving, but also remove them dynamically
+ * from the problem to reduce memory consumption in case they are not needed anymore.
+ * But also during presolving, SCIP may find that some variables are not needed anymore and then try
  * to delete them. Thus, if you do not implement this callback, the constraint handler should capture its variables via
  * SCIPcaptureVar() to avoid that SCIP erroneously deletes them.
  *
