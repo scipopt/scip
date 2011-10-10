@@ -145,8 +145,15 @@ SCIP_RETCODE readSol(
          }
       }
 
-      /* set the solution value of the variable */
-      SCIP_CALL( SCIPsetSolVal(scip, sol, var, value) );
+      /* set the solution value of the variable, if not multiaggregated */
+      if( SCIPisTransformed(scip) && SCIPvarGetStatus(SCIPvarGetProbvar(var)) == SCIP_VARSTATUS_MULTAGGR )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "ignored solution value for multiaggregated variable <%s>\n", SCIPvarGetName(var));
+      }
+      else
+      {
+         SCIP_CALL( SCIPsetSolVal(scip, sol, var, value) );
+      }
    }
 
    /* close input file */
