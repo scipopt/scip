@@ -2101,6 +2101,8 @@ SCIP_RETCODE createCGCutsDirect(
    SCIP* subscip;
    SCIP_STAGE stage;
    SCIP_SOL** sols;
+   SCIP_ROW** prevrows;
+   int nprevrows;
    int nsols;
    int k, s;
    char name[SCIP_MAXSTRLEN];
@@ -2153,6 +2155,7 @@ SCIP_RETCODE createCGCutsDirect(
    SCIP_CALL( SCIPallocBufferArray(scip, &varsolvals, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cutvars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cutvals, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &prevrows, nsols) );
 
    /* get solution values */
    for (k = 0; k < nvars; ++k)
@@ -2164,6 +2167,7 @@ SCIP_RETCODE createCGCutsDirect(
    }
 
    /* loop through solutions found */
+   nprevrows = 0;
    for (s = 0; s < nsols; ++s)
    {
       SCIP_SOL* sol;
@@ -2186,8 +2190,6 @@ SCIP_RETCODE createCGCutsDirect(
       cutact = 0.0;
       for (k = 0; k < nvars; ++k)
          cutact += cutcoefs[k] * varsolvals[k];
-
-      SCIPdebugMessage("act=%f, rhs=%f\n", cutact, cutrhs);
 
       /* the following test should be treated with care because of numerical differences - see computeCut() */ 
 #if 0
@@ -2256,22 +2258,6 @@ SCIP_RETCODE createCGCutsDirect(
                SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
                /*SCIPdebug(SCIPprintRow(scip, cut, NULL));*/
 
-               /* add cut if it is violated */
-               if ( violated )
-               {
-                  SCIPdebugMessage(" -> CG-cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
-                     name, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
-                     SCIPgetCutEfficacy(scip, NULL, cut),
-                     SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
-                     SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
-                  
-#ifdef SCIP_DEBUG
-                  SCIPdebug(SCIPprintRow(scip, cut, NULL));
-#endif
-                  SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
-                  ++(*ngen);
-               }
-
                /* add cut to pool */
                if ( ! cutislocal )
                {
@@ -2279,14 +2265,62 @@ SCIP_RETCODE createCGCutsDirect(
                   SCIP_CALL( SCIPaddPoolCut(scip, cut) );
                }
 
-               /* release the row */
-               SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+               /* add cut if it is violated */
+               if ( violated )
+               {
+                  /* check whether cut has been found before - may happend due to projection */
+                  for (k = 0; k < nprevrows; ++k)
+                  {
+                     SCIP_Real parval;
+
+                     assert( prevrows[k] != NULL );
+                     parval = SCIProwGetParallelism(cut, prevrows[k], 'e');
+                     /* exit if row is parallel to existing cut and rhs is not better */
+                     if ( SCIPisEQ(scip, parval, 1.0) && SCIPisGE(scip, cutrhs, SCIProwGetRhs(prevrows[k])) )
+                        break;
+                  }
+
+                  /* if cut is new */
+                  if ( k >= nprevrows )
+                  {
+                     prevrows[nprevrows++] = cut;
+                     assert( nprevrows <= nsols );
+
+                     SCIPdebugMessage(" -> CG-cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
+                        name, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
+                        SCIPgetCutEfficacy(scip, NULL, cut),
+                        SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
+                        SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
+                     SCIPdebug(SCIPprintRow(scip, cut, NULL));
+                     SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
+                     ++(*ngen);
+                  }
+                  else
+                  {
+                     SCIPdebugMessage("Cut already exists.\n");
+                     /* release the row */
+                     SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+                  }
+               }
+               else
+               {
+                  /* release the row */
+                  SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+               }
             }
          }
       }
    }
+   assert( nprevrows <= nsols );
+
+   /* release rows */
+   for (k = 0; k < nprevrows; ++k)
+   {
+      SCIP_CALL( SCIPreleaseRow(scip, &(prevrows[k])) );
+   }
 
    /* free temporary memory */
+   SCIPfreeBufferArray(scip, &prevrows);
    SCIPfreeBufferArray(scip, &cutvals);
    SCIPfreeBufferArray(scip, &cutvars);
    SCIPfreeBufferArrayNull(scip, &varsolvals);
@@ -2309,6 +2343,8 @@ SCIP_RETCODE createCGCutsCMIR(
    SCIP_STAGE stage;
    SCIP_Real* weights;
    SCIP_SOL** sols;
+   SCIP_ROW** prevrows;
+   int nprevrows;
    int nsols;
    int k, s;
    char name[SCIP_MAXSTRLEN];
@@ -2377,6 +2413,7 @@ SCIP_RETCODE createCGCutsCMIR(
    SCIP_CALL( SCIPallocBufferArray(scip, &varsolvals, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cutvars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cutvals, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &prevrows, nsols) );
 
    /* get solution values */
    for (k = 0; k < nvars; ++k)
@@ -2401,6 +2438,7 @@ SCIP_RETCODE createCGCutsCMIR(
    }
 
    /* loop through solutions found */
+   nprevrows = 0;
    for (s = 0; s < nsols; ++s)
    {
       SCIP_SOL* sol;
@@ -2539,48 +2577,84 @@ SCIP_RETCODE createCGCutsCMIR(
                /* if the cut could be made integral */
                if ( success )
                {
-                  if ( !SCIPisCutEfficacious(scip, NULL, cut) )
-                  {
-                     SCIPdebugMessage(" -> CG-cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
-                        name, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
-                        SCIPgetCutEfficacy(scip, NULL, cut));
-                     success = FALSE;
-                  }
-                  else
-                  {
-                     SCIPdebugMessage(" -> CG-cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
-                        name, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
-                        SCIPgetCutEfficacy(scip, NULL, cut),
-                        SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
-                        SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
-#ifdef SCIP_OUTPUT
-                     SCIPdebug(SCIPprintRow(scip, cut, NULL));
-#endif
-                     SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
-                     ++(*ngen);
-                  }
-
                   /* add cut to pool */
                   if ( !cutislocal )
                   {
                      assert( violated || sepadata->usecutpool );
                      SCIP_CALL( SCIPaddPoolCut(scip, cut) );
                   }
+
+                  if ( !SCIPisCutEfficacious(scip, NULL, cut) )
+                  {
+                     SCIPdebugMessage(" -> CG-cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
+                        name, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
+                        SCIPgetCutEfficacy(scip, NULL, cut));
+                     success = FALSE;
+
+                     /* release the row */
+                     SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+                  }
+                  else
+                  {
+                     /* check whether cut has been found before - may happend due to projection */
+                     for (k = 0; k < nprevrows; ++k)
+                     {
+                        SCIP_Real parval;
+
+                        assert( prevrows[k] != NULL );
+                        parval = SCIProwGetParallelism(cut, prevrows[k], 'e');
+                        /* exit if row is parallel to existing cut and rhs is not better */
+                        if ( SCIPisEQ(scip, parval, 1.0) && SCIPisGE(scip, cutrhs, SCIProwGetRhs(prevrows[k])) )
+                           break;
+                     }
+
+                     /* if cut is new */
+                     if ( k >= nprevrows )
+                     {
+                        prevrows[nprevrows++] = cut;
+                        assert( nprevrows <= nsols );
+
+                        SCIPdebugMessage(" -> CG-cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
+                           name, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
+                           SCIPgetCutEfficacy(scip, NULL, cut),
+                           SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
+                           SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
+#ifdef SCIP_OUTPUT
+                        SCIPdebug(SCIPprintRow(scip, cut, NULL));
+#endif
+                        SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
+                        ++(*ngen);
+                     }
+                     else
+                     {
+                        SCIPdebugMessage("Cut already exists.\n");
+                        /* release the row */
+                        SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+                     }
+                  }
                }
                else
                {
                   SCIPdebugMessage(" -> CG-cut <%s> could not be scaled to integral coefficients: act=%f, rhs=%f, norm=%f, eff=%f\n",
                      name, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, NULL, cut));
-               }
 
-               /* release the row */
-               SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+                  /* release the row */
+                  SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+               }
             }
          }
       }
    }
+   assert( nprevrows <= nsols );
+
+   /* release rows */
+   for (k = 0; k < nprevrows; ++k)
+   {
+      SCIP_CALL( SCIPreleaseRow(scip, &(prevrows[k])) );
+   }
 
    /* free temporary memory */
+   SCIPfreeBufferArray(scip, &prevrows);
    SCIPfreeBufferArrayNull(scip, &boundsfortrans);
    SCIPfreeBufferArrayNull(scip, &boundtypesfortrans);
 
