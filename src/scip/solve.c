@@ -3527,7 +3527,10 @@ SCIP_RETCODE solveNode(
             }
             else
             {
-               assert(!SCIPtreeHasFocusNodeLP(tree) || pricingaborted); /* feasible LP solutions with all integers fixed must be feasible */
+               /* feasible LP solutions with all integers fixed must be feasible
+                * if also no external branching candidates were available
+                */
+               assert(!SCIPtreeHasFocusNodeLP(tree) || pricingaborted);
 
                if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_TIMELIMIT || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_ITERLIMIT || SCIPsolveIsStopped(set, stat, FALSE) )
                {
@@ -3546,7 +3549,13 @@ SCIP_RETCODE solveNode(
                {
                   if( pricingaborted )
                   {
-                     SCIPerrorMessage("pricing was aborted, but no branching could be created!\n", result);
+                     SCIPerrorMessage("pricing was aborted, but no branching could be created!\n");
+                     return SCIP_INVALIDRESULT;
+                  }
+
+                  if( SCIPtreeHasFocusNodeLP(tree) )
+                  {
+                     SCIPerrorMessage("LP was solved, all integers fixed, some constraint still infeasible, but no branching could be created!\n");
                      return SCIP_INVALIDRESULT;
                   }
 
