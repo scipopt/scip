@@ -1560,10 +1560,10 @@ SCIP_RETCODE solveSubscip(
 
    /* determine timelimit */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if ( sepadata->timelimit < timelimit )
-      timelimit = sepadata->timelimit;
    if ( ! SCIPisInfinity(scip, timelimit) )
       timelimit -= SCIPgetSolvingTime(scip);
+   if ( sepadata->timelimit < timelimit )
+      timelimit = sepadata->timelimit;
    if ( timelimit > 0.0 )
    {
       SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
