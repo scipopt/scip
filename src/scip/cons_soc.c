@@ -20,6 +20,7 @@
  * @author Marc Pfetsch
  *
  * @todo rhsvar == NULL is supported in some routines, but not everywhere
+ * @todo merge square terms with same variables in presol/exitpre
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
