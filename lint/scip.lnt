@@ -63,6 +63,12 @@
 -emacro(506,SCIPdebugCheckRow) // Constant value Boolean
 -emacro(506,SCIPdebugCheckImplic) // Constant value Boolean
 -emacro(506,assert)       // Constant value Boolean
+-emacro(685,BMSallocMemoryArray) // Relational operator always evaluates to 'false'
+-emacro(685,BMSreallocMemoryArray) // Relational operator always evaluates to 'false'
+-emacro(685,BMSallocMemoryArrayCPP) // Relational operator always evaluates to 'false'
+-emacro(685,BMSallocClearMemoryArray) // Relational operator always evaluates to 'false'
+-emacro(685,BMSallocBlockMemoryArray) // Relational operator always evaluates to 'false'
+-emacro(685,BMSreallocBlockMemoryArray) // Relational operator always evaluates to 'false'
 
 -esym(578,clock)          // Declaration of symbol hides symbol
 -esym(578,scip)           // Declaration of symbol hides symbol
