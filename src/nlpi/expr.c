@@ -2952,7 +2952,7 @@ SCIP_DECL_EXPRINTEVAL( exprevalIntPolynomial )
             SCIPintervalSquareRoot(infinity, &childval, childval);
             if( SCIPintervalIsEmpty(childval) )
             {
-               SCIPintervalSetEmpty(&monomialval);
+               SCIPintervalSetEmpty(result);
                break;
             }
             SCIPintervalMul(infinity, &monomialval, monomialval, childval);
@@ -2972,8 +2972,8 @@ SCIP_DECL_EXPRINTEVAL( exprevalIntPolynomial )
             SCIPintervalPowerScalar(infinity, &childval, childval, exponent);
             if( SCIPintervalIsEmpty(childval) )
             {
-               SCIPintervalSetEmpty(&monomialval);
-               break;
+               SCIPintervalSetEmpty(result);
+               return SCIP_OKAY;
             }
             SCIPintervalMul(infinity, &monomialval, monomialval, childval);
          }
