@@ -8135,7 +8135,7 @@ SCIP_RETCODE fullDualPresolve(
    nintvars = nvars - ncontvars;
 
    /* copy the variable array since this array might change during the curse of this algorithm */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, &(vars[nbinvars]), nvars) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, &(vars[nbinvars]), nvars - nbinvars) );
    nvars = nvars - nbinvars;
 
    /* allocate temporary memory */
