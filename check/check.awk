@@ -501,13 +501,15 @@ BEGIN {
       if ( objsense == -1 && pb >= +infty )
 	 pb = -1.0 * pb;
 
+      # modify dual bound for infeasible maximization problems
+      if ( objsense == -1 && db >= +infty )
+	 db = -1.0 * db;
+
       nprobs++;
 
-      optimal = 0;
       markersym = "\\g";
       if( abs(pb - db) < 1e-06 && pb < infty ) {
          gap = 0.0;
-         optimal = 1;
          markersym = "  ";
       }
       else if( abs(db) < 1e-06 )
