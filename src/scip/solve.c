@@ -3176,6 +3176,7 @@ SCIP_RETCODE solveNode(
    SCIP_Bool fullpropagation;
    SCIP_Bool branched;
    SCIP_Bool forcedlpsolve;
+   SCIP_Bool wasforcedlpsolve;
    SCIP_Bool pricingaborted;
 
    assert(set != NULL);
@@ -3421,6 +3422,7 @@ SCIP_RETCODE solveNode(
        * In LP branching, we cannot allow adding constraints, because this does not necessary change the LP and can
        * therefore lead to an infinite loop.
        */
+      wasforcedlpsolve = forcedlpsolve;
       forcedlpsolve = FALSE;
       if( (*infeasible) && !(*cutoff) 
          && (!(*unbounded) || SCIPbranchcandGetNExternCands(branchcand) > 0 || SCIPbranchcandGetNPseudoCands(branchcand) > 0)
@@ -3553,8 +3555,9 @@ SCIP_RETCODE solveNode(
                      return SCIP_INVALIDRESULT;
                   }
 
-                  if( SCIPtreeHasFocusNodeLP(tree) )
+                  if( wasforcedlpsolve )
                   {
+                     assert(SCIPtreeHasFocusNodeLP(tree));
                      SCIPerrorMessage("LP was solved, all integers fixed, some constraint still infeasible, but no branching could be created!\n");
                      return SCIP_INVALIDRESULT;
                   }
