@@ -726,7 +726,23 @@ public:
       m_itused = 0;
       if( result != SPxSimplifier::VANISHED )
       {
+         /* we have to deactivate the objective limit, since we do not know the transformed value */
+         Real objlolimit = getObjLoLimit();
+         Real objuplimit = getObjUpLimit();
+
+         if( simplifier != NULL || scaler != NULL )
+         {
+            setObjLoLimit(soplex::infinity);
+            setObjUpLimit(-soplex::infinity);
+         }
+
          doSolve();
+
+         if( simplifier != NULL || scaler != NULL )
+         {
+            setObjLoLimit(objlolimit);
+            setObjUpLimit(objuplimit);
+         }
       }
 
       /* unsimplification not designed for infeasible basis */
