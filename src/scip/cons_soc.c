@@ -777,7 +777,8 @@ SCIP_RETCODE computeViolation(
 
    consdata->violation = consdata->lhsval - consdata->rhscoeff * (SCIPgetSolVal(scip, sol, consdata->rhsvar) + consdata->rhsoffset);
    if( consdata->violation <= 0.0 )
-   { /* constraint is not violated for sure */
+   {
+      /* constraint is not violated for sure */
       consdata->violation = 0.0;
       return SCIP_OKAY;
    }
@@ -820,7 +821,7 @@ SCIP_RETCODE computeViolations(
       {
          consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
          assert(consdata != NULL);
-         if( consdata->violation > maxviol && SCIPisFeasPositive(scip, consdata->violation) )
+         if( consdata->violation > maxviol && SCIPisGT(scip, consdata->violation, SCIPfeastol(scip)) )
          {
             maxviol      = consdata->violation;
             *maxviolcons = conss[c];  /*lint !e613*/
@@ -1123,11 +1124,12 @@ SCIP_RETCODE generateSparseCut(
 
       if( *row != NULL )
       {
-         efficacy = SCIPgetCutEfficacy(scip, sol, *row);
+         efficacy = -SCIPgetRowSolFeasibility(scip, *row, sol) / SCIPgetRowMaxCoef(scip, *row);
 
-         if( efficacy >= goodefficacy || 
-            (maxnz >= consdata->nvars && efficacy >= minefficacy) )
-         { /* cut cuts off solution and is efficient enough */
+         if( SCIPisGT(scip, efficacy, goodefficacy) ||
+            (maxnz >= consdata->nvars && SCIPisGT(scip, efficacy, minefficacy)) )
+         {
+            /* cut cuts off solution and is efficient enough */
             SCIPdebugMessage("accepted cut with %d of %d nonzeros, efficacy = %g\n", maxnz, consdata->nvars, efficacy);
             break;
          }
@@ -1195,7 +1197,7 @@ SCIP_RETCODE separatePoint(
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
-      if( SCIPisFeasPositive(scip, consdata->violation) && !SCIPisInfinity(scip, consdata->violation) )
+      if( SCIPisGT(scip, consdata->violation, SCIPfeastol(scip)) && !SCIPisInfinity(scip, consdata->violation) )
       {
          row = NULL;
 
@@ -1206,14 +1208,22 @@ SCIP_RETCODE separatePoint(
          }  
          else if( conshdlrdata->projectpoint )
          {
+            SCIP_Real efficacy;
+
             SCIP_CALL( generateCutProjectedPoint(scip, conss[c], sol, &row) );  /*lint !e613*/
-            if( SCIPgetCutEfficacy(scip, sol, row) < minefficacy )
+
+            efficacy = -SCIPgetRowSolFeasibility(scip, row, sol) / SCIPgetRowMaxCoef(scip, row);
+            if( SCIPisLE(scip, efficacy, minefficacy) )
                SCIP_CALL( SCIPreleaseRow(scip, &row) );
          }
          else
          {
+            SCIP_Real efficacy;
+
             SCIP_CALL( generateCutSol(scip, conss[c], sol, &row) );  /*lint !e613*/
-            if( SCIPgetCutEfficacy(scip, sol, row) < minefficacy )
+
+            efficacy = -SCIPgetRowSolFeasibility(scip, row, sol) / SCIPgetRowMaxCoef(scip, row);
+            if( SCIPisLE(scip, efficacy, minefficacy) )
                SCIP_CALL( SCIPreleaseRow(scip, &row) );
          }
 
@@ -3526,7 +3536,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpSOC)
    for( c = 0; c < nconss; ++c )
    {
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
-      if( !SCIPisFeasPositive(scip, consdata->violation) )
+      if( !SCIPisGT(scip, consdata->violation, SCIPfeastol(scip)) )
          continue;
 
       nbndchg = 0;
@@ -3605,7 +3615,7 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
       assert(consdata != NULL);
 
       /* if feasible, just continue */
-      if( !SCIPisFeasPositive(scip, consdata->violation) )
+      if( !SCIPisGT(scip, consdata->violation, SCIPfeastol(scip)) )
          continue;
 
       *result = SCIP_INFEASIBLE;

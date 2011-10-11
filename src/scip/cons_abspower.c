@@ -1676,7 +1676,7 @@ SCIP_RETCODE computeViolations(
       assert(consdata != NULL);
 
       viol = MAX(consdata->lhsviol, consdata->rhsviol);
-      if( viol > maxviol && SCIPisFeasPositive(scip, viol) )
+      if( viol > maxviol && SCIPisGT(scip, viol, SCIPfeastol(scip)) )
       {
          maxviol = viol;
          *maxviolcon = conss[c];
@@ -1730,7 +1730,7 @@ SCIP_Real proposeBranchingPoint(
       xub += consdata->xoffset;
 
       xref = SCIPgetVarSol(scip, x) + consdata->xoffset;
-      if( SCIPisFeasPositive(scip, consdata->rhsviol) )
+      if( SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
       {
          /* signpow(x,n,offset) + c*z <= 0 is violated
           *  if we are close to or right of -offset, then branching on -offset gives a convex function on the right branch, this is good
@@ -1741,7 +1741,7 @@ SCIP_Real proposeBranchingPoint(
          return SCIP_INVALID;
       }
 
-      assert(SCIPisFeasPositive(scip, consdata->lhsviol) );
+      assert(SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) );
       /* signpow(x,n) + c*z >= 0 is violated
        *  if we are close to or left of zero, then branching on 0.0 gives a concave function on the left branch, this is good
        *  otherwise if branching on 0.0 yields a violated secant cut in right branch, then current solution would be cutoff there, this is also still good
@@ -1841,8 +1841,8 @@ SCIP_RETCODE registerBranchingCandidates(
             continue;
 
          /* if the value of x lies in a concave range (i.e., where a secant approximation is used), then register x as branching variable */
-         if( (SCIPisFeasPositive(scip, consdata->rhsviol) && (SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->x)) || SCIPgetSolVal(scip, NULL, consdata->x) + consdata->xoffset <= -consdata->root * (SCIPvarGetLbLocal(consdata->x) + consdata->xoffset))) ||
-            ( SCIPisFeasPositive(scip, consdata->lhsviol) && (SCIPisInfinity(scip,  SCIPvarGetUbLocal(consdata->x)) || SCIPgetSolVal(scip, NULL, consdata->x) + consdata->xoffset >= -consdata->root * (SCIPvarGetUbLocal(consdata->x) + consdata->xoffset))) )
+         if( (SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) && (SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->x)) || SCIPgetSolVal(scip, NULL, consdata->x) + consdata->xoffset <= -consdata->root * (SCIPvarGetLbLocal(consdata->x) + consdata->xoffset))) ||
+            ( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && (SCIPisInfinity(scip,  SCIPvarGetUbLocal(consdata->x)) || SCIPgetSolVal(scip, NULL, consdata->x) + consdata->xoffset >= -consdata->root * (SCIPvarGetUbLocal(consdata->x) + consdata->xoffset))) )
          {
             SCIPdebugMessage("register var <%s> in cons <%s> with violation %g %g\n", SCIPvarGetName(consdata->x), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);  /*lint !e613*/
             SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->x, MAX(consdata->lhsviol, consdata->rhsviol), proposeBranchingPoint(scip, conss[c], conshdlrdata->preferzerobranch, conshdlrdata->branchminconverror)) );  /*lint !e613*/
@@ -1888,7 +1888,7 @@ SCIP_RETCODE registerLargeLPValueVariableForBranching(
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
-      if( !SCIPisFeasPositive(scip, consdata->lhsviol) && !SCIPisFeasPositive(scip, consdata->rhsviol) )
+      if( !SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
          continue;
 
       val = SCIPgetSolVal(scip, NULL, consdata->x) + consdata->xoffset;
@@ -3023,9 +3023,9 @@ SCIP_RETCODE generateCut(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   assert(SCIPisFeasPositive(scip, consdata->lhsviol) || SCIPisFeasPositive(scip, consdata->rhsviol));
+   assert(SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) || SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)));
 
-   violside = SCIPisFeasPositive(scip, consdata->lhsviol) ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT;
+   violside = SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT;
    *row = NULL;
 
    SCIPdebugMessage("generate cut for constraint <%s> with violated side %d\n", SCIPconsGetName(cons), violside);
@@ -3182,7 +3182,7 @@ SCIP_RETCODE separatePoint(
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
-      if( SCIPisFeasPositive(scip, consdata->lhsviol) || SCIPisFeasPositive(scip, consdata->rhsviol) )
+      if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) || SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
       {
          /* try to generate a cut */
          SCIP_CALL( generateCut(scip, conss[c], sol, &row, onlyinbounds) );  /*lint !e613*/
@@ -3190,7 +3190,7 @@ SCIP_RETCODE separatePoint(
             continue;
 
          /* check if we separate in convex area */
-         if( SCIPisFeasPositive(scip, consdata->rhsviol) )
+         if( SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
          {
             convex = !SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->x))
                && (!SCIPisNegative(scip, SCIPvarGetLbLocal(consdata->x)+consdata->xoffset)
@@ -3416,7 +3416,7 @@ SCIP_RETCODE proposeFeasibleSolution(
       SCIP_CALL( computeViolation(scip, conss[c], newsol, &viol) );  /*lint !e613*/
 
       /* do nothing if constraint is satisfied */
-      if( !SCIPisFeasPositive(scip, consdata->lhsviol) && !SCIPisFeasPositive(scip, consdata->rhsviol) )
+      if( !SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
          continue;
 
       /* @todo could also adjust x while keeping z fixed */
@@ -3431,9 +3431,9 @@ SCIP_RETCODE proposeFeasibleSolution(
       xtermval  = SIGN(xtermval) * consdata->pow(ABS(xtermval), consdata->exponent);
 
       /* if left hand side is violated, try to set z such that lhs is active */
-      if( SCIPisFeasPositive(scip, consdata->lhsviol) )
+      if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) )
       {
-         assert(!SCIPisFeasPositive(scip, consdata->rhsviol)); /* should only have one side violated (otherwise some variable is at infinity) */
+         assert(!SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip))); /* should only have one side violated (otherwise some variable is at infinity) */
 
          zval = (consdata->lhs - xtermval)/consdata->zcoef;
          /* bad luck: z would get value outside of its domain */
@@ -3443,7 +3443,7 @@ SCIP_RETCODE proposeFeasibleSolution(
       }
 
       /* if right hand side is violated, try to set z such that rhs is active */
-      if( SCIPisFeasPositive(scip, consdata->rhsviol) )
+      if( SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
       {
          zval = (consdata->rhs - xtermval)/consdata->zcoef;
          /* bad luck: z would get value outside of its domain */
@@ -5002,7 +5002,7 @@ SCIP_DECL_CONSSEPALP(consSepalpAbspower)
             assert(consdata != NULL);
 
             /* skip feasible constraints */
-            if( !SCIPisFeasPositive(scip, consdata->lhsviol) && !SCIPisFeasPositive(scip, consdata->rhsviol) )
+            if( !SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
                continue;
 
             if( (!SCIPisGT(scip, SCIPvarGetUbGlobal(consdata->x), -consdata->xoffset) && !SCIPisInfinity(scip, -consdata->lhs)) ||
@@ -5181,7 +5181,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpAbspower)
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
-      if( !SCIPisFeasPositive(scip, consdata->lhsviol) && !SCIPisFeasPositive(scip, consdata->rhsviol) )
+      if( !SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
          continue;
 
       nchgbds = 0;
@@ -5204,7 +5204,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpAbspower)
    consdata = SCIPconsGetData(maxviolcons);
    assert(consdata != NULL);
    maxviol = consdata->lhsviol + consdata->rhsviol;
-   assert(!SCIPisFeasZero(scip, maxviol));
+   assert(SCIPisGT(scip, maxviol, SCIPfeastol(scip)));
 
    /* we would like a cut that is efficient enough that it is not redundant in the LP (>feastol)
     * however, if the maximal violation is very small, also the best cut efficacy cannot be large
@@ -5301,7 +5301,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsAbspower)
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
-      if( !SCIPisFeasPositive(scip, consdata->lhsviol) && !SCIPisFeasPositive(scip, consdata->rhsviol) )
+      if( !SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
          continue;
 
       nchgbds = 0;
@@ -5332,7 +5332,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsAbspower)
       assert(consdata != NULL);
       SCIPdebugMessage("cons <%s> violation: %g %g\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
 
-      if( !SCIPisFeasPositive(scip, consdata->lhsviol) && !SCIPisFeasPositive(scip, consdata->rhsviol) )
+      if( !SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
          continue;
 
       SCIPdebugMessage("cons <%s> violation: %g %g\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
@@ -5832,7 +5832,7 @@ SCIP_DECL_CONSCHECK(consCheckAbspower)
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
-      if( SCIPisFeasPositive(scip, consdata->lhsviol) || SCIPisFeasPositive(scip, consdata->rhsviol) )
+      if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) || SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
       {
          *result = SCIP_INFEASIBLE;
 
