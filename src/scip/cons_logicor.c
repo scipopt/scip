@@ -875,8 +875,11 @@ SCIP_RETCODE mergeMultiples(
    SCIP_Bool* negarray;
    SCIP_VAR* var;
    int v;
+   int pos;
+   int nintvars;
 #ifndef NDEBUG
    int nbinvars;
+   int nimplvars;
 #endif
 
    assert(scip != NULL);
@@ -893,7 +896,7 @@ SCIP_RETCODE mergeMultiples(
 
    *redundant = FALSE;
 
-   if( consdata->merged ) 
+   if( consdata->merged )
       return SCIP_OKAY;
 
    if( consdata->nvars <= 1 )
@@ -908,11 +911,13 @@ SCIP_RETCODE mergeMultiples(
 
    assert(consdata->vars != NULL && nvars > 0);
 
+   nintvars = SCIPgetNIntVars(scip);
 #ifndef NDEBUG
    nbinvars = SCIPgetNBinVars(scip);
+   nimplvars = SCIPgetNImplVars(scip);
 #endif
 
-   assert(*nentries >= nbinvars);
+   assert(*nentries >= nbinvars + nimplvars);
 
    /* get active or negation of active variables */
    SCIP_CALL( SCIPgetBinvarRepresentatives(scip, nvars, consdata->vars, vars, negarray) );
@@ -922,13 +927,20 @@ SCIP_RETCODE mergeMultiples(
    {
       assert(negarray[v] ? SCIPvarIsNegated(vars[v]) : TRUE);
       var = negarray[v] ? SCIPvarGetNegationVar(vars[v]) : vars[v];
-      
+
+      pos = SCIPvarGetProbindex(var);
+
       assert(SCIPvarIsActive(var));
-      assert(SCIPvarGetProbindex(var) >= 0);
-      assert(SCIPvarGetProbindex(var) < nbinvars);
+      assert((pos < nbinvars && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY)
+	 || (pos > (nbinvars + nintvars) && pos < (nbinvars + nintvars + nimplvars)
+	    && SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT && SCIPvarIsBinary(var)));
+
+      /* subtract number of integer variables because we only allocated memory for all binary and implicit variables */
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
+	 pos -= nintvars;
 
       /** var is not active yet */
-      (*entries)[SCIPvarGetProbindex(var)] = 0;
+      (*entries)[pos] = 0;
    }
 
    /** check all vars for multiple entries, do necessary backwards loop because deletion only affect rear items */
@@ -936,18 +948,24 @@ SCIP_RETCODE mergeMultiples(
    {
       var = negarray[v] ? SCIPvarGetNegationVar(vars[v]) : vars[v];
 
+      pos = SCIPvarGetProbindex(var);
+
+      /* subtract number of integer variables because we only allocated memory for all binary and implicit variables */
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
+	 pos -= nintvars;
+
       /** if var occurs first time in constraint init entries array */
-      if( (*entries)[SCIPvarGetProbindex(var)] == 0 )
-         (*entries)[SCIPvarGetProbindex(var)] = negarray[v] ? 2 : 1;
+      if( (*entries)[pos] == 0 )
+         (*entries)[pos] = negarray[v] ? 2 : 1;
       /** if var occurs second time in constraint, first time it was not negated */
-      else if( (*entries)[SCIPvarGetProbindex(var)] == 1 )
+      else if( (*entries)[pos] == 1 )
       {
          if( negarray[v] )
          {
             *redundant = TRUE;
             goto TERMINATE;
          }
-         else 
+         else
          {
             SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
          }
@@ -960,7 +978,7 @@ SCIP_RETCODE mergeMultiples(
             *redundant = TRUE;
             goto TERMINATE;
          }
-         else 
+         else
          {
             SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
          }
@@ -2653,7 +2671,7 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   nentries = SCIPgetNBinVars(scip);
+   nentries = SCIPgetNBinVars(scip) + SCIPgetNImplVars(scip);
 
    oldnfixedvars = *nfixedvars;
    oldnchgbds = *nchgbds;
