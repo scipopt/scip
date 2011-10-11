@@ -463,9 +463,9 @@ SCIP_RETCODE mcfnetworkFill(
    SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->nodeflowinverted, mcfnetwork->nnodes) );
    for( v = 0; v < mcfnetwork->nnodes; v++ )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->nodeflowrows[v], mcfnetwork->ncommodities) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->nodeflowscales[v], mcfnetwork->ncommodities) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->nodeflowinverted[v], mcfnetwork->ncommodities) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->nodeflowrows[v], mcfnetwork->ncommodities) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->nodeflowscales[v], mcfnetwork->ncommodities) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->nodeflowinverted[v], mcfnetwork->ncommodities) ); /*lint !e866*/
       for( k = 0; k < mcfnetwork->ncommodities; k++ )
       {
          mcfnetwork->nodeflowrows[v][k] = NULL;
@@ -845,7 +845,7 @@ SCIP_RETCODE extractFlowRows(
    ncols = SCIPgetNLPCols(scip);
 
    /* allocate temporary memory for extraction data */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->flowrowsigns, nrows) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->flowrowsigns, nrows) ); /*lint !e685*/
    SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->flowrowscalars, nrows) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->flowrowscores, nrows) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->flowcands, nrows) );
@@ -1068,7 +1068,7 @@ SCIP_RETCODE extractCapacityRows(
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
 
    /* allocate temporary memory for extraction data */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->capacityrowsigns, nrows) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->capacityrowsigns, nrows) ); /*lint !e685*/
    SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->capacityrowscores, nrows) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->capacitycands, nrows) );
    capacityrowsigns  = mcfdata->capacityrowsigns;
@@ -2109,6 +2109,7 @@ SCIP_RETCODE extractFlow(
       SCIP_Bool newinvertcommodity;
       int nnodes;
 
+      assert(flowcands != NULL);
       r = flowcands[i];
       assert(0 <= r && r < nrows);
       newrow = rows[r];
@@ -2178,6 +2179,7 @@ SCIP_RETCODE extractFlow(
          nnodes = 0;
          for( i = 0; i < mcfdata->nflowcands; i++ )
          {
+            assert(flowcands != NULL);
             r = flowcands[i];
             if( rowcommodity[r] == k )
             {
@@ -2282,6 +2284,7 @@ SCIP_RETCODE extractCapacities(
       int nunassignedflowvars;
       int k;
 
+      assert(capacitycands != NULL);
       r = capacitycands[i];
       assert(0 <= r && r < nrows );
       capacityrow = rows[r];
@@ -2748,6 +2751,7 @@ SCIP_RETCODE extractNodes(
       int basecommodity;
       int i;
 
+      assert(flowcands != NULL);
       r = flowcands[n];
       assert(0 <= r && r < nrows);
 
@@ -3305,6 +3309,7 @@ SCIP_RETCODE findUncapacitatedArcs(
                c = inccols[m];
                assert(0 <= c && c < ncols);
 
+               assert(cols != NULL);
                getIncidentNodes(scip, mcfdata, cols[c], &s, &t);
                assert(s == v || t == v);
 
@@ -3318,7 +3323,7 @@ SCIP_RETCODE findUncapacitatedArcs(
                   ninccols--;
                   m--;
                }
-            }
+            } /*lint --e{850}*/
          }
 
          /* add arcs v -> u */
@@ -3341,11 +3346,13 @@ SCIP_RETCODE findUncapacitatedArcs(
                c = inccols[m];
                assert(0 <= c && c < ncols);
 
+               assert(cols != NULL);
                getIncidentNodes(scip, mcfdata, cols[c], &s, &t);
                assert(s == v || t == v);
 
                if( t == u )
                {
+                  assert(cols != NULL);
                   SCIPdebugMessage("         -> assign arcid:%i to column <%s>\n", arcid, SCIPvarGetName(SCIPcolGetVar(cols[c])));
                   colarcid[c] = arcid;
 
@@ -3354,7 +3361,7 @@ SCIP_RETCODE findUncapacitatedArcs(
                   ninccols--;
                   m--;
                }
-            }
+            } /*lint --e{850}*/
          }
       }
 
@@ -3460,6 +3467,7 @@ SCIP_RETCODE cleanupNetwork(
    {
       int r;
 
+      assert(flowcands != NULL);
       r = flowcands[i];
       assert(0 <= r && r < nrows);
       assert((rownodeid[r] >= 0) == (rowcommodity[r] >= 0));
@@ -3480,6 +3488,7 @@ SCIP_RETCODE cleanupNetwork(
       int r;
       int j;
 
+      assert(capacityrows != NULL);
       r = SCIProwGetLPPos(capacityrows[a]);
       assert(0 <= r && r < nrows);
       assert(rowarcid[r] == a);
@@ -3578,6 +3587,7 @@ SCIP_RETCODE cleanupNetwork(
       {
          int r;
 
+         assert(flowcands != NULL);
          r = flowcands[i];
          assert(0 <= r && r < nrows);
          assert((rownodeid[r] >= 0) == (rowcommodity[r] >= 0));
@@ -3605,6 +3615,8 @@ SCIP_RETCODE cleanupNetwork(
       for( a = 0; a < narcs; a++ )
       {
          int r;
+
+         assert(capacityrows != NULL);
 
          if( arcisused[a] )
          {
@@ -3644,6 +3656,7 @@ SCIP_RETCODE cleanupNetwork(
       for( a = 0; a < narcs; a++ )
       {
          int r;
+         assert(capacityrows != NULL);
          r = SCIProwGetLPPos(capacityrows[a]);
          assert(0 <= r && r < nrows);
          assert(rowarcid[r] == a);
@@ -3673,6 +3686,7 @@ SCIP_RETCODE cleanupNetwork(
          {
             int r;
 
+            assert(flowcands != NULL);
             r = flowcands[i];
             assert(0 <= r && r < nrows);
             assert((rownodeid[r] >= 0) == (rowcommodity[r] >= 0));
@@ -4098,16 +4112,16 @@ SCIP_RETCODE identifyComponent(
    nstacknodes = 1;
    nodevisited[startv] = ONSTACK;
 
-   assert(firstoutarcs != NULL || nstacknodes == 0);
-   assert(firstinarcs != NULL || nstacknodes == 0);
-   assert(nextoutarcs != NULL || nstacknodes == 0);
-   assert(nextinarcs != NULL || nstacknodes == 0);
-
    /* perform depth-first search */
    while( nstacknodes > 0 )
    {
       int v;
       int a;
+
+      assert(firstoutarcs != NULL);
+      assert(firstinarcs != NULL);
+      assert(nextoutarcs != NULL);
+      assert(nextinarcs != NULL);
 
       /* pop first element from stack */
       v = stacknodes[nstacknodes-1];
