@@ -323,3 +323,20 @@
 =opt= uflquad-40-80        347.488613
 
 =opt= bip_cross_min.10.10.10.1 1
+=opt= bip_cross_min.10.10.20.1 11
+=opt= bip_cross_min.10.10.30.1 52
+=opt= bip_cross_min.10.10.40.1 142
+=opt= bip_cross_min.10.10.50.1 276
+=opt= bip_cross_min.10.10.90.1 1387
+=opt= bip_cross_min.12.12.14.1 3
+=opt= bip_cross_min.12.12.28.1 35
+=opt= bip_cross_min.14.14.19.1 4
+=opt= bip_cross_min.16.16.25.1 12
+=opt= bip_cross_min.18.18.32.1 12
+=opt= small-investor-MVO-DAX30-return_0.0010-budget_10000-11000    39.1621419
+=opt= small-investor-MVO-DAX30-return_0.0010-budget_20000-22000   156.604268
+=opt= small-investor-MVO-DAX30-return_0.0040-budget_15000-16500    88.1049348
+=opt= small-investor-MVO-DAX30-return_0.0045-budget_5000-5500       9.79714345
+=opt= small-investor-MVO-DAX30-return_0.0050-budget_5000-5500       9.79714333
+=opt= small-investor-MVO-SNP100-return_0.0030-budget_1000-1100      0.084068386
+=opt= small-investor-MVO-SNP100-return_0.0035-budget_2000-2200      0.263234059

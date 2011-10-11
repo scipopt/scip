@@ -96,6 +96,7 @@ $NAME/check/instances/Indicator/*.lp \
 $NAME/check/instances/MIP/*.mps \
 $NAME/check/instances/MIQCP/*.lp \
 $NAME/check/instances/MIQCP/*.mps \
+$NAME/check/instances/MIQCP/*.pip \
 $NAME/check/instances/PseudoBoolean/*.opb \
 $NAME/check/instances/SOS/*.lp \
 $NAME/check/instances/Semicontinuous/*.lp \

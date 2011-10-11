@@ -19,16 +19,11 @@
 =opt= findRoot                        1.0
 =opt= pcu_0.01                0.167527525
 =opt= pcu_0.1                 0.185145653
+=opt= bip_cross_min.10.10.10.1          1
 =opt= ex1266                         16.3
-=opt= feedtray2                       0.0
 =opt= meanvarx           14.3692321148754
-=opt= sep1                      -510.0810
 =opt= tltr                  48.0666666667
 =opt= util               999.578750235364
-=opt= robust_20_0           -0.0797862095
-=opt= shortfall_20_0           -1.0904897
-=opt= estein5_data1            1.04536857
-=opt= clay0205m                    8092.5
 =opt= semicon1                        1.1
 =opt= meanvarxsc                 14.36918
 =opt= factor-mod-size=9-P0=67-P1=349-P2=67-P3=499-P4=79-P5=347-P6=307-B 3

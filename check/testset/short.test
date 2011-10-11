@@ -15,6 +15,7 @@ instances/MIP/pp08a.mps
 instances/MIP/rgn.mps
 instances/MIP/stein27.mps
 instances/MIP/vpm2.mps
+instances/MIQCP/bip_cross_min.10.10.10.1.pip
 instances/MIQCP/ex1266.mps
 instances/MIQCP/meanvarx.mps
 instances/MIQCP/tltr.mps
