@@ -6089,7 +6089,7 @@ SCIP_RETCODE SCIPincludeConshdlrAbspower(
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/linfeasshift",
          "whether to try to make solutions in check function feasible by shifting the linear variable z",
-         &conshdlrdata->linfeasshift, FALSE, FALSE, NULL, NULL) );
+         &conshdlrdata->linfeasshift, FALSE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/sepainboundsonly",
          "whether to separate linearization cuts only in the variable bounds (does not affect enforcement)",
