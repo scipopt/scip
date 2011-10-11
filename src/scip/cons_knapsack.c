@@ -4765,24 +4765,26 @@ SCIP_RETCODE propagateCons(
                         SCIPdebugMessage(" -> fixing variable <%s> to 1, due to negated clique information\n", SCIPvarGetName(myvars[v]));
                         SCIP_CALL( SCIPinferBinvarCons(scip, myvars[v], TRUE, cons, SCIPvarGetIndex(myvars[i]), &infeasible, &tightened) );
 
-                        /* analyze the infeasibility if conflict analysis is applicable */
-                        if( infeasible && SCIPisConflictAnalysisApplicable(scip))
+                        if( infeasible )
                         {
                            assert( SCIPvarGetUbLocal(myvars[v]) < 0.5 );
 
-                           /* conflict analysis can only be applied in solving stage */
-                           assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
+                           /* analyze the infeasibility if conflict analysis is applicable */
+                           if( SCIPisConflictAnalysisApplicable(scip) )
+                           {
+                              /* conflict analysis can only be applied in solving stage */
+                              assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
 
-                           /* initialize the conflict analysis */
-                           SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+                              /* initialize the conflict analysis */
+                              SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
-                           /* add the two variables which are fixed to zero within a negated clique */
-                           SCIP_CALL( SCIPaddConflictBinvar(scip, myvars[i]) );
-                           SCIP_CALL( SCIPaddConflictBinvar(scip, myvars[v]) );
+                              /* add the two variables which are fixed to zero within a negated clique */
+                              SCIP_CALL( SCIPaddConflictBinvar(scip, myvars[i]) );
+                              SCIP_CALL( SCIPaddConflictBinvar(scip, myvars[v]) );
 
-                           /* start the conflict analysis */
-                           SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
-
+                              /* start the conflict analysis */
+                              SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
+                           }
                            *cutoff = TRUE;
                            break;
                         }
@@ -8781,7 +8783,7 @@ SCIP_DECL_CONSLOCK(consLockKnapsack)
 
 /** variable deletion method of constraint handler */
 static
-SCIP_DECL_CONSDELVARS(consDelVarsKnapsack)
+SCIP_DECL_CONSDELVARS(consDelvarsKnapsack)
 {
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -9040,7 +9042,7 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
          consPropKnapsack, consPresolKnapsack, consRespropKnapsack, consLockKnapsack,
          consActiveKnapsack, consDeactiveKnapsack, 
          consEnableKnapsack, consDisableKnapsack,
-         consDelVarsKnapsack, consPrintKnapsack, consCopyKnapsack, consParseKnapsack,
+         consDelvarsKnapsack, consPrintKnapsack, consCopyKnapsack, consParseKnapsack,
          conshdlrdata) );
 
    if( SCIPfindConshdlr(scip,"linear") != NULL )
