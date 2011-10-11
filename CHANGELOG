@@ -77,6 +77,7 @@ interface:
 - new method SCIPvarMarkNotDeletable() that marks a variable to be non-deleteable (used within SCIP for forbidding deletion of variables contained in solution, LP bases, (multi)aggregation, ...)
 - new method SCIPvarIsDeletable() that returns whether a variable is marked to be deletable (each variable is per default non-deletable)
 - new callback SCIP_DECL_DELVARS for constraint handlers, that is called after variables were marked for deletion and should remove these variables from its constraints
+- new method SCIPpropagateCutoffboundVar() in prop_pseudoobj.h which can be used to propagate the cutoff bound for the given variables
 
 performance improvements:
 - performance improvements in prop_vbounds
