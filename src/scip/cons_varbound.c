@@ -561,6 +561,170 @@ SCIP_RETCODE analyzeConflict(
 }
 
 
+/** sets left hand side of varbound constraint */
+static
+SCIP_RETCODE chgLhs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< linear constraint */
+   SCIP_Real             lhs                 /**< new left hand side */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(!SCIPisInfinity(scip, lhs));
+
+   /* adjust value to not be smaller than -inf */
+   if ( SCIPisInfinity(scip, -lhs) )
+      lhs = -SCIPinfinity(scip);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->var != NULL && consdata->vbdvar != NULL);
+   assert(!SCIPisInfinity(scip, consdata->lhs));
+
+   /* check whether the side is not changed */
+   if( SCIPisEQ(scip, consdata->lhs, lhs) )
+      return SCIP_OKAY;
+
+   assert(consdata->row == NULL);
+
+   /* ensure that rhs >= lhs is satisfied without numerical tolerance */
+   if( SCIPisEQ(scip, lhs, consdata->rhs) )
+      consdata->rhs = lhs;
+
+   /* if necessary, update the rounding locks of variables */
+   if( SCIPconsIsLocked(cons) )
+   {
+      assert(SCIPconsIsTransformed(cons));
+
+      /* the left hand side switched from -infinity to a non-infinite value -> install rounding locks */
+      if( SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip, -lhs) )
+      {
+	 SCIP_CALL( SCIPlockVarCons(scip, consdata->var, cons, TRUE, FALSE) );
+
+	 if( SCIPisPositive(scip, consdata->vbdcoef) )
+	 {
+	    SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, TRUE, FALSE) );
+	 }
+	 else
+	 {
+	    SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, FALSE, TRUE) );
+	 }
+      }
+      /* the left hand side switched from a non-infinite value to -infinity -> remove rounding locks */
+      else if( !SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, -lhs) )
+      {
+	 SCIP_CALL( SCIPunlockVarCons(scip, consdata->var, cons, TRUE, FALSE) );
+	 if( SCIPisPositive(scip, consdata->vbdcoef) )
+	 {
+	    SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, TRUE, FALSE) );
+	 }
+	 else
+	 {
+	    SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, FALSE, TRUE) );
+	 }
+      }
+   }
+
+   /* if left hand side got tighter, we want to do additional presolving on this constraint */
+   if( SCIPisLT(scip, consdata->lhs, lhs) )
+   {
+      consdata->propagated = FALSE;
+      consdata->addvarbounds = FALSE;
+      consdata->tightened = FALSE;
+   }
+
+   consdata->presolved = FALSE;
+   consdata->lhs = lhs;
+   consdata->changed = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** sets right hand side of linear constraint */
+static
+SCIP_RETCODE chgRhs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< linear constraint */
+   SCIP_Real             rhs                 /**< new right hand side */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(!SCIPisInfinity(scip, -rhs));
+
+   /* adjust value to not be larger than inf */
+   if ( SCIPisInfinity(scip, rhs) )
+      rhs = SCIPinfinity(scip);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->var != NULL && consdata->vbdvar != NULL);
+   assert(!SCIPisInfinity(scip, -consdata->rhs));
+
+   /* check whether the side is not changed */
+   if( SCIPisEQ(scip, consdata->rhs, rhs) )
+      return SCIP_OKAY;
+
+   assert(consdata->row == NULL);
+
+   /* ensure that rhs >= lhs is satisfied without numerical tolerance */
+   if( SCIPisEQ(scip, rhs, consdata->lhs) )
+      consdata->lhs = rhs;
+
+   /* if necessary, update the rounding locks of variables */
+   if( SCIPconsIsLocked(cons) )
+   {
+      assert(SCIPconsIsTransformed(cons));
+
+      /* the right hand side switched from infinity to a non-infinite value -> install rounding locks */
+      if( SCIPisInfinity(scip, consdata->rhs) && !SCIPisInfinity(scip, rhs) )
+      {
+	 SCIP_CALL( SCIPlockVarCons(scip, consdata->var, cons, FALSE, TRUE) );
+
+	 if( SCIPisPositive(scip, consdata->vbdcoef) )
+	 {
+	    SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, FALSE, TRUE) );
+	 }
+	 else
+	 {
+	    SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, TRUE, FALSE) );
+	 }
+      }
+      /* the right hand side switched from a non-infinite value to infinity -> remove rounding locks */
+      else if( !SCIPisInfinity(scip, consdata->rhs) && SCIPisInfinity(scip, rhs) )
+      {
+	 SCIP_CALL( SCIPunlockVarCons(scip, consdata->var, cons, FALSE, TRUE) );
+	 if( SCIPisPositive(scip, consdata->vbdcoef) )
+	 {
+	    SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, FALSE, TRUE) );
+	 }
+	 else
+	 {
+	    SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, TRUE, FALSE) );
+	 }
+      }
+   }
+
+   /* if right hand side got tighter, we want to do additional presolving on this constraint */
+   if( SCIPisGT(scip, consdata->rhs, rhs) )
+   {
+      consdata->propagated = FALSE;
+      consdata->addvarbounds = FALSE;
+      consdata->tightened = FALSE;
+   }
+
+   consdata->presolved = FALSE;
+   consdata->rhs = rhs;
+   consdata->changed = TRUE;
+
+   return SCIP_OKAY;
+}
+
 /** propagation method for variable bound constraint */
 static
 SCIP_RETCODE propagateCons(
@@ -906,7 +1070,9 @@ SCIP_RETCODE updateFlags(
    return SCIP_OKAY;
 }
 
-/* check whether one constraints side is redundant to another constraints side */
+/* check whether one constraints side is redundant to another constraints side by calculating extreme values for
+ * variables
+ */
 static
 void checkRedundancySide(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -919,7 +1085,8 @@ void checkRedundancySide(
    SCIP_Bool*            sideequal,          /**< pointer to store if both constraints have the same redundancy on the
                                               *   given side */
    SCIP_Bool*            cons0sidered,       /**< pointer to store if side of constraint 0 is redundant */
-   SCIP_Bool*            cons1sidered        /**< pointer to store if side of constraint 1 is redundant */
+   SCIP_Bool*            cons1sidered,       /**< pointer to store if side of constraint 1 is redundant */
+   SCIP_Bool             islhs               /**< do we check the left or the right hand side */
    )
 {
    SCIP_Real lbvar;
@@ -942,6 +1109,8 @@ void checkRedundancySide(
    SCIP_Real valuex2;
    SCIP_Real valuey1;
    SCIP_Real valuey2;
+   SCIP_Bool* redundant0;
+   SCIP_Bool* redundant1;
 
    assert(scip != NULL);
    assert(var != NULL);
@@ -954,13 +1123,24 @@ void checkRedundancySide(
    *cons1sidered = SCIPisInfinity(scip, REALABS(side1));
    *sideequal = FALSE;
 
+   if( islhs )
+   {
+      redundant0 = cons1sidered;
+      redundant1 = cons0sidered;
+   }
+   else
+   {
+      redundant0 = cons0sidered;
+      redundant1 = cons1sidered;
+   }
+
    lbvar = SCIPvarGetLbGlobal(var);
    ubvar = SCIPvarGetUbGlobal(var);
    lbvbdvar = SCIPvarGetLbGlobal(vbdvar);
    ubvbdvar = SCIPvarGetUbGlobal(vbdvar);
 
-   /* if both constraint have a this side */
-   if( !*cons0sidered && !*cons1sidered )
+   /* if both constraint have this side */
+   if( !*redundant0 && !*redundant1 )
    {
       /* calculate extreme values, which are reached by setting the other variable to their lower/upper bound */
       boundxlb1 = side0 - lbvbdvar*coef0;
@@ -973,8 +1153,16 @@ void checkRedundancySide(
       boundyub1 = (side0 - ubvar)/coef0;
       boundyub2 = (side1 - ubvar)/coef1;
 
-      boundvaluex1 = MIN(boundxlb1, boundxlb2);
-      boundvaluex2 = MIN(boundxub1, boundxub2);
+      if( islhs )
+      {
+	 boundvaluex1 = MAX(boundxlb1, boundxlb2);
+	 boundvaluex2 = MAX(boundxub1, boundxub2);
+      }
+      else
+      {
+	 boundvaluex1 = MIN(boundxlb1, boundxlb2);
+	 boundvaluex2 = MIN(boundxub1, boundxub2);
+      }
 
       /* calculate important values for variables */
       if( SCIPisPositive(scip, coef0) )
@@ -1014,39 +1202,39 @@ void checkRedundancySide(
       valuey1 = (side0 - valuex1)/coef0;
       valuey2 = (side1 - valuex1)/coef1;
 
-      /* determine redundancy of one constraints right hand side */
+      /* determine redundancy of one constraints side */
       if( SCIPisPositive(scip, coef0) )
       {
          if( SCIPisEQ(scip, valuey1, valuey2) )
             *sideequal = TRUE;
          else if( SCIPisLT(scip, valuey1, valuey2) )
-            *cons1sidered = TRUE;
+            *redundant1 = TRUE;
          else
-            *cons0sidered = TRUE;
+            *redundant0 = TRUE;
       }
       else
       {
          if( SCIPisEQ(scip, valuey1, valuey2) )
             *sideequal = TRUE;
          else if( SCIPisLT(scip, valuey1, valuey2) )
-            *cons0sidered = TRUE;
+            *redundant0 = TRUE;
          else
-            *cons1sidered = TRUE;
+            *redundant1 = TRUE;
       }
 
       /* calculate resulting values of variable y by setting x to valuex2 */
       valuey1 = (side0 - valuex2)/coef0;
       valuey2 = (side1 - valuex2)/coef1;
 
-      /* determine redundancy of one constraints right hand side by checking for the first valuex2 */
+      /* determine redundancy of one constraints side by checking for the first valuex2 */
       if( SCIPisPositive(scip, coef0) )
       {
          /* if both constraints are weaker than the other on one value, we have no redundancy */
-         if( (*cons1sidered && SCIPisGT(scip, valuey1, valuey2)) || (*cons0sidered && SCIPisLT(scip, valuey1, valuey2)) )
+         if( (*redundant1 && SCIPisGT(scip, valuey1, valuey2)) || (*redundant0 && SCIPisLT(scip, valuey1, valuey2)) )
          {
             *sideequal = FALSE;
-            *cons0sidered = FALSE;
-            *cons1sidered = FALSE;
+            *redundant0 = FALSE;
+            *redundant1 = FALSE;
             return;
          }
          else if( *sideequal )
@@ -1054,23 +1242,23 @@ void checkRedundancySide(
             if( SCIPisLT(scip, valuey1, valuey2) )
             {
                *sideequal = FALSE;
-               *cons1sidered = TRUE;
+               *redundant1 = TRUE;
             }
             else if( SCIPisGT(scip, valuey1, valuey2) )
             {
                *sideequal = FALSE;
-               *cons0sidered = TRUE;
+               *redundant0 = TRUE;
             }
          }
       }
       else
       {
          /* if both constraints are weaker than the other on one value, we have no redundancy */
-         if( (*cons1sidered && SCIPisLT(scip, valuey1, valuey2)) || (*cons0sidered && SCIPisGT(scip, valuey1, valuey2)) )
+         if( (*redundant1 && SCIPisLT(scip, valuey1, valuey2)) || (*redundant0 && SCIPisGT(scip, valuey1, valuey2)) )
          {
             *sideequal = FALSE;
-            *cons0sidered = FALSE;
-            *cons1sidered = FALSE;
+            *redundant0 = FALSE;
+            *redundant1 = FALSE;
             return;
          }
          else if( *sideequal )
@@ -1078,22 +1266,30 @@ void checkRedundancySide(
             if( SCIPisLT(scip, valuey1, valuey2) )
             {
                *sideequal = FALSE;
-               *cons0sidered = TRUE;
+               *redundant0 = TRUE;
             }
             else if( SCIPisGT(scip, valuey1, valuey2) )
             {
                *sideequal = FALSE;
-               *cons1sidered = TRUE;
+               *redundant1 = TRUE;
             }
          }
       }
-      assert(*sideequal || *cons0sidered || *cons1sidered);
+      assert(*sideequal || *redundant0 || *redundant1);
 
       /* calculate feasability domain values for variable y concerning these both constraints */
       if( SCIPisPositive(scip, coef0) )
       {
-         boundvaluey1 = MIN(boundylb1, boundylb2);
-         boundvaluey2 = MIN(boundyub1, boundyub2);
+	 if( islhs )
+	 {
+	    boundvaluey1 = MAX(boundylb1, boundylb2);
+	    boundvaluey2 = MAX(boundyub1, boundyub2);
+	 }
+	 else
+	 {
+	    boundvaluey1 = MIN(boundylb1, boundylb2);
+	    boundvaluey2 = MIN(boundyub1, boundyub2);
+	 }
 
          valuey1 = MIN(boundvaluey1, ubvbdvar);
          valuey1 = MAX(valuey1, lbvbdvar);
@@ -1107,8 +1303,16 @@ void checkRedundancySide(
       }
       else
       {
-         boundvaluey1 = MAX(boundylb1, boundylb2);
-         boundvaluey2 = MAX(boundyub1, boundyub2);
+	 if( islhs )
+	 {
+	    boundvaluey1 = MIN(boundylb1, boundylb2);
+	    boundvaluey2 = MIN(boundyub1, boundyub2);
+	 }
+	 else
+	 {
+	    boundvaluey1 = MAX(boundylb1, boundylb2);
+	    boundvaluey2 = MAX(boundyub1, boundyub2);
+	 }
 
          valuey1 = MAX(boundvaluey1, lbvbdvar);
          valuey1 = MIN(valuey1, ubvbdvar);
@@ -1126,12 +1330,12 @@ void checkRedundancySide(
       valuex1 = side0 - valuey1*coef0;
       valuex2 = side1 - valuey1*coef1;
 
-      /* determine redundancy of one constraints right hand side by checking for the first valuey1 */
-      if( (*cons1sidered && SCIPisGT(scip, valuex1, valuex2)) || (*cons0sidered && SCIPisLT(scip, valuex1, valuex2)) )
+      /* determine redundancy of one constraints side by checking for the first valuey1 */
+      if( (*redundant1 && SCIPisGT(scip, valuex1, valuex2)) || (*redundant0 && SCIPisLT(scip, valuex1, valuex2)) )
       {
          *sideequal = FALSE;
-         *cons0sidered = FALSE;
-         *cons1sidered = FALSE;
+         *redundant0 = FALSE;
+         *redundant1 = FALSE;
          return;
       }
       if( *sideequal )
@@ -1139,12 +1343,12 @@ void checkRedundancySide(
          if( SCIPisLT(scip, valuex1, valuex2) )
          {
             *sideequal = FALSE;
-            *cons1sidered = TRUE;
+            *redundant1 = TRUE;
          }
          else if( SCIPisGT(scip, valuex1, valuex2) )
          {
             *sideequal = FALSE;
-            *cons0sidered = TRUE;
+            *redundant0 = TRUE;
          }
       }
 
@@ -1152,12 +1356,12 @@ void checkRedundancySide(
       valuex1 = side0 - valuey2*coef0;
       valuex2 = side1 - valuey2*coef1;
 
-      /* determine redundancy of one constraints right hand side by checking for the first valuey1 */
-      if( (*cons1sidered && SCIPisGT(scip, valuex1, valuex2)) || (*cons0sidered && SCIPisLT(scip, valuex1, valuex2)) )
+      /* determine redundancy of one constraints side by checking for the first valuey1 */
+      if( (*redundant1 && SCIPisGT(scip, valuex1, valuex2)) || (*redundant0 && SCIPisLT(scip, valuex1, valuex2)) )
       {
          *sideequal = FALSE;
-         *cons0sidered = FALSE;
-         *cons1sidered = FALSE;
+         *redundant0 = FALSE;
+         *redundant1 = FALSE;
          return;
       }
       if( *sideequal )
@@ -1165,15 +1369,15 @@ void checkRedundancySide(
          if( SCIPisLT(scip, valuex1, valuex2) )
          {
             *sideequal = FALSE;
-            *cons1sidered = TRUE;
+            *redundant1 = TRUE;
          }
          else if( SCIPisGT(scip, valuex1, valuex2) )
          {
             *sideequal = FALSE;
-            *cons0sidered = TRUE;
+            *redundant0 = TRUE;
          }
       }
-      assert(*cons0sidered || *cons1sidered || *sideequal);
+      assert(*redundant0 || *redundant1 || *sideequal);
    }
 }
 
@@ -1270,6 +1474,7 @@ SCIP_RETCODE preprocessConstraintPairs(
          SCIP_Real lhs;
          SCIP_Real rhs;
          SCIP_Real coef;
+         SCIP_Bool deletecons1;
 
          cons1 = sortedconss[s];
 
@@ -1288,6 +1493,9 @@ SCIP_RETCODE preprocessConstraintPairs(
          /* check for equal variables */
          if( consdata0->var != consdata1->var || consdata0->vbdvar != consdata1->vbdvar )
             break;
+
+         /* mark constraint1 for deletion if possible */
+         deletecons1 = TRUE;
 
          lhs = consdata0->lhs;
          rhs = consdata0->rhs;
@@ -1319,6 +1527,7 @@ SCIP_RETCODE preprocessConstraintPairs(
                rhs = MIN(consdata1->rhs, rhs);
                coef = rhs - MIN(consdata1->rhs - consdata1->vbdcoef, consdata0->rhs - coef);
             }
+	    consdata0->propagated = FALSE;
          }
          else if( SCIPisPositive(scip, coef) == SCIPisPositive(scip, consdata1->vbdcoef)
             && ((!SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, -consdata1->lhs))
@@ -1337,10 +1546,10 @@ SCIP_RETCODE preprocessConstraintPairs(
             assert(!SCIPisInfinity(scip, -consdata1->rhs));
 
             /* check if a left hand side of one constraints is redundant */
-            checkRedundancySide(scip, consdata0->var, consdata0->vbdvar, coef, consdata1->vbdcoef, lhs, consdata1->lhs,  &lhsequal, &cons0lhsred, &cons1lhsred);
+            checkRedundancySide(scip, consdata0->var, consdata0->vbdvar, coef, consdata1->vbdcoef, lhs, consdata1->lhs, &lhsequal, &cons0lhsred, &cons1lhsred, TRUE);
 
             /* check if a right hand side of one constraints is redundant */
-            checkRedundancySide(scip, consdata0->var, consdata0->vbdvar, coef, consdata1->vbdcoef, rhs, consdata1->rhs,  &rhsequal, &cons0rhsred, &cons1rhsred);
+            checkRedundancySide(scip, consdata0->var, consdata0->vbdvar, coef, consdata1->vbdcoef, rhs, consdata1->rhs, &rhsequal, &cons0rhsred, &cons1rhsred, FALSE);
 
             /* if cons0 is redundant, update cons1 and delete cons0 */
             if( (lhsequal || cons0lhsred) && (rhsequal || cons0rhsred) )
@@ -1380,33 +1589,47 @@ SCIP_RETCODE preprocessConstraintPairs(
             else if( (lhsequal || cons0lhsred) && !SCIPisInfinity(scip, -lhs) )
             {
                lhs = -SCIPinfinity(scip);
+
+	       /* if right hand side of cons1 is redundant too, set it to infinity */
+	       if( cons1rhsred && !SCIPisInfinity(scip, consdata1->rhs) )
+	       {
+		  SCIP_CALL( chgRhs(scip, cons1, SCIPinfinity(scip)) );
+		  ++(*nchgsides);
+
+		  SCIPdebugMessage("deleted rhs of constraint: ");
+		  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+		  SCIPdebugMessage("due to constraint: ");
+		  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+	       }
+
+               /* later on we cannot not want to delete cons1 */
+               deletecons1 = FALSE;
             }
             /* if right hand side of cons0 is redundant set it to infinity */
             else if( (rhsequal || cons0rhsred) && !SCIPisInfinity(scip, rhs) )
             {
                rhs = SCIPinfinity(scip);
+
+	       /* if left hand side of cons1 is redundant too, set it to -infinity */
+	       if( cons1lhsred && !SCIPisInfinity(scip, -consdata1->lhs) )
+	       {
+		  SCIP_CALL( chgLhs(scip, cons1, -SCIPinfinity(scip)) );
+		  ++(*nchgsides);
+
+		  SCIPdebugMessage("deleted lhs of constraint: ");
+		  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+		  SCIPdebugMessage("due to constraint: ");
+		  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+	       }
+
+               /* later on we cannot not want to delete cons1 */
+               deletecons1 = FALSE;
             }
             /* if left hand side of cons1 is redundant set it to -infinity */
             else if( cons1lhsred && !SCIPisInfinity(scip, -consdata1->lhs) )
             {
-               if( SCIPconsIsLocked(cons1) )
-               {
-                  assert(SCIPconsIsTransformed(cons1));
-
-                  /* remove locks in cons1 */
-                  SCIP_CALL( SCIPunlockVarCons(scip, consdata1->var, cons1, TRUE, FALSE) );
-                  if( SCIPisPositive(scip, consdata1->vbdcoef) )
-                  {
-                     SCIP_CALL( SCIPunlockVarCons(scip, consdata1->vbdvar, cons1, TRUE, FALSE) );
-                  }
-                  else
-                  {
-                     SCIP_CALL( SCIPunlockVarCons(scip, consdata1->vbdvar, cons1, FALSE, TRUE) );
-                  }
-               }
-
-               consdata1->lhs = -SCIPinfinity(scip);
-               consdata1->changed = TRUE;
+	       SCIP_CALL( chgLhs(scip, cons1, -SCIPinfinity(scip)) );
+	       ++(*nchgsides);
 
                SCIPdebugMessage("deleted lhs of constraint: ");
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
@@ -1418,24 +1641,8 @@ SCIP_RETCODE preprocessConstraintPairs(
             /* if right hand side of cons1 is redundant set it to infinity */
             else if( cons1rhsred && !SCIPisInfinity(scip, consdata1->rhs) )
             {
-               if( SCIPconsIsLocked(cons1) )
-               {
-                  assert(SCIPconsIsTransformed(cons1));
-
-                  /* remove locks in cons1 */
-                  SCIP_CALL( SCIPunlockVarCons(scip, consdata1->var, cons1, FALSE, TRUE) );
-                  if( SCIPisPositive(scip, consdata1->vbdcoef) )
-                  {
-                     SCIP_CALL( SCIPunlockVarCons(scip, consdata1->vbdvar, cons1, FALSE, TRUE) );
-                  }
-                  else
-                  {
-                     SCIP_CALL( SCIPunlockVarCons(scip, consdata1->vbdvar, cons1, TRUE, FALSE) );
-                  }
-               }
-
-               consdata1->rhs = SCIPinfinity(scip);
-               consdata1->changed = TRUE;
+	       SCIP_CALL( chgRhs(scip, cons1, SCIPinfinity(scip)) );
+	       ++(*nchgsides);
 
                SCIPdebugMessage("deleted rhs of constraint: ");
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
@@ -1544,101 +1751,24 @@ SCIP_RETCODE preprocessConstraintPairs(
             /* mark to add new varbound information */
             consdata0->addvarbounds = FALSE;
 	    consdata0->tightened = FALSE;
+	    consdata0->propagated = FALSE;
+	    consdata0->presolved = FALSE;
+	    consdata0->changed = FALSE;
+
+	    consdata0->vbdcoef = coef;
          }
-         consdata0->vbdcoef = coef;
 
          /* update lhs and rhs of cons0 */
-
-         /* if left hand side changed from -infinity to a 'normal' value update locks */
-         if( SCIPconsIsLocked(cons0) )
-         {
-            assert(SCIPconsIsTransformed(cons0));
-
-            /* if we got a real left hand side */
-            if( SCIPisInfinity(scip, -consdata0->lhs) && !SCIPisInfinity(scip, -lhs) )
-            {
-               SCIP_CALL( SCIPlockVarCons(scip, consdata0->var, cons0, TRUE, FALSE) );
-
-               if( SCIPisPositive(scip, consdata0->vbdcoef) )
-               {
-                  SCIP_CALL( SCIPlockVarCons(scip, consdata0->vbdvar, cons0, TRUE, FALSE) );
-               }
-               else
-               {
-                  SCIP_CALL( SCIPlockVarCons(scip, consdata0->vbdvar, cons0, FALSE, TRUE) );
-               }
-            }
-            /* if we delete the left hand side */
-            else if( !SCIPisInfinity(scip, -consdata0->lhs) && SCIPisInfinity(scip, -lhs) )
-            {
-
-               SCIP_CALL( SCIPunlockVarCons(scip, consdata0->var, cons0, TRUE, FALSE) );
-
-               if( SCIPisPositive(scip, consdata0->vbdcoef) )
-               {
-                  SCIP_CALL( SCIPunlockVarCons(scip, consdata0->vbdvar, cons0, TRUE, FALSE) );
-               }
-               else
-               {
-                  SCIP_CALL( SCIPunlockVarCons(scip, consdata0->vbdvar, cons0, FALSE, TRUE) );
-               }
-            }
-
-            /* if we got a real right hand side */
-            if( SCIPisInfinity(scip, consdata0->rhs) && !SCIPisInfinity(scip, rhs) )
-            {
-               SCIP_CALL( SCIPlockVarCons(scip, consdata0->var, cons0, FALSE, TRUE) );
-
-               if( SCIPisPositive(scip, consdata0->vbdcoef) )
-               {
-                  SCIP_CALL( SCIPlockVarCons(scip, consdata0->vbdvar, cons0, FALSE, TRUE) );
-               }
-               else
-               {
-                  SCIP_CALL( SCIPlockVarCons(scip, consdata0->vbdvar, cons0, TRUE, FALSE) );
-               }
-            }
-            /* if we delete the right hand side, we need to unlock variables */
-            else if( !SCIPisInfinity(scip, consdata0->rhs) && SCIPisInfinity(scip, rhs) )
-            {
-               SCIP_CALL( SCIPunlockVarCons(scip, consdata0->var, cons0, FALSE, TRUE) );
-
-               if( SCIPisPositive(scip, consdata0->vbdcoef) )
-               {
-                  SCIP_CALL( SCIPunlockVarCons(scip, consdata0->vbdvar, cons0, FALSE, TRUE) );
-               }
-               else
-               {
-                  SCIP_CALL( SCIPunlockVarCons(scip, consdata0->vbdvar, cons0, TRUE, FALSE) );
-               }
-            }
-         }
-
-         /* now change the sides */
          if( !SCIPisEQ(scip, consdata0->lhs, lhs) )
          {
-            ++(*nchgsides);
-            if( SCIPisInfinity(scip, -consdata0->lhs) || SCIPisInfinity(scip, -lhs) )
-               consdata0->changed = TRUE;
-
-            /* mark to add new varbound information */
-            consdata0->addvarbounds = FALSE;
-	    if( !SCIPisInfinity(scip, -lhs) )
-	       consdata0->tightened = FALSE;
-         }
+	    SCIP_CALL( chgLhs(scip, cons0, lhs) );
+	    ++(*nchgsides);
+	 }
          if( !SCIPisEQ(scip, consdata0->rhs, rhs) )
          {
-            ++(*nchgsides);
-            if( SCIPisInfinity(scip, consdata0->rhs) || SCIPisInfinity(scip, rhs) )
-               consdata0->changed = TRUE;
-
-            /* mark to add new varbound information */
-            consdata0->addvarbounds = FALSE;
-	    if( !SCIPisInfinity(scip, rhs) )
-	       consdata0->tightened = FALSE;
-         }
-         consdata0->lhs = lhs;
-         consdata0->rhs = rhs;
+	    SCIP_CALL( chgRhs(scip, cons0, rhs) );
+	    ++(*nchgsides);
+	 }
 
          /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
          SCIP_CALL( updateFlags(scip, cons0, cons1) );
@@ -1646,9 +1776,13 @@ SCIP_RETCODE preprocessConstraintPairs(
          SCIPdebugMessage("lead to new constraint: ");
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
 
-	 /* delete cons1 */
-	 SCIP_CALL( SCIPdelCons(scip, cons1) );
-	 ++(*ndelconss);
+	 /* if cons1 is still marked for deletion, delete it */
+         if( deletecons1 )
+         {
+	    /* delete cons1 */
+	    SCIP_CALL( SCIPdelCons(scip, cons1) );
+	    ++(*ndelconss);
+	 }
 
          assert(SCIPconsIsActive(cons0));
       }
@@ -2379,6 +2513,10 @@ SCIP_RETCODE tightenCoefs(
          SCIPdebugMessage("tighten binary VLB <%s>[%.15g,%.15g] %+.15g<%s> >= %.15g to <%s> %+.15g<%s> >= %.15g\n",
             SCIPvarGetName(consdata->var), xlb, xub, consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->lhs,
             SCIPvarGetName(consdata->var), consdata->lhs - xlb, SCIPvarGetName(consdata->vbdvar), consdata->lhs);
+
+	 /* we cnnot allow that the coefficient changes the sign because of the rounding locks */
+	 assert(consdata->vbdcoef * (consdata->lhs - xlb) > 0);
+
          consdata->vbdcoef = consdata->lhs - xlb;
          (*nchgcoefs)++;
       }
@@ -2391,6 +2529,10 @@ SCIP_RETCODE tightenCoefs(
          SCIPdebugMessage("tighten binary VLB <%s>[%.15g,%.15g] %+.15g<%s> >= %.15g to <%s> %+.15g<%s> >= %.15g\n",
             SCIPvarGetName(consdata->var), xlb, xub, consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->lhs,
             SCIPvarGetName(consdata->var), consdata->vbdcoef - consdata->lhs + xlb, SCIPvarGetName(consdata->vbdvar), xlb);
+
+	 /* we cnnot allow that the coefficient changes the sign because of the rounding locks */
+	 assert(consdata->vbdcoef * (consdata->vbdcoef - consdata->lhs + xlb) > 0);
+
          consdata->vbdcoef = consdata->vbdcoef - consdata->lhs + xlb;
          consdata->lhs = xlb;
          (*nchgcoefs)++;
@@ -2409,6 +2551,10 @@ SCIP_RETCODE tightenCoefs(
          SCIPdebugMessage("tighten binary VUB <%s>[%.15g,%.15g] %+.15g<%s> <= %.15g to <%s> %+.15g<%s> <= %.15g\n",
             SCIPvarGetName(consdata->var), xlb, xub, consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->rhs,
             SCIPvarGetName(consdata->var), consdata->rhs - xub, SCIPvarGetName(consdata->vbdvar), consdata->rhs);
+
+	 /* we cnnot allow that the coefficient changes the sign because of the rounding locks */
+	 assert(consdata->vbdcoef * (consdata->rhs - xub) > 0);
+
          consdata->vbdcoef = consdata->rhs - xub;
          (*nchgcoefs)++;
       }
@@ -2421,6 +2567,10 @@ SCIP_RETCODE tightenCoefs(
          SCIPdebugMessage("tighten binary VUB <%s>[%.15g,%.15g] %+.15g<%s> <= %.15g to <%s> %+.15g<%s> <= %.15g\n",
             SCIPvarGetName(consdata->var), xlb, xub, consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->rhs,
             SCIPvarGetName(consdata->var), consdata->vbdcoef - consdata->rhs + xub, SCIPvarGetName(consdata->vbdvar), xub);
+
+	 /* we cnnot allow that the coefficient changes the sign because of the rounding locks */
+	 assert(consdata->vbdcoef * (consdata->vbdcoef - consdata->rhs + xub) > 0);
+
          consdata->vbdcoef = consdata->vbdcoef - consdata->rhs + xub;
          consdata->rhs = xub;
          (*nchgcoefs)++;
@@ -2829,6 +2979,7 @@ SCIP_DECL_CONSPROP(consPropVarbound)
 static
 SCIP_DECL_CONSPRESOL(consPresolVarbound)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_Bool cutoff;
    int oldnchgbds;
@@ -2836,6 +2987,15 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
    int oldnchgcoefs;
    int oldnchgsides;
    int i;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(result != NULL);
+
+   /* get constraint handler data */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    cutoff = FALSE;
    oldnchgbds = *nchgbds;
@@ -2984,8 +3144,11 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
       /* for varbound constraint with two integer variables make coefficients integral */
       SCIP_CALL( prettifyConss(scip, conss, nconss, nchgcoefs, nchgsides) );
 
-      /** preprocess pairs of variable bound constraints */
-      SCIP_CALL( preprocessConstraintPairs(scip, conss, nconss, &cutoff, nchgbds, ndelconss, nchgcoefs, nchgsides) );
+      if( conshdlrdata->presolpairwise )
+      {
+	 /* preprocess pairs of variable bound constraints */
+	 SCIP_CALL( preprocessConstraintPairs(scip, conss, nconss, &cutoff, nchgbds, ndelconss, nchgcoefs, nchgsides) );
+      }
    }
 
    /* return the correct result code */
@@ -3072,7 +3235,7 @@ SCIP_DECL_CONSLOCK(consLockVarbound)
  *  varbound constraints are not modifiable and must have exactly two variables,
  *  so is is also not allowed to delete variables from them
  */
-#define consDelVarsVarbound NULL
+#define consDelvarsVarbound NULL
 
 
 /** constraint display method of constraint handler */
@@ -3328,7 +3491,7 @@ SCIP_RETCODE SCIPincludeConshdlrVarbound(
          consPropVarbound, consPresolVarbound, consRespropVarbound, consLockVarbound,
          consActiveVarbound, consDeactiveVarbound, 
          consEnableVarbound, consDisableVarbound,
-         consDelVarsVarbound, consPrintVarbound, consCopyVarbound, consParseVarbound,
+         consDelvarsVarbound, consPrintVarbound, consCopyVarbound, consParseVarbound,
          conshdlrdata) );
 
    if( SCIPfindConshdlr(scip,"linear") != NULL )

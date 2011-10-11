@@ -500,9 +500,9 @@ SCIP_RETCODE consdataFree(
    for( v = 0; v < (*consdata)->nvars; v++ )
    {
       assert((*consdata)->vars[v] != NULL);
-      SCIPreleaseVar(scip, &((*consdata)->vars[v]));
+      SCIP_CALL( SCIPreleaseVar(scip, &((*consdata)->vars[v])) );
    }
-   SCIPreleaseVar(scip, &((*consdata)->resvar));
+   SCIP_CALL( SCIPreleaseVar(scip, &((*consdata)->resvar)) );
 
 
    SCIPfreeBlockMemoryArray(scip, &(*consdata)->vars, (*consdata)->varssize);
@@ -639,7 +639,7 @@ SCIP_RETCODE delCoefPos(
    assert(pos != consdata->watchedvar2);
 
    /* release variable */
-   SCIPreleaseVar(scip, &(consdata->vars[pos]));
+   SCIP_CALL( SCIPreleaseVar(scip, &(consdata->vars[pos])) );
 
    /* move the last variable to the free slot */
    consdata->vars[pos] = consdata->vars[consdata->nvars-1];
@@ -2051,7 +2051,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAnd)
          SCIP_CALL( SCIPdebugGetSolVal(scip, vars[c], &varval) );
          debugval = debugval && (varval > 0.5);
       }
-      SCIP_CALL( SCIPdebugAddSolVal(var, debugval ? 1.0 : 0.0) );
+      SCIP_CALL( SCIPdebugAddSolVal(scip, var, debugval ? 1.0 : 0.0) );
    }
 #endif
 
@@ -2762,7 +2762,7 @@ SCIP_DECL_CONSLOCK(consLockAnd)
 
 
 /** variable deletion method of constraint handler */
-#define consDelVarsAnd NULL
+#define consDelvarsAnd NULL
 
 
 /** constraint display method of constraint handler */
@@ -2961,7 +2961,7 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
          consPropAnd, consPresolAnd, consRespropAnd, consLockAnd,
          consActiveAnd, consDeactiveAnd, 
          consEnableAnd, consDisableAnd,
-         consDelVarsAnd, consPrintAnd, consCopyAnd, consParseAnd,
+         consDelvarsAnd, consPrintAnd, consCopyAnd, consParseAnd,
          conshdlrdata) );
 
    /* add and constraint handler parameters */

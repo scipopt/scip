@@ -132,8 +132,8 @@ SCIP_ROUNDMODE SCIPintervalGetRoundingMode(
 /** Microsoft rounding mode settings */
 #define SCIP_ROUND_DOWNWARDS RC_DOWN         /**< round always down */
 #define SCIP_ROUND_UPWARDS   RC_UP           /**< round always up */
-#define SCIP_ROUND_NEAREST   RC_NEAREST      /**< round always to nearest */
-#define SCIP_ROUND_ZERO      RC_TRUNCATE     /**< round always towards zero */
+#define SCIP_ROUND_NEAREST   RC_NEAR         /**< round always to nearest */
+#define SCIP_ROUND_ZERO      RC_CHOP         /**< round always towards zero */
 
 /** returns whether rounding mode control is available */
 SCIP_Bool SCIPintervalHasRoundingControl(
@@ -239,6 +239,11 @@ double negate(
          }
    return x;
 }
+
+/* for the MS compiler, the function nextafter is named _nextafter */
+#ifndef NO_NEXTAFTER
+#define nextafter(x,y) _nextafter(x,y)
+#endif
 
 #else /* unknown compiler */
 
@@ -2148,8 +2153,8 @@ void SCIPintervalPowerScalarInverse(
    {
       SCIPintervalSetBounds(&tmp, MAX(-image.sup, 0.0), -image.inf);
       SCIPintervalPower(infinity, &tmp, tmp, exprecip);
-      SCIPintervalSetBounds(&tmp, MAX(basedomain.inf, -tmp.sup), MIN(basedomain.sup, -tmp.inf));
-
+      SCIPintervalSetBounds(&tmp, -tmp.sup, -tmp.inf);
+      SCIPintervalIntersect(&tmp, basedomain, tmp);
       SCIPintervalUnify(resultant, *resultant, tmp);
    }
 }
@@ -3304,8 +3309,11 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
       {
          SCIPintervalSet(&lincoef, -bx);
          SCIPintervalSolveUnivariateQuadExpressionPositive(infinity, &neg, sqrcoef, lincoef, rhs);
-         SCIPintervalSetBounds(&neg, -neg.sup, -neg.inf);
-         SCIPintervalIntersect(&neg, neg, xbnds);
+         if( !SCIPintervalIsEmpty(neg) )
+         {
+            SCIPintervalSetBounds(&neg, -neg.sup, -neg.inf);
+            SCIPintervalIntersect(&neg, neg, xbnds);
+         }
       }
       else
          SCIPintervalSetEmpty(&neg);

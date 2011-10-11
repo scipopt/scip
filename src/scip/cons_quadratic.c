@@ -69,6 +69,7 @@
 
 #define MAXDNOM                 10000LL /**< maximal denominator for simple rational fixed values */
 #define NONLINCONSUPGD_PRIORITY   40000 /**< priority of upgrading nonlinear constraints */
+#define INITLPMAXVARVAL          1000.0 /**< maximal absolute value of variable for still generating a linearization cut at that point in initlp */
 
 /* Activating this define enables reformulation of bilinear terms x*y with implications from x to y into linear terms.
  * However, implications are not enforced by SCIP. Thus, if, e.g., the used implication was derived from this constraint and we then reformulate the constraint,
@@ -3151,7 +3152,7 @@ SCIP_RETCODE presolveTryAddAND(
          SCIP_Real var1val;
          SCIP_CALL( SCIPdebugGetSolVal(scip, vars[0], &var0val) );
          SCIP_CALL( SCIPdebugGetSolVal(scip, vars[1], &var1val) );
-         SCIP_CALL( SCIPdebugAddSolVal(auxvar, var0val * var1val) );
+         SCIP_CALL( SCIPdebugAddSolVal(scip, auxvar, var0val * var1val) );
       }
 #endif
 
@@ -3436,7 +3437,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
                SCIP_Real var1val;
                SCIP_CALL( SCIPdebugGetSolVal(scip, xvars[0], &var0val) );
                SCIP_CALL( SCIPdebugGetSolVal(scip, y, &var1val) );
-               SCIP_CALL( SCIPdebugAddSolVal(auxvar, var0val * var1val) );
+               SCIP_CALL( SCIPdebugAddSolVal(scip, auxvar, var0val * var1val) );
             }
 #endif
 
@@ -3524,7 +3525,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
                SCIP_CALL( SCIPdebugGetSolVal(scip, y, &varval) );
                if( SCIPisZero(scip, varval) )
                {
-                  SCIP_CALL( SCIPdebugAddSolVal(auxvar, 0.0) );
+                  SCIP_CALL( SCIPdebugAddSolVal(scip, auxvar, 0.0) );
                }
                else
                {
@@ -3536,7 +3537,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
                      SCIP_CALL( SCIPdebugGetSolVal(scip, xvars[k], &varval) );
                      debugval += xcoef[k] * varval;
                   }
-                  SCIP_CALL( SCIPdebugAddSolVal(auxvar, debugval) );
+                  SCIP_CALL( SCIPdebugAddSolVal(scip, auxvar, debugval) );
                }
             }
 #endif
@@ -3920,12 +3921,12 @@ SCIP_RETCODE presolveDisaggregate(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( consdata->nquadvars <= 1 )
-      return SCIP_OKAY;
-
    /* make sure there are no quadratic variables without coefficients */
    SCIP_CALL( mergeAndCleanBilinearTerms(scip, cons) );
    SCIP_CALL( mergeAndCleanQuadVarTerms(scip, cons) );
+
+   if( consdata->nquadvars <= 1 )
+      return SCIP_OKAY;
 
    /* sort quadratic variable terms here, so we can later search in it without reordering the array */
    SCIP_CALL( consdataSortQuadVarTerms(scip, consdata) );
@@ -7215,7 +7216,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
                gap = SCIPinfinity(scip);
             else
                gap = (xval-xlb)*(xub-xval)/(1+2*ABS(xval));
-            assert(!SCIPisNegative(scip, gap));
+            assert(!SCIPisFeasNegative(scip, gap));
             SCIP_CALL( SCIPaddExternBranchCand(scip, x, MAX(gap, 0.0), SCIP_INVALID) );
             ++*nnotify;
          }
@@ -7271,7 +7272,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
                   gap = -(xval*yval - xval*yub - yval*xlb + xlb*yub) / (1+sqrt(xval*xval + yval*yval));
             }
 
-            assert(!SCIPisNegative(scip, gap));
+            assert(!SCIPisFeasNegative(scip, gap));
             if( gap < 0.0 )
                gap = 0.0;
          }
@@ -9385,6 +9386,11 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
                lb = SCIPvarGetLbGlobal(var);
                ub = SCIPvarGetUbGlobal(var);
 
+               if( ub > -INITLPMAXVARVAL )
+                  lb = MAX(lb, -INITLPMAXVARVAL);
+               if( lb <  INITLPMAXVARVAL )
+                  ub = MIN(ub,  INITLPMAXVARVAL);
+
                /* make bounds finite */
                if( SCIPisInfinity(scip, -lb) )
                   lb = MIN(-10.0, ub - 0.1*REALABS(ub));  /*lint !e666 */
@@ -10299,7 +10305,7 @@ SCIP_DECL_CONSDISABLE(consDisableQuadratic)
 
 
 /** variable deletion method of constraint handler */
-#define consDelVarsQuadratic NULL
+#define consDelvarsQuadratic NULL
 
 
 /** constraint display method of constraint handler */
@@ -10871,7 +10877,7 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          consPropQuadratic, consPresolQuadratic, consRespropQuadratic, consLockQuadratic,
          consActiveQuadratic, consDeactiveQuadratic,
          consEnableQuadratic, consDisableQuadratic,
-         consDelVarsQuadratic, consPrintQuadratic, consCopyQuadratic, consParseQuadratic,
+         consDelvarsQuadratic, consPrintQuadratic, consCopyQuadratic, consParseQuadratic,
          conshdlrdata) );
 
    /* add quadratic constraint handler parameters */

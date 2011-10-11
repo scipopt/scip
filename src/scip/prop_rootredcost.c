@@ -200,7 +200,7 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
          rootsol = SCIPvarGetRootSol(var);
          oldlb = SCIPvarGetLbGlobal(var);
          oldub = SCIPvarGetUbGlobal(var);
-         assert(SCIPisLE(scip, rootsol, SCIPvarGetLbGlobal(var))); /* lb might have been increased in the meantime */
+         assert(SCIPisFeasLE(scip, rootsol, SCIPvarGetLbGlobal(var))); /* lb might have been increased in the meantime */
 
          /* calculate reduced cost based bound */
          newub = (cutoffbound - lpobjval) / redcost + rootsol;

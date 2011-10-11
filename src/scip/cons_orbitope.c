@@ -1996,7 +1996,7 @@ SCIP_DECL_CONSLOCK(consLockOrbitope)
 #define consDisableOrbitope NULL
 
 /** variable deletion method of constraint handler */
-#define consDelVarsOrbitope NULL
+#define consDelvarsOrbitope NULL
 
 /** constraint display method of constraint handler */
 static
@@ -2264,7 +2264,7 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
          consSepalpOrbitope, consSepasolOrbitope, consEnfolpOrbitope, consEnfopsOrbitope, consCheckOrbitope,
          consPropOrbitope, consPresolOrbitope, consRespropOrbitope, consLockOrbitope,
          consActiveOrbitope, consDeactiveOrbitope, consEnableOrbitope, consDisableOrbitope,
-         consDelVarsOrbitope, consPrintOrbitope, consCopyOrbitope, consParseOrbitope, conshdlrdata) );
+         consDelvarsOrbitope, consPrintOrbitope, consCopyOrbitope, consParseOrbitope, conshdlrdata) );
 
    /* add orbitope constraint handler parameters */
 

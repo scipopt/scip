@@ -8088,6 +8088,7 @@ SCIP_RETCODE fullDualPresolve(
    int* nlocksdown;
    int* nlocksup;
    SCIP_Bool* isimplint;
+   SCIP_VAR** origvars;
    SCIP_VAR** vars;
    SCIP_VAR** conscontvars;
    int nvars;
@@ -8123,7 +8124,7 @@ SCIP_RETCODE fullDualPresolve(
 
    /* get active variables */
    nvars = SCIPgetNVars(scip);
-   vars = SCIPgetVars(scip);
+   origvars = SCIPgetVars(scip);
 
    /* if the problem is a pure binary program, nothing can be achieved by full dual presolve */
    nbinvars = SCIPgetNBinVars(scip);
@@ -8135,8 +8136,8 @@ SCIP_RETCODE fullDualPresolve(
    nintvars = nvars - ncontvars;
 
    /* copy the variable array since this array might change during the curse of this algorithm */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, &(vars[nbinvars]), nvars) );
    nvars = nvars - nbinvars;
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, &(origvars[nbinvars]), nvars) );
 
    /* allocate temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &redlb, nvars) );
@@ -9941,7 +9942,7 @@ SCIP_DECL_CONSLOCK(consLockLinear)
 
 /** variable deletion method of constraint handler */
 static
-SCIP_DECL_CONSDELVARS(consDelVarsLinear)
+SCIP_DECL_CONSDELVARS(consDelvarsLinear)
 {
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -10502,7 +10503,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          consSepalpLinear, consSepasolLinear, consEnfolpLinear, consEnfopsLinear, consCheckLinear,
          consPropLinear, consPresolLinear, consRespropLinear, consLockLinear,
          consActiveLinear, consDeactiveLinear,
-         consEnableLinear, consDisableLinear, consDelVarsLinear,
+         consEnableLinear, consDisableLinear, consDelvarsLinear,
          consPrintLinear, consCopyLinear, consParseLinear,
          conshdlrdata) );
 

@@ -24,6 +24,18 @@
 #include <assert.h>
 #include <math.h>
 
+/* for the MS compiler, the function finite(a) is named _finite(a) */
+#ifdef _MSC_VER
+#define finite(a) _finite(a)
+#endif
+
+/* on SunOS, the function finite(a) is declared in ieeefp.h
+ * but this header does not exist on every system, so include only if __sun is defined
+ */
+#ifdef __sun
+#include <ieeefp.h>
+#endif
+
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_linear.h"
 #include "scip/heur_trysol.h"
@@ -49,7 +61,8 @@
 #define CONSHDLR_PROP_TIMING SCIP_PROPTIMING_BEFORELP
 
 #define INTERVALINFTY             1E+43 /**< value for infinity in interval operations */
-#define BOUNDTIGHTENING_MINSTRENGTH 0.05
+#define BOUNDTIGHTENING_MINSTRENGTH 0.05/**< minimal required bound tightening strength in expression graph domain tightening for propagating bound change */
+#define INITLPMAXVARVAL          1000.0 /**< maximal absolute value of variable for still generating a linearization cut at that point in initlp */
 
 /*
  * Data structures
@@ -132,7 +145,7 @@ struct SCIP_ConshdlrData
    int                   maxproprounds;      /**< limit on number of propagation rounds for a single constraint within one round of SCIP propagation */
    SCIP_Bool             reformulate;        /**< whether to reformulate expression graph */
    int                   maxexpansionexponent;/**< maximal exponent where still expanding non-monomial polynomials in expression simplification */
-   SCIP_Real             sepanlpmincont;            /**< minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation */
+   SCIP_Real             sepanlpmincont;     /**< minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation */
 
    SCIP_HEUR*            subnlpheur;         /**< a pointer to the subNLP heuristic, if available */
    SCIP_HEUR*            trysolheur;         /**< a pointer to the TRYSOL heuristic, if available */
@@ -2112,7 +2125,7 @@ SCIP_RETCODE reformNode2Var(
 #ifdef SCIP_DEBUG_SOLUTION
    /* store debug sol value of node as value for auxvar in debug solution and as value for auxvarnode */
    SCIPexprgraphSetVarNodeValue(auxvarnode, SCIPexprgraphGetNodeVal(node));
-   SCIP_CALL( SCIPdebugAddSolVal(auxvar, SCIPexprgraphGetNodeVal(node)) );
+   SCIP_CALL( SCIPdebugAddSolVal(scip, auxvar, SCIPexprgraphGetNodeVal(node)) );
 #endif
 
    if( donotmultaggr )
@@ -2254,7 +2267,7 @@ SCIP_RETCODE reformMonomial(
          SCIP_Real debugval;
          debugval = pow(SCIPexprgraphGetNodeVal(factors[0]), exponents[0]);
          SCIPexprgraphSetVarNodeValue(*resultnode, debugval);
-         SCIP_CALL( SCIPdebugAddSolVal(auxvar, debugval) );
+         SCIP_CALL( SCIPdebugAddSolVal(scip, auxvar, debugval) );
       }
 #endif
 
@@ -2333,7 +2346,7 @@ SCIP_RETCODE reformMonomial(
 
 #ifdef SCIP_DEBUG_SOLUTION
          SCIPexprgraphSetVarNodeValue(*resultnode, SCIPexprgraphGetNodeVal(expnode));
-         SCIP_CALL( SCIPdebugAddSolVal(auxvar, SCIPexprgraphGetNodeVal(expnode)) );
+         SCIP_CALL( SCIPdebugAddSolVal(scip, auxvar, SCIPexprgraphGetNodeVal(expnode)) );
 #endif
 
          /* add new constraint resultnode(=auxvar) = expnode */
@@ -2426,7 +2439,7 @@ SCIP_RETCODE reformMonomial(
 
 #ifdef SCIP_DEBUG_SOLUTION
          SCIPexprgraphSetVarNodeValue(*resultnode, SCIPexprgraphGetNodeVal(productnode));
-         SCIP_CALL( SCIPdebugAddSolVal(auxvar, SCIPexprgraphGetNodeVal(productnode)) );
+         SCIP_CALL( SCIPdebugAddSolVal(scip, auxvar, SCIPexprgraphGetNodeVal(productnode)) );
 #endif
 
          /* add new constraint resultnode(= auxvar) == left * right */
@@ -2523,6 +2536,13 @@ SCIP_RETCODE reformulate(
       {
          node = SCIPexprgraphGetNodes(exprgraph)[d][i];
          assert(node != NULL);
+
+         /* skip disabled nodes, they should be removed soon */
+         if( !SCIPexprgraphIsNodeEnabled(node) )
+         {
+            ++i;
+            continue;
+         }
 
          /* make sure bounds and curvature of node are uptodate */
          SCIP_CALL( SCIPexprgraphUpdateNodeBoundsCurvature(node, INTERVALINFTY, BOUNDTIGHTENING_MINSTRENGTH, TRUE) );
@@ -2681,7 +2701,7 @@ SCIP_RETCODE reformulate(
                SCIP_Real debugval;
                debugval = SCIPexprgraphGetNodeVal(children[0]) / SCIPexprgraphGetNodeVal(children[1]);
                SCIPexprgraphSetVarNodeValue(auxvarnode, debugval);
-               SCIP_CALL( SCIPdebugAddSolVal(auxvar, debugval) );
+               SCIP_CALL( SCIPdebugAddSolVal(scip, auxvar, debugval) );
             }
 #endif
 
@@ -3488,7 +3508,7 @@ SCIP_RETCODE computeViolation(
          SCIPfreeBufferArray(scip, &x);
       }
 
-      if( SCIPisInfinity(scip, REALABS(val)) || !isfinite(val) )
+      if( SCIPisInfinity(scip, REALABS(val)) || !finite(val) )
       {
          consdata->activity = SCIPinfinity(scip);
          if( !SCIPisInfinity(scip, -consdata->lhs) )
@@ -3509,7 +3529,7 @@ SCIP_RETCODE computeViolation(
       val = SCIPexprgraphGetNodeVal(consdata->exprgraphnode);
       assert(val != SCIP_INVALID);  /*lint !e777*/
 
-      if( !isfinite(val) || SCIPisInfinity(scip, REALABS(val)) )
+      if( !finite(val) || SCIPisInfinity(scip, REALABS(val)) )
       {
          consdata->activity = SCIPinfinity(scip);
          if( !SCIPisInfinity(scip, -consdata->lhs) )
@@ -3667,14 +3687,14 @@ SCIP_RETCODE addLinearization(
    {
       /* get value and gradient */
       SCIP_CALL( SCIPexprintGrad(exprint, exprtree, x, newx, &val, grad) );
-      if( isfinite(val) && !SCIPisInfinity(scip, REALABS(val)) )
+      if( finite(val) && !SCIPisInfinity(scip, REALABS(val)) )
       {
          val *= treecoef;
          /* check gradient entries and compute constant f(refx) - grad * refx */
          constant = val;
          for( i = 0; i < nvars; ++i )
          {
-            if( !isfinite(grad[i]) || SCIPisInfinity(scip, grad[i]) || SCIPisInfinity(scip, -grad[i]) )
+            if( !finite(grad[i]) || SCIPisInfinity(scip, grad[i]) || SCIPisInfinity(scip, -grad[i]) )
                break;
 
             grad[i] *= treecoef;
@@ -3825,7 +3845,7 @@ SCIP_RETCODE addConcaveEstimatorUnivariate(
    assert(SCIPisLT(scip, xlb, xub));
 
    SCIP_CALL( SCIPexprtreeEval(exprtree, &xlb, &vallb) );
-   if( !isfinite(vallb) || SCIPisInfinity(scip, REALABS(vallb)) )
+   if( !finite(vallb) || SCIPisInfinity(scip, REALABS(vallb)) )
    {
       SCIPdebugMessage("skip secant for tree %d of constraint <%s> since function cannot be evaluated in lower bound\n", exprtreeidx, SCIPconsGetName(cons));
       return SCIP_OKAY;
@@ -3833,7 +3853,7 @@ SCIP_RETCODE addConcaveEstimatorUnivariate(
    vallb *= treecoef;
 
    SCIP_CALL( SCIPexprtreeEval(exprtree, &xub, &valub) );
-   if( !isfinite(valub) || SCIPisInfinity(scip, REALABS(valub)) )
+   if( !finite(valub) || SCIPisInfinity(scip, REALABS(valub)) )
    {
       SCIPdebugMessage("skip secant for tree %d of constraint <%s> since function cannot be evaluated in lower bound\n", exprtreeidx, SCIPconsGetName(cons));
       return SCIP_OKAY;
@@ -3963,14 +3983,6 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
    ylb = SCIPvarGetLbLocal(y);
    yub = SCIPvarGetUbLocal(y);
 
-   /* reference point should not be outside of bounds */
-   assert(SCIPisFeasLE(scip, xlb, ref[0]));
-   assert(SCIPisFeasGE(scip, xub, ref[0]));
-   ref[0] = MIN(xub, MAX(xlb, ref[0]));
-   assert(SCIPisFeasLE(scip, ylb, ref[1]));
-   assert(SCIPisFeasGE(scip, yub, ref[1]));
-   ref[1] = MIN(yub, MAX(ylb, ref[1]));
-
    if( SCIPisInfinity(scip, -xlb) || SCIPisInfinity(scip, xub) || SCIPisInfinity(scip, -ylb) || SCIPisInfinity(scip, yub) )
    {
       SCIPdebugMessage("skip bivariate secant since <%s> or <%s> is unbounded\n", SCIPvarGetName(x), SCIPvarGetName(y));
@@ -3982,6 +3994,14 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
       SCIPdebugMessage("skip bivariate secant since both <%s> and <%s> are fixed\n", SCIPvarGetName(x), SCIPvarGetName(y));
       return SCIP_OKAY;
    }
+
+   /* reference point should not be outside of bounds */
+   assert(SCIPisFeasLE(scip, xlb, ref[0]));
+   assert(SCIPisFeasGE(scip, xub, ref[0]));
+   ref[0] = MIN(xub, MAX(xlb, ref[0]));
+   assert(SCIPisFeasLE(scip, ylb, ref[1]));
+   assert(SCIPisFeasGE(scip, yub, ref[1]));
+   ref[1] = MIN(yub, MAX(ylb, ref[1]));
 
    /* lower left */
    p1[0] = xlb;
@@ -4006,7 +4026,7 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
 
       SCIP_CALL( SCIPexprtreeEval(exprtree, p1, &p1val) );
       SCIP_CALL( SCIPexprtreeEval(exprtree, p4, &p4val) );
-      if( !isfinite(p1val) || SCIPisInfinity(scip, REALABS(p1val)) || !isfinite(p4val) || SCIPisInfinity(scip, REALABS(p4val)) )
+      if( !finite(p1val) || SCIPisInfinity(scip, REALABS(p1val)) || !finite(p4val) || SCIPisInfinity(scip, REALABS(p4val)) )
       {
          SCIPdebugMessage("skip secant for tree %d of constraint <%s> since function cannot be evaluated\n", exprtreeidx, SCIPconsGetName(cons));
          return SCIP_OKAY;
@@ -4025,7 +4045,7 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
 
       SCIP_CALL( SCIPexprtreeEval(exprtree, p1, &p1val) );
       SCIP_CALL( SCIPexprtreeEval(exprtree, p2, &p2val) );
-      if( !isfinite(p1val) || SCIPisInfinity(scip, REALABS(p1val)) || !isfinite(p2val) || SCIPisInfinity(scip, REALABS(p2val)) )
+      if( !finite(p1val) || SCIPisInfinity(scip, REALABS(p1val)) || !finite(p2val) || SCIPisInfinity(scip, REALABS(p2val)) )
       {
          SCIPdebugMessage("skip secant for tree %d of constraint <%s> since function cannot be evaluated\n", exprtreeidx, SCIPconsGetName(cons));
          return SCIP_OKAY;
@@ -4052,8 +4072,8 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
       SCIP_CALL( SCIPexprtreeEval(exprtree, p2, &p2val) );
       SCIP_CALL( SCIPexprtreeEval(exprtree, p3, &p3val) );
       SCIP_CALL( SCIPexprtreeEval(exprtree, p4, &p4val) );
-      if( !isfinite(p1val) || SCIPisInfinity(scip, REALABS(p1val)) || !isfinite(p2val) || SCIPisInfinity(scip, REALABS(p2val)) ||
-         ! isfinite(p3val) || SCIPisInfinity(scip, REALABS(p3val)) || !isfinite(p4val) || SCIPisInfinity(scip, REALABS(p4val)) )
+      if( !finite(p1val) || SCIPisInfinity(scip, REALABS(p1val)) || !finite(p2val) || SCIPisInfinity(scip, REALABS(p2val)) ||
+         ! finite(p3val) || SCIPisInfinity(scip, REALABS(p3val)) || !finite(p4val) || SCIPisInfinity(scip, REALABS(p4val)) )
       {
          SCIPdebugMessage("skip secant for tree %d of constraint <%s> since function cannot be evaluated\n", exprtreeidx, SCIPconsGetName(cons));
          return SCIP_OKAY;
@@ -4372,7 +4392,7 @@ SCIP_RETCODE addConcaveEstimatorMultivariate(
       SCIP_CALL( SCIPexprtreeEval(exprtree, &val[i*ncols], &funcval) );
       SCIPdebugPrintf(") = %g\n", funcval);
 
-      if( !isfinite(funcval) || SCIPisInfinity(scip, REALABS(funcval)) )
+      if( !finite(funcval) || SCIPisInfinity(scip, REALABS(funcval)) )
       {
          SCIPdebugMessage("cannot compute underestimator for concave because constaint <%s> cannot be evaluated\n", SCIPconsGetName(cons));
          goto TERMINATE;
@@ -4581,7 +4601,7 @@ SCIP_RETCODE addIntervalGradientEstimator(
 
    /* evaluate in reference point */
    SCIP_CALL( SCIPexprintEval(exprint, exprtree, x, &val) );
-   if( !isfinite(val) )
+   if( !finite(val) )
    {
       SCIPdebugMessage("Got nonfinite function value from evaluation of constraint %s tree %d. skipping interval gradient estimator.\n", SCIPconsGetName(cons), exprtreeidx);
       goto INTGRADESTIMATOR_CLEANUP;
@@ -6659,7 +6679,14 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
                if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
                   x[j][i] = MAX(0.0, SCIPvarGetLbGlobal(var));  /*lint !e666*/
                else
+               {
                   x[j][i] = (SCIPvarGetLbGlobal(var) + SCIPvarGetUbGlobal(var)) / 2.0;
+                  /* shift refpoint into [-INITLPMAXVARVAL, INITLPMAXVARVAL], if bounds allow */
+                  if( x[j][i] < -INITLPMAXVARVAL && SCIPvarGetUbGlobal(var) >= -INITLPMAXVARVAL )
+                     x[j][i] = -INITLPMAXVARVAL;
+                  else if( x[j][i] > INITLPMAXVARVAL && SCIPvarGetLbGlobal(var) <= INITLPMAXVARVAL )
+                     x[j][i] =  INITLPMAXVARVAL;
+               }
             }
          }
       }
@@ -7620,7 +7647,7 @@ SCIP_DECL_CONSDISABLE(consDisableNonlinear)
 }
 
 /** variable deletion method of constraint handler */
-#define consDelVarsNonlinear NULL
+#define consDelvarsNonlinear NULL
 
 /** constraint display method of constraint handler */
 static
@@ -7835,7 +7862,7 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
          consSepalpNonlinear, consSepasolNonlinear, consEnfolpNonlinear, consEnfopsNonlinear, consCheckNonlinear,
          consPropNonlinear, consPresolNonlinear, consRespropNonlinear, consLockNonlinear,
          consActiveNonlinear, consDeactiveNonlinear,
-         consEnableNonlinear, consDisableNonlinear, consDelVarsNonlinear,
+         consEnableNonlinear, consDisableNonlinear, consDelvarsNonlinear,
          consPrintNonlinear, consCopyNonlinear, consParseNonlinear,
          conshdlrdata) );
 

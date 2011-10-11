@@ -143,7 +143,7 @@ SCIP_RETCODE SCIPcreateObjMessagehdlr(
       SCIP_CALL( retcode );
    }
 
-   return SCIP_OKAY; /*lint !e429*/
+   return SCIP_OKAY; /*lint !e429*/ /*lint !e593*/
 }
 
 /** destroys the message handler that was created by SCIPcreateObjMessagehdlr();

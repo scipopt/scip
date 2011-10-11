@@ -38,7 +38,7 @@ GITHASH=0
 MEM=6544
 TIME=3600
 LOCK=false
-CONTINUE=true
+CONTINUE=false
 OPTS=(dbg opt)
 TESTS=(short miplib2010 bugs)
 

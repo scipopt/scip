@@ -948,6 +948,7 @@ ifeq ($(LINKER),CPP)
 		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(LPILIBSRC) \
 		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
 		| sed '\''s|$(LIBDIR)/clp[^ ]*||g'\'' \
+		| sed '\''s|$(LIBDIR)/spxinc[^ ]*||g'\'' \
 		>$(LPILIBDEP)'
 endif
 		@#we explicitely add all lpi's here, since the content of depend.lpscheck should be independent of the currently selected LPI, but contain all LPI's that use the WITH_LPSCHECK define

@@ -1,4 +1,4 @@
-SCIP version NEXT
+SCIP version 2.1.0
 ===============
 
 interface
@@ -14,10 +14,9 @@ interface:
   these methods can be used to check, propagate, or resolve the propagation of a cumulative condition
 - new methods SCIPstrToRealValue() and SCIPstrCopySection() in pub_misc.h; these methods can be used to 
   convert a string into a SCIP_Real value and to copy a substring.
-- the methods SCIPwriteVarName() SCIPwriteVarsList(), and SCIPwriteVarsLinearsum() have new parameter named "type" 
-  of type SCIP_Bool; these parameter determines if the variable type should be written or not
-- the methods SCIPparseVarName() and SCIPparseVarsList() got one new parameters names "endptr"; the parameter  
-  should be filled with the final parsing position where the parsing stopped
+- the methods SCIPwriteVarName() SCIPwriteVarsList(), and SCIPwriteVarsLinearsum() have a new parameter named "type" of type SCIP_Bool
+  which determines if the variable type should be written or not
+- the methods SCIPparseVarName() and SCIPparseVarsList() got one new output parameter "endptr" which is filled with the position where the parsing stopped
 - new functions SCIPround() and SCIPfeasRound() to round to nearest integer
 - new functions SCIPcomputeVarCurrent{L,U}b{Local,Global}() to compute local or global lower or upper bounds of a multiaggregated variable
   from the bounds of the aggregation variables
@@ -46,7 +45,7 @@ interface:
 - new method SCIPconshdlrGetNAddConss() which returns the number of added constraints during presolving by a given constraint handler 
 - new method SCIPpresolGetNAddConss() which returns the number of added constraints during presolving by a given presolver
 - added two parameters to the callback methods SCIP_DECL_CONSPRESOL() and SCIP_DECL_PRESOLEXEC(), these are nnewaddconss and naddconss; these parameters
-  are also added to corresponding C++ wrapper class methods; these scip_presol() in objconshdlr.h and scip_exec() in objpresol.h 
+  are also added to corresponding C++ wrapper class methods; these are scip_presol() in objconshdlr.h and scip_exec() in objpresol.h
 - added method SCIPsortRealRealIntInt() and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines in misc.c
 - added SCIPconvertCutsToConss() and SCIPcopyCuts() to scip.{c,h} for copying cuts to linear constraints
 - new method SCIPnodeGetParent() to get parent node of a node
@@ -85,6 +84,7 @@ interface:
 - new method SCIPvarMarkNotDeletable() that marks a variable to be non-deleteable (used within SCIP for forbidding deletion of variables contained in solution, LP bases, (multi)aggregation, ...)
 - new method SCIPvarIsDeletable() that returns whether a variable is marked to be deletable (each variable is per default non-deletable)
 - new callback SCIP_DECL_DELVARS for constraint handlers, that is called after variables were marked for deletion and should remove these variables from its constraints
+- new method SCIPpropagateCutoffboundVar() in prop_pseudoobj.h which can be used to propagate the cutoff bound for the given variables
 
 performance improvements:
 - performance improvements in prop_vbounds
@@ -146,6 +146,7 @@ fixed bugs:
 - fixed possible buffer overrun in tclique_graph.c
 - fixed bug w.r.t. infinity loop during propagation
 - fixed bug in handling of lazy bounds that resulted in putting the bounds explicitly into the LP
+- fixed issue with interactive shell in case (user) plugins are included after the default plugins
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})
@@ -254,9 +255,9 @@ features:
 - it is possible to add a constraint to a problem in the interactive shell
 - added clock for determine the time for reading
 - new presolving step in cons_knapsack (detectRedundantVars, deleteRedundantVars) which determines redundant variables in knapsack constraint with or without using clique information
-- SCIPcreateSolNLP() now creates a SCIP_SOL that is linked to the solution of the current NLP relaxation
+- SCIPcreateNLPSol() now creates a SCIP_SOL that is linked to the solution of the current NLP relaxation
 - it is now possible in SCIP_STAGE_TRANSFORMED to call SCIPaddVarLocks (i.e. to lock variables in initialization methods)
-- cons_logicor is now abled to replace all aggregated variables in presolving by there active or negation of an active variable counterpart
+- cons_logicor is now able to replace all aggregated variables in presolving by there active or negation of an active variable counterpart
 - reader_gms is now able to write indicator constraints (reformulated either via big-M or sos1), see new parameters <reading/gmsreader/bigmdefault> and <reading/gmsreader/indicatorreform>
 - propagators can now presolve, added three callback functionalities SCIP_DECL_PROPINITPRE, SCIP_DECL_PROPEXITPRE, and SCIP_DECL_PROPPRESOL
 - prop_pseudoobj is now working in presolving as well
@@ -281,7 +282,7 @@ features:
 - there exists now a solution candidate store for the original problem;  during transformation these solutions are tried; during free the
   transformed problem the best feasible solution of the transformed problem  are copied to the solution candidate store of the original problem; this
   useful if you solve several problems iteratively, solutions get now carried over automatically.
-- solutions which are given by the user form the outside are now marked by '#' in the output
+- solutions which are given by the user from the outside are now marked by '#' in the output
 - implemented possibility to buffer and restore LP solution after diving without having to resolve the LP; currently
   turned off, because performance impact is unclear; controlled by parameters lp/resolverestore and lp/freesolvalbuffers
 - reworked concept of lazy bounds: they can now also be used for problems where constraints and objective together ensure the bounds; 
@@ -289,29 +290,24 @@ features:
   put into the LP during diving and removed afterwards
 - the varbound constraint handler can now parse its constraints
 - added beta version of variable deletion: for branch-and-price application, variables can now be completely deleted from the problem;
-  variables that are deletable have to be marked with SCIPvarMarkDeletable(), constraint handlers have to implement the new
+  variables that are deletable have to be marked with SCIPvarMarkDeletable(), constraint handlers can implement the new
   SCIP_DECL_DELVARS callback that should remove variables from the constraints; at the moment, only the linear, the setppc, and the
   knapsack constraint handler support this callback; furthermore, when using this feature, all used plugins have to capture and
   release variables they store in their data, this is currently only done for the aforementioned constraint handlers as well as
   the and, the varbound, and the logicor constraint handler; for more details about this feature, see the FAQ
-- added new event handler example for writing dualbound fronts of open nodes in a given frequency (event_boundwriting.{c,h})
-- added parameter <misc/boundwriting/freq> for new event handler example boundwriting that defines the frequency in which a dualbound front is written
-- added parameter <misc/boundwriting/filename> for new event handler example boundwriting that defines the name(s) of the files in which a dualbound front is written
-- added parameter <misc/boundwriting/writesubmipdualbound> for new event handler example boundwriting that defines if a subSCIP is created to resolve the open nodes to get a dualbound for
-
 
 design:
 - SCIP_HASHMAP now works also without block memory
-- the old probing presolver presol_probing.{c.h} is now a propagator prop_probing.{c,h}, all corresponding  parameters moved as well
-- the old redcost separator sepa_redcost.{c.h} is now a propagator prop_redcost.{c,h}, all corresponding  parameters moved as well
+- the probing presolver presol_probing.{c.h} is now a propagator prop_probing.{c,h}, all corresponding parameters moved as well
+- the redcost separator sepa_redcost.{c.h} is now a propagator prop_redcost.{c,h}, all corresponding parameters moved as well
 - moved all timings to type_timing.h
 - outsourced propAndSolve() method in solve.c which calls domain propagation and solving of the lp and relaxation
 - CIP format variable characters defined, e.g. SCIP_VARTYPE_INTEGER_CHAR
-- add expresssion graph data structures and methods for reformulation, domain propagation, and simple convexity check on nonlinear expressions
+- add expression graph data structures and methods for reformulation, domain propagation, and simple convexity check on nonlinear expressions
 
 statistic:
 - the "Solving Time" is now spitted into presolving, solving, and reading time
-- Presolvers section has new column "AddCons" which states the number f added constraint
+- Presolvers section has new column "AddCons" which states the number of added constraint
 - Constraints section has new column named "#ResProp" which show the number of resolve propagation calls of certain constraint handler
 - Constraint Timing section has a new column "ResProp" which states the time spend in resolve propagation method of the constraint handler
 - new section "Propagator Timing" which shows the time spend in different callbacks of the propagator
@@ -322,7 +318,7 @@ statistic:
   with zero iterations (only refactorization)
 
 Makefile
-- via "PARASCIP=true" as a "Makefile" option it is possible to compile SCIP threadsafe in DEBUG-mode, (in OPT-mode it's not necessary)
+- via "PARASCIP=true" as a "Makefile" option it is possible to compile SCIP threadsafe in DEBUG-mode, (in OPT-mode it's only necessary if non-default messagehandler or CppAD is used)
 - new variable $(INSTALLDIR) in Makefile which define installation directory for the libraries, $(INSTALLDIR)/lib/, 
   binary, $(INSTALLDIR)/bin, and include headers, $(INSTALLDIR)/include, the default value is the empty string
 - new target in Makefile "install" performs "make" and copies using the install command the include headers, binary, and libraries
@@ -391,7 +387,7 @@ SCIP version 2.0.1
 ==================
 
 interface:
-- allow access of transformed constraints in SCIP_STAGE_TRANSFORMED
+- allow access to transformed constraints in SCIP_STAGE_TRANSFORMED
 
 performance improvements:
 - SCIP with SoPlex as LP solver now uses auto pricing by default (start with devex, switch to steepest edge after some iterations);

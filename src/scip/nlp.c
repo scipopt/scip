@@ -3977,6 +3977,7 @@ SCIP_RETCODE nlpSetupNlpiIndices(
 
          assert(SCIPhashmapExists(nlp->varhash, var));
          (*linidxs)[i] = nlp->varmap_nlp2nlpi[(size_t) (void*) SCIPhashmapGetImage(nlp->varhash, var)];
+         assert((*linidxs)[i] >= 0);
       }
    }
    else

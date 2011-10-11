@@ -150,8 +150,6 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
       SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameIpopt(), SCIPgetSolverDescIpopt()) );
    }
 
-   SCIP_CALL( SCIPincludeDialogDefault(scip) );
-
    SCIP_CALL( SCIPdebugIncludeProp(scip) ); /*lint !e506 !e774*/
 
    return SCIP_OKAY;

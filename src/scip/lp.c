@@ -12584,7 +12584,7 @@ SCIP_RETCODE updateLazyBounds(
    if( lp->diving == lp->divinglazyapplied )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("mark all lazy columns as changed in order to reload bounds (diving=%d, applied=%d)\n",
+   SCIPdebugMessage("mark all lazy columns as changed in order to reload bounds (diving=%u, applied=%u)\n",
       lp->diving, lp->divinglazyapplied);
 
    for( c = 0; c < lp->nlazycols; ++c )
@@ -12594,9 +12594,9 @@ SCIP_RETCODE updateLazyBounds(
       /* if the column has a lazy lower bound, mark its lower bounds as changed */
       if( !SCIPsetIsInfinity(set, -col->lazylb) )
       {
-         assert((!(lp->divinglazyapplied)) || (col->flushedlb == col->lb));
+         assert((!(lp->divinglazyapplied)) || (col->flushedlb == col->lb)); /*lint !e777*/
          assert(lp->divinglazyapplied || SCIPsetIsGT(set, col->lb, col->lazylb)
-            || (col->flushedlb == -SCIPlpiInfinity(lp->lpi)));
+            || (col->flushedlb == -SCIPlpiInfinity(lp->lpi))); /*lint !e777*/
 
          /* insert column in the chgcols list (if not already there) */
          SCIP_CALL( insertColChgcols(col, set, lp) );
@@ -12608,9 +12608,9 @@ SCIP_RETCODE updateLazyBounds(
       /* if the column has a lazy upper bound, mark its upper bounds as changed */
       if( !SCIPsetIsInfinity(set, col->lazyub) )
       {
-         assert((!(lp->divinglazyapplied)) || (col->flushedub == col->ub));
+         assert((!(lp->divinglazyapplied)) || (col->flushedub == col->ub)); /*lint !e777*/
          assert(lp->divinglazyapplied || SCIPsetIsLT(set, col->ub, col->lazyub)
-            || (col->flushedub == SCIPlpiInfinity(lp->lpi)));
+            || (col->flushedub == SCIPlpiInfinity(lp->lpi))); /*lint !e777*/
 
          /* insert column in the chgcols list (if not already there) */
          SCIP_CALL( insertColChgcols(col, set, lp) );

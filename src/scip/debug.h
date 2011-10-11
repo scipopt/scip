@@ -133,6 +133,7 @@ SCIP_RETCODE SCIPdebugIncludeProp(
  */
 extern
 SCIP_RETCODE SCIPdebugAddSolVal(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable for which to add a value */
    SCIP_Real             val                 /**< solution value for variable */
    );
@@ -159,7 +160,7 @@ SCIP_RETCODE SCIPdebugGetSolVal(
 #define SCIPdebugCheckImplic(set,var,varfixing,implvar,impltype,implbound) SCIP_OKAY
 #define SCIPdebugCheckConflict(blkmem,set,node,conflictset,nliterals) SCIP_OKAY
 #define SCIPdebugIncludeProp(scip) SCIP_OKAY
-#define SCIPdebugAddSolVal(var,val) SCIP_OKAY
+#define SCIPdebugAddSolVal(scip,var,val) SCIP_OKAY
 #define SCIPdebugGetSolVal(scip,var,val) SCIP_OKAY
 #endif
 

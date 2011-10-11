@@ -2952,7 +2952,7 @@ SCIP_DECL_EXPRINTEVAL( exprevalIntPolynomial )
             SCIPintervalSquareRoot(infinity, &childval, childval);
             if( SCIPintervalIsEmpty(childval) )
             {
-               SCIPintervalSetEmpty(&monomialval);
+               SCIPintervalSetEmpty(result);
                break;
             }
             SCIPintervalMul(infinity, &monomialval, monomialval, childval);
@@ -2972,8 +2972,8 @@ SCIP_DECL_EXPRINTEVAL( exprevalIntPolynomial )
             SCIPintervalPowerScalar(infinity, &childval, childval, exponent);
             if( SCIPintervalIsEmpty(childval) )
             {
-               SCIPintervalSetEmpty(&monomialval);
-               break;
+               SCIPintervalSetEmpty(result);
+               return SCIP_OKAY;
             }
             SCIPintervalMul(infinity, &monomialval, monomialval, childval);
          }
@@ -7288,10 +7288,10 @@ SCIP_RETCODE SCIPexprtreeSimplify(
 
 #ifndef NDEBUG
    SCIP_CALL( SCIPexprtreeEval(tree, testx, &testval_after) );
-   if( nlinvars != NULL && !isnan(testval_before) )
+   if( nlinvars != NULL && testval_before == testval_before )
       for( i = 0; i < *nlinvars; ++i )
          testval_after += lincoefs[i] * testx[linidxs[i]];
-   assert(!isfinite(testval_before) || EPSZ(SCIPrelDiff(testval_before, testval_after), eps));
+   assert(testval_before != testval_before || testval_before == testval_after || EPSZ(SCIPrelDiff(testval_before, testval_after), eps));
    BMSfreeMemoryArray(&testx);
 #endif
 
@@ -12280,10 +12280,20 @@ void SCIPexprgraphDisableNode(
          return;
       }
 
-   SCIPdebugMessage("disabled node %p (%d,%d)\n", (void*)node, node->depth, node->pos);
+   SCIPdebugMessage("disabled node %p (%d,%d), nuses = %d\n", (void*)node, node->depth, node->pos, node->nuses);
 
    for( i = 0; i < node->nchildren; ++i )
       SCIPexprgraphDisableNode(exprgraph, node->children[i]);
+}
+
+/** returns whether a node is currently enabled */
+SCIP_Bool SCIPexprgraphIsNodeEnabled(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node to enable */
+   )
+{
+   assert(node != NULL);
+
+   return node->enabled;
 }
 
 /** gets number of children of a node in an expression graph */
@@ -14110,7 +14120,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
             testval_before = testvals[idx];  /*lint !e613*/
             testval_after = SCIPexprgraphGetNodeVal(node);
 
-            assert(!isfinite(testval_before) || EPSZ(SCIPrelDiff(testval_before, testval_after), eps));
+            assert(testval_before != testval_before || testval_before == testval_after || EPSZ(SCIPrelDiff(testval_before, testval_after), eps));
          }
       }
 #endif

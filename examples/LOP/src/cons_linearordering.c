@@ -1026,43 +1026,42 @@ SCIP_DECL_CONSCOPY(consCopyLinearOrdering)
 
    sourcedata = SCIPconsGetData(sourcecons);
    assert( sourcedata != NULL );
-   assert( sourcedata->vars != NULL );
 
    n = sourcedata->n;
    sourcevars = sourcedata->vars;
+   assert( sourcevars != NULL );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, n) );
-   BMSclearMemoryArray(&vars, n);
+   BMSclearMemoryArray(vars, n);
 
-   for( i = 0; i < n; ++i )
+   for (i = 0; i < n; ++i)
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &(vars[i]), n) );
 
-      for( j = 0; j < n && *valid; ++j )
+      for (j = 0; j < n && *valid; ++j)
       {
-         if( i != j )
+         if ( i != j )
          {
             SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[i][j], &vars[i][j], varmap, consmap, global, valid) );
-            assert(!(*valid) || vars[i][j] != NULL);                       
+            assert( !(*valid) || vars[i][j] != NULL );
          }
       }
    }
 
-   if( *valid )
+   if ( *valid )
    {
-      
       /* create copied constraint */
-      if( name == 0 )
+      if ( name == 0 )
          name = SCIPconsGetName(sourcecons);
-      
+
       SCIP_CALL( SCIPcreateConsLinearOrdering(scip, cons, name, n, vars,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
-      
-   for( i = 0; i < n; ++i )
+
+   for (i = 0; i < n; ++i)
       SCIPfreeBufferArrayNull(scip, &vars[i]);
    SCIPfreeBufferArray(scip, &vars);
- 
+
    return SCIP_OKAY;
 }
 

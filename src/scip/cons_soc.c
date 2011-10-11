@@ -20,6 +20,7 @@
  * @author Marc Pfetsch
  *
  * @todo rhsvar == NULL is supported in some routines, but not everywhere
+ * @todo merge square terms with same variables in presol/exitpre
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -3884,7 +3885,7 @@ SCIP_DECL_CONSDISABLE(consDisableSOC)
 
 
 /** variable deletion method of constraint handler */
-#define consDelVarsSOC NULL
+#define consDelvarsSOC NULL
 
 
 /** constraint display method of constraint handler */
@@ -4155,7 +4156,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
          consPropSOC, consPresolSOC, consRespropSOC, consLockSOC,
          consActiveSOC, consDeactiveSOC,
          consEnableSOC, consDisableSOC,
-         consDelVarsSOC, consPrintSOC, consCopySOC, consParseSOC,
+         consDelvarsSOC, consPrintSOC, consCopySOC, consParseSOC,
          conshdlrdata) );
 
    if( SCIPfindConshdlr(scip,"quadratic") != NULL )

@@ -326,13 +326,13 @@ void sortLinearCoefficients(
          ++offset;
       }
 
-      /* if j'th element is 0, increasing offset, otherwise increase j */
+      /* if j'th element is 0, increase offset, otherwise increase j */
       if( coefs[j] == 0.0 )  /*lint !e613*/
          ++offset;
       else
          ++j;
    }
-   *idxs -= offset;  /*lint !e613*/
+   *nidxs -= offset;
 }
 
 /** creates a NLPI constraint from given constraint data */
@@ -375,6 +375,7 @@ SCIP_RETCODE createConstraint(
 
       /* sort, merge duplicates, remove zero's */
       sortLinearCoefficients(&(*cons)->nlinidxs, (*cons)->linidxs, (*cons)->lincoefs);
+      assert((*cons)->linidxs[0] >= 0);
    }
 
    if( nquadelems > 0 )
@@ -386,6 +387,8 @@ SCIP_RETCODE createConstraint(
       /* sort and squeeze quadratic part */
       SCIPquadelemSort((*cons)->quadelems, nquadelems);
       SCIPquadelemSqueeze((*cons)->quadelems, nquadelems, &(*cons)->nquadelems);
+      assert((*cons)->nquadelems == 0 || (*cons)->quadelems[0].idx1 >= 0);
+      assert((*cons)->nquadelems == 0 || (*cons)->quadelems[0].idx2 >= 0);
    }
 
    if( exprtree != NULL )
@@ -1573,7 +1576,6 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
 
       if( cons->exprtree != NULL )
       {
-         assert(SCIPexprtreeGetNVars(cons->exprtree) <= oracle->nvars);
          addednlcon = TRUE;
          SCIP_CALL( SCIPexprintCompile(oracle->exprinterpreter, cons->exprtree) );
       }
@@ -1624,7 +1626,6 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
 
    if( oracle->objective->exprtree != NULL )
    {
-      assert(SCIPexprtreeGetNVars(oracle->objective->exprtree) <= oracle->nvars);
       SCIP_CALL( SCIPexprintCompile(oracle->exprinterpreter, oracle->objective->exprtree) );
    }
 

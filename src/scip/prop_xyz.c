@@ -28,10 +28,10 @@
 
 #define PROP_NAME              "xyz"
 #define PROP_DESC              "propagator template"
-#define PROP_TIMING             SCIP_PROPTIMING_BEFORELP
 #define PROP_PRIORITY                 0 /**< propagator priority */ 
 #define PROP_FREQ                    10 /**< propagator frequency */
 #define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
+#define PROP_TIMING             SCIP_PROPTIMING_BEFORELP/**< propagation timing mask */
 #define PROP_PRESOL_PRIORITY          0 /**< priority of the presolving method (>= 0: before, < 0: after constraint handlers); combined with presolvers */
 #define PROP_PRESOL_DELAY          TRUE /**< should presolving be delay, if other presolvers found reductions?  */
 #define PROP_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds the presolver participates in (-1: no
@@ -244,9 +244,9 @@ SCIP_RETCODE SCIPincludePropXyz(
    /* TODO: (optional) create propagator specific data here */
 
    /* include propagator */
-   SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY,
-         propCopyXyz,
-         propFreeXyz, propInitXyz, propExitXyz, propInitpreXyz, propExitpreXyz,
+   SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY,
+         PROP_TIMING, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY,
+         propCopyXyz, propFreeXyz, propInitXyz, propExitXyz, propInitpreXyz, propExitpreXyz,
          propInitsolXyz, propExitsolXyz, propPresolXyz, propExecXyz, propRespropXyz,
          propdata) );
 

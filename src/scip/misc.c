@@ -4665,7 +4665,7 @@ int SCIPsnprintf(
    assert(t != NULL);
    assert(len > 0);
 
-   va_start(ap, s);
+   va_start(ap, s); /*lint !e826*/
    n = vsnprintf(t, (size_t) len, s, ap);
    va_end(ap);
    if( n < 0 || n >= len )

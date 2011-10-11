@@ -2387,7 +2387,7 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveBounddisjunction)
 
 
 /** variable deletion method of constraint handler */
-#define consDelVarsBounddisjunction NULL
+#define consDelvarsBounddisjunction NULL
 
 
 /** constraint display method of constraint handler */
@@ -2764,7 +2764,7 @@ SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
          consPropBounddisjunction, consPresolBounddisjunction, consRespropBounddisjunction, consLockBounddisjunction,
          consActiveBounddisjunction, consDeactiveBounddisjunction,
          consEnableBounddisjunction, consDisableBounddisjunction,
-         consDelVarsBounddisjunction, consPrintBounddisjunction, consCopyBounddisjunction, consParseBounddisjunction,
+         consDelvarsBounddisjunction, consPrintBounddisjunction, consCopyBounddisjunction, consParseBounddisjunction,
          conshdlrdata) );
 
    /* register upgrade of quadratic complementarity constraints in cons_quadratic */

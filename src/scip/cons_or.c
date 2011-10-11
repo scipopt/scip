@@ -1788,7 +1788,7 @@ SCIP_DECL_CONSLOCK(consLockOr)
 
 
 /** variable deletion method of constraint handler */
-#define consDelVarsOr NULL
+#define consDelvarsOr NULL
 
 
 /** constraint display method of constraint handler */
@@ -1997,7 +1997,7 @@ SCIP_RETCODE SCIPincludeConshdlrOr(
          consPropOr, consPresolOr, consRespropOr, consLockOr,
          consActiveOr, consDeactiveOr, 
          consEnableOr, consDisableOr,
-         consDelVarsOr, consPrintOr, consCopyOr, consParseOr,
+         consDelvarsOr, consPrintOr, consCopyOr, consParseOr,
          conshdlrdata) );
 
    return SCIP_OKAY;

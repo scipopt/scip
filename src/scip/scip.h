@@ -420,7 +420,7 @@ SCIP_RETCODE SCIPcopyParamSettings(
 
 /** gets depth of current scip instance (increased by each copy call) */
 extern
-SCIP_RETCODE SCIPgetSubscipDepth(
+int SCIPgetSubscipDepth(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

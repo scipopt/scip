@@ -4266,6 +4266,376 @@ SCIP_RETCODE SCIPvarAggregate(
    return SCIP_OKAY;
 }
 
+/** Tries to aggregate an equality a*x + b*y == c consisting of two (implicit) integral active problem variables x and
+ *  y.  An integer aggregation (i.e. integral coefficients a' and b', such that a'*x + b'*y == c') is searched.
+ *
+ *  This can lead to the detection of infeasibility (e.g. if c' is fractional), or to a rejection of the aggregation
+ *  (denoted by aggregated == FALSE), if the resulting integer coefficients are too large and thus numerically instable.
+ */
+static
+SCIP_RETCODE tryAggregateIntVars(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_VAR*             varx,               /**< integral variable x in equality a*x + b*y == c */
+   SCIP_VAR*             vary,               /**< integral variable y in equality a*x + b*y == c */
+   SCIP_Real             scalarx,            /**< multiplier a in equality a*x + b*y == c */
+   SCIP_Real             scalary,            /**< multiplier b in equality a*x + b*y == c */
+   SCIP_Real             rhs,                /**< right hand side c in equality a*x + b*y == c */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the aggregation is infeasible */
+   SCIP_Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
+   )
+{
+   SCIP_VAR* aggvar;
+   char aggvarname[SCIP_MAXSTRLEN];
+   SCIP_Longint scalarxn = 0;
+   SCIP_Longint scalarxd = 0;
+   SCIP_Longint scalaryn = 0;
+   SCIP_Longint scalaryd = 0;
+   SCIP_Longint a;
+   SCIP_Longint b;
+   SCIP_Longint c;
+   SCIP_Longint scm;
+   SCIP_Longint gcd;
+   SCIP_Longint currentclass;
+   SCIP_Longint classstep;
+   SCIP_Longint xsol;
+   SCIP_Longint ysol;
+   SCIP_Bool success;
+   SCIP_VARTYPE vartype;
+
+#define MAXDNOM 1000000LL
+
+   assert(set != NULL);
+   assert(blkmem != NULL);
+   assert(stat != NULL);
+   assert(prob != NULL);
+   assert(tree != NULL);
+   assert(lp != NULL);
+   assert(cliquetable != NULL);
+   assert(branchcand != NULL);
+   assert(eventqueue != NULL);
+   assert(varx != NULL);
+   assert(vary != NULL);
+   assert(varx != vary);
+   assert(infeasible != NULL);
+   assert(aggregated != NULL);
+   assert(SCIPsetGetStage(set) == SCIP_STAGE_PRESOLVING);
+   assert(SCIPvarGetStatus(varx) == SCIP_VARSTATUS_LOOSE);
+   assert(SCIPvarGetType(varx) == SCIP_VARTYPE_INTEGER);
+   assert(SCIPvarGetStatus(vary) == SCIP_VARSTATUS_LOOSE);
+   assert(SCIPvarGetType(vary) == SCIP_VARTYPE_INTEGER);
+   assert(!SCIPsetIsZero(set, scalarx));
+   assert(!SCIPsetIsZero(set, scalary));
+
+   *infeasible = FALSE;
+   *aggregated = FALSE;
+
+   /* get rational representation of coefficients */
+   success = SCIPrealToRational(scalarx, -SCIPsetEpsilon(set), SCIPsetEpsilon(set), MAXDNOM, &scalarxn, &scalarxd);
+   if( success )
+      success = SCIPrealToRational(scalary, -SCIPsetEpsilon(set), SCIPsetEpsilon(set), MAXDNOM, &scalaryn, &scalaryd);
+   if( !success )
+      return SCIP_OKAY;
+   assert(scalarxd >= 1);
+   assert(scalaryd >= 1);
+
+   /* multiply equality with smallest common denominator */
+   scm = SCIPcalcSmaComMul(scalarxd, scalaryd);
+   a = (scm/scalarxd)*scalarxn;
+   b = (scm/scalaryd)*scalaryn;
+   rhs *= scm;
+
+   /* divide equality by the greatest common divisor of a and b */
+   gcd = SCIPcalcGreComDiv(ABS(a), ABS(b));
+   a /= gcd;
+   b /= gcd;
+   rhs /= gcd;
+   assert(a != 0);
+   assert(b != 0);
+
+   /* check, if right hand side is integral */
+   if( !SCIPsetIsFeasIntegral(set, rhs) )
+   {
+      *infeasible = TRUE;
+      return SCIP_OKAY;
+   }
+   c = (SCIP_Longint)(SCIPsetFeasFloor(set, rhs));
+
+   /* check, if we are in an easy case with either |a| = 1 or |b| = 1 */
+   if( a == 1 || a == -1 )
+   {
+      /* aggregate x = - b/a*y + c/a */
+      /*lint --e{653}*/
+      SCIP_CALL( SCIPvarAggregate(varx, blkmem, set, stat, prob, primal, tree, lp, cliquetable, branchcand, eventqueue,
+            vary, (SCIP_Real)(-b/a), (SCIP_Real)(c/a), infeasible, aggregated) );
+      assert(*aggregated);
+      return SCIP_OKAY;
+   }
+   if( b == 1 || b == -1 )
+   {
+      /* aggregate y = - a/b*x + c/b */
+      /*lint --e{653}*/
+      SCIP_CALL( SCIPvarAggregate(vary, blkmem, set, stat, prob, primal, tree, lp, cliquetable, branchcand, eventqueue,
+            varx, (SCIP_Real)(-a/b), (SCIP_Real)(c/b), infeasible, aggregated) );
+      assert(*aggregated);
+      return SCIP_OKAY;
+   }
+
+   /* Both variables are integers, their coefficients are not multiples of each other, and they don't have any
+    * common divisor. Let (x',y') be a solution of the equality
+    *   a*x + b*y == c    ->   a*x == c - b*y
+    * Then x = -b*z + x', y = a*z + y' with z integral gives all solutions to the equality.
+    */
+
+   /* find initial solution (x',y'):
+    *  - find y' such that c - b*y' is a multiple of a
+    *    - start in equivalence class c%a
+    *    - step through classes, where each step increases class number by (-b)%a, until class 0 is visited
+    *    - if equivalence class 0 is visited, we are done: y' equals the number of steps taken
+    *    - because a and b don't have a common divisor, each class is visited at most once, and at most a-1 steps are needed
+    *  - calculate x' with x' = (c - b*y')/a (which must be integral)
+    *
+    * Algorithm works for a > 0 only.
+    */
+   if( a < 0 )
+   {
+      a = -a;
+      b = -b;
+      c = -c;
+   }
+   assert(0 <= a);
+
+   /* search upwards from ysol = 0 */
+   ysol = 0;
+   currentclass = c%a;
+   if( currentclass < 0 )
+      currentclass += a;
+   assert(0 <= currentclass && currentclass < a);
+
+   classstep = (-b)%a;
+
+   if( classstep < 0 )
+      classstep += a;
+   assert(0 < classstep && classstep < a);
+
+   while( currentclass != 0 )
+   {
+      assert(0 <= currentclass && currentclass < a);
+      currentclass += classstep;
+      if( currentclass >= a )
+         currentclass -= a;
+      ysol++;
+   }
+   assert(ysol < a);
+   assert(((c - b*ysol)%a) == 0);
+
+   xsol = (c - b*ysol)/a;
+
+   /* determine variable type for new artificial variable:
+    *
+    * if both variables are implicit integer the new variable can be implicit too, because the integer implication on
+    * these both variables should be enforced by some other variables, otherwise the new variable needs to be of
+    * integral type
+    */
+   vartype = ((SCIPvarGetType(varx) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(vary) == SCIP_VARTYPE_INTEGER)
+      ? SCIP_VARTYPE_INTEGER : SCIP_VARTYPE_IMPLINT);
+
+   /* feasible solutions are (x,y) = (x',y') + z*(-b,a)
+    * - create new integer variable z with infinite bounds
+    * - aggregate variable x = -b*z + x'
+    * - aggregate variable y =  a*z + y'
+    * - the bounds of z are calculated automatically during aggregation
+    */
+   (void) SCIPsnprintf(aggvarname, SCIP_MAXSTRLEN, "agg%d", stat->nvaridx);
+   SCIP_CALL( SCIPvarCreateTransformed(&aggvar, blkmem, set, stat,
+         aggvarname, -SCIPsetInfinity(set), SCIPsetInfinity(set), 0.0, vartype,
+         SCIPvarIsInitial(varx) || SCIPvarIsInitial(vary), SCIPvarIsRemovable(varx) && SCIPvarIsRemovable(vary),
+         NULL, NULL, NULL, NULL, NULL) );
+
+   SCIP_CALL( SCIPprobAddVar(prob, blkmem, set, lp, branchcand, eventfilter, eventqueue, aggvar) );
+
+   SCIP_CALL( SCIPvarAggregate(varx, blkmem, set, stat, prob, primal, tree, lp, cliquetable, branchcand, eventqueue,
+         aggvar, (SCIP_Real)(-b), (SCIP_Real)xsol, infeasible, aggregated) );
+   assert(*aggregated);
+   if( !(*infeasible) )
+   {
+      SCIP_CALL( SCIPvarAggregate(vary, blkmem, set, stat, prob, primal, tree, lp, cliquetable, branchcand, eventqueue,
+            aggvar, (SCIP_Real)a, (SCIP_Real)ysol, infeasible, aggregated) );
+      assert(*aggregated);
+   }
+
+   /* release z */
+   SCIP_CALL( SCIPvarRelease(&aggvar, blkmem, set, eventqueue, lp) );
+
+   return SCIP_OKAY;
+}
+
+/** performs second step of SCIPaggregateVars():
+ *  the variable to be aggregated is chosen among active problem variables x' and y', preferring a less strict variable
+ *  type as aggregation variable (i.e. continuous variables are preferred over implicit integers, implicit integers
+ *  or integers over binaries). If none of the variables is continuous, it is tried to find an integer
+ *  aggregation (i.e. integral coefficients a'' and b'', such that a''*x' + b''*y' == c''). This can lead to
+ *  the detection of infeasibility (e.g. if c'' is fractional), or to a rejection of the aggregation (denoted by
+ *  aggregated == FALSE), if the resulting integer coefficients are too large and thus numerically instable.
+ */
+SCIP_RETCODE SCIPvarTryAggregateVars(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_VAR*             varx,               /**< variable x in equality a*x + b*y == c */
+   SCIP_VAR*             vary,               /**< variable y in equality a*x + b*y == c */
+   SCIP_Real             scalarx,            /**< multiplier a in equality a*x + b*y == c */
+   SCIP_Real             scalary,            /**< multiplier b in equality a*x + b*y == c */
+   SCIP_Real             rhs,                /**< right hand side c in equality a*x + b*y == c */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the aggregation is infeasible */
+   SCIP_Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
+   )
+{
+   int agg;
+
+   assert(set != NULL);
+   assert(blkmem != NULL);
+   assert(stat != NULL);
+   assert(prob != NULL);
+   assert(tree != NULL);
+   assert(lp != NULL);
+   assert(cliquetable != NULL);
+   assert(branchcand != NULL);
+   assert(eventqueue != NULL);
+   assert(varx != NULL);
+   assert(vary != NULL);
+   assert(varx != vary);
+   assert(infeasible != NULL);
+   assert(aggregated != NULL);
+   assert(SCIPsetGetStage(set) == SCIP_STAGE_PRESOLVING);
+   assert(SCIPvarGetStatus(varx) == SCIP_VARSTATUS_LOOSE);
+   assert(SCIPvarGetStatus(vary) == SCIP_VARSTATUS_LOOSE);
+   assert(!SCIPsetIsZero(set, scalarx));
+   assert(!SCIPsetIsZero(set, scalary));
+
+   *infeasible = FALSE;
+   *aggregated = FALSE;
+
+   /* prefer aggregating the variable of more general type (preferred aggregation variable is varx) */
+   if( SCIPvarGetType(vary) > SCIPvarGetType(varx) )
+   {
+      SCIP_VAR* var;
+      SCIP_Real scalar;
+
+      /* switch the variables, such that varx is the variable of more general type (cont > implint > int > bin) */
+      var = vary;
+      vary = varx;
+      varx = var;
+      scalar = scalary;
+      scalary = scalarx;
+      scalarx = scalar;
+   }
+   assert(SCIPvarGetType(varx) >= SCIPvarGetType(vary));
+
+   /* figure out, which variable should be aggregated */
+   agg = -1;
+
+   /* a*x + b*y == c
+    *  ->  x == -b/a * y + c/a  (agg=0)
+    *  ->  y == -a/b * x + c/b  (agg=1)
+    */
+   if( SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(vary) < SCIP_VARTYPE_CONTINUOUS )
+      agg = 0;
+   else if( SCIPsetIsFeasIntegral(set, scalary/scalarx) )
+      agg = 0;
+   else if( SCIPsetIsFeasIntegral(set, scalarx/scalary) && SCIPvarGetType(vary) == SCIPvarGetType(varx) )
+      agg = 1;
+   if( SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINUOUS )
+      agg = 0;
+   if( agg == 1 )
+   {
+      SCIP_VAR* var;
+      SCIP_Real scalar;
+
+      /* switch the variables, such that varx is the aggregated variable */
+      var = vary;
+      vary = varx;
+      varx = var;
+      scalar = scalary;
+      scalary = scalarx;
+      scalarx = scalar;
+      agg = 0;
+   }
+   assert(agg == 0 || agg == -1);
+
+   /* did we find an "easy" aggregation? */
+   if( agg == 0 )
+   {
+      SCIP_Real scalar;
+      SCIP_Real constant;
+
+      assert(SCIPvarGetType(varx) >= SCIPvarGetType(vary));
+
+      /* calculate aggregation scalar and constant: a*x + b*y == c  =>  x == -b/a * y + c/a */
+      scalar = -scalary/scalarx;
+      constant = rhs/scalarx;
+
+      /* check aggregation for integer feasibility */
+      if( SCIPvarGetType(varx) != SCIP_VARTYPE_CONTINUOUS
+         && SCIPvarGetType(vary) != SCIP_VARTYPE_CONTINUOUS
+         && SCIPsetIsFeasIntegral(set, scalar) && !SCIPsetIsFeasIntegral(set, constant) )
+      {
+         *infeasible = TRUE;
+         return SCIP_OKAY;
+      }
+
+#if 0
+      /* if the aggregation scalar is fractional, we cannot (for technical reasons) and do not want to aggregate implicit integer variables,
+       * since then we would loose the corresponding divisibility property
+       */
+      if( SCIPvarGetType(varx) == SCIP_VARTYPE_IMPLINT && !SCIPsetIsFeasIntegral(set, scalar) )
+      {
+         return SCIP_OKAY;
+      }
+#else
+      assert(SCIPvarGetType(varx) != SCIP_VARTYPE_IMPLINT || SCIPsetIsFeasIntegral(set, scalar));
+#endif
+
+      /* aggregate the variable */
+      SCIP_CALL( SCIPvarAggregate(varx, blkmem, set, stat, prob, primal, tree, lp, cliquetable, branchcand, eventqueue,
+            vary, scalar, constant, infeasible, aggregated) );
+      assert(*aggregated || *infeasible);
+   }
+   else if( (SCIPvarGetType(varx) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(varx) == SCIP_VARTYPE_IMPLINT)
+      && (SCIPvarGetType(vary) == SCIP_VARTYPE_INTEGER && SCIPvarGetType(vary) == SCIP_VARTYPE_IMPLINT) )
+   {
+      /* the variables are both integral: we have to try to find an integer aggregation */
+      SCIP_CALL( tryAggregateIntVars(set, blkmem, stat, prob, primal, tree, lp, cliquetable, branchcand, eventfilter, eventqueue,
+	    varx, vary, scalarx, scalary, rhs, infeasible, aggregated) );
+   }
+#if 0
+   else
+   {
+      /* @todo check for fixings or infeasibility when having one binary variable and another integer/implicit/binary
+       *       variable
+       */
+   }
+#endif
+
+   return SCIP_OKAY;
+}
 
 /** converts variable into multi-aggregated variable */
 SCIP_RETCODE SCIPvarMultiaggregate(
@@ -4279,6 +4649,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    int                   naggvars,           /**< number n of variables in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
    SCIP_VAR**            aggvars,            /**< variables y_i in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
@@ -4326,7 +4697,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
          return SCIP_INVALIDDATA;
       }
       SCIP_CALL( SCIPvarMultiaggregate(var->data.original.transvar, blkmem, set, stat, prob, primal, tree, lp,
-            cliquetable, branchcand, eventqueue, naggvars, aggvars, scalars, constant, infeasible, aggregated) );
+            cliquetable, branchcand, eventfilter, eventqueue, naggvars, aggvars, scalars, constant, infeasible, aggregated) );
       break;
 
    case SCIP_VARSTATUS_LOOSE:
@@ -4351,9 +4722,9 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       }
 
       tmpscalar = 0.0;
-      
+
       /* iterate over all active variables of the multi-aggregation and filter all variables which are equal to the
-       * possible multi-aggregated variable 
+       * possible multi-aggregated variable
        */
       for( v = ntmpvars - 1; v >= 0; --v )
       {
@@ -4373,7 +4744,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       if( SCIPsetIsEQ(set, tmpscalar, 1.0) )
       {
          if( ntmpvars == 0 )
-         {  
+         {
             if( SCIPsetIsZero(set, tmpconstant) ) /* x = x */
             {
                SCIPdebugMessage("Possible multi-aggregation was completely resolved and detected to be redundant.\n");
@@ -4392,41 +4763,23 @@ SCIP_RETCODE SCIPvarMultiaggregate(
             assert(tmpvars[0] != NULL);
 
             SCIPdebugMessage("Possible multi-aggregation led to fixing of variable <%s> to %g.\n", SCIPvarGetName(tmpvars[0]), -constant/tmpscalars[0]);
-            SCIP_CALL( SCIPvarFix(tmpvars[0], blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, -constant/tmpscalars[0], 
+            SCIP_CALL( SCIPvarFix(tmpvars[0], blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, -constant/tmpscalars[0],
                   infeasible, aggregated) );
             goto TERMINATE;
          }
          else if( ntmpvars == 2 ) /* 0 = a_1*y_1 + a_2*y_2 + c => y_1 = -a_2/a_1 * y_2 - c/a_1 */
          {
-            SCIP_VAR* aggvar;
-            SCIP_Real scalar;
+	    /* both variables are different active problem variables, and both scalars are non-zero: try to aggregate them */
 
-            /* prefer aggregating the variable of more general type (preferred aggregation variable is varx) */
-            if( SCIPvarGetType(tmpvars[0]) > SCIPvarGetType(tmpvars[1]) )
-            {
-               var = tmpvars[0];
-               aggvar = tmpvars[1];
-               
-               scalar = -tmpscalars[1]/tmpscalars[0];
-               tmpconstant *= -tmpconstant/tmpscalars[0];
-            }
-            else
-            {
-               var = tmpvars[1];
-               aggvar = tmpvars[0];
-               
-               scalar = -tmpscalars[0]/tmpscalars[1];
-               tmpconstant *= -tmpconstant/tmpscalars[1];
-            }
-            assert(SCIPvarGetType(var) >= SCIPvarGetType(aggvar));
-            
-            SCIPdebugMessage("Possible multi-aggregation led to aggregating variable <%s> with variable <%s> with scalar %g and constant %g.\n", SCIPvarGetName(var), SCIPvarGetName(aggvar), scalar, tmpconstant);
-            SCIP_CALL( SCIPvarAggregate(var, blkmem, set, stat, prob, primal, tree, lp, cliquetable, branchcand, eventqueue, 
-                  aggvar, scalar, tmpconstant, infeasible, aggregated) );
+            SCIPdebugMessage("Possible multi-aggregation led to aggregation of variables <%s> and <%s> with scalars %g and %g and constant %g.\n", SCIPvarGetName(tmpvars[0]), SCIPvarGetName(tmpvars[1]), tmpscalars[0], tmpscalars[1], -tmpconstant);
+
+	    SCIP_CALL( SCIPvarTryAggregateVars(set, blkmem, stat, prob, primal, tree, lp, cliquetable, branchcand, eventfilter, eventqueue,
+		  tmpvars[0], tmpvars[1], tmpscalars[0], tmpscalars[1], -tmpconstant, infeasible, aggregated) );
+
             goto TERMINATE;
          }
-         else 
-            /* @todo: it is possible to multi-aggregate another variable, does it make sense?, 
+         else
+            /* @todo: it is possible to multi-aggregate another variable, does it make sense?,
              *        rest looks like 0 = a_1*y_1 + ... + a_n*y_n + c and has at least three variables
              */
             goto TERMINATE;
@@ -4444,7 +4797,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       if( ntmpvars == 0 )
       {
          SCIPdebugMessage("Possible multi-aggregation led to fixing of variable <%s> to %g.\n", SCIPvarGetName(var), tmpconstant);
-         SCIP_CALL( SCIPvarFix(var, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, tmpconstant, 
+         SCIP_CALL( SCIPvarFix(var, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, tmpconstant,
                infeasible, aggregated) );
          goto TERMINATE;
       }
@@ -4452,24 +4805,11 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       /* if only one aggregation variable is left, we perform a normal aggregation instead of a multi-aggregation */
       if( ntmpvars == 1 )
       {
-         /* prefer aggregating the variable of more general type (preferred aggregation variable is varx) */
-         if( SCIPvarGetType(tmpvars[0]) > SCIPvarGetType(var) )
-         {
-            SCIP_VAR* tmpvar;
-            
-            /* switch the variables, such that var is the variable of more general type (cont > implint > int > bin) */
-            tmpvar = var;
-            var = tmpvars[0];
-            tmpvars[0] = tmpvar;
-            
-            tmpscalars[0] = 1/tmpscalars[0];
-            tmpconstant *= -tmpscalars[0];
-         }
-         assert(SCIPvarGetType(var) >= SCIPvarGetType(tmpvars[0]));
-         
-         SCIPdebugMessage("Possible multi-aggregation led to aggregating variable <%s> with variable <%s> with scalar %g and constant %g.\n", SCIPvarGetName(var), SCIPvarGetName(tmpvars[0]), tmpscalars[0], tmpconstant);
-         SCIP_CALL( SCIPvarAggregate(var, blkmem, set, stat, prob, primal, tree, lp, cliquetable, branchcand, eventqueue, 
-               tmpvars[0], tmpscalars[0], tmpconstant, infeasible, aggregated) );
+            SCIPdebugMessage("Possible multi-aggregation led to aggregation of variables <%s> and <%s> with scalars %g and %g and constant %g.\n", SCIPvarGetName(var), SCIPvarGetName(tmpvars[0]), 1.0, -tmpscalars[0], tmpconstant);
+
+	    SCIP_CALL( SCIPvarTryAggregateVars(set, blkmem, stat, prob, primal, tree, lp, cliquetable, branchcand, eventfilter, eventqueue,
+		  var, tmpvars[0], 1.0, -tmpscalars[0], tmpconstant, infeasible, aggregated) );
+
          goto TERMINATE;
       }
 
@@ -4619,8 +4959,8 @@ SCIP_RETCODE SCIPvarMultiaggregate(
          
       /* perform the multi aggregation on the negation variable */
       SCIP_CALL( SCIPvarMultiaggregate(var->negatedvar, blkmem, set, stat, prob, primal, tree, lp,
-            cliquetable, branchcand, eventqueue, naggvars, aggvars, scalars, var->data.negate.constant - constant, 
-            infeasible, aggregated) );
+            cliquetable, branchcand, eventfilter, eventqueue, naggvars, aggvars, scalars,
+	    var->data.negate.constant - constant, infeasible, aggregated) );
 
       /* switch the signs of the aggregation scalars again, to reset them to their original values */
       for( v = 0; v < naggvars; ++v )

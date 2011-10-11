@@ -18,10 +18,10 @@
 
     <p class="a">
       SCIP is a constraint integer program solver. It can be used as a framework for <b>branch-cut-and-price</b> 
-      and contains all necessary plugins to serve as a <b>standalone solver</b> for MIP, MIQCP, and PBO.<br> 
+      and contains all necessary plugins to serve as a <b>standalone solver</b> for MIP, MINLP, and PBO.<br>
     <ul>
       <li>You can use the <a href="http://scip.zib.de/download.shtml">precompiled binaries</a>
-          with which you can solve MIPs, MIQCPS, or PBO problems in *.mps, *.lp, *.rlp, *.zpl, *.opb, *.wbo and other file formats</li>
+          with which you can solve MIPs, MINLPs, or PBO problems in *.mps, *.lp, *.rlp, *.zpl, *.opb, *.wbo, *.pip and other file formats</li>
       <li>You can use SCIP as a subroutine for solving MIPs and more general constraint integer programs from your own source code.</li>
       <li>You can use SCIP as a framework in which you implement your own plugins.</li> 
       <li>You can use SCIP in any combination of the three purposes above.</li>
@@ -74,7 +74,7 @@
       LP-solvers currently supported by SCIP are: 
     </p>
     <ul>
-      <li><a href="http://www.coin-or.org/Clp/">CLP</a></li>
+      <li><a href="https://projects.coin-or.org/Clp/">CLP</a></li>
       <li><a href="http://www.fico.com/en/Products/DMTools/Pages/FICO-Xpress-Optimization-Suite.aspx">FICO XPress</a></li>
     <li><a href="http://www.gurobi.com/">Gurobi</a> (interface is in beta stage)</li>
       <li><a href="http://www-01.ibm.com/software/integration/optimization/cplex-optimizer/">ILOG CPLEX</a></li>
@@ -123,7 +123,7 @@
     </p>
     <p class="q">
       <a name="Q8">I changed to a new version of SCIP and now compiling breaks with some error messages which I don't understand.
-	Do you have a general hint on that?</a>
+      Do you have a general hint on that?</a>
     </p>
     <p class="a">
       Maybe the parameters of a function in SCIP changed. Relevant changes between version are listed below.
@@ -147,13 +147,13 @@
       <a name="Q44">SCIP prints error messages, aborts, produces segmentation faults, or just behaves strangely. What do?</a>
     </p>
     <p class="a">
-       <a href="#Q43>See above.</a> Often, the asserts that show up in debug mode already help to clarify misunderstandings 
+       <a href="#Q43">See above.</a> Often, the asserts that show up in debug mode already help to clarify misunderstandings
        and imply fixings, if you were calling SCIP functions in an unexpected manner. If you, however, have the impression that there is a bug in SCIP,
-       send us a bug report and include a log file and ideally a backtrace from a debugger.
+       <a href="https://www.edom.mi.uni-erlangen.de/cgi/scipweb/submit.pl">send us a bug report</a> and include a log file and ideally a backtrace from a debugger.
     </p>
     <p class="q">
       <a name="Q6"> I would like to check whether some functionality is implemented into SCIP. 
-	How does the naming of the methods work? Where do I find the most common methods?</a>
+      How does the naming of the methods work? Where do I find the most common methods?</a>
     </p>
     <p class="a">
       For an explanation of the naming see the 
@@ -161,7 +161,7 @@
       The methods being of interest for you, should normally be found either in scip.h or in pub_*.h, 
       see also <a href="http://scip.zib.de/doc/html/DOC.html">here</a>.
       In the doxygen documentation of <a href="http://scip.zib.de/doc/html/scip_8h.html">scip.h</a>, 
-      the methods are ordered by topics.		      
+      the methods are ordered by topics.
     </p>
     <p class="q">
       <a name="Q18">Can I use SCIP as a pure CP-Solver?</a>
@@ -229,7 +229,7 @@
     </p>
     <p class="q">
       <a name="Q7">The methods SCIPgetVarSol() and SCIPvarGetSol() seem to have the same
-	functionality. Which one should I use?</a>
+      functionality. Which one should I use?</a>
     </p>
     <p class="a">
       In fact, there is a slight difference: <code>SCIPvarGetSol()</code> is also able to return pseudo solution values.
@@ -238,18 +238,18 @@
     </p>
 
 
-<h4><a name="Section2">Using SCIP as a standalone MIP-Solver</a></h4>
+<h4><a name="Section2">Using SCIP as a standalone MIP/MINLP-Solver</a></h4>
     <p class="q">
       <a name="Q28">The output is too wide for my terminal window. What can I do?</a>
     </p>
     <p class="a">
       In the interactive shell you can set the width of the output with the following command
       &quot;set display width&quot; followed by an appropriate number.
-      See also the <a href="#Q9">next question</a>.		      
+      See also the <a href="#Q9">next question</a>.
     </p>
     <p class="q">
       <a name="Q9">What do the cryptic abbreviations for the columns mean which are displayed 
-	during the solving process of SCIP?</a>
+      during the solving process of SCIP?</a>
     </p>
     <p class="a">
       Type "display display" in the interactive shell to get an explanation of them.<br> 
@@ -276,7 +276,7 @@
     </p>
     <p class="q">
       <a name="Q11"> I recognized that one special plugin works very bad / very well for my problem and 
-	I want to disable it / weaken its influence / intensify its influence. How do I do this?</a>
+      I want to disable it / weaken its influence / intensify its influence. How do I do this?</a>
     </p>
     <p class="a">
     <ul>
@@ -331,6 +331,30 @@
           reducing the values  you would raise for intensification and vice versa.</li>
     </ul>
     </p>
+    <p class="q">
+      <a name="Q47">Which kind of MINLPs are supported by SCIP?</a>
+    </p>
+    <p class="a">
+      SCIP supports nonlinear constraints of the form lhs &le; f(x) &le; rhs, where the function f(x) is an algebraic
+      expression that can be represented as expression tree. Such an expression tree has constants and variables as terminal
+      nodes and operands as non-terminal nodes.
+      Expression operands supported by SCIP include addition, subtraction, multiplication, division, exponentation and
+      logarithm. Trigonometric functions are not yet supported by SCIP.<br>
+      Nonlinear objective functions are not supported by SCIP and must be modeled as constraint function.<br>
+      <b>Note</b>, that the support for non-quadratic nonlinear constraints is still in a <b>BETA</b>-stadium and not yet as
+      robust as the rest of SCIP.
+      Especially missing bounds on nonlinear variables and tiny or huge coefficients can easily lead to numerical problems,
+      which can be avoided by a careful modeling.
+    </p>
+    <p class="q">
+      <a name="Q48">How can I input a MINLP into SCIP?</a>
+    </p>
+    <p class="a">
+      Mixed-integer <b>polynomially</b> constraint programs can be input via the readers for *.zpl and *.pip files.<br>
+      Further, the readers for *.mps and *.lp files support the CPLEX extensions for <b>quadratic</b> constraints and objective.<br>
+      For more general MINLPs, no reader is included in SCIP yet.
+      However, an interface to the modeling language GAMS is available in the <a href="https://projects.coin-or.org/GAMSlinks">COIN-OR/GAMSlinks</a> project.
+    </p>
 
 
 <h4><a name="Section3">Using SCIP included in another source code</a></h4>
@@ -353,29 +377,29 @@
     </p>
     <p class="q">
       <a name="Q13">I already know a solution in advance, which I want to pass to SCIP. 
-	How do I do this?</a>
+      How do I do this?</a>
     </p>
     <p class="a">
       First you have to build your problem (at least all variables have to
       exist), then there are two options:
       <ul>
-	<li>
-	  You have the solution in file which fits the solution format of
-	  SCIP, then you can use <code>SCIPreadSol()</code> to pass that
-	  solution to SCIP.
-	</li>
-	<li>
-	  You create a new SCIP primal solution candidate by
-	  calling <code>SCIPcreateSol()</code> and set all nonzero values by
-	  calling <code>SCIPsetSolVal()</code>. After that, you add this
-	  solution by calling <code>SCIPaddSol()</code> (the variable
-	  <code>stored</code> should be true afterwards, if your solution was
-	  added to solution candidate store) and then release it by calling
-	  <code>SCIPsolFree()</code>. Instead of adding and releasing
-	  sequentially, you can use <code>SCIPaddSolFree()</code> which
-	  does both try to add the solution to the candidate store and
-	  frees the solution afterwards.
-	</li>
+      <li>
+        You have the solution in file which fits the solution format of
+        SCIP, then you can use <code>SCIPreadSol()</code> to pass that
+        solution to SCIP.
+      </li>
+      <li>
+        You create a new SCIP primal solution candidate by
+        calling <code>SCIPcreateSol()</code> and set all nonzero values by
+        calling <code>SCIPsetSolVal()</code>. After that, you add this
+        solution by calling <code>SCIPaddSol()</code> (the variable
+        <code>stored</code> should be true afterwards, if your solution was
+        added to solution candidate store) and then release it by calling
+        <code>SCIPsolFree()</code>. Instead of adding and releasing
+        sequentially, you can use <code>SCIPaddSolFree()</code> which
+        does both try to add the solution to the candidate store and
+        frees the solution afterwards.
+      </li>
       </ul>
     </p>
     <p class="q">
@@ -401,7 +425,7 @@
     </p>
     <p class="q">
       <a name="Q16">Why do the names, e.g., in debug messages often differ from the ones I
-	defined?</a>
+      defined?</a>
     </p>
     <p class="a">
       This can have several reasons. Especially names of binary variables can get different prefixes and suffixes.  Each
@@ -434,7 +458,7 @@
       If this is not possible, use SCIP_CALL_ABORT() to catch the return codes of the methods.
       If you do not want to use this either, you have to do the exception handling
       (i.e. the case that the return code is not SCIP_OKAY) on your own. 
-    </p>		   
+    </p>
     <p class="q">
       <a name="Q17a">I want to stop the solving process after a certain time. How can I do this?</a>
     </p>
@@ -444,9 +468,9 @@
       If you want to set a limit, you have to change these parameters.
       For example, for setting the time limit to one hour, you have to call 
       <code>SCIP_CALL( SCIPsetRealParam(scip, "limits/time", 3600) )</code>.
-      In the interactive shell, you just enter <code>SCIP> set limits time 3600</code>	
+      In the interactive shell, you just enter <code>SCIP> set limits time 3600</code>
       For more examples, please have a look into heur_rens.c.      
-    </p>		   
+    </p>
 
 
 <h4><a name="Section4">Using SCIP as a Branch-Cut-And-Price-Framework</a></h4>
@@ -458,7 +482,7 @@
     </p>
     <p class="q">
       <a name="Q19">What types of plugins can I add and how do I do this?</a>
-    </	 p>
+    </p>
     <p class="a">
       See the <a href="http://scip.zib.de/doc/html/index.html">doxygen documentation</a> for a list of 
       plugin types. There is a HowTo for each of them.
@@ -532,7 +556,7 @@
       </p>  
     <p class="q">
       <a name="Q21">Can I remove unnecessary display columns or&mdash;even better&mdash;add my own ones? 
-	Can I change the statistics displayed at the end of solving?</a>
+      Can I change the statistics displayed at the end of solving?</a>
     </p>
     <p class="a">
       Setting the status of a display column to 0 turns it off. E.g., type "set display memused status 0" in the

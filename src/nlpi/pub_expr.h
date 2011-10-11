@@ -925,6 +925,12 @@ void SCIPexprgraphDisableNode(
    SCIP_EXPRGRAPHNODE*   node                /**< expression graph node to enable */
    );
 
+/** returns whether a node is currently enabled */
+extern
+SCIP_Bool SCIPexprgraphIsNodeEnabled(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node to enable */
+   );
+
 /** gets number of children of a node in an expression graph */
 extern
 int SCIPexprgraphGetNodeNChildren(

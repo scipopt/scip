@@ -5007,7 +5007,7 @@ SCIP_DECL_CONSLOCK(consLockIndicator)
 }
 
 /** variable deletion method of constraint handler */
-#define consDelVarsIndicator NULL
+#define consDelvarsIndicator NULL
 
 /** constraint display method of constraint handler */
 static
@@ -5398,7 +5398,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
          consSepasolIndicator, consEnfolpIndicator, consEnfopsIndicator, consCheckIndicator,
          consPropIndicator, consPresolIndicator, consRespropIndicator, consLockIndicator,
          consActiveIndicator, consDeactiveIndicator, consEnableIndicator, consDisableIndicator,
-         consDelVarsIndicator, consPrintIndicator, consCopyIndicator, consParseIndicator, conshdlrdata) );
+         consDelvarsIndicator, consPrintIndicator, consCopyIndicator, consParseIndicator, conshdlrdata) );
 
    /* create conflict handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conflicthdlrdata) );

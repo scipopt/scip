@@ -517,7 +517,7 @@ SCIP_RETCODE resolvePropagation(
    return SCIP_OKAY;
 }
 
-/** relax lower bound of give variable as long as the given inference upper bound leads still to an cutoff and add that
+/** relax lower bound of give variable as long as the given inference upper bound leads still to a cutoff and add that
  *  bound change to the conflict set
  */
 static
@@ -554,7 +554,7 @@ SCIP_RETCODE relaxInfervarLowerbound(
 
       /* check if the old lower bound is sufficient to prove infeasibility; in case the inference upper bound is
        * greater equal to the next possible relaxed lower bound, then we have to break since in this case the inference
-       * upper bound does not lead to an cutoff anymore
+       * upper bound does not lead to a cutoff anymore
        */
       if( SCIPisGE(scip, inferub, SCIPbdchginfoGetOldbound(bdchginfo)) )
          break;
@@ -578,7 +578,7 @@ SCIP_RETCODE relaxInfervarLowerbound(
    return SCIP_OKAY;
 }
 
-/** relax lower bound of give variable as long as the given inference bound leads still to an cutoff and add that bound
+/** relax lower bound of give variable as long as the given inference bound leads still to a cutoff and add that bound
  *  change to the conflict set
  */
 static
@@ -616,7 +616,7 @@ SCIP_RETCODE relaxVbdvarLowerbound(
       
       /* check if the old lower bound is sufficient to prove infeasibility; in case the inference bound is greater
        * equal to the next possible relaxed lower bound, then we have to break since in this case the inference bound
-       * does not lead to an cutoff anymore
+       * does not lead to a cutoff anymore
        */
       if( SCIPisGE(scip, bound, coef * SCIPbdchginfoGetOldbound(bdchginfo) + constant) )
          break;
@@ -638,7 +638,7 @@ SCIP_RETCODE relaxVbdvarLowerbound(
    return SCIP_OKAY;
 }
 
-/** relax upper bound of give variable as long as the given inference lower bound leads still to an cutoff and add that
+/** relax upper bound of give variable as long as the given inference lower bound leads still to a cutoff and add that
  *  bound change to the conflict set
  */
 static
@@ -675,7 +675,7 @@ SCIP_RETCODE relaxInfervarUpperbound(
    
       /* check if the old upper bound is sufficient to prove infeasibility; in case the inference lower bound is less
        * equal to the next possible relaxed upper bound, then we have to break since in this case the inference lower bound
-       * does not lead to an cutoff anymore
+       * does not lead to a cutoff anymore
        */
       if( SCIPisLE(scip, inferlb, SCIPbdchginfoGetOldbound(bdchginfo)) )
          break;
@@ -699,7 +699,7 @@ SCIP_RETCODE relaxInfervarUpperbound(
    return SCIP_OKAY;
 }
 
-/** relax upper bound of give variable as long as the given inference bound leads still to an cutoff and add that bound
+/** relax upper bound of give variable as long as the given inference bound leads still to a cutoff and add that bound
  *  change to the conflict set
  */
 static
@@ -737,7 +737,7 @@ SCIP_RETCODE relaxVbdvarUpperbound(
       
       /* check if the old upper bound is sufficient to prove infeasibility; in case the inference bound is greater
        * equal to the next possible relaxed upper bound, then we have to break since in this case the inference bound
-       * does not lead to an cutoff anymore
+       * does not lead to a cutoff anymore
        */
       if( SCIPisGE(scip, bound, coef * SCIPbdchginfoGetOldbound(bdchginfo) + constant) )
          break;
@@ -759,7 +759,7 @@ SCIP_RETCODE relaxVbdvarUpperbound(
    return SCIP_OKAY;
 }
 
-/** relaxes bound of give variable as long as the given inference bound leads still to an cutoff and add that bound
+/** relaxes bound of give variable as long as the given inference bound leads still to a cutoff and add that bound
  *  change to the conflict set
  */
 static
@@ -787,14 +787,14 @@ SCIP_RETCODE relaxVbdvar(
 }
 
 
-/** analyzes a infeasibility which was reached by updating the lower bound of the inference variable above its upper
+/** analyzes an infeasibility which was reached by updating the lower bound of the inference variable above its upper
  *  bound
  */
 static
 SCIP_RETCODE analyzeConflictLowerbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROPDATA*        propdata,           /**< propagator data */   
-   SCIP_VAR*             infervar,           /**< variable which lead to an cutoff */
+   SCIP_VAR*             infervar,           /**< variable which lead to a cutoff */
    SCIP_Real             inferlb,            /**< lower bound which lead to infeasibility */
    INFERINFO             inferinfo,          /**< inference information */
    SCIP_Real             coef,               /**< inference variable bound coefficient used */
@@ -888,14 +888,14 @@ SCIP_RETCODE analyzeConflictLowerbound(
    return SCIP_OKAY;
 }
 
-/** analyzes a infeasibility which was reached by updating the upper bound of the inference variable below its lower
+/** analyzes an infeasibility which was reached by updating the upper bound of the inference variable below its lower
  *  bound
  */
 static
 SCIP_RETCODE analyzeConflictUpperbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROPDATA*        propdata,           /**< propagator data */   
-   SCIP_VAR*             infervar,           /**< variable which lead to an cutoff */
+   SCIP_VAR*             infervar,           /**< variable which lead to a cutoff */
    SCIP_Real             inferub,            /**< upper bound which lead to infeasibility */
    INFERINFO             inferinfo,          /**< inference information */
    SCIP_Real             coef,               /**< inference variable bound coefficient used */
@@ -1208,7 +1208,7 @@ SCIP_RETCODE propagateVbounds(
             
             SCIPdebugMessage(" -> lower bound tightening lead to infeasibility\n");
             
-            /* analyzes a infeasibility via conflict analysis */
+            /* analyzes an infeasibility via conflict analysis */
             SCIP_CALL( analyzeConflictLowerbound(scip, propdata, var, newbound, inferinfo, bestcoef, bestconstant) );
             *result = SCIP_CUTOFF;
 
@@ -1358,7 +1358,7 @@ SCIP_RETCODE propagateVbounds(
 
             SCIPdebugMessage(" -> upper bound tightening lead to infeasibility\n");
             
-            /* analyzes a infeasibility via conflict analysis */
+            /* analyzes an infeasibility via conflict analysis */
             SCIP_CALL( analyzeConflictUpperbound(scip, propdata, var, newbound, inferinfo, bestcoef, bestconstant) );
             *result = SCIP_CUTOFF;
             
