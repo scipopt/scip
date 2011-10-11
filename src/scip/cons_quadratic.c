@@ -3243,13 +3243,15 @@ void getImpliedBounds(
    while( pos > 0 && implvars[pos-1] == y )
       --pos;
 
-   /* update implied lower and upper bounds on y */
+   /* update implied lower and upper bounds on y
+    * but make sure that resultant will not be empty, due to tolerances
+    */
    while( pos < nimpls && implvars[pos] == y )
    {
       if( impltypes[pos] == SCIP_BOUNDTYPE_LOWER )
-         resultant->inf = MAX(resultant->inf, implbounds[pos]);
+         resultant->inf = MAX(resultant->inf, MIN(resultant->sup, implbounds[pos]));
       else
-         resultant->sup = MIN(resultant->sup, implbounds[pos]);
+         resultant->sup = MIN(resultant->sup, MAX(resultant->inf, implbounds[pos]));
       ++pos;
    }
 
