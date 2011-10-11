@@ -53,8 +53,8 @@ using std::vector;
 #define SCIPInterval_NAMESPACE CppAD
 #include "nlpi/intervalarith.h"
 
-SCIP_Real SCIPInterval_NAMESPACE::SCIPInterval::infinity = SCIP_DEFAULT_INFINITY;
-using SCIPInterval_NAMESPACE::SCIPInterval;
+SCIP_Real CppAD::SCIPInterval::infinity = SCIP_DEFAULT_INFINITY;
+using CppAD::SCIPInterval;
 
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wshadow"
