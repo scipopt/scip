@@ -145,7 +145,7 @@ SCIP_DECL_CONSINITPRE(consInitpreObj)
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   SCIP_CALL( conshdlrdata->objconshdlr->scip_initpre(scip, conshdlr, conss, nconss, result) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_initpre(scip, conshdlr, conss, nconss, isunbounded, isinfeasible, result) );
 
    return SCIP_OKAY;
 }
@@ -162,7 +162,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreObj)
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   SCIP_CALL( conshdlrdata->objconshdlr->scip_exitpre(scip, conshdlr, conss, nconss, result) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_exitpre(scip, conshdlr, conss, nconss, isunbounded, isinfeasible, result) );
 
    return SCIP_OKAY;
 }

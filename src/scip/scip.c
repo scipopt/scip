@@ -6287,15 +6287,15 @@ SCIP_RETCODE initPresolve(
    SCIP_CALL( SCIPsetInitprePlugins(scip->set, scip->mem->probmem, scip->stat, unbounded, infeasible) );
    assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
 
-   /* delete the variables from the problems that were marked to be deleted */
-   SCIP_CALL( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp, scip->branchcand) );
-
    /* remove empty and single variable cliques from the clique table, and convert all two variable cliques
     * into implications
+    * delete the variables from the problems that were marked to be deleted
     */
    if( !(*unbounded) && !(*infeasible) )
    {
       SCIP_Bool infeas;
+
+      SCIP_CALL( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp, scip->branchcand) );
 
       SCIP_CALL( SCIPcliquetableCleanup(scip->cliquetable, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, &infeas) );
@@ -6315,7 +6315,9 @@ static
 SCIP_RETCODE exitPresolve(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool*            unbounded,          /**< pointer to store whether presolving detected unboundedness */
-   SCIP_Bool*            infeasible          /**< pointer to store whether presolving detected infeasibility */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether presolving detected infeasibility */
+   SCIP_Bool             isunbounded,        /**< was unboundedness already detected */
+   SCIP_Bool             isinfeasible        /**< was infeasibility already detected */
    )
 {
    SCIP_VAR** vars;
@@ -6329,50 +6331,53 @@ SCIP_RETCODE exitPresolve(
    assert(scip->transprob != NULL);
    assert(scip->set->stage == SCIP_STAGE_PRESOLVING);
 
-   /* flatten all variables */
-   vars = SCIPgetFixedVars(scip);
-   nvars = SCIPgetNFixedVars(scip);
-   assert(nvars == 0 || vars != NULL);
-      
-   for( v = nvars - 1; v >= 0; --v )
-   { 
-      SCIP_VAR* var;
-#ifndef NDEBUG      
-      SCIP_VAR** multvars;
-      int i;
-#endif
-      var = vars[v];
-      assert(var != NULL);
+   if( !isunbounded && !isinfeasible )
+   {
+      /* flatten all variables */
+      vars = SCIPgetFixedVars(scip);
+      nvars = SCIPgetNFixedVars(scip);
+      assert(nvars == 0 || vars != NULL);
 
-      if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
+      for( v = nvars - 1; v >= 0; --v )
       {
-         /** flattens aggregation graph of multi-aggregated variable in order to avoid exponential recursion later-on */
-         SCIP_CALL( SCIPvarFlattenAggregationGraph(var, scip->mem->probmem, scip->set) );
+	 SCIP_VAR* var;
+#ifndef NDEBUG
+	 SCIP_VAR** multvars;
+	 int i;
+#endif
+	 var = vars[v];
+	 assert(var != NULL);
 
-#ifndef NDEBUG      
-         multvars = SCIPvarGetMultaggrVars(var);
-         for( i = SCIPvarGetMultaggrNVars(var) - 1; i >= 0; --i)
-            assert(SCIPvarGetStatus(multvars[i]) != SCIP_VARSTATUS_MULTAGGR);
-#endif      
+	 if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
+	 {
+	    /** flattens aggregation graph of multi-aggregated variable in order to avoid exponential recursion later-on */
+	    SCIP_CALL( SCIPvarFlattenAggregationGraph(var, scip->mem->probmem, scip->set) );
+
+#ifndef NDEBUG
+	    multvars = SCIPvarGetMultaggrVars(var);
+	    for( i = SCIPvarGetMultaggrNVars(var) - 1; i >= 0; --i)
+	       assert(SCIPvarGetStatus(multvars[i]) != SCIP_VARSTATUS_MULTAGGR);
+#endif
+	 }
       }
    }
 
-   *unbounded = FALSE;
-   *infeasible = FALSE;
+   *unbounded = isunbounded;
+   *infeasible = isinfeasible;
 
    /* inform plugins that the presolving is finished, and perform final modifications */
    SCIP_CALL( SCIPsetExitprePlugins(scip->set, scip->mem->probmem, scip->stat, unbounded, infeasible) );
    assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
 
-   /* delete the variables from the problems that were marked to be deleted */
-   SCIP_CALL( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp, scip->branchcand) );
-
    /* remove empty and single variable cliques from the clique table, and convert all two variable cliques
     * into implications
+    * delete the variables from the problems that were marked to be deleted
     */
    if( !(*unbounded) && !(*infeasible) )
    {
       SCIP_Bool infeas;
+
+      SCIP_CALL( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp, scip->branchcand) );
 
       SCIP_CALL( SCIPcliquetableCleanup(scip->cliquetable, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, &infeas) );
@@ -6587,7 +6592,7 @@ SCIP_RETCODE presolveRound(
                "presolver <%s> detected unboundedness (or infeasibility)\n", SCIPpresolGetName(scip->set->presols[i-1]));
          else
             SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "propagator <%s> detected infeasibility\n", SCIPpropGetName(scip->set->props[j-1]));
+               "propagator <%s> detected  unboundedness (or infeasibility)\n", SCIPpropGetName(scip->set->props[j-1]));
       }
       *delayed = *delayed || (result == SCIP_DELAYED);
 
@@ -6720,7 +6725,7 @@ SCIP_RETCODE presolveRound(
                "presolver <%s> detected unboundedness (or infeasibility)\n", SCIPpresolGetName(scip->set->presols[i-1]));
          else
             SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "propagator <%s> detected infeasibility\n", SCIPpropGetName(scip->set->props[j-1]));
+               "propagator <%s> detected  unboundedness (or infeasibility)\n", SCIPpropGetName(scip->set->props[j-1]));
       }
       *delayed = *delayed || (result == SCIP_DELAYED);
 
@@ -6841,7 +6846,7 @@ SCIP_RETCODE presolve(
    assert(scip->set->stage == SCIP_STAGE_PRESOLVING);
    
    /* call primal heuristics that are applicable before presolving */
-   if( scip->set->nheurs > 0 )
+   if( !(*infeasible) && !(*unbounded) && scip->set->nheurs > 0 )
    {
       SCIP_Bool foundsol;
 
@@ -7016,7 +7021,7 @@ SCIP_RETCODE presolve(
       }
 #endif
       
-      SCIP_CALL( exitPresolve(scip, &unbd, &infeas) );
+      SCIP_CALL( exitPresolve(scip, &unbd, &infeas, *unbounded, *infeasible) );
       assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
       if( infeas && !(*infeasible) )
       {
@@ -7611,9 +7616,6 @@ SCIP_RETCODE SCIPfreeSolve(
    SCIP_Bool             restart             /**< should certain data be preserved for improved restarting? */
    )
 {
-   SCIP_Bool unbounded;
-   SCIP_Bool infeasible;
-
    SCIP_CALL( checkStage(scip, "SCIPfreeSolve", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    switch( scip->set->stage )
@@ -7624,12 +7626,33 @@ SCIP_RETCODE SCIPfreeSolve(
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVING:
+   {
+      SCIP_Bool unbounded;
+      SCIP_Bool infeasible;
+      SCIP_Bool isunbounded;
+      SCIP_Bool isinfeasible;
+
+      if( scip->stat->status == SCIP_STATUS_INFEASIBLE )
+      {
+	 isinfeasible = TRUE;
+	 isunbounded = FALSE;
+      }
+      else if( scip->stat->status == SCIP_STATUS_INFORUNBD || scip->stat->status == SCIP_STATUS_UNBOUNDED  )
+      {
+	 isinfeasible = FALSE;
+	 isunbounded = TRUE;
+      }
+      else
+      {
+	 isinfeasible = FALSE;
+	 isunbounded = FALSE;
+      }
+
       /* exit presolving */
-      SCIP_CALL( exitPresolve(scip, &unbounded, &infeasible) );
+      SCIP_CALL( exitPresolve(scip, &unbounded, &infeasible, isunbounded, isinfeasible) );
       assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
-
-      /*lint -fallthrough*/
-
+   }
+   /*lint -fallthrough*/
    case SCIP_STAGE_PRESOLVED:
       /* switch stage to TRANSFORMED */
       scip->set->stage = SCIP_STAGE_TRANSFORMED;
@@ -7653,9 +7676,6 @@ SCIP_RETCODE SCIPfreeTransform(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_Bool unbounded;
-   SCIP_Bool infeasible;
-
    SCIP_CALL( checkStage(scip, "SCIPfreeTransform", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    switch( scip->set->stage )
@@ -7665,12 +7685,33 @@ SCIP_RETCODE SCIPfreeTransform(
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVING:
+   {
+      SCIP_Bool unbounded;
+      SCIP_Bool infeasible;
+      SCIP_Bool isunbounded;
+      SCIP_Bool isinfeasible;
+
+      if( scip->stat->status == SCIP_STATUS_INFEASIBLE )
+      {
+	 isinfeasible = TRUE;
+	 isunbounded = FALSE;
+      }
+      else if( scip->stat->status == SCIP_STATUS_INFORUNBD || scip->stat->status == SCIP_STATUS_UNBOUNDED  )
+      {
+	 isinfeasible = FALSE;
+	 isunbounded = TRUE;
+      }
+      else
+      {
+	 isinfeasible = FALSE;
+	 isunbounded = FALSE;
+      }
+
       /* exit presolving */
-      SCIP_CALL( exitPresolve(scip, &unbounded, &infeasible) );
+      SCIP_CALL( exitPresolve(scip, &unbounded, &infeasible, isunbounded, isinfeasible) );
       assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
-
-      /*lint -fallthrough*/
-
+   }
+   /*lint -fallthrough*/
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_SOLVED:

@@ -122,6 +122,8 @@ public:
    virtual SCIP_RETCODE scip_initpre(
       SCIP*              scip,               /**< SCIP data structure */   
       SCIP_PRESOL*       presol,             /**< presolver */
+      SCIP_Bool          isunbounded,        /**< was unboundedness already detected */
+      SCIP_Bool          isinfeasible,       /**< was infeasibility already detected */
       SCIP_RESULT*       result              /**< pointer to store the result of the callback method */
       )
    {  /*lint --e{715}*/
@@ -142,6 +144,8 @@ public:
    virtual SCIP_RETCODE scip_exitpre(
       SCIP*              scip,               /**< SCIP data structure */   
       SCIP_PRESOL*       presol,             /**< presolver */
+      SCIP_Bool          isunbounded,        /**< was unboundedness already detected */
+      SCIP_Bool          isinfeasible,       /**< was infeasibility already detected */
       SCIP_RESULT*       result              /**< pointer to store the result of the callback method */
       )
    {  /*lint --e{715}*/
