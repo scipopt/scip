@@ -163,6 +163,8 @@ struct SCIP_ConsData
    SCIP_VAR**            vars;               /**< variables of constraint entries */
    SCIP_Real*            vals;               /**< coefficients of constraint entries */
    SCIP_EVENTDATA**      eventdatas;         /**< event datas for bound change events of the variables */
+   int                   pseudoactivityneginf; /**< number of coefficients contributing with neg. infinite value to pseudoactivity */
+   int                   pseudoactivityposinf; /**< number of coefficients contributing with pos. infinite value to pseudoactivity */
    int                   minactivityneginf;  /**< number of coefficients contributing with neg. infinite value to minactivity */
    int                   minactivityposinf;  /**< number of coefficients contributing with pos. infinite value to minactivity */
    int                   maxactivityneginf;  /**< number of coefficients contributing with neg. infinite value to maxactivity */
@@ -814,6 +816,8 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->maxactivity = SCIP_INVALID;
    (*consdata)->lastminactivity = SCIP_INVALID;
    (*consdata)->lastmaxactivity = SCIP_INVALID;
+   (*consdata)->pseudoactivityneginf = -1;
+   (*consdata)->pseudoactivityposinf = -1;
    (*consdata)->minactivityneginf = -1;
    (*consdata)->minactivityposinf = -1;
    (*consdata)->maxactivityneginf = -1;
@@ -968,6 +972,8 @@ void consdataInvalidateActivities(
    consdata->maxactivity = SCIP_INVALID;
    consdata->lastminactivity = SCIP_INVALID;
    consdata->lastmaxactivity = SCIP_INVALID;
+   consdata->pseudoactivityneginf = -1;
+   consdata->pseudoactivityposinf = -1;
    consdata->minactivityneginf = -1;
    consdata->minactivityposinf = -1;
    consdata->maxactivityneginf = -1;
@@ -1000,6 +1006,57 @@ SCIP_Bool isNewActivityUnreliable(
    return SCIPisZero(scip, quotient) || SCIPisZero(scip, 1.0/quotient);
 }
 
+/** updates pseudo activity for a change in bound */
+static
+void consdataUpdatePseudoactivity(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< linear constraint data */
+   SCIP_Real             oldbound,           /**< old lower/upper bound of variable */
+   SCIP_Real             newbound,           /**< new lower/upper bound of variable */
+   SCIP_Real             val                /**< coefficient of constraint entry */
+   )
+{
+   if( SCIPisInfinity(scip, oldbound) )
+   {
+      assert(consdata->pseudoactivityposinf >= 1);
+      if( !SCIPisInfinity(scip, newbound) )
+      {
+         consdata->pseudoactivityposinf--;
+         if( SCIPisInfinity(scip, -newbound) )
+            consdata->pseudoactivityneginf++;
+         else
+            consdata->pseudoactivity += val * newbound;
+      }
+   }
+   else if( SCIPisInfinity(scip, -oldbound) )
+   {
+      assert(consdata->pseudoactivityneginf >= 1);
+      if( !SCIPisInfinity(scip, -newbound) )
+      {
+         consdata->pseudoactivityneginf--;
+         if( SCIPisInfinity(scip, newbound) )
+            consdata->pseudoactivityposinf++;
+         else
+            consdata->pseudoactivity += val * newbound;
+      }
+   }
+   else
+   {
+      if( SCIPisInfinity(scip, newbound) )
+      {
+         consdata->pseudoactivityposinf++;
+         consdata->pseudoactivity -= val * oldbound;
+      }
+      else if( SCIPisInfinity(scip, -newbound) )
+      {
+         consdata->pseudoactivityneginf++;
+         consdata->pseudoactivity -= val * oldbound;
+      }
+      else
+         consdata->pseudoactivity += val * (newbound - oldbound);
+   }
+}
+
 /** updates minimum and maximum activity for a change in lower bound */
 static
 void consdataUpdateChgLb(
@@ -1021,14 +1078,18 @@ void consdataUpdateChgLb(
       assert(consdata->pseudoactivity < SCIP_INVALID);
       assert(consdata->minactivity < SCIP_INVALID);
       assert(consdata->maxactivity < SCIP_INVALID);
+      assert(consdata->pseudoactivityneginf >= 0);
+      assert(consdata->pseudoactivityposinf >= 0);
       assert(consdata->minactivityneginf >= 0);
       assert(consdata->minactivityposinf >= 0);
       assert(consdata->maxactivityneginf >= 0);
       assert(consdata->maxactivityposinf >= 0);
 
+      /* adjust pseudo activity */
       if( SCIPvarGetBestBoundType(var) == SCIP_BOUNDTYPE_LOWER )
-         consdata->pseudoactivity += val * (newlb - oldlb);
+         consdataUpdatePseudoactivity(scip, consdata, oldlb, newlb, val);
 
+      /* adjust minactivity or maxactivity depending on the coefficient */
       if( val > 0.0 )
       {
          if( SCIPisInfinity(scip, oldlb) )
@@ -1132,7 +1193,7 @@ void consdataUpdateChgLb(
             {
                int i;
                SCIP_Real bound;
-               
+
                consdata->maxactivity = 0;
 
                for( i = consdata->nvars - 1; i >= 0; --i )
@@ -1176,9 +1237,11 @@ void consdataUpdateChgUb(
       assert(consdata->maxactivityneginf >= 0);
       assert(consdata->maxactivityposinf >= 0);
 
+      /* adjust pseudo activity */
       if( SCIPvarGetBestBoundType(var) == SCIP_BOUNDTYPE_UPPER )
-         consdata->pseudoactivity += val * (newub - oldub);
+         consdataUpdatePseudoactivity(scip, consdata, oldub, newub, val);
 
+      /* adjust minactivity or maxactivity depending on the coefficient */
       if( val > 0.0 )
       {
          if( SCIPisInfinity(scip, oldub) )
@@ -1751,6 +1814,8 @@ void consdataCalcActivities(
    consdata->pseudoactivity = 0.0;
    consdata->minactivity = 0.0;
    consdata->maxactivity = 0.0;
+   consdata->pseudoactivityneginf = 0;
+   consdata->pseudoactivityposinf = 0;
    consdata->minactivityneginf = 0;
    consdata->minactivityposinf = 0;
    consdata->maxactivityneginf = 0;
@@ -1790,6 +1855,11 @@ SCIP_Real consdataGetPseudoActivity(
    assert(consdata->glbmaxactivity < SCIP_INVALID);
 
    SCIPdebugMessage("pseudo activity of linear constraint: %.15g\n", consdata->pseudoactivity);
+
+   if( consdata->pseudoactivityneginf > 0 )
+      return -SCIPinfinity(scip);
+   else if( consdata->pseudoactivityposinf > 0 )
+      return SCIPinfinity(scip);
 
    return consdata->pseudoactivity;
 }
