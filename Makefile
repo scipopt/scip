@@ -182,7 +182,7 @@ ifeq ($(SHARED),true)
 FLAGS		+=	-fPIC
 LIBEXT		=	$(SHAREDLIBEXT)
 LIBBUILD	=	$(LINKCC)
-LIBBUILDFLAGS	+=      -shared -fPIC
+LIBBUILDFLAGS	+=      -shared
 LIBBUILD_o	= 	-o # the trailing space is important
 ARFLAGS		=
 RANLIB		=
@@ -926,14 +926,18 @@ endif
 
 .PHONY: cleanlib
 cleanlib:       $(LIBDIR)
-		@echo "-> remove libraries $(LIBDIR)/lib*.$(LIBEXT)"
-		@-rm -f $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) \
-		$(LPILIBLINK) $(LPILIBSHORTLINK) $(NLPILIBLINK) $(NLPILIBSHORTLINK) \
-		$(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK)
+		@echo "-> remove library $(SCIPLIBFILE)"
+		@-rm -f $(SCIPLIBFILE) $(SCIPLIBLINK) $(SCIPLIBSHORTLINK)
+		@echo "-> remove library $(OBJSCIPLIBFILE)"
+		@-rm -f $(OBJSCIPLIBFILE) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK)
+		@echo "-> remove library $(LPILIBFILE)"
+		@-rm -f $(LPILIBFILE) $(LPILIBLINK) $(LPILIBSHORTLINK)
+		@echo "-> remove library $(NLPILIBFILE)"
+		@-rm -f $(NLPILIBFILE) $(NLPILIBLINK) $(NLPILIBSHORTLINK)
 
 .PHONY: cleanbin
 cleanbin:       $(BINDIR) 
-		@echo "-> remove binary"
+		@echo "-> remove binary $(MAINFILE)"
 		@-rm -f $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
 
 .PHONY: lpidepend
