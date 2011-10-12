@@ -4011,6 +4011,11 @@ SCIP_RETCODE SCIPnodeFocus(
       }
       else
       {
+         /* in case the LP was not constructed (do to the parameter settings for example) we have the finally remember the old size
+          * of the LP (if it was constructed in an earlier node) before we change the current node into a junction
+          */
+         SCIPlpMarkSize(lp);
+
          /* convert old focus node into junction */
          SCIP_CALL( focusnodeToJunction(blkmem, set, stat, eventqueue, prob, tree, lp, branchcand) );
       }
