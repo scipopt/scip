@@ -23,6 +23,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "scip/cons_abspower.h"
 #include "scip/cons_nonlinear.h"
@@ -5914,9 +5915,6 @@ SCIP_DECL_CONSPARSE(consParseAbspower)
 {
    SCIP_Real lhs;
    SCIP_Real rhs;
-   char      varx[SCIP_MAXSTRLEN+2];
-   char      varz[SCIP_MAXSTRLEN+2];
-   int       namelen;
    SCIP_Real xoffset;
    SCIP_Real exponent;
    SCIP_Real zcoef;
@@ -5925,7 +5923,6 @@ SCIP_DECL_CONSPARSE(consParseAbspower)
    char      sense;
    SCIP_VAR* x;
    SCIP_VAR* z;
-   int ret;
 
    *success = TRUE;
 
@@ -5935,32 +5932,123 @@ SCIP_DECL_CONSPARSE(consParseAbspower)
 
    SCIPdebugMessage("start parsing absolute power constraint expression %s\n", str);
 
-   if( strncmp(str, "signpower", 9) != 0 )
+   if( strncmp(str, "signpower(", 10) != 0 )
    {
       /* str does not start with signpower string, so may be left-hand-side of ranged constraint */
       if( !SCIPstrToRealValue(str, &lhs, &endptr) )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: left-hand-side or 'signpower' expected at begin on '%s'\n", str);
-         (*success) = FALSE;
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: left-hand-side or 'signpower(' expected at begin on '%s'\n", str);
+         *success = FALSE;
          return SCIP_OKAY;
       }
       str = endptr;
    }
-
-   ret = sscanf(str, "signpower(<%[^>]> %lg, %lg) %lg<%[^>]> %c= %lg", varx+1, &xoffset, &exponent, &zcoef, varz+1, &sense, &value);
-   if( ret != 7 )
+   else
    {
-      /* if that does not match, then it may be a 'free' constraint (quite unlikely) */
-      ret = sscanf(str, "signpower(<%[^>]> %lg, %lg) %lg<%[^>]> [free]", varx+1, &xoffset, &exponent, &zcoef, varz+1);
-      if( ret != 5 )
+      str += 10;
+   }
+
+   /* parse (x +offset, exponent) +coef z */
+
+   /* parse variable name */
+   SCIP_CALL( SCIPparseVarName(scip, str, &x, &endptr) );
+   if( x == NULL )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable name at '%s'\n", str);
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+   str = endptr;
+
+   /* skip whitespace */
+   while( isspace((int)*str) )
+      ++str;
+
+   /* parse offset */
+   if( !SCIPstrToRealValue(str, &xoffset, &endptr) )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "expected coefficient at begin of '%s'\n", str);
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+   str = endptr;
+
+   if( *str != ',' )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "expected ',' at begin of '%s'\n", str);
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+   ++str;
+
+   /* skip whitespace */
+   while( isspace((int)*str) )
+      ++str;
+
+   /* parse exponent */
+   if( !SCIPstrToRealValue(str, &exponent, &endptr) )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "expected coefficient at begin of '%s'\n", str);
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+   str = endptr;
+
+   if( *str != ')' )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "expected ')' at begin of '%s'\n", str);
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+   ++str;
+
+   /* skip whitespace */
+   while( isspace((int)*str) )
+      ++str;
+
+   /* parse coefficient */
+   if( !SCIPstrToRealValue(str, &zcoef, &endptr) )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "expected coefficient at begin of '%s'\n", str);
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+   str = endptr;
+
+   /* parse variable name */
+   SCIP_CALL( SCIPparseVarName(scip, str, &z, &endptr) );
+   if( z == NULL )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable name at '%s'\n", str);
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+   str = endptr;
+
+   /* skip whitespace */
+   while( isspace((int)*str) )
+      ++str;
+
+   if( strncmp(str, "[free]", 6) != 0 )
+   {
+      /* parse sense */
+      if( (*str != '<' && *str != '>' && *str != '=') || str[1] != '=' )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error while parsing constraint expression\n");
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "expected sense at begin of '%s'\n", str);
          *success = FALSE;
          return SCIP_OKAY;
       }
-   }
-   else
-   {
+      sense = *str;
+      str += 2;
+
+      /* parse value at rhs */
+      if( !SCIPstrToRealValue(str, &value, &endptr) )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "expected rhs value at begin of '%s'\n", str);
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+
       switch( sense )
       {
       case '<' :
@@ -5973,40 +6061,8 @@ SCIP_DECL_CONSPARSE(consParseAbspower)
          lhs = rhs = value;
          break;
       default:
-         SCIPerrorMessage("unknown sense '%c='\n", sense);
-         *success = FALSE;
-         return SCIP_OKAY;
+         SCIPABORT(); /* checked above that this cannot happen */
       }
-   }
-
-   /* add '<' and '>' around variable names, so we can parse it via SCIPparseVarName */
-   namelen = (int) strlen(varx+1);
-   assert(namelen > 0);
-   varx[0] = '<';
-   varx[namelen+1] = '>';
-   varx[namelen+2] = '\0';
-
-   SCIP_CALL( SCIPparseVarName(scip, varx, &x, &endptr) );
-   if( x == NULL )
-   {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable %s", varx);
-      *success = FALSE;
-      return SCIP_OKAY;
-   }
-
-   /* add '<' and '>' around variable names, so we can parse it via SCIPparseVarName */
-   namelen = (int) strlen(varz+1);
-   assert(namelen > 0);
-   varz[0] = '<';
-   varz[namelen+1] = '>';
-   varz[namelen+2] = '\0';
-
-   SCIP_CALL( SCIPparseVarName(scip, varz, &z, &endptr) );
-   if( z == NULL )
-   {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable %s", varz);
-      *success = FALSE;
-      return SCIP_OKAY;
    }
 
    SCIP_CALL( SCIPcreateConsAbspower(scip, cons, name, x, z, exponent, xoffset, zcoef, lhs, rhs,

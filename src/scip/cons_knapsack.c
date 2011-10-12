@@ -27,6 +27,7 @@
 #include <string.h>
 #include <limits.h>
 #include <stdio.h>
+#include <ctype.h>
 
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
@@ -8863,15 +8864,12 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
 {  /*lint --e{715}*/
    SCIP_VAR* var;
    SCIP_Longint weight;
-   char varname[SCIP_MAXSTRLEN+2];
    SCIP_VAR** vars;
    SCIP_Longint* weights;
    SCIP_Longint capacity;
    char* endptr;
    int nvars;
    int varssize;
-   int parselen;
-   int namelen;
 
    assert(scip != NULL);
    assert(success != NULL);
@@ -8886,26 +8884,33 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
    SCIP_CALL( SCIPallocBufferArray(scip, &vars,    varssize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &weights, varssize) );
 
-   while( sscanf(str, "%"SCIP_LONGINT_FORMAT"<%[^>]>%n", &weight, varname+1, &parselen) >= 2 )
+   while( *str != '\0' )
    {
-      str += parselen;
+      /* try to parse coefficient */
+      weight = strtoll(str, &endptr, 0);
 
-      /* add '<' and '>' around variable name, so we can parse it via SCIPparseVarName */
-      namelen = (int)strlen(varname+1);
-      assert(namelen > 0);
+      /* probably reached <=, so stop */
+      if( str == endptr )
+         break;
 
-      varname[0] = '<';
-      varname[namelen+1] = '>';
-      varname[namelen+2] = '\0';
-      SCIP_CALL( SCIPparseVarName(scip, varname, &var, &endptr) );
+      str = endptr;
 
+      /* skip whitespace */
+      while( isspace((int)*str) )
+         ++str;
+
+      /* parse variable name */
+      SCIP_CALL( SCIPparseVarName(scip, str, &var, &endptr) );
       if( var == NULL )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s>\n", varname);
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable name at '%s'\n", str);
          *success = FALSE;
          break;
       }
 
+      str = endptr;
+
+      /* store weight and variable */
       if( varssize <= nvars )
       {
          varssize = SCIPcalcMemGrowSize(scip, varssize+1);
@@ -8916,21 +8921,39 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
       vars[nvars]    = var;
       weights[nvars] = weight;
       ++nvars;
+
+      /* skip whitespace */
+      while( isspace((int)*str) )
+         ++str;
    }
 
    if( *success )
    {
-      if( sscanf(str, " <= %"SCIP_LONGINT_FORMAT, &capacity) != 1  )
+      if( strncmp(str, "<= ", 3) != 0 )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "error parsing capacity\n");
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "expected '<= ' at begin of '%s'\n", str);
          *success = FALSE;
       }
-
-      if( *success )
+      else
       {
-         SCIP_CALL( SCIPcreateConsKnapsack(scip, cons, name, nvars, vars, weights, capacity,
-               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+         str += 3;
       }
+   }
+
+   if( *success )
+   {
+      capacity = strtoll(str, &endptr, 0);
+      if( str == endptr )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "error parsing capacity from '%s'\n", str);
+         *success = FALSE;
+      }
+   }
+
+   if( *success )
+   {
+      SCIP_CALL( SCIPcreateConsKnapsack(scip, cons, name, nvars, vars, weights, capacity,
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
 
    SCIPfreeBufferArray(scip, &vars);
