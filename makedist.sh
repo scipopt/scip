@@ -58,16 +58,15 @@ $NAME/src/tclique/*.c $NAME/src/tclique/*.cpp $NAME/src/tclique/*.h \
 $NAME/src/objscip/*.c $NAME/src/objscip/*.cpp $NAME/src/objscip/*.h \
 $NAME/examples/Binpacking/Makefile $NAME/examples/Binpacking/INSTALL \
 $NAME/examples/Binpacking/doc/* $NAME/examples/Binpacking/doc/pics/binpacking.png \
-$NAME/examples/Binpacking/check/short.test $NAME/examples/Binpacking/check/short.solu \
+$NAME/examples/Binpacking/check/testset/short.test $NAME/examples/Binpacking/check/testset/short.solu \
 $NAME/examples/Binpacking/src/depend.* \
 $NAME/examples/Binpacking/src/*.c $NAME/examples/Binpacking/src/*.h \
 $NAME/examples/Binpacking/data/*.bpa \
 $NAME/examples/Coloring/* $NAME/examples/Coloring/doc/* $NAME/examples/Coloring/data/* \
-$NAME/examples/Coloring/check/short.test $NAME/examples/Coloring/check/short.solu \
+$NAME/examples/Coloring/check/testset/short.test $NAME/examples/Coloring/check/testset/short.solu \
 $NAME/examples/Coloring/src/depend.* \
 $NAME/examples/Coloring/src/*.c $NAME/examples/Coloring/src/*.h \
 $NAME/examples/Eventhdlr/* $NAME/examples/Eventhdlr/doc/* \
-$NAME/examples/Eventhdlr/check/short.test $NAME/examples/Eventhdlr/check/short.solu \
 $NAME/examples/Eventhdlr/src/depend.* \
 $NAME/examples/Eventhdlr/src/*.c $NAME/examples/Eventhdlr/src/*.h \
 $NAME/examples/LOP/* $NAME/examples/LOP/doc/* $NAME/examples/LOP/data/* \
