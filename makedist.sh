@@ -70,6 +70,7 @@ $NAME/examples/Eventhdlr/* $NAME/examples/Eventhdlr/doc/* \
 $NAME/examples/Eventhdlr/src/depend.* \
 $NAME/examples/Eventhdlr/src/*.c $NAME/examples/Eventhdlr/src/*.h \
 $NAME/examples/LOP/* $NAME/examples/LOP/doc/* $NAME/examples/LOP/data/* \
+$NAME/examples/LOP/check/check.sh $NAME/examples/LOP/check/testset/short.test $NAME/examples/LOP/check/testset/short.solu \
 $NAME/examples/LOP/src/depend.* \
 $NAME/examples/LOP/src/*.c $NAME/examples/LOP/src/*.h \
 $NAME/examples/MIPSolver/Makefile  $NAME/examples/MIPSolver/INSTALL $NAME/examples/MIPSolver/scipmip.set \
@@ -84,6 +85,7 @@ $NAME/examples/TSP/Makefile $NAME/examples/TSP/INSTALL \
 $NAME/examples/TSP/runme.sh $NAME/examples/TSP/runviewer.sh \
 $NAME/examples/TSP/sciptsp.set \
 $NAME/examples/TSP/doc/* \
+$NAME/examples/TSP/check/testset/short.test $NAME/examples/TSP/check/testset/short.solu \
 $NAME/examples/TSP/src/depend.* \
 $NAME/examples/TSP/src/*.c $NAME/examples/TSP/src/*.cpp $NAME/examples/TSP/src/*.h \
 $NAME/examples/TSP/tspviewer/*.java $NAME/examples/TSP/tspdata/*.tsp \
