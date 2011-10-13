@@ -9694,8 +9694,8 @@ SCIP_RETCODE SCIPlpCalcMIR(
    /* remove again all nearly-zero coefficients from MIR row and relax the right hand side correspondingly in order to
     * prevent numerical rounding errors
     */
-   cleanupMIRRow(set, prob, mircoef, &rhs, varused, varinds, &nvarinds, *cutislocal);
-   SCIPdebug(printMIR(set, stat, prob, sol, mircoef, rhs));
+   cleanupMIRRow(set, prob, mircoef, mirrhs, varused, varinds, &nvarinds, *cutislocal);
+   SCIPdebug(printMIR(set, stat, prob, sol, mircoef, *mirrhs));
 
    /* calculate cut activity */
    *cutactivity = getMIRRowActivity(set, stat, prob, sol, mircoef, varinds, nvarinds);
