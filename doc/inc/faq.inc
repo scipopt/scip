@@ -700,20 +700,6 @@
       pricers.
     </p>
     <p class="q">
-      <a name="Q31">How can I delete variables?</a>
-    </p>
-    <p class="a">
-      Currently, it is not possible to delete variables during solving. A variable can be removed from the problem by
-      <code>SCIPdelVar()</code>, but it remains in the corresponding constraints. Instead of that, you should either fix
-      the variable to zero by <code>SCIPfixVar()</code>, which fixes the variable globally or use
-      <code>SCIPchgVarUbNode()</code> and <code>SCIPchgVarLBNode()</code>, which change the bounds only for the current
-      subtree.
-    </p>
-    <p class="a">
-      We are working on this problem and expect to provide functionalities for the deletion of variables in the next
-      release.
-    </p>
-    <p class="q">
       <a name="Q32">How can I store branching decisions?</a>
     </p>
     <p class="a">
@@ -785,7 +771,6 @@
       in another part of the branch-and-bound-tree, you should look to it that they are locally fixed to 0
       in all subtrees where they are not valid. A description of how this can be done is given <a href="#Q34">here</a>.
     </p>
-
 
     <p class="q">
       <a name="Q37">My pricer generates the same column twice. How can I solve this problem?</a>
@@ -869,6 +854,34 @@
       variables with negative dual feasibility, the result pointer should be set to SCIP_DIDNOTRUN. 
       In this case, the lp solution will not be used as a lower bound. 
       The pricer can, however, store a valid lower bound in the lowerbound pointer.
+    </p>
+
+    <p class="q">
+      <a name="Q31">How can I delete variables?</a>
+    </p>
+    <p class="a">
+      SCIP features the functionality to delete variables from the problem when performing branch-and-price.
+      This feature is still in a beta status and can be activated by switching the parameters
+      <code>pricing/delvars</code> and <code>pricing/delvarsroot</code> to TRUE in order to allow deletion
+      of variables at the root node and at all other nodes, respectively.
+      Furthermore, variables have to be marked to be deletable by <code>SCIPvarMarkDeletable()</code>, which has to be done
+      before adding the variable to the problem. Then, after a node of the branch-and-bound-tree is processed,
+      SCIP automatically deletes variables from the problem that were created at the current node and whose corresponding
+      columns were already removed from the LP. Note that due to the way SCIP stores basis information, it is not possible to
+      completely delete a variable that was created at another node than the current node.
+      You might want to change the parameters <code>lp/colagelimit</code>, <code>lp/cleanupcols</code>, and <code>lp/cleanupcolsroot</code>,
+      which have an impact on when and how fast columns are removed from the LP.
+    </p>
+    <p class="a">
+      Constraint handlers support a new callback function which deletes variables from their constraints that were marked to be deleted.
+      Thus, when using automatic variable deletion, you should make sure that all used constraint handlers implement this callback.
+      By now, the linear, the set partitioning/packing/covering and the knapsack constraint handler support this callback, which should
+      be sufficient for most branch-and-price applications. Note that set covering constraints can be used instead of logicor constraints.
+    </p>
+    <p class="a">
+      Instead of deleting a variable completely, you can also remove it from the problem by either fixing the variable to zero
+      using <code>SCIPfixVar()</code>, which fixes the variable globally or using <code>SCIPchgVarUbNode()</code> and
+      <code>SCIPchgVarLBNode()</code>, which changes the bounds only for the current subtree.
     </p>
 
 <h4><a name="Section6">Specific questions about the copy functionality in SCIP</a></h4>
