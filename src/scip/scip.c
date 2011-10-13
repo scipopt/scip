@@ -14456,6 +14456,48 @@ SCIP_RETCODE SCIPprintLPSolutionQuality(
    return SCIP_OKAY;
 }
 
+/** Compute relative interior point to current LP w.r.t. one-norm */
+SCIP_RETCODE SCIPcomputeLPRelIntPoint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             relaxrows,          /**< should the rows be relaxed */
+   SCIP_Bool             inclobjcutoff,      /**< should a row for the objective cutoff be included */
+   char                  normtype,           /**< which norm to use: 'o'ne-norm or 's'upremum-norm */
+   SCIP_SOL**            point               /**< relative interior point on exit */
+   )
+{
+   SCIP_Real* pointvals;
+   SCIP_Bool success;
+
+   SCIP_CALL( checkStage(scip, "SCIPcomputeLPRelIntPoint", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   assert(scip != NULL);
+   assert(scip->lp != NULL);
+   assert(point != NULL);
+
+   *point = NULL;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &pointvals, SCIPlpGetNCols(scip->lp)) );
+
+   SCIP_CALL( SCIPlpComputeRelIntPoint(scip->set, scip->lp, relaxrows, inclobjcutoff, normtype, pointvals, &success) );
+
+   /* if successful, create new solution with point values */
+   if( success )
+   {
+      int i;
+
+      SCIP_CALL( SCIPcreateSol(scip, point, NULL) );
+
+      for( i = 0; i < SCIPlpGetNCols(scip->lp); ++i )
+      {
+         SCIP_CALL( SCIPsetSolVal(scip, *point, SCIPcolGetVar(SCIPlpGetCols(scip->lp)[i]), pointvals[i]) );
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &pointvals);
+
+   return SCIP_OKAY;
+}
+
 /** Compute relative interior point to current LP w.r.t. one-norm
  *
  *  We use the approach of@par
@@ -14482,7 +14524,7 @@ SCIP_RETCODE SCIPprintLPSolutionQuality(
  *             & B x + y - \alpha b & \leq 0\\
  *             & D x - \alpha d & = 0\\
  *             & 0 \leq y & \leq 1\\
- *             & alpha & \geq 1.
+ *             & \alpha & \geq 1.
  *     \end{array}
  *  \f]
  *  If the original LP is feasible, this LP is feasible as well. Any optimal solution yields the
@@ -14987,7 +15029,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
    return SCIP_OKAY;
 }
 
-/** Compute relative interior point to current LP w.r.t. supremum norm
+/** Compute relative interior point to current LP w.r.t. supremum-norm
  *
  *  Assume the orginal LP looks as follows:
  *  \f[
@@ -15001,11 +15043,11 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
  *  Note that bounds should be included in the system. The following artificial LP does the job:
  *  \f[
  *     \begin{array}{rrl}
- *        \max & sigma &\\
- *             & <A_i, x> - sigma ||A_i|| & \geq a_i\\
- *             & <B_i, x> + sigma ||B_i|| & \leq b_i\\
+ *        \max & \sigma &\\
+ *             & <A_i, x> - \sigma ||A_i|| & \geq a_i\\
+ *             & <B_i, x> + \sigma ||B_i|| & \leq b_i\\
  *             & D x & = d\\
- *             & sigma & \geq 0.
+ *             & \sigma & \geq 0.
  *     \end{array}
  *  \f]
  *  If the original LP is feasible, this LP is feasible as well. Any optimal solution yields a

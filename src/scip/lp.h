@@ -1332,6 +1332,18 @@ void SCIPlpRecalculateObjSqrNorm(
    SCIP_LP*              lp                  /**< LP data */
    );
 
+/** compute relative interior point */
+extern
+SCIP_RETCODE SCIPlpComputeRelIntPoint(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_Bool             relaxrows,          /**< should the rows be relaxed */
+   SCIP_Bool             inclobjcutoff,      /**< should a row for the objective cutoff be included */
+   char                  normtype,           /**< which norm to use: 'o'ne-norm or 's'upremum-norm */
+   SCIP_Real*            point,              /**< array to store relative interior point on exit */
+   SCIP_Bool*            success             /**< buffer to indicate whether interior point was successfully computed */
+   );
+
 #ifndef NDEBUG
 
 /* In debug mode, the following methods are implemented as function calls to ensure

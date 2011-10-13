@@ -4645,6 +4645,16 @@ SCIP_RETCODE SCIPprintLPSolutionQuality(
 
 /** Compute relative interior point to current LP w.r.t. one-norm */
 extern
+SCIP_RETCODE SCIPcomputeLPRelIntPoint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             relaxrows,          /**< should the rows be relaxed */
+   SCIP_Bool             inclobjcutoff,      /**< should a row for the objective cutoff be included */
+   char                  normtype,           /**< which norm to use: 'o'ne-norm or 's'upremum-norm */
+   SCIP_SOL**            point               /**< relative interior point on exit */
+   );
+
+/** Compute relative interior point to current LP w.r.t. one-norm */
+extern
 SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             relaxrows,          /**< should the rows be relaxed */
