@@ -45,6 +45,7 @@ MAINFILE	=	$(BINDIR)/$(MAIN)
 MAINSHORTLINK	=	$(BINDIR)/$(MAINNAME)
 MAINOBJFILES	=	$(addprefix $(OBJDIR)/,$(MAINOBJ))
 
+TESTSETDIR	=	testset
 
 #-----------------------------------------------------------------------------
 # Rules
@@ -82,21 +83,28 @@ $(OBJDIR):
 $(BINDIR):
 		@-mkdir -p $(BINDIR)
 
+$(TESTSETDIR):
+		@-mkdir -p check/$(TESTSETDIR)
+
 .PHONY: clean
-clean:
+clean:		$(OBJDIR)
 ifneq ($(OBJDIR),)
 		-rm -f $(OBJDIR)/*.o
-		-rmdir -p $(OBJDIR)
+		-rmdir $(OBJDIR)
 endif
 		-rm -f $(MAINFILE)
 
 .PHONY: test
-test:           $(MAINFILE)
+test:           $(MAINFILE) $(TESTSETDIR)
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.awk);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/getlastprob.awk);
+ifeq ($(TEST), short)
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/instances);
+		@-(cd check/testset && ln -fs ../../$(SCIPDIR)/check/testset/short.test);
 		@-(cd check/testset && ln -fs ../../$(SCIPDIR)/check/testset/short.solu);
+endif
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS);
 

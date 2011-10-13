@@ -27,6 +27,7 @@
 #include <string.h>
 #include <limits.h>
 #include <stdio.h>
+#include <ctype.h>
 
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
@@ -7697,7 +7698,7 @@ SCIP_RETCODE preprocessConstraintPairs(
       /* if both constraints didn't change since last pair processing, we can ignore the pair */
       if( consdata0->presolved && consdata0->presolved )
          continue;
-      
+
       assert(consdata1->nvars >= 1);
       assert(consdata1->merged);
 
@@ -7705,18 +7706,18 @@ SCIP_RETCODE preprocessConstraintPairs(
       sortItems(consdata1);
 
       quotient = ((SCIP_Real) consdata0->capacity) / ((SCIP_Real) consdata1->capacity);
-      
+
       if( consdata0->nvars > consdata1->nvars )
       {
          iscons0incons1contained = FALSE;
          iscons1incons0contained = TRUE;
-         v = consdata0->nvars - 1;
+         v = consdata1->nvars - 1;
       }
       else if( consdata0->nvars < consdata1->nvars )
       {
          iscons0incons1contained = TRUE;
          iscons1incons0contained = FALSE;
-         v = consdata1->nvars - 1;
+         v = consdata0->nvars - 1;
       }
       else
       {
@@ -7728,18 +7729,18 @@ SCIP_RETCODE preprocessConstraintPairs(
       SCIPdebugMessage("preprocess knapsack constraint pair <%s> and <%s>\n", SCIPconsGetName(cons0), SCIPconsGetName(cons1));
 
       /* check consdata0 against consdata1:
-       * 1. if all variables var_i of cons1 are in cons0 and for each of these variables (consdata0->weights[i] / quotient) >= consdata1->weights[i] 
-       *    cons1 is redundant
-       * 2. if all variables var_i of cons0 are in cons1 and for each of these variables (consdata0->weights[i] / quotient) <= consdata1->weights[i] 
-       *    cons0 is redundant
+       * 1. if all variables var_i of cons1 are in cons0 and for each of these variables
+       *    (consdata0->weights[i] / quotient) >= consdata1->weights[i] cons1 is redundant
+       * 2. if all variables var_i of cons0 are in cons1 and for each of these variables
+       *    (consdata0->weights[i] / quotient) <= consdata1->weights[i] cons0 is redundant
        */
       v0 = consdata0->nvars - 1;
       v1 = consdata1->nvars - 1;
 
-      for( ; v >= 0; --v )
+      while( v >= 0 )
       {
          assert(iscons0incons1contained || iscons1incons0contained);
-         
+
          /* now there are more variables in cons1 left */
          if( v1 > v0 )
          {
@@ -7755,8 +7756,10 @@ SCIP_RETCODE preprocessConstraintPairs(
                break;
          }
 
-         assert(v >= v0 && v >= v1);
-         
+         assert(v == v0 || v == v1);
+	 assert(v0 >= 0);
+	 assert(v1 >= 0);
+
          /* both variables are the same */
          if( consdata0->vars[v0] == consdata1->vars[v1] )
          {
@@ -7776,6 +7779,7 @@ SCIP_RETCODE preprocessConstraintPairs(
             }
             --v0;
             --v1;
+	    --v;
          }
          else
          {
@@ -7793,16 +7797,20 @@ SCIP_RETCODE preprocessConstraintPairs(
                --v1;
             else
                --v0;
-            ++v;
          }
       }
+      /* neither one constraint was contained in another or we checked all variables of one constraint against the
+       * other
+       */
+      assert(!iscons1incons0contained || !iscons0incons1contained || v0 == -1 || v1 == -1);
+
       if( iscons1incons0contained )
       {
          SCIPdebugMessage("knapsack constraint <%s> is redundant\n", SCIPconsGetName(cons1));
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
 
          /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
-         SCIP_CALL( updateFlags(scip, cons0, cons1) ); 
+         SCIP_CALL( updateFlags(scip, cons0, cons1) );
 
          SCIP_CALL( SCIPdelCons(scip, cons1) );
          ++(*ndelconss);
@@ -7813,14 +7821,14 @@ SCIP_RETCODE preprocessConstraintPairs(
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
 
          /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
-         SCIP_CALL( updateFlags(scip, cons1, cons0) ); 
+         SCIP_CALL( updateFlags(scip, cons1, cons0) );
 
          SCIP_CALL( SCIPdelCons(scip, cons0) );
          ++(*ndelconss);
          break;
       }
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -8865,15 +8873,12 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
 {  /*lint --e{715}*/
    SCIP_VAR* var;
    SCIP_Longint weight;
-   char varname[SCIP_MAXSTRLEN+2];
    SCIP_VAR** vars;
    SCIP_Longint* weights;
    SCIP_Longint capacity;
    char* endptr;
    int nvars;
    int varssize;
-   int parselen;
-   int namelen;
 
    assert(scip != NULL);
    assert(success != NULL);
@@ -8888,26 +8893,33 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
    SCIP_CALL( SCIPallocBufferArray(scip, &vars,    varssize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &weights, varssize) );
 
-   while( sscanf(str, "%"SCIP_LONGINT_FORMAT"<%[^>]>%n", &weight, varname+1, &parselen) >= 2 )
+   while( *str != '\0' )
    {
-      str += parselen;
+      /* try to parse coefficient */
+      weight = strtoll(str, &endptr, 0);
 
-      /* add '<' and '>' around variable name, so we can parse it via SCIPparseVarName */
-      namelen = (int)strlen(varname+1);
-      assert(namelen > 0);
+      /* probably reached <=, so stop */
+      if( str == endptr )
+         break;
 
-      varname[0] = '<';
-      varname[namelen+1] = '>';
-      varname[namelen+2] = '\0';
-      SCIP_CALL( SCIPparseVarName(scip, varname, &var, &endptr) );
+      str = endptr;
 
+      /* skip whitespace */
+      while( isspace((int)*str) )
+         ++str;
+
+      /* parse variable name */
+      SCIP_CALL( SCIPparseVarName(scip, str, &var, &endptr) );
       if( var == NULL )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s>\n", varname);
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable name at '%s'\n", str);
          *success = FALSE;
          break;
       }
 
+      str = endptr;
+
+      /* store weight and variable */
       if( varssize <= nvars )
       {
          varssize = SCIPcalcMemGrowSize(scip, varssize+1);
@@ -8918,21 +8930,39 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
       vars[nvars]    = var;
       weights[nvars] = weight;
       ++nvars;
+
+      /* skip whitespace */
+      while( isspace((int)*str) )
+         ++str;
    }
 
    if( *success )
    {
-      if( sscanf(str, " <= %"SCIP_LONGINT_FORMAT, &capacity) != 1  )
+      if( strncmp(str, "<= ", 3) != 0 )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "error parsing capacity\n");
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "expected '<= ' at begin of '%s'\n", str);
          *success = FALSE;
       }
-
-      if( *success )
+      else
       {
-         SCIP_CALL( SCIPcreateConsKnapsack(scip, cons, name, nvars, vars, weights, capacity,
-               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+         str += 3;
       }
+   }
+
+   if( *success )
+   {
+      capacity = strtoll(str, &endptr, 0);
+      if( str == endptr )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "error parsing capacity from '%s'\n", str);
+         *success = FALSE;
+      }
+   }
+
+   if( *success )
+   {
+      SCIP_CALL( SCIPcreateConsKnapsack(scip, cons, name, nvars, vars, weights, capacity,
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
 
    SCIPfreeBufferArray(scip, &vars);

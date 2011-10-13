@@ -7288,10 +7288,10 @@ SCIP_RETCODE SCIPexprtreeSimplify(
 
 #ifndef NDEBUG
    SCIP_CALL( SCIPexprtreeEval(tree, testx, &testval_after) );
-   if( nlinvars != NULL && testval_before == testval_before )
+   if( nlinvars != NULL && testval_before == testval_before )  /*lint !e777*/
       for( i = 0; i < *nlinvars; ++i )
          testval_after += lincoefs[i] * testx[linidxs[i]];
-   assert(testval_before != testval_before || testval_before == testval_after || EPSZ(SCIPrelDiff(testval_before, testval_after), eps));
+   assert(testval_before != testval_before || testval_before == testval_after || EPSZ(SCIPrelDiff(testval_before, testval_after), eps));  /*lint !e777*/
    BMSfreeMemoryArray(&testx);
 #endif
 
@@ -14120,7 +14120,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
             testval_before = testvals[idx];  /*lint !e613*/
             testval_after = SCIPexprgraphGetNodeVal(node);
 
-            assert(testval_before != testval_before || testval_before == testval_after || EPSZ(SCIPrelDiff(testval_before, testval_after), eps));
+            assert(testval_before != testval_before || testval_before == testval_after || EPSZ(SCIPrelDiff(testval_before, testval_after), eps));  /*lint !e777*/
          }
       }
 #endif

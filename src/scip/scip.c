@@ -8354,7 +8354,6 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
             state = SCIPPARSEPOLYNOMIAL_STATE_END;
             break;
          }
-         str = *endptr;
 
          if( var == NULL )
          {
@@ -8362,6 +8361,8 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
             state = SCIPPARSEPOLYNOMIAL_STATE_ERROR;
             break;
          }
+
+         str = *endptr;
 
          /* add variable to vars array */
          if( nvars + 1 > varssize )

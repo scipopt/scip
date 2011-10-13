@@ -28,6 +28,7 @@
 #include <assert.h>
 #include <string.h>
 #include <math.h>
+#include <ctype.h>
 
 #include "scip/cons_soc.h"
 #include "scip/cons_quadratic.h"
@@ -777,7 +778,8 @@ SCIP_RETCODE computeViolation(
 
    consdata->violation = consdata->lhsval - consdata->rhscoeff * (SCIPgetSolVal(scip, sol, consdata->rhsvar) + consdata->rhsoffset);
    if( consdata->violation <= 0.0 )
-   { /* constraint is not violated for sure */
+   {
+      /* constraint is not violated for sure */
       consdata->violation = 0.0;
       return SCIP_OKAY;
    }
@@ -820,7 +822,7 @@ SCIP_RETCODE computeViolations(
       {
          consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
          assert(consdata != NULL);
-         if( consdata->violation > maxviol && SCIPisFeasPositive(scip, consdata->violation) )
+         if( consdata->violation > maxviol && SCIPisGT(scip, consdata->violation, SCIPfeastol(scip)) )
          {
             maxviol      = consdata->violation;
             *maxviolcons = conss[c];  /*lint !e613*/
@@ -1123,11 +1125,12 @@ SCIP_RETCODE generateSparseCut(
 
       if( *row != NULL )
       {
-         efficacy = SCIPgetCutEfficacy(scip, sol, *row);
+         efficacy = -SCIPgetRowSolFeasibility(scip, *row, sol) / SCIPgetRowMaxCoef(scip, *row);
 
-         if( efficacy >= goodefficacy || 
-            (maxnz >= consdata->nvars && efficacy >= minefficacy) )
-         { /* cut cuts off solution and is efficient enough */
+         if( SCIPisGT(scip, efficacy, goodefficacy) ||
+            (maxnz >= consdata->nvars && SCIPisGT(scip, efficacy, minefficacy)) )
+         {
+            /* cut cuts off solution and is efficient enough */
             SCIPdebugMessage("accepted cut with %d of %d nonzeros, efficacy = %g\n", maxnz, consdata->nvars, efficacy);
             break;
          }
@@ -1195,7 +1198,7 @@ SCIP_RETCODE separatePoint(
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
-      if( SCIPisFeasPositive(scip, consdata->violation) && !SCIPisInfinity(scip, consdata->violation) )
+      if( SCIPisGT(scip, consdata->violation, SCIPfeastol(scip)) && !SCIPisInfinity(scip, consdata->violation) )
       {
          row = NULL;
 
@@ -1206,14 +1209,22 @@ SCIP_RETCODE separatePoint(
          }  
          else if( conshdlrdata->projectpoint )
          {
+            SCIP_Real efficacy;
+
             SCIP_CALL( generateCutProjectedPoint(scip, conss[c], sol, &row) );  /*lint !e613*/
-            if( SCIPgetCutEfficacy(scip, sol, row) < minefficacy )
+
+            efficacy = -SCIPgetRowSolFeasibility(scip, row, sol) / SCIPgetRowMaxCoef(scip, row);
+            if( SCIPisLE(scip, efficacy, minefficacy) )
                SCIP_CALL( SCIPreleaseRow(scip, &row) );
          }
          else
          {
+            SCIP_Real efficacy;
+
             SCIP_CALL( generateCutSol(scip, conss[c], sol, &row) );  /*lint !e613*/
-            if( SCIPgetCutEfficacy(scip, sol, row) < minefficacy )
+
+            efficacy = -SCIPgetRowSolFeasibility(scip, row, sol) / SCIPgetRowMaxCoef(scip, row);
+            if( SCIPisLE(scip, efficacy, minefficacy) )
                SCIP_CALL( SCIPreleaseRow(scip, &row) );
          }
 
@@ -3526,7 +3537,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpSOC)
    for( c = 0; c < nconss; ++c )
    {
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
-      if( !SCIPisFeasPositive(scip, consdata->violation) )
+      if( !SCIPisGT(scip, consdata->violation, SCIPfeastol(scip)) )
          continue;
 
       nbndchg = 0;
@@ -3605,7 +3616,7 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
       assert(consdata != NULL);
 
       /* if feasible, just continue */
-      if( !SCIPisFeasPositive(scip, consdata->violation) )
+      if( !SCIPisGT(scip, consdata->violation, SCIPfeastol(scip)) )
          continue;
 
       *result = SCIP_INFEASIBLE;
@@ -3992,7 +4003,6 @@ static
 SCIP_DECL_CONSPARSE(consParseSOC)
 {  /*lint --e{715}*/
    SCIP_VAR* var;
-   char varname[SCIP_MAXSTRLEN+2];
    SCIP_VAR** vars;
    SCIP_Real* coefs;
    SCIP_Real* offsets;
@@ -4005,8 +4015,6 @@ SCIP_DECL_CONSPARSE(consParseSOC)
    SCIP_Real coef;
    SCIP_Real offset;
    char* endptr;
-   int parselen;
-   size_t namelen;
 
    assert(scip != NULL);
    assert(success != NULL);
@@ -4026,8 +4034,8 @@ SCIP_DECL_CONSPARSE(consParseSOC)
    *success = TRUE;
 
    /* check if we have a constant in the beginning */
-   if( sscanf(str, "%lf%n", &constant, &parselen) >= 1 )
-      str += parselen;
+   if( SCIPstrToRealValue(str, &constant, &endptr) )
+      str = endptr;
    else
       constant = 0.0;
 
@@ -4037,25 +4045,62 @@ SCIP_DECL_CONSPARSE(consParseSOC)
    SCIP_CALL( SCIPallocBufferArray(scip, &coefs,   varssize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &offsets, varssize) );
 
-   /* read (coef*(var+offset))^2 on lhs, as long as possible */
-   while( sscanf(str, "+ (%lf*(<%[^>]>%lf))^2 %n", &coef, varname+1, &offset, &parselen) >= 3 )
+   /* read '+ (coef*(var+offset))^2' on lhs, as long as possible */
+   while( *str != '\0' )
    {
-      str += parselen;
+      /* skip whitespace */
+      while( isspace((int)*str) )
+         ++str;
 
-      /* add '<' and '>' around variable name, so we can parse it via SCIPparseVarName */
-      namelen = strlen(varname+1);
-      varname[0] = '<';
-      varname[namelen+1] = '>';
-      varname[namelen+2] = '\0';
-      SCIP_CALL( SCIPparseVarName(scip, varname, &var, &endptr) );
-      assert(parselen == (int)namelen+2);
+      /* stop if no more coefficients */
+      if( strncmp(str, "+ (", 3) != 0 )
+         break;
 
-      if( var == NULL )
+      str += 3;
+
+      /* parse coef */
+      if( !SCIPstrToRealValue(str, &coef, &endptr) )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s>\n", varname);
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "expected coefficient at begin of '%s'\n", str);
          *success = FALSE;
          break;
       }
+      str = endptr;
+
+      if( strncmp(str, "*(", 2) != 0 )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "expected '*(' at begin of '%s'\n", str);
+         *success = FALSE;
+         break;
+      }
+      str += 2;
+
+      /* parse variable name */
+      SCIP_CALL( SCIPparseVarName(scip, str, &var, &endptr) );
+      if( var == NULL )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable name at '%s'\n", str);
+         *success = FALSE;
+         break;
+      }
+      str = endptr;
+
+      /* parse offset */
+      if( !SCIPstrToRealValue(str, &offset, &endptr) )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "expected offset at begin of '%s'\n", str);
+         *success = FALSE;
+         break;
+      }
+      str = endptr;
+
+      if( strncmp(str, "))^2", 4) != 0 )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "expected '))^2' at begin of '%s'\n", str);
+         *success = FALSE;
+         break;
+      }
+      str += 4;
 
       if( varssize <= nvars )
       {
@@ -4064,41 +4109,100 @@ SCIP_DECL_CONSPARSE(consParseSOC)
          SCIP_CALL( SCIPreallocBufferArray(scip, &coefs,   varssize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &offsets, varssize) );
       }
-
       vars[nvars]    = var;
       coefs[nvars]   = coef;
       offsets[nvars] = offset;
       ++nvars;
    }
 
+   if( strncmp(str, ") <=", 4) != 0 )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "expected ') <=' at begin of '%s'\n", str);
+      *success = FALSE;
+   }
+   str += 4;
+
+   /* read rhs coef*(var+offset) or just a constant */
+
+   /* parse coef */
    if( *success )
    {
-      /* read rhs coef*(var+offset) or just a constant */
-      if( sscanf(str, ") <= %lf*(<%[^>]>%lf)", &rhscoef, varname+1, &rhsoffset) == 3  )
-      {
-         /* add '<' and '>' around variable name, so we can parse it via SCIPparseVarName */
-         namelen = strlen(varname+1);
-         varname[0] = '<';
-         varname[namelen+1] = '>';
-         varname[namelen+2] = '\0';
-         SCIP_CALL( SCIPparseVarName(scip, varname, &rhsvar, &endptr) );
+      /* skip whitespace */
+      while( isspace((int)*str) )
+         ++str;
 
+      if( !SCIPstrToRealValue(str, &rhscoef, &endptr) )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "expected coefficient at begin of '%s'\n", str);
+         *success = FALSE;
+      }
+      str = endptr;
+
+      /* skip whitespace */
+      while( isspace((int)*str) )
+         ++str;
+   }
+
+   /* parse *(var+offset) */
+   if( *str != '\0' )
+   {
+      if( *success )
+      {
+         if( strncmp(str, "*(", 2) != 0 )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "expected '*(' at begin of '%s'\n", str);
+            *success = FALSE;
+         }
+         else
+         {
+            str += 2;
+         }
+      }
+
+      /* parse variable name */
+      if( *success )
+      {
+         SCIP_CALL( SCIPparseVarName(scip, str, &rhsvar, &endptr) );
          if( rhsvar == NULL )
          {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s>\n", varname);
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable name at '%s'\n", str);
+            *success = FALSE;
+         }
+         else
+         {
+            str = endptr;
+         }
+      }
+
+      /* parse offset */
+      if( *success )
+      {
+         if( !SCIPstrToRealValue(str, &rhsoffset, &endptr) )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "expected offset at begin of '%s'\n", str);
+            *success = FALSE;
+         }
+         else
+         {
+            str = endptr;
+         }
+      }
+
+      if( *success )
+      {
+         if( *str != ')' )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "expected ')' at begin of '%s'\n", str);
             *success = FALSE;
          }
       }
-      else if( sscanf(str, ") <= %lf", &rhsoffset) == 1  )
-      {
-         rhscoef = 1.0;
-         rhsvar = NULL;
-      }
-      else
-      {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "error parsing rhs '%s'\n", str);
-         *success = FALSE;
-      }
+   }
+   else if( *success )
+   {
+      /* only a constant at right hand side */
+      rhsoffset = rhscoef;  /*lint !e644*/
+      rhscoef = 1.0;
+      rhsvar = NULL;
    }
 
    if( *success )

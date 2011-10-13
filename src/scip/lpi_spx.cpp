@@ -190,7 +190,7 @@ public:
           m_stat(NO_PROBLEM),
           m_lpinfo(false),
           m_autopricing(true),
-          m_itlim(0),
+          m_itlim(-1),
           m_itused(0),
           m_rowstat(NULL),
           m_colstat(NULL),
@@ -495,7 +495,7 @@ public:
 
       /* save iteration count */
       m_itused += SPxSolver::iterations();
-      assert(m_itused <= m_itlim);
+      assert(m_itlim < 0 || m_itused <= m_itlim);
    }
 
    virtual Status doSolve(bool printwarning = true)
@@ -513,11 +513,11 @@ public:
 #endif
 
       /* in auto pricing, do the first iterations with devex, then switch to steepest edge */
-      setTerminationIter(m_autopricing && m_itlim - m_itused > AUTOPRICING_ITERSWITCH ? AUTOPRICING_ITERSWITCH : m_itlim - m_itused);
+      setTerminationIter(m_autopricing && (m_itlim < 0 || m_itlim - m_itused > AUTOPRICING_ITERSWITCH) ? AUTOPRICING_ITERSWITCH : m_itlim - m_itused);
       
       trySolve(printwarning);
 
-      if( m_autopricing && m_stat == SPxSolver::ABORT_ITER && m_itlim - m_itused > 0 )
+      if( m_autopricing && m_stat == SPxSolver::ABORT_ITER && (m_itlim < 0 || m_itlim - m_itused > 0) )
       {
             setTerminationIter(m_itlim - m_itused);
             setPricer(&m_price_steep);

@@ -3541,19 +3541,20 @@ SCIP_RETCODE computeViolation(
       consdata->activity += val;
    }
 
-   if( SCIPisFeasLT(scip, consdata->activity, consdata->lhs) && !SCIPisInfinity(scip, -consdata->lhs) )
+   if( !SCIPisInfinity(scip, -consdata->lhs) && SCIPisGT(scip, consdata->lhs - consdata->activity, SCIPfeastol(scip)) )
       consdata->lhsviol = consdata->lhs - consdata->activity;
    else
       consdata->lhsviol = 0.0;
 
-   if( SCIPisFeasGT(scip, consdata->activity, consdata->rhs) && !SCIPisInfinity(scip,  consdata->rhs) )
+   if( !SCIPisInfinity(scip,  consdata->rhs) && SCIPisGT(scip, consdata->activity - consdata->rhs, SCIPfeastol(scip)) )
       consdata->rhsviol = consdata->activity - consdata->rhs;
    else
       consdata->rhsviol = 0.0;
 
    /* scale violation by infinity norm of gradient, if violated
-    * do only if we are linear or have expression trees, thus, not during presolve */
-   if( (consdata->lhsviol || consdata->rhsviol) && (consdata->exprgraphnode == NULL || consdata->nexprtrees > 0) )
+    * do only if we are linear or have expression trees, thus, not during presolve
+    */
+   if( (consdata->lhsviol > 0.0 || consdata->rhsviol > 0.0) && (consdata->exprgraphnode == NULL || consdata->nexprtrees > 0) )
    {
       SCIP_Real norm;
 
@@ -3618,7 +3619,7 @@ SCIP_RETCODE computeViolations(
       assert(consdata != NULL);
 
       viol = MAX(consdata->lhsviol, consdata->rhsviol);
-      if( viol > maxviol && SCIPisFeasPositive(scip, viol) )
+      if( viol > maxviol && SCIPisGT(scip, viol, SCIPfeastol(scip)) )
       {
          maxviol = viol;
          *maxviolcon = conss[c];
@@ -4943,13 +4944,13 @@ SCIP_RETCODE separatePoint(
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
-      if( SCIPisFeasPositive(scip, consdata->lhsviol) || SCIPisFeasPositive(scip, consdata->rhsviol) )
+      if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) || SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
       {
          /* we are not feasible anymore */
          if( *result == SCIP_FEASIBLE )
             *result = SCIP_DIDNOTFIND;
 
-         violside = SCIPisFeasPositive(scip, consdata->lhsviol) ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT;
+         violside = SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT;
 
          /* generate cut
           * if function is defined at sol (activity<infinity) and constraint is violated, then expression interpreter should have evaluated at sol to get gradient before
@@ -4974,14 +4975,15 @@ SCIP_RETCODE separatePoint(
          else
             efficacy = -feasibility;
 
-         if( efficacy > minefficacy ||
+         if( SCIPisGT(scip, efficacy, minefficacy) ||
             (convexalways &&
                ( ( violside == SCIP_SIDETYPE_RIGHT && (consdata->curvature & SCIP_EXPRCURV_CONVEX )) ||
                   (violside == SCIP_SIDETYPE_LEFT  && (consdata->curvature & SCIP_EXPRCURV_CONCAVE)) ) &&
-               SCIPisFeasPositive(scip, efficacy)
+               SCIPisGT(scip, efficacy, SCIPfeastol(scip))
                )
             )
-         { /* cut cuts off solution */
+         {
+            /* cut cuts off solution */
             SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE /* forcecut */) );
             *result = SCIP_SEPARATED;
             SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
@@ -5167,16 +5169,16 @@ SCIP_RETCODE registerBranchingVariables(
          continue;
 
       /* do not branch on violation of convex constraint */
-      if( (!SCIPisFeasPositive(scip, consdata->lhsviol) || (consdata->curvature & SCIP_EXPRCURV_CONCAVE)) &&
-         ( !SCIPisFeasPositive(scip, consdata->rhsviol) || (consdata->curvature & SCIP_EXPRCURV_CONVEX )) )
+      if( (!SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) || (consdata->curvature & SCIP_EXPRCURV_CONCAVE)) &&
+         ( !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) || (consdata->curvature & SCIP_EXPRCURV_CONVEX )) )
          continue;
       SCIPdebugMessage("cons <%s> violation: %g %g  curvature: %s\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol, SCIPexprcurvGetName(consdata->curvature));
 
       for( i = 0; i < consdata->nexprtrees; ++i )
       {
          /* skip convex summands */
-         if( (!SCIPisFeasPositive(scip, consdata->lhsviol) || (consdata->curvatures[i] & SCIP_EXPRCURV_CONCAVE)) &&
-            ( !SCIPisFeasPositive(scip, consdata->rhsviol) || (consdata->curvatures[i] & SCIP_EXPRCURV_CONVEX )) )
+         if( (!SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) || (consdata->curvatures[i] & SCIP_EXPRCURV_CONCAVE)) &&
+            ( !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) || (consdata->curvatures[i] & SCIP_EXPRCURV_CONVEX )) )
             continue;
 
          for( j = 0; j < SCIPexprtreeGetNVars(consdata->exprtrees[i]); ++j )
@@ -5230,7 +5232,7 @@ SCIP_RETCODE registerLargeLPValueVariableForBranching(
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
-      if( !SCIPisFeasPositive(scip, consdata->lhsviol) && !SCIPisFeasPositive(scip, consdata->rhsviol) )
+      if( !SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
          continue;
 
       for( j = 0; j < consdata->nexprtrees; ++j )
@@ -5290,7 +5292,7 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
-      if( !SCIPisFeasPositive(scip, consdata->lhsviol) && !SCIPisFeasPositive(scip, consdata->rhsviol) )
+      if( !SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
          continue;
 
       lhs = consdata->lhs;
@@ -6080,12 +6082,12 @@ SCIP_RETCODE proposeFeasibleSolution(
 
       /* recompute violation of solution in case solution has changed
        * get absolution violation and sign */
-      if( SCIPisFeasPositive(scip, consdata->lhsviol) )
+      if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) )
       {
          SCIP_CALL( computeViolation(scip, conshdlrdata->exprinterpreter, conss[c], newsol) );  /*lint !e613*/
          viol = consdata->lhs - consdata->activity;
       }
-      else if( SCIPisFeasPositive(scip, consdata->rhsviol) )
+      else if( SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
       {
          SCIP_CALL( computeViolation(scip, conshdlrdata->exprinterpreter, conss[c], newsol) );  /*lint !e613*/
          viol = consdata->rhs - consdata->activity;
@@ -6162,7 +6164,7 @@ SCIP_RETCODE proposeFeasibleSolution(
       if( norm > 1.0 )
          viol /= norm;
       /* if still violated, we give up */
-      if( SCIPisFeasPositive(scip, REALABS(viol)) )
+      if( SCIPisGT(scip, REALABS(viol), SCIPfeastol(scip)) )
          break;
 
       /* if objective value is not better than current upper bound, we give up */
@@ -6780,14 +6782,14 @@ SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
             assert(consdata != NULL);
 
             /* skip feasible constraints */
-            if( !SCIPisFeasPositive(scip, consdata->lhsviol) && !SCIPisFeasPositive(scip, consdata->rhsviol) )
+            if( !SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
                continue;
 
             /* make sure curvature has been checked */
             SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkconvexexpensive, conshdlrdata->assumeconvex) );  /*lint !e613*/
 
-            if( (SCIPisFeasPositive(scip, consdata->rhsviol) && (consdata->curvature & SCIP_EXPRCURV_CONVEX )) ||
-               ( SCIPisFeasPositive(scip, consdata->lhsviol) && (consdata->curvature & SCIP_EXPRCURV_CONCAVE)) )
+            if( (SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) && (consdata->curvature & SCIP_EXPRCURV_CONVEX )) ||
+               ( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && (consdata->curvature & SCIP_EXPRCURV_CONCAVE)) )
                break;
          }
 
@@ -6938,7 +6940,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpNonlinear)
    consdata = SCIPconsGetData(maxviolcons);
    assert(consdata != NULL);
    maxviol = consdata->lhsviol + consdata->rhsviol;
-   assert(!SCIPisFeasZero(scip, maxviol));
+   assert(SCIPisGT(scip, maxviol, SCIPfeastol(scip)));
 
    SCIPdebugMessage("enfolp with max violation %g in cons <%s>\n", maxviol, SCIPconsGetName(maxviolcons));
 
@@ -7078,7 +7080,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsNonlinear)
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
-      if( !SCIPisFeasPositive(scip, consdata->lhsviol) && !SCIPisFeasPositive(scip, consdata->rhsviol) )
+      if( !SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
          continue;
 
       for( i = 0; i < consdata->nlinvars; ++i )
@@ -7161,17 +7163,17 @@ SCIP_DECL_CONSCHECK(consCheckNonlinear)
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
-      if( SCIPisFeasPositive(scip, consdata->lhsviol) || SCIPisFeasPositive(scip, consdata->rhsviol) )
+      if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) || SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
       {
          *result = SCIP_INFEASIBLE;
          if( printreason )
          {
             SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );
-            if( SCIPisFeasPositive(scip, consdata->lhsviol) )
+            if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) )
             {
                SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g (scaled: %.15g)\n", consdata->lhs - consdata->activity, consdata->lhsviol);
             }
-            if( SCIPisFeasPositive(scip, consdata->rhsviol) )
+            if( SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
             {
                SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %.15g (scaled: %.15g)\n", consdata->activity - consdata->rhs, consdata->rhsviol);
             }
@@ -7186,7 +7188,7 @@ SCIP_DECL_CONSCHECK(consCheckNonlinear)
             if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
                consdataFindUnlockedLinearVar(scip, consdata);
 
-            if( SCIPisFeasPositive(scip, consdata->lhsviol) )
+            if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) )
             {
                /* check if there is a variable which may help to get the left hand side satisfied
                 * if there is no such var, then we cannot get feasible */
@@ -7196,7 +7198,7 @@ SCIP_DECL_CONSCHECK(consCheckNonlinear)
             }
             else
             {
-               assert(SCIPisFeasPositive(scip, consdata->rhsviol));
+               assert(SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)));
                /* check if there is a variable which may help to get the right hand side satisfied
                 * if there is no such var, then we cannot get feasible */
                if( !(consdata->linvar_mayincrease >= 0 && consdata->lincoefs[consdata->linvar_mayincrease] < 0.0) &&

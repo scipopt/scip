@@ -480,7 +480,12 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
 
    /* don't try to dive, if there are no fractional variables and no indicator candidates */
    if( nlpcands == 0 && nindcands == 0 )
+   {
+      SCIPfreeBufferArrayNull(scip, &indcandfrac);
+      SCIPfreeBufferArrayNull(scip, &indcandssol);
+      SCIPfreeBufferArrayNull(scip, &indcands);
       return SCIP_OKAY;
+   }
 
    /* calculate the objective search bound */
    if( SCIPgetNSolsFound(scip) == 0 )

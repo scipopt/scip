@@ -3191,6 +3191,10 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
 
    SCIPdebugMessage("getting basis information\n");
 
+   /* this might be turned off if the user as called SCIPlpiClearState() or set SCIP_LPPAR_FROMSCRATCH to TRUE */
+   setIntParam(lpi, CPX_PARAM_ADVIND, CPX_ON);
+   SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
+
    retval = CPXgetbhead(lpi->cpxenv, lpi->cpxlp, bind, NULL);
    if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN
       || retval == CPXERR_NO_BASIS )
@@ -3225,6 +3229,10 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    assert(lpi->cpxenv != NULL);
 
    SCIPdebugMessage("getting binv-row %d\n", r);
+
+   /* this might be turned off if the user as called SCIPlpiClearState() or set SCIP_LPPAR_FROMSCRATCH to TRUE */
+   setIntParam(lpi, CPX_PARAM_ADVIND, CPX_ON);
+   SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
 
    retval = CPXbinvrow(lpi->cpxenv, lpi->cpxlp, r, coef);
    if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN
@@ -3265,6 +3273,10 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
 
    SCIPdebugMessage("getting binv-col %d\n", c);
 
+   /* this might be turned off if the user as called SCIPlpiClearState() or set SCIP_LPPAR_FROMSCRATCH to TRUE */
+   setIntParam(lpi, CPX_PARAM_ADVIND, CPX_ON);
+   SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
+
    retval = CPXbinvcol(lpi->cpxenv, lpi->cpxlp, c, coef);
    if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN
       || retval == CPXERR_NO_BASIS )
@@ -3300,6 +3312,10 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    assert(lpi->cpxenv != NULL);
 
    SCIPdebugMessage("getting binva-row %d\n", r);
+
+   /* this might be turned off if the user as called SCIPlpiClearState() or set SCIP_LPPAR_FROMSCRATCH to TRUE */
+   setIntParam(lpi, CPX_PARAM_ADVIND, CPX_ON);
+   SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
 
    retval = CPXbinvarow(lpi->cpxenv, lpi->cpxlp, r, coef);
    if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN
@@ -3338,6 +3354,10 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    assert(lpi->cpxlp != NULL);
 
    SCIPdebugMessage("getting binva-col %d\n", c);
+
+   /* this might be turned off if the user as called SCIPlpiClearState() or set SCIP_LPPAR_FROMSCRATCH to TRUE */
+   setIntParam(lpi, CPX_PARAM_ADVIND, CPX_ON);
+   SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
 
    retval = CPXbinvacol(lpi->cpxenv, lpi->cpxlp, c, coef);
    if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN
