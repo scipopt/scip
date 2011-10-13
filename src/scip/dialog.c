@@ -854,7 +854,7 @@ SCIP_RETCODE SCIPdialogAddEntry(
    SCIP_CALL( ensureSubdialogMem(dialog, set, dialog->nsubdialogs+1) );
 
    /* link the dialogs as parent-child pair; the sub-dialogs are sorted non-decreasing w.r.t. their name */
-   SCIPsortedvecInsertPtr((void**)dialog->subdialogs, dialogComp, (void*)subdialog, &dialog->nsubdialogs);
+   SCIPsortedvecInsertPtr((void**)dialog->subdialogs, dialogComp, (void*)subdialog, &dialog->nsubdialogs, NULL);
    subdialog->parent = dialog;
 
    /* capture sub-dialog */

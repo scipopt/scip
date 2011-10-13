@@ -3567,8 +3567,8 @@ int stairmapInsertTimepoint(
    assert(pos + 1 < stairmap->arraysize);
 
    /* insert new time point into the (sorted) stair map */
-   SCIPsortedvecInsertIntInt(stairmap->timepoints, stairmap->freecapacities, timepoint, stairmap->freecapacities[pos], 
-      &stairmap->ntimepoints);
+   SCIPsortedvecInsertIntInt(stairmap->timepoints, stairmap->freecapacities, timepoint, stairmap->freecapacities[pos],
+      &stairmap->ntimepoints, NULL);
    
 #ifndef NDEBUG
    /* check if the time points are sorted */

@@ -4,6 +4,8 @@ SCIP version NEXT
 interface
 - new method SCIPisConflictAnalysisApplicable() which return FALSE is the conflict will not runs; can be used
   to avoid unnecessary initialization of the conflict analysis
+- the methods SCIPsortedvecInsert*() have an additional parameter which can be used to receive the position where 
+  the new element was inserted, if this is not of interest a NULL pointer can be given
 
 parameters:
 - changed default value of parameter <separating/gomory/maxroundsroot> to 10

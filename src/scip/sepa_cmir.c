@@ -781,7 +781,7 @@ SCIP_RETCODE aggregation(
 
          /* store continuous variable in array sorted by distance to closest bound */
          bounddist = getBounddist(scip, nintvars, varsolvals, bestcontlbs, bestcontubs, var);
-         SCIPsortedvecInsertDownRealInt(aggrcontnonzbounddists, aggrcontnonzposs, bounddist, pos, &naggrcontnonzs);
+         SCIPsortedvecInsertDownRealInt(aggrcontnonzbounddists, aggrcontnonzposs, bounddist, pos, &naggrcontnonzs, NULL);
       }
       else
          naggrintnonzs++;
@@ -1106,7 +1106,7 @@ SCIP_RETCODE aggregation(
 
                /* store continuous variable in array sorted by distance to closest bound */
                bounddist = getBounddist(scip, nintvars, varsolvals, bestcontlbs, bestcontubs, var);
-               SCIPsortedvecInsertDownRealInt(aggrcontnonzbounddists, aggrcontnonzposs, bounddist, pos, &naggrcontnonzs);
+               SCIPsortedvecInsertDownRealInt(aggrcontnonzbounddists, aggrcontnonzposs, bounddist, pos, &naggrcontnonzs, NULL);
 
                updateNActiveConts(scip, varsolvals, bestcontlbs, bestcontubs, nintvars, var, +1, &nactiveconts);
             }

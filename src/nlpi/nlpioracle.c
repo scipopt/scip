@@ -965,7 +965,7 @@ SCIP_RETCODE hessLagSparsitySetNzFlagForQuad(
       if( colnz[quadelems->idx2] == NULL || !SCIPsortedvecFindInt(colnz[quadelems->idx2], quadelems->idx1, colnnz[quadelems->idx2], &pos) )
       {
          SCIP_CALL( ensureIntArraySize(oracle->blkmem, &colnz[quadelems->idx2], &collen[quadelems->idx2], colnnz[quadelems->idx2]+1) );
-         SCIPsortedvecInsertInt(colnz[quadelems->idx2], quadelems->idx1, &colnnz[quadelems->idx2]);
+         SCIPsortedvecInsertInt(colnz[quadelems->idx2], quadelems->idx1, &colnnz[quadelems->idx2], NULL);
          ++(*nzcount);
       }
    }
@@ -1034,7 +1034,7 @@ SCIP_RETCODE hessLagSparsitySetNzFlagForExprtree(
          if( colnz[row] == NULL || !SCIPsortedvecFindInt(colnz[row], col, colnnz[row], &pos) )
          {
             SCIP_CALL( ensureIntArraySize(oracle->blkmem, &colnz[row], &collen[row], colnnz[row]+1) );
-            SCIPsortedvecInsertInt(colnz[row], col, &colnnz[row]);
+            SCIPsortedvecInsertInt(colnz[row], col, &colnnz[row], NULL);
             ++(*nzcount);
          }
       }

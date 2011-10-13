@@ -7892,8 +7892,8 @@ int SCIPprofileInsertTimepoint(
    assert(pos + 1 < profile->arraysize);
 
    /* insert new time point into the (sorted) profile */
-   SCIPsortedvecInsertIntInt(profile->timepoints, profile->freecapacities, timepoint, profile->freecapacities[pos],
-      &profile->ntimepoints);
+   SCIPsortedvecInsertIntInt(profile->timepoints, profile->freecapacities, timepoint, profile->freecapacities[pos], 
+      &profile->ntimepoints, NULL);
 
 #ifndef NDEBUG
    /* check if the time points are sorted */

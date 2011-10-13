@@ -483,7 +483,8 @@ void SORTTPL_NAME(SCIPsortedvecInsert, SORTTPL_NAMEEXT)
    SORTTPL_HASFIELD3PAR(  SORTTPL_FIELD3TYPE     field3val  )  /**< field1 value of new element */
    SORTTPL_HASFIELD4PAR(  SORTTPL_FIELD4TYPE     field4val  )  /**< field1 value of new element */
    SORTTPL_HASFIELD5PAR(  SORTTPL_FIELD5TYPE     field5val  )  /**< field1 value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insert position, or NULL */
    )
 {
    int j;
@@ -506,6 +507,9 @@ void SORTTPL_NAME(SCIPsortedvecInsert, SORTTPL_NAMEEXT)
    SORTTPL_HASFIELD5( field5[j] = field5val; )
 
    (*len)++;
+
+   if( pos != NULL )
+      (*pos) = j;
 }
 
 /** SCIPsortedvecDelPos...(): deletes an element at a given position from a sorted multi-vector */
@@ -555,14 +559,14 @@ void SORTTPL_NAME(SCIPsortedvecDelPos, SORTTPL_NAMEEXT)
  */
 SCIP_Bool SORTTPL_NAME(SCIPsortedvecFind, SORTTPL_NAMEEXT)
 (
-    SORTTPL_KEYTYPE*      key,
-    SORTTPL_HASPTRCOMPPAR( SCIP_DECL_SORTPTRCOMP((*ptrcomp)) )
-    SORTTPL_HASINDCOMPPAR( SCIP_DECL_SORTINDCOMP((*indcomp)) )
-    SORTTPL_HASINDCOMPPAR( void*                  dataptr    )
-    SORTTPL_KEYTYPE       val,
-    int                   len,
-    int*                  pos
-    )
+   SORTTPL_KEYTYPE*      key,                /**< pointer to data array that defines the order */
+   SORTTPL_HASPTRCOMPPAR( SCIP_DECL_SORTPTRCOMP((*ptrcomp)) )  /**< data element comparator */
+   SORTTPL_HASINDCOMPPAR( SCIP_DECL_SORTINDCOMP((*indcomp)) )  /**< data element comparator */
+   SORTTPL_HASINDCOMPPAR( void*                  dataptr    )  /**< pointer to data field that is given to the external compare method */
+   SORTTPL_KEYTYPE       val,                /**< data field to find positopn for */
+   int                   len,                /**< length of array */
+   int*                  pos                 /**< pointer to store the insert position */
+   )
 {
    int left;
    int right;
