@@ -50,13 +50,13 @@ $(OBJDIR)/cmain.o: src/cmain.c ../../src/scip/scip.h ../../src/scip/def.h \
  ../../src/scip/cons_setppc.h ../../src/scip/cons_sos1.h \
  ../../src/scip/cons_sos2.h ../../src/scip/cons_soc.h \
  ../../src/scip/cons_varbound.h ../../src/scip/cons_xor.h \
- ../../src/scip/dialog_default.h ../../src/scip/disp_default.h \
- ../../src/scip/heur_actconsdiving.h ../../src/scip/heur_clique.h \
- ../../src/scip/heur_coefdiving.h ../../src/scip/heur_crossover.h \
- ../../src/scip/heur_dins.h ../../src/scip/heur_feaspump.h \
- ../../src/scip/heur_fixandinfer.h ../../src/scip/heur_fracdiving.h \
- ../../src/scip/heur_guideddiving.h ../../src/scip/heur_intdiving.h \
- ../../src/scip/heur_intshifting.h ../../src/scip/heur_linesearchdiving.h \
+ ../../src/scip/disp_default.h ../../src/scip/heur_actconsdiving.h \
+ ../../src/scip/heur_clique.h ../../src/scip/heur_coefdiving.h \
+ ../../src/scip/heur_crossover.h ../../src/scip/heur_dins.h \
+ ../../src/scip/heur_feaspump.h ../../src/scip/heur_fixandinfer.h \
+ ../../src/scip/heur_fracdiving.h ../../src/scip/heur_guideddiving.h \
+ ../../src/scip/heur_intdiving.h ../../src/scip/heur_intshifting.h \
+ ../../src/scip/heur_linesearchdiving.h \
  ../../src/scip/heur_localbranching.h ../../src/scip/heur_mutation.h \
  ../../src/scip/heur_objpscostdiving.h ../../src/scip/heur_octane.h \
  ../../src/scip/heur_oneopt.h ../../src/scip/heur_pscostdiving.h \
