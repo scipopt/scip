@@ -4974,7 +4974,7 @@ SCIP_DECL_CONSLOCK(consLockIndicator)
    assert( consdata != NULL );
    assert( consdata->binvar != NULL );
 
-   SCIPdebugMessage("%locking constraint <%s>.\n", (nlocksneg < 0) || (nlockspos < 0) ? "Unl" : "L", SCIPconsGetName(cons));
+   SCIPdebugMessage("%socking constraint <%s>.\n", (nlocksneg < 0) || (nlockspos < 0) ? "Unl" : "L", SCIPconsGetName(cons));
 
    SCIP_CALL( SCIPaddVarLocks(scip, consdata->binvar, nlocksneg, nlockspos) );
 
