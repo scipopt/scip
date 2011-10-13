@@ -29,6 +29,11 @@
 #include <stdio.h>
 #include <ctype.h>
 
+/* there is not strtoll with MS compiler, but a strtoi64 should be there */
+#ifdef _MSC_VER
+#define strtoll _strtoi64
+#endif
+
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_setppc.h"
