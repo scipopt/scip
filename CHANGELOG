@@ -206,6 +206,7 @@ parameters:
 - added parameter <lp/clearinitialprobinglp> to clear LP state at end of probing mode, if LP was initially unsolved
 - added parameter <constraints/varbound/presolpairwise> that allows pairwise presolving of varbound constraints, default is TRUE
 - added parameter <pricing/delvars> and <pricing/delvarsroot> that define, whether variables created at a node / the root node should be deleted when the node is solved in case they are not present in the LP anymore
+- added parameter <heuristics/shiftandpropagate/onlywithoutsol> to switch whether the heuristic should be called in case a primal solution is already present
 
 features:
 - flatzinc reader is now capable to read cumulative constraints
