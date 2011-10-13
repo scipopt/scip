@@ -44,18 +44,6 @@
 #define COL_MAX_LINELEN 65535
 
 
-/*
- * Data structures
- */
-
-
-/** data for csol reader */
-struct SCIP_ReaderData
-{
-};
-
-
-
 
 /*
  * Local methods

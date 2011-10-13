@@ -53,17 +53,6 @@
 #define BRANCHRULE_MAXBOUNDDIST    1.0
 
 /*
- * Data structures
- */
-
-/** branching rule data */
-struct SCIP_BranchruleData
-{
-};
-
-
-
-/*
  * Callback methods of branching rule
  */
 

@@ -88,15 +88,6 @@
 
 
 /*
- * Data structures
- */
-
-/** data for bpa reader */
-struct SCIP_ReaderData
-{
-};
-
-/*
  * Callback methods of reader
  */
 

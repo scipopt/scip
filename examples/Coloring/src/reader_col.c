@@ -40,15 +40,6 @@
 #define COL_MAX_LINELEN 1024
 
 
-/*
- * Data structures
- */
-
-/** data for col reader */
-struct SCIP_ReaderData
-{
-};
-
 
 /*
  * Local methods
@@ -140,6 +131,7 @@ SCIP_RETCODE readCol(
    probname[j-i-5]= '\0';
 
    /* Read until information about graph starts */
+   line_nr = 0;
    while( !SCIPfeof(fp) && (buf[0] != 'p') )
    {
       SCIPfgets(buf, sizeof(buf), fp);
