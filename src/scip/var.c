@@ -4098,6 +4098,9 @@ SCIP_RETCODE SCIPvarAggregate(
       var->negatedvar = aggvar;
       aggvar->negatedvar = var;
 
+      /* copy doNotMultiaggr status */
+      aggvar->donotmultaggr |= var->donotmultaggr;
+
       /* mark both variables to be non-deletable */
       SCIPvarMarkNotDeletable(var);
       SCIPvarMarkNotDeletable(aggvar);
@@ -4109,6 +4112,9 @@ SCIP_RETCODE SCIPvarAggregate(
       var->data.aggregate.var = aggvar;
       var->data.aggregate.scalar = scalar;
       var->data.aggregate.constant = constant;
+
+      /* copy doNotMultiaggr status */
+      aggvar->donotmultaggr |= var->donotmultaggr;
 
       /* mark both variables to be non-deletable */
       SCIPvarMarkNotDeletable(var);
