@@ -6257,8 +6257,9 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
          }
          else
          {
-            /* setting variable to 0 may decrease objective -> check whether variable only occurs in the current constraint */
-            if ( SCIPvarGetNLocksDown(binvar) <= 1 && ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 0.0) )
+            /* setting variable to 0 may decrease objective -> check whether variable only occurs in the current constraint
+             * note: binary variables are only locked up */
+            if ( SCIPvarGetNLocksDown(binvar) <= 0 && ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 0.0) )
             {
                SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 0.0) );
                *changed = TRUE;

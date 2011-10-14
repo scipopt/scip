@@ -4405,7 +4405,7 @@ SCIP_RETCODE respropCumulativeCondition(
    int*                  demands,            /**< array of demands */
    int                   capacity,           /**< cumulative capacity */
    SCIP_VAR*             infervar,           /**< the conflict variable whose bound change has to be resolved */
-   int                   inferinfo,          /**< the user information */
+   INFERINFO             inferinfo,          /**< the user information */
    SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
@@ -4413,15 +4413,13 @@ SCIP_RETCODE respropCumulativeCondition(
 {
    SCIP_VAR* var;
 
-   INFERINFO struct_inferinfo;
-
    SCIP_Bool success;
 
    int inferdemand;
    int inferduration;  /* needed for upperbound resolve process */
    int j;
 
-   struct_inferinfo = intToInferInfo(inferinfo);
+   assert(inferInfoGetProprule(inferinfo) != PROPRULE_INVALID);
 
    if( SCIPvarGetType(infervar) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(infervar) == SCIP_VARTYPE_IMPLINT )
    {
@@ -4447,7 +4445,7 @@ SCIP_RETCODE respropCumulativeCondition(
          SCIPvarGetName(infervar), inferduration, inferdemand);
 
       /* repropagation for core-times */
-      if( inferInfoGetProprule(struct_inferinfo) == PROPRULE_1_CORETIMES )
+      if(  inferInfoGetProprule(inferinfo) == PROPRULE_1_CORETIMES )
       {
          int leftbound;
          int rightbound;
@@ -4502,30 +4500,30 @@ SCIP_RETCODE respropCumulativeCondition(
             SCIP_CALL( SCIPaddConflictLb(scip, infervar, bdchgidx) );
 
             /* analyze the conflict */
-            if( inferInfoGetProprule(struct_inferinfo) == PROPRULE_3_EDGEFINDING )
+            if( inferInfoGetProprule(inferinfo) == PROPRULE_3_EDGEFINDING )
             {
                /* can search for small clauses if earliest start is in the interval */
-               if( oldbound >= inferInfoGetEst(struct_inferinfo) )
+               if( oldbound >= inferInfoGetEst(inferinfo) )
                {
                   int inferdiff;
-                  inferdiff = newbound - inferInfoGetEst(struct_inferinfo);
+                  inferdiff = newbound - inferInfoGetEst(inferinfo);
                   assert(inferdiff > 0);
                   SCIP_CALL( analyzeShortConflictEdgeFinding(scip, nvars, vars, durations, demands, capacity,
-                        infervar, struct_inferinfo, inferdemand, inferduration, inferdiff,
+                        infervar, inferinfo, inferdemand, inferduration, inferdiff,
                         bdchgidx, &success) );
                }
                else
                {
                   SCIP_CALL( analyzeConflictEdgeFinding(scip, nvars, vars, durations,
-                        infervar, struct_inferinfo, bdchgidx, &success) );
+                        infervar, inferinfo, bdchgidx, &success) );
                }
             }
             else
             {
-               assert(inferInfoGetProprule(struct_inferinfo) == PROPRULE_4_ENERGETICREASONING);
+               assert(inferInfoGetProprule(inferinfo) == PROPRULE_4_ENERGETICREASONING);
 
                SCIP_CALL( analyzeConflictEnergeticReasoning(scip, nvars, vars, durations,
-                     infervar, struct_inferinfo, bdchgidx, &success) );
+                     infervar, inferinfo, bdchgidx, &success) );
             }
          }
          else /* now consider upper bound changes */
@@ -4541,30 +4539,30 @@ SCIP_RETCODE respropCumulativeCondition(
             SCIP_CALL( SCIPaddConflictUb(scip, infervar, bdchgidx) );
 
             /* analyze the conflict */
-            if( inferInfoGetProprule(struct_inferinfo) == PROPRULE_3_EDGEFINDING )
+            if( inferInfoGetProprule(inferinfo) == PROPRULE_3_EDGEFINDING )
             {
                /* can search for small clauses if latest completion time is in the interval */
-               if( oldbound + inferduration<= inferInfoGetLct(struct_inferinfo) )
+               if( oldbound + inferduration<= inferInfoGetLct(inferinfo) )
                {
                   int inferdiff;
-                  inferdiff = inferInfoGetLct(struct_inferinfo) - newbound - inferduration;
+                  inferdiff = inferInfoGetLct(inferinfo) - newbound - inferduration;
                   assert(inferdiff > 0);
                   SCIP_CALL( analyzeShortConflictEdgeFinding(scip, nvars, vars, durations, demands, capacity,
-                        infervar, struct_inferinfo, inferdemand, inferduration, inferdiff,
+                        infervar, inferinfo, inferdemand, inferduration, inferdiff,
                         bdchgidx, &success) );
                }
                else
                {
                   SCIP_CALL( analyzeConflictEdgeFinding(scip, nvars, vars, durations,
-                        infervar, struct_inferinfo, bdchgidx, &success) );
+                        infervar, inferinfo, bdchgidx, &success) );
                }
             }
             else /* upper bound conflict analysis for energetic reasoning */
             {
-               assert(inferInfoGetProprule(struct_inferinfo) == PROPRULE_4_ENERGETICREASONING);
+               assert(inferInfoGetProprule(inferinfo) == PROPRULE_4_ENERGETICREASONING);
 
                SCIP_CALL( analyzeConflictEnergeticReasoning(scip, nvars, vars, durations,
-                     infervar, struct_inferinfo, bdchgidx, &success) );
+                     infervar, inferinfo, bdchgidx, &success) );
             }
          }
          assert(success);
@@ -4580,12 +4578,12 @@ SCIP_RETCODE respropCumulativeCondition(
       int nbinvars;
 
       assert(SCIPvarGetType(infervar) == SCIP_VARTYPE_BINARY);
-      assert(inferInfoGetProprule(struct_inferinfo) == PROPRULE_2_CORETIMEHOLES);
+      assert(inferInfoGetProprule(inferinfo) == PROPRULE_2_CORETIMEHOLES);
 
       intvar = NULL;
       inferdemand = 0;
 
-      pos = inferInfoGetEst(struct_inferinfo);
+      pos = inferInfoGetEst(inferinfo);
       assert(pos >= 0);
 
       /* get demand and integer variable of given inference variable */
@@ -4607,7 +4605,7 @@ SCIP_RETCODE respropCumulativeCondition(
       assert(inferdemand > 0);
 
       SCIP_CALL( analyzeConflictCoreTimesBinvarsCumulative(scip, nvars, vars, durations, demands, capacity,
-            infervar, intvar, inferInfoGetLct(struct_inferinfo), inferdemand, bdchgidx, &success) );
+            infervar, intvar, inferInfoGetLct(inferinfo), inferdemand, bdchgidx, &success) );
    }
 
    if( success )
@@ -7210,7 +7208,7 @@ SCIP_DECL_CONSRESPROP(consRespropCumulative)
 
    SCIP_CALL( respropCumulativeCondition(scip, consdata->nvars, consdata->vars,
          consdata->durations, consdata->demands, consdata->capacity,
-         infervar, inferinfo, boundtype, bdchgidx, result) );
+         infervar, intToInferInfo(inferinfo), boundtype, bdchgidx, result) );
 
    return SCIP_OKAY;
 }
@@ -7624,7 +7622,7 @@ SCIP_RETCODE SCIPrespropCumulativeCondition(
    )
 {
    SCIP_CALL( respropCumulativeCondition(scip, nvars, vars, durations, demands, capacity,
-         infervar, inferinfo, boundtype, bdchgidx, result) );
+         infervar, intToInferInfo(inferinfo), boundtype, bdchgidx, result) );
 
    return SCIP_OKAY;
 }

@@ -278,7 +278,9 @@ typedef enum cutseparatedby CUTSEPARATEDBY;
 #define IDENT_TO_ROW_WITH_SMALLER_SLACK   -101        /**< row is identical to another row but has a larger slack value */
 #define SLACK_GREATER_THAN_MAXSLACK       -102        /**< row has a slack value > maxslack                             */
 #define DEFINES_VIOLATED_ZEROHALF_CUT     -103        /**< row defines a violated zerohalf cut                          */
+#ifdef WITHDECOMPOSE
 #define ROW_IN_SUBPROB_WITHOUT_ODD_RHS    -104        /**< row is part of a subproblem without rows with odd rhs        */
+#endif
 #define NONEXISTENT_ROW                   -105        /**< row does not exist (lhs is -infinity or rhs is infinity)     */
 #define NO_RELEVANT_COLUMNS               -106        /**< row does not contain relevant columns                        */
 #define SLACK_GREATER_THAN_MSL_MINUS_SODD -107        /**< row has even rhs and the sum of its slack value and the minimum
@@ -299,7 +301,9 @@ typedef enum cutseparatedby CUTSEPARATEDBY;
 #define CONTINUOUS_VARIABLE               -208        /**< column corresponds to a non-integer variable                 */
 #define SMALL_FRACSOL_HEUR                -209        /**< column has been omitted (see preprocessColumnsWithSmallFracsol)       */
 #define ALL_MATRIX_ROWS_DELETED           -210        /**< all rows (of the current subproblem) have been deleted       */
+#ifdef WITHDECOMPOSE
 #define COLUMN_IN_SUBPROB_WITHOUT_ODD_RHS -211        /**< column is part of a subproblem without a row with odd rhs value       */
+#endif
 
 
 /* --------------------------------------------------------------------------------------------------------------------
@@ -1211,8 +1215,10 @@ char* getconstantname(
       (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "SLACK>MAXSLACK"); break;
    case DEFINES_VIOLATED_ZEROHALF_CUT:
       (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "ISZHCUT"); break;
+#ifdef WITHDECOMPOSE
    case ROW_IN_SUBPROB_WITHOUT_ODD_RHS: 
       (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "NOODDRHSROW"); break;
+#endif
    case NONEXISTENT_ROW: 
       (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "DOESNOTEXIST"); break;
    case NO_RELEVANT_COLUMNS:
@@ -1243,8 +1249,10 @@ char* getconstantname(
       (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "SUMFRACSOL<DELTA"); break;
    case ALL_MATRIX_ROWS_DELETED:
       (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "NOROWSLEFT"); break;
+#ifdef WITHDECOMPOSE
    case COLUMN_IN_SUBPROB_WITHOUT_ODD_RHS:
       (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "NOODDRHSCOL"); break;
+#endif
    default: 
       SCIPerrorMessage("parameter <%s> unknown\n", value);
       SCIPABORT(); 
@@ -3937,7 +3945,8 @@ SCIP_RETCODE decomposeProblem(
    )
 {
 
-#if 0 /**@todo this is buggy in different ways.
+#ifdef WITHDECOMPOSE
+   /**@todo this is buggy in different ways.
        * 1. it might happen that we ignore a variable of the current row and of all other rows. 
        * thus at the end, the variable will not occur in any subproblem. BUT, currently we do not update 
        * lpdata->subproblemsindexofcol[lppos] and lpdata->rcolsindexofcol[lppos] accordingly. 

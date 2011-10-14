@@ -23,7 +23,12 @@
 #include <cassert>
 #include <fstream>
 #include <iostream>
+#ifndef _MSC_VER
 #include <unistd.h>
+#else
+#include <windows.h>
+#define sleep Sleep
+#endif
 
 #include "objscip/objscip.h"
 #include "EventhdlrNewSol.h"

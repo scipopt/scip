@@ -5,6 +5,12 @@ interface
 - new method SCIPisConflictAnalysisApplicable() which return FALSE is the conflict will not runs; can be used
   to avoid unnecessary initialization of the conflict analysis
 
+parameters:
+- changed default value of parameter <separating/gomory/maxroundsroot> to 10
+- changed default value of parameter <separating/gomory/maxsepacutsroot> to 50
+- changed default value of parameter <presolving/inttobinary/maxrounds> to 0
+
+
 SCIP version 2.1.0
 ===============
 
@@ -213,10 +219,7 @@ parameters:
 - added parameter <lp/clearinitialprobinglp> to clear LP state at end of probing mode, if LP was initially unsolved
 - added parameter <constraints/varbound/presolpairwise> that allows pairwise presolving of varbound constraints, default is TRUE
 - added parameter <pricing/delvars> and <pricing/delvarsroot> that define, whether variables created at a node / the root node should be deleted when the node is solved in case they are not present in the LP anymore
-- changed default value of parameter <separating/gomory/maxroundsroot> to 10
-- changed default value of parameter <separating/gomory/maxsepacutsroot> to 50
-- changed default value of parameter <presolving/inttobinary/maxrounds> to 0
-
+- added parameter <heuristics/shiftandpropagate/onlywithoutsol> to switch whether the heuristic should be called in case a primal solution is already present
 
 features:
 - flatzinc reader is now capable to read cumulative constraints

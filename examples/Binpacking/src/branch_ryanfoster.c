@@ -73,18 +73,6 @@
 #define BRANCHRULE_MAXDEPTH        -1
 #define BRANCHRULE_MAXBOUNDDIST    1.0
 
-
-/*
- * Data structures
- */
-
-/* TODO: fill in the necessary branching rule data */
-
-/** branching rule data */
-struct SCIP_BranchruleData
-{
-};
-
 /*
  * Callback methods of branching rule
  */
