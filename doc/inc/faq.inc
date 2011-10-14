@@ -17,13 +17,14 @@
         How does the naming of the methods work? Where do I find the most common methods?</a></li>
 	<li><a href="#Q18">Can I use SCIP as a pure CP-Solver?</a></li>
 	<li><a href="#Q45">Can I use SCIP as a pure LP-Solver?</a></li>
+	<li><a href="#Q47">Which kind of MINLPs are supported by SCIP?</a></li>
 	<li><a href="#Q19">How can I use the SCIP makefiles?</a></li>
 	<li><a href="#Q19">What is this business with .a and .so libraries in the directory <tt>lib/</tt>?</a></li>
 	<li><a href="#Q20">Can I compile SCIP as a shared library?</a></li>
 	<li><a href="#Q7">The methods SCIPgetVarSol() and SCIPvarGetSol() seem to have the same
       functionality. Which one should I use?</a></li>
       </ul>
-     <li><a href="#Section2"><b>Using SCIP as a standalone MIP-Solver</b></a></li>
+     <li><a href="#Section2"><b>Using SCIP as a standalone solver</b></a></li>
       <ul>
 	<li><a href="#Q28">The output is too wide for my terminal window. What can I do?</a></li>
 	<li><a href="#Q9">What do the cryptic abbreviations for the columns mean which are displayed
@@ -31,7 +32,6 @@
 	<li><a href="#Q10">How do I change the behavior of SCIP?</a></li>
 	<li><a href="#Q11"> I recognized that one special plugin works very poorly / very well for my problem and
         I want to disable it / weaken its influence / intensify its influence. How do I do this?</a></li>
-	<li><a href="#Q47">Which kind of MINLPs are supported by SCIP?</a></li>
 	<li><a href="#Q48">How can I input a MINLP into SCIP?</a></li>
       </ul>
      <li><a href="#Section3"><b>Using SCIP included in another source code</b></a></li>
@@ -266,6 +266,21 @@
       C/C++ program, you could also use SCIP's LP-Interface, see also <a href="#Q46">here</a>.
     </p>
     <p class="q">
+      <a name="Q47">Which kind of MINLPs are supported by SCIP?</a>
+    </p>
+    <p class="a">
+      SCIP supports nonlinear constraints of the form lhs &le; f(x) &le; rhs, where the function f(x) is an algebraic
+      expression that can be represented as expression tree. Such an expression tree has constants and variables as terminal
+      nodes and operands as non-terminal nodes.
+      Expression operands supported by SCIP include addition, subtraction, multiplication, division, exponentiation and
+      logarithm. Trigonometric functions are not yet supported by SCIP.<br>
+      Nonlinear objective functions are not supported by SCIP and must be modeled as constraint function.<br>
+      <b>Note</b>, that the support for non-quadratic nonlinear constraints is still in a <b>BETA</b>-stadium and not yet as
+      robust as the rest of SCIP.
+      Missing bounds on nonlinear variables and tiny or huge coefficients can easily lead to numerical problems,
+      which can be avoided by careful modeling.
+    </p>
+    <p class="q">
        <a name="Q19">How can I use the SCIP makefiles?</a>
     </p>
     <p class="a">
@@ -315,7 +330,7 @@
     </p>
 
 
-<h4><a name="Section2">2. Using SCIP as a standalone MIP/MINLP-Solver</a></h4>
+<h4><a name="Section2">2. Using SCIP as a standalone solver</a></h4>
     <p class="q">
       <a name="Q28">The output is too wide for my terminal window. What can I do?</a>
     </p>
@@ -407,21 +422,6 @@
       <li>For <b class="grey">weakening</b>, you should just do the opposite operation, i.e.,
           reducing the values  you would raise for intensification and vice versa.</li>
     </ul>
-    </p>
-    <p class="q">
-      <a name="Q47">Which kind of MINLPs are supported by SCIP?</a>
-    </p>
-    <p class="a">
-      SCIP supports nonlinear constraints of the form lhs &le; f(x) &le; rhs, where the function f(x) is an algebraic
-      expression that can be represented as expression tree. Such an expression tree has constants and variables as terminal
-      nodes and operands as non-terminal nodes.
-      Expression operands supported by SCIP include addition, subtraction, multiplication, division, exponentiation and
-      logarithm. Trigonometric functions are not yet supported by SCIP.<br>
-      Nonlinear objective functions are not supported by SCIP and must be modeled as constraint function.<br>
-      <b>Note</b>, that the support for non-quadratic nonlinear constraints is still in a <b>BETA</b>-stadium and not yet as
-      robust as the rest of SCIP.
-      Missing bounds on nonlinear variables and tiny or huge coefficients can easily lead to numerical problems,
-      which can be avoided by careful modeling.
     </p>
     <p class="q">
       <a name="Q48">How can I input a MINLP into SCIP?</a>
