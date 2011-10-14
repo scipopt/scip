@@ -2024,22 +2024,6 @@ reading/ppmreader/coefficientlimit = 3
 # [type: int, range: [0,255], default: 160]
 reading/ppmreader/rgblimit = 160
 
-# should columns be added and removed dynamically to the LP?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-reading/zplreader/dynamiccols = FALSE
-
-# should the current directory be changed to that of the ZIMPL file before parsing?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-reading/zplreader/changedir = TRUE
-
-# should ZIMPL starting solutions be forwarded to SCIP?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-reading/zplreader/usestartsol = TRUE
-
-# additional parameter string passed to the ZIMPL parser (or - for no additional parameters)
-# [type: string, default: "-"]
-reading/zplreader/parameters = "-"
-
 # priority of presolver <boundshift>
 # [type: int, range: [-536870912,536870911], default: 7900000]
 presolving/boundshift/priority = 7900000
@@ -3491,6 +3475,10 @@ heuristics/shiftandpropagate/relax = TRUE
 # Should domains be reduced by probing?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 heuristics/shiftandpropagate/probing = TRUE
+
+# Should heuristic only be executed if no primal solution was found, yet?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+heuristics/shiftandpropagate/onlywithoutsol = TRUE
 
 # The number of cutoffs before heuristic stops
 # [type: int, range: [-1,1000000], default: 15]
