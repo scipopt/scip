@@ -78,6 +78,10 @@ interface:
 - new method SCIPvarIsDeletable() that returns whether a variable is marked to be deletable (each variable is per default non-deletable)
 - new callback SCIP_DECL_DELVARS for constraint handlers, that is called after variables were marked for deletion and should remove these variables from its constraints
 - new method SCIPpropagateCutoffboundVar() in prop_pseudoobj.h which can be used to propagate the cutoff bound for the given variables
+- callbacks SCIP_DECL_CONSINITPRE, SCIP_DECL_CONSEXITPRE, SCIP_DECL_PROPINITPRE, SCIP_DECL_PROPEXITPRE,
+  SCIP_DECL_PRESOLINITPRE, and SCIP_DECL_PRESOLEXITPRE and corresponding c++ functions got two new SCIP_Bool parameters
+  "isunbounded" and "isinfeasible" which state whether the problem is already declared to be unbounded or infeasible
+   respectively
 
 performance improvements:
 - performance improvements in prop_vbounds
@@ -140,6 +144,7 @@ fixed bugs:
 - fixed bug w.r.t. infinity loop during propagation
 - fixed bug in handling of lazy bounds that resulted in putting the bounds explicitly into the LP
 - fixed issue with interactive shell in case (user) plugins are included after the default plugins
+- fixed bug where mutiaggregating leads to an aggregation, and both variables were of implicit or integral type
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})
