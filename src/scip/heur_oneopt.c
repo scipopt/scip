@@ -39,7 +39,6 @@
 #define DEFAULT_WEIGHTEDOBJ   TRUE
 #define DEFAULT_DURINGROOT    TRUE
 
-
 /*
  * Data structures
  */

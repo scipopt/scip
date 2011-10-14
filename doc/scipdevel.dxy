@@ -180,8 +180,8 @@ TAB_SIZE               = 8
 # You can put \n's in the value part of an alias to insert newlines.
 
 ALIASES                = "SCIP=<a href= http://scip.zib.de>SCIP</a>" \
-		       	 "OTHERDOCU=Developers Manual" \
-			 "OTHERDOCUTEXT=<h2>This manual lists all methods and data types of SCIP, including the internal ones that users should not call. The <a class="qindex" href="../html/index.html">Users Manual</a> might be more helpful for regular SCIP users.</h2>"
+"OTHERDOCU=Developer's Manual" \
+"OTHERDOCUTEXT=This manual lists all methods and data types of SCIP, including the internal ones that users should not call. The <a class="qindex" href="../html/index.html">User's Manual</a> might be more helpful for regular SCIP users."
 
 # Set the OPTIMIZE_OUTPUT_FOR_C tag to YES if your project consists of C
 # sources only. Doxygen will then generate output that is more tailored for C.

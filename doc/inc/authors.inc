@@ -90,7 +90,7 @@
 	    </tr>		   
 	    <tr>
 	      <td>
-		<a href="http://fauam2m.am.uni-erlangen.de/optimization/edom/staff-members/martin-alexander/prof-dr-alexander-martin.html">Alexander Martin</a>
+		<a href="http://www.mso.math.uni-erlangen.de/optimization/edom/team/martin-alexander/prof-dr-alexander-martin.html">Alexander Martin</a>
 	      </td>
 	      <td>
 		Developer of SIP &ndash; the predecessor of SCIP
@@ -138,7 +138,7 @@
 	    </tr>
             <tr>
 	      <td>
-                <a href=" http://www.math.tu-berlin.de/coga/people/bley/">Andreas Bley</a>
+                <a href="http://univis.uni-magdeburg.de/form?__s=2&dsc=anew/tel_view&pers=fma/imo/imo/bleyan&anonymous=1&dir=fma/imo&ref=pande&sem=2011w&__e=258">Andreas Bley</a>
 	      </td>
 	      <td>
                  VRP example
@@ -168,7 +168,7 @@
 	    </tr>
             <tr>
 	      <td>
-                <a href="http://fauam2m.am.uni-erlangen.de/de/optimierung/wirtschaftsmathematik/mitarbeiter/gellermann-thorsten/thorsten-gellermann.html">Thorsten Gellermann</a>
+                <a href="http://www.mso.math.uni-erlangen.de/optimization/edom/team/gellermann-thorsten/thorsten-gellermann.html">Thorsten Gellermann</a>
 	      </td>
 	      <td>
                  Generic NLP interface
@@ -240,7 +240,7 @@
 	    </tr>
             <tr>
 	      <td>
-                 <a href="http://www.math.unipd.it/~salvagni/">Domenico Salvagnin</a>
+                 <a href="http://www.dei.unipd.it/~salvagni/">Domenico Salvagnin</a>
 	      </td>
 	      <td>
                  Feasibility Pump 2.0
@@ -250,7 +250,7 @@
 	    </tr>
             <tr>
 	      <td>
-                 <a href="http://www.math.tu-berlin.de/coga/people/jschulz/">Jens Schulz</a>
+                 <a href="http://www.coga.tu-berlin.de/v-menue/mitarbeiter/jens_schulz/jens_schulz/">Jens Schulz</a>
 	      </td>
 	      <td>
                  Scheduling plugins: cumulative and linking constraint handler, variable bounds propagator

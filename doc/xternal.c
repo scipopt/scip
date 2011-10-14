@@ -47,7 +47,7 @@
  *
  * SCIP is developed together with <a href="http://www.tu-braunschweig.de/mo/">TU Braunschweig</a> and <a
  * href="http://www.am.uni-erlangen.de/optimization/edom.html">University of Erlangen-N&uuml;rnberg (Chair of EDOM)</a>
- * and has more than 300'000 lines of C code.
+ * and has more than 450,000 lines of C code.
  *
  * <b>Getting started</b>
  *
@@ -89,7 +89,7 @@
  *   - \ref DISP    "Display columns"
  *   - \ref EVENT   "Event handler"
  *   - \ref NLPI    "Interfaces to NLP solvers"
- *   - \ref EXPRINT "Interfaces to Expression interpreters"
+ *   - \ref EXPRINT "Interfaces to expression interpreters"
  *   - \ref CONF    "Conflict analysis"
  *
  * - Miscellaneous
@@ -133,7 +133,7 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page CODE Coding style guidelines
  *
- * We follow the following coding style guidlines and we recommend to use it in your code.
+ * We follow the following coding style guidelines and recommend them for all developers.
  *
  * - Indentation is 3 spaces. No tabs anywhere in the code.
  * - Always only one declaration in a line.
@@ -150,7 +150,7 @@
  * - Defines should be named all upper case.
  * - Document functions, parameters, and variables in a doxygen conform way.
  *
- * As an example have a look at "tree.c" and see the examples below. We also provide settings for
+ * As an example, have a look at tree.c and see the examples below. We also provide settings for
  * \ref XEMACS "(x)emacs" and \ref ECLIPSE "eclipse".
  *
  * @section CODEEXAMPLES Examples
@@ -197,27 +197,26 @@
  * @section XEMACS Customize (x)emacs
  *
  * If you are using (x)emacs, you can use the following customization for the c++-mode. These settings satisfy the
- * coding guidline of \SCIP.
+ * coding guidelines of \SCIP.
  *
- * \code
- * (add-hook 'c++-mode-hook
- *   (function
- *     (lambda ()
- *   ;; SCIP customizations for c-mode and c++-mode
- *   (setq-default c-basic-offset 3)
- *   (c-set-offset 'substatement-open 0)
- *   (c-set-offset 'statement-case-open 0)
- *   (c-set-offset 'brace-list-open '-)
- *   (c-set-offset 'inextern-lang '0)
- *   (c-set-offset 'arglist-intro '+)
- *   (c-set-offset 'arglist-cont 0)
- *   (c-set-offset 'arglist-cont-nonempty '+)
- *   (c-set-offset 'arglist-close '+)
- *   (set-variable 'fill-column 120)
- *  ;; this will make sure spaces are used instead of tabs
- *   (setq tab-width 8 indent-tabs-mode nil)
- *   )))
- * \endcode
+ * \verbatim
+  (add-hook 'c++-mode-hook
+    (function
+      (lambda ()
+    ;; SCIP customizations for c-mode and c++-mode
+    (setq-default c-basic-offset 3)
+    (c-set-offset 'substatement-open 0)
+    (c-set-offset 'statement-case-open 0)
+    (c-set-offset 'brace-list-open '-)
+    (c-set-offset 'inextern-lang '0)
+    (c-set-offset 'arglist-intro '+)
+    (c-set-offset 'arglist-cont 0)
+    (c-set-offset 'arglist-cont-nonempty '+)
+    (c-set-offset 'arglist-close '+)
+    (set-variable 'fill-column 120)
+   ;; this will make sure spaces are used instead of tabs
+    (setq tab-width 8 indent-tabs-mode nil)
+    )))\endverbatim
  *
  * @section ECLIPSE Customize eclipse
  *
@@ -387,10 +386,10 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page MAKE Makefiles / Installation information
  *
- * In this section we describe (few) features and use of the SCIP Makefile. We also give two examples for how to install
+ * In this section we describe the use, and a few features, of the SCIP Makefile. We also give two examples for how to install
  * SCIP. The \ref EXAMPLE1 "first example" illustrates the default installation. This means, with SoPleX and ZIMPL. The
  * \ref EXAMPLE2 "second example" shows how to get CPLEX linked to SCIP without ZIMPL. This is followed by a section which
- * gives some hints what to do if the \ref COMPILERPROBLEMS "compilation threws some error". We give some comments on
+ * gives some hints on what to do if the \ref COMPILERPROBLEMS "compilation throws an error". We give some comments on
  * how to install SCIP under \ref WINDOWS "WINDOWS" and show \ref RUN "how to start SCIP".
  *
  * If you experience any problems during the installation, you will find help in the \ref INSTALL "INSTALL" file.
@@ -401,9 +400,9 @@
  * - <code>OPT=\<dbg|opt|opt-gccold\></code> Here <code>dbg</code> turns on the debug mode of SCIP. This enables asserts
  *   and avoids macros for several function in order to ease debugging. The default is <code>opt</code>, which enables
  *   the optimized mode. The third option <code>opt-gccold</code> will work with older GCC compilers before version
- *   4.2. We recommend to use newer GCC versions.
+ *   4.2. We recommend using newer GCC versions.
  *
- * - <code>LPS=\<clp|cpx|msk|spx|xprs|none\></code> This determines the LP-solver, which should have been
+ * - <code>LPS=\<clp|cpx|grb|msk|qso|spx|xprs|none\></code> This determines the LP-solver, which should have been
  *   installed separately from SCIP. The options are the following:
  *      - <code>clp</code>: COIN-OR Clp LP-solver
  *      - <code>cpx</code>: CPLEX LP-solver
@@ -419,9 +418,9 @@
  *
  * - <code>ZIMPL=\<true|false\></code> Turns direct support of ZIMPL in SCIP on (default) or off, respectively.
  * - <code>ZIMPLOPT=\<dbg|opt|opt-gccold\></code> Chooses the debug or optimized (default) (or old GCC optimized)
- *   version of ZIMPL, if ZIMPL support is enabled. \n 
+ *   version of ZIMPL, if ZIMPL support is enabled. \n
  *   If the ZIMPL-support is disabled, the GMP-library is no longer needed for SCIP and therefore not linked to SCIP.
- * 
+ *
  * - <code>READLINE=\<true|false\></code> Turns support via the readline library on (default) or off, respectively.
  *
  * - <code>IPOPT=\<true|false\></code> to enable/disable(default) IPOPT interface (needs IPOPT)
@@ -430,7 +429,7 @@
  *
  * There are additional parameters for Linux/Gnu compilers:
  *
- * - <code>OPT=noblkmem</code> turns off the internal SCIP memory.  This way the code can be checked via valgrind or
+ * - <code>OPT=noblkmem</code> turns off the internal SCIP memory.  This way the code can be checked by valgrind or
  *   similar tools.
  * - <code>OPT=opt-shared</code> generates a shared object of the SCIP libraries.  (The binary uses these shared
  *   libraries as well.)
@@ -461,11 +460,11 @@
  * - <code>make/make.project</code> This file contains definitions that are useful for all codes
  *   that use SCIP, for instance, the examples.
  * - <code>make.\<sys\>.\<machine\>.\<compiler\>.\<dbg|opt|prf|opt-gccold\></code> These file contain system/compiler specific
- *   definitions. If you have a yet unsupported compiler, you could copy one of these and modify it
+ *   definitions. If you have an unsupported compiler, you can copy one of these and modify it
  *   accordingly.
  *
  * If your platform or compiler is not supported by SCIP you might try and copy one of the existing
- * makefile in the <code>make</code> directory and modify it. If you succeed, we are always
+ * makefiles in the <code>make</code> directory and modify it. If you succeed, we are always
  * interested in including more Makefiles into the system.
  *
  *
@@ -477,7 +476,7 @@
  * \verbatim
   > make
   make[1]: Entering directory `scip-1.2'
- 
+
   - Current settings: LPS=spx OSTYPE=linux ARCH=x86_64 COMP=gnu SUFFIX= ZIMPL=true ZIMPLOPT=opt IPOPT=false IPOPTOPT=opt
  
   * SCIP needs some softlinks to external programs, in particular, LP-solvers. 
@@ -598,7 +597,7 @@
  * name in the "make/" subdirectory. You may take\n "make/make.linux.x86.gnu.opt" or any other file in the make
  * subdirectory as example.\n
  *
- * - The readline library seems to differ sligtly on different OS distributions. Some versions do
+ * - The readline library seems to differ slightly on different OS distributions. Some versions do
  * not support the <code>remove_history()</code> call.  In this case, you have to either add
  * <code>-DNO_REMOVE_HISTORY</code> to the FLAGS in the appropriate "make/make.*" file, or to
  * compile with <code>make USRFLAGS=-DNO_REMOVE_HISTORY</code>.  Make sure, the file
@@ -676,16 +675,16 @@
  * you find some hints of how to start a new project.
  *
  * - Copy one of the examples in the <code>examples</code> directory (in the SCIP root
- *   directory). Depending on the programming language (<b>C</b> or <b>C++</b>) and the purpose 
+ *   directory). Depending on the programming language (<b>C</b> or <b>C++</b>) and the purpose
  *   (<b>branch-and-cut</b> or <b>branch-and-cut-and-price</b>) of your project
  *   we suggest the use one of the following examples as starting point:
  *     - <code>VRP</code> should be used if your focus is <b>branch-and-cut-and-price</b>
  *       (column generation) and you want to use <b>C++</b>.
- *     - <code>Coloring</code> or <code>Binpacking</code> should be used if your focus is 
+ *     - <code>Coloring</code> or <code>Binpacking</code> should be used if your focus is
  *       <b>branch-and-cut-and-price</b> (column generation) and you want to use <b>C</b>.
  *     - <code>TSP</code> should be used if your focus is <b>branch-and-cut</b> and you want to use <b>C++</b>.
  *     - <code>LOP</code> should be used if your focus is <b>branch-and-cut</b> and you want to use <b>C</b>.
- * - Edit the makefile according to your needs - in particular: 
+ * - Edit the makefile according to your needs - in particular:
  *    - include a correct path to the SCIP root at the top (<code>SCIPDIR</code>)
  *    - you should rename the targets name (<code>MAINNAME</code>)
  *    - and you should adjust the source file names (<code>MAINOBJ</code>).
@@ -704,13 +703,13 @@
  * precompiled binary and an example problem separately. SCIP can read files in LP, MPS, ZPL, WBO, FZN, PIP, and other formats.
  *
  * If you want to download the source code of the SCIP standard distribution, we recommend to go to the <a
- * href="http://zibopt.zib.de/download.shtml">ZIBopt download section</a>, download the latest release (version 2.0.1 as
+ * href="http://zibopt.zib.de/download.shtml">ZIBopt download section</a>, download the latest release (version 2.1 as
  * of this writing), inflate the tarball (e.g., with "tar xzf ziboptsuite-[version].tgz"), and follow the instructions
  * in the INSTALL file. The instance stein27, which will serve as an example in this tutorial, can be found under
  * ziboptsuite-[version]/scip-[version]/check/instances/MIP/stein27.mps.
  *
  * If you want to download a precompiled binary, go to the <a href="http://scip.zib.de/download.shtml">SCIP download
- * section</a> and download an appropriate binary for your operating system. To follow this tutorial, we recommend to download the instances 
+ * section</a> and download an appropriate binary for your operating system. To follow this tutorial, we recommend downloading the instance
  * <a href="http://miplib.zib.de/miplib3/miplib3/stein27.mps.gz">stein27</a> from the <a href="http://miplib.zib.de/miplib3/miplib3.html">MIPLIB 3.0</a> homepage.
  *
  * Now start your binary, without any arguments. This opens the interactive shell, which should look somehow like this:
@@ -792,7 +791,7 @@
  * SCIP> 
  * \endcode
  *
- * What do we see here? After "optimize", SCIP first goes into presolving. Not much happening for this instance, just
+ * What do we see here? After "optimize", SCIP first goes into presolving. Not much is happening for this instance, just
  * the linear constraints get upgraded to more specific types. Each round of presolving will be displayed in a single
  * line, with a short summary at the end. Here, there has only been one round with actual changes, the second round did
  * not bring any further reductions.  Thus, it is not displayed and presolving is stopped. Then, we see the actual
@@ -804,14 +803,14 @@
  * is found (e.g. at node 14 in the above output). After some more nodes, the "dualbound" starts moving, too. At one
  * point, both will be the same, and the solving process terminates, showing us some wrap-up information.
  *
- * The exact performance varies amongst different architectures, operating systems, and so on. Do not be worried, if
+ * The exact performance varies amongst different architectures, operating systems, and so on. Do not be worried if
  * your installation needs more or less time or nodes to solve. Also, this instance has more than 2000 different optimal
  * solutions. The optimal objective value always has to be 18, but the solution vector may differ. If you are interested
- * in this behavior which is called "performance variability", you may have a look at the MIPLIB2010 paper.
+ * in this behavior, which is called "performance variability", you may have a look at the MIPLIB2010 paper.
  *
  * We might want to have some more information now. Which were the heuristics that found the solutions? What plugins
  *  were called during the solutions process and how much time did they spend? How did the instance that we were solving
- *  actually look like?  Information on certain plugin types (e.g., heuristics, branching rules, separators) we get by
+ *  look?  Information on certain plugin types (e.g., heuristics, branching rules, separators) we get by
  *  "display <plugin-type>", information on the solution process, we get by "display statistics", and "display problem"
  *  shows us the current instance.
  *
@@ -841,9 +840,9 @@
  * We see that rounding and shifting were the heuristics producing the solutions in the beginning. Rounding is called at
  * every node, shifting only at every tenth level of the tree. The statistics are quite comprehensive, thus, we just
  * explain a few lines here. We get information for all types of plugins and for the overall solving process. Besides
- * others, we see that in in six calls, the gomory cut separator and the strong Chv&agrave;tal-Gomory separator each produced 
+ * others, we see that in six calls, the gomory cut separator and the strong Chv&aacute;tal-Gomory separator each produced
  * several hundred cuts (of which only a few entered the LP). The oneopt heuristic found one solution in 4 calls,
- * whereas coefdiving failed all 57 times it was called. All the LPs have been solved with the primal simplex, which
+ * whereas coefdiving failed all 57 times it was called. All the LPs have been solved with the dual simplex algorithm, which
  * took about 0.2 seconds of the 0.7 seconds overall solving time.
  *
  * Now, we can start playing around with parameters. Rounding and shifting seem to be quite successful on this instance,
@@ -953,7 +952,7 @@
  * it has been interrupted.
  *
  * SCIP can also write information to files. E.g., we could store the incumbent solution to a file, or output the
- * problem instance in another files format (th LP format is much better human readable than the MPS format, for example).
+ * problem instance in another file format (the LP format is much more human readable than the MPS format, for example).
  *
  * \code
  * SCIP> write solution stein27.sol
@@ -967,8 +966,8 @@
  * ...
  * \endcode
  *
- * We hope this tutorial gave you an overview on what is possible using the SCIP interactive shell. Please also read our
- * \ref FAQ, in particular the section <a href="FAQ.html#Section2">Using SCIP as a standalone MIP-Solver</a>.
+ * We hope this tutorial gave you an overview of what is possible using the SCIP interactive shell. Please also read our
+ * \ref FAQ, in particular the section <a href="FAQ.html#Section2">Using SCIP as a standalone MIP/MINLP-Solver</a>.
  */ 
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1964,10 +1963,10 @@
  * @subsection PRICERFARKAS
  *
  * If the current LP relaxation is infeasible, it is the task of the pricer to generate additional variables that can
- * potentially render the LP feasible again. In standard branch-and-price, these are variables with positive farkas values,
+ * potentially render the LP feasible again. In standard branch-and-price, these are variables with positive Farkas values,
  * and the PRICERFARKAS method should identify those variables.
  *
- * If the LP was proven to be infeasible, we have an infeasibility proof by the dual farkas multipliers \f$y\f$.
+ * If the LP was proven to be infeasible, we have an infeasibility proof by the dual Farkas multipliers \f$y\f$.
  * With the values of y, an implicit inequality \f$y^T A x \ge y^T b\f$ is associated, with \f$b\f$ given
  * by the sides of the LP rows and the sign of \f$y\f$:
  *  - if \f$y_i\f$ is positive, \f$b_i\f$ is the left hand side of the row,
@@ -1977,20 +1976,20 @@
  * especially by the (for this inequality least infeasible solution) \f$x'\f$ defined by 
  *  - \f$x'_i := ub_i\f$, if \f$y^T A_i \ge 0\f$
  *  - \f$x'_i := lb_i\f$, if \f$y^T A_i < 0\f$.
- * Pricing in this case means to add variables \f$i\f$ with positive farkas value, i.e., \f$y^T A_i x'_i > 0\f$.
+ * Pricing in this case means to add variables \f$i\f$ with positive Farkas value, i.e., \f$y^T A_i x'_i > 0\f$.
  *
- * To apply farkas pricing, the pricer needs to know the farkas values of the constraints. Like the dual solution values for
- * feasible LP solutions, the dual farkas values for infeasible solutions can be obtained by constraint handler interface
+ * To apply Farkas pricing, the pricer needs to know the Farkas values of the constraints. Like the dual solution values for
+ * feasible LP solutions, the dual Farkas values for infeasible solutions can be obtained by constraint handler interface
  * methods like, for example, the SCIPgetDualfarkasLinear() method of the linear constraint handler.
- * The farkas values for the bounds of the variables are just the regular reduced costs and can be accessed with SCIPgetVarRedcost().
+ * The Farkas values for the bounds of the variables are just the regular reduced costs and can be accessed with SCIPgetVarRedcost().
  *
- * It is useful to note that farkas pricing is the same as the regular pricing with a zero objective function.
+ * It is useful to note that Farkas pricing is the same as the regular pricing with a zero objective function.
  * Therefore, a typical implementation of a pricer would consist of a generic pricing algorithm that gets a dual solution and an
  * objective function vector as input and generates variables by calling SCIPcreateVar() and SCIPaddPricedVar().
  * The PRICERREDCOST callback would call this function with the regular objective function and the regular dual solution vector,
- * while the PRICERFARKAS callback would call this function with a zero objective function and the farkas vector.
+ * while the PRICERFARKAS callback would call this function with a zero objective function and the Farkas vector.
  * From a practical point of view, it is usually the simplest approach to provide just one Boolean flag to the generic pricing
- * algorithm in order to identify whether it is reduced cost or farkas pricing. Then, the algorithm would just call the appropriate
+ * algorithm in order to identify whether it is reduced cost or Farkas pricing. Then, the algorithm would just call the appropriate
  * methods to access the dual solution or objective function, depending on the Boolean flag.
  *
  * @subsection PRICERFREE
@@ -2023,7 +2022,7 @@
  * The PRICERCOPY callback is executed when the SCIP instance is copied, e.g. to solve a sub-SCIP. By defining this
  * callback as <code>NULL</code> the user disables the inclusion of the pricer into all copied SCIP
  * instances. This means that primal heuristics will work on a sub-SCIP that contains only a part of the variables
- * and no variables are priced in during the solving process of the sub-SCIP. Therefore, primal soultions found in the
+ * and no variables are priced in during the solving process of the sub-SCIP. Therefore, primal solutions found in the
  * copied problem are typically still valid for the original problem and used for its solving process, 
  * but dual reductions cannot be transferred to the original problem.
  * 
@@ -3393,9 +3392,9 @@
  *
  * \par HEUR_FREQ: the default frequency for executing the primal heuristic.
  * The frequency together with the frequency offset (see HEUR_FREQOFS) defines the depth levels at which the execution
- * method of the primal heuristic \ref HEUREXEC is called. For example, a frequency of 7 together with a frequence offset 
+ * method of the primal heuristic \ref HEUREXEC is called. For example, a frequency of 7 together with a frequency offset
  * of 5 means, that the \ref HEUREXEC callback is executed for subproblems that are in depth 5, 12, 19, ... of the branching tree. A 
- * frequency of 0 together with a frequence offset of 3 means, that the execution method is only called at those nodes that are in
+ * frequency of 0 together with a frequency offset of 3 means, that the execution method is only called at those nodes that are in
  * depth level 3 (i.e., at most for \f$2^3 = 8\f$ nodes if binary branching is applied).
  * Typical cases are: A frequency of 0 and an offset of 0 which means that
  * the heuristic is only called at the root node and a frequency of -1 which disables the heuristic.
@@ -3817,7 +3816,7 @@
  * all file readers contained in this release can be found \ref FILEREADERS "here".
  *
  * Since a file reader is also responsible for writing a file, the user may
- * ask why the readers have not the name "filehandler". This name whould
+ * ask why the readers have not the name "filehandler". This name would
  * represent this plugin much better than the used one. 
  * \n 
  * The used name "readers" is historically grown. In the beginning of SCIP
@@ -4929,7 +4928,7 @@
  * @section EXPRINT_DATA Expression Interpreter Data
  *
  * In "struct SCIP_ExprInt", you can store the general data of your expression interpreter.
- * For example, you could store a pointer to the block memory data struction.
+ * For example, you could store a pointer to the block memory data structure.
  *
  * @section EXPRINT_INTERFACE Interface Methods
  *
@@ -5131,8 +5130,8 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page PARAM Adding additional user parameters
  *
- *  The user may add own parameters to SCIP with a call to SCIPaddXyzParam(). Using
- *  these methods, he has two possibilities where to store the actual parameter value:
+ *  Users may add their own parameters to SCIP by calling SCIPaddXyzParam(). Using
+ *  this method, there are two possibilities for where to store the actual parameter value:
  *   - If the given valueptr is NULL, SCIP stores the parameter value internally, and
  *     the user can only access the value with the SCIPgetXyzParam() and
  *     SCIPsetXyzParam() calls.
@@ -5159,8 +5158,7 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page DEBUG Debugging
  *
- *  If you want to debug your own code that uses SCIP, there are some tricks that we collect as
- *  in the following - check whether one of these helps in your case.
+ *  If you want to debug your own code that uses SCIP, here are some tips and tricks:
  * 
  *  - Use the debug mode (<code>make OPT=dbg</code>, see \ref MAKE) and run the code.
  *  - Use asserts in your code (see \ref CODE).
@@ -5170,7 +5168,7 @@
  *    debug output in the same way. 
  *  - If available on your system, we recommend to use a debugger like gdb to trace all function calls on the stack,
  *    display values of certain expressions, manually break the running code, and so forth.
- *  - If available on your system, you can use software like valgrind to check for uninitialized
+ *  - If available on your system, you can use software like <a href="http://valgrind.org">valgrind</a> to check for uninitialized
  *    values or segmentation faults.
  *  - For checking the usage of SCIP memory, you can use
  *    <code>SCIPprintMemoryDiagnostic()</code>. This outputs memory that is currently in use. This is
@@ -5253,7 +5251,7 @@
  * 
  * If we afterwards use
  * <code>\#define SCIP_DEBUG_SOLUTION "check/p0033.sol"</code> in debug.h, recompile and run SCIP,
- * it will output 
+ * it will output: 
  * \code
  * SCIP> read check/IP/miplib/p0033.mps
  * original problem has 33 variables (33 bin, 0 int, 0 impl, 0 cont) and 16 constraints
@@ -5271,20 +5269,20 @@
 /**@page TEST How to run automated tests with SCIP
  *
  *  SCIP comes along with a set of useful tools that allow to perform automated tests. The
- *  following is a step-by-step guide from setting up the test environment to evaluation and
+ *  following is a step-by-step guide from setting up the test environment for evaluation and
  *  customization of test runs.
  *
  *
  *  @section SETUP Setting up the test environment
  *
- *  At first you should create a file which contains all problem instances which should be part of the test.
+ *  At first you should create a file listing all problem instances that should be part of the test.
  *  This file has to be located in the the directory <code>scip/check/</code> 
  *  and has to have the file extension <code>.test</code>, e.g., <code>testrun.test</code>, 
  *  in order to be found by the <code>scip/check/check.sh</code> script. 
  *  \n
  *  All test problems can be listed in the <code>test</code>-file by a relative path, 
  *  e.g., <code>../../problems/instance1.lp</code> or absolute path, e.g., <code>/home/problems/instance2.mps</code> 
- *  in this file. Thereby, note only one problem per line (since the command <code>cat</code> is used to parse this file).
+ *  in this file. Only one problem should be listed each on line (since the command <code>cat</code> is used to parse this file).
  *  Note that these problems have to be readable for SCIP in order to solve them. 
  *  However, you can use different file formats.
  *
@@ -5299,7 +5297,7 @@
  *  - <code>=inf=</code> stating that a problem name follows which is infeasible
  * 
  *  With these information types you can encode for an instance named <code>instance1.lp</code> the following
- *  informations:
+ *  information:
  *  - The instance has a known optimal (objective) value of 10.
  *   \code
  *   =opt=  instance1 10
@@ -5332,7 +5330,6 @@
  *
  *  @section STARTING Starting a test run
  *
- *  We are now able to start a test run. The easiest way is to call
  *
  *  \code
  *  make TEST=testrun test
@@ -5346,7 +5343,7 @@
  *  @section EVAL Evaluating a test run
  *
  *  During computation, SCIP automatically creates the directory <code>scip/check/results/</code> 
- *  (if it does not exist yet) and stores the following output files there.
+ *  (if it does not already exist) and stores the following output files there.
  *
  *  \arg <code>*.out</code> - output of <code>stdout</code>
  *  \arg <code>*.err</code> - output of <code>stderr</code>
@@ -5359,7 +5356,7 @@
  *  The last three files in the above list, i.e., the files containing a summary of the computational results,
  *  can also be generated manually. Therefore the user has to call the <code>evalcheck.sh</code> script in the 
  *  @c check directory with the corresponding @c out file as argument. For example, this may be useful if the user stopped the 
- *  test before it was finished, as in this case, the last three files will not automatically be generated by SCIP.
+ *  test before it was finished, in which case the last three files will not be automatically generated by SCIP.
  *  
  *  The last column of the ASCII summary table contains the solver status. We distinguish the following statuses: (in order of priority)
  *  
@@ -5398,8 +5395,8 @@
  *  \arg <<code>test name</code>> indicates the name of the the test file, e.g., <code>testrun</code>
  *  \arg <<code>binary</code>> defines the used binary, e.g., <code>scip-1.1.0.linux.x86.gnu.opt.spx</code>
  *  \arg <<code>machine name</code>> tells the name of the machine, e.g., <code>mycomputer</code>
- *  \arg <<code>setting name</code>> denote the name of the used settings, e.g., <code>default</code>
- *    means the (SCIP) default setting are used
+ *  \arg <<code>setting name</code>> denotes the name of the used settings, e.g., <code>default</code>
+ *    means the (SCIP) default settings were used
  *
  *  Using the examples out of the previous listing the six file names would have the name:
  *
@@ -5433,7 +5430,7 @@
  *  \arg <code>MEM</code>   -  memory limit in MB [default: 1536]
  *  \arg <code>DISPFREQ</code> - display frequency of the output [default: 10000]
  *  \arg <code>FEASTOL</code> - LP feasibility tolerance for constraints [default: "default"]
- *  \arg <code>LOCK</code> - should the test run be locked to avoid other machines to perform the same test run [default: "false"]
+ *  \arg <code>LOCK</code> - should the test run be locked to prevent other machines from performing the same test run [default: "false"]
  *  \arg <code>CONTINUE</code> - continue the test run if it was previously aborted [default: "false"]
  *  \arg <code>VALGRIND</code> - run valgrind on the SCIP binary; errors and memory leaks found by valgrind are reported as fails [default: "false"]
  * 
@@ -5492,14 +5489,14 @@
  *  \arg <code>wobj</code>    - Number of instances on which the solver had a worse primal
  *	bound than the reference solver (i.e., a difference larger than 10%).
  *  \arg <code>feas</code>    - Number of instances for which a feasible solution was found.
- *  \arg <code>nodes</code>   - Geometric mean of the processed nodes over all evaluated instances.
+ *  \arg <code>gnodes</code>   - Geometric mean of the processed nodes over all evaluated instances.
  *  \arg <code>shnodes</code> - Shifted geometric mean of the processed nodes over all evaluated instances.
- *  \arg <code>nodesQ</code>  - Equals nodes(i) / nodes(0), where 'i' denotes the current
+ *  \arg <code>gnodesQ</code>  - Equals nodes(i) / nodes(0), where 'i' denotes the current
  *	solver and '0' stands for the reference solver.
  *  \arg <code>shnodesQ</code> - Equals shnodes(i) / shnodes(0).
- *  \arg <code>time</code>    - Geometric mean of the computation time over all evaluated instances.
+ *  \arg <code>gtime</code>    - Geometric mean of the computation time over all evaluated instances.
  *  \arg <code>shtime</code>  - Shifted geometric mean of the computation time over all evaluated instances.
- *  \arg <code>timeQ</code>   - Equals time(i) / time(0).
+ *  \arg <code>gtimeQ</code>   - Equals time(i) / time(0).
  *  \arg <code>shtimeQ</code> - Equals shtime(i) / shtime(0).
  *  \arg <code>score</code>   - N/A
  *
@@ -5510,8 +5507,8 @@
  *  \arg <code>equal</code> - Solvers with instances whose number of processed nodes and total number of
  *       simplex iterations is equal to the reference solver (including a 10% tolerance) and where no timeout
  *       occured.
- *  \arg <code>all optimal</code> - Solvers with instances that could be solved to optimiality by
- *       <em>all</em> solvers; in particular, no timeout occured.
+ *  \arg <code>all optimal</code> - Solvers with instances that could be solved to optimality by
+ *       <em>all</em> solvers; in particular, no timeout occurred.
  *  
  *  Since this large amount of information is not always needed, one can generate a narrower table by calling:
  *  \code
@@ -5633,7 +5630,7 @@
  *
  * - Added user pointer to callback methods of hash table, see pub_misc.h.
  *
- * - New parameters "extension" in SCIPreadProb(),    defining a desired file format or NULL if file extension should be used.
+ * - New parameter "extension" in SCIPreadProb(),    defining a desired file format or NULL if file extension should be used.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -5684,8 +5681,8 @@
  *       - When copying a SCIP instance, these methods are called to copy the plugins.
  *      <br>
  *      <br>
- *    - In case of the constraint handler there are two new callback methods. One for copying the constraint handler plugins
- *      (SCIP_DECL_CONSHDLRCOPY) and the other for copying a constraint (SCIP_DECL_CONSCOPY) itself.
+ *    - Constraint handlers have two new callback methods. One for copying the constraint handler plugins
+ *      SCIP_DECL_CONSHDLRCOPY() and the other for copying a constraint itself, SCIP_DECL_CONSCOPY().
  *      <br>
  *      <br>
  *    - Variables have a new callback method (see type_var.h for more details):
@@ -5780,10 +5777,10 @@
  * - The NLPI library is now a separate library that is required when linking against the SCIP library.
  *   This requires changes to Makefile's that use SCIP, see the \ref RELEASENOTES "Release notes" for more details.
  *
- * - We do not distinguish between <b>block memory</b> for the original and the transformed problem anymore. In both
-     problem stages, the same block memory is used, now.
+ * - We do not distinguish between <b>block memory</b> for the original and the transformed problem anymore. The same 
+ *   block memory is now used in both problem stages.
  *
- * - The usage of <b>strong branching</b> changed. Now, SCIPstartStrongbranch() and SCIPendStrongbranch() have to be
+ * - The usage of <b>strong branching</b> changed. Now, SCIPstartStrongbranch() and SCIPendStrongbranch() must be
  *   called before and after strong branching, respectively.
  *
  * - All <b>C++</b> objects and constructors have a SCIP pointer, now.
@@ -5814,7 +5811,7 @@
  *
  * - SCIP can now handle indicator constraints (reading (from LP, ZIMPL), writing, solving, ...) - see cons_indicator.c.
  *
- * - One can now do "early branching" usefull for column generation.
+ * - One can now do "early branching" useful for column generation.
  *
  * - Can now run a black-box lexicographic dual simplex algorithm.
  */
@@ -5836,7 +5833,7 @@
   * - <b>Constraint Handler</b>:
   *     <br>
   *     <br>
-  *   - the new constraint handler callback SCIP_DECL_DELVARS() is called after variables were marked for deletion, the constraint handler should then remove these variables from its constraints
+  *   - the new constraint handler callback SCIP_DECL_DELVARS() is called after variables are marked for deletion, the constraint handler should then remove these variables from its constraints
   *
   * - <b>Problem Data</b>:
   *     <br>
@@ -5847,7 +5844,7 @@
   *     <br>
   *     <br>
   *   - the callbacks SCIP_DECL_NLPIGETSOLUTION() and SCIP_DECL_NLPISETINITIALGUESS() got new parameters to get/set values of dual variables
-  *   - the callback SCIP_DECL_NLPICOPY() now passes the block memory of the target SCIP as additional parameter
+  *   - the callback SCIP_DECL_NLPICOPY() now passes the block memory of the target SCIP as an additional parameter
   *
   * <br>
   * @section CHGINTERFUNC5 Changed interface methods
@@ -5856,8 +5853,8 @@
   *      <br>
   *      <br>
   *    - the methods SCIPwriteVarName(), SCIPwriteVarsList(), and SCIPwriteVarsLinearsum() got a new boolean parameter "type"
-  *      which indicates whether the variable type should be written or not
-  *    - the methods SCIPparseVarName() and SCIPparseVarsList() got a new output parameter "endptr" which is filled with the position where the parsing stopped
+  *      that indicates whether the variable type should be written or not
+  *    - the methods SCIPparseVarName() and SCIPparseVarsList() got a new output parameter "endptr" that is filled with the position where the parsing stopped
   *
   * - <b>Plugin management</b>:
   *      <br>
@@ -5910,48 +5907,48 @@
  *
  * <b>Note:</b> Since SCIP version 2.0.0 you do not have to worry about <tt>dual</tt> reductions anymore. These are
  * automatically turned off. The only thing you should switch off are restarts. Since restarts will lead to a wrong
- * counting process. We recommend to use the counting settings which can set in the interactive shell as follows:
+ * counting process. We recommend using the counting settings which can be set in the interactive shell as follows:
  *
  * <code>SCIP&gt; set emphasis counter</code>
  *
  * The SCIP library provides an interface method SCIPcount() which allows to count the number of feasible solution
- * within your project. The methods SCIPsetParamsCountsols() which is also located in cons_countsols.h loads the
- * predefined counting settings to ensure a save count. The complete list of all methods which can be used for counting
+ * within your project. The method SCIPsetParamsCountsols(), which is also located in cons_countsols.h, loads the
+ * predefined counting settings to ensure a safe count. The complete list of all methods that can be used for counting
  * via the callable library can be found in cons_countsols.h.
  *
  * 
  * @section COUNTLIMIT Limit the number of solutions which should be counted
  *
- * It is possible to give a (soft) upper on the number solutions which should be counted. If this upper bound is
- * exceeded SCIP will be stopped. The name of the parameter to use is <code>constraints/countsols/sollimit</code>. In
+ * It is possible to give a (soft) upper bound on the number solutions that should be counted. If this upper bound is
+ * exceeded, SCIP will be stopped. The name of this parameter is <code>constraints/countsols/sollimit</code>. In
  * the interactive shell this parameter can be set as follows:
  *
  * <code>SCIP&gt; constraints countsols sollimit 1000</code>
  * 
- * In case of using the callable library you use the function SCIPsetLongintParam() as follows:
+ * In case you are using the callable library, this upper bound can be assigned by calling SCIPsetLongintParam() as follows:
  *
  * \code
  * SCIP_CALL( SCIPsetLongintParam( scip, "constraints/countsols/sollimit", 1000) );
  * \endcode
  *
  *
- * The reason why this upper bound is soft, comes from the fact that SCIP uses per default the so-called unrestricted
+ * The reason why this upper bound is soft comes from the fact that, by default, SCIP uses a technique called unrestricted
  * subtree detection. Using this technique it is possible to detect several solutions at once. Therefore, it can happen
  * that the solution limit is exceeded before SCIP is stopped.
  *
  * @section COUNTWRITE Write the counted solution to a file
  *
- * Using the interactive shell, it is possible to write the collected number of solutions to a file. To be able to this,
- * you have to set the parameter <code>constraints/countsols/collect</code> to TRUE (the default value is FALSE). If you
- * do this, SCIP will not only count the number of feasible solutions it will also <b>collect</b> them. Using the
+ * Using the interactive shell, it is possible to write the collected solutions to a file. To do this
+ * you must set the parameter <code>constraints/countsols/collect</code> to TRUE (the default value is FALSE). Then
+ * SCIP will <b>collect</b> all of the feasible solutions as it counts them. Using the
  * following command you can write the collect solution into a file:
  *
  * <code>SCIP&gt; write allsolutions &lt;file name&gt;</code>
  *
  * @section COUNTOPTIMAL Count number of optimal solutions
  *
- * If you are interested to count the number of optimal solutions, this can be also done with SCIP using the
- * <code>count</code> command. Therefore, you have to do the following:
+ * If you are interested in counting the number of optimal solutions, this can be done with SCIP using the
+ * <code>count</code> command by applying the following steps:
  *
  *  -# Solve the original problem to optimality and let \f$c^*\f$ be the optimal value
  *  -# Add the objective function as constraint with left and right hand side equal to \f$c^*\f$
@@ -5999,23 +5996,24 @@
  *
  * \verbinclude CHANGELOG
  *
+ */
 
 /**@defgroup PUBLICMETHODS Public Methods 
  *
- * This page lists headers which contain methods, which are provided by the core of \SCIP, that can be used via the
- * callable library. If you are in the <a href="../html/index.html">User Manual</a> you only find methods which are
- * public and therefore, allowed to be used. In the <a href="../html_devel/index.html">Developer Manual</a> you find,
- * however, all methods.
+ * This page lists headers containing methods provided by the core of \SCIP that can be used via the
+ * callable library. If you are in the <a href="../html/index.html">User's Manual</a> you only find methods that are
+ * public and, therefore, allowed to be used. The <a href="../html_devel/index.html">Developer's Manual</a> includes
+ * all methods.
  *
- * All the headers listed below include functions which are allowed to be called by external users. Besides those
+ * All of the headers listed below include functions that are allowed to be called by external users. Besides those
  * functions it is also valid to call methods that are listed in one of the headers of the (default) plugins, e.g.,
  * cons_linear.h.
  *
- * If you are locking for information about a particular object of SCIP, such as a variable or a constraint, you should
- * first search the corresponding "pub_<...>.h" header. E.g., in case of a constraint pub_cons.h. If you need some
+ * If you are looking for information about a particular object of SCIP, such as a variable or a constraint, you should
+ * first search the corresponding "pub_<...>.h" header. E.g., for constraints, look in pub_cons.h. If you need some
  * information about the overall problem, you should start searching in scip.h.
  *
- * Since there is a huge amount of methods in scip.h, these methods are grouped into different categories. These
+ * Since there are a huge number of methods in scip.h, these methods are grouped into different categories. These
  * categories are:
  *
  * - Memory Management 
