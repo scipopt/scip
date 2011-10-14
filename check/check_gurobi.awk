@@ -66,7 +66,6 @@ BEGIN {
 /=opt=/  { solstatus[$2] = "opt"; sol[$2] = $3; }   # get optimum
 /=inf=/  { solstatus[$2] = "inf"; }                 # problem infeasible (no feasible solution exists)
 /=best=/ { solstatus[$2] = "best"; sol[$2] = $3; }  # get best known solution value
-/=feas=/ { solstatus[$2] = "feas"; }                # no feasible solution known
 /=unkn=/ { solstatus[$2] = "unkn"; }                # no feasible solution known
 #
 # problem name
@@ -95,7 +94,6 @@ BEGIN {
    origvars   = 0;
    origcons   = 0;
    timeout    = 0;
-   memout     = 0;
    nodeout    = 0;
    opti       = 0;
    feasible   = 1;
@@ -376,7 +374,7 @@ BEGIN {
             }
             else {
                if( abs(pb - db) <= max(abstol, reltol) ) {
-                  printf("solved\n");
+                  printf("solved not verified\n");
                   pass++;
                }
                else {
@@ -391,96 +389,60 @@ BEGIN {
          reltol = max(mipgap, 1e-5) * max(abs(pb),1.0);
          abstol = max(absmipgap, 1e-4);
          
-         if( abs(pb - db) <= max(abstol, reltol) ) {
-            printf("solved\n");
-            pass++;
-         }
-         else {
-            if( abs(pb) < infty ) {
+         if( timeout || nodeout ) {
+            if( abs(pb) < infty )
                printf("better\n");
-               timeouttime += tottime;
-               timeouts++;
-            }
-            else {
-               if( timeout ) {
-                  printf("timeout\n");
-                  timeouttime += tottime;
-                  timeouts++;
-               }
-	       else if (nodeout) {
-		  printf("nodelimit\n");
-		  timeouttime += tottime;
-		  timeouts++;
-	       }
-               else
-                  printf("unknown\n");
-            }
-         }
-      }
-      else if( solstatus[prob] == "inf" ) {
-         if( !feasible ) {
-            printf("ok\n");
-            pass++;
-         }
-         else {
-            if( timeout ) {
-               printf("timeout\n");
-               timeouttime += tottime;
-               timeouts++;
-            }
-	    else if (nodeout) {
-               printf("nodelimit\n");
-               timeouttime += tottime;
-               timeouts++;
-            }
-            else {
-               printf("fail\n");
-               failtime += tottime;
-               fail++;
-            }
-         }
-      }
-      else if( solstatus[prob] == "feas" ) {
-         if( timeout ) {
-            printf("timeout\n");
-            timeouttime += tottime;
-            timeouts++;
-         }
-	 else if (nodeout) {
-	    printf("nodelimit\n");
+            else if( timeout )
+	       printf("timeout\n");
+	    else if (nodeout)
+	       printf("nodelimit\n");
 	    timeouttime += tottime;
 	    timeouts++;
-	 }
-         else if( feasible ) {
-            printf("ok\n");
-            pass++;
          }
-         else {
-            printf("fail\n");
-            failtime += tottime;
-            fail++;
-         }
-      }
-      else {
-         reltol = 1e-5 * max(abs(pb),1.0);
-         abstol = 1e-4;
-
-         if( abs(pb - db) < max(abstol,reltol) ) {
+         else if( abs(pb - db) <= max(abstol, reltol) ) {
             printf("solved not verified\n");
             pass++;
          }
-         else if( timeout ) {
-            printf("timeout\n");
-            timeouttime += tottime;
-            timeouts++;
-         }
-	 else if (nodeout) {
-	    printf("nodelimit\n");
+	 else
+	    printf("unknown\n");
+      }
+      else if( solstatus[prob] == "inf" ) {
+	 if( timeout || nodeout ) {
+            if( timeout )
+               printf("timeout\n");
+            else if (nodeout)
+               printf("nodelimit\n");
 	    timeouttime += tottime;
 	    timeouts++;
 	 }
-         else
-            printf("unknown\n");
+	 else if( !feasible ) {
+	    printf("ok\n");
+	    pass++;
+	 }
+	 else {
+	    printf("fail\n");
+	    failtime += tottime;
+	    fail++;
+         }
+      }
+      else {
+         reltol = max(mipgap, 1e-5) * max(abs(pb),1.0);
+         abstol = max(absmipgap, 1e-4);
+
+         if( timeout || nodeout ) {
+            if( timeout )
+	       printf("timeout\n");
+	    else if (nodeout)
+	       printf("nodelimit\n");
+	    timeouttime += tottime;
+	    timeouts++;
+         }
+         else if( abs(pb - db) <= max(abstol, reltol) ) {
+            printf("solved not verified\n");
+            pass++;
+         }
+	 else
+	    printf("unknown\n");
       }
    
       if( writesolufile ) {
