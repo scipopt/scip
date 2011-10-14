@@ -26,9 +26,9 @@
 
 struct SCIP_ProbData
 {
-   int         n;     /**< number of elements */
-   SCIP_Real** W;     /**< weight matrix */
-   SCIP_VAR*** vars;  /**< variables */
+   int                   n;                  /**< number of elements */
+   SCIP_Real**           W;                  /**< weight matrix */
+   SCIP_VAR***           vars;               /**< variables */
 };
 
 
@@ -139,9 +139,9 @@ SCIP_DECL_PROBCOPY(probcopyLOP)
  */
 static
 SCIP_RETCODE LOPreadFile(
-   SCIP*          scip,          /**< SCIP data structure */
-   const char*    filename,      /**< name of file to read */
-   SCIP_PROBDATA* probdata       /**< problem data to be filled */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename,           /**< name of file to read */
+   SCIP_PROBDATA*        probdata            /**< problem data to be filled */
    )
 {
    int i, j;
@@ -206,9 +206,9 @@ SCIP_RETCODE LOPreadFile(
  */
 static
 SCIP_RETCODE getProblemName(
-   const char* filename,         /**< input filename */
-   char*       probname,         /**< output problemname */
-   int         maxSize           /**< maximum size of probname */
+   const char*           filename,           /**< input filename */
+   char*                 probname,           /**< output problemname */
+   int                   maxSize             /**< maximum size of probname */
    )
 {
    int i = 0;

@@ -27,6 +27,7 @@
 using namespace tsp;
 using namespace scip;
 
+/** copies given graph */
 static
 SCIP_RETCODE copy_graph(
    GRAPH** graph,                        /**< pointer to store the copied graph */
@@ -111,7 +112,7 @@ SCIP_RETCODE copy_graph(
    return SCIP_OKAY;
 }
 
-/** Copies user data if you want to copy it to a subscip */
+/** copies user data if you want to copy it to a subscip */
 SCIP_RETCODE ProbDataTSP::scip_copy(
    SCIP*           scip,         /**< SCIP data structure */
    SCIP*           sourcescip,   /**< source SCIP main data structure */

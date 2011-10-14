@@ -164,8 +164,8 @@ SCIP_Bool readArguments(
 
 /** main function, which starts the solution of the linear ordering problem */
 int main(
-   int    argc,
-   char** argv
+   int                        argc,          /**< number of arguments from the shell */
+   char**                     argv           /**< array of shell arguments */
    )
 {
    SCIP* scip = NULL;

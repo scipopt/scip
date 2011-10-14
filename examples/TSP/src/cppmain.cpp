@@ -100,10 +100,11 @@ using namespace scip;
 using namespace tsp;
 using namespace std;
 
+/** creates and runs a SCIP instance with default and TSP plugins */
 static
 SCIP_RETCODE runSCIP(
-   int                   argc,
-   char**                argv
+   int                        argc,          /**< number of arguments from the shell */
+   char**                     argv           /**< array of shell arguments */
    )
 {
    SCIP* scip = NULL;
@@ -146,10 +147,10 @@ SCIP_RETCODE runSCIP(
    return SCIP_OKAY;
 }
 
-int
-main(
-   int                   argc,
-   char**                argv
+/** main method starting TSP code */
+int main(
+   int                        argc,          /**< number of arguments from the shell */
+   char**                     argv           /**< array of shell arguments */
    )
 {
    SCIP_RETCODE retcode;
