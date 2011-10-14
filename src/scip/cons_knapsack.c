@@ -27,6 +27,7 @@
 #include <string.h>
 #include <limits.h>
 #include <stdio.h>
+#include <stdlib.h> /*lint --e{766}*/ /* needed for strtoll() */
 #include <ctype.h>
 
 /* there is not strtoll with MS compiler, but a strtoi64 should be there */
@@ -3080,7 +3081,7 @@ SCIP_RETCODE makeCoverMinimal(
    {
       for( j = 0; j < *ncovervars; j++ )
       {
-         SCIP_CALL( SCIPallocBlockMemory(scip, &(sortkeypairs[j])) );
+         SCIP_CALL( SCIPallocBlockMemory(scip, &(sortkeypairs[j])) ); /*lint !e866 */
          
          sortkeypairs[j]->key1 = solvals[covervars[j]]; 
          sortkeypairs[j]->key2 = (SCIP_Real) weights[covervars[j]]; 
@@ -3090,7 +3091,7 @@ SCIP_RETCODE makeCoverMinimal(
    {
       for( j = 0; j < *ncovervars; j++ )
       {
-         SCIP_CALL( SCIPallocBlockMemory(scip, &(sortkeypairs[j])) );
+         SCIP_CALL( SCIPallocBlockMemory(scip, &(sortkeypairs[j])) ); /*lint !e866 */
          
          sortkeypairs[j]->key1 = (solvals[covervars[j]] - 1.0) / weights[covervars[j]]; 
          sortkeypairs[j]->key2 = (SCIP_Real) (-weights[covervars[j]]); 
@@ -3112,16 +3113,20 @@ SCIP_RETCODE makeCoverMinimal(
    assert(minweightidx >= 0 && minweightidx < *ncovervars);
    assert(minweight > 0 && minweight <= *coverweight);
 
+   j = 0;
    /* removes variables from C until the remaining variables form a minimal cover */
-   for( j = 0; j < *ncovervars && ((*coverweight) - minweight > capacity); j++ )
+   while( j < *ncovervars && ((*coverweight) - minweight > capacity) )
    {
       assert(minweightidx >= j);
       assert(checkMinweightidx(weights, capacity, covervars, *ncovervars, *coverweight, minweightidx, j));
 
       /* if sum_{i in C} a_i - a_j <= a_0, j cannot be removed from C */
       if( (*coverweight) - weights[covervars[j]] <= capacity )
+      {
+	 ++j;
          continue;
-      
+      }
+
       /* adds j to N\C */
       noncovervars[*nnoncovervars] = covervars[j];
       (*nnoncovervars)++;
@@ -3153,15 +3158,14 @@ SCIP_RETCODE makeCoverMinimal(
          assert(minweightidx > j);
          minweightidx--;
       }
-      /* updates j */
-      j--;
+      /* j needs to stay the same */
    }
    assert((*coverweight) > capacity);
    assert((*coverweight) - minweight <= capacity);
    
    /* frees temporary memory */
    for( j = nsortkeypairs-1; j >= 0; j-- )
-      SCIPfreeBlockMemory(scip, &(sortkeypairs[j]));
+      SCIPfreeBlockMemory(scip, &(sortkeypairs[j])); /*lint !e866 */
    SCIPfreeBlockMemoryArray(scip, &sortkeypairs, nsortkeypairs);
    
    return SCIP_OKAY;
@@ -3488,7 +3492,7 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
          while( conshdlrdata->reals1size < nbinvars )
             conshdlrdata->reals1size *= 2;
          SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->reals1, conshdlrdata->reals1size) );
-         BMSclearMemoryArray(&(conshdlrdata->reals1[oldsize]), conshdlrdata->reals1size - oldsize);
+         BMSclearMemoryArray(&(conshdlrdata->reals1[oldsize]), conshdlrdata->reals1size - oldsize); /*lint !e866 */
       }
       binvals = conshdlrdata->reals1;
 
@@ -4233,8 +4237,9 @@ SCIP_RETCODE mergeMultiples(
    consdata->sorted = FALSE;
 
    v = consdata->nvars - 1;
+   prev = v - 1;
    /* loop backwards through the items: deletion only affects rear items */
-   for( prev = v - 1; prev >= 0; --prev )
+   while( prev >= 0 )
    {
       SCIP_VAR* var1;
       SCIP_VAR* var2;
@@ -4309,6 +4314,7 @@ SCIP_RETCODE mergeMultiples(
                {
                   consdata->cliquesadded = FALSE; /* reduced capacity might lead to larger cliques */
                   /* don't decrease v, the same variable may exist up front */
+		  --prev;
                   continue;
                }
             }
@@ -4316,6 +4322,7 @@ SCIP_RETCODE mergeMultiples(
          consdata->cliquesadded = FALSE; /* reduced capacity might lead to larger cliques */
       }
       v = prev;
+      --prev;
    }
 
    consdata->merged = TRUE;
@@ -4702,8 +4709,9 @@ SCIP_RETCODE propagateCons(
 
          c = 0;
          foundmax = FALSE;
-         
-         for( i = 0; i < nvars; ++i )
+         i = 0;
+
+         while( i < nvars )
          {
             /* ignore variables of the negated clique which are fixed to one since these are counted in
              * consdata->onesweightsum 
@@ -4733,7 +4741,10 @@ SCIP_RETCODE propagateCons(
                   foundmax = FALSE;
                
                if( SCIPvarGetUbLocal(myvars[i]) > 0.5 )
+	       {
+		  ++i;
                   continue;
+	       }
             }
 
             if( SCIPvarGetLbLocal(myvars[i]) < 0.5 )
@@ -4750,6 +4761,7 @@ SCIP_RETCODE propagateCons(
 
                      /* overwrite cliquestartpos to the position of the first unfixed variable in this clique */
                      cliquestartposs[c - 1] = i;
+		     ++i;
 
                      continue;
                   }
@@ -4801,6 +4813,7 @@ SCIP_RETCODE propagateCons(
                   i = cliquestartposs[c] - 1;
                }
             }
+	    ++i;
          }
          /* add last clique minweightsum */
          minweightsum += localminweightsum;
@@ -8892,7 +8905,7 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
    while( *str != '\0' )
    {
       /* try to parse coefficient */
-      weight = strtoll(str, &endptr, 0);
+      weight = strtoll(str, &endptr, 0); /*lint !e718 !e746 */
 
       /* probably reached <=, so stop */
       if( str == endptr )
@@ -8947,18 +8960,17 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
 
    if( *success )
    {
-      capacity = strtoll(str, &endptr, 0);
+      capacity = strtoll(str, &endptr, 0); /*lint !e718 !e746 */
       if( str == endptr )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "error parsing capacity from '%s'\n", str);
          *success = FALSE;
       }
-   }
-
-   if( *success )
-   {
-      SCIP_CALL( SCIPcreateConsKnapsack(scip, cons, name, nvars, vars, weights, capacity,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      else
+      {
+	 SCIP_CALL( SCIPcreateConsKnapsack(scip, cons, name, nvars, vars, weights, capacity,
+	       initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      }
    }
 
    SCIPfreeBufferArray(scip, &vars);
@@ -9013,6 +9025,7 @@ SCIP_DECL_EVENTEXEC(eventExecKnapsack)
       break;
    case SCIP_EVENTTYPE_VARDELETED:
       eventdata->consdata->varsdeleted = TRUE;
+      break;
    default:
       SCIPerrorMessage("invalid event type %x\n", SCIPeventGetType(event));
       return SCIP_INVALIDDATA;

@@ -9042,7 +9042,7 @@ SCIP_DECL_CONSEXIT(consExitQuadratic)
 #if 0
 static
 SCIP_DECL_CONSINITPRE(consInitpreQuadratic)
-{
+{  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    int c;
@@ -9065,7 +9065,7 @@ SCIP_DECL_CONSINITPRE(consInitpreQuadratic)
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
 static
 SCIP_DECL_CONSEXITPRE(consExitpreQuadratic)
-{
+{  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
    int                i;
