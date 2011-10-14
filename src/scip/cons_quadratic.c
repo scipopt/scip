@@ -3282,7 +3282,8 @@ SCIP_RETCODE presolveTryAddLinearReform(
    SCIP_Real*         xcoef;
    SCIP_INTERVAL      xbndszero;
    SCIP_INTERVAL      xbndsone;
-   SCIP_INTERVAL      tmp;
+   SCIP_INTERVAL      act0;
+   SCIP_INTERVAL      act1;
    int                nxvars;
    SCIP_VAR*          y;
    SCIP_VAR*          bvar;
@@ -3374,19 +3375,38 @@ SCIP_RETCODE presolveTryAddLinearReform(
             bilincoef = consdata->bilinterms[bilinidx].coef;
             assert(bilincoef != 0.0);
 
+            /* get activity of bilincoef * x if y = 0 */
+            getImpliedBounds(y, FALSE, bvar, &act0);
+            SCIPintervalMulScalar(SCIPinfinity(scip), &act0, act0, bilincoef);
+
+            /* get activity of bilincoef * x if y = 1 */
+            getImpliedBounds(y,  TRUE, bvar, &act1);
+            SCIPintervalMulScalar(SCIPinfinity(scip), &act1, act1, bilincoef);
+
+            /* skip products that give rise to very large coefficients (big big-M's)
+             * we just reuse cutmaxrange as threshold, which is similarly motivated
+             */
+            if( SCIPintervalGetInf(act0) <= -conshdlrdata->cutmaxrange || SCIPintervalGetSup(act0) >= conshdlrdata->cutmaxrange )
+            {
+               SCIPdebugMessage("skip reform of %g<%s><%s> due to huge activity [%g,%g] for <%s> = 0.0\n",
+                  bilincoef, SCIPvarGetName(y), SCIPvarGetName(bvar), SCIPintervalGetInf(act0), SCIPintervalGetSup(act0), SCIPvarGetName(y));
+               continue;
+            }
+            if( SCIPintervalGetInf(act1) <= -conshdlrdata->cutmaxrange || SCIPintervalGetSup(act1) >= conshdlrdata->cutmaxrange )
+            {
+               SCIPdebugMessage("skip reform of %g<%s><%s> due to huge activity [%g,%g] for <%s> = 1.0\n",
+                  bilincoef, SCIPvarGetName(y), SCIPvarGetName(bvar), SCIPintervalGetInf(act1), SCIPintervalGetSup(act1), SCIPvarGetName(y));
+               continue;
+            }
+
             /* add bvar to x term */  
             xvars[nxvars] = bvar;
             xcoef[nxvars] = bilincoef;
             ++nxvars;
 
             /* update bounds on x term */
-            getImpliedBounds(y, FALSE, bvar, &tmp); /* get bounds on x if y = 0 */
-            SCIPintervalMulScalar(SCIPinfinity(scip), &tmp, tmp, bilincoef);
-            SCIPintervalAdd(SCIPinfinity(scip), &xbndszero, xbndszero, tmp);
-
-            getImpliedBounds(y,  TRUE, bvar, &tmp); /* get bounds on x if y = 1 */
-            SCIPintervalMulScalar(SCIPinfinity(scip), &tmp, tmp, bilincoef);
-            SCIPintervalAdd(SCIPinfinity(scip), &xbndsone, xbndsone, tmp);
+            SCIPintervalAdd(SCIPinfinity(scip), &xbndszero, xbndszero, act0);
+            SCIPintervalAdd(SCIPinfinity(scip), &xbndsone,  xbndsone,  act1);
 
             if( REALABS(bilincoef) < mincoef )
                mincoef = ABS(bilincoef);
