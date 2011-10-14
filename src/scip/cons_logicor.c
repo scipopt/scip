@@ -932,7 +932,7 @@ SCIP_RETCODE mergeMultiples(
 
       assert(SCIPvarIsActive(var));
       assert((pos < nbinvars && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY)
-	 || (pos > (nbinvars + nintvars) && pos < (nbinvars + nintvars + nimplvars)
+	 || (pos >= (nbinvars + nintvars) && pos < (nbinvars + nintvars + nimplvars)
 	    && SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT && SCIPvarIsBinary(var)));
 
       /* subtract number of integer variables because we only allocated memory for all binary and implicit variables */
