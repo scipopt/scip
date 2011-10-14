@@ -1958,7 +1958,8 @@ SCIP_RETCODE applyFixings(
    SCIP_CONS*            cons,               /**< variable bound constraint */
    SCIP_Bool*            cutoff,             /**< pointer to store whether an infeasibility was detected */
    int*                  nchgbds,            /**< pointer to count number of bound changes */
-   int*                  ndelconss           /**< pointer to count number of deleted constraints */
+   int*                  ndelconss,          /**< pointer to count number of deleted constraints */
+   int*                  naddconss           /**< pointer to count number of added constraints */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -1971,9 +1972,12 @@ SCIP_RETCODE applyFixings(
    SCIP_Bool varschanged;
    SCIP_Bool redundant;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
    assert(cutoff != NULL);
    assert(nchgbds != NULL);
    assert(ndelconss != NULL);
+   assert(naddconss != NULL);
 
    *cutoff = FALSE;
    redundant = FALSE;
@@ -1992,8 +1996,6 @@ SCIP_RETCODE applyFixings(
    vbdvarconstant = 0.0;
    SCIP_CALL( SCIPvarGetProbvarSum(&vbdvar, &vbdvarscalar, &vbdvarconstant) );
    varschanged = (var != consdata->var || vbdvar != consdata->vbdvar);
-
-   /**@todo fix bug: active variables might be MULTAGGR -> no bound changes possible! */
 
    /* if the variables are equal, the variable bound constraint reduces to standard bounds on the single variable */
    if( var == vbdvar && SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
@@ -2265,6 +2267,40 @@ SCIP_RETCODE applyFixings(
    if( varschanged )
    {
       consdata->changed = TRUE;
+   }
+
+   /* active multi aggregations are now resolved by creating a new linear constraint */
+   if( !(*cutoff) && !redundant && (SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR || SCIPvarGetStatus(vbdvar) == SCIP_VARSTATUS_MULTAGGR) )
+   {
+      SCIP_CONS* newcons;
+      SCIP_Real lhs;
+      SCIP_Real rhs;
+
+      lhs = consdata->lhs;
+      rhs = consdata->rhs;
+
+      assert(var == consdata->var);
+      assert(vbdvar == consdata->vbdvar);
+
+      /* create upgraded linear constraint */
+      SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, SCIPconsGetName(cons), 0, NULL, NULL, lhs, rhs,
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
+            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
+            SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+
+      SCIP_CALL( SCIPaddCoefLinear(scip, newcons, consdata->var, 1.0) );
+      SCIP_CALL( SCIPaddCoefLinear(scip, newcons, consdata->vbdvar, consdata->vbdcoef) );
+
+      SCIP_CALL( SCIPaddCons(scip, newcons) );
+
+      SCIPdebugMessage("resolved multi aggregation in varbound constraint <%s> by creating a new linear constraint\n", SCIPconsGetName(cons));
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons) ) );
+
+      SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+
+      redundant = TRUE;
+      ++(*naddconss);
    }
 
    /* delete a redundant constraint */
@@ -2984,6 +3020,7 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
    SCIP_Bool cutoff;
    int oldnchgbds;
    int oldndelconss;
+   int oldnaddconss;
    int oldnchgcoefs;
    int oldnchgsides;
    int i;
@@ -3000,6 +3037,7 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
    cutoff = FALSE;
    oldnchgbds = *nchgbds;
    oldndelconss = *ndelconss;
+   oldnaddconss = *naddconss;
    oldnchgcoefs = *nchgcoefs;
    oldnchgsides = *nchgsides;
 
@@ -3022,7 +3060,7 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
       consdata->propagated = FALSE;
 
       /* incorporate fixings and aggregations in constraint */
-      SCIP_CALL( applyFixings(scip, conss[i], &cutoff, nchgbds, ndelconss) );
+      SCIP_CALL( applyFixings(scip, conss[i], &cutoff, nchgbds, ndelconss, naddconss) );
       if( cutoff || !SCIPconsIsActive(conss[i]) )
          continue;
 
@@ -3154,7 +3192,7 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
    /* return the correct result code */
    if( cutoff )
       *result = SCIP_CUTOFF;
-   else if( *nchgbds > oldnchgbds || *ndelconss > oldndelconss
+   else if( *nchgbds > oldnchgbds || *ndelconss > oldndelconss || *naddconss > oldnaddconss
       || *nchgcoefs > oldnchgcoefs || *nchgsides > oldnchgsides )
       *result = SCIP_SUCCESS;
    else
