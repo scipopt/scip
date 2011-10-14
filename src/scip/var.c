@@ -5752,8 +5752,14 @@ SCIP_RETCODE varProcessChgLbGlobal(
 
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
+
    /* check that the bound is feasible */
-   assert(SCIPsetIsLE(set, newbound, var->glbdom.ub));
+   if( newbound > var->glbdom.ub )
+   {
+      /* due to numerics we only want to be feasible in feasibility tolerance */
+      assert(SCIPsetIsFeasLE(set, newbound, var->glbdom.ub));
+      newbound = var->glbdom.ub;
+   }
 
    assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));  /*lint !e641*/
    
@@ -5912,8 +5918,14 @@ SCIP_RETCODE varProcessChgUbGlobal(
 
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
+
    /* check that the bound is feasible */
-   assert(SCIPsetIsGE(set, newbound, var->glbdom.lb));
+   if( newbound < var->glbdom.lb )
+   {
+      /* due to numerics we only want to be feasible in feasibility tolerance */
+      assert(SCIPsetIsFeasGE(set, newbound, var->glbdom.lb));
+      newbound = var->glbdom.lb;
+   }
 
    assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));  /*lint !e641*/
 
@@ -6526,7 +6538,8 @@ SCIP_RETCODE varProcessChgLbLocal(
                 */
                if( parentnewbound > parentvar->glbdom.ub )
                {
-                  assert(SCIPsetIsRelLE(set, parentnewbound, parentvar->glbdom.ub));
+		  /* due to numerics we only want to be feasible in feasibility tolerance */
+                  assert(SCIPsetIsFeasLE(set, parentnewbound, parentvar->glbdom.ub));
                   parentnewbound = parentvar->glbdom.ub;
                }
             }
@@ -6552,7 +6565,8 @@ SCIP_RETCODE varProcessChgLbLocal(
                 */
                if( parentnewbound < parentvar->glbdom.lb )
                {
-                  assert(SCIPsetIsRelGE(set, parentnewbound, parentvar->glbdom.lb));
+		  /* due to numerics we only want to be feasible in feasibility tolerance */
+                  assert(SCIPsetIsFeasGE(set, parentnewbound, parentvar->glbdom.lb));
                   parentnewbound = parentvar->glbdom.lb;
                }
             }
@@ -6663,7 +6677,8 @@ SCIP_RETCODE varProcessChgUbLocal(
                 */
                if( parentnewbound < parentvar->glbdom.lb )
                {
-                  assert(SCIPsetIsRelGE(set, parentnewbound, parentvar->glbdom.lb));
+		  /* due to numerics we only want to be feasible in feasibility tolerance */
+                  assert(SCIPsetIsFeasGE(set, parentnewbound, parentvar->glbdom.lb));
                   parentnewbound = parentvar->glbdom.lb;
                }
             }
@@ -6689,7 +6704,8 @@ SCIP_RETCODE varProcessChgUbLocal(
                 */
                if( parentnewbound > parentvar->glbdom.ub )
                {
-                  assert(SCIPsetIsRelLE(set, parentnewbound, parentvar->glbdom.ub));
+		  /* due to numerics we only want to be feasible in feasibility tolerance */
+                  assert(SCIPsetIsFeasLE(set, parentnewbound, parentvar->glbdom.ub));
                   parentnewbound = parentvar->glbdom.ub;
                }
             }
