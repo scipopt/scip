@@ -37,7 +37,7 @@
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
-
+#define RELCUTCOEFMAXRANGE          1.0 /**< maximal allowed range of cut coefficients, relative to 1/feastol */
 
 
 /*
@@ -171,8 +171,8 @@ SCIP_RETCODE separateCuts(
             /* implication x == 1 -> y <= p */
             ub = SCIPvarGetUbGlobal(implvars[j]);
             
-            /* consider only nonredundant implications */
-            if( SCIPisLE(scip, implbounds[j], ub) )
+            /* consider only nonredundant and numerical harmless implications */
+            if( SCIPisLE(scip, implbounds[j], ub) && (ub - implbounds[j]) * SCIPfeastol(scip) <= RELCUTCOEFMAXRANGE )
             {
                /* add cut if violated */
                SCIP_CALL( addCut(scip, sol, 1.0, implvars[j], solval, (ub - implbounds[j]), fracvars[i], fracvals[i],
@@ -187,8 +187,8 @@ SCIP_RETCODE separateCuts(
             lb = SCIPvarGetLbGlobal(implvars[j]);
             assert(impltypes[j] == SCIP_BOUNDTYPE_LOWER);
  
-            /* consider only nonredundant implications */
-            if( SCIPisGE(scip, implbounds[j], lb) )
+            /* consider only nonredundant and numerical harmless implications */
+            if( SCIPisGE(scip, implbounds[j], lb) && (implbounds[j] - lb) * SCIPfeastol(scip) <= RELCUTCOEFMAXRANGE )
             {
                /* add cut if violated */
                SCIP_CALL( addCut(scip, sol, -1.0, implvars[j], solval, (implbounds[j] - lb), fracvars[i], fracvals[i],
@@ -226,8 +226,8 @@ SCIP_RETCODE separateCuts(
             /* implication x == 0 -> y <= p */
             ub = SCIPvarGetUbGlobal(implvars[j]);
 
-            /* consider only nonredundant implications */
-            if( SCIPisLE(scip, implbounds[j], ub) )
+            /* consider only nonredundant and numerical harmless implications */
+            if( SCIPisLE(scip, implbounds[j], ub) && (ub - implbounds[j]) * SCIPfeastol(scip) < RELCUTCOEFMAXRANGE )
             {
                /* add cut if violated */
                SCIP_CALL( addCut(scip, sol, 1.0, implvars[j], solval, (implbounds[j] - ub), fracvars[i], fracvals[i],
@@ -242,8 +242,8 @@ SCIP_RETCODE separateCuts(
             lb = SCIPvarGetLbGlobal(implvars[j]);
             assert(impltypes[j] == SCIP_BOUNDTYPE_LOWER);
             
-            /* consider only nonredundant implications */
-            if( SCIPisGE(scip, implbounds[j], lb) )
+            /* consider only nonredundant and numerical harmless implications */
+            if( SCIPisGE(scip, implbounds[j], lb) && (implbounds[j] - lb) * SCIPfeastol(scip) < RELCUTCOEFMAXRANGE )
             { 
                /* add cut if violated */
                SCIP_CALL( addCut(scip, sol, -1.0, implvars[j], solval, (lb - implbounds[j]), fracvars[i], fracvals[i],
