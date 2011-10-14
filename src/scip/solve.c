@@ -2928,6 +2928,7 @@ SCIP_RETCODE propAndSolve(
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
    SCIP_PRICESTORE*      pricestore,         /**< pricing storage */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -3007,6 +3008,7 @@ SCIP_RETCODE propAndSolve(
 
       /* the number of bound changes was increased by the propagation call, thus the relaxation should be solved again */
       solverelax = solverelax || (stat->nboundchgs > oldnboundchgs);
+      markRelaxsUnsolved(set, relaxation);
 
       /* update lower bound with the pseudo objective value, and cut off node by bounding */
       SCIP_CALL( applyBounding(blkmem, set, stat, transprob, primal, tree, lp, conflict, cutoff) );
@@ -3282,7 +3284,7 @@ SCIP_RETCODE solveNode(
       SCIP_CALL( applyBounding(blkmem, set, stat, transprob, primal, tree, lp, conflict, cutoff) );
 
       /* propagate domains before lp solving and solve relaxation and lp */
-      SCIP_CALL( propAndSolve(blkmem, set, stat, origprob, transprob, primal, tree, lp, pricestore, sepastore, 
+      SCIP_CALL( propAndSolve(blkmem, set, stat, origprob, transprob, primal, tree, lp, relaxation, pricestore, sepastore,
             branchcand, cutpool, conflict, eventfilter, eventqueue, focusnode, actdepth, SCIP_PROPTIMING_BEFORELP,
             propagate, solvelp, solverelax, forcedlpsolve, &nlperrors, &fullpropagation, &propagateagain,
             &initiallpsolved, &solvelpagain, &solverelaxagain, cutoff, unbounded, &lperror, &pricingaborted,
@@ -3297,7 +3299,7 @@ SCIP_RETCODE solveNode(
          forcedenforcement = FALSE;
 
          /* propagate domains after lp solving and resolve relaxation and lp */
-         SCIP_CALL( propAndSolve(blkmem, set, stat, origprob, transprob, primal, tree, lp, pricestore, sepastore, 
+         SCIP_CALL( propAndSolve(blkmem, set, stat, origprob, transprob, primal, tree, lp, relaxation, pricestore, sepastore,
                branchcand, cutpool, conflict, eventfilter, eventqueue, focusnode, actdepth, SCIP_PROPTIMING_AFTERLPLOOP,
                propagate, solvelp, solverelax, forcedlpsolve, &nlperrors, &fullpropagation, &propagateagain,
                &initiallpsolved, &solvelpagain, &solverelaxagain, cutoff, unbounded, &lperror, &pricingaborted,
