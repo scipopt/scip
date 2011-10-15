@@ -27,13 +27,7 @@
 #include <string.h>
 #include <limits.h>
 #include <stdio.h>
-#include <stdlib.h> /*lint --e{766}*/ /* needed for strtoll() */
 #include <ctype.h>
-
-/* there is not strtoll with MS compiler, but a strtoi64 should be there */
-#ifdef _MSC_VER
-#define strtoll _strtoi64
-#endif
 
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
@@ -8886,6 +8880,7 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
    SCIP_Longint* weights;
    SCIP_Longint capacity;
    char* endptr;
+   int nread;
    int nvars;
    int varssize;
 
@@ -8904,14 +8899,11 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
 
    while( *str != '\0' )
    {
-      /* try to parse coefficient */
-      weight = strtoll(str, &endptr, 0); /*lint !e718 !e746 */
-
-      /* probably reached <=, so stop */
-      if( str == endptr )
+      /* try to parse coefficient, and stop if not successful (probably reached <=) */
+      if( sscanf(str, "%"SCIP_LONGINT_FORMAT"%n", &weight, &nread) < 1 )
          break;
 
-      str = endptr;
+      str += nread;
 
       /* skip whitespace */
       while( isspace((int)*str) )
@@ -8960,8 +8952,7 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
 
    if( *success )
    {
-      capacity = strtoll(str, &endptr, 0); /*lint !e718 !e746 */
-      if( str == endptr )
+      if( sscanf(str, "%"SCIP_LONGINT_FORMAT, &capacity) != 1 )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "error parsing capacity from '%s'\n", str);
          *success = FALSE;
