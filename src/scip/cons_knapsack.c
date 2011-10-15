@@ -8833,7 +8833,7 @@ SCIP_DECL_CONSPRINT(consPrintKnapsack)
       if( i > 0 )
          SCIPinfoMessage(scip, file, " ");
       SCIPinfoMessage(scip, file, "%+"SCIP_LONGINT_FORMAT, consdata->weights[i]);
-      SCIP_CALL( SCIPwriteVarName(scip, file, consdata->vars[i], FALSE) );
+      SCIP_CALL( SCIPwriteVarName(scip, file, consdata->vars[i], TRUE) );
    }
    SCIPinfoMessage(scip, file, " <= %"SCIP_LONGINT_FORMAT"", consdata->capacity);
    

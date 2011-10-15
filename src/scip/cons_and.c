@@ -522,13 +522,13 @@ SCIP_RETCODE consdataPrint(
    assert(consdata != NULL);
 
    /* print resultant */
-   SCIP_CALL( SCIPwriteVarName(scip, file, consdata->resvar, FALSE) );
+   SCIP_CALL( SCIPwriteVarName(scip, file, consdata->resvar, TRUE) );
 
    /* start the variable list */
    SCIPinfoMessage(scip, file, " == and(");
 
    /* print variable list */
-   SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars, FALSE, ',') );
+   SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars, TRUE, ',') );
 
    /* close the variable list */
    SCIPinfoMessage(scip, file, ")");

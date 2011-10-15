@@ -305,7 +305,7 @@ SCIP_RETCODE consdataPrint(
    SCIPinfoMessage(scip, file, "logicor(");
 
    /* print variable list */
-   SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars, FALSE, ',') );
+   SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars, TRUE, ',') );
    
    /* close bracket */
    SCIPinfoMessage(scip, file, ")");

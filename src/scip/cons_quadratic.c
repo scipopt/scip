@@ -10427,7 +10427,7 @@ SCIP_DECL_CONSPRINT(consPrintQuadratic)
          ++nmonomials;
       }
 
-      SCIP_CALL( SCIPwriteVarsPolynomial(scip, file, monomialvars, monomialexps, monomialcoefs, monomialnvars, nmonomials, FALSE) );
+      SCIP_CALL( SCIPwriteVarsPolynomial(scip, file, monomialvars, monomialexps, monomialcoefs, monomialnvars, nmonomials, TRUE) );
 
       for( j = 0; j < nmonomials; ++j )
       {
