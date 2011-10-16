@@ -3136,7 +3136,7 @@ SCIP_RETCODE SCIPlpiGetBase(
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
 
-   SCIPdebugMessage("saving CPLEX basis into %p/%p\n", cstat, rstat);
+   SCIPdebugMessage("saving CPLEX basis into %p/%p\n", (void *) cstat, (void *) rstat);
 
    CHECK_ZERO( CPXgetbase(lpi->cpxenv, lpi->cpxlp, cstat, rstat) );
 
@@ -3162,7 +3162,7 @@ SCIP_RETCODE SCIPlpiSetBase(
    assert(cstat != NULL);
    assert(rstat != NULL);
 
-   SCIPdebugMessage("loading basis %p/%p into CPLEX\n", cstat, rstat);
+   SCIPdebugMessage("loading basis %p/%p into CPLEX\n", (void *) cstat, (void *) rstat);
 
    invalidateSolution(lpi);
 
@@ -3427,7 +3427,7 @@ SCIP_RETCODE SCIPlpiGetState(
    /* allocate lpistate data */
    SCIP_CALL( lpistateCreate(lpistate, blkmem, ncols, nrows) );
 
-   SCIPdebugMessage("storing CPLEX LPI state in %p (%d cols, %d rows)\n", *lpistate, ncols, nrows);
+   SCIPdebugMessage("storing CPLEX LPI state in %p (%d cols, %d rows)\n", (void *) *lpistate, ncols, nrows);
 
    /* get unpacked basis information from CPLEX */
    SCIP_CALL( getBase(lpi) );
@@ -3468,7 +3468,7 @@ SCIP_RETCODE SCIPlpiSetState(
    assert(lpistate->nrows <= lpnrows);
 
    SCIPdebugMessage("loading LPI state %p (%d cols, %d rows) into CPLEX LP with %d cols and %d rows\n",
-      lpistate, lpistate->ncols, lpistate->nrows, lpncols, lpnrows);
+      (void *) lpistate, lpistate->ncols, lpistate->nrows, lpncols, lpnrows);
 
    if( lpistate->ncols == 0 || lpistate->nrows == 0 )
       return SCIP_OKAY;   
