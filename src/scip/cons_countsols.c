@@ -1030,8 +1030,8 @@ SCIP_RETCODE checkVarbound(
     */
    
    SCIP_CONS** conss;
-   SCIP_VAR* var_x;
-   SCIP_VAR* var_y;
+   SCIP_VAR* var;
+   SCIP_VAR* vbdvar;
    SCIP_Real lhs;
    SCIP_Real rhs;
    SCIP_Real coef;
@@ -1053,16 +1053,16 @@ SCIP_RETCODE checkVarbound(
    for( ; c >= 0 && nconss > 0 && (*satisfied); --c )
    {
       SCIPdebugMessage("varbound constraint %d\n", c);
-    
+
       if( !SCIPconsIsEnabled(conss[c]) )
          continue;
-    
+
       nconss--;
     
-      var_x = SCIPgetVarVarbound(scip, conss[c]);
-      var_y = SCIPgetVbdvarVarbound(scip, conss[c]);
+      var = SCIPgetVarVarbound(scip, conss[c]);
+      vbdvar = SCIPgetVbdvarVarbound(scip, conss[c]);
 
-      assert (SCIPvarGetType(var_y) != SCIP_VARTYPE_CONTINUOUS);
+      assert (SCIPvarGetType(vbdvar) != SCIP_VARTYPE_CONTINUOUS);
       
       coef = SCIPgetVbdcoefVarbound(scip, conss[c]);
       lhs = SCIPgetLhsVarbound(scip, conss[c]);
@@ -1071,13 +1071,13 @@ SCIP_RETCODE checkVarbound(
       /* variables y is fixed locally; therefore, subtract fixed variable value multiplied by
        * the coefficient; 
        */
-      if(SCIPisGT(scip, SCIPvarGetUbLocal(var_x), rhs - SCIPvarGetUbLocal(var_y) * coef ) 
-         || !SCIPisGE(scip, SCIPvarGetLbLocal(var_x), lhs - SCIPvarGetLbLocal(var_y) * coef ) )
+      if(SCIPisGT(scip, SCIPvarGetUbLocal(var), rhs - SCIPvarGetUbLocal(vbdvar) * coef )
+         || !SCIPisGE(scip, SCIPvarGetLbLocal(var), lhs - SCIPvarGetLbLocal(vbdvar) * coef ) )
       {
          SCIPdebugMessage("constraint %s cannot be disabled\n", SCIPconsGetName(conss[c]));
          SCIPdebug(SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
-         SCIPdebugMessage("%s\t lb: %lf\t ub: %lf\n",SCIPvarGetName(var_x), SCIPvarGetLbLocal(var_x), SCIPvarGetUbLocal(var_x));
-         SCIPdebugMessage("%s\t lb: %lf\t ub: %lf\n",SCIPvarGetName(var_y), SCIPvarGetLbLocal(var_y), SCIPvarGetUbLocal(var_y));
+         SCIPdebugMessage("<%s>  lb: %.15g\t ub: %.15g\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+         SCIPdebugMessage("<%s>  lb: %.15g\t ub: %.15g\n", SCIPvarGetName(vbdvar), SCIPvarGetLbLocal(vbdvar), SCIPvarGetUbLocal(vbdvar));
          (*satisfied) = FALSE;
       }
       
