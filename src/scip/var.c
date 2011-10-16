@@ -5178,14 +5178,40 @@ void SCIPvarMarkDeleted(
 }
 
 /** marks the variable to not to be multi-aggregated */
-void SCIPvarMarkDoNotMultaggr(
+SCIP_RETCODE SCIPvarMarkDoNotMultaggr(
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
    assert(var != NULL);
-   assert(var->probindex != -1);
 
-   var->donotmultaggr = TRUE;
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+   case SCIP_VARSTATUS_FIXED:
+      var->donotmultaggr = TRUE;
+      break;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+      assert( var->data.aggregate.var != NULL );
+      var->data.aggregate.var->donotmultaggr = TRUE;
+
+   case SCIP_VARSTATUS_NEGATED:
+      assert( var->negatedvar != NULL );
+      var->negatedvar->donotmultaggr = TRUE;
+      break;
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      SCIPerrorMessage("cannot mark a multi-aggregated variable to not be multi-aggregated.\n");
+      return SCIP_INVALIDDATA;
+
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   return SCIP_OKAY;
 }
 
 /** changes type of variable; cannot be called, if var belongs to a problem */

@@ -12394,7 +12394,7 @@ SCIP_RETCODE SCIPmarkDoNotMultaggrVar(
 
    SCIP_CALL( checkStage(scip, "SCIPmarkDoNotMultiaggrVar", TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPvarMarkDoNotMultaggr(var);
+   SCIP_CALL( SCIPvarMarkDoNotMultaggr(var) );
 
    return SCIP_OKAY;
 }

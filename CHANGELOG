@@ -82,6 +82,7 @@ interface:
   SCIP_DECL_PRESOLINITPRE, and SCIP_DECL_PRESOLEXITPRE and corresponding c++ functions got two new SCIP_Bool parameters
   "isunbounded" and "isinfeasible" which state whether the problem is already declared to be unbounded or infeasible
    respectively
+- SCIPmarkDoNotMultaggrVar()/SCIPvarMarkDoNotMultaggr() now allow to mark negated and aggregated variables
 
 performance improvements:
 - performance improvements in prop_vbounds
