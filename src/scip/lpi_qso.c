@@ -330,7 +330,10 @@ SCIP_RETCODE convertSides(
 const char* SCIPlpiGetSolverName(void)
 {
    char* vname = QSversion();
-   snprintf (__qsstr, 1023, "%s", vname);
+   int vnamelen;
+   vnamelen = strlen(vname);
+   memcpy(__qsstr, vname, MIN(sizeof(__qsstr), vnamelen+1));
+   __qsstr[sizeof(__qsstr)-1] = '\0';
    QSfree(vname);
    return __qsstr;
 }
