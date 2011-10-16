@@ -3096,7 +3096,10 @@ SCIP_RETCODE writeOpbConstraints(
       {
          SCIP_CONS* artcons;
 
-         artcons = (SCIP_CONS*) SCIPhashmapGetImage(linconssofindicatorsmap, (void*)cons);
+	 if( linconssofindicatorsmap == NULL )
+	    artcons = NULL;
+	 else
+	    artcons = (SCIP_CONS*) SCIPhashmapGetImage(linconssofindicatorsmap, (void*)cons);
 
          if( artcons == NULL )
          {
