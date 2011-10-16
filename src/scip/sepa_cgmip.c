@@ -76,7 +76,7 @@
 #define DEFAULT_MAXROUNDSROOT        50 /**< maximal number of separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXDEPTH             -1 /**< maximal depth at which the separator is applied */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
-#define DEFAULT_TIMELIMIT          1e20 /**< time limit for sub-MIP */
+#define DEFAULT_TIMELIMIT           500 /**< time limit for sub-MIP */
 #define DEFAULT_MEMORYLIMIT        1e20 /**< memory limit for sub-MIP */
 #define DEFAULT_NODELIMIT       10000LL /**< node limit for sub-MIP */
 #define DEFAULT_OBJWEIGHT         1e-03 /**< objective weight for artificial variables */
