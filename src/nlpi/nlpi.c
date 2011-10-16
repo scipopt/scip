@@ -182,8 +182,8 @@ SCIP_RETCODE SCIPnlpiFree(
    assert(*nlpi != NULL);
 
    SCIP_CALL( (*(*nlpi)->nlpifree)((*nlpi)) );
-   free((*nlpi)->name);
-   free((*nlpi)->description);
+   BMSfreeMemoryArray(&(*nlpi)->name);
+   BMSfreeMemoryArray(&(*nlpi)->description);
    BMSfreeMemory(nlpi);
 
    assert(*nlpi == NULL);
