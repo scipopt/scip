@@ -95,9 +95,12 @@
 #define DEFAULT_ADDVIOLCONSHDLR   FALSE /**< add constraint handler to filter out violated cuts? */
 #define DEFAULT_CONSHDLRUSENORM    TRUE /**< should the violation constraint handler use the norm of a cut to check for feasibility? */
 #define DEFAULT_OBJLONE           FALSE /**< should the objective of the sub-MIP minimize the l1-norm of the multipliers? */
-#define DEFAULT_CONTCONVERT        TRUE /**< convert some integral variables to be continuous to reduce the size of the sub-MIP */
-#define DEFAULT_CONTCONVFRAC        0.5 /**< fraction of integral variables converted to be continuous (if contconvert) */
+#define DEFAULT_CONTCONVERT       FALSE /**< convert some integral variables to be continuous to reduce the size of the sub-MIP */
+#define DEFAULT_CONTCONVFRAC        0.1 /**< fraction of integral variables converted to be continuous (if contconvert) */
 #define DEFAULT_CONTCONVMIN         100 /**< minimum number of integral variables before some are converted to be continuous */
+#define DEFAULT_INTCONVERT        FALSE /**< convert some integral variables attaining fractional values to have integral value */
+#define DEFAULT_INTCONVFRAC         0.1 /**< fraction of fractional integral variables converted to have integral value (if intconvert) */
+#define DEFAULT_INTCONVMIN          100 /**< minimum number of integral variables before some are converted to have integral value */
 #define DEFAULT_DECISIONTREE       TRUE /**< use decision tree to turn separation on/off? */
 
 #define NROWSTOOSMALL                 5 /**< only separate if the number of rows is larger than this number */
@@ -153,6 +156,9 @@ struct SCIP_SepaData
    SCIP_Bool             contconvert;        /**< convert some integral variables to be continuous to reduce the size of the sub-MIP */
    SCIP_Real             contconvfrac;       /**< fraction of integral variables converted to be continuous (if contconvert) */
    int                   contconvmin;        /**< minimum number of integral variables before some are converted to be continuous */
+   SCIP_Bool             intconvert;         /**< convert some integral variables attaining fractional values to have integral value */
+   SCIP_Real             intconvfrac;        /**< fraction of frac. integral variables converted to have integral value (if intconvert) */
+   int                   intconvmin;         /**< minimum number of integral variables before some are converted to have integral value */
    SCIP_Bool             decisiontree;       /**< use decision tree to turn separation on/off? */
 #if 1
    SCIP_Real             firstlptime;        /**< time for first lp */
@@ -804,7 +810,8 @@ SCIP_RETCODE createSubscip(
    unsigned int cnt, ucnt;
    unsigned int nshifted;
    unsigned int ncomplemented;
-   unsigned int nconverted;
+   unsigned int ncontconverted;
+   unsigned int nintconverted;
    unsigned int nlbounds;
    unsigned int nubounds;
 
@@ -890,7 +897,8 @@ SCIP_RETCODE createSubscip(
    /* store lb/ub for complementing and perform preprocessing */
    nshifted = 0;
    ncomplemented = 0;
-   nconverted = 0;
+   ncontconverted = 0;
+   nintconverted = 0;
    nlbounds = 0;
    nubounds = 0;
    for (j = 0; j < ncols; ++j)
@@ -904,7 +912,7 @@ SCIP_RETCODE createSubscip(
       assert( var != NULL );
 
       primsol[j] = SCIPcolGetPrimsol(col);
-      assert(SCIPisEQ(scip, SCIPgetVarSol(scip, var), primsol[j]) );
+      assert( SCIPisEQ(scip, SCIPgetVarSol(scip, var), primsol[j]) );
 
       lb[j] = SCIPvarGetLbGlobal(var);
       assert( SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPcolGetLb(col)) );
@@ -927,15 +935,64 @@ SCIP_RETCODE createSubscip(
       /* check status of column/variable */
       if ( SCIPcolIsIntegral(col) )
       {
-         /* possibly convert integral variables to be continuous */
-         if ( sepadata->contconvert && ncols >= sepadata->contconvmin )
+         /* integral variables taking integral values are not interesting - will be substituted out below */
+         if ( ! SCIPisFeasIntegral(scip, primsol[j]) )
          {
-            /* randomly convert variables */
-            if ( ((SCIP_Real) rand())/((SCIP_Real) RAND_MAX) >= sepadata->contconvfrac )
+            /* possibly convert fractional integral variables to take integral values */
+            if ( sepadata->intconvert && ncols >= sepadata->intconvmin )
             {
-               /* preprocessing is also performed for converted columns */
-               mipdata->coltype[j] = colConverted;
-               ++nconverted;
+               /* randomly convert variables */
+               if ( ((SCIP_Real) rand())/((SCIP_Real) RAND_MAX) <= sepadata->intconvfrac )
+               {
+                  assert( ! SCIPisInfinity(scip, ub[j]) || ! SCIPisInfinity(scip, -lb[j]) );
+
+                  /* if both bounds are finite, take the closer one */
+                  if ( ! SCIPisInfinity(scip, ub[j]) && ! SCIPisInfinity(scip, -lb[j]) )
+                  {
+                     assert( SCIPisFeasIntegral(scip, ub[j]) );
+                     assert( SCIPisFeasIntegral(scip, lb[j]) );
+                     assert( SCIPisFeasLT(scip, primsol[j], ub[j]) );
+                     assert( SCIPisFeasGT(scip, primsol[j], lb[j]) );
+                     if ( ub[j] - primsol[j] < primsol[j] - lb[j] )
+                        primsol[j] = ub[j];
+                     else
+                        primsol[j] = lb[j];
+                     ++nintconverted;
+                  }
+                  else
+                  {
+                     /* if only lower bound is finite */
+                     if ( ! SCIPisInfinity(scip, -lb[j]) )
+                     {
+                        assert( SCIPisFeasIntegral(scip, lb[j]) );
+                        primsol[j] = lb[j];
+                        ++nintconverted;
+                     }
+                     else
+                     {
+                        assert( ! SCIPisInfinity(scip, ub[j]) );
+                        assert( SCIPisFeasIntegral(scip, ub[j]) );
+                        primsol[j] = ub[j];
+                        ++nintconverted;
+                     }
+                  }
+               }
+            }
+         }
+
+         /* integral variables taking integral values are not interesting - will be substituted out below */
+         if ( ! SCIPisFeasIntegral(scip, primsol[j]) )
+         {
+            /* possibly convert integral variables to be continuous */
+            if ( sepadata->contconvert && ncols >= sepadata->contconvmin )
+            {
+               /* randomly convert variables */
+               if ( ((SCIP_Real) rand())/((SCIP_Real) RAND_MAX) <= sepadata->contconvfrac )
+               {
+                  /* preprocessing is also performed for converted columns */
+                  mipdata->coltype[j] = colConverted;
+                  ++ncontconverted;
+               }
             }
          }
       }
@@ -1000,9 +1057,15 @@ SCIP_RETCODE createSubscip(
    }
 
 #ifndef NDEBUG
+   if ( sepadata->intconvert && ncols >= sepadata->intconvmin )
+   {
+      SCIPdebugMessage("Converted %u fractional integral variables to have integral value.\n", nintconverted);
+   }
+#endif
+#ifndef NDEBUG
    if ( sepadata->contconvert && ncols >= sepadata->contconvmin )
    {
-      SCIPdebugMessage("Converted %u integral variables to be continuous.\n", nconverted);
+      SCIPdebugMessage("Converted %u integral variables to be continuous.\n", ncontconverted);
    }
 #endif
 
@@ -1439,8 +1502,8 @@ SCIP_RETCODE createSubscip(
       ++mipdata->m;
    }
 
-   SCIPdebugMessage("subscip has %u variables and %u constraints (%u shifted, %u complemented, %u at lb, %u at ub).\n",
-      mipdata->n, mipdata->m, nshifted, ncomplemented, nlbounds, nubounds);
+   SCIPdebugMessage("subscip has %u vars (%d integral, %d continuous), %u conss (%u shifted, %u complemented, %u at lb, %u at ub).\n",
+      mipdata->n, SCIPgetNIntVars(subscip), SCIPgetNContVars(subscip), mipdata->m, nshifted, ncomplemented, nlbounds, nubounds);
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &consvars);
@@ -2801,7 +2864,6 @@ SCIP_RETCODE createCGCuts(
    subscip = mipdata->subscip;
    assert( subscip != NULL );
 
-   SCIPdebugMessage("Generating CG-cuts (cmir: %u, strong-cg: %u) ...\n", sepadata->usecmir, sepadata->usestrongcg);
    *ngen = 0;
 
    /* check if solving was successful and get solutions */
@@ -2814,6 +2876,8 @@ SCIP_RETCODE createCGCuts(
    /* only if solutions have been found */
    if ( nsols == 0 )
       return SCIP_OKAY;
+
+   SCIPdebugMessage("Generating CG-cuts from %d sols (cmir: %u, strong-cg: %u) ...\n", nsols, sepadata->usecmir, sepadata->usestrongcg);
 
    sols = SCIPgetSols(subscip);
 
@@ -3327,6 +3391,18 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
          "separating/cgmip/contconvmin",
          "minimum number of integral variables before some are converted to be continuous",
          &sepadata->contconvmin, FALSE, DEFAULT_CONTCONVMIN, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "separating/cgmip/intconvert",
+         "convert some integral variables attaining fractional values to have integral value?",
+         &sepadata->intconvert, FALSE, DEFAULT_INTCONVERT, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "separating/cgmip/intconvfrac",
+         "fraction of frac. integral variables converted to have integral value (if intconvert)",
+         &sepadata->intconvfrac, FALSE, DEFAULT_INTCONVFRAC, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "separating/cgmip/intconvmin",
+         "minimum number of integral variables before some are converted to have integral value",
+         &sepadata->intconvmin, FALSE, DEFAULT_INTCONVMIN, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/cgmip/decisiontree",
          "use decision tree to turn separation on/off?",
