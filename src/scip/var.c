@@ -5196,6 +5196,7 @@ SCIP_RETCODE SCIPvarMarkDoNotMultaggr(
    case SCIP_VARSTATUS_AGGREGATED:
       assert( var->data.aggregate.var != NULL );
       var->data.aggregate.var->donotmultaggr = TRUE;
+      break;
 
    case SCIP_VARSTATUS_NEGATED:
       assert( var->negatedvar != NULL );
