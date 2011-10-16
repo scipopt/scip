@@ -35,7 +35,7 @@
 #include <assert.h>
 #include <string.h> /* for strcmp */ 
 #include <ctype.h>  /* for isspace */
-#include <math.h>   /* for sqrtl */
+#include <math.h>
 
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_quadratic.h"
@@ -5151,11 +5151,11 @@ SCIP_Bool generateCutLTIfindIntersection(
    SCIP_Real*            yu
    )
 {
-   long double a;
-   long double b;
-   long double c;
-   long double tl;
-   long double tu;
+   SCIP_Real a;
+   SCIP_Real b;
+   SCIP_Real c;
+   SCIP_Real tl;
+   SCIP_Real tu;
 
    assert(wl == SCIP_INVALID || (xl != NULL && yl != NULL));  /*lint !e777 */
    assert(wu == SCIP_INVALID || (xu != NULL && yu != NULL));  /*lint !e777 */
@@ -5188,12 +5188,12 @@ SCIP_Bool generateCutLTIfindIntersection(
    {
       if( wl != SCIP_INVALID )  /*lint !e777 */
       {
-         long double tl1;
-         long double tl2;
-         long double denom;
+         SCIP_Real tl1;
+         SCIP_Real tl2;
+         SCIP_Real denom;
 
          assert(b * b - 4.0 * a * (c - wl) >= 0.0);
-         denom = sqrtl(b * b - 4.0 * a * (c - wl));
+         denom = sqrt(b * b - 4.0 * a * (c - wl));
          tl1 = (-b - denom) / (2.0 * a);
          tl2 = (-b + denom) / (2.0 * a);
          tl = (tl1 < 0.0) ? tl2 : tl1;
@@ -5201,12 +5201,12 @@ SCIP_Bool generateCutLTIfindIntersection(
 
       if( wu != SCIP_INVALID )  /*lint !e777 */
       {
-         long double tu1;
-         long double tu2;
-         long double denom;
+         SCIP_Real tu1;
+         SCIP_Real tu2;
+         SCIP_Real denom;
 
          assert(b * b - 4.0 * a * (c - wu) >= 0.0);
-         denom = sqrtl(b * b - 4.0 * a * (c - wu));
+         denom = sqrt(b * b - 4.0 * a * (c - wu));
          tu1 = (-b - denom) / (2.0 * a);
          tu2 = (-b + denom) / (2.0 * a);
          tu = (tu1 < 0.0) ? tu2 : tu1;
