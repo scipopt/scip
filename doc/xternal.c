@@ -998,17 +998,17 @@
 /**@page CONS How to add constraint handlers
  *
  * A constraint handler defines the semantics and the algorithms to process constraints of a certain class.  A single
- * constraint handler is responsible for all the constraints belonging to his constraint class.  For example, there is
- * one \ref cons_knapsack.c "knapsack constraint handler" that ensures that only solutions are accepted that satisfy all
- * the knapsack constraints in the model. \n A complete list of all constraint handlers contained in this release can be
+ * constraint handler is responsible for all constraints belonging to its constraint class.  For example, there is
+ * one \ref cons_knapsack.c "knapsack constraint handler" that ensures solutions are only accepted if they satisfy all
+ * knapsack constraints in the model. \n A complete list of all constraint handlers contained in this release can be
  * found \ref CONSHDLRS "here".
  *
- * In the following, we explain how the user can add an own constraint handler.
+ * We now explain how users can add their own constraint handlers.
  * For an example, look into the subtour constraint handler (examples/TSP/src/ConshdlrSubtour.cpp) of the
  * TSP example project.
  * The example is written in C++ and uses the C++ wrapper classes.
  * However, we will explain the implementation of a constraint handler using the C interface.
- * It is very easy to transfer the C explanation to C++: whenever a method should be implemented using the
+ * It is very easy to transfer the C explanation to C++; whenever a method should be implemented using the
  * SCIP_DECL_CONS... notion, reimplement the corresponding virtual member function of the abstract ObjConshdlr
  * base class.
  *
@@ -1063,7 +1063,7 @@
  * \par CONSHDLR_ENFOPRIORITY: the priority of the constraint handler for constraint enforcing.
  * Like the separation priority, the enforcement priorities define the order in which the different constraint handlers
  * are called in the constraint enforcement step of the subproblem processing.
- * The constraint enforcement is called after the price-and-cut loop was executed (in the case that the LP is solved
+ * The constraint enforcement is called after the price-and-cut loop is executed (in the case that the LP is solved
  * at the current subproblem).
  * \n
  * The integrality constraint handler has an enforcement priority of 0.
@@ -1119,10 +1119,10 @@
  * \par CONSHDLR_MAXPREROUNDS: the default maximal number of presolving rounds the constraint handler participates in.
  * The preprocessing is executed in rounds.
  * If enough changes have been applied to the model, an additional preprocessing round is performed.
- * The MAXPREROUNDS parameter of a constraint handler denotes the maximal number of preprocessing rounds, the constraint
+ * The MAXPREROUNDS parameter of a constraint handler denotes the maximal number of preprocessing rounds the constraint
  * handler participates in.
- * A value of -1 means, that there is no limit on the number of rounds.
- * A value of 0 means, the preprocessing callback of the constraint handler is disabled.
+ * A value of -1 means that there is no limit on the number of rounds.
+ * A value of 0 means the preprocessing callback of the constraint handler is disabled.
  *
  * \par CONSHDLR_DELAYSEPA: the default for whether the separation method should be delayed, if other separators found cuts.
  * If the constraint handler's separation method is marked to be delayed, it is only executed after no other separator
@@ -1184,7 +1184,7 @@
  * At the bottom of "cons_subtour.c" you can find two interface methods, that also appear in "cons_subtour.h".
  * These are SCIPincludeConshdlrSubtour() and SCIPcreateConsSubtour().
  * \n
- * The method SCIPincludeConshdlrSubtour() has only to be adjusted slightly.
+ * The method SCIPincludeConshdlrSubtour() only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the constraint handler by calling the method
  * SCIPincludeConshdlr().
  * It is called by the user, if he wants to include the constraint handler, i.e., if he wants to make
@@ -1272,7 +1272,7 @@
  * deals with.
  * If these methods are implemented, the resulting code is already correct and finds the optimal solution to the
  * given problem instance.
- * However, it might be very slow, because the additional features like cut separation and domain propagation are
+ * However, it might be very slow because the additional features, like cut separation and domain propagation, are
  * missing.
  * In the C++ wrapper class ObjConshdlr, the fundamental callback methods are virtual abstract member functions.
  * You have to implement them in order to be able to construct an object of your constraint handler class.
@@ -1366,15 +1366,15 @@
  * variables may affect the feasibility of the constraint.
  *
  * For each variable that is affected by the constraint, the callback should call SCIPaddVarLocks():
- *  - If the constraint may get violated by decreasing the value of a variable, it should call
+ *  - If the constraint may become violated by decreasing the value of a variable, it should call
  *    SCIPaddVarLocks(scip, var, nlockspos, nlocksneg), saying that rounding down is potentially rendering the
  *    (positive) constraint infeasible and rounding up is potentially rendering the negation of the constraint
  *    infeasible.
- *  - If the constraint may get violated by increasing the value of a variable, it should call
+ *  - If the constraint may become violated by increasing the value of a variable, it should call
  *    SCIPaddVarLocks(scip, var, nlocksneg, nlockspos), saying that rounding up is potentially rendering the
  *    constraint's negation infeasible and rounding up is potentially rendering the constraint itself
  *    infeasible.
- *  - If the constraint may get violated by changing the variable in any direction, it should call
+ *  - If the constraint may become violated by changing the variable in any direction, it should call
  *    SCIPaddVarLocks(scip, var, nlockspos + nlocksneg, nlockspos + nlocksneg).
  *
  *  <b>Note:</b> You do not have to worry about nlockspos and nlocksneg. These integer values are given as 
@@ -1689,14 +1689,14 @@
  * this is a viable approach to circumvent the implementation of the usually rather complex conflict resolving method, it
  * will make the conflict analysis less effective. We suggest to first omit the conflict resolving method and check how
  * effective the propagation method is. If it produces a lot of propagations for your application, you definitely should
- * consider to implement the conflict resolving method.
+ * consider implementing the conflict resolving method.
  *
  * @subsection CONSPRESOL
  *
  * The CONSPRESOL callback is called during preprocessing.
  * It should try to tighten the domains of the variables, tighten the coefficients of the constraints of the constraint
- * handler, delete redundant constraints, aggregate and fix variables if possible, and upgrade constraints to a more
- * specific type.
+ * handler, delete redundant constraints, aggregate and fix variables if possible, and upgrade constraints to more
+ * specific types.
  *
  * If the CONSPRESOL callback applies changes to the constraint data, you also have to implement the \ref CONSTRANS callback
  * in order to copy the constraint data to the transformed problem space and protect the original problem from the
@@ -1738,7 +1738,7 @@
  *
  * The CONSPRINT callback method is called, when the user asks SCIP to display the problem to the screen 
  * or save the problem into a file. This is, however, only the case if the user requested the CIP format. 
- * For more detail to reading and writing with SCIP we refer to the \ref READER "file readers". In this 
+ * For more details about reading and writing with SCIP we refer to the \ref READER "file readers". In this
  * callback method the constraint handler should display the data of the constraint in an appropriate form.
  * The output format that is defined by the CONSPRINT callbacks is called CIP format.
  * In later versions of SCIP, the constraint handlers should also be able to parse (i.e., read) constraints
@@ -1767,8 +1767,8 @@
  *
  * Finally, the result pointer valid has to be set to TRUE if (and only if!) the copy process was successful.
  * 
- * <b>Note.</b> Take care by setting the valid pointer. If you set the valid pointer to TRUE, but the constraint was
- * not copied one-to-one, then it might happen that optimal solutions are cut off during the search (see section
+ * <b>Note.</b> Be careful when setting the valid pointer. If you set the valid pointer to TRUE, but the constraint was
+ * not copied one-to-one, then optimal solutions might be cut off during the search (see section
  * CONSHDLRCOPY above).
  *
  * For an example implementation we refer to cons_linear.c. Additional documentation and the complete list of all
@@ -1786,13 +1786,13 @@
  * This method should iterate over the given constraints and delete all variables that were marked for deletion by SCIPdelVar().
  * Variable deletion is especially interesting for branch-cut-and-price applications. If your constraint handler allows
  * the addition of variables during the solving process (see "modifiable" attribute of constraints), then you might also want to
- * implement this callback. This would allow to not only create variables during solving, but also remove them dynamically
- * from the problem to reduce memory consumption in case they are not needed anymore.
- * But also during presolving, SCIP may find that some variables are not needed anymore and then try
+ * implement this callback. This would allow you to not only create variables during solving, but also remove them dynamically
+ * from the problem to reduce memory consumption in case they are no longer necessary.
+ * During presolving, SCIP may also find that some variables are not needed anymore and then try
  * to delete them. Thus, if you do not implement this callback, the constraint handler should capture its variables via
- * SCIPcaptureVar() to avoid that SCIP erroneously deletes them.
+ * SCIPcaptureVar() to prevent SCIP from erroneously deleting them.
  *
- * Additional documentation and the complete list of all parameters can be found in the file in type_cons.h. 
+ * Additional documentation and the complete list of all parameters can be found in the file type_cons.h.
  * 
  */
 
@@ -1806,13 +1806,13 @@
  * \n
  * A complete list of all pricers contained in this release can be found \ref PRICERS "here".
  *
- * If the pricer finds one or more variables with negative reduced costs or negative farkas value, it should
+ * If the pricer finds one or more variables with negative reduced costs or negative Farkas value, it should
  * call SCIPcreateVar() and SCIPaddPricedVar() to create and add the variable to the problem. Additionally,
  * the pricer has to add the variable to all constraints in which it appears. Therefore, a pricer needs to
  * know the constraints of the model and their meaning. Note that all constraints for which additional variables
  * are generated by a pricer have to be flagged as "modifiable" in the SCIPcreateCons() call.
  *
- * In the following, we explain how the user can add an own pricer.
+ * We now explain how users can add their own pricers.
  * For example, look into the stable set pricer for the coloring problem (examples/Coloring/src/pricer_coloring.c) of the
  * Coloring example project.
  * The example is written in C. C++ users can easily adapt the code by using the ObjPricer wrapper base class and 
@@ -1821,7 +1821,7 @@
  * Additional documentation for the callback methods of a pricer can be found in the file
  * type_pricer.h.
  *
- * Notice that if your pricer cannot cope with other variable bounds than 0 and infinity, you have to mark 
+ * Notice that if your pricer cannot cope with variable bounds other than 0 and infinity, you have to mark
  * all constraints containing priced variables as modifiable, and you may have to disable reduced cost
  * strengthening by setting propagating/rootredcost/freq to -1.
  *
@@ -1884,7 +1884,7 @@
  * Below the header "Data structures" you can find a struct which is called "struct SCIP_PricerData".
  * In this data structure, you can store the data of your pricer. For example, it may be convenient to store pointers to the
  * constraints of the problem instance here, because the pricer has to add variables to those constraints.
- * If you are using C++, you can add pricer data as usual as object variables to your class.
+ * If you are using C++, you can add pricer data, as usual, as object variables to your class.
  * \n
  * Defining pricer data is optional. You can leave the struct empty.
  *
@@ -1893,7 +1893,7 @@
  *
  * At the bottom of "pricer_mypricer.c" you can find the interface method SCIPincludePricerMypricer(), which also appears in "pricer_mypricer.h".
  * \n
- * This method has only to be adjusted slightly.
+ * This method only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the pricer by calling the method
  * SCIPincludePricer().
  * It is called by the user, if he wants to include the pricer, i.e., if he wants to solve a model for which variables should
@@ -1956,7 +1956,7 @@
  *
  * @section PRICER_ADDITIONALCALLBACKS Additional Callback Methods of a Pricer
  *
- * The additional callback methods need not to be implemented in every case.
+ * The additional callback methods do not need to be implemented in every case.
  * However, some of them have to be implemented for most applications.
  *
  *
@@ -1967,7 +1967,7 @@
  * and the PRICERFARKAS method should identify those variables.
  *
  * If the LP was proven to be infeasible, we have an infeasibility proof by the dual Farkas multipliers \f$y\f$.
- * With the values of y, an implicit inequality \f$y^T A x \ge y^T b\f$ is associated, with \f$b\f$ given
+ * With the values of \f$y\f$, an implicit inequality \f$y^T A x \ge y^T b\f$ is associated, with \f$b\f$ given
  * by the sides of the LP rows and the sign of \f$y\f$:
  *  - if \f$y_i\f$ is positive, \f$b_i\f$ is the left hand side of the row,
  *  - if \f$y_i\f$ is negative, \f$b_i\f$ is the right hand side of the row.
@@ -1980,7 +1980,7 @@
  *
  * To apply Farkas pricing, the pricer needs to know the Farkas values of the constraints. Like the dual solution values for
  * feasible LP solutions, the dual Farkas values for infeasible solutions can be obtained by constraint handler interface
- * methods like, for example, the SCIPgetDualfarkasLinear() method of the linear constraint handler.
+ * methods such as the SCIPgetDualfarkasLinear() method of the linear constraint handler.
  * The Farkas values for the bounds of the variables are just the regular reduced costs and can be accessed with SCIPgetVarRedcost().
  *
  * It is useful to note that Farkas pricing is the same as the regular pricing with a zero objective function.
@@ -2026,7 +2026,7 @@
  * copied problem are typically still valid for the original problem and used for its solving process, 
  * but dual reductions cannot be transferred to the original problem.
  * 
- * <b>Note.</b> If you implement this callback, take care when setting the valid pointer. The valid pointer should be
+ * <b>Note.</b> If you implement this callback, be careful when setting the valid pointer. The valid pointer should be
  * set to TRUE if (and only if!) you can make sure that all necessary data of the pricer are copied
  * correctly. If the complete problem is validly copied, i.e. if the copy methods of all problem defining plugins
  * (constraint handlers and pricers) return <code>*valid = TRUE</code>, then dual reductions found for the copied problem can be
@@ -2035,18 +2035,18 @@
  *
  * @subsection PRICERINIT
  *
- * The PRICERINIT callback is executed after the problem was transformed.
+ * The PRICERINIT callback is executed after the problem is transformed.
  * The pricer may, e.g., use this call to replace the original constraints stored in its pricer data by transformed
  * constraints, or to initialize other elements of his pricer data.
  *
  * @subsection PRICEREXIT
  *
  * The PRICEREXIT callback is executed before the transformed problem is freed.
- * In this method, the pricer should free all resources that have been allocated for the solving process in PRICERINIT.
+ * In this method the pricer should free all resources that have been allocated for the solving process in PRICERINIT.
  *
  * @subsection PRICERINITSOL
  *
- * The PRICERINITSOL callback is executed when the presolving was finished and the branch and bound process is about to begin.
+ * The PRICERINITSOL callback is executed when the presolving is finished and the branch and bound process is about to begin.
  * The pricer may use this call to initialize its branch and bound specific data.
  *
  * @subsection PRICEREXITSOL
@@ -2058,7 +2058,7 @@
  *
  * If you use your own branching rule (e.g., to branch on constraints), make sure that it is able to branch on pseudo solutions. 
  * Otherwise, SCIP will use its default branching rules, if necessary (which all branch on variables). This
- * could disturb the pricing problem or branching might not even be possible, e.g., if all yet created variables have already been fixed.
+ * could disturb the pricing problem or branching might not even be possible, e.g., if all variables created thus far have already been fixed.
  *
  * Note that if the original problem is a maximization problem, SCIP will transform the problem into a minimization 
  * problem by multiplying the objective function by -1. The pricer has to consider this and thus, the original 
@@ -2070,7 +2070,7 @@
  * We call these bounds lazy bounds, they may be set by SCIPchgVarLbLazy() and SCIPchgVarUbLazy() for upper or lower bounds, respectively.
  * If the lazy bound is tighter than the local bound, the corresponding bound is not put into the LP.
  * In diving mode, lazy bounds are explicitly put into the LP, because changing the objective (which is possible only in diving)
- * might reverse the implicitly given bounds. When diving finished, the bounds are again removed from the LP.
+ * might reverse the implicitly given bounds. When diving is finished, the bounds are again removed from the LP.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -2085,7 +2085,7 @@
  * \n 
  * A complete list of all presolvers contained in this release can be found \ref PRESOLVERS "here".
  *
- * In the following, we explain how the user can add its own presolver.
+ * We now explain how users can add their own presolvers.
  * Take the dual fixing presolver (src/scip/presol_dualfix.c) as an example.
  * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjPresol wrapper
  * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_PRESOL... callback methods.
@@ -2281,7 +2281,7 @@
  * \n
  * A complete list of all separators contained in this release can be found \ref SEPARATORS "here".
  *
- * In the following, we explain how the user can add its own separator.
+ * We now explain how users can add their own separators.
  * Take the separator for the class of Gomory mixed integer inequalities (src/scip/sepa_gomory.c) as an example.
  * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjSepa wrapper
  * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_SEPA... callback methods.
@@ -2540,7 +2540,7 @@
  * 
  * A complete list of all propagators contained in this release can be found \ref PROPAGATORS "here".
  *
- * In the following, we explain how the user can add an own propagator.  Take the pseudo objective function propagator
+ * We now explain how users can add their own propagators.  Take the pseudo objective function propagator
  * (src/scip/prop_pseudoobj.c) as an example.  As all other default plugins, it is written in C. C++ users can easily
  * adapt the code by using the scip::ObjProp wrapper base class and implement the @c scip_...() virtual methods instead
  * of the @c SCIP_DECL_PROP... callback methods.
@@ -2814,7 +2814,7 @@
  * \n 
  * A complete list of all branching rules contained in this release can be found \ref BRANCHINGRULES "here".
  *
- * In the following, we explain how the user can add an own branching rule.  Take the most infeasible LP branching rule
+ * We now explain how users can add their own branching rules.  Take the most infeasible LP branching rule
  * (src/scip/branch_mostinf.c) as an example.  As all other default plugins, it is written in C. C++ users can easily
  * adapt the code by using the ObjBranchrule wrapper base class and implement the scip_...() virtual methods instead of
  * the SCIP_DECL_BRANCH... callback methods.
@@ -3105,7 +3105,7 @@
  * \n
  * A complete list of all node selectors contained in this release can be found \ref NODESELECTORS "here".
  *
- * In the following, we explain how the user can add an own node selector.
+ * We now explain how users can add their own node selectors.
  * Take the node selector for depth first search (src/scip/nodesel_dfs.c) as an example.
  * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjNodesel wrapper
  * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_NODESEL... callback methods.
@@ -3330,7 +3330,7 @@
  * \n
  * A complete list of all primal heuristics contained in this release can be found \ref PRIMALHEURISTICS "here".
  *
- * In the following, we explain how the user can add an own primal heuristic.
+ * We now explain how users can add their own primal heuristics.
  * Take the simple and fast LP rounding heuristic (src/scip/heur_simplerounding.c) as an example.
  * The idea of simple rounding is to iterate over all fractional variables of an LP solution and round them down,
  * if the variables appears only with nonnegative coefficients in the system Ax <= b and round them up if
@@ -3603,7 +3603,7 @@
  * handlers. In the latter case, the constraint handlers have to be extended to support this specific relaxation. 
  * \n
  *
- * In the following, we explain how the user can add an own relaxation handler using the C interface. It is very easy to 
+ * We now explain how users can add their own relaxation handlers using the C interface. It is very easy to
  * transfer the C explanation to C++: whenever a method should be implemented using the SCIP_DECL_RELAX... notion, 
  * reimplement the corresponding virtual member function of the abstract ObjRelax wrapper base class.
  * Unfortunately, SCIP does not contain a default relaxation handler plugin, which could be used as an example.
@@ -3826,7 +3826,7 @@
  * the solving process mainly for debugging. Therefore, a writing callback
  * was added to the "readers" plugin. 
  *
- * In the following, we explain how the user can add an own file reader.
+ * We now explain how users can add their own file readers.
  * Take the file reader for MIPs in IBM's Mathematical Programming System format (src/scip/reader_mps.c) as an example.
  * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjReader wrapper
  * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_READER... callback methods.
@@ -4029,7 +4029,7 @@
  * \n
  * A complete list of all dialogs contained in this release can be found \ref DIALOGS "here".
  *
- * In the following, we explain how the user can extend the interactive shell by adding an own dialog.
+ * In the following, we explain how users can extend the interactive shell by adding their own dialog.
  * We give the explanation for creating an own source file for each additional dialog. Of course, you can collect 
  * different dialogs in one source file. Take src/scip/dialog_default.c, where all default dialog plugins are collected, as an 
  * example.
@@ -4250,7 +4250,7 @@
  * \n
  * A complete list of all displays contained in this release can be found \ref DISPLAYS "here".
  *
- * In the following, we explain how the user can add an own display column. 
+ * We now explain users can add their own display columns.
  * We give the explanation for creating an own source file for each additional display column. Of course, you can collect 
  * different additional display columns in one source file.
  * Take src/scip/disp_default.c, where all default display columns are collected, as an example.
@@ -4434,7 +4434,7 @@
  * catching the event SCIP_EVENTTYPE_VARFIXED. To be able to catch an event it is necessary to write an event handler
  * which defines what to do after a certain event was caught.
  *
- * In the following, we explain how the user can add an own event handler. We give the explanation for creating an own
+ * We now explain how users can add their own event handlers. We give the explanation for creating an own
  * source file for each additional event handler. Of course, you can collect different event handlers in one source file
  * or you can put the event handler directly into the constraint handler.  In a \ref EVENTUSAGE "second step" we discuss
  * the usage of an event handler. This means how to catch and drop events. \ref EVENTTYPES "Finally", we give some notes on the exiting
@@ -4676,7 +4676,7 @@
  * 
  * A complete list of all NLPIs contained in this release can be found \ref NLPIS "here".
  *
- * In the following, we explain how the user can add its own NLP solver interface.
+ * We now explain how users can add their own NLP solver interface.
  * Take the interface to Ipopt (src/nlpi/nlpi_ipopt.cpp) as an example.
  * Unlike most other plugins, it is written in C++.
  * Additional documentation for the callback methods of an NLPI, in particular for their input parameters, 
@@ -4907,7 +4907,7 @@
  * 
  * A complete list of all expression interpreters contained in this release can be found \ref EXPRINTS "here".
  *
- * In the following, we explain how the user can add its own expressions interpreter.
+ * We now explain how users can add their own expression interpreters.
  * Take the interface to CppAD (src/nlpi/exprinterpret_cppad.cpp) as an example.
  * Unlike most other plugins, it is written in C++.
  *
