@@ -797,29 +797,26 @@ SCIP_RETCODE propagateCons(
                   newlb = -SCIPinfinity(scip);
             }
 
-            if( SCIPisLbBetter(scip, newlb, xlb, xub) || ylb > yub - 0.5 )
+            SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n",
+               SCIPvarGetName(consdata->var), xlb, xub, newlb, xub);
+            SCIP_CALL( SCIPinferVarLbCons(scip, consdata->var, newlb, cons, (int)PROPRULE_1, FALSE,
+                  cutoff, &tightened) );
+
+            if( *cutoff )
             {
-               SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n",
-                  SCIPvarGetName(consdata->var), xlb, xub, newlb, xub);
-               SCIP_CALL( SCIPinferVarLbCons(scip, consdata->var, newlb, cons, (int)PROPRULE_1, FALSE,
-                     cutoff, &tightened) );
+               assert(SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->var)));
 
-               if( *cutoff )
-               {
-                  assert(SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->var)));
-
-                  /* analyze infeasibility */
-                  SCIP_CALL( analyzeConflict(scip, cons, consdata->var, PROPRULE_1, SCIP_BOUNDTYPE_LOWER) );
-                  break;
-               }
-
-               if( tightened )
-               {
-                  tightenedround = TRUE;
-                  (*nchgbds)++;
-               }
-               xlb = SCIPvarGetLbLocal(consdata->var);
+               /* analyze infeasibility */
+               SCIP_CALL( analyzeConflict(scip, cons, consdata->var, PROPRULE_1, SCIP_BOUNDTYPE_LOWER) );
+               break;
             }
+
+            if( tightened )
+            {
+               tightenedround = TRUE;
+               (*nchgbds)++;
+            }
+            xlb = SCIPvarGetLbLocal(consdata->var);
          }
 
          assert(!*cutoff);
@@ -911,29 +908,26 @@ SCIP_RETCODE propagateCons(
                   newub = SCIPinfinity(scip);
             }
 
-            if( SCIPisUbBetter(scip, newub, xlb, xub) || ylb > yub - 0.5 )
+            SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n",
+               SCIPvarGetName(consdata->var), xlb, xub, xlb, newub);
+            SCIP_CALL( SCIPinferVarUbCons(scip, consdata->var, newub, cons, (int)PROPRULE_3, FALSE,
+                  cutoff, &tightened) );
+
+            if( *cutoff )
             {
-               SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n",
-                  SCIPvarGetName(consdata->var), xlb, xub, xlb, newub);
-               SCIP_CALL( SCIPinferVarUbCons(scip, consdata->var, newub, cons, (int)PROPRULE_3, FALSE,
-                     cutoff, &tightened) );
+               assert(SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->var)));
 
-               if( *cutoff )
-               {
-                  assert(SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->var)));
-
-                  /* analyze infeasibility */
-                  SCIP_CALL( analyzeConflict(scip, cons, consdata->var, PROPRULE_3, SCIP_BOUNDTYPE_UPPER) );
-                  break;
-               }
-
-               if( tightened )
-               {
-                  tightenedround = TRUE;
-                  (*nchgbds)++;
-               }
-               xub = SCIPvarGetUbLocal(consdata->var);
+               /* analyze infeasibility */
+               SCIP_CALL( analyzeConflict(scip, cons, consdata->var, PROPRULE_3, SCIP_BOUNDTYPE_UPPER) );
+               break;
             }
+
+            if( tightened )
+            {
+               tightenedround = TRUE;
+               (*nchgbds)++;
+            }
+            xub = SCIPvarGetUbLocal(consdata->var);
          }
 
          assert(!*cutoff);
