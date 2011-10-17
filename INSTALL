@@ -202,7 +202,7 @@ make[1]: Entering directory `/sw/scip'
 * For more information and if you experience problems see the INSTALL file.
 
   -> "clp.*" is a directory containing the Clp installation, i.e., "clp.*/include/coin/ClpModel.hpp" should exist.
-  -> "ipopt.*" is a directory containing the ipopt installation, i.e., "ipopt.*/IpIpoptApplication.hpp" should exist.
+  -> "ipopt.*" is a directory containing the ipopt installation, i.e., "ipopt.*/include/coin/IpIpoptApplication.hpp", "ipopt.*/lib/libipopt*", ... should exist.
   -> "cppad" is a directory containing the CppAD header files, i.e., "cppad/cppad.hpp" should exist.
 
 - preparing missing soft-link "lib/clp.linux.x86_64.gnu.opt":
@@ -348,6 +348,9 @@ make[1]: Leaving directory `/sw/scip'
    (h) to use IPOPT as NLP solver
        - ln -s <path to IPOPT installation> <path to SCIP>/lib/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)
          (e.g. "cd scip; ln -s /Ipopt lib/ipopt.linux.x86.gnu.opt")
+         The path to the IPOPT installation is the path under where the Ipopt build has been installed.
+         It should contain the directories include/coin with the Ipopt header files, the directory lib with the Ipopt libraries,
+         and the directory share/coin/doc/Ipopt (Ipopt >= 3.9.0) or share/doc/coin/Ipopt (Ipopt < 3.9.0) with the ipopt_addlibs_cpp.txt file.
 
    (i) to use CppAD as expressions interpreter
        - ln -s <path to CppAD's header files> <path to SCIP>/lib/cppad
