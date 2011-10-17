@@ -1081,6 +1081,7 @@ SCIP_RETCODE SCIPlpiFree(
    if( numlp == 0 )
    {
       GRBfreeenv(grbenv);
+      grbenv = NULL;
    }
 
    return SCIP_OKAY;
