@@ -146,6 +146,9 @@ fixed bugs:
 - fixed bug in handling of lazy bounds that resulted in putting the bounds explicitly into the LP
 - fixed issue with interactive shell in case (user) plugins are included after the default plugins
 - fixed bug where mutiaggregating leads to an aggregation, and both variables were of implicit or integral type
+- fixed bug in cons_linear.c, scaling could have led to wrong values
+- fixed bug in cons_linear.c, when scaling a constraint maxabscoef was not set correctly, furthermore the correction of
+  maxabscoef was not handled correctly
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})
