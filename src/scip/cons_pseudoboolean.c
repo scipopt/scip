@@ -355,9 +355,9 @@ SCIP_RETCODE createTerms(
          
          for( v = ntermvars[t] - 2; v >= 0; --v )
          {
-            varsareactive &= SCIPvarIsActive(terms[t][v]);
-            sorted &= (SCIPvarCompare(terms[t][v + 1], terms[t][v]) >= 0);
-            merged &= (SCIPvarCompare(terms[t][v + 1], terms[t][v]) > 0);
+            varsareactive = varsareactive && SCIPvarIsActive(terms[t][v]);
+            sorted = sorted && (SCIPvarCompare(terms[t][v + 1], terms[t][v]) >= 0);
+            merged = merged && (SCIPvarCompare(terms[t][v + 1], terms[t][v]) > 0);
          }
          term->sorted = sorted;
          term->removedfixings = varsareactive;
@@ -581,7 +581,7 @@ SCIP_RETCODE consdataFree(
       assert(((*consdata)->nonlinterms[t]->vars) != NULL);
 
       SCIPfreeBlockMemoryArray(scip, &((*consdata)->nonlinterms[t]->vars), (*consdata)->nonlinterms[t]->nvars);
-      SCIPfreeBlockMemory(scip, &((*consdata)->nonlinterms[t]));
+      SCIPfreeBlockMemory(scip, &((*consdata)->nonlinterms[t])); /*lint !e866 */
    }
    
    /* free linear term variable and coefficient arrays */
@@ -878,8 +878,8 @@ SCIP_RETCODE addCoefTerm(
 
    for( v = nvars - 2; v >= 0; --v )
    {
-      varsareactive &= SCIPvarIsActive(vars[v]);
-      sorted &= (SCIPvarCompare(vars[v + 1], vars[v]) >= 0);
+      varsareactive = varsareactive && SCIPvarIsActive(vars[v]);
+      sorted = sorted && (SCIPvarCompare(vars[v + 1], vars[v]) >= 0);
    }
    term->sorted = sorted;
    term->removedfixings = varsareactive;
@@ -1748,7 +1748,7 @@ SCIP_RETCODE copyConsPseudoboolean(
          ntermvars[t] = term->nvars;
 
          /* allocate nonlinear array of variable array */
-         SCIP_CALL( SCIPallocBufferArray(targetscip, &(termvars[t]), ntermvars[t]) );
+         SCIP_CALL( SCIPallocBufferArray(targetscip, &(termvars[t]), ntermvars[t]) ); /*lint !e866 */
 
          /* map variables of the source constraint to variables of the target SCIP */
          for( v = 0; v < ntermvars[t]; ++v )
@@ -2440,6 +2440,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
          assert(consdata != NULL);
 
          andvars = NULL;
+	 nandvars = 0;
 
          if( consdata->issoftcons )
          {
@@ -2708,7 +2709,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
                for( t = 0; t < nandvars; ++t )
                {
                   /* add auxiliary variables to linear constraint */
-                  SCIP_CALL( SCIPaddCoefLinear(scip, lincons, andvars[t], consdata->nonlincoefs[t]) );
+                  SCIP_CALL( SCIPaddCoefLinear(scip, lincons, andvars[t], consdata->nonlincoefs[t]) ); /*lint !e613 */
                }
 
                SCIP_CALL( SCIPaddCons(scip, indcons) );
@@ -2721,7 +2722,6 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
 #endif
             /* free temporary memory */
             SCIPfreeBufferArrayNull(scip, &andvars);
-            andvars = NULL;
          }
          /* no soft constraint */
          else
@@ -2755,7 +2755,6 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
 
             /* free temporary memory */
             SCIPfreeBufferArrayNull(scip, &andvars);
-            andvars = NULL;
          }
          /* remove pseudo boolean constraint */
          SCIP_CALL( SCIPdelCons(scip, cons) );
@@ -3466,7 +3465,7 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
       assert(pbterms[t]->vars != NULL);
 
       SCIPfreeBlockMemoryArray(scip, &(pbterms[t]->vars), pbterms[t]->nvars);
-      SCIPfreeBlockMemory(scip, &(pbterms[t]) );
+      SCIPfreeBlockMemory(scip, &(pbterms[t]) ); /*lint !e866 */
    }
    /* clear temporary created array */
    SCIPfreeBlockMemoryArrayNull(scip, &pbcoefs, npbterms);

@@ -4098,6 +4098,9 @@ SCIP_RETCODE SCIPvarAggregate(
       var->negatedvar = aggvar;
       aggvar->negatedvar = var;
 
+      /* copy doNotMultiaggr status */
+      aggvar->donotmultaggr |= var->donotmultaggr;
+
       /* mark both variables to be non-deletable */
       SCIPvarMarkNotDeletable(var);
       SCIPvarMarkNotDeletable(aggvar);
@@ -4109,6 +4112,9 @@ SCIP_RETCODE SCIPvarAggregate(
       var->data.aggregate.var = aggvar;
       var->data.aggregate.scalar = scalar;
       var->data.aggregate.constant = constant;
+
+      /* copy doNotMultiaggr status */
+      aggvar->donotmultaggr |= var->donotmultaggr;
 
       /* mark both variables to be non-deletable */
       SCIPvarMarkNotDeletable(var);
@@ -4975,14 +4981,88 @@ SCIP_RETCODE SCIPvarMultiaggregate(
    return SCIP_OKAY;
 }
 
+/** transformed variables are resolved to their active, fixed, or multi-aggregated problem variable of a variable,
+ * or for original variables the same variable is returned
+ */
+static
+SCIP_VAR* varGetActiveVar(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   SCIP_VAR* retvar;
+
+   assert(var != NULL);
+
+   retvar = var;
+
+   SCIPdebugMessage("get active variable of <%s>\n", var->name);
+
+   while( TRUE ) /*lint !e716 */
+   {
+      assert(retvar != NULL);
+
+      switch( SCIPvarGetStatus(retvar) )
+      {
+      case SCIP_VARSTATUS_ORIGINAL:
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_COLUMN:
+      case SCIP_VARSTATUS_FIXED:
+	 return retvar;
+
+      case SCIP_VARSTATUS_MULTAGGR:
+	 /* handle multi-aggregated variables depending on one variable only (possibly caused by SCIPvarFlattenAggregationGraph()) */
+	 if ( retvar->data.multaggr.nvars == 1 )
+	    retvar = retvar->data.multaggr.vars[0];
+	 else
+	    return retvar;
+	 break;
+
+      case SCIP_VARSTATUS_AGGREGATED:
+	 retvar = retvar->data.aggregate.var;
+	 break;
+
+      case SCIP_VARSTATUS_NEGATED:
+	 retvar = retvar->negatedvar;
+	 break;
+
+      default:
+	 SCIPerrorMessage("unknown variable status\n");
+	 SCIPABORT();
+	 return NULL; /*lint !e527*/
+      }
+   }
+}
+
 /** returns whether variable is not allowed to be multi-aggregated */
 SCIP_Bool SCIPvarDoNotMultaggr(
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
+   SCIP_VAR* retvar;
+
    assert(var != NULL);
 
-   return var->donotmultaggr;
+   retvar = varGetActiveVar(var);
+   assert(retvar != NULL);
+
+   switch( SCIPvarGetStatus(retvar) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+   case SCIP_VARSTATUS_FIXED:
+      return retvar->donotmultaggr;
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      return FALSE;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+   case SCIP_VARSTATUS_NEGATED:
+   default:
+      SCIPerrorMessage("wrong variable status\n");
+      SCIPABORT();
+      return FALSE; /*lint !e527 */
+   }
 }
 
 /** gets negated variable x' = offset - x of problem variable x; the negated variable is created if not yet existing;
@@ -5172,14 +5252,38 @@ void SCIPvarMarkDeleted(
 }
 
 /** marks the variable to not to be multi-aggregated */
-void SCIPvarMarkDoNotMultaggr(
+SCIP_RETCODE SCIPvarMarkDoNotMultaggr(
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
-   assert(var != NULL);
-   assert(var->probindex != -1);
+   SCIP_VAR* retvar;
 
-   var->donotmultaggr = TRUE;
+   assert(var != NULL);
+
+   retvar = varGetActiveVar(var);
+   assert(retvar != NULL);
+
+   switch( SCIPvarGetStatus(retvar) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+   case SCIP_VARSTATUS_FIXED:
+      retvar->donotmultaggr = TRUE;
+      break;
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      SCIPerrorMessage("cannot mark a multi-aggregated variable to not be multi-aggregated.\n");
+      return SCIP_INVALIDDATA;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+   case SCIP_VARSTATUS_NEGATED:
+   default:
+      SCIPerrorMessage("wrong variable status\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   return SCIP_OKAY;
 }
 
 /** changes type of variable; cannot be called, if var belongs to a problem */
@@ -5752,8 +5856,14 @@ SCIP_RETCODE varProcessChgLbGlobal(
 
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
+
    /* check that the bound is feasible */
-   assert(SCIPsetIsLE(set, newbound, var->glbdom.ub));
+   if( newbound > var->glbdom.ub )
+   {
+      /* due to numerics we only want to be feasible in feasibility tolerance */
+      assert(SCIPsetIsFeasLE(set, newbound, var->glbdom.ub));
+      newbound = var->glbdom.ub;
+   }
 
    assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));  /*lint !e641*/
    
@@ -5912,8 +6022,14 @@ SCIP_RETCODE varProcessChgUbGlobal(
 
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
+
    /* check that the bound is feasible */
-   assert(SCIPsetIsGE(set, newbound, var->glbdom.lb));
+   if( newbound < var->glbdom.lb )
+   {
+      /* due to numerics we only want to be feasible in feasibility tolerance */
+      assert(SCIPsetIsFeasGE(set, newbound, var->glbdom.lb));
+      newbound = var->glbdom.lb;
+   }
 
    assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));  /*lint !e641*/
 
@@ -6526,7 +6642,8 @@ SCIP_RETCODE varProcessChgLbLocal(
                 */
                if( parentnewbound > parentvar->glbdom.ub )
                {
-                  assert(SCIPsetIsRelLE(set, parentnewbound, parentvar->glbdom.ub));
+		  /* due to numerics we only want to be feasible in feasibility tolerance */
+                  assert(SCIPsetIsFeasLE(set, parentnewbound, parentvar->glbdom.ub));
                   parentnewbound = parentvar->glbdom.ub;
                }
             }
@@ -6552,7 +6669,8 @@ SCIP_RETCODE varProcessChgLbLocal(
                 */
                if( parentnewbound < parentvar->glbdom.lb )
                {
-                  assert(SCIPsetIsRelGE(set, parentnewbound, parentvar->glbdom.lb));
+		  /* due to numerics we only want to be feasible in feasibility tolerance */
+                  assert(SCIPsetIsFeasGE(set, parentnewbound, parentvar->glbdom.lb));
                   parentnewbound = parentvar->glbdom.lb;
                }
             }
@@ -6663,7 +6781,8 @@ SCIP_RETCODE varProcessChgUbLocal(
                 */
                if( parentnewbound < parentvar->glbdom.lb )
                {
-                  assert(SCIPsetIsRelGE(set, parentnewbound, parentvar->glbdom.lb));
+		  /* due to numerics we only want to be feasible in feasibility tolerance */
+                  assert(SCIPsetIsFeasGE(set, parentnewbound, parentvar->glbdom.lb));
                   parentnewbound = parentvar->glbdom.lb;
                }
             }
@@ -6689,7 +6808,8 @@ SCIP_RETCODE varProcessChgUbLocal(
                 */
                if( parentnewbound > parentvar->glbdom.ub )
                {
-                  assert(SCIPsetIsRelLE(set, parentnewbound, parentvar->glbdom.ub));
+		  /* due to numerics we only want to be feasible in feasibility tolerance */
+                  assert(SCIPsetIsFeasLE(set, parentnewbound, parentvar->glbdom.ub));
                   parentnewbound = parentvar->glbdom.ub;
                }
             }
@@ -10008,41 +10128,56 @@ SCIP_VAR* SCIPvarGetProbvar(
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
+   SCIP_VAR* retvar;
+
    assert(var != NULL);
+
+   retvar = var;
 
    SCIPdebugMessage("get problem variable of <%s>\n", var->name);
 
-   switch( SCIPvarGetStatus(var) )
+   while( TRUE ) /*lint !e716 */
    {
-   case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.original.transvar == NULL )
+      assert(retvar != NULL);
+
+      switch( SCIPvarGetStatus(retvar) )
       {
-         SCIPerrorMessage("original variable has no transformed variable attached\n");
-         return NULL;
+      case SCIP_VARSTATUS_ORIGINAL:
+	 if( retvar->data.original.transvar == NULL )
+	 {
+	    SCIPerrorMessage("original variable has no transformed variable attached\n");
+	    SCIPABORT();
+	    return NULL; /*lint !e527 */
+	 }
+	 retvar = retvar->data.original.transvar;
+	 break;
+
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_COLUMN:
+      case SCIP_VARSTATUS_FIXED:
+	 return retvar;
+
+      case SCIP_VARSTATUS_MULTAGGR:
+	 /* handle multi-aggregated variables depending on one variable only (possibly caused by SCIPvarFlattenAggregationGraph()) */
+	 if ( retvar->data.multaggr.nvars == 1 )
+	    retvar = retvar->data.multaggr.vars[0];
+	 else
+	    return retvar;
+	 break;
+
+      case SCIP_VARSTATUS_AGGREGATED:
+	 retvar = retvar->data.aggregate.var;
+	 break;
+
+      case SCIP_VARSTATUS_NEGATED:
+	 retvar = retvar->negatedvar;
+	 break;
+
+      default:
+	 SCIPerrorMessage("unknown variable status\n");
+	 SCIPABORT();
+	 return NULL; /*lint !e527*/
       }
-      return SCIPvarGetProbvar(var->data.original.transvar);
-
-   case SCIP_VARSTATUS_LOOSE:
-   case SCIP_VARSTATUS_COLUMN:
-   case SCIP_VARSTATUS_FIXED:
-      return var;
-
-   case SCIP_VARSTATUS_MULTAGGR:
-      /* handle multi-aggregated variables depending on one variable only (possibly caused by SCIPvarFlattenAggregationGraph()) */
-      if ( var->data.multaggr.nvars == 1 )
-         return SCIPvarGetProbvar(var->data.multaggr.vars[0]);
-      return var;
-
-   case SCIP_VARSTATUS_AGGREGATED:
-      return SCIPvarGetProbvar(var->data.aggregate.var);
-
-   case SCIP_VARSTATUS_NEGATED:
-      return SCIPvarGetProbvar(var->negatedvar);
-
-   default:
-      SCIPerrorMessage("unknown variable status\n");
-      SCIPABORT();
-      return NULL; /*lint !e527*/
    }
 }
 

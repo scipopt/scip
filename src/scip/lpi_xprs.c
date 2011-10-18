@@ -661,7 +661,7 @@ void reconvertSides(
  * Miscellaneous Methods
  */
 
-static char xprsname[SCIP_MAXSTRLEN];
+static char xprsname[100];
 
 /**@name Miscellaneous Methods */
 /**@{ */
@@ -671,7 +671,7 @@ const char* SCIPlpiGetSolverName(
    void
    )
 {
-   snprintf(xprsname, SCIP_MAXSTRLEN, "XPRESS %i", XPVERSION);
+   sprintf(xprsname, "XPRESS %d", XPVERSION);
 
    return xprsname;
 }

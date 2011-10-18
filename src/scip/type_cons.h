@@ -98,6 +98,8 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - conshdlr        : the constraint handler itself
  *  - conss           : array of constraints in transformed problem
  *  - nconss          : number of constraints in transformed problem
+ *  - isunbounded     : was the problem already declared to be unbounded
+ *  - isinfeasible    : was the problem already declared to be infeasible
  *
  *  output:
  *  - result          : pointer to store the result of the call
@@ -107,7 +109,8 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
  *  - SCIP_FEASIBLE   : no infeasibility nor unboundedness could be found
  */
-#define SCIP_DECL_CONSINITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, SCIP_RESULT* result)
+#define SCIP_DECL_CONSINITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, \
+      SCIP_Bool isunbounded, SCIP_Bool isinfeasible, SCIP_RESULT* result)
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished)
  *
@@ -123,6 +126,8 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - conshdlr        : the constraint handler itself
  *  - conss           : final array of constraints in transformed problem
  *  - nconss          : final number of constraints in transformed problem
+ *  - isunbounded     : was the problem already declared to be unbounded
+ *  - isinfeasible    : was the problem already declared to be infeasible
  *
  *  output:
  *  - result          : pointer to store the result of the call
@@ -132,7 +137,8 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
  *  - SCIP_FEASIBLE   : no infeasibility nor unboundedness could be found
  */
-#define SCIP_DECL_CONSEXITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, SCIP_RESULT* result)
+#define SCIP_DECL_CONSEXITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, \
+      SCIP_Bool isunbounded, SCIP_Bool isinfeasible, SCIP_RESULT* result)
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin)
  *

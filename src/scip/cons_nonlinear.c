@@ -6295,7 +6295,7 @@ SCIP_DECL_CONSEXIT(consExitNonlinear)
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
 static
 SCIP_DECL_CONSINITPRE(consInitpreNonlinear)
-{
+{  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    int c;
 
@@ -6322,7 +6322,7 @@ SCIP_DECL_CONSINITPRE(consInitpreNonlinear)
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
 static
 SCIP_DECL_CONSEXITPRE(consExitpreNonlinear)
-{
+{  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
    SCIP_Bool          havegraphchange;

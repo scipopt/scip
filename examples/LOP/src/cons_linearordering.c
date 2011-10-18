@@ -55,19 +55,19 @@
 /** constraint data for linear ordering constraints */
 struct SCIP_ConsData
 {
-   int         n;     /**< number of elements */
-   SCIP_VAR*** vars;  /**< variables */
+   int                   n;                  /**< number of elements */
+   SCIP_VAR***           vars;               /**< variables */
 };
 
 
 /** separate symmetry equations and triangle inequalities */
 static
 SCIP_RETCODE LinearOrderingSeparate(
-   SCIP*       scip,          /**< SCIP pointer */
-   int         n,             /**< number of elements */
-   SCIP_VAR*** vars,          /**< n x n matrix of variables */
-   SCIP_SOL*   sol,           /**< solution to be separated */
-   int*        nGen           /**< output: number of added rows */
+   SCIP*                 scip,               /**< SCIP pointer */
+   int                   n,                  /**< number of elements */
+   SCIP_VAR***           vars,               /**< n x n matrix of variables */
+   SCIP_SOL*             sol,                /**< solution to be separated */
+   int*                  nGen                /**< output: number of added rows */
    )
 {
    int i;

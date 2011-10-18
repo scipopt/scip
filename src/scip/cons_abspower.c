@@ -5771,11 +5771,11 @@ SCIP_DECL_CONSPRINT(consPrintAbspower)
 
    /* print coefficients and variables */
    SCIPinfoMessage(scip, file, "signpower(");
-   SCIP_CALL( SCIPwriteVarName(scip, file, consdata->x, FALSE) );
+   SCIP_CALL( SCIPwriteVarName(scip, file, consdata->x, TRUE) );
    SCIPinfoMessage(scip, file, " %+.15g, %.15g) ", consdata->xoffset, consdata->exponent);
 
    SCIPinfoMessage(scip, file, "%+.15g", consdata->zcoef);
-   SCIP_CALL( SCIPwriteVarName(scip, file, consdata->z, FALSE) );
+   SCIP_CALL( SCIPwriteVarName(scip, file, consdata->z, TRUE) );
 
    /* print right hand side */
    if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )

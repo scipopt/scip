@@ -26,10 +26,11 @@
 #include "objscip/objscipdefplugins.h"
 
 
+/** reads parameters */
 static
 SCIP_RETCODE readParams(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename            /**< parameter file name, or NULL */
+   SCIP*                      scip,               /**< SCIP data structure */
+   const char*                filename            /**< parameter file name, or NULL */
    )
 {
    if( filename != NULL )
@@ -51,10 +52,11 @@ SCIP_RETCODE readParams(
    return SCIP_OKAY;
 }
 
+/** starts SCIP */
 static
 SCIP_RETCODE fromCommandLine(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename            /**< input file name */
+   SCIP*                      scip,               /**< SCIP data structure */
+   const char*                filename            /**< input file name */
    )
 {
    /********************
@@ -92,21 +94,24 @@ SCIP_RETCODE fromCommandLine(
    return SCIP_OKAY;
 }
 
+/** starts user interactive mode */
 static
 SCIP_RETCODE interactive(
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*                      scip                /**< SCIP data structure */
    )
 {
-   /* start user interactive mode */
    SCIP_CALL( SCIPstartInteraction(scip) );
 
    return SCIP_OKAY;
 }
 
+/** creates a SCIP instance with default plugins, evaluates command line parameters, runs SCIP appropriately,
+ *  and frees the SCIP instance
+ */
 static
 SCIP_RETCODE runSCIP(
-   int                   argc,
-   char**                argv
+   int                        argc,               /**< number of shell parameters */
+   char**                     argv                /**< array with shell parameters */
    )
 {
    SCIP* scip = NULL;
@@ -174,10 +179,10 @@ SCIP_RETCODE runSCIP(
    return SCIP_OKAY;
 }
 
-int
-main(
-   int                   argc,
-   char**                argv
+/** main method starting SCIP */
+int main(
+   int                        argc,          /**< number of arguments from the shell */
+   char**                     argv           /**< array of shell arguments */
    )
 {
    SCIP_RETCODE retcode;

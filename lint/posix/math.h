@@ -30,10 +30,6 @@ extern double sinh(double );
 extern double sqrt(double );
 extern double tan(double );
 extern double tanh(double );
-extern long double sqrtl(long double );
-extern long double fabsl(long double );
-extern int isnan(double );
-extern int isfinite(double );
 extern int finite(double );
 
 #endif

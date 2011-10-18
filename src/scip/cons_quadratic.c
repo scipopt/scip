@@ -35,7 +35,7 @@
 #include <assert.h>
 #include <string.h> /* for strcmp */ 
 #include <ctype.h>  /* for isspace */
-#include <math.h>   /* for sqrtl */
+#include <math.h>
 
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_quadratic.h"
@@ -3282,7 +3282,8 @@ SCIP_RETCODE presolveTryAddLinearReform(
    SCIP_Real*         xcoef;
    SCIP_INTERVAL      xbndszero;
    SCIP_INTERVAL      xbndsone;
-   SCIP_INTERVAL      tmp;
+   SCIP_INTERVAL      act0;
+   SCIP_INTERVAL      act1;
    int                nxvars;
    SCIP_VAR*          y;
    SCIP_VAR*          bvar;
@@ -3374,19 +3375,38 @@ SCIP_RETCODE presolveTryAddLinearReform(
             bilincoef = consdata->bilinterms[bilinidx].coef;
             assert(bilincoef != 0.0);
 
+            /* get activity of bilincoef * x if y = 0 */
+            getImpliedBounds(y, FALSE, bvar, &act0);
+            SCIPintervalMulScalar(SCIPinfinity(scip), &act0, act0, bilincoef);
+
+            /* get activity of bilincoef * x if y = 1 */
+            getImpliedBounds(y,  TRUE, bvar, &act1);
+            SCIPintervalMulScalar(SCIPinfinity(scip), &act1, act1, bilincoef);
+
+            /* skip products that give rise to very large coefficients (big big-M's)
+             * we just reuse cutmaxrange as threshold, which is similarly motivated
+             */
+            if( SCIPintervalGetInf(act0) <= -conshdlrdata->cutmaxrange || SCIPintervalGetSup(act0) >= conshdlrdata->cutmaxrange )
+            {
+               SCIPdebugMessage("skip reform of %g<%s><%s> due to huge activity [%g,%g] for <%s> = 0.0\n",
+                  bilincoef, SCIPvarGetName(y), SCIPvarGetName(bvar), SCIPintervalGetInf(act0), SCIPintervalGetSup(act0), SCIPvarGetName(y));
+               continue;
+            }
+            if( SCIPintervalGetInf(act1) <= -conshdlrdata->cutmaxrange || SCIPintervalGetSup(act1) >= conshdlrdata->cutmaxrange )
+            {
+               SCIPdebugMessage("skip reform of %g<%s><%s> due to huge activity [%g,%g] for <%s> = 1.0\n",
+                  bilincoef, SCIPvarGetName(y), SCIPvarGetName(bvar), SCIPintervalGetInf(act1), SCIPintervalGetSup(act1), SCIPvarGetName(y));
+               continue;
+            }
+
             /* add bvar to x term */  
             xvars[nxvars] = bvar;
             xcoef[nxvars] = bilincoef;
             ++nxvars;
 
             /* update bounds on x term */
-            getImpliedBounds(y, FALSE, bvar, &tmp); /* get bounds on x if y = 0 */
-            SCIPintervalMulScalar(SCIPinfinity(scip), &tmp, tmp, bilincoef);
-            SCIPintervalAdd(SCIPinfinity(scip), &xbndszero, xbndszero, tmp);
-
-            getImpliedBounds(y,  TRUE, bvar, &tmp); /* get bounds on x if y = 1 */
-            SCIPintervalMulScalar(SCIPinfinity(scip), &tmp, tmp, bilincoef);
-            SCIPintervalAdd(SCIPinfinity(scip), &xbndsone, xbndsone, tmp);
+            SCIPintervalAdd(SCIPinfinity(scip), &xbndszero, xbndszero, act0);
+            SCIPintervalAdd(SCIPinfinity(scip), &xbndsone,  xbndsone,  act1);
 
             if( REALABS(bilincoef) < mincoef )
                mincoef = ABS(bilincoef);
@@ -5131,11 +5151,11 @@ SCIP_Bool generateCutLTIfindIntersection(
    SCIP_Real*            yu
    )
 {
-   long double a;
-   long double b;
-   long double c;
-   long double tl;
-   long double tu;
+   SCIP_Real a;
+   SCIP_Real b;
+   SCIP_Real c;
+   SCIP_Real tl;
+   SCIP_Real tu;
 
    assert(wl == SCIP_INVALID || (xl != NULL && yl != NULL));  /*lint !e777 */
    assert(wu == SCIP_INVALID || (xu != NULL && yu != NULL));  /*lint !e777 */
@@ -5168,12 +5188,12 @@ SCIP_Bool generateCutLTIfindIntersection(
    {
       if( wl != SCIP_INVALID )  /*lint !e777 */
       {
-         long double tl1;
-         long double tl2;
-         long double denom;
+         SCIP_Real tl1;
+         SCIP_Real tl2;
+         SCIP_Real denom;
 
          assert(b * b - 4.0 * a * (c - wl) >= 0.0);
-         denom = sqrtl(b * b - 4.0 * a * (c - wl));
+         denom = sqrt(b * b - 4.0 * a * (c - wl));
          tl1 = (-b - denom) / (2.0 * a);
          tl2 = (-b + denom) / (2.0 * a);
          tl = (tl1 < 0.0) ? tl2 : tl1;
@@ -5181,12 +5201,12 @@ SCIP_Bool generateCutLTIfindIntersection(
 
       if( wu != SCIP_INVALID )  /*lint !e777 */
       {
-         long double tu1;
-         long double tu2;
-         long double denom;
+         SCIP_Real tu1;
+         SCIP_Real tu2;
+         SCIP_Real denom;
 
          assert(b * b - 4.0 * a * (c - wu) >= 0.0);
-         denom = sqrtl(b * b - 4.0 * a * (c - wu));
+         denom = sqrt(b * b - 4.0 * a * (c - wu));
          tu1 = (-b - denom) / (2.0 * a);
          tu2 = (-b + denom) / (2.0 * a);
          tu = (tu1 < 0.0) ? tu2 : tu1;
@@ -9022,7 +9042,7 @@ SCIP_DECL_CONSEXIT(consExitQuadratic)
 #if 0
 static
 SCIP_DECL_CONSINITPRE(consInitpreQuadratic)
-{
+{  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    int c;
@@ -9045,7 +9065,7 @@ SCIP_DECL_CONSINITPRE(consInitpreQuadratic)
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
 static
 SCIP_DECL_CONSEXITPRE(consExitpreQuadratic)
-{
+{  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
    int                i;
@@ -10407,7 +10427,7 @@ SCIP_DECL_CONSPRINT(consPrintQuadratic)
          ++nmonomials;
       }
 
-      SCIP_CALL( SCIPwriteVarsPolynomial(scip, file, monomialvars, monomialexps, monomialcoefs, monomialnvars, nmonomials, FALSE) );
+      SCIP_CALL( SCIPwriteVarsPolynomial(scip, file, monomialvars, monomialexps, monomialcoefs, monomialnvars, nmonomials, TRUE) );
 
       for( j = 0; j < nmonomials; ++j )
       {

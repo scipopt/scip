@@ -497,7 +497,7 @@ SCIP_RETCODE consdataPrint(
       SCIPinfoMessage(scip, file, "0 ");
  
    /* write linear sum */
-   SCIP_CALL( SCIPwriteVarsLinearsum(scip, file, consdata->vars, NULL, consdata->nvars, FALSE) );
+   SCIP_CALL( SCIPwriteVarsLinearsum(scip, file, consdata->vars, NULL, consdata->nvars, TRUE) );
    
    /* print right hand side */
    switch( consdata->setppctype )

@@ -944,7 +944,7 @@ void reconvertSides(
  * Miscellaneous Methods
  */
 
-static char grbname[SCIP_MAXSTRLEN];
+static char grbname[100];
 
 /**@name Miscellaneous Methods */
 /**@{ */
@@ -959,7 +959,7 @@ const char* SCIPlpiGetSolverName(
    int technical;
 
    GRBversion(&major, &minor, &technical);
-   snprintf(grbname, SCIP_MAXSTRLEN, "Gurobi %d.%d.%d", major, minor, technical);
+   sprintf(grbname, "Gurobi %d.%d.%d", major, minor, technical);
    return grbname;
 }
 
@@ -1081,6 +1081,7 @@ SCIP_RETCODE SCIPlpiFree(
    if( numlp == 0 )
    {
       GRBfreeenv(grbenv);
+      grbenv = NULL;
    }
 
    return SCIP_OKAY;

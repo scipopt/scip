@@ -78,6 +78,8 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *  input:
  *  - scip            : SCIP main data structure
  *  - prop            : the propagator itself
+ *  - isunbounded     : was the problem already declared to be unbounded
+ *  - isinfeasible    : was the problem already declared to be infeasible
  *
  *  output:
  *  - result          : pointer to store the result of the call
@@ -87,7 +89,8 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
  *  - SCIP_FEASIBLE   : no infeasibility nor unboundedness could be found
  */
-#define SCIP_DECL_PROPINITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop, SCIP_RESULT* result)
+#define SCIP_DECL_PROPINITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop, SCIP_Bool isunbounded, \
+      SCIP_Bool isinfeasible, SCIP_RESULT* result)
 
 /** presolving deinitialization method of propagator (called after presolving has been finished)
  *
@@ -98,6 +101,8 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *  input:
  *  - scip            : SCIP main data structure
  *  - prop            : the propagator itself
+ *  - isunbounded     : was the problem already declared to be unbounded
+ *  - isinfeasible    : was the problem already declared to be infeasible
  *
  *  output:
  *  - result          : pointer to store the result of the call
@@ -107,7 +112,8 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
  *  - SCIP_FEASIBLE   : no infeasibility nor unboundedness could be found
  */
-#define SCIP_DECL_PROPEXITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop, SCIP_RESULT* result)
+#define SCIP_DECL_PROPEXITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop, SCIP_Bool isunbounded, \
+      SCIP_Bool isinfeasible, SCIP_RESULT* result)
 
 /** solving process initialization method of propagator (called when branch and bound process is about to begin)
  *

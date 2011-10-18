@@ -39,6 +39,7 @@ struct SCIP_ConsData
    GRAPH* graph;
 };
 
+/* checks whether proposed solution contains a subtour */
 static
 SCIP_Bool findSubtour( 
    SCIP*              scip,               /**< SCIP data structure */
@@ -112,6 +113,7 @@ SCIP_Bool findSubtour(
    return ( graph->nnodes != tourlength );
 }
 
+/* separates subtour elemination cuts */
 static
 SCIP_RETCODE sepaSubtour(
    SCIP*              scip,               /**< SCIP data structure */

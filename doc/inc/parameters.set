@@ -3476,6 +3476,10 @@ heuristics/shiftandpropagate/relax = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 heuristics/shiftandpropagate/probing = TRUE
 
+# Should heuristic only be executed if no primal solution was found, yet?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+heuristics/shiftandpropagate/onlywithoutsol = TRUE
+
 # The number of cutoffs before heuristic stops
 # [type: int, range: [-1,1000000], default: 15]
 heuristics/shiftandpropagate/cutoffbreaker = 15

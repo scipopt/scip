@@ -8220,7 +8220,7 @@ SCIP_RETCODE fullDualPresolve(
    /* initialize redundancy bounds */
    for( v = 0; v < nvars; ++v )
    {
-      assert(!SCIPvarIsBinary(vars[v]) || SCIPvarGetType(vars[v]) == SCIP_VARTYPE_IMPLINT);
+      assert(SCIPvarGetType(vars[v]) != SCIP_VARTYPE_BINARY);
       redlb[v] = SCIPvarGetLbGlobal(vars[v]);
       redub[v] = SCIPvarGetUbGlobal(vars[v]);
    }
@@ -8476,7 +8476,7 @@ SCIP_RETCODE fullDualPresolve(
       SCIP_Bool infeasible;
       SCIP_Bool tightened;
 
-      assert(!SCIPvarIsBinary(vars[v]) || SCIPvarGetType(vars[v]) == SCIP_VARTYPE_IMPLINT);
+      assert(SCIPvarGetType(vars[v]) != SCIP_VARTYPE_BINARY);
       assert(SCIPvarGetNLocksDown(vars[v]) >= nlocksdown[v]);
       assert(SCIPvarGetNLocksUp(vars[v]) >= nlocksup[v]);
 

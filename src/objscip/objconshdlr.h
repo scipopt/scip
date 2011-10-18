@@ -182,6 +182,8 @@ public:
       SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
       SCIP_CONS**        conss,              /**< array of constraints in transformed problem */
       int                nconss,             /**< number of constraints in transformed problem */
+      SCIP_Bool          isunbounded,        /**< was unboundedness already detected */
+      SCIP_Bool          isinfeasible,       /**< was infeasibility already detected */
       SCIP_RESULT*       result              /**< pointer to store the result of the callback method */
       )
    {  /*lint --e{715}*/
@@ -210,6 +212,8 @@ public:
       SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
       SCIP_CONS**        conss,              /**< final array of constraints in transformed problem */
       int                nconss,             /**< final number of constraints in transformed problem */
+      SCIP_Bool          isunbounded,        /**< was unboundedness already detected */
+      SCIP_Bool          isinfeasible,       /**< was infeasibility already detected */
       SCIP_RESULT*       result              /**< pointer to store the result of the callback method */
       )
    {  /*lint --e{715}*/

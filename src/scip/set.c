@@ -951,7 +951,7 @@ SCIP_RETCODE SCIPsetCreate(
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "limits/gap",
-         "solving stops, if the relative gap = |(primalbound - dualbound)/dualbound| is below the given value",
+         "solving stops, if the relative gap = |primal - dual|/MIN(|dual|,|primal|) is below the given value",
          &(*set)->limit_gap, FALSE, SCIP_DEFAULT_LIMIT_GAP, 0.0, SCIP_REAL_MAX,
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
@@ -3239,7 +3239,7 @@ SCIP_RETCODE SCIPsetInitprePlugins(
    /* inform presolvers that the presolving is abound to begin */
    for( i = 0; i < set->npresols; ++i )
    {
-      SCIP_CALL( SCIPpresolInitpre(set->presols[i], set, &result) );
+      SCIP_CALL( SCIPpresolInitpre(set->presols[i], set, *unbounded, *infeasible, &result) );
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
@@ -3257,7 +3257,7 @@ SCIP_RETCODE SCIPsetInitprePlugins(
    /* inform propagators that the presolving is abound to begin */
    for( i = 0; i < set->nprops; ++i )
    {
-      SCIP_CALL( SCIPpropInitpre(set->props[i], set, &result) );
+      SCIP_CALL( SCIPpropInitpre(set->props[i], set, *unbounded, *infeasible, &result) );
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
@@ -3275,7 +3275,7 @@ SCIP_RETCODE SCIPsetInitprePlugins(
    /* inform constraint handlers that the presolving is abound to begin */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
-      SCIP_CALL( SCIPconshdlrInitpre(set->conshdlrs[i], blkmem, set, stat, &result) );
+      SCIP_CALL( SCIPconshdlrInitpre(set->conshdlrs[i], blkmem, set, stat, *unbounded, *infeasible, &result) );
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
@@ -3299,8 +3299,10 @@ SCIP_RETCODE SCIPsetExitprePlugins(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundedness */
-   SCIP_Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
+   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundedness, if
+					      *   problem was already declared unbounded, it is already stored */
+   SCIP_Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility, if
+					      *   problem was already declared infeasible, it is already stored */
    )
 {
    SCIP_RESULT result;
@@ -3313,7 +3315,7 @@ SCIP_RETCODE SCIPsetExitprePlugins(
    /* inform presolvers that the presolving is abound to begin */
    for( i = 0; i < set->npresols; ++i )
    {
-      SCIP_CALL( SCIPpresolExitpre(set->presols[i], set, &result) );
+      SCIP_CALL( SCIPpresolExitpre(set->presols[i], set, *unbounded, *infeasible, &result) );
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
@@ -3331,7 +3333,7 @@ SCIP_RETCODE SCIPsetExitprePlugins(
    /* inform propagators that the presolving is abound to begin */
    for( i = 0; i < set->nprops; ++i )
    {
-      SCIP_CALL( SCIPpropExitpre(set->props[i], set, &result) );
+      SCIP_CALL( SCIPpropExitpre(set->props[i], set, *unbounded, *infeasible, &result) );
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
@@ -3349,7 +3351,7 @@ SCIP_RETCODE SCIPsetExitprePlugins(
    /* inform constraint handlers that the presolving is abound to begin */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
-      SCIP_CALL( SCIPconshdlrExitpre(set->conshdlrs[i], blkmem, set, stat, &result) );
+      SCIP_CALL( SCIPconshdlrExitpre(set->conshdlrs[i], blkmem, set, stat, *unbounded, *infeasible, &result) );
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;

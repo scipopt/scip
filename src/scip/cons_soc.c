@@ -3923,7 +3923,7 @@ SCIP_DECL_CONSPRINT(consPrintSOC)
    for( i = 0; i < consdata->nvars; ++i )
    {
       SCIPinfoMessage(scip, file, "+ (%.15g*(", consdata->coefs[i]);
-      SCIP_CALL( SCIPwriteVarName(scip, file, consdata->vars[i], FALSE) );
+      SCIP_CALL( SCIPwriteVarName(scip, file, consdata->vars[i], TRUE) );
       SCIPinfoMessage(scip, file, "%+.15g))^2 ", consdata->offsets[i]);
    }
 
@@ -3931,7 +3931,7 @@ SCIP_DECL_CONSPRINT(consPrintSOC)
    if( consdata->rhsvar != NULL )
    {
       SCIPinfoMessage(scip, file, "%.15g*(", consdata->rhscoeff);
-      SCIP_CALL( SCIPwriteVarName(scip, file, consdata->rhsvar, FALSE) );
+      SCIP_CALL( SCIPwriteVarName(scip, file, consdata->rhsvar, TRUE) );
       SCIPinfoMessage(scip, file, "%+.15g)", consdata->rhsoffset);
    }
    else

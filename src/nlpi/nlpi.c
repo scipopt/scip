@@ -114,11 +114,10 @@ SCIP_RETCODE SCIPnlpiCreate(
    assert(nlpigetstringpar != NULL);
    assert(nlpisetstringpar != NULL);
 
-   if( BMSallocMemory(nlpi) == NULL )
-      return SCIP_NOMEMORY;
+   SCIP_ALLOC( BMSallocMemory(nlpi) );
 
-   (*nlpi)->name = strdup(name);
-   (*nlpi)->description = strdup(description);
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(*nlpi)->name, name, strlen(name)+1) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(*nlpi)->description, description, strlen(description)+1) );
    (*nlpi)->priority = priority;
    (*nlpi)->nlpicopy = nlpicopy;
    (*nlpi)->nlpifree = nlpifree;
@@ -183,8 +182,8 @@ SCIP_RETCODE SCIPnlpiFree(
    assert(*nlpi != NULL);
 
    SCIP_CALL( (*(*nlpi)->nlpifree)((*nlpi)) );
-   free((*nlpi)->name);
-   free((*nlpi)->description);
+   BMSfreeMemoryArray(&(*nlpi)->name);
+   BMSfreeMemoryArray(&(*nlpi)->description);
    BMSfreeMemory(nlpi);
 
    assert(*nlpi == NULL);

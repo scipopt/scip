@@ -427,7 +427,7 @@ void invalidateSolution(SCIP_LPI* lpi)
  * Miscellaneous Methods
  */
 
-static char spxname[SCIP_MAXSTRLEN];
+static char spxname[100];
 
 /**@name Miscellaneous Methods */
 /**@{ */
@@ -441,7 +441,7 @@ const char* SCIPlpiGetSolverName(
    int version;
 
    version = spx.version();
-   snprintf(spxname, SCIP_MAXSTRLEN, "SOPLEX %d.%d.%d", version/100, (version % 100)/10, version % 10);
+   sprintf(spxname, "SoPlex %d.%d.%d", version/100, (version % 100)/10, version % 10);
    return spxname;
 }
 

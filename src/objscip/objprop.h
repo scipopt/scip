@@ -141,6 +141,8 @@ public:
     *  input:
     *  - scip            : SCIP main data structure
     *  - prop            : the propagator itself
+    *  - isunbounded     : was the problem already declared to be unbounded
+    *  - isinfeasible    : was the problem already declared to be infeasible
     *
     *  output:
     *  - result          : pointer to store the result of the call
@@ -153,6 +155,8 @@ public:
    virtual SCIP_RETCODE scip_initpre(
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_PROP*         prop,               /**< the propagator itself */
+      SCIP_Bool          isunbounded,        /**< was unboundedness already detected */
+      SCIP_Bool          isinfeasible,       /**< was infeasibility already detected */
       SCIP_RESULT*       result              /**< pointer to store the result of the propagation call */
       )
    {  /*lint --e{715}*/
@@ -168,6 +172,8 @@ public:
     *  input:
     *  - scip            : SCIP main data structure
     *  - prop            : the propagator itself
+    *  - isunbounded     : was the problem already declared to be unbounded
+    *  - isinfeasible    : was the problem already declared to be infeasible
     *
     *  output:
     *  - result          : pointer to store the result of the call
@@ -180,6 +186,8 @@ public:
    virtual SCIP_RETCODE scip_exitpre(
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_PROP*         prop,               /**< the propagator itself */
+      SCIP_Bool          isunbounded,        /**< was unboundedness already detected */
+      SCIP_Bool          isinfeasible,       /**< was infeasibility already detected */
       SCIP_RESULT*       result              /**< pointer to store the result of the propagation call */
       )
    {  /*lint --e{715}*/

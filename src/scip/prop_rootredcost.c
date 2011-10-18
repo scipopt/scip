@@ -183,6 +183,8 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
    {
       SCIP_VAR* var;
       SCIP_Real redcost;
+      SCIP_Bool infeasible;
+      SCIP_Bool tightened;
 
       var = vars[v];
       redcost = SCIPvarGetRootRedcost(var);
@@ -195,7 +197,6 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
          SCIP_Real oldlb;
          SCIP_Real oldub;
          SCIP_Real newub;
-         SCIP_Bool strengthen;
 
          rootsol = SCIPvarGetRootSol(var);
          oldlb = SCIPvarGetLbGlobal(var);
@@ -205,33 +206,23 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
          /* calculate reduced cost based bound */
          newub = (cutoffbound - lpobjval) / redcost + rootsol;
 
-         /* check, if new bound is good enough */
-         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+         /* strengthen upper bound */
+         SCIP_CALL( SCIPtightenVarUbGlobal(scip, var, newub, FALSE, &infeasible, &tightened) );
+
+         if( infeasible )
          {
-            newub = SCIPadjustedVarUb(scip, var, newub);
-            strengthen = (newub < oldub - 0.5);
+            /* we are done with solving: cutoff root node */
+            SCIP_CALL( SCIPcutoffNode(scip, SCIPgetRootNode(scip)) );
+            *result = SCIP_CUTOFF;
+            break;
          }
-         else
-            strengthen = SCIPisUbBetter(scip, newub, oldlb, oldub);
 
-         if( strengthen )
+         if( tightened )
          {
-            SCIP_Bool infeasible;
-            SCIP_Bool tightened;
-
-            /* strengthen upper bound */
             SCIPdebugMessage("root redcost strengthening upper bound: <%s> [%g,%g] -> [%g,%g] (ub=%g, lb=%g, redcost=%g)\n",
                SCIPvarGetName(var), oldlb, oldub, oldlb, newub, cutoffbound, lpobjval, redcost);
-            SCIP_CALL( SCIPtightenVarUbGlobal(scip, var, newub, FALSE, &infeasible, &tightened) );
-            if( infeasible )
-            {
-               /* we are done with solving: cutoff root node */
-               SCIP_CALL( SCIPcutoffNode(scip, SCIPgetRootNode(scip)) );
-               *result = SCIP_CUTOFF;
-               break;
-            }
-            else if( tightened )
-               *result = SCIP_REDUCEDDOM;
+
+            *result = SCIP_REDUCEDDOM;
          }
       }
       else if( SCIPisFeasNegative(scip, redcost) )
@@ -240,7 +231,6 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
          SCIP_Real oldlb;
          SCIP_Real oldub;
          SCIP_Real newlb;
-         SCIP_Bool strengthen;
 
          rootsol = SCIPvarGetRootSol(var);
          oldlb = SCIPvarGetLbGlobal(var);
@@ -250,33 +240,23 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
          /* calculate reduced cost based bound */
          newlb = (cutoffbound - lpobjval) / redcost + rootsol;
 
-         /* check, if new bound is good enough */
-         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+         /* strengthen lower bound */
+         SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, newlb, FALSE, &infeasible, &tightened) );
+
+         if( infeasible )
          {
-            newlb = SCIPadjustedVarLb(scip, var, newlb);
-            strengthen = (newlb > oldlb + 0.5);
+            /* we are done with solving: cutoff root node */
+            SCIP_CALL( SCIPcutoffNode(scip, SCIPgetRootNode(scip)) );
+            *result = SCIP_CUTOFF;
+            break;
          }
-         else
-            strengthen = SCIPisLbBetter(scip, newlb, oldlb, oldub);
 
-         if( strengthen )
+         if( tightened )
          {
-            SCIP_Bool infeasible;
-            SCIP_Bool tightened;
-
-            /* strengthen lower bound */
             SCIPdebugMessage("root redcost strengthening lower bound: <%s> [%g,%g] -> [%g,%g] (ub=%g, lb=%g, redcost=%g)\n",
                SCIPvarGetName(var), oldlb, oldub, newlb, oldub, cutoffbound, lpobjval, redcost);
-            SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, newlb, FALSE, &infeasible, &tightened) );
-            if( infeasible )
-            {
-               /* we are done with solving: cutoff root node */
-               SCIP_CALL( SCIPcutoffNode(scip, SCIPgetRootNode(scip)) );
-               *result = SCIP_CUTOFF;
-               break;
-            }
-            else if( tightened )
-               *result = SCIP_REDUCEDDOM;
+
+            *result = SCIP_REDUCEDDOM;
          }
       }
    }

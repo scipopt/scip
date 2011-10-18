@@ -548,7 +548,7 @@ void SCIPvarMarkDeleted(
 
 /** marks the variable to not to be multi-aggregated */
 extern
-void SCIPvarMarkDoNotMultaggr(
+SCIP_RETCODE SCIPvarMarkDoNotMultaggr(
    SCIP_VAR*             var                 /**< problem variable */
    );
 

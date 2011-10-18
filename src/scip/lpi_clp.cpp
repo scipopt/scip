@@ -423,8 +423,6 @@ void unsetFastmipClpParameters(
  * Miscellaneous Methods
  */
 
-static char clpname[SCIP_MAXSTRLEN];
-
 /**@name Miscellaneous Methods */
 /**@{ */
 
@@ -434,8 +432,7 @@ const char* SCIPlpiGetSolverName(
    )
 {
    // Currently Clp has no function to get version, so we hard code it ...
-   snprintf(clpname, SCIP_MAXSTRLEN, "Clp "CLP_VERSION"");
-   return clpname;
+   return "Clp "CLP_VERSION;
 }
 
 /** gets description of LP solver (developer, webpage, ...) */

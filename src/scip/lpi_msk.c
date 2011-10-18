@@ -548,7 +548,7 @@ SCIP_RETCODE setbase(
  * Miscellaneous Methods
  */
 
-static char mskname[SCIP_MAXSTRLEN];
+static char mskname[100];
 
 /**@name Miscellaneous Methods */
 /**@{ */
@@ -558,7 +558,7 @@ const char* SCIPlpiGetSolverName(
    void
    )
 {
-   snprintf(mskname, SCIP_MAXSTRLEN, "MOSEK %.2f", (SCIP_Real)MSK_VERSION_MAJOR);
+   sprintf(mskname, "MOSEK %.2f", (SCIP_Real)MSK_VERSION_MAJOR);
    return mskname;
 }
 

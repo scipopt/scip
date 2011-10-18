@@ -305,7 +305,7 @@ SCIP_RETCODE consdataPrint(
    SCIPinfoMessage(scip, file, "logicor(");
 
    /* print variable list */
-   SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars, FALSE, ',') );
+   SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars, TRUE, ',') );
    
    /* close bracket */
    SCIPinfoMessage(scip, file, ")");
@@ -932,7 +932,7 @@ SCIP_RETCODE mergeMultiples(
 
       assert(SCIPvarIsActive(var));
       assert((pos < nbinvars && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY)
-	 || (pos > (nbinvars + nintvars) && pos < (nbinvars + nintvars + nimplvars)
+	 || (pos >= (nbinvars + nintvars) && pos < (nbinvars + nintvars + nimplvars)
 	    && SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT && SCIPvarIsBinary(var)));
 
       /* subtract number of integer variables because we only allocated memory for all binary and implicit variables */
@@ -2176,7 +2176,7 @@ SCIP_DECL_CONSFREE(consFreeLogicor)
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
 static
 SCIP_DECL_CONSINITPRE(consInitpreLogicor)
-{
+{  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    int c;
@@ -2206,7 +2206,7 @@ SCIP_DECL_CONSINITPRE(consInitpreLogicor)
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
 static
 SCIP_DECL_CONSEXITPRE(consExitpreLogicor)
-{
+{  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    int c;

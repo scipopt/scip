@@ -735,8 +735,10 @@ SCIP_RETCODE SCIPsetExitprePlugins(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundedness */
-   SCIP_Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
+   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundedness, if
+					      *   problem was already declared unbounded, it is already stored */
+   SCIP_Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility, if
+					      *   problem was already declared infeasible, it is already stored */
    );
 
 /** calls initsol methods of all plugins */

@@ -6642,7 +6642,7 @@ SCIP_DECL_CONSFREE(consFreeCumulative)
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
 static
 SCIP_DECL_CONSINITPRE(consInitpreCumulative)
-{
+{  /*lint --e{715}*/
    SCIP_CONS* cons;
    int c;
 
