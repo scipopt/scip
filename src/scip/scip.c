@@ -7340,6 +7340,24 @@ SCIP_RETCODE SCIPpresolve(
       {
          if( infeasible || unbounded )
          {
+	    /* first change status of scip, so that all plugins in their initsol callbacks can ask SCIP for the correct
+	     * status
+	     */
+            if( infeasible )
+            {
+	       /* switch status to OPTIMAL */
+               if( scip->primal->nsols > 0
+                  && SCIPsetIsLT(scip->set, SCIPsolGetObj(scip->primal->sols[0], scip->set, scip->transprob),
+                     SCIPprobInternObjval(scip->transprob, scip->set, SCIPprobGetObjlim(scip->transprob, scip->set))) )
+                  scip->stat->status = SCIP_STATUS_OPTIMAL;
+               else /* switch status to INFEASIBLE */
+                  scip->stat->status = SCIP_STATUS_INFEASIBLE;
+            }
+            else if( scip->primal->nsols >= 1 ) /* switch status to UNBOUNDED */
+               scip->stat->status = SCIP_STATUS_UNBOUNDED;
+            else /* switch status to INFORUNBD */
+               scip->stat->status = SCIP_STATUS_INFORUNBD;
+
             /* initialize solving process data structures to be able to switch to SOLVED stage */
             SCIP_CALL( initSolve(scip) );
 
