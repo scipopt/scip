@@ -4981,14 +4981,88 @@ SCIP_RETCODE SCIPvarMultiaggregate(
    return SCIP_OKAY;
 }
 
+/** transformed variables are resolved to their active, fixed, or multi-aggregated problem variable of a variable,
+ * or for original variables the same variable is returned
+ */
+static
+SCIP_VAR* varGetActiveVar(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   SCIP_VAR* retvar;
+
+   assert(var != NULL);
+
+   retvar = var;
+
+   SCIPdebugMessage("get active variable of <%s>\n", var->name);
+
+   while( TRUE ) /*lint !e716 */
+   {
+      assert(retvar != NULL);
+
+      switch( SCIPvarGetStatus(retvar) )
+      {
+      case SCIP_VARSTATUS_ORIGINAL:
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_COLUMN:
+      case SCIP_VARSTATUS_FIXED:
+	 return retvar;
+
+      case SCIP_VARSTATUS_MULTAGGR:
+	 /* handle multi-aggregated variables depending on one variable only (possibly caused by SCIPvarFlattenAggregationGraph()) */
+	 if ( retvar->data.multaggr.nvars == 1 )
+	    retvar = retvar->data.multaggr.vars[0];
+	 else
+	    return retvar;
+	 break;
+
+      case SCIP_VARSTATUS_AGGREGATED:
+	 retvar = retvar->data.aggregate.var;
+	 break;
+
+      case SCIP_VARSTATUS_NEGATED:
+	 retvar = retvar->negatedvar;
+	 break;
+
+      default:
+	 SCIPerrorMessage("unknown variable status\n");
+	 SCIPABORT();
+	 return NULL; /*lint !e527*/
+      }
+   }
+}
+
 /** returns whether variable is not allowed to be multi-aggregated */
 SCIP_Bool SCIPvarDoNotMultaggr(
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
+   SCIP_VAR* retvar;
+
    assert(var != NULL);
 
-   return var->donotmultaggr;
+   retvar = varGetActiveVar(var);
+   assert(retvar != NULL);
+
+   switch( SCIPvarGetStatus(retvar) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+   case SCIP_VARSTATUS_FIXED:
+      return retvar->donotmultaggr;
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      return FALSE;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+   case SCIP_VARSTATUS_NEGATED:
+   default:
+      SCIPerrorMessage("wrong variable status\n");
+      SCIPABORT();
+      return FALSE; /*lint !e527 */
+   }
 }
 
 /** gets negated variable x' = offset - x of problem variable x; the negated variable is created if not yet existing;
@@ -5182,33 +5256,30 @@ SCIP_RETCODE SCIPvarMarkDoNotMultaggr(
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
+   SCIP_VAR* retvar;
+
    assert(var != NULL);
 
-   switch( SCIPvarGetStatus(var) )
+   retvar = varGetActiveVar(var);
+   assert(retvar != NULL);
+
+   switch( SCIPvarGetStatus(retvar) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_FIXED:
-      var->donotmultaggr = TRUE;
-      break;
-
-   case SCIP_VARSTATUS_AGGREGATED:
-      assert( var->data.aggregate.var != NULL );
-      SCIP_CALL( SCIPvarMarkDoNotMultaggr(var->data.aggregate.var) );
-      break;
-
-   case SCIP_VARSTATUS_NEGATED:
-      assert( var->negatedvar != NULL );
-      SCIP_CALL( SCIPvarMarkDoNotMultaggr(var->negatedvar) );
+      retvar->donotmultaggr = TRUE;
       break;
 
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPerrorMessage("cannot mark a multi-aggregated variable to not be multi-aggregated.\n");
       return SCIP_INVALIDDATA;
 
+   case SCIP_VARSTATUS_AGGREGATED:
+   case SCIP_VARSTATUS_NEGATED:
    default:
-      SCIPerrorMessage("unknown variable status\n");
+      SCIPerrorMessage("wrong variable status\n");
       return SCIP_INVALIDDATA;
    }
 
@@ -10057,41 +10128,56 @@ SCIP_VAR* SCIPvarGetProbvar(
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
+   SCIP_VAR* retvar;
+
    assert(var != NULL);
+
+   retvar = var;
 
    SCIPdebugMessage("get problem variable of <%s>\n", var->name);
 
-   switch( SCIPvarGetStatus(var) )
+   while( TRUE ) /*lint !e716 */
    {
-   case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.original.transvar == NULL )
+      assert(retvar != NULL);
+
+      switch( SCIPvarGetStatus(retvar) )
       {
-         SCIPerrorMessage("original variable has no transformed variable attached\n");
-         return NULL;
+      case SCIP_VARSTATUS_ORIGINAL:
+	 if( retvar->data.original.transvar == NULL )
+	 {
+	    SCIPerrorMessage("original variable has no transformed variable attached\n");
+	    SCIPABORT();
+	    return NULL; /*lint !e527 */
+	 }
+	 retvar = retvar->data.original.transvar;
+	 break;
+
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_COLUMN:
+      case SCIP_VARSTATUS_FIXED:
+	 return retvar;
+
+      case SCIP_VARSTATUS_MULTAGGR:
+	 /* handle multi-aggregated variables depending on one variable only (possibly caused by SCIPvarFlattenAggregationGraph()) */
+	 if ( retvar->data.multaggr.nvars == 1 )
+	    retvar = retvar->data.multaggr.vars[0];
+	 else
+	    return retvar;
+	 break;
+
+      case SCIP_VARSTATUS_AGGREGATED:
+	 retvar = retvar->data.aggregate.var;
+	 break;
+
+      case SCIP_VARSTATUS_NEGATED:
+	 retvar = retvar->negatedvar;
+	 break;
+
+      default:
+	 SCIPerrorMessage("unknown variable status\n");
+	 SCIPABORT();
+	 return NULL; /*lint !e527*/
       }
-      return SCIPvarGetProbvar(var->data.original.transvar);
-
-   case SCIP_VARSTATUS_LOOSE:
-   case SCIP_VARSTATUS_COLUMN:
-   case SCIP_VARSTATUS_FIXED:
-      return var;
-
-   case SCIP_VARSTATUS_MULTAGGR:
-      /* handle multi-aggregated variables depending on one variable only (possibly caused by SCIPvarFlattenAggregationGraph()) */
-      if ( var->data.multaggr.nvars == 1 )
-         return SCIPvarGetProbvar(var->data.multaggr.vars[0]);
-      return var;
-
-   case SCIP_VARSTATUS_AGGREGATED:
-      return SCIPvarGetProbvar(var->data.aggregate.var);
-
-   case SCIP_VARSTATUS_NEGATED:
-      return SCIPvarGetProbvar(var->negatedvar);
-
-   default:
-      SCIPerrorMessage("unknown variable status\n");
-      SCIPABORT();
-      return NULL; /*lint !e527*/
    }
 }
 
