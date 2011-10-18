@@ -1042,7 +1042,7 @@
  * Names have to be unique: no two constraint handlers may have the same name.
  *
  * \par CONSHDLR_DESC: the description of the constraint handler.
- * This string is printed as description of the constraint handler in the interactive shell of SCIP.
+ * This string is printed as a description of the constraint handler in the interactive shell of SCIP.
  *
  * \par CONSHDLR_SEPAPRIORITY: the priority of the constraint handler for separation.
  * In each separation round during the price-and-cut loop of the subproblem processing or during the separation loop
@@ -1283,7 +1283,7 @@
  * methods with slightly modified parameters.
  * The fourth method provides dual information that is used for example in preprocessing.
  *
- * Additional documentation to the callback methods can be found in type_cons.h.
+ * Additional documentation for the callback methods can be found in type_cons.h.
  *
  * @subsection CONSCHECK
  *
@@ -1417,7 +1417,7 @@
  *
  * @section CONS_ADDITIONALCALLBACKS Additional Callback Methods
  *
- * The additional callback methods need not to be implemented in every case.  However, some of them have to be
+ * The additional callback methods do not need to be implemented in every case.  However, some of them have to be
  * implemented for most applications. 
  *
  * @subsection CONSFREE
@@ -1487,7 +1487,7 @@
  *
  * @subsection CONSINIT
  *
- * The CONSINIT callback is executed after the problem was transformed.
+ * The CONSINIT callback is executed after the problem is transformed.
  * The constraint handler may, e.g., use this call to replace the original variables in its constraints by transformed
  * variables, or to initialize his statistical constraint handler data.
  *
@@ -1508,22 +1508,22 @@
  *
  * The CONSEXITPRE callback is executed after the preprocessing has been finished, even if presolving is turned off.
  * The constraint handler may use this call e.g. to clean up its presolving data, or to finally modify its constraints
- * before the branch and bound process begins.
+ * before the branch-and-bound process begins.
  * Necessary constraint modifications that have to be performed even if presolving is turned off should be done here
  * or in the presolving initialization call.
  * Besides necessary modifications and clean up, no time consuming operations should be done.
  *
  * @subsection CONSINITSOL
  *
- * The CONSINITSOL callback is executed when the presolving was finished and the branch and bound process is about to
+ * The CONSINITSOL callback is executed when the presolving is finished and the branch-and-bound process is about to
  * begin.
- * The constraint handler may use this call to initialize its branch and bound specific data.
+ * The constraint handler may use this call to initialize its branch-and-bound specific data.
  *
  * @subsection CONSEXITSOL
  *
- * The CONSEXITSOL callback is executed before the branch and bound process is freed.
- * The constraint handler should use this call to clean up its branch and bound data, in particular to release
- * all LP rows that he has created or captured.
+ * The CONSEXITSOL callback is executed before the branch-and-bound process is freed.
+ * The constraint handler should use this call to clean up its branch-and-bound data, in particular to release
+ * all LP rows that it has created or captured.
  *
  * @subsection CONSDELETE
  *
@@ -1852,7 +1852,7 @@
  * Names have to be unique: no two pricers may have the same name.
  *
  * \par PRICER_DESC: the description of the pricer.
- * This string is printed as description of the pricer in the interactive shell.
+ * This string is printed as a description of the pricer in the interactive shell.
  *
  * \par PRICER_PRIORITY: the priority of the pricer.
  * In each pricing round during the price-and-cut loop of the subproblem processing, the included pricers are
@@ -1872,7 +1872,7 @@
  * \n
  * In some applications, this inner pricing loop on the already existing variables can significantly slow down the solving process,
  * since it may lead to the addition of only very few variables in each pricing round. If this is an issue in your application,
- * you should consider to set the PRICER_DELAY flag to FALSE. You must, however, be aware of the fact that there may be already
+ * you should consider setting the PRICER_DELAY flag to FALSE. You must, however, be aware of the fact that there may be already
  * existing variables with negative reduced costs. For example, this may lead to the issue that your pricer generates the same
  * variable twice. In some models, this is not critical because an optimal solution would choose only one of the two identical
  * variables anyway, but for other models this can lead to wrong results because the duplication of a variable essentially doubles
@@ -1924,7 +1924,7 @@
  * is a virtual abstract member function. You have to implement it in order to be able to construct an object of your 
  * pricer class.
  *
- * Additional documentation to the callback methods can be found in type_pricer.h.
+ * Additional documentation for the callback methods can be found in type_pricer.h.
  *
  * @subsection PRICERREDCOST
  *
@@ -2046,13 +2046,13 @@
  *
  * @subsection PRICERINITSOL
  *
- * The PRICERINITSOL callback is executed when the presolving is finished and the branch and bound process is about to begin.
- * The pricer may use this call to initialize its branch and bound specific data.
+ * The PRICERINITSOL callback is executed when the presolving is finished and the branch-and-bound process is about to begin.
+ * The pricer may use this call to initialize its branch-and-bound specific data.
  *
  * @subsection PRICEREXITSOL
  *
- * The PRICEREXITSOL callback is executed before the branch and bound process is freed.
- * The pricer should use this call to clean up its branch and bound data, which was allocated in PRICERINITSOL.
+ * The PRICEREXITSOL callback is executed before the branch-and-bound process is freed.
+ * The pricer should use this call to clean up its branch-and-bound data, which was allocated in PRICERINITSOL.
  *
  * @section PRICER_REMARKS Further remarks
  *
@@ -2120,7 +2120,7 @@
  * Names have to be unique: no two presolvers may have the same name.
  *
  * \par PRESOL_DESC: the description of the presolver.
- * This string is printed as description of the presolver in the interactive shell.
+ * This string is printed as a description of the presolver in the interactive shell.
  *
  * \par PRESOL_PRIORITY: the priority of the presolver.
  * In each presolving round, the presolvers and presolving methods of the constraint handlers are called in
@@ -2192,7 +2192,7 @@
  * abstract member function.
  * You have to implement it in order to be able to construct an object of your presolver class.
  *
- * Additional documentation to the callback methods, in particular to their input parameters, 
+ * Additional documentation for the callback methods, in particular to their input parameters,
  * can be found in type_presol.h.
  *
  * @subsection PRESOLEXEC
@@ -2208,7 +2208,7 @@
  *
  * @section PRESOL_ADDITIONALCALLBACKS Additional Callback Methods of a Presolver
  *
- * The additional callback methods need not to be implemented in every case.
+ * The additional callback methods do not need to be implemented in every case.
  * They can be used, for example, to initialize and free private data.
  *
  * @subsection PRESOLFREE
@@ -2238,7 +2238,7 @@
  *
  * @subsection PRESOLINIT
  *
- * The PRESOLINIT callback is executed after the problem was transformed.
+ * The PRESOLINIT callback is executed after the problem is transformed.
  * The presolver may, e.g., use this call to initialize his presolver data.
  * The difference between the original and the transformed problem is explained in 
  * "What is this thing with the original and the transformed problem about?" on \ref FAQ. 
@@ -2264,7 +2264,7 @@
  *
  * @subsection PRESOLEXITPRE
  *
- * The PRESOLEXITPRE callback is executed after presolving has been finished and before the branch and bound process begins.
+ * The PRESOLEXITPRE callback is executed after presolving finishes and before the branch-and-bound process begins.
  * The presolver should use this call to clean up its presolving data, which was allocated in PRESOLINITPRE.
  */
 
@@ -2316,7 +2316,7 @@
  * Names have to be unique: no two separators may have the same name.
  *
  * \par SEPA_DESC: the description of the separator.
- * This string is printed as description of the separator in the interactive shell.
+ * This string is printed as a description of the separator in the interactive shell.
  *
  * \par SEPA_PRIORITY: the priority of the separator.
  * In each separation round during the price-and-cut loop of the subproblem processing or the separation loop
@@ -2364,7 +2364,7 @@
  * for any value of SEPA_MAXBOUNDDIST.
  *
  * \par SEPA_USESSUBSCIP: Does the separator use a secondary SCIP instance? 
- * Some heuristics and separators solve MIPs or SAT problems and use a secondary SCIP instance therefor. Examples are
+ * Some heuristics and separators solve MIPs or SAT problems and use a secondary SCIP instance. Examples are
  * Large Neighborhood Search heuristics such as RINS and Local Branching or the CGMIP separator. To avoid recursion,
  * these plugins usually deactivate all other plugins that solve MIPs. If a separator uses a secondary SCIP instance,
  * this parameter has to be TRUE and it is recommended to call SCIPsetSubscipsOff() for the secondary SCIP instance.
@@ -2396,7 +2396,7 @@
  * the separator in his application.
  *
  * If you are using separator data, you have to allocate the memory 
- * for the data at this point. You can do this by calling
+ * for the data at this point. You can do this by calling:
  * \code
  * SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
  * \endcode
@@ -2411,15 +2411,15 @@
  *
  * The fundamental callback methods of the plugins are the ones that have to be implemented in order to obtain 
  * an operational algorithm. Separator plugins do not have any fundamental callback methods, i.e., all 
- * callback methods are optional. But, most probably, you want to use at least the optional callback \ref SEPAEXECLP
+ * callback methods are optional. However, you probably want to at least use the optional callback \ref SEPAEXECLP
  * to separate LP solutions.
  *
- * Additional documentation to the callback methods, in particular to their input parameters, 
+ * Additional documentation for the callback methods, in particular to their input parameters,
  * can be found in type_sepa.h.
  *
  * @section SEPA_ADDITIONALCALLBACKS Additional Callback Methods of a Separator
  *
- * The additional callback methods need not to be implemented in every case.
+ * The additional callback methods do not need to be implemented in every case.
  * They can be used, for example, to initialize and free private data.
  * The main functions of separators are the \ref SEPAEXECLP and \ref SEPAEXECSOL callbacks.
  *
@@ -2508,7 +2508,7 @@
  *
  * @subsection SEPAINIT
  *
- * The SEPAINIT callback is executed after the problem was transformed.
+ * The SEPAINIT callback is executed after the problem is transformed.
  * The separator may, e.g., use this call to initialize his separator data. 
  * The difference between the original and the transformed problem is explained in 
  * "What is this thing with the original and the transformed problem about?" on \ref FAQ. 
@@ -2520,13 +2520,13 @@
  *
  * @subsection SEPAINITSOL
  *
- * The SEPAINITSOL callback is executed when the presolving was finished and the branch-and-bound process is about to 
+ * The SEPAINITSOL callback is executed when the presolving is finished and the branch-and-bound process is about to
  * begin. The separator may use this call to initialize its branch-and-bound specific data.
  *
  * @subsection SEPAEXITSOL
  *
  * The SEPAEXITSOL callback is executed before the branch-and-bound process is freed. The separator should use this call 
- * to clean up its branch-and-bound data, in particular to release all LP rows that he has created or captured.
+ * to clean up its branch-and-bound data, in particular to release all LP rows that it has created or captured.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -2567,11 +2567,11 @@
  *
  * \par PROP_NAME: the name of the propagator.
  * This name is used in the interactive shell to address the propagator.  Additionally, if you are searching for a
- * propagator with SCIPfindProp(), this name is search for.  Names have to be unique: no two propagators may have the
+ * propagator with SCIPfindProp(), this name is searched for.  Names have to be unique: no two propagators may have the
  * same name.
  *
  * \par PROP_DESC: the description of the propagator.
- * This string is printed as description of the propagator in the interactive shell.
+ * This string is printed as a description of the propagator in the interactive shell.
  *
  * \par PROP_PRIORITY: the priority of the propagator.
  * In each propagation round, the propagators and propagation methods of the constraint handlers are called in a
@@ -2658,7 +2658,7 @@
  * PROPEXEC callback and \ref PROPRESPROP callback, respectively) are virtual abstract member functions. You have to
  * implement them in order to be able to construct an object of your propagator class.
  *
- * Additional documentation to the callback methods can be found in type_prop.h.
+ * Additional documentation for the callback methods can be found in type_prop.h.
  *
  * @subsection PROPEXEC
  *
@@ -2695,7 +2695,7 @@
  * this is viable approach to circumvent the implementation of the usually rather complex conflict resolving method, it
  * will make the conflict analysis less effective. We suggest to first omit the conflict resolving method and check how
  * effective the propagation method is. If it produces a lot of propagations for your application, you definitely should
- * consider to implement the conflict resolving method.
+ * consider implementing the conflict resolving method.
  *
  *
  * @section PROP_ADDITIONALCALLBACKS Additional Callback Methods of a Propagator
@@ -2730,7 +2730,7 @@
  *
  * @subsection PROPINIT
  *
- * The PROPINIT callback is executed after the problem was transformed.  The propagator may, e.g., use this call to
+ * The PROPINIT callback is executed after the problem is transformed.  The propagator may, e.g., use this call to
  * initialize its propagator data.
  *
  * @subsection PROPCOPY
@@ -2760,14 +2760,14 @@
  *
  * @subsection PROPINITSOL
  *
- * The PROPINITSOL callback is executed when the presolving was finished and the branch and bound process is about to
+ * The PROPINITSOL callback is executed when the presolving is finished and the branch-and-bound process is about to
  * begin.
- * The propagator may use this call to initialize its branch and bound specific data.
+ * The propagator may use this call to initialize its branch-and-bound specific data.
  * 
  * @subsection PROPEXITSOL
  *
- * The PROPEXITSOL callback is executed before the branch and bound process is freed.
- * The propagator should use this call to clean up its branch and bound data.
+ * The PROPEXITSOL callback is executed before the branch-and-bound process is freed.
+ * The propagator should use this call to clean up its branch-and-bound data.
  *
  * @subsection PROPPRESOL
  *
@@ -2848,7 +2848,7 @@
  * Names have to be unique: no two branching rules may have the same name.
  *
  * \par BRANCHRULE_DESC: the description of the branching rule.
- * This string is printed as description of the branching rule in the interactive shell.
+ * This string is printed as a description of the branching rule in the interactive shell.
  *
  * \par BRANCHRULE_PRIORITY: the default value for the priority of the branching rule.
  * In the subproblem processing, the branching rules are called in decreasing order of their priority until 
@@ -2869,8 +2869,7 @@
  * \n
  * Note that this property only specifies the default value. The user can change this value arbitrarily.
  *
- * \par BRANCHRULE_MAXBOUNDDIST: the default value for the maximal relative distance from current node's dual bound to 
- * primal bound compared to best node's dual bound for applying branching.
+ * \par BRANCHRULE_MAXBOUNDDIST: the default value for the maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying branching.
  * At the current branch-and-bound node, the relative distance from its dual bound (local dual bound) 
  * to the primal bound compared to the best node's dual bound (global dual bound) is considered. The branching method of 
  * the branching rule will only be applied at the node if this relative distance does not exceed BRANCHRULE_MAXBOUNDDIST. 
@@ -2924,11 +2923,11 @@
  *
  * @section BRANCHRULE_ADDITIONALCALLBACKS Additional Callback Methods of a Branching Rule
  *
- * The additional callback methods need not to be implemented in every case.  They can be used, for example, to
+ * The additional callback methods do not need to be implemented in every case.  They can be used, for example, to
  * initialize and free private data.  The most important callback methods are the \ref BRANCHEXECLP, \ref BRANCHEXECEXT,
  * and \ref BRANCHEXECPS methods, which perform the actual task of generating a branching.
  *
- * Additional documentation to the callback methods can be found in type_branch.h.
+ * Additional documentation for the callback methods can be found in type_branch.h.
  *
  * @subsection BRANCHEXECLP
  *
@@ -2965,10 +2964,10 @@
  *
  * The user gains access to these branching candidates by calling the method SCIPgetExternBranchCands(). Furthermore,
  * SCIP provides two methods for performing the actual branching with a given solution value, namely SCIPbranchVarVal()
- * and SCIPcreateChild(). SCIPbranchVarVal() allows to specify the branching point for a variable in contrast to
+ * and SCIPcreateChild(). SCIPbranchVarVal() allows users to specify the branching point for a variable in contrast to
  * SCIPbranchVar(), which will always use the current LP or pseudo solution.
  *
- * This paragraph contains additional information, how the method SCIPbranchVarVal() works. For external branching candidates,
+ * This paragraph contains additional information regarding how the method SCIPbranchVarVal() works. For external branching candidates,
  * there are three principle possibilities:
  * - Given a continuous variable \f$x\f$ with solution value \f$x^*\f$, the method SCIPbranchVarVal() creates
  *   two child nodes; one contains the bound \f$x \le x^* \f$ and the other one contains the bound \f$x \ge x^* \f$.
@@ -3000,7 +2999,7 @@
  * creates two child nodes:
  * - If both bounds are finite, then the two children will contain the domain reductions \f$x \le x^*\f$, and \f$x \ge
  *   x^*+1\f$ with \f$x^* = \lfloor \frac{l + u}{2}\rfloor\f$. The current pseudo solution will remain feasible in one
- *   of the branches, but the hope is that halving the domain#s size leads to good propagations.
+ *   of the branches, but the hope is that halving the domain's size leads to good propagations.
  * - If only one of the bounds is finite, the variable will be fixed to that bound in one of the child nodes. In the
  *   other child node, the bound will be shifted by one.
  * - If both bounds are infinite, three children will be created: \f$x \le 1\f$, \f$x \ge 1\f$, and \f$x = 0\f$.
@@ -3066,7 +3065,7 @@
  *
  * @subsection BRANCHINIT
  *
- * The BRANCHINIT callback is executed after the problem was transformed.
+ * The BRANCHINIT callback is executed after the problem is transformed.
  * The branching rule may, e.g., use this call to initialize his branching rule data.
  *
  * @subsection BRANCHCOPY
@@ -3086,21 +3085,21 @@
  *
  * @subsection BRANCHINITSOL
  *
- * The BRANCHINITSOL callback is executed when the presolving was finished and the branch and bound process is about to
+ * The BRANCHINITSOL callback is executed when the presolving is finished and the branch-and-bound process is about to
  * begin.
- * The branching rule may use this call to initialize its branch and bound specific data.
+ * The branching rule may use this call to initialize its branch-and-bound specific data.
  *
  * @subsection BRANCHEXITSOL
  *
- * The BRANCHEXITSOL callback is executed before the branch and bound process is freed.
- * The branching rule should use this call to clean up its branch and bound data.
+ * The BRANCHEXITSOL callback is executed before the branch-and-bound process is freed.
+ * The branching rule should use this call to clean up its branch-and-bound data.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page NODESEL How to add node selectors
  *
  * Node selectors are used to decide which of the leaves in the current branching tree is selected as next subproblem 
- * to be processed. The ordering relation of the tree's leaves for storing them in the leave priority queue is also
+ * to be processed. The ordering relation of the tree's leaves for storing them in the leaf priority queue is also
  * defined by the node selectors.  
  * \n
  * A complete list of all node selectors contained in this release can be found \ref NODESELECTORS "here".
@@ -3139,12 +3138,12 @@
  * Names have to be unique: no two node selectors may have the same name.
  * 
  * \par NODESEL_DESC: the description of the node selector.
- * This string is printed as description of the node selector in the interactive shell.
+ * This string is printed as a description of the node selector in the interactive shell.
  *
  * \par NODESEL_STDPRIORITY: the default priority of the node selector in the standard mode.
  * The first step of each iteration of the main solving loop is the selection of the next subproblem to be processed. 
  * The node selector of highest priority (the active node selector) is called to do this selection. 
- * In particular, if you implemented an own node selector plugin which you want to be applied, you should choose a priority
+ * In particular, if you implemented your own node selector plugin which you want to be applied, you should choose a priority
  * which is greater then all priorities of the SCIP default node selectors.
  * Note that SCIP has two different operation modes: the standard mode and the memory saving mode. If the memory 
  * limit - given as a parameter by the user - is almost reached, SCIP switches from the standard mode to the memory saving 
@@ -3208,12 +3207,12 @@
  * NODESELSELECT callback and the NODESELCOMP callback, respectively) are virtual abstract member functions.
  * You have to implement them in order to be able to construct an object of your node selector class.
  *
- * Additional documentation to the callback methods can be found in type_nodesel.h.
+ * Additional documentation for the callback methods can be found in type_nodesel.h.
  *
  * @subsection NODESELSELECT
  *
  * The NODESELSELECT callback is the first method called in each iteration in the main solving loop. It should decide 
- * which of the leaves in the current branching tree is selected as next subproblem to be processed. 
+ * which of the leaves in the current branching tree is selected as the next subproblem to be processed.
  * It can arbitrarily decide between all leaves stored in the tree, but for performance reasons,
  * the current node's children and siblings are often treated different from the remaining leaves. 
  * This is mainly due to the warm start capabilities of the simplex algorithm and the expectation that the bases of 
@@ -3222,10 +3221,10 @@
  * have a large impact on the solver's performance, because it influences the finding of feasible solutions and the 
  * development of the global dual bound. 
  *
- * Besides the ranking of the node selector, every node gets assigned a node selection priority by the branching rule, 
- * which created the node. See the \ref BRANCHEXECLP and \ref BRANCHEXECPS callbacks of the branching rules for details. 
- * For example, the node where the branching went in the same way as the deviation from the branching variable's 
- * root solution could be assigned a higher priority as the node where the branching went in the opposite direction. 
+ * Besides the ranking of the node selector, every node gets assigned a node selection priority by the branching rule
+ * that created the node. See the \ref BRANCHEXECLP and \ref BRANCHEXECPS callbacks of the branching rules for details.
+ * For example, the node where the branching went in the same way as the deviation from the branching variable's
+ * root solution could be assigned a higher priority than the node where the branching went in the opposite direction.
  *
  * The following methods provide access to the various types of leaf nodes:
  * - SCIPgetPrioChild() returns the child of the current node with the largest node selection priority, as assigned by the
@@ -3256,11 +3255,11 @@
  * The NODESELCOMP should return the following values:
  *  - value < 0, if node 1 comes before (is better than) node 2
  *  - value = 0, if both nodes are equally good
- *  - value > 0, if node 2 comes after (is worse than) node 2.
+ *  - value > 0, if node 1 comes after (is worse than) node 2.
  *
  * @section NODESEL_ADDITIONALCALLBACKS Additional Callback Methods of a Node Selector
  *
- * The additional callback methods need not to be implemented in every case.
+ * The additional callback methods do not need to be implemented in every case.
  * They can be used, for example, to initialize and free private data.
  *
  * @subsection NODESELFREE
@@ -3290,7 +3289,7 @@
  *
  * @subsection NODESELINIT
  *
- * The NODESELINIT callback is executed after the problem was transformed.
+ * The NODESELINIT callback is executed after the problem is transformed.
  * The node selector may, e.g., use this call to initialize his node selector data.
  *
  * @subsection NODESELCOPY
@@ -3310,14 +3309,14 @@
  *
  * @subsection NODESELINITSOL
  *
- * The NODESELINITSOL callback is executed when the presolving was finished and the branch and bound process is about to
+ * The NODESELINITSOL callback is executed when the presolving is finished and the branch-and-bound process is about to
  * begin.
- * The node selector may use this call to initialize its branch and bound specific data.
+ * The node selector may use this call to initialize its branch-and-bound specific data.
  *
  * @subsection NODESELEXITSOL
  *
- * The NODESELEXITSOL callback is executed before the branch and bound process is freed.
- * The node selector should use this call to clean up its branch and bound data.
+ * The NODESELEXITSOL callback is executed before the branch-and-bound process is freed.
+ * The node selector should use this call to clean up its branch-and-bound data.
  */
 
 
@@ -3370,7 +3369,7 @@
  * Names have to be unique: no two primal heuristics may have the same name.
  *
  * \par HEUR_DESC: the description of the primal heuristic.
- * This string is printed as description of the primal heuristic in the interactive shell when you call "display heuristics".
+ * This string is printed as a description of the primal heuristic in the interactive shell when you call "display heuristics".
  *
  * \par HEUR_DISPCHAR: the display character of the primal heuristic.
  * In the interactive shell, this character is printed in the first column of a status information row, if the primal 
@@ -3509,7 +3508,7 @@
  * abstract member function. You have to implement it in order to be able to construct an object of your primal heuristic 
  * class.
  *
- * Additional documentation to the callback methods can be found in type_heur.h.
+ * Additional documentation for the callback methods can be found in type_heur.h.
  *
  * @subsection HEUREXEC
  *
@@ -3531,7 +3530,7 @@
  *
  * @section HEUR_ADDITIONALCALLBACKS Additional Callback Methods of a Primal Heuristic
  *
- * The additional callback methods need not to be implemented in every case.
+ * The additional callback methods do not need to be implemented in every case.
  * They can be used, for example, to initialize and free private data.
  *
  * @subsection HEURFREE
@@ -3561,7 +3560,7 @@
  *
  * @subsection HEURINIT
  *
- * The HEURINIT callback is executed after the problem was transformed.
+ * The HEURINIT callback is executed after the problem is transformed.
  * The primal heuristic may, e.g., use this call to initialize his primal heuristic data.
  *
  * @subsection HEURCOPY
@@ -3581,13 +3580,13 @@
  *
  * @subsection HEURINITSOL
  *
- * The HEURINITSOL callback is executed when the presolving was finished and the branch and bound process is about to 
- * begin. The primal heuristic may use this call to initialize its branch and bound specific data.
+ * The HEURINITSOL callback is executed when the presolving is finished and the branch-and-bound process is about to
+ * begin. The primal heuristic may use this call to initialize its branch-and-bound specific data.
  *
  * @subsection HEUREXITSOL
  *
- * The HEUREXITSOL callback is executed before the branch and bound process is freed. The primal heuristic should use this
- * call to clean up its branch and bound data, which was allocated in HEURINITSOL.
+ * The HEUREXITSOL callback is executed before the branch-and-bound process is freed. The primal heuristic should use this
+ * call to clean up its branch-and-bound data, which was allocated in HEURINITSOL.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -3637,7 +3636,7 @@
  * Names have to be unique: no two relaxation handlers may have the same name.
  *
  * \par RELAX_DESC: the description of the relaxation handler.
- * This string is printed as description of the relaxation handler in the interactive shell.
+ * This string is printed as a description of the relaxation handler in the interactive shell.
  *
  * \par RELAX_PRIORITY: the priority of the relaxation handler.
  * During each relaxation solving round, the included relaxation handlers and the 
@@ -3703,7 +3702,7 @@
  * abstract member function.
  * You have to implement it in order to be able to construct an object of your relaxation handler class.
  *
- * Additional documentation to the callback methods can be found in type_relax.h.
+ * Additional documentation for the callback methods can be found in type_relax.h.
  *
  * @subsection RELAXEXEC
  * The RELAXEXEC is called in each relaxation solving round. It should solve the current 
@@ -3747,7 +3746,7 @@
  *
  * @section RELAX_ADDITIONALCALLBACKS Additional Callback Methods of a Relaxation Handler
  *
- * The additional callback methods need not to be implemented in every case.
+ * The additional callback methods do not need to be implemented in every case.
  * They can be used, for example, to initialize and free private data.
  *
  * @subsection RELAXFREE
@@ -3777,7 +3776,7 @@
  *
  * @subsection RELAXINIT
  *
- * The RELAXINIT callback is executed after the problem was transformed.
+ * The RELAXINIT callback is executed after the problem is transformed.
  * The relaxation handler may, e.g., use this call to initialize his relaxation handler data.
  *
  * @subsection RELAXCOPY
@@ -3797,13 +3796,13 @@
  *
  * @subsection RELAXINITSOL
  *
- * The RELAXINITSOL callback is executed when the presolving was finished and the branch and bound process is about to
- * begin. The relaxation handler may use this call to initialize its branch and bound specific data.
+ * The RELAXINITSOL callback is executed when the presolving is finished and the branch-and-bound process is about to
+ * begin. The relaxation handler may use this call to initialize its branch-and-bound specific data.
  *
  * @subsection REALXEXITSOL
  *
- * The RELAXEXITSOL callback is executed before the branch and bound process is freed.
- * The relaxation handler should use this call to clean up its branch and bound data.
+ * The RELAXEXITSOL callback is executed before the branch-and-bound process is freed.
+ * The relaxation handler should use this call to clean up its branch-and-bound data.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -3860,7 +3859,7 @@
  * Names have to be unique: no two file readers may have the same name.
  * 
  * \par READER_DESC: the description of the file reader.
- * This string is printed as description of the file reader in the interactive shell.
+ * This string is printed as a description of the file reader in the interactive shell.
  *
  * \par READER_EXTENSION: the file name extension of the file reader. 
  * Each file reader is hooked to a single file name extension. It is automatically called if the user wants to read in a 
@@ -3916,7 +3915,7 @@
  * READERREAD and \ref READERWRITE callback) are virtual member
  * functions. At least one of them should be implemented.
  *
- * Additional documentation to the callback methods can be found in type_reader.h.
+ * Additional documentation for the callback methods can be found in type_reader.h.
  *
  *
  * @section READER_ADDITIONALCALLBACKS Additional Callback Methods of a File Reader
@@ -4030,7 +4029,7 @@
  * A complete list of all dialogs contained in this release can be found \ref DIALOGS "here".
  *
  * In the following, we explain how users can extend the interactive shell by adding their own dialog.
- * We give the explanation for creating an own source file for each additional dialog. Of course, you can collect 
+ * We give the explanation for creating your own source file for each additional dialog. Of course, you can collect
  * different dialogs in one source file. Take src/scip/dialog_default.c, where all default dialog plugins are collected, as an 
  * example.
  * As all other default plugins, the default dialog plugin and the template dialog are written in C. C++ users can easily
@@ -4066,7 +4065,7 @@
  * Names within one menu have to be unique: no two dialogs in the same menu may have the same name.
  *
  * \par DIALOG_DESC: the description of the dialog.
- * This string is printed as description of the dialog in the interactive shell if the additional 
+ * This string is printed as a description of the dialog in the interactive shell if the additional
  * callback method \ref DIALOGDESC is not implemented.
  *
  * \par DIALOG_ISSUBMENU: whether the dialog is a (sub)menu.
@@ -4178,7 +4177,7 @@
  * abstract member function.
  * You have to implement it in order to be able to construct an object of your dialog class.
  * 
- * Additional documentation to the callback methods can be found in type_dialog.h.
+ * Additional documentation for the callback methods can be found in type_dialog.h.
  *
  * @subsection DIALOGEXEC
  *
@@ -4195,7 +4194,7 @@
  *
  * @section DIALOG_ADDITIONALCALLBACKS Additional Callback Methods of a Dialog
  *
- * The additional callback methods need not to be implemented in every case.
+ * The additional callback methods do not need to be implemented in every case.
  * They can be used, for example, to free private data.
  *
  * @subsection DIALOGPFREE
@@ -4251,7 +4250,7 @@
  * A complete list of all displays contained in this release can be found \ref DISPLAYS "here".
  *
  * We now explain users can add their own display columns.
- * We give the explanation for creating an own source file for each additional display column. Of course, you can collect 
+ * We give the explanation for creating your own source file for each additional display column. Of course, you can collect
  * different additional display columns in one source file.
  * Take src/scip/disp_default.c, where all default display columns are collected, as an example.
  * As all other default plugins, the default display column plugins and the display column template are written in C.
@@ -4288,7 +4287,7 @@
  * Names have to be unique: no two display columns may have the same name.
  *
  * \par DISP_DESC: the description of the display column.
- * This string is printed as description of the display column in the interactive shell.
+ * This string is printed as a description of the display column in the interactive shell.
  *
  * \par DISP_HEADER: the header of the display column.
  * This string is printed as header of the display column in the status information display.
@@ -4352,7 +4351,7 @@
  * abstract member function.
  * You have to implement it in order to be able to construct an object of your display column class.
  *
- * Additional documentation to the callback methods can be found in type_disp.h.
+ * Additional documentation for the callback methods can be found in type_disp.h.
  *
  * @subsection DISPOUTPUT
  *
@@ -4366,7 +4365,7 @@
  *
  * @section DISP_ADDITIONALCALLBACKS Additional Callback Methods of a Display Column
  *
- * The additional callback methods need not to be implemented in every case.
+ * The additional callback methods do not need to be implemented in every case.
  * They can be used, for example, to initialize and free private data.
  *
  * @subsection DISPCOPY
@@ -4404,7 +4403,7 @@
  *
  * @subsection DISPINIT
  *
- * The DISPINIT callback is executed after the problem was transformed.
+ * The DISPINIT callback is executed after the problem is transformed.
  * The display column may, e.g., use this call to initialize its display column data.
  *
  * @subsection DISPEXIT
@@ -4415,13 +4414,13 @@
  *
  * @subsection DISPINITSOL
  *
- * The DISPINITSOL callback is executed when the presolving was finished and the branch and bound process is about to 
- * begin. The display column may use this call to initialize its branch and bound specific data.
+ * The DISPINITSOL callback is executed when the presolving is finished and the branch-and-bound process is about to
+ * begin. The display column may use this call to initialize its branch-and-bound specific data.
  *
  * @subsection DISPEXITSOL
  *
- * The DISPEXITSOL callback is executed before the branch and bound process is freed. The display column should use this 
- * call to clean up its branch and bound data specific data.
+ * The DISPEXITSOL callback is executed before the branch-and-bound process is freed. The display column should use this
+ * call to clean up its branch-and-bound data specific data.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -4434,7 +4433,7 @@
  * catching the event SCIP_EVENTTYPE_VARFIXED. To be able to catch an event it is necessary to write an event handler
  * which defines what to do after a certain event was caught.
  *
- * We now explain how users can add their own event handlers. We give the explanation for creating an own
+ * We now explain how users can add their own event handlers. We give the explanation for creating your own
  * source file for each additional event handler. Of course, you can collect different event handlers in one source file
  * or you can put the event handler directly into the constraint handler.  In a \ref EVENTUSAGE "second step" we discuss
  * the usage of an event handler. This means how to catch and drop events. \ref EVENTTYPES "Finally", we give some notes on the exiting
@@ -4472,8 +4471,8 @@
  * This name has to be unique with respect to all other event handlers. If you are searching for an event handler with
  * SCIPfindEventhdlr(), this name is looked up.
  *
- * \par EVENT_DESC: the description of the display column.
- * This string is printed as description of the event handler.
+ * \par EVENT_DESC: the description of the event handler.
+ * This string is printed as a description of the event handler.
  *
  * @section EVENTHDLR_DATA Event Handler Data
  *
@@ -4515,7 +4514,7 @@
  * ObjEventhdlr, the scip_exec() method (which corresponds to the \ref EVENTEXEC callback) is a virtual abstract member
  * function.  You have to implement it in order to be able to construct an object of your event handler class.
  *
- * Additional documentation to the callback methods can be found in type_event.h.
+ * Additional documentation for the callback methods can be found in type_event.h.
  *
  * @subsection EVENTEXEC
  *
@@ -4528,7 +4527,7 @@
  *
  * @section EVENT_ADDITIONALCALLBACKS Additional Callback Methods of a Event Handler
  *
- * The additional callback methods need not to be implemented in every case.
+ * The additional callback methods do not need to be implemented in every case.
  * They can be used, for example, to initialize and free private data.
  *
  * @subsection EVENTCOPY
@@ -4584,7 +4583,7 @@
  *
  * @subsection EVENTINIT
  *
- * The EVENTINIT callback is executed after the problem was transformed.
+ * The EVENTINIT callback is executed after the problem is transformed.
  * The event handler may, e.g., use this call to initialize its event handler data.
  *
  * @subsection EVENTEXIT
@@ -4595,13 +4594,13 @@
  *
  * @subsection EVENTINITSOL
  *
- * The EVENTINITSOL callback is executed when the presolving was finished and the branch and bound process is about to 
- * begin. The event handler may use this call to initialize its branch and bound specific data.
+ * The EVENTINITSOL callback is executed when the presolving is finished and the branch-and-bound process is about to
+ * begin. The event handler may use this call to initialize its branch-and-bound specific data.
  *
  * @subsection EVENTEXITSOL
  *
- * The EVENTEXITSOL callback is executed before the branch and bound process is freed. The event handler should use this 
- * call to clean up its branch and bound data specific data.
+ * The EVENTEXITSOL callback is executed before the branch-and-bound process is freed. The event handler should use this
+ * call to clean up its branch-and-bound data specific data.
  *
  * @section EVENTUSAGE Catching and Dropping Events
  *
@@ -4635,7 +4634,7 @@
  *
  * All available events are listed in type_event.h. There are atomic events such as <code>SCIP_EVENTTYPE_VARFIXED</code>
  * and combined events such as <code>SCIP_EVENTTYPE_VARCHANGED</code>. The events are encoded via bit masks. Each atomic
- * event has a unique power of two. This allows to combine the atomic events.
+ * event has a unique power of two. This enables combination of the atomic events.
  *
  * SCIP only throws atomic events. However, an event handler might be interested in bunch of events. Through the
  * underlying bit masks it is possible to combine the atomic events. For example, <code>SCIP_EVENTTYPE_VARCHANGED</code>
@@ -4706,7 +4705,7 @@
  * Names have to be unique: no two NLPIs may have the same name.
  *
  * \par NLPI_DESC: the description of the NLPI.
- * This string is printed as description of the NLPI in the interactive shell.
+ * This string is printed as a description of the NLPI in the interactive shell.
  *
  * \par NLPI_PRIORITY: the priority of the NLPI.
  * If an NLP has to be solved, an NLP solver has to be selected.
@@ -4838,7 +4837,7 @@
  * The NLPISETINITIALGUESS callback is executed to provide primal and dual initial values for the variables and constraints of an NLP.
  * For a local solver, these values can be used as a starting point for the search.
  * It is possible to pass a NULL pointer for any of the arguments (primal values of variables, dual values of variable bounds, dual values of constraints).
- * In this case, the solver should clear previously set starting values and setup an own starting point.
+ * In this case, the solver should clear previously set starting values and setup its own starting point.
  * 
  * @subsection NLPISOLVE
  *
@@ -5005,7 +5004,7 @@
  * Conflict analysis is a way to automatically use the information obtained from infeasible nodes
  * in the branch-and-bound tree. 
  *
- * Once a node is declared infeasible, SCIP automatically tries to infer a constraint that explains the reason of the
+ * Once a node is declared infeasible, SCIP automatically tries to infer a constraint that explains the reason for the
  * infeasibility, in order to avoid similar situations later in the search.  This explanation essentially consists of a
  * constraint stating that at least one of its variables should have a bound different from the current infeasible node,
  * because the current setting led to infeasibility. Clearly, all variables that are fixed in the current infeasible
@@ -5056,7 +5055,7 @@
  *
  * @section RESPROP Reverse Propagation
  *
- * Reverse Propagation allows to build up the conflict graph. Essentially, it provides an algorithm to detect the arcs
+ * Reverse Propagation is used to build up the conflict graph. Essentially, it provides an algorithm to detect the arcs
  * leading to a node in the conflict graph, i.e., the bound changes responsible for the new bound change deduced during
  * propagation. Reverse Propagation needs to be implemented in the RESPROP callback functions of constraint handlers or
  * propagators. These callbacks receive the following information: the variable which is under investigation (@p
@@ -5769,7 +5768,7 @@
  *      <br>
  *    - All functions for setting <b>user parameters</b> of different types like SCIPparamSetBool(), SCIPparamSetChar(), 
  *      SCIPparamSetInt(), SCIPparamSetLongint(), and SCIPparamSetString() in pub_paramset.h have a new parameter:
- *        - <code>quite</code> - It allows to prevent any output during the assign to a new value.  
+ *        - <code>quiet</code> - It prevents any output during the assign to a new value.
  *   
  * <br>
  * @section MISCELLANEOUS4 Miscellaneous
@@ -5911,8 +5910,8 @@
  *
  * <code>SCIP&gt; set emphasis counter</code>
  *
- * The SCIP library provides an interface method SCIPcount() which allows to count the number of feasible solution
- * within your project. The method SCIPsetParamsCountsols(), which is also located in cons_countsols.h, loads the
+ * The SCIP library provides an interface method SCIPcount() which allows users to count the number of feasible solutions
+ * to their problem. The method SCIPsetParamsCountsols(), which is also located in cons_countsols.h, loads the
  * predefined counting settings to ensure a safe count. The complete list of all methods that can be used for counting
  * via the callable library can be found in cons_countsols.h.
  *
