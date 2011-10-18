@@ -3007,8 +3007,11 @@ SCIP_RETCODE propAndSolve(
       solvelp = solvelp || (lpwasflushed && !lp->flushed);
 
       /* the number of bound changes was increased by the propagation call, thus the relaxation should be solved again */
-      solverelax = solverelax || (stat->nboundchgs > oldnboundchgs);
-      markRelaxsUnsolved(set, relaxation);
+      if( stat->nboundchgs > oldnboundchgs )
+      {
+         solverelax = TRUE;
+         markRelaxsUnsolved(set, relaxation);
+      }
 
       /* update lower bound with the pseudo objective value, and cut off node by bounding */
       SCIP_CALL( applyBounding(blkmem, set, stat, transprob, primal, tree, lp, conflict, cutoff) );
