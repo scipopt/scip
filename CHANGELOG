@@ -64,7 +64,7 @@ interface:
 - new method SCIProwGetAge() to access the age of a row (pub_lp.h/lp.c)
 - allowed calling SCIPgetRowSolActivity() in SCIP_STAGE_SOLVED, since LP is still available
 - removed parameters timelimit and memorylimit from SCIPapplyRens()
-- added parmaeter to SCIPincludeQuadconsUpgrade() to indicates whether the given upgrade method should be active by default
+- added parameter to SCIPincludeQuadconsUpgrade() to indicates whether the given upgrade method should be active by default
 - new methods SCIPdebugAddSolVal() and SCIPdebugGetSolVal() to add/get values to/from a debug solution
 - various extensions and modifications for expressions and expression trees (too much to state here)
 - split off PARAMEMPHASIS from PARAMSETTING (in pub_paramset.c/paramset.c)
@@ -164,7 +164,7 @@ plugins:
 
 parameters:
 - added parameter <constraints/quadratic/disaggregate> to split a block-separable quadratic constraint into several quadratic constraint
-- added parameter <constraints/indicator/removeIndicators> to remove indicator constraints if corresponding vub has been added
+- added parameter <constraints/indicator/removeindicators> to remove indicator constraints if corresponding vub has been added
 - change default value of parameter "nodeselection/restartdfs/selectbestfreq" 100
 - added parameter "nodeselection/restartdfs/countonlyleafs" in node selector restart dfs which can be used to select 
   the counting process of processed nodes 
@@ -174,7 +174,7 @@ parameters:
   as the best known are checked; this is of interest if the check of a solution is expensive; default value is FALSE
 - added parameters <constraints/linear/nmincomparisons> and <constraints/linear/mingainpernmincomparisons> to influence stopping criterium
   for pairwise comparison of linear constraints
-- added parameter <constraints/indicator/maxConditionAltLP> to enable a quality check for the solution of the alternative LP 
+- added parameter <constraints/indicator/maxconditionaltlp> to enable a quality check for the solution of the alternative LP
 - moved parameters for pseudoboolean constraints from opb-reader to pseudoboolean constraint handler
 - new parameter for pseudoboolean constraints <constraints/pseudoboolean/decompose>, to transform pseudoboolean constraints into linear- and and-constraints
 - added parameters <constraints/quadratic/maxproprounds> and <constraints/quadratic/maxproproundspresolve> to limit the number of propagations rounds for
@@ -188,7 +188,7 @@ parameters:
 - added parameters <lp/resolveitermin> and <lp/resolveiterfac> to limit the number of LP iterations in resolving calls: resolveiterfac is a factor 
   by which the average number of iterations per call is multiplied to get the limit, but the limit is at least resolveitermin; default is
   -1 (no limit) for resolveiterfac and 1000 for resolveitermin
-- added parameter <constraints/indicator/genBilinear> to generate bilinear (quadratic) constraints instead of indicator constraints
+- added parameter <constraints/indicator/generatebilinear> to generate bilinear (quadratic) constraints instead of indicator constraints
 - added parameter <timing/reading> to add reading time to solving time
 - added parameter <constraints/quadratic/binreforminitial> to indicate whether linear (non-varbound) constraints added due to reformulation of products with binary variables in a quadratic constraints should be initial (if the quadratic constraint is initial), default is FALSE
 - renamed parameter <constraints/quadratic/linearizenlpsol> to <constraints/quadratic/linearizeheursol> and do linearizations in every solution found by some heuristic
@@ -327,7 +327,7 @@ Makefile
   additionally, if building with gnu compilers, the Ipopt libraries directory is stored in the SCIP binary, which should make it easier to run with Ipopt shared libraries
 - new target "make libs" which compiles only the libraries
 - to link against Clp, only the base directory of an Clp installation needs to be specified now
-- moved *.test and *.solu files to folder testset in check folder and adjusted test scripts
+- moved *.test and *.solu files to subdirectory testset in check directory and adjusted test scripts
 - adjusted all test scripts to use the same new optimality gap computation as in SCIP
 - added Makefile option "VALGRIND=true" to enable running the SCIP checks (make test) through valgrind; valgrind errors and memory leaks are reported as fails
 - removed target "lintfiles", this target is now imitated by the "lint" target and a none empty variable FILES
@@ -581,7 +581,7 @@ features:
 - SCIP is now able to write non-linear opb-files(linear instances with and-constraints)
 - primal heuristics may now be called during presolving, using the new timing point SCIP_HEURTIMING_DURINGPRESOLLOOP
 - added new dialog for writing all solutions which are collected during the counting process (see cons_countsols.{c,h})
-- support for FreeBSD (32- and 64-bit) including minor changes in several scripts in the check-folder
+- support for FreeBSD (32- and 64-bit) including minor changes in several scripts in the check-directory
 - added scripts for testruns and evaluation for gurobi, blis, symphony, glpk
 - minor changes on several evaluation scripts (new statuses: better, solved, sollimit, gaplimit) and short-mode for cmpres.awk
 - added new sorting method SCIPsortLongPtr, SCIPsortDownLongPtr and all corresponding methods

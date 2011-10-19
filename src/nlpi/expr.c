@@ -8592,7 +8592,7 @@ void exprgraphNodePropagateBounds(
    /* we will do something, so reset boundstatus to "tightened-by-parent, but not recently" */
    node->boundstatus = SCIP_EXPRBOUNDSTATUS_TIGHTENEDBYPARENT;
 
-   SCIPdebugMessage("propagating node %p (%d,%d): [%10g,%10g] = ", (void*)node, node->depth, node->pos, node->bounds.inf, node->bounds.sup);
+   SCIPdebugMessage("propagating node %p (%d,%d) op %s: [%10g,%10g] = ", (void*)node, node->depth, node->pos, SCIPexpropGetName(node->op), node->bounds.inf, node->bounds.sup);
    SCIPdebug( exprgraphPrintNodeExpression(node, NULL, NULL, TRUE) );
    SCIPdebugPrintf("\n");
 
