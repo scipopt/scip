@@ -4777,7 +4777,7 @@
  * @subsection NLPIADDVARS
  * 
  * The NLPIADDVARS callback is executed if a set of variables with lower and upper bounds and names should be added to a particular NLP.
- * It is assumed that the new variables are added after the already existing variables.
+ * The callback method must add the new variables behind the previously added variables, if any.
  * If NULL is given for the lower bounds arguments, -infinity is assumed as lower bound for each new variable.
  * If NULL is given for the upper bounds arguments, +infinity is assumed as upper bound for each new variable.
  * It is also permitted to use NULL for the names argument.
