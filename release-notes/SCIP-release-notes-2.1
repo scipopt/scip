@@ -5,14 +5,14 @@ Features
 ========
 
 - Major extensions for nonlinear CIP
-  + New constraint handlers for absolute power constraints, 
-    nonlinear equations with algebraic expressions (only Beta), 
-    and for bivariate nonlinear constraints (only Beta)
-  + Reformulation, domain propagation, and convexity check supported by expression graph
-  + Improved pseudocost branching on continuous variables
-  + New interval arithmetic functions
+  + New constraint handlers for nonlinear equations with algebraic expressions (only Beta),
+    absolute power constraints, and bivariate nonlinear constraints (only Beta)
+  + New expression graph data structure for domain propagation and reformulation
+  + Simple convexity check and simplification for expression trees and graphs
+  + New option for n-ary branching on continuous variables (within pseudocost branching rule)
+  + New interval arithmetic functions for bivariate quadratic expressions
 
-- New funtionalities in the interactive shell (modify current CIP instance, store NLP relaxation)
+- New funtionalities in the interactive shell (modify current CIP instance, write NLP relaxation)
 
 - In branch-and-price algorithms, created variables can now be deleted (beta version)
 
@@ -20,9 +20,9 @@ Features
 
 - New primal heuristics (LNS heuristics employing variable bounds and clique partitions)
 
-- New original solution storage capability, which allows sharing solutions between SCIP runs
+- New original solution storage capability, which allows transfering solutions between SCIP runs
 
-- New separator for close cuts including a function to compute relative interior points
+- New separator for close cuts including a function to compute relative interior points of the LP
 
 - New presolving steps for various constraint handlers 
 
@@ -48,13 +48,13 @@ Interfaces
 - Support of GML format for storing the variable bound graph
 
 - Improved support for wbo format for weighted PBO problems, IBM's xml-solution
-  format, and pip format for polynomial mixed-integer programs
+  format, and pip and zimpl format for polynomial mixed-integer programs
 
 - Extended reader for Flatzinc models to handle cumulative constraints
 
-- Extended reader for CIP models to handle various new constraints
+- Extended reader for CIP models to handle various new constraints, including all types of linear constraints
 
-- Extended readers for GAMS and pip models to write additional nonlinear constraints 
+- Extended writer for GAMS and pip models to write more types of nonlinear constraints
 
 
 
@@ -68,6 +68,8 @@ Performance Improvements and Bug Fixes
 - Reorganized filtering process of separation storage (allows adding cuts for different solutions)
 
 - Improved propagation methods for variable bound constraints
+
+- Improved performance for quadratic constraints
 
 - More robust sorting functions 
 
