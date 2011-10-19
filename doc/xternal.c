@@ -148,7 +148,7 @@
  * - Variable names should be all lower case.
  * - For each structure there is a typedef with the name in all upper case.
  * - Defines should be named all upper case.
- * - Document functions, parameters, and variables in a doxygen conform way.
+ * - Document functions, parameters, and variables in a doxygen conformed way.
  *
  * As an example, have a look at tree.c and see the examples below. We also provide settings for
  * \ref XEMACS "(x)emacs" and \ref ECLIPSE "eclipse".
@@ -1091,7 +1091,7 @@
  * A separation frequency of -1 disables the separation method of the constraint handler.
  * \n
  * The separation frequency can be adjusted by the user.
- * The property of the constraint handler only defines the default value of the frequency.
+ * This property of the constraint handler only defines the default value of the frequency.
  * If you want to have a more flexible control of when to execute the separation algorithm, you have to assign
  * a separation frequency of 1 and implement a check at the beginning of your separation algorithm whether you really 
  * want to execute the separator or not.
@@ -1191,7 +1191,7 @@
  * the constraint handler available to the model.
  *
  * If you are using constraint handler data, you have to allocate the memory for the data at this point.
- * You can do this by calling
+ * You can do this by calling:
  * \code
  * SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
  * \endcode
@@ -1670,7 +1670,7 @@
  * and thus identify the "reason" bounds. The bounds that form the reason of the assignment must then be provided by
  * calls to SCIPaddConflictLb() and SCIPaddConflictUb() in the propagation conflict resolving method.
  *
- * <b>Note.</b> That "inferinfo" is an integer is a compromise between space and speed. Sometimes a propagator would
+ * <b>Note.</b> The fact that "inferinfo" is an integer, as opposed to an arbitrary data object, is a compromise between space and speed. Sometimes a propagator would
  * need more information to efficiently infer the original propagation steps that lead to the conflict. This would,
  * however, require too much space. In the extreme, the original propagation steps have to be repeated.
  *
@@ -1904,7 +1904,7 @@
  * \endcode
  *
  * If you are using pricer data, you have to allocate the memory for the data at this point.
- * You can do this by calling
+ * You can do this by calling:
  * \code
  * SCIP_CALL( SCIPallocMemory(scip, &pricerdata) );
  * \endcode
@@ -2165,14 +2165,14 @@
  * At the bottom of "presol_mypresolver.c", you can find the interface method SCIPincludePresolMypresolver(), 
  * which also appears in "presol_mypresolver.h".
  * \n
- * This method has only to be adjusted slightly.
+ * This method only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the presolver by calling the method
  * SCIPincludePresol(). 
  * SCIPincludePresolMypresolver() is called by the user, if he wants to include the presolver, 
  * i.e., if he wants to use the presolver in his application.
  *
  * If you are using presolver data, you have to allocate the memory for the data at this point.
- * You can do this by calling
+ * You can do this by calling:
  * \code
  * SCIP_CALL( SCIPallocMemory(scip, &presoldata) );
  * \endcode
@@ -2239,7 +2239,7 @@
  * @subsection PRESOLINIT
  *
  * The PRESOLINIT callback is executed after the problem is transformed.
- * The presolver may, e.g., use this call to initialize his presolver data.
+ * The presolver may, e.g., use this call to initialize its presolver data.
  * The difference between the original and the transformed problem is explained in 
  * "What is this thing with the original and the transformed problem about?" on \ref FAQ. 
  *
@@ -2341,7 +2341,7 @@
  * 0, 7, 14, ... of the branching tree. A frequency of 0 means, that the separation method is only called at the root node.
  * A frequency of -1 disables the separator.
  * \n
- * The frequency can be adjusted by the user. The property of the separator only defines the default value of the frequency.
+ * The frequency can be adjusted by the user. This property of the separator only defines the default value of the frequency.
  * If you want to have a more flexible control of when to execute the separation algorithm, you have to assign
  * a frequency of 1 and implement a check at the beginning of your separation methods whether you really want to execute 
  * the separation or not. If you do not want to execute it, set the result code of 
@@ -2390,7 +2390,7 @@
  * At the bottom of "sepa_myseparator.c" you can find the interface method SCIPincludeSepaMyseparator(), which also 
  * appears in "sepa_myseparator.h".
  * \n
- * This method has only to be adjusted slightly.
+ * This method only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the separator by calling the method SCIPincludeSepa().
  * SCIPincludeSepaMyseparator() is called by the user, if he wants to include the separator, i.e., if he wants to use 
  * the separator in his application.
@@ -2509,7 +2509,7 @@
  * @subsection SEPAINIT
  *
  * The SEPAINIT callback is executed after the problem is transformed.
- * The separator may, e.g., use this call to initialize his separator data. 
+ * The separator may, e.g., use this call to initialize its separator data.
  * The difference between the original and the transformed problem is explained in 
  * "What is this thing with the original and the transformed problem about?" on \ref FAQ. 
  *
@@ -2589,7 +2589,7 @@
  * the branching tree. A frequency of 0 means that propagation is only applied in preprocessing and at the root node. A
  * frequency of -1 disables the propagator.
  * \n
- * The frequency can be adjusted by the user. The property of the propagator only defines the default value of the 
+ * The frequency can be adjusted by the user. This property of the propagator only defines the default value of the
  * frequency.\n
  * <b>Note:</b> If you want to have a more flexible control of when to execute the propagation algorithm, you have to
  * assign a frequency of 1 and implement a check at the beginning of your propagation algorithm whether you really want
@@ -2635,7 +2635,7 @@
  * At the bottom of "prop_mypropagator.c" you can find the interface method SCIPincludePropMypropagator(), which also 
  * appears in "prop_mypropagator.h".
  * \n
- * This method has only to be adjusted slightly.  It is responsible for notifying SCIP of the presence of the propagator
+ * This method only has to be adjusted slightly.  It is responsible for notifying SCIP of the presence of the propagator
  * by calling the method SCIPincludeProp(). It is called by the user, if he wants to include the propagator, i.e., if he
  * wants to use the propagator in his application.
  *
@@ -2898,14 +2898,14 @@
  * At the bottom of "branch_mybranchingrule.c" you can find the interface method SCIPincludeBranchruleMybranchingrule(), 
  * which also appears in "branch_mybranchingrule.h".
  * \n
- * This method has only to be adjusted slightly.
+ * This method only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the branching rule by calling the method
  * SCIPincludeBranchrule().
  * It is called by the user, if he wants to include the branching rule, i.e., if he wants to use the branching rule in his 
  * application.
  *
  * If you are using branching rule data, you have to allocate the memory for the data at this point.
- * You can do this by calling
+ * You can do this by calling:
  * \code
  * SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
  * \endcode
@@ -3066,7 +3066,7 @@
  * @subsection BRANCHINIT
  *
  * The BRANCHINIT callback is executed after the problem is transformed.
- * The branching rule may, e.g., use this call to initialize his branching rule data.
+ * The branching rule may, e.g., use this call to initialize its branching rule data.
  *
  * @subsection BRANCHCOPY
  *
@@ -3179,14 +3179,14 @@
  * At the bottom of "nodesel_mynodeselector.c" you can find the interface method SCIPincludeNodeselMynodeselector(), 
  * which also appears in "nodesel_mynodeselector.h".
  * \n
- * This method has only to be adjusted slightly.
+ * This method only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the node selector by calling the method
  * SCIPincludeNodesel().
  * It is called by the user, if he wants to include the node selector, i.e., if he wants to use the node selector in 
  * his application.
  *
  * If you are using node selector data, you have to allocate the memory for the data at this point.
- * You can do this by calling
+ * You can do this by calling:
  * \code
  * SCIP_CALL( SCIPallocMemory(scip, &nodeseldata) );
  * \endcode
@@ -3290,7 +3290,7 @@
  * @subsection NODESELINIT
  *
  * The NODESELINIT callback is executed after the problem is transformed.
- * The node selector may, e.g., use this call to initialize his node selector data.
+ * The node selector may, e.g., use this call to initialize its node selector data.
  *
  * @subsection NODESELCOPY
  *
@@ -3323,7 +3323,7 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page HEUR How to add primal heuristics
  *
- * Feasible solutions can be found in two different ways during the traversal of the branch-and-bound tree. On the one 
+ * Feasible solutions can be found in two different ways during the traversal of the branch-and-bound tree. On one
  * hand, the solution of a node's relaxation may be feasible with respect to the constraints (including the integrality). 
  * On the other hand, feasible solutions can be discovered by primal heuristics.  
  * \n
@@ -3359,8 +3359,8 @@
  * These are given as compiler defines.
  * In the C++ wrapper class, you have to provide the primal heuristic properties by calling the constructor
  * of the abstract base class ObjHeur from within your constructor.
- * Of course, all of them are of relevance, but the most important ones for controlling the performance
- * usually are HEUR_FREQ and HEUR_TIMING.
+ * Of course, all of them are of relevant, but the most important ones for controlling the performance
+ * are usually HEUR_FREQ and HEUR_TIMING.
  * The properties you have to set have the following meaning:
  *
  * \par HEUR_NAME: the name of the primal heuristic.
@@ -3387,7 +3387,7 @@
  * feasible solutions: primal heuristics that provide fast algorithms that often succeed in finding a feasible solution should have
  * a high priority (like simple rounding). In addition, the interaction between different types of primal heuristics should be taken into account.
  * For example, improvement heuristics, which try to generate improved solutions by inspecting one or more of the feasible
- * solutions that have already been found, should have a small priority (like Crossover which by default needs at least 3 feasible solutions).
+ * solutions that have already been found, should have a low priority (like Crossover which by default needs at least 3 feasible solutions).
  *
  * \par HEUR_FREQ: the default frequency for executing the primal heuristic.
  * The frequency together with the frequency offset (see HEUR_FREQOFS) defines the depth levels at which the execution
@@ -3398,7 +3398,7 @@
  * Typical cases are: A frequency of 0 and an offset of 0 which means that
  * the heuristic is only called at the root node and a frequency of -1 which disables the heuristic.
  * \n
- * The frequency can be adjusted by the user. The property of the primal heuristic only defines the default value of the 
+ * The frequency can be adjusted by the user. This property of the primal heuristic only defines the default value of the
  * frequency. If you want to have a more flexible control of when to execute the primal heuristic, you have to assign
  * a frequency of 1 and implement a check at the beginning of your execution method whether you really want to search for feasible
  * solutions or not. If you do not want to execute the method, set the result code to SCIP_DIDNOTRUN.
@@ -3422,7 +3422,7 @@
  * \n
  * The primal heuristic can be called first:
  * - before the processing of the node starts (SCIP_HEURTIMING_BEFORENODE)
- * - after each LP solving during the cut-and-price loop (SCIP_HEURTIMING_DURINGLPLOOP) 
+ * - after each LP solve during the cut-and-price loop (SCIP_HEURTIMING_DURINGLPLOOP)
  * - after the cut-and-price loop was finished (SCIP_HEURTIMING_AFTERLPLOOP) 
  * - after the processing of a node <em>with solved LP</em>  was finished (SCIP_HEURTIMING_AFTERLPNODE)
  * - after the processing of a node <em>without solved LP</em> was finished (SCIP_HEURTIMING_AFTERPSEUDONODE)
@@ -3442,10 +3442,10 @@
  * Calling a primal heuristic "before the processing of the node starts" is particularly useful for heuristics 
  * that do not need to access the LP solution of the current node. If such a heuristic finds a feasible solution, the 
  * leaves of the branching tree exceeding the new primal bound are pruned. It may happen that even the current node can 
- * be cut off without solving the LP relaxation. Combinatorial heuristics, like the farthest insert heuristic for the TSP 
+ * be cut off without solving the LP relaxation. Combinatorial heuristics, like the farthest insert heuristic for the TSP
  * (see examples/TSP/src/HeurFarthestInsert.cpp), are often applicable at this point.
  * \n
- * Very fast primal heuristics that require an LP solution can also be called "after each LP solving during the 
+ * Very fast primal heuristics that require an LP solution can also be called "after each LP solve during the
  * cut-and-price loop". Rounding heuristics, like the simple and fast LP rounding heuristic 
  * (src/scip/heur_simplerounding.c), belong to this group of primal heuristics. 
  * \n
@@ -3453,7 +3453,7 @@
  * (e.g. expensive rounding heuristics like RENS), or even only after a full plunge was finished (e.g., diving heuristics). 
  *
  * \par HEUR_USESSUBSCIP: Does the heuristic use a secondary SCIP instance? 
- * Some heuristics and separators solve MIPs or SAT problems and use a secondary SCIP instance therefor. Examples are
+ * Some heuristics and separators solve MIPs or SAT problems using a secondary SCIP instance. Examples are
  * Large Neighborhood Search heuristics such as RINS and Local Branching or the CGMIP separator. To avoid recursion,
  * these plugins usually deactivate all other plugins that solve MIPs. If a heuristic uses a secondary SCIP instance,
  * this parameter has to be TRUE and it is recommended to call SCIPsetSubscipsOff() for the secondary SCIP instance.
@@ -3484,13 +3484,13 @@
  * At the bottom of "heur_myheuristic.c" you can find the interface method SCIPincludeHeurMyheuristic(), which also 
  * appears in "heur_myheuristic.h".
  * \n
- * This method has only to be adjusted slightly.
+ * This method only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the primal heuristic by calling the method SCIPincludeHeur().
  * It is called by the user, if he wants to include the primal heuristic, i.e., if he wants to use the primal heuristic
  * in his application.
  *
  * If you are using primal heuristic data, you have to allocate the memory for the data at this point.
- * You can do this by calling
+ * You can do this by calling:
  * \code
  * SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
  * \endcode
@@ -3561,7 +3561,7 @@
  * @subsection HEURINIT
  *
  * The HEURINIT callback is executed after the problem is transformed.
- * The primal heuristic may, e.g., use this call to initialize his primal heuristic data.
+ * The primal heuristic may, e.g., use this call to initialize its primal heuristic data.
  *
  * @subsection HEURCOPY
  *
@@ -3678,13 +3678,13 @@
  * At the bottom of "relax_myrelaxator.c" you can find the interface method SCIPincludeRelaxMyrelaxator(), which also 
  * appears in "relax_myrelaxator.h".
  * \n
- * This method has only to be adjusted slightly.
+ * This method only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the relaxation handler by calling the method SCIPincludeRelax().
  * It is called by the user, if he wants to include the relaxation handler, i.e., if he wants to use the relaxation 
  * handler in his application.
  *
  * If you are using relaxation handler data, you have to allocate the memory for the data at this point.
- * You can do this by calling
+ * You can do this by calling:
  * \code
  * SCIP_CALL( SCIPallocMemory(scip, &relaxdata) );
  * \endcode
@@ -3709,7 +3709,7 @@
  * subproblem's relaxation.  
  *
  * Note that, like the LP relaxation, the relaxation handler should only operate on variables for which the corresponding 
- * column does exist in the transformed problem. Typical methods called by a relaxation handler are SCIPconstructLP() to
+ * column exists in the transformed problem. Typical methods called by a relaxation handler are SCIPconstructLP() to
  * make sure that the LP of the current node is constructed and its data can be accessed via calls to SCIPgetLPRowsData()
  * and SCIPgetLPColsData(), SCIPseparateSol() to call the cutting plane separators for a given primal solution, and
  * SCIPupdateLocalLowerbound() to update the current node's dual bound after having solved the relaxation.
@@ -3777,7 +3777,7 @@
  * @subsection RELAXINIT
  *
  * The RELAXINIT callback is executed after the problem is transformed.
- * The relaxation handler may, e.g., use this call to initialize his relaxation handler data.
+ * The relaxation handler may, e.g., use this call to initialize its relaxation handler data.
  *
  * @subsection RELAXCOPY
  *
@@ -3889,11 +3889,11 @@
  * appears in "reader_myreader.h".
  * It is responsible for notifying SCIP of the presence of the file reader by calling the method
  * SCIPincludeReader().
- * It is called by the user, if he wants to include the file reader, i.e., if he wants to use the file reader in his 
+ * It is called by the user if he wants to include the file reader, i.e., if he wants to use the file reader in his
  * application.
  *
  * If you are using file reader data, you have to allocate the memory for the data at this point.
- * You can do this by calling
+ * You can do this by calling:
  * \code
  * SCIP_CALL( SCIPallocMemory(scip, &readerdata) );
  * \endcode
@@ -3931,11 +3931,11 @@
  * The READERREAD callback is called when the user invokes SCIP to read in a file with file name extension 
  * corresponding to the READER_EXTENSION property of the file reader. This is usually triggered by a call to the method
  * SCIPreadProb() or by an interactive shell command.
- * The READERREAD callback should parse the input file and perform the desired action, which usually means to 
- * generate a constraint integer programming model, to add a primal solution, or to fix variables 
+ * The READERREAD callback should parse the input file and perform the desired action, which usually means
+ * generating a constraint integer programming model, adding a primal solution, fixing variables
  * in an existing model.
  * \n
- * Typical methods called by a file reader which is used to read/generate constraint 
+ * Typical methods called by a file reader that is used to read/generate constraint
  * integer programming models are, for example, 
  *
  * - creating an empty problem: SCIPcreateProb() 
@@ -3953,8 +3953,8 @@
  *
  * The READERWRITE callback is called when the user invokes SCIP to write a problem (original or transformed) 
  * in the format the reader supports. This is only possible if this callback is implemented. To write the problem 
- * all necessary informations are given through the parameters of this callback method (see type_reader.h). These 
- * informations should be used to output the problem in the requested format. This callback method is usually 
+ * all necessary information is given through the parameters of this callback method (see type_reader.h). This
+ * information should be used to output the problem in the requested format. This callback method is usually
  * triggered by the call of the methods SCIPwriteOrigProblem(), SCIPwriteTransProblem(), SCIPprintOrigProblem(), 
  * or SCIPprintTransProblem().
  * \n
@@ -4028,7 +4028,7 @@
  * \n
  * A complete list of all dialogs contained in this release can be found \ref DIALOGS "here".
  *
- * In the following, we explain how users can extend the interactive shell by adding their own dialog.
+ * We now explain how users can extend the interactive shell by adding their own dialog.
  * We give the explanation for creating your own source file for each additional dialog. Of course, you can collect
  * different dialogs in one source file. Take src/scip/dialog_default.c, where all default dialog plugins are collected, as an 
  * example.
@@ -4060,7 +4060,7 @@
  * The properties you have to set have the following meaning:
  *
  * \par DIALOG_NAME: the name of the dialog.
- * In the interactive shell, this name appears as command name of the dialog in the parent dialog. 
+ * In the interactive shell, this name appears as the command name of the dialog in the parent dialog.
  * Additionally, if you are searching an entry in a menu with SCIPdialogFindEntry(), this name is looked up.
  * Names within one menu have to be unique: no two dialogs in the same menu may have the same name.
  *
@@ -4087,7 +4087,7 @@
  * At the bottom of "dialog_mydialog.c" you can find the interface method SCIPincludeDialogMydialog(), which also appears
  * in "dialog_mydialog.h".
  * \n
- * This method has only to be adjusted slightly.
+ * This method only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the dialog, which can be done by the following lines of code:
  * \code
  * if( !SCIPdialogHasEntry(parentdialog, DIALOG_NAME) )
@@ -4128,7 +4128,7 @@
  * SCIPincludeDialogDefault() and SCIPincludeDefaultPlugins() .
  *
  * If you are using dialog data, you have to allocate the memory for the data at this point.
- * You can do this by calling
+ * You can do this by calling:
  * \code
  * SCIP_CALL( SCIPallocMemory(scip, &dialogdata) );
  * \endcode
@@ -4224,7 +4224,7 @@
  *
  * @subsection DIALOGDESC
  *
- * The method is called, when the help menu of the parent is displayed. It should output (usually a single line of) 
+ * This method is called when the help menu of the parent is displayed. It should output (usually a single line of)
  * information describing the meaning of the dialog. 
  * \n
  * If this callback is not implemented, the description string of the dialog (DIALOG_DESC) is displayed instead.
@@ -4290,7 +4290,7 @@
  * This string is printed as a description of the display column in the interactive shell.
  *
  * \par DISP_HEADER: the header of the display column.
- * This string is printed as header of the display column in the status information display.
+ * This string is printed as the header of the display column in the status information display.
  *
  * \par DISP_WIDTH: the width of the display column.
  * This parameter defines the width (number of characters) of the display column. The value of the parameter has to be
@@ -4325,7 +4325,7 @@
  * At the bottom of "disp_mydisplaycolumn.c" you can find the interface method SCIPincludeDispMydisplaycolumn(), which also
  * appears in "disp_mydisplaycolumn.h".
  * \n
- * This method has only to be adjusted slightly.
+ * This method only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the display column by calling the method
  * SCIPincludeDisp().
  *
@@ -4333,7 +4333,7 @@
  * application. 
  *
  * If you are using display column data, you have to allocate the memory for the data at this point.
- * You can do this by calling
+ * You can do this by calling:
  * \code
  * SCIP_CALL( SCIPallocMemory(scip, &dispdata) );
  * \endcode
@@ -4429,7 +4429,7 @@
  * While solving a constraint integer program, SCIP drops thousands of events such as SCIP_EVENTTYPE_VARFIXED (a
  * complete list of all events is given in type_event.h). These events can be caught and used to do something after a
  * certain event happens. Events can be used to speed up the solution process. For example, the set partitioning
- * constraint is only worth to propagate if one of the involved variables is fixed. This can be detected by
+ * constraint is only worth propagating if one of the involved variables is fixed. This can be detected by
  * catching the event SCIP_EVENTTYPE_VARFIXED. To be able to catch an event it is necessary to write an event handler
  * which defines what to do after a certain event was caught.
  *
@@ -4489,7 +4489,7 @@
  * At the bottom of "event_bestsol.c" you can find the interface method SCIPincludeEventHdlrBestsol(), which also
  * appears in "event_bestsol.h".
  * \n
- * This method has only to be adjusted slightly.
+ * This method only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the event handler by calling the method
  * SCIPincludeEvent().
  *
@@ -4497,7 +4497,7 @@
  * event handler in his application.
  *
  * If you are using event handler data, you have to allocate the memory for the data at this point.
- * You can do this by calling
+ * You can do this by calling:
  * \code
  * SCIP_CALL( SCIPallocMemory(scip, &eventhdlrdata) );
  * \endcode
@@ -4534,11 +4534,11 @@
  *
  * The EVENTCOPY callback is executed when a SCIP instance is copied, e.g. to solve a sub-SCIP. By defining this
  * callback as <code>NULL</code> the user disables the execution of the specified event handler for all copied SCIP
- * instances. Note that in most case the event handler in the copied instance will be initialize by those objects (such
- * as constraint handlers or propagators) which need these event handler (see cons_knapsack.c). In these case the copy
- * callback can be ignored. In case of general events such as new best solution found (SCIP_EVENTTYPE_BESTSOLFOUND) you
- * might want to implement that callback. The event handler example which you find in the directory
- * "examples/Eventhdlr/" uses that callback. 
+ * instances. Note that in most cases the event handler in the copied instance will be initialize by those objects (such
+ * as constraint handlers or propagators) which need this event handler (see cons_knapsack.c). In these cases the copy
+ * callback can be ignored. In case of general events, such as a new best solution being found
+ * (SCIP_EVENTTYPE_BESTSOLFOUND), you might want to implement that callback. The event handler example which you find
+ * in the directory "examples/Eventhdlr/" uses that callback.
  *
  * \code
  * static
@@ -4647,8 +4647,8 @@
  *                                    | SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_DOMCHANGED | SCIP_EVENTTYPE_IMPLADDED)
  * \endcode
  *
- * Depending on the event type, the event offers different information. The methods which are allowed to use to get
- * access to these information are given in pub_event.h.
+ * Depending on the event type, the event offers different information. The methods which can be used to gain
+ * access to this information are given in pub_event.h.
  *
  */
 
@@ -4662,9 +4662,9 @@
  *
  * While the NLPI itself corresponds to the solver interface, the NLPIPROBLEM corresponds to the
  * (solver specific) representation of a concrete nonlinear program.
- * An NLP is specified in form of a set of indexed variables with variable bounds, an objective function,
- * and a set of constraints, where each constraint is specified by a function which is restricted to lie
- * between given left and right hand sides (possibly at infinity).
+ * An NLP is specified as a set of indexed variables with variable bounds, an objective function,
+ * and a set of constraints, where each constraint is specified as a function which is restricted to lie
+ * between given left and right hand sides (possibly infinite).
  * A function consists of a linear, quadratic, and general nonlinear part.
  * The linear and quadratic parts are specified via variable indices and coefficients, while the
  * general nonlinear part is specified via an expression tree.
@@ -4726,13 +4726,13 @@
  * At the bottom of "nlpi_mynlpi.c", you can find the interface method SCIPcreateNlpSolverXyz(), 
  * which also appears in "nlpi_mynlpi.h".
  * \n
- * This method has only to be adjusted slightly.
+ * This method only has to be adjusted slightly.
  * It is responsible for creating an NLPI that contains all properties and callback methods of your
  * solver interface by calling the method SCIPnlpiCreate().
  * SCIPcreateNlpSolverXyz() is called by the user (e.g., SCIP), if he wants to use this solver interface in his application.
  *
  * If you are using NLPI data, you have to allocate the memory for the data at this point.
- * You can do this by calling
+ * You can do this by calling:
  * \code
  * SCIP_CALL( SCIPallocMemory(scip, &nlpidata) );
  * \endcode
@@ -4786,7 +4786,7 @@
  *
  * The NLPIADDCONSTRAINTS callback is executed if a set of constraints should be added to a particular NLP.
  * Constraints are specified by providing left and right hand sides, linear and quadratic coefficients, expression trees, and constraint names.
- * All these arguments are optional, giving NULL for left hand sides corresponds to -infinity, giving NULL for right hand sides corresponds to +infinity.
+ * All of these arguments are optional, giving NULL for left hand sides corresponds to -infinity, giving NULL for right hand sides corresponds to +infinity.
  *
  * @subsection NLPISETOBJECTIVE
  *
@@ -4814,19 +4814,19 @@
  *
  * @subsection NLPICHGLINEARCOEFS
  *
- * The NLPICHGLINEARCOEFS callback is executed to change the coefficients in the linear part of the objective function or an constraint of an NLP.
+ * The NLPICHGLINEARCOEFS callback is executed to change the coefficients in the linear part of the objective function or a constraint of an NLP.
  * 
  * @subsection NLPICHGQUADCOEFS
  *
- * The NLPICHGQUADCOEFS callback is executed to change the coefficients in the quadratic part of the objective function or an constraint of an NLP.
+ * The NLPICHGQUADCOEFS callback is executed to change the coefficients in the quadratic part of the objective function or a constraint of an NLP.
  * 
  * @subsection NLPICHGEXPRTREE
  *
- * The NLPICHGEXPRTREE callback is executed to replace the expression tree of the objective function or an constraint of an NLP.
+ * The NLPICHGEXPRTREE callback is executed to replace the expression tree of the objective function or a constraint of an NLP.
  * 
  * @subsection NLPICHGNONLINCOEF
  *
- * The NLPICHGNONLINCOEF callback is executed to change a single parameter in the (parametrized) expression tree of the objective function or an constraint of an NLP.
+ * The NLPICHGNONLINCOEF callback is executed to change a single parameter in the (parametrized) expression tree of the objective function or a constraint of an NLP.
  * 
  * @subsection NLPICHGOBJCONSTANT
  *
@@ -4897,7 +4897,7 @@
 /**@page EXPRINT How to add interfaces to expression interpreters
  *
  * An expression interpreter is a tool to compute point-wise and interval-wise the function values, gradients, and
- * derivatives of algebraic expressions which are given in form of an expression tree.
+ * derivatives of algebraic expressions which are given in the form of an expression tree.
  * It is used, e.g., by an NLP solver interface to compute Jacobians and Hessians for the solver.
  * 
  * The expression interpreter interface in SCIP has been implemented similar to those of the LP solver interface (LPI).
@@ -4959,7 +4959,7 @@
  *
  * @subsection SCIPexprintCompile
  *
- * The SCIPexprintCompile method is called to initialize the data structure that are required to evaluate
+ * The SCIPexprintCompile method is called to initialize the data structures that are required to evaluate
  * a particular expression tree.
  * The expression interpreter can store data that is particular to a given expression tree in the tree by using
  * SCIPexprtreeSetInterpreterData().
@@ -4987,7 +4987,7 @@
  *
  * @subsection SCIPexprintGradInt
  * 
- * The SCIPexprintGradInt method is called when an interval vector that contains the range the gradients of an expression represented by an expression tree with respect to intervals for the variables should be computed.
+ * The SCIPexprintGradInt method is called when an interval vector that contains the range of the gradients of an expression represented by an expression tree with respect to intervals for the variables should be computed.
  *
  * @subsection SCIPexprintHessianSparsityDense
  * 
@@ -5774,7 +5774,7 @@
  * @section MISCELLANEOUS4 Miscellaneous
  *
  * - The NLPI library is now a separate library that is required when linking against the SCIP library.
- *   This requires changes to Makefile's that use SCIP, see the \ref RELEASENOTES "Release notes" for more details.
+ *   This requires changes to Makefiles that use SCIP, see the \ref RELEASENOTES "Release notes" for more details.
  *
  * - We do not distinguish between <b>block memory</b> for the original and the transformed problem anymore. The same 
  *   block memory is now used in both problem stages.
@@ -5979,6 +5979,8 @@
  */
 
 /**@page RELEASENOTES Release notes
+ *
+ * \verbinclude SCIP-release-notes-2.1
  *
  * \verbinclude SCIP-release-notes-2.0.2
  *
