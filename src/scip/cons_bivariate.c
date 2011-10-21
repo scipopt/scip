@@ -3208,7 +3208,7 @@ SCIP_RETCODE lifting(
    SCIP_Real*            convenvvalue        /**< value of the convex envelope at (xval,yval) */
    )
 {
-   int index; /* indicates which variable is at the boundary */
+   int idx; /* indicates which variable is at the boundary */
 
    SCIP_Real mu;
    SCIP_Real fval;
@@ -3222,7 +3222,7 @@ SCIP_RETCODE lifting(
 
    assert(SCIPisEQ(scip,xlb,xub) || SCIPisEQ(scip,ylb,yub));
 
-   index = SCIPisEQ(scip,xlb,xub) ? 0 : 1;
+   idx = SCIPisEQ(scip, xlb, xub) ? 0 : 1;
 
    /* determine mu
     * if f is bivariate quadratic then f_x(xlb,yval) is linear in yval
@@ -3236,27 +3236,27 @@ SCIP_RETCODE lifting(
    x0y0[1] = yub;
    SCIP_CALL( SCIPexprintGrad(exprinterpreter, f, x0y0, TRUE, &f_ub, grad_ub) );
 
-   /* if min_max=-1 choose min( grad_lb[index], grad_ub[index] )
-    * if min_max= 1 choose max( grad_lb[index], grad_ub[index] )
+   /* if min_max=-1 choose min( grad_lb[idx], grad_ub[idx] )
+    * if min_max= 1 choose max( grad_lb[idx], grad_ub[idx] )
     */
-   if( min_max*(grad_lb[index]-grad_ub[index]) >= 0 )
-      mu = grad_lb[index];
+   if( min_max * (grad_lb[idx] - grad_ub[idx]) >= 0 )
+      mu = grad_lb[idx];
    else
-      mu = grad_ub[index];
+      mu = grad_ub[idx];
 
    /* determine coefficients for the hyperplane */
    x0y0[0] = xval;
    x0y0[1] = yval;
    SCIP_CALL( SCIPexprintGrad(exprinterpreter, f, x0y0, TRUE, &fval, grad) );
 
-   if( index==0 )
+   if( idx == 0 )
    {
       cutcoeff[0] = mu;
       cutcoeff[1] = grad[1];
    }
    else
    {
-      assert(index == 1);
+      assert(idx == 1);
       cutcoeff[0] = grad[0];
       cutcoeff[1] = mu;
    }

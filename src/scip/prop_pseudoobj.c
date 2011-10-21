@@ -671,6 +671,10 @@ SCIP_DECL_PROPINITSOL(propInitsolPseudoobj)
    int nobjvars;
    int v;
 
+   /* if a pricer is active we can do  nothing */
+   if( SCIPgetNActivePricers(scip) > 0 )
+      return SCIP_OKAY;
+
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
@@ -809,6 +813,10 @@ SCIP_DECL_PROPPRESOL(propPresolPseudoobj)
 
    *result = SCIP_DIDNOTRUN;
 
+   /* if a pricer is active we can do  nothing */
+   if( SCIPgetNActivePricers(scip) > 0 )
+      return SCIP_OKAY;
+
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
    
@@ -911,6 +919,10 @@ static
 SCIP_DECL_EVENTEXEC(eventExecPseudoobj)
 {  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
+
+   /* if a pricer is active we can do  nothing */
+   if( SCIPgetNActivePricers(scip) > 0 )
+      return SCIP_OKAY;
 
    propdata = (SCIP_PROPDATA*)eventdata;
    assert(propdata != NULL);

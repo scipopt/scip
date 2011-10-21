@@ -22080,7 +22080,7 @@ void printPropagatorStatistics(
          SCIPpropGetNDomredsFound(prop));
    }
    
-   SCIPmessageFPrintInfo(file, "Propagator Timings :  TotalTime  Presolve   Propagate    ResProp\n");
+   SCIPmessageFPrintInfo(file, "Propagator Timings :  TotalTime   Presolve  Propagate    ResProp\n");
 
    for( i = 0; i < scip->set->nprops; ++i )
    {

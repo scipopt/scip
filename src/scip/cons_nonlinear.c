@@ -6266,7 +6266,6 @@ SCIP_DECL_CONSINIT(consInitNonlinear)
       file = fopen("exprgraph_init.dot", "w");
       SCIP_CALL( SCIPexprgraphPrintDot(conshdlrdata->exprgraph, file, NULL) );
       fclose(file);
-      exit(0);
    }
 #endif
 

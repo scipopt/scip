@@ -1711,7 +1711,7 @@ void consdataUpdateDelCoef(
    /* invalidate maximum absolute value, if this coefficient was the maximum */
    if( consdata->validmaxabsval )
    {
-      if( val == consdata->maxabsval ) /*lint !e777*/ /* check for equality without epsilon is correct here! */
+      if( SCIPisEQ(scip, val, consdata->maxabsval) )
       {
          consdata->validmaxabsval = FALSE;
          consdata->maxabsval = SCIP_INVALID;
@@ -3346,8 +3346,13 @@ SCIP_RETCODE scaleCons(
    for( i = consdata->nvars - 1; i >= 0; --i )
    {
       newval = scalar * consdata->vals[i];
+
+      /* because SCIPisScalingIntegral uses another integrality check as SCIPfeasFloor, we add an additional 0.5 before
+       * flooring down our new value
+       */
       if( SCIPisScalingIntegral(scip, consdata->vals[i], scalar) )
-         newval = SCIPfeasFloor(scip, newval);
+         newval = SCIPfeasFloor(scip, newval + 0.5);
+
       if( SCIPisZero(scip, newval) )
       {
          SCIPwarningMessage("coefficient %.15g of variable <%s> in linear constraint <%s> scaled to zero (scalar: %.15g)\n",
@@ -3371,16 +3376,24 @@ SCIP_RETCODE scaleCons(
    if( !SCIPisInfinity(scip, -consdata->lhs) )
    {
       newval = absscalar * consdata->lhs;
+
+      /* because SCIPisScalingIntegral uses another integrality check as SCIPfeasFloor, we add an additional 0.5 before
+       * flooring down our new value
+       */
       if( SCIPisScalingIntegral(scip, consdata->lhs, absscalar) )
-         consdata->lhs = SCIPfeasFloor(scip, newval);
+         consdata->lhs = SCIPfeasFloor(scip, newval + 0.5);
       else
          consdata->lhs = newval;
    }
    if( !SCIPisInfinity(scip, consdata->rhs) )
    {
       newval = absscalar * consdata->rhs;
+
+      /* because SCIPisScalingIntegral uses another integrality check as SCIPfeasCeil, we subtract 0.5 before ceiling up
+       * our new value
+       */
       if( SCIPisScalingIntegral(scip, consdata->rhs, absscalar) )
-         consdata->rhs = SCIPfeasCeil(scip, newval);
+         consdata->rhs = SCIPfeasCeil(scip, newval - 0.5);
       else
          consdata->rhs = newval;
    }
@@ -3572,6 +3585,9 @@ SCIP_RETCODE normalizeCons(
       SCIPdebugMessage("multiply linear constraint with -1.0\n");
       SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
       SCIP_CALL( scaleCons(scip, cons, -1.0) );
+
+      /* scalecons() can delete variables, but scaling with -1 should not do that */
+      assert(nvars == consdata->nvars);
    }
 
    /*
@@ -3597,6 +3613,16 @@ SCIP_RETCODE normalizeCons(
       SCIPdebugMessage("scale linear constraint with %"SCIP_LONGINT_FORMAT" to make coefficients integral\n", scm);
       SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
       SCIP_CALL( scaleCons(scip, cons, (SCIP_Real)scm) );
+
+      if( consdata->validmaxabsval )
+      {
+	 consdata->maxabsval *= REALABS((SCIP_Real)scm);
+      }
+
+      /* get new consdata information, because scalecons() might have deleted variables */
+      vals = consdata->vals;
+      nvars = consdata->nvars;
+      assert(nvars == 0 || vals != NULL);
    }
 
    /*
@@ -3620,6 +3646,11 @@ SCIP_RETCODE normalizeCons(
          SCIPdebugMessage("divide linear constraint by greatest common divisor %"SCIP_LONGINT_FORMAT"\n", gcd);
          SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
          SCIP_CALL( scaleCons(scip, cons, 1.0/(SCIP_Real)gcd) );
+
+	 if( consdata->validmaxabsval )
+	 {
+	    consdata->maxabsval /= REALABS((SCIP_Real)gcd);
+	 }
       }
    }
 

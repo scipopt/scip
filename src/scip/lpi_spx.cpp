@@ -806,7 +806,8 @@ public:
             catch(SPxException x)
             {
                std::string s = x.what();
-               SCIPwarningMessage("SoPlex simplifier threw an exception: %s\n", s.c_str());
+               SCIPwarningMessage("SoPlex unsimplification unsuccessful; solving again without LP presolving (SoPlex says %s)\n",
+                  s.c_str());
             }
 
             if( cstat != NULL )
