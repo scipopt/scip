@@ -31,6 +31,7 @@ Features
 - New targets "(un)install" in Makefile, support for valgrind in testing environment, 
   threadsafe compilation possible (only with CPLEX as LP solver)
 
+- MIP instances can now be read and written in CIP format
 
 Interfaces
 ==========
@@ -64,6 +65,8 @@ Performance Improvements and Bug Fixes
 - Improved knapsack cover cuts 
 
 - Reorganized filtering process of separation storage (allows adding cuts for different solutions)
+
+- Improved presolving for various constraint handlers
 
 - Improved propagation methods for variable bound constraints
 
