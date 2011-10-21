@@ -240,15 +240,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpClosecuts)
          if ( sepadata->sepasol == NULL )
          {
             SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Computing relative interior point (norm type: %c) ...\n", sepadata->relintnormtype);
-            assert(sepadata->relintnormtype == 'o' || sepadata->relintnormtype == 'i');
-            if( sepadata->relintnormtype == 'o' )
-            {
-               SCIP_CALL( SCIPcomputeLPRelIntPointOneNorm(scip, TRUE, sepadata->inclobjcutoff, &sepadata->sepasol) );
-            }
-            else
-            {
-               SCIP_CALL( SCIPcomputeLPRelIntPointSupNorm(scip, sepadata->inclobjcutoff, &sepadata->sepasol) );
-            }
+            assert(sepadata->relintnormtype == 'o' || sepadata->relintnormtype == 's');
+            SCIP_CALL( SCIPcomputeLPRelIntPoint(scip, TRUE, sepadata->inclobjcutoff, sepadata->relintnormtype, &sepadata->sepasol) );
          }
       }
       else
@@ -381,8 +374,8 @@ SCIP_RETCODE SCIPincludeSepaClosecuts(
 
    SCIP_CALL( SCIPaddCharParam(scip,
          "separating/closecuts/relintnormtype",
-         "type of norm to use when computing relative interior: 'o'ne norm, 'i'nfinity norm",
-         &sepadata->relintnormtype, TRUE, SCIP_DEFAULT_RELINTNORMTYPE, "oi", NULL, NULL) );
+         "type of norm to use when computing relative interior: 'o'ne norm, 's'upremum norm",
+         &sepadata->relintnormtype, TRUE, SCIP_DEFAULT_RELINTNORMTYPE, "os", NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/closecuts/maxunsuccessful",
