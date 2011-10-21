@@ -14536,7 +14536,8 @@ SCIP_RETCODE SCIPprintLPSolutionQuality(
  *  If the original LP is feasible, this LP is feasible as well. Any optimal solution yields the
  *  relative interior point \f$x^*_j/\alpha^*\f$.
  */
-SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
+static
+SCIP_RETCODE computeLPRelIntPointOneNorm(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             relaxrows,          /**< should the rows be relaxed */
    SCIP_Bool             inclobjcutoff,      /**< should a row for the objective cutoff be included */
@@ -14569,7 +14570,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
    assert( scip != NULL );
    assert( point != NULL );
 
-   SCIP_CALL( checkStage(scip, "SCIPcomputeLPRelIntPoint", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "computeLPRelIntPoint", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    /* initialize point */
    *point = NULL;
@@ -15059,7 +15060,8 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointOneNorm(
  *  If the original LP is feasible, this LP is feasible as well. Any optimal solution yields a
  *  relative interior point.
  */
-SCIP_RETCODE SCIPcomputeLPRelIntPointSupNorm(
+static
+SCIP_RETCODE computeLPRelIntPointSupNorm(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             inclobjcutoff,      /**< should a row for the objective cutoff be included */
    SCIP_SOL**            point               /**< relative interior point on exit */
@@ -15087,7 +15089,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointSupNorm(
    assert( scip != NULL );
    assert( point != NULL );
 
-   SCIP_CALL( checkStage(scip, "SCIPcomputeLPRelIntPointSup", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "computeLPRelIntPointSup", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    /* initialize point */
    *point = NULL;
@@ -15388,6 +15390,36 @@ SCIP_RETCODE SCIPcomputeLPRelIntPointSupNorm(
       SCIPfreeBufferArray(scip, &primal);
    }
    SCIP_CALL( SCIPlpiFree(&lpi) );
+
+   return SCIP_OKAY;
+}
+
+/** compute relative interior point to current LP
+ * @see computeLPRelIntPointOneNorm
+ * @see computeLPRelIntPointSupNorm
+ */
+extern
+SCIP_RETCODE SCIPcomputeLPRelIntPoint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             relaxrows,          /**< should the rows be relaxed, can be FALSE only if normtype is 's' */
+   SCIP_Bool             inclobjcutoff,      /**< should a row for the objective cutoff be included */
+   char                  normtype,           /**< which norm to use: 'o'ne-norm or 's'upremum-norm */
+   SCIP_SOL**            point               /**< relative interior point on exit */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPcomputeLPRelIntPoint", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   if( normtype == 'o' )
+   {
+      SCIP_CALL( computeLPRelIntPointOneNorm(scip, relaxrows, inclobjcutoff, point) );
+   }
+   else
+   {
+      assert(normtype == 's');
+      assert(relaxrows);
+
+      SCIP_CALL( computeLPRelIntPointSupNorm(scip, inclobjcutoff, point) );
+   }
 
    return SCIP_OKAY;
 }

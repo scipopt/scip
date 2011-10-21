@@ -25,7 +25,7 @@ interface:
 - new parameter success in SCIPgetVarCopy() that will be FALSE if method is called after problem creation stage
 - SCIP_DECL_PROBCOPY got a new parameter global
 - using proper terms "monomial" and "polynomial" (instead of "monom" and "polynom") in nonlinear expressions (nlpi/*expr*) results in many renamings of types, structs, and methods
-- added functions SCIPcomputeLPRelIntPointOneNorm() and SCIPcomputeLPRelIntPointSupNorm() to compute relative interior points of the current LP
+- added function SCIPcomputeLPRelIntPoint() to compute relative interior point of the current LP
 - added function SCIPsepastoreRemoveInefficaciousCuts() to remove non-efficious cuts from the separation storage
 - added result value SCIP_NEWROUND that allows a separator/constraint handler to start a new separation round (without previous calls to other separators/conshdlrs)
 - implemented SCIPlpiGetPrimalRay() in SoPlex interface that has become available with SoPlex version 1.5.0.2
@@ -156,7 +156,7 @@ plugins:
 - added pseudoboolean constraint handler (cons_pseudoboolean.{c,h})
 - all C template files are now called <plugintype>_xyz.{c,h} instead of <plugintype>_xxx.{c,h}
 - added first version of cons_disjunction.{c,h} which allows a disjunction of constraints
-- added first version of sepa_closecuts.{c,h} to separate cuts w.r.t. to a point that is closer to the integral polyhedron
+- added first version of sepa_closecuts.{c,h} to separate cuts w.r.t. a point that is closer to the integral polyhedron
 - added reader for variable bounds (reader_bnd.{c,h})
 - added BETA version of constraint handler for nonlinear constraints (cons_nonlinear.{c,h}) to handle nonlinear equations given by algebraic expressions using operands like addition, multiplication, power, exp, log; currently no trigonometric functions
 - added constraint handler for (absolute) power constraints (cons_abspower.{c,h}) to handle equations like z = sign(x)abs(x)^n, n > 1
