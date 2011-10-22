@@ -121,6 +121,8 @@ struct SCIP_ConshdlrData
    SCIP_Bool             linfeasshift;       /**< whether to try to make solutions feasible in check by shifting the variable on the right hand side */
    char                  nlpform;            /**< formulation of SOC constraint in NLP */
    SCIP_Real             sepanlpmincont;     /**< minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation */
+   SCIP_NODE*            lastenfolpnode;     /**< the node for which enforcement was called the last time (and some constraint was violated) */
+   int                   nenfolprounds;      /**< counter on number of enforcement rounds for the current node */
 };
 
 
@@ -3163,8 +3165,10 @@ SCIP_DECL_CONSINITSOL(consInitsolSOC)
       SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_SOLFOUND, eventhdlr, (SCIP_EVENTDATA*)conshdlr, &conshdlrdata->newsoleventfilterpos) );
    }
 
-   /* reset flag */
+   /* reset flags and counters */
    conshdlrdata->sepanlp = FALSE;
+   conshdlrdata->lastenfolpnode = NULL;
+   conshdlrdata->nenfolprounds = 0;
 
    return SCIP_OKAY;
 }
@@ -3522,6 +3526,36 @@ SCIP_DECL_CONSENFOLP(consEnfolpSOC)
    {
       *result = SCIP_FEASIBLE;
       return SCIP_OKAY;
+   }
+
+   /* if we are above the 100'th enforcement round for this node, something is strange
+    * (maybe the LP does not think that the cuts we add are violated, or we do ECP on a high-dimensional convex function)
+    * in this case, check if some limit is hit or SCIP should stop for some other reason and terminate enforcement by creating a dummy node
+    * (in optimized more, returning SCIP_INFEASIBLE in *result would be sufficient, but in debug mode this would give an assert in scip.c)
+    * the reason to wait for 100 rounds is to avoid calls to SCIPisStopped in normal runs, which may be expensive
+    * we only increment nenfolprounds until 101 to avoid an overflow
+    */
+   if( conshdlrdata->lastenfolpnode == SCIPgetCurrentNode(scip) )
+   {
+      if( conshdlrdata->nenfolprounds > 100 )
+      {
+         if( SCIPisStopped(scip) )
+         {
+            SCIP_NODE* child;
+
+            SCIP_CALL( SCIPcreateChild(scip, &child, 1.0, SCIPnodeGetEstimate(SCIPgetCurrentNode(scip))) );
+            *result = SCIP_BRANCHED;
+
+            return SCIP_OKAY;
+         }
+      }
+      else
+         ++conshdlrdata->nenfolprounds;
+   }
+   else
+   {
+      conshdlrdata->lastenfolpnode = SCIPgetCurrentNode(scip);
+      conshdlrdata->nenfolprounds = 0;
    }
 
    /* try separation, this should usually work */

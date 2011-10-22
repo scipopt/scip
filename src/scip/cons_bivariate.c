@@ -136,6 +136,9 @@ struct SCIP_ConshdlrData
    SCIP_Bool             isremovedfixings;   /**< whether variable fixations have been removed from the expression graph */
    SCIP_Bool             ispropagated;       /**< whether the bounds on the variables in the expression graph have been propagated */
    SCIP*                 scip;               /**< SCIP data structure, needed in expression graph callbacks */
+
+   SCIP_NODE*            lastenfolpnode;     /**< the node for which enforcement was called the last time (and some constraint was violated) */
+   int                   nenfolprounds;      /**< counter on number of enforcement rounds for the current node */
 };
 
 
@@ -5771,6 +5774,10 @@ SCIP_DECL_CONSINITSOL(consInitsolBivariate)
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "NOTE: the constraint handler for bivariate constraints is still experimental!\n");
    }
 
+   /* reset counter */
+   conshdlrdata->lastenfolpnode = NULL;
+   conshdlrdata->nenfolprounds = 0;
+
    return SCIP_OKAY;
 }
 #else
@@ -6214,6 +6221,36 @@ SCIP_DECL_CONSENFOLP(consEnfolpBivariate)
    }
 
    *result = SCIP_INFEASIBLE;
+
+   /* if we are above the 100'th enforcement round for this node, something is strange
+    * (maybe the LP does not think that the cuts we add are violated, or we do ECP on a high-dimensional convex function)
+    * in this case, check if some limit is hit or SCIP should stop for some other reason and terminate enforcement by creating a dummy node
+    * (in optimized more, returning SCIP_INFEASIBLE in *result would be sufficient, but in debug mode this would give an assert in scip.c)
+    * the reason to wait for 100 rounds is to avoid calls to SCIPisStopped in normal runs, which may be expensive
+    * we only increment nenfolprounds until 101 to avoid an overflow
+    */
+   if( conshdlrdata->lastenfolpnode == SCIPgetCurrentNode(scip) )
+   {
+      if( conshdlrdata->nenfolprounds > 100 )
+      {
+         if( SCIPisStopped(scip) )
+         {
+            SCIP_NODE* child;
+
+            SCIP_CALL( SCIPcreateChild(scip, &child, 1.0, SCIPnodeGetEstimate(SCIPgetCurrentNode(scip))) );
+            *result = SCIP_BRANCHED;
+
+            return SCIP_OKAY;
+         }
+      }
+      else
+         ++conshdlrdata->nenfolprounds;
+   }
+   else
+   {
+      conshdlrdata->lastenfolpnode = SCIPgetCurrentNode(scip);
+      conshdlrdata->nenfolprounds = 0;
+   }
 
    consdata = SCIPconsGetData(maxviolcons);
    assert(consdata != NULL);
