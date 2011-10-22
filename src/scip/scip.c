@@ -19271,7 +19271,26 @@ SCIP_RETCODE SCIPfreeSol(
 {
    SCIP_CALL( checkStage(scip, "SCIPfreeSol", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPsolFree(sol, scip->mem->probmem, scip->primal) );
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      SCIP_CALL( SCIPsolFree(sol, scip->mem->probmem, scip->origprimal) );
+      break;
+   case SCIP_STAGE_FREETRANS:
+   case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_SOLVED:
+   case SCIP_STAGE_FREESOLVE:
+      SCIP_CALL( SCIPsolFree(sol, scip->mem->probmem, scip->primal) );
+      break;
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_ERROR;
+   }  /*lint !e788*/
 
    return SCIP_OKAY;
 }
