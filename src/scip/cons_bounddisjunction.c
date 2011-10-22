@@ -1079,12 +1079,19 @@ SCIP_RETCODE registerBranchingCandidates(
       varlb = SCIPcomputeVarLbLocal(scip, vars[v]);
       varub = SCIPcomputeVarUbLocal(scip, vars[v]);
       /* if literal is x >= varlb, but upper bound on x is < varlb, then this literal can never be satisfied,
-       * thus there is no use for branching */
+       * thus there is no use for branching
+       */
       if( boundtypes[v] == SCIP_BOUNDTYPE_LOWER && SCIPisFeasLT(scip, varub, bounds[v]) )
          continue;
       /* if literal is x <= varub, but lower bound on x is > varub, then this literal can never be satisfied,
-       * thus there is no use for branching */
+       * thus there is no use for branching
+       */
       if( boundtypes[v] == SCIP_BOUNDTYPE_UPPER && SCIPisFeasGT(scip, varlb, bounds[v]) )
+         continue;
+      /* if literal is always satisfied, then no need to branch on it
+       * may happen if propagation is disabled for some reason and due to numerics current solution does not satisfy literal, but variable bounds do
+       */
+      if( isLiteralSatisfied(scip, consdata, v) )
          continue;
 
       violation = SCIPgetSolVal(scip, NULL, vars[v]) - bounds[v];
@@ -1199,12 +1206,17 @@ SCIP_RETCODE createNAryBranch(
       varlb = SCIPcomputeVarLbLocal(scip, vars[v]);
       varub = SCIPcomputeVarUbLocal(scip, vars[v]);
       /* if literal is x >= varlb, but upper bound on x is < varlb, then this literal can never be satisfied,
-       * thus there is no use in creating an extra child for it */
+       * thus there is no use in creating an extra child for it
+       */
       if( boundtypes[v] == SCIP_BOUNDTYPE_LOWER && SCIPisFeasLT(scip, varub, bounds[v]) )
          continue;
       /* if literal is x <= varub, but lower bound on x is > varub, then this literal can never be satisfied,
-       * thus there is no use in creating an extra child for it */
+       * thus there is no use in creating an extra child for it
+       */
       if( boundtypes[v] == SCIP_BOUNDTYPE_UPPER && SCIPisFeasGT(scip, varlb, bounds[v]) )
+         continue;
+      /* if literal is always satisfied, then no need to branch on it */
+      if( isLiteralSatisfied(scip, consdata, v) )
          continue;
 
       /* create a child that enforces the current literal */      
