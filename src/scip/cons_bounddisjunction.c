@@ -1316,6 +1316,11 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
       return SCIP_OKAY;
    if( SCIPgetNBilinTermsQuadratic(scip, cons) != 1 )
       return SCIP_OKAY;
+   /* do not upgrade x*y <=/== rhs with x (or y) binary
+    * the reformulation for such terms in cons_quadratic should handle this better
+    */
+   if( nbinquad > 0 )
+      return SCIP_OKAY;
 
    lhs = SCIPgetLhsQuadratic(scip, cons);
    rhs = SCIPgetRhsQuadratic(scip, cons);
