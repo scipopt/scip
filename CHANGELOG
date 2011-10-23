@@ -619,7 +619,7 @@ features:
 - new method SCIPwriteVarName() which writes a variable in cip-format to given stream
 - new method SCIPwriteVarsList() which writes an array of variables in cip-Format to given stream
 - new method SCIPparseVarName() which parses a string in cip-format as a variable name
-- new method SCIPparsearList() which parses an string as a variable list in cip-format 
+- new method SCIPparseVarList() which parses a string as a variable list in cip-format 
 - constraint handler "logicor" can parse its output 
 - constraint handler "and" can parse its output 
 - constraint handler "or" can parse its output 
