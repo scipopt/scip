@@ -6708,7 +6708,7 @@ SCIP_RETCODE generateCut(
          /* check that our computed efficacy is > feastol, iff efficacy computed by row is > feastol
           * (they should be equal, but due to numerics...)
           */
-         assert(SCIPisFeasPositive(scip, *efficacy) == SCIPisFeasPositive(scip, -SCIPgetRowSolFeasibility(scip, *row, sol)/MAX(1.0,SCIPgetRowMaxCoef(scip, *row))));
+         assert(SCIPisFeasPositive(scip, *efficacy) == SCIPisFeasPositive(scip, -SCIPgetRowSolFeasibility(scip, *row, sol)/MAX(1.0,SCIPgetRowMaxCoef(scip, *row))));  /*lint !e666*/
       }
    }
 
@@ -7870,11 +7870,11 @@ SCIP_RETCODE propagateBoundsBilinearTerm(
       return SCIP_OKAY;
 
    SCIPintervalSetBounds(&xbnds,
-      -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x))),
-      +infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x))));
+      -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x))),   /*lint !e666*/
+      +infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x))));  /*lint !e666*/
    SCIPintervalSetBounds(&ybnds,
-      -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(y), SCIPvarGetUbLocal(y))),
-      +infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(y), SCIPvarGetUbLocal(y))));
+      -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(y), SCIPvarGetUbLocal(y))),   /*lint !e666*/
+      +infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(y), SCIPvarGetUbLocal(y))));  /*lint !e666*/
 
    /* try to find domain reductions for x */
    SCIPintervalSolveBivariateQuadExpressionAllScalar(intervalinfty, &xbnds, xsqrcoef, ysqrcoef, bilincoef, xlincoef, ylincoef, rhs, xbnds, ybnds);
