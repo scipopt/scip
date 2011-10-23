@@ -1960,6 +1960,9 @@ SCIP_RETCODE SCIPcopy(
    /* construct name for the target SCIP using the source problem name and the given suffix string */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%s", SCIPgetProbName(sourcescip), suffix);
 
+   /* copy all settings */
+   SCIP_CALL( SCIPcopyParamSettings(sourcescip, targetscip) );
+
    /* create problem in the target SCIP and copying the source problem data */
    SCIP_CALL( SCIPcopyProb(sourcescip, targetscip, localvarmap, localconsmap, global, name) );
 
@@ -1972,9 +1975,6 @@ SCIP_RETCODE SCIPcopy(
 
    SCIPdebugMessage("Copying constraints was%s valid.\n", consscopyvalid ? "" : " not");
 
-   /* copy all settings */
-   SCIP_CALL( SCIPcopyParamSettings(sourcescip, targetscip) );
-   
    if( uselocalvarmap )
    {
       /* free hash map */
