@@ -14535,7 +14535,7 @@ SCIP_RETCODE provedBound(
        * or
        * - only a few variables with large or infinite bounds exist
        */
-      lboundratio = (SCIP_Real) (SCIPgetNInfinitBounds(conss[0]) + SCIPgetNLargeBounds(conss[0])) / (SCIP_Real) SCIPgetNVars(set->scip);
+      lboundratio = (SCIP_Real) (SCIPgetNInfiniteBounds(conss[0]) + SCIPgetNLargeBounds(conss[0])) / (SCIP_Real) SCIPgetNVars(set->scip);
       if( !usefarkas && lboundratio > FEWLBOUNDSRATIO )
       {
          *bound = -SCIPsetInfinity(set);

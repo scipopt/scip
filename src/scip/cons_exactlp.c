@@ -181,6 +181,7 @@ struct SCIP_ConsData
                                               *   extobj = objsense * objscale * (intobj + objoffset) */
    int                   nvars;              /**< number of variables */
    int                   ninfbounds;         /**< number of variables with infinite bound in safe dual bounding method */
+   int                   ninfintbounds;      /**< number of integer variables with infinite bound in safe db method */
    int                   nlargebounds;       /**< number of variables with large bound in safe dual bounding method */
    mpq_t*                obj;                /**< objective function values of variables */
    SCIP_Bool             objneedscaling;     /**< do objective function values need to be scaled because some are not FP representable? */
@@ -1034,6 +1035,7 @@ SCIP_RETCODE consdataCreate(
    SCIP_OBJSENSE         objsense,           /**< objective sense */
    int                   nvars,              /**< number of variables */
    int                   ninfbounds,         /**< number of variables with infinite bound in safe dual bounding method */
+   int                   ninfintbounds,      /**< number of integer variables with infinite bound in safe db method */
    int                   nlargebounds,       /**< number of variables with large bound in safe dual bounding method */
    mpq_t*                obj,                /**< objective function values of variables */
    mpq_t*                lb,                 /**< lower bounds of variables */
@@ -1176,6 +1178,7 @@ SCIP_RETCODE consdataCreate(
    mpq_set_d((*consdata)->objoffset, 0.0);
    (*consdata)->nvars = nvars;
    (*consdata)->ninfbounds = ninfbounds;
+   (*consdata)->ninfintbounds = ninfintbounds;
    (*consdata)->nlargebounds = nlargebounds;
    (*consdata)->nconss = nconss;
    (*consdata)->nsplitconss = nsplitconss;
@@ -7562,10 +7565,10 @@ SCIP_DECL_CONSTRANS(consTransExactlp)
    {
       /* create exactlp constraint data for target constraint */
       SCIP_CALL( consdataCreate(scip, conshdlrdata, &targetdata, conshdlrdata->eventhdlr, sourcedata->objsense, 
-            sourcedata->nvars, sourcedata->ninfbounds, sourcedata->nlargebounds, newobj, sourcedata->lb, sourcedata->ub, 
-            sourcedata->nconss, sourcedata->nsplitconss, sourcedata->conssize, sourcedata->lhs, sourcedata->rhs, 
-            sourcedata->nnonz, sourcedata->nintegral, sourcedata->beg, sourcedata->len, sourcedata->ind, sourcedata->val, 
-            sourcedata->minabsval, sourcedata->maxabsval, FALSE) );
+            sourcedata->nvars, sourcedata->ninfbounds, sourcedata->ninfintbounds, sourcedata->nlargebounds, newobj, 
+            sourcedata->lb, sourcedata->ub, sourcedata->nconss, sourcedata->nsplitconss, sourcedata->conssize, 
+            sourcedata->lhs, sourcedata->rhs, sourcedata->nnonz, sourcedata->nintegral, sourcedata->beg, sourcedata->len, 
+            sourcedata->ind, sourcedata->val, sourcedata->minabsval, sourcedata->maxabsval, FALSE) );
      
       /* create target constraint */
       SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
@@ -8036,6 +8039,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpExactlp)
 
    /* select dual bounding method to apply */
    dualboundmethod = SCIPselectDualBoundMethod(scip, FALSE);
+   assert(SCIPgetNLPBranchCands(scip) == 0 || dualboundmethod == 'e');
 
    /* start timing for dual bounding method 'e' (is performed here, as we cannot branch in sepalp) */
    if( dualboundmethod == 'e' )
@@ -8100,10 +8104,10 @@ SCIP_DECL_CONSENFOLP(consEnfolpExactlp)
    {
       SCIPerrorMessage("exact LP solver returns error: case not handled yet\n");
 
-      if( dualboundmethod == 'e' )
-         conshdlrdata->nfailprovedfeaslp++;
-      else
+      if( dualboundmethod != 'e' || SCIPgetNLPBranchCands(scip) == 0 )
          conshdlrdata->nwrongexactfeaslp++;
+      else
+         conshdlrdata->nfailprovedfeaslp++;
 
       return SCIP_ERROR;
    }
@@ -8112,8 +8116,8 @@ SCIP_DECL_CONSENFOLP(consEnfolpExactlp)
    SCIP_CALL( evaluateLPEX(scip, conss[0], conshdlrdata, consdata, result) );
 
    /* update number of wrong integral LP claims */
-   if( *result == SCIP_BRANCHED && dualboundmethod != 'e' )
-      conshdlrdata->nwrongexactfeaslp++;
+    if( *result == SCIP_BRANCHED && ( dualboundmethod != 'e' || SCIPgetNLPBranchCands(scip) == 0 ) )
+         conshdlrdata->nwrongexactfeaslp++;
 
    return SCIP_OKAY;
 }
@@ -9115,6 +9119,7 @@ SCIP_RETCODE SCIPcreateConsExactlp(
    SCIP_OBJSENSE         objsense,           /**< objective sense */
    int                   nvars,              /**< number of variables */
    int                   ninfbounds,         /**< number of variables with infinite bound in safe dual bounding method */
+   int                   ninfintbounds,      /**< number of integer variables with infinite bound in safe db method */
    int                   nlargebounds,       /**< number of variables with large bound in safe dual bounding method */
    mpq_t*                obj,                /**< objective function values of variables */
    mpq_t*                lb,                 /**< lower bounds of variables */
@@ -9181,8 +9186,8 @@ SCIP_RETCODE SCIPcreateConsExactlp(
 
    /* create constraint data */
    SCIP_CALL( consdataCreate(scip, conshdlrdata, &consdata, conshdlrdata->eventhdlr, objsense, nvars, ninfbounds, 
-         nlargebounds, obj, lb, ub, nconss, nsplitconss, nconss, lhs, rhs, nnonz, nintegral, beg, len, ind, val, 
-         minabsval, maxabsval, objneedscaling) );
+         ninfintbounds, nlargebounds, obj, lb, ub, nconss, nsplitconss, nconss, lhs, rhs, nnonz, nintegral, beg, len, ind,
+         val, minabsval, maxabsval, objneedscaling) );
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
@@ -9427,6 +9432,43 @@ void SCIPgetBestSolexObj(
    }
 }
 
+/** returns transformed objective value of best exact primal CIP solution found so far */
+void SCIPgetBestSolexTransObj(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< exactlp constraint data */
+   mpq_t                 obj                 /**< pointer to store objective value */ 
+   )
+{
+   SCIP_SOLEX* sol;
+
+   /* get best exact solution found so far */
+   sol = SCIPgetBestSolex(scip);
+   if( sol != NULL )
+   {
+      SCIPgetSolexTransObj(scip, sol, obj);
+   }
+   else
+   {
+      SCIP_CONSHDLRDATA* conshdlrdata;
+      SCIP_CONSHDLR* conshdlr;
+
+      /* find the exactlp constraint handler */
+      conshdlr = SCIPconsGetHdlr(cons);
+
+      if( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
+      {
+         SCIPerrorMessage("constraint is not of type exactlp\n");
+         SCIPABORT();
+      }
+
+      /* get constraint handler data */
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+
+      assert(conshdlrdata != NULL);
+      mpq_set(obj, *posInfinity(conshdlrdata));
+   }
+}
+
 /** outputs non-zero variables of exact solution in original problem space to file stream */
 SCIP_RETCODE SCIPprintSolex(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -9438,13 +9480,24 @@ SCIP_RETCODE SCIPprintSolex(
 {
    char s[SCIP_MAXSTRLEN];
    mpq_t obj;
-
+   int n;
+         
    mpq_init(obj);
    
    SCIPgetSolexOrigObj(scip, cons, sol, obj);
-   gmp_snprintf(s, SCIP_MAXSTRLEN, "objective value:                 %20Qd\n", obj);
-   SCIPmessageFPrintInfo(file, s);
-
+   n = gmp_snprintf(s, SCIP_MAXSTRLEN, "objective value:                 %20Qd\n", obj);
+   if( n >= SCIP_MAXSTRLEN )
+   {
+      char* bigs;
+      
+      SCIP_CALL( SCIPallocMemorySize(scip, &bigs, n+1) );
+      gmp_snprintf(bigs, n+1, "objective value:                 %20Qd\n", obj);
+      SCIPmessagePrintInfo(bigs);
+      SCIPfreeMemory(scip, &bigs);
+   }
+   else
+      SCIPmessageFPrintInfo(file, s);
+   
    /* todo: usinf scip->orig/transprob is ugly! think about a general way get information from the constraint handler 
     *       implement all the methods in cons_exactlp.c that operate and use exact problem data, like exact solutions
     *       ??????????? 
@@ -9862,9 +9915,9 @@ char SCIPselectDualBoundMethod(
 #ifdef DBAUTO_OUT /*?????????????????*/
    printf("selected dual bounding method for %s LP: %c (skip:%d, boundcrit:%d [%d/%d=%.2f], dimcrit:%d)\n", 
       infeaslp ? "infeasible" : "feasible", dualboundmethod, skip, 
-      (SCIP_Real)(SCIPgetNInfinitBounds(conss[0]) + SCIPgetNLargeBounds(conss[0]))/(SCIP_Real)SCIPgetNVars(scip) <= FEWLBOUNDSRATIO, 
-      SCIPgetNInfinitBounds(conss[0]) + SCIPgetNLargeBounds(conss[0]), SCIPgetNVars(scip),
-      (SCIP_Real)(SCIPgetNInfinitBounds(conss[0]) + SCIPgetNLargeBounds(conss[0]))/(SCIP_Real)SCIPgetNVars(scip),
+      (SCIP_Real)(SCIPgetNInfiniteBounds(conss[0]) + SCIPgetNLargeBounds(conss[0]))/(SCIP_Real)SCIPgetNVars(scip) <= FEWLBOUNDSRATIO, 
+      SCIPgetNInfiniteBounds(conss[0]) + SCIPgetNLargeBounds(conss[0]), SCIPgetNVars(scip),
+      (SCIP_Real)(SCIPgetNInfiniteBounds(conss[0]) + SCIPgetNLargeBounds(conss[0]))/(SCIP_Real)SCIPgetNVars(scip),
       SCIPgetNVars(scip) * SCIPgetNConssExactlp(conss[0]) <= SMALLPROBDIM);
 #endif
 
@@ -9989,7 +10042,7 @@ SCIP_Real SCIPgetCoefRatioExactlp(
 }
 
 /** gets total number variables with infinite bound needed in safe dual bounding method */
-int SCIPgetNInfinitBounds(
+int SCIPgetNInfiniteBounds(
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
@@ -10006,6 +10059,26 @@ int SCIPgetNInfinitBounds(
    assert(consdata != NULL);
 
    return consdata->ninfbounds;
+}
+
+/** gets total number integer variables with infinite bound needed in safe dual bounding method */
+int SCIPgetNInfiniteIntegerBounds(
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not of type exactlp\n");
+      SCIPABORT();
+      return 0;
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->ninfintbounds;
 }
 
 /** gets total number variables with infinite bound needed in safe dual bounding method */

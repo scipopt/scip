@@ -423,6 +423,7 @@ SCIP_RETCODE SCIPsolexPrint(
    mpq_t solval;
    int v;
    char s[SCIP_MAXSTRLEN];
+   int n;
 
    assert(sol != NULL);
    assert(prob != NULL);
@@ -442,7 +443,8 @@ SCIP_RETCODE SCIPsolexPrint(
       if( printzeros || mpq_sgn(solval) != 0 )
       {
          SCIPmessageFPrintInfo(file, "%-32s", SCIPvarGetName(prob->fixedvars[v]));
-         gmp_snprintf(s, SCIP_MAXSTRLEN, " %Q20d\n", solval);
+         n = gmp_snprintf(s, SCIP_MAXSTRLEN, " %Q20d\n", solval);
+         assert(n < SCIP_MAXSTRLEN);
          SCIPmessageFPrintInfo(file, s);
       }
    }
@@ -453,7 +455,8 @@ SCIP_RETCODE SCIPsolexPrint(
       if( printzeros || mpq_sgn(solval) != 0 )
       {
          SCIPmessageFPrintInfo(file, "%-32s", SCIPvarGetName(prob->vars[v]));
-         gmp_snprintf(s, SCIP_MAXSTRLEN, " %20Qd\n", solval);
+         n = gmp_snprintf(s, SCIP_MAXSTRLEN, " %20Qd\n", solval);
+         assert(n < SCIP_MAXSTRLEN);
          SCIPmessageFPrintInfo(file, s);
       }
    }
@@ -472,7 +475,8 @@ SCIP_RETCODE SCIPsolexPrint(
          if( printzeros || mpq_sgn(solval) != 0 )
          {
             SCIPmessageFPrintInfo(file, "%-32s", SCIPvarGetName(transprob->fixedvars[v]));
-            gmp_snprintf(s, SCIP_MAXSTRLEN, " %20Qd\n", solval);
+            n = gmp_snprintf(s, SCIP_MAXSTRLEN, " %20Qd\n", solval);
+            assert(n < SCIP_MAXSTRLEN);
             SCIPmessageFPrintInfo(file, s);
          }
       }
@@ -485,7 +489,8 @@ SCIP_RETCODE SCIPsolexPrint(
          SCIPsolexGetVal(sol, transprob->vars[v], solval);
          if( printzeros || mpq_sgn(solval) != 0 )
          {
-            gmp_snprintf(s, SCIP_MAXSTRLEN, " %20Qd\n", solval);
+            n = gmp_snprintf(s, SCIP_MAXSTRLEN, " %20Qd\n", solval);
+            assert(n < SCIP_MAXSTRLEN);
             SCIPmessageFPrintInfo(file, s);
          }
       }

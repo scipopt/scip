@@ -108,6 +108,7 @@ SCIP_RETCODE SCIPcreateConsExactlp(
    SCIP_OBJSENSE         objsen,             /**< objective sense */
    int                   nvars,              /**< number of variables */
    int                   ninfbounds,         /**< number of variables with infinite bound in safe dual bounding method */
+   int                   ninfintbounds,      /**< number of integer variables with infinite bound in safe db method */
    int                   nlargebounds,       /**< number of variables with large bound in safe dual bounding method */
    mpq_t*                obj,                /**< objective function values of variables */
    mpq_t*                lb,                 /**< lower bounds of variables */
@@ -207,6 +208,14 @@ void SCIPgetSolexTransObj(
 /** returns objective value of best exact primal CIP solution found so far w.r.t. original problem */
 extern
 void SCIPgetBestSolexObj(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< exactlp constraint data */
+   mpq_t                 obj                 /**< pointer to store objective value */ 
+   );
+
+/** returns transformed objective value of best exact primal CIP solution found so far */
+extern
+void SCIPgetBestSolexTransObj(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< exactlp constraint data */
    mpq_t                 obj                 /**< pointer to store objective value */ 
@@ -348,7 +357,13 @@ SCIP_Real SCIPgetCoefRatioExactlp(
 
 /** gets total number variables with infinite bound needed in safe dual bounding method */
 extern
-int SCIPgetNInfinitBounds(
+int SCIPgetNInfiniteBounds(
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** gets total number integer variables with infinite bound needed in safe dual bounding method */
+extern
+int SCIPgetNInfiniteIntegerBounds(
    SCIP_CONS*            cons                /**< constraint data */
    );
 

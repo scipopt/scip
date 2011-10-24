@@ -85,6 +85,7 @@ static mpq_t* ub_ = NULL;
 static mpq_t* obj_ = NULL;
 static int nvars_ = 0;
 static int ninfbounds_ = 0;
+static int ninfintbounds_ = 0;
 static int nlargebounds_ = 0;
 static int varssize_ = 0;
 
@@ -1117,12 +1118,6 @@ Var* xlp_addvar(
       break;
    }
 
-   /* update of variables with infinite oder large bounds */
-   if( bound_get_type(lower) == BOUND_MINUS_INFTY || bound_get_type(upper) == BOUND_INFTY  ) 
-      ninfbounds_++;
-   else if( lb <= -LARGEBOUND || ub >= LARGEBOUND ) 
-      nlargebounds_++;
-
    /* get variable type */
    switch( usevarclass )
    {
@@ -1141,6 +1136,16 @@ Var* xlp_addvar(
       readerror_ = TRUE;
       break;
    }
+
+   /* update of variables with infinite or large bounds and integer variables with infinite bounds */
+   if( bound_get_type(lower) == BOUND_MINUS_INFTY || bound_get_type(upper) == BOUND_INFTY  ) 
+   {
+      ninfbounds_++;
+      if( vartype != SCIP_VARTYPE_CONTINUOUS ) 
+         ninfintbounds_++;
+   }
+   else if( lb <= -LARGEBOUND || ub >= LARGEBOUND ) 
+      nlargebounds_++;
 
    /* get branching priority of variable and additional information */
    initial = !dynamiccols;
@@ -2044,10 +2049,10 @@ SCIP_DECL_READERREAD(readerReadZpl)
    (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "exactlp");
    
 
-   SCIP_CALL_ABORT( SCIPcreateConsExactlp(scip, &cons, consname, objsense_, nvars_, ninfbounds_, nlargebounds_, obj_, lb_,
-         ub_, nconss_, nsplitconss_, lhs_, rhs_, nnonz_, nintegral_, beg_, len_, ind_, val_, minabsval_, maxabsval_, 
-         objneedscaling_, initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, 
-         stickingatnode) );
+   SCIP_CALL_ABORT( SCIPcreateConsExactlp(scip, &cons, consname, objsense_, nvars_, ninfbounds_, ninfintbounds_, 
+         nlargebounds_, obj_, lb_, ub_, nconss_, nsplitconss_, lhs_, rhs_, nnonz_, nintegral_, beg_, len_, ind_, val_, 
+         minabsval_, maxabsval_, objneedscaling_, initial, separate, enforce, check, propagate, local, modifiable, dynamic,
+         removable, stickingatnode) );
    SCIP_CALL_ABORT( SCIPaddCons(scip, cons) );
    SCIP_CALL_ABORT( SCIPreleaseCons(scip, &cons) );
 #ifdef READER_OUT

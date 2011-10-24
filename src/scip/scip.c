@@ -5922,14 +5922,28 @@ SCIP_RETCODE SCIPsolve(
          SCIP_CONS** conss;
          char s[SCIP_MAXSTRLEN];
          mpq_t primalboundex;
-         
+         int n;
+
          conss = SCIPgetConss(scip);
          assert(conss != NULL);
          mpq_init(primalboundex);
 
          SCIPgetBestSolexObj(scip, conss[0], primalboundex);
-         gmp_snprintf(s, SCIP_MAXSTRLEN, "Exact Primal Bound : %+Qd (%d solutions)\n", primalboundex, SCIPgetNSolexs(scip));
-         SCIPmessagePrintInfo(s);
+
+         n = gmp_snprintf(s, SCIP_MAXSTRLEN, "Exact Primal Bound : %+Qd (%d solutions)\n", primalboundex, SCIPgetNSolexs(scip));
+         if( n >= SCIP_MAXSTRLEN )
+         {
+            char* bigs;
+
+            SCIP_CALL( SCIPallocMemorySize(scip, &bigs, n+1) );
+            gmp_snprintf(bigs, n+1, "Exact Primal Bound : %+Qd (%d solutions)\n", primalboundex, SCIPgetNSolexs(scip));
+            SCIPmessagePrintInfo(bigs);
+            SCIPfreeMemory(scip, &bigs);
+         }
+         else
+         {
+            SCIPmessagePrintInfo(s);
+         }
          mpq_clear(primalboundex);
       }
 #endif
@@ -6855,6 +6869,8 @@ SCIP_RETCODE SCIPgetVarStrongbranch(
 
 #ifdef USESBGAIN /* ??????????? */
    exactsolve = FALSE;
+#else
+   exactsolve = TRUE;
 #endif
 
    /* call strong branching for column */
@@ -16454,6 +16470,67 @@ void printSolutionStatistics(
             : (SCIPsolGetRunnum(scip->primal->sols[0]) == 0 ? "initial" : "relaxation"));
       }
    }
+#ifdef EXACTSOLVE
+   if( SCIPisExactSolve(scip) )
+   {
+      if( scip->set->stage >= SCIP_STAGE_TRANSFORMED && scip->set->stage <= SCIP_STAGE_FREESOLVE )
+      {
+         SCIP_CONS** conss;
+         char s[SCIP_MAXSTRLEN];
+         mpq_t primalboundex;
+         int n;
+               
+         conss = SCIPgetConss(scip);
+         assert(conss != NULL);
+         mpq_init(primalboundex);
+      
+         SCIPgetBestSolexObj(scip, conss[0], primalboundex);
+      
+         if( SCIPisPosInfinityExactlp(scip, primalboundex) || SCIPisNegInfinityExactlp(scip, primalboundex) )
+         {
+            if( scip->set->stage == SCIP_STAGE_SOLVED )
+            {
+               if( SCIPgetNSolexs(scip) == 0 )
+                  SCIPmessageFPrintInfo(file, "  Exact Primal Bnd : infeasible\n");
+               else
+                  SCIPmessageFPrintInfo(file, "  Exact Primal Bnd : unbounded\n");
+            }
+            else
+               SCIPmessageFPrintInfo(file, "  Exact Primal Bnd :         -\n");
+         }
+         else
+         {
+            if( SCIPgetNSolexs(scip) == 0 )
+               SCIPmessageFPrintInfo(file, "   (user objective limit)\n");
+            else
+            {
+               n = gmp_snprintf(s, SCIP_MAXSTRLEN, "  Exact Primal Bnd : %+Qd\n", primalboundex);
+               if( n >= SCIP_MAXSTRLEN )
+               {
+                  char* bigs;
+                  
+                  if( SCIPallocMemorySize(scip, &bigs, n+1) != SCIP_OKAY )
+                  {
+                     SCIPmessagePrintInfo("  Exact Primal Bnd : string to long\n");
+                  }
+                  else
+                  {
+                     gmp_snprintf(bigs, n+1, "  Exact Primal Bnd : %+Qd\n", primalboundex);
+                     SCIPmessagePrintInfo(bigs);
+                     SCIPfreeMemory(scip, &bigs);
+                  }
+               }
+               else
+                  SCIPmessageFPrintInfo(file, s);
+            }
+         }
+
+         mpq_clear(primalboundex);
+      }
+      else
+         SCIPmessageFPrintInfo(file, "  Exact Primal Bnd : not accessable anymore\n");
+   }
+#endif
    if( SCIPsetIsInfinity(scip->set, REALABS(dualbound)) )
       SCIPmessageFPrintInfo(file, "  Dual Bound       :          -\n");
    else
