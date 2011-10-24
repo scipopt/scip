@@ -1090,6 +1090,12 @@ endif
 ifneq ($(SHARED),$(LAST_SHARED))
 		@-touch $(ALLSRC)
 endif
+ifneq ($(USRCFLAGS),$(LAST_USRCFLAGS))
+		@-touch $(ALLSRC)
+endif
+ifneq ($(USRCXXFLAGS),$(LAST_USRCXXFLAGS))
+		@-touch $(ALLSRC)
+endif
 		@-rm -f $(LASTSETTINGS)
 		@echo "LAST_ZLIB=$(ZLIB)" >> $(LASTSETTINGS)
 		@echo "LAST_GMP=$(GMP)" >> $(LASTSETTINGS)
@@ -1097,6 +1103,8 @@ endif
 		@echo "LAST_ZIMPL=$(ZIMPL)" >> $(LASTSETTINGS)
 		@echo "LAST_LPSCHECK=$(LPSCHECK)" >> $(LASTSETTINGS)
 		@echo "LAST_SHARED=$(SHARED)" >> $(LASTSETTINGS)
+		@echo "LAST_USRCFLAGS=$(USRCFLAGS)" >> $(LASTSETTINGS)
+		@echo "LAST_USRCXXFLAGS=$(USRCXXFLAGS)" >> $(LASTSETTINGS)
 
 $(LINKSMARKERFILE):
 		@$(MAKE) links
