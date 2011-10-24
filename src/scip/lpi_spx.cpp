@@ -69,9 +69,6 @@
 #include "spxparmultpr.h"
 #include "spxdevexpr.h"
 #include "spxfastrt.h"
-#if (SOPLEX_VERSION > 150 || (SOPLEX_VERSION == 150 && SOPLEX_SUBVERSION >= 7))
-#include "spxboundflippingrt.h"
-#endif
 #include "spxmainsm.h"
 #include "spxequilisc.h"
 
@@ -83,6 +80,15 @@
 /* define subversion for versions <= 1.5.0.1 */
 #ifndef SOPLEX_SUBVERSION
 #define SOPLEX_SUBVERSION 0
+#endif
+
+#if (SOPLEX_VERSION > 150 || (SOPLEX_VERSION == 150 && SOPLEX_SUBVERSION >= 7))
+#include "spxboundflippingrt.h"
+#endif
+
+/* get githash of SoPlex */
+#if (SOPLEX_VERSION > 150)
+#include "githash.cpp"
 #endif
 
 /* reset the SCIP_DEBUG define to its original SCIP value */
@@ -1315,7 +1321,9 @@ const char* SCIPlpiGetSolverName(
 #else
    sprintf(spxname, "SoPlex %d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10);
 #endif
-
+#ifdef SPX_GITHASH
+   sprintf(spxname, "%s (#%s)", spxname, SPX_GITHASH);
+#endif
    return spxname;
 }
 
