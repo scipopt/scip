@@ -398,6 +398,9 @@ SCIP_RETCODE selectBranchVar(
    {
       cand = candssorted[i];
 
+      /* there should be no fixed branching candidates */
+      assert(!SCIPisEQ(scip, SCIPvarGetLbLocal(cand), SCIPvarGetUbLocal(cand)));
+
       /* compute min, sum, and max of all registered scores for this variables
        * set candsol to a valid value, if someone registered one */
       scoremin = candsscore[candsorigidx[i]];

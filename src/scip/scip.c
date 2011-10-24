@@ -1960,6 +1960,9 @@ SCIP_RETCODE SCIPcopy(
    /* construct name for the target SCIP using the source problem name and the given suffix string */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%s", SCIPgetProbName(sourcescip), suffix);
 
+   /* copy all settings */
+   SCIP_CALL( SCIPcopyParamSettings(sourcescip, targetscip) );
+
    /* create problem in the target SCIP and copying the source problem data */
    SCIP_CALL( SCIPcopyProb(sourcescip, targetscip, localvarmap, localconsmap, global, name) );
 
@@ -1972,9 +1975,6 @@ SCIP_RETCODE SCIPcopy(
 
    SCIPdebugMessage("Copying constraints was%s valid.\n", consscopyvalid ? "" : " not");
 
-   /* copy all settings */
-   SCIP_CALL( SCIPcopyParamSettings(sourcescip, targetscip) );
-   
    if( uselocalvarmap )
    {
       /* free hash map */
@@ -18407,7 +18407,26 @@ SCIP_RETCODE SCIPfreeSol(
 {
    SCIP_CALL( checkStage(scip, "SCIPfreeSol", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPsolFree(sol, scip->mem->probmem, scip->primal) );
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      SCIP_CALL( SCIPsolFree(sol, scip->mem->probmem, scip->origprimal) );
+      break;
+   case SCIP_STAGE_FREETRANS:
+   case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_SOLVED:
+   case SCIP_STAGE_FREESOLVE:
+      SCIP_CALL( SCIPsolFree(sol, scip->mem->probmem, scip->primal) );
+      break;
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_ERROR;
+   }  /*lint !e788*/
 
    return SCIP_OKAY;
 }

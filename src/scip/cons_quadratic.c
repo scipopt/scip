@@ -55,8 +55,8 @@
 #define CONSHDLR_SEPAPRIORITY        10 /**< priority of the constraint handler for separation */
 #define CONSHDLR_ENFOPRIORITY       -50 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY -4000000 /**< priority of the constraint handler for checking feasibility */
-#define CONSHDLR_SEPAFREQ             2 /**< frequency for separating cuts; zero means to separate only in the root node */
-#define CONSHDLR_PROPFREQ             2 /**< frequency for propagating domains; zero means only preprocessing propagation */
+#define CONSHDLR_SEPAFREQ             1 /**< frequency for separating cuts; zero means to separate only in the root node */
+#define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
@@ -77,6 +77,9 @@
  * This issue need to be fixed before this feature can be enabled.
  */
 /* #define CHECKIMPLINBILINEAR */
+
+/* enable new propagation for bivariate quadratic terms */
+#define PROPBILINNEW
 
 /*
  * Data structures
@@ -184,6 +187,8 @@ struct SCIP_ConshdlrData
    SCIP_EVENTHDLR*       eventhdlr;                 /**< our handler for variable bound change events */
    int                   newsoleventfilterpos;      /**< filter position of new solution event handler, if caught */
    SCIP_Real             sepanlpmincont;            /**< minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation */
+   SCIP_NODE*            lastenfolpnode;            /**< the node for which enforcement was called the last time (and some constraint was violated) */
+   int                   nenfolprounds;             /**< counter on number of enforcement rounds for the current node */
 
    SCIP_QUADCONSUPGRADE** quadconsupgrades;         /**< quadratic constraint upgrade methods for specializing quadratic constraints */
    int                   quadconsupgradessize;      /**< size of quadconsupgrade array */
@@ -6519,13 +6524,14 @@ SCIP_RETCODE generateCut(
 
       /* compute activity of linear part in sol, if required
        * it is required if we need to check or return cut efficacy and for some debug output below
+       * round almost integral coefficients in integers, since this will happen when adding coefs to row (see comments below)
        */
       refactivitylinpart = 0.0;
 #ifndef SCIP_DEBUG
       if( !SCIPisInfinity(scip, -minefficacy) || efficacy != NULL )
 #endif
          for( j = 0; j < consdata->nlinvars; ++j )
-            refactivitylinpart += lincoefs[j] * SCIPgetSolVal(scip, sol, consdata->linvars[j]);
+            refactivitylinpart += (SCIPisIntegral(scip, lincoefs[j]) ? SCIPround(scip, lincoefs[j]) : lincoefs[j]) * SCIPgetSolVal(scip, sol, consdata->linvars[j]);
 
       assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
 
@@ -6569,6 +6575,13 @@ SCIP_RETCODE generateCut(
 
                continue;
             }
+
+            /* coefficients very close to integral values are rounded to integers when added to LP
+             * we do this here already to be sure to compute an accurate activity/violation/efficacy
+             * (otherwise, if variables are at huge values, cut may look efficient here, but not anymore after rounding coefs)
+             */
+            if( SCIPisIntegral(scip, coef[j]) )
+               coef[j] = SCIPround(scip, coef[j]);
 
             if( coef[j] == 0.0 )
                continue;
@@ -6690,7 +6703,13 @@ SCIP_RETCODE generateCut(
          SCIProwGetNNonz(*row), viol, viol / MAX(1.0, maxcoef));  /*lint !e414 */
 
       if( efficacy != NULL )
+      {
          *efficacy = viol / MAX(1.0, maxcoef);
+         /* check that our computed efficacy is > feastol, iff efficacy computed by row is > feastol
+          * (they should be equal, but due to numerics...)
+          */
+         assert(SCIPisFeasPositive(scip, *efficacy) == SCIPisFeasPositive(scip, -SCIPgetRowSolFeasibility(scip, *row, sol)/MAX(1.0,SCIPgetRowMaxCoef(scip, *row))));  /*lint !e666*/
+      }
    }
 
    SCIPfreeBufferArray(scip, &coef);
@@ -7851,11 +7870,11 @@ SCIP_RETCODE propagateBoundsBilinearTerm(
       return SCIP_OKAY;
 
    SCIPintervalSetBounds(&xbnds,
-      -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x))),
-      +infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x))));
+      -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x))),   /*lint !e666*/
+      +infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x))));  /*lint !e666*/
    SCIPintervalSetBounds(&ybnds,
-      -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(y), SCIPvarGetUbLocal(y))),
-      +infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(y), SCIPvarGetUbLocal(y))));
+      -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(y), SCIPvarGetUbLocal(y))),   /*lint !e666*/
+      +infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(y), SCIPvarGetUbLocal(y))));  /*lint !e666*/
 
    /* try to find domain reductions for x */
    SCIPintervalSolveBivariateQuadExpressionAllScalar(intervalinfty, &xbnds, xsqrcoef, ysqrcoef, bilincoef, xlincoef, ylincoef, rhs, xbnds, ybnds);
@@ -9216,8 +9235,10 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Quadratic constraint handler does not have LAPACK for eigenvalue computation. Will assume that matrices (with size > 2x2) are indefinite.\n");
    }
 
-   /* reset flag */
+   /* reset flags and counters */
    conshdlrdata->sepanlp = FALSE;
+   conshdlrdata->lastenfolpnode = NULL;
+   conshdlrdata->nenfolprounds = 0;
 
    return SCIP_OKAY;
 }
@@ -9740,6 +9761,36 @@ SCIP_DECL_CONSENFOLP(consEnfolpQuadratic)
    assert(SCIPisGT(scip, maxviol, SCIPfeastol(scip)));
 
    SCIPdebugMessage("enfolp with max violation %g in cons <%s>\n", maxviol, SCIPconsGetName(maxviolcon));
+
+   /* if we are above the 100'th enforcement round for this node, something is strange
+    * (maybe the LP does not think that the cuts we add are violated, or we do ECP on a high-dimensional convex function)
+    * in this case, check if some limit is hit or SCIP should stop for some other reason and terminate enforcement by creating a dummy node
+    * (in optimized more, returning SCIP_INFEASIBLE in *result would be sufficient, but in debug mode this would give an assert in scip.c)
+    * the reason to wait for 100 rounds is to avoid calls to SCIPisStopped in normal runs, which may be expensive
+    * we only increment nenfolprounds until 101 to avoid an overflow
+    */
+   if( conshdlrdata->lastenfolpnode == SCIPgetCurrentNode(scip) )
+   {
+      if( conshdlrdata->nenfolprounds > 100 )
+      {
+         if( SCIPisStopped(scip) )
+         {
+            SCIP_NODE* child;
+
+            SCIP_CALL( SCIPcreateChild(scip, &child, 1.0, SCIPnodeGetEstimate(SCIPgetCurrentNode(scip))) );
+            *result = SCIP_BRANCHED;
+
+            return SCIP_OKAY;
+         }
+      }
+      else
+         ++conshdlrdata->nenfolprounds;
+   }
+   else
+   {
+      conshdlrdata->lastenfolpnode = SCIPgetCurrentNode(scip);
+      conshdlrdata->nenfolprounds = 0;
+   }
 
    /* run domain propagation */
    nchgbds = 0;

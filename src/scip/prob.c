@@ -396,14 +396,12 @@ SCIP_RETCODE SCIPprobFree(
    BMSfreeMemoryArrayNull(&(*prob)->deletedvars);
 
    /* free hash tables for names */
-   if( set->misc_usevartable )
+   if( (*prob)->varnames != NULL )
    {
-      assert((*prob)->varnames != NULL);
       SCIPhashtableFree(&(*prob)->varnames);
    }
-   if( set->misc_useconstable )
+   if( (*prob)->consnames != NULL )
    {
-      assert((*prob)->consnames != NULL);
       SCIPhashtableFree(&(*prob)->consnames);
    }
    BMSfreeMemoryArray(&(*prob)->name);

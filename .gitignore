@@ -22,6 +22,8 @@ doc/doxygen
 doc/scip.tag
 .cproject
 .project
+.settings/
 hooks/
 localhooks/
 src/scip/githash.c
+settings/

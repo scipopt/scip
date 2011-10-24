@@ -42,7 +42,7 @@
 #define CONSHDLR_SEPAPRIORITY         0 /**< priority of the constraint handler for separation */
 #define CONSHDLR_ENFOPRIORITY       -30 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY -3500000 /**< priority of the constraint handler for checking feasibility */
-#define CONSHDLR_SEPAFREQ             2 /**< frequency for separating cuts; zero means to separate only in the root node */
+#define CONSHDLR_SEPAFREQ             1 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
@@ -145,6 +145,8 @@ struct SCIP_ConshdlrData
    int                   newsoleventfilterpos;/**< filter position of new solution event handler, if catched */
    SCIP_Bool             comparedpairwise;   /**< did we compare absolute power constraints pairwise in this run? */
    SCIP_Bool             sepanlp;            /**< where linearization of the NLP relaxation solution added? */
+   SCIP_NODE*            lastenfolpnode;     /**< the node for which enforcement was called the last time (and some constraint was violated) */
+   int                   nenfolprounds;      /**< counter on number of enforcement rounds for the current node */
 };
 
 /*
@@ -4666,8 +4668,10 @@ SCIP_DECL_CONSINITSOL(consInitsolAbspower)
       SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_SOLFOUND, eventhdlr, (SCIP_EVENTDATA*)conshdlr, &conshdlrdata->newsoleventfilterpos) );
    }
 
-   /* reset flag */
+   /* reset flags and counters */
    conshdlrdata->sepanlp = FALSE;
+   conshdlrdata->lastenfolpnode = NULL;
+   conshdlrdata->nenfolprounds = 0;
 
    return SCIP_OKAY;
 }
@@ -5168,6 +5172,36 @@ SCIP_DECL_CONSENFOLP(consEnfolpAbspower)
    }
 
    *result = SCIP_INFEASIBLE;
+
+   /* if we are above the 100'th enforcement round for this node, something is strange
+    * (maybe the LP does not think that the cuts we add are violated, or we do ECP on a high-dimensional convex function)
+    * in this case, check if some limit is hit or SCIP should stop for some other reason and terminate enforcement by creating a dummy node
+    * (in optimized more, returning SCIP_INFEASIBLE in *result would be sufficient, but in debug mode this would give an assert in scip.c)
+    * the reason to wait for 100 rounds is to avoid calls to SCIPisStopped in normal runs, which may be expensive
+    * we only increment nenfolprounds until 101 to avoid an overflow
+    */
+   if( conshdlrdata->lastenfolpnode == SCIPgetCurrentNode(scip) )
+   {
+      if( conshdlrdata->nenfolprounds > 100 )
+      {
+         if( SCIPisStopped(scip) )
+         {
+            SCIP_NODE* child;
+
+            SCIP_CALL( SCIPcreateChild(scip, &child, 1.0, SCIPnodeGetEstimate(SCIPgetCurrentNode(scip))) );
+            *result = SCIP_BRANCHED;
+
+            return SCIP_OKAY;
+         }
+      }
+      else
+         ++conshdlrdata->nenfolprounds;
+   }
+   else
+   {
+      conshdlrdata->lastenfolpnode = SCIPgetCurrentNode(scip);
+      conshdlrdata->nenfolprounds = 0;
+   }
 
    /* run domain propagation for violated constraints */
    for( c = 0; c < nconss; ++c )
