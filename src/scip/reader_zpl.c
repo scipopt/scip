@@ -13,8 +13,6 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#define SCIP_DEBUG
-
 /**@file   reader_zpl.c
  * @ingroup FILEREADERS
  * @brief  ZIMPL model file reader
