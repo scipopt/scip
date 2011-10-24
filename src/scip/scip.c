@@ -13130,7 +13130,7 @@ SCIP_Bool SCIPisConflictAnalysisApplicable(
 {
    SCIP_CALL( checkStage(scip, "SCIPisConflictAnalysisApplicable", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   return SCIPconflictApplicable(scip->set);
+   return (SCIPgetDepth(scip) > 0 && SCIPconflictApplicable(scip->set));
 }
 
 /** initializes the conflict analysis by clearing the conflict candidate queue; this method must be called before
