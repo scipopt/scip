@@ -2180,7 +2180,7 @@
  * presolver data, see \ref PRESOLFREE.
  *
  * You may also add user parameters for your presolver, see \ref PARAM for how to add user parameters and 
- * the method SCIPincludePresolProbing() in src/scip/presol_probing.c for an example.
+ * the method SCIPincludePresolTrivial() in src/scip/presol_trivial.c for an example.
  *
  * 
  * @section PRESOL_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Presolver
@@ -5825,25 +5825,35 @@
   * - <b>Presolving</b>:
   *      <br>
   *      <br>
-  *    - the new parameters nnewaddconss and naddconss were added to the constraint handler callback method SCIP_DECL_CONSPRESOL() and the presolver callback method SCIP_DECL_PRESOLEXEC();
-  *      these parameters were also added to corresponding C++ wrapper class methods
-  *    - propagators can now be called in presolve, this is supported by the new callback methods SCIP_DECL_PROPINITPRE(), SCIP_DECL_PROPEXITPRE(), and SCIP_DECL_PROPPRESOL()
+  *    - The new parameters "nnewaddconss" and "naddconss" were added to the constraint handler callback method SCIP_DECL_CONSPRESOL()
+  *      and the presolver callback method SCIP_DECL_PRESOLEXEC(). These parameters were also added to corresponding C++ wrapper class methods.
+  *    - Propagators are now also called in during presolving, this is supported by the new callback methods SCIP_DECL_PROPINITPRE(),
+  *      SCIP_DECL_PROPEXITPRE(), and SCIP_DECL_PROPPRESOL().
+  *    - New parameters "isunbounded" and "isinfeasible" for presolving initialization and presolving deinitialization callbacks of
+  *      presolvers, constraint handlers and propagators, telling the callback whether the problem was already declared to be unbounded or infeasible.
+  *      This allows to avoid expensive steps in these methods in case the problem is already solved, anyway.
   *
   * - <b>Constraint Handler</b>:
   *     <br>
   *     <br>
-  *   - the new constraint handler callback SCIP_DECL_DELVARS() is called after variables are marked for deletion, the constraint handler should then remove these variables from its constraints
+  *   - The new constraint handler callback SCIP_DECL_DELVARS() is called after variables were marked for deletion.
+  *     The constraint handler should then update its data and remove these variables from its constraints.
   *
   * - <b>Problem Data</b>:
   *     <br>
   *     <br>
-  *   - the callback SCIP_DECL_PROBCOPY() got a new parameter global to indicate whether the global problem or a local version is copied
+  *   - The method SCIPcopyProb() and the callback SCIP_DECL_PROBCOPY() got a new parameter "global" to indicate whether the global problem or a local version is copied.
+  *
+  * - <b>Conflict Analysis</b>:
+  *     <br>
+  *     <br>
+  *   - Added parameter "separate" to conflict handler callback method SCIP_DECL_CONFLICTEXEC() that defines whether the conflict constraint should be separated or not.
   *
   * - <b>NLP Solver Interface</b>:
   *     <br>
   *     <br>
-  *   - the callbacks SCIP_DECL_NLPIGETSOLUTION() and SCIP_DECL_NLPISETINITIALGUESS() got new parameters to get/set values of dual variables
-  *   - the callback SCIP_DECL_NLPICOPY() now passes the block memory of the target SCIP as an additional parameter
+  *   - The callbacks SCIP_DECL_NLPIGETSOLUTION() and SCIP_DECL_NLPISETINITIALGUESS() got new parameters to get/set values of dual variables.
+  *   - The callback SCIP_DECL_NLPICOPY() now passes the block memory of the target SCIP as an additional parameter.
   *
   * <br>
   * @section CHGINTERFUNC5 Changed interface methods
@@ -5851,37 +5861,57 @@
   * - <b>Writing and Parsing constraints</b>:
   *      <br>
   *      <br>
-  *    - the methods SCIPwriteVarName(), SCIPwriteVarsList(), and SCIPwriteVarsLinearsum() got a new boolean parameter "type"
-  *      that indicates whether the variable type should be written or not
-  *    - the methods SCIPparseVarName() and SCIPparseVarsList() got a new output parameter "endptr" that is filled with the position where the parsing stopped
+  *    - The methods SCIPwriteVarName(), SCIPwriteVarsList(), and SCIPwriteVarsLinearsum() got a new boolean parameter "type"
+  *      that indicates whether the variable type should be written or not.
+  *    - The method SCIPwriteVarsList() got additionally a new parameter "delimiter" that defines the character which is used for delimitation.
+  *    - The methods SCIPparseVarName() and SCIPparseVarsList() got a new output parameter "endptr" that is filled with the position where the parsing stopped.
   *
   * - <b>Plugin management</b>:
   *      <br>
   *      <br>
-  *    - SCIPincludeProp() got additional parameters to set the timing mask of the propagator and the new callbacks related to calling the propagator in presolving
-  *    - SCIPincludeConshdlr() got additional parameters to set the timing mask of the constraint handlers propagator and the variable deletion callback function
+  *    - SCIPincludeProp() got additional parameters to set the timing mask of the propagator and the new callbacks and parameters related to calling the propagator in presolving.
+  *    - SCIPincludeConshdlr() got additional parameters to set the variable deletion callback function and the timing mask for propagation.
+  *
+  * - <b>Constraint Handlers</b>:
+  *      <br>
+  *      <br>
+  *    - Method SCIPseparateRelaxedKnapsack() in knapsack constraint handler got new parameter "cutoff", which is a pointer to store whether a cutoff was found.
+  *    - Method SCIPincludeQuadconsUpgrade() of quadratic constraint handler got new parameter "active" to indicate whether the upgrading method is active by default.
   *
   * - <b>Nonlinear expressions, relaxation, and solver interface</b>:
   *      <br>
   *      <br>
-  *    - the methods SCIPexprtreeEvalSol(), SCIPexprtreeEvalIntLocalBounds(), and SCIPexprtreeEvalIntGlobalBounds() have been renamed to SCIPevalExprtreeSol(), SCIPevalExprtreeLocalBounds(), and SCIPevalExprtreeGlobalBounds() and are now located in scip.h
-  *    - various types and functions dealing with polynomial expressions have been renamed to use the proper terms "monomial" and "polynomial"
-  *    - the methods SCIPnlpGetObjective(), SCIPnlpGetSolVals(), and SCIPnlpGetVarSolVal() have been removed, use SCIPvarGetNLPSol() and SCIPcreateNLPSol() to retrieve NLP solution values instead
-  *    - removed methods SCIPmarkRequireNLP() and SCIPisNLPRequired(), because the NLP is now always constructed if nonlinearities are present
-  *    - SCIPgetNLP() has been removed and NLP-methods from pub_nlp.h have been moved to scip.h, which resulted in some renamings too
-  *    - the functions SCIPnlpiGetSolution() and SCIPnlpiSetInitialGuess() got additional arguments to get/set dual values
+  *    - The methods SCIPexprtreeEvalSol(), SCIPexprtreeEvalIntLocalBounds(), and SCIPexprtreeEvalIntGlobalBounds() have been renamed to SCIPevalExprtreeSol(),
+  *      SCIPevalExprtreeLocalBounds(), and SCIPevalExprtreeGlobalBounds() and are now located in scip.h.
+  *    - Various types and functions dealing with polynomial expressions have been renamed to use the proper terms "monomial" and "polynomial".
+  *    - The methods SCIPnlpGetObjective(), SCIPnlpGetSolVals(), and SCIPnlpGetVarSolVal() have been removed, use SCIPgetNLPObjval(), SCIPvarGetNLPSol()
+  *      and SCIPcreateNLPSol() to retrieve NLP solution values instead.
+  *    - Removed methods SCIPmarkRequireNLP() and SCIPisNLPRequired(), because the NLP is now always constructed if nonlinearities are present.
+  *    - SCIPgetNLP() has been removed and NLP-methods from pub_nlp.h have been moved to scip.h, which resulted in some renamings, too.
+  *    - The functions SCIPnlpiGetSolution() and SCIPnlpiSetInitialGuess() got additional arguments to get/set dual values.
+  *    - The method SCIPgetNLPI() got a new parameter "nlpiproblem", which is a pointer to store the NLP solver interface problem.
   *
   * - <b>Others</b>:
   *      <br>
   *      <br>
-  *    - SCIPgetVarCopy() got a new parameter "success" that will be FALSE if method is called after problem creation stage
-  *    - SCIPchgVarType() got an extra boolean parameter to store if infeasibility is recognized while upgrading a variable from continuous type to an integer type
-  *    - the parameters timelimit and memorylimit were removed from SCIPapplyRens()
+  *    - SCIPgetVarCopy() got a new parameter "success" that will be FALSE if method is called after problem creation stage and no hash map is given or no image for
+  *      the given variable is contained in the given hash map.
+  *    - Removed method SCIPreadSol(); call solution reading via SCIPreadProb() which calls the solution reader for .sol files.
+  *    - SCIPchgVarType() got an extra boolean parameter to store if infeasibility is recognized while upgrading a variable from continuous type to an integer type.
+  *    - SCIPdelVar() got a new parameter "deleted", which stores whether the variable was successfully marked to be deleted.
+  *    - SCIPcalcNodeselPriority() got a new parameter "branchdir", which defines the type of branching that was performed: upwards, downwards, or fixed.
+  *    - The parameters "timelimit" and "memorylimit" were removed from SCIPapplyRens().
   *
   * <br>
   * @section MISCELLANEOUS5 Miscellaneous
   *
-  *  - the result value SCIP_NEWROUND has been added, it allows a separator/constraint handler to start a new separation round (without previous calls to other separators/conshdlrs)
+  *  - The result value SCIP_NEWROUND has been added, it allows a separator/constraint handler to start a new separation round
+  *    (without previous calls to other separators/conshdlrs).
+  *  - All timing flags are now defined type_timing.h.
+  *  - The variable deletion event is now a variable specific event and not global, anymore.
+  *  - The emphasis setting types now distinguish between plugin-type specific parameter settings (default, aggressive, fast, off), which are changed by
+  *    SCIPsetHeuristics/Presolving/Separating(), and global emphasis settings (default, cpsolver, easycip, feasibility, hardlp, optimality, counter),
+  *    which can be set using SCIPsetEmphasis().
   *
   * <br>
   * For further release notes we refer the \ref RELEASENOTES "Release notes".
