@@ -194,7 +194,7 @@ SCIP_RETCODE writeBounds(
       assert(nopennodes >= 0);
 
       /* print all node information */
-      for( n = nopennodes - 1; n >= 0; --n )
+      for( n = nopennodes - 1; n >= 0 && !SCIPisStopped(scip); --n )
       {
          node = opennodes[n];
 
