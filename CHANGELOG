@@ -11,6 +11,7 @@ performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
   1e+06/MAX(maximal absolute coefficient, 1.0) instead of 1e+03/MAX(maximal absolute coefficient, 1.0);
   if all coefficients are in absolute value equal they will be scaled by that
+- if probing reached the end of all variables it will restart the probing cycle correctly
 
 parameters:
 - changed default value of parameter <presolving/inttobinary/maxrounds> to 0
