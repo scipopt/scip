@@ -37,8 +37,8 @@ interface:
 - new methods SCIPvarGetNBdchgInfosLb() and SCIPvarGetNBdchgInfosUb() in pub_var.h returning the number of lower or upper 
   bound changes on the active path
 - new methods SCIPvarGetBdchgInfoLb() and SCIPvarGetBdchgInfoUb() returning the bound change information at the given position
-- new parameter success in SCIPgetVarCopy() that will be FALSE if method is called after problem creation stage
-- SCIP_DECL_PROBCOPY got a new parameter global
+- new parameter success in SCIPgetVarCopy() that will be FALSE if method is called after problem creation stage and no hash map is given or no image for the given variable is contained in the given hash map
+- SCIPcopyProb() and SCIP_DECL_PROBCOPY got a new parameter global
 - using proper terms "monomial" and "polynomial" (instead of "monom" and "polynom") in nonlinear expressions (nlpi/*expr*) results in many renamings of types, structs, and methods
 - added function SCIPcomputeLPRelIntPoint() to compute relative interior point of the current LP
 - added function SCIPsepastoreRemoveInefficaciousCuts() to remove non-efficious cuts from the separation storage
@@ -63,7 +63,7 @@ interface:
 - new method SCIPgetNLPFracVars() to get the fractional variables in an NLP solution
 - new methods SCIPcreateMesshdlrPThreads() and SCIPfreeMesshdlrPThreads() for allocating and deleting necessary memory for message handlers for parallel pthread version
 - new methods SCIPallocClearMemoryArray() and BMSallocClearMemoryArray() for allocating cleared memory arrays in scip.h and memory.h
-- removed methods SCIPnlpGetObjective(), SCIPnlpGetSolVals(), SCIPnlpGetVarSolVal(); added method SCIPvarGetNLPSol(); SCIPcreateNLPSol() now returns an error if NLP or NLP solution is not available
+- removed methods SCIPnlpGetObjective(), SCIPnlpGetSolVals(), SCIPnlpGetVarSolVal(); added methods SCIPgetNLPObjval() and SCIPvarGetNLPSol(); SCIPcreateNLPSol() now returns an error if NLP or NLP solution is not available
 - removed methods SCIPmarkRequireNLP() and SCIPisNLPRequired(), NLP is now always constructed if nonlinearities are present
 - removed NLP methods from pub_nlp.h and added corresponding methods to scip.h; removed SCIPgetNLP()
 - added method SCIPgetNLPVarsNonlinearity() to get for each variable in the NLP the number of NLP rows in which this variable appears in a nonlinear way
@@ -73,7 +73,7 @@ interface:
 - added methods SCIPnlrowGetDualsol(), SCIPgetNLPVarsLbDualsol(), SCIPgetNLPVarsUbDualsol() to retrieve dual values from an NLP solution
 - added method SCIPbranchVarValNary() for n-ary variable branching
 - the callback NLPICOPY gets the block memory of the target SCIP as additional parameter
-- due to adding SCIP_DECL_PROPINITPRE, SCIP_DECL_PROPEXITPRE, SCIP_DECL_PROPPRESOL, new timing flag and presolving paramters for propagators the SCIPincludeProp() method has a new list of parameters
+- due to adding SCIP_DECL_PROPINITPRE, SCIP_DECL_PROPEXITPRE, SCIP_DECL_PROPPRESOL, new timing flag and presolving parameters for propagators the SCIPincludeProp() method has a new list of parameters
 - new methods SCIPpropInitpre, SCIPpropExitpre, SCIPpropPresol which initializes, exists and executes the presolving phase
 - due to the new timingmask for propagation calls SCIPincludeConshdlr() has the timingmask as a new parameter
 - new method SCIProwGetAge() to access the age of a row (pub_lp.h/lp.c)
@@ -93,11 +93,15 @@ interface:
 - new method SCIPvarIsDeletable() that returns whether a variable is marked to be deletable (each variable is per default non-deletable)
 - new callback SCIP_DECL_DELVARS for constraint handlers, that is called after variables were marked for deletion and should remove these variables from its constraints
 - new method SCIPpropagateCutoffboundVar() in prop_pseudoobj.h which can be used to propagate the cutoff bound for the given variables
+- SCIPdelVar() got a new parameter "deleted", which stores whether the variable was successfully marked to be deleted
 - callbacks SCIP_DECL_CONSINITPRE, SCIP_DECL_CONSEXITPRE, SCIP_DECL_PROPINITPRE, SCIP_DECL_PROPEXITPRE,
   SCIP_DECL_PRESOLINITPRE, and SCIP_DECL_PRESOLEXITPRE and corresponding c++ functions got two new SCIP_Bool parameters
   "isunbounded" and "isinfeasible" which state whether the problem is already declared to be unbounded or infeasible
    respectively
 - SCIPmarkDoNotMultaggrVar()/SCIPvarMarkDoNotMultaggr() now allow to mark negated and aggregated variables
+- new method SCIPgetNTotalVars() that returns the total number of created vars, icluding variables that were deleted in the meantime
+- added parameter "separate" to conflict handler callback method SCIP_DECL_CONFLICTEXEC() that defines whether the conflict constraint should be separated or not
+- SCIPcalcNodeselPriority() got a new parameter "branchdir", which defines the type of branching that was performed: upwards, downwards, or fixed
 
 performance improvements:
 - performance improvements in prop_vbounds

@@ -227,7 +227,7 @@ endif
 LPSOPTIONS	+=	xprs
 ifeq ($(LPS),xprs)
 FLAGS		+=	-I$(LIBDIR)/xprsinc
-LPSLDFLAGS	=	$(LINKCC_l)xpress.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)  $(LINKCC_l)pthread$(LINKLIBSUFFIX)  $(LINKCC_l)dl$(LINKLIBSUFFIX)
+LPSLDFLAGS	+=	$(LINKCC_l)xpress.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)  $(LINKCC_l)pthread$(LINKLIBSUFFIX)  $(LINKCC_l)dl$(LINKLIBSUFFIX)
 LPILIBOBJ	=	scip/lpi_xprs.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 SOFTLINKS	+=	$(LIBDIR)/xprsinc
@@ -240,7 +240,7 @@ endif
 LPSOPTIONS	+=	msk
 ifeq ($(LPS),msk)
 FLAGS		+=	-I$(LIBDIR)/mskinc
-LPSLDFLAGS	=	$(LINKCC_l)mosek.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
+LPSLDFLAGS	+=	$(LINKCC_l)mosek.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
 			$(LINKCXX_l)iomp5.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
 LPILIBOBJ	=	scip/lpi_msk.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
@@ -258,7 +258,7 @@ LPSOPTIONS	+=	spx
 ifeq ($(LPS),spx)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spxinc
-LPSLDFLAGS	=	$(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
+LPSLDFLAGS	+=	$(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
 LPILIBOBJ	=	scip/lpi_spx.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/scip/lpi_spx.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
 SOFTLINKS	+=	$(LIBDIR)/spxinc
@@ -281,7 +281,7 @@ LPSOPTIONS	+=	spx132
 ifeq ($(LPS),spx132)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spx132inc
-LPSLDFLAGS	=	$(LINKCXX_l)soplex132.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
+LPSLDFLAGS	+=	$(LINKCXX_l)soplex132.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
 LPILIBOBJ	=	scip/lpi_spx132.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/scip/lpi_spx132.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
 SOFTLINKS	+=	$(LIBDIR)/spx132inc
@@ -297,10 +297,10 @@ LINKER		=	CPP
 CLPDIR		= 	$(LIBDIR)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
 FLAGS		+=	-I$(CLPDIR)/include/coin
 # for newer Clp versions all linker flags are in share/coin/doc/Clp/clp_addlibs.txt
-LPSLDFLAGS	=	$(shell test -e $(CLPDIR)/share/coin/doc/Clp/clp_addlibs.txt && cat $(CLPDIR)/share/coin/doc/Clp/clp_addlibs.txt)
+LPSLDFLAGS	+=	$(shell test -e $(CLPDIR)/share/coin/doc/Clp/clp_addlibs.txt && cat $(CLPDIR)/share/coin/doc/Clp/clp_addlibs.txt)
 # if we could not find clp_addlibs file, try to guess linker flags
 ifeq ($(LPSLDFLAGS),)
-LPSLDFLAGS	=	$(LINKCXX_L)$(CLPDIR)/lib $(LINKCXX_l)Clp$(LINKLIBSUFFIX) \
+LPSLDFLAGS	+=	$(LINKCXX_L)$(CLPDIR)/lib $(LINKCXX_l)Clp$(LINKLIBSUFFIX) \
 			$(LINKCXX_l)CoinUtils$(LINKLIBSUFFIX) \
 			$(LINKCXX_l)bz2$(LINKLIBSUFFIX) $(LINKCXX_l)lapack$(LINKLIBSUFFIX)
 endif
@@ -318,7 +318,7 @@ endif
 LPSOPTIONS	+=	qso
 ifeq ($(LPS),qso)
 FLAGS         	+=      -I$(LIBDIR)/qsinc
-LPSLDFLAGS    	=       $(LINKCC_l)qsopt.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
+LPSLDFLAGS    	+=       $(LINKCC_l)qsopt.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
 LPILIBOBJ     	= 	scip/lpi_qso.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC     	=       $(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 SOFTLINKS     	+=      $(LIBDIR)/qsinc
@@ -330,7 +330,7 @@ endif
 LPSOPTIONS	+=	grb
 ifeq ($(LPS),grb)
 FLAGS		+=	-I$(LIBDIR)/grbinc
-LPSLDFLAGS	=	$(LINKCC_l)gurobi.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
+LPSLDFLAGS	+=	$(LINKCC_l)gurobi.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
 LPILIBOBJ	=	scip/lpi_grb.o blockmemshell/memory.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 SOFTLINKS	+=	$(LIBDIR)/grbinc
@@ -1090,6 +1090,12 @@ endif
 ifneq ($(SHARED),$(LAST_SHARED))
 		@-touch $(ALLSRC)
 endif
+ifneq ($(USRCFLAGS),$(LAST_USRCFLAGS))
+		@-touch $(ALLSRC)
+endif
+ifneq ($(USRCXXFLAGS),$(LAST_USRCXXFLAGS))
+		@-touch $(ALLSRC)
+endif
 		@-rm -f $(LASTSETTINGS)
 		@echo "LAST_ZLIB=$(ZLIB)" >> $(LASTSETTINGS)
 		@echo "LAST_GMP=$(GMP)" >> $(LASTSETTINGS)
@@ -1097,6 +1103,8 @@ endif
 		@echo "LAST_ZIMPL=$(ZIMPL)" >> $(LASTSETTINGS)
 		@echo "LAST_LPSCHECK=$(LPSCHECK)" >> $(LASTSETTINGS)
 		@echo "LAST_SHARED=$(SHARED)" >> $(LASTSETTINGS)
+		@echo "LAST_USRCFLAGS=$(USRCFLAGS)" >> $(LASTSETTINGS)
+		@echo "LAST_USRCXXFLAGS=$(USRCXXFLAGS)" >> $(LASTSETTINGS)
 
 $(LINKSMARKERFILE):
 		@$(MAKE) links

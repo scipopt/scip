@@ -13,7 +13,7 @@
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-#@file    Makefile include to detect git hasd
+#@file    Makefile include to detect git hash
 #@brief   SCIP sub Makefile
 #@author  Stefan Heinz
 

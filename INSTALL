@@ -13,6 +13,51 @@
 *                                                                           *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
+In most cases (LINUX and MAC) it is quite easy to compile and install
+SCIP. Therefore, reading the setction "Brief installation description"
+should be usually enough. If this is not the case you find a section
+"Detailed installation description" below as well as an "Example" section.
+
+Content
+*******
+
+I    Brief installation description:
+II   Detailed installation description:
+III  Examples
+
+
+I Brief installation description
+********************************
+
+The most easiest why to install SCIP is to use the ZIB Optimization Suite
+which contains SCIP, SoPlex, and ZIMPL. For that we refer to INSTALL file
+of the ZIB Optimization Suite (In case of the ZIB Optimization Suite there
+is not need to specify any directories, the compiling process is full
+automatically).
+
+Compiling SCIP directly can be done as follows:
+
+1) unpack the tarball "tar xvf scip-x.y.z.tgz"
+2) change into the directory "cd scip-x.y.z"
+3) start compiling SCIP "make"
+4) (optional) install the header, libraries, and binary "make insatll INSTALLDIR="/usr/local/"
+
+On your first compilation you will be asked for some soft-link targets,
+depending on the LP solver you want to use. Usually, SCIP needs the
+following information
+ (a) the directory where the include files of the LP solver
+ (b) the library file(s) "lib*.a" or/and "lib*.so"
+
+Beside that SCIP needs the some soft-link targets, for ZIMPL 
+ (a) the directory where the include files of ZIMPL
+ (b) the library file(s) "lib*.a" or/and "lib*.so"
+
+You will need either the .a or the .so files and can skip the others by
+just pressing return.
+
+II Detailed installation description
+************************************
+
 In the following, some of the names depend on your machine and your
 compilation settings:
 
@@ -42,7 +87,7 @@ compilation settings:
               "dbg", "opt", or "prf" 
 
 - $(LPS):     the LP solver to use
-              "spx", "spx132", "clp", "cpx", "xprs", "msk", "grb", "qso", "none"
+              "spx", "clp", "cpx", "xprs", "msk", "grb", "qso", "none"
 
 - $(EXPRINT): the expressions interpreter (code that computes derivatives and hessians) to use
               "none", "cppad"
@@ -63,11 +108,6 @@ Here is what you have to do to get SCIP running:
 
 1. Compile the library and the solver program:
    In your SCIP main directory, enter "make [options]" with the following options:
-   - "INSTALLDIR="     to current directory as install directory (dafault) 
-   - "INSTALLDIR=/usr/local" 
-                       to install the libraries (/usr/local/lib/) and binary (/usr/loacl/bin/) 
-                       in the directory /usr/local
-
    - "OPT=opt"         to use optimized compilation mode (default)
    - "OPT=dbg"         to use debug compilation mode
    - "OPT=prf"         to use performance analysis compilation mode
@@ -108,6 +148,9 @@ Here is what you have to do to get SCIP running:
    - "VERBOSE=false"   to suppress display of compiler and linker invocations (default)
    - "VERBOSE=true"    to display compiler and linker invocations
 
+   - "SHARED=false"    to suppress shared libraries
+   - "SHARED=true"     to create shared libraries
+
    On some machines, you should use gmake instead of make.
 
    On your first compilation you will be asked for some soft-link targets, depending on the
@@ -115,6 +158,21 @@ Here is what you have to do to get SCIP running:
      (a) the directory where the include files of the LP solver
      (b) the library file(s) "lib*.a" or/and "lib*.so"
    You will need either the .a or the .so files and can skip the others by just pressing return.
+
+2. Installing SCIP
+   After compiling you can install the headers, the libraries, and the binay. Therefore you use the command:
+
+   make install INSATLLDIR=<dirctory>
+
+   - "INSTALLDIR="     directory as install directory (dafault) 
+   - "INSTALLDIR=/usr/local" 
+                       to install the headers (/usr/local/include/), the libraries (/usr/local/lib/),
+                        and binary (/usr/loacl/bin/) in the directory /usr/local
+
+   For un-installing SCIP there exist the target "uninstall" which can be used in the same way as "install".
+
+III Examples
+************
 
    Example 1 (defaults: SoPlex, with ZIMPL support):
    =================================================
@@ -293,7 +351,7 @@ make[1]: Leaving directory `/sw/scip'
    fix the corresponding machine dependent makefile in the make subdirectory.
 
 
-2. Instructions for manually creating the soft-links, if the query script fails:
+3. Instructions for manually creating the soft-links, if the query script fails:
 
    Create necessary soft-links in the "lib/" subdirectory of SCIP:
 
@@ -356,16 +414,16 @@ make[1]: Leaving directory `/sw/scip'
        - ln -s <path to CppAD's header files> <path to SCIP>/lib/cppad
          (e.g. "cd scip; ln -s /CppAD/cppad lib/cppad")
 
-3. To run the program enter "bin/scip.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LPS)"
+4. To run the program enter "bin/scip.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LPS)"
    (e.g. "bin/scip.linux.x86.gnu.opt.spx") or just "bin/scip" for the last compiled version
 
-4. To generate the documentation, you need to have doxygen installed, and
+5. To generate the documentation, you need to have doxygen installed, and
    enter "make doc"
 
-5. To check the code with lint, you need to have flexelint installed, and
+6. To check the code with lint, you need to have flexelint installed, and
    enter "make lint"
 
-6. To run the MIPLIB 3 test bench, download the MIPLIB instances from
+7. To run the MIPLIB 3 test bench, download the MIPLIB instances from
    "http://scip.zib.de/download/files/scip-miplib3.zip" and extract the archive into the SCIP base directory.
    The instances will be unziped into the subdirectory "check/IP/miplib3/". Afterwards, enter
    "make [options] test" with the same options with which you compiled SCIP in step 1.

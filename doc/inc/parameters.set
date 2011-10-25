@@ -176,7 +176,7 @@ limits/stallnodes = -1
 # [type: real, range: [0,1.79769313486232e+308], default: 1e+20]
 limits/memory = 1e+20
 
-# solving stops, if the relative gap = |(primalbound - dualbound)/dualbound| is below the given value
+# solving stops, if the relative gap = |primal - dual|/MIN(|dual|,|primal|) is below the given value
 # [type: real, range: [0,1.79769313486232e+308], default: 0]
 limits/gap = 0
 
@@ -589,12 +589,12 @@ vbc/realtime = TRUE
 vbc/dispsols = FALSE
 
 # frequency for separating cuts (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 2]
-constraints/nonlinear/sepafreq = 2
+# [type: int, range: [-1,2147483647], default: 1]
+constraints/nonlinear/sepafreq = 1
 
 # frequency for propagating domains (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 2]
-constraints/nonlinear/propfreq = 2
+# [type: int, range: [-1,2147483647], default: 1]
+constraints/nonlinear/propfreq = 1
 
 # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
@@ -653,12 +653,12 @@ constraints/nonlinear/maxexpansionexponent = 2
 constraints/nonlinear/sepanlpmincont = 1
 
 # frequency for separating cuts (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 2]
-constraints/quadratic/sepafreq = 2
+# [type: int, range: [-1,2147483647], default: 1]
+constraints/quadratic/sepafreq = 1
 
 # frequency for propagating domains (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 2]
-constraints/quadratic/propfreq = 2
+# [type: int, range: [-1,2147483647], default: 1]
+constraints/quadratic/propfreq = 1
 
 # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
@@ -853,8 +853,8 @@ constraints/linear/dualpresolving = TRUE
 constraints/linear/sortvars = TRUE
 
 # frequency for separating cuts (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 2]
-constraints/abspower/sepafreq = 2
+# [type: int, range: [-1,2147483647], default: 1]
+constraints/abspower/sepafreq = 1
 
 # frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
@@ -981,8 +981,8 @@ constraints/and/aggrlinearization = FALSE
 constraints/nonlinear/upgrade/and = TRUE
 
 # frequency for separating cuts (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 2]
-constraints/bivariate/sepafreq = 2
+# [type: int, range: [-1,2147483647], default: 1]
+constraints/bivariate/sepafreq = 1
 
 # frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
@@ -1769,8 +1769,8 @@ constraints/SOS2/delaypresol = FALSE
 constraints/soc/sepafreq = 1
 
 # frequency for propagating domains (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 20]
-constraints/soc/propfreq = 20
+# [type: int, range: [-1,2147483647], default: 1]
+constraints/soc/propfreq = 1
 
 # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
@@ -4144,8 +4144,8 @@ separating/closecuts/inclobjcutoff = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 separating/closecuts/recomputerelint = FALSE
 
-# type of norm to use when computing relative interior: 'o'ne norm, 'i'nfinity norm
-# [type: char, range: {oi}, default: o]
+# type of norm to use when computing relative interior: 'o'ne norm, 's'upremum norm
+# [type: char, range: {os}, default: o]
 separating/closecuts/relintnormtype = o
 
 # turn off separation in current node after unsuccessful calls (-1 never turn off)
@@ -4481,16 +4481,16 @@ separating/gomory/delay = FALSE
 separating/gomory/maxrounds = 5
 
 # maximal number of gomory separation rounds in the root node (-1: unlimited)
-# [type: int, range: [-1,2147483647], default: -1]
-separating/gomory/maxroundsroot = -1
+# [type: int, range: [-1,2147483647], default: 10]
+separating/gomory/maxroundsroot = 10
 
 # maximal number of gomory cuts separated per separation round
 # [type: int, range: [0,2147483647], default: 50]
 separating/gomory/maxsepacuts = 50
 
 # maximal number of gomory cuts separated per separation round in the root node
-# [type: int, range: [0,2147483647], default: 500]
-separating/gomory/maxsepacutsroot = 500
+# [type: int, range: [0,2147483647], default: 50]
+separating/gomory/maxsepacutsroot = 50
 
 # maximal valid range max(|weights|)/min(|weights|) of row weights
 # [type: real, range: [1,1.79769313486232e+308], default: 10000]
@@ -5118,6 +5118,10 @@ display/cutoffbound/active = 1
 # display activation status of display column <gap> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 1]
 display/gap/active = 1
+
+# display activation status of display column <primalgap> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 0]
+display/primalgap/active = 0
 
 # display activation status of display column <nsols> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 1]

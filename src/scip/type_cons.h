@@ -107,7 +107,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  possible return values for *result:
  *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
  *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
- *  - SCIP_FEASIBLE   : no infeasibility nor unboundedness could be found
+ *  - SCIP_FEASIBLE   : no infeasibility or unboundedness could be found
  */
 #define SCIP_DECL_CONSINITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, \
       SCIP_Bool isunbounded, SCIP_Bool isinfeasible, SCIP_RESULT* result)
@@ -135,7 +135,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  possible return values for *result:
  *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
  *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
- *  - SCIP_FEASIBLE   : no infeasibility nor unboundedness could be found
+ *  - SCIP_FEASIBLE   : no infeasibility or unboundedness could be found
  */
 #define SCIP_DECL_CONSEXITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, \
       SCIP_Bool isunbounded, SCIP_Bool isinfeasible, SCIP_RESULT* result)
@@ -625,8 +625,12 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
 
 /** variable deletion method of constraint handler
  *
- *  This method should iterate over all constraints of the constraint handler and delete all variables
- *  that were marked for deletion by SCIPdelVar().
+ *  This method is optinal and only of interest if you are using SCIP as a branch-and-price framework. That means, you
+ *  are generating new variables during the search. If you are not doing that just define the function pointer to be
+ *  NULL.
+ *
+ *  If this method gets implemented you should iterate over all constraints of the constraint handler and delete all
+ *  variables that were marked for deletion by SCIPdelVar().
  *
  *  input:
  *  - scip            : SCIP main data structure

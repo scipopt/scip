@@ -922,6 +922,7 @@ const char* xlp_getvarname(
    const Var*            var                 /**< variable */
    )
 {
+#ifndef NDEBUG
    SCIP* scip;
    SCIP_READERDATA* readerdata;
 
@@ -930,6 +931,7 @@ const char* xlp_getvarname(
 
    scip = readerdata->scip;
    assert(scip != NULL);
+#endif
 
    return SCIPvarGetName((SCIP_VAR*)var);
 }

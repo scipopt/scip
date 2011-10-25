@@ -69,9 +69,6 @@
 #include "spxparmultpr.h"
 #include "spxdevexpr.h"
 #include "spxfastrt.h"
-#if (SOPLEX_VERSION > 150 || (SOPLEX_VERSION == 150 && SOPLEX_SUBVERSION >= 7))
-#include "spxboundflippingrt.h"
-#endif
 #include "spxmainsm.h"
 #include "spxequilisc.h"
 
@@ -83,6 +80,15 @@
 /* define subversion for versions <= 1.5.0.1 */
 #ifndef SOPLEX_SUBVERSION
 #define SOPLEX_SUBVERSION 0
+#endif
+
+#if (SOPLEX_VERSION > 150 || (SOPLEX_VERSION == 150 && SOPLEX_SUBVERSION >= 7))
+#include "spxboundflippingrt.h"
+#endif
+
+/* get githash of SoPlex */
+#if (SOPLEX_VERSION > 150)
+#include "spxgithash.h"
 #endif
 
 /* reset the SCIP_DEBUG define to its original SCIP value */
@@ -1299,6 +1305,7 @@ void invalidateSolution(SCIP_LPI* lpi)
  */
 
 static char spxname[100];
+static char spxdesc[200];
 
 /**@name Miscellaneous Methods */
 /**@{ */
@@ -1315,7 +1322,6 @@ const char* SCIPlpiGetSolverName(
 #else
    sprintf(spxname, "SoPlex %d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10);
 #endif
-
    return spxname;
 }
 
@@ -1324,11 +1330,14 @@ const char* SCIPlpiGetSolverDesc(
    void
    )
 {
-#ifdef WITH_LPSCHECK
-   return "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de) - including CPLEX double check";
-#else
-   return "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)";
+   sprintf(spxdesc, "%s", "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)");
+#if (SOPLEX_VERSION > 150)
+   sprintf(spxdesc, "%s [GitHash: %s]", spxdesc, getGitHash());
 #endif
+#ifdef WITH_LPSCHECK
+   sprintf(spxdesc, "%s %s", spxdesc, "- including CPLEX double check");
+#endif
+   return spxdesc;
 }
 
 /** gets pointer for LP solver - use only with great care */

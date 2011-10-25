@@ -982,7 +982,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
          SCIPerrorMessage("Ipopt returned with status \"Insufficient Memory\"\n");
          return SCIP_NOMEMORY;
       case Invalid_Number_Detected:
-         SCIPwarningMessage("Ipopt failed because of an invalid number in function or derivative value\n");
+         SCIPdebugMessage("Ipopt failed because of an invalid number in function or derivative value\n");
          invalidateSolution(problem);
          problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
          problem->lasttermstat = SCIP_NLPTERMSTAT_EVALERR;
