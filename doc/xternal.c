@@ -5836,7 +5836,7 @@
   * - <b>Constraint Handler</b>:
   *     <br>
   *     <br>
-  *   - The new constraint handler callback SCIP_DECL_DELVARS() is called after variables were marked for deletion.
+  *   - The new constraint handler callback SCIP_DECL_CONSDELVARS() is called after variables were marked for deletion.
   *     The constraint handler should then update its data and remove these variables from its constraints.
   *
   * - <b>Problem Data</b>:

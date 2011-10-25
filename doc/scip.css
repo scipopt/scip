@@ -1,15 +1,18 @@
 /* The standard CSS for doxygen */
 
-body, div, dl {
+body, div {
   color:            black;
   background-color: #FFFFE6;
   font-size: 12pt;
   font-family: sans-serif;
+}
+
+body {
   margin:           2px;
   padding:          0px;
 }
 
-/* boxes and bars */
+/* boxes */
 div.outer {
   padding:    19px;
   background: #FFFFFF;
@@ -20,7 +23,6 @@ div.inner {
   min-height: 450px;
   min-width: 1150px;
   background-color: #FFFFE6;
-  padding: 10px 10px 10px 10px;
 }
 
 /* @group Heading Levels */
@@ -101,7 +103,6 @@ div.navtab {
 
 a {
     color: #5050C0;
-    font-weight: normal;
     text-decoration: none;
 }
 
@@ -155,7 +156,7 @@ dl.el {
 }
 
 pre.fragment {
-    border: 1px solid #C4CFE5;
+    border: 1px solid #8080A0;
     background-color: #FBFCFD;
     padding: 4px 6px;
     margin: 4px 8px 4px 2px;
@@ -203,14 +204,14 @@ div.contents {
 td.indexkey {
     background-color: #EBEFF6;
     font-weight: bold;
-    border: 1px solid #C4CFE5;
+    border: 1px solid #8080A0;
     margin: 2px 0px 2px 0;
     padding: 2px 10px;
 }
 
 td.indexvalue {
     background-color: #EBEFF6;
-    border: 1px solid #C4CFE5;
+    border: 1px solid #8080A0;
     padding: 2px 10px;
     margin: 2px 0px;
 }
@@ -336,7 +337,7 @@ th.dirtab {
 hr {
     height: 0px;
     border: none;
-    border-top: 2px solid  #C4CFE5;
+    border-top: 2px solid #8080A0;
 }
 
 hr.footer {
@@ -365,7 +366,7 @@ table.memberdecls {
 }
 
 .memItemLeft, .memItemRight, .memTemplParams {
-    border-top: 1px solid #C4CFE5;
+    border-top: 1px solid #8080A0;
 }
 
 .memItemLeft, .memTemplItemLeft {
@@ -656,7 +657,7 @@ div.header
     background-repeat:repeat-x;
     background-color: #FFFFE6;
     margin:  0px;
-    border-bottom: 2px solid #C4CFE5;
+    border-bottom: 2px solid #8080A0;
 }
 
 div.headertitle
@@ -689,4 +690,64 @@ td.mainheadertitle
     right: 30px;
     width: 170px;
     z-index: 102;
+}
+
+/* menu */
+#menu {
+  line-height: 100%; 
+}
+
+#menu ul {
+  list-style: none;
+  padding-left: 0px;
+}
+
+#menu li {
+  padding:     2px 0px 0px 6px;
+  white-space: nowrap;
+  background:  #e9e9ff;
+}
+
+#menu li.hdr {
+  color: #5050C0; 
+  font-weight:   bold;
+  padding:       2px 0px 3px 6px;
+  background:    #d0d0ff;
+  border-top:    1px solid #f2f2f2; 
+  border-bottom: 1px solid #f2f2f2; 
+}
+
+#menu li a {
+  color:         black;
+  text-decoration: none;
+}
+
+#menu li a:hover {
+  color: #888800;
+  text-decoration: underline;
+}
+
+/* faq */
+#faq ul {
+  list-style: none;
+  padding-left: 1em;
+}
+
+#faq ol {
+  padding-left: 3em;
+}
+
+#faq h4 { 
+  padding-top: 2em;
+}
+
+/* question: */
+#faq p.q { 
+  font-weight:   bold;
+  padding-top: 2em;
+}
+
+/* answer */
+#faq p.a { 
+  padding-left:   1em;
 }
