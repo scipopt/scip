@@ -1399,7 +1399,7 @@ SCIP_RETCODE analyzeConflictZero(
    int v;
 
    /* conflict analysis can only be applied in solving stage and if it is applicable */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || !SCIPisConflictAnalysisApplicable(scip) )
+   if( (SCIPgetStage(scip) != SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);
@@ -1434,7 +1434,7 @@ SCIP_RETCODE analyzeConflictOne(
    int n;
 
    /* conflict analysis can only be applied in solving stage and if it is applicable */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || !SCIPisConflictAnalysisApplicable(scip) )
+   if( (SCIPgetStage(scip) != SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);

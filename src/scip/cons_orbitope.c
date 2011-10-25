@@ -771,7 +771,7 @@ SCIP_RETCODE propagateCons(
          if( SCIPisConflictAnalysisApplicable(scip) )
          {
             /* conflict analysis only applicable in SOLVING stage */
-            assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
+            assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING || SCIPinProbing(scip));
 
             /* perform conflict analysis */
             SCIP_CALL( SCIPinitConflictAnalysis(scip) );
@@ -832,7 +832,7 @@ SCIP_RETCODE propagateCons(
                   int k;
 
                   /* conflict analysis only applicable in SOLVING stage */
-                  assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
+                  assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING || SCIPinProbing(scip));
 
                   /* perform conflict analysis */
                   SCIP_CALL( SCIPinitConflictAnalysis(scip) );

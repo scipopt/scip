@@ -595,7 +595,7 @@ SCIP_RETCODE analyzeConflict(
    assert(scip != NULL);
 
    /* conflict analysis can only be applied in solving stage and if it is turned on */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || !SCIPisConflictAnalysisApplicable(scip) )
+   if( (SCIPgetStage(scip) != SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
    /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
@@ -855,7 +855,7 @@ SCIP_RETCODE tightenedIntvar(
    if( infeasible )
    {
       /* conflict analysis can only be applied in solving stage and if conflict analysis is turned on */
-      if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisConflictAnalysisApplicable(scip) )
+      if( (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) && SCIPisConflictAnalysisApplicable(scip) )
       {  
          int k;
          
@@ -914,7 +914,7 @@ SCIP_RETCODE tightenedIntvar(
    if( infeasible ) 
    {
       /* analyze the cutoff if if SOLVING stage and conflict analysis is turned on */
-      if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisConflictAnalysisApplicable(scip) )
+      if( (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) && SCIPisConflictAnalysisApplicable(scip) )
       {
          int k;
          
@@ -1058,7 +1058,7 @@ SCIP_RETCODE processBinvarFixings(
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
 
       /* conflict analysis can only be applied in solving stage and if it is applicable */
-      if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisConflictAnalysisApplicable(scip) )
+      if( (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) && SCIPisConflictAnalysisApplicable(scip) )
       {
          SCIP_VAR** vars;
          int nvars;
@@ -1106,7 +1106,7 @@ SCIP_RETCODE processBinvarFixings(
       else 
       {
          /* conflict analysis can only be applied in solving stage and if it is applicable */
-         if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisConflictAnalysisApplicable(scip) )
+         if( (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) && SCIPisConflictAnalysisApplicable(scip) )
          {
             SCIP_VAR** vars;
             int nvars;

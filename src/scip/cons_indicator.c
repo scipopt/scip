@@ -3189,7 +3189,7 @@ SCIP_RETCODE propIndicator(
          return SCIP_OKAY;
 
       /* conflict analysis can only be applied in solving stage */
-      assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
+      assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING || SCIPinProbing(scip));
 
       /* perform conflict analysis */
       SCIP_CALL( SCIPinitConflictAnalysis(scip) );

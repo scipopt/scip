@@ -2215,7 +2215,7 @@ SCIP_RETCODE initializeConflictAnalysisCoreTimes(
    SCIPdebugMessage("initialize conflict analysis\n");
 
    /* conflict analysis can only be applied in solving stage and if it is turned on */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || !SCIPisConflictAnalysisApplicable(scip) )
+   if( (SCIPgetStage(scip) != SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPinitConflictAnalysis(scip) );
@@ -2355,7 +2355,7 @@ SCIP_RETCODE initializeConflictAnalysisCoreTimesBinvars(
    SCIPdebugMessage("initialize conflict analysis\n");
 
    /* conflict analysis can only be applied in solving stage and if it is turned on */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || !SCIPisConflictAnalysisApplicable(scip) )
+   if( (SCIPgetStage(scip) != SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPinitConflictAnalysis(scip) );
@@ -3733,7 +3733,7 @@ SCIP_RETCODE initializeConflictAnalysisEnergeticReasoning(
    SCIPdebugMessage("initialize conflict analysis for energetic reasoning\n");
 
    /* conflict analysis can only be applied in solving stage and if it is turned on */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || !SCIPisConflictAnalysisApplicable(scip) )
+   if( (SCIPgetStage(scip) != SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
    assert(inferInfoGetProprule(inferinfo) == PROPRULE_4_ENERGETICREASONING);
@@ -4377,7 +4377,7 @@ SCIP_RETCODE initializeConflictAnalysisEdgeFinding(
    assert(inferInfoGetProprule(inferinfo) == PROPRULE_3_EDGEFINDING);
 
    /* conflict analysis can only be applied in solving stage and if it is turned on */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || !SCIPisConflictAnalysisApplicable(scip) )
+   if( (SCIPgetStage(scip) != SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPinitConflictAnalysis(scip) );
