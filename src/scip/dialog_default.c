@@ -2626,72 +2626,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteGenTransproblem)
    return SCIP_OKAY;
 }
 
-/** dialog execution method for the writing the variable bounds graph */
-static
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteVarsVboundGraph)
-{  /*lint --e{715}*/
-   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
-
-   if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
-   {
-      SCIP_RETCODE retcode;
-      char filename[SCIP_MAXSTRLEN];
-      char* word;
-      SCIP_Bool endoffile;
-      SCIP_Bool boolval;
-      SCIP_Bool error;
-
-      SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ", &word, &endoffile) );
-      if( endoffile )
-      {
-         *nextdialog = NULL;
-         return SCIP_OKAY;
-      }
-      if( word[0] == '\0' )
-         return SCIP_OKAY;
-
-      /* copy variable name */
-      (void)SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s", word);
-
-      /* add input to history */
-      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
-
-      SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "variable lower bounds (otherwise variable upper bounds) (TRUE/FALSE): ", &word, &endoffile) );
-      if( endoffile )
-      {
-         *nextdialog = NULL;
-         return SCIP_OKAY;
-      }
-      if( word[0] == '\0' )
-         return SCIP_OKAY;
-
-      boolval = parseBoolValue(scip, word, &error);
-      
-      if( error )
-         return SCIP_OKAY;
-
-      /* add input to history */
-      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, boolval ? "TRUE" : "FALSE", TRUE) );
-         
-      retcode = SCIPwriteVarsVboundGraph(scip, filename, boolval);
-      if( retcode == SCIP_FILECREATEERROR )
-      {
-         SCIPdialogMessage(scip, NULL, "error not creating file  <%s>\n", filename);
-      }
-      else                                                              
-      { 
-         SCIP_CALL( retcode );
-         SCIPdialogMessage(scip, NULL, "written variable %s bound graph to file <%s>\n", boolval ? "lower" : "upper", filename);
-      }
-   }
-   else
-      SCIPdialogMessage(scip, NULL, "no transformed problem available\n");
-
-   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
-
-   return SCIP_OKAY;
-}
-
 /** creates a root dialog */
 SCIP_RETCODE SCIPcreateRootDialog(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3271,18 +3205,6 @@ SCIP_RETCODE SCIPincludeDialogDefault(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
-   /* write variables bound graph */
-   if( !SCIPdialogHasEntry(submenu, "vboundgraph") )
-   {
-      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
-            NULL,
-            SCIPdialogExecWriteVarsVboundGraph, NULL, NULL,
-            "vboundgraph",
-            "write variable bound graph in GML format",
-            FALSE, NULL) );
-      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
-      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
-   }
 
    return SCIP_OKAY;
 }

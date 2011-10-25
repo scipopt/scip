@@ -224,7 +224,6 @@ parameters:
 features:
 - flatzinc reader is now capable to read cumulative constraints
 - new heuristic vbounds which use the variables lower and upper bounds to fix variable and performs a neighborhood search
-- new method SCIPwriteVarsVboundGraph() (scip.c) which writes the variable lower or upper bounds graph to a file in GML format
 - new method SCIPvarGetHashkey(), SCIPvarIsHashkeyEq(), SCIPvarGetHashkeyVal() in pub_var.h which can be used for SCIP_HASHTABLE of variables
 - new dialog "write vboundgraph" which can be used to write the variable lower or upper bound graph to a file from the interactive shell
 - the xor constraint handler can now parse its constraints
