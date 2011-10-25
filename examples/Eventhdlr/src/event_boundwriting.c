@@ -206,6 +206,7 @@ SCIP_RETCODE writeBounds(
             SCIP_VAR** vars;                          /* original problem's variables                    */
             int nvars;
             SCIP_Real submipdb;
+	    SCIP_Bool cutoff;
 
             SCIP_CALL( SCIPcreate(&subscip) );
 
@@ -216,6 +217,7 @@ SCIP_RETCODE writeBounds(
 
             submipdb = SCIP_INVALID;
             valid = FALSE;
+	    cutoff = FALSE;
             SCIP_CALL( SCIPcopy(scip, subscip, varmap, NULL, "__boundwriting", TRUE, FALSE, &valid) );
 
             if( valid )
@@ -263,15 +265,19 @@ SCIP_RETCODE writeBounds(
 	       /* solve only root node */
 	       SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 1LL) );
 
+	       /* set cutoffbound as objective limit for subscip */
+	       SCIP_CALL( SCIPsetObjlimit(subscip, SCIPgetCutoffbound(scip)) );
+
 	       SCIP_CALL( SCIPsolve(subscip) );
 
+	       cutoff = (SCIPgetStatus(subscip) == SCIP_STATUS_INFEASIBLE);
 	       submipdb = SCIPgetDualbound(subscip) * SCIPgetTransObjscale(scip) + SCIPgetTransObjoffset(scip);
 	    }
 
 #ifdef LONGSTATS
-            SCIPinfoMessage(scip, file, "Node %"SCIP_LONGINT_FORMAT" (depth %d): dualbound: %g, nodesubmiprootdualbound: %g\n", SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), SCIPgetNodeDualbound(scip, node), submipdb);
+            SCIPinfoMessage(scip, file, "Node %"SCIP_LONGINT_FORMAT" (depth %d): dualbound: %g, nodesubmiprootdualbound: %g %s\n", SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), SCIPgetNodeDualbound(scip, node), submipdb, cutoff ? "(cutoff)" : "");
 #else
-	    SCIPinfoMessage(scip, file, "%"SCIP_LONGINT_FORMAT" %d %g %g\n", SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), SCIPgetNodeDualbound(scip, node), submipdb);
+	    SCIPinfoMessage(scip, file, "%"SCIP_LONGINT_FORMAT" %d %g %g %s\n", SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), SCIPgetNodeDualbound(scip, node), submipdb, cutoff ? "(cutoff)" : "");
 #endif
 
             /* free hash map */
