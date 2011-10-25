@@ -625,8 +625,12 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
 
 /** variable deletion method of constraint handler
  *
- *  This method should iterate over all constraints of the constraint handler and delete all variables
- *  that were marked for deletion by SCIPdelVar().
+ *  This method is optinal and only of interest if you are using SCIP as a branch-and-price framework. That means, you
+ *  are generating new variables during the search. If you are not doing that just define the function pointer to be
+ *  NULL.
+ *
+ *  If this method gets implemented you should iterate over all constraints of the constraint handler and delete all
+ *  variables that were marked for deletion by SCIPdelVar().
  *
  *  input:
  *  - scip            : SCIP main data structure
