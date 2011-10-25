@@ -3853,14 +3853,6 @@ SCIP_RETCODE SCIPprintVar(
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
-/** writes variable bound graph to file */
-extern
-SCIP_RETCODE SCIPwriteVarsVboundGraph(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename,           /**< file name, or NULL for stdout */
-   SCIP_Bool             lowerbound          /**< variable lower bounds? (otherwise variable upper bounds) */
-   );
-
 /**@} */
 
 
