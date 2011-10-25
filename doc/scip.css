@@ -1,8 +1,26 @@
 /* The standard CSS for doxygen */
 
-body, table, div, p, dl {
-    font-family: Lucida Grande, Verdana, Geneva, Arial, sans-serif;
-    font-size: 12px;
+body, div, dl {
+  color:            black;
+  background-color: #FFFFE6;
+  font-size: 12pt;
+  font-family: sans-serif;
+  margin:           2px;
+  padding:          0px;
+}
+
+/* boxes and bars */
+div.outer {
+  padding:    19px;
+  background: #FFFFFF;
+}
+
+div.inner {
+  border:     1px solid #bdbdbd;
+  min-height: 450px;
+  min-width: 1150px;
+  background-color: #FFFFE6;
+  padding: 10px 10px 10px 10px;
 }
 
 /* @group Heading Levels */
@@ -82,13 +100,13 @@ div.navtab {
 /* @group Link Styling */
 
 a {
-    color: #3D578C;
+    color: #5050C0;
     font-weight: normal;
     text-decoration: none;
 }
 
 .contents a:visited {
-    color: #4665A2;
+    color: #5050C0;
 }
 
 a:hover {
@@ -102,12 +120,12 @@ a.qindex {
 a.qindexHL {
     font-weight: bold;
     background-color: #9CAFD4;
-    color: #ffffff;
+    color: #ffffe6;
     border: 1px double #869DCA;
 }
 
 .contents a.qindexHL:visited {
-    color: #ffffff;
+    color: #ffffe6;
 }
 
 a.el {
@@ -150,7 +168,7 @@ pre.fragment {
 div.ah {
     background-color: black;
     font-weight: bold;
-    color: #ffffff;
+    color: #ffffe6;
     margin-bottom: 3px;
     margin-top: 3px;
     padding: 0.2em;
@@ -174,12 +192,6 @@ div.groupHeader {
 div.groupText {
     margin-left: 16px;
     font-style: italic;
-}
-
-body {
-    background: white;
-    color: black;
-    margin: 0;
 }
 
 div.contents {
@@ -230,9 +242,8 @@ div.center img {
     border: 0px;
 }
 
-address.footer {
-    text-align: right;
-    padding-right: 12px;
+td.footer {
+    font-size: 75%;
 }
 
 img.footer {
@@ -325,7 +336,7 @@ th.dirtab {
 hr {
     height: 0px;
     border: none;
-    border-top: 1px solid #4A6AAA;
+    border-top: 2px solid  #C4CFE5;
 }
 
 hr.footer {
@@ -418,7 +429,6 @@ table.memberdecls {
     background-image:url('nav_f.png');
     background-repeat:repeat-x;
     background-color: #E2E8F2;
-
 }
 
 .memdoc {
@@ -644,9 +654,9 @@ div.header
 {
     background-image:url('nav_h.png');
     background-repeat:repeat-x;
-    background-color: #F9FAFC;
+    background-color: #FFFFE6;
     margin:  0px;
-    border-bottom: 1px solid #C4CFE5;
+    border-bottom: 2px solid #C4CFE5;
 }
 
 div.headertitle
@@ -656,19 +666,27 @@ div.headertitle
 
 div.mainheadertitle
 {
-    background-image:url('nav_h.png');
     background-repeat:repeat-x;
-    background-color: #F9FAFC;
     margin:  0px;
-    border-bottom: 1px solid #C4CFE5;
+    color: #5050C0;
 }
 
 td.mainheadertitle
 {
     font-weight: bold;
     font-size: 200%;
-    color: #3D578C;
     text-align:left;
     vertical-align: middle;
     padding: 0px 0px 0px 10px;
+}
+
+#MSearchBox {
+    white-space : nowrap;
+    position: absolute;
+    float: none;
+    display: inline;
+    margin-top: 8px;
+    right: 30px;
+    width: 170px;
+    z-index: 102;
 }
