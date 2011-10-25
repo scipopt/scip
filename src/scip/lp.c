@@ -276,7 +276,6 @@ SCIP_RETCODE lpStoreSolVals(
    storedsolvals->primalfeasible = lp->primalfeasible;
    storedsolvals->dualfeasible = lp->dualfeasible;
    storedsolvals->solisbasic = lp->solisbasic;
-   storedsolvals->validfarkas = lp->validfarkaslp == stat->lpcount;
 
    return SCIP_OKAY;
 }
@@ -306,7 +305,9 @@ SCIP_RETCODE lpRestoreSolVals(
       lp->primalfeasible = storedsolvals->primalfeasible;
       lp->dualfeasible = storedsolvals->dualfeasible;
       lp->solisbasic = storedsolvals->solisbasic;
-      lp->validfarkaslp = storedsolvals->validfarkas ? validlp : -1;
+
+      /* restore infeasible LPs always by resolving */
+      assert(lp->lpsolstat != SCIP_LPSOLSTAT_INFEASIBLE);
    }
    /* no values available, mark LP as unsolved */
    else
@@ -424,7 +425,6 @@ SCIP_RETCODE rowStoreSolVals(
 
    /* store values */
    storedsolvals->dualsol = row->dualsol;
-   storedsolvals->dualfarkas = row->dualfarkas;
    storedsolvals->activity = row->activity;
    storedsolvals->basisstatus = row->basisstatus; /*lint !e641*/
 
@@ -450,7 +450,6 @@ SCIP_RETCODE rowRestoreSolVals(
    if( storedsolvals != NULL )
    {
       row->dualsol = storedsolvals->dualsol;
-      row->dualfarkas = storedsolvals->dualfarkas;
       row->activity = storedsolvals->activity;
       row->validactivitylp = validlp;
       row->basisstatus = storedsolvals->basisstatus; /*lint !e641*/
@@ -15068,10 +15067,10 @@ SCIP_RETCODE SCIPlpStartDive(
    SCIP_CALL( SCIPlpiGetState(lp->lpi, blkmem, &lp->divelpistate) );
 
    /* save current LP values dependent on the solution */
-   if( !set->lp_resolverestore )
+   SCIP_CALL( lpStoreSolVals(lp, stat, blkmem) );
+   assert(lp->storedsolvals != NULL);
+   if( !set->lp_resolverestore && lp->lpsolstat != SCIP_LPSOLSTAT_INFEASIBLE )
    {
-      SCIP_CALL( lpStoreSolVals(lp, stat, blkmem) );
-      assert(lp->storedsolvals != NULL);
       for( c = 0; c < lp->ncols; ++c )
       {
          SCIP_CALL( colStoreSolVals(lp->cols[c], blkmem) );
@@ -15136,7 +15135,8 @@ SCIP_RETCODE SCIPlpEndDive(
    lp->divingobjchg = FALSE;
 
    /* resolve LP to reset solution */
-   if( set->lp_resolverestore )
+   assert(lp->storedsolvals != NULL);
+   if( set->lp_resolverestore || lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE )
    {
       SCIP_Bool lperror;
 
@@ -15167,7 +15167,6 @@ SCIP_RETCODE SCIPlpEndDive(
       stat->lpcount++;
 
       /* restore LP solution values in lp data, columns and rows */
-      assert(lp->storedsolvals != NULL);
       SCIP_CALL( lpRestoreSolVals(lp, blkmem, stat->lpcount) );
       for( c = 0; c < lp->ncols; ++c )
       {

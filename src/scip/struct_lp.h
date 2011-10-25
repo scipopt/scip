@@ -72,13 +72,13 @@ struct SCIP_ColSolVals
 };
 
 /** collected values of a row which depend on the LP solution
- *  We store these values in each row to recover the LP solution at start of diving or probing mode, say, without
- *  having to resolve the LP.  We have to store the dualfarkas value since there is (currently) no way to invalidate it.
+ *  We store these values in each row to recover the LP solution at start of diving or probing mode, say, without having
+ *  to resolve the LP.  We do not store the dualfarkas value since we expect a node with infeasible LP to be pruned
+ *  anyway. In this unlikely case, we have to resolve the LP.
  */
 struct SCIP_RowSolVals
 {
    SCIP_Real             dualsol;            /**< dual solution value in LP, is 0 if row is not in LP */
-   SCIP_Real             dualfarkas;         /**< multiplier value in dual farkas infeasibility proof */
    SCIP_Real             activity;           /**< row activity value in LP, or SCIP_INVALID if not yet calculated */
    unsigned int          basisstatus:2;      /**< basis status of row in last LP solution, invalid for non-LP rows */
 };
@@ -94,7 +94,6 @@ struct SCIP_LpSolVals
    SCIP_Bool             primalfeasible;     /**< is current LP solution primal feasible? */
    SCIP_Bool             dualfeasible;       /**< is current LP solution dual feasible? */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
-   SCIP_Bool             validfarkas;        /**< are stored row farkas coefficients valid? */
 };
 
 /** LP column;
