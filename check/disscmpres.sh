@@ -36,6 +36,6 @@ for i in $TESTSETS
 do
     echo
     echo ====vvvv==== $i ====vvvv====
-    cmpres.awk $AWKARGS diss-setnames.txt `ls -1 --color=none $FILES | grep "$i\..*\.res"`
+    awk -f cmpres.awk $AWKARGS diss-setnames.txt `ls -1 --color=none $FILES | grep "$i\..*\.res"`
     echo ====^^^^==== $i ====^^^^====
 done
