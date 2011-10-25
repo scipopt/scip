@@ -2706,15 +2706,32 @@ SCIP_RETCODE paramsetSetPresolvingDefault(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {  /*lint --e{715}*/
+   SCIP_PROP** props;
    SCIP_CONSHDLR** conshdlrs;
    SCIP_PARAM* param;
    char paramname[SCIP_MAXSTRLEN];
+   int nprops;
    int nconshdlrs;
    int i;
 
    /* reset all parameter which start with "presolving" in their name to default */
    SCIP_CALL( paramsetSetDefault(paramset, scip, "presolving") );
-   
+
+   props = SCIPgetProps(scip);
+   nprops = SCIPgetNProps(scip);
+
+   /* turn off presolving for each individual propagator */
+   for( i = 0; i < nprops; ++i )
+   {
+      const char* propname;
+      propname = SCIPpropGetName(props[i]);
+
+      /* get maxrounds parameter of presolvers */
+      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/maxprerounds", propname);
+
+      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, paramname) );
+   }
+
    conshdlrs = SCIPgetConshdlrs(scip);
    nconshdlrs = SCIPgetNConshdlrs(scip);
 
@@ -2893,9 +2910,11 @@ SCIP_RETCODE paramsetSetPresolvingOff(
    )
 {
    SCIP_PRESOL** presols;
+   SCIP_PROP** props;
    SCIP_CONSHDLR** conshdlrs;
    char paramname[SCIP_MAXSTRLEN];
    int npresols;
+   int nprops;
    int nconshdlrs;
    int i;
 
@@ -2913,6 +2932,21 @@ SCIP_RETCODE paramsetSetPresolvingOff(
       /* get maxrounds parameter of presolvers */
       (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "presolving/%s/maxrounds", presolname);
       
+      SCIP_CALL( paramSetInt(scip, paramset, paramname, 0, quiet) );
+   }
+
+   props = SCIPgetProps(scip);
+   nprops = SCIPgetNProps(scip);
+
+   /* turn off presolving for each individual propagator */
+   for( i = 0; i < nprops; ++i )
+   {
+      const char* propname;
+      propname = SCIPpropGetName(props[i]);
+
+      /* get maxrounds parameter of presolvers */
+      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/maxprerounds", propname);
+
       SCIP_CALL( paramSetInt(scip, paramset, paramname, 0, quiet) );
    }
 
