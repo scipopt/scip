@@ -103,6 +103,9 @@
 
 #define MAXDNOM                   10000LL /**< maximal denominator for simple rational fixed values */
 #define MAXSCALEDCOEF               1e+03 /**< maximal coefficient value after scaling */
+#define MAXSCALEDCOEFINTEGER        1e+06 /**< maximal coefficient value after scaling if all variables are of integral
+					   *   type
+					   */
 
 #define HASHSIZE_LINEARCONS        131101 /**< minimal size of hash table in linear constraint tables */
 
@@ -3448,6 +3451,7 @@ SCIP_RETCODE performVarDeletions(
 
 
 /** normalizes a linear constraint with the following rules:
+ *  - if all coefficients have them same absolute value, change them to (-)1.0
  *  - multiplication with +1 or -1:
  *      Apply the following rules in the given order, until the sign of the factor is determined. Later rules only apply,
  *      if the current rule doesn't determine the sign):
@@ -3470,9 +3474,7 @@ SCIP_RETCODE normalizeCons(
    )
 {
    SCIP_CONSDATA* consdata;
-#ifndef NDEBUG
    SCIP_VAR** vars;
-#endif
    SCIP_Real* vals;
    SCIP_Longint scm;
    SCIP_Longint nominator;
@@ -3488,6 +3490,7 @@ SCIP_RETCODE normalizeCons(
    int nposcoeffs;
    int nnegcoeffs;
    int i;
+   int v;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -3507,11 +3510,77 @@ SCIP_RETCODE normalizeCons(
    /* get coefficient arrays */
    vals = consdata->vals;
    nvars = consdata->nvars;
-#ifndef NDEBUG
    vars = consdata->vars;
    assert(nvars == 0 || vars != NULL);
    assert(nvars == 0 || vals != NULL);
-#endif
+
+   if( nvars == 0 )
+   {
+      consdata->normalized = TRUE;
+      return SCIP_OKAY;
+   }
+
+   assert(vars != NULL);
+   assert(vals != NULL);
+
+   /* get maximal absolute coefficient */
+   maxabsval = consdataGetMaxAbsval(consdata);
+
+   /* check if all coefficients are in absolute value equal, and not 1.0 */
+   if( !SCIPisEQ(scip, maxabsval, 1.0) )
+   {
+      SCIP_Bool abscoefsequ;
+
+      abscoefsequ = TRUE;
+
+      for( v = nvars - 1; v >= 0; --v )
+      {
+	 if( !SCIPisEQ(scip, REALABS(vals[v]), maxabsval) )
+	 {
+	    abscoefsequ = FALSE;
+	    break;
+	 }
+      }
+
+      /* all coefficients are in absolute value equal, so change them to (-)1.0 */
+      if( abscoefsequ )
+      {
+	 SCIPdebugMessage("divide linear constraint with %g, because all coefficents are in absolute value th same\n", maxabsval);
+	 SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
+	 SCIP_CALL( scaleCons(scip, cons, 1/maxabsval) );
+
+	 if( consdata->validmaxabsval )
+	 {
+	    if( !SCIPisEQ(scip, consdata->maxabsval, 1.0) )
+	       consdata->maxabsval = 1.0;
+
+	    maxabsval = 1.0;
+	 }
+	 else
+	 {
+	    /* get maximal absolute coefficient */
+	    maxabsval = consdataGetMaxAbsval(consdata);
+	 }
+
+	 /* get new consdata information, because scalecons() might have deleted variables */
+	 vals = consdata->vals;
+	 nvars = consdata->nvars;
+	 vars = consdata->vars;
+
+	 assert(nvars == 0 || vars != NULL);
+	 assert(nvars == 0 || vals != NULL);
+      }
+   }
+
+   /* nvars might have changed */
+   if( nvars == 0 )
+   {
+      consdata->normalized = TRUE;
+      return SCIP_OKAY;
+   }
+
+   assert(vars != NULL);
+   assert(vals != NULL);
 
    /* calculate the maximal multiplier for common divisor calculation:
     *   |p/q - val| < epsilon  and  q < feastol/epsilon  =>  |p - q*val| < feastol
@@ -3522,8 +3591,36 @@ SCIP_RETCODE normalizeCons(
    epsilon = SCIPepsilon(scip) * 0.9;  /* slightly decrease epsilon to be safe in rational conversion below */
    feastol = SCIPfeastol(scip);
    maxmult = (SCIP_Longint)(feastol/epsilon + feastol);
-   maxabsval = consdataGetMaxAbsval(consdata);
    maxmult = MIN(maxmult, (SCIP_Longint)( MAXSCALEDCOEF/MAX(maxabsval, 1.0)));
+
+   /* if all variables are of intergal type we will allow a greater multiplier */
+   if( consdata->sorted )
+   {
+      if( SCIPvarGetType(vars[nvars - 1]) != SCIP_VARTYPE_CONTINUOUS )
+      {
+	 maxmult = (SCIP_Longint) (MAXSCALEDCOEFINTEGER/(MAX(maxabsval, 1.0)));
+      }
+   }
+   else
+   {
+      SCIP_Bool foundcont;
+
+      foundcont = FALSE;
+
+      for( v = nvars - 1; v >= 0; --v )
+      {
+	 if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+	 {
+	    foundcont = TRUE;
+	    break;
+	 }
+      }
+
+      if( !foundcont )
+      {
+	 maxmult = (SCIP_Longint) (MAXSCALEDCOEFINTEGER/(MAX(maxabsval, 1.0)));
+      }
+   }
 
    /*
     * multiplication with +1 or -1

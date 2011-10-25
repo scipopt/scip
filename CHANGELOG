@@ -7,9 +7,12 @@ interface
 - the methods SCIPsortedvecInsert*() have an additional parameter which can be used to receive the position where 
   the new element was inserted, if this is not of interest a NULL pointer can be given
 
+performance improvements:
+- improved scaling of linear constraints, linear constraints with integral variables will now be scale with
+  1e+06/MAX(maximal absolute coefficient, 1.0) instead of 1e+03/MAX(maximal absolute coefficient, 1.0);
+  if all coefficients are in absolute value equal they will be scaled by that
+
 parameters:
-- changed default value of parameter <separating/gomory/maxroundsroot> to 10
-- changed default value of parameter <separating/gomory/maxsepacutsroot> to 50
 - changed default value of parameter <presolving/inttobinary/maxrounds> to 0
 
 
@@ -235,6 +238,8 @@ parameters:
 - added parameter <constraints/varbound/presolpairwise> that allows pairwise presolving of varbound constraints, default is TRUE
 - added parameter <pricing/delvars> and <pricing/delvarsroot> that define, whether variables created at a node / the root node should be deleted when the node is solved in case they are not present in the LP anymore
 - added parameter <heuristics/shiftandpropagate/onlywithoutsol> to switch whether the heuristic should be called in case a primal solution is already present
+- changed default value of parameter <separating/gomory/maxroundsroot> to 10
+- changed default value of parameter <separating/gomory/maxsepacutsroot> to 50
 
 features:
 - flatzinc reader is now capable to read cumulative constraints
