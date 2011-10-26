@@ -2018,7 +2018,11 @@ SCIP_RETCODE treeApplyPendingBdchgs(
 
          lb = SCIPvarGetLbLocal(var);
          if( !SCIPsetIsGT(set, tree->pendingbdchgs[i].newbound, lb) )
+         {
+            /* release the variable */
+            SCIP_CALL( SCIPvarRelease(&var, blkmem, set, eventqueue, lp) );
             continue;
+         }
       }
       else
       {
@@ -2027,7 +2031,11 @@ SCIP_RETCODE treeApplyPendingBdchgs(
          assert(tree->pendingbdchgs[i].boundtype == SCIP_BOUNDTYPE_UPPER);
          ub = SCIPvarGetUbLocal(var);
          if( !SCIPsetIsLT(set, tree->pendingbdchgs[i].newbound, ub) )
+         {
+            /* release the variable */
+            SCIP_CALL( SCIPvarRelease(&var, blkmem, set, eventqueue, lp) );
             continue;
+         }
       }
 
       SCIP_CALL( SCIPnodeAddBoundinfer(tree->pendingbdchgs[i].node, blkmem, set, stat, tree, lp, branchcand, eventqueue,
@@ -4287,6 +4295,8 @@ SCIP_RETCODE SCIPtreeClear(
    SCIP_LP*              lp                  /**< current LP data */
    )
 {
+   int v;
+
    assert(tree != NULL);
    assert(tree->nchildren == 0);
    assert(tree->nsiblings == 0);
@@ -4298,7 +4308,19 @@ SCIP_RETCODE SCIPtreeClear(
    /* clear node queue */
    SCIP_CALL( SCIPnodepqClear(tree->leaves, blkmem, set, stat, eventqueue, tree, lp) );
    assert(tree->root == NULL);
-   
+
+   /* we have to remove the captures of the variables within the pending bound change data structure */
+   for( v = tree->npendingbdchgs-1; v >= 0; --v )
+   {
+      SCIP_VAR* var;
+
+      var = tree->pendingbdchgs[v].var;
+      assert(var != NULL);
+
+      /* release the variable */
+      SCIP_CALL( SCIPvarRelease(&var, blkmem, set, eventqueue, lp) );
+   }
+
    /* mark working arrays to be empty and reset data */
    tree->focuslpstateforklpcount = -1;
    tree->nchildren = 0;
