@@ -559,6 +559,11 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
             SCIPdebugMessage("  *** cutoff detected at level %d - backtracking\n", SCIPgetProbingDepth(scip));
             SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip)-1) );
             SCIP_CALL( SCIPnewProbingNode(scip) );
+
+            bestfixval = SCIPvarIsBinary(var)
+               ? 1.0 - bestfixval
+               : (SCIPisGT(scip, bestsolval, bestfixval) && SCIPisFeasLE(scip, bestfixval + 1, SCIPvarGetUbLocal(var)) ? bestfixval + 1 : bestfixval - 1);
+
             backtracked = TRUE;
          }
          else
