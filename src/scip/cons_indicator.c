@@ -3319,7 +3319,7 @@ SCIP_RETCODE propIndicator(
                   if ( SCIPvarGetLbLocal(binvar) < 0.5 )
                   {
                      SCIPdebugMessage("Propagating <%s> - dual reduction: Slack variable fixed to 0, fix binary variable to 0.\n", SCIPconsGetName(cons));
-                     SCIP_CALL( SCIPinferVarUbCons(scip, binvar, 0.0, cons, 0, FALSE, &infeasible, &tightened) );
+                     SCIP_CALL( SCIPinferVarUbCons(scip, binvar, 0.0, cons, 2, FALSE, &infeasible, &tightened) );
                      assert( ! infeasible );
                      if ( tightened )
                         ++(*nGen);
@@ -3337,7 +3337,7 @@ SCIP_RETCODE propIndicator(
                   if ( SCIPvarGetUbGlobal(binvar) > 0.5 )
                   {
                      SCIPdebugMessage("Propagating <%s> - dual reduction: Slack variable fixed to 0, fix binary variable to 1.\n", SCIPconsGetName(cons));
-                     SCIP_CALL( SCIPinferVarUbCons(scip, binvar, 1.0, cons, 0, FALSE, &infeasible, &tightened) );
+                     SCIP_CALL( SCIPinferVarLbCons(scip, binvar, 1.0, cons, 2, FALSE, &infeasible, &tightened) );
                      assert( ! infeasible );
                      if ( tightened )
                         ++(*nGen);
@@ -5036,7 +5036,7 @@ SCIP_DECL_CONSRESPROP(consRespropIndicator)
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
-   assert( inferinfo == 0 || inferinfo == 1 );
+   assert( inferinfo == 0 || inferinfo == 1 || inferinfo == 2 );
    assert( consdata->linconsactive );
 
    /* if the binary variable was the reason */
@@ -5046,18 +5046,22 @@ SCIP_DECL_CONSRESPROP(consRespropIndicator)
       assert( infervar != consdata->binvar );
 
       SCIP_CALL( SCIPaddConflictLb(scip, consdata->binvar, bdchgidx) );
-      *result = SCIP_SUCCESS;
+   }
+   else if ( inferinfo == 1 )
+   {
+      /* if the slack variable fixed to a positive value was the reason */
+      assert( infervar != consdata->slackvar );
+      assert( SCIPisFeasPositive(scip, SCIPvarGetLbAtIndex(consdata->slackvar, bdchgidx, FALSE)) );
+      SCIP_CALL( SCIPaddConflictLb(scip, consdata->slackvar, bdchgidx) );
    }
    else
    {
-      /* if the slack variable was the reason */
-      assert( inferinfo == 1 );
-      assert( SCIPisFeasPositive(scip, SCIPvarGetLbAtIndex(consdata->slackvar, bdchgidx, FALSE)) );
-      assert( infervar != consdata->slackvar );
-
-      SCIP_CALL( SCIPaddConflictLb(scip, consdata->slackvar, bdchgidx) );
-      *result = SCIP_SUCCESS;
+      assert( inferinfo == 2 );
+      assert( SCIPisFeasZero(scip, SCIPvarGetUbAtIndex(consdata->slackvar, bdchgidx, FALSE)) );
+      assert( SCIPconshdlrGetData(conshdlr)->dualreductions );
+      SCIP_CALL( SCIPaddConflictUb(scip, consdata->slackvar, bdchgidx) );
    }
+   *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
 }
