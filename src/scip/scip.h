@@ -426,10 +426,10 @@ int SCIPgetSubscipDepth(
 
 /** copies source SCIP to target SCIP; the copying process is done in the following order:
  *  1) copy the plugins
- *  2) create problem data in target-SCIP and copy the problem data of the source-SCIP
- *  3) copy all active variables
- *  4) copy all constraints
- *  5) copy the settings 
+ *  2) copy the settings
+ *  3) create problem data in target-SCIP and copy the problem data of the source-SCIP
+ *  4) copy all active variables
+ *  5) copy all constraints
  *
  *  @note all variables and constraints which are created in the target-SCIP are not (user) captured 
  */
