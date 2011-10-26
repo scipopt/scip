@@ -2,7 +2,7 @@
 
 body, div {
   color:            black;
-  background-color: #FFFFE6;
+  background-color: #ffffe6;
   font-size: 12pt;
   font-family: sans-serif;
 }
@@ -19,10 +19,9 @@ div.outer {
 }
 
 div.inner {
-  border:     1px solid #bdbdbd;
+  border:     1px solid #BDBDBD;
   min-height: 450px;
   min-width: 1150px;
-  background-color: #FFFFE6;
 }
 
 /* @group Heading Levels */
@@ -196,9 +195,6 @@ div.groupText {
 }
 
 div.contents {
-    margin-top: 10px;
-    margin-left: 10px;
-    margin-right: 10px;
 }
 
 td.indexkey {
@@ -351,8 +347,14 @@ table.memberdecls {
     padding: 0px;
 }
 
+
 .mdescLeft, .mdescRight,
-.memItemLeft, .memItemRight,
+.memItemLeft, .memItemRight {
+    border: none;
+    margin: 4px;
+    padding: 5px 0px 5px 8px;
+}
+
 .memTemplItemLeft, .memTemplItemRight, .memTemplParams {
     background-color: #F9FAFC;
     border: none;
@@ -588,16 +590,6 @@ table.doxtable th {
     text-align:left;
 }
 
-.tabsearch {
-    top: 0px;
-    left: 10px;
-    height: 36px;
-    background-image: url('tab_b.png');
-    z-index: 101;
-    overflow: hidden;
-    font-size: 13px;
-}
-
 .navpath ul
 {
     font-size: 11px;
@@ -655,42 +647,42 @@ div.header
 {
     background-image:url('nav_h.png');
     background-repeat:repeat-x;
-    background-color: #FFFFE6;
     margin:  0px;
-    border-bottom: 2px solid #8080A0;
+}
+
+div.textblock
+{
+    padding: 0px 0px 10px 0px;
 }
 
 div.headertitle
 {
-    padding: 5px 5px 5px 10px;
+    padding: 5px 0px 5px 0px;
+}
+
+div.title
+{
+    padding: 5px 0px 5px 0px;
+    font-weight: bold;
+    font-size: 16pt;
 }
 
 div.mainheadertitle
 {
     background-repeat:repeat-x;
     margin:  0px;
-    color: #5050C0;
 }
 
 td.mainheadertitle
 {
     font-weight: bold;
-    font-size: 200%;
+    font-size: 20pt;
     text-align:left;
     vertical-align: middle;
-    padding: 0px 0px 0px 10px;
+    padding: 0px 0px 0px 0px;
+    color: #5050C0;
 }
 
-#MSearchBox {
-    white-space : nowrap;
-    position: absolute;
-    float: none;
-    display: inline;
-    margin-top: 8px;
-    right: 30px;
-    width: 170px;
-    z-index: 102;
-}
 
 /* menu */
 #menu {
@@ -705,7 +697,7 @@ td.mainheadertitle
 #menu li {
   padding:     2px 0px 0px 6px;
   white-space: nowrap;
-  background:  #e9e9ff;
+  background:  #E9E9FF;
 }
 
 #menu li.hdr {
@@ -750,4 +742,14 @@ td.mainheadertitle
 /* answer */
 #faq p.a { 
   padding-left:   1em;
+}
+
+#MSearchBox {
+    white-space : nowrap;
+    float: none;
+    display: inline;
+    margin-top: 8px;
+    right: 30px;
+    width: 170px;
+    z-index: 102;
 }

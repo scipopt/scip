@@ -1,14 +1,14 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
-    <title>$title</title>
+    <!--BEGIN PROJECT_NAME--><title>$projectname: $title</title><!--END PROJECT_NAME-->
+    <!--BEGIN !PROJECT_NAME--><title>$title</title><!--END !PROJECT_NAME-->
+    $search
     <link href="$relpath$tabs.css" rel="stylesheet" type="text/css"/>
-    <link href="$relpath$search/search.css" rel="stylesheet" type="text/css"/>
-    <script type="text/javaScript" src="$relpath$search/search.js"></script>
     <link href="$relpath$scip.css" rel="stylesheet" type="text/css"/>
   </head>
-  <body bgcolor="#FFFFFF" text="#000000" link="#0000FF" alink="#FF0000" vlink="#800080" onload='searchBox.OnSelectItem(0);'>
+  <body>
     <div class="outer">
       <div class="inner">
 	<table width="100%" cellspacing="0" cellpadding="12" border="0">
@@ -49,20 +49,20 @@
               </div>
 	    </td>
             <td valign="top" width="99%">
-	      <table cellpadding="0px" width="100%">
-		<tr>
-		  <td nowrap class="mainheadertitle">
-		    <a class="el" href="http://scip.zib.de">
-		      SCIP &mdash; Solving Constraint Integer Programs
-		    </a>
-		  </td>
-		  <td nowrap>
-		    <a class="qindex" href="../html/index.html">User's Manual</a>
-		    <br>
-		      <a class="qindex" href="../html_devel/index.html">Developer's Manual</a>
-		    </td>
-		  <td width="50">
-		    <a href="scippy.png" target="_blank"><img class="header" src="miniscippy.png" alt="scippy"  border="0"></a>
-		    </td>
-		  </tr>
-		  </table>
+	      <div id="top"><!-- do not remove this div! -->
+		<table width="100%" cellspacing="0" cellpadding="12" border="0">
+                  <tr>
+                    <td nowrap class="mainheadertitle">
+                      SCIP Doxygen Documentation
+                    </td>
+                    <td nowrap>
+                      <a class="qindex" href="../html/index.html">User's Manual</a>
+                      <br>
+                      <a class="qindex" href="../html_devel/index.html">Developer's Manual</a>
+                    </td>
+                    <td width="50">
+                      <a href="scippy.png" target="_blank"><img class="header" src="miniscippy.png" alt="scippy"  border="0"></a>
+                    </td>
+                  </tr>
+                </table>
+	      </div>

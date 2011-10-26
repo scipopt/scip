@@ -12,17 +12,19 @@ then
 fi
 rm -f release/$NAME.tgz
 
+# run git status to clean the dirty git hash
+git status
+
+echo generating default setting files
+make LPS=none OPT=opt-gccold READLINE=false ZLIB=false ZIMPL=false -j4
+bin/scip -c "set default set save doc/inc/parameters.set quit"
+
 # Before we create a tarball change the director and file rights in a command way
 echo adjust file modes
 find ./ -type d -exec chmod 750 {} \;
 find ./ -type f -exec chmod 640 {} \;
 find ./ -name "*.sh" -exec chmod 750 {} \;
-find ./ -name "*.awk" -exec chmod 750 {} \;
 chmod 750 bin/*
-
-echo generating default setting files
-make LPS=none OPT=opt-gccold READLINE=false ZLIB=false ZIMPL=false -j4
-bin/scip -c "set default set save doc/inc/parameters.set quit"
 
 tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 --exclude="*CVS*" \
@@ -109,3 +111,4 @@ echo "check version numbers in src/scip/def.h, doc/xternal.c, Makefile and maked
 grep "VERSION" src/scip/def.h
 grep "@version" doc/xternal.c
 grep "^VERSION" Makefile
+tail src/scip/githash.c
