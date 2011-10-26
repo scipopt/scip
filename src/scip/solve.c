@@ -2265,11 +2265,14 @@ SCIP_RETCODE priceAndCutLoop(
          SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
       }
 
-      /* analyze an infeasible LP (not necessary in the root node) */
-      if( !set->misc_exactsolve && !root && SCIPlpIsRelax(lp)
+      /* if the LP is a relaxation and we are not solving exactly, then we may analyze an infeasible or bound exceeding
+       * LP (not necessary in the root node) and cut off the current node
+       */
+      if( !set->misc_exactsolve && !root && SCIPlpIsRelax(lp) && SCIPprobAllColsInLP(prob, set, lp)
          && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT) )
       {
          SCIP_CALL( SCIPconflictAnalyzeLP(conflict, blkmem, set, stat, prob, tree, lp, NULL) );
+         *cutoff = TRUE;
       }
    }
    /* check for unboundedness */

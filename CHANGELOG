@@ -153,6 +153,7 @@ fixed bugs:
 - fixed bug in cons_linear.c, scaling could have led to wrong values
 - fixed bug in cons_linear.c, when scaling a constraint maxabscoef was not set correctly, furthermore the correction of
   maxabscoef was not handled correctly
+- fixed bug in conflict.c, where LPi was manipulated, but not marked as not solved
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})
