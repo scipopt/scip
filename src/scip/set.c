@@ -3031,18 +3031,7 @@ SCIP_RETCODE SCIPsetIncludeExternalCode(
    }
    assert(set->nextcodes < set->extcodessize);
 
-   /* remove git hash from SoPlex version */
-   if( strncmp(name, "SoPlex", 6) == 0 )
-   {
-      char* starthash;
-
-      starthash = strrchr(name, ' ');
-      BMSduplicateMemoryArray(&(set->extcodenames[set->nextcodes]), name, (int) strlen(name)-strlen(starthash));  /*lint !e866*/
-   }
-   else
-   {
-      BMSduplicateMemoryArray(&(set->extcodenames[set->nextcodes]), name, (int) strlen(name)+1);  /*lint !e866*/
-   }
+   BMSduplicateMemoryArray(&(set->extcodenames[set->nextcodes]), name, (int) strlen(name)+1);  /*lint !e866*/
    if( description != NULL )
    {
       BMSduplicateMemoryArray(&(set->extcodedescs[set->nextcodes]), description, (int) strlen(description)+1);  /*lint !e866*/
