@@ -3334,7 +3334,7 @@ SCIP_RETCODE propIndicator(
                   constraint will fix the binary variable to 1. */
                if ( SCIPvarGetNLocksUp(binvar) <= 1 )
                {
-                  if ( SCIPvarGetUbGlobal(binvar) > 0.5 )
+                  if ( SCIPvarGetUbLocal(binvar) > 0.5 )
                   {
                      SCIPdebugMessage("Propagating <%s> - dual reduction: Slack variable fixed to 0, fix binary variable to 1.\n", SCIPconsGetName(cons));
                      SCIP_CALL( SCIPinferVarLbCons(scip, binvar, 1.0, cons, 2, FALSE, &infeasible, &tightened) );
