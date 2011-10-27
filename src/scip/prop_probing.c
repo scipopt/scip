@@ -409,7 +409,10 @@ SCIP_RETCODE applyProbing(
 	 /* check if we already fixed enough variables for this round, or probed on all variables */
 	 if( *nfixedvars - oldnfixedvars + *naggrvars - oldnaggrvars >= maxfixings || (looped && oldstartidx == i) )
 	 {
-	    *delay = TRUE;
+	    if( *nfixedvars - oldnfixedvars + *naggrvars - oldnaggrvars > 0 )
+	       *delay = TRUE;
+	    else
+	       aborted = TRUE;
 	    break;
 	 }
 
