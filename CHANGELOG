@@ -155,6 +155,8 @@ fixed bugs:
   maxabscoef was not handled correctly
 - fixed bug in conflict.c, where LPi was manipulated, but not marked as not solved
 - reader_lp is now able to read lines longer than 65534 characters
+- fixed bug in cons_indicator.c trying to copy a constraint where the pointer to the linear constraint did not point to
+  the already transformed linear constraint (, happend when SCIPcopy() is used after transforming before presolving)
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})
