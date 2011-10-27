@@ -154,6 +154,7 @@ fixed bugs:
 - fixed bug in cons_linear.c, when scaling a constraint maxabscoef was not set correctly, furthermore the correction of
   maxabscoef was not handled correctly
 - fixed bug in conflict.c, where LPi was manipulated, but not marked as not solved
+- reader_lp is now able to read lines longer than 65534 characters
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})
