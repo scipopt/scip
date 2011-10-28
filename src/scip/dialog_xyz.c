@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   dialog_xyz.c
- * @ingroup DIALOGS
  * @brief  xyz user interface dialog
  * @author Kati Wolter
  */
