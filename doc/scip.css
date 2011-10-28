@@ -98,6 +98,11 @@ div.navtab {
     margin-right: 15px;
 }
 
+div.note{
+    color: #EE0000;
+    font-weight: bold;
+}
+
 /* @group Link Styling */
 
 a {
