@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_linesearchdiving.h
+ * @ingroup PRIMALHEURISTICS
  * @brief  linesearchdiving primal heuristic
  * @author Tobias Achterberg
  */

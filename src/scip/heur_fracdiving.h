@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_fracdiving.h
+ * @ingroup PRIMALHEURISTICS
  * @brief  LP diving heuristic that chooses fixings w.r.t. the fractionalities
  * @author Tobias Achterberg
  */

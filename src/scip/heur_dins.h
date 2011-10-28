@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_dins.h
+ * @ingroup PRIMALHEURISTICS
  * @brief  DINS primal heuristic
  * @author Robert Waniek
  */

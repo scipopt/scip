@@ -14,9 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_undercover.c
- * @ingroup PRIMALHEURISTICS
  * @brief  undercover primal heuristic for MIQCPs
- *
  * @author Timo Berthold
  * @author Ambros Gleixner
  */

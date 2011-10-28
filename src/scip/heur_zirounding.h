@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_zirounding.h
+ * @ingroup PRIMALHEURISTICS
  * @brief  zirounding primal heuristic
  * @author Tobias Achterberg
  */

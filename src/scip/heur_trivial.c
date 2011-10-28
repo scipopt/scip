@@ -13,9 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-
 /**@file   heur_trivial.c
- * @ingroup PRIMALHEURISTICS
  * @brief  trivial primal heuristic
  * @author Timo Berthold
  */

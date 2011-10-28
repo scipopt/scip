@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_shiftandpropagate.h
+ * @ingroup PRIMALHEURISTICS
  * @brief  shiftandpropagate primal heuristic
  * @author Tobias Achterberg
  */

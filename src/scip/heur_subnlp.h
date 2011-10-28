@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_subnlp.h
+ * @ingroup PRIMALHEURISTICS
  * @brief  NLP local search primal heuristic using sub-SCIPs
  * @author Stefan Vigerske
  */

@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_oneopt.c
- * @ingroup PRIMALHEURISTICS
  * @brief  oneopt primal heuristic
  * @author Timo Berthold
  */

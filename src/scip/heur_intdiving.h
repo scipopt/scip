@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_intdiving.h
+ * @ingroup PRIMALHEURISTICS
  * @brief  LP diving heuristic that fixes variables with integral LP value
  * @author Tobias Achterberg
  */
