@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_dualfix.h
+ * @ingroup PRESOLVERS
  * @brief  fixing roundable variables to best bound
  * @author Tobias Achterberg
  */

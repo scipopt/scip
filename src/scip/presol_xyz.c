@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_xyz.c
- * @ingroup PRESOLVERS
  * @brief  xyz presolver
  * @author Tobias Achterberg
  */
