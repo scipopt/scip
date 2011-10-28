@@ -3556,10 +3556,6 @@ heuristics/subnlp/nlptimelimit = 0
 # [type: string, default: ""]
 heuristics/subnlp/nlpoptfile = ""
 
-# name of an NLP solver to use (empty value means to use solver with highest priority)
-# [type: string, default: ""]
-heuristics/subnlp/nlpsolver = ""
-
 # if SCIP does not accept a NLP feasible solution, resolve NLP with feas. tolerance reduced by this factor (set to 1.0 to turn off resolve)
 # [type: real, range: [0,1], default: 0.001]
 heuristics/subnlp/resolvetolfactor = 0.001

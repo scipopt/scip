@@ -6140,7 +6140,7 @@
 /**@defgroup BRANCHINGRULES Branching Rules
  * @brief This page contains a list of all branching rule which are currently available.
  *
- * A detailed description what a branching rule does and how to add a branching rule to SCIPcan be found
+ * A detailed description what a branching rule does and how to add a branching rule to SCIP can be found
  * \ref BRANCH "here".
  */
 
