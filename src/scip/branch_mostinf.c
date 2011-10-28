@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch_mostinf.c
- * @ingroup BRANCHINGRULES
  * @brief  most infeasible LP branching rule
  * @author Tobias Achterberg
  */

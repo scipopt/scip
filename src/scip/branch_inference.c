@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch_inference.c
- * @ingroup BRANCHINGRULES
  * @brief  inference history branching rule
  * @author Tobias Achterberg
  * @author Timo Berthold

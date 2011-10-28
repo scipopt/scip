@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch_random.h
+ * @ingroup BRANCHINGRULES
  * @brief  random variable branching rule
  * @author Tobias Achterberg
  */

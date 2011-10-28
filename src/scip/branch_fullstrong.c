@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch_fullstrong.c
- * @ingroup BRANCHINGRULES
  * @brief  full strong LP branching rule
  * @author Tobias Achterberg
  */
