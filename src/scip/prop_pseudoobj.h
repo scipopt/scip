@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_pseudoobj.h
+ * @ingroup PROPAGATORS
  * @brief  pseudoobj propagator
  * @author Tobias Achterberg
  */

@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_redcost.c
- * @ingroup PROPAGATORS
  * @brief  redcost propagator
  * @author Tobias Achterberg
  * @author Matthias Miltenberger

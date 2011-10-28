@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_pseudoobj.c
- * @ingroup PROPAGATORS
  * @brief  pseudoobj propagator
  * @author Tobias Achterberg
  * @author Stefan Heinz

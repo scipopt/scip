@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_probing.h
+ * @ingroup PROPAGATORS
  * @brief  probing propagator
  * @author Tobias Achterberg
  */
