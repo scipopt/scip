@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_intobj.c
- * @ingroup SEPARATORS
  * @brief  integer objective value separator
  * @author Tobias Achterberg
  * @author Timo Berthold

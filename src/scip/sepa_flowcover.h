@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_flowcover.h
+ * @ingroup SEPARATORS
  * @brief  flowcover separator
  * @author Tobias Achterberg
  */

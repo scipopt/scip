@@ -18,7 +18,6 @@
 /* #define MCF_DEBUG */
 
 /**@file   sepa_mcf.c
- * @ingroup SEPARATORS
  * @brief  multi-commodity-flow network cut separator
  * @author Tobias Achterberg
  * @author Christian Raack
