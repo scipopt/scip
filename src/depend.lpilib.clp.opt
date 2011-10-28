@@ -1,6 +1,34 @@
-$(LIBOBJDIR)/scip/lpi_clp.o: src/scip/lpi_clp.cpp src/scip/lpi.h src/scip/def.h \
- src/scip/type_retcode.h src/scip/message.h src/scip/type_message.h \
- src/scip/struct_message.h src/scip/pub_message.h \
+$(LIBOBJDIR)/scip/lpi_clp.o: src/scip/lpi_clp.cpp \
+  \
+  \
+  \
+  \
+  \
+  \
+  \
+  \
+  \
+  \
+  \
+  \
+  \
+  \
+  \
+  \
+  \
+  \
+  \
+  \
+  \
+  \
+  \
+  \
+  \
+  \
+  \
+  src/scip/lpi.h \
+ src/scip/def.h src/scip/type_retcode.h src/scip/message.h \
+ src/scip/type_message.h src/scip/struct_message.h src/scip/pub_message.h \
  src/blockmemshell/memory.h src/scip/type_lpi.h src/scip/bitencode.h
 $(LIBOBJDIR)/scip/bitencode.o: src/scip/bitencode.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
