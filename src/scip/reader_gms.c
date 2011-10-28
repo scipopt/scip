@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_gms.c
- * @ingroup FILEReaders 
  * @brief  GAMS file reader
  * @author Ambros Gleixner
  * @author Stefan Vigerske

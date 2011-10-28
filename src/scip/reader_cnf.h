@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_cnf.h
+ * @ingroup FILEREADERS
  * @brief  CNF file reader
  * @author Thorsten Koch
  * @author Tobias Achterberg

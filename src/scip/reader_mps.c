@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_mps.c
- * @ingroup FILEREADERS 
  * @brief  (extended) MPS file reader
  * @author Thorsten Koch
  * @author Tobias Achterberg

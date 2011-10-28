@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_gms.h
+ * @ingroup FILEREADERS
  * @brief  GAMS file reader
  * @author Ambros Gleixner
  */

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_sol.h
+ * @ingroup FILEREADERS
  * @brief  file reader for primal solutions
  * @author Tobias Achterberg
  */

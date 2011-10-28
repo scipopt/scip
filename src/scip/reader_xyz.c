@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_xyz.c
- * @ingroup FILEREADERS 
  * @brief  XYZ file reader
  * @author Tobias Achterberg
  */

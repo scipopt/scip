@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_lp.h
+ * @ingroup FILEREADERS
  * @brief  LP file reader
  * @author Tobias Achterberg
  */
