@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_countsols.h
+ * @ingroup CONSHDLRS
  * @brief  constraint handler for counting feasible solutions
  * @author Stefan Heinz
  * @author Michael Winkler

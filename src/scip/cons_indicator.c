@@ -17,7 +17,6 @@
 /* #define SCIP_ENABLE_IISCHECK */
 
 /**@file   cons_indicator.c
- * @ingroup CONSHDLRS
  * @brief  constraint handler for indicator constraints
  * @author Marc Pfetsch
  *

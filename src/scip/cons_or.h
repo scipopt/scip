@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_or.h
+ * @ingroup CONSHDLRS
  * @brief  constraint handler for or constraints
  * @author Tobias Achterberg
  */

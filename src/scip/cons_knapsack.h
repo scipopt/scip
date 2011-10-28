@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_knapsack.h
+ * @ingroup CONSHDLRS
  * @brief  constraint handler for knapsack constraints
  * @author Tobias Achterberg
  */

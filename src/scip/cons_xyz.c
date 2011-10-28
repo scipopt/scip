@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_xyz.c
- * @ingroup CONSHDLRS
  * @brief  constraint handler for xyz constraints
  * @author Tobias Achterberg
  */

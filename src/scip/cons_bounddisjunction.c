@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_bounddisjunction.c
- * @ingroup CONSHDLRS 
  * @brief  constraint handler for bound disjunction constraints
  * @author Tobias Achterberg
  * @author Marc Pfetsch

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_pseudoboolean.h
+ * @ingroup CONSHDLRS
  * @brief  constraint handler for pseudoboolean constraints
  * @author Stefan Heinz
  * @author Michael Winkler
