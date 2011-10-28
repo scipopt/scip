@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   event_xyz.h
+ * @ingroup EVENTS 
  * @brief  eventhdlr for xyz event
  * @author Stefan Heinz
  */
