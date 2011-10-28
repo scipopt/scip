@@ -1032,7 +1032,7 @@
  *
  * A constraint handler defines the semantics and the algorithms to process constraints of a certain class.  A single
  * constraint handler is responsible for all constraints belonging to its constraint class.  For example, there is
- * one \ref cons_knapsack.c "knapsack constraint handler" that ensures solutions are only accepted if they satisfy all
+ * one \ref cons_knapsack.h "knapsack constraint handler" that ensures solutions are only accepted if they satisfy all
  * knapsack constraints in the model. \n A complete list of all constraint handlers contained in this release can be
  * found \ref CONSHDLRS "here".
  *
@@ -1239,12 +1239,12 @@
  *
  * You may also add user parameters for your constraint handler.  An
  * example for this and the automatic linear upgrading mechanism can be
- * found in the \ref cons_knapsack.c "knapsack constraint handler".
+ * found in the \ref cons_knapsack.h "knapsack constraint handler".
  *
  * The method SCIPcreateConsSubtour() is called to create a single constraint of the constraint
  * handler's constraint class.
  * It should allocate and fill the constraint data, and call SCIPcreateCons().
- * Take a look at the following example from the \ref cons_knapsack.c "knapsack constraint handler":
+ * Take a look at the following example from the \ref cons_knapsack.h "knapsack constraint handler":
  *
  * \code
  * SCIP_RETCODE SCIPcreateConsKnapsack(
@@ -1333,7 +1333,7 @@
  * SCIPgetSolVal(scip, sol, var)
  * \endcode
  *
- * For example, the \ref cons_knapsack.c "knapsack constraint handler" loops over his constraints and
+ * For example, the \ref cons_knapsack.h "knapsack constraint handler" loops over his constraints and
  * calculates the scalar product \f$w^T x\f$ of weights \f$w\f$ with the solution vector \f$x\f$.
  * This scalar product is compared with the capacity of the knapsack constraint.
  * If it exceeds the capacity, the CONSCHECK method is immediately aborted with the result SCIP_INFEASIBLE.
@@ -1457,7 +1457,7 @@
  *
  * If you are using constraint handler data, you have to implement this method in order to free the
  * constraint handler data. This can be done by the following procedure (which is taken from the
- * \ref cons_knapsack.c "knapsack constraint handler"):
+ * \ref cons_knapsack.h "knapsack constraint handler"):
  *
  * \code
  * static
@@ -1586,7 +1586,7 @@
  * If you want to implement preprocessing methods or other methods that modify the constraint data, you have to
  * implement the CONSTRANS method and create a copy of the constraint data.
  *
- * Here is an example, which is taken from the \ref cons_knapsack.c "knapsack constraint handler":
+ * Here is an example, which is taken from the \ref cons_knapsack.h "knapsack constraint handler":
  * \code
  * static
  * SCIP_DECL_CONSTRANS(consTransKnapsack)
@@ -1804,14 +1804,14 @@
  * not copied one-to-one, then optimal solutions might be cut off during the search (see section
  * CONSHDLRCOPY above).
  *
- * For an example implementation we refer to cons_linear.c. Additional documentation and the complete list of all
+ * For an example implementation we refer to cons_linear.h. Additional documentation and the complete list of all
  * parameters can be found in the file in type_cons.h.
  *
  * @subsection CONSPARSE
  *
  * This method is the counter part to CONSPRINT. The ideal idea is that a constraint handler is able to parse the output
  * which it generated via the CONSPRINT method and creates the corresponding constraint. If the parsing was successfully
- * the result pointer success should be set to TRUE. An example implementation can be found in the \ref cons_linear.c
+ * the result pointer success should be set to TRUE. An example implementation can be found in the \ref cons_linear.h
  * "linear constraint handler".
  *
  * @subsection CONSDELVARS
@@ -2640,7 +2640,7 @@
  * Possible values are defined in type_timing.h and can be concatenated, e.g., as in SCIP_PROPTIMING_ALWAYS.
  *
  * \par PROP_PRESOL_PRIORITY: the priority of the presolving method.
- * This attribute is analogous to the \ref PROP_PRIORITY flag, but deals with the preprocessing method of the presolver.
+ * This attribute is analogous to the PROP_PRIORITY flag, but deals with the preprocessing method of the presolver.
  *
  * \par PROP_PRESOL_MAXROUNDS: the default maximal number of presolving rounds the propagator participates in.
  * The preprocessing is executed in rounds.
@@ -2651,7 +2651,7 @@
  * A value of 0 means, the preprocessing callback of the propagator is disabled.
  *
  * \par PROP_PRESOL_DELAY: the default for whether the presolving method should be delayed, if other propagators or constraint handlers found presolving reductions.
- * This property is analogous to the \ref PROP_DELAY flag, but deals with the preprocessing method of the propagator.
+ * This property is analogous to the PROP_DELAY flag, but deals with the preprocessing method of the propagator.
  *
  * @section PROP_DATA Propagator Data
  *
@@ -2828,7 +2828,7 @@
  * - the LP solution of the current problem is fractional. In this case, the integrality constraint handler calls the
  *   \ref BRANCHEXECLP methods of the branching rules.
  * - the list of external branching candidates is not empty. This will only be the case if branching candidates were added
- *   by a user's \ref RELAX "relaxator" or \ref CONS "constraint handler" plugin, calling SCIPaddExternBranchCand().
+ *   by a user's \ref RELAX "relaxation handler" or \ref CONS "constraint handler" plugin, calling SCIPaddExternBranchCand().
  *   These branching candidates should be processed by the \ref BRANCHEXECEXT method.
  * - if an integral solution violates one or more constraints and this infeasibility could not be resolved in the callback methods
  *   \ref CONSENFOLP and \ref CONSENFOPS of the corresponding constraint handlers. In this case, the \ref BRANCHEXECPS method will be called. This is the
@@ -2987,12 +2987,12 @@
  *
  * The BRANCHEXECEXT callback is executed during node processing if no LP solution is available and the list of
  * external branching candidates is not empty. It should split the current problem into smaller subproblems. If you
- * do not use relaxators or constraints handlers that provide external branching candidates, you do not need to
+ * do not use relaxation handlers or constraints handlers that provide external branching candidates, you do not need to
  * implement this callback.
  *
  * In contrast to the LP branching candidates and the pseudo branching candidates, the list of external branching
  * candidates will not be generated automatically. The user has to add all variables to the list by calling
- * SCIPaddExternBranchCand() for each of them. Usually, this will happen in the execution method of a relaxator or in the
+ * SCIPaddExternBranchCand() for each of them. Usually, this will happen in the execution method of a relaxation handler or in the
  * enforcement methods of a constraint handler.
  *
  * The user gains access to these branching candidates by calling the method SCIPgetExternBranchCands(). Furthermore,
@@ -3724,7 +3724,7 @@
  * You also have to initialize the fields in struct SCIP_RelaxData afterwards.
  *
  * You may also add user parameters for your relaxation handler, see the method SCIPincludeConshdlrKnapsack() in
- * the \ref cons_knapsack.c "knapsack constraint handler" for an example of how to add user parameters.
+ * the \ref cons_knapsack.h "knapsack constraint handler" for an example of how to add user parameters.
  *
  *
  * @section RELAX_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Relaxation Handler
@@ -3751,9 +3751,9 @@
  * The primal solution of the relaxation can be stored inside the data structures of SCIP with
  * <code>SCIPsetRelaxSolVal()</code> and <code>SCIPsetRelaxSolVals()</code> and later accessed by
  * <code>SCIPgetRelaxSolVal()</code>.
- * Furthermore, there is a list of external branching candidates, that can be filled by relaxators and constraint handlers,
+ * Furthermore, there is a list of external branching candidates, that can be filled by relaxation handlers and constraint handlers,
  * allowing branching rules to take these candidates as a guide on how to split the problem into subproblems.
- * Relaxators should store appropriate candidates in this list using the method <code>SCIPaddExternBranchCand()</code>.
+ * Relaxation handlers should store appropriate candidates in this list using the method <code>SCIPaddExternBranchCand()</code>.
  *
  * Usually, the RELAXEXEC callback only solves the relaxation and provides a lower (dual) bound with a call to
  * SCIPupdateLocalLowerbound().
@@ -3818,7 +3818,7 @@
  * solve a sub-SCIP. By
  * defining this callback as
  * <code>NULL</code> the user disables the execution of the specified
- * relaxator for all copied SCIP instances. This may deteriorate the performance
+ * relaxation handler for all copied SCIP instances. This may deteriorate the performance
  * of primal heuristics using sub-SCIPs.
  *
  * @subsection RELAXEXIT
@@ -4373,7 +4373,7 @@
  * You also have to initialize the fields in struct SCIP_DispData afterwards.
  *
  * Although this is very uncommon, you may also add user parameters for your display column, see the method
- * SCIPincludeConshdlrKnapsack() in the \ref cons_knapsack.c "knapsack constraint handler" for an example.
+ * SCIPincludeConshdlrKnapsack() in the \ref cons_knapsack.h "knapsack constraint handler" for an example.
  *
  *
  * @section DISP_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Display Column
@@ -4537,7 +4537,7 @@
  * You also have to initialize the fields in struct SCIP_EventhdlrData afterwards.
  *
  * Although this is very uncommon, you may also add user parameters for your event handler, see the method
- * SCIPincludeConshdlrKnapsack() in the \ref cons_knapsack.c "knapsack constraint handler" for an example.
+ * SCIPincludeConshdlrKnapsack() in the \ref cons_knapsack.h "knapsack constraint handler" for an example.
  *
  *
  * @section EVENT_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Event Handler
@@ -4555,7 +4555,7 @@
  * reaction to the event.
  *
  * Typical the execution method sets a parameter to TRUE to indicate later in solving process that something happened
- * which should be analyzed further. In the \ref cons_knapsack.c "knapsack constraint handler" you find such a typical
+ * which should be analyzed further. In the \ref cons_knapsack.h "knapsack constraint handler" you find such a typical
  * example.
  *
  * @section EVENT_ADDITIONALCALLBACKS Additional Callback Methods of a Event Handler
@@ -4568,7 +4568,7 @@
  * The EVENTCOPY callback is executed when a SCIP instance is copied, e.g. to solve a sub-SCIP. By defining this
  * callback as <code>NULL</code> the user disables the execution of the specified event handler for all copied SCIP
  * instances. Note that in most cases the event handler in the copied instance will be initialize by those objects (such
- * as constraint handlers or propagators) which need this event handler (see cons_knapsack.c). In these cases the copy
+ * as constraint handlers or propagators) which need this event handler (see \ref cons_knapsack.h). In these cases the copy
  * callback can be ignored. In case of general events, such as a new best solution being found
  * (SCIP_EVENTTYPE_BESTSOLFOUND), you might want to implement that callback. The event handler example which you find
  * in the directory "examples/Eventhdlr/" uses that callback.
@@ -4940,16 +4940,16 @@
  * A complete list of all expression interpreters contained in this release can be found \ref EXPRINTS "here".
  *
  * We now explain how users can add their own expression interpreters.
- * Take the interface to CppAD (src/nlpi/exprinterpret_cppad.cpp) as an example.
+ * Take the interface to CppAD (\ref exprinterpret_cppad.cpp) as an example.
  * Unlike most other plugins, it is written in C++.
  *
  * Additional documentation for the callback methods of an expression interpreter, in particular for their input parameters,
- * can be found in the file src/nlpi/exprinterpret.h.
+ * can be found in the file \ref exprinterpret.h
  *
  * Note that the expression interpreter API has <b>BETA status</b> and thus may change in the next version.
  *
  * Here is what you have to do to implement an expression interpreter:
- * -# Copy the file src/nlpi/exprinterpret_none.c into a file named "exprinterpreti_myexprinterpret.c".
+ * -# Copy the file \ref exprinterpret_none.c into a file named "exprinterpreti_myexprinterpret.c".
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor.
@@ -5211,7 +5211,7 @@
  *    This solution is then read and it is checked for every cut, whether the solution violates the cut.
  *
  *  @section EXAMPLE_1 How to activate debug messages
- *    For example, if we include a <code>\#define SCIP_DEBUG</code> at the top of heur_oneopt.c and recompile in DBG mode,
+ *    For example, if we include a <code>\#define SCIP_DEBUG</code> at the top of \ref heur_oneopt.h and recompile in DBG mode,
  *    and run the scip interactive shell to solve p0033.mps from the miplib, we get some output like:
  * \code
  * SCIP version 1.1.0 [precision: 8 byte] [memory: block] [mode: debug] [LP solver: SoPlex 1.4.0]
@@ -5731,7 +5731,7 @@
  *      <br>
  *    - The \ref BRANCH "branching rules" have a second new callback method (see type_branch.h for more details):
  *       - SCIP_DECL_BRANCHEXECEXT(x) - This method can be used to branch on external branching candidates,
- *         which can be added by a user's "relaxator" or "constraint handler" plugin, calling <code>SCIPaddExternBranchCand()</code>.
+ *         which can be added by a user's "relaxation handler" or "constraint handler" plugin, calling <code>SCIPaddExternBranchCand()</code>.
  *
  * - <b>Restarts</b>:
  *      <br>
@@ -5752,10 +5752,10 @@
  *      SCIP_DECL_VARCOPY and SCIP_DECL_PROBCOPY led to new parameters in SCIPcreateVar() and SCIPcreateProb() in
  *      scip.c, respectively.
  *      <br><br>
- *    - SCIPincludeHeur() and SCIPincludeSepa() in scip.c, as well as ObjSepa() and ObjHeur(), have a new parameter:
+ *    - SCIPincludeHeur() and SCIPincludeSepa() in \ref scip.h, as well as ObjSepa() and ObjHeur(), have a new parameter:
  *       - <code>usessubscip</code> - It can be used to inform SCIP that the heuristic/separator to be included uses a secondary SCIP instance.
  *      <br><br>
- *    - SCIPapplyRens() in heur_rens.c has a new parameter <code>uselprows</code>. It can be used to switch from LP rows
+ *    - SCIPapplyRens() in \ref heur_rens.h has a new parameter <code>uselprows</code>. It can be used to switch from LP rows
  *      to constraints as basis of the sub-SCIP constructed in the RENS heuristic.
  *      <br>
  *      <br>
@@ -5772,12 +5772,12 @@
  *    - The method SCIPgetVarStrongbranch() has been replaced by two methods SCIPgetVarStrongbranchFrac() and
  *      SCIPgetVarStrongbranchInt().
  *      <br><br>
- *    - The methods SCIPgetVarPseudocost() and SCIPgetVarPseudocostCurrentRun() in var.c now return the pseudocost value of
+ *    - The methods SCIPgetVarPseudocost() and SCIPgetVarPseudocostCurrentRun() in \ref scip.h now return the pseudocost value of
  *      one branching direction, scaled to a unit interval. The former versions of SCIPgetVarPseudocost() and
  *      SCIPgetVarPseudocostCurrentRun() are now called SCIPgetVarPseudocostVal() and SCIPgetVarPseudocostValCurrentRun(), respectively.
  *      <br>
  *      <br>
- *    - The methods SCIPgetVarConflictScore() and SCIPgetVarConflictScoreCurrentRun() in var.c are now called
+ *    - The methods SCIPgetVarConflictScore() and SCIPgetVarConflictScoreCurrentRun() in \ref scip.h are now called
  *      SCIPgetVarVSIDS() and SCIPgetVarVSIDSCurrentRun(), respectively.
  *      <br><br>
  *    - The methods SCIPvarGetNInferences(), SCIPvarGetNInferencesCurrentRun(), SCIPvarGetNCutoffs(), and
@@ -5787,7 +5787,7 @@
  *
  * - <b>Others</b>:
  *      <br><br>
- *    - SCIPcutGenerationHeuristicCmir() in sepa_cmir.c has three new parameters:
+ *    - SCIPcutGenerationHeuristicCmir() in \ref sepa_cmir.h has three new parameters:
  *        - <code>maxmksetcoefs</code> - If the mixed knapsack constraint obtained after aggregating LP rows contains more
  *          than <code>maxmksetcoefs</code> nonzero coefficients the generation of the <b>c-MIR cut</b> is aborted.
  *        - <code>delta</code> - It can be used to obtain the scaling factor which leads to the best c-MIR cut found within
@@ -5818,7 +5818,7 @@
  *
  * - The <b>predefined setting files</b> like "settings/cuts/off.set,aggressive.set,fast.set" have been replaced by
  *   interface methods like SCIPsetHeuristics(), SCIPsetPresolving(), SCIPsetSeparating(), and SCIPsetEmphasis() in
- *   scip.c and by user dialogs in the interactive shell like
+ *   \ref scip.h and by user dialogs in the interactive shell like
  *   <br>
  *   <br>
  *   <code>SCIP&gt; set {heuristics|presolving|separating} emphasis {aggressive|fast|off}</code>
@@ -5836,11 +5836,11 @@
 
 /* - SCIP now has "lazy bounds", which are useful for column generation - see @ref PRICER_REMARKS "pricer remarks" for an explanation.
  *
- * - SCIP has rudimentary support to solve quadratic nonlinear integer programs - see cons_quadratic.c.
+ * - SCIP has rudimentary support to solve quadratic nonlinear integer programs - see \ref cons_quadratic.h.
  *
  * - There are LP-interfaces to QSopt and Gurobi (rudimentary).
  *
- * - SCIP can now handle indicator constraints (reading (from LP, ZIMPL), writing, solving, ...) - see cons_indicator.c.
+ * - SCIP can now handle indicator constraints (reading (from LP, ZIMPL), writing, solving, ...) - see \ref cons_indicator.h.
  *
  * - One can now do "early branching" useful for column generation.
  *
@@ -6226,8 +6226,13 @@
  * \ref PROP "here".
  */
 
-/**@defgroup RELAXATORS Relaxators
- * @brief This page contains a list of all relaxators which are currently available.
+/**@defgroup RELAXATORS Relaxation Handlers
+ * @brief This page contains a list of all relaxation handlers which are currently available.
+ *
+ * Note that the linear programming relaxation is not implemented via the relaxation handler plugin. Per default there
+ * exist no relaxation handler. A detailed description what a variable pricer does and how to add a A detailed
+ * description what a relaxation handler does and how to add a relaxation handler to SCIP can be found \ref RELAX
+ * "here".
  */
 
 /**@defgroup SEPARATORS Separators

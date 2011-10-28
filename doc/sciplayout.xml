@@ -6,8 +6,8 @@
       <tab type="files" visible="no" title=""/>
       <tab type="globals" visible="no" title=""/>
     </tab>
-    <tab type="classes" visible="yes" title="">
-      <tab type="classes" visible="yes" title=""/>
+    <tab type="classes" visible="yes" title="C++ Wrapper Classes">
+      <tab type="classes" visible="no" title="Wrapper Classes"/>
       <tab type="classindex" visible="$ALPHABETICAL_INDEX" title=""/> 
       <tab type="hierarchy" visible="no" title=""/>
       <tab type="classmembers" visible="no" title=""/>
@@ -15,8 +15,8 @@
     <tab type="modules" visible="yes" title="Plugins"/>
     <tab type="pages" visible="yes" title=""/>
     <tab type="namespaces" visible="no" title="">
-      <tab type="namespaces" visible="yes" title=""/>
-      <tab type="namespacemembers" visible="yes" title=""/>
+      <tab type="namespaces" visible="no" title=""/>
+      <tab type="namespacemembers" visible="no" title=""/>
     </tab>
     <tab type="dirs" visible="yes" title=""/>
     <tab type="examples" visible="yes" title=""/>  
