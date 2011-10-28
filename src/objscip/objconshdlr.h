@@ -33,7 +33,16 @@
 namespace scip
 {
 
-/** C++ wrapper object for constraint handlers */
+/**
+ *  @brief C++ wrapper for constraint handlers
+ *
+ *  This class defines the interface for constraint handlers implemented in C++. Note that there are pure virtual
+ *  functions (these have to be implemented). These functions are: scip_trans(), scip_enfolp(), scip_enfops(),
+ *  scip_check(), and scip_lock().
+ *
+ *  - \ref CONS "Instructions for implementing a constraint handler"
+ *  - \ref CONSHDLRS "List of available constraint handlers"
+ */
 class ObjConshdlr : public ObjProbCloneable
 {
 public:

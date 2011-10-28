@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   objprobcloneable.h
+ * @brief Definition of base class for all clonable classes which define problem data
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Ambros Gleixner
@@ -31,8 +32,11 @@
 
 namespace scip
 {
-   /** constraint handler and variable pricer C++ wrapper object plugins should extend this class */
-   struct ObjProbCloneable 
+   /** @brief Definition of base class for all clonable classes which define problem data
+    *
+    *  Constraint handler and variable pricer C++ wrapper object plugins should extend this class
+    */
+   struct ObjProbCloneable
    {
       virtual ~ObjProbCloneable() {}
 

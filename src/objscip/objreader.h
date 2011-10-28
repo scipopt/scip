@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   objreader.h
- * @brief  C++ wrapper for file readers
+ * @brief  C++ wrapper for file readers and writers
  * @author Tobias Achterberg
  */
 
@@ -31,7 +31,13 @@
 namespace scip
 {
 
-/** C++ wrapper object for file readers */
+/** @brief C++ wrapper for file readers and writers
+ *
+ *  This class defines the interface for file readers and writers implemented in C++.
+ *
+ *  - \ref READER "Instructions for implementing a file reader and writer"
+ *  - \ref FILEREADERS "List of available file readers and writers"
+ */
 class ObjReader : public ObjCloneable
 {
 public:
@@ -99,7 +105,15 @@ public:
       SCIP_READER*       reader,             /**< the file reader itself */
       const char*        filename,           /**< full path and name of file to read, or NULL if stdin should be used */
       SCIP_RESULT*       result              /**< pointer to store the result of the file reading call */
-      ) = 0;
+      )
+   {  /*lint --e{715}*/
+
+      /* set result pointer to indicate that the reading was not performed */
+      assert(result != NULL);
+      (*result) = SCIP_DIDNOTRUN;
+
+      return SCIP_OKAY;
+   }
 
    /** problem writing method of reader; NOTE: if the parameter "genericnames" is TRUE, then
     *  SCIP already set all variable and constraint names to generic names; therefore, this
@@ -140,7 +154,15 @@ public:
       int                startnconss,        /**< number of constraints existing when problem solving started */
       SCIP_Bool          genericnames,       /**< using generic variable and constraint names? */
       SCIP_RESULT*       result              /**< pointer to store the result of the file reading call */
-      ) = 0;
+      )
+   {  /*lint --e{715}*/
+
+      /* set result pointer to indicate that the writing was not performed */
+      assert(result != NULL);
+      (*result) = SCIP_DIDNOTRUN;
+
+      return SCIP_OKAY;
+   }
 };
    
 } /* namespace scip */

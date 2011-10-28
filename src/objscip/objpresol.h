@@ -31,7 +31,14 @@
 namespace scip
 {
 
-/** C++ wrapper object for presolvers */
+/** @brief C++ wrapper for presolvers
+ *
+ *  This class defines the interface for presolvers implemented in C++. Note that there is a pure virtual
+ *  function (this function has to be implemented). This function is: scip_exec().
+ *
+ *  - \ref PRESOL "Instructions for implementing a presolver"
+ *  - \ref PRESOLVERS "List of available presolvers"
+ */
 class ObjPresol : public ObjCloneable
 {
 public:
