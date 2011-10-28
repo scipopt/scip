@@ -6084,7 +6084,7 @@
 
 /**@defgroup PUBLICMETHODS Public Methods
  *
- * This page lists headers containing methods provided by the core of \SCIP that can be used via the
+ * This page lists headers containing methods provided by the core of SCIP that can be used via the
  * callable library. If you are in the <a href="../html/index.html">User's Manual</a> you only find methods that are
  * public and, therefore, allowed to be used. The <a href="../html_devel/index.html">Developer's Manual</a> includes
  * all methods.
@@ -6140,28 +6140,28 @@
 /**@defgroup BRANCHINGRULES Branching Rules
  * @brief This page contains a list of all branching rule which are currently available.
  *
- * A detailed description what a branching rule does and how to add a branching rule to \SCIP can be found
+ * A detailed description what a branching rule does and how to add a branching rule to SCIPcan be found
  * \ref BRANCH "here".
  */
 
 /**@defgroup CONSHDLRS  Constraint Handler
  * @brief This page contains a list of all constraint handlers which are currently available.
  *
- * A detailed description what a constraint handler does and how to add a constraint handler to \SCIP can be found
+ * A detailed description what a constraint handler does and how to add a constraint handler to SCIP can be found
  * \ref CONS "here".
  */
 
 /**@defgroup DIALOGS Dialogs
  * @brief This page contains a list of all dialogs which are currently available.
  *
- * A detailed description what a dialog does and how to add a dialog to \SCIP can be found
+ * A detailed description what a dialog does and how to add a dialog to SCIP can be found
  * \ref DIALOG "here".
  */
 
 /**@defgroup DISPLAYS Displays
  * @brief This page contains a list of all displays (output columns)  which are currently available.
  *
- * A detailed description what a display does and how to add a display to \SCIP can be found
+ * A detailed description what a display does and how to add a display to SCIP can be found
  * \ref DISP "here".
  *
  */
@@ -6169,14 +6169,14 @@
 /**@defgroup EXPRINTS Expression Interpreter
  * @brief This page contains a list of all expression interpreter which are currently available.
  *
- * A detailed description what a expression interpreter does and how to add a expression interpreter to \SCIP can be found
+ * A detailed description what a expression interpreter does and how to add a expression interpreter to SCIP can be found
  * \ref EXPRINT "here".
  */
 
 /**@defgroup FILEREADERS File Readers
  * @brief This page contains a list of all file readers which are currently available.
  *
- * A detailed description what a file reader does and how to add a file reader to \SCIP can be found
+ * A detailed description what a file reader does and how to add a file reader to SCIP can be found
  * \ref READER "here".
  */
 
@@ -6187,21 +6187,21 @@
 /**@defgroup NODESELECTORS Node Selectors
  * @brief This page contains a list of all node selectors which are currently available.
  *
- * A detailed description what a node selector does and how to add a node selector to \SCIP can be found
+ * A detailed description what a node selector does and how to add a node selector to SCIP can be found
  * \ref NODESEL "here".
  */
 
 /**@defgroup NLPIS NLP Solver Interfaces
  * @brief This page contains a list of all NLP solver interfaces which are currently available.
  *
- * A detailed description what a NLP solver interface does and how to add a NLP solver interface to \SCIP can be found
+ * A detailed description what a NLP solver interface does and how to add a NLP solver interface to SCIP can be found
  * \ref NLPI "here".
  */
 
 /**@defgroup PRESOLVERS Presolvers
  * @brief This page contains a list of all presolvers which are currently available.
  *
- * A detailed description what a presolver does and how to add a presolver to \SCIP can be found
+ * A detailed description what a presolver does and how to add a presolver to SCIP can be found
  * \ref PRESOL "here".
  */
 
@@ -6209,20 +6209,20 @@
  * @brief This page contains a list of all pricers which are currently available.
  *
  * Per default there exist no variable pricer. A detailed description what a variable pricer does and how to add a
- * variable pricer to \SCIP can be found \ref PRICER "here".
+ * variable pricer to SCIP can be found \ref PRICER "here".
  */
 
 /**@defgroup PRIMALHEURISTICS Primal Heuristics
  * @brief This page contains a list of all primal heuristics which are currently available.
  *
- * A detailed description what a primal heuristic does and how to add a primal heuristic to \SCIP can be found
+ * A detailed description what a primal heuristic does and how to add a primal heuristic to SCIP can be found
  * \ref HEUR "here".
  */
 
 /**@defgroup PROPAGATORS Propagators
  * @brief This page contains a list of all propagators which are currently available.
  *
- * A detailed description what a propagator does and how to add a propagator to \SCIP can be found
+ * A detailed description what a propagator does and how to add a propagator to SCIP can be found
  * \ref PROP "here".
  */
 
@@ -6233,7 +6233,7 @@
 /**@defgroup SEPARATORS Separators
  * @brief This page contains a list of all separators  which are currently available.
  *
- * A detailed description what a separator does and how to add a separator to \SCIP can be found
+ * A detailed description what a separator does and how to add a separator to SCIP can be found
  * \ref SEPA "here".
  */
 

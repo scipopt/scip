@@ -27,3 +27,5 @@ hooks/
 localhooks/
 src/scip/githash.c
 settings/
+examples/Eventhdlr/check/
+examples/MIPSolver/check/
