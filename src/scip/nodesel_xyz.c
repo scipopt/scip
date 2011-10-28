@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nodesel_xyz.c
- * @ingroup NODESELECTORS
  * @brief  xyz node selector
  * @author Tobias Achterberg
  */
