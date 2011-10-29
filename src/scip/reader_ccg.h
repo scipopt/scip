@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_ccg.h
+ * @ingroup FILEREADERS
  * @brief  Column connectivity graph file reader (actually, only a writer)
  * @author Marc Pfetsch
  *

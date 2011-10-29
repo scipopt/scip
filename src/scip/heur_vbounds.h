@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_vbounds.h
+ * @ingroup PRIMALHEURISTICS
  * @brief  LNS heuristic uses the variable lower and upper bounds to determine the search neighborhood
  * @author Timo Berthold
  * @author Stefan Heinz

@@ -609,11 +609,9 @@ INPUT_ENCODING         = UTF-8
 # *.hpp *.h++ *.idl *.odl *.cs *.php *.php3 *.inc *.m *.mm *.py *.f90
 
 FILE_PATTERNS          = scip.h \
-		       	 scip.c \
                          *_*.h \
-                         *_*.c \
-                         *_*.cpp \
-			 obj*.cpp \
+                         lpi* \
+			 exprinterpret* \
 			 obj*.h \
                          xternal.c
 
@@ -653,13 +651,72 @@ EXCLUDE_PATTERNS       = struct* \
 EXCLUDE_SYMBOLS        = Ipopt \
 		       	 CppAD \
 			 _* \
-			 SCIP_*Data
+			 SCIP_*Data \
+			 CGMIP_MIPData \
+			 CipInput \
+			 clique \
+			 cliquehash \
+			 ConstArray \
+			 ConstraintMatrix \
+			 CPXParam \
+			 CumulativeProfile \
+			 Dijkstra_graph \
+			 Dimensions \
+			 FznConstant \
+			 FznInput \
+			 FznOutput \
+			 GRBParam \
+			 HessianData \
+			 InferInfo \
+			 levelGraph \
+			 LpInput \
+			 mcfdata \
+			 MpsInput \
+			 nodepair \
+			 nodepairqueue \
+			 nodepartition \
+			 OpbInput \
+			 PipInput \
+			 SCIP_BilinTerm \
+			 SCIP_ExprInt \
+			 SCIP_LinConsUpgrade \
+			 SCIP_LPi \
+			 SCIP_LPiState \
+			 SCIP_McfNetwork \
+			 SCIP_NlConsUpgrade \
+			 SCIP_NlpiProblem \
+			 SCIP_QuadConsUpgrade \
+			 SCIP_QuadElement \
+			 SCIP_QuadVarTerm \
+			 ScipJournal \
+			 ScipNLP \
+			 SepaData_ConvexConcave \
+			 SolTuple \
+			 sortkeypair \
+			 sparseGraph \
+			 SparseMatrix \
+			 SparseSolution \
+			 SPxSCIP \
+			 TCLIQUE_Graph \
+			 Term \
+			 ThetaTree \
+			 ThetaTreeNode \
+			 TLTree \
+			 TLTreeNode \
+			 VarArray \
+			 Zerohalf_AuxGraph \
+			 Zerohalf_AuxGraph_Node \
+			 Zerohalf_AuxIPData \
+			 Zerohalf_CutData \
+			 Zerohalf_LPData \
+			 Zerohalf_Mod2Data \
+			 Zerohalf_SubLPData
 
 # The EXAMPLE_PATH tag can be used to specify one or more files or
 # directories that contain example code fragments that are included (see
 # the \include command).
 
-EXAMPLE_PATH           = inc/ \	
+EXAMPLE_PATH           = inc/ \
 			 .. \
                          ../release-notes
 
@@ -775,7 +832,7 @@ VERBATIM_HEADERS       = NO
 # of all compounds will be generated. Enable this if the project
 # contains a lot of classes, structs, unions or interfaces.
 
-ALPHABETICAL_INDEX     = YES
+ALPHABETICAL_INDEX     = NO
 
 # If the alphabetical index is enabled (see ALPHABETICAL_INDEX) then
 # the COLS_IN_ALPHA_INDEX tag can be used to specify the number of columns

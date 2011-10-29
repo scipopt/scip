@@ -14,10 +14,28 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_cumulative.h
+ * @ingroup CONSHDLRS
  * @brief  constraint handler for cumulative constraints
  * @author Timo Berthold
  * @author Stefan Heinz
  * @author Jens Schulz
+ *
+ * Given:
+ * - a set of jobs, represented by their integer start time variables \f$S_j\f$, their array of processing times \f$p_j\f$ and of
+ *   their demands \f$d_j\f$.
+ * - an integer resource capacity \f$C\f$
+ *
+ * The cumulative constraint ensures that for each point in time \f$t\f$ \f$\sum_{j: S_j \leq t < S_j + p_j} d_j \leq C\f$ holds.
+ *
+ * Separation:
+ * - can be done using binary start time model, see Pritskers, Watters and Wolfe
+ * - or by just separating relatively weak cuts on the start time variables
+ *
+ * Propagation:
+ * - time tabling, Klein & Scholl (1999)
+ * - Edge-finding from Petr Vilim, adjusted and simplified for dynamic propagation
+ *   (2009)
+ * - energetic reasoning, see Baptiste, Le Pape, Nuijten (2001)
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

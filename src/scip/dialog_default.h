@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   dialog_default.h
+ * @ingroup DIALOGS
  * @brief  default user interface dialog
  * @author Tobias Achterberg
  */

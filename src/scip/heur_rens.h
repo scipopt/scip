@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_rens.h
+ * @ingroup PRIMALHEURISTICS
  * @brief  RENS primal heuristic
  * @author Timo Berthold
  */

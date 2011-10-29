@@ -17,7 +17,6 @@
 /* #define SCIP_ENABLE_IISCHECK */
 
 /**@file   cons_indicator.c
- * @ingroup CONSHDLRS
  * @brief  constraint handler for indicator constraints
  * @author Marc Pfetsch
  *
@@ -5195,6 +5194,20 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
       assert( sourcelincons != NULL );
       conshdlrlinear = SCIPfindConshdlr(sourcescip, "linear");
       assert( conshdlrlinear != NULL );
+
+      /* if copying scip after transforming the original instance before presolving, we need to correct the linear
+       * constraint pointer
+       */
+      if( SCIPisTransformed(sourcescip) && !SCIPconsIsTransformed(sourcelincons) )
+      {
+	 SCIP_CONS* translincons;
+
+          SCIP_CALL( SCIPgetTransformedCons(sourcescip, sourcelincons, &translincons) );
+          assert(translincons != NULL);
+          SCIP_CALL( SCIPcaptureCons(sourcescip, translincons) );
+          sourceconsdata->lincons = translincons;
+          sourcelincons = translincons;
+       }
 
       SCIP_CALL( SCIPgetConsCopy(sourcescip, scip, sourcelincons, &targetlincons, conshdlrlinear, varmap, consmap, SCIPconsGetName(sourcelincons),
             SCIPconsIsInitial(sourcelincons), SCIPconsIsSeparated(sourcelincons), SCIPconsIsEnforced(sourcelincons), SCIPconsIsChecked(sourcelincons),

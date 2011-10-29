@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_nonlinear.c
- * @ingroup CONSHDLRS 
  * @brief  constraint handler for nonlinear constraints
  * @author Stefan Vigerske
  */

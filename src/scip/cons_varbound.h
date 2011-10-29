@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_varbound.h
+ * @ingroup CONSHDLRS
  * @brief  constraint handler for variable bound constraints
  * @author Tobias Achterberg
  */

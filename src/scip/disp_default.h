@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   disp_default.h
+ * @ingroup DISPLAYS
  * @brief  default display columns
  * @author Tobias Achterberg
  */

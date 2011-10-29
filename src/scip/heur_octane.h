@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_octane.h
+ * @ingroup PRIMALHEURISTICS
  * @brief  octane primal heuristic based on Balas, Ceria, Dawande, Margot, and Pataki
  * @author Timo Berthold
  */

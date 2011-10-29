@@ -521,7 +521,7 @@ FILE_VERSION_FILTER    =
 # You can optionally specify a file name after the option, if omitted
 # DoxygenLayout.xml will be used as the name of the layout file.
 
-LAYOUT_FILE            = sciplayout.xml
+LAYOUT_FILE            = sciplayoutdevel.xml
 
 #---------------------------------------------------------------------------
 # configuration options related to warning and progress messages
@@ -584,14 +584,14 @@ WARN_LOGFILE           =
 # with spaces.
 
 INPUT                  = . \
-                         ../src \
-                         ../src/scip \
-                         ../src/nlpi \
-                         ../src/objscip \
-                         ../src/tclique \
-                         ../src/dijkstra \
-                         ../src/xml \
-                         ../src/blockmemshell
+			 ../src \
+			 ../src/scip \
+			 ../src/nlpi \
+			 ../src/objscip \
+			 ../src/tclique \
+			 ../src/dijkstra \
+			 ../src/xml \
+			 ../src/blockmemshell
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding, which is
@@ -610,8 +610,8 @@ INPUT_ENCODING         = UTF-8
 
 FILE_PATTERNS          = *.c \
 		       	 *.h \
-                         *.cpp \
-                         *.hpp
+			 *.cpp \
+			 *.hpp
 
 # The RECURSIVE tag can be used to turn specify whether or not subdirectories
 # should be searched for input files as well. Possible values are YES and NO.
@@ -648,16 +648,110 @@ EXCLUDE_PATTERNS       = *xyz*
 EXCLUDE_SYMBOLS        = Ipopt \
 		       	 CppAD \
 			 _* \
-			 SCIP_*Data
-
+			 SCIP_*Data \
+			 CGMIP_MIPData \
+			 CipInput \
+			 clique \
+			 cliquehash \
+			 ConstArray \
+			 ConstraintMatrix \
+			 CPXParam \
+			 CumulativeProfile \
+			 Dijkstra_graph \
+			 Dimensions \
+			 FznConstant \
+			 FznInput \
+			 FznOutput \
+			 GRBParam \
+			 HessianData \
+			 InferInfo \
+			 levelGraph \
+			 LpInput \
+			 mcfdata \
+			 MpsInput \
+			 nodepair \
+			 nodepairqueue \
+			 nodepartition \
+			 OpbInput \
+			 PipInput \
+			 ScipJournal \
+			 ScipNLP \
+			 SepaData_ConvexConcave \
+			 SolTuple \
+			 sortkeypair \
+			 sparseGraph \
+			 SparseMatrix \
+			 SparseSolution \
+			 SPxSCIP \
+			 TCLIQUE_Graph \
+			 Term \
+			 ThetaTree \
+			 ThetaTreeNode \
+			 TLTree \
+			 TLTreeNode \
+			 VarArray \
+			 Zerohalf_AuxGraph \
+			 Zerohalf_AuxGraph_Node \
+			 Zerohalf_AuxIPData \
+			 Zerohalf_CutData \
+			 Zerohalf_LPData \
+			 Zerohalf_Mod2Data \
+			 Zerohalf_SubLPData \
+			 BMS_BlkMem \
+			 BMS_ChkMem \
+			 CGMIP_MIPData \
+			 Chunk \
+			 CipInput \
+			 clique \
+			 cliquehash \
+			 ConstArray \
+			 ConstraintMatrix \
+			 CPXParam \
+			 CumulativeProfile \
+			 Dijkstra_graph \
+			 Dimensions \
+			 exprOpTableElement \
+			 Freelist \
+			 FznConstant \
+			 FznInput \
+			 FznOutput \
+			 GRBParam \
+			 HessianData \
+			 InferInfo \
+			 levelGraph \
+			 LpInput \
+			 mcfdata \
+			 MpsInput \
+			 nodepair \
+			 nodepairqueue \
+			 nodepartition \
+			 SCIPInterval \
+			 ScipJournal \
+			 ScipNLP \
+			 SepaData_ConvexConcave \
+			 SolTuple \
+			 sortkeypair \
+			 sparseGraph \
+			 SparseMatrix \
+			 SparseSolution \
+			 SPxSCIP \
+			 TCLIQUE_Graph \
+			 Term \
+			 ThetaTree \
+			 ThetaTreeNode \
+			 TLTree \
+			 TLTreeNode \
+			 VarArray \
+			 XML_ATTR_struct \
+			 XML_NODE_struct
 
 # The EXAMPLE_PATH tag can be used to specify one or more files or
 # directories that contain example code fragments that are included (see
 # the \include command).
 
 EXAMPLE_PATH           = inc/ \
-                         ../ \
-                         ../release-notes/
+			 ../ \
+			 ../release-notes/
 
 # If the value of the EXAMPLE_PATH tag contains directories, you can use the
 # EXAMPLE_PATTERNS tag to specify one or more wildcard pattern (like *.cpp
@@ -678,7 +772,7 @@ EXAMPLE_RECURSIVE      = NO
 # the \image command).
 
 IMAGE_PATH             = pictures/
- 
+
 # The INPUT_FILTER tag can be used to specify a program that doxygen should
 # invoke to filter for each input file. Doxygen will invoke the filter program
 # by executing (via popen()) the command <filter> <input-file>, where <filter>
@@ -784,7 +878,7 @@ COLS_IN_ALPHA_INDEX    = 5
 # The IGNORE_PREFIX tag can be used to specify one or more prefixes that
 # should be ignored while generating the index headers.
 
-IGNORE_PREFIX          =
+IGNORE_PREFIX          = SCIP_
 
 #---------------------------------------------------------------------------
 # configuration options related to the HTML output
@@ -1385,10 +1479,10 @@ INCLUDE_FILE_PATTERNS  =
 # instead of the = operator.
 
 PREDEFINED             = "SCIP_CALL=" \
-                         "SCIP_CALL_ABORT=" \
+			 "SCIP_CALL_ABORT=" \
 			 "SCIP_CALL_ABORT_QUIET=" \
 			 "SCIP_ALLOC=" \
-                         "SCIP_ALLOC_ABORT=" \
+			 "SCIP_ALLOC_ABORT=" \
 			 "SCIP_ALLOC_ABORT_QUIET=" \
 			 "SCIPABORT="
 

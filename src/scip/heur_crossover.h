@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_crossover.h
+ * @ingroup PRIMALHEURISTICS
  * @brief  crossover primal heuristic
  * @author Timo Berthold
  */

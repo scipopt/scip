@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_shifting.c
- * @ingroup PRIMALHEURISTICS
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities and shifts continuous variables
  * @author Tobias Achterberg
  */

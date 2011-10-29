@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_localbranching.c
- * @ingroup PRIMALHEURISTICS
  * @brief  localbranching primal heuristic
  * @author Timo Berthold
  * @author Marc Pfetsch

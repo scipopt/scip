@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_ppm.c
- * @ingroup FILEREADERS 
  * @brief  file writer for portable pixmap file format (PPM), open with common graphic viewer programs (e.g. xview)
  * @author Michael Winkler
  *

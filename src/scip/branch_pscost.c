@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch_pscost.c
- * @ingroup BRANCHINGRULES
  * @brief  pseudo costs branching rule
  * @author Tobias Achterberg
  * @author Stefan Vigerske

@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch_relpscost.c
- * @ingroup BRANCHINGRULES
  * @brief  reliable pseudo costs branching rule
  * @author Tobias Achterberg
  * @author Timo Berthold

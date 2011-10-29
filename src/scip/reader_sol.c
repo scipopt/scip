@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_sol.c
- * @ingroup FILEREADERS 
  * @brief  file reader for primal solutions
  * @author Tobias Achterberg
  * @author Timo Berthold

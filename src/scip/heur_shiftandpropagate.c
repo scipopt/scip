@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_shiftandpropagate.c
- * @ingroup PRIMALHEURISTICS
  * @brief  shiftandpropagate primal heuristic
  * @author Tobias Achterberg
  * @author Gregor Hendel
@@ -42,7 +41,7 @@
 #define DEFAULT_RELAX            TRUE   /**< Should continuous variables be relaxed from the problem? */
 #define DEFAULT_PROBING          TRUE   /**< Is propagation of solution values enabled? */
 #define DEFAULT_ONLYWITHOUTSOL   TRUE   /**< Should heuristic only be executed if no primal solution was found, yet? */
-#define DEFAULT_NPROPROUNDS        20   /**< The default number of propagation rounds for each propagation used */
+#define DEFAULT_NPROPROUNDS        10   /**< The default number of propagation rounds for each propagation used */
 #define DEFAULT_PROPBREAKER      65000   /**< fixed maximum number of propagations */
 #define DEFAULT_CUTOFFBREAKER      15   /**< fixed maximum number of allowed cutoffs before the heuristic stops */
 #define DEFAULT_RANDSEED            3141598   /**< the default random seed for random number generation */

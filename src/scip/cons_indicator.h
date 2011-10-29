@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_indicator.h
+ * @ingroup CONSHDLRS
  * @brief  constraint handler for indicator constraints
  * @author Marc Pfetsch
  *

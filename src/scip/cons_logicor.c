@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_logicor.c
- * @ingroup CONSHDLRS 
  * @brief  constraint handler for logic or constraints
  *         (equivalent to set covering, but algorithms are suited for depth first search)
  * @author Tobias Achterberg

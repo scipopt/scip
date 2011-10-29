@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_coefdiving.h
+ * @ingroup PRIMALHEURISTICS
  * @brief  LP diving heuristic that chooses fixings w.r.t. the matrix coefficients
  * @author Tobias Achterberg
  */

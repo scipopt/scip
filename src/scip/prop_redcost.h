@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_redcost.h
+ * @ingroup PROPAGATORS
  * @brief  redcost propagator
  * @author Tobias Achterberg
  */

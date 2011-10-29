@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_impliedbounds.c
- * @ingroup SEPARATORS
  * @brief  implied bounds separator
  * @author Kati Wolter
  * @author Tobias Achterberg

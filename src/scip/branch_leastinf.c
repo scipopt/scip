@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch_leastinf.c
- * @ingroup BRANCHINGRULES
  * @brief  least infeasible LP branching rule
  * @author Tobias Achterberg
  * @author Stefan Vigerske

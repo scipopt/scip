@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_xyz.c
- * @ingroup SEPARATORS
  * @brief  xyz separator
  * @author Tobias Achterberg
  */

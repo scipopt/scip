@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_actconsdiving.c
- * @ingroup PRIMALHEURISTICS
  * @brief  LP diving heuristic that chooses fixings w.r.t. the active constraints the variable appear in
  * @author Tobias Achterberg
  */

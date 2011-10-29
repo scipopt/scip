@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_linear.h
+ * @ingroup CONSHDLRS
  * @brief  constraint handler for linear constraints
  * @author Tobias Achterberg
  */

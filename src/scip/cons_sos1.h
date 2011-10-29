@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_sos1.h
+ * @ingroup CONSHDLRS
  * @brief  constraint handler for SOS type 1 constraints
  * @author Marc Pfetsch
  *

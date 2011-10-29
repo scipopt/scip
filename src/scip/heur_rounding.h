@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_rounding.h
+ * @ingroup PRIMALHEURISTICS
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities
  * @author Tobias Achterberg
  */

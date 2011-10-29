@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_vbounds.h
+ * @ingroup PROPAGATORS
  * @brief  variable upper and lower bound propagator
  * @author Stefan Heinz
  * @author Jens Schulz

@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_setppc.c
- * @ingroup CONSHDLRS 
  * @brief  constraint handler for the set partitioning / packing / covering constraints
  * @author Tobias Achterberg
  * @author Michael Winkler

@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_probing.c
- * @ingroup PROPAGATORS
  * @brief  probing propagator
  * @author Tobias Achterberg
  * @author Matthias Miltenberger

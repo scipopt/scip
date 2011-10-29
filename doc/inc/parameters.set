@@ -229,8 +229,8 @@ lp/pricing = l
 lp/clearinitialprobinglp = TRUE
 
 # should the LP be resolved to restore the state at start of diving (if FALSE we buffer the solution values)?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-lp/resolverestore = TRUE
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+lp/resolverestore = FALSE
 
 # should the buffers for storing LP solution values during diving be freed at end of diving?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -3465,8 +3465,8 @@ heuristics/shiftandpropagate/freqofs = 0
 heuristics/shiftandpropagate/maxdepth = -1
 
 # The number of propagation rounds used for each propagation
-# [type: int, range: [-1,1000], default: 20]
-heuristics/shiftandpropagate/nproprounds = 20
+# [type: int, range: [-1,1000], default: 10]
+heuristics/shiftandpropagate/nproprounds = 10
 
 # Should continuous variables be relaxed?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -3555,10 +3555,6 @@ heuristics/subnlp/nlptimelimit = 0
 # name of an NLP solver specific options file
 # [type: string, default: ""]
 heuristics/subnlp/nlpoptfile = ""
-
-# name of an NLP solver to use (empty value means to use solver with highest priority)
-# [type: string, default: ""]
-heuristics/subnlp/nlpsolver = ""
 
 # if SCIP does not accept a NLP feasible solution, resolve NLP with feas. tolerance reduced by this factor (set to 1.0 to turn off resolve)
 # [type: real, range: [0,1], default: 0.001]

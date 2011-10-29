@@ -31,7 +31,13 @@
 namespace scip
 {
 
-/** C++ wrapper object for variable pricers */
+/** @brief C++ wrapper for variable pricer
+ *
+ *  This class defines the interface for variable pricer implemented in C++. Note that there is a pure virtual
+ *  function (this function has to be implemented). This function is: scip_redcost().
+ *
+ *  - \ref PRICER "Instructions for implementing a variable pricer"
+ */
 class ObjPricer : public ObjProbCloneable
 {
 public:

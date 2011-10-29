@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_trysol.c
- * @ingroup PRIMALHEURISTICS
  * @brief  primal heuristic that tries a given solution
  * @author Marc Pfetsch
  *

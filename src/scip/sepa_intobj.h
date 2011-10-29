@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_intobj.h
+ * @ingroup SEPARATORS
  * @brief  integer objective value separator
  * @author Tobias Achterberg
  */

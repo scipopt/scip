@@ -4204,7 +4204,7 @@ SCIP_RETCODE conflictAnalyzeLP(
    assert(conflict != NULL);
    assert(conflict->nconflictsets == 0);
    assert(set != NULL);
-   assert(SCIPprobAllColsInLP(prob, set, lp)); /* conflict analysis is not possible with unknown variables */
+   assert(SCIPprobAllColsInLP(prob, set, lp)); /* LP conflict analysis is only valid, if all variables are known */
    assert(stat != NULL);
    assert(prob != NULL);
    assert(lp != NULL);
@@ -4417,8 +4417,9 @@ SCIP_RETCODE conflictAnalyzeLP(
       }
    }
 
-   /* check if we want to solve the LP and if all columns are present in the LP */
-   solvelp = (set->conf_maxlploops != 0 && set->conf_lpiterations != 0 && SCIPprobAllColsInLP(prob, set, lp));
+   /* check if we want to solve the LP */
+   assert(SCIPprobAllColsInLP(prob, set, lp));
+   solvelp = (set->conf_maxlploops != 0 && set->conf_lpiterations != 0);
 
    if( valid && resolve && solvelp )
    {
@@ -4585,6 +4586,16 @@ SCIP_RETCODE conflictAnalyzeLP(
          SCIP_CALL( SCIPlpiChgSides(lpi, nsidechgs, sidechginds, sidechgoldlhss, sidechgoldrhss) );
       }
 
+      /* mark the LP unsolved */
+      if( nbdchgs > 0 || nsidechgs > 0 )
+      {
+         lp->solved = FALSE;
+         lp->primalfeasible = FALSE;
+         lp->dualfeasible = FALSE;
+         lp->lpobjval = SCIP_INVALID;
+         lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+      }
+
       /* reinstall old objective and iteration limits in LP solver */
       SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_UOBJLIM, lp->lpiuobjlim) );
       SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPITLIM, lp->lpiitlim) );
@@ -4647,6 +4658,7 @@ SCIP_RETCODE conflictAnalyzeInfeasibleLP(
    assert(conflict != NULL);
    assert(set != NULL);
    assert(lp != NULL);
+   assert(SCIPprobAllColsInLP(prob, set, lp)); /* LP conflict analysis is only valid, if all variables are known */
 
    if( success != NULL )
       *success = FALSE;
@@ -4657,10 +4669,6 @@ SCIP_RETCODE conflictAnalyzeInfeasibleLP(
 
    /* check, if there are any conflict handlers to use a conflict set */
    if( set->nconflicthdlrs == 0 )
-      return SCIP_OKAY;
-
-   /* LP conflict analysis is only possible, if all variables are known */
-   if( !SCIPprobAllColsInLP(prob, set, lp) )
       return SCIP_OKAY;
 
    SCIPdebugMessage("analyzing conflict on infeasible LP in depth %d (solstat: %d, objchanged: %u)\n",
@@ -4716,6 +4724,7 @@ SCIP_RETCODE conflictAnalyzeBoundexceedingLP(
    assert(set != NULL);
    assert(lp != NULL);
    assert(!SCIPlpDivingObjChanged(lp));
+   assert(SCIPprobAllColsInLP(prob, set, lp)); /* LP conflict analysis is only valid, if all variables are known */
 
    if( success != NULL )
       *success = FALSE;
@@ -4726,10 +4735,6 @@ SCIP_RETCODE conflictAnalyzeBoundexceedingLP(
 
    /* check, if there are any conflict handlers to use a conflict set */
    if( set->nconflicthdlrs == 0 )
-      return SCIP_OKAY;
-
-   /* LP conflict analysis is only possible, if all variables are known */
-   if( !SCIPprobAllColsInLP(prob, set, lp) )
       return SCIP_OKAY;
 
    SCIPdebugMessage("analyzing conflict on bound exceeding LP in depth %d (solstat: %d)\n",
@@ -4761,7 +4766,8 @@ SCIP_RETCODE conflictAnalyzeBoundexceedingLP(
  *  infeasibility or for exceeding the primal bound;
  *  on success, calls standard conflict analysis with the responsible variables as starting conflict set, thus creating
  *  a conflict constraint out of the resulting conflict set;
- *  updates statistics for infeasible or bound exceeding LP conflict analysis
+ *  updates statistics for infeasible or bound exceeding LP conflict analysis;
+ *  may only be called if SCIPprobAllColsInLP()
  */
 SCIP_RETCODE SCIPconflictAnalyzeLP(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
@@ -4774,6 +4780,9 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
    SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    )
 {
+   /* LP conflict analysis is only valid, if all variables are known */
+   assert(SCIPprobAllColsInLP(prob, set, lp));
+
    /* check, if the LP was infeasible or bound exceeding */
    if( SCIPlpiIsPrimalInfeasible(SCIPlpGetLPI(lp)) )
    {
@@ -4986,7 +4995,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->solved);
-   assert(SCIPprobAllColsInLP(prob, set, lp));
+   assert(SCIPprobAllColsInLP(prob, set, lp)); /* LP conflict analysis is only valid, if all variables are known */
    assert(col != NULL);
    assert((col->sbdownvalid && SCIPsetIsGE(set, col->sbdown, lp->cutoffbound)
          && SCIPsetFeasCeil(set, col->primsol-1.0) >= col->lb - 0.5)
@@ -5004,10 +5013,6 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
 
    /* check, if there are any conflict handlers to use a conflict set */
    if( set->nconflicthdlrs == 0 )
-      return SCIP_OKAY;
-
-   /* LP conflict analysis is only possible, if all variables are known */
-   if( !SCIPprobAllColsInLP(prob, set, lp) )
       return SCIP_OKAY;
 
    /* start timing */
@@ -5082,6 +5087,13 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
 
          /* reset LP basis */
          SCIP_CALL( SCIPlpiSetBase(lp->lpi, cstat, rstat) );
+
+         /* mark the LP unsolved */
+         lp->solved = FALSE;
+         lp->primalfeasible = FALSE;
+         lp->dualfeasible = FALSE;
+         lp->lpobjval = SCIP_INVALID;
+         lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
       }
    }
 
@@ -5143,6 +5155,13 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
 
          /* reset LP basis */
          SCIP_CALL( SCIPlpiSetBase(lp->lpi, cstat, rstat) );
+
+         /* mark the LP unsolved */
+         lp->solved = FALSE;
+         lp->primalfeasible = FALSE;
+         lp->dualfeasible = FALSE;
+         lp->lpobjval = SCIP_INVALID;
+         lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
       }
    }
 

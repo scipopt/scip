@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_cgmip.h
+ * @ingroup SEPARATORS
  * @brief  Chvatal-Gomory cuts computed via a sub-MIP
  * @author Marc Pfetsch
  */

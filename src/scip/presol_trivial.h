@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_trivial.h
+ * @ingroup PRESOLVERS
  * @brief  trivial presolver: round fractional bounds on integer variables, fix variables with equal bounds
  * @author Tobias Achterberg
  */

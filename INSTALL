@@ -14,9 +14,9 @@
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 In most cases (LINUX and MAC) it is quite easy to compile and install
-SCIP. Therefore, reading the setction "Brief installation description"
-should be usually enough. If this is not the case you find a section
-"Detailed installation description" below as well as an "Example" section.
+SCIP. Therefore, reading the section "Brief installation description"
+should usually be enough. If this is not the case you find "Detailed
+installation description" below as well as some examples.
 
 Content
 *******
@@ -29,26 +29,26 @@ III  Examples
 I Brief installation description
 ********************************
 
-The most easiest why to install SCIP is to use the ZIB Optimization Suite
-which contains SCIP, SoPlex, and ZIMPL. For that we refer to INSTALL file
-of the ZIB Optimization Suite (In case of the ZIB Optimization Suite there
-is not need to specify any directories, the compiling process is full
-automatically).
+The easiest way to install SCIP is to use the ZIB Optimization Suite which
+contains SCIP, SoPlex, and ZIMPL. For that we refer to the INSTALL file of
+the ZIB Optimization Suite (In case of the ZIB Optimization Suite, there is
+not need to specify any directories, the compiling process is fully
+automated).
 
 Compiling SCIP directly can be done as follows:
 
 1) unpack the tarball "tar xvf scip-x.y.z.tgz"
 2) change into the directory "cd scip-x.y.z"
 3) start compiling SCIP "make"
-4) (optional) install the header, libraries, and binary "make insatll INSTALLDIR="/usr/local/"
+4) (optional) install the header, libraries, and binary "make install INSTALLDIR="/usr/local/"
 
 On your first compilation you will be asked for some soft-link targets,
 depending on the LP solver you want to use. Usually, SCIP needs the
 following information
- (a) the directory where the include files of the LP solver
+ (a) the directory where the include files of the LP solver lie
  (b) the library file(s) "lib*.a" or/and "lib*.so"
 
-Beside that SCIP needs the some soft-link targets, for ZIMPL 
+Beside that SCIP needs the some soft-link targets, for ZIMPL lie
  (a) the directory where the include files of ZIMPL
  (b) the library file(s) "lib*.a" or/and "lib*.so"
 

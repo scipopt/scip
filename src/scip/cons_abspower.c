@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_abspower.c
- * @ingroup CONSHDLRS
  * @brief  constraint handler for absolute power constraints
  * @author Stefan Vigerske
  */

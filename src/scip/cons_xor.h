@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_xor.h
+ * @ingroup CONSHDLRS
  * @brief  constraint handler for xor constraints
  * @author Tobias Achterberg
  */

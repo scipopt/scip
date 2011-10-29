@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_soc.h
+ * @ingroup CONSHDLRS
  * @brief  constraint handler for second order cone constraints
  * @author Stefan Vigerske
  * 

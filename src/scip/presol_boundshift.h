@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_boundshift.h
+ * @ingroup PRESOLVERS
  * @brief  presolver that converts integer variables with domain [a,b] to integer variables with domain [0,b-a]
  * @author Tobias Achterberg
  * @author Michael Winkler

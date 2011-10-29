@@ -156,7 +156,7 @@
                                                  *   'd'evex pricing) */
 #define SCIP_DEFAULT_LP_CLEARINITIALPROBINGLP TRUE/**< should lp state be cleared at the end of probing mode when lp
                                                    *   was initially unsolved, e.g., when called right after presolving? */
-#define SCIP_DEFAULT_LP_RESOLVERESTORE     TRUE /**< should the LP be resolved to restore the state at start of diving (if FALSE we buffer the solution values)? */
+#define SCIP_DEFAULT_LP_RESOLVERESTORE    FALSE /**< should the LP be resolved to restore the state at start of diving (if FALSE we buffer the solution values)? */
 #define SCIP_DEFAULT_LP_FREESOLVALBUFFERS FALSE /**< should the buffers for storing LP solution values during diving be freed at end of diving? */
 #define SCIP_DEFAULT_LP_COLAGELIMIT          10 /**< maximum age a dynamic column can reach before it is deleted from SCIP_LP
                                                  *   (-1: don't delete columns due to aging) */

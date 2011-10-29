@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nodesel_hybridestim.c
- * @ingroup NODESELECTORS
  * @brief  node selector for hybrid best estimate / best bound search
  * @author Tobias Achterberg
  */

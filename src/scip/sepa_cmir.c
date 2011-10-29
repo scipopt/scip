@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_cmir.c
- * @ingroup SEPARATORS
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
  * @author Kati Wolter
  * @author Tobias Achterberg

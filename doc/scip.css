@@ -10,6 +10,7 @@ body, div {
 body {
   margin:           2px;
   padding:          0px;
+  background: #FFFFFF;
 }
 
 /* boxes */
@@ -96,6 +97,11 @@ div.qindex, div.navpath {
 
 div.navtab {
     margin-right: 15px;
+}
+
+div.note{
+    color: #EE0000;
+    font-weight: bold;
 }
 
 /* @group Link Styling */

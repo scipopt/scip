@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_gomory.h
+ * @ingroup SEPARATORS
  * @brief  Gomory MIR Cuts
  * @author Tobias Achterberg
  */

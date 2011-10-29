@@ -14,7 +14,8 @@ $(LIBOBJDIR)/scip/lpi_spx.o: src/scip/lpi_spx.cpp  \
     \
    \
    \
-    \
+   \
+   \
    src/scip/message.h \
  src/scip/def.h src/scip/type_retcode.h src/scip/type_message.h \
  src/scip/struct_message.h src/scip/pub_message.h src/scip/lpi.h \

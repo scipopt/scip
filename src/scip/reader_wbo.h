@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_wbo.h
+ * @ingroup FILEREADERS
  * @brief  WBO file reader (LP format with generic variables and row names)
  * @author Michael Winkler
  */

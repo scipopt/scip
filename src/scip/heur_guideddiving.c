@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_guideddiving.c
- * @ingroup PRIMALHEURISTICS
  * @brief  LP diving heuristic that chooses fixings in direction of incumbent solutions
  * @author Tobias Achterberg
  */

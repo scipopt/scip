@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_integral.c
- * @ingroup CONSHDLRS 
  * @brief  constraint handler for the integrality constraint
  * @author Tobias Achterberg
  */

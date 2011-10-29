@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_xyz.h
+ * @ingroup PRIMALHEURISTICS
  * @brief  xyz primal heuristic
  * @author Tobias Achterberg
  */

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_quadratic.h
+ * @ingroup CONSHDLRS
  * @brief  constraint handler for quadratic constraints
  * @author Stefan Vigerske
  * 

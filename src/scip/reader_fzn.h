@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_fzn.h
+ * @ingroup FILEREADERS
  * @brief  FlatZinc file reader
  * @author Timo Berthold
  * @author Stefan Heinz

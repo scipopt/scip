@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_rootredcost.c
- * @ingroup PROPAGATORS
  * @brief  reduced cost strengthening at the root node
  * @author Tobias Achterberg
  */

@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_wbo.c
- * @ingroup FILEREADERS 
  * @brief  WBO file reader (OPB format with weighted constraints)
  * @author Michael Winkler
  */

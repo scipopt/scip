@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_rlp.h
+ * @ingroup FILEREADERS
  * @brief  RLP file reader (LP format with generic variables and row names)
  * @author Stefan Heinz
  */

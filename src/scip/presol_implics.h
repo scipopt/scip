@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_implics.h
+ * @ingroup PRESOLVERS
  * @brief  implics presolver
  * @author Tobias Achterberg
  */

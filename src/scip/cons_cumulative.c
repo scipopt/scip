@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_cumulative.c
- * @ingroup CONSHDLRS
  * @brief  constraint handler for cumulative constraints
  * @author Timo Berthold
  * @author Stefan Heinz

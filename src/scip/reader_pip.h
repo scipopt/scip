@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_pip.h
- * @ingroup FILEREADERS 
+ * @ingroup FILEREADERS
  * @brief  file reader for polynomial mixed-integer programs in PIP format
  * @author Stefan Vigerske
  */

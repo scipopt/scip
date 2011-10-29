@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file    heur_subnlp.c
- * @ingroup PRIMALHEURISTICS
  * @brief   NLP local search primal heuristic using sub-SCIPs
  * @author  Stefan Vigerske
  * 
@@ -75,7 +74,6 @@ struct SCIP_HeurData
    SCIP_Real             nlptimelimit;       /**< time limit of NLP solver; 0 for off */
    SCIP_Real             resolvetolfactor;   /**< factor for feasibility tolerance when resolving NLP due to disagreement of feasibility */
    SCIP_Bool             resolvefromscratch; /**< whether a resolve of an NLP due to disagreement of feasibility should be from the original starting point or the infeasible solution */
-   char*                 nlpsolver;          /**< name of NLP solver to use */
    char*                 nlpoptfile;         /**< name of NLP solver specific option file */
    SCIP_Real             minimprove;         /**< desired minimal improvement in objective function value when running heuristic */
    int                   maxpresolverounds;  /**< limit on number of presolve rounds in sub-SCIP */
@@ -2128,10 +2126,6 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
    SCIP_CALL( SCIPaddStringParam(scip, "heuristics/"HEUR_NAME"/nlpoptfile",
          "name of an NLP solver specific options file",
          &heurdata->nlpoptfile, TRUE, "", NULL, NULL) );
-
-   SCIP_CALL( SCIPaddStringParam(scip, "heuristics/"HEUR_NAME"/nlpsolver",
-         "name of an NLP solver to use (empty value means to use solver with highest priority)",
-         &heurdata->nlpsolver, FALSE, "", NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/resolvetolfactor",
          "if SCIP does not accept a NLP feasible solution, resolve NLP with feas. tolerance reduced by this factor (set to 1.0 to turn off resolve)",

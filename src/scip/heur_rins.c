@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_rins.c
- * @ingroup PRIMALHEURISTICS
  * @brief  RINS primal heuristic
  * @author Timo Berthold
  */

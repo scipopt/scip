@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_clique.h
+ * @ingroup SEPARATORS
  * @brief  clique separator
  * @author Tobias Achterberg
  * @author Kati Wolter

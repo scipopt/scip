@@ -3490,8 +3490,15 @@ SCIP_RETCODE SCIPchgVarBranchDirection(
    SCIP_BRANCHDIR        branchdirection     /**< preferred branch direction of the variable (downwards, upwards, auto) */
    );
 
-/** changes type of variable in the problem; this changes the vars array returned from
- *  SCIPgetVars() and SCIPgetVarsData()
+/** changes type of variable in the problem; 
+ *
+ * @note this type changes might change the variable array returned from SCIPgetVars() and SCIPgetVarsData();
+ *
+ * @note if SCIP is already beyond the SCIP_STAGE_PROBLEM and a original variable is passed; the variable type of the
+ *       corresponding transformed variable is changed; the type of the original variable does not change
+ * 
+ * @note if the type changes from a continuous variable to a non-continuous variable the bound of the variable get
+ *       adjusts w.r.t. to integrality information
  */
 extern
 SCIP_RETCODE SCIPchgVarType(

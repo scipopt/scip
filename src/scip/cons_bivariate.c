@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_bivariate.c
- * @ingroup CONSHDLRS
  * @brief  constraint handler for bivariate nonlinear constraints
  * @author Martin Ballerstein
  * @author Dennis Michaels

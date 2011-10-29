@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_feaspump.h
+ * @ingroup PRIMALHEURISTICS
  * @brief  feaspump primal heuristic
  * @author Timo Berthold
  */

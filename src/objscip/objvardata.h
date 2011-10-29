@@ -32,7 +32,12 @@
 namespace scip
 {
 
-/** C++ wrapper object for user variable data */
+/** @brief C++ wrapper for user variable data
+ *
+ *  This class defines the interface for user variable data implemented in C++. Each variable can be equipped with a
+ *  variable data class. This data can be accessed via the function SCIPgetObjVardata() at any time after it is created
+ *  and before it is deleted.
+ */
 class ObjVardata
 {
 public:

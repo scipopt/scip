@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_zirounding.c
- * @ingroup PRIMALHEURISTICS
  * @brief  zirounding primal heuristic
  * @author Gregor Hendel
  */

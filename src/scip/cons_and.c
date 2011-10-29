@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_and.c
- * @ingroup CONSHDLRS 
  * @brief  constraint handler for and constraints
  * @author Tobias Achterberg
  * @author Stefan Heinz

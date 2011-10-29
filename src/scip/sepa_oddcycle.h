@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_oddcycle.h
+ * @ingroup SEPARATORS
  * @brief  oddcycle separator
  * @author Robert Waniek
  */

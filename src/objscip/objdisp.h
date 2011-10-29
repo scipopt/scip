@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   objdisp.h
- * @brief  C++ wrapper for display column
+ * @brief  C++ wrapper for display columns
  * @author Kati Wolter
  */
 
@@ -31,7 +31,15 @@
 namespace scip
 {
 
-/** C++ wrapper object for display columns */
+/**
+ *  @brief C++ wrapper for display columns
+ *
+ *  This class defines the interface for display columns implemented in C++. Note that there is a pure virtual function
+ *  (this function has to be implemented). This function is: scip_output().
+ *
+ * - \ref DISP "Instructions for implementing a display column"
+ * - \ref DISPLAYS "List of available display columns"
+ */
 class ObjDisp : public ObjCloneable
 {
 public:

@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_feaspump.c
- * @ingroup PRIMALHEURISTICS
  * @brief  feasibility pump primal heuristic
  * @author Timo Berthold
  * @author Domenico Salvagnin

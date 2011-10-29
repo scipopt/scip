@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_closecuts.c
- * @ingroup SEPARATORS
  * @brief  closecuts meta separator
  * @author Marc Pfetsch
  */

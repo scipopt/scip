@@ -31,7 +31,14 @@
 namespace scip
 {
 
-/** C++ wrapper object for propagators */
+/** @brief C++ wrapper for propagators
+ *
+ *  This class defines the interface for propagators implemented in C++. Note that there is a pure virtual
+ *  function (this function has to be implemented). This function is: scip_exec().
+ *
+ *  - \ref PROP "Instructions for implementing a propagator"
+ *  - \ref PROPAGATORS "List of available propagators"
+ */
 class ObjProp : public ObjCloneable
 {
 public:
@@ -324,7 +331,15 @@ public:
       SCIP_BDCHGIDX*     bdchgidx,           /**< the index of the bound change, representing the point of time where the
                                               *   change took place */
       SCIP_RESULT*       result              /**< pointer to store the result of the propagation call */
-      ) = 0;
+      )
+   {  /*lint --e{715}*/
+
+      /* set result pointer to indicate the propagation was not resolved */
+      assert(result != NULL);
+      (*result) = SCIP_DIDNOTFIND;
+
+      return SCIP_OKAY;
+   }
 };
 
 } /* namespace scip */

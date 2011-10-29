@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_mutation.c
- * @ingroup PRIMALHEURISTICS
  * @brief  mutation primal heuristic
  * @author Timo Berthold
  */

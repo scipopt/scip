@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_fix.c
- * @ingroup FILEREADERS 
  * @brief  file reader for variable fixings
  * @author Tobias Achterberg
  */

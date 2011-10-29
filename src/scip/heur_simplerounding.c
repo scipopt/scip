@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_simplerounding.c
- * @ingroup PRIMALHEURISTICS
  * @brief  simple and fast LP rounding heuristic
  * @author Tobias Achterberg
  */

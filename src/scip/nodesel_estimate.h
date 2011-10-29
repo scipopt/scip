@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nodesel_estimate.h
+ * @ingroup NODESELECTORS
  * @brief  node selector for best estimate search
  * @author Tobias Achterberg
  */
