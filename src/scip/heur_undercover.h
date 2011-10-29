@@ -17,6 +17,11 @@
  * @ingroup PRIMALHEURISTICS
  * @brief  undercover primal heuristic for MIQCPs
  * @author Ambros Gleixner
+ *
+ * The undercover heuristic is designed for mixed-integer nonlinear programs and tries to fix a subset of variables such
+ * as to make each constraint linear or convex. For this purpose it solves a binary program to automatically determine
+ * the minimum number of variable fixings necessary. As fixing values, we use values from the LP relaxation, the NLP
+ * relaxation, or the incumbent solution.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
