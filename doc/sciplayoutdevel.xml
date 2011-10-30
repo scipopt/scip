@@ -1,12 +1,12 @@
 <doxygenlayout version="1.0">
   <!-- Navigation index tabs for HTML output -->
   <navindex>
-    <tab type="mainpage" visible="yes" title=""/>
+    <tab type="mainpage" visible="yes" title="Overview"/>
+    <tab type="modules" visible="yes" title="Plugins"/>
     <tab type="files" visible="yes" title="">
       <tab type="files" visible="no" title=""/>
       <tab type="globals" visible="no" title=""/>
     </tab>
-    <tab type="modules" visible="yes" title="Plugins"/>
     <tab type="classes" visible="yes" title="">
       <tab type="classes" visible="yes" title=""/>
       <tab type="classindex" visible="$ALPHABETICAL_INDEX" title=""/> 
