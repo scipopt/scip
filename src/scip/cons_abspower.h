@@ -15,15 +15,15 @@
 
 /**@file   cons_abspower.h
  * @ingroup CONSHDLRS
- * @brief  constraint handler for absolute power constraints
+ * @brief  Constraint handler for absolute power constraints, \f$lhs \leq sign(x+offset) |x+offset|^n + c z \leq rhs\f$
  * @author Stefan Vigerske
  *
  * This constraint handler handles constraints of the form
  * \f[
  *   lhs \leq sign(x+offset) |x+offset|^n + c z \leq rhs
  * \f]
- * for n > 1.0 a rational number, c and offset arbitrary, and x and z variables.
- * x can have -offset in the interior of its domain.
+ * for \f$n > 1.0\f$ a rational number, \f$c\f$ and offset arbitrary, and \f$x\f$ and \f$z\f$ variables.
+ * Note that \f$x\f$ can have -offset in the interior of its domain.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
