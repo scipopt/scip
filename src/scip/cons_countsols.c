@@ -18,6 +18,8 @@
  * @author Stefan Heinz
  * @author Michael Winkler
  *
+ * If this constraint handler is activated than it counts or collects all feasible solutions. We refer to \ref COUNTER for
+ * more details about using SCIP for counting feasible solutions.
  *
  * @todo In the last round of presolving we should check if variables exit which have up and down lock one. In that case
  *       we know that these locks are coming from this constraint handler. Therefore, they are totally free and can be
