@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_bounddisjunction.c
- * @brief  constraint handler for bound disjunction constraints
+ * @brief  constraint handler for bound disjunction constraints \f$(x_1 \{\leq,\geq\} b_1) \vee \ldots \vee (x_n \{\leq,\geq\} b_n)\f$
  * @author Tobias Achterberg
  * @author Marc Pfetsch
  */
