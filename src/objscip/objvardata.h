@@ -37,6 +37,8 @@ namespace scip
  *  This class defines the interface for user variable data implemented in C++. Each variable can be equipped with a
  *  variable data class. This data can be accessed via the function SCIPgetObjVardata() at any time after it is created
  *  and before it is deleted.
+ *
+ *  - \ref type_var.h "Corresponding C interface"
  */
 class ObjVardata
 {

@@ -38,6 +38,7 @@ namespace scip
  *
  *  - \ref PROP "Instructions for implementing a propagator"
  *  - \ref PROPAGATORS "List of available propagators"
+ *  - \ref type_prop.h "Corresponding C interface"
  */
 class ObjProp : public ObjCloneable
 {

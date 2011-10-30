@@ -37,6 +37,7 @@ namespace scip
  *  (this function has to be implemented). This function is: scip_exec(). 
  *
  *  - \ref EVENT "Instructions for implementing an event handler"
+ *  - \ref type_event.h "Corresponding C interface"
  */
 class ObjEventhdlr : public ObjCloneable
 {

@@ -38,6 +38,7 @@ namespace scip
  *
  *  - \ref PRESOL "Instructions for implementing a presolver"
  *  - \ref PRESOLVERS "List of available presolvers"
+ *  - \ref type_presol.h "Corresponding C interface"
  */
 class ObjPresol : public ObjCloneable
 {

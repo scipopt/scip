@@ -37,6 +37,7 @@ namespace scip
  *
  *  - \ref READER "Instructions for implementing a file reader and writer"
  *  - \ref FILEREADERS "List of available file readers and writers"
+ *  - \ref type_reader.h "Corresponding C interface"
  */
 class ObjReader : public ObjCloneable
 {

@@ -39,6 +39,7 @@ namespace scip
  *
  * - \ref DIALOG "Instructions for implementing a dialog"
  * - \ref DIALOGS "List of available dialogs"
+ *  - \ref type_dialog.h "Corresponding C interface"
  */
 class ObjDialog : public ObjCloneable
 {

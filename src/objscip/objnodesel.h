@@ -38,6 +38,7 @@ namespace scip
  *
  *  - \ref NODESEL "Instructions for implementing a  node selector"
  *  - \ref NODESELECTORS "List of available node selectors"
+ *  - \ref type_nodesel.h "Corresponding C interface"
  */
 class ObjNodesel : public ObjCloneable
 {
