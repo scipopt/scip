@@ -2186,7 +2186,6 @@ SCIP_RETCODE createCGCutDirect(
    SCIP_Real cutact;
    SCIP_Bool success;
    SCIP_VAR** vars;
-   SCIP* subscip;
    int nvars;
    int k;
 
@@ -2202,9 +2201,6 @@ SCIP_RETCODE createCGCutDirect(
    assert( nprevrows != NULL );
    assert( prevrows != NULL );
    assert( ngen != NULL );
-
-   subscip = mipdata->subscip;
-   assert( subscip != NULL );
 
    /* get variable data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
@@ -2229,12 +2225,16 @@ SCIP_RETCODE createCGCutDirect(
 #if 0
    {
       /* check for correctness of computed values */
+      SCIP* subscip;
       SCIP_Real obj = 0.0;
       SCIP_Real val;
       SCIP_Bool contVarShifted = FALSE;
       unsigned int j;
       SCIP_COL** cols;
       int ncols;
+
+      subscip = mipdata->subscip;
+      assert( subscip != NULL );
 
       SCIP_CALL( SCIPprintSol(subscip, sol, NULL, FALSE) );
 
