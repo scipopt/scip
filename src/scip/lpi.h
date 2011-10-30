@@ -18,6 +18,16 @@
  * @brief  interface methods for specific LP solvers
  * @author Tobias Achterberg
  * @author Marc Pfetsch
+ *
+ * This file specifies a generic LP solver interface used by SCIP to create, modify, and solve linear programs of the
+ * form
+ *
+ *   min/max   obj * x
+ *      lhs <=   A * x  <= rhs
+ *      lb  <=       x  <= ub
+ *
+ * and query information about the solution. Although it includes a few SCIP header files, e.g., because it uses SCIP's
+ * return codes, it can be used independently of any SCIP instance.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -146,7 +156,7 @@ SCIP_RETCODE SCIPlpiDelCols(
    int                   lastcol             /**< last column to be deleted */
    );
 
-/** deletes columns from SCIP_LP; the new position of a column must not be greater that its old position */
+/** deletes columns from SCIP_LPI; the new position of a column must not be greater that its old position */
 extern 
 SCIP_RETCODE SCIPlpiDelColset(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -177,7 +187,7 @@ SCIP_RETCODE SCIPlpiDelRows(
    int                   lastrow             /**< last row to be deleted */
    );
 
-/** deletes rows from SCIP_LP; the new position of a row must not be greater that its old position */
+/** deletes rows from SCIP_LPI; the new position of a row must not be greater that its old position */
 extern 
 SCIP_RETCODE SCIPlpiDelRowset(
    SCIP_LPI*             lpi,                /**< LP interface structure */

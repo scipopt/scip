@@ -20,7 +20,15 @@
  * @author Timo Berthold
  * @author Ambros Gleixner
  * @author Marc Pfetsch
+ *
+ * This is an implementation of SCIP's LP interface for SoPlex. While the ratio test is fixed to SoPlex's standard,
+ * different pricing methods can be chosen and an autopricing strategy (start with devex and switch to steepest edge
+ * after too many iterations) is implemented directly. Scaler and simplifier may be applied if solving from scratch.
+ *
+ * For debugging purposes, the SoPlex results can be double checked with CPLEX if WITH_LPSCHECK is defined. This may
+ * yield false positives, since the LP is dumped to a file for transfering it to CPLEX, hence, precision may be lost.
  */
+
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #define AUTOPRICING_ITERSWITCH          10000/**< start with devex and switch to steepest edge after this many iterations */
@@ -80,10 +88,6 @@
 /* define subversion for versions <= 1.5.0.1 */
 #ifndef SOPLEX_SUBVERSION
 #define SOPLEX_SUBVERSION 0
-#endif
-
-#if (SOPLEX_VERSION > 150 || (SOPLEX_VERSION == 150 && SOPLEX_SUBVERSION >= 7))
-#include "spxboundflippingrt.h"
 #endif
 
 /* get githash of SoPlex */
@@ -157,11 +161,7 @@ class SPxSCIP : public SPxSolver
    SPxSteepPR       m_price_steep;      /**< steepest edge pricer */
    SPxParMultPR     m_price_parmult;    /**< partial multiple pricer */
    SPxDevexPR       m_price_devex;      /**< devex pricer */
-#ifdef WITH_BOUNDFLIPPING
-   SPxBoundFlippingRT m_ratio;          /**< Long step dual ratio tester */
-#else
    SPxFastRT        m_ratio;            /**< Harris fast ratio tester */
-#endif
    char*            m_probname;         /**< problem name */
    bool             m_fromscratch;      /**< use old basis indicator */
    bool             m_scaling;          /**< use lp scaling */
