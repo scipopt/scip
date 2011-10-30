@@ -17,6 +17,12 @@
  * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for displaying runtime statistics
  * @author Tobias Achterberg
+ *
+ *  This file defines the interface for display columns implemented in C.
+ *
+ * - \ref DISP "Instructions for implementing a display column"
+ * - \ref DISPLAYS "List of available display columns"
+ * - \ref scip::ObjDisp "C++ wrapper class
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

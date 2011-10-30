@@ -17,6 +17,12 @@
  * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for problem variables
  * @author Tobias Achterberg
+ *
+ *  This file defines the interface for user variable data implemented in C. Each variable can be equipped with a
+ *  variable data struct. This data can be accessed via the function SCIPgetVardata() at any time after it is created
+ *  and before it is deleted.
+ *
+ *  - \ref scip::ObjVardata "Corresponding C interface"
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
