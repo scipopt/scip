@@ -18,6 +18,12 @@
  * @brief  type definitions for primal heuristics
  * @author Tobias Achterberg
  * @author Timo Berthold
+ *
+ *  This file defines the interface for primal heuristics implemented in C.
+ *
+ *  - \ref HEUR "Instructions for implementing a primal heuristic"
+ *  - \ref PRIMALHEURISTICS "List of available primal heuristics"
+ *  - \ref scip::ObjHeur "C++ wrapper class"
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
