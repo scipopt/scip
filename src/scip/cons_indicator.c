@@ -472,7 +472,10 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorRestart)
          SCIP_CALL( SCIPrestartSolve(scip) );
 
          /* drop event */
-         SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, (SCIP_EVENTDATA*) conshdlrdata, -1) );
+         if ( conshdlrdata->objindicatoronly )
+         {
+            SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, (SCIP_EVENTDATA*) conshdlrdata, -1) );
+         }
          conshdlrdata->performedrestart = TRUE;
       }
       break;
