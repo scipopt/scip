@@ -17,6 +17,11 @@
  * @ingroup FILEREADERS
  * @brief  LP file reader
  * @author Tobias Achterberg
+ *
+ * This reader allows to parse and write CPLEX .lp files with linear and quadratic constraints and objective,
+ * special ordered sets of type 1 and 2, indicators on linear constraints, and semicontinuous variables.
+ * For writing, linear (general and specialized), indicator, quadratic, second order cone, and
+ * special ordered set constraints are supported.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
