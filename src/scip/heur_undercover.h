@@ -15,7 +15,8 @@
 
 /**@file   heur_undercover.h
  * @ingroup PRIMALHEURISTICS
- * @brief  undercover primal heuristic for MIQCPs
+ * @brief  Undercover primal heuristic for MIQCPs
+ * @author Timo Berthold
  * @author Ambros Gleixner
  *
  * The undercover heuristic is designed for mixed-integer nonlinear programs and tries to fix a subset of variables such
