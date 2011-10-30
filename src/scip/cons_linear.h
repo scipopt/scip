@@ -22,14 +22,11 @@
  * @author Kati Wolter
  *
  * This constraint handler handles linear constraints in their most general form. That is,
- *
  * \f[
  *   lhs \leq \sum_{i=1}^n a_i x_i \leq rhs
  * \f]
- *
- * where \f$a_i \in Q\f$ for all \f$i\f$, \f$lhs\in Q \cup \{-\infty\}\f$, \f$rhs\in Q \cup \{\infty\}\f$,
- * and decision variables \f$x_i\f$ for all \f$i\f$ which can be binary, integer, or continuous.
- *
+ * with \f$a_i \in Q, i = 1,\dots,n\f$, \f$lhs\in Q \cup \{-\infty\}\f$, \f$rhs\in Q \cup \{\infty\}\f$,
+ * and decision variables \f$x_i, i = 1,\dots,n\f$ which can be binary, integer, or continuous.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

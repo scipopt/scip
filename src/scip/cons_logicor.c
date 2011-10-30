@@ -14,8 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_logicor.c
- * @brief  constraint handler for logic or constraints
- *         (equivalent to set covering, but algorithms are suited for depth first search)
+ * @brief  Constraint handler for logic or constraints \f$1^T x \ge 1\f$
+ *         (equivalent to set covering, but algorithms are suited for depth first search).
  * @author Tobias Achterberg
  * @author Michael Winkler
  */
