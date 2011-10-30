@@ -15,15 +15,24 @@
 
 /**@file   cons_abspower.h
  * @ingroup CONSHDLRS
- * @brief  Constraint handler for absolute power constraints, \f$lhs \leq sign(x+offset) |x+offset|^n + c z \leq rhs\f$
+ * @brief  Constraint handler for absolute power constraints \f$\textrm{lhs} \leq \textrm{sign}(x+a) |x+a|^n + c z \leq \textrm{rhs}\f$
  * @author Stefan Vigerske
  *
  * This constraint handler handles constraints of the form
  * \f[
- *   lhs \leq sign(x+offset) |x+offset|^n + c z \leq rhs
+ *   \textrm{lhs} \leq \textrm{sign}(x+a) |x+a|^n + c z \leq \textrm{rhs}
  * \f]
- * for \f$n > 1.0\f$ a rational number, \f$c\f$ and offset arbitrary, and \f$x\f$ and \f$z\f$ variables.
- * Note that \f$x\f$ can have -offset in the interior of its domain.
+ * for \f$n > 1.0\f$ a rational number, \f$a\f$ and \f$c\f$ arbitrary, and \f$x\f$ and \f$z\f$ variables.
+ * Note that \f$x\f$ can have \f$-a\f$ in the interior of its domain.
+ *
+ * Constraints are enforced by separation, domain propagation, and spatial branching.
+ *
+ * Cuts that separate on the convex hull of the graph of \f$\textrm{sign}(x+a) |x+a|^n\f$ are generated as long as they separate the relaxation solution.
+ * Otherwise, spatial branching on \f$x\f$ is applied.
+ *
+ * Further, domain propagation is implemented to propagate bound changes on \f$x\f$ onto \f$z\f$, and vice versa, and
+ * repropagation is implemented to allow for conflict analysis.
+ * During presolve, a pairwise comparison of absolute power constraints may allow to fix or aggregate some variables.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

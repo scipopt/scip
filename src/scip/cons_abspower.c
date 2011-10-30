@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_abspower.c
- * @brief  Constraint handler for absolute power constraints, \f$lhs \leq sign(x+offset) |x+offset|^n + c z \leq rhs\f$
+ * @brief  Constraint handler for absolute power constraints \f$\textrm{lhs} \leq \textrm{sign}(x+a) |x+a|^n + c z \leq \textrm{rhs}\f$
  * @author Stefan Vigerske
  */
 

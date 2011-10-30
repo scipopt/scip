@@ -15,10 +15,30 @@
 
 /**@file   cons_bivariate.h
  * @ingroup CONSHDLRS
- * @brief  constraint handler for bivariate nonlinear constraints
+ * @brief  constraint handler for bivariate nonlinear constraints \f$\textrm{lhs} \leq f(x,y) + c z \leq \textrm{rhs}\f$
  * @author Martin Ballerstein
  * @author Dennis Michaels
  * @author Stefan Vigerske
+ *
+ * This constraint handler handles constraints of the form
+ * \f[
+ *   \textrm{lhs} \leq f(x,y) + c z \leq \textrm{rhs}
+ * \f]
+ * for a bivariate nonlinear function \f$f(x,y)\f$ (given as expression tree) that has
+ * a fixed convexity behaviour, that is, \f$f(x,y)\f$ has to be either jointly convex in \f$(x,y)\f$,
+ * or convex in \f$x\f$ and concave in \f$y\f$,
+ * or convex in \f$x\f$ and convex in \f$y\f$, but indefinite w.r.t. \f$(x,y)\f$.
+ * See also
+ *
+ * @par
+ * Matthias Jach, Dennis Michaels, and Robert Weismantel@n
+ * The convex envelope of (n-1)-convex functions@n
+ * SIAM Journal on Optimization 19:3, 1451-1466, 2008.
+ *
+ * @par
+ * Mohit Tawarmalani and Nikolaos V. Sahinidis@n
+ * Semidefinite Relaxations of Fractional Programs via Novel Convexification Techniques@n
+ * Journal of Global Optimization 20, 137-158, 2001.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

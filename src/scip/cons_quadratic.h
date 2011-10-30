@@ -15,13 +15,38 @@
 
 /**@file   cons_quadratic.h
  * @ingroup CONSHDLRS
- * @brief  constraint handler for quadratic constraints
+ * @brief  constraint handler for quadratic constraints \f$\textrm{lhs} \leq \sum_{i,j=1}^n a_{i,j} x_ix_j + \sum_{i=1}^n b_i x_i \leq \textrm{rhs}\f$
  * @author Stefan Vigerske
  * 
  * This constraint handler handles constraints of the form
  * \f[
- *   \ell \leq \sum_{i,j=1}^n a_{i,j} x_ix_j + \sum_{i=1}^n b_i x_i \leq u  
+ *   \textrm{lhs} \leq \sum_{i,j=1}^n a_{i,j} x_ix_j + \sum_{i=1}^n b_i x_i \leq \textrm{rhs}
  * \f]
+ *
+ * Constraints are enforced by separation, domain propagation, and spatial branching.
+ *
+ * For semidefinite matrices \f$A=(a_{i,j})_{i,j}\f$, cuts based on linearization of \f$\langle x, Ax\rangle\f$ are implemented.
+ * For underestimating a non-convex term, McCormick underestimators and secants for univariate concave quadratic terms are implemented.
+ * If \f$\langle x, Ax\rangle\f$ is factorable (i.e., can be written as product of two linear functions),
+ * specialized separation techniques (e.g., lifted tangent inequalities) that take the constraint sides into account are applied.
+ *
+ * Branching is performed for variables in nonconvex terms, if the relaxation solution cannot be separated.
+ * Further, domain propagation is applied.
+ *
+ * During presolve, variable products which contain binary variables may be reformulated into linear constraints, thereby introducing new variables.
+ *
+ * See also
+ * @par
+ * Timo Berthold and Stefan Heinz and Stefan Vigerske@n
+ * Extending a CIP framework to solve MIQCPs@n
+ * In: Jon Lee and Sven Leyffer (eds.),
+ *     Mixed-integer nonlinear optimization: Algorithmic advances and applications,
+ *     IMA volumes in Mathematics and its Applications
+ *
+ * @par
+ * Pietro Belotti and Andrew J. Miller and Mahdi Namazifar@n
+ * Linear inequalities for bounded products of variables@n
+ * SIAG/OPT Views-and-News 22:1, 1-8, 2011.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
