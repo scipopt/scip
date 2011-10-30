@@ -6,13 +6,13 @@
       <tab type="files" visible="no" title=""/>
       <tab type="globals" visible="no" title=""/>
     </tab>
+    <tab type="modules" visible="yes" title="Plugins"/>
     <tab type="classes" visible="yes" title="">
       <tab type="classes" visible="yes" title=""/>
       <tab type="classindex" visible="$ALPHABETICAL_INDEX" title=""/> 
       <tab type="hierarchy" visible="no" title=""/>
       <tab type="classmembers" visible="no" title=""/>
     </tab>
-    <tab type="modules" visible="yes" title="Plugins"/>
     <tab type="pages" visible="yes" title=""/>
     <tab type="namespaces" visible="no" title="">
       <tab type="namespaces" visible="no" title=""/>

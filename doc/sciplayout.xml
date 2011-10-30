@@ -6,13 +6,13 @@
       <tab type="files" visible="no" title=""/>
       <tab type="globals" visible="no" title=""/>
     </tab>
+    <tab type="modules" visible="yes" title="Plugins"/>
     <tab type="classes" visible="yes" title="C++ Wrapper Classes">
       <tab type="classes" visible="no" title="Wrapper Classes"/>
       <tab type="classindex" visible="$ALPHABETICAL_INDEX" title=""/> 
       <tab type="hierarchy" visible="no" title=""/>
       <tab type="classmembers" visible="no" title=""/>
     </tab>
-    <tab type="modules" visible="yes" title="Plugins"/>
     <tab type="pages" visible="yes" title=""/>
     <tab type="namespaces" visible="no" title="">
       <tab type="namespaces" visible="no" title=""/>
@@ -101,8 +101,8 @@
   <!-- Layout definition for a file page -->
   <file>
     <authorsection/>
-    <detaileddescription title=""/>
     <briefdescription visible="no"/>
+    <detaileddescription title=""/>
     <includes visible="$SHOW_INCLUDE_FILES"/>
     <includegraph visible="$INCLUDE_GRAPH"/>
     <includedbygraph visible="$INCLUDED_BY_GRAPH"/>
