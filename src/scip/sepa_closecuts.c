@@ -16,6 +16,35 @@
 /**@file   sepa_closecuts.c
  * @brief  closecuts meta separator
  * @author Marc Pfetsch
+ *
+ * This separator generates a convex combination of the current LP solution and either the best
+ * primal feasible solution or an interior point of the LP relaxation. If the convex combination is
+ * proper, the new point is closer to the convex hull of the feasible points. The separator then
+ * calls all other separators to separate this point. The idea is that in this way possibly "deeper"
+ * cuts are generated. Note, however, that the new point is not a basic solution, i.e., separators
+ * relying basis information, e.g., Gomory cuts, will not work.
+ *
+ * The other cuts are generated via the sepasol() callbacks in constraints handlers or separators.
+ *
+ * This separator stops after a certain number (parameter @p maxunsuccessful) of unsuccessful
+ * calls. It also inhibits the separation of the ordinary LP solution if it already generated enough
+ * (parameter @p sepathreshold) cuts. The convex combination is determined via the parameter @p
+ * sepacombvalue.
+ *
+ * In general, this separator makes sense if it is expected that there will be many separation
+ * rounds and many cuts will be again deleted, because they are not active after a certain number of
+ * rounds. In particular, branch-and-cut algorithms for combinatorial optimization problems form
+ * good candidates.
+ *
+ * The idea seems to be first proposed in the context of the travelling salesman problem, see@par
+ *   The Traveling Salesman Problem: A Computational Study@n
+ *   David L. Applegate, Robert E. Bixby, Vasek Chvatal & William J. Cook@n
+ *   Princeton University Press  2006@n
+ *
+ * for more details. See also@par
+ *   Acceleration of cutting-plane and column generation algorithms: Applications to network design.@n
+ *   Walid Ben-Ameur, Jose Neto@n
+ *   Networks 49(1): 3-17 (2007).
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
