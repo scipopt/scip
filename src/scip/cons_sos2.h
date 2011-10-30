@@ -20,7 +20,7 @@
  *
  * A specially ordered set of type 2 (SOS2) is a sequence of variables such that at most two
  * variables are nonzero and if two variables are nonzero they must be adjacent in the specified
- * sequence. Note that it is in principle allowed that a variables appears twice, but it then can be
+ * sequence. Note that it is in principle allowed that a variable appears twice, but it then can be
  * fixed to 0 if it is at least two apart in the sequence.
  */
 
