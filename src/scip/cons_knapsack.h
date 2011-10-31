@@ -15,8 +15,17 @@
 
 /**@file   cons_knapsack.h
  * @ingroup CONSHDLRS
- * @brief  constraint handler for knapsack constraints
+ * @brief  Constraint handler for knapsack constraints of the form  \f$a^T x \le b\f$, x binary and \f$a \ge 0\f$.
  * @author Tobias Achterberg
+ * @author Kati Wolter
+ * @author Michael Winkler
+ *
+ * This constraint handler handles a special type of linear constraints, namely knapsack constraints.
+ * A knapsack constraint has the form
+ * \f[
+ *   \sum_{i=1}^n a_i x_i \leq b
+ * \f]
+ * with non-negative integer coefficients \f$a_i\f$, integer right-hand side \f$b\f$, and binary variables \f$x_i\f$.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

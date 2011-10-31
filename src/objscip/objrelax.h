@@ -37,6 +37,7 @@ namespace scip
  *  function (this function has to be implemented). This function is: scip_exec().
  *
  *  - \ref RELAX "Instructions for implementing a relaxation handler"
+ *  - \ref type_relax.h "Corresponding C interface"
  */
 class ObjRelax : public ObjCloneable
 {

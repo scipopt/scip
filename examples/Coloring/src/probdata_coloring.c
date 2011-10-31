@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   probdata_coloring.c
- * @brief  problem data for coloring algorithm
+ * @brief  problem data for vertex coloring algorithm
  * @author Gerald Gamrath
  *
  * This file implements the problem data for the coloring algorithm.
@@ -25,7 +25,7 @@
  *
  * The preprocessing deletes nodes that have a lower degree than the size of a maximum clique.
  * Additionally, it also deletes nodes that have a dominated neighborhood. For further information,
- * look at the comments for the method preprocessGraph().
+ * look at the documentation for the method preprocessGraph().
  *
  * The deleted nodes and the relation between the nodes of the original graph and the nodes of the
  * preprocessed graph are stored in order to convert a solution of the preprocessed problem to a
@@ -37,7 +37,6 @@
  * and is also used to check whether a stable set found by the pricer is really new. This can be
  * done by calling COLORprobStableSetIsNew(). All sets are sorted decreasingly with respect to the
  * indices of the nodes. New candidates should also be sorted that way.
- *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -70,17 +69,17 @@ struct SCIP_ProbData
  */
 
 /** 
- *  preprocessing of the graph, using 2 methods in order to find redundant nodes 
+ *  Preprocessing of the graph, using 2 methods in order to find redundant nodes
  *  that can be deleted and easily colored later.
  *
  *  Foundation of these methods is the computation of a maximum clique C with M nodes. 
- *  After this computation the following two steps are repeated until no node was deleted
+ *  After this computation, the following two steps are repeated until no node was deleted
  *  in the last iteration:
  *  
- *  1: Low-Degree
+ *  1: Low-Degree:
  *  Iterativly delete all nodes v in the graph G with degree d(v) < M ( don't delete nodes of C )
  *
- *  2: Dominated Neighbourhood
+ *  2: Dominated Neighbourhood:
  *  If the neighbourhood of one node v is part of the neighbourhood of another node w, v can 
  *  be deleted, since it can later get the same color as w.
  */
@@ -577,10 +576,10 @@ SCIP_DECL_EVENTEXEC(eventExecProbdatavardeleted)
    assert(probdata != NULL);
    assert(var != NULL);
 
-   SCIPdebugMessage("remove variable %s [%d] from list of stable sets\n", SCIPvarGetName(var), (int)(size_t)SCIPvarGetData(var));
-
    /* get index of variable in stablesets array */
    idx = (int)(size_t) SCIPvarGetData(var);
+
+   SCIPdebugMessage("remove variable %s [%d] from list of stable sets\n", SCIPvarGetName(var), idx);
 
    assert(probdata->stablesetvars[idx] == var);
 

@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_setppc.c
- * @brief  constraint handler for the set partitioning / packing / covering constraints
+ * @brief  Constraint handler for the set partitioning / packing / covering constraints \f$1^T x\ \{=, \le, \ge\}\ 1\f$.
  * @author Tobias Achterberg
  * @author Michael Winkler
  */

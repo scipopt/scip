@@ -1,7 +1,2 @@
-check/check.awk
-check/check.sh
-check/evalcheck.sh
-check/getlastprob.awk
-check/locks/
-check/testset/short.solu
-check/results/
+check/
+

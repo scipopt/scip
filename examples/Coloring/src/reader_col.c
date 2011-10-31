@@ -14,13 +14,10 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_col.c
- * @brief  COL file reader
+ * @brief  file reader for vertex coloring instances
  * @author Gerald Gamrath
  *
- * This file implements the reader for coloring files in DIMACS standard format.
- *
- * Additionally, it provides two sorting functions and a method, which ensures that all nodes in the
- * graph are covered by at least one stable set.
+ * This file implements the reader for vertex coloring problems in DIMACS standard format.
  *
  */
 

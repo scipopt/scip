@@ -1042,7 +1042,7 @@
  * The example is written in C++ and uses the C++ wrapper classes.
  * However, we will explain the implementation of a constraint handler using the C interface.
  * It is very easy to transfer the C explanation to C++; whenever a method should be implemented using the
- * SCIP_DECL_CONS... notion, reimplement the corresponding virtual member function of the abstract ObjConshdlr
+ * SCIP_DECL_CONS... notion, reimplement the corresponding virtual member function of the abstract scip::ObjConshdlr
  * base class.
  *
  * Additional documentation for the callback methods of a constraint handler can be found in the file
@@ -1066,7 +1066,7 @@
  * At the top of the new file "cons_subtour.c" you can find the constraint handler properties.
  * These are given as compiler defines.
  * In the C++ wrapper class, you have to provide the constraint handler properties by calling the constructor
- * of the abstract base class ObjConshdlr from within your constructor (see the TSP example).
+ * of the abstract base class scip::ObjConshdlr from within your constructor (see the TSP example).
  * The properties you have to set have the following meaning:
  *
  * \par CONSHDLR_NAME: the name of the constraint handler.
@@ -1307,7 +1307,7 @@
  * given problem instance.
  * However, it might be very slow because the additional features, like cut separation and domain propagation, are
  * missing.
- * In the C++ wrapper class ObjConshdlr, the fundamental callback methods are virtual abstract member functions.
+ * In the C++ wrapper class scip::ObjConshdlr, the fundamental callback methods are virtual abstract member functions.
  * You have to implement them in order to be able to construct an object of your constraint handler class.
  *
  * There are three fundamental callback methods that are all dealing with the feasibility of a given solution.
@@ -1848,7 +1848,7 @@
  * We now explain how users can add their own pricers.
  * For example, look into the stable set pricer for the coloring problem (examples/Coloring/src/pricer_coloring.c) of the
  * Coloring example project.
- * The example is written in C. C++ users can easily adapt the code by using the ObjPricer wrapper base class and
+ * The example is written in C. C++ users can easily adapt the code by using the scip::scip::ObjPricer wrapper base class and
  * implement the scip_...() virtual methods instead of the SCIP_DECL_PRICER... callback methods.
  *
  * Additional documentation for the callback methods of a pricer can be found in the file
@@ -1876,7 +1876,7 @@
  * At the top of the new file "pricer_mypricer.c" you can find the pricer properties.
  * These are given as compiler defines.
  * In the C++ wrapper class, you have to provide the pricer properties by calling the constructor
- * of the abstract base class ObjPricer from within your constructor.
+ * of the abstract base class scip::ObjPricer from within your constructor.
  * The properties you have to set have the following meaning:
  *
  * \par PRICER_NAME: the name of the pricer.
@@ -1953,7 +1953,7 @@
  * In the case of a pricer, there is only one fundamental callback method, namely the PRICERREDCOST method
  * which searches and adds new variables to the problem.
  * This method has to be implemented for every pricer; the other callback methods are optional.
- * In the C++ wrapper class ObjPricer, the scip_redcost() method (which corresponds to the PRICERREDCOST callback)
+ * In the C++ wrapper class scip::ObjPricer, the scip_redcost() method (which corresponds to the PRICERREDCOST callback)
  * is a virtual abstract member function. You have to implement it in order to be able to construct an object of your
  * pricer class.
  *
@@ -2120,7 +2120,7 @@
  *
  * We now explain how users can add their own presolvers.
  * Take the dual fixing presolver (src/scip/presol_dualfix.c) as an example.
- * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjPresol wrapper
+ * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the scip::ObjPresol wrapper
  * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_PRESOL... callback methods.
  *
  * Additional documentation for the callback methods of a presolver, in particular for their input parameters,
@@ -2144,7 +2144,7 @@
  * At the top of the new file "presol_mypresolver.c", you can find the presolver properties.
  * These are given as compiler defines.
  * In the C++ wrapper class, you have to provide the presolver properties by calling the constructor
- * of the abstract base class ObjPresol from within your constructor.
+ * of the abstract base class scip::ObjPresol from within your constructor.
  * The properties you have to set have the following meaning:
  *
  * \par PRESOL_NAME: the name of the presolver.
@@ -2221,7 +2221,7 @@
  * The fundamental callback methods of the plugins are the ones that have to be implemented in order to obtain
  * an operational algorithm. Presolver plugins have only one fundamental callback method, namely the PRESOLEXEC method.
  * This method has to be implemented for every presolver; the other callback methods are optional.
- * In the C++ wrapper class ObjPresol, the scip_exec() method (which corresponds to the PRESOLEXEC callback) is a virtual
+ * In the C++ wrapper class scip::ObjPresol, the scip_exec() method (which corresponds to the PRESOLEXEC callback) is a virtual
  * abstract member function.
  * You have to implement it in order to be able to construct an object of your presolver class.
  *
@@ -2316,7 +2316,7 @@
  *
  * We now explain how users can add their own separators.
  * Take the separator for the class of Gomory mixed integer inequalities (src/scip/sepa_gomory.c) as an example.
- * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjSepa wrapper
+ * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the scip::ObjSepa wrapper
  * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_SEPA... callback methods.
  *
  * Additional documentation for the callback methods of a separator, in particular for the input parameters,
@@ -2340,7 +2340,7 @@
  * At the top of the new file "sepa_myseparator.c", you can find the separator properties.
  * These are given as compiler defines.
  * In the C++ wrapper class, you have to provide the separator properties by calling the constructor
- * of the abstract base class ObjSepa from within your constructor.
+ * of the abstract base class scip::ObjSepa from within your constructor.
  * The properties you have to set have the following meaning:
  *
  * \par SEPA_NAME: the name of the separator.
@@ -2849,7 +2849,7 @@
  *
  * We now explain how users can add their own branching rules.  Take the most infeasible LP branching rule
  * (src/scip/branch_mostinf.c) as an example.  As all other default plugins, it is written in C. C++ users can easily
- * adapt the code by using the ObjBranchrule wrapper base class and implement the scip_...() virtual methods instead of
+ * adapt the code by using the scip::ObjBranchrule wrapper base class and implement the scip_...() virtual methods instead of
  * the SCIP_DECL_BRANCH... callback methods.
  *
  * Additional documentation for the callback methods of a branching rule can be found in the file type_branch.h.
@@ -2872,7 +2872,7 @@
  * At the top of the new file "branch_mybranchingrule.c" you can find the branching rule properties.
  * These are given as compiler defines.
  * In the C++ wrapper class, you have to provide the branching rule properties by calling the constructor
- * of the abstract base class ObjBranchrule from within your constructor.
+ * of the abstract base class scip::ObjBranchrule from within your constructor.
  * The properties you have to set have the following meaning:
  *
  * \par BRANCHRULE_NAME: the name of the branching rule.
@@ -3139,7 +3139,7 @@
  *
  * We now explain how users can add their own node selectors.
  * Take the node selector for depth first search (src/scip/nodesel_dfs.c) as an example.
- * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjNodesel wrapper
+ * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the scip::ObjNodesel wrapper
  * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_NODESEL... callback methods.
  *
  * Additional documentation for the callback methods of a node selector can be found in the file type_nodesel.h.
@@ -3162,7 +3162,7 @@
  * At the top of the new file "nodesel_mynodeselector.c" you can find the node selector properties.
  * These are given as compiler defines.
  * In the C++ wrapper class, you have to provide the node selector properties by calling the constructor
- * of the abstract base class ObjNodesel from within your constructor.
+ * of the abstract base class scip::ObjNodesel from within your constructor.
  * The properties you have to set have the following meaning:
  *
  * \par NODESEL_NAME: the name of the node selector.
@@ -3236,7 +3236,7 @@
  * They implement the two requirements every node selector has to fulfill: Selecting a node from the queue to be processed
  * next and, given two nodes, deciding which of both is favored by the node selector's selection rule. The first
  * task is implemented in the NODESELSELECT callback, the second one in the NODESELCOMP callback.
- * In the C++ wrapper class ObjNodesel, the scip_select() method and the scip_comp() method (which correspond to the
+ * In the C++ wrapper class scip::ObjNodesel, the scip_select() method and the scip_comp() method (which correspond to the
  * NODESELSELECT callback and the NODESELCOMP callback, respectively) are virtual abstract member functions.
  * You have to implement them in order to be able to construct an object of your node selector class.
  *
@@ -3368,7 +3368,7 @@
  * if the variables appears only with nonnegative coefficients in the system Ax <= b and round them up if
  * the variables appears only with nonpositive coefficients.
  * If one of both conditions applies for each of the fractional variables, this will give a feasible solution.
- * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjHeur wrapper
+ * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the scip::ObjHeur wrapper
  * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_HEUR... callback methods.
  *
  * Additional documentation for the callback methods of a primal heuristic can be found in the file type_heur.h.
@@ -3391,7 +3391,7 @@
  * At the top of the new file "heur_myheuristic.c" you can find the primal heuristic properties.
  * These are given as compiler defines.
  * In the C++ wrapper class, you have to provide the primal heuristic properties by calling the constructor
- * of the abstract base class ObjHeur from within your constructor.
+ * of the abstract base class scip::ObjHeur from within your constructor.
  * Of course, all of them are of relevant, but the most important ones for controlling the performance
  * are usually HEUR_FREQ and HEUR_TIMING.
  * The properties you have to set have the following meaning:
@@ -3537,7 +3537,7 @@
  *
  * Primal heuristic plugins have only one fundamental callback method, namely the HEUREXEC method.
  * This method has to be implemented for every primal heuristic; the other callback methods are optional.
- * In the C++ wrapper class ObjHeur, the scip_exec() method (which corresponds to the HEUREXEC callback) is a virtual
+ * In the C++ wrapper class scip::ObjHeur, the scip_exec() method (which corresponds to the HEUREXEC callback) is a virtual
  * abstract member function. You have to implement it in order to be able to construct an object of your primal heuristic
  * class.
  *
@@ -3637,7 +3637,7 @@
  *
  * We now explain how users can add their own relaxation handlers using the C interface. It is very easy to
  * transfer the C explanation to C++: whenever a method should be implemented using the SCIP_DECL_RELAX... notion,
- * reimplement the corresponding virtual member function of the abstract ObjRelax wrapper base class.
+ * reimplement the corresponding virtual member function of the abstract scip::ObjRelax wrapper base class.
  * Unfortunately, SCIP does not contain a default relaxation handler plugin, which could be used as an example.
  *
  * Additional documentation for the callback methods of a relaxation handler can be found in the file type_relax.h.
@@ -3660,7 +3660,7 @@
  * At the top of the new file "relax_myrelaxator.c" you can find the relaxation handler properties.
  * These are given as compiler defines.
  * In the C++ wrapper class, you have to provide the relaxation handler properties by calling the constructor
- * of the abstract base class ObjRelax from within your constructor.
+ * of the abstract base class scip::ObjRelax from within your constructor.
  * The properties you have to set have the following meaning:
  *
  * \par RELAX_NAME: the name of the relaxation handler.
@@ -3731,7 +3731,7 @@
  *
  * Relaxation handler plugins have only one fundamental callback method, namely the \ref RELAXEXEC method.
  * This method has to be implemented for every relaxation handler; the other callback methods are optional.
- * In the C++ wrapper class ObjRelax, the scip_exec() method (which corresponds to the \ref RELAXEXEC callback) is a virtual
+ * In the C++ wrapper class scip::ObjRelax, the scip_exec() method (which corresponds to the \ref RELAXEXEC callback) is a virtual
  * abstract member function.
  * You have to implement it in order to be able to construct an object of your relaxation handler class.
  *
@@ -3860,7 +3860,7 @@
  *
  * We now explain how users can add their own file readers.
  * Take the file reader for MIPs in IBM's Mathematical Programming System format (src/scip/reader_mps.c) as an example.
- * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjReader wrapper
+ * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the scip::ObjReader wrapper
  * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_READER... callback methods.
  *
  * Additional documentation for the callback methods of a file reader can be found in the file type_reader.h.
@@ -3883,7 +3883,7 @@
  * At the top of the new file "reader_myreader.c" you can find the file reader properties.
  * These are given as compiler defines.
  * In the C++ wrapper class, you have to provide the file reader properties by calling the constructor
- * of the abstract base class ObjReader from within your constructor.
+ * of the abstract base class scip::ObjReader from within your constructor.
  * The properties you have to set have the following meaning:
  *
  * \par READER_NAME: the name of the file reader.
@@ -3943,7 +3943,7 @@
  * file. A file reader is only useful if the reader method \ref READERREAD
  * and/or the writing method \ref READERWRITE is implemented.  One of these
  * methods should be implemented for every file reader; the other callback
- * methods \ref READERCOPY and \ref READERFREE are optional.  In the C++ wrapper class ObjReader, the
+ * methods \ref READERCOPY and \ref READERFREE are optional.  In the C++ wrapper class scip::ObjReader, the
  * scip_read() and scip_write() methods (which corresponds to the \ref
  * READERREAD and \ref READERWRITE callback) are virtual member
  * functions. At least one of them should be implemented.
@@ -4066,7 +4066,7 @@
  * different dialogs in one source file. Take src/scip/dialog_default.c, where all default dialog plugins are collected, as an
  * example.
  * As all other default plugins, the default dialog plugin and the template dialog are written in C. C++ users can easily
- * adapt the code by using the ObjDialog wrapper base class and implement the scip_...() virtual methods instead of the
+ * adapt the code by using the scip::ObjDialog wrapper base class and implement the scip_...() virtual methods instead of the
  * SCIP_DECL_DIALOG... callback methods.
  *
  * Additional documentation for the callback methods of a dialog can be found in the file type_dialog.h.
@@ -4089,7 +4089,7 @@
  * At the top of the new file "dialog_mydialog.c" you can find the dialog properties.
  * These are given as compiler defines.
  * In the C++ wrapper class, you have to provide the dialog properties by calling the constructor
- * of the abstract base class ObjDialog from within your constructor.
+ * of the abstract base class scip::ObjDialog from within your constructor.
  * The properties you have to set have the following meaning:
  *
  * \par DIALOG_NAME: the name of the dialog.
@@ -4206,7 +4206,7 @@
  *
  * Dialogs have only one fundamental callback method, namely the \ref DIALOGEXEC method.
  * This method has to be implemented for every dialog; the other callback methods are optional.
- * In the C++ wrapper class ObjDialog, the scip_exec() method (which corresponds to the \ref DIALOGEXEC callback) is a virtual
+ * In the C++ wrapper class scip::ObjDialog, the scip_exec() method (which corresponds to the \ref DIALOGEXEC callback) is a virtual
  * abstract member function.
  * You have to implement it in order to be able to construct an object of your dialog class.
  *
@@ -4287,7 +4287,7 @@
  * different additional display columns in one source file.
  * Take src/scip/disp_default.c, where all default display columns are collected, as an example.
  * As all other default plugins, the default display column plugins and the display column template are written in C.
- * C++ users can easily adapt the code by using the ObjDisp wrapper base class and implement the scip_...() virtual methods
+ * C++ users can easily adapt the code by using the scip::ObjDisp wrapper base class and implement the scip_...() virtual methods
  * instead of the SCIP_DECL_DISP... callback methods.
  *
  *
@@ -4311,7 +4311,7 @@
  * At the top of the new file "disp_mydisplaycolumn.c" you can find the display column properties.
  * These are given as compiler defines.
  * In the C++ wrapper class, you have to provide the display column properties by calling the constructor
- * of the abstract base class ObjDisp from within your constructor.
+ * of the abstract base class scip::ObjDisp from within your constructor.
  * The properties you have to set have the following meaning:
  *
  * \par DISP_NAME: the name of the display column.
@@ -4380,7 +4380,7 @@
  *
  * Display column plugins have only one fundamental callback method, namely the \ref DISPOUTPUT method.
  * This method has to be implemented for every display column; the other callback methods are optional.
- * In the C++ wrapper class ObjDisp, the scip_output() method (which corresponds to the \ref DISPOUTPUT callback) is a virtual
+ * In the C++ wrapper class scip::ObjDisp, the scip_output() method (which corresponds to the \ref DISPOUTPUT callback) is a virtual
  * abstract member function.
  * You have to implement it in order to be able to construct an object of your display column class.
  *
@@ -4473,7 +4473,7 @@
  * types of events.
  *
  * Take src/scip/cons_logior.c, where the event handler is directly included into the constraint handler. As all other
- * default plugins, the event handlers are written in C. C++ users can easily adapt the code by using the ObjEventhdlr
+ * default plugins, the event handlers are written in C. C++ users can easily adapt the code by using the scip::ObjEventhdlr
  * wrapper base class and implement the scip_...() virtual methods instead of the SCIP_DECL_EVENT... callback methods.
  *
  * Additional documentation for the callback methods of an event handler can be found in the file type_event.h. There is
@@ -4497,7 +4497,7 @@
  * At the top of the new file "event_bestsol.c" you can find the event handler properties.
  * These are given as compiler defines.
  * In the C++ wrapper class, you have to provide the event handler properties by calling the constructor
- * of the abstract base class ObjEventhdlr from within your constructor.
+ * of the abstract base class scip::ObjEventhdlr from within your constructor.
  * The properties you have to set have the following meaning:
  *
  * \par EVENT_NAME: the name of the event handler.
@@ -4544,7 +4544,7 @@
  *
  * Event handler plugins have only one fundamental callback method, namely the \ref EVENTEXEC method.  This method has
  * to be implemented for every event handler; the other callback methods are optional.  In the C++ wrapper class
- * ObjEventhdlr, the scip_exec() method (which corresponds to the \ref EVENTEXEC callback) is a virtual abstract member
+ * scip::ObjEventhdlr, the scip_exec() method (which corresponds to the \ref EVENTEXEC callback) is a virtual abstract member
  * function.  You have to implement it in order to be able to construct an object of your event handler class.
  *
  * Additional documentation for the callback methods can be found in type_event.h.
@@ -5752,7 +5752,7 @@
  *      SCIP_DECL_VARCOPY and SCIP_DECL_PROBCOPY led to new parameters in SCIPcreateVar() and SCIPcreateProb() in
  *      scip.c, respectively.
  *      <br><br>
- *    - SCIPincludeHeur() and SCIPincludeSepa() in \ref scip.h, as well as ObjSepa() and ObjHeur(), have a new parameter:
+ *    - SCIPincludeHeur() and SCIPincludeSepa() in \ref scip.h, as well as scip::ObjSepa() and scip::ObjHeur(), have a new parameter:
  *       - <code>usessubscip</code> - It can be used to inform SCIP that the heuristic/separator to be included uses a secondary SCIP instance.
  *      <br><br>
  *    - SCIPapplyRens() in \ref heur_rens.h has a new parameter <code>uselprows</code>. It can be used to switch from LP rows
@@ -6256,9 +6256,3 @@
  * \verbinclude parameters.set
  */
 
-/**@page SCIPPY SCIPPY images
- *
- * \image html miniscippy.png
- * \image html scippy.png
- *
- */

@@ -19,6 +19,7 @@
  * @author Timo Berthold
  * @author Stefan Heinz
  *
+ * This file implements the Ryan/Foster branching rule. For more details see \ref BRANCHING page.
  *
  * @page BRANCHING Ryan/Foster branching
  *

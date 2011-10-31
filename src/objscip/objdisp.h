@@ -39,6 +39,7 @@ namespace scip
  *
  * - \ref DISP "Instructions for implementing a display column"
  * - \ref DISPLAYS "List of available display columns"
+ *  - \ref type_disp.h "Corresponding C interface"
  */
 class ObjDisp : public ObjCloneable
 {

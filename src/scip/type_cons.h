@@ -17,6 +17,12 @@
  * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for constraints and constraint handlers
  * @author Tobias Achterberg
+ *
+ *  This file defines the interface for constraint handlers implemented in C.
+ *
+ *  - \ref CONS "Instructions for implementing a constraint handler"
+ *  - \ref CONSHDLRS "List of available constraint handlers"
+ *  - \ref scip::ObjConshdlr "C++ wrapper class"
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

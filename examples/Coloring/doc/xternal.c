@@ -20,7 +20,7 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@mainpage Coloring Example
+/**@mainpage Overview
  * @version  0.1
  * @author   Gerald Gamrath
  *
@@ -33,7 +33,7 @@
  * by Anuj Mehrotra and Micheal A. Trick,@n
  * INFORMS J. Comput. 8, no. 4, 1995, pp. 344-354.
  *
- * The input format for the graph files is the DIMACS standard format; the file must end with ".col".
+ * The input format for the graph files is the DIMACS standard format; the name of the file must end with ".col".
  *
  * The graph coloring problem is the following:
  *
@@ -42,7 +42,7 @@
  *
  * We use the following integer programming model: We have binary
  * variables \f$ x_{s}, s \in \mathcal{S}\f$ where \f$\mathcal{S}\f$ 
- * is the set of all (inclusion-)maximal stable sets in the graph \f$G\f$.
+ * is the set of all stable sets in the graph \f$G\f$.
  * 
  * The basic model is then:
  * \f[
@@ -53,7 +53,7 @@
  *  \end{array}
  * \f]
  *
- * Since the number of stable sets can exponential in the size of the graph, the algorithm starts
+ * Since the number of stable sets can be exponential in the size of the graph, the algorithm starts
  * with some subset \f$ \bar{\mathcal{S}} \subseteq \mathcal{S}\f$ of the stable sets and adds
  * further stable sets during the solution process. This way it tries to improve the current LP
  * solution.
@@ -66,7 +66,7 @@
  * by propagation.  The default branching rule branch_coloring.c describes how these constraints are
  * added to the branch-and-bound nodes.  Some more sophisticated approaches for the branching,
  * especially a strongbranching on these constraints, can be found in the second branching rule
- * branch_strongcoloring.c. The starting solution is computed by a starting heuristic which is
+ * branch_strongcoloring.c. An initial solution is computed by a start heuristic which is
  * described in heur_init.c.  The organization of the data for the problem is described in the
  * problem data file (probdata_coloring.c). The file readers are described in reader_col.c and
  * reader_csol.c.

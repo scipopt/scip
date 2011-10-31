@@ -133,7 +133,7 @@ SCIP_DECL_PROPEXIT(propExitXyz)
 static
 SCIP_DECL_PROPINITPRE(propInitpreXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xyz propagator not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -148,7 +148,7 @@ SCIP_DECL_PROPINITPRE(propInitpreXyz)
 static
 SCIP_DECL_PROPEXITPRE(propExitpreXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xyz propagator not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;

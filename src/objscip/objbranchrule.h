@@ -40,6 +40,7 @@ namespace scip
  *
  *  - \ref BRANCH "Instructions for implementing a branching rule"
  *  - \ref BRANCHINGRULES "List of available branching rules"
+ *  - \ref type_branch.h "Corresponding C interface"
  */
 class ObjBranchrule : public ObjCloneable
 {

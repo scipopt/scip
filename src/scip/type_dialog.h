@@ -17,6 +17,12 @@
  * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for user interface dialog
  * @author Tobias Achterberg
+ *
+ *  This file defines the interface for dialogs implemented in C.
+ *
+ * - \ref DIALOG "Instructions for implementing a dialog"
+ * - \ref DIALOGS "List of available dialogs"
+ * - \ref scip::ObjDialog "C++ wrapper class
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

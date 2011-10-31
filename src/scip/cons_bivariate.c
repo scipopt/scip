@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_bivariate.c
- * @brief  constraint handler for bivariate nonlinear constraints
+ * @brief  constraint handler for bivariate nonlinear constraints \f$\textrm{lhs} \leq f(x,y) + c z \leq \textrm{rhs}\f$
  * @author Martin Ballerstein
  * @author Dennis Michaels
  * @author Stefan Vigerske

@@ -18,6 +18,13 @@
  * @brief  constraint handler for pseudoboolean constraints
  * @author Stefan Heinz
  * @author Michael Winkler
+ *
+ * The constraint handler deals with pseudo boolean constraints. These are constraints of the form
+ * \f[
+ * \mbox{lhs} \leq \sum_{k=0}^m c_k \cdot x_k  +  \sum_{i=0}^n c_i \cdot \prod_{j \in I_i} x_j \leq \mbox{rhs}
+ * \f]
+ * where all \f$x\f$ are binary and all \f$c\f$ are integer.
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

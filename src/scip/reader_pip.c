@@ -17,8 +17,6 @@
  * @brief  file reader for polynomial mixed-integer programs in PIP format
  * @author Stefan Vigerske
  * @author Marc Pfetsch
- *
- * reader_lp has been used as a starting point for this reader.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

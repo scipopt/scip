@@ -17,6 +17,12 @@
  * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for branching rules
  * @author Tobias Achterberg
+ *
+ *  This file defines the interface for branching rules implemented in C.
+ *
+ *  - \ref BRANCH "Instructions for implementing a branching rule"
+ *  - \ref PRIMALHEURISTICS "List of available branching rule"
+ *  - \ref scip::ObjBranchrule "C++ wrapper class"
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

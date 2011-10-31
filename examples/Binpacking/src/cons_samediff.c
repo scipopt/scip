@@ -14,9 +14,12 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_samediff.c
- * @brief  constraint handler stores the local branching decision data 
+ * @brief  Constraint handler stores the local branching decision data
  * @author Timo Berthold
  * @author Stefan Heinz
+ *
+ * This constraint handler is used to store the branching decision of the \ref BRANCHING "Ryan/Foster branching rule"
+ * which is implemented in \ref branch_ryanfoster.c.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -52,7 +55,7 @@
  * Data structures
  */
 
-/** constraint data for samediff constraints */
+/** @brief Constraint data for  \ref cons_samediff.c "SameDiff" constraints */
 struct SCIP_ConsData
 {
    int                   itemid1;           /**< item id one */
@@ -67,7 +70,7 @@ struct SCIP_ConsData
    SCIP_NODE*            node;               /**< the node in the B&B-tree at which the cons is sticking */
 };
 
-/** constraint handler data */
+/** @brief Constraint handler data for \ref cons_samediff.c "SameDiff" constraint handler */
 struct SCIP_ConshdlrData
 {
    int                   dummy;              /**< a dummy struct member to avoid compiling problem with an empty struct */

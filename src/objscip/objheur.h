@@ -38,6 +38,7 @@ namespace scip
  *
  *  - \ref HEUR "Instructions for implementing a primal heuristic"
  *  - \ref PRIMALHEURISTICS "List of available primal heuristics"
+ *  - \ref type_heur.h "Corresponding C interface"
  */
 class ObjHeur : public ObjCloneable
 {

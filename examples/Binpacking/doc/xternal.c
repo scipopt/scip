@@ -21,7 +21,7 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@mainpage Binpacking Example
+/**@mainpage Overview
  * @author Timo Berthold
  * @author Stefan Heinz
  *
@@ -57,7 +57,9 @@
  * items with sizes: 2, 1, 2, 1, 1, 2, 3, 2, and 1 and a bin capacity of \f$\kappa\f$ of 4. The following pictures show
  * a feasible solution which needs 5 bins. The minimum number of bins needed for that example is 3.
  *
+ * <CENTER>
  * \image html binpacking.png
+ * </CENTER>
  *
  * This problem can be formulated as a set covering problem. Therefore, we introduce a binary variable \f$x_{S}\f$ for
  * each feasible packing \f$S\f$. A <b>packing</b> \f$S\f$ is an assignment vector \f$ \lambda_{S}\in\{0,1\}^n \f$ which

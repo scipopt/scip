@@ -42,6 +42,7 @@ namespace scip
  *
  *  - \ref CONS "Instructions for implementing a constraint handler"
  *  - \ref CONSHDLRS "List of available constraint handlers"
+ *  - \ref type_cons.h "Corresponding C interface"
  */
 class ObjConshdlr : public ObjProbCloneable
 {

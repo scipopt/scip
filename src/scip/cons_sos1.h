@@ -21,7 +21,7 @@
  * A specially ordered set of type 1 (SOS1) is a sequence of variables such that at most one
  * variable is nonzero. The special case of two variables arises, for instance, from equilibrium or
  * complementary conditions like \f$x \cdot y = 0\f$. Note that it is in principle allowed that a
- * variables appears twice, but it then can be fixed to 0.
+ * variable appears twice, but it then can be fixed to 0.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

@@ -37,6 +37,7 @@ namespace scip
  *  function (this function has to be implemented). This function is: scip_redcost().
  *
  *  - \ref PRICER "Instructions for implementing a variable pricer"
+ *  - \ref type_pricer.h "Corresponding C interface"
  */
 class ObjPricer : public ObjProbCloneable
 {

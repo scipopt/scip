@@ -15,8 +15,24 @@
 
 /**@file   cons_setppc.h
  * @ingroup CONSHDLRS
- * @brief  constraint handler for the set partitioning / packing / covering constraints
+ * @brief  Constraint handler for the set partitioning / packing / covering constraints \f$1^T x\ \{=, \le, \ge\}\ 1\f$.
  * @author Tobias Achterberg
+ * @author Michael Winkler
+ *
+ * This constraint handler handles three special classes of linear constraints, namely
+ * set partitioning, set packing, and set covering constraints.
+ * For a set of binary variables \f$x_i, i=1,\dots,n\f$, a set partitioning constraint has the form
+ * \f[
+ *   \sum_{i=1}^n x_i = 1,
+ * \f]
+ * a set packing constraint has the form
+ * \f[
+ *   \sum_{i=1}^n x_i \le 1,
+ * \f]
+ * and a set covering constraint has the form
+ * \f[
+ *   \sum_{i=1}^n x_i \ge 1.
+ * \f]
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
