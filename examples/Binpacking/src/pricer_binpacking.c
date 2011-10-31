@@ -14,12 +14,15 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pricer_binpacking.c
- * @brief  binpacking variable pricer
+ * @brief  Binpacking variable pricer
  * @author Timo Berthold
  * @author Stefan Heinz
  *
+ * This file implements the variable pricer which check if variables exist with negative reduced cost. See for more
+ * details \ref PRICER.
+ *
  * @page PRICER Pricing new variables
- * 
+ *
  * The task of the pricer is to search for new variables with negative reduced cost. Therefore the following integer
  * program is solved.
  *
@@ -78,7 +81,7 @@
  * Data structures
  */
 
-/** variable pricer data */
+/** @brief Variable pricer data used in the \ref pricer_binpacking.c "pricer" */
 struct SCIP_PricerData
 {
    SCIP_CONSHDLR*        conshdlr;           /**< comstraint handler for "same" and "diff" constraints */

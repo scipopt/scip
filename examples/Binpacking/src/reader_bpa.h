@@ -14,9 +14,11 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_bpa.h
- * @brief  binpacking problem reader file reader
+ * @brief  Binpacking problem reader file reader
  * @author Timo Berthold
  * @author Stefan Heinz
+ *
+ * This file implements the reader/parser used to read the binpacking input data. For more details see \ref READER.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
