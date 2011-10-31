@@ -150,15 +150,20 @@ SCIP_RETCODE readLine(
       *endoffile = TRUE;
    else
    {
+#ifndef NDEBUG
       char* result;
+#endif
 
       /* display prompt */
       SCIPmessagePrintDialog(prompt);
-      
+
       /* read line from stdin */
+#ifndef NDEBUG
       result = fgets(&dialoghdlr->buffer[dialoghdlr->bufferpos], dialoghdlr->buffersize - dialoghdlr->bufferpos, stdin);
       assert(result != NULL);
-
+#else
+      (void) fgets(&dialoghdlr->buffer[dialoghdlr->bufferpos], dialoghdlr->buffersize - dialoghdlr->bufferpos, stdin);
+#endif
       /* replace newline with \0 */
       s = strchr(&dialoghdlr->buffer[dialoghdlr->bufferpos], '\n');
       if( s != NULL )
