@@ -6256,9 +6256,3 @@
  * \verbinclude parameters.set
  */
 
-/**@page SCIPPY SCIPPY images
- *
- * \image html miniscippy.png
- * \image html scippy.png
- *
- */
