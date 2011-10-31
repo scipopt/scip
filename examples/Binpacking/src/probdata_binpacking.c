@@ -28,21 +28,21 @@
  * SCIP_ProbData is shown below.
  *
  * \code
- * /** @brief Problem data which is accessible in all places
+ *  ** @brief Problem data which is accessible in all places
  *  *
  *  *   This problem data is used to store the input of the binpacking, all variables which are created, and all
  *  *   constrsaints.
- *  */
+ *  *
  * struct SCIP_ProbData
  * {
- *    SCIP_VAR**            vars;         /**< all exiting variables in the problem */
- *    SCIP_CONS**           conss;        /**< set partitioning constraints for each item exactly one */
- *    SCIP_Longint*         weights;      /**< array of item weights */
- *    int*                  ids;          /**< array of item ids */
- *    int                   nvars;        /**< number of generated variables */
- *    int                   varssize;     /**< size of the variable array */
- *    int                   nitems;       /**< number of items */
- *    SCIP_Longint          capacity;     /**< bin capacity */
+ *    SCIP_VAR**            vars;         **< all exiting variables in the problem *
+ *    SCIP_CONS**           conss;        **< set partitioning constraints for each item exactly one *
+ *    SCIP_Longint*         weights;      **< array of item weights *
+ *    int*                  ids;          **< array of item ids *
+ *    int                   nvars;        **< number of generated variables *
+ *    int                   varssize;     **< size of the variable array *
+ *    int                   nitems;       **< number of items *
+ *    SCIP_Longint          capacity;     **< bin capacity *
  * };
  * \endcode
  *
