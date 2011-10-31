@@ -30,7 +30,6 @@
 #include <string.h>
 
 #include "scip/cons_linear.h"
-#include "scip/cons_setppc.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
 #include "scip/cons_indicator.h"
@@ -135,7 +134,7 @@ Bool xlp_conname_exists(
 }
 
 
-/** method creates a linear constraint and is called directly from ZIMPL 
+/** method creates a constraint and is called directly from ZIMPL
  *
  *  @note this method is used by ZIMPL from version 3.00; 
  */
@@ -766,27 +765,30 @@ Var* xlp_addvar(
    initial = !dynamiccols;
    removable = dynamiccols;
 
-   if( numb_is_int(priority) )
-      branchpriority = numb_toint(priority);
-   else
-   {
-      if( !readerdata->branchpriowarning )
-      {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,
-            "ZIMPL reader: fractional branching priorities in input - rounding down to integer values\n");
-         readerdata->branchpriowarning = TRUE;
-      }
-      branchpriority = (int)numb_todbl(priority);
-   }
-
    /* create variable */
    SCIP_CALL_ABORT( SCIPcreateVar(scip, &var, name, lb, ub, 0.0, vartype, initial, removable, NULL, NULL, NULL, NULL, NULL) );
 
    /* add variable to the problem; we are releasing the variable later */
    SCIP_CALL_ABORT( SCIPaddVar(scip, var) );
 
-   /* change the branching priority of the variable */
-   SCIP_CALL_ABORT( SCIPchgVarBranchPriority(scip, var, branchpriority) );
+   if( !numb_equal(priority, numb_unknown()) )
+   {
+      if( numb_is_int(priority) )
+	 branchpriority = numb_toint(priority);
+      else
+      {
+	 if( !readerdata->branchpriowarning )
+	 {
+	    SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+	       "ZIMPL reader: fractional branching priorities in input - rounding down to integer values\n");
+	    readerdata->branchpriowarning = TRUE;
+	 }
+	 branchpriority = (int)numb_todbl(priority);
+      }
+
+      /* change the branching priority of the variable */
+      SCIP_CALL_ABORT( SCIPchgVarBranchPriority(scip, var, branchpriority) );
+   }
 
    /* check if we are willing to except a primal solution candidate */
    if( readerdata->valid )
