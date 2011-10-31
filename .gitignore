@@ -29,3 +29,5 @@ src/scip/githash.c
 settings/
 examples/Eventhdlr/check/
 examples/MIPSolver/check/
+examples/Binpacking/doc/html/
+examples/Coloring/doc/html/
