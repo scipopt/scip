@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch_strongcoloring.c
- * @brief  coloring branching rule
+ * @brief  branching rule performing strong branching for the vertex coloring problem
  * @author Gerald Gamrath
  *
  * This file implements an additional branching rule for the coloring algorithm.
@@ -35,13 +35,12 @@
  * possible branching is found that has only one feasible child. This results in more restrictions
  * in this child without increasing the number of unprocessed nodes.
  *
- * The second improvement is to compute a priority for all the possible combinations, w.r.t. the
+ * The second improvement is to compute a priority for all possible combinations, w.r.t. the
  * fractional values of the variables. Then, only the first best k combinations are investigated by
  * strongbranching.
  *
  * This code is not optimized and in most cases inferior to the standard branching rule. It is only
  * a demonstration of how to perform strongbranching on constraints!
- *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

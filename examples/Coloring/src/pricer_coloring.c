@@ -14,23 +14,22 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pricer_coloring.c
- * @brief  coloring variable pricer
+ * @brief  variable pricer for the vertex coloring problem
  * @author Gerald Gamrath
  *
  * This file implements the pricer for the coloring algorithm.
- * 
+ *
  * It computes maximal stable sets in the current graph whose corresponding variables can improve
  * the current LP solution.  This is done by computing a maximum weighted stable set in the current
- * graph with dual-variables of the node constraints as weights. A stable set can improve the
- * solution, if the weight of the set is larger than 1, since it then has negative reduced costs,
- * which are (1 - weight of the set).
+ * graph with dual-variables of the node constraints as weights. A variable can improve the
+ * solution, if the weight of the corresponding stable set is larger than 1, since it then has
+ * negative reduced costs, which are given by (1 - weight of the set).
  *
- * First, a greedy-method tries to compute such a stable set. If it fails, the tclique-algorithm is
+ * The pricer first tries to compute such a stable set using a a greedy-method. If it fails, the tclique-algorithm is
  * used on the complementary graph. This is a branch-and-bound based algorithm for maximal cliques,
- * included in SCIP.  In this case, not only the best solution is added to the LP, as well all other
+ * included in SCIP.  In this case, not only the best solution is added to the LP, but also all other
  * stable sets found during the branch-and-bound process that could improve the current LP solution
  * are added, limited to a maximal number that can be changed by a parameter.
- *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
