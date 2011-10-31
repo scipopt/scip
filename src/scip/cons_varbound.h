@@ -15,7 +15,7 @@
 
 /**@file   cons_varbound.h
  * @ingroup CONSHDLRS
- * @brief  Constraint handler for variable bound constraints \f$lhs \le x + c*y \le rhs\f$.
+ * @brief  Constraint handler for variable bound constraints \f$lhs \le x + c y \le rhs\f$.
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Michael Winkler
