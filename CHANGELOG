@@ -1,3 +1,9 @@
+SCIP version NEXT
+===============
+
+fixed bugs:
+- fixed bug in reader_mps.c: INTEND marker is now also written, if COLUMNS section ends with non-continous variables
+
 SCIP version 2.1.0
 ===============
 

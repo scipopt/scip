@@ -2917,7 +2917,7 @@ void printColumnSection(
          continue;
       }
          
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && intSection)
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && intSection )
       {
          /* end integer section in MPS format */
          printStart(scip, file, "", "INTEND", (int) maxnamelen);
@@ -2959,6 +2959,17 @@ void printColumnSection(
       if( recordcnt == 1 )
          SCIPinfoMessage(scip, file, "\n");
    }
+   /* end integer section, if the columns sections ends with integer variables */
+   if( intSection )
+   {
+      /* end integer section in MPS format */
+      printStart(scip, file, "", "INTEND", (int) maxnamelen);
+      printRecord(scip, file, "'MARKER'", "", maxnamelen);
+      printRecord(scip, file, "'INTEND'", "", maxnamelen);
+      SCIPinfoMessage(scip, file, "\n", maxnamelen);
+      intSection = FALSE;
+   }
+
 }
 
 
