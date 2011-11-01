@@ -3142,22 +3142,8 @@ SCIP_RETCODE presolRoundIndicator(
          /* check objective of binary variable */
          binvar = consdata->binvar;
          obj = varGetObjDelta(binvar);
-         if ( obj >= 0.0 )
-         {
-            /* In this case we would like to fix the binary variable to 0, if it is not locked down
-               (should also have been performed by other dual reductions). */
-            if ( SCIPvarGetNLocksDown(binvar) == 0 )
-            {
-               if ( SCIPvarGetLbGlobal(binvar) < 0.5 )
-               {
-                  SCIPdebugMessage("Presolving <%s> - dual reduction: Slack variable fixed to 0, fix binary variable to 0.\n", SCIPconsGetName(cons));
-                  SCIP_CALL( SCIPfixVar(scip, binvar, 0.0, &infeasible, &fixed) );
-                  assert( ! infeasible );
-                  if ( fixed )
-                     ++(*nfixedvars);
-               }
-            }
-         }
+
+         /* if obj = 0, we prefer fixing the binary variable to 1 (if possible) */
          if ( obj <= 0.0 )
          {
             /* In this case we would like to fix the binary variable to 1, if it is not locked up
@@ -3170,6 +3156,24 @@ SCIP_RETCODE presolRoundIndicator(
                {
                   SCIPdebugMessage("Presolving <%s> - dual reduction: Slack variable fixed to 0, fix binary variable to 1.\n", SCIPconsGetName(cons));
                   SCIP_CALL( SCIPfixVar(scip, binvar, 1.0, &infeasible, &fixed) );
+                  assert( ! infeasible );
+                  if ( fixed )
+                     ++(*nfixedvars);
+                  /* make sure that the other case does not occur */
+                  obj = -1.0;
+               }
+            }
+         }
+         if ( obj >= 0.0 )
+         {
+            /* In this case we would like to fix the binary variable to 0, if it is not locked down
+               (should also have been performed by other dual reductions). */
+            if ( SCIPvarGetNLocksDown(binvar) == 0 )
+            {
+               if ( SCIPvarGetLbGlobal(binvar) < 0.5 )
+               {
+                  SCIPdebugMessage("Presolving <%s> - dual reduction: Slack variable fixed to 0, fix binary variable to 0.\n", SCIPconsGetName(cons));
+                  SCIP_CALL( SCIPfixVar(scip, binvar, 0.0, &infeasible, &fixed) );
                   assert( ! infeasible );
                   if ( fixed )
                      ++(*nfixedvars);
@@ -3312,22 +3316,8 @@ SCIP_RETCODE propIndicator(
             /* check objective of binary variable */
             binvar = consdata->binvar;
             obj = varGetObjDelta(binvar);
-            if ( obj >= 0.0 )
-            {
-               /* In this case we would like to fix the binary variable to 0, if it is not locked down
-                  (should also have been performed by other dual reductions). */
-               if ( SCIPvarGetNLocksDown(binvar) == 0 )
-               {
-                  if ( SCIPvarGetLbLocal(binvar) < 0.5 )
-                  {
-                     SCIPdebugMessage("Propagating <%s> - dual reduction: Slack variable fixed to 0, fix binary variable to 0.\n", SCIPconsGetName(cons));
-                     SCIP_CALL( SCIPinferVarUbCons(scip, binvar, 0.0, cons, 2, FALSE, &infeasible, &tightened) );
-                     assert( ! infeasible );
-                     if ( tightened )
-                        ++(*nGen);
-                  }
-               }
-            }
+
+            /* if obj = 0, we prefer setting the binary variable to 1 (if possible) */
             if ( obj <= 0.0 )
             {
                /* In this case we would like to fix the binary variable to 1, if it is not locked up
@@ -3340,6 +3330,24 @@ SCIP_RETCODE propIndicator(
                   {
                      SCIPdebugMessage("Propagating <%s> - dual reduction: Slack variable fixed to 0, fix binary variable to 1.\n", SCIPconsGetName(cons));
                      SCIP_CALL( SCIPinferVarLbCons(scip, binvar, 1.0, cons, 2, FALSE, &infeasible, &tightened) );
+                     assert( ! infeasible );
+                     if ( tightened )
+                        ++(*nGen);
+                     /* Make sure that the other case does not occur, since we are not sure whether SCIPinferVarLbCons() directly changes the bounds. */
+                     obj = -1.0;
+                  }
+               }
+            }
+            if ( obj >= 0.0 )
+            {
+               /* In this case we would like to fix the binary variable to 0, if it is not locked down
+                  (should also have been performed by other dual reductions). */
+               if ( SCIPvarGetNLocksDown(binvar) == 0 )
+               {
+                  if ( SCIPvarGetLbLocal(binvar) < 0.5 )
+                  {
+                     SCIPdebugMessage("Propagating <%s> - dual reduction: Slack variable fixed to 0, fix binary variable to 0.\n", SCIPconsGetName(cons));
+                     SCIP_CALL( SCIPinferVarUbCons(scip, binvar, 0.0, cons, 2, FALSE, &infeasible, &tightened) );
                      assert( ! infeasible );
                      if ( tightened )
                         ++(*nGen);
@@ -6368,6 +6376,8 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
       }
       else
       {
+         SCIP_Real obj;
+
          /* the original constraint is satisfied - we can set the slack variable to 0 (slackvar
             should only occur in this indicator constraint) */
          if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, slackvar), 0.0) )
@@ -6376,16 +6386,21 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
             *changed = TRUE;
          }
 
-         if ( varGetObjDelta(binvar) < 0 )
+         obj = varGetObjDelta(binvar);
+
+         /* if objective coefficient is 0, we prefer setting the binary variable to 1 */
+         if ( obj <= 0 )
          {
             /* setting variable to 1 decreases objective -> check whether variable only occurs in the current constraint */
             if ( SCIPvarGetNLocksUp(binvar) <= 1 && ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 1.0) )
             {
                SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 1.0) );
                *changed = TRUE;
+               /* make sure that the other case does not occur */
+               obj = -1.0;
             }
          }
-         else
+         if ( obj >= 0 )
          {
             /* setting variable to 0 may decrease objective -> check whether variable only occurs in the current constraint
              * note: binary variables are only locked up */
