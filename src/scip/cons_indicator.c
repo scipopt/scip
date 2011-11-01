@@ -571,7 +571,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
    conflicthdlrdata = SCIPconflicthdlrGetData(conflicthdlr);
    assert( conflicthdlrdata != NULL );
 
-   /* possible skip conflict handler */
+   /* possibly skip conflict handler */
    if ( ! ((SCIP_CONFLICTHDLRDATA*) conflicthdlrdata)->conshdlrdata->conflictsupgrade )
       return SCIP_OKAY;
 
@@ -6298,9 +6298,10 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
    SCIP_Real* linvals;
    SCIP_VAR* slackvar;
    SCIP_VAR* binvar;
-   int nlinvars;
+   SCIP_Real slackval;
    SCIP_Real sum;
    SCIP_Real val;
+   int nlinvars;
    int v;
 
    assert( cons != NULL );
@@ -6322,32 +6323,35 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
    if ( ! consdata->linconsactive )
       return SCIP_OKAY;
 
-   slackvar = consdata->slackvar;
-   binvar = consdata->binvar;
    lincons = consdata->lincons;
-   assert( slackvar != NULL );
    assert( lincons != NULL );
-   assert( binvar != NULL );
 
    /* avoid non-active linear constraints, e.g., due to preprocessing */
-   if ( SCIPconsIsActive(lincons) || SCIPgetStage(scip) < SCIP_STAGE_PRESOLVING)
+   if ( SCIPconsIsActive(lincons) || SCIPgetStage(scip) < SCIP_STAGE_PRESOLVING )
    {
+      slackvar = consdata->slackvar;
+      binvar = consdata->binvar;
+      assert( slackvar != NULL );
+      assert( binvar != NULL );
+
       nlinvars = SCIPgetNVarsLinear(scip, lincons);
       linvars = SCIPgetVarsLinear(scip, lincons);
       linvals = SCIPgetValsLinear(scip, lincons);
 
       /* compute value of regular variables */
       sum = 0.0;
+      slackval = 1.0;
       for (v = 0; v < nlinvars; ++v)
       {
          SCIP_VAR* var;
          var = linvars[v];
          if ( var != slackvar )
             sum += linvals[v] * SCIPgetSolVal(scip, sol, var);
+         else
+            slackval = linvals[v];
       }
-
-      assert( SCIPisInfinity(scip, -SCIPgetLhsLinear(scip, lincons)) ||
-         SCIPisInfinity(scip, SCIPgetRhsLinear(scip, lincons)) );
+      assert( ! SCIPisZero(scip, slackval) );
+      assert( SCIPisInfinity(scip, -SCIPgetLhsLinear(scip, lincons)) || SCIPisInfinity(scip, SCIPgetRhsLinear(scip, lincons)) );
 
       val = SCIPgetRhsLinear(scip, lincons);
       if ( ! SCIPisInfinity(scip, val) )
@@ -6358,6 +6362,7 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
          if ( ! SCIPisInfinity(scip, -val) )
             sum = val - sum;
       }
+      sum /= slackval;
 
       /* check if linear constraint w/o slack variable is violated */
       if ( SCIPisFeasPositive(scip, sum) )
