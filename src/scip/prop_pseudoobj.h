@@ -15,7 +15,7 @@
 
 /**@file   prop_pseudoobj.h
  * @ingroup PROPAGATORS
- * @brief  pseudoobj propagator
+ * @brief  Pseudo objective propagator
  * @author Tobias Achterberg
  * @author Stefan Heinz
  *
