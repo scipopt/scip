@@ -75,7 +75,7 @@
 #define DEFAULT_MAXROUNDSROOT        50 /**< maximal number of separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXDEPTH             -1 /**< maximal depth at which the separator is applied */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
-#define DEFAULT_TIMELIMIT           500 /**< time limit for sub-MIP */
+#define DEFAULT_TIMELIMIT         500.0 /**< time limit for sub-MIP */
 #define DEFAULT_MEMORYLIMIT        1e20 /**< memory limit for sub-MIP */
 #define DEFAULT_NODELIMIT       10000LL /**< node limit for sub-MIP */
 #define DEFAULT_OBJWEIGHT         1e-03 /**< objective weight for artificial variables */
@@ -2556,7 +2556,6 @@ SCIP_RETCODE createCGCutCMIR(
                   SCIPdebugMessage(" -> CG-cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
                      name, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
                      SCIPgetCutEfficacy(scip, NULL, cut));
-                  success = FALSE;
 
                   /* release the row */
                   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
@@ -2629,8 +2628,6 @@ SCIP_RETCODE createCGCutStrongCG(
    SCIP_Real*            cutvals,            /**< values of variables in cut */
    SCIP_Real*            varsolvals,         /**< solution value of variables */
    SCIP_Real*            weights,            /**< weights to compute cmir cut */
-   int*                  boundsfortrans,     /**< bounds for cmir function of NULL */
-   SCIP_BOUNDTYPE*       boundtypesfortrans, /**< type of bounds for cmir function or NULL */
    int*                  nprevrows,          /**< number of previously generated rows */
    SCIP_ROW**            prevrows,           /**< previously generated rows */
    unsigned int*         ngen                /**< number of generated cuts */
@@ -2766,7 +2763,6 @@ SCIP_RETCODE createCGCutStrongCG(
                   SCIPdebugMessage(" -> CG-cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
                      name, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
                      SCIPgetCutEfficacy(scip, NULL, cut));
-                  success = FALSE;
 
                   /* release the row */
                   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
@@ -2932,7 +2928,7 @@ SCIP_RETCODE createCGCuts(
       if ( sepadata->usestrongcg )
       {
          SCIP_CALL( createCGCutStrongCG(scip, sepadata, mipdata, sol, normtype, cutcoefs, cutvars, cutvals, varsolvals, weights,
-               boundsfortrans, boundtypesfortrans, &nprevrows, prevrows, ngen) );
+               &nprevrows, prevrows, ngen) );
       }
 
       if ( ! sepadata->usecmir && ! sepadata->usestrongcg )
@@ -3118,7 +3114,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
    depth = SCIPgetDepth(scip);
 
 #if 1
-   if ( sepadata->firstlptime == SCIP_INVALID )
+   if ( sepadata->firstlptime == SCIP_INVALID )   /*lint !e777*/
    {
       /* approximate time for first LP */
       sepadata->firstlptime = SCIPgetSolvingTime(scip) - SCIPgetPresolvingTime(scip);
