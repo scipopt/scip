@@ -604,6 +604,13 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
          {
             SCIPdebugMessage("coefdiving found roundable primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
 
+            /* try to correct indicator constraints */
+            if ( nindconss > 0 )
+            {
+               assert( heurdata->indconshdlr != NULL );
+               SCIP_CALL( SCIPmakeIndicatorsFeasible(scip, heurdata->indconshdlr, heurdata->sol, &success) );
+            }
+
             /* try to add solution to SCIP */
             SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, &success) );
 
