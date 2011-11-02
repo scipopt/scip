@@ -15,7 +15,7 @@
 
 /**@file   heur_zirounding.h
  * @ingroup PRIMALHEURISTICS
- * @brief  zirounding primal heuristic
+ * @brief  ZI Round primal heuristic
  * @author Gregor Hendel
  *
  * ZI Round (C. Wallace, Journal of Heuristics 2009) reduces the integer infeasibility of an LP solution step-by-step by

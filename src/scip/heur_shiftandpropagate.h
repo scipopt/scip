@@ -15,7 +15,7 @@
 
 /**@file   heur_shiftandpropagate.h
  * @ingroup PRIMALHEURISTICS
- * @brief  shiftandpropagate primal heuristic
+ * @brief  preroot heuristic that alternatingly fixes variables and propagates domains
  * @author Timo Berthold
  * @author Gregor Hendel
  *

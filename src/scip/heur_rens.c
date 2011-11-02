@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_rens.c
- * @brief  RENS primal heuristic
+ * @brief  LNS heuristic that finds the optimal rounding to a given point
  * @author Timo Berthold
  */
 

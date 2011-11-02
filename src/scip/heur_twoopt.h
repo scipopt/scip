@@ -15,7 +15,7 @@
 
 /**@file   heur_twoopt.h
  * @ingroup PRIMALHEURISTICS
- * @brief  primal heuristic to improve incumbent solution by flipping pairs of variables
+ * @brief  Primal heuristic to improve incumbent solution by flipping pairs of variables
  * @author Timo Berthold
  * @author Gregor Hendel
  *

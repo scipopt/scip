@@ -15,7 +15,7 @@
 
 /**@file   heur_oneopt.h
  * @ingroup PRIMALHEURISTICS
- * @brief  improvement heuristic that alters single variable values
+ * @brief  Improvement heuristic that alters single variable values
  * @author Timo Berthold
  *
  * Oneopt is a straightforward improvement heuristic: given a feasible MIP solution, the value of
