@@ -60,7 +60,6 @@
                                          *   (0: don't abort) */
 
 
-
 /*
  * Data structures
  */
@@ -562,9 +561,70 @@ SCIP_RETCODE applyProbing(
 	    "   (%.1fs) probing cycle finished: starting next cycle\n", SCIPgetSolvingTime(scip));
 	 i = 0;
 
-	 /* resorting here might lead to probing a second time on the same variable */
-	 SCIP_CALL( sortVariables(scip, propdata->sortedvars, propdata->nsortedbinvars, 0) );
-	 propdata->lastsortstartidx = 0;
+	 if( SCIPgetStage(scip) ==  SCIP_STAGE_PRESOLVING && SCIPgetNBinVars(scip) != nbinvars )
+	 {
+	    SCIP_VAR** probvars;
+	    int nnewvars;
+	    int nnewbinvars;
+	    int v;
+
+	    assert(vars == propdata->sortedvars);
+	    assert(nbinvars == propdata->nsortedbinvars);
+
+	    /* release old variables and free memory */
+	    for( v = 0; v < propdata->nsortedvars; ++v )
+	    {
+	       SCIP_CALL( SCIPreleaseVar(scip, &propdata->sortedvars[v]) );
+	    }
+	    SCIPfreeMemoryArray(scip, &propdata->sortedvars);
+	    propdata->nsortedvars = 0;
+	    propdata->nsortedbinvars = 0;
+
+	    SCIP_CALL( SCIPgetVarsData(scip, &probvars, &nnewvars, &nnewbinvars, NULL, NULL, NULL) );
+	    if( nnewbinvars == 0 )
+	    {
+	       *startidx = 0;
+	       propdata->lastsortstartidx = -1;
+	       propdata->nuseless = 0;
+	       propdata->ntotaluseless = 0;
+
+	       goto TERMINATE;
+	    }
+
+	    /* get new variables */
+	    SCIP_CALL( SCIPduplicateMemoryArray(scip, &propdata->sortedvars, probvars, nnewvars) );
+	    propdata->nsortedvars = nnewvars;
+	    propdata->nsortedbinvars = nnewbinvars;
+	    nbinvars = nnewbinvars;
+	    vars = propdata->sortedvars;
+	    nvars = propdata->nsortedvars;
+
+	    SCIP_CALL( SCIPreallocBufferArray(scip, &zeroimpllbs, nvars) );
+	    SCIP_CALL( SCIPreallocBufferArray(scip, &zeroimplubs, nvars) );
+	    SCIP_CALL( SCIPreallocBufferArray(scip, &zeroproplbs, nvars) );
+	    SCIP_CALL( SCIPreallocBufferArray(scip, &zeropropubs, nvars) );
+	    SCIP_CALL( SCIPreallocBufferArray(scip, &oneimpllbs, nvars) );
+	    SCIP_CALL( SCIPreallocBufferArray(scip, &oneimplubs, nvars) );
+	    SCIP_CALL( SCIPreallocBufferArray(scip, &oneproplbs, nvars) );
+	    SCIP_CALL( SCIPreallocBufferArray(scip, &onepropubs, nvars) );
+
+	    /* correct oldstartidx which is used for early termination */
+	    if( oldstartidx >= nbinvars )
+	       oldstartidx = nbinvars - 1;
+
+	    /* capture variables to make sure, the variables are not deleted */
+	    for( v = 0; v < propdata->nsortedvars; ++v )
+	    {
+	       SCIP_CALL( SCIPcaptureVar(scip, propdata->sortedvars[v]) );
+	    }
+	 }
+
+	 if( SCIPgetStage(scip) ==  SCIP_STAGE_PRESOLVING )
+	 {
+	    /* resorting here might lead to probing a second time on the same variable */
+	    SCIP_CALL( sortVariables(scip, propdata->sortedvars, propdata->nsortedbinvars, 0) );
+	    propdata->lastsortstartidx = 0;
+	 }
       }
 
    }
@@ -572,6 +632,7 @@ SCIP_RETCODE applyProbing(
 
    *startidx = i;
 
+ TERMINATE:
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &onepropubs);
    SCIPfreeBufferArray(scip, &oneproplbs);
@@ -798,8 +859,43 @@ SCIP_DECL_PROPPRESOL(propPresolProbing)
    /* if we probed all binary variables in previous runs, start again with the first one */
    if( propdata->lastnode != -1 && propdata->startidx >= nbinvars )
    {
+      SCIP_VAR** probvars;
+      int i;
+
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                       "   (%.1fs) probing cycle finished: starting next cycle\n", SCIPgetSolvingTime(scip));
+
+      /* release old variables and free memory */
+      for( i = 0; i < propdata->nsortedvars; ++i )
+      {
+         SCIP_CALL( SCIPreleaseVar(scip, &propdata->sortedvars[i]) );
+      }
+      SCIPfreeMemoryArray(scip, &propdata->sortedvars);
+      propdata->nsortedvars = 0;
+      propdata->nsortedbinvars = 0;
+
+      SCIP_CALL( SCIPgetVarsData(scip, &probvars, &nvars, &nbinvars, NULL, NULL, NULL) );
+      if( nbinvars == 0 )
+      {
+	 propdata->startidx = 0;
+	 propdata->lastsortstartidx = -1;
+	 propdata->nuseless = 0;
+	 propdata->ntotaluseless = 0;
+
+         return SCIP_OKAY;
+      }
+
+      /* get new variables */
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &propdata->sortedvars, probvars, nvars) );
+      propdata->nsortedvars = nvars;
+      propdata->nsortedbinvars = nbinvars;
+
+      /* capture variables to make sure, the variables are not deleted */
+      for( i = 0; i < propdata->nsortedvars; ++i )
+      {
+         SCIP_CALL( SCIPcaptureVar(scip, propdata->sortedvars[i]) );
+      }
+
       propdata->startidx = 0;
       propdata->lastsortstartidx = -1;
       propdata->nuseless = 0;
