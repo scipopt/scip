@@ -15,8 +15,12 @@
 
 /**@file   heur_mutation.h
  * @ingroup PRIMALHEURISTICS
- * @brief  mutation primal heuristic
+ * @brief  LNS heuristic that tries to randomly mutate the incumbent solution
  * @author Timo Berthold
+ *
+ * Mutation is a large neighborhood search improvement heuristic that is inspired by genetic algorithms and requires a
+ * known feasible solution. It randomly fixes variables to their value in the incumbent solution and solves a sub-SCIP,
+ * consisting of the remaining variables. See also @ref heur_crossover.h
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

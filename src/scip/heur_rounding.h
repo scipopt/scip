@@ -17,6 +17,13 @@
  * @ingroup PRIMALHEURISTICS
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities
  * @author Tobias Achterberg
+ *
+ * Rounding heuristic that starts from an LP-feasible point and reduces the number of fractional variables by one in
+ * each step. As long as no LP row is violated, the algorithm iterates over the fractional variables and applies a
+ * rounding into the direction of fewer locks, updating the activities of the LP rows after each step.  If there is a
+ * violated LP row, the heuristic will try to find a fractional variable that can be rounded in a direction such that
+ * the violation of the constraint is decreased, using the number of up- and down-locks as a tie breaker.  If no
+ * rounding can decrease the violation of the constraint, the procedure is aborted.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

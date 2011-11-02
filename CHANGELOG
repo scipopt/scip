@@ -20,7 +20,6 @@ plugins:
   1 y0 + 2 y1 + 4 y2 + 8 y3 <= 10 and x = 1 y0 + 2 y1 + 4 y2 + 8 y3
 
 parameters:
-- changed default value of parameter <presolving/inttobinary/maxrounds> to 0
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines
   the domainsize for which integers are converted to their binary representation
 - new parameter <presolving/convertinttobin/onlypoweroftwo> by default is set to FALSE, that parameter allows you to
@@ -31,6 +30,13 @@ parameters:
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to
   set relaxrows = FALSE
+
+SCIP version 2.1.1
+===============
+
+fixed bugs:
+- fixed bug in reader_mps.c: INTEND marker is now also written, if COLUMNS section ends with non-continous variables
+- fixed numeric issue in aggregations
 
 SCIP version 2.1.0
 ===============

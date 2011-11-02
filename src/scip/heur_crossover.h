@@ -15,8 +15,13 @@
 
 /**@file   heur_crossover.h
  * @ingroup PRIMALHEURISTICS
- * @brief  crossover primal heuristic
+ * @brief  LNS heuristic that tries to combine several feasible solutions
  * @author Timo Berthold
+ *
+ * Crossover is a large neighborhood search improvement heuristic that is inspired by genetic algorithms and requires
+ * more than one feasible solution. For a set of feasible solutions, e.g., the three best found so far, it fixes
+ * variables that take identical values in all of them and solves a corresponding sub-SCIP. See also @ref
+ * heur_mutation.h
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

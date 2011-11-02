@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_rins.c
- * @brief  RINS primal heuristic
+ * @brief  LNS heuristic that combines the incumbent with the LP optimum
  * @author Timo Berthold
  */
 

@@ -28,7 +28,7 @@
  *
  *  \f[
  *  \begin{array}[t]{rll}
- *       \max & \displaystyle \sum_{i=1}^n (\lambda_S)_i y^*_i\\
+ *       \max & \displaystyle \sum_{i=1}^n (\lambda_S)_i y^\star_i\\
  *        & \\
  *        subject \ to & \displaystyle \sum_{i=0}^n (\lambda_S)_i s_i \leq \kappa \\
  *        & \\
@@ -36,7 +36,7 @@
  *  \end{array}
  * \f]
  *
- * where \f$ (\lambda_S)_i \f$ for \f$i\in\{1,\dots,n\}\f$ are binary variables and \f$y^*_i\f$ given by the dual
+ * where \f$ (\lambda_S)_i \f$ for \f$i\in\{1,\dots,n\}\f$ are binary variables and \f$y^\star_i\f$ given by the dual
  * solution of the restricted master problem. See the \ref PROBLEM "problem description" for more details.
  *
  * To solve the above integer program we create new SCIP instance within SCIP and use the usual functions to create

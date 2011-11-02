@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_mutation.c
- * @brief  mutation primal heuristic
+ * @brief  LNS heuristic that tries to randomly mutate the incumbent solution
  * @author Timo Berthold
  */
 

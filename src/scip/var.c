@@ -4514,7 +4514,7 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    SCIP_Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
    )
 {
-   int agg;
+   SCIP_Bool easyaggr;
 
    assert(set != NULL);
    assert(blkmem != NULL);
@@ -4556,21 +4556,28 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    assert(SCIPvarGetType(varx) >= SCIPvarGetType(vary));
 
    /* figure out, which variable should be aggregated */
-   agg = -1;
+   easyaggr = FALSE;
 
-   /* a*x + b*y == c
-    *  ->  x == -b/a * y + c/a  (agg=0)
-    *  ->  y == -a/b * x + c/b  (agg=1)
+   /* check if it is an easy aggregation that means:
+    *
+    *   a*x + b*y == c -> x == -b/a * y + c/a iff b/a != 0 and abs(b/a) < infinty
     */
-   if( SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(vary) < SCIP_VARTYPE_CONTINUOUS )
-      agg = 0;
-   else if( SCIPsetIsFeasIntegral(set, scalary/scalarx) )
-      agg = 0;
-   else if( SCIPsetIsFeasIntegral(set, scalarx/scalary) && SCIPvarGetType(vary) == SCIPvarGetType(varx) )
-      agg = 1;
-   if( SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINUOUS )
-      agg = 0;
-   if( agg == 1 )
+   if( !SCIPsetIsZero(set, scalary/scalarx)  && !SCIPsetIsInfinity(set, REALABS(scalary/scalarx)) )
+   {
+      if( SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(vary) < SCIP_VARTYPE_CONTINUOUS )
+         easyaggr = TRUE;
+      else if( SCIPsetIsFeasIntegral(set, scalary/scalarx) )
+         easyaggr = TRUE;
+      else if( SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINUOUS )
+         easyaggr = TRUE;
+   }
+
+   /* check if we have easy aggregation if we flip the variables x and y that means:
+    *
+    *   a*x + b*y == c -> y == -a/b * x + c/b  iff a/b != 0 and abs(b/a) < infinty
+    */
+   if( !easyaggr  && !SCIPsetIsZero(set, scalary/scalarx) && !SCIPsetIsInfinity(set, REALABS(scalary/scalarx))
+      && SCIPsetIsFeasIntegral(set, scalarx/scalary) && SCIPvarGetType(vary) == SCIPvarGetType(varx))
    {
       SCIP_VAR* var;
       SCIP_Real scalar;
@@ -4582,12 +4589,11 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
       scalar = scalary;
       scalary = scalarx;
       scalarx = scalar;
-      agg = 0;
+      easyaggr = TRUE;
    }
-   assert(agg == 0 || agg == -1);
 
    /* did we find an "easy" aggregation? */
-   if( agg == 0 )
+   if( easyaggr )
    {
       SCIP_Real scalar;
       SCIP_Real constant;

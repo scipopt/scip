@@ -15,9 +15,15 @@
 
 /**@file   heur_twoopt.h
  * @ingroup PRIMALHEURISTICS
- * @brief  primal heuristic to improve incumbent solution by flipping pairs of variables
+ * @brief  Primal heuristic to improve incumbent solution by flipping pairs of variables
  * @author Timo Berthold
  * @author Gregor Hendel
+ *
+ * The Twoopt heuristic attempts to improve a feasible MIP solution by altering the solution values of pairs of
+ * variables. Only variables which share a pre-defined ratio of LP rows are considered as pairs. Each step of the
+ * heuristic consists of improving the objective value by shifting one variable, and then compensating the resulting
+ * infeasibilities by shifting a second variable, without completely losing the objective improvement. Similarly to
+ * Oneopt (see @ref heur_oneopt.h), pairs are processed in non-decreasing order of their impact on the objective.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

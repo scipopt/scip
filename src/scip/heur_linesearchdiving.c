@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_linesearchdiving.c
- * @brief  linesearchdiving primal heuristic
+ * @brief  LP diving heuristic that fixes variables with a large difference to their root solution
  * @author Tobias Achterberg
  */
 
