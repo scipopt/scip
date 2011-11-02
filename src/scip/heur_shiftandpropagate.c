@@ -15,7 +15,7 @@
 
 /**@file   heur_shiftandpropagate.c
  * @brief  shiftandpropagate primal heuristic
- * @author Tobias Achterberg
+ * @author Timo Berthold
  * @author Gregor Hendel
  */
 
