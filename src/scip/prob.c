@@ -860,10 +860,15 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
    assert(prob != NULL);
    assert(set != NULL);
 
-   /* delete variables from the constraints */
-   for( i = 0; i < set->nconshdlrs; ++i )
+   /* delete variables from the constraints;
+    * do this only in solving stage, in presolving, it is already handled by the constraint handlers
+    */
+   if( SCIPsetGetStage(set) == SCIP_STAGE_SOLVING )
    {
-      SCIP_CALL( SCIPconshdlrDelVars(set->conshdlrs[i], blkmem, set, stat) );
+      for( i = 0; i < set->nconshdlrs; ++i )
+      {
+         SCIP_CALL( SCIPconshdlrDelVars(set->conshdlrs[i], blkmem, set, stat) );
+      }
    }
 
    for( i = 0; i < prob->ndeletedvars; ++i )
