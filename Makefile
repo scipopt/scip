@@ -574,6 +574,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/nodesel_hybridestim.o \
 			scip/nodesel_restartdfs.o \
 			scip/presol_boundshift.o \
+			scip/presol_convertinttobin.o \
 			scip/presol_dualfix.o \
 			scip/presol_implics.o \
 			scip/presol_inttobinary.o \

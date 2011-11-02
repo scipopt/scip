@@ -102,6 +102,7 @@
 #include "scip/nodesel_hybridestim.h"
 #include "scip/nodesel_restartdfs.h"
 #include "scip/presol_boundshift.h"
+#include "scip/presol_convertinttobin.h"
 #include "scip/presol_dualfix.h"
 #include "scip/presol_implics.h"
 #include "scip/presol_inttobinary.h"

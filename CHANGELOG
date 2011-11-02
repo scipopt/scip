@@ -14,8 +14,19 @@ performance improvements:
 - if probing reached the end of all variables it will restart the probing cycle correctly
 - improved intdiving heuristic by activating backtracking to a different fixing value
 
+plugins:
+- added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.
+  for integer variable 0 <= x <= 10 the binary variables y0, y1, y2, and y3 are created, such that
+  1 y0 + 2 y1 + 4 y2 + 8 y3 <= 10 and x = 1 y0 + 2 y1 + 4 y2 + 8 y3
+
 parameters:
 - changed default value of parameter <presolving/inttobinary/maxrounds> to 0
+- new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines
+  the domainsize for which integers are converted to their binary representation
+- new parameter <presolving/convertinttobin/onlypoweroftwo> by default is set to FALSE, that parameter allows you to
+  only convert integer variables with a domainsize of 2^p - 1 to their binary representation
+- new parameter <presolving/convertinttobin/samelocksinbothdirections> by default is set to FALSE, that parameter allows
+  you to convert only integer variables to their binary representation, which have the same amount of up- and downlocks
 
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to

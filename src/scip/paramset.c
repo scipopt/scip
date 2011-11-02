@@ -2815,7 +2815,15 @@ SCIP_RETCODE paramsetSetPresolvingAggressive(
    {
       SCIP_CALL( paramSetInt(scip, paramset, "presolving/boundshift/maxrounds", -1, quiet) );
    }
- 
+
+   /* explicitly change parameters of presolver convertinttobin, if included */
+#ifndef NDEBUG
+   if( SCIPfindPresol(scip, "convertinttobin") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetInt(scip, paramset, "presolving/convertinttobin/maxrounds", 0, quiet) );
+   }
+
    /* explicitly change parameters of probing */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/probing/maxuseless");
    param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
@@ -2881,6 +2889,14 @@ SCIP_RETCODE paramsetSetPresolvingFast(
 
    /* explicitly turn off restarts */
    SCIP_CALL( paramSetInt(scip, paramset, "presolving/maxrestarts", 0, quiet) );
+
+   /* explicitly change parameters of presolver convertinttobin, if included */
+#ifndef NDEBUG
+   if( SCIPfindPresol(scip, "convertinttobin") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetInt(scip, paramset, "presolving/convertinttobin/maxrounds", 0, quiet) );
+   }
 
    /* turn off probing, if included */
 #ifndef NDEBUG
