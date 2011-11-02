@@ -10518,6 +10518,8 @@ SCIP_RETCODE SCIPtightenVarLb(
    SCIP_Real ub;
 
    assert(infeasible != NULL);
+   /** @todo if needed provide pending local/global bound changes that will be flushed after leaving diving mode (as in struct_tree.h) */
+   assert(!SCIPinDive(scip));
 
    SCIP_CALL( checkStage(scip, "SCIPtightenVarLb", FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
@@ -10609,6 +10611,8 @@ SCIP_RETCODE SCIPtightenVarUb(
    SCIP_Real ub;
 
    assert(infeasible != NULL);
+   /** @todo if needed provide pending local/global bound changes that will be flushed after leaving diving mode (as in struct_tree.h) */
+   assert(!SCIPinDive(scip));
 
    SCIP_CALL( checkStage(scip, "SCIPtightenVarUb", FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
@@ -16875,6 +16879,8 @@ SCIP_RETCODE SCIPstartDive(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   assert(scip != NULL);
+
    SCIP_CALL( checkStage(scip, "SCIPstartDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
    assert(SCIPnodeGetType(SCIPgetCurrentNode(scip)) == SCIP_NODETYPE_FOCUSNODE);
 
@@ -16907,6 +16913,8 @@ SCIP_RETCODE SCIPendDive(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   assert(scip != NULL);
+
    SCIP_CALL( checkStage(scip, "SCIPendDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    if( !SCIPlpDiving(scip->lp) )
@@ -16948,6 +16956,9 @@ SCIP_RETCODE SCIPchgVarObjDive(
    SCIP_Real             newobj              /**< new objective value */
    )
 {
+   assert(scip != NULL);
+   assert(var != NULL);
+
    SCIP_CALL( checkStage(scip, "SCIPchgVarObjDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    if( !SCIPlpDiving(scip->lp) )
@@ -16977,6 +16988,9 @@ SCIP_RETCODE SCIPchgVarLbDive(
    SCIP_Real             newbound            /**< new value for bound */
    )
 {
+   assert(scip != NULL);
+   assert(var != NULL);
+
    SCIP_CALL( checkStage(scip, "SCIPchgVarLbDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    if( !SCIPlpDiving(scip->lp) )
@@ -16997,6 +17011,9 @@ SCIP_RETCODE SCIPchgVarUbDive(
    SCIP_Real             newbound            /**< new value for bound */
    )
 {
+   assert(scip != NULL);
+   assert(var != NULL);
+
    SCIP_CALL( checkStage(scip, "SCIPchgVarUbDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    if( !SCIPlpDiving(scip->lp) )
@@ -17016,6 +17033,9 @@ SCIP_Real SCIPgetVarObjDive(
    SCIP_VAR*             var                 /**< variable to get the bound for */
    )
 {
+   assert(scip != NULL);
+   assert(var != NULL);
+
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarObjDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    if( !SCIPlpDiving(scip->lp) )
@@ -17033,6 +17053,9 @@ SCIP_Real SCIPgetVarLbDive(
    SCIP_VAR*             var                 /**< variable to get the bound for */
    )
 {
+   assert(scip != NULL);
+   assert(var != NULL);
+
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarLbDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    if( !SCIPlpDiving(scip->lp) )
@@ -17050,6 +17073,9 @@ SCIP_Real SCIPgetVarUbDive(
    SCIP_VAR*             var                 /**< variable to get the bound for */
    )
 {
+   assert(scip != NULL);
+   assert(var != NULL);
+
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarUbDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    if( !SCIPlpDiving(scip->lp) )
@@ -17068,6 +17094,8 @@ SCIP_RETCODE SCIPsolveDiveLP(
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
 {
+   assert(scip != NULL);
+
    SCIP_CALL( checkStage(scip, "SCIPsolveDiveLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    if( !SCIPlpDiving(scip->lp) )
@@ -17102,9 +17130,23 @@ SCIP_Longint SCIPgetLastDivenode(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   assert(scip != NULL);
+
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetLastDivenode", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    return scip->stat->lastdivenode;
+}
+
+/** returns whether we are in diving mode */
+SCIP_Bool SCIPinDive(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPinDive", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPlpDiving(scip->lp);
 }
 
 

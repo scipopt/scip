@@ -5858,6 +5858,12 @@ SCIP_Longint SCIPgetLastDivenode(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** returns whether we are in diving mode */
+extern
+SCIP_Bool SCIPinDive(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /**@} */
 
 
