@@ -88,21 +88,21 @@
  * can be transformed into a solution where each item is packed exactly once with the same cost.
  *
  *
- * Since \f$\mathcal{S}\f$ can be of exponential size, we will use a column generation approach to solve this
+ * Since \f$\mathcal{S}\f$ can be of exponential size, we are using a column generation approach to solve this
  * problem. We initialize the (master) problem with a set of \f$ n \f$ variables representing packings of a single item
  * per bin.  Now, we have to iteratively search for variables representing "better" packings, i.e., a packing pattern
- * which reduces the overall cost. For a given solution \f$y^*\f$ of the (restricted) dual linear program, we have
+ * which reduces the overall cost. For a given solution \f$y^\star\f$ of the (restricted) dual linear program, we have
  * to ﬁnd a variable/packing \f$ \lambda_{S} \f$ for which the reduced costs is negative. This means:
  *
  * \f[
- *     c_{S} - \sum_{i=0}^n (\lambda_S)_i y_i^* < 0.
+ *     c_{S} - \sum_{i=0}^n (\lambda_S)_i y_i^\star < 0.
  * \f]
  *
  * Since all variables \f$ \lambda_{S} \f$ have an objective coefficient \f$ c_{S} = 1 \f$ the above condition is
  * equivalent to
  *
  * \f[
- *     \sum_{i=0}^n  (\lambda_S)_i y_i^* > 1.
+ *     \sum_{i=0}^n  (\lambda_S)_i y_i^\star > 1.
  * \f]
  *
  *
@@ -110,7 +110,7 @@
  *
  *  \f[
  *  \begin{array}[t]{rll}
- *       \max & \displaystyle \sum_{i=1}^n (\lambda_S)_i y^*_i\\
+ *       \max & \displaystyle \sum_{i=1}^n (\lambda_S)_i y^\star_i\\
  *        & \\
  *        subject \ to & \displaystyle \sum_{i=0}^n (\lambda_S)_i s_i \leq \kappa \\
  *        & \\
@@ -118,7 +118,7 @@
  *  \end{array}
  * \f]
  *
- * where \f$ (\lambda_S)_i \f$ for \f$i\in\{1,\dots,n\}\f$ are binary variables and \f$y^*_i\f$ given by the dual
+ * where \f$ (\lambda_S)_i \f$ for \f$i\in\{1,\dots,n\}\f$ are binary variables and \f$y^\star_i\f$ given by the dual
  * solution of the restricted master problem.
  *
  * The above problem is a knapsack problem which can be solved via dynamic programming or by solving the above integer

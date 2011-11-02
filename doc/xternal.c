@@ -5878,7 +5878,7 @@
   *      - scip::ObjPresol::scip_exitpre() corresponding to SCIP_DECL_PRESOLEXITPRE()
   *      -  scip::ObjProp::scip_exitpre() corresponding to  and SCIP_DECL_PROPEXITPRE()
   *      .
-  *      are virtual functions. That means, if you are not adding the new parameters, your code will still compile, but the these methods are not executed.
+  *      are virtual functions. That means, if you are not adding the new parameters, your code will still compile, but these methods are not executed.
   *      </DIV>
   *
   * - <b>Constraint Handler</b>:
