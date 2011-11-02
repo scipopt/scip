@@ -17,6 +17,11 @@
  * @ingroup PRIMALHEURISTICS
  * @brief  LP diving heuristic that chooses fixings w.r.t. the matrix coefficients
  * @author Tobias Achterberg
+ *
+ * Diving heuristic: Iteratively fixes some fractional variable and resolves the LP-relaxation, thereby simulating a
+ * depth-first-search in the tree. Coefficient Diving chooses the variable with the fewest locking number in any
+ * direction and rounds it into this direction. One-level backtracking is applied: If the LP gets infeasible, the last
+ * fixing is undone, and the opposite fixing is tried. If this is infeasible, too, the procedure aborts.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
