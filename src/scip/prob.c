@@ -396,14 +396,12 @@ SCIP_RETCODE SCIPprobFree(
    BMSfreeMemoryArrayNull(&(*prob)->deletedvars);
 
    /* free hash tables for names */
-   if( set->misc_usevartable )
+   if( (*prob)->varnames != NULL )
    {
-      assert((*prob)->varnames != NULL);
       SCIPhashtableFree(&(*prob)->varnames);
    }
-   if( set->misc_useconstable )
+   if( (*prob)->consnames != NULL )
    {
-      assert((*prob)->consnames != NULL);
       SCIPhashtableFree(&(*prob)->consnames);
    }
    BMSfreeMemoryArray(&(*prob)->name);
@@ -492,7 +490,7 @@ SCIP_RETCODE SCIPprobTransform(
    /* check, whether objective value is always integral by inspecting the problem, if it is the case adjust the
     * cutoff bound if primal solution is already known 
     */
-   SCIP_CALL( SCIPprobCheckObjIntegral(*target, blkmem, set, stat, primal, tree, lp) );
+   SCIP_CALL( SCIPprobCheckObjIntegral(*target, blkmem, set, stat, primal, tree, lp, eventqueue) );
 
    return SCIP_OKAY;
 }
@@ -791,18 +789,35 @@ SCIP_RETCODE SCIPprobDelVar(
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_VAR*             var                 /**< problem variable */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Bool*            deleted             /**< pointer to store whether marking variable to be deleted was successful */
    )
 {
    assert(prob != NULL);
    assert(set != NULL);
    assert(var != NULL);
+   assert(eventqueue != NULL);
+   assert(deleted != NULL);
    assert(SCIPvarGetProbindex(var) != -1);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+
+   *deleted = FALSE;
+
+   /* don't remove variables that are not in the problem */
+   /**@todo what about negated variables? should the negation variable be removed instead? */
+   if( SCIPvarGetProbindex(var) == -1 )
+      return SCIP_OKAY;
+
+   /* don't remove the direct counterpart of an original variable from the transformed problem, because otherwise
+    * operations on the original variables would be applied to a NULL pointer
+    */
+   if( SCIPvarIsTransformedOrigvar(var) )
+      return SCIP_OKAY;
+
+   assert(SCIPvarGetNegatedVar(var) == NULL);
 
    SCIPdebugMessage("deleting variable <%s> from problem (%d variables: %d binary, %d integer, %d implicit, %d continuous)\n",
       SCIPvarGetName(var), prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars);
@@ -816,13 +831,15 @@ SCIP_RETCODE SCIPprobDelVar(
 
       /* issue VARDELETED event */
       SCIP_CALL( SCIPeventCreateVarDeleted(&event, blkmem, var) );
-      SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
+      SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, NULL, &event) );
    }
 
    /* remember that the variable should be deleted from the problem in SCIPprobPerformVarDeletions() */
    SCIP_CALL( probEnsureDeletedvarsMem(prob, set, prob->ndeletedvars+1) );
    prob->deletedvars[prob->ndeletedvars] = var;
    prob->ndeletedvars++;
+
+   *deleted = TRUE;
 
    return SCIP_OKAY;
 }
@@ -832,6 +849,7 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data (may be NULL) */
    SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
@@ -840,6 +858,18 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
    int i;
 
    assert(prob != NULL);
+   assert(set != NULL);
+
+   /* delete variables from the constraints;
+    * do this only in solving stage, in presolving, it is already handled by the constraint handlers
+    */
+   if( SCIPsetGetStage(set) == SCIP_STAGE_SOLVING )
+   {
+      for( i = 0; i < set->nconshdlrs; ++i )
+      {
+         SCIP_CALL( SCIPconshdlrDelVars(set->conshdlrs[i], blkmem, set, stat) );
+      }
+   }
 
    for( i = 0; i < prob->ndeletedvars; ++i )
    {
@@ -851,7 +881,7 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
       if( SCIPvarGetProbindex(var) >= 0 )
       {
          SCIPdebugMessage("perform deletion of <%s> [%p]\n", SCIPvarGetName(var), (void*)var);
-         
+
          /* convert column variable back into loose variable, free LP column */
          if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
          {
@@ -1193,7 +1223,8 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp                  /**< current LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
    SCIP_Real obj;
@@ -1238,7 +1269,7 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
       prob->objisintegral = TRUE;
 
       /* update upper bound and cutoff bound in primal data structure due to new internality information */
-      SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, prob, tree, lp) );
+      SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, prob, tree, lp) );
    }
 
    return SCIP_OKAY;
@@ -1353,7 +1384,7 @@ SCIP_RETCODE SCIPprobScaleObj(
                   SCIPdebugMessage("integral objective scalar: objscale=%g\n", prob->objscale);
 
                   /* update upperbound and cutoffbound in primal data structure */
-                  SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, prob, tree, lp) );
+                  SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, prob, tree, lp) );
                }
             }
          }
@@ -1395,7 +1426,7 @@ SCIP_RETCODE SCIPprobExitPresolve(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
-{
+{  /*lint --e{715}*/
    return SCIP_OKAY;
 }
 

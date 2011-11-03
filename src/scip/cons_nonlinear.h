@@ -14,8 +14,28 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_nonlinear.h
- * @brief  constraint handler for nonlinear constraints
+ * @ingroup CONSHDLRS
+ * @brief  constraint handler for nonlinear constraints \f$\textrm{lhs} \leq \sum_{i=1}^n a_ix_i + \sum_{j=1}^m c_jf_j(x) \leq \textrm{rhs}\f$
  * @author Stefan Vigerske
+ *
+ * This constraint handler handles constraints of the form
+ * \f[
+ *   \textrm{lhs} \leq \sum_{i=1}^n a_ix_i + \sum_{j=1}^m c_jf_j(x) \leq \textrm{rhs},
+ * \f]
+ * where \f$a_i\f$ and \f$c_j\f$ are coefficients and
+ * \f$f_j(x)\f$ are nonlinear functions (given as expression tree).
+ *
+ * Constraints are enforced by separation, domain propagation, and spatial branching.
+ *
+ * For convex or concave \f$f_j(x)\f$, cuts that separate on the convex hull of the function graph are implemented.
+ * For \f$f_j(x)\f$ that are not known to be convex or concave, a simple variant of linear estimation based on interval gradients is implemented.
+ *
+ * Branching is performed for variables in nonconvex terms, if the relaxation solution cannot be separated.
+ *
+ * Further, the function representation is stored in an expression graph, which allows to propagate variable domains
+ * and constraint sides and offers a simple convexity check.
+ * During presolve, the expression graph is reformulated, whereby new variables and constraints are created
+ * such that for the remaining nonlinear constraints the functions \f$f_j(x)\f$ are known to be convex or concave.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -48,7 +68,7 @@ extern "C" {
  *  - upgdconsssize   : length of the provided upgdconss array
  */
 #define SCIP_DECL_NONLINCONSUPGD(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONS* cons, \
-   int* nupgdconss, SCIP_CONS** upgdconss, int upgdconsssize)
+      int* nupgdconss, SCIP_CONS** upgdconss, int upgdconsssize)
 
 /** reformulation method for expression graph nodes
  *
@@ -74,9 +94,9 @@ extern "C" {
  *  - naddcons        : to be increased by number of additionally added constraints
  *  - reformnode      : reformulated node to replace node with, or NULL if no reformulation
  */
-#define SCIP_DECL_EXPRGRAPHNODEREFORM(x) SCIP_RETCODE x (SCIP* scip, \
-   SCIP_EXPRGRAPH* exprgraph, SCIP_EXPRGRAPHNODE* node, \
-   int* naddcons, SCIP_EXPRGRAPHNODE** reformnode)
+#define SCIP_DECL_EXPRGRAPHNODEREFORM(x) SCIP_RETCODE x (SCIP* scip,    \
+      SCIP_EXPRGRAPH* exprgraph, SCIP_EXPRGRAPHNODE* node,              \
+      int* naddcons, SCIP_EXPRGRAPHNODE** reformnode)
 
 /** creates the handler for nonlinear constraints and includes it in SCIP */
 extern
@@ -108,7 +128,7 @@ SCIP_RETCODE SCIPcreateConsNonlinear(
    SCIP_Real*            lincoefs,           /**< array with coefficients of constraint linear entries */
    int                   nexprtrees,         /**< number of expression trees for nonlinear part of constraint */
    SCIP_EXPRTREE**       exprtrees,          /**< expression trees for nonlinear part of constraint */
-   SCIP_Real*            nonlincoefs,        /**< coefficients for expression trees for nonlinear part */
+   SCIP_Real*            nonlincoefs,        /**< coefficients for expression trees for nonlinear part, or NULL if all 1.0 */
    SCIP_Real             lhs,                /**< left hand side of constraint */
    SCIP_Real             rhs,                /**< right hand side of constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?

@@ -17,6 +17,9 @@
  * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for conflict analysis
  * @author Tobias Achterberg
+ *
+ *  This file defines the interface for conflict handler implemented in C.
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -117,6 +120,7 @@ typedef struct SCIP_Conflict SCIP_CONFLICT;       /**< conflict analysis data st
  *  - validnode       : node at which the conflict constraint is valid (should be passed to SCIPaddConsNode())
  *  - bdchginfos      : array with bound changes that lead to a conflict
  *  - nbdchginfos     : number of bound changes in the conflict set
+ *  - separate        : should the conflict constraint be separated?
  *  - local           : is the conflict set only valid locally, i.e. should the constraint created as local constraint?
  *  - dynamic         : should the conflict constraint be made subject to aging?
  *  - removable       : should the conflict's relaxation be made subject to LP aging and cleanup?
@@ -130,7 +134,7 @@ typedef struct SCIP_Conflict SCIP_CONFLICT;       /**< conflict analysis data st
  */
 #define SCIP_DECL_CONFLICTEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONFLICTHDLR* conflicthdlr, SCIP_NODE* node, \
       SCIP_NODE* validnode, SCIP_BDCHGINFO** bdchginfos, int nbdchginfos, \
-      SCIP_Bool local, SCIP_Bool dynamic, SCIP_Bool removable, SCIP_Bool resolved, SCIP_RESULT* result)
+      SCIP_Bool separate, SCIP_Bool local, SCIP_Bool dynamic, SCIP_Bool removable, SCIP_Bool resolved, SCIP_RESULT* result)
 
 #ifdef __cplusplus
 }

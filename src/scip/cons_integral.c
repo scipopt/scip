@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_integral.c
- * @ingroup CONSHDLRS 
  * @brief  constraint handler for the integrality constraint
  * @author Tobias Achterberg
  */
@@ -248,6 +247,11 @@ SCIP_DECL_CONSLOCK(consLockIntegral)
 /** constraint disabling notification method of constraint handler */
 #define consDisableIntegral NULL
 
+
+/** variable deletion method of constraint handler */
+#define consDelvarsIntegral NULL
+
+
 /** constraint display method of constraint handler */
 #define consPrintIntegral NULL
 
@@ -287,7 +291,7 @@ SCIP_RETCODE SCIPincludeConshdlrIntegral(
          consPropIntegral, consPresolIntegral, consRespropIntegral, consLockIntegral,
          consActiveIntegral, consDeactiveIntegral, 
          consEnableIntegral, consDisableIntegral,
-         consPrintIntegral, consCopyIntegral, consParseIntegral,
+         consDelvarsIntegral, consPrintIntegral, consCopyIntegral, consParseIntegral,
          conshdlrdata) );
 
    return SCIP_OKAY;

@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_lp.c
- * @ingroup FILEREADERS 
  * @brief  LP file reader
  * @author Tobias Achterberg
  * @author Marc Pfetsch
@@ -100,6 +99,8 @@ struct LpInput
    SCIP_Bool            inlazyconstraints;
    SCIP_Bool            inusercuts;
    SCIP_Bool            haserror;
+   SCIP_Bool            comment;
+   SCIP_Bool            endline;
 };
 typedef struct LpInput LPINPUT;
 
@@ -224,22 +225,64 @@ SCIP_Bool getNextLine(
 
    assert(lpinput != NULL);
 
+   /* if we previously detected a comment we have to parse the remaining line away if there is something left */
+   if( !lpinput->endline && lpinput->comment )
+   {
+      SCIPdebugMessage("Throwing rest of comment away.\n");
+
+      do
+      {
+         lpinput->linebuf[LP_MAX_LINELEN-2] = '\0';
+         (void)SCIPfgets(lpinput->linebuf, sizeof(lpinput->linebuf), lpinput->file);
+      }
+      while( lpinput->linebuf[LP_MAX_LINELEN-2] != '\0' );
+
+      lpinput->comment = FALSE;
+      lpinput->endline = TRUE;
+   }
+
    /* clear the line */
    BMSclearMemoryArray(lpinput->linebuf, LP_MAX_LINELEN);
 
    /* read next line */
    lpinput->linepos = 0;
    lpinput->linebuf[LP_MAX_LINELEN-2] = '\0';
+
    if( SCIPfgets(lpinput->linebuf, sizeof(lpinput->linebuf), lpinput->file) == NULL )
       return FALSE;
+
    lpinput->linenumber++;
+
+   /* if line is too long for our buffer correct the buffer and correct position in file */
    if( lpinput->linebuf[LP_MAX_LINELEN-2] != '\0' )
    {
-      SCIPerrorMessage("Error: line %d exceeds %d characters\n", lpinput->linenumber, LP_MAX_LINELEN-2);
-      lpinput->haserror = TRUE;
-      return FALSE;
+      char* last;
+
+      /* buffer is full; erase last token since it might be incomplete */
+      lpinput->endline = FALSE;
+      last = strrchr(lpinput->linebuf, ' ');
+
+      if( last == NULL )
+      {
+         SCIPwarningMessage("we read %d character from the file; these might indicates a corrupted input file!",
+            LP_MAX_LINELEN - 2);
+         lpinput->linebuf[LP_MAX_LINELEN-2] = '\0';
+         SCIPdebugMessage("the buffer might be corrupted\n");
+      }
+      else
+      {
+         SCIPfseek(lpinput->file, -(long) strlen(last) - 1, SEEK_CUR);
+         SCIPdebugMessage("correct buffer, reread the last %ld characters\n", (long) strlen(last) + 1);
+         *last = '\0';
+      }
+   }
+   else
+   {
+      /* found end of line */
+      lpinput->endline = TRUE;
    }
    lpinput->linebuf[LP_MAX_LINELEN-1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
+   lpinput->comment = FALSE;
 
    /* skip characters after comment symbol */
    for( i = 0; commentchars[i] != '\0'; ++i )
@@ -251,6 +294,9 @@ SCIP_Bool getNextLine(
       {
          *commentstart = '\0';
          *(commentstart+1) = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
+
+         lpinput->comment = TRUE;
+         break;
       }
    }
 
@@ -3095,6 +3141,8 @@ SCIP_RETCODE SCIPreadLp(
    lpinput.inlazyconstraints = FALSE;
    lpinput.inusercuts = FALSE;
    lpinput.haserror = FALSE;
+   lpinput.comment = FALSE;
+   lpinput.endline = FALSE;
 
    /* read the file */
    SCIP_CALL( readLPFile(scip, &lpinput, filename) );

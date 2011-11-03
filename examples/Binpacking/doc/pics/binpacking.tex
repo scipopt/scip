@@ -7,6 +7,8 @@
 \usetikzlibrary{snakes}
 \usetikzlibrary{patterns}
 
+\definecolor{background}{HTML}{FFFFE6}
+
 % tikz styles
 \definecolor{matheonblue}{rgb}{0.15,0.35,0.65}
 \tikzstyle{bin} = [thick]
@@ -89,7 +91,7 @@
   \ifnum #4=9
   \draw[color9] (#1/2,#2) rectangle (#1/2+0.4,#2+#3);
   \fi
-  
+
   \foreach \y in {1,...,#3}
   {
     \draw (#1/2,#2+\y) -- (#1/2+0.4,#2+\y);
@@ -127,7 +129,7 @@
   \ifnum #4=9
   \draw[color9] (#2,#1/2) rectangle (#2-#3,#1/2+0.4);
   \fi
-  
+
   \foreach \y in {1,...,#3}
   {
     \draw (#2-\y,#1/2) -- (#2-\y,#1/2+0.4);
@@ -140,6 +142,8 @@
 
 
 \begin{tikzpicture}
+  \draw[background,fill=background] (-4.5,-.5) rectangle (9,5.5);
+
   \begin{scope}[rotate=-90,xshift=-1cm,yshift=-4cm]
     \foreach \pos/\size/\color in {
       1/2/0,
@@ -155,44 +159,44 @@
     {
       \binitemquer{\pos}{0}{\size}{\color}
     }
-    
+
     % size axis
     \draw[thick,->] (0,0) -- (-3,0);
     \foreach \x in {1,2,3}
     \draw[thick] (-\x+1,0) -- +(0,0.10) (-\x+.5,0) +(0mm,-0.2mm) node[anchor=west] {\footnotesize\x};
-    
+
     \node[left] at (1,3.5){Items};
   \end{scope}
-  
+
   \begin{scope}[yshift=3cm, xshift=1.5cm]
     \draw[thick,->] (0,0) --  node[above] {bin capacity $4$} (3,0);
   \end{scope}
-  
+
   \begin{scope}[yshift=1cm, xshift=6cm]
     \setcounter{xpos}{0}
     \bin{\thexpos}{4}{1}
     \binitem{\thexpos}{0}{2}{0}
     \binitem{\thexpos}{2}{1}{1}
-    
+
     \stepcounter{xpos}
     \bin{\thexpos}{4}{0}
     \binitem{\thexpos}{0}{2}{2}
     \binitem{\thexpos}{2}{1}{3}
     \binitem{\thexpos}{3}{1}{4}
-    
+
     \stepcounter{xpos}
     \bin{\thexpos}{4}{2}
     \binitem{\thexpos}{0}{2}{5}
-    
+
     \stepcounter{xpos}
     \bin{\thexpos}{4}{1}
     \binitem{\thexpos}{0}{3}{6}
-    
+
     \stepcounter{xpos}
     \bin{\thexpos}{4}{1}
     \binitem{\thexpos}{0}{2}{7}
     \binitem{\thexpos}{2}{1}{8}
-    
+
     \node[right] at (-.25,-1) {Assignment};
   \end{scope}
 \end{tikzpicture}

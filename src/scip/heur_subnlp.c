@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file    heur_subnlp.c
- * @ingroup PRIMALHEURISTICS
  * @brief   NLP local search primal heuristic using sub-SCIPs
  * @author  Stefan Vigerske
  * 
@@ -75,11 +74,11 @@ struct SCIP_HeurData
    SCIP_Real             nlptimelimit;       /**< time limit of NLP solver; 0 for off */
    SCIP_Real             resolvetolfactor;   /**< factor for feasibility tolerance when resolving NLP due to disagreement of feasibility */
    SCIP_Bool             resolvefromscratch; /**< whether a resolve of an NLP due to disagreement of feasibility should be from the original starting point or the infeasible solution */
-   char*                 nlpsolver;          /**< name of NLP solver to use */
    char*                 nlpoptfile;         /**< name of NLP solver specific option file */
    SCIP_Real             minimprove;         /**< desired minimal improvement in objective function value when running heuristic */
    int                   maxpresolverounds;  /**< limit on number of presolve rounds in sub-SCIP */
    SCIP_Bool             forbidfixings;      /**< whether to add constraints that forbid specific fixations that turned out to be infeasible */
+   SCIP_Bool             keepcopy;           /**< whether to keep SCIP copy or to create new copy each time heuristic is applied */
 
    SCIP_Longint          iterused;           /**< number of iterations used so far */
    int                   iteroffset;         /**< number of iterations added to the contingent of the total number of iterations */
@@ -137,22 +136,22 @@ SCIP_RETCODE createSubSCIP(
    /* copy interesting plugins */
    success = TRUE;
    SCIP_CALL( SCIPcopyPlugins(scip, heurdata->subscip,
-      copyreader, /* readers */
-      FALSE, /* pricers */
-      TRUE,  /* conshdlrs */
-      FALSE, /* conflicthdlrs */
-      TRUE,  /* presolvers */
-      FALSE, /* relaxators */
-      FALSE, /* separators */
-      TRUE,  /* propagators */
-      FALSE, /* heuristics */
-      TRUE,  /* eventhandler */
-      TRUE,  /* nodeselectors (SCIP gives an error if there is none) */
-      FALSE,  /* branchrules */
-      copydisplays, /* displays */
-      FALSE, /* dialogs */
-      TRUE,  /* nlpis */
-      &success) );
+         copyreader, /* readers */
+         FALSE, /* pricers */
+         TRUE,  /* conshdlrs */
+         FALSE, /* conflicthdlrs */
+         TRUE,  /* presolvers */
+         FALSE, /* relaxators */
+         FALSE, /* separators */
+         TRUE,  /* propagators */
+         FALSE, /* heuristics */
+         TRUE,  /* eventhandler */
+         TRUE,  /* nodeselectors (SCIP gives an error if there is none) */
+         FALSE,  /* branchrules */
+         copydisplays, /* displays */
+         FALSE, /* dialogs */
+         TRUE,  /* nlpis */
+         &success) );
    if( !success )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "In heur_subnlp: failed to copy some plugins to sub-SCIP, continue anyway\n");
@@ -298,14 +297,14 @@ SCIP_RETCODE freeSubSCIP(
 
    assert(scip != NULL);
    assert(heurdata != NULL);
-  
+
    assert(heurdata->subscip != NULL);
 
    /* free NLP statistics */
    if( heurdata->nlpstatistics != NULL )
       SCIPnlpStatisticsFree(&heurdata->nlpstatistics);
    assert(heurdata->nlpstatistics == NULL);
-  
+
    SCIP_CALL( SCIPgetOrigVarsData(heurdata->subscip, &subvars, &nsubvars, NULL, NULL, NULL, NULL) );
    assert(nsubvars == heurdata->nsubvars);
 
@@ -459,9 +458,9 @@ SCIP_RETCODE addLinearConstraints(
       }
 
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
-         SCIPgetNVarsLinear(scip, conss[i]), SCIPgetVarsLinear(scip, conss[i]), SCIPgetValsLinear(scip, conss[i]),
-         0, NULL, 0, NULL, NULL,
-         SCIPgetLhsLinear(scip, conss[i]), SCIPgetRhsLinear(scip, conss[i])) );
+            SCIPgetNVarsLinear(scip, conss[i]), SCIPgetVarsLinear(scip, conss[i]), SCIPgetValsLinear(scip, conss[i]),
+            0, NULL, 0, NULL, NULL,
+            SCIPgetLhsLinear(scip, conss[i]), SCIPgetRhsLinear(scip, conss[i])) );
 
       SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
       SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
@@ -515,9 +514,9 @@ SCIP_RETCODE addVarboundConstraints(
       coefs[1] = SCIPgetVbdcoefVarbound(scip, conss[i]);
 
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
-         2, vars, coefs,
-         0, NULL, 0, NULL, NULL,
-         SCIPgetLhsVarbound(scip, conss[i]), SCIPgetRhsVarbound(scip, conss[i])) );
+            2, vars, coefs,
+            0, NULL, 0, NULL, NULL,
+            SCIPgetLhsVarbound(scip, conss[i]), SCIPgetRhsVarbound(scip, conss[i])) );
 
       SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
       SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
@@ -580,9 +579,9 @@ SCIP_RETCODE addLogicOrConstraints(
       /* logic or constraints: 1 == sum_j x_j */
 
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
-         nvars, SCIPgetVarsLogicor(scip, conss[i]), coefs,
-         0, NULL, 0, NULL, NULL,
-         1.0, 1.0) );
+            nvars, SCIPgetVarsLogicor(scip, conss[i]), coefs,
+            0, NULL, 0, NULL, NULL,
+            1.0, 1.0) );
 
       SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
       SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
@@ -650,30 +649,30 @@ SCIP_RETCODE addSetppcConstraints(
 
       switch( SCIPgetTypeSetppc(scip, conss[i]) )
       {
-         case SCIP_SETPPCTYPE_PARTITIONING:
-            lhs = 1.0;
-            rhs = 1.0;
-            break;
+      case SCIP_SETPPCTYPE_PARTITIONING:
+         lhs = 1.0;
+         rhs = 1.0;
+         break;
 
-         case SCIP_SETPPCTYPE_PACKING:
-            lhs = -SCIPinfinity(scip);
-            rhs = 1.0;
-            break;
+      case SCIP_SETPPCTYPE_PACKING:
+         lhs = -SCIPinfinity(scip);
+         rhs = 1.0;
+         break;
 
-         case SCIP_SETPPCTYPE_COVERING:
-            lhs = 1.0;
-            rhs = SCIPinfinity(scip);
-            break;
+      case SCIP_SETPPCTYPE_COVERING:
+         lhs = 1.0;
+         rhs = SCIPinfinity(scip);
+         break;
 
-         default:
-            SCIPerrorMessage("unexpected setppc type\n");
-            return SCIP_ERROR;
+      default:
+         SCIPerrorMessage("unexpected setppc type\n");
+         return SCIP_ERROR;
       }
 
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
-         nvars, SCIPgetVarsSetppc(scip, conss[i]), coefs,
-         0, NULL, 0, NULL, NULL,
-         lhs, rhs) );
+            nvars, SCIPgetVarsSetppc(scip, conss[i]), coefs,
+            0, NULL, 0, NULL, NULL,
+            lhs, rhs) );
 
       SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
       SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
@@ -741,9 +740,9 @@ SCIP_RETCODE addKnapsackConstraints(
          coefs[j] = (SCIP_Real)weights[j];  /*lint !e613*/
 
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
-         nvars, SCIPgetVarsKnapsack(scip, conss[i]), coefs,
-         0, NULL, 0, NULL, NULL,
-         -SCIPinfinity(scip), (SCIP_Real)SCIPgetCapacityKnapsack(scip, conss[i])) );
+            nvars, SCIPgetVarsKnapsack(scip, conss[i]), coefs,
+            0, NULL, 0, NULL, NULL,
+            -SCIPinfinity(scip), (SCIP_Real)SCIPgetCapacityKnapsack(scip, conss[i])) );
 
       SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
       SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
@@ -760,7 +759,7 @@ SCIP_RETCODE addLinearConstraintsToNlp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             addcombconss,       /**< whether to add combinatorial linear constraints to NLP */
    SCIP_Bool             addcontconss        /**< whether to add continuous    linear constraints to NLP */
-)
+   )
 {
    SCIP_CONSHDLR* conshdlr;
 
@@ -811,7 +810,7 @@ SCIP_RETCODE createSolFromNLP(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic data structure */
    SCIP_SOL**            sol                 /**< buffer to store solution value; if pointing to NULL, then a new solution is created, otherwise values in the given one are overwritten */
-)
+   )
 {
    SCIP_HEURDATA* heurdata;
    SCIP_VAR*      var;
@@ -858,7 +857,7 @@ SCIP_RETCODE createSolFromSubScipSol(
    SCIP_HEUR*            heur,               /**< heuristic data structure */
    SCIP_SOL**            sol,                /**< buffer to store solution value; if pointing to NULL, then a new solution is created, otherwise values in the given one are overwritten */
    SCIP_SOL*             subsol              /**< solution of sub-SCIP */
-)
+   )
 {
    SCIP_HEURDATA* heurdata;
    int            i;
@@ -882,7 +881,7 @@ SCIP_RETCODE createSolFromSubScipSol(
       if( heurdata->var_subscip2scip[i] == NULL || !SCIPvarIsActive(heurdata->var_subscip2scip[i]) )
          continue;
       SCIP_CALL( SCIPsetSolVal(scip, *sol, heurdata->var_subscip2scip[i],
-         SCIPgetSolVal(heurdata->subscip, subsol, SCIPgetOrigVars(heurdata->subscip)[i])) );
+            SCIPgetSolVal(heurdata->subscip, subsol, SCIPgetOrigVars(heurdata->subscip)[i])) );
    }
 
    return SCIP_OKAY;
@@ -1249,7 +1248,7 @@ SCIP_RETCODE solveSubNLP(
       }
    }
 
-CLEANUP:
+ CLEANUP:
    if( heurdata->subscip != NULL )
    {
       SCIP_CALL( SCIPfreeTransform(heurdata->subscip) );
@@ -1455,7 +1454,7 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
 
    assert(scip != NULL);
    assert(heur != NULL);
-  
+
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
@@ -1593,10 +1592,18 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
       }
    }
 
-CLEANUP:
-   /* undo fixing of discrete variables in sub-SCIP */
-   if( SCIPgetNBinVars(heurdata->subscip) || SCIPgetNIntVars(heurdata->subscip) )
+ CLEANUP:
+   /* if the heuristic was applied before solving has started, then destroy subSCIP, since EXITSOL may not be called
+    * also if keepcopy is disabled, then destroy subSCIP
+    */
+   if( SCIPgetStage(scip) < SCIP_STAGE_SOLVING || !heurdata->keepcopy )
    {
+      SCIP_CALL( freeSubSCIP(scip, heurdata) );
+      heurdata->triedsetupsubscip = FALSE;
+   }
+   else if( SCIPgetNBinVars(heurdata->subscip) || SCIPgetNIntVars(heurdata->subscip) )
+   {
+      /* undo fixing of discrete variables in sub-SCIP */
       SCIP_VAR** subvars;
       int        nsubvars;
       int        nsubbinvars;
@@ -1617,13 +1624,6 @@ CLEANUP:
          SCIP_CALL( SCIPchgVarLbGlobal(heurdata->subscip, subvar, SCIPvarGetLbGlobal(var)) );
          SCIP_CALL( SCIPchgVarUbGlobal(heurdata->subscip, subvar, SCIPvarGetUbGlobal(var)) );
       }
-   }
-
-   /* if the heuristic was applied before solving has started, then destroy NLP, since EXITSOL may not be called */
-   if( SCIPgetStage(scip) < SCIP_STAGE_SOLVING )
-   {
-      SCIP_CALL( freeSubSCIP(scip, heurdata) );
-      heurdata->triedsetupsubscip = FALSE;
    }
 
    return SCIP_OKAY;
@@ -1750,10 +1750,18 @@ SCIP_RETCODE SCIPresolveSolHeurSubNlp(
    if( result == SCIP_FOUNDSOL )
       *success = TRUE;
 
-CLEANUP:
-   /* undo fixing of discrete variables in subSCIP */
-   if( SCIPgetNBinVars(heurdata->subscip) || SCIPgetNIntVars(heurdata->subscip) )
+ CLEANUP:
+   /* if the heuristic was applied before solving has started, then destroy subSCIP, since EXITSOL may not be called
+    * also if keepcopy is not set, then destroy subSCIP
+    */
+   if( SCIPgetStage(scip) < SCIP_STAGE_SOLVING || !heurdata->keepcopy )
    {
+      SCIP_CALL( freeSubSCIP(scip, heurdata) );
+      heurdata->triedsetupsubscip = FALSE;
+   }
+   else if( SCIPgetNBinVars(heurdata->subscip) || SCIPgetNIntVars(heurdata->subscip) )
+   {
+      /* undo fixing of discrete variables in subSCIP */
       SCIP_VAR** subvars;
       int        nsubvars;
       int        nsubbinvars;
@@ -1776,13 +1784,6 @@ CLEANUP:
       }
    }
 
-   /* if the heuristic was applied before solving has started, then destroy NLP, since EXITSOL may not be called */
-   if( SCIPgetStage(scip) < SCIP_STAGE_SOLVING )
-   {
-      SCIP_CALL( freeSubSCIP(scip, heurdata) );
-      heurdata->triedsetupsubscip = FALSE;
-   }
-
    return SCIP_OKAY;
 }
 
@@ -1800,7 +1801,7 @@ SCIP_DECL_HEURCOPY(heurCopySubNlp)
 
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurSubNlp(scip) );
- 
+
    return SCIP_OKAY;
 }
 
@@ -1888,11 +1889,15 @@ SCIP_DECL_HEURINITSOL(heurInitsolSubNlp)
    assert(heurdata != NULL);
    assert(heurdata->subscip == NULL);
 
-   /* create sub-SCIP for later use */
-   SCIP_CALL( createSubSCIP(scip, heurdata) );
-   /* creating sub-SCIP may fail if the NLP solver interfaces did not copy into subscip */
-   if( heurdata->subscip == NULL )
-      return SCIP_OKAY;
+   if( heurdata->keepcopy )
+   {
+      /* create sub-SCIP for later use */
+      SCIP_CALL( createSubSCIP(scip, heurdata) );
+
+      /* creating sub-SCIP may fail if the NLP solver interfaces did not copy into subscip */
+      if( heurdata->subscip == NULL )
+         return SCIP_OKAY;
+   }
 
    /* if the heuristic is called at the root node, we want to be called directly after the initial root LP solve */
    if( SCIPheurGetFreqofs(heur) == 0 )
@@ -1948,7 +1953,7 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
 
    assert(scip != NULL);
    assert(heur != NULL);
-  
+
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
@@ -1956,10 +1961,14 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
    /* obviously, we did not do anything yet */
    *result = SCIP_DIDNOTRUN;
 
-   /* InitsolNlp decided that we do not need an NLP solver
-    * probably because we do not have nonlinear continuous or implicit integer variables
+   /* if keepcopy and subscip == NULL, then InitsolNlp decided that we do not need an NLP solver,
+    *   probably because we do not have nonlinear continuous or implicit integer variables
+    * if triedsetupsubscip and subscip == NULL, then we run the heuristic already, but gave up due to some serious error
+    * in both cases, we do not want to run
+    *
+    * otherwise, we continue and let SCIPapplyHeurSubNlp try to create subscip
     */
-   if( heurdata->subscip == NULL )
+   if( heurdata->subscip == NULL && (heurdata->keepcopy || heurdata->triedsetupsubscip) )
       return SCIP_OKAY;
 
    if( heurdata->startcand == NULL )
@@ -2096,7 +2105,7 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, 
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
          heurCopySubNlp,
          heurFreeSubNlp, heurInitSubNlp, heurExitSubNlp, heurInitsolSubNlp, heurExitsolSubNlp, heurExecSubNlp,
          heurdata) );
@@ -2117,10 +2126,6 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
    SCIP_CALL( SCIPaddStringParam(scip, "heuristics/"HEUR_NAME"/nlpoptfile",
          "name of an NLP solver specific options file",
          &heurdata->nlpoptfile, TRUE, "", NULL, NULL) );
-
-   SCIP_CALL( SCIPaddStringParam(scip, "heuristics/"HEUR_NAME"/nlpsolver",
-         "name of an NLP solver to use (empty value means to use solver with highest priority)",
-         &heurdata->nlpsolver, FALSE, "", NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/resolvetolfactor",
          "if SCIP does not accept a NLP feasible solution, resolve NLP with feas. tolerance reduced by this factor (set to 1.0 to turn off resolve)",
@@ -2158,6 +2163,10 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
          "whether to add constraints that forbid specific fixings that turned out to be infeasible",
          &heurdata->forbidfixings, FALSE, TRUE, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam (scip, "heuristics/"HEUR_NAME"/keepcopy",
+         "whether to keep SCIP copy or to create new copy each time heuristic is applied",
+         &heurdata->keepcopy, TRUE, TRUE, NULL, NULL) );
+
    return SCIP_OKAY;
 }
 
@@ -2169,7 +2178,7 @@ SCIP_RETCODE SCIPaddLinearConsToNlpHeurSubNlp(
    SCIP_HEUR*            heur,               /**< heuristic data structure                                       */
    SCIP_Bool             addcombconss,       /**< whether to add combinatorial linear constraints, i.e., linear constraints that involve only discrete variables */
    SCIP_Bool             addcontconss        /**< whether to add continuous    linear constraints, i.e., linear constraints that involve not only discrete variables */
-)
+   )
 {
    SCIP_HEURDATA* heurdata;
 
@@ -2185,8 +2194,8 @@ SCIP_RETCODE SCIPaddLinearConsToNlpHeurSubNlp(
       return SCIP_OKAY;
 
    SCIP_CALL( addLinearConstraintsToNlp(scip,
-      addcombconss && !heurdata->comblinearconsadded,
-      addcontconss && !heurdata->contlinearconsadded) );
+         addcombconss && !heurdata->comblinearconsadded,
+         addcontconss && !heurdata->contlinearconsadded) );
 
    return SCIP_OKAY;
 }

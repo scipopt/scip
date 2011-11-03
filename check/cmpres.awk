@@ -1695,7 +1695,7 @@ END {
       printf("%% TRENNLINIEN\n") > diagramfile;
       upperbreak = 0.92 * extendedub/1000.0;
       lowerbreak = 0.90 * extendedub/1000.0;
-      printf("\\fill[background] (0.1,%1.4f) rectangle (%d,%1.4f);\n",lowerbreak,nsolver,upperbreak) > diagramfile;
+      printf("\\fill[background] (0.1,%1.4f) rectangle (%d.5,%1.4f);\n",lowerbreak,nsolver,upperbreak) > diagramfile;
       printf("\\draw[black] (0.1,%1.4f) --  (0.3,%1.4f);\n",lowerbreak,lowerbreak) > diagramfile;
       printf("\\draw[black] (0.1,%1.4f) --  (0.3,%1.4f);\n",upperbreak,upperbreak) > diagramfile;
 

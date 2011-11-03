@@ -145,7 +145,7 @@ SCIP_DECL_PRESOLINITPRE(presolInitpreObj)
    assert(presoldata->objpresol != NULL);
 
    /* call virtual method of presol object */
-   SCIP_CALL( presoldata->objpresol->scip_initpre(scip, presol, result) );
+   SCIP_CALL( presoldata->objpresol->scip_initpre(scip, presol, isunbounded, isinfeasible, result) );
 
    return SCIP_OKAY;
 }
@@ -162,7 +162,7 @@ SCIP_DECL_PRESOLEXITPRE(presolExitpreObj)
    assert(presoldata->objpresol != NULL);
 
    /* call virtual method of presol object */
-   SCIP_CALL( presoldata->objpresol->scip_exitpre(scip, presol, result) );
+   SCIP_CALL( presoldata->objpresol->scip_exitpre(scip, presol, isunbounded, isinfeasible, result) );
 
    return SCIP_OKAY;
 }

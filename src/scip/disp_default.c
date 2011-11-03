@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   disp_default.c
- * @ingroup DISPLAYS
  * @brief  default display columns
  * @author Tobias Achterberg
  */
@@ -268,12 +267,20 @@
 #define DISP_STRI_CUTOFFBOUND   TRUE
 
 #define DISP_NAME_GAP           "gap"
-#define DISP_DESC_GAP           "current relative primal-dual gap"
+#define DISP_DESC_GAP           "current (relative) gap using |primal-dual|/MIN(|dual|,|primal|)"
 #define DISP_HEAD_GAP           "gap"
 #define DISP_WIDT_GAP           8
 #define DISP_PRIO_GAP           60000
 #define DISP_POSI_GAP           20000
 #define DISP_STRI_GAP           TRUE
+
+#define DISP_NAME_PRIMALGAP          "primalgap"
+#define DISP_DESC_PRIMALGAP          "current (relative) gap using |primal-dual|/|primal|"
+#define DISP_HEAD_PRIMALGAP          "primgap"
+#define DISP_WIDT_PRIMALGAP          8
+#define DISP_PRIO_PRIMALGAP          20000
+#define DISP_POSI_PRIMALGAP          21000
+#define DISP_STRI_PRIMALGAP          TRUE
 
 #define DISP_NAME_NSOLS         "nsols"
 #define DISP_DESC_NSOLS         "current number of solutions found"
@@ -829,6 +836,51 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputGap)
    return SCIP_OKAY;
 }
 
+/** output method of display column to output file stream 'file' for primalgap */
+static
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputPrimalgap)
+{  /*lint --e{715}*/
+   SCIP_Real primalbound;
+   SCIP_Real dualbound;
+   SCIP_Real gap;
+
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_PRIMALGAP) == 0);
+   assert(scip != NULL);
+
+   if( SCIPisInfinity(scip, SCIPgetLowerbound(scip)) )
+   {
+      /* in case we could not prove whether the problem is unbounded or infeasible, we want to terminate with
+       * gap = +inf instead of gap = 0
+       */
+      if( SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD )
+         gap = SCIPinfinity(scip);
+      else
+         gap = 0.0;
+   }
+
+   primalbound = SCIPgetPrimalbound(scip);
+   dualbound = SCIPgetDualbound(scip);
+
+   if( SCIPisEQ(scip, primalbound, dualbound) )
+      gap = 0.0;
+   else if( SCIPisZero(scip, primalbound)
+      || SCIPisInfinity(scip, REALABS(primalbound))
+      || primalbound * dualbound < 0.0 )
+      gap = SCIPinfinity(scip);
+   else
+      gap = REALABS((primalbound - dualbound))/REALABS(primalbound + SCIPepsilon(scip));
+
+   if( SCIPisInfinity(scip, gap) )
+      SCIPinfoMessage(scip, file, "    Inf ");
+   else if( gap >= 100.00 )
+      SCIPinfoMessage(scip, file, "  Large ");
+   else
+      SCIPinfoMessage(scip, file, "%7.2f%%", 100.0*gap);
+
+   return SCIP_OKAY;
+}
+
 /** output method of display column to output file stream 'file' for number of found solutions */
 static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputNSols)
@@ -1127,6 +1179,15 @@ SCIP_RETCODE SCIPincludeDispDefault(
             dispCopyDefault,
             NULL, NULL, NULL, NULL, NULL, SCIPdispOutputGap, NULL, 
             DISP_WIDT_GAP, DISP_PRIO_GAP, DISP_POSI_GAP, DISP_STRI_GAP) );
+   }
+   tmpdisp = SCIPfindDisp(scip, DISP_NAME_PRIMALGAP);
+   if( tmpdisp == NULL )
+   {
+      SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_PRIMALGAP, DISP_DESC_PRIMALGAP, DISP_HEAD_PRIMALGAP,
+            SCIP_DISPSTATUS_OFF,
+            dispCopyDefault,
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputPrimalgap, NULL,
+            DISP_WIDT_PRIMALGAP, DISP_PRIO_PRIMALGAP, DISP_POSI_PRIMALGAP, DISP_STRI_PRIMALGAP) );
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_NSOLS);
    if( tmpdisp == NULL )

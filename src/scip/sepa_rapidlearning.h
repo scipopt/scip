@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_rapidlearning.h
+ * @ingroup SEPARATORS
  * @brief  rapidlearning separator
  * @author Tobias Achterberg
  */

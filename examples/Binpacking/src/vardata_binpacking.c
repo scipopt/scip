@@ -14,9 +14,11 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   vardata_binpacking.c
- * @brief  variable data containing the ids of constraints in which the variable appears 
+ * @brief  Variable data containing the ids of constraints in which the variable appears
  * @author Timo Berthold
  * @author Stefan Heinz
+ *
+ * This file implements the handling of the variable data which is attached to each file. See SCIP_VarData and \ref PRICER.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -24,6 +26,11 @@
 #include "probdata_binpacking.h"
 #include "vardata_binpacking.h"
 
+/** @brief Variable data which is attached to all variables.
+ *
+ *  This variables data is used to know in which constraints this variables appears. Therefore, the variable data
+ *  containing the ids of constraints in which the variable is part of. Hence, that data give us a column view.
+ */
 struct SCIP_VarData
 {
    int*                  consids;
@@ -148,6 +155,8 @@ SCIP_RETCODE SCIPcreateVarBinpacking(
 {
    SCIP_CALL( SCIPcreateVar(scip, var, name, 0.0, 1.0, obj, SCIP_VARTYPE_BINARY,
          initial, removable, vardataDelOrig, vardataTrans, vardataDelTrans, vardataCopy, vardata) );
+
+   SCIPvarMarkDeletable(*var);
    
    SCIPdebug(SCIPprintVar(scip, *var, NULL) );
 

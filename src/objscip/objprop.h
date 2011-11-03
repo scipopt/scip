@@ -31,7 +31,15 @@
 namespace scip
 {
 
-/** C++ wrapper object for propagators */
+/** @brief C++ wrapper for propagators
+ *
+ *  This class defines the interface for propagators implemented in C++. Note that there is a pure virtual
+ *  function (this function has to be implemented). This function is: scip_exec().
+ *
+ *  - \ref PROP "Instructions for implementing a propagator"
+ *  - \ref PROPAGATORS "List of available propagators"
+ *  - \ref type_prop.h "Corresponding C interface"
+ */
 class ObjProp : public ObjCloneable
 {
 public:
@@ -141,6 +149,8 @@ public:
     *  input:
     *  - scip            : SCIP main data structure
     *  - prop            : the propagator itself
+    *  - isunbounded     : was the problem already declared to be unbounded
+    *  - isinfeasible    : was the problem already declared to be infeasible
     *
     *  output:
     *  - result          : pointer to store the result of the call
@@ -153,6 +163,8 @@ public:
    virtual SCIP_RETCODE scip_initpre(
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_PROP*         prop,               /**< the propagator itself */
+      SCIP_Bool          isunbounded,        /**< was unboundedness already detected */
+      SCIP_Bool          isinfeasible,       /**< was infeasibility already detected */
       SCIP_RESULT*       result              /**< pointer to store the result of the propagation call */
       )
    {  /*lint --e{715}*/
@@ -168,6 +180,8 @@ public:
     *  input:
     *  - scip            : SCIP main data structure
     *  - prop            : the propagator itself
+    *  - isunbounded     : was the problem already declared to be unbounded
+    *  - isinfeasible    : was the problem already declared to be infeasible
     *
     *  output:
     *  - result          : pointer to store the result of the call
@@ -180,6 +194,8 @@ public:
    virtual SCIP_RETCODE scip_exitpre(
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_PROP*         prop,               /**< the propagator itself */
+      SCIP_Bool          isunbounded,        /**< was unboundedness already detected */
+      SCIP_Bool          isinfeasible,       /**< was infeasibility already detected */
       SCIP_RESULT*       result              /**< pointer to store the result of the propagation call */
       )
    {  /*lint --e{715}*/
@@ -316,7 +332,15 @@ public:
       SCIP_BDCHGIDX*     bdchgidx,           /**< the index of the bound change, representing the point of time where the
                                               *   change took place */
       SCIP_RESULT*       result              /**< pointer to store the result of the propagation call */
-      ) = 0;
+      )
+   {  /*lint --e{715}*/
+
+      /* set result pointer to indicate the propagation was not resolved */
+      assert(result != NULL);
+      (*result) = SCIP_DIDNOTFIND;
+
+      return SCIP_OKAY;
+   }
 };
 
 } /* namespace scip */

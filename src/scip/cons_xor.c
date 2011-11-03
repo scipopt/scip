@@ -14,9 +14,20 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_xor.c
- * @ingroup CONSHDLRS 
- * @brief  constraint handler for xor constraints
+ * @brief  Constraint handler for "xor" constraints,  \f$rhs = x_1 \oplus x_2 \oplus \dots  \oplus x_n\f$
  * @author Tobias Achterberg
+ * @author Stefan Heinz
+ * @author Michael Winkler
+ *
+ * This constraint handler deals with "xor" constraint. These are constraint of the form:
+ *
+ * \f[
+ *    rhs = x_1 \oplus x_2 \oplus \dots  \oplus x_n
+ * \f]
+ *
+ * where \f$x_i\f$ is a binary variable for all \f$i\f$ and \f$rhs\f$ is bool. The variables \f$x\f$'s are called
+ * operators. This constraint is satisfied if \f$rhs\f$ is TRUE and an odd number of the operators are TRUE or if the
+ * \f$rhs\f$ is FALSE and a even number of operators are TRUE. Hence, if the sum of \f$rhs\f$ and operators is even.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -361,7 +372,9 @@ SCIP_RETCODE consdataFree(
        */
       if( SCIPvarMayRoundDown((*consdata)->intvar) && SCIPvarMayRoundUp((*consdata)->intvar) )
       {
-         SCIP_CALL( SCIPdelVar(scip, (*consdata)->intvar) );
+         SCIP_Bool deleted;
+
+         SCIP_CALL( SCIPdelVar(scip, (*consdata)->intvar, &deleted) );
       }
       SCIP_CALL( SCIPreleaseVar(scip, &(*consdata)->intvar) );
    }
@@ -387,7 +400,7 @@ SCIP_RETCODE consdataPrint(
    SCIPinfoMessage(scip, file, "xor(");
 
    /* print variable list */
-   SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars, FALSE, ',') );
+   SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars, TRUE, ',') );
 
    /* close variable list and write right hand side */
    SCIPinfoMessage(scip, file, ") = %d", consdata->rhs);
@@ -1083,8 +1096,8 @@ SCIP_RETCODE analyzeConflict(
    SCIP_CONSDATA* consdata;
    int v;
 
-   /* conflict analysis can only be applied in solving stage */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   /* conflict analysis can only be applied in solving stage and if it is applicable */
+   if( (SCIPgetStage(scip) != SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);
@@ -1730,12 +1743,17 @@ SCIP_RETCODE preprocessConstraintPairs(
             SCIP_CALL( SCIPaggregateVars(scip, singlevar1, singlevar0, 1.0, 1.0, 1.0,
                   &infeasible, &redundant, &aggregated) );
          }
-         assert(infeasible || redundant);
+         assert(infeasible || redundant || SCIPdoNotAggr(scip));
+
          *cutoff = *cutoff || infeasible;
          if( aggregated )
             (*naggrvars)++;
-         SCIP_CALL( SCIPdelCons(scip, cons1) );
-         (*ndelconss)++;
+
+         if( redundant )
+         {
+            SCIP_CALL( SCIPdelCons(scip, cons1) );
+            (*ndelconss)++;
+         }
 #if 0
       /* if aggregation in the core of SCIP is not changed we do not need to call applyFixing, this would be the correct
        * way
@@ -2150,13 +2168,20 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
                SCIP_CALL( SCIPaggregateVars(scip, consdata->vars[0], consdata->vars[1], 1.0, 1.0, 1.0,
                      &cutoff, &redundant, &aggregated) );
             }
-            assert(redundant);
-            if( aggregated )
-               (*naggrvars)++;
+            assert(redundant || SCIPdoNotAggr(scip));
 
-            /* delete constraint */
-            SCIP_CALL( SCIPdelCons(scip, cons) );
-            (*ndelconss)++;
+            if( aggregated )
+            {
+               assert(redundant);
+               (*naggrvars)++;
+            }
+
+            if( redundant )
+            {
+               /* delete constraint */
+               SCIP_CALL( SCIPdelCons(scip, cons) );
+               (*ndelconss)++;
+            }
          }
       }
    }
@@ -2270,6 +2295,10 @@ SCIP_DECL_CONSLOCK(consLockXor)
 
 /** constraint disabling notification method of constraint handler */
 #define consDisableXor NULL
+
+
+/** variable deletion method of constraint handler */
+#define consDelvarsXor NULL
 
 
 /** constraint display method of constraint handler */
@@ -2467,7 +2496,7 @@ SCIP_RETCODE SCIPincludeConshdlrXor(
          consPropXor, consPresolXor, consRespropXor, consLockXor,
          consActiveXor, consDeactiveXor, 
          consEnableXor, consDisableXor,
-         consPrintXor, consCopyXor, consParseXor,
+         consDelvarsXor, consPrintXor, consCopyXor, consParseXor,
          conshdlrdata) );
 
    /* add xor constraint handler parameters */

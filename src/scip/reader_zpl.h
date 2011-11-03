@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_zpl.h
+ * @ingroup FILEREADERS
  * @brief  ZIMPL model file reader
  * @author Tobias Achterberg
  */

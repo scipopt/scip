@@ -517,6 +517,7 @@ void SCIProwRecalcLPActivity(
 extern
 SCIP_Real SCIProwGetLPActivity(
    SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp                  /**< current LP data */
    );
@@ -525,6 +526,7 @@ SCIP_Real SCIProwGetLPActivity(
 extern
 SCIP_Real SCIProwGetLPFeasibility(
    SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp                  /**< current LP data */
    );
@@ -540,6 +542,7 @@ void SCIProwRecalcPseudoActivity(
 extern
 SCIP_Real SCIProwGetPseudoActivity(
    SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat                /**< problem statistics */
    );
 
@@ -547,6 +550,7 @@ SCIP_Real SCIProwGetPseudoActivity(
 extern
 SCIP_Real SCIProwGetPseudoFeasibility(
    SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat                /**< problem statistics */
    );
 
@@ -1254,7 +1258,8 @@ extern
 SCIP_RETCODE SCIPlpStartDive(
    SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics */
    );
 
 /** quits LP diving and resets bounds and objective values of columns to the current node's values */
@@ -1325,6 +1330,18 @@ extern
 void SCIPlpRecalculateObjSqrNorm(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp                  /**< LP data */
+   );
+
+/** compute relative interior point */
+extern
+SCIP_RETCODE SCIPlpComputeRelIntPoint(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_Bool             relaxrows,          /**< should the rows be relaxed */
+   SCIP_Bool             inclobjcutoff,      /**< should a row for the objective cutoff be included */
+   char                  normtype,           /**< which norm to use: 'o'ne-norm or 's'upremum-norm */
+   SCIP_Real*            point,              /**< array to store relative interior point on exit */
+   SCIP_Bool*            success             /**< buffer to indicate whether interior point was successfully computed */
    );
 
 #ifndef NDEBUG

@@ -17,6 +17,10 @@
  * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for message output methods
  * @author Tobias Achterberg
+ *
+ *  This file defines the interface for message handlers implemented in C.
+ *
+ *  - \ref scip::ObjMessagehdlr "C++ wrapper class"
  */
 
 #ifndef __SCIP_TYPE_MESSAGE_H__

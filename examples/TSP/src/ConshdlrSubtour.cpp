@@ -39,6 +39,7 @@ struct SCIP_ConsData
    GRAPH* graph;
 };
 
+/* checks whether proposed solution contains a subtour */
 static
 SCIP_Bool findSubtour( 
    SCIP*              scip,               /**< SCIP data structure */
@@ -112,6 +113,7 @@ SCIP_Bool findSubtour(
    return ( graph->nnodes != tourlength );
 }
 
+/* separates subtour elemination cuts */
 static
 SCIP_RETCODE sepaSubtour(
    SCIP*              scip,               /**< SCIP data structure */
@@ -620,6 +622,28 @@ SCIP_RETCODE ConshdlrSubtour::scip_lock(
 
    return SCIP_OKAY;
 }
+
+/** variable deletion method of constraint handler
+ *
+ *  This method should iterate over all constraints of the constraint handler and delete all variables
+ *  that were marked for deletion by SCIPdelVar().
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
+ *  - conss           : array of constraints in transformed problem
+ *  - nconss          : number of constraints in transformed problem
+ */
+SCIP_RETCODE ConshdlrSubtour::scip_delvars(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+   SCIP_CONS**        conss,              /**< array of constraints to process */
+   int                nconss              /**< number of constraints to process */
+   )
+{
+   return SCIP_OKAY;
+}
+
 
 /** constraint display method of constraint handler
  *

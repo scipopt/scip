@@ -14,8 +14,13 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_rins.h
- * @brief  RINS primal heuristic
+ * @ingroup PRIMALHEURISTICS
+ * @brief  LNS heuristic that combines the incumbent with the LP optimum
  * @author Timo Berthold
+ *
+ * RINS is a large neighborhood search improvement heuristic, i.e., it requires a known feasible solution. It solves a
+ * sub-SCIP that is created by fixing variables which take the same value in the incumbent and the current node's LP
+ * relaxation.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

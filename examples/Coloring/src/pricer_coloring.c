@@ -14,23 +14,22 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pricer_coloring.c
- * @brief  coloring variable pricer
+ * @brief  variable pricer for the vertex coloring problem
  * @author Gerald Gamrath
  *
  * This file implements the pricer for the coloring algorithm.
- * 
+ *
  * It computes maximal stable sets in the current graph whose corresponding variables can improve
  * the current LP solution.  This is done by computing a maximum weighted stable set in the current
- * graph with dual-variables of the node constraints as weights. A stable set can improve the
- * solution, if the weight of the set is larger than 1, since it then has negative reduced costs,
- * which are (1 - weight of the set).
+ * graph with dual-variables of the node constraints as weights. A variable can improve the
+ * solution, if the weight of the corresponding stable set is larger than 1, since it then has
+ * negative reduced costs, which are given by (1 - weight of the set).
  *
- * First, a greedy-method tries to compute such a stable set. If it fails, the tclique-algorithm is
+ * The pricer first tries to compute such a stable set using a a greedy-method. If it fails, the tclique-algorithm is
  * used on the complementary graph. This is a branch-and-bound based algorithm for maximal cliques,
- * included in SCIP.  In this case, not only the best solution is added to the LP, as well all other
+ * included in SCIP.  In this case, not only the best solution is added to the LP, but also all other
  * stable sets found during the branch-and-bound process that could improve the current LP solution
  * are added, limited to a maximal number that can be changed by a parameter.
- *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -58,7 +57,7 @@
 
 
 /* default values for parameters */
-#define DEFAULT_MAXVARSROUND    -1
+#define DEFAULT_MAXVARSROUND     0
 #define DEFAULT_USETCLIQUE      TRUE
 #define DEFAULT_USEGREEDY       TRUE
 #define DEFAULT_ONLYBEST        TRUE
@@ -396,8 +395,8 @@ SCIP_DECL_PRICERINITSOL(pricerInitsolColoring)
    pricerdata = SCIPpricerGetData(pricer);
    assert(pricerdata != NULL);
    
-   pricerdata->maxvarsround = 0;
-   pricerdata->oldmaxvarsround = 0;
+   /* set maximal number of variables to be priced in each round */
+   SCIPsetIntParam(scip, "pricers/coloring/maxvarsround", MAX(5,COLORprobGetNStableSets(scip))*MAX(50,COLORprobGetNNodes(scip))/50);
 
    pricerdata->bbnode = NULL;
 
@@ -575,10 +574,12 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
          }
          pricerdata->nstablesetsfound += 1;
          
-         /* create variable for the stable set and add it to SCIP*/
+         /* create variable for the stable set and add it to SCIP */
          SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0, 1, 1, SCIP_VARTYPE_BINARY, 
                TRUE, TRUE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) );
+
          COLORprobAddVarForStableSet(scip, setnumber, var);
+         SCIPvarMarkDeletable(var);
          SCIP_CALL( SCIPaddPricedVar(scip, var, 1.0) );
          SCIP_CALL( SCIPchgVarUbLazy(scip, var, 1.0) );
          
@@ -692,7 +693,9 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
                   /* create variable for the stable set and add it to SCIP */
                   SCIP_CALL( SCIPcreateVar(pricerdata->scip, &var, NULL, 0, 1, 1, SCIP_VARTYPE_BINARY, 
                         TRUE, TRUE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) );
+
                   COLORprobAddVarForStableSet(pricerdata->scip, setnumber, var);
+                  SCIPvarMarkDeletable(var);
                   SCIP_CALL( SCIPaddPricedVar(pricerdata->scip, var, 1.0) );
                   SCIP_CALL( SCIPchgVarUbLazy(scip, var, 1.0) );
 
@@ -792,7 +795,8 @@ SCIP_DECL_PRICERFARKAS(pricerFarkasColoring)
       SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0, 1, 1, SCIP_VARTYPE_BINARY, 
             TRUE, TRUE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*) (size_t) setnumber) );
       COLORprobAddVarForStableSet(scip, setnumber, var);
-      SCIP_CALL( SCIPaddVar(scip, var) );
+      SCIPvarMarkDeletable(var);
+      SCIP_CALL( SCIPaddPricedVar(scip, var, 1.0) );
       SCIP_CALL( SCIPchgVarUbLazy(scip, var, 1.0) );
 
       for ( i = 0; i < nmaxstablesetnodes; i++ )
@@ -802,7 +806,6 @@ SCIP_DECL_PRICERFARKAS(pricerFarkasColoring)
          /* mark node as colored */
          colored[maxstablesetnodes[i]] = TRUE;
       }
-
    }
    /* free memory */
    SCIPfreeBufferArray(scip, &maxstablesetnodes);
@@ -827,6 +830,9 @@ SCIP_DECL_PARAMCHGD(paramChgdMaxvarsround)
    paramdata = SCIPparamGetData(param);
    assert(paramdata != NULL);
    pricerdata = (SCIP_PRICERDATA*) paramdata;
+
+   if( pricerdata->maxvarsround == pricerdata->oldmaxvarsround )
+      return SCIP_OKAY;
    
    if ( pricerdata->maxvarsround <= 1 ) 
       pricerdata->maxvarsround = 2;
@@ -875,6 +881,10 @@ SCIP_RETCODE SCIPincludePricerColoring(
 
    SCIP_CALL( SCIPallocMemory(scip, &pricerdata) );
    pricerdata->scip = scip;
+
+   pricerdata->maxvarsround = 0;
+   pricerdata->oldmaxvarsround = 0;
+
 
    /* include variable pricer */
    SCIP_CALL( SCIPincludePricer(scip, PRICER_NAME, PRICER_DESC, PRICER_PRIORITY, PRICER_DELAY,

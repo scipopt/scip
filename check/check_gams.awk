@@ -78,7 +78,6 @@ BEGIN  {
 /=opt=/  { solstatus[$2] = "opt"; sol[$2] = $3; }   # get optimum
 /=inf=/  { solstatus[$2] = "inf"; }                 # problem infeasible (no feasible solution exists)
 /=best=/ { solstatus[$2] = "best"; sol[$2] = $3; }  # get best known solution value
-/=feas=/ { solstatus[$2] = "feas"; }                # known to be feasible
 /=unkn=/ { solstatus[$2] = "unkn"; }                # no feasible solution known
 /^\*/    { FS="," }  # a start at the beginnnig of a line we take as start of tracefile, so change FS to ','
 /^\* SOLVER/     { solver=$2; }
@@ -290,7 +289,7 @@ END {
            }
            else {
              if( abs(pb - db) <= max(abstol, reltol) ) {
-               status = "solved";
+               status = "solved not verified";
                pass++;
              }
              else {
@@ -302,87 +301,69 @@ END {
          }
        }
        else if( solstatus[prob] == "unkn" ) {
-         reltol = 1e-4 * max(abs(pb),1.0);
-         abstol = 1e-4;
-         
-         if( abs(pb - db) <= max(abstol, reltol) ) {
-           status = "solved not verified";
-           pass++;
-         }
-         else {
-           if( abs(pb) < infty ) {
-             status = "better";
-             timeouttime += tottime;
-             timeouts++;
-           }
-           else {
-             if( timeout || gapreached ) {
-               if( timeout )
-                 status = "timeout";
-               else if( gapreached )
-                 status = "gaplimit";
-               timeouttime += tottime;
-               timeouts++;
-             }
-             else 
-               status = "unknown";
-           }
-         }
+	  reltol = 1e-4 * max(abs(pb),1.0);
+	  abstol = 1e-4;
+
+	  if( timeout || gapreached ) {
+	     if( abs(pb) < infty ) {
+		status = "better";
+		timeouttime += tottime;
+		timeouts++;
+	     }
+	     else {
+		if( timeout )
+		   status = "timeout";
+		else if( gapreached )
+		   status = "gaplimit";
+		timeouttime += tottime;
+		timeouts++;
+	     }
+	  }
+	  else if( abs(pb - db) <= max(abstol, reltol) ) {
+	     status = "solved not verified";
+	     pass++;
+	  }
+	  else {
+	     status = "unknown";
+	  }
        }
        else if( solstatus[prob] == "inf" ) {
-         if( !feasible ) {
-           if( timeout ) {
-             status = "timeout";
-             timeouttime += tottime;
-             timeouts++;
-           }
-           else {
-             status = "ok";
-             pass++;
-           }
-         }
-         else {
-           status = "fail";
-           failtime += tottime;
-           fail++;
-         }
-       }
-       else if( solstatus[prob] == "feas" ) {
-         if( timeout ) {
-           status = "timeout";
-           timeouttime += tottime;
-           timeouts++;
-         }
-         else if( feasible ) {
-           status = "ok";
-           pass++;
-         }
-         else {
-           status = "fail";
-           failtime += tottime;
-           fail++;
-         }
+	  if( !feasible ) {
+	     if( timeout ) {
+		status = "timeout";
+		timeouttime += tottime;
+		timeouts++;
+	     }
+	     else {
+		status = "ok";
+		pass++;
+	     }
+	  }
+	  else {
+	     status = "fail";
+	     failtime += tottime;
+	     fail++;
+	  }
        }
        else {
-         reltol = 1e-4 * max(abs(pb),1.0);
-         abstol = 1e-4;
+	  reltol = 1e-4 * max(abs(pb),1.0);
+	  abstol = 1e-4;
 
-         if( abs(pb - db) < max(abstol,reltol) ) {
-           status = "solved not verified";
-           pass++;
-         }
-         else {
-           if( timeout || gapreached ) {
-             if( timeout )
-               status = "timeout";
-             else if( gapreached )
-               status = "gaplimit";
-             timeouttime += tottime;
-             timeouts++;
-           }
-           else
-             status = "unknown";
-         }
+	  if( timeout || gapreached ) {
+	     if( timeout )
+		status = "timeout";
+	     else if( gapreached )
+		status = "gaplimit";
+	     timeouttime += tottime;
+	     timeouts++;
+	  }
+	  else if( abs(pb - db) < max(abstol,reltol) ) {
+	     status = "solved not verified";
+	     pass++;
+	  }
+	  else {
+	     status = "unknown";
+	  }
        }
 
        if( writesolufile ) {
@@ -394,7 +375,6 @@ END {
            printf("=best= %-18s %16.9g\n",prob,pb)>NEWSOLUFILE;
          else
            printf("=unkn= %-18s\n",prob)>NEWSOLUFILE;
-         #=feas= cannot happen since the problem is reported with an objective value
        }
 
        #write output to both the tex file and the console depending on whether printsoltimes is activated or not
@@ -418,7 +398,7 @@ END {
        } else if( status == "gaplimit" || status == "better" ) {
          modelstat = 8;
          solverstat = 1;
-       } else if( status == "ok" || status == "solved" || status == "solved not verified" ) {
+       } else if( status == "ok" || status == "solved not verified" ) {
          modelstat = 1;
          solverstat = 1;
        } else {

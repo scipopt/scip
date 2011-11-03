@@ -55,19 +55,19 @@
 /** constraint data for linear ordering constraints */
 struct SCIP_ConsData
 {
-   int         n;     /**< number of elements */
-   SCIP_VAR*** vars;  /**< variables */
+   int                   n;                  /**< number of elements */
+   SCIP_VAR***           vars;               /**< variables */
 };
 
 
 /** separate symmetry equations and triangle inequalities */
 static
 SCIP_RETCODE LinearOrderingSeparate(
-   SCIP*       scip,          /**< SCIP pointer */
-   int         n,             /**< number of elements */
-   SCIP_VAR*** vars,          /**< n x n matrix of variables */
-   SCIP_SOL*   sol,           /**< solution to be separated */
-   int*        nGen           /**< output: number of added rows */
+   SCIP*                 scip,               /**< SCIP pointer */
+   int                   n,                  /**< number of elements */
+   SCIP_VAR***           vars,               /**< n x n matrix of variables */
+   SCIP_SOL*             sol,                /**< solution to be separated */
+   int*                  nGen                /**< output: number of added rows */
    )
 {
    int i;
@@ -955,6 +955,9 @@ SCIP_DECL_CONSLOCK(consLockLinearOrdering)
 /** constraint disabling notification method of constraint handler */
 #define consDisableLinearOrdering NULL
 
+/** variable deletion method of constraint handler */
+#define consDelVarsLinearOrdering NULL
+
 /** constraint display method of constraint handler */
 static
 SCIP_DECL_CONSPRINT(consPrintLinearOrdering)
@@ -1023,43 +1026,42 @@ SCIP_DECL_CONSCOPY(consCopyLinearOrdering)
 
    sourcedata = SCIPconsGetData(sourcecons);
    assert( sourcedata != NULL );
-   assert( sourcedata->vars != NULL );
 
    n = sourcedata->n;
    sourcevars = sourcedata->vars;
+   assert( sourcevars != NULL );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, n) );
-   BMSclearMemoryArray(&vars, n);
+   BMSclearMemoryArray(vars, n);
 
-   for( i = 0; i < n; ++i )
+   for (i = 0; i < n; ++i)
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &(vars[i]), n) );
 
-      for( j = 0; j < n && *valid; ++j )
+      for (j = 0; j < n && *valid; ++j)
       {
-         if( i != j )
+         if ( i != j )
          {
             SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[i][j], &vars[i][j], varmap, consmap, global, valid) );
-            assert(!(*valid) || vars[i][j] != NULL);                       
+            assert( !(*valid) || vars[i][j] != NULL );
          }
       }
    }
 
-   if( *valid )
+   if ( *valid )
    {
-      
       /* create copied constraint */
-      if( name == 0 )
+      if ( name == 0 )
          name = SCIPconsGetName(sourcecons);
-      
+
       SCIP_CALL( SCIPcreateConsLinearOrdering(scip, cons, name, n, vars,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
-      
-   for( i = 0; i < n; ++i )
+
+   for (i = 0; i < n; ++i)
       SCIPfreeBufferArrayNull(scip, &vars[i]);
    SCIPfreeBufferArray(scip, &vars);
- 
+
    return SCIP_OKAY;
 }
 
@@ -1083,7 +1085,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinearOrdering(
          consSepalpLinearOrdering, consSepasolLinearOrdering, consEnfolpLinearOrdering, consEnfopsLinearOrdering,
 	 consCheckLinearOrdering, consPropLinearOrdering, consPresolLinearOrdering, consRespropLinearOrdering,
          consLockLinearOrdering, consActiveLinearOrdering, consDeactiveLinearOrdering,
-         consEnableLinearOrdering, consDisableLinearOrdering,
+         consEnableLinearOrdering, consDisableLinearOrdering, consDelVarsLinearOrdering,
          consPrintLinearOrdering, consCopyLinearOrdering, consParseLinearOrdering,
          NULL) );
 

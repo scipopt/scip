@@ -1125,7 +1125,8 @@ void SCIPsortedvecInsertInd(
    SCIP_DECL_SORTINDCOMP((*indcomp)),        /**< data element comparator */
    void*                 dataptr,            /**< pointer to data field that is given to the external compare method */
    int                   keyval,             /**< key value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into an array of pointers in non-decreasing order */
@@ -1134,7 +1135,8 @@ void SCIPsortedvecInsertPtr(
    void**                ptrarray,           /**< pointer to the pointer array where an element is to be inserted */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
    void*                 keyval,             /**< key value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into two joint arrays of pointers/pointers sorted by first array in non-decreasing order */
@@ -1145,7 +1147,8 @@ void SCIPsortedvecInsertPtrPtr(
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
    void*                 keyval,             /**< key value of new element */
    void*                 field1val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into two joint arrays of pointers/Reals, sorted by first array in non-decreasing order */
@@ -1156,7 +1159,8 @@ void SCIPsortedvecInsertPtrReal(
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
    void*                 keyval,             /**< key value of new element */
    SCIP_Real             field1val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into two joint arrays of pointers/ints, sorted by first array in non-decreasing order */
@@ -1167,7 +1171,8 @@ void SCIPsortedvecInsertPtrInt(
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
    void*                 keyval,             /**< key value of new element */
    int                   field1val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into two joint arrays of pointers/Bools, sorted by first array in non-decreasing order */
@@ -1178,7 +1183,8 @@ void SCIPsortedvecInsertPtrBool(
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
    void*                 keyval,             /**< key value of new element */
    SCIP_Bool             field1val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into three joint arrays of pointers/ints/ints, sorted by first array in non-decreasing order */
@@ -1191,7 +1197,8 @@ void SCIPsortedvecInsertPtrIntInt(
    void*                 keyval,             /**< key value of new element */
    int                   field1val,          /**< additional value of new element */
    int                   field2val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into three joint arrays of pointers/Reals/ints, sorted by first array in non-decreasing order */
@@ -1204,7 +1211,8 @@ void SCIPsortedvecInsertPtrRealInt(
    void*                 keyval,             /**< key value of new element */
    SCIP_Real             field1val,          /**< additional value of new element */
    int                   field2val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into three joint arrays of pointers/pointers/Ints, sorted by first array in non-decreasing order */
@@ -1217,7 +1225,8 @@ void SCIPsortedvecInsertPtrPtrInt(
    void*                 keyval,             /**< key value of new element */
    void*                 field1val,          /**< additional value of new element */
    int                   field2val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into three joint arrays of pointers/pointers/Reals, sorted by first array in non-decreasing order */
@@ -1230,7 +1239,8 @@ void SCIPsortedvecInsertPtrPtrReal(
    void*                 keyval,             /**< key value of new element */
    void*                 field1val,          /**< additional value of new element */
    SCIP_Real             field2val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into four joint arrays of pointers/Reals/ints/ints, sorted by first array in non-decreasing order */
@@ -1245,7 +1255,8 @@ void SCIPsortedvecInsertPtrRealIntInt(
    SCIP_Real             field1val,          /**< additional value of new element */
    int                   field2val,          /**< additional value of new element */
    int                   field3val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into four joint arrays of pointer/pointer/Reals/ints, sorted by first array in non-decreasing order */
@@ -1260,7 +1271,8 @@ void SCIPsortedvecInsertPtrPtrRealInt(
    void*                 field1val,          /**< additional value of new element */
    SCIP_Real             field2val,          /**< additional value of new element */
    int                   field3val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into four joint arrays of pointer/pointer/Longs/ints, sorted by first array in non-decreasing order */
@@ -1275,7 +1287,8 @@ void SCIPsortedvecInsertPtrPtrLongInt(
    void*                 field1val,          /**< additional value of new element */
    SCIP_Longint          field2val,          /**< additional value of new element */
    int                   field3val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into five joint arrays of pointer/pointer/Longs/ints/ints, sorted by first array in non-decreasing order */
@@ -1292,7 +1305,8 @@ void SCIPsortedvecInsertPtrPtrLongIntInt(
    SCIP_Longint          field2val,          /**< additional value of new element */
    int                   field3val,          /**< additional value of new element */
    int                   field4val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into two joint arrays of Reals/pointers, sorted by first array in non-decreasing order */
@@ -1302,21 +1316,23 @@ void SCIPsortedvecInsertRealPtr(
    void**                ptrarray,           /**< pointer array where an element is to be inserted */
    SCIP_Real             keyval,             /**< key value of new element */
    void*                 field1val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into two joint arrays of Reals/pointers, sorted by first array in non-decreasing order */
 extern
 void SCIPsortedvecInsertRealPtrPtrInt(
    SCIP_Real*            realarray,          /**< SCIP_Real array where an element is to be inserted */
-   void**                ptrarray1,           /**< pointer array where an element is to be inserted */
-   void**                ptrarray2,           /**< pointer array where an element is to be inserted */
+   void**                ptrarray1,          /**< pointer array where an element is to be inserted */
+   void**                ptrarray2,          /**< pointer array where an element is to be inserted */
    int*                  intarray,           /**< int array where an element is to be inserted */
    SCIP_Real             keyval,             /**< key value of new element */
    void*                 field1val,          /**< additional value of new element */
    void*                 field2val,          /**< additional value of new element */
-   int                   intval,           /**<  additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int                   intval,             /**<  additional value of new element */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into an arrays of Reals, sorted in non-decreasing order */
@@ -1324,7 +1340,8 @@ extern
 void SCIPsortedvecInsertReal(
    SCIP_Real*            realarray,          /**< SCIP_Real array where an element is to be inserted */
    SCIP_Real             keyval,             /**< key value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into two joint arrays of Reals/ints, sorted by first array in non-decreasing order */
@@ -1334,7 +1351,8 @@ void SCIPsortedvecInsertRealInt(
    int*                  intarray,           /**< int array where an element is to be inserted */
    SCIP_Real             keyval,             /**< key value of new element */
    int                   field1val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into three joint arrays of Reals/ints/Longs, sorted by first array in non-decreasing order */
@@ -1346,7 +1364,8 @@ void SCIPsortedvecInsertRealIntLong(
    SCIP_Real             keyval,             /**< key value of new element */
    int                   field1val,          /**< additional value of new element */
    SCIP_Longint          field2val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into three joint arrays of Reals/ints/Pointer, sorted by first array in non-decreasing order */
@@ -1358,7 +1377,8 @@ void SCIPsortedvecInsertRealIntPtr(
    SCIP_Real             keyval,             /**< key value of new element */
    int                   field1val,          /**< additional value of new element */
    void*                 field2val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into three joint arrays of Reals/Reals/Pointer, sorted by first array in non-decreasing order */
@@ -1370,7 +1390,8 @@ void SCIPsortedvecInsertRealRealPtr(
    SCIP_Real             keyval,             /**< key value of new element */
    SCIP_Real             field1val,          /**< additional value of new element */
    void*                 field2val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into four joint arrays of Reals/Long/Reals/ints, sorted by first array in non-decreasing order */
@@ -1384,7 +1405,8 @@ void SCIPsortedvecInsertRealLongRealInt(
    SCIP_Longint          field1val,          /**< additional value of new element */
    SCIP_Real             field2val,          /**< additional value of new element */
    int                   field3val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into four joint arrays of Reals/Reals/ints/ints, sorted by first array in non-decreasing order */
@@ -1398,7 +1420,8 @@ void SCIPsortedvecInsertRealRealIntInt(
    SCIP_Real             field1val,          /**< additional value of new element */
    int                   field2val,          /**< additional value of new element */
    int                   field3val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into four joint arrays of Reals/Reals/Reals/ints, sorted by first array in non-decreasing order */
@@ -1412,7 +1435,8 @@ void SCIPsortedvecInsertRealRealRealInt(
    SCIP_Real             field1val,          /**< additional value of new element */
    SCIP_Real             field2val,          /**< additional value of new element */
    int                   field3val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into four joint arrays of Reals/Reals/Reals/pointers, sorted by first array in non-decreasing order */
@@ -1426,7 +1450,8 @@ void SCIPsortedvecInsertRealRealRealPtr(
    SCIP_Real             field1val,          /**< additional value of new element */
    SCIP_Real             field2val,          /**< additional value of new element */
    void*                 field3val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into five joint arrays of Reals/Reals/Reals/Bools/pointers, sorted by first array in non-decreasing order */
@@ -1442,7 +1467,8 @@ void SCIPsortedvecInsertRealRealRealBoolPtr(
    SCIP_Real             field2val,          /**< additional value of new element */
    SCIP_Bool             field3val,          /**< additional value of new element */
    void*                 field4val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into an array of ints in non-decreasing order */
@@ -1450,7 +1476,8 @@ extern
 void SCIPsortedvecInsertInt(
    int*                  intarray,           /**< int array where an element is to be inserted */
    int                   keyval,             /**< key value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into two joint arrays of ints/ints, sorted by first array in non-decreasing order */
@@ -1460,7 +1487,8 @@ void SCIPsortedvecInsertIntInt(
    int*                  intarray2,          /**< second int array where an element is to be inserted */
    int                   keyval,             /**< key value of new element */
    int                   field1val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into two joint arrays of ints/pointers, sorted by first array in non-decreasing order */
@@ -1470,7 +1498,8 @@ void SCIPsortedvecInsertIntPtr(
    void**                ptrarray,           /**< pointer array where an element is to be inserted */
    int                   keyval,             /**< key value of new element */
    void*                 field1val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into two joint arrays of ints/reals, sorted by first array in non-decreasing order */
@@ -1480,7 +1509,8 @@ void SCIPsortedvecInsertIntReal(
    SCIP_Real*            realarray,          /**< real array where an element is to be inserted */
    int                   keyval,             /**< key value of new element */
    SCIP_Real             field1val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into three joint arrays of ints/ints/SCIP_Longint, sorted by first array in non-decreasing order */
@@ -1492,7 +1522,8 @@ void SCIPsortedvecInsertIntIntLong(
    int                   keyval,             /**< key value of new element */
    int                   field1val,          /**< additional value of new element */
    SCIP_Longint          field2val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into three joint arrays of ints/ints/pointers, sorted by first array in non-decreasing order */
@@ -1504,7 +1535,8 @@ void SCIPsortedvecInsertIntIntPtr(
    int                   keyval,             /**< key value of new element */
    int                   field1val,          /**< additional value of new element */
    void*                 field2val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into three joint arrays of ints/ints/Reals, sorted by first array in non-decreasing order */
@@ -1516,7 +1548,8 @@ void SCIPsortedvecInsertIntIntReal(
    int                   keyval,             /**< key value of new element */
    int                   field1val,          /**< additional value of new element */
    SCIP_Real             field2val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into three joint arrays of ints/pointers/Reals, sorted by first array in non-decreasing order */
@@ -1528,7 +1561,8 @@ void SCIPsortedvecInsertIntPtrReal(
    int                   keyval,             /**< key value of new element */
    void*                 field1val,          /**< additional value of new element */
    SCIP_Real             field2val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into four joint arrays of ints/ints/ints/pointers, sorted by first array in non-decreasing order */
@@ -1542,7 +1576,8 @@ void SCIPsortedvecInsertIntIntIntPtr(
    int                   field1val,          /**< additional value of new element */
    int                   field2val,          /**< additional value of new element */
    void*                 field3val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into four joint arrays of ints/pointers/ints/Reals, sorted by first array in non-decreasing order */
@@ -1556,7 +1591,8 @@ void SCIPsortedvecInsertIntPtrIntReal(
    void*                 field1val,          /**< additional value of new element */
    int                   field2val,          /**< additional value of new element */
    SCIP_Real             field3val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into an array of Longints, sorted in non-decreasing order */
@@ -1564,7 +1600,8 @@ extern
 void SCIPsortedvecInsertLong(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array where an element is to be inserted */
    SCIP_Longint          keyval,             /**< key value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into two joint arrays of Long/pointer, sorted by the first array in non-decreasing order */
@@ -1574,7 +1611,8 @@ void SCIPsortedvecInsertLongPtr(
    void**                ptrarray,           /**< pointer array where an element is to be inserted */
    SCIP_Longint          keyval,             /**< key value of new element */
    void*                 field1val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into three joint arrays of Long/pointer/ints, sorted by the first array in non-decreasing order */
@@ -1586,7 +1624,8 @@ void SCIPsortedvecInsertLongPtrInt(
    SCIP_Longint          keyval,             /**< key value of new element */
    void*                 field1val,          /**< additional value of new element */
    int                   field2val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into four joint arrays of Long/pointer/pointer/ints, sorted by first array in non-decreasing order */
@@ -1600,7 +1639,8 @@ void SCIPsortedvecInsertLongPtrPtrInt(
    void*                 field1val,          /**< additional value of new element */
    void*                 field2val,          /**< additional value of new element */
    int                   field3val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into five joint arrays of Long/pointer/pointer/ints/ints, sorted by first array in non-decreasing order */
@@ -1616,7 +1656,8 @@ void SCIPsortedvecInsertLongPtrPtrIntInt(
    void*                 field2val,          /**< additional value of new element */
    int                   field3val,          /**< additional value of new element */
    int                   field4val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into five joint arrays of Long/pointer/pointer/Bool/ints, sorted by first array in non-decreasing order */
@@ -1632,7 +1673,8 @@ void SCIPsortedvecInsertLongPtrPtrBoolInt(
    void*                 field2val,          /**< additional value of new element */
    SCIP_Bool             field3val,          /**< additional value of new element */
    int                   field4val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 
@@ -1645,7 +1687,8 @@ void SCIPsortedvecInsertDownInd(
    SCIP_DECL_SORTINDCOMP((*indcomp)),        /**< data element comparator */
    void*                 dataptr,            /**< pointer to data field that is given to the external compare method */
    int                   keyval,             /**< key value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into an array of pointers in non-increasing order */
@@ -1654,7 +1697,8 @@ void SCIPsortedvecInsertDownPtr(
    void**                ptrarray,           /**< pointer array where an element is to be inserted */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
    void*                 keyval,             /**< key value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into two joint arrays of pointers/pointers, sorted by first array in non-increasing order */
@@ -1665,7 +1709,8 @@ void SCIPsortedvecInsertDownPtrPtr(
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
    void*                 keyval,             /**< key value of new element */
    void*                 field1val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into two joint arrays of pointers/Reals, sorted by first array in non-increasing order */
@@ -1676,7 +1721,8 @@ void SCIPsortedvecInsertDownPtrReal(
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
    void*                 keyval,             /**< key value of new element */
    SCIP_Real             field1val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into two joint arrays of pointers/ints, sorted by first array in non-increasing order */
@@ -1687,7 +1733,8 @@ void SCIPsortedvecInsertDownPtrInt(
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
    void*                 keyval,             /**< key value of new element */
    int                   field1val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into two joint arrays of pointers/Bools, sorted by first array in non-increasing order */
@@ -1698,7 +1745,8 @@ void SCIPsortedvecInsertDownPtrBool(
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
    void*                 keyval,             /**< key value of new element */
    SCIP_Bool             field1val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into three joint arrays of pointers/ints/ints, sorted by first array in non-increasing order */
@@ -1711,7 +1759,8 @@ void SCIPsortedvecInsertDownPtrIntInt(
    void*                 keyval,             /**< key value of new element */
    int                   field1val,          /**< additional value of new element */
    int                   field2val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into three joint arrays of pointers/Reals/ints, sorted by first array in non-increasing order */
@@ -1724,7 +1773,8 @@ void SCIPsortedvecInsertDownPtrRealInt(
    void*                 keyval,             /**< key value of new element */
    SCIP_Real             field1val,          /**< additional value of new element */
    int                   field2val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into three joint arrays of pointers/pointers/Ints, sorted by first array in non-increasing order */
@@ -1737,7 +1787,8 @@ void SCIPsortedvecInsertDownPtrPtrInt(
    void*                 keyval,             /**< key value of new element */
    void*                 field1val,          /**< additional value of new element */
    int                   field2val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into three joint arrays of pointers/pointers/Reals, sorted by first array in non-increasing order */
@@ -1750,7 +1801,8 @@ void SCIPsortedvecInsertDownPtrPtrReal(
    void*                 keyval,             /**< key value of new element */
    void*                 field1val,          /**< additional value of new element */
    SCIP_Real             field2val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into four joint arrays of pointers/Reals/ints/ints, sorted by first array in non-increasing order */
@@ -1765,7 +1817,8 @@ void SCIPsortedvecInsertDownPtrRealIntInt(
    SCIP_Real             field1val,          /**< additional value of new element */
    int                   field2val,          /**< additional value of new element */
    int                   field3val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into four joint arrays of pointer/pointer/Reals/ints, sorted by first array in non-increasing order */
@@ -1780,7 +1833,8 @@ void SCIPsortedvecInsertDownPtrPtrRealInt(
    void*                 field1val,          /**< additional value of new element */
    SCIP_Real             field2val,          /**< additional value of new element */
    int                   field3val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into four joint arrays of pointer/pointer/Longs/ints, sorted by first array in non-increasing order */
@@ -1795,7 +1849,8 @@ void SCIPsortedvecInsertDownPtrPtrLongInt(
    void*                 field1val,          /**< additional value of new element */
    SCIP_Longint          field2val,          /**< additional value of new element */
    int                   field3val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into five joint arrays of pointer/pointer/Longs/ints/ints, sorted by first array in non-increasing order */
@@ -1812,7 +1867,8 @@ void SCIPsortedvecInsertDownPtrPtrLongIntInt(
    SCIP_Longint          field2val,          /**< additional value of new element */
    int                   field3val,          /**< additional value of new element */
    int                   field4val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into an array of Reals, sorted in non-increasing order */
@@ -1820,7 +1876,8 @@ extern
 void SCIPsortedvecInsertDownReal(
    SCIP_Real*            realarray,          /**< SCIP_Real array where an element is to be inserted */
    SCIP_Real             keyval,             /**< key value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into two joint arrays of Reals/pointers, sorted by first array in non-increasing order */
@@ -1830,7 +1887,8 @@ void SCIPsortedvecInsertDownRealPtr(
    void**                ptrarray,           /**< pointer array where an element is to be inserted */
    SCIP_Real             keyval,             /**< key value of new element */
    void*                 field1val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into three joint arrays of Reals/pointers, sorted by first array in non-increasing order */
@@ -1842,7 +1900,8 @@ void SCIPsortedvecInsertDownRealPtrPtr(
    SCIP_Real             keyval,             /**< key value of new element */
    void*                 field1val,          /**< additional value of new element */
    void*                 field2val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into two joint arrays of Reals/ints, sorted by first array in non-increasing order */
@@ -1852,7 +1911,8 @@ void SCIPsortedvecInsertDownRealInt(
    int*                  intarray,           /**< int array where an element is to be inserted */
    SCIP_Real             keyval,             /**< key value of new element */
    int                   field1val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into three joint arrays of Reals/ints/Longs, sorted by first array in non-increasing order */
@@ -1864,7 +1924,8 @@ void SCIPsortedvecInsertDownRealIntLong(
    SCIP_Real             keyval,             /**< key value of new element */
    int                   field1val,          /**< additional value of new element */
    SCIP_Longint          field2val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into three joint arrays of Reals/ints/Pointer, sorted by first array in non-increasing order */
@@ -1876,7 +1937,8 @@ void SCIPsortedvecInsertDownRealIntPtr(
    SCIP_Real             keyval,             /**< key value of new element */
    int                   field1val,          /**< additional value of new element */
    void*                 field2val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into three joint arrays of Reals/Reals/Pointer, sorted by first array in non-increasing order */
@@ -1888,7 +1950,8 @@ void SCIPsortedvecInsertDownRealRealPtr(
    SCIP_Real             keyval,             /**< key value of new element */
    SCIP_Real             field1val,          /**< additional value of new element */
    void*                 field2val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into four joint arrays of Reals/Longs/Reals/ints, sorted by first array in non-increasing order */
@@ -1902,7 +1965,8 @@ void SCIPsortedvecInsertDownRealLongRealInt(
    SCIP_Longint          field1val,          /**< additional value of new element */
    SCIP_Real             field2val,          /**< additional value of new element */
    int                   field3val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into four joint arrays of Reals/Reals/ints/ints, sorted by first array in non-increasing order */
@@ -1916,7 +1980,8 @@ void SCIPsortedvecInsertDownRealRealIntInt(
    SCIP_Real             field1val,          /**< additional value of new element */
    int                   field2val,          /**< additional value of new element */
    int                   field3val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into four joint arrays of Reals/Reals/Reals/ints, sorted by first array in non-increasing order */
@@ -1930,7 +1995,8 @@ void SCIPsortedvecInsertDownRealRealRealInt(
    SCIP_Real             field1val,          /**< additional value of new element */
    SCIP_Real             field2val,          /**< additional value of new element */
    int                   field3val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into four joint arrays of Reals/Reals/Reals/pointers, sorted by first array in non-increasing order */
@@ -1944,7 +2010,8 @@ void SCIPsortedvecInsertDownRealRealRealPtr(
    SCIP_Real             field1val,          /**< additional value of new element */
    SCIP_Real             field2val,          /**< additional value of new element */
    void*                 field3val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into five joint arrays of Reals/Reals/Reals/Bools/pointers, sorted by first array in non-increasing order */
@@ -1960,7 +2027,8 @@ void SCIPsortedvecInsertDownRealRealRealBoolPtr(
    SCIP_Real             field2val,          /**< additional value of new element */
    SCIP_Bool             field3val,          /**< additional value of new element */
    void*                 field4val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into an array of ints in non-increasing order */
@@ -1968,7 +2036,8 @@ extern
 void SCIPsortedvecInsertDownInt(
    int*                  intarray,           /**< int array where an element is to be inserted */
    int                   keyval,             /**< key value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into two joint arrays of ints/ints, sorted by first array in non-increasing order */
@@ -1978,7 +2047,8 @@ void SCIPsortedvecInsertDownIntInt(
    int*                  intarray2,          /**< second int array where an element is to be inserted */
    int                   keyval,             /**< key value of new element */
    int                   field1val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into two joint arrays of ints/reals, sorted by first array in non-increasing order */
@@ -1988,7 +2058,8 @@ void SCIPsortedvecInsertDownIntReal(
    SCIP_Real*            realarray,          /**< real array where an element is to be inserted */
    int                   keyval,             /**< key value of new element */
    SCIP_Real             field1val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into three joint arrays of ints/ints/SCIP_Longint, sorted by first array in non-increasing order */
@@ -2000,7 +2071,8 @@ void SCIPsortedvecInsertDownIntIntLong(
    int                   keyval,             /**< key value of new element */
    int                   field1val,          /**< additional value of new element */
    SCIP_Longint          field2val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into three joint arrays of ints/ints/pointers, sorted by first array in non-increasing order */
@@ -2012,7 +2084,8 @@ void SCIPsortedvecInsertDownIntIntPtr(
    int                   keyval,             /**< key value of new element */
    int                   field1val,          /**< additional value of new element */
    void*                 field2val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into three joint arrays of ints/ints/Reals, sorted by first array in non-increasing order */
@@ -2024,7 +2097,8 @@ void SCIPsortedvecInsertDownIntIntReal(
    int                   keyval,             /**< key value of new element */
    int                   field1val,          /**< additional value of new element */
    SCIP_Real             field2val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into two joint arrays of ints/pointers, sorted by first array in non-increasing order */
@@ -2034,7 +2108,8 @@ void SCIPsortedvecInsertDownIntPtr(
    void**                ptrarray,           /**< pointer array where an element is to be inserted */
    int                   keyval,             /**< key value of new element */
    void*                 field1val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into four joint arrays of ints/pointers/ints/Reals, sorted by first array in non-increasing order */
@@ -2048,7 +2123,8 @@ void SCIPsortedvecInsertDownIntIntIntPtr(
    int                   field1val,          /**< additional value of new element */
    int                   field2val,          /**< additional value of new element */
    void*                 field3val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 
@@ -2063,7 +2139,8 @@ void SCIPsortedvecInsertDownIntPtrIntReal(
    void*                 field1val,          /**< additional value of new element */
    int                   field2val,          /**< additional value of new element */
    SCIP_Real             field3val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into an array of Longints, sorted in non-increasing order */
@@ -2071,7 +2148,8 @@ extern
 void SCIPsortedvecInsertDownLong(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array where an element is to be inserted */
    SCIP_Longint          keyval,             /**< key value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into two joint arrays of Long/pointer, sorted by the first array in non-increasing order */
@@ -2081,7 +2159,8 @@ void SCIPsortedvecInsertDownLongPtr(
    void**                ptrarray,           /**< pointer array where an element is to be inserted */
    SCIP_Longint          keyval,             /**< key value of new element */
    void*                 field1val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into three joint arrays of Long/pointer/ints, sorted by the first array in non-increasing order */
@@ -2093,7 +2172,8 @@ void SCIPsortedvecInsertDownLongPtrInt(
    SCIP_Longint          keyval,             /**< key value of new element */
    void*                 field1val,          /**< additional value of new element */
    int                   field2val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into four joint arrays of Long/pointer/pointer/ints, sorted by first array in non-increasing order */
@@ -2107,7 +2187,8 @@ void SCIPsortedvecInsertDownLongPtrPtrInt(
    void*                 field1val,          /**< additional value of new element */
    void*                 field2val,          /**< additional value of new element */
    int                   field3val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into five joint arrays of Long/pointer/pointer/ints/ints, sorted by first array in non-increasing order */
@@ -2123,7 +2204,8 @@ void SCIPsortedvecInsertDownLongPtrPtrIntInt(
    void*                 field2val,          /**< additional value of new element */
    int                   field3val,          /**< additional value of new element */
    int                   field4val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 /** insert a new element into five joint arrays of Long/pointer/pointer/Bool/ints, sorted by first array in non-increasing order */
@@ -2139,7 +2221,8 @@ void SCIPsortedvecInsertDownLongPtrPtrBoolInt(
    void*                 field2val,          /**< additional value of new element */
    SCIP_Bool             field3val,          /**< additional value of new element */
    int                   field4val,          /**< additional value of new element */
-   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
 

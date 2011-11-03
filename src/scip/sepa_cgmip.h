@@ -14,8 +14,13 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_cgmip.h
+ * @ingroup SEPARATORS
  * @brief  Chvatal-Gomory cuts computed via a sub-MIP
  * @author Marc Pfetsch
+ *
+ * Separate Chv&aacute;tal-Gomory cuts using a sub-MIP.
+ *
+ * This separator should be used carefully - it may require long separation times.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

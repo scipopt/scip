@@ -17,6 +17,12 @@
  * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for constraints and constraint handlers
  * @author Tobias Achterberg
+ *
+ *  This file defines the interface for constraint handlers implemented in C.
+ *
+ *  - \ref CONS "Instructions for implementing a constraint handler"
+ *  - \ref CONSHDLRS "List of available constraint handlers"
+ *  - \ref scip::ObjConshdlr "C++ wrapper class"
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -98,6 +104,8 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - conshdlr        : the constraint handler itself
  *  - conss           : array of constraints in transformed problem
  *  - nconss          : number of constraints in transformed problem
+ *  - isunbounded     : was the problem already declared to be unbounded
+ *  - isinfeasible    : was the problem already declared to be infeasible
  *
  *  output:
  *  - result          : pointer to store the result of the call
@@ -105,9 +113,10 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  possible return values for *result:
  *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
  *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
- *  - SCIP_FEASIBLE   : no infeasibility nor unboundedness could be found
+ *  - SCIP_FEASIBLE   : no infeasibility or unboundedness could be found
  */
-#define SCIP_DECL_CONSINITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, SCIP_RESULT* result)
+#define SCIP_DECL_CONSINITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, \
+      SCIP_Bool isunbounded, SCIP_Bool isinfeasible, SCIP_RESULT* result)
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished)
  *
@@ -123,6 +132,8 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - conshdlr        : the constraint handler itself
  *  - conss           : final array of constraints in transformed problem
  *  - nconss          : final number of constraints in transformed problem
+ *  - isunbounded     : was the problem already declared to be unbounded
+ *  - isinfeasible    : was the problem already declared to be infeasible
  *
  *  output:
  *  - result          : pointer to store the result of the call
@@ -130,9 +141,10 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  possible return values for *result:
  *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
  *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
- *  - SCIP_FEASIBLE   : no infeasibility nor unboundedness could be found
+ *  - SCIP_FEASIBLE   : no infeasibility or unboundedness could be found
  */
-#define SCIP_DECL_CONSEXITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, SCIP_RESULT* result)
+#define SCIP_DECL_CONSEXITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, \
+      SCIP_Bool isunbounded, SCIP_Bool isinfeasible, SCIP_RESULT* result)
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin)
  *
@@ -616,6 +628,24 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - cons            : the constraint that will be disabled
  */
 #define SCIP_DECL_CONSDISABLE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons)
+
+/** variable deletion method of constraint handler
+ *
+ *  This method is optinal and only of interest if you are using SCIP as a branch-and-price framework. That means, you
+ *  are generating new variables during the search. If you are not doing that just define the function pointer to be
+ *  NULL.
+ *
+ *  If this method gets implemented you should iterate over all constraints of the constraint handler and delete all
+ *  variables that were marked for deletion by SCIPdelVar().
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
+ *  - conss           : array of constraints in transformed problem
+ *  - nconss          : number of constraints in transformed problem
+ */
+#define SCIP_DECL_CONSDELVARS(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss)
+
 
 /** constraint display method of constraint handler
  *

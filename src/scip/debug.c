@@ -316,6 +316,10 @@ SCIP_Bool debugSolIsAchieved(
    {
       SCIP_Real solvalue;
 
+      /* don't check solution while in problem creation stage */
+      if( SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM )
+         return TRUE;
+
       solvalue = SCIPgetSolOrigObj(scip, bestsol);
 
       /* make sure a debug solution has been read, so we do not compare against the initial debugsolval == 0 */
@@ -1013,6 +1017,7 @@ SCIP_RETCODE SCIPdebugIncludeProp(
  */
 extern
 SCIP_RETCODE SCIPdebugAddSolVal(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable for which to add a value */
    SCIP_Real             val                 /**< solution value for variable */
    )
@@ -1021,6 +1026,10 @@ SCIP_RETCODE SCIPdebugAddSolVal(
    int i;
 
    assert(var != NULL);
+
+   /* check if we are in the SCIP instance that we are debugging and not some different (subSCIP, auxiliary CIP, ...) */
+   if( !isSolutionInMip(scip->set) )
+      return SCIP_OKAY;
 
    if( SCIPvarIsOriginal(var) )
    {

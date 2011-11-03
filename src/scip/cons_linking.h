@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_linking.h
+ * @ingroup CONSHDLRS
  * @brief  constraint handler for linking binary variables to an integer variable
  * @author Stefan Heinz
  * @author Jens Schulz

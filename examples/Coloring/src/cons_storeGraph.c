@@ -12,24 +12,26 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 /**@file   cons_storeGraph.c
  * @brief  constraint handler for storing the graph at each node of the tree
  * @author Gerald Gamrath
  *
  * This file implements the constraints that are used for the branching in the coloring algorithm.
  *
- * For each node in the branch-and-bound tree, there exists a constraint of this type, which stores
- * all the restrictions related to that node.
- * 
+ * For each node in the branch-and-bound tree, a constraint of this type is created, which stores
+ * all restrictions related to that branch-and-bound node.
+ *
  * First of all, it stores the type of the constraint ("same" or "differ", the root has type root)
- * and the two nodes on which this restriction is applied.  When the node corresponding to the
- * constraint is examined for the first time, the constraint creates a graph that takes into account
- * all the restrictions, which are active at this node.  At the root, this is the original
- * (preprocessed) graph.  At any other node, it takes the graph of the constraint related to the
- * branch-and-bound father of the current node and modifies it so that all restrictions up to this
- * node are respected.  Since the graph in the branch-and-bound father respects all restrictions on
- * the path to that node, only the last requirement, the one saved at the current node, must be
- * added. This is done as follows: Adding a DIFFER(v,w) constraint is easy, since it suffices to add
+ * and the two nodes in the graph on which this restriction is applied.  When the branch-and-bound
+ * node corresponding to the constraint is examined for the first time, the constraint creates a
+ * graph that takes into account all the restrictions, which are active at this node.
+ * At the root, this is the original (preprocessed) graph.  At any other branch-and-bound node, it
+ * takes the graph of the constraint related to the branch-and-bound father of the current node and
+ * modifies it so that all restrictions up to this node are respected.  Since the graph in the
+ * branch-and-bound father respects all restrictions on the path to that node, only the last
+ * requirement, the one saved at the current branch-and-bound node, must be added.
+ * This is done as follows: Adding a DIFFER(v,w) constraint is easy, since it suffices to add
  * an edge between v and w. For a SAME(v,w) constraint, the original idea is to collapse the nodes v
  * and w into one single vertex. Since this is not possible in the tclique-graph data structure, we
  * introduce new edges in the graph, so that v and w have the same neighborhood.  Hence, in the
@@ -40,19 +42,18 @@
  * in another subtree. In order to forbid all of these sets, which do not fulfill the current
  * restrictions, a propagation is started when the node is entered the first time and repeated
  * later, if the node is reentered after the creation of new variables in another subtree. The
- * propagation simply fixes all those variables to 0 that represent a stable set, which does not
+ * propagation simply fixes to 0 all variables representing a stable set that does not
  * fulfill the restriction at the current node.
  *
- * The information about all fusions of nodes is stored, so that the nodes constituting a union can
- * be accessed easily. Each union has a representative and a set of nodes, whereas each node knows
- * the representative of the union it belongs to. At the beginning, each node forms its own union
- * and therefore each node also represents this union, consisting of only this node.  Later on, some
- * nodes represent unions of several nodes, while other nodes are part of a union which they do not
- * represent, so they have another node as representative. The representatives of the nodes are
- * returned by the methods COLORconsGetRepresentative() / COLORconsGetRepresentatives(), the union
- * represented by a node is returned by COLORconsGetUnion(), the array of unions, indexed by the
- * representing node, is returned by COLORconsGetUnions().
- *
+ * The information about all fusions of nodes (caused by the SAME() operation) is stored, so that the nodes
+ * constituting a union can be accessed easily. Each union has a representative and a set of nodes, whereas
+ * each node knows the representative of the union it belongs to. At the beginning, each node forms its own
+ * union and therefore each node also represents this union, consisting of only this node.  Later on, some
+ * nodes represent unions of several nodes, while other nodes are part of a union which they do not represent,
+ * so they have another node as representative. The representatives of the nodes are returned by the methods
+ * COLORconsGetRepresentative() / COLORconsGetRepresentatives(), the union represented by a node is returned
+ * by COLORconsGetUnion(), the array of unions, indexed by the representing node, is returned by
+ * COLORconsGetUnions().
  */
 
 #include <assert.h>
@@ -93,13 +94,13 @@ struct SCIP_ConsData
    SCIP_CONS*         fathercons;            /* the constraint sticking at the B&B-node's father */
    int*               representativeofnode;  /* r...[i] = j if node j is representative of the union containing node i */
    int**              unionofnode;           /* for all represantatives of a union an array with all the union's members */
-   int*               nnodesinunion;         /* value at position i = #elements in unionofnode[i] */ 
+   int*               nnodesinunion;         /* value at position i = #elements in unionofnode[i] */
    int                node1;                 /* first node for DIFFER / SAME */
    int                node2;                 /* second node for DIFFER / SAME */
    int                type;                  /* type of the branching operation: COLOR_CONSTYPE_DIFFER oder COLOR_CONSTYPE_SAME */
    int                propagatedvars;        /* number of Vars that existed, the last time, the related node was propagated,
                                                 used to determine whether the constraint should be repropagated*/
-   SCIP_Bool          created;               /* flag for saving the creation status of the graph saved in the cons, 
+   SCIP_Bool          created;               /* flag for saving the creation status of the graph saved in the cons,
                                                 at the beginning false, after the first activation set to true */
    SCIP_NODE*         stickingatnode;        /* the node in the B&B-tree at which the cons is sticking */
 };
@@ -156,7 +157,7 @@ SCIP_RETCODE createConsStoreGraphAtRoot(
    consdata->propagatedvars = 0;
    consdata->stickingatnode = NULL;
    consdata->created = TRUE;
-   
+
    /* allocate memory for the arrays and fill them */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(consdata->representativeofnode), nnodes) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(consdata->nnodesinunion), nnodes) );
@@ -188,8 +189,8 @@ SCIP_RETCODE createConsStoreGraphAtRoot(
  */
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
-/** We do not want to copy store graph constraints into subSCIPs since they just store information about 
- *  branching decisions and are used to enforce those. 
+/** We do not want to copy store graph constraints into subSCIPs since they just store information about
+ *  branching decisions and are used to enforce those.
  *  However, in subSCIPs, we only want to solve the current MIP with a branch-and-cut approach.
  */
 #define conshdlrCopyStoreGraph NULL
@@ -291,10 +292,10 @@ SCIP_DECL_CONSDELETE(consDeleteStoreGraph)
       }
       SCIPfreeBlockMemoryArray(scip, &((*consdata)->unionofnode), tcliqueGetNNodes((*consdata)->graph));
       SCIPfreeBlockMemoryArray(scip, &((*consdata)->nnodesinunion), tcliqueGetNNodes((*consdata)->graph));
-      SCIPfreeBlockMemoryArray(scip, &((*consdata)->representativeofnode), tcliqueGetNNodes((*consdata)->graph));      
+      SCIPfreeBlockMemoryArray(scip, &((*consdata)->representativeofnode), tcliqueGetNNodes((*consdata)->graph));
       tcliqueFree(&((*consdata)->cgraph));
    }
-   else  
+   else
    {
       if ((*consdata)->created)
       {
@@ -309,7 +310,7 @@ SCIP_DECL_CONSDELETE(consDeleteStoreGraph)
          SCIPfreeBlockMemoryArray(scip, &((*consdata)->unionofnode), tcliqueGetNNodes((*consdata)->graph));
          SCIPfreeBlockMemoryArray(scip, &((*consdata)->nnodesinunion), tcliqueGetNNodes((*consdata)->graph));
          SCIPfreeBlockMemoryArray(scip, &((*consdata)->representativeofnode), tcliqueGetNNodes((*consdata)->graph));
-         
+
          (*consdata)->unionofnode = NULL;
          (*consdata)->representativeofnode = NULL;
          (*consdata)->nnodesinunion = NULL;
@@ -420,9 +421,9 @@ SCIP_DECL_CONSACTIVE(consActiveStoreGraph)
    assert(consdata != NULL);
    assert((consdata->type == COLOR_CONSTYPE_ROOT) || (consdata->fathercons != NULL));
 
-   SCIPdebugMessage("Activating store graph constraint: <%s(%d,%d)> [stack size: %d].\n", SCIPconsGetName(cons), 
+   SCIPdebugMessage("Activating store graph constraint: <%s(%d,%d)> [stack size: %d].\n", SCIPconsGetName(cons),
                          (consdata->node1+1), (consdata->node2+1), conshdlrData->nstack+1);
-   
+
    /* put constraint on the stack */
    if ( conshdlrData->nstack >= conshdlrData->maxstacksize )
    {
@@ -438,8 +439,8 @@ SCIP_DECL_CONSACTIVE(consActiveStoreGraph)
    {
       consdata->created = TRUE;
       olddata = SCIPconsGetData(consdata->fathercons);
-      assert((consdata->type == COLOR_CONSTYPE_ROOT) 
-         || (consdata->node1 == olddata->representativeofnode[consdata->node1] 
+      assert((consdata->type == COLOR_CONSTYPE_ROOT)
+         || (consdata->node1 == olddata->representativeofnode[consdata->node1]
             && consdata->node2 == olddata->representativeofnode[consdata->node2]));
       nnodes = tcliqueGetNNodes(olddata->graph);
       fathergraph = olddata->graph;
@@ -490,7 +491,7 @@ SCIP_DECL_CONSACTIVE(consActiveStoreGraph)
          {
             for ( j = 0; j < consdata->nnodesinunion[consdata->representativeofnode[consdata->node1]]; j++ )
             {
-               tcliqueAddEdge(consdata->graph, consdata->unionofnode[consdata->representativeofnode[consdata->node1]][j], 
+               tcliqueAddEdge(consdata->graph, consdata->unionofnode[consdata->representativeofnode[consdata->node1]][j],
                   consdata->unionofnode[consdata->representativeofnode[consdata->node2]][i]);
             }
          }
@@ -501,7 +502,7 @@ SCIP_DECL_CONSACTIVE(consActiveStoreGraph)
       {
          assert(consdata->type == COLOR_CONSTYPE_SAME);
          inserted = 0;
-         
+
          /* add edges from all nodes of union2 to all nodes adjacent to union1 */
          for ( i = 0; i < consdata->nnodesinunion[consdata->node2]; i++ )
          {
@@ -543,20 +544,20 @@ SCIP_DECL_CONSACTIVE(consActiveStoreGraph)
          }
 
          /* update union represented by node1 */
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(consdata->unionofnode[consdata->node1]), 
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(consdata->unionofnode[consdata->node1]),
                consdata->nnodesinunion[consdata->node1],
                (consdata->nnodesinunion[consdata->node1]) + (consdata->nnodesinunion[consdata->node2])) );
          for ( i = 0; i < consdata->nnodesinunion[consdata->node2]; i ++ )
          {
-            consdata->unionofnode[consdata->node1][consdata->nnodesinunion[consdata->node1]+i] 
+            consdata->unionofnode[consdata->node1][consdata->nnodesinunion[consdata->node1]+i]
                = consdata->unionofnode[consdata->node2][i];
          }
-         SCIPfreeBlockMemoryArray(scip, &(consdata->unionofnode[consdata->node2]), 
+         SCIPfreeBlockMemoryArray(scip, &(consdata->unionofnode[consdata->node2]),
             consdata->nnodesinunion[consdata->node2]);
-         consdata->nnodesinunion[consdata->node1] = 
+         consdata->nnodesinunion[consdata->node1] =
             (consdata->nnodesinunion[consdata->node1]) + (consdata->nnodesinunion[consdata->node2]);
          consdata->nnodesinunion[consdata->node2] = 0;
-         consdata->unionofnode[consdata->node2] = NULL; 
+         consdata->unionofnode[consdata->node2] = NULL;
       }
 
       /* create the complementary graph */
@@ -564,16 +565,15 @@ SCIP_DECL_CONSACTIVE(consActiveStoreGraph)
       assert(consdata->cgraph != NULL);
       COLORprobGetComplementaryGraph(scip, consdata->graph, consdata->cgraph);
    }
-
    /* if new variables where created after the last propagation of this cons, repropagate it */
    else
    {
-      if ( (consdata->propagatedvars < COLORprobGetNStableSets(scip)) && (consdata->type != COLOR_CONSTYPE_ROOT) )
+      if ( (consdata->type != COLOR_CONSTYPE_ROOT) && (consdata->propagatedvars < SCIPgetNTotalVars(scip)) )
       {
          SCIPrepropagateNode(scip, consdata->stickingatnode);
       }
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -617,7 +617,7 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveStoreGraph)
 static
 SCIP_DECL_CONSPROP(consPropStoreGraph)
 {
-   SCIP_CONSHDLRDATA* conshdlrData;  
+   SCIP_CONSHDLRDATA* conshdlrData;
    SCIP_CONS*         cons;
    SCIP_CONSDATA*     consdata;
    SCIP_VAR*          var;
@@ -627,7 +627,7 @@ SCIP_DECL_CONSPROP(consPropStoreGraph)
    int                i;
    int                propcount;
 
-   assert(conshdlr != NULL); 
+   assert(conshdlr != NULL);
    conshdlrData = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrData != NULL);
    assert(conshdlrData->stack != NULL);
@@ -640,10 +640,10 @@ SCIP_DECL_CONSPROP(consPropStoreGraph)
    /* the constraint data of the cons related to the current node */
    cons = conshdlrData->stack[conshdlrData->nstack-1];
    consdata = SCIPconsGetData(cons);
-   
+
    SCIPdebugMessage( "Starting propagation of store graph constraint <%s(%d,%d)> .\n", SCIPconsGetName(cons), (consdata->node1+1), (consdata->node2+1));
-  
-   /* propagation for differ: set upper bound of all stable sets, which contain both nodes, to 0 */
+
+   /* propagation for differ: set upper bound to 0 for all stable sets, which contain both nodes */
    if (consdata->type == COLOR_CONSTYPE_DIFFER)
    {
       for ( i = 0; i < nsets; i++ )
@@ -652,7 +652,7 @@ SCIP_DECL_CONSPROP(consPropStoreGraph)
          {
             if ( COLORprobIsNodeInStableSet(scip, i, consdata->node1) && COLORprobIsNodeInStableSet(scip, i, consdata->node2) )
             {
-               var = COLORprobGetVarForStableSet(scip, i);               
+               var = COLORprobGetVarForStableSet(scip, i);
                SCIP_CALL( SCIPchgVarUb(scip, var, 0) );
                propcount++;
             }
@@ -660,14 +660,14 @@ SCIP_DECL_CONSPROP(consPropStoreGraph)
       }
    }
 
-   /* propagation for same: set upper bound of all stable sets to 0, which do not contain both nodes */   
+   /* propagation for same: set upper bound to 0 for all stable sets, which do not contain both nodes */
    if ( consdata->type == COLOR_CONSTYPE_SAME )
    {
       for ( i = 0; i < nsets; i++ )
-      { 
+      {
          if ( !SCIPisFeasZero(scip, SCIPvarGetUbLocal(COLORprobGetVarForStableSet(scip, i))) )
          {
-            if ( (COLORprobIsNodeInStableSet(scip, i, consdata->node1) || COLORprobIsNodeInStableSet(scip, i, consdata->node2)) 
+            if ( (COLORprobIsNodeInStableSet(scip, i, consdata->node1) || COLORprobIsNodeInStableSet(scip, i, consdata->node2))
                && !(COLORprobIsNodeInStableSet(scip, i, consdata->node1) && COLORprobIsNodeInStableSet(scip, i, consdata->node2)) )
             {
                var = COLORprobGetVarForStableSet(scip, i);
@@ -677,12 +677,12 @@ SCIP_DECL_CONSPROP(consPropStoreGraph)
          }
       }
    }
-   
+
    SCIPdebugMessage( "Finished propagation of store graph constraint <%s(%d,%d)>, %d vars fixed.\n", SCIPconsGetName(cons), (consdata->node1+1), (consdata->node2+1), propcount);
 
    consdata = SCIPconsGetData(COLORconsGetActiveStoreGraphCons(scip));
-   consdata->propagatedvars = COLORprobGetNStableSets(scip);
-   
+   consdata->propagatedvars = SCIPgetNTotalVars(scip);
+
    return SCIP_OKAY;
 }
 
@@ -699,6 +699,7 @@ SCIP_DECL_CONSPROP(consPropStoreGraph)
 #define consSepasolStoreGraph NULL
 #define consEnableStoreGraph NULL
 #define consDisableStoreGraph NULL
+#define consDelVarsStoreGraph NULL
 #define consPrintStoreGraph NULL
 #define consCopyStoreGraph NULL
 #define consParseStoreGraph NULL
@@ -735,7 +736,7 @@ SCIP_RETCODE COLORincludeConshdlrStoreGraph(
          consSepalpStoreGraph, consSepasolStoreGraph, consEnfolpStoreGraph, consEnfopsStoreGraph, consCheckStoreGraph,
          consPropStoreGraph, consPresolStoreGraph, consRespropStoreGraph, consLockStoreGraph,
          consActiveStoreGraph, consDeactiveStoreGraph,
-         consEnableStoreGraph, consDisableStoreGraph,
+         consEnableStoreGraph, consDisableStoreGraph, consDelVarsStoreGraph,
          consPrintStoreGraph, consCopyStoreGraph, consParseStoreGraph,
          conshdlrData) );
 
@@ -752,7 +753,7 @@ SCIP_RETCODE COLORcreateConsStoreGraph(
    int                   type,               /**< type of the constraint: COLOR_CONSTYPE_SAME or COLOR_CONSTYPE_DIFFER */
    int                   node1,              /**< the first node of the constraint */
    int                   node2,              /**< the second node of the constraint */
-   SCIP_NODE*            stickingnode        /**< the B&B-tree node at which the constraint will be sticking */    
+   SCIP_NODE*            stickingnode        /**< the B&B-tree node at which the constraint will be sticking */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -790,12 +791,12 @@ SCIP_RETCODE COLORcreateConsStoreGraph(
    consdata->propagatedvars = 0;
    consdata->stickingatnode = stickingnode;
    consdata->created = FALSE;
-   
+
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, FALSE, FALSE, FALSE, FALSE, TRUE,
          TRUE, FALSE, TRUE, FALSE, TRUE) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -860,7 +861,7 @@ TCLIQUE_GRAPH* COLORconsGetCurrentGraph(
    {
       SCIPerrorMessage("storeGraph constraint handler not found\n");
       return NULL;
-   }   
+   }
    conshdlrData = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrData != NULL);
    assert(conshdlrData->stack != NULL);
@@ -889,7 +890,7 @@ TCLIQUE_GRAPH* COLORconsGetComplementaryGraph(
    {
       SCIPerrorMessage("storeGraph constraint handler not found\n");
       return NULL;
-   }   
+   }
 
    conshdlrData = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrData != NULL);
@@ -1043,14 +1044,14 @@ void COLORconsGetStack(
    {
       SCIPerrorMessage("storeGraph constraint handler not found\n");
       return;
-   }   
+   }
    conshdlrData = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrData != NULL);
    assert(conshdlrData != NULL);
    assert(conshdlrData->stack != NULL);
 
    *stack = conshdlrData->stack;
-   *nstackelements = conshdlrData->nstack;   
+   *nstackelements = conshdlrData->nstack;
 }
 
 

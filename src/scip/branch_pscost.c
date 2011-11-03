@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch_pscost.c
- * @ingroup BRANCHINGRULES
  * @brief  pseudo costs branching rule
  * @author Tobias Achterberg
  * @author Stefan Vigerske
@@ -128,6 +127,8 @@ SCIP_RETCODE updateBestCandidate(
          SCIP_Real minact;
          SCIP_Real maxact;
          SCIP_Real aggrvarsol;
+         SCIP_Real aggrvarsol1;
+         SCIP_Real aggrvarsol2;
 
          multscalars = SCIPvarGetMultaggrScalars(cand);
 
@@ -142,9 +143,6 @@ SCIP_RETCODE updateBestCandidate(
             multvarub = SCIPcomputeVarUbLocal(scip, multvars[i]);
             if( SCIPisEQ(scip, multvarlb, multvarub) )
                continue;
-
-            SCIP_Real aggrvarsol1;
-            SCIP_Real aggrvarsol2;
 
             assert(multscalars != NULL);
             assert(multscalars[i] != 0.0);
@@ -398,6 +396,9 @@ SCIP_RETCODE selectBranchVar(
    for( i = 0; i < ncands; ++i )
    {
       cand = candssorted[i];
+
+      /* there should be no fixed branching candidates */
+      assert(!SCIPisEQ(scip, SCIPvarGetLbLocal(cand), SCIPvarGetUbLocal(cand)));
 
       /* compute min, sum, and max of all registered scores for this variables
        * set candsol to a valid value, if someone registered one */

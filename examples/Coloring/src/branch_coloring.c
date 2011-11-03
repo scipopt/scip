@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch_coloring.c
- * @brief  coloring branching rule
+ * @brief  default branching rule for the vertex coloring problem
  * @author Gerald Gamrath
  *
  * This file implements the standard branching rule for the coloring algorithm.
@@ -35,9 +35,8 @@
  * whereas w is part of exactly one of the stable sets.  Create two children of the current node,
  * one with the restriction SAME(v,w), the other one with restriction DIFFER(v,w). Therefore, each
  * node gets a constraint of type @c cons_storeGraph, which enforces the branching decision and
- * assures that each coloring in the respective subgraph assigns both nodes the same
+ * assures that each coloring of the nodes in the respective subgraph assigns to both nodes the same
  * color/different colors by fixing stable sets to 0 that violate this constraint.
- *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -51,17 +50,6 @@
 #define BRANCHRULE_PRIORITY        50000
 #define BRANCHRULE_MAXDEPTH        -1
 #define BRANCHRULE_MAXBOUNDDIST    1.0
-
-/*
- * Data structures
- */
-
-/** branching rule data */
-struct SCIP_BranchruleData
-{
-};
-
-
 
 /*
  * Callback methods of branching rule

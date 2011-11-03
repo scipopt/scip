@@ -14,8 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_oneopt.c
- * @ingroup PRIMALHEURISTICS
- * @brief  oneopt primal heuristic
+ * @brief  improvement heuristic that alters single variable values
  * @author Timo Berthold
  */
 
@@ -38,7 +37,6 @@
 
 #define DEFAULT_WEIGHTEDOBJ   TRUE
 #define DEFAULT_DURINGROOT    TRUE
-
 
 /*
  * Data structures

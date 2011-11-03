@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_strongcg.c
- * @ingroup SEPARATORS
  * @brief  Strong CG Cuts (Letchford & Lodi)
  * @author Kati Wolter
  * @author Tobias Achterberg

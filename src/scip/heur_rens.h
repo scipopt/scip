@@ -14,8 +14,13 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_rens.h
- * @brief  RENS primal heuristic
+ * @ingroup PRIMALHEURISTICS
+ * @brief  LNS heuristic that finds the optimal rounding to a given point
  * @author Timo Berthold
+ *
+ * RENS is a large neighborhood search start heuristic, i.e., unlike other LNS heuristics, it does not need a known
+ * feasible solution. It solves a sub-SCIP that is created by fixing variables which take an integral value in a given
+ * LP or NLP solution. For the remaining integer variables, the bounds get tightened to the two nearest integral values.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

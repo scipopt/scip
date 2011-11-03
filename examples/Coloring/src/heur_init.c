@@ -14,13 +14,13 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_init.c
- * @brief  initial primal heuristic for coloring
+ * @brief  initial primal heuristic for the vertex coloring problem
  * @author Gerald Gamrath
  *
  * This file implements a heuristic which computes a starting solution for the coloring problem. It
- * therefore computes maximal stable sets and creates one variable for each set that is added to the
+ * therefore computes maximal stable sets and creates one variable for each set, which is added to the
  * LP.
- * 
+ *
  * The heuristic is called only one time: before solving the root node.
  *
  * It checks, whether a solution-file was read in and there already is a starting solution.  If this
@@ -31,9 +31,9 @@
  * "A Survey of Local Search Methods for Graph Coloring"@n
  * by P. Galinier and A. Hertz@n
  * Computers & Operations Research, 33 (2006)
- * 
+ *
  * The tabu-search works as follows: given the graph and a number of colors it tries to color the
- * nodes of the graph with at most the given number colors.  It starts with a random coloring. In
+ * nodes of the graph with at most the given number of colors.  It starts with a random coloring. In
  * each iteration, it counts the number of violated edges, that is, edges for which both incident
  * nodes have the same color. It now switches one node to another color in each iteration, taking
  * the node and color, that cause the greatest reduction of the number of violated edges, or if no
@@ -43,11 +43,11 @@
  *
  * As long as the tabu-search finds a solution with the given number of colors, this number is reduced
  * by 1 and the tabu-search is called another time. If no coloring was found after a given number
- * of iterations, the tabu-search is stopped and variables for all sets of the last feasible coloring 
+ * of iterations, the tabu-search is stopped and variables for all sets of the last feasible coloring
  * are created and added to the LP (after possible extension to maximal stable sets).
  *
  * The variables of these sets result in a feasible starting solution of the coloring problem.
- * 
+ *
  * The tabu-search can be deactivated by setting the parameter <heuristics/initcol/usetabu> to
  * FALSE.  The number of iterations after which the tabu-search stops if no solution was yet found
  * can be changed by the param <heuristics/initcol/maxiter>. A great effect is also obtained by
@@ -56,7 +56,6 @@
  * precisely, this number is \<tabubase\> + ncritical * \<tabugamma\>, where ncritical is the number
  * of nodes, which are incident to violated edges.  Finally, the level of output and the frequency of
  * status lines can be changed by <heuristics/initcol/output> and <heuristics/initcol/dispfreq>.
- *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -141,9 +140,9 @@ SCIP_Bool hasUncoloredNode(
 
 
 /** computes a stable set with a greedy-method and colors its nodes */
-static 
+static
 SCIP_RETCODE greedyStableSet(
-   SCIP*                 scip,               /**< SCIP data structure */   
+   SCIP*                 scip,               /**< SCIP data structure */
    TCLIQUE_GRAPH*        graph,              /**< pointer to graph data structure */
    int*                  colors,             /**< array of ints representing the different colors, -1 means uncolored */
    int                   nextcolor           /**< color in which the stable set will be colored */
@@ -155,7 +154,7 @@ SCIP_RETCODE greedyStableSet(
    int j;
    int* degrees;
    int* sortednodes;
-   int* values;    
+   int* values;
    int* stablesetnodes;
    int nstablesetnodes;
 
@@ -168,12 +167,12 @@ SCIP_RETCODE greedyStableSet(
 
    /* get the  degrees and weights for the nodes in the graph */
    degrees = tcliqueGetDegrees(graph);
-   SCIP_CALL( SCIPallocBufferArray(scip, &stablesetnodes, nnodes) );   
-   SCIP_CALL( SCIPallocBufferArray(scip, &values, nnodes) );   
+   SCIP_CALL( SCIPallocBufferArray(scip, &stablesetnodes, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &values, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &sortednodes, nnodes) );
 
    /* set values to the nodes which are used for sorting them */
-   /* value = degree of the node + number of nodes if the node is yet uncolored, 
+   /* value = degree of the node + number of nodes if the node is yet uncolored,
       therefore the yet colored nodes have lower values than the not yet colored nodes */
    for( i = 0; i < nnodes; i++ )
    {
@@ -216,8 +215,8 @@ SCIP_RETCODE greedyStableSet(
    }
    SCIPfreeBufferArray(scip, &stablesetnodes);
    SCIPfreeBufferArray(scip, &sortednodes);
-   SCIPfreeBufferArray(scip, &values);   
-   
+   SCIPfreeBufferArray(scip, &values);
+
    return SCIP_OKAY;
 }
 
@@ -225,7 +224,7 @@ SCIP_RETCODE greedyStableSet(
 static
 /** computes the initial coloring with a greedy method */
 SCIP_RETCODE greedyInitialColoring(
-   SCIP*                 scip,               /**< SCIP data structure */   
+   SCIP*                 scip,               /**< SCIP data structure */
    TCLIQUE_GRAPH*        graph,              /**< pointer to graph data structure */
    int*                  colors,             /**< array of ints representing the different colors */
    int*                  ncolors             /**< number of colors needed */
@@ -273,14 +272,14 @@ int getNViolatedEdges(
    int i;
    int* j;
    int cnt;
-   
+
    assert(graph != NULL);
    assert(colors != NULL);
 
    /* get the number of nodes */
    nnodes = tcliqueGetNNodes(graph);
    cnt = 0;
-   
+
    /* count the number of violated edges, only consider edges (i,j) with i > j since the graph is undirected bu */
    for( i = 0; i < nnodes; i++ )
    {
@@ -297,7 +296,7 @@ int getNViolatedEdges(
 
 /** runs tabu coloring heuristic, gets a graph and a number of colors
  *  and tries to color the graph with at most that many colors;
- *  starts with a random coloring and switches one node to another color in each iteration, 
+ *  starts with a random coloring and switches one node to another color in each iteration,
  *  forbidding the old color for a couple of iterations
  */
 static
@@ -305,7 +304,7 @@ SCIP_Bool runTabuCol(
    TCLIQUE_GRAPH*        graph,              /**< the graph, that should be colored */
    int                   seed,               /**< seed for the first random coloring */
    int                   maxcolors,          /**< number of colors, which are allowed */
-   int*                  colors,             /**< output: the computed coloring */ 
+   int*                  colors,             /**< output: the computed coloring */
    SCIP_HEURDATA*        heurdata            /**< data of the heuristic */
    )
 {
@@ -354,7 +353,7 @@ SCIP_Bool runTabuCol(
    // init matrices
    SCIP_CALL( SCIPallocMemoryArray(scip, &tabu, nnodes) );   // stores iteration at which tabu node/color pair will expire to be tabu
    SCIP_CALL( SCIPallocMemoryArray(scip, &adj, nnodes) );    // stores number of adjacent nodes using specified color
-   
+
    for( i = 0; i < nnodes; i++ )
    {
       SCIP_CALL( SCIPallocMemoryArray(scip, &(tabu[i]), maxcolors) );
@@ -425,7 +424,7 @@ SCIP_Bool runTabuCol(
 		     // 'aspiration criterion': stop if we get feasible solution
 		     if( obj + d == 0 )
 		     {
-                        if( heurdata->output >= 1 ) 
+                        if( heurdata->output >= 1 )
                            printf("   Feasible solution found after %d iterations!\n\n", iter);
 			minnode = node1;
 			mincolor = j;
@@ -468,7 +467,7 @@ SCIP_Bool runTabuCol(
 
 	 if( heurdata->output == 2 && (iter) % (heurdata->dispfreq) == 0 )
 	 {
-            printf("Iter: %d  obj: %d  critical: %d   node: %d  color: %d  delta: %d\n", 
+            printf("Iter: %d  obj: %d  critical: %d   node: %d  color: %d  delta: %d\n",
                                         iter, obj, ncritical, minnode, mincolor, minvalue);
 	 }
 
@@ -535,7 +534,7 @@ SCIP_DECL_HEURCOPY(heurCopyInit)
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_HEURFREE(heurFreeInit)
-{  
+{
    SCIP_HEURDATA* heurdata;
 
    /* free heuristic rule data */
@@ -550,7 +549,7 @@ SCIP_DECL_HEURFREE(heurFreeInit)
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecInit)
-{  
+{
    int i;
    int j;
    int k;
@@ -643,28 +642,29 @@ SCIP_DECL_HEUREXEC(heurExecInit)
          SCIPsortDownInt(colors, nstablesetnodes);
          SCIP_CALL( COLORprobAddNewStableSet(scip, colors, nstablesetnodes, &setnumber) );
          assert(setnumber != -1);
-         
-         /* create variable for the stable set and add it to SCIP*/
-         SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0, 1, 1, SCIP_VARTYPE_BINARY, 
+
+         /* create variable for the stable set and add it to SCIP */
+         SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0, 1, 1, SCIP_VARTYPE_BINARY,
                TRUE, TRUE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) );
-         COLORprobAddVarForStableSet(scip, setnumber, var);
+
+         SCIP_CALL( COLORprobAddVarForStableSet(scip, setnumber, var) );
          SCIP_CALL( SCIPaddVar(scip, var) );
          SCIP_CALL( SCIPchgVarUbLazy(scip, var, 1.0) );
-         
+
          for( j = 0; j < nstablesetnodes; j++ )
          {
             /* add variable to node constraints of nodes in the set */
             SCIP_CALL( SCIPaddCoefSetppc(scip, constraints[colors[j]], var) );
          }
 
-         
+
       }
 
       SCIPfreeMemoryArray(scip, &colors);
       SCIPfreeMemoryArray(scip, &bestcolors);
-      
+
    }
-   /* create solution consisting of all yet created stable sets, 
+   /* create solution consisting of all yet created stable sets,
       that means all sets of the solution given by the solution file or created by the greedy and tabu search */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
    assert(sol != NULL);
@@ -672,12 +672,12 @@ SCIP_DECL_HEUREXEC(heurExecInit)
    {
       SCIP_CALL( SCIPsetSolVal(scip, sol, COLORprobGetVarForStableSet(scip, i), 1.0) );
    }
-   SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, FALSE, &stored) );
+   SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, FALSE, FALSE, FALSE, &stored) );
    assert(stored);
 
    /* set maximal number of variables to be priced in each round */
    SCIPsetIntParam(scip, "pricers/coloring/maxvarsround", COLORprobGetNStableSets(scip)*COLORprobGetNNodes(scip)/50);
-   
+
    *result = SCIP_FOUNDSOL;
 
    return SCIP_OKAY;
@@ -708,9 +708,9 @@ SCIP_RETCODE SCIPincludeHeurInit(
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, 
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
          heurCopyInit,
-         heurFreeInit, heurInitInit, heurExitInit, 
+         heurFreeInit, heurInitInit, heurExitInit,
          heurInitsolInit, heurExitsolInit, heurExecInit,
          heurdata) );
 

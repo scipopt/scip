@@ -90,6 +90,8 @@ extern
 SCIP_RETCODE SCIPpresolInitpre(
    SCIP_PRESOL*          presol,             /**< presolver */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             isunbounded,        /**< was unboundedness already detected */
+   SCIP_Bool             isinfeasible,       /**< was infeasibility already detected */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -98,6 +100,8 @@ extern
 SCIP_RETCODE SCIPpresolExitpre(
    SCIP_PRESOL*          presol,             /**< presolver */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             isunbounded,        /**< was unboundedness already detected */
+   SCIP_Bool             isinfeasible,       /**< was infeasibility already detected */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 

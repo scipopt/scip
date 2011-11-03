@@ -101,7 +101,9 @@ extern
 SCIP_RETCODE SCIPdomchgFree(
    SCIP_DOMCHG**         domchg,             /**< pointer to domain change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LP*              lp                  /**< current LP data */
    );
 
 /** converts a dynamic domain change data into a static one, using less memory than for a dynamic one */
@@ -109,7 +111,9 @@ extern
 SCIP_RETCODE SCIPdomchgMakeStatic(
    SCIP_DOMCHG**         domchg,             /**< pointer to domain change data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LP*              lp                  /**< current LP data */
    );
 
 /** applies domain change */
@@ -413,6 +417,36 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** performs second step of SCIPaggregateVars():
+ *  the variable to be aggregated is chosen among active problem variables x' and y', preferring a less strict variable
+ *  type as aggregation variable (i.e. continuous variables are preferred over implicit integers, implicit integers
+ *  or integers over binaries). If none of the variables is continuous, it is tried to find an integer
+ *  aggregation (i.e. integral coefficients a'' and b'', such that a''*x' + b''*y' == c''). This can lead to
+ *  the detection of infeasibility (e.g. if c'' is fractional), or to a rejection of the aggregation (denoted by
+ *  aggregated == FALSE), if the resulting integer coefficients are too large and thus numerically instable.
+ */
+extern
+SCIP_RETCODE SCIPvarTryAggregateVars(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_VAR*             varx,               /**< variable x in equality a*x + b*y == c */
+   SCIP_VAR*             vary,               /**< variable y in equality a*x + b*y == c */
+   SCIP_Real             scalarx,            /**< multiplier a in equality a*x + b*y == c */
+   SCIP_Real             scalary,            /**< multiplier b in equality a*x + b*y == c */
+   SCIP_Real             rhs,                /**< right hand side c in equality a*x + b*y == c */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the aggregation is infeasible */
+   SCIP_Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
+   );
+
 /** converts loose variable into aggregated variable */
 extern
 SCIP_RETCODE SCIPvarAggregate(
@@ -447,6 +481,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    int                   naggvars,           /**< number n of variables in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
    SCIP_VAR**            aggvars,            /**< variables y_i in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
@@ -461,7 +496,6 @@ extern
 SCIP_Bool SCIPvarDoNotMultaggr(
    SCIP_VAR*             var                 /**< problem variable */
    );
-
 
 /** gets negated variable x' = offset - x of problem variable x; the negated variable is created if not yet existing;
  *  the negation offset of binary variables is always 1, the offset of other variables is fixed to lb + ub when the
@@ -514,7 +548,7 @@ void SCIPvarMarkDeleted(
 
 /** marks the variable to not to be multi-aggregated */
 extern
-void SCIPvarMarkDoNotMultaggr(
+SCIP_RETCODE SCIPvarMarkDoNotMultaggr(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -719,8 +753,6 @@ SCIP_RETCODE SCIPvarChgUbLazy(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             lazylb              /**< the lazy lower bound to be set */
    );
-
-
 
 /** changes lower bound of variable in current dive; if possible, adjusts bound to integral value */
 extern
@@ -986,7 +1018,8 @@ SCIP_Real SCIPvarGetObjLP(
  */
 extern
 SCIP_Real SCIPvarGetLbLP(
-   SCIP_VAR*             var                 /**< problem variable */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** gets upper bound of variable in current SCIP_LP; the bound can be different from the bound stored in the variable's own
@@ -994,7 +1027,8 @@ SCIP_Real SCIPvarGetLbLP(
  */
 extern
 SCIP_Real SCIPvarGetUbLP(
-   SCIP_VAR*             var                 /**< problem variable */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** returns solution value and index of variable lower bound that is closest to the variable's value in the given primal solution
@@ -1316,9 +1350,6 @@ SCIP_Real SCIPvarGetVSIDS(
       SCIPhistoryGetVSIDS(var->history, dir)/stat->vsidsweight : SCIPvarGetVSIDS_rec(var, stat, dir))
 
 #endif
-
-
-
 
 /*
  * Hash functions

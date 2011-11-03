@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_clique.c
- * @ingroup PRIMALHEURISTICS
  * @brief  LNS heuristic using a clique partition to restrict the search neighborhood
  * @brief  clique primal heuristic
  * @author Stefan Heinz
@@ -553,7 +552,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
-   //assert(SCIPhasCurrentNodeLP(scip));
+   /* assert(SCIPhasCurrentNodeLP(scip)); */
 
    *result = SCIP_DIDNOTRUN;
 

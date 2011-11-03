@@ -14,9 +14,11 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   vardata_binpacking.h
- * @brief  variable data containing the ids of constraints in which the variable appears 
+ * @brief  Variable data containing the ids of constraints in which the variable appears
  * @author Timo Berthold
  * @author Stefan Heinz
+ *
+ * This file implements the handling of the variable data which is attached to each file. See SCIP_VarData and \ref PRICER.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

@@ -14,9 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_shiftandpropagate.c
- * @ingroup PRIMALHEURISTICS
  * @brief  shiftandpropagate primal heuristic
- * @author Tobias Achterberg
+ * @author Timo Berthold
  * @author Gregor Hendel
  */
 
@@ -41,7 +40,8 @@
 #define DEFAULT_WEIGHT_EQUALITY     3   /**< the heuristic row weight for equations */
 #define DEFAULT_RELAX            TRUE   /**< Should continuous variables be relaxed from the problem? */
 #define DEFAULT_PROBING          TRUE   /**< Is propagation of solution values enabled? */
-#define DEFAULT_NPROPROUNDS        20   /**< The default number of propagation rounds for each propagation used */
+#define DEFAULT_ONLYWITHOUTSOL   TRUE   /**< Should heuristic only be executed if no primal solution was found, yet? */
+#define DEFAULT_NPROPROUNDS        10   /**< The default number of propagation rounds for each propagation used */
 #define DEFAULT_PROPBREAKER      65000   /**< fixed maximum number of propagations */
 #define DEFAULT_CUTOFFBREAKER      15   /**< fixed maximum number of allowed cutoffs before the heuristic stops */
 #define DEFAULT_RANDSEED            3141598   /**< the default random seed for random number generation */
@@ -65,6 +65,7 @@ struct SCIP_HeurData
 {
    SCIP_Bool            relax;              /**< should continuous variables be relaxed from the problem */
    SCIP_Bool            probing;            /**< should probing be executed? */
+   SCIP_Bool            onlywithoutsol;     /* Should heuristic only be executed if no primal solution was found, yet? */
    int                  nproprounds;        /**< The default number of propagation rounds for each propagation used */
    int                  cutoffbreaker;      /**< the number of cutoffs before heuristic execution is stopped, or -1 for no
                                                * limit */
@@ -1339,7 +1340,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       return SCIP_OKAY;
 
    /* stop execution method if there is already a primarily feasible solution at hand */
-   if( SCIPgetBestSol(scip) != NULL )
+   if( SCIPgetBestSol(scip) != NULL && heurdata->onlywithoutsol )
       return SCIP_OKAY;
 
    if( !SCIPisLPConstructed(scip) && SCIPhasCurrentNodeLP(scip) )
@@ -1834,6 +1835,8 @@ SCIP_RETCODE SCIPincludeHeurShiftandpropagate(
          &heurdata->relax, TRUE, DEFAULT_RELAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/probing", "Should domains be reduced by probing?",
          &heurdata->probing, TRUE, DEFAULT_PROBING, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/onlywithoutsol", "Should heuristic only be executed if no primal solution was found, yet?",
+         &heurdata->onlywithoutsol, TRUE, DEFAULT_ONLYWITHOUTSOL, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/cutoffbreaker", "The number of cutoffs before heuristic stops",
            &heurdata->cutoffbreaker, TRUE, DEFAULT_CUTOFFBREAKER, -1, 1000000, NULL, NULL) );
    SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/sortkey", "the key for variable sorting: (n)orms or (r)andom",

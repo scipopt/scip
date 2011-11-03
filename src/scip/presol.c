@@ -248,6 +248,8 @@ SCIP_RETCODE SCIPpresolExit(
 SCIP_RETCODE SCIPpresolInitpre(
    SCIP_PRESOL*          presol,             /**< presolver */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             isunbounded,        /**< was unboundedness already detected */
+   SCIP_Bool             isinfeasible,       /**< was infeasibility already detected */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -272,7 +274,7 @@ SCIP_RETCODE SCIPpresolInitpre(
    /* call presolving initialization method of presolver */
    if( presol->presolinitpre != NULL )
    {
-      SCIP_CALL( presol->presolinitpre(set->scip, presol, result) );
+      SCIP_CALL( presol->presolinitpre(set->scip, presol, isunbounded, isinfeasible, result) );
 
       /* evaluate result */
       if( *result != SCIP_CUTOFF
@@ -292,6 +294,8 @@ SCIP_RETCODE SCIPpresolInitpre(
 SCIP_RETCODE SCIPpresolExitpre(
    SCIP_PRESOL*          presol,             /**< presolver */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             isunbounded,        /**< was unboundedness already detected */
+   SCIP_Bool             isinfeasible,       /**< was infeasibility already detected */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -304,12 +308,10 @@ SCIP_RETCODE SCIPpresolExitpre(
    /* call presolving deinitialization method of presolver */
    if( presol->presolexitpre != NULL )
    {
-      SCIP_CALL( presol->presolexitpre(set->scip, presol, result) );
+      SCIP_CALL( presol->presolexitpre(set->scip, presol, isunbounded, isinfeasible, result) );
 
       /* evaluate result */
-      if( *result != SCIP_CUTOFF
-         && *result != SCIP_UNBOUNDED
-         && *result != SCIP_FEASIBLE )
+      if( *result != SCIP_CUTOFF && *result != SCIP_UNBOUNDED && *result != SCIP_FEASIBLE )
       {
          SCIPerrorMessage("presolving deinitialization method of presolver <%s> returned invalid result <%d>\n", 
             presol->name, *result);

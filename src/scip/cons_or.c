@@ -14,9 +14,19 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_or.c
- * @ingroup CONSHDLRS 
- * @brief  constraint handler for or constraints
+ * @brief  Constraint handler for "or" constraints,  \f$r = x_1 \vee x_2 \vee \dots  \vee x_n\f$
  * @author Tobias Achterberg
+ * @author Stefan Heinz
+ * @author Michael Winkler
+ *
+ * This constraint handler deals with "or" constraint. These are constraint of the form:
+ *
+ * \f[
+ *    r = x_1 \vee x_2 \vee \dots  \vee x_n
+ * \f]
+ *
+ * where \f$x_i\f$ is a binary variable for all \f$i\f$. Hence, \f$r\f$ is also of binary type. The variable \f$r\f$ is
+ * called resultant and the \f$x\f$'s operators.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -481,13 +491,13 @@ SCIP_RETCODE consdataPrint(
    assert(consdata != NULL);
 
    /* print resultant */
-   SCIP_CALL( SCIPwriteVarName(scip, file, consdata->resvar, FALSE) );
+   SCIP_CALL( SCIPwriteVarName(scip, file, consdata->resvar, TRUE) );
 
    /* start the variable list */
    SCIPinfoMessage(scip, file, " == or(");
 
    /* print variable list */
-   SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars, FALSE, ',') );
+   SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars, TRUE, ',') );
 
    /* close the variable list */
    SCIPinfoMessage(scip, file, ")");
@@ -888,8 +898,8 @@ SCIP_RETCODE analyzeConflictZero(
 {
    SCIP_CONSDATA* consdata;
 
-   /* conflict analysis can only be applied in solving stage */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   /* conflict analysis can only be applied in solving stage and if it is applicable */
+   if( (SCIPgetStage(scip) != SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);
@@ -921,8 +931,8 @@ SCIP_RETCODE analyzeConflictOne(
 
    assert(!SCIPconsIsModifiable(cons));
 
-   /* conflict analysis can only be applied in solving stage */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   /* conflict analysis can only be applied in solving stage and if it is applicable */
+   if( (SCIPgetStage(scip) != SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);
@@ -1683,13 +1693,20 @@ SCIP_DECL_CONSPRESOL(consPresolOr)
             /* aggregate variables: resultant - operand == 0 */
             SCIP_CALL( SCIPaggregateVars(scip, consdata->resvar, consdata->vars[0], 1.0, -1.0, 0.0,
                   &cutoff, &redundant, &aggregated) );
-            assert(redundant);
-            if( aggregated )
-               (*naggrvars)++;
+            assert(redundant || SCIPdoNotAggr(scip));
 
-            /* delete constraint */
-            SCIP_CALL( SCIPdelCons(scip, cons) );
-            (*ndelconss)++;
+            if( aggregated )
+            {
+               assert(redundant);
+               (*naggrvars)++;
+            }
+
+            if( redundant )
+            {
+               /* delete constraint */
+               SCIP_CALL( SCIPdelCons(scip, cons) );
+               (*ndelconss)++;
+            }
          }
          else if( !consdata->impladded )
          {
@@ -1778,6 +1795,11 @@ SCIP_DECL_CONSLOCK(consLockOr)
 
 /** constraint disabling notification method of constraint handler */
 #define consDisableOr NULL
+
+
+/** variable deletion method of constraint handler */
+#define consDelvarsOr NULL
+
 
 /** constraint display method of constraint handler */
 static
@@ -1985,7 +2007,7 @@ SCIP_RETCODE SCIPincludeConshdlrOr(
          consPropOr, consPresolOr, consRespropOr, consLockOr,
          consActiveOr, consDeactiveOr, 
          consEnableOr, consDisableOr,
-         consPrintOr, consCopyOr, consParseOr,
+         consDelvarsOr, consPrintOr, consCopyOr, consParseOr,
          conshdlrdata) );
 
    return SCIP_OKAY;

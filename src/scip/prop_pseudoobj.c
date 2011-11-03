@@ -14,8 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_pseudoobj.c
- * @ingroup PROPAGATORS
- * @brief  pseudoobj propagator
+ * @brief  Pseudo objective propagator
  * @author Tobias Achterberg
  * @author Stefan Heinz
  *
@@ -293,13 +292,16 @@ SCIP_RETCODE propagateCutoffbound(
    {
       SCIPdebugMessage("pseudo objective value %g exceeds cutoff bound %g\n", pseudoobjval, cutoffbound);
 
-      /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
-      SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-      SCIP_CALL( resolvePropagation(scip, propdata, NULL, NULL) );
+      /* check if conflict analysis is applicable */
+      if( SCIPisConflictAnalysisApplicable(scip) )
+      {
+         /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
+         SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+         SCIP_CALL( resolvePropagation(scip, propdata, NULL, NULL) );
 
-      /* analyze the conflict */
-      SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
-      
+         /* analyze the conflict */
+         SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
+      }
       *result = SCIP_CUTOFF;
 
       return SCIP_OKAY;
@@ -336,9 +338,6 @@ SCIP_RETCODE propagateCutoffbound(
       propdata->lastvarnum = v;
    }
 
-   /* check if we locally chanced bounds */
-   if( nchgbds > 0 )
-      *result = SCIP_REDUCEDDOM;
    
    /* check pseudo objective value of the root node */
    if( SCIPgetDepth(scip) == 0 && pseudoobjval > propdata->glbpseudoobjval )
@@ -370,9 +369,10 @@ SCIP_RETCODE propagateCutoffbound(
       }
    }
 
+   /* check if we chanced bounds */
    if( nchgbds > 0 )
       *result = SCIP_REDUCEDDOM;
-   
+
    return SCIP_OKAY;
 }
 
@@ -571,6 +571,8 @@ SCIP_RETCODE propagateLowerbound(
             SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, newlb, FALSE, &infeasible, &tightened) );
             if( infeasible )
             {
+               /* we are done with solving since the global bound change is infeasible: cutoff root node */
+               SCIP_CALL( SCIPcutoffNode(scip, SCIPgetRootNode(scip)) );
                *result = SCIP_CUTOFF;
                return SCIP_OKAY;
             }
@@ -592,6 +594,8 @@ SCIP_RETCODE propagateLowerbound(
             SCIP_CALL( SCIPtightenVarUbGlobal(scip, var, newub, FALSE, &infeasible, &tightened) );
             if( infeasible )
             {
+               /* we are done with solving since the global bound change is infeasible: cutoff root node */
+               SCIP_CALL( SCIPcutoffNode(scip, SCIPgetRootNode(scip)) );
                *result = SCIP_CUTOFF;
                return SCIP_OKAY;
             }
@@ -665,6 +669,10 @@ SCIP_DECL_PROPINITSOL(propInitsolPseudoobj)
    int nvars;
    int nobjvars;
    int v;
+
+   /* if a pricer is active we can do  nothing */
+   if( SCIPgetNActivePricers(scip) > 0 )
+      return SCIP_OKAY;
 
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
@@ -804,6 +812,10 @@ SCIP_DECL_PROPPRESOL(propPresolPseudoobj)
 
    *result = SCIP_DIDNOTRUN;
 
+   /* if a pricer is active we can do  nothing */
+   if( SCIPgetNActivePricers(scip) > 0 )
+      return SCIP_OKAY;
+
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
    
@@ -907,6 +919,10 @@ SCIP_DECL_EVENTEXEC(eventExecPseudoobj)
 {  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
 
+   /* if a pricer is active we can do  nothing */
+   if( SCIPgetNActivePricers(scip) > 0 )
+      return SCIP_OKAY;
+
    propdata = (SCIP_PROPDATA*)eventdata;
    assert(propdata != NULL);
 
@@ -977,6 +993,21 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
          "propagating/pseudoobj/propcutoffbound", 
          "propagate new cutoff bound directly globally",
          &propdata->propcutoffbound, TRUE, DEFAULT_PROPCUTOFFBOUND, NULL, NULL) );
+
+   return SCIP_OKAY;
+}
+
+/** propagates the cutoff bound for the given variables */
+SCIP_RETCODE SCIPpropagateCutoffboundVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator, or NULL */
+   SCIP_VAR*             var,                /**< variables to propagate */
+   SCIP_Real             cutoffbound,        /**< cutoff bound to use */
+   SCIP_Real             pseudoobjval,       /**< pseudo objective value to use */
+   int*                  nchgbds             /**< pointer to store the number of changed bounds */
+   )
+{
+   SCIP_CALL( propagateCutoffboundVar(scip, prop, var, cutoffbound, pseudoobjval, nchgbds, FALSE) );
 
    return SCIP_OKAY;
 }

@@ -19,6 +19,7 @@
  * @author Timo Berthold
  * @author Stefan Heinz
  *
+ * This file implements the Ryan/Foster branching rule. For more details see \ref BRANCHING page.
  *
  * @page BRANCHING Ryan/Foster branching
  *
@@ -72,18 +73,6 @@
 #define BRANCHRULE_PRIORITY        50000
 #define BRANCHRULE_MAXDEPTH        -1
 #define BRANCHRULE_MAXBOUNDDIST    1.0
-
-
-/*
- * Data structures
- */
-
-/* TODO: fill in the necessary branching rule data */
-
-/** branching rule data */
-struct SCIP_BranchruleData
-{
-};
 
 /*
  * Callback methods of branching rule

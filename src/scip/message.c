@@ -421,7 +421,7 @@ SCIP_MESSAGEHDLR* SCIPmessageGetHandler(
 }
 
 
-#else //NPARASCIP
+#else /* NPARASCIP */
 
 /* mutex to lock all message printings in pthread case */
 static pthread_mutex_t  messagemutex = PTHREAD_MUTEX_INITIALIZER;
@@ -898,7 +898,7 @@ size_t SCIPmessagehdlrGetThreadNum(
    return (size_t)SCIPhashmapGetImage(messagepthreadhashmap, (void*) pthread_self()) - 1;
 }
 
-#endif //NPARASCIP
+#endif /* NPARASCIP */
 
 
 /** creates a message handler */

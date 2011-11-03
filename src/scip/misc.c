@@ -3586,8 +3586,8 @@ int stairmapInsertTimepoint(
    assert(pos + 1 < stairmap->arraysize);
 
    /* insert new time point into the (sorted) stair map */
-   SCIPsortedvecInsertIntInt(stairmap->timepoints, stairmap->freecapacities, timepoint, stairmap->freecapacities[pos], 
-      &stairmap->ntimepoints);
+   SCIPsortedvecInsertIntInt(stairmap->timepoints, stairmap->freecapacities, timepoint, stairmap->freecapacities[pos],
+      &stairmap->ntimepoints, NULL);
    
 #ifndef NDEBUG
    /* check if the time points are sorted */
@@ -4685,7 +4685,7 @@ int SCIPsnprintf(
    assert(t != NULL);
    assert(len > 0);
 
-   va_start(ap, s);
+   va_start(ap, s); /*lint !e826*/
    n = vsnprintf(t, (size_t) len, s, ap);
    va_end(ap);
    if( n < 0 || n >= len )
@@ -4777,7 +4777,7 @@ void SCIPstrCopySection(
    token[nchars] = '\0';
 
    /* if section was longer than size, we want to reach the end of the parsing section anyway */
-   if( nchars == size )
+   if( nchars == (size-1) )
       while( *str != '\0' && *str != endchar )
          ++str;
 

@@ -1459,6 +1459,8 @@ SCIP_DECL_CONSDISABLE(consDisablePolynomial)
 #define consDisablePolynomial NULL
 #endif
 
+/** variable deletion method of constraint handler */
+#define consDelVarsPolynomial NULL
 
 /** constraint display method of constraint handler */
 #if 1
@@ -1529,7 +1531,7 @@ SCIP_DECL_INCLUDEPLUGIN(SCIPincludeConshdlrPolynomial)
          consSepalpPolynomial, consSepasolPolynomial, consEnfolpPolynomial, consEnfopsPolynomial, consCheckPolynomial, 
          consPropPolynomial, consPresolPolynomial, consRespropPolynomial, consLockPolynomial,
          consActivePolynomial, consDeactivePolynomial, 
-         consEnablePolynomial, consDisablePolynomial,
+         consEnablePolynomial, consDisablePolynomial, consDelVarsPolynomial,
          consPrintPolynomial, consCopyPolynomial, consParsePolynomial,
          conshdlrdata) );
 

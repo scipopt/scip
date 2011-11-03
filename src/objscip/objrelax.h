@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   objrelax.h
- * @brief  C++ wrapper for relaxators
+ * @brief  C++ wrapper for relaxation handlers
  * @author Tobias Achterberg
  */
 
@@ -31,7 +31,14 @@
 namespace scip
 {
 
-/** C++ wrapper object for relaxators */
+/** @brief C++ wrapper for relaxation handlers
+ *
+ *  This class defines the interface for relaxation handlers implemented in C++. Note that there is a pure virtual
+ *  function (this function has to be implemented). This function is: scip_exec().
+ *
+ *  - \ref RELAX "Instructions for implementing a relaxation handler"
+ *  - \ref type_relax.h "Corresponding C interface"
+ */
 class ObjRelax : public ObjCloneable
 {
 public:

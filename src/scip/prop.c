@@ -314,6 +314,8 @@ SCIP_RETCODE SCIPpropExit(
 SCIP_RETCODE SCIPpropInitpre(
    SCIP_PROP*            prop,               /**< propagator */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             isunbounded,        /**< was unboundedness already detected */
+   SCIP_Bool             isinfeasible,       /**< was infeasibility already detected */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -339,7 +341,7 @@ SCIP_RETCODE SCIPpropInitpre(
    /* call presolving initialization method of propagator */
    if( prop->propinitpre != NULL )
    {
-      SCIP_CALL( prop->propinitpre(set->scip, prop, result) );
+      SCIP_CALL( prop->propinitpre(set->scip, prop, isunbounded, isinfeasible, result) );
 
       /* evaluate result */
       if( *result != SCIP_CUTOFF
@@ -359,6 +361,8 @@ SCIP_RETCODE SCIPpropInitpre(
 SCIP_RETCODE SCIPpropExitpre(
    SCIP_PROP*            prop,               /**< propagator */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             isunbounded,        /**< was unboundedness already detected */
+   SCIP_Bool             isinfeasible,       /**< was infeasibility already detected */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -371,7 +375,7 @@ SCIP_RETCODE SCIPpropExitpre(
    /* call presolving deinitialization method of propagator */
    if( prop->propexitpre != NULL )
    {
-      SCIP_CALL( prop->propexitpre(set->scip, prop, result) );
+      SCIP_CALL( prop->propexitpre(set->scip, prop, isunbounded, isinfeasible, result) );
 
       /* evaluate result */
       if( *result != SCIP_CUTOFF

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch_xyz.h
+ * @ingroup BRANCHINGRULES
  * @brief  xyz branching rule
  * @author Tobias Achterberg
  */

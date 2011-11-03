@@ -14,9 +14,11 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_bpa.c
- * @brief  binpacking problem reader file reader
+ * @brief  Binpacking problem reader file reader
  * @author Timo Berthold
  * @author Stefan Heinz
+ *
+ * This file implements the reader/parser used to read the binpacking input data. For more details see \ref READER.
  *
  * @page READER Parsing the input format and creating the problem
  *
@@ -86,15 +88,6 @@
 #define READER_DESC             "file reader for binpacking data format"
 #define READER_EXTENSION        "bpa"
 
-
-/*
- * Data structures
- */
-
-/** data for bpa reader */
-struct SCIP_ReaderData
-{
-};
 
 /*
  * Callback methods of reader

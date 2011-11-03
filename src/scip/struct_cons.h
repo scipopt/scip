@@ -152,6 +152,7 @@ struct SCIP_Conshdlr
    SCIP_DECL_CONSDEACTIVE((*consdeactive));  /**< deactivation notification method */
    SCIP_DECL_CONSENABLE  ((*consenable));    /**< enabling notification method */
    SCIP_DECL_CONSDISABLE ((*consdisable));   /**< disabling notification method */
+   SCIP_DECL_CONSDELVARS ((*consdelvars));   /**< variable deletion method */
    SCIP_DECL_CONSPRINT   ((*consprint));     /**< constraint display method */
    SCIP_DECL_CONSCOPY    ((*conscopy));      /**< constraint copying method */
    SCIP_DECL_CONSPARSE   ((*consparse));     /**< constraint parsing method */

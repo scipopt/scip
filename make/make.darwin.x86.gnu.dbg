@@ -1,9 +1,9 @@
 FLAGS		+=	-DNO_REMOVE_HISTORY -DROUNDING_FE
 OFLAGS		+=	-O0 -g
-CFLAGS		+=	$(GCCWARN)
-CXXFLAGS	+=	$(GXXWARN)
+CFLAGS		+=	$(GCCWARN) -m32
+CXXFLAGS	+=	$(GXXWARN) -m32
 ARFLAGS		=	crs
-LDFLAGS		+=	
+LDFLAGS		+=	-m32
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
 GMP_FLAGS	=
@@ -13,4 +13,8 @@ READLINE_LDFLAGS=	-lreadline -lncurses
 
 ifeq ($(LPS),cpx)
 LPSLDFLAGS	+=	 -framework IOKit -framework Carbon
+endif
+
+ifeq ($(SHARED),true)
+LIBBUILDFLAGS   +=   -m32
 endif

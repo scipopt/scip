@@ -14,8 +14,15 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_shiftandpropagate.h
- * @brief  shiftandpropagate primal heuristic
- * @author Tobias Achterberg
+ * @ingroup PRIMALHEURISTICS
+ * @brief  preroot heuristic that alternatingly fixes variables and propagates domains
+ * @author Timo Berthold
+ * @author Gregor Hendel
+ *
+ * Preroot primal heuristic that fixes variables and propagates these fixings. In each step, the heuristic fixes a
+ * variable such that the number of violated LP rows gets maximally reduced.  The fixing is then propagated to reduce
+ * further variable domains.  In case that the domain propagation detects the infeasibility of the current partial
+ * solution, the domain is reset to its previous state and the variable is postponed.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

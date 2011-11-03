@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_cip.h
+ * @ingroup FILEREADERS
  * @brief  CIP file reader
  * @author Stefan Heinz
  */

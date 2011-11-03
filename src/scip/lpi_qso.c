@@ -330,7 +330,10 @@ SCIP_RETCODE convertSides(
 const char* SCIPlpiGetSolverName(void)
 {
    char* vname = QSversion();
-   snprintf (__qsstr, 1023, "%s", vname);
+   size_t vnamelen;
+   vnamelen = strlen(vname);
+   memcpy(__qsstr, vname, MIN(sizeof(__qsstr), vnamelen+1));
+   __qsstr[sizeof(__qsstr)-1] = '\0';
    QSfree(vname);
    return __qsstr;
 }
@@ -1727,7 +1730,7 @@ SCIP_RETCODE SCIPlpiStartStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   // currently do nothing
+   /* currently do nothing */
    return SCIP_OKAY;
 }
 
@@ -1736,7 +1739,7 @@ SCIP_RETCODE SCIPlpiEndStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   // currently do nothing
+   /* currently do nothing */
    return SCIP_OKAY;
 }
 
@@ -2848,6 +2851,19 @@ SCIP_RETCODE SCIPlpiSetState(
    /* set the basis */
    rval = QSload_basis_array(lpi->prob, icstat, irstat);
    QS_RETURN(rval);
+}
+
+/** clears current LPi state (like basis information) of the solver */
+SCIP_RETCODE SCIPlpiClearState(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert(lpi != NULL);
+
+   /**@todo implement SCIPlpiClearState() for QSopt */
+   SCIPwarningMessage("QSopt interface does not implement SCIPlpiClearState()\n");
+
+   return SCIP_OKAY;
 }
 
 /** frees LPi state information */

@@ -150,12 +150,20 @@ SCIP_RETCODE readLine(
       *endoffile = TRUE;
    else
    {
+#ifndef NDEBUG
+      char* result;
+#endif
+
       /* display prompt */
       SCIPmessagePrintDialog(prompt);
-      
-      /* read line from stdin */
-      (void)fgets(&dialoghdlr->buffer[dialoghdlr->bufferpos], dialoghdlr->buffersize - dialoghdlr->bufferpos, stdin);
 
+      /* read line from stdin */
+#ifndef NDEBUG
+      result = fgets(&dialoghdlr->buffer[dialoghdlr->bufferpos], dialoghdlr->buffersize - dialoghdlr->bufferpos, stdin);
+      assert(result != NULL);
+#else
+      (void) fgets(&dialoghdlr->buffer[dialoghdlr->bufferpos], dialoghdlr->buffersize - dialoghdlr->bufferpos, stdin);
+#endif
       /* replace newline with \0 */
       s = strchr(&dialoghdlr->buffer[dialoghdlr->bufferpos], '\n');
       if( s != NULL )
@@ -313,7 +321,7 @@ SCIP_RETCODE SCIPdialoghdlrCreate(
    (*dialoghdlr)->inputlistptr = &(*dialoghdlr)->inputlist;
    (*dialoghdlr)->buffersize = SCIP_MAXSTRLEN;
    (*dialoghdlr)->nprotectedhistelems = -1;
-   SCIP_ALLOC( BMSallocMemoryArray(&(*dialoghdlr)->buffer, (*dialoghdlr)->buffersize) ); /*lint !e685*/
+   SCIP_ALLOC( BMSallocMemoryArray(&(*dialoghdlr)->buffer, (*dialoghdlr)->buffersize) );
 
    SCIPdialoghdlrClearBuffer(*dialoghdlr);
 
@@ -851,7 +859,7 @@ SCIP_RETCODE SCIPdialogAddEntry(
    SCIP_CALL( ensureSubdialogMem(dialog, set, dialog->nsubdialogs+1) );
 
    /* link the dialogs as parent-child pair; the sub-dialogs are sorted non-decreasing w.r.t. their name */
-   SCIPsortedvecInsertPtr((void**)dialog->subdialogs, dialogComp, (void*)subdialog, &dialog->nsubdialogs);
+   SCIPsortedvecInsertPtr((void**)dialog->subdialogs, dialogComp, (void*)subdialog, &dialog->nsubdialogs, NULL);
    subdialog->parent = dialog;
 
    /* capture sub-dialog */

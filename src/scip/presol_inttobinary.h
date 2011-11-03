@@ -14,8 +14,15 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_inttobinary.h
+ * @ingroup PRESOLVERS
  * @brief  presolver that converts integer variables with domain [a,a+1] to binaries
  * @author Tobias Achterberg
+ *
+ * This presolver converts all integer variables with domain \f$[a,a+1]\f$ to binaries variables. This is done by
+ * creating a new binary variable \f$y\f$ which will be aggregated to the old variable \f$x\f$ such that
+ * \f[
+ *   x = y + a
+ * \f]
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

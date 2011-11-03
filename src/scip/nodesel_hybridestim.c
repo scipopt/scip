@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nodesel_hybridestim.c
- * @ingroup NODESELECTORS
  * @brief  node selector for hybrid best estimate / best bound search
  * @author Tobias Achterberg
  */
@@ -286,11 +285,9 @@ SCIP_DECL_NODESELCOMP(nodeselCompHybridestim)
 
    score1 = getNodeselScore(node1, nodeseldata->estimweight);
    score2 = getNodeselScore(node2, nodeseldata->estimweight);
-   if( SCIPisLT(scip, score1, score2) )
-      return -1;
-   else if( SCIPisGT(scip, score1, score2) )
-      return +1;
-   else
+   if( (SCIPisInfinity(scip,  score1) && SCIPisInfinity(scip,  score2)) ||
+       (SCIPisInfinity(scip, -score1) && SCIPisInfinity(scip, -score2)) ||
+       SCIPisEQ(scip, score1, score2) )
    {
       SCIP_NODETYPE nodetype1;
       SCIP_NODETYPE nodetype2;
@@ -320,6 +317,12 @@ SCIP_DECL_NODESELCOMP(nodeselCompHybridestim)
             return 0;
       }
    }
+
+   if( SCIPisLT(scip, score1, score2) )
+      return -1;
+
+   assert(SCIPisGT(scip, score1, score2));
+   return +1;
 }
 
 

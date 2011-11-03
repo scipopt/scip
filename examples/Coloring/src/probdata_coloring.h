@@ -14,8 +14,29 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   probdata_coloring.h
- * @brief  problem data for coloring algorithm
+ * @brief  problem data for vertex coloring algorithm
  * @author Gerald Gamrath
+ *
+ * This file implements the problem data for the coloring algorithm.
+ *
+ * The problem data contains the original graph, preprocessing information, the preprocessed graph,
+ * the array with the node-constraints, and an array with all stable sets and corresponding
+ * variables.
+ *
+ * The preprocessing deletes nodes that have a lower degree than the size of a maximum clique.
+ * Additionally, it also deletes nodes that have a dominated neighborhood. For further information,
+ * look at the documentation for the method preprocessGraph().
+ *
+ * The deleted nodes and the relation between the nodes of the original graph and the nodes of the
+ * preprocessed graph are stored in order to convert a solution of the preprocessed problem to a
+ * solution for the original graph and vice versa.
+ *
+ * Each variable has a pointer of type SCIP_VARDATA* that is used in this case to store an integer
+ * representing the number of the stable set. With the aid of this, the corresponding stable set can
+ * be found in the array returned by COLORprobGetStableSets().  This array contains all stable sets
+ * and is also used to check whether a stable set found by the pricer is really new. This can be
+ * done by calling COLORprobStableSetIsNew(). All sets are sorted decreasingly with respect to the
+ * indices of the nodes. New candidates should also be sorted that way.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -73,7 +94,7 @@ SCIP_RETCODE COLORprobAddNewStableSet(
 
 /** adds a variable that belongs to a given stable set */
 extern
-void COLORprobAddVarForStableSet(
+SCIP_RETCODE COLORprobAddVarForStableSet(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   setindex,              /**< index of the stable set */
    SCIP_VAR*             var                 /**< pointer to the variable */

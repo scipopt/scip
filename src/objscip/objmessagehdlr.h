@@ -29,7 +29,14 @@
 namespace scip
 {
 
-/** C++ wrapper object for message handlers */
+/**
+ *  @brief C++ wrapper for message handlers
+ *
+ *  This class defines the interface for message handlers implemented in C++. Note that all functions are pure virtual
+ *  (these functions have to be implemented).
+ *
+ *  - \ref type_message.h "Corresponding C interface"
+ */
 class ObjMessagehdlr
 {
 public:

@@ -35,18 +35,21 @@
 #include "scip/scip.h"
 #include "scip/scipshell.h"
 
-
-int
-main(
-   int                        argc,
-   char**                     argv
+/** main method starting SCIP */
+int main(
+   int                        argc,          /**< number of arguments from the shell */
+   char**                     argv           /**< array of shell arguments */
    )
 {
    SCIP_RETCODE retcode;
 
+   /* run interactive shell */
    retcode = SCIPrunShell(argc, argv, "scip.set");
+
+   /* evaluate retrun code of the SCIP process */
    if( retcode != SCIP_OKAY )
    {
+      /* write error back trace */
       SCIPprintError(retcode, stderr);
       return -1;
    }

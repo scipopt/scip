@@ -2,7 +2,7 @@
 
 # For release versions, only use VERSION="x.x.x".
 # For development versions, use VERSION="x.x.x.x" with subversion number.
-VERSION="2.0.2.1"
+VERSION="2.1.0.1"
 NAME="scip-$VERSION"
 rm -f $NAME
 ln -s . $NAME
@@ -12,16 +12,19 @@ then
 fi
 rm -f release/$NAME.tgz
 
+# run git status to clean the dirty git hash
+git status
+
+echo generating default setting files
+make LPS=none OPT=opt-gccold READLINE=false ZLIB=false ZIMPL=false -j4
+bin/scip -c "set default set save doc/inc/parameters.set quit"
+
 # Before we create a tarball change the director and file rights in a command way
 echo adjust file modes
 find ./ -type d -exec chmod 750 {} \;
 find ./ -type f -exec chmod 640 {} \;
 find ./ -name "*.sh" -exec chmod 750 {} \;
 chmod 750 bin/*
-
-echo generating default setting files
-make LPS=none OPT=opt-gccold READLINE=false ZLIB=false ZIMPL=false -j4
-bin/scip -c "set default set save doc/inc/parameters.set quit"
 
 tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 --exclude="*CVS*" \
@@ -58,19 +61,19 @@ $NAME/src/tclique/*.c $NAME/src/tclique/*.cpp $NAME/src/tclique/*.h \
 $NAME/src/objscip/*.c $NAME/src/objscip/*.cpp $NAME/src/objscip/*.h \
 $NAME/examples/Binpacking/Makefile $NAME/examples/Binpacking/INSTALL \
 $NAME/examples/Binpacking/doc/* $NAME/examples/Binpacking/doc/pics/binpacking.png \
-$NAME/examples/Binpacking/check/short.test $NAME/examples/Binpacking/check/short.solu \
+$NAME/examples/Binpacking/check/testset/short.test $NAME/examples/Binpacking/check/testset/short.solu \
 $NAME/examples/Binpacking/src/depend.* \
 $NAME/examples/Binpacking/src/*.c $NAME/examples/Binpacking/src/*.h \
 $NAME/examples/Binpacking/data/*.bpa \
 $NAME/examples/Coloring/* $NAME/examples/Coloring/doc/* $NAME/examples/Coloring/data/* \
-$NAME/examples/Coloring/check/short.test $NAME/examples/Coloring/check/short.solu \
+$NAME/examples/Coloring/check/testset/short.test $NAME/examples/Coloring/check/testset/short.solu \
 $NAME/examples/Coloring/src/depend.* \
 $NAME/examples/Coloring/src/*.c $NAME/examples/Coloring/src/*.h \
 $NAME/examples/Eventhdlr/* $NAME/examples/Eventhdlr/doc/* \
-$NAME/examples/Eventhdlr/check/short.test $NAME/examples/Eventhdlr/check/short.solu \
 $NAME/examples/Eventhdlr/src/depend.* \
 $NAME/examples/Eventhdlr/src/*.c $NAME/examples/Eventhdlr/src/*.h \
 $NAME/examples/LOP/* $NAME/examples/LOP/doc/* $NAME/examples/LOP/data/* \
+$NAME/examples/LOP/check/check.sh $NAME/examples/LOP/check/testset/short.test $NAME/examples/LOP/check/testset/short.solu \
 $NAME/examples/LOP/src/depend.* \
 $NAME/examples/LOP/src/*.c $NAME/examples/LOP/src/*.h \
 $NAME/examples/MIPSolver/Makefile  $NAME/examples/MIPSolver/INSTALL $NAME/examples/MIPSolver/scipmip.set \
@@ -85,6 +88,7 @@ $NAME/examples/TSP/Makefile $NAME/examples/TSP/INSTALL \
 $NAME/examples/TSP/runme.sh $NAME/examples/TSP/runviewer.sh \
 $NAME/examples/TSP/sciptsp.set \
 $NAME/examples/TSP/doc/* \
+$NAME/examples/TSP/check/testset/short.test $NAME/examples/TSP/check/testset/short.solu \
 $NAME/examples/TSP/src/depend.* \
 $NAME/examples/TSP/src/*.c $NAME/examples/TSP/src/*.cpp $NAME/examples/TSP/src/*.h \
 $NAME/examples/TSP/tspviewer/*.java $NAME/examples/TSP/tspdata/*.tsp \
@@ -96,6 +100,7 @@ $NAME/check/instances/Indicator/*.lp \
 $NAME/check/instances/MIP/*.mps \
 $NAME/check/instances/MIQCP/*.lp \
 $NAME/check/instances/MIQCP/*.mps \
+$NAME/check/instances/MIQCP/*.pip \
 $NAME/check/instances/PseudoBoolean/*.opb \
 $NAME/check/instances/SOS/*.lp \
 $NAME/check/instances/Semicontinuous/*.lp \
@@ -106,3 +111,4 @@ echo "check version numbers in src/scip/def.h, doc/xternal.c, Makefile and maked
 grep "VERSION" src/scip/def.h
 grep "@version" doc/xternal.c
 grep "^VERSION" Makefile
+tail src/scip/githash.c

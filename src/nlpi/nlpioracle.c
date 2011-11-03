@@ -58,7 +58,7 @@ struct SCIP_NlpiOracle
    BMS_BLKMEM*           blkmem;             /**< block memory */
    SCIP_Real             infinity;           /**< value for infinity */
    char*                 name;               /**< name of problem */
-   
+
    int                   varssize;           /**< length of variables related arrays */
    int                   nvars;              /**< number of variables */
    SCIP_Real*            varlbs;             /**< array with variable lower bounds */
@@ -70,16 +70,16 @@ struct SCIP_NlpiOracle
    int                   consssize;          /**< length of constraints related arrays */
    int                   nconss;             /**< number of constraints */
    SCIP_NLPIORACLECONS** conss;              /**< constraints, or NULL if none */
-   
+
    SCIP_NLPIORACLECONS*  objective;          /**< objective */
 
    int*                  jacoffsets;         /**< rowwise jacobi sparsity pattern: constraint offsets in jaccols */
    int*                  jaccols;            /**< rowwise jacobi sparsity pattern: indices of variables appearing in constraints */
-   
+
    int*                  heslagoffsets;      /**< rowwise sparsity pattern of hessian matrix of Lagrangian: row offsets in heslagcol */
    int*                  heslagcols;         /**< rowwise sparsity pattern of hessian matrix of Lagrangian: column indices; sorted for each row */
-   
-   
+
+
    SCIP_EXPRINT*         exprinterpreter;    /**< interpreter for expression trees: evaluation and derivatives */
 };
 
@@ -249,7 +249,7 @@ void invalidateJacobiSparsity(
    )
 {
    assert(oracle != NULL);
-   
+
    SCIPdebugMessage("%p invalidate jacobian sparsity\n", (void*)oracle);
 
    if( oracle->jacoffsets == NULL )
@@ -257,7 +257,7 @@ void invalidateJacobiSparsity(
       assert(oracle->jaccols == NULL);
       return;
    }
-   
+
    assert(oracle->jaccols != NULL);
    BMSfreeBlockMemoryArray(oracle->blkmem, &oracle->jaccols,    oracle->jacoffsets[oracle->nconss]);
    BMSfreeBlockMemoryArray(oracle->blkmem, &oracle->jacoffsets, oracle->nconss + 1);
@@ -272,7 +272,7 @@ void invalidateHessianLagSparsity(
    )
 {
    assert(oracle != NULL);
-   
+
    SCIPdebugMessage("%p invalidate hessian lag sparsity\n", (void*)oracle);
 
    if( oracle->heslagoffsets == NULL )
@@ -280,7 +280,7 @@ void invalidateHessianLagSparsity(
       assert(oracle->heslagcols == NULL);
       return;
    }
-   
+
    assert(oracle->heslagcols != NULL);
    BMSfreeBlockMemoryArray(oracle->blkmem, &oracle->heslagcols,    oracle->heslagoffsets[oracle->nvars]);
    BMSfreeBlockMemoryArray(oracle->blkmem, &oracle->heslagoffsets, oracle->nvars + 1);
@@ -326,13 +326,13 @@ void sortLinearCoefficients(
          ++offset;
       }
 
-      /* if j'th element is 0, increasing offset, otherwise increase j */
+      /* if j'th element is 0, increase offset, otherwise increase j */
       if( coefs[j] == 0.0 )  /*lint !e613*/
          ++offset;
       else
          ++j;
    }
-   *idxs -= offset;  /*lint !e613*/
+   *nidxs -= offset;
 }
 
 /** creates a NLPI constraint from given constraint data */
@@ -375,6 +375,7 @@ SCIP_RETCODE createConstraint(
 
       /* sort, merge duplicates, remove zero's */
       sortLinearCoefficients(&(*cons)->nlinidxs, (*cons)->linidxs, (*cons)->lincoefs);
+      assert((*cons)->linidxs[0] >= 0);
    }
 
    if( nquadelems > 0 )
@@ -386,6 +387,8 @@ SCIP_RETCODE createConstraint(
       /* sort and squeeze quadratic part */
       SCIPquadelemSort((*cons)->quadelems, nquadelems);
       SCIPquadelemSqueeze((*cons)->quadelems, nquadelems, &(*cons)->nquadelems);
+      assert((*cons)->nquadelems == 0 || (*cons)->quadelems[0].idx1 >= 0);
+      assert((*cons)->nquadelems == 0 || (*cons)->quadelems[0].idx2 >= 0);
    }
 
    if( exprtree != NULL )
@@ -422,13 +425,13 @@ void freeConstraint(
    assert(cons   != NULL);
    assert(*cons  != NULL);
 
-   SCIPdebugMessage("free constraint %p\n", *cons);
+   SCIPdebugMessage("free constraint %p\n", (void*)*cons);
 
    BMSfreeBlockMemoryArrayNull(blkmem, &(*cons)->linidxs, (*cons)->linsize);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*cons)->lincoefs, (*cons)->linsize);
 
    BMSfreeBlockMemoryArrayNull(blkmem, &(*cons)->quadelems, (*cons)->quadsize);
-   
+
    if( (*cons)->exprtree != NULL )
    {
       BMSfreeBlockMemoryArrayNull(blkmem, &(*cons)->exprvaridxs, SCIPexprtreeGetNVars((*cons)->exprtree));
@@ -451,9 +454,9 @@ void freeConstraints(
    )
 {
    int i;
-   
+
    assert(oracle != NULL);
-   
+
    SCIPdebugMessage("%p free constraints\n", (void*)oracle);
 
    for( i = 0; i < oracle->nconss; ++i )
@@ -462,7 +465,7 @@ void freeConstraints(
       assert(oracle->conss[i] == NULL);
    }
    oracle->nconss = 0;
-   
+
    BMSfreeBlockMemoryArrayNull(oracle->blkmem, &oracle->conss, oracle->consssize);
    oracle->consssize = 0;
 }
@@ -491,16 +494,16 @@ SCIP_RETCODE moveVariable(
    assert(oracle->varubs[toidx] >=  oracle->infinity);
    assert(oracle->varnames == NULL || oracle->varnames[toidx] == NULL);
    assert(!oracle->vardegreesuptodate || oracle->vardegrees[toidx] == -1);
-   
+
    oracle->varlbs[toidx] = oracle->varlbs[fromidx];
    oracle->varubs[toidx] = oracle->varubs[fromidx];
-   
+
    oracle->varlbs[fromidx] = -oracle->infinity;
    oracle->varubs[fromidx] =  oracle->infinity;
-   
+
    oracle->vardegrees[toidx]   = oracle->vardegrees[fromidx];
    oracle->vardegrees[fromidx] = -1;
-   
+
    if( oracle->varnames != NULL )
    {
       oracle->varnames[toidx]   = oracle->varnames[fromidx];
@@ -517,9 +520,9 @@ void freeVariables(
    )
 {
    int i;
-   
+
    assert(oracle != NULL);
-   
+
    SCIPdebugMessage("%p free variables\n", (void*)oracle);
 
    if( oracle->varnames != NULL )
@@ -535,7 +538,7 @@ void freeVariables(
    }
    oracle->nvars = 0;
    oracle->vardegreesuptodate = TRUE; 
-   
+
    BMSfreeBlockMemoryArrayNull(oracle->blkmem, &oracle->varlbs,     oracle->varssize);
    BMSfreeBlockMemoryArrayNull(oracle->blkmem, &oracle->varubs,     oracle->varssize);
    BMSfreeBlockMemoryArrayNull(oracle->blkmem, &oracle->vardegrees, oracle->varssize);
@@ -583,16 +586,16 @@ void updateVariableDegrees(
    )
 {
    int c;
-   
+
    assert(oracle != NULL);
    assert(oracle->nvars == 0 || oracle->vardegrees != NULL);
    assert(oracle->objective != NULL);
-   
+
    SCIPdebugMessage("%p update variable degrees\n", (void*)oracle);
 
    if( oracle->vardegreesuptodate || oracle->nvars == 0 )
       return;
-   
+
    /* assume all variables do not appear in NLP */
    BMSclearMemoryArray(oracle->vardegrees, oracle->nvars);
 
@@ -683,7 +686,7 @@ void clearDeletedQuadElements(
    assert(*quadelems  != NULL);
    assert(nquadelems  != NULL);
    assert(*nquadelems > 0);
-   
+
    /* search for beginning of non-delete entries @todo binary search? */
    for( offset = 0; offset < *nquadelems; ++offset )
    {
@@ -747,7 +750,7 @@ SCIP_RETCODE evalFunctionValue(
    SCIPdebugMessage("%p eval function value\n", (void*)oracle);
 
    *val = 0.0;
-   
+
    if( cons->nlinidxs > 0 )
    {
       int*       linidxs;
@@ -760,11 +763,11 @@ SCIP_RETCODE evalFunctionValue(
       assert(linidxs  != NULL);
       assert(lincoefs != NULL);
       assert(x != NULL);
-      
+
       for( ; nlin > 0; --nlin, ++linidxs, ++lincoefs )
          *val += *lincoefs * x[*linidxs];
    }
-   
+
    if( cons->nquadelems > 0 )
    {
       SCIP_QUADELEM* quadelems;
@@ -774,33 +777,33 @@ SCIP_RETCODE evalFunctionValue(
       nquadelems = cons->nquadelems;
       assert(quadelems != NULL);
       assert(x != NULL);
-      
+
       for( ; nquadelems > 0; --nquadelems, ++quadelems )
          *val += quadelems->coef * x[quadelems->idx1] * x[quadelems->idx2];
    }
-   
+
    if( cons->exprtree != NULL )
    {
       SCIP_Real* xx;
       int        i;
       SCIP_Real  nlval;
       int        nvars;
-      
+
       nvars = SCIPexprtreeGetNVars(cons->exprtree);
-      
+
       SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &xx, nvars) );
       for( i = 0; i < nvars; ++i )
       {
          assert(cons->exprvaridxs[i] >= 0);
          xx[i] = x[cons->exprvaridxs[i]];  /*lint !e613 !e644*/
       }
-      
+
       SCIP_CALL( SCIPexprintEval(oracle->exprinterpreter, cons->exprtree, xx, &nlval) );
       if( nlval != nlval || ABS(nlval) >= oracle->infinity )  /*lint !e777*/
          *val  = nlval;
       else
          *val += nlval;
-      
+
       BMSfreeBlockMemoryArray(oracle->blkmem, &xx, nvars);
    }
 
@@ -822,12 +825,12 @@ SCIP_RETCODE evalFunctionGradient(
    assert(x != NULL || oracle->nvars == 0);
    assert(val != NULL);
    assert(grad != NULL);
-   
+
    SCIPdebugMessage("%p eval function gradient\n", (void*)oracle);
 
    *val = 0.0;
    BMSclearMemoryArray(grad, oracle->nvars);
-   
+
    if( cons->nlinidxs > 0 )
    {
       int*       linidxs;
@@ -840,7 +843,7 @@ SCIP_RETCODE evalFunctionGradient(
       assert(linidxs  != NULL);
       assert(lincoefs != NULL);
       assert(x != NULL);
-      
+
       for( ; nlin > 0; --nlin, ++linidxs, ++lincoefs )
       {
          *val += *lincoefs * x[*linidxs];
@@ -848,7 +851,7 @@ SCIP_RETCODE evalFunctionGradient(
          grad[*linidxs] = *lincoefs;
       }
    }
-   
+
    if( cons->nquadelems > 0 )
    {
       SCIP_Real tmp;
@@ -859,7 +862,7 @@ SCIP_RETCODE evalFunctionGradient(
       nquadelems = cons->nquadelems;
       assert(quadelems != NULL);
       assert(x != NULL);
-      
+
       for( ; nquadelems > 0; --nquadelems, ++quadelems )
       {
          tmp = quadelems->coef * x[quadelems->idx1];
@@ -876,7 +879,7 @@ SCIP_RETCODE evalFunctionGradient(
       int        i;
       SCIP_Real  nlval;
       int        nvars;
-      
+
       xx = NULL;
       nvars = SCIPexprtreeGetNVars(cons->exprtree);
 
@@ -891,13 +894,13 @@ SCIP_RETCODE evalFunctionGradient(
             xx[i] = x[cons->exprvaridxs[i]];  /*lint !e613*/
          }
       }
-      
+
       SCIPdebugMessage("eval gradient of ");
       SCIPdebug( SCIPexprtreePrint(cons->exprtree, NULL, NULL, NULL) );
       SCIPdebug( if( isnewx ) {printf("\nx ="); for( i = 0; i < nvars; ++i) printf(" %g", xx[i]); printf("\n");} )
-      
+
       SCIP_CALL( SCIPexprintGrad(oracle->exprinterpreter, cons->exprtree, xx, isnewx, &nlval, g) );  /*lint !e644*/
-      
+
       SCIPdebug( printf("g ="); for( i = 0; i < nvars; ++i) printf(" %g", g[i]); printf("\n"); )
 
       if( nlval != nlval || ABS(nlval) >= oracle->infinity )  /*lint !e777*/
@@ -923,7 +926,7 @@ SCIP_RETCODE evalFunctionGradient(
                grad[cons->exprvaridxs[i]] += g[i];
             }
       }
-      
+
       BMSfreeBlockMemoryArrayNull(oracle->blkmem, &xx, nvars);
       BMSfreeBlockMemoryArray(oracle->blkmem, &g, nvars);
    }
@@ -958,15 +961,15 @@ SCIP_RETCODE hessLagSparsitySetNzFlagForQuad(
    for( ; length > 0; --length, ++quadelems )
    {
       assert(quadelems->idx1 <= quadelems->idx2);
-      
+
       if( colnz[quadelems->idx2] == NULL || !SCIPsortedvecFindInt(colnz[quadelems->idx2], quadelems->idx1, colnnz[quadelems->idx2], &pos) )
       {
          SCIP_CALL( ensureIntArraySize(oracle->blkmem, &colnz[quadelems->idx2], &collen[quadelems->idx2], colnnz[quadelems->idx2]+1) );
-         SCIPsortedvecInsertInt(colnz[quadelems->idx2], quadelems->idx1, &colnnz[quadelems->idx2]);
+         SCIPsortedvecInsertInt(colnz[quadelems->idx2], quadelems->idx1, &colnnz[quadelems->idx2], NULL);
          ++(*nzcount);
       }
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -982,7 +985,7 @@ SCIP_RETCODE hessLagSparsitySetNzFlagForExprtree(
    int*                  exprvaridx, /**< indices of variables from expression tree in NLP */
    SCIP_EXPRTREE*        exprtree,   /**< expression tree */
    int                   dim         /**< dimension of matrix */
-)
+   )
 {
    SCIP_Real*  x;
    SCIP_Bool*  hesnz;
@@ -993,7 +996,7 @@ SCIP_RETCODE hessLagSparsitySetNzFlagForExprtree(
    int         row;
    int         col;
    int         pos;
-   
+
    assert(oracle != NULL);
    assert(colnz  != NULL);
    assert(collen != NULL);
@@ -1007,38 +1010,38 @@ SCIP_RETCODE hessLagSparsitySetNzFlagForExprtree(
 
    nvars = SCIPexprtreeGetNVars(exprtree);
    nn = nvars * nvars;
-   
+
    SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &x,     nvars) );
    SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &hesnz, nn) );
-   
+
    for( i = 0; i < nvars; ++i )
       x[i] = 2.0; /* hope that this value does not make much trouble for the evaluation routines */  /*lint !e644*/
-   
+
    SCIP_CALL( SCIPexprintHessianSparsityDense(oracle->exprinterpreter, exprtree, x, hesnz) );  /*lint !e644*/
-   
+
    for( i = 0; i < nvars; ++i ) /* rows */
       for( j = 0; j <= i; ++j ) /* cols */
       {
          if( !hesnz[i*nvars + j] )
             continue;
-         
+
          row = MAX(exprvaridx[i], exprvaridx[j]);
          col = MIN(exprvaridx[i], exprvaridx[j]);
-         
+
          assert(row <  dim);
          assert(col <= row);
 
          if( colnz[row] == NULL || !SCIPsortedvecFindInt(colnz[row], col, colnnz[row], &pos) )
          {
-            SCIP_CALL( ensureIntArraySize(oracle->blkmem, &colnz[row], &collen[row], collen[row]+1) );
-            SCIPsortedvecInsertInt(colnz[row], col, &colnnz[row]);
+            SCIP_CALL( ensureIntArraySize(oracle->blkmem, &colnz[row], &collen[row], colnnz[row]+1) );
+            SCIPsortedvecInsertInt(colnz[row], col, &colnnz[row], NULL);
             ++(*nzcount);
          }
       }
-   
+
    BMSfreeBlockMemoryArray(oracle->blkmem, &x, nvars);
    BMSfreeBlockMemoryArray(oracle->blkmem, &hesnz, nn);
-   
+
    return SCIP_OKAY;
 }
 
@@ -1089,7 +1092,7 @@ SCIP_RETCODE hessLagAddExprtree(
    int*                  hesoffset,  /**< row offsets in sparse matrix that is to be filled */ 
    int*                  hescol,     /**< column indices in sparse matrix that is to be filled */
    SCIP_Real*            values      /**< buffer for values of sparse matrix that is to be filled */
-)
+   )
 {
    SCIP_Real* xx;
    SCIP_Real* h;
@@ -1102,7 +1105,7 @@ SCIP_RETCODE hessLagAddExprtree(
    int        col;
    int        idx;
    SCIP_Real  val;
-   
+
    SCIPdebugMessage("%p hess lag add exprtree\n", (void*)oracle);
 
    assert(oracle != NULL);
@@ -1132,7 +1135,7 @@ SCIP_RETCODE hessLagAddExprtree(
          xx[i] = x[exprvaridx[i]];  /*lint !e613*/
       }
    }
-   
+
    SCIP_CALL( SCIPexprintHessianDense(oracle->exprinterpreter, exprtree, xx, new_x, &val, h) );  /*lint !e644*/
    if( val != val )  /*lint !e777*/
    {
@@ -1149,7 +1152,7 @@ SCIP_RETCODE hessLagAddExprtree(
       {
          if( !*hh )
             continue;
-         
+
          if( *hh != *hh )  /*lint !e777*/
          {
             SCIPdebugMessage("hessian evaluation yield invalid hessian value %g\n", *hh);
@@ -1157,10 +1160,10 @@ SCIP_RETCODE hessLagAddExprtree(
             BMSfreeBlockMemoryArray(oracle->blkmem, &h, nn);
             return SCIP_INVALIDDATA; /* indicate that the function could not be evaluated at given point */
          }
-         
+
          row = MAX(exprvaridx[i], exprvaridx[j]);
          col = MIN(exprvaridx[i], exprvaridx[j]);
-         
+
          if( !SCIPsortedvecFindInt(&hescol[hesoffset[row]], col, hesoffset[row+1] - hesoffset[row], &idx) )
          {
             SCIPerrorMessage("Could not find entry (%d, %d) in hessian sparsity\n", row, col);
@@ -1168,12 +1171,12 @@ SCIP_RETCODE hessLagAddExprtree(
             BMSfreeBlockMemoryArray(oracle->blkmem, &h, nn);
             return SCIP_ERROR;
          }
-         
+
          values[hesoffset[row] + idx] += weight * *hh;
       }
       hh += nvars - j;
    }
-   
+
    BMSfreeBlockMemoryArrayNull(oracle->blkmem, &xx, nvars);
    BMSfreeBlockMemoryArray(oracle->blkmem, &h, nn);
 
@@ -1189,7 +1192,7 @@ void printName(
    char                  prefix,             /**< a letter (typically 'x' or 'e') to distinguish variable and equation names, if names[idx] is not available */
    const char*           suffix,             /**< a suffer to add to the name, or NULL */
    SCIP_Bool             longnames           /**< whether prefixes for long names should be added */
-)
+   )
 {
    if( longnames )
    {
@@ -1229,7 +1232,7 @@ SCIP_RETCODE printFunction(
    assert(oracle != NULL);
    assert(file != NULL);
    assert(cons != NULL);
-   
+
    for( i = 0; i < cons->nlinidxs; ++i )
    {
       printName(namebuf, oracle->varnames != NULL ? oracle->varnames[cons->linidxs[i]] : NULL, cons->linidxs[i], 'x', NULL, longvarnames);
@@ -1237,7 +1240,7 @@ SCIP_RETCODE printFunction(
       if( i % 10 == 9 )
          SCIPmessageFPrintInfo(file, "\n");
    }
-   
+
    j = 0;
    for( i = 0; i < cons->nquadelems; ++i )
    {
@@ -1282,7 +1285,7 @@ SCIP_Bool exprIsNonSmooth(
    )
 {
    int i;
-   
+
    assert(expr != NULL);
    assert(SCIPexprGetChildren(expr) != NULL || SCIPexprGetNChildren(expr) == 0);
 
@@ -1294,14 +1297,14 @@ SCIP_Bool exprIsNonSmooth(
 
    switch( SCIPexprGetOperator(expr) )
    {
-      case SCIP_EXPR_MIN:
-      case SCIP_EXPR_MAX:
-      case SCIP_EXPR_ABS:
-      case SCIP_EXPR_SIGN:
-      case SCIP_EXPR_SIGNPOWER:
-         return TRUE;
+   case SCIP_EXPR_MIN:
+   case SCIP_EXPR_MAX:
+   case SCIP_EXPR_ABS:
+   case SCIP_EXPR_SIGN:
+   case SCIP_EXPR_SIGNPOWER:
+      return TRUE;
 
-      default: ;
+   default: ;
    } /*lint !e788*/
 
    return FALSE;
@@ -1320,16 +1323,16 @@ SCIP_RETCODE SCIPnlpiOracleCreate(
 {
    assert(blkmem != NULL);
    assert(oracle != NULL);
-   
+
    SCIPdebugMessage("%p oracle create\n", (void*)oracle);
 
    SCIP_ALLOC( BMSallocMemory(oracle) );
    BMSclearMemory(*oracle);
-   
+
    (*oracle)->blkmem   = blkmem;
    (*oracle)->infinity = SCIP_DEFAULT_INFINITY;
    (*oracle)->vardegreesuptodate = TRUE;
-   
+
    SCIPdebugMessage("Oracle initializes expression interpreter %s\n", SCIPexprintGetName());
    SCIP_CALL( SCIPexprintCreate(blkmem, &(*oracle)->exprinterpreter) );
 
@@ -1357,14 +1360,14 @@ SCIP_RETCODE SCIPnlpiOracleFree(
    freeVariables(*oracle);
 
    SCIP_CALL( SCIPexprintFree(&(*oracle)->exprinterpreter) );
-   
+
    if( (*oracle)->name != NULL )
    {
       SCIP_CALL( SCIPnlpiOracleSetProblemName(*oracle, NULL) );
    }
 
    BMSfreeMemory(oracle);
-   
+
    return SCIP_OKAY;
 }
 
@@ -1376,11 +1379,11 @@ SCIP_RETCODE SCIPnlpiOracleSetInfinity(
 {
    assert(oracle != NULL);
    assert(infinity > 0.0);
-   
+
    SCIPdebugMessage("%p set infinity\n", (void*)oracle);
-   
+
    oracle->infinity = infinity;
-   
+
    return SCIP_OKAY;
 }
 
@@ -1415,7 +1418,7 @@ SCIP_RETCODE SCIPnlpiOracleSetProblemName(
    {
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(oracle->blkmem, &oracle->name, name, strlen(name)+1) );
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -1443,12 +1446,12 @@ SCIP_RETCODE SCIPnlpiOracleAddVars(
    int i;
 
    assert(oracle != NULL);
-   
+
    SCIPdebugMessage("%p add vars\n", (void*)oracle);
 
    if( nvars == 0 )
       return SCIP_OKAY;
-   
+
    assert(nvars > 0);
 
    SCIP_CALL( ensureVarsSize(oracle, oracle->nvars + nvars) );
@@ -1460,7 +1463,7 @@ SCIP_RETCODE SCIPnlpiOracleAddVars(
    else
       for( i = 0; i < nvars; ++i )
          oracle->varlbs[oracle->nvars+i] = -oracle->infinity;
-   
+
    if( ubs != NULL )
    {
       BMScopyMemoryArray(&oracle->varubs[oracle->nvars], ubs, nvars);  /*lint !e866*/
@@ -1540,12 +1543,12 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
    int c;
 
    assert(oracle != NULL);
-   
+
    SCIPdebugMessage("%p add constraints\n", (void*)oracle);
 
    if( nconss == 0 )
       return SCIP_OKAY;
-   
+
    assert(nconss > 0);
 
    addednlcon = FALSE;
@@ -1556,24 +1559,23 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
    for( c = 0; c < nconss; ++c )
    {
       SCIP_CALL( createConstraint(oracle->blkmem, &cons,
-         nlininds != NULL ? nlininds[c] : 0,
-         lininds != NULL ? lininds[c] : NULL,
-         linvals != NULL ? linvals[c] : NULL,
-         nquadelems != NULL ? nquadelems[c] : 0,
-         quadelems != NULL ? quadelems[c] : NULL,
-         exprvaridxs != NULL ? exprvaridxs[c] : NULL,
-         exprtrees != NULL ? exprtrees[c] : NULL,
-         lhss != NULL ? lhss[c] : -oracle->infinity,
-         rhss != NULL ? rhss[c] :  oracle->infinity,
-         consnames != NULL ? consnames[c] : NULL
-      ) );
+            nlininds != NULL ? nlininds[c] : 0,
+            lininds != NULL ? lininds[c] : NULL,
+            linvals != NULL ? linvals[c] : NULL,
+            nquadelems != NULL ? nquadelems[c] : 0,
+            quadelems != NULL ? quadelems[c] : NULL,
+            exprvaridxs != NULL ? exprvaridxs[c] : NULL,
+            exprtrees != NULL ? exprtrees[c] : NULL,
+            lhss != NULL ? lhss[c] : -oracle->infinity,
+            rhss != NULL ? rhss[c] :  oracle->infinity,
+            consnames != NULL ? consnames[c] : NULL
+            ) );
 
       if( cons->nquadelems > 0 )
          addednlcon = TRUE;
 
       if( cons->exprtree != NULL )
       {
-         assert(SCIPexprtreeGetNVars(cons->exprtree) <= oracle->nvars);
          addednlcon = TRUE;
          SCIP_CALL( SCIPexprintCompile(oracle->exprinterpreter, cons->exprtree) );
       }
@@ -1588,7 +1590,7 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
 
    if( addednlcon == TRUE )
       invalidateHessianLagSparsity(oracle);
-   
+
    return SCIP_OKAY;
 }
 
@@ -1610,7 +1612,7 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
 {  /*lint --e{715}*/
    assert(oracle != NULL);
    assert(REALABS(constant) < oracle->infinity);
-   
+
    SCIPdebugMessage("%p set objective\n", (void*)oracle);
 
    if( nquadelems > 0 || oracle->objective->quadsize > 0 || exprtree != NULL || oracle->objective->exprtree != NULL )
@@ -1618,18 +1620,17 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
 
    /* clear previous objective */
    freeConstraint(oracle->blkmem, &oracle->objective);
-   
+
    SCIP_CALL( createConstraint(oracle->blkmem, &oracle->objective,
-      nlin, lininds, linvals, nquadelems, quadelems, exprvaridxs, exprtree, constant, constant, NULL) );
+         nlin, lininds, linvals, nquadelems, quadelems, exprvaridxs, exprtree, constant, constant, NULL) );
 
    if( oracle->objective->exprtree != NULL )
    {
-      assert(SCIPexprtreeGetNVars(oracle->objective->exprtree) <= oracle->nvars);
       SCIP_CALL( SCIPexprintCompile(oracle->exprinterpreter, oracle->objective->exprtree) );
    }
 
    oracle->vardegreesuptodate = FALSE;
-   
+
    return SCIP_OKAY;
 }
 
@@ -1646,7 +1647,7 @@ SCIP_RETCODE SCIPnlpiOracleChgVarBounds(
 
    assert(oracle != NULL);
    assert(indices != NULL || nvars == 0);
-   
+
    SCIPdebugMessage("%p chg var bounds\n", (void*)oracle);
 
    for( i = 0; i < nvars; ++i )
@@ -1654,10 +1655,10 @@ SCIP_RETCODE SCIPnlpiOracleChgVarBounds(
       assert(indices != NULL);
       assert(indices[i] >= 0);
       assert(indices[i] < oracle->nvars);
-      
+
       oracle->varlbs[indices[i]] = (lbs != NULL ? lbs[i] : -oracle->infinity);
       oracle->varubs[indices[i]] = (ubs != NULL ? ubs[i] :  oracle->infinity);
-      
+
       if( oracle->varlbs[indices[i]] > oracle->varubs[indices[i]] )
       {
          /* inconsistent bounds; let's assume it's due to rounding and make them equal */
@@ -1665,7 +1666,7 @@ SCIP_RETCODE SCIPnlpiOracleChgVarBounds(
          oracle->varlbs[indices[i]] = oracle->varubs[indices[i]];
       }
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -1679,10 +1680,10 @@ SCIP_RETCODE SCIPnlpiOracleChgConsSides(
    )
 {
    int i;
-   
+
    assert(oracle != NULL);
    assert(indices != NULL || nconss == 0);
-   
+
    SCIPdebugMessage("%p chg cons sides\n", (void*)oracle);
 
    for( i = 0; i < nconss; ++i )
@@ -1690,7 +1691,7 @@ SCIP_RETCODE SCIPnlpiOracleChgConsSides(
       assert(indices != NULL);
       assert(indices[i] >= 0);
       assert(indices[i] < oracle->nconss);
-      
+
       oracle->conss[indices[i]]->lhs = (lhss != NULL ? lhss[i] : -oracle->infinity);
       oracle->conss[indices[i]]->rhs = (rhss != NULL ? rhss[i] :  oracle->infinity);
       if( oracle->conss[indices[i]]->lhs > oracle->conss[indices[i]]->rhs )
@@ -1699,7 +1700,7 @@ SCIP_RETCODE SCIPnlpiOracleChgConsSides(
          oracle->conss[indices[i]]->lhs = oracle->conss[indices[i]]->rhs;
       }
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -1713,14 +1714,14 @@ SCIP_RETCODE SCIPnlpiOracleDelVarSet(
    int c;
    int lastgood; /* index of the last variable that should be kept */
    SCIP_NLPIORACLECONS* cons;
-   
+
    assert(oracle != NULL);
 
    SCIPdebugMessage("%p del var set\n", (void*)oracle);
 
    invalidateJacobiSparsity(oracle);
    invalidateHessianLagSparsity(oracle);
-   
+
    lastgood = oracle->nvars - 1;
    while( lastgood >= 0 && delstats[lastgood] == 1 )
       --lastgood;
@@ -1736,7 +1737,7 @@ SCIP_RETCODE SCIPnlpiOracleDelVarSet(
       freeVariables(oracle);
       return SCIP_OKAY;
    }
-   
+
    /* delete variables at the end */
    for( c = oracle->nvars - 1; c > lastgood; --c )
    {
@@ -1764,11 +1765,11 @@ SCIP_RETCODE SCIPnlpiOracleDelVarSet(
          BMSfreeBlockMemoryArray(oracle->blkmem, &oracle->varnames[c], strlen(oracle->varnames[c])+1);  /*lint !e866*/
       }
       delstats[c] = -1;
-      
+
       /* move constraint at position lastgood to position c */
       SCIP_CALL( moveVariable(oracle, lastgood, c) );
       delstats[lastgood] = c; /* mark that lastgood variable is now at position c */
-      
+
       /* move lastgood forward, delete variables on the way */
       --lastgood;
       while( lastgood > c && delstats[lastgood] == 1)
@@ -1822,7 +1823,7 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
 {  /*lint --e{715}*/
    int c;
    int lastgood; /* index of the last constraint that should be kept */ 
-   
+
    assert(oracle != NULL);
 
    SCIPdebugMessage("%p del cons set\n", (void*)oracle);
@@ -1830,7 +1831,7 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
    invalidateJacobiSparsity(oracle);
    invalidateHessianLagSparsity(oracle);
    oracle->vardegreesuptodate = FALSE;
-   
+
    lastgood = oracle->nconss - 1;
    while( lastgood >= 0 && delstats[lastgood] == 1)
       --lastgood;
@@ -1842,7 +1843,7 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
       freeConstraints(oracle);
       return SCIP_OKAY;
    }
-   
+
    /* delete constraints at the end */
    for( c = oracle->nconss - 1; c > lastgood; --c )
    {
@@ -1863,11 +1864,11 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
          continue;
       }
       assert(delstats[c] == 1); /* constraint should be deleted */
-      
+
       freeConstraint(oracle->blkmem, &oracle->conss[c]);
       assert(oracle->conss[c] == NULL);
       delstats[c] = -1;
-      
+
       /* move constraint at position lastgood to position c */
       oracle->conss[c] = oracle->conss[lastgood];
       assert(oracle->conss[c] != NULL);
@@ -1903,7 +1904,7 @@ SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
    SCIP_NLPIORACLECONS* cons;
    SCIP_Bool needsort;
    int       i;
-   
+
    SCIPdebugMessage("%p chg linear coefs\n", (void*)oracle);
 
    assert(oracle != NULL);
@@ -1911,10 +1912,10 @@ SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
    assert(newcoefs != NULL || nentries == 0);
    assert(considx >= -1);
    assert(considx < oracle->nconss);
-   
+
    if( nentries == 0 )
       return SCIP_OKAY;
-   
+
    SCIPdebugMessage("change %d linear coefficients in cons %d\n", nentries, considx);
 
    needsort = FALSE;
@@ -1926,7 +1927,7 @@ SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
       /* first time we have linear coefficients in this constraint (or objective) */
       assert(cons->linidxs  == NULL);
       assert(cons->lincoefs == NULL);
-      
+
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(oracle->blkmem, &cons->linidxs,  varidxs,  nentries) );
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(oracle->blkmem, &cons->lincoefs, newcoefs, nentries) );
       cons->linsize  = nentries;
@@ -1966,7 +1967,7 @@ SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
          }
       }
    }
-   
+
    if( needsort )
    {
       int oldsize;
@@ -1984,7 +1985,7 @@ SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
          for( i = 0; i < cons->linsize; ++i )
             oracle->vardegrees[varidxs[i]] = MAX(1, oracle->vardegrees[varidxs[i]]);  /*lint !e613*/
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -2006,19 +2007,19 @@ SCIP_RETCODE SCIPnlpiOracleChgQuadCoefs(
    assert(quadelems != NULL || nquadelems == 0);
    assert(considx >= -1);
    assert(considx < oracle->nconss);
-   
+
    if( nquadelems == 0 )
       return SCIP_OKAY;
-   
+
    needsort = FALSE;
 
    cons = considx < 0 ? oracle->objective : oracle->conss[considx];
-   
+
    if( cons->quadsize == 0 )
    {
       /* first time we have quadratic coefficients in this constraint (or objective) */
       assert(cons->quadelems == NULL);
-      
+
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(oracle->blkmem, &cons->quadelems, quadelems, nquadelems) );
       cons->quadsize  = nquadelems;
       cons->nquadelems = nquadelems;
@@ -2028,14 +2029,14 @@ SCIP_RETCODE SCIPnlpiOracleChgQuadCoefs(
    else
    {
       int pos;
-      
+
       for( i = 0; i < nquadelems; ++i )
       {
          assert(quadelems[i].idx1 >= 0);  /*lint !e613*/
          assert(quadelems[i].idx2 >= 0);  /*lint !e613*/
          assert(quadelems[i].idx1 < oracle->nvars);  /*lint !e613*/
          assert(quadelems[i].idx2 < oracle->nvars);  /*lint !e613*/
-         
+
          /* if we already have an entry for quadelems[i], then just replace the coefficient, otherwise append new entry */
          if( SCIPquadelemSortedFind(cons->quadelems, quadelems[i].idx1, quadelems[i].idx2, cons->nquadelems, &pos) )  /*lint !e613*/
          {
@@ -2082,7 +2083,7 @@ SCIP_RETCODE SCIPnlpiOracleChgQuadCoefs(
             oracle->vardegrees[cons->quadelems[i].idx2] = MAX(2, oracle->vardegrees[cons->quadelems[i].idx2]);
          }
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -2108,7 +2109,7 @@ SCIP_RETCODE SCIPnlpiOracleChgExprtree(
    invalidateJacobiSparsity(oracle);
 
    cons = considx < 0 ? oracle->objective : oracle->conss[considx];
-   
+
    /* free previous expression tree */
    if( cons->exprtree != NULL )
    {
@@ -2180,7 +2181,7 @@ SCIP_RETCODE SCIPnlpiOracleChgObjConstant(
 
    oracle->objective->lhs = objconstant;
    oracle->objective->rhs = objconstant;
-   
+
    return SCIP_OKAY;
 }
 
@@ -2190,7 +2191,7 @@ int SCIPnlpiOracleGetNVars(
    )
 {
    assert(oracle != NULL);
-   
+
    return oracle->nvars;
 }
 
@@ -2200,7 +2201,7 @@ int SCIPnlpiOracleGetNConstraints(
    )
 {
    assert(oracle != NULL);
-   
+
    return oracle->nconss;
 }
 
@@ -2210,7 +2211,7 @@ const SCIP_Real* SCIPnlpiOracleGetVarLbs(
    )
 {
    assert(oracle != NULL);
-   
+
    return oracle->varlbs;
 }
 
@@ -2220,7 +2221,7 @@ const SCIP_Real* SCIPnlpiOracleGetVarUbs(
    )
 {
    assert(oracle != NULL);
-   
+
    return oracle->varubs;
 }
 
@@ -2230,7 +2231,7 @@ char** SCIPnlpiOracleGetVarNames(
    )
 {
    assert(oracle != NULL);
-   
+
    return oracle->varnames;
 }
 
@@ -2245,9 +2246,9 @@ int SCIPnlpiOracleGetVarDegree(
    assert(oracle != NULL);
    assert(varidx >= 0);
    assert(varidx < oracle->nvars);
-   
+
    updateVariableDegrees(oracle);
-   
+
    return oracle->vardegrees[varidx];
 }
 
@@ -2274,7 +2275,7 @@ SCIP_Real SCIPnlpiOracleGetConstraintLhs(
    assert(oracle != NULL);
    assert(considx >= 0);
    assert(considx < oracle->nconss);
-   
+
    return oracle->conss[considx]->lhs;
 }
 
@@ -2317,13 +2318,13 @@ int SCIPnlpiOracleGetConstraintDegree(
    assert(oracle != NULL);
    assert(considx >= -1);
    assert(considx < oracle->nconss);
-   
+
    cons = considx < 0 ? oracle->objective : oracle->conss[considx];
 
    /* could do something more clever like exprtreeGetMaxDegree, but no solver uses this so far */
    if( cons->exprtree != NULL )
       return INT_MAX;
-   
+
    if( cons->nquadelems > 0 )
       return 2;
 
@@ -2345,7 +2346,7 @@ int SCIPnlpiOracleGetMaxDegree(
 {
    int i;
    int maxdegree;
-   
+
    assert(oracle != NULL);
 
    SCIPdebugMessage("%p get max degree\n", (void*)oracle);
@@ -2360,7 +2361,7 @@ int SCIPnlpiOracleGetMaxDegree(
          if( maxdegree == INT_MAX )
             break;
       }
-   
+
    return maxdegree;
 }
 
@@ -2372,14 +2373,14 @@ SCIP_RETCODE SCIPnlpiOracleEvalObjectiveValue(
    )
 {
    assert(oracle != NULL);
-   
+
    SCIPdebugMessage("%p eval obj value\n", (void*)oracle);
 
    SCIP_CALL_QUIET( evalFunctionValue(oracle, oracle->objective, x, objval) );
-   
+
    assert(oracle->objective->lhs == oracle->objective->rhs);  /*lint !e777*/
    *objval += oracle->objective->lhs;
-   
+
    return SCIP_OKAY;
 }
 
@@ -2394,11 +2395,11 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintValue(
    assert(oracle != NULL);
    assert(x != NULL || oracle->nvars == 0);
    assert(conval != NULL);
-   
+
    SCIPdebugMessage("%p eval cons value\n", (void*)oracle);
 
    SCIP_CALL_QUIET( evalFunctionValue(oracle, oracle->conss[considx], x, conval) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -2410,7 +2411,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintValues(
    )
 {
    int i;
-   
+
    SCIPdebugMessage("%p eval cons values\n", (void*)oracle);
 
    assert(oracle != NULL);
@@ -2421,7 +2422,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintValues(
    {
       SCIP_CALL_QUIET( evalFunctionValue(oracle, oracle->conss[i], x, &convals[i]) );
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -2435,14 +2436,14 @@ SCIP_RETCODE SCIPnlpiOracleEvalObjectiveGradient(
    )
 {
    assert(oracle != NULL);
-   
+
    SCIPdebugMessage("%p eval obj grad\n", (void*)oracle);
 
    SCIP_CALL_QUIET( evalFunctionGradient(oracle, oracle->objective, x, isnewx, objval, objgrad) );
-   
+
    assert(oracle->objective->lhs == oracle->objective->rhs);  /*lint !e777*/
    *objval += oracle->objective->lhs;
-   
+
    return SCIP_OKAY;
 }
 
@@ -2459,11 +2460,11 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintGradient(
    assert(oracle != NULL);
    assert(x != NULL || oracle->nvars == 0);
    assert(conval != NULL);
-   
+
    SCIPdebugMessage("%p eval cons grad\n", (void*)oracle);
 
    SCIP_CALL_QUIET( evalFunctionGradient(oracle, oracle->conss[considx], x, isnewx, conval, congrad) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -2484,9 +2485,9 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
    int maxnnz;
    int i;
    int j;
-   
+
    assert(oracle != NULL);
-   
+
    SCIPdebugMessage("%p get jacobian sparsity\n", (void*)oracle);
 
    if( oracle->jacoffsets != NULL )
@@ -2503,7 +2504,7 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
 
    maxnnz = MIN(oracle->nvars, 10) * oracle->nconss;  /* initial guess */
    SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &oracle->jaccols, maxnnz) );
-   
+
    if( maxnnz == 0 )
    {
       /* no variables */
@@ -2515,13 +2516,13 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
       return SCIP_OKAY;
    }
    nnz = 0;
-   
+
    SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &nzflag, oracle->nvars) );
 
    for( i = 0; i < oracle->nconss; ++i )
    {
       oracle->jacoffsets[i] = nnz;
-      
+
       cons = oracle->conss[i];
       assert(cons != NULL);
 
@@ -2559,43 +2560,43 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
        * @todo this could be done faster for very sparse constraint by assembling all appearing variables, sorting, and removing duplicates
        */
       BMSclearMemoryArray(nzflag, oracle->nvars);  /*lint !e644*/
-      
+
       for( j = 0; j < cons->nlinidxs; ++j )
          nzflag[cons->linidxs[j]] = TRUE;
-      
+
       for( j = 0; j < cons->nquadelems; ++j )
       {
          nzflag[cons->quadelems[j].idx1] = TRUE;
          nzflag[cons->quadelems[j].idx2] = TRUE;
       }
-      
+
       if( cons->exprvaridxs != NULL )
       {
          assert(cons->exprtree != NULL);
          for( j = SCIPexprtreeGetNVars(cons->exprtree)-1; j >= 0; --j )
             nzflag[cons->exprvaridxs[j]] = TRUE;
       }
-      
+
       /* store variables indices in jaccols */
       for( j = 0; j < oracle->nvars; ++j )
       {
          if( nzflag[j] == FALSE )
             continue;
-         
+
          SCIP_CALL( ensureIntArraySize(oracle->blkmem, &oracle->jaccols, &maxnnz, nnz + 1) );
          oracle->jaccols[nnz] = j;
          ++nnz;
       }
    }
-   
+
    oracle->jacoffsets[oracle->nconss] = nnz;
-   
+
    /* shrink jaccols array to nnz */
    if( nnz < maxnnz )
    {
       SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->jaccols, maxnnz, nnz) );
    }
-   
+
    BMSfreeBlockMemoryArray(oracle->blkmem, &nzflag, oracle->nvars);
 
    if( offset != NULL )
@@ -2628,20 +2629,20 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
    int j;
    int k;
    int l;
-   
+
    SCIPdebugMessage("%p eval jacobian\n", (void*)oracle);
 
    assert(oracle != NULL);
    assert(jacobi != NULL);
-   
+
    assert(oracle->jacoffsets != NULL);
    assert(oracle->jaccols    != NULL);
-   
+
    SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &grad, oracle->nvars) );
    xx = NULL;
 
    retcode = SCIP_OKAY;
-   
+
    j = oracle->jacoffsets[0];
    k = 0;
    for( i = 0; i < oracle->nconss; ++i )
@@ -2739,10 +2740,10 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
       while( j < oracle->jacoffsets[i+1] )
          jacobi[k++] = grad[oracle->jaccols[j++]];
    }
-   
+
    BMSfreeBlockMemoryArrayNull(oracle->blkmem, &xx, oracle->nvars);
    BMSfreeBlockMemoryArray(oracle->blkmem, &grad, oracle->nvars);
-   
+
    return retcode;
 }
 
@@ -2765,9 +2766,9 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
    int   i;
    int   j;
    int   cnt;
-   
+
    assert(oracle != NULL);
-   
+
    SCIPdebugMessage("%p get hessian lag sparsity\n", (void*)oracle);
 
    if( oracle->heslagoffsets != NULL )
@@ -2781,7 +2782,7 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
    }
 
    SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &oracle->heslagoffsets, oracle->nvars + 1) );
-   
+
    SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &colnz,  oracle->nvars) );
    SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &collen, oracle->nvars) );
    SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &colnnz, oracle->nvars) );
@@ -2789,7 +2790,7 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
    BMSclearMemoryArray(collen, oracle->nvars);  /*lint !e644*/
    BMSclearMemoryArray(colnnz, oracle->nvars);  /*lint !e644*/
    nnz = 0;
-   
+
    if( oracle->objective->nquadelems != 0 )
    {
       SCIP_CALL( hessLagSparsitySetNzFlagForQuad(oracle, colnz, collen, colnnz, &nnz, oracle->objective->nquadelems, oracle->objective->quadelems) );
@@ -2806,15 +2807,15 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
       {
          SCIP_CALL( hessLagSparsitySetNzFlagForQuad(oracle, colnz, collen, colnnz, &nnz, oracle->conss[i]->nquadelems, oracle->conss[i]->quadelems) );
       }
-      
+
       if( oracle->conss[i]->exprtree != NULL )
       {
          SCIP_CALL( hessLagSparsitySetNzFlagForExprtree(oracle, colnz, collen, colnnz, &nnz, oracle->conss[i]->exprvaridxs, oracle->conss[i]->exprtree, oracle->nvars) );
       }
    }
-   
+
    SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &oracle->heslagcols, nnz) );
-   
+
    /* set hessian sparsity from colnz, colnnz */
    cnt = 0;
    for( i = 0; i < oracle->nvars; ++i )
@@ -2830,11 +2831,11 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
    }
    oracle->heslagoffsets[oracle->nvars] = cnt;
    assert(cnt == nnz);
-   
+
    BMSfreeBlockMemoryArray(oracle->blkmem, &colnz,  oracle->nvars);
    BMSfreeBlockMemoryArray(oracle->blkmem, &colnnz, oracle->nvars);
    BMSfreeBlockMemoryArray(oracle->blkmem, &collen, oracle->nvars);
-   
+
    if( offset != NULL )
       *offset = oracle->heslagoffsets;
    if( col != NULL )
@@ -2872,13 +2873,13 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
 
    for( i = oracle->heslagoffsets[oracle->nvars] - 1; i >= 0; --i )
       hessian[i] = 0.0;
-   
+
    if( objfactor != 0.0 )
    {
       SCIP_CALL( hessLagAddQuad(objfactor, oracle->objective->nquadelems, oracle->objective->quadelems, oracle->heslagoffsets, oracle->heslagcols, hessian) );
       SCIP_CALL_QUIET( hessLagAddExprtree(oracle, objfactor, x, isnewx, oracle->objective->exprvaridxs, oracle->objective->exprtree, oracle->heslagoffsets, oracle->heslagcols, hessian) );
    }
-   
+
    for( i = 0; i < oracle->nconss; ++i )
    {
       if( lambda[i] == 0.0 )
@@ -2886,7 +2887,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
       SCIP_CALL( hessLagAddQuad(lambda[i], oracle->conss[i]->nquadelems, oracle->conss[i]->quadelems, oracle->heslagoffsets, oracle->heslagcols, hessian) );
       SCIP_CALL_QUIET( hessLagAddExprtree(oracle, lambda[i], x, isnewx, oracle->conss[i]->exprvaridxs, oracle->conss[i]->exprtree, oracle->heslagoffsets, oracle->heslagcols, hessian) );
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -2901,12 +2902,12 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblem(
    SCIP_Real rhs;
 
    assert(oracle != NULL);
-   
+
    SCIPdebugMessage("%p print problem\n", (void*)oracle);
 
    if( file == NULL )
       file = stdout;
-   
+
    SCIPmessageFPrintInfo(file, "NLPI Oracle %s: %d variables and %d constraints\n", oracle->name ? oracle->name : "", oracle->nvars, oracle->nconss);
    for( i = 0; i < oracle->nvars; ++i )
    {
@@ -2919,35 +2920,35 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblem(
          SCIPmessageFPrintInfo(file, "\t degree: %d", oracle->vardegrees[i]);
       SCIPmessageFPrintInfo(file, "\n");
    }
-   
+
    SCIPmessageFPrintInfo(file, "objective: ");
    SCIP_CALL( printFunction(oracle, file, oracle->objective, FALSE, FALSE) );
    if( oracle->objective->lhs != 0.0 )
       SCIPmessageFPrintInfo(file, "%+.20g", oracle->objective->lhs);
    SCIPmessageFPrintInfo(file, "\n");
-   
+
    for( i = 0; i < oracle->nconss; ++i )
    {
       if( oracle->conss[i]->name != NULL )
          SCIPmessageFPrintInfo(file, "%10s", oracle->conss[i]->name);
       else
          SCIPmessageFPrintInfo(file, "con%07d", i);
-      
+
       lhs = oracle->conss[i]->lhs;
       rhs = oracle->conss[i]->rhs;
       SCIPmessageFPrintInfo(file, ": ");
       if( lhs > -oracle->infinity && rhs < oracle->infinity && lhs != rhs )
          SCIPmessageFPrintInfo(file, "%.20g <= ", lhs);
-      
+
       SCIP_CALL( printFunction(oracle, file, oracle->conss[i], FALSE, FALSE) );
-      
+
       if( lhs == rhs )
          SCIPmessageFPrintInfo(file, " = %.20g", rhs);
       else if( rhs <  oracle->infinity )
          SCIPmessageFPrintInfo(file, " <= %.20g", rhs);
       else if( lhs > -oracle->infinity )
          SCIPmessageFPrintInfo(file, " >= %.20g", lhs);
-      
+
       SCIPmessageFPrintInfo(file, "\n");
    }
 
@@ -2976,10 +2977,10 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
    SCIPdebugMessage("%p print problem gams\n", (void*)oracle);
 
    assert(oracle != NULL);
-   
+
    if( file == NULL )
       file = stdout;
-   
+
    nllevel = 0;
 
    havelongvarnames = FALSE;
@@ -3040,7 +3041,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
       SCIPmessageFPrintInfo(file, "\n");
    }
    SCIPmessageFPrintInfo(file, "\n");
-   
+
    SCIPmessageFPrintInfo(file, "Equations ");
    for( i = 0; i < oracle->nconss; ++i )
    {
@@ -3057,13 +3058,13 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
          SCIPmessageFPrintInfo(file, "\n");
    }
    SCIPmessageFPrintInfo(file, "NLPIORACLEOBJ;\n\n");
-   
+
    SCIPmessageFPrintInfo(file, "NLPIORACLEOBJ.. NLPIORACLEOBJVAR =E= ");
    SCIP_CALL( printFunction(oracle, file, oracle->objective, havelongvarnames, havelongequnames) );
    if( oracle->objective->lhs != 0.0 )
       SCIPmessageFPrintInfo(file, "%+.20g", oracle->objective->lhs);
    SCIPmessageFPrintInfo(file, ";\n");
-   
+
    for( i = 0; i < oracle->nconss; ++i )
    {
       SCIP_Real lhs;
@@ -3071,7 +3072,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
 
       printName(namebuf, oracle->conss[i]->name, i, 'e', NULL, havelongequnames);
       SCIPmessageFPrintInfo(file, "%s.. ", namebuf);
-      
+
       SCIP_CALL( printFunction(oracle, file, oracle->conss[i], havelongvarnames, havelongequnames) );
 
       lhs = oracle->conss[i]->lhs;
@@ -3091,12 +3092,12 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
       {
          printName(namebuf, oracle->conss[i]->name, i, 'e', "_RNG", havelongequnames);
          SCIPmessageFPrintInfo(file, "%s.. ", namebuf);
-        
+
          SCIP_CALL( printFunction(oracle, file, oracle->conss[i], havelongvarnames, havelongequnames) );
-         
+
          SCIPmessageFPrintInfo(file, " =G= %.20g;\n", lhs);
       }
-      
+
       if( nllevel <= 0 && oracle->conss[i]->nquadelems > 0 )
          nllevel = 1;
       if( nllevel <= 1 && oracle->conss[i]->exprtree != NULL )
@@ -3104,9 +3105,9 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
       if( nllevel <= 2 && oracle->conss[i]->exprtree != NULL && exprIsNonSmooth(SCIPexprtreeGetRoot(oracle->conss[i]->exprtree)) )
          nllevel = 3;
    }
-   
+
    problemname = oracle->name ? oracle->name : "m";
-   
+
    SCIPmessageFPrintInfo(file, "Model %s / all /;\n", problemname);
    SCIPmessageFPrintInfo(file, "option limrow = 0;\n");
    SCIPmessageFPrintInfo(file, "option limcol = 0;\n");

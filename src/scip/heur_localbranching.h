@@ -14,7 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_localbranching.h
- * @brief  localbranching primal heuristic
+ * @ingroup PRIMALHEURISTICS
+ * @brief  Local branching heuristic according to Fischetti and Lodi
  * @author Timo Berthold
  */
 

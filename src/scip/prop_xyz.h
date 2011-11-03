@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_xyz.h
+ * @ingroup PROPAGATORS
  * @brief  xyz propagator
  * @author Tobias Achterberg
  */

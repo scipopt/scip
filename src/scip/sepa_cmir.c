@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_cmir.c
- * @ingroup SEPARATORS
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
  * @author Kati Wolter
  * @author Tobias Achterberg
@@ -781,7 +780,7 @@ SCIP_RETCODE aggregation(
 
          /* store continuous variable in array sorted by distance to closest bound */
          bounddist = getBounddist(scip, nintvars, varsolvals, bestcontlbs, bestcontubs, var);
-         SCIPsortedvecInsertDownRealInt(aggrcontnonzbounddists, aggrcontnonzposs, bounddist, pos, &naggrcontnonzs);
+         SCIPsortedvecInsertDownRealInt(aggrcontnonzbounddists, aggrcontnonzposs, bounddist, pos, &naggrcontnonzs, NULL);
       }
       else
          naggrintnonzs++;
@@ -1106,7 +1105,7 @@ SCIP_RETCODE aggregation(
 
                /* store continuous variable in array sorted by distance to closest bound */
                bounddist = getBounddist(scip, nintvars, varsolvals, bestcontlbs, bestcontubs, var);
-               SCIPsortedvecInsertDownRealInt(aggrcontnonzbounddists, aggrcontnonzposs, bounddist, pos, &naggrcontnonzs);
+               SCIPsortedvecInsertDownRealInt(aggrcontnonzbounddists, aggrcontnonzposs, bounddist, pos, &naggrcontnonzs, NULL);
 
                updateNActiveConts(scip, varsolvals, bestcontlbs, bestcontubs, nintvars, var, +1, &nactiveconts);
             }

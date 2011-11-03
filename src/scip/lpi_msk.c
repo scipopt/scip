@@ -343,8 +343,9 @@ SCIP_RETCODE getEndptrs(
    
    SCIP_ALLOC( BMSallocMemoryArray( aptre, n) );
 
-//    if (aptre == NULL) 
-//       return NULL;
+   /*    if (aptre == NULL) 
+         return NULL;
+   */
 
    if (nnonz > 0)
    {
@@ -547,7 +548,7 @@ SCIP_RETCODE setbase(
  * Miscellaneous Methods
  */
 
-static char mskname[SCIP_MAXSTRLEN];
+static char mskname[100];
 
 /**@name Miscellaneous Methods */
 /**@{ */
@@ -557,7 +558,7 @@ const char* SCIPlpiGetSolverName(
    void
    )
 {
-   snprintf(mskname, SCIP_MAXSTRLEN, "MOSEK %.2f", (SCIP_Real)MSK_VERSION_MAJOR);
+   sprintf(mskname, "MOSEK %.2f", (SCIP_Real)MSK_VERSION_MAJOR);
    return mskname;
 }
 
@@ -1846,7 +1847,7 @@ SCIP_RETCODE SolveWSimplex(
       maxiter,lpi->termcode,prosta,solsta,
       pobj,dobj,itercount_primal,itercount_dual);
    
-   //  SCIPdebugMessage("Iter dual %d primal %d\n",itercount_dual,itercount_primal);
+   /*  SCIPdebugMessage("Iter dual %d primal %d\n",itercount_dual,itercount_primal); */
    switch (solsta)
    {
    case MSK_SOL_STA_OPTIMAL:
@@ -2205,7 +2206,7 @@ SCIP_RETCODE SCIPlpiStartStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   // currently do nothing
+   /* currently do nothing */
    return SCIP_OKAY;
 }
 
@@ -2214,7 +2215,7 @@ SCIP_RETCODE SCIPlpiEndStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   // currently do nothing
+   /* currently do nothing */
    return SCIP_OKAY;
 }
 
@@ -3774,6 +3775,19 @@ SCIP_RETCODE SCIPlpiSetState(
    return SCIP_OKAY;
 }
 
+/** clears current LPi state (like basis information) of the solver */
+SCIP_RETCODE SCIPlpiClearState(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert(lpi != NULL);
+
+   /**@todo implement SCIPlpiClearState() for MOSEK */
+   SCIPwarningMessage("MOSEK interface does not implement SCIPlpiClearState()\n");
+
+   return SCIP_OKAY;
+}
+
 /** frees LP state information */
 SCIP_RETCODE SCIPlpiFreeState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -4148,7 +4162,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    case SCIP_LPPAR_DUALFEASTOL:               /* feasibility tolerance for dual variables and reduced costs */
       if (dval < 1e-9) 
          return SCIP_PARAMETERUNKNOWN;
-      //         dval = 1e-9;
+      /*         dval = 1e-9; */
 
       MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_BASIS_TOL_S, dval) );
       break;

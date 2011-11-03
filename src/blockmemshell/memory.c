@@ -153,8 +153,10 @@ void removeMemlistEntry(
       listptr = &(list->next);
       list = list->next;
    }
-   if( list != NULL && ptr == list->ptr )
+   if( list != NULL )
    {
+      assert(ptr == list->ptr);
+
       *listptr = list->next;
       memused -= (long long)list->size;
       free(list->filename);

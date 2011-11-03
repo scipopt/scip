@@ -14,8 +14,21 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_subnlp.h
+ * @ingroup PRIMALHEURISTICS
  * @brief  NLP local search primal heuristic using sub-SCIPs
  * @author Stefan Vigerske
+ *
+ * This heuristic applies a NLP local search to a nonlinear CIP after fixing all discrete variables.
+ * That is, the CIP is copied, all discrete variables are fixed, presolving is applied,
+ * and if the resulting CIP has a nonlinear relaxation, then it is tried to solve this relaxation
+ * by an NLP solver.
+ * The heuristic only runs if continuous nonlinearities are present (@ref SCIPhasContinuousNonlinearitiesPresent()).
+ *
+ * Fixing values for discrete values are either taken from a solution of the LP relaxation which
+ * satisfies all integrality constraints, or are provided by SCIPupdateStartpointHeurSubNlp().
+ *
+ * This heuristic is orthogonal to the undercover heuristic (@ref heur_undercover.h), which fixes
+ * variables in a nonlinear CIP in a way that a (possibly mixed-integer) linear subproblem is obtained.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -80,7 +93,7 @@ SCIP_RETCODE SCIPaddLinearConsToNlpHeurSubNlp(
    SCIP_HEUR*            heur,               /**< heuristic data structure                                       */
    SCIP_Bool             addcombconss,       /**< whether to add combinatorial linear constraints, i.e., linear constraints that involve only discrete variables */
    SCIP_Bool             addcontconss        /**< whether to add continuous    linear constraints, i.e., linear constraints that involve not only discrete variables */
-);
+   );
    
 /** gets sub-SCIP used by NLP heuristic, or NULL if none */
 extern

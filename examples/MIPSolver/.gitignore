@@ -1,7 +1,9 @@
-check/check.awk
-check/check.sh
-check/evalcheck.sh
-check/getlastprob.awk
-check/locks/
-check/testset/short.solu
-check/results/
+check/
+doc/doxygen
+doc/footer.hrml
+doc/footer.html
+doc/html/
+doc/miniscippy.png
+doc/scip.css
+doc/scippy.png
+

@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_pseudoboolean.c
- * @ingroup CONSHDLRS 
  * @brief  constraint handler for pseudo Boolean constraints
  * @author Stefan Heinz
  * @author Michael Winkler
@@ -5841,7 +5840,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
             }
 
             /* @todo check whether it's better to set the initial flag to false */         
-            initial = SCIPconsIsInitial(cons); //FALSE;
+            initial = SCIPconsIsInitial(cons); /* FALSE; */
 
             /* first soft constraints for lhs */
             if( !SCIPisInfinity(scip, -lhs) )
@@ -5936,8 +5935,8 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
             }
 #else /* with indicator */
             /* @todo check whether it's better to set the initial flag to false */         
-            initial = SCIPconsIsInitial(cons); //FALSE;
-            
+            initial = SCIPconsIsInitial(cons); /* FALSE; */
+
             if( !SCIPisInfinity(scip, rhs) )
             {
                /* first we are modelling the implication that if the negation of the indicator variable is on, the constraint
@@ -6796,6 +6795,8 @@ SCIP_DECL_CONSPARSE(consParsePseudoboolean)
 #define consParsePseudoboolean NULL
 #endif
 
+/** variable deletion method of constraint handler */
+#define consDelvarsPseudoboolean NULL
 
 /*
  * constraint specific interface methods
@@ -6824,7 +6825,7 @@ SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
          consSepalpPseudoboolean, consSepasolPseudoboolean, consEnfolpPseudoboolean, consEnfopsPseudoboolean, consCheckPseudoboolean, 
          consPropPseudoboolean, consPresolPseudoboolean, consRespropPseudoboolean, consLockPseudoboolean,
          consActivePseudoboolean, consDeactivePseudoboolean, 
-         consEnablePseudoboolean, consDisablePseudoboolean,
+         consEnablePseudoboolean, consDisablePseudoboolean, consDelvarsPseudoboolean,
          consPrintPseudoboolean, consCopyPseudoboolean, consParsePseudoboolean,
          conshdlrdata) );
 

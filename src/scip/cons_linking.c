@@ -594,10 +594,10 @@ SCIP_RETCODE analyzeConflict(
 {
    assert(scip != NULL);
 
-   /* conflict analysis can only be applied in solving stage */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   /* conflict analysis can only be applied in solving stage and if it is turned on */
+   if( (SCIPgetStage(scip) != SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
-   
+
    /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
    SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
@@ -854,8 +854,8 @@ SCIP_RETCODE tightenedIntvar(
    
    if( infeasible )
    {
-      /* conflict analysis can only be applied in solving stage */
-      if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+      /* conflict analysis can only be applied in solving stage and if conflict analysis is turned on */
+      if( (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) && SCIPisConflictAnalysisApplicable(scip) )
       {  
          int k;
          
@@ -913,7 +913,8 @@ SCIP_RETCODE tightenedIntvar(
    /* start conflict analysis if infeasible */
    if( infeasible ) 
    {
-      if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+      /* analyze the cutoff if if SOLVING stage and conflict analysis is turned on */
+      if( (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) && SCIPisConflictAnalysisApplicable(scip) )
       {
          int k;
          
@@ -1056,8 +1057,8 @@ SCIP_RETCODE processBinvarFixings(
 
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
 
-      /* conflict analysis can only be applied in solving stage */
-      if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+      /* conflict analysis can only be applied in solving stage and if it is applicable */
+      if( (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) && SCIPisConflictAnalysisApplicable(scip) )
       {
          SCIP_VAR** vars;
          int nvars;
@@ -1104,8 +1105,8 @@ SCIP_RETCODE processBinvarFixings(
          *addcut = TRUE;
       else 
       {
-         /* conflict analysis can only be applied in solving stage */
-         if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+         /* conflict analysis can only be applied in solving stage and if it is applicable */
+         if( (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) && SCIPisConflictAnalysisApplicable(scip) )
          {
             SCIP_VAR** vars;
             int nvars;
@@ -1128,13 +1129,15 @@ SCIP_RETCODE processBinvarFixings(
          *cutoff = TRUE;
       }
    }
-   else if( consdata->nfixedzeros == consdata->nbinvars - 1 && consdata->nfixedones == 0 )
+   else if( consdata->nfixedzeros == consdata->nbinvars - 1 )
    {
       /* all variables except one are fixed to zero:
        * - an unmodifiable set partitioning constraint is feasible and can be disabled after the
        *   remaining variable is fixed to one
        * - a modifiable set partitioning constraint must be checked manually
        */
+      assert(consdata->nfixedones == 0);
+
       if( !SCIPconsIsModifiable(cons) )
       {
          SCIP_VAR** vars;
@@ -1507,7 +1510,7 @@ SCIP_RETCODE separateCons(
             if( !SCIProwIsInLP(consdata->row2) )
             {
                tmp = SCIPgetRowLPFeasibility(scip, consdata->row2);
-               feasibility = MIN( feasibility, tmp);
+               feasibility = MIN(feasibility, tmp);
             }
             addcut = SCIPisFeasNegative(scip, feasibility);
          }
@@ -1642,7 +1645,7 @@ SCIP_DECL_CONSFREE(consFreeLinking)
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
 static
 SCIP_DECL_CONSINITPRE(consInitpreLinking)
-{
+{  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    int c;
@@ -2190,7 +2193,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
-      if( !SCIPconsIsEnabled(cons) )//|| consdata->nbinvars <= 1 )
+      if( !SCIPconsIsEnabled(cons) /* || consdata->nbinvars <= 1 */ )
          continue;
       
       /* in case there is only at most one binary variables, the constraints should already be disabled */
@@ -2711,6 +2714,10 @@ SCIP_DECL_CONSENABLE(consEnableLinking)
 #define consDisableLinking NULL
 
 
+/** variable deletion method of constraint handler */
+#define consDelvarsLinking NULL
+
+
 /** constraint display method of constraint handler */
 static
 SCIP_DECL_CONSPRINT(consPrintLinking)
@@ -2880,7 +2887,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinking(
          consPropLinking, consPresolLinking, consRespropLinking, consLockLinking,
          consActiveLinking, consDeactiveLinking,
          consEnableLinking, consDisableLinking,
-         consPrintLinking, consCopyLinking, consParseLinking,
+         consDelvarsLinking, consPrintLinking, consCopyLinking, consParseLinking,
          conshdlrdata) );
 
 

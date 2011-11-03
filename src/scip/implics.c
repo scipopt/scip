@@ -552,13 +552,13 @@ SCIP_RETCODE implicsEnsureSize(
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*implics)->vars[varfixing], (*implics)->size[varfixing],
-            newsize) );
+            newsize) ); /*lint !e866*/
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*implics)->types[varfixing], (*implics)->size[varfixing], 
-            newsize) );
+            newsize) ); /*lint !e866*/
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*implics)->bounds[varfixing], (*implics)->size[varfixing],
-            newsize) );
+            newsize) ); /*lint !e866*/
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*implics)->ids[varfixing], (*implics)->size[varfixing],
-            newsize) );
+            newsize) ); /*lint !e866*/
       (*implics)->size[varfixing] = newsize;
    }
    assert(num <= (*implics)->size[varfixing]);
@@ -1372,7 +1372,7 @@ SCIP_RETCODE cliquelistEnsureSize(
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &cliquelist->cliques[value], cliquelist->size[value], newsize) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &cliquelist->cliques[value], cliquelist->size[value], newsize) ); /*lint !e866*/
       cliquelist->size[value] = newsize;
    }
    assert(num <= cliquelist->size[value]);

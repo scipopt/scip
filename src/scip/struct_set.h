@@ -164,6 +164,7 @@ struct SCIP_Set
    SCIP_Bool             conf_repropagate;   /**< should earlier nodes be repropagated in order to replace branching
                                               *   decisions by deductions? */
    SCIP_Bool             conf_keepreprop;    /**< should constraints be kept for repropagation even if they are too long? */
+   SCIP_Bool             conf_seperate;      /**< should the conflict constraints be separated? */
    SCIP_Bool             conf_dynamic;       /**< should the conflict constraints be subject to aging? */
    SCIP_Bool             conf_removable;     /**< should the conflict's relaxations be subject to LP aging and cleanup? */
    SCIP_Real             conf_depthscorefac; /**< score factor for depth level in bound relaxation heuristic of LP analysis */
@@ -211,6 +212,12 @@ struct SCIP_Set
                                               *   ('s'implex, 'b'arrier, barrier with 'c'rossover) */
    char                  lp_pricing;         /**< LP pricing strategy ('a'uto, 'f'ull pricing, 's'teepest edge pricing,
                                               *   'q'uickstart steepest edge pricing, 'd'evex pricing) */
+   SCIP_Bool             lp_clearinitialprobinglp;/**< should lp state be cleared at the end of probing mode when LP
+                                              *   was initially unsolved, e.g., when called right after presolving? */
+   SCIP_Bool             lp_resolverestore;  /**< should the LP be resolved to restore the state at start of diving (if
+                                              *   FALSE we buffer the solution values)? */
+   SCIP_Bool             lp_freesolvalbuffers; /**< should the buffers for storing LP solution values during diving be
+                                              *   freed at end of diving? */
    int                   lp_colagelimit;     /**< maximum age a column can reach before it is deleted from the SCIP_LP
                                               *   (-1: don't delete columns due to aging) */
    int                   lp_rowagelimit;     /**< maximum age a row can reach before it is deleted from the LP 
@@ -291,11 +298,16 @@ struct SCIP_Set
    SCIP_Real             presol_restartminred;/**< minimal fraction of integer variables removed after restart to allow for
                                                *   an additional restart */
    SCIP_Bool             presol_donotmultaggr;/**< should multi-aggregation of variables be forbidden? */
+   SCIP_Bool             presol_donotaggr;    /**< shouldaggregation of variables be forbidden? */
 
    /* pricing settings */
    SCIP_Real             price_abortfac;     /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */
    int                   price_maxvars;      /**< maximal number of variables priced in per pricing round */
    int                   price_maxvarsroot;  /**< maximal number of priced variables at the root node */
+   SCIP_Bool             price_delvars;      /**< should variables created at the current node be deleted when the node is solved
+                                              *   in case they are not present in the LP anymore? */
+   SCIP_Bool             price_delvarsroot;  /**< should variables created at the root node be deleted when the root is solved
+                                              *   in case they are not present in the LP anymore? */
 
    /* propagation settings */
    int                   prop_maxrounds;     /**< maximal number of propagation rounds per node (-1: unlimited) */

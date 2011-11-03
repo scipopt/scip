@@ -14,8 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_setppc.c
- * @ingroup CONSHDLRS 
- * @brief  constraint handler for the set partitioning / packing / covering constraints
+ * @brief  Constraint handler for the set partitioning / packing / covering constraints \f$1^T x\ \{=, \le, \ge\}\ 1\f$.
  * @author Tobias Achterberg
  * @author Michael Winkler
  */
@@ -103,6 +102,7 @@ struct SCIP_ConsData
    unsigned int          cliqueadded:1;      /**< was the set partitioning / packing constraint already added as clique? */
    unsigned int          validsignature:1;   /**< is the bit signature valid? */
    unsigned int          changed:1;          /**< was constraint changed since last redundancy round in preprocessing? */
+   unsigned int          varsdeleted:1;      /**< were variables deleted after last cleanup? */
    unsigned int          merged:1;           /**< are the constraint's equal/negated variables already merged? */
 };
 
@@ -388,9 +388,26 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->row = NULL;
    if( nvars > 0 )
    {
+      int v;
+
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
       (*consdata)->varssize = nvars;
       (*consdata)->nvars = nvars;
+
+      if( SCIPisTransformed(scip) )
+      {
+         /* get transformed variables */
+         SCIP_CALL( SCIPgetTransformedVars(scip, (*consdata)->nvars, (*consdata)->vars, (*consdata)->vars) );
+      }
+
+
+      /* capture variables */
+      for( v = 0; v < (*consdata)->nvars; v++ )
+      {
+         assert((*consdata)->vars[v] != NULL);
+         SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[v]) );
+      }
+
    }
    else
    {
@@ -405,6 +422,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->cliqueadded = FALSE;
    (*consdata)->validsignature = FALSE;
    (*consdata)->changed = TRUE;
+   (*consdata)->varsdeleted = FALSE;
    (*consdata)->merged = FALSE;
 
    return SCIP_OKAY;
@@ -439,6 +457,8 @@ SCIP_RETCODE consdataFree(
    SCIP_CONSDATA**       consdata            /**< pointer to store the set partitioning / packing / covering constraint */
    )
 {
+   int v;
+
    assert(consdata != NULL);
    assert(*consdata != NULL);
 
@@ -446,6 +466,13 @@ SCIP_RETCODE consdataFree(
    if( (*consdata)->row != NULL )
    {
       SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->row) );
+   }
+
+   /* release variables */
+   for( v = 0; v < (*consdata)->nvars; v++ )
+   {
+      assert((*consdata)->vars[v] != NULL);
+      SCIP_CALL( SCIPreleaseVar(scip, &((*consdata)->vars[v])) );
    }
 
    SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->vars, (*consdata)->varssize);
@@ -469,7 +496,7 @@ SCIP_RETCODE consdataPrint(
       SCIPinfoMessage(scip, file, "0 ");
  
    /* write linear sum */
-   SCIP_CALL( SCIPwriteVarsLinearsum(scip, file, consdata->vars, NULL, consdata->nvars, FALSE) );
+   SCIP_CALL( SCIPwriteVarsLinearsum(scip, file, consdata->vars, NULL, consdata->nvars, TRUE) );
    
    /* print right hand side */
    switch( consdata->setppctype )
@@ -613,7 +640,7 @@ SCIP_RETCODE catchEvent(
    assert(var != NULL);
 
    /* catch bound change events on variable */
-   SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)consdata, NULL) );
+   SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARDELETED, eventhdlr, (SCIP_EVENTDATA*)consdata, NULL) );
 
    /* update the fixed variables counters for this variable */
    if( SCIPisEQ(scip, SCIPvarGetUbLocal(var), 0.0) )
@@ -646,7 +673,7 @@ SCIP_RETCODE dropEvent(
    assert(var != NULL);
 
    /* drop events on variable */
-   SCIP_CALL( SCIPdropVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)consdata, -1) );
+   SCIP_CALL( SCIPdropVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARDELETED, eventhdlr, (SCIP_EVENTDATA*)consdata, -1) );
 
    /* update the fixed variables counters for this variable */
    if( SCIPisEQ(scip, SCIPvarGetUbLocal(var), 0.0) )
@@ -738,6 +765,9 @@ SCIP_RETCODE addCoef(
    consdata->sorted = (consdata->nvars == 1);
    consdata->changed = TRUE;
 
+   /* capture the variable */
+   SCIP_CALL( SCIPcaptureVar(scip, var) );
+
    /* if we are in transformed problem, catch the variable's events */
    if( transformed )
    {
@@ -787,6 +817,9 @@ SCIP_RETCODE delCoefPos(
    SCIP_CONSDATA* consdata;
    SCIP_VAR* var;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(0 <= pos && pos < consdata->nvars);
@@ -798,6 +831,7 @@ SCIP_RETCODE delCoefPos(
    /* remove the rounding locks for the deleted variable */
    SCIP_CALL( unlockRounding(scip, cons, var) );
 
+   /* if we are in transformed problem, delete the event data of the variable */
    if( SCIPconsIsTransformed(cons) )
    {
       SCIP_CONSHDLR* conshdlr;
@@ -813,6 +847,12 @@ SCIP_RETCODE delCoefPos(
       SCIP_CALL( dropEvent(scip, cons, conshdlrdata->eventhdlr, pos) );
    }
 
+   /* delete coefficient from the LP row */
+   if( consdata->row != NULL )
+   {
+      SCIP_CALL( SCIPaddVarToRow(scip, consdata->row, var, -1.0) );
+   }
+
    /* move the last variable to the free slot */
    if( pos != consdata->nvars - 1 )
    {
@@ -822,6 +862,9 @@ SCIP_RETCODE delCoefPos(
    consdata->nvars--;
    consdata->validsignature = FALSE;
    consdata->changed = TRUE;
+
+   /* release variable */
+   SCIP_CALL( SCIPreleaseVar(scip, &var) );
 
    return SCIP_OKAY;
 }
@@ -1354,8 +1397,8 @@ SCIP_RETCODE analyzeConflictZero(
    SCIP_CONSDATA* consdata;
    int v;
 
-   /* conflict analysis can only be applied in solving stage */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   /* conflict analysis can only be applied in solving stage and if it is applicable */
+   if( (SCIPgetStage(scip) != SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);
@@ -1389,8 +1432,8 @@ SCIP_RETCODE analyzeConflictOne(
    int v;
    int n;
 
-   /* conflict analysis can only be applied in solving stage */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   /* conflict analysis can only be applied in solving stage and if it is applicable */
+   if( (SCIPgetStage(scip) != SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);
@@ -2498,6 +2541,49 @@ SCIP_RETCODE removeRedundantConstraints(
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
          SCIP_CALL( processContainedCons(scip, cons1, cons0, cutoff, nfixedvars, ndelconss, nchgsides) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/* perform deletion of variables in all constraints of the constraint handler */
+static
+SCIP_RETCODE performVarDeletions(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< array of constraints */
+   int                   nconss              /**< number of constraints */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   int i;
+   int v;
+
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL);
+   assert(nconss >= 0);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   /* iterate over all constraints */
+   for( i = 0; i < nconss; i++ )
+   {
+      consdata = SCIPconsGetData(conss[i]);
+
+      /* constraint is marked, that some of its variables were deleted */
+      if( consdata->varsdeleted )
+      {
+         /* iterate over all variables of the constraint and delete marked variables */
+         for( v = consdata->nvars - 1; v >= 0; v-- )
+         {
+            if( SCIPvarIsDeleted(consdata->vars[v]) )
+            {
+               SCIP_CALL( delCoefPos(scip, conss[i], v) );
+            }
+         }
+         consdata->varsdeleted = FALSE;
       }
    }
 
@@ -3780,8 +3866,10 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
                *result = SCIP_CUTOFF;
                return SCIP_OKAY;
             }
+
             if( aggregated )
                (*naggrvars)++;
+
             if( redundant )
             {
                SCIP_CALL( SCIPdelCons(scip, cons) );
@@ -4081,6 +4169,25 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveSetppc)
 /** constraint disabling notification method of constraint handler */
 #define consDisableSetppc NULL
 
+
+/** variable deletion method of constraint handler */
+static
+SCIP_DECL_CONSDELVARS(consDelvarsSetppc)
+{
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( conss != NULL || nconss == 0 );
+
+   if( nconss > 0 )
+   {
+      SCIP_CALL( performVarDeletions(scip, conshdlr, conss, nconss) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
+
 /** constraint display method of constraint handler */
 static
 SCIP_DECL_CONSPRINT(consPrintSetppc)
@@ -4183,7 +4290,7 @@ SCIP_DECL_CONSPARSE(consParseSetppc)
       SCIP_CALL( SCIPallocBufferArray(scip, &coefs, coefssize) );
 
       /* parse linear sum to get variables and coefficients */
-      SCIP_CALL( SCIPparseVarsLinearsum(scip, str, 0, vars, coefs, &nvars, coefssize, &requsize, &endptr, success) );
+      SCIP_CALL( SCIPparseVarsLinearsum(scip, str, vars, coefs, &nvars, coefssize, &requsize, &endptr, success) );
 
       if( *success && requsize > coefssize )
       {
@@ -4192,7 +4299,7 @@ SCIP_DECL_CONSPARSE(consParseSetppc)
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars,  coefssize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, coefssize) );
 
-         SCIP_CALL( SCIPparseVarsLinearsum(scip, str, 0, vars, coefs, &nvars, coefssize, &requsize, &endptr, success) );
+         SCIP_CALL( SCIPparseVarsLinearsum(scip, str, vars, coefs, &nvars, coefssize, &requsize, &endptr, success) );
          assert(!*success || requsize <= coefssize); /* if successful, then should have had enough space now */
       }
 
@@ -4262,6 +4369,7 @@ SCIP_DECL_EVENTEXEC(eventExecSetppc)
    assert(consdata != NULL);
 
    eventtype = SCIPeventGetType(event);
+
    switch( eventtype )
    {
    case SCIP_EVENTTYPE_LBTIGHTENED:
@@ -4275,6 +4383,9 @@ SCIP_DECL_EVENTEXEC(eventExecSetppc)
       break;
    case SCIP_EVENTTYPE_UBRELAXED:
       consdata->nfixedzeros--;
+      break;
+   case SCIP_EVENTTYPE_VARDELETED:
+      consdata->varsdeleted = TRUE;
       break;
    default:
       SCIPerrorMessage("invalid event type\n");
@@ -4343,7 +4454,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecSetppc)
       /* create a constraint out of the conflict set */
       (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsSetcover(scip, &cons, consname, nbdchginfos, vars,
-            FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
+            FALSE, separate, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
       SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
@@ -4395,7 +4506,7 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
          consPropSetppc, consPresolSetppc, consRespropSetppc, consLockSetppc,
          consActiveSetppc, consDeactiveSetppc,
          consEnableSetppc, consDisableSetppc,
-         consPrintSetppc, consCopySetppc, consParseSetppc,
+         consDelvarsSetppc, consPrintSetppc, consCopySetppc, consParseSetppc,
          conshdlrdata) );
 
    if( SCIPfindConshdlr(scip,"linear") != NULL )

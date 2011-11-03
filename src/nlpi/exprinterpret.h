@@ -59,26 +59,26 @@ extern
 SCIP_RETCODE SCIPexprintCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_EXPRINT**        exprint             /**< buffer to store pointer to expression interpreter */
-);
+   );
 
 /** frees an expression interpreter object */
 extern
 SCIP_RETCODE SCIPexprintFree(
    SCIP_EXPRINT**        exprint             /**< expression interpreter that should be freed */
-);
+   );
 
 /** compiles an expression tree and stores compiled data in expression tree */
 extern
 SCIP_RETCODE SCIPexprintCompile(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPRTREE*        tree                /**< expression tree */
-);
+   );
 
 /** frees interpreter data */
 extern
 SCIP_RETCODE SCIPexprintFreeData(
    SCIP_EXPRINTDATA**    interpreterdata     /**< interpreter data that should freed */
-);
+   );
 
 /** notify expression interpreter that a new parameterization is used
  * this probably causes retaping by AD algorithms
@@ -87,7 +87,7 @@ extern
 SCIP_RETCODE SCIPexprintNewParametrization(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPRTREE*        tree                /**< expression tree */
-);
+   );
 
 /** evaluates an expression tree */
 extern
@@ -96,7 +96,7 @@ SCIP_RETCODE SCIPexprintEval(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    SCIP_Real*            varvals,            /**< values of variables */
    SCIP_Real*            val                 /**< buffer to store value of expression */
-);
+   );
 
 /** evaluates an expression tree on intervals */
 extern
@@ -106,7 +106,7 @@ SCIP_RETCODE SCIPexprintEvalInt(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        varvals,            /**< interval values of variables */
    SCIP_INTERVAL*        val                 /**< buffer to store interval value of expression */
-);
+   );
 
 /** computes value and gradient of an expression tree */
 extern
@@ -117,7 +117,7 @@ SCIP_RETCODE SCIPexprintGrad(
    SCIP_Bool             new_varvals,        /**< have variable values changed since last call to a point evaluation routine? */
    SCIP_Real*            val,                /**< buffer to store expression value */
    SCIP_Real*            gradient            /**< buffer to store expression gradient, need to have length at least SCIPexprtreeGetNVars(tree) */
-);
+   );
 
 /** computes interval value and interval gradient of an expression tree */
 extern
@@ -129,7 +129,7 @@ SCIP_RETCODE SCIPexprintGradInt(
    SCIP_Bool             new_varvals,        /**< have variable interval values changed since last call to an interval evaluation routine? */
    SCIP_INTERVAL*        val,                /**< buffer to store expression interval value */
    SCIP_INTERVAL*        gradient            /**< buffer to store expression interval gradient, need to have length at least SCIPexprtreeGetNVars(tree) */
-);
+   );
 
 /** gives sparsity pattern of hessian
  * NOTE: this function might be replaced later by something nicer 
@@ -141,7 +141,7 @@ SCIP_RETCODE SCIPexprintHessianSparsityDense(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    SCIP_Real*            varvals,            /**< values of variables */
    SCIP_Bool*            sparsity            /**< buffer to store sparsity pattern of Hessian, sparsity[i+n*j] indicates whether entry (i,j) is nonzero in the hessian */
-);
+   );
 
 /** computes value and dense hessian of an expression tree
  * the full hessian is computed (lower left and upper right triangle)
@@ -154,7 +154,7 @@ SCIP_RETCODE SCIPexprintHessianDense(
    SCIP_Bool             new_varvals,        /**< have variable values changed since last call to an evaluation routine? */
    SCIP_Real*            val,                /**< buffer to store function value */
    SCIP_Real*            hessian             /**< buffer to store hessian values, need to have size at least n*n */
-);
+   );
 
 #ifdef __cplusplus
 }

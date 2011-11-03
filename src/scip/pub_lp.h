@@ -110,8 +110,8 @@ SCIP_Real SCIPcolGetMaxPrimsol(
    SCIP_COL*             col                 /**< LP column */
    );
 
-/** gets the basis status of a row in the LP solution; only valid for LPs with status SCIP_LPSOLSTAT_OPTIMAL
- *  and with SCIPisLPSolBasic(scip) == TRUE; returns SCIP_BASESTAT_BASIC for rows not in the current SCIP_LP
+/** gets the basis status of a column in the LP solution; only valid for LPs with status SCIP_LPSOLSTAT_OPTIMAL
+ *  and with SCIPisLPSolBasic(scip) == TRUE; returns SCIP_BASESTAT_ZERO for columns not in the current SCIP_LP
  */
 extern
 SCIP_BASESTAT SCIPcolGetBasisStatus(

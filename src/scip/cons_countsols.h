@@ -14,9 +14,13 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_countsols.h
- * @brief  constraint handler for counting feasible solutions
+ * @ingroup CONSHDLRS
+ * @brief  Constraint handler for counting feasible solutions
  * @author Stefan Heinz
  * @author Michael Winkler
+ *
+ * If this constraint handler is activated than it counts or collects all feasible solutions. We refer to \ref COUNTER for
+ * more details about using SCIP for counting feasible solutions.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

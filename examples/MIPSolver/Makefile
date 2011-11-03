@@ -46,6 +46,7 @@ MAINFILE	=	$(BINDIR)/$(MAIN)
 MAINSHORTLINK	=	$(BINDIR)/$(MAINNAME)
 MAINOBJFILES	=	$(addprefix $(OBJDIR)/,$(MAINOBJ))
 
+TESTSETDIR	=	testset
 
 #-----------------------------------------------------------------------------
 # Rules
@@ -68,8 +69,16 @@ lint:		$(MAINSRC)
 			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE $$i; \
 			done'
 
+.PHONY: scip
+scip:
+		@$(MAKE) -C $(SCIPDIR) libs $^
+
 .PHONY: doc
 doc:		
+		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scip.css);
+		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/scippy.png);
+		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/miniscippy.png);
+		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scipfooter.html footer.html);
 		cd doc; $(DOXY) $(MAINNAME).dxy
 
 $(MAINSHORTLINK):	$(MAINFILE)
@@ -82,18 +91,25 @@ $(OBJDIR):
 $(BINDIR):
 		@-mkdir -p $(BINDIR)
 
+$(TESTSETDIR):
+		@-mkdir -p check/$(TESTSETDIR)
+
 .PHONY: test
-test:           $(MAINFILE)
+test:           $(MAINFILE) $(TESTSETDIR)
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.awk);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/getlastprob.awk);
+ifeq ($(TEST), short)
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/instances);
+		@-(cd check/testset && ln -fs ../../$(SCIPDIR)/check/testset/short.test);
 		@-(cd check/testset && ln -fs ../../$(SCIPDIR)/check/testset/short.solu);
+endif
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS);
 
 .PHONY: clean
-clean:
+clean:		$(OBJDIR)
 ifneq ($(OBJDIR),)
 		-rm -f $(OBJDIR)/*.o
 		-rmdir $(OBJDIR)

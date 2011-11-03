@@ -20,15 +20,19 @@
 #@author  Timo Berthold 
 
 #-----------------------------------------------------------------------------
-# get real path to SCIP
-#-----------------------------------------------------------------------------
-SCIPREALPATH	=	$(realpath $(SCIPDIR))
-
-
-#-----------------------------------------------------------------------------
 # detect host architecture
 #-----------------------------------------------------------------------------
 include $(SCIPDIR)/make/make.detecthost
+
+
+#-----------------------------------------------------------------------------
+# get real path to SCIP
+#-----------------------------------------------------------------------------
+ifeq ($(OSTYPE),mingw)
+SCIPREALPATH	=	$(SCIPDIR)
+else
+SCIPREALPATH	=	$(realpath $(SCIPDIR))
+endif
 
 
 #-----------------------------------------------------------------------------
@@ -243,6 +247,7 @@ endif
 
 LPILIB		=	$(LPILIBNAME).$(BASE)
 LPILIBFILE	=	$(SCIPREALPATH)/lib/lib$(LPILIB).$(LIBEXT)
+LPILIBSHORTLINK	=	$(SCIPREALPATH)/lib/lib$(LPILIBNAME).$(LIBEXT)
 
 
 #-----------------------------------------------------------------------------
@@ -291,10 +296,13 @@ ifeq ($(IPOPT),true)
 FLAGS		+=	-I$(SCIPDIR)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/include/coin $(IPOPT_FLAGS)
 # for Ipopt >= 3.9.0, all linker flags are in share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt
 # for Ipopt < 3.9.0, we need to link against libipopt from the lib directory, plus the additional flags given in share/doc/coin/Ipopt/ipopt_addlibs_cpp.txt
+# finally, if no ipopt_addlibs_cpp.txt is present in the ipopt installation but a user put one into SCIP's libdir, take this one
 LDFLAGS		+=	$(shell test -e $(SCIPDIR)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt && \
   cat $(SCIPDIR)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt)
 LDFLAGS		+=	$(shell test -e $(SCIPDIR)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/share/doc/coin/Ipopt/ipopt_addlibs_cpp.txt && \
   (echo $(LINKCXX_L)$(SCIPDIR)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib $(LINKCXX_l)ipopt; cat $(SCIPDIR)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/share/doc/coin/Ipopt/ipopt_addlibs_cpp.txt))
+LDFLAGS		+=	$(shell test -e $(SCIPDIR)/$(LIBDIR)/ipopt_addlibs_cpp.txt && \
+  (echo $(LINKCXX_L)$(SCIPDIR)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib $(LINKCXX_l)ipopt; cat $(SCIPDIR)/$(LIBDIR)/ipopt_addlibs_cpp.txt))
 # ensure that also shared libraries are found while running the binary
 # for Ipopt 3.9.x, the libraries are installed in the lib/coin and lib/coin/ThirdParty subdirectories
 # for Ipopt != 3.9.x, they are installed into the lib subdirectory
@@ -318,6 +326,7 @@ endif
 SCIPLIBNAME	=	scip
 SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
 SCIPLIBFILE	=	$(SCIPREALPATH)/lib/lib$(SCIPLIB).$(LIBEXT)
+SCIPLIBSHARTLINK=	$(SCIPREALPATH)/lib/lib$(SCIPLIBNAME).$(LIBEXT)
 
 
 #-----------------------------------------------------------------------------
@@ -327,6 +336,7 @@ SCIPLIBFILE	=	$(SCIPREALPATH)/lib/lib$(SCIPLIB).$(LIBEXT)
 OBJSCIPLIBNAME	=	objscip
 OBJSCIPLIB	=	$(OBJSCIPLIBNAME).$(BASE)
 OBJSCIPLIBFILE	=	$(SCIPREALPATH)/lib/lib$(OBJSCIPLIB).$(LIBEXT)
+OBJSCIPLIBSHORTLINK=	$(SCIPREALPATH)/lib/lib$(OBJSCIPLIBNAME).$(LIBEXT)
 
 
 #-----------------------------------------------------------------------------
@@ -336,3 +346,4 @@ OBJSCIPLIBFILE	=	$(SCIPREALPATH)/lib/lib$(OBJSCIPLIB).$(LIBEXT)
 NLPILIBNAME	=	nlpi$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAMEIPOPT)
 NLPILIB		=	$(NLPILIBNAME).$(BASE)
 NLPILIBFILE	=	$(SCIPREALPATH)/lib/lib$(NLPILIB).$(LIBEXT)
+NLPILIBSHORTLINK=	$(SCIPREALPATH)/lib/lib$(NLPILIBNAME).$(LIBEXT)

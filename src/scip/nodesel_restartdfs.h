@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nodesel_restartdfs.h
+ * @ingroup NODESELECTORS
  * @brief  node selector for depth first search with periodical selection of the best node
  * @author Tobias Achterberg
  */

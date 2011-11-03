@@ -62,7 +62,7 @@
                                                  *   in sum score function */
 #define SCIP_DEFAULT_BRANCH_PREFERBINARY  FALSE /**< should branching on binary variables be preferred? */
 #define SCIP_DEFAULT_BRANCH_CLAMP           0.2 /**< minimal fractional distance of branching point to a continuous variable'
-                                                     bounds; a value of 0.5 leads to branching always in the middle of a bounded domain */
+                                                 *   bounds; a value of 0.5 leads to branching always in the middle of a bounded domain */
 #define SCIP_DEFAULT_BRANCH_LPGAINNORMALIZE 's' /**< strategy for normalizing LP gain when updating pseudo costs of continuous variables */
 #define SCIP_DEFAULT_BRANCH_DELAYPSCOST    TRUE /**< should updating pseudo costs of continuous variables be delayed to after separation */
 
@@ -97,6 +97,7 @@
 #define SCIP_DEFAULT_CONF_REPROPAGATE      TRUE /**< should earlier nodes be repropagated in order to replace branching
                                                  *   decisions by deductions? */
 #define SCIP_DEFAULT_CONF_KEEPREPROP       TRUE /**< should constraints be kept for repropagation even if they are too long? */
+#define SCIP_DEFAULT_CONF_SEPARATE         TRUE /**< should the conflict constraints be separated? */
 #define SCIP_DEFAULT_CONF_DYNAMIC          TRUE /**< should the conflict constraints be subject to aging? */
 #define SCIP_DEFAULT_CONF_REMOVEABLE       TRUE /**< should the conflict's relaxations be subject to LP aging and cleanup? */
 #define SCIP_DEFAULT_CONF_DEPTHSCOREFAC     1.0 /**< score factor for depth level in bound relaxation heuristic of LP analysis */
@@ -153,6 +154,10 @@
 #define SCIP_DEFAULT_LP_PRICING             'l' /**< LP pricing strategy ('l'pi default, 'a'uto, 'f'ull pricing, 'p'artial,
                                                  *   's'teepest edge pricing, 'q'uickstart steepest edge pricing,
                                                  *   'd'evex pricing) */
+#define SCIP_DEFAULT_LP_CLEARINITIALPROBINGLP TRUE/**< should lp state be cleared at the end of probing mode when lp
+                                                   *   was initially unsolved, e.g., when called right after presolving? */
+#define SCIP_DEFAULT_LP_RESOLVERESTORE    FALSE /**< should the LP be resolved to restore the state at start of diving (if FALSE we buffer the solution values)? */
+#define SCIP_DEFAULT_LP_FREESOLVALBUFFERS FALSE /**< should the buffers for storing LP solution values during diving be freed at end of diving? */
 #define SCIP_DEFAULT_LP_COLAGELIMIT          10 /**< maximum age a dynamic column can reach before it is deleted from SCIP_LP
                                                  *   (-1: don't delete columns due to aging) */
 #define SCIP_DEFAULT_LP_ROWAGELIMIT          10 /**< maximum age a dynamic row can reach before it is deleted from SCIP_LP
@@ -228,6 +233,7 @@
 #define SCIP_DEFAULT_PRESOL_RESTARTMINRED  0.10 /**< minimal fraction of integer variables removed after restart to allow
                                                  *   for an additional restart */
 #define SCIP_DEFAULT_PRESOL_DONOTMULTAGGR FALSE /**< should multi-aggregation of variables be forbidden? */
+#define SCIP_DEFAULT_PRESOL_DONOTAGGR     FALSE /**< should aggregation of variables be forbidden? */
 
 /* Pricing */
 
@@ -235,6 +241,10 @@
                                                  *   found */
 #define SCIP_DEFAULT_PRICE_MAXVARS          100 /**< maximal number of variables priced in per pricing round */
 #define SCIP_DEFAULT_PRICE_MAXVARSROOT     2000 /**< maximal number of priced variables at the root node */
+#define SCIP_DEFAULT_PRICE_DELVARS        FALSE /**< should variables created at the current node be deleted when the node is solved
+                                                 *   in case they are not present in the LP anymore? */
+#define SCIP_DEFAULT_PRICE_DELVARSROOT    FALSE /**< should variables created at the root node be deleted when the root is solved
+                                                 *   in case they are not present in the LP anymore? */
 
 
 /* Propagating */
@@ -837,6 +847,11 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->conf_keepreprop, TRUE, SCIP_DEFAULT_CONF_KEEPREPROP,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "conflict/separate",
+         "should the conflict constraints be separated?",
+         &(*set)->conf_seperate, TRUE, SCIP_DEFAULT_CONF_SEPARATE,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/dynamic",
          "should the conflict constraints be subject to aging?",
          &(*set)->conf_dynamic, TRUE, SCIP_DEFAULT_CONF_DYNAMIC,
@@ -936,7 +951,7 @@ SCIP_RETCODE SCIPsetCreate(
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "limits/gap",
-         "solving stops, if the relative gap = |(primalbound - dualbound)/dualbound| is below the given value",
+         "solving stops, if the relative gap = |primal - dual|/MIN(|dual|,|primal|) is below the given value",
          &(*set)->limit_gap, FALSE, SCIP_DEFAULT_LIMIT_GAP, 0.0, SCIP_REAL_MAX,
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
@@ -995,6 +1010,21 @@ SCIP_RETCODE SCIPsetCreate(
          "lp/pricing",
          "LP pricing strategy ('l'pi default, 'a'uto, 'f'ull pricing, 'p'artial, 's'teepest edge pricing, 'q'uickstart steepest edge pricing, 'd'evex pricing)",
          &(*set)->lp_pricing, FALSE, SCIP_DEFAULT_LP_PRICING, "lafpsqd",
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "lp/clearinitialprobinglp",
+         "should lp state be cleared at the end of probing mode when lp was initially unsolved, e.g., when called right after presolving?",
+         &(*set)->lp_clearinitialprobinglp, TRUE, SCIP_DEFAULT_LP_CLEARINITIALPROBINGLP,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "lp/resolverestore",
+         "should the LP be resolved to restore the state at start of diving (if FALSE we buffer the solution values)?",
+         &(*set)->lp_resolverestore, TRUE, SCIP_DEFAULT_LP_RESOLVERESTORE,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "lp/freesolvalbuffers",
+         "should the buffers for storing LP solution values during diving be freed at end of diving?",
+         &(*set)->lp_freesolvalbuffers, TRUE, SCIP_DEFAULT_LP_FREESOLVALBUFFERS,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "lp/colagelimit",
@@ -1290,6 +1320,11 @@ SCIP_RETCODE SCIPsetCreate(
          "should multi-aggregation of variables be forbidden?",
          &(*set)->presol_donotmultaggr, TRUE, SCIP_DEFAULT_PRESOL_DONOTMULTAGGR,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "presolving/donotaggr",
+         "should aggregation of variables be forbidden?",
+         &(*set)->presol_donotaggr, TRUE, SCIP_DEFAULT_PRESOL_DONOTAGGR,
+         NULL, NULL) );
 
 
    /* pricing parameters */
@@ -1307,6 +1342,16 @@ SCIP_RETCODE SCIPsetCreate(
          "pricing/abortfac",
          "pricing is aborted, if fac * pricing/maxvars pricing candidates were found",
          &(*set)->price_abortfac, FALSE, SCIP_DEFAULT_PRICE_ABORTFAC, 1.0, SCIP_REAL_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "pricing/delvars",
+         "should variables created at the current node be deleted when the node is solved in case they are not present in the LP anymore?",
+         &(*set)->price_delvars, FALSE, SCIP_DEFAULT_PRICE_DELVARS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "pricing/delvarsroot",
+         "should variables created at the root node be deleted when the root is solved in case they are not present in the LP anymore?",
+         &(*set)->price_delvarsroot, FALSE, SCIP_DEFAULT_PRICE_DELVARSROOT,
          NULL, NULL) );
 
    /* propagation parameters */
@@ -3194,7 +3239,7 @@ SCIP_RETCODE SCIPsetInitprePlugins(
    /* inform presolvers that the presolving is abound to begin */
    for( i = 0; i < set->npresols; ++i )
    {
-      SCIP_CALL( SCIPpresolInitpre(set->presols[i], set, &result) );
+      SCIP_CALL( SCIPpresolInitpre(set->presols[i], set, *unbounded, *infeasible, &result) );
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
@@ -3212,7 +3257,7 @@ SCIP_RETCODE SCIPsetInitprePlugins(
    /* inform propagators that the presolving is abound to begin */
    for( i = 0; i < set->nprops; ++i )
    {
-      SCIP_CALL( SCIPpropInitpre(set->props[i], set, &result) );
+      SCIP_CALL( SCIPpropInitpre(set->props[i], set, *unbounded, *infeasible, &result) );
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
@@ -3230,7 +3275,7 @@ SCIP_RETCODE SCIPsetInitprePlugins(
    /* inform constraint handlers that the presolving is abound to begin */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
-      SCIP_CALL( SCIPconshdlrInitpre(set->conshdlrs[i], blkmem, set, stat, &result) );
+      SCIP_CALL( SCIPconshdlrInitpre(set->conshdlrs[i], blkmem, set, stat, *unbounded, *infeasible, &result) );
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
@@ -3254,8 +3299,10 @@ SCIP_RETCODE SCIPsetExitprePlugins(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundedness */
-   SCIP_Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
+   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundedness, if
+					      *   problem was already declared unbounded, it is already stored */
+   SCIP_Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility, if
+					      *   problem was already declared infeasible, it is already stored */
    )
 {
    SCIP_RESULT result;
@@ -3268,7 +3315,7 @@ SCIP_RETCODE SCIPsetExitprePlugins(
    /* inform presolvers that the presolving is abound to begin */
    for( i = 0; i < set->npresols; ++i )
    {
-      SCIP_CALL( SCIPpresolExitpre(set->presols[i], set, &result) );
+      SCIP_CALL( SCIPpresolExitpre(set->presols[i], set, *unbounded, *infeasible, &result) );
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
@@ -3286,7 +3333,7 @@ SCIP_RETCODE SCIPsetExitprePlugins(
    /* inform propagators that the presolving is abound to begin */
    for( i = 0; i < set->nprops; ++i )
    {
-      SCIP_CALL( SCIPpropExitpre(set->props[i], set, &result) );
+      SCIP_CALL( SCIPpropExitpre(set->props[i], set, *unbounded, *infeasible, &result) );
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
@@ -3304,7 +3351,7 @@ SCIP_RETCODE SCIPsetExitprePlugins(
    /* inform constraint handlers that the presolving is abound to begin */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
-      SCIP_CALL( SCIPconshdlrExitpre(set->conshdlrs[i], blkmem, set, stat, &result) );
+      SCIP_CALL( SCIPconshdlrExitpre(set->conshdlrs[i], blkmem, set, stat, *unbounded, *infeasible, &result) );
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;

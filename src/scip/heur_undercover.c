@@ -14,11 +14,14 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_undercover.c
- * @ingroup PRIMALHEURISTICS
- * @brief  undercover primal heuristic for MIQCPs
- *
+ * @brief  Undercover primal heuristic for MIQCPs
  * @author Timo Berthold
  * @author Ambros Gleixner
+ *
+ * The undercover heuristic is designed for mixed-integer nonlinear programs and tries to fix a subset of variables such
+ * as to make each constraint linear or convex. For this purpose it solves a binary program to automatically determine
+ * the minimum number of variable fixings necessary. As fixing values, we use values from the LP relaxation, the NLP
+ * relaxation, or the incumbent solution.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -29,6 +32,7 @@
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 #include "scip/heur_undercover.h"
+#include "nlpi/exprinterpret.h"
 
 #define HEUR_NAME               "undercover"
 #define HEUR_DESC               "solves a sub-CIP determined by a set covering approach"
@@ -108,10 +112,17 @@ struct SCIP_HeurData
    int                   nnlconshdlrs;       /**< number of nonlinear constraint handlers */
    char                  coveringobj;        /**< objective function of the covering problem */
    SCIP_Bool             copycuts;           /**< should all active cuts from cutpool be copied to constraints in
-                                              *   subproblem?
-                                              */
+                                              *   subproblem? */
 };
 
+/** working memory for retrieving dense sparsity of Hessian matrices */
+struct HessianData
+{
+   SCIP_SOL*             evalsol;
+   SCIP_Real*            varvals;
+   SCIP_Bool*            sparsity;
+   int                   nvars;
+};
 
 /*
  * Local methods
@@ -213,6 +224,9 @@ static
 SCIP_RETCODE processNlRow(
    SCIP*                 scip,               /**< original SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< nonlinear row representation of a nonlinear constraint */
+   SCIP_EXPRINT*         exprint,            /**< expression interpreter for computing sparsity pattern of the Hessian;
+                                              *   if NULL, we will simply fix all variables in the expression tree */
+   struct HessianData*   hessiandata,        /**< working memory for retrieving dense sparsity of Hessian matrices */
    SCIP*                 coveringscip,       /**< SCIP data structure for the covering problem */
    int                   nvars,              /**< number of variables */
    SCIP_VAR**            coveringvars,       /**< array to store the covering problem's variables */
@@ -221,7 +235,7 @@ SCIP_RETCODE processNlRow(
    SCIP_Bool*            consmarker,         /**< marker array if constraint has been counted in conscounter */
    SCIP_Bool             globalbounds,       /**< should global bounds on variables be used instead of local bounds at focus node? */
    SCIP_Bool             onlyconvexify,      /**< should we only fix/dom.red. variables creating nonconvexity? */
-   SCIP_Bool*            success             /**< pointer to store whether the problem was created successfully */
+   SCIP_Bool*            success             /**< pointer to store whether row was processed successfully */
    )
 {
    SCIP_EXPRTREE* exprtree;
@@ -232,6 +246,7 @@ SCIP_RETCODE processNlRow(
 
    assert(scip != NULL);
    assert(nlrow != NULL);
+   assert(exprint == NULL || hessiandata != NULL);
    assert(coveringscip != NULL);
    assert(nvars >= 1);
    assert(coveringvars != NULL);
@@ -249,43 +264,160 @@ SCIP_RETCODE processNlRow(
    {
       SCIP_VAR** exprtreevars;
       int nexprtreevars;
-      int probidx;
+      int probidx1;
+      int probidx2;
 
       /* get variables in expression tree */
       nexprtreevars = SCIPexprtreeGetNVars(exprtree);
       exprtreevars = SCIPexprtreeGetVars(exprtree);
 
-      /* currently, we fix all variables contained in the expression tree; this is possibly unnecessarily restrictive,
-       * but ensures a linear resp. convex subproblem */
-      if( exprtreevars != NULL )
+      if( exprtreevars != NULL && nexprtreevars > 0 )
       {
+         SCIP_Bool usehessian;
          int i;
 
-         for( i = nexprtreevars-1; i >= 0; i-- )
+         /* is an expression interpreter available which can return the sparsity pattern of the Hessian? */
+         usehessian = exprint != NULL && (SCIPexprintGetCapability() & SCIP_EXPRINTCAPABILITY_HESSIAN);
+         if( usehessian )
          {
-            assert(exprtreevars[i] != NULL);
+            int idx1;
+            int idx2;
 
-            /* if constraints with inactive variables are present, we will have difficulties creating the sub-CIP later */
-            probidx = SCIPvarGetProbindex(exprtreevars[i]);
-            if( probidx == -1 )
+            assert(hessiandata != NULL);
+            assert(hessiandata->nvars == 0 || hessiandata->varvals != NULL);
+            assert(hessiandata->nvars == 0 || hessiandata->sparsity != NULL);
+
+            /* compile expression tree */
+            SCIP_CALL( SCIPexprintCompile(exprint, exprtree) );
+
+            /* ensure memory */
+            if( hessiandata->nvars < nexprtreevars )
             {
-               SCIPdebugMessage("inactive variables detected in nonlinear row <%s>\n", SCIPnlrowGetName(nlrow));
-               return SCIP_OKAY;
+               SCIP_CALL( SCIPreallocBufferArray(scip, &hessiandata->varvals, nexprtreevars) );
+               SCIP_CALL( SCIPreallocBufferArray(scip, &hessiandata->sparsity, nexprtreevars*nexprtreevars) );
+               hessiandata->nvars = nexprtreevars;
             }
 
-            /* term is constant, nothing to do */
-            if( termIsConstant(scip, exprtreevars[i], 1.0, globalbounds) )
-               continue;
+            /* get point at which to evaluate the Hessian sparsity */
+            if( hessiandata->evalsol == NULL )
+            {
+               SCIP_CALL( SCIPcreateSol(scip, &hessiandata->evalsol, NULL) );
+               SCIP_CALL( SCIPlinkCurrentSol(scip, hessiandata->evalsol) );
+            }
+            SCIP_CALL( SCIPgetSolVals(scip, hessiandata->evalsol, nexprtreevars, exprtreevars, hessiandata->varvals) );
 
-            /* otherwise fix variable */
-            SCIP_CALL( SCIPfixVar(coveringscip, coveringvars[probidx], 1.0, &infeas, &fixed) );
-            assert(!infeas);
-            assert(fixed);
+            /* get sparsity of the Hessian at current LP solution */
+            SCIP_CALL( SCIPexprintHessianSparsityDense(exprint, exprtree, hessiandata->varvals, hessiandata->sparsity) );
 
-            /* update counters */
-            incCounters(termcounter, conscounter, consmarker, probidx);
+            for( idx1 = nexprtreevars-1; idx1 >= 0; idx1-- )
+            {
+               /* if constraints with inactive variables are present, we will have difficulties creating the sub-CIP later */
+               probidx1 = SCIPvarGetProbindex(exprtreevars[idx1]);
+               if( probidx1 == -1 )
+               {
+                  SCIPdebugMessage("strange: inactive variables detected in nonlinear row <%s>\n", SCIPnlrowGetName(nlrow));
+                  return SCIP_OKAY;
+               }
 
-            SCIPdebugMessage("fixing var <%s> in covering problem to 1\n", SCIPvarGetName(coveringvars[probidx]));
+               /* nonzero diagonal element of the Hessian: fix */
+               if( hessiandata->sparsity[idx1*nexprtreevars + idx1]
+                  && !termIsConstant(scip, exprtreevars[idx1], 1.0, globalbounds) )
+               {
+                  SCIP_CALL( SCIPfixVar(coveringscip, coveringvars[probidx1], 1.0, &infeas, &fixed) );
+                  assert(!infeas);
+                  assert(fixed);
+
+                  /* update counters */
+                  incCounters(termcounter, conscounter, consmarker, probidx1);
+
+                  SCIPdebugMessage("fixing var <%s> in covering problem to 1\n", SCIPvarGetName(coveringvars[probidx1]));
+
+                  /* if covering variable is fixed, then no need to still check non-diagonal elements */
+                  continue;
+               }
+
+               /* two different variables relate nonlinearly */
+               for( idx2 = nexprtreevars-1; idx2 > idx1; idx2-- )
+               {
+                  SCIP_CONS* coveringcons;
+                  SCIP_VAR* coveringconsvars[2];
+
+                  /* do not assume symmetry */
+                  if( !hessiandata->sparsity[idx1*nexprtreevars + idx2] && !hessiandata->sparsity[idx2*nexprtreevars + idx1] )
+                     continue;
+
+                  /* if diagonal has entry already, then covering constraint would always be satisfied, thus no need to add */
+                  if( hessiandata->sparsity[idx2*nexprtreevars + idx2] && !termIsConstant(scip, exprtreevars[idx2], 1.0, globalbounds) )
+                     continue;
+
+                  /* if constraints with inactive variables are present, we will have difficulties creating the sub-CIP later */
+                  probidx2 = SCIPvarGetProbindex(exprtreevars[idx2]);
+                  if( probidx2 == -1 )
+                  {
+                     SCIPdebugMessage("strange: inactive variables detected in nonlinear row <%s>\n", SCIPnlrowGetName(nlrow));
+                     return SCIP_OKAY;
+                  }
+
+                  /* if the term is linear because one of the variables is fixed, nothing to do */
+                  if( termIsConstant(scip, exprtreevars[idx1], 1.0, globalbounds)
+                     || termIsConstant(scip, exprtreevars[idx2], 1.0, globalbounds) )
+                     continue;
+
+                  /* create covering constraint */
+                  (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_covering_%d_%d", SCIPnlrowGetName(nlrow), idx1, idx2);
+                  coveringconsvars[0] = coveringvars[probidx1];
+                  coveringconsvars[1] = coveringvars[probidx2];
+                  SCIP_CALL( SCIPcreateConsSetcover(coveringscip, &coveringcons, name, 2, coveringconsvars,
+                        TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
+
+                  if( coveringcons == NULL )
+                  {
+                     SCIPdebugMessage("failed to create set covering constraint <%s>\n", name);
+                     return SCIP_OKAY;
+                  }
+
+                  /* add and release covering constraint */
+                  SCIP_CALL( SCIPaddCons(coveringscip, coveringcons) );
+                  SCIP_CALL( SCIPreleaseCons(coveringscip, &coveringcons) );
+
+                  SCIPdebugMessage("added covering constraint for vars <%s> and <%s> in covering problem\n", SCIPvarGetName(coveringvars[probidx1]), SCIPvarGetName(coveringvars[probidx2]));
+
+                  /* update counters for both variables */
+                  incCounters(termcounter, conscounter, consmarker, probidx1);
+                  incCounters(termcounter, conscounter, consmarker, probidx2);
+               }
+            }
+         }
+         /* fix all variables contained in the expression tree */
+         else
+         {
+            for( i = nexprtreevars-1; i >= 0; i-- )
+            {
+               assert(exprtreevars[i] != NULL);
+
+               /* if constraints with inactive variables are present, we will have difficulties creating the sub-CIP later */
+               probidx1 = SCIPvarGetProbindex(exprtreevars[i]);
+               if( probidx1 == -1 )
+               {
+                  SCIPdebugMessage("strange: inactive variable <%s> detected in nonlinear row <%s>\n",
+                     SCIPvarGetName(exprtreevars[i]), SCIPnlrowGetName(nlrow));
+                  return SCIP_OKAY;
+               }
+
+               /* term is constant, nothing to do */
+               if( termIsConstant(scip, exprtreevars[i], 1.0, globalbounds) )
+                  continue;
+
+               /* otherwise fix variable */
+               SCIP_CALL( SCIPfixVar(coveringscip, coveringvars[probidx1], 1.0, &infeas, &fixed) );
+               assert(!infeas);
+               assert(fixed);
+
+               /* update counters */
+               incCounters(termcounter, conscounter, consmarker, probidx1);
+
+               SCIPdebugMessage("fixing var <%s> in covering problem to 1\n", SCIPvarGetName(coveringvars[probidx1]));
+            }
          }
       }
    }
@@ -393,10 +525,12 @@ SCIP_RETCODE createCoveringProblem(
    SCIP_VAR** vars;
    SCIP_CONSHDLR* conshdlr;
    SCIP_HASHMAP* nlrowmap;
+   SCIP_EXPRINT* exprint;
    SCIP_Bool* consmarker;
    int* conscounter;
    int* termcounter;
 
+   struct HessianData hessiandata;
    int nlocksup;
    int nlocksdown;
    int nvars;
@@ -424,6 +558,16 @@ SCIP_RETCODE createCoveringProblem(
    SCIP_CALL( SCIPallocBufferArray(scip, &termcounter, nvars) );
    BMSclearMemoryArray(conscounter, nvars);
    BMSclearMemoryArray(termcounter, nvars);
+
+   /* create expression interpreter */
+   SCIP_CALL( SCIPexprintCreate(SCIPblkmem(scip), &exprint) );
+   assert(exprint != NULL);
+
+   /* initialize empty hessiandata; memory will be allocated in method processNlRow() as required */
+   hessiandata.evalsol = NULL;
+   hessiandata.varvals = NULL;
+   hessiandata.sparsity = NULL;
+   hessiandata.nvars = 0;
 
    /* create covering variable for each variable in the original problem (fix it or not?) in the same order as in the
       original problem */
@@ -516,7 +660,7 @@ SCIP_RETCODE createCoveringProblem(
                continue;
             }
 
-            /* if constraints with inactive variables are present, we will have difficulties creating the sub-CIP later */
+            /* if constraints with inactive variables are present, we have to find the corresponding active variable */
             probindex = SCIPvarGetProbindex(andvars[v]);
             if( probindex == -1 )
             {
@@ -563,7 +707,7 @@ SCIP_RETCODE createCoveringProblem(
          }
          negated = FALSE;
 
-         /* if constraints with inactive variables are present, we will have difficulties creating the sub-CIP later */
+         /* if constraints with inactive variables are present, we have to find the corresponding active variable */
          probindex = SCIPvarGetProbindex(SCIPgetResultantAnd(scip, andcons));
          negated = FALSE;
 
@@ -675,11 +819,9 @@ SCIP_RETCODE createCoveringProblem(
          /* get nlrow representation and store it in hash map */
          SCIP_CALL( SCIPgetNlRowQuadratic(scip, quadcons, &nlrow) );
          assert(nlrow != NULL);
-         if( nlrowmap != NULL )
-         {
-            assert(!SCIPhashmapExists(nlrowmap, nlrow));
-            SCIP_CALL( SCIPhashmapInsert(nlrowmap, nlrow, quadcons) );
-         }
+         assert(nlrowmap != NULL);
+         assert(!SCIPhashmapExists(nlrowmap, nlrow));
+         SCIP_CALL( SCIPhashmapInsert(nlrowmap, nlrow, quadcons) );
 
          /* if we only want to convexify and curvature and bounds prove already convexity, nothing to do */
          if( onlyconvexify
@@ -689,8 +831,8 @@ SCIP_RETCODE createCoveringProblem(
 
          /* process nlrow */
          *success = FALSE;
-         SCIP_CALL( processNlRow(scip, nlrow, coveringscip, nvars, coveringvars, termcounter, conscounter, consmarker,
-               globalbounds, onlyconvexify, success) );
+         SCIP_CALL( processNlRow(scip, nlrow, exprint, &hessiandata, coveringscip, nvars, coveringvars,
+               termcounter, conscounter, consmarker, globalbounds, onlyconvexify, success) );
 
          if( *success == FALSE )
             goto TERMINATE;
@@ -741,7 +883,7 @@ SCIP_RETCODE createCoveringProblem(
          BMSclearMemoryArray(consmarker, nvars);
          ntofix = 0;
 
-         /* if constraints with inactive variables are present, we will have difficulties creating the sub-CIP later */
+         /* soc constraints should contain only active and multi-aggregated variables; the later we do not handle */
          probindex = SCIPvarGetProbindex(socrhsvar);
          if( probindex == -1 )
          {
@@ -762,7 +904,7 @@ SCIP_RETCODE createCoveringProblem(
          {
             assert(soclhsvars[v] != NULL);
 
-            /* if constraints with inactive variables are present, we will have difficulties creating the sub-CIP later */
+            /* soc constraints should contain only active and multi-aggregated variables; the later we do not handle */
             probindex = SCIPvarGetProbindex(soclhsvars[v]);
             if( probindex == -1 )
             {
@@ -829,8 +971,8 @@ SCIP_RETCODE createCoveringProblem(
 
          /* process nlrow */
          *success = FALSE;
-         SCIP_CALL( processNlRow(scip, nlrows[i], coveringscip, nvars, coveringvars, termcounter, conscounter, consmarker,
-               globalbounds, onlyconvexify, success) );
+         SCIP_CALL( processNlRow(scip, nlrows[i], exprint, &hessiandata, coveringscip, nvars, coveringvars,
+               termcounter, conscounter, consmarker, globalbounds, onlyconvexify, success) );
 
          if( *success == FALSE )
             goto TERMINATE;
@@ -895,6 +1037,28 @@ SCIP_RETCODE createCoveringProblem(
    {
       SCIPhashmapFree(&nlrowmap);
    }
+
+   /* free hessiandata */
+   if( hessiandata.nvars > 0 )
+   {
+      assert(hessiandata.evalsol != NULL);
+      assert(hessiandata.varvals != NULL);
+      assert(hessiandata.sparsity != NULL);
+
+      SCIPfreeBufferArray(scip, &hessiandata.sparsity);
+      SCIPfreeBufferArray(scip, &hessiandata.varvals);
+
+      SCIP_CALL( SCIPfreeSol(scip, &hessiandata.evalsol) );
+   }
+   else
+   {
+      assert(hessiandata.evalsol == NULL);
+      assert(hessiandata.varvals == NULL);
+      assert(hessiandata.sparsity == NULL);
+   }
+
+   /* free expression interpreter */
+   SCIP_CALL( SCIPexprintFree(&exprint) );
 
    /* free counter arrays for weighted objectives */
    SCIPfreeBufferArray(scip, &termcounter);
@@ -1161,7 +1325,7 @@ SCIP_RETCODE solveCoveringProblem(
    SCIP_CALL( SCIPsetSeparating(coveringscip, SCIP_PARAMSETTING_FAST, TRUE) );
 
    /* only solve root */
-   SCIP_CALL( SCIPsetLongintParam(coveringscip, "limits/nodes", 1) );
+   SCIP_CALL( SCIPsetLongintParam(coveringscip, "limits/nodes", 1LL) );
 
    SCIPdebugMessage("timelimit = %g, memlimit = %g\n", timelimit, memorylimit);
 

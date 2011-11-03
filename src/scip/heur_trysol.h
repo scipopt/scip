@@ -14,12 +14,14 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_trysol.h
+ * @ingroup PRIMALHEURISTICS
  * @brief  primal heuristic that tries a given solution
  * @author Marc Pfetsch
  *
- * This heuristic is just a stand in for other components of SCIP that should not or cannot submit
- * solutions. For example, this heuristic might take a solution from a constraint handler that knows
- * how to produce feasible solutions. The heuristic then tries to submit the solution to SCIP.
+ * This heuristic takes a solution from somewhere else via the function SCIPheurPassSolTrySol(). It
+ * then tries to commit this solution. It is mainly used by cons_indicator, which tries to correct a
+ * given solution, but cannot directly submit this solution, because it is a constraint handler and
+ * not a heuristic.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

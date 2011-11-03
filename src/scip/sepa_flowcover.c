@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_flowcover.c
- * @ingroup SEPARATORS
  * @brief  flow cover cuts separator
  * @author Kati Wolter
  * @author Tobias Achterberg

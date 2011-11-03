@@ -14,8 +14,15 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_zirounding.h
- * @brief  zirounding primal heuristic
- * @author Tobias Achterberg
+ * @ingroup PRIMALHEURISTICS
+ * @brief  ZI Round primal heuristic
+ * @author Gregor Hendel
+ *
+ * ZI Round (C. Wallace, Journal of Heuristics 2009) reduces the integer infeasibility of an LP solution step-by-step by
+ * shifting fractional values towards integrality, but not necessarily rounding them.  For each integer variable with
+ * fractional solution value, the heuristic calculates bounds for both possible rounding directions such that the
+ * obtained solution stays LP-feasible. The solution value is then shifted by the corresponding bound into the direction
+ * which reduces the fractionality most.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

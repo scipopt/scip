@@ -74,6 +74,8 @@ typedef struct SCIP_PresolData SCIP_PRESOLDATA;   /**< presolver specific data *
  *  input:
  *  - scip            : SCIP main data structure
  *  - presol          : the presolver itself
+ *  - isunbounded     : was the problem already declared to be unbounded
+ *  - isinfeasible    : was the problem already declared to be infeasible
  *
  *  output:
  *  - result          : pointer to store the result of the presolving call
@@ -81,15 +83,18 @@ typedef struct SCIP_PresolData SCIP_PRESOLDATA;   /**< presolver specific data *
  *  possible return values for *result:
  *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
  *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
- *  - SCIP_FEASIBLE   : no infeasibility nor unboundedness could be found
+ *  - SCIP_FEASIBLE   : no infeasibility or unboundedness could be found
  */
-#define SCIP_DECL_PRESOLINITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRESOL* presol, SCIP_RESULT* result)
+#define SCIP_DECL_PRESOLINITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRESOL* presol, SCIP_Bool isunbounded, \
+      SCIP_Bool isinfeasible, SCIP_RESULT* result)
 
 /** presolving deinitialization method of presolver (called after presolving has been finished)
  *
  *  input:
  *  - scip            : SCIP main data structure
  *  - presol          : the presolver itself
+ *  - isunbounded     : was the problem already declared to be unbounded
+ *  - isinfeasible    : was the problem already declared to be infeasible
  *
  *  output:
  *  - result          : pointer to store the result of the presolving call
@@ -97,9 +102,10 @@ typedef struct SCIP_PresolData SCIP_PRESOLDATA;   /**< presolver specific data *
  *  possible return values for *result:
  *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
  *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
- *  - SCIP_FEASIBLE   : no infeasibility nor unboundedness could be found
+ *  - SCIP_FEASIBLE   : no infeasibility or unboundedness could be found
  */
-#define SCIP_DECL_PRESOLEXITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRESOL* presol, SCIP_RESULT* result)
+#define SCIP_DECL_PRESOLEXITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRESOL* presol, SCIP_Bool isunbounded, \
+      SCIP_Bool isinfeasible, SCIP_RESULT* result)
 
 /** execution method of presolver
  *

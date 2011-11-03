@@ -31,7 +31,14 @@
 namespace scip
 {
 
-/** C++ wrapper object for cut separators */
+/** @brief C++ wrapper for cut separators
+ *
+ *  This class defines the interface for cut separators implemented in C++. 
+ *
+ *  - \ref SEPA "Instructions for implementing a cut separator"
+ *  - \ref SEPARATORS "List of available cut separators"
+ *  - \ref type_sepa.h "Corresponding C interface"
+ */
 class ObjSepa : public ObjCloneable
 {
 public:

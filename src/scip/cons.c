@@ -1772,6 +1772,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_DECL_CONSDEACTIVE((*consdeactive)),  /**< deactivation notification method */
    SCIP_DECL_CONSENABLE  ((*consenable)),    /**< enabling notification method */
    SCIP_DECL_CONSDISABLE ((*consdisable)),   /**< disabling notification method */
+   SCIP_DECL_CONSDELVARS ((*consdelvars)),   /**< variable deletion method */
    SCIP_DECL_CONSPRINT   ((*consprint)),     /**< constraint display method */
    SCIP_DECL_CONSCOPY    ((*conscopy)),      /**< constraint copying method */
    SCIP_DECL_CONSPARSE   ((*consparse)),     /**< constraint parsing method */
@@ -1823,6 +1824,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->consenable = consenable;
    (*conshdlr)->consdisable = consdisable;
    (*conshdlr)->consprint = consprint;
+   (*conshdlr)->consdelvars = consdelvars;
    (*conshdlr)->conscopy = conscopy;
    (*conshdlr)->consparse = consparse;
    (*conshdlr)->conshdlrdata = conshdlrdata;
@@ -2135,6 +2137,8 @@ SCIP_RETCODE SCIPconshdlrInitpre(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_Bool             isunbounded,        /**< was unboundedness already detected */
+   SCIP_Bool             isinfeasible,       /**< was infeasibility already detected */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -2180,7 +2184,7 @@ SCIP_RETCODE SCIPconshdlrInitpre(
       conshdlrDelayUpdates(conshdlr);
 
       /* call external method */
-      SCIP_CALL( conshdlr->consinitpre(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss, result) );
+      SCIP_CALL( conshdlr->consinitpre(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss, isunbounded, isinfeasible, result) );
 
       /* perform the cached constraint updates */
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
@@ -2205,6 +2209,8 @@ SCIP_RETCODE SCIPconshdlrExitpre(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_Bool             isunbounded,        /**< was unboundedness already detected */
+   SCIP_Bool             isinfeasible,       /**< was infeasibility already detected */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -2224,7 +2230,7 @@ SCIP_RETCODE SCIPconshdlrExitpre(
       conshdlrDelayUpdates(conshdlr);
 
       /* call external method */
-      SCIP_CALL( conshdlr->consexitpre(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss, result) );
+      SCIP_CALL( conshdlr->consexitpre(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss, isunbounded, isinfeasible, result) );
 
       /* perform the cached constraint updates */
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
@@ -3331,6 +3337,37 @@ SCIP_RETCODE SCIPconshdlrPresolve(
 
       /* remember whether presolving method was delayed */
       conshdlr->presolwasdelayed = (*result == SCIP_DELAYED);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls variable deletion method of constraint handler */
+SCIP_RETCODE SCIPconshdlrDelVars(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
+   )
+{
+   assert(conshdlr != NULL);
+   assert(set != NULL);
+
+   if( conshdlr->consdelvars != NULL )
+   {
+      SCIPdebugMessage("deleting variables in constraints of handler <%s>\n", conshdlr->name);
+
+      /* during constraint processing, constraints of this handler may be deleted, activated, deactivated,
+       * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
+       * external method; to avoid this, these changes will be buffered and processed after the method call
+       */
+      conshdlrDelayUpdates(conshdlr);
+
+      /* call external method */
+      SCIP_CALL( conshdlr->consdelvars(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss) );
+
+      /* perform the cached constraint updates */
+      SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
    }
 
    return SCIP_OKAY;

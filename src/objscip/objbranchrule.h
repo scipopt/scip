@@ -33,7 +33,15 @@
 namespace scip
 {
 
-/** C++ wrapper object for branching rules */
+/**
+ *  @brief C++ wrapper for branching rules
+ *
+ *  This class defines the interface for branching rules implemented in C++.
+ *
+ *  - \ref BRANCH "Instructions for implementing a branching rule"
+ *  - \ref BRANCHINGRULES "List of available branching rules"
+ *  - \ref type_branch.h "Corresponding C interface"
+ */
 class ObjBranchrule : public ObjCloneable
 {
 public:

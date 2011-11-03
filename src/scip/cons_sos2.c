@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_sos2.c
- * @ingroup CONSHDLRS
  * @brief  constraint handler for SOS type 2 constraints
  * @author Marc Pfetsch
  *
@@ -1426,7 +1425,7 @@ SCIP_DECL_CONSPRESOL(consPresolSOS2)
    nremovedvars = 0;
 
    /* only run if success is possible */
-   if ( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || nnewchgcoefs > 0 || *nfixedvars > oldnfixedvars )
+   if( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || nnewchgcoefs > 0 )
    {
       /* get constraint handler data */
       assert( SCIPconshdlrGetData(conshdlr) != NULL );
@@ -2114,6 +2113,9 @@ SCIP_DECL_CONSPARSE(consParseSOS2)
 #define consInitpreSOS2 NULL
 
 
+/** variable deletion method of constraint handler */
+#define consDelvarsSOS2 NULL
+
 
 
 
@@ -2217,7 +2219,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS2(
          consSepalpSOS2, consSepasolSOS2, consEnfolpSOS2, consEnfopsSOS2, consCheckSOS2,
          consPropSOS2, consPresolSOS2, consRespropSOS2, consLockSOS2,
          consActiveSOS2, consDeactiveSOS2, consEnableSOS2, consDisableSOS2,
-         consPrintSOS2, consCopySOS2, consParseSOS2, conshdlrdata) );
+         consDelvarsSOS2, consPrintSOS2, consCopySOS2, consParseSOS2, conshdlrdata) );
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_cumulative.c
- * @ingroup CONSHDLRS
  * @brief  constraint handler for cumulative constraints
  * @author Timo Berthold
  * @author Stefan Heinz
@@ -129,13 +128,13 @@ struct SCIP_ConshdlrData
  * Propagation rules
  */
 enum Proprule
-   {
-      PROPRULE_INVALID              = 0,        /**< propagation was applied without a specific propagation rule */
-      PROPRULE_1_CORETIMES          = 1,        /**< core-time propagator */
-      PROPRULE_2_CORETIMEHOLES      = 2,        /**< core-time propagator for holes */
-      PROPRULE_3_EDGEFINDING        = 3,        /**< edge-finder */
-      PROPRULE_4_ENERGETICREASONING = 4         /**< energetic reasoning */
-   };
+{
+   PROPRULE_INVALID              = 0,        /**< propagation was applied without a specific propagation rule */ /*lint !e830*/
+   PROPRULE_1_CORETIMES          = 1,        /**< core-time propagator */
+   PROPRULE_2_CORETIMEHOLES      = 2,        /**< core-time propagator for holes */
+   PROPRULE_3_EDGEFINDING        = 3,        /**< edge-finder */
+   PROPRULE_4_ENERGETICREASONING = 4         /**< energetic reasoning */
+};
 typedef enum Proprule PROPRULE;
 
 /** inference information */
@@ -2214,7 +2213,8 @@ SCIP_RETCODE initializeConflictAnalysisCoreTimes(
 
    SCIPdebugMessage("initialize conflict analysis\n");
 
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   /* conflict analysis can only be applied in solving stage and if it is turned on */
+   if( (SCIPgetStage(scip) != SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPinitConflictAnalysis(scip) );
@@ -2353,7 +2353,8 @@ SCIP_RETCODE initializeConflictAnalysisCoreTimesBinvars(
 
    SCIPdebugMessage("initialize conflict analysis\n");
 
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   /* conflict analysis can only be applied in solving stage and if it is turned on */
+   if( (SCIPgetStage(scip) != SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPinitConflictAnalysis(scip) );
@@ -3730,7 +3731,8 @@ SCIP_RETCODE initializeConflictAnalysisEnergeticReasoning(
 
    SCIPdebugMessage("initialize conflict analysis for energetic reasoning\n");
 
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   /* conflict analysis can only be applied in solving stage and if it is turned on */
+   if( (SCIPgetStage(scip) != SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
    assert(inferInfoGetProprule(inferinfo) == PROPRULE_4_ENERGETICREASONING);
@@ -4373,7 +4375,8 @@ SCIP_RETCODE initializeConflictAnalysisEdgeFinding(
 
    assert(inferInfoGetProprule(inferinfo) == PROPRULE_3_EDGEFINDING);
 
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   /* conflict analysis can only be applied in solving stage and if it is turned on */
+   if( (SCIPgetStage(scip) != SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPinitConflictAnalysis(scip) );
@@ -4401,7 +4404,7 @@ SCIP_RETCODE respropCumulativeCondition(
    int*                  demands,            /**< array of demands */
    int                   capacity,           /**< cumulative capacity */
    SCIP_VAR*             infervar,           /**< the conflict variable whose bound change has to be resolved */
-   int                   inferinfo,          /**< the user information */
+   INFERINFO             inferinfo,          /**< the user information */
    SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
@@ -4409,15 +4412,13 @@ SCIP_RETCODE respropCumulativeCondition(
 {
    SCIP_VAR* var;
 
-   INFERINFO struct_inferinfo;
-
    SCIP_Bool success;
 
    int inferdemand;
    int inferduration;  /* needed for upperbound resolve process */
    int j;
 
-   struct_inferinfo = intToInferInfo(inferinfo);
+   assert(inferInfoGetProprule(inferinfo) != PROPRULE_INVALID);
 
    if( SCIPvarGetType(infervar) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(infervar) == SCIP_VARTYPE_IMPLINT )
    {
@@ -4443,7 +4444,7 @@ SCIP_RETCODE respropCumulativeCondition(
          SCIPvarGetName(infervar), inferduration, inferdemand);
 
       /* repropagation for core-times */
-      if( inferInfoGetProprule(struct_inferinfo) == PROPRULE_1_CORETIMES )
+      if(  inferInfoGetProprule(inferinfo) == PROPRULE_1_CORETIMES )
       {
          int leftbound;
          int rightbound;
@@ -4498,30 +4499,30 @@ SCIP_RETCODE respropCumulativeCondition(
             SCIP_CALL( SCIPaddConflictLb(scip, infervar, bdchgidx) );
 
             /* analyze the conflict */
-            if( inferInfoGetProprule(struct_inferinfo) == PROPRULE_3_EDGEFINDING )
+            if( inferInfoGetProprule(inferinfo) == PROPRULE_3_EDGEFINDING )
             {
                /* can search for small clauses if earliest start is in the interval */
-               if( oldbound >= inferInfoGetEst(struct_inferinfo) )
+               if( oldbound >= inferInfoGetEst(inferinfo) )
                {
                   int inferdiff;
-                  inferdiff = newbound - inferInfoGetEst(struct_inferinfo);
+                  inferdiff = newbound - inferInfoGetEst(inferinfo);
                   assert(inferdiff > 0);
                   SCIP_CALL( analyzeShortConflictEdgeFinding(scip, nvars, vars, durations, demands, capacity,
-                        infervar, struct_inferinfo, inferdemand, inferduration, inferdiff,
+                        infervar, inferinfo, inferdemand, inferduration, inferdiff,
                         bdchgidx, &success) );
                }
                else
                {
                   SCIP_CALL( analyzeConflictEdgeFinding(scip, nvars, vars, durations,
-                        infervar, struct_inferinfo, bdchgidx, &success) );
+                        infervar, inferinfo, bdchgidx, &success) );
                }
             }
             else
             {
-               assert(inferInfoGetProprule(struct_inferinfo) == PROPRULE_4_ENERGETICREASONING);
+               assert(inferInfoGetProprule(inferinfo) == PROPRULE_4_ENERGETICREASONING);
 
                SCIP_CALL( analyzeConflictEnergeticReasoning(scip, nvars, vars, durations,
-                     infervar, struct_inferinfo, bdchgidx, &success) );
+                     infervar, inferinfo, bdchgidx, &success) );
             }
          }
          else /* now consider upper bound changes */
@@ -4537,30 +4538,30 @@ SCIP_RETCODE respropCumulativeCondition(
             SCIP_CALL( SCIPaddConflictUb(scip, infervar, bdchgidx) );
 
             /* analyze the conflict */
-            if( inferInfoGetProprule(struct_inferinfo) == PROPRULE_3_EDGEFINDING )
+            if( inferInfoGetProprule(inferinfo) == PROPRULE_3_EDGEFINDING )
             {
                /* can search for small clauses if latest completion time is in the interval */
-               if( oldbound + inferduration<= inferInfoGetLct(struct_inferinfo) )
+               if( oldbound + inferduration<= inferInfoGetLct(inferinfo) )
                {
                   int inferdiff;
-                  inferdiff = inferInfoGetLct(struct_inferinfo) - newbound - inferduration;
+                  inferdiff = inferInfoGetLct(inferinfo) - newbound - inferduration;
                   assert(inferdiff > 0);
                   SCIP_CALL( analyzeShortConflictEdgeFinding(scip, nvars, vars, durations, demands, capacity,
-                        infervar, struct_inferinfo, inferdemand, inferduration, inferdiff,
+                        infervar, inferinfo, inferdemand, inferduration, inferdiff,
                         bdchgidx, &success) );
                }
                else
                {
                   SCIP_CALL( analyzeConflictEdgeFinding(scip, nvars, vars, durations,
-                        infervar, struct_inferinfo, bdchgidx, &success) );
+                        infervar, inferinfo, bdchgidx, &success) );
                }
             }
             else /* upper bound conflict analysis for energetic reasoning */
             {
-               assert(inferInfoGetProprule(struct_inferinfo) == PROPRULE_4_ENERGETICREASONING);
+               assert(inferInfoGetProprule(inferinfo) == PROPRULE_4_ENERGETICREASONING);
 
                SCIP_CALL( analyzeConflictEnergeticReasoning(scip, nvars, vars, durations,
-                     infervar, struct_inferinfo, bdchgidx, &success) );
+                     infervar, inferinfo, bdchgidx, &success) );
             }
          }
          assert(success);
@@ -4576,12 +4577,12 @@ SCIP_RETCODE respropCumulativeCondition(
       int nbinvars;
 
       assert(SCIPvarGetType(infervar) == SCIP_VARTYPE_BINARY);
-      assert(inferInfoGetProprule(struct_inferinfo) == PROPRULE_2_CORETIMEHOLES);
+      assert(inferInfoGetProprule(inferinfo) == PROPRULE_2_CORETIMEHOLES);
 
       intvar = NULL;
       inferdemand = 0;
 
-      pos = inferInfoGetEst(struct_inferinfo);
+      pos = inferInfoGetEst(inferinfo);
       assert(pos >= 0);
 
       /* get demand and integer variable of given inference variable */
@@ -4603,7 +4604,7 @@ SCIP_RETCODE respropCumulativeCondition(
       assert(inferdemand > 0);
 
       SCIP_CALL( analyzeConflictCoreTimesBinvarsCumulative(scip, nvars, vars, durations, demands, capacity,
-            infervar, intvar, inferInfoGetLct(struct_inferinfo), inferdemand, bdchgidx, &success) );
+            infervar, intvar, inferInfoGetLct(inferinfo), inferdemand, bdchgidx, &success) );
    }
 
    if( success )
@@ -6640,7 +6641,7 @@ SCIP_DECL_CONSFREE(consFreeCumulative)
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
 static
 SCIP_DECL_CONSINITPRE(consInitpreCumulative)
-{
+{  /*lint --e{715}*/
    SCIP_CONS* cons;
    int c;
 
@@ -7206,7 +7207,7 @@ SCIP_DECL_CONSRESPROP(consRespropCumulative)
 
    SCIP_CALL( respropCumulativeCondition(scip, consdata->nvars, consdata->vars,
          consdata->durations, consdata->demands, consdata->capacity,
-         infervar, inferinfo, boundtype, bdchgidx, result) );
+         infervar, intToInferInfo(inferinfo), boundtype, bdchgidx, result) );
 
    return SCIP_OKAY;
 }
@@ -7312,6 +7313,10 @@ SCIP_DECL_CONSCOPY(consCopyCumulative)
    return SCIP_OKAY;
 }
 
+/** variable deletion method of constraint handler */
+#define consDelvarsCumulative NULL
+
+
 /** constraint parsing method of constraint handler */
 #define consParseCumulative NULL
 
@@ -7342,7 +7347,7 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
          consSepalpCumulative, consSepasolCumulative, consEnfolpCumulative, consEnfopsCumulative, consCheckCumulative,
          consPropCumulative, consPresolCumulative, consRespropCumulative, consLockCumulative,
          consActiveCumulative, consDeactiveCumulative,
-         consEnableCumulative, consDisableCumulative,
+         consEnableCumulative, consDisableCumulative, consDelvarsCumulative,
          consPrintCumulative, consCopyCumulative, consParseCumulative,
          conshdlrdata) );
 
@@ -7616,7 +7621,7 @@ SCIP_RETCODE SCIPrespropCumulativeCondition(
    )
 {
    SCIP_CALL( respropCumulativeCondition(scip, nvars, vars, durations, demands, capacity,
-         infervar, inferinfo, boundtype, bdchgidx, result) );
+         infervar, intToInferInfo(inferinfo), boundtype, bdchgidx, result) );
 
    return SCIP_OKAY;
 }
@@ -7886,8 +7891,8 @@ int SCIPprofileInsertTimepoint(
    assert(pos + 1 < profile->arraysize);
 
    /* insert new time point into the (sorted) profile */
-   SCIPsortedvecInsertIntInt(profile->timepoints, profile->freecapacities, timepoint, profile->freecapacities[pos],
-      &profile->ntimepoints);
+   SCIPsortedvecInsertIntInt(profile->timepoints, profile->freecapacities, timepoint, profile->freecapacities[pos], 
+      &profile->ntimepoints, NULL);
 
 #ifndef NDEBUG
    /* check if the time points are sorted */

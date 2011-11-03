@@ -407,7 +407,8 @@ $(OBJDIR)/main.o: src/main.c src/reader_col.h ../../src/scip/scip.h \
  ../../src/scip/branch_fullstrong.h ../../src/scip/branch_inference.h \
  ../../src/scip/branch_mostinf.h ../../src/scip/branch_leastinf.h \
  ../../src/scip/branch_pscost.h ../../src/scip/branch_random.h \
- ../../src/scip/branch_relpscost.h ../../src/scip/cons_and.h \
+ ../../src/scip/branch_relpscost.h ../../src/scip/cons_abspower.h \
+ ../../src/scip/cons_and.h ../../src/scip/cons_bivariate.h \
  ../../src/scip/cons_bounddisjunction.h ../../src/scip/cons_conjunction.h \
  ../../src/scip/cons_countsols.h ../../src/scip/cons_cumulative.h \
  ../../src/scip/cons_disjunction.h ../../src/scip/cons_indicator.h \
@@ -416,10 +417,9 @@ $(OBJDIR)/main.o: src/main.c src/reader_col.h ../../src/scip/scip.h \
  ../../src/scip/cons_logicor.h ../../src/scip/cons_nonlinear.h \
  ../../src/scip/cons_or.h ../../src/scip/cons_orbitope.h \
  ../../src/scip/cons_pseudoboolean.h ../../src/scip/cons_quadratic.h \
- ../../src/scip/cons_signedpower.h ../../src/scip/cons_sos1.h \
- ../../src/scip/cons_sos2.h ../../src/scip/cons_soc.h \
- ../../src/scip/cons_varbound.h ../../src/scip/cons_xor.h \
- ../../src/scip/dialog_default.h ../../src/scip/disp_default.h \
+ ../../src/scip/cons_sos1.h ../../src/scip/cons_sos2.h \
+ ../../src/scip/cons_soc.h ../../src/scip/cons_varbound.h \
+ ../../src/scip/cons_xor.h ../../src/scip/disp_default.h \
  ../../src/scip/heur_actconsdiving.h ../../src/scip/heur_clique.h \
  ../../src/scip/heur_coefdiving.h ../../src/scip/heur_crossover.h \
  ../../src/scip/heur_dins.h ../../src/scip/heur_feaspump.h \
@@ -460,5 +460,6 @@ $(OBJDIR)/main.o: src/main.c src/reader_col.h ../../src/scip/scip.h \
  ../../src/scip/sepa_rapidlearning.h ../../src/scip/sepa_strongcg.h \
  ../../src/scip/sepa_zerohalf.h ../../src/scip/scipshell.h \
  ../../src/nlpi/nlpi_ipopt.h src/pricer_coloring.h src/branch_coloring.h \
- src/cons_storeGraph.h src/coloringplugins.h src/branch_strongcoloring.h \
+ src/cons_storeGraph.h src/coloringplugins.h \
+ ../../src/scip/dialog_default.h src/branch_strongcoloring.h \
  src/reader_csol.h src/heur_init.h

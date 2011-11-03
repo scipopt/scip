@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   scipgithash.c
+/**@file   scipgithash.h
  * @brief  git hash methods
  * @author Stefan Heinz
  */

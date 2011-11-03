@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_boundshift.c
- * @ingroup PRESOLVERS
  * @brief  presolver that converts variables with domain [a,b] to variables with domain [0,b-a]
  * @author Stefan Heinz
  * @author Michael Winkler
@@ -155,6 +154,9 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
    if( nvars == 0 )
       return SCIP_OKAY;
    
+   if( SCIPdoNotAggr(scip) )
+      return SCIP_OKAY;
+
    *result = SCIP_DIDNOTFIND;
 
    /* copy the integer variables into an own array, since adding new integer variables affects the left-most slots in

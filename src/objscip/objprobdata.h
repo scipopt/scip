@@ -32,7 +32,14 @@
 namespace scip
 {
 
-/** C++ wrapper object for user problem data */
+/** @brief C++ wrapper for user problem data
+ *
+ *  This class defines the interface for user problem data implemented in C++. This class can be accessed at any time
+ *  using the methods SCIPgetObjProbData(). Therefore, it can be used to store data which has to be accessible within
+ *  several plugins.
+ *
+ *  - \ref type_prob.h "Corresponding C interface"
+ */
 class ObjProbData
 {
 public:

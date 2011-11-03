@@ -60,9 +60,9 @@ SCIP_RETCODE SCIPexprintCreate(
 {
    SCIPdebugMessage("SCIPexprintCreate()\n");
    SCIPdebugMessage("Note that there is no expression interpreter linked to the binary.\n");
-   
+
    SCIP_ALLOC( BMSallocMemory(exprint) );
-   
+
    return SCIP_OKAY;
 }  /*lint !e715*/
 
@@ -72,7 +72,7 @@ SCIP_RETCODE SCIPexprintFree(
    )
 {
    BMSfreeMemory(exprint);
-   
+
    return SCIP_OKAY;
 }  /*lint !e715*/
 
@@ -152,7 +152,7 @@ SCIP_RETCODE SCIPexprintGradInt(
    SCIP_Bool             new_varvals,        /**< have variable interval values changed since last call to an interval evaluation routine? */
    SCIP_INTERVAL*        val,                /**< buffer to store expression interval value */
    SCIP_INTERVAL*        gradient            /**< buffer to store expression interval gradient, need to have length at least SCIPexprtreeGetNVars(tree) */
-)
+   )
 {
    return SCIP_PLUGINNOTFOUND;
 }  /*lint !e715*/

@@ -31,7 +31,15 @@
 namespace scip
 {
 
-/** C++ wrapper object for node selectors */
+/** @brief C++ wrapper for primal heuristics
+ *
+ *  This class defines the interface for node selectors implemented in C++. Note that there is a pure virtual
+ *  function (this function has to be implemented). This function is: scip_comp().
+ *
+ *  - \ref NODESEL "Instructions for implementing a  node selector"
+ *  - \ref NODESELECTORS "List of available node selectors"
+ *  - \ref type_nodesel.h "Corresponding C interface"
+ */
 class ObjNodesel : public ObjCloneable
 {
 public:

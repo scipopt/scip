@@ -14,13 +14,10 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_col.c
- * @brief  COL file reader
+ * @brief  file reader for vertex coloring instances
  * @author Gerald Gamrath
  *
- * This file implements the reader for coloring files in DIMACS standard format.
- *
- * Additionally, it provides two sorting functions and a method, which ensures that all nodes in the
- * graph are covered by at least one stable set.
+ * This file implements the reader for vertex coloring problems in DIMACS standard format.
  *
  */
 
@@ -39,15 +36,6 @@
 
 #define COL_MAX_LINELEN 1024
 
-
-/*
- * Data structures
- */
-
-/** data for col reader */
-struct SCIP_ReaderData
-{
-};
 
 
 /*
@@ -81,8 +69,8 @@ SCIP_RETCODE readCol(
 {
    SCIP_FILE* fp;               /* file-reader */
    char buf[COL_MAX_LINELEN];   /* maximal length of line */
-   long nedges;
-   long nnodes;
+   int nedges;
+   int nnodes;
    int line_nr;
    char* char_p;
    char* probname;
@@ -140,6 +128,7 @@ SCIP_RETCODE readCol(
    probname[j-i-5]= '\0';
 
    /* Read until information about graph starts */
+   line_nr = 0;
    while( !SCIPfeof(fp) && (buf[0] != 'p') )
    {
       SCIPfgets(buf, sizeof(buf), fp);
@@ -215,8 +204,9 @@ SCIP_RETCODE readCol(
          }
       }
    }
-   printf("Read graph: %ld nodes, %ld edges (%d duplicates)\n", nnodes, nedges, nduplicateedges);
-   
+
+   printf("Read graph: %d nodes, %d edges (%d duplicates)\n", nnodes, nedges, nduplicateedges);
+
    /* create problem data */
    SCIP_CALL( SCIPcreateProbColoring(scip, probname, nnodes, nedges-nduplicateedges, edges) );
 

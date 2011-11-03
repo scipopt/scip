@@ -65,8 +65,16 @@ lint:		$(MAINSRC)
 			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE $$i; \
 			done'
 
+.PHONY: scip
+scip:
+		@$(MAKE) -C $(SCIPDIR) libs $^
+
 .PHONY: doc
 doc:
+		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scip.css);
+		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/scippy.png);
+		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/miniscippy.png);
+		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scipfooter.html footer.html);
 		cd doc; $(DOXY) $(MAINNAME).dxy
 
 $(MAINSHORTLINK):	$(MAINFILE)
@@ -80,7 +88,7 @@ $(BINDIR):
 		@-mkdir -p $(BINDIR)
 
 .PHONY: clean
-clean:
+clean:		$(OBJDIR)
 ifneq ($(OBJDIR),)
 		@-(rm -f $(OBJDIR)/*.o && rmdir $(OBJDIR));
 		@echo "-> remove main objective files"

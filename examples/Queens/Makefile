@@ -69,6 +69,10 @@ lint:		$(MAINSRC)
 			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE $$i; \
 			done'
 
+.PHONY: scip
+scip:
+		@$(MAKE) -C $(SCIPDIR) libs $^
+
 .PHONY: doc
 doc:
 		@-(echo ''; echo '--> running pdflatex to create documentation'; echo ''); 
@@ -86,7 +90,7 @@ $(BINDIR):
 		@-mkdir -p $(BINDIR)
 
 .PHONY: clean
-clean:
+clean:		$(OBJDIR)
 ifneq ($(OBJDIR),)
 		-rm -f $(OBJDIR)/*.o
 		-rmdir $(OBJDIR)

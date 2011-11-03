@@ -1,8 +1,6 @@
-check/check.awk
-check/check.sh
-check/evalcheck.sh
-check/getlastprob.awk
-check/locks/
-check/results/
-check/testset/short.solu
+check/
 doc/html/
+doc/footer.html
+doc/miniscippy.png
+doc/scip.css
+doc/scippy.png

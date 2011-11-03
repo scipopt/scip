@@ -14,8 +14,10 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_col.h
- * @brief  COL file reader
+ * @brief  file reader for vertex coloring instances
  * @author Gerald Gamrath
+ *
+ * This file implements the reader for vertex coloring problems in DIMACS standard format.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

@@ -14,8 +14,12 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_wbo.h
+ * @ingroup FILEREADERS
  * @brief  WBO file reader (LP format with generic variables and row names)
  * @author Michael Winkler
+ *
+ * This file reader parses the \f$wbo\f$ format by using the \f$opb\f$ reader. For a detailed description of this format
+ * see http://www.cril.univ-artois.fr/PB10/format.pdf .
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

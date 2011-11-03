@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_mps.c
- * @ingroup FILEREADERS 
  * @brief  (extended) MPS file reader
  * @author Thorsten Koch
  * @author Tobias Achterberg
@@ -1552,7 +1551,7 @@ SCIP_RETCODE readSOS(
             mpsinputSetSection(mpsi, MPS_INDICATORS);
          break;
       }
-      if( mpsinputField1(mpsi) == NULL || mpsinputField2(mpsi) == NULL )
+      if( mpsinputField1(mpsi) == NULL )
       {
          SCIPerrorMessage("empty data in a non-comment line.\n");
          mpsinputSyntaxerror(mpsi);
@@ -2219,7 +2218,7 @@ SCIP_RETCODE readIndicators(
       }
 
       /* create slack variable */
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "indslack_%s", SCIPconsGetName(lincons));
+      (void) SCIPsnprintf(name, MPS_MAX_NAMELEN, "indslack_%s", SCIPconsGetName(lincons));
       SCIP_CALL( SCIPcreateVar(scip, &slackvar, name, 0.0, SCIPinfinity(scip), 0.0, slackvartype, TRUE, FALSE,
             NULL, NULL, NULL, NULL, NULL) );
 
@@ -2918,7 +2917,7 @@ void printColumnSection(
          continue;
       }
          
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && intSection)
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && intSection )
       {
          /* end integer section in MPS format */
          printStart(scip, file, "", "INTEND", (int) maxnamelen);
@@ -2960,6 +2959,17 @@ void printColumnSection(
       if( recordcnt == 1 )
          SCIPinfoMessage(scip, file, "\n");
    }
+   /* end integer section, if the columns sections ends with integer variables */
+   if( intSection )
+   {
+      /* end integer section in MPS format */
+      printStart(scip, file, "", "INTEND", (int) maxnamelen);
+      printRecord(scip, file, "'MARKER'", "", maxnamelen);
+      printRecord(scip, file, "'INTEND'", "", maxnamelen);
+      SCIPinfoMessage(scip, file, "\n", maxnamelen);
+      intSection = FALSE;
+   }
+
 }
 
 

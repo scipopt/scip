@@ -26,6 +26,7 @@
 #include "scip/scipshell.h"
 
 #include "event_bestsol.h"
+#include "event_boundwriting.h"
 
 /** runs the shell */
 static
@@ -49,7 +50,8 @@ SCIP_RETCODE runShell(
 
    /* include event handler for best solution found */
    SCIP_CALL( SCIPincludeEventHdlrBestsol(scip) );
-   
+   SCIP_CALL( SCIPincludeEventHdlrBoundwriting(scip) );
+
    /**********************************
     * Process command line arguments *
     **********************************/

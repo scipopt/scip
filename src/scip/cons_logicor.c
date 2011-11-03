@@ -14,9 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_logicor.c
- * @ingroup CONSHDLRS 
- * @brief  constraint handler for logic or constraints
- *         (equivalent to set covering, but algorithms are suited for depth first search)
+ * @brief  Constraint handler for logic or constraints \f$1^T x \ge 1\f$
+ *         (equivalent to set covering, but algorithms are suited for depth first search).
  * @author Tobias Achterberg
  * @author Michael Winkler
  */
@@ -214,6 +213,8 @@ SCIP_RETCODE consdataCreate(
    SCIP_VAR**            vars                /**< variables of the constraint */
    )
 {
+   int v;
+
    assert(consdata != NULL);
    assert(nvars == 0 || vars != NULL);
 
@@ -247,6 +248,13 @@ SCIP_RETCODE consdataCreate(
       SCIP_CALL( SCIPgetTransformedVars(scip, (*consdata)->nvars, (*consdata)->vars, (*consdata)->vars) );
    }
 
+   /* capture variables */
+   for( v = 0; v < (*consdata)->nvars; v++ )
+   {
+      assert((*consdata)->vars[v] != NULL);
+      SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[v]) );
+   }
+
    return SCIP_OKAY;
 }   
 
@@ -257,6 +265,8 @@ SCIP_RETCODE consdataFree(
    SCIP_CONSDATA**       consdata            /**< pointer to the logic or constraint */
    )
 {
+   int v;
+
    assert(consdata != NULL);
    assert(*consdata != NULL);
 
@@ -264,6 +274,13 @@ SCIP_RETCODE consdataFree(
    if( (*consdata)->row != NULL )
    {
       SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->row) );
+   }
+
+   /* release variables */
+   for( v = 0; v < (*consdata)->nvars; v++ )
+   {
+      assert((*consdata)->vars[v] != NULL);
+      SCIP_CALL( SCIPreleaseVar(scip, &((*consdata)->vars[v])) );
    }
 
    SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->vars, (*consdata)->varssize);
@@ -287,7 +304,7 @@ SCIP_RETCODE consdataPrint(
    SCIPinfoMessage(scip, file, "logicor(");
 
    /* print variable list */
-   SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars, FALSE, ',') );
+   SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars, TRUE, ',') );
    
    /* close bracket */
    SCIPinfoMessage(scip, file, ")");
@@ -398,6 +415,7 @@ SCIP_RETCODE addCoef(
 
    SCIP_CALL( consdataEnsureVarsSize(scip, consdata, consdata->nvars + 1) );
    consdata->vars[consdata->nvars] = var;
+   SCIP_CALL( SCIPcaptureVar(scip, consdata->vars[consdata->nvars]) );
    consdata->nvars++;
 
    /* we only catch this event in presolving stage */
@@ -474,6 +492,9 @@ SCIP_RETCODE delCoefPos(
    }
    assert(pos != consdata->watchedvar1);
    assert(pos != consdata->watchedvar2);
+
+   /* release variable */
+   SCIP_CALL( SCIPreleaseVar(scip, &consdata->vars[pos]) );
 
    /* move the last variable to the free slot */
    if( pos != consdata->nvars - 1 )
@@ -796,8 +817,8 @@ SCIP_RETCODE analyzeConflict(
    SCIP_CONSDATA* consdata;
    int v;
 
-   /* conflict analysis can only be applied in solving stage */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   /* conflict analysis can only be applied in solving stage and if it is applicable */
+   if( (SCIPgetStage(scip) != SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);
@@ -853,8 +874,11 @@ SCIP_RETCODE mergeMultiples(
    SCIP_Bool* negarray;
    SCIP_VAR* var;
    int v;
+   int pos;
+   int nintvars;
 #ifndef NDEBUG
    int nbinvars;
+   int nimplvars;
 #endif
 
    assert(scip != NULL);
@@ -871,7 +895,7 @@ SCIP_RETCODE mergeMultiples(
 
    *redundant = FALSE;
 
-   if( consdata->merged ) 
+   if( consdata->merged )
       return SCIP_OKAY;
 
    if( consdata->nvars <= 1 )
@@ -886,11 +910,13 @@ SCIP_RETCODE mergeMultiples(
 
    assert(consdata->vars != NULL && nvars > 0);
 
+   nintvars = SCIPgetNIntVars(scip);
 #ifndef NDEBUG
    nbinvars = SCIPgetNBinVars(scip);
+   nimplvars = SCIPgetNImplVars(scip);
 #endif
 
-   assert(*nentries >= nbinvars);
+   assert(*nentries >= nbinvars + nimplvars);
 
    /* get active or negation of active variables */
    SCIP_CALL( SCIPgetBinvarRepresentatives(scip, nvars, consdata->vars, vars, negarray) );
@@ -900,13 +926,20 @@ SCIP_RETCODE mergeMultiples(
    {
       assert(negarray[v] ? SCIPvarIsNegated(vars[v]) : TRUE);
       var = negarray[v] ? SCIPvarGetNegationVar(vars[v]) : vars[v];
-      
+
+      pos = SCIPvarGetProbindex(var);
+
       assert(SCIPvarIsActive(var));
-      assert(SCIPvarGetProbindex(var) >= 0);
-      assert(SCIPvarGetProbindex(var) < nbinvars);
+      assert((pos < nbinvars && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY)
+	 || (pos >= (nbinvars + nintvars) && pos < (nbinvars + nintvars + nimplvars)
+	    && SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT && SCIPvarIsBinary(var)));
+
+      /* subtract number of integer variables because we only allocated memory for all binary and implicit variables */
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
+	 pos -= nintvars;
 
       /** var is not active yet */
-      (*entries)[SCIPvarGetProbindex(var)] = 0;
+      (*entries)[pos] = 0;
    }
 
    /** check all vars for multiple entries, do necessary backwards loop because deletion only affect rear items */
@@ -914,18 +947,24 @@ SCIP_RETCODE mergeMultiples(
    {
       var = negarray[v] ? SCIPvarGetNegationVar(vars[v]) : vars[v];
 
+      pos = SCIPvarGetProbindex(var);
+
+      /* subtract number of integer variables because we only allocated memory for all binary and implicit variables */
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
+	 pos -= nintvars;
+
       /** if var occurs first time in constraint init entries array */
-      if( (*entries)[SCIPvarGetProbindex(var)] == 0 )
-         (*entries)[SCIPvarGetProbindex(var)] = negarray[v] ? 2 : 1;
+      if( (*entries)[pos] == 0 )
+         (*entries)[pos] = negarray[v] ? 2 : 1;
       /** if var occurs second time in constraint, first time it was not negated */
-      else if( (*entries)[SCIPvarGetProbindex(var)] == 1 )
+      else if( (*entries)[pos] == 1 )
       {
          if( negarray[v] )
          {
             *redundant = TRUE;
             goto TERMINATE;
          }
-         else 
+         else
          {
             SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
          }
@@ -938,7 +977,7 @@ SCIP_RETCODE mergeMultiples(
             *redundant = TRUE;
             goto TERMINATE;
          }
-         else 
+         else
          {
             SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
          }
@@ -2136,7 +2175,7 @@ SCIP_DECL_CONSFREE(consFreeLogicor)
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
 static
 SCIP_DECL_CONSINITPRE(consInitpreLogicor)
-{
+{  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    int c;
@@ -2166,7 +2205,7 @@ SCIP_DECL_CONSINITPRE(consInitpreLogicor)
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
 static
 SCIP_DECL_CONSEXITPRE(consExitpreLogicor)
-{
+{  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    int c;
@@ -2631,7 +2670,7 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   nentries = SCIPgetNBinVars(scip);
+   nentries = SCIPgetNBinVars(scip) + SCIPgetNImplVars(scip);
 
    oldnfixedvars = *nfixedvars;
    oldnchgbds = *nchgbds;
@@ -3013,6 +3052,10 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveLogicor)
 #define consDisableLogicor NULL
 
 
+/** variable deletion method of constraint handler */
+#define consDelvarsLogicor NULL
+
+
 /** constraint display method of constraint handler */
 static
 SCIP_DECL_CONSPRINT(consPrintLogicor)
@@ -3220,7 +3263,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLogicor)
       /* create a constraint out of the conflict set */
       (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, consname, nbdchginfos, vars, 
-            FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
+            FALSE, separate, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
       SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       
@@ -3273,7 +3316,7 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
          consPropLogicor, consPresolLogicor, consRespropLogicor, consLockLogicor,
          consActiveLogicor, consDeactiveLogicor,
          consEnableLogicor, consDisableLogicor,
-         consPrintLogicor, consCopyLogicor, consParseLogicor,
+         consDelvarsLogicor, consPrintLogicor, consCopyLogicor, consParseLogicor,
          conshdlrdata) );
 
    conshdlrdata->conshdlrlinear = SCIPfindConshdlr(scip,"linear");

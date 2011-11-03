@@ -427,7 +427,7 @@ void invalidateSolution(SCIP_LPI* lpi)
  * Miscellaneous Methods
  */
 
-static char spxname[SCIP_MAXSTRLEN];
+static char spxname[100];
 
 /**@name Miscellaneous Methods */
 /**@{ */
@@ -441,7 +441,7 @@ const char* SCIPlpiGetSolverName(
    int version;
 
    version = spx.version();
-   snprintf(spxname, SCIP_MAXSTRLEN, "SOPLEX %d.%d.%d", version/100, (version % 100)/10, version % 10);
+   sprintf(spxname, "SoPlex %d.%d.%d", version/100, (version % 100)/10, version % 10);
    return spxname;
 }
 
@@ -2532,6 +2532,21 @@ SCIP_RETCODE SCIPlpiSetState(
 
    /* load basis information */
    SCIP_CALL( SCIPlpiSetBase(lpi, lpi->cstat, lpi->rstat) );
+
+   return SCIP_OKAY;
+}
+
+/** clears current LPi state (like basis information) of the solver */
+SCIP_RETCODE SCIPlpiClearState(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{  /*lint --e{715}*/
+   SCIPdebugMessage("calling SCIPlpiClearState()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   lpi->spx->reLoad();
 
    return SCIP_OKAY;
 }

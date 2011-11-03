@@ -322,6 +322,24 @@ public:
       int                nlocksneg           /**< no. of times, the roundings should be locked for the constraint's negation */
       );
 
+   /** variable deletion method of constraint handler
+    *
+    *  This method should iterate over all constraints of the constraint handler and delete all variables
+    *  that were marked for deletion by SCIPdelVar().
+    *
+    *  input:
+    *  - scip            : SCIP main data structure
+    *  - conshdlr        : the constraint handler itself
+    *  - conss           : array of constraints in transformed problem
+    *  - nconss          : number of constraints in transformed problem
+    */
+   virtual SCIP_RETCODE scip_delvars(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS**        conss,              /**< array of constraints to process */
+      int                nconss              /**< number of constraints to process */
+      );
+
    /** constraint display method of constraint handler
     *
     *  The constraint handler should store a representation of the constraint into the given text file.

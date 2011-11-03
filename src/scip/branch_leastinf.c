@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch_leastinf.c
- * @ingroup BRANCHINGRULES
  * @brief  least infeasible LP branching rule
  * @author Tobias Achterberg
  * @author Stefan Vigerske
@@ -88,6 +87,8 @@ void updateBestCandidate(
          SCIP_Real minact;
          SCIP_Real maxact;
          SCIP_Real aggrvarsol;
+         SCIP_Real aggrvarsol1;
+         SCIP_Real aggrvarsol2;
 
          multscalars = SCIPvarGetMultaggrScalars(cand);
 
@@ -102,9 +103,6 @@ void updateBestCandidate(
             multvarub = SCIPcomputeVarUbLocal(scip, multvars[i]);
             if( SCIPisEQ(scip, multvarlb, multvarub) )
                continue;
-
-            SCIP_Real aggrvarsol1;
-            SCIP_Real aggrvarsol2;
 
             assert(multscalars != NULL);
             assert(multscalars[i] != 0.0);

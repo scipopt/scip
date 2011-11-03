@@ -31,7 +31,15 @@
 namespace scip
 {
 
-/** C++ wrapper object for presolvers */
+/** @brief C++ wrapper for presolvers
+ *
+ *  This class defines the interface for presolvers implemented in C++. Note that there is a pure virtual
+ *  function (this function has to be implemented). This function is: scip_exec().
+ *
+ *  - \ref PRESOL "Instructions for implementing a presolver"
+ *  - \ref PRESOLVERS "List of available presolvers"
+ *  - \ref type_presol.h "Corresponding C interface"
+ */
 class ObjPresol : public ObjCloneable
 {
 public:
@@ -122,6 +130,8 @@ public:
    virtual SCIP_RETCODE scip_initpre(
       SCIP*              scip,               /**< SCIP data structure */   
       SCIP_PRESOL*       presol,             /**< presolver */
+      SCIP_Bool          isunbounded,        /**< was unboundedness already detected */
+      SCIP_Bool          isinfeasible,       /**< was infeasibility already detected */
       SCIP_RESULT*       result              /**< pointer to store the result of the callback method */
       )
    {  /*lint --e{715}*/
@@ -142,6 +152,8 @@ public:
    virtual SCIP_RETCODE scip_exitpre(
       SCIP*              scip,               /**< SCIP data structure */   
       SCIP_PRESOL*       presol,             /**< presolver */
+      SCIP_Bool          isunbounded,        /**< was unboundedness already detected */
+      SCIP_Bool          isinfeasible,       /**< was infeasibility already detected */
       SCIP_RESULT*       result              /**< pointer to store the result of the callback method */
       )
    {  /*lint --e{715}*/

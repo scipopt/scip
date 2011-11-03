@@ -31,7 +31,15 @@
 namespace scip
 {
 
-/** C++ wrapper object for primal heuristics */
+/** @brief C++ wrapper for primal heuristics
+ *
+ *  This class defines the interface for primal heuristics implemented in C++. Note that there is a pure virtual
+ *  function (this function has to be implemented). This function is: scip_exec().
+ *
+ *  - \ref HEUR "Instructions for implementing a primal heuristic"
+ *  - \ref PRIMALHEURISTICS "List of available primal heuristics"
+ *  - \ref type_heur.h "Corresponding C interface"
+ */
 class ObjHeur : public ObjCloneable
 {
 public:

@@ -53,8 +53,12 @@ using std::vector;
 #define SCIPInterval_NAMESPACE CppAD
 #include "nlpi/intervalarith.h"
 
-SCIP_Real SCIPInterval_NAMESPACE::SCIPInterval::infinity = SCIP_DEFAULT_INFINITY;
-using SCIPInterval_NAMESPACE::SCIPInterval;
+SCIP_Real CppAD::SCIPInterval::infinity = SCIP_DEFAULT_INFINITY;
+using CppAD::SCIPInterval;
+
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wshadow"
+#endif
 
 #include <cppad/cppad.hpp>
 #ifndef CPPAD_PACKAGE_STRING
@@ -62,6 +66,10 @@ using SCIPInterval_NAMESPACE::SCIPInterval;
 #define CPPAD_PACKAGE_STRING PACKAGE_STRING
 #endif
 #include <cppad/error_handler.hpp>
+
+#ifdef __GNUC__
+#pragma GCC diagnostic warning "-Wshadow"
+#endif
 
 #ifndef NPARASCIP
 
@@ -133,7 +141,7 @@ SCIPInterval CondExpOp(
    CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
       "SCIPInterval CondExpOp(...)",
       "Error: cannot use CondExp with an interval type"
-   );
+      );
 
    return SCIPInterval();
 }
@@ -194,7 +202,7 @@ bool GreaterThanZero(
    CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
       "GreaterThanZero(x)",
       "Error: cannot use GreaterThanZero with interval"
-   );
+      );
 
    return false;
 }
@@ -208,7 +216,7 @@ bool GreaterThanOrZero(
    CppAD::ErrorHandler::Call(true, __LINE__, __FILE__ ,
       "GreaterThanOrZero(x)",
       "Error: cannot use GreaterThanOrZero with interval"
-   );
+      );
 
    return false;
 }
@@ -217,12 +225,12 @@ bool GreaterThanOrZero(
 inline
 bool LessThanZero(
    const SCIPInterval&   x                   /**< operand */
-)
+   )
 {
    CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
       "LessThanZero(x)",
       "Error: cannot use LessThanZero with interval"
-   );
+      );
 
    return false;
 }
@@ -231,12 +239,12 @@ bool LessThanZero(
 inline
 bool LessThanOrZero(
    const SCIPInterval&   x                   /**< operand */
-)
+   )
 {
    CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
       "LessThanOrZero(x)",
       "Error: cannot use LessThanOrZero with interval"
-   );
+      );
 
    return false;
 }
@@ -245,12 +253,12 @@ bool LessThanOrZero(
 inline
 int Integer(
    const SCIPInterval&   x                   /**< operand */
-)
+   )
 {
    CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
       "Integer(x)",
       "Error: cannot use Integer with interval"
-   );
+      );
 
    return 0;
 }
@@ -277,7 +285,7 @@ class SCIP_ExprIntData
 public:
    /* constructor */
    SCIP_ExprIntData()
-   : need_retape(true), int_need_retape(true), need_retape_always(false), blkmem(NULL), root(NULL)
+      : need_retape(true), int_need_retape(true), need_retape_always(false), blkmem(NULL), root(NULL)
    { }
 
    /* destructor */
@@ -347,35 +355,35 @@ bool forward_posintpower(
 
    switch( k )
    {
-      case 0:
-         ty[0] = pow(tx[0], id);
-         break;
+   case 0:
+      ty[0] = pow(tx[0], id);
+      break;
 
-      case 1:
-         ty[1] = pow(tx[0], id-1) * tx[1];
-         ty[1] *= double(id);
-         break;
+   case 1:
+      ty[1] = pow(tx[0], id-1) * tx[1];
+      ty[1] *= double(id);
+      break;
 
-      case 2:
-         if( id > 2 )
-         {
-            // ty[2] = id * (id-1) * pow(tx[0], id-2) * tx[1] * tx[1] + id * pow(tx[0], id-1) * tx[2];
-            ty[2]  = pow(tx[0], id-2) * tx[1] * tx[1];
-            ty[2] *= id-1;
-            ty[2] += pow(tx[0], id-1) * tx[2];
-            ty[2] *= id;
-         }
-         else
-         {
-            assert(id == 2);
-            // ty[2] = id * tx[1] * tx[1] + id * tx[0] * tx[2];
-            ty[2]  = tx[1] * tx[1] + tx[0] * tx[2];
-            ty[2] *= id;
-         }
-         break;
+   case 2:
+      if( id > 2 )
+      {
+         // ty[2] = id * (id-1) * pow(tx[0], id-2) * tx[1] * tx[1] + id * pow(tx[0], id-1) * tx[2];
+         ty[2]  = pow(tx[0], id-2) * tx[1] * tx[1];
+         ty[2] *= id-1;
+         ty[2] += pow(tx[0], id-1) * tx[2];
+         ty[2] *= id;
+      }
+      else
+      {
+         assert(id == 2);
+         // ty[2] = id * tx[1] * tx[1] + id * tx[0] * tx[2];
+         ty[2]  = tx[1] * tx[1] + tx[0] * tx[2];
+         ty[2] *= id;
+      }
+      break;
 
-      default:
-         return false;
+   default:
+      return false;
    }
 
    return true;
@@ -414,7 +422,7 @@ bool reverse_posintpower(
    const CppAD::vector<Type>&  ty,           /**< values for taylor coefficients of y */
    CppAD::vector<Type>&        px,           /**< vector to store partial derivatives of h(x) = g(y(x)) w.r.t. x */
    const CppAD::vector<Type>&  py            /**< values for partial derivatives of g(x) w.r.t. y */
-)
+   )
 {
    assert(id > 1);
    assert(n == 1);
@@ -425,25 +433,25 @@ bool reverse_posintpower(
 
    switch( k )
    {
-      case 0:
-         // px[0] = py[0] * id * pow(tx[0], id-1);
-         px[0]  = py[0] * pow(tx[0], id-1);
-         px[0] *= id;
-         break;
+   case 0:
+      // px[0] = py[0] * id * pow(tx[0], id-1);
+      px[0]  = py[0] * pow(tx[0], id-1);
+      px[0] *= id;
+      break;
 
-      case 1:
-         // px[0] = py[0] * id * pow(tx[0], id-1) + py[1] * id * (id-1) * pow(tx[0], id-2) * tx[1];
-         px[0]  = py[1] * tx[1] * pow(tx[0], id-2);
-         px[0] *= id-1;
-         px[0] += py[0] * pow(tx[0], id-1);
-         px[0] *= id;
-         // px[1] = py[1] * id * pow(tx[0], id-1);
-         px[1]  = py[1] * pow(tx[0], id-1);
-         px[1] *= id;
-         break;
+   case 1:
+      // px[0] = py[0] * id * pow(tx[0], id-1) + py[1] * id * (id-1) * pow(tx[0], id-2) * tx[1];
+      px[0]  = py[1] * tx[1] * pow(tx[0], id-2);
+      px[0] *= id-1;
+      px[0] += py[0] * pow(tx[0], id-1);
+      px[0] *= id;
+      // px[1] = py[1] * id * pow(tx[0], id-1);
+      px[1]  = py[1] * pow(tx[0], id-1);
+      px[1] *= id;
+      break;
 
-      default:
-         return false;
+   default:
+      return false;
    }
 
    return true;
@@ -547,7 +555,7 @@ CPPAD_USER_ATOMIC(
    for_jac_sparse_posintpower,
    rev_jac_sparse_posintpower,
    rev_hes_sparse_posintpower
-)
+   )
 
 /** tell CppAD about our implementation for x^p, p>=2 integer, for x interval-valued */
 CPPAD_USER_ATOMIC(
@@ -559,7 +567,7 @@ CPPAD_USER_ATOMIC(
    for_jac_sparse_posintpower,
    rev_jac_sparse_posintpower,
    rev_hes_sparse_posintpower
-)
+   )
 #else
 template<class Type>
 void posintpower(size_t exp, vector<Type>& in, vector<Type>& out)
@@ -614,34 +622,34 @@ bool forward_signpower(
 
    switch( k )
    {
-      case 0:
-         ty[0] = SIGN(tx[0]) * pow(REALABS(tx[0]), p);
-         break;
+   case 0:
+      ty[0] = SIGN(tx[0]) * pow(REALABS(tx[0]), p);
+      break;
 
-      case 1:
-         ty[1] = pow(REALABS(tx[0]), p - 1.0) * tx[1];
-         ty[1] *= p;
-         break;
+   case 1:
+      ty[1] = pow(REALABS(tx[0]), p - 1.0) * tx[1];
+      ty[1] *= p;
+      break;
 
-      case 2:
-         if( p != 2.0 )
-         {
-            ty[2]  = SIGN(tx[0]) * pow(REALABS(tx[0]), p - 2.0) * tx[1] * tx[1];
-            ty[2] *= p - 1.0;
-            ty[2] += pow(REALABS(tx[0]), p - 1.0) * tx[2];
-            ty[2] *= p;
-         }
-         else
-         {
-            // y'' = 2 (sign(x) * x'^2 + |x|*x'') = 2 (sign(tx[0]) * tx[1]^2 + abs(tx[0]) * tx[2])
-            ty[2]  = SIGN(tx[0]) * tx[1] * tx[1];
-            ty[2] += REALABS(tx[0]) * tx[2];
-            ty[2] *= p;
-         }
-         break;
+   case 2:
+      if( p != 2.0 )
+      {
+         ty[2]  = SIGN(tx[0]) * pow(REALABS(tx[0]), p - 2.0) * tx[1] * tx[1];
+         ty[2] *= p - 1.0;
+         ty[2] += pow(REALABS(tx[0]), p - 1.0) * tx[2];
+         ty[2] *= p;
+      }
+      else
+      {
+         // y'' = 2 (sign(x) * x'^2 + |x|*x'') = 2 (sign(tx[0]) * tx[1]^2 + abs(tx[0]) * tx[2])
+         ty[2]  = SIGN(tx[0]) * tx[1] * tx[1];
+         ty[2] += REALABS(tx[0]) * tx[2];
+         ty[2] *= p;
+      }
+      break;
 
-      default:
-         return false;
+   default:
+      return false;
    }
 
    return true;
@@ -684,34 +692,34 @@ bool forward_signpower(
 
    switch( k )
    {
-      case 0:
-         ty[0] = signpow(tx[0], p);
-         break;
+   case 0:
+      ty[0] = signpow(tx[0], p);
+      break;
 
-      case 1:
-         ty[1] = pow(abs(tx[0]), p - 1.0) * tx[1];
-         ty[1] *= p;
-         break;
+   case 1:
+      ty[1] = pow(abs(tx[0]), p - 1.0) * tx[1];
+      ty[1] *= p;
+      break;
 
-      case 2:
-         if( p != 2.0 )
-         {
-            ty[2]  = signpow(tx[0], p - 2.0) * square(tx[1]);
-            ty[2] *= p - 1.0;
-            ty[2] += CppAD::pow(abs(tx[0]), p - 1.0) * tx[2];
-            ty[2] *= p;
-         }
-         else
-         {
-            // y'' = 2 (sign(x) * x'^2 + |x|*x'') = 2 (sign(tx[0]) * tx[1]^2 + abs(tx[0]) * tx[2])
-            ty[2]  = CppAD::sign(tx[0]) * square(tx[1]);
-            ty[2] += abs(tx[0]) * tx[2];
-            ty[2] *= p;
-         }
-         break;
+   case 2:
+      if( p != 2.0 )
+      {
+         ty[2]  = signpow(tx[0], p - 2.0) * square(tx[1]);
+         ty[2] *= p - 1.0;
+         ty[2] += CppAD::pow(abs(tx[0]), p - 1.0) * tx[2];
+         ty[2] *= p;
+      }
+      else
+      {
+         // y'' = 2 (sign(x) * x'^2 + |x|*x'') = 2 (sign(tx[0]) * tx[1]^2 + abs(tx[0]) * tx[2])
+         ty[2]  = CppAD::sign(tx[0]) * square(tx[1]);
+         ty[2] += abs(tx[0]) * tx[2];
+         ty[2] *= p;
+      }
+      break;
 
-      default:
-         return false;
+   default:
+      return false;
    }
 
    return true;
@@ -750,7 +758,7 @@ bool reverse_signpower(
    const CppAD::vector<Type>&  ty,           /**< values for taylor coefficients of y */
    CppAD::vector<Type>&        px,           /**< vector to store partial derivatives of h(x) = g(y(x)) w.r.t. x */
    const CppAD::vector<Type>&  py            /**< values for partial derivatives of g(x) w.r.t. y */
-)
+   )
 {
    SCIP_Real p;
 
@@ -766,38 +774,38 @@ bool reverse_signpower(
 
    switch( k )
    {
-      case 0:
-         // px[0] = py[0] * p * pow(abs(tx[0]), p-1);
-         px[0]  = py[0] * pow(REALABS(tx[0]), p - 1.0);
+   case 0:
+      // px[0] = py[0] * p * pow(abs(tx[0]), p-1);
+      px[0]  = py[0] * pow(REALABS(tx[0]), p - 1.0);
+      px[0] *= p;
+      break;
+
+   case 1:
+      if( p != 2.0 )
+      {
+         // px[0] = py[0] * p * abs(tx[0])^(p-1) + py[1] * p * (p-1) * abs(tx[0])^(p-2) * sign(tx[0]) * tx[1]
+         px[0]  = py[1] * tx[1] * pow(REALABS(tx[0]), p - 2.0) * SIGN(tx[0]);
+         px[0] *= p - 1.0;
+         px[0] += py[0] * pow(REALABS(tx[0]), p - 1.0);
          px[0] *= p;
-         break;
+         // px[1] = py[1] * p * abs(tx[0])^(p-1)
+         px[1]  = py[1] * pow(REALABS(tx[0]), p - 1.0);
+         px[1] *= p;
+      }
+      else
+      {
+         // px[0] = py[0] * 2.0 * abs(tx[0]) + py[1] * 2.0 * sign(tx[0]) * tx[1]
+         px[0]  = py[1] * tx[1] * SIGN(tx[0]);
+         px[0] += py[0] * REALABS(tx[0]);
+         px[0] *= 2.0;
+         // px[1] = py[1] * 2.0 * abs(tx[0])
+         px[1]  = py[1] * REALABS(tx[0]);
+         px[1] *= 2.0;
+      }
+      break;
 
-      case 1:
-         if( p != 2.0 )
-         {
-            // px[0] = py[0] * p * abs(tx[0])^(p-1) + py[1] * p * (p-1) * abs(tx[0])^(p-2) * sign(tx[0]) * tx[1]
-            px[0]  = py[1] * tx[1] * pow(REALABS(tx[0]), p - 2.0) * SIGN(tx[0]);
-            px[0] *= p - 1.0;
-            px[0] += py[0] * pow(REALABS(tx[0]), p - 1.0);
-            px[0] *= p;
-            // px[1] = py[1] * p * abs(tx[0])^(p-1)
-            px[1]  = py[1] * pow(REALABS(tx[0]), p - 1.0);
-            px[1] *= p;
-         }
-         else
-         {
-            // px[0] = py[0] * 2.0 * abs(tx[0]) + py[1] * 2.0 * sign(tx[0]) * tx[1]
-            px[0]  = py[1] * tx[1] * SIGN(tx[0]);
-            px[0] += py[0] * REALABS(tx[0]);
-            px[0] *= 2.0;
-            // px[1] = py[1] * 2.0 * abs(tx[0])
-            px[1]  = py[1] * REALABS(tx[0]);
-            px[1] *= 2.0;
-         }
-         break;
-
-      default:
-         return false;
+   default:
+      return false;
    }
 
    return true;
@@ -816,7 +824,7 @@ bool reverse_signpower(
    const CppAD::vector<SCIPInterval>&  ty,           /**< values for taylor coefficients of y */
    CppAD::vector<SCIPInterval>&        px,           /**< vector to store partial derivatives of h(x) = g(y(x)) w.r.t. x */
    const CppAD::vector<SCIPInterval>&  py            /**< values for partial derivatives of g(x) w.r.t. y */
-)
+   )
 {
    SCIP_Real p;
 
@@ -832,38 +840,38 @@ bool reverse_signpower(
 
    switch( k )
    {
-      case 0:
-         // px[0] = py[0] * p * pow(abs(tx[0]), p-1);
-         px[0]  = py[0] * pow(abs(tx[0]), p - 1.0);
+   case 0:
+      // px[0] = py[0] * p * pow(abs(tx[0]), p-1);
+      px[0]  = py[0] * pow(abs(tx[0]), p - 1.0);
+      px[0] *= p;
+      break;
+
+   case 1:
+      if( p != 2.0 )
+      {
+         // px[0] = py[0] * p * abs(tx[0])^(p-1) + py[1] * p * (p-1) * abs(tx[0])^(p-2) * sign(tx[0]) * tx[1]
+         px[0]  = py[1] * tx[1] * signpow(tx[0], p - 2.0);
+         px[0] *= p - 1.0;
+         px[0] += py[0] * pow(abs(tx[0]), p - 1.0);
          px[0] *= p;
-         break;
+         // px[1] = py[1] * p * abs(tx[0])^(p-1)
+         px[1]  = py[1] * pow(abs(tx[0]), p - 1.0);
+         px[1] *= p;
+      }
+      else
+      {
+         // px[0] = py[0] * 2.0 * abs(tx[0]) + py[1] * 2.0 * sign(tx[0]) * tx[1]
+         px[0]  = py[1] * tx[1] * CppAD::sign(tx[0]);
+         px[0] += py[0] * abs(tx[0]);
+         px[0] *= 2.0;
+         // px[1] = py[1] * 2.0 * abs(tx[0])
+         px[1]  = py[1] * abs(tx[0]);
+         px[1] *= 2.0;
+      }
+      break;
 
-      case 1:
-         if( p != 2.0 )
-         {
-            // px[0] = py[0] * p * abs(tx[0])^(p-1) + py[1] * p * (p-1) * abs(tx[0])^(p-2) * sign(tx[0]) * tx[1]
-            px[0]  = py[1] * tx[1] * signpow(tx[0], p - 2.0);
-            px[0] *= p - 1.0;
-            px[0] += py[0] * pow(abs(tx[0]), p - 1.0);
-            px[0] *= p;
-            // px[1] = py[1] * p * abs(tx[0])^(p-1)
-            px[1]  = py[1] * pow(abs(tx[0]), p - 1.0);
-            px[1] *= p;
-         }
-         else
-         {
-            // px[0] = py[0] * 2.0 * abs(tx[0]) + py[1] * 2.0 * sign(tx[0]) * tx[1]
-            px[0]  = py[1] * tx[1] * CppAD::sign(tx[0]);
-            px[0] += py[0] * abs(tx[0]);
-            px[0] *= 2.0;
-            // px[1] = py[1] * 2.0 * abs(tx[0])
-            px[1]  = py[1] * abs(tx[0]);
-            px[1] *= 2.0;
-         }
-         break;
-
-      default:
-         return false;
+   default:
+      return false;
    }
 
    return true;
@@ -967,7 +975,7 @@ CPPAD_USER_ATOMIC(
    for_jac_sparse_signpower,
    rev_jac_sparse_signpower,
    rev_hes_sparse_signpower
-)
+   )
 
 /** tell CppAD about our implementation for signpower for x interval-valued */
 CPPAD_USER_ATOMIC(
@@ -979,7 +987,7 @@ CPPAD_USER_ATOMIC(
    for_jac_sparse_signpower,
    rev_jac_sparse_signpower,
    rev_hes_sparse_signpower
-)
+   )
 
 template<class Type>
 void evalSignPower(
@@ -1011,7 +1019,7 @@ void evalSignPower(
    CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
       "evalSignPower()",
       "Error: SignPower not implemented for this value type"
-   );
+      );
 }
 
 /** specialization of signpower evaluation for real numbers
@@ -1050,7 +1058,7 @@ void evalMin(
    CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
       "evalMin()",
       "Error: Min not implemented for this value type"
-   );
+      );
 }
 
 /** specialization of minimum evaluation for real numbers
@@ -1079,7 +1087,7 @@ void evalMax(
    CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
       "evalMax()",
       "Error: Max not implemented for this value type"
-   );
+      );
 }
 
 /** specialization of maximum evaluation for real numbers
@@ -1202,7 +1210,7 @@ SCIP_RETCODE eval(
    )
 {
    Type* buf;
-   
+
    assert(expr != NULL);
 
    /* todo use SCIP_MAXCHILD_ESTIMATE as in expression.c */
@@ -1219,251 +1227,251 @@ SCIP_RETCODE eval(
 
    switch(SCIPexprGetOperator(expr))
    {
-      case SCIP_EXPR_VARIDX:
-         assert(SCIPexprGetOpIndex(expr) < (int)x.size());
-         val = x[SCIPexprGetOpIndex(expr)];
-         break;
+   case SCIP_EXPR_VARIDX:
+      assert(SCIPexprGetOpIndex(expr) < (int)x.size());
+      val = x[SCIPexprGetOpIndex(expr)];
+      break;
 
-      case SCIP_EXPR_CONST:
-         val = SCIPexprGetOpReal(expr);
-         break;
+   case SCIP_EXPR_CONST:
+      val = SCIPexprGetOpReal(expr);
+      break;
 
-      case SCIP_EXPR_PARAM:
-         assert(param != NULL);
-         val = param[SCIPexprGetOpIndex(expr)];
-         break;
+   case SCIP_EXPR_PARAM:
+      assert(param != NULL);
+      val = param[SCIPexprGetOpIndex(expr)];
+      break;
 
-      case SCIP_EXPR_PLUS:
-         val = buf[0] + buf[1];
-         break;
+   case SCIP_EXPR_PLUS:
+      val = buf[0] + buf[1];
+      break;
 
-      case SCIP_EXPR_MINUS:
-         val = buf[0] - buf[1];
-         break;
+   case SCIP_EXPR_MINUS:
+      val = buf[0] - buf[1];
+      break;
 
-      case SCIP_EXPR_MUL:
-         val = buf[0] * buf[1];
-         break;
+   case SCIP_EXPR_MUL:
+      val = buf[0] * buf[1];
+      break;
 
-      case SCIP_EXPR_DIV:
-         val = buf[0] / buf[1];
-         break;
+   case SCIP_EXPR_DIV:
+      val = buf[0] / buf[1];
+      break;
 
-      case SCIP_EXPR_SQUARE:
-         evalIntPower(val, buf[0], 2);
-         break;
+   case SCIP_EXPR_SQUARE:
+      evalIntPower(val, buf[0], 2);
+      break;
 
-      case SCIP_EXPR_SQRT:
-         evalSqrt(val, buf[0]);
-         break;
+   case SCIP_EXPR_SQRT:
+      evalSqrt(val, buf[0]);
+      break;
 
-      case SCIP_EXPR_REALPOWER:
-         val = pow(buf[0], SCIPexprGetRealPowerExponent(expr));
-         break;
+   case SCIP_EXPR_REALPOWER:
+      val = pow(buf[0], SCIPexprGetRealPowerExponent(expr));
+      break;
 
-      case SCIP_EXPR_INTPOWER:
-         evalIntPower(val, buf[0], SCIPexprGetIntPowerExponent(expr));
-         break;
+   case SCIP_EXPR_INTPOWER:
+      evalIntPower(val, buf[0], SCIPexprGetIntPowerExponent(expr));
+      break;
 
-      case SCIP_EXPR_SIGNPOWER:
-         evalSignPower(val, buf[0], expr);
-         break;
+   case SCIP_EXPR_SIGNPOWER:
+      evalSignPower(val, buf[0], expr);
+      break;
 
-      case SCIP_EXPR_EXP:
-         val = exp(buf[0]);
-         break;
+   case SCIP_EXPR_EXP:
+      val = exp(buf[0]);
+      break;
 
-      case SCIP_EXPR_LOG:
-         val = log(buf[0]);
-         break;
+   case SCIP_EXPR_LOG:
+      val = log(buf[0]);
+      break;
 
-      case SCIP_EXPR_SIN:
-         val = sin(buf[0]);
-         break;
+   case SCIP_EXPR_SIN:
+      val = sin(buf[0]);
+      break;
 
-      case SCIP_EXPR_COS:
-         val = cos(buf[0]);
-         break;
+   case SCIP_EXPR_COS:
+      val = cos(buf[0]);
+      break;
 
-      case SCIP_EXPR_TAN:
-         val = tan(buf[0]);
-         break;
+   case SCIP_EXPR_TAN:
+      val = tan(buf[0]);
+      break;
 #if 0 /* these operators are currently disabled */
-      case SCIP_EXPR_ERF:
-         val = erf(buf[0]);
-         break;
+   case SCIP_EXPR_ERF:
+      val = erf(buf[0]);
+      break;
 
-      case SCIP_EXPR_ERFI:
-         return SCIP_ERROR;
+   case SCIP_EXPR_ERFI:
+      return SCIP_ERROR;
 #endif
-      case SCIP_EXPR_MIN:
-         evalMin(val, buf[0], buf[1]);
-         break;
+   case SCIP_EXPR_MIN:
+      evalMin(val, buf[0], buf[1]);
+      break;
 
-      case SCIP_EXPR_MAX:
-         evalMax(val, buf[0], buf[1]);
-         break;
+   case SCIP_EXPR_MAX:
+      evalMax(val, buf[0], buf[1]);
+      break;
 
-      case SCIP_EXPR_ABS:
-         evalAbs(val, buf[0]);
-         break;
+   case SCIP_EXPR_ABS:
+      evalAbs(val, buf[0]);
+      break;
 
-      case SCIP_EXPR_SIGN:
-         val = sign(buf[0]);
-         break;
+   case SCIP_EXPR_SIGN:
+      val = sign(buf[0]);
+      break;
 
-      case SCIP_EXPR_SUM:
-         val = 0.0;
-         for (int i = 0; i < SCIPexprGetNChildren(expr); ++i)
-            val += buf[i];
-         break;
+   case SCIP_EXPR_SUM:
+      val = 0.0;
+      for (int i = 0; i < SCIPexprGetNChildren(expr); ++i)
+         val += buf[i];
+      break;
 
-      case SCIP_EXPR_PRODUCT:
-         val = 1.0;
-         for (int i = 0; i < SCIPexprGetNChildren(expr); ++i)
-            val *= buf[i];
-         break;
+   case SCIP_EXPR_PRODUCT:
+      val = 1.0;
+      for (int i = 0; i < SCIPexprGetNChildren(expr); ++i)
+         val *= buf[i];
+      break;
 
-      case SCIP_EXPR_LINEAR:
+   case SCIP_EXPR_LINEAR:
+   {
+      SCIP_Real* coefs;
+
+      coefs = SCIPexprGetLinearCoefs(expr);
+      assert(coefs != NULL || SCIPexprGetNChildren(expr) == 0);
+
+      val = SCIPexprGetLinearConstant(expr);
+      for (int i = 0; i < SCIPexprGetNChildren(expr); ++i)
+         val += coefs[i] * buf[i];
+      break;
+   }
+
+   case SCIP_EXPR_QUADRATIC:
+   {
+      SCIP_Real* lincoefs;
+      SCIP_QUADELEM* quadelems;
+      int nquadelems;
+      SCIP_Real sqrcoef;
+      Type lincoef;
+      vector<Type> in(1);
+      vector<Type> out(1);
+
+      lincoefs   = SCIPexprGetQuadLinearCoefs(expr);
+      nquadelems = SCIPexprGetNQuadElements(expr);
+      quadelems  = SCIPexprGetQuadElements(expr);
+      assert(quadelems != NULL || nquadelems == 0);
+
+      SCIPexprSortQuadElems(expr);
+
+      val = SCIPexprGetQuadConstant(expr);
+
+      /* for each argument, we collect it's linear index from lincoefs, it's square coefficients and all factors from bilinear terms
+       * then we compute the interval sqrcoef*x^2 + lincoef*x and add it to result */
+      int i = 0;
+      for( int argidx = 0; argidx < SCIPexprGetNChildren(expr); ++argidx )
       {
-         SCIP_Real* coefs;
-
-         coefs = SCIPexprGetLinearCoefs(expr);
-         assert(coefs != NULL || SCIPexprGetNChildren(expr) == 0);
-
-         val = SCIPexprGetLinearConstant(expr);
-         for (int i = 0; i < SCIPexprGetNChildren(expr); ++i)
-            val += coefs[i] * buf[i];
-         break;
-      }
-      
-      case SCIP_EXPR_QUADRATIC:
-      {
-         SCIP_Real* lincoefs;
-         SCIP_QUADELEM* quadelems;
-         int nquadelems;
-         SCIP_Real sqrcoef;
-         Type lincoef;
-         vector<Type> in(1);
-         vector<Type> out(1);
-         
-         lincoefs   = SCIPexprGetQuadLinearCoefs(expr);
-         nquadelems = SCIPexprGetNQuadElements(expr);
-         quadelems  = SCIPexprGetQuadElements(expr);
-         assert(quadelems != NULL || nquadelems == 0);
-         
-         SCIPexprSortQuadElems(expr);
-
-         val = SCIPexprGetQuadConstant(expr);
-
-         /* for each argument, we collect it's linear index from lincoefs, it's square coefficients and all factors from bilinear terms
-          * then we compute the interval sqrcoef*x^2 + lincoef*x and add it to result */
-         int i = 0;
-         for( int argidx = 0; argidx < SCIPexprGetNChildren(expr); ++argidx )
+         if( i == nquadelems || quadelems[i].idx1 > argidx )
          {
-            if( i == nquadelems || quadelems[i].idx1 > argidx )
+            /* there are no quadratic terms with argidx in its first argument, that should be easy to handle */
+            if( lincoefs != NULL )
+               val += lincoefs[argidx] * buf[argidx];
+            continue;
+         }
+
+         sqrcoef = 0.0;
+         lincoef = lincoefs != NULL ? lincoefs[argidx] : 0.0;
+
+         assert(i < nquadelems && quadelems[i].idx1 == argidx);
+         do
+         {
+            if( quadelems[i].idx2 == argidx )
+               sqrcoef += quadelems[i].coef;
+            else
+               lincoef += quadelems[i].coef * buf[quadelems[i].idx2];
+            ++i;
+         } while( i < nquadelems && quadelems[i].idx1 == argidx );
+         assert(i == nquadelems || quadelems[i].idx1 > argidx);
+
+         /* this is not as good as what we can get from SCIPintervalQuad, but easy to implement */
+         if( sqrcoef != 0.0 )
+         {
+            in[0] = buf[argidx];
+            posintpower(2, in, out);
+            val += sqrcoef * out[0];
+         }
+
+         val += lincoef * buf[argidx];
+      }
+      assert(i == nquadelems);
+
+      break;
+   }
+
+   case SCIP_EXPR_POLYNOMIAL:
+   {
+      SCIP_EXPRDATA_MONOMIAL** monomials;
+      Type childval;
+      Type monomialval;
+      SCIP_Real exponent;
+      int nmonomials;
+      int nfactors;
+      int* childidxs;
+      SCIP_Real* exponents;
+      int i;
+      int j;
+
+      val = SCIPexprGetPolynomialConstant(expr);
+
+      nmonomials = SCIPexprGetNMonomials(expr);
+      monomials  = SCIPexprGetMonomials(expr);
+
+      for( i = 0; i < nmonomials; ++i )
+      {
+         nfactors  = SCIPexprGetMonomialNFactors(monomials[i]);
+         childidxs = SCIPexprGetMonomialChildIndices(monomials[i]);
+         exponents = SCIPexprGetMonomialExponents(monomials[i]);
+         monomialval  = SCIPexprGetMonomialCoef(monomials[i]);
+
+         for( j = 0; j < nfactors; ++j )
+         {
+            assert(childidxs[j] >= 0);
+            assert(childidxs[j] <  SCIPexprGetNChildren(expr));
+
+            childval = buf[childidxs[j]];
+            exponent = exponents[j];
+
+            /* cover some special exponents separately to avoid calling expensive pow function */
+            if( exponent == 0.0 )
+               continue;
+            if( exponent == 1.0 )
             {
-               /* there are no quadratic terms with argidx in its first argument, that should be easy to handle */
-               if( lincoefs != NULL )
-                  val += lincoefs[argidx] * buf[argidx];
+               monomialval *= childval;
                continue;
             }
-
-            sqrcoef = 0.0;
-            lincoef = lincoefs != NULL ? lincoefs[argidx] : 0.0;
-
-            assert(i < nquadelems && quadelems[i].idx1 == argidx);
-            do
+            if( (int)exponent == exponent )
             {
-               if( quadelems[i].idx2 == argidx )
-                  sqrcoef += quadelems[i].coef;
-               else
-                  lincoef += quadelems[i].coef * buf[quadelems[i].idx2];
-               ++i;
-            } while( i < nquadelems && quadelems[i].idx1 == argidx );
-            assert(i == nquadelems || quadelems[i].idx1 > argidx);
-
-            /* this is not as good as what we can get from SCIPintervalQuad, but easy to implement */
-            if( sqrcoef != 0.0 )
-            {
-               in[0] = buf[argidx];
-               posintpower(2, in, out);
-               val += sqrcoef * out[0];
+               Type tmp;
+               evalIntPower(tmp, childval, (int)exponent);
+               monomialval *= tmp;
+               continue;
             }
-
-            val += lincoef * buf[argidx];
-         }
-         assert(i == nquadelems);
-
-         break;
-      }
-
-      case SCIP_EXPR_POLYNOMIAL:
-      {
-         SCIP_EXPRDATA_MONOMIAL** monomials;
-         Type childval;
-         Type monomialval;
-         SCIP_Real exponent;
-         int nmonomials;
-         int nfactors;
-         int* childidxs;
-         SCIP_Real* exponents;
-         int i;
-         int j;
-
-         val = SCIPexprGetPolynomialConstant(expr);
-
-         nmonomials = SCIPexprGetNMonomials(expr);
-         monomials  = SCIPexprGetMonomials(expr);
-
-         for( i = 0; i < nmonomials; ++i )
-         {
-            nfactors  = SCIPexprGetMonomialNFactors(monomials[i]);
-            childidxs = SCIPexprGetMonomialChildIndices(monomials[i]);
-            exponents = SCIPexprGetMonomialExponents(monomials[i]);
-            monomialval  = SCIPexprGetMonomialCoef(monomials[i]);
-
-            for( j = 0; j < nfactors; ++j )
+            if( exponent == 0.5 )
             {
-               assert(childidxs[j] >= 0);
-               assert(childidxs[j] <  SCIPexprGetNChildren(expr));
-
-               childval = buf[childidxs[j]];
-               exponent = exponents[j];
-
-               /* cover some special exponents separately to avoid calling expensive pow function */
-               if( exponent == 0.0 )
-                  continue;
-               if( exponent == 1.0 )
-               {
-                  monomialval *= childval;
-                  continue;
-               }
-               if( (int)exponent == exponent )
-               {
-                  Type tmp;
-                  evalIntPower(tmp, childval, (int)exponent);
-                  monomialval *= tmp;
-                  continue;
-               }
-               if( exponent == 0.5 )
-               {
-                  Type tmp;
-                  evalSqrt(tmp, childval);
-                  monomialval *= tmp;
-                  continue;
-               }
-               monomialval *= pow(childval, exponent);
+               Type tmp;
+               evalSqrt(tmp, childval);
+               monomialval *= tmp;
+               continue;
             }
-
-            val += monomialval;
+            monomialval *= pow(childval, exponent);
          }
 
-         break;
+         val += monomialval;
       }
 
-      default:
-         return SCIP_ERROR;
+      break;
+   }
+
+   default:
+      return SCIP_ERROR;
    }
 
    BMSfreeMemoryArrayNull(&buf);
@@ -1487,15 +1495,15 @@ bool needAlwaysRetape(SCIP_EXPR* expr)
 
    switch( SCIPexprGetOperator(expr) )
    {
-      case SCIP_EXPR_MIN:
-      case SCIP_EXPR_MAX:
-      case SCIP_EXPR_ABS:
+   case SCIP_EXPR_MIN:
+   case SCIP_EXPR_MAX:
+   case SCIP_EXPR_ABS:
 #ifndef CPPAD_USER_ATOMIC
-      case SCIP_EXPR_SIGNPOWER:
+   case SCIP_EXPR_SIGNPOWER:
 #endif
-         return true;
+      return true;
 
-      default: ;
+   default: ;
    }
 
    return false;
@@ -1514,7 +1522,7 @@ void cppaderrorcallback(
    const char*        file,                  /**< file where error occured */
    const char*        exp,                   /**< error condition */
    const char*        msg                    /**< error message */
-)
+   )
 {
    SCIPdebugMessage("ignore CppAD error from %sknown source %s:%d: msg: %s exp: %s\n", known ? "" : "un", file, line, msg, exp);
 }
@@ -1548,14 +1556,14 @@ SCIP_EXPRINTCAPABILITY SCIPexprintGetCapability(
 SCIP_RETCODE SCIPexprintCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_EXPRINT**        exprint             /**< buffer to store pointer to expression interpreter */
-)
+   )
 {
    assert(blkmem  != NULL);
    assert(exprint != NULL);
-   
+
    if( BMSallocMemory(exprint) == NULL )
       return SCIP_NOMEMORY;
-   
+
    (*exprint)->blkmem = blkmem;
 
    return SCIP_OKAY;
@@ -1564,11 +1572,11 @@ SCIP_RETCODE SCIPexprintCreate(
 /** frees an expression interpreter object */
 SCIP_RETCODE SCIPexprintFree(
    SCIP_EXPRINT**        exprint             /**< expression interpreter that should be freed */
-)
+   )
 {
    assert( exprint != NULL);
    assert(*exprint != NULL);
-   
+
    BMSfreeMemory(exprint);
 
    return SCIP_OKAY;
@@ -1578,10 +1586,10 @@ SCIP_RETCODE SCIPexprintFree(
 SCIP_RETCODE SCIPexprintCompile(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPRTREE*        tree                /**< expression tree */
-)
+   )
 {
    assert(tree    != NULL);
-   
+
    SCIP_EXPRINTDATA* data = SCIPexprtreeGetInterpreterData(tree);
    if (!data)
    {
@@ -1612,7 +1620,7 @@ SCIP_RETCODE SCIPexprintCompile(
    }
 
    SCIP_EXPR* root = SCIPexprtreeGetRoot(tree);
-   
+
    SCIP_CALL( SCIPexprCopyDeep(exprint->blkmem, &data->root, root) );
 
    data->need_retape_always = needAlwaysRetape(SCIPexprtreeGetRoot(tree));
@@ -1625,7 +1633,7 @@ SCIP_RETCODE SCIPexprintCompile(
 /** frees interpreter data */
 SCIP_RETCODE SCIPexprintFreeData(
    SCIP_EXPRINTDATA**    interpreterdata     /**< interpreter data that should freed */
-)
+   )
 {
    assert( interpreterdata != NULL);
    assert(*interpreterdata != NULL);
@@ -1645,7 +1653,7 @@ SCIP_RETCODE SCIPexprintFreeData(
 SCIP_RETCODE SCIPexprintNewParametrization(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPRTREE*        tree                /**< expression tree */
-)
+   )
 {
    assert(exprint != NULL);
    assert(tree    != NULL);
@@ -1656,7 +1664,7 @@ SCIP_RETCODE SCIPexprintNewParametrization(
       data->need_retape     = true;
       data->int_need_retape = true;
    }
-	 
+
    return SCIP_OKAY;
 }
 
@@ -1666,7 +1674,7 @@ SCIP_RETCODE SCIPexprintEval(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    SCIP_Real*            varvals,            /**< values of variables */
    SCIP_Real*            val                 /**< buffer to store value */
-)
+   )
 {
    SCIP_EXPRINTDATA* data;
 
@@ -1730,7 +1738,7 @@ SCIP_RETCODE SCIPexprintEvalInt(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        varvals,            /**< interval values of variables */
    SCIP_INTERVAL*        val                 /**< buffer to store interval value of expression */
-)
+   )
 {
    SCIP_EXPRINTDATA* data;
 
@@ -1791,7 +1799,7 @@ SCIP_RETCODE SCIPexprintGrad(
    SCIP_Bool             new_varvals,        /**< have variable values changed since last call to a point evaluation routine? */
    SCIP_Real*            val,                /**< buffer to store expression value */
    SCIP_Real*            gradient            /**< buffer to store expression gradient, need to have length at least SCIPexprtreeGetNVars(tree) */
-)
+   )
 {
    assert(exprint  != NULL);
    assert(tree     != NULL);
@@ -1834,7 +1842,7 @@ SCIP_RETCODE SCIPexprintGradInt(
    SCIP_Bool             new_varvals,        /**< have variable interval values changed since last call to an interval evaluation routine? */
    SCIP_INTERVAL*        val,                /**< buffer to store expression interval value */
    SCIP_INTERVAL*        gradient            /**< buffer to store expression interval gradient, need to have length at least SCIPexprtreeGetNVars(tree) */
-)
+   )
 {
    assert(exprint  != NULL);
    assert(tree     != NULL);
@@ -1875,7 +1883,7 @@ SCIP_RETCODE SCIPexprintHessianSparsityDense(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    SCIP_Real*            varvals,            /**< values of variables */
    SCIP_Bool*            sparsity            /**< buffer to store sparsity pattern of Hessian, sparsity[i+n*j] indicates whether entry (i,j) is nonzero in the hessian */
-)
+   )
 {
    assert(exprint  != NULL);
    assert(tree     != NULL);
@@ -1942,7 +1950,7 @@ SCIP_RETCODE SCIPexprintHessianDense(
    SCIP_Bool             new_varvals,        /**< have variable values changed since last call to an evaluation routine? */
    SCIP_Real*            val,                /**< buffer to store function value */
    SCIP_Real*            hessian             /**< buffer to store hessian values, need to have size at least n*n */
-)
+   )
 {
    assert(exprint != NULL);
    assert(tree    != NULL);

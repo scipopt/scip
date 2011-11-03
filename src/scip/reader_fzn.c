@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_fzn.c
- * @ingroup FILEREADERS 
  * @brief  FlatZinc file reader
  * @author Timo Berthold
  * @author Stefan Heinz
@@ -1610,6 +1609,7 @@ SCIP_RETCODE parseName(
       else if( equalTokens(fzninput->token, "output_array") && output != NULL)
       {
          (*output) = TRUE;
+         assert(info != NULL);
          SCIP_CALL( parseOutputDimensioninfo(scip, fzninput, info) );
       }
          
@@ -4824,7 +4824,7 @@ SCIP_DECL_READERWRITE(readerWriteFzn)
 
          varname = SCIPvarGetName(vars[i]);
          length = strlen(varname);
-         legal = legal && isIdentifier(varname); 
+         legal = isIdentifier(varname);
          if( !legal )
          {
             SCIPwarningMessage("The name of variable <%d>: \"%s\" is not conform to the fzn standard.\n", i, varname);
@@ -4832,7 +4832,7 @@ SCIP_DECL_READERWRITE(readerWriteFzn)
          }
 
          if( length >= 7 )
-            legal = legal && (strncmp(&varname[length-6],"_float",6) != 0);
+            legal = (strncmp(&varname[length-6],"_float",6) != 0);
          if( !legal )
          {
             SCIPwarningMessage("The name of variable <%d>: \"%s\" ends with \"_float\" which is not supported.\n", i, varname);

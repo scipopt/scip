@@ -14,9 +14,19 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_logicor.h
- * @brief  constraint handler for logicor constraints
- *         (equivalent to set covering, but algorithms are suited for depth first search)
+ * @ingroup CONSHDLRS
+ * @brief  Constraint handler for logicor constraints \f$1^T x \ge 1\f$
+ *         (equivalent to set covering, but algorithms are suited for depth first search).
  * @author Tobias Achterberg
+ * @author Michael Winkler
+ *
+ * This constraint handler handles a special type of linear constraints, namely
+ * logic or constraints. These are equivalent to set covering constraints, but
+ * are handled by special algorithms which are better suited for depth first search.
+ * For a set of binary variables \f$x_i, i=1,\dots,n\f$, a logic or constraint has the form
+ * \f[
+ *   \sum_{i=1}^n x_i \ge 1.
+ * \f]
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

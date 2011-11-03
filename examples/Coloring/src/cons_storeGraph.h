@@ -16,6 +16,44 @@
 /**@file   cons_storeGraph.h
  * @brief  constraint handler for storing the graph at each node of the tree
  * @author Gerald Gamrath
+ *
+ * This file implements the constraints that are used for the branching in the coloring algorithm.
+ *
+ * For each node in the branch-and-bound tree, a constraint of this type is created, which stores
+ * all restrictions related to that branch-and-bound node.
+ *
+ * First of all, it stores the type of the constraint ("same" or "differ", the root has type root)
+ * and the two nodes in the graph on which this restriction is applied.  When the branch-and-bound
+ * node corresponding to the constraint is examined for the first time, the constraint creates a
+ * graph that takes into account all the restrictions, which are active at this node.
+ * At the root, this is the original (preprocessed) graph.  At any other branch-and-bound node, it
+ * takes the graph of the constraint related to the branch-and-bound father of the current node and
+ * modifies it so that all restrictions up to this node are respected.  Since the graph in the
+ * branch-and-bound father respects all restrictions on the path to that node, only the last
+ * requirement, the one saved at the current branch-and-bound node, must be added.
+ * This is done as follows: Adding a DIFFER(v,w) constraint is easy, since it suffices to add
+ * an edge between v and w. For a SAME(v,w) constraint, the original idea is to collapse the nodes v
+ * and w into one single vertex. Since this is not possible in the tclique-graph data structure, we
+ * introduce new edges in the graph, so that v and w have the same neighborhood.  Hence, in the
+ * pricing routine, each new stable set will either contain both nodes or none of them, since we
+ * create (inclusion-) maximal sets.
+ *
+ * This does of course not hold for sets created in a higher level of the branch-and-bound tree or
+ * in another subtree. In order to forbid all of these sets, which do not fulfill the current
+ * restrictions, a propagation is started when the node is entered the first time and repeated
+ * later, if the node is reentered after the creation of new variables in another subtree. The
+ * propagation simply fixes to 0 all variables representing a stable set that does not
+ * fulfill the restriction at the current node.
+ *
+ * The information about all fusions of nodes (caused by the SAME() operation) is stored, so that the nodes
+ * constituting a union can be accessed easily. Each union has a representative and a set of nodes, whereas
+ * each node knows the representative of the union it belongs to. At the beginning, each node forms its own
+ * union and therefore each node also represents this union, consisting of only this node.  Later on, some
+ * nodes represent unions of several nodes, while other nodes are part of a union which they do not represent,
+ * so they have another node as representative. The representatives of the nodes are returned by the methods
+ * COLORconsGetRepresentative() / COLORconsGetRepresentatives(), the union represented by a node is returned
+ * by COLORconsGetUnion(), the array of unions, indexed by the representing node, is returned by
+ * COLORconsGetUnions().
  */
 
 #ifndef CONSSTOREGRAPH_H
@@ -114,7 +152,7 @@ SCIP_RETCODE COLORcreateConsStoreGraph(
    int                   type,               /**< type of the constraint: ROOT for root-constraint, else SAME or DIFFER */
    int                   node1,              /**< the first node of the constraint or -1 if root-constraint */
    int                   node2,              /**< the second node of the constraint or -1 if root-constraint */
-   SCIP_NODE*            stickingnode        /**< the B&B-tree node at which the constraint will be sticking */     
+   SCIP_NODE*            stickingnode        /**< the B&B-tree node at which the constraint will be sticking */
    );
 
 

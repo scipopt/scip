@@ -31,7 +31,16 @@
 namespace scip
 {
 
-/** C++ wrapper object for dialog */
+/**
+ *  @brief C++ wrapper for dialogs
+ *
+ *  This class defines the interface for dialogs implemented in C++. Note that there is a pure virtual function (this
+ *  function has to be implemented). This function is: scip_exec().
+ *
+ * - \ref DIALOG "Instructions for implementing a dialog"
+ * - \ref DIALOGS "List of available dialogs"
+ *  - \ref type_dialog.h "Corresponding C interface"
+ */
 class ObjDialog : public ObjCloneable
 {
 public:

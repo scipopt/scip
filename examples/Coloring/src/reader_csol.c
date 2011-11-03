@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_csol.c
- * @brief  CSOL file writer
+ * @brief  file reader and writer for vertex coloring solutions
  * @author Gerald Gamrath
  *
  * This file implements the reader and writer for coloring solution files.
@@ -22,7 +22,7 @@
  * These files have the following structure:@n The first line contains the name of the problem, the
  * number of colors used in the solution, and - optional - the name of the algorithm that computed
  * this solution.  The second line lists the colors of the nodes, separated by spaces. It is sorted
- * increasingly by the node indices. The number for the colors start with 0.
+ * increasingly by the node indices. The numbers for the colors start with 0.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -42,18 +42,6 @@
 #define READER_EXTENSION        "csol"
 
 #define COL_MAX_LINELEN 65535
-
-
-/*
- * Data structures
- */
-
-
-/** data for csol reader */
-struct SCIP_ReaderData
-{
-};
-
 
 
 
@@ -281,7 +269,8 @@ SCIP_DECL_READERREAD(readerReadCsol)
 
       SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0, 1, 1, SCIP_VARTYPE_BINARY, 
             TRUE, FALSE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setindex) );
-      COLORprobAddVarForStableSet(scip, setindex, var);
+
+      SCIP_CALL( COLORprobAddVarForStableSet(scip, setindex, var) );
       SCIP_CALL( SCIPaddVar(scip, var) );
       SCIP_CALL( SCIPchgVarUbLazy(scip, var, 1.0) );
 

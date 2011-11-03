@@ -944,7 +944,7 @@ void reconvertSides(
  * Miscellaneous Methods
  */
 
-static char grbname[SCIP_MAXSTRLEN];
+static char grbname[100];
 
 /**@name Miscellaneous Methods */
 /**@{ */
@@ -959,7 +959,7 @@ const char* SCIPlpiGetSolverName(
    int technical;
 
    GRBversion(&major, &minor, &technical);
-   snprintf(grbname, SCIP_MAXSTRLEN, "Gurobi %d.%d.%d", major, minor, technical);
+   sprintf(grbname, "Gurobi %d.%d.%d", major, minor, technical);
    return grbname;
 }
 
@@ -1081,6 +1081,7 @@ SCIP_RETCODE SCIPlpiFree(
    if( numlp == 0 )
    {
       GRBfreeenv(grbenv);
+      grbenv = NULL;
    }
 
    return SCIP_OKAY;
@@ -2315,7 +2316,7 @@ SCIP_RETCODE SCIPlpiStartStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   // currently do nothing
+   /* currently do nothing */
    return SCIP_OKAY;
 }
 
@@ -2324,7 +2325,7 @@ SCIP_RETCODE SCIPlpiEndStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   // currently do nothing
+   /* currently do nothing */
    return SCIP_OKAY;
 }
 
@@ -3524,6 +3525,19 @@ SCIP_RETCODE SCIPlpiSetState(
 
    /* load basis information into Gurobi */
    SCIP_CALL( setBase(lpi) );
+
+   return SCIP_OKAY;
+}
+
+/** clears current LPi state (like basis information) of the solver */
+SCIP_RETCODE SCIPlpiClearState(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert(lpi != NULL);
+
+   /**@todo implement SCIPlpiClearState() for Gurobi */
+   SCIPwarningMessage("Gurobi interface does not implement SCIPlpiClearState()\n");
 
    return SCIP_OKAY;
 }

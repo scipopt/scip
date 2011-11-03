@@ -423,8 +423,6 @@ void unsetFastmipClpParameters(
  * Miscellaneous Methods
  */
 
-static char clpname[SCIP_MAXSTRLEN];
-
 /**@name Miscellaneous Methods */
 /**@{ */
 
@@ -434,8 +432,7 @@ const char* SCIPlpiGetSolverName(
    )
 {
    // Currently Clp has no function to get version, so we hard code it ...
-   snprintf(clpname, SCIP_MAXSTRLEN, "Clp "CLP_VERSION"");
-   return clpname;
+   return "Clp "CLP_VERSION;
 }
 
 /** gets description of LP solver (developer, webpage, ...) */
@@ -2868,8 +2865,6 @@ SCIP_RETCODE SCIPlpiSetBase(
 
    assert(lpi != 0);
    assert(lpi->clp != 0);
-   assert(cstat != 0);
-   assert(rstat != 0);
 
    invalidateSolution(lpi);
 
@@ -2880,6 +2875,8 @@ SCIP_RETCODE SCIPlpiSetBase(
 
    const double* lhs = clp->getRowLower();
    const double* rhs = clp->getRowUpper();
+
+   assert( rstat != 0 || clp->numberRows() == 0 );
    for( int i = 0; i < clp->numberRows(); ++i )
    {
       int status = rstat[i];
@@ -2915,6 +2912,8 @@ SCIP_RETCODE SCIPlpiSetBase(
 
    const double* lb = clp->getColLower();
    const double* ub = clp->getColUpper();
+
+   assert( cstat != 0 || clp->numberColumns() == 0 );
    for( int j = 0; j < clp->numberColumns(); ++j )
    {
       int status = cstat[j];
@@ -3191,6 +3190,22 @@ SCIP_RETCODE SCIPlpiSetState(
 
    /* load basis information */
    SCIP_CALL( SCIPlpiSetBase(lpi, lpi->cstat, lpi->rstat) );
+
+   return SCIP_OKAY;
+}
+
+/** clears current LPi state (like basis information) of the solver */
+SCIP_RETCODE SCIPlpiClearState(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiClearState()\n");
+
+   assert(lpi != 0);
+   assert(lpi->clp != 0);
+
+   lpi->clp->allSlackBasis(true);
+   lpi->validFactorization = false;
 
    return SCIP_OKAY;
 }

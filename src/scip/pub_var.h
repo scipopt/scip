@@ -397,6 +397,26 @@ SCIP_Bool SCIPvarIsDeleted(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
+/** marks the variable to be deletable, i.e., it may be deleted completely from the problem;
+ *  method can only be called before the variable is added to the problem by SCIPaddVar() or SCIPaddPricedVar()
+ */
+extern
+void SCIPvarMarkDeletable(
+   SCIP_VAR*             var
+   );
+
+/** marks the variable to be not deletable from the problem */
+extern
+void SCIPvarMarkNotDeletable(
+   SCIP_VAR*             var
+   );
+
+/** returns whether variable is allowed to be deleted completely from the problem */
+extern
+SCIP_Bool SCIPvarIsDeletable(
+   SCIP_VAR*             var
+   );
+
 /** returns whether variable is an active (neither fixed nor aggregated) variable */
 extern
 SCIP_Bool SCIPvarIsActive(
@@ -774,6 +794,9 @@ int SCIPvarGetNBdchgInfosUb(
 #define SCIPvarIsInitial(var)           (var)->initial
 #define SCIPvarIsRemovable(var)         (var)->removable
 #define SCIPvarIsDeleted(var)           (var)->deleted
+#define SCIPvarMarkDeletable(var)       (var)->deletable = TRUE
+#define SCIPvarMarkNotDeletable(var)    (var)->deletable = FALSE
+#define SCIPvarIsDeletable(var)         (var)->deletable
 #define SCIPvarIsActive(var)            ((var)->probindex >= 0)
 #define SCIPvarGetIndex(var)            (var)->index
 #define SCIPvarGetProbindex(var)        (var)->probindex

@@ -14,10 +14,19 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_and.c
- * @ingroup CONSHDLRS 
- * @brief  constraint handler for and constraints
+ * @brief  Constraint handler for "and" constraints,  \f$r = x_1 \wedge x_2 \wedge \dots  \wedge x_n\f$
  * @author Tobias Achterberg
  * @author Stefan Heinz
+ * @author Michael Winkler
+ *
+ * This constraint handler deals with "and" constraint. These are constraint of the form:
+ *
+ * \f[
+ *    r = x_1 \wedge x_2 \wedge \dots  \wedge x_n
+ * \f]
+ *
+ * where \f$x_i\f$ is a binary variable for all \f$i\f$. Hence, \f$r\f$ is also of binary type. The variable \f$r\f$ is
+ * called resultant and the \f$x\f$'s operators.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -404,6 +413,8 @@ SCIP_RETCODE consdataCreate(
                                               */
    )
 {
+   int v;
+
    assert(consdata != NULL);
    assert(nvars == 0 || vars != NULL);
    assert(resvar != NULL);
@@ -437,6 +448,15 @@ SCIP_RETCODE consdataCreate(
       /* catch needed events on variables */
       SCIP_CALL( consdataCatchEvents(scip, *consdata, eventhdlr) );
    }
+
+   /* capture vars */
+   SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->resvar) );
+   for( v = 0; v < (*consdata)->nvars; v++ )
+   {
+      assert((*consdata)->vars[v] != NULL);
+      SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[v]) );
+   }
+
 
    return SCIP_OKAY;
 }
@@ -474,6 +494,8 @@ SCIP_RETCODE consdataFree(
    SCIP_EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
    )
 {
+   int v;
+
    assert(consdata != NULL);
    assert(*consdata != NULL);
 
@@ -494,6 +516,15 @@ SCIP_RETCODE consdataFree(
    /* release and free the rows */
    SCIP_CALL( consdataFreeRows(scip, *consdata) );
 
+   /* release vars */
+   for( v = 0; v < (*consdata)->nvars; v++ )
+   {
+      assert((*consdata)->vars[v] != NULL);
+      SCIP_CALL( SCIPreleaseVar(scip, &((*consdata)->vars[v])) );
+   }
+   SCIP_CALL( SCIPreleaseVar(scip, &((*consdata)->resvar)) );
+
+
    SCIPfreeBlockMemoryArray(scip, &(*consdata)->vars, (*consdata)->varssize);
    SCIPfreeBlockMemory(scip, consdata);
  
@@ -511,13 +542,13 @@ SCIP_RETCODE consdataPrint(
    assert(consdata != NULL);
 
    /* print resultant */
-   SCIP_CALL( SCIPwriteVarName(scip, file, consdata->resvar, FALSE) );
+   SCIP_CALL( SCIPwriteVarName(scip, file, consdata->resvar, TRUE) );
 
    /* start the variable list */
    SCIPinfoMessage(scip, file, " == and(");
 
    /* print variable list */
-   SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars, FALSE, ',') );
+   SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars, TRUE, ',') );
 
    /* close the variable list */
    SCIPinfoMessage(scip, file, ")");
@@ -560,6 +591,9 @@ SCIP_RETCODE addCoef(
    consdata->sorted = (consdata->nvars == 1);
    consdata->changed = TRUE;
    consdata->merged = FALSE;
+
+   /* capture variable */
+   SCIP_CALL( SCIPcaptureVar(scip, var) );
 
    /* if we are in transformed problem, catch the variable's events */
    if( transformed )
@@ -624,6 +658,9 @@ SCIP_RETCODE delCoefPos(
    }
    assert(pos != consdata->watchedvar1);
    assert(pos != consdata->watchedvar2);
+
+   /* release variable */
+   SCIP_CALL( SCIPreleaseVar(scip, &(consdata->vars[pos])) );
 
    /* move the last variable to the free slot */
    consdata->vars[pos] = consdata->vars[consdata->nvars-1];
@@ -1042,8 +1079,8 @@ SCIP_RETCODE analyzeConflictOne(
 {
    SCIP_CONSDATA* consdata;
 
-   /* conflict analysis can only be applied in solving stage */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   /* conflict analysis can only be applied in solving stage and if it turned on */
+   if( (SCIPgetStage(scip) != SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);
@@ -1075,8 +1112,8 @@ SCIP_RETCODE analyzeConflictZero(
 
    assert(!SCIPconsIsModifiable(cons));
 
-   /* conflict analysis can only be applied in solving stage */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   /* conflict analysis can only be applied in solving stage and if it is applicable */
+   if( (SCIPgetStage(scip) != SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);
@@ -1805,6 +1842,8 @@ SCIP_RETCODE detectRedundantConstraints(
       if( cons1 != NULL )
       {
          SCIP_CONSDATA* consdata1;
+         SCIP_Bool redundant;
+
 
          assert(SCIPconsIsActive(cons1));
          assert(!SCIPconsIsModifiable(cons1));
@@ -1819,27 +1858,33 @@ SCIP_RETCODE detectRedundantConstraints(
 
          /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
          SCIP_CALL( updateFlags(scip, cons1, cons0) ); 
+         redundant = FALSE;
 
          if( consdata0->resvar != consdata1->resvar )
          {
             SCIP_Bool aggregated;
-            SCIP_Bool redundant;
             
             assert(SCIPvarCompare(consdata0->resvar, consdata1->resvar) != 0); 
          
             /* aggregate resultants */
             SCIP_CALL( SCIPaggregateVars(scip, consdata0->resvar, consdata1->resvar, 1.0, -1.0, 0.0,
                   cutoff, &redundant, &aggregated) );
-            assert(redundant);
+            assert(redundant || SCIPdoNotAggr(scip));
+
             if( aggregated )
                ++(*naggrvars);
             if( *cutoff )
                goto TERMINATE;
          }
+         else 
+            redundant = TRUE;
 
          /* delete consdel */
-         SCIP_CALL( SCIPdelCons(scip, cons0) );
-         (*ndelconss)++;
+         if( redundant )
+         {
+            SCIP_CALL( SCIPdelCons(scip, cons0) );
+            (*ndelconss)++;
+         }
 
          /* update the first changed constraint to begin the next aggregation round with */
          if( consdata0->changed && SCIPconsGetPos(cons1) < *firstchange )
@@ -1998,14 +2043,22 @@ SCIP_RETCODE preprocessConstraintPairs(
             /* aggregate resultants */
             SCIP_CALL( SCIPaggregateVars(scip, consdata0->resvar, consdata1->resvar, 1.0, -1.0, 0.0,
                   &infeasible, &redundant, &aggregated) );
-            assert(redundant);
-            if( aggregated )
-               (*naggrvars)++;
-            *cutoff = *cutoff || infeasible;
+            assert(redundant || SCIPdoNotAggr(scip));
 
-            /* delete cons1 */
-            SCIP_CALL( SCIPdelCons(scip, cons1) );
-            (*ndelconss)++;
+            if( aggregated )
+            {
+               assert(redundant);
+               (*naggrvars)++;
+            }
+            
+            if( redundant )
+            {
+               /* delete constraint */
+               SCIP_CALL( SCIPdelCons(scip, cons1) );
+               (*ndelconss)++;
+            }
+
+            *cutoff = *cutoff || infeasible;
          }
          else if( cons0superset )
          {
@@ -2127,7 +2180,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAnd)
          SCIP_CALL( SCIPdebugGetSolVal(scip, vars[c], &varval) );
          debugval = debugval && (varval > 0.5);
       }
-      SCIP_CALL( SCIPdebugAddSolVal(var, debugval ? 1.0 : 0.0) );
+      SCIP_CALL( SCIPdebugAddSolVal(scip, var, debugval ? 1.0 : 0.0) );
    }
 #endif
 
@@ -2210,7 +2263,6 @@ SCIP_DECL_CONSFREE(consFreeAnd)
 
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
 #define consExitAnd NULL
-
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
 static
@@ -2679,13 +2731,20 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
             /* aggregate variables: resultant - operand == 0 */
             SCIP_CALL( SCIPaggregateVars(scip, consdata->resvar, consdata->vars[0], 1.0, -1.0, 0.0,
                   &cutoff, &redundant, &aggregated) );
-            assert(redundant);
-            if( aggregated )
-               (*naggrvars)++;
+            assert(redundant || SCIPdoNotAggr(scip));
 
-            /* delete constraint */
-            SCIP_CALL( SCIPdelCons(scip, cons) );
-            (*ndelconss)++;
+            if( aggregated )
+            {
+               assert(redundant);
+               (*naggrvars)++;
+            }
+            
+            if( redundant )
+            {
+               /* delete constraint */
+               SCIP_CALL( SCIPdelCons(scip, cons) );
+               (*ndelconss)++;
+            }
          }
          else if( !consdata->impladded )
          {
@@ -2832,6 +2891,10 @@ SCIP_DECL_CONSLOCK(consLockAnd)
 
 /** constraint disabling notification method of constraint handler */
 #define consDisableAnd NULL
+
+
+/** variable deletion method of constraint handler */
+#define consDelvarsAnd NULL
 
 
 /** constraint display method of constraint handler */
@@ -3030,7 +3093,7 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
          consPropAnd, consPresolAnd, consRespropAnd, consLockAnd,
          consActiveAnd, consDeactiveAnd, 
          consEnableAnd, consDisableAnd,
-         consPrintAnd, consCopyAnd, consParseAnd,
+         consDelvarsAnd, consPrintAnd, consCopyAnd, consParseAnd,
          conshdlrdata) );
 
    /* add and constraint handler parameters */

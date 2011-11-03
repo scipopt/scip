@@ -14,28 +14,35 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   probdata_binpacking.c
- * @brief  problem data for binpacking problem 
+ * @brief  Problem data for binpacking problem
  * @author Timo Berthold
  * @author Stefan Heinz
+ *
+ * This file handles the main problem data used in that project. For more details see \ref PROBLEMDATA page.
  *
  * @page PROBLEMDATA Main problem data
  *
  * The problem data is accessible in all plugin. The function SCIPgetProbData() return the pointer to that structure. We
  * are using this data structure to store all the information of the binpacking problem. Since this structure is not
- * visible in the other plugins we implemented setter and getter functions to access this data. The problem date structure 
- * is shown below.
+ * visible in the other plugins we implemented setter and getter functions to access this data. The problem data structure
+ * SCIP_ProbData is shown below.
  *
  * \code
+ *  ** @brief Problem data which is accessible in all places
+ *  *
+ *  *   This problem data is used to store the input of the binpacking, all variables which are created, and all
+ *  *   constrsaints.
+ *  *
  * struct SCIP_ProbData
  * {
- *    SCIP_VAR**            vars;        
- *    SCIP_CONS**           conss;        
- *    SCIP_Longint*         weights;      
- *    int*                  ids;          
- *    int                   nvars;        
- *    int                   varssize;     
- *    int                   nitems;      
- *    SCIP_Longint          capacity;    
+ *    SCIP_VAR**            vars;         **< all exiting variables in the problem *
+ *    SCIP_CONS**           conss;        **< set partitioning constraints for each item exactly one *
+ *    SCIP_Longint*         weights;      **< array of item weights *
+ *    int*                  ids;          **< array of item ids *
+ *    int                   nvars;        **< number of generated variables *
+ *    int                   varssize;     **< size of the variable array *
+ *    int                   nitems;       **< number of items *
+ *    SCIP_Longint          capacity;     **< bin capacity *
  * };
  * \endcode
  *
@@ -61,7 +68,11 @@
 #include "scip/cons_setppc.h"
 #include "scip/scip.h"
 
-/** problem data */
+/** @brief Problem data which is accessible in all places
+ *
+ * This problem data is used to store the input of the binpacking, all variables which are created, and all
+ * constrsaints.
+ */
 struct SCIP_ProbData
 {
    SCIP_VAR**            vars;         /**< all exiting variables in the problem */

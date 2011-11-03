@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_conjunction.c
- * @ingroup CONSHDLRS 
  * @brief  constraint handler for conjunction constraints
  * @author Tobias Achterberg
  */
@@ -500,6 +499,11 @@ SCIP_DECL_CONSLOCK(consLockConjunction)
 /** constraint disabling notification method of constraint handler */
 #define consDisableConjunction NULL
 
+
+/** variable deletion method of constraint handler */
+#define consDelvarsConjunction NULL
+
+
 /** constraint display method of constraint handler */
 static
 SCIP_DECL_CONSPRINT(consPrintConjunction)
@@ -563,7 +567,7 @@ SCIP_RETCODE SCIPincludeConshdlrConjunction(
          consCheckConjunction, consPropConjunction, consPresolConjunction, consRespropConjunction, consLockConjunction,
          consActiveConjunction, consDeactiveConjunction, 
          consEnableConjunction, consDisableConjunction,
-         consPrintConjunction, consCopyConjuction, consParseConjuction,
+         consDelvarsConjunction, consPrintConjunction, consCopyConjuction, consParseConjuction,
          conshdlrdata) );
 
    return SCIP_OKAY;

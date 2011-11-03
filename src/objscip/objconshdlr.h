@@ -33,7 +33,17 @@
 namespace scip
 {
 
-/** C++ wrapper object for constraint handlers */
+/**
+ *  @brief C++ wrapper for constraint handlers
+ *
+ *  This class defines the interface for constraint handlers implemented in C++. Note that there are pure virtual
+ *  functions (these have to be implemented). These functions are: scip_trans(), scip_enfolp(), scip_enfops(),
+ *  scip_check(), and scip_lock().
+ *
+ *  - \ref CONS "Instructions for implementing a constraint handler"
+ *  - \ref CONSHDLRS "List of available constraint handlers"
+ *  - \ref type_cons.h "Corresponding C interface"
+ */
 class ObjConshdlr : public ObjProbCloneable
 {
 public:
@@ -182,6 +192,8 @@ public:
       SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
       SCIP_CONS**        conss,              /**< array of constraints in transformed problem */
       int                nconss,             /**< number of constraints in transformed problem */
+      SCIP_Bool          isunbounded,        /**< was unboundedness already detected */
+      SCIP_Bool          isinfeasible,       /**< was infeasibility already detected */
       SCIP_RESULT*       result              /**< pointer to store the result of the callback method */
       )
    {  /*lint --e{715}*/
@@ -210,6 +222,8 @@ public:
       SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
       SCIP_CONS**        conss,              /**< final array of constraints in transformed problem */
       int                nconss,             /**< final number of constraints in transformed problem */
+      SCIP_Bool          isunbounded,        /**< was unboundedness already detected */
+      SCIP_Bool          isinfeasible,       /**< was infeasibility already detected */
       SCIP_RESULT*       result              /**< pointer to store the result of the callback method */
       )
    {  /*lint --e{715}*/
@@ -711,6 +725,29 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
       SCIP_CONS*         cons                /**< the constraint that has been disabled */
+      )
+   {  /*lint --e{715}*/
+      return SCIP_OKAY;
+   }
+
+
+   /** variable deletion method of constraint handler
+    *
+    *  This method goes through all constraints of the constraint handler and deletes all variables
+    *  that were marked for deletion by SCIPdelVar().
+    *
+    *  possible return values for *result:
+    *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
+    *  - SCIP_REDUCEDDOM : at least one domain reduction was found
+    *  - SCIP_DIDNOTFIND : the propagator searched, but did not find any domain reductions
+    *  - SCIP_DIDNOTRUN  : the propagator was skipped
+    *  - SCIP_DELAYED    : the propagator was skipped, but should be called again
+    */
+   virtual SCIP_RETCODE scip_delvars(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS**        conss,              /**< array of constraints in transformed problem */
+      int                nconss              /**< number of constraints in transformed problem */
       )
    {  /*lint --e{715}*/
       return SCIP_OKAY;

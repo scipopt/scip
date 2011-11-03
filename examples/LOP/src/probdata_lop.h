@@ -27,22 +27,26 @@
 extern "C" {
 #endif
 
+/** create linear ordering problem instance */
 extern
 SCIP_RETCODE LOPcreateProb(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename            /**< name of file to read */
    );
 
+/** create linear ordering problem model */
 extern
 SCIP_RETCODE LOPgenerateModel(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** evalutate solution */
 extern
 SCIP_RETCODE LOPevalSolution(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** return the number of elements */
 extern
 int LOPgetNElements(
    SCIP*                 scip                /**< SCIP data structure */

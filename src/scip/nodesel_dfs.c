@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nodesel_dfs.c
- * @ingroup NODESELECTORS
  * @brief  node selector for depth first search
  * @author Tobias Achterberg
  */
