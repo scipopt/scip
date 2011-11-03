@@ -6439,7 +6439,7 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
 
       /* compute value of regular variables */
       sum = 0.0;
-      slackval = 1.0;
+      slackval = 0.0;
       for (v = 0; v < nlinvars; ++v)
       {
          SCIP_VAR* var;
@@ -6449,19 +6449,29 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
          else
             slackval = linvals[v];
       }
+
+      /* do nothing if slack variable does not appear */
+      if ( SCIPisFeasZero(scip, slackval) )
+         return SCIP_OKAY;
+
       assert( ! SCIPisZero(scip, slackval) );
       assert( SCIPisInfinity(scip, -SCIPgetLhsLinear(scip, lincons)) || SCIPisInfinity(scip, SCIPgetRhsLinear(scip, lincons)) );
 
       val = SCIPgetRhsLinear(scip, lincons);
       if ( ! SCIPisInfinity(scip, val) )
+      {
          sum -= val;
+         sum /= -slackval;
+      }
       else
       {
          val = SCIPgetLhsLinear(scip, lincons);
          if ( ! SCIPisInfinity(scip, -val) )
+         {
             sum = val - sum;
+            sum /= slackval;
+         }
       }
-      sum /= slackval;
 
       /* check if linear constraint w/o slack variable is violated */
       if ( SCIPisFeasPositive(scip, sum) )
