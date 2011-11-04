@@ -784,13 +784,13 @@ SCIP_RETCODE SCIPresetParams(
    );
 
 /** sets parameters to 
- *  - SCIP_PARAMSETTING_DEFAULT to use default values (see also SCIPresetParams())
- *  - SCIP_PARAMSETTING_COUNTER to get feasible and "fast" counting process
- *  - SCIP_PARAMSETTING_CPSOLVER to get CP like search (e.g. no LP relaxation)
- *  - SCIP_PARAMSETTING_EASYCIP to solve easy problems fast
- *  - SCIP_PARAMSETTING_FEASIBILITY to detect feasibility fast 
- *  - SCIP_PARAMSETTING_HARDLP to be capable to handle hard LPs
- *  - SCIP_PARAMSETTING_OPTIMALITY to prove optimality fast
+ *  - SCIP_PARAMEMPHASIS_DEFAULT to use default values (see also SCIPresetParams())
+ *  - SCIP_PARAMEMPHASIS_COUNTER to get feasible and "fast" counting process
+ *  - SCIP_PARAMEMPHASIS_CPSOLVER to get CP like search (e.g. no LP relaxation)
+ *  - SCIP_PARAMEMPHASIS_EASYCIP to solve easy problems fast
+ *  - SCIP_PARAMEMPHASIS_FEASIBILITY to detect feasibility fast 
+ *  - SCIP_PARAMEMPHASIS_HARDLP to be capable to handle hard LPs
+ *  - SCIP_PARAMEMPHASIS_OPTIMALITY to prove optimality fast
  */
 extern
 SCIP_RETCODE SCIPsetEmphasis(
