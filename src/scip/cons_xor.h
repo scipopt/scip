@@ -49,7 +49,10 @@ SCIP_RETCODE SCIPincludeConshdlrXor(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates and captures a xor constraint */
+/** creates and captures a xor constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+*/
 extern
 SCIP_RETCODE SCIPcreateConsXor(
    SCIP*                 scip,               /**< SCIP data structure */

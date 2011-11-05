@@ -2013,7 +2013,10 @@ SCIP_RETCODE SCIPincludeConshdlrOr(
    return SCIP_OKAY;
 }
 
-/** creates and captures a or constraint */
+/** creates and captures a or constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 SCIP_RETCODE SCIPcreateConsOr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */

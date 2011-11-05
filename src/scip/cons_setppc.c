@@ -4537,7 +4537,10 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
 }
 
 
-/** creates and captures a set partitioning constraint */
+/** creates and captures a set partitioning constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 SCIP_RETCODE SCIPcreateConsSetpart(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -4573,7 +4576,10 @@ SCIP_RETCODE SCIPcreateConsSetpart(
       initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode);
 }
 
-/** creates and captures a set packing constraint */
+/** creates and captures a set packing constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 SCIP_RETCODE SCIPcreateConsSetpack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -4609,7 +4615,10 @@ SCIP_RETCODE SCIPcreateConsSetpack(
       initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode);
 }
 
-/** creates and captures a set covering constraint */
+/** creates and captures a set covering constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 SCIP_RETCODE SCIPcreateConsSetcover(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */

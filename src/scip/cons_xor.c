@@ -2512,7 +2512,10 @@ SCIP_RETCODE SCIPincludeConshdlrXor(
    return SCIP_OKAY;
 }
 
-/** creates and captures a xor constraint x_0 xor ... xor x_{k-1} = rhs */
+/** creates and captures a xor constraint x_0 xor ... xor x_{k-1} = rhs
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 SCIP_RETCODE SCIPcreateConsXor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */

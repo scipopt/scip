@@ -66,7 +66,10 @@ SCIP_RETCODE SCIPincludeConshdlrBivariate(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates and captures a bivariate constraint */
+/** creates and captures a bivariate constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 extern
 SCIP_RETCODE SCIPcreateConsBivariate(
    SCIP*                 scip,               /**< SCIP data structure */

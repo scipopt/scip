@@ -6198,7 +6198,10 @@ SCIP_RETCODE SCIPincludeConshdlrAbspower(
    return SCIP_OKAY;
 }
 
-/** creates and captures a absolute power constraint */
+/** creates and captures a absolute power constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 SCIP_RETCODE SCIPcreateConsAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */

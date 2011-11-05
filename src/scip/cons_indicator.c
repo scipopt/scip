@@ -5507,8 +5507,10 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
 
 /** creates and captures an indicator constraint
  *
- *  Note: @a binvar is checked to be binary only later. This enables a change of the type in
+ *  @note @a binvar is checked to be binary only later. This enables a change of the type in
  *  procedures reading an instance.
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
 SCIP_RETCODE SCIPcreateConsIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -5684,11 +5686,13 @@ SCIP_RETCODE SCIPcreateConsIndicator(
 
 /** creates and captures an indicator constraint with given linear constraint and slack variable
  *
- *  Note: @a binvar is checked to be binary only later. This enables a change of the type in
+ *  @note @a binvar is checked to be binary only later. This enables a change of the type in
  *  procedures reading an instance.
  *
- *  Note: we assume that @a slackvar actually appears in @a lincons and we also assume that it takes
+ *  @note we assume that @a slackvar actually appears in @a lincons and we also assume that it takes
  *  the role of a slack variable!
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
 SCIP_RETCODE SCIPcreateConsIndicatorLinCons(
    SCIP*                 scip,               /**< SCIP data structure */

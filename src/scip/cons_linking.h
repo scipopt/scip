@@ -38,7 +38,10 @@ SCIP_RETCODE SCIPincludeConshdlrLinking(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates and captures a linking constraint */
+/** creates and captures a linking constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 extern
 SCIP_RETCODE SCIPcreateConsLinking(
    SCIP*                 scip,               /**< SCIP data structure */

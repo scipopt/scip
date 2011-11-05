@@ -693,7 +693,10 @@ SCIP_RETCODE SCIPincludeConshdlrDisjunction(
    return SCIP_OKAY;
 }
 
-/** creates and captures a disjunction constraint */
+/** creates and captures a disjunction constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 SCIP_RETCODE SCIPcreateConsDisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */

@@ -44,7 +44,10 @@ SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates and captures a bound disjunction constraint */
+/** creates and captures a bound disjunction constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 extern
 SCIP_RETCODE SCIPcreateConsBounddisjunction(
    SCIP*                 scip,               /**< SCIP data structure */

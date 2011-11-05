@@ -66,7 +66,10 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates and captures a cumulative constraint */
+/** creates and captures a cumulative constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 extern
 SCIP_RETCODE SCIPcreateConsCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
