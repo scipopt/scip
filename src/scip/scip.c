@@ -21323,8 +21323,8 @@ SCIP_Real SCIPgetGap(
       return REALABS((primalbound - dualbound)/MIN(REALABS(dualbound),REALABS(primalbound)));
 }
 
-/** gets current gap |(upperbound - lowerbound)/lowerbound| in transformed problem if both bounds have same sign, 
- *  or infinity, if they have opposite sign
+/** gets current gap |(upperbound - lowerbound)/min(|upperbound|,|lowerbound|)| in transformed problem if both bounds
+ *  have same sign, or infinity, if they have opposite sign
  */
 SCIP_Real SCIPgetTransGap(
    SCIP*                 scip                /**< SCIP data structure */
@@ -21354,10 +21354,8 @@ SCIP_Real SCIPgetTransGap(
       || SCIPsetIsInfinity(scip->set, -lowerbound)
       || lowerbound * upperbound < 0.0 )
       return SCIPsetInfinity(scip->set);
-   else if( lowerbound > 0 )
-      return REALABS((upperbound - lowerbound)/lowerbound);
    else
-      return REALABS((upperbound - lowerbound)/upperbound);
+      return REALABS((upperbound - lowerbound)/MIN(REALABS(lowerbound),REALABS(upperbound)));
 }
 
 /** gets number of feasible primal solutions found so far */

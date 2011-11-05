@@ -7475,8 +7475,8 @@ SCIP_Real SCIPgetGap(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets current gap |(upperbound - lowerbound)/lowerbound| in transformed problem if both bounds have same sign,
- *  or infinity, if they have opposite sign
+/** gets current gap |(upperbound - lowerbound)/min(|upperbound|,|lowerbound|)| in transformed problem if both bounds
+ *  have same sign, or infinity, if they have opposite sign
  */
 extern
 SCIP_Real SCIPgetTransGap(
