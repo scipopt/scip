@@ -16993,7 +16993,7 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
                      assert( SCIPsetIsFeasZero(set, primal[lp->ncols+1]) || SCIPsetIsFeasGT(set, sum, lhs) );
                }
                /* treat rhs */
-               if( !SCIPisInfinity(scip, ABS(rhs)) )
+               if( !SCIPsetIsInfinity(set, ABS(rhs)) )
                {
                   if( normtype == 'o' )
                   {
@@ -17008,14 +17008,16 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
          if( inclobjcutoff )
          {
             SCIP_Real sum;
+#ifndef NDEBUG
             SCIP_Real rhs;
 
+            rhs = lp->cutoffbound - lp->looseobjval;
+#endif
             sum = 0.0;
             for( j = 0; j < lp->ncols; ++j )
                sum += lp->cols[j]->obj * primal[lp->cols[j]->lppos];
             sum /= alpha;
 
-            rhs = lp->cutoffbound - lp->looseobjval;
             if( normtype == 'o' )
             {
                assert( SCIPsetIsFeasZero(set, primal[lp->ncols+1+cnt]) || SCIPsetIsFeasLT(set, sum, rhs) );
@@ -17029,12 +17031,15 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
       for( j = 0; j < lp->ncols; ++j )
       {
          SCIP_COL* col;
+#ifndef NDEBUG
          SCIP_Real val;
+#endif
 
          col = lp->cols[j];
          assert( col != NULL );
+#ifndef NDEBUG
          val = primal[col->lppos] / alpha;
-
+#endif
          /* if the variable is not fixed */
          if( !SCIPsetIsEQ(set, col->lb, col->ub) )
          {
