@@ -13,6 +13,7 @@ performance improvements:
   if all coefficients are in absolute value equal they will be scaled by that
 - if probing reached the end of all variables it will restart the probing cycle correctly
 - improved intdiving heuristic by activating backtracking to a different fixing value
+- improved scaling by choosing the smallest scaler
 
 plugins:
 - added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.

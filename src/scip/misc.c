@@ -4141,6 +4141,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
    SCIP_Bool*            success             /**< stores whether returned value is valid */
    )
 {
+   SCIP_Real bestscalar;
    SCIP_Longint gcd;
    SCIP_Longint scm;
    SCIP_Longint nominator;
@@ -4149,12 +4150,11 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
    SCIP_Real minval;
    SCIP_Real absval;
    SCIP_Real scaleval;
-   SCIP_Real twomultval;
    SCIP_Bool scalable;
-   SCIP_Bool twomult;
    SCIP_Bool rational;
    int c;
    int s;
+   int i;
 
    assert(vals != NULL);
    assert(nvals >= 0);
@@ -4193,86 +4193,66 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
    }
    assert(minval > MIN(-mindelta, maxdelta));
 
-   /* try, if values can be made integral multiplying them with the reciprocal of the smallest value and a power of 2 */
-   scalable = TRUE;
-   scaleval = 1.0/minval;
-   for( c = 0; c < nvals && scalable; ++c )
-   {
-      /* check, if the value can be scaled with a simple scalar */
-      val = vals[c];
-      if( val == 0.0 ) /* zeros are allowed in the vals array */
-         continue;
-    
-      absval = REALABS(val);
-      while( scaleval <= maxscale
-         && (absval * scaleval < 0.5 || !isIntegralScalar(val, scaleval, mindelta, maxdelta)) )
-      {
-         for( s = 0; s < nscalars; ++s )
-         {
-            if( isIntegralScalar(val, scaleval * scalars[s], mindelta, maxdelta) )
-            {
-               scaleval *= scalars[s];
-               break;
-            }
-         }
-         if( s >= nscalars )
-            scaleval *= 2.0;
-      }
-      scalable = (scaleval <= maxscale);
-      SCIPdebugMessage(" -> val=%g, scaleval=%g, val*scaleval=%g, scalable=%u\n", 
-         val, scaleval, val*scaleval, scalable);
-   }
-   if( scalable )
-   {
-      /* make values integral by dividing them by the smallest value (and multiplying them with a power of 2) */
-      assert(scaleval <= maxscale);
-      if( intscalar != NULL )
-         *intscalar = scaleval;
-      *success = TRUE;
-      SCIPdebugMessage(" -> integrality can be achieved by scaling with %g (minval=%g)\n", scaleval, minval);
-      
-      return SCIP_OKAY;
-   }
+   bestscalar = SCIP_INVALID;
 
-   /* try, if values can be made integral by multiplying them by a power of 2 */
-   twomult = TRUE;
-   twomultval = 1.0;
-   for( c = 0; c < nvals && twomult; ++c )
+   for( i = 0; i < 2; ++i )
    {
-      /* check, if the value can be scaled with a simple scalar */
-      val = vals[c];
-      if( val == 0.0 ) /* zeros are allowed in the vals array */
-         continue;
-      
-      absval = REALABS(val);
-      while( twomultval <= maxscale
-         && (absval * twomultval < 0.5 || !isIntegralScalar(val, twomultval, mindelta, maxdelta)) )
+      scalable = TRUE;
+
+      /* try, if values can be made integral multiplying them with the reciprocal of the smallest value and a power of 2 */
+      if( i == 0 )
+	 scaleval = 1.0/minval;
+      /* try, if values can be made integral by multiplying them by a power of 2 */
+      else
+	 scaleval = 1.0;
+
+      for( c = 0; c < nvals && scalable; ++c )
       {
-         for( s = 0; s < nscalars; ++s )
-         {
-            if( isIntegralScalar(val, twomultval * scalars[s], mindelta, maxdelta) )
-            {
-               twomultval *= scalars[s];
-               break;
-            }
-         }
-         if( s >= nscalars )
-            twomultval *= 2.0;
+	 /* check, if the value can be scaled with a simple scalar */
+	 val = vals[c];
+	 if( val == 0.0 ) /* zeros are allowed in the vals array */
+	    continue;
+
+	 absval = REALABS(val);
+	 while( scaleval <= maxscale
+	    && (absval * scaleval < 0.5 || !isIntegralScalar(val, scaleval, mindelta, maxdelta)) )
+	 {
+	    for( s = 0; s < nscalars; ++s )
+	    {
+	       if( isIntegralScalar(val, scaleval * scalars[s], mindelta, maxdelta) )
+	       {
+		  scaleval *= scalars[s];
+		  break;
+	       }
+	    }
+	    if( s >= nscalars )
+	       scaleval *= 2.0;
+	 }
+	 scalable = (scaleval <= maxscale);
+	 SCIPdebugMessage(" -> val=%g, scaleval=%g, val*scaleval=%g, scalable=%u\n",
+	    val, scaleval, val*scaleval, scalable);
       }
-      twomult = (twomultval <= maxscale);
-      SCIPdebugMessage(" -> val=%g, twomult=%g, val*twomult=%g, twomultable=%u\n",
-         val, twomultval, val*twomultval, twomult);
-   }
-   if( twomult )
-   {
-      /* make values integral by multiplying them with a power of 2 */
-      assert(twomultval <= maxscale);
-      if( intscalar != NULL )
-         *intscalar = twomultval;
-      *success = TRUE;
-      SCIPdebugMessage(" -> integrality can be achieved by scaling with %g (power of 2)\n", twomultval);
-      
-      return SCIP_OKAY;
+      if( scalable )
+      {
+	 /* make values integral by dividing them by the smallest value (and multiplying them with a power of 2) */
+	 assert(scaleval <= maxscale);
+
+	 /* check if we found a better scaling value */
+	 if( scaleval < bestscalar )
+	    bestscalar = scaleval;
+
+	 SCIPdebugMessage(" -> integrality could be achieved by scaling with %g\n", scaleval);
+
+	 /* if the scalar is still the reciprocal of the minimal value, all coeffcients are the same and we do not get a better scalar */
+	 if( i == 0 && EPSEQ(scaleval, 1.0/minval, SCIP_DEFAULT_EPSILON) )
+	 {
+	    if( intscalar != NULL )
+	       *intscalar = bestscalar;
+	    *success = TRUE;
+
+	    return SCIP_OKAY;
+	 }
+      }
    }
 
    /* convert each value into a rational number, calculate the greatest common divisor of the nominators
@@ -4329,11 +4309,22 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
    {
       /* make values integral by multiplying them with the smallest common multiple of the denominators */
       assert((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
-      if( intscalar != NULL )
-         *intscalar = (SCIP_Real)scm/(SCIP_Real)gcd;
-      *success = TRUE;
-      SCIPdebugMessage(" -> integrality can be achieved by scaling with %g (rational:%"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT")\n", 
+
+      /* check if we found a better scaling value */
+      if( (SCIP_Real)scm/(SCIP_Real)gcd < bestscalar )
+	 bestscalar = (SCIP_Real)scm/(SCIP_Real)gcd;
+
+      SCIPdebugMessage(" -> integrality could be achieved by scaling with %g (rational:%"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT")\n",
          (SCIP_Real)scm/(SCIP_Real)gcd, scm, gcd);
+   }
+
+   if( bestscalar < SCIP_INVALID )
+   {
+      if( intscalar != NULL )
+         *intscalar = bestscalar;
+      *success = TRUE;
+
+      SCIPdebugMessage(" -> smallest value to achieve integrality is %g \n", bestscalar);
    }
 
    return SCIP_OKAY;
