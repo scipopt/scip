@@ -4,6 +4,7 @@ SCIP version NEXT
 fixed bugs:
 - fixed bug in reader_mps.c: INTEND marker is now also written, if COLUMNS section ends with non-continous variables
 - fixed numeric issue in aggregations
+- fixed pseudo cost computation
 
 SCIP version 2.1.0
 ===============
