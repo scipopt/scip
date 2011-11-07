@@ -358,7 +358,7 @@ void SCIPfreeMesshdlrPThreads(
  *  copied SCIP instance might not represent the same problem semantics as the original. 
  *  Note that in this case dual reductions might be invalid.
  *
- *  @note you need to lock from outside before copying
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *  @note Do not change the source SCIP environment during the copying process
  */
 extern
@@ -386,7 +386,7 @@ SCIP_RETCODE SCIPcopyPlugins(
 
 /** create a problem by copying the problem data of the source SCIP
  *
- *  @note you need to lock from outside before copying
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *  @note Do not change the source SCIP environment during the copying process
  */
 extern
@@ -405,6 +405,8 @@ SCIP_RETCODE SCIPcopyProb(
  *  it is just returned as target variable; elsewise a new variable will be created and added to the target SCIP; this
  *  created variable is added to the variable hash map and returned as target variable
  *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *  @note Do not change the source SCIP environment during the copying process
  *  @note if a new variable was created, this variable will be added to the target-SCIP, but it is not captured
  */
 extern
@@ -427,7 +429,7 @@ SCIP_RETCODE SCIPgetVarCopy(
  *
  *  @note the variables are added to the target-SCIP but not captured
  *
- *  @note you need to lock from outside before copying
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *  @note Do not change the source SCIP environment during the copying process
  */
 extern
@@ -451,6 +453,8 @@ SCIP_RETCODE SCIPcopyVars(
  *           used, if no LP or pseudo solution can violate the constraint -- e.g. if a local constraint is redundant due
  *           to the variable's local bounds.
  *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *  @note Do not change the source SCIP environment during the copying process
  *  @note the constraint is not added and not captured in the target SCIP
  */
 extern
@@ -489,7 +493,7 @@ SCIP_RETCODE SCIPgetConsCopy(
  *
  *  @note the constraints are added to the target-SCIP but are not (user) captured in the target SCIP
  *
- *  @note you need to lock from outside before copying
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *  @note Do not change the source SCIP environment during the copying process
  */
 extern
@@ -508,6 +512,9 @@ SCIP_RETCODE SCIPcopyConss(
 
 /** convert all active cuts from cutpool of sourcescip to linear constraints in targetscip, sourcescip and targetscip
  *  could be the same
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *  @note Do not change the source SCIP environment during the copying process
  */
 extern
 SCIP_RETCODE SCIPconvertCutsToConss(
@@ -523,7 +530,7 @@ SCIP_RETCODE SCIPconvertCutsToConss(
 
 /** copies all active cuts from cutpool of sourcescip to constraints in targetscip
  *
- *  @note you need to lock from outside before copying
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *  @note Do not change the source SCIP environment during the copying process
  */
 extern
@@ -539,7 +546,7 @@ SCIP_RETCODE SCIPcopyCuts(
 
 /** copies parameter settings from sourcescip to targetscip
  *
- *  @note you need to lock from outside before copying
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *  @note Do not change the source SCIP environment during the copying process
  */
 extern
@@ -563,7 +570,7 @@ int SCIPgetSubscipDepth(
  *
  *  @note all variables and constraints which are created in the target-SCIP are not (user) captured
  *
- *  @note you need to lock from outside before copying
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *  @note Do not change the source SCIP environment during the copying process
  */
 extern
