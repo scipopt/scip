@@ -6153,7 +6153,7 @@ SCIP_RETCODE SCIPincludeConshdlrAbspower(
          &conshdlrdata->mincutefficacysepa, FALSE, 0.0001, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacyenfofac",
-         "/**< minimal target efficacy of a cut in order to add it to relaxation during enforcement as factor of feasibility tolerance (may be ignored)",
+         "minimal target efficacy of a cut in order to add it to relaxation during enforcement as factor of feasibility tolerance (may be ignored)",
          &conshdlrdata->mincutefficacyenfofac, FALSE, 2.0, 1.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/cutmaxrange",
