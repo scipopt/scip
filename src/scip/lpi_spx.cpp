@@ -80,6 +80,10 @@
 #include "spxmainsm.h"
 #include "spxequilisc.h"
 
+#if (SOPLEX_VERSION > 150 || (SOPLEX_VERSION == 150 && SOPLEX_SUBVERSION >= 7))
+#include "spxboundflippingrt.h"
+#endif
+
 /* check version */
 #if (SOPLEX_VERSION < 133)
 #error "This interface is not compatible with SoPlex versions prior to 1.4"
@@ -161,7 +165,11 @@ class SPxSCIP : public SPxSolver
    SPxSteepPR       m_price_steep;      /**< steepest edge pricer */
    SPxParMultPR     m_price_parmult;    /**< partial multiple pricer */
    SPxDevexPR       m_price_devex;      /**< devex pricer */
+#if (SOPLEX_VERSION > 150 || (SOPLEX_VERSION == 150 && SOPLEX_SUBVERSION >= 7))
+   SPxBoundFlippingRT m_ratio;          /**< Long step dual ratio tester */
+#else
    SPxFastRT        m_ratio;            /**< Harris fast ratio tester */
+#endif
    char*            m_probname;         /**< problem name */
    bool             m_fromscratch;      /**< use old basis indicator */
    bool             m_scaling;          /**< use lp scaling */
