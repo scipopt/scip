@@ -19,7 +19,7 @@
  * @author Timo Berthold
  * @author Marc Pfetsch
  * @author Kati Wolter
-*
+ *
  *  Linear constraints are separated with a high priority, because they are easy
  *  to separate. Instead of using the global cut pool, the same effect can be
  *  implemented by adding linear constraints to the root node, such that they are
@@ -10832,7 +10832,10 @@ SCIP_RETCODE SCIPincludeLinconsUpgrade(
    return SCIP_OKAY;
 }
 
-/** creates and captures a linear constraint */
+/** creates and captures a linear constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 SCIP_RETCODE SCIPcreateConsLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */

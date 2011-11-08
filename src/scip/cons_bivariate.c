@@ -7490,7 +7490,10 @@ SCIP_RETCODE SCIPincludeConshdlrBivariate(
    return SCIP_OKAY;
 }
 
-/** creates and captures a bivariate constraint */
+/** creates and captures a bivariate constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 SCIP_RETCODE SCIPcreateConsBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */

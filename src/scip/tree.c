@@ -469,6 +469,7 @@ static
 SCIP_RETCODE forkCreate(
    SCIP_FORK**           fork,               /**< pointer to fork data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< current LP data */
    )
@@ -487,6 +488,7 @@ SCIP_RETCODE forkCreate(
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, fork) );
 
    SCIP_CALL( SCIPlpGetState(lp, blkmem, &((*fork)->lpistate)) );
+   (*fork)->lpobjval = SCIPlpGetObjval(lp, set);
    (*fork)->nlpistateref = 0;
    (*fork)->addedcols = NULL;
    (*fork)->addedrows = NULL;
@@ -559,6 +561,7 @@ static
 SCIP_RETCODE subrootCreate(
    SCIP_SUBROOT**        subroot,            /**< pointer to subroot data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< current LP data */
    )
@@ -577,7 +580,7 @@ SCIP_RETCODE subrootCreate(
    assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL);
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, subroot) );
-   
+   (*subroot)->lpobjval = SCIPlpGetObjval(lp, set);
    (*subroot)->nlpistateref = 0;
    (*subroot)->ncols = SCIPlpGetNCols(lp);
    (*subroot)->nrows = SCIPlpGetNRows(lp);
@@ -3604,7 +3607,7 @@ SCIP_RETCODE focusnodeToFork(
    assert(lp->solved);
 
    /* create fork data */
-   SCIP_CALL( forkCreate(&fork, blkmem, tree, lp) );
+   SCIP_CALL( forkCreate(&fork, blkmem, set, tree, lp) );
    
    tree->focusnode->nodetype = SCIP_NODETYPE_FORK; /*lint !e641*/
    tree->focusnode->data.fork = fork;
@@ -3726,7 +3729,7 @@ SCIP_RETCODE focusnodeToSubroot(
 
 
    /* create subroot data */
-   SCIP_CALL( subrootCreate(&subroot, blkmem, tree, lp) );
+   SCIP_CALL( subrootCreate(&subroot, blkmem, set, tree, lp) );
 
    tree->focusnode->nodetype = SCIP_NODETYPE_SUBROOT; /*lint !e641*/
    tree->focusnode->data.subroot = subroot;

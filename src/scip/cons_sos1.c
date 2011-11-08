@@ -2156,6 +2156,8 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
  *  We set the constraint to not be modifable. If the weights are non
  *  NULL, the variables are ordered according to these weights (in
  *  ascending order).
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
 SCIP_RETCODE SCIPcreateConsSOS1(
    SCIP*                 scip,               /**< SCIP data structure */
