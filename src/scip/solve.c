@@ -2373,7 +2373,7 @@ SCIP_RETCODE solveNodeLP(
    )
 {
    SCIP_Longint nlpiterations;
-   int nlps;
+   SCIP_Longint nlps;
 
    assert(stat != NULL);
    assert(tree != NULL);
@@ -3062,7 +3062,7 @@ SCIP_RETCODE propAndSolve(
             cutpool, branchcand, conflict, eventfilter, eventqueue, *initiallpsolved, cutoff, unbounded, 
             lperror, pricingaborted) );
       *initiallpsolved = TRUE;
-      SCIPdebugMessage(" -> LP status: %d, LP obj: %g, iter: %"SCIP_LONGINT_FORMAT", count: %d\n",
+      SCIPdebugMessage(" -> LP status: %d, LP obj: %g, iter: %"SCIP_LONGINT_FORMAT", count: %"SCIP_LONGINT_FORMAT"\n",
          SCIPlpGetSolstat(lp),
          *cutoff ? SCIPsetInfinity(set) : (*lperror ? -SCIPsetInfinity(set) : SCIPlpGetObjval(lp, set)),
          stat->nlpiterations, stat->lpcount);
@@ -3172,7 +3172,7 @@ SCIP_RETCODE solveNode(
    SCIP_NODE* focusnode;
    SCIP_Longint lastdomchgcount;
    SCIP_Real restartfac;
-   int lastlpcount;
+   SCIP_Longint lastlpcount;
    int actdepth;
    int nlperrors;
    int nloops;

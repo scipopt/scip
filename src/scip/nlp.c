@@ -4759,7 +4759,7 @@ SCIP_RETCODE nlpCalcFracVars(
    assert(nlp->validfracvars <= stat->nnlps);
    assert(SCIPnlpHasSolution(nlp));
 
-   SCIPdebugMessage("calculating NLP fractional variables: validfracvars=%d, nnlps=%d\n", nlp->validfracvars, stat->nnlps);
+   SCIPdebugMessage("calculating NLP fractional variables: validfracvars=%"SCIP_LONGINT_FORMAT", nnlps=%"SCIP_LONGINT_FORMAT"\n", nlp->validfracvars, stat->nnlps);
 
    if( nlp->solstat > SCIP_NLPSOLSTAT_LOCINFEASIBLE )
    {

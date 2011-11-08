@@ -2455,9 +2455,9 @@ SCIP_RETCODE SCIPconshdlrSeparateLP(
             SCIP_CONS** conss;
             SCIP_Longint oldndomchgs;
             SCIP_Longint oldnprobdomchgs;
+            SCIP_Longint lastsepalpcount;
             int oldncuts;
             int oldnactiveconss;
-            int lastsepalpcount;
             int lastnusefulsepaconss;
 
             SCIPdebugMessage("separating constraints %d to %d of %d constraints of handler <%s> (%s LP solution)\n",

@@ -1200,7 +1200,7 @@ SCIP_RETCODE nodeRepropagate(
    SCIP_NODE* oldfocuslpfork;
    SCIP_NODE* oldfocuslpstatefork;
    SCIP_NODE* oldfocussubroot;
-   int oldfocuslpstateforklpcount;
+   SCIP_Longint oldfocuslpstateforklpcount;
    int oldnchildren;
    int oldnsiblings;
    SCIP_Bool oldfocusnodehaslp;

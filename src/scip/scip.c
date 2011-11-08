@@ -9894,7 +9894,7 @@ SCIP_Longint SCIPgetVarStrongbranchNode(
  *  the LP where the strong branching on this variable was applied;
  *  if strong branching was not yet applied on the variable at the current node, returns INT_MAX
  */
-int SCIPgetVarStrongbranchLPAge(
+SCIP_Longint SCIPgetVarStrongbranchLPAge(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to get strong branching LP age for */
    )
@@ -9902,7 +9902,7 @@ int SCIPgetVarStrongbranchLPAge(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarStrongbranchLPAge", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
-      return INT_MAX;
+      return SCIP_LONGINT_MAX;
 
    return SCIPcolGetStrongbranchLPAge(SCIPvarGetCol(var), scip->stat);
 }
@@ -19903,7 +19903,7 @@ int SCIPgetNNodesLeft(
 }
 
 /** gets total number of LPs solved so far */
-int SCIPgetNLPs(
+SCIP_Longint SCIPgetNLPs(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -19933,7 +19933,7 @@ SCIP_Longint SCIPgetNRootLPIterations(
 }
 
 /** gets total number of primal LPs solved so far */
-int SCIPgetNPrimalLPs(
+SCIP_Longint SCIPgetNPrimalLPs(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -19953,7 +19953,7 @@ SCIP_Longint SCIPgetNPrimalLPIterations(
 }
 
 /** gets total number of dual LPs solved so far */
-int SCIPgetNDualLPs(
+SCIP_Longint SCIPgetNDualLPs(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -19973,7 +19973,7 @@ SCIP_Longint SCIPgetNDualLPIterations(
 }
 
 /** gets total number of barrier LPs solved so far */
-int SCIPgetNBarrierLPs(
+SCIP_Longint SCIPgetNBarrierLPs(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -19993,7 +19993,7 @@ SCIP_Longint SCIPgetNBarrierLPIterations(
 }
 
 /** gets total number of LPs solved so far that were resolved from an advanced start basis */
-int SCIPgetNResolveLPs(
+SCIP_Longint SCIPgetNResolveLPs(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -20015,7 +20015,7 @@ SCIP_Longint SCIPgetNResolveLPIterations(
 }
 
 /** gets total number of primal LPs solved so far that were resolved from an advanced start basis */
-int SCIPgetNPrimalResolveLPs(
+SCIP_Longint SCIPgetNPrimalResolveLPs(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -20037,7 +20037,7 @@ SCIP_Longint SCIPgetNPrimalResolveLPIterations(
 }
 
 /** gets total number of dual LPs solved so far that were resolved from an advanced start basis */
-int SCIPgetNDualResolveLPs(
+SCIP_Longint SCIPgetNDualResolveLPs(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -20059,7 +20059,7 @@ SCIP_Longint SCIPgetNDualResolveLPIterations(
 }
 
 /** gets total number of LPs solved so far for node relaxations */
-int SCIPgetNNodeLPs(
+SCIP_Longint SCIPgetNNodeLPs(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -20079,7 +20079,7 @@ SCIP_Longint SCIPgetNNodeLPIterations(
 }
 
 /** gets total number of LPs solved so far for initial LP in node relaxations */
-int SCIPgetNNodeInitLPs(
+SCIP_Longint SCIPgetNNodeInitLPs(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -20099,7 +20099,7 @@ SCIP_Longint SCIPgetNNodeInitLPIterations(
 }
 
 /** gets total number of LPs solved so far during diving and probing */
-int SCIPgetNDivingLPs(
+SCIP_Longint SCIPgetNDivingLPs(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -20119,7 +20119,7 @@ SCIP_Longint SCIPgetNDivingLPIterations(
 }
 
 /** gets total number of times, strong branching was called (each call represents solving two LPs) */
-int SCIPgetNStrongbranchs(
+SCIP_Longint SCIPgetNStrongbranchs(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -20139,7 +20139,7 @@ SCIP_Longint SCIPgetNStrongbranchLPIterations(
 }
 
 /** gets total number of times, strong branching was called at the root node (each call represents solving two LPs) */
-int SCIPgetNRootStrongbranchs(
+SCIP_Longint SCIPgetNRootStrongbranchs(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -21381,7 +21381,7 @@ void printLPStatistics(
 
    SCIPmessageFPrintInfo(file, "LP                 :       Time      Calls Iterations  Iter/call   Iter/sec  Time-0-It Calls-0-It\n");
 
-   SCIPmessageFPrintInfo(file, "  primal LP        : %10.2f %10d %10"SCIP_LONGINT_FORMAT" %10.2f",
+   SCIPmessageFPrintInfo(file, "  primal LP        : %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10.2f",
       SCIPclockGetTime(scip->stat->primallptime),
       scip->stat->nprimallps + scip->stat->nprimalzeroitlps,
       scip->stat->nprimallpiterations,
@@ -21390,11 +21390,11 @@ void printLPStatistics(
       SCIPmessageFPrintInfo(file, " %10.2f", (SCIP_Real)scip->stat->nprimallpiterations/SCIPclockGetTime(scip->stat->primallptime));
    else
       SCIPmessageFPrintInfo(file, "          -");
-   SCIPmessageFPrintInfo(file, " %10.2f %10d\n",
+   SCIPmessageFPrintInfo(file, " %10.2f %10"SCIP_LONGINT_FORMAT"\n",
       scip->stat->primalzeroittime,
       scip->stat->nprimalzeroitlps);
 
-   SCIPmessageFPrintInfo(file, "  dual LP          : %10.2f %10d %10"SCIP_LONGINT_FORMAT" %10.2f",
+   SCIPmessageFPrintInfo(file, "  dual LP          : %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10.2f",
       SCIPclockGetTime(scip->stat->duallptime),
       scip->stat->nduallps + scip->stat->ndualzeroitlps,
       scip->stat->nduallpiterations,
@@ -21403,11 +21403,11 @@ void printLPStatistics(
       SCIPmessageFPrintInfo(file, " %10.2f", (SCIP_Real)scip->stat->nduallpiterations/SCIPclockGetTime(scip->stat->duallptime));
    else
       SCIPmessageFPrintInfo(file, "          -");
-   SCIPmessageFPrintInfo(file, " %10.2f %10d\n",
+   SCIPmessageFPrintInfo(file, " %10.2f %10"SCIP_LONGINT_FORMAT"\n",
       scip->stat->dualzeroittime,
       scip->stat->ndualzeroitlps);
 
-   SCIPmessageFPrintInfo(file, "  lex dual LP      : %10.2f %10d %10"SCIP_LONGINT_FORMAT" %10.2f",
+   SCIPmessageFPrintInfo(file, "  lex dual LP      : %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10.2f",
       SCIPclockGetTime(scip->stat->lexduallptime),
       scip->stat->nlexduallps,
       scip->stat->nlexduallpiterations,
@@ -21417,7 +21417,7 @@ void printLPStatistics(
    else
       SCIPmessageFPrintInfo(file, "          -\n");
 
-   SCIPmessageFPrintInfo(file, "  barrier LP       : %10.2f %10d %10"SCIP_LONGINT_FORMAT" %10.2f",
+   SCIPmessageFPrintInfo(file, "  barrier LP       : %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10.2f",
       SCIPclockGetTime(scip->stat->barrierlptime),
       scip->stat->nbarrierlps,
       scip->stat->nbarrierlpiterations,
@@ -21426,11 +21426,11 @@ void printLPStatistics(
       SCIPmessageFPrintInfo(file, " %10.2f", (SCIP_Real)scip->stat->nbarrierlpiterations/SCIPclockGetTime(scip->stat->barrierlptime));
    else
       SCIPmessageFPrintInfo(file, "          -");
-   SCIPmessageFPrintInfo(file, " %10.2f %10d\n",
+   SCIPmessageFPrintInfo(file, " %10.2f %10"SCIP_LONGINT_FORMAT"\n",
       scip->stat->barrierzeroittime,
       scip->stat->nbarrierzeroitlps);
 
-   SCIPmessageFPrintInfo(file, "  diving/probing LP: %10.2f %10d %10"SCIP_LONGINT_FORMAT" %10.2f",
+   SCIPmessageFPrintInfo(file, "  diving/probing LP: %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10.2f",
       SCIPclockGetTime(scip->stat->divinglptime),
       scip->stat->ndivinglps,
       scip->stat->ndivinglpiterations,
@@ -21440,7 +21440,7 @@ void printLPStatistics(
    else
       SCIPmessageFPrintInfo(file, "          -\n");
 
-   SCIPmessageFPrintInfo(file, "  strong branching : %10.2f %10d %10"SCIP_LONGINT_FORMAT" %10.2f",
+   SCIPmessageFPrintInfo(file, "  strong branching : %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10.2f",
       SCIPclockGetTime(scip->stat->strongbranchtime),
       scip->stat->nstrongbranchs,
       scip->stat->nsblpiterations,
@@ -21450,13 +21450,13 @@ void printLPStatistics(
    else
       SCIPmessageFPrintInfo(file, "          -\n");
 
-   SCIPmessageFPrintInfo(file, "    (at root node) :          - %10d %10"SCIP_LONGINT_FORMAT" %10.2f          -\n",
+   SCIPmessageFPrintInfo(file, "    (at root node) :          - %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10.2f          -\n",
       scip->stat->nrootstrongbranchs,
       scip->stat->nrootsblpiterations,
       scip->stat->nrootstrongbranchs > 0
       ? (SCIP_Real)scip->stat->nrootsblpiterations/(SCIP_Real)scip->stat->nrootstrongbranchs : 0.0);
 
-   SCIPmessageFPrintInfo(file, "  conflict analysis: %10.2f %10d %10"SCIP_LONGINT_FORMAT" %10.2f",
+   SCIPmessageFPrintInfo(file, "  conflict analysis: %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10.2f",
       SCIPclockGetTime(scip->stat->conflictlptime),
       scip->stat->nconflictlps,
       scip->stat->nconflictlpiterations,
@@ -21482,7 +21482,7 @@ void printNLPStatistics(
 
    SCIPmessageFPrintInfo(file, "NLP                :       Time      Calls\n");
 
-   SCIPmessageFPrintInfo(file, "  all NLPs         : %10.2f %10d\n",
+   SCIPmessageFPrintInfo(file, "  all NLPs         : %10.2f %10"SCIP_LONGINT_FORMAT"\n",
       SCIPclockGetTime(scip->stat->nlpsoltime),
       scip->stat->nnlps);
 }

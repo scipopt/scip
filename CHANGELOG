@@ -6,6 +6,10 @@ interface
   to avoid unnecessary initialization of the conflict analysis
 - the methods SCIPsortedvecInsert*() have an additional parameter which can be used to receive the position where 
   the new element was inserted, if this is not of interest a NULL pointer can be given
+- SCIPcolGetStrongbranchLPAge(), SCIPgetVarStrongbranchLPAge(), SCIPgetNLPs(), SCIPgetNPrimalLPs(), SCIPgetNDualLPs(),
+  SCIPgetNBarrierLPs(), SCIPgetNResolveLPs(), SCIPgetNPrimalResolveLPs(), SCIPgetNDualResolveLPs(), SCIPgetNNodeLPs(),
+  SCIPgetNNodeInitLPs(), SCIPgetNDivingLPs(), SCIPgetNStrongbranchs(), SCIPgetNRootStrongbranchs() now return a longint
+  instead of an integer
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
@@ -14,6 +18,8 @@ performance improvements:
 - if probing reached the end of all variables it will restart the probing cycle correctly
 - improved intdiving heuristic by activating backtracking to a different fixing value
 - improved scaling by choosing the smallest scaler
+- if first root lp is solved and the optimality is rejected by SCIP, there won't be an unnecessary solving of the lp
+  from scratch again
 
 plugins:
 - added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.
@@ -27,6 +33,7 @@ parameters:
   only convert integer variables with a domainsize of 2^p - 1 to their binary representation
 - new parameter <presolving/convertinttobin/samelocksinbothdirections> by default is set to FALSE, that parameter allows
   you to convert only integer variables to their binary representation, which have the same amount of up- and downlocks
+- branching/fullstrong/reevalage changed from an integer to a longint parameter
 
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to

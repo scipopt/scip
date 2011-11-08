@@ -32,14 +32,14 @@
 #define BRANCHRULE_MAXDEPTH      -1
 #define BRANCHRULE_MAXBOUNDDIST  1.0
 
-#define DEFAULT_REEVALAGE       10      /**< number of intermediate LPs solved to trigger reevaluation of strong branching
+#define DEFAULT_REEVALAGE        10LL        /**< number of intermediate LPs solved to trigger reevaluation of strong branching
                                               *   value for a variable that was already evaluated at the current node */
 
 
 /** branching rule data */
 struct SCIP_BranchruleData
 {
-   int                   reevalage;          /**< number of intermediate LPs solved to trigger reevaluation of strong branching
+   SCIP_Longint          reevalage;          /**< number of intermediate LPs solved to trigger reevaluation of strong branching
                                               *   value for a variable that was already evaluated at the current node */
    int                   lastcand;           /**< last evaluated candidate of last branching rule execution */
 };
@@ -223,7 +223,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
             downconflict = FALSE;
             upconflict = FALSE;
             lperror = FALSE;
-            SCIPdebugMessage("strong branching on variable <%s> already performed (lpage=%d, down=%g (%+g), up=%g (%+g))\n",
+            SCIPdebugMessage("strong branching on variable <%s> already performed (lpage=%"SCIP_LONGINT_FORMAT", down=%g (%+g), up=%g (%+g))\n",
                SCIPvarGetName(lpcands[c]), SCIPgetVarStrongbranchLPAge(scip, lpcands[c]), down, downgain, up, upgain);
          }
          else
@@ -416,10 +416,10 @@ SCIP_RETCODE SCIPincludeBranchruleFullstrong(
          branchruledata) );
 
    /* fullstrong branching rule parameters */
-   SCIP_CALL( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPaddLongintParam(scip,
          "branching/fullstrong/reevalage", 
          "number of intermediate LPs solved to trigger reevaluation of strong branching value for a variable that was already evaluated at the current node",
-         &branchruledata->reevalage, TRUE, DEFAULT_REEVALAGE, 0, INT_MAX, NULL, NULL) );
+         &branchruledata->reevalage, TRUE, DEFAULT_REEVALAGE, 0, SCIP_LONGINT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

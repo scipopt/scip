@@ -176,9 +176,9 @@ struct SCIP_Tree
                                               *   newly added rows of the focus node and the current probing node) */
    SCIP_LPISTATE*        probinglpistate;    /**< LP state information before probing started */
    SCIP_PENDINGBDCHG*    pendingbdchgs;      /**< array of pending bound changes, or NULL */
+   SCIP_Longint          focuslpstateforklpcount; /**< LP number of last solved LP in current LP state fork, or -1 if unknown */
    int                   pendingbdchgssize;  /**< size of pendingbdchgs array */
    int                   npendingbdchgs;     /**< number of pending bound changes */
-   int                   focuslpstateforklpcount; /**< LP number of last solved LP in current LP state fork, or -1 if unknown */
    int                   childrensize;       /**< available slots in children vector */
    int                   nchildren;          /**< number of children of focus node (number of used slots in children vector) */
    int                   siblingssize;       /**< available slots in siblings vector */

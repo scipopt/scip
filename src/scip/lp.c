@@ -285,7 +285,7 @@ static
 SCIP_RETCODE lpRestoreSolVals(
    SCIP_LP*              lp,                 /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   int                   validlp             /**< number of lp for which restored values are valid */
+   SCIP_Longint          validlp             /**< number of lp for which restored values are valid */
    )
 {
    SCIP_LPSOLVALS* storedsolvals;
@@ -360,7 +360,7 @@ static
 SCIP_RETCODE colRestoreSolVals(
    SCIP_COL*             col,                /**< LP column */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   int                   validlp,            /**< number of lp for which restored values are valid */
+   SCIP_Longint          validlp,            /**< number of lp for which restored values are valid */
    SCIP_Bool             freebuffer          /**< should buffer for LP solution values be freed? */
    )
 {
@@ -436,7 +436,7 @@ static
 SCIP_RETCODE rowRestoreSolVals(
    SCIP_ROW*             row,                /**< LP column */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   int                   validlp,            /**< number of lp for which restored values are valid */
+   SCIP_Longint          validlp,            /**< number of lp for which restored values are valid */
    SCIP_Bool             freebuffer          /**< should buffer for LP solution values be freed? */
    )
 {
@@ -4186,7 +4186,7 @@ void SCIPcolGetStrongbranchLast(
  *  the LP where the strong branching on this column was applied;
  *  if strong branching was not yet applied on the column at the current node, returns INT_MAX
  */
-int SCIPcolGetStrongbranchLPAge(
+SCIP_Longint SCIPcolGetStrongbranchLPAge(
    SCIP_COL*             col,                /**< LP column */
    SCIP_STAT*            stat                /**< dynamic problem statistics */
    )
@@ -4194,7 +4194,7 @@ int SCIPcolGetStrongbranchLPAge(
    assert(col != NULL);
    assert(stat != NULL);
 
-   return (col->sbnode != stat->nnodes ? INT_MAX : stat->lpcount - col->validsblp);
+   return (col->sbnode != stat->nnodes ? SCIP_LONGINT_MAX : stat->lpcount - col->validsblp);
 }
 
 /** output column to file stream */
@@ -10903,7 +10903,7 @@ SCIP_RETCODE lpPrimalSimplex(
    assert(stat != NULL);
    assert(lperror != NULL);
 
-   SCIPdebugMessage("solving primal LP %d (LP %d, %d cols, %d rows)\n", 
+   SCIPdebugMessage("solving primal LP %"SCIP_LONGINT_FORMAT" (LP %"SCIP_LONGINT_FORMAT", %d cols, %d rows)\n",
       stat->nprimallps+1, stat->nlps+1, lp->ncols, lp->nrows);
 
    *lperror = FALSE;
@@ -10912,7 +10912,7 @@ SCIP_RETCODE lpPrimalSimplex(
    if( stat->nnodes == 1 && !lp->diving && !lp->probing )
    {
       char fname[SCIP_MAXSTRLEN];
-      (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "lp%"SCIP_LONGINT_FORMAT"_%d.lp", stat->nnodes, stat->lpcount);
+      (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "lp%"SCIP_LONGINT_FORMAT"_%"SCIP_LONGINT_FORMAT".lp", stat->nnodes, stat->lpcount);
       SCIP_CALL( SCIPlpWrite(lp, fname) );
       SCIPmessagePrintInfo("wrote LP to file <%s> (primal simplex, uobjlim=%.15g, feastol=%.15g/%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
          fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol,
@@ -10937,7 +10937,7 @@ SCIP_RETCODE lpPrimalSimplex(
    if( retcode == SCIP_LPERROR )
    {
       *lperror = TRUE;
-      SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") primal simplex solving error in LP %d\n", stat->nnodes, stat->nlps);
+      SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") primal simplex solving error in LP %"SCIP_LONGINT_FORMAT"\n", stat->nnodes, stat->nlps);
    }
    else
    {
@@ -10997,7 +10997,7 @@ SCIP_RETCODE lpPrimalSimplex(
       }
    }
 
-   SCIPdebugMessage("solved primal LP %d in %d iterations\n", stat->lpcount, iterations);
+   SCIPdebugMessage("solved primal LP %"SCIP_LONGINT_FORMAT" in %d iterations\n", stat->lpcount, iterations);
 
    return SCIP_OKAY;
 }
@@ -11023,7 +11023,7 @@ SCIP_RETCODE lpDualSimplex(
    assert(stat != NULL);
    assert(lperror != NULL);
 
-   SCIPdebugMessage("solving dual LP %d (LP %d, %d cols, %d rows)\n", 
+   SCIPdebugMessage("solving dual LP %"SCIP_LONGINT_FORMAT" (LP %"SCIP_LONGINT_FORMAT", %d cols, %d rows)\n",
       stat->nduallps+1, stat->nlps+1, lp->ncols, lp->nrows);
 
    *lperror = FALSE;
@@ -11032,7 +11032,7 @@ SCIP_RETCODE lpDualSimplex(
    if( stat->nnodes == 1 && !lp->diving && !lp->probing )
    {
       char fname[SCIP_MAXSTRLEN];
-      (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "lp%"SCIP_LONGINT_FORMAT"_%d.lp", stat->nnodes, stat->lpcount);
+      (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "lp%"SCIP_LONGINT_FORMAT"_%"SCIP_LONGINT_FORMAT".lp", stat->nnodes, stat->lpcount);
       SCIP_CALL( SCIPlpWrite(lp, fname) );
       SCIPmessagePrintInfo("wrote LP to file <%s> (dual simplex, uobjlim=%.15g, feastol=%.15g/%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
          fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol, 
@@ -11057,7 +11057,7 @@ SCIP_RETCODE lpDualSimplex(
    if( retcode == SCIP_LPERROR )
    {
       *lperror = TRUE;
-      SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") dual simplex solving error in LP %d\n", stat->nnodes, stat->nlps);
+      SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") dual simplex solving error in LP %"SCIP_LONGINT_FORMAT"\n", stat->nnodes, stat->nlps);
    }
    else
    {
@@ -11117,7 +11117,7 @@ SCIP_RETCODE lpDualSimplex(
       }
    }
 
-   SCIPdebugMessage("solved dual LP %d in %d iterations\n", stat->lpcount, iterations);
+   SCIPdebugMessage("solved dual LP %"SCIP_LONGINT_FORMAT" in %d iterations\n", stat->lpcount, iterations);
 
    return SCIP_OKAY;
 }
@@ -11179,7 +11179,7 @@ SCIP_RETCODE lpLexDualSimplex(
    assert(stat != NULL);
    assert(lperror != NULL);
 
-   SCIPdebugMessage("solving lex dual LP %d (LP %d, %d cols, %d rows)\n", stat->nduallps+1, stat->nlps+1, lp->ncols, lp->nrows);
+   SCIPdebugMessage("solving lex dual LP %"SCIP_LONGINT_FORMAT" (LP %"SCIP_LONGINT_FORMAT", %d cols, %d rows)\n", stat->nduallps+1, stat->nlps+1, lp->ncols, lp->nrows);
 
    *lperror = FALSE;
 
@@ -11200,7 +11200,7 @@ SCIP_RETCODE lpLexDualSimplex(
    if( retcode == SCIP_LPERROR )
    {
       *lperror = TRUE;
-      SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") dual simplex solving error in LP %d\n", stat->nnodes, stat->nlps);
+      SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") dual simplex solving error in LP %"SCIP_LONGINT_FORMAT"\n", stat->nnodes, stat->nlps);
    }
    else
    {
@@ -11549,7 +11549,7 @@ SCIP_RETCODE lpLexDualSimplex(
             if( retcode == SCIP_LPERROR )
             {
                *lperror = TRUE;
-               SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") in lex-dual: primal simplex solving error in LP %d\n", stat->nnodes, stat->nlps);
+               SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") in lex-dual: primal simplex solving error in LP %"SCIP_LONGINT_FORMAT"\n", stat->nnodes, stat->nlps);
             }
             else
             {
@@ -11635,7 +11635,7 @@ SCIP_RETCODE lpLexDualSimplex(
       if( retcode == SCIP_LPERROR )
       {
          *lperror = TRUE;
-         SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") dual simplex solving error in LP %d\n", stat->nnodes, stat->nlps);
+         SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") dual simplex solving error in LP %"SCIP_LONGINT_FORMAT"\n", stat->nnodes, stat->nlps);
       }
       else
       {
@@ -11699,7 +11699,7 @@ SCIP_RETCODE lpLexDualSimplex(
       /* stop timing */
       SCIPclockStop(stat->lexduallptime, set);
 
-      SCIPdebugMessage("solved dual lexicographic LP %d in %d iterations (%d lex. iters.) in %d rounds\n", stat->lpcount, totalIterations, lexIterations, rounds);
+      SCIPdebugMessage("solved dual lexicographic LP %"SCIP_LONGINT_FORMAT" in %d iterations (%d lex. iters.) in %d rounds\n", stat->lpcount, totalIterations, lexIterations, rounds);
    }
    lp->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
    lp->solisbasic = TRUE;
@@ -11742,7 +11742,7 @@ SCIP_RETCODE lpBarrier(
    assert(stat != NULL);
    assert(lperror != NULL);
 
-   SCIPdebugMessage("solving barrier%s LP %d (LP %d, %d cols, %d rows)\n", 
+   SCIPdebugMessage("solving barrier%s LP %"SCIP_LONGINT_FORMAT" (LP %"SCIP_LONGINT_FORMAT", %d cols, %d rows)\n",
       crossover ? "/crossover" : "", stat->nbarrierlps+1, stat->nlps+1, lp->ncols, lp->nrows);
 
    *lperror = FALSE;
@@ -11751,7 +11751,7 @@ SCIP_RETCODE lpBarrier(
    if( stat->nnodes == 1 && !lp->diving && !lp->probing )
    {
       char fname[SCIP_MAXSTRLEN];
-      (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "lp%"SCIP_LONGINT_FORMAT"_%d.lp", stat->nnodes, stat->lpcount);
+      (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "lp%"SCIP_LONGINT_FORMAT"_%"SCIP_LONGINT_FORMAT".lp", stat->nnodes, stat->lpcount);
       SCIP_CALL( SCIPlpWrite(lp, fname) );
       SCIPmessagePrintInfo("wrote LP to file <%s> (barrier, uobjlim=%.15g, feastol=%.15g/%.15g, convtol=%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
          fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol, lp->lpibarrierconvtol,
@@ -11776,7 +11776,7 @@ SCIP_RETCODE lpBarrier(
    if( retcode == SCIP_LPERROR )
    {
       *lperror = TRUE;
-      SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") barrier solving error in LP %d\n", stat->nnodes, stat->nlps);
+      SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") barrier solving error in LP %"SCIP_LONGINT_FORMAT"\n", stat->nnodes, stat->nlps);
    }
    else
    {
@@ -11831,7 +11831,7 @@ SCIP_RETCODE lpBarrier(
       }
    }
 
-   SCIPdebugMessage("solved barrier LP %d in %d iterations\n", stat->lpcount, iterations);
+   SCIPdebugMessage("solved barrier LP %"SCIP_LONGINT_FORMAT" in %d iterations\n", stat->lpcount, iterations);
 
    return SCIP_OKAY;
 }
@@ -12711,13 +12711,13 @@ SCIP_RETCODE SCIPlpSolveAndEval(
       SCIP_Bool dualfeasible;
       SCIP_Bool tightfeastol;
       SCIP_Bool fromscratch;
+      SCIP_Longint oldnlps;
       int fastmip;
-      int oldnlps;
 
       /* set initial LP solver settings */
       fastmip = ((lp->lpihasfastmip && !lp->flushaddedcols && !lp->flushdeletedcols && stat->nnodes > 1) ? set->lp_fastmip : 0);
       tightfeastol = FALSE;
-      fromscratch = FALSE;
+      fromscratch = (stat->nlps == 0);
       primalfeasible = FALSE;
       dualfeasible = FALSE;
 
@@ -12761,7 +12761,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          {
             /* update ages and remove obsolete columns and rows from LP */
             SCIP_CALL( SCIPlpUpdateAges(lp, stat) );
-            if( stat->nlps % ((set->lp_rowagelimit+1)/2 + 1) == 0 )
+            if( stat->nlps % ((set->lp_rowagelimit+1)/2 + 1) == 0 ) /*lint !e776*/
             {
                SCIP_CALL( SCIPlpRemoveNewObsoletes(lp, blkmem, set, stat, eventqueue, eventfilter) );
             }
@@ -13911,9 +13911,9 @@ SCIP_RETCODE SCIPlpGetSol(
    SCIP_Real* redcost;
    int* cstat;
    int* rstat;
+   SCIP_Longint lpcount;
    int nlpicols;
    int nlpirows;
-   int lpcount;
    int c;
    int r;
 
@@ -13934,7 +13934,7 @@ SCIP_RETCODE SCIPlpGetSol(
       return SCIP_OKAY;
    lp->validsollp = stat->lpcount;
 
-   SCIPdebugMessage("getting new LP solution %d\n", stat->lpcount);
+   SCIPdebugMessage("getting new LP solution %"SCIP_LONGINT_FORMAT"\n", stat->lpcount);
 
    lpicols = lp->lpicols;
    lpirows = lp->lpirows;
@@ -14057,9 +14057,9 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    SCIP_Real* ray;
    SCIP_Real rayobjval;
    SCIP_Real rayscale;
+   SCIP_Longint lpcount;
    int nlpicols;
    int nlpirows;
-   int lpcount;
    int c;
    int r;
 
@@ -14082,7 +14082,7 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
 
    lp->validsollp = stat->lpcount;
 
-   SCIPdebugMessage("getting new unbounded LP solution %d\n", stat->lpcount);
+   SCIPdebugMessage("getting new unbounded LP solution %"SCIP_LONGINT_FORMAT"\n", stat->lpcount);
 
    /* get temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &primsol, lp->nlpicols) );

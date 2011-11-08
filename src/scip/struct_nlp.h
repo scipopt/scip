@@ -92,7 +92,7 @@ struct SCIP_NlRow
    char*                 name;               /**< name */
    int                   nuses;              /**< number of times, this row is referenced */
    SCIP_Real             activity;           /**< row activity value in NLP, or SCIP_INVALID if not yet calculated */
-   int                   validactivitynlp;   /**< NLP number for which activity value is valid */
+   SCIP_Longint          validactivitynlp;   /**< NLP number for which activity value is valid */
    SCIP_Real             pseudoactivity;     /**< row activity value in pseudo solution, or SCIP_INVALID if not yet calculated */
    SCIP_Longint          validpsactivitydomchg; /**< domain change number for which pseudo activity value is valid */
    SCIP_Real             minactivity;        /**< minimal activity value w.r.t. the variables' bounds, or SCIP_INVALID */
@@ -164,7 +164,7 @@ struct SCIP_Nlp
    int                   nfracvars;          /**< number of fractional variables */
    int                   npriofracvars;      /**< number of fractional variables with highest branching priority */
    int                   fracvarssize;       /**< size of fracvars* arrays */
-   int                   validfracvars;      /**< the NLP solve for which the fractional variables are valid, or -1 if never setup */
+   SCIP_Longint          validfracvars;      /**< the NLP solve for which the fractional variables are valid, or -1 if never setup */
 
    /* miscellaneous */
    char*                 name;               /**< problem name */

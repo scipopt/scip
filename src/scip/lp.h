@@ -299,7 +299,7 @@ void SCIPcolGetStrongbranchLast(
  *  if strong branching was not yet applied on the column at the current node, returns INT_MAX
  */
 extern
-int SCIPcolGetStrongbranchLPAge(
+SCIP_Longint SCIPcolGetStrongbranchLPAge(
    SCIP_COL*             col,                /**< LP column */
    SCIP_STAT*            stat                /**< dynamic problem statistics */
    );

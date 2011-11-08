@@ -2984,7 +2984,7 @@ SCIP_Longint SCIPgetVarStrongbranchNode(
  *  if strong branching was not yet applied on the variable at the current node, returns INT_MAX
  */
 extern
-int SCIPgetVarStrongbranchLPAge(
+SCIP_Longint SCIPgetVarStrongbranchLPAge(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to get strong branching LP age for */
    );
@@ -7149,7 +7149,7 @@ int SCIPgetNNodesLeft(
 
 /** gets total number of LPs solved so far */
 extern
-int SCIPgetNLPs(
+SCIP_Longint SCIPgetNLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7167,7 +7167,7 @@ SCIP_Longint SCIPgetNRootLPIterations(
 
 /** gets total number of primal LPs solved so far */
 extern
-int SCIPgetNPrimalLPs(
+SCIP_Longint SCIPgetNPrimalLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7179,7 +7179,7 @@ SCIP_Longint SCIPgetNPrimalLPIterations(
 
 /** gets total number of dual LPs solved so far */
 extern
-int SCIPgetNDualLPs(
+SCIP_Longint SCIPgetNDualLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7191,7 +7191,7 @@ SCIP_Longint SCIPgetNDualLPIterations(
 
 /** gets total number of barrier LPs solved so far */
 extern
-int SCIPgetNBarrierLPs(
+SCIP_Longint SCIPgetNBarrierLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7203,7 +7203,7 @@ SCIP_Longint SCIPgetNBarrierLPIterations(
 
 /** gets total number of LPs solved so far that were resolved from an advanced start basis */
 extern
-int SCIPgetNResolveLPs(
+SCIP_Longint SCIPgetNResolveLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7217,7 +7217,7 @@ SCIP_Longint SCIPgetNResolveLPIterations(
 
 /** gets total number of primal LPs solved so far that were resolved from an advanced start basis */
 extern
-int SCIPgetNPrimalResolveLPs(
+SCIP_Longint SCIPgetNPrimalResolveLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7231,7 +7231,7 @@ SCIP_Longint SCIPgetNPrimalResolveLPIterations(
 
 /** gets total number of dual LPs solved so far that were resolved from an advanced start basis */
 extern
-int SCIPgetNDualResolveLPs(
+SCIP_Longint SCIPgetNDualResolveLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7245,7 +7245,7 @@ SCIP_Longint SCIPgetNDualResolveLPIterations(
 
 /** gets total number of LPs solved so far for node relaxations */
 extern
-int SCIPgetNNodeLPs(
+SCIP_Longint SCIPgetNNodeLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7257,7 +7257,7 @@ SCIP_Longint SCIPgetNNodeLPIterations(
 
 /** gets total number of LPs solved so far for initial LP in node relaxations */
 extern
-int SCIPgetNNodeInitLPs(
+SCIP_Longint SCIPgetNNodeInitLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7269,7 +7269,7 @@ SCIP_Longint SCIPgetNNodeInitLPIterations(
 
 /** gets total number of LPs solved so far during diving and probing */
 extern
-int SCIPgetNDivingLPs(
+SCIP_Longint SCIPgetNDivingLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7281,7 +7281,7 @@ SCIP_Longint SCIPgetNDivingLPIterations(
 
 /** gets total number of times, strong branching was called (each call represents solving two LPs) */
 extern
-int SCIPgetNStrongbranchs(
+SCIP_Longint SCIPgetNStrongbranchs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7293,7 +7293,7 @@ SCIP_Longint SCIPgetNStrongbranchLPIterations(
 
 /** gets total number of times, strong branching was called at the root node (each call represents solving two LPs) */
 extern
-int SCIPgetNRootStrongbranchs(
+SCIP_Longint SCIPgetNRootStrongbranchs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

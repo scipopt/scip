@@ -42,6 +42,7 @@ struct SCIP_BranchCand
    SCIP_Real*            externcandsscore;   /**< scores of external candidates, e.g. infeasibilities */
    SCIP_Real*            externcandssol;     /**< values in solution of external candidates */
    SCIP_VAR**            pseudocands;        /**< candidates for branching on pseudo solution (non-fixed integer variables) */
+   SCIP_Longint          validlpcandslp;     /**< lp number for which lpcands are valid */
    int                   lpcandssize;        /**< number of available slots in lpcands array */
    int                   nlpcands;           /**< number of candidates for branching on LP solution */
    int                   npriolpcands;       /**< number of LP candidates with largest branch priority value */
@@ -60,7 +61,6 @@ struct SCIP_BranchCand
    int                   npriopseudobins;    /**< number of binary pseudo candidates with largest branch priority value */
    int                   npriopseudoints;    /**< number of integer pseudo candidates with largest branch priority value */
    int                   pseudomaxpriority;  /**< maximal branch priority of all pseudo candidates */
-   int                   validlpcandslp;     /**< lp number for which lpcands are valid */
 };
 
 /** branching rule */
