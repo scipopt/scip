@@ -1,10 +1,24 @@
-SCIP version NEXT
+SCIP version 2.1.1
 ===============
+
+performance improvements:
+- revised pseudo objective propagator;
+
+features:
+- the pseudo objective propagator can be forced to propagate if active pricers are present; this can be done 
+  if for all (known or unknown) variables follows that: they have positive (negative) objective coefficient 
+  and the global lower (upper) bound is zero.
 
 fixed bugs:
 - fixed bug in reader_mps.c: INTEND marker is now also written, if COLUMNS section ends with non-continous variables
 - fixed numeric issue in aggregations
 - fixed pseudo cost computation
+- pseudo objective propagator does not propagate it active pricers are present
+
+parameters
+- changed parameter "propagating/pseudoobj/maxcands" to "propagating/pseudoobj/minuseless" (see prop_pseudoobj.h)
+  due to revision of the pseudo objective propagator
+
 
 SCIP version 2.1.0
 ===============
