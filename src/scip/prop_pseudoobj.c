@@ -450,10 +450,9 @@ SCIP_RETCODE resolvePropagation(
    glbpseudoobjval = propdata->glbpseudoobjval;
    assert(!SCIPisInfinity(scip, -glbpseudoobjval));
 
-   /* the global pseudo objective activity should be smaller than required minactivity, otherwise SCIP should be
-    * already stopped
+   /** @note If the global pseudo objective activity is greater than the required minactivity, the local bound change
+    *        which has to explained is actually (now) a global one. That means, the reason/explanation is empty
     */
-   assert(SCIPisLE(scip, glbpseudoobjval, reqpseudoobjval));
 
    SCIPdebugMessage("resolve propagation global pseudo objective <%g>, a required minactivity <%g>\n",
       glbpseudoobjval, reqpseudoobjval);
