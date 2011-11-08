@@ -13989,11 +13989,16 @@ SCIP_RETCODE SCIPlpGetSol(
          }
          else
          {
-            /* complementary slackness in simplex means that basic variables should have zero reduced costs */
-            if( SCIPsetIsFeasGT(set, lpicols[c]->primsol, lpicols[c]->lb) )
-               *dualfeasible = *dualfeasible && !SCIPsetIsFeasPositive(set, lpicols[c]->redcost);
-            if( SCIPsetIsFeasLT(set, lpicols[c]->primsol, lpicols[c]->ub) )
-               *dualfeasible = *dualfeasible && !SCIPsetIsFeasNegative(set, lpicols[c]->redcost);
+            if( lpicols[c]->basisstatus != SCIP_BASESTAT_BASIC )
+            {
+               /* complementary slackness in simplex means that basic variables should have zero reduced costs */
+               if( SCIPsetIsFeasGT(set, lpicols[c]->primsol, lpicols[c]->lb) )
+                  *dualfeasible = *dualfeasible && !SCIPsetIsFeasPositive(set, lpicols[c]->redcost);
+               if( SCIPsetIsFeasLT(set, lpicols[c]->primsol, lpicols[c]->ub) )
+                  *dualfeasible = *dualfeasible && !SCIPsetIsFeasNegative(set, lpicols[c]->redcost);
+            }
+            else
+               lpicols[c]->redcost = 0.0;
          }
       } /*lint --e{705}*/
       SCIPdebugMessage(" col <%s> [%g,%g]: primsol=%.9f, redcost=%.9f, pfeas=%u/%u(%u), dfeas=%u(%u)\n",
