@@ -618,6 +618,9 @@ SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
 
       SCIPdebugMessage("Found conflict involving slack variables that can be remodelled.\n");
 
+      assert( conflicthdlrdata->conshdlr != NULL );
+      assert( strcmp(SCIPconshdlrGetName(conflicthdlrdata->conshdlr), CONSHDLR_NAME) == 0 );
+
       nconss = SCIPconshdlrGetNConss(conflicthdlrdata->conshdlr);
       conss = SCIPconshdlrGetConss(conflicthdlrdata->conshdlr);
 
@@ -630,36 +633,35 @@ SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
 
          var = SCIPbdchginfoGetVar(bdchginfos[i]);
 
+         SCIPdebugMessage(" <%s> %s %g\n", SCIPvarGetName(var), SCIPbdchginfoGetBoundtype(bdchginfos[i]) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+            SCIPbdchginfoGetNewbound(bdchginfos[i]));
+
          /* quick check for slack variable that is implicitly integral or continuous */
-         if ( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+         if ( (SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS) && strstr(SCIPvarGetName(var), "indslack") != NULL )
          {
             SCIP_VAR* slackvar;
-            
-            /* check string */
-            if ( strstr(SCIPvarGetName(var), "indslack") != NULL )
+
+            /* search for slack variable */
+            for (j = 0; j < nconss; ++j)
             {
-               /* search for slack variable */
-               for (j = 0; j < nconss; ++j)
-               {
-                  assert( conss[j] != NULL );
-                  slackvar = SCIPgetSlackVarIndicator(conss[j]);
-                  assert( slackvar != NULL );
+               assert( conss[j] != NULL );
+               slackvar = SCIPgetSlackVarIndicator(conss[j]);
+               assert( slackvar != NULL );
 
-                  /* check whether we found the variable */
-                  if ( slackvar == var )
-                  {
-                     /* replace slack variable by binary variable */
-                     var = SCIPgetBinaryVarIndicator(conss[j]);   /* negated ??????????? */
-                     break;
-                  }
-               }
-
-               /* check whether we found the slack variable */
-               if ( j >= nconss )
+               /* check whether we found the variable */
+               if ( slackvar == var )
                {
-                  SCIPdebugMessage("Could not find slack variable <%s>.\n", SCIPvarGetName(var));
+                  /* replace slack variable by binary variable */
+                  var = SCIPgetBinaryVarIndicator(conss[j]);
                   break;
                }
+            }
+
+            /* check whether we found the slack variable */
+            if ( j >= nconss )
+            {
+               SCIPdebugMessage("Could not find slack variable <%s>.\n", SCIPvarGetName(var));
+               break;
             }
          }
          else
@@ -667,7 +669,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
             /* if the variable is fixed to one in the conflict set, we have to use its negation */
             if ( SCIPbdchginfoGetNewbound(bdchginfos[i]) > 0.5 )
             {
-               SCIP_CALL( SCIPgetNegatedVar(scip, vars[i], &vars[i]) );
+               SCIP_CALL( SCIPgetNegatedVar(scip, var, &var) );
             }
          }
 
@@ -681,7 +683,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
          char consname[SCIP_MAXSTRLEN];
 
          SCIPdebugMessage("Generated logicor conflict constraint.\n");
-      
+
          /* create a logicor constraint out of the conflict set */
          (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
          SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, consname, nbdchginfos, vars, 
@@ -691,7 +693,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
          SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
 #endif
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-      
+
          *result = SCIP_CONSADDED;
       }
 
