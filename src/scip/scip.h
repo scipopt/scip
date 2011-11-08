@@ -119,23 +119,26 @@ extern "C" {
 /**@name Miscellaneous Methods */
 /**@{ */
 
-/** returns scip version number */
+/** returns SCIP version number */
 extern
 SCIP_Real SCIPversion(
    void
    );
 
 /** returns SCIP major version */
+extern
 int SCIPmajorVersion(
    void
    );
 
 /** returns SCIP minor version */
+extern
 int SCIPminorVersion(
    void
    );
 
 /** returns SCIP technical version */
+extern
 int SCIPtechVersion(
    void
    );
