@@ -6175,6 +6175,7 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
    SCIP_Real* linvals;
    SCIP_VAR* slackvar;
    SCIP_VAR* binvar;
+   SCIP_Real slackval;
    int nlinvars;
    SCIP_Real sum;
    SCIP_Real val;
@@ -6222,6 +6223,8 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
          var = linvars[v];
          if ( var != slackvar )
             sum += linvals[v] * SCIPgetSolVal(scip, sol, var);
+         else
+            slackval = linvals[v];
       }
 
       /* do nothing if slack variable does not appear */
