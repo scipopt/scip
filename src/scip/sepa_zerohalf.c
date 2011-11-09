@@ -1410,7 +1410,6 @@ void debugPrintMod2Data(
    SCIPdebugMessage("\n fracsol:\n");
    for( j = 0 ; j < mod2data->relatedsubproblem->nrcols ; ++j )
    {
-      k = mod2data->ncolsind;
       for( k = 0 ; k < mod2data->ncolsind ; ++k )
          if( mod2data->colsind[k] == j )
             break;
@@ -1429,7 +1428,7 @@ void debugPrintMod2Data(
       int nnonz = 0;
       SCIPdebugMessage(" ");
       for( j = 0 ; j < mod2data->ncolsind; ++j )
-         if( BITARRAYBITISSET(mod2data->rows[mod2data->rowsind[i]], mod2data->colsind[j]) )
+         if( BITARRAYBITISSET(mod2data->rows[mod2data->rowsind[i]], mod2data->colsind[j]) ) /*lint !e701*/
          {
             nnonz++;
             SCIPdebugPrintf("1");        
@@ -1452,7 +1451,7 @@ void debugPrintMod2Data(
       if( printaggregations )
       {
          for( j = 0 ; j < mod2data->relatedsubproblem->nrrows; ++j )
-            if( BITARRAYBITISSET(mod2data->rowaggregations[mod2data->rowsind[i]], j) )
+            if( BITARRAYBITISSET(mod2data->rowaggregations[mod2data->rowsind[i]], j) ) /*lint !e701*/
             {
                SCIPdebugPrintf("1");
             }
@@ -5591,7 +5590,7 @@ SCIP_RETCODE separateBySolvingAuxIP(
 
 
 #ifdef SCIP_DEBUG
-      debugPrintLPRowsAndCols(scip, lpdata);
+      SCIP_CALL( debugPrintLPRowsAndCols(scip, lpdata) );
       SCIPdebugMessage("\n");
       debugPrintSubLpData(scip, lpdata, mod2data->relatedsubproblem);
       debugPrintMod2Data(scip, lpdata, mod2data, TRUE);
@@ -7149,7 +7148,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
       if( lpdata->subproblems[subproblemindex]->nrrows == 1 && lpdata->subproblems[subproblemindex]->nrcols == 0 )
       {        
 #ifdef SCIP_DEBUG
-         debugPrintLPRowsAndCols(scip, lpdata);
+         SCIP_CALL( debugPrintLPRowsAndCols(scip, lpdata) );
          SCIPdebugMessage("\n");
          debugPrintSubLpData(scip, lpdata, lpdata->subproblems[subproblemindex]);
          SCIPdebugMessage("\n");

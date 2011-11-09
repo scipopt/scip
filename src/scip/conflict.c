@@ -2322,7 +2322,7 @@ SCIP_RETCODE conflictResolveBound(
       return SCIP_INVALIDDATA;
    }
 
-   SCIPdebugMessage("resolving status: %d\n", *resolved);
+   SCIPdebugMessage("resolving status: %u\n", *resolved);
 
 #ifndef NDEBUG
    /* subract the size of the conflicq queues */

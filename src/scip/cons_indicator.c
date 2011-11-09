@@ -6467,7 +6467,7 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
       if ( ! SCIPisInfinity(scip, val) )
       {
          sum -= val;
-         sum /= -slackval;
+         sum /= -slackval; /*lint !e414*/
       }
       else
       {
@@ -6475,7 +6475,7 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
          if ( ! SCIPisInfinity(scip, -val) )
          {
             sum = val - sum;
-            sum /= slackval;
+            sum /= slackval; /*lint !e414*/
          }
       }
 

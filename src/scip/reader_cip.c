@@ -345,7 +345,7 @@ SCIP_RETCODE getVariable(
 
    SCIP_CALL( SCIPaddVar(scip, var) );
 
-   SCIPdebug(SCIPprintVar(scip, var, NULL) );
+   SCIPdebug( SCIP_CALL( SCIPprintVar(scip, var, NULL) ) );
 
    SCIP_CALL( SCIPreleaseVar(scip, &var) );
    

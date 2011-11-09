@@ -6513,7 +6513,7 @@ SCIP_RETCODE dualPresolve(
       SCIP_CALL( SCIPallocBufferArray(scip, &aggrcoefs, consdata->nvars-1) );
             
       /* set up the multi-aggregation */
-      SCIPdebug(SCIPprintCons(scip, cons, NULL));
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
       SCIPdebugMessage("linear constraint <%s> (dual): multi-aggregate <%s> ==", SCIPconsGetName(cons), SCIPvarGetName(bestvar));
       naggrs = 0;
       supinf = FALSE;

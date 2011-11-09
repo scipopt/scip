@@ -705,7 +705,7 @@ SCIP_DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
       {
 #ifdef SCIP_DEBUG
          SCIPdebugMessage("found feasible rounded solution:\n");
-         SCIPprintSol(scip, sol, NULL, FALSE);
+         SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) );
 #endif
          *result = SCIP_FOUNDSOL;
       }

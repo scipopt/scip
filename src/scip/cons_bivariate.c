@@ -1755,7 +1755,7 @@ SCIP_RETCODE generateUnderestimatorParallelYFacets(
    assert(!SCIPisEQ(scip,yub,yval));
 
    SCIPdebugMessage("f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
-   SCIPdebug( SCIPexprtreePrintWithNames(f, NULL) );
+   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, NULL) ) );
    SCIPdebugPrintf("\n");
 
    t = (yub - yval) / (yub - ylb);
@@ -1968,7 +1968,7 @@ SCIP_RETCODE generateOrthogonal_lx_ly_Underestimator(
    *success = FALSE;
 
    SCIPdebugMessage("f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
-   SCIPdebug( SCIPexprtreePrintWithNames(f, NULL) );
+   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, NULL) ) );
    SCIPdebugPrintf("\n");
    SCIPdebugMessage("%s[%g,%g] = %g  %s[%g,%g] = %g\n", SCIPvarGetName(x), xlb, xub, xval, SCIPvarGetName(y), ylb, yub, yval);
 
@@ -2316,7 +2316,7 @@ SCIP_RETCODE generateOrthogonal_lx_uy_Underestimator(
    *success = FALSE;
 
    SCIPdebugMessage("f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
-   SCIPdebug( SCIPexprtreePrintWithNames(f, NULL) );
+   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, NULL) ) );
    SCIPdebugPrintf("\n");
 
    /* check in which triangle the point (xval,yval) lies */
@@ -2645,7 +2645,7 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
    }
 
    SCIPdebugMessage("f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
-   SCIPdebug( SCIPexprtreePrintWithNames(f, NULL) );
+   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, NULL) ) );
    SCIPdebugPrintf("\n");
 
    if( SCIPisEQ(scip, xlb, xub) )
@@ -2798,7 +2798,7 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
       SCIP_CALL( SCIPexprintNewParametrization(exprinterpreter, f_yfixed) );
 
       SCIPdebugMessage("f(x,yub) = ");
-      SCIPdebug( SCIPexprtreePrintWithNames(f_yfixed, NULL) );
+      SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f_yfixed, NULL) ) );
       SCIPdebugPrintf("\n");
 
       /* find xtilde in [xlb, xub] such that f'(xtilde,yub) = f'(xval,ylb) */
@@ -3076,7 +3076,7 @@ SCIP_RETCODE generateConvexConcaveEstimator(
 
    SCIPdebugMessage("generate %sestimator for convex-concave constraint <%s>\n",
       (violside == SCIP_SIDETYPE_LEFT ? "over" : "under"), SCIPconsGetName(cons));
-   SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
 
    if( violside == SCIP_SIDETYPE_LEFT )
    {
@@ -3310,7 +3310,7 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorAtBoundary(
    *success = FALSE;
 
    SCIPdebugMessage("f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
-   SCIPdebug( SCIPexprtreePrintWithNames(f, NULL) );
+   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, NULL) ) );
    SCIPdebugPrintf("\n");
 
    xval = xyref[0];
@@ -3523,7 +3523,7 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorInTheInteriorPatternA(
    }
 
    SCIPdebugMessage("f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
-   SCIPdebug( SCIPexprtreePrintWithNames(f, NULL) );
+   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, NULL) ) );
    SCIPdebugPrintf("\n");
 
    SCIPdebugMessage("xval=%g in [%g,%g], yval=%g in [%g,%g]\n", xval, xlb, xub, yval, ylb, yub);
@@ -3695,7 +3695,7 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorInTheInteriorPatternB(
    *success = FALSE;
 
    SCIPdebugMessage("f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
-   SCIPdebug( SCIPexprtreePrintWithNames(f, NULL) );
+   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, NULL) ) );
    SCIPdebugPrintf("\n");
 
    xval = xyref[0];
@@ -4034,7 +4034,7 @@ SCIP_RETCODE generateCut(
    if( *row == NULL )
       return SCIP_OKAY;
 
-   SCIPdebug( SCIPprintRow(scip, *row, NULL) );
+   SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *row, NULL) ) );
 
    /* check numerics */
    {
@@ -4598,7 +4598,7 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
             SCIPconsIsStickingAtNode(conss[c])) );
 
       SCIPdebugMessage("replace violated nonlinear constraint <%s> by linear constraint after all nonlinear vars have been fixed\n", SCIPconsGetName(conss[c]) );
-      SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
 
       SCIP_CALL( SCIPcheckCons(scip, cons, NULL, FALSE, FALSE, FALSE, &checkresult) );
 
@@ -5674,8 +5674,8 @@ SCIP_DECL_CONSINITSOL(consInitsolBivariate)
    SCIP_CONSDATA*     consdata;
    int                c;
 #ifdef SCIP_DEBUG
-   int                nconvextypeslhs[SCIP_BIVAR_UNKNOWN+1];
-   int                nconvextypesrhs[SCIP_BIVAR_UNKNOWN+1];
+   int                nconvextypeslhs[(int)SCIP_BIVAR_UNKNOWN+1];
+   int                nconvextypesrhs[(int)SCIP_BIVAR_UNKNOWN+1];
 #endif
 
    assert(scip  != NULL);
@@ -5685,8 +5685,8 @@ SCIP_DECL_CONSINITSOL(consInitsolBivariate)
    assert(conshdlrdata != NULL);
 
 #ifdef SCIP_DEBUG
-   BMSclearMemoryArray(nconvextypeslhs, SCIP_BIVAR_UNKNOWN+1);
-   BMSclearMemoryArray(nconvextypesrhs, SCIP_BIVAR_UNKNOWN+1);
+   BMSclearMemoryArray(nconvextypeslhs, (int)SCIP_BIVAR_UNKNOWN+1);
+   BMSclearMemoryArray(nconvextypesrhs, (int)SCIP_BIVAR_UNKNOWN+1);
 #endif
 
    for( c = 0; c < nconss; ++c )
@@ -5764,7 +5764,7 @@ SCIP_DECL_CONSINITSOL(consInitsolBivariate)
       SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_SOLFOUND, eventhdlr, (SCIP_EVENTDATA*)conshdlr, &conshdlrdata->newsoleventfilterpos) );
 
 #ifdef SCIP_DEBUG
-      for( c = 0; c <= SCIP_BIVAR_UNKNOWN; ++c )
+      for( c = 0; c <= (int)SCIP_BIVAR_UNKNOWN; ++c )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%4d left and %4d right bivariate constraints of type %d\n", nconvextypeslhs[c], nconvextypesrhs[c], c);
       }
@@ -6582,7 +6582,7 @@ SCIP_DECL_CONSPRESOL(consPresolBivariate)
 #endif
 
       SCIPdebugMessage("process constraint <%s>\n", SCIPconsGetName(conss[c]));
-      SCIPdebug( SCIPprintCons(scip, conss[c], NULL) );
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
 
       havechange = FALSE;
 
@@ -6596,7 +6596,7 @@ SCIP_DECL_CONSPRESOL(consPresolBivariate)
       if( havechange )
       {
          SCIPdebugMessage("removed fixed variables -> ");
-         SCIPdebug( SCIPprintCons(scip, conss[c], NULL) );
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
       }
    }
 

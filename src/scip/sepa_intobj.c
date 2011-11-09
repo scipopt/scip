@@ -162,7 +162,7 @@ SCIP_RETCODE createObjRow(
       SCIP_CALL( SCIPflushRowExtensions(scip, sepadata->objrow) );
 
       SCIPdebugMessage("created objective value row: ");
-      SCIPdebug(SCIPprintRow(scip, sepadata->objrow, NULL));
+      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, sepadata->objrow, NULL) ) );
    }
 
    return SCIP_OKAY;

@@ -226,7 +226,7 @@ SCIP_RETCODE addCut(
    
          SCIPdebugMessage(" -> found potential %s cut <%s>: activity=%f, rhs=%f, norm=%f, eff=%f\n",
             cutclassname, cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut));
-         SCIPdebug(SCIPprintRow(scip, cut, NULL));
+         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
    
          /* try to scale the cut to integral values, but only if the scaling is small; otherwise keep the fractional cut */
          SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
@@ -235,7 +235,7 @@ SCIP_RETCODE addCut(
          {
             SCIPdebugMessage(" -> %s cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
                cutclassname, cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut));
-            SCIPdebug(SCIPprintRow(scip, cut, NULL));
+            SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
             success = FALSE;
          }
          else
@@ -248,7 +248,7 @@ SCIP_RETCODE addCut(
                cutclassname, cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut),
                SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
                SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
-            SCIPdebug(SCIPprintRow(scip, cut, NULL));
+            SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
             SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE) );
             if( !cutislocal )
             {

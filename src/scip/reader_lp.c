@@ -1946,7 +1946,7 @@ SCIP_RETCODE readSemicontinuous(
       SCIP_CALL( SCIPaddCons(scip, cons) );
       
       SCIPdebugMessage("add bound disjunction constraint for semi-continuity of <%s>:\n\t", SCIPvarGetName(var));
-      SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
       
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }

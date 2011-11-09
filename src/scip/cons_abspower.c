@@ -835,16 +835,16 @@ SCIP_RETCODE presolveFindDuplicates(
             if( *infeas )
             {
                SCIPdebugMessage("infeasibility detected while solving the equations, no solution exists\n");
-               SCIPdebug( SCIPprintCons(scip, cons0, NULL) );
-               SCIPdebug( SCIPprintCons(scip, cons1, NULL) );
+               SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+	       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
                break;
             }
 
             SCIPdebugMessage("fixing variables <%s>[%g, %g] to %g and <%s>[%g, %g] to %g due to equations\n",
                SCIPvarGetName(consdata0->x), SCIPvarGetLbLocal(consdata0->x), SCIPvarGetUbLocal(consdata0->x), xval,
                SCIPvarGetName(consdata0->z), SCIPvarGetLbLocal(consdata0->z), SCIPvarGetUbLocal(consdata0->z), zval);
-            SCIPdebug( SCIPprintCons(scip, cons0, NULL) );
-            SCIPdebug( SCIPprintCons(scip, cons1, NULL) );
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+	    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
 
             if( SCIPvarGetStatus(SCIPvarGetProbvar(consdata0->x)) != SCIP_VARSTATUS_MULTAGGR )
             {
@@ -1273,7 +1273,7 @@ void computeBoundsZ(
    }
 
    SCIPdebugMessage("given x = [%.20g, %.20g], computed z = [%.20g, %.20g] via", xbnds.inf, xbnds.sup, zbnds->inf, zbnds->sup);
-   SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+   SCIPdebug( SCIP_CALL_ABORT( SCIPprintCons(scip, cons, NULL) ) );
 
    assert(!SCIPintervalIsEmpty(*zbnds));
 }
@@ -1326,7 +1326,7 @@ void computeBoundsX(
    }
 
    SCIPdebugMessage("given z = [%.20g, %.20g], computed x = [%.20g, %.20g] via", zbnds.inf, zbnds.sup, xbnds->inf, xbnds->sup);
-   SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+   SCIPdebug( SCIP_CALL_ABORT( SCIPprintCons(scip, cons, NULL) ) );
 
    assert(!SCIPintervalIsEmpty(*xbnds));
 }
@@ -3111,7 +3111,7 @@ SCIP_RETCODE generateCut(
    /* check numerics */
    if( *row != NULL )
    {
-      SCIPdebug( SCIPprintRow(scip, *row, NULL) );
+      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *row, NULL) ) );
 
       /* check range of coefficients */
       SCIPdebugMessage(" -> found cut rhs=%f, min=%f, max=%f range=%g\n",
@@ -4339,7 +4339,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAbspower)
             x, z, exponent, xoffset, -1.0/signpowcoef, -constant/signpowcoef, -constant/signpowcoef,
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, cons) );
-      SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
       ++*naddcons;
 
       /* compute value of z and reformnode and set in debug solution and expression graph, resp. */
@@ -4366,7 +4366,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAbspower)
             x, z, exponent, xoffset, -1.0, 0.0, 0.0,
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, cons) );
-      SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
       ++*naddcons;
 
       /* compute value of z and reformnode and set in debug solution and expression graph, resp. */
@@ -5590,7 +5590,7 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
          )
       {
          SCIPdebugMessage("make z = <%s> implicit integer in cons <%s>\n", SCIPvarGetName(consdata->z), SCIPconsGetName(conss[c]));  /*lint !e613*/
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) ); /*lint !e613*/
          SCIP_CALL( SCIPchgVarType(scip, consdata->z, SCIP_VARTYPE_IMPLINT, &infeas) );
          if( infeas )
          {

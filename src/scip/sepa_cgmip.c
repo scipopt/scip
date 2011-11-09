@@ -2290,7 +2290,7 @@ SCIP_RETCODE createCGCutDirect(
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cgcut%d_%u", SCIPgetNLPs(scip), *ngen);
             SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, name, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, sepadata->dynamiccuts) );
             SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
-            /*SCIPdebug(SCIPprintRow(scip, cut, NULL));*/
+            /*SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );*/
             
             /* add cut to pool */
             if ( ! cutislocal )
@@ -2325,7 +2325,7 @@ SCIP_RETCODE createCGCutDirect(
                      SCIPgetCutEfficacy(scip, NULL, cut),
                      SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
                      SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
-                  SCIPdebug(SCIPprintRow(scip, cut, NULL));
+                  SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
                   SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
                   ++(*ngen);
                }
@@ -2534,7 +2534,7 @@ SCIP_RETCODE createCGCutCMIR(
             assert( success );
 
 #ifdef SCIP_DEBUG
-            SCIPdebug(SCIPprintRow(scip, cut, NULL));
+            SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
 #endif
 
             /* try to scale the cut to integral values */
@@ -2586,7 +2586,7 @@ SCIP_RETCODE createCGCutCMIR(
                         SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
                         SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
 #ifdef SCIP_OUTPUT
-                     SCIPdebug(SCIPprintRow(scip, cut, NULL));
+                     SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
 #endif
                      SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
                      ++(*ngen);
@@ -2741,7 +2741,7 @@ SCIP_RETCODE createCGCutStrongCG(
             assert( success );
 
 #ifdef SCIP_DEBUG
-            SCIPdebug(SCIPprintRow(scip, cut, NULL));
+            SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
 #endif
 
             /* try to scale the cut to integral values */
@@ -2793,7 +2793,7 @@ SCIP_RETCODE createCGCutStrongCG(
                         SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
                         SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
 #ifdef SCIP_OUTPUT
-                     SCIPdebug(SCIPprintRow(scip, cut, NULL));
+                     SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
 #endif
                      SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
                      ++(*ngen);

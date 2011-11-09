@@ -16536,7 +16536,7 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
       return SCIP_OKAY;
 
    /* disable objective cutoff if we have none */
-   if( inclobjcutoff && (SCIPsetIsInfinity(set, lp->cutoffbound) || lp->looseobjvalinf > 0 || lp->looseobjval == SCIP_INVALID) )
+   if( inclobjcutoff && (SCIPsetIsInfinity(set, lp->cutoffbound) || lp->looseobjvalinf > 0 || lp->looseobjval == SCIP_INVALID) ) /*lint !e777 */
       inclobjcutoff = FALSE;
 
    SCIPdebugMessage("Computing relative interior point to current LP.\n");

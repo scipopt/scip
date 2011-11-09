@@ -419,7 +419,7 @@ SCIP_RETCODE SCIPincludeBranchruleFullstrong(
    SCIP_CALL( SCIPaddLongintParam(scip,
          "branching/fullstrong/reevalage", 
          "number of intermediate LPs solved to trigger reevaluation of strong branching value for a variable that was already evaluated at the current node",
-         &branchruledata->reevalage, TRUE, DEFAULT_REEVALAGE, 0, SCIP_LONGINT_MAX, NULL, NULL) );
+         &branchruledata->reevalage, TRUE, DEFAULT_REEVALAGE, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

@@ -3405,11 +3405,16 @@ void subtractStartingJobDemands(
    int                   nvars               /**< number of vars in array of starttimes and startindices */
    )
 {
-   assert(idx != NULL);
-#ifdef SCIP_DEBUG
+#if defined SCIP_DEBUG && !defined NDEBUG
    int oldidx;
+#endif
+
+   assert(idx != NULL);
+
+#if defined SCIP_DEBUG && !defined NDEBUG
    oldidx = *idx;
 #endif
+
    assert(starttimes != NULL);
    assert(starttimes != NULL);
    assert(freecapacity != NULL);
@@ -3443,7 +3448,7 @@ void addEndingJobDemands(
    int                   nvars               /**< number of vars in array of starttimes and startindices */
    )
 {
-#ifdef SCIP_DEBUG
+#if defined SCIP_DEBUG && !defined NDEBUG
    int oldidx;
    oldidx = *idx;
 #endif

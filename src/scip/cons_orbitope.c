@@ -592,7 +592,7 @@ SCIP_RETCODE separateSCIs(
 
             /* generate cut */
 #ifdef SCIP_DEBUG
-            SCIPsnprintf(name, SCIP_MAXSTRLEN, "sci_%d_%d", i, j);
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sci_%d_%d", i, j);
             SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
 #else
             SCIP_CALL( SCIPcreateEmptyRow(scip, &row, "", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );

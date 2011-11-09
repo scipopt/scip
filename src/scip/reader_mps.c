@@ -1480,7 +1480,7 @@ SCIP_RETCODE readBounds(
          SCIP_CALL( SCIPaddCons(scip, cons) );
          
          SCIPdebugMessage("add bound disjunction constraint for semi-continuity of <%s>:\n\t", SCIPvarGetName(var));
-         SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
          
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       }
@@ -2967,9 +2967,7 @@ void printColumnSection(
       printRecord(scip, file, "'MARKER'", "", maxnamelen);
       printRecord(scip, file, "'INTEND'", "", maxnamelen);
       SCIPinfoMessage(scip, file, "\n", maxnamelen);
-      intSection = FALSE;
    }
-
 }
 
 

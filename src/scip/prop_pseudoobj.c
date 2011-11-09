@@ -951,6 +951,7 @@ void calcMaxObjPseudoactivity(
    }
 }
 
+#ifndef NDEBUG
 /** returns the pseudo objective activity */
 static
 SCIP_Real getMaxObjPseudoactivity(
@@ -970,6 +971,7 @@ SCIP_Real getMaxObjPseudoactivity(
 
    return propdata->maxpseudoobjact;
 }
+#endif
 
 /** returns the residual pseudo objective activity without the given value */
 static
@@ -1124,11 +1126,13 @@ SCIP_RETCODE propagateLowerbound(
 {  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
    SCIP_Real lowerbound;
-   SCIP_Real maxactivity;
    SCIP_VAR** objvars;
    int nobjbinvars;
    int nobjvars;
    int k;
+#ifndef NDEBUG
+   SCIP_Real maxactivity;
+#endif
 
    assert(result != NULL);
 
@@ -1159,7 +1163,9 @@ SCIP_RETCODE propagateLowerbound(
    if( SCIPisLE(scip, lowerbound, propdata->lastlowerbound) && propdata->maxpseudoobjact < SCIP_INVALID)
       return SCIP_OKAY;
 
+#ifndef NDEBUG
    maxactivity = getMaxObjPseudoactivity(scip, propdata);
+#endif
 
    /* if more than one variable contribute an infinity to the maximal pseudo activity we can do nothing */
    assert(propdata->maxpseudoobjact < SCIP_INVALID);
@@ -1169,13 +1175,17 @@ SCIP_RETCODE propagateLowerbound(
    for( k = 0; k < nobjbinvars && *result != SCIP_CUTOFF; ++k )
    {
       SCIP_VAR* var;
+#ifndef NDEBUG
       SCIP_Real objval;
+#endif
 
       var = objvars[k];
       assert(var != NULL);
 
+#ifndef NDEBUG
       objval = SCIPvarGetObj(var);
       assert(!SCIPisZero(scip, objval));
+#endif
 
       SCIP_CALL( propagateLowerboundVar(scip, propdata, objvars[k], lowerbound, result) );
 

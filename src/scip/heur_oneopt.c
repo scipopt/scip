@@ -534,7 +534,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          if( success )
          {
             SCIPdebugMessage("found feasible shifted solution:\n");
-            SCIPdebug(SCIPprintSol(scip, worksol, NULL, FALSE));
+            SCIPdebug( SCIP_CALL( SCIPprintSol(scip, worksol, NULL, FALSE) ) );
             heurdata->lastsolindex = SCIPsolGetIndex(bestsol);
             *result = SCIP_FOUNDSOL;
          }
@@ -603,7 +603,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
             if( success )
             {
                SCIPdebugMessage("found feasible shifted solution:\n");
-               SCIPdebug(SCIPprintSol(scip, worksol, NULL, FALSE));
+               SCIPdebug( SCIP_CALL( SCIPprintSol(scip, worksol, NULL, FALSE) ) );
                heurdata->lastsolindex = SCIPsolGetIndex(bestsol);
                *result = SCIP_FOUNDSOL;
             }
