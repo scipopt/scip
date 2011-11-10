@@ -12712,15 +12712,17 @@ SCIP_RETCODE SCIPlpSolveAndEval(
       SCIP_Bool dualfeasible;
       SCIP_Bool tightfeastol;
       SCIP_Bool fromscratch;
+      SCIP_Bool wasfromscratch;
       SCIP_Longint oldnlps;
       int fastmip;
 
       /* set initial LP solver settings */
       fastmip = ((lp->lpihasfastmip && !lp->flushaddedcols && !lp->flushdeletedcols && stat->nnodes > 1) ? set->lp_fastmip : 0);
       tightfeastol = FALSE;
-      fromscratch = (stat->nlps == 0);
+      fromscratch = FALSE;
       primalfeasible = FALSE;
       dualfeasible = FALSE;
+      wasfromscratch = (stat->nlps == 0);
 
    SOLVEAGAIN:
       /* solve the LP */
@@ -12799,7 +12801,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                tightfeastol = TRUE;
                goto SOLVEAGAIN;
             }
-            else if( !fromscratch && simplex )
+            else if( !fromscratch && !wasfromscratch && simplex )
             {
                /* solution is infeasible (this can happen due to numerical problems): solve again from scratch */
                SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
