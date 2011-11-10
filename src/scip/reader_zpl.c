@@ -162,6 +162,9 @@ Bool xlp_addcon_term(
    SCIP_Bool modifiable;
    SCIP_Bool dynamic;
    SCIP_Bool removable;
+   SCIP_Bool usercut;
+   SCIP_Bool lazycut;
+
    int  i;
    int  maxdegree;
 
@@ -203,15 +206,41 @@ Bool xlp_addcon_term(
    }
 
    cons = NULL;
-   initial = !((flags & LP_FLAG_CON_SEPAR) != 0);
+
+   /* default values */
+   initial = TRUE;
    separate = TRUE;
-   enforce = TRUE;
-   check = enforce;
    propagate = TRUE;
+   enforce = TRUE;
+   check = TRUE;
+   removable = FALSE;
    local = FALSE;
    modifiable = FALSE;
-   dynamic = ((flags & LP_FLAG_CON_SEPAR) != 0);
-   removable = dynamic;
+   dynamic = FALSE;
+
+   usercut = (flags & LP_FLAG_CON_SEPAR) != 0;
+   lazycut = (flags & LP_FLAG_CON_CHECK) != 0;
+
+   /* evaluate constraint flags */
+   if( usercut && lazycut )
+   {
+      initial = FALSE;
+      separate = TRUE;
+      check = TRUE;
+   }
+   else if( usercut )
+   {
+      initial = FALSE;
+      separate = TRUE;
+      check = FALSE;
+   }
+   else if( lazycut )
+   {
+      initial = FALSE;
+      separate = FALSE;
+      check = TRUE;
+   }
+
    maxdegree = term_get_degree(term);
 
    if (maxdegree <= 1)
