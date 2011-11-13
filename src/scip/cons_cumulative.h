@@ -157,6 +157,52 @@ SCIP_RETCODE SCIPcheckCumulativeCondition(
    SCIP_Bool             printreason         /**< should the reason for the violation be printed? */
    );
 
+/** presolve the given cumulative condition */
+extern
+SCIP_RETCODE SCIPpresolveCumulativeCondition(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of variables (jobs) */
+   SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
+   int*                  durations,          /**< array containing corresponding durations */
+   int*                  demands,            /**< array containing corresponding demands */
+   int*                  capacity,           /**< pointer to available cumulative capacity which might change */
+   SCIP_CONS*            cons,               /**< constraint which gets presolved */
+   SCIP_Bool*            delvars,            /**< array storing which jobs can be deleted since they are irrelevant */
+   int*                  nfixedvars,         /**< pointer to store the number of fixed variable */
+   int*                  nchgbds,            /**< pointer to store the number of variable bound changes */
+   int*                  nchgcoefs,          /**< pointer to store the number of coefficient changes */
+   int*                  nchgsides,          /**< pointer to store the number of changes constraint sides */
+   SCIP_Bool*            redundant,          /**< pointer to store if the constraint is redundant */
+   SCIP_Bool*            cutoff              /**< pointer to store if the cumulative condition is violated */
+   );
+
+/** presolve the given cumulative condition */
+extern
+SCIP_RETCODE SCIPdetectIrrelevantJobsCumulativeCondition(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of variables (jobs) */
+   SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
+   int*                  durations,          /**< array containing corresponding durations */
+   int*                  demands,            /**< array containing corresponding demands */
+   int                   capacity,           /**< available cumulative capacity */
+   SCIP_CONS*            cons,               /**< constraint which gets presolved */
+   SCIP_Bool*            delvars,            /**< array storing which jobs can be deleted since they are irrelevant */
+   int*                  nfixedvars          /**< pointer to store the number of fixed variable */
+   );
+
+/** normalizes the cumulative condition */
+extern
+SCIP_RETCODE SCIPnormalizeCumulativeCondition(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of variables (jobs) */
+   SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
+   int*                  durations,          /**< array containing corresponding durations */
+   int*                  demands,            /**< array containing corresponding demands */
+   int*                  capacity,           /**< pointer to available cumulative capacity which might change */
+   int*                  nchgcoefs,          /**< pointer to store the number of coefficient changes */
+   int*                  nchgsides           /**< pointer to store the number of changes constraint sides */
+   );
+
 /** propagate the given cumulative condition */
 extern
 SCIP_RETCODE SCIPpropCumulativeCondition(
