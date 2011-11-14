@@ -6373,10 +6373,6 @@ SCIP_Bool SCIPisViolatedIndicator(
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
 
-   /* deleted constraints should always be satisfied */
-   if ( SCIPconsIsDeleted(cons) )
-      return FALSE;
-
    if ( consdata->linconsactive )
    {
       assert( consdata->slackvar != NULL );
