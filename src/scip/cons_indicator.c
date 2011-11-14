@@ -6365,6 +6365,11 @@ SCIP_Bool SCIPisViolatedIndicator(
    SCIP_CONSDATA* consdata;
 
    assert( cons != NULL );
+
+   /* deleted constraints should always be satisfied */
+   if ( SCIPconsIsDeleted(cons) )
+      return FALSE;
+
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
 
