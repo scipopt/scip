@@ -11707,7 +11707,7 @@ SCIP_RETCODE SCIPaddClique(
       /** in case one both variables are not of binary type we have to add the implication as variable bounds */
       else
       {
-         /* both variables are not of binary type but are implicit binary; in that case we can only add the this
+         /* both variables are not of binary type but are implicit binary; in that case we can only add this
           * implication as variable bounds
           */
          assert(SCIPvarGetType(vars[0]) != SCIP_VARTYPE_BINARY && SCIPvarIsBinary(vars[0]));
