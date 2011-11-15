@@ -3012,6 +3012,13 @@ SCIP_RETCODE createVarUbs(
          {
             SCIPdebugMessage("Removing indicator constraint <%s>.\n", SCIPconsGetName(conss[c]));
             assert( ! SCIPconsIsModifiable(conss[c]) );
+
+	    /* mark linear constraint to be update-able */
+	    if ( SCIPconsIsActive(consdata->lincons) )
+	    {
+	       SCIP_CALL( SCIPsetUpgradeConsLinear(scip, consdata->lincons, TRUE) );
+	    }
+
             SCIP_CALL( SCIPdelCons(scip, conss[c]) );
          }
 
@@ -3309,6 +3316,13 @@ SCIP_RETCODE propIndicator(
 
       /* delete constraint locally */
       assert( !SCIPconsIsModifiable(cons) );
+
+      /* mark linear constraint to be update-able */
+      if ( SCIPgetDepth(scip) == 0 && SCIPconsIsActive(consdata->lincons) )
+      {
+	 SCIP_CALL( SCIPsetUpgradeConsLinear(scip, consdata->lincons, TRUE) );
+      }
+
       SCIP_CALL( SCIPdelConsLocal(scip, cons) );
    }
    else
@@ -3369,6 +3383,13 @@ SCIP_RETCODE propIndicator(
 
          /* delete constraint */
          assert( ! SCIPconsIsModifiable(cons) );
+
+	 /* mark linear constraint to be update-able */
+	 if ( SCIPgetDepth(scip) == 0 && SCIPconsIsActive(consdata->lincons) )
+	 {
+	    SCIP_CALL( SCIPsetUpgradeConsLinear(scip, consdata->lincons, TRUE) );
+	 }
+
          SCIP_CALL( SCIPdelConsLocal(scip, cons) );
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
          ++(*nGen);
