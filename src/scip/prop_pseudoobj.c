@@ -439,7 +439,6 @@ SCIP_RETCODE propdataInit(
       propdata->cutoffbound = cutoffbound;
    }
 
-
    return SCIP_OKAY;
 }
 
@@ -458,27 +457,33 @@ SCIP_RETCODE resolvePropagation(
    SCIP_VAR* var;
    SCIP_Real glbpseudoobjval;
    SCIP_Real obj;
+   SCIP_Bool infinity;
    int nvars;
    int v;
 
+   infinity = FALSE;
    vars = propdata->objvars;
    nvars = propdata->nobjvars;
    assert(nvars > 0 && vars != NULL);
 
    /* we use the last stored global pseudo objective activity; Note that this is just a relaxation since global bounds
-    * might be tighten since then.
-    */
-   glbpseudoobjval = propdata->glbpseudoobjval;
-   assert(!SCIPisInfinity(scip, -glbpseudoobjval));
-
-   /** @note If the global pseudo objective activity is greater than the required minactivity, the local bound change
+    * might be tighten since then and the current global pseudo objective activity is greater than that
+    *
+    * @note The global pseudo objective activity can be minus infinity. In that case all variable are part of the
+    *       reason/explanation
+    *
+    * @note If the global pseudo objective activity is greater than the required minactivity, the local bound change
     *        which has to explained is actually (now) a global one. That means, the reason/explanation is empty
     */
+   glbpseudoobjval = propdata->glbpseudoobjval;
 
    SCIPdebugMessage("resolve propagation global pseudo objective <%g>, a required minactivity <%g>\n",
       glbpseudoobjval, reqpseudoobjval);
 
-   reqpseudoobjval -= glbpseudoobjval;
+   if( SCIPisInfinity(scip, -glbpseudoobjval) )
+      infinity = TRUE;
+   else
+      reqpseudoobjval -= glbpseudoobjval;
 
    /* the variables responsible for the propagation are the ones with
     *  - obj > 0 and local lb > global lb
@@ -489,7 +494,7 @@ SCIP_RETCODE resolvePropagation(
     * (ii) finally collect all variables which contribute positively to the pseudo objective activity (minactivity)
     *      until we reached the adjusted required minactivity
     */
-   for( v = 0; v < nvars && SCIPisPositive(scip, reqpseudoobjval); ++v )
+   for( v = 0; v < nvars && (SCIPisPositive(scip, reqpseudoobjval) || infinity); ++v )
    {
       var = vars[v];
       if( var == infervar )
