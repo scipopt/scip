@@ -528,9 +528,16 @@ SCIP_RETCODE execRelpscost(
          {
             if( !SCIPisStopped(scip) )
             {
+#ifdef EXACTSOLVE
+               /* happens very often on numerically difficult instances. increase the verlevel to avoid huge logfiles */
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
+                  "(node %"SCIP_LONGINT_FORMAT") error in strong branching call for variable <%s> with solution %g\n", 
+                  SCIPgetNNodes(scip), SCIPvarGetName(branchcands[c]), branchcandssol[c]);
+#else
                SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                   "(node %"SCIP_LONGINT_FORMAT") error in strong branching call for variable <%s> with solution %g\n", 
                   SCIPgetNNodes(scip), SCIPvarGetName(branchcands[c]), branchcandssol[c]);
+#endif
             }
             break;
          }
