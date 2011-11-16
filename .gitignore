@@ -16,3 +16,4 @@ doc/html_devel/
 .project
 hooks/
 localhooks/
+src/scip/githash.c
