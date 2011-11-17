@@ -97,16 +97,15 @@ void SCIPgetNCountedSolsstr(
 extern
 SCIP_Longint SCIPgetNCountedFeasSubtrees(
    SCIP*                 scip                /**< SCIP data structure */
-   ); 
+   );
 
 /** Method to get the sparse solution.
  *
  *  @note You get the pointer to the sparse solutions stored in the constraint handler (not a copy).
  *
- *  @note Only the entries for active or fixed variables are valied. For none active variables or fixed the value has to
- *        be computed depending on its aggregation type (SCIP_VARSTATUS_AGGREGATED, SCIP_VARSTATUS_MULTAGGR, and
- *        SCIP_VARSTATUS_NEGATED). In these case the intervall stored in the spares solution structure is
- *        [LLONG_MIN,LLONG_MAX]
+ *  @note The sparse solutions are stored w.r.t. the active variables. This are the variables which got not removed
+ *        during presolving. For none active variables the value has to be computed depending on their aggregation
+ *        type. See for more details about that \ref COLLECTALLFEASEBLES.
  */
 extern
 void SCIPgetCountedSparseSolutions(

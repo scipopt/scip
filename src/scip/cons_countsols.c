@@ -2263,8 +2263,8 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
                retcode = SCIPallocBufferArray(scip, &origvars, SCIPgetNOrigVars(scip));
                if( retcode != SCIP_OKAY )
                {
-                   fclose(file);
-                   SCIP_CALL( retcode );
+                  fclose(file);
+                  SCIP_CALL( retcode );
                }
 
                norigvars = 0;
@@ -2282,8 +2282,8 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
                retcode = SCIPduplicateBufferArray(scip, &allvars, conshdlrdata->allvars, norigvars);
                if( retcode != SCIP_OKAY )
                {
-                   fclose(file);
-                   SCIP_CALL( retcode );
+                  fclose(file);
+                  SCIP_CALL( retcode );
                }
 
                /* sort original variables array and the corresponding transformed variables w.r.t. the problem index */
@@ -2293,14 +2293,14 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
                retcode = SCIPallocBufferArray(scip, &perm, nvars);
                if( retcode != SCIP_OKAY )
                {
-                   fclose(file);
-                   SCIP_CALL( retcode );
+                  fclose(file);
+                  SCIP_CALL( retcode );
                }
                retcode = SCIPduplicateBufferArray(scip, &vars, conshdlrdata->vars, nvars);
                if( retcode != SCIP_OKAY )
                {
-                   fclose(file);
-                   SCIP_CALL( retcode );
+                  fclose(file);
+                  SCIP_CALL( retcode );
                }
 
                /* create identity permutation */
@@ -2343,8 +2343,8 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
                retcode = writeExpandedSolutions(scip, file, allvars, nvars, conshdlrdata->nallvars, perm, sparsesols, nsparsesols);
                if( retcode != SCIP_OKAY )
                {
-                   fclose(file);
-                   SCIP_CALL( retcode );
+                  fclose(file);
+                  SCIP_CALL( retcode );
                }
                SCIPdialogMessage(scip, NULL, "written solutions information to file <%s>\n", filename);
 
@@ -2683,10 +2683,9 @@ SCIP_Longint SCIPgetNCountedFeasSubtrees(
  *
  *  @note You get the pointer to the sparse solutions stored in the constraint handler (not a copy).
  *
- *  @note Only the entries for active or fixed variables are valied. For none active variables or fixed the value has to
- *        be computed depending on its aggregation type (SCIP_VARSTATUS_AGGREGATED, SCIP_VARSTATUS_MULTAGGR, and
- *        SCIP_VARSTATUS_NEGATED). In these case the intervall stored in the spares solution structure is
- *        [LLONG_MIN,LLONG_MAX]
+ *  @note The sparse solutions are stored w.r.t. the active variables. This are the variables which got not removed
+ *        during presolving. For none active variables the value has to be computed depending on their aggregation
+ *        type. See for more details about that \ref COLLECTALLFEASEBLES.
  */
 void SCIPgetCountedSparseSolutions(
    SCIP*                 scip,               /**< SCIP data structure */
