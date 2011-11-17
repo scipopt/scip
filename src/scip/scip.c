@@ -8995,24 +8995,40 @@ SCIP_RETCODE SCIPflattenVarAggregationGraph(
    return SCIP_OKAY;
 }
 
-/** transforms given variables, scalars and constant to the corresponding active variables, scalars and constant
+/** Transforms a given linear sum of variables, that is a_1*x_1 + ... + a_n*x_n + c into a corresponding linear sum of
+ *  active variables, that is b_1*y_1 + ... + b_m*y_m + d.
  *
- * If the number of needed active variables is greater than the available slots in the variable array, nothing happens
- * except that the required size is stored in the corresponding variable; hence, if afterwards the required size is
- * greater than the available slots (varssize), nothing happens; otherwise, the active variable representation is stored
- * in the arrays.
+ *  If the number of needed active variables is greater than the available slots in the variable array, nothing happens
+ *  except that the required size is stored in the corresponding variable (requiredsize). Otherwise the active variable
+ *  representation is stored in the variable array, scalar array and constant.
  *
- * The reason for this approach is that we cannot reallocate memory, since we do not know how the
- * memory has been allocated (e.g., by a C++ 'new' or SCIP functions).
+ *  The reason for this approach is that we cannot reallocate memory, since we do not know how the memory has been
+ *  allocated (e.g., by a C++ 'new' or SCIP functions).
+ *
+ *  @note The resulting linear sum is stored into the given variable array, scalar array, and constant. That means the
+ *        given entries are overwritten.
+ *
+ *  @note That method can be used to convert a single variables into variable space of active variables. Therefore call
+ *        the method with the linear sum 1.0*x + 0.0.
  */
 SCIP_RETCODE SCIPgetProbvarLinearSum(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            vars,               /**< variable array to get active variables */
-   SCIP_Real*            scalars,            /**< scalars a_1, ..., a_n in linear sum a_1*x_1 + ... + a_n*x_n + c */
-   int*                  nvars,              /**< pointer to number of variables and values in vars and vals array */
-   int                   varssize,           /**< available slots in vars and scalars array */
-   SCIP_Real*            constant,           /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c  */
-   int*                  requiredsize,       /**< pointer to store the required array size for the active variables */
+   SCIP_VAR**            vars,               /**< variable array x_1, ..., x_n in the linear sum which will be
+                                              *   overwritten by the variable array y_1, ..., y_m in the linear sum
+                                              *   w.r.t. active variables */
+   SCIP_Real*            scalars,            /**< scalars a_1, ..., a_n in linear sum which will be overwritten to the
+                                              *   scalars b_1, ..., b_m in the linear sum of the active variables  */
+   int*                  nvars,              /**< pointer to number of variables in the linear sum which will be
+                                              *   overwritten by the number of variables in the linear sum corresponding
+                                              *   to the active variables */
+   int                   varssize,           /**< available slots in vars and scalars array which is needed to check if
+                                              *   the array are large enough for the linear sum w.r.t. active
+                                              *   variables */
+   SCIP_Real*            constant,           /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c which
+                                              *   will chnage to constant d in the linear sum b_1*y_1 + ... + b_n*y_n +
+                                              *   d w.r.t. the active variables */
+   int*                  requiredsize,       /**< pointer to store the required array size for the linear sum w.r.t. the
+                                              *   active variables */
    SCIP_Bool             mergemultiples      /**< should multiple occurrences of a var be replaced by a single coeff? */
    )
 {
