@@ -1,4 +1,4 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
@@ -264,7 +264,7 @@ SCIP_RETCODE propagationRound(
    SCIP_Bool             onlydelayed,        /**< should only delayed propagators be called? */
    SCIP_Bool*            delayed,            /**< pointer to store whether a propagator was delayed */
    SCIP_Bool*            propagain,          /**< pointer to store whether propagation should be applied again */
-   unsigned int          timingmask,         /**< timing mask to decide which propagators are executed */
+   SCIP_PROPTIMING       timingmask,         /**< timing mask to decide which propagators are executed */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    )
 {  /*lint --e{715}*/
@@ -301,6 +301,8 @@ SCIP_RETCODE propagationRound(
       if( onlydelayed && !SCIPpropWasDelayed(set->props[i]) )
          continue;
 
+      SCIPdebugMessage("calling propagator <%s>\n", SCIPpropGetName(set->props[i]));
+
       SCIP_CALL( SCIPpropExec(set->props[i], set, stat, depth, onlydelayed, &result) );
       *delayed = *delayed || (result == SCIP_DELAYED);
       *propagain = *propagain || (result == SCIP_REDUCEDDOM);
@@ -333,6 +335,8 @@ SCIP_RETCODE propagationRound(
 
       if( onlydelayed && !SCIPconshdlrWasPropagationDelayed(set->conshdlrs[i]) )
          continue;
+
+      SCIPdebugMessage("calling propagation method of constraint handler <%s>\n", SCIPconshdlrGetName(set->conshdlrs[i]));
 
       SCIP_CALL( SCIPconshdlrPropagate(set->conshdlrs[i], blkmem, set, stat, depth, fullpropagation, onlydelayed,
             &result) );
@@ -372,6 +376,8 @@ SCIP_RETCODE propagationRound(
       if( onlydelayed && !SCIPpropWasDelayed(set->props[i]) )
          continue;
 
+      SCIPdebugMessage("calling propagator <%s>\n", SCIPpropGetName(set->props[i]));
+
       SCIP_CALL( SCIPpropExec(set->props[i], set, stat, depth, onlydelayed, &result) );
       *delayed = *delayed || (result == SCIP_DELAYED);
       *propagain = *propagain || (result == SCIP_REDUCEDDOM);
@@ -409,7 +415,7 @@ SCIP_RETCODE propagateDomains(
    int                   depth,              /**< depth level to use for propagator frequency checks */
    int                   maxproprounds,      /**< maximal number of propagation rounds (-1: no limit, 0: parameter settings) */
    SCIP_Bool             fullpropagation,    /**< should all constraints be propagated (or only new ones)? */
-   unsigned int          timingmask,         /**< timing mask to decide which propagators are executed */
+   SCIP_PROPTIMING       timingmask,         /**< timing mask to decide which propagators are executed */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    )
 {
@@ -480,7 +486,7 @@ SCIP_RETCODE SCIPpropagateDomains(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    int                   depth,              /**< depth level to use for propagator frequency checks */
    int                   maxproprounds,      /**< maximal number of propagation rounds (-1: no limit, 0: parameter settings) */
-   unsigned int          timingmask,         /**< timing mask to decide which propagators are executed */
+   SCIP_PROPTIMING       timingmask,         /**< timing mask to decide which propagators are executed */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    )
 {
