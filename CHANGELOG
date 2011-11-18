@@ -34,6 +34,8 @@ parameters:
 - new parameter <presolving/convertinttobin/samelocksinbothdirections> by default is set to FALSE, that parameter allows
   you to convert only integer variables to their binary representation, which have the same amount of up- and downlocks
 - branching/fullstrong/reevalage changed from an integer to a longint parameter
+- new parameter for changing the timingmask for calling the propagtion method of all propagator plugins
+  propagating/%s/timingmask and all constraint plugins constraints/%s/timingmask
 
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to
