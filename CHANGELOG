@@ -38,7 +38,7 @@ parameters:
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to
   set relaxrows = FALSE
-
+- the check script now recognizes MIQCP and MINLP instances
 
 SCIP version 2.1.1
 ===============

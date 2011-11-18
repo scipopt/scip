@@ -133,6 +133,8 @@ BEGIN {
    contvars = 0;
    cons = 0;
    lincons = 0;
+   quadcons = 0;
+   nonlincons = 0;
    origvars = 0;
    origcons = 0;
    objsense = 0;
@@ -296,6 +298,8 @@ BEGIN {
 /^Constraints        :/ {
    incons = 1;
    lincons = 0;
+   quadcons = 0;
+   nonlincons = 0;
 }
 /^  knapsack         :/ {
    if( incons == 1 ) {
@@ -321,10 +325,40 @@ BEGIN {
       lincons += a[1];
    }
 }
-/^  varbound         :/ { 
+/^  varbound         :/ {
    if( incons == 1 ) {
       n  = split ($3, a, "+");
       lincons += a[1];
+   }
+}
+/^  quadratic        :/ { 
+   if( incons == 1 ) {
+      n  = split ($3, a, "+");
+      quadcons += a[1];
+   }
+}
+/^  soc              :/ { 
+   if( incons == 1 ) {
+      n  = split ($3, a, "+");
+      quadcons += a[1];
+   }
+}
+/^  bivariate        :/ { 
+   if( incons == 1 ) {
+      n  = split ($3, a, "+");
+      nonlincons += a[1];
+   }
+}
+/^  nonlinear        :/ { 
+   if( incons == 1 ) {
+      n  = split ($3, a, "+");
+      nonlincons += a[1];
+   }
+}
+/^  abspower         :/ { 
+   if( incons == 1 ) {
+      n  = split ($3, a, "+");
+      nonlincons += a[1];
    }
 }
 /^Constraint Timings :/ {
@@ -531,22 +565,29 @@ BEGIN {
          gapstr = " Large";
       
       if( vars == 0 )
-         probtype = "--";
+         probtype = "   --";
       else if( lincons < cons )
-         probtype = "CIP";
+      {
+	 if( cons == lincons+quadcons )  
+	    probtype = "MIQCP";
+	 else if( cons == lincons+quadcons+nonlincons )  
+	    probtype = "MINLP";
+	 else
+	    probtype = "  CIP";
+      }
       else if( binvars == 0 && intvars == 0 )
-         probtype = "LP";
+         probtype = "   LP";
       else if( contvars == 0 ) {
          if( intvars == 0 && implvars == 0 )
-            probtype = "BP";
+            probtype = "   BP";
          else
-            probtype = "IP";
+            probtype = "   IP";
       }
       else {
          if( intvars == 0 )
-            probtype = "MBP";
+            probtype = "  MBP";
          else
-            probtype = "MIP";
+            probtype = "  MIP";
       }
 
       if( aborted && endtime - starttime > timelimit && timelimit > 0.0 ) {
