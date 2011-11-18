@@ -57,6 +57,7 @@ fixed bugs:
 - fixed pseudo cost computation
 - pseudo objective propagator does not propagate it active pricers are present
 - fixed constraint flags evaluation within the ZIMPL reader (reader_zpl.c)
+- fixed bug when copying problem data in c++ case returned with the result SCIP_DIDNOTRUN
 
 parameters
 - changed parameter "propagating/pseudoobj/maxcands" to "propagating/pseudoobj/minuseless" (see prop_pseudoobj.h)
