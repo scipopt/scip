@@ -338,6 +338,25 @@ SCIP_RETCODE SCIPprocessShellArguments(
          SCIPprintVersion(NULL);
          SCIPinfoMessage(scip, NULL, "\n");
 
+#ifdef EXACTSOLVE 
+         /***********************
+          * ExactIP information *
+          ***********************/
+#ifdef EXACTZPL
+         SCIPinfoMessage(scip, NULL, "Reduced version of SCIP in EXACT mode (version 0.2):\n");
+#else
+         SCIPinfoMessage(scip, NULL, "Reduced version of SCIP in STANDARD (floating-point) mode:\n");
+#endif
+         SCIPinfoMessage(scip, NULL, "  Algorithm: branch-and-bound\n");
+         SCIPinfoMessage(scip, NULL, "  Constraints: linear\n");
+#ifdef EXACTBRANCHPLGS
+         SCIPinfoMessage(scip, NULL, "  Branching: all standard plugins\n");
+#else
+         SCIPinfoMessage(scip, NULL, "  Branching: first fractional\n");
+#endif
+         SCIPinfoMessage(scip, NULL, "  Readers: zpl [mps files can be converted with \"check/mps2zpl.sh <filename.mps(.gz)>\"]\n");
+         SCIPinfoMessage(scip, NULL, "\n");
+#endif
 
          /*****************
           * Load settings *

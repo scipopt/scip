@@ -164,7 +164,6 @@ DFLAGS		+=	$(USRDFLAGS)
 #-----------------------------------------------------------------------------
 ifeq ($(EXACTSOLVE),true)
 # FLAGS		+=	-DROUNDING_FE
-FLAGS		+=	-DEXACTSOLVE_OUT		# general info 
 FLAGS		+=	-DEXACTSOLVE			# flag for switching between exact and inexact version of code
 LDFLAGS		+=	$(LINKCC_l)mpfr$(LINKLIBSUFFIX)
 LIBOBJSUBDIRS	+=	rectlu 

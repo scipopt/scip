@@ -1013,7 +1013,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayTranssolution)
    }
 #endif
 
-   assert(SCIPisExactSolve(scip));
+   assert(!SCIPisExactSolve(scip));
    
    if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
    {
