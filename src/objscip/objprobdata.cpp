@@ -161,10 +161,20 @@ SCIP_DECL_PROBCOPY(probCopyObj)
    /* call virtual method of probdata object */
    SCIP_CALL( sourcedata->objprobdata->scip_copy(scip, sourcescip, varmap, consmap, &objprobdata, global, result) ); /*lint !e40*/
 
-   /* create transformed user problem data */
-   *targetdata = new SCIP_PROBDATA;
-   (*targetdata)->objprobdata = objprobdata; /*lint !e40*/
-   (*targetdata)->deleteobject = sourcedata->deleteobject;
+   if( objprobdata != 0 )
+   {
+      assert(*result == SCIP_SUCCESS);
+
+      /* create transformed user problem data */
+      *targetdata = new SCIP_PROBDATA;
+      (*targetdata)->objprobdata = objprobdata; /*lint !e40*/
+      (*targetdata)->deleteobject = sourcedata->deleteobject;
+   }
+   else
+   {
+      assert(*result == SCIP_DIDNOTRUN);
+      *targetdata = 0;
+   }
 
    return SCIP_OKAY;
 }
