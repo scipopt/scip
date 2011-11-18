@@ -4543,7 +4543,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreIndicator)
          continue;
 
       /* perform one presolving round */
-      SCIP_CALL( presolRoundIndicator(scip, cons, consdata, &cutoff, &success, &ndelconss, &nfixedvars) );
+      SCIP_CALL( presolRoundIndicator(scip, cons, consdata, conshdlrdata->dualreductions, &cutoff, &success, &ndelconss, &nfixedvars) );
 
       if ( cutoff )
       {
