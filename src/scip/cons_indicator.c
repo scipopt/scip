@@ -4281,43 +4281,6 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
          conshdlrdata->sepaalternativelp, conshdlrdata->forcerestart) );
    assert( consdata != NULL );
 
-   /* check if slack variable can be made implicit integer. We repeat the check from
-    * SCIPcreateConsIndicator(), since when reading files in LP-format the type is only determined
-    * after creation of the constraint. */
-   if ( SCIPvarGetType(consdata->slackvar) != SCIP_VARTYPE_IMPLINT )
-   {
-      SCIP_Real* vals;
-      SCIP_VAR** vars;
-      SCIP_VAR* slackvar;
-      SCIP_Bool foundslackvar;
-      int nvars;
-      int i;
-      
-      vars = SCIPgetVarsLinear(scip, sourcedata->lincons);
-      vals = SCIPgetValsLinear(scip, sourcedata->lincons);
-      nvars = SCIPgetNVarsLinear(scip, sourcedata->lincons);
-      slackvar = sourcedata->slackvar;
-      foundslackvar = FALSE;
-      for (i = 0; i < nvars; ++i)
-      {
-         if ( vars[i] == slackvar )
-            foundslackvar = TRUE;
-         else
-         {
-            if ( ! SCIPvarIsIntegral(vars[i]) || ! SCIPisIntegral(scip, vals[i]))
-               break;
-         }
-      }
-      /* something is strange if the slack variable does not appear in the linear constraint (possibly because it is an artificial constraint) */
-      if ( i == nvars && foundslackvar )
-      {
-         SCIP_Bool infeasible;
-
-         SCIP_CALL( SCIPchgVarType(scip, consdata->slackvar, SCIP_VARTYPE_IMPLINT, &infeasible) );
-         /* don't assert feasibility here because the presolver should detect infeasibility */
-      }
-   }
-
    /* create transformed constraint with the same flags */
    (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "t_%s", SCIPconsGetName(sourcecons));
    SCIP_CALL( SCIPcreateCons(scip, targetcons, s, conshdlr, consdata,
@@ -4367,6 +4330,43 @@ SCIP_DECL_CONSINITPRE(consInitpreIndicator)
          assert( translincons != NULL );
          SCIP_CALL( SCIPcaptureCons(scip, translincons) );
          consdata->lincons = translincons;
+      }
+
+      /* check if slack variable can be made implicit integer. We repeat the check from
+       * SCIPcreateConsIndicator(), since when reading files in LP-format the type is only determined
+       * after creation of the constraint. */
+      if ( SCIPvarGetType(consdata->slackvar) != SCIP_VARTYPE_IMPLINT )
+      {
+         SCIP_Real* vals;
+         SCIP_VAR** vars;
+         SCIP_VAR* slackvar;
+         SCIP_Bool foundslackvar;
+         int nvars;
+         int i;
+
+         vars = SCIPgetVarsLinear(scip, consdata->lincons);
+         vals = SCIPgetValsLinear(scip, consdata->lincons);
+         nvars = SCIPgetNVarsLinear(scip, consdata->lincons);
+         slackvar = consdata->slackvar;
+         foundslackvar = FALSE;
+         for (i = 0; i < nvars; ++i)
+         {
+            if ( vars[i] == slackvar )
+               foundslackvar = TRUE;
+            else
+            {
+               if ( ! SCIPvarIsIntegral(vars[i]) || ! SCIPisIntegral(scip, vals[i]))
+                  break;
+            }
+         }
+         /* something is strange if the slack variable does not appear in the linear constraint (possibly because it is an artificial constraint) */
+         if ( i == nvars && foundslackvar )
+         {
+            SCIP_Bool infeasible;
+
+            SCIP_CALL( SCIPchgVarType(scip, consdata->slackvar, SCIP_VARTYPE_IMPLINT, &infeasible) );
+            /* don't assert feasibility here because the presolver should detect infeasibility */
+         }
       }
    }
 
@@ -4542,8 +4542,8 @@ SCIP_DECL_CONSEXITPRE(consExitpreIndicator)
       if ( ! consdata->linconsactive )
          continue;
 
-      /* perform on presolving round */
-      SCIP_CALL( presolRoundIndicator(scip, cons, consdata, conshdlrdata->dualreductions, &cutoff, &success, &ndelconss, &nfixedvars) );
+      /* perform one presolving round */
+      SCIP_CALL( presolRoundIndicator(scip, cons, consdata, &cutoff, &success, &ndelconss, &nfixedvars) );
 
       if ( cutoff )
       {
@@ -4563,6 +4563,41 @@ SCIP_DECL_CONSEXITPRE(consExitpreIndicator)
          return SCIP_OKAY;
       }
       /* note: nbdchgs == 0 is not necessarily true, because preprocessing might be truncated. */
+
+      /* check if slack variable can be made implicit integer. We repeat the check from
+       * SCIPcreateConsIndicator(), since when reading files in LP-format the type is only determined
+       * after creation of the constraint. */
+      if ( SCIPvarGetType(consdata->slackvar) != SCIP_VARTYPE_IMPLINT )
+      {
+         SCIP_Real* vals;
+         SCIP_VAR** vars;
+         SCIP_VAR* slackvar;
+         SCIP_Bool foundslackvar;
+         int nvars;
+         int i;
+
+         vars = SCIPgetVarsLinear(scip, consdata->lincons);
+         vals = SCIPgetValsLinear(scip, consdata->lincons);
+         nvars = SCIPgetNVarsLinear(scip, consdata->lincons);
+         slackvar = consdata->slackvar;
+         foundslackvar = FALSE;
+         for (i = 0; i < nvars; ++i)
+         {
+            if ( vars[i] == slackvar )
+               foundslackvar = TRUE;
+            else
+            {
+               if ( ! SCIPvarIsIntegral(vars[i]) || ! SCIPisIntegral(scip, vals[i]))
+                  break;
+            }
+         }
+         /* something is strange if the slack variable does not appear in the linear constraint (possibly because it is an artificial constraint) */
+         if ( i == nvars && foundslackvar )
+         {
+            SCIP_CALL( SCIPchgVarType(scip, consdata->slackvar, SCIP_VARTYPE_IMPLINT, &infeasible) );
+            /* don't assert feasibility here because the presolver should detect infeasibility */
+         }
+      }
    }
 
    SCIPdebugMessage("Exitpre handled %d constraints, fixed %d variables, and deleted %d constraints.\n", nconss, nfixedvars, ndelconss);
