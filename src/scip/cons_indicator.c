@@ -240,6 +240,8 @@
 #define DEFAULT_SEPACOUPLINGCUTS   FALSE
 #define DEFAULT_SEPACOUPLINGVALUE  1e4
 #define DEFAULT_SEPACOUPLINGLOCAL  FALSE
+#define DEFAULT_MAXSEPACUTS          100
+#define DEFAULT_MAXSEPACUTSROOT     2000
 #define DEFAULT_REMOVEINDICATORS   FALSE
 #define DEFAULT_UPDATEBOUNDS       FALSE
 #define DEFAULT_TRYSOLUTIONS       TRUE
@@ -306,6 +308,8 @@ struct SCIP_ConshdlrData
    SCIP_Bool             generatebilinear;   /**< do not generate indicator constraint, but a bilinear constraint instead */
    SCIP_Bool             conflictsupgrade;   /**< Try to upgrade bounddisjunction conflicts by replacing slack variables? */
    SCIP_Bool             performedrestart;   /**< whether a restart has been performed already */
+   int                   maxsepacuts;        /**< maximal number of cuts separated per separation round */
+   int                   maxsepacutsroot;    /**< maximal number of cuts separated per separation round in root node */
    int                   nbinvarszero;       /**< binary variables globally fixed to zero */
    int                   ninitconss;         /**< initial number of indicator constraints (needed in event handlers) */
    SCIP_Real             maxcouplingvalue;   /**< maximum coefficient for binary variable in initial coupling constraint */
@@ -3688,6 +3692,7 @@ SCIP_RETCODE separateIISRounding(
    SCIP_SOL*             sol,                /**< solution to be separated */
    int                   nconss,             /**< number of constraints */
    SCIP_CONS**           conss,              /**< indicator constraints */
+   int                   maxsepacuts,        /**< maximal number of cuts to be generated */
    int*                  nGen                /**< number of domain changes */
    )
 {
@@ -3703,6 +3708,9 @@ SCIP_RETCODE separateIISRounding(
    assert( conshdlr != NULL );
    assert( conss != NULL );
    assert( nGen != NULL );
+
+   if ( *nGen >= maxsepacuts )
+      return SCIP_OKAY;
 
    rounds = 0;
 
@@ -3734,7 +3742,8 @@ SCIP_RETCODE separateIISRounding(
    SCIP_CALL( SCIPallocBufferArray(scip, &S, nconss) );
 
    /* loop through the possible thresholds */
-   for (threshold = conshdlrdata->roundingmaxthres; rounds < conshdlrdata->roundingrounds && threshold >= conshdlrdata->roundingminthres;
+   for (threshold = conshdlrdata->roundingmaxthres;
+        rounds < conshdlrdata->roundingrounds && threshold >= conshdlrdata->roundingminthres && *nGen < maxsepacuts;
         threshold -= conshdlrdata->roundingoffset)
    {
       SCIP_Real value;
@@ -3807,6 +3816,145 @@ SCIP_RETCODE separateIISRounding(
 }
 
 
+/** separation method
+ *
+ *  We first check whether coupling inequalities can be separated (if required). If not enough of
+ *  these could be generated, we check whether IIS inequalities can be separated.
+ */
+static
+SCIP_RETCODE separateIndicators(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   int                   nconss,             /**< number of constraints */
+   int                   nusefulconss,       /**< number of usefull constraints */
+   SCIP_CONS**           conss,              /**< indicator constraints */
+   SCIP_SOL*             sol,                /**< solution to be separated */
+   SCIP_RESULT*          result              /**< result */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int maxsepacuts;
+   int ncuts;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( conss != NULL );
+   assert( result != NULL );
+
+   *result = SCIP_DIDNOTRUN;
+
+   if ( nconss == 0 )
+      return SCIP_OKAY;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+   ncuts = 0;
+
+   /* get the maximal number of cuts allowed in a separation round */
+   if ( SCIPgetDepth(scip) == 0 )
+      maxsepacuts = conshdlrdata->maxsepacutsroot;
+   else
+      maxsepacuts = conshdlrdata->maxsepacuts;
+
+   /* first separate coupling inequalities (if required) */
+   if ( conshdlrdata->sepacouplingcuts )
+   {
+      int c;
+
+      *result = SCIP_DIDNOTFIND;
+
+      /* check each constraint */
+      for (c = 0; c < nusefulconss && ncuts < maxsepacuts; ++c)
+      {
+         SCIP_CONSDATA* consdata;
+         SCIP_Bool islocal;
+         SCIP_Real ub;
+
+         assert( conss != NULL );
+         assert( conss[c] != NULL );
+         consdata = SCIPconsGetData(conss[c]);
+         assert( consdata != NULL );
+         assert( consdata->slackvar != NULL );
+         assert( consdata->binvar != NULL );
+
+         /* get upper bound for slack variable in linear constraint */
+         islocal = FALSE;
+         if ( conshdlrdata->sepacouplinglocal )
+         {
+            ub = SCIPvarGetUbLocal(consdata->slackvar);
+            if ( ub < SCIPvarGetUbGlobal(consdata->slackvar) )
+               islocal = TRUE;
+         }
+         else
+            ub = SCIPvarGetUbGlobal(consdata->slackvar);
+         assert( ! SCIPisFeasNegative(scip, ub) );
+
+         /* only use coefficients that are not too large */
+         if ( ub <= conshdlrdata->sepacouplingvalue )
+         {
+            SCIP_Real activity;
+
+            activity = SCIPgetSolVal(scip, sol, consdata->slackvar) + ub * SCIPgetSolVal(scip, sol, consdata->binvar) - ub;
+            if ( SCIPisEfficacious(scip, activity) )
+            {
+               SCIP_ROW* row;
+               char name[50];
+#ifndef NDEBUG
+               (void) SCIPsnprintf(name, 50, "couple%d", c);
+#else
+               name[0] = '\0';
+#endif
+
+               SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), ub, islocal, FALSE, conshdlrdata->removable) );
+               SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
+
+               SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->slackvar, 1.0) );
+               SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->binvar, ub) );
+               SCIP_CALL( SCIPflushRowExtensions(scip, row) );
+
+               SCIPdebugMessage("Separated coupling inequality for indicator constraint <%s> (coeff: %f).\n", SCIPconsGetName(conss[c]), ub);
+#ifdef SCIP_OUTPUT
+               SCIProwPrint(row, NULL);
+#endif
+               SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
+               SCIP_CALL( SCIPreleaseRow(scip, &row));
+
+               SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
+
+               ++ncuts;
+            }
+         }
+      }
+      SCIPdebugMessage("Separated coupling inequalities: %d\n", ncuts);
+   }
+
+   /* separated cuts from the alternative lp (if required) */
+   if ( conshdlrdata->sepaalternativelp && ncuts < SEPAALTTHRESHOLD )
+   {
+      int noldcuts;
+
+      SCIPdebugMessage("Separating inequalities for indicator constraints.\n");
+
+      noldcuts = ncuts;
+      if ( *result == SCIP_DIDNOTRUN )
+         *result = SCIP_DIDNOTFIND;
+
+      /* start separation */
+      SCIP_CALL( separateIISRounding(scip, conshdlr, sol, nconss, conss, maxsepacuts, &ncuts) );
+      SCIPdebugMessage("Separated %d cuts from indicator constraints.\n", ncuts - noldcuts);
+
+      if ( ncuts > noldcuts )
+      {
+         /* possibly overwrite result from separation above */
+         if ( conshdlrdata->genlogicor )
+            *result = SCIP_CONSADDED;
+         else
+            *result = SCIP_SEPARATED;
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 
 /* ---------------------------- constraint handler callback methods ----------------------*/
@@ -4705,115 +4853,14 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
 static
 SCIP_DECL_CONSSEPALP(consSepalpIndicator)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   int ngen;
-
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
-   *result = SCIP_DIDNOTRUN;
-
-   if ( nconss == 0 )
-      return SCIP_OKAY;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != NULL );
-   ngen = 0;
-
-   /* first separate coupling inequalities (if required) */
-   if ( conshdlrdata->sepacouplingcuts )
-   {
-      int c;
-
-      *result = SCIP_DIDNOTFIND;
-
-      /* check each constraint */
-      for (c = 0; c < nconss; ++c)
-      {
-         SCIP_CONSDATA* consdata;
-         SCIP_Bool islocal;
-         SCIP_Real ub;
-
-         assert( conss != NULL );
-         assert( conss[c] != NULL );
-         consdata = SCIPconsGetData(conss[c]);
-         assert( consdata != NULL );
-         assert( consdata->slackvar != NULL );
-         assert( consdata->binvar != NULL );
-
-         /* get upper bound for slack variable in linear constraint */
-         islocal = FALSE;
-         if ( conshdlrdata->sepacouplinglocal )
-         {
-            ub = SCIPvarGetUbLocal(consdata->slackvar);
-            if ( ub < SCIPvarGetUbGlobal(consdata->slackvar) )
-               islocal = TRUE;
-         }
-         else
-            ub = SCIPvarGetUbGlobal(consdata->slackvar);
-         assert( ! SCIPisFeasNegative(scip, ub) );
-
-         /* only use coefficients that are not too large */
-         if ( ub <= conshdlrdata->sepacouplingvalue )
-         {
-            SCIP_Real activity;
-
-            activity = SCIPgetSolVal(scip, NULL, consdata->slackvar) + ub * SCIPgetSolVal(scip, NULL, consdata->binvar) - ub;
-            if ( SCIPisEfficacious(scip, activity) )
-            {
-               SCIP_ROW* row;
-               char name[50];
-#ifndef NDEBUG
-               (void) SCIPsnprintf(name, 50, "couple%d", c);
-#else
-               name[0] = '\0';
-#endif
-
-               SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), ub, islocal, FALSE, FALSE) );
-               SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
-
-               SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->slackvar, 1.0) );
-               SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->binvar, ub) );
-               SCIP_CALL( SCIPflushRowExtensions(scip, row) );
-
-               SCIPdebugMessage("Separated coupling inequality for indicator constraint <%s> (coeff: %f).\n", SCIPconsGetName(conss[c]), ub);
-#ifdef SCIP_OUTPUT
-               SCIProwPrint(row, NULL);
-#endif
-               SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
-               SCIP_CALL( SCIPreleaseRow(scip, &row));
-               ++ngen;
-            }
-         }
-      }
-      SCIPdebugMessage("Separated coupling inequalities: %d\n", ngen);
-      if ( ngen > 0 )
-         *result = SCIP_SEPARATED;
-   }
-
-   /* separated cuts from the alternative lp (if required) */
-   if ( conshdlrdata->sepaalternativelp && ngen < SEPAALTTHRESHOLD )
-   {
-      SCIPdebugMessage("Separating inequalities for indicator constraints.\n");
-
-      *result = SCIP_DIDNOTFIND;
-      ngen = 0;
-
-      /* start separation */
-      SCIP_CALL( separateIISRounding(scip, conshdlr, NULL, nconss, conss, &ngen) );
-      SCIPdebugMessage("Separated %d cuts from indicator constraints.\n", ngen);
-
-      if ( ngen > 0 )
-      {
-         if ( conshdlrdata->genlogicor )
-            *result = SCIP_CONSADDED;
-         else
-            *result = SCIP_SEPARATED;
-      }
-   }
+   /* perform separation */
+   SCIP_CALL( separateIndicators(scip, conshdlr, nconss, nusefulconss, conss, NULL, result) );
 
    return SCIP_OKAY;
 }
@@ -4823,39 +4870,14 @@ SCIP_DECL_CONSSEPALP(consSepalpIndicator)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolIndicator)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != NULL );
-
-   if ( conshdlrdata->sepaalternativelp && nconss > 0 )
-   {
-      int nGen;
-
-      nGen = 0;
-
-      SCIPdebugMessage("Separating inequalities for indicator constraints.\n");
-
-      *result = SCIP_DIDNOTFIND;
-
-      /* start separation */
-      SCIP_CALL( separateIISRounding(scip, conshdlr, sol, nconss, conss, &nGen) );
-      SCIPdebugMessage("Separated %d cuts from indicator constraints.\n", nGen);
-
-      if ( nGen > 0 )
-      {
-         if ( conshdlrdata->genlogicor )
-            *result = SCIP_CONSADDED;
-         else
-            *result = SCIP_SEPARATED;
-      }
-   }
+   /* perform separation */
+   SCIP_CALL( separateIndicators(scip, conshdlr, nconss, nusefulconss, conss, sol, result) );
 
    return SCIP_OKAY;
 }
@@ -5766,6 +5788,16 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
          "constraints/indicator/restartfrac",
          "fraction of binary variables that need to be fixed before restart occurs (in forcerestart)",
          &conshdlrdata->restartfrac, TRUE, DEFAULT_RESTARTFRAC, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "constraints/indicator/maxsepacuts",
+         "maximal number of cuts separated per separation round",
+         &conshdlrdata->maxsepacuts, FALSE, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "constraints/indicator/maxsepacutsroot",
+         "maximal number of cuts separated per separation round in the root node",
+         &conshdlrdata->maxsepacutsroot, FALSE, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
 
    /* parameters that should not be changed after problem stage: */
    SCIP_CALL( SCIPaddBoolParam(scip,
