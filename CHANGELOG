@@ -15,6 +15,10 @@ fixed bugs:
 - fixed pseudo cost computation
 - pseudo objective propagator does not propagate it active pricers are present
 - fixed constraint flags evaluation within the ZIMPL reader (reader_zpl.c)
+- fixed bug in SCIPmakeIndicatorFeasible() in cons_indicator.c
+- fixed bug with conflict clause modification in cons_indicator
+- fixed bug in cons_bounddisjunction with uninitialized return values
+- fixed bug with setting type of slack variables to be implicitly integral
 - fixed bug when copying problem data in c++ case returned with the result SCIP_DIDNOTRUN
 
 parameters
