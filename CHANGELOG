@@ -36,6 +36,9 @@ parameters:
 - branching/fullstrong/reevalage changed from an integer to a longint parameter
 - new parameter for changing the timingmask for calling the propagtion method of all propagator plugins
   propagating/%s/timingmask and all constraint plugins constraints/%s/timingmask
+- new parameter constraints/indicator/dualreductions to enable dual presolving/propagation steps
+- new parameters constraints/indicator/{sepacouplingcuts,sepacouplinglocal} to enable separation of (local) cuts
+- new parameters constraints/indicator/{maxsepacuts,maxsepacutsroot} to restrict the number of separated cuts
 
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to
@@ -59,7 +62,11 @@ fixed bugs:
 - fixed pseudo cost computation
 - pseudo objective propagator does not propagate it active pricers are present
 - fixed constraint flags evaluation within the ZIMPL reader (reader_zpl.c)
+- fixed bug in SCIPmakeIndicatorFeasible() in cons_indicator.c
+- fixed bug with conflict clause modification in cons_indicator
+- fixed bug in cons_bounddisjunction with uninitialized return values
 - fixed bug when copying problem data in c++ case returned with the result SCIP_DIDNOTRUN
+- fixed bug with setting type of slack variables to be implicitly integral
 
 parameters
 - changed parameter "propagating/pseudoobj/maxcands" to "propagating/pseudoobj/minuseless" (see prop_pseudoobj.h)
