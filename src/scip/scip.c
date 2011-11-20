@@ -8999,7 +8999,7 @@ SCIP_RETCODE SCIPflattenVarAggregationGraph(
  *  active variables, that is b_1*y_1 + ... + b_m*y_m + d.
  *
  *  If the number of needed active variables is greater than the available slots in the variable array, nothing happens
- *  except that the required size is stored in the corresponding variable (requiredsize). Otherwise the active variable
+ *  except that the required size is stored in the corresponding variable (requiredsize). Otherwise, the active variable
  *  representation is stored in the variable array, scalar array and constant.
  *
  *  The reason for this approach is that we cannot reallocate memory, since we do not know how the memory has been
@@ -9025,7 +9025,7 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
                                               *   the array are large enough for the linear sum w.r.t. active
                                               *   variables */
    SCIP_Real*            constant,           /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c which
-                                              *   will chnage to constant d in the linear sum b_1*y_1 + ... + b_n*y_n +
+                                              *   will chnage to constant d in the linear sum b_1*y_1 + ... + b_m*y_m +
                                               *   d w.r.t. the active variables */
    int*                  requiredsize,       /**< pointer to store the required array size for the linear sum w.r.t. the
                                               *   active variables */
