@@ -2656,7 +2656,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
                assert(nandvars == consdata->nnonlinterms);
                gotandress = TRUE;
 
-               /* get linear constraint corresponding too the indicator constraint */
+               /* get linear constraint corresponding to the indicator constraint */
                lincons = SCIPgetLinearConsIndicator(indcons);
                assert(lincons != NULL);
 
@@ -2700,7 +2700,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
                assert(nandvars == 0 || andvars != NULL);
                assert(nandvars == consdata->nnonlinterms);
 
-               /* get linear constraint corresponding too the indicator constraint */
+               /* get linear constraint corresponding to the indicator constraint */
                lincons = SCIPgetLinearConsIndicator(indcons);
                assert(lincons != NULL);
 
