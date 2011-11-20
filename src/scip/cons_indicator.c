@@ -4452,6 +4452,14 @@ SCIP_DECL_CONSINITPRE(consInitpreIndicator)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert( result != NULL );
+
+   *result = SCIP_FEASIBLE;
+
+   if ( isinfeasible || isunbounded )
+      return SCIP_OKAY;
+
+   SCIPdebugMessage("Initpre method for indicator constraints.\n");
 
    /* check each constraint and get transformed linear constraint */
    for (c = 0; c < nconss; ++c)
@@ -4653,6 +4661,10 @@ SCIP_DECL_CONSEXITPRE(consExitpreIndicator)
    assert( result != NULL );
 
    *result = SCIP_FEASIBLE;
+
+   if ( isinfeasible || isunbounded )
+      return SCIP_OKAY;
+
    SCIPdebugMessage("Exitpre method for indicator constraints.\n");
 
    /* get constraint handler data */
