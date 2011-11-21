@@ -24,6 +24,9 @@
 #  - PPN=8 means we need 8 core, therefore time measuring is possible if we use 1 node of queue "ib"
 #  - PPN=4 means we need 4 core, therefore time measuring is possible if we use 1 node of queue "gbe"
 #  - PPN=1 means we need one core, therefore time measuring is not possible
+QUEUETYPE	=	qsub
 QUEUE		=	 gbe
 PPN		=	 4
 CLIENTTMPDIR	=	/scratch
+NOWAITCLUSTER   =       0
+EXCLUSIVE       =       notneeded

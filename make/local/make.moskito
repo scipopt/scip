@@ -1,6 +1,8 @@
+QUEUETYPE	=	qsub
 override MEM	=	7110
 QUEUE		=	extra
 PPN		=	2
 CLIENTTMPDIR	=	/tmp
 NOWAITCLUSTER   =       1
+EXCLUSIVE       =       notneeded
 

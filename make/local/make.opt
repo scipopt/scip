@@ -1,0 +1,9 @@
+# Call with "make testcluster"
+#
+
+QUEUETYPE	=	srun
+QUEUE		=	mip
+PPN 		=	-1
+CLIENTTMPDIR	=	/usr/local/tmp
+NOWAITCLUSTER   =       1
+EXCLUSIVE	=	true
