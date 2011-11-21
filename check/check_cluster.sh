@@ -43,10 +43,20 @@ DISPFREQ=${10}
 CONTINUE=${11}
 VERSION=${12}
 LPS=${13}
-QUEUE=${14}
-PPN=${15}
-CLIENTTMPDIR=${16}
-NOWAITCLUSTER=${17}
+QUEUETYPE=${14}
+QUEUE=${15}
+PPN=${16}
+CLIENTTMPDIR=${17}
+NOWAITCLUSTER=${18}
+EXCLUSIVE=${19}
+
+# check all variables defined
+if [ -z ${EXCLUSIVE} ]
+then
+    echo Skipping test since not all variables are defined.
+    exit 1;
+fi
+
 
 # get current SCIP path
 SCIPPATH=`pwd`
@@ -68,7 +78,7 @@ then
     fi
 fi
 
-# check if binary exists 
+# check if binary exists
 if test ! -e $SCIPPATH/../$BINNAME
 then
     echo Skipping test since the binary $BINNAME does not exist.
@@ -89,15 +99,28 @@ then
     exit
 fi
 
+# check if the slurm blades should be used exclusively
+if test "$EXCLUSIVE" = "true"
+then
+    EXCLUSIVE=" --exclusive"
+else
+    EXCLUSIVE=""
+fi
+
 # we add 100% to the hard time limit and additional 600 seconds in case of small time limits
 # NOTE: the jobs should have a hard running time of more than 5 minutes; if not so, these
 #       jobs get automatically assigned in the "exrpess" queue; this queue has only 4 CPUs
 #       available 
 HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 600\` + $TIMELIMIT`
 
-# we add 10% to the hard memory limit and additional 100mb to the hard memory limit
+# we add 10% to the hard memory limit and additional 100MB to the hard memory limit
 HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` + \`expr $MEMLIMIT / 10\``
-HARDMEMLIMIT=`expr $HARDMEMLIMIT \* 1024000`
+
+# in case of qsub queue the memory is measured in kB
+if test  "$QUEUETYPE" = "qsub"
+then
+    HARDMEMLIMIT=`expr $HARDMEMLIMIT \* 1024000`
+fi
 
 EVALFILE=$SCIPPATH/results/check.$QUEUE.$TSTNAME.$BINID.$SETNAME.eval
 echo > $EVALFILE
@@ -176,8 +199,21 @@ do
       echo checksol                          >> $TMPFILE
       echo quit                              >> $TMPFILE
 
-# -v to set local variables explicitly -V to copy all environment variables      
-      qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTFILENAME -v SOLVERPATH=$SCIPPATH,BINNAME=$BINNAME,FILENAME=$i,BASENAME=$FILENAME,CLIENTTMPDIR=$CLIENTTMPDIR  -V -q $QUEUE -o /dev/null -e /dev/null runcluster.sh 
+      # additional environment variables needed by runcluster.sh
+      export SOLVERPATH=$SCIPPATH
+      export BINNAME=$BINNAME
+      export BASENAME=$FILENAME
+      export FILENAME=$i
+      export CLIENTTMPDIR=$CLIENTTMPDIR
+
+      # check queue type
+      if test  "$QUEUETYPE" = "srun"
+      then
+	  srun --job-name=SCIP$SHORTFILENAME --mem=$HARDMEMLIMIT -p $QUEUE --time=${HARDTIMELIMIT}${EXCLUSIVE} runcluster.sh &
+      else
+          # -V to copy all environment variables
+	  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTFILENAME -V -q $QUEUE -o /dev/null -e /dev/null runcluster.sh 
+      fi
   else
       echo "input file "$SCIPPATH/$i" not found!"
   fi
