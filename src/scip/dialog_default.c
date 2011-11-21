@@ -303,10 +303,11 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChecksol)
    SCIPdialogMessage(scip, NULL, "\n");
 
 #ifdef EXACTSOLVE
-   if( SCIPisExactSolve(scip) )
    {
       SCIP_CONS** conss;
       int c;
+
+      assert(SCIPisExactSolve(scip));
 
       conss = SCIPgetOrigConss(scip);
       
@@ -811,9 +812,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySolution)
    SCIPdialogMessage(scip, NULL, "\n");
 
 #ifdef EXACTSOLVE
-   if( SCIPisExactSolve(scip) )
    {
       SCIP_CONS** conss;
+
+      assert(SCIPisExactSolve(scip));
 
       conss = SCIPgetConss(scip);
       assert(conss != NULL);
@@ -883,33 +885,31 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayValue)
    SCIPdialogMessage(scip, NULL, "\n");
 
 #ifdef EXACTSOLVE
-   if( SCIPisExactSolve(scip) )
+   assert(SCIPisExactSolve(scip));
+   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter variable name: ", &varname, &endoffile) );
+   if( endoffile )
    {
-      SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter variable name: ", &varname, &endoffile) );
-      if( endoffile )
-      {
-         *nextdialog = NULL;
-         return SCIP_OKAY;
-      }
-
-      if( varname[0] != '\0' )
-      {
-         SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, varname, TRUE) );
-
-         var = SCIPfindVar(scip, varname);
-         if( var == NULL )
-            SCIPdialogMessage(scip, NULL, "variable <%s> not found\n", varname);
-         else
-         {
-            SCIP_CALL( SCIPprintBestSolexVar(scip, var, NULL) );
-         }      
-      }
-      SCIPdialogMessage(scip, NULL, "\n");
-      
-      *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
-      
+      *nextdialog = NULL;
       return SCIP_OKAY;
    }
+
+   if( varname[0] != '\0' )
+   {
+      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, varname, TRUE) );
+
+      var = SCIPfindVar(scip, varname);
+      if( var == NULL )
+         SCIPdialogMessage(scip, NULL, "variable <%s> not found\n", varname);
+      else
+      {
+         SCIP_CALL( SCIPprintBestSolexVar(scip, var, NULL) );
+      }      
+   }
+   SCIPdialogMessage(scip, NULL, "\n");
+      
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+      
+   return SCIP_OKAY;
 #endif
 
    assert(!SCIPisExactSolve(scip));
@@ -997,20 +997,18 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayTranssolution)
    SCIPdialogMessage(scip, NULL, "\n");
 
 #ifdef EXACTSOLVE
-   if( SCIPisExactSolve(scip) )
+   assert(SCIPisExactSolve(scip));
+   if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
    {
-      if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
-      {
-         SCIP_CALL( SCIPprintBestTransSolex(scip, NULL, FALSE) );
-      }
-      else
-         SCIPdialogMessage(scip, NULL, "no exact solution available\n");
-      SCIPdialogMessage(scip, NULL, "\n");
-      
-      *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
-      
-      return SCIP_OKAY;
+      SCIP_CALL( SCIPprintBestTransSolex(scip, NULL, FALSE) );
    }
+   else
+      SCIPdialogMessage(scip, NULL, "no exact solution available\n");
+   SCIPdialogMessage(scip, NULL, "\n");
+      
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+      
+   return SCIP_OKAY;
 #endif
 
    assert(!SCIPisExactSolve(scip));
@@ -1983,20 +1981,15 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteSolution)
          SCIP_CALL( SCIPprintStatus(scip, file) );
          SCIPinfoMessage(scip, file, "\n");
 #ifdef EXACTSOLVE
-         if( SCIPisExactSolve(scip) )
          {
             SCIP_CONS** conss;
-
+            
+            assert(SCIPisExactSolve(scip));
             conss = SCIPgetConss(scip);
             assert(conss != NULL);
 
             SCIP_CALL( SCIPprintBestSolex(scip, conss[0], file, FALSE) );
             SCIPdialogMessage(scip, NULL, "written exact solution information to file <%s>\n", filename);
-         }
-         else
-         {
-            SCIP_CALL( SCIPprintBestSol(scip, file, FALSE) );
-            SCIPdialogMessage(scip, NULL, "written solution information to file <%s>\n", filename);
          }
 #else
          assert(!SCIPisExactSolve(scip));

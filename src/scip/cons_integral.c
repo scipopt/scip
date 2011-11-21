@@ -114,14 +114,17 @@ SCIP_DECL_CONSENFOLP(consEnfolpIntegral)
 
    SCIPdebugMessage("Enfolp method of integrality constraint: %d fractional variables\n", SCIPgetNLPBranchCands(scip));
 
+#ifdef EXACTSOLVE
    /* in exactip mode with pure rational approach, the branching is based on the exact LP solution 
     * (computed in enfolp method of exactlp constraint handler) 
     */
-   if( SCIPisExactSolve(scip) && SCIPselectDualBoundMethod(scip, FALSE) == 'e' )
+   assert(SCIPisExactSolve(scip));
+   if( SCIPselectDualBoundMethod(scip, FALSE) == 'e' )
    {
       *result = SCIP_FEASIBLE;
       return SCIP_OKAY;
    }
+#endif
 
    /* call branching methods */
    SCIP_CALL( SCIPbranchLP(scip, result) );

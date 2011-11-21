@@ -31,17 +31,19 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    )
 {
    /**@todo modify other plugins such that they can be used for exact mip solving */ 
-#ifdef EXACTSOLVE 
-   SCIP_CALL( SCIPincludeConshdlrLinear(scip) ); /* linear must be first due to constraint upgrading */
-   SCIP_CALL( SCIPincludeConshdlrIntegral(scip) );
+#ifdef REDUCEDSOLVE
+#ifdef EXACTSOLVE
    SCIP_CALL( SCIPincludeConshdlrExactlp(scip) ); 
-
+#else
+   SCIP_CALL( SCIPincludeConshdlrLinear(scip) ); /* linear must be first due to constraint upgrading */
+#endif
+   SCIP_CALL( SCIPincludeConshdlrIntegral(scip) );
    SCIP_CALL( SCIPincludeReaderZpl(scip) );
 
    SCIP_CALL( SCIPincludeNodeselBfs(scip) );
    SCIP_CALL( SCIPincludeNodeselDfs(scip) );
 
-#ifdef EXACTBRANCHPLGS
+#ifdef BRANCHPLGS
    SCIP_CALL( SCIPincludeBranchruleAllfullstrong(scip) );
    SCIP_CALL( SCIPincludeBranchruleFullstrong(scip) );
    SCIP_CALL( SCIPincludeBranchruleInference(scip) );
@@ -54,7 +56,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
 
    SCIP_CALL( SCIPincludeDispDefault(scip) );
    SCIP_CALL( SCIPincludeDialogDefault(scip) );
-   /* load parameter settings needed to ensure correct behavior of EXACTSOLVE flag */
+   /* load parameter settings needed to ensure correct behavior of REDUCEDSOLVE flag */
    /* @todo: the parameters set in SCIPsetExactsolve() are for a pure branch and bound alorithm. they have to be 
     * adapted when other solving techniques, like presolving, are modified s.t. they can be used for exact MIP solving.
     * ????????????

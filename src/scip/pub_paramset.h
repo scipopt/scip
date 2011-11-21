@@ -231,7 +231,7 @@ SCIP_RETCODE SCIPparamSetToDefault(
    SCIP*                 scip                /**< SCIP data structure, or NULL if paramchgd method should not be called */   
    );
 
-/** sets parameters that are supported by EXACTSOLVE flag; note, this does not enable exact MIP solving. 
+/** sets parameters that are supported by REDUCEDSOLVE flag; note, this does not enable exact MIP solving. 
  *  For that misc/exactsolve has to be set appropriately. 
  */ 
 extern

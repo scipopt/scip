@@ -43,9 +43,9 @@ TEST		=	shortmiplib
 SETTINGS        =       default
 CONTINUE	=	false
 LOCK		=	false
-EXACTSOLVE	=	false
-EXACTZPL	=	true
-EXACTGETTESTSET	=	false
+REDUCEDSOLVE	=	true
+EXACTSOLVE	=	true
+BRANCHPLGS	=	true
 
 VERBOSE		=	false
 OPT		=	opt
@@ -162,20 +162,32 @@ DFLAGS		+=	$(USRDFLAGS)
 #-----------------------------------------------------------------------------
 # Exact MIP Solving
 #-----------------------------------------------------------------------------
+ifeq ($(REDUCEDSOLVE),true)
+ifeq ($(ZIMPL),false)
+$(error REDUCEDSOLVE requires ZIMPL. Use either REDUCEDSOLVE=false or ZIMPL=true)
+endif
+FLAGS		+=	-DREDUCEDSOLVE			# flag for switching between full and reduced version of SCIP
+endif
+
 ifeq ($(EXACTSOLVE),true)
-# FLAGS		+=	-DROUNDING_FE
-FLAGS		+=	-DEXACTSOLVE			# flag for switching between exact and inexact version of code
+ifeq ($(REDUCEDSOLVE),false)
+$(error EXACTSOLVE requires REDUCEDSOLVE. Use either EXACTSOLVE=false or REDUCEDSOLVE=true)
+endif
+ifeq ($(GMP),false)
+$(error EXACTSOLVE requires GMP. Use either EXACTSOLVE=false or GMP=true)
+endif
+FLAGS		+=	-DEXACTSOLVE			# flag for switching between exact and inexact mode
 LDFLAGS		+=	$(LINKCC_l)mpfr$(LINKLIBSUFFIX)
 LIBOBJSUBDIRS	+=	rectlu 
 endif
 
-ifeq ($(EXACTZPL),true)
-FLAGS		+=	-DEXACTZPL			# flag for switching between exact and inexact version of reader_zpl.c
+ifeq ($(BRANCHPLGS),true)
+ifeq ($(REDUCEDSOLVE),false)
+$(error BRANCHPLGS requires REDUCEDSOLVE. Use either BRANCHPLGS=false or REDUCEDSOLVE=true)
+endif
+FLAGS		+=	-DBRANCHPLGS			# flag for including branching plugins or supporting only first fractional variable branching
 endif
 
-ifeq ($(EXACTGETTESTSET),true)
-FLAGS		+=	-DUNBNDVARSINFO			# info with nr of unbounded vars in presolved problem; for test set
-endif
 
 
 #-----------------------------------------------------------------------------

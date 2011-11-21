@@ -57,6 +57,7 @@
 #include "scip/var.h"
 #include "scip/prob.h"
 #include "scip/sol.h"
+#include "scip/scip.h"
 #ifdef EXACTSOLVE
 #include "scip/cons_exactlp.h"
 #endif
@@ -1848,7 +1849,7 @@ SCIP_RETCODE lpSetUobjlim(
    if( set->misc_exactsolve )  
       return SCIP_OKAY;
 
-#ifdef EXACTSOLVE
+#ifdef REDUCEDSOLVE
 #ifdef FAIRINEXACT /*?????????????????*/
       return SCIP_OKAY;
 #endif
@@ -14491,14 +14492,16 @@ SCIP_RETCODE provedBound(
    assert(bound != NULL);
    assert(SCIPlpiInfinity(lp->lpi) <= SCIPsetInfinity(set));
 
+#ifdef EXACTSOLVE /* misc_reducesafedb is only be supported in exact mode because corresponing case distinction requires 
+                   * cons_exactlp.c methods which are not available in the inexact mode */
    if( set->misc_reducesafedb == 's' )
    {
 #ifdef DBAUTO_OUT /*?????????????????*/
       printf("reduce (%d:%d) (%f >= %f?: %d) \t (%d:%d) --> %d \n", 
          usefarkas, !usefarkas, 
-         SCIPlpGetObjval(lp, set), SCIPgetCutoffbound(set->scip), SCIPsetIsLT(set, SCIPlpGetObjval(lp, set), SCIPgetCutoffbound(set->scip)),
+         SCIPlpGetObjval(lp, set), lp->cutoffbound, SCIPsetIsLT(set, SCIPlpGetObjval(lp, set), lp->cutoffbound),
          SCIPgetNLPBranchCands(set->scip), (SCIPgetNLPBranchCands(set->scip) > 0),
-         !usefarkas && SCIPsetIsLT(set, SCIPlpGetObjval(lp, set), SCIPgetCutoffbound(set->scip)) && (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL || SCIPgetNLPBranchCands(set->scip) > 0));
+         !usefarkas && SCIPsetIsLT(set, SCIPlpGetObjval(lp, set), lp->cutoffbound) && (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL || SCIPgetNLPBranchCands(set->scip) > 0));
 #endif
       /* decide whether safe dual bound is not really necessary:
        * - LP is claimed to be feasible
@@ -14507,7 +14510,7 @@ SCIP_RETCODE provedBound(
        * - LP is claimed to be integral
        */
       if( !usefarkas 
-         && SCIPsetIsLT(set, SCIPlpGetObjval(lp, set), SCIPgetCutoffbound(set->scip)) 
+         && SCIPsetIsLT(set, SCIPlpGetObjval(lp, set), lp->cutoffbound) 
          && (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL || SCIPgetNLPBranchCands(set->scip) > 0) )
       {
          *bound = -SCIPsetInfinity(set);
@@ -14540,6 +14543,7 @@ SCIP_RETCODE provedBound(
          return SCIP_OKAY;
       }
    }
+#endif
 
    /* start timing */
    if ( usefarkas )
@@ -14957,7 +14961,9 @@ SCIP_RETCODE provedBound(
          assert(conss != NULL);
          assert(SCIPgetNConss(set->scip) == 1);
 
+#ifdef EXACTSOLVE
          SCIP_CALL( SCIPcomputeDualboundQuality(set->scip, conss[0], *bound) );
+#endif
          lp->hasprovedbound = TRUE;
       }
       else

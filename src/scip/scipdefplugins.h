@@ -41,7 +41,9 @@
 #include "scip/cons_bounddisjunction.h"
 #include "scip/cons_conjunction.h"
 #include "scip/cons_countsols.h"
+#ifdef EXACTSOLVE
 #include "scip/cons_exactlp.h"
+#endif
 #include "scip/cons_indicator.h"
 #include "scip/cons_integral.h"
 #include "scip/cons_knapsack.h"

@@ -182,7 +182,11 @@
 #define SCIP_DEFAULT_MISC_USEVARTABLE      TRUE /**< should a hashtable be used to map from variable names to variables? */
 #define SCIP_DEFAULT_MISC_USECONSTABLE     TRUE /**< should a hashtable be used to map from constraint names to constraints? */
 #define SCIP_DEFAULT_MISC_USESMALLTABLES  FALSE /**< should smaller hashtables be used? yields better performance for small problems with about 100 variables */
+#ifdef EXACTSOLVE
 #define SCIP_DEFAULT_MISC_EXACTSOLVE       TRUE /**< should the problem be solved exactly (with proven dual bounds)? */
+#else
+#define SCIP_DEFAULT_MISC_EXACTSOLVE      FALSE /**< should the problem be solved exactly (with proven dual bounds)? */
+#endif
 #define SCIP_DEFAULT_MISC_USEFPRELAX      FALSE /**< if problem is solved exactly, should floating point problem be 
                                                  *   a relaxation of the original problem (instead of an approximation)? */
 #define SCIP_DEFAULT_MISC_DBMETHOD          'n' /**< method for computing truely valid dual bounds at the nodes
@@ -833,12 +837,8 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->misc_usesmalltables, FALSE, SCIP_DEFAULT_MISC_USESMALLTABLES,
          NULL, NULL) );
    /**@todo activate exactsolve parameter and finish implementation of solving MIPs exactly */
-#if 1
-   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
-         "misc/exactsolve",
-         "should the problem be solved exactly (with proven dual bounds)?",
-         &(*set)->misc_exactsolve, FALSE, SCIP_DEFAULT_MISC_EXACTSOLVE,
-         NULL, NULL) );
+#ifdef EXACTSOLVE
+   (*set)->misc_exactsolve = SCIP_DEFAULT_MISC_EXACTSOLVE;
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "misc/usefprelax",
          "if problem is solved exactly, should floating point problem be a relaxation of the original problem (instead of an approximation)?",
@@ -1572,7 +1572,7 @@ SCIP_RETCODE SCIPsetResetParams(
    return SCIP_OKAY;
 }
 
-/** sets parameters that are supported by EXACTSOLVE flag; note, this does not enable exact MIP solving. 
+/** sets parameters that are supported by REDUCEDSOLVE flag; note, this does not enable exact MIP solving. 
  *  For that misc/exactsolve has to be set appropriately. 
  */ 
 SCIP_RETCODE SCIPsetSetExactsolve(
