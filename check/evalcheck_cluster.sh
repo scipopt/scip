@@ -116,21 +116,12 @@ do
   then
       echo create results for $EVALFILE
 
-      # detect used queue
-      QUEUE=`echo $EVALFILE | sed 's/check.\([a-zA-Z0-9_-]*\).*/\1/g'`
-
       # detect test set
-      if test "$QUEUE" = ""
-      then
-          TSTNAME=$QUEUE
-      else
-          TSTNAME=`echo $EVALFILE | sed 's/check.'$QUEUE'.\([a-zA-Z0-9_-]*\).*/\1/g'`
-      fi
+      TSTNAME=`echo $EVALFILE | sed 's/check.\([a-zA-Z0-9_-]*\).*/\1/g'`
 
       # detect test used solver
-      SOLVER=`echo $EVALFILE | sed 's/check.\([a-zA-Z0-9_-]*\).\([a-zA-Z0-9_-]*\).\([a-zA-Z0-9_]*\).*/\3/g'`
+      SOLVER=`echo $EVALFILE | sed 's/check.\([a-zA-Z0-9_-]*\).\([a-zA-Z0-9_]*\).*/\2/g'`
       
-      echo "Queue   " $QUEUE
       echo "Testset " $TSTNAME
       echo "Solver  " $SOLVER
 
