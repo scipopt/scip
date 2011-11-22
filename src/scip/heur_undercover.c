@@ -64,11 +64,13 @@
 #define DEFAULT_MAXRECOVERS     0            /**< maximum number of recoverings */
 #define DEFAULT_MAXREORDERS     1            /**< maximum number of reorderings of the fixing order */
 #define DEFAULT_COVERINGOBJ     'u'          /**< objective function of the covering problem */
+#define DEFAULT_FIXINGORDER     'v'          /**< order in which variables should be fixed */
 #define DEFAULT_COPYCUTS        TRUE         /**< should all active cuts from the cutpool of the original scip be copied
                                               *   to constraints of the subscip
                                               */
 
 #define COVERINGOBJS            "cdlmtu"     /**< list of objective functions of the covering problem */
+#define FIXINGORDERS            "CcVv"       /**< list of orders in which variables can be fixed */
 #define MAXNLPFAILS             1            /**< maximum number of fails after which we give up solving the nlp relaxation */
 #define MAXPOSTNLPFAILS         1            /**< maximum number of fails after which we give up calling nlp local search */
 #define MINTIMELEFT             1.0          /**< don't start expensive parts of the heuristics if less than this amount of time left */
@@ -111,6 +113,7 @@ struct SCIP_HeurData
    int                   npostnlpfails;      /**< number of fails of the nlp local search after last success */
    int                   nnlconshdlrs;       /**< number of nonlinear constraint handlers */
    char                  coveringobj;        /**< objective function of the covering problem */
+   char                  fixingorder;        /**< order in which variables should be fixed */
    SCIP_Bool             copycuts;           /**< should all active cuts from cutpool be copied to constraints in
                                               *   subproblem? */
 };
@@ -1409,6 +1412,7 @@ SCIP_RETCODE computeFixingOrder(
 {
    SCIP_Real* scores;
    SCIP_Real bestscore;
+   SCIP_Bool sortdown;
    int i;
 
    assert(scip != NULL);
@@ -1428,8 +1432,11 @@ SCIP_RETCODE computeFixingOrder(
    /* allocate buffer array for score values */
    SCIP_CALL( SCIPallocBufferArray(scip, &scores, coversize) );
 
+   /* initialize best score to infinite value */
+   sortdown = (heurdata->fixingorder == 'c' || heurdata->fixingorder == 'v' );
+   bestscore = sortdown ? -SCIPinfinity(scip) : +SCIPinfinity(scip);
+
    /* compute score values */
-   bestscore = SCIPinfinity(scip);
    for( i = coversize-1; i >= 0; i-- )
    {
       SCIP_VAR* var;
@@ -1439,15 +1446,23 @@ SCIP_RETCODE computeFixingOrder(
       assert(cover[i] < nvars);
       var = vars[cover[i]];
 
-      /* compute score; switch sign because we will sort in non-decreasing order */
-      scores[i] = -(heurdata->conflictweight * SCIPgetVarConflictScore(scip, var)
-         + heurdata->inferenceweight * SCIPgetVarAvgInferenceCutoffScore(scip, var, heurdata->cutoffweight));
-      assert(scores[i] <= 0.0);
+      if( heurdata->fixingorder == 'C' || heurdata->fixingorder == 'c' )
+         scores[i] = heurdata->conflictweight * SCIPgetVarConflictScore(scip, var)
+            + heurdata->inferenceweight * SCIPgetVarAvgInferenceCutoffScore(scip, var, heurdata->cutoffweight);
+      else if( heurdata->fixingorder == 'V' || heurdata->fixingorder == 'v' )
+         scores[i] = cover[i];
+      else
+         return SCIP_PARAMETERWRONGVAL; 
 
-      /* update maximum score */
-      bestscore = MIN(bestscore, scores[i]);
+      assert(scores[i] >= 0.0);
+
+      /* update best score */
+      if( sortdown )
+         bestscore = MAX(bestscore, scores[i]);
+      else
+         bestscore = MIN(bestscore, scores[i]);     
+
    }
-   bestscore -= 1.0;
 
    /* put integers to the front */
    if( heurdata->fixintfirst )
@@ -1455,19 +1470,31 @@ SCIP_RETCODE computeFixingOrder(
       for( i = coversize-1; i >= 0; i-- )
       {
          if( SCIPvarIsIntegral(vars[cover[i]]) )
-            scores[i] += bestscore;
+         {
+            if( sortdown )
+               scores[i] += bestscore+1.0;
+            else
+               scores[i] = bestscore - 1.0/(scores[i]+1.0);
+         }
       }
    }
 
    /* put last failed variable to the front */
    if( lastfailed < coversize )
    {
-      scores[lastfailed] += 2*bestscore;
+      if( sortdown )
+         scores[lastfailed] += bestscore+2.0;
+      else
+         scores[lastfailed] = bestscore - 2.0/(scores[lastfailed]+1.0);
       i = cover[lastfailed];
    }
 
    /* sort by non-decreasing (negative) score */
-   SCIPsortRealInt(scores, cover, coversize);
+   if( sortdown )
+      SCIPsortDownRealInt(scores, cover, coversize);
+   else
+      SCIPsortRealInt(scores, cover, coversize);
+
    assert(lastfailed >= coversize || cover[0] == i);
 
    /* free buffer memory */
@@ -2987,6 +3014,10 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
    SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/coveringobj",
          "objective function of the covering problem ('b'ranching status, influenced nonlinear 'c'onstraints/'t'erms, 'd'omain size, 'l'ocks, 'm'in of up/down locks, 'u'nit penalties, constraint 'v'iolation)",
          &heurdata->coveringobj, TRUE, DEFAULT_COVERINGOBJ, COVERINGOBJS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/fixingorder",
+         "order in which variables should be fixed (increasing 'C'onflict score, decreasing 'c'onflict score, increasing 'V'ariable index, decreasing 'v'ariable index",
+         &heurdata->fixingorder, TRUE, DEFAULT_FIXINGORDER, FIXINGORDERS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/copycuts",
          "should all active cuts from cutpool be copied to constraints in subproblem?",
