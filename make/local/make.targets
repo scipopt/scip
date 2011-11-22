@@ -1,12 +1,16 @@
 # this local Makefile includes the cluster targets 
 
+OPTHOST	   	 := $(shell uname -n | tr -cd '[:alpha:]')
+
+-include make/local/make.$(OPTHOST)
+
 .PHONY: testcluster
 testcluster:		
 		cd check; \
 		$(SHELL) ./check_cluster.sh $(TEST) $(MAINFILE) $(SETTINGS) \
 		$(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) \
 		$(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(VERSION) \
-		$(LPS) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER);
+		$(LPS) $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
 
 .PHONY: testclustercpx
 testclustercpx:		
