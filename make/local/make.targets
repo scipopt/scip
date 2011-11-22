@@ -8,7 +8,7 @@ OPTHOST	   	 := $(shell uname -n | tr -cd '[:alpha:]')
 testcluster:		
 		cd check; \
 		$(SHELL) ./check_cluster.sh $(TEST) $(MAINFILE) $(SETTINGS) \
-		$(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) \
+		$(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) \
 		$(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(VERSION) \
 		$(LPS) $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
 
@@ -16,7 +16,7 @@ testcluster:
 testclustercpx:		
 		cd check; \
 		$(SHELL) ./check_cluster_cplex.sh $(TEST) $(CPLEX) $(SETTINGS) \
-		$(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) \
+		$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) \
 		$(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(QUEUE) $(PPN) \
 		$(CLIENTTMPDIR)  $(NOWAITCLUSTER);
 
@@ -24,7 +24,7 @@ testclustercpx:
 testclustercbc:		
 		cd check; \
 		$(SHELL) ./check_cluster_cbc.sh $(TEST) $(CBC) $(SETTINGS) \
-		$(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) \
+		$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) \
 		$(THREADS) $(FEASTOL) $(CONTINUE) $(QUEUE) $(PPN) \
 		$(CLIENTTMPDIR) $(NOWAITCLUSTER);
 
