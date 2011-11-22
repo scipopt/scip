@@ -1,16 +1,6 @@
-FLAGS		+=	-DROUNDING_FE
-OFLAGS		+=	-O0 -g
-CFLAGS		+=	$(GCCWARN) -funit-at-a-time  -m64
-CXXFLAGS	+=	$(GXXWARN) -funit-at-a-time  -m64
-ARFLAGS		=	crs
-LDFLAGS		+=      -m64
-ZLIB_FLAGS	=
-ZLIB_LDFLAGS 	=	-lz
-GMP_FLAGS	=
-GMP_LDFLAGS 	=	-lgmp
-READLINE_FLAGS	=
-READLINE_LDFLAGS=	-lreadline -lncurses
+# note that the local make file is a dummy and is eventually the union of
+# following sub make files
 
-ifeq ($(SHARED),true)
-LIBBUILDFLAGS	+=     	-m64
-endif
+include $(SCIPDIR)/make/make.$(OSTYPE).$(COMP)
+include $(SCIPDIR)/make/make.$(OSTYPE).$(COMP).$(OPT)
+include $(SCIPDIR)/make/make.$(OSTYPE).$(ARCH).$(COMP)
