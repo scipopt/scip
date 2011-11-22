@@ -23,14 +23,11 @@
  *        lhs <=   A * x + const <= rhs
  *        lb  <=       x         <= ub
  *
- *  The row activities are defined as
- *
- *     activity = A * x + const
- *
- *  and must therefore be in the range of [lhs,rhs].
+ *  The row activities are defined as activity = A * x + const and must
+ *  therefore be in the range of [lhs,rhs].
  *
  *  Mathematically, each range constraint would account for two dual
- *  variables (one for each inequaility). Since in an optimal solution (at
+ *  variables, one for each inequality. Since in an optimal solution (at
  *  least) one of them may be chosen to be zero, we may define one dual
  *  multiplier for each row as the difference of those two.
  *
