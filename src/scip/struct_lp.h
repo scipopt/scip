@@ -19,18 +19,37 @@
  *
  *  In SCIP, the LP is defined as follows:
  *
- *   min       obj * x
- *      lhs <=   A * x + const <= rhs
- *      lb  <=       x         <= ub
+ *     min       obj * x
+ *        lhs <=   A * x + const <= rhs
+ *        lb  <=       x         <= ub
  *
- *  The row activities are defined as 
+ *  The row activities are defined as
+ *
  *     activity = A * x + const
+ *
  *  and must therefore be in the range of [lhs,rhs].
  *
- *  The reduced costs are defined as
- *     redcost = obj - A^T * y
- *  and must be   nonnegative, if the corresponding lb is nonnegative,
- *                zero,        if the corresponding lb is negative.
+ *  Mathematically, each range constraint would account for two dual
+ *  variables (one for each inequaility). Since in an optimal solution (at
+ *  least) one of them may be chosen to be zero, we may define one dual
+ *  multiplier for each row as the difference of those two.
+ *
+ *  Let y be the vector of dual multipliers for the rows, then the reduced
+ *  costs are defined as
+ *
+ *     redcost = obj - A^T * y.
+ *
+ *  In an optimal solution, y must be
+ *
+ *     - nonnegative, if the corresponding row activity is not tight at its rhs
+ *     - nonpositive, if the corresponding row activity is not tight at its lhs
+ *     - zero, if the corresponding row activity is not at any of its sides
+ *
+ *  and the reduced costs must be
+ *
+ *     - nonnegative, if the corresponding variable is not tight at its ub
+ *     - nonpositive, if the corresponding variable is not tight at its lb
+ *     - zero, if the corresponding variable is not at any of its bounds.
  *
  *  The main datastructures for storing an LP are the rows and the columns.
  *  A row can live on its own (if it was created by a separator), or as SCIP_LP
