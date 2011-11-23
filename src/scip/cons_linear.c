@@ -8898,13 +8898,11 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
          assert(!SCIPisZero(scip, consdata->vals[i]));
       }
 
-      SCIPdebugMessage("classifying constraint ");
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-
       /* is constraint of type SCIP_CONSTYPE_EMPTY? */
       if( consdata->nvars == 0 )
       {
-         SCIPdebugMessage(" as EMPTY\n");
+         SCIPdebugMessage("classified as EMPTY: ");
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
          counter[SCIP_CONSTYPE_EMPTY]++;
          continue;
       }
@@ -8912,7 +8910,8 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
       /* is constraint of type SCIP_CONSTYPE_FREE? */
       if( SCIPisInfinity(scip, consdata->rhs) && SCIPisInfinity(scip, -consdata->lhs) )
       {
-         SCIPdebugMessage(" as FREE\n");
+         SCIPdebugMessage("classified as FREE: ");
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
          counter[SCIP_CONSTYPE_FREE]++;
          continue;
       }
@@ -8920,7 +8919,8 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
       /* is constraint of type SCIP_CONSTYPE_SINGLETON? */
       if( consdata->nvars == 1 )
       {
-         SCIPdebugMessage(" as SINGLETON\n");
+         SCIPdebugMessage("classified as SINGLETON: ");
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
          counter[SCIP_CONSTYPE_SINGLETON] += isRangedRow(scip, cons) ? 2 : 1;
          continue;
       }
@@ -8928,7 +8928,8 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
       /* is constraint of type SCIP_CONSTYPE_AGGREGATION? */
       if( consdata->nvars == 2 && SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
       {
-         SCIPdebugMessage(" as AGGREGATION\n");
+         SCIPdebugMessage("classified as AGGREGATION: ");
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
          counter[SCIP_CONSTYPE_AGGREGATION]++;
          continue;
       }
@@ -8936,7 +8937,8 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
       /* is constraint of type SCIP_CONSTYPE_{VARBOUND}? */
       if( consdata->nvars == 2 )
       {
-         SCIPdebugMessage(" as VARBOUND\n");
+         SCIPdebugMessage("classified as VARBOUND: ");
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
          counter[SCIP_CONSTYPE_VARBOUND] += isRangedRow(scip, cons) ? 2 : 1;
          continue;
       }
@@ -8970,13 +8972,15 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
                b = consdata->rhs/scale + nnegbinvars;
                if( SCIPisEQ(scip, 1.0, b) )
                {
-                  SCIPdebugMessage(" as SETPARTITION\n");
+                  SCIPdebugMessage("classified as SETPARTITION: ");
+                  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
                   counter[SCIP_CONSTYPE_SETPARTITION]++;
                   continue;
                }
                else if( SCIPisIntegral(scip, b) && !SCIPisNegative(scip, b) )
                {
-                  SCIPdebugMessage(" as CARDINALITY\n");
+                  SCIPdebugMessage("classified as CARDINALITY: ");
+                  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
                   counter[SCIP_CONSTYPE_CARDINALITY]++;
                   continue;
                }
@@ -8985,13 +8989,15 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
             b = consdata->rhs/scale + nnegbinvars;
             if( SCIPisEQ(scip, 1.0, b) )
             {
-               SCIPdebugMessage(" as SETPACKING\n");
+               SCIPdebugMessage("classified as SETPACKING: ");
+               SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
                counter[SCIP_CONSTYPE_SETPACKING]++;
                consdata->rhs = SCIPinfinity(scip);
             }
             else if( SCIPisIntegral(scip, b) && !SCIPisNegative(scip, b) )
             {
-               SCIPdebugMessage(" as INVKNAPSACK\n");
+               SCIPdebugMessage("classified as INVKNAPSACK: ");
+               SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
                counter[SCIP_CONSTYPE_INVKNAPSACK]++;
                consdata->rhs = SCIPinfinity(scip);
             }
@@ -8999,7 +9005,8 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
             b = consdata->lhs/scale + nnegbinvars;
             if( SCIPisEQ(scip, 1.0, b) )
             {
-               SCIPdebugMessage(" as SETCOVERING\n");
+               SCIPdebugMessage("classified as SETCOVERING: ");
+               SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
                counter[SCIP_CONSTYPE_SETCOVERING]++;
                consdata->lhs = -SCIPinfinity(scip);
             }
@@ -9035,7 +9042,8 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
          {
             if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
             {
-               SCIPdebugMessage(" as EQKNAPSACK\n");
+               SCIPdebugMessage("classified as EQKNAPSACK: ");
+               SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
                counter[SCIP_CONSTYPE_EQKNAPSACK]++;
                continue;
             }
@@ -9049,7 +9057,8 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
                   matched = matched || SCIPisEQ(scip, b, REALABS(consdata->vals[i]));
                }
 
-               SCIPdebugMessage(" as %s\n", matched ? "BINPACKING" : "KNAPSACK");
+               SCIPdebugMessage("classified as %s: ", matched ? "BINPACKING" : "KNAPSACK");
+               SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
                counter[matched ? SCIP_CONSTYPE_BINPACKING : SCIP_CONSTYPE_KNAPSACK]++;
             }
 
@@ -9080,7 +9089,8 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
 
          if( !unmatched )
          {
-            SCIPdebugMessage(" as INTKNAPSACK\n");
+            SCIPdebugMessage("classified as INTKNAPSACK: ");
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
             counter[SCIP_CONSTYPE_INTKNAPSACK]++;
 
             if( SCIPisInfinity(scip, -consdata->lhs) )
@@ -9105,14 +9115,16 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
 
          if( !unmatched )
          {
-            SCIPdebugMessage(" as MIXEDBINARY (%d)\n", isRangedRow(scip, cons) ? 2 : 1);
+            SCIPdebugMessage("classified as MIXEDBINARY (%d): ", isRangedRow(scip, cons) ? 2 : 1);
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
             counter[SCIP_CONSTYPE_MIXEDBINARY] += isRangedRow(scip, cons) ? 2 : 1;
             continue;
          }
       }
 
       /* no special structure detected */
-      SCIPdebugMessage(" as GENERAL\n");
+      SCIPdebugMessage("classified as GENERAL: ");
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
       counter[SCIP_CONSTYPE_GENERAL] += isRangedRow(scip, cons) ? 2 : 1;
    }
 
