@@ -3834,9 +3834,68 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
       SCIP_Real minval;
       SCIP_Real maxval;
 
-      /* if -bx / axy in ybnds, we do nothing */
+      /* consider -bx / axy in ybnds, i.e., bx + axy y can be 0 */
       if( EPSGE(-bx / axy, ybnds.inf, 1e-9) && EPSLE(-bx / axy, ybnds.sup, 1e-9) )
+      {
+         /* write as (bx + axy y) * x \in (c - ay y^2 - by y)
+          * and estimate bx + axy y and c - ay y^2 - by y by intervals independently
+          * @todo can we do better, as in the case where bx + axy y is bounded away from 0?
+          */
+         SCIP_INTERVAL lincoef;
+         SCIP_INTERVAL myrhs;
+         SCIP_INTERVAL tmp;
+
+         if( xbnds.inf < 0.0 && xbnds.sup > 0.0 )
+         {
+            /* if (bx + axy y) can be arbitrary small and x be both positive and negative,
+             * then nothing we can tighten here
+             */
+            SCIPintervalSetBounds(resultant, xbnds.inf, xbnds.sup);
+            return;
+         }
+
+         /* store interval for (bx + axy y) in lincoef */
+         SCIPintervalMulScalar(infinity, &lincoef, ybnds, axy);
+         SCIPintervalAddScalar(infinity, &lincoef, lincoef, bx);
+
+         /* store interval for (c - ay y^2 - by y) in myrhs */
+         SCIPintervalSet(&tmp, by);
+         SCIPintervalQuad(infinity, &tmp, ay, tmp, ybnds);
+         SCIPintervalSub(infinity, &myrhs, rhs, tmp);
+
+         if( lincoef.inf == 0.0 && lincoef.sup == 0.0 )
+         {
+            /* equation became 0.0 \in myrhs */
+            if( myrhs.inf <= 0.0 && myrhs.sup >= 0.0 )
+               SCIPintervalSetEntire(infinity, resultant);
+            else
+               SCIPintervalSetEmpty(resultant);
+         }
+         else if( xbnds.inf >= 0.0 )
+         {
+            SCIP_INTERVAL a_;
+
+            /* need only positive solutions */
+            SCIPintervalSet(&a_, 0.0);
+            SCIPintervalSolveUnivariateQuadExpressionPositive(infinity, resultant, a_, lincoef, myrhs);
+         }
+         else
+         {
+            assert(xbnds.sup <= 0.0);
+
+            /* need only negative solutions */
+            SCIP_INTERVAL a_;
+            SCIPintervalSet(&a_, 0.0);
+            SCIPintervalSetBounds(&lincoef, -lincoef.sup, -lincoef.inf);
+            SCIPintervalSolveUnivariateQuadExpressionPositive(infinity, resultant, a_, lincoef, myrhs);
+            if( !SCIPintervalIsEmpty(*resultant) )
+               SCIPintervalSetBounds(resultant, -resultant->sup, -resultant->inf);
+         }
+
+         SCIPintervalIntersect(resultant, xbnds, *resultant);
+
          return;
+      }
 
       minval =  infinity;
       maxval = -infinity;
@@ -3847,48 +3906,58 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
       else
          c = rhs.sup;
 
-      if( ybnds.inf <= -infinity )
+      if( c > -infinity && c < infinity )
       {
-         /* limit is ay/axy * infinity if ay != 0.0 and -by/axy otherwise */
-         if( EPSZ(ay, 1e-9) )
-            minval = -by / axy;
-         else if( ay * axy < 0.0 )
-            minval = -infinity;
+         if( ybnds.inf <= -infinity )
+         {
+            /* limit is ay/axy * infinity if ay != 0.0 and -by/axy otherwise */
+            if( EPSZ(ay, 1e-9) )
+               minval = -by / axy;
+            else if( ay * axy < 0.0 )
+               minval = -infinity;
+         }
+         else
+         {
+            val = (c - ay * ybnds.inf * ybnds.inf - by * ybnds.inf) / (bx + axy * ybnds.inf);
+            minval = MIN(val, minval);
+         }
+
+         if( ybnds.sup >= infinity )
+         {
+            /* limit is -ay/axy * infinity if ay != 0.0 and -by/axy otherwise */
+            if( EPSZ(ay, 1e-9) )
+               minval = MIN(minval, -by / axy);
+            else if( ay * axy > 0.0 )
+               minval = -infinity;
+         }
+         else
+         {
+            val = (c - ay * ybnds.sup * ybnds.sup - by * ybnds.sup) / (bx + axy * ybnds.sup);
+            minval = MIN(val, minval);
+         }
+
+         if( !EPSZ(ay, 1e-9) )
+         {
+            d = ay * (ay * bx * bx - axy * (bx * by + axy * c));
+            if( !EPSN(d, 1e-9) )
+            {
+               ymin = ay * bx + sqrt(MAX(d, 0.0));
+               ymin /= axy * ay;
+
+               val = (c - ay * ymin * ymin - by * ymin) / (bx + axy * ymin);
+               minval = MIN(val, minval);
+
+               ymin = ay * bx - sqrt(MAX(d, 0.0));
+               ymin /= axy * ay;
+
+               val = (c - ay * ymin * ymin - by * ymin) / (bx + axy * ymin);
+               minval = MIN(val, minval);
+            }
+         }
       }
       else
       {
-         val = (c - ay * ybnds.inf * ybnds.inf - by * ybnds.inf) / (bx + axy * ybnds.inf);
-         minval = MIN(val, minval);
-      }
-
-      if( ybnds.sup >= infinity )
-      {
-         /* limit is -ay/axy * infinity if ay != 0.0 and -by/axy otherwise */
-         if( EPSZ(ay, 1e-9) )
-            minval = MIN(minval, -by / axy);
-         else if( ay * axy > 0.0 )
-            minval = -infinity;
-      }
-      else
-      {
-         val = (c - ay * ybnds.sup * ybnds.sup - by * ybnds.sup) / (bx + axy * ybnds.sup);
-         minval = MIN(val, minval);
-      }
-
-      d = ay * (ay * bx * bx - axy * (bx * by + axy * c));
-      if( !EPSN(d, 1e-9) )
-      {
-         ymin = ay * bx + sqrt(MAX(d, 0.0));
-         ymin /= axy * ay;
-
-         val = (c - ay * ymin * ymin - by * ymin) / (bx + axy * ymin);
-         minval = MIN(val, minval);
-
-         ymin = ay * bx - sqrt(MAX(d, 0.0));
-         ymin /= axy * ay;
-
-         val = (c - ay * ymin * ymin - by * ymin) / (bx + axy * ymin);
-         minval = MIN(val, minval);
+         minval = -infinity;
       }
 
       /* compute an upper bound on x */
@@ -3897,51 +3966,68 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
       else
          c = rhs.inf;
 
-      if( ybnds.inf <= -infinity )
+      if( c > -infinity && c < infinity )
       {
-         /* limit is ay/axy * infinity if ay != 0.0 and -by/axy otherwise */
-         if( EPSZ(ay, 1e-9) )
-            maxval = -by / axy;
-         else if( ay * axy > 0.0 )
-            maxval = infinity;
+         if( ybnds.inf <= -infinity )
+         {
+            /* limit is ay/axy * infinity if ay != 0.0 and -by/axy otherwise */
+            if( EPSZ(ay, 1e-9) )
+               maxval = -by / axy;
+            else if( ay * axy > 0.0 )
+               maxval = infinity;
+         }
+         else
+         {
+            val = (c - ay * ybnds.inf * ybnds.inf - by * ybnds.inf) / (bx + axy * ybnds.inf);
+            maxval = MAX(val, maxval);
+         }
+
+         if( ybnds.sup >= infinity )
+         {
+            /* limit is -ay/axy * infinity if ay != 0.0 and -by/axy otherwise */
+            if( EPSZ(ay, 1e-9) )
+               maxval = MAX(maxval, -by / axy);
+            else if( ay * axy < 0.0 )
+               maxval = infinity;
+         }
+         else
+         {
+            val = (c - ay * ybnds.sup * ybnds.sup - by * ybnds.sup) / (bx + axy * ybnds.sup);
+            maxval = MAX(val, maxval);
+         }
+
+         if( !EPSZ(ay, 1e-9) )
+         {
+            d = ay * (ay * bx * bx - axy * (bx * by + axy * c));
+            if( !EPSN(d, 1e-9) )
+            {
+               ymin = ay * bx + sqrt(MAX(d, 0.0));
+               ymin /= axy * ay;
+
+               val = (c - ay * ymin * ymin - by * ymin) / (bx + axy * ymin);
+               maxval = MAX(val, maxval);
+
+               ymin = ay * bx - sqrt(MAX(d, 0.0));
+               ymin /= axy * ay;
+
+               val = (c - ay * ymin * ymin - by * ymin) / (bx + axy * ymin);
+               maxval = MAX(val, maxval);
+            }
+         }
       }
       else
       {
-         val = (c - ay * ybnds.inf * ybnds.inf - by * ybnds.inf) / (bx + axy * ybnds.inf);
-         maxval = MAX(val, maxval);
+         maxval = infinity;
       }
 
-      if( ybnds.sup >= infinity )
-      {
-         /* limit is -ay/axy * infinity if ay != 0.0 and -by/axy otherwise */
-         if( EPSZ(ay, 1e-9) )
-            maxval = MAX(maxval, -by / axy);
-         else if( ay * axy < 0.0 )
-            maxval = infinity;
-      }
+      if( minval > -infinity )
+         resultant->inf = minval - 1e-10 * REALABS(minval);
       else
-      {
-         val = (c - ay * ybnds.sup * ybnds.sup - by * ybnds.sup) / (bx + axy * ybnds.sup);
-         maxval = MAX(val, maxval);
-      }
-
-      d = ay * (ay * bx * bx - axy * (bx * by + axy * c));
-      if( !EPSN(d, 1e-9) )
-      {
-         ymin = ay * bx + sqrt(MAX(d, 0.0));
-         ymin /= axy * ay;
-
-         val = (c - ay * ymin * ymin - by * ymin) / (bx + axy * ymin);
-         maxval = MAX(val, maxval);
-
-         ymin = ay * bx - sqrt(MAX(d, 0.0));
-         ymin /= axy * ay;
-
-         val = (c - ay * ymin * ymin - by * ymin) / (bx + axy * ymin);
-         maxval = MAX(val, maxval);
-      }
-
-      resultant->inf = (SCIP_Real)(minval - 1e-10 * REALABS(minval));
-      resultant->sup = (SCIP_Real)(maxval + 1e-10 * REALABS(maxval));
+         resultant->inf = -infinity;
+      if( maxval <  infinity )
+         resultant->sup = maxval + 1e-10 * REALABS(maxval);
+      else
+         resultant->sup = infinity;
+      SCIPintervalIntersect(resultant, *resultant, xbnds);
    }
 }
