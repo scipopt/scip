@@ -1522,6 +1522,7 @@ SCIP_RETCODE SCIPlpiAddCols(
    {
       LPColSet cols(ncols);
       DSVector colVector(ncols);
+      int nrows = spx->nRows();
       int last;
       int i;
       int j;
@@ -1534,7 +1535,10 @@ SCIP_RETCODE SCIPlpiAddCols(
          {
             last = (i == ncols-1 ? nnonz : beg[i+1]);
             for( j = beg[i]; j < last; ++j )
-               colVector.add(ind[j], val[j]);
+            {
+               if( ind[j] < nrows )
+                  colVector.add(ind[j], val[j]);
+            }
          }
          cols.add(obj[i], lb[i], colVector, ub[i]);
       }
