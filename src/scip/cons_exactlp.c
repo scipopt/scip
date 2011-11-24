@@ -12,27 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-//#define SCIP_DEBUG /*??????????????*/
-//#define LP_OUT /* only for debugging ???????????????? */
-//#define BOUNDCHG_OUT /* only for debugging ?????????? */
-//#define PSEUDOOBJ_OUT /* only for debugging ?????????? */
-//#define BASIS_OUT /* only for debugging ???????????????? */
-//#define DBVERIFY_TEST /* only for testing the method ?????????????????? */
-//#define EXLPSOLVER_OUT /* only for debugging ???????????????? */
-//#define DETAILED_DEBUG /* only for debugging ???????????????? */
-//#define DETAILED_DEBUG2 /* only for debugging ???????????????? */
 //#define PS_OUT/* only for debugging ???????????????? */
-//#define DBAUTO_OUT /*?????????????????*/
-//#define USETIMELIM_OUT /*??????????????*/ 
-
-//#define READER_OUT /* only for debugging ???????????????? */
-//#define PRESOL_OUT /* only for debugging ?????????? */
-
-//#define USEOBJLIM /*??????????????*/ 
-
-#define STORE_INTERA /* build the interval version of constraint matrix for provedBoundInterval() */
-//#define USETIMELIM /*??????????????*/ 
-
 
 /**@file   cons_exactlp.c
  * @ingroup CONSHDLRS 
@@ -42,6 +22,21 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+//#define BOUNDCHG_OUT   /** uncomment to get more debug msgs (SCIP_DEBUG) about processing bound changes of variables,
+//                        *  including pseudo objective value update */
+//#define FPRELAXVAL_OUT /** uncomment to get info about relaxing exact values to floating-point values */
+//#define FPRELAXLP_OUT  /** uncomment to get info about creation of floating-point relaxation or approximation */
+//#define DBAUTO_OUT     /** uncomment this define to get info about automatic selection of safe dual bounding method */
+//#define LPEX_OUT       /** uncomment to get info about solving process of exact LP solver */
+//#define BASISCHECK_OUT /** uncomment to get info about LP basis consistency check between exact and inexact LP solvers */
+
+//#define TESTDBVERIFY   /** uncomment to test basis verification method by comparing it to exact LP solver behavior */
+//#define USEOBJLIM      /** uncomment to pass objlimit to exact LP solver; same as in lpiex_qso.c
+//                        *  warning: QSopt_ex allows objlimits but the support is buggy; if the limit is reached, 
+//                        *  QSopt_ex does not stop but increases the precision */
+//#define USETIMELIM     /** uncomment to pass timelimit to exact LP solver
+//                        *  warning: QSopt_ex allows timelimits but the support is buggy; if the limit is reached, 
+//                        *  QSopt_ex does not stop but increases the precision */
 
 #include <assert.h>
 #include <string.h>
@@ -100,8 +95,10 @@
 #define PSBIGM                      100
 #define PSWARMSTARTAUXPROB         TRUE
 #define SPARSEMAXNNONZ            10000 /**< maximal number of nonzero coefficients in matrix to be considered sparse */
-#define FEWLBOUNDSRATIO             0.2 /**< maximal percentage of variables with large bounds that is regarded to be small */
-#define SMALLPROBDIM             100000 /**< dimension of problem that is regarded to be small */   
+#define FEWLBOUNDSRATIO             0.2 /**< maximal percentage of vars with large bounds that is regarded to be small; 
+                                         *   same as in lp.c */
+#define STORE_INTERA                    /**< should interval constraint matrix for provedBoundInterval() be stored? */
+
 
 /*
  * Data structures
@@ -238,8 +235,8 @@ struct SCIP_EventData
  * local methods for consistency checks
  */
 
-/* just for debugging ????????????? */
-#ifdef DETAILED_DEBUG /* just for debugging ?????????? */
+#ifndef NDEBUG
+/** checks for correct status of original variables */
 static
 void checkOrigVars(
    SCIP*                 scip                /**< SCIP data structure */
@@ -255,18 +252,21 @@ void checkOrigVars(
       assert(SCIPvarIsOriginal(origvars[i]));
    }
 }
+#endif
 
+#ifndef NDEBUG
+/** checks whether basis of exact and inexact LP solvers match after basis was loaded from one solver to the other */
 static
 SCIP_RETCODE checkLoadState(
    SCIP*                 scip,              /**< SCIP data structure */
    SCIP_CONSHDLRDATA*    conshdlrdata       /**< exactlp constraint handler data */
    )
 {
-   int i;
    int* cstat;
    int* rstat;
    int* cstatex;
    int* rstatex;
+   int i;
    int ncols;
    int nrows;
    int ncolsex;
@@ -283,82 +283,87 @@ SCIP_RETCODE checkLoadState(
    SCIP_CALL( SCIPallocBufferArray(scip, &cstatex, ncolsex) );  
    SCIP_CALL( SCIPallocBufferArray(scip, &rstatex, nrowsex) );
 
+   /* get exact and inxeact basis */
    SCIP_CALL( SCIPlpiGetBase(scip->lp->lpi, cstat, rstat) );
    SCIP_CALL( SCIPlpiexGetBase(conshdlrdata->lpiex, cstatex, rstatex) );
 
-#ifdef BASIS_OUT2 /* ???????????????? */
-   //   printCurrentLP(scip);  /* ????????????? */
+#ifdef BASISCHECK_OUT
+   printf("basis of exact and inexact LP solver should match after basis was loaded from one to the other:\n");
+   printf("  inexact LP basis (ncols<%d>, nrows<%d>):\n", ncols, nrows);
+   //printCurrentLP(scip); /* uncomment to display inexact LP */
    for( i = 0; i < ncols; ++i)
    {
       if( cstat[i] == SCIP_BASESTAT_LOWER)
-         printf(" c=%d: %d (at lower)\n", i, cstat[i]);
+         printf("     c=%d: %d (at lower)\n", i, cstat[i]);
       else if( cstat[i] == SCIP_BASESTAT_BASIC)
-         printf(" c=%d: %d (basic)\n", i, cstat[i]);
+         printf("     c=%d: %d (basic)\n", i, cstat[i]);
       else if( cstat[i] ==  SCIP_BASESTAT_UPPER)
-         printf(" c=%d: %d (at upper)\n", i, cstat[i]);
+         printf("     c=%d: %d (at upper)\n", i, cstat[i]);
       else if( cstat[i] ==  SCIP_BASESTAT_ZERO)
-         printf(" c=%d: %d (at zero)\n", i, cstat[i]);
+         printf("     c=%d: %d (at zero)\n", i, cstat[i]);
       else 
-         printf(" c=%d: %d (error)\n", i, cstat[i]);
+         printf("     c=%d: %d (error)\n", i, cstat[i]);
    }
-#endif
-#ifdef BASIS_OUT /* ???????????????? */
    for( i = 0; i < nrows; ++i)
    {
       if( rstat[i] == SCIP_BASESTAT_LOWER)
-         printf(" r=%d: %d (at lower)\n", i, rstat[i]);
+         printf("     r=%d: %d (at lower)\n", i, rstat[i]);
       else if( rstat[i] == SCIP_BASESTAT_BASIC)
-         printf(" r=%d: %d (basic)\n", i, rstat[i]);
+         printf("     r=%d: %d (basic)\n", i, rstat[i]);
       else if( rstat[i] ==  SCIP_BASESTAT_UPPER)
-         printf(" r=%d: %d (at upper)\n", i, rstat[i]);
+         printf("     r=%d: %d (at upper)\n", i, rstat[i]);
       else 
-         printf(" r=%d: %d (error)\n", i, rstat[i]);
+         printf("     r=%d: %d (error)\n", i, rstat[i]);
    }
+   printf("  exact LP basis (ncols<%d>, nrows<%d>):\n", ncolsex, nrowsex);
 #endif
  
-
+   /* check basis status of columns */ 
    assert(ncols == ncolsex);
    for( i = 0; i < ncolsex; ++i)
    {
-      assert(cstatex[i] == cstat[i]);
-#ifdef BASIS_OUT2 /* ???????????????? */
+#ifdef BASISCHECK_OUT
       if( cstatex[i] == SCIP_BASESTAT_LOWER)
-         printf("ex c=%d: %d (at lower)\n", i, cstatex[i]);
+         printf("     ex c=%d: %d (at lower)\n", i, cstatex[i]);
       else if( cstatex[i] == SCIP_BASESTAT_BASIC)
-         printf("ex c=%d: %d (basic)\n", i, cstatex[i]);
+         printf("     ex c=%d: %d (basic)\n", i, cstatex[i]);
       else if( cstatex[i] ==  SCIP_BASESTAT_UPPER)
-         printf("ex c=%d: %d (at upper)\n", i, cstatex[i]);
+         printf("     ex c=%d: %d (at upper)\n", i, cstatex[i]);
       else if( cstatex[i] ==  SCIP_BASESTAT_ZERO)
-         printf("ex c=%d: %d (at zero)\n", i, cstatex[i]);
+         printf("     ex c=%d: %d (at zero)\n", i, cstatex[i]);
       else 
-         printf("ex c=%d: %d (error)\n", i, cstatex[i]);
+         printf("     ex c=%d: %d (error)\n", i, cstatex[i]);
 #endif
+
+      assert(cstatex[i] == cstat[i]);
    }
 
+   /* check basis status of row slacks */ 
    assert(nrows == nrowsex);
    for( i = 0; i < nrowsex; ++i)
    {
-      assert(rstatex[i] == rstat[i]);
-
-#ifdef BASIS_OUT /* ???????????????? */
+#ifdef BASISCHECK_OUT
       if( rstatex[i] == SCIP_BASESTAT_LOWER)
-         printf("ex r=%d: %d (at lower)\n", i, rstatex[i]);
+         printf("     ex r=%d: %d (at lower)\n", i, rstatex[i]);
       else if( rstatex[i] == SCIP_BASESTAT_BASIC)
-         printf("ex r=%d: %d (basic)\n", i, rstatex[i]);
+         printf("     ex r=%d: %d (basic)\n", i, rstatex[i]);
       else if( rstatex[i] ==  SCIP_BASESTAT_UPPER)
-         printf("ex r=%d: %d (at upper)\n", i, rstatex[i]);
+         printf("     ex r=%d: %d (at upper)\n", i, rstatex[i]);
       else 
-         printf("ex r=%d: %d (error)\n", i, rstatex[i]);
+         printf("     ex r=%d: %d (error)\n", i, rstatex[i]);
 #endif
+
+      assert(rstatex[i] == rstat[i]);
    }
 
-#if 0 /*?????????????????*/
+#if 0 /* activate this for detailed debugging. writes both LP basis to files and stops afterwards */
    {
       SCIP_LPI* lpi;
-      SCIPgetLPI(scip, &lpi); /*????????????????*/
-      SCIP_CALL( SCIPlpiWriteState(lpi, "testset/state_lp.bas") ); /*????????????????*/
-      SCIP_CALL( SCIPlpiexWriteState(conshdlrdata->lpiex, "testset/state_lpex.bas") ); /* ????????????*/
-      SCIPABORT(); /*?????????????*/
+
+      SCIPgetLPI(scip, &lpi);
+      SCIP_CALL( SCIPlpiWriteState(lpi, "testset/state_lp.bas") );
+      SCIP_CALL( SCIPlpiexWriteState(conshdlrdata->lpiex, "testset/state_lpex.bas") );
+      SCIPABORT();
    }
 #endif
 
@@ -385,19 +390,12 @@ void checkPseudoobjval(
    int pseudoobjvalinf; 
    mpq_t prod;
    int i;
-#ifdef DETAILED_DEBUG2 /*???????????????*/
-   char s[SCIP_MAXSTRLEN];
-#endif
 
    mpq_init(pseudoobjval);
    mpq_set_d(pseudoobjval, 0.0);
    pseudoobjvalinf = 0;
    mpq_init(prod);
  
-#ifdef DETAILED_DEBUG2  /*???????????????*/
-   SCIPdebugMessage("check correctness of pseudoobjval (nvars=%d)\n)", consdata->nvars);
-#endif
-
    /* compute pseudo objective value manually */
    for( i = 0; i < consdata->nvars; ++i )
    {
@@ -423,18 +421,7 @@ void checkPseudoobjval(
             mpq_add(pseudoobjval, pseudoobjval, prod);
          }
       }
-#ifdef DETAILED_DEBUG2  /*???????????????*/
-      gmp_snprintf(s, SCIP_MAXSTRLEN, "i=%d: obj=%Qd, loc=[%Qd,%Qd], glb=[%Qd,%Qd] \t -> %Qd\n", i, consdata->obj[i], 
-         consdata->lbloc[i], consdata->ubloc[i], consdata->lb[i], consdata->ub[i], pseudoobjval);
-         SCIPdebugMessage(s);
-#endif
    }
-
-#ifdef DETAILED_DEBUG2  /*???????????????*/
-   gmp_snprintf(s, SCIP_MAXSTRLEN, "---> inf: %d, %d, pseudoobj: %Qd, %Qd\n", conshdlrdata->pseudoobjvalinf, 
-      pseudoobjvalinf, conshdlrdata->pseudoobjval, pseudoobjval);
-   SCIPdebugMessage(s);
-#endif
 
    /* check whether manually computed pseudo objective value is equal to updated one */
    assert(pseudoobjvalinf == conshdlrdata->pseudoobjvalinf);
@@ -555,16 +542,16 @@ SCIP_Real mpqGetRealRelax(
          assert(mpq_cmp(result, val) >= 0);
       if( roundmode == GMP_RNDD )
          assert(mpq_cmp(result, val) <= 0); 
-#ifdef READER_OUT  /*???????????????*/
+#ifdef FPRELAXVAL_OUT
       if( roundmode == GMP_RNDU )
       {
-         gmp_printf("given <%Qd> <=! conv <%Qd | ", val, result); 
-         printf(" %g>\n", mpq_get_d(result)); 
+         gmp_printf("   relaxing value: given<%Qd> <= relaxed<%Qd|", val, result); 
+         printf("%g>\n", mpq_get_d(result)); 
       }
       if( roundmode == GMP_RNDD )
       {
-         gmp_printf("given <%Qd> >=! conv <%Qd | ", val, result); 
-         printf(" %g>\n", mpq_get_d(result)); 
+         gmp_printf("   relaxing value: given<%Qd> >= relaxed<%Qd|", val, result); 
+         printf("%g>\n", mpq_get_d(result)); 
       }
 #endif
       mpq_clear(result);
@@ -712,7 +699,8 @@ SCIP_RETCODE catchEvents(
             &consdata->eventdatas[i]->filterpos) );
    }
 
-#ifdef DETAILED_DEBUG /*????????????????*/
+#ifndef NDEBUG
+   /* check for correct status of original variables */
    checkOrigVars(scip);
 #endif
 
@@ -757,7 +745,8 @@ SCIP_RETCODE dropEvents(
       SCIP_CALL( eventdataFree(scip, &consdata->eventdatas[i]) );
    }
 
-#ifdef DETAILED_DEBUG /*????????????????*/
+#ifndef NDEBUG
+   /* check for correct status of original variables */
    checkOrigVars(scip);
 #endif
 
@@ -803,7 +792,7 @@ SCIP_RETCODE conshdlrdataCreate(
    mpq_set((*conshdlrdata)->neginfinity, *SCIPlpiexNegInfinity((*conshdlrdata)->lpiex));
    mpq_set((*conshdlrdata)->lpiexuobjlim, *SCIPlpiexPosInfinity((*conshdlrdata)->lpiex));
 
-#ifdef USEOBJLIM /*??????????????*/ 
+#ifdef USEOBJLIM
    SCIP_CALL( SCIPlpiexSetRealpar((*conshdlrdata)->lpiex, SCIP_LPPAR_UOBJLIM, (*conshdlrdata)->lpiexuobjlim) ); 
 #endif
 
@@ -945,8 +934,8 @@ SCIP_RETCODE updateVar(
    mpq_set_d(deltaval, 0.0);
    deltainf = 0;
 
-#ifdef PSEUDOOBJ_OUT /* only for debugging ?????????? */
-   gmp_printf("obj: %Qd -> %Qd, lb:  %Qd -> %Qd, ub:  %Qd -> %Qd: pseudoobjval: %Qd (%d) --> ", 
+#ifdef BOUNDCHG_OUT
+   gmp_printf("   change pseudoobjval for obj (%Qd->%Qd) lb (%Qd->%Qd) ub (%Qd->%Qd): pseudoobjval %Qd (inf<%d>) --> ", 
       oldobj, newobj, oldlb, newlb, oldub, newub, conshdlrdata->pseudoobjval, conshdlrdata->pseudoobjvalinf); 
 #endif
 
@@ -1002,8 +991,8 @@ SCIP_RETCODE updateVar(
    mpq_add(conshdlrdata->pseudoobjval, conshdlrdata->pseudoobjval, deltaval);
    conshdlrdata->pseudoobjvalinf += deltainf;
 
-#ifdef PSEUDOOBJ_OUT /* only for debugging ?????????? */
-   gmp_printf("%Qd (%d)\n", conshdlrdata->pseudoobjval, conshdlrdata->pseudoobjvalinf); 
+#ifdef BOUNDCHG_OUT
+   gmp_printf("%Qd (inf<%d>)\n", conshdlrdata->pseudoobjval, conshdlrdata->pseudoobjvalinf); 
 #endif
 
    assert(conshdlrdata->pseudoobjvalinf >= 0);
@@ -1548,7 +1537,7 @@ SCIP_RETCODE checkCons(
       {
          /** @todo: ????????????
           *  - This only works if presolving is disabled (solval may already be an approximation since 
-          *    solution values of aggregated variables are calculated in floating point arithmetic in SCIPgetSolVal()) 
+          *    solution values of aggregated variables are calculated in floating-point arithmetic in SCIPgetSolVal()) 
           */
          mpq_set_d(solval, SCIPgetSolVal(scip, sol, vars[v]));
       }
@@ -1597,7 +1586,7 @@ SCIP_RETCODE checkCons(
          {
             /** @todo: ????????????
              *  - This only works if presolving is disabled (solval may already be an approximation since 
-             *    solution values of aggregated variables are calculated in floating point arithmetic in SCIPgetSolVal()) 
+             *    solution values of aggregated variables are calculated in floating-point arithmetic in SCIPgetSolVal()) 
              */ 
             mpq_set_d(solval, SCIPgetSolVal(scip, sol, vars[consdata->ind[i]]));
          }
@@ -1668,15 +1657,17 @@ SCIP_RETCODE processBoundchgs(
       /* update lower bounds in exact LP */
       if( conshdlrdata->lpexconstructed )
       {
-#ifdef BOUNDCHG_OUT /* ?????????? */
+#ifdef BOUNDCHG_OUT
          SCIPdebugMessage("apply lower bound changes to LPEX (nbndchglb=%d, nbndchgub=%d):\n", consdata->nbndchglb, 
             consdata->nbndchgub);
 #endif
-
          SCIP_CALL( SCIPlpiexChgBounds(conshdlrdata->lpiex, consdata->nbndchglb, consdata->bndchglbind, 
                consdata->bndchglb, NULL) );
       }
 
+#ifdef BOUNDCHG_OUT
+      SCIPdebugMessage("apply lower bound changes to pseudoobjval:\n");
+#endif
       /* update pseudo objective value and local lower bounds */
       for( i = 0; i < consdata->nbndchglb; ++i )
       {
@@ -1700,7 +1691,7 @@ SCIP_RETCODE processBoundchgs(
       /* update upper bounds in exact LP */
       if( conshdlrdata->lpexconstructed )
       {
-#ifdef BOUNDCHG_OUT /* ?????????? */
+#ifdef BOUNDCHG_OUT
          SCIPdebugMessage("apply upper bound changes to LPEX (nbndchglb=%d, nbndchgub=%d):\n", consdata->nbndchglb, 
             consdata->nbndchgub);
 #endif
@@ -1708,6 +1699,9 @@ SCIP_RETCODE processBoundchgs(
                NULL, consdata->bndchgub) );
       }
 
+#ifdef BOUNDCHG_OUT
+      SCIPdebugMessage("apply upper bound changes to pseudo objval:\n");
+#endif
       /* update pseudo objective value and local upper bounds */
       for( i = 0; i <  consdata->nbndchgub; ++i )
       {
@@ -1819,7 +1813,7 @@ SCIP_RETCODE checkObjIntegral(
 {
    SCIP_VAR** origvars; 
    SCIP_VAR** vars;
-#ifdef SCIP_DEBUG /* ?????????? */
+#ifdef SCIP_DEBUG
    char s[SCIP_MAXSTRLEN];
 #endif
    int v;
@@ -1899,7 +1893,8 @@ SCIP_RETCODE checkObjIntegral(
 
    SCIPdebugMessage("--> obj is %s always integral\n", SCIPisObjIntegral(scip) ? "" : "NOT");
 
-#ifdef DETAILED_DEBUG /*????????????????*/
+#ifndef NDEBUG
+   /* check for correct status of original variables */
    checkOrigVars(scip);
 #endif
 
@@ -1950,7 +1945,7 @@ SCIP_RETCODE scaleObj(
       SCIP_Bool success; 
       mpq_t intscalar;
       mpq_t one;
-#ifdef SCIP_DEBUG /* ?????????? */
+#ifdef SCIP_DEBUG
       char s[SCIP_MAXSTRLEN];
 #endif
 
@@ -2104,7 +2099,9 @@ SCIP_RETCODE createRelaxation(
    SCIP_CALL( SCIPallocBufferArray(scip, &rowvars, SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &rowvals, SCIPgetNVars(scip)) );
    
-#ifdef LP_OUT /* only for debugging ???????????????? */
+#ifdef FPRELAXLP_OUT
+   printf("constructing FP %s of exactlp constraint<%s>:\n", SCIPuseFPRelaxation(scip) ? "relaxation" : "approximation", 
+      SCIPconsGetName(cons));
    SCIP_CALL( SCIPprintCons(scip, cons, NULL) ); 
 #endif
 
@@ -2199,8 +2196,8 @@ SCIP_RETCODE createRelaxation(
                SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
          SCIP_CALL( SCIPaddVarsToRow(scip, consdata->rows[c], consdata->len[c], rowvars, rowvals) );
 
-#ifdef LP_OUT /* only for debugging ???????????????? */
-         SCIPdebug(SCIPprintRow(scip, consdata->rows[c], NULL)); 
+#ifdef FPRELAXLP_OUT
+         SCIPprintRow(scip, consdata->rows[c], NULL); 
 #endif
       }
    }
@@ -2239,8 +2236,8 @@ SCIP_RETCODE createRelaxation(
                SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
          SCIP_CALL( SCIPaddVarsToRow(scip, consdata->rows[c], consdata->len[c], rowvars, rowvals) );
          
-#ifdef LP_OUT /* only for debugging ???????????????? */
-         SCIPdebug(SCIPprintRow(scip, consdata->rows[c], NULL)); 
+#ifdef FPRELAXLP_OUT
+         SCIPprintRow(scip, consdata->rows[c], NULL); 
 #endif
       }
    }
@@ -2286,15 +2283,15 @@ SCIP_RETCODE addRelaxation(
    return SCIP_OKAY;
 }
 
-#ifdef BASIS_OUT /* ???????????????? */
+#ifdef BASISCHECK_OUT
 static
 SCIP_RETCODE printCurrentLP(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_ROW** rows;
-   int nrows;
    int i;
+   int nrows;
 
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
    
@@ -2336,7 +2333,8 @@ SCIP_RETCODE loadLPEXState(
       /* loads LP state (like basis information) into exact LP solver */
       SCIP_CALL( SCIPsetLPState(scip, lpistate) ); 
       
-#ifdef DETAILED_DEBUG
+#ifndef NDEBUG
+      /* check whether basis of exact and inexact LP solvers match it was loaded from inexact solver to exact one */
       SCIP_CALL( checkLoadState(scip, conshdlrdata) );
 #endif
 
@@ -2349,8 +2347,8 @@ SCIP_RETCODE loadLPEXState(
    {
       *success = FALSE;
 
-#ifdef BASIS_OUT
-      SCIPdebugMessage("loading LP basis into LPEX failed because dimensions don't match (LP: %d x %d, LPEX: %d x %d)\n",
+#ifdef BASISCHECK_OUT
+      SCIPdebugMessage("loading LP basis into LPEX failed because dimensions do not match (LP: %d x %d, LPEX: %d x %d)\n",
          SCIPgetNLPRows(scip), SCIPgetNLPCols(scip), nrowsex, ncolsex);
 #endif
    }
@@ -2451,17 +2449,17 @@ SCIP_RETCODE loadLPState(
       SCIP_CALL( SCIPgetLPState(scip, &lpistate) ); 
 
       /* loads LP state (like basis information) into exact LP solver */
-      //      printCurrentLP(scip);  /* ????????????? */
       SCIP_CALL( SCIPlpiexSetState(conshdlrdata->lpiex, SCIPblkmem(scip), lpistate) );
       
-#ifdef DETAILED_DEBUG
+#ifndef NDEBUG
+      /* check whether basis of exact and inexact LP solvers match it was loaded from inexact solver to exact one */
       SCIP_CALL( checkLoadState(scip, conshdlrdata) );
 #endif
 
       /* free LP state */
       SCIP_CALL( SCIPfreeLPState(scip, &lpistate) );
    }
-#ifdef BASIS_OUT
+#ifdef BASISCHECK_OUT
    else
    {
       SCIPdebugMessage("loading LP basis into LPEX failed because dimensions don't match (LP: %d x %d, LPEX: %d x %d)\n",
@@ -2494,11 +2492,11 @@ SCIP_RETCODE solveLPEX(
    
    *lperror = FALSE;
 
-#ifdef EXLPSOLVER_OUT /* only for debugging ???????????????? */
+#if defined(LPEX_OUT) || defined(TESTDBVERIFY)
    SCIP_CALL( SCIPlpiexSetIntpar(conshdlrdata->lpiex, SCIP_LPPAR_LPINFO, TRUE) ); 
 #endif
 
-#ifdef USEOBJLIM /*??????????????*/ 
+#ifdef USEOBJLIM
    {
       /* set objective limit for exact LP solver */
       mpq_t uobjlim;
@@ -2520,7 +2518,7 @@ SCIP_RETCODE solveLPEX(
    }
 #endif
 
-#ifdef USETIMELIM /*??????????????*/ 
+#ifdef USETIMELIM
    {
       if( usetimelimit )
       {
@@ -2534,9 +2532,6 @@ SCIP_RETCODE solveLPEX(
          mpq_set_d(lptimelimit, timelimit - SCIPgetSolvingTime(scip));
          if( mpq_sgn(lptimelimit) > 0 )
          {
-#ifdef USETIMELIM_OUT /*??????????????*/ 
-            printf("set timelimit to %f\n", mpq_get_d(lptimelimit));
-#endif
             SCIP_CALL( SCIPlpiexSetRealpar(conshdlrdata->lpiex, SCIP_LPPAR_LPTILIM, lptimelimit) ); 
          }
          mpq_clear(lptimelimit);
@@ -2547,14 +2542,14 @@ SCIP_RETCODE solveLPEX(
    switch( lpalgo )
    {
    case SCIP_LPALGO_PRIMALSIMPLEX:
-      SCIPdebugMessage("solving current primal exact LP (%d cols, %d rows):\n", ncols, nrows);
+      SCIPdebugMessage("   solving current primal exact LP (%d cols, %d rows):\n", ncols, nrows);
 
       /* call primal simplex */
       retcode = SCIPlpiexSolvePrimal(conshdlrdata->lpiex);
       if( retcode == SCIP_LPERROR )
       {
          *lperror = TRUE;
-         SCIPdebugMessage("   (node %"SCIP_LONGINT_FORMAT") primal simplex solving error in current exact LP\n", 
+         SCIPdebugMessage("      (node %"SCIP_LONGINT_FORMAT") primal simplex solving error in current exact LP\n", 
             SCIPgetNNodes(scip));
       }
       else
@@ -2563,18 +2558,18 @@ SCIP_RETCODE solveLPEX(
       }
  
       SCIP_CALL( SCIPlpiexGetIterations(conshdlrdata->lpiex, &iterations) );
-      SCIPdebugMessage("   solved primal exact LP in %d iterations\n", iterations);
+      SCIPdebugMessage("      solved primal exact LP in %d iterations\n", iterations);
       break;
 
    case SCIP_LPALGO_DUALSIMPLEX:
-      SCIPdebugMessage("solving current dual exact LP (%d cols, %d rows)\n", ncols, nrows);
+      SCIPdebugMessage("   solving current dual exact LP (%d cols, %d rows)\n", ncols, nrows);
       
       /* call dual simplex */
       retcode = SCIPlpiexSolveDual(conshdlrdata->lpiex);
       if( retcode == SCIP_LPERROR )
       {
          *lperror = TRUE;
-         SCIPdebugMessage("   (node %"SCIP_LONGINT_FORMAT") dual simplex solving error in current exact LP\n", 
+         SCIPdebugMessage("      (node %"SCIP_LONGINT_FORMAT") dual simplex solving error in current exact LP\n", 
             SCIPgetNNodes(scip));
       }
       else
@@ -2583,7 +2578,7 @@ SCIP_RETCODE solveLPEX(
       }
 
       SCIP_CALL( SCIPlpiexGetIterations(conshdlrdata->lpiex, &iterations) );
-      SCIPdebugMessage("   solved dual exact LP in %d iterations\n", iterations);
+      SCIPdebugMessage("      solved dual exact LP in %d iterations\n", iterations);
       break;
 
    default:
@@ -2615,8 +2610,10 @@ SCIP_RETCODE checkIntegrality(
    SCIP_Bool inrange;
    SCIP_Bool integral;
    int branchvar;
-#ifdef DETAILED_DEBUG /*????????? */
+
+#ifdef SCIP_DEBUG
    SCIP_Real oldlb;
+   oldlb = SCIPgetLocalLowerbound(scip);
 #endif
 
    assert(scip != NULL);
@@ -2640,18 +2637,16 @@ SCIP_RETCODE checkIntegrality(
    SCIP_CALL( SCIPlpiexGetSol(conshdlrdata->lpiex, &lpobjval, primsol, NULL, NULL, NULL) );
 
    /* try to improve current local lower bound by using the result of the exact LP solver */
-#ifdef DETAILED_DEBUG /*????????? */
-   oldlb = SCIPgetLocalLowerbound(scip);
-#endif
    SCIP_CALL( SCIPupdateLocalLowerbound(scip, mpqGetRealRelax(scip, lpobjval, GMP_RNDD)) ); /* todo: check whether it is ok to use this function instead of SCIPupdateLocalDualbound() ?????????? */ 
-#ifdef DETAILED_DEBUG /*????????? */
+
+#ifdef SCIP_DEBUG
    if( oldlb < SCIPgetLocalLowerbound(scip) )
    {
-      SCIPdebugMessage("lower bound improved: %.50f --> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip));
+      SCIPdebugMessage("   local lower bound improved: %.50f --> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip));
    }
    else
    {
-      SCIPdebugMessage("lower bound did not improve: %.50f -/-> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip));
+      SCIPdebugMessage("   local lower bound did not improve: %.50f -/-> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip));
    }
 #endif
 
@@ -2661,7 +2656,8 @@ SCIP_RETCODE checkIntegrality(
    /* check for infeasible node by bounding */
    if( SCIPgetLocalLowerbound(scip) >= SCIPgetCutoffbound(scip) )
    {
-      SCIPdebugMessage("node is cut off by bounding (lower=%g, upper=%g)\n", SCIPgetLocalLowerbound(scip), SCIPgetCutoffbound(scip));
+      SCIPdebugMessage("   --> cut off node (lower=%g >= upper=%g)\n", SCIPgetLocalLowerbound(scip), 
+         SCIPgetCutoffbound(scip));
 
       *result = SCIP_CUTOFF;
    }
@@ -2679,12 +2675,14 @@ SCIP_RETCODE checkIntegrality(
 
          if( !mpqIsIntegral(primsol[v]) ) 
          {
+#ifdef SCIP_DEBUG
+            char s[SCIP_MAXSTRLEN];
+            gmp_snprintf(s, SCIP_MAXSTRLEN, "   exact LP value<%Qd> of intvar<%s> is not integral", primsol[v], 
+               SCIPvarGetName(vars[v]));
+            SCIPdebugMessage(s);
+#endif
             integral = FALSE;
             branchvar = v;
-#ifdef DETAILED_DEBUG  /*???????????????*/
-            SCIPdebugMessage("   exact LP value of intvar %s ", SCIPvarGetName(vars[v]));
-            gmp_printf("<%Qd> is not integral\n", primsol[v]); 
-#endif
          }
       }
 
@@ -2697,13 +2695,11 @@ SCIP_RETCODE checkIntegrality(
          SCIP_Bool stored;
          SCIP_Bool fpvalue;
 
+         SCIPdebugMessage("   ---> exact LP solution is integral\n");
+
          assert(branchvar == -1);
 
          mpq_init(tmp);
-
-#ifdef DETAILED_DEBUG  /*???????????????*/
-         SCIPdebugMessage("   current exact LP solution is integral\n");
-#endif
 
          /* create exact and approximate primal solution */
          SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
@@ -2755,7 +2751,7 @@ SCIP_RETCODE checkIntegrality(
 
             SCIP_CALL( SCIPaddSolFree(scip, &sol, &stored) );
          
-#if 0 /* since exact solutions can be stored now, this is not needed anymore */
+#if 0 /* since exact solutions can be stored now, this is not needed anymore ??????????? */
             if( stored && !fpvalue )
             {
                SCIPwarningMessage("Note: Primal solution found is NOT FP representable (primal bound stored is safe, but primal solution stored is only an FP approximation)!\n");
@@ -2779,19 +2775,22 @@ SCIP_RETCODE checkIntegrality(
       {
          SCIP_Bool solvelpagain; 
 
+         SCIPdebugMessage("   exact LP solution is not integral\n");
+
          /* if the inexact LP was claimed to be infeasible, i.e., a pseudo solution is enforced here, but the exact LP 
           * has been proved to be feasible, try to solve the inexact LP again with starting basis equal to optimal 
           * basis of the exact LP; in order to avoid an infinite loop, this is only done once at a node 
           */
          solvelpagain = FALSE;
-         if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_INFEASIBLE && conshdlrdata->lastenfopsnode != SCIPgetCurrentNode(scip) )
+         if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_INFEASIBLE 
+            && conshdlrdata->lastenfopsnode != SCIPgetCurrentNode(scip) )
          {
             SCIP_CALL( loadLPEXState(scip, conshdlrdata, &solvelpagain) );
 
             if( solvelpagain )
             {
                *result = SCIP_SOLVELP;
-#ifdef DETAILED_DEBUG  /*???????????????*/
+#ifdef SCIP_DEBUG
                SCIPdebugMessage("   ---> LP was infeasible but LPEX not: solve LP once again with basis of LPEX\n");
 #endif
             }
@@ -2846,8 +2845,9 @@ SCIP_RETCODE checkIntegrality(
             }
 #endif
             *result = SCIP_BRANCHED;
-#ifdef DETAILED_DEBUG  /*???????????????*/
-            SCIPdebugMessage("   ---> LP was not solved: branch on result of LPEX\n");
+
+#ifdef SCIP_DEBUG
+            SCIPdebugMessage("   ---> branched on exact LP solution\n");
 #endif
          }
       }
@@ -2903,9 +2903,8 @@ SCIP_RETCODE evaluateLPEX(
    }
    else if( SCIPlpiexIsObjlimExc(conshdlrdata->lpiex) )
    {
-#ifdef USEOBJLIM /*?????????????????????*/
+#ifdef USEOBJLIM
       SCIPdebugMessage("   exact LP exceeds upper objective limit\n"); 
-
       *result = SCIP_CUTOFF;
 #else
       SCIPerrorMessage("exact LP exceeds objlimit: case not handled yet\n");
@@ -2930,13 +2929,8 @@ SCIP_RETCODE evaluateLPEX(
    }
    else if( SCIPlpiexIsTimelimExc(conshdlrdata->lpiex) )
    {
-#ifdef USETIMELIM /*??????????????*/
+#ifdef USETIMELIM
       SCIPdebugMessage("   exact LP exceeds time limit\n"); 
-
-#ifdef USETIMELIM_OUT /*??????????????*/ 
-      printf("   exact LP exceeds time limit\n"); 
-#endif
-
       *result = SCIP_INFEASIBLE;
 #else
       SCIPerrorMessage("exact LP exceeds time limit: case not handled yet\n");
@@ -6763,16 +6757,17 @@ SCIP_RETCODE tightenVarLb(
       goto TERMINATE;
    }
 
-#ifdef PSEUDOOBJ_OUT /* only for debugging ?????????????????? */
-   gmp_printf("tighten lb of var: <%Qd> --> <%Qd>\n", consdata->lbloc[consdata->ind[v]], adjustedbound); 
+#ifdef SCIP_DEBUG
+   {
+      char s[SCIP_MAXSTRLEN];
+      gmp_snprintf(s, SCIP_MAXSTRLEN, "tighten lb of var<%s>: <%Qd> --> <%Qd>\n", SCIPvarGetName(var), 
+         consdata->lbloc[consdata->ind[v]], adjustedbound); 
+      SCIPdebugMessage(s);
+   }
 #endif
 
    SCIP_CALL( chgVarLb(scip, conshdlrdata, consdata, var, v, adjustedbound) );
    
-#ifdef PSEUDOOBJ_OUT /* only for debugging ?????????????????? */
-   gmp_printf("done\n");
-#endif
-
    if( tightened != NULL )
       *tightened = TRUE;
 
@@ -6819,16 +6814,17 @@ SCIP_RETCODE tightenVarUb(
       goto TERMINATE;
    }
 
-#ifdef PSEUDOOBJ_OUT /* only for debugging ?????????????????? */
-   gmp_printf("tighten ub of var: <%Qd> --> <%Qd>\n", consdata->ubloc[consdata->ind[v]], adjustedbound); 
+#ifdef SCIP_DEBUG
+   {
+      char s[SCIP_MAXSTRLEN];
+      gmp_snprintf(s, SCIP_MAXSTRLEN, "tighten ub of var<%s>: <%Qd> --> <%Qd>\n", SCIPvarGetName(var), 
+         consdata->ubloc[consdata->ind[v]], adjustedbound); 
+      SCIPdebugMessage(s);
+   }
 #endif
 
    SCIP_CALL( chgVarUb(scip, conshdlrdata, consdata, var, v, adjustedbound) );
    
-#ifdef PSEUDOOBJ_OUT /* only for debugging ?????????????????? */
-   gmp_printf("done\n");
-#endif
-
    if( tightened != NULL )
       *tightened = TRUE;
 
@@ -6926,7 +6922,6 @@ SCIP_RETCODE tightenVarBounds(
             {
 #ifdef SCIP_DEBUG
                char s[SCIP_MAXSTRLEN];
-               
                gmp_snprintf(s, SCIP_MAXSTRLEN, "linear constraint <%d>: tighten <%s>, new bds=[%Qd,%Qd]\n",
                   c, SCIPvarGetName(var), consdata->lbloc[consdata->ind[v]], consdata->ubloc[consdata->ind[v]]);
                SCIPdebugMessage(s);
@@ -7404,7 +7399,8 @@ SCIP_DECL_CONSTRANS(consTransExactlp)
             }
          }
       
-#ifdef DETAILED_DEBUG /*????????????????*/
+#ifndef NDEBUG
+         /* check for correct status of original variables */
          checkOrigVars(scip);
 #endif
           
@@ -7481,8 +7477,10 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
    char dualboundmethod;
    int ncolsex;
    int nrowsex;
-#ifdef DETAILED_DEBUG /*????????? */
+
+#ifdef SCIP_DEBUG
    SCIP_Real oldlb;
+   oldlb = SCIPgetLocalLowerbound(scip);
 #endif
 
    assert(conshdlr != NULL);
@@ -7504,7 +7502,7 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
    /* update root node LP activities of the constraints for project and shift method */
    if( SCIPdualBoundMethod(scip) == 'p' || SCIPdualBoundMethod(scip) == 'a' )
    {
-      SCIPdebugMessage("recording the root LP activity for later use by Project and Shift \n");
+      SCIPdebugMessage("   recording the root LP activity for later use by project-and-shift\n");
       copyRootActivity( scip, conshdlrdata, consdata );
    }
 
@@ -7534,29 +7532,30 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
    /* update lower bound of current node wrt the pseudo objective value */
    if( !SCIPuseFPRelaxation(scip) )
    {
-#ifdef DETAILED_DEBUG /*????????? */
-      oldlb = SCIPgetLocalLowerbound(scip);
-#endif
-
       SCIP_CALL( SCIPupdateLocalLowerbound(scip, 
             mpqGetRealRelax(scip, *getPseudoObjval(scip, conshdlrdata, consdata), GMP_RNDD)) ); /* todo: check whether it is ok to use this function instead of SCIPupdateLocalDualbound() ?????????? */ 
       
-#ifdef DETAILED_DEBUG /*????????? */
+#ifdef SCIP_DEBUG
       if( oldlb < SCIPgetLocalLowerbound(scip) )
       {         
-         SCIPdebugMessage("by pseudosol: lower bound improved: %.50f --> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip));
+         SCIPdebugMessage("   by pseudosol: local lower bound improved: %.20f --> %.20f\n", oldlb, 
+            SCIPgetLocalLowerbound(scip));
       }
       else
       {
-         SCIPdebugMessage("by pseudosol: lower bound did not improve: %.50f -/-> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip));
+         SCIPdebugMessage("   by pseudosol: local lower bound did not improve: %.20f -/-> %.20f\n", oldlb, 
+            SCIPgetLocalLowerbound(scip));
       }
+      oldlb = SCIPgetLocalLowerbound(scip);
 #endif
    }
    
    /* check for infeasible node by bounding */
    if( SCIPgetLocalLowerbound(scip) >= SCIPgetCutoffbound(scip) )
    {
-      SCIPdebugMessage("node will be cut off by bounding (lower=%g, upper=%g)\n", SCIPgetLocalLowerbound(scip), SCIPgetCutoffbound(scip));
+      SCIPdebugMessage("   --> node will be cut off by bounding (lower=%g, upper=%g)\n", SCIPgetLocalLowerbound(scip), 
+         SCIPgetCutoffbound(scip));
+
       return SCIP_OKAY;
    }
 
@@ -7601,19 +7600,15 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
             
             SCIP_CALL( SCIPgetLPState(scip, &lpistate) ); 
 
-#ifdef DBVERIFY_TEST /* only for testing the db method ?????????????????? */
+#ifdef TESTDBVERIFY
             {
                SCIP_Bool lperror;
 
-               printf("\n<<<<<<<<<<<<<<<<<< Load LP basis into LPEX solver and solve LPEX exactly - START >>>>>>>>>>>>>>>>\n");
+               printf("\n\n................................. Test basis verification method ..........................\n");
+               printf("1. solve LP exactly:\n");
                SCIP_CALL( loadLPState(scip, conshdlrdata) );
                SCIP_CALL( solveLPEX(scip, conshdlrdata, SCIP_LPALGO_DUALSIMPLEX, FALSE, &lperror) );
-               printf("<<<<<<<<<<<<<<<<<< Load LP basis into LPEX solver and solve LPEX exactly - END   >>>>>>>>>>>>>>>>\n\n");
             }
-#endif
-
-#ifdef EXLPSOLVER_OUT /* only for debugging ????????? */ 
-            printf("<<<<<<<<<<<<<<<<<< Load LP basis into LPEX solver and only check basis   - START >>>>>>>>>>>>>>>>\n");
 #endif
 
             /* get approximate primal and dual solution of inexact LP solver */
@@ -7634,40 +7629,30 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
                   dualsol[j] = 0.0;
             }
 
+#ifdef TESTDBVERIFY
+            printf("2. apply basis verification:\n");
+#endif
             /* verify dual feasibility of basis of inexact LP solver */
             useprestep = TRUE;
             SCIP_CALL( SCIPlpiexStateDualFeasible(conshdlrdata->lpiex, SCIPblkmem(scip), lpistate, useprestep, 
                   primalsol, dualsol, &dualfeasible, &dualobjval) );
 
+#ifdef TESTDBVERIFY
+            printf("  --> LP basis %s dual feasible (%.50f)\n", dualfeasible ? "IS" : "IS NOT", 
+               mpqGetRealRelax(scip, dualobjval, GMP_RNDD));
+            printf("3. by hand: Compare result of basis verify <-> status of exact LP solver with double prescion.\n");
+            printf("...........................................................................................\n\n");
+#endif
 
             /* free LP state */
             SCIP_CALL( SCIPfreeLPState(scip, &lpistate) );
          
-#ifdef EXLPSOLVER_OUT /* only for debugging ????????? */ 
-            printf("<<<<<<<<<<<<<<<<<< Load LP basis into LPEX solver and only check basis   - END   >>>>>>>>>>>>>>>>\n\n");
-#endif
-
-            SCIPdebugMessage("DB method <v>: LP basis %s dual feasible (%.50f)\n", dualfeasible ? "is" : "is not", 
+            SCIPdebugMessage("   db method <v>: LP basis %s dual feasible (%.50f)\n", dualfeasible ? "is" : "is not", 
                mpqGetRealRelax(scip, dualobjval, GMP_RNDD));
       
             if( dualfeasible )
             {
-#ifdef DETAILED_DEBUG /*????????? */
-               oldlb = SCIPgetLocalLowerbound(scip);
-#endif
-
                SCIP_CALL( SCIPupdateLocalLowerbound(scip, mpqGetRealRelax(scip, dualobjval, GMP_RNDD)) ); /* todo: check whether it is ok to use this function instead of SCIPupdateLocalDualbound() ?????????? */ 
-
-#ifdef DETAILED_DEBUG /*????????? */
-               if( oldlb < SCIPgetLocalLowerbound(scip) )
-               {
-                  char s[SCIP_MAXSTRLEN];
-               
-                  gmp_snprintf(s, SCIP_MAXSTRLEN, "by db method (verify): lower bound improved: %.50f --> %.50f (%Qd)\n", oldlb, SCIPgetLocalLowerbound(scip),
-                     dualobjval);
-                  SCIPdebugMessage(s);
-               }
-#endif
 
                safedualboundcomputed = TRUE;
                safedualbound = mpqGetRealRelax(scip, dualobjval, GMP_RNDD);
@@ -7702,7 +7687,6 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
             conshdlrdata->nfailprovedfeaslp++;
             break;
          }
-         SCIPdebugMessage("Computing bound by project and scale\n");
 
          SCIP_CALL( constructPSData(scip, conshdlrdata, consdata) );
          if( conshdlrdata->psdatafail )
@@ -7719,26 +7703,12 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
          {
             SCIP_Real dualbound;                                     
 
-#ifdef DETAILED_DEBUG /*????????? */          
-            oldlb = SCIPgetLocalLowerbound(scip);                                                                     
-#endif 
             dualbound = mpqGetRealRelax(scip, dualobjval, GMP_RNDD);
             
             /* todo: if this assert is not correct we have to change the way we update nfailprovedfeaslp */
             assert(!SCIPisInfinity(scip, -dualbound)); 
 
             SCIP_CALL( SCIPupdateLocalLowerbound(scip, dualbound) ); 
-
-#ifdef DETAILED_DEBUG /*????????? */  
-            if( oldlb < SCIPgetLocalLowerbound(scip) )              
-            { 
-               SCIPdebugMessage("by db method (project): lower bound improved: %.50f --> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip));
-            }
-            else
-            {
-               SCIPdebugMessage("by pseudosol: lower bound did not improve: %.50f -/-> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip));
-            }
-#endif                                                                                                                
 
             safedualboundcomputed = TRUE;
             safedualbound = dualbound;
@@ -7757,23 +7727,8 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
          SCIP_Real dualobjval;                                     
 
          SCIP_CALL( provedBoundInterval(scip, conshdlrdata, consdata, FALSE, &dualobjval) );
-
-#ifdef DETAILED_DEBUG /*????????? */          
-         oldlb = SCIPgetLocalLowerbound(scip);                                                                     
-#endif 
+         
          SCIP_CALL( SCIPupdateLocalLowerbound(scip, dualobjval) ); 
-
-#ifdef DETAILED_DEBUG /*????????? */  
-         if( oldlb < SCIPgetLocalLowerbound(scip) )              
-         { 
-            SCIPdebugMessage("by db method (neumshch interval): lower bound improved: %.50f --> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip));
-         }
-         else
-         {
-            SCIPdebugMessage("by db method (neumshch interval): lower bound did not improve: %.50f -/-> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip));
-         }
-#endif                                                        
-
          if( !SCIPisInfinity(scip, -dualobjval) )
          {
             safedualboundcomputed = TRUE;
@@ -7793,24 +7748,9 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
 
          mpq_init(dualobjval);
          SCIP_CALL( provedBoundRational(scip, conshdlrdata, consdata, FALSE, &dualobjval) );
-
-#ifdef DETAILED_DEBUG /*????????? */          
-         oldlb = SCIPgetLocalLowerbound(scip);                                                                     
-#endif 
          dualbound = mpqGetRealRelax(scip, dualobjval, GMP_RNDD);
+
          SCIP_CALL( SCIPupdateLocalLowerbound(scip, dualbound) ); 
-
-#ifdef DETAILED_DEBUG /*????????? */  
-         if( oldlb < SCIPgetLocalLowerbound(scip) )              
-         { 
-            SCIPdebugMessage("by db method (neumshch exact): lower bound improved: %.50f --> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip));
-         }
-         else
-         {
-            SCIPdebugMessage("by db method (neumshch exact): lower bound did not improve: %.50f -/-> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip));
-         }
-#endif                                                                                                                
-
          if( !SCIPisInfinity(scip, -dualbound) )
          {
             safedualboundcomputed = TRUE;
@@ -7835,9 +7775,22 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
    SCIPstopClock(scip, conshdlrdata->provedfeaslptime);
    conshdlrdata->nprovedfeaslp++;
 
-   /* compute dual bound quality if no dual bounding method did not fail */
+   /* compute dual bound quality if dual bounding method did not fail */
    if( safedualboundcomputed )
    {
+#ifdef SCIP_DEBUG
+      if( oldlb < SCIPgetLocalLowerbound(scip) )
+      {
+         SCIPdebugMessage("   by dbmethod <%c>: local lower bound improved: %.20f -----> %.20f\n", dualboundmethod, oldlb, 
+            SCIPgetLocalLowerbound(scip));
+      }
+      else
+      {
+         SCIPdebugMessage("   by dbmethod <%c>: local lower bound did not improved: %.20f --/--> %.20f\n", dualboundmethod,
+            oldlb, SCIPgetLocalLowerbound(scip));
+      }
+#endif
+
       SCIP_CALL( SCIPcomputeDualboundQuality(scip, conss[0], safedualbound) );;
    }
 
@@ -8016,23 +7969,21 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
    if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_INFEASIBLE && 
       (!SCIPuseFPRelaxation(scip) || dualboundmethod != 'n') )
    {
+      SCIPdebugMessage("   proving infeasibility by dbmethod <%c>\n", dualboundmethod);
+
       switch( dualboundmethod )
       {
       case 'p':
          {
             if( conshdlrdata->psinfeasversion )
             {
+               mpq_t dualobjval;                                     
+               SCIP_Bool success;
+
+      
                /* start timing */
                SCIPstartClock(scip, conshdlrdata->provedinfeaslptime);
 
-               mpq_t dualobjval;                                     
-#ifdef DETAILED_DEBUG /*????????? */
-               SCIP_Real oldlb;
-#endif
-               SCIP_Bool success;
-
-               SCIPdebugMessage("Proving infeasibility by project and shift method\n");
-            
                /* nothing can be done if requirements for project and shift method are not satisfied */
                if( conshdlrdata->psdatafail )
                {
@@ -8044,7 +7995,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
                SCIP_CALL( constructPSData(scip, conshdlrdata, consdata) );
                if( conshdlrdata->psdatafail )
                {
-                  SCIPdebugMessage("   constructPSData failed\n");
+                  SCIPdebugMessage("      constructPSData failed\n");
 
                   /* update number of fails */
                   conshdlrdata->nfailprovedinfeaslp++;
@@ -8056,20 +8007,23 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
                SCIP_CALL( getPSdualbound(scip, conshdlrdata, consdata, &dualobjval, &success) );
                if( success ) 
                {
-#ifdef DETAILED_DEBUG /*????????? */
+#ifdef SCIP_DEBUG
+                  SCIP_Real oldlb;
                   oldlb = SCIPgetLocalLowerbound(scip);
 #endif
 
                   SCIP_CALL( SCIPupdateLocalLowerbound(scip, mpqGetRealRelax(scip, dualobjval, GMP_RNDD)) ); /* todo: check whether it is ok to use this function instead of SCIPupdateLocalDualbound() ?????????? */ 
 
-#ifdef DETAILED_DEBUG /*????????? */
+#ifdef SCIP_DEBUG
                   if( oldlb < SCIPgetLocalLowerbound(scip) )
                   {
-                     SCIPdebugMessage("lower bound improved: %.50f --> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip)); 
+                     SCIPdebugMessage("      local lower bound improved: %.20f --> %.20f\n", oldlb, 
+                        SCIPgetLocalLowerbound(scip)); 
                   }
                   else
                   {
-                     SCIPdebugMessage("lower bound did not improve: %.50f -/-> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip));
+                     SCIPdebugMessage("      local lower bound did not improve: %.20f -/-> %.20f\n", oldlb, 
+                        SCIPgetLocalLowerbound(scip));
                   }
 #endif
 
@@ -8077,7 +8031,8 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
                   if( SCIPgetLocalLowerbound(scip) >= SCIPgetCutoffbound(scip) )
                   {
 
-                     SCIPdebugMessage("node is cut off by bounding (lower=%g, upper=%g)\n", SCIPgetLocalLowerbound(scip), SCIPgetCutoffbound(scip));
+                     SCIPdebugMessage("      node can be cut off by bounding (lower=%g, upper=%g)\n", 
+                        SCIPgetLocalLowerbound(scip), SCIPgetCutoffbound(scip));
                      *result = SCIP_CUTOFF;
                   }
                   else
@@ -8088,6 +8043,8 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
                }
                else
                {
+                  SCIPdebugMessage("      project-and-shift was not able to proof infeasibility\n");
+                  
                   /* update number of fails */
                   conshdlrdata->nfailprovedinfeaslp++;
                }
@@ -8107,18 +8064,19 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
             SCIPstartClock(scip, conshdlrdata->provedinfeaslptime);
 
             mpq_init(dualobjval);
-
             SCIP_CALL( provedBoundRational(scip, conshdlrdata, consdata, TRUE, &dualobjval) );
             
             /* check if node can be cut off because safe infeasibility proof was found */
             if( mpqGetRealRelax(scip, dualobjval, GMP_RNDD) > 0.0 )
             {
-               SCIPdebugMessage("node is cut off by bounding (ray cost =%g)\n", mpqGetRealRelax(scip, dualobjval, GMP_RNDD));
+               SCIPdebugMessage("   --> node is cut off by bounding (farkasproof<%.20f> <= 0)\n", 
+                  mpqGetRealRelax(scip, dualobjval, GMP_RNDD));
                *result = SCIP_CUTOFF;
             }
             else
             {
-               SCIPdebugMessage("node not cut off by provedboundrational (ray cost =%g)\n", mpqGetRealRelax(scip, dualobjval, GMP_RNDD)); 
+               SCIPdebugMessage("   --> node NOT cut off by provedboundrational (farkasproof<%.20f> > 0)\n", 
+                  mpqGetRealRelax(scip, dualobjval, GMP_RNDD)); 
 
                /* update number of fails */
                conshdlrdata->nfailprovedinfeaslp++;
@@ -8142,12 +8100,12 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
             /* check if node can be cut off because safe infeasibility proof was found */
             if( dualobjval > 0.0 )
             {
-               SCIPdebugMessage("node is cut off by bounding (ray cost =%g)\n", dualobjval);
+               SCIPdebugMessage("   --> node is cut off by bounding (ray cost =%g)\n", dualobjval);
                *result = SCIP_CUTOFF;
             }
             else
             {
-               SCIPdebugMessage("node not cut off by provedbound interval (ray cost =%g)\n",dualobjval); 
+               SCIPdebugMessage("   --> node not cut off by provedbound interval (ray cost =%g)\n",dualobjval); 
 
                /* update number of fails */
                conshdlrdata->nfailprovedinfeaslp++;
@@ -8171,6 +8129,8 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
    /* solve LP exactly in order to show that node can be pruned or to find a solution to branch on */
    if( *result != SCIP_CUTOFF )
    {
+      SCIPdebugMessage("   as a last resort: proving infeasibility by dbmethod <e>\n");
+
       /* start timing */
       if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_INFEASIBLE )
       {
@@ -8260,7 +8220,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
          conshdlrdata->nwrongexactinfeaslp++; 
    }
 
-   SCIPdebugMessage(" -> enforcing pseudo solution returned result <%d>\n", *result);
+   SCIPdebugMessage("   --> enforcing pseudo solution returned result <%d>\n", *result);
 
    /* todo (later): ????????????????? 
     *  - decide whether it is possible and useful to support working on a pseudo solution 
@@ -8712,12 +8672,12 @@ SCIP_DECL_EVENTEXEC(eventExecExactlp)
       if( SCIPvarGetType(SCIPeventGetVar(event)) == SCIP_VARTYPE_CONTINUOUS )
          break;
 
-#ifdef BOUNDCHG_OUT /* ?????????? */
+#ifdef BOUNDCHG_OUT
       {
          char s[SCIP_MAXSTRLEN];
-         gmp_snprintf(s, SCIP_MAXSTRLEN, "store unprocessed bound change (%x): <%s> [%Qd,%Qd] >= %g (old: nbndchglb=%d,nbndchgub=%d)\n", 
-            SCIPeventGetType(event), SCIPvarGetName(SCIPeventGetVar(event)), consdata->lb[varind], consdata->ub[varind], 
-            newbound, consdata->nbndchglb, consdata->nbndchgub);
+         gmp_snprintf(s, SCIP_MAXSTRLEN, "event<%x>: store unprocessed bndchg: <%s>[%Qd,%Qd] >= %g (old sum: nchglb=%d,nchgub=%d)", 
+            SCIPeventGetType(event), SCIPvarGetName(SCIPeventGetVar(event)), consdata->lbloc[varind], 
+            consdata->ubloc[varind], newbound, consdata->nbndchglb, consdata->nbndchgub);
          SCIPdebugMessage(s);
       }
 #endif
@@ -8725,8 +8685,8 @@ SCIP_DECL_EVENTEXEC(eventExecExactlp)
       /* check whether variable already has unprocessed lower bound change events */ 
       if( consdata->bndchglbpos[varind] == -1 )
       {
-#ifdef BOUNDCHG_OUT /* ?????????? */
-         SCIPdebugMessage("   first unprocessed boundchange of variable!\n");
+#ifdef BOUNDCHG_OUT
+         printf("-->     first lbchg of var");
 #endif
          /* store position of variable in unprocessed lower bound change arrays */
          consdata->bndchglbpos[varind] = consdata->nbndchglb; 
@@ -8745,8 +8705,8 @@ SCIP_DECL_EVENTEXEC(eventExecExactlp)
       }
       else
       {
-#ifdef BOUNDCHG_OUT /* ?????????? */
-         SCIPdebugMessage("   NOT the first unprocessed boundchange of variable!\n");
+#ifdef BOUNDCHG_OUT
+         printf("--> NOT first lbchg of var");
 #endif
          assert(0 <= consdata->bndchglbpos[varind] && consdata->bndchglbpos[varind] < consdata->nbndchglb);
          if( SCIPisInfinity(scip, -newbound) )
@@ -8770,12 +8730,12 @@ SCIP_DECL_EVENTEXEC(eventExecExactlp)
       if( SCIPvarGetType(SCIPeventGetVar(event)) == SCIP_VARTYPE_CONTINUOUS )
          break;
 
-#ifdef BOUNDCHG_OUT /* ?????????? */
+#ifdef BOUNDCHG_OUT
       {
          char s[SCIP_MAXSTRLEN];
-         gmp_snprintf(s, SCIP_MAXSTRLEN, "store unprocessed bound change (%x): <%s> [%Qd,%Qd] <= %g (old: nbndchglb=%d,nbndchgub=%d)\n", 
-            SCIPeventGetType(event), SCIPvarGetName(SCIPeventGetVar(event)), consdata->lb[varind], consdata->ub[varind], 
-            newbound, consdata->nbndchglb, consdata->nbndchgub);
+         gmp_snprintf(s, SCIP_MAXSTRLEN, "event<%x>: store unprocessed bndchg: <%s>[%Qd,%Qd] <= %g (old sum: nchglb=%d,nchgub=%d)", 
+            SCIPeventGetType(event), SCIPvarGetName(SCIPeventGetVar(event)), consdata->lbloc[varind], 
+            consdata->ubloc[varind], newbound, consdata->nbndchglb, consdata->nbndchgub);
          SCIPdebugMessage(s);
       }
 #endif
@@ -8783,8 +8743,8 @@ SCIP_DECL_EVENTEXEC(eventExecExactlp)
       /* check whether variable already has unprocessed upper bound change events */ 
       if( consdata->bndchgubpos[varind] == -1 )
       {
-#ifdef BOUNDCHG_OUT /* ?????????? */
-         SCIPdebugMessage("   first unprocessed boundchange of variable!\n");
+#ifdef BOUNDCHG_OUT
+         printf("-->     first ubchg of var");
 #endif
          /* store position of variable in unprocessed upper bound change arrays */
          consdata->bndchgubpos[varind] = consdata->nbndchgub;
@@ -8803,8 +8763,8 @@ SCIP_DECL_EVENTEXEC(eventExecExactlp)
       }
       else
       {
-#ifdef BOUNDCHG_OUT /* ?????????? */
-         SCIPdebugMessage("   NOT the first unprocessed boundchange of variable!\n");
+#ifdef BOUNDCHG_OUT
+         printf("--> NOT first ubchg of var");
 #endif
          assert(0 <= consdata->bndchgubpos[varind] && consdata->bndchgubpos[varind] < consdata->nbndchgub);
 
@@ -8824,8 +8784,8 @@ SCIP_DECL_EVENTEXEC(eventExecExactlp)
    assert(0 <= consdata->nbndchglb && consdata->nbndchglb <= consdata->nvars); 
    assert(0 <= consdata->nbndchgub && consdata->nbndchgub <= consdata->nvars); 
 
-#ifdef BOUNDCHG_OUT /* ?????????? */
-   SCIPdebugMessage("   --> new: nbndchglb=%d, nbndchgub=%d\n", consdata->nbndchglb, consdata->nbndchgub);
+#ifdef BOUNDCHG_OUT
+   printf(" (new sum: nchglb=%d, nchgub=%d)\n", consdata->nbndchglb, consdata->nbndchgub);
 #endif
 
 #ifndef NDEBUG
@@ -9744,15 +9704,15 @@ char SCIPselectDualBoundMethod(
          }
       }
    }
-   SCIPdebugMessage("selected dual bounding method for %s LP: %c\n", 
-      infeaslp ? "infeasible" : "feasible", dualboundmethod);
-#ifdef DBAUTO_OUT /*?????????????????*/
-   printf("selected dual bounding method for %s LP: %c (skip:%d, boundcrit:%d [%d/%d=%.2f], dimcrit:%d)\n", 
+   SCIPdebugMessage("   selected dual bounding method for <%s> LP: %c\n", infeaslp ? "infeasible" : "feasible", 
+      dualboundmethod);
+#ifdef DBAUTO_OUT
+   printf("selected dual bounding method for <%s> LP: %c (skip safedb:%d, many largebounds:%d [<%d>/<%d>=%.2f], many nonzeros:%d [<%d>])\n", 
       infeaslp ? "infeasible" : "feasible", dualboundmethod, skip, 
-      (SCIP_Real)(SCIPgetNInfiniteBounds(conss[0]) + SCIPgetNLargeBounds(conss[0]))/(SCIP_Real)SCIPgetNVars(scip) <= FEWLBOUNDSRATIO, 
+      (SCIP_Real)(SCIPgetNInfiniteBounds(conss[0]) + SCIPgetNLargeBounds(conss[0]))/(SCIP_Real)SCIPgetNVars(scip) > FEWLBOUNDSRATIO, 
       SCIPgetNInfiniteBounds(conss[0]) + SCIPgetNLargeBounds(conss[0]), SCIPgetNVars(scip),
       (SCIP_Real)(SCIPgetNInfiniteBounds(conss[0]) + SCIPgetNLargeBounds(conss[0]))/(SCIP_Real)SCIPgetNVars(scip),
-      SCIPgetNVars(scip) * SCIPgetNConssExactlp(conss[0]) <= SMALLPROBDIM);
+      SCIPgetNNonzExactlp(conss[0]) > SPARSEMAXNNONZ, SCIPgetNNonzExactlp(conss[0]));
 #endif
 
    return dualboundmethod;
@@ -10323,7 +10283,7 @@ SCIP_RETCODE SCIPcomputeDualboundQuality(
    if( !conshdlrdata->computedbdiff )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("computing dual bound quality for exactlp constraint <%s>:\n", SCIPconsGetName(cons));
+   SCIPdebugMessage("  computing dual bound quality for exactlp constraint <%s>:\n", SCIPconsGetName(cons));
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -10363,16 +10323,15 @@ SCIP_RETCODE SCIPcomputeDualboundQuality(
 
       mpq_sub(dbdiff, dualobjval, dualbound);
 
-#ifdef DETAILED_DEBUG  /*???????????????*/
+#ifdef SCIP_DEBUG
       {
          char s[SCIP_MAXSTRLEN];
-         gmp_snprintf(s, SCIP_MAXSTRLEN, "exactdb (%Qd / %.14f) - saf db (%Qd / %.14f) = %Qd / %.14f\n",
+         gmp_snprintf(s, SCIP_MAXSTRLEN, "     exactdb<%Qd> (%.14f) - safedb<%Qd> (%.14f) = <%Qd> (%.14f)\n",
             dualobjval, mpqGetRealApprox(scip, dualobjval), dualbound, mpqGetRealApprox(scip, dualbound), 
             dbdiff, mpqGetRealApprox(scip, dbdiff));
          SCIPdebugMessage(s);
       }
 #endif
-
 
       /* compute relative difference (exact db - safe db)/max(1.0, |exact db|) */
       if( mpq_cmp_ui(absdualobjval, 1, 1) < 0 )

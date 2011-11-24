@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-//#define USESBGAIN /* ??????????? only for testing effect of sbgain (dom-red, cut-off, db improve). only supported in inexact mode */
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -27,6 +26,8 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+//#define USESBGAIN /** uncomment to test gain of additional strong branching conclusions in inexact mode; 
+//                   *  same as in branch_relpscost.c */
 
 #include <stdarg.h>
 #include <assert.h>

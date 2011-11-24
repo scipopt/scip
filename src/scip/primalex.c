@@ -13,8 +13,6 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-//#define SCIP_DEBUG /* only for debugging ?????????? */
-
 /**@file   primalex.c
  * @brief  methods for collecting exact primal CIP solutions and exact primal information
  * @author Kati Wolter

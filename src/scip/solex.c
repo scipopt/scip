@@ -13,8 +13,6 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-//#define SCIP_DEBUG /* only for debugging ?????????? */
-
 /**@file   solex.c
  * @brief  methods for storing exact primal CIP solutions
  * @author Kati Wolter

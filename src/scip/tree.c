@@ -12,8 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-//#define SCIP_DEBUG /*??????????????*/
-//#define EST_OUT /*??????????????????*/
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -22,6 +20,8 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+//#define NODESEL_OUT /** uncomment to get more debug msgs (define SCIP_DEBUG) for node selection; 
+//                     *  same as in nodesel_bfs.c */
 
 #include <assert.h>
 
@@ -1997,8 +1997,9 @@ void SCIPnodeSetEstimate(
    assert(node != NULL);
    assert(stat != NULL);
 
-#ifdef EST_OUT /*??????????????????*/
-   SCIPdebugMessage("node %lld: est=%f \t -> est=%f\n", SCIPnodeGetNumber(node), node->estimate, newestimate);
+#ifdef NODESEL_OUT
+   SCIPdebugMessage("set estimate of node<%lld>: old<%f> -> new<%f>\n", SCIPnodeGetNumber(node), node->estimate, 
+      newestimate);
 #endif
    node->estimate = newestimate;
 }
@@ -5251,14 +5252,15 @@ SCIP_NODE* SCIPtreeGetBestNode(
    bestsibling = SCIPtreeGetBestSibling(tree, set);
    bestleaf = SCIPtreeGetBestLeaf(tree);
 
-   /* return the best of the three */
-   bestnode = bestchild;
-#ifdef EST_OUT /*????????????????*/
-   SCIPdebugMessage("bestchild=%lld, bestsib=%lld, bestleaf=%lld\n", 
+#ifdef NODESEL_OUT
+   SCIPdebugMessage("select bestnode: bestchild<%lld>, bestsib<%lld>, bestleaf<%lld>\n", 
       bestchild == NULL ? -1: SCIPnodeGetNumber(bestchild), 
       bestsibling == NULL ? -1 : SCIPnodeGetNumber(bestsibling), 
       bestleaf == NULL ? -1 : SCIPnodeGetNumber(bestleaf));
 #endif
+
+   /* return the best of the three */
+   bestnode = bestchild;
    if( bestsibling != NULL && (bestnode == NULL || SCIPnodeselCompare(nodesel, set, bestsibling, bestnode) < 0) )
       bestnode = bestsibling;
    if( bestleaf != NULL && (bestnode == NULL || SCIPnodeselCompare(nodesel, set, bestleaf, bestnode) < 0) )
@@ -5266,8 +5268,8 @@ SCIP_NODE* SCIPtreeGetBestNode(
 
    assert(SCIPtreeGetNLeaves(tree) == 0 || bestnode != NULL);
 
-#ifdef EST_OUT /*????????????????*/
-   SCIPdebugMessage("---> bestnode=%lld\n", 
+#ifdef NODESEL_OUT
+   SCIPdebugMessage("---> bestnode<%lld>\n", 
       bestnode == NULL ? -1 : SCIPnodeGetNumber(bestnode));
 #endif
 

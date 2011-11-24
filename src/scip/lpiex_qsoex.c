@@ -12,9 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-//#define SCIP_DEBUG /*?????????????????*/
-//#define SCIP_DEBUG2 /*?????????????????*/
-//#define USEOBJLIM /*??????????????*/ 
 
 /**@file   lpiex_qsoex.c
  * @brief  LP interface for QSopt_ex version >= 2.5.4 (r239)
@@ -24,6 +21,11 @@
 */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+//#define VERIFY_OUT  /** uncomment to get info of QSopt_ex about verifying dual feasibility of the basis */
+
+//#define USEOBJLIM   /** uncomment to pass objlimit to exact lp solver; same as in cons_exactlp.c
+//                     *  warning: QSopt_ex allows objlimits but the support is buggy; if the limit is reached, QSopt_ex
+//                     *  does not stop but increasess the precision */
 
 #include <gmp.h>
 #include "EGlib.h"
@@ -1787,10 +1789,13 @@ SCIP_RETCODE SCIPlpiexGetSolFeasibility(
    if ( lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_UNBOUNDED)
       *primalfeasible = 1;
 
-#ifdef USEOBJLIM /*??????????????*/ 
+   /* @todo: check why we can conclude dual feasibility from primal infeasibility. in theory, the LP could be primal and 
+    * dual infeasible as well; see also SCIPlpiexIsDualFeasible() and SCIPlpiexIsDualInfeasible()
+    */
+#ifdef USEOBJLIM
    if ( lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_INFEASIBLE || lpi->solstat == QS_LP_OBJ_LIMIT ) 
 #else
-   if ( lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_INFEASIBLE ) /* ?????????????????? */
+   if ( lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_INFEASIBLE )
 #endif
       *dualfeasible = 1;
 
@@ -1933,10 +1938,10 @@ SCIP_Bool SCIPlpiexIsDualFeasible(
 
    SCIPdebugMessage("checking for dual feasibility\n");
 
-#ifdef USEOBJLIM /*??????????????*/ 
+#ifdef USEOBJLIM
    return (lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_OBJ_LIMIT ); 
 #else
-   return (lpi->solstat == QS_LP_OPTIMAL);  /* ?????????????*/
+   return (lpi->solstat == QS_LP_OPTIMAL);
 #endif
 }
 
@@ -1976,10 +1981,10 @@ SCIP_Bool SCIPlpiexIsObjlimExc(
 
    SCIPdebugMessage("checking for objective limit exceeded\n");
 
-#ifdef USEOBJLIM /*??????????????*/ 
+#ifdef USEOBJLIM
    return (lpi->solstat == QS_LP_OBJ_LIMIT);
 #else
-   return FALSE;   /* ????????????? */
+   return FALSE;
 #endif
 }
 
@@ -2664,7 +2669,7 @@ SCIP_RETCODE SCIPlpiexWriteState(
    return SCIP_OKAY;
 }
 
-/** checks whether LPi state (i.e. basis information) is dual feasbile and returns corresponding dual objective value.
+/** checks whether LPi state (i.e. basis information) is dual feasible and returns corresponding dual objective value.
  *  if wanted it will first directly test the corresponding approximate dual and primal solution 
  *  (corrected via dual variables for bounds and primal variables for slacks if possible) for optimality
  *  before performing the dual feasibility test on the more expensive exact basic solution. 
@@ -2689,7 +2694,7 @@ SCIP_RETCODE SCIPlpiexStateDualFeasible(
    /* checks whether basis just loaded into the solver is dual feasible */
    B =  mpq_QSget_basis(lpi->prob);
    
-#ifdef SCIP_DEBUG2
+#ifdef VERIFY_OUT
    rval = QSexact_verify(lpi->prob, B, (int) useprestep, primalsol, dualsol, (int*) result, dualobjval, 0);
 #else
    rval = QSexact_verify(lpi->prob, B, (int) useprestep, primalsol, dualsol, (int*) result, dualobjval, 1);

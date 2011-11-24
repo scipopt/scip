@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-//#define PROOF_OUT /* only for debugging ??????????????????*/
 
 /**@file   lpi_cpx.c
  * @ingroup LPIS
@@ -21,6 +20,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+//#define DUALFARKASPROOF_OUT /** uncomment to get info about dual farkas proof value as computed by cplex */
 
 #include <assert.h>
 
@@ -2734,12 +2734,13 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
 
    SCIPdebugMessage("calling CPLEX dual farkas: %d cols, %d rows\n",
       CPXgetnumcols(cpxenv, lpi->cpxlp), CPXgetnumrows(cpxenv, lpi->cpxlp));
-#ifdef PROOF_OUT /* only for debugging ??????????????????*/
+
+#ifdef DUALFARKASPROOF_OUT
    {
-      SCIP_Real tmp;
-      tmp = 0;
-      CHECK_ZERO( CPXdualfarkas(cpxenv, lpi->cpxlp, dualfarkas, &tmp) );
-      printf("proof = %.20f, lpisolstat=%d\n", tmp, lpi->solstat);
+      SCIP_Real proof;
+      proof = 0.0;
+      CHECK_ZERO( CPXdualfarkas(cpxenv, lpi->cpxlp, dualfarkas, &proof) );
+      printf("cpxsolstat<%d>(3=infeas): cpx dual farkas proof <%f> should be pos for infeas LP\n", lpi->solstat, proof);
    }
 #else
    CHECK_ZERO( CPXdualfarkas(cpxenv, lpi->cpxlp, dualfarkas, NULL) );
