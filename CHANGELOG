@@ -89,6 +89,8 @@ interface
 - new methods SCIPgetConflictVarLb(), SCIPgetConflictVarUb(), SCIPgetConflictVarRelaxedLb(), and
   SCIPgetConflictVarRelaxedUb() returning the (relaxed) lower/upper bound of the given variable within the current
   active conflict set
+- the resolve propagation methods for the constraint handler and propagator getting a new parameter called relaxedbd;
+  explaining/resolving this relaxed bound is sufficient
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with

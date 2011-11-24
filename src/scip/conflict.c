@@ -2673,12 +2673,15 @@ SCIP_RETCODE conflictAddConflictset(
  *   - resolutions on local constraints are only applied, if the constraint is valid at the
  *     current minimal valid depth level, because this depth level is the topmost level to add the conflict
  *     constraint to anyways
+ *
+ *  @note it is sufficient to explain the relaxed bound change
  */
 static
 SCIP_RETCODE conflictResolveBound(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_BDCHGINFO*       bdchginfo,          /**< bound change to resolve */
+   SCIP_Real             relaxedbd,          /**< the relaxed bound */
    int                   validdepth,         /**< minimal depth level at which the conflict is valid */
    SCIP_Bool*            resolved            /**< pointer to store whether the bound change was resolved */
    )
@@ -2708,7 +2711,7 @@ SCIP_RETCODE conflictResolveBound(
    assert(actvar != NULL);
    assert(SCIPvarIsActive(actvar));
 
-   SCIPdebugMessage("processing next conflicting bound (depth: %d, valid depth: %d, bdchgtype: %s [%s], vartype: %d): [<%s> %s %g]\n",
+   SCIPdebugMessage("processing next conflicting bound (depth: %d, valid depth: %d, bdchgtype: %s [%s], vartype: %d): [<%s> %s %g(%g)]\n",
       SCIPbdchginfoGetDepth(bdchginfo), validdepth,
       SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_BRANCHING ? "branch"
       : SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_CONSINFER ? "cons" : "prop",
@@ -2719,7 +2722,7 @@ SCIP_RETCODE conflictResolveBound(
       : SCIPpropGetName(SCIPbdchginfoGetInferProp(bdchginfo)),
       SCIPvarGetType(actvar), SCIPvarGetName(actvar),
       SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-      SCIPbdchginfoGetNewbound(bdchginfo));
+      SCIPbdchginfoGetNewbound(bdchginfo), relaxedbd);
    SCIPdebugMessage(" - conflict set       :");
 
 #ifndef NDEBUG
@@ -2780,10 +2783,10 @@ SCIP_RETCODE conflictResolveBound(
          bdchgidx = SCIPbdchginfoGetIdx(bdchginfo);
          assert(infervar != NULL);
 
-         SCIPdebugMessage("resolving bound <%s> %s %g [status:%d, type:%d, depth:%d, pos:%d]: <%s> %s %g [cons:<%s>(%s), info:%d]\n",
+         SCIPdebugMessage("resolving bound <%s> %s %g(%g) [status:%d, type:%d, depth:%d, pos:%d]: <%s> %s %g [cons:<%s>(%s), info:%d]\n",
             SCIPvarGetName(actvar),
             SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-            SCIPbdchginfoGetNewbound(bdchginfo),
+            SCIPbdchginfoGetNewbound(bdchginfo), relaxedbd,
             SCIPvarGetStatus(actvar), SCIPvarGetType(actvar),
             SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo),
             SCIPvarGetName(infervar),
@@ -2793,7 +2796,7 @@ SCIP_RETCODE conflictResolveBound(
             SCIPconsIsGlobal(infercons) ? "global" : "local",
             inferinfo);
 
-         SCIP_CALL( SCIPconsResolvePropagation(infercons, set, infervar, inferinfo, inferboundtype, bdchgidx, &result) );
+         SCIP_CALL( SCIPconsResolvePropagation(infercons, set, infervar, inferinfo, inferboundtype, bdchgidx, relaxedbd, &result) );
          *resolved = (result == SCIP_SUCCESS);
       }
       break;
@@ -2816,17 +2819,17 @@ SCIP_RETCODE conflictResolveBound(
          bdchgidx = SCIPbdchginfoGetIdx(bdchginfo);
          assert(infervar != NULL);
 
-         SCIPdebugMessage("resolving bound <%s> %s %g [status:%d, depth:%d, pos:%d]: <%s> %s %g [prop:<%s>, info:%d]\n",
+         SCIPdebugMessage("resolving bound <%s> %s %g(%g) [status:%d, depth:%d, pos:%d]: <%s> %s %g [prop:<%s>, info:%d]\n",
             SCIPvarGetName(actvar),
             SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-            SCIPbdchginfoGetNewbound(bdchginfo),
+            SCIPbdchginfoGetNewbound(bdchginfo), relaxedbd,
             SCIPvarGetStatus(actvar), SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo),
             SCIPvarGetName(infervar),
             inferboundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
             SCIPvarGetBdAtIndex(infervar, inferboundtype, bdchgidx, TRUE),
             SCIPpropGetName(inferprop), inferinfo);
 
-         SCIP_CALL( SCIPpropResolvePropagation(inferprop, set, infervar, inferinfo, inferboundtype, bdchgidx, &result) );
+         SCIP_CALL( SCIPpropResolvePropagation(inferprop, set, infervar, inferinfo, inferboundtype, bdchgidx, relaxedbd, &result) );
          *resolved = (result == SCIP_SUCCESS);
       }
       break;
@@ -2998,7 +3001,7 @@ SCIP_RETCODE conflictCreateReconvergenceConss(
                   && SCIPbdchginfoGetDepth(nextbdchginfo) == bdchgdepth)
                || forceresolve )
             {
-               SCIP_CALL( conflictResolveBound(conflict, set, bdchginfo, validdepth, &resolved) );
+               SCIP_CALL( conflictResolveBound(conflict, set, bdchginfo, relaxedbd, validdepth, &resolved) );
             }
 
             if( resolved )
@@ -3261,7 +3264,7 @@ SCIP_RETCODE conflictAnalyze(
                && SCIPbdchginfoGetDepth(nextbdchginfo) == bdchgdepth)
             || forceresolve )
          {
-            SCIP_CALL( conflictResolveBound(conflict, set, bdchginfo, validdepth, &resolved) );
+            SCIP_CALL( conflictResolveBound(conflict, set, bdchginfo, relaxedbd, validdepth, &resolved) );
          }
 
          if( resolved )

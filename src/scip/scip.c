@@ -14469,6 +14469,7 @@ SCIP_RETCODE SCIPrespropCons(
    int                   inferinfo,          /**< the user information passed to the corresponding SCIPinferVarLbCons() or SCIPinferVarUbCons() call */
    SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
+   SCIP_Real             relaxedbd,          /**< the relaxed bound which is sufficient to be explained */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -14480,7 +14481,7 @@ SCIP_RETCODE SCIPrespropCons(
 
    SCIP_CALL( checkStage(scip, "SCIPrespropCons", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPconsResprop(cons, scip->set, infervar, inferinfo, boundtype, bdchgidx, result) );
+   SCIP_CALL( SCIPconsResprop(cons, scip->set, infervar, inferinfo, boundtype, bdchgidx, relaxedbd, result) );
 
    return SCIP_OKAY;
 }
