@@ -53,6 +53,7 @@ SCIP_RETCODE SCIPcomputeCoverUndercover(
    SCIP_Real             memorylimit,        /**< memory limit */
    SCIP_Bool             globalbounds,       /**< should global bounds on variables be used instead of local bounds at focus node? */
    SCIP_Bool             onlyconvexify,      /**< should we only fix/dom.red. variables creating nonconvexity? */
+   SCIP_Bool             coverbd,            /**< should bounddisjunction constraints be covered (or just copied)? */
    char                  coveringobj,        /**< objective function of the covering problem ('b'ranching status,
                                               *   influenced nonlinear 'c'onstraints/'t'erms, 'd'omain size, 'l'ocks,
                                               *   'm'in of up/down locks, 'u'nit penalties, constraint 'v'iolation) */
