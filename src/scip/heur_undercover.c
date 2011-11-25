@@ -13,6 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #define SCIP_DEBUG
+#define STATISTIC_INFORMATION /* uncomment to get statistical output at the end of undercover run */
 
 /**@file   heur_undercover.c
  * @brief  Undercover primal heuristic for MIQCPs
@@ -78,6 +79,13 @@
 #define MINTIMELEFT             1.0          /**< don't start expensive parts of the heuristics if less than this amount of time left */
 #define SUBMIPSETUPCOSTS        200          /**< number of nodes equivalent for the costs for setting up the sub-CIP */
 
+
+/* enable statistic output by defining macro STATISTIC_INFORMATION */
+#ifdef STATISTIC_INFORMATION
+#define STATISTIC(x)                {x} 
+#else
+#define STATISTIC(x)             /**/
+#endif
 
 /*
  * Data structures
@@ -1199,6 +1207,14 @@ SCIP_RETCODE createCoveringProblem(
 
    /* free expression interpreter */
    SCIP_CALL( SCIPexprintFree(&exprint) );
+
+   STATISTIC(
+      int nnonzs;
+      nnonzs = 0;
+      for( i = 0; i < nvars; ++i)
+         nnonzs += termcounter[i];
+      SCIPinfoMessage(scip, NULL, "UCstats nnz/var: %9.6f\n", nnonzs/(SCIP_Real)nvars); 
+      );
 
    /* free counter arrays for weighted objectives */
    SCIPfreeBufferArray(scip, &termcounter);
@@ -2412,6 +2428,12 @@ SCIP_RETCODE SCIPapplyUndercover(
       success = FALSE;
       SCIP_CALL( solveCoveringProblem(coveringscip, nvars, coveringvars, &coversize, cover,
             timelimit, memorylimit + SCIPgetMemUsed(coveringscip)/1048576.0, &success) );
+
+   STATISTIC(
+      if( ncovers == 0 && success )
+         SCIPinfoMessage(scip, NULL, "UCstats coversize: %9.6f\n", 100*coversize /(SCIP_Real)nvars); 
+      );
+
       assert(coversize >= 0);
       assert(coversize <= nvars);
 
