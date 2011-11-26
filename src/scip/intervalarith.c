@@ -203,7 +203,7 @@ SCIP_ROUNDMODE SCIPintervalGetRoundingMode(
 #endif
 
 
-#if defined(__GNUC__)  /* gcc or icc compiler */
+#if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))  /* gcc or icc compiler on x86 32bit or 64bit */
 
 /** gets the negation of a double
  * Do this in a way that the compiler does not "optimize" it away, which usually does not considers rounding modes.
@@ -220,7 +220,10 @@ double negate(
    return x;
 }
 
-#elif defined(_MSC_VER)  /* cl or icl compiler */
+/* cl or icl compiler on 32bit windows or icl compiler on 64bit windows
+ * cl on 64bit windows does not seem to support inline assembler
+ */
+#elif defined(_MSC_VER) && (defined(__INTEL_COMPILER) || !defined(_M_X64))
 
 /** gets the negation of a double
  * Do this in a way that the compiler does not "optimize" it away, which usually does not considers rounding modes.
@@ -3881,10 +3884,11 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
          }
          else
          {
+            SCIP_INTERVAL a_;
+
             assert(xbnds.sup <= 0.0);
 
             /* need only negative solutions */
-            SCIP_INTERVAL a_;
             SCIPintervalSet(&a_, 0.0);
             SCIPintervalSetBounds(&lincoef, -lincoef.sup, -lincoef.inf);
             SCIPintervalSolveUnivariateQuadExpressionPositive(infinity, resultant, a_, lincoef, myrhs);
