@@ -697,7 +697,7 @@ SCIP_RETCODE removeFixedNonlinearVariables(
    i = 0;
    while( i < SCIPexprgraphGetNVars(conshdlrdata->exprgraph) )
    {
-      var = SCIPexprgraphGetVars(conshdlrdata->exprgraph)[i];
+      var = (SCIP_VAR*) SCIPexprgraphGetVars(conshdlrdata->exprgraph)[i];
       if( SCIPvarIsActive(var) )
       {
          ++i;
