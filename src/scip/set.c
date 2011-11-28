@@ -213,6 +213,7 @@
                                                  *   to FALSE and therefore can be used to collect statistics over all
                                                  *   runs) */
 #define SCIP_DEFAULT_MISC_IMPROVINGSOLS   FALSE /**< should only solutions be checked which improve the primal bound */
+#define SCIP_DEFAULT_MISC_PRINTREASON      TRUE /**< should the reason be printed if a given start solution is infeasible? */
 
 /* Node Selection */
 #define SCIP_DEFAULT_NODESEL_CHILDSEL       'h' /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,
@@ -1223,6 +1224,11 @@ SCIP_RETCODE SCIPsetCreate(
          "misc/improvingsols",
          "should only solutions be checked which improve the primal bound",
          &(*set)->misc_improvingsols, FALSE, SCIP_DEFAULT_MISC_IMPROVINGSOLS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "misc/printreason",
+         "should the reason be printed if a given start solution is infeasible",
+         &(*set)->misc_printreason, FALSE, SCIP_DEFAULT_MISC_PRINTREASON,
          NULL, NULL) );
    
    /* node selection */

@@ -6130,6 +6130,7 @@ SCIP_RETCODE SCIPtransformProb(
    )
 {
    int nfeassols;
+   int ncandsols;
    int h;
    int s;
 
@@ -6181,6 +6182,7 @@ SCIP_RETCODE SCIPtransformProb(
   
    /* check solution of solution candidate storage */
    nfeassols = 0;
+   ncandsols = scip->origprimal->nsols;
    for( s = scip->origprimal->nsols - 1; s >= 0; --s )
    {
       SCIP_Bool feasible;
@@ -6192,7 +6194,7 @@ SCIP_RETCODE SCIPtransformProb(
       /* SCIPprimalTrySol() can only be called on transformed solutions; therefore check solutions in original problem
        * including modifiable constraints
        */
-      SCIP_CALL( checkSolOrig(scip, sol, &feasible, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE) );
+      SCIP_CALL( checkSolOrig(scip, sol, &feasible, scip->set->misc_printreason, FALSE, TRUE, TRUE, TRUE, TRUE) );
       
       if( feasible )
       {
@@ -6216,7 +6218,12 @@ SCIP_RETCODE SCIPtransformProb(
    if( nfeassols > 0 )
    {
       SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "%d feasible solutions given by solution candidate storage\n", nfeassols);                    
-   }
+   } 
+   else if( ncandsols > 0 )
+   {
+      SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "all solutions given by solution candidate storage are infeasible\n");                    
+   } 
+      
 
    /* update upper bound and cutoff bound due to objective limit in primal data */
    SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,

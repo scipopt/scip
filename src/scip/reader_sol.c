@@ -176,7 +176,7 @@ SCIP_RETCODE readSol(
 
          /* display result */
          SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "primal solution from solution file <%s> was %s\n",
-            fname, stored ? "accepted as candidate" : "rejected - solution objective too poor");
+            fname, stored ? "accepted as candidate, will be checked when solving starts" : "rejected - solution objective too poor");
       }
 
       return SCIP_OKAY;
@@ -317,7 +317,7 @@ SCIP_RETCODE readXMLSol(
 
          /* display result */
          SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "primal solution from solution file <%s> was %s\n",
-            filename, stored ? "accepted as candidate" : "rejected - solution objective too poor");
+            filename, stored ? "accepted as candidate, will be checked when solving starts" : "rejected - solution objective too poor");
       }
    }
    else
