@@ -1,6 +1,7 @@
 MINLP/instances/MINLPLib/zpl/alan.zpl
 MINLP/instances/MINLPLib/mps/du-opt.mps.gz
 MINLP/instances/MINLPLib/mps/du-opt5.mps.gz
+MINLP/instances/MINLPLib/zpl/elf.zpl
 MINLP/instances/MINLPLib/zpl/ex1223a.zpl
 MINLP/instances/MINLPLib/zpl/ex1263.zpl
 MINLP/instances/MINLPLib/mps/ex1263.mps.gz
@@ -23,6 +24,7 @@ MINLP/instances/MINLPLib/mps/netmod_kar1.mps.gz
 MINLP/instances/MINLPLib/mps/netmod_kar2.mps.gz
 MINLP/instances/MINLPLib/mps/nvs19.mps.gz
 MINLP/instances/MINLPLib/mps/nvs23.mps.gz
+MINLP/instances/MINLPLib/zpl/nvs24.zpl
 MINLP/instances/MINLPLib/zpl/prob02.zpl
 MINLP/instances/MINLPLib/zpl/prob03.zpl
 MINLP/instances/MINLPLib/mps/product.mps.gz

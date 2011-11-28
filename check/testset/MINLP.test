@@ -1,6 +1,7 @@
 MINLP/instances/MINLPLib/zpl/alan.zpl
 MINLP/instances/MINLPLib/zpl/du-opt.zpl
 MINLP/instances/MINLPLib/zpl/du-opt5.zpl
+MINLP/instances/MINLPLib/zpl/elf.zpl
 MINLP/instances/MINLPLib/zpl/ex1223a.zpl
 MINLP/instances/MINLPLib/zpl/ex1263.zpl
 MINLP/instances/MINLPLib/zpl/ex1263a.zpl
@@ -47,6 +48,7 @@ MINLP/instances/MINLPLib/zpl/nuclear10b.zpl
 MINLP/instances/MINLPLib/zpl/nuclear104.zpl
 MINLP/instances/MINLPLib/zpl/nvs19.zpl
 MINLP/instances/MINLPLib/zpl/nvs23.zpl
+MINLP/instances/MINLPLib/zpl/nvs24.zpl
 MINLP/instances/MINLPLib/lp/pb302035.lp.gz
 MINLP/instances/MINLPLib/lp/pb302055.lp.gz
 MINLP/instances/MINLPLib/lp/pb302075.lp.gz
