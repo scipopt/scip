@@ -260,10 +260,6 @@ SCIP_Real SCIPsolGetObj(
    SCIP_PROB*            prob                /**< transformed problem data */
    );
 
-/* todo: ???????????? this is only for a workaround method for the exactlp constraint handler, 
- * as I can not store solutions which are not FP representable at the moment, 
- * but at least I want to have the correct primal bound (delete this method from the code again later) ?????????????? 
- */
 /** sets objective value of primal CIP solution in transformed problem */
 extern
 void SCIPsolSetObj(

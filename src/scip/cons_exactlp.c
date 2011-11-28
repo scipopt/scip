@@ -41,19 +41,24 @@
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
-#include "mpfr.h" /* mpfr.h has to be included before gmp.h */ /* todo: only necessary because of gmp<->fp functions (which maybe move) ?????? */
+/** @todo exiptodo: mpfr library is needed to control the rounding mode in the gmp-double conversion. these methods might 
+ *   move to another file. delete library inclusion then.
+ */
+#include "mpfr.h" /* mpfr.h has to be included before gmp.h */
 #include "gmp.h" 
-
-#include "scip/cons_exactlp.h"
-#include "scip/struct_lp.h" /* only for debugging ??????????*/
-#include "scip/struct_scip.h" 
-#include "scip/solex.h" 
-#include "scip/primalex.h" 
 #include "EGlib.h" 
 #include "QSopt_ex.h" 
-#include "scip/misc.h" 
-#include "rectlu/rectlu.h"
+
+#include "scip/cons_exactlp.h"
 #include "scip/intervalarith.h"
+#include "scip/lp.h"
+#include "scip/lpiex.h"
+#include "scip/misc.h" 
+#include "scip/primalex.h" 
+#include "scip/scip.h"
+#include "scip/solex.h" 
+#include "scip/struct_scip.h" 
+#include "rectlu/rectlu.h"
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "exactlp"
@@ -104,11 +109,11 @@
  * Data structures
  */
 
+/** @todo exiptodo: posinfinity and neginfinity should be moved to a more appropriate place (scipex.h, def.h or defex.h) */
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
-   /* ???? todo: this should be moved to an appropriat place and has to be assigned in a consistent way (scipex/def.h oder defex.h) */
    mpq_t                 posinfinity;        /**< value considered to be infinity */
    mpq_t                 neginfinity;        /**< value considered to be infinity */
    SCIP_LPIEX*           lpiex;              /**< Exact LP solver interface */
@@ -282,9 +287,13 @@ SCIP_RETCODE checkLoadState(
    SCIP_CALL( SCIPallocBufferArray(scip, &rstat, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cstatex, ncolsex) );  
    SCIP_CALL( SCIPallocBufferArray(scip, &rstatex, nrowsex) );
-
-   /* get exact and inxeact basis */
-   SCIP_CALL( SCIPlpiGetBase(scip->lp->lpi, cstat, rstat) );
+   
+   /** @todo exiptodo: using scip->lp is not SCIP conform. 
+    *  - implement method corresponding to SCIPlpGetBase() in scip.c
+    *  - there is at least one other position where lp is accessed directly
+    */
+   /* get exact and inexact basis */
+   SCIP_CALL( SCIPlpGetBase(scip->lp, cstat, rstat) );
    SCIP_CALL( SCIPlpiexGetBase(conshdlrdata->lpiex, cstatex, rstatex) );
 
 #ifdef BASISCHECK_OUT
@@ -558,7 +567,9 @@ SCIP_Real mpqGetRealRelax(
    }
 #endif
 
-   /* todo: check whether this way to treat infinity is ok (in particular if we want to construct a relaxation) ???????? */
+   /** @todo exiptodo: after reworking the handling of (different) infinity values, we should check the treatment of 
+    *  infinite values here, in particular, when constructing an FP relaxation
+    */
    if( SCIPisInfinity(scip, valrelax) )
       valrelax = SCIPinfinity(scip);
 
@@ -580,7 +591,9 @@ SCIP_Real mpqGetRealApprox(
 
    valapprox = (SCIP_Real) mpq_get_d(val);
  
-   /* todo: check whether this way to treat infinity is ok (in particular if we want to construct a relaxation) ????????? */
+   /** @todo exiptodo: after reworking the handling of (different) infinity values, we should check the treatment of 
+    *  infinite values here
+    */
    if( SCIPisInfinity(scip, valapprox) )
       valapprox = SCIPinfinity(scip);
 
@@ -772,7 +785,8 @@ SCIP_RETCODE conshdlrdataCreate(
 
    SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
 
-   QSexactStart(); /* todo: find a good way/place to call this method ?????????????? */
+   /** @todo exiptodo: is there a better place to call QSexactStart(), also for QSexactClear()? */
+   QSexactStart(); 
 
    /* open exact LP Solver interface */
    SCIP_CALL( SCIPlpiexCreate(&(*conshdlrdata)->lpiex, NULL, SCIP_OBJSEN_MINIMIZE) );
@@ -895,7 +909,8 @@ SCIP_RETCODE conshdlrdataFree(
 
    SCIPfreeMemory(scip, conshdlrdata);
 
-   QSexactClear();/* todo: find a good way/place to call this method ?????????????? */
+   /** @todo exiptodo: is there a better place to call QSexactClear(), also for QSexactStart()? */
+   QSexactClear();
 
    return SCIP_OKAY;
 }
@@ -1535,9 +1550,9 @@ SCIP_RETCODE checkCons(
 
       if( sol != NULL )
       {
-         /** @todo: ????????????
-          *  - This only works if presolving is disabled (solval may already be an approximation since 
-          *    solution values of aggregated variables are calculated in floating-point arithmetic in SCIPgetSolVal()) 
+         /** @todo exiptodo: presolving extension 
+          *  - this only works if presolving is disabled (solval may already be an approximation since 
+          *    solution values of aggregated variables are calculated in FP arithmetic in SCIPgetSolVal()) 
           */
          mpq_set_d(solval, SCIPgetSolVal(scip, sol, vars[v]));
       }
@@ -1584,10 +1599,10 @@ SCIP_RETCODE checkCons(
 
          if( sol != NULL )
          {
-            /** @todo: ????????????
-             *  - This only works if presolving is disabled (solval may already be an approximation since 
-             *    solution values of aggregated variables are calculated in floating-point arithmetic in SCIPgetSolVal()) 
-             */ 
+            /** @todo exiptodo: presolving extension 
+             *  - this only works if presolving is disabled (solval may already be an approximation since 
+             *    solution values of aggregated variables are calculated in FP arithmetic in SCIPgetSolVal()) 
+             */
             mpq_set_d(solval, SCIPgetSolVal(scip, sol, vars[consdata->ind[i]]));
          }
          else
@@ -2175,10 +2190,11 @@ SCIP_RETCODE createRelaxation(
              */
             else
             {
-               /* todo: split variable into positive and negative part and modify consdata structures in order to be able 
-                * to transform a basis to the original problem later ??????? 
+               /** @todo exiptodo: reading extension
+                *  - split variable into positive and negative part and modify consdata structures in order to later be 
+                *    able to transform a basis to the original problem
                 */
-               SCIPerrorMessage("consinitlp: for variables that are neither nonnegative nor nonpositive, creating a FP relaxation is not supported yet\n");
+               SCIPerrorMessage("consinitlp: for vars that are neither nonneg nor nonpos, creating a FP relaxation is not supported yet\n");
 
                /* free temporary memory */
                SCIPfreeBufferArray(scip, &rowvals);
@@ -2275,7 +2291,7 @@ SCIP_RETCODE addRelaxation(
    {
       if( !SCIProwIsInLP(consdata->rows[r]) )
       {
-         /* todo: check whether it is ok/better not to force the cut to enter the LP ???????????? */
+         /** @todo exiptodo: is it be better eg for basis transfer between LP and LPEX to force the cut to enter the LP? */
          SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[r], TRUE) ); 
       }
    }
@@ -2283,6 +2299,7 @@ SCIP_RETCODE addRelaxation(
    return SCIP_OKAY;
 }
 
+#if 0 /* uncomment if method is needed */
 #ifdef BASISCHECK_OUT
 static
 SCIP_RETCODE printCurrentLP(
@@ -2304,6 +2321,7 @@ SCIP_RETCODE printCurrentLP(
 
    return SCIP_OKAY;
 }
+#endif
 #endif
 
 /** loads LP state from exact LP into inexact LP solver */
@@ -2378,7 +2396,7 @@ SCIP_RETCODE constructCurrentLPEX(
    if( !conshdlrdata->lpexconstructed )
    {
       SCIP_VAR** vars;
-      char** colnames; /* todo: is this implemented in a correct way ????????????*/
+      char** colnames;
        
       SCIPdebugMessage("constructing initial exact LP\n");
       
@@ -2402,7 +2420,6 @@ SCIP_RETCODE constructCurrentLPEX(
       }
 
       /* add all columns to the exact LP */
-      /* todo: check whether I implement SCIPlpiexAddCols() correctly (handling of case: beg=ind=val=NULL) ????????????? */
       SCIP_CALL( SCIPlpiexAddCols(conshdlrdata->lpiex, consdata->nvars, consdata->obj, consdata->lbloc, consdata->ubloc, 
             colnames, 0, NULL, NULL, NULL) );
 
@@ -2411,9 +2428,10 @@ SCIP_RETCODE constructCurrentLPEX(
             (const mpq_t*) consdata->rhs, NULL, consdata->nnonz, consdata->beg, consdata->len, consdata->ind, 
             consdata->val) );
 
-      //SCIP_CALL( SCIPlpiexWriteLP(conshdlrdata->lpiex, "testset/debug2.lp") ); /* ????????????*/
-      //SCIPABORT(); /*lint --e{527}*/ /* ????????????*/
-
+#if 0 /* activate this for detailed debugging. writes LPEX to a file and stops afterwards */
+      SCIP_CALL( SCIPlpiexWriteLP(conshdlrdata->lpiex, "testset/debug.lp") );
+      SCIPABORT();
+#endif
       conshdlrdata->lpexconstructed = TRUE;
      
       /* free temporary memory */
@@ -2442,10 +2460,11 @@ SCIP_RETCODE loadLPState(
 
    if( ncolsex == SCIPgetNLPCols(scip) && nrowsex == SCIPgetNLPRows(scip) )
    {
-      /* stores LP state (like basis information) of inexact LP solver into LP state object */
-      /* todo: check whether this gives the basis corresponding to the node from which the unbounded ray was 
-       *       found in case of an infeasible LP ???????????? 
+      /** @todo exiptodo: 
+       *  - for infeasible LPs with unbounded dual ray, check whether this always gives the basis corresponding to the 
+       *    node from which the unbounded ray was found  
        */
+      /* stores LP state (like basis information) of inexact LP solver into LP state object */
       SCIP_CALL( SCIPgetLPState(scip, &lpistate) ); 
 
       /* loads LP state (like basis information) into exact LP solver */
@@ -2637,7 +2656,7 @@ SCIP_RETCODE checkIntegrality(
    SCIP_CALL( SCIPlpiexGetSol(conshdlrdata->lpiex, &lpobjval, primsol, NULL, NULL, NULL) );
 
    /* try to improve current local lower bound by using the result of the exact LP solver */
-   SCIP_CALL( SCIPupdateLocalLowerbound(scip, mpqGetRealRelax(scip, lpobjval, GMP_RNDD)) ); /* todo: check whether it is ok to use this function instead of SCIPupdateLocalDualbound() ?????????? */ 
+   SCIP_CALL( SCIPupdateLocalLowerbound(scip, mpqGetRealRelax(scip, lpobjval, GMP_RNDD)) );
 
 #ifdef SCIP_DEBUG
    if( oldlb < SCIPgetLocalLowerbound(scip) )
@@ -2725,10 +2744,17 @@ SCIP_RETCODE checkIntegrality(
                fpvalue = FALSE;
 
             /* set value of variabel in exact and approximate solution */
+            /** @todo exiptodo:
+             *  - in SCIPsetSolVal() the objval is computed using interval arithmetic which leads to a safe objval in 
+             *    case the varsolvals are FP representable. We needed that in an older version where we did not yet store
+             *    the exact solution. 
+             *  - now, we could compute the objval unsafe in SCIPsetSolVal() (below it's set to a safe value anyway)
+             *    and also delete the fpvalue flag here.
+             */
             SCIP_CALL( SCIPsetSolVal(scip, sol, vars[v], scipsolval) );
-            /* todo: using scip->set is ugly! think about a general way to get information from the constraint handler 
-             *       implement all the methods in cons_exactlp.c that operate and use exact problem data, like exact solutions
-             *       ??????????? 
+            /** @todo exiptodo: using scip->set is not SCIP conform
+             *  - think about a more general way to get information from cons_exactlp.c.
+             *  - maybe, implement all methods that operate/use exact problem data (like solex methods) in cons_exactlp.c 
              */
             SCIP_CALL( SCIPsolexSetVal(solex, scip->set, vars[v], consdata->obj[v], consdata->lb[v], primsol[v]) );
          }
@@ -2740,30 +2766,22 @@ SCIP_RETCODE checkIntegrality(
             SCIPfreeSol(scip, &sol);
          else   
          {
-            /* @todo (later): ????????? 
-             * 1. maybe improve objval (using SCIPsetSolTransObj() is only a workaround, and this method is not very safe, 
-             *    i.e., should be deleted from the source code later when point 2. was implemented)
-             * 2. store all primal solutions in the exactlp conshdlr with the exact objval and 
-             *    hand over an FP approximation of the exact sol with safe objval to scip (step 3c)
+            /** @todo exiptodo:  
+             *  - setting the upperbound in SCIP via the FP-solution using SCIPsetSolTransObj() is more a workaround
+             *  - maybe it is better to set the upperbound directly via the exact solution. this way the code also works
+             *    when we do not store a FP-solution for every exact solution.
+             *  - remove SCIPsetSolTransObj() if it is not needed anymore
              */
             /* store safe objective value for approximate primal solution */ 
             SCIP_CALL( SCIPsetSolTransObj(scip, sol, mpqGetRealRelax(scip, lpobjval, GMP_RNDU)) );
-
             SCIP_CALL( SCIPaddSolFree(scip, &sol, &stored) );
-         
-#if 0 /* since exact solutions can be stored now, this is not needed anymore ??????????? */
-            if( stored && !fpvalue )
-            {
-               SCIPwarningMessage("Note: Primal solution found is NOT FP representable (primal bound stored is safe, but primal solution stored is only an FP approximation)!\n");
-            }
-#endif
          }
 
-         /* add exact primal solution */ 
-         /* todo: using scip->set is ugly! think about a general way get information from the constraint handler 
-          *       implement all the methods in cons_exactlp.c that operate and use exact problem data, like exact solutions
-          *       ??????????? 
+         /** @todo exiptodo: using scip->set is not SCIP conform
+          *  - think about a more general way to get information from cons_exactlp.c.
+          *  - maybe, implement all methods that operate/use exact problem data (like solex methods) in cons_exactlp.c 
           */
+         /* add exact primal solution */ 
          SCIP_CALL( SCIPprimalexAddSolFree(conshdlrdata->primal, SCIPblkmem(scip), scip->set, scip->transprob, 
                &solex, &stored) );
 
@@ -2804,8 +2822,8 @@ SCIP_RETCODE checkIntegrality(
             SCIP_Real downub;
             SCIP_Real uplb;
 
-            /* @todo (later): ???????????
-             *  - implement more sophisticated branching rules 
+            /** @todo exiptodo: branching extension
+             *  - implement more sophisticated rule for branching on the exact LP solution
              */
 
             assert(branchvar >= 0 && branchvar < nvars);
@@ -2880,6 +2898,10 @@ SCIP_RETCODE evaluateLPEX(
    SCIP_RESULT*          result              /**< pointer to store the result of the lp enforcement call */
    )
 {
+   /** @todo exiptodo:
+    *  - in a similar function for LP in lp.c the case SCIPlpiIsPrimalUnbounded() is not explicitely handled. why? if case
+    *    should be added, include it here as well.
+    */
    /* evaluate solution status */
    if( SCIPlpiexIsOptimal(conshdlrdata->lpiex) )
    {
@@ -2917,7 +2939,7 @@ SCIP_RETCODE evaluateLPEX(
       
       *result = SCIP_CUTOFF;
    }
-   else if( SCIPlpiexExistsPrimalRay(conshdlrdata->lpiex) ) /* todo: check why in lp.c SCIPlpiIsPrimalUnbounded() is not used ????*/
+   else if( SCIPlpiexExistsPrimalRay(conshdlrdata->lpiex) )
    {
       SCIPerrorMessage("exact LP has primal ray: case not handled yet\n");
       return SCIP_ERROR;
@@ -5253,9 +5275,9 @@ SCIP_RETCODE copyRootActivity(
 }
 
 
-/* This function will check the condition required for the project and shift method to work
- * given the current settings of the parameters.  If it has not already been called, this will
- * call constructPSData
+#if 0 /* uncomment if method is needed */
+/* checks the condition required for the project-and-shift method to work given the current settings of the parameters.
+ * this will call constructPSData() if the psdata structures are not constructed yet.
  */
 static
 SCIP_RETCODE checkPSConditions(
@@ -5279,7 +5301,7 @@ SCIP_RETCODE checkPSConditions(
    
    return SCIP_OKAY;
 }
-
+#endif
 
 
 
@@ -5846,7 +5868,7 @@ SCIP_RETCODE provedBoundInterval(
       assert(row != NULL);
 
       /* create y vector in interval arithmetic, setting near zeros to zero */
-      y[j] = (usefarkas ? row->dualfarkas : row->dualsol);
+      y[j] = (usefarkas ? SCIProwGetDualfarkas(row) : SCIProwGetDualsol(row));
 
       if( SCIPisInfinity(scip, y[j]) )
          y[j] = SCIPinfinity(scip);
@@ -5878,17 +5900,6 @@ SCIP_RETCODE provedBoundInterval(
       }
    }      
    SCIPintervalScalprodScalars(SCIPinfinity(scip), &ytb, consdata->nconss, rhsinter, y);
-
-#ifdef PROVEDBOUNDOUT /*?????????*/
-   for( j = 0; j < consdata->nconss; ++j )
-   {
-      row = consdata->rows[j];
-      if( SCIPisFeasPositive(scip, y[j]) || SCIPisFeasNegative(scip, y[j]) )
-         printf("j=%d: b=[%g,%g] (lhs=%g, rhs=%g, const=%g, y=%g)\n ", j, rhsinter[j].inf, rhsinter[j].sup, row->lhs, 
-            row->rhs, row->constant,y[j]);
-   }
-   printf("--> ytb=[%g,%g]\n", SCIPintervalGetInf(ytb), SCIPintervalGetSup(ytb)); /*???????????????*/
-#endif
 
 #ifndef NDEBUG
    for( j = 0; j < consdata->nconss; ++j )
@@ -6343,7 +6354,7 @@ void delSingleCons(
    int i;
 
    assert(consdata->len[c] > 0);
-   assert(consdata->rows == NULL); /* @todo: otherwise the LP/LPEX rows have to be deleted as well */ 
+   assert(consdata->rows == NULL); /** @todo exiptodo: otherwise the LP/LPEX rows have to be deleted as well */ 
    assert(!conshdlrdata->lpexconstructed);
 
    unlockRoundingSingleCons(scip, cons, conshdlrdata, consdata, c);
@@ -6377,7 +6388,10 @@ void singleConsGetActivityBounds(
    assert(minactivity != NULL);
    assert(maxactivity != NULL);
 
-   /* @todo: implement more general case with more than one variable */
+   /** @todo exiptodo: presolving extension
+    *  - currently we only work on pure bound constraints
+    *  - implement more general presolving step which considers constraints with more than one variable.
+    */
    if( consdata->len[c] > 1 )
    {
       mpq_set(minactivity, *negInfinity(conshdlrdata));
@@ -6518,9 +6532,11 @@ SCIP_RETCODE chgVarLbLocal(
    mpq_t adjustedbound;
    int probidx;
  
-   /* @todo: changing local bounds is currently only supported at the root 
-    * (because keeping track of bound changes which is necessary for switching between different subtrees 
-    * is not supported yet). implement this. ??????????? */
+   /** @todo exiptodo: presolving extension
+    *  - changing local bounds in presolving is currently only supported at the root node. Because for switching between
+    *    different subtrees, keeping track of the bound changes would be required which is not supported yet. 
+    *    Implement this.
+    */
    if( SCIPgetDepth(scip) > 0 )
       return SCIP_OKAY;
 
@@ -6560,9 +6576,11 @@ SCIP_RETCODE chgVarUbLocal(
    mpq_t adjustedbound;
    int probidx;
    
-   /* @todo: changing local bounds is currently only supported at the root 
-    * (because keeping track of bound changes which is necessary for switching between different subtrees 
-    * is not supported yet). implement this. ??????????? */
+   /** @todo exiptodo: presolving extension
+    *  - changing local bounds in presolving is currently only supported at the root node. Because for switching between
+    *    different subtrees, keeping track of the bound changes would be required which is not supported yet. 
+    *    Implement this.
+    */
    if( SCIPgetDepth(scip) > 0 )
       return SCIP_OKAY;
 
@@ -6876,13 +6894,18 @@ SCIP_RETCODE tightenVarBounds(
    assert(!isPosInfinity(conshdlrdata, consdata->lhs[c]));
    assert(!isNegInfinity(conshdlrdata, consdata->rhs[c]));
    
-   /* @todo: changing local bounds is currently only supported at the root 
-    * (because keeping track of bound changes which is necessary for switching between different subtrees 
-    * is not supported yet). implement this. ??????????? */
+   /** @todo exiptodo: presolving extension
+    *  - changing local bounds in presolving is currently only supported at the root node. Because for switching between
+    *    different subtrees, keeping track of the bound changes would be required which is not supported yet. 
+    *    Implement this.
+    */
    if( SCIPgetDepth(scip) > 0 )
       return SCIP_OKAY; 
 
-   /* @todo: implement general case with more than one variable ?????? */
+   /** @todo exiptodo: presolving extension
+    *  - currently we only work on pure bound constraints
+    *  - implement more general presolving step which considers constraints with more than one variable.
+    */
    if( consdata->len[c] > 1 )
       return SCIP_OKAY;
    
@@ -6986,7 +7009,6 @@ SCIP_RETCODE tightenVarBounds(
    {
       assert(mpq_sgn(consdata->val[v]) == -1);
 
-      /* todo: CONTINUE here ???????*/
       /* check, if we can tighten the variable's bounds */
       if( !isNegInfinity(conshdlrdata, minresactivity) && !isPosInfinity(conshdlrdata, consdata->rhs[c]) )
       {
@@ -7352,7 +7374,7 @@ SCIP_DECL_CONSTRANS(consTransExactlp)
 
       assert(SCIPuseFPRelaxation(scip));
 
-      /* todo: check what value is suitable for maxscale such that there is no overflow ?????????? */
+      /** @todo exiptodo: check which value is suitable for maxscale such that there is no overflow */
       SCIP_CALL( SCIPmpqCalcIntegralScalar((const mpq_t*) newobj, sourcedata->nvars, SCIPinfinity(scip), intscalar, 
             &success) );
       
@@ -7506,10 +7528,10 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
       copyRootActivity( scip, conshdlrdata, consdata );
    }
 
-   /* @todo: as soon as we actually add cutting planes here, we might want to compute a proved bound 
-    * after the separation loop in solve.c. currently we disabled it inorder to avoid a second call 
-    * of proved bound, the first one is done before separation in order to know whether Neumaier Shcherbina 
-    * worked for the selection of the dual bounding method
+   /** @todo exiptodo: separation extension
+    *  - as soon as we actually add cutting planes here, we might want to compute a proved bound after the separation loop
+    *    in solve.c. currently we disabled it inorder to avoid a second call of proved bound, the first one is done before
+    *    separation in order to know whether Neumaier Shcherbina worked for the selection of the dual bounding method
     */
 
    /* select dual bounding method to apply */
@@ -7533,7 +7555,7 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
    if( !SCIPuseFPRelaxation(scip) )
    {
       SCIP_CALL( SCIPupdateLocalLowerbound(scip, 
-            mpqGetRealRelax(scip, *getPseudoObjval(scip, conshdlrdata, consdata), GMP_RNDD)) ); /* todo: check whether it is ok to use this function instead of SCIPupdateLocalDualbound() ?????????? */ 
+            mpqGetRealRelax(scip, *getPseudoObjval(scip, conshdlrdata, consdata), GMP_RNDD)) );
       
 #ifdef SCIP_DEBUG
       if( oldlb < SCIPgetLocalLowerbound(scip) )
@@ -7652,7 +7674,7 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
       
             if( dualfeasible )
             {
-               SCIP_CALL( SCIPupdateLocalLowerbound(scip, mpqGetRealRelax(scip, dualobjval, GMP_RNDD)) ); /* todo: check whether it is ok to use this function instead of SCIPupdateLocalDualbound() ?????????? */ 
+               SCIP_CALL( SCIPupdateLocalLowerbound(scip, mpqGetRealRelax(scip, dualobjval, GMP_RNDD)) );
 
                safedualboundcomputed = TRUE;
                safedualbound = mpqGetRealRelax(scip, dualobjval, GMP_RNDD);
@@ -7705,7 +7727,7 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
 
             dualbound = mpqGetRealRelax(scip, dualobjval, GMP_RNDD);
             
-            /* todo: if this assert is not correct we have to change the way we update nfailprovedfeaslp */
+            /** @todo exiptodo: if this assert is not correct we have to change the way we update nfailprovedfeaslp */
             assert(!SCIPisInfinity(scip, -dualbound)); 
 
             SCIP_CALL( SCIPupdateLocalLowerbound(scip, dualbound) ); 
@@ -7859,14 +7881,18 @@ SCIP_DECL_CONSENFOLP(consEnfolpExactlp)
    if( !SCIPuseFPRelaxation(scip) )
    {
       SCIP_CALL( SCIPupdateLocalLowerbound(scip, 
-            mpqGetRealRelax(scip, *getPseudoObjval(scip, conshdlrdata, consdata), GMP_RNDD)) ); /* todo: check whether it is ok to use this function instead of SCIPupdateLocalDualbound() ?????????? */ 
+            mpqGetRealRelax(scip, *getPseudoObjval(scip, conshdlrdata, consdata), GMP_RNDD)) );
    }
    
    /* load LP state from inexact LP into exact LP solver */
    SCIP_CALL( loadLPState(scip, conshdlrdata) );
 
+   /** @todo exiptodo:
+    *  - which simplex algorithm sould be used here? selection by warmstartinfo is not useful; maybe use the same 
+    *    algorithm as in the inexact LP solver. 
+    */
    /* solve exact LP */
-   algo = 'd'; /* todo: what should be done here (selection by warmstartinfo is not useful, algo used in inexact LP solver better?) ?????????? */
+   algo = 'd'; 
    switch( algo )
    {
    case 'd':
@@ -7957,8 +7983,10 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
 
    *result = SCIP_INFEASIBLE;
 
-   /* todo: (later) this is ugly and only used to avoid stopping with the hard time limit. 
-    *       Should be improved later (set a time and iteration limit on solving LPEX anyway) ?????????????? */
+   /** @todo exiptodo: 
+    *  - this is just a workaround to avoid stopping at the hard time limit. it is only needed because currently the exact
+    *    LP solver QSopt_ex does not correctly handle time and iteration limits.
+    */
    if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_TIMELIMIT )
       return SCIP_OKAY;
 
@@ -8012,7 +8040,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
                   oldlb = SCIPgetLocalLowerbound(scip);
 #endif
 
-                  SCIP_CALL( SCIPupdateLocalLowerbound(scip, mpqGetRealRelax(scip, dualobjval, GMP_RNDD)) ); /* todo: check whether it is ok to use this function instead of SCIPupdateLocalDualbound() ?????????? */ 
+                  SCIP_CALL( SCIPupdateLocalLowerbound(scip, mpqGetRealRelax(scip, dualobjval, GMP_RNDD)) );
 
 #ifdef SCIP_DEBUG
                   if( oldlb < SCIPgetLocalLowerbound(scip) )
@@ -8149,7 +8177,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
       if( !SCIPuseFPRelaxation(scip) )
       {
          SCIP_CALL( SCIPupdateLocalLowerbound(scip, 
-               mpqGetRealRelax(scip, *getPseudoObjval(scip, conshdlrdata, consdata), GMP_RNDD)) ); /* todo: check whether it is ok to use this function instead of SCIPupdateLocalDualbound() ?????????? */ 
+               mpqGetRealRelax(scip, *getPseudoObjval(scip, conshdlrdata, consdata), GMP_RNDD)) );
       }
 
       /* if the inexact LP was solved at the node, load LP state from inexact LP into exact LP solver */
@@ -8158,8 +8186,12 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
          SCIP_CALL( loadLPState(scip, conshdlrdata) );
       }
 
+      /** @todo exiptodo:
+       *  - which simplex algorithm sould be used here? selection by warmstartinfo is not useful; maybe use the same 
+       *    algorithm as in the inexact LP solver. 
+       */
       /* solve exact LP */
-      algo = 'd'; /* todo: what should be done here (selection by warmstartinfo is not useful, algo used in inexact LP solver better?) ?????????? */
+      algo = 'd';
       switch( algo )
       {
       case 'd':
@@ -8222,13 +8254,13 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
 
    SCIPdebugMessage("   --> enforcing pseudo solution returned result <%d>\n", *result);
 
-   /* todo (later): ????????????????? 
-    *  - decide whether it is possible and useful to support working on a pseudo solution 
-    *    (inexact from scip or exact from exactlp conshdlr) in addition 
-    */
-
    /* remember that current node is the one at which a pseudo solution was enforced last */
    conshdlrdata->lastenfopsnode = SCIPgetCurrentNode(scip);
+
+   /** @todo exiptodo: extension
+    *  - is it possible and useful to work on the pseudosolution in additon (on inexact pseudosolution from scip 
+    *    or exact pseudosolution via exactlp conshdlr)?
+    */
 
    return SCIP_OKAY;
 }
@@ -8355,17 +8387,13 @@ SCIP_DECL_CONSPRESOL(consPresolExactlp)
          if( cutoff )
             break;
          
-         /* todo: CONTINUE HERE ???????? 
-          *  - search for redundant constraints 
-          *    (in particulat delete constraints with only one variable if it is redundant) 
-          */
          /* check constraint for infeasibility and redundancy */
          singleConsGetActivityBounds(conshdlrdata, consdata, i, minactivity, maxactivity);
          
          if( mpq_cmp(minactivity, consdata->rhs[i]) > 0 || mpq_cmp(maxactivity, consdata->lhs[i]) < 0 )
          {
 #ifdef SCIP_DEBUG
-            gmp_snprintf(s, SCIP_MAXSTRLEN, "linear constraint <%d> of exactlp constraint is infeasible: activitybounds=[%Qd,%Qd], sides=[%Qd,%Qd]\n",
+            gmp_snprintf(s, SCIP_MAXSTRLEN, "lincons<%d> of exactlp cons is infeas: activity=[%Qd,%Qd], sides=[%Qd,%Qd]\n",
                i, minactivity, maxactivity, consdata->lhs[i], consdata->rhs[i]);
             SCIPdebugMessage(s);
 #endif
@@ -8375,7 +8403,7 @@ SCIP_DECL_CONSPRESOL(consPresolExactlp)
          else if( mpq_cmp(minactivity, consdata->lhs[i]) >= 0 && mpq_cmp(maxactivity, consdata->rhs[i]) <= 0 )
          {
 #ifdef SCIP_DEBUG
-            gmp_snprintf(s, SCIP_MAXSTRLEN, "linear constraint <%d> of exactlp constraint is redundant: activitybounds=[%Qd,%Qd], sides=[%Qd,%Qd]\n",
+            gmp_snprintf(s, SCIP_MAXSTRLEN, "lincons<%d> of exactlp cons is redundant: activity=[%Qd,%Qd], sides=[%Qd,%Qd]\n",
                i, minactivity, maxactivity, consdata->lhs[i], consdata->rhs[i]);
             SCIPdebugMessage(s);
 #endif
@@ -8663,12 +8691,14 @@ SCIP_DECL_EVENTEXEC(eventExecExactlp)
    case SCIP_EVENTTYPE_LBTIGHTENED:
    case SCIP_EVENTTYPE_LBRELAXED:
 
+      /** @todo exiptodo: presolving extension
+       *  - check whether the following argumentation is correct (currently we only have branching decisions anyway)
+       */
       /* catch only bound changes that are not originated by the exactlp constraint handler (e.g., exact presolving),
        * i.e., those that come from branching decisions. the bound changes found by the exactlp constraint handler are 
        * already stored here and the given bound is only a relaxation and probably weaker. 
        * bound changes on integral variables can be catched in any case as they are identical to the ones already stored. 
        */
-      /* todo: check whether this argumentation is correct ???????? */
       if( SCIPvarGetType(SCIPeventGetVar(event)) == SCIP_VARTYPE_CONTINUOUS )
          break;
 
@@ -8721,12 +8751,14 @@ SCIP_DECL_EVENTEXEC(eventExecExactlp)
    case SCIP_EVENTTYPE_UBTIGHTENED:
    case SCIP_EVENTTYPE_UBRELAXED:
 
+      /** @todo exiptodo: presolving extension
+       *  - check whether the following argumentation is correct (currently we only have branching decisions anyway)
+       */
       /* catch only bound changes that are not originated by the exactlp constraint handler (e.g., exact presolving),
        * i.e., those that come from branching decisions. the bound changes found by the exactlp constraint handler are 
        * already stored here and the given bound is only a relaxation and probaly weaker. 
        * bound changes on integral variables can be catched in any case as they are identical to the ones already stored. 
        */
-      /* todo: check whether this argumentation is correct ???????? */
       if( SCIPvarGetType(SCIPeventGetVar(event)) == SCIP_VARTYPE_CONTINUOUS )
          break;
 
@@ -9292,11 +9324,11 @@ SCIP_RETCODE SCIPprintSolex(
    else
       SCIPmessageFPrintInfo(file, s);
    
-   /* todo: usinf scip->orig/transprob is ugly! think about a general way get information from the constraint handler 
-    *       implement all the methods in cons_exactlp.c that operate and use exact problem data, like exact solutions
-    *       ??????????? 
+   /** @todo exiptodo: using scip->origprob and scip->transprob is not SCIP conform
+    *  - think about a more general way to get information from cons_exactlp.c.
+    *  - maybe, implement all methods that operate/use exact problem data (like solex methods) in cons_exactlp.c 
     */
-   SCIP_CALL( SCIPsolexPrint(sol, scip->origprob, scip->transprob, file, printzeros) );
+   SCIP_CALL( SCIPsolexPrint(scip, sol, scip->origprob, scip->transprob, file, printzeros) );
 
    mpq_clear(obj);
 
@@ -9326,11 +9358,11 @@ SCIP_RETCODE SCIPprintTransSolex(
    gmp_snprintf(s, SCIP_MAXSTRLEN, "objective value:                 %20Qd\n", obj);
    SCIPmessageFPrintInfo(file, s);
 
-   /* todo: usinf scip->orig/transprob is ugly! think about a general way get information from the constraint handler 
-    *       implement all the methods in cons_exactlp.c that operate and use exact problem data, like exact solutions
-    *       ??????????? 
+   /** @todo exiptodo: using scip->origprob and scip->transprob is not SCIP conform
+    *  - think about a more general way to get information from cons_exactlp.c.
+    *  - maybe, implement all methods that operate/use exact problem data (like solex methods) in cons_exactlp.c 
     */
-   SCIP_CALL( SCIPsolexPrint(sol, scip->transprob, scip->transprob, file, printzeros) );
+   SCIP_CALL( SCIPsolexPrint(scip, sol, scip->transprob, scip->transprob, file, printzeros) );
 
    mpq_clear(obj);
 
@@ -9610,6 +9642,10 @@ char SCIPselectDualBoundMethod(
          dualboundmethod = SCIPdualBoundMethod(scip);
       else
       {
+         /** @todo exiptodo: using scip->lp->hasprovedbound is not SCIP conform. 
+          *  - implement method in lp.c or scip.c which returns lp->hasprovedbound
+          *  - there is at least one other position where hasprovedbound accessed directly
+          */
          /* enfops which calls this methods for infeaslp is never called if Neumair Shcherbina proved infeasibility */
          assert(!scip->lp->hasprovedbound); 
          

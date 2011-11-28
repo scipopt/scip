@@ -1282,16 +1282,17 @@ SCIP_RETCODE SCIPresetParams(
    return SCIP_OKAY;
 }
 
-/** sets parameters that are supported by REDUCEDSOLVE flag; note, this does not enable exact MIP solving. 
- *  For that misc/exactsolve has to be set appropriately. 
+/** sets parameters such that we obtain a reduced version of SCIP, which is currently a pure branch-and-bound algorithm. 
+ *  the method is called when the user sets the REDUCEDSOLVE flag to true. note that it does not enable exact MIP solving
+ *  (for that the EXACTSOLVE flag has to be set to true as well).
  */ 
-SCIP_RETCODE SCIPsetExactsolve(
+SCIP_RETCODE SCIPsetReducedsolve(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetExactsolve", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPsetSetExactsolve(scip->set) );
+   SCIP_CALL( SCIPsetSetReducedsolve(scip->set) );
 
    return SCIP_OKAY;
 }
@@ -6839,7 +6840,7 @@ SCIP_RETCODE SCIPgetVarStrongbranch(
     */
    exactsolve = SCIPisExactSolve(scip);
 
-#ifdef USESBGAIN /* ??????????? */
+#ifdef USESBGAIN
    exactsolve = FALSE;
 #else
    exactsolve = TRUE;
@@ -13657,9 +13658,11 @@ SCIP_Real SCIPgetSolTransObj(
    }
 }
 
-/* todo: ???????????? this is only for a workaround method for the exactlp constraint handler, 
- * as I can not store solutions which are not FP representable at the moment, 
- * but at least I want to have the correct primal bound (delete this method from the code again later) ?????????????? 
+/** @todo  
+ *  - setting the upperbound in SCIP via the FP-solution using SCIPsetSolTransObj() is more a workaround
+ *  - maybe it is better to set the upperbound directly via the exact solution. this way the code also works
+ *    when we do not store a FP-solution for every exact solution.
+ *  - remove SCIPsetSolTransObj() if it is not needed anymore
  */
 /** sets transformed objective value of primal CIP solution; has to be called after solution has been constructed; 
  *  has to be called before solution is added to the solution storage

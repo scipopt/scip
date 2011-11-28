@@ -24,6 +24,7 @@
 #include <gmp.h> 
 
 #include "scip/def.h" 
+#include "scip/scip.h"
 #include "scip/set.h"
 #include "scip/misc.h"
 #include "scip/var.h"
@@ -260,7 +261,9 @@ SCIP_RETCODE SCIPsolexSetVal(
       break;
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
-      /* @todo: implement this if exact version of SCIP supports aggregated variables ????????? */
+      /** @todo exiptodo: presolving extension
+       *  - implement this if exact version of SCIP supports aggregated variables 
+       */
       SCIPerrorMessage("cannot set solution value for aggregated variable\n");
       SCIPABORT();
       break;
@@ -271,7 +274,9 @@ SCIP_RETCODE SCIPsolexSetVal(
       break;
 
    case SCIP_VARSTATUS_NEGATED:
-      /* @todo: implement this if exact version of SCIP supports negated variables ????????? */
+      /** @todo exiptodo: presolving extension
+       *  - implement this if exact version of SCIP supports negated variables 
+       */
       SCIPerrorMessage("cannot set solution value for negated variable\n");
       SCIPABORT();
       break;
@@ -313,25 +318,33 @@ void SCIPsolexGetVal(
       break;
 
    case SCIP_VARSTATUS_FIXED:
-      /* @todo: implement this if exact version of SCIP supports getting solution values of fixed variables ?????? */
+      /** @todo exiptodo: presolving extension
+       *  - implement this if exact version of SCIP supports fixed variables 
+       */
       SCIPerrorMessage("cannot get solution value of fixed variable\n");
       SCIPABORT();
       break;
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
-      /* @todo: implement this if exact version of SCIP supports getting solution values of aggregated variables ?????? */
+      /** @todo exiptodo: presolving extension
+       *  - implement this if exact version of SCIP supports aggregated variables 
+       */
       SCIPerrorMessage("cannot get solution value of aggregated variable\n");
       SCIPABORT();
       break;
 
    case SCIP_VARSTATUS_MULTAGGR:
-      /* @todo: implement this if exact version of SCIP supports getting solution values of multiaggregated variables ?????? */
+      /** @todo exiptodo: presolving extension
+       *  - implement this if exact version of SCIP supports multiaggregated variables 
+       */
       SCIPerrorMessage("cannot get solution value of multiaggregated variable\n");
       SCIPABORT();
       break;
 
    case SCIP_VARSTATUS_NEGATED:
-      /* @todo: implement this if exact version of SCIP supports getting solution values of negated variables ?????? */
+      /** @todo exiptodo: presolving extension
+       *  - implement this if exact version of SCIP supports negated variables 
+       */
       SCIPerrorMessage("cannot get solution value of negated variable\n");
       SCIPABORT();
       break;
@@ -353,7 +366,8 @@ void SCIPsolexGetObj(
    /* for original solutions, sol->obj contains the external objective value */
    if( sol->solorigin == SCIP_SOLORIGIN_ORIGINAL )
    {                                               
-      /* @todo: implement this if exact version of SCIP supports getting objective value of original solutions ?????? */
+      /** @todo exiptodo: heuristics extension
+       *  - implement this if exact version of SCIP supports getting objective value of original solutions */
       SCIPerrorMessage("cannot get objectiv value of original solution\n");
       SCIPABORT();
    }
@@ -363,10 +377,10 @@ void SCIPsolexGetObj(
    }
 }
 
-/** @todo: If heuristics are allowed to create and add exact solutions, then I need a SCIPsolexCheck()! 
- *  Should it be implemented here or completely in cons_exactlp.c?  
- *  Currently, I don't need it because only cons_exactlp.c adds solutions and these are valid for sure. 
- *  ????????? 
+/** @todo exiptodo: heuristics extension
+ *  - if heuristics are allowed to create and add exact solutions, then we need to implement SCIPsolexCheck(). currently, 
+ *    we do not need it because only cons_exactlp.c adds solutions and they are valid for sure. 
+ *  - should it be implemented here or in cons_exactlp.c?  
  */
 
 /** returns whether the given exact solutions in transformed space are equal */
@@ -411,6 +425,7 @@ SCIP_Bool SCIPsolexsAreEqual(
 
 /** outputs non-zero elements of exact solution to file stream */
 SCIP_RETCODE SCIPsolexPrint(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOLEX*           sol,                /**< primal CIP solution */
    SCIP_PROB*            prob,               /**< problem data (original or transformed) */
    SCIP_PROB*            transprob,          /**< transformed problem data or NULL (to display priced variables) */
@@ -418,18 +433,25 @@ SCIP_RETCODE SCIPsolexPrint(
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    )
 {
+   SCIP_CONS** conss;
+   char s[SCIP_MAXSTRLEN];
+   mpq_t obj;
    mpq_t solval;
    int v;
-   char s[SCIP_MAXSTRLEN];
    int n;
 
    assert(sol != NULL);
    assert(prob != NULL);
    assert(prob->transformed || transprob != NULL);
 
+   assert(SCIPisExactSolve(scip));
+   conss = SCIPgetConss(scip);
+   assert(conss != NULL);
+   assert(SCIPgetNConss(scip) == 1);
+      
    mpq_init(solval);
+   mpq_init(obj);
 
-   /** @todo: in addition, print obj coefs of variables (as in the inexact version) ???????????? */ 
    
    /* display variables of problem data */
    for( v = 0; v < prob->nfixedvars; ++v )
@@ -437,25 +459,51 @@ SCIP_RETCODE SCIPsolexPrint(
       assert(prob->fixedvars[v] != NULL);
 
       SCIPsolexGetVal(sol, prob->fixedvars[v], solval);
-      
+#if 0
+      /** @todo exiptodo: presolving extension
+       *  - in addition, print objective coefficients of the variables (as in the inexact version)
+       *  - the problem is that currently SCIPvarGetObjExactlp() always returns the obj coef for the transformed problem, 
+       *    i.e. after objective scaling
+       */ 
+      SCIPvarGetObjExactlp(conss[0], prob->fixedvars[v], obj);
+#endif      
       if( printzeros || mpq_sgn(solval) != 0 )
       {
          SCIPmessageFPrintInfo(file, "%-32s", SCIPvarGetName(prob->fixedvars[v]));
-         n = gmp_snprintf(s, SCIP_MAXSTRLEN, " %Q20d\n", solval);
+         n = gmp_snprintf(s, SCIP_MAXSTRLEN, " %Q20d", solval);
          assert(n < SCIP_MAXSTRLEN);
          SCIPmessageFPrintInfo(file, s);
+#if 0
+         n = gmp_snprintf(s, SCIP_MAXSTRLEN, " \t(obj:%Qd)\n", obj);
+         assert(n < SCIP_MAXSTRLEN);
+         SCIPmessageFPrintInfo(file, s);
+#else
+         SCIPmessageFPrintInfo(file, "\n");
+#endif
       }
    }
    for( v = 0; v < prob->nvars; ++v )
    {
       assert(prob->vars[v] != NULL);
+
       SCIPsolexGetVal(sol, prob->vars[v], solval);
+#if 0
+      SCIPvarGetObjExactlp(conss[0], prob->vars[v], obj);
+#endif
+
       if( printzeros || mpq_sgn(solval) != 0 )
       {
          SCIPmessageFPrintInfo(file, "%-32s", SCIPvarGetName(prob->vars[v]));
-         n = gmp_snprintf(s, SCIP_MAXSTRLEN, " %20Qd\n", solval);
+         n = gmp_snprintf(s, SCIP_MAXSTRLEN, " %20Qd", solval);
          assert(n < SCIP_MAXSTRLEN);
          SCIPmessageFPrintInfo(file, s);
+#if 0
+         n = gmp_snprintf(s, SCIP_MAXSTRLEN, " \t(obj:%Qd)\n", obj);
+         assert(n < SCIP_MAXSTRLEN);
+         SCIPmessageFPrintInfo(file, s);
+#else
+         SCIPmessageFPrintInfo(file, "\n");
+#endif
       }
    }
 
@@ -466,34 +514,60 @@ SCIP_RETCODE SCIPsolexPrint(
       for( v = 0; v < transprob->nfixedvars; ++v )
       {
          assert(transprob->fixedvars[v] != NULL);
+
          if( SCIPvarIsTransformedOrigvar(transprob->fixedvars[v]) )
             continue;
          
          SCIPsolexGetVal(sol, transprob->fixedvars[v], solval);
+#if 0
+         SCIPvarGetObjExactlp(conss[0], transprob->fixedvars[v], obj);
+#endif
+
          if( printzeros || mpq_sgn(solval) != 0 )
          {
             SCIPmessageFPrintInfo(file, "%-32s", SCIPvarGetName(transprob->fixedvars[v]));
-            n = gmp_snprintf(s, SCIP_MAXSTRLEN, " %20Qd\n", solval);
+            n = gmp_snprintf(s, SCIP_MAXSTRLEN, " %20Qd", solval);
             assert(n < SCIP_MAXSTRLEN);
             SCIPmessageFPrintInfo(file, s);
+#if 0
+            n = gmp_snprintf(s, SCIP_MAXSTRLEN, " \t(obj:%Qd)\n", obj);
+            assert(n < SCIP_MAXSTRLEN);
+            SCIPmessageFPrintInfo(file, s);
+#else
+            SCIPmessageFPrintInfo(file, "\n");
+#endif
          }
       }
       for( v = 0; v < transprob->nvars; ++v )
       {
          assert(transprob->vars[v] != NULL);
+
          if( SCIPvarIsTransformedOrigvar(transprob->vars[v]) )
             continue;
 
          SCIPsolexGetVal(sol, transprob->vars[v], solval);
+#if 0
+         SCIPvarGetObjExactlp(conss[0], transprob->vars[v], obj);
+#endif
+
          if( printzeros || mpq_sgn(solval) != 0 )
          {
-            n = gmp_snprintf(s, SCIP_MAXSTRLEN, " %20Qd\n", solval);
+            SCIPmessageFPrintInfo(file, "%-32s", SCIPvarGetName(transprob->vars[v]));
+            n = gmp_snprintf(s, SCIP_MAXSTRLEN, " %20Qd", solval);
             assert(n < SCIP_MAXSTRLEN);
             SCIPmessageFPrintInfo(file, s);
+#if 0
+            n = gmp_snprintf(s, SCIP_MAXSTRLEN, " \t(obj:%Qd)\n", obj);
+            assert(n < SCIP_MAXSTRLEN);
+            SCIPmessageFPrintInfo(file, s);
+#else
+            SCIPmessageFPrintInfo(file, "\n");
+#endif
          }
       }
    }
 
+   mpq_clear(obj);
    mpq_clear(solval);
 
    return SCIP_OKAY;

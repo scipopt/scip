@@ -1572,14 +1572,15 @@ SCIP_RETCODE SCIPsetResetParams(
    return SCIP_OKAY;
 }
 
-/** sets parameters that are supported by REDUCEDSOLVE flag; note, this does not enable exact MIP solving. 
- *  For that misc/exactsolve has to be set appropriately. 
+/** sets parameters such that we obtain a reduced version of SCIP, which is currently a pure branch-and-bound algorithm. 
+ *  the method is called when the user sets the REDUCEDSOLVE flag to true. note that it does not enable exact MIP solving
+ *  (for that the EXACTSOLVE flag has to be set to true as well).
  */ 
-SCIP_RETCODE SCIPsetSetExactsolve(
+SCIP_RETCODE SCIPsetSetReducedsolve(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
-   SCIP_CALL( SCIPparamsetSetExactsolve(set->paramset, set->scip) );
+   SCIP_CALL( SCIPparamsetSetReducedsolve(set->paramset, set->scip) );
 
    return SCIP_OKAY;
 }

@@ -553,7 +553,7 @@ SCIP_RETCODE SCIPlpiexLoadColLP(
 }
 
 
-#if 0 /* old version with some minor fix concering nnonz=0, but which does not work, beg =NULL is not allowed still */
+#if 0 /* old version with some minor fix concering nnonz=0, but which does not work, beg=NULL is still not allowed */
 /** adds columns to the LP */
 SCIP_RETCODE SCIPlpiexAddCols(
    SCIP_LPIEX*           lpi,                /**< LP interface structure */
@@ -606,6 +606,7 @@ SCIP_RETCODE SCIPlpiexAddCols(
    QS_RETURN(rval);
 }
 #else
+/** @todo exip: check whether I implemented handling of case beg=ind=val=NULL correctly */
 /** adds columns to the LP */
 SCIP_RETCODE SCIPlpiexAddCols(
    SCIP_LPIEX*           lpi,                /**< LP interface structure */

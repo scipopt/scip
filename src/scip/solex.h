@@ -91,6 +91,7 @@ SCIP_Bool SCIPsolexsAreEqual(
 /** outputs non-zero elements of exact solution to file stream */
 extern
 SCIP_RETCODE SCIPsolexPrint(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOLEX*           sol,                /**< primal CIP solution */
    SCIP_PROB*            prob,               /**< problem data (original or transformed) */
    SCIP_PROB*            transprob,          /**< transformed problem data or NULL (to display priced variables) */

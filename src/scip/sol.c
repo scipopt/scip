@@ -1037,9 +1037,11 @@ SCIP_Real SCIPsolGetObj(
       return sol->obj;
 }
 
-/* todo: ???????????? this is only for a workaround method for the exactlp constraint handler, 
- * as I can not store solutions which are not FP representable at the moment, 
- * but at least I want to have the correct primal bound (delete this method from the code again later) ?????????????? 
+/** @todo  
+ *  - setting the upperbound in SCIP via the FP-solution using SCIPsetSolTransObj() is more a workaround
+ *  - maybe it is better to set the upperbound directly via the exact solution. this way the code also works
+ *    when we do not store a FP-solution for every exact solution.
+ *  - remove SCIPsetSolTransObj() if it is not needed anymore
  */
 /** sets objective value of primal CIP solution in transformed problem */
 void SCIPsolSetObj(

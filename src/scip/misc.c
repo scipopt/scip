@@ -4147,7 +4147,6 @@ SCIP_RETCODE SCIPmpqCalcIntegralScalar(
 #endif
    }
 
-
    if( scalable )
    {
       /* make values integral by multiplying them with the smallest common multiple of the denominators */

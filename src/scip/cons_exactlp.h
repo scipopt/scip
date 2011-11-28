@@ -24,11 +24,16 @@
 #define __SCIP_CONS_EXACTLP_H__
 
 
-#include "mpfr.h" /* mpfr.h has to be included before gmp.h */ /* todo: only necessary because of gmp<->fp functions (which maybe move) ?????? */
-#include "gmp.h"
-#include "scip/scip.h"
-#include "scip/lpiex.h"
-#include "scip/solex.h"
+/** @todo exiptodo: mpfr library is needed to control the rounding mode in the gmp-double conversion. these methods might 
+ *   move to another file. delete library inclusion then.
+ */
+#include "mpfr.h" /* mpfr.h has to be included before gmp.h */
+#include "gmp.h" 
+
+#include "scip/type_cons.h"
+#include "scip/type_lpiex.h"
+#include "scip/type_prob.h"
+#include "scip/type_solex.h"
 
 #ifdef __cplusplus
 extern "C" {

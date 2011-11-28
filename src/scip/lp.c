@@ -37,7 +37,6 @@
 #include <math.h>
 #include <limits.h>
 #include <string.h>
-#include <gmp.h> /* only for debugging: for exactlp in order to print exact values stored ?????????? */
 
 #include "scip/def.h"
 #include "scip/message.h"
@@ -5101,7 +5100,6 @@ SCIP_Real SCIProwGetObjParallelism(
    return parallelism;
 }
 
-#if 0 /* correct scip version ??????????? */
 /** output row to file stream */
 void SCIProwPrint(
    SCIP_ROW*             row,                /**< LP row */
@@ -5140,66 +5138,7 @@ void SCIProwPrint(
    /* print right hand side */
    SCIPmessageFPrintInfo(file, "<= %.15g\n", row->rhs);
 }
-#else /* only for debugging: version for exactlp in order to print exact values stored ?????????? */
-/** output row to file stream */
-void SCIProwPrint(
-   SCIP_ROW*             row,                /**< LP row */
-   FILE*                 file                /**< output file (or NULL for standard output) */
-   )
-{
-   char s[SCIP_MAXSTRLEN];
-   mpq_t tmp;
-   int i;
 
-   assert(row != NULL);
-
-   mpq_init(tmp);
-
-   /* print row name */
-   if( row->name != NULL && row->name[0] != '\0' )
-   {
-      SCIPmessageFPrintInfo(file, "%s: ", row->name);
-   }
-
-   /* print left hand side */
-   //   SCIPmessageFPrintInfo(file, "%.15g <= ", row->lhs);
-   mpq_set_d(tmp, row->lhs);
-   gmp_snprintf(s, SCIP_MAXSTRLEN, "%Qd <= ", tmp);
-   SCIPmessageFPrintInfo(file, s);
-
-
-   /* print coefficients */
-   if( row->len == 0 )
-      SCIPmessageFPrintInfo(file, "0 ");
-   for( i = 0; i < row->len; ++i )
-   {
-      assert(row->cols[i] != NULL);
-      assert(row->cols[i]->var != NULL);
-      assert(SCIPvarGetName(row->cols[i]->var) != NULL);
-      assert(SCIPvarGetStatus(row->cols[i]->var) == SCIP_VARSTATUS_COLUMN);
-      //      SCIPmessageFPrintInfo(file, "%+.15g<%s> ", row->vals[i]
-      mpq_set_d(tmp, row->vals[i]);
-      gmp_snprintf(s, SCIP_MAXSTRLEN, "%+Qd<%s> ", tmp, SCIPvarGetName(row->cols[i]->var));
-      SCIPmessageFPrintInfo(file, s);
-   }
-
-   /* print constant */
-   if( REALABS(row->constant) > SCIP_DEFAULT_EPSILON )
-   {
-      //      SCIPmessageFPrintInfo(file, "%+.15g ", row->constant);
-      mpq_set_d(tmp, row->constant);
-      gmp_snprintf(s, SCIP_MAXSTRLEN, "%+Qd ", tmp);
-      SCIPmessageFPrintInfo(file, s);
-   }
-   /* print right hand side */
-   //   SCIPmessageFPrintInfo(file, "<= %.15g\n", row->rhs);
-   mpq_set_d(tmp, row->rhs);
-   gmp_snprintf(s, SCIP_MAXSTRLEN, "<= %Qd\n", tmp);
-   SCIPmessageFPrintInfo(file, s);
-
-   mpq_clear(tmp);
-}
-#endif
 
 
 

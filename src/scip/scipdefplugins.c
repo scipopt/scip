@@ -30,8 +30,10 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   /**@todo modify other plugins such that they can be used for exact mip solving */ 
 #ifdef REDUCEDSOLVE
+
+   /**@todo exiptodo: modify other plugins such that they can be used for exact mip solving */ 
+   /* include plugins for reduced version of SCIP and distiguish between exact and inexact MIP solving. */
 #ifdef EXACTSOLVE
    SCIP_CALL( SCIPincludeConshdlrExactlp(scip) ); 
 #else
@@ -56,13 +58,16 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
 
    SCIP_CALL( SCIPincludeDispDefault(scip) );
    SCIP_CALL( SCIPincludeDialogDefault(scip) );
-   /* load parameter settings needed to ensure correct behavior of REDUCEDSOLVE flag */
-   /* @todo: the parameters set in SCIPsetExactsolve() are for a pure branch and bound alorithm. they have to be 
-    * adapted when other solving techniques, like presolving, are modified s.t. they can be used for exact MIP solving.
-    * ????????????
+
+   /** @todo exiptodo: 
+    *  - the parameters changed in SCIPsetReducedsolve() refer to a pure branch-and-bound alorithm. they have to be 
+    *    adapted when other solving techniques, like presolving, are incorporated into the reduced version of SCIP.
     */
-   SCIP_CALL( SCIPsetExactsolve(scip) );
+   /* load parameter settings needed to obtain reduced version of SCIP and to support EXACTSOLVE flag if activated */
+   SCIP_CALL( SCIPsetReducedsolve(scip) );
 #else
+
+   /* include all default plugins into SCIP */
    SCIP_CALL( SCIPincludeConshdlrLinear(scip) ); /* linear must be first due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrAnd(scip) );
    SCIP_CALL( SCIPincludeConshdlrBounddisjunction(scip) );
