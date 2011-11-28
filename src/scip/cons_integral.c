@@ -185,8 +185,8 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
          
             mpq_init(solvalexact);
 
-            /**@todo: ?????????
-             * - This only works if presolving is disabled (solval may already be an approximation since 
+            /**@todo exiptodo: presolving extension 
+             * - this only works if presolving is disabled (solval may already be an approximation since 
              *   solution values of aggregated variables are calculated in floating point arithmetic in SCIPgetSolVal()) 
              */ 
             mpq_set_d(solvalexact, solval);
