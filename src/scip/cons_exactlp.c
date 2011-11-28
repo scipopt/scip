@@ -2291,7 +2291,7 @@ SCIP_RETCODE addRelaxation(
    {
       if( !SCIProwIsInLP(consdata->rows[r]) )
       {
-         /** @todo exiptodo: is it be better eg for basis transfer between LP and LPEX to force the cut to enter the LP? */
+         /** @todo exiptodo: is it better e.g. for basis transfer between LP and LPEX to force the cut to enter the LP? */
          SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[r], TRUE) ); 
       }
    }
