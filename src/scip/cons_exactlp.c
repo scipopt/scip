@@ -5828,7 +5828,7 @@ SCIP_RETCODE provedBoundInterval(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
    SCIP_CONSDATA*        consdata,           /**< exactlp constraint data */
-   SCIP_Bool             usefarkas,  
+   SCIP_Bool             usefarkas,          /**< use y = dual farkas and c = 0 instead of y = dual solution and c = obj? */
    SCIP_Real*            boundval            /**< value of dual bound */
    )
 {
@@ -6053,7 +6053,7 @@ SCIP_RETCODE provedBoundRational(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
    SCIP_CONSDATA*        consdata,           /**< exactlp constraint data */
-   SCIP_Bool             usefarkas,
+   SCIP_Bool             usefarkas,          /**< use y = dual farkas and c = 0 instead of y = dual solution and c = obj? */
    mpq_t*                boundval            /**< value of dual bound */
    )
 {
