@@ -2023,13 +2023,13 @@ SCIP_RETCODE priceAndCutLoop(
          }
 
          /* call primal heuristics that are applicable during node LP solving loop */
-         if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
+         if( !*cutoff && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
          {
             SCIP_Bool foundsol;
-            
+
             SCIP_CALL( SCIPprimalHeuristics(set, stat, primal, tree, lp, NULL, SCIP_HEURTIMING_DURINGLPLOOP, &foundsol) );
             assert(SCIPbufferGetNUsed(set->buffer) == 0);
-            
+
             *lperror = *lperror || lp->resolvelperror;
          }
       }
