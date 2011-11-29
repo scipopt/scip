@@ -302,8 +302,6 @@ SCIP_RETCODE propdataInit(
 {
    SCIP_EVENTHDLR* eventhdlr;
    SCIP_VAR** vars;
-   SCIP_Real cutoffbound;
-   SCIP_Real pseudoobjval;
    int nvars;
    int nbinvars;
    int nintvars;
@@ -421,23 +419,10 @@ SCIP_RETCODE propdataInit(
    propdata->firstnonfixed = 0;
    propdata->nnewvars = 0;
 
-   pseudoobjval = SCIPgetPseudoObjval(scip);
-
-   /* check pseudo objective */
-   if( pseudoobjval > propdata->glbpseudoobjval )
-   {
-      propdata->glbpropagated = FALSE;
-      propdata->glbpseudoobjval = pseudoobjval;
-   }
-
-   cutoffbound =  SCIPgetCutoffbound(scip);
-
-   /* check current cutoff bound */
-   if( cutoffbound < propdata->cutoffbound )
-   {
-      propdata->glbpropagated = FALSE;
-      propdata->cutoffbound = cutoffbound;
-   }
+   /* due to scaling after presolving we need to update the global pseudoactivity and the cutoffbound */
+   propdata->glbpropagated = FALSE;
+   propdata->glbpseudoobjval = SCIPgetPseudoObjval(scip);
+   propdata->cutoffbound = SCIPgetCutoffbound(scip);
 
    return SCIP_OKAY;
 }
