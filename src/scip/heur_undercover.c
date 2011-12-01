@@ -12,8 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_DEBUG
-#define STATISTIC_INFORMATION /* uncomment to get statistical output at the end of undercover run */
+/*#define STATISTIC_INFORMATION /* uncomment to get statistical output at the end of undercover run */
 
 /**@file   heur_undercover.c
  * @brief  Undercover primal heuristic for MIQCPs
@@ -1214,6 +1213,11 @@ SCIP_RETCODE createCoveringProblem(
       for( i = 0; i < nvars; ++i)
          nnonzs += termcounter[i];
       SCIPinfoMessage(scip, NULL, "UCstats nnz/var: %9.6f\n", nnonzs/(SCIP_Real)nvars); 
+      nnonzs = 0;
+      for( i = 0; i < nvars; ++i)
+         if( conscounter[i] > 0 )
+            nnonzs++;
+      SCIPinfoMessage(scip, NULL, "UCstats nlvars: %6d\n", nnonzs);
       );
 
    /* free counter arrays for weighted objectives */
@@ -2431,7 +2435,7 @@ SCIP_RETCODE SCIPapplyUndercover(
 
    STATISTIC(
       if( ncovers == 0 && success )
-         SCIPinfoMessage(scip, NULL, "UCstats coversize: %9.6f\n", 100*coversize /(SCIP_Real)nvars); 
+         SCIPinfoMessage(scip, NULL, "UCstats coversize abs: %6d rel: %9.6f\n", coversize, 100*coversize /(SCIP_Real)nvars); 
       );
 
       assert(coversize >= 0);
