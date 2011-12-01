@@ -36,6 +36,7 @@
 #include "scip/tree.h"
 #include "scip/branch.h"
 #include "scip/cons.h"
+#include "scip/scip.h"
 #ifdef EXACTSOLVE
 #include "scip/cons_exactlp.h"
 #endif
@@ -1570,7 +1571,7 @@ void SCIPprobPrintStatistics(
       SCIPgetNInfiniteIntegerBounds(prob->conss[0]));
    SCIPmessageFPrintInfo(file, "  Constraints      : %d initial, %d maximal, %d linear (%d by split), would split %d conss for FP-relaxation\n", 
       prob->startnconss, prob->maxnconss, SCIPgetNConssExactlp(prob->conss[0]), 
-      SCIPuseFPRelaxation(set->scip) ? SCIPgetNSplitconssExactlp(prob->conss[0]) : 0,
+      set->misc_usefprelax ? SCIPgetNSplitconssExactlp(prob->conss[0]) : 0,
       SCIPgetNSplitconssExactlp(prob->conss[0]));
    SCIPmessageFPrintInfo(file, "  Nonzeros         : %d (%d integral)\n", SCIPgetNNonzExactlp(prob->conss[0]), 
       SCIPgetNIntegralExactlp(prob->conss[0]));

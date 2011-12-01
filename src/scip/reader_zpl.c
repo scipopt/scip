@@ -1955,8 +1955,6 @@ SCIP_DECL_READERREAD(readerReadZpl)
    {
       /* transform the problem such that adding primal solutions is possible */
       SCIP_CALL( SCIPtransformProb(scip) );
-#ifdef EXACTSOLVE
-#endif
       SCIP_CALL( SCIPcreateSol(scip, &startsol, NULL) );
       for( i = 0; i < nstartvals_; i++ )
       {

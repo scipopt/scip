@@ -861,7 +861,7 @@ endif
 
 .PHONY: lpiexdepend
 lpiexdepend:
-ifneq ($(LPS),none)
+ifneq ($(LPSEX),none)
 ifeq ($(LINKER),C)
 		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(LPIEXLIBSRC) \
 		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
