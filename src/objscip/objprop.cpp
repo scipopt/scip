@@ -234,7 +234,7 @@ SCIP_DECL_PROPEXEC(propExecObj)
    assert(propdata->objprop != NULL);
 
    /* call virtual method of prop object */
-   SCIP_CALL( propdata->objprop->scip_exec(scip, prop, result) );
+   SCIP_CALL( propdata->objprop->scip_exec(scip, prop, proptiming, result) );
 
    return SCIP_OKAY;
 }

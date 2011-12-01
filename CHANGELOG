@@ -10,6 +10,8 @@ interface
   SCIPgetNBarrierLPs(), SCIPgetNResolveLPs(), SCIPgetNPrimalResolveLPs(), SCIPgetNDualResolveLPs(), SCIPgetNNodeLPs(),
   SCIPgetNNodeInitLPs(), SCIPgetNDivingLPs(), SCIPgetNStrongbranchs(), SCIPgetNRootStrongbranchs() now return a longint
   instead of an integer
+- added propagation timing as parameter "proptiming" to SCIP_DECL_CONSPROP() and SCIP_DECL_PROPEXEC() as well as to
+  the corresponding C++ wrapper classes
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with

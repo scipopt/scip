@@ -303,7 +303,7 @@ SCIP_RETCODE propagationRound(
 
       SCIPdebugMessage("calling propagator <%s>\n", SCIPpropGetName(set->props[i]));
 
-      SCIP_CALL( SCIPpropExec(set->props[i], set, stat, depth, onlydelayed, &result) );
+      SCIP_CALL( SCIPpropExec(set->props[i], set, stat, depth, onlydelayed, timingmask, &result) );
       *delayed = *delayed || (result == SCIP_DELAYED);
       *propagain = *propagain || (result == SCIP_REDUCEDDOM);
 
@@ -339,7 +339,7 @@ SCIP_RETCODE propagationRound(
       SCIPdebugMessage("calling propagation method of constraint handler <%s>\n", SCIPconshdlrGetName(set->conshdlrs[i]));
 
       SCIP_CALL( SCIPconshdlrPropagate(set->conshdlrs[i], blkmem, set, stat, depth, fullpropagation, onlydelayed,
-            &result) );
+            timingmask, &result) );
       *delayed = *delayed || (result == SCIP_DELAYED);
       *propagain = *propagain || (result == SCIP_REDUCEDDOM);
 
@@ -378,7 +378,7 @@ SCIP_RETCODE propagationRound(
 
       SCIPdebugMessage("calling propagator <%s>\n", SCIPpropGetName(set->props[i]));
 
-      SCIP_CALL( SCIPpropExec(set->props[i], set, stat, depth, onlydelayed, &result) );
+      SCIP_CALL( SCIPpropExec(set->props[i], set, stat, depth, onlydelayed, timingmask, &result) );
       *delayed = *delayed || (result == SCIP_DELAYED);
       *propagain = *propagain || (result == SCIP_REDUCEDDOM);
 

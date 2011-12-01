@@ -289,6 +289,7 @@ public:
    virtual SCIP_RETCODE scip_exec(
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_PROP*         prop,               /**< the propagator itself */
+      SCIP_PROPTIMING    proptiming,         /**< current point in the node solving process */
       SCIP_RESULT*       result              /**< pointer to store the result of the propagation call */
       ) = 0;
 

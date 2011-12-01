@@ -583,6 +583,7 @@ SCIP_RETCODE SCIPpropExec(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    int                   depth,              /**< depth of current node */
    SCIP_Bool             execdelayed,        /**< execute propagator even if it is marked to be delayed */
+   SCIP_PROPTIMING       proptiming,         /**< current point in the node solving process */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -601,21 +602,21 @@ SCIP_RETCODE SCIPpropExec(
       {
          SCIP_Longint oldndomchgs;
          SCIP_Longint oldnprobdomchgs;
-         
+
          SCIPdebugMessage("executing propagator <%s>\n", prop->name);
-         
+
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
          oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
-         
+
          /* start timing */
          SCIPclockStart(prop->proptime, set);
-         
+
          /* call external propagation method */
-         SCIP_CALL( prop->propexec(set->scip, prop, result) );
-         
+         SCIP_CALL( prop->propexec(set->scip, prop, proptiming, result) );
+
          /* stop timing */
          SCIPclockStop(prop->proptime, set);
-         
+
          /* update statistics */
          if( *result != SCIP_DIDNOTRUN && *result != SCIP_DELAYED )
             prop->ncalls++;

@@ -193,6 +193,7 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *  input:
  *  - scip            : SCIP main data structure
  *  - prop            : the propagator itself
+ *  - proptiming      : current point in the node solving loop
  *  - result          : pointer to store the result of the propagation call
  *
  *  possible return values for *result:
@@ -202,7 +203,7 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *  - SCIP_DIDNOTRUN  : the propagator was skipped
  *  - SCIP_DELAYED    : the propagator was skipped, but should be called again
  */
-#define SCIP_DECL_PROPEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop, SCIP_RESULT* result)
+#define SCIP_DECL_PROPEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop,  SCIP_PROPTIMING proptiming, SCIP_RESULT* result)
 
 
 /** propagation conflict resolving method of propagator

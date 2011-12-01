@@ -404,6 +404,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - conss           : array of constraints to process
  *  - nconss          : number of constraints to process
  *  - nusefulconss    : number of useful (non-obsolete) constraints to process
+ *  - proptiming      : current point in the node solving loop
  *  - result          : pointer to store the result of the propagation call
  *
  *  possible return values for *result:
@@ -414,7 +415,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - SCIP_DELAYED    : the propagator was skipped, but should be called again
  */
 #define SCIP_DECL_CONSPROP(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, int nusefulconss, \
-      SCIP_RESULT* result)
+      SCIP_PROPTIMING proptiming, SCIP_RESULT* result)
 
 /** presolving method of constraint handler
  *
