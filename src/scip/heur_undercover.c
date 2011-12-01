@@ -12,7 +12,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/*#define STATISTIC_INFORMATION /* uncomment to get statistical output at the end of undercover run */
+
+/* uncomment to get statistical output at the end of undercover run */
+/* #define STATISTIC_INFORMATION */
 
 /**@file   heur_undercover.c
  * @brief  Undercover primal heuristic for MIQCPs
