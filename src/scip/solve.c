@@ -1981,7 +1981,7 @@ SCIP_RETCODE priceAndCutLoop(
                timingmask = SCIP_PROPTIMING_BEFORELP;
             }
             else
-               timingmask = 0x000;
+               timingmask = SCIP_PROPTIMING_DISABLED;
 
             /* call propagators that are applicable during node LP solving loop */
             if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
@@ -1991,7 +1991,7 @@ SCIP_RETCODE priceAndCutLoop(
                timingmask = timingmask | SCIP_PROPTIMING_DURINGLPLOOP;
             }
 
-            if( timingmask != 0 )
+            if( timingmask != SCIP_PROPTIMING_DISABLED )
             {
                SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, FALSE, timingmask, cutoff) );
                assert(SCIPbufferGetNUsed(set->buffer) == 0);
