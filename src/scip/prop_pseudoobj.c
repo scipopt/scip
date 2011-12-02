@@ -359,9 +359,25 @@ SCIP_RETCODE propdataInit(
          if( SCIPisZero(scip, obj) )
             continue;
 
-         /* store and capture variable */
          assert(k < nobjvars);
-         propdata->objvars[k] = var;
+
+         /* check if one of the non-binary variables is implicit binary */
+         if( k >= nobjbinvars && SCIPvarIsBinary(var) )
+         {
+            /* we cannot have a continuous variables at hand */
+            assert(k < nobjintvars);
+
+            /* move the first interger variable to end of the array */
+            propdata->objvars[k] = propdata->objvars[nobjbinvars];
+
+            /* place the binary variable at the end of the binary section */
+            propdata->objvars[nobjbinvars] = var;
+            nobjbinvars++;
+         }
+         else
+            propdata->objvars[k] = var;
+
+         /* captures the variable */
          SCIP_CALL( SCIPcaptureVar(scip, var) ) ;
 
          /* catch bound change events */
