@@ -36,7 +36,7 @@
 #define PROP_NAME              "pseudoobj"
 #define PROP_DESC              "pseudo objective function propagator"
 #define PROP_TIMING             SCIP_PROPTIMING_ALWAYS
-#define PROP_PRIORITY                 0 /**< propagator priority */ 
+#define PROP_PRIORITY            100000 /**< propagator priority */
 #define PROP_FREQ                     1 /**< propagator frequency */
 #define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 #define PROP_PRESOL_PRIORITY   +6000000 /**< priority of the presolving method (>= 0: before, < 0: after constraint handlers); combined with presolvers */
@@ -69,7 +69,7 @@
 struct SCIP_PropData
 {
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for global bound change events */
-   SCIP_VAR**            objvars;            /**< none binary variables with non-zero objective */
+   SCIP_VAR**            objvars;            /**< variables with non-zero objective */
    SCIP_Real             lastlowerbound;     /**< last lower bound which propagated */
    SCIP_Real             cutoffbound;        /**< last cutoff bound used in presolving */
    SCIP_Real             glbpseudoobjval;    /**< last pseudo objective used in presolving */
@@ -94,12 +94,12 @@ struct SCIP_PropData
 };
 
 /** compare variables w.r.t.
- *  (i)  the absolute value the objective coefficient;
- *  (ii) the locks which indicate most effect -- for the variables with a positive (negative) objective coefficient the
- *       down (up) lock is used since this lock indicates that tightened of the upper (lower) bound will triegger
- *       further domain propagations;
- * (iii) the other locks;
- * (iv)  variable problem index;
+ *  (i)   the absolute value the objective coefficient;
+ *  (ii)  the locks which indicate most effect -- for the variables with a positive (negative) objective coefficient the
+ *        down (up) lock is used since this lock indicates that tightened of the upper (lower) bound will triegger
+ *        further domain propagations;
+ *  (iii) the other locks;
+ *  (iv)  variable problem index;
  */
 static
 SCIP_DECL_SORTPTRCOMP(varCompObj)
@@ -241,7 +241,7 @@ SCIP_RETCODE dropVarEvents(
    return SCIP_OKAY;
 }
 
-/** counts the number if variables with none zero objective coefficient */
+/** counts the number of variables with none zero objective coefficient */
 static
 int countNoneZeroObjVars(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -293,7 +293,7 @@ SCIP_RETCODE propdataExit(
    return SCIP_OKAY;
 }
 
-/** initializate the propgator */
+/** initializate the propagator */
 static
 SCIP_RETCODE propdataInit(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -872,9 +872,6 @@ SCIP_RETCODE propagateCutoffbound(
       {
          SCIP_CALL( propagateCutoffboundVar(scip, prop, objvars[v], cutoffbound, pseudoobjval, &nchgbds, FALSE) );
       }
-
-      /* reset lastvarnum to first none binary variable */
-      // propdata->lastvarnum = nobjbinvars-1;
    }
    else
    {
