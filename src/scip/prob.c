@@ -1411,11 +1411,11 @@ void SCIPprobStoreRootSol(
    assert(prob != NULL);
    assert(prob->transformed);
 
-   for( v = 0; v < prob->nvars; ++v )
-      SCIPvarStoreRootSol(prob->vars[v], stat, lp, roothaslp);
-
    if( roothaslp )
    {
+      for( v = 0; v < prob->nvars; ++v )
+         SCIPvarStoreRootSol(prob->vars[v], stat, lp, roothaslp);
+
       SCIPlpSetRootLPIsRelax(lp, SCIPlpIsRelax(lp));
       SCIPlpStoreRootObjval(lp, set);
    }
