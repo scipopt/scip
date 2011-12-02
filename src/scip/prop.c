@@ -888,6 +888,16 @@ SCIP_Bool SCIPpropIsDelayed(
    return prop->delay;
 }
 
+/** should propagator be delayed during presolving, if other propagators found reductions? */
+SCIP_Bool SCIPpropIsPresolDelayed(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return prop->presoldelay;
+}
+
 /** was propagator delayed at the last call? */
 SCIP_Bool SCIPpropWasDelayed(
    SCIP_PROP*            prop                /**< propagator */

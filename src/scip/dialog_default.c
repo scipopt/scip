@@ -1025,8 +1025,8 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayPropagators)
 
    /* display list of propagators */
    SCIPdialogMessage(scip, NULL, "\n");
-   SCIPdialogMessage(scip, NULL, " propagator           priority  freq  description\n");
-   SCIPdialogMessage(scip, NULL, " ----------           --------  ----  -----------\n");
+   SCIPdialogMessage(scip, NULL, " propagator           propprio  freq  presprio  description\n");
+   SCIPdialogMessage(scip, NULL, " ----------           --------  ----  --------  -----------\n");
    for( i = 0; i < nprops; ++i )
    {
       SCIPdialogMessage(scip, NULL, " %-20s ", SCIPpropGetName(props[i]));
@@ -1034,6 +1034,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayPropagators)
          SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
       SCIPdialogMessage(scip, NULL, "%8d%c ", SCIPpropGetPriority(props[i]), SCIPpropIsDelayed(props[i]) ? 'd' : ' ');
       SCIPdialogMessage(scip, NULL, "%4d  ", SCIPpropGetFreq(props[i]));
+      SCIPdialogMessage(scip, NULL, "%8d%c ", SCIPpropGetPresolPriority(props[i]), SCIPpropIsPresolDelayed(props[i]) ? 'd' : ' ');
       SCIPdialogMessage(scip, NULL, "%s", SCIPpropGetDesc(props[i]));
       SCIPdialogMessage(scip, NULL, "\n");
    }
