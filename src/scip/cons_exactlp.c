@@ -46,8 +46,6 @@
  */
 #include "mpfr.h" /* mpfr.h has to be included before gmp.h */
 #include "gmp.h" 
-#include "EGlib.h" 
-#include "QSopt_ex.h" 
 
 #include "scip/cons_exactlp.h"
 #include "scip/intervalarith.h"
@@ -785,8 +783,8 @@ SCIP_RETCODE conshdlrdataCreate(
 
    SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
 
-   /** @todo exiptodo: is there a better place to call QSexactStart(), also for QSexactClear()? */
-   QSexactStart(); 
+   /* initialize exact LP solver */
+   SCIPlpiexStart();
 
    /* open exact LP Solver interface */
    SCIP_CALL( SCIPlpiexCreate(&(*conshdlrdata)->lpiex, NULL, SCIP_OBJSEN_MINIMIZE) );
@@ -801,10 +799,10 @@ SCIP_RETCODE conshdlrdataCreate(
    mpq_init((*conshdlrdata)->posinfinity);
    mpq_init((*conshdlrdata)->neginfinity);
    mpq_init((*conshdlrdata)->lpiexuobjlim);
-
-   mpq_set((*conshdlrdata)->posinfinity, *SCIPlpiexPosInfinity((*conshdlrdata)->lpiex));
-   mpq_set((*conshdlrdata)->neginfinity, *SCIPlpiexNegInfinity((*conshdlrdata)->lpiex));
-   mpq_set((*conshdlrdata)->lpiexuobjlim, *SCIPlpiexPosInfinity((*conshdlrdata)->lpiex));
+   
+   SCIPlpiexPosInfinity((*conshdlrdata)->lpiex, &(*conshdlrdata)->posinfinity);
+   SCIPlpiexNegInfinity((*conshdlrdata)->lpiex, &(*conshdlrdata)->neginfinity);
+   SCIPlpiexPosInfinity((*conshdlrdata)->lpiex, &(*conshdlrdata)->lpiexuobjlim);
 
 #ifdef USEOBJLIM
    SCIP_CALL( SCIPlpiexSetRealpar((*conshdlrdata)->lpiex, SCIP_LPPAR_UOBJLIM, (*conshdlrdata)->lpiexuobjlim) ); 
@@ -909,8 +907,8 @@ SCIP_RETCODE conshdlrdataFree(
 
    SCIPfreeMemory(scip, conshdlrdata);
 
-   /** @todo exiptodo: is there a better place to call QSexactClear(), also for QSexactStart()? */
-   QSexactClear();
+   /* deinitialize exact LP solver */
+   SCIPlpiexEnd();
 
    return SCIP_OKAY;
 }
@@ -2499,10 +2497,11 @@ SCIP_RETCODE solveLPEX(
    )
 {
    SCIP_RETCODE retcode;
+
    int iterations;
    int ncols;
    int nrows;
-
+   
    assert(scip != NULL);
    assert(lperror != NULL);
 
@@ -2523,7 +2522,7 @@ SCIP_RETCODE solveLPEX(
       mpq_init(uobjlim);
       
       if( SCIPisInfinity(scip, SCIPgetCutoffbound(scip)) )
-         mpq_set(uobjlim, *SCIPlpiexPosInfinity(conshdlrdata->lpiex));
+         SCIPlpiexPosInfinity(conshdlrdata->lpiex, &uobjlim);
       else
          mpq_set_d(uobjlim, SCIPgetCutoffbound(scip));
 

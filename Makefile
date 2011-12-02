@@ -344,7 +344,6 @@ LPIEXLIBSHORTNAME =	lpiex$(LPSEX)
 LPIEXLIBNAME	=	$(LPIEXLIBSHORTNAME)-$(VERSION)
 LPIEXLIBOBJ	=
 LPIEXLIBSRC	=
-LPIEXUSED	=
 LPSEXOPTIONS	=
 
 
@@ -364,13 +363,13 @@ LPIINSTMSG	+=	"\n  -> \"qsexinc\" is the path to the QSopt_ex \"include\" direct
 LPIINSTMSG	+=	" -> \"libqsoptex.*\" is the path to the QSopt_ex library, e.g., \"<QSopt_ex-path>/lib/qsoptex.a\".\n"
 LPIINSTMSG	+=	" -> \"EGlibinc\" is the path to the EGlib \"include\" directory, e.g., \"<QSopt_ex-path/EGlib>\".\n"
 LPIINSTMSG	+=	" -> \"libeglib.*\" is the path to the QSopt_ex library, e.g., \"<QSopt_ex-path>/EGlib/lib/EGlib.a\".\n"
-LPIEXUSED	=	qsoex
 endif
 
 LPSEXOPTIONS	+=	none
 ifeq ($(LPSEX),none)
 LPSEXLDFLAGS   	=
-LPIEXUSED	=	none
+LPIEXLIBOBJ    	= 	scip/lpiex_none.o scip/bitencode.o blockmemshell/memory.o scip/message.o
+LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPIEXLIBOBJ:.o=.c))
 endif
 
 LPIEXLIB	=	$(LPIEXLIBNAME).$(BASE)
@@ -1065,7 +1064,7 @@ endif
 
 .PHONY: checklpsexdefine
 checklpsexdefine:
-ifeq ($(LPIEXUSED),)
+ifeq ($(LPIEXLIBOBJ),)
 		$(error invalid exact LP solver selected: LPSEX=$(LPSEX). Possible options are: $(LPSEXOPTIONS))
 endif
 

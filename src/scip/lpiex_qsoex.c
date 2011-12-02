@@ -370,6 +370,26 @@ void* SCIPlpiexGetSolverPointer(
 /**@name LPI Creation and Destruction Methods */
 /**@{ */
 
+/** calls initializator of LP solver; this is mainly needed for defining constants in extended and rational precision */
+void SCIPlpiexStart(
+   void
+   )
+{
+   assert(!__QSexact_setup);
+   QSexactStart();
+}
+
+/** calls deinitializator of LP solver; this is needed for freeing all internal data of the solver, like constants in 
+ *  extended and rational precision 
+ */
+void SCIPlpiexEnd(
+   void
+   )
+{
+   assert(__QSexact_setup);
+   QSexactClear();
+}
+
 /** creates an LP problem object
  * @return SCIP_OK on success
  * */
@@ -2909,11 +2929,14 @@ SCIP_RETCODE SCIPlpiexSetRealpar(
 /**@{ */
 
 /** returns value treated as positive infinity in the LP solver */
-const mpq_t* SCIPlpiexPosInfinity(
-   SCIP_LPIEX*           lpi             /**< LP interface structure */
+void SCIPlpiexPosInfinity(
+   SCIP_LPIEX*           lpi,            /**< LP interface structure */
+   mpq_t*                infval          /**< pointer to store positive infinity value of LP solver */
    )
-{  /*lint --e{715} */
-   return ((const mpq_t*)(&(mpq_ILL_MAXDOUBLE)));
+{
+   assert(infval != NULL);
+
+   mpq_set(*infval, mpq_ILL_MAXDOUBLE);
 }
 
 /** checks if given value is treated as positive infinity in the LP solver */
@@ -2926,11 +2949,14 @@ SCIP_Bool SCIPlpiexIsPosInfinity(
 }
 
 /** returns value treated as negative infinity in the LP solver */
-const mpq_t* SCIPlpiexNegInfinity(
-   SCIP_LPIEX*           lpi             /**< LP interface structure */
+void SCIPlpiexNegInfinity(
+   SCIP_LPIEX*           lpi,            /**< LP interface structure */
+   mpq_t*                infval          /**< pointer to store negative infinity value of LP solver */
    )
 {  /*lint --e{715} */
-   return ((const mpq_t*)(&(mpq_ILL_MINDOUBLE)));
+   assert(infval != NULL);
+
+   mpq_set(*infval, mpq_ILL_MINDOUBLE);
 }
 
 /** checks if given value is treated as negative infinity in the LP solver */
