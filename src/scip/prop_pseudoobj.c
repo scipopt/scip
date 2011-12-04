@@ -22,7 +22,6 @@
  * objective value can be seen as minimum activity of the linear objective function. Using this, this propagator checks
  * if variables with non-zero objective coefficients can exceed the cutoff bound. If this is the case the corresponding
  * bound can be tightened.
- *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -553,7 +552,7 @@ SCIP_RETCODE propagateCutoffboundVar(
    SCIP_VAR*             var,                /**< variable to propagate */
    SCIP_Real             cutoffbound,        /**< cutoff bound to use */
    SCIP_Real             pseudoobjval,       /**< pseudo objective value to use */
-   int*                  nchgbds,            /**< pointer to store the number of changed bounds */
+   SCIP_Bool*            tightened,          /**< pointer to store if the variable domain was tightened */
    SCIP_Bool             local               /**< propagate local bounds, otherwise global bounds */
    )
 {
@@ -561,7 +560,6 @@ SCIP_RETCODE propagateCutoffboundVar(
    SCIP_Real ub;
    SCIP_Real obj;
    SCIP_Bool infeasible;
-   SCIP_Bool tightened;
 
    assert(!SCIPisInfinity(scip, -pseudoobjval));
    assert(!SCIPisInfinity(scip, cutoffbound));
@@ -592,27 +590,24 @@ SCIP_RETCODE propagateCutoffboundVar(
 
       if( local )
       {
-         SCIP_CALL( SCIPinferVarUbProp(scip, var, newub, prop, 0, FALSE, &infeasible, &tightened) );
+         SCIP_CALL( SCIPinferVarUbProp(scip, var, newub, prop, 0, FALSE, &infeasible, tightened) );
          assert(!infeasible);
 
-         if( tightened ) /* might not be tightened due to numerical reasons */
+         if( *tightened ) /* might not be tightened due to numerical reasons */
          {
             SCIPdebugMessage(" -> new (local) upper bound of variable <%s>[%.10f,%.10f]: %.10f\n",
                SCIPvarGetName(var), lb, ub, newub);
-            (*nchgbds)++;
          }
       }
       else
       {
-         SCIP_CALL( SCIPtightenVarUbGlobal(scip, var, newub, FALSE, &infeasible, &tightened) );
+         SCIP_CALL( SCIPtightenVarUbGlobal(scip, var, newub, FALSE, &infeasible, tightened) );
          assert(!infeasible);
 
-         if( tightened )
+         if( *tightened )
          {
             SCIPdebugMessage(" -> new (global) upper bound of variable <%s>[%.10f,%.10f]: %.10f\n",
                SCIPvarGetName(var), lb, ub, newub);
-
-            (*nchgbds)++;
          }
       }
    }
@@ -624,28 +619,24 @@ SCIP_RETCODE propagateCutoffboundVar(
 
       if( local )
       {
-         SCIP_CALL( SCIPinferVarLbProp(scip, var, newlb, prop, 0, FALSE, &infeasible, &tightened) );
+         SCIP_CALL( SCIPinferVarLbProp(scip, var, newlb, prop, 0, FALSE, &infeasible, tightened) );
          assert(!infeasible);
 
-         if( tightened ) /* might not be tightened due to numerical reasons */
+         if( *tightened ) /* might not be tightened due to numerical reasons */
          {
             SCIPdebugMessage(" -> new (local) lower bound of variable <%s>[%g,%g]: %g\n",
                SCIPvarGetName(var), lb, ub, newlb);
-
-            (*nchgbds)++;
          }
       }
       else
       {
-         SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, newlb, FALSE, &infeasible, &tightened) );
+         SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, newlb, FALSE, &infeasible, tightened) );
          assert(!infeasible);
 
-         if( tightened )
+         if( *tightened )
          {
             SCIPdebugMessage(" -> new (global) lower bound of variable <%s>[%g,%g]: %g\n",
                SCIPvarGetName(var), lb, ub, newlb);
-
-            (*nchgbds)++;
          }
       }
    }
@@ -657,83 +648,109 @@ SCIP_RETCODE propagateCutoffboundVar(
 static
 SCIP_RETCODE propagateGlobally(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PROP*            prop                /**< propagator */
+   SCIP_PROP*            prop,               /**< propagator */
+   int*                  nchgbds,            /**< pointer to store the number of bound changes */
+   SCIP_Bool*            cutoff              /**< pointer to store if a cutoff was detected */
    )
 {
    SCIP_PROPDATA* propdata;
+   SCIP_VAR** objvars;
+   SCIP_Real pseudoobjval;
+   SCIP_Real cutoffbound;
+   int nobjbinvars;
+   int nobjvars;
+   int v;
 
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
-   /* check if we have a new cutoff bound; in that case we globally propagate this new bound */
-   if( propdata->propcutoffbound && !propdata->glbpropagated )
+   pseudoobjval = propdata->glbpseudoobjval;
+   cutoffbound = propdata->cutoffbound;
+
+   /* check if the global pseudo objective value (minimum activity of the objective function) is greater or equal to
+    * the cutoff bound
+    */
+   if( SCIPisGE(scip, pseudoobjval, cutoffbound) )
    {
-      SCIP_VAR** objvars;
-      SCIP_Real pseudoobjval;
-      SCIP_Real cutoffbound;
-      int nobjbinvars;
-      int nobjvars;
-      int nchgbds;
-      int v;
+      *cutoff = TRUE;
+      return SCIP_OKAY;
+   }
 
-      pseudoobjval = propdata->glbpseudoobjval;
-      cutoffbound = propdata->cutoffbound;
+   objvars = propdata->objvars;
+   nobjbinvars = propdata->nobjbinvars;
+   nobjvars = propdata->nobjvars;
 
-      /* check if the global pseudo objective value (minimum activity of the objective function) is greater or equal to
-       * the cutoff bound
-       */
-      if( SCIPisGE(scip, pseudoobjval, cutoffbound) )
+   if( !SCIPisInfinity(scip, -pseudoobjval) )
+   {
+      SCIP_Bool tightened;
+
+      /* always propagate the binary variables completely */
+      for( v = propdata->glbfirstnonfixed; v < nobjbinvars; ++v )
       {
-         /* we are done with solving since a global pseudo activity is greater or equal to the cutoff bound */
-         SCIP_CALL( SCIPcutoffNode(scip, SCIPgetRootNode(scip)) );
-         return SCIP_OKAY;
-      }
+         SCIP_VAR* var;
 
-      objvars = propdata->objvars;
-      nobjbinvars = propdata->nobjbinvars;
-      nobjvars = propdata->nobjvars;
-      nchgbds = 0;
+         var =  objvars[v];
+         assert(var != NULL);
 
-      if( !SCIPisInfinity(scip, -pseudoobjval) )
-      {
-         /* always propagate the binary variables completely */
-         for( v = propdata->glbfirstnonfixed; v < nobjbinvars; ++v )
+         /* check if the variables is already globally fixed; if so continue with the potential candidate */
+         if( SCIPvarGetLbGlobal(var) > 0.5 || SCIPvarGetUbGlobal(var) < 0.5)
+            continue;
+
+         /* try to tighten the variable bound */
+         SCIP_CALL( propagateCutoffboundVar(scip, prop, var, cutoffbound, pseudoobjval, &tightened, FALSE) );
+
+         /* the binary variables are sorted in non-increasing manner w.r.t. the absolute value of their objective
+          * coefficient; These values are the increase in the pseudo objective activity we would get if we fix the
+          * variable to its worse bound; hence we can stop if for a variable this potential increase is not enough
+          * too exceed the cutoff bound; It is not enough to fix it.
+          */
+         if( !tightened )
          {
-            SCIP_VAR* var;
-
-            var =  objvars[v];
-            assert(var != NULL);
-
-            /* check if the variables is already globally fixed; if so continue with the potential candidate */
-            if( SCIPvarGetLbGlobal(var) > 0.5 || SCIPvarGetUbGlobal(var) < 0.5)
-               continue;
-
-            /* try to tighten the variable bound */
-            SCIP_CALL( propagateCutoffboundVar(scip, prop, var, cutoffbound, pseudoobjval, &nchgbds, FALSE) );
-
-            /* the binary variables are sorted in non-increasing manner w.r.t. the absolute value of their objective
-             * coefficient; These values are the increase in the pseudo objective activity we would get if we fix the
-             * variable to its worse bound; hence we can stop if for a variable this potential increase is not enough
-             * too exceed the cutoff bound; It is not enough to fix it.
-             */
-            if( SCIPvarGetLbGlobal(var) < 0.5 && SCIPvarGetUbGlobal(var) > 0.5)
-            {
-               SCIPdebugMessage("interrupt global pseudo objective propagation w.r.t. cutoff bound <%.15g> for binary variables after %d from %d binary variables\n",
-                  cutoffbound, v, nobjbinvars);
-               break;
-            }
-         }
-         propdata->glbfirstnonfixed = v;
-         propdata->firstnonfixed = MAX(propdata->firstnonfixed, v);
-
-         /* propagate the none binary variables completely */
-         for( v = nobjbinvars; v < nobjvars; ++v )
-         {
-            SCIP_CALL( propagateCutoffboundVar(scip, prop, objvars[v], cutoffbound, pseudoobjval, &nchgbds, FALSE) );
+            SCIPdebugMessage("interrupt global pseudo objective propagation w.r.t. cutoff bound <%.15g> for binary variables after %d from %d binary variables\n",
+               cutoffbound, v, nobjbinvars);
+            break;
          }
 
-         propdata->glbpropagated = TRUE;
+         /* @note The variable might not be globally fixed right away since this would destroy the local internal
+          *       data structure of a search node; the bound change is in that case pending; hence we cannot assert
+          *       that the variable is globally fixed
+          */
+         (*nchgbds)++;
       }
+      propdata->glbfirstnonfixed = v;
+      propdata->firstnonfixed = MAX(propdata->firstnonfixed, v);
+
+#ifndef NDEBUG
+      /* check if the abort criteria for the binary variables works */
+      for( ; v < nobjbinvars; ++v )
+      {
+         SCIP_VAR* var;
+
+         var = objvars[v];
+         assert(var != NULL);
+
+         /* check if the variable is already locally fixed; in that case we just continue with the next potential
+          * candidate
+          */
+         if( SCIPvarGetLbGlobal(var) > 0.5 || SCIPvarGetUbGlobal(var) < 0.5)
+            continue;
+
+         /* try to locally fix the variable bound */
+         SCIP_CALL( propagateCutoffboundVar(scip, prop, var, cutoffbound, pseudoobjval, &tightened, FALSE) );
+         assert(!tightened);
+      }
+#endif
+
+      /* propagate the none binary variables completely */
+      for( v = nobjbinvars; v < nobjvars; ++v )
+      {
+         SCIP_CALL( propagateCutoffboundVar(scip, prop, objvars[v], cutoffbound, pseudoobjval, &tightened, FALSE) );
+
+         if( tightened )
+            (*nchgbds)++;
+      }
+
+      propdata->glbpropagated = TRUE;
    }
 
    return SCIP_OKAY;
@@ -749,8 +766,11 @@ SCIP_RETCODE propagateCutoffbound(
 {
    SCIP_PROPDATA* propdata;
    SCIP_VAR** objvars;
+   SCIP_VAR* var;
    SCIP_Real pseudoobjval;
    SCIP_Real cutoffbound;
+   SCIP_Bool cutoff;
+   SCIP_Bool tightened;
    int nchgbds;
    int nobjbinvars;
    int nobjvars;
@@ -767,12 +787,9 @@ SCIP_RETCODE propagateCutoffbound(
    objvars = propdata->objvars;
    nobjvars = propdata->nobjvars;
    nobjbinvars = propdata->nobjbinvars;
-   assert(nobjvars == 0 || objvars != NULL);
+   assert(nobjvars > 0);
+   assert(objvars != NULL);
    assert(nobjbinvars <= nobjvars);
-
-   /* nothing to do for empty objective */
-   if( nobjvars == 0 )
-      return SCIP_OKAY;
 
    /* get current pseudo objective value and cutoff bound */
    pseudoobjval = SCIPgetPseudoObjval(scip);
@@ -796,8 +813,26 @@ SCIP_RETCODE propagateCutoffbound(
       propdata->cutoffbound = cutoffbound;
    }
 
-   /* first globally propagate new cutoff bound or pseudo objective activity */
-   SCIP_CALL( propagateGlobally(scip, prop) );
+   nchgbds = 0;
+   cutoff = FALSE;
+   (*result) = SCIP_DIDNOTFIND;
+
+   /* check if we have a new cutoff bound; in that case we globally propagate this new bound */
+   if( propdata->propcutoffbound && !propdata->glbpropagated )
+   {
+      /* first globally propagate new cutoff bound or pseudo objective activity */
+      SCIP_CALL( propagateGlobally(scip, prop, &nchgbds, &cutoff) );
+
+      if( cutoff )
+      {
+         /* we are done with solving since a global pseudo activity is greater or equal to the cutoff bound */
+         SCIP_CALL( SCIPcutoffNode(scip, SCIPgetRootNode(scip)) );
+
+         (*result) = SCIP_CUTOFF;
+
+         return SCIP_OKAY;
+      }
+   }
 
    /* check if the pseudo objective value (minimum activity of the objective function) is greater or equal to the cutoff
     * bound
@@ -823,8 +858,6 @@ SCIP_RETCODE propagateCutoffbound(
 
    SCIPdebugMessage("propagating pseudo objective function (pseudoobj: %g, cutoffbound: %g)\n", pseudoobjval, cutoffbound);
 
-   *result = SCIP_DIDNOTFIND;
-   nchgbds = 0;
 
    /* always propagate the binary variables completely; note that the variables before the firstnonfixed indexed are
     * already locally fixed and those before glbfirstnonfixed are already globally fixed
@@ -833,8 +866,6 @@ SCIP_RETCODE propagateCutoffbound(
    /* check that the variables before glbfirstnonfixed are globally fixed */
    for( v = 0; v < propdata->glbfirstnonfixed; ++v )
    {
-      SCIP_VAR* var;
-
       var =  objvars[v];
       assert(var != NULL);
 
@@ -843,8 +874,6 @@ SCIP_RETCODE propagateCutoffbound(
    /* check that the variables before firstnonfixed are locally fixed */
    for( v = propdata->glbfirstnonfixed; v < propdata->firstnonfixed; ++v )
    {
-      SCIP_VAR* var;
-
       var =  objvars[v];
       assert(var != NULL);
 
@@ -853,8 +882,6 @@ SCIP_RETCODE propagateCutoffbound(
 #endif
    for( v = propdata->firstnonfixed; v < nobjbinvars; ++v )
    {
-      SCIP_VAR* var;
-
       var =  objvars[v];
       assert(var != NULL);
 
@@ -865,29 +892,55 @@ SCIP_RETCODE propagateCutoffbound(
          continue;
 
       /* try to locally fix the variable bound */
-      SCIP_CALL( propagateCutoffboundVar(scip, prop, var, cutoffbound, pseudoobjval, &nchgbds, TRUE) );
+      SCIP_CALL( propagateCutoffboundVar(scip, prop, var, cutoffbound, pseudoobjval, &tightened, TRUE) );
 
       /* the binary variables are sorted in non-increasing manner w.r.t. the absolute value of their objective
        * coefficient; These values are the increase in the pseudo objective activity we would get if we fix the variable
        * to its worse bound; hence we can stop if for a variable this potential increase is not enough too exceed the
        * cutoff bound; It is not enough to fix it.
        */
-      if( SCIPvarGetLbLocal(var) < 0.5 && SCIPvarGetUbLocal(var) > 0.5)
+      if( !tightened )
       {
          SCIPdebugMessage("interrupt local pseudo objective propagation w.r.t. cutoff bound <%.15g> for binary variables after %d from %d binary variables\n",
             cutoffbound, v, nobjbinvars);
          break;
       }
+
+      /* check that the binary variable is locally fixed */
+      assert(SCIPvarGetLbLocal(var) > 0.5 || SCIPvarGetUbLocal(var) < 0.5);
+      nchgbds++;
    }
    propdata->firstnonfixed = v;
+
+#ifndef NDEBUG
+   /* check if the abort criteria for the binary variables works */
+   for( ; v < nobjbinvars; ++v )
+   {
+      var = objvars[v];
+      assert(var != NULL);
+
+      /* check if the variable is already locally fixed; in that case we just continue with the next potential
+       * candidate
+       */
+      if( SCIPvarGetLbLocal(var) > 0.5 || SCIPvarGetUbLocal(var) < 0.5)
+         continue;
+
+      /* try to locally fix the variable bound */
+      SCIP_CALL( propagateCutoffboundVar(scip, prop, var, cutoffbound, pseudoobjval, &tightened, TRUE) );
+      assert(!tightened);
+   }
+#endif
 
    /* tighten domains of none binary variables, if they would increase the pseudo objective value above the cutoff bound */
    if( propdata->propfullinroot && SCIPgetDepth(scip) == 0 )
    {
       for( v = nobjbinvars; v < nobjvars; ++v )
       {
-         SCIP_CALL( propagateCutoffboundVar(scip, prop, objvars[v], cutoffbound, pseudoobjval, &nchgbds, FALSE) );
+         SCIP_CALL( propagateCutoffboundVar(scip, prop, objvars[v], cutoffbound, pseudoobjval, &tightened, FALSE) );
       }
+
+      if( tightened )
+         nchgbds++;
    }
    else
    {
@@ -901,17 +954,16 @@ SCIP_RETCODE propagateCutoffbound(
       v = propdata->lastvarnum;
       for( c = 0; c < nobjvars - nobjbinvars && nuseless < nmaxuseless; ++c )
       {
-         int oldnchgbds;
-
          v++;
          if( v >= nobjvars )
             v = nobjbinvars;
 
-         oldnchgbds = nchgbds;
-         SCIP_CALL( propagateCutoffboundVar(scip, prop, objvars[v], cutoffbound, pseudoobjval, &nchgbds, TRUE) );
+         SCIP_CALL( propagateCutoffboundVar(scip, prop, objvars[v], cutoffbound, pseudoobjval, &tightened, TRUE) );
 
          /* check if the domain of the variable was reduced */
-         if( oldnchgbds == nchgbds )
+         if( tightened )
+            nchgbds++;
+         else
             nuseless++;
       }
       propdata->lastvarnum = v;
@@ -919,7 +971,7 @@ SCIP_RETCODE propagateCutoffbound(
 
    /* check if we chanced bounds */
    if( nchgbds > 0 )
-      *result = SCIP_REDUCEDDOM;
+      (*result) = SCIP_REDUCEDDOM;
 
    return SCIP_OKAY;
 }
@@ -1167,12 +1219,10 @@ SCIP_RETCODE propagateLowerbound(
    objvars = propdata->objvars;
    nobjvars = propdata->nobjvars;
    nobjbinvars = propdata->nobjbinvars;
-   assert(nobjvars == 0 || objvars != NULL);
+   assert(nobjvars > 0);
+   assert(objvars != NULL);
    assert(nobjbinvars <= nobjvars);
 
-   /* nothing to do for empty objective */
-   if( nobjvars == 0 )
-      return SCIP_OKAY;
 
    /* check if there is a chance to find a reduction */
    lowerbound = SCIPgetLowerbound(scip);
@@ -1198,17 +1248,10 @@ SCIP_RETCODE propagateLowerbound(
    for( k = 0; k < nobjbinvars && *result != SCIP_CUTOFF; ++k )
    {
       SCIP_VAR* var;
-#ifndef NDEBUG
-      SCIP_Real objval;
-#endif
 
       var = objvars[k];
       assert(var != NULL);
-
-#ifndef NDEBUG
-      objval = SCIPvarGetObj(var);
-      assert(!SCIPisZero(scip, objval));
-#endif
+      assert(!SCIPisZero(scip, SCIPvarGetObj(objvars[k])));
 
       SCIP_CALL( propagateLowerboundVar(scip, propdata, objvars[k], lowerbound, result) );
 
@@ -1388,6 +1431,8 @@ SCIP_DECL_PROPPRESOL(propPresolPseudoobj)
 
    if( cutoffbound < propdata->cutoffbound || pseudoobjval > propdata->glbpseudoobjval )
    {
+      SCIP_Bool tightened;
+
       *result = SCIP_DIDNOTFIND;
       oldnchgbds = *nchgbds;
 
@@ -1403,9 +1448,13 @@ SCIP_DECL_PROPPRESOL(propPresolPseudoobj)
          if( SCIPisZero(scip, SCIPvarGetObj(vars[v])) )
             continue;
 
-         SCIP_CALL( propagateCutoffboundVar(scip, prop, vars[v], cutoffbound, pseudoobjval, nchgbds, FALSE) );
+         SCIP_CALL( propagateCutoffboundVar(scip, prop, vars[v], cutoffbound, pseudoobjval, &tightened, FALSE) );
+
+         if( tightened )
+            (*nchgbds)++;
       }
 
+      /* evaluate if bound change was detected */
       if( *nchgbds > oldnchgbds )
          *result = SCIP_SUCCESS;
 
@@ -1442,6 +1491,10 @@ SCIP_DECL_PROPEXEC(propExecPseudoobj)
       /* initialize propdata data from scratch */
       SCIP_CALL( propdataInit(scip, propdata) );
    }
+
+   /* nothing to do for empty objective */
+   if( propdata->nobjvars == 0 )
+      return SCIP_OKAY;
 
    /* propagate c*x <= cutoff */
    SCIP_CALL( propagateCutoffbound(scip, prop, result) );
@@ -1654,10 +1707,10 @@ SCIP_RETCODE SCIPpropagateCutoffboundVar(
    SCIP_VAR*             var,                /**< variables to propagate */
    SCIP_Real             cutoffbound,        /**< cutoff bound to use */
    SCIP_Real             pseudoobjval,       /**< pseudo objective value to use */
-   int*                  nchgbds             /**< pointer to store the number of changed bounds */
+   SCIP_Bool*            tightened           /**< pointer to if the domain was tightened */
    )
 {
-   SCIP_CALL( propagateCutoffboundVar(scip, prop, var, cutoffbound, pseudoobjval, nchgbds, FALSE) );
+   SCIP_CALL( propagateCutoffboundVar(scip, prop, var, cutoffbound, pseudoobjval, tightened, FALSE) );
 
    return SCIP_OKAY;
 }
