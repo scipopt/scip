@@ -1409,8 +1409,8 @@ SCIP_RETCODE checkFixedVariables(
 
                zfix = consdata->rhs - SIGN(constant + consdata->xoffset) * consdata->pow(REALABS(constant + consdata->xoffset), consdata->exponent);
                zfix /= consdata->zcoef;
-               assert(SCIPisLE(scip, zbnds.inf, zfix) || !SCIPconshdlrGetData(conshdlr)->propagatecareful);
-               assert(SCIPisGE(scip, zbnds.sup, zfix) || !SCIPconshdlrGetData(conshdlr)->propagatecareful);
+               assert(SCIPisLE(scip, zbnds.inf, zfix));
+               assert(SCIPisGE(scip, zbnds.sup, zfix));
                zfix = MIN(SCIPvarGetUbGlobal(consdata->z), MAX(SCIPvarGetLbGlobal(consdata->z), zfix));
 
                zbnds.inf = zfix;
@@ -1546,8 +1546,8 @@ SCIP_RETCODE checkFixedVariables(
                   xfix = SIGN(xfix) * sqrt(REALABS(xfix)) - consdata->xoffset;
                else
                   xfix = SIGN(xfix) * pow(REALABS(xfix), 1.0/consdata->exponent) - consdata->xoffset;
-               assert(SCIPisLE(scip, xbnds.inf, xfix) || !SCIPconshdlrGetData(conshdlr)->propagatecareful);
-               assert(SCIPisGE(scip, xbnds.sup, xfix) || !SCIPconshdlrGetData(conshdlr)->propagatecareful);
+               assert(SCIPisLE(scip, xbnds.inf, xfix));
+               assert(SCIPisGE(scip, xbnds.sup, xfix));
                xfix = MIN(SCIPvarGetUbGlobal(consdata->x), MAX(SCIPvarGetLbGlobal(consdata->x), xfix));
 
                xbnds.inf = xfix;
