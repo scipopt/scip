@@ -1381,9 +1381,11 @@ SCIP_RETCODE checkFixedVariables(
          SCIP_INTERVAL zbnds;
          int naddconss;
 
+         naddconss = 0;
+
          /* x has been fixed to constant */
-         assert(SCIPisRelEQ(scip, SCIPvarGetLbGlobal(consdata->x), constant));
-         assert(SCIPisRelEQ(scip, SCIPvarGetUbGlobal(consdata->x), constant));
+         assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(consdata->x), constant));
+         assert(SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(consdata->x), constant));
 
          /* compute corresponding bounds on z */
          SCIPintervalSet(&xbnds, constant);
@@ -1391,9 +1393,36 @@ SCIP_RETCODE checkFixedVariables(
 
          SCIPdebugMessage("in cons <%s>: x = <%s> fixed to %g -> tighten <%s> to [%g, %g]\n", SCIPconsGetName(cons), SCIPvarGetName(consdata->x), constant, SCIPvarGetName(consdata->z), zbnds.inf, zbnds.sup);
 
-         /* tighten bounds on z accordingly */
-         naddconss = 0;
-         SCIP_CALL( tightenBounds(scip, consdata->z, zbnds, TRUE, cons, result, nchgbds, nfixedvars, &naddconss) );
+         if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
+         {
+            /* if sides are equal, then we should either fix z, or declare infeasibility */
+            if( SCIPisFeasLT(scip, SCIPvarGetUbGlobal(consdata->z), zbnds.inf) || SCIPisFeasGT(scip, SCIPvarGetLbGlobal(consdata->z), zbnds.sup) )
+            {
+               SCIPdebugMessage("bounds inconsistent -> cutoff\n");
+               *result = SCIP_CUTOFF;
+               return SCIP_OKAY;
+            }
+            else
+            {
+               /* compute fixing value for z as value corresponding to fixing of x, projected onto bounds of z */
+               SCIP_Real zfix;
+
+               zfix = consdata->rhs - SIGN(constant + consdata->xoffset) * consdata->pow(REALABS(constant + consdata->xoffset), consdata->exponent);
+               zfix /= consdata->zcoef;
+               assert(SCIPisLE(scip, zbnds.inf, zfix) || !SCIPconshdlrGetData(conshdlr)->propagatecareful);
+               assert(SCIPisGE(scip, zbnds.sup, zfix) || !SCIPconshdlrGetData(conshdlr)->propagatecareful);
+               zfix = MIN(SCIPvarGetUbGlobal(consdata->z), MAX(SCIPvarGetLbGlobal(consdata->z), zfix));
+
+               zbnds.inf = zfix;
+               zbnds.sup = zfix;
+               SCIP_CALL( tightenBounds(scip, consdata->z, zbnds, TRUE, cons, result, nchgbds, nfixedvars, &naddconss) );
+            }
+         }
+         else
+         {
+            /* tighten bounds on z accordingly */
+            SCIP_CALL( tightenBounds(scip, consdata->z, zbnds, TRUE, cons, result, nchgbds, nfixedvars, &naddconss) );
+         }
 
          /* delete constraint */
          SCIP_CALL( SCIPdelCons(scip, cons) );
@@ -1486,9 +1515,11 @@ SCIP_RETCODE checkFixedVariables(
          SCIP_INTERVAL zbnds;
          int naddconss;
 
+         naddconss = 0;
+
          /* z has been fixed to constant */
-         assert(SCIPisRelEQ(scip, SCIPvarGetLbGlobal(consdata->z), constant));
-         assert(SCIPisRelEQ(scip, SCIPvarGetUbGlobal(consdata->z), constant));
+         assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(consdata->z), constant));
+         assert(SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(consdata->z), constant));
 
          /* compute corresponding bounds on x */
          SCIPintervalSet(&zbnds, constant);
@@ -1496,9 +1527,39 @@ SCIP_RETCODE checkFixedVariables(
 
          SCIPdebugMessage("in cons <%s>: z = <%s> fixed to %g -> tighten <%s> to [%g, %g]\n", SCIPconsGetName(cons), SCIPvarGetName(consdata->z), constant, SCIPvarGetName(consdata->x), xbnds.inf, xbnds.sup);
 
-         /* tighten bounds on x accordingly */
-         naddconss = 0;
-         SCIP_CALL( tightenBounds(scip, consdata->x, xbnds, TRUE, cons, result, nchgbds, nfixedvars, &naddconss) );
+         if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
+         {
+            /* if sides are equal, then we should either fix x, or declare infeasibility */
+            if( SCIPisFeasLT(scip, SCIPvarGetUbGlobal(consdata->x), xbnds.inf) || SCIPisFeasGT(scip, SCIPvarGetLbGlobal(consdata->x), xbnds.sup) )
+            {
+               SCIPdebugMessage("bounds inconsistent -> cutoff\n");
+               *result = SCIP_CUTOFF;
+               return SCIP_OKAY;
+            }
+            else
+            {
+               /* compute fixing value for x as value corresponding to fixing of z, projected onto bounds of x */
+               SCIP_Real xfix;
+
+               xfix = consdata->rhs - consdata->zcoef * constant;
+               if( consdata->exponent == 2.0 )
+                  xfix = SIGN(xfix) * sqrt(REALABS(xfix)) - consdata->xoffset;
+               else
+                  xfix = SIGN(xfix) * pow(REALABS(xfix), 1.0/consdata->exponent) - consdata->xoffset;
+               assert(SCIPisLE(scip, xbnds.inf, xfix) || !SCIPconshdlrGetData(conshdlr)->propagatecareful);
+               assert(SCIPisGE(scip, xbnds.sup, xfix) || !SCIPconshdlrGetData(conshdlr)->propagatecareful);
+               xfix = MIN(SCIPvarGetUbGlobal(consdata->x), MAX(SCIPvarGetLbGlobal(consdata->x), xfix));
+
+               xbnds.inf = xfix;
+               xbnds.sup = xfix;
+               SCIP_CALL( tightenBounds(scip, consdata->x, xbnds, TRUE, cons, result, nchgbds, nfixedvars, &naddconss) );
+            }
+         }
+         else
+         {
+            /* tighten bounds on x accordingly */
+            SCIP_CALL( tightenBounds(scip, consdata->x, xbnds, TRUE, cons, result, nchgbds, nfixedvars, &naddconss) );
+         }
 
          /* delete constraint */
          SCIP_CALL( SCIPdelCons(scip, cons) );
@@ -2082,28 +2143,22 @@ SCIP_RETCODE propagateCons(
       {
          assert(!*cutoff);
 
-         /* propagate bounds on x:
+         /* propagate bounds on x (if not multiaggregated):
           *  (1) left hand side and bounds on z -> lower bound on x
           */
-         if( SCIPvarIsActive(SCIPvarGetProbvar(consdata->x)) ) /* cannot change bounds of multaggr vars */
+         if( SCIPvarIsActive(SCIPvarGetProbvar(consdata->x)) )
          {
-            if( consdata->zcoef > 0.0 )
+            /* if z is fixed, first compute new lower bound on x without tolerances
+             * if that is feasible, project new lower bound onto current bounds
+             *   otherwise, recompute with tolerances and continue as usual
+             */
+            if( SCIPisFeasEQ(scip, zlb, zub) )
             {
-               if( !SCIPisInfinity(scip, zub) )
-                  newlb = consdata->lhs - PROPSIDETOL - consdata->zcoef * (zub + PROPVARTOL);
-               else
-                  newlb = -SCIPinfinity(scip);
-            }
-            else
-            {
-               if( !SCIPisInfinity(scip, -zlb) )
-                  newlb = consdata->lhs - PROPSIDETOL - consdata->zcoef * (zlb - PROPVARTOL);
-               else
-                  newlb = -SCIPinfinity(scip);
-            }
+               assert(!SCIPisInfinity(scip, -zlb));
+               assert(!SCIPisInfinity(scip,  zub));
 
-            if( !SCIPisInfinity(scip, -newlb) )
-            {
+               newlb = consdata->lhs - consdata->zcoef * (consdata->zcoef > 0.0 ? zub : zlb);
+
                /* invert sign(x+offset)|x+offset|^(n-1) = y -> x = sign(y)|y|^(1/n) - offset */
                if( consdata->exponent == 2.0 )
                   newlb = SIGN(newlb) * sqrt(ABS(newlb));
@@ -2111,6 +2166,54 @@ SCIP_RETCODE propagateCons(
                   newlb = SIGN(newlb) * pow(ABS(newlb), 1.0/consdata->exponent);
                newlb -= consdata->xoffset;
 
+               if( SCIPisFeasGT(scip, newlb, xub) )
+               {
+                  /* if new lower bound for x would yield cutoff, recompute with tolerances */
+                  newlb = consdata->lhs - PROPSIDETOL - consdata->zcoef * (consdata->zcoef > 0.0 ? (zub + PROPVARTOL) : (zlb - PROPVARTOL));
+
+                  /* invert sign(x+offset)|x+offset|^(n-1) = y -> x = sign(y)|y|^(1/n) - offset */
+                  if( consdata->exponent == 2.0 )
+                     newlb = SIGN(newlb) * sqrt(ABS(newlb));
+                  else
+                     newlb = SIGN(newlb) * pow(ABS(newlb), 1.0/consdata->exponent);
+                  newlb -= consdata->xoffset;
+               }
+               else
+               {
+                  /* project new lower bound onto current bounds */
+                  newlb = MIN(newlb, xub);
+               }
+            }
+            else
+            {
+               if( consdata->zcoef > 0.0 )
+               {
+                  if( !SCIPisInfinity(scip, zub) )
+                     newlb = consdata->lhs - PROPSIDETOL - consdata->zcoef * (zub + PROPVARTOL);
+                  else
+                     newlb = -SCIPinfinity(scip);
+               }
+               else
+               {
+                  if( !SCIPisInfinity(scip, -zlb) )
+                     newlb = consdata->lhs - PROPSIDETOL - consdata->zcoef * (zlb - PROPVARTOL);
+                  else
+                     newlb = -SCIPinfinity(scip);
+               }
+
+               if( !SCIPisInfinity(scip, -newlb) )
+               {
+                  /* invert sign(x+offset)|x+offset|^(n-1) = y -> x = sign(y)|y|^(1/n) - offset */
+                  if( consdata->exponent == 2.0 )
+                     newlb = SIGN(newlb) * sqrt(ABS(newlb));
+                  else
+                     newlb = SIGN(newlb) * pow(ABS(newlb), 1.0/consdata->exponent);
+                  newlb -= consdata->xoffset;
+               }
+            }
+
+            if( !SCIPisInfinity(scip, -newlb) )
+            {
                if( SCIPisLbBetter(scip, newlb, xlb, xub) )
                {
                   SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n",
@@ -2143,13 +2246,41 @@ SCIP_RETCODE propagateCons(
           */
          if( SCIPvarGetStatus(consdata->z) != SCIP_VARSTATUS_MULTAGGR && !SCIPisInfinity(scip, xub) ) /* cannot change bounds of multaggr vars */
          {
-            SCIP_Real tmp;
-            tmp  = xub + PROPVARTOL + consdata->xoffset;
-            tmp  = consdata->lhs - PROPSIDETOL - SIGN(tmp) * consdata->pow(REALABS(tmp), consdata->exponent);
-            tmp /= consdata->zcoef;
+            SCIP_Real newbd;
+
+            /* if x is fixed, first compute new bound on z without tolerances
+             * if that is feasible, project new bound onto current bounds
+             *   otherwise, recompute with tolerances and continue as usual
+             */
+            if( SCIPisFeasEQ(scip, xlb, xub) )
+            {
+               newbd  = xub + consdata->xoffset;
+               newbd  = consdata->lhs - SIGN(newbd) * consdata->pow(REALABS(newbd), consdata->exponent);
+               newbd /= consdata->zcoef;
+
+               if( (consdata->zcoef > 0.0 && SCIPisFeasGT(scip, newbd, zub)) || (consdata->zcoef < 0.0 && SCIPisFeasLT(scip, newbd, zlb)) )
+               {
+                  /* if infeasible, recompute with tolerances */
+                  newbd  = xub + PROPVARTOL + consdata->xoffset;
+                  newbd  = consdata->lhs - PROPSIDETOL - SIGN(newbd) * consdata->pow(REALABS(newbd), consdata->exponent);
+                  newbd /= consdata->zcoef;
+               }
+               else
+               {
+                  /* project onto current bounds of z */
+                  newbd = MIN(zub, MAX(zlb, newbd) );
+               }
+            }
+            else
+            {
+               newbd  = xub + PROPVARTOL + consdata->xoffset;
+               newbd  = consdata->lhs - PROPSIDETOL - SIGN(newbd) * consdata->pow(REALABS(newbd), consdata->exponent);
+               newbd /= consdata->zcoef;
+            }
+
             if( consdata->zcoef > 0.0 )
             {
-               newlb = tmp;
+               newlb = newbd;
                if( SCIPisLbBetter(scip, newlb, zlb, zub) )
                {
                   SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n",
@@ -2175,7 +2306,7 @@ SCIP_RETCODE propagateCons(
             }
             else
             {
-               newub = tmp;
+               newub = newbd;
                if( SCIPisUbBetter(scip, newub, zlb, zub) )
                {
                   SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n",
@@ -2212,23 +2343,17 @@ SCIP_RETCODE propagateCons(
           */
          if( SCIPvarIsActive(SCIPvarGetProbvar(consdata->x)) ) /* cannot change bounds of multaggr or fixed vars */
          {
-            if( consdata->zcoef > 0.0 )
+            /* if z is fixed, first compute new upper bound on x without tolerances
+             * if that is feasible, project new upper bound onto current bounds
+             *   otherwise, recompute with tolerances and continue as usual
+             */
+            if( SCIPisFeasEQ(scip, zlb, zub) )
             {
-               if( !SCIPisInfinity(scip, -zlb) )
-                  newub = consdata->rhs + PROPSIDETOL - consdata->zcoef * (zlb - PROPVARTOL);
-               else
-                  newub = SCIPinfinity(scip);
-            }
-            else
-            {
-               if( !SCIPisInfinity(scip, zub) )
-                  newub = consdata->rhs + PROPSIDETOL - consdata->zcoef * (zub + PROPVARTOL);
-               else
-                  newub = SCIPinfinity(scip);
-            }
+               assert(!SCIPisInfinity(scip, -zlb));
+               assert(!SCIPisInfinity(scip,  zub));
 
-            if( !SCIPisInfinity(scip, newub) )
-            {
+               newub = consdata->rhs - consdata->zcoef * (consdata->zcoef > 0.0 ? zlb : zub);
+
                /* invert sign(x+offset)|x+offset|^(n-1) = y -> x = sign(y)|y|^(1/n) - offset */
                if( consdata->exponent == 2.0 )
                   newub = SIGN(newub) * sqrt(ABS(newub));
@@ -2236,6 +2361,53 @@ SCIP_RETCODE propagateCons(
                   newub = SIGN(newub) * pow(ABS(newub), 1.0/consdata->exponent);
                newub -= consdata->xoffset;
 
+               if( SCIPisFeasLT(scip, newub, xlb) )
+               {
+                  /* if new lower bound for x would yield cutoff, recompute with tolerances */
+                  newub = consdata->rhs + PROPSIDETOL - consdata->zcoef * (consdata->zcoef > 0.0 ? (zlb - PROPVARTOL) : (zub + PROPVARTOL));
+
+                  /* invert sign(x+offset)|x+offset|^(n-1) = y -> x = sign(y)|y|^(1/n) - offset */
+                  if( consdata->exponent == 2.0 )
+                     newub = SIGN(newub) * sqrt(ABS(newub));
+                  else
+                     newub = SIGN(newub) * pow(ABS(newub), 1.0/consdata->exponent);
+                  newub -= consdata->xoffset;
+               }
+               else
+               {
+                  /* project new upper bound onto current bounds */
+                  newub = MAX(newub, xlb);
+               }
+            }
+            else
+            {
+               if( consdata->zcoef > 0.0 )
+               {
+                  if( !SCIPisInfinity(scip, -zlb) )
+                     newub = consdata->rhs + PROPSIDETOL - consdata->zcoef * (zlb - PROPVARTOL);
+                  else
+                     newub = SCIPinfinity(scip);
+               }
+               else
+               {
+                  if( !SCIPisInfinity(scip, zub) )
+                     newub = consdata->rhs + PROPSIDETOL - consdata->zcoef * (zub + PROPVARTOL);
+                  else
+                     newub = SCIPinfinity(scip);
+               }
+               if( !SCIPisInfinity(scip, -newub) )
+               {
+                  /* invert sign(x+offset)|x+offset|^(n-1) = y -> x = sign(y)|y|^(1/n) - offset */
+                  if( consdata->exponent == 2.0 )
+                     newub = SIGN(newub) * sqrt(ABS(newub));
+                  else
+                     newub = SIGN(newub) * pow(ABS(newub), 1.0/consdata->exponent);
+                  newub -= consdata->xoffset;
+               }
+            }
+
+            if( !SCIPisInfinity(scip, newub) )
+            {
                if( SCIPisUbBetter(scip, newub, xlb, xub) )
                {
                   SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n",
@@ -2268,14 +2440,41 @@ SCIP_RETCODE propagateCons(
           */
          if( SCIPvarGetStatus(consdata->z) != SCIP_VARSTATUS_MULTAGGR && !SCIPisInfinity(scip, -xlb) ) /* cannot change bounds of multaggr vars */
          {
-            SCIP_Real tmp;
-            tmp  = xlb - PROPVARTOL + consdata->xoffset;
-            tmp  = consdata->rhs + PROPSIDETOL - SIGN(tmp) * consdata->pow(REALABS(tmp), consdata->exponent);
-            tmp /= consdata->zcoef;
+            SCIP_Real newbd;
+
+            /* if x is fixed, first compute new bound on z without tolerances
+             * if that is feasible, project new bound onto current bounds
+             *   otherwise, recompute with tolerances and continue as usual
+             */
+            if( SCIPisFeasEQ(scip, xlb, xub) )
+            {
+               newbd  = xlb + consdata->xoffset;
+               newbd  = consdata->rhs - SIGN(newbd) * consdata->pow(REALABS(newbd), consdata->exponent);
+               newbd /= consdata->zcoef;
+
+               if( (consdata->zcoef > 0.0 && SCIPisFeasLT(scip, newbd, zlb)) || (consdata->zcoef < 0.0 && SCIPisFeasGT(scip, newbd, zub)) )
+               {
+                  /* if infeasible, recompute with tolerances */
+                  newbd  = xlb - PROPVARTOL + consdata->xoffset;
+                  newbd  = consdata->rhs + PROPSIDETOL - SIGN(newbd) * consdata->pow(REALABS(newbd), consdata->exponent);
+                  newbd /= consdata->zcoef;
+               }
+               else
+               {
+                  /* project onto current bounds of z */
+                  newbd = MIN(zub, MAX(zlb, newbd) );
+               }
+            }
+            else
+            {
+               newbd  = xlb - PROPVARTOL + consdata->xoffset;
+               newbd  = consdata->rhs + PROPSIDETOL - SIGN(newbd) * consdata->pow(REALABS(newbd), consdata->exponent);
+               newbd /= consdata->zcoef;
+            }
 
             if( consdata->zcoef > 0.0 )
             {
-               newub = tmp;
+               newub = newbd;
                if( SCIPisUbBetter(scip, newub, zlb, zub) )
                {
                   SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n",
@@ -2301,7 +2500,7 @@ SCIP_RETCODE propagateCons(
             }
             else
             {
-               newlb = tmp;
+               newlb = newbd;
                if( SCIPisLbBetter(scip, newlb, zlb, zub) )
                {
                   SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n",
