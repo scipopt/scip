@@ -70,7 +70,7 @@ struct SCIP_PropData
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for global bound change events */
    SCIP_VAR**            objvars;            /**< variables with non-zero objective */
    SCIP_Real             lastlowerbound;     /**< last lower bound which propagated */
-   SCIP_Real             cutoffbound;        /**< last cutoff bound used in presolving */
+   SCIP_Real             cutoffbound;        /**< last cutoff bound used for propagation */
    SCIP_Real             glbpseudoobjval;    /**< last pseudo objective used in presolving */
    SCIP_Real             maxpseudoobjact;    /**< maximal global pseudo objective activity */
    SCIP_Real             maxvarsfrac;        /**< maximal fraction of none binary variables with non-zero objective
