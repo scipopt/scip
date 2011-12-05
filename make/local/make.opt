@@ -3,8 +3,8 @@
 # Runs distributed tests on the cluster via SLURM.
 #
 # The SLURM "mip" queue consists of 9 nodes (opt210 - opt218). Each node
-# provides 8 Intel Xeon X5672 CPUs @ 3.2 GHz each with 4 cores, 12 MB cache and
-# 50 GB memory. This gives a total of 9 * 8 * 4 = 288 cores.
+# provides 2 Intel Xeon X5672 CPUs @ 3.2 GHz each with 4 cores, 12 MB cache and
+# 50 GB memory. This gives a total of 9 * 2 * 4 = 72 cores.
 #
 # In case of time measuring you should use the flag EXCLUSIVE=true to enforce
 # that only one process is running on any node you use.
@@ -29,4 +29,4 @@ EXCLUSIVE	=	false
 
 .PHONY: cancelcluster
 cancelcluster:
-		scancel --user=$(USER) --name=SCIP$(TEST)
+	scancel --user=$(USER)
