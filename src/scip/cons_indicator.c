@@ -6489,7 +6489,27 @@ SCIP_Bool SCIPisViolatedIndicator(
 
 /** Based on values of other variables, computes slack and binary variable to turn constraint feasible 
  *
- *  Will also clean up solution, i.e., shift slack variable.
+ *  It will also clean up the solution, i.e., shift slack variable, as follows:
+ *
+ *  If the inequality is \f$a^T x + \gamma\, s \leq \beta\f$, the value of the slack variable
+ *  \f$s\f$ to achieve equality is
+ *  \f[
+ *      s^* = \frac{\beta - a^T x^*}{\gamma},
+ *  \f]
+ *  where \f$x^*\f$ is the given solution. In case of \f$a^T x + \gamma\, s \geq \alpha\f$, we
+ *  arrive at
+ *  \f[
+ *      s^* = \frac{\alpha - a^T x^*}{\gamma}.
+ *  \f]
+ *  The typical values of \f$\gamma\f$ in the first case is -1 and +1 in the second case.
+ *
+ *  Now, let \f$\sigma\f$ be the sign of \f$\gamma\f$ in the first case and \f$-\gamma\f$ in the
+ *  second case. Thus, if \f$\sigma > 0\f$ and \f$s^* < 0\f$, the inequality cannot be satisfied by
+ *  a nonnegative value for the slack variable; in this case, we have to leave the values as they
+ *  are. If \f$\sigma < 0\f$ and \f$s^* > 0\f$, the solution violates the indicator constraint (we
+ *  can set the slack variable to value \f$s^*\f$). If \f$\sigma < 0\f$ and \f$s^* \leq 0\f$ or
+ *  \f$\sigma > 0\f$ and \f$s^* \geq 0\f$, the constraint is satisfied, and we can set the slack
+ *  variable to 0.
  */
 SCIP_RETCODE SCIPmakeIndicatorFeasible(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6504,10 +6524,11 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
    SCIP_Real* linvals;
    SCIP_VAR* slackvar;
    SCIP_VAR* binvar;
-   SCIP_Real slackval;
+   SCIP_Real slackcoef;
    SCIP_Real sum;
    SCIP_Real val;
    int nlinvars;
+   int sigma;
    int v;
 
    assert( cons != NULL );
@@ -6546,7 +6567,7 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
 
       /* compute value of regular variables */
       sum = 0.0;
-      slackval = 0.0;
+      slackcoef = 0.0;
       for (v = 0; v < nlinvars; ++v)
       {
          SCIP_VAR* var;
@@ -6554,39 +6575,43 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
          if ( var != slackvar )
             sum += linvals[v] * SCIPgetSolVal(scip, sol, var);
          else
-            slackval = linvals[v];
+            slackcoef = linvals[v];
       }
 
       /* do nothing if slack variable does not appear */
-      if ( SCIPisFeasZero(scip, slackval) )
+      if ( SCIPisFeasZero(scip, slackcoef) )
          return SCIP_OKAY;
 
-      assert( ! SCIPisZero(scip, slackval) );
+      assert( ! SCIPisZero(scip, slackcoef) );
       assert( SCIPisInfinity(scip, -SCIPgetLhsLinear(scip, lincons)) || SCIPisInfinity(scip, SCIPgetRhsLinear(scip, lincons)) );
+      assert( SCIPisFeasGE(scip, SCIPvarGetLbLocal(slackvar), 0.0) );
 
       val = SCIPgetRhsLinear(scip, lincons);
-      if ( ! SCIPisInfinity(scip, val) )
-      {
-         sum -= val;
-         sum /= -slackval; /*lint !e414*/
-      }
-      else
+      sigma = 1;
+      if ( SCIPisInfinity(scip, val) )
       {
          val = SCIPgetLhsLinear(scip, lincons);
-         if ( ! SCIPisInfinity(scip, -val) )
-         {
-            sum = val - sum;
-            sum /= slackval; /*lint !e414*/
-         }
+         assert( ! SCIPisInfinity(scip, REALABS(val)) );
+         sigma = -1;
       }
+      /* compute value of slack that would achieve equality */
+      val = (val - sum)/slackcoef;
+
+      /* compute direction into which slack variable would be infeasible */
+      if ( slackcoef < 0 )
+         sigma *= -1;
+
+      /* filter out cases in which no sensible change is possible */
+      if ( sigma > 0 && SCIPisFeasNegative(scip, val) )
+         return SCIP_OKAY;
 
       /* check if linear constraint w/o slack variable is violated */
-      if ( SCIPisFeasPositive(scip, sum) )
+      if ( sigma < 0 && SCIPisFeasPositive(scip, val) )
       {
          /* the original constraint is violated */
-         if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, slackvar), sum) )
+         if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, slackvar), val) )
          {
-            SCIP_CALL( SCIPsetSolVal(scip, sol, slackvar, sum) );
+            SCIP_CALL( SCIPsetSolVal(scip, sol, slackvar, val) );
             *changed = TRUE;
          }
          if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 0.0) )
@@ -6599,8 +6624,10 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
       {
          SCIP_Real obj;
 
+         assert( SCIPisFeasGE(scip, val * ((SCIP_Real) sigma), 0.0) );
+
          /* the original constraint is satisfied - we can set the slack variable to 0 (slackvar
-            should only occur in this indicator constraint) */
+          * should only occur in this indicator constraint) */
          if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, slackvar), 0.0) )
          {
             SCIP_CALL( SCIPsetSolVal(scip, sol, slackvar, 0.0) );
