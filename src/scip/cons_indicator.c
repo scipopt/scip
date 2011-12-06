@@ -6344,6 +6344,8 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
       }
       else
       {
+         SCIP_Real obj;
+
          assert( SCIPisFeasGE(scip, val * ((SCIP_Real) sigma), 0.0) );
 
          /* the original constraint is satisfied - we can set the slack variable to 0 (slackvar
@@ -6354,16 +6356,21 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
             *changed = TRUE;
          }
 
-         if ( varGetObjDelta(binvar) < 0 )
+         obj = varGetObjDelta(binvar);
+
+         /* if objective coefficient is 0, we prefer setting the binary variable to 1 */
+         if ( obj <= 0 )
          {
             /* setting variable to 1 decreases objective -> check whether variable only occurs in the current constraint */
             if ( SCIPvarGetNLocksUp(binvar) <= 1 && ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 1.0) )
             {
                SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 1.0) );
                *changed = TRUE;
+               /* make sure that the other case does not occur */
+               obj = -1.0;
             }
          }
-         else
+         if ( obj >= 0 )
          {
             /* setting variable to 0 may decrease objective -> check whether variable only occurs in the current constraint
              * note: binary variables are only locked up */
