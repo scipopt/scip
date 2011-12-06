@@ -15,8 +15,13 @@
 
 /**@file   heur_simplerounding.h
  * @ingroup PRIMALHEURISTICS
- * @brief  simple and fast LP rounding heuristic
+ * @brief  Simple and fast LP rounding heuristic
  * @author Tobias Achterberg
+ *
+ * Simple rounding is a very cheap heuristic that iterates over the set of fractional variables of an LP-feasible
+ * point. It only performs roundings for variable that have zero up- or downlocks. Hence, they are guaranteed to keep
+ * all constraints satisfied.  If all fractional variables can be rounded that way, the resulting solution will bve
+ * integral and LP-feasible.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

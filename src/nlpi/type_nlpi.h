@@ -362,6 +362,8 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  * solver can return NULL in dual values if not available
  * but if solver provides dual values for one side of variable bounds, then it must also provide those for the other side
  *
+ * for a ranged constraint, the dual variable is positive if the right hand side is active and negative if the left hand side is active
+ *
  * input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance

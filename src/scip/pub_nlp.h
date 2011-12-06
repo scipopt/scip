@@ -204,7 +204,9 @@ SCIP_Bool SCIPnlrowIsInNLP(
    SCIP_NLROW*           nlrow               /**< NLP row */
    );
 
-/** gets the dual NLP solution of a nlrow */
+/** gets the dual NLP solution of a nlrow
+ * for a ranged constraint, the dual value is positive if the right hand side is active and negative if the left hand side is active
+ */
 extern
 SCIP_Real SCIPnlrowGetDualsol(
    SCIP_NLROW*           nlrow               /**< NLP row */

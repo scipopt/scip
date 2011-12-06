@@ -618,6 +618,9 @@ SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
 
       SCIPdebugMessage("Found conflict involving slack variables that can be remodelled.\n");
 
+      assert( conflicthdlrdata->conshdlr != NULL );
+      assert( strcmp(SCIPconshdlrGetName(conflicthdlrdata->conshdlr), CONSHDLR_NAME) == 0 );
+
       nconss = SCIPconshdlrGetNConss(conflicthdlrdata->conshdlr);
       conss = SCIPconshdlrGetConss(conflicthdlrdata->conshdlr);
 
@@ -630,36 +633,35 @@ SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
 
          var = SCIPbdchginfoGetVar(bdchginfos[i]);
 
+         SCIPdebugMessage(" <%s> %s %g\n", SCIPvarGetName(var), SCIPbdchginfoGetBoundtype(bdchginfos[i]) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+            SCIPbdchginfoGetNewbound(bdchginfos[i]));
+
          /* quick check for slack variable that is implicitly integral or continuous */
-         if ( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+         if ( (SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS) && strstr(SCIPvarGetName(var), "indslack") != NULL )
          {
             SCIP_VAR* slackvar;
-            
-            /* check string */
-            if ( strstr(SCIPvarGetName(var), "indslack") != NULL )
+
+            /* search for slack variable */
+            for (j = 0; j < nconss; ++j)
             {
-               /* search for slack variable */
-               for (j = 0; j < nconss; ++j)
-               {
-                  assert( conss[j] != NULL );
-                  slackvar = SCIPgetSlackVarIndicator(conss[j]);
-                  assert( slackvar != NULL );
+               assert( conss[j] != NULL );
+               slackvar = SCIPgetSlackVarIndicator(conss[j]);
+               assert( slackvar != NULL );
 
-                  /* check whether we found the variable */
-                  if ( slackvar == var )
-                  {
-                     /* replace slack variable by binary variable */
-                     var = SCIPgetBinaryVarIndicator(conss[j]);   /* negated ??????????? */
-                     break;
-                  }
-               }
-
-               /* check whether we found the slack variable */
-               if ( j >= nconss )
+               /* check whether we found the variable */
+               if ( slackvar == var )
                {
-                  SCIPdebugMessage("Could not find slack variable <%s>.\n", SCIPvarGetName(var));
+                  /* replace slack variable by binary variable */
+                  var = SCIPgetBinaryVarIndicator(conss[j]);
                   break;
                }
+            }
+
+            /* check whether we found the slack variable */
+            if ( j >= nconss )
+            {
+               SCIPdebugMessage("Could not find slack variable <%s>.\n", SCIPvarGetName(var));
+               break;
             }
          }
          else
@@ -667,7 +669,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
             /* if the variable is fixed to one in the conflict set, we have to use its negation */
             if ( SCIPbdchginfoGetNewbound(bdchginfos[i]) > 0.5 )
             {
-               SCIP_CALL( SCIPgetNegatedVar(scip, vars[i], &vars[i]) );
+               SCIP_CALL( SCIPgetNegatedVar(scip, var, &var) );
             }
          }
 
@@ -681,7 +683,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
          char consname[SCIP_MAXSTRLEN];
 
          SCIPdebugMessage("Generated logicor conflict constraint.\n");
-      
+
          /* create a logicor constraint out of the conflict set */
          (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
          SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, consname, nbdchginfos, vars, 
@@ -691,7 +693,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
          SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
 #endif
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-      
+
          *result = SCIP_CONSADDED;
       }
 
@@ -4141,43 +4143,6 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
          conshdlrdata->sepaalternativelp, conshdlrdata->forcerestart) );
    assert( consdata != NULL );
 
-   /* check if slack variable can be made implicit integer. We repeat the check from
-    * SCIPcreateConsIndicator(), since when reading files in LP-format the type is only determined
-    * after creation of the constraint. */
-   if ( SCIPvarGetType(consdata->slackvar) != SCIP_VARTYPE_IMPLINT )
-   {
-      SCIP_Real* vals;
-      SCIP_VAR** vars;
-      SCIP_VAR* slackvar;
-      SCIP_Bool foundslackvar;
-      int nvars;
-      int i;
-      
-      vars = SCIPgetVarsLinear(scip, sourcedata->lincons);
-      vals = SCIPgetValsLinear(scip, sourcedata->lincons);
-      nvars = SCIPgetNVarsLinear(scip, sourcedata->lincons);
-      slackvar = sourcedata->slackvar;
-      foundslackvar = FALSE;
-      for (i = 0; i < nvars; ++i)
-      {
-         if ( vars[i] == slackvar )
-            foundslackvar = TRUE;
-         else
-         {
-            if ( ! SCIPvarIsIntegral(vars[i]) || ! SCIPisIntegral(scip, vals[i]))
-               break;
-         }
-      }
-      /* something is strange if the slack variable does not appear in the linear constraint (possibly because it is an artificial constraint) */
-      if ( i == nvars && foundslackvar )
-      {
-         SCIP_Bool infeasible;
-
-         SCIP_CALL( SCIPchgVarType(scip, consdata->slackvar, SCIP_VARTYPE_IMPLINT, &infeasible) );
-         /* don't assert feasibility here because the presolver should detect infeasibility */
-      }
-   }
-
    /* create transformed constraint with the same flags */
    (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "t_%s", SCIPconsGetName(sourcecons));
    SCIP_CALL( SCIPcreateCons(scip, targetcons, s, conshdlr, consdata,
@@ -4201,6 +4166,14 @@ SCIP_DECL_CONSINITPRE(consInitpreIndicator)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert( result != NULL );
+
+   *result = SCIP_FEASIBLE;
+
+   if ( isinfeasible || isunbounded )
+      return SCIP_OKAY;
+
+   SCIPdebugMessage("Initpre method for indicator constraints.\n");
 
    /* check each constraint and get transformed linear constraint */
    for (c = 0; c < nconss; ++c)
@@ -4227,6 +4200,43 @@ SCIP_DECL_CONSINITPRE(consInitpreIndicator)
          assert( translincons != NULL );
          SCIP_CALL( SCIPcaptureCons(scip, translincons) );
          consdata->lincons = translincons;
+      }
+
+      /* check if slack variable can be made implicit integer. We repeat the check from
+       * SCIPcreateConsIndicator(), since when reading files in LP-format the type is only determined
+       * after creation of the constraint. */
+      if ( SCIPvarGetType(consdata->slackvar) != SCIP_VARTYPE_IMPLINT )
+      {
+         SCIP_Real* vals;
+         SCIP_VAR** vars;
+         SCIP_VAR* slackvar;
+         SCIP_Bool foundslackvar;
+         int nvars;
+         int i;
+
+         vars = SCIPgetVarsLinear(scip, consdata->lincons);
+         vals = SCIPgetValsLinear(scip, consdata->lincons);
+         nvars = SCIPgetNVarsLinear(scip, consdata->lincons);
+         slackvar = consdata->slackvar;
+         foundslackvar = FALSE;
+         for (i = 0; i < nvars; ++i)
+         {
+            if ( vars[i] == slackvar )
+               foundslackvar = TRUE;
+            else
+            {
+               if ( ! SCIPvarIsIntegral(vars[i]) || ! SCIPisIntegral(scip, vals[i]))
+                  break;
+            }
+         }
+         /* something is strange if the slack variable does not appear in the linear constraint (possibly because it is an artificial constraint) */
+         if ( i == nvars && foundslackvar )
+         {
+            SCIP_Bool infeasible;
+
+            SCIP_CALL( SCIPchgVarType(scip, consdata->slackvar, SCIP_VARTYPE_IMPLINT, &infeasible) );
+            /* don't assert feasibility here because the presolver should detect infeasibility */
+         }
       }
    }
 
@@ -4365,6 +4375,10 @@ SCIP_DECL_CONSEXITPRE(consExitpreIndicator)
    assert( result != NULL );
 
    *result = SCIP_FEASIBLE;
+
+   if ( isinfeasible || isunbounded )
+      return SCIP_OKAY;
+
    SCIPdebugMessage("Exitpre method for indicator constraints.\n");
 
    /* get constraint handler data */
@@ -4402,7 +4416,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreIndicator)
       if ( ! consdata->linconsactive )
          continue;
 
-      /* perform on presolving round */
+      /* perform one presolving round */
       SCIP_CALL( presolRoundIndicator(scip, cons, consdata, &cutoff, &success, &ndelconss, &nfixedvars) );
 
       if ( cutoff )
@@ -4423,6 +4437,41 @@ SCIP_DECL_CONSEXITPRE(consExitpreIndicator)
          return SCIP_OKAY;
       }
       /* note: nbdchgs == 0 is not necessarily true, because preprocessing might be truncated. */
+
+      /* check if slack variable can be made implicit integer. We repeat the check from
+       * SCIPcreateConsIndicator(), since when reading files in LP-format the type is only determined
+       * after creation of the constraint. */
+      if ( SCIPvarGetType(consdata->slackvar) != SCIP_VARTYPE_IMPLINT )
+      {
+         SCIP_Real* vals;
+         SCIP_VAR** vars;
+         SCIP_VAR* slackvar;
+         SCIP_Bool foundslackvar;
+         int nvars;
+         int i;
+
+         vars = SCIPgetVarsLinear(scip, consdata->lincons);
+         vals = SCIPgetValsLinear(scip, consdata->lincons);
+         nvars = SCIPgetNVarsLinear(scip, consdata->lincons);
+         slackvar = consdata->slackvar;
+         foundslackvar = FALSE;
+         for (i = 0; i < nvars; ++i)
+         {
+            if ( vars[i] == slackvar )
+               foundslackvar = TRUE;
+            else
+            {
+               if ( ! SCIPvarIsIntegral(vars[i]) || ! SCIPisIntegral(scip, vals[i]))
+                  break;
+            }
+         }
+         /* something is strange if the slack variable does not appear in the linear constraint (possibly because it is an artificial constraint) */
+         if ( i == nvars && foundslackvar )
+         {
+            SCIP_CALL( SCIPchgVarType(scip, consdata->slackvar, SCIP_VARTYPE_IMPLINT, &infeasible) );
+            /* don't assert feasibility here because the presolver should detect infeasibility */
+         }
+      }
    }
 
    SCIPdebugMessage("Exitpre handled %d constraints, fixed %d variables, and deleted %d constraints.\n", nconss, nfixedvars, ndelconss);
@@ -5507,8 +5556,10 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
 
 /** creates and captures an indicator constraint
  *
- *  Note: @a binvar is checked to be binary only later. This enables a change of the type in
+ *  @note @a binvar is checked to be binary only later. This enables a change of the type in
  *  procedures reading an instance.
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
 SCIP_RETCODE SCIPcreateConsIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -5684,11 +5735,13 @@ SCIP_RETCODE SCIPcreateConsIndicator(
 
 /** creates and captures an indicator constraint with given linear constraint and slack variable
  *
- *  Note: @a binvar is checked to be binary only later. This enables a change of the type in
+ *  @note @a binvar is checked to be binary only later. This enables a change of the type in
  *  procedures reading an instance.
  *
- *  Note: we assume that @a slackvar actually appears in @a lincons and we also assume that it takes
+ *  @note we assume that @a slackvar actually appears in @a lincons and we also assume that it takes
  *  the role of a slack variable!
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
 SCIP_RETCODE SCIPcreateConsIndicatorLinCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6135,6 +6188,11 @@ SCIP_Bool SCIPisViolatedIndicator(
    SCIP_CONSDATA* consdata;
 
    assert( cons != NULL );
+
+   /* deleted constraints should always be satisfied */
+   if ( SCIPconsIsDeleted(cons) )
+      return FALSE;
+
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
 
@@ -6169,6 +6227,7 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
    SCIP_Real* linvals;
    SCIP_VAR* slackvar;
    SCIP_VAR* binvar;
+   SCIP_Real slackval;
    int nlinvars;
    SCIP_Real sum;
    SCIP_Real val;
@@ -6209,25 +6268,38 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
 
       /* compute value of regular variables */
       sum = 0.0;
+      slackval = 0.0;
       for (v = 0; v < nlinvars; ++v)
       {
          SCIP_VAR* var;
          var = linvars[v];
          if ( var != slackvar )
             sum += linvals[v] * SCIPgetSolVal(scip, sol, var);
+         else
+            slackval = linvals[v];
       }
 
-      assert( SCIPisInfinity(scip, -SCIPgetLhsLinear(scip, lincons)) ||
-         SCIPisInfinity(scip, SCIPgetRhsLinear(scip, lincons)) );
+      /* do nothing if slack variable does not appear */
+      if ( SCIPisFeasZero(scip, slackval) )
+         return SCIP_OKAY;
+
+      assert( ! SCIPisZero(scip, slackval) );
+      assert( SCIPisInfinity(scip, -SCIPgetLhsLinear(scip, lincons)) || SCIPisInfinity(scip, SCIPgetRhsLinear(scip, lincons)) );
 
       val = SCIPgetRhsLinear(scip, lincons);
       if ( ! SCIPisInfinity(scip, val) )
+      {
          sum -= val;
+         sum /= -slackval;
+      }
       else
       {
          val = SCIPgetLhsLinear(scip, lincons);
          if ( ! SCIPisInfinity(scip, -val) )
+         {
             sum = val - sum;
+            sum /= slackval;
+         }
       }
 
       /* check if linear constraint w/o slack variable is violated */

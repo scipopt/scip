@@ -89,6 +89,7 @@ struct SCIP_Fork
    SCIP_COL**            addedcols;          /**< array with pointers to new columns added at this node into the LP */
    SCIP_ROW**            addedrows;          /**< array with pointers to new rows added at this node into the LP */
    SCIP_LPISTATE*        lpistate;           /**< LP state information */
+   SCIP_Real             lpobjval;           /**< the LP objective value for that node, needed to compute the pseudo costs correctly */
    int                   naddedcols;         /**< number of columns added at this node */
    int                   naddedrows;         /**< number of rows added at this node */
    int                   nchildren;          /**< number of children of this parent node */
@@ -101,6 +102,7 @@ struct SCIP_Subroot
    SCIP_COL**            cols;               /**< array with pointers to the columns in the same order as in the LP */
    SCIP_ROW**            rows;               /**< array with pointers to the rows in the same order as in the LP */
    SCIP_LPISTATE*        lpistate;           /**< LP state information */
+   SCIP_Real             lpobjval;           /**< the LP objective value for that node, needed to compute the pseudo costs correctly */
    int                   ncols;              /**< number of columns in the LP */
    int                   nrows;              /**< number of rows in the LP */
    int                   nchildren;          /**< number of children of this parent node */

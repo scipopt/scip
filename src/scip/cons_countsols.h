@@ -72,16 +72,17 @@ SCIP_RETCODE SCIPcount(
 extern
 SCIP_Bool SCIPisCountValid(
    SCIP*                 scip                /**< SCIP data structure */
-   ); 
+   );
 #endif
 
-/** returns number of feasible solutions found as SCIP_Longint; if the number does not fit into 
- *  a SCIP_Longint the valid flag is set to FALSE */
+/** returns number of feasible solutions found as SCIP_Longint; if the number does not fit into
+ *  a SCIP_Longint the valid flag is set to FALSE
+ */
 extern
 SCIP_Longint SCIPgetNCountedSols(
    SCIP*                 scip,              /**< SCIP data structure */
-   SCIP_Bool*            valid              /**< pointer to store if the return value is valid */             
-   ); 
+   SCIP_Bool*            valid              /**< pointer to store if the return value is valid */
+   );
 
 /** returns number of counted solutions as string */
 extern
@@ -96,13 +97,18 @@ void SCIPgetNCountedSolsstr(
 extern
 SCIP_Longint SCIPgetNCountedFeasSubtrees(
    SCIP*                 scip                /**< SCIP data structure */
-   ); 
+   );
 
-/** method to get the sparse solution; note that you get the pointer to the sparse solutions stored in the constraint
- *  handler (not a copy). Note that the spares solution only stores the value for active 
+/** Method to get the sparse solution.
+ *
+ *  @note You get the pointer to the sparse solutions stored in the constraint handler (not a copy).
+ *
+ *  @note The sparse solutions are stored w.r.t. the active variables. This are the variables which got not removed
+ *        during presolving. For none active variables the value has to be computed depending on their aggregation
+ *        type. See for more details about that \ref COLLECTALLFEASEBLES.
  */
-extern 
-void SCIPgetCountedSparseSolutions( 
+extern
+void SCIPgetCountedSparseSolutions(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR***           vars,               /**< pointer to variable array defining to variable order */
    int*                  nvars,              /**< number of variables */

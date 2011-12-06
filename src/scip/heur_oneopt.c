@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_oneopt.c
- * @brief  oneopt primal heuristic
+ * @brief  improvement heuristic that alters single variable values
  * @author Timo Berthold
  */
 

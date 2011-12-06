@@ -15,8 +15,14 @@
 
 /**@file   prop_pseudoobj.h
  * @ingroup PROPAGATORS
- * @brief  pseudoobj propagator
+ * @brief  Pseudo objective propagator
  * @author Tobias Achterberg
+ * @author Stefan Heinz
+ *
+ * This propagator propagates the objective function using the cutoff bound and the pseudo objective value. The pseudo
+ * objective value can be seen as minimum activity of the linear objective function. Using this, this propagator checks
+ * if variables with non-zero objective coefficients can exceed the cutoff bound. If this is the case the corresponding
+ * bound can be tightened.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

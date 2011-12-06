@@ -47,7 +47,10 @@ SCIP_RETCODE SCIPincludeConshdlrVarbound(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates and captures a variable bound constraint: lhs <= x + c*y <= rhs */
+/** creates and captures a variable bound constraint: lhs <= x + c*y <= rhs
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 extern
 SCIP_RETCODE SCIPcreateConsVarbound(
    SCIP*                 scip,               /**< SCIP data structure */

@@ -1,18 +1,22 @@
 # this local Makefile includes the cluster targets 
 
+OPTHOST	   	 := $(shell uname -n | tr -cd '[:alpha:]')
+
+-include make/local/make.$(OPTHOST)
+
 .PHONY: testcluster
 testcluster:		
 		cd check; \
 		$(SHELL) ./check_cluster.sh $(TEST) $(MAINFILE) $(SETTINGS) \
-		$(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) \
+		$(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) \
 		$(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(VERSION) \
-		$(LPS) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER);
+		$(LPS) $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
 
 .PHONY: testclustercpx
 testclustercpx:		
 		cd check; \
 		$(SHELL) ./check_cluster_cplex.sh $(TEST) $(CPLEX) $(SETTINGS) \
-		$(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) \
+		$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) \
 		$(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(QUEUE) $(PPN) \
 		$(CLIENTTMPDIR)  $(NOWAITCLUSTER);
 
@@ -20,7 +24,7 @@ testclustercpx:
 testclustercbc:		
 		cd check; \
 		$(SHELL) ./check_cluster_cbc.sh $(TEST) $(CBC) $(SETTINGS) \
-		$(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) \
+		$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) \
 		$(THREADS) $(FEASTOL) $(CONTINUE) $(QUEUE) $(PPN) \
 		$(CLIENTTMPDIR) $(NOWAITCLUSTER);
 

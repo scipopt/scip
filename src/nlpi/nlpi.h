@@ -299,7 +299,9 @@ SCIP_NLPTERMSTAT SCIPnlpiGetTermstat(
    SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
    );
 
-/** gives primal and dual solution */
+/** gives primal and dual solution
+ * for a ranged constraint, the dual variable is positive if the right hand side is active and negative if the left hand side is active
+ */
 extern
 SCIP_RETCODE SCIPnlpiGetSolution(
    SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */

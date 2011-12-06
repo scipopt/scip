@@ -4350,7 +4350,10 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
    return SCIP_OKAY;
 }
 
-/** creates and captures a second order cone constraint */
+/** creates and captures a second order cone constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 SCIP_RETCODE SCIPcreateConsSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */

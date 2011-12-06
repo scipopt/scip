@@ -3303,7 +3303,7 @@ SCIP_RETCODE createCapacityRestriction(
 
       /* create linear constraint for the linking between the binary variables and the integer variable */
       SCIP_CALL( SCIPcreateConsKnapsack(scip, &lincons, name, 0, NULL, NULL, (SCIP_Longint)(capacity),
-            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
+            FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
       for( b = 0; b < nbinvars; ++b )
       {
@@ -4410,13 +4410,15 @@ SCIP_RETCODE respropCumulativeCondition(
 
    SCIP_Bool success;
 
+   PROPRULE proprule;
    int inferdemand;
    int inferduration;  /* needed for upperbound resolve process */
    int j;
 
-   assert(inferInfoGetProprule(inferinfo) != PROPRULE_INVALID);
+   proprule = inferInfoGetProprule(inferinfo);
+   assert(proprule != PROPRULE_INVALID);
 
-   if( SCIPvarGetType(infervar) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(infervar) == SCIP_VARTYPE_IMPLINT )
+   if( proprule != PROPRULE_2_CORETIMEHOLES )
    {
       /* get duration and demand of inference variable */
       /**@todo hashmap for variables and durations would speed this up */
@@ -4440,7 +4442,7 @@ SCIP_RETCODE respropCumulativeCondition(
          SCIPvarGetName(infervar), inferduration, inferdemand);
 
       /* repropagation for core-times */
-      if(  inferInfoGetProprule(inferinfo) == PROPRULE_1_CORETIMES )
+      if(  proprule == PROPRULE_1_CORETIMES )
       {
          int leftbound;
          int rightbound;
@@ -4495,7 +4497,7 @@ SCIP_RETCODE respropCumulativeCondition(
             SCIP_CALL( SCIPaddConflictLb(scip, infervar, bdchgidx) );
 
             /* analyze the conflict */
-            if( inferInfoGetProprule(inferinfo) == PROPRULE_3_EDGEFINDING )
+            if( proprule == PROPRULE_3_EDGEFINDING )
             {
                /* can search for small clauses if earliest start is in the interval */
                if( oldbound >= inferInfoGetEst(inferinfo) )
@@ -4515,7 +4517,7 @@ SCIP_RETCODE respropCumulativeCondition(
             }
             else
             {
-               assert(inferInfoGetProprule(inferinfo) == PROPRULE_4_ENERGETICREASONING);
+               assert(proprule == PROPRULE_4_ENERGETICREASONING);
 
                SCIP_CALL( analyzeConflictEnergeticReasoning(scip, nvars, vars, durations,
                      infervar, inferinfo, bdchgidx, &success) );
@@ -4534,7 +4536,7 @@ SCIP_RETCODE respropCumulativeCondition(
             SCIP_CALL( SCIPaddConflictUb(scip, infervar, bdchgidx) );
 
             /* analyze the conflict */
-            if( inferInfoGetProprule(inferinfo) == PROPRULE_3_EDGEFINDING )
+            if( proprule == PROPRULE_3_EDGEFINDING )
             {
                /* can search for small clauses if latest completion time is in the interval */
                if( oldbound + inferduration<= inferInfoGetLct(inferinfo) )
@@ -4554,7 +4556,7 @@ SCIP_RETCODE respropCumulativeCondition(
             }
             else /* upper bound conflict analysis for energetic reasoning */
             {
-               assert(inferInfoGetProprule(inferinfo) == PROPRULE_4_ENERGETICREASONING);
+               assert(proprule == PROPRULE_4_ENERGETICREASONING);
 
                SCIP_CALL( analyzeConflictEnergeticReasoning(scip, nvars, vars, durations,
                      infervar, inferinfo, bdchgidx, &success) );
@@ -4573,7 +4575,7 @@ SCIP_RETCODE respropCumulativeCondition(
       int nbinvars;
 
       assert(SCIPvarGetType(infervar) == SCIP_VARTYPE_BINARY);
-      assert(inferInfoGetProprule(inferinfo) == PROPRULE_2_CORETIMEHOLES);
+      assert(proprule == PROPRULE_2_CORETIMEHOLES);
 
       intvar = NULL;
       inferdemand = 0;
@@ -5457,12 +5459,12 @@ SCIP_RETCODE removeIrrelevantJobs(
 
          for( t = est; t < ect; ++t )
          {
-            for( i = v; v < consdata->nvars && cumudemand <= capacity; ++v )
+            for( i = v; v < nvars && cumudemand <= capacity; ++v )
             {
-               if( time[i] > t )
+               if( times[indices[i]] > t )
                   break;
 
-               cumudemand += demands[perm[i]];
+               cumudemand += demands[indices[i]];
             }
 
             if( cumudemand > capacity )
@@ -7384,7 +7386,10 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
    return SCIP_OKAY;
 }
 
-/** creates and captures a cumulative constraint */
+/** creates and captures a cumulative constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 SCIP_RETCODE SCIPcreateConsCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */

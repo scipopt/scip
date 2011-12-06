@@ -747,8 +747,8 @@ public:
 
          if( simplifier != NULL || scaler != NULL )
          {
-            setObjLoLimit(soplex::infinity);
-            setObjUpLimit(-soplex::infinity);
+            setObjLoLimit(-soplex::infinity);
+            setObjUpLimit(soplex::infinity);
          }
 
          doSolve();

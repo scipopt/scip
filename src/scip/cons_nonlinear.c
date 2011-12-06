@@ -8050,7 +8050,9 @@ SCIP_RETCODE SCIPincludeNonlinconsUpgrade(
 }
 
 /** creates and captures a nonlinear constraint
- * this variant takes expression trees as input
+ *  this variant takes expression trees as input
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
 SCIP_RETCODE SCIPcreateConsNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -8139,6 +8141,8 @@ SCIP_RETCODE SCIPcreateConsNonlinear(
  * this variant takes a node of the expression graph as input and can only be used during presolving
  * it is assumed that the nonlinear constraint will be added to the transformed problem short after creation
  * the given exprgraphnode is captured in this method
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
 SCIP_RETCODE SCIPcreateConsNonlinear2(
    SCIP*                 scip,               /**< SCIP data structure */

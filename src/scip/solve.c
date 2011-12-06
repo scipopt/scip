@@ -662,8 +662,9 @@ SCIP_RETCODE updatePseudocost(
       /* update the pseudo cost values and reset the variables' flags; assume, that the responsibility for the dual gain
        * is equally spread on all bound changes that lead to valid pseudo cost updates
        */
+      assert(SCIPnodeGetType(tree->focuslpstatefork) == SCIP_NODETYPE_FORK);
       weight = (nvalidupdates > 0 ? 1.0 / (SCIP_Real)nvalidupdates : 1.0);
-      lpgain = (SCIPlpGetObjval(lp, set) - tree->focuslpstatefork->lowerbound) * weight;
+      lpgain = (SCIPlpGetObjval(lp, set) - tree->focuslpstatefork->data.fork->lpobjval) * weight;
       lpgain = MAX(lpgain, 0.0);
 
       for( i = 0; i < nupdates; ++i )

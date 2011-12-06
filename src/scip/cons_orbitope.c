@@ -2260,7 +2260,10 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
 }
 
 
-/** creates and captures a orbitope constraint */
+/** creates and captures a orbitope constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 SCIP_RETCODE SCIPcreateConsOrbitope(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */

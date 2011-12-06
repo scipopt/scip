@@ -45,9 +45,12 @@ SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates and captures a pseudoboolean constraint  
+/** creates and captures a pseudoboolean constraint
+ *
  *  @note linear and nonlinear terms can be added using SCIPaddCoefPseudoboolean() and SCIPaddTermPseudoboolean(),
- *  respectively
+ *        respectively
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
 extern
 SCIP_RETCODE SCIPcreateConsPseudoboolean(
