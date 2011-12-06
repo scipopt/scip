@@ -2195,7 +2195,7 @@ SCIP_RETCODE SCIPparamsetSetReducedsolve(
 
    /* turn off presolving, except for exactlp constraint handler where trivial presolving steps are implemented */
    SCIP_CALL( paramSetInt(scip, paramset, "constraints/integral/maxprerounds", 0) );
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
    SCIP_CALL( paramSetInt(scip, paramset, "constraints/exactlp/maxprerounds", -1) );
 #endif
 
@@ -2203,7 +2203,7 @@ SCIP_RETCODE SCIPparamsetSetReducedsolve(
    SCIP_CALL( paramSetInt(scip, paramset, "propagating/maxrounds", 0) );
    SCIP_CALL( paramSetInt(scip, paramset, "propagating/maxroundsroot", 0) );
    SCIP_CALL( paramSetInt(scip, paramset, "constraints/integral/propfreq", -1) );
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
    SCIP_CALL( paramSetInt(scip, paramset, "constraints/exactlp/propfreq", -1) );
 #endif
 
@@ -2215,7 +2215,7 @@ SCIP_RETCODE SCIPparamsetSetReducedsolve(
     */
    SCIP_CALL( paramSetInt(scip, paramset, "separating/maxstallrounds", -1) ); 
    SCIP_CALL( paramSetInt(scip, paramset, "constraints/integral/sepafreq", -1) );
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
    SCIP_CALL( paramSetInt(scip, paramset, "constraints/exactlp/sepafreq", 1) );
 #endif
 

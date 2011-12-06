@@ -32,12 +32,12 @@
 #include <unistd.h>
 #include <string.h>
 #include <assert.h>
+#ifdef WITH_EXACTSOLVE
+#include "gmp.h" /* gmp.h has to be included before zimpl/mme.h */
+#endif
 
-#ifdef EXACTSOLVE
-#include <gmp.h> /* gmp.h has to be included before zimpl/mme.h */
 #include "scip/cons_exactlp.h"
 #include "scip/intervalarith.h"
-#endif
 
 #include "scip/cons_linear.h"
 #include "scip/cons_setppc.h"
@@ -76,7 +76,7 @@ static int nstartvals_ = 0;
 static SCIP_Bool issuedbranchpriowarning_ = FALSE;
 static SCIP_Bool readerror_ = FALSE;
 
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
 static SCIP_CONSHDLRDATA* conshdlrdata_ = NULL;
 static SCIP_VAR** vars_ = NULL;  
 static SCIP_OBJSENSE objsense_;
@@ -162,7 +162,7 @@ Bool xlp_conname_exists(const char* conname)
  *
  *  @note this method is used by ZIMPL from version 3.00; 
  */
-#ifndef EXACTSOLVE
+#ifndef WITH_EXACTSOLVE
 Bool xlp_addcon_term(
    const char*           name,               /**< constraint name */
    ConType               type,               /**< constraint type */
@@ -668,7 +668,7 @@ Bool xlp_addcon_term(
  *
  *  @note this method is used by ZIMPL up to version 2.09; 
  */
-#ifndef EXACTSOLVE
+#ifndef WITH_EXACTSOLVE
 Con* xlp_addcon(
    const char*           name,               /**< constraint name */
    ConType               type,               /**< constraint type */
@@ -760,7 +760,7 @@ Con* xlp_addcon(
  *
  *  @note this method is used by ZIMPL up to version 2.09; 
  */
-#ifndef EXACTSOLVE
+#ifndef WITH_EXACTSOLVE
 void xlp_addtonzo(
    Var*            var,                /**< variable to add */
    Con*            con,                /**< constraint */
@@ -793,7 +793,7 @@ void xlp_addtonzo(
 
 
 /** method adds an variable; is called directly by ZIMPL */
-#ifndef EXACTSOLVE
+#ifndef WITH_EXACTSOLVE
 Var* xlp_addvar(
    const char*           name,               /**< variable name */
    VarClass              usevarclass,        /**< variable type */
@@ -1086,7 +1086,7 @@ Var* xlp_addvar(
 /** ZIMPL_VERSION is defined by ZIMPL version 3.00 and higher. ZIMPL 3.00 made same changes in the interface to SCIP. */
 #if (ZIMPL_VERSION >= 300)
 
-#ifndef EXACTSOLVE
+#ifndef WITH_EXACTSOLVE
 Bool xlp_addsos_term(
    const char*           name,               /**< constraint name */
    SosType               type,               /**< SOS type */
@@ -1189,7 +1189,7 @@ Bool xlp_addsos_term(
 #else /* else of #if (ZIMPL_VERSION >= 300) */
 
 /** method adds SOS constraints */
-#ifndef EXACTSOLVE
+#ifndef WITH_EXACTSOLVE
 Sos* xlp_addsos(
    const char*           name,               /**< constraint name */
    SosType               type,               /**< SOS type */
@@ -1266,7 +1266,7 @@ Sos* xlp_addsos(
 #endif
 
 /** adds a variable to a SOS constraint */
-#ifndef EXACTSOLVE
+#ifndef WITH_EXACTSOLVE
 void xlp_addtosos(
    Sos*                  sos,                /**< SOS constraint */ 
    Var*                  var,                /**< variable to add */
@@ -1343,7 +1343,7 @@ VarClass xlp_getclass(
 }
 
 /** returns lower bound */
-#ifndef EXACTSOLVE
+#ifndef WITH_EXACTSOLVE
 Bound* xlp_getlower(
    const Var*            var                 /**< variable */
    )
@@ -1382,7 +1382,7 @@ Bound* xlp_getlower(
 #endif
 
 /** returns upper bound */
-#ifndef EXACTSOLVE
+#ifndef WITH_EXACTSOLVE
 Bound* xlp_getupper(
    const Var*            var                 /**< variable */
    )
@@ -1430,7 +1430,7 @@ void xlp_objname(const char* name)
    /* nothing to be done */
 }
 
-#ifndef EXACTSOLVE
+#ifndef WITH_EXACTSOLVE
 void xlp_setdir(Bool minimize)
 {
    SCIP_OBJSENSE objsense;
@@ -1448,7 +1448,7 @@ void xlp_setdir(Bool minimize)
 #endif
 
 /** changes objective coefficient of a variable */
-#ifndef EXACTSOLVE
+#ifndef WITH_EXACTSOLVE
 void xlp_addtocost(
    Var*            var,                /**< variable */
    const Numb*     cost                /**< objective coefficient */
@@ -1566,7 +1566,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
    SCIP_Bool usestartsol;
    SCIP_Bool success;
    
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
    SCIP_CONS* cons;
    SCIP_Bool initial;
    SCIP_Bool separate;
@@ -1655,7 +1655,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
       SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_,&startvars_,startvalssize_) );
    }
 
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
    conshdlrdata_ = SCIPconshdlrGetData(SCIPfindConshdlr(scip, "exactlp"));
    assert(conshdlrdata_ != NULL);
 
@@ -1710,7 +1710,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
    if( strcmp(paramstr, "-") == 0 )
    {
       /* call ZIMPL parser without arguments */
-#ifdef REDUCEDSOLVE
+#ifdef WITH_REDUCEDSOLVE
       if( !zpl_read(filename, FALSE) )
          readerror_ = TRUE;
 #else
@@ -1799,7 +1799,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
       }
 
       /* call ZIMPL parser with arguments */
-#ifdef REDUCEDSOLVE
+#ifdef WITH_REDUCEDSOLVE
       if( !zpl_read_with_args(argv, argc, FALSE) )
          readerror_ = TRUE;
 #else
@@ -1826,7 +1826,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
       }
    }
 
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
    /* create exactlp constraint from variable, constraint and matrix information stored */
    
 #ifdef CREATEEXACTLPCONS_OUT
@@ -1959,7 +1959,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
       for( i = 0; i < nstartvals_; i++ )
       {
          SCIP_CALL( SCIPsetSolVal(scip, startsol, startvars_[i], startvals_[i]) );
-#ifndef EXACTSOLVE
+#ifndef WITH_EXACTSOLVE
          SCIP_CALL( SCIPreleaseVar(scip, &startvars_[i]) ); /* variables are still needed */
 #endif
       }
@@ -1983,7 +1983,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
       startvalssize_ = 0;
    }
    
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
    /* free matrix specific information */ 
    assert(nnonz_ <= nonzsize_);
    for( i = 0; i < nonzsize_; ++i )

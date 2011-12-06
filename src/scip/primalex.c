@@ -21,7 +21,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
-#include <gmp.h> 
 
 #include "scip/def.h"
 #include "scip/message.h"
@@ -31,6 +30,9 @@
 #include "scip/solex.h"
 #include "scip/primalex.h"
 
+
+#ifdef WITH_EXACTSOLVE
+#include "gmp.h" 
 
 /*
  * memory growing methods for dynamically allocated arrays
@@ -291,4 +293,4 @@ SCIP_RETCODE SCIPprimalexAddSolFree(
    return SCIP_OKAY;
 }
 
-
+#endif

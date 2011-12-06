@@ -21,7 +21,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
-#include <gmp.h> 
 
 #include "scip/def.h" 
 #include "scip/scip.h"
@@ -36,6 +35,8 @@
 #include "scip/struct_solex.h"
 #endif
 
+#ifdef WITH_EXACTSOLVE
+#include "gmp.h" 
 
 /** clears solution arrays of exact primal CIP solution */
 static
@@ -594,3 +595,5 @@ SCIP_SOLORIGIN SCIPsolexGetOrigin(
 
    return sol->solorigin;
 }
+
+#endif

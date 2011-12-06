@@ -292,7 +292,15 @@ $(LIBOBJDIR)/scip/lp.o: src/scip/lp.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/type_prob.h src/scip/pub_lp.h src/scip/struct_lp.h \
  src/scip/var.h src/scip/type_primal.h src/scip/pub_var.h \
  src/scip/type_implics.h src/scip/struct_var.h src/scip/prob.h \
- src/scip/struct_prob.h src/scip/sol.h src/scip/pub_sol.h
+ src/scip/struct_prob.h src/scip/sol.h src/scip/pub_sol.h src/scip/scip.h \
+ src/scip/type_dialog.h src/scip/pub_branch.h src/scip/pub_conflict.h \
+ src/scip/pub_cons.h src/scip/pub_cutpool.h src/scip/type_cutpool.h \
+ src/scip/pub_dialog.h src/scip/pub_disp.h src/scip/pub_event.h \
+ src/scip/pub_fileio.h src/scip/pub_heur.h src/scip/pub_implics.h \
+ src/scip/pub_nodesel.h src/scip/pub_paramset.h src/scip/pub_presol.h \
+ src/scip/pub_pricer.h src/scip/pub_reader.h src/scip/pub_relax.h \
+ src/scip/pub_sepa.h src/scip/pub_prop.h src/scip/pub_tree.h \
+ src/scip/cons_exactlp.h src/scip/type_lpiex.h src/scip/type_solex.h
 $(LIBOBJDIR)/scip/mem.o: src/scip/mem.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
  src/scip/pub_message.h src/scip/mem.h src/scip/type_mem.h \
@@ -496,25 +504,8 @@ $(LIBOBJDIR)/scip/primal.o: src/scip/primal.c src/scip/def.h src/scip/type_retco
  src/scip/struct_prob.h src/scip/sol.h src/scip/pub_sol.h \
  src/scip/primal.h src/scip/struct_primal.h src/scip/tree.h \
  src/scip/pub_tree.h src/scip/struct_tree.h src/scip/disp.h \
- src/scip/pub_disp.h
-$(LIBOBJDIR)/scip/primalex.o: src/scip/primalex.c src/scip/def.h src/scip/type_retcode.h \
- src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
- src/scip/pub_message.h src/scip/set.h src/blockmemshell/memory.h \
- src/scip/buffer.h src/scip/type_set.h src/scip/type_buffer.h \
- src/scip/type_stat.h src/scip/type_clock.h src/scip/type_paramset.h \
- src/scip/type_scip.h src/scip/type_event.h src/scip/type_branch.h \
- src/scip/type_result.h src/scip/type_conflict.h src/scip/type_var.h \
- src/scip/type_cons.h src/scip/type_sol.h src/scip/type_disp.h \
- src/scip/type_heur.h src/scip/type_nodesel.h src/scip/type_tree.h \
- src/scip/type_presol.h src/scip/type_pricer.h src/scip/type_reader.h \
- src/scip/type_relax.h src/scip/type_sepa.h src/scip/type_prop.h \
- src/scip/struct_set.h src/scip/var.h src/scip/type_misc.h \
- src/scip/type_history.h src/scip/type_lp.h src/scip/type_prob.h \
- src/scip/type_primal.h src/scip/pub_var.h src/scip/type_implics.h \
- src/scip/pub_misc.h src/scip/struct_var.h src/scip/prob.h \
- src/scip/struct_prob.h src/scip/solex.h src/scip/type_solex.h \
- src/scip/pub_solex.h src/scip/primalex.h src/scip/type_primalex.h \
- src/scip/struct_primalex.h
+ src/scip/pub_disp.h src/scip/cons_exactlp.h src/scip/type_lpiex.h \
+ src/scip/type_solex.h
 $(LIBOBJDIR)/scip/prob.o: src/scip/prob.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
  src/scip/pub_message.h src/scip/set.h src/blockmemshell/memory.h \
@@ -537,7 +528,15 @@ $(LIBOBJDIR)/scip/prob.o: src/scip/prob.c src/scip/def.h src/scip/type_retcode.h
  src/scip/primal.h src/scip/struct_primal.h src/scip/tree.h \
  src/scip/pub_tree.h src/scip/struct_tree.h src/scip/branch.h \
  src/scip/type_sepastore.h src/scip/pub_branch.h src/scip/cons.h \
- src/scip/pub_cons.h src/scip/struct_cons.h
+ src/scip/pub_cons.h src/scip/struct_cons.h src/scip/scip.h \
+ src/scip/type_dialog.h src/scip/pub_conflict.h src/scip/pub_cutpool.h \
+ src/scip/type_cutpool.h src/scip/pub_dialog.h src/scip/pub_disp.h \
+ src/scip/pub_fileio.h src/scip/pub_heur.h src/scip/pub_implics.h \
+ src/scip/pub_nodesel.h src/scip/pub_paramset.h src/scip/pub_presol.h \
+ src/scip/pub_pricer.h src/scip/pub_reader.h src/scip/pub_relax.h \
+ src/scip/pub_sepa.h src/scip/pub_prop.h src/scip/pub_sol.h \
+ src/scip/lpi.h src/scip/cons_exactlp.h src/scip/type_lpiex.h \
+ src/scip/type_solex.h
 $(LIBOBJDIR)/scip/prop.o: src/scip/prop.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
  src/scip/pub_message.h src/scip/set.h src/blockmemshell/memory.h \
@@ -649,8 +648,8 @@ $(LIBOBJDIR)/scip/scip.o: src/scip/scip.c src/scip/def.h src/scip/type_retcode.h
  src/scip/dialog.h src/scip/disp.h src/scip/heur.h src/scip/nodesel.h \
  src/scip/reader.h src/scip/presol.h src/scip/pricer.h src/scip/relax.h \
  src/scip/sepa.h src/scip/prop.h src/scip/debug.h src/scip/cons_exactlp.h \
- src/scip/lpiex.h src/scip/type_lpiex.h src/scip/solex.h \
- src/scip/type_solex.h src/scip/pub_solex.h src/scip/struct_scip.h
+ src/scip/type_lpiex.h src/scip/type_solex.h src/scip/lpiex.h \
+ src/scip/struct_scip.h
 $(LIBOBJDIR)/scip/scipdefplugins.o: src/scip/scipdefplugins.c src/scip/scipdefplugins.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
@@ -678,9 +677,8 @@ $(LIBOBJDIR)/scip/scipdefplugins.o: src/scip/scipdefplugins.c src/scip/scipdefpl
  src/scip/branch_pscost.h src/scip/branch_random.h \
  src/scip/branch_relpscost.h src/scip/cons_and.h \
  src/scip/cons_bounddisjunction.h src/scip/cons_conjunction.h \
- src/scip/cons_countsols.h src/scip/cons_exactlp.h src/scip/lpiex.h \
- src/scip/type_lpiex.h src/scip/solex.h src/scip/type_solex.h \
- src/scip/pub_solex.h src/scip/cons_indicator.h src/scip/cons_integral.h \
+ src/scip/cons_countsols.h src/scip/cons_exactlp.h src/scip/type_lpiex.h \
+ src/scip/type_solex.h src/scip/cons_indicator.h src/scip/cons_integral.h \
  src/scip/cons_knapsack.h src/scip/cons_linear.h src/scip/cons_logicor.h \
  src/scip/cons_or.h src/scip/cons_orbitope.h src/scip/cons_quadratic.h \
  src/scip/type_nlpi.h src/scip/cons_setppc.h src/scip/cons_sos1.h \
@@ -743,9 +741,8 @@ $(LIBOBJDIR)/scip/scipshell.o: src/scip/scipshell.c src/scip/scip.h src/scip/def
  src/scip/branch_pscost.h src/scip/branch_random.h \
  src/scip/branch_relpscost.h src/scip/cons_and.h \
  src/scip/cons_bounddisjunction.h src/scip/cons_conjunction.h \
- src/scip/cons_countsols.h src/scip/cons_exactlp.h src/scip/lpiex.h \
- src/scip/type_lpiex.h src/scip/solex.h src/scip/type_solex.h \
- src/scip/pub_solex.h src/scip/cons_indicator.h src/scip/cons_integral.h \
+ src/scip/cons_countsols.h src/scip/cons_exactlp.h src/scip/type_lpiex.h \
+ src/scip/type_solex.h src/scip/cons_indicator.h src/scip/cons_integral.h \
  src/scip/cons_knapsack.h src/scip/cons_linear.h src/scip/cons_logicor.h \
  src/scip/cons_or.h src/scip/cons_orbitope.h src/scip/cons_quadratic.h \
  src/scip/type_nlpi.h src/scip/cons_setppc.h src/scip/cons_sos1.h \
@@ -881,33 +878,6 @@ $(LIBOBJDIR)/scip/sol.o: src/scip/sol.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_tree.h src/scip/struct_tree.h src/scip/cons.h \
  src/scip/type_sepastore.h src/scip/pub_cons.h src/scip/struct_cons.h \
  src/scip/struct_sol.h
-$(LIBOBJDIR)/scip/solex.o: src/scip/solex.c src/scip/def.h src/scip/type_retcode.h \
- src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
- src/scip/pub_message.h src/scip/set.h src/blockmemshell/memory.h \
- src/scip/buffer.h src/scip/type_set.h src/scip/type_buffer.h \
- src/scip/type_stat.h src/scip/type_clock.h src/scip/type_paramset.h \
- src/scip/type_scip.h src/scip/type_event.h src/scip/type_branch.h \
- src/scip/type_result.h src/scip/type_conflict.h src/scip/type_var.h \
- src/scip/type_cons.h src/scip/type_sol.h src/scip/type_disp.h \
- src/scip/type_heur.h src/scip/type_nodesel.h src/scip/type_tree.h \
- src/scip/type_presol.h src/scip/type_pricer.h src/scip/type_reader.h \
- src/scip/type_relax.h src/scip/type_sepa.h src/scip/type_prop.h \
- src/scip/struct_set.h src/scip/misc.h src/scip/type_misc.h \
- src/scip/pub_misc.h src/scip/var.h src/scip/type_history.h \
- src/scip/type_lp.h src/scip/type_prob.h src/scip/type_primal.h \
- src/scip/pub_var.h src/scip/type_implics.h src/scip/struct_var.h \
- src/scip/prob.h src/scip/struct_prob.h src/scip/solex.h \
- src/scip/type_solex.h src/scip/pub_solex.h src/scip/cons_exactlp.h \
- src/scip/scip.h src/scip/type_dialog.h src/scip/pub_branch.h \
- src/scip/pub_conflict.h src/scip/pub_cons.h src/scip/pub_cutpool.h \
- src/scip/type_cutpool.h src/scip/pub_dialog.h src/scip/pub_disp.h \
- src/scip/pub_event.h src/scip/pub_fileio.h src/scip/pub_heur.h \
- src/scip/pub_implics.h src/scip/pub_lp.h src/scip/type_lpi.h \
- src/scip/pub_nodesel.h src/scip/pub_paramset.h src/scip/pub_presol.h \
- src/scip/pub_pricer.h src/scip/pub_reader.h src/scip/pub_relax.h \
- src/scip/pub_sepa.h src/scip/pub_prop.h src/scip/pub_sol.h \
- src/scip/pub_tree.h src/scip/lpi.h src/scip/lpiex.h \
- src/scip/type_lpiex.h src/scip/struct_solex.h
 $(LIBOBJDIR)/scip/solve.o: src/scip/solve.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
  src/scip/pub_message.h src/scip/set.h src/blockmemshell/memory.h \
@@ -1342,6 +1312,34 @@ $(LIBOBJDIR)/scip/cons_eqknapsack.o: src/scip/cons_eqknapsack.c src/scip/cons_eq
  src/scip/pub_relax.h src/scip/pub_sepa.h src/scip/pub_prop.h \
  src/scip/pub_sol.h src/scip/pub_tree.h src/scip/pub_var.h \
  src/scip/type_history.h src/scip/lpi.h src/scip/cons_linear.h
+$(LIBOBJDIR)/scip/cons_exactlp.o: src/scip/cons_exactlp.c src/scip/cons_exactlp.h \
+ src/scip/type_cons.h src/scip/def.h src/scip/type_retcode.h \
+ src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
+ src/scip/pub_message.h src/scip/type_result.h src/scip/type_var.h \
+ src/scip/type_sol.h src/scip/type_scip.h src/scip/type_lpiex.h \
+ src/scip/type_lpi.h src/scip/type_prob.h src/scip/type_solex.h \
+ src/scip/intervalarith.h src/scip/lp.h src/blockmemshell/memory.h \
+ src/scip/type_set.h src/scip/type_stat.h src/scip/type_misc.h \
+ src/scip/type_lp.h src/scip/pub_lp.h src/scip/struct_lp.h \
+ src/scip/lpiex.h src/scip/misc.h src/scip/pub_misc.h src/scip/primalex.h \
+ src/scip/type_primalex.h src/scip/struct_primalex.h src/scip/scip.h \
+ src/scip/type_clock.h src/scip/type_paramset.h src/scip/type_event.h \
+ src/scip/type_tree.h src/scip/type_branch.h src/scip/type_conflict.h \
+ src/scip/type_dialog.h src/scip/type_disp.h src/scip/type_heur.h \
+ src/scip/type_nodesel.h src/scip/type_presol.h src/scip/type_pricer.h \
+ src/scip/type_reader.h src/scip/type_relax.h src/scip/type_sepa.h \
+ src/scip/type_prop.h src/scip/pub_branch.h src/scip/pub_conflict.h \
+ src/scip/pub_cons.h src/scip/pub_cutpool.h src/scip/type_cutpool.h \
+ src/scip/pub_dialog.h src/scip/pub_disp.h src/scip/pub_event.h \
+ src/scip/pub_fileio.h src/scip/pub_heur.h src/scip/pub_implics.h \
+ src/scip/type_implics.h src/scip/pub_nodesel.h src/scip/pub_paramset.h \
+ src/scip/pub_presol.h src/scip/pub_pricer.h src/scip/pub_reader.h \
+ src/scip/pub_relax.h src/scip/pub_sepa.h src/scip/pub_prop.h \
+ src/scip/pub_sol.h src/scip/pub_tree.h src/scip/pub_var.h \
+ src/scip/type_history.h src/scip/lpi.h src/scip/solex.h \
+ src/scip/pub_solex.h src/scip/struct_scip.h src/scip/type_interrupt.h \
+ src/scip/type_mem.h src/scip/type_primal.h src/scip/type_pricestore.h \
+ src/scip/type_sepastore.h src/rectlu/rectlu.h src/rectlu/rectlu_num.h
 $(LIBOBJDIR)/scip/cons_indicator.o: src/scip/cons_indicator.c src/scip/cons_indicator.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
@@ -1386,7 +1384,8 @@ $(LIBOBJDIR)/scip/cons_integral.o: src/scip/cons_integral.c src/scip/cons_integr
  src/scip/pub_presol.h src/scip/pub_pricer.h src/scip/pub_reader.h \
  src/scip/pub_relax.h src/scip/pub_sepa.h src/scip/pub_prop.h \
  src/scip/pub_sol.h src/scip/pub_tree.h src/scip/pub_var.h \
- src/scip/type_history.h src/scip/lpi.h
+ src/scip/type_history.h src/scip/lpi.h src/scip/cons_exactlp.h \
+ src/scip/type_lpiex.h src/scip/type_solex.h
 $(LIBOBJDIR)/scip/cons_invarknapsack.o: src/scip/cons_invarknapsack.c \
  src/scip/cons_invarknapsack.h src/scip/scip.h src/scip/def.h \
  src/scip/type_retcode.h src/scip/message.h src/scip/type_message.h \
@@ -1702,8 +1701,7 @@ $(LIBOBJDIR)/scip/dialog_default.o: src/scip/dialog_default.c src/scip/dialog_de
  src/scip/pub_relax.h src/scip/pub_sepa.h src/scip/pub_prop.h \
  src/scip/pub_sol.h src/scip/pub_tree.h src/scip/pub_var.h \
  src/scip/type_history.h src/scip/lpi.h src/scip/cons_exactlp.h \
- src/scip/lpiex.h src/scip/type_lpiex.h src/scip/solex.h \
- src/scip/type_solex.h src/scip/pub_solex.h
+ src/scip/type_lpiex.h src/scip/type_solex.h
 $(LIBOBJDIR)/scip/disp_default.o: src/scip/disp_default.c src/scip/disp_default.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
@@ -1798,9 +1796,8 @@ $(LIBOBJDIR)/scip/heur_crossover.o: src/scip/heur_crossover.c src/scip/scip.h \
  src/scip/branch_pscost.h src/scip/branch_random.h \
  src/scip/branch_relpscost.h src/scip/cons_and.h \
  src/scip/cons_bounddisjunction.h src/scip/cons_conjunction.h \
- src/scip/cons_countsols.h src/scip/cons_exactlp.h src/scip/lpiex.h \
- src/scip/type_lpiex.h src/scip/solex.h src/scip/type_solex.h \
- src/scip/pub_solex.h src/scip/cons_indicator.h src/scip/cons_integral.h \
+ src/scip/cons_countsols.h src/scip/cons_exactlp.h src/scip/type_lpiex.h \
+ src/scip/type_solex.h src/scip/cons_indicator.h src/scip/cons_integral.h \
  src/scip/cons_knapsack.h src/scip/cons_linear.h src/scip/cons_logicor.h \
  src/scip/cons_or.h src/scip/cons_orbitope.h src/scip/cons_quadratic.h \
  src/scip/type_nlpi.h src/scip/cons_setppc.h src/scip/cons_sos1.h \
@@ -1862,9 +1859,8 @@ $(LIBOBJDIR)/scip/heur_dins.o: src/scip/heur_dins.c src/scip/scip.h src/scip/def
  src/scip/branch_pscost.h src/scip/branch_random.h \
  src/scip/branch_relpscost.h src/scip/cons_and.h \
  src/scip/cons_bounddisjunction.h src/scip/cons_conjunction.h \
- src/scip/cons_countsols.h src/scip/cons_exactlp.h src/scip/lpiex.h \
- src/scip/type_lpiex.h src/scip/solex.h src/scip/type_solex.h \
- src/scip/pub_solex.h src/scip/cons_indicator.h src/scip/cons_integral.h \
+ src/scip/cons_countsols.h src/scip/cons_exactlp.h src/scip/type_lpiex.h \
+ src/scip/type_solex.h src/scip/cons_indicator.h src/scip/cons_integral.h \
  src/scip/cons_knapsack.h src/scip/cons_linear.h src/scip/cons_logicor.h \
  src/scip/cons_or.h src/scip/cons_orbitope.h src/scip/cons_quadratic.h \
  src/scip/type_nlpi.h src/scip/cons_setppc.h src/scip/cons_sos1.h \
@@ -2084,9 +2080,8 @@ $(LIBOBJDIR)/scip/heur_localbranching.o: src/scip/heur_localbranching.c src/scip
  src/scip/branch_leastinf.h src/scip/branch_pscost.h \
  src/scip/branch_random.h src/scip/branch_relpscost.h src/scip/cons_and.h \
  src/scip/cons_bounddisjunction.h src/scip/cons_conjunction.h \
- src/scip/cons_countsols.h src/scip/cons_exactlp.h src/scip/lpiex.h \
- src/scip/type_lpiex.h src/scip/solex.h src/scip/type_solex.h \
- src/scip/pub_solex.h src/scip/cons_indicator.h src/scip/cons_integral.h \
+ src/scip/cons_countsols.h src/scip/cons_exactlp.h src/scip/type_lpiex.h \
+ src/scip/type_solex.h src/scip/cons_indicator.h src/scip/cons_integral.h \
  src/scip/cons_knapsack.h src/scip/cons_logicor.h src/scip/cons_or.h \
  src/scip/cons_orbitope.h src/scip/cons_quadratic.h src/scip/type_nlpi.h \
  src/scip/cons_setppc.h src/scip/cons_sos1.h src/scip/cons_sos2.h \
@@ -2148,9 +2143,8 @@ $(LIBOBJDIR)/scip/heur_mutation.o: src/scip/heur_mutation.c src/scip/scip.h src/
  src/scip/branch_pscost.h src/scip/branch_random.h \
  src/scip/branch_relpscost.h src/scip/cons_and.h \
  src/scip/cons_bounddisjunction.h src/scip/cons_conjunction.h \
- src/scip/cons_countsols.h src/scip/cons_exactlp.h src/scip/lpiex.h \
- src/scip/type_lpiex.h src/scip/solex.h src/scip/type_solex.h \
- src/scip/pub_solex.h src/scip/cons_indicator.h src/scip/cons_integral.h \
+ src/scip/cons_countsols.h src/scip/cons_exactlp.h src/scip/type_lpiex.h \
+ src/scip/type_solex.h src/scip/cons_indicator.h src/scip/cons_integral.h \
  src/scip/cons_knapsack.h src/scip/cons_linear.h src/scip/cons_logicor.h \
  src/scip/cons_or.h src/scip/cons_orbitope.h src/scip/cons_quadratic.h \
  src/scip/type_nlpi.h src/scip/cons_setppc.h src/scip/cons_sos1.h \
@@ -2326,9 +2320,8 @@ $(LIBOBJDIR)/scip/heur_rens.o: src/scip/heur_rens.c src/scip/scip.h src/scip/def
  src/scip/branch_pscost.h src/scip/branch_random.h \
  src/scip/branch_relpscost.h src/scip/cons_and.h \
  src/scip/cons_bounddisjunction.h src/scip/cons_conjunction.h \
- src/scip/cons_countsols.h src/scip/cons_exactlp.h src/scip/lpiex.h \
- src/scip/type_lpiex.h src/scip/solex.h src/scip/type_solex.h \
- src/scip/pub_solex.h src/scip/cons_indicator.h src/scip/cons_integral.h \
+ src/scip/cons_countsols.h src/scip/cons_exactlp.h src/scip/type_lpiex.h \
+ src/scip/type_solex.h src/scip/cons_indicator.h src/scip/cons_integral.h \
  src/scip/cons_knapsack.h src/scip/cons_linear.h src/scip/cons_logicor.h \
  src/scip/cons_or.h src/scip/cons_orbitope.h src/scip/cons_quadratic.h \
  src/scip/type_nlpi.h src/scip/cons_setppc.h src/scip/cons_sos1.h \
@@ -2390,9 +2383,8 @@ $(LIBOBJDIR)/scip/heur_rins.o: src/scip/heur_rins.c src/scip/scip.h src/scip/def
  src/scip/branch_pscost.h src/scip/branch_random.h \
  src/scip/branch_relpscost.h src/scip/cons_and.h \
  src/scip/cons_bounddisjunction.h src/scip/cons_conjunction.h \
- src/scip/cons_countsols.h src/scip/cons_exactlp.h src/scip/lpiex.h \
- src/scip/type_lpiex.h src/scip/solex.h src/scip/type_solex.h \
- src/scip/pub_solex.h src/scip/cons_indicator.h src/scip/cons_integral.h \
+ src/scip/cons_countsols.h src/scip/cons_exactlp.h src/scip/type_lpiex.h \
+ src/scip/type_solex.h src/scip/cons_indicator.h src/scip/cons_integral.h \
  src/scip/cons_knapsack.h src/scip/cons_linear.h src/scip/cons_logicor.h \
  src/scip/cons_or.h src/scip/cons_orbitope.h src/scip/cons_quadratic.h \
  src/scip/type_nlpi.h src/scip/cons_setppc.h src/scip/cons_sos1.h \
@@ -2610,9 +2602,8 @@ $(LIBOBJDIR)/scip/heur_undercover.o: src/scip/heur_undercover.c src/scip/heur_un
  src/scip/branch_leastinf.h src/scip/branch_pscost.h \
  src/scip/branch_random.h src/scip/branch_relpscost.h src/scip/cons_and.h \
  src/scip/cons_bounddisjunction.h src/scip/cons_conjunction.h \
- src/scip/cons_countsols.h src/scip/cons_exactlp.h src/scip/lpiex.h \
- src/scip/type_lpiex.h src/scip/solex.h src/scip/type_solex.h \
- src/scip/pub_solex.h src/scip/cons_indicator.h src/scip/cons_integral.h \
+ src/scip/cons_countsols.h src/scip/cons_exactlp.h src/scip/type_lpiex.h \
+ src/scip/type_solex.h src/scip/cons_indicator.h src/scip/cons_integral.h \
  src/scip/cons_knapsack.h src/scip/cons_linear.h src/scip/cons_logicor.h \
  src/scip/cons_or.h src/scip/cons_orbitope.h src/scip/cons_quadratic.h \
  src/scip/type_nlpi.h src/scip/cons_setppc.h src/scip/cons_sos1.h \
@@ -3306,14 +3297,7 @@ $(LIBOBJDIR)/scip/reader_zpl.o: src/scip/reader_zpl.c src/scip/reader_zpl.h src/
  src/scip/pub_pricer.h src/scip/pub_reader.h src/scip/pub_relax.h \
  src/scip/pub_sepa.h src/scip/pub_prop.h src/scip/pub_sol.h \
  src/scip/pub_tree.h src/scip/pub_var.h src/scip/type_history.h \
- src/scip/lpi.h src/scip/intervalarith.h src/scip/cons_exactlp.h \
- src/scip/lpiex.h src/scip/type_lpiex.h src/scip/solex.h \
- src/scip/type_solex.h src/scip/pub_solex.h src/scip/cons_linear.h \
- src/scip/cons_setppc.h src/scip/cons_sos1.h src/scip/cons_sos2.h \
- src/scip/cons_indicator.h src/scip/cons_quadratic.h src/scip/type_nlpi.h \
- lib/zimplinc/zimpl/bool.h lib/zimplinc/zimpl/ratlptypes.h \
- lib/zimplinc/zimpl/mme.h lib/zimplinc/zimpl/xlpglue.h \
- lib/zimplinc/zimpl/zimpllib.h lib/zimplinc/zimpl/mono.h
+ src/scip/lpi.h
 $(LIBOBJDIR)/scip/sepa_clique.o: src/scip/sepa_clique.c src/scip/sepa_clique.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
@@ -3497,9 +3481,8 @@ $(LIBOBJDIR)/scip/sepa_rapidlearning.o: src/scip/sepa_rapidlearning.c \
  src/scip/branch_pscost.h src/scip/branch_random.h \
  src/scip/branch_relpscost.h src/scip/cons_and.h \
  src/scip/cons_bounddisjunction.h src/scip/cons_conjunction.h \
- src/scip/cons_countsols.h src/scip/cons_exactlp.h src/scip/lpiex.h \
- src/scip/type_lpiex.h src/scip/solex.h src/scip/type_solex.h \
- src/scip/pub_solex.h src/scip/cons_indicator.h src/scip/cons_integral.h \
+ src/scip/cons_countsols.h src/scip/cons_exactlp.h src/scip/type_lpiex.h \
+ src/scip/type_solex.h src/scip/cons_indicator.h src/scip/cons_integral.h \
  src/scip/cons_knapsack.h src/scip/cons_linear.h src/scip/cons_logicor.h \
  src/scip/cons_or.h src/scip/cons_orbitope.h src/scip/cons_quadratic.h \
  src/scip/type_nlpi.h src/scip/cons_setppc.h src/scip/cons_sos1.h \
@@ -3607,9 +3590,8 @@ $(LIBOBJDIR)/scip/sepa_zerohalf.o: src/scip/sepa_zerohalf.c src/scip/sepa_zeroha
  src/scip/branch_leastinf.h src/scip/branch_pscost.h \
  src/scip/branch_random.h src/scip/branch_relpscost.h src/scip/cons_and.h \
  src/scip/cons_bounddisjunction.h src/scip/cons_conjunction.h \
- src/scip/cons_countsols.h src/scip/cons_exactlp.h src/scip/lpiex.h \
- src/scip/type_lpiex.h src/scip/solex.h src/scip/type_solex.h \
- src/scip/pub_solex.h src/scip/cons_indicator.h src/scip/cons_integral.h \
+ src/scip/cons_countsols.h src/scip/cons_exactlp.h src/scip/type_lpiex.h \
+ src/scip/type_solex.h src/scip/cons_indicator.h src/scip/cons_integral.h \
  src/scip/cons_knapsack.h src/scip/cons_logicor.h src/scip/cons_or.h \
  src/scip/cons_orbitope.h src/scip/cons_quadratic.h src/scip/type_nlpi.h \
  src/scip/cons_setppc.h src/scip/cons_sos1.h src/scip/cons_sos2.h \
@@ -3647,6 +3629,80 @@ $(LIBOBJDIR)/scip/sepa_zerohalf.o: src/scip/sepa_zerohalf.c src/scip/sepa_zeroha
  src/scip/struct_scip.h src/scip/type_interrupt.h src/scip/type_mem.h \
  src/scip/type_primal.h src/scip/type_pricestore.h \
  src/scip/type_sepastore.h src/scip/struct_set.h
+$(LIBOBJDIR)/scip/cons_exactlp.o: src/scip/cons_exactlp.c src/scip/cons_exactlp.h \
+ src/scip/type_cons.h src/scip/def.h src/scip/type_retcode.h \
+ src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
+ src/scip/pub_message.h src/scip/type_result.h src/scip/type_var.h \
+ src/scip/type_sol.h src/scip/type_scip.h src/scip/type_lpiex.h \
+ src/scip/type_lpi.h src/scip/type_prob.h src/scip/type_solex.h \
+ src/scip/intervalarith.h src/scip/lp.h src/blockmemshell/memory.h \
+ src/scip/type_set.h src/scip/type_stat.h src/scip/type_misc.h \
+ src/scip/type_lp.h src/scip/pub_lp.h src/scip/struct_lp.h \
+ src/scip/lpiex.h src/scip/misc.h src/scip/pub_misc.h src/scip/primalex.h \
+ src/scip/type_primalex.h src/scip/struct_primalex.h src/scip/scip.h \
+ src/scip/type_clock.h src/scip/type_paramset.h src/scip/type_event.h \
+ src/scip/type_tree.h src/scip/type_branch.h src/scip/type_conflict.h \
+ src/scip/type_dialog.h src/scip/type_disp.h src/scip/type_heur.h \
+ src/scip/type_nodesel.h src/scip/type_presol.h src/scip/type_pricer.h \
+ src/scip/type_reader.h src/scip/type_relax.h src/scip/type_sepa.h \
+ src/scip/type_prop.h src/scip/pub_branch.h src/scip/pub_conflict.h \
+ src/scip/pub_cons.h src/scip/pub_cutpool.h src/scip/type_cutpool.h \
+ src/scip/pub_dialog.h src/scip/pub_disp.h src/scip/pub_event.h \
+ src/scip/pub_fileio.h src/scip/pub_heur.h src/scip/pub_implics.h \
+ src/scip/type_implics.h src/scip/pub_nodesel.h src/scip/pub_paramset.h \
+ src/scip/pub_presol.h src/scip/pub_pricer.h src/scip/pub_reader.h \
+ src/scip/pub_relax.h src/scip/pub_sepa.h src/scip/pub_prop.h \
+ src/scip/pub_sol.h src/scip/pub_tree.h src/scip/pub_var.h \
+ src/scip/type_history.h src/scip/lpi.h src/scip/solex.h \
+ src/scip/pub_solex.h src/scip/struct_scip.h src/scip/type_interrupt.h \
+ src/scip/type_mem.h src/scip/type_primal.h src/scip/type_pricestore.h \
+ src/scip/type_sepastore.h src/rectlu/rectlu.h src/rectlu/rectlu_num.h
+$(LIBOBJDIR)/scip/primalex.o: src/scip/primalex.c src/scip/def.h src/scip/type_retcode.h \
+ src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
+ src/scip/pub_message.h src/scip/set.h src/blockmemshell/memory.h \
+ src/scip/buffer.h src/scip/type_set.h src/scip/type_buffer.h \
+ src/scip/type_stat.h src/scip/type_clock.h src/scip/type_paramset.h \
+ src/scip/type_scip.h src/scip/type_event.h src/scip/type_branch.h \
+ src/scip/type_result.h src/scip/type_conflict.h src/scip/type_var.h \
+ src/scip/type_cons.h src/scip/type_sol.h src/scip/type_disp.h \
+ src/scip/type_heur.h src/scip/type_nodesel.h src/scip/type_tree.h \
+ src/scip/type_presol.h src/scip/type_pricer.h src/scip/type_reader.h \
+ src/scip/type_relax.h src/scip/type_sepa.h src/scip/type_prop.h \
+ src/scip/struct_set.h src/scip/var.h src/scip/type_misc.h \
+ src/scip/type_history.h src/scip/type_lp.h src/scip/type_prob.h \
+ src/scip/type_primal.h src/scip/pub_var.h src/scip/type_implics.h \
+ src/scip/pub_misc.h src/scip/struct_var.h src/scip/prob.h \
+ src/scip/struct_prob.h src/scip/solex.h src/scip/type_solex.h \
+ src/scip/pub_solex.h src/scip/primalex.h src/scip/type_primalex.h \
+ src/scip/struct_primalex.h
+$(LIBOBJDIR)/scip/solex.o: src/scip/solex.c src/scip/def.h src/scip/type_retcode.h \
+ src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
+ src/scip/pub_message.h src/scip/scip.h src/blockmemshell/memory.h \
+ src/scip/type_result.h src/scip/type_clock.h src/scip/type_misc.h \
+ src/scip/type_paramset.h src/scip/type_scip.h src/scip/type_event.h \
+ src/scip/type_lp.h src/scip/type_var.h src/scip/type_prob.h \
+ src/scip/type_tree.h src/scip/type_branch.h src/scip/type_conflict.h \
+ src/scip/type_cons.h src/scip/type_sol.h src/scip/type_dialog.h \
+ src/scip/type_disp.h src/scip/type_heur.h src/scip/type_nodesel.h \
+ src/scip/type_presol.h src/scip/type_pricer.h src/scip/type_reader.h \
+ src/scip/type_relax.h src/scip/type_sepa.h src/scip/type_prop.h \
+ src/scip/pub_branch.h src/scip/pub_conflict.h src/scip/pub_cons.h \
+ src/scip/pub_cutpool.h src/scip/type_cutpool.h src/scip/pub_dialog.h \
+ src/scip/pub_disp.h src/scip/pub_event.h src/scip/pub_fileio.h \
+ src/scip/pub_heur.h src/scip/pub_implics.h src/scip/type_implics.h \
+ src/scip/pub_lp.h src/scip/type_set.h src/scip/type_stat.h \
+ src/scip/type_lpi.h src/scip/pub_misc.h src/scip/pub_nodesel.h \
+ src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
+ src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
+ src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
+ src/scip/pub_var.h src/scip/type_history.h src/scip/lpi.h src/scip/set.h \
+ src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
+ src/scip/misc.h src/scip/var.h src/scip/type_primal.h \
+ src/scip/struct_var.h src/scip/prob.h src/scip/struct_prob.h \
+ src/scip/solex.h src/scip/type_solex.h src/scip/pub_solex.h \
+ src/scip/cons_exactlp.h src/scip/type_lpiex.h src/scip/struct_solex.h
+$(LIBOBJDIR)/rectlu/rectlu_factor.o: src/rectlu/rectlu_factor.c src/rectlu/rectlu_factor.h \
+ src/rectlu/rectlu_num.h src/rectlu/rectlu.h
 $(LIBOBJDIR)/tclique/tclique_branch.o: src/tclique/tclique_branch.c src/tclique/tclique.h \
  src/tclique/tclique_def.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
@@ -3661,31 +3717,3 @@ $(LIBOBJDIR)/tclique/tclique_graph.o: src/tclique/tclique_graph.c src/tclique/tc
  src/tclique/tclique_def.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
  src/scip/pub_message.h src/blockmemshell/memory.h
-$(LIBOBJDIR)/scip/cons_exactlp.o: src/scip/cons_exactlp.c src/scip/cons_exactlp.h \
- src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
- src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
- src/scip/pub_message.h src/blockmemshell/memory.h src/scip/type_result.h \
- src/scip/type_clock.h src/scip/type_misc.h src/scip/type_paramset.h \
- src/scip/type_scip.h src/scip/type_event.h src/scip/type_lp.h \
- src/scip/type_var.h src/scip/type_prob.h src/scip/type_tree.h \
- src/scip/type_branch.h src/scip/type_conflict.h src/scip/type_cons.h \
- src/scip/type_sol.h src/scip/type_dialog.h src/scip/type_disp.h \
- src/scip/type_heur.h src/scip/type_nodesel.h src/scip/type_presol.h \
- src/scip/type_pricer.h src/scip/type_reader.h src/scip/type_relax.h \
- src/scip/type_sepa.h src/scip/type_prop.h src/scip/pub_branch.h \
- src/scip/pub_conflict.h src/scip/pub_cons.h src/scip/pub_cutpool.h \
- src/scip/type_cutpool.h src/scip/pub_dialog.h src/scip/pub_disp.h \
- src/scip/pub_event.h src/scip/pub_fileio.h src/scip/pub_heur.h \
- src/scip/pub_implics.h src/scip/type_implics.h src/scip/pub_lp.h \
- src/scip/type_set.h src/scip/type_stat.h src/scip/type_lpi.h \
- src/scip/pub_misc.h src/scip/pub_nodesel.h src/scip/pub_paramset.h \
- src/scip/pub_presol.h src/scip/pub_pricer.h src/scip/pub_reader.h \
- src/scip/pub_relax.h src/scip/pub_sepa.h src/scip/pub_prop.h \
- src/scip/pub_sol.h src/scip/pub_tree.h src/scip/pub_var.h \
- src/scip/type_history.h src/scip/lpi.h src/scip/lpiex.h \
- src/scip/type_lpiex.h src/scip/solex.h src/scip/type_solex.h \
- src/scip/pub_solex.h src/scip/struct_lp.h src/scip/struct_scip.h \
- src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
- src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/primalex.h \
- src/scip/type_primalex.h src/scip/struct_primalex.h lib/EGlibinc/EGlib.h \
- lib/qsexinc/QSopt_ex.h src/scip/misc.h

@@ -135,7 +135,7 @@ SCIP_RETCODE fromCommandLine(
    SCIPinfoMessage(scip, NULL, "=============\n\n");
    SCIP_CALL( SCIPsolve(scip) );
 
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
    {
       SCIP_CONS** conss;
       
@@ -332,22 +332,22 @@ SCIP_RETCODE SCIPprocessShellArguments(
          SCIPprintVersion(NULL);
          SCIPinfoMessage(scip, NULL, "\n");
 
-#ifdef REDUCEDSOLVE
+#ifdef WITH_REDUCEDSOLVE
          /***********************
           * ExactIP information *
           ***********************/
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
          SCIPinfoMessage(scip, NULL, "Reduced version of SCIP in EXACT mode (version 0.2):\n");
 #else
          SCIPinfoMessage(scip, NULL, "Reduced version of SCIP in STANDARD (floating-point) mode:\n");
 #endif
          SCIPinfoMessage(scip, NULL, "  Algorithm: branch-and-bound\n");
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
          SCIPinfoMessage(scip, NULL, "  Constraints: exact linear\n");
 #else
          SCIPinfoMessage(scip, NULL, "  Constraints: linear\n");
 #endif
-#ifdef BRANCHPLGS
+#ifdef WITH_BRANCHPLGS
          SCIPinfoMessage(scip, NULL, "  Branching: all standard plugins\n");
 #else
          SCIPinfoMessage(scip, NULL, "  Branching: first fractional\n");

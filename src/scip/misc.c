@@ -25,7 +25,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <gmp.h> 
+#ifdef WITH_GMP
+#include "gmp.h" 
+#endif
 
 #include "scip/def.h"
 #include "scip/message.h"
@@ -2559,6 +2561,7 @@ int SCIPptrarrayGetMaxIdx(
    return ptrarray->maxusedidx;
 }
 
+#ifdef WITH_GMP
 /** creates a dynamic array of mpq_t values */
 SCIP_RETCODE SCIPmpqarrayCreate(
    SCIP_MPQARRAY**       mpqarray,           /**< pointer to store the mpq array */
@@ -2957,7 +2960,7 @@ int SCIPmpqarrayGetMaxIdx(
 
    return mpqarray->maxusedidx;
 }
-
+#endif
 
 
 /*
@@ -4057,6 +4060,7 @@ SCIP_Real SCIPselectSimpleValue(
  * Numerical methods for rational numbers
  */
 
+#ifdef WITH_GMP
 /** tries to find a value, such that all given values, if scaled with this value become integral */
 SCIP_RETCODE SCIPmpqCalcIntegralScalar(
    const mpq_t*          vals,               /**< values to scale */
@@ -4169,6 +4173,7 @@ SCIP_RETCODE SCIPmpqCalcIntegralScalar(
 
    return SCIP_OKAY;
 }
+#endif
 
 /*
  * Random Numbers

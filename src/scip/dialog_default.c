@@ -26,9 +26,7 @@
 #include <string.h>
 
 #include "scip/dialog_default.h"
-#ifdef EXACTSOLVE
 #include "scip/cons_exactlp.h"
-#endif
 
 
 
@@ -302,7 +300,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChecksol)
 
    SCIPdialogMessage(scip, NULL, "\n");
 
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
    {
       SCIP_CONS** conss;
       int c;
@@ -811,7 +809,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySolution)
 
    SCIPdialogMessage(scip, NULL, "\n");
 
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
    {
       SCIP_CONS** conss;
 
@@ -884,7 +882,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayValue)
 
    SCIPdialogMessage(scip, NULL, "\n");
 
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
    assert(SCIPisExactSolve(scip));
    SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter variable name: ", &varname, &endoffile) );
    if( endoffile )
@@ -996,7 +994,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayTranssolution)
 
    SCIPdialogMessage(scip, NULL, "\n");
 
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
    assert(SCIPisExactSolve(scip));
    if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
    {
@@ -1980,7 +1978,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteSolution)
          SCIPinfoMessage(scip, file, "solution status: ");
          SCIP_CALL( SCIPprintStatus(scip, file) );
          SCIPinfoMessage(scip, file, "\n");
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
          {
             SCIP_CONS** conss;
             

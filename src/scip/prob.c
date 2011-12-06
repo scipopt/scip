@@ -37,9 +37,7 @@
 #include "scip/branch.h"
 #include "scip/cons.h"
 #include "scip/scip.h"
-#ifdef EXACTSOLVE
 #include "scip/cons_exactlp.h"
-#endif
 
 
 #define OBJSCALE_MAXDNOM          1000000LL  /**< maximal denominator in objective integral scaling */
@@ -1561,7 +1559,7 @@ void SCIPprobPrintStatistics(
    assert(prob != NULL);
 
    SCIPmessageFPrintInfo(file, "  Problem name     : %s\n", prob->name);
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
    assert(set->misc_exactsolve);
    assert(prob->conss != NULL);
    assert(prob->nconss == 1);

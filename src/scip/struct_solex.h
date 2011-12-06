@@ -30,6 +30,8 @@
 #include "scip/type_sol.h"
 #include "scip/type_solex.h"
 #include "scip/type_heur.h"
+#ifdef WITH_EXACTSOLVE
+#include "gmp.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -53,6 +55,8 @@ struct SCIP_Solex
 
 #ifdef __cplusplus
 }
+#endif
+
 #endif
 
 #endif

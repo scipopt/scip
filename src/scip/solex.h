@@ -34,6 +34,9 @@
 #include "scip/type_solex.h"
 #include "scip/type_heur.h"
 #include "scip/pub_solex.h"
+#ifdef WITH_EXACTSOLVE
+#include "gmp.h"
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -101,6 +104,8 @@ SCIP_RETCODE SCIPsolexPrint(
 
 #ifdef __cplusplus
 }
+#endif
+
 #endif
 
 #endif

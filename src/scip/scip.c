@@ -73,9 +73,8 @@
 #include "scip/sepa.h"
 #include "scip/prop.h"
 #include "scip/debug.h"
-#ifdef EXACTSOLVE
 #include "scip/cons_exactlp.h"
-#endif
+#include "scip/lpiex.h"
 
 
 /* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
@@ -369,7 +368,7 @@ SCIP_Real getPrimalbound(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
    SCIP_CONS** conss;
       
    assert(SCIPisExactSolve(scip));
@@ -397,7 +396,7 @@ SCIP_Real getDualbound(
       return getPrimalbound(scip);
    else
    {
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
       SCIP_CONS** conss;
          
       assert(SCIPisExactSolve(scip));
@@ -499,7 +498,8 @@ void SCIPprintVersion(
 #else
    SCIPmessageFPrintInfo(file, " [mode: optimized]");
 #endif
-   SCIPmessageFPrintInfo(file, " [LP solver: %s]\n", SCIPlpiGetSolverName());
+   SCIPmessageFPrintInfo(file, " [LP solver: %s]", SCIPlpiGetSolverName());
+   SCIPmessageFPrintInfo(file, " [Exact LP solver: %s]\n", SCIPlpiexGetSolverName());
    SCIPmessageFPrintInfo(file, "%s\n", SCIP_COPYRIGHT);
 }
 
@@ -4379,7 +4379,7 @@ SCIP_Real SCIPgetLocalDualbound(
 
    node = SCIPtreeGetCurrentNode(scip->tree);
 
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
    assert(SCIPisExactSolve(scip)); 
    if( node != NULL )
    {
@@ -4421,7 +4421,7 @@ SCIP_Real SCIPgetNodeDualbound(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNodeDualbound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
    {
       SCIP_CONS** conss;
       
@@ -5354,7 +5354,7 @@ SCIP_RETCODE initSolve(
    /* if all variables are known, calculate a trivial primal bound by setting all variables to their worst bound */
    if( scip->set->nactivepricers == 0 )
    {
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
       assert(scip->set->misc_exactsolve);
       if( scip->set->misc_usefprelax )
       {
@@ -5891,7 +5891,7 @@ SCIP_RETCODE SCIPsolve(
             SCIPmessagePrintInfo("%.2f %%\n", 100.0*SCIPgetGap(scip));
       }
 
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
       assert(SCIPisExactSolve(scip)); 
       if( scip->set->stage >= SCIP_STAGE_TRANSFORMED && scip->set->stage <= SCIP_STAGE_FREESOLVE )
       {
@@ -5929,7 +5929,7 @@ SCIP_RETCODE SCIPsolve(
       {
          SCIP_SOL* sol;
          SCIP_Bool feasible;
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
          int c;
                
          assert(SCIPisExactSolve(scip));
@@ -15202,7 +15202,7 @@ SCIP_Real SCIPgetAvgDualbound(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetAvgDualbound", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
    {
       SCIP_CONS** conss;
       
@@ -15268,7 +15268,7 @@ SCIP_Real SCIPgetDualboundRoot(
       return getPrimalbound(scip);
    else
    {
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
       SCIP_CONS** conss;
          
       assert(SCIPisExactSolve(scip));
@@ -16263,7 +16263,7 @@ void printRelaxatorStatistics(
          SCIPrelaxGetNCalls(scip->set->relaxs[i]));
 }
 
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
 static
 void printDualboundingStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -16312,7 +16312,7 @@ void printDualboundingStatistics(
 }
 #endif
 
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
 static
 void printExactLPStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -16447,7 +16447,7 @@ void printSolutionStatistics(
             : (SCIPsolGetRunnum(scip->primal->sols[0]) == 0 ? "initial" : "relaxation"));
       }
    }
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
    assert(SCIPisExactSolve(scip));
    if( scip->set->stage >= SCIP_STAGE_TRANSFORMED && scip->set->stage <= SCIP_STAGE_FREESOLVE )
    {
@@ -16578,7 +16578,7 @@ SCIP_RETCODE SCIPprintStatistics(
       printHeuristicStatistics(scip, file);
       printLPStatistics(scip, file);
       printRelaxatorStatistics(scip, file);
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
       assert(SCIPisExactSolve(scip));
       printDualboundingStatistics(scip, file);
       printExactLPStatistics(scip, file);

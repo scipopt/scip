@@ -20,21 +20,27 @@
  * @author Kati Wolter 
 */
 
-/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 //#define VERIFY_OUT  /** uncomment to get info of QSopt_ex about verifying dual feasibility of the basis */
 
 //#define USEOBJLIM   /** uncomment to pass objlimit to exact lp solver; same as in cons_exactlp.c
 //                     *  warning: QSopt_ex allows objlimits but the support is buggy; if the limit is reached, QSopt_ex
 //                     *  does not stop but increasess the precision */
 
-#include <gmp.h>
+#include <string.h>
+#ifdef WITH_GMP
+#include "gmp.h"
 #include "EGlib.h"
 #include "QSopt_ex.h"
+#endif
+
 #include "scip/lpiex.h"
 #include "scip/bitencode.h"
 #include "scip/message.h"
 #include "scip/misc.h"
-#include <string.h>
+
+
+#ifdef WITH_GMP
 
 typedef SCIP_DUALPACKET COLPACKET;           /* each column needs two bits of information (basic/on_lower/on_upper) */
 #define COLS_PER_PACKET SCIP_DUALPACKETSIZE
@@ -3134,3 +3140,4 @@ SCIP_RETCODE SCIPlpiexFactorSolve(
 }
 
 /**@} */
+#endif

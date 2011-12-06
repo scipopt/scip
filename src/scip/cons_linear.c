@@ -47,7 +47,9 @@
 #include <string.h>
 #include <limits.h>
 #include <ctype.h>
-#include <gmp.h>
+#ifdef WITH_EXACTSOLVE
+#include "gmp.h"
+#endif
 
 #include "scip/intervalarith.h"
 #include "scip/cons_linear.h"
@@ -2538,6 +2540,7 @@ SCIP_Real consdataGetActivity(
    return activity;
 }
 
+#ifdef WITH_EXACTSOLVE
 /** calculates the exact activity of the linear constraint for given solution */
 static
 void consdataGetActivityExact(
@@ -2589,7 +2592,9 @@ void consdataGetActivityExact(
    mpq_clear(val);
    mpq_clear(solval);
 }
+#endif
 
+#ifdef WITH_EXACTSOLVE
 /** calculates the interval of the activity of the linear constraint for given solution */
 static
 SCIP_INTERVAL consdataGetActivityInterval(
@@ -2636,6 +2641,7 @@ SCIP_INTERVAL consdataGetActivityInterval(
    
    return activityint;
 }
+#endif
 
 /** calculates the feasibility of the linear constraint for given solution */
 static
@@ -4391,6 +4397,7 @@ SCIP_RETCODE checkCons(
    return SCIP_OKAY;
 }
 
+#ifdef WITH_EXACTSOLVE
 /** checks linear constraint for exact feasibility of given solution or current solution */
 static
 SCIP_RETCODE checkConsExact(
@@ -4532,6 +4539,7 @@ SCIP_RETCODE checkConsExact(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** creates an LP row in a linear constraint data */
 static
@@ -8811,14 +8819,13 @@ SCIP_DECL_CONSCHECK(consCheckLinear)
    violated = FALSE;
    for( c = 0; c < nconss && !violated; ++c )
    {
-      if( !SCIPisExactSolve(scip) )
-      {
-         SCIP_CALL( checkCons(scip, conss[c], sol, checklprows, &violated) );
-      }
-      else
-      {
-         SCIP_CALL( checkConsExact(scip, conss[c], sol, checklprows, &violated) );
-      }
+#ifdef WITH_EXACTSOLVE
+      assert(SCIPisExactSolve(scip));
+      SCIP_CALL( checkConsExact(scip, conss[c], sol, checklprows, &violated) );
+#else
+      assert(!SCIPisExactSolve(scip));
+      SCIP_CALL( checkCons(scip, conss[c], sol, checklprows, &violated) );
+#endif
    }
 
    if( violated )

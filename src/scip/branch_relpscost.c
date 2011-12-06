@@ -529,7 +529,7 @@ SCIP_RETCODE execRelpscost(
          {
             if( !SCIPisStopped(scip) )
             {
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
                /* happens very often on numerically difficult instances. increase the verblevel to avoid huge logfiles */
                SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
                   "(node %"SCIP_LONGINT_FORMAT") error in strong branching call for variable <%s> with solution %g\n", 

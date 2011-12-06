@@ -35,9 +35,7 @@
 #include "scip/primal.h"
 #include "scip/tree.h"
 #include "scip/disp.h"
-#ifdef EXACTSOLVE
 #include "scip/cons_exactlp.h"
-#endif
 
 
 
@@ -242,7 +240,7 @@ SCIP_RETCODE primalSetUpperbound(
       }
       else 
       {
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
          mpq_t safecutoffbound;
          mpq_t change;
 

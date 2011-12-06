@@ -51,9 +51,7 @@
 #include "scip/prob.h"
 #include "scip/sol.h"
 #include "scip/scip.h"
-#ifdef EXACTSOLVE
 #include "scip/cons_exactlp.h"
-#endif
 
 #define MAXCMIRSCALE               1e+6 /**< maximal scaling (scale/(1-f0)) allowed in c-MIR calculations */
 
@@ -1842,7 +1840,7 @@ SCIP_RETCODE lpSetUobjlim(
    if( set->misc_exactsolve )  
       return SCIP_OKAY;
 
-#ifdef REDUCEDSOLVE
+#ifdef WITH_REDUCEDSOLVE
 #ifdef FAIRINEXACT
       return SCIP_OKAY;
 #endif
@@ -14443,8 +14441,8 @@ SCIP_RETCODE provedBound(
    assert(bound != NULL);
    assert(SCIPlpiInfinity(lp->lpi) <= SCIPsetInfinity(set));
 
-#ifdef EXACTSOLVE /* misc_reducesafedb is only be supported in exact mode because corresponing case distinction requires 
-                   * cons_exactlp.c methods which are not available in the inexact mode */
+#ifdef WITH_EXACTSOLVE /* misc_reducesafedb is only supported in exact mode because corresponing case distinction 
+                        * requires cons_exactlp.c methods which are not available in the inexact mode */
    if( set->misc_reducesafedb == 's' )
    {
 #ifdef DBAUTO_OUT
@@ -14922,7 +14920,7 @@ SCIP_RETCODE provedBound(
          assert(conss != NULL);
          assert(SCIPgetNConss(set->scip) == 1);
 
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
          SCIP_CALL( SCIPcomputeDualboundQuality(set->scip, conss[0], *bound) );
 #endif
          lp->hasprovedbound = TRUE;

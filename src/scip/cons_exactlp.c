@@ -41,11 +41,6 @@
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
-/** @todo exiptodo: mpfr library is needed to control the rounding mode in the gmp-double conversion. these methods might 
- *   move to another file. delete library inclusion then.
- */
-#include "mpfr.h" /* mpfr.h has to be included before gmp.h */
-#include "gmp.h" 
 
 #include "scip/cons_exactlp.h"
 #include "scip/intervalarith.h"
@@ -57,6 +52,14 @@
 #include "scip/solex.h" 
 #include "scip/struct_scip.h" 
 #include "rectlu/rectlu.h"
+
+#ifdef WITH_EXACTSOLVE
+
+/** @todo exiptodo: mpfr library is needed to control the rounding mode in the gmp-double conversion. these methods might 
+ *   move to another file. delete library inclusion then.
+ */
+#include "mpfr.h" /* mpfr.h has to be included before gmp.h */
+#include "gmp.h" 
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "exactlp"
@@ -7692,10 +7695,6 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
          }
          break;
       }
-   case 'r':
-      SCIPerrorMessage("Dual bounding method <%c> has not been implemented yet\n", dualboundmethod);
-      return SCIP_ERROR;
-      //break;
 
    case 'p':
       {
@@ -8144,7 +8143,6 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
          }         
       case 'n':         
       case 'v':
-      case 'r':
       case 'e':
          break;
       default:
@@ -10462,3 +10460,5 @@ SCIP_Bool SCIPhasDualboundDiff(
 
    return conshdlrdata->computedbdiff;
 }
+
+#endif

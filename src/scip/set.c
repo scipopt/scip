@@ -182,17 +182,16 @@
 #define SCIP_DEFAULT_MISC_USEVARTABLE      TRUE /**< should a hashtable be used to map from variable names to variables? */
 #define SCIP_DEFAULT_MISC_USECONSTABLE     TRUE /**< should a hashtable be used to map from constraint names to constraints? */
 #define SCIP_DEFAULT_MISC_USESMALLTABLES  FALSE /**< should smaller hashtables be used? yields better performance for small problems with about 100 variables */
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
 #define SCIP_DEFAULT_MISC_EXACTSOLVE       TRUE /**< should the problem be solved exactly (with proven dual bounds)? */
 #else
 #define SCIP_DEFAULT_MISC_EXACTSOLVE      FALSE /**< should the problem be solved exactly (with proven dual bounds)? */
 #endif
-#define SCIP_DEFAULT_MISC_USEFPRELAX      FALSE /**< if problem is solved exactly, should floating point problem be 
+#define SCIP_DEFAULT_MISC_USEFPRELAX       TRUE /**< if problem is solved exactly, should floating-point problem be 
                                                  *   a relaxation of the original problem (instead of an approximation)? */
-#define SCIP_DEFAULT_MISC_DBMETHOD          'n' /**< method for computing truely valid dual bounds at the nodes
-                                                 *   ('n'eumaier and shcherbina, 'v'erify LP basis, 'r'epair LP basis, 
-                                                 *   'p'roject and scale, 'e'xact LP, 'i'nterval neumaier and shcherbina,
-                                                 *   e'x'act neumaier and shcherbina, 'a'utomatic) */
+#define SCIP_DEFAULT_MISC_DBMETHOD          'n' /**< method for computing truely safe dual bounds
+                                                 *   ('n'eumaier-shcherbina, 'v'erify basis, 'p'roject-and-shift, 
+                                                 *   'e'xact LP, 'i'nterval n-s, e'x'act n-s, 'a'utomatic) */
 #define SCIP_DEFAULT_MISC_REDUCESAFEDB      'n' /**< strategy for reducing safe dual bounding calls
                                                  *   ('n'o reduction, 'w'eak reduction, 's'trong reduction) */
 #define SCIP_DEFAULT_MISC_IGNOREPSSOL     FALSE /**< should pseudo solutions be ignored for dual bounds? */
@@ -837,30 +836,28 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->misc_usesmalltables, FALSE, SCIP_DEFAULT_MISC_USESMALLTABLES,
          NULL, NULL) );
    /**@todo activate exactsolve parameter and finish implementation of solving MIPs exactly */
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
    (*set)->misc_exactsolve = SCIP_DEFAULT_MISC_EXACTSOLVE;
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "misc/usefprelax",
-         "if problem is solved exactly, should floating point problem be a relaxation of the original problem (instead of an approximation)?",
+         "exip: should floating-point problem be a relaxation of the original problem (instead of an approximation)?",
          &(*set)->misc_usefprelax, FALSE, SCIP_DEFAULT_MISC_USEFPRELAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
          "misc/dbmethod",
-         "method for computing truely valid dual bounds at the nodes ('n'eumaier and shcherbina, 'v'erify LP basis, 'r'epair LP basis, 'p'roject and scale, 'e'xact LP,'i'nterval neumaier and shcherbina, e'x'act neumaier and shcherbina, 'a'utomatic)",
+         "exip: method for computing safe dual bounds ('n'eumaier-shcherbina, 'v'erify basis, 'p'roject-and-shift, 'e'xact LP, 'i'nterval n-s, e'x'act n-s, 'a'utomatic)",
          &(*set)->misc_dbmethod, FALSE, SCIP_DEFAULT_MISC_DBMETHOD, "nvrpeixa",
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
          "misc/reducesafedb",
-         "strategy for reducing safe dual bounding calls ('n'o reduction, 'w'eak reduction, 's'trong reduction)",
+         "exip: strategy for reducing safe dual bounding calls ('n'o reduction, 'w'eak reduction, 's'trong reduction)",
          &(*set)->misc_reducesafedb, FALSE, SCIP_DEFAULT_MISC_REDUCESAFEDB, "nws",
          NULL, NULL) );
-
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "misc/ignorepssol",
-         "should pseudo solutions be ignored for dual bounds?",
+         "exip: should pseudo solutions be ignored for dual bounds?",
          &(*set)->misc_ignorepssol, FALSE, SCIP_DEFAULT_MISC_IGNOREPSSOL,
          NULL, NULL) );
-
 #else
    (*set)->misc_exactsolve = SCIP_DEFAULT_MISC_EXACTSOLVE;
    (*set)->misc_usefprelax = SCIP_DEFAULT_MISC_USEFPRELAX;

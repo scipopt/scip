@@ -24,12 +24,12 @@
 #include <assert.h>
 #include <string.h>
 #include <limits.h>
-#include <gmp.h>
+#ifdef WITH_EXACTSOLVE
+#include "gmp.h"
+#endif
 
 #include "scip/cons_integral.h"
-#ifdef EXACTSOLVE
 #include "scip/cons_exactlp.h"
-#endif
 
 
 #define CONSHDLR_NAME          "integral"
@@ -114,7 +114,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpIntegral)
 
    SCIPdebugMessage("Enfolp method of integrality constraint: %d fractional variables\n", SCIPgetNLPBranchCands(scip));
 
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
    /* in exactip mode with pure rational approach, the branching is based on the exact LP solution 
     * (computed in enfolp method of exactlp constraint handler) 
     */
@@ -166,23 +166,13 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
       for( v = 0; v < nbin + nint && *result == SCIP_FEASIBLE; ++v )
       {
          solval = SCIPgetSolVal(scip, sol, vars[v]);
-         if( !SCIPisExactSolve(scip) )
-         {
-            if( !SCIPisFeasIntegral(scip, solval) )
-            {
-               *result = SCIP_INFEASIBLE;
 
-               if( printreason )
-               {
-                  SCIPinfoMessage(scip, NULL, "violation: integrality condition of variable <%s> = %.15g\n", 
-                     SCIPvarGetName(vars[v]), solval);
-               }
-            }
-         }
-         else
+#ifdef WITH_EXACTSOLVE
          {
             mpq_t solvalexact;
          
+            assert(SCIPisExactSolve(scip));
+
             mpq_init(solvalexact);
 
             /**@todo exiptodo: presolving extension 
@@ -206,6 +196,20 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
 
             mpq_clear(solvalexact);
          }
+#else
+         assert(!SCIPisExactSolve(scip));
+
+         if( !SCIPisFeasIntegral(scip, solval) )
+         {
+            *result = SCIP_INFEASIBLE;
+
+            if( printreason )
+            {
+               SCIPinfoMessage(scip, NULL, "violation: integrality condition of variable <%s> = %.15g\n", 
+                  SCIPvarGetName(vars[v]), solval);
+            }
+         }
+#endif
       }
    }
 #ifndef NDEBUG
@@ -218,6 +222,7 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
             assert(SCIPisFeasIntegral(scip, solval));
          else
          {
+#ifdef WITH_EXACTSOLVE
             mpq_t solvalexact;
             
             mpq_init(solvalexact);
@@ -226,6 +231,7 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
             assert(mpz_get_si(mpq_denref(solvalexact)) == 1); 
 
             mpq_clear(solvalexact);
+#endif
          }
       }
    }

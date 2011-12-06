@@ -61,7 +61,7 @@ SOFTLINKS	=
 MAKESOFTLINKS	=	true
 READLINE	=	true
 ZLIB		=	true
-GMP             =       auto
+GMP		=	auto
 ZIMPL		=	true
 IPOPT		=	false
 LPSOPT		=	opt
@@ -133,7 +133,7 @@ BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT)
 OBJDIR		=	obj/O.$(BASE)
 BINOBJDIR	=	$(OBJDIR)/bin
 LIBOBJDIR	=	$(OBJDIR)/lib
-LIBOBJSUBDIRS	=	scip objscip blockmemshell tclique
+LIBOBJSUBDIRS	=	scip objscip blockmemshell tclique rectlu
 SRCDIR		=	src
 BINDIR		=	bin
 LIBDIR		=	lib
@@ -162,32 +162,42 @@ DFLAGS		+=	$(USRDFLAGS)
 #-----------------------------------------------------------------------------
 # Exact MIP Solving
 #-----------------------------------------------------------------------------
+
+# flag for switching between full and reduced version of SCIP
 ifeq ($(REDUCEDSOLVE),true)
 ifeq ($(ZIMPL),false)
 $(error REDUCEDSOLVE requires ZIMPL. Use either REDUCEDSOLVE=false or ZIMPL=true)
 endif
-FLAGS		+=	-DREDUCEDSOLVE			# flag for switching between full and reduced version of SCIP
+FLAGS		+=	-DWITH_REDUCEDSOLVE			
 endif
+REDUCEDSOLVEDEP	:=	$(SRCDIR)/depend.reducedsolve
+REDUCEDSOLVESRC	:=	$(shell cat $(REDUCEDSOLVEDEP))
 
+
+# flag for switching between exact and inexact mode
 ifeq ($(EXACTSOLVE),true)
 ifeq ($(REDUCEDSOLVE),false)
 $(error EXACTSOLVE requires REDUCEDSOLVE. Use either EXACTSOLVE=false or REDUCEDSOLVE=true)
 endif
 ifeq ($(GMP),false)
-$(error EXACTSOLVE requires GMP. Use either EXACTSOLVE=false or GMP=true)
+$(error EXACTSOLVE requires GMP (and MPFR). Use either EXACTSOLVE=false or GMP=true)
 endif
-FLAGS		+=	-DEXACTSOLVE			# flag for switching between exact and inexact mode
+FLAGS		+=	-DWITH_EXACTSOLVE			
 LDFLAGS		+=	$(LINKCC_l)mpfr$(LINKLIBSUFFIX)
-LIBOBJSUBDIRS	+=	rectlu 
 endif
+EXACTSOLVEDEP	:=	$(SRCDIR)/depend.exactsolve
+EXACTSOLVESRC	:=	$(shell cat $(EXACTSOLVEDEP))
 
-ifeq ($(BRANCHPLGS),true)
+
+# flag for including branching plugins or supporting only first fractional variable branching
+ifeq ($(BRANCHPLGS),true) 
 ifeq ($(REDUCEDSOLVE),false)
 $(error BRANCHPLGS requires REDUCEDSOLVE. Use either BRANCHPLGS=false or REDUCEDSOLVE=true)
 endif
-FLAGS		+=	-DBRANCHPLGS			# flag for including branching plugins or supporting only first fractional variable branching
+FLAGS		+=	-DWITH_BRANCHPLGS			
 endif
-
+BRANCHPLGSDEP	:=	$(SRCDIR)/depend.branchplgs
+BRANCHPLGSSRC	:=	$(shell cat $(BRANCHPLGSDEP))
 
 
 #-----------------------------------------------------------------------------
@@ -369,7 +379,7 @@ LPSEXOPTIONS	+=	none
 ifeq ($(LPSEX),none)
 LPSEXLDFLAGS   	=
 LPIEXLIBOBJ    	= 	scip/lpiex_none.o scip/bitencode.o blockmemshell/memory.o scip/message.o
-LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPIEXLIBOBJ:.o=.c))
+LPIEXLIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPIEXLIBOBJ:.o=.c))
 endif
 
 LPIEXLIB	=	$(LPIEXLIBNAME).$(BASE)
@@ -377,7 +387,8 @@ LPIEXLIBFILE	=	$(LIBDIR)/lib$(LPIEXLIB).$(LIBEXT)
 LPIEXLIBOBJFILES =	$(addprefix $(LIBOBJDIR)/,$(LPIEXLIBOBJ))
 LPIEXLIBDEP	=	$(SRCDIR)/depend.lpiexlib.$(LPSEX).$(OPT)
 LPIEXLIBLINK	=	$(LIBDIR)/lib$(LPIEXLIBSHORTNAME).$(BASE).$(LIBEXT)
-ALLSRC		+=	$(LPIEXLIBSRC)
+ALLSRC		+= 	$(SRCDIR)/scip/lpiex_none.c $(SRCDIR)/scip/lpiex_qsoex.c $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
+
 
 #-----------------------------------------------------------------------------
 # External Libraries
@@ -392,7 +403,13 @@ endif
 GMPDEP		:=	$(SRCDIR)/depend.gmp
 GMPSRC		:=	$(shell cat $(GMPDEP))
 ifeq ($(GMP),auto)
-GMP		=	$(ZIMPL)
+GMP		=	false
+ifeq ($(ZIMPL),true)
+GMP		=	true
+endif
+ifeq ($(EXACTSOLVE),true)
+GMP		=	true
+endif
 endif
 ifeq ($(GMP_LDFLAGS),)
 GMP		=	false
@@ -523,6 +540,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/cons_conjunction.o \
 			scip/cons_countsols.o \
 			scip/cons_eqknapsack.o \
+			scip/cons_exactlp.o \
 			scip/cons_indicator.o \
 			scip/cons_integral.o \
 			scip/cons_invarknapsack.o \
@@ -608,16 +626,14 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/sepa_redcost.o \
 			scip/sepa_strongcg.o \
 			scip/sepa_zerohalf.o \
+			scip/cons_exactlp.o \
+			scip/primalex.o \
+			scip/solex.o \
+			rectlu/rectlu_factor.o \
 			tclique/tclique_branch.o \
 			tclique/tclique_coloring.o \
 			tclique/tclique_graph.o
 
-ifeq ($(EXACTSOLVE),true)
-SCIPLIBOBJ	+=	scip/cons_exactlp.o \
-			scip/primalex.o \
-			scip/solex.o \
-			rectlu/rectlu_factor.o
-endif
 
 SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
 SCIPLIBFILE	=	$(LIBDIR)/lib$(SCIPLIB).$(LIBEXT)
@@ -694,6 +710,7 @@ ALLSRC		+=	$(MAINSRC)
 
 LINKSMARKERFILE	=	$(LIBDIR)/linkscreated.$(LPS)-$(LPSOPT).$(LPSEX)-$(LPSEXOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT).$(IPOPT)-$(IPOPTOPT)
 LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
+
 
 #-----------------------------------------------------------------------------
 # Rules
@@ -827,7 +844,7 @@ $(BINDIR):
 		@-mkdir -p $(BINDIR)
 
 .PHONY: clean
-clean:
+clean:		cleanlib cleanbin $(LIBOBJSUBDIRS) $(LIBOBJDIR) $(BINOBJDIR) $(OBJDIR)
 ifneq ($(LIBOBJDIR),)
 		@cd $(LIBOBJDIR) && rm -f */*.o && rmdir $(LIBOBJSUBDIRS)
 		@-rmdir $(LIBOBJDIR)
@@ -839,11 +856,22 @@ ifneq ($(OBJDIR),)
 		@-rm -f $(LASTSETTINGS)
 		@-rmdir $(OBJDIR)
 endif
-		@echo "-> remove objective files"
-		@-rm -f $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(LPIEXLIBFILE) $(MAINFILE) \
-		$(LPILIBLINK) $(LPIEXLIBLINK) $(SCIPLIBLINK) $(OBJSCIPLIBLINK) $(MAINLINK) $(MAINSHORTLINK)
-		@echo "-> remove libraries"
-		@echo "-> remove binary"
+
+.PHONY: cleanlib
+cleanlib:       $(LIBDIR)
+		@echo "-> remove library $(SCIPLIBFILE)"
+		@-rm -f $(SCIPLIBFILE) $(SCIPLIBLINK)
+		@echo "-> remove library $(OBJSCIPLIBFILE)"
+		@-rm -f $(OBJSCIPLIBFILE) $(OBJSCIPLIBLINK)
+		@echo "-> remove library $(LPILIBFILE)"
+		@-rm -f $(LPILIBFILE) $(LPILIBLINK)
+		@echo "-> remove library $(LPIEXLIBFILE)"
+		@-rm -f $(LPIEXLIBFILE) $(LPIEXLIBLINK) $(LPIEXLIBSHORTLINK)
+
+.PHONY: cleanbin
+cleanbin:       $(BINDIR) 
+		@echo "-> remove binary $(MAINFILE)"
+		@-rm -f $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
 
 .PHONY: lpidepend
 lpidepend:
@@ -860,7 +888,6 @@ endif
 
 .PHONY: lpiexdepend
 lpiexdepend:
-ifneq ($(LPSEX),none)
 ifeq ($(LINKER),C)
 		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(LPIEXLIBSRC) \
 		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
@@ -870,7 +897,6 @@ ifeq ($(LINKER),CPP)
 		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(LPIEXLIBSRC) \
 		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
 		>$(LPIEXLIBDEP)'
-endif
 endif
 
 .PHONY: maindepend
@@ -886,12 +912,12 @@ ifeq ($(LINKER),CPP)
 		>$(MAINDEP)'
 endif
 
-.PHONY: depend
-depend:		lpidepend lpiexdepend maindepend
+.PHONY: scipdepend
+scipdepend:
 		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(SCIPLIBSRC) \
 		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
 		>$(SCIPLIBDEP)'
-		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(OBJSCIPLIBSRC) \
+		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(OBJSCIPLIBSRC) \
 		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
 		>$(OBJSCIPLIBDEP)'
 		@echo `grep -l "WITH_ZLIB" $(ALLSRC)` >$(ZLIBDEP)
@@ -899,6 +925,12 @@ depend:		lpidepend lpiexdepend maindepend
 		@echo `grep -l "WITH_READLINE" $(ALLSRC)` >$(READLINEDEP)
 		@echo `grep -l "WITH_ZIMPL" $(ALLSRC)` >$(ZIMPLDEP)
 		@echo `grep -l "WITH_IPOPT" $(ALLSRC)` >$(IPOPTDEP)
+		@echo `grep -l "WITH_EXACTSOLVE" $(ALLSRC)` >$(EXACTSOLVEDEP)
+		@echo `grep -l "WITH_REDUCEDSOLVE" $(ALLSRC)` >$(REDUCEDSOLVEDEP)
+		@echo `grep -l "WITH_BRANCHPLGS" $(ALLSRC)` >$(BRANCHPLGSDEP)
+
+depend:		scipdepend lpidepend lpiexdepend maindepend
+
 
 -include	$(MAINDEP)
 -include	$(SCIPLIBDEP)
@@ -971,7 +1003,7 @@ $(LIBOBJDIR)/%.o:	$(SRCDIR)/%.cpp $(LIBOBJDIR)
 -include $(LASTSETTINGS)
 
 .PHONY: touchexternal
-touchexternal:	$(ZLIBDEP) $(GMPDEP) $(READLINEDEP) $(ZIMPLDEP) $(IPOPTDEP)
+touchexternal:	$(ZLIBDEP) $(GMPDEP) $(READLINEDEP) $(ZIMPLDEP) $(IPOPTDEP) $(EXACTSOLVEDEP) $(REDUCEDSOLVEDEP) $(BRANCHPLGSDEP)
 ifneq ($(ZLIB),$(LAST_ZLIB))
 		@-touch $(ZLIBSRC)
 endif
@@ -987,12 +1019,24 @@ endif
 ifneq ($(IPOPT),$(LAST_IPOPT))
 		@-touch $(IPOPTSRC)
 endif
+ifneq ($(EXACTSOLVE),$(LAST_EXACTSOLVE))
+		@-touch $(EXACTSOLVESRC)
+endif
+ifneq ($(REDUCEDSOLVE),$(LAST_REDUCEDSOLVE))
+		@-touch $(REDUCEDSOLVESRC)
+endif
+ifneq ($(BRANCHPLGS),$(LAST_BRANCHPLGS))
+		@-touch $(BRANCHPLGSSRC)
+endif
 		@-rm -f $(LASTSETTINGS)
 		@echo "LAST_ZLIB=$(ZLIB)" >> $(LASTSETTINGS)
 		@echo "LAST_GMP=$(GMP)" >> $(LASTSETTINGS)
 		@echo "LAST_READLINE=$(READLINE)" >> $(LASTSETTINGS)
 		@echo "LAST_ZIMPL=$(ZIMPL)" >> $(LASTSETTINGS)
 		@echo "LAST_IPOPT=$(IPOPT)" >> $(LASTSETTINGS)
+		@echo "LAST_EXACTSOLVE=$(EXACTSOLVE)" >> $(LASTSETTINGS)
+		@echo "LAST_REDUCEDSOLVE=$(REDUCEDSOLVE)" >> $(LASTSETTINGS)
+		@echo "LAST_BRANCHPLGS=$(BRANCHPLGS)" >> $(LASTSETTINGS)
 
 $(LINKSMARKERFILE):
 		@$(MAKE) links

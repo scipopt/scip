@@ -18,14 +18,17 @@
  * @author Kati Wolter
  */
 
-/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#ifdef WITH_GMP
 #include "gmp.h" 
+#endif
 
 #include "scip/lpiex.h"
 #include "scip/message.h"
 
+#ifdef WITH_GMP
 
 /*
  * Local Methods
@@ -145,7 +148,6 @@ SCIP_RETCODE SCIPlpiexLoadColLP(
 {  /*lint --e{715}*/
    return SCIP_PLUGINNOTFOUND;
 }
-
 
 /** adds columns to the LP */
 SCIP_RETCODE SCIPlpiexAddCols(
@@ -1053,3 +1055,4 @@ SCIP_RETCODE SCIPlpiexFactorSolve(
 }
 
 /**@} */
+#endif

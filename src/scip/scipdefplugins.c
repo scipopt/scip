@@ -30,11 +30,11 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-#ifdef REDUCEDSOLVE
+#ifdef WITH_REDUCEDSOLVE
 
    /**@todo exiptodo: modify other plugins such that they can be used for exact mip solving */ 
    /* include plugins for reduced version of SCIP and distiguish between exact and inexact MIP solving. */
-#ifdef EXACTSOLVE
+#ifdef WITH_EXACTSOLVE
    SCIP_CALL( SCIPincludeConshdlrExactlp(scip) ); 
 #else
    SCIP_CALL( SCIPincludeConshdlrLinear(scip) ); /* linear must be first due to constraint upgrading */
@@ -45,7 +45,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeNodeselBfs(scip) );
    SCIP_CALL( SCIPincludeNodeselDfs(scip) );
 
-#ifdef BRANCHPLGS
+#ifdef WITH_BRANCHPLGS
    SCIP_CALL( SCIPincludeBranchruleAllfullstrong(scip) );
    SCIP_CALL( SCIPincludeBranchruleFullstrong(scip) );
    SCIP_CALL( SCIPincludeBranchruleInference(scip) );

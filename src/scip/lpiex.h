@@ -30,6 +30,8 @@
 #include "scip/type_retcode.h"
 #include "scip/type_lpiex.h"
 
+#ifdef WITH_GMP
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -884,6 +886,8 @@ SCIP_RETCODE SCIPlpiexFactorSolve(
 
 #ifdef __cplusplus
 }
+#endif
+
 #endif
 
 #endif
