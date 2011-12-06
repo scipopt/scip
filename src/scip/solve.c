@@ -1919,10 +1919,6 @@ SCIP_RETCODE priceAndCutLoop(
       /* solve the LP with pricing in new variables */
       while( mustprice && !(*lperror) )
       {
-         SCIP_Real oldlowerbound;
-
-         oldlowerbound = SCIPtreeGetLowerbound(tree, set);
-
          pricerlowerbound = -SCIPsetInfinity(set);
 
          SCIP_CALL( SCIPpriceLoop(blkmem, set, stat, prob, primal, tree, lp, pricestore, sepastore, branchcand, eventqueue,
@@ -1960,34 +1956,13 @@ SCIP_RETCODE priceAndCutLoop(
 
          if( !(*lperror) )
          {
-            SCIP_Real newlowerbound;
-            unsigned int timingmask;
-
-            /* if the global lower bound changed, propagate domains again since this may trigger reductions 
-             * propagation only has to be performed if the node is not cut off by bounding anyway 
-             */
-            newlowerbound = SCIPtreeGetLowerbound(tree, set);
-            if( SCIPsetIsGT(set, newlowerbound, oldlowerbound) && SCIPsetIsLT(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound) )
+            /* call propagators that are applicable during LP solving loop only if the node is not cut off */
+            if( SCIPsetIsLT(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound) )
             {
-               SCIPdebugMessage(" -> global lower bound changed from %g to %g: propagate domains again\n",
-                  oldlowerbound, newlowerbound);
+               SCIPdebugMessage(" -> LP solved: call propagators that are applicable during LP solving loop\n");
 
-               timingmask = SCIP_PROPTIMING_BEFORELP;
-            }
-            else
-               timingmask = 0x000;
-
-            /* call propagators that are applicable during node LP solving loop */
-            if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
-            {
-               SCIPdebugMessage(" -> LP solved to optimality: call propagators that are applicable during LP solving loop\n");
-
-               timingmask = timingmask | SCIP_PROPTIMING_DURINGLPLOOP;
-            }
-
-            if( timingmask != 0 )
-            {
-               SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, FALSE, timingmask, cutoff) );
+               SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, FALSE,
+                     SCIP_PROPTIMING_DURINGLPLOOP, cutoff) );
                assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
                /* if we found something, solve LP again */
@@ -2017,13 +1992,13 @@ SCIP_RETCODE priceAndCutLoop(
          }
 
          /* call primal heuristics that are applicable during node LP solving loop */
-         if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
+         if( !*cutoff && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
          {
             SCIP_Bool foundsol;
-            
+
             SCIP_CALL( SCIPprimalHeuristics(set, stat, primal, tree, lp, NULL, SCIP_HEURTIMING_DURINGLPLOOP, &foundsol) );
             assert(SCIPbufferGetNUsed(set->buffer) == 0);
-            
+
             *lperror = *lperror || lp->resolvelperror;
          }
       }
