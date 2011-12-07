@@ -189,7 +189,7 @@
 #endif
 #define SCIP_DEFAULT_MISC_USEFPRELAX       TRUE /**< if problem is solved exactly, should floating-point problem be 
                                                  *   a relaxation of the original problem (instead of an approximation)? */
-#define SCIP_DEFAULT_MISC_DBMETHOD          'n' /**< method for computing truely safe dual bounds
+#define SCIP_DEFAULT_MISC_DBMETHOD          'a' /**< method for computing truely safe dual bounds
                                                  *   ('n'eumaier-shcherbina, 'v'erify basis, 'p'roject-and-shift, 
                                                  *   'e'xact LP, 'i'nterval n-s, e'x'act n-s, 'a'utomatic) */
 #define SCIP_DEFAULT_MISC_REDUCESAFEDB      'n' /**< strategy for reducing safe dual bounding calls

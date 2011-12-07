@@ -80,14 +80,14 @@
 #define DEFAULT_PSOBJWEIGHT         0.0 /**< weight of the original objective function in lp to compute interior point */
 #define DEFAULT_PSREDUCEAUXLP     FALSE /**< should the number of constraints in lp to compute interior point be reduced? */
 #define DEFAULT_PSLAMBDACOMPWISE   TRUE /**< should lambda in shifting step of ps method be computed componentwise? */
-#define DEFAULT_PSDUALCOLSELECTION  'n' /**< strategy to select which dual columns to use for lp to compute interior point 
+#define DEFAULT_PSDUALCOLSELECTION  'A' /**< strategy to select which dual columns to use for lp to compute interior point 
                                          *   ('n'o sel, 'a'ctive rows of exact primal LP, 'A'ctive rows of inexact primal LP, 
                                          *   'b'asic rows of exact primal LP, 'B'asic rows of inexact primal LP)" */
-#define DEFAULT_PSINTPOINTSELECTION 'a' /**< method to select interior point ('a'rbitrary interior point, 'o'ptimized interior 
+#define DEFAULT_PSINTPOINTSELECTION 'o' /**< method to select interior point ('a'rbitrary interior point, 'o'ptimized interior 
                                          *   point, 'A'rbitrary interior point in dual form, 't'wo stage optimized interior point */
 #define DEFAULT_PSUSEINTPOINT      TRUE /**< should correction shift use an interior pt? (otherwise use interior ray of recession cone) */
 #define DEFAULT_PSINFEASVERSION    TRUE /**< should infeasibility version of project and shift be used? */
-#define DEFAULT_INTERLEAVEDBFREQ     -1 /**< frequency at which dual bounding strategy is interleaved (-1: never, 0: if prommising, x: xth node) */
+#define DEFAULT_INTERLEAVEDBFREQ      0 /**< frequency at which dual bounding strategy is interleaved (-1: never, 0: if prommising, x: xth node) */
 #define DEFAULT_COMPUTEDBDIFF     FALSE /**< should the quality of the safe dual bounds be computed (involves solving LPs exactly)? */
 #define DEFAULT_SMALLDBDIFF        1e-9 /**< maximum value of small relativ difference of safe dual bound */
 #define DEFAULT_MEDIUMDBDIFF       1e-3 /**< maximum value of medium relativ difference of safe dual bound */
