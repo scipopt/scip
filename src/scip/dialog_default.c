@@ -496,7 +496,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChecksol)
    else
    {
       SCIPmessagePrintInfo("check best solution\n");
-      SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, TRUE, FALSE) );
+      SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, TRUE, TRUE) );
 
       if( feasible )
          SCIPdialogMessage(scip, NULL, "solution is feasible in original problem\n");

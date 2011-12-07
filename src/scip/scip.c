@@ -7634,7 +7634,7 @@ SCIP_RETCODE SCIPsolve(
          if( sol != NULL )
          {
             SCIP_Bool feasible;
-            SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, TRUE, FALSE) );
+            SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, TRUE, TRUE) );
             
             if( !feasible )
             {
