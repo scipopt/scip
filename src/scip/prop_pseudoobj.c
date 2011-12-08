@@ -34,7 +34,7 @@
 
 #define PROP_NAME              "pseudoobj"
 #define PROP_DESC              "pseudo objective function propagator"
-#define PROP_TIMING             SCIP_PROPTIMING_ALWAYS
+#define PROP_TIMING             SCIP_PROPTIMING_BEFORELP | SCIP_PROPTIMING_AFTERLPLOOP
 #define PROP_PRIORITY            100000 /**< propagator priority */
 #define PROP_FREQ                     1 /**< propagator frequency */
 #define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
@@ -396,8 +396,8 @@ SCIP_RETCODE propdataInit(
          {
             if( k < nobjbinvars )
             {
-            SCIP_CALL( SCIPcatchVarEvent(scip, var,
-                  SCIP_EVENTTYPE_GLBCHANGED | SCIP_EVENTTYPE_BOUNDRELAXED, eventhdlr, (SCIP_EVENTDATA*)propdata, NULL) );
+               SCIP_CALL( SCIPcatchVarEvent(scip, var,
+                     SCIP_EVENTTYPE_GLBCHANGED | SCIP_EVENTTYPE_BOUNDRELAXED, eventhdlr, (SCIP_EVENTDATA*)propdata, NULL) );
             }
             else
             {
@@ -644,6 +644,27 @@ SCIP_RETCODE propagateCutoffboundVar(
    return SCIP_OKAY;
 }
 
+#ifndef NDEBUG
+/** check if the global fixed index is correct */
+static
+void checkGlbfirstnonfixed(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROPDATA*        propdata            /**< propagator data */
+   )
+{
+   SCIP_VAR* var;
+   int v;
+
+   for( v = 0; v < propdata->glbfirstnonfixed; ++v )
+   {
+      var = propdata->objvars[v];
+      assert(var != NULL);
+
+      assert(SCIPvarGetLbGlobal(var) > 0.5 || SCIPvarGetUbGlobal(var) < 0.5);
+   }
+}
+#endif
+
 /** globally propagate new cutoff bound or pseudo objective activity */
 static
 SCIP_RETCODE propagateGlobally(
@@ -683,6 +704,10 @@ SCIP_RETCODE propagateGlobally(
    if( !SCIPisInfinity(scip, -pseudoobjval) )
    {
       SCIP_Bool tightened;
+
+#ifndef NDEBUG
+      checkGlbfirstnonfixed(scip, propdata);
+#endif
 
       /* always propagate the binary variables completely */
       for( v = propdata->glbfirstnonfixed; v < nobjbinvars; ++v )
@@ -864,13 +889,8 @@ SCIP_RETCODE propagateCutoffbound(
     */
 #ifndef NDEBUG
    /* check that the variables before glbfirstnonfixed are globally fixed */
-   for( v = 0; v < propdata->glbfirstnonfixed; ++v )
-   {
-      var =  objvars[v];
-      assert(var != NULL);
+   checkGlbfirstnonfixed(scip, propdata);
 
-      assert(SCIPvarGetLbGlobal(var) > 0.5 || SCIPvarGetUbGlobal(var) < 0.5);
-   }
    /* check that the variables before firstnonfixed are locally fixed */
    for( v = propdata->glbfirstnonfixed; v < propdata->firstnonfixed; ++v )
    {
@@ -1121,64 +1141,33 @@ SCIP_RETCODE propagateLowerboundVar(
    SCIP_PROPDATA*        propdata,           /**< propagator data */
    SCIP_VAR*             var,                /**< variable to propagate */
    SCIP_Real             lowerbound,         /**< lower bound to use */
-   SCIP_RESULT*          result              /**< pointer to store the result of the variable tightening */
+   SCIP_Bool*            infeasible,         /**< pointer to store if the variable domain got empty, infeasible */
+   SCIP_Bool*            tightened           /**< pointer to store if the variable domain was tightened */
    )
 {
    SCIP_Real residual;
+   SCIP_Real newbd;
    SCIP_Real obj;
-   SCIP_Real lb;
-   SCIP_Real ub;
-   SCIP_Bool infeasible;
-   SCIP_Bool tightened;
 
    obj = SCIPvarGetObj(var);
    assert(!SCIPisZero(scip, obj));
 
-   lb = SCIPvarGetLbGlobal(var);
-   ub = SCIPvarGetUbGlobal(var);
+   /* get residual pseudo objective activity, that is the pseudo objective activity without the given variable */
    residual = getMaxObjPseudoactivityResidual(scip, propdata, var);
 
    if( SCIPisInfinity(scip, residual) )
       return SCIP_OKAY;
 
+   /* compute potential mew bound */
+   newbd = (lowerbound - residual) / obj;
+
    if( obj > 0.0 )
    {
-      SCIP_Real newlb;
-
-      newlb = (lowerbound - residual) / obj;
-
-      /* adjust variable bound w.r.t. integrality */
-      newlb = SCIPadjustedVarLb(scip, var, newlb);
-
-      SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, newlb, FALSE, &infeasible, &tightened) );
-
-      if( infeasible )
-            *result = SCIP_CUTOFF;
-      if( tightened ) /* might not be tightened due to numerical reasons */
-      {
-         SCIPdebugMessage(" -> new global lower bound of variable <%s>[%.10f,%.10f]: %.10f (obj=%g, residual=%g)\n",
-            SCIPvarGetName(var), lb, ub, newlb, obj, residual);
-
-         *result = SCIP_REDUCEDDOM;
-      }
+      SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, newbd, FALSE, infeasible, tightened) );
    }
    else
    {
-      SCIP_Real newub;
-
-      newub = (lowerbound - residual) / obj;
-
-      SCIP_CALL( SCIPtightenVarUbGlobal(scip, var, newub, FALSE, &infeasible, &tightened) );
-
-      if( infeasible )
-         *result = SCIP_CUTOFF;
-      if( tightened ) /* might not be tightened due to numerical reasons */
-      {
-         SCIPdebugMessage(" -> new global upper bound of variable <%s>[%.10f,%.10f]: %.10f (obj=%g, residual=%g)\n",
-            SCIPvarGetName(var), lb, ub, newub, obj, residual);
-
-         *result = SCIP_REDUCEDDOM;
-      }
+      SCIP_CALL( SCIPtightenVarUbGlobal(scip, var, newbd, FALSE, infeasible, tightened) );
    }
 
    return SCIP_OKAY;
@@ -1195,24 +1184,20 @@ SCIP_RETCODE propagateLowerbound(
    SCIP_PROPDATA* propdata;
    SCIP_Real lowerbound;
    SCIP_VAR** objvars;
+   SCIP_Bool cutoff;
+   SCIP_Bool tightened;
    int nobjbinvars;
    int nobjvars;
-   int k;
+   int v;
 
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
+   cutoff = FALSE;
+   tightened = FALSE;
 
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
-
-   objvars = propdata->objvars;
-   nobjvars = propdata->nobjvars;
-   nobjbinvars = propdata->nobjbinvars;
-   assert(nobjvars > 0);
-   assert(objvars != NULL);
-   assert(nobjbinvars <= nobjvars);
-
 
    /* check if there is a chance to find a reduction */
    lowerbound = SCIPgetLowerbound(scip);
@@ -1234,39 +1219,89 @@ SCIP_RETCODE propagateLowerbound(
    if( propdata->maxpseudoobjactinf > 1 )
       return SCIP_OKAY;
 
-   for( k = 0; k < nobjbinvars && *result != SCIP_CUTOFF; ++k )
+   objvars = propdata->objvars;
+   nobjvars = propdata->nobjvars;
+   nobjbinvars = propdata->nobjbinvars;
+   assert(nobjvars > 0);
+   assert(objvars != NULL);
+   assert(nobjbinvars <= nobjvars);
+
+#ifndef NDEBUG
+   checkGlbfirstnonfixed(scip, propdata);
+#endif
+
+   for( v = propdata->glbfirstnonfixed; v < nobjbinvars && !cutoff; ++v )
    {
       SCIP_VAR* var;
 
-      var = objvars[k];
+      var = objvars[v];
       assert(var != NULL);
 
-      SCIP_CALL( propagateLowerboundVar(scip, propdata, var, lowerbound, result) );
+      /* check if the variables is already globally fixed; if so continue with the next potential candidate */
+      if( SCIPvarGetLbGlobal(var) > 0.5 || SCIPvarGetUbGlobal(var) < 0.5)
+         continue;
+
+      /* try to propagate variable domain globally */
+      SCIP_CALL( propagateLowerboundVar(scip, propdata, var, lowerbound, &cutoff, &tightened) );
 
       /* the binary variables are sorted in non-increasing manner w.r.t. the absolute value of their objective
        * coefficient; These values are the decrease we would get with the maximal pseudo objective activity if we fix
        * the variable to its best bound; hence we can stop if for a variable this potential decrease is not enough
        * anymore too fall below the lower bound.
+       *
+       * @note In case a fixing was performed. The variable might not be globally fixed right away since this would
+       *       destroy the local internal data structure of a search node; the bound change is in that case pending;
+       *       hence we cannot assert that the variable is globally fixed
        */
-      if( propdata->maxpseudoobjactinf == 0 && SCIPvarGetLbGlobal(var) < 0.5 && SCIPvarGetUbGlobal(var) > 0.5 )
+      if( propdata->maxpseudoobjactinf == 0 && !tightened )
       {
          assert(!SCIPisInfinity(scip, propdata->maxpseudoobjact));
-         SCIPdebugMessage("interrupt pseudo objective propagation w.r.t. lower bound <%.15g> for binary variables after %d from %d binary variables\n", lowerbound, k, nobjbinvars);
+         SCIPdebugMessage("interrupt pseudo objective propagation w.r.t. lower bound <%.15g> for binary variables after %d from %d binary variables\n", lowerbound, v, nobjbinvars);
          break;
       }
    }
 
-   /* propagate c*x >= lowerbound */
-   for( k = nobjbinvars; k < nobjvars && *result != SCIP_CUTOFF; ++k )
+   /* update globally fixed index if abort criteria was applied */
+   if( propdata->maxpseudoobjactinf == 0 )
    {
-      SCIP_CALL( propagateLowerboundVar(scip, propdata, objvars[k], lowerbound, result) );
+      propdata->glbfirstnonfixed = v;
+
+#ifndef NDEBUG
+      /* check that the abort criteria works */
+      for( ; v < nobjbinvars && !cutoff; ++v )
+      {
+         SCIP_VAR* var;
+
+         var = objvars[v];
+         assert(var != NULL);
+
+         /* check if the variables is already globally fixed; if so continue with the next potential candidate */
+         if( SCIPvarGetLbGlobal(var) > 0.5 || SCIPvarGetUbGlobal(var) < 0.5)
+            continue;
+
+         /* try to propagate variable domain globally */
+         SCIP_CALL( propagateLowerboundVar(scip, propdata, var, lowerbound, &cutoff, &tightened) );
+         assert(!tightened);
+         assert(!cutoff);
+      }
+#endif
    }
 
-   if( *result == SCIP_CUTOFF )
+   /* propagate c*x >= lowerbound for non-binary variables */
+   for( v = nobjbinvars; v < nobjvars && !cutoff; ++v )
+   {
+      SCIP_CALL( propagateLowerboundVar(scip, propdata, objvars[v], lowerbound, &cutoff, &tightened) );
+   }
+
+   /* evaluate result pointer */
+   if( cutoff )
    {
       /* we are done with solving since a global bound change is infeasible: cutoff root node */
       SCIP_CALL( SCIPcutoffNode(scip, SCIPgetRootNode(scip)) );
+      (*result) = SCIP_CUTOFF;
    }
+   else if( tightened )
+      (*result) = SCIP_REDUCEDDOM;
 
    /* remember the lower bound which we already propagated */
    propdata->lastlowerbound = lowerbound;
