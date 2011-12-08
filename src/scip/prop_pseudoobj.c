@@ -240,9 +240,9 @@ SCIP_RETCODE dropVarEvents(
    return SCIP_OKAY;
 }
 
-/** counts the number of variables with none zero objective coefficient */
+/** counts the number of variables with non-zero objective coefficient */
 static
-int countNoneZeroObjVars(
+int countNonZeroObjVars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< variable array */
    int                   nvars               /**< number of variables */
@@ -274,7 +274,7 @@ SCIP_RETCODE propdataExit(
    SCIP_PROPDATA*        propdata            /**< propagator data */
    )
 {
-   /* drop events for the none binary variables */
+   /* drop events for the variables */
    SCIP_CALL( dropVarEvents(scip, propdata) );
 
    /* free memory for non-zero objective variables */
@@ -323,15 +323,15 @@ SCIP_RETCODE propdataInit(
    ncontvars = SCIPgetNContVars(scip);
 
    /* count binary variables with non-zero objective value */
-   nobjbinvars = countNoneZeroObjVars(scip, vars, nbinvars);
+   nobjbinvars = countNonZeroObjVars(scip, vars, nbinvars);
    SCIPdebugMessage("There are %d binary variables in the objective function <%s>.\n", nobjbinvars, SCIPgetProbName(scip));
 
    /* count integer variables with non-zero objective value */
-   nobjintvars = countNoneZeroObjVars(scip, &vars[nbinvars], nintvars);
+   nobjintvars = countNonZeroObjVars(scip, &vars[nbinvars], nintvars);
    SCIPdebugMessage("There are %d interger variables (none binary) in the objective function.\n", nobjintvars);
 
    /* count continue variables with non-zero objective value */
-   nobjvars = countNoneZeroObjVars(scip, &vars[nbinvars + nintvars], ncontvars);
+   nobjvars = countNonZeroObjVars(scip, &vars[nbinvars + nintvars], ncontvars);
    SCIPdebugMessage("There are %d continuous variables in the objective function.\n", nobjvars);
 
    nobjvars += nobjbinvars + nobjintvars;
@@ -360,11 +360,11 @@ SCIP_RETCODE propdataInit(
 
          assert(k < nobjvars);
 
-         /* check if one of the non-binary variables is implicit binary */
+         /* check if one of the none binary variables is implicit binary */
          if( k >= nobjbinvars && SCIPvarIsBinary(var) )
          {
             /* we cannot have a continuous variables at hand */
-            assert(k < nobjintvars);
+            assert(k < nobjbinvars + nobjintvars);
 
             /* move the first interger variable to end of the array */
             propdata->objvars[k] = propdata->objvars[nobjbinvars];
@@ -372,6 +372,7 @@ SCIP_RETCODE propdataInit(
             /* place the binary variable at the end of the binary section */
             propdata->objvars[nobjbinvars] = var;
             nobjbinvars++;
+            nobjintvars--;
          }
          else
             propdata->objvars[k] = var;
@@ -382,7 +383,7 @@ SCIP_RETCODE propdataInit(
          /* catch bound change events */
          if( obj > 0.0 )
          {
-            if( k < nobjbinvars )
+            if( SCIPvarIsBinary(var) )
             {
                SCIP_CALL( SCIPcatchVarEvent(scip, var,
                      SCIP_EVENTTYPE_GUBCHANGED | SCIP_EVENTTYPE_BOUNDRELAXED, eventhdlr, (SCIP_EVENTDATA*)propdata, NULL) );
@@ -394,7 +395,7 @@ SCIP_RETCODE propdataInit(
          }
          else
          {
-            if( k < nobjbinvars )
+            if( SCIPvarIsBinary(var) )
             {
                SCIP_CALL( SCIPcatchVarEvent(scip, var,
                      SCIP_EVENTTYPE_GLBCHANGED | SCIP_EVENTTYPE_BOUNDRELAXED, eventhdlr, (SCIP_EVENTDATA*)propdata, NULL) );
