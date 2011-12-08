@@ -958,9 +958,9 @@ void calcMaxObjPseudoactivity(
    }
 }
 
-/** returns the pseudo objective activity */
+/** updates the pseudo objective activity if necessary */
 static
-SCIP_Real getMaxObjPseudoactivity(
+void updateMaxObjPseudoactivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROPDATA*        propdata            /**< propagator data */
    )
@@ -971,11 +971,6 @@ SCIP_Real getMaxObjPseudoactivity(
    if( propdata->maxpseudoobjact == SCIP_INVALID ) /*lint !e777*/
       calcMaxObjPseudoactivity(scip, propdata);
    assert(propdata->maxpseudoobjact != SCIP_INVALID); /*lint !e777*/
-
-   if( propdata->maxpseudoobjactinf > 0)
-      return SCIPinfinity(scip);
-
-   return propdata->maxpseudoobjact;
 }
 
 /** returns the residual pseudo objective activity without the given value */
@@ -1131,7 +1126,6 @@ SCIP_RETCODE propagateLowerbound(
 {  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
    SCIP_Real lowerbound;
-   SCIP_Real maxactivity;
    SCIP_VAR** objvars;
    int nobjbinvars;
    int nobjvars;
@@ -1166,7 +1160,8 @@ SCIP_RETCODE propagateLowerbound(
    if( SCIPisLE(scip, lowerbound, propdata->lastlowerbound) && propdata->maxpseudoobjact < SCIP_INVALID)
       return SCIP_OKAY;
 
-   maxactivity = getMaxObjPseudoactivity(scip, propdata);
+   /* updates the pseudo objective activity if necessary */
+   updateMaxObjPseudoactivity(scip, propdata);
 
    /* if more than one variable contribute an infinity to the maximal pseudo activity we can do nothing */
    assert(propdata->maxpseudoobjact < SCIP_INVALID);
@@ -1176,15 +1171,11 @@ SCIP_RETCODE propagateLowerbound(
    for( k = 0; k < nobjbinvars && *result != SCIP_CUTOFF; ++k )
    {
       SCIP_VAR* var;
-      SCIP_Real objval;
 
       var = objvars[k];
       assert(var != NULL);
 
-      objval = SCIPvarGetObj(var);
-      assert(!SCIPisZero(scip, objval));
-
-      SCIP_CALL( propagateLowerboundVar(scip, propdata, objvars[k], lowerbound, result) );
+      SCIP_CALL( propagateLowerboundVar(scip, propdata, var, lowerbound, result) );
 
       /* the binary variables are sorted in non-increasing manner w.r.t. the absolute value of their objective
        * coefficient; These values are the decrease we would get with the maximal pseudo objective activity if we fix
@@ -1193,7 +1184,7 @@ SCIP_RETCODE propagateLowerbound(
        */
       if( propdata->maxpseudoobjactinf == 0 && SCIPvarGetLbGlobal(var) < 0.5 && SCIPvarGetUbGlobal(var) > 0.5 )
       {
-         assert(!SCIPisInfinity(scip, maxactivity));
+         assert(!SCIPisInfinity(scip, propdata->maxpseudoobjact));
          SCIPdebugMessage("interrupt pseudo objective propagation w.r.t. lower bound <%.15g> for binary variables after %d from %d binary variables\n", lowerbound, k, nobjbinvars);
          break;
       }
