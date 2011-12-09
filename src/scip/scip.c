@@ -9076,7 +9076,7 @@ SCIP_Real SCIPgetVarRedcost(
       return SCIPgetVarRedcost(scip,var->data.original.transvar);
 
    case SCIP_VARSTATUS_COLUMN:
-      return SCIPgetColRedcost(scip,SCIPvarGetCol(var));
+      return SCIPgetColRedcost(scip, SCIPvarGetCol(var));
 
    case SCIP_VARSTATUS_LOOSE:
       return SCIP_INVALID;
@@ -9407,6 +9407,56 @@ SCIP_RETCODE SCIPendStrongbranch(
    return SCIP_OKAY;
 }
 
+/** analyze the strong branching for the given variable; that includes conflict analysis for infeasible branches and
+ *  storing of root reduced cost information
+ */
+static
+SCIP_RETCODE analyzeStrongbranch(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to analyze */
+   SCIP_Bool*            downinf,            /**< pointer to store whether the downwards branch is infeasible, or NULL */
+   SCIP_Bool*            upinf,              /**< pointer to store whether the upwards branch is infeasible, or NULL */
+   SCIP_Bool*            downconflict,       /**< pointer to store whether a conflict constraint was created for an
+                                              *   infeasible downwards branch, or NULL */
+   SCIP_Bool*            upconflict          /**< pointer to store whether a conflict constraint was created for an
+                                              *   infeasible upwards branch, or NULL */
+   )
+{
+   SCIP_COL* col;
+   SCIP_Bool downcutoff;
+   SCIP_Bool upcutoff;
+
+   col = SCIPvarGetCol(var);
+   assert(col != NULL);
+
+   downcutoff = col->sbdownvalid && SCIPsetIsGE(scip->set, col->sbdown, scip->lp->cutoffbound);
+   upcutoff = col->sbupvalid && SCIPsetIsGE(scip->set, col->sbup, scip->lp->cutoffbound);
+
+   if( downinf != NULL )
+      *downinf = downcutoff;
+   if( upinf != NULL )
+      *upinf = upcutoff;
+
+   /* analyze infeasible strong branching sub problems:
+    * because the strong branching's bound change is necessary for infeasibility, it cannot be undone;
+    * therefore, infeasible strong branchings on non-binary variables will not produce a valid conflict constraint
+    */
+   if( scip->set->conf_enable && scip->set->conf_usesb && scip->set->nconflicthdlrs > 0
+      && SCIPvarIsBinary(var) && SCIPtreeGetCurrentDepth(scip->tree) > 0 )
+   {
+      if( (downcutoff && SCIPsetFeasCeil(scip->set, col->primsol-1.0) >= col->lb - 0.5)
+         || (upcutoff && SCIPsetFeasFloor(scip->set, col->primsol+1.0) <= col->ub + 0.5) )
+      {
+         assert(downconflict != NULL);
+         assert(upconflict   != NULL);
+         SCIP_CALL( SCIPconflictAnalyzeStrongbranch(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
+               scip->transprob, scip->tree, scip->lp, col, downconflict, upconflict) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** gets strong branching information on column variable with fractional value */
 SCIP_RETCODE SCIPgetVarStrongbranchFrac(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -9479,30 +9529,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
     */
    if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !scip->set->misc_exactsolve )
    {
-      SCIP_Bool downcutoff;
-      SCIP_Bool upcutoff;
-
-      downcutoff = col->sbdownvalid && SCIPsetIsGE(scip->set, col->sbdown, scip->lp->cutoffbound);
-      upcutoff = col->sbupvalid && SCIPsetIsGE(scip->set, col->sbup, scip->lp->cutoffbound);
-      if( downinf != NULL )
-         *downinf = downcutoff;
-      if( upinf != NULL )
-         *upinf = upcutoff;
-
-      /* analyze infeasible strong branching sub problems:
-       * because the strong branching's bound change is necessary for infeasibility, it cannot be undone;
-       * therefore, infeasible strong branchings on non-binary variables will not produce a valid conflict constraint
-       */
-      if( scip->set->conf_enable && scip->set->conf_usesb && scip->set->nconflicthdlrs > 0
-         && SCIPvarIsBinary(var) && SCIPtreeGetCurrentDepth(scip->tree) > 0 )
-      {
-         if( (downcutoff && SCIPsetFeasCeil(scip->set, col->primsol-1.0) >= col->lb - 0.5)
-            || (upcutoff && SCIPsetFeasFloor(scip->set, col->primsol+1.0) <= col->ub + 0.5) )
-         {
-            SCIP_CALL( SCIPconflictAnalyzeStrongbranch(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
-                  scip->transprob, scip->tree, scip->lp, col, downconflict, upconflict) );
-         }
-      }
+      SCIP_CALL( analyzeStrongbranch(scip, var, downinf, upinf, downconflict, upconflict) );
    }
 
    return SCIP_OKAY;
@@ -9580,30 +9607,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchInt(
     */
    if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !scip->set->misc_exactsolve )
    {
-      SCIP_Bool downcutoff;
-      SCIP_Bool upcutoff;
-
-      downcutoff = col->sbdownvalid && SCIPsetIsGE(scip->set, col->sbdown, scip->lp->cutoffbound);
-      upcutoff = col->sbupvalid && SCIPsetIsGE(scip->set, col->sbup, scip->lp->cutoffbound);
-      if( downinf != NULL )
-         *downinf = downcutoff;
-      if( upinf != NULL )
-         *upinf = upcutoff;
-
-      /* analyze infeasible strong branching sub problems:
-       * because the strong branching's bound change is necessary for infeasibility, it cannot be undone;
-       * therefore, infeasible strong branchings on non-binary variables will not produce a valid conflict constraint
-       */
-      if( scip->set->conf_enable && scip->set->conf_usesb && scip->set->nconflicthdlrs > 0
-         && SCIPvarIsBinary(var) && SCIPtreeGetCurrentDepth(scip->tree) > 0 )
-      {
-         if( (downcutoff && SCIPsetFeasCeil(scip->set, col->primsol-1.0) >= col->lb - 0.5)
-            || (upcutoff && SCIPsetFeasFloor(scip->set, col->primsol+1.0) <= col->ub + 0.5) )
-         {
-            SCIP_CALL( SCIPconflictAnalyzeStrongbranch(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
-                  scip->transprob, scip->tree, scip->lp, col, downconflict, upconflict) );
-         }
-      }
+      SCIP_CALL( analyzeStrongbranch(scip, var, downinf, upinf, downconflict, upconflict) );
    }
 
    return SCIP_OKAY;
@@ -9694,7 +9698,7 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesFrac(
       /* call strong branching for columns */
       SCIP_CALL( SCIPcolGetStrongbranchesFrac(cols, nvars, scip->set, scip->stat, scip->lp, itlim,
             down, up, downvalid, upvalid, lperror) );
-      
+
       /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough to
        * declare the sub nodes infeasible
        */
@@ -9702,34 +9706,7 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesFrac(
       {
          for( j = 0; j < nvars; ++j )
          {
-            SCIP_Bool downcutoff;
-            SCIP_Bool upcutoff;
-            SCIP_COL* col;
-            
-            col = cols[j];
-            downcutoff = col->sbdownvalid && SCIPsetIsGE(scip->set, col->sbdown, scip->lp->cutoffbound);
-            upcutoff = col->sbupvalid && SCIPsetIsGE(scip->set, col->sbup, scip->lp->cutoffbound);
-            if( downinf != NULL )
-               downinf[j] = downcutoff;
-            if( upinf != NULL )
-               upinf[j] = upcutoff;
-            
-            /* analyze infeasible strong branching sub problems:
-             * because the strong branching's bound change is necessary for infeasibility, it cannot be undone;
-             * therefore, infeasible strong branchings on non-binary variables will not produce a valid conflict constraint
-             */
-            if( scip->set->conf_enable && scip->set->conf_usesb && scip->set->nconflicthdlrs > 0
-               && SCIPvarIsBinary(vars[j]) && SCIPtreeGetCurrentDepth(scip->tree) > 0 )
-            {
-               if( (downcutoff && SCIPsetFeasCeil(scip->set, col->primsol-1.0) >= col->lb - 0.5)
-                  || (upcutoff && SCIPsetFeasFloor(scip->set, col->primsol+1.0) <= col->ub + 0.5) )
-               {
-                  assert(downconflict != NULL);
-                  assert(upconflict   != NULL);
-                  SCIP_CALL( SCIPconflictAnalyzeStrongbranch(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
-                        scip->transprob, scip->tree, scip->lp, col, &(downconflict[j]), &(upconflict[j])) );
-               }
-            }
+            SCIP_CALL( analyzeStrongbranch(scip, vars[j], &(downinf[j]), &(upinf[j]), &(downconflict[j]), &(upconflict[j])) );
          }
       }
    }
@@ -9831,34 +9808,7 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesInt(
       {
          for( j = 0; j < nvars; ++j )
          {
-            SCIP_Bool downcutoff;
-            SCIP_Bool upcutoff;
-            SCIP_COL* col;
-            
-            col = cols[j];
-            downcutoff = col->sbdownvalid && SCIPsetIsGE(scip->set, col->sbdown, scip->lp->cutoffbound);
-            upcutoff = col->sbupvalid && SCIPsetIsGE(scip->set, col->sbup, scip->lp->cutoffbound);
-            if( downinf != NULL )
-               downinf[j] = downcutoff;
-            if( upinf != NULL )
-               upinf[j] = upcutoff;
-            
-            /* analyze infeasible strong branching sub problems:
-             * because the strong branching's bound change is necessary for infeasibility, it cannot be undone;
-             * therefore, infeasible strong branchings on non-binary variables will not produce a valid conflict constraint
-             */
-            if( scip->set->conf_enable && scip->set->conf_usesb && scip->set->nconflicthdlrs > 0
-               && SCIPvarIsBinary(vars[j]) && SCIPtreeGetCurrentDepth(scip->tree) > 0 )
-            {
-               if( (downcutoff && SCIPsetFeasCeil(scip->set, col->primsol-1.0) >= col->lb - 0.5)
-                  || (upcutoff && SCIPsetFeasFloor(scip->set, col->primsol+1.0) <= col->ub + 0.5) )
-               {
-                  assert(downconflict != NULL);
-                  assert(upconflict   != NULL);
-                  SCIP_CALL( SCIPconflictAnalyzeStrongbranch(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
-                        scip->transprob, scip->tree, scip->lp, col, &(downconflict[j]), &(upconflict[j])) );
-               }
-            }
+            SCIP_CALL( analyzeStrongbranch(scip, vars[j], &(downinf[j]), &(upinf[j]), &(downconflict[j]), &(upconflict[j])) );
          }
       }
    }
