@@ -375,8 +375,8 @@ SCIP_RETCODE SCIPpresolExec(
 
    /* calculate the number of changes since last call */
    nnewfixedvars = *nfixedvars - presol->lastnfixedvars;
-   nnewaggrvars = *naggrvars - presol->lastnaddconss;
-   nnewchgvartypes = *nchgvartypes - presol->lastnchgsides;
+   nnewaggrvars = *naggrvars - presol->lastnaggrvars;
+   nnewchgvartypes = *nchgvartypes - presol->lastnchgvartypes;
    nnewchgbds = *nchgbds - presol->lastnchgbds;
    nnewaddholes = *naddholes - presol->lastnaddholes;
    nnewdelconss = *ndelconss - presol->lastndelconss;
@@ -387,8 +387,8 @@ SCIP_RETCODE SCIPpresolExec(
 
    /* remember the number of changes prior to the call of the presolver */
    presol->lastnfixedvars = *nfixedvars;
-   presol->lastnaddconss = *naggrvars;
-   presol->lastnchgsides = *nchgvartypes;
+   presol->lastnaggrvars = *naggrvars;
+   presol->lastnchgvartypes = *nchgvartypes;
    presol->lastnchgbds = *nchgbds;
    presol->lastnaddholes = *naddholes;
    presol->lastndelconss = *ndelconss;
