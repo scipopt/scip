@@ -487,8 +487,8 @@ SCIP_RETCODE SCIPpropPresol(
 
       /* calculate the number of changes since last call */
       nnewfixedvars = *nfixedvars - prop->lastnfixedvars;
-      nnewaggrvars = *naggrvars - prop->lastnaddconss;
-      nnewchgvartypes = *nchgvartypes - prop->lastnchgsides;
+      nnewaggrvars = *naggrvars - prop->lastnaggrvars;
+      nnewchgvartypes = *nchgvartypes - prop->lastnchgvartypes;
       nnewchgbds = *nchgbds - prop->lastnchgbds;
       nnewaddholes = *naddholes - prop->lastnaddholes;
       nnewdelconss = *ndelconss - prop->lastndelconss;
@@ -499,8 +499,8 @@ SCIP_RETCODE SCIPpropPresol(
 
       /* remember the number of changes prior to the call of the presolver method of the propagator */
       prop->lastnfixedvars = *nfixedvars;
-      prop->lastnaddconss = *naggrvars;
-      prop->lastnchgsides = *nchgvartypes;
+      prop->lastnaggrvars = *naggrvars;
+      prop->lastnchgvartypes = *nchgvartypes;
       prop->lastnchgbds = *nchgbds;
       prop->lastnaddholes = *naddholes;
       prop->lastndelconss = *ndelconss;
