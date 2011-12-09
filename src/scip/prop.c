@@ -450,17 +450,6 @@ SCIP_RETCODE SCIPpropPresol(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
-   int oldnfixedvars;
-   int oldnaggrvars;
-   int oldnchgvartypes;
-   int oldnchgbds;
-   int oldnaddholes;
-   int oldndelconss;
-   int oldnaddconss;
-   int oldnupgdconss;
-   int oldnchgcoefs;
-   int oldnchgsides;
-
    assert(prop != NULL);
    assert(set != NULL);
    assert(nfixedvars != NULL);
@@ -479,64 +468,75 @@ SCIP_RETCODE SCIPpropPresol(
 
    if( prop->proppresol == NULL )
       return SCIP_OKAY;
-   
+
    /* check number of presolving rounds */
    if( prop->maxprerounds >= 0 && nrounds >= prop->maxprerounds && !prop->presolwasdelayed )
       return SCIP_OKAY;
 
-   /* remember the old number of changes */
-   oldnfixedvars = *nfixedvars;
-   oldnaggrvars = *naggrvars;
-   oldnchgvartypes = *nchgvartypes;
-   oldnchgbds = *nchgbds;
-   oldnaddholes = *naddholes;
-   oldndelconss = *ndelconss;
-   oldnaddconss = *naddconss;
-   oldnupgdconss = *nupgdconss;
-   oldnchgcoefs = *nchgcoefs;
-   oldnchgsides = *nchgsides;
-   assert(oldnfixedvars >= 0);
-   assert(oldnaggrvars >= 0);
-   assert(oldnchgvartypes >= 0);
-   assert(oldnchgbds >= 0);
-   assert(oldnaddholes >= 0);
-   assert(oldndelconss >= 0);
-   assert(oldnaddconss >= 0);
-   assert(oldnupgdconss >= 0);
-   assert(oldnchgcoefs >= 0);
-   assert(oldnchgsides >= 0);
-
    /* check, if presolver should be delayed */
    if( !prop->presoldelay || execdelayed )
    {
-      SCIPdebugMessage("calling propagator <%s>\n", prop->name);
+      int nnewfixedvars;
+      int nnewaggrvars;
+      int nnewchgvartypes;
+      int nnewchgbds;
+      int nnewaddholes;
+      int nnewdelconss;
+      int nnewaddconss;
+      int nnewupgdconss;
+      int nnewchgcoefs;
+      int nnewchgsides;
+
+      SCIPdebugMessage("calling presolving method of propagator <%s>\n", prop->name);
+
+      /* calculate the number of changes since last call */
+      nnewfixedvars = *nfixedvars - prop->lastnfixedvars;
+      nnewaggrvars = *naggrvars - prop->lastnaddconss;
+      nnewchgvartypes = *nchgvartypes - prop->lastnchgsides;
+      nnewchgbds = *nchgbds - prop->lastnchgbds;
+      nnewaddholes = *naddholes - prop->lastnaddholes;
+      nnewdelconss = *ndelconss - prop->lastndelconss;
+      nnewaddconss = *naddconss - prop->lastnaddconss;
+      nnewupgdconss = *nupgdconss - prop->lastnupgdconss;
+      nnewchgcoefs = *nchgcoefs - prop->lastnchgcoefs;
+      nnewchgsides = *nchgsides - prop->lastnchgsides;
+
+      /* remember the number of changes prior to the call of the presolver method of the propagator */
+      prop->lastnfixedvars = *nfixedvars;
+      prop->lastnaddconss = *naggrvars;
+      prop->lastnchgsides = *nchgvartypes;
+      prop->lastnchgbds = *nchgbds;
+      prop->lastnaddholes = *naddholes;
+      prop->lastndelconss = *ndelconss;
+      prop->lastnaddconss = *naddconss;
+      prop->lastnupgdconss = *nupgdconss;
+      prop->lastnchgcoefs = *nchgcoefs;
+      prop->lastnchgsides = *nchgsides;
 
       /* start timing */
       SCIPclockStart(prop->presoltime, set);
 
       /* call external method */
       SCIP_CALL( prop->proppresol(set->scip, prop, nrounds,
-            *nfixedvars - prop->nfixedvars, *naggrvars - prop->naggrvars, *nchgvartypes - prop->nchgvartypes,
-            *nchgbds - prop->nchgbds, *naddholes - prop->naddholes, *ndelconss - prop->ndelconss, 
-            *naddconss - prop->naddconss, *nupgdconss - prop->nupgdconss, *nchgcoefs - prop->nchgcoefs, 
-            *nchgsides - prop->nchgsides,
+            nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewaddholes,
+            nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
             nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
             ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result) );
 
       /* stop timing */
       SCIPclockStop(prop->presoltime, set);
 
-      /* count the new changes */
-      prop->nfixedvars += *nfixedvars - oldnfixedvars;
-      prop->naggrvars += *naggrvars - oldnaggrvars;
-      prop->nchgvartypes += *nchgvartypes - oldnchgvartypes;
-      prop->nchgbds += *nchgbds - oldnchgbds;
-      prop->naddholes += *naddholes - oldnaddholes;
-      prop->ndelconss += *ndelconss - oldndelconss;
-      prop->naddconss += *naddconss - oldnaddconss;
-      prop->nupgdconss += *nupgdconss - oldnupgdconss;
-      prop->nchgcoefs += *nchgcoefs - oldnchgcoefs;
-      prop->nchgsides += *nchgsides - oldnchgsides;
+      /* add/count the new changes */
+      prop->nfixedvars += *nfixedvars - prop->lastnfixedvars;
+      prop->naggrvars += *naggrvars - prop->lastnaggrvars;
+      prop->nchgvartypes += *nchgvartypes - prop->lastnchgvartypes;
+      prop->nchgbds += *nchgbds - prop->lastnchgbds;
+      prop->naddholes += *naddholes - prop->lastnaddholes;
+      prop->ndelconss += *ndelconss - prop->lastndelconss;
+      prop->naddconss += *naddconss - prop->lastnaddconss;
+      prop->nupgdconss += *nupgdconss - prop->lastnupgdconss;
+      prop->nchgcoefs += *nchgcoefs - prop->lastnchgcoefs;
+      prop->nchgsides += *nchgsides - prop->lastnchgsides;
 
       /* check result code of callback method */
       if( *result != SCIP_CUTOFF
@@ -548,20 +548,6 @@ SCIP_RETCODE SCIPpropPresol(
       {
          SCIPerrorMessage("propagator <%s> returned invalid result <%d>\n", prop->name, *result);
          return SCIP_INVALIDRESULT;
-      }
-      else if( *result != SCIP_DIDNOTRUN && *result != SCIP_DELAYED )
-      {
-         /* remember the number of changes prior to the call of the presolving method */
-         prop->lastnfixedvars = oldnfixedvars;
-         prop->lastnaggrvars = oldnaggrvars;
-         prop->lastnchgvartypes = oldnchgvartypes;
-         prop->lastnchgbds = oldnchgbds;
-         prop->lastnaddholes = oldnaddholes;
-         prop->lastndelconss = oldndelconss;
-         prop->lastnaddconss = oldnaddconss;
-         prop->lastnupgdconss = oldnupgdconss;
-         prop->lastnchgcoefs = oldnchgcoefs;
-         prop->lastnchgsides = oldnchgsides;
       }
    }
    else
