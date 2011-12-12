@@ -210,6 +210,14 @@
 #define DISP_POSI_STRONGBRANCHS 5000
 #define DISP_STRI_STRONGBRANCHS TRUE
 
+#define DISP_NAME_PSEUDOOBJ     "pseudoobj"
+#define DISP_DESC_PSEUDOOBJ     "current pseudo objective value"
+#define DISP_HEAD_PSEUDOOBJ     "pseudoobj"
+#define DISP_WIDT_PSEUDOOBJ     14
+#define DISP_PRIO_PSEUDOOBJ     300
+#define DISP_POSI_PSEUDOOBJ     6000
+#define DISP_STRI_PSEUDOOBJ     TRUE
+
 #define DISP_NAME_LPOBJ         "lpobj"
 #define DISP_DESC_LPOBJ         "current LP objective value"
 #define DISP_HEAD_LPOBJ         "lpobj"
@@ -666,6 +674,28 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputNStrongbranchs)
    return SCIP_OKAY;
 }
 
+/** output method of display column to output file stream 'file' for pseudo objective value */
+static
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputPseudoObjval)
+{  /*lint --e{715}*/
+   SCIP_Real pseudoobj;
+
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_PSEUDOOBJ) == 0);
+   assert(scip != NULL);
+
+   pseudoobj = SCIPgetPseudoObjval(scip);
+
+   if( SCIPisInfinity(scip, -pseudoobj) )
+      SCIPinfoMessage(scip, file, "      --      ");
+   else if( SCIPisInfinity(scip, pseudoobj) )
+      SCIPinfoMessage(scip, file, "    cutoff    ");
+   else
+      SCIPinfoMessage(scip, file, "%13.6e ", pseudoobj);
+  
+   return SCIP_OKAY;
+}
+
 /** output method of display column to output file stream 'file' for LP objective value */
 static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputLPObjval)
@@ -1107,6 +1137,15 @@ SCIP_RETCODE SCIPincludeDispDefault(
             dispCopyDefault,
             NULL, NULL, NULL, NULL, NULL, SCIPdispOutputNStrongbranchs, NULL, 
             DISP_WIDT_STRONGBRANCHS, DISP_PRIO_STRONGBRANCHS, DISP_POSI_STRONGBRANCHS, DISP_STRI_STRONGBRANCHS) );
+   }
+   tmpdisp = SCIPfindDisp(scip, DISP_NAME_PSEUDOOBJ);
+   if( tmpdisp == NULL )
+   {
+      SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_PSEUDOOBJ, DISP_DESC_PSEUDOOBJ, DISP_HEAD_PSEUDOOBJ,
+            SCIP_DISPSTATUS_AUTO,
+            dispCopyDefault,
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputPseudoObjval, NULL,
+            DISP_WIDT_PSEUDOOBJ, DISP_PRIO_PSEUDOOBJ, DISP_POSI_PSEUDOOBJ, DISP_STRI_PSEUDOOBJ) );
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_LPOBJ);
    if( tmpdisp == NULL )
