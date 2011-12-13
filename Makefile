@@ -43,8 +43,8 @@ TEST		=	shortmiplib
 SETTINGS        =       default
 CONTINUE	=	false
 LOCK		=	false
-REDUCEDSOLVE	=	true
-EXACTSOLVE	=	true
+REDUCEDSOLVE	=	false
+EXACTSOLVE	=	false
 BRANCHPLGS	=	true
 
 VERBOSE		=	false
@@ -191,9 +191,6 @@ EXACTSOLVESRC	:=	$(shell cat $(EXACTSOLVEDEP))
 
 # flag for including branching plugins or supporting only first fractional variable branching
 ifeq ($(BRANCHPLGS),true) 
-ifeq ($(REDUCEDSOLVE),false)
-$(error BRANCHPLGS requires REDUCEDSOLVE. Use either BRANCHPLGS=false or REDUCEDSOLVE=true)
-endif
 FLAGS		+=	-DWITH_BRANCHPLGS			
 endif
 BRANCHPLGSDEP	:=	$(SRCDIR)/depend.branchplgs
