@@ -667,9 +667,9 @@ void mcfnetworkPrint(
             MCFdebugMessage("  commodity %2d: ", k);
             if( mcfnetwork->nodeflowrows[v][k] != NULL )
             {
-               MCFdebugMessage("<%s> [%+g] [inv:%d]\n", SCIProwGetName(mcfnetwork->nodeflowrows[v][k]),
+               MCFdebugMessage("<%s> [%+g] [inv:%u]\n", SCIProwGetName(mcfnetwork->nodeflowrows[v][k]),
                       mcfnetwork->nodeflowscales[v][k], mcfnetwork->nodeflowinverted[v][k]);
-               /*SCIProwPrint(mcfnetwork->nodeflowrows[v][k], NULL);*/
+               /*SCIP_CALL( SCIProwPrint(mcfnetwork->nodeflowrows[v][k], NULL) );*/
             }
             else
                MCFdebugMessage("-\n");
@@ -765,9 +765,9 @@ void printCommodities(
    for( a = 0; a < mcfdata->narcs; a++ )
    {
       MCFdebugMessage("  arc %d: ", a);
-      if( capacityrows[a] != NULL )
+      if( capacityrows[a] != NULL ) /*lint !e613*/
       {
-         r = SCIProwGetLPPos(capacityrows[a]);
+         r = SCIProwGetLPPos(capacityrows[a]); /*lint !e613*/
          assert(0 <= r && r < nrows);
          if( (capacityrowsigns[r] & LHSASSIGNED) != 0 )
             MCFdebugMessage(" row <%s> [sign:-1]\n", SCIProwGetName(rows[r]));
@@ -784,7 +784,7 @@ void printCommodities(
    MCFdebugMessage("unused columns:\n");
    for( c = 0; c < ncols; c++ )
    {
-      if( colcommodity[c] == -1 )
+      if( colcommodity[c] == -1 ) /*lint !e613*/
       {
          SCIP_VAR* var = SCIPcolGetVar(cols[c]);
          MCFdebugMessage(" col <%s> [%g,%g]\n", SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));

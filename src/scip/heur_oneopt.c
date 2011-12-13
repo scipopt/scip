@@ -25,6 +25,10 @@
 
 #include "scip/heur_oneopt.h"
 
+/* @note if heuristic runs in root node timing is change there to (SCIP_HEURTIMING_DURINGLPLOOP |
+ *       SCIP_HEURTIMING_BEFORENODE), see SCIP_DECL_HEURINITSOL callback
+ */
+
 #define HEUR_NAME             "oneopt"
 #define HEUR_DESC             "1-opt heuristic which tries to improve setting of single integer variables"
 #define HEUR_DISPCHAR         'b'
@@ -534,7 +538,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          if( success )
          {
             SCIPdebugMessage("found feasible shifted solution:\n");
-            SCIPdebug(SCIPprintSol(scip, worksol, NULL, FALSE));
+            SCIPdebug( SCIP_CALL( SCIPprintSol(scip, worksol, NULL, FALSE) ) );
             heurdata->lastsolindex = SCIPsolGetIndex(bestsol);
             *result = SCIP_FOUNDSOL;
          }
@@ -603,7 +607,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
             if( success )
             {
                SCIPdebugMessage("found feasible shifted solution:\n");
-               SCIPdebug(SCIPprintSol(scip, worksol, NULL, FALSE));
+               SCIPdebug( SCIP_CALL( SCIPprintSol(scip, worksol, NULL, FALSE) ) );
                heurdata->lastsolindex = SCIPsolGetIndex(bestsol);
                *result = SCIP_FOUNDSOL;
             }

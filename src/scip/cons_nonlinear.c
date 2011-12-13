@@ -1617,7 +1617,7 @@ SCIP_RETCODE removeFixedLinearVariables(
    }
 
    SCIPdebugMessage("removed fixations of linear variables from <%s>\n  -> ", SCIPconsGetName(cons));
-   SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
 
 #ifndef NDEBUG
    for( i = 0; i < consdata->nlinvars; ++i )
@@ -1885,7 +1885,7 @@ SCIP_RETCODE presolveUpgrade(
 
    SCIPdebugMessage("upgrading nonlinear constraint <%s> (up to %d upgrade methods):\n",
       SCIPconsGetName(cons), conshdlrdata->nnlconsupgrades);
-   SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
 
    /* try all upgrading methods in priority order in case the upgrading step is enable  */
    for( i = 0; i < conshdlrdata->nnlconsupgrades; ++i )
@@ -2020,7 +2020,7 @@ SCIP_RETCODE checkCurvature(
          if( consdata->curvatures[i] == SCIP_EXPRCURV_UNKNOWN && SCIPconshdlrGetData(SCIPconsGetHdlr(cons))->isreformulated )
          {
             SCIPwarningMessage("indefinite expression tree in constraint <%s>\n", SCIPconsGetName(cons));
-            SCIPdebug( SCIPexprtreePrintWithNames(consdata->exprtrees[i], NULL) );
+            SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(consdata->exprtrees[i], NULL) ) );
             SCIPdebugPrintf("\n");
          }
       }
@@ -3310,7 +3310,7 @@ SCIP_RETCODE reformulate(
       {
          SCIPdebugMessage("replace linear multivariate node %p(%d,%d) in expression of cons <%s> by auxvar\n",
             (void*)multivarnode, SCIPexprgraphGetNodeDepth(multivarnode), SCIPexprgraphGetNodePosition(multivarnode), SCIPconsGetName(conss[c]));  /*lint !e613*/
-         SCIPdebug( SCIPprintCons(scip, conss[c], NULL) );  /*lint !e613*/
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );  /*lint !e613*/
          SCIP_CALL( reformNode2Var(scip, exprgraph, multivarnode, conss, nconss, naddcons, TRUE) );
       }
    }
@@ -5324,8 +5324,8 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
             SCIPconsIsStickingAtNode(conss[c])) );
 
       SCIPdebugMessage("replace violated nonlinear constraint <%s> by linear constraint after all nonlinear vars have been fixed\n", SCIPconsGetName(conss[c]) );
-      SCIPdebug( SCIPprintCons(scip, conss[c], NULL) );
-      SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
 
       SCIP_CALL( SCIPcheckCons(scip, cons, NULL, FALSE, FALSE, FALSE, &checkresult) );
 
@@ -6604,7 +6604,7 @@ SCIP_DECL_CONSTRANS(consTransNonlinear)
          SCIPconsIsStickingAtNode(sourcecons)) );
 
    SCIPdebugMessage("created transformed nonlinear constraint ");
-   SCIPdebug( SCIPprintCons(scip, *targetcons, NULL) );
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *targetcons, NULL) ) );
 
    return SCIP_OKAY;
 }
@@ -7358,7 +7358,7 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
       assert(consdata != NULL);
 
       SCIPdebugMessage("process constraint <%s>\n", SCIPconsGetName(conss[c]));
-      SCIPdebug( SCIPprintCons(scip, conss[c], NULL) );
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
 
       havechange = FALSE;
 
@@ -8008,7 +8008,7 @@ SCIP_RETCODE SCIPincludeNonlinconsUpgrade(
       if( conshdlrdata->nlconsupgrades[i]->nlconsupgd == nonlinconsupgd && conshdlrdata->nlconsupgrades[i]->nodereform == nodereform)
       {
 #ifdef SCIP_DEBUG
-         SCIPwarningMessage("Try to add already known upgrade method pair (%p,%p) for constraint handler <%s>.\n", (void*)nonlinconsupgd, (void*)nodereform, conshdlrname);
+         SCIPwarningMessage("Try to add already known upgrade method pair (%p,%p) for constraint handler <%s>.\n", (void*)nonlinconsupgd, (void*)nodereform, conshdlrname); /*lint !e611*/
 #endif
          return SCIP_OKAY;
       }
@@ -8050,7 +8050,9 @@ SCIP_RETCODE SCIPincludeNonlinconsUpgrade(
 }
 
 /** creates and captures a nonlinear constraint
- * this variant takes expression trees as input
+ *  this variant takes expression trees as input
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
 SCIP_RETCODE SCIPcreateConsNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -8130,7 +8132,7 @@ SCIP_RETCODE SCIPcreateConsNonlinear(
    SCIP_CALL( consdataSetExprtrees(scip, consdata, nexprtrees, exprtrees, nonlincoefs, TRUE) );
 
    SCIPdebugMessage("created nonlinear constraint ");
-   SCIPdebug( SCIPprintCons(scip, *cons, NULL) );
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *cons, NULL) ) );
 
    return SCIP_OKAY;
 }
@@ -8139,6 +8141,8 @@ SCIP_RETCODE SCIPcreateConsNonlinear(
  * this variant takes a node of the expression graph as input and can only be used during presolving
  * it is assumed that the nonlinear constraint will be added to the transformed problem short after creation
  * the given exprgraphnode is captured in this method
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
 SCIP_RETCODE SCIPcreateConsNonlinear2(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -8221,7 +8225,7 @@ SCIP_RETCODE SCIPcreateConsNonlinear2(
    }
 
    SCIPdebugMessage("created nonlinear constraint ");
-   SCIPdebug( SCIPprintCons(scip, *cons, NULL) );
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *cons, NULL) ) );
 
    return SCIP_OKAY;
 }

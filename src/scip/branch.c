@@ -198,7 +198,7 @@ SCIP_RETCODE branchcandCalcLPCands(
    assert(lp->solved);
    assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
 
-   SCIPdebugMessage("calculating LP branching candidates: validlp=%d, lpcount=%d\n",
+   SCIPdebugMessage("calculating LP branching candidates: validlp=%"SCIP_LONGINT_FORMAT", lpcount=%"SCIP_LONGINT_FORMAT"\n",
       branchcand->validlpcandslp, stat->lpcount);
 
    if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )

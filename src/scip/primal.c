@@ -429,7 +429,7 @@ SCIP_RETCODE primalAddSol(
    assert(0 <= insertpos && insertpos < set->limit_maxsol);
 
    SCIPdebugMessage("insert primal solution %p with obj %g at position %d:\n", (void*)sol, SCIPsolGetObj(sol, set, prob), insertpos);
-   SCIPdebug( SCIPsolPrint(sol, set, stat, prob, NULL, NULL, FALSE) );
+   SCIPdebug( SCIP_CALL( SCIPsolPrint(sol, set, stat, prob, NULL, NULL, FALSE) ) );
 
 #if 0
 #ifndef NDEBUG

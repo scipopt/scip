@@ -572,7 +572,10 @@ SCIP_RETCODE SCIPincludeConshdlrXyz(
    return SCIP_OKAY;
 }
 
-/** creates and captures a xyz constraint */
+/** creates and captures a xyz constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 SCIP_RETCODE SCIPcreateConsXyz(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */

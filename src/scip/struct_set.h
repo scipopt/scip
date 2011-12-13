@@ -269,6 +269,7 @@ struct SCIP_Set
                                               *   case of bender decomposition this parameter should be set to FALSE and
                                               *   therefore can be used to collect statistics over all runs) */
    SCIP_Bool             misc_improvingsols; /**< should only solutions be checked which improve the primal bound */
+   SCIP_Bool             misc_printreason;   /**< should the reason be printed if a given start solution is infeasible? */
 
    /* node selection settings */
    char                  nodesel_childsel;   /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,

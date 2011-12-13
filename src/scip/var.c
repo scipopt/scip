@@ -11018,7 +11018,7 @@ SCIP_Real SCIPvarGetNLPSol_rec(
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
-         return var->relaxsol;
+         return var->nlpsol;
 
    case SCIP_VARSTATUS_FIXED:
       assert(SCIPvarGetLbGlobal(var) == SCIPvarGetUbGlobal(var));  /*lint !e777*/

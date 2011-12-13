@@ -5971,15 +5971,15 @@
   */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-/**@page COUNTER How to use SCIP to count feasible solution
+/**@page COUNTER How to use SCIP to count/enumerate feasible solutions
  *
- * SCIP is capable of computing the number of feasible solutions of a given constraint integer program. In case the
- * problem contains continuous variables, the number of feasible solutions for the projection to the integral variables
- * is computed. This means, an assignment to the integer variables is counted if the remaining problem (this is the one
- * after fixing the integer variables w.r.t. to this assignment) is feasible.
+ * SCIP is capable of computing (count or enumerate) the number of feasible solutions of a given constraint integer
+ * program. In case continuous variables are present, the number of feasible solutions for the projection to the
+ * integral variables is counted/enumerated. This means, an assignment to the integer variables is counted if the
+ * remaining problem (this is the one after fixing the integer variables w.r.t. to this assignment) is feasible.
  *
- * As a first step you have to load the problem. In case of using the interactive shell, you use the <code>read</code>
- * command:
+ * As a first step you have to load or create your problem in the usual way. In case of using the
+ * interactive shell, you use the <code>read</code> command:
  *
  * <code>SCIP&gt; read &lt;file name&gt;</code>
  *
@@ -5987,14 +5987,17 @@
  *
  * <code>SCIP&gt; count</code>
  *
- * <b>Note:</b> Since SCIP version 2.0.0 you do not have to worry about <tt>dual</tt> reductions anymore. These are
- * automatically turned off. The only thing you should switch off are restarts. Since restarts will lead to a wrong
+ * That means SCIP will count the number of solution but does not store (enumerate) them. If you are interested in that see
+ * \ref COLLECTALLFEASEBLES.
+ *
+ * @note Since SCIP version 2.0.0 you do not have to worry about <tt>dual</tt> reductions anymore. These are
+ * automatically turned off. The only thing you should switch off are restarts. These restarts can lead to a wrong
  * counting process. We recommend using the counting settings which can be set in the interactive shell as follows:
  *
  * <code>SCIP&gt; set emphasis counter</code>
  *
- * The SCIP library provides an interface method SCIPcount() which allows users to count the number of feasible solutions
- * to their problem. The method SCIPsetParamsCountsols(), which is also located in cons_countsols.h, loads the
+ * The SCIP callable library provides an interface method SCIPcount() which allows users to count the number of feasible
+ * solutions to their problem. The method SCIPsetParamsCountsols(), which is also located in cons_countsols.h, loads the
  * predefined counting settings to ensure a safe count. The complete list of all methods that can be used for counting
  * via the callable library can be found in cons_countsols.h.
  *
@@ -6005,7 +6008,7 @@
  * exceeded, SCIP will be stopped. The name of this parameter is <code>constraints/countsols/sollimit</code>. In
  * the interactive shell this parameter can be set as follows:
  *
- * <code>SCIP&gt; constraints countsols sollimit 1000</code>
+ * <code>SCIP&gt; set constraints countsols sollimit 1000</code>
  *
  * In case you are using the callable library, this upper bound can be assigned by calling SCIPsetLongintParam() as follows:
  *
@@ -6018,14 +6021,47 @@
  * subtree detection. Using this technique it is possible to detect several solutions at once. Therefore, it can happen
  * that the solution limit is exceeded before SCIP is stopped.
  *
- * @section COUNTWRITE Write the counted solution to a file
+ * @section COLLECTALLFEASEBLES Collect all feasible solution
  *
- * Using the interactive shell, it is possible to write the collected solutions to a file. To do this
- * you must set the parameter <code>constraints/countsols/collect</code> to TRUE (the default value is FALSE). Then
- * SCIP will <b>collect</b> all of the feasible solutions as it counts them. Using the
- * following command you can write the collect solution into a file:
+ * Per default SCIP only counts all feasible solutions. This means, these solutions are not stored. If you switch the
+ * parameter <code>constraints/countsols/collect</code> to TRUE (the default value is FALSE) the detected solutions are
+ * stored. Changing this parameter can be done in the interactive shell
+ *
+ * <code>SCIP&gt; set constraints countsols collect TRUE</code>
+ *
+ * as well as via the callable library
+ *
+ * \code
+ * SCIP_CALL( SCIPsetBoolParam( scip, "constraints/countsols/collect", TRUE) );
+ * \endcode
+ *
+ * @note The solution which are collected are stored w.r.t. the active variables. These are the variables which got not
+ *       removed during presolving.
+ *
+ * In case you are using the interactive shell you can write all collected solutions to a file as follows
  *
  * <code>SCIP&gt; write allsolutions &lt;file name&gt;</code>
+ *
+ * In that case the sparse solutions are unrolled and lifted back into the original variable space.
+ *
+ * The callable library provides a method which gives access to all collected sparse solutions. That is,
+ * SCIPgetCountedSparseSolutions(). The sparse solutions you get are defined w.r.t. active variables. To get solutions
+ * w.r.t. to the original variables. You have to do two things:
+ *
+ * -# unroll each sparse solution
+ * -# lift each solution into original variable space by extending the solution by those variable which got removed
+ *    during presolving
+ *
+ * The get the variables which got removed during presolving, you can use the methods SCIPgetFixedVars() and
+ * SCIPgetNFixedVars(). The method SCIPgetProbvarLinearSum() transforms given variables, scalars and constant to the
+ * corresponding active variables, scalars and constant. Using this method for a single variable gives a representation
+ * for that variable w.r.t. the active variables which can be used to compute the value for the considered solution (which
+ * is defined w.r.t. active variables).
+ *
+ * For that complete procedure you can also check the source code of
+ * \ref SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions) "SCIPdialogExecWriteAllsolutions()" cons_countsols.c which
+ * does exactly that.
+ *
  *
  * @section COUNTOPTIMAL Count number of optimal solutions
  *

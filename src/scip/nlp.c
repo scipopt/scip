@@ -1508,7 +1508,7 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
       return SCIP_OKAY;
 
    SCIPdebugMessage("removing fixed quadratic variables from nlrow\n\t");
-   SCIPdebug( SCIPnlrowPrint(nlrow, NULL) );
+   SCIPdebug( SCIP_CALL( SCIPnlrowPrint(nlrow, NULL) ) );
 
    nvarsold = nlrow->nquadvars;
    havechange = FALSE;
@@ -1906,7 +1906,7 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
    SCIPsetFreeBufferArray(set, &used);
 
    SCIPdebugMessage("finished removing fixed quadratic variables\n\t");
-   SCIPdebug( SCIPnlrowPrint(nlrow, NULL) );
+   SCIPdebug( SCIP_CALL( SCIPnlrowPrint(nlrow, NULL) ) );
 
    return SCIP_OKAY;
 }
@@ -3407,7 +3407,9 @@ SCIP_Bool SCIPnlrowIsInNLP(
    return nlrow->nlpindex != -1;
 }
 
-/** gets the dual NLP solution of a nlrow */
+/** gets the dual NLP solution of a nlrow
+ * for a ranged constraint, the dual value is positive if the right hand side is active and negative if the left hand side is active
+ */
 SCIP_Real SCIPnlrowGetDualsol(
    SCIP_NLROW*           nlrow               /**< NLP row */
    )
@@ -4759,7 +4761,7 @@ SCIP_RETCODE nlpCalcFracVars(
    assert(nlp->validfracvars <= stat->nnlps);
    assert(SCIPnlpHasSolution(nlp));
 
-   SCIPdebugMessage("calculating NLP fractional variables: validfracvars=%d, nnlps=%d\n", nlp->validfracvars, stat->nnlps);
+   SCIPdebugMessage("calculating NLP fractional variables: validfracvars=%"SCIP_LONGINT_FORMAT", nnlps=%"SCIP_LONGINT_FORMAT"\n", nlp->validfracvars, stat->nnlps);
 
    if( nlp->solstat > SCIP_NLPSOLSTAT_LOCINFEASIBLE )
    {

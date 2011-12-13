@@ -19,18 +19,34 @@
  *
  *  In SCIP, the LP is defined as follows:
  *
- *   min       obj * x
- *      lhs <=   A * x + const <= rhs
- *      lb  <=       x         <= ub
+ *     min       obj * x
+ *        lhs <=   A * x + const <= rhs
+ *        lb  <=       x         <= ub
  *
- *  The row activities are defined as 
- *     activity = A * x + const
- *  and must therefore be in the range of [lhs,rhs].
+ *  The row activities are defined as activity = A * x + const and must
+ *  therefore be in the range of [lhs,rhs].
  *
- *  The reduced costs are defined as
- *     redcost = obj - A^T * y
- *  and must be   nonnegative, if the corresponding lb is nonnegative,
- *                zero,        if the corresponding lb is negative.
+ *  Mathematically, each range constraint would account for two dual
+ *  variables, one for each inequality. Since in an optimal solution (at
+ *  least) one of them may be chosen to be zero, we may define one dual
+ *  multiplier for each row as the difference of those two.
+ *
+ *  Let y be the vector of dual multipliers for the rows, then the reduced
+ *  costs are defined as
+ *
+ *     redcost = obj - A^T * y.
+ *
+ *  In an optimal solution, y must be
+ *
+ *     - nonnegative, if the corresponding row activity is not tight at its rhs
+ *     - nonpositive, if the corresponding row activity is not tight at its lhs
+ *     - zero, if the corresponding row activity is not at any of its sides
+ *
+ *  and the reduced costs must be
+ *
+ *     - nonnegative, if the corresponding variable is not tight at its ub
+ *     - nonpositive, if the corresponding variable is not tight at its lb
+ *     - zero, if the corresponding variable is not at any of its bounds.
  *
  *  The main datastructures for storing an LP are the rows and the columns.
  *  A row can live on its own (if it was created by a separator), or as SCIP_LP
@@ -130,6 +146,9 @@ struct SCIP_Col
    SCIP_VAR*             var;                /**< variable, this column represents; there cannot be a column without variable */
    SCIP_ROW**            rows;               /**< rows of column entries, that may have a nonzero dual solution value */
    SCIP_Real*            vals;               /**< coefficients of column entries */
+   SCIP_Longint          validredcostlp;     /**< LP number for which reduced cost value is valid */
+   SCIP_Longint          validfarkaslp;      /**< LP number for which Farkas coefficient is valid */
+   SCIP_Longint          validsblp;          /**< LP number for which strong branching values are valid */
    int*                  linkpos;            /**< position of col in col vector of the row, or -1 if not yet linked */
    int                   index;              /**< consecutively numbered column identifier */
    int                   size;               /**< size of the row- and val-arrays */
@@ -139,9 +158,6 @@ struct SCIP_Col
    int                   lppos;              /**< column position number in current LP, or -1 if not in current LP */
    int                   lpipos;             /**< column position number in LP solver, or -1 if not in LP solver */
    int                   lpdepth;            /**< depth level at which column entered the LP, or -1 if not in current LP */
-   int                   validredcostlp;     /**< LP number for which reduced cost value is valid */
-   int                   validfarkaslp;      /**< LP number for which Farkas coefficient is valid */
-   int                   validsblp;          /**< LP number for which strong branching values are valid */
    int                   sbitlim;            /**< strong branching iteration limit used to get strong branching values, or -1 */
    int                   nsbcalls;           /**< number of times, strong branching was applied on the column */
    int                   age;                /**< number of successive times this variable was in LP and was 0.0 in solution */
@@ -196,6 +212,7 @@ struct SCIP_Row
    SCIP_Real*            vals;               /**< coefficients of row entries */
    int*                  linkpos;            /**< position of row in row vector of the column, or -1 if not yet linked */
    SCIP_EVENTFILTER*     eventfilter;        /**< event filter for events concerning this row */
+   SCIP_Longint          validactivitylp;    /**< LP number for which activity value is valid */
    int                   index;              /**< consecutively numbered row identifier */
    int                   size;               /**< size of the col- and val-arrays */
    int                   len;                /**< number of nonzeros in row */
@@ -209,7 +226,6 @@ struct SCIP_Row
    int                   maxidx;             /**< maximal column index of row entries */
    int                   nummaxval;          /**< number of coefs with absolute value equal to maxval, zero if maxval invalid */
    int                   numminval;          /**< number of coefs with absolute value equal to minval, zero if minval invalid */
-   int                   validactivitylp;    /**< LP number for which activity value is valid */
    int                   age;                /**< number of successive times this row was in LP and was not sharp in solution */
    unsigned int          basisstatus:2;      /**< basis status of row in last LP solution, invalid for non-LP rows */
    unsigned int          lpcolssorted:1;     /**< are the linked LP columns in the cols array sorted by non-decreasing index? */
@@ -254,6 +270,8 @@ struct SCIP_Lp
    SCIP_ROW**            rows;               /**< array with current LP rows in correct order */
    SCIP_LPISTATE*        divelpistate;       /**< stores LPI state (basis information) before diving starts */
    SCIP_LPSOLVALS*       storedsolvals;      /**< collected values of the LP data which depend on the LP solution */
+   SCIP_Longint          validsollp;         /**< LP number for which the currently stored solution values are valid */
+   SCIP_Longint          validfarkaslp;      /**< LP number for which the currently stored Farkas row multipliers are valid */
    int                   lpicolssize;        /**< available slots in lpicols vector */
    int                   nlpicols;           /**< number of columns in the LP solver */
    int                   lpifirstchgcol;     /**< first column of the LP which differs from the column in the LP solver */
@@ -277,8 +295,6 @@ struct SCIP_Lp
    int                   looseobjvalinf;     /**< number of loose variables with infinite best bound in current solution */
    int                   nloosevars;         /**< number of loose variables in LP */
    int                   pseudoobjvalinf;    /**< number of variables with infinite best bound in current pseudo solution */
-   int                   validsollp;         /**< LP number for which the currently stored solution values are valid */
-   int                   validfarkaslp;      /**< LP number for which the currently stored Farkas row multipliers are valid */
    int                   lpiitlim;           /**< current iteration limit setting in LPI */
    int                   lpifastmip;         /**< current FASTMIP setting in LPI */
    int                   lpithreads;         /**< current THREADS setting in LPI */

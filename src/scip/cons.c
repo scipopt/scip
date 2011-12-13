@@ -1780,6 +1780,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    )
 {
    char paramname[SCIP_MAXSTRLEN];
+   char paramdesc[SCIP_MAXSTRLEN];
 
    assert(conshdlr != NULL);
    assert(name != NULL);
@@ -1910,7 +1911,6 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->delayupdatecount = 0;
    (*conshdlr)->ageresetavg = AGERESETAVG_INIT;
    (*conshdlr)->needscons = needscons;
-   (*conshdlr)->timingmask = timingmask;
    (*conshdlr)->sepalpwasdelayed = FALSE;
    (*conshdlr)->sepasolwasdelayed = FALSE;
    (*conshdlr)->propwasdelayed = FALSE;
@@ -1927,6 +1927,11 @@ SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, 
          "frequency for propagating domains (-1: never, 0: only in root node)",
          &(*conshdlr)->propfreq, FALSE, propfreq, -1, INT_MAX, NULL, NULL) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/timingmask", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing when constraint propagation should be called (%u:BEFORELP, %u:DURINGLPLOOP, %u:AFTERLPLOOP, %u:ALWAYS))", SCIP_PROPTIMING_BEFORELP, SCIP_PROPTIMING_DURINGLPLOOP, SCIP_PROPTIMING_AFTERLPLOOP, SCIP_PROPTIMING_ALWAYS);
+   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
+         (int*)(&(*conshdlr)->timingmask), TRUE, timingmask, (int) SCIP_PROPTIMING_BEFORELP, (int) SCIP_PROPTIMING_ALWAYS, NULL, NULL) ); /*lint !e713*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/eagerfreq", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, 
@@ -2455,9 +2460,9 @@ SCIP_RETCODE SCIPconshdlrSeparateLP(
             SCIP_CONS** conss;
             SCIP_Longint oldndomchgs;
             SCIP_Longint oldnprobdomchgs;
+            SCIP_Longint lastsepalpcount;
             int oldncuts;
             int oldnactiveconss;
-            int lastsepalpcount;
             int lastnusefulsepaconss;
 
             SCIPdebugMessage("separating constraints %d to %d of %d constraints of handler <%s> (%s LP solution)\n",

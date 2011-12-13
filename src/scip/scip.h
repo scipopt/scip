@@ -119,23 +119,26 @@ extern "C" {
 /**@name Miscellaneous Methods */
 /**@{ */
 
-/** returns scip version number */
+/** returns SCIP version number */
 extern
 SCIP_Real SCIPversion(
    void
    );
 
 /** returns SCIP major version */
+extern
 int SCIPmajorVersion(
    void
    );
 
 /** returns SCIP minor version */
+extern
 int SCIPminorVersion(
    void
    );
 
 /** returns SCIP technical version */
+extern
 int SCIPtechVersion(
    void
    );
@@ -241,221 +244,6 @@ SCIP_Bool SCIPisStopped(
 
 
 /*
- * SCIP copy methods
- */
-
-/**@name Copy Methods */
-/**@{ */
-
-/** copies plugins from sourcescip to targetscip; in case that a constraint handler which does not need constraints
- *  cannot be copied, valid will return FALSE. All plugins can declare that, if their copy process failed, the 
- *  copied SCIP instance might not represent the same problem semantics as the original. 
- *  Note that in this case dual reductions might be invalid. */
-extern
-SCIP_RETCODE SCIPcopyPlugins(
-   SCIP*                 sourcescip,         /**< source SCIP data structure */
-   SCIP*                 targetscip,         /**< target SCIP data structure */
-   SCIP_Bool             copyreaders,        /**< should the file readers be copied */
-   SCIP_Bool             copypricers,        /**< should the variable pricers be copied */
-   SCIP_Bool             copyconshdlrs,      /**< should the constraint handlers be copied */
-   SCIP_Bool             copyconflicthdlrs,  /**< should the conflict handlers be copied */
-   SCIP_Bool             copypresolvers,     /**< should the presolvers be copied */
-   SCIP_Bool             copyrelaxators,     /**< should the relaxators be copied */
-   SCIP_Bool             copyseparators,     /**< should the separators be copied */
-   SCIP_Bool             copypropagators,    /**< should the propagators be copied */
-   SCIP_Bool             copyheuristics,     /**< should the heuristics be copied */
-   SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
-   SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
-   SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
-   SCIP_Bool             copydisplays,       /**< should the display columns be copied */
-   SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
-   SCIP_Bool             copynlpis,          /**< should the NLPIs be copied */
-   SCIP_Bool*            valid               /**< pointer to store whether plugins, in particular all constraint
-                                              *   handlers which do not need constraints were validly copied */
-   );
-
-/** create a problem by copying the problem data of the source-SCIP */
-extern
-SCIP_RETCODE SCIPcopyProb(
-   SCIP*                 sourcescip,         /**< source SCIP data structure */
-   SCIP*                 targetscip,         /**< target SCIP data structure */
-   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
-                                              *   target variables, or NULL */
-   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
-                                              *   target constraints, or NULL */
-   SCIP_Bool             global,             /**< create a global or a local copy? */
-   const char*           name                /**< problem name */
-   );
-
-/** returns copy of the source variable; if there already is a copy of the source variable in the variable hash map,
- *  it is just returned as target variable; elsewise a new variable will be created and added to the target SCIP; this
- *  created variable is added to the variable hash map and returned as target variable
- *
- *  @note if a new variable was created, this variable will be added to the target-SCIP, but it is not captured
- */
-extern
-SCIP_RETCODE SCIPgetVarCopy(
-   SCIP*                 sourcescip,         /**< source SCIP data structure */
-   SCIP*                 targetscip,         /**< target SCIP data structure */
-   SCIP_VAR*             sourcevar,          /**< source variable */
-   SCIP_VAR**            targetvar,          /**< pointer to store the target variable */
-   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables to the corresponding
-                                              *   target variables, or NULL */
-   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
-                                              *   target constraints, or NULL */
-   SCIP_Bool             global,             /**< should global or local bounds be used? */
-   SCIP_Bool*            success             /**< pointer to store whether the copying was successful or not */
-   );
-
-/** copies all active variables from source-SCIP and adds these variable to the target-SCIP; the mapping between these
- *  variables are stored in the variable hashmap, fixed and aggregated variables do not get copied
- *
- *  @note the variables are added to the target-SCIP but not captured
- */
-extern
-SCIP_RETCODE SCIPcopyVars(
-   SCIP*                 sourcescip,         /**< source SCIP data structure */
-   SCIP*                 targetscip,         /**< target SCIP data structure */
-   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables  to the corresponding
-                                              *   target variables, or NULL */
-   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
-                                              *   target constraints, or NULL */
-   SCIP_Bool             global              /**< should global or local bounds be used? */
-   );
-
-/** returns copy of the source constraint; if there already is a copy of the source constraint in the constraint hash
- *  map, it is just returned as target constraint; elsewise a new constraint will be created in the target SCIP; this
- *  created constraint is added to the constraint hash map and returned as target constraint; the variable map is used
- *  to map the variables of the source SCIP to the variables of the target SCIP;
- *
- *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution may
- *  be declared feasible even if it violates this particular constraint.  This constellation should only be used, if no
- *  LP or pseudo solution can violate the constraint -- e.g. if a local constraint is redundant due to the variable's
- *  local bounds.
- *
- *  @note the constraint is not added and not captured in the target SCIP
- */
-extern
-SCIP_RETCODE SCIPgetConsCopy(
-   SCIP*                 sourcescip,         /**< source SCIP data structure */
-   SCIP*                 targetscip,         /**< target SCIP data structure */
-   SCIP_CONS*            sourcecons,         /**< source constraint of the source SCIP */
-   SCIP_CONS**           targetcons,         /**< pointer to store the created target constraint */
-   SCIP_CONSHDLR*        sourceconshdlr,     /**< source constraint handler for this constraint */
-   SCIP_HASHMAP*         varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to the corresponding
-                                              *   variables of the target SCIP, or NULL */
-   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
-                                              *   target constraints, or NULL */
-   const char*           name,               /**< name of constraint, or NULL if the name of the source constraint should be used */
-   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
-   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
-   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
-   SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
-   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
-   SCIP_Bool             local,              /**< is constraint only valid locally? */
-   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
-   SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
-   SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
-                                              *   if it may be moved to a more global node? */
-   SCIP_Bool             global,             /**< create a global or a local copy? */
-   SCIP_Bool*            success             /**< pointer to store whether the copying was successful or not */
-   );
-
-/** copies constraints from the source-SCIP and adds these to the target-SCIP; for mapping the
- *  variables between the source and the target SCIP a hash map can be given; if the variable hash
- *  map is NULL or necessary variable mapping is missing, the required variables are created in the
- *  target-SCIP and added to the hash map, if not NULL; all variables which are created are added to
- *  the target-SCIP but not (user) captured; if the constraint hash map is not NULL the mapping
- *  between the constraints of the source and target-SCIP is stored
- *
- *  @note the constraints are added to the target-SCIP but are not (user) captured in the target SCIP
- */
-extern
-SCIP_RETCODE SCIPcopyConss(
-   SCIP*                 sourcescip,         /**< source SCIP data structure */
-   SCIP*                 targetscip,         /**< target SCIP data structure */
-   SCIP_HASHMAP*         varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to the corresponding
-                                              *   variables of the target SCIP, must not be NULL! */
-   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
-                                              *   target constraints, or NULL */
-   SCIP_Bool             global,             /**< create a global or a local copy? */
-   SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? 
-                                              *   If TRUE, the modifiable flag of constraints will be copied. */
-   SCIP_Bool*            valid               /**< pointer to store whether all constraints were validly copied */
-   );
-
-/** convert all active cuts from cutpool of sourcescip to linear constraints in targetscip, sourcescip and targetscip
- *  could be the same
- */
-extern
-SCIP_RETCODE SCIPconvertCutsToConss(
-   SCIP*                 sourcescip,         /**< source SCIP data structure */
-   SCIP*                 targetscip,         /**< target SCIP data structure */
-   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
-                                              *   target variables, or NULL */
-   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
-                                              *   target constraints, or NULL */
-   SCIP_Bool             global,             /**< create a global or a local copy? */
-   int*                  ncutsadded          /**< pointer to store number of added cuts */
-   );
-
-/** copies all active cuts from cutpool of sourcescip to constraints in targetscip */
-SCIP_RETCODE SCIPcopyCuts(
-   SCIP*                 sourcescip,         /**< source SCIP data structure */
-   SCIP*                 targetscip,         /**< target SCIP data structure */
-   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
-                                              *   target variables, or NULL */
-   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
-                                              *   target constraints, or NULL */
-   SCIP_Bool             global              /**< create a global or a local copy? */
-   );
-
-/** copies parameter settings from sourcescip to targetscip */
-extern
-SCIP_RETCODE SCIPcopyParamSettings(
-   SCIP*                 sourcescip,         /**< source SCIP data structure */
-   SCIP*                 targetscip          /**< target SCIP data structure */
-   );
-
-/** gets depth of current scip instance (increased by each copy call) */
-extern
-int SCIPgetSubscipDepth(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** copies source SCIP to target SCIP; the copying process is done in the following order:
- *  1) copy the plugins
- *  2) copy the settings
- *  3) create problem data in target-SCIP and copy the problem data of the source-SCIP
- *  4) copy all active variables
- *  5) copy all constraints
- *
- *  @note all variables and constraints which are created in the target-SCIP are not (user) captured 
- */
-extern
-SCIP_RETCODE SCIPcopy(
-   SCIP*                 sourcescip,         /**< source SCIP data structure */
-   SCIP*                 targetscip,         /**< target SCIP data structure */
-   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
-                                              *   target variables, or NULL */
-   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
-                                              *   target constraints, or NULL */
-   const char*           suffix,             /**< suffix which will be added to the names of the source SCIP */          
-   SCIP_Bool             global,             /**< create a global or a local copy? */
-   SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? If TRUE, pricer
-                                              *   plugins will be copied and activated, and the modifiable flag of
-                                              *   constraints will be respected. If FALSE, valid will be set to FALSE, when
-                                              *   there are pricers present */
-   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
-   );
-
-/**@} */
-
-
-
-
-/*
  * message output methods
  */
 
@@ -539,7 +327,10 @@ SCIP_VERBLEVEL SCIPgetVerbLevel(
    );
 
 #ifndef NPARASCIP
-/** allocates memory for all message handlers for number of given threads */
+/** allocates memory for all message handlers for number of given threads
+ *
+ * @note it is necessary to call SCIPmessageSetDefaultHandler or SCIPmessageSetHandler for each thread
+ */
 extern
 SCIP_RETCODE SCIPcreateMesshdlrPThreads(
    int                   nthreads            /**< number of threads to allocate memory for */
@@ -552,6 +343,255 @@ void SCIPfreeMesshdlrPThreads(
    );
 #endif
 
+
+/**@} */
+
+
+
+
+/*
+ * SCIP copy methods
+ */
+
+/**@name Copy Methods */
+/**@{ */
+
+/** copies plugins from sourcescip to targetscip; in case that a constraint handler which does not need constraints
+ *  cannot be copied, valid will return FALSE. All plugins can declare that, if their copy process failed, the 
+ *  copied SCIP instance might not represent the same problem semantics as the original. 
+ *  Note that in this case dual reductions might be invalid.
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *  @note Do not change the source SCIP environment during the copying process
+ */
+extern
+SCIP_RETCODE SCIPcopyPlugins(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_Bool             copyreaders,        /**< should the file readers be copied */
+   SCIP_Bool             copypricers,        /**< should the variable pricers be copied */
+   SCIP_Bool             copyconshdlrs,      /**< should the constraint handlers be copied */
+   SCIP_Bool             copyconflicthdlrs,  /**< should the conflict handlers be copied */
+   SCIP_Bool             copypresolvers,     /**< should the presolvers be copied */
+   SCIP_Bool             copyrelaxators,     /**< should the relaxation handler be copied */
+   SCIP_Bool             copyseparators,     /**< should the separators be copied */
+   SCIP_Bool             copypropagators,    /**< should the propagators be copied */
+   SCIP_Bool             copyheuristics,     /**< should the heuristics be copied */
+   SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
+   SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
+   SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
+   SCIP_Bool             copydisplays,       /**< should the display columns be copied */
+   SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
+   SCIP_Bool             copynlpis,          /**< should the NLPIs be copied */
+   SCIP_Bool*            valid               /**< pointer to store whether plugins, in particular all constraint
+                                              *   handlers which do not need constraints were validly copied */
+   );
+
+/** create a problem by copying the problem data of the source SCIP
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *  @note Do not change the source SCIP environment during the copying process
+ */
+extern
+SCIP_RETCODE SCIPcopyProb(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   SCIP_Bool             global,             /**< create a global or a local copy? */
+   const char*           name                /**< problem name */
+   );
+
+/** returns copy of the source variable; if there already is a copy of the source variable in the variable hash map,
+ *  it is just returned as target variable; elsewise a new variable will be created and added to the target SCIP; this
+ *  created variable is added to the variable hash map and returned as target variable
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *  @note Do not change the source SCIP environment during the copying process
+ *  @note if a new variable was created, this variable will be added to the target-SCIP, but it is not captured
+ */
+extern
+SCIP_RETCODE SCIPgetVarCopy(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_VAR*             sourcevar,          /**< source variable */
+   SCIP_VAR**            targetvar,          /**< pointer to store the target variable */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables to the corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   SCIP_Bool             global,             /**< should global or local bounds be used? */
+   SCIP_Bool*            success             /**< pointer to store whether the copying was successful or not */
+   );
+
+/** copies all active variables from source-SCIP and adds these variable to the target-SCIP; the mapping between these
+ *  variables are stored in the variable hashmap, target-SCIP has to be in problem creation stage, fixed and aggregated
+ *  variables do not get copied
+ *
+ *  @note the variables are added to the target-SCIP but not captured
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *  @note Do not change the source SCIP environment during the copying process
+ */
+extern
+SCIP_RETCODE SCIPcopyVars(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables  to the corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   SCIP_Bool             global              /**< should global or local bounds be used? */
+   );
+
+/** returns copy of the source constraint; if there already is a copy of the source constraint in the constraint hash
+ *  map, it is just returned as target constraint; elsewise a new constraint will be created in the target SCIP; this
+ *  created constraint is added to the constraint hash map and returned as target constraint; the variable map is used
+ *  to map the variables of the source SCIP to the variables of the target SCIP;
+ *
+ *  @warning If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution may
+ *           be declared feasible even if it violates this particular constraint.  This constellation should only be
+ *           used, if no LP or pseudo solution can violate the constraint -- e.g. if a local constraint is redundant due
+ *           to the variable's local bounds.
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *  @note Do not change the source SCIP environment during the copying process
+ *  @note the constraint is not added and not captured in the target SCIP
+ */
+extern
+SCIP_RETCODE SCIPgetConsCopy(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_CONS*            sourcecons,         /**< source constraint of the source SCIP */
+   SCIP_CONS**           targetcons,         /**< pointer to store the created target constraint */
+   SCIP_CONSHDLR*        sourceconshdlr,     /**< source constraint handler for this constraint */
+   SCIP_HASHMAP*         varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to the corresponding
+                                              *   variables of the target SCIP, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   const char*           name,               /**< name of constraint, or NULL if the name of the source constraint should be used */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   SCIP_Bool             local,              /**< is constraint only valid locally? */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
+   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
+                                              *   if it may be moved to a more global node? */
+   SCIP_Bool             global,             /**< create a global or a local copy? */
+   SCIP_Bool*            success             /**< pointer to store whether the copying was successful or not */
+   );
+
+/** copies constraints from the source-SCIP and adds these to the target-SCIP; for mapping the
+ *  variables between the source and the target SCIP a hash map can be given; if the variable hash
+ *  map is NULL or necessary variable mapping is missing, the required variables are created in the
+ *  target-SCIP and added to the hash map, if not NULL; all variables which are created are added to
+ *  the target-SCIP but not (user) captured; if the constraint hash map is not NULL the mapping
+ *  between the constraints of the source and target-SCIP is stored
+ *
+ *  @note the constraints are added to the target-SCIP but are not (user) captured in the target SCIP
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *  @note Do not change the source SCIP environment during the copying process
+ */
+extern
+SCIP_RETCODE SCIPcopyConss(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to the corresponding
+                                              *   variables of the target SCIP, must not be NULL! */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   SCIP_Bool             global,             /**< create a global or a local copy? */
+   SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? 
+                                              *   If TRUE, the modifiable flag of constraints will be copied. */
+   SCIP_Bool*            valid               /**< pointer to store whether all constraints were validly copied */
+   );
+
+/** convert all active cuts from cutpool of sourcescip to linear constraints in targetscip, sourcescip and targetscip
+ *  could be the same
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *  @note Do not change the source SCIP environment during the copying process
+ */
+extern
+SCIP_RETCODE SCIPconvertCutsToConss(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   SCIP_Bool             global,             /**< create a global or a local copy? */
+   int*                  ncutsadded          /**< pointer to store number of added cuts */
+   );
+
+/** copies all active cuts from cutpool of sourcescip to constraints in targetscip
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *  @note Do not change the source SCIP environment during the copying process
+ */
+extern
+SCIP_RETCODE SCIPcopyCuts(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   SCIP_Bool             global              /**< create a global or a local copy? */
+   );
+
+/** copies parameter settings from sourcescip to targetscip
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *  @note Do not change the source SCIP environment during the copying process
+ */
+extern
+SCIP_RETCODE SCIPcopyParamSettings(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip          /**< target SCIP data structure */
+   );
+
+/** gets depth of current scip instance (increased by each copy call) */
+extern
+int SCIPgetSubscipDepth(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** copies source SCIP to target SCIP; the copying process is done in the following order:
+ *  1) copy the plugins
+ *  2) copy the settings
+ *  3) create problem data in target-SCIP and copy the problem data of the source-SCIP
+ *  4) copy all active variables
+ *  5) copy all constraints
+ *
+ *  @note all variables and constraints which are created in the target-SCIP are not (user) captured
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *  @note Do not change the source SCIP environment during the copying process
+ */
+extern
+SCIP_RETCODE SCIPcopy(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   const char*           suffix,             /**< suffix which will be added to the names of the source SCIP */          
+   SCIP_Bool             global,             /**< create a global or a local copy? */
+   SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? If TRUE, pricer
+                                              *   plugins will be copied and activated, and the modifiable flag of
+                                              *   constraints will be respected. If FALSE, valid will be set to FALSE, when
+                                              *   there are pricers present */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
+   );
 
 /**@} */
 
@@ -784,13 +824,13 @@ SCIP_RETCODE SCIPresetParams(
    );
 
 /** sets parameters to 
- *  - SCIP_PARAMSETTING_DEFAULT to use default values (see also SCIPresetParams())
- *  - SCIP_PARAMSETTING_COUNTER to get feasible and "fast" counting process
- *  - SCIP_PARAMSETTING_CPSOLVER to get CP like search (e.g. no LP relaxation)
- *  - SCIP_PARAMSETTING_EASYCIP to solve easy problems fast
- *  - SCIP_PARAMSETTING_FEASIBILITY to detect feasibility fast 
- *  - SCIP_PARAMSETTING_HARDLP to be capable to handle hard LPs
- *  - SCIP_PARAMSETTING_OPTIMALITY to prove optimality fast
+ *  - SCIP_PARAMEMPHASIS_DEFAULT to use default values (see also SCIPresetParams())
+ *  - SCIP_PARAMEMPHASIS_COUNTER to get feasible and "fast" counting process
+ *  - SCIP_PARAMEMPHASIS_CPSOLVER to get CP like search (e.g. no LP relaxation)
+ *  - SCIP_PARAMEMPHASIS_EASYCIP to solve easy problems fast
+ *  - SCIP_PARAMEMPHASIS_FEASIBILITY to detect feasibility fast 
+ *  - SCIP_PARAMEMPHASIS_HARDLP to be capable to handle hard LPs
+ *  - SCIP_PARAMEMPHASIS_OPTIMALITY to prove optimality fast
  */
 extern
 SCIP_RETCODE SCIPsetEmphasis(
@@ -1140,49 +1180,49 @@ SCIP_RETCODE SCIPsetPresolPriority(
    int                   priority            /**< new priority of the presolver */
    );
 
-/** creates a relaxator and includes it in SCIP */
+/** creates a relaxation handler and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludeRelax(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           name,               /**< name of relaxator */
-   const char*           desc,               /**< description of relaxator */
-   int                   priority,           /**< priority of the relaxator (negative: after LP, non-negative: before LP) */
-   int                   freq,               /**< frequency for calling relaxator */
-   SCIP_DECL_RELAXCOPY   ((*relaxcopy)),     /**< copy method of relaxator or NULL if you don't want to copy your plugin into sub-SCIPs */
-   SCIP_DECL_RELAXFREE   ((*relaxfree)),     /**< destructor of relaxator */
-   SCIP_DECL_RELAXINIT   ((*relaxinit)),     /**< initialize relaxator */
-   SCIP_DECL_RELAXEXIT   ((*relaxexit)),     /**< deinitialize relaxator */
-   SCIP_DECL_RELAXINITSOL((*relaxinitsol)),  /**< solving process initialization method of relaxator */
-   SCIP_DECL_RELAXEXITSOL((*relaxexitsol)),  /**< solving process deinitialization method of relaxator */
-   SCIP_DECL_RELAXEXEC   ((*relaxexec)),     /**< execution method of relaxator */
-   SCIP_RELAXDATA*       relaxdata           /**< relaxator data */
+   const char*           name,               /**< name of relaxation handler */
+   const char*           desc,               /**< description of relaxation handler */
+   int                   priority,           /**< priority of the relaxation handler (negative: after LP, non-negative: before LP) */
+   int                   freq,               /**< frequency for calling relaxation handler */
+   SCIP_DECL_RELAXCOPY   ((*relaxcopy)),     /**< copy method of relaxation handler or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_RELAXFREE   ((*relaxfree)),     /**< destructor of relaxation handler */
+   SCIP_DECL_RELAXINIT   ((*relaxinit)),     /**< initialize relaxation handler */
+   SCIP_DECL_RELAXEXIT   ((*relaxexit)),     /**< deinitialize relaxation handler */
+   SCIP_DECL_RELAXINITSOL((*relaxinitsol)),  /**< solving process initialization method of relaxation handler */
+   SCIP_DECL_RELAXEXITSOL((*relaxexitsol)),  /**< solving process deinitialization method of relaxation handler */
+   SCIP_DECL_RELAXEXEC   ((*relaxexec)),     /**< execution method of relaxation handler */
+   SCIP_RELAXDATA*       relaxdata           /**< relaxation handler data */
    );
 
-/** returns the relaxator of the given name, or NULL if not existing */
+/** returns the relaxation handler of the given name, or NULL if not existing */
 extern
 SCIP_RELAX* SCIPfindRelax(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           name                /**< name of relaxator */
+   const char*           name                /**< name of relaxation handler*/
    );
 
-/** returns the array of currently available relaxators */
+/** returns the array of currently available relaxation handlers  */
 extern
 SCIP_RELAX** SCIPgetRelaxs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns the number of currently available relaxators */
+/** returns the number of currently available relaxation handlers  */
 extern
 int SCIPgetNRelaxs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** sets the priority of a relaxator */
+/** sets the priority of a relaxation handler*/
 extern
 SCIP_RETCODE SCIPsetRelaxPriority(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_RELAX*           relax,              /**< primal relaxator */
-   int                   priority            /**< new priority of the relaxator */
+   SCIP_RELAX*           relax,              /**< relaxation handler */
+   int                   priority            /**< new priority of the relaxation handler */
    );
 
 /** creates a separator and includes it in SCIP */
@@ -1231,7 +1271,7 @@ int SCIPgetNSepas(
 extern
 SCIP_RETCODE SCIPsetSepaPriority(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SEPA*            sepa,               /**< primal separator */
+   SCIP_SEPA*            sepa,               /**< separator */
    int                   priority            /**< new priority of the separator */
    );
 
@@ -1285,7 +1325,7 @@ int SCIPgetNProps(
 extern
 SCIP_RETCODE SCIPsetPropPriority(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PROP*            prop,               /**< primal propagator */
+   SCIP_PROP*            prop,               /**< propagator */
    int                   priority            /**< new priority of the propagator */
    );
 
@@ -1600,16 +1640,18 @@ SCIP_RETCODE SCIPincludeExternalCodeInformation(
    const char*           description         /**< description of external code, or NULL */
    );
 
-/** returns the names of currently included external codes
- * note that some descriptions may be NULL */
+/** returns an array of names of currently included external codes */
 extern
-char* const* SCIPgetExternalCodeNames(
+char** SCIPgetExternalCodeNames(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns the descriptions of currently included external codes */
+/** returns an array of the descriptions of currently included external codes
+ *
+ *  @note some descriptions may be NULL
+ */
 extern
-char* const* SCIPgetExternalCodeDescriptions(
+char** SCIPgetExternalCodeDescriptions(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -1638,12 +1680,12 @@ void SCIPprintExternalCodes(
 /**@name User Interactive Dialog Methods */
 /**@{ */
 
-/** creates and captures a dialog */
+/** creates and includes dialog */
 extern
 SCIP_RETCODE SCIPincludeDialog(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIALOG**         dialog,             /**< pointer to store the dialog */
-   SCIP_DECL_DIALOGCOPY  ((*dialogcopy)),    /**< inclusion method of dialog or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_DIALOGCOPY  ((*dialogcopy)),    /**< copy method of dialog or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_DIALOGEXEC  ((*dialogexec)),    /**< execution method of dialog */
    SCIP_DECL_DIALOGDESC  ((*dialogdesc)),    /**< description output method of dialog, or NULL */
    SCIP_DECL_DIALOGFREE  ((*dialogfree)),    /**< destructor of dialog to free user data, or NULL */
@@ -1763,8 +1805,8 @@ SCIP_RETCODE SCIPwriteOrigProblem(
    SCIP_Bool             genericnames        /**< use generic variable and constraint names? */
    );
 
-/** writes transformed problem to file  */
-extern 
+/** writes transformed problem which are valid in the current node to file */
+extern
 SCIP_RETCODE SCIPwriteTransProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< output file (or NULL for standard output) */
@@ -1773,7 +1815,7 @@ SCIP_RETCODE SCIPwriteTransProblem(
    SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
    );
 
-/** frees problem and branch and bound data structures */
+/** frees problem and solution process data */
 extern
 SCIP_RETCODE SCIPfreeProb(
    SCIP*                 scip                /**< SCIP data structure */
@@ -1841,13 +1883,13 @@ SCIP_RETCODE SCIPaddObjoffset(
 extern
 SCIP_Real SCIPgetOrigObjoffset(
    SCIP*                 scip                /**< SCIP data structure */
-   ); 
+   );
 
 /** returns the objective scale of the original problem */
 extern
 SCIP_Real SCIPgetOrigObjscale(
    SCIP*                 scip                /**< SCIP data structure */
-   ); 
+   );
 
 /** returns the objective offset of the transformed problem */
 extern
@@ -2092,16 +2134,16 @@ SCIP_RETCODE SCIPdelCons(
    SCIP_CONS*            cons                /**< constraint to delete */
    );
 
-/** returns constraint of given name in the problem, or NULL if not existing */
+/** returns original constraint of given name in the problem, or NULL if not existing */
 extern
-SCIP_CONS* SCIPfindCons(
+SCIP_CONS* SCIPfindOrigCons(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of constraint to find */
    );
 
-/** returns original constraint of given name in the problem, or NULL if not existing */
+/** returns constraint of given name in the problem, or NULL if not existing */
 extern
-SCIP_CONS* SCIPfindOrigCons(
+SCIP_CONS* SCIPfindCons(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of constraint to find */
    );
@@ -2374,9 +2416,12 @@ SCIP_Bool SCIPisInRestart(
 /** creates and captures problem variable; if variable is of integral type, fractional bounds are automatically rounded;
  *  an integer variable with bounds zero and one is automatically converted into a binary variable;
  *
- *  Warning! When doing column generation and the original problem is a maximization problem, notice that SCIP 
- *  will transform the problem into a minimization problem by multiplying the objective function by -1.
- *  Thus, the original objective function value of variables created during the solving process has to be multiplied by -1, too.
+ *  @warning When doing column generation and the original problem is a maximization problem, notice that SCIP will
+ *           transform the problem into a minimization problem by multiplying the objective function by -1.  Thus, the
+ *           original objective function value of variables created during the solving process has to be multiplied by
+ *           -1, too.
+ *
+ *  @note the variable gets captured, hence at one point you have to release it using the method SCIPreleaseVar()
  */
 extern
 SCIP_RETCODE SCIPcreateVar(
@@ -2405,8 +2450,11 @@ SCIP_RETCODE SCIPwriteVarName(
    SCIP_Bool             type                /**< should the variable type be also posted */
    );
 
-/** print the given list of variables to output stream separated by a comma; the variables x1, x2, ..., xn are
- *  written as: \<x1\>, \<x2\>, ..., \<xn\>; the method SCIPparseVarsList() can parse such a string
+/** print the given list of variables to output stream separated by the given delimiter character;
+ *
+ *  i. e. the variables x1, x2, ..., xn with given delimiter ',' are written as: \<x1\>, \<x2\>, ..., \<xn\>;
+ *
+ *  the method SCIPparseVarsList() can parse such a string
  */
 extern
 SCIP_RETCODE SCIPwriteVarsList(
@@ -2485,13 +2533,13 @@ SCIP_RETCODE SCIPparseVarName(
  *
  *  @note the pointer success in only set to FALSE in the case that a variable with a parsed variable name does not exist
  *
- *  If the number of variables (parsed) is greater than the available slots in the variable array, nothing happens
- *  except that the required size is stored in the corresponding integer; the reason for this approach is that we cannot
- *  reallocate memory, since we do not know how the memory has been allocated (e.g., by a C++ 'new' or SCIP memory
- *  functions).
+ *  @note If the number of (parsed) variables is greater than the available slots in the variable array, nothing happens
+ *        except that the required size is stored in the corresponding integer; the reason for this approach is that we
+ *        cannot reallocate memory, since we do not know how the memory has been allocated (e.g., by a C++ 'new' or SCIP
+ *        memory functions).
  */
 extern
-SCIP_RETCODE SCIPparseVarsList( 
+SCIP_RETCODE SCIPparseVarsList(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           str,                /**< string to parse */
    SCIP_VAR**            vars,               /**< array to store the parsed variable */
@@ -2508,11 +2556,12 @@ SCIP_RETCODE SCIPparseVarsList(
  *
  *  @note the pointer success in only set to FALSE in the case that a variable with a parsed variable name does not exist
  *
- *  If the number of (parsed) variables is greater than the available slots in the variable array, nothing happens
- *  except that the required size is stored in the corresponding integer; the reason for this approach is that we cannot
- *  reallocate memory, since we do not know how the memory has been allocated (e.g., by a C++ 'new' or SCIP memory
- *  functions).
+ *  @note If the number of (parsed) variables is greater than the available slots in the variable array, nothing happens
+ *        except that the required size is stored in the corresponding integer; the reason for this approach is that we
+ *        cannot reallocate memory, since we do not know how the memory has been allocated (e.g., by a C++ 'new' or SCIP
+ *        memory functions).
  */
+extern
 SCIP_RETCODE SCIPparseVarsLinearsum(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           str,                /**< string to parse */
@@ -2568,7 +2617,10 @@ SCIP_RETCODE SCIPcaptureVar(
    SCIP_VAR*             var                 /**< variable to capture */
    );
 
-/** decreases usage counter of variable, and frees memory if necessary */
+/** decreases usage counter of variable, if the usage pointer reaches zero the variable gets freed
+ *
+ *  @note the pointer of the variable will be NULLed
+ */
 extern
 SCIP_RETCODE SCIPreleaseVar(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2667,28 +2719,49 @@ SCIP_RETCODE SCIPflattenVarAggregationGraph(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** transforms given variables, scalars and constant to the corresponding active variables, scalars and constant;
+/** Transforms a given linear sum of variables, that is a_1*x_1 + ... + a_n*x_n + c into a corresponding linear sum of
+ *  active variables, that is b_1*y_1 + ... + b_m*y_m + d.
  *
- * if the number variables of needed active variables is greater than the available slots in the variable array, nothing
- * happens except that the required size is stored in the corresponding integer variable; hence, if afterwards the
- * required size is greater than the available slots (varssize), nothing happens; otherwise, the active variable
- * representation is stored in the arrays
+ *  If the number of needed active variables is greater than the available slots in the variable array, nothing happens
+ *  except that the required size is stored in the corresponding variable (requiredsize). Otherwise, the active variable
+ *  representation is stored in the variable array, scalar array and constant.
  *
+ *  The reason for this approach is that we cannot reallocate memory, since we do not know how the memory has been
+ *  allocated (e.g., by a C++ 'new' or SCIP functions).
+ *
+ *  @note The resulting linear sum is stored into the given variable array, scalar array, and constant. That means the
+ *        given entries are overwritten.
+ *
+ *  @note That method can be used to convert a single variables into variable space of active variables. Therefore call
+ *        the method with the linear sum 1.0*x + 0.0.
  */
+extern
 SCIP_RETCODE SCIPgetProbvarLinearSum(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            vars,               /**< vars array to get active variables for */
-   SCIP_Real*            scalars,            /**< scalars a_1, ..., a_n in linear sum a_1*x_1 + ... + a_n*x_n + c */ 
-   int*                  nvars,              /**< pointer to number of variables and values in vars and vals array */
-   int                   varssize,           /**< available slots in vars and scalars array */
-   SCIP_Real*            constant,           /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c  */
-   int*                  requiredsize,       /**< pointer to store the required array size for the active variables */
+   SCIP_VAR**            vars,               /**< variable array x_1, ..., x_n in the linear sum which will be
+                                              *   overwritten by the variable array y_1, ..., y_m in the linear sum
+                                              *   w.r.t. active variables */
+   SCIP_Real*            scalars,            /**< scalars a_1, ..., a_n in linear sum which will be overwritten to the
+                                              *   scalars b_1, ..., b_m in the linear sum of the active variables  */
+   int*                  nvars,              /**< pointer to number of variables in the linear sum which will be
+                                              *   overwritten by the number of variables in the linear sum corresponding
+                                              *   to the active variables */
+   int                   varssize,           /**< available slots in vars and scalars array which is needed to check if
+                                              *   the array are large enough for the linear sum w.r.t. active
+                                              *   variables */
+   SCIP_Real*            constant,           /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c which
+                                              *   will chnage to constant d in the linear sum b_1*y_1 + ... + b_m*y_m +
+                                              *   d w.r.t. the active variables */
+   int*                  requiredsize,       /**< pointer to store the required array size for the linear sum w.r.t. the
+                                              *   active variables */
    SCIP_Bool             mergemultiples      /**< should multiple occurrences of a var be replaced by a single coeff? */
    );
-   
-/** returns the reduced costs of the variable in the current node's LP relaxation, 
- *  if the variable is not in the current LP, SCIP_INVALID will be returned,
- *  the current node has to have a feasible LP
+
+/** returns the reduced costs of the variable in the current node's LP relaxation;
+ *  the current node has to have a feasible LP.
+ *
+ *  returns SCIP_INVALID if the variable is active but not in the current LP;
+ *  returns 0 if the variable has been aggregated out or fixed in presolving.
  */
 extern
 SCIP_Real SCIPgetVarRedcost(
@@ -2696,9 +2769,11 @@ SCIP_Real SCIPgetVarRedcost(
    SCIP_VAR*             var                 /**< variable to get reduced costs, should be a column in current node LP */
    );
 
-/** returns the Farkas coefficients of the variable in the current node's LP relaxation, 
- *  if the variable is not in the current LP, SCIP_INVALID will be returned,
- *  the current node has to have an infeasible LP
+/** returns the Farkas coefficient of the variable in the current node's LP relaxation;
+ *  the current node has to have an infeasible LP.
+ *
+ *  returns SCIP_INVALID if the variable is active but not in the current LP;
+ *  returns 0 if the variable has been aggregated out or fixed in presolving.
  */
 extern
 SCIP_Real SCIPgetVarFarkasCoef(
@@ -2722,14 +2797,14 @@ SCIP_RETCODE SCIPgetVarSols(
    SCIP_Real*            vals                /**< array to store solution values of variables */
    );
 
-/** sets the relaxation solution value of all variables to zero */
+/** sets the solution value of all variables in the global relaxation solution to zero */
 extern
 SCIP_RETCODE SCIPclearRelaxSolVals(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** sets the value of the given variable in the global relaxation solution;
- *  this solution can be filled by the relaxators and can be used by heuristics and for separation;
+ *  this solution can be filled by the relaxation handlers and can be used by heuristics and for separation;
  *  You can use SCIPclearRelaxSolVals() to set all values to zero, initially;
  *  after setting all solution values, you have to call SCIPmarkRelaxSolValid() 
  *  to inform SCIP that the stored solution is valid
@@ -2741,18 +2816,22 @@ SCIP_RETCODE SCIPsetRelaxSolVal(
    SCIP_Real             val                 /**< solution value of variable */
    );
 
-/** sets the relaxation solution value of the given variables and marks the relaxation solution to be valid
- *  Attention: the values of all other variables are set to zero!
+/** sets the values of the given variables in the global relaxation solution;
+ *  this solution can be filled by the relaxation handlers  and can be used by heuristics and for separation;
+ *  the solution is automatically cleared, s.t. all other variables get value 0.0
  */
 extern
 SCIP_RETCODE SCIPsetRelaxSolVals(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   nvars,              /**< number of variables to set relaxator solution value for */
+   int                   nvars,              /**< number of variables to set relaxation solution value for */
    SCIP_VAR**            vars,               /**< array with variables to set value for */
    SCIP_Real*            vals                /**< array with solution values of variables */
    );
 
-/** sets the relaxation solution values to the values in the given primal solution and marks the relaxation solution to be valid */
+/** sets the values of the variables in the global relaxation solution to the values 
+ *  in the given primal solution; the relaxation solution can be filled by the relaxation hanlders
+ *  and might be used by heuristics and for separation
+ */
 extern
 SCIP_RETCODE SCIPsetRelaxSolValsSol(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2847,6 +2926,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchInt(
    );
 
 /** gets strong branching information on column variables with fractional values */
+extern
 SCIP_RETCODE SCIPgetVarsStrongbranchesFrac(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< variables to get strong branching values for */
@@ -2869,6 +2949,7 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesFrac(
    );
 
 /** gets strong branching information on column variables with integral values */
+extern
 SCIP_RETCODE SCIPgetVarsStrongbranchesInt(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< variables to get strong branching values for */
@@ -2922,7 +3003,7 @@ SCIP_Longint SCIPgetVarStrongbranchNode(
  *  if strong branching was not yet applied on the variable at the current node, returns INT_MAX
  */
 extern
-int SCIPgetVarStrongbranchLPAge(
+SCIP_Longint SCIPgetVarStrongbranchLPAge(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to get strong branching LP age for */
    );
@@ -3010,6 +3091,11 @@ SCIP_Real SCIPadjustedVarUb(
 /** depending on SCIP's stage, changes lower bound of variable in the problem, in preprocessing, or in current node;
  *  if possible, adjusts bound to integral value; doesn't store any inference information in the bound change, such
  *  that in conflict analysis, this change is treated like a branching decision
+ *
+ *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *        SCIPgetVars()) gets resorted.
+ *
+ *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
 extern
 SCIP_RETCODE SCIPchgVarLb(
@@ -3021,6 +3107,11 @@ SCIP_RETCODE SCIPchgVarLb(
 /** depending on SCIP's stage, changes upper bound of variable in the problem, in preprocessing, or in current node;
  *  if possible, adjusts bound to integral value; doesn't store any inference information in the bound change, such
  *  that in conflict analysis, this change is treated like a branching decision
+ *
+ *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *        SCIPgetVars()) gets resorted.
+ *
+ *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
 extern
 SCIP_RETCODE SCIPchgVarUb(
@@ -3055,6 +3146,11 @@ SCIP_RETCODE SCIPchgVarUbNode(
 
 /** changes global lower bound of variable; if possible, adjust bound to integral value; also tightens the local bound,
  *  if the global bound is better than the local bound
+ *
+ *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *        SCIPgetVars()) gets resorted.
+ *
+ *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
 extern
 SCIP_RETCODE SCIPchgVarLbGlobal(
@@ -3065,6 +3161,11 @@ SCIP_RETCODE SCIPchgVarLbGlobal(
 
 /** changes global upper bound of variable; if possible, adjust bound to integral value; also tightens the local bound,
  *  if the global bound is better than the local bound
+ *
+ *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *        SCIPgetVars()) gets resorted.
+ *
+ *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
 extern
 SCIP_RETCODE SCIPchgVarUbGlobal(
@@ -3073,7 +3174,13 @@ SCIP_RETCODE SCIPchgVarUbGlobal(
    SCIP_Real             newbound            /**< new value for bound */
    );
 
-/** changes lazy lower bound of the variable, this is only possible if the variable is not in the LP yet */
+/** changes lazy lower bound of the variable, this is only possible if the variable is not in the LP yet
+ *
+ *  lazy bounds are bounds, that are enforced by constraints and the objective function; hence, these bounds do not need
+ *  to be put into the LP explicitly.
+ *
+ *  @note lazy bounds are useful for branch-and-price since the the corresponding variable bounds are not part of the LP
+ */
 extern
 SCIP_RETCODE SCIPchgVarLbLazy(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3081,7 +3188,13 @@ SCIP_RETCODE SCIPchgVarLbLazy(
    SCIP_Real             lazylb              /**< the lazy lower bound to be set */
    );
 
-/** changes lazy upper bound of the variable, this is only possible if the variable is not in the LP yet */
+/** changes lazy upper bound of the variable, this is only possible if the variable is not in the LP yet
+ *
+ *  lazy bounds are bounds, that are enforced by constraints and the objective function; hence, these bounds do not need
+ *  to be put into the LP explicitly.
+ *
+ *  @note lazy bounds are useful for branch-and-price since the the corresponding variable bounds are not part of the LP
+ */
 extern
 SCIP_RETCODE SCIPchgVarUbLazy(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3093,6 +3206,11 @@ SCIP_RETCODE SCIPchgVarUbLazy(
  *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
  *  doesn't store any inference information in the bound change, such that in conflict analysis, this change
  *  is treated like a branching decision
+ *
+ *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *        SCIPgetVars()) gets resorted.
+ *
+ *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
 extern
 SCIP_RETCODE SCIPtightenVarLb(
@@ -3108,6 +3226,11 @@ SCIP_RETCODE SCIPtightenVarLb(
  *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
  *  doesn't store any inference information in the bound change, such that in conflict analysis, this change
  *  is treated like a branching decision
+ *
+ *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *        SCIPgetVars()) gets resorted.
+ *
+ *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
 extern
 SCIP_RETCODE SCIPtightenVarUb(
@@ -3123,6 +3246,11 @@ SCIP_RETCODE SCIPtightenVarUb(
  *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
  *  the given inference constraint is stored, such that the conflict analysis is able to find out the reason
  *  for the deduction of the bound change
+ *
+ *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *        SCIPgetVars()) gets resorted.
+ *
+ *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
 extern
 SCIP_RETCODE SCIPinferVarLbCons(
@@ -3140,6 +3268,11 @@ SCIP_RETCODE SCIPinferVarLbCons(
  *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
  *  the given inference constraint is stored, such that the conflict analysis is able to find out the reason
  *  for the deduction of the bound change
+ *
+ *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *        SCIPgetVars()) gets resorted.
+ *
+ *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
 extern
 SCIP_RETCODE SCIPinferVarUbCons(
@@ -3172,6 +3305,11 @@ SCIP_RETCODE SCIPinferBinvarCons(
  *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
  *  the given inference propagator is stored, such that the conflict analysis is able to find out the reason
  *  for the deduction of the bound change
+ *
+ *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *        SCIPgetVars()) gets resorted.
+ *
+ *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
 extern
 SCIP_RETCODE SCIPinferVarLbProp(
@@ -3189,6 +3327,11 @@ SCIP_RETCODE SCIPinferVarLbProp(
  *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
  *  the given inference propagator is stored, such that the conflict analysis is able to find out the reason
  *  for the deduction of the bound change
+ *
+ *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *        SCIPgetVars()) gets resorted.
+ *
+ *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
 extern
 SCIP_RETCODE SCIPinferVarUbProp(
@@ -3220,6 +3363,11 @@ SCIP_RETCODE SCIPinferBinvarProp(
 /** changes global lower bound of variable in preprocessing or in the current node, if the new bound is tighter
  *  (w.r.t. bound strengthening epsilon) than the current global bound; if possible, adjusts bound to integral value;
  *  also tightens the local bound, if the global bound is better than the local bound
+ *
+ *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *        SCIPgetVars()) gets resorted.
+ *
+ *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
 extern
 SCIP_RETCODE SCIPtightenVarLbGlobal(
@@ -3234,6 +3382,11 @@ SCIP_RETCODE SCIPtightenVarLbGlobal(
 /** changes global upper bound of variable in preprocessing or in the current node, if the new bound is tighter
  *  (w.r.t. bound strengthening epsilon) than the current global bound; if possible, adjusts bound to integral value;
  *  also tightens the local bound, if the global bound is better than the local bound
+ *
+ *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *        SCIPgetVars()) gets resorted.
+ *
+ *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
 extern
 SCIP_RETCODE SCIPtightenVarUbGlobal(
@@ -3390,6 +3543,7 @@ SCIP_RETCODE SCIPaddClique(
  *  the preceding variables was assigned to clique i-1;
  *  for each clique at most 1 variables can be set to TRUE in a feasible solution;
  */
+extern
 SCIP_RETCODE SCIPcalcCliquePartition(
    SCIP*const            scip,               /**< SCIP data structure */
    SCIP_VAR**const       vars,               /**< binary variables in the clique from which at most one can be set to 1 */
@@ -3555,10 +3709,12 @@ SCIP_RETCODE SCIPaggregateVars(
    SCIP_Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
    );
 
-/** converts variable into multi-aggregated variable; this changes the vars array returned from
- *  SCIPgetVars() and SCIPgetVarsData(); Warning! The integrality condition is not checked anymore on
- *  the multi-aggregated variable. You must not multi-aggregate an integer variable without being sure,
- *  that integrality on the aggregation variables implies integrality on the aggregated variable.
+/** converts variable into multi-aggregated variable; this changes the variable array returned from
+ *  SCIPgetVars() and SCIPgetVarsData();
+ *
+ *  @warning The integrality condition is not checked anymore on the multi-aggregated variable. You must not
+ *           multi-aggregate an integer variable without being sure, that integrality on the aggregation variables
+ *           implies integrality on the aggregated variable.
  *
  *  The output flags have the following meaning:
  *  - infeasible: the problem is infeasible
@@ -3786,8 +3942,8 @@ SCIP_RETCODE SCIPinitVarBranchStats(
    SCIP_VAR*             var,                /**< variable which should be initialized */
    SCIP_Real             downpscost,         /**< value to which pseudocosts for downwards branching should be initialized */
    SCIP_Real             uppscost,           /**< value to which pseudocosts for upwards branching should be initialized */
-   SCIP_Real             downconf,           /**< value to which conflict score for downwards branching should be initialized */
-   SCIP_Real             upconf,             /**< value to which conflict score for upwards branching should be initialized */
+   SCIP_Real             downvsids,          /**< value to which VSIDS score for downwards branching should be initialized */
+   SCIP_Real             upvsids,            /**< value to which VSIDS score for upwards branching should be initialized */
    SCIP_Real             downconflen,        /**< value to which conflict length score for downwards branching should be initialized */
    SCIP_Real             upconflen,          /**< value to which conflict length score for upwards branching should be initialized */
    SCIP_Real             downinfer,          /**< value to which inference counter for downwards branching should be initialized */
@@ -3991,10 +4147,12 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
 
 /** creates and captures a constraint of the given constraint handler
  *
- *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, an LP or pseudo solution
- *  may be declared feasible even if it violates this particular constraint.
- *  This constellation should only be used, if no LP or pseudo solution can violate the constraint -- e.g. if a
- *  local constraint is redundant due to the variable's local bounds.
+ *  @warning If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution may
+ *           be declared feasible even if it violates this particular constraint.  This constellation should only be
+ *           used, if no LP or pseudo solution can violate the constraint -- e.g. if a local constraint is redundant due
+ *           to the variable's local bounds.
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
 extern
 SCIP_RETCODE SCIPcreateCons(
@@ -4029,12 +4187,12 @@ SCIP_RETCODE SCIPcreateCons(
    );
 
 /** parses constraint information (in cip format) out of a string; if the parsing process was successful a constraint is
- *  created and captured.
+ *  creates and captures;
  *
- *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, an LP or pseudo solution may
- *  be declared feasible even if it violates this particular constraint.  This constellation should only be used, if no
- *  LP or pseudo solution can violate the constraint -- e.g. if a local constraint is redundant due to the variable's
- *  local bounds.
+ *  @warning If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution may
+ *           be declared feasible even if it violates this particular constraint.  This constellation should only be
+ *           used, if no LP or pseudo solution can violate the constraint -- e.g. if a local constraint is redundant due
+ *           to the variable's local bounds.
  */
 extern
 SCIP_RETCODE SCIPparseCons(
@@ -4074,7 +4232,10 @@ SCIP_RETCODE SCIPcaptureCons(
    SCIP_CONS*            cons                /**< constraint to capture */
    );
 
-/** decreases usage counter of constraint, and frees memory if necessary */
+/** decreases usage counter of constraint, if the usage pointer reaches zero the constraint gets freed
+ *
+ *  @note the pointer of the constraint will be NULLed
+ */
 extern
 SCIP_RETCODE SCIPreleaseCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4605,7 +4766,7 @@ SCIP_RETCODE SCIPwriteLP(
    const char*           fname               /**< file name */
    );
 
-/** writes current MIP to a file */
+/** writes MIP relaxation of the current branch-and-bound node to a file */
 extern
 SCIP_RETCODE SCIPwriteMIP(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4617,14 +4778,17 @@ SCIP_RETCODE SCIPwriteMIP(
 
 /** gets the LP interface of SCIP;
  *  with the LPI you can use all of the methods defined in scip/lpi.h;
- *  Warning! You have to make sure, that the full internal state of the LPI does not change or is recovered completely after
- *  the end of the method that uses the LPI. In particular, if you manipulate the LP or its solution (e.g. by calling one of the
- *  SCIPlpiAdd...() or one of the SCIPlpiSolve...() methods), you have to check in advance with SCIPlpiWasSolved() whether the LP
- *  is currently solved. If this is the case, you have to make sure, the internal solution status is recovered completely at the
- *  end of your method. This can be achieved by getting the LPI state before applying any LPI manipulations with SCIPlpiGetState()
- *  and restoring it afterwards with SCIPlpiSetState() and SCIPlpiFreeState(). Additionally you have to resolve the LP with
- *  the appropriate SCIPlpiSolve...() call in order to reinstall the internal solution status.
- *  Make also sure, that all parameter values that you have changed are set back to their original values.
+ *
+ *  @warning You have to make sure, that the full internal state of the LPI does not change or is recovered completely
+ *           after the end of the method that uses the LPI. In particular, if you manipulate the LP or its solution
+ *           (e.g. by calling one of the SCIPlpiAdd...() or one of the SCIPlpiSolve...() methods), you have to check in
+ *           advance with SCIPlpiWasSolved() whether the LP is currently solved. If this is the case, you have to make
+ *           sure, the internal solution status is recovered completely at the end of your method. This can be achieved
+ *           by getting the LPI state before applying any LPI manipulations with SCIPlpiGetState() and restoring it
+ *           afterwards with SCIPlpiSetState() and SCIPlpiFreeState(). Additionally you have to resolve the LP with the
+ *           appropriate SCIPlpiSolve...() call in order to reinstall the internal solution status.
+ *
+ *  @warning Make also sure, that all parameter values that you have changed are set back to their original values.
  */
 extern
 SCIP_RETCODE SCIPgetLPI(
@@ -4973,7 +5137,7 @@ void SCIPmarkContinuousNonlinearitiesPresent(
  * 
  * The function should be called before the branch-and-bound process is initialized, e.g., when presolve is exiting.
  * 
- * Calling SCIPmarkContinuousNonlinearitiesPresent makes a call to SCIPmarkContinuousNonlinearitiesPresent dispensable.
+ * Calling SCIPmarkContinuousNonlinearitiesPresent makes a call to SCIPmarkNonlinearitiesPresent dispensable.
  */ 
 extern
 void SCIPmarkNonlinearitiesPresent(
@@ -5195,12 +5359,15 @@ SCIP_RETCODE SCIPwriteNLP(
 
 /** gets the NLP interface and problem used by the SCIP NLP;
  *  with the NLPI and its problem you can use all of the methods defined in nlpi/nlpi.h;
- *  Warning! You have to make sure, that the full internal state of the NLPI does not change or is recovered completely after
- *  the end of the method that uses the NLPI. In particular, if you manipulate the NLP or its solution (e.g. by calling one of the
- *  SCIPnlpiAdd...() or the SCIPnlpiSolve() method), you have to check in advance whether the NLP is currently solved.
- *  If this is the case, you have to make sure, the internal solution status is recovered completely at the
- *  end of your method. Additionally you have to resolve the NLP with SCIPnlpiSolve() in order to reinstall the internal solution status.
- *  Make also sure, that all parameter values that you have changed are set back to their original values.
+ *
+ *  @warning You have to make sure, that the full internal state of the NLPI does not change or is recovered completely
+ *           after the end of the method that uses the NLPI. In particular, if you manipulate the NLP or its solution
+ *           (e.g. by calling one of the SCIPnlpiAdd...() or the SCIPnlpiSolve() method), you have to check in advance
+ *           whether the NLP is currently solved.  If this is the case, you have to make sure, the internal solution
+ *           status is recovered completely at the end of your method. Additionally you have to resolve the NLP with
+ *           SCIPnlpiSolve() in order to reinstall the internal solution status.
+ *
+ *  @warning Make also sure, that all parameter values that you have changed are set back to their original values.
  */
 extern
 SCIP_RETCODE SCIPgetNLPI(
@@ -5335,20 +5502,20 @@ SCIP_RETCODE SCIPchgNlRowLhs(
    SCIP_Real             lhs                 /**< new left hand side */
    );
 
-/** changes constant of NLP nonlinear row */
-extern
-SCIP_RETCODE SCIPchgNlRowConstant(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLROW*           nlrow,              /**< NLP row */
-   SCIP_Real             constant            /**< new value for constant */
-   );
-
 /** changes right hand side of NLP nonlinear row */
 extern
 SCIP_RETCODE SCIPchgNlRowRhs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
    SCIP_Real             rhs                 /**< new right hand side */
+   );
+
+/** changes constant of NLP nonlinear row */
+extern
+SCIP_RETCODE SCIPchgNlRowConstant(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   SCIP_Real             constant            /**< new value for constant */
    );
 
 /** adds variable with a linear coefficient to the nonlinear row */
@@ -5379,16 +5546,6 @@ SCIP_RETCODE SCIPchgNlRowLinearCoef(
    SCIP_NLROW*           nlrow,              /**< NLP row */
    SCIP_VAR*             var,                /**< variable */
    SCIP_Real             coef                /**< new value of coefficient */
-   );
-
-/** changes coefficient in quadratic part of a row
- * setting the coefficient in the quadelement to 0.0 means that it is removed from the row
- * the element does not need to exists before */
-extern
-SCIP_RETCODE SCIPchgNlRowQuadElement(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLROW*           nlrow,              /**< NLP row */
-   SCIP_QUADELEM         quadelement         /**< new quadratic element, or update for existing one */
    );
 
 /** adds quadratic variable to the nonlinear row
@@ -5427,6 +5584,16 @@ SCIP_RETCODE SCIPaddQuadElementsToNlRow(
    SCIP_NLROW*           nlrow,              /**< NLP row */
    int                   nquadelems,         /**< number of quadratic elements */
    SCIP_QUADELEM*        quadelems           /**< quadratic elements */
+   );
+
+/** changes coefficient in quadratic part of a row
+ * setting the coefficient in the quadelement to 0.0 means that it is removed from the row
+ * the element does not need to exists before */
+extern
+SCIP_RETCODE SCIPchgNlRowQuadElement(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   SCIP_QUADELEM         quadelement         /**< new quadratic element, or update for existing one */
    );
 
 /** sets or deletes expression tree in the nonlinear row */
@@ -5523,7 +5690,7 @@ SCIP_RETCODE SCIPgetNlRowFeasibility(
    SCIP_Real*            feasibility         /**< buffer to store feasibility value */
    );
 
-/** gives the activity of a nonlinear row for the given primal solution */
+/** gives the activity of a nonlinear row for the given primal solution or NLP solution or pseudo solution */
 extern
 SCIP_RETCODE SCIPgetNlRowSolActivity(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6590,8 +6757,9 @@ SCIP_SOL** SCIPgetSols(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets best feasible primal solution found so far if the problem is transformed; in case the the problem is problem
- *  stage it returns the best solution candidate, or NULL if no solution has been found or the candidate store is empty;
+/** gets best feasible primal solution found so far if the problem is transformed; in case the problem is in
+ *  SCIP_STAGE_PROBLEM it returns the best solution candidate, or NULL if no solution has been found or the candidate
+ *  store is empty;
  */
 extern
 SCIP_SOL* SCIPgetBestSol(
@@ -6980,7 +7148,7 @@ int SCIPgetNRuns(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets number of processed nodes, including the focus node */
+/** gets number of processed nodes in current run, including the focus node */
 extern
 SCIP_Longint SCIPgetNNodes(
    SCIP*                 scip                /**< SCIP data structure */
@@ -7000,7 +7168,7 @@ int SCIPgetNNodesLeft(
 
 /** gets total number of LPs solved so far */
 extern
-int SCIPgetNLPs(
+SCIP_Longint SCIPgetNLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7018,7 +7186,7 @@ SCIP_Longint SCIPgetNRootLPIterations(
 
 /** gets total number of primal LPs solved so far */
 extern
-int SCIPgetNPrimalLPs(
+SCIP_Longint SCIPgetNPrimalLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7030,7 +7198,7 @@ SCIP_Longint SCIPgetNPrimalLPIterations(
 
 /** gets total number of dual LPs solved so far */
 extern
-int SCIPgetNDualLPs(
+SCIP_Longint SCIPgetNDualLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7042,7 +7210,7 @@ SCIP_Longint SCIPgetNDualLPIterations(
 
 /** gets total number of barrier LPs solved so far */
 extern
-int SCIPgetNBarrierLPs(
+SCIP_Longint SCIPgetNBarrierLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7054,7 +7222,7 @@ SCIP_Longint SCIPgetNBarrierLPIterations(
 
 /** gets total number of LPs solved so far that were resolved from an advanced start basis */
 extern
-int SCIPgetNResolveLPs(
+SCIP_Longint SCIPgetNResolveLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7068,7 +7236,7 @@ SCIP_Longint SCIPgetNResolveLPIterations(
 
 /** gets total number of primal LPs solved so far that were resolved from an advanced start basis */
 extern
-int SCIPgetNPrimalResolveLPs(
+SCIP_Longint SCIPgetNPrimalResolveLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7082,7 +7250,7 @@ SCIP_Longint SCIPgetNPrimalResolveLPIterations(
 
 /** gets total number of dual LPs solved so far that were resolved from an advanced start basis */
 extern
-int SCIPgetNDualResolveLPs(
+SCIP_Longint SCIPgetNDualResolveLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7096,7 +7264,7 @@ SCIP_Longint SCIPgetNDualResolveLPIterations(
 
 /** gets total number of LPs solved so far for node relaxations */
 extern
-int SCIPgetNNodeLPs(
+SCIP_Longint SCIPgetNNodeLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7108,7 +7276,7 @@ SCIP_Longint SCIPgetNNodeLPIterations(
 
 /** gets total number of LPs solved so far for initial LP in node relaxations */
 extern
-int SCIPgetNNodeInitLPs(
+SCIP_Longint SCIPgetNNodeInitLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7120,7 +7288,7 @@ SCIP_Longint SCIPgetNNodeInitLPIterations(
 
 /** gets total number of LPs solved so far during diving and probing */
 extern
-int SCIPgetNDivingLPs(
+SCIP_Longint SCIPgetNDivingLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7132,7 +7300,7 @@ SCIP_Longint SCIPgetNDivingLPIterations(
 
 /** gets total number of times, strong branching was called (each call represents solving two LPs) */
 extern
-int SCIPgetNStrongbranchs(
+SCIP_Longint SCIPgetNStrongbranchs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7144,7 +7312,7 @@ SCIP_Longint SCIPgetNStrongbranchLPIterations(
 
 /** gets total number of times, strong branching was called at the root node (each call represents solving two LPs) */
 extern
-int SCIPgetNRootStrongbranchs(
+SCIP_Longint SCIPgetNRootStrongbranchs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7338,16 +7506,16 @@ SCIP_Bool SCIPisPrimalboundSol(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets current gap |(primalbound - dualbound)/dualbound| if both bounds have same sign, or infinity, if they have
- *  opposite sign
+/** gets current gap |(primalbound - dualbound)/min(|primalbound|,|dualbound|)| if both bounds have same sign,
+ *  or infinity, if they have opposite sign
  */
 extern
 SCIP_Real SCIPgetGap(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets current gap |(upperbound - lowerbound)/lowerbound| in transformed problem if both bounds have same sign, 
- *  or infinity, if they have opposite sign
+/** gets current gap |(upperbound - lowerbound)/min(|upperbound|,|lowerbound|)| in transformed problem if both bounds
+ *  have same sign, or infinity, if they have opposite sign
  */
 extern
 SCIP_Real SCIPgetTransGap(
@@ -7458,7 +7626,9 @@ SCIP_Real SCIPgetAvgInferenceScore(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets the average inference score value over all variables */
+/** gets the average inference score value over all variables, only using the inference information information of the
+ *  current run
+ */
 extern
 SCIP_Real SCIPgetAvgInferenceScoreCurrentRun(
    SCIP*                 scip                /**< SCIP data structure */
@@ -7501,7 +7671,7 @@ SCIP_RETCODE SCIPprintOrigProblem(
    SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
    );
 
-/** outputs transformed problem to file stream */
+/** outputs transformed problem of the current node to file stream */
 extern
 SCIP_RETCODE SCIPprintTransProblem(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -7742,6 +7912,8 @@ void SCIPmarkLimitChanged(
 
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
+ * In optimized mode, the methods are implemented as defines to improve performance.
+ * However, we want to have them in the library anyways, so we have to undef the defines.
  */
 
 /** checks, if values are in range of epsilon */
@@ -7848,7 +8020,7 @@ SCIP_Real SCIPceil(
    SCIP_Real             val                 /**< value to process */
    );
 
-/** rounds value - feasibility tolerance up to the next integer in epsilon tolerance */
+/** rounds value to the nearest integer with epsilon tolerance */
 extern
 SCIP_Real SCIPround(
    SCIP*                 scip,               /**< SCIP data structure */

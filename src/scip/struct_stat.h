@@ -108,6 +108,26 @@ struct SCIP_Stat
    SCIP_HEUR*            firstprimalheur;    /**< heuristic which found the first primal solution */     
    SCIP_STATUS           status;             /**< SCIP solving status */
    SCIP_BRANCHDIR        lastbranchdir;      /**< direction of the last branching */
+   SCIP_Longint          lpcount;            /**< internal counter, where all lp calls are counted; this includes the restored lps after diving and probing */
+   SCIP_Longint          nlps;               /**< total number of LPs solved with at least 1 iteration */
+   SCIP_Longint          nrootlps;           /**< number of LPs solved at the root node with at least 1 iteration */
+   SCIP_Longint          nprimallps;         /**< number of primal LPs solved with at least 1 iteration */
+   SCIP_Longint          nprimalzeroitlps;   /**< number of primal LPs with 0 iterations */
+   SCIP_Longint          nduallps;           /**< number of dual LPs solved with at least 1 iteration */
+   SCIP_Longint          ndualzeroitlps;     /**< number of dual LPs with 0 iterations */
+   SCIP_Longint          nlexduallps;        /**< number of lexicographic dual LPs solved */
+   SCIP_Longint          nbarrierlps;        /**< number of barrier LPs solved with at least 1 iteration */
+   SCIP_Longint          nbarrierzeroitlps;  /**< number of barrier LPs with 1 iteration */
+   SCIP_Longint          nprimalresolvelps;  /**< number of primal LPs solved with advanced start basis and at least 1 iteration */
+   SCIP_Longint          ndualresolvelps;    /**< number of dual LPs solved with advanced start basis and at least 1 iteration */
+   SCIP_Longint          nlexdualresolvelps; /**< number of lexicographic dual LPs solved with advanced start basis and at least 1 iteration */
+   SCIP_Longint          nnodelps;           /**< number of LPs solved for node relaxations */
+   SCIP_Longint          ninitlps;           /**< number of LPs solved for nodes' initial relaxations */
+   SCIP_Longint          ndivinglps;         /**< number of LPs solved during diving and probing */
+   SCIP_Longint          nstrongbranchs;     /**< number of strong branching calls */
+   SCIP_Longint          nrootstrongbranchs; /**< number of strong branching calls at the root node */
+   SCIP_Longint          nconflictlps;       /**< number of LPs solved during conflict analysis */
+   SCIP_Longint          nnlps;              /**< number of NLPs solved */
    int                   subscipdepth;       /**< depth of current scip instance (increased by each copy call) */
    int                   nruns;              /**< number of branch and bound runs on current problem, including current run */
    int                   nconfrestarts;      /**< number of restarts performed due to conflict analysis */
@@ -122,26 +142,6 @@ struct SCIP_Stat
    int                   marked_nvaridx;     /**< number of used variable indices before solving started */
    int                   marked_ncolidx;     /**< number of used column indices before solving started */
    int                   marked_nrowidx;     /**< number of used row indices before solving started */
-   int                   lpcount;            /**< internal counter, where all lp calls are counted; this includes the restored lps after diving and probing */
-   int                   nlps;               /**< total number of LPs solved with at least 1 iteration */
-   int                   nrootlps;           /**< number of LPs solved at the root node with at least 1 iteration */
-   int                   nprimallps;         /**< number of primal LPs solved with at least 1 iteration */
-   int                   nprimalzeroitlps;   /**< number of primal LPs with 0 iterations */
-   int                   nduallps;           /**< number of dual LPs solved with at least 1 iteration */
-   int                   ndualzeroitlps;     /**< number of dual LPs with 0 iterations */
-   int                   nlexduallps;        /**< number of lexicographic dual LPs solved */
-   int                   nbarrierlps;        /**< number of barrier LPs solved with at least 1 iteration */
-   int                   nbarrierzeroitlps;  /**< number of barrier LPs with 1 iteration */
-   int                   nprimalresolvelps;  /**< number of primal LPs solved with advanced start basis and at least 1 iteration */
-   int                   ndualresolvelps;    /**< number of dual LPs solved with advanced start basis and at least 1 iteration */
-   int                   nlexdualresolvelps; /**< number of lexicographic dual LPs solved with advanced start basis and at least 1 iteration */
-   int                   nnodelps;           /**< number of LPs solved for node relaxations */
-   int                   ninitlps;           /**< number of LPs solved for nodes' initial relaxations */
-   int                   ndivinglps;         /**< number of LPs solved during diving and probing */
-   int                   nstrongbranchs;     /**< number of strong branching calls */
-   int                   nrootstrongbranchs; /**< number of strong branching calls at the root node */
-   int                   nconflictlps;       /**< number of LPs solved during conflict analysis */
-   int                   nnlps;              /**< number of NLPs solved */
    int                   npricerounds;       /**< number of pricing rounds performed in current node */
    int                   nseparounds;        /**< number of separation rounds performed in current node */
    int                   ndisplines;         /**< number of displayed information lines */

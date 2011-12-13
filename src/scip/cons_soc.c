@@ -655,8 +655,8 @@ SCIP_RETCODE createNlRow(
    }
 
    SCIPdebugMessage("created nonlinear row representation of SOC constraint\n");
-   SCIPdebug( SCIPprintCons(scip, cons, NULL) );
-   SCIPdebug( SCIPprintNlRow(scip, consdata->nlrow, NULL) );
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebug( SCIP_CALL( SCIPprintNlRow(scip, consdata->nlrow, NULL) ) );
 
    return SCIP_OKAY;
 }
@@ -4350,7 +4350,10 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
    return SCIP_OKAY;
 }
 
-/** creates and captures a second order cone constraint */
+/** creates and captures a second order cone constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 SCIP_RETCODE SCIPcreateConsSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */

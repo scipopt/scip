@@ -98,7 +98,10 @@ SCIP_RETCODE SCIPincludeLinconsUpgrade(
    const char*           conshdlrname        /**< name of the constraint handler */
    );
 
-/** creates and captures a linear constraint */
+/** creates and captures a linear constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 extern
 SCIP_RETCODE SCIPcreateConsLinear(
    SCIP*                 scip,               /**< SCIP data structure */

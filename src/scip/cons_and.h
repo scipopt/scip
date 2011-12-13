@@ -48,7 +48,10 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates and captures a and constraint */
+/** creates and captures a and constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 extern
 SCIP_RETCODE SCIPcreateConsAnd(
    SCIP*                 scip,               /**< SCIP data structure */

@@ -6324,7 +6324,7 @@ SCIP_DECL_CONSCHECK(consCheckPseudoboolean)
       *result = SCIP_INFEASIBLE;
    else
       *result = SCIP_FEASIBLE;
-   
+
    return SCIP_OKAY;
 }
 
@@ -7065,6 +7065,8 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
  *
  *  @note linear and nonlinear terms can be added using SCIPaddCoefPseudoboolean() and SCIPaddTermPseudoboolean(),
  *        respectively
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
 SCIP_RETCODE SCIPcreateConsPseudoboolean(
    SCIP*                 scip,               /**< SCIP data structure */

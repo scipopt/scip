@@ -235,6 +235,7 @@ struct SCIP_Var
    SCIP_BDCHGINFO*       ubchginfos;         /**< bound change informations for upper bound changes from root to current node */
    SCIP_HISTORY*         history;            /**< branching and inference history information */
    SCIP_HISTORY*         historycrun;        /**< branching and inference history information for current run */
+   SCIP_Longint          closestvblpcount;   /**< LP count for which the closestvlbidx/closestvubidx entries are valid */
    int                   index;              /**< consecutively numbered variable identifier */
    int                   probindex;          /**< array position in problems vars array, or -1 if not assigned to a problem */
    int                   pseudocandindex;    /**< array position in pseudo branching candidates array, or -1 */
@@ -255,7 +256,6 @@ struct SCIP_Var
    int                   conflictubcount;    /**< number of last conflict, the upper bound was member of */
    int                   closestvlbidx;      /**< index of closest VLB variable in current LP solution, or -1 */
    int                   closestvubidx;      /**< index of closest VUB variable in current LP solution, or -1 */
-   int                   closestvblpcount;   /**< LP count for which the closestvlbidx/closestvubidx entries are valid */
    unsigned int          initial:1;          /**< TRUE iff var's column should be present in the initial root LP */
    unsigned int          removable:1;        /**< TRUE iff var's column is removable from the LP (due to aging or cleanup) */
    unsigned int          deletable:1;        /**< TRUE iff the variable is removable from the problem */

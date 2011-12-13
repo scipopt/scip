@@ -2288,7 +2288,7 @@ SCIP_RETCODE applyFixings(
       SCIP_CALL( SCIPaddCons(scip, newcons) );
 
       SCIPdebugMessage("resolved multi aggregation in varbound constraint <%s> by creating a new linear constraint\n", SCIPconsGetName(cons));
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons) ) );
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
 
       SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
 
@@ -3547,7 +3547,10 @@ SCIP_RETCODE SCIPincludeConshdlrVarbound(
    return SCIP_OKAY;
 }
 
-/** creates and captures a variable bound constraint: lhs <= x + c*y <= rhs */
+/** creates and captures a variable bound constraint: lhs <= x + c*y <= rhs
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 SCIP_RETCODE SCIPcreateConsVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */

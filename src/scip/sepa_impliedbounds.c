@@ -83,7 +83,7 @@ SCIP_RETCODE addCut(
       
 #ifdef SCIP_DEBUG
       SCIPdebugMessage(" -> found cut (activity = %g): ", activity);
-      SCIPprintRow(scip, cut, NULL);
+      SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
 #endif
 
       /* add cut */

@@ -592,7 +592,7 @@ SCIP_RETCODE separateSCIs(
 
             /* generate cut */
 #ifdef SCIP_DEBUG
-            SCIPsnprintf(name, SCIP_MAXSTRLEN, "sci_%d_%d", i, j);
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sci_%d_%d", i, j);
             SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
 #else
             SCIP_CALL( SCIPcreateEmptyRow(scip, &row, "", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
@@ -2272,7 +2272,10 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
 }
 
 
-/** creates and captures a orbitope constraint */
+/** creates and captures a orbitope constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 SCIP_RETCODE SCIPcreateConsOrbitope(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */

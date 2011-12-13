@@ -6,6 +6,10 @@ interface
   to avoid unnecessary initialization of the conflict analysis
 - the methods SCIPsortedvecInsert*() have an additional parameter which can be used to receive the position where 
   the new element was inserted, if this is not of interest a NULL pointer can be given
+- SCIPcolGetStrongbranchLPAge(), SCIPgetVarStrongbranchLPAge(), SCIPgetNLPs(), SCIPgetNPrimalLPs(), SCIPgetNDualLPs(),
+  SCIPgetNBarrierLPs(), SCIPgetNResolveLPs(), SCIPgetNPrimalResolveLPs(), SCIPgetNDualResolveLPs(), SCIPgetNNodeLPs(),
+  SCIPgetNNodeInitLPs(), SCIPgetNDivingLPs(), SCIPgetNStrongbranchs(), SCIPgetNRootStrongbranchs() now return a longint
+  instead of an integer
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
@@ -13,6 +17,9 @@ performance improvements:
   if all coefficients are in absolute value equal they will be scaled by that
 - if probing reached the end of all variables it will restart the probing cycle correctly
 - improved intdiving heuristic by activating backtracking to a different fixing value
+- improved scaling by choosing the smallest scaler
+- if first root lp is solved and the optimality is rejected by SCIP, there won't be an unnecessary solving of the lp
+  from scratch again
 
 plugins:
 - added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.
@@ -26,17 +33,45 @@ parameters:
   only convert integer variables with a domainsize of 2^p - 1 to their binary representation
 - new parameter <presolving/convertinttobin/samelocksinbothdirections> by default is set to FALSE, that parameter allows
   you to convert only integer variables to their binary representation, which have the same amount of up- and downlocks
+- branching/fullstrong/reevalage changed from an integer to a longint parameter
+- new parameter for changing the timingmask for calling the propagtion method of all propagator plugins
+  propagating/%s/timingmask and all constraint plugins constraints/%s/timingmask
+- new parameter constraints/indicator/dualreductions to enable dual presolving/propagation steps
+- new parameters constraints/indicator/{sepacouplingcuts,sepacouplinglocal} to enable separation of (local) cuts
+- new parameters constraints/indicator/{maxsepacuts,maxsepacutsroot} to restrict the number of separated cuts
 
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to
   set relaxrows = FALSE
+- the check script now recognizes MIQCP and MINLP instances
 
 SCIP version 2.1.1
 ===============
 
+performance improvements:
+- revised pseudo objective propagator;
+
+features:
+- the pseudo objective propagator can be forced to propagate if active pricers are present; this can be done 
+  if for all (known or unknown) variables follows that: they have positive (negative) objective coefficient 
+  and the global lower (upper) bound is zero.
+
 fixed bugs:
 - fixed bug in reader_mps.c: INTEND marker is now also written, if COLUMNS section ends with non-continous variables
 - fixed numeric issue in aggregations
+- fixed pseudo cost computation
+- pseudo objective propagator does not propagate it active pricers are present
+- fixed constraint flags evaluation within the ZIMPL reader (reader_zpl.c)
+- fixed bug in SCIPmakeIndicatorFeasible() in cons_indicator.c
+- fixed bug with conflict clause modification in cons_indicator
+- fixed bug in cons_bounddisjunction with uninitialized return values
+- fixed bug when copying problem data in c++ case returned with the result SCIP_DIDNOTRUN
+- fixed bug with setting type of slack variables to be implicitly integral
+
+parameters
+- changed parameter "propagating/pseudoobj/maxcands" to "propagating/pseudoobj/minuseless" (see prop_pseudoobj.h)
+  due to revision of the pseudo objective propagator
+
 
 SCIP version 2.1.0
 ===============
@@ -501,7 +536,7 @@ Makefile
 
 
 SCIP version 2.0.2
-==================
+===============
 
 fixed bugs:
 - fixed bug in heur_subnlp.c where constraints forbidding variable fixations where added if a cutoff was used in the
@@ -562,7 +597,7 @@ performance improvements:
 - improved runtime and memory consumption in SCIPsolveKnapsackExactly() in cons_knapsack.c
 
 SCIP version 2.0.1
-==================
+===============
 
 interface:
 - allow access to transformed constraints in SCIP_STAGE_TRANSFORMED

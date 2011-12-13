@@ -897,7 +897,7 @@ SCIP_RETCODE evalFunctionGradient(
 
       SCIPdebugMessage("eval gradient of ");
       SCIPdebug( SCIPexprtreePrint(cons->exprtree, NULL, NULL, NULL) );
-      SCIPdebug( if( isnewx ) {printf("\nx ="); for( i = 0; i < nvars; ++i) printf(" %g", xx[i]); printf("\n");} )
+      SCIPdebug( if( isnewx ) {printf("\nx ="); for( i = 0; i < nvars; ++i) printf(" %g", xx[i]); /*lint !e613*/ printf("\n");} )
 
       SCIP_CALL( SCIPexprintGrad(oracle->exprinterpreter, cons->exprtree, xx, isnewx, &nlval, g) );  /*lint !e644*/
 
@@ -2689,7 +2689,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
 
             SCIPdebugMessage("eval gradient of ");
             SCIPdebug( SCIPexprtreePrint(cons->exprtree, NULL, NULL, NULL) );
-            SCIPdebug( if( isnewx ) {printf("\nx ="); for( l = 0; l < nvars; ++l) printf(" %g", xx[l]); printf("\n");} )
+            SCIPdebug( if( isnewx ) {printf("\nx ="); for( l = 0; l < nvars; ++l) printf(" %g", xx[l]); /*lint !e613*/ printf("\n");} )
 
             SCIP_CALL( SCIPexprintGrad(oracle->exprinterpreter, cons->exprtree, xx, isnewx, &nlval, grad) );  /*lint !e644*/
 

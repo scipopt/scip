@@ -1523,7 +1523,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
       assert(row != NULL);
       assert(SCIProwGetLPPos(row) == i);
       SCIPdebugMessage("  Row <%d> is %sin LP: \n", i, SCIProwGetLPPos(row) >= 0 ? "" : "not ");
-      SCIPdebug( SCIPprintRow(scip, row, NULL) );
+      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
       activities[i] = SCIPgetRowSolActivity(scip, row, bestsol);
 
       /* Heuristic does not provide infeasibility recovery, thus if any constraint is violated,

@@ -661,7 +661,7 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputNStrongbranchs)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_STRONGBRANCHS) == 0);
    assert(scip != NULL);
 
-   SCIPdispInt(file, SCIPgetNStrongbranchs(scip), DISP_WIDT_STRONGBRANCHS);
+   SCIPdispLongint(file, SCIPgetNStrongbranchs(scip), DISP_WIDT_STRONGBRANCHS);
 
    return SCIP_OKAY;
 }

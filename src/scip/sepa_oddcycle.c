@@ -252,7 +252,7 @@ void printCycle(
    }
 
    ++counter;
-   SCIPdebugMessage("original cycle has %d variables.\n",counter);
+   SCIPdebugMessage("original cycle has %u variables.\n", counter);
 }
 #endif
 

@@ -62,7 +62,7 @@
  * Local methods (for writing)
  */
 
-static const char badchars[] = "#*+/-@";
+static const char badchars[] = "#*+/-@$";
 
 /** transforms given variables, scalars, and constant to the corresponding active variables, scalars, and constant */
 static

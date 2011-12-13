@@ -52,7 +52,10 @@ SCIP_RETCODE SCIPincludeConshdlrAbspower(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates and captures a absolute power constraint */
+/** creates and captures a absolute power constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 extern
 SCIP_RETCODE SCIPcreateConsAbspower(
    SCIP*                 scip,               /**< SCIP data structure */

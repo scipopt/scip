@@ -80,6 +80,10 @@
 #include "spxmainsm.h"
 #include "spxequilisc.h"
 
+#ifdef WITH_BOUNDFLIPPING
+#include "spxboundflippingrt.h"
+#endif
+
 /* check version */
 #if (SOPLEX_VERSION < 133)
 #error "This interface is not compatible with SoPlex versions prior to 1.4"
@@ -161,7 +165,11 @@ class SPxSCIP : public SPxSolver
    SPxSteepPR       m_price_steep;      /**< steepest edge pricer */
    SPxParMultPR     m_price_parmult;    /**< partial multiple pricer */
    SPxDevexPR       m_price_devex;      /**< devex pricer */
+#ifdef WITH_BOUNDFLIPPING
+   SPxBoundFlippingRT m_ratio;          /**< Long step dual ratio tester */
+#else
    SPxFastRT        m_ratio;            /**< Harris fast ratio tester */
+#endif
    char*            m_probname;         /**< problem name */
    bool             m_fromscratch;      /**< use old basis indicator */
    bool             m_scaling;          /**< use lp scaling */
@@ -738,8 +746,8 @@ public:
 
          if( simplifier != NULL || scaler != NULL )
          {
-            setObjLoLimit(soplex::infinity);
-            setObjUpLimit(-soplex::infinity);
+            setObjLoLimit(-soplex::infinity);
+            setObjUpLimit(soplex::infinity);
          }
 
          doSolve();
@@ -1514,6 +1522,7 @@ SCIP_RETCODE SCIPlpiAddCols(
    {
       LPColSet cols(ncols);
       DSVector colVector(ncols);
+      int nrows = spx->nRows();
       int last;
       int i;
       int j;
@@ -1526,7 +1535,10 @@ SCIP_RETCODE SCIPlpiAddCols(
          {
             last = (i == ncols-1 ? nnonz : beg[i+1]);
             for( j = beg[i]; j < last; ++j )
-               colVector.add(ind[j], val[j]);
+            {
+               if( ind[j] < nrows )
+                  colVector.add(ind[j], val[j]);
+            }
          }
          cols.add(obj[i], lb[i], colVector, ub[i]);
       }

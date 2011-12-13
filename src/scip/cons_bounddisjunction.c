@@ -785,6 +785,10 @@ SCIP_RETCODE processWatchedVars(
    assert(consdata != NULL);
    assert(consdata->watchedvar1 == -1 || consdata->watchedvar1 != consdata->watchedvar2);
 
+   /* init bools */
+   *cutoff = FALSE;
+   *infeasible = FALSE;
+   *reduceddom = FALSE;
    *mustcheck = FALSE;
 
    SCIPdebugMessage("processing watched variables of constraint <%s>\n", SCIPconsGetName(cons));
@@ -838,6 +842,8 @@ SCIP_RETCODE processWatchedVars(
    }
    assert(watchedvar1 >= 0 || watchedvar2 == -1);
    assert(nbranchings1 <= nbranchings2);
+   assert(watchedvar1 != -1 || nbranchings1 == SCIP_LONGINT_MAX);
+   assert(watchedvar2 != -1 || nbranchings2 == SCIP_LONGINT_MAX);
 
    /* search for new watched variables */
    if( watchedvar2 == -1 )
@@ -939,6 +945,19 @@ SCIP_RETCODE processWatchedVars(
       else
       {
          SCIP_Bool infbdchg;
+
+#ifndef NDEBUG
+         int v;
+
+         /* check whether all other literals are violated */
+         for (v = 0; v < nvars; ++v)
+         {
+            if ( v != watchedvar1 )
+            {
+               assert( isLiteralViolated(scip, consdata, v) );
+            }
+         }
+#endif
 
          /* satisfy remaining literal and disable constraint; make sure, the fixed-to-one variable is watched */
          SCIPdebugMessage(" -> single-literal constraint <%s> (change bound <%s> %s %g) at depth %d\n", 
@@ -2793,7 +2812,10 @@ SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
 }
 
 
-/** creates and captures a bound disjunction constraint */
+/** creates and captures a bound disjunction constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 SCIP_RETCODE SCIPcreateConsBounddisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */

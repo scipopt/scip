@@ -1132,7 +1132,7 @@ SCIP_RETCODE conflictInsertConflictset(
       }
 
       /**@todo like in sepastore.c: calculate overlap between conflictsets -> large overlap reduces score */
-      
+
    }
 
    /* insert conflictset into the sorted conflictsets array*/
@@ -1768,8 +1768,10 @@ SCIP_Bool conflictMarkBoundCheckPresence(
          SCIPdebugMessage("ignoring redundant bound change <%s> >= %g\n", SCIPvarGetName(var), newbound);
          return TRUE;
       }
+
       var->conflictlbcount = conflict->count;
       var->conflictlb = newbound;
+
       return FALSE;
 
    case SCIP_BOUNDTYPE_UPPER:
@@ -1778,8 +1780,10 @@ SCIP_Bool conflictMarkBoundCheckPresence(
          SCIPdebugMessage("ignoring redundant bound change <%s> <= %g\n", SCIPvarGetName(var), newbound);
          return TRUE;
       }
+
       var->conflictubcount = conflict->count;
       var->conflictub = newbound;
+
       return FALSE;
 
    default:
@@ -2001,6 +2005,81 @@ SCIP_RETCODE SCIPconflictAddBound(
    return SCIP_OKAY;
 }
 
+/** check if the bound change info (which is the potential next candidate which is queued) is valid for the current
+ *  conflict analysis; a bound change info can get invalid if after this one was added to the queue, a weaker bound
+ *  change was added to the queue (due the bound widening idea) which immediately makes this bound change redundant; due
+ *  to the priority we did not removed that bound change info since that cost O(log(n)); hence we have to skip/ignore it
+ *  now
+ *
+ *  The following situations can occur before for example the bound change info (x >= 3) is potentially popped from the
+ *  queue.
+ *
+ *  Postcondition: the reason why (x >= 3) was queued is that at this time point no lower bound of x was involved yet in
+ *                 the current conflict or the lower bound which was involved until then was stronger, e.g., (x >= 2).
+ *
+ *  1) during the time until (x >= 3) gets potentially popped no weaker lower bound was added to the queue, in that case
+ *     the conflictlbcount is valid and conflictlb is 3; that is (var->conflictlbcount == conflict->count &&
+ *     var->conflictlb == 3)
+ *
+ *  2) a weaker bound change info gets queued (e.g., x >= 4); this bound change is popped before (x >= 3) since it has
+ *     higher priority (which is the time stamp of the bound change info and (x >= 4) has to be done after (x >= 3)
+ *     during propagation or branching)
+ *
+ *    a) if (x >= 4) is popped and added to the conflict set the conflictlbcount is still valid and conflictlb is at
+ *      most 4; that is (var->conflictlbcount == conflict->count && var->conflictlb >= 4); it follows that any bound
+ *      change info which is stronger than (x >= 4) gets ignored (for example x >= 2)
+ *
+ *    b) if (x >= 4) is popped and resolved without introducing a new lower bound on x until (x >= 3) is a potentially
+ *       candidate the conflictlbcount indicates that bound change is currently not present; that is
+ *       (var->conflictlbcount != conflict->count)
+ *
+ *    c) if (x >= 4) is popped and resolved and a new lower bound on x (e.g., x >= 2) is introduced until (x >= 3) is
+ *       pooped, the conflictlbcount indicates that bound change is currently present; that is (var->conflictlbcount ==
+ *       conflict->count); however the (x >= 3) only has be explained if conflictlb matches that one; that is
+ *       (var->conflictlb == bdchginfo->newbound); otherwise it redundant/invalid.
+ */
+static
+SCIP_Bool bdchginfoIsInvalid(
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
+   )
+{
+   SCIP_VAR* var;
+
+   assert(bdchginfo != NULL);
+
+   var = SCIPbdchginfoGetVar(bdchginfo);
+   assert(var != NULL);
+
+   /* the bound change info of a binary (domained) variable can never be invalid since the concepts of relaxed bounds
+    * and bound widening do not make sense for these type of variables
+    */
+   if( SCIPvarIsBinary(var) )
+      return FALSE;
+
+   /* check if the bdchginfo is invaild since a tight/weaker bound change was already explained */
+   if( SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER )
+   {
+      if( var->conflictlbcount != conflict->count || var->conflictlb != SCIPbdchginfoGetNewbound(bdchginfo) )
+      {
+         assert(!SCIPvarIsBinary(var));
+         return TRUE;
+      }
+   }
+   else
+   {
+      assert(SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER);
+
+      if( var->conflictubcount != conflict->count || var->conflictub != SCIPbdchginfoGetNewbound(bdchginfo) )
+      {
+         assert(!SCIPvarIsBinary(var));
+         return TRUE;
+      }
+   }
+
+   return FALSE;
+}
+
 /** removes and returns next conflict analysis candidate from the candidate queue */
 static
 SCIP_BDCHGINFO* conflictRemoveCand(
@@ -2016,7 +2095,11 @@ SCIP_BDCHGINFO* conflictRemoveCand(
       bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueRemove(conflict->forcedbdchgqueue));
    else
       bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueRemove(conflict->bdchgqueue));
-   assert(bdchginfo == NULL || !SCIPbdchginfoIsRedundant(bdchginfo));
+
+   assert(!SCIPbdchginfoIsRedundant(bdchginfo));
+
+   /* if we have a candidate this one should be valid for the current conflict analysis */
+   assert(!bdchginfoIsInvalid(conflict, bdchginfo));
 
    /* mark the bound change to be no longer in the conflict (it will be either added again to the conflict set or
     * replaced by resolving, which might add a weaker change on the same bound to the queue)
@@ -2045,9 +2128,44 @@ SCIP_BDCHGINFO* conflictFirstCand(
    assert(conflict != NULL);
 
    if( SCIPpqueueNElems(conflict->forcedbdchgqueue) > 0 )
+   {
+      /* get next potetioal candidate */
       bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueFirst(conflict->forcedbdchgqueue));
+
+      /* check if this candidate is valid */
+      if( bdchginfoIsInvalid(conflict, bdchginfo) )
+      {
+         SCIPdebugMessage("bound change info [%d:<%s> %s %g] is invaild -> pop it from the force queue\n", SCIPbdchginfoGetDepth(bdchginfo),
+            SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfo)),
+            SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+            SCIPbdchginfoGetNewbound(bdchginfo));
+
+         /* pop the invalid bound change info from the queue */
+         (void*)(SCIPpqueueRemove(conflict->forcedbdchgqueue));
+
+         /* call method recursively to get next conflict analysis candidate */
+         bdchginfo = conflictFirstCand(conflict);
+      }
+   }
    else
+   {
       bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueFirst(conflict->bdchgqueue));
+
+      /* check if this candidate is valid */
+      if( bdchginfo != NULL && bdchginfoIsInvalid(conflict, bdchginfo) )
+      {
+         SCIPdebugMessage("bound change info [%d:<%s> %s %g] is invaild -> pop it from the queue\n", SCIPbdchginfoGetDepth(bdchginfo),
+            SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfo)),
+            SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+            SCIPbdchginfoGetNewbound(bdchginfo));
+
+         /* pop the invalid bound change info from the queue */
+         (void*)(SCIPpqueueRemove(conflict->bdchgqueue));
+
+         /* call method recursively to get next conflict analysis candidate */
+         bdchginfo = conflictFirstCand(conflict);
+      }
+   }
    assert(bdchginfo == NULL || !SCIPbdchginfoIsRedundant(bdchginfo));
 
    return bdchginfo;
@@ -2108,12 +2226,16 @@ SCIP_RETCODE conflictAddConflictset(
    conflictset->validdepth = validdepth;
    conflictset->repropagate = repropagate;
 
-   /* add the queue elements to the conflict set */
+   /* add the valid queue elements to the conflict set */
    SCIPdebugMessage("adding %d variables from the queue as temporary conflict variables\n", nbdchginfos);
    for( i = 0; i < nbdchginfos; ++i )
    {
       assert(!SCIPbdchginfoIsRedundant(bdchginfos[i]));
-      SCIP_CALL( conflictsetAddBound(conflictset, blkmem, set, bdchginfos[i]) );
+
+      if( !bdchginfoIsInvalid(conflict, bdchginfos[i]) )
+      {
+         SCIP_CALL( conflictsetAddBound(conflictset, blkmem, set, bdchginfos[i]) );
+      }
    }
 
    /* calculate the depth, at which the conflictset should be inserted */
@@ -2322,7 +2444,7 @@ SCIP_RETCODE conflictResolveBound(
       return SCIP_INVALIDDATA;
    }
 
-   SCIPdebugMessage("resolving status: %d\n", *resolved);
+   SCIPdebugMessage("resolving status: %u\n", *resolved);
 
 #ifndef NDEBUG
    /* subract the size of the conflicq queues */
@@ -2487,7 +2609,7 @@ SCIP_RETCODE conflictCreateReconvergenceConss(
                 */
                assert(bdchgdepth >= validdepth);
                validdepth = bdchgdepth;
-               
+
                SCIPdebugMessage("couldn't resolve forced bound change on <%s> -> new valid depth: %d\n",
                   SCIPvarGetName(actvar), validdepth);
             }
@@ -2676,7 +2798,7 @@ SCIP_RETCODE conflictAnalyze(
          {
             int nlits;
             SCIP_Bool success;
-            
+
             /* call the conflict handlers to create a conflict set */
             SCIPdebugMessage("creating intermediate conflictset after %d resolutions up to depth %d (valid at depth %d): %d conflict bounds, %d bounds in queue\n",
                nresolutions, bdchgdepth, validdepth, conflict->conflictset->nbdchginfos,

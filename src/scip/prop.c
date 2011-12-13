@@ -153,7 +153,6 @@ SCIP_RETCODE SCIPpropCreate(
    (*prop)->propexec = propexec;
    (*prop)->propresprop = propresprop;
    (*prop)->propdata = propdata;
-   (*prop)->timingmask = timingmask;
    SCIP_CALL( SCIPclockCreate(&(*prop)->proptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*prop)->resproptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*prop)->presoltime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -182,6 +181,11 @@ SCIP_RETCODE SCIPpropCreate(
          "should propagator be delayed, if other propagators found reductions?",
          &(*prop)->delay, TRUE, delay, NULL, NULL) ); /*lint !e740*/
 
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/timingmask", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing when propagator should be called (%u:BEFORELP, %u:DURINGLPLOOP, %u:AFTERLPLOOP, %u:ALWAYS))", SCIP_PROPTIMING_BEFORELP, SCIP_PROPTIMING_DURINGLPLOOP, SCIP_PROPTIMING_AFTERLPLOOP, SCIP_PROPTIMING_ALWAYS);
+   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
+         (int*)(&(*prop)->timingmask), TRUE, timingmask, (int) SCIP_PROPTIMING_BEFORELP, (int) SCIP_PROPTIMING_ALWAYS, NULL, NULL) ); /*lint !e713*/
+
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/presolpriority", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "presolving priority of propagator <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
@@ -195,7 +199,7 @@ SCIP_RETCODE SCIPpropCreate(
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/presoldelay", name);
    SCIP_CALL( SCIPsetAddBoolParam(set, blkmem, paramname,
-         "should presolver be delayed, if other propagators found reductions?",
+         "should presolving be delayed, if other presolvers found reductions?",
          &(*prop)->presoldelay, TRUE, presoldelay, NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;

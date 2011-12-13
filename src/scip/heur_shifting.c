@@ -828,7 +828,7 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
       if( stored )
       {
          SCIPdebugMessage("found feasible shifted solution:\n");
-         SCIPdebug(SCIPprintSol(scip, sol, NULL, FALSE));
+         SCIPdebug( SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) ) );
          *result = SCIP_FOUNDSOL;
       }
    }

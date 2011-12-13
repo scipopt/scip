@@ -3349,7 +3349,10 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
 }
 
 
-/** creates and captures a logic or constraint */
+/** creates and captures a logic or constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 SCIP_RETCODE SCIPcreateConsLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */

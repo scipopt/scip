@@ -9142,7 +9142,10 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
    return SCIP_OKAY;
 }
 
-/** creates and captures a knapsack constraint */
+/** creates and captures a knapsack constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 SCIP_RETCODE SCIPcreateConsKnapsack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */

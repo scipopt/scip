@@ -89,6 +89,7 @@ struct SCIP_Fork
    SCIP_COL**            addedcols;          /**< array with pointers to new columns added at this node into the LP */
    SCIP_ROW**            addedrows;          /**< array with pointers to new rows added at this node into the LP */
    SCIP_LPISTATE*        lpistate;           /**< LP state information */
+   SCIP_Real             lpobjval;           /**< the LP objective value for that node, needed to compute the pseudo costs correctly */
    int                   naddedcols;         /**< number of columns added at this node */
    int                   naddedrows;         /**< number of rows added at this node */
    int                   nchildren;          /**< number of children of this parent node */
@@ -101,6 +102,7 @@ struct SCIP_Subroot
    SCIP_COL**            cols;               /**< array with pointers to the columns in the same order as in the LP */
    SCIP_ROW**            rows;               /**< array with pointers to the rows in the same order as in the LP */
    SCIP_LPISTATE*        lpistate;           /**< LP state information */
+   SCIP_Real             lpobjval;           /**< the LP objective value for that node, needed to compute the pseudo costs correctly */
    int                   ncols;              /**< number of columns in the LP */
    int                   nrows;              /**< number of rows in the LP */
    int                   nchildren;          /**< number of children of this parent node */
@@ -174,9 +176,9 @@ struct SCIP_Tree
                                               *   newly added rows of the focus node and the current probing node) */
    SCIP_LPISTATE*        probinglpistate;    /**< LP state information before probing started */
    SCIP_PENDINGBDCHG*    pendingbdchgs;      /**< array of pending bound changes, or NULL */
+   SCIP_Longint          focuslpstateforklpcount; /**< LP number of last solved LP in current LP state fork, or -1 if unknown */
    int                   pendingbdchgssize;  /**< size of pendingbdchgs array */
    int                   npendingbdchgs;     /**< number of pending bound changes */
-   int                   focuslpstateforklpcount; /**< LP number of last solved LP in current LP state fork, or -1 if unknown */
    int                   childrensize;       /**< available slots in children vector */
    int                   nchildren;          /**< number of children of focus node (number of used slots in children vector) */
    int                   siblingssize;       /**< available slots in siblings vector */
