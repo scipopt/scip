@@ -15166,6 +15166,19 @@ SCIP_RETCODE SCIPlpEndDive(
       int c;
       int r;
 
+      /* if there are lazy bounds, remove them from the LP */
+      if( lp->nlazycols > 0 )
+      {
+         /* @todo avoid loosing primal feasibility here after changing the objective already did destroy dual feasibility;
+          * first resolve LP?
+          */
+         SCIP_CALL( updateLazyBounds(lp, set) );
+         assert(lp->diving == lp->divinglazyapplied);
+
+         /* flush changes to the LP solver */
+         SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
+      }
+
       /* increment lp counter to ensure that we do not use solution values from the last solved diving lp */
       stat->lpcount++;
 
