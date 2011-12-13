@@ -29,6 +29,7 @@ $NAME/check/check_mosek.sh $NAME/check/evalcheck_mosek.sh $NAME/check/check_mose
 $NAME/check/check_symphony.sh $NAME/check/evalcheck_symphony.sh $NAME/check/check_symphony.awk \
 $NAME/check/checkcount.sh $NAME/check/evalcheckcount.sh $NAME/check/checkcount.awk \
 $NAME/check/shortmiplib.test $NAME/check/shortmiplib.solu \
+$NAME/check/shortmiplibex.test \
 $NAME/check/cmpres.awk $NAME/check/allcmpres.sh \
 $NAME/check/getlastprob.awk \
 $NAME/mps2zpl.sh $NAME/mps2zpl.awk \
