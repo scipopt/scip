@@ -352,7 +352,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
 #else
          SCIPinfoMessage(scip, NULL, "  Branching: first fractional\n");
 #endif
-         SCIPinfoMessage(scip, NULL, "  Readers: zpl [mps files can be converted with \"check/mps2zpl.sh <filename.mps(.gz)>\"]\n");
+         SCIPinfoMessage(scip, NULL, "  Readers: zpl (mps files can be converted with \"mps2zpl.sh filename.mps[.gz]\")\n");
          SCIPinfoMessage(scip, NULL, "\n");
 #endif
 

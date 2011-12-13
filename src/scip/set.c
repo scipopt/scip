@@ -840,7 +840,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->misc_exactsolve = SCIP_DEFAULT_MISC_EXACTSOLVE;
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "misc/usefprelax",
-         "exip: should floating-point problem be a relaxation of the original problem (instead of an approximation)?",
+         "exip: should floating-point problem be a relaxation of the original problem (instead of an approximation)? Change BEFORE reading in an instance!",
          &(*set)->misc_usefprelax, FALSE, SCIP_DEFAULT_MISC_USEFPRELAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
