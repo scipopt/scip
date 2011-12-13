@@ -31,7 +31,7 @@ $NAME/check/checkcount.sh $NAME/check/evalcheckcount.sh $NAME/check/checkcount.a
 $NAME/check/shortmiplib.test $NAME/check/shortmiplib.solu \
 $NAME/check/cmpres.awk $NAME/check/allcmpres.sh \
 $NAME/check/getlastprob.awk \
-$NAME/check/mps2zpl.sh $NAME/check/mps2zpl.awk \
+$NAME/mps2zpl.sh $NAME/mps2zpl.awk \
 $NAME/settings/cuts/*.set $NAME/settings/emphasis/*.set $NAME/settings/heuristics/*.set $NAME/settings/presolving/*.set \
 $NAME/release-notes/SCIP-* \
 $NAME/src/depend.* \
