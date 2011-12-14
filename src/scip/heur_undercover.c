@@ -25,6 +25,14 @@
  * as to make each constraint linear or convex. For this purpose it solves a binary program to automatically determine
  * the minimum number of variable fixings necessary. As fixing values, we use values from the LP relaxation, the NLP
  * relaxation, or the incumbent solution.
+ *
+ * @todo after adding conflict to master SCIP rerun the probing with the same cover;
+ *
+ * @todo consider an upper bound on the number of variable in the cover depending an the number of variable in the
+ *       original problem and the amount of constraints which are not reflected in the cover problem (such as linear,
+ *       cumulative, ...)
+ * @todo avoid strong branching calls (and may be even separation rounds) in the cover SCIP if the node limit is set one
+ * @todo change createNogood() -> createConflict() since we call that in SCIP conflicts and not no-good
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -2696,6 +2704,12 @@ SCIP_RETCODE SCIPapplyUndercover(
          {
             SCIP_Real maxvarsfac;
             SCIP_Bool useconf;
+            int minmaxvars;
+
+            SCIP_CALL( SCIPgetIntParam(scip, "conflict/minmaxvars", &minmaxvars) );
+            SCIP_CALL( SCIPgetRealParam(scip, "conflict/maxvarsfac", &maxvarsfac) );
+
+            useconf = bdlen > 0 && (bdlen <= minmaxvars || bdlen < maxvarsfac*nvars);
 
             if( SCIPgetRealParam(scip, "conflict/maxvarsfac", &maxvarsfac) != SCIP_OKAY )
                maxvarsfac = 0.1;
