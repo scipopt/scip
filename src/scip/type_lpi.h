@@ -67,7 +67,8 @@ enum SCIP_Pricing
    SCIP_PRICING_PARTIAL     = 3,        /**< partial pricing */
    SCIP_PRICING_STEEP       = 4,        /**< steepest edge pricing */
    SCIP_PRICING_STEEPQSTART = 5,        /**< steepest edge pricing without initial dual norms */
-   SCIP_PRICING_DEVEX       = 6         /**< devex pricing */
+   SCIP_PRICING_DEVEX       = 6,        /**< devex pricing */
+   SCIP_PRICING_FIRST       = 7         /**< first candidate rule */
 };
 typedef enum SCIP_Pricing SCIP_PRICING;
 

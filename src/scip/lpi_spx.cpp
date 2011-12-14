@@ -77,6 +77,7 @@
 #include "spxsteeppr.h"
 #include "spxparmultpr.h"
 #include "spxdevexpr.h"
+#include "spxpartialpr.h"
 #include "spxfastrt.h"
 #include "spxmainsm.h"
 #include "spxequilisc.h"
@@ -166,6 +167,7 @@ class SPxSCIP : public SPxSolver
    SPxSteepPR       m_price_steep;      /**< steepest edge pricer */
    SPxParMultPR     m_price_parmult;    /**< partial multiple pricer */
    SPxDevexPR       m_price_devex;      /**< devex pricer */
+   SPxPartialPR     m_price_partial;    /**< partial pricer */
 #ifdef WITH_BOUNDFLIPPING
    SPxBoundFlippingRT m_ratio;          /**< Long step dual ratio tester */
 #else
@@ -285,6 +287,12 @@ public:
    void setDevexPricer()
    {
       setPricer(&m_price_devex);
+      m_autopricing = false;
+   }
+
+   void setPartialPricer()
+   {
+      setPricer(&m_price_partial);
       m_autopricing = false;
    }
 
@@ -4190,6 +4198,9 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       case SCIP_PRICING_DEVEX:
          lpi->spx->setDevexPricer();
 	 break;
+      case SCIP_PRICING_FIRST:
+         lpi->spx->setPartialPricer();
+      break;
       default:
          return SCIP_LPERROR;
       }
