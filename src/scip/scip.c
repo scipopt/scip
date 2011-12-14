@@ -1446,18 +1446,18 @@ SCIP_RETCODE SCIPcopyVars(
 }
 
 /** returns copy of the source constraint; if there already is a copy of the source constraint in the constraint hash
- *  map, it is just returned as target constraint; elsewise a new constraint will be created in the target SCIP; this
- *  created constraint is added to the constraint hash map and returned as target constraint; the variable map is used
- *  to map the variables of the source SCIP to the variables of the target SCIP;
+ *  map, it is just returned as target constraint; elsewise a new constraint will be created and captured in the target
+ *  SCIP; this created constraint is added to the constraint hash map and returned as target constraint; the variable
+ *  map is used to map the variables of the source SCIP to the variables of the target SCIP
  *
  *  @warning If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution may
  *           be declared feasible even if it violates this particular constraint.  This constellation should only be
  *           used, if no LP or pseudo solution can violate the constraint -- e.g. if a local constraint is redundant due
  *           to the variable's local bounds.
  *
+ *  @note The constraint is not added to the target SCIP
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *  @note Do not change the source SCIP environment during the copying process
- *  @note the constraint is not added and not captured in the target SCIP
  */
 SCIP_RETCODE SCIPgetConsCopy(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
