@@ -178,7 +178,7 @@ public:
     *  - SCIP_SUCCESS    : the presolver found a reduction
     *  - SCIP_DIDNOTFIND : the presolver searched, but did not find a presolving change
     *  - SCIP_DIDNOTRUN  : the presolver was skipped
-    *  - SCIP_DELAYED    : the presolver should be called again after all (none delayed) wants
+    *  - SCIP_DELAYED    : the presolver was skipped, but should be called again
     */
    virtual SCIP_RETCODE scip_exec(
       SCIP*              scip,               /**< SCIP data structure */

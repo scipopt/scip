@@ -181,7 +181,7 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *  - SCIP_SUCCESS    : the presolving method found a reduction
  *  - SCIP_DIDNOTFIND : the presolving method searched, but did not find a presolving change
  *  - SCIP_DIDNOTRUN  : the presolving method was skipped
- *  - SCIP_DELAYED    : the presolving method should be called again after all (none delayed) wants
+ *  - SCIP_DELAYED    : the presolving method was skipped, but should be called again
  */
 #define SCIP_DECL_PROPPRESOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop, int nrounds, \
       int nnewfixedvars, int nnewaggrvars, int nnewchgvartypes, int nnewchgbds, int nnewholes, \
