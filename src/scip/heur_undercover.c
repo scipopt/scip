@@ -2696,6 +2696,12 @@ SCIP_RETCODE SCIPapplyUndercover(
          {
             SCIP_Real maxvarsfac;
             SCIP_Bool useconf;
+            int minmaxvars;
+
+            SCIP_CALL( SCIPgetIntParam(scip, "conflict/minmaxvars", &minmaxvars) );
+            SCIP_CALL( SCIPgetRealParam(scip, "conflict/maxvarsfac", &maxvarsfac) );
+
+            useconf = bdlen > 0 && (bdlen <= minmaxvars || bdlen < maxvarsfac*nvars);
 
             if( SCIPgetRealParam(scip, "conflict/maxvarsfac", &maxvarsfac) != SCIP_OKAY )
                maxvarsfac = 0.1;
