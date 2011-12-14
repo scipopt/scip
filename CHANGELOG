@@ -75,6 +75,7 @@ fixed bugs:
 - fixed computation of counter which state the changes since the last call of a presolver
 - fixed handling of unbounded solutions, including double-checking their feasibility and that the primal ray is a
   valid unboundedness proof and reoptimizing the LP with modified settings if the solution is not feasible
+- fixed bug in cons_orbitope with calling conflict analysis
 
 parameters
 - changed parameter "propagating/pseudoobj/maxcands" to "propagating/pseudoobj/minuseless" (see prop_pseudoobj.h)
