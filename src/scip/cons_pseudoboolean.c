@@ -3544,6 +3544,7 @@ SCIP_RETCODE correctLocksAndCaptures(
          assert(SCIPhashmapGetImage(conshdlrdata->hashmap, (void*)res2) != NULL);
 
          newconsanddatas[nnewconsanddatas] = (CONSANDDATA*) SCIPhashmapGetImage(conshdlrdata->hashmap, (void*)res2);
+         newandcoefs[nnewconsanddatas] = andcoefs[c1];
 
          /* add new locks */
          SCIP_CALL( addNewLocks(scip, cons, newconsanddatas[nnewconsanddatas], newandcoefs[nnewconsanddatas], newlhs, newrhs) );
@@ -3625,6 +3626,7 @@ SCIP_RETCODE addCliques(
    int c;
    int v2;
    int v1;
+   int nchgbdslocal;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -3764,9 +3766,11 @@ SCIP_RETCODE addCliques(
                /* @todo: check whether it is better to only add the clique or to add the setppc constraint or do both */
 
                /* add clique */
-               SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, 2, cutoff, nchgbds) );
+               SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, 2, cutoff, &nchgbdslocal) );
                if( *cutoff )
                   goto TERMINATE;
+
+	       *nchgbds += nchgbdslocal;
 
                (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_clq_%s_%s", SCIPconsGetName(cons), SCIPvarGetName(clqvars[0]), SCIPvarGetName(clqvars[1]) );
                SCIP_CALL( SCIPcreateConsSetpack(scip, &newcons, consname, 2, clqvars, 
@@ -3805,9 +3809,11 @@ SCIP_RETCODE addCliques(
                /* @todo: check whether it is better to only add the clique or to add the setppc constraint or do both */
 
                /* add clique */
-               SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, 2, cutoff, nchgbds) );
+               SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, 2, cutoff, &nchgbdslocal) );
                if( *cutoff )
                   goto TERMINATE;
+
+	       *nchgbds += nchgbdslocal;
 
                (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_clq_%s_%s", SCIPconsGetName(cons), SCIPvarGetName(clqvars[0]), SCIPvarGetName(clqvars[1]) );
                SCIP_CALL( SCIPcreateConsSetpack(scip, &newcons, consname, 2, clqvars, 
@@ -3929,9 +3935,11 @@ SCIP_RETCODE addCliques(
                /* @todo: check whether it is better to only add the clique or to add the setppc constraint or do both */
 
                /* add clique */
-               SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, 2, cutoff, nchgbds) );
+               SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, 2, cutoff, &nchgbdslocal) );
                if( *cutoff )
                   goto TERMINATE;
+
+	       *nchgbds += nchgbdslocal;
 
                (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_clq_%s_%s", SCIPconsGetName(cons), SCIPvarGetName(clqvars[0]), SCIPvarGetName(clqvars[1]) );
                SCIP_CALL( SCIPcreateConsSetpack(scip, &newcons, consname, 2, clqvars, 
@@ -3971,9 +3979,11 @@ SCIP_RETCODE addCliques(
                /* @todo: check whether it is better to only add the clique or to add the setppc constraint or do both */
 
                /* add clique */
-               SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, 2, cutoff, nchgbds) );
+               SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, 2, cutoff, &nchgbdslocal) );
                if( *cutoff )
                   goto TERMINATE;
+
+	       *nchgbds += nchgbdslocal;
 
                (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_clq_%s_%s", SCIPconsGetName(cons), SCIPvarGetName(clqvars[0]), SCIPvarGetName(clqvars[1]) );
                SCIP_CALL( SCIPcreateConsSetpack(scip, &newcons, consname, 2, clqvars, 
