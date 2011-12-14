@@ -151,7 +151,7 @@ typedef struct SCIP_PresolData SCIP_PRESOLDATA;   /**< presolver specific data *
  *  - SCIP_SUCCESS    : the presolver found a reduction
  *  - SCIP_DIDNOTFIND : the presolver searched, but did not find a presolving change
  *  - SCIP_DIDNOTRUN  : the presolver was skipped
- *  - SCIP_DELAYED    : the presolver should be called again after all (none delayed) wants
+ *  - SCIP_DELAYED    : the presolver was skipped, but should be called again
  */
 #define SCIP_DECL_PRESOLEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRESOL* presol, int nrounds, \
       int nnewfixedvars, int nnewaggrvars, int nnewchgvartypes, int nnewchgbds, int nnewholes, \
