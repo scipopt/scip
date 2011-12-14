@@ -32,6 +32,9 @@
  *       original problem and the amount of constraints which are not reflected in the cover problem (such as linear,
  *       cumulative, ...)
  * @todo avoid strong branching calls (and may be even separation rounds) in the cover SCIP if the node limit is set one
+ * @todo use the conflict analysis to analyze the infeasibility which arise after the probing of the cover worked and
+ *       solve returned infeasible, instead of adding the Nogood/Conflict by hand; that has the advantage that the SCIP
+ *       takes care of creating the conflict and might shrink the initial reason
  * @todo change createNogood() -> createConflict() since we call that in SCIP conflicts and not no-good
  */
 
