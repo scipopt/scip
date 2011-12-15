@@ -121,7 +121,6 @@
  *         inside the and-constraint will stay active
  */
 
-
 /** and-constraint data object */
 struct ConsAndData
 {
@@ -2747,8 +2746,17 @@ SCIP_RETCODE checkOrigPbCons(
       SCIP_VAR* res;
 #endif
       andcons = consdata->consanddatas[c]->origcons;
+      /*      assert(andcons != NULL); */
+
+      /* if after during or before presolving a solution will be transformed into original space and will be checked
+       * there, but origcons was already removed and only the pointer to the transformed and-constraint is existing
+       */
+      if( andcons == NULL )
+      {
+	 andcons = consdata->consanddatas[c]->cons;
+      }
       assert(andcons != NULL);
-      
+
       andvars = SCIPgetVarsAnd(scip, andcons);
       nandvars = SCIPgetNVarsAnd(scip, andcons);
 
