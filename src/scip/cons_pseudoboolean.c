@@ -796,6 +796,7 @@ SCIP_RETCODE addCoefLinear(
 
    /* save all data */
    consdata->linvars[consdata->nlinvars] = var; 
+   consdata->lincoefs[consdata->nlinvars] = val;
    ++(consdata->nlinvars);
 
    /* install rounding locks for new variable */
