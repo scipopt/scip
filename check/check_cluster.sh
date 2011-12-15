@@ -34,7 +34,7 @@ TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
 BINID=$4
-TIMELIMIT=$5
+TIMEFACTOR=$5
 NODELIMIT=$6
 MEMLIMIT=$7
 THREADS=$8
@@ -49,6 +49,14 @@ PPN=${16}
 CLIENTTMPDIR=${17}
 NOWAITCLUSTER=${18}
 EXCLUSIVE=${19}
+
+MAXFACTOR=24
+
+if [ $TIMEFACTOR -gt $MAXFACTOR ]
+then
+    TIMEFACTOR=1
+fi
+
 
 # check all variables defined
 if [ -z ${EXCLUSIVE} ]
@@ -107,12 +115,6 @@ else
     EXCLUSIVE=""
 fi
 
-# we add 100% to the hard time limit and additional 600 seconds in case of small time limits
-# NOTE: the jobs should have a hard running time of more than 5 minutes; if not so, these
-#       jobs get automatically assigned in the "exrpess" queue; this queue has only 4 CPUs
-#       available 
-HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 600\` + $TIMELIMIT`
-
 # we add 10% to the hard memory limit and additional 100MB to the hard memory limit
 HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` + \`expr $MEMLIMIT / 10\``
 
@@ -128,12 +130,30 @@ echo > $EVALFILE
 # counter to define file names for a test set uniquely 
 COUNT=1
 
-for i in `cat testset/$TSTNAME.test` DONE
+for j in `cat testset/$TSTNAME.ttest` DONE
 do
-  if test "$i" = "DONE"
+  if test "$j" = "DONE"
       then
       break
   fi
+
+  if test "$instance" = ""
+  then
+      instance=$j
+      continue
+  fi
+
+  TIMELIMIT=`expr $j \* $TIMEFACTOR`
+  i=$instance
+  instance=""
+
+  echo timelimit $TIMELIMIT
+
+  # we add 100% to the hard time limit and additional 600 seconds in case of small time limits
+  # NOTE: the jobs should have a hard running time of more than 5 minutes; if not so, these
+  #       jobs get automatically assigned in the "express" queue; this queue has only 4 CPUs
+  #       available
+  HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 600\` + $TIMELIMIT`
 
   # check if problem instance exists 
   if test -f $SCIPPATH/$i
