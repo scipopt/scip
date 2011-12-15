@@ -2841,7 +2841,7 @@ void printPBRow(
    /* print non-linear part */
    for( t = 0; t < ntermvals; ++t )
    {
-      (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%+"SCIP_LONGINT_FORMAT, (SCIP_Longint) SCIPround(scip, termvals[v] * (*mult))); /*lint !e613 */
+      (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%+"SCIP_LONGINT_FORMAT, (SCIP_Longint) SCIPround(scip, termvals[t] * (*mult))); /*lint !e613 */
       appendBuffer(scip, file, linebuffer, &linecnt, buffer);
 
       for( v = 0; v < ntermvars[t]; ++v ) /*lint !e613 */
