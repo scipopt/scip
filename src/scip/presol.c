@@ -341,16 +341,16 @@ SCIP_RETCODE SCIPpresolExec(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
-   int oldnfixedvars;
-   int oldnaggrvars;
-   int oldnchgvartypes;
-   int oldnchgbds;
-   int oldnaddholes;
-   int oldndelconss;
-   int oldnaddconss;
-   int oldnupgdconss;
-   int oldnchgcoefs;
-   int oldnchgsides;
+   int nnewfixedvars;
+   int nnewaggrvars;
+   int nnewchgvartypes;
+   int nnewchgbds;
+   int nnewaddholes;
+   int nnewdelconss;
+   int nnewaddconss;
+   int nnewupgdconss;
+   int nnewchgcoefs;
+   int nnewchgsides;
 
    assert(presol != NULL);
    assert(presol->presolexec != NULL);
@@ -373,27 +373,29 @@ SCIP_RETCODE SCIPpresolExec(
    if( presol->maxrounds >= 0 && nrounds >= presol->maxrounds && !presol->wasdelayed )
       return SCIP_OKAY;
 
-   /* remember the old number of changes */
-   oldnfixedvars = *nfixedvars;
-   oldnaggrvars = *naggrvars;
-   oldnchgvartypes = *nchgvartypes;
-   oldnchgbds = *nchgbds;
-   oldnaddholes = *naddholes;
-   oldndelconss = *ndelconss;
-   oldnaddconss = *naddconss;
-   oldnupgdconss = *nupgdconss;
-   oldnchgcoefs = *nchgcoefs;
-   oldnchgsides = *nchgsides;
-   assert(oldnfixedvars >= 0);
-   assert(oldnaggrvars >= 0);
-   assert(oldnchgvartypes >= 0);
-   assert(oldnchgbds >= 0);
-   assert(oldnaddholes >= 0);
-   assert(oldndelconss >= 0);
-   assert(oldnaddconss >= 0);
-   assert(oldnupgdconss >= 0);
-   assert(oldnchgcoefs >= 0);
-   assert(oldnchgsides >= 0);
+   /* calculate the number of changes since last call */
+   nnewfixedvars = *nfixedvars - presol->lastnfixedvars;
+   nnewaggrvars = *naggrvars - presol->lastnaggrvars;
+   nnewchgvartypes = *nchgvartypes - presol->lastnchgvartypes;
+   nnewchgbds = *nchgbds - presol->lastnchgbds;
+   nnewaddholes = *naddholes - presol->lastnaddholes;
+   nnewdelconss = *ndelconss - presol->lastndelconss;
+   nnewaddconss = *naddconss - presol->lastnaddconss;
+   nnewupgdconss = *nupgdconss - presol->lastnupgdconss;
+   nnewchgcoefs = *nchgcoefs - presol->lastnchgcoefs;
+   nnewchgsides = *nchgsides - presol->lastnchgsides;
+
+   /* remember the number of changes prior to the call of the presolver */
+   presol->lastnfixedvars = *nfixedvars;
+   presol->lastnaggrvars = *naggrvars;
+   presol->lastnchgvartypes = *nchgvartypes;
+   presol->lastnchgbds = *nchgbds;
+   presol->lastnaddholes = *naddholes;
+   presol->lastndelconss = *ndelconss;
+   presol->lastnaddconss = *naddconss;
+   presol->lastnupgdconss = *nupgdconss;
+   presol->lastnchgcoefs = *nchgcoefs;
+   presol->lastnchgsides = *nchgsides;
 
    /* check, if presolver should be delayed */
    if( !presol->delay || execdelayed )
@@ -405,27 +407,25 @@ SCIP_RETCODE SCIPpresolExec(
 
       /* call external method */
       SCIP_CALL( presol->presolexec(set->scip, presol, nrounds,
-            *nfixedvars - presol->nfixedvars, *naggrvars - presol->naggrvars, *nchgvartypes - presol->nchgvartypes,
-            *nchgbds - presol->nchgbds, *naddholes - presol->naddholes, *ndelconss - presol->ndelconss, 
-            *naddconss - presol->naddconss, *nupgdconss - presol->nupgdconss, *nchgcoefs - presol->nchgcoefs, 
-            *nchgsides - presol->nchgsides,
+            nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewaddholes,
+            nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
             nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
             ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result) );
 
       /* stop timing */
       SCIPclockStop(presol->presolclock, set);
 
-      /* count the new changes */
-      presol->nfixedvars += *nfixedvars - oldnfixedvars;
-      presol->naggrvars += *naggrvars - oldnaggrvars;
-      presol->nchgvartypes += *nchgvartypes - oldnchgvartypes;
-      presol->nchgbds += *nchgbds - oldnchgbds;
-      presol->naddholes += *naddholes - oldnaddholes;
-      presol->ndelconss += *ndelconss - oldndelconss;
-      presol->naddconss += *naddconss - oldnaddconss;
-      presol->nupgdconss += *nupgdconss - oldnupgdconss;
-      presol->nchgcoefs += *nchgcoefs - oldnchgcoefs;
-      presol->nchgsides += *nchgsides - oldnchgsides;
+      /* add/count the new changes */
+      presol->nfixedvars += *nfixedvars - presol->lastnfixedvars;
+      presol->naggrvars += *naggrvars - presol->lastnaggrvars;
+      presol->nchgvartypes += *nchgvartypes - presol->lastnchgvartypes;
+      presol->nchgbds += *nchgbds - presol->lastnchgbds;
+      presol->naddholes += *naddholes - presol->lastnaddholes;
+      presol->ndelconss += *ndelconss - presol->lastndelconss;
+      presol->naddconss += *naddconss - presol->lastnaddconss;
+      presol->nupgdconss += *nupgdconss - presol->lastnupgdconss;
+      presol->nchgcoefs += *nchgcoefs - presol->lastnchgcoefs;
+      presol->nchgsides += *nchgsides - presol->lastnchgsides;
 
       /* check result code of callback method */
       if( *result != SCIP_CUTOFF
@@ -437,20 +437,6 @@ SCIP_RETCODE SCIPpresolExec(
       {
          SCIPerrorMessage("presolver <%s> returned invalid result <%d>\n", presol->name, *result);
          return SCIP_INVALIDRESULT;
-      }
-      else if( *result != SCIP_DIDNOTRUN && *result != SCIP_DELAYED )
-      {
-         /* remember the number of changes prior to the call of the presolver */
-         presol->lastnfixedvars = oldnfixedvars;
-         presol->lastnaggrvars = oldnaggrvars;
-         presol->lastnchgvartypes = oldnchgvartypes;
-         presol->lastnchgbds = oldnchgbds;
-         presol->lastnaddholes = oldnaddholes;
-         presol->lastndelconss = oldndelconss;
-         presol->lastnaddconss = oldnaddconss;
-         presol->lastnupgdconss = oldnupgdconss;
-         presol->lastnchgcoefs = oldnchgcoefs;
-         presol->lastnchgsides = oldnchgsides;
       }
    }
    else

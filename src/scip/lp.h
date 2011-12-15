@@ -1159,7 +1159,9 @@ extern
 SCIP_RETCODE SCIPlpGetUnboundedSol(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat                /**< problem statistics */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Bool*            primalfeasible,     /**< pointer to store whether the solution is primal feasible, or NULL */
+   SCIP_Bool*            rayfeasible         /**< pointer to store whether the primal ray is a feasible unboundedness proof, or NULL */
    );
 
 /** returns primal ray proving the unboundedness of the current LP */

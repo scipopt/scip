@@ -163,11 +163,14 @@ public:
 
       return SCIP_OKAY;
    }
-   
+
    /** execution method of presolver
     *
     *  The presolver should go through the variables and constraints and tighten the domains or
     *  constraints. Each tightening should increase the given total numbers of changes.
+    *
+    *  @note the counters state the changes since the last call including the changes of this presolver during its last
+    *        last call
     *
     *  possible return values for *result:
     *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
