@@ -559,11 +559,12 @@ SCIP_RETCODE SCIPresetParams(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** sets parameters that are supported by EXACTSOLVE flag; note, this does not enable exact MIP solving. 
- *  For that misc/exactsolve has to be set appropriately. 
+/** sets parameters such that we obtain a reduced version of SCIP, which is currently a pure branch-and-bound algorithm. 
+ *  the method is called when the user sets the REDUCEDSOLVE flag to true. note that it does not enable exact MIP solving
+ *  (for that the EXACTSOLVE flag has to be set to true as well).
  */ 
 extern
-SCIP_RETCODE SCIPsetExactsolve(
+SCIP_RETCODE SCIPsetReducedsolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -5035,10 +5036,6 @@ SCIP_Real SCIPgetSolTransObj(
    SCIP_SOL*             sol                 /**< primal solution, or NULL for current LP/pseudo objective value */
    );
 
-/* todo: ???????????? this is only for a workaround method for the exactlp constraint handler, 
- * as I can not store solutions which are not FP representable at the moment, 
- * but at least I want to have the correct primal bound (delete this method from the code again later) ?????????????? 
- */
 /** sets transformed objective value of primal CIP solution; has to be called after solution has been constructed; 
  *  has to be called before solution is added to the solution storage
  */

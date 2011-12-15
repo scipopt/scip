@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-//#define USESBGAIN /* ??????????? only for testing effect of sbgain (dom-red, cut-off, db improve). only supported in inexact mode */
 
 /**@file   branch_relpscost.c
  * @ingroup BRANCHINGRULES
@@ -22,6 +21,8 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+//#define USESBGAIN /** uncomment to test gain of additional strong branching conclusions in inexact mode; 
+//                   *  same as in scip.c */
 
 #include <assert.h>
 #include <string.h>
@@ -235,7 +236,7 @@ SCIP_RETCODE execRelpscost(
     */
    exactsolve = SCIPisExactSolve(scip);
 
-#ifdef USESBGAIN /* ??????????? */
+#ifdef USESBGAIN
    exactsolve = FALSE;
 #else
    exactsolve = TRUE;
@@ -528,9 +529,16 @@ SCIP_RETCODE execRelpscost(
          {
             if( !SCIPisStopped(scip) )
             {
+#ifdef WITH_EXACTSOLVE
+               /* happens very often on numerically difficult instances. increase the verblevel to avoid huge logfiles */
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
+                  "(node %"SCIP_LONGINT_FORMAT") error in strong branching call for variable <%s> with solution %g\n", 
+                  SCIPgetNNodes(scip), SCIPvarGetName(branchcands[c]), branchcandssol[c]);
+#else
                SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                   "(node %"SCIP_LONGINT_FORMAT") error in strong branching call for variable <%s> with solution %g\n", 
                   SCIPgetNNodes(scip), SCIPvarGetName(branchcands[c]), branchcandssol[c]);
+#endif
             }
             break;
          }

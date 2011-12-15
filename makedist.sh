@@ -29,14 +29,17 @@ $NAME/check/check_mosek.sh $NAME/check/evalcheck_mosek.sh $NAME/check/check_mose
 $NAME/check/check_symphony.sh $NAME/check/evalcheck_symphony.sh $NAME/check/check_symphony.awk \
 $NAME/check/checkcount.sh $NAME/check/evalcheckcount.sh $NAME/check/checkcount.awk \
 $NAME/check/shortmiplib.test $NAME/check/shortmiplib.solu \
+$NAME/check/shortmiplibex.test \
 $NAME/check/cmpres.awk $NAME/check/allcmpres.sh \
 $NAME/check/getlastprob.awk \
+$NAME/mps2zpl.sh $NAME/mps2zpl.awk \
 $NAME/settings/cuts/*.set $NAME/settings/emphasis/*.set $NAME/settings/heuristics/*.set $NAME/settings/presolving/*.set \
 $NAME/release-notes/SCIP-* \
 $NAME/src/depend.* \
 $NAME/src/*.c $NAME/src/*.cpp $NAME/src/*.h \
 $NAME/src/scip/*.c $NAME/src/scip/*.cpp $NAME/src/scip/*.h \
 $NAME/src/blockmemshell/*.c $NAME/src/blockmemshell/*.cpp $NAME/src/blockmemshell/*.h \
+$NAME/src/rectlu/*.c $NAME/src/rectlu/*.h \
 $NAME/src/tclique/*.c $NAME/src/tclique/*.cpp $NAME/src/tclique/*.h \
 $NAME/src/objscip/*.c $NAME/src/objscip/*.cpp $NAME/src/objscip/*.h \
 $NAME/examples/Coloring/* $NAME/examples/Coloring/doc/* $NAME/examples/Coloring/data/* \

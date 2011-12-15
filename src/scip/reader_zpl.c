@@ -22,6 +22,8 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+//#define CREATEEXACTLPCONS_OUT /** uncomment to get more debug messages (SCIP_DEBUG) about creation of exactlp constraints; 
+//                               *  also in cons_exactlp.c */
 
 #include "scip/reader_zpl.h"
 
@@ -30,14 +32,12 @@
 #include <unistd.h>
 #include <string.h>
 #include <assert.h>
-
-#ifdef EXACTZPL
-#include <gmp.h> /* gmp.h has to be included before mme.h */
-#include "scip/intervalarith.h"
-#include "scip/cons_exactlp.h"
-//#define READER_OUT /* only for debugging ???????????????? */
-#define REALLOC /* only for debugging ???????????????? */
+#ifdef WITH_EXACTSOLVE
+#include "gmp.h" /* gmp.h has to be included before zimpl/mme.h */
 #endif
+
+#include "scip/cons_exactlp.h"
+#include "scip/intervalarith.h"
 
 #include "scip/cons_linear.h"
 #include "scip/cons_setppc.h"
@@ -76,7 +76,7 @@ static int nstartvals_ = 0;
 static SCIP_Bool issuedbranchpriowarning_ = FALSE;
 static SCIP_Bool readerror_ = FALSE;
 
-#ifdef EXACTZPL
+#ifdef WITH_EXACTSOLVE
 static SCIP_CONSHDLRDATA* conshdlrdata_ = NULL;
 static SCIP_VAR** vars_ = NULL;  
 static SCIP_OBJSENSE objsense_;
@@ -162,7 +162,7 @@ Bool xlp_conname_exists(const char* conname)
  *
  *  @note this method is used by ZIMPL from version 3.00; 
  */
-#ifndef EXACTZPL
+#ifndef WITH_EXACTSOLVE
 Bool xlp_addcon_term(
    const char*           name,               /**< constraint name */
    ConType               type,               /**< constraint type */
@@ -425,6 +425,11 @@ Bool storeConstraint(
    assert(beg_[nconss_] == nnonz_);
    assert(len_[nconss_] == 0);
   
+#ifdef CREATEEXACTLPCONS_OUT
+   SCIPdebugMessage("zimpl reader: store linear cons with <%d> vars in matrix, nconss<%d>, next matrixbeg<%d>, next matrixlen<%d>\n", 
+      term_get_elements(term), nconss_, beg_[nconss_], len_[nconss_]);
+#endif
+
    /* store coefficients of constraint */
    split = FALSE;
    mpq_init(absval);
@@ -452,9 +457,9 @@ Bool storeConstraint(
       assert(vars_[varidx] == scipvar);
       ind_[nnonz_] = varidx;
 
-#ifdef READER_OUT  /*???????????????*/
-      gmp_printf("nnonz=%d, i=%d, nelem=%d, var=%s given=%g stored=%Qd\n", nnonz_, i, term_get_elements(term), 
-         SCIPvarGetName(scipvar), numb_todbl(mono_get_coeff(term_get_element(term, i))), val_[nnonz_]);
+#ifdef CREATEEXACTLPCONS_OUT
+      gmp_printf("   i=%d: current nnonz<%d>, var<%s>, approx coef<%g>, stored exact coef<%Qd> (split:%d)\n", 
+         nnonz_, i, SCIPvarGetName(scipvar), numb_todbl(mono_get_coeff(term_get_element(term, i))), val_[nnonz_], split);
 #endif
 
       /* update number of inetgral nonzero coefficients */
@@ -474,9 +479,6 @@ Bool storeConstraint(
    }
    mpq_clear(absval);
 
-#ifdef READER_OUT  /*???????????????*/
-   gmp_printf("new: %d: beg=%d, len=%d\n", nconss_, beg_[nconss_], len_[nconss_]);
-#endif
 
    /* update number of constraints */
    nconss_++;
@@ -489,13 +491,6 @@ Bool storeConstraint(
    /* set length of constraint */
    len_[nconss_-1] = beg_[nconss_] - beg_[nconss_-1];
 
-#if 0 /*???????????? only to test usage of len array */
-   mpq_set(val_[nnonz_], val_[0]);  
-   mpq_set(val_[nnonz_+1], val_[1]);  
-   nnonz_ += 2; 
-   beg_[nconss_] = nnonz_;  
-#endif
-   
    return split;
 }
 
@@ -519,7 +514,6 @@ Bool xlp_addcon_term(
    int  i;
 
    /* reallocate and initialize constraint information; ranged constraints might be splitted into two constraints */ 
-#ifdef REALLOC /* todo: check, if it is ok to do this ????????????? */
    assert(nconss_ <= consssize_);
    if( nconss_ + 3 > consssize_ )
    {
@@ -535,45 +529,8 @@ Bool xlp_addcon_term(
          mpq_init(rhs_[i]);
       }
    }
-#else
-   assert(nconss_ <= consssize_);
-   if( nconss_ + 3 > consssize_ )
-   {
-      mpq_t* lhstmp;
-      mpq_t* rhstmp;
-
-      consssize_ = MAX(2 * consssize_, consssize_ + 3);
-
-      SCIP_CALL_ABORT( SCIPreallocMemoryArray(scip_, &beg_, consssize_) );
-      SCIP_CALL_ABORT( SCIPreallocMemoryArray(scip_, &len_, consssize_) );
-
-      SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_, &lhstmp, consssize_) );
-      SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_, &rhstmp, consssize_) );
-      for( i = 0; i < consssize_; ++i )
-      {
-         mpq_init(lhstmp[i]);
-         mpq_init(rhstmp[i]);
-      }
-
-      for( i = 0; i < nconss_; ++i )
-      {
-         mpq_set(lhstmp[i], lhs_[i]);
-         mpq_set(rhstmp[i], rhs_[i]);
- 
-         mpq_clear(lhs_[i]);
-         mpq_clear(rhs_[i]);
-      }
-
-      SCIPfreeMemoryArray(scip_, &lhs_);
-      SCIPfreeMemoryArray(scip_, &rhs_);
-      
-      lhs_ = lhstmp;
-      rhs_ = rhstmp;
-   }
-#endif
 
    /* reallocate and initialize matrix information; ranged constraints might be splitted into two constraints */ 
-#ifdef REALLOC /* todo: check, if it is ok to do this ????????????? */
    assert(nnonz_ <= nonzsize_);
    if( nnonz_ + (2 * term_get_elements(term)) > nonzsize_ )
    {
@@ -585,34 +542,6 @@ Bool xlp_addcon_term(
          mpq_init(val_[i]);
       }
    }   
-#else
-   assert(nnonz_ <= nonzsize_);
-   if( nnonz_ + (2 * term_get_elements(term)) > nonzsize_ )
-   {
-      mpq_t* valtmp;
-
-      nonzsize_ = MAX(2 * nonzsize_, nonzsize_ + (2 * term_get_elements(term)));
-
-      SCIP_CALL_ABORT( SCIPreallocMemoryArray(scip_, &ind_, nonzsize_) );
-
-      SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_, &valtmp, nonzsize_) );
-      for( i = 0; i < nonzsize_; ++i )
-      {
-         mpq_init(valtmp[i]);
-      }
-
-      for( i = 0; i < nnonz_; ++i )
-      {
-         mpq_set(valtmp[i], val_[i]);
- 
-         mpq_clear(val_[i]);
-      }
-
-      SCIPfreeMemoryArray(scip_, &val_);
-      
-      val_ = valtmp;
-   }   
-#endif
 
    lhsgiven = FALSE;
    rhsgiven = FALSE;
@@ -739,7 +668,7 @@ Bool xlp_addcon_term(
  *
  *  @note this method is used by ZIMPL up to version 2.09; 
  */
-#ifndef EXACTZPL
+#ifndef WITH_EXACTSOLVE
 Con* xlp_addcon(
    const char*           name,               /**< constraint name */
    ConType               type,               /**< constraint type */
@@ -831,7 +760,7 @@ Con* xlp_addcon(
  *
  *  @note this method is used by ZIMPL up to version 2.09; 
  */
-#ifndef EXACTZPL
+#ifndef WITH_EXACTSOLVE
 void xlp_addtonzo(
    Var*            var,                /**< variable to add */
    Con*            con,                /**< constraint */
@@ -864,7 +793,7 @@ void xlp_addtonzo(
 
 
 /** method adds an variable; is called directly by ZIMPL */
-#ifndef EXACTZPL
+#ifndef WITH_EXACTSOLVE
 Var* xlp_addvar(
    const char*           name,               /**< variable name */
    VarClass              usevarclass,        /**< variable type */
@@ -1008,7 +937,6 @@ Var* xlp_addvar(
    SCIP_CALL_ABORT( SCIPgetBoolParam(scip_, "reading/zplreader/usestartsol", &usestartsol) );
 
    /* reallocate and initialize variable specific information */ 
-#ifdef REALLOC /* todo: check, if it is ok to do this ????????????? */
    assert(nvars_ <= varssize_);
    if( nvars_ == varssize_ )
    {
@@ -1026,50 +954,6 @@ Var* xlp_addvar(
       }
    }
    assert(nvars_ < varssize_);
-#else
-   assert(nvars_ <= varssize_);
-   if( nvars_ == varssize_ )
-   {
-      mpq_t* lbtmp;
-      mpq_t* ubtmp;
-      mpq_t* objtmp;
-
-      varssize_ *= 2;
-
-      SCIP_CALL_ABORT( SCIPreallocMemoryArray(scip_, &vars_, varssize_) );
-
-      SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_, &lbtmp, varssize_) );
-      SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_, &ubtmp, varssize_) );
-      SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_, &objtmp, varssize_) );
-      for( i = 0; i < varssize_; ++i )
-      {
-         mpq_init(lbtmp[i]);
-         mpq_init(ubtmp[i]);
-         mpq_init(objtmp[i]);
-         mpq_set_si(objtmp[i], 0, 1); 
-      }
-
-      for( i = 0; i < nvars_; ++i )
-      {
-         mpq_set(lbtmp[i], lb_[i]);
-         mpq_set(ubtmp[i], ub_[i]);
-         mpq_set(objtmp[i], obj_[i]);
-
-         mpq_clear(lb_[i]);
-         mpq_clear(ub_[i]);
-         mpq_clear(obj_[i]);
-      }
-
-      SCIPfreeMemoryArray(scip_, &lb_);
-      SCIPfreeMemoryArray(scip_, &ub_);
-      SCIPfreeMemoryArray(scip_, &obj_);
-      
-      lb_ = lbtmp;
-      ub_ = ubtmp;
-      obj_ = objtmp;
-   }
-   assert(nvars_ < varssize_);
-#endif
 
    /* get exact bounds for exactlp constraint handler and safe FP values for FP problem */
    SCIPdebugMessage("zimpl reader: store lower bound of variable\n");
@@ -1185,8 +1069,8 @@ Var* xlp_addvar(
       nstartvals_++;
    }
 
-#ifdef READER_OUT /* only for debugging ???????????????? */
-   SCIPdebugMessage("reader_zpl: added new variable:\n");
+#ifdef CREATEEXACTLPCONS_OUT
+   SCIPdebugMessage("zimpl reader: added new variable");
    SCIPprintVar(scip_, var, NULL);
 #endif
 
@@ -1202,7 +1086,7 @@ Var* xlp_addvar(
 /** ZIMPL_VERSION is defined by ZIMPL version 3.00 and higher. ZIMPL 3.00 made same changes in the interface to SCIP. */
 #if (ZIMPL_VERSION >= 300)
 
-#ifndef EXACTZPL
+#ifndef WITH_EXACTSOLVE
 Bool xlp_addsos_term(
    const char*           name,               /**< constraint name */
    SosType               type,               /**< SOS type */
@@ -1305,7 +1189,7 @@ Bool xlp_addsos_term(
 #else /* else of #if (ZIMPL_VERSION >= 300) */
 
 /** method adds SOS constraints */
-#ifndef EXACTZPL
+#ifndef WITH_EXACTSOLVE
 Sos* xlp_addsos(
    const char*           name,               /**< constraint name */
    SosType               type,               /**< SOS type */
@@ -1382,7 +1266,7 @@ Sos* xlp_addsos(
 #endif
 
 /** adds a variable to a SOS constraint */
-#ifndef EXACTZPL
+#ifndef WITH_EXACTSOLVE
 void xlp_addtosos(
    Sos*                  sos,                /**< SOS constraint */ 
    Var*                  var,                /**< variable to add */
@@ -1459,7 +1343,7 @@ VarClass xlp_getclass(
 }
 
 /** returns lower bound */
-#ifndef EXACTZPL
+#ifndef WITH_EXACTSOLVE
 Bound* xlp_getlower(
    const Var*            var                 /**< variable */
    )
@@ -1498,7 +1382,7 @@ Bound* xlp_getlower(
 #endif
 
 /** returns upper bound */
-#ifndef EXACTZPL
+#ifndef WITH_EXACTSOLVE
 Bound* xlp_getupper(
    const Var*            var                 /**< variable */
    )
@@ -1546,7 +1430,7 @@ void xlp_objname(const char* name)
    /* nothing to be done */
 }
 
-#ifndef EXACTZPL
+#ifndef WITH_EXACTSOLVE
 void xlp_setdir(Bool minimize)
 {
    SCIP_OBJSENSE objsense;
@@ -1564,7 +1448,7 @@ void xlp_setdir(Bool minimize)
 #endif
 
 /** changes objective coefficient of a variable */
-#ifndef EXACTZPL
+#ifndef WITH_EXACTSOLVE
 void xlp_addtocost(
    Var*            var,                /**< variable */
    const Numb*     cost                /**< objective coefficient */
@@ -1600,9 +1484,9 @@ void xlp_addtocost(
    numb_get_mpq(cost, scipvalmpq);
    scipval = mpqGetRealApprox(scip_, scipvalmpq);
 
-#ifdef READER_OUT
-   SCIPdebugMessage("reader_zpl: change obj of var: old %g, add %g as approx", SCIPvarGetObj(scipvar), scipval);
-   gmp_printf(" (%Qd as orig mpq_t)\n", scipvalmpq);
+#ifdef CREATEEXACTLPCONS_OUT
+   SCIPdebugMessage("zimpl reader: change obj<%g> of var: add<%g> as approx", SCIPvarGetObj(scipvar), scipval);
+   gmp_printf(" (<%Qd> as exact)", scipvalmpq);
 #endif
 
    /* if we want to work on an FP relaxation we have to ensure that obj coefficient stored in scip for the variable 
@@ -1625,7 +1509,7 @@ void xlp_addtocost(
    mpq_add(obj_[varidx], obj_[varidx], scipvalmpq);
    SCIP_CALL_ABORT( SCIPchgVarObj(scip_, scipvar, SCIPvarGetObj(scipvar) + scipval) );
 
-#ifdef READER_OUT
+#ifdef CREATEEXACTLPCONS_OUT
    SCIPprintVar(scip_, scipvar, NULL);
 #endif
 
@@ -1682,7 +1566,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
    SCIP_Bool usestartsol;
    SCIP_Bool success;
    
-#ifdef EXACTZPL
+#ifdef WITH_EXACTSOLVE
    SCIP_CONS* cons;
    SCIP_Bool initial;
    SCIP_Bool separate;
@@ -1771,7 +1655,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
       SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_,&startvars_,startvalssize_) );
    }
 
-#ifdef EXACTZPL
+#ifdef WITH_EXACTSOLVE
    conshdlrdata_ = SCIPconshdlrGetData(SCIPfindConshdlr(scip, "exactlp"));
    assert(conshdlrdata_ != NULL);
 
@@ -1826,7 +1710,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
    if( strcmp(paramstr, "-") == 0 )
    {
       /* call ZIMPL parser without arguments */
-#ifdef EXACTSOLVE
+#ifdef WITH_REDUCEDSOLVE
       if( !zpl_read(filename, FALSE) )
          readerror_ = TRUE;
 #else
@@ -1915,7 +1799,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
       }
 
       /* call ZIMPL parser with arguments */
-#ifdef EXACTSOLVE
+#ifdef WITH_REDUCEDSOLVE
       if( !zpl_read_with_args(argv, argc, FALSE) )
          readerror_ = TRUE;
 #else
@@ -1942,9 +1826,13 @@ SCIP_DECL_READERREAD(readerReadZpl)
       }
    }
 
-#ifdef EXACTZPL
+#ifdef WITH_EXACTSOLVE
    /* create exactlp constraint from variable, constraint and matrix information stored */
    
+#ifdef CREATEEXACTLPCONS_OUT
+   SCIPdebugMessage("zimpl reader: after adding all vars sort them by probindex instead of index\n");
+#endif
+
    /* sort variable specific information by variable's probindex instead of index */
    for( c = 0; c < nconss_; ++c )
    {
@@ -1972,8 +1860,9 @@ SCIP_DECL_READERREAD(readerReadZpl)
       probindex = SCIPvarGetProbindex(vars_[idx]);
       assert(probindex >= idx);
 
-#ifdef READER_OUT /*????????????????*/
-      SCIPdebugMessage("i=%d| idxpos=%d: var=<%s,%d> | probindexpos=%d:  var=<%s,%d>", i, idx, SCIPvarGetName(vars_[idx]), SCIPvarGetProbindex(vars_[idx]), 
+#ifdef CREATEEXACTLPCONS_OUT
+      SCIPdebugMessage("i=%d:  on idxpos<%d> var<%s> with probidx<%d> | on probidxpos<%d> var<%s> with probidx<%d>\n", i, 
+         idx, SCIPvarGetName(vars_[idx]), SCIPvarGetProbindex(vars_[idx]), 
          probindex, SCIPvarGetName(vars_[probindex]), SCIPvarGetProbindex(vars_[probindex]) );
 #endif
 
@@ -1997,21 +1886,23 @@ SCIP_DECL_READERREAD(readerReadZpl)
          vars_[idx] = vartmp;
 
          nswitch++;
-#ifdef READER_OUT /*????????????????*/
-         SCIPdebugMessage(" --> switch --> i=%d (idx=%d)| idxpos=%d: var=<%s,%d> | probindexpos=%d:  var=<%s,%d>\n", i, idx, idx, SCIPvarGetName(vars_[idx]), SCIPvarGetProbindex(vars_[idx]), 
+#ifdef CREATEEXACTLPCONS_OUT
+         SCIPdebugMessage("   swap: idxpos<%d> var<%s> with probidx<%d> | on probidxpos<%d> var<%s> with probidx<%d>\n", 
+            idx, SCIPvarGetName(vars_[idx]), SCIPvarGetProbindex(vars_[idx]), 
             probindex, SCIPvarGetName(vars_[probindex]), SCIPvarGetProbindex(vars_[probindex]) );
 #endif
       }
       /* position of current variable is correct */      
       else
       {
-         /* move to variable on next position */
-         idx++;
-
-#ifdef READER_OUT /*????????????????*/
-         SCIPdebugMessage(" --> NO switch --> i=%d (idx=%d)| idxpos=%d: var=<%s,%d> | probindexpos=%d:  var=<%s,%d>\n", i, idx, idx-1, SCIPvarGetName(vars_[idx-1]), SCIPvarGetProbindex(vars_[idx-1]), 
+#ifdef CREATEEXACTLPCONS_OUT
+         SCIPdebugMessage("NO swap: idxpos<%d> var<%s> with probidx<%d> | on probidxpos<%d> var<%s> with probidx<%d>\n", 
+            idx, SCIPvarGetName(vars_[idx]), SCIPvarGetProbindex(vars_[idx]), 
             probindex, SCIPvarGetName(vars_[probindex]), SCIPvarGetProbindex(vars_[probindex]) );
 #endif
+
+         /* move to variable on next position */
+         idx++;
       }
    }
 
@@ -2055,8 +1946,8 @@ SCIP_DECL_READERREAD(readerReadZpl)
          removable, stickingatnode) );
    SCIP_CALL_ABORT( SCIPaddCons(scip, cons) );
    SCIP_CALL_ABORT( SCIPreleaseCons(scip, &cons) );
-#ifdef READER_OUT
-   SCIPdebugMessage("readerzpl: released exactlp constraint\n");
+#ifdef CREATEEXACTLPCONS_OUT
+   SCIPdebugMessage("zimpl reader: released exactlp constraint\n");
 #endif
 #endif   
 
@@ -2064,16 +1955,11 @@ SCIP_DECL_READERREAD(readerReadZpl)
    {
       /* transform the problem such that adding primal solutions is possible */
       SCIP_CALL( SCIPtransformProb(scip) );
-#ifdef EXACTZPL
-#ifdef READER_OUT
-      SCIPdebugMessage("   after transform prob (nstartvals=%d)\n", nstartvals_);
-#endif
-#endif
       SCIP_CALL( SCIPcreateSol(scip, &startsol, NULL) );
       for( i = 0; i < nstartvals_; i++ )
       {
          SCIP_CALL( SCIPsetSolVal(scip, startsol, startvars_[i], startvals_[i]) );
-#ifndef EXACTZPL
+#ifndef WITH_EXACTSOLVE
          SCIP_CALL( SCIPreleaseVar(scip, &startvars_[i]) ); /* variables are still needed */
 #endif
       }
@@ -2097,7 +1983,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
       startvalssize_ = 0;
    }
    
-#ifdef EXACTZPL
+#ifdef WITH_EXACTSOLVE
    /* free matrix specific information */ 
    assert(nnonz_ <= nonzsize_);
    for( i = 0; i < nonzsize_; ++i )
@@ -2150,12 +2036,6 @@ SCIP_DECL_READERREAD(readerReadZpl)
 #endif
 
    *result = SCIP_SUCCESS;
-
-#ifdef EXACTZPL
-#ifdef READER_OUT
-   SCIPdebugMessage("end of readerreadzpl\n");
-#endif
-#endif
 
    if( readerror_ )
       return SCIP_PARSEERROR;

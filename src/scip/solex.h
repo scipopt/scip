@@ -34,6 +34,9 @@
 #include "scip/type_solex.h"
 #include "scip/type_heur.h"
 #include "scip/pub_solex.h"
+#ifdef WITH_EXACTSOLVE
+#include "gmp.h"
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -91,6 +94,7 @@ SCIP_Bool SCIPsolexsAreEqual(
 /** outputs non-zero elements of exact solution to file stream */
 extern
 SCIP_RETCODE SCIPsolexPrint(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOLEX*           sol,                /**< primal CIP solution */
    SCIP_PROB*            prob,               /**< problem data (original or transformed) */
    SCIP_PROB*            transprob,          /**< transformed problem data or NULL (to display priced variables) */
@@ -100,6 +104,8 @@ SCIP_RETCODE SCIPsolexPrint(
 
 #ifdef __cplusplus
 }
+#endif
+
 #endif
 
 #endif

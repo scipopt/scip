@@ -12,9 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-//#define SCIP_DEBUG /*?????????????????*/
-//#define SCIP_DEBUG2 /*?????????????????*/
-//#define USEOBJLIM /*??????????????*/ 
 
 /**@file   lpiex_qsoex.c
  * @brief  LP interface for QSopt_ex version >= 2.5.4 (r239)
@@ -23,16 +20,27 @@
  * @author Kati Wolter 
 */
 
-/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+//#define VERIFY_OUT  /** uncomment to get info of QSopt_ex about verifying dual feasibility of the basis */
 
-#include <gmp.h>
+//#define USEOBJLIM   /** uncomment to pass objlimit to exact lp solver; same as in cons_exactlp.c
+//                     *  warning: QSopt_ex allows objlimits but the support is buggy; if the limit is reached, QSopt_ex
+//                     *  does not stop but increasess the precision */
+
+#include <string.h>
+#ifdef WITH_GMP
+#include "gmp.h"
 #include "EGlib.h"
 #include "QSopt_ex.h"
+#endif
+
 #include "scip/lpiex.h"
 #include "scip/bitencode.h"
 #include "scip/message.h"
 #include "scip/misc.h"
-#include <string.h>
+
+
+#ifdef WITH_GMP
 
 typedef SCIP_DUALPACKET COLPACKET;           /* each column needs two bits of information (basic/on_lower/on_upper) */
 #define COLS_PER_PACKET SCIP_DUALPACKETSIZE
@@ -368,6 +376,26 @@ void* SCIPlpiexGetSolverPointer(
 /**@name LPI Creation and Destruction Methods */
 /**@{ */
 
+/** calls initializator of LP solver; this is mainly needed for defining constants in extended and rational precision */
+void SCIPlpiexStart(
+   void
+   )
+{
+   assert(!__QSexact_setup);
+   QSexactStart();
+}
+
+/** calls deinitializator of LP solver; this is needed for freeing all internal data of the solver, like constants in 
+ *  extended and rational precision 
+ */
+void SCIPlpiexEnd(
+   void
+   )
+{
+   assert(__QSexact_setup);
+   QSexactClear();
+}
+
 /** creates an LP problem object
  * @return SCIP_OK on success
  * */
@@ -551,7 +579,7 @@ SCIP_RETCODE SCIPlpiexLoadColLP(
 }
 
 
-#if 0 /* old version with some minor fix concering nnonz=0, but which does not work, beg =NULL is not allowed still */
+#if 0 /* old version with some minor fix concering nnonz=0, but which does not work, beg=NULL is still not allowed */
 /** adds columns to the LP */
 SCIP_RETCODE SCIPlpiexAddCols(
    SCIP_LPIEX*           lpi,                /**< LP interface structure */
@@ -604,6 +632,7 @@ SCIP_RETCODE SCIPlpiexAddCols(
    QS_RETURN(rval);
 }
 #else
+/** @todo exip: check whether I implemented handling of case beg=ind=val=NULL correctly */
 /** adds columns to the LP */
 SCIP_RETCODE SCIPlpiexAddCols(
    SCIP_LPIEX*           lpi,                /**< LP interface structure */
@@ -1787,10 +1816,13 @@ SCIP_RETCODE SCIPlpiexGetSolFeasibility(
    if ( lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_UNBOUNDED)
       *primalfeasible = 1;
 
-#ifdef USEOBJLIM /*??????????????*/ 
+   /* @todo: check why we can conclude dual feasibility from primal infeasibility. in theory, the LP could be primal and 
+    * dual infeasible as well; see also SCIPlpiexIsDualFeasible() and SCIPlpiexIsDualInfeasible()
+    */
+#ifdef USEOBJLIM
    if ( lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_INFEASIBLE || lpi->solstat == QS_LP_OBJ_LIMIT ) 
 #else
-   if ( lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_INFEASIBLE ) /* ?????????????????? */
+   if ( lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_INFEASIBLE )
 #endif
       *dualfeasible = 1;
 
@@ -1933,10 +1965,10 @@ SCIP_Bool SCIPlpiexIsDualFeasible(
 
    SCIPdebugMessage("checking for dual feasibility\n");
 
-#ifdef USEOBJLIM /*??????????????*/ 
+#ifdef USEOBJLIM
    return (lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_OBJ_LIMIT ); 
 #else
-   return (lpi->solstat == QS_LP_OPTIMAL);  /* ?????????????*/
+   return (lpi->solstat == QS_LP_OPTIMAL);
 #endif
 }
 
@@ -1976,10 +2008,10 @@ SCIP_Bool SCIPlpiexIsObjlimExc(
 
    SCIPdebugMessage("checking for objective limit exceeded\n");
 
-#ifdef USEOBJLIM /*??????????????*/ 
+#ifdef USEOBJLIM
    return (lpi->solstat == QS_LP_OBJ_LIMIT);
 #else
-   return FALSE;   /* ????????????? */
+   return FALSE;
 #endif
 }
 
@@ -2664,7 +2696,7 @@ SCIP_RETCODE SCIPlpiexWriteState(
    return SCIP_OKAY;
 }
 
-/** checks whether LPi state (i.e. basis information) is dual feasbile and returns corresponding dual objective value.
+/** checks whether LPi state (i.e. basis information) is dual feasible and returns corresponding dual objective value.
  *  if wanted it will first directly test the corresponding approximate dual and primal solution 
  *  (corrected via dual variables for bounds and primal variables for slacks if possible) for optimality
  *  before performing the dual feasibility test on the more expensive exact basic solution. 
@@ -2689,7 +2721,7 @@ SCIP_RETCODE SCIPlpiexStateDualFeasible(
    /* checks whether basis just loaded into the solver is dual feasible */
    B =  mpq_QSget_basis(lpi->prob);
    
-#ifdef SCIP_DEBUG2
+#ifdef VERIFY_OUT
    rval = QSexact_verify(lpi->prob, B, (int) useprestep, primalsol, dualsol, (int*) result, dualobjval, 0);
 #else
    rval = QSexact_verify(lpi->prob, B, (int) useprestep, primalsol, dualsol, (int*) result, dualobjval, 1);
@@ -2903,11 +2935,14 @@ SCIP_RETCODE SCIPlpiexSetRealpar(
 /**@{ */
 
 /** returns value treated as positive infinity in the LP solver */
-const mpq_t* SCIPlpiexPosInfinity(
-   SCIP_LPIEX*           lpi             /**< LP interface structure */
+void SCIPlpiexPosInfinity(
+   SCIP_LPIEX*           lpi,            /**< LP interface structure */
+   mpq_t*                infval          /**< pointer to store positive infinity value of LP solver */
    )
-{  /*lint --e{715} */
-   return ((const mpq_t*)(&(mpq_ILL_MAXDOUBLE)));
+{
+   assert(infval != NULL);
+
+   mpq_set(*infval, mpq_ILL_MAXDOUBLE);
 }
 
 /** checks if given value is treated as positive infinity in the LP solver */
@@ -2920,11 +2955,14 @@ SCIP_Bool SCIPlpiexIsPosInfinity(
 }
 
 /** returns value treated as negative infinity in the LP solver */
-const mpq_t* SCIPlpiexNegInfinity(
-   SCIP_LPIEX*           lpi             /**< LP interface structure */
+void SCIPlpiexNegInfinity(
+   SCIP_LPIEX*           lpi,            /**< LP interface structure */
+   mpq_t*                infval          /**< pointer to store negative infinity value of LP solver */
    )
 {  /*lint --e{715} */
-   return ((const mpq_t*)(&(mpq_ILL_MINDOUBLE)));
+   assert(infval != NULL);
+
+   mpq_set(*infval, mpq_ILL_MINDOUBLE);
 }
 
 /** checks if given value is treated as negative infinity in the LP solver */
@@ -3102,3 +3140,4 @@ SCIP_RETCODE SCIPlpiexFactorSolve(
 }
 
 /**@} */
+#endif

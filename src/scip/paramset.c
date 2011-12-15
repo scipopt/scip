@@ -2178,10 +2178,11 @@ SCIP_RETCODE SCIPparamsetSetToDefault(
    return SCIP_OKAY;
 }
 
-/** sets parameters that are supported by EXACTSOLVE flag; note, this does not enable exact MIP solving. 
- *  For that misc/exactsolve has to be set appropriately. 
+/** sets parameters such that we obtain a reduced version of SCIP, which is currently a pure branch-and-bound algorithm. 
+ *  the method is called when the user sets the REDUCEDSOLVE flag to true. note that it does not enable exact MIP solving
+ *  (for that the EXACTSOLVE flag has to be set to true as well).
  */ 
-SCIP_RETCODE SCIPparamsetSetExactsolve(
+SCIP_RETCODE SCIPparamsetSetReducedsolve(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -2192,17 +2193,19 @@ SCIP_RETCODE SCIPparamsetSetExactsolve(
    /* turn off restarts */
    SCIP_CALL( paramSetInt(scip, paramset, "presolving/maxrestarts", 0) );
 
-   SCIP_CALL( paramSetInt(scip, paramset, "constraints/linear/maxprerounds", 0) );
-   SCIP_CALL( paramSetInt(scip, paramset, "constraints/linear/maxprerounds", 0) );
+   /* turn off presolving, except for exactlp constraint handler where trivial presolving steps are implemented */
    SCIP_CALL( paramSetInt(scip, paramset, "constraints/integral/maxprerounds", 0) );
+#ifdef WITH_EXACTSOLVE
    SCIP_CALL( paramSetInt(scip, paramset, "constraints/exactlp/maxprerounds", -1) );
+#endif
 
    /* turn off domain propagation */
    SCIP_CALL( paramSetInt(scip, paramset, "propagating/maxrounds", 0) );
    SCIP_CALL( paramSetInt(scip, paramset, "propagating/maxroundsroot", 0) );
-   SCIP_CALL( paramSetInt(scip, paramset, "constraints/linear/propfreq", -1) );
    SCIP_CALL( paramSetInt(scip, paramset, "constraints/integral/propfreq", -1) );
+#ifdef WITH_EXACTSOLVE
    SCIP_CALL( paramSetInt(scip, paramset, "constraints/exactlp/propfreq", -1) );
+#endif
 
    /* turn off conflict analysis */
    SCIP_CALL( paramSetBool(scip, paramset, "conflict/enable", FALSE) );
@@ -2211,9 +2214,10 @@ SCIP_RETCODE SCIPparamsetSetExactsolve(
     * takes place at every node
     */
    SCIP_CALL( paramSetInt(scip, paramset, "separating/maxstallrounds", -1) ); 
-   SCIP_CALL( paramSetInt(scip, paramset, "constraints/linear/sepafreq", -1) );
    SCIP_CALL( paramSetInt(scip, paramset, "constraints/integral/sepafreq", -1) );
+#ifdef WITH_EXACTSOLVE
    SCIP_CALL( paramSetInt(scip, paramset, "constraints/exactlp/sepafreq", 1) );
+#endif
 
    return SCIP_OKAY;
 }

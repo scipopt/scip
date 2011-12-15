@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-//#define USESBGAIN /* ??????????? only for testing effect of sbgain (dom-red, cut-off, db improve). only supported in inexact mode */
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -27,6 +26,8 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+//#define USESBGAIN /** uncomment to test gain of additional strong branching conclusions in inexact mode; 
+//                   *  same as in branch_relpscost.c */
 
 #include <stdarg.h>
 #include <assert.h>
@@ -72,9 +73,8 @@
 #include "scip/sepa.h"
 #include "scip/prop.h"
 #include "scip/debug.h"
-#ifdef EXACTSOLVE
 #include "scip/cons_exactlp.h"
-#endif
+#include "scip/lpiex.h"
 
 
 /* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
@@ -368,19 +368,18 @@ SCIP_Real getPrimalbound(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-#ifdef EXACTSOLVE
-   if( SCIPisExactSolve(scip) )
-   {
-      SCIP_CONS** conss;
+#ifdef WITH_EXACTSOLVE
+   SCIP_CONS** conss;
       
-      conss = SCIPgetConss(scip);
-      assert(conss != NULL);
-      assert(SCIPgetNConss(scip) == 1);
+   assert(SCIPisExactSolve(scip));
+   conss = SCIPgetConss(scip);
+   assert(conss != NULL);
+   assert(SCIPgetNConss(scip) == 1);
       
-      return SCIPgetExternSafeObjval(scip, conss[0], scip->primal->upperbound, FALSE);
-   }
+   return SCIPgetExternSafeObjval(scip, conss[0], scip->primal->upperbound, FALSE);
 #endif
 
+   assert(!SCIPisExactSolve(scip));
    return SCIPprobExternObjval(scip->transprob, scip->set, scip->primal->upperbound);
 }
 
@@ -397,18 +396,18 @@ SCIP_Real getDualbound(
       return getPrimalbound(scip);
    else
    {
-#ifdef EXACTSOLVE
-      if( SCIPisExactSolve(scip) )
-      {
-         SCIP_CONS** conss;
+#ifdef WITH_EXACTSOLVE
+      SCIP_CONS** conss;
          
-         conss = SCIPgetConss(scip);
-         assert(conss != NULL);
-         assert(SCIPgetNConss(scip) == 1);
+      assert(SCIPisExactSolve(scip));
+      conss = SCIPgetConss(scip);
+      assert(conss != NULL);
+      assert(SCIPgetNConss(scip) == 1);
  
-         return SCIPgetExternSafeObjval(scip, conss[0], lowerbound, TRUE);
-      }
+      return SCIPgetExternSafeObjval(scip, conss[0], lowerbound, TRUE);
 #endif
+
+      assert(!SCIPisExactSolve(scip));
       return SCIPprobExternObjval(scip->transprob, scip->set, lowerbound);
    }
 }
@@ -499,7 +498,8 @@ void SCIPprintVersion(
 #else
    SCIPmessageFPrintInfo(file, " [mode: optimized]");
 #endif
-   SCIPmessageFPrintInfo(file, " [LP solver: %s]\n", SCIPlpiGetSolverName());
+   SCIPmessageFPrintInfo(file, " [LP solver: %s]", SCIPlpiGetSolverName());
+   SCIPmessageFPrintInfo(file, " [Exact LP solver: %s]\n", SCIPlpiexGetSolverName());
    SCIPmessageFPrintInfo(file, "%s\n", SCIP_COPYRIGHT);
 }
 
@@ -1293,16 +1293,17 @@ SCIP_RETCODE SCIPresetParams(
    return SCIP_OKAY;
 }
 
-/** sets parameters that are supported by EXACTSOLVE flag; note, this does not enable exact MIP solving. 
- *  For that misc/exactsolve has to be set appropriately. 
+/** sets parameters such that we obtain a reduced version of SCIP, which is currently a pure branch-and-bound algorithm. 
+ *  the method is called when the user sets the REDUCEDSOLVE flag to true. note that it does not enable exact MIP solving
+ *  (for that the EXACTSOLVE flag has to be set to true as well).
  */ 
-SCIP_RETCODE SCIPsetExactsolve(
+SCIP_RETCODE SCIPsetReducedsolve(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetExactsolve", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPsetSetExactsolve(scip->set) );
+   SCIP_CALL( SCIPsetSetReducedsolve(scip->set) );
 
    return SCIP_OKAY;
 }
@@ -4389,8 +4390,9 @@ SCIP_Real SCIPgetLocalDualbound(
 
    node = SCIPtreeGetCurrentNode(scip->tree);
 
-#ifdef EXACTSOLVE
-   if( SCIPisExactSolve(scip) && node != NULL )
+#ifdef WITH_EXACTSOLVE
+   assert(SCIPisExactSolve(scip)); 
+   if( node != NULL )
    {
       SCIP_CONS** conss;
       
@@ -4400,8 +4402,11 @@ SCIP_Real SCIPgetLocalDualbound(
       
       return SCIPgetExternSafeObjval(scip, conss[0], SCIPnodeGetLowerbound(node), TRUE);
    }
+   else
+      return SCIP_INVALID;
 #endif
 
+   assert(!SCIPisExactSolve(scip)); 
    return node != NULL ? SCIPprobExternObjval(scip->transprob, scip->set, SCIPnodeGetLowerbound(node)) : SCIP_INVALID;
 }
 
@@ -4427,11 +4432,11 @@ SCIP_Real SCIPgetNodeDualbound(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNodeDualbound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-#ifdef EXACTSOLVE
-   if( SCIPisExactSolve(scip) )
+#ifdef WITH_EXACTSOLVE
    {
       SCIP_CONS** conss;
       
+      assert(SCIPisExactSolve(scip));
       conss = SCIPgetConss(scip);
       assert(conss != NULL);
       assert(SCIPgetNConss(scip) == 1);
@@ -4440,6 +4445,7 @@ SCIP_Real SCIPgetNodeDualbound(
    }
 #endif
 
+   assert(!SCIPisExactSolve(scip));
    return SCIPprobExternObjval(scip->transprob, scip->set, SCIPnodeGetLowerbound(node));
 }
 
@@ -5359,113 +5365,115 @@ SCIP_RETCODE initSolve(
    /* if all variables are known, calculate a trivial primal bound by setting all variables to their worst bound */
    if( scip->set->nactivepricers == 0 )
    {
-      if( scip->set->misc_exactsolve )
+#ifdef WITH_EXACTSOLVE
+      assert(scip->set->misc_exactsolve);
+      if( scip->set->misc_usefprelax )
       {
-         if( scip->set->misc_usefprelax )
+         SCIP_VAR* var;
+         SCIP_Real obj;
+         SCIP_Real bd;
+         SCIP_Real objbound;
+         SCIP_INTERVAL objint;
+         SCIP_INTERVAL bdint;
+         SCIP_INTERVAL objboundint;
+         SCIP_INTERVAL prod;
+         int v;
+            
+         objbound = 1.0;
+         SCIPintervalSet(&objboundint, objbound);
+         assert(objbound == SCIPintervalGetSup(objboundint));
+         for( v = 0; v < scip->transprob->nvars && !SCIPsetIsInfinity(scip->set, objbound); ++v )
          {
-            SCIP_VAR* var;
-            SCIP_Real obj;
-            SCIP_Real bd;
-            SCIP_Real objbound;
-            SCIP_INTERVAL objint;
-            SCIP_INTERVAL bdint;
-            SCIP_INTERVAL objboundint;
-            SCIP_INTERVAL prod;
-            int v;
-            
-            objbound = 1.0;
-            SCIPintervalSet(&objboundint, objbound);
-            assert(objbound == SCIPintervalGetSup(objboundint));
-            for( v = 0; v < scip->transprob->nvars && !SCIPsetIsInfinity(scip->set, objbound); ++v )
-            {
-               var = scip->transprob->vars[v];
-               obj = SCIPvarGetObj(var);
+            var = scip->transprob->vars[v];
+            obj = SCIPvarGetObj(var);
                
-               if( obj != 0.0 )
-               {
-                  bd = SCIPvarGetWorstBound(var);
-                  if( SCIPsetIsInfinity(scip->set, REALABS(bd)) )
-                     objbound = SCIPsetInfinity(scip->set);
-                  else
-                  {
-                     SCIPintervalSet(&bdint, bd);
-                     SCIPintervalSet(&objint, obj);
-                     SCIPintervalMul(SCIPinfinity(scip), &prod, bdint, objint); 
-                     SCIPintervalAdd(SCIPinfinity(scip), &objboundint, objboundint, prod);
-                     objbound = SCIPintervalGetSup(objboundint);
-                  }
-               }            
-            }
-            
-            /* update primal bound (at the beginning, added 1.0 to primal bound, such that solution with worst bound may be found) */
-            if( !SCIPsetIsInfinity(scip->set, objbound) && objbound < scip->primal->cutoffbound )
+            if( obj != 0.0 )
             {
-               SCIP_CALL( SCIPprimalSetCutoffbound(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
-                     scip->lp, objbound) );
-            }
+               bd = SCIPvarGetWorstBound(var);
+               if( SCIPsetIsInfinity(scip->set, REALABS(bd)) )
+                  objbound = SCIPsetInfinity(scip->set);
+               else
+               {
+                  SCIPintervalSet(&bdint, bd);
+                  SCIPintervalSet(&objint, obj);
+                  SCIPintervalMul(SCIPinfinity(scip), &prod, bdint, objint); 
+                  SCIPintervalAdd(SCIPinfinity(scip), &objboundint, objboundint, prod);
+                  objbound = SCIPintervalGetSup(objboundint);
+               }
+            }            
          }
-         else
-         {
-            SCIP_CONS** conss;
-            SCIP_VAR* var;
-            SCIP_Bool objboundinf; 
-            mpq_t obj;
-            mpq_t objbound;
-            mpq_t bd;
-            mpq_t prod;
-            int v;
-
-            conss = SCIPgetConss(scip);
-            assert(conss != NULL);
-            assert(SCIPgetNConss(scip) == 1);
-
-            mpq_init(obj);
-            mpq_init(objbound);
-            mpq_init(bd);
-            mpq_init(prod);
-                      
-            mpq_set_si(objbound, 1, 1);
-            objboundinf = FALSE;
-            for( v = 0; v < scip->transprob->nvars && !objboundinf; ++v )
-            {
-               var = scip->transprob->vars[v];
-               SCIPvarGetObjExactlp(conss[0], var, obj);
-               if( mpq_sgn(obj) != 0 )
-               {
-                  SCIPvarGetWorstGlobalBoundExactlp(conss[0], var, bd);
-                  if( SCIPisPosInfinityExactlp(scip, bd) || SCIPisNegInfinityExactlp(scip, bd) )
-                     objboundinf = TRUE;
-                  else
-                  {
-                     assert(!objboundinf);
-                     mpq_mul(prod, obj, bd);
-                     mpq_add(objbound, objbound, prod);
-                  }
-               }
-            }
-            if( !objboundinf )
-            {
-               SCIP_Real safeobjbound;
-               
-               safeobjbound = mpqGetRealRelax(scip, objbound, GMP_RNDU);
             
-               /* update primal bound (at the beginning, added 1.0 to primal bound, such that solution with worst bound 
-                * may be found) 
-                */
-               if( !SCIPsetIsInfinity(scip->set, safeobjbound) && safeobjbound < scip->primal->cutoffbound )
-               {
-                  SCIP_CALL( SCIPprimalSetCutoffbound(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
-                        scip->lp, safeobjbound) );
-               }
-            }     
-       
-            mpq_clear(prod);
-            mpq_clear(bd);
-            mpq_clear(objbound);
-            mpq_clear(obj);
+         /* update primal bound (at the beginning, added 1.0 to primal bound, such that solution with worst bound may be 
+            found) 
+         */
+         if( !SCIPsetIsInfinity(scip->set, objbound) && objbound < scip->primal->cutoffbound )
+         {
+            SCIP_CALL( SCIPprimalSetCutoffbound(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
+                  scip->lp, objbound) );
          }
       }
       else
+      {
+         SCIP_CONS** conss;
+         SCIP_VAR* var;
+         SCIP_Bool objboundinf; 
+         mpq_t obj;
+         mpq_t objbound;
+         mpq_t bd;
+         mpq_t prod;
+         int v;
+
+         conss = SCIPgetConss(scip);
+         assert(conss != NULL);
+         assert(SCIPgetNConss(scip) == 1);
+
+         mpq_init(obj);
+         mpq_init(objbound);
+         mpq_init(bd);
+         mpq_init(prod);
+                      
+         mpq_set_si(objbound, 1, 1);
+         objboundinf = FALSE;
+         for( v = 0; v < scip->transprob->nvars && !objboundinf; ++v )
+         {
+            var = scip->transprob->vars[v];
+            SCIPvarGetObjExactlp(conss[0], var, obj);
+            if( mpq_sgn(obj) != 0 )
+            {
+               SCIPvarGetWorstGlobalBoundExactlp(conss[0], var, bd);
+               if( SCIPisPosInfinityExactlp(scip, bd) || SCIPisNegInfinityExactlp(scip, bd) )
+                  objboundinf = TRUE;
+               else
+               {
+                  assert(!objboundinf);
+                  mpq_mul(prod, obj, bd);
+                  mpq_add(objbound, objbound, prod);
+               }
+            }
+         }
+         if( !objboundinf )
+         {
+            SCIP_Real safeobjbound;
+               
+            safeobjbound = mpqGetRealRelax(scip, objbound, GMP_RNDU);
+            
+            /* update primal bound (at the beginning, added 1.0 to primal bound, such that solution with worst bound 
+             * may be found) 
+             */
+            if( !SCIPsetIsInfinity(scip->set, safeobjbound) && safeobjbound < scip->primal->cutoffbound )
+            {
+               SCIP_CALL( SCIPprimalSetCutoffbound(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
+                     scip->lp, safeobjbound) );
+            }
+         }     
+       
+         mpq_clear(prod);
+         mpq_clear(bd);
+         mpq_clear(objbound);
+         mpq_clear(obj);
+      }
+#endif
+      if( !scip->set->misc_exactsolve )
       {
          SCIP_VAR* var;
          SCIP_Real obj;
@@ -5706,28 +5714,6 @@ SCIP_RETCODE SCIPpresolve(
                scip->transprob->nvars, scip->transprob->nbinvars, scip->transprob->nintvars, scip->transprob->nimplvars,
                scip->transprob->ncontvars, scip->transprob->nconss);
        
-#ifdef UNBNDVARSINFO /* for exactip: get nr of unbounded vars in presolved problem; for test set */
-            {
-               SCIP_Real lb;
-               SCIP_Real ub;
-               int nunbndvars;
-               int v;
-               nunbndvars = 0;
-               for( v = 0; v < scip->transprob->nvars; ++v )
-               {
-                  lb = SCIPvarGetLbGlobal(scip->transprob->vars[v]);
-                  ub = SCIPvarGetUbGlobal(scip->transprob->vars[v]);
-   
-                  if( SCIPsetIsInfinity(scip->set, ub) || SCIPsetIsInfinity(scip->set, -lb) )
-                     nunbndvars++;
-
-               }      
-               /* print number of unbounded variables in presolved problem */
-               SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
-                  "unbounded vars in presolved problem: %d\n", nunbndvars);
-            }            
-#endif
-
             for( h = 0; h < scip->set->nconshdlrs; ++h )
             {
                int nactiveconss;
@@ -5916,8 +5902,9 @@ SCIP_RETCODE SCIPsolve(
             SCIPmessagePrintInfo("%.2f %%\n", 100.0*SCIPgetGap(scip));
       }
 
-#ifdef EXACTSOLVE
-      if( SCIPisExactSolve(scip) && scip->set->stage >= SCIP_STAGE_TRANSFORMED && scip->set->stage <= SCIP_STAGE_FREESOLVE )
+#ifdef WITH_EXACTSOLVE
+      assert(SCIPisExactSolve(scip)); 
+      if( scip->set->stage >= SCIP_STAGE_TRANSFORMED && scip->set->stage <= SCIP_STAGE_FREESOLVE )
       {
          SCIP_CONS** conss;
          char s[SCIP_MAXSTRLEN];
@@ -5953,27 +5940,24 @@ SCIP_RETCODE SCIPsolve(
       {
          SCIP_SOL* sol;
          SCIP_Bool feasible;
-
-#ifdef EXACTSOLVE
-         if( SCIPisExactSolve(scip) )
-         {
-            int c;
+#ifdef WITH_EXACTSOLVE
+         int c;
                
-            for( c = 0; c < scip->origprob->nconss; ++c )
+         assert(SCIPisExactSolve(scip));
+         for( c = 0; c < scip->origprob->nconss; ++c )
+         {
+            if( SCIPconsIsChecked(scip->origprob->conss[c]) && !SCIPconsIsModifiable(scip->origprob->conss[c]) )
             {
-               if( SCIPconsIsChecked(scip->origprob->conss[c]) && !SCIPconsIsModifiable(scip->origprob->conss[c]) )
-               {
-                  SCIP_CALL( SCIPcheckBestSolex(scip, scip->origprob->conss[c], &feasible, TRUE) );
-               }
+               SCIP_CALL( SCIPcheckBestSolex(scip, scip->origprob->conss[c], &feasible, TRUE) );
             }
-
-            if( !feasible )
-            {
-               SCIPmessagePrintInfo("best exact solution is not feasible in original problem\n");
-            }
-
-            return SCIP_OKAY;
          }
+
+         if( !feasible )
+         {
+            SCIPmessagePrintInfo("best exact solution is not feasible in original problem\n");
+         }
+
+         return SCIP_OKAY;
 #endif
 
          assert(!SCIPisExactSolve(scip));
@@ -6867,7 +6851,7 @@ SCIP_RETCODE SCIPgetVarStrongbranch(
     */
    exactsolve = SCIPisExactSolve(scip);
 
-#ifdef USESBGAIN /* ??????????? */
+#ifdef USESBGAIN
    exactsolve = FALSE;
 #else
    exactsolve = TRUE;
@@ -13688,9 +13672,11 @@ SCIP_Real SCIPgetSolTransObj(
    }
 }
 
-/* todo: ???????????? this is only for a workaround method for the exactlp constraint handler, 
- * as I can not store solutions which are not FP representable at the moment, 
- * but at least I want to have the correct primal bound (delete this method from the code again later) ?????????????? 
+/** @todo  
+ *  - setting the upperbound in SCIP via the FP-solution using SCIPsetSolTransObj() is more a workaround
+ *  - maybe it is better to set the upperbound directly via the exact solution. this way the code also works
+ *    when we do not store a FP-solution for every exact solution.
+ *  - remove SCIPsetSolTransObj() if it is not needed anymore
  */
 /** sets transformed objective value of primal CIP solution; has to be called after solution has been constructed; 
  *  has to be called before solution is added to the solution storage
@@ -15230,20 +15216,22 @@ SCIP_Real SCIPgetAvgDualbound(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetAvgDualbound", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-#ifdef EXACTSOLVE
-   if( SCIPisExactSolve(scip) )
+#ifdef WITH_EXACTSOLVE
    {
       SCIP_CONS** conss;
       
+      assert(SCIPisExactSolve(scip));
       conss = SCIPgetConss(scip);
       assert(conss != NULL);
       assert(SCIPgetNConss(scip) == 1);
       
-      return SCIPgetExternSafeObjval(scip, conss[0], SCIPtreeGetAvgLowerbound(scip->tree, scip->primal->cutoffbound), TRUE);
+      return SCIPgetExternSafeObjval(scip, conss[0], SCIPtreeGetAvgLowerbound(scip->tree, scip->primal->cutoffbound), 
+         TRUE);
    }
 #endif
 
-   return SCIPprobExternObjval(scip->transprob, scip->set,
+   assert(!SCIPisExactSolve(scip));
+   return SCIPprobExternObjval(scip->transprob, scip->set, 
       SCIPtreeGetAvgLowerbound(scip->tree, scip->primal->cutoffbound));
 }
 
@@ -15294,19 +15282,18 @@ SCIP_Real SCIPgetDualboundRoot(
       return getPrimalbound(scip);
    else
    {
-#ifdef EXACTSOLVE
-      if( SCIPisExactSolve(scip) )
-      {
-         SCIP_CONS** conss;
+#ifdef WITH_EXACTSOLVE
+      SCIP_CONS** conss;
          
-         conss = SCIPgetConss(scip);
-         assert(conss != NULL);
-         assert(SCIPgetNConss(scip) == 1);
+      assert(SCIPisExactSolve(scip));
+      conss = SCIPgetConss(scip);
+      assert(conss != NULL);
+      assert(SCIPgetNConss(scip) == 1);
          
-         return SCIPgetExternSafeObjval(scip, conss[0], scip->stat->rootlowerbound, TRUE);
-      }
+      return SCIPgetExternSafeObjval(scip, conss[0], scip->stat->rootlowerbound, TRUE);
 #endif
 
+      assert(!SCIPisExactSolve(scip));
       return SCIPprobExternObjval(scip->transprob, scip->set, scip->stat->rootlowerbound);
    }
 }
@@ -16290,6 +16277,7 @@ void printRelaxatorStatistics(
          SCIPrelaxGetNCalls(scip->set->relaxs[i]));
 }
 
+#ifdef WITH_EXACTSOLVE
 static
 void printDualboundingStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -16336,7 +16324,9 @@ void printDualboundingStatistics(
       scip->stat->nfailprovedinfeaslp + SCIPgetNFailProvedinfeaslp(scip),
       scip->stat->nabortprovedinfeaslp + SCIPgetNAbortProvedinfeaslp(scip));
 }
+#endif
 
+#ifdef WITH_EXACTSOLVE
 static
 void printExactLPStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -16363,6 +16353,7 @@ void printExactLPStatistics(
       SCIPgetExactunsollpTime(scip),
       SCIPgetNExactunsollp(scip));
 }
+#endif
 
 static
 void printTreeStatistics(
@@ -16470,66 +16461,64 @@ void printSolutionStatistics(
             : (SCIPsolGetRunnum(scip->primal->sols[0]) == 0 ? "initial" : "relaxation"));
       }
    }
-#ifdef EXACTSOLVE
-   if( SCIPisExactSolve(scip) )
+#ifdef WITH_EXACTSOLVE
+   assert(SCIPisExactSolve(scip));
+   if( scip->set->stage >= SCIP_STAGE_TRANSFORMED && scip->set->stage <= SCIP_STAGE_FREESOLVE )
    {
-      if( scip->set->stage >= SCIP_STAGE_TRANSFORMED && scip->set->stage <= SCIP_STAGE_FREESOLVE )
-      {
-         SCIP_CONS** conss;
-         char s[SCIP_MAXSTRLEN];
-         mpq_t primalboundex;
-         int n;
+      SCIP_CONS** conss;
+      char s[SCIP_MAXSTRLEN];
+      mpq_t primalboundex;
+      int n;
                
-         conss = SCIPgetConss(scip);
-         assert(conss != NULL);
-         mpq_init(primalboundex);
+      conss = SCIPgetConss(scip);
+      assert(conss != NULL);
+      mpq_init(primalboundex);
       
-         SCIPgetBestSolexObj(scip, conss[0], primalboundex);
+      SCIPgetBestSolexObj(scip, conss[0], primalboundex);
       
-         if( SCIPisPosInfinityExactlp(scip, primalboundex) || SCIPisNegInfinityExactlp(scip, primalboundex) )
-         {
-            if( scip->set->stage == SCIP_STAGE_SOLVED )
-            {
-               if( SCIPgetNSolexs(scip) == 0 )
-                  SCIPmessageFPrintInfo(file, "  Exact Primal Bnd : infeasible\n");
-               else
-                  SCIPmessageFPrintInfo(file, "  Exact Primal Bnd : unbounded\n");
-            }
-            else
-               SCIPmessageFPrintInfo(file, "  Exact Primal Bnd :         -\n");
-         }
-         else
+      if( SCIPisPosInfinityExactlp(scip, primalboundex) || SCIPisNegInfinityExactlp(scip, primalboundex) )
+      {
+         if( scip->set->stage == SCIP_STAGE_SOLVED )
          {
             if( SCIPgetNSolexs(scip) == 0 )
-               SCIPmessageFPrintInfo(file, "   (user objective limit)\n");
+               SCIPmessageFPrintInfo(file, "  Exact Primal Bnd : infeasible\n");
             else
-            {
-               n = gmp_snprintf(s, SCIP_MAXSTRLEN, "  Exact Primal Bnd : %+Qd\n", primalboundex);
-               if( n >= SCIP_MAXSTRLEN )
-               {
-                  char* bigs;
-                  
-                  if( SCIPallocMemorySize(scip, &bigs, n+1) != SCIP_OKAY )
-                  {
-                     SCIPmessagePrintInfo("  Exact Primal Bnd : string to long\n");
-                  }
-                  else
-                  {
-                     gmp_snprintf(bigs, n+1, "  Exact Primal Bnd : %+Qd\n", primalboundex);
-                     SCIPmessagePrintInfo(bigs);
-                     SCIPfreeMemory(scip, &bigs);
-                  }
-               }
-               else
-                  SCIPmessageFPrintInfo(file, s);
-            }
+               SCIPmessageFPrintInfo(file, "  Exact Primal Bnd : unbounded\n");
          }
-
-         mpq_clear(primalboundex);
+         else
+            SCIPmessageFPrintInfo(file, "  Exact Primal Bnd :         -\n");
       }
       else
-         SCIPmessageFPrintInfo(file, "  Exact Primal Bnd : not accessable anymore\n");
+      {
+         if( SCIPgetNSolexs(scip) == 0 )
+            SCIPmessageFPrintInfo(file, "   (user objective limit)\n");
+         else
+         {
+            n = gmp_snprintf(s, SCIP_MAXSTRLEN, "  Exact Primal Bnd : %+Qd\n", primalboundex);
+            if( n >= SCIP_MAXSTRLEN )
+            {
+               char* bigs;
+                  
+               if( SCIPallocMemorySize(scip, &bigs, n+1) != SCIP_OKAY )
+               {
+                  SCIPmessagePrintInfo("  Exact Primal Bnd : string to long\n");
+               }
+               else
+               {
+                  gmp_snprintf(bigs, n+1, "  Exact Primal Bnd : %+Qd\n", primalboundex);
+                  SCIPmessagePrintInfo(bigs);
+                  SCIPfreeMemory(scip, &bigs);
+               }
+            }
+            else
+               SCIPmessageFPrintInfo(file, s);
+         }
+      }
+
+      mpq_clear(primalboundex);
    }
+   else
+      SCIPmessageFPrintInfo(file, "  Exact Primal Bnd : not accessable anymore\n");
 #endif
    if( SCIPsetIsInfinity(scip->set, REALABS(dualbound)) )
       SCIPmessageFPrintInfo(file, "  Dual Bound       :          -\n");
@@ -16603,11 +16592,11 @@ SCIP_RETCODE SCIPprintStatistics(
       printHeuristicStatistics(scip, file);
       printLPStatistics(scip, file);
       printRelaxatorStatistics(scip, file);
-      if( SCIPisExactSolve(scip) )
-      {
-         printDualboundingStatistics(scip, file);
-         printExactLPStatistics(scip, file);
-      }
+#ifdef WITH_EXACTSOLVE
+      assert(SCIPisExactSolve(scip));
+      printDualboundingStatistics(scip, file);
+      printExactLPStatistics(scip, file);
+#endif
       printTreeStatistics(scip, file);
       printSolutionStatistics(scip, file);
       return SCIP_OKAY;

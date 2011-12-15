@@ -36,9 +36,8 @@
 #include "scip/tree.h"
 #include "scip/branch.h"
 #include "scip/cons.h"
-#ifdef EXACTSOLVE
+#include "scip/scip.h"
 #include "scip/cons_exactlp.h"
-#endif
 
 
 #define OBJSCALE_MAXDNOM          1000000LL  /**< maximal denominator in objective integral scaling */
@@ -1559,33 +1558,24 @@ void SCIPprobPrintStatistics(
 {
    assert(prob != NULL);
 
-#ifdef EXACTSOLVE
    SCIPmessageFPrintInfo(file, "  Problem name     : %s\n", prob->name);
-
-   if( set->misc_exactsolve )
-   {
-      assert(prob->conss != NULL);
-      assert(prob->nconss == 1);
-      SCIPmessageFPrintInfo(file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous) (%d inf bounds, %d large bounds, %d inf bounds on non-continuous)\n",
-         prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars, 
-         SCIPgetNInfiniteBounds(prob->conss[0]), SCIPgetNLargeBounds(prob->conss[0]), 
-         SCIPgetNInfiniteIntegerBounds(prob->conss[0]));
-      SCIPmessageFPrintInfo(file, "  Constraints      : %d initial, %d maximal, %d linear (%d by split), would split %d conss for FP-relaxation\n", 
-         prob->startnconss, prob->maxnconss, SCIPgetNConssExactlp(prob->conss[0]), 
-         SCIPuseFPRelaxation(set->scip) ? SCIPgetNSplitconssExactlp(prob->conss[0]) : 0,
-         SCIPgetNSplitconssExactlp(prob->conss[0]));
-      SCIPmessageFPrintInfo(file, "  Nonzeros         : %d (%d integral)\n", SCIPgetNNonzExactlp(prob->conss[0]), 
-         SCIPgetNIntegralExactlp(prob->conss[0]));
-      SCIPmessageFPrintInfo(file, "  Max Coef Ratio   : %.0f\n", SCIPgetCoefRatioExactlp(set->scip, prob->conss[0]));
-   }
-   else
-   {
-      SCIPmessageFPrintInfo(file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
-         prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars);
-      SCIPmessageFPrintInfo(file, "  Constraints      : %d initial, %d maximal\n", prob->startnconss, prob->maxnconss);
-   }   
+#ifdef WITH_EXACTSOLVE
+   assert(set->misc_exactsolve);
+   assert(prob->conss != NULL);
+   assert(prob->nconss == 1);
+   SCIPmessageFPrintInfo(file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous) (%d inf bounds, %d large bounds, %d inf bounds on non-continuous)\n",
+      prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars, 
+      SCIPgetNInfiniteBounds(prob->conss[0]), SCIPgetNLargeBounds(prob->conss[0]), 
+      SCIPgetNInfiniteIntegerBounds(prob->conss[0]));
+   SCIPmessageFPrintInfo(file, "  Constraints      : %d initial, %d maximal, %d linear (%d by split), would split %d conss for FP-relaxation\n", 
+      prob->startnconss, prob->maxnconss, SCIPgetNConssExactlp(prob->conss[0]), 
+      set->misc_usefprelax ? SCIPgetNSplitconssExactlp(prob->conss[0]) : 0,
+      SCIPgetNSplitconssExactlp(prob->conss[0]));
+   SCIPmessageFPrintInfo(file, "  Nonzeros         : %d (%d integral)\n", SCIPgetNNonzExactlp(prob->conss[0]), 
+      SCIPgetNIntegralExactlp(prob->conss[0]));
+   SCIPmessageFPrintInfo(file, "  Max Coef Ratio   : %.0f\n", SCIPgetCoefRatioExactlp(set->scip, prob->conss[0]));
 #else
-   SCIPmessageFPrintInfo(file, "  Problem name     : %s\n", prob->name);
+   assert(!set->misc_exactsolve);
    SCIPmessageFPrintInfo(file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
       prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars);
    SCIPmessageFPrintInfo(file, "  Constraints      : %d initial, %d maximal\n", prob->startnconss, prob->maxnconss);

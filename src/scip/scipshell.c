@@ -135,23 +135,17 @@ SCIP_RETCODE fromCommandLine(
    SCIPinfoMessage(scip, NULL, "=============\n\n");
    SCIP_CALL( SCIPsolve(scip) );
 
-#ifdef EXACTSOLVE
-   if( SCIPisExactSolve(scip) )
+#ifdef WITH_EXACTSOLVE
    {
       SCIP_CONS** conss;
-
+      
+      assert(SCIPisExactSolve(scip));
       conss = SCIPgetConss(scip);
       assert(conss != NULL);
 
       SCIPinfoMessage(scip, NULL, "\nexact primal solution:\n");
       SCIPinfoMessage(scip, NULL, "================\n\n");
       SCIP_CALL( SCIPprintBestSolex(scip, conss[0], NULL, FALSE) );
-   }
-   else
-   {
-      SCIPinfoMessage(scip, NULL, "\nprimal solution:\n");
-      SCIPinfoMessage(scip, NULL, "================\n\n");
-      SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
    }
 #else
    assert(!SCIPisExactSolve(scip));
@@ -338,6 +332,29 @@ SCIP_RETCODE SCIPprocessShellArguments(
          SCIPprintVersion(NULL);
          SCIPinfoMessage(scip, NULL, "\n");
 
+#ifdef WITH_REDUCEDSOLVE
+         /***********************
+          * ExactIP information *
+          ***********************/
+#ifdef WITH_EXACTSOLVE
+         SCIPinfoMessage(scip, NULL, "Reduced version of SCIP in EXACT mode (version 0.2):\n");
+#else
+         SCIPinfoMessage(scip, NULL, "Reduced version of SCIP in STANDARD (floating-point) mode:\n");
+#endif
+         SCIPinfoMessage(scip, NULL, "  Algorithm: branch-and-bound\n");
+#ifdef WITH_EXACTSOLVE
+         SCIPinfoMessage(scip, NULL, "  Constraints: exact linear\n");
+#else
+         SCIPinfoMessage(scip, NULL, "  Constraints: linear\n");
+#endif
+#ifdef WITH_BRANCHPLGS
+         SCIPinfoMessage(scip, NULL, "  Branching: all standard plugins\n");
+#else
+         SCIPinfoMessage(scip, NULL, "  Branching: first fractional\n");
+#endif
+         SCIPinfoMessage(scip, NULL, "  Readers: zpl (mps files can be converted with \"mps2zpl.sh filename.mps[.gz]\")\n");
+         SCIPinfoMessage(scip, NULL, "\n");
+#endif
 
          /*****************
           * Load settings *
