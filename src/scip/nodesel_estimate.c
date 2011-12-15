@@ -38,11 +38,12 @@
  * Default parameter settings
  */
 
-#define MINPLUNGEDEPTH               -1 /**< minimal plunging depth, before new best node may be selected (-1 for dynamic setting) */
-#define MAXPLUNGEDEPTH               -1 /**< maximal plunging depth, before new best node is forced to be selected (-1 for dynamic setting) */
-#define MAXPLUNGEQUOT              0.25 /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
+#define DEFAULT_MINPLUNGEDEPTH       -1 /**< minimal plunging depth, before new best node may be selected (-1 for dynamic setting) */
+#define DEFAULT_MAXPLUNGEDEPTH       -1 /**< maximal plunging depth, before new best node is forced to be selected (-1 for dynamic setting) */
+#define DEFAULT_MAXPLUNGEQUOT      0.25 /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
                                          *   where plunging is performed */
-#define BESTNODEFREQ                 10 /**< frequency at which the best node instead of the best estimate is selected (0: never) */
+#define DEFAULT_BESTNODEFREQ         10 /**< frequency at which the best node instead of the best estimate is selected (0: never) */
+#define DEFAULT_BREADTHFIRSTDEPTH    -1 /**< depth until breadth-fisrt search is applied (-1: never) */
 
 
 /** node selector data for best estimate search node selection */
@@ -56,6 +57,7 @@ struct SCIP_NodeselData
                                               *   (-1 for dynamic setting) */
    int                   bestnodefreq;       /**< frequency at which the best node instead of the best estimate is selected
                                               *   (0: never) */
+   int                   breadthfirstdepth;  /**< depth until breadth-fisrt search is applied */
 };
 
 
@@ -135,6 +137,30 @@ SCIP_DECL_NODESELSELECT(nodeselSelectEstimate)
    nodeseldata = SCIPnodeselGetData(nodesel);
    assert(nodeseldata != NULL);
 
+   /* check if the breadth-first search should be applied */
+   if( SCIPgetDepth(scip) <= nodeseldata->breadthfirstdepth )
+   {
+      SCIP_NODE* node;
+
+      SCIPdebugMessage("perform breadth-first search at depth <%d>\n", SCIPgetDepth(scip));
+
+      node = SCIPgetPrioSibling(scip);
+      if( node != NULL )
+      {
+         *selnode = node;
+         SCIPdebugMessage("  -> selected prio sibling: estimate=%g\n", SCIPnodeGetEstimate(*selnode));
+         return SCIP_OKAY;
+      }
+
+      node = SCIPgetPrioChild(scip);
+      if( node != NULL )
+      {
+         *selnode = node;
+         SCIPdebugMessage("  -> selected prio child: estimate=%g\n", SCIPnodeGetEstimate(*selnode));
+         return SCIP_OKAY;
+      }
+   }
+
    /* calculate minimal and maximal plunging depth */
    minplungedepth = nodeseldata->minplungedepth;
    maxplungedepth = nodeseldata->maxplungedepth;
@@ -181,7 +207,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectEstimate)
        */
       if( SCIPgetNSolsFound(scip) == 0 )
          cutoffbound = lowerbound + 0.2 * (cutoffbound - lowerbound);
-         
+
       /* check, if plunging is forced at the current depth */
       if( plungedepth < minplungedepth )
          maxbound = SCIPinfinity(scip);
@@ -340,20 +366,24 @@ SCIP_RETCODE SCIPincludeNodeselEstimate(
    SCIP_CALL( SCIPaddIntParam(scip,
          "nodeselection/estimate/minplungedepth",
          "minimal plunging depth, before new best node may be selected (-1 for dynamic setting)",
-         &nodeseldata->minplungedepth, TRUE, MINPLUNGEDEPTH, -1, INT_MAX, NULL, NULL) );
+         &nodeseldata->minplungedepth, TRUE, DEFAULT_MINPLUNGEDEPTH, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "nodeselection/estimate/maxplungedepth",
          "maximal plunging depth, before new best node is forced to be selected (-1 for dynamic setting)",
-         &nodeseldata->maxplungedepth, TRUE, MAXPLUNGEDEPTH, -1, INT_MAX, NULL, NULL) );
+         &nodeseldata->maxplungedepth, TRUE, DEFAULT_MAXPLUNGEDEPTH, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "nodeselection/estimate/maxplungequot",
          "maximal quotient (estimate - lowerbound)/(cutoffbound - lowerbound) where plunging is performed",
-         &nodeseldata->maxplungequot, TRUE, MAXPLUNGEQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         &nodeseldata->maxplungequot, TRUE, DEFAULT_MAXPLUNGEQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "nodeselection/estimate/bestnodefreq",
          "frequency at which the best node instead of the best estimate is selected (0: never)",
-         &nodeseldata->bestnodefreq, FALSE, BESTNODEFREQ, 0, INT_MAX, NULL, NULL) );
-   
+         &nodeseldata->bestnodefreq, FALSE, DEFAULT_BESTNODEFREQ, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "nodeselection/estimate/breadthfirstdepth",
+         "depth until breadth-fisrt search is applied",
+         &nodeseldata->breadthfirstdepth, FALSE, DEFAULT_BREADTHFIRSTDEPTH, -1, INT_MAX, NULL, NULL) );
+
    return SCIP_OKAY;
 }
 

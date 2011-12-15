@@ -3055,6 +3055,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
    int                   depth,              /**< depth of current node */
    SCIP_Bool             fullpropagation,    /**< should all constraints be propagated (or only new ones)? */
    SCIP_Bool             execdelayed,        /**< execute propagation method even if it is marked to be delayed */
+   SCIP_PROPTIMING       proptiming,         /**< current point in the node solving process */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -3145,7 +3146,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
             SCIPclockStart(conshdlr->proptime, set);
 
             /* call external method */
-            SCIP_CALL( conshdlr->consprop(set->scip, conshdlr, conss, nconss, nusefulconss, result) );
+            SCIP_CALL( conshdlr->consprop(set->scip, conshdlr, conss, nconss, nusefulconss, proptiming, result) );
             SCIPdebugMessage(" -> propagation returned result <%d>\n", *result);
 
             /* stop timing */

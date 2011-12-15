@@ -404,6 +404,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - conss           : array of constraints to process
  *  - nconss          : number of constraints to process
  *  - nusefulconss    : number of useful (non-obsolete) constraints to process
+ *  - proptiming      : current point in the node solving loop
  *  - result          : pointer to store the result of the propagation call
  *
  *  possible return values for *result:
@@ -414,7 +415,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - SCIP_DELAYED    : the propagator was skipped, but should be called again
  */
 #define SCIP_DECL_CONSPROP(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, int nusefulconss, \
-      SCIP_RESULT* result)
+      SCIP_PROPTIMING proptiming, SCIP_RESULT* result)
 
 /** presolving method of constraint handler
  *
@@ -438,6 +439,9 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - nnewchgcoefs    : number of changed coefficients since the last call to the presolving method
  *  - nnewchgsides    : number of changed left or right hand sides since the last call to the presolving method
  *
+ *  @note the counters state the changes since the last call including the changes of this presolving method during its
+ *        call
+ *
  *  input/output:
  *  - nfixedvars      : pointer to count total number of variables fixed of all presolvers
  *  - naggrvars       : pointer to count total number of variables aggregated of all presolvers
@@ -456,10 +460,10 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  possible return values for *result:
  *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
  *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
- *  - SCIP_SUCCESS    : the presolver found a reduction
- *  - SCIP_DIDNOTFIND : the presolver searched, but did not find a presolving change
- *  - SCIP_DIDNOTRUN  : the presolver was skipped
- *  - SCIP_DELAYED    : the presolver was skipped, but should be called again
+ *  - SCIP_SUCCESS    : the presolving method found a reduction
+ *  - SCIP_DIDNOTFIND : the presolving method searched, but did not find a presolving change
+ *  - SCIP_DIDNOTRUN  : the presolving method was skipped
+ *  - SCIP_DELAYED    : the presolving method was skipped, but should be called again
  */
 #define SCIP_DECL_CONSPRESOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, int nrounds, \
       int nnewfixedvars, int nnewaggrvars, int nnewchgvartypes, int nnewchgbds, int nnewholes, \

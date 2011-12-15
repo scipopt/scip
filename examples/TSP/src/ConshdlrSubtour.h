@@ -261,6 +261,7 @@ public:
       SCIP_CONS**        conss,              /**< array of constraints to process */
       int                nconss,             /**< number of constraints to process */
       int                nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+      SCIP_PROPTIMING    proptiming,         /**< current point in the node solving process */
       SCIP_RESULT*       result              /**< pointer to store the result of the propagation call */
       );
 

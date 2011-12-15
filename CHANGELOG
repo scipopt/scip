@@ -10,6 +10,10 @@ interface
   SCIPgetNBarrierLPs(), SCIPgetNResolveLPs(), SCIPgetNPrimalResolveLPs(), SCIPgetNDualResolveLPs(), SCIPgetNNodeLPs(),
   SCIPgetNNodeInitLPs(), SCIPgetNDivingLPs(), SCIPgetNStrongbranchs(), SCIPgetNRootStrongbranchs() now return a longint
   instead of an integer
+- added propagation timing as parameter "proptiming" to SCIP_DECL_CONSPROP() and SCIP_DECL_PROPEXEC() as well as to
+  the corresponding C++ wrapper classes
+- new method SCIPpropIsPresolDelayed() which return if a propagator is delay during presolving
+- changed parameters of function SCIPpropagateCutoffboundVar() in prop_pseudoobj.{c,h}
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
@@ -44,6 +48,7 @@ features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to
   set relaxrows = FALSE
 - the check script now recognizes MIQCP and MINLP instances
+- new column showing the pseudo objective value
 
 SCIP version 2.1.1
 ===============
@@ -67,6 +72,10 @@ fixed bugs:
 - fixed bug in cons_bounddisjunction with uninitialized return values
 - fixed bug when copying problem data in c++ case returned with the result SCIP_DIDNOTRUN
 - fixed bug with setting type of slack variables to be implicitly integral
+- fixed computation of counter which state the changes since the last call of a presolver
+- fixed handling of unbounded solutions, including double-checking their feasibility and that the primal ray is a
+  valid unboundedness proof and reoptimizing the LP with modified settings if the solution is not feasible
+- fixed bug in cons_orbitope with calling conflict analysis
 
 parameters
 - changed parameter "propagating/pseudoobj/maxcands" to "propagating/pseudoobj/minuseless" (see prop_pseudoobj.h)

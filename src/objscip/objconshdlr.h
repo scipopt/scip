@@ -502,6 +502,7 @@ public:
       SCIP_CONS**        conss,              /**< array of constraints to process */
       int                nconss,             /**< number of constraints to process */
       int                nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+      SCIP_PROPTIMING    proptiming,         /**< current point in the node solving process */
       SCIP_RESULT*       result              /**< pointer to store the result of the propagation call */
       )
    {  /*lint --e{715}*/
@@ -515,13 +516,16 @@ public:
     *  The presolver should go through the variables and constraints and tighten the domains or
     *  constraints. Each tightening should increase the given total number of changes.
     *
+    *  @note the counters state the changes since the last call including the changes of this presolving method during
+    *        its call
+    *
     *  possible return values for *result:
     *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
     *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
-    *  - SCIP_SUCCESS    : the presolver found a reduction
-    *  - SCIP_DIDNOTFIND : the presolver searched, but did not find a presolving change
-    *  - SCIP_DIDNOTRUN  : the presolver was skipped
-    *  - SCIP_DELAYED    : the presolver was skipped, but should be called again
+    *  - SCIP_SUCCESS    : the presolving method found a reduction
+    *  - SCIP_DIDNOTFIND : the presolving method searched, but did not find a presolving change
+    *  - SCIP_DIDNOTRUN  : the presolving method was skipped
+    *  - SCIP_DELAYED    : the presolving method was skipped, but should be called again
     */
    virtual SCIP_RETCODE scip_presol(
       SCIP*              scip,               /**< SCIP data structure */

@@ -111,11 +111,11 @@ SCIP_RETCODE createSubSCIP(
    SCIP_HASHMAP* conssmap;
    SCIP_HASHMAPLIST* list;
 #ifdef SCIP_DEBUG
-   static const SCIP_Bool copydisplays = FALSE;
-   static const SCIP_Bool copyreader = FALSE;
-#else
    static const SCIP_Bool copydisplays = TRUE;
    static const SCIP_Bool copyreader = TRUE;
+#else
+   static const SCIP_Bool copydisplays = FALSE;
+   static const SCIP_Bool copyreader = FALSE;
 #endif
 
    assert(heurdata != NULL);
@@ -2004,6 +2004,7 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
          SCIPdebugMessage("NLP heuristic delayed because lower and upper bound coincide in current node\n");
          return SCIP_OKAY;
       }
+      SCIPdebugMessage("using current LP solution as startcand\n");
    }
    else
    {

@@ -127,6 +127,9 @@ typedef struct SCIP_PresolData SCIP_PRESOLDATA;   /**< presolver specific data *
  *  - nnewchgcoefs    : number of changed coefficients since the last call to the presolver
  *  - nnewchgsides    : number of changed left or right hand sides since the last call to the presolver
  *
+ *  @note the counters state the changes since the last call including the changes of this presolver during its last
+ *        last call
+ *
  *  input/output:
  *  - nfixedvars      : pointer to total number of variables fixed of all presolvers
  *  - naggrvars       : pointer to total number of variables aggregated of all presolvers
@@ -150,10 +153,10 @@ typedef struct SCIP_PresolData SCIP_PRESOLDATA;   /**< presolver specific data *
  *  - SCIP_DIDNOTRUN  : the presolver was skipped
  *  - SCIP_DELAYED    : the presolver was skipped, but should be called again
  */
-#define SCIP_DECL_PRESOLEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRESOL* presol, int nrounds,              \
-   int nnewfixedvars, int nnewaggrvars, int nnewchgvartypes, int nnewchgbds, int nnewholes, \
+#define SCIP_DECL_PRESOLEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRESOL* presol, int nrounds, \
+      int nnewfixedvars, int nnewaggrvars, int nnewchgvartypes, int nnewchgbds, int nnewholes, \
       int nnewdelconss, int nnewaddconss, int nnewupgdconss, int nnewchgcoefs, int nnewchgsides, \
-   int* nfixedvars, int* naggrvars, int* nchgvartypes, int* nchgbds, int* naddholes,        \
+      int* nfixedvars, int* naggrvars, int* nchgvartypes, int* nchgbds, int* naddholes, \
       int* ndelconss, int* naddconss, int* nupgdconss, int* nchgcoefs, int* nchgsides, SCIP_RESULT* result)
 
 #ifdef __cplusplus

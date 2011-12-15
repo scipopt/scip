@@ -755,6 +755,8 @@ SCIP_RETCODE propagateCons(
       /* check whether we are infeasible */
       if ( firstnonzeroinrow > lastoneinrow )
       {
+         int k;
+
 #ifdef SCIP_DEBUG
          if ( ispart )
          {
@@ -776,23 +778,27 @@ SCIP_RETCODE propagateCons(
             /* perform conflict analysis */
             SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
-            /* add bounds that result in the first nonzero entry */
+            /* add bounds (variables fixed to 0) that result in the first nonzero entry */
             for (j = 0; j <= lastcolumn; ++j)
             {
-               if ( ( ispart && SCIPvarGetUbLocal(vars[i][j]) > 0.5 ) || ( ! ispart && SCIPvarGetLbLocal(vars[i][j]) > 0.5 ) )
-               {
-                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
-               }
+               if ( ispart && SCIPvarGetUbLocal(vars[i][j]) > 0.5 )
+                  break;
+               if ( ! ispart && SCIPvarGetLbLocal(vars[i][j]) > 0.5 )
+                  break;
+
+               /* at this point the variable should be fixed to 0 */
+               assert( SCIPvarGetUbLocal(vars[i][j]) < 0.5 );
+               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
             }
 
             /* add bounds that result in the last one - pass through rows */
-            for (j = 0; j < i; ++j)
+            for (k = 0; k < i; ++k)
             {
                int l;
-               l = lastones[j] + 1;
-               if ( l < nblocks-1 && SCIPvarGetUbLocal(vars[j][l]) < 0.5 )
+               l = lastones[k] + 1;
+               if ( l <= nblocks-1 && l <= k && SCIPvarGetUbLocal(vars[k][l]) < 0.5 )
                {
-                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[j][l]) );
+                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[k][l]) );
                }
             }
             SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
@@ -845,7 +851,7 @@ SCIP_RETCODE propagateCons(
                   {
                      int l;
                      l = lastones[k] + 1;
-                     if ( l < nblocks-1 && SCIPvarGetUbLocal(vars[k][l]) < 0.5 )
+                     if ( l <= nblocks-1 && l <= k && SCIPvarGetUbLocal(vars[k][l]) < 0.5 )
                      {
                         SCIP_CALL( SCIPaddConflictBinvar(scip, vars[k][l]) );
                      }

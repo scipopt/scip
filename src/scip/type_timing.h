@@ -33,7 +33,9 @@
 extern "C" {
 #endif
 
+
 /** propagation execution timing flags */
+#define SCIP_PROPTIMING_DISABLED          0x000     /**< no proptiming set */
 #define SCIP_PROPTIMING_BEFORELP          0x001     /**< call propagator before the processing of the node starts */
 #define SCIP_PROPTIMING_DURINGLPLOOP      0x002     /**< call propagator after each LP solving during cut-and-price loop */
 #define SCIP_PROPTIMING_AFTERLPLOOP       0x004     /**< call propagator after the cut-and-price loop was finished */

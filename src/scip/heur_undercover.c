@@ -13,6 +13,9 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+/* uncomment to get statistical output at the end of undercover run */
+/* #define STATISTIC_INFORMATION */
+
 /**@file   heur_undercover.c
  * @brief  Undercover primal heuristic for MIQCPs
  * @author Timo Berthold
@@ -22,6 +25,17 @@
  * as to make each constraint linear or convex. For this purpose it solves a binary program to automatically determine
  * the minimum number of variable fixings necessary. As fixing values, we use values from the LP relaxation, the NLP
  * relaxation, or the incumbent solution.
+ *
+ * @todo after adding conflict to master SCIP rerun the probing with the same cover;
+ *
+ * @todo consider an upper bound on the number of variable in the cover depending an the number of variable in the
+ *       original problem and the amount of constraints which are not reflected in the cover problem (such as linear,
+ *       cumulative, ...)
+ * @todo avoid strong branching calls (and may be even separation rounds) in the cover SCIP if the node limit is set one
+ * @todo use the conflict analysis to analyze the infeasibility which arise after the probing of the cover worked and
+ *       solve returned infeasible, instead of adding the Nogood/Conflict by hand; that has the advantage that the SCIP
+ *       takes care of creating the conflict and might shrink the initial reason
+ * @todo change createNogood() -> createConflict() since we call that in SCIP conflicts and not no-good
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -60,20 +74,30 @@
 #define DEFAULT_LOCKSROUNDING   TRUE         /**< shall LP values for integer vars be rounded according to locks? */
 #define DEFAULT_ONLYCONVEXIFY   FALSE        /**< should we only fix/dom.red. variables creating nonconvexity? */
 #define DEFAULT_POSTNLP         TRUE         /**< should the nlp heuristic be called to polish a feasible solution? */
+#define DEFAULT_COVERBD         FALSE        /**< should bounddisjunction constraints be covered (or just copied)? */
 #define DEFAULT_MAXBACKTRACKS   6            /**< maximum number of backtracks */
 #define DEFAULT_MAXRECOVERS     0            /**< maximum number of recoverings */
 #define DEFAULT_MAXREORDERS     1            /**< maximum number of reorderings of the fixing order */
 #define DEFAULT_COVERINGOBJ     'u'          /**< objective function of the covering problem */
+#define DEFAULT_FIXINGORDER     'v'          /**< order in which variables should be fixed */
 #define DEFAULT_COPYCUTS        TRUE         /**< should all active cuts from the cutpool of the original scip be copied
                                               *   to constraints of the subscip
                                               */
 
 #define COVERINGOBJS            "cdlmtu"     /**< list of objective functions of the covering problem */
+#define FIXINGORDERS            "CcVv"       /**< list of orders in which variables can be fixed */
 #define MAXNLPFAILS             1            /**< maximum number of fails after which we give up solving the nlp relaxation */
 #define MAXPOSTNLPFAILS         1            /**< maximum number of fails after which we give up calling nlp local search */
 #define MINTIMELEFT             1.0          /**< don't start expensive parts of the heuristics if less than this amount of time left */
 #define SUBMIPSETUPCOSTS        200          /**< number of nodes equivalent for the costs for setting up the sub-CIP */
 
+
+/* enable statistic output by defining macro STATISTIC_INFORMATION */
+#ifdef STATISTIC_INFORMATION
+#define STATISTIC(x)                {x} 
+#else
+#define STATISTIC(x)             /**/
+#endif
 
 /*
  * Data structures
@@ -104,6 +128,7 @@ struct SCIP_HeurData
    SCIP_Bool             nlpfailed;          /**< has solving the nlp relaxation failed? */
    SCIP_Bool             onlyconvexify;      /**< should we only fix/dom.red. variables creating nonconvexity? */
    SCIP_Bool             postnlp;            /**< should the nlp heuristic be called to polish a feasible solution? */
+   SCIP_Bool             coverbd;            /**< should bounddisjunction constraints be covered (or just copied)? */
    int                   maxbacktracks;      /**< maximum number of backtracks */
    int                   maxrecovers;        /**< maximum number of recoverings */
    int                   maxreorders;        /**< maximum number of reorderings of the fixing order */
@@ -111,6 +136,7 @@ struct SCIP_HeurData
    int                   npostnlpfails;      /**< number of fails of the nlp local search after last success */
    int                   nnlconshdlrs;       /**< number of nonlinear constraint handlers */
    char                  coveringobj;        /**< objective function of the covering problem */
+   char                  fixingorder;        /**< order in which variables should be fixed */
    SCIP_Bool             copycuts;           /**< should all active cuts from cutpool be copied to constraints in
                                               *   subproblem? */
 };
@@ -518,6 +544,7 @@ SCIP_RETCODE createCoveringProblem(
    SCIP_VAR**            coveringvars,       /**< array to store the covering problem's variables */
    SCIP_Bool             globalbounds,       /**< should global bounds on variables be used instead of local bounds at focus node? */
    SCIP_Bool             onlyconvexify,      /**< should we only fix/dom.red. variables creating nonconvexity? */
+   SCIP_Bool             coverbd,            /**< should bounddisjunction constraints be covered (or just copied)? */
    char                  coveringobj,        /**< objective function of the covering problem */
    SCIP_Bool*            success             /**< pointer to store whether the problem was created successfully */
    )
@@ -597,6 +624,11 @@ SCIP_RETCODE createCoveringProblem(
          mapsize = SCIPconshdlrGetNConss(conshdlr);
          conshdlr = SCIPfindConshdlr(scip, "quadratic");
          mapsize += SCIPconshdlrGetNConss(conshdlr);
+         if( coverbd )
+         {
+            conshdlr = SCIPfindConshdlr(scip, "bounddisjunction");
+            mapsize += SCIPconshdlrGetNConss(conshdlr);
+         }
          conshdlr = SCIPfindConshdlr(scip, "soc");
          mapsize += SCIPconshdlrGetNConss(conshdlr);
          mapsize = MAX(mapsize, nnlprows);
@@ -773,6 +805,137 @@ SCIP_RETCODE createCoveringProblem(
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_covering", SCIPconsGetName(andcons));
             SCIP_CALL( SCIPcreateConsLinear(coveringscip, &coveringcons, name, ntofix, coveringconsvars, coveringconsvals,
                   (SCIP_Real)(ntofix - 2), SCIPinfinity(coveringscip),
+                  TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
+
+            if( coveringcons == NULL )
+            {
+               SCIPdebugMessage("failed to create linear constraint <%s>\n", name);
+               SCIPfreeBufferArray(coveringscip, &coveringconsvals);
+               SCIPfreeBufferArray(coveringscip, &coveringconsvars);
+               goto TERMINATE;
+            }
+
+            /* add and release covering constraint */
+            SCIP_CALL( SCIPaddCons(coveringscip, coveringcons) );
+            SCIP_CALL( SCIPreleaseCons(coveringscip, &coveringcons) );
+
+            /* update counters */
+            for( v = ntofix-1; v >= 0; v-- )
+               if( SCIPvarIsNegated(coveringconsvars[v]) )
+                  incCounters(termcounter, conscounter, consmarker, SCIPvarGetProbindex(SCIPvarGetNegationVar(coveringconsvars[v])));
+               else
+                  incCounters(termcounter, conscounter, consmarker, SCIPvarGetProbindex(coveringconsvars[v]));
+         }
+
+         /* free memory for covering constraint */
+         SCIPfreeBufferArray(coveringscip, &coveringconsvals);
+         SCIPfreeBufferArray(coveringscip, &coveringconsvars);
+      }
+   }
+
+   /* go through all bounddisjunction constraints in the original problem */
+   conshdlr = SCIPfindConshdlr(scip, "bounddisjunction");
+   if( conshdlr != NULL && coverbd )
+   {
+      int c;
+
+      for( c = SCIPconshdlrGetNConss(conshdlr)-1; c >= 0; c-- )
+      {
+         SCIP_CONS* bdcons;
+         SCIP_CONS* coveringcons;
+         SCIP_VAR** bdvars;
+         SCIP_VAR** coveringconsvars;
+         SCIP_Real* coveringconsvals;
+
+         int nbdvars;
+         int ntofix;
+         int v;
+
+         /* get original constraint and variables */
+         bdcons = SCIPconshdlrGetConss(conshdlr)[c];
+         assert(bdcons != NULL);
+         bdvars = SCIPgetVarsBounddisjunction(scip, bdcons);
+         assert(bdvars != NULL);
+         nbdvars = SCIPgetNVarsBounddisjunction(scip, bdcons);
+
+         /* bounddisjunction constraints are not passed to the nlp, hence nothing to store in the hash map */
+
+         /* allocate memory for covering constraint */
+         SCIP_CALL( SCIPallocBufferArray(coveringscip, &coveringconsvars, nbdvars) );
+         SCIP_CALL( SCIPallocBufferArray(coveringscip, &coveringconsvals, nbdvars) );
+
+         /* collect unfixed variables */
+         BMSclearMemoryArray(consmarker, nvars);
+         ntofix = 0;
+         for( v = nbdvars-1; v >= 0; v-- )
+         {
+            SCIP_Bool negated;
+
+            assert(bdvars[v] != NULL);
+            negated = FALSE;
+
+            /* if variable is fixed, nothing to do */
+            if( varIsFixed(scip, bdvars[v], globalbounds ? SCIPvarGetLbGlobal(bdvars[v]) : SCIPvarGetLbLocal(bdvars[v]), 
+                  globalbounds) )
+            {
+               continue;
+            }
+
+            /* if constraints with inactive variables are present, we have to find the corresponding active variable */
+            probindex = SCIPvarGetProbindex(bdvars[v]);
+            if( probindex == -1 )
+            {
+               SCIP_VAR* repvar;
+
+               /* get binary representative of variable */
+               SCIP_CALL( SCIPgetBinvarRepresentative(scip, bdvars[v], &repvar, &negated) );
+               assert(repvar != NULL);
+               assert(SCIPvarGetStatus(repvar) != SCIP_VARSTATUS_FIXED);
+
+               if( SCIPvarGetStatus(repvar) == SCIP_VARSTATUS_MULTAGGR )
+               {
+                  SCIPdebugMessage("strange: multiaggregated variable found <%s>\n", SCIPvarGetName(bdvars[v]));
+                  SCIPdebugMessage("inactive variables detected in constraint <%s>\n", SCIPconsGetName(bdcons));
+                  SCIPfreeBufferArray(coveringscip, &coveringconsvals);
+                  SCIPfreeBufferArray(coveringscip, &coveringconsvars);
+                  goto TERMINATE;
+               }
+
+               /* check for negation */
+               if( SCIPvarIsNegated(repvar) )
+               {
+                  probindex = SCIPvarGetProbindex(SCIPvarGetNegationVar(repvar));
+                  negated = TRUE;
+               }
+               else
+               {
+                  assert(SCIPvarIsActive(repvar));
+                  probindex = SCIPvarGetProbindex(repvar);
+                  negated = FALSE;
+               }
+            }
+            assert(probindex >= 0);
+
+            /* add covering variable for unfixed original variable */
+            if( negated )
+            {
+               SCIP_CALL( SCIPgetNegatedVar(coveringscip, coveringvars[probindex], &coveringconsvars[ntofix]) );
+            }
+            else
+               coveringconsvars[ntofix] = coveringvars[probindex];
+            coveringconsvals[ntofix] = 1.0;
+            ntofix++;
+         }
+
+         /* if less than 2 variables are unfixed, the entire constraint can be linearized anyway */
+         if( ntofix >= 2 )
+         {
+            assert(ntofix <= nbdvars);
+
+            /* create covering constraint */
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_covering", SCIPconsGetName(bdcons));
+            SCIP_CALL( SCIPcreateConsLinear(coveringscip, &coveringcons, name, ntofix, coveringconsvars, coveringconsvals,
+                  (SCIP_Real)(ntofix - 1), SCIPinfinity(coveringscip),
                   TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
 
             if( coveringcons == NULL )
@@ -1059,6 +1222,19 @@ SCIP_RETCODE createCoveringProblem(
 
    /* free expression interpreter */
    SCIP_CALL( SCIPexprintFree(&exprint) );
+
+   STATISTIC(
+      int nnonzs;
+      nnonzs = 0;
+      for( i = 0; i < nvars; ++i)
+         nnonzs += termcounter[i];
+      SCIPinfoMessage(scip, NULL, "UCstats nnz/var: %9.6f\n", nnonzs/(SCIP_Real)nvars); 
+      nnonzs = 0;
+      for( i = 0; i < nvars; ++i)
+         if( conscounter[i] > 0 )
+            nnonzs++;
+      SCIPinfoMessage(scip, NULL, "UCstats nlvars: %6d\n", nnonzs);
+      );
 
    /* free counter arrays for weighted objectives */
    SCIPfreeBufferArray(scip, &termcounter);
@@ -1412,6 +1588,7 @@ SCIP_RETCODE computeFixingOrder(
 {
    SCIP_Real* scores;
    SCIP_Real bestscore;
+   SCIP_Bool sortdown;
    int i;
 
    assert(scip != NULL);
@@ -1431,8 +1608,11 @@ SCIP_RETCODE computeFixingOrder(
    /* allocate buffer array for score values */
    SCIP_CALL( SCIPallocBufferArray(scip, &scores, coversize) );
 
+   /* initialize best score to infinite value */
+   sortdown = (heurdata->fixingorder == 'c' || heurdata->fixingorder == 'v' );
+   bestscore = sortdown ? -SCIPinfinity(scip) : +SCIPinfinity(scip);
+
    /* compute score values */
-   bestscore = SCIPinfinity(scip);
    for( i = coversize-1; i >= 0; i-- )
    {
       SCIP_VAR* var;
@@ -1442,15 +1622,23 @@ SCIP_RETCODE computeFixingOrder(
       assert(cover[i] < nvars);
       var = vars[cover[i]];
 
-      /* compute score; switch sign because we will sort in non-decreasing order */
-      scores[i] = -(heurdata->conflictweight * SCIPgetVarConflictScore(scip, var)
-         + heurdata->inferenceweight * SCIPgetVarAvgInferenceCutoffScore(scip, var, heurdata->cutoffweight));
-      assert(scores[i] <= 0.0);
+      if( heurdata->fixingorder == 'C' || heurdata->fixingorder == 'c' )
+         scores[i] = heurdata->conflictweight * SCIPgetVarConflictScore(scip, var)
+            + heurdata->inferenceweight * SCIPgetVarAvgInferenceCutoffScore(scip, var, heurdata->cutoffweight);
+      else if( heurdata->fixingorder == 'V' || heurdata->fixingorder == 'v' )
+         scores[i] = cover[i];
+      else
+         return SCIP_PARAMETERWRONGVAL; 
 
-      /* update maximum score */
-      bestscore = MIN(bestscore, scores[i]);
+      assert(scores[i] >= 0.0);
+
+      /* update best score */
+      if( sortdown )
+         bestscore = MAX(bestscore, scores[i]);
+      else
+         bestscore = MIN(bestscore, scores[i]);     
+
    }
-   bestscore -= 1.0;
 
    /* put integers to the front */
    if( heurdata->fixintfirst )
@@ -1458,19 +1646,31 @@ SCIP_RETCODE computeFixingOrder(
       for( i = coversize-1; i >= 0; i-- )
       {
          if( SCIPvarIsIntegral(vars[cover[i]]) )
-            scores[i] += bestscore;
+         {
+            if( sortdown )
+               scores[i] += bestscore+1.0;
+            else
+               scores[i] = bestscore - 1.0/(scores[i]+1.0);
+         }
       }
    }
 
    /* put last failed variable to the front */
    if( lastfailed < coversize )
    {
-      scores[lastfailed] += 2*bestscore;
+      if( sortdown )
+         scores[lastfailed] += bestscore+2.0;
+      else
+         scores[lastfailed] = bestscore - 2.0/(scores[lastfailed]+1.0);
       i = cover[lastfailed];
    }
 
    /* sort by non-decreasing (negative) score */
-   SCIPsortRealInt(scores, cover, coversize);
+   if( sortdown )
+      SCIPsortDownRealInt(scores, cover, coversize);
+   else
+      SCIPsortRealInt(scores, cover, coversize);
+
    assert(lastfailed >= coversize || cover[0] == i);
 
    /* free buffer memory */
@@ -2195,7 +2395,8 @@ SCIP_RETCODE SCIPapplyUndercover(
    SCIP_CALL( SCIPcreate(&coveringscip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(coveringscip) );
    SCIP_CALL( SCIPallocBufferArray(scip, &coveringvars, nvars) );
-   SCIP_CALL( createCoveringProblem(scip, coveringscip, coveringvars, heurdata->globalbounds, heurdata->onlyconvexify, heurdata->coveringobj, &success) );
+   SCIP_CALL( createCoveringProblem(scip, coveringscip, coveringvars, heurdata->globalbounds, heurdata->onlyconvexify, 
+         heurdata->coverbd, heurdata->coveringobj, &success) );
 
    if( !success )
    {
@@ -2249,6 +2450,12 @@ SCIP_RETCODE SCIPapplyUndercover(
       success = FALSE;
       SCIP_CALL( solveCoveringProblem(coveringscip, nvars, coveringvars, &coversize, cover,
             timelimit, memorylimit + SCIPgetMemUsed(coveringscip)/1048576.0, &success) );
+
+   STATISTIC(
+      if( ncovers == 0 && success )
+         SCIPinfoMessage(scip, NULL, "UCstats coversize abs: %6d rel: %9.6f\n", coversize, 100*coversize /(SCIP_Real)nvars); 
+      );
+
       assert(coversize >= 0);
       assert(coversize <= nvars);
 
@@ -2505,6 +2712,12 @@ SCIP_RETCODE SCIPapplyUndercover(
          {
             SCIP_Real maxvarsfac;
             SCIP_Bool useconf;
+            int minmaxvars;
+
+            SCIP_CALL( SCIPgetIntParam(scip, "conflict/minmaxvars", &minmaxvars) );
+            SCIP_CALL( SCIPgetRealParam(scip, "conflict/maxvarsfac", &maxvarsfac) );
+
+            useconf = bdlen > 0 && (bdlen <= minmaxvars || bdlen < maxvarsfac*nvars);
 
             if( SCIPgetRealParam(scip, "conflict/maxvarsfac", &maxvarsfac) != SCIP_OKAY )
                maxvarsfac = 0.1;
@@ -2706,7 +2919,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolUndercover)
       SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_DURINGLPLOOP);
 
    /* find nonlinear constraint handlers */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &heurdata->nlconshdlrs, 3) );/*lint !e506*/
+   SCIP_CALL( SCIPallocMemoryArray(scip, &heurdata->nlconshdlrs, 4) );/*lint !e506*/
    h = 0;
    heurdata->nlconshdlrs[h] = SCIPfindConshdlr(scip, "and");
    if( heurdata->nlconshdlrs[h] != NULL )
@@ -2714,6 +2927,12 @@ SCIP_DECL_HEURINITSOL(heurInitsolUndercover)
    heurdata->nlconshdlrs[h] = SCIPfindConshdlr(scip, "quadratic");
    if( heurdata->nlconshdlrs[h] != NULL )
       h++;
+   if( heurdata->coverbd )
+   {
+      heurdata->nlconshdlrs[h] = SCIPfindConshdlr(scip, "bounddisjunction");
+      if( heurdata->nlconshdlrs[h] != NULL )
+         h++;
+   }
    heurdata->nlconshdlrs[h] = SCIPfindConshdlr(scip, "soc");
    if( heurdata->nlconshdlrs[h] != NULL )
       h++;
@@ -2975,6 +3194,10 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
          "should the nlp heuristic be called to polish a feasible solution?",
          &heurdata->postnlp, FALSE, DEFAULT_POSTNLP, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/coverbd",
+         "should bounddisjunction constraints be covered (or just copied)?",
+         &heurdata->coverbd, TRUE, DEFAULT_COVERBD, NULL, NULL) );
+
    /* add int parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxbacktracks",
          "maximum number of backtracks in fix-and-propagate",
@@ -2992,6 +3215,10 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
    SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/coveringobj",
          "objective function of the covering problem ('b'ranching status, influenced nonlinear 'c'onstraints/'t'erms, 'd'omain size, 'l'ocks, 'm'in of up/down locks, 'u'nit penalties, constraint 'v'iolation)",
          &heurdata->coveringobj, TRUE, DEFAULT_COVERINGOBJ, COVERINGOBJS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/fixingorder",
+         "order in which variables should be fixed (increasing 'C'onflict score, decreasing 'c'onflict score, increasing 'V'ariable index, decreasing 'v'ariable index",
+         &heurdata->fixingorder, TRUE, DEFAULT_FIXINGORDER, FIXINGORDERS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/copycuts",
          "should all active cuts from cutpool be copied to constraints in subproblem?",
@@ -3011,6 +3238,7 @@ SCIP_RETCODE SCIPcomputeCoverUndercover(
    SCIP_Real             memorylimit,        /**< memory limit */
    SCIP_Bool             globalbounds,       /**< should global bounds on variables be used instead of local bounds at focus node? */
    SCIP_Bool             onlyconvexify,      /**< should we only fix/dom.red. variables creating nonconvexity? */
+   SCIP_Bool             coverbd,            /**< should bounddisjunction constraints be covered (or just copied)? */
    char                  coveringobj,        /**< objective function of the covering problem ('b'ranching status,
                                               *   influenced nonlinear 'c'onstraints/'t'erms, 'd'omain size, 'l'ocks,
                                               *   'm'in of up/down locks, 'u'nit penalties, constraint 'v'iolation) */
@@ -3038,7 +3266,7 @@ SCIP_RETCODE SCIPcomputeCoverUndercover(
    /* create covering problem */
    SCIP_CALL( SCIPcreate(&coveringscip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(coveringscip) );
-   SCIP_CALL( createCoveringProblem(scip, coveringscip, coveringvars, globalbounds, onlyconvexify, coveringobj, success) );
+   SCIP_CALL( createCoveringProblem(scip, coveringscip, coveringvars, globalbounds, onlyconvexify, coverbd, coveringobj, success) );
 
    if( *success )
    {
