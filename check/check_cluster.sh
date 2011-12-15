@@ -57,7 +57,6 @@ then
     TIMEFACTOR=1
 fi
 
-
 # check all variables defined
 if [ -z ${EXCLUSIVE} ]
 then
