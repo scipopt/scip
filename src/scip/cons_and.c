@@ -108,7 +108,11 @@ struct SCIP_ConsData
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
+   SCIP_CONS**           conss;              /**< AND constraints where at least one operand has a non-zero objective coefficient */
+   SCIP_Real*            maxobjchgs;         /**< the maximal change of the objective if the resultant of corresponding AND constraint is fixed to its worst bound */
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events on watched variables */
+   SCIP_Real             cutoffbound;        /**< last cutoff bound used for propagation */
+   int                   nconss;             /**< number of AND constraints where at least one operand has a non-zero objective coefficient */
    SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
    SCIP_Bool             presolusehashing;   /**< should hash table be used for detecting redundant constraints in advance */
    SCIP_Bool             linearize;          /**< should constraint get linearize and removed? */
@@ -125,11 +129,12 @@ struct SCIP_ConshdlrData
 
 enum Proprule
 {
-   PROPRULE_1,                          /**< v_i = FALSE                                  =>  r   = FALSE          */
-   PROPRULE_2,                          /**< r   = TRUE                                   =>  v_i = TRUE for all i */
-   PROPRULE_3,                          /**< v_i = TRUE for all i                         =>  r   = TRUE           */
-   PROPRULE_4,                          /**< r   = FALSE, v_i = TRUE for all i except j   =>  v_j = FALSE          */
-   PROPRULE_INVALID                     /**< propagation was applied without a specific propagation rule */
+   PROPRULE_INVALID = 0,                     /**< propagation was applied without a specific propagation rule */
+   PROPRULE_1 = 1,                           /**< v_i = FALSE                                  =>  r   = FALSE          */
+   PROPRULE_2 = 2,                           /**< r   = TRUE                                   =>  v_i = TRUE for all i */
+   PROPRULE_3 = 3,                           /**< v_i = TRUE for all i                         =>  r   = TRUE           */
+   PROPRULE_4 = 4,                           /**< r   = FALSE, v_i = TRUE for all i except j   =>  v_j = FALSE          */
+   PROPRULE_5 = 5                            /**< r is fixed to it best bound due to cutoff */
 };
 typedef enum Proprule PROPRULE;
 
@@ -186,7 +191,7 @@ SCIP_RETCODE conshdlrdataCreate(
       SCIPerrorMessage("event handler for and constraints not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -335,7 +340,7 @@ SCIP_RETCODE consdataSwitchWatchedvars(
    if( watchedvar1 == consdata->watchedvar2 || watchedvar2 == consdata->watchedvar1 )
    {
       int tmp;
-      
+
       tmp = consdata->watchedvar1;
       consdata->watchedvar1 = consdata->watchedvar2;
       consdata->watchedvar2 = tmp;
@@ -1135,6 +1140,428 @@ SCIP_RETCODE analyzeConflictZero(
    return SCIP_OKAY;
 }
 
+/** propagates the cutoff bound for the given variable */
+static
+SCIP_RETCODE propagateCutoffboundVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_VAR*             var,                /**< variable to propagate */
+   SCIP_Real             objchg,             /**< objective change */
+   SCIP_Real             cutoffbound,        /**< cutoff bound to use */
+   SCIP_Real             pseudoobjval,       /**< pseudo objective value to use */
+   SCIP_Bool*            tightened,          /**< pointer to store if the variable domain was tightened */
+   SCIP_Bool             local               /**< propagate local bounds, otherwise global bounds */
+   )
+{
+   SCIP_Bool infeasible;
+
+   assert(cons != NULL);
+   assert(!local || (SCIPvarGetLbLocal(var) < 0.5 && SCIPvarGetUbLocal(var) > 0.5));
+   assert(!SCIPisZero(scip, objchg));
+   assert(!SCIPisInfinity(scip, -pseudoobjval));
+   assert(!SCIPisInfinity(scip, cutoffbound));
+   assert(SCIPisLT(scip, pseudoobjval, cutoffbound) );
+
+   if( objchg > 0.0 )
+   {
+      SCIP_Real newub;
+
+      newub = (cutoffbound - pseudoobjval) / objchg;
+
+      if( local )
+      {
+         SCIP_CALL( SCIPinferVarUbCons(scip, var, newub, cons, (int)PROPRULE_5, FALSE, &infeasible, tightened) );
+         assert(!infeasible);
+      }
+      else
+      {
+         SCIP_CALL( SCIPtightenVarUbGlobal(scip, var, newub, FALSE, &infeasible, tightened) );
+         assert(!infeasible);
+      }
+   }
+   else
+   {
+      SCIP_Real newlb;
+
+      newlb = 1.0 + (cutoffbound - pseudoobjval) / objchg;
+
+      if( local )
+      {
+         SCIP_CALL( SCIPinferVarLbCons(scip, var, newlb, cons, (int)PROPRULE_5, FALSE, &infeasible, tightened) );
+         assert(!infeasible);
+      }
+      else
+      {
+         SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, newlb, FALSE, &infeasible, tightened) );
+         assert(!infeasible);
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** tries to fix the given resultant to zero */
+static
+SCIP_RETCODE consdataFixResultantZero(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< and constraint to be processed */
+   SCIP_VAR*             resvar,             /**< resultant variable to fix to zero */
+   int                   pos,                /**< position of operand that is fixed to FALSE */
+   SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
+   int*                  nfixedvars          /**< pointer to add up the number of found domain reductions */
+   )
+{
+   SCIP_Bool infeasible;
+   SCIP_Bool tightened;
+
+   SCIPdebugMessage("constraint <%s>: operator %d fixed to 0.0 -> fix resultant <%s> to 0.0\n",
+      SCIPconsGetName(cons), pos, SCIPvarGetName(resvar));
+
+   SCIP_CALL( SCIPinferBinvarCons(scip, resvar, FALSE, cons, (int)PROPRULE_1, &infeasible, &tightened) );
+
+   if( infeasible )
+   {
+      /* use conflict analysis to get a conflict constraint out of the conflicting assignment */
+      SCIP_CALL( analyzeConflictOne(scip, cons, pos) );
+      SCIP_CALL( SCIPresetConsAge(scip, cons) );
+      (*cutoff) = TRUE;
+   }
+   else
+   {
+      SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+      if( tightened )
+      {
+         SCIP_CALL( SCIPresetConsAge(scip, cons) );
+         (*nfixedvars)++;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** fix all operands to one */
+static
+SCIP_RETCODE consdataFixOperandsOne(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< and constraint to be processed */
+   SCIP_VAR**            vars,               /**< array of operands */
+   int                   nvars,              /**< number of operands */
+   SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
+   int*                  nfixedvars          /**< pointer to add up the number of found domain reductions */
+   )
+{
+   SCIP_Bool infeasible;
+   SCIP_Bool tightened;
+   int v;
+
+   for( v = 0; v < nvars && !(*cutoff); ++v )
+   {
+      SCIPdebugMessage("constraint <%s>: resultant fixed to 1.0 -> fix operator var <%s> to 1.0\n",
+         SCIPconsGetName(cons), SCIPvarGetName(vars[v]));
+
+      SCIP_CALL( SCIPinferBinvarCons(scip, vars[v], TRUE, cons, (int)PROPRULE_2, &infeasible, &tightened) );
+
+      if( infeasible )
+      {
+         /* use conflict analysis to get a conflict constraint out of the conflicting assignment */
+         SCIP_CALL( analyzeConflictOne(scip, cons, v) );
+         SCIP_CALL( SCIPresetConsAge(scip, cons) );
+         (*cutoff) = TRUE;
+      }
+      else if( tightened )
+      {
+         SCIP_CALL( SCIPresetConsAge(scip, cons) );
+         (*nfixedvars)++;
+      }
+   }
+
+   if( !(*cutoff) )
+   {
+      SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** returns for the given variable the objective coefficient; in case of a negated variable the negative objective
+ *  coefficient of its parent variable is returned
+ */
+static
+SCIP_Real getVarObj(
+   SCIP_VAR*             var                 /**< variable of interest */
+   )
+{
+   if( SCIPvarIsNegated(var) )
+   {
+      var = SCIPvarGetNegatedVar(var);
+      assert(var != NULL);
+
+      return -SCIPvarGetObj(var);
+   }
+
+   return SCIPvarGetObj(var);
+}
+
+/** propagates the cutoff bound c*x <= cutoff using the objective coefficients combined with the AND structure for he
+ *  given AND constraint where at least two variables have anon-zero objective coefficient
+ */
+static
+SCIP_RETCODE consPropagateCutoffbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to propagate */
+   SCIP_Real             cutoffbound,        /**< cutoff bound to use */
+   SCIP_Real             pseudoobjval,       /**< pseudo objective value to use */
+   SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
+   int*                  nfixedvars          /**< pointer so store the number of fixed variables */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars;
+   SCIP_VAR* resvar;
+   SCIP_Real resobjval;
+   SCIP_Bool tightened;
+   int nvars;
+   int v;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   resvar = consdata->resvar;
+   assert(resvar != NULL);
+
+   vars = consdata->vars;
+   assert(vars != NULL);
+
+   nvars = consdata->nvars;
+   assert(nvars > 1);
+
+   /* check if the resultant is fixed to one  */
+   if( SCIPvarGetLbLocal(resvar) > 0.5 )
+   {
+      /* fix resultant to zero */
+      SCIP_CALL( consdataFixOperandsOne(scip, cons, vars, nvars, cutoff, nfixedvars) );
+
+      return SCIP_OKAY;
+   }
+
+   /* if the resultant is fixed to zero nothing to be done */
+   if( SCIPvarGetUbLocal(resvar) < 0.5 )
+      return SCIP_OKAY;
+
+   /* get the objective coefficients of the resultant */
+   resobjval = getVarObj(resvar);
+
+   /* depending on the resultant objective value we can check if is possible to fixe it to zero or one */
+   if( resobjval >= 0.0 )
+   {
+      SCIP_Real objchg;
+
+      /* If the objective coefficient of the resultant is positive or zero it follows that the objective coefficient is
+       * not part of the pseudo objective value (assumed to take the best bound, that is, the lower bound). The pseudo
+       * objective propagator checks if fixing that (single) variable to one (its worse bound w.r.t. objective
+       * coefficient) exceeds the cutoff bound. If so we can fix that variable to its lower bound. Due to the AND
+       * structure we can increase the objective change by the objective values of the operands. Since fixing the
+       * resultant to one means also fixing all operands to one.
+       */
+
+      objchg = 0.0;
+
+      for( v = 0; v < nvars; ++v )
+      {
+         SCIP_VAR* var;
+         SCIP_Real objval;
+
+         var = vars[v];
+         assert(var != NULL);
+
+         SCIP_CALL( SCIPprintVar(scip, var, NULL) );
+
+         /* if a operand is fixed zero the resultant can be fixed to zero and the constraint can be removed */
+         if( SCIPvarGetUbLocal(var) < 0.5)
+         {
+            SCIP_CALL( consdataFixResultantZero(scip, cons, resvar, v, cutoff, nfixedvars) );
+
+            return SCIP_OKAY;
+         }
+
+         /* skip operands which are fixed to one since their objective coefficient is already part of the pseudo
+          * objective
+          */
+         if( SCIPvarGetLbLocal(var) > 0.5 )
+            continue;
+
+         /* collect the contribution of the of the operand to objective change if we would fixed the resultant to one
+          *
+          * @note Operands with negation objective value have a best bound of one which means they are already part of
+          *       the pseudo objective value
+          */
+         objval = getVarObj(consdata->vars[v]);
+
+         if(  objval > 0.0 )
+            objchg += objval;
+
+         /* check if the operants have a positive contribution; in case the objective change provided by operants is
+          * zero it might be still possible to fix the resultant variable; this however would be done by the pseudo
+          * objective propagator
+          */
+         if( objchg > 0.0 )
+         {
+            /* try tightening resultant to zero */
+            SCIP_CALL( propagateCutoffboundVar(scip, cons, resvar, resobjval + objchg, cutoffbound, pseudoobjval, &tightened, TRUE) );
+
+            if( tightened )
+            {
+               SCIPdebugMessage("fixed resultant to one due to aggregated objective coefficient <%g>\n", resobjval + objchg);
+               printf("fixed resultant to one due to aggregated objective coefficient <%g>\n", resobjval + objchg);
+               (*nfixedvars)++;
+            }
+        }
+      }
+   }
+   else
+   {
+      SCIP_Real maxnegobj;
+
+      maxnegobj = -SCIPinfinity(scip);
+
+      /* If the objective coefficient of the resultant is negative it follows that the coefficient is part of the pseudo
+       * objective value (assumed to take the best bound, that is, the upper bound). The pseudo objective propagator
+       * checks if fixing that (single) variable to zero (its worse bound w.r.t. objective coefficient) exceeds the
+       * cutoff bound. If so we can fix that variable to its upper bound. Due to the AND structure it follows fixing the
+       * resultant to zero implies that at least one of the operands has to be fixed to zero as well. Hence we can
+       * increase the objective change due the fixing of the resultant to zero, if all operands have a negative
+       * coefficient, by the maximum objective coefficient of the operands.
+       *
+       * @note The transformed problem is a minimization problem
+       */
+      for( v = 0; v < nvars; ++v )
+      {
+         SCIP_VAR* var;
+         SCIP_Real objval;
+
+         var = vars[v];
+         assert(var != NULL);
+
+         objval = getVarObj(consdata->vars[v]);
+
+         /* check if the objective coefficient is zero or positive; in that case there is no additional increase in the
+          * objective value by fixing the resultant to zero
+          */
+         if(  objval >= 0.0 )
+            break;
+
+         /* compute the maximum of the negative objective coefficients */
+         maxnegobj = MAX(maxnegobj, objval);
+      }
+
+      /* try tightening bound of resultant */
+      if( v == nvars )
+      {
+         assert(maxnegobj < 0.0);
+
+         /* try to fix the resultant */
+         SCIP_CALL( propagateCutoffboundVar(scip, cons, resvar, resobjval + maxnegobj, cutoffbound, pseudoobjval, &tightened, TRUE) );
+
+         if( tightened )
+         {
+            SCIPdebugMessage("fixed resultant to zero due to aggregated objective coefficient <%g>\n", resobjval + maxnegobj);
+            printf("fixed resultant to zero due to aggregated objective coefficient <%g>\n", resobjval + maxnegobj);
+            (*nfixedvars)++;
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** propagates the cutoff bound c*x <= cutoff using the objective coefficients combined with the AND structure for all
+ *  AND constraints where at least two variables have anon-zero objective coefficient
+ */
+static
+SCIP_RETCODE propagateCutoffbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
+   int*                  nfixedvars          /**< pointer so store the number of fixed variables */
+   )
+{
+   SCIP_CONS** conss;
+   SCIP_Real cutoffbound;
+   SCIP_Real pseudoobjval;
+   int nconss;
+   int c;
+
+   assert(!(*cutoff));
+
+   nconss = conshdlrdata->nconss;
+
+   if( nconss == 0 )
+      return SCIP_OKAY;
+
+   conss = conshdlrdata->conss;
+   assert(conss != NULL);
+
+   /* get current pseudo objective value and cutoff bound */
+   pseudoobjval = SCIPgetPseudoObjval(scip);
+   if( SCIPisInfinity(scip, -pseudoobjval) )
+      return SCIP_OKAY;
+   cutoffbound = SCIPgetCutoffbound(scip);
+   if( SCIPisInfinity(scip, cutoffbound) )
+      return SCIP_OKAY;
+
+   printf("propagate pseudo objective value <%g> and cutoff bound <%g>\n", pseudoobjval, cutoffbound);
+
+   /* loop over all AND contraints which have position contribution w.r.t. objective finction */
+   for( c = 0; c < nconss && !(*cutoff); ++c )
+   {
+      /* check if the AND constraint has a chance of propagating something */
+      if( cutoffbound - pseudoobjval >= conshdlrdata->maxobjchgs[c] )
+      {
+         /* The AND constraints are sorted w.r.t. maximal objective change they can achieve. Hence is for a given AND
+          * constraint not enough objective chnage possible then this also holds for all remaining AND constraints;
+          */
+         break;
+      }
+
+      /* check if the constraint is enabled in the current node */
+      if( !SCIPconsIsEnabled(conss[c]) )
+         continue;
+
+      /* try to fix the resultant variable using the cutoff bound */
+      SCIP_CALL( consPropagateCutoffbound(scip, conss[c], cutoffbound, pseudoobjval, cutoff, nfixedvars) );
+   }
+
+   return SCIP_OKAY;
+}
+
+#if 0
+/** returns for the given variable the current reduced cost; in case of a negated variable the negative reduced cost of
+ *  it parent variable is returned
+ */
+static
+SCIP_Real getVarRedcost(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable of interest */
+   )
+{
+   if( SCIPvarIsNegated(var) )
+   {
+      var = SCIPvarGetNegatedVar(var);
+      assert(var != NULL);
+
+      if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
+         return -SCIPgetVarRedcost(scip, var);
+   }
+
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
+      return SCIPgetVarRedcost(scip, var);
+
+   return 0.0;
+}
+#endif
+
+
 /** replaces multiple occurrences of variables */
 static
 SCIP_RETCODE mergeMultiples(
@@ -1296,30 +1723,12 @@ SCIP_RETCODE propagateCons(
    /* if one of the operator variables was fixed to FALSE, the resultant can be fixed to FALSE (rule (1)) */
    if( !consdata->nofixedzero )
    {
-      for( i = 0; i < nvars && SCIPvarGetUbLocal(vars[i]) > 0.5; ++i ) /* search fixed operator */
+      for( i = 0; i < nvars && SCIPvarGetUbLocal(vars[i]) > 0.5; ++i ) /* search for operator fixed to zero */
       {}
       if( i < nvars )
       {
-         SCIPdebugMessage("constraint <%s>: operator var <%s> fixed to 0.0 -> fix resultant <%s> to 0.0\n",
-            SCIPconsGetName(cons), SCIPvarGetName(vars[i]), SCIPvarGetName(resvar));
-         SCIP_CALL( SCIPinferBinvarCons(scip, resvar, FALSE, cons, (int)PROPRULE_1, &infeasible, &tightened) );
-         if( infeasible )
-         {
-            /* use conflict analysis to get a conflict constraint out of the conflicting assignment */
-            SCIP_CALL( analyzeConflictOne(scip, cons, i) );
-            SCIP_CALL( SCIPresetConsAge(scip, cons) );
-            *cutoff = TRUE;
-         }
-         else
-         {
-            SCIP_CALL( SCIPdelConsLocal(scip, cons) );
-
-            if( tightened )
-            {
-               SCIP_CALL( SCIPresetConsAge(scip, cons) );
-               (*nfixedvars)++;
-            }
-         }
+         /* fix resultant to zero */
+         SCIP_CALL( consdataFixResultantZero(scip, cons, resvar, i, cutoff, nfixedvars) );
 
          return SCIP_OKAY;
       }
@@ -1331,29 +1740,8 @@ SCIP_RETCODE propagateCons(
    /* if resultant is fixed to TRUE, all operator variables can be fixed to TRUE (rule (2)) */
    if( SCIPvarGetLbLocal(resvar) > 0.5 )
    {
-      for( i = 0; i < nvars && !(*cutoff); ++i )
-      {
-         SCIPdebugMessage("constraint <%s>: resultant var <%s> fixed to 1.0 -> fix operator var <%s> to 1.0\n",
-            SCIPconsGetName(cons), SCIPvarGetName(resvar), SCIPvarGetName(vars[i]));
-         SCIP_CALL( SCIPinferBinvarCons(scip, vars[i], TRUE, cons, (int)PROPRULE_2, &infeasible, &tightened) );
-         if( infeasible )
-         {
-            /* use conflict analysis to get a conflict constraint out of the conflicting assignment */
-            SCIP_CALL( analyzeConflictOne(scip, cons, i) );
-            SCIP_CALL( SCIPresetConsAge(scip, cons) );
-            *cutoff = TRUE;
-         }
-         else if( tightened )
-         {
-            SCIP_CALL( SCIPresetConsAge(scip, cons) );
-            (*nfixedvars)++;
-         }
-      }
-
-      if( !(*cutoff) )
-      {
-         SCIP_CALL( SCIPdelConsLocal(scip, cons) );
-      }
+      /* fix resultant to zero */
+      SCIP_CALL( consdataFixOperandsOne(scip, cons, vars, nvars, cutoff, nfixedvars) );
 
       return SCIP_OKAY;
    }
@@ -1382,7 +1770,7 @@ SCIP_RETCODE propagateCons(
       if( SCIPvarGetLbLocal(vars[watchedvar2]) > 0.5 )
          watchedvar2 = -1;
    }
-   
+
    /* if only one watched variable is still unfixed, make it the first one */
    if( watchedvar1 == -1 )
    {
@@ -1418,7 +1806,7 @@ SCIP_RETCODE propagateCons(
    if( watchedvar1 == -1 )
    {
       assert(watchedvar2 == -1);
-      
+
       SCIPdebugMessage("constraint <%s>: all operator vars fixed to 1.0 -> fix resultant <%s> to 1.0\n",
          SCIPconsGetName(cons), SCIPvarGetName(resvar));
       SCIP_CALL( SCIPinferBinvarCons(scip, resvar, TRUE, cons, (int)PROPRULE_3, &infeasible, &tightened) );
@@ -1450,7 +1838,7 @@ SCIP_RETCODE propagateCons(
       if( watchedvar2 == -1 )
       {
          assert(watchedvar1 != -1);
-         
+
          SCIPdebugMessage("constraint <%s>: resultant <%s> fixed to 0.0, only one unfixed operand -> fix operand <%s> to 0.0\n",
             SCIPconsGetName(cons), SCIPvarGetName(resvar), SCIPvarGetName(vars[watchedvar1]));
          SCIP_CALL( SCIPinferBinvarCons(scip, vars[watchedvar1], FALSE, cons, (int)PROPRULE_4, &infeasible, &tightened) );
@@ -1470,7 +1858,7 @@ SCIP_RETCODE propagateCons(
                (*nfixedvars)++;
             }
          }
-         
+
          return SCIP_OKAY;
       }
       else if( SCIPgetDepth(scip) <= 0 )
@@ -1484,9 +1872,10 @@ SCIP_RETCODE propagateCons(
           *
           * create, add, and release the logicor constraint and remove the and constraint globally 
           */
-         
+
          SCIP_VAR** consvars;
          SCIP_CONS* lincons;
+
          SCIP_Bool conscreated;
 
          assert(SCIPvarGetUbGlobal(resvar) < 0.5);
@@ -1660,6 +2049,10 @@ SCIP_RETCODE resolvePropagation(
          }
       }
       *result = SCIP_SUCCESS;
+      break;
+
+   case PROPRULE_5:
+      *result = SCIP_DIDNOTFIND;
       break;
 
    case PROPRULE_INVALID:
@@ -2373,20 +2766,20 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
                consdata->checkwhenupgr | SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), 
                SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
                SCIPconsIsStickingAtNode(cons)) );
-         
+
          /* add constraint */
          SCIP_CALL( SCIPaddCons(scip, newcons) );
          SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
-         
+
          /* delete constraint */
          SCIP_CALL( SCIPdelCons(scip, cons) );
       }
-      
+
       /* free buffer array */
       SCIPfreeBufferArray(scip, &vars);
       SCIPfreeBufferArray(scip, &vals);
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -2397,23 +2790,153 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
 
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#define consInitsolAnd NULL
+static
+SCIP_DECL_CONSINITSOL(consInitsolAnd)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   int nobjconss;
+   int c;
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->conss, nconss) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->maxobjchgs, nconss) );
+
+   nobjconss = 0;
+
+   /* collect AND constraints which have at least two variables with a non-zero objective coefficient */
+   for( c = 0; c < nconss; ++c )
+   {
+      SCIP_CONS* cons;
+      SCIP_Real resobjval;
+      SCIP_Real objchg;
+      int v;
+
+      cons = conss[c];
+      assert(cons != NULL);
+
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
+
+      resobjval = getVarObj(consdata->resvar);
+
+      if( resobjval >= 0.0 )
+      {
+         int nposobjs;
+
+         objchg = 0.0;
+         nposobjs = 0;
+
+         for( v = 0; v < consdata->nvars; ++v )
+         {
+            SCIP_Real objval;
+
+            objval = getVarObj(consdata->vars[v]);
+
+            if(  objval > 0.0 )
+            {
+               objchg += objval;
+               nposobjs++;
+            }
+         }
+
+         /* check if at least two variables in the AND constraint have positive objective coefficient */
+         if( nposobjs > 1 || (resobjval > 0.0 && nposobjs > 0) )
+         {
+            SCIPdebugMessage("resultant <%s> (obj %g) has additional objective value up to <%g>\n", SCIPvarGetName(consdata->resvar), resobjval, objchg);
+            printf("resultant <%s> (obj %g) has additional objective value up to <%g>\n", SCIPvarGetName(consdata->resvar), resobjval, objchg);
+
+            /* collect constraint */
+            conshdlrdata->conss[nobjconss] = cons;
+            conshdlrdata->maxobjchgs[nobjconss] = resobjval + objchg;
+
+            /* capture constraint to ensure existence */
+            SCIP_CALL( SCIPcaptureCons(scip, cons) );
+
+            nobjconss++;
+         }
+      }
+      else
+      {
+         objchg = -SCIPinfinity(scip);
+
+         for( v = 0; v < consdata->nvars; ++v )
+         {
+            SCIP_Real objval;
+
+            objval = getVarObj(consdata->vars[v]);
+
+            if( objval < 0.0 )
+               objchg = MAX(objchg, objval);
+         }
+
+         if( !SCIPisInfinity(scip, -objchg) )
+         {
+            SCIPdebugMessage("resultant <%s> (obj %g) has additional objective value down to <%g>\n", SCIPvarGetName(consdata->resvar), resobjval, objchg);
+            printf("resultant <%s> (obj %g) has additional objective value down to <%g>\n", SCIPvarGetName(consdata->resvar), resobjval, objchg);
+
+            /* collect constraint */
+            conshdlrdata->conss[nobjconss] = cons;
+
+            /* store the absolute value of the objective change */
+            conshdlrdata->maxobjchgs[nobjconss] = -resobjval - objchg;
+
+            /* capture constraint to ensure existence */
+            SCIP_CALL( SCIPcaptureCons(scip, cons) );
+
+            nobjconss++;
+         }
+      }
+   }
+
+   if( nobjconss == 0 )
+   {
+      SCIPfreeMemoryArray(scip, &conshdlrdata->maxobjchgs);
+      SCIPfreeMemoryArray(scip, &conshdlrdata->conss);
+      conshdlrdata->conss = NULL;
+   }
+   else
+   {
+      /* sort the AND constraint which have at least one operand with a non-zero coefficient by the maximal objective
+       * value change they could contribute by fixing the corresponds resultant to its worse bound
+       */
+      SCIPsortDownRealPtr(conshdlrdata->maxobjchgs, (void**)conshdlrdata->conss, nobjconss);
+   }
+   conshdlrdata->nconss = nobjconss;
+
+   return SCIP_OKAY;
+}
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
 SCIP_DECL_CONSEXITSOL(consExitsolAnd)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    int c;
-
 
    /* release and free the rows of all constraints */
    for( c = 0; c < nconss; ++c )
    {
       consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
       SCIP_CALL( consdataFreeRows(scip, consdata) );
    }
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* release and AND constraint which habe at least on operand with a non-zero objective coefficient */
+   for( c = 0; c < conshdlrdata->nconss; ++c )
+   {
+      SCIP_CALL( SCIPreleaseCons(scip, &conshdlrdata->conss[c]) );
+   }
+
+   SCIPfreeMemoryArrayNull(scip, &conshdlrdata->maxobjchgs);
+   SCIPfreeMemoryArrayNull(scip, &conshdlrdata->conss);
 
    return SCIP_OKAY;
 }
@@ -2434,7 +2957,7 @@ SCIP_DECL_CONSDELETE(consDeleteAnd)
 }
 
 
-/** transforms constraint data into data belonging to the transformed problem */ 
+/** transforms constraint data into data belonging to the transformed problem */
 static
 SCIP_DECL_CONSTRANS(consTransAnd)
 {  /*lint --e{715}*/
@@ -2625,7 +3148,7 @@ SCIP_DECL_CONSPROP(consPropAnd)
    int nfixedvars;
    int nupgdconss;
    int c;
-   
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
@@ -2637,6 +3160,14 @@ SCIP_DECL_CONSPROP(consPropAnd)
    for( c = 0; c < nusefulconss && !cutoff; ++c )
    {
       SCIP_CALL( propagateCons(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &nfixedvars, &nupgdconss) );
+   }
+
+   if( !cutoff )
+   {
+      /* propagates AND constraints which invalove at lest two variables which a non-zero objective coefficient against
+       * the cutoff bound
+       */
+      SCIP_CALL( propagateCutoffbound(scip, conshdlrdata, &cutoff, &nfixedvars) );
    }
 
    /* return the correct result */
@@ -2723,7 +3254,7 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
             SCIP_Bool aggregated;
 
             SCIPdebugMessage("and constraint <%s> has only one variable not fixed to 1.0\n", SCIPconsGetName(cons));
-            
+
             assert(consdata->vars != NULL);
             assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(consdata->vars[0]), 0.0));
             assert(SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(consdata->vars[0]), 1.0));
