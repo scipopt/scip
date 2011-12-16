@@ -76,6 +76,7 @@ fixed bugs:
 - fixed handling of unbounded solutions, including double-checking their feasibility and that the primal ray is a
   valid unboundedness proof and reoptimizing the LP with modified settings if the solution is not feasible
 - fixed bug in cons_orbitope with calling conflict analysis
+- fixed bug in flatzinc reader w.r.t. boolean expressions
 
 parameters
 - changed parameter "propagating/pseudoobj/maxcands" to "propagating/pseudoobj/minuseless" (see prop_pseudoobj.h)
