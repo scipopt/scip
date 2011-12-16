@@ -14538,6 +14538,10 @@ SCIP_RETCODE provedBound(
       if( SCIPlpiIsInfinity(lp->lpi, -y[j]) )
 	  y[j] = -SCIPsetInfinity(set);
 
+      /** @todo exiptodo: dual bounding improvement
+       *  - should we also set nonzero values of y to zero if corresponding lhs/rhs is not finite (to improve dual bound)?
+       *  - do such situations come up?
+       */
       /* create rhs and constant vectors in interval arithmetic */
       if( SCIPsetIsFeasPositive(set, y[j]) )
       {

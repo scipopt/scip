@@ -192,7 +192,7 @@
 #define SCIP_DEFAULT_MISC_DBMETHOD          'a' /**< method for computing truely safe dual bounds
                                                  *   ('n'eumaier-shcherbina, 'v'erify basis, 'p'roject-and-shift, 
                                                  *   'e'xact LP, 'i'nterval n-s, e'x'act n-s, 'a'utomatic) */
-#define SCIP_DEFAULT_MISC_PSINFEASRAY     FALSE /**< should project and shift method prove node infeasibility by correcting dual ray? */
+#define SCIP_DEFAULT_MISC_PSINFEASRAY     FALSE /**< should project-and-shift method prove node infeasibility by correcting dual ray? */
 #define SCIP_DEFAULT_MISC_REDUCESAFEDB      'n' /**< strategy for reducing safe dual bounding calls
                                                  *   ('n'o reduction, 'w'eak reduction, 's'trong reduction) */
 #define SCIP_DEFAULT_MISC_IGNOREPSSOL     FALSE /**< should pseudo solutions be ignored for dual bounds? */
@@ -851,7 +851,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "misc/psinfeasray",
-         "should project and shift method prove node infeasibility by correcting dual ray?",
+         "exip: should project-and-shift method prove node infeasibility by correcting dual ray?",
          &(*set)->misc_psinfeasray, FALSE, SCIP_DEFAULT_MISC_PSINFEASRAY,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
