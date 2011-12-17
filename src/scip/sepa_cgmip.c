@@ -59,6 +59,7 @@
 #include <string.h>
 
 #include "scip/sepa_cgmip.h"
+#include "scip/scipdefplugins.h"
 #include "scip/cons_linear.h"
 #include "scip/pub_misc.h"
 
@@ -820,8 +821,6 @@ SCIP_RETCODE createSubscip(
    int nconsvars;
    char name[SCIP_MAXSTRLEN];
 
-   SCIP_Bool success;
-
    assert( scip != NULL );
    assert( sepadata != NULL );
 
@@ -842,13 +841,7 @@ SCIP_RETCODE createSubscip(
    /* create subscip */
    SCIP_CALL( SCIPcreate( &(mipdata->subscip) ) );
    subscip = mipdata->subscip;
-#ifndef NDEBUG
-   SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, &success) );
-#else
-   SCIP_CALL( SCIPcopyPlugins(scip, subscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, &success) );
-#endif
+   SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
 
    /* add violation constraint handler if requested */
    if ( sepadata->addviolconshdlr )
