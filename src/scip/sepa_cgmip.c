@@ -101,7 +101,7 @@
 #define DEFAULT_INTCONVERT        FALSE /**< convert some integral variables attaining fractional values to have integral value */
 #define DEFAULT_INTCONVFRAC         0.1 /**< fraction of fractional integral variables converted to have integral value (if intconvert) */
 #define DEFAULT_INTCONVMIN          100 /**< minimum number of integral variables before some are converted to have integral value */
-#define DEFAULT_DECISIONTREE       TRUE /**< use decision tree to turn separation on/off? */
+#define DEFAULT_DECISIONTREE      FALSE /**< use decision tree to turn separation on/off? */
 
 #define NROWSTOOSMALL                 5 /**< only separate if the number of rows is larger than this number */
 #define NCOLSTOOSMALL                 5 /**< only separate if the number of columns is larger than this number */
@@ -3106,14 +3106,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
 
    depth = SCIPgetDepth(scip);
 
-#if 1
    if ( sepadata->firstlptime == SCIP_INVALID )   /*lint !e777*/
    {
       /* approximate time for first LP */
       sepadata->firstlptime = SCIPgetSolvingTime(scip) - SCIPgetPresolvingTime(scip);
-      printf("firstlptime: %f\n", sepadata->firstlptime);
    }
-#endif
 
    /* only call separator, if we are not close to terminating */
    if ( SCIPisStopped(scip) )
@@ -3183,7 +3180,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
 
       if ( ! separate )
       {
-         printf("Do not separate!\n");
          return SCIP_OKAY;
       }
    }
