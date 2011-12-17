@@ -1970,19 +1970,19 @@ SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
 
    if( needsort )
    {
-      int oldsize;
+      int oldlen;
 
       invalidateJacobiSparsity(oracle);
 
-      oldsize = cons->linsize;
-      sortLinearCoefficients(&cons->linsize, cons->linidxs, cons->lincoefs);
+      oldlen = cons->nlinidxs;
+      sortLinearCoefficients(&cons->nlinidxs, cons->linidxs, cons->lincoefs);
 
       /* if sorting removed an entry, then the var degrees are not uptodate anymore */
-      oracle->vardegreesuptodate &= (cons->linsize == oldsize);  /*lint !e514*/
+      oracle->vardegreesuptodate &= (cons->nlinidxs == oldlen);  /*lint !e514*/
 
       /* increase variable degrees of variables to 1 */
       if( oracle->vardegreesuptodate )
-         for( i = 0; i < cons->linsize; ++i )
+         for( i = 0; i < cons->nlinidxs; ++i )
             oracle->vardegrees[varidxs[i]] = MAX(1, oracle->vardegrees[varidxs[i]]);  /*lint !e613*/
    }
 
