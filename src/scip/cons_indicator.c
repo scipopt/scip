@@ -6583,6 +6583,7 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
          return SCIP_OKAY;
 
       assert( ! SCIPisZero(scip, slackcoef) );
+      assert( slackcoef != 0.0 );  /* to satisfy lint */
       assert( SCIPisInfinity(scip, -SCIPgetLhsLinear(scip, lincons)) || SCIPisInfinity(scip, SCIPgetRhsLinear(scip, lincons)) );
       assert( SCIPisFeasGE(scip, SCIPvarGetLbLocal(slackvar), 0.0) );
 
