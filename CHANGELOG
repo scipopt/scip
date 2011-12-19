@@ -54,7 +54,10 @@ SCIP version 2.1.1
 ===============
 
 performance improvements:
-- revised pseudo objective propagator;
+- revised pseudo objective propagator
+- improve SCIPintervalSolveBivariateQuadExpressionAllScalar for ax=0 case if x has 0 in the interval for the linear coef.
+- better domain propagation for quadratic constraints that consist of "non-overlapping" bilinear terms only
+- ensure that a fixing of a variable in an abspower constraint is propagated to a fixing of the other variable
 
 features:
 - the pseudo objective propagator can be forced to propagate if active pricers are present; this can be done 
@@ -78,6 +81,8 @@ fixed bugs:
 - fixed bug in cons_orbitope with calling conflict analysis
 - fixed bug in flatzinc reader w.r.t. boolean expressions
 - fixed bug in nlpi_oracle w.r.t. changing linear coefs in a NLP constraint
+- fixed compilation issues with negate() function in intervalarith.c on exotic platforms
+- gams writer now also substitutes $-sign from variable/equation names
 
 parameters
 - changed parameter "propagating/pseudoobj/maxcands" to "propagating/pseudoobj/minuseless" (see prop_pseudoobj.h)
