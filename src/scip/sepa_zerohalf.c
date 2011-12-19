@@ -2131,6 +2131,8 @@ SCIP_RETCODE getRelevantRows(
       for( c = 0; c < nnonzcurrentrow; ++c)
       {
          collppos = SCIPcolGetLPPos(colscurrentrow[c]);
+	 assert(0 <= collppos && collppos < lpdata->ncols);
+
          var = SCIPcolGetVar(colscurrentrow[c]);
 
          /* check if row contains a continuous variable */
