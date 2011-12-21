@@ -83,6 +83,7 @@ fixed bugs:
 - fixed bug in nlpi_oracle w.r.t. changing linear coefs in a NLP constraint
 - fixed compilation issues with negate() function in intervalarith.c on exotic platforms
 - gams writer now also substitutes $-sign from variable/equation names
+- fixed bug in SCIPsortedvecDelPos...() templates
 
 parameters
 - changed parameter "propagating/pseudoobj/maxcands" to "propagating/pseudoobj/minuseless" (see prop_pseudoobj.h)
