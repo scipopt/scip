@@ -233,14 +233,14 @@ SCIP_RETCODE primalSetUpperbound(
    SCIPdebugMessage("changing upper bound from %g to %g\n", primal->upperbound, upperbound);
 
    primal->upperbound = upperbound;
-   
+
    /* if objective value is always integral, the cutoff bound can be reduced to nearly the previous integer number */
    if( SCIPprobIsObjIntegral(prob) && !SCIPsetIsInfinity(set, upperbound) )
    {
       SCIP_Real delta;
 
-      delta = 100.0*SCIPsetFeastol(set);
-      delta = MIN(delta, 0.0001);
+      delta = SCIPsetCutoffbounddelta(set);
+
       cutoffbound = SCIPsetFeasCeil(set, upperbound) - (1.0 - delta);
       cutoffbound = MIN(cutoffbound, upperbound); /* SCIPsetFeasCeil() can increase bound by almost 1.0 due to numerics
                                                    * and very large upperbound value */

@@ -7162,11 +7162,15 @@ SCIP_RETCODE initSolve(
          }
       }
 
-      /* update primal bound (add 1.0 to primal bound, such that solution with worst bound may be found) */
-      if( !SCIPsetIsInfinity(scip->set, objbound) && SCIPsetIsLT(scip->set, objbound + 1.0, scip->primal->cutoffbound) )
+      /* adjust primal bound, such that solution with worst bound may be found */
+      objbound += SCIPsetCutoffbounddelta(scip->set);
+
+      /* update cutoff bound */
+      if( !SCIPsetIsInfinity(scip->set, objbound) && SCIPsetIsLT(scip->set, objbound, scip->primal->cutoffbound) )
       {
+         /* adjust cutoff bound */
          SCIP_CALL( SCIPprimalSetCutoffbound(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
-               scip->tree, scip->lp, objbound + 1.0) );
+               scip->tree, scip->lp, objbound) );
       }
    }
 

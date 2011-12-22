@@ -883,6 +883,12 @@ SCIP_Real SCIPsetPseudocostdelta(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** return the delta to use for computing the cutoff bound for integral objectives */
+extern
+SCIP_Real SCIPsetCutoffbounddelta(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** checks, if values are in range of epsilon */
 extern
 SCIP_Bool SCIPsetIsEQ(
@@ -1313,6 +1319,7 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetBarrierconvtol(set)         ( (set)->num_barrierconvtol )
 #define SCIPsetPseudocosteps(set)          ( (set)->num_pseudocosteps )
 #define SCIPsetPseudocostdelta(set)        ( (set)->num_pseudocostdelta )
+#define SCIPsetCutoffbounddelta(set)       ( MIN(100.0 * SCIPsetFeastol(set), 0.0001) )
 #define SCIPsetIsEQ(set, val1, val2)       ( EPSEQ(val1, val2, (set)->num_epsilon) )
 #define SCIPsetIsLT(set, val1, val2)       ( EPSLT(val1, val2, (set)->num_epsilon) )
 #define SCIPsetIsLE(set, val1, val2)       ( EPSLE(val1, val2, (set)->num_epsilon) )
