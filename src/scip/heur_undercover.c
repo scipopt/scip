@@ -2714,10 +2714,6 @@ SCIP_RETCODE SCIPapplyUndercover(
 
             useconf = bdlen > 0 && (bdlen <= minmaxvars || bdlen < maxvarsfac*nvars);
 
-            if( SCIPgetRealParam(scip, "conflict/maxvarsfac", &maxvarsfac) != SCIP_OKAY )
-               maxvarsfac = 0.1;
-
-            useconf = bdlen > 0 && bdlen < maxvarsfac*nvars;
             if( useconf )
             {
                /* even if we had reset the global bounds at start of probing, the constraint might be only locally valid due to local constraints/cuts */
