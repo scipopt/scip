@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scipdefplugins.h
+ * @ingroup PUBLICMETHODS
  * @brief  default SCIP plugins
  * @author Tobias Achterberg
  */
