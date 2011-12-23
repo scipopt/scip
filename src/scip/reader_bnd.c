@@ -22,7 +22,6 @@
 
 #include <assert.h>
 #include <string.h>
-#include <ctype.h>
 
 #include "scip/reader_bnd.h"
 
