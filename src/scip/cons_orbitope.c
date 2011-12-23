@@ -791,13 +791,23 @@ SCIP_RETCODE propagateCons(
                SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
             }
 
+            /* add bounds that result in the last one - check top left entry for packing case */
+            if ( ! ispart && lastones[0] == -1 )
+            {
+               assert( SCIPvarGetUbLocal(vars[0][0]) < 0.5 );
+               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[0][0]) );
+            }
+
             /* add bounds that result in the last one - pass through rows */
-            for (k = 0; k < i; ++k)
+            for (k = 1; k < i; ++k)
             {
                int l;
                l = lastones[k] + 1;
-               if ( l <= nblocks-1 && l <= k && SCIPvarGetUbLocal(vars[k][l]) < 0.5 )
+
+               /* if the frontier has not moved and we are not beyond the matrix boundaries */
+               if ( l <= nblocks-1 && l <= k && lastones[k-1] == lastones[k] )
                {
+                  assert( SCIPvarGetUbLocal(vars[k][l]) < 0.5 );
                   SCIP_CALL( SCIPaddConflictBinvar(scip, vars[k][l]) );
                }
             }
@@ -846,13 +856,23 @@ SCIP_RETCODE propagateCons(
                   /* add current bound */
                   SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
 
+                  /* add bounds that result in the last one - check top left entry for packing case */
+                  if ( ! ispart && lastones[0] == -1 )
+                  {
+                     assert( SCIPvarGetUbLocal(vars[0][0]) < 0.5 );
+                     SCIP_CALL( SCIPaddConflictBinvar(scip, vars[0][0]) );
+                  }
+
                   /* add bounds that result in the last one - pass through rows */
-                  for (k = 0; k < i; ++k)
+                  for (k = 1; k < i; ++k)
                   {
                      int l;
                      l = lastones[k] + 1;
-                     if ( l <= nblocks-1 && l <= k && SCIPvarGetUbLocal(vars[k][l]) < 0.5 )
+
+                     /* if the frontier has not moved and we are not beyond the matrix boundaries */
+                     if ( l <= nblocks-1 && l <= k && lastones[k-1] == lastones[k] )
                      {
+                        assert( SCIPvarGetUbLocal(vars[k][l]) < 0.5 );
                         SCIP_CALL( SCIPaddConflictBinvar(scip, vars[k][l]) );
                      }
                   }
