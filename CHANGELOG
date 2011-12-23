@@ -14,6 +14,20 @@ interface
   the corresponding C++ wrapper classes
 - new method SCIPpropIsPresolDelayed() which return if a propagator is delay during presolving
 - changed parameters of function SCIPpropagateCutoffboundVar() in prop_pseudoobj.{c,h}
+- added new method SCIPaddOrigObjoffset() in scip.{c,h} which adds a value to the offset in original space an updates
+  all orignal solutions correspondingly
+
+internal methods
+- changed prob to transprob/origprob and added origprob/transprob parameter to SCIPprimalUpdateObjlimit(),
+  SCIPprimalUpdateObjoffset(), SCIPprimalUpperboundIsSol(), SCIPprimalAddOrigSol(), SCIPprimalAddOrigSolFree in
+  primal.{c,h}, SCIPprobCheckObjIntegral(), SCIPprobScaleObj(), SCIPprobExternObjval(), SCIPprobInternObjval() in
+  prob.{c,h}, SCIPsolGetObj() in sol.{c,h}, SCIPvarFix(), SCIPvarTryAggregateVars(), SCIPvarAggregate(),
+  SCIPvarMultiaggregate(), SCIPvarAddObj() in var.{c,h}
+- added origprob parameter to SCIPsolCreateOriginal() in sol.{c,h}
+- added new method SCIPsolOrigAddObjval() in sol.{h,c} to add an external offset value to one original solution, this
+  is a define in opt mode
+- added new method SCIPprimalAddOrigObjoffset() in primal.{c,h}, to add an external offset to all existing original
+  solutions
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
@@ -51,6 +65,8 @@ features:
   set relaxrows = FALSE
 - the check script now recognizes MIQCP and MINLP instances
 - new column showing the pseudo objective value
+- it is now possible to add an offset for the original problem instance, all original solutions will be initialized with
+  this value and updated, when the offset is changed
 
 SCIP version 2.1.1
 ===============

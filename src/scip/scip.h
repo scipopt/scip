@@ -1879,6 +1879,13 @@ SCIP_RETCODE SCIPaddObjoffset(
    SCIP_Real             addval              /**< value to add to objective offset */
    );
 
+/** adds offset of objective function to original problem and to all existing solution in original space */
+extern
+SCIP_RETCODE SCIPaddOrigObjoffset(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             addval              /**< value to add to objective offset */
+   );
+
 /** returns the objective offset of the original problem */
 extern
 SCIP_Real SCIPgetOrigObjoffset(

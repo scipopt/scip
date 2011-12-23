@@ -91,7 +91,8 @@ SCIP_RETCODE SCIPprimalUpdateObjlimit(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< orginal problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< current LP data */
    );
@@ -104,9 +105,18 @@ SCIP_RETCODE SCIPprimalUpdateObjoffset(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< orginal problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< current LP data */
+   );
+
+/** adds additional objective offset in origanal space to all existing solution (in original space) */
+extern
+void SCIPprimalAddOrigObjoffset(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             addval              /**< additional objective offset in original space */
    );
 
 /** returns whether the current primal bound is justified with a feasible primal solution; if not, the primal bound
@@ -116,7 +126,8 @@ extern
 SCIP_Bool SCIPprimalUpperboundIsSol(
    SCIP_PRIMAL*          primal,              /**< primal data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob                /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob            /**< orginal problem data */
    );
 
 /** adds primal solution to solution storage by copying it */
@@ -159,7 +170,8 @@ SCIP_RETCODE SCIPprimalAddOrigSol(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PROB*            prob,               /**< original problem */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< orginal problem data */
    SCIP_SOL*             sol,                /**< primal CIP solution; is cleared in function call */
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    );
@@ -170,7 +182,8 @@ SCIP_RETCODE SCIPprimalAddOrigSolFree(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PROB*            prob,               /**< original problem */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< orginal problem data */
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    );

@@ -1254,7 +1254,17 @@ SCIP_RETCODE setObjective(
       /* set the objective values */
       for( v = 0; v < ncoefs; ++v )
       {
-         SCIP_CALL( SCIPchgVarObj(scip, linvars[v], SCIPvarGetObj(linvars[v]) + coefs[v]) );
+	 if( SCIPvarIsNegated(linvars[v]) )
+	 {
+	    SCIP_VAR* negvar = SCIPvarGetNegationVar(linvars[v]);
+
+	    SCIP_CALL( SCIPaddOrigObjoffset(scip, coefs[v]) );
+	    SCIP_CALL( SCIPchgVarObj(scip, negvar, SCIPvarGetObj(negvar) - coefs[v]) );
+	 }
+	 else
+	 {
+	    SCIP_CALL( SCIPchgVarObj(scip, linvars[v], SCIPvarGetObj(linvars[v]) + coefs[v]) );
+	 }
       }
    }
 

@@ -57,13 +57,14 @@ SCIP_RETCODE SCIPsolCreate(
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
-/** creates primal CIP solution in original problem space, initialized to zero */
+/** creates primal CIP solution in original problem space, initialized to the offset in the original problem */
 extern
 SCIP_RETCODE SCIPsolCreateOriginal(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            origprob,           /**< orginal problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
@@ -284,7 +285,8 @@ extern
 SCIP_Real SCIPsolGetObj(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob                /**< transformed problem data */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob            /**< orginal problem data */
    );
 
 /** updates primal solutions after a change in a variable's objective value */
@@ -383,6 +385,13 @@ SCIP_RETCODE SCIPsolPrint(
  * type validity.
  */
 
+/** adds value to the objective value of a given original primal CIP solution */
+extern
+void SCIPsolOrigAddObjval(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             addval              /**< offset value to add */
+   );
+
 /** gets current position of solution in array of existing solutions of primal data */
 extern
 int SCIPsolGetPrimalIndex(
@@ -402,6 +411,7 @@ void SCIPsolSetPrimalIndex(
  * speed up the algorithms.
  */
 
+#define SCIPsolOrigAddObjval(sol, addval) ((sol)->obj += (addval))
 #define SCIPsolGetPrimalIndex(sol)      ((sol)->primalindex)
 #define SCIPsolSetPrimalIndex(sol,idx)  { (sol)->primalindex = idx; }
 

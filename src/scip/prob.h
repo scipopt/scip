@@ -258,7 +258,8 @@ void SCIPprobSetObjIntegral(
  */
 extern
 SCIP_RETCODE SCIPprobCheckObjIntegral(
-   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< orginal problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
@@ -271,7 +272,8 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
 /** if possible, scales objective function such that it is integral with gcd = 1 */
 extern
 SCIP_RETCODE SCIPprobScaleObj(
-   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< orginal problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
@@ -344,7 +346,8 @@ SCIP_PROBDATA* SCIPprobGetData(
 /** returns the external value of the given internal objective value */
 extern
 SCIP_Real SCIPprobExternObjval(
-   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< orginal problem data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             objval              /**< internal objective value */
    );
@@ -352,7 +355,8 @@ SCIP_Real SCIPprobExternObjval(
 /** returns the internal value of the given external objective value */
 extern
 SCIP_Real SCIPprobInternObjval(
-   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< orginal problem data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             objval              /**< external objective value */
    );

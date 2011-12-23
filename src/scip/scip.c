@@ -388,7 +388,7 @@ SCIP_Real getPrimalbound(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   return SCIPprobExternObjval(scip->transprob, scip->set, scip->primal->upperbound);
+   return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, scip->primal->upperbound);
 }
 
 /** gets global dual bound */
@@ -409,12 +409,12 @@ SCIP_Real getDualbound(
        * since -infinity is the only valid lower bound
        */
       if( SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD || SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED )
-         return SCIPprobExternObjval(scip->transprob, scip->set, -SCIPinfinity(scip));
+         return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, -SCIPinfinity(scip));
       else
          return getPrimalbound(scip);
    }
    else
-      return SCIPprobExternObjval(scip->transprob, scip->set, lowerbound);
+      return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, lowerbound);
 }
 
 /** gets global lower (dual) bound in transformed problem */
@@ -4635,6 +4635,20 @@ SCIP_RETCODE SCIPaddObjoffset(
    return SCIP_OKAY;
 }
 
+/** adds offset of objective function to original problem and to all existing solution in original space */
+SCIP_RETCODE SCIPaddOrigObjoffset(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             addval              /**< value to add to objective offset */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPaddObjoffset", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   scip->origprob->objoffset += addval;
+   SCIPprimalAddOrigObjoffset(scip->origprimal, scip->set, addval);
+
+   return SCIP_OKAY;
+}
+
 /** returns the objective offset of the original problem */
 SCIP_Real SCIPgetOrigObjoffset(
    SCIP*                 scip                /**< SCIP data structure */
@@ -4696,14 +4710,14 @@ SCIP_RETCODE SCIPsetObjlimit(
    case SCIP_STAGE_SOLVING:
       oldobjlimit = SCIPprobGetObjlim(scip->origprob, scip->set);
       assert(oldobjlimit == SCIPprobGetObjlim(scip->transprob, scip->set)); /*lint !e777*/
-      if( SCIPtransformObj(scip, objlimit) > SCIPprobInternObjval(scip->transprob, scip->set, oldobjlimit) )
+      if( SCIPtransformObj(scip, objlimit) > SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, oldobjlimit) )
       {
          SCIPerrorMessage("cannot relax objective limit from %.15g to %.15g after problem was transformed\n", oldobjlimit, objlimit);
          return SCIP_INVALIDDATA;
       }
       SCIPprobSetObjlim(scip->origprob, objlimit);
       SCIPprobSetObjlim(scip->transprob, objlimit);
-      SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->transprob,
+      SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->transprob, scip->origprob,
             scip->tree, scip->lp) );
       break;
    default:
@@ -5872,7 +5886,7 @@ SCIP_Real SCIPgetLocalOrigEstimate(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetLocalOrigEstimate", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    node = SCIPtreeGetCurrentNode(scip->tree);
-   return node != NULL ? SCIPprobExternObjval(scip->transprob, scip->set, SCIPnodeGetEstimate(node)) : SCIP_INVALID;
+   return node != NULL ? SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPnodeGetEstimate(node)) : SCIP_INVALID;
 }
 
 /** gets estimate of best primal solution w.r.t. transformed problem contained in current subtree */
@@ -5899,7 +5913,7 @@ SCIP_Real SCIPgetLocalDualbound(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetLocalDualbound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    node = SCIPtreeGetCurrentNode(scip->tree);
-   return node != NULL ? SCIPprobExternObjval(scip->transprob, scip->set, SCIPnodeGetLowerbound(node)) : SCIP_INVALID;
+   return node != NULL ? SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPnodeGetLowerbound(node)) : SCIP_INVALID;
 }
 
 /** gets lower bound of current node in transformed problem */
@@ -5924,7 +5938,7 @@ SCIP_Real SCIPgetNodeDualbound(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNodeDualbound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   return SCIPprobExternObjval(scip->transprob, scip->set, SCIPnodeGetLowerbound(node));
+   return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPnodeGetLowerbound(node));
 }
 
 /** gets lower bound of given node in transformed problem */
@@ -5949,7 +5963,7 @@ SCIP_RETCODE SCIPupdateLocalDualbound(
    SCIP_CALL( checkStage(scip, "SCIPupdateLocalDualbound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPnodeUpdateLowerbound(SCIPtreeGetCurrentNode(scip->tree), scip->stat,
-      SCIPprobInternObjval(scip->transprob, scip->set, newbound));
+      SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, newbound));
 
    return SCIP_OKAY;
 }
@@ -5980,7 +5994,7 @@ SCIP_RETCODE SCIPupdateNodeDualbound(
 {
    SCIP_CALL( checkStage(scip, "SCIPupdateNodeDualbound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIPnodeUpdateLowerbound(node, scip->stat, SCIPprobInternObjval(scip->transprob, scip->set, newbound));
+   SCIPnodeUpdateLowerbound(node, scip->stat, SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, newbound));
 
    return SCIP_OKAY;
 }
@@ -6227,7 +6241,7 @@ SCIP_RETCODE SCIPtransformProb(
 
    /* update upper bound and cutoff bound due to objective limit in primal data */
    SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
-         scip->transprob, scip->tree, scip->lp) );
+         scip->transprob, scip->origprob, scip->tree, scip->lp) );
 
    /* print transformed problem statistics */
    SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
@@ -6417,11 +6431,11 @@ SCIP_RETCODE exitPresolve(
    /* check, whether objective value is always integral by inspecting the problem, if it is the case adjust the
     * cutoff bound if primal solution is already known 
     */
-   SCIP_CALL( SCIPprobCheckObjIntegral(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,
+   SCIP_CALL( SCIPprobCheckObjIntegral(scip->transprob, scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,
          scip->tree, scip->lp, scip->eventqueue) );
 
    /* if possible, scale objective function such that it becomes integral with gcd 1 */
-   SCIP_CALL( SCIPprobScaleObj(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,
+   SCIP_CALL( SCIPprobScaleObj(scip->transprob, scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,
          scip->tree, scip->lp, scip->eventqueue) );
 
    /* free temporary presolving root node */
@@ -6844,7 +6858,7 @@ SCIP_RETCODE presolve(
 
    /* update upper bound and cutoff bound due to objective limit in primal data */
    SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
-         scip->transprob, scip->tree, scip->lp) );
+         scip->transprob, scip->origprob, scip->tree, scip->lp) );
 
    /* start presolving timer */
    SCIPclockStart(scip->stat->presolvingtime, scip->set);
@@ -7100,7 +7114,7 @@ SCIP_RETCODE initSolve(
 
    /* update upper bound and cutoff bound due to objective limit in primal data */
    SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
-         scip->transprob, scip->tree, scip->lp) );
+         scip->transprob, scip->origprob, scip->tree, scip->lp) );
 
    /* switch stage to INITSOLVE */
    scip->set->stage = SCIP_STAGE_INITSOLVE;
@@ -7368,8 +7382,8 @@ SCIP_RETCODE SCIPpresolve(
             {
 	       /* switch status to OPTIMAL */
                if( scip->primal->nsols > 0
-                  && SCIPsetIsLT(scip->set, SCIPsolGetObj(scip->primal->sols[0], scip->set, scip->transprob),
-                     SCIPprobInternObjval(scip->transprob, scip->set, SCIPprobGetObjlim(scip->transprob, scip->set))) )
+                  && SCIPsetIsLT(scip->set, SCIPsolGetObj(scip->primal->sols[0], scip->set, scip->transprob, scip->origprob),
+                     SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, SCIPprobGetObjlim(scip->transprob, scip->set))) )
                   scip->stat->status = SCIP_STATUS_OPTIMAL;
                else /* switch status to INFEASIBLE */
                   scip->stat->status = SCIP_STATUS_INFEASIBLE;
@@ -7392,8 +7406,8 @@ SCIP_RETCODE SCIPpresolve(
                 * worse than user objective limit)
                 */
                if( scip->primal->nsols > 0
-                  && SCIPsetIsLT(scip->set, SCIPsolGetObj(scip->primal->sols[0], scip->set, scip->transprob),
-                     SCIPprobInternObjval(scip->transprob, scip->set, SCIPprobGetObjlim(scip->transprob, scip->set))) )
+                  && SCIPsetIsLT(scip->set, SCIPsolGetObj(scip->primal->sols[0], scip->set, scip->transprob, scip->origprob),
+                     SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, SCIPprobGetObjlim(scip->transprob, scip->set))) )
                {
                   /* switch status to OPTIMAL */
                   scip->stat->status = SCIP_STATUS_OPTIMAL;
@@ -9292,7 +9306,7 @@ SCIP_RETCODE SCIPsetRelaxSolValsSol(
       SCIP_CALL( SCIPvarSetRelaxSol(vars[v], scip->set, scip->relaxation, vals[v], FALSE) );
    }       
 
-   SCIPrelaxationSetSolObj(scip->relaxation, SCIPsolGetObj(sol, scip->set, scip->transprob));
+   SCIPrelaxationSetSolObj(scip->relaxation, SCIPsolGetObj(sol, scip->set, scip->transprob, scip->origprob));
 
    SCIPrelaxationSetSolZero(scip->relaxation, FALSE);
    SCIPrelaxationSetSolValid(scip->relaxation, TRUE);
@@ -10076,13 +10090,13 @@ SCIP_RETCODE SCIPaddVarObj(
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
-      SCIP_CALL( SCIPvarAddObj(var, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->primal,
+      SCIP_CALL( SCIPvarAddObj(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob, scip->primal,
             scip->tree, scip->lp, scip->eventqueue, addobj) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_PRESOLVING:
-      SCIP_CALL( SCIPvarAddObj(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal,
+      SCIP_CALL( SCIPvarAddObj(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob, scip->primal,
             scip->tree, scip->lp, scip->eventqueue, addobj) );
       return SCIP_OKAY;
 
@@ -10926,7 +10940,7 @@ SCIP_RETCODE SCIPinferBinvarCons(
       {
          SCIP_Bool fixed;
 
-         SCIP_CALL( SCIPvarFix(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal, scip->tree,
+         SCIP_CALL( SCIPvarFix(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob, scip->primal, scip->tree,
                scip->lp, scip->branchcand, scip->eventqueue, (SCIP_Real)fixedval, infeasible, &fixed) );
          break;
       }
@@ -11207,7 +11221,7 @@ SCIP_RETCODE SCIPinferBinvarProp(
       {
          SCIP_Bool fixed;
 
-         SCIP_CALL( SCIPvarFix(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal, scip->tree,
+         SCIP_CALL( SCIPvarFix(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob, scip->primal, scip->tree,
                scip->lp, scip->branchcand, scip->eventqueue, (SCIP_Real)fixedval, infeasible, &fixed) );
          break;
       }
@@ -11613,14 +11627,61 @@ SCIP_RETCODE SCIPaddVarImplication(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddVarImplication", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
+   if( !SCIPvarIsBinary(var) )
    {
       SCIPerrorMessage("can't add implication for nonbinary variable\n");
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPvarAddImplic(var, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
-         scip->branchcand, scip->eventqueue, varfixing, implvar, impltype, implbound, TRUE, infeasible, nbdchgs) );
+   /* the implication graph can only handle 'real' binary (SCIP_VARTYPE_BINARY) variables, therefore we transform the
+    * implication in variable bounds, (lowerbound of y will be abbreviated by lby, upperbound equivlaent) the follwing
+    * four cases are:
+    *
+    * 1. (x >= 1 => y >= b) => y >= (b - lby) * x + lby
+    * 2. (x >= 1 => y <= b) => y <= (b - uby) * x + uby
+    * 3. (x <= 0 => y >= b) => y >= (lby - b) * x + b
+    * 4. (x <= 0 => y <= b) => y <= (uby - b) * x + b
+    */
+   if( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
+   {
+      SCIP_Real lby;
+      SCIP_Real uby;
+
+      lby = SCIPvarGetLbGlobal(implvar);
+      uby = SCIPvarGetUbGlobal(implvar);
+
+      if( varfixing == TRUE )
+      {
+	 if( impltype == SCIP_BOUNDTYPE_LOWER )
+	 {
+	    SCIP_CALL( SCIPvarAddVlb(implvar, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
+		  scip->branchcand, scip->eventqueue, var, implbound - lby, lby, TRUE, infeasible, nbdchgs) );
+	 }
+	 else
+	 {
+	    SCIP_CALL( SCIPvarAddVub(implvar, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
+		  scip->branchcand, scip->eventqueue, var, implbound - uby, uby, TRUE, infeasible, nbdchgs) );
+	 }
+      }
+      else
+      {
+	 if( impltype == SCIP_BOUNDTYPE_LOWER )
+	 {
+	    SCIP_CALL( SCIPvarAddVlb(implvar, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
+		  scip->branchcand, scip->eventqueue, var, lby - implbound, implbound, TRUE, infeasible, nbdchgs) );
+	 }
+	 else
+	 {
+	    SCIP_CALL( SCIPvarAddVub(implvar, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
+		  scip->branchcand, scip->eventqueue, var, uby - implbound, implbound, TRUE, infeasible, nbdchgs) );
+	 }
+      }
+   }
+   else
+   {
+      SCIP_CALL( SCIPvarAddImplic(var, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
+	    scip->branchcand, scip->eventqueue, varfixing, implvar, impltype, implbound, TRUE, infeasible, nbdchgs) ); \
+   }
 
    return SCIP_OKAY;
 }
@@ -12221,7 +12282,7 @@ SCIP_RETCODE SCIPfixVar(
    case SCIP_STAGE_PRESOLVING:
       if( SCIPtreeGetCurrentDepth(scip->tree) == 0 )
       {
-         SCIP_CALL( SCIPvarFix(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal, scip->tree,
+         SCIP_CALL( SCIPvarFix(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob, scip->primal, scip->tree,
                scip->lp, scip->branchcand, scip->eventqueue, fixedval, infeasible, fixed) );
          return SCIP_OKAY;
       }
@@ -12337,7 +12398,7 @@ SCIP_RETCODE SCIPaggregateVars(
       assert(!SCIPsetIsZero(scip->set, scalary));
 
       /* variable x was resolved to fixed variable: variable y can be fixed to c'/b' */
-      SCIP_CALL( SCIPvarFix(vary, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal, scip->tree,
+      SCIP_CALL( SCIPvarFix(vary, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob, scip->primal, scip->tree,
             scip->lp, scip->branchcand, scip->eventqueue, rhs/scalary, infeasible, aggregated) );
       *redundant = TRUE;
    }
@@ -12347,7 +12408,7 @@ SCIP_RETCODE SCIPaggregateVars(
       assert(!SCIPsetIsZero(scip->set, scalarx));
       
       /* variable y was resolved to fixed variable: variable x can be fixed to c'/a' */
-      SCIP_CALL( SCIPvarFix(varx, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal, scip->tree,
+      SCIP_CALL( SCIPvarFix(varx, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob, scip->primal, scip->tree,
             scip->lp, scip->branchcand, scip->eventqueue, rhs/scalarx, infeasible, aggregated) );
       *redundant = TRUE;
    }
@@ -12363,7 +12424,7 @@ SCIP_RETCODE SCIPaggregateVars(
       else
       {
          /* sum of scalars is not zero: fix variable x' == y' to c'/(a'+b') */
-         SCIP_CALL( SCIPvarFix(varx, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal,
+         SCIP_CALL( SCIPvarFix(varx, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob, scip->primal,
                scip->tree, scip->lp, scip->branchcand, scip->eventqueue, rhs/scalarx, infeasible, aggregated) );
       }
       *redundant = TRUE;
@@ -12371,7 +12432,7 @@ SCIP_RETCODE SCIPaggregateVars(
    else
    {
       /* both variables are different active problem variables, and both scalars are non-zero: try to aggregate them */
-      SCIP_CALL( SCIPvarTryAggregateVars(scip->set, scip->mem->probmem, scip->stat, scip->transprob, scip->primal,
+      SCIP_CALL( SCIPvarTryAggregateVars(scip->set, scip->mem->probmem, scip->stat, scip->transprob, scip->origprob, scip->primal,
 	    scip->tree, scip->lp, scip->cliquetable, scip->branchcand, scip->eventfilter, scip->eventqueue,
 	    varx, vary, scalarx, scalary, rhs, infeasible, aggregated) );
       *redundant = *aggregated;
@@ -12411,7 +12472,7 @@ SCIP_RETCODE SCIPmultiaggregateVar(
    }
    assert(SCIPtreeGetCurrentDepth(scip->tree) == 0);
 
-   SCIP_CALL( SCIPvarMultiaggregate(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal,
+   SCIP_CALL( SCIPvarMultiaggregate(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob, scip->primal,
          scip->tree, scip->lp, scip->cliquetable, scip->branchcand, scip->eventfilter, scip->eventqueue,
          naggvars, aggvars, scalars, constant, infeasible, aggregated) );
 
@@ -18122,7 +18183,7 @@ SCIP_RETCODE SCIPcreateSol(
    switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      SCIP_CALL( SCIPsolCreateOriginal(sol, scip->mem->probmem, scip->set, scip->stat, scip->origprimal, NULL, heur) );
+      SCIP_CALL( SCIPsolCreateOriginal(sol, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->origprimal, NULL, heur) );
       return SCIP_OKAY;
       
    case SCIP_STAGE_TRANSFORMING:
@@ -18273,7 +18334,7 @@ SCIP_RETCODE SCIPcreateOrigSol(
    switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      SCIP_CALL( SCIPsolCreateOriginal(sol, scip->mem->probmem, scip->set, scip->stat, scip->origprimal, NULL, heur) );
+      SCIP_CALL( SCIPsolCreateOriginal(sol, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->origprimal, NULL, heur) );
       return SCIP_OKAY;
       
    case SCIP_STAGE_TRANSFORMING:
@@ -18282,7 +18343,7 @@ SCIP_RETCODE SCIPcreateOrigSol(
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_SOLVING:
-      SCIP_CALL( SCIPsolCreateOriginal(sol, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree, heur) );
+      SCIP_CALL( SCIPsolCreateOriginal(sol, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->primal, scip->tree, heur) );
       return SCIP_OKAY;
       
    case SCIP_STAGE_SOLVED:
@@ -18638,15 +18699,15 @@ SCIP_Real SCIPgetSolOrigObj(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSolOrigObj", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    if( sol != NULL )
-      return SCIPprobExternObjval(scip->transprob, scip->set, SCIPsolGetObj(sol, scip->set, scip->transprob));
+      return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPsolGetObj(sol, scip->set, scip->transprob, scip->origprob));
    else
    {
       SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSolOrigObj(sol==NULL)",
             FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
       if( SCIPtreeHasCurrentNodeLP(scip->tree) )
-         return SCIPprobExternObjval(scip->transprob, scip->set, SCIPlpGetObjval(scip->lp, scip->set));
+         return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPlpGetObjval(scip->lp, scip->set));
       else
-         return SCIPprobExternObjval(scip->transprob, scip->set, SCIPlpGetPseudoObjval(scip->lp, scip->set));
+         return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPlpGetPseudoObjval(scip->lp, scip->set));
    }
 }
 
@@ -18659,7 +18720,7 @@ SCIP_Real SCIPgetSolTransObj(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSolTransObj", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    if( sol != NULL )
-      return SCIPsolGetObj(sol, scip->set, scip->transprob);
+      return SCIPsolGetObj(sol, scip->set, scip->transprob, scip->origprob);
    else
    {
       SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSolTransObj(sol==NULL)",
@@ -18679,7 +18740,7 @@ SCIP_Real SCIPtransformObj(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPtransformObj", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
-   return SCIPprobInternObjval(scip->transprob, scip->set, obj);
+   return SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, obj);
 }
 
 /** maps transformed objective value into original space */
@@ -18690,7 +18751,7 @@ SCIP_Real SCIPretransformObj(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPretransformObj", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
-   return SCIPprobExternObjval(scip->transprob, scip->set, obj);
+   return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, obj);
 }
 
 /** gets clock time, when this solution was found */
@@ -18779,7 +18840,7 @@ SCIP_RETCODE SCIPprintSol(
    if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
       objvalue = SCIPsolGetOrigObj(sol);
    else
-      objvalue = SCIPprobExternObjval(scip->transprob, scip->set, SCIPsolGetObj(sol, scip->set, scip->transprob));
+      objvalue = SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPsolGetObj(sol, scip->set, scip->transprob, scip->origprob));
 
    SCIPprintReal(scip, file, objvalue, 20, 15);
    SCIPmessageFPrintInfo(file, "\n");
@@ -18822,7 +18883,7 @@ SCIP_RETCODE SCIPprintTransSol(
    }
 
    SCIPmessageFPrintInfo(file, "objective value:                 ");
-   SCIPprintReal(scip, file, SCIPsolGetObj(sol, scip->set, scip->transprob), 20, 9);
+   SCIPprintReal(scip, file, SCIPsolGetObj(sol, scip->set, scip->transprob, scip->origprob), 20, 9);
    SCIPmessageFPrintInfo(file, "\n");
 
    SCIP_CALL( SCIPsolPrint(sol, scip->set, scip->stat, scip->transprob, NULL, file, printzeros) );
@@ -19090,7 +19151,7 @@ SCIP_RETCODE SCIPaddSol(
    case SCIP_STAGE_PROBLEM:
    case SCIP_STAGE_FREETRANS:
       assert( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL );
-      SCIP_CALL( SCIPprimalAddOrigSol(scip->origprimal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, sol, stored) );
+      SCIP_CALL( SCIPprimalAddOrigSol(scip->origprimal, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob, sol, stored) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMED:
@@ -19134,7 +19195,7 @@ SCIP_RETCODE SCIPaddSolFree(
    case SCIP_STAGE_PROBLEM:
    case SCIP_STAGE_FREETRANS:
       assert( SCIPsolGetOrigin(*sol) == SCIP_SOLORIGIN_ORIGINAL );
-      SCIP_CALL( SCIPprimalAddOrigSolFree(scip->origprimal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, sol, stored) );
+      SCIP_CALL( SCIPprimalAddOrigSolFree(scip->origprimal, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob, sol, stored) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMED:
@@ -20341,8 +20402,8 @@ SCIP_Real SCIPgetAvgDualbound(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetAvgDualbound", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   return SCIPprobExternObjval(scip->transprob, scip->set,
-      SCIPtreeGetAvgLowerbound(scip->tree, scip->primal->cutoffbound));
+   return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set,
+	 SCIPtreeGetAvgLowerbound(scip->tree, scip->primal->cutoffbound));
 }
 
 /** gets average lower (dual) bound of all unprocessed nodes in transformed problem */
@@ -20385,7 +20446,7 @@ SCIP_Real SCIPgetDualboundRoot(
    if( SCIPsetIsInfinity(scip->set, scip->stat->rootlowerbound) )
       return getPrimalbound(scip);
    else
-      return SCIPprobExternObjval(scip->transprob, scip->set, scip->stat->rootlowerbound);
+      return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, scip->stat->rootlowerbound);
 }
 
 /** gets lower (dual) bound in transformed problem of the root node */
@@ -20441,7 +20502,7 @@ SCIP_Bool SCIPisPrimalboundSol(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPisPrimalboundSol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   return SCIPprimalUpperboundIsSol(scip->primal, scip->set, scip->transprob);
+   return SCIPprimalUpperboundIsSol(scip->primal, scip->set, scip->transprob, scip->origprob);
 }
 
 /** gets current gap |(primalbound - dualbound)/min(|primalbound|,|dualbound|)| if both bounds have same sign,
@@ -21586,7 +21647,7 @@ void printSolutionStatistics(
          SCIPmessageFPrintInfo(file, "  Primal Bound     : %+21.14e", primalbound);
          
          /* display (best) primal bound */
-         bestsol = SCIPsolGetObj(scip->primal->sols[0], scip->set, scip->transprob);
+         bestsol = SCIPsolGetObj(scip->primal->sols[0], scip->set, scip->transprob, scip->origprob);
          bestsol = SCIPretransformObj(scip, bestsol);
          if( SCIPsetIsGT(scip->set, bestsol, primalbound) )
          {
