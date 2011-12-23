@@ -1,4 +1,4 @@
-# SCIP version 2.1.0
+# SCIP version 2.1.1
 
 # branching score function ('s'um, 'p'roduct)
 # [type: char, range: {sp}, default: p]
@@ -379,6 +379,10 @@ misc/resetstat = TRUE
 # should only solutions be checked which improve the primal bound
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 misc/improvingsols = FALSE
+
+# should the reason be printed if a given start solution is infeasible
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+misc/printreason = TRUE
 
 # child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value, 'r'oot LP value difference, 'h'ybrid inference/root LP value difference)
 # [type: char, range: {dupilrh}, default: h]
@@ -892,7 +896,7 @@ constraints/nonlinear/upgrade/abspower = TRUE
 # [type: real, range: [0,1e+20], default: 0.0001]
 constraints/abspower/minefficacysepa = 0.0001
 
-# /**< minimal target efficacy of a cut in order to add it to relaxation during enforcement as factor of feasibility tolerance (may be ignored)
+# minimal target efficacy of a cut in order to add it to relaxation during enforcement as factor of feasibility tolerance (may be ignored)
 # [type: real, range: [1,1e+20], default: 2]
 constraints/abspower/minefficacyenfofac = 2
 
@@ -3740,6 +3744,10 @@ heuristics/undercover/onlyconvexify = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 heuristics/undercover/postnlp = TRUE
 
+# should bounddisjunction constraints be covered (or just copied)?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+heuristics/undercover/coverbd = FALSE
+
 # maximum number of backtracks in fix-and-propagate
 # [type: int, range: [0,2147483647], default: 6]
 heuristics/undercover/maxbacktracks = 6
@@ -3755,6 +3763,10 @@ heuristics/undercover/maxreorders = 1
 # objective function of the covering problem ('b'ranching status, influenced nonlinear 'c'onstraints/'t'erms, 'd'omain size, 'l'ocks, 'm'in of up/down locks, 'u'nit penalties, constraint 'v'iolation)
 # [type: char, range: {cdlmtu}, default: u]
 heuristics/undercover/coveringobj = u
+
+# order in which variables should be fixed (increasing 'C'onflict score, decreasing 'c'onflict score, increasing 'V'ariable index, decreasing 'v'ariable index
+# [type: char, range: {CcVv}, default: v]
+heuristics/undercover/fixingorder = v
 
 # should all active cuts from cutpool be copied to constraints in subproblem?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -3941,8 +3953,8 @@ propagating/probing/maxtotaluseless = 50
 propagating/probing/maxsumuseless = 0
 
 # priority of propagator <pseudoobj>
-# [type: int, range: [-536870912,536870911], default: 0]
-propagating/pseudoobj/priority = 0
+# [type: int, range: [-536870912,536870911], default: 100000]
+propagating/pseudoobj/priority = 100000
 
 # frequency for calling propagator <pseudoobj> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
@@ -3964,17 +3976,29 @@ propagating/pseudoobj/maxprerounds = -1
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 propagating/pseudoobj/presoldelay = TRUE
 
-# maximal number of variables to look at in a single propagation round (-1: process all variables)
-# [type: int, range: [-1,2147483647], default: 100]
-propagating/pseudoobj/maxcands = 100
+# minimal number of successive none binary variable propagator whithout a bound reduction before aborted
+# [type: int, range: [0,2147483647], default: 100]
+propagating/pseudoobj/minuseless = 100
+
+# maximal fraction of none binary variables with non-zero objective without a bound reduction before aborted
+# [type: real, range: [0,1], default: 0.1]
+propagating/pseudoobj/maxvarsfrac = 0.1
 
 # do we want to propagate full if we are propagating the root node, despite the number of maxcand
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 propagating/pseudoobj/propfullinroot = TRUE
 
 # propagate new cutoff bound directly globally
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+propagating/pseudoobj/propcutoffbound = TRUE
+
+# should the propagator be forced even active pricer are present?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
-propagating/pseudoobj/propcutoffbound = FALSE
+propagating/pseudoobj/force = FALSE
+
+# number of variable added after the propgatore is reinitialized?
+# [type: int, range: [0,2147483647], default: 1000]
+propagating/pseudoobj/maxnewvars = 1000
 
 # priority of propagator <redcost>
 # [type: int, range: [-536870912,536870911], default: 10000000]
