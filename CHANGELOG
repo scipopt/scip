@@ -58,7 +58,8 @@ performance improvements:
 - improve SCIPintervalSolveBivariateQuadExpressionAllScalar for ax=0 case if x has 0 in the interval for the linear coef.
 - better domain propagation for quadratic constraints that consist of "non-overlapping" bilinear terms only
 - ensure that a fixing of a variable in an abspower constraint is propagated to a fixing of the other variable
-- improvements in undercover heuristic, e.g., bound disjunction constraints are considered when setting up the covering problem
+- improvements in undercover heuristic, e.g., bound disjunction constraints are considered when setting up the covering 
+  problem
 
 features:
 - the pseudo objective propagator can be forced to propagate if active pricers are present; this can be done 
@@ -74,8 +75,8 @@ fixed bugs:
 - fixed bug in SCIPmakeIndicatorFeasible() in cons_indicator.c
 - fixed bug with conflict clause modification in cons_indicator
 - fixed bug in cons_bounddisjunction with uninitialized return values
-- fixed bug when copying problem data in c++ case returned with the result SCIP_DIDNOTRUN
 - fixed bug with setting type of slack variables to be implicitly integral
+- fixed bug when copying problem data in c++ case returned with the result SCIP_DIDNOTRUN
 - fixed computation of counter which state the changes since the last call of a presolver
 - fixed handling of unbounded solutions, including double-checking their feasibility and that the primal ray is a
   valid unboundedness proof and reoptimizing the LP with modified settings if the solution is not feasible
@@ -87,7 +88,7 @@ fixed bugs:
 - fixed bug in SCIPsortedvecDelPos...() templates
 
 parameters:
-- changed parameter "propagating/pseudoobj/maxcands" to "propagating/pseudoobj/minuseless" (see prop_pseudoobj.h)
+- changed parameter "propagating/pseudoobj/maxcands" to "propagating/pseudoobj/minuseless" (see prop_pseudoobj.c)
   due to revision of the pseudo objective propagator
 - added parameters "heuristics/undercover/coverbd" and "heuristics/undercover/fixingorder"
 
