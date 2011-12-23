@@ -69,6 +69,7 @@
 #define DEFAULT_ENFORCECUTS        TRUE /**< should cuts be separated during LP enforcing? */
 #define DEFAULT_AGGRLINEARIZATION FALSE /**< should an aggregated linearization be used? */
 #define DEFAULT_OBJECTIVE          TRUE /**< should the objective function be used to propagate */
+#define DEFAULT_UPGRRESULTANT      TRUE /**< should all binary resultant variables be upgraded to implicit binary variables */
 
 #define HASHSIZE_ANDCONS         131101 /**< minimal size of hash table in and constraint tables */
 #define DEFAULT_PRESOLUSEHASHING   TRUE /**< should hash table be used for detecting redundant constraints in advance */
@@ -121,6 +122,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             enforcecuts;        /**< should cuts be separated during LP enforcing? */
    SCIP_Bool             aggrlinearization;  /**< should an aggregated linearization be used?  */
    SCIP_Bool             objective;          /**< should the objective function be used to propagate */
+   SCIP_Bool             upgrresultant;      /**< upgrade binary resultant variable to an implicit binary variable */
 };
 
 
@@ -238,6 +240,12 @@ SCIP_RETCODE conshdlrdataCreate(
       SCIPerrorMessage("event handler for and constraints not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
+
+   (*conshdlrdata)->nconss = 0;
+   (*conshdlrdata)->conss = NULL;
+   (*conshdlrdata)->maxobjchgmap = NULL;
+   (*conshdlrdata)->maxobjchgs = NULL;
+   (*conshdlrdata)->cutoffbound = SCIPinfinity(scip);
 
    return SCIP_OKAY;
 }
@@ -501,11 +509,14 @@ SCIP_RETCODE consdataCreate(
       SCIP_CALL( consdataCatchEvents(scip, *consdata, eventhdlr) );
    }
 
+   assert(SCIPvarIsBinary((*consdata)->resvar));
+
    /* capture vars */
    SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->resvar) );
    for( v = 0; v < (*consdata)->nvars; v++ )
    {
       assert((*consdata)->vars[v] != NULL);
+      assert(SCIPvarIsBinary((*consdata)->vars[v]));
       SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[v]) );
    }
 
@@ -1586,7 +1597,7 @@ SCIP_RETCODE consPropagateObjective(
           * @note Operands with negation objective value or negation reduced cost have a best bound of one which means
           *       they are already part of the LP objective value
           */
-         objval = getVarCont(scip, consdata->vars[v]);
+         objval = getVarCont(scip, var);
 
          if(  objval > 0.0 )
             operandchg += objval;
@@ -1638,7 +1649,7 @@ SCIP_RETCODE consPropagateObjective(
          var = vars[v];
          assert(var != NULL);
 
-         objval = getVarCont(scip, consdata->vars[v]);
+         objval = getVarCont(scip, var);
 
          /* check if the objective contribution is zero or positive; in that case there is no additional increase in the
           * objective value by fixing the resultant to zero
@@ -1833,7 +1844,7 @@ SCIP_RETCODE propagateCons(
    }
 
    /* check if resultant variables is globally fixed to zero */
-   if( SCIPvarGetUbGlobal(resvar) < 0.5 )
+   if( !SCIPconsIsModifiable(cons) && SCIPvarGetUbGlobal(resvar) < 0.5 )
    {
       SCIP_CALL( consdataLinearize(scip, cons, cutoff, nfixedvars, nupgdconss) );
 
@@ -1969,7 +1980,7 @@ SCIP_RETCODE propagateCons(
       SCIP_CALL( consdataSwitchWatchedvars(scip, consdata, conshdlrdata->eventhdlr, watchedvar1, watchedvar2) );
    }
 
-   /* use objective fucntion and AND structure to propagate resultant variable */
+   /* use objective function and AND structure to propagate resultant variable */
    if( conshdlrdata->objective )
    {
       SCIP_Real cutoffbound;
@@ -2007,7 +2018,7 @@ SCIP_RETCODE propagateCons(
          }
 
          /* only run propagation, if an optimal LP solution is at hand */
-         if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
+         if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPhasCurrentNodeLP(scip) && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
          {
             SCIP_Real lpobjval;
 
@@ -2733,7 +2744,7 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-   
+
    if( conshdlrdata->linearize )
    {
       /* linearize all "and" constraints and remove the "and" constraints */
@@ -3716,6 +3727,10 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
          "constraints/"CONSHDLR_NAME"/objective",
          "should the objective function be used to propagate?",
          &conshdlrdata->objective, TRUE, DEFAULT_OBJECTIVE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/"CONSHDLR_NAME"/upgraderesultant",
+         "should all binary resultant variables be upgraded to implicit binary variables?",
+         &conshdlrdata->upgrresultant, TRUE, DEFAULT_UPGRRESULTANT, NULL, NULL) );
 
    if( SCIPfindConshdlr(scip, "nonlinear") != NULL )
    {
@@ -3765,6 +3780,7 @@ SCIP_RETCODE SCIPcreateConsAnd(
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
+   SCIP_Bool infeasible;
 
    /* find the and constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -3776,6 +3792,13 @@ SCIP_RETCODE SCIPcreateConsAnd(
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+
+   /* upgrade binary resultant variable to an implicit binary variable */
+   if( conshdlrdata->upgrresultant && SCIPvarGetType(resvar) == SCIP_VARTYPE_BINARY )
+   {
+      SCIP_CALL( SCIPchgVarType(scip, resvar, SCIP_VARTYPE_IMPLINT, &infeasible) );
+      assert(!infeasible);
+   }
 
    /* create constraint data */
    SCIP_CALL( consdataCreate(scip, &consdata, conshdlrdata->eventhdlr, nvars, vars, resvar, FALSE) );

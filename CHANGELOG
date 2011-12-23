@@ -43,6 +43,8 @@ parameters:
 - new parameter constraints/indicator/dualreductions to enable dual presolving/propagation steps
 - new parameters constraints/indicator/{sepacouplingcuts,sepacouplinglocal} to enable separation of (local) cuts
 - new parameters constraints/indicator/{maxsepacuts,maxsepacutsroot} to restrict the number of separated cuts
+- new parameter constraints/and/upgraderesultant to upgrade resultants of and constraints from binry to implicit binary
+  variables, default is TRUE
 
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to
