@@ -2435,10 +2435,10 @@ SCIP_RETCODE SCIPapplyUndercover(
       SCIP_CALL( solveCoveringProblem(coveringscip, nvars, coveringvars, &coversize, cover,
             timelimit, memorylimit + SCIPgetMemUsed(coveringscip)/1048576.0, &success) );
 
-   STATISTIC(
-      if( ncovers == 0 && success )
-         SCIPinfoMessage(scip, NULL, "UCstats coversize abs: %6d rel: %9.6f\n", coversize, 100*coversize /(SCIP_Real)nvars);
-      );
+      STATISTIC(
+         if( ncovers == 0 && success )
+            SCIPinfoMessage(scip, NULL, "UCstats coversize abs: %6d rel: %9.6f\n", coversize, 100*coversize /(SCIP_Real)nvars);
+         );
 
       assert(coversize >= 0);
       assert(coversize <= nvars);
