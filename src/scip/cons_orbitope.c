@@ -787,7 +787,7 @@ SCIP_RETCODE propagateCons(
                   break;
 
                /* at this point the variable should be fixed to 0 */
-               assert( SCIPvarGetUbLocal(vars[i][j]) < 0.5 );
+               assert( !ispart || SCIPvarGetUbLocal(vars[i][j]) < 0.5 );
                SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
             }
 
