@@ -3744,10 +3744,6 @@ heuristics/undercover/onlyconvexify = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 heuristics/undercover/postnlp = TRUE
 
-# should bounddisjunction constraints be covered (or just copied)?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-heuristics/undercover/coverbd = FALSE
-
 # maximum number of backtracks in fix-and-propagate
 # [type: int, range: [0,2147483647], default: 6]
 heuristics/undercover/maxbacktracks = 6
