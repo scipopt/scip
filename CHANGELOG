@@ -1,5 +1,9 @@
+SCIP version 2.1.2
+==================
+
+
 SCIP version 2.1.1
-===============
+==================
 
 performance improvements:
 - revised pseudo objective propagator
@@ -39,8 +43,9 @@ parameters:
   due to revision of the pseudo objective propagator
 - added parameters "heuristics/undercover/fixingorder"
 
+
 SCIP version 2.1.0
-===============
+==================
 
 interface:
 
@@ -636,7 +641,7 @@ parameters:
   form for SOC constraint representation in NLP
 
 SCIP version 2.0.0
-===============
+==================
 
 interface:
 - new method SCIPbranchruleGetNRelaxCalls() to get the total number of times, a particular branching rule was called on
@@ -1076,7 +1081,7 @@ Makefile
 
 
 SCIP version 1.2.0
-===============
+==================
 
 interface:
 - new parameter "mksetcoefsvalid" in lp.c: SCIPlpCalcMIR(), scip.c: SCIPcalcMIR(), and sepa_cmir.c: tryDelta() to store
@@ -1323,7 +1328,7 @@ parameters:
 - display character of oneopt heuristic changed to 'b'
 
 SCIP version 1.1.0
-===============
+==================
 
 compiling:
 - added in all make/make.* "GMP_FLAGS" and "GMP_LDFLAGS"
