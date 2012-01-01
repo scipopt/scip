@@ -101,7 +101,7 @@ unsigned int dijkstraPairCutoff(
 
 /** Dijkstra's algorithm for shortest paths between a pair of nodes ignoring nodes, using binary heaps, and truncated at cutoff */
 extern
-unsigned int dijkstraPairCutoff(
+unsigned int dijkstraPairCutoffIgnore(
    const DIJKSTRA_GRAPH* G,                  /**< directed graph */
    unsigned int          source,             /**< source node */
    unsigned int          target,             /**< target node */

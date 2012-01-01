@@ -494,7 +494,7 @@ unsigned int dijkstraPairCutoff(
 
 
 /** Dijkstra's algorithm for shortest paths between a pair of nodes ignoring nodes, using binary heaps, and truncated at cutoff */
-unsigned int dijkstraPairCutoff(
+unsigned int dijkstraPairCutoffIgnore(
    const DIJKSTRA_GRAPH* G,                  /**< directed graph */
    unsigned int          source,             /**< source node */
    unsigned int          target,             /**< target node */
@@ -519,8 +519,8 @@ unsigned int dijkstraPairCutoff(
    assert( target < G->nodes );
    assert( dist != NULL );
    assert( pred != NULL );
-   assert( ignored[source] == 0 );
-   assert( ignored[target] == 0 );
+   assert( ignore[source] == 0 );
+   assert( ignore[target] == 0 );
 
    assert( dijkstraHeapIsValid(entry, dist, order, used, G->nodes) );
 
