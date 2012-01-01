@@ -49,7 +49,7 @@
 #define DATA_EXT_SIZE 4096
 #define LINE_BUF_SIZE 8192
 
-#define xml_error(a, b) xml_errmsg(a, b, FALSE, __FILE__, __LINE__)
+#define xmlError(a, b) xmlErrmsg(a, b, FALSE, __FILE__, __LINE__)
 
 
 /* forward declarations */
@@ -59,11 +59,11 @@ typedef struct parse_pos_struct   PPOS;
 /** state of the parser */
 enum parse_state_enum
 {
-   STATE_ERROR,
-   STATE_BEFORE,
-   STATE_IN_TAG,
-   STATE_PCDATA,
-   STATE_EOF
+   XML_STATE_ERROR,
+   XML_STATE_BEFORE,
+   XML_STATE_IN_TAG,
+   XML_STATE_PCDATA,
+   XML_STATE_EOF
 };
 typedef enum   parse_state_enum   PSTATE;
 
@@ -90,7 +90,7 @@ struct parse_pos_struct
 
 
 /** output error message with corresponding line and position */
-static void xml_errmsg(
+static void xmlErrmsg(
    PPOS*                 ppos,
    const char*           msg,
    XML_Bool              msg_only,
@@ -100,7 +100,7 @@ static void xml_errmsg(
 {
 #ifndef NDEBUG
    int ret;
-   assert(ppos != NULL);
+   assert( ppos != NULL );
 
    if ( ! msg_only )
    {
@@ -110,7 +110,7 @@ static void xml_errmsg(
       ret = fprintf(stderr, "%s", ppos->buf);
       assert(ret >= 0);
 
-      if (strchr(ppos->buf, '\n') == NULL)
+      if ( strchr(ppos->buf, '\n') == NULL )
       {
          char retc;
 
@@ -132,7 +132,7 @@ static void xml_errmsg(
 
       (void) fprintf(stderr, "%s", ppos->buf);
 
-      if (strchr(ppos->buf, '\n') == NULL)
+      if ( strchr(ppos->buf, '\n') == NULL )
       {
          (void) fputc('\n', stderr);
       }
@@ -149,7 +149,7 @@ static void xml_errmsg(
  *  TRUE if it worked, FAILURE otherwise.
  */
 static
-XML_Bool push_pstack(
+XML_Bool pushPstack(
    PPOS*                 ppos,
    XML_NODE*             node
    )
@@ -172,7 +172,7 @@ XML_Bool push_pstack(
 }
 
 /** returns top element on stack (which has to be present) */
-static XML_NODE* top_pstack(
+static XML_NODE* topPstack(
    const PPOS*           ppos
    )
 {
@@ -187,24 +187,24 @@ static XML_NODE* top_pstack(
  *  TRUE if ok, FALSE otherwise
  */
 static
-XML_Bool pop_pstack(
+XML_Bool popPstack(
    PPOS*                 ppos                /**< input stream position */
    )
 {
    PSTACK* p;
-   int     result;
+   int result;
 
    assert(ppos != NULL);
 
-   if (ppos->top == NULL)
+   if ( ppos->top == NULL )
    {
-      xml_error(ppos, "Stack underflow");
+      xmlError(ppos, "Stack underflow");
       result = FALSE;
    }
    else
    {
-      result    = TRUE;
-      p         = ppos->top;
+      result = TRUE;
+      p = ppos->top;
       ppos->top = p->next;
 
       debugMessage("Poping %s\n", p->node->name);
@@ -215,21 +215,21 @@ XML_Bool pop_pstack(
 
 /** remove complete stack */
 static
-void clear_pstack(
+void clearPstack(
    PPOS*                 ppos
    )
 {
    assert(ppos != NULL);
 
-   while (ppos->top != NULL)
-      (void)pop_pstack(ppos);
+   while ( ppos->top != NULL )
+      (void) popPstack(ppos);
 }
 
 /** Returns the next character from the input buffer and fills the buffer if it is empty (similar to
  * fgetc()).
  */
 static
-int my_getc(
+int mygetc(
    PPOS*                 ppos
    )
 {
@@ -237,10 +237,10 @@ int my_getc(
    assert(ppos->fp  != NULL);
    assert(ppos->pos <  LINE_BUF_SIZE);
 
-   if (ppos->buf[ppos->pos] == '\0')
+   if ( ppos->buf[ppos->pos] == '\0' )
    {
 #if 0
-      if (NULL == FGETS(ppos->buf, sizeof(ppos->buf), ppos->fp))
+      if ( NULL == FGETS(ppos->buf, sizeof(ppos->buf), ppos->fp) )
          return EOF;
 #else
       int len = FREAD(ppos->buf, sizeof(ppos->buf) - 1, ppos->fp);
@@ -271,8 +271,8 @@ int getsymbol(
 
    assert(ppos != NULL);
 
-   if (ppos->nextsym == 0)
-      c = my_getc(ppos);
+   if ( ppos->nextsym == 0 )
+      c = mygetc(ppos);
    else
    {
       c = ppos->nextsym;
@@ -280,17 +280,16 @@ int getsymbol(
    }
    assert(ppos->nextsym == 0);
 
-   if (((c == '\n') && (ppos->lastsym == '\r'))
-      || ((c == '\r') && (ppos->lastsym == '\n')))
-      c = my_getc(ppos);
+   if (((c == '\n') && (ppos->lastsym == '\r')) || ((c == '\r') && (ppos->lastsym == '\n')))
+      c = mygetc(ppos);
 
    ppos->lastsym = c;
 
-   if (c == '\r')
+   if ( c == '\r' )
       c = '\n';
 
-   if (c == '\n')
-      ppos->lineno++;
+   if ( c == '\n' )
+      ++ppos->lineno;
 
    return c;
 }
@@ -313,8 +312,8 @@ int getsymbol(
 
    do
    {
-      if (ppos->nextsym == 0)
-         c = my_getc(ppos);
+      if ( ppos->nextsym == 0 )
+         c = mygetc(ppos);
       else
       {
          c = ppos->nextsym;
@@ -322,8 +321,8 @@ int getsymbol(
       }
       assert(ppos->nextsym == 0);
 
-      if (c == '\n')
-         ppos->lineno++;
+      if ( c == '\n' )
+         ++ppos->lineno;
 
       if ((c == '\n') || (c == '\r'))
          c = ' ';
@@ -352,7 +351,7 @@ void ungetsymbol(
 
 /** Skip all spaces and return the next non-space character or EOF */
 static
-int skip_space(
+int skipSpace(
    PPOS*                 ppos
    )
 {
@@ -360,7 +359,11 @@ int skip_space(
 
    assert(ppos != NULL);
 
-   do { c = getsymbol(ppos); } while(isspace(c));
+   do
+   {
+      c = getsymbol(ppos);
+   }
+   while(isspace(c));
 
    return c;
 }
@@ -371,29 +374,29 @@ int skip_space(
  *  there is some error.
  */
 static
-char* get_name(
+char* getName(
    PPOS*                 ppos
    )
 {
-   char*  name = NULL;
+   char* name = NULL;
    size_t size = 0;
    size_t len  = 0;
-   int    c;
+   int c;
 
    assert(ppos != NULL);
 
    c = getsymbol(ppos);
 
-   if (!isalpha(c) && (c != '_') && (c != ':'))
+   if ( ! isalpha(c) && (c != '_') && (c != ':') )
    {
-      xml_error(ppos, "Name starting with illegal charater");
+      xmlError(ppos, "Name starting with illegal charater");
       return NULL;
    }
 
    /* The following is wrong: Here almost all characters that we casted to unicode are feasible */
-   while (isalnum(c) || (c == '_') || (c == ':') || (c == '.') || (c == '-'))
+   while ( isalnum(c) || (c == '_') || (c == ':') || (c == '.') || (c == '-') )
    {
-      if (len + 1 >= size)
+      if ( len + 1 >= size )
       {
          size += NAME_EXT_SIZE;
 
@@ -413,12 +416,12 @@ char* get_name(
 
       c = getsymbol(ppos);
    }
-   if (c != EOF)
+   if ( c != EOF )
       ungetsymbol(ppos, c);
 
    assert(name != NULL);
 
-   if (len == 0)
+   if ( len == 0 )
    {
       BMSfreeMemoryArray(&name);
       name = NULL;
@@ -436,7 +439,7 @@ char* get_name(
  *  error.
  */
 static
-char* get_attrval(
+char* getAttrval(
    PPOS*                 ppos
    )
 {
@@ -450,18 +453,18 @@ char* get_attrval(
 
    /* The following is not allowed according to the specification (the value has to be directly
     * after the equation sign). */
-   c = skip_space(ppos);
+   c = skipSpace(ppos);
 
-   if ((c != '"') && (c != '\''))
+   if ( (c != '"') && (c != '\'') )
    {
-      xml_error(ppos, "Atribute value does not start with \" or \'");
+      xmlError(ppos, "Atribute value does not start with \" or \'");
       return NULL;
    }
    stop = c;
 
    for(;;)
    {
-      if (len == size)
+      if ( len == size )
       {
          size += ATTR_EXT_SIZE;
 
@@ -479,12 +482,13 @@ char* get_attrval(
 
       c = getsymbol(ppos);
 
-      if ((c == stop) || (c == EOF))
+      if ( (c == stop) || (c == EOF) )
          break;
 
       attr[len++] = (char)c;
    }
-   if (c != EOF)
+
+   if ( c != EOF )
       attr[len] = '\0';
    else
    {
@@ -499,7 +503,7 @@ char* get_attrval(
  *  Return FALSE if an error occurs.
  */
 static
-int do_comment(
+int doComment(
    PPOS*                 ppos
    )
 {
@@ -513,15 +517,17 @@ int do_comment(
    {
       c = getsymbol(ppos);
 
-      if (c == EOF)
+      if ( c == EOF )
          break;
-      if ((c == '>') && (state >= 2))
+
+      if ( (c == '>') && (state >= 2) )
          break;
+
       state = (c == '-') ? state + 1 : 0;
    }
-   if (c == EOF)
+   if ( c == EOF )
    {
-      xml_error(ppos, "Unexpected EOF in comment");
+      xmlError(ppos, "Unexpected EOF in comment");
       result = FALSE;
    }
    return result;
@@ -533,15 +539,15 @@ int do_comment(
  *  error.
  */
 static
-char* do_cdata(
+char* doCdata(
    PPOS*                 ppos
    )
 {
-   char*  data  = NULL;
+   char* data  = NULL;
    size_t size  = 0;
    size_t len   = 0;
-   int    state = 0;
-   int    c;
+   int state = 0;
+   int c;
 
    assert(ppos != NULL);
 
@@ -549,18 +555,18 @@ char* do_cdata(
    {
       c = getsymbol(ppos);
 
-      if (c == EOF)
+      if ( c == EOF )
          break;
 
-      if (c == ']')
+      if ( c == ']' )
          state++;
       else
-         if ((c == '>') && (state >= 2))
+         if ( (c == '>') && (state >= 2) )
             break;
          else
             state = 0;
 
-      if (len == size)
+      if ( len == size )
       {
          size += DATA_EXT_SIZE;
 
@@ -580,7 +586,7 @@ char* do_cdata(
    }
    assert(data != NULL);
 
-   if (c != EOF)
+   if ( c != EOF )
    {
       assert(len  >= 2);
 
@@ -590,30 +596,34 @@ char* do_cdata(
    {
       BMSfreeMemoryArray(&data);
       data = NULL;
-      xml_error(ppos, "Unexpected EOF in CDATA");
+      xmlError(ppos, "Unexpected EOF in CDATA");
    }
    return data;
 }
 
 /** Handle processing instructions (skipping) */
 static
-void handle_pi(
+void handlePi(
    PPOS*                 ppos
    )
 {
    int c;
 
    assert(ppos        != NULL);
-   assert(ppos->state == STATE_BEFORE);
+   assert(ppos->state == XML_STATE_BEFORE);
 
-   do { c = getsymbol(ppos); } while((c != EOF) && (c != '>'));
+   do
+   {
+      c = getsymbol(ppos);
+   }
+   while ( (c != EOF) && (c != '>') );
 
-   if (c != EOF)
-      ppos->state = STATE_PCDATA;
+   if ( c != EOF )
+      ppos->state = XML_STATE_PCDATA;
    else
    {
-      xml_error(ppos, "Unexpected EOF in PI");
-      ppos->state = STATE_ERROR;
+      xmlError(ppos, "Unexpected EOF in PI");
+      ppos->state = XML_STATE_ERROR;
    }
 }
 
@@ -622,11 +632,12 @@ void handle_pi(
  *  This includes comments. Does currenlty not work very well, because of DTDs.
  */
 static
-void handle_decl(
+void handleDecl(
    PPOS*                 ppos
    )
 {
-   enum XmlSection {
+   enum XmlSection
+   {
       IS_COMMENT,
       IS_ATTLIST,
       IS_DOCTYPE,
@@ -636,12 +647,13 @@ void handle_decl(
       IS_CDATA
    };
    typedef enum XmlSection XMLSECTION;
-   
+
    static struct
    {
       const char* name;
       XMLSECTION  what;
-   } key[] =
+   }
+   key[] =
    {
       { "--",       IS_COMMENT  },
       { "ATTLIST",  IS_ATTLIST  },
@@ -652,14 +664,14 @@ void handle_decl(
       { "[CDATA[",  IS_CDATA    }
    };
    XML_NODE* node;
-   char*   data;
-   int     c;
-   int     k      = 0;
-   int     beg    = 0;
-   int     end    = (sizeof(key) / sizeof(key[0])) - 1;
+   char* data;
+   int c;
+   int k = 0;
+   int beg = 0;
+   int end = (sizeof(key) / sizeof(key[0])) - 1;
 
    assert(ppos        != NULL);
-   assert(ppos->state == STATE_BEFORE);
+   assert(ppos->state == XML_STATE_BEFORE);
 
    do
    {
@@ -672,11 +684,11 @@ void handle_decl(
       k++;
    } while(beg < end);
 
-   if (beg != end)
+   if ( beg != end )
    {
-      xml_error(ppos, "Unknown declaration");
+      xmlError(ppos, "Unknown declaration");
 
-      while((c != EOF) && (c != '>'))
+      while ( (c != EOF) && (c != '>') )
          c = getsymbol(ppos);
    }
    else
@@ -687,24 +699,24 @@ void handle_decl(
       switch(key[beg].what)
       {
       case IS_COMMENT :
-         if (do_comment(ppos))
-            ppos->state = STATE_ERROR;
+         if ( doComment(ppos) )
+            ppos->state = XML_STATE_ERROR;
          break;
       case IS_CDATA :
-         if ((data = do_cdata(ppos)) == NULL)
-            ppos->state = STATE_ERROR;
+         if ( (data = doCdata(ppos)) == NULL )
+            ppos->state = XML_STATE_ERROR;
          else
          {
-            if (NULL == (node = xml_new_node("#CDATA", ppos->lineno)))
+            if ( NULL == (node = xmlNewNode("#CDATA", ppos->lineno)) )
             {
-               xml_error(ppos, "Can't create new node");
-               ppos->state = STATE_ERROR;
+               xmlError(ppos, "Can't create new node");
+               ppos->state = XML_STATE_ERROR;
             }
             else
             {
                BMSduplicateMemoryArray(&node->data, data, strlen(data)+1);
                BMSfreeMemoryArray(&data);
-               xml_append_child(top_pstack(ppos), node);
+               xmlAppendChild(topPstack(ppos), node);
             }
          }
          break;
@@ -722,7 +734,7 @@ void handle_decl(
 
 /** Handle end tag */
 static
-void handle_endtag(
+void handleEndtag(
    PPOS*                 ppos
    )
 {
@@ -731,30 +743,30 @@ void handle_endtag(
 
    assert(ppos != NULL);
 
-   if ((name = get_name(ppos)) == NULL)
-      xml_error(ppos, "Missing name in endtag");
+   if ( (name = getName(ppos)) == NULL )
+      xmlError(ppos, "Missing name in endtag");
    else
    {
-      c = skip_space(ppos);
+      c = skipSpace(ppos);
 
-      if (c != '>')
+      if ( c != '>' )
       {
-         xml_error(ppos, "Missing '>' in endtag");
-         ppos->state = STATE_ERROR;
+         xmlError(ppos, "Missing '>' in endtag");
+         ppos->state = XML_STATE_ERROR;
       }
       else
       {
-         if (strcmp(name, top_pstack(ppos)->name))
+         if ( strcmp(name, topPstack(ppos)->name) )
          {
-            xml_error(ppos, "Name of endtag does not match starttag");
-            ppos->state = STATE_ERROR;
+            xmlError(ppos, "Name of endtag does not match starttag");
+            ppos->state = XML_STATE_ERROR;
          }
          else
          {
-            if ( pop_pstack(ppos) )
-               ppos->state = STATE_PCDATA;
+            if ( popPstack(ppos) )
+               ppos->state = XML_STATE_PCDATA;
             else
-               ppos->state = STATE_ERROR;
+               ppos->state = XML_STATE_ERROR;
          }
          BMSfreeMemoryArray(&name);
       }
@@ -763,7 +775,7 @@ void handle_endtag(
 
 /** Handle start tag */
 static
-void handle_starttag(
+void handleStarttag(
    PPOS*                 ppos
    )
 {
@@ -772,26 +784,28 @@ void handle_starttag(
 
    assert(ppos != NULL);
 
-   if ((name = get_name(ppos)) == NULL)
+   name = getName(ppos);
+   if ( name == NULL )
    {
-      xml_error(ppos, "Missing name in tagstart");
-      ppos->state = STATE_ERROR;
+      xmlError(ppos, "Missing name in tagstart");
+      ppos->state = XML_STATE_ERROR;
    }
    else
    {
-      if (NULL == (node = xml_new_node(name, ppos->lineno)))
+      node = xmlNewNode(name, ppos->lineno);
+      if ( node == NULL )
       {
-         xml_error(ppos, "Can't create new node");
-         ppos->state = STATE_ERROR;
+         xmlError(ppos, "Can't create new node");
+         ppos->state = XML_STATE_ERROR;
       }
       else
       {
-         xml_append_child(top_pstack(ppos), node);
+         xmlAppendChild(topPstack(ppos), node);
 
-         if ( push_pstack(ppos, node) )
-            ppos->state = STATE_IN_TAG;
+         if ( pushPstack(ppos, node) )
+            ppos->state = XML_STATE_IN_TAG;
          else
-            ppos->state = STATE_ERROR;
+            ppos->state = XML_STATE_ERROR;
       }
       BMSfreeMemoryArray(&name);
    }
@@ -799,21 +813,21 @@ void handle_starttag(
 
 /** Checks for next tag */
 static
-void proc_before(
+void procBefore(
    PPOS*                 ppos                /**< input stream position */
    )
 {
    int c;
 
    assert(ppos        != NULL);
-   assert(ppos->state == STATE_BEFORE);
+   assert(ppos->state == XML_STATE_BEFORE);
 
-   c = skip_space(ppos);
+   c = skipSpace(ppos);
 
-   if (c != '<')
+   if ( c != '<' )
    {
-      xml_error(ppos, "Expecting '<'");
-      ppos->state = STATE_ERROR;
+      xmlError(ppos, "Expecting '<'");
+      ppos->state = XML_STATE_ERROR;
    }
    else
    {
@@ -822,21 +836,21 @@ void proc_before(
       switch(c)
       {
       case EOF :
-         xml_error(ppos, "Unexpected EOF");
-         ppos->state = STATE_ERROR;
+         xmlError(ppos, "Unexpected EOF");
+         ppos->state = XML_STATE_ERROR;
          break;
       case '!' :
-         handle_decl(ppos);
+         handleDecl(ppos);
          break;
       case '?' :
-         handle_pi(ppos);
+         handlePi(ppos);
          break;
       case '/' :
-         handle_endtag(ppos);
+         handleEndtag(ppos);
          break;
       default :
          ungetsymbol(ppos, c);
-         handle_starttag(ppos);
+         handleStarttag(ppos);
          break;
       }
    }
@@ -844,7 +858,7 @@ void proc_before(
 
 /** Process tag */
 static
-void proc_in_tag(
+void procInTag(
    PPOS*                 ppos                /**< input stream position */
    )
 {
@@ -855,64 +869,68 @@ void proc_in_tag(
    char*   value;
 
    assert(ppos        != NULL);
-   assert(ppos->state == STATE_IN_TAG);
+   assert(ppos->state == XML_STATE_IN_TAG);
 
-   c = skip_space(ppos);
+   c = skipSpace(ppos);
 
-   if ((c == '/') || (c == '>') || (c == EOF))
+   if ( (c == '/') || (c == '>') || (c == EOF) )
    {
-      if (c == '/')
+      if ( c == '/' )
       {
          empty = TRUE;
          c = getsymbol(ppos);
       }
-      if (c == EOF)
-      {
-         xml_error(ppos, "Unexpected EOF while in a tag");
-         ppos->state = STATE_ERROR;
-      }
-      if (c == '>')
-      {
-         ppos->state = STATE_PCDATA;
 
-         if (empty && ! pop_pstack(ppos))
-            ppos->state = STATE_ERROR;
+      if ( c == EOF )
+      {
+         xmlError(ppos, "Unexpected EOF while in a tag");
+         ppos->state = XML_STATE_ERROR;
+      }
+
+      if ( c == '>' )
+      {
+         ppos->state = XML_STATE_PCDATA;
+
+         if (empty && ! popPstack(ppos))
+            ppos->state = XML_STATE_ERROR;
       }
       else
       {
-         xml_error(ppos, "Expected tag end marker '>'");
-         ppos->state = STATE_ERROR;
+         xmlError(ppos, "Expected tag end marker '>'");
+         ppos->state = XML_STATE_ERROR;
       }
    }
    else
    {
       ungetsymbol(ppos, c);
 
-      if ((name = get_name(ppos)) == NULL)
+      name = getName(ppos);
+      if ( name == NULL )
       {
-         xml_error(ppos, "No name for attribute");
-         ppos->state = STATE_ERROR;
+         xmlError(ppos, "No name for attribute");
+         ppos->state = XML_STATE_ERROR;
       }
       else
       {
-         c = skip_space(ppos);
+         c = skipSpace(ppos);
 
-         if ((c != '=') || ((value = get_attrval(ppos)) == NULL))
+         if ( (c != '=') || ((value = getAttrval(ppos)) == NULL) )
          {
-            xml_error(ppos, "Missing attribute value");
-            ppos->state = STATE_ERROR;
+            xmlError(ppos, "Missing attribute value");
+            ppos->state = XML_STATE_ERROR;
             BMSfreeMemoryArray(&name);
          }
          else
          {
-            if (NULL == (attr = xml_new_attr(name, value)))
+            attr = xmlNewAttr(name, value);
+            if ( attr == NULL )
             {
-               xml_error(ppos, "Can't create new attribute");
-               ppos->state = STATE_ERROR;
+               xmlError(ppos, "Can't create new attribute");
+               ppos->state = XML_STATE_ERROR;
             }
             else
             {
-               xml_add_attr(top_pstack(ppos), attr);
+               xmlAddAttr(topPstack(ppos), attr);
             }
             BMSfreeMemoryArray(&name);
             BMSfreeMemoryArray(&value);
@@ -923,7 +941,7 @@ void proc_in_tag(
 
 /* Handles PCDATA */
 static
-void proc_pcdata(
+void procPcdata(
    PPOS*                 ppos                /**< input stream position */
    )
 {
@@ -934,17 +952,18 @@ void proc_pcdata(
    int     c;
 
    assert(ppos        != NULL);
-   assert(ppos->state == STATE_PCDATA);
+   assert(ppos->state == XML_STATE_PCDATA);
 
 #ifndef SPEC_LIKE_SPACE_HANDLING
-   if ((c = skip_space(ppos)) != EOF)
+   c = skipSpace(ppos);
+   if ( c != EOF )
       ungetsymbol(ppos, c);
 #endif
    c = getsymbol(ppos);
 
-   while ((c != EOF) && (c != '<'))
+   while ( (c != EOF) && (c != '<') )
    {
-      if (len >= size - 1) /* leave space for terminating '\0' */
+      if ( len >= size - 1 ) /* leave space for terminating '\0' */
       {
          size += DATA_EXT_SIZE;
 
@@ -964,18 +983,18 @@ void proc_pcdata(
 
       c = getsymbol(ppos);
    }
-   if (data == NULL)
+   if ( data == NULL )
    {
-      if (c == EOF)
-         ppos->state = STATE_EOF;
-      else if (c == '<')
+      if ( c == EOF )
+         ppos->state = XML_STATE_EOF;
+      else if ( c == '<' )
       {
-         ppos->state = STATE_BEFORE;
+         ppos->state = XML_STATE_BEFORE;
          ungetsymbol(ppos, c);
       }
       else
       {
-         ppos->state = STATE_ERROR;
+         ppos->state = XML_STATE_ERROR;
       }
    }
    else
@@ -983,22 +1002,23 @@ void proc_pcdata(
       assert(len < size);
       data[len] = '\0';
 
-      if (c == EOF)
-         ppos->state = STATE_ERROR;
+      if ( c == EOF )
+         ppos->state = XML_STATE_ERROR;
       else
       {
          ungetsymbol(ppos, c);
 
-         if (NULL == (node = xml_new_node("#PCDATA", ppos->lineno)))
+         node = xmlNewNode("#PCDATA", ppos->lineno);
+         if ( node == NULL )
          {
-            xml_error(ppos, "Can't create new node");
-            ppos->state = STATE_ERROR;
+            xmlError(ppos, "Can't create new node");
+            ppos->state = XML_STATE_ERROR;
          }
          else
          {
             BMSduplicateMemoryArray(&node->data, data, strlen(data)+1);
-            xml_append_child(top_pstack(ppos), node);
-            ppos->state = STATE_BEFORE;
+            xmlAppendChild(topPstack(ppos), node);
+            ppos->state = XML_STATE_BEFORE;
          }
          BMSfreeMemoryArray(&data);
       }
@@ -1007,7 +1027,7 @@ void proc_pcdata(
 
 /** Parse input stream */
 static
-XML_Bool xml_parse(
+XML_Bool xmlParse(
    PPOS*                 ppos                /**< input stream position */
    )
 {
@@ -1019,31 +1039,31 @@ XML_Bool xml_parse(
 
       switch (ppos->state)
       {
-      case STATE_BEFORE :
-         proc_before(ppos);
+      case XML_STATE_BEFORE :
+         procBefore(ppos);
          break;
-      case STATE_IN_TAG :
-         proc_in_tag(ppos);
+      case XML_STATE_IN_TAG :
+         procInTag(ppos);
          break;
-      case STATE_PCDATA :
-         proc_pcdata(ppos);
+      case XML_STATE_PCDATA :
+         procPcdata(ppos);
          break;
-      case STATE_EOF :
+      case XML_STATE_EOF :
          ok = FALSE;
          break;
-      case STATE_ERROR :
+      case XML_STATE_ERROR :
          ok = FALSE;
          break;
       default :
-         xml_error(ppos, "Internal Error, illegal state");
+         xmlError(ppos, "Internal Error, illegal state");
          ok = FALSE;
       }
    }
-   return (ppos->state == STATE_EOF);
+   return (ppos->state == XML_STATE_EOF);
 }
 
 /** Parse file */
-XML_NODE* xml_process(
+XML_NODE* xmlProcess(
    const char*           filename            /**< XML file name */
    )
 {
@@ -1056,14 +1076,14 @@ XML_NODE* xml_process(
    ALLOC_FALSE( BMSduplicateMemoryArray(&myfilename, filename, strlen(filename) + 5) );
 
 #ifdef WITH_ZLIB
-   if (access(filename, R_OK) != 0)
+   if ( access(filename, R_OK) != 0 )
    {
       strcat(myfilename, ".gz");
 
       /* If .gz also does not work, revert to the old name
        * to get a better error message.
        */
-      if (access(myfilename, R_OK) != 0)
+      if ( access(myfilename, R_OK) != 0 )
          strcpy(myfilename, filename);
    }
 #endif
@@ -1078,40 +1098,40 @@ XML_NODE* xml_process(
       ppos.lineno   = 1;
       ppos.nextsym  = 0;
       ppos.lastsym  = 0;
-      ppos.state    = STATE_BEFORE;
+      ppos.state    = XML_STATE_BEFORE;
       ppos.top      = NULL;
 
-      node = xml_new_node("#ROOT", ppos.lineno);
+      node = xmlNewNode("#ROOT", ppos.lineno);
       if ( node == NULL )
       {
-         xml_error(&ppos, "Can't create new node");
+         xmlError(&ppos, "Can't create new node");
       }
       else
       {
-         attr = xml_new_attr("filename", myfilename);
+         attr = xmlNewAttr("filename", myfilename);
          if ( attr == NULL )
-            xml_error(&ppos, "Can't create new attribute");
+            xmlError(&ppos, "Can't create new attribute");
          else
          {
-            xml_add_attr(node, attr);
+            xmlAddAttr(node, attr);
 
             /* push root node on stack and start to process */
-            if ( push_pstack(&ppos, node) )
+            if ( pushPstack(&ppos, node) )
             {
-               result = xml_parse(&ppos);
+               result = xmlParse(&ppos);
 
-               clear_pstack(&ppos);
+               clearPstack(&ppos);
             }
          }
       }
 
       if ( ! result && (node != NULL) )
       {
-         xml_errmsg(&ppos, "Parsing error, processing stopped", TRUE, __FILE__, __LINE__);
-         xml_free_node(node);
+         xmlErrmsg(&ppos, "Parsing error, processing stopped", TRUE, __FILE__, __LINE__);
+         xmlFreeNode(node);
          node = NULL;
       }
-      if (FCLOSE(ppos.fp))
+      if ( FCLOSE(ppos.fp) )
          perror(myfilename);
    }
    BMSfreeMemoryArray(&myfilename);
@@ -1128,7 +1148,7 @@ XML_NODE* xml_process(
 
 
 /** create new node */
-XML_NODE* xml_new_node(
+XML_NODE* xmlNewNode(
    const char*           name,
    int                   lineno
    )
@@ -1147,7 +1167,7 @@ XML_NODE* xml_new_node(
 }
 
 /** create new attribute */
-XML_ATTR* xml_new_attr(
+XML_ATTR* xmlNewAttr(
    const char*           name,
    const char*           value
    )
@@ -1167,7 +1187,7 @@ XML_ATTR* xml_new_attr(
 }
 
 /** add attribute */
-void xml_add_attr(
+void xmlAddAttr(
    XML_NODE*             n,
    XML_ATTR*             a
    )
@@ -1175,12 +1195,12 @@ void xml_add_attr(
    assert(n != NULL);
    assert(a != NULL);
 
-   a->next      = n->attr_list;
-   n->attr_list = a;
+   a->next = n->attrlist;
+   n->attrlist = a;
 }
 
 /** append child node */
-void xml_append_child(
+void xmlAppendChild(
    XML_NODE*             parent,
    XML_NODE*             child
    )
@@ -1188,21 +1208,21 @@ void xml_append_child(
    assert(parent != NULL);
    assert(child  != NULL);
 
-   child->parent      = parent;
-   child->prev_sibl   = parent->last_child;
-   child->next_sibl   = NULL;
-   parent->last_child = child;
+   child->parent = parent;
+   child->prevsibl = parent->lastchild;
+   child->nextsibl = NULL;
+   parent->lastchild = child;
 
-   if (child->prev_sibl != NULL)
-      child->prev_sibl->next_sibl = child;
+   if ( child->prevsibl != NULL )
+      child->prevsibl->nextsibl = child;
 
-   if (parent->first_child == NULL)
-      parent->first_child = child;
+   if ( parent->firstchild == NULL )
+      parent->firstchild = child;
 }
 
 /** free attribute */
 static
-void xml_free_attr(
+void xmlFreeAttr(
    XML_ATTR*             attr
    )
 {
@@ -1216,7 +1236,7 @@ void xml_free_attr(
 
       assert(a->name  != NULL);
       assert(a->value != NULL);
-      
+
       BMSfreeMemoryArray(&a->name);
       BMSfreeMemoryArray(&a->value);
       BMSfreeMemory(&a);
@@ -1226,7 +1246,7 @@ void xml_free_attr(
 #if 0
    if (a != NULL)
    {
-      xml_free_attr(a->next);
+      xmlFreeAttr(a->next);
 
       assert(a->name  != NULL);
       assert(a->value != NULL);
@@ -1239,27 +1259,27 @@ void xml_free_attr(
 }
 
 /** free node */
-void xml_free_node(
+void xmlFreeNode(
    XML_NODE*             node
    )
 {
    XML_NODE* n;
 
-   if (node == NULL)
+   if ( node == NULL )
       return;
 
-   n = node->first_child;
-   while (n != NULL)
+   n = node->firstchild;
+   while ( n != NULL )
    {
       XML_NODE* m;
-      m = n->next_sibl;
-      xml_free_node(n);
+      m = n->nextsibl;
+      xmlFreeNode(n);
       n = m;
    }
 
-   xml_free_attr(node->attr_list);
+   xmlFreeAttr(node->attrlist);
 
-   if (node->data != NULL)
+   if ( node->data != NULL )
    {
       BMSfreeMemoryArray(&node->data);
    }
@@ -1269,13 +1289,13 @@ void xml_free_node(
    BMSfreeMemory(&node);
 
 #if 0
-   if (n != NULL)
+   if ( n != NULL )
    {
-      xml_free_node(n->first_child);
-      xml_free_node(n->next_sibl);
-      xml_free_attr(n->attr_list);
+      xmlFreeNode(n->firstchild);
+      xmlFreeNode(n->nextsibl);
+      xmlFreeAttr(n->attrlist);
 
-      if (n->data != NULL)
+      if ( n->data != NULL )
       {
          BMSfreeMemoryArray(&n->data);
       }
@@ -1288,7 +1308,7 @@ void xml_free_node(
 }
 
 /** output node */
-void xml_show_node(
+void xmlShowNode(
    const XML_NODE*       root
    )
 {
@@ -1297,26 +1317,26 @@ void xml_show_node(
 
    assert(root != NULL);
 
-   for (n = root; n != NULL; n = n->next_sibl)
+   for (n = root; n != NULL; n = n->nextsibl)
    {
       infoMessage("Name: %s\n", n->name);
       infoMessage("Line: %d\n", n->lineno);
       infoMessage("Data: %s\n", (n->data != NULL) ? n->data : "***");
 
-      for(a = n->attr_list; a != NULL; a = a->next)
+      for (a = n->attrlist; a != NULL; a = a->next)
          infoMessage("Attr: %s = [%s]\n", a->name, a->value);
 
-      if (n->first_child != NULL)
+      if ( n->firstchild != NULL )
       {
          infoMessage("->\n");
-         xml_show_node(n->first_child);
+         xmlShowNode(n->firstchild);
          infoMessage("<-\n");
       }
    }
 }
 
 /** get attribute value */
-const char* xml_get_attrval(
+const char* xmlGetAttrval(
    const XML_NODE*       node,
    const char*           name
    )
@@ -1326,9 +1346,9 @@ const char* xml_get_attrval(
    assert(node != NULL);
    assert(name != NULL);
 
-   for (a = node->attr_list; a != NULL; a = a->next)
+   for (a = node->attrlist; a != NULL; a = a->next)
    {
-      if (!strcmp(name, a->name))
+      if ( ! strcmp(name, a->name) )
          break;
    }
 
@@ -1342,7 +1362,7 @@ const char* xml_get_attrval(
 }
 
 /** return first node */
-const XML_NODE* xml_first_node(
+const XML_NODE* xmlFirstNode(
    const XML_NODE*       node,
    const char*           name
    )
@@ -1352,9 +1372,9 @@ const XML_NODE* xml_first_node(
    assert(node != NULL);
    assert(name != NULL);
 
-   for (n = node; n != NULL; n = n->next_sibl)
+   for (n = node; n != NULL; n = n->nextsibl)
    {
-      if (!strcmp(name, n->name))
+      if ( ! strcmp(name, n->name) )
          break;
    }
 
@@ -1362,7 +1382,7 @@ const XML_NODE* xml_first_node(
 }
 
 /** return next node */
-const XML_NODE* xml_next_node(
+const XML_NODE* xmlNextNode(
    const XML_NODE*       node,
    const char*           name
    )
@@ -1370,11 +1390,11 @@ const XML_NODE* xml_next_node(
    assert(node != NULL);
    assert(name != NULL);
 
-   return (node->next_sibl == NULL) ? NULL : xml_first_node(node->next_sibl, name);
+   return (node->nextsibl == NULL) ? NULL : xmlFirstNode(node->nextsibl, name);
 }
 
 /** find node */
-const XML_NODE* xml_find_node(
+const XML_NODE* xmlFindNode(
    const XML_NODE*       node,
    const char*           name
    )
@@ -1385,26 +1405,26 @@ const XML_NODE* xml_find_node(
    assert(node != NULL);
    assert(name != NULL);
 
-   if (!strcmp(name, node->name))
+   if ( ! strcmp(name, node->name) )
       return node;
 
-   for (n = node->first_child; n != NULL; n = n->next_sibl)
+   for (n = node->firstchild; n != NULL; n = n->nextsibl)
    {
-      r = xml_find_node(n, name);
-      if (r != NULL )
+      r = xmlFindNode(n, name);
+      if ( r != NULL )
          return r;
    }
 
 #if 0
-   if (node->first_child != NULL)
+   if ( node->firstchild != NULL )
    {
-      if (NULL != (n = xml_find_node(node->first_child, name)))
+      if (NULL != (n = xmlFindNode(node->firstchild, name)))
          return n;
    }
 
-   if (node->next_sibl != NULL)
+   if ( node->nextsibl != NULL )
    {
-      if (NULL != (n = xml_find_node(node->next_sibl, name)))
+      if (NULL != (n = xmlFindNode(node->nextsibl, name)))
          return n;
    }
 #endif
@@ -1413,7 +1433,7 @@ const XML_NODE* xml_find_node(
 }
 
 /** find node with bound on the depth */
-const XML_NODE* xml_find_node_maxdepth(
+const XML_NODE* xmlFindNodeMaxdepth(
    const XML_NODE*       node,               /**< current node - use start node to begin */
    const char*           name,               /**< name of tag to search for */
    int                   depth,              /**< current depth - start with 0 for root */
@@ -1426,15 +1446,15 @@ const XML_NODE* xml_find_node_maxdepth(
    assert(node != NULL);
    assert(name != NULL);
 
-   if (!strcmp(name, node->name))
+   if ( ! strcmp(name, node->name) )
       return node;
 
    if ( depth < maxdepth )
    {
-      for (n = node->first_child; n != NULL; n = n->next_sibl)
+      for (n = node->firstchild; n != NULL; n = n->nextsibl)
       {
-         r = xml_find_node_maxdepth(n, name, depth+1, maxdepth);
-         if (r != NULL )
+         r = xmlFindNodeMaxdepth(n, name, depth+1, maxdepth);
+         if ( r != NULL )
             return r;
       }
    }
@@ -1443,47 +1463,47 @@ const XML_NODE* xml_find_node_maxdepth(
 }
 
 /** return next sibling */
-const XML_NODE* xml_next_sibl(
+const XML_NODE* xmlNextSibl(
    const XML_NODE*       node
    )
 {
    assert(node != NULL);
 
-   return node->next_sibl;
+   return node->nextsibl;
 }
 
 /** return previous sibling */
-const XML_NODE* xml_prev_sibl(
+const XML_NODE* xmlPrevSibl(
    const XML_NODE*       node
    )
 {
    assert(node != NULL);
 
-   return node->prev_sibl;
+   return node->prevsibl;
 }
 
 /** return first child */
-const XML_NODE* xml_first_child(
+const XML_NODE* xmlFirstChild(
    const XML_NODE*       node
    )
 {
    assert(node != NULL);
 
-   return node->first_child;
+   return node->firstchild;
 }
 
 /** return last child */
-const XML_NODE* xml_last_child(
+const XML_NODE* xmlLastChild(
    const XML_NODE*       node
    )
 {
    assert(node != NULL);
 
-   return node->last_child;
+   return node->lastchild;
 }
 
 /** return name of node */
-const char* xml_get_name(
+const char* xmlGetName(
    const XML_NODE*       node
    )
 {
@@ -1493,7 +1513,7 @@ const char* xml_get_name(
 }
 
 /** get line number */
-int xml_get_line(
+int xmlGetLine(
    const XML_NODE*       node
    )
 {
@@ -1503,7 +1523,7 @@ int xml_get_line(
 }
 
 /** get data */
-const char* xml_get_data(
+const char* xmlGetData(
    const XML_NODE*       node
    )
 {
@@ -1513,7 +1533,7 @@ const char* xml_get_data(
 }
 
 /** find PCDATA */
-const char* xml_find_pcdata(
+const char* xmlFindPcdata(
    const XML_NODE*       node,
    const char*           name
    )
@@ -1523,11 +1543,12 @@ const char* xml_find_pcdata(
    assert(node != NULL);
    assert(name != NULL);
 
-   if (NULL == (n = xml_find_node(node, name)))
+   n = xmlFindNode(node, name);
+   if ( n == NULL )
       return NULL;
 
-   if (!strcmp(n->first_child->name, "#PCDATA"))
-      return n->first_child->data;
+   if ( ! strcmp(n->firstchild->name, "#PCDATA") )
+      return n->firstchild->data;
 
    return NULL;
 }
