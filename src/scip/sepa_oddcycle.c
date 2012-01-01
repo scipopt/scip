@@ -3108,11 +3108,11 @@ SCIP_RETCODE addGLSBinImpls(
       }
 
       /* update minimum and maximum weight values */
-      if( graph->weight[*narcs] < graph->min_weight )
-         graph->min_weight = graph->weight[*narcs];
+      if( graph->weight[*narcs] < graph->minweight )
+         graph->minweight = graph->weight[*narcs];
 
-      if( graph->weight[*narcs] > graph->max_weight )
-         graph->max_weight = graph->weight[*narcs];
+      if( graph->weight[*narcs] > graph->maxweight )
+         graph->maxweight = graph->weight[*narcs];
 
       assert(graph->head[*narcs] >= 2*nbinvars);
       assert(graph->head[*narcs] < 4*nbinvars);
@@ -3248,11 +3248,11 @@ SCIP_RETCODE addGLSCliques(
          }
 
          /* update minimum and maximum weight values */
-         if( graph->weight[*narcs] < graph->min_weight )
-            graph->min_weight = graph->weight[*narcs];
+         if( graph->weight[*narcs] < graph->minweight )
+            graph->minweight = graph->weight[*narcs];
 
-         if( graph->weight[*narcs] > graph->max_weight )
-            graph->max_weight = graph->weight[*narcs];
+         if( graph->weight[*narcs] > graph->maxweight )
+            graph->maxweight = graph->weight[*narcs];
 
          ++(*narcs);
          if( *arraysize == *narcs )
@@ -3475,8 +3475,8 @@ SCIP_RETCODE separateGLS(
       graph.head[i] = DIJKSTRA_UNUSED;
       graph.weight[i] = DIJKSTRA_UNUSED;
    }
-   graph.min_weight = DIJKSTRA_FARAWAY;
-   graph.max_weight = 0;
+   graph.minweight = DIJKSTRA_FARAWAY;
+   graph.maxweight = 0;
    narcs = 0;
 
 #ifndef NDEBUG
@@ -3555,11 +3555,11 @@ SCIP_RETCODE separateGLS(
          graph.weight[narcs] = 0;
 
          /* update minimum and maximum weight values */
-         if( graph.weight[narcs] < graph.min_weight )
-            graph.min_weight = graph.weight[narcs];
+         if( graph.weight[narcs] < graph.minweight )
+            graph.minweight = graph.weight[narcs];
 
-         if( graph.weight[narcs] > graph.max_weight )
-            graph.max_weight = graph.weight[narcs];
+         if( graph.weight[narcs] > graph.maxweight )
+            graph.maxweight = graph.weight[narcs];
 
          ++narcs;
          if( arraysize == narcs )

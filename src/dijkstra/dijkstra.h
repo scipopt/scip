@@ -48,8 +48,8 @@ struct DIJKSTRA_Graph
    unsigned int          arcs;               /**< consecutive storage for all arcs */
    unsigned int*         weight;             /**< corresponding weights for all arcs */
    unsigned int*         head;               /**< target nodes for all arcs */
-   unsigned long long    min_weight;         /**< total minimal weight */
-   unsigned long long    max_weight;         /**< total maximal weight */
+   unsigned long long    minweight;          /**< total minimal weight */
+   unsigned long long    maxweight;          /**< total maximal weight */
 };
 
 /** graph structure - use consecutive storage for arcs */
@@ -60,7 +60,7 @@ typedef struct DIJKSTRA_Graph DIJKSTRA_GRAPH;
 /** Check whether the data structures of the graph are valid. */
 extern
 DIJKSTRA_Bool dijkstraGraphIsValid(
-   const DIJKSTRA_GRAPH* G                   /**< directed graph */
+   const DIJKSTRA_GRAPH* G                   /**< directed graph to be checked */
    );
 
 /** Dijkstra's algorithm using binary heaps */
@@ -68,6 +68,45 @@ extern
 unsigned int dijkstra(
    const DIJKSTRA_GRAPH* G,                  /**< directed graph */
    unsigned int          source,             /**< source node */
+   unsigned long long*   dist,               /**< node distances (allocated by user) */
+   unsigned int*         pred,               /**< node predecessors in final shortest path tree (allocated by user) */
+   unsigned int*         entry,              /**< temporary storage (for each node - must be allocated by user) */
+   unsigned int*         order               /**< temporary storage (for each node - must be allocated by user) */
+   );
+
+/** Dijkstra's algorithm for shortest paths between a pair of nodes using binary heaps */
+extern
+unsigned int dijkstraPair(
+   const DIJKSTRA_GRAPH* G,                  /**< directed graph */
+   unsigned int          source,             /**< source node */
+   unsigned int          target,             /**< target node */
+   unsigned long long*   dist,               /**< node distances (allocated by user) */
+   unsigned int*         pred,               /**< node predecessors in final shortest path tree (allocated by user) */
+   unsigned int*         entry,              /**< temporary storage (for each node - must be allocated by user) */
+   unsigned int*         order               /**< temporary storage (for each node - must be allocated by user) */
+   );
+
+/** Dijkstra's algorithm for shortest paths between a pair of nodes using binary heaps and truncated at cutoff */
+extern
+unsigned int dijkstraPairCutoff(
+   const DIJKSTRA_GRAPH* G,                  /**< directed graph */
+   unsigned int          source,             /**< source node */
+   unsigned int          target,             /**< target node */
+   unsigned long long    cutoff,             /**< if the distance of a node reached this value, we truncate the search */
+   unsigned long long*   dist,               /**< node distances (allocated by user) */
+   unsigned int*         pred,               /**< node predecessors in final shortest path tree (allocated by user) */
+   unsigned int*         entry,              /**< temporary storage (for each node - must be allocated by user) */
+   unsigned int*         order               /**< temporary storage (for each node - must be allocated by user) */
+   );
+
+/** Dijkstra's algorithm for shortest paths between a pair of nodes ignoring nodes, using binary heaps, and truncated at cutoff */
+extern
+unsigned int dijkstraPairCutoff(
+   const DIJKSTRA_GRAPH* G,                  /**< directed graph */
+   unsigned int          source,             /**< source node */
+   unsigned int          target,             /**< target node */
+   unsigned int*         ignore,             /**< marking nodes to be ignored (if value is nonzero) */
+   unsigned long long    cutoff,             /**< if the distance of a node reached this value, we truncate the search */
    unsigned long long*   dist,               /**< node distances (allocated by user) */
    unsigned int*         pred,               /**< node predecessors in final shortest path tree (allocated by user) */
    unsigned int*         entry,              /**< temporary storage (for each node - must be allocated by user) */

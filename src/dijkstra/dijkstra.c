@@ -44,10 +44,10 @@ DIJKSTRA_Bool dijkstraGraphIsValid(
    {
       for (k = G->outbeg[i]; k < G->outbeg[i] + G->outcnt[i]; ++k)
       {
-         if (G->head[k] >= G->nodes)
+         if ( G->head[k] >= G->nodes )
             abort();
 
-         if (G->weight[k] > G->max_weight || G->weight[k] < G->min_weight)
+         if ( G->weight[k] > G->maxweight || G->weight[k] < G->minweight )
             abort();
 
          ++count;
@@ -238,6 +238,342 @@ unsigned int dijkstra(
       for (e = G->outbeg[tail]; G->head[e] != DIJKSTRA_UNUSED; ++e)
       {
          head = G->head[e];
+         weight = G->weight[e] + dist[tail];
+
+	 /* Can we improve the current shortest path? */
+         if ( dist[head] > weight )
+         {
+            assert( dijkstraHeapIsValid(entry, dist, order, used, G->nodes) );
+            assert( used < G->nodes );
+            assert( head <= G->nodes );
+
+            pred[head] = tail;
+            dist[head] = weight;
+
+            if ( order[head] == DIJKSTRA_UNUSED )
+            {
+               assert( head < G->nodes );
+
+               entry[used] = head;
+               order[head] = used;
+
+               dijkstraSiftUp(entry, dist, order, used);
+               ++used;
+            }
+            else
+            {
+               dijkstraSiftUp(entry, dist, order, order[head]);
+            }
+            assert( dijkstraHeapIsValid(entry, dist, order, used, G->nodes) );
+
+            ++iters;
+         }
+      }
+   }
+   assert( dijkstraHeapIsValid(entry, dist, order, used, G->nodes) );
+
+   return iters;
+}
+
+
+/** Dijkstra's algorithm for shortest paths between a pair of nodes using binary heaps */
+unsigned int dijkstraPair(
+   const DIJKSTRA_GRAPH* G,                  /**< directed graph */
+   unsigned int          source,             /**< source node */
+   unsigned int          target,             /**< target node */
+   unsigned long long*   dist,               /**< node distances (allocated by user) */
+   unsigned int*         pred,               /**< node predecessors in final shortest path tree (allocated by user) */
+   unsigned int*         entry,              /**< temporary storage (for each node - must be allocated by user) */
+   unsigned int*         order               /**< temporary storage (for each node - must be allocated by user) */
+   )
+{
+   unsigned long long weight;
+   unsigned int iters = 0;
+   unsigned int used = 0;
+   unsigned int head;
+   unsigned int tail;
+   unsigned int i;
+   unsigned int e;
+
+   assert( dijkstraGraphIsValid(G) );
+   assert( source < G->nodes );
+   assert( target < G->nodes );
+   assert( dist != NULL );
+   assert( pred != NULL );
+
+   assert( dijkstraHeapIsValid(entry, dist, order, used, G->nodes) );
+
+   /* initialize nodes */
+   for (i = 0; i < G->nodes; ++i)
+   {
+      dist[i] = DIJKSTRA_FARAWAY;
+      order[i] = DIJKSTRA_UNUSED;
+      pred[i] = DIJKSTRA_UNUSED;
+   }
+
+   /* enter source node into heap */
+   entry[0] = source;
+   order[source] = 0;
+   pred[source] = DIJKSTRA_UNUSED;
+   dist[source] = 0;
+
+   ++used;
+
+   /* loop while heap is not empty */
+   while ( used > 0 )
+   {
+      /* get next node */
+      tail = entry[0];
+
+      /* stop if we have found the target node */
+      if ( tail == target )
+	 break;
+
+      /* remove node from heap */
+      --used;
+      entry[0] = entry[used];
+      order[entry[0]] = 0;
+      order[tail] = DIJKSTRA_UNUSED;
+
+      dijkstraSiftDown(entry, dist, order, used, 0);
+
+      assert( dijkstraHeapIsValid(entry, dist, order, used, G->nodes) );
+      assert( entry[used] < G->nodes );
+
+      /* check adjacent nodes */
+      for (e = G->outbeg[tail]; G->head[e] != DIJKSTRA_UNUSED; ++e)
+      {
+         head = G->head[e];
+         weight = G->weight[e] + dist[tail];
+
+	 /* Can we improve the current shortest path? */
+         if ( dist[head] > weight )
+         {
+            assert( dijkstraHeapIsValid(entry, dist, order, used, G->nodes) );
+            assert( used < G->nodes );
+            assert( head <= G->nodes );
+
+            pred[head] = tail;
+            dist[head] = weight;
+
+            if ( order[head] == DIJKSTRA_UNUSED )
+            {
+               assert( head < G->nodes );
+
+               entry[used] = head;
+               order[head] = used;
+
+               dijkstraSiftUp(entry, dist, order, used);
+               ++used;
+            }
+            else
+            {
+               dijkstraSiftUp(entry, dist, order, order[head]);
+            }
+            assert( dijkstraHeapIsValid(entry, dist, order, used, G->nodes) );
+
+            ++iters;
+         }
+      }
+   }
+   assert( dijkstraHeapIsValid(entry, dist, order, used, G->nodes) );
+
+   return iters;
+}
+
+
+/** Dijkstra's algorithm for shortest paths between a pair of nodes using binary heaps and truncated at cutoff */
+unsigned int dijkstraPairCutoff(
+   const DIJKSTRA_GRAPH* G,                  /**< directed graph */
+   unsigned int          source,             /**< source node */
+   unsigned int          target,             /**< target node */
+   unsigned long long    cutoff,             /**< if the distance of a node reached this value, we truncate the search */
+   unsigned long long*   dist,               /**< node distances (allocated by user) */
+   unsigned int*         pred,               /**< node predecessors in final shortest path tree (allocated by user) */
+   unsigned int*         entry,              /**< temporary storage (for each node - must be allocated by user) */
+   unsigned int*         order               /**< temporary storage (for each node - must be allocated by user) */
+   )
+{
+   unsigned long long weight;
+   unsigned int iters = 0;
+   unsigned int used = 0;
+   unsigned int head;
+   unsigned int tail;
+   unsigned int i;
+   unsigned int e;
+
+   assert( dijkstraGraphIsValid(G) );
+   assert( source < G->nodes );
+   assert( target < G->nodes );
+   assert( dist != NULL );
+   assert( pred != NULL );
+
+   assert( dijkstraHeapIsValid(entry, dist, order, used, G->nodes) );
+
+   /* initialize nodes */
+   for (i = 0; i < G->nodes; ++i)
+   {
+      dist[i] = DIJKSTRA_FARAWAY;
+      order[i] = DIJKSTRA_UNUSED;
+      pred[i] = DIJKSTRA_UNUSED;
+   }
+
+   /* enter source node into heap */
+   entry[0] = source;
+   order[source] = 0;
+   pred[source] = DIJKSTRA_UNUSED;
+   dist[source] = 0;
+
+   ++used;
+
+   /* loop while heap is not empty */
+   while ( used > 0 )
+   {
+      /* get next node */
+      tail = entry[0];
+
+      /* stop if we have found the target node */
+      if ( tail == target )
+	 break;
+
+      /* remove node from heap */
+      --used;
+      entry[0] = entry[used];
+      order[entry[0]] = 0;
+      order[tail] = DIJKSTRA_UNUSED;
+
+      dijkstraSiftDown(entry, dist, order, used, 0);
+
+      assert( dijkstraHeapIsValid(entry, dist, order, used, G->nodes) );
+      assert( entry[used] < G->nodes );
+
+      /* only work on nodes if their distance is less than the cutoff */
+      if ( dist[tail] >= cutoff )
+         continue;
+
+      /* check adjacent nodes */
+      for (e = G->outbeg[tail]; G->head[e] != DIJKSTRA_UNUSED; ++e)
+      {
+         head = G->head[e];
+         weight = G->weight[e] + dist[tail];
+
+	 /* Can we improve the current shortest path? */
+         if ( dist[head] > weight )
+         {
+            assert( dijkstraHeapIsValid(entry, dist, order, used, G->nodes) );
+            assert( used < G->nodes );
+            assert( head <= G->nodes );
+
+            pred[head] = tail;
+            dist[head] = weight;
+
+            if ( order[head] == DIJKSTRA_UNUSED )
+            {
+               assert( head < G->nodes );
+
+               entry[used] = head;
+               order[head] = used;
+
+               dijkstraSiftUp(entry, dist, order, used);
+               ++used;
+            }
+            else
+            {
+               dijkstraSiftUp(entry, dist, order, order[head]);
+            }
+            assert( dijkstraHeapIsValid(entry, dist, order, used, G->nodes) );
+
+            ++iters;
+         }
+      }
+   }
+   assert( dijkstraHeapIsValid(entry, dist, order, used, G->nodes) );
+
+   return iters;
+}
+
+
+/** Dijkstra's algorithm for shortest paths between a pair of nodes ignoring nodes, using binary heaps, and truncated at cutoff */
+unsigned int dijkstraPairCutoff(
+   const DIJKSTRA_GRAPH* G,                  /**< directed graph */
+   unsigned int          source,             /**< source node */
+   unsigned int          target,             /**< target node */
+   unsigned int*         ignore,             /**< marking nodes to be ignored (if value is nonzero) */
+   unsigned long long    cutoff,             /**< if the distance of a node reached this value, we truncate the search */
+   unsigned long long*   dist,               /**< node distances (allocated by user) */
+   unsigned int*         pred,               /**< node predecessors in final shortest path tree (allocated by user) */
+   unsigned int*         entry,              /**< temporary storage (for each node - must be allocated by user) */
+   unsigned int*         order               /**< temporary storage (for each node - must be allocated by user) */
+   )
+{
+   unsigned long long weight;
+   unsigned int iters = 0;
+   unsigned int used = 0;
+   unsigned int head;
+   unsigned int tail;
+   unsigned int i;
+   unsigned int e;
+
+   assert( dijkstraGraphIsValid(G) );
+   assert( source < G->nodes );
+   assert( target < G->nodes );
+   assert( dist != NULL );
+   assert( pred != NULL );
+   assert( ignored[source] == 0 );
+   assert( ignored[target] == 0 );
+
+   assert( dijkstraHeapIsValid(entry, dist, order, used, G->nodes) );
+
+   /* initialize nodes */
+   for (i = 0; i < G->nodes; ++i)
+   {
+      dist[i] = DIJKSTRA_FARAWAY;
+      order[i] = DIJKSTRA_UNUSED;
+      pred[i] = DIJKSTRA_UNUSED;
+   }
+
+   /* enter source node into heap */
+   entry[0] = source;
+   order[source] = 0;
+   pred[source] = DIJKSTRA_UNUSED;
+   dist[source] = 0;
+
+   ++used;
+
+   /* loop while heap is not empty */
+   while ( used > 0 )
+   {
+      /* get next node */
+      tail = entry[0];
+
+      /* stop if we have found the target node */
+      if ( tail == target )
+	 break;
+
+      /* remove node from heap */
+      --used;
+      entry[0] = entry[used];
+      order[entry[0]] = 0;
+      order[tail] = DIJKSTRA_UNUSED;
+
+      dijkstraSiftDown(entry, dist, order, used, 0);
+
+      assert( dijkstraHeapIsValid(entry, dist, order, used, G->nodes) );
+      assert( entry[used] < G->nodes );
+
+      /* only work on nodes if their distance is less than the cutoff */
+      if ( dist[tail] >= cutoff )
+         continue;
+
+      /* check adjacent nodes */
+      for (e = G->outbeg[tail]; G->head[e] != DIJKSTRA_UNUSED; ++e)
+      {
+         head = G->head[e];
+
+         /* skip ignored nodes */
+         if ( ignore[head] != 0 )
+            continue;
+
          weight = G->weight[e] + dist[tail];
 
 	 /* Can we improve the current shortest path? */
