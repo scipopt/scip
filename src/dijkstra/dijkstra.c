@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   dijkstra.c
- * @brief  C implementation of Dijkstra's algorithm using binary heaps
+ * @brief  C implementation of Dijkstra's algorithm
  * @author Thorsten Koch
  * @author Marc Pfetsch
  */
@@ -28,14 +28,14 @@
 #include "dijkstra.h"
 
 
-/** Check whether the data structures of the graph are valid */
-DIJKSTRA_Bool Dijsktra_graphIsValid(
-  const Dijkstra_Graph*  G                   /**< directed graph */
-  )
+/** Check whether the data structures of the graph are valid. */
+DIJKSTRA_Bool dijkstraGraphIsValid(
+   const DIJKSTRA_GRAPH* G                   /**< directed graph to be checked */
+   )
 {
+   unsigned int count = 0;
    unsigned int i;
    unsigned int k;
-   unsigned int count = 0;
 
    if ( G == NULL || G->outbeg == NULL || G->outcnt == NULL || G->weight == NULL || G->head == NULL )
       abort();
@@ -52,31 +52,30 @@ DIJKSTRA_Bool Dijsktra_graphIsValid(
 
          ++count;
       }
-      if (G->head[k] != DIJKSTRA_UNUSED)
+      if ( G->head[k] != DIJKSTRA_UNUSED )
          abort();
 
       ++count;
    }
-   if (count > G->arcs)
+   if ( count > G->arcs )
       abort();
 
    return TRUE;
 }
 
 
-
 #ifndef NDEBUG
-/** Check whether heap is valid
+/** Check whether heap is valid.
  *
- *  @note Sift up/down does not use the swap, only for the last the changed one is entered.
+ *  @note Sift up/down do not use order, only for the last the changed one is entered.
  */
 static
-DIJKSTRA_Bool heap_is_valid(
-   const unsigned int*        entry,
-   const unsigned long long*  value,
-   const unsigned int*        order,
-   const unsigned int         used,
-   const unsigned int         size
+DIJKSTRA_Bool dijkstraHeapIsValid(
+   const unsigned int*   entry,              /**< entries of heap */
+   const unsigned long long* value,          /**< values in heap */
+   const unsigned int*   order,              /**< order of entries */
+   const unsigned int    used,               /**< number of used entries */
+   const unsigned int    size                /**< size of entry array */
    )
 {
    unsigned int i;
@@ -98,35 +97,38 @@ DIJKSTRA_Bool heap_is_valid(
 #endif
 
 
-
 /** Moves an entry down in the vector until the sorting is valid again. */
 static
-void sift_down(
-   unsigned int*              entry,
-   const unsigned long long*  value,
-   unsigned int*              order,
-   unsigned int               used,
-   unsigned int               current
+void dijkstraSiftDown(
+   unsigned int*         entry,              /**< entries of heap */
+   const unsigned long long* value,          /**< values in heap */
+   unsigned int*         order,              /**< order of entries */
+   unsigned int          used,               /**< number of used entries */
+   unsigned int          current             /**< current entry to be sifted */
    )
 {
-   unsigned int        child = current + current;
-   unsigned int        ent   = entry[current];
-   unsigned long long  val   = value[ent];
-   unsigned int        e;
+   unsigned long long val;
+   unsigned int child;
+   unsigned int ent;
+   unsigned int e;
 
-   while (child < used)
+   child = current + current;
+   ent = entry[current];
+   val = value[ent];
+
+   while ( child < used )
    {
       e = entry[child];
 
-      if (child + 1 < used)
+      if ( child + 1 < used )
       {
-         if (value[entry[child + 1]] < value[e])
+         if ( value[entry[child + 1]] < value[e] )
          {
             ++child;
             e = entry[child];
          }
       }
-      if (value[e] >= val)
+      if ( value[e] >= val )
          break;
 
       entry[current] = e;
@@ -142,24 +144,27 @@ void sift_down(
 
 /** Moves an entry up in the vector until the sorting is valid again. */
 static
-void sift_up(
-   unsigned int*              entry,
-   const unsigned long long*  value,
-   unsigned int*              order,
-   unsigned int               current
+void dijkstraSiftUp(
+   unsigned int*         entry,              /**< entries of heap */
+   const unsigned long long* value,          /**< values in heap */
+   unsigned int*         order,              /**< order of entries */
+   unsigned int          current             /**< current entry to be sifted */
    )
 {
-   unsigned int       parent;
-   unsigned int       ent = entry[current];
-   unsigned long long val = value[ent];
-   unsigned int       e;
+   unsigned long long val;
+   unsigned int parent;
+   unsigned int ent;
+   unsigned int e;
 
-   while (current > 0)
+   ent = entry[current];
+   val = value[ent];
+
+   while ( current > 0 )
    {
       parent = current / 2;
       e = entry[parent];
 
-      if (value[e] <= val)
+      if ( value[e] <= val )
          break;
 
       entry[current] = e;
@@ -171,33 +176,30 @@ void sift_up(
 }
 
 
-
-/** Dijkstra's algorithm using binary heaps */
-unsigned int
-graph_dijkstra_bh(
-  const Dijkstra_Graph*  G,                  /**< directed graph */
-  unsigned int           start,              /**< start node */
-  unsigned long long*    dist,               /**< node distances */
-  unsigned int*          pred,               /**< node predecessors in final shortest path tree */
-  unsigned int*          entry,              /**< temporary storage (for each node - must be allocated by user) */
-  unsigned int*          order               /**< temporary storage (for each node - must be allocated by user) */
-  )
+/** Dijkstra's algorithm for shortest paths from a single source using binary heaps */
+unsigned int dijkstra(
+   const DIJKSTRA_GRAPH* G,                  /**< directed graph */
+   unsigned int          source,             /**< source node */
+   unsigned long long*   dist,               /**< node distances (allocated by user) */
+   unsigned int*         pred,               /**< node predecessors in final shortest path tree (allocated by user) */
+   unsigned int*         entry,              /**< temporary storage (for each node - must be allocated by user) */
+   unsigned int*         order               /**< temporary storage (for each node - must be allocated by user) */
+   )
 {
-   unsigned int       used;
-   unsigned int       head;
-   unsigned int       tail;
    unsigned long long weight;
-   unsigned int       i;
-   unsigned int       e;
-   unsigned int       iters = 0;
+   unsigned int iters = 0;
+   unsigned int used = 0;
+   unsigned int head;
+   unsigned int tail;
+   unsigned int i;
+   unsigned int e;
 
-   assert( Dijsktra_graphIsValid(G) );
-   assert( start < G->nodes );
+   assert( dijkstraGraphIsValid(G) );
+   assert( source < G->nodes );
    assert( dist != NULL );
    assert( pred != NULL );
-   used = 0;
 
-   assert( heap_is_valid(entry, dist, order, used, G->nodes) );
+   assert( dijkstraHeapIsValid(entry, dist, order, used, G->nodes) );
 
    /* initialize nodes */
    for (i = 0; i < G->nodes; ++i)
@@ -207,69 +209,68 @@ graph_dijkstra_bh(
       pred[i] = DIJKSTRA_UNUSED;
    }
 
-   /* enter start node into heap */
-   entry[0]     = start;
-   order[start] = 0;
-   pred[start]  = DIJKSTRA_UNUSED;
-   dist[start]  = 0;
+   /* enter source node into heap */
+   entry[0] = source;
+   order[source] = 0;
+   pred[source] = DIJKSTRA_UNUSED;
+   dist[source] = 0;
 
    ++used;
 
    /* loop while heap is not empty */
-   while (used > 0)
+   while ( used > 0 )
    {
       /* get next node */
-      --used;
-
       tail = entry[0];
 
-      entry[0]        = entry[used];
+      /* remove node from heap */
+      --used;
+      entry[0] = entry[used];
       order[entry[0]] = 0;
-      order[tail]     = DIJKSTRA_UNUSED;
+      order[tail] = DIJKSTRA_UNUSED;
 
-      sift_down(entry, dist, order, used, 0);
+      dijkstraSiftDown(entry, dist, order, used, 0);
 
-      assert( heap_is_valid(entry, dist, order, used, G->nodes) );
+      assert( dijkstraHeapIsValid(entry, dist, order, used, G->nodes) );
       assert( entry[used] < G->nodes );
 
       /* check adjacent nodes */
       for (e = G->outbeg[tail]; G->head[e] != DIJKSTRA_UNUSED; ++e)
       {
-         head   = G->head[e];
+         head = G->head[e];
          weight = G->weight[e] + dist[tail];
 
 	 /* Can we improve the current shortest path? */
-         if (dist[head] > weight)
+         if ( dist[head] > weight )
          {
-            assert( heap_is_valid(entry, dist, order, used, G->nodes) );
+            assert( dijkstraHeapIsValid(entry, dist, order, used, G->nodes) );
             assert( used < G->nodes );
             assert( head <= G->nodes );
 
             pred[head] = tail;
             dist[head] = weight;
 
-            if (order[head] == DIJKSTRA_UNUSED)
+            if ( order[head] == DIJKSTRA_UNUSED )
             {
                assert( head < G->nodes );
 
                entry[used] = head;
                order[head] = used;
 
+               dijkstraSiftUp(entry, dist, order, used);
                ++used;
-
-               sift_up(entry, dist, order, used - 1);
             }
             else
             {
-               sift_up(entry, dist, order, order[head]);
+               dijkstraSiftUp(entry, dist, order, order[head]);
             }
-            assert( heap_is_valid(entry, dist, order, used, G->nodes) );
+            assert( dijkstraHeapIsValid(entry, dist, order, used, G->nodes) );
 
             ++iters;
          }
       }
    }
-   assert( heap_is_valid(entry, dist, order, used, G->nodes) );
+   assert( dijkstraHeapIsValid(entry, dist, order, used, G->nodes) );
 
    return iters;
 }

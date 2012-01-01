@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   dijkstra.h
- * @brief  Definitions for Disjkstra's shortest path algorithm using binary heaps
+ * @brief  Definitions for Disjkstra's shortest path algorithm
  * @author Thorsten Koch
  * @author Marc Pfetsch
  */
@@ -35,12 +35,12 @@ extern "C" {
 #define FALSE 0                              /**< boolean value FALSE */
 #endif
 
-
 #define DIJKSTRA_FARAWAY 0xffffffffffffffffLL   /**< node has distance 'infinity' */
 #define DIJKSTRA_UNUSED  0xffffffff             /**< node is unused */
 
+
 /** graph structure - use consecutive storage for arcs */
-struct Dijkstra_graph
+struct DIJKSTRA_Graph
 {
    unsigned int          nodes;              /**< number of nodes */
    unsigned int*         outbeg;             /**< indices of out-arcs for each node in arcs array */
@@ -53,25 +53,26 @@ struct Dijkstra_graph
 };
 
 /** graph structure - use consecutive storage for arcs */
-typedef struct Dijkstra_graph Dijkstra_Graph;
+typedef struct DIJKSTRA_Graph DIJKSTRA_GRAPH;
 
 
-/** Check whether the data structures of the graph are valid */
+
+/** Check whether the data structures of the graph are valid. */
 extern
-DIJKSTRA_Bool Dijsktra_graphIsValid(
-  const Dijkstra_Graph*  G                   /**< directed graph */
-  );
+DIJKSTRA_Bool dijkstraGraphIsValid(
+   const DIJKSTRA_GRAPH* G                   /**< directed graph */
+   );
 
 /** Dijkstra's algorithm using binary heaps */
 extern
-unsigned int graph_dijkstra_bh(
-  const Dijkstra_Graph*  G,                  /**< directed graph */
-  unsigned int           start,              /**< start node */
-  unsigned long long*    dist,               /**< node distances */
-  unsigned int*          pred,               /**< node predecessors in final shortest path tree */
-  unsigned int*          entry,              /**< temporary storage (for each node - must be allocated by user) */
-  unsigned int*          order               /**< temporary storage (for each node - must be allocated by user) */
-  );
+unsigned int dijkstra(
+   const DIJKSTRA_GRAPH* G,                  /**< directed graph */
+   unsigned int          source,             /**< source node */
+   unsigned long long*   dist,               /**< node distances (allocated by user) */
+   unsigned int*         pred,               /**< node predecessors in final shortest path tree (allocated by user) */
+   unsigned int*         entry,              /**< temporary storage (for each node - must be allocated by user) */
+   unsigned int*         order               /**< temporary storage (for each node - must be allocated by user) */
+   );
 
 #ifdef __cplusplus
 }

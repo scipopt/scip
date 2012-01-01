@@ -157,7 +157,7 @@ struct SCIP_SepaData
                                               *   by removing both and reconnecting the remaining nodes of the cycle */
    SCIP_Bool             includetriangles;   /**< handle triangles found as 3-cycles or repaired larger cycles */
    LEVELGRAPH*           levelgraph;         /**< level graph when using HP method, NULL otherwise */
-   Dijkstra_Graph*       dijkstragraph;      /**< Dijkstra graph if using method by GLS, NULL otherwise */
+   DIJKSTRA_GRAPH*       dijkstragraph;      /**< Dijkstra graph if using method by GLS, NULL otherwise */
    unsigned int*         mapping;            /**< mapping for getting the index of a variable in the sorted variable array */
    SCIP_Bool             lpliftcoef;         /**< TRUE: choose lifting candidate with highest value of coefficient*lpvalue
                                               *   FALSE: choose lifting candidate with highest coefficient */
@@ -2931,7 +2931,7 @@ SCIP_RETCODE checkArraySizesGLS(
    SCIP*                 scip,               /**< SCIP data structure */
    unsigned int          maxarcs,            /**< maximal size of graph->head and graph->weight */
    unsigned int*         arraysize,          /**< current size of graph->head and graph->weight */
-   Dijkstra_Graph*       graph,              /**< Dijkstra Graph data structure */
+   DIJKSTRA_GRAPH*       graph,              /**< Dijkstra Graph data structure */
    SCIP_Bool*            success             /**< FALSE, iff memory reallocation fails */
    )
 {
@@ -3006,7 +3006,7 @@ SCIP_RETCODE addGLSBinImpls(
    SCIP_Real*            vals,               /**< value of the variables in the given solution */
    unsigned int          nbinvars,           /**< number of binary problem variables */
    unsigned int          nbinimpls,          /**< number of binary implications of the current node */
-   Dijkstra_Graph*       graph,              /**< Dijkstra Graph data structure */
+   DIJKSTRA_GRAPH*       graph,              /**< Dijkstra Graph data structure */
    unsigned int*         narcs,              /**< current number of arcs inside the Dijkstra Graph */
    unsigned int          maxarcs,            /**< maximal number of arcs inside the Dijkstra Graph */
    SCIP_Bool             original,           /**< TRUE, iff variable is a problem variable */
@@ -3145,7 +3145,7 @@ SCIP_RETCODE addGLSCliques(
    SCIP_Real*            vals,               /**< value of the variables in the given solution */
    unsigned int          nbinvars,           /**< number of binary problem variables */
    unsigned int          ncliques,           /**< number of cliques of the current node */
-   Dijkstra_Graph*       graph,              /**< Dijkstra Graph data structure */
+   DIJKSTRA_GRAPH*       graph,              /**< Dijkstra Graph data structure */
    unsigned int*         narcs,              /**< current number of arcs inside the Dijkstra Graph */
    unsigned int          maxarcs,            /**< maximal number of arcs inside the Dijkstra Graph */
    SCIP_Bool             original,           /**< TRUE, iff variable is a problem variable */
@@ -3319,7 +3319,7 @@ SCIP_RETCODE separateGLS(
    unsigned int nbinimpls;                   /* number of binary implications of the current variable */
    unsigned int ncliques;                    /* number of cliques of the current variable */
 
-   Dijkstra_Graph graph;                     /* Dijkstra graph data structure */
+   DIJKSTRA_GRAPH graph;                     /* Dijkstra graph data structure */
    unsigned int arraysize;                   /* current size of graph->head and graph->weight */
    unsigned int narcs;                       /* number of arcs in the Dijkstra graph */
    unsigned int maxarcs;                     /* maximum number of arcs in the Dijkstra graph */
@@ -3634,7 +3634,7 @@ SCIP_RETCODE separateGLS(
    SCIPdebugMessage("--- graph successfully created (%u nodes, %u arcs) ---\n", graph.nodes, narcs);
 
    /* graph is now prepared for Dijkstra methods */
-   assert(Dijsktra_graphIsValid(&graph));
+   assert( dijkstraGraphIsValid(&graph) );
 
    /* determine the number of start nodes */
    maxstarts = (unsigned int) SCIPceil(scip, sepadata->offsettestvars + (0.02 * nbinvars * sepadata->percenttestvars));
@@ -3674,7 +3674,7 @@ SCIP_RETCODE separateGLS(
       startnode = i;
       endnode = i + 2*nbinvars;
 
-      (void) graph_dijkstra_bh(&graph, startnode, dist, pred, entry, order);
+      (void) dijkstra(&graph, startnode, dist, pred, entry, order);
 
       /* no odd cycle cut found */
       if( dist[endnode] == DIJKSTRA_FARAWAY )
