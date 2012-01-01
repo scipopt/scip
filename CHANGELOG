@@ -25,11 +25,16 @@ performance improvements:
 - improved scaling by choosing the smallest scaler
 - if first root lp is solved and the optimality is rejected by SCIP, there won't be an unnecessary solving of the lp
   from scratch again
+- automatically turn off separation in sepa_oddcycle if it was too unsuccessful within the last calls
+- use faster Dijkstra variants in sepa_oddcycle
 
 plugins:
 - added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.
   for integer variable 0 <= x <= 10 the binary variables y0, y1, y2, and y3 are created, such that
   1 y0 + 2 y1 + 4 y2 + 8 y3 <= 10 and x = 1 y0 + 2 y1 + 4 y2 + 8 y3
+
+fixed bugs:
+- fixed minor bugs with respect to counting generated and lifted cuts in sepa_oddcycle
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines
@@ -44,6 +49,7 @@ parameters:
 - new parameter constraints/indicator/dualreductions to enable dual presolving/propagation steps
 - new parameters constraints/indicator/{sepacouplingcuts,sepacouplinglocal} to enable separation of (local) cuts
 - new parameters constraints/indicator/{maxsepacuts,maxsepacutsroot} to restrict the number of separated cuts
+- new parameter separating/oddcycle/maxunsucessfull to automatically turn off separation
 
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to
