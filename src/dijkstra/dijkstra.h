@@ -13,14 +13,14 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   dijkstra_bh.h
+/**@file   dijkstra.h
  * @brief  Definitions for Disjkstra's shortest path algorithm using binary heaps
  * @author Thorsten Koch
  * @author Marc Pfetsch
  */
 
-#ifndef DIJSKSTRA_BH_H
-#define DIJSKSTRA_BH_H
+#ifndef DIJSKSTRA_H
+#define DIJSKSTRA_H
 
 #ifdef __cplusplus
 extern "C" {

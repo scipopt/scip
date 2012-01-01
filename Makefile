@@ -655,7 +655,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			tclique/tclique_branch.o \
 			tclique/tclique_coloring.o \
 			tclique/tclique_graph.o \
-			dijkstra/dijkstra_bh.o \
+			dijkstra/dijkstra.o \
 			xml/xmlparse.o
 
 SCIPLIB		=	$(SCIPLIBNAME).$(BASE)

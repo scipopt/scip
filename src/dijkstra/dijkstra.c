@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   dijkstra_bh.c
+/**@file   dijkstra.c
  * @brief  C implementation of Dijkstra's algorithm using binary heaps
  * @author Thorsten Koch
  * @author Marc Pfetsch
@@ -25,7 +25,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#include "dijkstra_bh.h"
+#include "dijkstra.h"
 
 
 /** Check whether the data structures of the graph are valid */

@@ -34,7 +34,7 @@
 
 #include "scip/sepa_oddcycle.h"
 #include "scip/pub_misc.h"
-#include "dijkstra/dijkstra_bh.h"
+#include "dijkstra/dijkstra.h"
 
 
 #define SEPA_NAME              "oddcycle"
