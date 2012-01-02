@@ -335,14 +335,15 @@ Please note that we do NOT support creating the doxygen documentation and readli
 Installing SCIP in Exact Solving Mode (without Floating-Point Errors)
 ---------------------------------------------------------------------
 
-This version of SCIP can solve MIP instances exactly, i.e., without
-floating-point errors. So far the branch-and-bound algorithm of SCIP has
-been adapted for exact MIP solving. It works with safe primal and dual
-bounds and supports the branching plugins of SCIP. All additional plugins,
-like separators, primal heuristics, and presolvers must not be included.
+This version of SCIP can solve MIP instances exactly over the rational
+numbers. So far the branch-and-bound algorithm of SCIP has been adapted for
+exact MIP solving. It works with safe primal and dual bounds and supports
+the branching plugins of SCIP. All additional plugins, like separators,
+primal heuristics, and presolvers must not be included (adding them might
+introduce rounding errors).
 
 
-The following variables were added to the Makefile to allow compiling SCIP
+The following variables were added to the Makefile to enable compiling SCIP
 for exact MIP solving.
 
 
@@ -350,7 +351,7 @@ for exact MIP solving.
              "true", "false"
 
 - $(BRANCHPLGS): whether to include all branching plugins 
-  	     (otherwise the branch-and-bound algorithm will simply apply first-fractional variable branching)
+  	     (otherwise the branch-and-bound algorithm will apply first-fractional variable branching)
              "true", "false"
 
 - $(EXACTSOLVE): whether to run the branch-and-bound algorithm in exact solving mode
@@ -363,23 +364,27 @@ for exact MIP solving.
 Here is what you have to do to get SCIP running in exact mode:
 
 
-1. You have to install and link the following software packages.
+1. Install and link the following software packages.
 
    Package: GNU Multiple Precision Arithmetic Library (GMP) -- tested with version 4.3.1
    =====================================================================================
    
    GMP is required for the exact LP solver QSopt_ex, SCIP in exact solving
    mode, ZIMPL, and the GNU MPFR library. It can be downloaded from
-   "http://gmplib.org/". For correct behavior in QSopt_ex, it has to be
-   compiled using the option
+   "ftp://ftp.gnu.org/gnu/gmp". For correct behavior in QSopt_ex, it must
+   be compiled using the option "--enable-alloca=malloc-reentrant" which
+   avoids memory overwriting problems. You can use the following commands
+   for correctly installing GMP (see also "Installing GMP" on
+   "http://gmplib.org/manual").
 
-   "--enable-alloca=maloc-reentrant" 
-
-   which avoids memory overwriting problems.
+   - "cd <path>/gmp-4.3.1"
+   - "./configure --disable-shared --enable-static --enable-alloca=malloc-reentrant --prefix=<path>/gmp-4.3.1/lib" 
+   - "make"
+   - "make install"
    
-   If you have to use a local GMP installation for SCIP, please provide the
+   If you need to use a local GMP installation for SCIP, please provide the
    corresponding path via a new local makefile
-   "myscip/make/local/make.$(HOSTNAME)".  For example,
+   "myscip/make/local/make.$(HOSTNAME)". For example,
    "myscip/make/local/make.alibaba" could contain lines of the form
    
    FLAGS	      +=	-I/<path>/gmp-4.3.1/lib/include
@@ -390,10 +395,17 @@ Here is what you have to do to get SCIP running in exact mode:
    =============================================================
    
    SCIP in exact solving mode requires MPFR. It can be downloaded from
-   "http://www.mpfr.org/". 
+   "http://www.mpfr.org/". You can use the following commands
+   for correctly installing MPFR (see also "Installing MPFR" on
+   "http://www.mpfr.org/mpfr-current/mpfr.html").
+
+   - "cd <path>/mpfr-2.4.2
+   - "./configure --disable-shared --enable-static --prefix=<path>/mpfr-2.4.2/lib" 
+   - "make"
+   - "make install"
    
-   If you have to use a local MPFR installation for SCIP, please provide
-   the corresponding path via a new local makefile
+   If you need to use a local MPFR installation for SCIP, please provide
+   the corresponding path via a (new) local makefile
    "myscip/make/local/make.$(HOSTNAME)". For example,
    "myscip/make/local/make.alibaba" could contain lines of the form
    
@@ -412,7 +424,8 @@ Here is what you have to do to get SCIP running in exact mode:
    
    Note that for some larger MIP instances, ZIMPL 3.0.0 only works if the
    stack size is large enough, otherwise you will get a segmentation
-   fault. In a bash shell, the command "ulimit -s unlimited" helps.
+   fault. In a bash shell, the command "ulimit -s unlimited" corrects this
+   problem.
    
    To convert files given in mps-format to files in zpl-format for ZIMPL,
    you can use the scripts "mps2zpl.sh"; see Step 5.
@@ -577,9 +590,9 @@ Here is what you have to do to get SCIP running in exact mode:
    has to be set before a MIP instance is read in as it influences the
    behavior of the ZIMPL reader.
 
-5. To run some of the MIPLIB 3 test instances, download the MIPLIB 3.0 test
+5. To run some of the MIPLIB test instances, download the MIPLIB 3.0 test
    set from "http://scip.zib.de/download/files/scip-miplib3.zip" and
-   extract the archive into the SCIP base directory.  The instances will be
+   extract the archive into the SCIP base directory. The instances will be
    unziped into the subdirectory "check/IP/miplib3/". For the exact version
    of SCIP you have to convert the downloaded mps-files into zpl-files (to
    be able to read them via the ZIMPL reader). Please, use the "mps2zpl.sh"
