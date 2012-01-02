@@ -5917,15 +5917,28 @@ SCIP_RETCODE SCIPsolve(
 
          SCIPgetBestSolexObj(scip, conss[0], primalboundex);
 
-         n = gmp_snprintf(s, SCIP_MAXSTRLEN, "Exact Primal Bound : %+Qd (%d solutions)\n", primalboundex, SCIPgetNSolexs(scip));
+         n = gmp_snprintf(s, SCIP_MAXSTRLEN, "Exact Primal Bound : %+Qd (%d solutions)\n", primalboundex, 
+            SCIPgetNSolexs(scip));
          if( n >= SCIP_MAXSTRLEN )
          {
             char* bigs;
 
-            SCIP_CALL( SCIPallocMemorySize(scip, &bigs, n+1) );
-            gmp_snprintf(bigs, n+1, "Exact Primal Bound : %+Qd (%d solutions)\n", primalboundex, SCIPgetNSolexs(scip));
-            SCIPmessagePrintInfo(bigs);
-            SCIPfreeMemory(scip, &bigs);
+            if( SCIPallocMemorySize(scip, &bigs, n+1) != SCIP_OKAY )
+            {
+               SCIPmessagePrintInfo("Exact Primal Bound : string too long\n");
+            }
+            else
+            {
+#ifndef NDEBUG
+               int m;
+               m = gmp_snprintf(bigs, n+1, "Exact Primal Bound : %+Qd (%d solutions)\n", primalboundex, SCIPgetNSolexs(scip));
+               assert(m == n);
+#else
+               gmp_snprintf(bigs, n+1, "Exact Primal Bound : %+Qd (%d solutions)\n", primalboundex, SCIPgetNSolexs(scip));
+#endif
+               SCIPmessagePrintInfo(bigs);
+               SCIPfreeMemory(scip, &bigs);
+            }
          }
          else
          {
@@ -16501,11 +16514,17 @@ void printSolutionStatistics(
                   
                if( SCIPallocMemorySize(scip, &bigs, n+1) != SCIP_OKAY )
                {
-                  SCIPmessagePrintInfo("  Exact Primal Bnd : string to long\n");
+                  SCIPmessagePrintInfo("  Exact Primal Bnd : string too long\n");
                }
                else
                {
+#ifndef NDEBUG
+                  int m;
+                  m = gmp_snprintf(bigs, n+1, "  Exact Primal Bnd : %+Qd\n", primalboundex);
+                  assert(m == n);
+#else
                   gmp_snprintf(bigs, n+1, "  Exact Primal Bnd : %+Qd\n", primalboundex);
+#endif
                   SCIPmessagePrintInfo(bigs);
                   SCIPfreeMemory(scip, &bigs);
                }
