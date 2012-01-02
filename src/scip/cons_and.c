@@ -1462,7 +1462,7 @@ SCIP_RETCODE consdataLinearize(
 
 /** the resultant is fixed to zero; in case all except one operator are fixed to TRUE the last operator has to fixed to FALSE */
 static
-SCIP_RETCODE analyzeZeroResultanat(
+SCIP_RETCODE analyzeZeroResultant(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< and constraint to be processed */
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
@@ -1486,6 +1486,17 @@ SCIP_RETCODE analyzeZeroResultanat(
 
       watchedvar1 = consdata->watchedvar1;
       assert(watchedvar1 != -1);
+
+#ifndef NDEBUG
+      /* check that all variables regardless of wathcedvar1 are fixed to 1 */
+      {
+	 int v;
+
+	 for( v = consdata->nvars - 1; v >=0; --v )
+	    if( v != watchedvar1 )
+	       assert(SCIPvarGetLbLocal(consdata->vars[v]) > 0.5);
+      }
+#endif
 
       SCIPdebugMessage("constraint <%s>: resultant <%s> fixed to 0.0, only one unfixed operand -> fix operand <%s> to 0.0\n",
          SCIPconsGetName(cons), SCIPvarGetName(consdata->resvar), SCIPvarGetName(consdata->vars[watchedvar1]));
@@ -1619,7 +1630,7 @@ SCIP_RETCODE consPropagateObjective(
                (*nfixedvars)++;
 
                /* analyze the fixing to zero */
-               SCIP_CALL( analyzeZeroResultanat(scip, cons, cutoff, nfixedvars) );
+               SCIP_CALL( analyzeZeroResultant(scip, cons, cutoff, nfixedvars) );
             }
          }
       }
@@ -1969,11 +1980,13 @@ SCIP_RETCODE propagateCons(
       /* if resultant is fixed to FALSE, and only one operator variable is not fixed to TRUE, this operator variable
        * can be fixed to FALSE (rule (4))
        */
-      if( SCIPvarGetUbLocal(resvar) < 0.5 )
+      if( watchedvar2 == -1 && SCIPvarGetUbLocal(resvar) < 0.5 )
       {
-         SCIP_CALL( analyzeZeroResultanat(scip, cons, cutoff, nfixedvars) );
+         assert(watchedvar1 != -1);
 
-         return SCIP_OKAY;
+	 SCIP_CALL( analyzeZeroResultant(scip, cons, cutoff, nfixedvars) );
+
+	 return SCIP_OKAY;
       }
 
       /* switch to the new watched variables */
