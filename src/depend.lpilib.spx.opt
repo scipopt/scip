@@ -27,5 +27,4 @@ $(LIBOBJDIR)/blockmemshell/memory.o: src/blockmemshell/memory.c src/scip/def.h \
 $(LIBOBJDIR)/scip/message.o: src/scip/message.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
  src/scip/pub_message.h src/blockmemshell/memory.h src/scip/misc.h \
- /nfs/optimi/kombadon/bzfwolte/projects/gmp/gmp-4.3.1/lib/include/gmp.h \
  src/scip/type_set.h src/scip/type_misc.h src/scip/pub_misc.h
