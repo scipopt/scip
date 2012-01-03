@@ -1,4 +1,3 @@
-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -2208,7 +2207,9 @@ SCIP_RETCODE createRelaxation(
                 *  - split variable into positive and negative part and modify consdata structures in order to later be 
                 *    able to transform a basis to the original problem
                 */
-               SCIPerrorMessage("consinitlp: for vars that are neither nonneg nor nonpos, creating a FP relaxation is not supported yet\n");
+               SCIPerrorMessage("FP-relaxation not supported yet (requires splitting <%s>[%g,%g] into pos/neg-part) --> switch to FP-approximation via \"set misc usefprelax FALSE\"\n",
+                  SCIPvarGetName(vars[probidx]), mpqGetRealApprox(scip, consdata->lb[probidx]), 
+                  mpqGetRealApprox(scip, consdata->ub[probidx]));
 
                /* free temporary memory */
                SCIPfreeBufferArray(scip, &rowvals);
@@ -2896,7 +2897,7 @@ SCIP_RETCODE checkIntegrality(
 
    if( integral && !inrange )   
    {
-      SCIPerrorMessage("storing optimal solutions of subproblems that is out of FP range is not supported yet\n");
+      SCIPerrorMessage("storing optimal solutions of subproblems that is out of FP-range is not supported yet\n");
       return SCIP_ERROR;
    }
 
@@ -7434,7 +7435,7 @@ SCIP_DECL_CONSTRANS(consTransExactlp)
    mpq_set_d(intscalar, 1.0);
 
    success = TRUE;
-
+   
    /* in case of maximization, use negative objective coefficients in the transformed constraint */
    if( sourcedata->objsense == SCIP_OBJSENSE_MAXIMIZE )
    {
@@ -7549,7 +7550,7 @@ SCIP_DECL_CONSTRANS(consTransExactlp)
    
    if( !success )
    {
-      SCIPerrorMessage("given obj coefficient of var could not be scaled to FP representable number; which is required for working with an FP relaxation\n");
+      SCIPerrorMessage("FP-relaxation not supported (could not scale objective funtion to FP-numbers) --> switch to FP-approximation via \"set misc usefprelax FALSE\"\n");
       return SCIP_INVALIDDATA;
    }
 
