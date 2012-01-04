@@ -153,7 +153,7 @@
                                                  *   ('s'implex, 'b'arrier, barrier with 'c'rossover) */
 #define SCIP_DEFAULT_LP_PRICING             'l' /**< LP pricing strategy ('l'pi default, 'a'uto, 'f'ull pricing, 'p'artial,
                                                  *   's'teepest edge pricing, 'q'uickstart steepest edge pricing,
-                                                 *   'd'evex pricing, first 'c'andidate rule) */
+                                                 *   'd'evex pricing) */
 #define SCIP_DEFAULT_LP_CLEARINITIALPROBINGLP TRUE/**< should lp state be cleared at the end of probing mode when lp
                                                    *   was initially unsolved, e.g., when called right after presolving? */
 #define SCIP_DEFAULT_LP_RESOLVERESTORE    FALSE /**< should the LP be resolved to restore the state at start of diving (if FALSE we buffer the solution values)? */
@@ -1009,8 +1009,8 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
          "lp/pricing",
-         "LP pricing strategy ('l'pi default, 'a'uto, 'f'ull pricing, 'p'artial, 's'teepest edge pricing, 'q'uickstart steepest edge pricing, 'd'evex pricing, first 'c'andidate rule)",
-         &(*set)->lp_pricing, FALSE, SCIP_DEFAULT_LP_PRICING, "lafpsqdc",
+         "LP pricing strategy ('l'pi default, 'a'uto, 'f'ull pricing, 'p'artial, 's'teepest edge pricing, 'q'uickstart steepest edge pricing, 'd'evex pricing)",
+         &(*set)->lp_pricing, FALSE, SCIP_DEFAULT_LP_PRICING, "lafpsqd",
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "lp/clearinitialprobinglp",

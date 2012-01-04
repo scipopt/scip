@@ -2595,9 +2595,6 @@ SCIP_RETCODE lpSetPricingChar(
    case 'd':
       pricing = SCIP_PRICING_DEVEX;
       break;
-   case 'c':
-      pricing = SCIP_PRICING_FIRST;
-      break;
    default:
       SCIPerrorMessage("invalid LP pricing parameter <%c>\n", pricingchar);
       return SCIP_INVALIDDATA;
