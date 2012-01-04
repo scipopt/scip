@@ -2967,9 +2967,7 @@ void printColumnSection(
       printRecord(scip, file, "'MARKER'", "", maxnamelen);
       printRecord(scip, file, "'INTEND'", "", maxnamelen);
       SCIPinfoMessage(scip, file, "\n", maxnamelen);
-      intSection = FALSE;
    }
-
 }
 
 

@@ -1,0 +1,5 @@
+FLAGS		+=	-DROUNDING_FE
+OFLAGS		+=	-O0 -fprofile-arcs -ftest-coverage
+CFLAGS		+=	$(GCCWARN)
+CXXFLAGS	+=	$(GXXWARN)
+# gcov [-b] -o obj/O.seq.linux.x86.gnu.gcov/ src/<file>.c

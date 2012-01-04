@@ -2042,7 +2042,7 @@ SCIP_Bool bdchginfoIsInvalid(
    /* check if the bdchginfo is invaild since a tight/weaker bound change was already explained */
    if( SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER )
    {
-      if( var->conflictlbcount != conflict->count || var->conflictlb != SCIPbdchginfoGetNewbound(bdchginfo) )
+      if( var->conflictlbcount != conflict->count || var->conflictlb != SCIPbdchginfoGetNewbound(bdchginfo) ) /*lint !e777*/
       {
          assert(!SCIPvarIsBinary(var));
          return TRUE;
@@ -2052,7 +2052,7 @@ SCIP_Bool bdchginfoIsInvalid(
    {
       assert(SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER);
 
-      if( var->conflictubcount != conflict->count || var->conflictub != SCIPbdchginfoGetNewbound(bdchginfo) )
+      if( var->conflictubcount != conflict->count || var->conflictub != SCIPbdchginfoGetNewbound(bdchginfo) ) /*lint !e777*/
       {
          assert(!SCIPvarIsBinary(var));
          return TRUE;
@@ -2123,7 +2123,7 @@ SCIP_BDCHGINFO* conflictFirstCand(
             SCIPbdchginfoGetNewbound(bdchginfo));
 
          /* pop the invalid bound change info from the queue */
-         (void*)(SCIPpqueueRemove(conflict->forcedbdchgqueue));
+         (void)(SCIPpqueueRemove(conflict->forcedbdchgqueue));
 
          /* call method recursively to get next conflict analysis candidate */
          bdchginfo = conflictFirstCand(conflict);
@@ -2142,7 +2142,7 @@ SCIP_BDCHGINFO* conflictFirstCand(
             SCIPbdchginfoGetNewbound(bdchginfo));
 
          /* pop the invalid bound change info from the queue */
-         (void*)(SCIPpqueueRemove(conflict->bdchgqueue));
+         (void)(SCIPpqueueRemove(conflict->bdchgqueue));
 
          /* call method recursively to get next conflict analysis candidate */
          bdchginfo = conflictFirstCand(conflict);

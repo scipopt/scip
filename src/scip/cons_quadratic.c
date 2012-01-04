@@ -8105,6 +8105,14 @@ SCIP_RETCODE propagateBoundsCons(
    assert(consdata->minlinactivityinf >= 0);
    assert(consdata->maxlinactivityinf >= 0);
 
+   /* sort quadratic variable terms, in case we need to search for terms occuring in bilinear terms later
+    * we sort here already, since we rely on a constant variable order during this method
+    */
+   if( consdata->nbilinterms > 0 )
+   {
+      SCIP_CALL( consdataSortQuadVarTerms(scip, consdata) );
+   }
+
    /* compute activity of quad term part, if not up to date
     * in that case, we also collect the contribution of each quad var term for later */
    if( SCIPintervalIsEmpty(consdata->quadactivitybounds) )
@@ -8469,6 +8477,85 @@ SCIP_RETCODE propagateBoundsCons(
                for( j = 0; j < consdata->quadvarterms[i].nadjbilin; ++j )
                {
                   k = consdata->quadvarterms[i].adjbilin[j];
+#if 1
+                  if( consdata->bilinterms[k].var1 == var )
+                  {
+                     /* bilinear term k contributes to the activity of quad var term i, so just add bounds to linear coef */
+                     SCIPintervalSetBounds(&tmp,
+                        -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(consdata->bilinterms[k].var2), SCIPvarGetUbLocal(consdata->bilinterms[k].var2))),
+                        +infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(consdata->bilinterms[k].var2), SCIPvarGetUbLocal(consdata->bilinterms[k].var2))));
+                     SCIPintervalMulScalar(intervalinfty, &tmp, tmp, consdata->bilinterms[k].coef);
+                     SCIPintervalAdd(intervalinfty, &lincoef, lincoef, tmp);
+
+                  }
+                  else
+                  {
+                     /* bilinear term k does not contribute to the activity of quad var term i
+                      * so bounds on term k are contained in rhs2
+                      * if they are finite, we try to remove them from rhs2 and update lincoef instead
+                      * if the bounds on bilinear term k as added to rhs2 are old due to recent bound tightening, we may not do best possible, but still correct
+                      * HOWEVER: when computing rhs2, we may not just have added the bounds for the bilinear term, but for the associated quadratic term
+                      *   for this complete term, we used SCIPintervalQuad to compute the bounds
+                      *   since we do not want to repeat a call to SCIPintervalQuad for that quadratic term with bilinear term k removed,
+                      *   we only remove the bounds for the bilinear term k from rhs2 if the associated quadratic term consists only of this bilinear term,
+                      *   i.e., the quadratic term corresponding to var1 should be only var1*var2, but have no square or linear coefs or other bilinear terms
+                      *   (for efficiency reasons, we check here only if there are any other bilinear terms than var1*var2 associated with var1, even if they are not associated with the quad var term for var1)
+                      */
+                     SCIP_INTERVAL me;
+                     SCIP_INTERVAL bilinbounds;
+                     int otherpos;
+
+                     assert(consdata->bilinterms[k].var2 == var);
+
+                     assert(consdata->quadvarssorted);
+                     SCIP_CALL( consdataFindQuadVarTerm(scip, consdata, consdata->bilinterms[k].var1, &otherpos) );
+                     assert(otherpos >= 0);
+                     assert(consdata->quadvarterms[otherpos].var == consdata->bilinterms[k].var1);
+
+                     if( (consdata->quadvarterms[otherpos].sqrcoef != 0.0) || consdata->quadvarterms[otherpos].lincoef != 0.0 || consdata->quadvarterms[otherpos].nadjbilin > 1 )
+                        continue;
+
+                     /* set tmp to bounds of other variable and multiply with bilin coef */
+                     SCIPintervalSetBounds(&tmp,
+                        -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(consdata->bilinterms[k].var1), SCIPvarGetUbLocal(consdata->bilinterms[k].var1))),
+                        +infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(consdata->bilinterms[k].var1), SCIPvarGetUbLocal(consdata->bilinterms[k].var1))));
+                     SCIPintervalMulScalar(intervalinfty, &tmp, tmp, consdata->bilinterms[k].coef);
+
+                     /* set me to bounds of i'th variable */
+                     SCIPintervalSetBounds(&me,
+                        -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(consdata->bilinterms[k].var2), SCIPvarGetUbLocal(consdata->bilinterms[k].var2))),
+                        +infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(consdata->bilinterms[k].var2), SCIPvarGetUbLocal(consdata->bilinterms[k].var2))));
+
+                     /* remove me*tmp from rhs2 */
+
+                     roundmode = SCIPintervalGetRoundingMode();
+
+                     if( rhs2.inf > -intervalinfty )
+                     {
+                        /* need upward rounding for SCIPintervalMulSup */
+                        SCIPintervalSetRoundingModeUpwards();
+                        SCIPintervalMulSup(intervalinfty, &bilinbounds, me, tmp);
+                        /* rhs2.inf += bilinbounds.sup, but we are in upward rounding */
+                        if( bilinbounds.sup < intervalinfty )
+                           rhs2.inf = SCIPintervalNegateReal(SCIPintervalNegateReal(rhs2.inf) - bilinbounds.sup);
+                     }
+
+                     if( rhs2.sup <  intervalinfty )
+                     {
+                        /* need downward rounding for SCIPintervalMulInf */
+                        SCIPintervalSetRoundingModeDownwards();
+                        SCIPintervalMulInf(intervalinfty, &bilinbounds, me, tmp);
+                        /* rhs2.sup += bilinbounds.inf, but we are in downward rounding */
+                        if( bilinbounds.inf > -intervalinfty )
+                           rhs2.sup = SCIPintervalNegateReal(SCIPintervalNegateReal(rhs2.sup) - bilinbounds.inf);
+                     }
+
+                     SCIPintervalSetRoundingMode(roundmode);
+
+                     /* add tmp to lincoef */
+                     SCIPintervalAdd(intervalinfty, &lincoef, lincoef, tmp);
+                  }
+#else
                   if( consdata->bilinterms[k].var1 != var )
                      continue; /* this term does not contribute to the activity of quad var term i */
 
@@ -8477,6 +8564,7 @@ SCIP_RETCODE propagateBoundsCons(
                      +infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(consdata->bilinterms[k].var2), SCIPvarGetUbLocal(consdata->bilinterms[k].var2))));
                   SCIPintervalMulScalar(intervalinfty, &tmp, tmp, consdata->bilinterms[k].coef);
                   SCIPintervalAdd(intervalinfty, &lincoef, lincoef, tmp);
+#endif
                }
 
                /* deduce domain reductions for x_i */

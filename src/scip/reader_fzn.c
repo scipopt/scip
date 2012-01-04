@@ -264,7 +264,7 @@ SCIP_Bool isChar(
 {
    if( strlen(token) == 1 && *token == c )
       return TRUE;
-   
+
    return FALSE;
 }
 
@@ -275,20 +275,32 @@ SCIP_Bool isBoolExp(
    SCIP_Bool*            value               /**< pointer to store the Bool value */
    )
 {
-   /* check if the identifier starts with a letter */
-   if( strlen(name) == 4 || strncmp(name, "true", 4) )
+   /* check the name */
+   if( strlen(name) == 4 && strncmp(name, "true", 4) == 0 )
    {
       *value = TRUE;
       return TRUE;
    }
-   else if( strlen(name) == 5 || strncmp(name, "false", 5) )
+   else if( strlen(name) == 1 && strncmp(name, "1", 1) == 0 )
+   {
+      /* we also allow 1 as true */
+      *value = TRUE;
+      return TRUE;
+   }
+   else if( strlen(name) == 5 && strncmp(name, "false", 5) == 0 )
    {
       *value = FALSE;
       return TRUE;
    }
-   
+   else if( strlen(name) == 1 && strncmp(name, "0", 1) == 0 )
+   {
+      /* we also allow 0 as false */
+      *value = FALSE;
+      return TRUE;
+   }
+
    return FALSE;
-}   
+}
 
 
 /** check if the current token is an identifier, this means [A-Za-z][A-Za-z0-9_]* */
@@ -1680,6 +1692,7 @@ SCIP_RETCODE applyVariableAssignment(
    SCIP*                 scip,               /**< SCIP data structure */
    FZNINPUT*             fzninput,           /**< FZN reading data */
    SCIP_VAR*             var,                /**< variable to assign something */
+   FZNNUMBERTYPE         type,               /**< number type */
    const char*           assignment          /**< assignment */
    )
 {
@@ -1697,9 +1710,9 @@ SCIP_RETCODE applyVariableAssignment(
 
    if( linkVar == NULL )
    {
-      if( isBoolExp(assignment, &boolvalue) && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+      if( isBoolExp(assignment, &boolvalue) && type == FZN_BOOL )
          fixvalue = (SCIP_Real) boolvalue;
-      else if( isValue(assignment, &realvalue) && SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
+      else if( isValue(assignment, &realvalue) && type != FZN_BOOL )
          fixvalue = realvalue;
       else if( constant != NULL )
          fixvalue = constant->value;
@@ -2007,16 +2020,16 @@ SCIP_RETCODE parseVariableArray(
          nassigns = 0;
          
          SCIP_CALL( parseArrayAssignment(scip, fzninput, &assigns, &nassigns, nvars) );
-         
+
          if(!hasError(fzninput) )
          {
             for( v = 0; v < nvars && !hasError(fzninput); ++v )
             {
                /* parse and apply assignment */
-               SCIP_CALL( applyVariableAssignment(scip, fzninput, vars[v], assigns[v]) );
+               SCIP_CALL( applyVariableAssignment(scip, fzninput, vars[v], type, assigns[v]) );
             }
          }
-         
+
          freeStringBufferArray(scip, assigns, nassigns);
       }
       else
@@ -2213,9 +2226,9 @@ SCIP_RETCODE parseVariable(
    {
       /* parse and flatten assignment */
       flattenAssignment(scip, fzninput, assignment);
-      
+
       /* apply assignment */
-      SCIP_CALL( applyVariableAssignment(scip, fzninput, var, assignment) );
+      SCIP_CALL( applyVariableAssignment(scip, fzninput, var, type, assignment) );
    }
    else
       pushToken(fzninput);

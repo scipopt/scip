@@ -30,7 +30,7 @@ include make/make.detecthost
 # default settings
 #-----------------------------------------------------------------------------
 
-VERSION		:=	2.1.0
+VERSION		:=	2.1.2
 
 TIME     	=  	3600
 NODES           =       2100000000
@@ -152,7 +152,6 @@ SCIPDIR		=	$(realpath .)
 
 #-----------------------------------------------------------------------------
 include make/make.$(BASE)
--include make/make.$(OSTYPE).$(COMP).$(OPT)
 -include make/local/make.$(HOSTNAME)
 -include make/local/make.$(HOSTNAME).$(COMP)
 -include make/local/make.$(HOSTNAME).$(COMP).$(OPT)

@@ -142,7 +142,6 @@ ALLSRC		=
 
 #-----------------------------------------------------------------------------
 include $(SCIPDIR)/make/make.$(BASE)
--include $(SCIPDIR)/make/make.$(OSTYPE).$(COMP).$(OPT)
 -include $(SCIPDIR)/make/local/make.$(HOSTNAME)
 -include $(SCIPDIR)/make/local/make.$(HOSTNAME).$(COMP)
 -include $(SCIPDIR)/make/local/make.$(HOSTNAME).$(COMP).$(OPT)
