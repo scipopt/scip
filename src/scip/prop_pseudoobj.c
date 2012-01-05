@@ -437,8 +437,9 @@ SCIP_RETCODE propdataInit(
 
    /* due to scaling after presolving we need to update the global pseudoactivity and the cutoffbound */
    propdata->glbpropagated = FALSE;
-   propdata->glbpseudoobjval = SCIPgetPseudoObjval(scip);
+   propdata->glbpseudoobjval = SCIPgetGlobalPseudoObjval(scip);
    propdata->cutoffbound = SCIPgetCutoffbound(scip);
+   assert(SCIPisFeasEQ(scip, propdata->glbpseudoobjval, SCIPgetPseudoObjval(scip)));
 
    return SCIP_OKAY;
 }
@@ -467,8 +468,7 @@ SCIP_RETCODE resolvePropagation(
    nvars = propdata->nobjvars;
    assert(nvars > 0 && vars != NULL);
 
-   /* we use the last stored global pseudo objective activity; Note that this is just a relaxation since global bounds
-    * might be tighten since then and the current global pseudo objective activity is greater than that
+   /* the global pseudo value gives us a global valid minimal activity
     *
     * @note The global pseudo objective activity can be minus infinity. In that case all variable are part of the
     *       reason/explanation
@@ -476,7 +476,7 @@ SCIP_RETCODE resolvePropagation(
     * @note If the global pseudo objective activity is greater than the required minactivity, the local bound change
     *        which has to explained is actually (now) a global one. That means, the reason/explanation is empty
     */
-   glbpseudoobjval = propdata->glbpseudoobjval;
+   glbpseudoobjval = SCIPgetGlobalPseudoObjval(scip);
 
    SCIPdebugMessage("resolve propagation global pseudo objective <%g>, a required minactivity <%g>\n",
       glbpseudoobjval, reqpseudoobjval);
@@ -689,7 +689,7 @@ SCIP_RETCODE propagateGlobally(
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
-   pseudoobjval = propdata->glbpseudoobjval;
+   pseudoobjval = SCIPgetGlobalPseudoObjval(scip);
    cutoffbound = propdata->cutoffbound;
 
    /* check if the global pseudo objective value (minimum activity of the objective function) is greater or equal to
@@ -779,6 +779,8 @@ SCIP_RETCODE propagateGlobally(
             (*nchgbds)++;
       }
 
+      /* store last propagated pseudo objective value */
+      propdata->glbpseudoobjval = pseudoobjval;
       propdata->glbpropagated = TRUE;
    }
 
@@ -796,6 +798,7 @@ SCIP_RETCODE propagateCutoffbound(
    SCIP_PROPDATA* propdata;
    SCIP_VAR** objvars;
    SCIP_VAR* var;
+   SCIP_Real glbpseudoobjval;
    SCIP_Real pseudoobjval;
    SCIP_Real cutoffbound;
    SCIP_Bool cutoff;
@@ -828,12 +831,10 @@ SCIP_RETCODE propagateCutoffbound(
    if( SCIPisInfinity(scip, cutoffbound) )
       return SCIP_OKAY;
 
-   /* check pseudo objective value of the root node */
-   if( SCIPgetDepth(scip) == 0 && pseudoobjval > propdata->glbpseudoobjval )
-   {
+   /* check global pseudo objective value */
+   glbpseudoobjval = SCIPgetGlobalPseudoObjval(scip);
+   if( glbpseudoobjval > propdata->glbpseudoobjval )
       propdata->glbpropagated = FALSE;
-      propdata->glbpseudoobjval = pseudoobjval;
-   }
 
    /* check current cutoff bound */
    if( cutoffbound < propdata->cutoffbound )
@@ -1442,7 +1443,7 @@ SCIP_DECL_PROPPRESOL(propPresolPseudoobj)
    if( !propdata->force && SCIPgetNActivePricers(scip) > 0 )
       return SCIP_OKAY;
 
-   pseudoobjval = SCIPgetPseudoObjval(scip);
+   pseudoobjval = SCIPgetGlobalPseudoObjval(scip);
    if( SCIPisInfinity(scip, -pseudoobjval) )
       return SCIP_OKAY;
 
