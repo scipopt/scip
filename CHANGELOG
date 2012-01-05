@@ -25,6 +25,8 @@ interface
   feasibility check
 - new method SCIPvarsGetProbvar() in pub_var.h and var.c, which returns for a given array of variables the active, fixed
   or multiaggregated representation
+- new method SCIPgetGlobalPseudoObjval() which returns the global pseudo objective value which is all variables
+  set to their best (w.r.t. the objective function) global bound
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
