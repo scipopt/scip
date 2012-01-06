@@ -487,6 +487,8 @@ public:
 
    void trySolve(bool printwarning = true)
    {
+      Real timespent;
+      Real timelimit;
       try
       {
 	 m_stat = SPxSolver::solve();
@@ -510,6 +512,21 @@ public:
       /* save iteration count */
       m_itused += SPxSolver::iterations();
       assert(m_itlim < 0 || m_itused <= m_itlim);
+
+      /* update time limit */
+      timespent = SPxSolver::time();
+      if( timespent > 0 )
+      {
+         /* get current time limit */
+         timelimit = SPxSolver::terminationTime();
+         if( timelimit > timespent )
+            timelimit -= timespent;
+         else
+            timelimit = 0;
+         /* set new time limit */
+         assert(timelimit >= 0);
+         SPxSolver::setTerminationTime(timelimit);
+      }
    }
 
    virtual Status doSolve(bool printwarning = true)

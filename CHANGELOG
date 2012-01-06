@@ -1,5 +1,5 @@
 SCIP version NEXT
-===============
+==================
 
 interface
 - new method SCIPisConflictAnalysisApplicable() which return FALSE is the conflict will not runs; can be used
@@ -16,6 +16,9 @@ interface
 - changed parameters of function SCIPpropagateCutoffboundVar() in prop_pseudoobj.{c,h}
 - added new method SCIPaddOrigObjoffset() in scip.{c,h} which adds a value to the offset in original space an updates
   all orignal solutions correspondingly
+- SCIPcomputeCoverUndercover() now has an additional parameter coverbd
+- the code in src/dijkstra and src/xml has been changed to (increasingly) conform to the SCIP coding style;
+  all function (and variable) names have been changed (do not contain "_" anymore).
 
 internal methods
 - changed prob to transprob/origprob and added origprob/transprob parameter to SCIPprimalUpdateObjlimit(),
@@ -38,11 +41,16 @@ performance improvements:
 - improved scaling by choosing the smallest scaler
 - if first root lp is solved and the optimality is rejected by SCIP, there won't be an unnecessary solving of the lp
   from scratch again
+- automatically turn off separation in sepa_oddcycle if it was too unsuccessful within the last calls
+- use faster Dijkstra variants in sepa_oddcycle
 
 plugins:
 - added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.
   for integer variable 0 <= x <= 10 the binary variables y0, y1, y2, and y3 are created, such that
   1 y0 + 2 y1 + 4 y2 + 8 y3 <= 10 and x = 1 y0 + 2 y1 + 4 y2 + 8 y3
+
+fixed bugs:
+- fixed minor bugs with respect to counting generated and lifted cuts in sepa_oddcycle
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines
@@ -59,6 +67,7 @@ parameters:
 - new parameters constraints/indicator/{maxsepacuts,maxsepacutsroot} to restrict the number of separated cuts
 - new parameter constraints/and/upgraderesultant to upgrade resultants of and constraints from binry to implicit binary
   variables, default is TRUE
+- new parameter separating/oddcycle/maxunsucessfull to automatically turn off separation
 
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to
@@ -68,11 +77,22 @@ features:
 - it is now possible to add an offset for the original problem instance, all original solutions will be initialized with
   this value and updated, when the offset is changed
 
+
+SCIP version 2.1.2
+==================
+
+
+
 SCIP version 2.1.1
-===============
+==================
 
 performance improvements:
-- revised pseudo objective propagator;
+- revised pseudo objective propagator
+- improve SCIPintervalSolveBivariateQuadExpressionAllScalar for ax=0 case if x has 0 in the interval for the linear coef.
+- better domain propagation for quadratic constraints that consist of "non-overlapping" bilinear terms only
+- ensure that a fixing of a variable in an abspower constraint is propagated to a fixing of the other variable
+- improvements in undercover heuristic, e.g., bound disjunction constraints are considered when setting up the covering 
+  problem
 
 features:
 - the pseudo objective propagator can be forced to propagate if active pricers are present; this can be done 
@@ -88,20 +108,26 @@ fixed bugs:
 - fixed bug in SCIPmakeIndicatorFeasible() in cons_indicator.c
 - fixed bug with conflict clause modification in cons_indicator
 - fixed bug in cons_bounddisjunction with uninitialized return values
-- fixed bug when copying problem data in c++ case returned with the result SCIP_DIDNOTRUN
 - fixed bug with setting type of slack variables to be implicitly integral
+- fixed bug when copying problem data in c++ case returned with the result SCIP_DIDNOTRUN
 - fixed computation of counter which state the changes since the last call of a presolver
 - fixed handling of unbounded solutions, including double-checking their feasibility and that the primal ray is a
   valid unboundedness proof and reoptimizing the LP with modified settings if the solution is not feasible
 - fixed bug in cons_orbitope with calling conflict analysis
+- fixed bug in flatzinc reader w.r.t. boolean expressions
+- fixed bug in nlpi_oracle w.r.t. changing linear coefs in a NLP constraint
+- fixed compilation issues with negate() function in intervalarith.c on exotic platforms
+- gams writer now also substitutes $-sign from variable/equation names
+- fixed bug in SCIPsortedvecDelPos...() templates
+- fixed bug in heur_shiftandpropagate.c concerning the treatment of unbounded variables
 
-parameters
-- changed parameter "propagating/pseudoobj/maxcands" to "propagating/pseudoobj/minuseless" (see prop_pseudoobj.h)
+parameters:
+- changed parameter "propagating/pseudoobj/maxcands" to "propagating/pseudoobj/minuseless" (see prop_pseudoobj.c)
   due to revision of the pseudo objective propagator
-
+- added parameters "heuristics/undercover/coverbd" and "heuristics/undercover/fixingorder"
 
 SCIP version 2.1.0
-===============
+==================
 
 interface:
 
@@ -563,7 +589,7 @@ Makefile
 
 
 SCIP version 2.0.2
-===============
+==================
 
 fixed bugs:
 - fixed bug in heur_subnlp.c where constraints forbidding variable fixations where added if a cutoff was used in the
@@ -623,8 +649,9 @@ performance improvements:
 - fixed issue w.r.t. calling primal heuristics after presolving detected infeasibility
 - improved runtime and memory consumption in SCIPsolveKnapsackExactly() in cons_knapsack.c
 
+
 SCIP version 2.0.1
-===============
+==================
 
 interface:
 - allow access to transformed constraints in SCIP_STAGE_TRANSFORMED
@@ -698,8 +725,9 @@ parameters:
 - added possible values 'a' and 'e' for <constraints/soc/nlpform> to enable automatic choice and convex exponential-sqrt
   form for SOC constraint representation in NLP
 
+
 SCIP version 2.0.0
-===============
+==================
 
 interface:
 - new method SCIPbranchruleGetNRelaxCalls() to get the total number of times, a particular branching rule was called on
@@ -1139,7 +1167,7 @@ Makefile
 
 
 SCIP version 1.2.0
-===============
+==================
 
 interface:
 - new parameter "mksetcoefsvalid" in lp.c: SCIPlpCalcMIR(), scip.c: SCIPcalcMIR(), and sepa_cmir.c: tryDelta() to store
@@ -1385,8 +1413,9 @@ parameters:
 - new parameter <heuristics/oneopt/duringroot>, default value TRUE
 - display character of oneopt heuristic changed to 'b'
 
+
 SCIP version 1.1.0
-===============
+==================
 
 compiling:
 - added in all make/make.* "GMP_FLAGS" and "GMP_LDFLAGS"
@@ -1682,6 +1711,7 @@ fixed bugs:
   calls to std::strlen
 - fixed bug with errors occurring in heuristic LPs. In opt mode a warning will be printed, abort in dbg mode
 
+
 SCIP version 1.00
 =================
 
@@ -1860,6 +1890,7 @@ fixed bugs:
 - fixed potential bug with non-existent LP in SCIPwrite{LP,MIP}
 - fixed bug with multiple pending bound changes on some variable
 - fixed bug with fractional coefficients of binary variables in cont --> impl int upgrading
+
 
 SCIP version 0.90
 =================

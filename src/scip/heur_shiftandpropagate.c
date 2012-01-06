@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
 /**@file   heur_shiftandpropagate.c
  * @brief  shiftandpropagate primal heuristic
  * @author Timo Berthold
@@ -410,7 +409,6 @@ SCIP_RETCODE initMatrix(
 {
    SCIP_ROW** lprows;
    SCIP_COL** lpcols;
-
    int i;
    int j;
    int currentpointer;
@@ -633,7 +631,6 @@ SCIP_RETCODE initMatrix(
 
    SCIPdebugMessage("Matrix initialized for %d discrete variables with %d cols, %d rows and %d nonzero entries\n",
       matrix->ndiscvars, matrix->ncols, matrix->nrows, matrix->nnonzs);
-
    return SCIP_OKAY;
 }
 
@@ -835,7 +832,7 @@ SCIP_RETCODE getOptimalShiftingValue(
       /* determine if current row is violated or not */
       rowisviolated =(SCIPisFeasLT(scip, rhs, 0.0) || SCIPisFeasLT(scip, -lhs, 0.0));
 
-      /* for a feasible row, determine the minimum integral value within the bounds of the variable by which it has to be
+      /* for a feasible row, determine the minimum integer value within the bounds of the variable by which it has to be
        * shifted to make row infeasible.
        */
       if( !rowisviolated )
@@ -1537,6 +1534,23 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          assert(SCIPisFeasEQ(scip, lb, ub));
 
          SCIP_CALL( SCIPsetSolVal(scip, sol, var, ub) );
+
+         continue;
+      }
+
+      /* Variables with FREE transform status are currently not dealt with */
+      /*@todo change matrix representation and shiftval methods to treat FREE variables correctly */
+      if( matrix->transformstatus[permutedvarindex] == TRANSFORMSTATUS_FREE )
+      {
+         ++lastindexofsusp;
+         assert(lastindexofsusp >= 0 && lastindexofsusp <= c);
+
+         assert(permutedvarindex == permutation[c]);
+
+         permutation[c] = permutation[lastindexofsusp];
+         permutation[lastindexofsusp] = permutedvarindex;
+
+         SCIPdebugMessage("  Variable %s postponed from pos <%d> to <%d> due to FREE transform status", SCIPvarGetName(var), c, lastindexofsusp);
 
          continue;
       }

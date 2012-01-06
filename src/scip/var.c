@@ -4581,9 +4581,9 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
 
    /* check if we have easy aggregation if we flip the variables x and y that means:
     *
-    *   a*x + b*y == c -> y == -a/b * x + c/b  iff a/b != 0 and abs(b/a) < infinty
+    *   a*x + b*y == c -> y == -a/b * x + c/b  iff a/b != 0 and abs(a/b) < infinty
     */
-   if( !easyaggr  && !SCIPsetIsZero(set, scalary/scalarx) && !SCIPsetIsInfinity(set, REALABS(scalary/scalarx))
+   if( !easyaggr  && !SCIPsetIsZero(set, scalarx/scalary) && !SCIPsetIsInfinity(set, REALABS(scalarx/scalary))
       && SCIPsetIsFeasIntegral(set, scalarx/scalary) && SCIPvarGetType(vary) == SCIPvarGetType(varx))
    {
       SCIP_VAR* var;

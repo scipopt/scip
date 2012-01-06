@@ -1,7 +1,6 @@
-CFLAGS		+=	-m64
-CXXFLAGS	+=	-m64 
-LDFLAGS		+=      -m64 
+# note that the local make file is a dummy and is eventually the union of
+# following sub make files
 
-ifeq ($(SHARED),true)
-LIBBUILDFLAGS   +=	-m64
-endif
+include $(SCIPDIR)/make/make.$(OSTYPE).$(COMP)
+include $(SCIPDIR)/make/make.$(OSTYPE).$(COMP).$(OPT)
+include $(SCIPDIR)/make/make.$(OSTYPE).$(ARCH).$(COMP)

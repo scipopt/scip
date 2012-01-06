@@ -30,7 +30,7 @@ include make/make.detecthost
 # default settings
 #-----------------------------------------------------------------------------
 
-VERSION		:=	2.1.0.2
+VERSION		:=	2.1.1.1
 
 TIME     	=  	3600
 NODES           =       2100000000
@@ -151,7 +151,6 @@ SCIPDIR		=	$(realpath .)
 
 #-----------------------------------------------------------------------------
 include make/make.$(BASE)
--include make/make.$(OSTYPE).$(COMP).$(OPT)
 -include make/local/make.$(HOSTNAME)
 -include make/local/make.$(HOSTNAME).$(COMP)
 -include make/local/make.$(HOSTNAME).$(COMP).$(OPT)
@@ -656,7 +655,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			tclique/tclique_branch.o \
 			tclique/tclique_coloring.o \
 			tclique/tclique_graph.o \
-			dijkstra/dijkstra_bh.o \
+			dijkstra/dijkstra.o \
 			xml/xmlparse.o
 
 SCIPLIB		=	$(SCIPLIBNAME).$(BASE)

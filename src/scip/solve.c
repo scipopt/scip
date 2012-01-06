@@ -2214,7 +2214,13 @@ SCIP_RETCODE priceAndCutLoop(
          stat->nseparounds++;
       }
    }
-   
+
+   if ( nsepastallrounds >= maxnsepastallrounds )
+   {
+      SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
+         "Truncate separation round because of stalling (%d stall rounds).\n", maxnsepastallrounds);
+   }
+
    if( !*lperror )
    {
       /* update pseudo cost values for continuous variables, if it should be delayed */

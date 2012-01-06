@@ -59,6 +59,7 @@
 #include <string.h>
 
 #include "scip/sepa_cgmip.h"
+#include "scip/scipdefplugins.h"
 #include "scip/cons_linear.h"
 #include "scip/pub_misc.h"
 
@@ -100,7 +101,7 @@
 #define DEFAULT_INTCONVERT        FALSE /**< convert some integral variables attaining fractional values to have integral value */
 #define DEFAULT_INTCONVFRAC         0.1 /**< fraction of fractional integral variables converted to have integral value (if intconvert) */
 #define DEFAULT_INTCONVMIN          100 /**< minimum number of integral variables before some are converted to have integral value */
-#define DEFAULT_DECISIONTREE       TRUE /**< use decision tree to turn separation on/off? */
+#define DEFAULT_DECISIONTREE      FALSE /**< use decision tree to turn separation on/off? */
 
 #define NROWSTOOSMALL                 5 /**< only separate if the number of rows is larger than this number */
 #define NCOLSTOOSMALL                 5 /**< only separate if the number of columns is larger than this number */
@@ -820,8 +821,6 @@ SCIP_RETCODE createSubscip(
    int nconsvars;
    char name[SCIP_MAXSTRLEN];
 
-   SCIP_Bool success;
-
    assert( scip != NULL );
    assert( sepadata != NULL );
 
@@ -842,13 +841,7 @@ SCIP_RETCODE createSubscip(
    /* create subscip */
    SCIP_CALL( SCIPcreate( &(mipdata->subscip) ) );
    subscip = mipdata->subscip;
-#ifndef NDEBUG
-   SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, &success) );
-#else
-   SCIP_CALL( SCIPcopyPlugins(scip, subscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, &success) );
-#endif
+   SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
 
    /* add violation constraint handler if requested */
    if ( sepadata->addviolconshdlr )
@@ -3113,14 +3106,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
 
    depth = SCIPgetDepth(scip);
 
-#if 1
    if ( sepadata->firstlptime == SCIP_INVALID )   /*lint !e777*/
    {
       /* approximate time for first LP */
       sepadata->firstlptime = SCIPgetSolvingTime(scip) - SCIPgetPresolvingTime(scip);
-      printf("firstlptime: %f\n", sepadata->firstlptime);
    }
-#endif
 
    /* only call separator, if we are not close to terminating */
    if ( SCIPisStopped(scip) )
@@ -3190,7 +3180,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
 
       if ( ! separate )
       {
-         printf("Do not separate!\n");
          return SCIP_OKAY;
       }
    }

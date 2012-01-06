@@ -498,7 +498,7 @@ void SORTTPL_NAME(SCIPsortedvecInsert, SORTTPL_NAMEEXT)
       SORTTPL_HASFIELD4( field4[j] = field4[j-1]; )
       SORTTPL_HASFIELD5( field5[j] = field5[j-1]; )
    }
-          
+
    key[j] = keyval;
    SORTTPL_HASFIELD1( field1[j] = field1val; )
    SORTTPL_HASFIELD2( field2[j] = field2val; )
@@ -532,6 +532,8 @@ void SORTTPL_NAME(SCIPsortedvecDelPos, SORTTPL_NAMEEXT)
 
    assert(0 <= pos && pos < *len);
 
+   (*len)--;
+
    for( j = pos; j < *len; j++ )
    {
       key[j] = key[j+1];
@@ -541,8 +543,6 @@ void SORTTPL_NAME(SCIPsortedvecDelPos, SORTTPL_NAMEEXT)
       SORTTPL_HASFIELD4( field4[j] = field4[j+1]; )
       SORTTPL_HASFIELD5( field5[j] = field5[j+1]; )
    }
-
-   (*len)--;
 }
 
 

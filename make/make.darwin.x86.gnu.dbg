@@ -1,20 +1,6 @@
-FLAGS		+=	-DNO_REMOVE_HISTORY -DROUNDING_FE
-OFLAGS		+=	-O0 -g
-CFLAGS		+=	$(GCCWARN) -m32
-CXXFLAGS	+=	$(GXXWARN) -m32
-ARFLAGS		=	crs
-LDFLAGS		+=	-m32
-ZLIB_FLAGS	=
-ZLIB_LDFLAGS 	=	-lz
-GMP_FLAGS	=
-GMP_LDFLAGS 	=	-lgmp
-READLINE_FLAGS	=
-READLINE_LDFLAGS=	-lreadline -lncurses
+# note that the local make file is a dummy and is eventually the union of
+# following sub make files
 
-ifeq ($(LPS),cpx)
-LPSLDFLAGS	+=	 -framework IOKit -framework Carbon
-endif
-
-ifeq ($(SHARED),true)
-LIBBUILDFLAGS   +=   -m32
-endif
+include $(SCIPDIR)/make/make.$(OSTYPE).$(COMP)
+include $(SCIPDIR)/make/make.$(OSTYPE).$(COMP).$(OPT)
+include $(SCIPDIR)/make/make.$(OSTYPE).$(ARCH).$(COMP)

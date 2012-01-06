@@ -16,6 +16,7 @@
 /**@file   sepa_oddcycle.c
  * @brief  oddcycle separator
  * @author Robert Waniek
+ * @author Marc Pfetsch
  *
  * We separate odd cycle inequalities in the implication graph. Implemented are the classic method
  * by Groetschel, Lovasz, and Schrijver (GLS) and the levelgraph method by Hoffman and Padberg (HP)
@@ -34,7 +35,7 @@
 
 #include "scip/sepa_oddcycle.h"
 #include "scip/pub_misc.h"
-#include "dijkstra/dijkstra_bh.h"
+#include "dijkstra/dijkstra.h"
 
 
 #define SEPA_NAME              "oddcycle"
@@ -47,31 +48,32 @@
 
 
 /* default values for separator settings */
-#define DEFAULT_SCALEFACTOR       1000      /**< factor for scaling of the arc-weights in the Dijkstra algorithm */
-#define DEFAULT_USECLASSICAL      TRUE      /**< use GLS method, otherwise HP method */
-#define DEFAULT_LIFT              FALSE     /**< lift odd cycle cuts */
-#define DEFAULT_REPAIRCYCLES      TRUE      /**< try to repair violated cycles in which a variable and its negated appear */
-#define DEFAULT_ADDSELFARCS       TRUE      /**< add links between a variable and its negated */
-#define DEFAULT_INCLUDETRIANGLES  TRUE      /**< separate triangles (3-cliques) found as 3-cycles or repaired larger cycles */
-#define DEFAULT_MULTIPLECUTS      FALSE     /**< even if a variable is already covered by a cut, still try it as start node */
-#define DEFAULT_ALLOWMULTIPLECUTS TRUE      /**< even if a variable is already covered by a cut, still allow another cut to cover it too */
-#define DEFAULT_LPLIFTCOEF        FALSE     /**< TRUE: choose lifting candidate with highest value of coefficient*lpvalue
-                                             *   FALSE: choose lifting candidate with highest coefficient */
-#define DEFAULT_RECALCLIFTCOEF    TRUE      /**< whether lifting coefficients should be recomputed */
-#define DEFAULT_MAXSEPACUTS       5000      /**< maximal number of oddcycle cuts separated per separation round */
-#define DEFAULT_MAXSEPACUTSROOT   5000      /**< maximal number of oddcycle cuts separated per separation round in root node */
-#define DEFAULT_PERCENTTESTVARS   0         /**< percent of variables to try the chosen method on [0-100] */
-#define DEFAULT_OFFSETTESTVARS    100       /**< offset of variables to try the chosen method on */
-#define DEFAULT_MAXCUTSROOT       1         /**< maximal number of oddcycle cuts generated per root of the levelgraph */
-#define DEFAULT_SORTSWITCH        3         /**< unsorted (0), maxlp (1), minlp (2), maxfrac (3), minfrac (4) */
-#define DEFAULT_MAXREFERENCE      0         /**< minimal weight on an edge (in level graph or Dijkstra graph) */
-#define DEFAULT_MAXROUNDS         10        /**< maximal number of rounds pre node */
-#define DEFAULT_MAXROUNDSROOT     10        /**< maximal number of rounds in the root node */
-#define DEFAULT_MAXNLEVELS        20        /**< maximal number of levels in level graph */
-#define DEFAULT_MAXPERNODESLEVEL  100       /**< maximal percentage of nodes allowed in one level of the levelgraph [0-100] */
-#define DEFAULT_OFFSETNODESLEVEL  10        /**< additional offset of nodes allowed in one level of the levelgraph */
-#define DEFAULT_SORTROOTNEIGHBORS TRUE      /**< sort neighbors of the root in the level graph */
-#define DEFAULT_MAXCUTSLEVEL      50        /**< maximal number of cuts produced per level */
+#define DEFAULT_SCALEFACTOR        1000      /**< factor for scaling of the arc-weights in the Dijkstra algorithm */
+#define DEFAULT_USEGLS             TRUE      /**< use GLS method, otherwise HP method */
+#define DEFAULT_LIFTODDCYCLES     FALSE      /**< lift odd cycle cuts */
+#define DEFAULT_REPAIRCYCLES       TRUE      /**< try to repair violated cycles in which a variable and its negated appear */
+#define DEFAULT_ADDSELFARCS        TRUE      /**< add links between a variable and its negated */
+#define DEFAULT_INCLUDETRIANGLES   TRUE      /**< separate triangles (3-cliques) found as 3-cycles or repaired larger cycles */
+#define DEFAULT_MULTIPLECUTS      FALSE      /**< still try variable as start, even if it is already covered by a cut */
+#define DEFAULT_ALLOWMULTIPLECUTS  TRUE      /**< allow another inequality to use variable, even if it is already covered */
+#define DEFAULT_LPLIFTCOEF        FALSE      /**< TRUE: choose lifting candidate with highest value of coefficient*lpvalue
+                                              *   FALSE: choose lifting candidate with highest coefficient */
+#define DEFAULT_RECALCLIFTCOEF     TRUE      /**< whether lifting coefficients should be recomputed */
+#define DEFAULT_MAXSEPACUTS        5000      /**< maximal number of oddcycle cuts separated per separation round */
+#define DEFAULT_MAXSEPACUTSROOT    5000      /**< maximal number of oddcycle cuts separated per separation round in root node */
+#define DEFAULT_PERCENTTESTVARS       0      /**< percent of variables to try the chosen method on [0-100] */
+#define DEFAULT_OFFSETTESTVARS      100      /**< offset of variables to try the chosen method on */
+#define DEFAULT_MAXCUTSROOT           1      /**< maximal number of oddcycle cuts generated per root of the levelgraph */
+#define DEFAULT_SORTSWITCH            3      /**< unsorted (0), maxlp (1), minlp (2), maxfrac (3), minfrac (4) */
+#define DEFAULT_MAXREFERENCE          0      /**< minimal weight on an edge (in level graph or Dijkstra graph) */
+#define DEFAULT_MAXROUNDS            10      /**< maximal number of rounds pre node */
+#define DEFAULT_MAXROUNDSROOT        10      /**< maximal number of rounds in the root node */
+#define DEFAULT_MAXNLEVELS           20      /**< maximal number of levels in level graph */
+#define DEFAULT_MAXPERNODESLEVEL    100      /**< maximal percentage of nodes allowed in one level of the levelgraph [0-100] */
+#define DEFAULT_OFFSETNODESLEVEL     10      /**< additional offset of nodes allowed in one level of the levelgraph */
+#define DEFAULT_SORTROOTNEIGHBORS  TRUE      /**< sort neighbors of the root in the level graph */
+#define DEFAULT_MAXCUTSLEVEL         50      /**< maximal number of cuts produced per level */
+#define DEFAULT_MAXUNSUCESSFULL       3      /**< maximal number of unsuccessful calls at each node */
 
 
 /*
@@ -99,10 +101,10 @@ struct levelGraph
    unsigned int          m;                  /**< maximal number of arcs of the level graph */
    unsigned int          nlevels;            /**< number of levels completely inserted so far */
    unsigned int*         level;              /**< level number for each node */
-   unsigned int          lastF;              /**< index of last storage element (in targetForward, weightForward) for forward direction */
-   unsigned int          lastB;              /**< index of last storage element (in targetBackward, weightBackward) for backward direction */
-   int*                  beginForward;       /**< index of forward adjacency list (in targetForward, weightForward) for each node */
-   int*                  beginBackward;      /**< index of backward adjacency list (in targetBackward, weightBackward) for each node */
+   unsigned int          lastF;              /**< last storage element index in targetForward, weightForward - forward direction */
+   unsigned int          lastB;              /**< last storage element index in targetBackward, weightBackward - backward direction */
+   int*                  beginForward;       /**< forward adjacency list index in targetForward, weightForward for each node */
+   int*                  beginBackward;      /**< backward adjacency list index in targetBackward, weightBackward for each node */
    int*                  targetForward;      /**< target nodes of forward arcs */
    int*                  targetBackward;     /**< target nodes of backward arcs */
    unsigned int*         weightForward;      /**< weights of forward arcs */
@@ -146,7 +148,7 @@ struct SCIP_SepaData
    unsigned int          ncuts;              /**< number of cuts, added by the separator so far (in current and past calls) */
    unsigned int          oldncuts;           /**< number of cuts at the start the current separation round */
    int                   nliftedcuts;        /**< number of lifted cuts, added by the separator so far (in current and past calls) */
-   SCIP_Bool             useclassical;       /**< use GLS method, otherwise HP method */
+   SCIP_Bool             usegls;             /**< use GLS method, otherwise HP method */
    SCIP_Bool             multiplecuts;       /**< an odd cycle cut of length L can be generated L times; forbidding multiple cuts
                                               *   per node might be faster but might miss some cuts in the current round */
    SCIP_Bool             allowmultiplecuts;  /**< allow multiple cuts covering one node */
@@ -157,15 +159,15 @@ struct SCIP_SepaData
                                               *   by removing both and reconnecting the remaining nodes of the cycle */
    SCIP_Bool             includetriangles;   /**< handle triangles found as 3-cycles or repaired larger cycles */
    LEVELGRAPH*           levelgraph;         /**< level graph when using HP method, NULL otherwise */
-   Dijkstra_Graph*       dijkstragraph;      /**< Dijkstra graph if using method by GLS, NULL otherwise */
+   DIJKSTRA_GRAPH*       dijkstragraph;      /**< Dijkstra graph if using method by GLS, NULL otherwise */
    unsigned int*         mapping;            /**< mapping for getting the index of a variable in the sorted variable array */
    SCIP_Bool             lpliftcoef;         /**< TRUE: choose lifting candidate with highest value of coefficient*lpvalue
                                               *   FALSE: choose lifting candidate with highest coefficient */
    SCIP_Bool             recalcliftcoef;     /**< whether lifting coefficients should be recomputed */
-   int                   maxsepacuts;        /**< maximal number of oddcycle cuts separated per separation round */
-   int                   maxsepacutsroot;    /**< maximal number of oddcycle cuts separated per separation round in the root node */
-   int                   maxsepacutsround;   /**< maximal number of oddcycle cuts separated per separation round in the current node */
-   SORTTYPE              sortswitch;         /*   sorted variable array: unsorted (0), maxlp (1), minlp (2), maxfrac (3), minfrac (4) */
+   int                   maxsepacuts;        /**< max. number of oddcycle cuts separated per separation round */
+   int                   maxsepacutsroot;    /**< max. number of oddcycle cuts separated per separation round in the root node */
+   int                   maxsepacutsround;   /**< max. number of oddcycle cuts separated per separation round in the current node */
+   SORTTYPE              sortswitch;         /**< sorted type: unsorted (0), maxlp (1), minlp (2), maxfrac (3), minfrac (4) */
    int                   lastroot;           /**< save root of last GLS-method run */
    SCIP_Bool             sortrootneighbors;  /**< sort neighbors of the root in the level graph */
    int                   percenttestvars;    /**< percentage of variables to try the chosen method on [0-100] */
@@ -179,13 +181,10 @@ struct SCIP_SepaData
    int                   maxroundsroot;      /**< maximal number of oddcycle separation rounds in the root node (-1: unlimited) */
    int                   maxreference;       /**< minimal weight on an edge (in level graph or Dijkstra graph) */
    int                   maxnlevels;         /**< maximal number of levels in level graph */
+   int                   maxunsucessfull;    /**< maximal number of unsuccessful calls at each node */
+   int                   nunsucessfull;      /**< number of unsuccessful calls at current node */
+   SCIP_Longint          lastnode;           /**< number of last node */
 };
-
-
-
-/*
- * Local methods
- */
 
 
 
@@ -193,7 +192,7 @@ struct SCIP_SepaData
  * debugging methods
  */
 
-#ifdef SCIP_DEBUG
+#ifdef SCIP_OUTPUT
 
 /** displays cycle of pred data structure w.r.t. variable names of the original problem (including
  *  status: original or negated node in graph)
@@ -278,14 +277,14 @@ SCIP_Bool isNeighbor(
    assert(vars != NULL);
    assert(nbinvars > 2);
    assert(sepadata != NULL);
-   assert(sepadata->levelgraph != NULL || sepadata->useclassical);
-   assert(sepadata->dijkstragraph != NULL || !(sepadata->useclassical));
+   assert(sepadata->levelgraph != NULL || sepadata->usegls);
+   assert(sepadata->dijkstragraph != NULL || ! sepadata->usegls);
    assert(a < 2*nbinvars);
    assert(b < 2*nbinvars);
    assert(a != b);
 
    /* determine adjacency using the Dijkstra graph */
-   if( sepadata->useclassical )
+   if( sepadata->usegls )
    {
       if( sepadata->dijkstragraph->outcnt[a] == 0 || sepadata->dijkstragraph->outcnt[b] == 0 )
          return FALSE;
@@ -734,8 +733,8 @@ SCIP_RETCODE liftOddCycleCut(
 
    assert(scip != NULL);
    assert(sepadata != NULL);
-   assert(sepadata->levelgraph != NULL || sepadata->useclassical);
-   assert(sepadata->dijkstragraph != NULL || !(sepadata->useclassical));
+   assert(sepadata->levelgraph != NULL || sepadata->usegls);
+   assert(sepadata->dijkstragraph != NULL || ! sepadata->usegls);
    assert(vars != NULL);
    assert(nbinvars > 2);
    assert(startnode < 2*nbinvars);
@@ -869,6 +868,7 @@ SCIP_RETCODE liftOddCycleCut(
    return SCIP_OKAY;
 }
 
+
 /*
  * methods for both techniques
  */
@@ -912,12 +912,14 @@ SCIP_RETCODE generateOddCycleCut(
    assert(ncyclevars <= nbinvars);
    assert(incut != NULL);
    assert(sepadata != NULL);
-   assert(sepadata->levelgraph != NULL || sepadata->useclassical);
-   assert(sepadata->dijkstragraph != NULL || !(sepadata->useclassical));
+   assert(sepadata->levelgraph != NULL || sepadata->usegls);
+   assert(sepadata->dijkstragraph != NULL || ! sepadata->usegls);
    assert(result != NULL);
 
+#ifdef SCIP_OUTPUT
    /* debug method that prints out all found cycles */
-   SCIPdebug(printCycle(vars,pred,nbinvars,startnode));
+   printCycle(vars,pred,nbinvars,startnode);
+#endif
 
    /* cycle contains only one node */
    if( ncyclevars < 3 )
@@ -939,7 +941,7 @@ SCIP_RETCODE generateOddCycleCut(
    }
 
    /* cycle is a triangle (can be excluded by user) */
-   if( ncyclevars < 5 && !(sepadata->includetriangles) )
+   if( ncyclevars < 5 && ! sepadata->includetriangles )
       return SCIP_OKAY;
 
    if( SCIPisStopped(scip) )
@@ -1034,7 +1036,10 @@ SCIP_RETCODE generateOddCycleCut(
    {
       SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE) );
       SCIP_CALL( SCIPaddPoolCut(scip, cut) );
-      ++(sepadata->ncuts);
+      ++sepadata->ncuts;
+      if ( nlifted > 0 )
+         ++sepadata->nliftedcuts;
+
       if( *result == SCIP_DIDNOTFIND )
          *result = SCIP_SEPARATED;
 
@@ -1210,6 +1215,7 @@ SCIP_RETCODE cleanCycle(
 
    return SCIP_OKAY;
 }
+
 
 /*
  * methods for separateHeur()
@@ -2463,7 +2469,7 @@ SCIP_RETCODE separateHeur(
    )
 {
    /* memory for variable data */
-   SCIP_VAR** varstemp;                      /* variables of the current SCIP (unsorted) */
+   SCIP_VAR** scipvars;                      /* variables of the current SCIP (unsorted) */
    SCIP_VAR** vars;                          /* variables of the current SCIP (sorted if requested) */
    SCIP_Real* vals;                          /* LP-values of the variables (and negated variables) */
    unsigned int nbinvars;                    /* number of nodecandidates for implicationgraph */
@@ -2494,35 +2500,35 @@ SCIP_RETCODE separateHeur(
    unsigned int i;
    unsigned int j;
    unsigned int k;
-   int temp;
+   int nscipbinvars;
 
    assert(scip != NULL);
    assert(sepadata != NULL);
    assert(result != NULL);
 
    /* get variable data */
-   SCIP_CALL( SCIPgetVarsData(scip, &varstemp, NULL, &temp, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPgetVarsData(scip, &scipvars, NULL, &nscipbinvars, NULL, NULL, NULL) );
 
-   assert(varstemp != NULL || temp == 0);
+   assert(scipvars != NULL || nscipbinvars == 0);
 
-   if( temp == 0 )
+   if( nscipbinvars == 0 )
       return SCIP_OKAY;
 
-   nbinvars = (unsigned int) temp;
+   nbinvars = (unsigned int) nscipbinvars;
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, (int) (2 * nbinvars)) );
 
    vars = NULL;
    /* duplicate variable data array for sorting (if requested) */
    if( sepadata->sortswitch != UNSORTED )
    {
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, varstemp, temp) );
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, scipvars, nscipbinvars) );
    }
 
    switch( sepadata->sortswitch )
    {
    case UNSORTED :
       /* if no sorting is requested, we use the normal variable array */
-      vars = varstemp;
+      vars = scipvars;
       break;
    case MAXIMAL_LPVALUE :
       assert(vars != NULL);
@@ -2644,9 +2650,8 @@ SCIP_RETCODE separateHeur(
            && !SCIPisStopped(scip) ; ++i )
    {
       /* skip node if it is already covered by a cut and if we do not want to search cycles starting
-       * with a node already covered by a cut
-       */
-      if( incut[i] && !(sepadata->multiplecuts) )
+       * with a node already covered by a cut */
+      if( incut[i] && ! sepadata->multiplecuts )
          continue;
 
       /* skip variable if its LP-value is not fractional */
@@ -2839,8 +2844,7 @@ SCIP_RETCODE separateHeur(
                /* generate cut (if cycle is valid) */
                if(success)
                {
-                  unsigned int oldncuts;
-                  oldncuts = sepadata->ncuts;
+                  unsigned int oldncuts = sepadata->ncuts;
 
                   sepadata->levelgraph = &graph;
                   SCIP_CALL( generateOddCycleCut(scip, sol, vars, nbinvars, graph.targetAdj[j], pred, ncyclevars,
@@ -2923,6 +2927,7 @@ SCIP_RETCODE separateHeur(
    return SCIP_OKAY;
 }
 
+
 /* methods for separateGLS() */
 
 /** memory reallocation method (the graph is normally very dense, so we dynamically allocate only the memory we need) */
@@ -2931,7 +2936,7 @@ SCIP_RETCODE checkArraySizesGLS(
    SCIP*                 scip,               /**< SCIP data structure */
    unsigned int          maxarcs,            /**< maximal size of graph->head and graph->weight */
    unsigned int*         arraysize,          /**< current size of graph->head and graph->weight */
-   Dijkstra_Graph*       graph,              /**< Dijkstra Graph data structure */
+   DIJKSTRA_GRAPH*       graph,              /**< Dijkstra Graph data structure */
    SCIP_Bool*            success             /**< FALSE, iff memory reallocation fails */
    )
 {
@@ -3006,7 +3011,7 @@ SCIP_RETCODE addGLSBinImpls(
    SCIP_Real*            vals,               /**< value of the variables in the given solution */
    unsigned int          nbinvars,           /**< number of binary problem variables */
    unsigned int          nbinimpls,          /**< number of binary implications of the current node */
-   Dijkstra_Graph*       graph,              /**< Dijkstra Graph data structure */
+   DIJKSTRA_GRAPH*       graph,              /**< Dijkstra Graph data structure */
    unsigned int*         narcs,              /**< current number of arcs inside the Dijkstra Graph */
    unsigned int          maxarcs,            /**< maximal number of arcs inside the Dijkstra Graph */
    SCIP_Bool             original,           /**< TRUE, iff variable is a problem variable */
@@ -3108,11 +3113,11 @@ SCIP_RETCODE addGLSBinImpls(
       }
 
       /* update minimum and maximum weight values */
-      if( graph->weight[*narcs] < graph->min_weight )
-         graph->min_weight = graph->weight[*narcs];
+      if( graph->weight[*narcs] < graph->minweight )
+         graph->minweight = graph->weight[*narcs];
 
-      if( graph->weight[*narcs] > graph->max_weight )
-         graph->max_weight = graph->weight[*narcs];
+      if( graph->weight[*narcs] > graph->maxweight )
+         graph->maxweight = graph->weight[*narcs];
 
       assert(graph->head[*narcs] >= 2*nbinvars);
       assert(graph->head[*narcs] < 4*nbinvars);
@@ -3145,7 +3150,7 @@ SCIP_RETCODE addGLSCliques(
    SCIP_Real*            vals,               /**< value of the variables in the given solution */
    unsigned int          nbinvars,           /**< number of binary problem variables */
    unsigned int          ncliques,           /**< number of cliques of the current node */
-   Dijkstra_Graph*       graph,              /**< Dijkstra Graph data structure */
+   DIJKSTRA_GRAPH*       graph,              /**< Dijkstra Graph data structure */
    unsigned int*         narcs,              /**< current number of arcs inside the Dijkstra Graph */
    unsigned int          maxarcs,            /**< maximal number of arcs inside the Dijkstra Graph */
    SCIP_Bool             original,           /**< TRUE, iff variable is a problem variable */
@@ -3248,11 +3253,11 @@ SCIP_RETCODE addGLSCliques(
          }
 
          /* update minimum and maximum weight values */
-         if( graph->weight[*narcs] < graph->min_weight )
-            graph->min_weight = graph->weight[*narcs];
+         if( graph->weight[*narcs] < graph->minweight )
+            graph->minweight = graph->weight[*narcs];
 
-         if( graph->weight[*narcs] > graph->max_weight )
-            graph->max_weight = graph->weight[*narcs];
+         if( graph->weight[*narcs] > graph->maxweight )
+            graph->maxweight = graph->weight[*narcs];
 
          ++(*narcs);
          if( *arraysize == *narcs )
@@ -3310,16 +3315,16 @@ SCIP_RETCODE separateGLS(
    unsigned int i;
    unsigned int j;
 
-   SCIP_VAR** varstemp;                      /* variables of the current SCIP (unsorted) */
+   SCIP_VAR** scipvars;                      /* variables of the current SCIP (unsorted) */
    SCIP_VAR** vars;                          /* variables of the current SCIP (sorted if requested) */
    unsigned int nbinvars;                    /* number of binary problem variables */
    SCIP_Bool original;                       /* flag if the current variable is original or negated */
-   int ntempvars;
+   int nscipbinvars;
 
    unsigned int nbinimpls;                   /* number of binary implications of the current variable */
    unsigned int ncliques;                    /* number of cliques of the current variable */
 
-   Dijkstra_Graph graph;                     /* Dijkstra graph data structure */
+   DIJKSTRA_GRAPH graph;                     /* Dijkstra graph data structure */
    unsigned int arraysize;                   /* current size of graph->head and graph->weight */
    unsigned int narcs;                       /* number of arcs in the Dijkstra graph */
    unsigned int maxarcs;                     /* maximum number of arcs in the Dijkstra graph */
@@ -3335,6 +3340,9 @@ SCIP_RETCODE separateGLS(
    unsigned int dijkindex;
    SCIP_Bool success;                        /* flag for check for several errors */
 
+   SCIP_Bool* incycle;                       /* flag array if variable is contained in the found cycle */
+   unsigned int* pred2;                      /* temporary predecessor list for backprojection of found cycle */
+
    assert(scip != NULL);
    assert(sepadata != NULL);
    assert(result != NULL);
@@ -3342,30 +3350,30 @@ SCIP_RETCODE separateGLS(
    success = TRUE;
    emptygraph = TRUE;
 
-   SCIP_CALL( SCIPgetVarsData(scip, &varstemp, NULL, &ntempvars, NULL, NULL, NULL) );
-   assert(varstemp != NULL || ntempvars == 0);
+   SCIP_CALL( SCIPgetVarsData(scip, &scipvars, NULL, &nscipbinvars, NULL, NULL, NULL) );
+   assert(scipvars != NULL || nscipbinvars == 0);
 
-   if( ntempvars == 0 )
+   if( nscipbinvars == 0 )
       return SCIP_OKAY;
 
-   nbinvars = (unsigned int) ntempvars;
+   nbinvars = (unsigned int) nscipbinvars;
 
    /* initialize flag array to avoid multiple cuts per variable, if requested by user-flag */
-   SCIP_CALL( SCIPallocBufferArray(scip, &incut, (int) (2 * nbinvars)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &incut, (int) (4 * nbinvars)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, (int) (2 * nbinvars)) );
 
    /* duplicate variable data array for sorting (if requested) */
    vars = NULL;
    if( sepadata->sortswitch != UNSORTED )
    {
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, varstemp, ntempvars) );
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, scipvars, nscipbinvars) );
    }
 
    switch( sepadata->sortswitch )
    {
    case UNSORTED :
       /* if no sorting is requested, we use the normal variable array */
-      vars = varstemp;
+      vars = scipvars;
       break;
 
    case MAXIMAL_LPVALUE :
@@ -3426,7 +3434,7 @@ SCIP_RETCODE separateGLS(
 
    /* create mapping for getting the index of a variable via its probindex to the index in the sorted variable array */
    SCIP_CALL( SCIPallocBufferArray(scip, &(sepadata->mapping), (int) nbinvars) );
-   BMSclearMemoryArray(incut, 2 * nbinvars);
+   BMSclearMemoryArray(incut, 4 * nbinvars);
 
    /* initialize LP value and cut flag for all variables */
    for( i = 0; i < nbinvars; ++i )
@@ -3475,8 +3483,8 @@ SCIP_RETCODE separateGLS(
       graph.head[i] = DIJKSTRA_UNUSED;
       graph.weight[i] = DIJKSTRA_UNUSED;
    }
-   graph.min_weight = DIJKSTRA_FARAWAY;
-   graph.max_weight = 0;
+   graph.minweight = DIJKSTRA_FARAWAY;
+   graph.maxweight = 0;
    narcs = 0;
 
 #ifndef NDEBUG
@@ -3555,11 +3563,11 @@ SCIP_RETCODE separateGLS(
          graph.weight[narcs] = 0;
 
          /* update minimum and maximum weight values */
-         if( graph.weight[narcs] < graph.min_weight )
-            graph.min_weight = graph.weight[narcs];
+         if( graph.weight[narcs] < graph.minweight )
+            graph.minweight = graph.weight[narcs];
 
-         if( graph.weight[narcs] > graph.max_weight )
-            graph.max_weight = graph.weight[narcs];
+         if( graph.weight[narcs] > graph.maxweight )
+            graph.maxweight = graph.weight[narcs];
 
          ++narcs;
          if( arraysize == narcs )
@@ -3634,11 +3642,15 @@ SCIP_RETCODE separateGLS(
    SCIPdebugMessage("--- graph successfully created (%u nodes, %u arcs) ---\n", graph.nodes, narcs);
 
    /* graph is now prepared for Dijkstra methods */
-   assert(Dijsktra_graphIsValid(&graph));
+   assert( dijkstraGraphIsValid(&graph) );
 
    /* determine the number of start nodes */
    maxstarts = (unsigned int) SCIPceil(scip, sepadata->offsettestvars + (0.02 * nbinvars * sepadata->percenttestvars));
    startcounter = 0;
+
+   /* allocate and initialize predecessor list and flag array representing odd cycle */
+   SCIP_CALL( SCIPallocBufferArray(scip, &pred2, (int) (2 * nbinvars)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &incycle, (int) (2 * nbinvars)) );
 
    /* separate odd cycle inequalities by GLS method */
    for( i = (unsigned int) sepadata->lastroot; i < 2 * nbinvars
@@ -3646,11 +3658,10 @@ SCIP_RETCODE separateGLS(
            && sepadata->ncuts - sepadata->oldncuts < (unsigned int) sepadata->maxsepacutsround
            && !SCIPisStopped(scip); ++i )
    {
-      SCIP_Bool* incycle;                    /* flag array if variable is contained in the found cycle */
-      unsigned int* pred2;                   /* temporary predecessor list for backprojection of found cycle */
+      long long cutoff;                      /* cutoff value for Dijkstra algorithm */
       unsigned int ncyclevars;               /* cycle length */
       SCIP_Bool edgedirection;               /* partitionindicator for backprojection from bipartite graph to original graph:
-                                              * is the current edge a backwards edge, i.e., it goes from second to first partition? */
+                                              * is the current edge a backwards edge, i.e., from second to first partition? */
 
       /* skip isolated node */
       if( graph.head[graph.outbeg[i]] == DIJKSTRA_UNUSED )
@@ -3662,19 +3673,23 @@ SCIP_RETCODE separateGLS(
       if( graph.head[graph.outbeg[i]+1] == DIJKSTRA_UNUSED )
          continue;
 
-      /* skip node if it is already covered by a cut and
-       * we do not want to search cycles starting with a node already covered by a cut
-       */
-      if( incut[i] && !(sepadata->multiplecuts) )
-         continue;
-
-      startcounter++;
-
       /* search shortest path from node to its counter part in the other partition */
       startnode = i;
       endnode = i + 2*nbinvars;
 
-      (void) graph_dijkstra_bh(&graph, startnode, dist, pred, entry, order);
+      /* skip node if it is already covered by a cut and
+       * we do not want to search cycles starting with a node already covered by a cut
+       */
+      if( incut[startnode] && !sepadata->multiplecuts )
+         continue;
+
+      startcounter++;
+
+      cutoff = (long long) (0.5 * sepadata->scale);
+      if ( sepadata->allowmultiplecuts )
+         (void) dijkstraPairCutoffIgnore(&graph, startnode, endnode, incut, cutoff, dist, pred, entry, order);
+      else
+         (void) dijkstraPairCutoff(&graph, startnode, endnode, cutoff, dist, pred, entry, order);
 
       /* no odd cycle cut found */
       if( dist[endnode] == DIJKSTRA_FARAWAY )
@@ -3685,11 +3700,6 @@ SCIP_RETCODE separateGLS(
        * (pred&incycle-structure for generateOddCycleCut)
        * check cycles for double variables and try to clean variable-negated-sub-cycles if existing
        */
-
-      /* allocate and initialize predecessor list and flag array representing odd cycle */
-      SCIP_CALL( SCIPallocBufferArray(scip, &pred2, (int) (2 * nbinvars)) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &incycle, (int) (2 * nbinvars)) );
-
       for( j = 0; j < 2*nbinvars; ++j )
       {
          pred2[j] = DIJKSTRA_UNUSED;
@@ -3744,11 +3754,11 @@ SCIP_RETCODE separateGLS(
          sepadata->dijkstragraph = NULL;
 #endif
       }
-
-      /* free temporary memory */
-      SCIPfreeBufferArray(scip, &incycle);
-      SCIPfreeBufferArray(scip, &pred2);
    }
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &incycle);
+   SCIPfreeBufferArray(scip, &pred2);
 
    /* store the last tried root (when running without sorting the variable array, we don't want
     * to always check the same variables and therefore start next time where we stopped last time)
@@ -3847,7 +3857,21 @@ SCIP_DECL_SEPAINIT(sepaInitOddcycle)
 
 
 /** solving process initialization method of separator (called when branch and bound process is about to begin) */
-#define sepaInitsolOddcycle NULL
+static
+SCIP_DECL_SEPAINITSOL(sepaInitsolOddcycle)
+{
+   SCIP_SEPADATA* sepadata;
+
+   assert(sepa != NULL);
+
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+
+   sepadata->nunsucessfull = 0;
+   sepadata->lastnode = -1;
+
+   return SCIP_OKAY;
+}
 
 
 /** solving process deinitialization method of separator (called before branch and bound process data is freed) */
@@ -3861,6 +3885,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpOddcycle)
    SCIP_SEPADATA* sepadata;
    int depth;
    int ncalls;
+   int oldnliftedcuts;
 
    *result = SCIP_DIDNOTRUN;
 
@@ -3875,7 +3900,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpOddcycle)
    if( (depth == 0 && sepadata->maxroundsroot >= 0 && ncalls >= sepadata->maxroundsroot)
       || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
       return SCIP_OKAY;
-
 
    /* only call separator if enough binary variables are present */
    if( SCIPgetNBinVars(scip) < 3 || (!(sepadata->includetriangles) && SCIPgetNBinVars(scip) < 5))
@@ -3898,8 +3922,24 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpOddcycle)
       return SCIP_OKAY;
    }
 
+   /* store node number and reset number of unsuccessful calls */
+   if ( sepadata->lastnode != SCIPnodeGetNumber(SCIPgetCurrentNode(scip)) )
+   {
+      sepadata->nunsucessfull = 0;
+      sepadata->lastnode = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
+   }
+   else
+   {
+      if ( sepadata->nunsucessfull > sepadata->maxunsucessfull )
+      {
+         SCIPdebugMessage("skipping separator: number of unsucessfull calls = %d.\n", sepadata->nunsucessfull);
+         return SCIP_OKAY;
+      }
+   }
+
    *result = SCIP_DIDNOTFIND;
    sepadata->oldncuts = sepadata->ncuts;
+   oldnliftedcuts = sepadata->nliftedcuts;
 
    if( depth == 0 )
       sepadata->maxsepacutsround = sepadata->maxsepacutsroot;
@@ -3907,7 +3947,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpOddcycle)
       sepadata->maxsepacutsround = sepadata->maxsepacuts;
 
    /* perform the actual separation routines */
-   if( sepadata->useclassical )
+   if( sepadata->usegls )
    {
       SCIPdebugMessage("using GLS method for finding odd cycles\n");
       SCIP_CALL( separateGLS(scip, sepadata, NULL, result) );
@@ -3918,14 +3958,16 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpOddcycle)
       SCIP_CALL( separateHeur(scip, sepadata, NULL, result) );
    }
 
-   if( sepadata->ncuts > 0 )
+   if( sepadata->ncuts - sepadata->oldncuts > 0 )
    {
-      SCIPdebugMessage("added %u of %d cuts (%.2f percent lifted)\n", sepadata->ncuts - sepadata->oldncuts,
-         sepadata->maxsepacutsround, (sepadata->nliftedcuts*100.0)/(1.0*sepadata->ncuts));
+      SCIPdebugMessage("added %u cuts (%d allowed), %d lifted.\n", sepadata->ncuts - sepadata->oldncuts,
+         sepadata->maxsepacutsround, sepadata->nliftedcuts - oldnliftedcuts);
+      sepadata->nunsucessfull = 0;
    }
    else
    {
       SCIPdebugMessage("no cuts added (%d allowed)\n", sepadata->maxsepacutsround);
+      ++sepadata->nunsucessfull;
    }
    SCIPdebugMessage("total sepatime: %.2f - total number of added cuts: %u\n", SCIPsepaGetTime(sepa), sepadata->ncuts);
 
@@ -3949,6 +3991,8 @@ SCIP_RETCODE SCIPincludeSepaOddcycle(
 
    /* create oddcycle separator data */
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
+   sepadata->nunsucessfull = 0;
+   sepadata->lastnode = -1;
 
    /* include separator */
    SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
@@ -3957,12 +4001,12 @@ SCIP_RETCODE SCIPincludeSepaOddcycle(
          sepaExitsolOddcycle, sepaExeclpOddcycle, sepaExecsolOddcycle, sepadata) );
 
    /* add oddcycle separator parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/oddcycle/useclassical",
-         "should classical search method by Groetschel, Lovasz, Schrijver be used? Otherwise use levelgraph method by Hoffman, Padberg.",
-         &sepadata->useclassical, FALSE, DEFAULT_USECLASSICAL, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/oddcycle/usegls",
+         "should the search method by Groetschel, Lovasz, Schrijver be used? Otherwise use levelgraph method by Hoffman, Padberg.",
+         &sepadata->usegls, FALSE, DEFAULT_USEGLS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/oddcycle/liftoddcycles",
          "should odd cycle cuts be lifted?",
-         &sepadata->liftoddcycles, FALSE, DEFAULT_LIFT, NULL, NULL) );
+         &sepadata->liftoddcycles, FALSE, DEFAULT_LIFTODDCYCLES, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/maxsepacuts",
          "maximal number of oddcycle cuts separated per separation round",
          &sepadata->maxsepacuts, FALSE, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
@@ -4031,6 +4075,9 @@ SCIP_RETCODE SCIPincludeSepaOddcycle(
    SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/maxreference",
          "minimal weight on an edge (in level graph or bipartite graph)",
          &sepadata->maxreference, TRUE, DEFAULT_MAXREFERENCE, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/maxunsucessfull",
+         "number of unsuccessful calls at current node",
+         &sepadata->maxunsucessfull, TRUE, DEFAULT_MAXUNSUCESSFULL, 0, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

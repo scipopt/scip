@@ -155,7 +155,7 @@ END {
      pb = primalbnd[m];
      
      # we consider every solver status between 4 and 7 and above 8 as unusal interrupt, i.e., abort
-     # (8 is user interrupt, which is likely to be due to schulz stopping a server on the hard timelimit)
+     # (8 is user interrupt, which is likely to be due to schulz stopping a solver on the hard timelimit)
      aborted = 0;
      if( solstat[m] >= 4 && solstat[m] != 8 )
        aborted = 1;
@@ -163,10 +163,13 @@ END {
      if( nodes[m] == "NA" )
        nodes[m] = 0;
 
+     # we consider iteration limit reached as node limit reached, because there is no extra status for node limits
+     nodelimreached = (solstat[m] == 2);
+
      # TODO consider gaplimit
-     gapreached = 0
+     gapreached = 0;
      
-     timeout = 0
+     timeout = 0;
 
      if( !onlyinsolufile || solstatus[prob] != "" )  {
 
@@ -207,7 +210,7 @@ END {
        tottime = time[m];
        if( time[m] > timelimit && timelimit > 0.0 )
          timeout = 1;
-       else if( gapreached )
+       else if( gapreached || nodelimreached )
          timeout = 0;
        if( tottime == 0.0 )
          tottime = timelimit;
@@ -241,11 +244,13 @@ END {
             fail++;
          }
          else {
-           if( timeout || gapreached ) {
+           if( timeout || gapreached || nodelimreached ) {
              if( timeout )
                 status = "timeout";
              else if( gapreached )
                 status = "gaplimit";
+             else if( nodelimreached )
+                status = "nodelimit";
              timeouttime += tottime;
              timeouts++;
            }
@@ -272,7 +277,7 @@ END {
            fail++;
          }
          else {
-           if( timeout || gapreached ) {
+           if( timeout || gapreached || nodelimreached ) {
              if( (!maxobj[m] && sol[prob]-pb > reltol) || (maxobj[m] && pb-sol[prob] > reltol) ) {
                status = "better";
                timeouttime += tottime;
@@ -283,6 +288,8 @@ END {
                  status = "timeout";
                else if( gapreached )
                  status = "gaplimit";
+               else if( nodelimreached )
+                 status = "nodelimit";
                timeouttime += tottime;
                timeouts++;
              }
@@ -304,7 +311,7 @@ END {
 	  reltol = 1e-4 * max(abs(pb),1.0);
 	  abstol = 1e-4;
 
-	  if( timeout || gapreached ) {
+	  if( timeout || gapreached || nodelimreached ) {
 	     if( abs(pb) < infty ) {
 		status = "better";
 		timeouttime += tottime;
@@ -315,6 +322,8 @@ END {
 		   status = "timeout";
 		else if( gapreached )
 		   status = "gaplimit";
+		else if( nodelimreached )
+			status = "nodelimit";
 		timeouttime += tottime;
 		timeouts++;
 	     }
@@ -349,11 +358,13 @@ END {
 	  reltol = 1e-4 * max(abs(pb),1.0);
 	  abstol = 1e-4;
 
-	  if( timeout || gapreached ) {
+	  if( timeout || gapreached || nodelimreached ) {
 	     if( timeout )
 		status = "timeout";
 	     else if( gapreached )
 		status = "gaplimit";
+		  else if( nodelimreached )
+		status = "nodelimit";
 	     timeouttime += tottime;
 	     timeouts++;
 	  }

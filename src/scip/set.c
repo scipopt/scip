@@ -3680,6 +3680,7 @@ int SCIPsetGetSepaMaxcuts(
 #undef SCIPsetBarrierconvtol
 #undef SCIPsetPseudocosteps
 #undef SCIPsetPseudocostdelta
+#undef SCIPsetCutoffbounddelta
 #undef SCIPsetIsEQ
 #undef SCIPsetIsLT
 #undef SCIPsetIsLE
@@ -3804,6 +3805,16 @@ SCIP_Real SCIPsetPseudocostdelta(
    assert(set != NULL);
 
    return set->num_pseudocostdelta;
+}
+
+/** return the delta to use for computing the cutoff bound for integral objectives */
+SCIP_Real SCIPsetCutoffbounddelta(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   return MIN(100.0 * SCIPsetFeastol(set), 0.0001);
 }
 
 /** checks, if value is (positive) infinite */
