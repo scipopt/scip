@@ -1533,7 +1533,7 @@ SCIP_RETCODE consPropagateObjective(
    SCIP_CONS*            cons,               /**< constraint to propagate */
    SCIP_Real             cutoffbound,        /**< cutoff bound to use */
    SCIP_Real             lpobjval,           /**< LP objective value to use */
-   VARIABLE_CONTRIBUTION((*getVarCont)),     /**< function which returns the constribution for a variable */
+   VARIABLE_CONTRIBUTION((*getVarCont)),     /**< function which returns the constribution for a variable which is the reduced cost or the objective coefficient */
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
    int*                  nfixedvars          /**< pointer so store the number of fixed variables */
    )
