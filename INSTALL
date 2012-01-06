@@ -380,6 +380,7 @@ Here is what you have to do to get SCIP running in exact mode:
    - "cd <path>/gmp-4.3.1"
    - "./configure --disable-shared --enable-static --enable-alloca=malloc-reentrant --prefix=<path>/gmp-4.3.1/lib" 
    - "make"
+   - "make check"
    - "make install"
    
    If you need to use a local GMP installation for SCIP, please provide the
@@ -387,21 +388,22 @@ Here is what you have to do to get SCIP running in exact mode:
    "myscip/make/local/make.$(HOSTNAME)". For example,
    "myscip/make/local/make.alibaba" could contain lines of the form
    
-   FLAGS	      +=	-I/<path>/gmp-4.3.1/lib/include
-   LDFLAGS	      +=	-L/<path>/gmp-4.3.1/lib/lib
+   FLAGS	      +=	-I<path>/gmp-4.3.1/lib/include
+   LDFLAGS	      +=	-L<path>/gmp-4.3.1/lib/lib
    
    
    Package: GNU MPFR Library (MPFR) -- tested with version 2.4.2
    =============================================================
    
    SCIP in exact solving mode requires MPFR. It can be downloaded from
-   "http://www.mpfr.org/". You can use the following commands
+   "ftp://ftp.gnu.org/gnu/mpfr". You can use the following commands
    for correctly installing MPFR (see also "Installing MPFR" on
    "http://www.mpfr.org/mpfr-current/mpfr.html").
 
    - "cd <path>/mpfr-2.4.2
    - "./configure --disable-shared --enable-static --prefix=<path>/mpfr-2.4.2/lib" 
    - "make"
+   - "make check"
    - "make install"
    
    If you need to use a local MPFR installation for SCIP, please provide
@@ -409,8 +411,8 @@ Here is what you have to do to get SCIP running in exact mode:
    "myscip/make/local/make.$(HOSTNAME)". For example,
    "myscip/make/local/make.alibaba" could contain lines of the form
    
-   FLAGS           +=      -I/<path>/mpfr-2.4.2/lib/include
-   LDFLAGS         +=      -L/<path>/mpfr-2.4.2/lib/lib
+   FLAGS           +=      -I<path>/mpfr-2.4.2/lib/include
+   LDFLAGS         +=      -L<path>/mpfr-2.4.2/lib/lib
    
    
    Package: ZIMPL version 3.0.0
@@ -419,8 +421,15 @@ Here is what you have to do to get SCIP running in exact mode:
    SCIP in exact solving mode requires ZIMPL for reading in a MIP instance
    without floating-point errors. Please stick to version 3.0.0; the ZIMPL
    reader of the present SCIP version is not compatible with newer ZIMPL
-   versions. It can be downloaded from "http://zimpl.zib.de". SCIP will
-   automatically ask for the path to ZIMPL while compiling (see Step 2).
+   versions. It can be downloaded from "http://zimpl.zib.de/download". You
+   can use the following commands for installing ZIMPL.
+
+   - "cd <path>/zimpl-3.0.0
+   - "make"
+   - "make check"
+
+   SCIP will automatically ask for the path to ZIMPL while compiling (see
+   standard SCIP instructions above).
    
    Note that for some larger MIP instances, ZIMPL 3.0.0 only works if the
    stack size is large enough, otherwise you will get a segmentation
@@ -428,7 +437,7 @@ Here is what you have to do to get SCIP running in exact mode:
    problem.
    
    To convert files given in mps-format to files in zpl-format for ZIMPL,
-   you can use the scripts "mps2zpl.sh"; see Step 5.
+   you can use the script "mps2zpl.sh"; see Step 5.
 
 
    Package: Standard LP solver
@@ -444,27 +453,39 @@ Here is what you have to do to get SCIP running in exact mode:
    
    You need the exact LP solver QSopt_ex. You can obtain it via 
    
-   - "svn co https://conexo.dii.uchile.cl/SVN/ESolver/tags/QSopt_ex-2.5.5 myQSopt_ex".
+   - "svn co https://conexo.dii.uchile.cl/SVN/ESolver/tags/QSopt_ex-2.5.5 QSopt_ex-2.5.5".
    
-   Please stick to version 2.5.5. We tested the interface for this version
-   and, in particular, the following required replacement will only work
-   for QSopt_ex 2.5.5. You need to add the functions "QSexact_verify()" and
-   "QSexact_basis_dualstatus()", which test a given basis for dual
-   feasibility. For this, please, replace the files
+   Please stick to version 2.5.5. We tested the interface of SCIP for this
+   version and, in particular, the following required replacement will only
+   work for QSopt_ex 2.5.5. You need to add the functions
+   "QSexact_verify()" and "QSexact_basis_dualstatus()" to QSopt_ex, which
+   test a given basis for dual feasibility. For this, please, replace the
+   files
    
-   - "myQSopt_ex/EXact/exact.c" 
-   - "myQSopt_ex/EXact/exact.h" 
-   - "myQSopt_ex/include/QSopt_ex.h" 
+   - "QSopt_ex-2.5.5/EXact/exact.c" 
+   - "QSopt_ex-2.5.5/EXact/exact.h" 
+   - "QSopt_ex-2.5.5/include/QSopt_ex.h" 
    
    by the ones provided in the directory "QSopt_ex-2.5.5-replace".
    
    For installing the QSopt_ex, we refer to the file
-   "myQSopt_ex/README". The most important point is that QSopt_ex requires
-   the GMP library to be compiled using the option
-   "--enable-alloca=maloc-reentrant", which avoids memory overwriting
-   problems (see point "Package: GMP"). Make sure to update the GMP path in
-   "myQSopt_ex/make.conf" (copy of "myQSopt_ex/make.conf.default") and
-   "myQSopt_ex/EGlib/make.conf".
+   "QSopt_ex-2.5.5/README". The most important point is that QSopt_ex
+   requires the GMP library to be compiled using the option
+   "--enable-alloca=malloc-reentrant", which avoids memory overwriting
+   problems (see point "Package: GMP"). 
+
+   Before compiling QSopt_ex, make sure to update the GMP path in
+   "QSopt_ex-2.5.5/make.conf" (copy of "QSopt_ex-2.5.5/make.conf.default")
+   and "QSopt_ex-2.5.5/EGlib/make.conf". For example, replace the the
+   "GNUMP_LIB_DIR" and "GNUMP_INCLUDE_DIR" lines in both files by
+   
+   GNUMP_LIB_DIR += <path>/gmp-4.3.1/lib/lib
+   GNUMP_INCLUDE_DIR += <path>/gmp-4.3.1/lib/include
+   
+   You can use the following commands for installing QSopt_ex.
+
+   - "cd <path>/QSopt_ex-2.5.5
+   - "make"
    
    SCIP will automatically ask for missing links to QSopt_ex while
    compiling (see Step 2).
@@ -490,8 +511,8 @@ Here is what you have to do to get SCIP running in exact mode:
    - "BRANCHPLGS=false" to exclude all branching plugins and thus use first-fractional variable branching
                         Note: the value of "BRANCHPLGS" has no effect if "REDUCEDSOLVE=false".
 
-   - "LPSEX=qsoex"      to use QSopt_ex version 2.5.5 as exact LP solver
-   - "LPSEX=none        to use no exact LP solver (deafult; not compatible with "EXACTSOLVE=true")
+   - "LPSEX=qsoex"      to use QSopt_ex as exact LP solver
+   - "LPSEX=none        to use no exact LP solver (default; not compatible with "EXACTSOLVE=true")
 
    - "EXACTSOLVE=true"  to run SCIP in exact solving mode (requires "ZIMPL=true", "GMP=auto/true", "REDUCEDSOLVE=true", "LPSEX=qsoex")
    - "EXACTSOLVE=false" to run SCIP in standard, floating-point, solving mode (default)
@@ -505,10 +526,11 @@ Here is what you have to do to get SCIP running in exact mode:
      (c) the directory with the include files of EGlib (part of the QSopt_ex distribution)
      (d) the library file(s) "lib*.a" or/and "lib*.so" of the EGlib library
 
-     (e) information for ZIMPL (see standard SCIP instructions above)
+     (e) include- and lib-info for ZIMPL (see standard SCIP instructions above)
 
-   You will need either the ".a" or the ".so" files and can skip the others
-   by just pressing "return".
+   See also Step 3 for more details about the soft-links. You will need
+   either the ".a" or the ".so" files and can skip the others by just
+   pressing "return".
 
 
    Example 1 (Branch-and-bound algorithm in exact solving mode, all branching plugins)
