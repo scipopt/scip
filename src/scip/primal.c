@@ -521,7 +521,7 @@ SCIP_RETCODE primalAddSol(
       SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_POORSOLFOUND) );
    }
    SCIP_CALL( SCIPeventChgSol(&event, sol) );
-   SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+   SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, NULL, eventfilter) );
 
    /* display node information line */
    if( insertpos == 0 && set->stage >= SCIP_STAGE_SOLVING )

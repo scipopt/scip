@@ -1258,6 +1258,7 @@ SCIP_Real SCIPeventGetRowNewSideVal(
 SCIP_RETCODE SCIPeventProcess(
    SCIP_EVENT*           event,              /**< event */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data; only needed for obj/boundchanged events, or NULL */
    SCIP_PRIMAL*          primal,             /**< primal data; only needed for objchanged events, or NULL */
    SCIP_LP*              lp,                 /**< current LP data; only needed for obj/boundchanged events, or NULL */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for bound change events, or NULL */
@@ -1268,7 +1269,8 @@ SCIP_RETCODE SCIPeventProcess(
 
    assert(event != NULL);
    assert((event->eventtype & SCIP_EVENTTYPE_OBJCHANGED) == 0 || primal != NULL);
-   assert((event->eventtype & (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_OBJCHANGED)) == 0 || lp != NULL);
+   assert((event->eventtype & (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_OBJCHANGED)) == 0
+      || (prob != NULL && lp != NULL));
    assert((event->eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) == 0 || branchcand != NULL);
 
    SCIPdebugMessage("processing event of type 0x%x\n", event->eventtype);
@@ -1335,7 +1337,7 @@ SCIP_RETCODE SCIPeventProcess(
          {
             SCIP_CALL( SCIPcolChgObj(SCIPvarGetCol(var), set, lp, event->data.eventobjchg.newobj) );
          }
-         SCIP_CALL( SCIPlpUpdateVarObj(lp, set, var, event->data.eventobjchg.oldobj, event->data.eventobjchg.newobj) );
+         SCIP_CALL( SCIPlpUpdateVarObj(lp, set, prob, var, event->data.eventobjchg.oldobj, event->data.eventobjchg.newobj) );
       }
 
       /* inform all existing primal solutions about the objective change */
@@ -1368,7 +1370,7 @@ SCIP_RETCODE SCIPeventProcess(
          {
             SCIP_CALL( SCIPcolChgLb(SCIPvarGetCol(var), set, lp, event->data.eventbdchg.newbound) );
          }
-         SCIP_CALL( SCIPlpUpdateVarLb(lp, set, var, event->data.eventbdchg.oldbound,
+         SCIP_CALL( SCIPlpUpdateVarLb(lp, set, prob, var, event->data.eventbdchg.oldbound,
                event->data.eventbdchg.newbound) );
          SCIP_CALL( SCIPbranchcandUpdateVar(branchcand, set, var) );
       }
@@ -1391,7 +1393,7 @@ SCIP_RETCODE SCIPeventProcess(
          {
             SCIP_CALL( SCIPcolChgUb(SCIPvarGetCol(var), set, lp, event->data.eventbdchg.newbound) );
          }
-         SCIP_CALL( SCIPlpUpdateVarUb(lp, set, var, event->data.eventbdchg.oldbound, 
+         SCIP_CALL( SCIPlpUpdateVarUb(lp, set, prob, var, event->data.eventbdchg.oldbound,
                event->data.eventbdchg.newbound) );
          SCIP_CALL( SCIPbranchcandUpdateVar(branchcand, set, var) );
       }
@@ -1875,6 +1877,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data; only needed for obj/boundchanged events, or NULL */
    SCIP_PRIMAL*          primal,             /**< primal data; only needed for objchanged events, or NULL */
    SCIP_LP*              lp,                 /**< current LP data; only needed for obj/boundchanged events, or NULL */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for bound change events, or NULL */
@@ -1890,13 +1893,14 @@ SCIP_RETCODE SCIPeventqueueAdd(
    assert(event != NULL);
    assert(*event != NULL);
    assert(((*event)->eventtype & SCIP_EVENTTYPE_OBJCHANGED) == 0 || primal != NULL);
-   assert(((*event)->eventtype & (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_OBJCHANGED)) == 0 || lp != NULL);
+   assert(((*event)->eventtype & (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_OBJCHANGED)) == 0
+      || (prob != NULL && lp != NULL));
    assert(((*event)->eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) == 0 || branchcand != NULL);
    
    if( !eventqueue->delayevents )
    {
       /* immediately process event */
-      SCIP_CALL( SCIPeventProcess(*event, set, primal, lp, branchcand, eventfilter) );
+      SCIP_CALL( SCIPeventProcess(*event, set, prob, primal, lp, branchcand, eventfilter) );
       SCIP_CALL( SCIPeventFree(event, blkmem) );
    }
    else
@@ -2125,6 +2129,7 @@ SCIP_RETCODE SCIPeventqueueProcess(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -2177,7 +2182,7 @@ SCIP_RETCODE SCIPeventqueueProcess(
       }
 
       /* process event */
-      SCIP_CALL( SCIPeventProcess(event, set, primal, lp, branchcand, eventfilter) );
+      SCIP_CALL( SCIPeventProcess(event, set, prob, primal, lp, branchcand, eventfilter) );
 
       /* free the event immediately, because additionally raised events during event processing
        * can lead to a large event queue

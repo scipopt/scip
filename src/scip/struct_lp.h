@@ -233,9 +233,11 @@ struct SCIP_Lp
 {
    SCIP_Real             lpobjval;           /**< objective value of LP without loose variables, or SCIP_INVALID */
    SCIP_Real             looseobjval;        /**< current solution value of all loose variables set to their best bounds,
-                                              *   ignoring variables, with infinite best bound */
+                                              *   ignoring variables with infinite best bound */
    SCIP_Real             pseudoobjval;       /**< current pseudo solution value with all variables set to their best bounds,
-                                              *   ignoring variables, with infinite best bound */
+                                              *   ignoring variables with infinite best bound */
+   SCIP_Real             relpseudoobjval;    /**< last reliable pseudo solution value with all variables set to their best bounds,
+                                              *   ignoring variables with infinite best bound */
    SCIP_Real             rootlpobjval;       /**< objective value of root LP without loose variables, or SCIP_INVALID */
    SCIP_Real             rootlooseobjval;    /**< objective value of loose variables in root node, or SCIP_INVALID */
    SCIP_Real             cutoffbound;        /**< upper objective limit of LP (copy of primal->cutoffbound) */

@@ -28,6 +28,7 @@
 #include "blockmemshell/memory.h"
 #include "scip/type_retcode.h"
 #include "scip/type_set.h"
+#include "scip/type_prob.h"
 #include "scip/type_event.h"
 #include "scip/type_lp.h"
 #include "scip/type_var.h"
@@ -351,6 +352,7 @@ extern
 SCIP_RETCODE SCIPeventProcess(
    SCIP_EVENT*           event,              /**< event */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data; only needed for obj/boundchanged events, or NULL */
    SCIP_PRIMAL*          primal,             /**< primal data; only needed for objchanged events, or NULL */
    SCIP_LP*              lp,                 /**< current LP data; only needed for obj/boundchanged events, or NULL */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for bound change events, or NULL */
@@ -434,6 +436,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data; only needed for obj/boundchanged events, or NULL */
    SCIP_PRIMAL*          primal,             /**< primal data; only needed for objchanged events, or NULL */
    SCIP_LP*              lp,                 /**< current LP data; only needed for obj/boundchanged events, or NULL */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for bound change events, or NULL */
@@ -453,6 +456,7 @@ SCIP_RETCODE SCIPeventqueueProcess(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */

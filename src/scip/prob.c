@@ -511,7 +511,7 @@ SCIP_RETCODE SCIPprobResetBounds(
 
    for( v = 0; v < prob->nvars; ++v )
    {
-      SCIP_CALL( SCIPvarResetBounds(prob->vars[v], blkmem, set, stat) );
+      SCIP_CALL( SCIPvarResetBounds(prob->vars[v], blkmem, set, prob, stat) );
    }
 
    return SCIP_OKAY;
@@ -766,7 +766,7 @@ SCIP_RETCODE SCIPprobAddVar(
    if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL )
    {
       SCIP_CALL( SCIPbranchcandUpdateVar(branchcand, set, var) );
-      SCIP_CALL( SCIPlpUpdateAddVar(lp, set, var) );
+      SCIP_CALL( SCIPlpUpdateAddVar(lp, set, prob, var) );
    }
 
    SCIPdebugMessage("added variable <%s> to problem (%d variables: %d binary, %d integer, %d implicit, %d continuous)\n",
@@ -778,7 +778,7 @@ SCIP_RETCODE SCIPprobAddVar(
 
       /* issue VARADDED event */
       SCIP_CALL( SCIPeventCreateVarAdded(&event, blkmem, var) );
-      SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
+      SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, NULL, eventfilter, &event) );
    }
 
    return SCIP_OKAY;
@@ -831,7 +831,7 @@ SCIP_RETCODE SCIPprobDelVar(
 
       /* issue VARDELETED event */
       SCIP_CALL( SCIPeventCreateVarDeleted(&event, blkmem, var) );
-      SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, NULL, &event) );
+      SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, NULL, NULL, &event) );
    }
 
    /* remember that the variable should be deleted from the problem in SCIPprobPerformVarDeletions() */
@@ -891,7 +891,7 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
          /* update branching candidates and pseudo and loose objective value in the LP */
          if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL )
          {
-            SCIP_CALL( SCIPlpUpdateDelVar(lp, set, var) );
+            SCIP_CALL( SCIPlpUpdateDelVar(lp, set, prob, var) );
             SCIP_CALL( SCIPbranchcandRemoveVar(branchcand, var) );
          }
          
@@ -1376,7 +1376,7 @@ SCIP_RETCODE SCIPprobScaleObj(
                   for( v = 0; v < nints; ++v )
                   {
                      SCIPdebugMessage(" -> var <%s>: newobj = %.6f\n", SCIPvarGetName(prob->vars[v]), objvals[v]);
-                     SCIP_CALL( SCIPvarChgObj(prob->vars[v], blkmem, set, primal, lp, eventqueue, objvals[v]) );
+                     SCIP_CALL( SCIPvarChgObj(prob->vars[v], blkmem, set, prob, primal, lp, eventqueue, objvals[v]) );
                   }
                   prob->objoffset *= intscalar;
                   prob->objscale /= intscalar;

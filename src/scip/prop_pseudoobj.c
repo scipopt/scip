@@ -1184,7 +1184,7 @@ SCIP_RETCODE propagateLowerbound(
        */
       if( propdata->maxpseudoobjactinf == 0 && SCIPvarGetLbGlobal(var) < 0.5 && SCIPvarGetUbGlobal(var) > 0.5 )
       {
-         assert(!SCIPisInfinity(scip, propdata->maxpseudoobjact));
+         //assert(!SCIPisInfinity(scip, propdata->maxpseudoobjact));
          SCIPdebugMessage("interrupt pseudo objective propagation w.r.t. lower bound <%.15g> for binary variables after %d from %d binary variables\n", lowerbound, k, nobjbinvars);
          break;
       }

@@ -170,6 +170,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    SCIP_NODE*            node,               /**< node to add bound change to */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -192,6 +193,7 @@ SCIP_RETCODE SCIPnodeAddBoundchg(
    SCIP_NODE*            node,               /**< node to add bound change to */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -280,6 +282,7 @@ SCIP_RETCODE SCIPnodePropagateImplics(
    SCIP_NODE*            node,               /**< node to propagate implications on */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -467,6 +470,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -500,6 +504,7 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -558,6 +563,7 @@ SCIP_RETCODE SCIPtreeBacktrackProbing(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */

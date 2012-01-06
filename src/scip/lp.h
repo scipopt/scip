@@ -1081,6 +1081,7 @@ extern
 SCIP_RETCODE SCIPlpUpdateVarObj(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_VAR*             var,                /**< problem variable that changed */
    SCIP_Real             oldobj,             /**< old objective value of variable */
    SCIP_Real             newobj              /**< new objective value of variable */
@@ -1091,6 +1092,7 @@ extern
 SCIP_RETCODE SCIPlpUpdateVarLb(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_VAR*             var,                /**< problem variable that changed */
    SCIP_Real             oldlb,              /**< old lower bound of variable */
    SCIP_Real             newlb               /**< new lower bound of variable */
@@ -1101,6 +1103,7 @@ extern
 SCIP_RETCODE SCIPlpUpdateVarUb(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_VAR*             var,                /**< problem variable that changed */
    SCIP_Real             oldub,              /**< old upper bound of variable */
    SCIP_Real             newub               /**< new upper bound of variable */
@@ -1111,6 +1114,7 @@ extern
 SCIP_RETCODE SCIPlpUpdateAddVar(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_VAR*             var                 /**< variable that is now a LOOSE problem variable */
    );
 
@@ -1119,6 +1123,7 @@ extern
 SCIP_RETCODE SCIPlpUpdateDelVar(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_VAR*             var                 /**< variable that will be deleted from the problem */
    );
 

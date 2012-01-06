@@ -345,6 +345,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -364,6 +365,7 @@ SCIP_RETCODE SCIPcliquetableCleanup(
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */

@@ -1284,6 +1284,11 @@ SCIP_RETCODE SCIPsetCreate(
          "minimal objective distance value to use for branching pseudo cost updates",
          &(*set)->num_pseudocostdelta, TRUE, SCIP_DEFAULT_PSEUDOCOSTDELTA, 0.0, SCIP_REAL_MAX,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
+         "numerics/recomputefac",
+         "minimal decrease factor that causes the recomputation of a value (e.g., pseudo objective) instead of an update",
+         &(*set)->num_recompfac, TRUE, SCIP_DEFAULT_RECOMPFAC, 0.0, SCIP_REAL_MAX,
+         NULL, NULL) );
 
    /* presolving parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
@@ -3680,6 +3685,7 @@ int SCIPsetGetSepaMaxcuts(
 #undef SCIPsetBarrierconvtol
 #undef SCIPsetPseudocosteps
 #undef SCIPsetPseudocostdelta
+#undef SCIPsetRecompfac
 #undef SCIPsetIsEQ
 #undef SCIPsetIsLT
 #undef SCIPsetIsLE
@@ -3804,6 +3810,17 @@ SCIP_Real SCIPsetPseudocostdelta(
    assert(set != NULL);
 
    return set->num_pseudocostdelta;
+}
+
+/** returns minimal decrease factor that causes the recomputation of a value
+ *  (e.g., pseudo objective) instead of an update */
+SCIP_Real SCIPsetRecompfac(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   return set->num_recompfac;
 }
 
 /** checks, if value is (positive) infinite */

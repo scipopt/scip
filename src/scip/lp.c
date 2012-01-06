@@ -1092,7 +1092,7 @@ SCIP_RETCODE rowEventCoefChanged(
       SCIP_EVENT* event;
 
       SCIP_CALL( SCIPeventCreateRowCoefChanged(&event, blkmem, row, col, oldval, newval) );
-      SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, row->eventfilter, &event) );
+      SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, NULL, row->eventfilter, &event) );
    }
 
    return SCIP_OKAY;
@@ -1120,7 +1120,7 @@ SCIP_RETCODE rowEventConstantChanged(
       SCIP_EVENT* event;
 
       SCIP_CALL( SCIPeventCreateRowConstChanged(&event, blkmem, row, oldval, newval) );
-      SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, row->eventfilter, &event) );
+      SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, NULL, row->eventfilter, &event) );
    }
 
    return SCIP_OKAY;
@@ -1149,7 +1149,7 @@ SCIP_RETCODE rowEventSideChanged(
       SCIP_EVENT* event;
 
       SCIP_CALL( SCIPeventCreateRowSideChanged(&event, blkmem, row, side, oldval, newval) );
-      SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, row->eventfilter, &event) );
+      SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, NULL, row->eventfilter, &event) );
    }
 
    return SCIP_OKAY;
@@ -7317,6 +7317,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
    (*lp)->lpobjval = 0.0;
    (*lp)->pseudoobjval = 0.0;
+   (*lp)->relpseudoobjval = 0.0;
    (*lp)->pseudoobjvalinf = 0;
    (*lp)->looseobjval = 0.0;
    (*lp)->looseobjvalinf = 0;
@@ -7665,7 +7666,7 @@ SCIP_RETCODE SCIPlpAddRow(
       SCIP_EVENT* event;
 
       SCIP_CALL( SCIPeventCreateRowAddedLP(&event, blkmem, row) );
-      SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
+      SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, NULL, eventfilter, &event) );
    }
 
    return SCIP_OKAY;
@@ -7848,7 +7849,7 @@ SCIP_RETCODE SCIPlpShrinkRows(
             SCIP_EVENT* event;
 
             SCIP_CALL( SCIPeventCreateRowDeletedLP(&event, blkmem, lp->rows[r]) );
-            SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
+            SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, NULL, eventfilter, &event) );
          }
          
          SCIP_CALL( SCIProwRelease(&lp->rows[r], blkmem, set, lp) );
@@ -13373,13 +13374,14 @@ static
 SCIP_RETCODE lpUpdateVar(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_VAR*             var,                /**< problem variable that changed */
    SCIP_Real             oldobj,             /**< old objective value of variable */
-   SCIP_Real             oldlb,              /**< old objective value of variable */
-   SCIP_Real             oldub,              /**< old objective value of variable */
+   SCIP_Real             oldlb,              /**< old lower bound of variable */
+   SCIP_Real             oldub,              /**< old upper bound of variable */
    SCIP_Real             newobj,             /**< new objective value of variable */
-   SCIP_Real             newlb,              /**< new objective value of variable */
-   SCIP_Real             newub               /**< new objective value of variable */
+   SCIP_Real             newlb,              /**< new lower bound of variable */
+   SCIP_Real             newub               /**< new upper bound of variable */
    )
 {
    SCIP_Real deltaval;
@@ -13395,6 +13397,8 @@ SCIP_RETCODE lpUpdateVar(
    assert(!SCIPsetIsInfinity(set, newlb));
    assert(!SCIPsetIsInfinity(set, -newub));
    assert(var != NULL);
+   assert(SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), newlb));
+   assert(SCIPsetIsEQ(set, SCIPvarGetUbLocal(var), newub));
 
    if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_LOOSE && SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
    {
@@ -13439,13 +13443,94 @@ SCIP_RETCODE lpUpdateVar(
          deltaval += newub * newobj;
    }
 
-   /* update the pseudo and loose objective values */
-   lp->pseudoobjval += deltaval;
-   lp->pseudoobjvalinf += deltainf;
-   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
+   /* set pseudo and loose objective values to 0, if no variables are present */
+   if( prob->nvars == 0 )
    {
-      lp->looseobjval += deltaval;
-      lp->looseobjvalinf += deltainf;
+      lp->pseudoobjval = 0.0;
+      lp->relpseudoobjval = 0.0;
+      lp->looseobjval = 0.0;
+      lp->pseudoobjvalinf = 0;
+      lp->looseobjvalinf = 0;
+   }
+   /* update the pseudo and loose objective values */
+   else
+   {
+      lp->pseudoobjval += deltaval;
+      lp->pseudoobjvalinf += deltainf;
+      if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
+      {
+         lp->looseobjval += deltaval;
+         lp->looseobjvalinf += deltainf;
+      }
+
+      /* compute pseudo and loose objective value from scratch, if needed */
+      if( MAX(ABS(lp->relpseudoobjval), 1.0) > SCIPsetRecompfac(set) * MAX(ABS(lp->pseudoobjval), 1.0) )
+      {
+         SCIP_VAR** vars;
+         SCIP_Real pseudoobjval;
+         SCIP_Real looseobjval;
+         int pseudoobjvalinf;
+         int looseobjvalinf;
+         int nvars;
+         int v;
+
+         pseudoobjval = 0.0;
+         looseobjval = 0.0;
+         pseudoobjvalinf = 0;
+         looseobjvalinf = 0;
+         vars = prob->vars;
+         nvars = prob->nvars;
+
+         /* iterate over all variables in the problem */
+         for( v = 0; v < nvars; ++v )
+         {
+            if( SCIPsetIsPositive(set, SCIPvarGetObj(vars[v])) )
+            {
+               if( SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(vars[v])) )
+               {
+                  pseudoobjvalinf++;
+
+                  if( SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_LOOSE )
+                     looseobjvalinf++;
+               }
+               else
+               {
+                  pseudoobjval += SCIPvarGetObj(vars[v]) * SCIPvarGetLbLocal(vars[v]);
+
+                  if( SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_LOOSE )
+                     looseobjval += SCIPvarGetObj(vars[v]) * SCIPvarGetLbLocal(vars[v]);
+               }
+            }
+            else if( SCIPsetIsNegative(set, SCIPvarGetObj(vars[v])) )
+            {
+               if( SCIPsetIsInfinity(set, SCIPvarGetUbLocal(vars[v])) )
+               {
+                  pseudoobjvalinf++;
+
+                  if( SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_LOOSE )
+                     looseobjvalinf++;
+               }
+               else
+               {
+                  pseudoobjval += SCIPvarGetObj(vars[v]) * SCIPvarGetUbLocal(vars[v]);
+
+                  if( SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_LOOSE )
+                     looseobjval += SCIPvarGetObj(vars[v]) * SCIPvarGetUbLocal(vars[v]);
+               }
+            }
+         }
+         assert(lp->pseudoobjvalinf == pseudoobjvalinf);
+         assert(lp->looseobjvalinf == looseobjvalinf);
+
+         lp->pseudoobjval = pseudoobjval;
+            lp->pseudoobjvalinf = pseudoobjvalinf;
+            lp->looseobjval = looseobjval;
+            lp->looseobjvalinf = looseobjvalinf;
+            lp->relpseudoobjval =lp->pseudoobjval;
+      }
+      else
+         if( ABS(lp->relpseudoobjval) < ABS(lp->pseudoobjval) )
+            lp->relpseudoobjval = lp->pseudoobjval;
    }
 
    assert(lp->pseudoobjvalinf >= 0);
@@ -13601,12 +13686,14 @@ SCIP_RETCODE lpUpdateVarProved(
 SCIP_RETCODE SCIPlpUpdateVarObj(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_VAR*             var,                /**< problem variable that changed */
    SCIP_Real             oldobj,             /**< old objective value of variable */
    SCIP_Real             newobj              /**< new objective value of variable */
    )
 {
    assert(set != NULL);
+   assert(prob != NULL);
    assert(var != NULL);
 
    if( set->misc_exactsolve )
@@ -13621,7 +13708,7 @@ SCIP_RETCODE SCIPlpUpdateVarObj(
    {
       if( !SCIPsetIsEQ(set, oldobj, newobj) )
       {
-         SCIP_CALL( lpUpdateVar(lp, set, var, oldobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
+         SCIP_CALL( lpUpdateVar(lp, set, prob, var, oldobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
                newobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
       }
    }
@@ -13633,12 +13720,14 @@ SCIP_RETCODE SCIPlpUpdateVarObj(
 SCIP_RETCODE SCIPlpUpdateVarLb(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_VAR*             var,                /**< problem variable that changed */
    SCIP_Real             oldlb,              /**< old lower bound of variable */
    SCIP_Real             newlb               /**< new lower bound of variable */
    )
 {
    assert(set != NULL);
+   assert(prob != NULL);
    assert(var != NULL);
 
    if( set->misc_exactsolve )
@@ -13653,7 +13742,7 @@ SCIP_RETCODE SCIPlpUpdateVarLb(
    {
       if( !SCIPsetIsEQ(set, oldlb, newlb) && SCIPsetIsPositive(set, SCIPvarGetObj(var)) )
       {
-         SCIP_CALL( lpUpdateVar(lp, set, var, SCIPvarGetObj(var), oldlb, SCIPvarGetUbLocal(var), 
+         SCIP_CALL( lpUpdateVar(lp, set, prob, var, SCIPvarGetObj(var), oldlb, SCIPvarGetUbLocal(var),
                SCIPvarGetObj(var), newlb, SCIPvarGetUbLocal(var)) );
       }
    }
@@ -13665,12 +13754,14 @@ SCIP_RETCODE SCIPlpUpdateVarLb(
 SCIP_RETCODE SCIPlpUpdateVarUb(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_VAR*             var,                /**< problem variable that changed */
    SCIP_Real             oldub,              /**< old upper bound of variable */
    SCIP_Real             newub               /**< new upper bound of variable */
    )
 {
    assert(set != NULL);
+   assert(prob != NULL);
    assert(var != NULL);
 
    if( set->misc_exactsolve )
@@ -13685,7 +13776,7 @@ SCIP_RETCODE SCIPlpUpdateVarUb(
    {
       if( !SCIPsetIsEQ(set, oldub, newub) && SCIPsetIsNegative(set, SCIPvarGetObj(var)) )
       {
-         SCIP_CALL( lpUpdateVar(lp, set, var, SCIPvarGetObj(var), SCIPvarGetLbLocal(var), oldub, 
+         SCIP_CALL( lpUpdateVar(lp, set, prob, var, SCIPvarGetObj(var), SCIPvarGetLbLocal(var), oldub,
                SCIPvarGetObj(var), SCIPvarGetLbLocal(var), newub) );
       }
    }
@@ -13697,15 +13788,19 @@ SCIP_RETCODE SCIPlpUpdateVarUb(
 SCIP_RETCODE SCIPlpUpdateAddVar(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_VAR*             var                 /**< variable that is now a LOOSE problem variable */
    )
 {
    assert(lp != NULL);
+   assert(set != NULL);
+   assert(prob != NULL);
+   assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetProbindex(var) >= 0);
 
    /* add the variable to the loose objective value sum */
-   SCIP_CALL( SCIPlpUpdateVarObj(lp, set, var, 0.0, SCIPvarGetObj(var)) );
+   SCIP_CALL( SCIPlpUpdateVarObj(lp, set, prob, var, 0.0, SCIPvarGetObj(var)) );
 
    /* update the loose variables counter */
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
@@ -13718,15 +13813,19 @@ SCIP_RETCODE SCIPlpUpdateAddVar(
 SCIP_RETCODE SCIPlpUpdateDelVar(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_VAR*             var                 /**< variable that will be deleted from the problem */
    )
 {
    assert(lp != NULL);
+   assert(set != NULL);
+   assert(prob != NULL);
+   assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetProbindex(var) >= 0);
 
    /* subtract the variable from the loose objective value sum */
-   SCIP_CALL( SCIPlpUpdateVarObj(lp, set, var, SCIPvarGetObj(var), 0.0) );
+   SCIP_CALL( SCIPlpUpdateVarObj(lp, set, prob, var, SCIPvarGetObj(var), 0.0) );
 
    /* update the loose variables counter */
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
@@ -14636,7 +14735,7 @@ SCIP_RETCODE lpDelRowset(
             SCIP_EVENT* event;
 
             SCIP_CALL( SCIPeventCreateRowDeletedLP(&event, blkmem, row) );
-            SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
+            SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, NULL, eventfilter, &event) );
          }
 
          SCIP_CALL( SCIProwRelease(&lp->lpirows[r], blkmem, set, lp) );

@@ -389,6 +389,7 @@ extern
 SCIP_RETCODE SCIPbranchExecLP(
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -405,6 +406,7 @@ extern
 SCIP_RETCODE SCIPbranchExecExtern(
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -421,6 +423,7 @@ extern
 SCIP_RETCODE SCIPbranchExecPseudo(
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */

@@ -285,6 +285,8 @@ struct SCIP_Set
    SCIP_Real             num_boundstreps;    /**< minimal improve for strengthening bounds */
    SCIP_Real             num_pseudocosteps;  /**< minimal variable distance value to use for pseudo cost updates */
    SCIP_Real             num_pseudocostdelta;/**< minimal objective distance value to use for pseudo cost updates */
+   SCIP_Real             num_recompfac;      /**< minimal decrease factor that causes the recomputation of a value
+                                              *   (e.g., pseudo objective) instead of an update */
 
    /* presolving settings */
    SCIP_Real             presol_abortfac;    /**< abort presolve, if l.t. this frac of the problem was changed in last round */
