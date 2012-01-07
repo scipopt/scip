@@ -64,10 +64,10 @@ struct SCIP_HeurData
 };
 
 enum Direction
-   {
-      DIRECTION_UP           =  1,
-      DIRECTION_DOWN         = -1
-   };
+{
+   DIRECTION_UP          =  1,
+   DIRECTION_DOWN        = -1
+};
 typedef enum Direction DIRECTION;
 
 /*
@@ -92,7 +92,7 @@ SCIP_Real getZiValue(
    return MIN(upgap, downgap);
 }
 
-/** determines shifting bounds for variable; */
+/** determines shifting bounds for variable */
 static
 void calculateBounds(
    SCIP*                 scip,               /**< pointer to current SCIP data structure */
@@ -202,18 +202,18 @@ void calculateBounds(
       {
          assert(colvals[i] != 0.0);
 
-         if( !SCIPisInfinity(scip, upslacks[rowpos] ) )
+         if( !SCIPisInfinity(scip, upslacks[rowpos]) )
          {
             SCIP_Real upslack;
             upslack = MAX(upslacks[rowpos], 0.0); /* avoid errors due to numerically slightly infeasible rows */
             *lowerbound = MIN(*lowerbound, -upslack/colvals[i]);
          }
 
-         if( !SCIPisInfinity(scip, downslacks[rowpos] ) )
+         if( !SCIPisInfinity(scip, downslacks[rowpos]) )
          {
             SCIP_Real downslack;
             downslack = MAX(downslacks[rowpos], 0.0); /* avoid errors due to numerically slightly infeasible rows */
-            *upperbound = MIN(*upperbound,-downslack/colvals[i]);
+            *upperbound = MIN(*upperbound, -downslack/colvals[i]);
          }
       }
    }
@@ -671,11 +671,11 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
             }
             else
             {
-               if( !SCIPisInfinity(scip, lbslackvar) )
+               if( !SCIPisInfinity(scip, ubslackvar) )
                   upslacks[i] -= coeffslackvar * ubgap;
                else
                   upslacks[i] = SCIPinfinity(scip);
-               if( !SCIPisInfinity(scip, ubslackvar) )
+               if( !SCIPisInfinity(scip, lbslackvar) )
                   downslacks[i] -= coeffslackvar * lbgap;
                else
                   downslacks[i] = SCIPinfinity(scip);
