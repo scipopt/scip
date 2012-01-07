@@ -12,7 +12,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+// #define SCIP_DEBUG
+// #define SCIP_WRITEPROB
+// #define SCIP_OUTPUT
 /**@file   sepa_cgmip.c
  * @brief  Chvatal-Gomory cuts computed via a sub-MIP
  * @author Marc Pfetsch
@@ -105,7 +107,7 @@
 #define DEFAULT_USECUTPOOL         TRUE /**< Use cutpool to store CG-cuts even if the are not efficient? */
 #define DEFAULT_PRIMALSEPARATION   TRUE /**< Only separate cuts that are tight for the best feasible solution? */
 #define DEFAULT_EARLYTERM          TRUE /**< Terminate separation if a violated (but possibly sub-optimal) cut has been found? */
-#define DEFAULT_ADDVIOLATIONCONS   TRUE /**< Add constraint to subscip that only allows violated cuts? */
+#define DEFAULT_ADDVIOLATIONCONS  FALSE /**< Add constraint to subscip that only allows violated cuts (otherwise add obj. limit)?*/
 #define DEFAULT_ADDVIOLCONSHDLR   FALSE /**< Add constraint handler to filter out violated cuts? */
 #define DEFAULT_CONSHDLRUSENORM    TRUE /**< Should the violation constraint handler use the norm of a cut to check for feasibility? */
 
@@ -432,7 +434,7 @@ SCIP_RETCODE SCIPincludeConshdlrViolatedCut(
  */
 
 
-/** stores nonzero elements of dense coefficient vector as sparse vector, and calculates activity and norm
+/** stores nonzero elements of dense coefficient vector as sparse vector and calculates activity and norm
  *
  *  copied from sepa_gomory.c
  */
@@ -811,7 +813,7 @@ SCIP_RETCODE createSubscip(
    SCIP_Real* lb;
    SCIP_Real* ub;
    SCIP_Real* primsol;
-   SCIP_Real yvarub;
+   SCIP_Real multvarub;
 
    int ncols;
    int nrows;
@@ -880,7 +882,7 @@ SCIP_RETCODE createSubscip(
    SCIP_CALL( SCIPallocBufferArray(scip, &ub, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &primsol, ncols) );
 
-   /* store lhs/rhs for complementing (see below) */
+   /* store lhs/rhs for complementing (see below) and compute maximal nonzeros of candidate rows */
    maxrowsize = 0;
    for (i = 0; i < nrows; ++i)
    {
@@ -1120,9 +1122,9 @@ SCIP_RETCODE createSubscip(
 
    /* prepare upper bound on y-variables */
    if ( sepadata->skipmultbounds )
-      yvarub = SCIPinfinity(scip);
+      multvarub = SCIPinfinity(scip);
    else
-      yvarub =  1.0-EPSILONVALUE;
+      multvarub =  1.0-EPSILONVALUE;
 
    /* create artificial variables for row combinations (y-variables) */
    cnt = 0;
@@ -1166,22 +1168,22 @@ SCIP_RETCODE createSubscip(
 
          /* create two variables for each equation */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "yeq1_%d", i);
-         SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->ylhs[i]), name, 0.0, yvarub,
+         SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->ylhs[i]), name, 0.0, multvarub,
                weight, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(subscip, mipdata->ylhs[i]) );
          ++cnt;
 
-#ifdef SCIP_OUTPUT
+#if SCIP_MORE_DEBUG
          SCIPdebugMessage("Created variable <%s> for equation <%s>.\n", name, SCIProwGetName(row));
 #endif
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "yeq2_%d", i);
-         SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->yrhs[i]), name, 0.0, yvarub,
+         SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->yrhs[i]), name, 0.0, multvarub,
                weight, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(subscip, mipdata->yrhs[i]) );
          ++cnt;
 
-#ifdef SCIP_OUTPUT
+#ifdef SCIP_MORE_DEBUG
          SCIPdebugMessage("Created variable <%s> for equation <%s>.\n", name, SCIProwGetName(row));
 #endif
       }
@@ -1207,12 +1209,12 @@ SCIP_RETCODE createSubscip(
             {
                /* add variable */
                (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "ylhs_%d", i);
-               SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->ylhs[i]), name, 0.0, yvarub,
+               SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->ylhs[i]), name, 0.0, multvarub,
                      weight, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
                SCIP_CALL( SCIPaddVar(subscip, mipdata->ylhs[i]) );
                ++cnt;
 
-#ifdef SCIP_OUTPUT
+#ifdef SCIP_MORE_DEBUG
                SCIPdebugMessage("Created variable <%s> for >= inequality <%s> (weight: %f).\n", name, SCIProwGetName(row), weight);
 #endif
             }
@@ -1237,12 +1239,12 @@ SCIP_RETCODE createSubscip(
             if ( ! sepadata->onlyactiverows || isactive )
             {
                (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "yrhs_%d", i);
-               SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->yrhs[i]), name, 0.0, yvarub,
+               SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->yrhs[i]), name, 0.0, multvarub,
                      weight, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
                SCIP_CALL( SCIPaddVar(subscip, mipdata->yrhs[i]) );
                ++cnt;
 
-#ifdef SCIP_OUTPUT
+#ifdef SCIP_MORE_DEBUG
                SCIPdebugMessage("Created variable <%s> for <= inequality <%s> (weight: %f).\n", name, SCIProwGetName(row), weight);
 #endif
             }
@@ -1298,7 +1300,7 @@ SCIP_RETCODE createSubscip(
          if ( ! SCIPisInfinity(scip, ub[j]) )
          {
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "zub_%d", j);
-            SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->z[j]), name, 0.0, yvarub,
+            SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->z[j]), name, 0.0, multvarub,
                   0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(subscip, mipdata->z[j]) );
             ++ucnt;
@@ -1616,9 +1618,25 @@ SCIP_RETCODE createSubscip(
    SCIPfreeBufferArray(scip, &rhs);
    SCIPfreeBufferArray(scip, &lhs);
 
-#ifdef SCIP_OUTPUT
    /* SCIPdebug( SCIP_CALL( SCIPprintOrigProblem(subscip, NULL, NULL, FALSE) ) ); */
-   SCIP_CALL( SCIPwriteOrigProblem(subscip, "debug.lp", "lp", FALSE) );
+
+#ifdef SCIP_WRITEPROB
+   {
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cgsepa");
+      if ( sepadata->objlone )
+         (void) strncat(name, "_l1", SCIP_MAXSTRLEN);
+      if ( sepadata->addviolationcons )
+         (void) strncat(name, "_vc", SCIP_MAXSTRLEN);
+      if ( sepadata->skipmultbounds )
+         (void) strncat(name, "_ub", SCIP_MAXSTRLEN);
+      if ( sepadata->primalseparation )
+         (void) strncat(name, "_ps", SCIP_MAXSTRLEN);
+      (void) strncat(name, "_", SCIP_MAXSTRLEN);
+      (void) strncat(name, SCIPgetProbName(scip), SCIP_MAXSTRLEN);
+      (void) strncat(name, ".lp", SCIP_MAXSTRLEN);
+      SCIP_CALL( SCIPwriteOrigProblem(subscip, name, "lp", FALSE) );
+      SCIPinfoMessage(scip, NULL, "Wrote subscip to file <%s>.\n", name);
+   }
 #endif
 
    return SCIP_OKAY;
@@ -1628,7 +1646,6 @@ SCIP_RETCODE createSubscip(
 /** sets parameters for subscip */
 static
 SCIP_RETCODE subscipSetParams(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
    CGMIP_MIPDATA*        mipdata,            /**< data for sub-MIP */
    SCIP_Bool*            success             /**< if setting was successful -> stop solution otherwise */
@@ -1636,7 +1653,6 @@ SCIP_RETCODE subscipSetParams(
 {
    SCIP* subscip;
 
-   assert( scip != NULL );
    assert( sepadata != NULL );
    assert( mipdata != NULL );
    assert( success != NULL );
@@ -1646,9 +1662,11 @@ SCIP_RETCODE subscipSetParams(
    subscip = mipdata->subscip;
    assert( subscip != NULL );
 
-   /* set other limits of subscip */
-   /* SCIP_CALL( SCIPsetObjlimit(subscip, mipdata->objectivelimit) ); */
-   /* SCIP_CALL( SCIPsetIntParam(subscip, "limits/solutions", sepadata->sollimit) ); */
+   /* set objective limit, if no corresponding constraint has been added */
+   if ( ! sepadata->addviolationcons )
+   {
+      SCIP_CALL( SCIPsetObjlimit(subscip, MINEFFICACY) );
+   }
 
    /* do not abort subscip on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
@@ -1663,15 +1681,16 @@ SCIP_RETCODE subscipSetParams(
    SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 1000) );
 #endif
 
-   /* forbid recursive call of heuristics solving subMIPs */
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rins/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rens/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/localbranching/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/crossover/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/mutation/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/dins/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/undercover/freq", -1) );
+   /* forbid recursive call of plugins solving subMIPs (also disables CG-separation) */
+#ifdef SCIP_OUTPUT
+   SCIP_CALL( SCIPsetSubscipsOff(subscip, FALSE) );
+#else
+   SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) ); /* quiet */
+#endif
 
+#if 0
+   SCIP_CALL( SCIPsetEmphasis(subscip, SCIP_PARAMEMPHASIS_FEASIBILITY, TRUE) );
+#else
    /* set other heuristics */
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/shifting/freq", 3) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/simplerounding/freq", 1) );
@@ -1689,13 +1708,8 @@ SCIP_RETCODE subscipSetParams(
    /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rootsoldiving/freq", -1) ); */
    /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/veclendiving/freq", -1) ); */
 
-   /* disable cut separation in subscip */
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/cgmip/freq", -1) );
-
-   /* disable expensive presolving */
-   /*     SCIP_CALL( SCIPsetIntParam(subscip, "presolving/probing/maxrounds", 0) ); */
-   /*     SCIP_CALL( SCIPsetIntParam(subscip, "constraints/linear/maxpresolpairrounds", 0) ); */
-   /*     SCIP_CALL( SCIPsetRealParam(subscip, "constraints/linear/maxaggrnormscale", 0.0) ); */
+   /* use fast presolving */
+   SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
 
    /* disable conflict analysis */
    /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useprop", FALSE) ); */
@@ -1703,6 +1717,10 @@ SCIP_RETCODE subscipSetParams(
    /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useboundlp", FALSE) ); */
    /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usesb", FALSE) ); */
    /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) ); */
+
+   /* use fast separation */
+   SCIP_CALL( SCIPsetSeparating(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
+#endif
 
    return SCIP_OKAY;
 }
@@ -3344,7 +3362,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
    SCIP_CALL( createSubscip(scip, sepadata, mipdata) );
 
    /* set parameters */
-   SCIP_CALL( subscipSetParams(scip, sepadata, mipdata, &success) );
+   SCIP_CALL( subscipSetParams(sepadata, mipdata, &success) );
 
    if ( success && !SCIPisStopped(scip) )
    {      
@@ -3526,7 +3544,7 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
          &sepadata->earlyterm, FALSE, DEFAULT_EARLYTERM, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/cgmip/addviolationcons",
-         "add constraint to subscip that only allows violated cuts?",
+         "add constraint to subscip that only allows violated cuts (otherwise add obj. limit)?",
          &sepadata->addviolationcons, FALSE, DEFAULT_ADDVIOLATIONCONS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/cgmip/addviolconshdlr",
