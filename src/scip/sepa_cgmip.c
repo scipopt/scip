@@ -916,7 +916,7 @@ SCIP_RETCODE createSubscip(
       if ( sepadata->onlyrankone )
       {
          /* check for name "cgcut..." */
-         if ( strncmp(name, "cgcut", 5) == 0 )
+         if ( strncmp(SCIProwGetName(row), "cgcut", 5) == 0 )
             continue;
       }
 
@@ -1116,7 +1116,7 @@ SCIP_RETCODE createSubscip(
       SCIPdebugMessage("Converted %u integral variables to be continuous.\n", ncontconverted);
    }
 #endif
-   SCIPdebugMessage("original variables: %u integral, %u continuous, %u shifted, %u complemented, %u at lb, %u at ub\n",
+   SCIPdebugMessage("original variables: %d integral, %d continuous, %u shifted, %u complemented, %u at lb, %u at ub\n",
       SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNImplVars(scip), SCIPgetNContVars(scip),
       nshifted, ncomplemented, nlbounds, nubounds);
 
@@ -1173,7 +1173,7 @@ SCIP_RETCODE createSubscip(
          SCIP_CALL( SCIPaddVar(subscip, mipdata->ylhs[i]) );
          ++cnt;
 
-#if SCIP_MORE_DEBUG
+#ifdef SCIP_MORE_DEBUG
          SCIPdebugMessage("Created variable <%s> for equation <%s>.\n", name, SCIProwGetName(row));
 #endif
 
