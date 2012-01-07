@@ -9591,7 +9591,7 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
                      unbounded = TRUE;
                   }
                   else
-                     x[i] = lambda * SCIPvarGetBestBound(var) + (1.0-lambda) * SCIPvarGetWorstBound(var);
+                     x[i] = lambda * SCIPvarGetBestBoundLocal(var) + (1.0-lambda) * SCIPvarGetWorstBoundLocal(var);
                }
 
                possquare |= consdata->quadvarterms[i].sqrcoef > 0.0;  /*lint !e514 */

@@ -17,6 +17,9 @@ interface
 - SCIPcomputeCoverUndercover() now has an additional parameter coverbd
 - the code in src/dijkstra and src/xml has been changed to (increasingly) conform to the SCIP coding style;
   all function (and variable) names have been changed (do not contain "_" anymore).
+- rename SCIPvarGetBestBound() to SCIPvarGetBestBoundLocal()
+- rename SCIPvarGetWorstBound() to SCIPvarGetWorstBoundLocal()
+- new methods SCIPvarGetBestBoundGlobal() to SCIPvarGetWorstBoundGlobal()
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with

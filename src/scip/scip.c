@@ -7154,7 +7154,7 @@ SCIP_RETCODE initSolve(
          obj = SCIPvarGetObj(var);
          if( !SCIPsetIsZero(scip->set, obj) )
          {
-            bd = SCIPvarGetWorstBound(var);
+            bd = SCIPvarGetWorstBoundGlobal(var);
             if( SCIPsetIsInfinity(scip->set, REALABS(bd)) )
                objbound = SCIPsetInfinity(scip->set);
             else

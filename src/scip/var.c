@@ -10882,58 +10882,6 @@ SCIP_Real SCIPvarGetUbLP(
    }
 }
 
-/** gets best local bound of variable with respect to the objective function */
-SCIP_Real SCIPvarGetBestBound(
-   SCIP_VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   if( var->obj >= 0.0 )
-      return var->locdom.lb;
-   else
-      return var->locdom.ub;
-}
-
-/** gets worst local bound of variable with respect to the objective function */
-SCIP_Real SCIPvarGetWorstBound(
-   SCIP_VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   if( var->obj >= 0.0 )
-      return var->locdom.ub;
-   else
-      return var->locdom.lb;
-}
-
-/** gets type (lower or upper) of best bound of variable with respect to the objective function */
-SCIP_BOUNDTYPE SCIPvarGetBestBoundType(
-   SCIP_VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   if( var->obj >= 0.0 )
-      return SCIP_BOUNDTYPE_LOWER;
-   else
-      return SCIP_BOUNDTYPE_UPPER;
-}
-
-/** gets type (lower or upper) of worst bound of variable with respect to the objective function */
-SCIP_BOUNDTYPE SCIPvarGetWorstBoundType(
-   SCIP_VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   if( var->obj >= 0.0 )
-      return SCIP_BOUNDTYPE_UPPER;
-   else
-      return SCIP_BOUNDTYPE_LOWER;
-}
-
 /** gets primal LP solution value of variable */
 SCIP_Real SCIPvarGetLPSol_rec(
    SCIP_VAR*             var                 /**< problem variable */
@@ -10952,7 +10900,7 @@ SCIP_Real SCIPvarGetLPSol_rec(
       return SCIPvarGetLPSol(var->data.original.transvar);
 
    case SCIP_VARSTATUS_LOOSE:
-      return SCIPvarGetBestBound(var);
+      return SCIPvarGetBestBoundLocal(var);
 
    case SCIP_VARSTATUS_COLUMN:
       assert(var->data.col != NULL);
@@ -11067,7 +11015,7 @@ SCIP_Real SCIPvarGetPseudoSol_rec(
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
-      return SCIPvarGetBestBound(var);
+      return SCIPvarGetBestBoundLocal(var);
 
    case SCIP_VARSTATUS_FIXED:
       assert(var->locdom.lb == var->locdom.ub); /*lint !e777*/
@@ -13768,9 +13716,15 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarGetLbGlobal
 #undef SCIPvarGetUbGlobal
 #undef SCIPvarGetHolelistGlobal
+#undef SCIPvarGetBestBoundGlobal
+#undef SCIPvarGetWorstBoundGlobal
 #undef SCIPvarGetLbLocal
 #undef SCIPvarGetUbLocal
 #undef SCIPvarGetHolelistLocal
+#undef SCIPvarGetBestBoundLocal
+#undef SCIPvarGetWorstBoundLocal
+#undef SCIPvarGetBestBoundType
+#undef SCIPvarGetWorstBoundType
 #undef SCIPvarGetLbLazy
 #undef SCIPvarGetUbLazy
 #undef SCIPvarGetBranchFactor
@@ -14400,6 +14354,32 @@ SCIP_HOLELIST* SCIPvarGetHolelistGlobal(
    return var->glbdom.holelist;
 }
 
+/** gets best global bound of variable with respect to the objective function */
+SCIP_Real SCIPvarGetBestBoundGlobal(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   if( var->obj >= 0.0 )
+      return var->glbdom.lb;
+   else
+      return var->glbdom.ub;
+}
+
+/** gets worst global bound of variable with respect to the objective function */
+SCIP_Real SCIPvarGetWorstBoundGlobal(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   if( var->obj >= 0.0 )
+      return var->glbdom.ub;
+   else
+      return var->glbdom.lb;
+}
+
 /** gets current lower bound of variable */
 SCIP_Real SCIPvarGetLbLocal(
    SCIP_VAR*             var                 /**< problem variable */
@@ -14428,6 +14408,58 @@ SCIP_HOLELIST* SCIPvarGetHolelistLocal(
    assert(var != NULL);
    
    return var->locdom.holelist;
+}
+
+/** gets best local bound of variable with respect to the objective function */
+SCIP_Real SCIPvarGetBestBoundLocal(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   if( var->obj >= 0.0 )
+      return var->locdom.lb;
+   else
+      return var->locdom.ub;
+}
+
+/** gets worst local bound of variable with respect to the objective function */
+SCIP_Real SCIPvarGetWorstBoundLocal(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   if( var->obj >= 0.0 )
+      return var->locdom.ub;
+   else
+      return var->locdom.lb;
+}
+
+/** gets type (lower or upper) of best bound of variable with respect to the objective function */
+SCIP_BOUNDTYPE SCIPvarGetBestBoundType(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   if( var->obj >= 0.0 )
+      return SCIP_BOUNDTYPE_LOWER;
+   else
+      return SCIP_BOUNDTYPE_UPPER;
+}
+
+/** gets type (lower or upper) of worst bound of variable with respect to the objective function */
+SCIP_BOUNDTYPE SCIPvarGetWorstBoundType(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   if( var->obj >= 0.0 )
+      return SCIP_BOUNDTYPE_UPPER;
+   else
+      return SCIP_BOUNDTYPE_LOWER;
 }
 
 /** gets lazy lower bound of variable, returns -infinity if the variable has no lazy lower bound */
@@ -14754,7 +14786,7 @@ SCIP_Real SCIPvarGetPseudoSol(
    assert(var != NULL);
 
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
-      return SCIPvarGetBestBound(var);
+      return SCIPvarGetBestBoundLocal(var);
    else
       return SCIPvarGetPseudoSol_rec(var);
 }
