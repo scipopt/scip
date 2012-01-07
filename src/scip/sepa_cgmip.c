@@ -1150,7 +1150,7 @@ SCIP_RETCODE createSubscip(
       if ( sepadata->onlyrankone )
       {
          /* check for name "cgcut..." */
-         if ( strncmp(SCIPgetName(row), "cgcut", 5) == 0 )
+         if ( strncmp(SCIProwGetName(row), "cgcut", 5) == 0 )
             continue;
       }
 
