@@ -809,7 +809,7 @@ SCIP_RETCODE analyzeConflictLowerbound(
    assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
 
    /* check if conflict analysis is applicable */
-   if( SCIPisConflictAnalysisApplicable(scip) )
+   if( !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
    if( propdata->usebdwidening )
@@ -910,7 +910,7 @@ SCIP_RETCODE analyzeConflictUpperbound(
    assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
 
    /* check if conflict analysis is applicable */
-   if( SCIPisConflictAnalysisApplicable(scip) )
+   if( !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
    if( propdata->usebdwidening )
