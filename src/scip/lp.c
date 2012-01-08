@@ -13464,7 +13464,7 @@ SCIP_RETCODE lpUpdateVar(
       }
 
       /* compute pseudo and loose objective value from scratch, if needed */
-      if( MAX(ABS(lp->relpseudoobjval), 1.0) > SCIPsetRecompfac(set) * MAX(ABS(lp->pseudoobjval), 1.0) )
+      if( SCIPsetIsUpdateUnreliable(set, lp->pseudoobjval, lp->relpseudoobjval) )
       {
          SCIP_VAR** vars;
          SCIP_Real pseudoobjval;
