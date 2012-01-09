@@ -479,9 +479,9 @@ BEGIN {
       }
       
       #print header of table when this regular expression is matched for the first time
-      tablehead1 = "------------------+------+--- Original --+-- Presolved --+----------------+----------------+------+--------+-------+-------+";
-      tablehead2 = "Name              | Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters | Nodes |  Time |";
-      tablehead3 = "------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+";
+      tablehead1 = "------------------+------+--- Original --+-- Presolved --+----------------+----------------+------+--------+--------+-------+";
+      tablehead2 = "Name              | Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters |  Nodes |  Time |";
+      tablehead3 = "------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+--------+-------+";
       
       if( printsoltimes == 1 ) {  
          tablehead1 = tablehead1"----------+---------+";
@@ -856,7 +856,7 @@ BEGIN {
             printf("\\\\\n") > TEXFILE;
          }
 
-         printf("%-19s %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %8d %7d %7.1f ",
+         printf("%-19s %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %8d %8d %7.1f ",
                 shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, simpiters, bbnodes, tottime);
          if( printsoltimes )
             printf(" %9.1f %9.1f ", timetofirst, timetobest);
