@@ -84,6 +84,7 @@
 #define DEFAULT_DECISIONTREE      FALSE /**< Use decision tree to turn separation on/off? */
 #define DEFAULT_TIMELIMIT         500.0 /**< time limit for sub-MIP */
 #define DEFAULT_MEMORYLIMIT        1e20 /**< memory limit for sub-MIP */
+#define DEFAULT_CUTCOEFBND       1000.0 /**< bounds on the values of the coefficients in the CG-cut */
 #define DEFAULT_NODELIMIT       10000LL /**< node limit for sub-MIP */
 #define DEFAULT_ONLYACTIVEROWS    FALSE /**< Use only active rows to generate cuts? */
 #define DEFAULT_MAXROWAGE            -1 /**< maximal age of rows to consider if onlyactiverows is false */
@@ -116,7 +117,6 @@
 
 #define EPSILONVALUE              1e-03 /**< epsilon value needed to model strict-inequalities */
 #define BETAEPSILONVALUE          1e-02 /**< epsilon value for fracbeta - is larger than EPSILONVALUE for numerical stability */
-#define CUTCOEFBND               1000.0 /**< bounds on the values of the coefficients in the CG-cut */
 #define STALLNODELIMIT           1000LL /**< number of stalling nodes if earlyterm is true */
 #define MINEFFICACY                0.05 /**< minimum efficacy of a cut - compare set.c */
 
@@ -145,6 +145,7 @@ struct SCIP_SepaData
    SCIP_Real             timelimit;          /**< time limit for subscip */
    SCIP_Real             memorylimit;        /**< memory limit for subscip */
    SCIP_Longint          nodelimit;          /**< node limit for subscip */
+   SCIP_Real             cutcoefbnd;         /**< bounds on the values of the coefficients in the CG-cut */
    SCIP_Bool             onlyactiverows;     /**< Use only active rows to generate cuts? */
    int                   maxrowage;          /**< maximal age of rows to consider if onlyactiverows is false */
    SCIP_Bool             onlyrankone;        /**< Separate only rank 1 inequalities? */
@@ -1274,7 +1275,7 @@ SCIP_RETCODE createSubscip(
 
          /* create alpha variables */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "alpha_%d", j);
-         SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->alpha[j]), name, -CUTCOEFBND, CUTCOEFBND, obj,
+         SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->alpha[j]), name, -sepadata->cutcoefbnd, sepadata->cutcoefbnd, obj,
                SCIP_VARTYPE_INTEGER, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(subscip, mipdata->alpha[j]) );
          ++cnt;
@@ -1313,12 +1314,12 @@ SCIP_RETCODE createSubscip(
    /* create variable for the rhs of the cut */
    if ( sepadata->objlone )
    {
-      SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->beta), "beta", -CUTCOEFBND, CUTCOEFBND, 0.0,
+      SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->beta), "beta", -sepadata->cutcoefbnd, sepadata->cutcoefbnd, 0.0,
             SCIP_VARTYPE_INTEGER, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    }
    else
    {
-      SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->beta), "beta", -CUTCOEFBND, CUTCOEFBND, -1.0,
+      SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->beta), "beta", -sepadata->cutcoefbnd, sepadata->cutcoefbnd, -1.0,
             SCIP_VARTYPE_INTEGER, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    }
    SCIP_CALL( SCIPaddVar(subscip, mipdata->beta) );
@@ -2540,7 +2541,7 @@ SCIP_RETCODE createCGCutCMIR(
    assert( (int) mipdata->nrows == nrows );
 
    /* @todo more advanced settings - compare sepa_gomory.c */
-   maxdnom = (SCIP_Longint) CUTCOEFBND+1;
+   maxdnom = (SCIP_Longint) sepadata->cutcoefbnd+1;
    maxscale = 10000.0;
 
    /* get variable data */
@@ -2810,7 +2811,7 @@ SCIP_RETCODE createCGCutStrongCG(
    assert( (int) mipdata->nrows == nrows );
 
    /* @todo more advanced settings - compare sepa_gomory.c */
-   maxdnom = (SCIP_Longint) CUTCOEFBND+1;
+   maxdnom = (SCIP_Longint) sepadata->cutcoefbnd + 1;
    maxscale = 10000.0;
 
    /* get variable data */
@@ -3454,6 +3455,10 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
          "separating/cgmip/nodelimit",
          "node limit for sub-MIP (-1: unlimited)",
          &sepadata->nodelimit, FALSE, DEFAULT_NODELIMIT, -1LL, SCIP_LONGINT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "separating/cgmip/cutcoefbnd",
+         "bounds on the values of the coefficients in the CG-cut",
+         &sepadata->cutcoefbnd, TRUE, DEFAULT_CUTCOEFBND, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/cgmip/onlyactiverows",
          "Use only active rows to generate cuts?",
