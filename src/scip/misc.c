@@ -4489,6 +4489,66 @@ SCIP_Real SCIPgetRandomReal(
 
 
 /*
+ * Additional math functions
+ */
+
+/** calculates a binomial coefficient n over m, choose m elements out of n, maximal value will be 33 over 16 (because
+ *  the n=33 is the last line in the Pascal's triangle where each entry fits in a 4 byte value), an error occurs due to
+ *  big numbers or an negative value m (and m < n) and -1 will be returned
+ */
+SCIP_Longint SCIPcalcBinomCoef(
+   int                   n,                  /**< number of different elements */
+   int                   m                   /**< number to choose out of the above */
+   )
+{
+   if( m == 0 || m >= n )
+      return 1;
+
+   if( m < 0 )
+      return -1;
+
+   /* symmetry of the binomial coefficient, choose smaller m */
+   if( m > n/2 )
+      m = n - m;
+
+   /* trivial case m == 1 */
+   if( m == 1 )
+      return n;
+
+   /* abort on to big numbers */
+   if( m > 16 || n > 33 )
+      return -1;
+
+   /* simple case m == 2 */
+   if( m == 2 )
+      return (n*(n-1)/2);
+
+   /* simple case m == 3 */
+   if( m == 3 )
+      return (n*(n-1)*(n-2)/6);
+   else
+   {
+      /* first half of Pascal's triangle numbers(without the symmetric part) backwards from (33,16) over (32,16),
+       * (33,15), (32,15),(31,15, (30,15), (33,14) to (8,4) (rest is calculated directly)
+       *
+       * due to this order we can extract the right binomial coefficient by (16-m)^2+(16-m)+(33-n)
+       */
+      static const SCIP_Longint binoms[182] = {1166803110, 601080390, 1037158320, 565722720, 300540195, 155117520, 818809200, 471435600, 265182525, 145422675, 77558760, 40116600, 573166440, 347373600, 206253075, 119759850, 67863915, 37442160, 20058300, 10400600, 354817320, 225792840, 141120525, 86493225, 51895935, 30421755, 17383860, 9657700, 5200300, 2704156, 193536720, 129024480, 84672315, 54627300, 34597290, 21474180, 13037895, 7726160, 4457400, 2496144, 1352078, 705432, 92561040, 64512240, 44352165, 30045015, 20030010, 13123110, 8436285, 5311735, 3268760, 1961256, 1144066, 646646, 352716, 184756, 38567100, 28048800, 20160075, 14307150, 10015005, 6906900, 4686825, 3124550, 2042975, 1307504, 817190, 497420, 293930, 167960, 92378, 48620, 13884156, 10518300, 7888725, 5852925, 4292145, 3108105, 2220075, 1562275, 1081575, 735471, 490314, 319770, 203490, 125970, 75582, 43758, 24310, 12870, 4272048, 3365856, 2629575, 2035800, 1560780, 1184040, 888030, 657800, 480700, 346104, 245157, 170544, 116280, 77520, 50388, 31824, 19448, 11440, 6435, 3432, 1107568, 906192, 736281, 593775, 475020, 376740, 296010, 230230, 177100, 134596, 100947, 74613, 54264, 38760, 27132, 18564, 12376, 8008, 5005, 3003, 1716, 924, 237336, 201376, 169911, 142506, 118755, 98280, 80730, 65780, 53130, 42504, 33649, 26334, 20349, 15504, 11628, 8568, 6188, 4368, 3003, 2002, 1287, 792, 462, 252, 40920, 35960, 31465, 27405, 23751, 20475, 17550, 14950, 12650, 10626, 8855, 7315, 5985, 4845, 3876, 3060, 2380, 1820, 1365, 1001, 715, 495, 330, 210, 126, 70};
+
+      /* m can at most be 16 */
+      const int t = 16-m;
+      assert(t >= 0);
+      assert(n <= 33);
+
+      /* binoms array hast exactly 182 elements */
+      assert(t*(t+1)+(33-n) < 182);
+
+      return binoms[t*(t+1)+(33-n)];
+   }
+}
+
+
+/*
  * Permutations / Shuffling
  */
 

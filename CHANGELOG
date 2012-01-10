@@ -20,6 +20,7 @@ interface
 - rename SCIPvarGetBestBound() to SCIPvarGetBestBoundLocal()
 - rename SCIPvarGetWorstBound() to SCIPvarGetWorstBoundLocal()
 - new methods SCIPvarGetBestBoundGlobal() to SCIPvarGetWorstBoundGlobal()
+- new method SCIPcalcBinomCoef() in pub_misc.h and misc.c which calculates a binomial coefficient up to 33 over 16
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
