@@ -58,6 +58,9 @@
 #define DEFAULT_COPYCUTS      TRUE      /* if DEFAULT_USELPROWS is FALSE, then should all active cuts from the cutpool
                                          * of the original scip be copied to constraints of the subscip
                                          */
+#define DEFAULT_EXTRATIME    FALSE      /* should the RENS sub-CIP get its own full time limit? This is only
+                                         * implemented for testing and not recommended to be used!
+                                         */
 
 /* enable statistic output by defining macro STATISTIC_INFORMATION */
 #ifdef STATISTIC_INFORMATION
@@ -85,6 +88,9 @@ struct SCIP_HeurData
    SCIP_Bool             uselprows;          /**< should subproblem be created out of the rows in the LP rows?        */
    SCIP_Bool             copycuts;           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
                                               *   to constraints in subproblem?
+                                              */
+   SCIP_Bool             extratime;          /**< should the RENS sub-CIP get its own full time limit? This is only
+                                              *   implemented for testing and not recommended to be used!
                                               */
 };
 
@@ -342,14 +348,15 @@ SCIP_RETCODE SCIPapplyRens(
    SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
    SCIP_VAR** vars;                          /* original problem's variables                    */
    SCIP_VAR** subvars;                       /* subproblem's variables                          */
+   SCIP_HEURDATA* heurdata;                  /* heuristic's private data structure              */
 
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem             */
-   SCIP_Real timelimit;
-   SCIP_Real memorylimit;
+   SCIP_Real timelimit;                      /* time limit for RENS subproblem                  */
+   SCIP_Real memorylimit;                    /* memory limit for RENS subproblem                */
    SCIP_Real allfixingrate;                  /* percentage of all variables fixed               */
    SCIP_Real intfixingrate;                  /* percentage of integer variables fixed           */
 
-   int nvars;
+   int nvars;                                /* number of original problem's variables          */
    int i;
 
    SCIP_Bool success;
@@ -366,7 +373,10 @@ SCIP_RETCODE SCIPapplyRens(
    assert(0.0 <= minimprove && minimprove <= 1.0);
    assert(startsol == 'l' || startsol == 'n');
 
+   /* get variables' and heuristic's data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+   heurdata = SCIPheurGetData(heur);
+   assert( heurdata != NULL );
 
    /* initialize the subproblem */
    SCIP_CALL( SCIPcreate(&subscip) );
@@ -375,6 +385,7 @@ SCIP_RETCODE SCIPapplyRens(
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
+   /* different methods to create sub-problem: either copy LP relaxation or the CIP with all constraints */
    if( uselprows )
    {
       char probname[SCIP_MAXSTRLEN];
@@ -394,15 +405,10 @@ SCIP_RETCODE SCIPapplyRens(
    else
    {
       SCIP_Bool valid;
-      SCIP_HEURDATA* heurdata;
 
       valid = FALSE;
 
       SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "rens", TRUE, FALSE, &valid) );
-
-      /* get heuristic's data */
-      heurdata = SCIPheurGetData(heur);
-      assert( heurdata != NULL );
 
       if( heurdata->copycuts )
       {
@@ -433,7 +439,7 @@ SCIP_RETCODE SCIPapplyRens(
    timelimit = 0.0;
    memorylimit = 0.0;
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if( !SCIPisInfinity(scip, timelimit) )
+   if( !SCIPisInfinity(scip, timelimit) && !heurdata->extratime )
       timelimit -= SCIPgetSolvingTime(scip);
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
    if( !SCIPisInfinity(scip, memorylimit) )
@@ -715,7 +721,7 @@ SCIP_DECL_HEUREXEC(heurExecRens)
       return SCIP_OKAY;
    }
 
-   if( SCIPisStopped(scip) )
+   if( SCIPisStopped(scip) && !heurdata->extratime )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
@@ -791,6 +797,10 @@ SCIP_RETCODE SCIPincludeHeurRens(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/copycuts",
          "if uselprows == FALSE, should all active cuts from cutpool be copied to constraints in subproblem?",
          &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/extratime",
+         "should the RENS sub-CIP get its own full time limit? This is only for tesing and not recommended!",
+         &heurdata->extratime, TRUE, DEFAULT_EXTRATIME, NULL, NULL) );
 
    return SCIP_OKAY;
 }
