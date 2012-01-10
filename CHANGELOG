@@ -33,8 +33,6 @@ performance improvements:
   from scratch again
 - automatically turn off separation in sepa_oddcycle if it was too unsuccessful within the last calls
 - use faster Dijkstra variants in sepa_oddcycle
-- fixed performance issue in debug mode, where SCIPvarGetLPSol_rec() calculated a value to often, which in the end lead
-  to exponential growth in running time
 
 plugins:
 - added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.
@@ -70,7 +68,9 @@ features:
 SCIP version 2.1.2
 ==================
 
-
+performance improvements:
+- fixed performance issue in debug mode, where SCIPvarGetLPSol_rec() calculated a value to often, which in the end lead
+  to exponential growth in running time
 
 SCIP version 2.1.1
 ==================
