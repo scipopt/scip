@@ -10887,11 +10887,8 @@ SCIP_Real SCIPvarGetLPSol_rec(
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
-   SCIP_Real primsol;
-   int i;
-
    assert(var != NULL);
- 
+
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
@@ -10911,7 +10908,12 @@ SCIP_Real SCIPvarGetLPSol_rec(
       return var->locdom.lb;
 
    case SCIP_VARSTATUS_AGGREGATED:
+   {
+      SCIP_Real lpsolval;
+
       assert(var->data.aggregate.var != NULL);
+      lpsolval = SCIPvarGetLPSol(var->data.aggregate.var);
+
       /* a correct implementation would need to check the value of var->data.aggregate.var for infinity and return the
        * corresponding infinity value instead of performing an arithmetical transformation (compare method
        * SCIPvarGetLbLP()); however, we do not want to introduce a SCIP or SCIP_SET pointer to this method, since it is
@@ -10919,11 +10921,15 @@ SCIP_Real SCIPvarGetLPSol_rec(
        * w.r.t. SCIP_DEFAULT_INFINITY, which seems to be true in our regression tests; note that this may yield false
        * positives and negatives if the parameter <numerics/infinity> is modified by the user
        */
-      assert(SCIPvarGetLPSol(var->data.aggregate.var) > -SCIP_DEFAULT_INFINITY);
-      assert(SCIPvarGetLPSol(var->data.aggregate.var) < +SCIP_DEFAULT_INFINITY);
-      return var->data.aggregate.scalar * SCIPvarGetLPSol(var->data.aggregate.var) + var->data.aggregate.constant;
-
+      assert(lpsolval > -SCIP_DEFAULT_INFINITY);
+      assert(lpsolval < +SCIP_DEFAULT_INFINITY);
+      return var->data.aggregate.scalar * lpsolval + var->data.aggregate.constant;
+   }
    case SCIP_VARSTATUS_MULTAGGR:
+   {
+      SCIP_Real primsol;
+      int i;
+
       assert(!var->donotmultaggr);
       assert(var->data.multaggr.vars != NULL);
       assert(var->data.multaggr.scalars != NULL);
@@ -10934,7 +10940,7 @@ SCIP_Real SCIPvarGetLPSol_rec(
       for( i = 0; i < var->data.multaggr.nvars; ++i )
          primsol += var->data.multaggr.scalars[i] * SCIPvarGetLPSol(var->data.multaggr.vars[i]);
       return primsol;
-
+   }
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
