@@ -40,7 +40,8 @@ performance improvements:
   from scratch again
 - automatically turn off separation in sepa_oddcycle if it was too unsuccessful within the last calls
 - use faster Dijkstra variants in sepa_oddcycle
-
+- improved pseduo objective propagator
+ 
 plugins:
 - added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.
   for integer variable 0 <= x <= 10 the binary variables y0, y1, y2, and y3 are created, such that
