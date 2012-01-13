@@ -8670,11 +8670,12 @@ SCIP_RETCODE varAddTransitiveImplic(
              *       "vubvar" the variable lower and upper bounds of this variable "vubvar" are also considered; note
              *       that the "aggvar" can be a variable lower bound variable of the variable "vubvar"; Due to that
              *       situation it can happen that we reach that code place where "vlbvars[i] == aggvar". In particular
-             *       the "aggvar" has already the variable status SCIP_VARSTATUS_AGGREGATED but is still active since
-             *       the aggregation is not finished yet (in SCIPvarAggregate()); therefore we have to explicitly check
-             *       that the active variable has not a variable status SCIP_VARSTATUS_AGGREGATED;
+             *       the "aggvar" has already the variable status SCIP_VARSTATUS_AGGREGATED or SCIP_VARSTATUS_NEGATED
+             *       but is still active since the aggregation is not finished yet (in SCIPvarAggregate()); therefore we
+             *       have to explicitly check that the active variable has not a variable status
+             *       SCIP_VARSTATUS_AGGREGATED or SCIP_VARSTATUS_NEGATED;
              */
-            if( SCIPvarIsActive(vlbvars[i]) && SCIPvarGetStatus(vlbvars[i]) != SCIP_VARSTATUS_AGGREGATED )
+            if( SCIPvarIsActive(vlbvars[i]) && SCIPvarGetStatus(vlbvars[i]) != SCIP_VARSTATUS_AGGREGATED && SCIPvarGetStatus(vlbvars[i]) != SCIP_VARSTATUS_NEGATED )
             {
                SCIP_Real vbimplbound;
 
@@ -8737,11 +8738,12 @@ SCIP_RETCODE varAddTransitiveImplic(
              *       "vlbvar" the variable lower and upper bounds of this variable "vlbvar" are also considered; note
              *       that the "aggvar" can be a variable upper bound variable of the variable "vlbvar"; Due to that
              *       situation it can happen that we reach that code place where "vubvars[i] == aggvar". In particular
-             *       the "aggvar" has already the variable status SCIP_VARSTATUS_AGGREGATED but is still active since
-             *       the aggregation is not finished yet (in SCIPvarAggregate()); therefore we have to explicitly check
-             *       that the active variable has not a variable status SCIP_VARSTATUS_AGGREGATED;
+             *       the "aggvar" has already the variable status SCIP_VARSTATUS_AGGREGATED or SCIP_VARSTATUS_NEGATED
+             *       but is still active since the aggregation is not finished yet (in SCIPvarAggregate()); therefore we
+             *       have to explicitly check that the active variable has not a variable status
+             *       SCIP_VARSTATUS_AGGREGATED or SCIP_VARSTATUS_NEGATED;
              */
-            if( SCIPvarIsActive(vubvars[i]) && SCIPvarGetStatus(vubvars[i]) != SCIP_VARSTATUS_AGGREGATED )
+            if( SCIPvarIsActive(vubvars[i]) && SCIPvarGetStatus(vubvars[i]) != SCIP_VARSTATUS_AGGREGATED && SCIPvarGetStatus(vubvars[i]) != SCIP_VARSTATUS_NEGATED )
             {
                SCIP_Real vbimplbound;
 
