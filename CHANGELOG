@@ -68,6 +68,9 @@ features:
 SCIP version 2.1.2
 ==================
 
+fixed bugs:
+- fixed bug in SCIPsolveKnapsackExactly()
+
 performance improvements:
 - fixed performance issue in debug mode, where SCIPvarGetLPSol_rec() calculated a value to often, which in the end lead
   to exponential growth in running time
@@ -84,8 +87,8 @@ performance improvements:
   problem
 
 features:
-- the pseudo objective propagator can be forced to propagate if active pricers are present; this can be done 
-  if for all (known or unknown) variables follows that: they have positive (negative) objective coefficient 
+- the pseudo objective propagator can be forced to propagate if active pricers are present; this can be done
+  if for all (known or unknown) variables follows that: they have positive (negative) objective coefficient
   and the global lower (upper) bound is zero.
 
 fixed bugs:

@@ -1069,7 +1069,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
 
       addval = 0.0;
       /* update solution information */
-      if( solitems != NULL)
+      if( solitems != NULL || solval != NULL )
       {
          SCIP_Longint i;
 
@@ -1079,16 +1079,25 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
          /* take the first best items into the solution */
          for( i = capacity - 1; i >= 0; --i )
          {
-            solitems[*nsolitems] = myitems[i];
-            ++(*nsolitems);
+            if( solitems != NULL)
+            {
+               assert(nonsolitems != NULL);
+               solitems[*nsolitems] = myitems[i];
+               ++(*nsolitems);
+            }
             addval += myprofits[i];
          }
 
-         /* the rest are not in the solution */
-         for( j = nmyitems - 1; j >= capacity; --j )
+         if( solitems != NULL)
          {
-            nonsolitems[*nnonsolitems] = myitems[j];
-            ++(*nnonsolitems);
+            assert(nonsolitems != NULL);
+
+            /* the rest are not in the solution */
+            for( j = nmyitems - 1; j >= capacity; --j )
+            {
+               nonsolitems[*nnonsolitems] = myitems[j];
+               ++(*nnonsolitems);
+            }
          }
       }
       /* update solution value */
