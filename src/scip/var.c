@@ -8679,11 +8679,12 @@ SCIP_RETCODE varAddTransitiveImplic(
              *       "vubvar" the variable lower and upper bounds of this variable "vubvar" are also considered; note
              *       that the "aggvar" can be a variable lower bound variable of the variable "vubvar"; Due to that
              *       situation it can happen that we reach that code place where "vlbvars[i] == aggvar". In particular
-             *       the "aggvar" has already the variable status SCIP_VARSTATUS_AGGREGATED but is still active since
-             *       the aggregation is not finished yet (in SCIPvarAggregate()); therefore we have to explicitly check
-             *       that the active variable has not a variable status SCIP_VARSTATUS_AGGREGATED;
+             *       the "aggvar" has already the variable status SCIP_VARSTATUS_AGGREGATED or SCIP_VARSTATUS_NEGATED
+             *       but is still active since the aggregation is not finished yet (in SCIPvarAggregate()); therefore we
+             *       have to explicitly check that the active variable has not a variable status
+             *       SCIP_VARSTATUS_AGGREGATED or SCIP_VARSTATUS_NEGATED;
              */
-            if( SCIPvarIsActive(vlbvars[i]) && SCIPvarGetStatus(vlbvars[i]) != SCIP_VARSTATUS_AGGREGATED )
+            if( SCIPvarIsActive(vlbvars[i]) && SCIPvarGetStatus(vlbvars[i]) != SCIP_VARSTATUS_AGGREGATED && SCIPvarGetStatus(vlbvars[i]) != SCIP_VARSTATUS_NEGATED )
             {
                SCIP_Real vbimplbound;
 
@@ -8746,11 +8747,12 @@ SCIP_RETCODE varAddTransitiveImplic(
              *       "vlbvar" the variable lower and upper bounds of this variable "vlbvar" are also considered; note
              *       that the "aggvar" can be a variable upper bound variable of the variable "vlbvar"; Due to that
              *       situation it can happen that we reach that code place where "vubvars[i] == aggvar". In particular
-             *       the "aggvar" has already the variable status SCIP_VARSTATUS_AGGREGATED but is still active since
-             *       the aggregation is not finished yet (in SCIPvarAggregate()); therefore we have to explicitly check
-             *       that the active variable has not a variable status SCIP_VARSTATUS_AGGREGATED;
+             *       the "aggvar" has already the variable status SCIP_VARSTATUS_AGGREGATED or SCIP_VARSTATUS_NEGATED
+             *       but is still active since the aggregation is not finished yet (in SCIPvarAggregate()); therefore we
+             *       have to explicitly check that the active variable has not a variable status
+             *       SCIP_VARSTATUS_AGGREGATED or SCIP_VARSTATUS_NEGATED;
              */
-            if( SCIPvarIsActive(vubvars[i]) && SCIPvarGetStatus(vubvars[i]) != SCIP_VARSTATUS_AGGREGATED )
+            if( SCIPvarIsActive(vubvars[i]) && SCIPvarGetStatus(vubvars[i]) != SCIP_VARSTATUS_AGGREGATED && SCIPvarGetStatus(vubvars[i]) != SCIP_VARSTATUS_NEGATED )
             {
                SCIP_Real vbimplbound;
 
@@ -10891,68 +10893,13 @@ SCIP_Real SCIPvarGetUbLP(
    }
 }
 
-/** gets best local bound of variable with respect to the objective function */
-SCIP_Real SCIPvarGetBestBound(
-   SCIP_VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   if( var->obj >= 0.0 )
-      return var->locdom.lb;
-   else
-      return var->locdom.ub;
-}
-
-/** gets worst local bound of variable with respect to the objective function */
-SCIP_Real SCIPvarGetWorstBound(
-   SCIP_VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   if( var->obj >= 0.0 )
-      return var->locdom.ub;
-   else
-      return var->locdom.lb;
-}
-
-/** gets type (lower or upper) of best bound of variable with respect to the objective function */
-SCIP_BOUNDTYPE SCIPvarGetBestBoundType(
-   SCIP_VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   if( var->obj >= 0.0 )
-      return SCIP_BOUNDTYPE_LOWER;
-   else
-      return SCIP_BOUNDTYPE_UPPER;
-}
-
-/** gets type (lower or upper) of worst bound of variable with respect to the objective function */
-SCIP_BOUNDTYPE SCIPvarGetWorstBoundType(
-   SCIP_VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   if( var->obj >= 0.0 )
-      return SCIP_BOUNDTYPE_UPPER;
-   else
-      return SCIP_BOUNDTYPE_LOWER;
-}
-
 /** gets primal LP solution value of variable */
 SCIP_Real SCIPvarGetLPSol_rec(
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
-   SCIP_Real primsol;
-   int i;
-
    assert(var != NULL);
- 
+
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
@@ -10961,7 +10908,7 @@ SCIP_Real SCIPvarGetLPSol_rec(
       return SCIPvarGetLPSol(var->data.original.transvar);
 
    case SCIP_VARSTATUS_LOOSE:
-      return SCIPvarGetBestBound(var);
+      return SCIPvarGetBestBoundLocal(var);
 
    case SCIP_VARSTATUS_COLUMN:
       assert(var->data.col != NULL);
@@ -10972,7 +10919,12 @@ SCIP_Real SCIPvarGetLPSol_rec(
       return var->locdom.lb;
 
    case SCIP_VARSTATUS_AGGREGATED:
+   {
+      SCIP_Real lpsolval;
+
       assert(var->data.aggregate.var != NULL);
+      lpsolval = SCIPvarGetLPSol(var->data.aggregate.var);
+
       /* a correct implementation would need to check the value of var->data.aggregate.var for infinity and return the
        * corresponding infinity value instead of performing an arithmetical transformation (compare method
        * SCIPvarGetLbLP()); however, we do not want to introduce a SCIP or SCIP_SET pointer to this method, since it is
@@ -10980,11 +10932,15 @@ SCIP_Real SCIPvarGetLPSol_rec(
        * w.r.t. SCIP_DEFAULT_INFINITY, which seems to be true in our regression tests; note that this may yield false
        * positives and negatives if the parameter <numerics/infinity> is modified by the user
        */
-      assert(SCIPvarGetLPSol(var->data.aggregate.var) > -SCIP_DEFAULT_INFINITY);
-      assert(SCIPvarGetLPSol(var->data.aggregate.var) < +SCIP_DEFAULT_INFINITY);
-      return var->data.aggregate.scalar * SCIPvarGetLPSol(var->data.aggregate.var) + var->data.aggregate.constant;
-
+      assert(lpsolval > -SCIP_DEFAULT_INFINITY);
+      assert(lpsolval < +SCIP_DEFAULT_INFINITY);
+      return var->data.aggregate.scalar * lpsolval + var->data.aggregate.constant;
+   }
    case SCIP_VARSTATUS_MULTAGGR:
+   {
+      SCIP_Real primsol;
+      int i;
+
       assert(!var->donotmultaggr);
       assert(var->data.multaggr.vars != NULL);
       assert(var->data.multaggr.scalars != NULL);
@@ -10995,7 +10951,7 @@ SCIP_Real SCIPvarGetLPSol_rec(
       for( i = 0; i < var->data.multaggr.nvars; ++i )
          primsol += var->data.multaggr.scalars[i] * SCIPvarGetLPSol(var->data.multaggr.vars[i]);
       return primsol;
-
+   }
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
@@ -11076,7 +11032,7 @@ SCIP_Real SCIPvarGetPseudoSol_rec(
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
-      return SCIPvarGetBestBound(var);
+      return SCIPvarGetBestBoundLocal(var);
 
    case SCIP_VARSTATUS_FIXED:
       assert(var->locdom.lb == var->locdom.ub); /*lint !e777*/
@@ -13777,9 +13733,15 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarGetLbGlobal
 #undef SCIPvarGetUbGlobal
 #undef SCIPvarGetHolelistGlobal
+#undef SCIPvarGetBestBoundGlobal
+#undef SCIPvarGetWorstBoundGlobal
 #undef SCIPvarGetLbLocal
 #undef SCIPvarGetUbLocal
 #undef SCIPvarGetHolelistLocal
+#undef SCIPvarGetBestBoundLocal
+#undef SCIPvarGetWorstBoundLocal
+#undef SCIPvarGetBestBoundType
+#undef SCIPvarGetWorstBoundType
 #undef SCIPvarGetLbLazy
 #undef SCIPvarGetUbLazy
 #undef SCIPvarGetBranchFactor
@@ -14409,6 +14371,32 @@ SCIP_HOLELIST* SCIPvarGetHolelistGlobal(
    return var->glbdom.holelist;
 }
 
+/** gets best global bound of variable with respect to the objective function */
+SCIP_Real SCIPvarGetBestBoundGlobal(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   if( var->obj >= 0.0 )
+      return var->glbdom.lb;
+   else
+      return var->glbdom.ub;
+}
+
+/** gets worst global bound of variable with respect to the objective function */
+SCIP_Real SCIPvarGetWorstBoundGlobal(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   if( var->obj >= 0.0 )
+      return var->glbdom.ub;
+   else
+      return var->glbdom.lb;
+}
+
 /** gets current lower bound of variable */
 SCIP_Real SCIPvarGetLbLocal(
    SCIP_VAR*             var                 /**< problem variable */
@@ -14437,6 +14425,58 @@ SCIP_HOLELIST* SCIPvarGetHolelistLocal(
    assert(var != NULL);
    
    return var->locdom.holelist;
+}
+
+/** gets best local bound of variable with respect to the objective function */
+SCIP_Real SCIPvarGetBestBoundLocal(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   if( var->obj >= 0.0 )
+      return var->locdom.lb;
+   else
+      return var->locdom.ub;
+}
+
+/** gets worst local bound of variable with respect to the objective function */
+SCIP_Real SCIPvarGetWorstBoundLocal(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   if( var->obj >= 0.0 )
+      return var->locdom.ub;
+   else
+      return var->locdom.lb;
+}
+
+/** gets type (lower or upper) of best bound of variable with respect to the objective function */
+SCIP_BOUNDTYPE SCIPvarGetBestBoundType(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   if( var->obj >= 0.0 )
+      return SCIP_BOUNDTYPE_LOWER;
+   else
+      return SCIP_BOUNDTYPE_UPPER;
+}
+
+/** gets type (lower or upper) of worst bound of variable with respect to the objective function */
+SCIP_BOUNDTYPE SCIPvarGetWorstBoundType(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   if( var->obj >= 0.0 )
+      return SCIP_BOUNDTYPE_UPPER;
+   else
+      return SCIP_BOUNDTYPE_LOWER;
 }
 
 /** gets lazy lower bound of variable, returns -infinity if the variable has no lazy lower bound */
@@ -14763,7 +14803,7 @@ SCIP_Real SCIPvarGetPseudoSol(
    assert(var != NULL);
 
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
-      return SCIPvarGetBestBound(var);
+      return SCIPvarGetBestBoundLocal(var);
    else
       return SCIPvarGetPseudoSol_rec(var);
 }

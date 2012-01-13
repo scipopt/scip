@@ -3524,6 +3524,23 @@ SCIP_Real SCIPgetRandomReal(
 
 
 
+
+/*
+ * Additional math functions
+ */
+
+/** calculates a binomial coefficient n over m, choose m elements out of n, maximal value will be 33 over 16 (because
+ *  the n=33 is the last line in the Pascal's triangle where each entry fits in a 4 byte value), an error occurs due to
+ *  big numbers or an negative value m (and m < n) and -1 will be returned
+ */
+extern
+SCIP_Longint SCIPcalcBinomCoef(
+   int                   n,                  /**< number of different elements */
+   int                   m                   /**< number to choose out of the above */
+   );
+
+
+
 /*
  * Permutations / Shuffling
  */

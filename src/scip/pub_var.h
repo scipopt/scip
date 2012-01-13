@@ -555,6 +555,18 @@ SCIP_HOLELIST* SCIPvarGetHolelistGlobal(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
+/** gets best global bound of variable with respect to the objective function */
+extern
+SCIP_Real SCIPvarGetBestBoundGlobal(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** gets worst global bound of variable with respect to the objective function */
+extern
+SCIP_Real SCIPvarGetWorstBoundGlobal(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
 /** gets current lower bound of variable */
 extern
 SCIP_Real SCIPvarGetLbLocal(
@@ -570,6 +582,30 @@ SCIP_Real SCIPvarGetUbLocal(
 /** gets the current hole list of an active variable */
 extern
 SCIP_HOLELIST* SCIPvarGetHolelistLocal(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** gets best local bound of variable with respect to the objective function */
+extern
+SCIP_Real SCIPvarGetBestBoundLocal(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** gets worst local bound of variable with respect to the objective function */
+extern
+SCIP_Real SCIPvarGetWorstBoundLocal(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** gets type (lower or upper) of best bound of variable with respect to the objective function */
+extern
+SCIP_BOUNDTYPE SCIPvarGetBestBoundType(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** gets type (lower or upper) of worst bound of variable with respect to the objective function */
+extern
+SCIP_BOUNDTYPE SCIPvarGetWorstBoundType(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -827,9 +863,15 @@ int SCIPvarGetNBdchgInfosUb(
 #define SCIPvarGetLbGlobal(var)         (var)->glbdom.lb
 #define SCIPvarGetUbGlobal(var)         (var)->glbdom.ub
 #define SCIPvarGetHolelistGlobal(var)   (var)->glbdom.holelist
+#define SCIPvarGetBestBoundGlobal(var)  ((var)->obj >= 0.0 ? (var)->glbdom.lb : (var)->glbdom.ub)
+#define SCIPvarGetWorstBoundGlobal(var) ((var)->obj >= 0.0 ? (var)->glbdom.ub : (var)->glbdom.lb)
 #define SCIPvarGetLbLocal(var)          (var)->locdom.lb
 #define SCIPvarGetUbLocal(var)          (var)->locdom.ub
 #define SCIPvarGetHolelistLocal(var)    (var)->locdom.holelist
+#define SCIPvarGetBestBoundLocal(var)   ((var)->obj >= 0.0 ? (var)->locdom.lb : (var)->locdom.ub)
+#define SCIPvarGetWorstBoundLocal(var)  ((var)->obj >= 0.0 ? (var)->locdom.ub : (var)->locdom.lb)
+#define SCIPvarGetBestBoundType(var)    ((var)->obj >= 0.0 ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER)
+#define SCIPvarGetWorstBoundType(var)   ((var)->obj >= 0.0 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER)
 #define SCIPvarGetLbLazy(var)           (var)->lazylb
 #define SCIPvarGetUbLazy(var)           (var)->lazyub
 #define SCIPvarGetBranchFactor(var)     (var)->branchfactor
@@ -858,30 +900,6 @@ int SCIPvarGetNBdchgInfosUb(
 #define SCIPvarGetBdchgInfoUb(var, pos)   (&((var)->ubchginfos[pos]))
 #define SCIPvarGetNBdchgInfosUb(var)      ((var)->nubchginfos)
 #endif
-
-/** gets best local bound of variable with respect to the objective function */
-extern
-SCIP_Real SCIPvarGetBestBound(
-   SCIP_VAR*             var                 /**< problem variable */
-   );
-
-/** gets worst local bound of variable with respect to the objective function */
-extern
-SCIP_Real SCIPvarGetWorstBound(
-   SCIP_VAR*             var                 /**< problem variable */
-   );
-
-/** gets type (lower or upper) of best bound of variable with respect to the objective function */
-extern
-SCIP_BOUNDTYPE SCIPvarGetBestBoundType(
-   SCIP_VAR*             var                 /**< problem variable */
-   );
-
-/** gets type (lower or upper) of worst bound of variable with respect to the objective function */
-extern
-SCIP_BOUNDTYPE SCIPvarGetWorstBoundType(
-   SCIP_VAR*             var                 /**< problem variable */
-   );
 
 /** gets primal LP solution value of variable */
 extern

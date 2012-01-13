@@ -4874,7 +4874,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
       /* avoid branching on infinite values in pseudo solution */
       if( SCIPsetIsInfinity(set, -val) || SCIPsetIsInfinity(set, val) )
       {
-         val = SCIPvarGetWorstBound(var);
+         val = SCIPvarGetWorstBoundLocal(var);
        
          /* if both bounds are infinite, choose zero as branching point */
          if( SCIPsetIsInfinity(set, -val) || SCIPsetIsInfinity(set, val) )
@@ -5195,7 +5195,7 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
       /* avoid branching on infinite values in pseudo solution */
       if( SCIPsetIsInfinity(set, -val) || SCIPsetIsInfinity(set, val) )
       {
-         val = SCIPvarGetWorstBound(var);
+         val = SCIPvarGetWorstBoundLocal(var);
 
          /* if both bounds are infinite, choose zero as branching point */
          if( SCIPsetIsInfinity(set, -val) || SCIPsetIsInfinity(set, val) )

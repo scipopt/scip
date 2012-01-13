@@ -7054,7 +7054,7 @@ SCIP_DECL_CONSCHECK(consCheckCumulative)
 /** domain propagation method of constraint handler */
 static
 SCIP_DECL_CONSPROP(consPropCumulative)
-{
+{  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool cutoff;
    int nchgbds;

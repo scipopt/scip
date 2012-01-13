@@ -565,6 +565,9 @@ SCIP_RETCODE propagateCutoffboundVar(
    assert(!SCIPisInfinity(scip, -pseudoobjval));
    assert(!SCIPisInfinity(scip, cutoffbound));
    assert(SCIPisLT(scip, pseudoobjval, cutoffbound) );
+   assert(tightened != NULL);
+
+   *tightened = FALSE;
 
    if( local )
    {

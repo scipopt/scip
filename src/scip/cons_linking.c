@@ -2097,7 +2097,7 @@ SCIP_DECL_CONSCHECK(consCheckLinking)
 /** domain propagation method of constraint handler */
 static
 SCIP_DECL_CONSPROP(consPropLinking)
-{  
+{  /*lint --e{715}*/
    SCIP_Bool cutoff;
    SCIP_Bool addcut;
    SCIP_Bool mustcheck;

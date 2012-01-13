@@ -327,7 +327,7 @@ SCIP_RETCODE addBoundViolated(
       SCIP_Real bestbound;
 
       /* add variable, if zero is not best bound w.r.t. objective function */
-      bestbound = SCIPvarGetBestBound(var);
+      bestbound = SCIPvarGetBestBoundLocal(var);
       if( !SCIPsetIsZero(set, bestbound) )
       {
          SCIPdebugMessage(" -> best bound of <%s> [%g,%g] is not zero but %g\n",

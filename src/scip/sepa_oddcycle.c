@@ -3658,7 +3658,7 @@ SCIP_RETCODE separateGLS(
            && sepadata->ncuts - sepadata->oldncuts < (unsigned int) sepadata->maxsepacutsround
            && !SCIPisStopped(scip); ++i )
    {
-      long long cutoff;                      /* cutoff value for Dijkstra algorithm */
+      unsigned long long cutoff;             /* cutoff value for Dijkstra algorithm */
       unsigned int ncyclevars;               /* cycle length */
       SCIP_Bool edgedirection;               /* partitionindicator for backprojection from bipartite graph to original graph:
                                               * is the current edge a backwards edge, i.e., from second to first partition? */
@@ -3685,7 +3685,7 @@ SCIP_RETCODE separateGLS(
 
       startcounter++;
 
-      cutoff = (long long) (0.5 * sepadata->scale);
+      cutoff = (unsigned long long) (0.5 * sepadata->scale);
       if ( sepadata->allowmultiplecuts )
          (void) dijkstraPairCutoffIgnore(&graph, startnode, endnode, incut, cutoff, dist, pred, entry, order);
       else

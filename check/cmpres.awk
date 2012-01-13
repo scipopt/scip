@@ -480,38 +480,49 @@ END {
    # print headers
    for( o = 0; o < nsolver; ++o )
    {
-      s = printorder[o];
-      if( o == 0 )
-      {
-        if( printsoltimes )
-          printf(" %58s |", solvername[s]);
-        else
-          printf(" %39s |", solvername[s])
-      }
-      else
-      {
-         if( short )
-         {
-            if( length(solvername[s]) <= 19 )
-               printf("%19s |", solvername[s]);
-            else
-               printf("%20s|", solvername[s]);
-         }
-         else if( printsoltimes )
-         {
-            if( length(solvername[s]) <= 47 )
-               printf("%47s |", solvername[s]);
-            else
-               printf("%48s|", solvername[s]);
-         }
-         else
-         {            
-            if( length(solvername[s]) <= 33 )
-               printf("%33s |", solvername[s]);
-            else
-               printf("%34s|", solvername[s]);
-         }
-      }
+       s = printorder[o];
+       sname = solvername[s];
+       if( o == 0 )
+       {
+	   if( printsoltimes )
+	   {
+	       if ( length(sname) <= 58 )
+		   printf(" %58s |", sname);
+	       else
+		   printf(" *%57s |", substr(sname, length(sname)-58));
+	   }
+	   else
+	   {
+	       if ( length(sname) <= 39 )
+		   printf(" %39s |", sname)
+	       else
+		   printf(" *%38s |", substr(sname, length(sname)-39));
+	   }
+       }
+       else
+       {
+	   if( short )
+	   {
+	       if( length(sname) <= 19 )
+		   printf("%19s |", sname);
+	       else
+		   printf("*%18s |", substr(sname, length(sname)-19));
+	   }
+	   else if( printsoltimes )
+	   {
+	       if( length(sname) <= 47 )
+		   printf("%47s |", sname);
+	       else
+		   printf("*%46s |", substr(sname, length(sname)-47));
+	   }
+	   else
+	   {            
+	       if( length(sname) <= 33 )
+		   printf("%31s |", sname);
+	       else
+		   printf("*%30s |", substr(sname, length(sname)-31));
+	   }
+       }
    }
    printf("\n");
    printhline(nsolver,short, printsoltimes);
@@ -1329,6 +1340,7 @@ END {
          for( o = 0; o < nsolver; ++o )
          {
             s = printorder[o];
+	    sname = solvername[s];
             if( o == 0 )
             {
                nodegeomcomp = nodegeom[s,cat];
@@ -1338,8 +1350,13 @@ END {
             }
             if( (o > 0 || cat == 0 || cat == -1) && nevalprobs[s,cat] > 0 )
             {
-               printf("%-50s %4d %4d %4d %4d %4d %4d", solvername[s], nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
-                      ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
+	       if ( length(sname) <= 50 )
+		  printf("%-50s %4d %4d %4d %4d %4d %4d", sname, nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
+			 ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
+	       else
+		  printf("*%-49s %4d %4d %4d %4d %4d %4d", substr(sname, length(sname)-50), nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
+			 ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
+ 
                printf(" %4d %4d", better[s,cat], worse[s,cat]);
                printf(" %4d %4d %4d %9d %9d %9.2f %9.2f %7.1f %7.1f %7.2f %7.2f %7.2f\n", 
                   betterobj[s,cat], worseobj[s,cat], feasibles[s,cat],
@@ -1369,6 +1386,7 @@ END {
       for( o = 0; o < nsolver; ++o )
       {
          s = printorder[o];
+	 sname = solvername[s];
          if( o == 0 )
          {
             nodegeomcomp = nodegeom[s,cat];
@@ -1378,8 +1396,12 @@ END {
          }
          if( (o > 0 || cat == 0 || cat == -1) && nevalprobs[s,cat] > 0 )
          {
-            printf("%-50s %4d %4d %4d %4d %4d %4d", solvername[s], nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
-                   ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
+	    if ( length(sname) <= 50 )
+	       printf("%-50s %4d %4d %4d %4d %4d %4d", sname, nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
+		      ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
+	    else
+	       printf("*%-49s %4d %4d %4d %4d %4d %4d", substr(sname, length(sname)-50), nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
+		      ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
             printf(" %4d %4d", better[s,cat], worse[s,cat]);
             printf(" %4d %4d %4d %9d %9d %9.2f %9.2f %7.1f %7.1f %7.2f %7.2f %7.2f\n", 
                    betterobj[s,cat], worseobj[s,cat], feasibles[s,cat],
