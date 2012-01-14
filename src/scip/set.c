@@ -17,6 +17,9 @@
  * @brief  methods for global SCIP settings
  * @author Tobias Achterberg
  * @author Timo Berthold
+ *
+ * @todo Functions like SCIPsetFeastol() are misleading (it seems that the feasibility tolerance can be set).
+ *       Rename all functions starting with SCIPsetXXX, e.g., SCIPsetGetFeastol() and SCIPsetSetFeastol().
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
