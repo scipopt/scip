@@ -945,7 +945,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    {
       if( eventdata->varidx < 0 )
       {
-         /* mark activity bounds for this quad var term variable as not up to date anymore */
+         /* mark activity bounds for quad term as not up to date anymore */
          SCIPintervalSetEmpty(&consdata->quadactivitybounds);
       }
       else
@@ -2050,6 +2050,7 @@ SCIP_RETCODE delQuadVarTermPos(
 
    /* invalidate activity */
    consdata->activity = SCIP_INVALID;
+   SCIPintervalSetEmpty(&consdata->quadactivitybounds);
 
    /* invalidate nonlinear row */
    if( consdata->nlrow != NULL )
@@ -2411,10 +2412,10 @@ SCIP_RETCODE removeBilinearTermsPos(
    consdata->ispropagated  = FALSE;
    consdata->ispresolved   = FALSE;
    consdata->iscurvchecked = FALSE;
-   SCIPintervalSetEmpty(&consdata->quadactivitybounds);
 
    /* invalidate activity */
    consdata->activity = SCIP_INVALID;
+   SCIPintervalSetEmpty(&consdata->quadactivitybounds);
 
    /* invalidate nonlinear row */
    if( consdata->nlrow != NULL )
@@ -2801,7 +2802,6 @@ SCIP_RETCODE removeFixedVariables(
                   assert(var2pos < consdata->nquadvars);
                }
                consdata->quadvarterms[var2pos].lincoef += bilinterm->coef * offset;
-               SCIPintervalSetEmpty(&consdata->quadactivitybounds);
             }
 
             offset = consdata->quadvarterms[i].lincoef * offset + consdata->quadvarterms[i].sqrcoef * offset * offset;
