@@ -27,6 +27,7 @@ interface
   or multiaggregated representation
 - new method SCIPgetGlobalPseudoObjval() which returns the global pseudo objective value which is all variables
   set to their best (w.r.t. the objective function) global bound
+- new method SCIPhashtableClear() which removes all elements of a hash table
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with

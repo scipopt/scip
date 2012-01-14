@@ -517,6 +517,29 @@ void SCIPhashtableFree(
    BMSfreeMemory(hashtable);
 }
 
+/** rmoves all elemets of the hash table
+ *
+ *  @note From the performance point of view you should not fill and clear a hash table to often since the clearing can
+ *        be expensive. Clearing is done by looping over all buckets and removing the hast table lists one-by-one.
+ */
+void SCIPhashtableClear(
+   SCIP_HASHTABLE*       hashtable           /**< hash table */
+   )
+{
+   int i;
+   BMS_BLKMEM* blkmem;
+   SCIP_HASHTABLELIST** lists;
+
+   assert(hashtable != NULL);
+
+   blkmem = hashtable->blkmem;
+   lists = hashtable->lists;
+
+   /* free hash lists */
+   for( i = hashtable->nlists - 1; i >= 0; --i )
+      hashtablelistFree(&lists[i], blkmem);
+}
+
 /** inserts element in hash table (multiple inserts of same element possible) */
 SCIP_RETCODE SCIPhashtableInsert(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
