@@ -4111,7 +4111,7 @@ static
 SCIP_RETCODE correctConshdlrdata(
    SCIP*const            scip,               /**< SCIP data structure */
    SCIP_CONSHDLRDATA*const conshdlrdata,     /**< pseudoboolean constraint handler data */
-   int*const             ndelconss           /**< pointer to count number of deleted constraints */         
+   int*const             ndelconss           /**< pointer to count number of deleted constraints */
    )
 {
    CONSANDDATA** allconsanddatas;
@@ -4133,7 +4133,7 @@ SCIP_RETCODE correctConshdlrdata(
       int stmpvars;
       SCIP_CONS* cons;
       int v;
-            
+
       consanddata = allconsanddatas[c];
 
       assert(consanddata->nvars == 0 || (consanddata->vars != NULL && consanddata->svars > 0));
@@ -4157,7 +4157,7 @@ SCIP_RETCODE correctConshdlrdata(
       {
          /* if we have no old variables, than also no new variables */
          assert(consanddata->nnewvars == 0);
-         
+
          SCIPfreeBlockMemoryArrayNull(scip, &(consanddata->vars), consanddata->svars);
          SCIPfreeBlockMemoryArrayNull(scip, &(consanddata->newvars), consanddata->snewvars);
 
@@ -4215,7 +4215,7 @@ SCIP_RETCODE correctConshdlrdata(
 
          continue;
       }
-      
+
       /* if no new variables exist, we do not need to do anything here */
       if( consanddata->nnewvars == 0 )
          continue;
@@ -4239,7 +4239,7 @@ SCIP_RETCODE correctConshdlrdata(
       consanddata->snewvars = stmpvars;
       /* reset number of variables in newvars array */
       consanddata->nnewvars = 0;
-   }      
+   }
 
    return SCIP_OKAY;
 }
@@ -6202,8 +6202,8 @@ SCIP_RETCODE findAggregation(
    nconsanddatas = consdata->nconsanddatas;
    assert(nconsanddatas == 0 || consanddatas != NULL);
 
-   /* we have only one special case for aggregations */
-   if( consdata->linconstype != SCIP_SETPPC )
+   /* we have only one special case for aggregations, a set-partinioning constraint */
+   if( consdata->linconstype != SCIP_SETPPC || SCIPgetTypeSetppc(scip, consdata->lincons) != SCIP_SETPPCTYPE_PARTITIONING )
       return SCIP_OKAY;
 
    assert(SCIPisEQ(scip, consdata->rhs, consdata->lhs));
@@ -6436,13 +6436,10 @@ SCIP_RETCODE findAggregation(
 
 	 SCIPdebugMessage("aggregating variables <%s> == 1 - <%s> in pseudoboolean <%s>\n", SCIPvarGetName(linvar), SCIPvarGetName(var), SCIPconsGetName(cons));
 
-	 SCIP_CALL( SCIPaggregateVars(scip, linvar, var, 1.0, 1.0, 0.0, &infeasible, &redundant, &aggregated) );
+	 SCIP_CALL( SCIPaggregateVars(scip, linvar, var, 1.0, 1.0, 1.0, &infeasible, &redundant, &aggregated) );
 
-	 if( TRUE )//strcmp(SCIPconsGetName(cons), "pseudoboolean177") == 0 )
-	 {
-	    SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-	    printf("aggregating variables <%s> == 1 - <%s>, infeasible = %u, aggregated = %u\n", SCIPvarGetName(linvar), SCIPvarGetName(var), infeasible, aggregated);
-	 }
+	 SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+	 SCIPdebugMessage("aggregation of variables: <%s> == 1 - <%s>, infeasible = %u, aggregated = %u\n", SCIPvarGetName(linvar), SCIPvarGetName(var), infeasible, aggregated);
 
 	 if( infeasible )
 	    *cutoff = TRUE;
@@ -6457,7 +6454,7 @@ SCIP_RETCODE findAggregation(
 	    (*ndelconss) += 2;
 	 }
       }
-#ifndef NDEBUG
+#if 0
       else
       {
 	 /* @todo */
@@ -6471,6 +6468,14 @@ SCIP_RETCODE findAggregation(
 	  */
       }
 #endif
+   }
+
+   if( SCIPconsIsDeleted(cons) )
+   {
+      /* update the uses counter of consandata objects which are used in pseudoboolean constraint, which was deleted and
+       * probably delete and-constraints
+       */
+      SCIP_CALL( updateConsanddataUses(scip, cons, ndelconss) );
    }
 
  TERMINATE:

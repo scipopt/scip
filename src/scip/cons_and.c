@@ -1030,13 +1030,13 @@ SCIP_RETCODE checkCons(
    if( !mustcheck )
    {
       assert(consdata->rows != NULL);
-      
+
       for( r = 0; r < consdata->nrows; ++r )
       {
          mustcheck = !SCIProwIsInLP(consdata->rows[r]);
          if( mustcheck )
             break;
-      }         
+      }
    }
 
    /* check feasibility of constraint if necessary */
@@ -1059,9 +1059,9 @@ SCIP_RETCODE checkCons(
 
       /* if all operator variables are TRUE, the resultant has to be TRUE, otherwise, the resultant has to be FALSE */
       solval = SCIPgetSolVal(scip, sol, consdata->resvar);
-      assert(SCIPisFeasIntegral(scip, solval));
+      /* assert(SCIPisFeasIntegral(scip, solval)); not true when the resultant is of type implicit integer */
 
-      if( (i == consdata->nvars) != (solval > 0.5) )
+      if( !SCIPisFeasIntegral(scip, solval) || ((i == consdata->nvars) != (solval > 0.5)) )
       {
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
          *violated = TRUE;
@@ -1071,20 +1071,25 @@ SCIP_RETCODE checkCons(
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
 
             SCIPinfoMessage(scip, NULL, "violation:");
+	    if( !SCIPisFeasIntegral(scip, solval) )
+	    {
+               SCIPinfoMessage(scip, NULL, " resultant <%s> not of integral value\n",
+                  SCIPvarGetName(consdata->resvar));
+	    }
             if( i == consdata->nvars )
             {
-               SCIPinfoMessage(scip, NULL, " all operands are TRUE and resultant <%s> = FALSE\n",                   
-                  SCIPvarGetName(consdata->resvar)); 
+               SCIPinfoMessage(scip, NULL, " all operands are TRUE and resultant <%s> = FALSE\n",
+                  SCIPvarGetName(consdata->resvar));
             }
             else
             {
                SCIPinfoMessage(scip, NULL, " operand <%s> = FALSE and resultant <%s> = TRUE\n",
-                  SCIPvarGetName(consdata->vars[i-1]), SCIPvarGetName(consdata->resvar)); 
+                  SCIPvarGetName(consdata->vars[i-1]), SCIPvarGetName(consdata->resvar));
             }
          }
       }
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -1465,26 +1470,23 @@ static
 SCIP_RETCODE analyzeZeroResultant(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< and constraint to be processed */
+   int                   watchedvar1,        /**< maybe last unfixed variable position */
+   int                   watchedvar2,        /**< second watched position */
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
    int*                  nfixedvars          /**< pointer to add up the number of found domain reductions */
    )
 {
    SCIP_CONSDATA* consdata;
-   int watchedvar2;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(SCIPvarGetUbLocal(consdata->resvar) < 0.5);
 
-   watchedvar2 = consdata->watchedvar2;
-
    if( watchedvar2 == -1 )
    {
       SCIP_Bool infeasible;
       SCIP_Bool tightened;
-      int watchedvar1;
 
-      watchedvar1 = consdata->watchedvar1;
       assert(watchedvar1 != -1);
 
 #ifndef NDEBUG
@@ -1492,7 +1494,7 @@ SCIP_RETCODE analyzeZeroResultant(
       {
 	 int v;
 
-	 for( v = consdata->nvars - 1; v >=0; --v )
+	 for( v = consdata->nvars - 1; v >= 0; --v )
 	    if( v != watchedvar1 )
 	       assert(SCIPvarGetLbLocal(consdata->vars[v]) > 0.5);
       }
@@ -1630,7 +1632,7 @@ SCIP_RETCODE consPropagateObjective(
                (*nfixedvars)++;
 
                /* analyze the fixing to zero */
-               SCIP_CALL( analyzeZeroResultant(scip, cons, cutoff, nfixedvars) );
+               SCIP_CALL( analyzeZeroResultant(scip, cons, consdata->watchedvar1, consdata->watchedvar2, cutoff, nfixedvars) );
             }
          }
       }
@@ -1984,7 +1986,7 @@ SCIP_RETCODE propagateCons(
       {
          assert(watchedvar1 != -1);
 
-	 SCIP_CALL( analyzeZeroResultant(scip, cons, cutoff, nfixedvars) );
+	 SCIP_CALL( analyzeZeroResultant(scip, cons, watchedvar1, watchedvar2, cutoff, nfixedvars) );
 
 	 return SCIP_OKAY;
       }
