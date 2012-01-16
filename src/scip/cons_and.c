@@ -1466,6 +1466,7 @@ SCIP_RETCODE consdataLinearize(
 }
 
 /** the resultant is fixed to zero; in case all except one operator are fixed to TRUE the last operator has to fixed to FALSE */
+/** @note consdata->watchedvars might not be the same to the watchedvar parameters, because the update was not yet done */
 static
 SCIP_RETCODE analyzeZeroResultant(
    SCIP*                 scip,               /**< SCIP data structure */

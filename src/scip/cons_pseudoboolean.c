@@ -6176,15 +6176,19 @@ SCIP_RETCODE findAggregation(
    CONSANDDATA** consanddatas;
    SCIP_CONSDATA* consdata;
    SCIP_VAR** allvars;
-   int* allstatus;
+   int* varcount[2];
    SCIP_VAR** repvars;
    SCIP_Bool* negated;
    SCIP_VAR** vars;
    int nconsanddatas;
    int nvars;
+   int zerocount;
+   int onecount;
+   int twocount;
+   int othercount;
    int c;
    int v;
-   int samepos;
+   int i;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -6193,6 +6197,9 @@ SCIP_RETCODE findAggregation(
    assert(naggrvars != NULL);
    assert(cutoff != NULL);
    assert(SCIPconsIsActive(cons));
+
+   if( SCIPconsIsModifiable(cons) )
+      return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -6209,7 +6216,7 @@ SCIP_RETCODE findAggregation(
    assert(SCIPisEQ(scip, consdata->rhs, consdata->lhs));
    assert(SCIPisEQ(scip, consdata->rhs, 1.0));
 
-   if( nconsanddatas != 2 )
+   if( nconsanddatas < 2 || nconsanddatas > 3 )
       return SCIP_OKAY;
 
 #ifndef NDEBUG
@@ -6237,8 +6244,10 @@ SCIP_RETCODE findAggregation(
 
    /* allocate temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &allvars, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &allstatus, nvars) );
-   BMSclearMemoryArray(allstatus, nvars);
+   SCIP_CALL( SCIPallocBufferArray(scip, &(varcount[0]), nvars) );
+   BMSclearMemoryArray(varcount[0], nvars);
+   SCIP_CALL( SCIPallocBufferArray(scip, &(varcount[1]), nvars) );
+   BMSclearMemoryArray(varcount[1], nvars);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &repvars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &negated, nvars) );
@@ -6290,13 +6299,11 @@ SCIP_RETCODE findAggregation(
       assert(SCIPvarIsActive(repvars[v]) || (SCIPvarIsNegated(repvars[v]) && SCIPvarIsActive(SCIPvarGetNegationVar(repvars[v]))));
       assert(SCIPvarIsActive(repvars[v]) != negated[v]);
 
-      allvars[v] = repvars[v];
+      allvars[v] = negated[v] ? SCIPvarGetNegationVar(repvars[v]) : repvars[v];
 
-      if( !negated[v] )
-	 allstatus[v] = 1;
+      ++(varcount[negated[v]][v]);
    }
 
-   samepos = -1;
    for( c = nconsanddatas - 2; c >= 0; --c )
    {
       int pos = -1;
@@ -6355,119 +6362,230 @@ SCIP_RETCODE findAggregation(
 	 {
 	    assert(pos >= 0 && pos < nvars);
 
-	    if( !negated[v] )
-	    {
-	       if( allstatus[pos] == 0 )
-	       {
-		  allstatus[pos] = 2;
-
-		  /* two much different variables */
-		  if( samepos != -1 )
-		     goto TERMINATE;
-
-		  samepos = pos;
-	       }
-	    }
-	    else
-	    {
-	       if( allstatus[pos] == 1 )
-	       {
-		  allstatus[pos] = 2;
-
-		  /* two much different variables */
-		  if( samepos != -1 )
-		     goto TERMINATE;
-
-		  samepos = pos;
-	       }
-	    }
+	    ++(varcount[negated[v]][pos]);
 	 }
 	 else
 	    goto TERMINATE;
       }
    }
 
-   /* exactly one variable in all and-constraints appears as active and as negated variable */
-   if( samepos != -1 )
+   zerocount = 0;
+   onecount = 0;
+   twocount = 0;
+   othercount = 0;
+
+   /* count number of multiple appearances of a variable */
+   for( i = 1; i >= 0; --i )
    {
-      SCIP_VAR** consvars;
-      SCIP_Real* conscoefs;
-      int nconsvars;
-      SCIP_VAR* linvar;
-      SCIP_Real lincoef;
-      int nlinvars;
+      for( v = nvars - 1; v >= 0; --v )
+      {
+	 assert(SCIPvarIsActive(allvars[v]));
 
-      /* allocate temporary memory */
-      SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nvars) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &conscoefs, nvars) );
+	 if( varcount[i][v] == 0 )
+	    ++zerocount;
+	 else if( varcount[i][v] == 1 )
+	    ++onecount;
+	 else if( varcount[i][v] == 2 )
+	    ++twocount;
+	 else
+	    ++othercount;
+      }
+   }
 
-      /* get variables and coefficients */
-      SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, consvars, conscoefs, &nconsvars) );
-      assert(nconsvars == consdata->nlinvars + nconsanddatas);
-      assert(consvars != NULL);
-      assert(conscoefs != NULL);
+   /* exactly one variable in all and-constraints appears as active and as negated variable */
+   if( othercount == 0 )
+   {
+      /* we have a constraint in the form of: x1 + x2 * x3 * ... * x_n + ~x2 * x3 * ... * x_n == 1
+       * this leads to the aggregation x1 = 1 - x3 * ... * x_n
+       */
+      if( nconsanddatas == 2 && twocount == nvars - 1 && onecount == 2 && zerocount == 1 )
+      {
+	 SCIP_VAR** consvars;
+	 SCIP_Real* conscoefs;
+	 int nconsvars;
+	 SCIP_VAR* linvar;
+	 SCIP_Real lincoef;
+	 int nlinvars;
+
+	 /* allocate temporary memory */
+	 SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nvars) );
+	 SCIP_CALL( SCIPallocBufferArray(scip, &conscoefs, nvars) );
+
+	 /* get variables and coefficients */
+	 SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, consvars, conscoefs, &nconsvars) );
+	 assert(nconsvars == consdata->nlinvars + nconsanddatas);
+	 assert(consvars != NULL);
+	 assert(conscoefs != NULL);
 
 #ifndef NDEBUG
-      /* all coefficients have to be 1 */
-      for( v = 0; v < nvars; ++v )
-	 assert(SCIPisEQ(scip, conscoefs[v], 1.0));
+	 /* all coefficients have to be 1 */
+	 for( v = 0; v < nvars; ++v )
+	    assert(SCIPisEQ(scip, conscoefs[v], 1.0));
 #endif
-      /* calculate all not artificial linear variables */
-      SCIP_CALL( getLinVarsAndAndRess(scip, cons, consvars, conscoefs, nconsvars, &linvar, &lincoef, &nlinvars, NULL, NULL, NULL) );
-      assert(nlinvars == 1);
+	 linvar = NULL;
 
-      SCIPfreeBufferArray(scip, &conscoefs);
-      SCIPfreeBufferArray(scip, &consvars);
+	 /* calculate all not artificial linear variables */
+	 SCIP_CALL( getLinVarsAndAndRess(scip, cons, consvars, conscoefs, nconsvars, &linvar, &lincoef, &nlinvars, NULL, NULL, NULL) );
+	 assert(nlinvars == 1);
+	 assert(linvar != NULL);
 
-      /* if all and-constraints have exactly two variables */
-      if( nvars == 2 )
-      {
-	 SCIP_VAR* var;
-	 SCIP_Bool redundant;
-	 SCIP_Bool infeasible;
-	 SCIP_Bool aggregated;
+	 SCIPfreeBufferArray(scip, &conscoefs);
+	 SCIPfreeBufferArray(scip, &consvars);
 
-	 assert(samepos >= 0 && samepos <= 1);
+	 /* if all and-constraints have exactly two variables */
+	 if( nvars == 2 )
+	 {
+	    SCIP_VAR* var;
+	    SCIP_Bool breaked;
+	    SCIP_Bool redundant;
+	    SCIP_Bool infeasible;
+	    SCIP_Bool aggregated;
 
-	 if( samepos == 0 )
-	    var = allvars[1];
-	 else
-	    var = allvars[0];
+	    var = NULL;
+	    breaked = FALSE;
 
-	 SCIPdebugMessage("aggregating variables <%s> == 1 - <%s> in pseudoboolean <%s>\n", SCIPvarGetName(linvar), SCIPvarGetName(var), SCIPconsGetName(cons));
+	    /* find necessary variables, which only occur once */
+	    for( i = 1; i >= 0; --i )
+	    {
+	       for( v = nvars - 1; v >= 0; --v )
+	       {
+		  assert(i == 1 || SCIPvarGetNegatedVar(allvars[v]) != NULL);
+		  if( varcount[i][v] == 2 )
+		  {
+		     var = i ? SCIPvarGetNegatedVar(allvars[v]) : allvars[v];
 
-	 SCIP_CALL( SCIPaggregateVars(scip, linvar, var, 1.0, 1.0, 1.0, &infeasible, &redundant, &aggregated) );
+		     breaked = TRUE;
+		     break;
+		  }
+	       }
 
-	 SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-	 SCIPdebugMessage("aggregation of variables: <%s> == 1 - <%s>, infeasible = %u, aggregated = %u\n", SCIPvarGetName(linvar), SCIPvarGetName(var), infeasible, aggregated);
+	       if( breaked )
+		  break;
+	    }
+	    assert(var != NULL);
 
-	 if( infeasible )
-	    *cutoff = TRUE;
+	    SCIPdebugMessage("aggregating variables <%s> == 1 - <%s> in pseudoboolean <%s>\n", SCIPvarGetName(linvar), SCIPvarGetName(var), SCIPconsGetName(cons));
+
+	    SCIP_CALL( SCIPaggregateVars(scip, linvar, var, 1.0, 1.0, 1.0, &infeasible, &redundant, &aggregated) );
+
+	    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+	    SCIPdebugMessage("aggregation of variables: <%s> == 1 - <%s>, infeasible = %u, aggregated = %u\n", SCIPvarGetName(linvar), SCIPvarGetName(var), infeasible, aggregated);
+
+	    if( infeasible )
+	       *cutoff = TRUE;
+	    else
+	    {
+	       if( aggregated )
+		  ++(*naggrvars);
+
+	       /* delete old constraints */
+	       SCIP_CALL( SCIPdelCons(scip, consdata->lincons) );
+	       SCIP_CALL( SCIPdelCons(scip, cons) );
+	       (*ndelconss) += 2;
+	    }
+	 }
+#if 0
 	 else
 	 {
-	    if( aggregated )
-	       ++(*naggrvars);
-
-	    /* delete old constraints */
-	    SCIP_CALL( SCIPdelCons(scip, consdata->lincons) );
-	    SCIP_CALL( SCIPdelCons(scip, cons) );
-	    (*ndelconss) += 2;
+	    /* @todo */
+	    /* delete allvars[samepos] from all and-constraints which appear in this pseudoboolean constraint, and delete
+	     * all but one of the remaining and-constraint
+	     *
+	     * it is the same like aggregating linvar with the resultant of the product, which is the same in all and-
+	     * constraints without allvars[samepos]
+	     *
+	     * e.g. x1 + x2*x_3*...x_n + ~x2*x_3*...x_n = 1 => x1 = 1 - x_3*...x_n
+	     */
 	 }
-      }
-#if 0
-      else
-      {
-	 /* @todo */
-	 /* delete allvars[samepos] from all and-constraints which appear in this pseudoboolean constraint, and delete
-	  * all but one of the remaining and-constraint
-	  *
-	  * it is the same like aggregating linvar with the resultant of the product, which is the same in all and-
-	  * constraints without allvars[samepos]
-	  *
-	  * e.g. x1 + x2*x_3*...x_n + ~x2*x_3*...x_n = 1 => x1 = 1 - x_3*...x_n
-	  */
-      }
 #endif
+      }
+      /* we have a constraint in the form of: x1 + x2 * x3 + ~x2 * x3 + ~x2 * ~x3 == 1
+       * this leads to the aggregation x1 = x2 * ~x3
+       *
+       * @todo: implement more general step, that one combination of the variables in the and constraints is missing in
+       *        the pseudoboolean constraint, which leads to the same result, that the only linear variable is the
+       *        resultant of the missing and-constraint
+       */
+      else if( nvars == 2 && nconsanddatas == 3 && twocount == 2 && onecount == 2 && zerocount == 0)
+      {
+	 SCIP_VAR** consvars;
+	 SCIP_Real* conscoefs;
+	 int nconsvars;
+	 SCIP_VAR* linvar;
+	 SCIP_Real lincoef;
+	 int nlinvars;
+	 SCIP_VAR* newandvars[2];
+	 SCIP_Bool breaked;
+	 SCIP_CONS* newcons;
+	 char name[SCIP_MAXSTRLEN];
+
+	 /* allocate temporary memory */
+	 SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nvars) );
+	 SCIP_CALL( SCIPallocBufferArray(scip, &conscoefs, nvars) );
+
+	 /* get variables and coefficients */
+	 SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, consvars, conscoefs, &nconsvars) );
+	 assert(nconsvars == consdata->nlinvars + nconsanddatas);
+	 assert(consvars != NULL);
+	 assert(conscoefs != NULL);
+
+#ifndef NDEBUG
+	 /* all coefficients have to be 1 */
+	 for( v = 0; v < nvars; ++v )
+	    assert(SCIPisEQ(scip, conscoefs[v], 1.0));
+#endif
+	 linvar = NULL;
+
+	 /* calculate all not artificial linear variables */
+	 SCIP_CALL( getLinVarsAndAndRess(scip, cons, consvars, conscoefs, nconsvars, &linvar, &lincoef, &nlinvars, NULL, NULL, NULL) );
+	 assert(nlinvars == 1);
+	 assert(linvar != NULL);
+
+	 SCIPfreeBufferArray(scip, &conscoefs);
+	 SCIPfreeBufferArray(scip, &consvars);
+
+	 newandvars[0] = NULL;
+	 newandvars[1] = NULL;
+	 breaked = FALSE;
+
+	 /* find necessary variables, which only occur once */
+	 for( i = 1; i >= 0; --i )
+	 {
+	    for( v = nvars - 1; v >= 0; --v )
+	    {
+	       assert(i == 1 || SCIPvarGetNegatedVar(allvars[v]) != NULL);
+	       if( varcount[i][v] == 1 )
+	       {
+		  if( newandvars[0] == NULL )
+		     newandvars[0] = i ? SCIPvarGetNegatedVar(allvars[v]) : allvars[v];
+		  else
+		  {
+		     assert(newandvars[1] == NULL);
+		     newandvars[1] = i ? SCIPvarGetNegatedVar(allvars[v]) : allvars[v];
+
+		     breaked = TRUE;
+		     break;
+		  }
+	       }
+	    }
+
+	    if( breaked )
+	       break;
+	 }
+	 assert(newandvars[0] != NULL && newandvars[1] != NULL);
+
+	 (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "andcons_%s_%s", SCIPconsGetName(cons), SCIPvarGetName(linvar));
+	 SCIP_CALL( SCIPcreateConsAnd(scip, &newcons, name, linvar, nvars, newandvars,
+	       TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+	 SCIP_CALL( SCIPaddCons(scip, newcons) );
+	 SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
+	 SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+
+	 /* delete old constraints */
+	 SCIP_CALL( SCIPdelCons(scip, consdata->lincons) );
+	 SCIP_CALL( SCIPdelCons(scip, cons) );
+	 (*ndelconss) += 2;
+      }
    }
 
    if( SCIPconsIsDeleted(cons) )
@@ -6482,7 +6600,8 @@ SCIP_RETCODE findAggregation(
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &negated);
    SCIPfreeBufferArray(scip, &repvars);
-   SCIPfreeBufferArray(scip, &allstatus);
+   SCIPfreeBufferArray(scip, &(varcount[1]));
+   SCIPfreeBufferArray(scip, &(varcount[0]));
    SCIPfreeBufferArray(scip, &allvars);
 
 
