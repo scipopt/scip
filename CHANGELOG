@@ -4,7 +4,7 @@ SCIP version NEXT
 interface
 - new method SCIPisConflictAnalysisApplicable() which return FALSE is the conflict will not runs; can be used
   to avoid unnecessary initialization of the conflict analysis
-- the methods SCIPsortedvecInsert*() have an additional parameter which can be used to receive the position where 
+- the methods SCIPsortedvecInsert*() have an additional parameter which can be used to receive the position where
   the new element was inserted, if this is not of interest a NULL pointer can be given
 - SCIPcolGetStrongbranchLPAge(), SCIPgetVarStrongbranchLPAge(), SCIPgetNLPs(), SCIPgetNPrimalLPs(), SCIPgetNDualLPs(),
   SCIPgetNBarrierLPs(), SCIPgetNResolveLPs(), SCIPgetNPrimalResolveLPs(), SCIPgetNDualResolveLPs(), SCIPgetNNodeLPs(),
@@ -21,6 +21,8 @@ interface
 - rename SCIPvarGetWorstBound() to SCIPvarGetWorstBoundLocal()
 - new methods SCIPvarGetBestBoundGlobal() to SCIPvarGetWorstBoundGlobal()
 - new method SCIPcalcBinomCoef() in pub_misc.h and misc.c which calculates a binomial coefficient up to 33 over 16
+- new method SCIPheurPassSolAddSol() in heur_trysol.c; solution which are passed via this method are just added without any
+  feasibility check
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
