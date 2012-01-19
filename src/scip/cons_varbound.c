@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+#define SCIP_DEBUG
 /**@file   cons_varbound.c
  * @brief  Constraint handler for variable bound constraints \f$lhs \le x + c y \le rhs\f$.
  * @author Tobias Achterberg
@@ -2288,7 +2288,7 @@ SCIP_RETCODE applyFixings(
       SCIP_CALL( SCIPaddCons(scip, newcons) );
 
       SCIPdebugMessage("resolved multi aggregation in varbound constraint <%s> by creating a new linear constraint\n", SCIPconsGetName(cons));
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons) ) );
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
 
       SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
 
