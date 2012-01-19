@@ -88,7 +88,10 @@ SCIP version 2.1.2
 
 fixed bugs:
 - fixed bug in SCIPsolveKnapsackExactly()
-- fixed bug in varAddTransitiveImplic() in var.c, when adding implications on special aggregated, namely negated, variables
+- fixed bug in varAddTransitiveImplic() in var.c, when adding implications on special aggregated, namely negated,
+  variables
+- fixed bug in heur_undercover.c, where a variable with fixed bounds but not of status SCIP_VARSTATUS_FIXED was wrongly
+  handled
 
 performance improvements:
 - fixed performance issue in debug mode, where SCIPvarGetLPSol_rec() calculated a value to often, which in the end lead

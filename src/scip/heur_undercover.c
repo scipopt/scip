@@ -652,6 +652,7 @@ SCIP_RETCODE createCoveringProblem(
          SCIP_CONS* andcons;
          SCIP_CONS* coveringcons;
          SCIP_VAR** andvars;
+         SCIP_VAR* andres;
          SCIP_VAR** coveringconsvars;
          SCIP_Real* coveringconsvals;
          SCIP_Bool negated;
@@ -740,7 +741,9 @@ SCIP_RETCODE createCoveringProblem(
          negated = FALSE;
 
          /* if constraints with inactive variables are present, we have to find the corresponding active variable */
-         probindex = SCIPvarGetProbindex(SCIPgetResultantAnd(scip, andcons));
+	 andres = SCIPgetResultantAnd(scip, andcons);
+	 assert(andres != NULL);
+         probindex = SCIPvarGetProbindex(andres);
          negated = FALSE;
 
          if( probindex == -1 )
@@ -781,6 +784,14 @@ SCIP_RETCODE createCoveringProblem(
                negated = FALSE;
             }
          }
+	 else if( SCIPvarGetLbGlobal(andres) > 0.5 || SCIPvarGetUbGlobal(andres) < 0.5 )
+	 {
+	    /* free memory for covering constraint */
+	    SCIPfreeBufferArray(coveringscip, &coveringconsvals);
+	    SCIPfreeBufferArray(coveringscip, &coveringconsvars);
+
+	    continue;
+	 }
          assert(probindex >= 0);
          assert(!termIsConstant(scip, (negated ? SCIPvarGetNegatedVar(vars[probindex]) : vars[probindex]), 1.0, globalbounds));
 
