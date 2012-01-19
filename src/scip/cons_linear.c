@@ -5978,14 +5978,14 @@ SCIP_RETCODE convertLongEquality(
       SCIP_Real newrhs;
       SCIP_Bool aggregated;
 
-      /* do not multi aggregate binary variables */
-      if( bestslacktype == SCIP_VARTYPE_BINARY )
-         return SCIP_OKAY;
-
       /* we found a slack variable that only occurs in at most one other constraint:
        *   a_1*x_1 + ... + a_k*x_k + a'*s == rhs  ->  s == rhs - a_1/a'*x_1 - ... - a_k/a'*x_k
        */
       assert(bestslackpos < consdata->nvars);
+
+      /* do not multi aggregate binary variables */
+      if( SCIPvarIsBinary(vars[bestslackpos]) )
+         return SCIP_OKAY;
 
       /* convert equality into inequality by deleting the slack variable:
        *  x + a*s == b, l <= s <= u   ->  b - a*u <= x <= b - a*l
