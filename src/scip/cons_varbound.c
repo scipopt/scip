@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_DEBUG
+
 /**@file   cons_varbound.c
  * @brief  Constraint handler for variable bound constraints \f$lhs \le x + c y \le rhs\f$.
  * @author Tobias Achterberg
