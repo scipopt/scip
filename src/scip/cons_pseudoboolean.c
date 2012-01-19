@@ -6829,6 +6829,10 @@ SCIP_RETCODE checkConsConsistency(
    
    assert(scip != NULL);
    assert(cons != NULL);
+
+   if( SCIPgetStage(scip) == SCIP_STAGE_FREETRANS )
+      return SCIP_OKAY;
+
    assert(SCIPconsIsActive(cons));
 
    consdata = SCIPconsGetData(cons);
@@ -6836,19 +6840,19 @@ SCIP_RETCODE checkConsConsistency(
 
    /* check standard pointers and sizes */
    assert(consdata->lincons != NULL);
-   assert(SCIPconsIsActive(consdata->lincons));
+   assert(!SCIPconsIsDeleted(consdata->lincons));
    assert(consdata->linconstype > SCIP_INVALIDCONS);
-   assert(consdata->andconss != NULL);
-   assert(consdata->nandconss > 0);
-   assert(consdata->nandconss <= consdata->sandconss);
+   assert(consdata->consanddatas != NULL);
+   assert(consdata->nconsanddatas > 0);
+   assert(consdata->nconsanddatas <= consdata->sconsanddatas);
 
    /* get sides of linear constraint */
    SCIP_CALL( getLinearConsSides(scip, consdata->lincons, consdata->linconstype, &newlhs, &newrhs) );
    assert(!SCIPisInfinity(scip, newlhs));
    assert(!SCIPisInfinity(scip, -newrhs));
    assert(SCIPisLE(scip, newlhs, newrhs));
-   assert(SCIPisEQ(scip, newrhs, consdata->rhs);
-   assert(SCIPisEQ(scip, newlhs, consdata->lhs);
+   assert(SCIPisEQ(scip, newrhs, consdata->rhs) || SCIPisEQ(scip, newrhs, -consdata->lhs));
+   assert(SCIPisEQ(scip, newlhs, consdata->lhs) || SCIPisEQ(scip, newlhs, -consdata->rhs));
 
    /* check number of linear variables */
    SCIP_CALL( getLinearConsNVars(scip, consdata->lincons, consdata->linconstype, &nvars) );
@@ -6864,30 +6868,31 @@ SCIP_RETCODE checkConsConsistency(
    SCIP_CALL( SCIPallocBufferArray(scip, &alreadyfound, nvars) );
    BMSclearMemoryArray(alreadyfound, nvars);
 
-   /* get variables and coefficients */ 
+   /* get variables and coefficients */
    SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, vars, coefs, &nvars) );
    assert(nvars == 0 || (vars != NULL && coefs != NULL));
 
    /* calculate all not artificial linear variables and all artificial and-resultants which will be ordered like the
     * 'consanddatas' such that the and-resultant of the and-constraint is the and-resultant in the 'andress' array
-    * afterwards 
+    * afterwards
     */
    SCIP_CALL( getLinVarsAndAndRess(scip, cons, vars, coefs, nvars, linvars, lincoefs, &nlinvars, andress, andcoefs, &nandress) );
    assert(nlinvars == consdata->nlinvars);
 
    for( v = nandress - 1; v >= 0; --v )
    {
-      for(c = consdata->nandconss - 1; c >= 0; --c )
+      for(c = consdata->nconsanddatas - 1; c >= 0; --c )
       {
-         assert(consdata->andconss[c] != NULL);
-         res = SCIPgetResultantAnd(scip, consdata->andconss[c]);
+         assert(consdata->consanddatas[c] != NULL);
+         assert(consdata->consanddatas[c]->cons != NULL);
+         res = SCIPgetResultantAnd(scip, consdata->consanddatas[c]->cons);
          assert(res != NULL);
          if( res == andress[v] )
          {
             /* resultant should be either active or a negated variable of an active one */
             assert(SCIPvarIsActive(res) || (SCIPvarIsNegated(res) && SCIPvarIsActive(SCIPvarGetNegationVar(res))));
             assert(!alreadyfound[c]);
-            
+
             /* all and-resultants should be merged, so it is only allowed that each variable exists one time */
             alreadyfound[c] = TRUE;
             break;
@@ -7963,7 +7968,10 @@ SCIP_DECL_CONSLOCK(consLockPseudoboolean)
    assert(consdata != NULL);
 
 #ifdef SCIP_DEBUG
-   SCIP_CALL( checkConsConsistency(scip, cons) );
+   if( !SCIPconsIsDeleted(cons) )
+   {
+      SCIP_CALL( checkConsConsistency(scip, cons) );
+   }
 #endif
 
    lhs = consdata->lhs;
