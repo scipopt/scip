@@ -3440,6 +3440,9 @@ SCIP_RETCODE correctLocksAndCaptures(
       /* collect new consanddata objects in sorted order due to the variable index of corresponding and-resultants */
       if( SCIPvarGetIndex(res1) < SCIPvarGetIndex(res2) )
       {
+	 assert(consanddatas[c]->nuses > 0);
+	 --(consanddatas[c]->nuses);
+
          /* remove old locks */
          SCIP_CALL( removeOldLocks(scip, cons, consanddatas[c], oldandcoefs[c], consdata->lhs, consdata->rhs) );
          ++c;
@@ -3450,7 +3453,8 @@ SCIP_RETCODE correctLocksAndCaptures(
       {
          newconsanddatas[nnewconsanddatas] = (CONSANDDATA*) SCIPhashmapGetImage(conshdlrdata->hashmap, (void*)res2);
          newandcoefs[nnewconsanddatas] = andcoefs[c1];
-      
+	 ++(newconsanddatas[nnewconsanddatas]->nuses);
+
          /* add new locks */
          SCIP_CALL( addNewLocks(scip, cons, newconsanddatas[nnewconsanddatas], newandcoefs[nnewconsanddatas], newlhs, newrhs) );
          ++c1;
@@ -3536,6 +3540,9 @@ SCIP_RETCODE correctLocksAndCaptures(
             continue;
          }
 
+	 assert(consanddatas[c]->nuses > 0);
+	 --(consanddatas[c]->nuses);
+
          /* remove old locks */
          SCIP_CALL( removeOldLocks(scip, cons, consanddatas[c], oldandcoefs[c], consdata->lhs, consdata->rhs) );
          consdata->changed = TRUE;
@@ -3554,6 +3561,7 @@ SCIP_RETCODE correctLocksAndCaptures(
 
          newconsanddatas[nnewconsanddatas] = (CONSANDDATA*) SCIPhashmapGetImage(conshdlrdata->hashmap, (void*)res2);
          newandcoefs[nnewconsanddatas] = andcoefs[c1];
+	 ++(newconsanddatas[nnewconsanddatas]->nuses);
 
          /* add new locks */
          SCIP_CALL( addNewLocks(scip, cons, newconsanddatas[nnewconsanddatas], newandcoefs[nnewconsanddatas], newlhs, newrhs) );
@@ -4175,6 +4183,111 @@ SCIP_RETCODE correctConshdlrdata(
          continue;
       }
 
+      /* the consanddata object is not used anymore, so extract the and constraint and delete other data */
+      if( consanddata->nuses == 0 )
+      {
+	 SCIP_Bool looseorcolumn;
+	 int varstatus;
+
+         tmpvars = consanddata->vars;
+
+         /* release all old variables */
+         for( v = consanddata->nvars - 1; v >= 0; --v )
+         {
+            assert(tmpvars[v] != NULL);
+            SCIP_CALL( SCIPreleaseVar(scip, &tmpvars[v]) );
+         }
+
+         tmpvars = consanddata->newvars;
+
+         /* release all new variables */
+         for( v = consanddata->nnewvars - 1; v >= 0; --v )
+         {
+            assert(tmpvars[v] != NULL);
+            SCIP_CALL( SCIPreleaseVar(scip, &tmpvars[v]) );
+         }
+
+         SCIPfreeBlockMemoryArrayNull(scip, &(consanddata->vars), consanddata->svars);
+         SCIPfreeBlockMemoryArrayNull(scip, &(consanddata->newvars), consanddata->snewvars);
+
+	 varstatus = SCIPvarGetStatus(SCIPgetResultantAnd(scip, consanddata->cons));
+	 looseorcolumn = (varstatus == SCIP_VARSTATUS_LOOSE || varstatus == SCIP_VARSTATUS_COLUMN);
+
+#if 1
+	 /* @note: due to aggregations or fixings the resultant may need to be propagated later on, so we can only
+	  *        delete the and-constraint if the resultant is of column or loose status
+	  *
+	  *        @todo: and is not an active variable of another (multi-)aggregated/negated variable
+	  */
+	 if( looseorcolumn )
+	 {
+	    SCIP_Bool delete = TRUE;
+	    const int nfixedvars = SCIPgetNFixedVars(scip);
+
+	    if( nfixedvars > 0 )
+	    {
+	       SCIP_VAR** fixedvars;
+	       int pos;
+#ifndef NDEBUG
+	       int w;
+#endif
+
+	       SCIP_CALL( SCIPduplicateBufferArray(scip, &fixedvars, SCIPgetFixedVars(scip), nfixedvars) );
+
+	       SCIPvarsGetProbvar(fixedvars, nfixedvars);
+
+#ifndef NDEBUG
+	       /* all inactive variables have a loose, column, fixed or multi-aggregated variable as counterpart, but
+		* because we have only binary variables (in pseudobbolean contest) there should also be no
+		* multi-aggregated variable
+		*
+		* @todo for multi-aggregated variables check also all active representatives for this resultant
+	        */
+	       for( w = nfixedvars - 1; w >= 0; --w )
+	       {
+		  assert(SCIPvarGetStatus(fixedvars[w]) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(fixedvars[w]) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(fixedvars[w]) == SCIP_VARSTATUS_FIXED);
+	       }
+#endif
+	       SCIPsortPtr((void**)fixedvars, SCIPvarComp, nfixedvars);
+
+	       if( SCIPsortedvecFindPtr((void**)fixedvars, SCIPvarComp, SCIPgetResultantAnd(scip, consanddata->cons), nfixedvars, &pos) )
+		  delete = FALSE;
+
+	       SCIPfreeBufferArray(scip, &fixedvars);
+	    }
+
+	    if( delete )
+	    {
+	       SCIP_CALL( SCIPdelCons(scip, consanddata->cons) );
+	    }
+	 }
+#endif
+
+	 if( !SCIPconsIsDeleted(consanddata->cons) )
+	 {
+	    /* change flags */
+	    if( !looseorcolumn )
+	    {
+	       SCIP_CALL( SCIPsetConsInitial(scip, consanddata->cons, FALSE) );
+#if 0
+	       SCIP_CALL( SCIPsetConsSeparated(scip, consanddata->cons, FALSE) );
+#endif
+	    }
+	    SCIP_CALL( SCIPsetConsChecked(scip, consanddata->cons, TRUE) );
+	 }
+
+         SCIP_CALL( SCIPreleaseCons(scip, &(consanddata->cons)) );
+         ++(*ndelconss);
+
+         consanddata->nvars = 0;
+         consanddata->svars = 0;
+         consanddata->nnewvars = 0;
+         consanddata->snewvars = 0;
+         consanddata->deleted = TRUE;
+
+         continue;
+      }
+
       cons = consanddata->cons;
       assert(cons != NULL);
 
@@ -4263,6 +4376,9 @@ SCIP_RETCODE updateConsanddataUses(
    assert(cons != NULL);
    assert(ndelconss != NULL);
 
+   /* can only be called when constraint was deleted */
+   assert(SCIPconsIsDeleted(cons));
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -4309,6 +4425,8 @@ SCIP_RETCODE updateConsanddataUses(
       {
          SCIP_VAR** tmpvars;
          int v;
+	 SCIP_Bool looseorcolumn;
+	 int varstatus;
 
          tmpvars = consanddata->vars;
 
@@ -4331,8 +4449,84 @@ SCIP_RETCODE updateConsanddataUses(
          SCIPfreeBlockMemoryArrayNull(scip, &(consanddata->vars), consanddata->svars);
          SCIPfreeBlockMemoryArrayNull(scip, &(consanddata->newvars), consanddata->snewvars);
 
-         /* delete and release and-constraint */
-         SCIP_CALL( SCIPdelCons(scip, consanddata->cons) );
+	 varstatus = SCIPvarGetStatus(SCIPgetResultantAnd(scip, consanddata->cons));
+	 looseorcolumn = (varstatus == SCIP_VARSTATUS_LOOSE || varstatus == SCIP_VARSTATUS_COLUMN);
+
+#if 1
+	 /* @note: due to aggregations or fixings the resultant may need to be propagated later on, so we can only
+	  *        delete the and-constraint if the resultant is of column or loose status
+	  *
+	  *        @todo: and is not an active variable of another (multi-)aggregated/negated variable
+	  */
+	 if( looseorcolumn )
+	 {
+	    SCIP_Bool delete = TRUE;
+	    const int nfixedvars = SCIPgetNFixedVars(scip);
+
+	    if( nfixedvars > 0 )
+	    {
+	       SCIP_VAR** fixedvars;
+	       int pos;
+#ifndef NDEBUG
+	       int w;
+#endif
+
+	       SCIP_CALL( SCIPduplicateBufferArray(scip, &fixedvars, SCIPgetFixedVars(scip), nfixedvars) );
+
+	       SCIPvarsGetProbvar(fixedvars, nfixedvars);
+
+#ifndef NDEBUG
+	       /* all inactive variables have a loose, column, fixed or multi-aggregated variable as counterpart, but
+		* because we have only binary variables (in pseudobbolean contest) there should also be no
+		* multi-aggregated variable
+		*
+		* @todo for multi-aggregated variables check also all active representatives for this resultant
+	        */
+	       for( w = nfixedvars - 1; w >= 0; --w )
+	       {
+		  assert(SCIPvarGetStatus(fixedvars[w]) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(fixedvars[w]) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(fixedvars[w]) == SCIP_VARSTATUS_FIXED);
+	       }
+#endif
+	       SCIPsortPtr((void**)fixedvars, SCIPvarComp, nfixedvars);
+
+	       if( SCIPsortedvecFindPtr((void**)fixedvars, SCIPvarComp, SCIPgetResultantAnd(scip, consanddata->cons), nfixedvars, &pos) )
+		  delete = FALSE;
+
+	       SCIPfreeBufferArray(scip, &fixedvars);
+	    }
+
+	    if( delete )
+	    {
+	       SCIP_CALL( SCIPdelCons(scip, consanddata->cons) );
+	    }
+	 }
+#endif
+
+#if 0
+	 /* @note: due to aggregations or fixings the resultant may need to be propagated later on, so we can only
+	  *        delete the and-constraint if the resultant is of column or loose status
+	  *
+	  *        @todo: and is not an active variable of another (multi-)aggregated/negated variable
+	  */
+	 if( looseorcolumn )
+	 {
+	    SCIP_CALL( SCIPdelCons(scip, consanddata->cons) );
+	 }
+#endif
+
+	 if( !SCIPconsIsDeleted(consanddata->cons) )
+	 {
+	    /* change flags */
+	    if( !looseorcolumn )
+	    {
+	       SCIP_CALL( SCIPsetConsInitial(scip, consanddata->cons, FALSE) );
+#if 0
+	       SCIP_CALL( SCIPsetConsSeparated(scip, consanddata->cons, FALSE) );
+#endif
+	    }
+	    SCIP_CALL( SCIPsetConsChecked(scip, consanddata->cons, TRUE) );
+	 }
+
          SCIP_CALL( SCIPreleaseCons(scip, &(consanddata->cons)) );
          ++(*ndelconss);
 

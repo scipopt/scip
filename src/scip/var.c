@@ -10140,6 +10140,26 @@ SCIP_DECL_HASHKEYVAL(SCIPvarGetHashkeyVal)
    return (unsigned int) SCIPvarGetIndex((SCIP_VAR*) key);
 }
 
+/** gets corresponding active, fixed, or multi-aggregated problem variables of given variables,
+ *  @note the content of the given array will/might change
+ */
+void SCIPvarsGetProbvar(
+   SCIP_VAR**            vars,               /**< array of problem variables */
+   int                   nvars               /**< number of variables */
+   )
+{
+   int v;
+
+   assert(vars != NULL || nvars == 0);
+
+   for( v = nvars - 1; v >= 0; --v )
+   {
+      assert(vars[v] != NULL);
+      vars[v] = SCIPvarGetProbvar(vars[v]);
+      assert(vars[v] != NULL);
+   }
+}
+
 /** gets corresponding active, fixed, or multi-aggregated problem variable of a variable */
 SCIP_VAR* SCIPvarGetProbvar(
    SCIP_VAR*             var                 /**< problem variable */
