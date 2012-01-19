@@ -139,7 +139,7 @@ BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT)
 OBJDIR		=	obj/O.$(BASE)
 BINOBJDIR	=	$(OBJDIR)/bin
 LIBOBJDIR	=	$(OBJDIR)/lib
-LIBOBJSUBDIRS	=       scip objscip blockmemshell tclique nlpi xml dijkstra
+LIBOBJSUBDIRS	=       scip objscip blockmemshell tclique nlpi xml dijkstra matrix
 SRCDIR		=	src
 LIBDIR		=	lib
 BINDIR		=	bin
@@ -577,6 +577,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/presol_implics.o \
 			scip/presol_inttobinary.o \
 			scip/presol_trivial.o \
+			scip/presol_concomp.o \
 			scip/prop_probing.o \
 			scip/prop_pseudoobj.o \
 			scip/prop_redcost.o \
@@ -660,7 +661,8 @@ SCIPLIBOBJ	=	scip/branch.o \
 			tclique/tclique_coloring.o \
 			tclique/tclique_graph.o \
 			dijkstra/dijkstra_bh.o \
-			xml/xmlparse.o
+			xml/xmlparse.o \
+			matrix/matrix.o
 
 SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
 SCIPLIBFILE	=	$(LIBDIR)/lib$(SCIPLIB).$(LIBEXT)
