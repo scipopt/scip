@@ -6637,21 +6637,30 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
 
          obj = varGetObjDelta(binvar);
 
-         /* if objective coefficient is 0, we prefer setting the binary variable to 1 */
+         /* check objective for possibly setting binary variable */
          if ( obj <= 0 )
          {
-            /* setting variable to 1 decreases objective -> check whether variable only occurs in the current constraint */
-            if ( SCIPvarGetNLocksUp(binvar) <= 1 && ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 1.0) )
+            /* setting variable to 1 does not increase objective  */
+            if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 1.0) )
             {
-               SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 1.0) );
-               *changed = TRUE;
-               /* make sure that the other case does not occur */
+               /* check whether variable only occurs in the current constraint */
+               if ( SCIPvarGetNLocksUp(binvar) <= 1 )
+               {
+                  SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 1.0) );
+                  *changed = TRUE;
+                  /* make sure that the other case does not occur if obj = 0: prefer variables set to 1 */
+                  obj = -1.0;
+               }
+            }
+            else
+            {
+               /* make sure that the other case does not occur if obj = 0: prefer variables set to 1 */
                obj = -1.0;
             }
          }
          if ( obj >= 0 )
          {
-            /* setting variable to 0 may decrease objective -> check whether variable only occurs in the current constraint
+            /* setting variable to 0 does not inrease objective -> check whether variable only occurs in the current constraint
              * note: binary variables are only locked up */
             if ( SCIPvarGetNLocksDown(binvar) <= 0 && ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 0.0) )
             {
