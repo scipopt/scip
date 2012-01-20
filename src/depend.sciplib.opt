@@ -3846,13 +3846,7 @@ $(LIBOBJDIR)/scip/reader_zpl.o: src/scip/reader_zpl.c src/scip/reader_zpl.h src/
  src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/set.h \
  src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
- src/scip/struct_event.h src/scip/cons_linear.h src/scip/cons_sos1.h \
- src/scip/cons_sos2.h src/scip/cons_indicator.h src/scip/cons_quadratic.h \
- src/scip/cons_nonlinear.h lib/zimplinc/zimpl/bool.h \
- lib/zimplinc/zimpl/ratlptypes.h lib/zimplinc/zimpl/mme.h \
- lib/zimplinc/zimpl/numb.h lib/zimplinc/zimpl/bound.h \
- lib/zimplinc/zimpl/mono.h lib/zimplinc/zimpl/term.h \
- lib/zimplinc/zimpl/xlpglue.h lib/zimplinc/zimpl/zimpllib.h
+ src/scip/struct_event.h
 $(LIBOBJDIR)/scip/sepa_clique.o: src/scip/sepa_clique.c src/scip/sepa_clique.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
@@ -5631,3 +5625,37 @@ $(LIBOBJDIR)/tclique/tclique_graph.o: src/tclique/tclique_graph.c src/tclique/tc
 $(LIBOBJDIR)/dijkstra/dijkstra_bh.o: src/dijkstra/dijkstra_bh.c src/dijkstra/dijkstra_bh.h
 $(LIBOBJDIR)/xml/xmlparse.o: src/xml/xmlparse.c src/blockmemshell/memory.h src/xml/xml.h \
  src/xml/xmldef.h
+$(LIBOBJDIR)/matrix/matrix.o: src/matrix/matrix.c src/scip/cons_knapsack.h src/scip/scip.h \
+ src/scip/def.h src/scip/type_retcode.h src/scip/message.h \
+ src/scip/type_message.h src/scip/struct_message.h src/scip/pub_message.h \
+ src/blockmemshell/memory.h src/scip/type_result.h src/scip/type_clock.h \
+ src/scip/type_misc.h src/scip/type_timing.h src/scip/type_scip.h \
+ src/scip/type_paramset.h src/scip/type_event.h src/scip/type_lp.h \
+ src/scip/type_nlp.h src/scip/type_var.h src/scip/type_prob.h \
+ src/scip/type_tree.h src/scip/type_branch.h src/scip/type_conflict.h \
+ src/scip/type_cons.h src/scip/type_sol.h src/scip/type_dialog.h \
+ src/scip/type_disp.h src/scip/type_heur.h src/scip/type_nodesel.h \
+ src/scip/type_presol.h src/scip/type_pricer.h src/scip/type_reader.h \
+ src/scip/type_relax.h src/scip/type_sepa.h src/scip/type_prop.h \
+ src/nlpi/type_nlpi.h src/nlpi/type_expr.h src/scip/pub_branch.h \
+ src/scip/pub_conflict.h src/scip/pub_cons.h src/scip/struct_cons.h \
+ src/scip/pub_cutpool.h src/scip/type_cutpool.h src/scip/pub_dialog.h \
+ src/scip/pub_disp.h src/scip/pub_event.h src/scip/pub_fileio.h \
+ src/scip/pub_heur.h src/scip/pub_implics.h src/scip/type_implics.h \
+ src/scip/struct_implics.h src/scip/pub_lp.h src/scip/type_set.h \
+ src/scip/type_stat.h src/scip/type_lpi.h src/scip/struct_lp.h \
+ src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/pub_nodesel.h \
+ src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
+ src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
+ src/scip/pub_prop.h src/scip/pub_sol.h src/scip/struct_sol.h \
+ src/scip/pub_tree.h src/scip/struct_tree.h src/scip/pub_var.h \
+ src/scip/type_history.h src/scip/struct_var.h src/scip/implics.h \
+ src/scip/history.h src/scip/struct_history.h src/scip/lpi.h \
+ src/nlpi/pub_expr.h src/nlpi/type_exprinterpret.h \
+ src/scip/intervalarith.h src/scip/struct_scip.h \
+ src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
+ src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/set.h \
+ src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
+ src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
+ src/scip/struct_event.h src/scip/cons_linear.h src/scip/cons_logicor.h \
+ src/scip/cons_setppc.h src/scip/cons_varbound.h src/matrix/matrix.h

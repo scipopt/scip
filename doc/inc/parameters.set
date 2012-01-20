@@ -1,4 +1,4 @@
-# SCIP version 2.1.1
+# SCIP version 2.1.2
 
 # branching score function ('s'um, 'p'roduct)
 # [type: char, range: {sp}, default: p]
@@ -177,8 +177,8 @@ limits/stallnodes = -1
 limits/memory = 1e+20
 
 # solving stops, if the relative gap = |primal - dual|/MIN(|dual|,|primal|) is below the given value
-# [type: real, range: [0,1.79769313486232e+308], default: 0]
-limits/gap = 0
+# [type: real, range: [0,1.79769313486232e+308], default: 1e-08]
+limits/gap = 1e-08
 
 # solving stops, if the absolute gap = |primalbound - dualbound| is below the given value
 # [type: real, range: [0,1.79769313486232e+308], default: 0]
@@ -401,8 +401,8 @@ numerics/epsilon = 1e-09
 numerics/sumepsilon = 1e-06
 
 # feasibility tolerance for constraints
-# [type: real, range: [1e-17,0.001], default: 1e-06]
-numerics/feastol = 1e-06
+# [type: real, range: [1e-17,0.001], default: 1e-08]
+numerics/feastol = 1e-08
 
 # feasibility tolerance for reduced costs in LP solution
 # [type: real, range: [1e-17,0.001], default: 1e-09]
@@ -423,6 +423,10 @@ numerics/pseudocosteps = 0.1
 # minimal objective distance value to use for branching pseudo cost updates
 # [type: real, range: [0,1.79769313486232e+308], default: 0.0001]
 numerics/pseudocostdelta = 0.0001
+
+# minimal decrease factor that causes the recomputation of a value (e.g., pseudo objective) instead of an update
+# [type: real, range: [0,1.79769313486232e+308], default: 10000000]
+numerics/recomputefac = 10000000
 
 # maximal number of presolving rounds (-1: unlimited, 0: off)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -1025,8 +1029,8 @@ constraints/nonlinear/upgrade/bivariate = FALSE
 constraints/bivariate/minefficacysepa = 0.0001
 
 # minimal target efficacy of a cut in order to add it to relaxation during enforcement (may be ignored)
-# [type: real, range: [0,1e+20], default: 2e-06]
-constraints/bivariate/minefficacyenfo = 2e-06
+# [type: real, range: [0,1e+20], default: 2e-08]
+constraints/bivariate/minefficacyenfo = 2e-08
 
 # maximal coef range of a cut (maximal coefficient divided by minimal coefficient) in order to be added to LP relaxation
 # [type: real, range: [0,1e+20], default: 10000000]
@@ -2099,6 +2103,42 @@ presolving/trivial/maxrounds = -1
 # should presolver be delayed, if other presolvers found reductions?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 presolving/trivial/delay = FALSE
+
+# priority of presolver <concomp>
+# [type: int, range: [-536870912,536870911], default: -9200000]
+presolving/concomp/priority = -9200000
+
+# maximal number of presolving rounds the presolver participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+presolving/concomp/maxrounds = -1
+
+# should presolver be delayed, if other presolvers found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+presolving/concomp/delay = TRUE
+
+# search for connected components (0: no search, 1: do search)
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+presolving/concomp/dosearch = TRUE
+
+# show single sizes (0: no, 1: show)
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+presolving/concomp/showsizes = FALSE
+
+# should the single components be written as an .lp-file?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+presolving/concomp/writeproblems = FALSE
+
+# maximum number of integer (or binary) variables to solve a subproblem directly (-1: no solving)
+# [type: int, range: [-1,2147483647], default: 20]
+presolving/concomp/maxintvars = 20
+
+# maximum number of nodes to be solved in subproblems
+# [type: longint, range: [-1,9223372036854775807], default: 10000]
+presolving/concomp/nodelimit = 10000
+
+# the weight of an integer variable compared to binary variables
+# [type: real, range: [0,1.79769313486232e+308], default: 1]
+presolving/concomp/intfactor = 1
 
 # priority of node selection rule <bfs> in standard mode
 # [type: int, range: [-536870912,536870911], default: 100000]
