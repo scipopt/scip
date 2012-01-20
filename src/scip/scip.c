@@ -22633,6 +22633,7 @@ void SCIPprintMemoryDiagnostic(
 #undef SCIPisSumRelLE
 #undef SCIPisSumRelGT
 #undef SCIPisSumRelGE
+#undef SCIPisUpdateUnreliable
 #undef SCIPcreateRealarray
 #undef SCIPfreeRealarray
 #undef SCIPextendRealarray
@@ -23444,6 +23445,31 @@ SCIP_Bool SCIPisSumRelGE(
 
    return SCIPsetIsSumRelGE(scip->set, val1, val2);
 }
+
+/** Checks, if an iterativly updated value is reliable or should be recomputed from scratch.
+ *  This is useful, if the value, e.g., the activity of a linear constraint or the pseudo objective value, gets a high
+ *  absolute value during the optimization process which is later reduced significantly. In this case, the last digits
+ *  were cancelled out when increasing the value and are random after decreasing it.
+ *  We dot not consider the cancellations which can occur during increasing the absolute value because they just cannot
+ *  be expressed using fixed precision floating point arithmetic, anymore.
+ *  In order to get more reliable values, the idea is to always store the last reliable value, where increasing the
+ *  absolute of the value is viewed as preserving reliability. Then, after each update, the new absolute value can be
+ *  compared against the last reliable one with this method, checking whether it was decreased by a factor of at least
+ *  "lp/recompfac" and should be recomputed.
+ */
+SCIP_Bool SCIPisUpdateUnreliable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             newvalue,           /**< new value after update */
+   SCIP_Real             oldvalue            /**< old value, i.e., last reliable value */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPcreateRealarray", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPsetIsUpdateUnreliable(scip->set, newvalue, oldvalue);
+}
+
 
 /** creates a dynamic array of real values */
 SCIP_RETCODE SCIPcreateRealarray(

@@ -8342,6 +8342,24 @@ SCIP_Bool SCIPisSumRelGE(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
+/** Checks, if an iterativly updated value is reliable or should be recomputed from scratch.
+ *  This is useful, if the value, e.g., the activity of a linear constraint or the pseudo objective value, gets a high
+ *  absolute value during the optimization process which is later reduced significantly. In this case, the last digits
+ *  were cancelled out when increasing the value and are random after decreasing it.
+ *  We dot not consider the cancellations which can occur during increasing the absolute value because they just cannot
+ *  be expressed using fixed precision floating point arithmetic, anymore.
+ *  In order to get more reliable values, the idea is to always store the last reliable value, where increasing the
+ *  absolute of the value is viewed as preserving reliability. Then, after each update, the new absolute value can be
+ *  compared against the last reliable one with this method, checking whether it was decreased by a factor of at least
+ *  "lp/recompfac" and should be recomputed.
+ */
+extern
+SCIP_Bool SCIPisUpdateUnreliable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             newvalue,           /**< new value after update */
+   SCIP_Real             oldvalue            /**< old value, i.e., last reliable value */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -8404,7 +8422,8 @@ SCIP_Bool SCIPisSumRelGE(
 #define SCIPisSumRelLE(scip, val1, val2)          SCIPsetIsSumRelLE((scip)->set, val1, val2) 
 #define SCIPisSumRelGT(scip, val1, val2)          SCIPsetIsSumRelGT((scip)->set, val1, val2) 
 #define SCIPisSumRelGE(scip, val1, val2)          SCIPsetIsSumRelGE((scip)->set, val1, val2) 
-                                                                                
+
+#define SCIPisUpdateUnreliable(scip, newval, oldval) SCIPsetIsUpdateUnreliable((scip)->set, newval, oldval)
 #endif
 
 /** outputs a real number, or "+infinity", or "-infinity" to a file */
