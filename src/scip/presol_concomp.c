@@ -483,7 +483,7 @@ SCIP_RETCODE createSubscips(
       //printf("++++++++++++++ sub-SCIP for component %d: %d vars (%d bin, %d int, %d cont), %d conss\n",
       //   presoldata->ncomponents, ntmpvars, nbinvars, nintvars, ntmpvars - nintvars - nbinvars, ntmpconss);
 
-      if( nbinvars + presoldata->intfactor * nintvars <= presoldata->maxintvars && !presoldata->writeproblems )
+      if( (nbinvars + presoldata->intfactor * nintvars <= presoldata->maxintvars) || presoldata->writeproblems )
       {
          /* build subscip for one component */
          SCIP_CALL( buildComponentSubscip(scip, presoldata, tmpconss, ntmpconss, tmpvars, ntmpvars, &nsolvedprobs, &ndeletedvars, &ndeletedconss, &subsolvetime) );
