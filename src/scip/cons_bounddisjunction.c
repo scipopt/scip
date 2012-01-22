@@ -2285,9 +2285,9 @@ SCIP_DECL_CONSRESPROP(consRespropBounddisjunction)
     * literals are violated
     */
    assert((boundtypes[inferinfo] == SCIP_BOUNDTYPE_LOWER
-         && SCIPisFeasGE(scip, SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE), bounds[inferinfo]))
+         && SCIPisGE(scip, SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE), bounds[inferinfo]))
       || (boundtypes[inferinfo] == SCIP_BOUNDTYPE_UPPER
-         && SCIPisFeasLE(scip, SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE), bounds[inferinfo])));
+         && SCIPisLE(scip, SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE), bounds[inferinfo])));
 
    for( v = 0; v < consdata->nvars; ++v )
    {
@@ -2299,9 +2299,9 @@ SCIP_DECL_CONSRESPROP(consRespropBounddisjunction)
           * we do not check for multi-aggregated variables, since SCIPvarGetXbAtIndex is not implemented for them */
          assert(SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_MULTAGGR
             || (boundtypes[v] == SCIP_BOUNDTYPE_LOWER
-               && SCIPisFeasLT(scip, SCIPvarGetUbAtIndex(vars[v], bdchgidx, TRUE), bounds[v]))
+               && SCIPisLT(scip, SCIPvarGetUbAtIndex(vars[v], bdchgidx, TRUE), bounds[v]))
             || (boundtypes[v] == SCIP_BOUNDTYPE_UPPER
-               && SCIPisFeasGT(scip, SCIPvarGetLbAtIndex(vars[v], bdchgidx, TRUE), bounds[v])));
+               && SCIPisGT(scip, SCIPvarGetLbAtIndex(vars[v], bdchgidx, TRUE), bounds[v])));
          SCIP_CALL( SCIPaddConflictBd(scip, vars[v], SCIPboundtypeOpposite(boundtypes[v]), bdchgidx) );
       }
    }
