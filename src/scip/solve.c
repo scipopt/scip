@@ -3113,15 +3113,25 @@ SCIP_RETCODE propAndSolve(
          }
          SCIPtreeSetFocusNodeLP(tree, FALSE);
          ++(*nlperrors);
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, actdepth == 0 ? SCIP_VERBLEVEL_HIGH : SCIP_VERBLEVEL_FULL,
             "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %d -- using pseudo solution instead (loop %d)\n",
             stat->nnodes, stat->nlps, *nlperrors);
       }
-         
+
       if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_TIMELIMIT || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_ITERLIMIT )
       {
          SCIPtreeSetFocusNodeLP(tree, FALSE);
          *forcedenforcement = TRUE;
+
+         SCIPmessagePrintVerbInfo(set->disp_verblevel, actdepth == 0 ? SCIP_VERBLEVEL_HIGH : SCIP_VERBLEVEL_FULL,
+            "(node %"SCIP_LONGINT_FORMAT") LP solver hit %s limit in LP %d -- using pseudo solution instead\n",
+            stat->nnodes, stat->nlps,  SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_TIMELIMIT ? "time" : "iteration");
+      }
+
+      if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+      {
+         SCIPmessagePrintVerbInfo(set->disp_verblevel, actdepth == 0 ? SCIP_VERBLEVEL_HIGH : SCIP_VERBLEVEL_FULL,
+            "(node %"SCIP_LONGINT_FORMAT") LP relaxation is unbounded (LP %d)\n", stat->nnodes, stat->nlps);
       }
 
       /* if we solve exactly, the LP claims to be infeasible but the infeasibility could not be proved,
