@@ -1000,3 +1000,91 @@
 =opt= small-investor-MVO-DAX30-return_0.0050-budget_5000-5500       9.79714333
 =opt= small-investor-MVO-SNP100-return_0.0030-budget_1000-1100      0.084068386
 =opt= small-investor-MVO-SNP100-return_0.0035-budget_2000-2200      0.263234059
+
+=opt= 0_box_topo_orig                   0
+=best= 10_box_topo_orig            247.714
+=opt= 11_box_topo_orig          166.21399
+=opt= 12_box_topo_orig             189.61
+=opt= 13_box_topo_orig         485.306925
+=best= 14_box_topo_orig           221.0288
+=opt= 15_box_topo_orig         485.306925
+=opt= 16_box_topo_orig                  0
+=opt= 17_box_topo_orig                  0
+=opt= 18_box_topo_orig                  0
+=opt= 19_box_topo_orig                  0
+=opt= 1_box_topo_orig                   0
+=opt= 20_box_topo_orig             23.112
+=inf= 21_box_topo_orig  
+=opt= 22_box_topo_orig             25.824
+=inf= 23_box_topo_orig  
+=opt= 24_box_topo_orig             130.43
+=opt= 25_box_topo_orig          308.60298
+=opt= 26_box_topo_orig             130.43
+=opt= 27_box_topo_orig          308.60298
+=best= 28_box_topo_orig             322.56
+=inf= 29_box_topo_orig  
+=opt= 2_box_topo_orig                   0
+=best= 30_box_topo_orig           211.0284
+=inf= 31_box_topo_orig  
+=best= 32_box_topo_orig             192.13
+=opt= 33_box_topo_orig         217.090367
+=best= 34_box_topo_orig             255.91
+=opt= 35_box_topo_orig         217.090367
+=opt= 36_box_topo_orig            195.066
+=opt= 37_box_topo_orig         256.665566
+=best= 38_box_topo_orig            235.866
+=opt= 39_box_topo_orig         256.665566
+=opt= 3_box_topo_orig                   0
+=best= 40_box_topo_orig             402.04
+=opt= 41_box_topo_orig         580.484818
+=best= 42_box_topo_orig             402.04
+=opt= 43_box_topo_orig         580.484818
+=best= 44_box_topo_orig            569.466
+=opt= 45_box_topo_orig         1041.42954
+=best= 46_box_topo_orig           638.7732
+=opt= 47_box_topo_orig         1041.42954
+=opt= 4_box_topo_orig              23.112
+=opt= 5_box_topo_orig          99.6714023
+=best= 6_box_topo_orig              63.912
+=opt= 7_box_topo_orig          99.6714023
+=best= 8_box_topo_orig             191.322
+=opt= 9_box_topo_orig           166.21399
+=opt= topo_orig_00000             67.1424
+=opt= topo_orig_00001              63.488
+=opt= topo_orig_00002             138.392
+=opt= topo_orig_00003          135.949396
+=opt= topo_orig_00004            193.9044
+=opt= topo_orig_00005           270.74826
+=opt= topo_orig_00006              271.61
+=best= topo_orig_00007          489.151533
+=opt= topo_orig_00008              125.48
+=opt= topo_orig_00009          125.488596
+=best= topo_orig_00010            444.0364
+=opt= topo_orig_00011          283.947151
+=best= topo_orig_00012            406.1616
+=best= topo_orig_00014            630.3672
+=best= topo_orig_00015          1512.35099
+=inf= topo_orig_00016   
+=opt= topo_orig_00017                1000
+=inf= topo_orig_00018   
+=opt= topo_orig_00019                2000
+=inf= topo_orig_00020   
+=opt= topo_orig_00021          2500.36939
+=inf= topo_orig_00022   
+=best= topo_orig_00023          8777.19582
+=best= topo_orig_00024            317.3764
+=best= topo_orig_00025          1271.13041
+=best= topo_orig_00027          597.936594
+=best= topo_orig_00031          832.106306
+=opt= topo_orig_00033          1164.81139
+=opt= topo_orig_00035          1501.38926
+=best= topo_orig_00037          3357.99508
+=best= topo_orig_00039           4838.6186
+=inf= topo_orig_00040   
+=opt= topo_orig_00041           1183.9344
+=inf= topo_orig_00042   
+=opt= topo_orig_00043          2477.76366
+=inf= topo_orig_00044   
+=best= topo_orig_00045          4684.46054
+=inf= topo_orig_00046   
+=best= topo_orig_00047          11789.7215
