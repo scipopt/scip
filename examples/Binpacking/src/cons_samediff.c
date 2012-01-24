@@ -585,6 +585,12 @@ SCIP_DECL_CONSPRINT(consPrintSamediff)
 /** constraint parsing method of constraint handler */
 #define consParseSamediff NULL
 
+/** constraint method of constraint handler which returns the variables (if possible) */
+#define consGetVarsSamediff NULL
+
+/** constraint method of constraint handler which returns the number of variables (if possible) */
+#define consGetNVarsSamediff NULL
+
 /*
  * constraint specific interface methods
  */
@@ -603,18 +609,18 @@ SCIP_RETCODE SCIPincludeConshdlrSamediff(
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopySamediff, consFreeSamediff, consInitSamediff, consExitSamediff, 
+         conshdlrCopySamediff, consFreeSamediff, consInitSamediff, consExitSamediff,
          consInitpreSamediff, consExitpreSamediff, consInitsolSamediff, consExitsolSamediff,
          consDeleteSamediff, consTransSamediff, consInitlpSamediff,
-         consSepalpSamediff, consSepasolSamediff, consEnfolpSamediff, consEnfopsSamediff, consCheckSamediff, 
+         consSepalpSamediff, consSepasolSamediff, consEnfolpSamediff, consEnfopsSamediff, consCheckSamediff,
          consPropSamediff, consPresolSamediff, consRespropSamediff, consLockSamediff,
-         consActiveSamediff, consDeactiveSamediff, 
+         consActiveSamediff, consDeactiveSamediff,
          consEnableSamediff, consDisableSamediff, consDelVarsSamediff,
          consPrintSamediff, consCopySamediff, consParseSamediff,
-         conshdlrdata) );
+         consGetVarsSamediff, consGetNVarsSamediff, conshdlrdata) );
 
    return SCIP_OKAY;
 }

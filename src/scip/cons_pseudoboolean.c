@@ -3368,7 +3368,11 @@ SCIP_DECL_CONSPARSE(consParsePseudoboolean)
 /** variable deletion method of constraint handler */
 #define consDelvarsPseudoboolean NULL
 
+/** constraint method of constraint handler which returns the variables (if possible) */
+#define consGetVarsPseudoboolean NULL
 
+/** constraint method of constraint handler which returns the number of variables (if possible) */
+#define consGetNVarsPseudoboolean NULL
 
 
 /*
@@ -3388,19 +3392,19 @@ SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
          conshdlrCopyPseudoboolean,
-         consFreePseudoboolean, consInitPseudoboolean, consExitPseudoboolean, 
+         consFreePseudoboolean, consInitPseudoboolean, consExitPseudoboolean,
          consInitprePseudoboolean, consExitprePseudoboolean, consInitsolPseudoboolean, consExitsolPseudoboolean,
          consDeletePseudoboolean, consTransPseudoboolean, consInitlpPseudoboolean,
-         consSepalpPseudoboolean, consSepasolPseudoboolean, consEnfolpPseudoboolean, consEnfopsPseudoboolean, consCheckPseudoboolean, 
+         consSepalpPseudoboolean, consSepasolPseudoboolean, consEnfolpPseudoboolean, consEnfopsPseudoboolean, consCheckPseudoboolean,
          consPropPseudoboolean, consPresolPseudoboolean, consRespropPseudoboolean, consLockPseudoboolean,
-         consActivePseudoboolean, consDeactivePseudoboolean, 
+         consActivePseudoboolean, consDeactivePseudoboolean,
          consEnablePseudoboolean, consDisablePseudoboolean, consDelvarsPseudoboolean,
          consPrintPseudoboolean, consCopyPseudoboolean, consParsePseudoboolean,
-         conshdlrdata) );
+         consGetVarsPseudoboolean, consGetNVarsPseudoboolean, conshdlrdata) );
 
    /* add pseudoboolean constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

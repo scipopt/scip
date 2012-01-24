@@ -8987,6 +8987,43 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
    return SCIP_OKAY;
 }
 
+/** constraint method of constraint handler which returns the variables (if possible) */
+static
+SCIP_DECL_CONSGETVARS(consGetVarsKnapsack)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( varssize > consdata->nvars )
+      (*success) = FALSE;
+   else
+   {
+      assert(vars != NULL);
+
+      BMScopyMemoryArray(vars, consdata->vars, consdata->nvars);
+      (*success) = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** constraint method of constraint handler which returns the number of variables (if possible) */
+static
+SCIP_DECL_CONSGETNVARS(consGetNVarsKnapsack)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   (*nvars) = consdata->nvars;
+   (*success) = TRUE;
+
+   return SCIP_OKAY;
+}
+
 /*
  * Event handler
  */
@@ -9082,22 +9119,22 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
          conshdlrCopyKnapsack,
-         consFreeKnapsack, consInitKnapsack, consExitKnapsack, 
+         consFreeKnapsack, consInitKnapsack, consExitKnapsack,
          consInitpreKnapsack, consExitpreKnapsack, consInitsolKnapsack, consExitsolKnapsack,
          consDeleteKnapsack, consTransKnapsack, consInitlpKnapsack,
-         consSepalpKnapsack, consSepasolKnapsack, consEnfolpKnapsack, consEnfopsKnapsack, consCheckKnapsack, 
+         consSepalpKnapsack, consSepasolKnapsack, consEnfolpKnapsack, consEnfopsKnapsack, consCheckKnapsack,
          consPropKnapsack, consPresolKnapsack, consRespropKnapsack, consLockKnapsack,
-         consActiveKnapsack, consDeactiveKnapsack, 
-         consEnableKnapsack, consDisableKnapsack,
-         consDelvarsKnapsack, consPrintKnapsack, consCopyKnapsack, consParseKnapsack,
-         conshdlrdata) );
+         consActiveKnapsack, consDeactiveKnapsack,
+         consEnableKnapsack, consDisableKnapsack, consDelvarsKnapsack,
+         consPrintKnapsack, consCopyKnapsack, consParseKnapsack,
+         consGetVarsKnapsack, consGetNVarsKnapsack, conshdlrdata) );
 
    if( SCIPfindConshdlr(scip,"linear") != NULL )
    {
       /* include the linear constraint to knapsack constraint upgrade in the linear constraint handler */
       SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdKnapsack, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) );
    }
-  
+
    /* add knapsack constraint handler parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/knapsack/sepacardfreq",

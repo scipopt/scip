@@ -6306,6 +6306,42 @@ SCIP_DECL_CONSPARSE(consParseAbspower)
 #define consParseAbspower NULL
 #endif
 
+/** constraint method of constraint handler which returns the variables (if possible) */
+static
+SCIP_DECL_CONSGETVARS(consGetVarsAbspower)
+{  /*lint --e{715}*/
+
+   if( varssize < 2 )
+      (*success) = FALSE;
+   else
+   {
+      SCIP_CONSDATA* consdata;
+      assert(cons != NULL);
+      assert(vars != NULL);
+
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
+
+      vars[0] = consdata->x;
+      vars[1] = consdata->z;
+      (*success) = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** constraint method of constraint handler which returns the number of variables (if possible) */
+static
+SCIP_DECL_CONSGETNVARS(consGetNVarsAbspower)
+{  /*lint --e{715}*/
+   (*nvars) = 2;
+   (*success) = TRUE;
+
+   return SCIP_OKAY;
+}
+
+
+
 /*
  * constraint specific interface methods
  */
@@ -6336,6 +6372,7 @@ SCIP_RETCODE SCIPincludeConshdlrAbspower(
          consActiveAbspower, consDeactiveAbspower,
          consEnableAbspower, consDisableAbspower, consDelvarsAbspower,
          consPrintAbspower, consCopyAbspower, consParseAbspower,
+         consGetVarsAbspower, consGetNVarsAbspower,
          conshdlrdata) );
 
    /* include the quadratic constraint upgrade in the quadratic constraint handler */

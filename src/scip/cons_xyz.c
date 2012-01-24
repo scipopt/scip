@@ -524,6 +524,33 @@ SCIP_DECL_CONSPARSE(consParseXyz)
 #endif
 
 
+/** constraint method of constraint handler which returns the variables (if possible) */
+#if 0
+static
+SCIP_DECL_CONSGETVARS(consGetVarsXyz)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of xyz power constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define consGetVarsXyz NULL
+#endif
+
+/** constraint method of constraint handler which returns the number of variables (if possible) */
+#if 0
+static
+SCIP_DECL_CONSGETNVARS(consGetNVarsXyz)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of xyz power constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define consGetNVarsXyz NULL
+#endif
 
 
 /*
@@ -555,8 +582,8 @@ SCIP_RETCODE SCIPincludeConshdlrXyz(
          consPropXyz, consPresolXyz, consRespropXyz, consLockXyz,
          consActiveXyz, consDeactiveXyz,
          consEnableXyz, consDisableXyz, consDelvarsXyz,
-         consPrintXyz, consCopyXyz, consParseXyz,
-         conshdlrdata) );
+         consPrintXyz, consCopyXyz, consParseXyz, consGetVarsDataXyz,
+         consGetVarsXyz, consGetNVarsXyz, conshdlrdata) );
 
 #ifdef LINCONSUPGD_PRIORITY
    if( SCIPfindConshdlr(scip,"linear") != NULL )

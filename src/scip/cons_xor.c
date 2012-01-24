@@ -2436,7 +2436,60 @@ SCIP_DECL_CONSPARSE(consParseXor)
    return SCIP_OKAY;
 }
 
+/** constraint method of constraint handler which returns the variables (if possible) */
+static
+SCIP_DECL_CONSGETVARS(consGetVarsXor)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
 
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->intvar == NULL )
+   {
+      if( varssize < consdata->nvars  )
+         (*success) = FALSE;
+      else
+      {
+         BMScopyMemoryArray(vars, consdata->vars, consdata->nvars);
+         (*success) = TRUE;
+      }
+   }
+   else
+   {
+      if( varssize < consdata->nvars  + 1 )
+         (*success) = FALSE;
+      else
+      {
+         BMScopyMemoryArray(vars, consdata->vars, consdata->nvars);
+         vars[consdata->nvars] = consdata->intvar;
+         (*success) = TRUE;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** constraint method of constraint handler which returns the number of variable (if possible) */
+static
+SCIP_DECL_CONSGETNVARS(consGetNVarsXor)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->intvar == NULL )
+      (*nvars) = consdata->nvars;
+   else
+      (*nvars) = consdata->nvars + 1;
+
+   (*success) = TRUE;
+
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods of event handler
@@ -2485,19 +2538,19 @@ SCIP_RETCODE SCIPincludeConshdlrXor(
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
          conshdlrCopyXor,
-         consFreeXor, consInitXor, consExitXor, 
+         consFreeXor, consInitXor, consExitXor,
          consInitpreXor, consExitpreXor, consInitsolXor, consExitsolXor,
          consDeleteXor, consTransXor, consInitlpXor,
-         consSepalpXor, consSepasolXor, consEnfolpXor, consEnfopsXor, consCheckXor, 
+         consSepalpXor, consSepasolXor, consEnfolpXor, consEnfopsXor, consCheckXor,
          consPropXor, consPresolXor, consRespropXor, consLockXor,
-         consActiveXor, consDeactiveXor, 
-         consEnableXor, consDisableXor,
-         consDelvarsXor, consPrintXor, consCopyXor, consParseXor,
-         conshdlrdata) );
+         consActiveXor, consDeactiveXor,
+         consEnableXor, consDisableXor, consDelvarsXor,
+         consPrintXor, consCopyXor, consParseXor,
+         consGetVarsXor, consGetNVarsXor, conshdlrdata) );
 
    /* add xor constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -2506,7 +2559,7 @@ SCIP_RETCODE SCIPincludeConshdlrXor(
          &conshdlrdata->presolpairwise, TRUE, DEFAULT_PRESOLPAIRWISE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/xor/presolusehashing",
-         "should hash table be used for detecting redundant constraints in advance", 
+         "should hash table be used for detecting redundant constraints in advance",
          &conshdlrdata->presolusehashing, TRUE, DEFAULT_PRESOLUSEHASHING, NULL, NULL) );
 
    return SCIP_OKAY;

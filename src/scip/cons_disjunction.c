@@ -608,7 +608,7 @@ SCIP_DECL_CONSPRINT(consPrintDisjunction)
 
 /** constraint copying method of constraint handler */
 static
-SCIP_DECL_CONSCOPY(consCopyConjuction)
+SCIP_DECL_CONSCOPY(consCopyDisjunction)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* sourcedata;
    SCIP_CONS** sourceconss;
@@ -655,8 +655,13 @@ SCIP_DECL_CONSCOPY(consCopyConjuction)
 }
 
 /** constraint parsing method of constraint handler */
-#define consParseConjuction NULL
+#define consParseDisjunction NULL
 
+/** constraint method of constraint handler which returns the variables (if possible) */
+#define consGetVarsDisjunction NULL
+
+/** constraint method of constraint handler which returns the number of variables (if possible) */
+#define consGetNVarsDisjunction NULL
 
 
 /*
@@ -676,18 +681,19 @@ SCIP_RETCODE SCIPincludeConshdlrDisjunction(
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
          conshdlrCopyDisjunction,
-         consFreeDisjunction, consInitDisjunction, consExitDisjunction, 
+         consFreeDisjunction, consInitDisjunction, consExitDisjunction,
          consInitpreDisjunction, consExitpreDisjunction, consInitsolDisjunction, consExitsolDisjunction,
          consDeleteDisjunction, consTransDisjunction, consInitlpDisjunction,
-         consSepalpDisjunction, consSepasolDisjunction, consEnfolpDisjunction, consEnfopsDisjunction, 
+         consSepalpDisjunction, consSepasolDisjunction, consEnfolpDisjunction, consEnfopsDisjunction,
          consCheckDisjunction, consPropDisjunction, consPresolDisjunction, consRespropDisjunction, consLockDisjunction,
-         consActiveDisjunction, consDeactiveDisjunction, 
-         consEnableDisjunction, consDisableDisjunction,
-         consDelvarsDisjunction, consPrintDisjunction, consCopyConjuction, consParseConjuction,
+         consActiveDisjunction, consDeactiveDisjunction,
+         consEnableDisjunction, consDisableDisjunction, consDelvarsDisjunction,
+         consPrintDisjunction, consCopyDisjunction, consParseDisjunction,
+         consGetVarsDisjunction, consGetNVarsDisjunction,
          conshdlrdata) );
 
    return SCIP_OKAY;

@@ -2808,6 +2808,44 @@ SCIP_DECL_CONSCOPY(consCopyLinking)
 /** constraint parsing method of constraint handler */
 #define consParseLinking NULL
 
+/** constraint method of constraint handler which returns the variables (if possible) */
+static
+SCIP_DECL_CONSGETVARS(consGetVarsLinking)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( varssize > consdata->nbinvars + 1 )
+      (*success) = FALSE;
+   else
+   {
+      assert(vars != NULL);
+
+      BMScopyMemoryArray(vars, consdata->binvars, consdata->nbinvars);
+      vars[consdata->nbinvars] = consdata->intvar;
+      (*success) = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** constraint method of constraint handler which returns the number of variables (if possible) */
+static
+SCIP_DECL_CONSGETNVARS(consGetNVarsLinking)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   (*nvars) = consdata->nbinvars + 1;
+   (*success) = TRUE;
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of event handler
  */
@@ -2886,17 +2924,16 @@ SCIP_RETCODE SCIPincludeConshdlrLinking(
          consSepalpLinking, consSepasolLinking, consEnfolpLinking, consEnfopsLinking, consCheckLinking,
          consPropLinking, consPresolLinking, consRespropLinking, consLockLinking,
          consActiveLinking, consDeactiveLinking,
-         consEnableLinking, consDisableLinking,
-         consDelvarsLinking, consPrintLinking, consCopyLinking, consParseLinking,
-         conshdlrdata) );
+         consEnableLinking, consDisableLinking, consDelvarsLinking,
+         consPrintLinking, consCopyLinking, consParseLinking,
+         consGetVarsLinking, consGetNVarsLinking, conshdlrdata) );
 
 
    /* include the linear constraint to linking constraint upgrade in the linear constraint handler */
    /* SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdLinking, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) ); */
 
-   
    /* add linking constraint handler parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, 
+   SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/linearize", "this constraint will not propagate or separate, linear and setppc are used?", 
          &conshdlrdata->linearize, FALSE, DEFAULT_LINEARIZE, NULL, NULL) );
 

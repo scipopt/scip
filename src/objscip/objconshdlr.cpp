@@ -545,6 +545,38 @@ SCIP_DECL_CONSPARSE(consParseObj)
 
    return SCIP_OKAY;
 }
+
+/** constraint method of constraint handler which returns the variables (if possible) */
+static
+SCIP_DECL_CONSGETVARS(consGetVarsObj)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->objconshdlr != NULL);
+
+   /* call virtual method of conshdlr object */
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_getvars(scip, conshdlr, cons, vars, varssize, success) );
+
+   return SCIP_OKAY;
+}
+
+/** constraint method of constraint handler which returns the number of variables (if possible) */
+static
+SCIP_DECL_CONSGETNVARS(consGetNVarsObj)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->objconshdlr != NULL);
+
+   /* call virtual method of conshdlr object */
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_getnvars(scip, conshdlr, cons, nvars, success) );
+
+   return SCIP_OKAY;
+}
 }
 
 
@@ -571,22 +603,22 @@ SCIP_RETCODE SCIPincludeObjConshdlr(
    conshdlrdata->deleteobject = deleteobject;
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, objconshdlr->scip_name_, objconshdlr->scip_desc_, 
+   SCIP_CALL( SCIPincludeConshdlr(scip, objconshdlr->scip_name_, objconshdlr->scip_desc_,
          objconshdlr->scip_sepapriority_, objconshdlr->scip_enfopriority_, objconshdlr->scip_checkpriority_,
          objconshdlr->scip_sepafreq_, objconshdlr->scip_propfreq_, objconshdlr->scip_eagerfreq_,
-         objconshdlr->scip_maxprerounds_, 
+         objconshdlr->scip_maxprerounds_,
          objconshdlr->scip_delaysepa_, objconshdlr->scip_delayprop_, objconshdlr->scip_delaypresol_,
          objconshdlr->scip_needscons_, objconshdlr->scip_timingmask_,
          conshdlrCopyObj,
-         consFreeObj, consInitObj, consExitObj, 
+         consFreeObj, consInitObj, consExitObj,
          consInitpreObj, consExitpreObj, consInitsolObj, consExitsolObj,
          consDeleteObj, consTransObj, consInitlpObj,
-         consSepalpObj, consSepasolObj, consEnfolpObj, consEnfopsObj, consCheckObj, 
+         consSepalpObj, consSepasolObj, consEnfolpObj, consEnfopsObj, consCheckObj,
          consPropObj, consPresolObj, consRespropObj, consLockObj,
-         consActiveObj, consDeactiveObj, 
-         consEnableObj, consDisableObj,
-         consDelVarsObj, consPrintObj, consCopyObj, consParseObj,
-         conshdlrdata) ); /*lint !e429*/
+         consActiveObj, consDeactiveObj,
+         consEnableObj, consDisableObj, consDelVarsObj,
+         consPrintObj, consCopyObj, consParseObj,
+         consGetVarsObj, consGetNVarsObj, conshdlrdata) ); /*lint !e429*/
 
    return SCIP_OKAY; /*lint !e429*/
 }

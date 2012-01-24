@@ -10366,6 +10366,44 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    return SCIP_OKAY;
 }
 
+
+/** constraint method of constraint handler which returns the variables (if possible) */
+static
+SCIP_DECL_CONSGETVARS(consGetVarsLinear)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( varssize > consdata->nvars )
+      (*success) = FALSE;
+   else
+   {
+      assert(vars != NULL);
+
+      BMScopyMemoryArray(vars, consdata->vars, consdata->nvars);
+      (*success) = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** constraint method of constraint handler which returns the number of variables (if possible) */
+static
+SCIP_DECL_CONSGETNVARS(consGetNVarsLinear)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   (*nvars) = consdata->nvars;
+   (*success) = TRUE;
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of event handler
  */
@@ -10714,7 +10752,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          consActiveLinear, consDeactiveLinear,
          consEnableLinear, consDisableLinear, consDelvarsLinear,
          consPrintLinear, consCopyLinear, consParseLinear,
-         conshdlrdata) );
+         consGetVarsLinear, consGetNVarsLinear, conshdlrdata) );
 
    if( SCIPfindConshdlr(scip, "quadratic") != NULL )
    {
