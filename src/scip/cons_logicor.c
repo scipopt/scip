@@ -3158,6 +3158,42 @@ SCIP_DECL_CONSPARSE(consParseLogicor)
    return SCIP_OKAY;
 }
 
+/** constraint method of constraint handler which returns the variables (if possible) */
+static
+SCIP_DECL_CONSGETVARS(consGetVarsLogicor)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( varssize > consdata->nvars )
+      (*success) = FALSE;
+   else
+   {
+      assert(vars != NULL);
+
+      BMScopyMemoryArray(vars, consdata->vars, consdata->nvars);
+      (*success) = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** constraint method of constraint handler which returns the number of variables (if possible) */
+static
+SCIP_DECL_CONSGETNVARS(consGetNVarsLogicor)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   (*nvars) = consdata->nvars;
+   (*success) = TRUE;
+
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods of event handler
@@ -3304,23 +3340,23 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
          conshdlrCopyLogicor,
-         consFreeLogicor, consInitLogicor, consExitLogicor, 
+         consFreeLogicor, consInitLogicor, consExitLogicor,
          consInitpreLogicor, consExitpreLogicor, consInitsolLogicor, consExitsolLogicor,
-         consDeleteLogicor, consTransLogicor, 
-         consInitlpLogicor, consSepalpLogicor, consSepasolLogicor, 
-         consEnfolpLogicor, consEnfopsLogicor, consCheckLogicor, 
+         consDeleteLogicor, consTransLogicor,
+         consInitlpLogicor, consSepalpLogicor, consSepasolLogicor,
+         consEnfolpLogicor, consEnfopsLogicor, consCheckLogicor,
          consPropLogicor, consPresolLogicor, consRespropLogicor, consLockLogicor,
          consActiveLogicor, consDeactiveLogicor,
-         consEnableLogicor, consDisableLogicor,
-         consDelvarsLogicor, consPrintLogicor, consCopyLogicor, consParseLogicor,
-         conshdlrdata) );
+         consEnableLogicor, consDisableLogicor, consDelvarsLogicor,
+         consPrintLogicor, consCopyLogicor, consParseLogicor,
+         consGetVarsLogicor, consGetNVarsLogicor, conshdlrdata) );
 
    conshdlrdata->conshdlrlinear = SCIPfindConshdlr(scip,"linear");
-   
+
    if( conshdlrdata->conshdlrlinear != NULL )
    {
       /* include the linear constraint to logicor constraint upgrade in the linear constraint handler */
@@ -3334,7 +3370,7 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
          &conshdlrdata->presolpairwise, TRUE, DEFAULT_PRESOLPAIRWISE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/logicor/presolusehashing",
-         "should hash table be used for detecting redundant constraints in advance", 
+         "should hash table be used for detecting redundant constraints in advance",
          &conshdlrdata->presolusehashing, TRUE, DEFAULT_PRESOLUSEHASHING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/logicor/dualpresolving",

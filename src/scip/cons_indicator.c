@@ -5369,6 +5369,11 @@ SCIP_DECL_CONSDISABLE(consDisableIndicator)
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
 #define consExitIndicator NULL
 
+/** constraint method of constraint handler which returns the variables (if possible) */
+#define consGetVarsIndicator NULL
+
+/** constraint method of constraint handler which returns the number of variables (if possible) */
+#define consGetNVarsIndicator NULL
 
 
 
@@ -5456,7 +5461,8 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
          consSepasolIndicator, consEnfolpIndicator, consEnfopsIndicator, consCheckIndicator,
          consPropIndicator, consPresolIndicator, consRespropIndicator, consLockIndicator,
          consActiveIndicator, consDeactiveIndicator, consEnableIndicator, consDisableIndicator,
-         consDelvarsIndicator, consPrintIndicator, consCopyIndicator, consParseIndicator, conshdlrdata) );
+         consDelvarsIndicator, consPrintIndicator, consCopyIndicator, consParseIndicator,
+         consGetVarsIndicator, consGetNVarsIndicator, conshdlrdata) );
 
    /* create conflict handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conflicthdlrdata) );

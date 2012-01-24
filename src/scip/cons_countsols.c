@@ -1706,10 +1706,17 @@ SCIP_DECL_CONSLOCK(consLockCountsols)
 #define consPrintCountsols NULL
 
 /** constraint copying method of constraint handler */
-#define consCopyCountsol NULL
+#define consCopyCountsols NULL
 
 /** constraint parsing method of constraint handler */
-#define consParseCountsol NULL
+#define consParseCountsols NULL
+
+/** constraint method of constraint handler which returns the variables (if possible) */
+#define consGetVarsCountsols NULL
+
+/** constraint method of constraint handler which returns the number of variable (if possible) */
+#define consGetNVarsCountsols NULL
+
 
 
 /*
@@ -2525,8 +2532,9 @@ SCIP_RETCODE SCIPincludeConshdlrCountsols(
          consSepalpCountsols, consSepasolCountsols, consEnfolpCountsols, consEnfopsCountsols, consCheckCountsols,
          consPropCountsols, consPresolCountsols, consRespropCountsols, consLockCountsols,
          consActiveCountsols, consDeactiveCountsols,
-         consEnableCountsols, consDisableCountsols,
-         consDelvarsCountsols, consPrintCountsols, consCopyCountsol, consParseCountsol,
+         consEnableCountsols, consDisableCountsols, consDelvarsCountsols,
+         consPrintCountsols, consCopyCountsols, consParseCountsols,
+         consGetVarsCountsols, consGetNVarsCountsols,
          conshdlrdata) );
 
    /* add countsols constraint handler parameters */

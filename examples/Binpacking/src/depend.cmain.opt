@@ -130,7 +130,8 @@ $(OBJDIR)/cmain.o: src/cmain.c ../../src/scip/scip.h ../../src/scip/def.h \
  ../../src/scip/heur_zirounding.h ../../src/scip/nodesel_bfs.h \
  ../../src/scip/nodesel_dfs.h ../../src/scip/nodesel_estimate.h \
  ../../src/scip/nodesel_hybridestim.h ../../src/scip/nodesel_restartdfs.h \
- ../../src/scip/presol_boundshift.h ../../src/scip/presol_dualfix.h \
+ ../../src/scip/presol_boundshift.h \
+ ../../src/scip/presol_convertinttobin.h ../../src/scip/presol_dualfix.h \
  ../../src/scip/presol_implics.h ../../src/scip/presol_inttobinary.h \
  ../../src/scip/presol_trivial.h ../../src/scip/prop_probing.h \
  ../../src/scip/prop_pseudoobj.h ../../src/scip/prop_redcost.h \
@@ -284,7 +285,8 @@ $(OBJDIR)/pricer_binpacking.o: src/pricer_binpacking.c \
  ../../src/scip/heur_zirounding.h ../../src/scip/nodesel_bfs.h \
  ../../src/scip/nodesel_dfs.h ../../src/scip/nodesel_estimate.h \
  ../../src/scip/nodesel_hybridestim.h ../../src/scip/nodesel_restartdfs.h \
- ../../src/scip/presol_boundshift.h ../../src/scip/presol_dualfix.h \
+ ../../src/scip/presol_boundshift.h \
+ ../../src/scip/presol_convertinttobin.h ../../src/scip/presol_dualfix.h \
  ../../src/scip/presol_implics.h ../../src/scip/presol_inttobinary.h \
  ../../src/scip/presol_trivial.h ../../src/scip/prop_probing.h \
  ../../src/scip/prop_pseudoobj.h ../../src/scip/prop_redcost.h \

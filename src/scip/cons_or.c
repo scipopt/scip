@@ -1943,6 +1943,43 @@ SCIP_DECL_CONSPARSE(consParseOr)
    return SCIP_OKAY;
 }
 
+/** constraint method of constraint handler which returns the variables (if possible) */
+static
+SCIP_DECL_CONSGETVARS(consGetVarsOr)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( varssize < consdata->nvars + 1 )
+      (*success) = FALSE;
+   else
+   {
+      BMScopyMemoryArray(vars, consdata->vars, consdata->nvars);
+      vars[consdata->nvars] = consdata->resvar;
+      (*success) = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** constraint method of constraint handler which returns the number of variable (if possible) */
+static
+SCIP_DECL_CONSGETNVARS(consGetNVarsOr)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   (*nvars) = consdata->nvars + 1;
+   (*success) = TRUE;
+
+   return SCIP_OKAY;
+}
 
 
 /*
@@ -1996,19 +2033,19 @@ SCIP_RETCODE SCIPincludeConshdlrOr(
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
          conshdlrCopyOr,
-         consFreeOr, consInitOr, consExitOr, 
+         consFreeOr, consInitOr, consExitOr,
          consInitpreOr, consExitpreOr, consInitsolOr, consExitsolOr,
          consDeleteOr, consTransOr, consInitlpOr,
-         consSepalpOr, consSepasolOr, consEnfolpOr, consEnfopsOr, consCheckOr, 
+         consSepalpOr, consSepasolOr, consEnfolpOr, consEnfopsOr, consCheckOr,
          consPropOr, consPresolOr, consRespropOr, consLockOr,
-         consActiveOr, consDeactiveOr, 
-         consEnableOr, consDisableOr,
-         consDelvarsOr, consPrintOr, consCopyOr, consParseOr,
-         conshdlrdata) );
+         consActiveOr, consDeactiveOr,
+         consEnableOr, consDisableOr, consDelvarsOr,
+         consPrintOr, consCopyOr, consParseOr,
+         consGetVarsOr, consGetNVarsOr, conshdlrdata) );
 
    return SCIP_OKAY;
 }

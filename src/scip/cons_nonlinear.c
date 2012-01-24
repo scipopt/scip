@@ -7868,6 +7868,11 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
    return SCIP_OKAY;
 }
 
+/** constraint method of constraint handler which returns the variables (if possible) */
+#define consGetVarsNonlinear NULL
+
+/** constraint method of constraint handler which returns the number of variables (if possible) */
+#define consGetNVarsNonlinear NULL
 /*
  * constraint specific interface methods
  */
@@ -7898,7 +7903,7 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
          consActiveNonlinear, consDeactiveNonlinear,
          consEnableNonlinear, consDisableNonlinear, consDelvarsNonlinear,
          consPrintNonlinear, consCopyNonlinear, consParseNonlinear,
-         conshdlrdata) );
+         consGetVarsNonlinear, consGetNVarsNonlinear, conshdlrdata) );
 
    /* add nonlinear constraint handler parameters */
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacysepa",

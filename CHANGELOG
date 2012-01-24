@@ -1,3 +1,84 @@
+SCIP version NEXT
+==================
+
+interface
+- new method SCIPisConflictAnalysisApplicable() which return FALSE is the conflict will not runs; can be used
+  to avoid unnecessary initialization of the conflict analysis
+- the methods SCIPsortedvecInsert*() have an additional parameter which can be used to receive the position where
+  the new element was inserted, if this is not of interest a NULL pointer can be given
+- SCIPcolGetStrongbranchLPAge(), SCIPgetVarStrongbranchLPAge(), SCIPgetNLPs(), SCIPgetNPrimalLPs(), SCIPgetNDualLPs(),
+  SCIPgetNBarrierLPs(), SCIPgetNResolveLPs(), SCIPgetNPrimalResolveLPs(), SCIPgetNDualResolveLPs(), SCIPgetNNodeLPs(),
+  SCIPgetNNodeInitLPs(), SCIPgetNDivingLPs(), SCIPgetNStrongbranchs(), SCIPgetNRootStrongbranchs() now return a longint
+  instead of an integer
+- added propagation timing as parameter "proptiming" to SCIP_DECL_CONSPROP() and SCIP_DECL_PROPEXEC() as well as to
+  the corresponding C++ wrapper classes
+- new method SCIPpropIsPresolDelayed() which return if a propagator is delay during presolving
+- changed parameters of function SCIPpropagateCutoffboundVar() in prop_pseudoobj.{c,h}
+- SCIPcomputeCoverUndercover() now has an additional parameter coverbd
+- the code in src/dijkstra and src/xml has been changed to (increasingly) conform to the SCIP coding style;
+  all function (and variable) names have been changed (do not contain "_" anymore).
+- rename SCIPvarGetBestBound() to SCIPvarGetBestBoundLocal()
+- rename SCIPvarGetWorstBound() to SCIPvarGetWorstBoundLocal()
+- new methods SCIPvarGetBestBoundGlobal() to SCIPvarGetWorstBoundGlobal()
+- new method SCIPcalcBinomCoef() in pub_misc.h and misc.c which calculates a binomial coefficient up to 33 over 16
+- new method SCIPheurPassSolAddSol() in heur_trysol.c; solution which are passed via this method are just added without any
+  feasibility check
+- new method SCIPvarsGetProbvar() in pub_var.h and var.c, which returns for a given array of variables the active, fixed
+  or multiaggregated representation
+- new method SCIPgetGlobalPseudoObjval() which returns the global pseudo objective value which is all variables
+  set to their best (w.r.t. the objective function) global bound
+- new method SCIPhashtableClear() which removes all elements of a hash table
+- new callback method in constraint handler SCIP_DECL_CONSGETVARSDATA which is optional and returns for a constraint
+  the involved variables
+- new callback methods in constraint handler SCIP_DECL_CONSGETVAR and SCIP_DECL_CONSGETVAR which are optional and 
+  returns for a constraint the involved variables and the number of variables
+- new methods SCIPgetConsVars() and SCIPgetConsNVars() which return for a given constraint the involved variables and 
+  the number of variables if the corresponding constraint supports this (optional) callbacks
+
+performance improvements:
+- improved scaling of linear constraints, linear constraints with integral variables will now be scale with
+  1e+06/MAX(maximal absolute coefficient, 1.0) instead of 1e+03/MAX(maximal absolute coefficient, 1.0);
+  if all coefficients are in absolute value equal they will be scaled by that
+- if probing reached the end of all variables it will restart the probing cycle correctly
+- improved intdiving heuristic by activating backtracking to a different fixing value
+- improved scaling by choosing the smallest scaler
+- if first root lp is solved and the optimality is rejected by SCIP, there won't be an unnecessary solving of the lp
+  from scratch again
+- automatically turn off separation in sepa_oddcycle if it was too unsuccessful within the last calls
+- use faster Dijkstra variants in sepa_oddcycle
+- improved pseduo objective propagator
+ 
+plugins:
+- added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.
+  for integer variable 0 <= x <= 10 the binary variables y0, y1, y2, and y3 are created, such that
+  1 y0 + 2 y1 + 4 y2 + 8 y3 <= 10 and x = 1 y0 + 2 y1 + 4 y2 + 8 y3
+
+fixed bugs:
+- fixed minor bugs with respect to counting generated and lifted cuts in sepa_oddcycle
+- fixed bug in heur_zirounding with computation of up/downslacks
+
+parameters:
+- new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines
+  the domainsize for which integers are converted to their binary representation
+- new parameter <presolving/convertinttobin/onlypoweroftwo> by default is set to FALSE, that parameter allows you to
+  only convert integer variables with a domainsize of 2^p - 1 to their binary representation
+- new parameter <presolving/convertinttobin/samelocksinbothdirections> by default is set to FALSE, that parameter allows
+  you to convert only integer variables to their binary representation, which have the same amount of up- and downlocks
+- branching/fullstrong/reevalage changed from an integer to a longint parameter
+- new parameter for changing the timingmask for calling the propagtion method of all propagator plugins
+  propagating/%s/timingmask and all constraint plugins constraints/%s/timingmask
+- new parameter constraints/indicator/dualreductions to enable dual presolving/propagation steps
+- new parameters constraints/indicator/{sepacouplingcuts,sepacouplinglocal} to enable separation of (local) cuts
+- new parameters constraints/indicator/{maxsepacuts,maxsepacutsroot} to restrict the number of separated cuts
+- new parameter separating/oddcycle/maxunsucessfull to automatically turn off separation
+
+features:
+- SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to
+  set relaxrows = FALSE
+- the check script now recognizes MIQCP and MINLP instances
+- new column showing the pseudo objective value
+
+
 SCIP version 2.1.2
 ==================
 

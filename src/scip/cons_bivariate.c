@@ -6988,6 +6988,43 @@ SCIP_DECL_CONSPARSE(consParseBivariate)
 #endif
 
 
+/** constraint method of constraint handler which returns the variables (if possible) */
+static
+SCIP_DECL_CONSGETVARS(consGetVarsBivariate)
+{  /*lint --e{715}*/
+
+   if( varssize < 3 )
+      (*success) = FALSE;
+   else
+   {
+      SCIP_CONSDATA* consdata;
+
+      assert(cons != NULL);
+      assert(vars != NULL);
+
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
+
+      vars[0] = SCIPexprtreeGetVars(consdata->f)[0];
+      vars[1] = SCIPexprtreeGetVars(consdata->f)[1];
+      vars[2] = consdata->z;
+      (*success) = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** constraint method of constraint handler which returns the number of variables (if possible) */
+static
+SCIP_DECL_CONSGETNVARS(consGetNVarsBivariate)
+{  /*lint --e{715}*/
+
+   (*nvars) = 3;
+   (*success) = TRUE;
+
+   return SCIP_OKAY;
+}
+
 /*
  * Quadratic constraint upgrading
  */
@@ -7432,7 +7469,7 @@ SCIP_RETCODE SCIPincludeConshdlrBivariate(
          consActiveBivariate, consDeactiveBivariate,
          consEnableBivariate, consDisableBivariate, consDelvarsBivariate,
          consPrintBivariate, consCopyBivariate, consParseBivariate,
-         conshdlrdata) );
+         consGetVarsBivariate, consGetNVarsBivariate, conshdlrdata) );
 
    /* include the quadratic constraint upgrade in the quadratic constraint handler */
    SCIP_CALL( SCIPincludeQuadconsUpgrade(scip, quadconsUpgdBivariate, QUADCONSUPGD_PRIORITY, FALSE, CONSHDLR_NAME) );

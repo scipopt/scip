@@ -68,6 +68,7 @@ struct SCIP_ConsData
    SCIP_Real             rhs;                /**< right hand side of variable bound inequality */
    SCIP_VAR*             var;                /**< variable x that has variable bound */
    SCIP_VAR*             vbdvar;             /**< binary, integer or implicit integer bounding variable y */
+   SCIP_VAR**            vars;               /**< array containing both variable which is need for consGetVarsDataVarbound */
    SCIP_ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
    unsigned int          propagated:1;       /**< is the variable bound constraint already propagated? */
    unsigned int          presolved:1;        /**< is the variable bound constraint already presolved? */
@@ -284,6 +285,10 @@ SCIP_RETCODE consdataCreate(
       SCIP_CALL( catchEvents(scip, *consdata) );
    }
 
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->vars, 2) );
+   (*consdata)->vars[0] = (*consdata)->var;
+   (*consdata)->vars[1] = (*consdata)->vbdvar;
+
    /* capture variables */
    SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->var) );
    SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vbdvar) );
@@ -317,6 +322,7 @@ SCIP_RETCODE consdataFree(
    SCIP_CALL( SCIPreleaseVar(scip, &(*consdata)->var) );
    SCIP_CALL( SCIPreleaseVar(scip, &(*consdata)->vbdvar) );
 
+   SCIPfreeBlockMemoryArray(scip, &(*consdata)->vars, 2);
    SCIPfreeBlockMemory(scip, consdata);
 
    return SCIP_OKAY;
@@ -3467,9 +3473,39 @@ SCIP_DECL_CONSPARSE(consParseVarbound)
    return SCIP_OKAY;
 }
 
+/** constraint method of constraint handler which returns the variables (if possible) */
+static
+SCIP_DECL_CONSGETVARS(consGetVarsVarbound)
+{  /*lint --e{715}*/
 
+   if( varssize < 2 )
+      (*success) = FALSE;
+   else
+   {
+      SCIP_CONSDATA* consdata;
+      assert(cons != NULL);
+      assert(vars != NULL);
 
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
 
+      vars[0] = consdata->var;
+      vars[1] = consdata->vbdvar;
+      (*success) = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** constraint method of constraint handler which returns the number of variables (if possible) */
+static
+SCIP_DECL_CONSGETNVARS(consGetNVarsVarbound)
+{  /*lint --e{715}*/
+   (*nvars) = 2;
+   (*success) = TRUE;
+
+   return SCIP_OKAY;
+}
 
 /*
  * Event Handler
@@ -3511,19 +3547,19 @@ SCIP_RETCODE SCIPincludeConshdlrVarbound(
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
          conshdlrCopyVarbound,
-         consFreeVarbound, consInitVarbound, consExitVarbound, 
+         consFreeVarbound, consInitVarbound, consExitVarbound,
          consInitpreVarbound, consExitpreVarbound, consInitsolVarbound, consExitsolVarbound,
          consDeleteVarbound, consTransVarbound, consInitlpVarbound,
-         consSepalpVarbound, consSepasolVarbound, consEnfolpVarbound, consEnfopsVarbound, consCheckVarbound, 
+         consSepalpVarbound, consSepasolVarbound, consEnfolpVarbound, consEnfopsVarbound, consCheckVarbound,
          consPropVarbound, consPresolVarbound, consRespropVarbound, consLockVarbound,
-         consActiveVarbound, consDeactiveVarbound, 
-         consEnableVarbound, consDisableVarbound,
-         consDelvarsVarbound, consPrintVarbound, consCopyVarbound, consParseVarbound,
-         conshdlrdata) );
+         consActiveVarbound, consDeactiveVarbound,
+         consEnableVarbound, consDisableVarbound, consDelvarsVarbound,
+         consPrintVarbound, consCopyVarbound, consParseVarbound,
+         consGetVarsVarbound, consGetNVarsVarbound, conshdlrdata) );
 
    if( SCIPfindConshdlr(scip,"linear") != NULL )
    {

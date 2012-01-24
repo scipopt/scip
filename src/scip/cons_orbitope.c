@@ -2248,7 +2248,11 @@ SCIP_DECL_CONSPARSE(consParseOrbitope)
    return SCIP_OKAY;
 }
 
+/** constraint method of constraint handler which returns the variables (if possible) */
+#define consGetVarsOrbitope NULL
 
+/** constraint method of constraint handler which returns the number of variables (if possible) */
+#define consGetNVarsOrbitope NULL
 
 
 /*
@@ -2278,7 +2282,8 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
          consSepalpOrbitope, consSepasolOrbitope, consEnfolpOrbitope, consEnfopsOrbitope, consCheckOrbitope,
          consPropOrbitope, consPresolOrbitope, consRespropOrbitope, consLockOrbitope,
          consActiveOrbitope, consDeactiveOrbitope, consEnableOrbitope, consDisableOrbitope,
-         consDelvarsOrbitope, consPrintOrbitope, consCopyOrbitope, consParseOrbitope, conshdlrdata) );
+         consDelvarsOrbitope, consPrintOrbitope, consCopyOrbitope, consParseOrbitope,
+         consGetVarsOrbitope, consGetNVarsOrbitope, conshdlrdata) );
 
    /* add orbitope constraint handler parameters */
 

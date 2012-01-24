@@ -10811,7 +10811,6 @@ SCIP_DECL_CONSCOPY(consCopyQuadratic)
 }
 
 /** constraint parsing method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSPARSE(consParseQuadratic)
 {  /*lint --e{715}*/
@@ -11003,9 +11002,13 @@ SCIP_DECL_CONSPARSE(consParseQuadratic)
 
    return SCIP_OKAY;
 }
-#else
-#define consParseQuadratic NULL
-#endif
+
+
+/** constraint method of constraint handler which returns the variables (if possible) */
+#define consGetVarsQuadratic NULL
+
+/** constraint method of constraint handler which returns the number of variables (if possible) */
+#define consGetNVarsQuadratic NULL
 
 
 /*
@@ -11036,9 +11039,9 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          consSepalpQuadratic, consSepasolQuadratic, consEnfolpQuadratic, consEnfopsQuadratic, consCheckQuadratic,
          consPropQuadratic, consPresolQuadratic, consRespropQuadratic, consLockQuadratic,
          consActiveQuadratic, consDeactiveQuadratic,
-         consEnableQuadratic, consDisableQuadratic,
-         consDelvarsQuadratic, consPrintQuadratic, consCopyQuadratic, consParseQuadratic,
-         conshdlrdata) );
+         consEnableQuadratic, consDisableQuadratic, consDelvarsQuadratic,
+         consPrintQuadratic, consCopyQuadratic, consParseQuadratic,
+         consGetVarsQuadratic, consGetNVarsQuadratic, conshdlrdata) );
 
    /* add quadratic constraint handler parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/replacebinaryprod",

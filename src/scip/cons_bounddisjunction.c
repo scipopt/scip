@@ -2614,6 +2614,47 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
    return SCIP_OKAY;
 }
 
+/** constraint method of constraint handler which returns the variables (if possible) */
+static
+SCIP_DECL_CONSGETVARS(consGetVarsBounddisjunction)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( varssize < consdata->nvars )
+      (*success) = FALSE;
+   else
+   {
+      assert(vars != NULL);
+
+      BMScopyMemoryArray(vars, consdata->vars, consdata->nvars);
+      (*success) = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** constraint method of constraint handler which returns the number of variables (if possible) */
+static
+SCIP_DECL_CONSGETNVARS(consGetNVarsBounddisjunction)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   (*nvars) = consdata->nvars;
+   (*success) = TRUE;
+
+   return SCIP_OKAY;
+}
+
 
 /*
  * Callback methods of event handler
@@ -2787,19 +2828,20 @@ SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
          conshdlrCopyBounddisjunction,
-         consFreeBounddisjunction, consInitBounddisjunction, consExitBounddisjunction, 
+         consFreeBounddisjunction, consInitBounddisjunction, consExitBounddisjunction,
          consInitpreBounddisjunction, consExitpreBounddisjunction, consInitsolBounddisjunction, consExitsolBounddisjunction,
-         consDeleteBounddisjunction, consTransBounddisjunction, 
-         consInitlpBounddisjunction, consSepalpBounddisjunction, consSepasolBounddisjunction, 
-         consEnfolpBounddisjunction, consEnfopsBounddisjunction, consCheckBounddisjunction, 
+         consDeleteBounddisjunction, consTransBounddisjunction,
+         consInitlpBounddisjunction, consSepalpBounddisjunction, consSepasolBounddisjunction,
+         consEnfolpBounddisjunction, consEnfopsBounddisjunction, consCheckBounddisjunction,
          consPropBounddisjunction, consPresolBounddisjunction, consRespropBounddisjunction, consLockBounddisjunction,
          consActiveBounddisjunction, consDeactiveBounddisjunction,
-         consEnableBounddisjunction, consDisableBounddisjunction,
-         consDelvarsBounddisjunction, consPrintBounddisjunction, consCopyBounddisjunction, consParseBounddisjunction,
+         consEnableBounddisjunction, consDisableBounddisjunction, consDelvarsBounddisjunction,
+         consPrintBounddisjunction, consCopyBounddisjunction, consParseBounddisjunction,
+         consGetVarsBounddisjunction, consGetNVarsBounddisjunction,
          conshdlrdata) );
 
    /* register upgrade of quadratic complementarity constraints in cons_quadratic */
