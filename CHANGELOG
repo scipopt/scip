@@ -23,6 +23,8 @@ interface
 - new method SCIPcalcBinomCoef() in pub_misc.h and misc.c which calculates a binomial coefficient up to 33 over 16
 - new method SCIPheurPassSolAddSol() in heur_trysol.c; solution which are passed via this method are just added without any
   feasibility check
+- new method SCIPvarsGetProbvar() in pub_var.h and var.c, which returns for a given array of variables the active, fixed
+  or multiaggregated representation
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with

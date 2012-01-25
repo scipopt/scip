@@ -113,6 +113,15 @@ SCIP_DECL_HASHKEYEQ(SCIPvarIsHashkeyEq);
 extern
 SCIP_DECL_HASHKEYVAL(SCIPvarGetHashkeyVal);
 
+
+/** gets corresponding active, fixed, or multi-aggregated problem variables of given variables,
+ *  @note the content of the given array will/might change
+ */
+void SCIPvarsGetProbvar(
+   SCIP_VAR**            vars,               /**< array of problem variables */
+   int                   nvars               /**< number of variables */
+   );
+
 /** gets corresponding active, fixed, or multi-aggregated problem variable of a variable */
 extern
 SCIP_VAR* SCIPvarGetProbvar(
