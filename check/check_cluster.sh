@@ -231,7 +231,7 @@ do
       echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
       echo set save $SETFILE                 >> $TMPFILE
       echo read $SCIPPATH/$i                 >> $TMPFILE
-#  echo presolve                         >> $TMPFILE
+#      echo presolve                         >> $TMPFILE
       echo optimize                          >> $TMPFILE
       echo display statistics                >> $TMPFILE
 #            echo display solution                  >> $TMPFILE

@@ -571,6 +571,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/presol_boundshift.o \
 			scip/presol_convertinttobin.o \
 			scip/presol_dualfix.o \
+			scip/presol_gateextraction.o \
 			scip/presol_implics.o \
 			scip/presol_inttobinary.o \
 			scip/presol_trivial.o \
