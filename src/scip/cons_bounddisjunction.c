@@ -2285,9 +2285,9 @@ SCIP_DECL_CONSRESPROP(consRespropBounddisjunction)
     * literals are violated
     */
    assert((boundtypes[inferinfo] == SCIP_BOUNDTYPE_LOWER
-         && SCIPisGE(scip, SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE), bounds[inferinfo]))
+         && SCIPisFeasGE(scip, SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE), bounds[inferinfo]))
       || (boundtypes[inferinfo] == SCIP_BOUNDTYPE_UPPER
-         && SCIPisLE(scip, SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE), bounds[inferinfo])));
+         && SCIPisFeasLE(scip, SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE), bounds[inferinfo])));
 
    for( v = 0; v < consdata->nvars; ++v )
    {
