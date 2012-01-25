@@ -11030,6 +11030,8 @@ SCIP_Real SCIPvarGetPseudoSol_rec(
       return var->locdom.lb;
 
    case SCIP_VARSTATUS_AGGREGATED:
+   {
+      SCIP_Real pseudosolval;
       assert(var->data.aggregate.var != NULL);
       /* a correct implementation would need to check the value of var->data.aggregate.var for infinity and return the
        * corresponding infinity value instead of performing an arithmetical transformation (compare method
@@ -11038,10 +11040,11 @@ SCIP_Real SCIPvarGetPseudoSol_rec(
        * w.r.t. SCIP_DEFAULT_INFINITY, which seems to be true in our regression tests; note that this may yield false
        * positives and negatives if the parameter <numerics/infinity> is modified by the user
        */
-      assert(SCIPvarGetPseudoSol(var->data.aggregate.var) > -SCIP_DEFAULT_INFINITY);
-      assert(SCIPvarGetPseudoSol(var->data.aggregate.var) < +SCIP_DEFAULT_INFINITY);
-      return var->data.aggregate.scalar * SCIPvarGetPseudoSol(var->data.aggregate.var) + var->data.aggregate.constant;
-
+      pseudosolval = SCIPvarGetPseudoSol(var->data.aggregate.var);
+      assert(pseudosolval > -SCIP_DEFAULT_INFINITY);
+      assert(pseudosolval < +SCIP_DEFAULT_INFINITY);
+      return var->data.aggregate.scalar * pseudosolval + var->data.aggregate.constant;
+   }
    case SCIP_VARSTATUS_MULTAGGR:
       assert(!var->donotmultaggr);
       assert(var->data.multaggr.vars != NULL);
