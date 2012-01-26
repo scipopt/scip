@@ -36,7 +36,6 @@
                                               *   down branch and after the up branch; if false only after the end of a
                                               *   strong branching phase, which however seems to mostly increase strong
                                               *   branching time and iterations */
-#define WITH_BOUNDFLIPPING                   /**< enable bound flipping ratio test */
 
 /* in this case the SoPlex results are double checked using CPLEX */
 #ifdef WITH_LPSCHECK
@@ -175,6 +174,7 @@ class SPxSCIP : public SPxSolver
    bool             m_fromscratch;      /**< use old basis indicator */
    bool             m_scaling;          /**< use lp scaling */
    bool             m_presolving;       /**< use lp presolving */
+   Real             m_feastol;          /**< feasibility tolerance of SCIP */
    Real             m_objLoLimit;       /**< lower objective limit */
    Real             m_objUpLimit;       /**< upper objective limit */
    Status           m_stat;             /**< solving status */
@@ -200,6 +200,7 @@ public:
           m_fromscratch(false),
           m_scaling(false),
           m_presolving(false),
+          m_feastol(1e-06),
           m_objLoLimit(-soplex::infinity),
           m_objUpLimit(soplex::infinity),
           m_stat(NO_PROBLEM),
@@ -322,6 +323,16 @@ public:
    void setPresolving(bool p)
    {
       m_presolving = p;
+   }
+
+   Real getFeastol() const
+   {
+      return m_feastol;
+   }
+
+   void setFeastol(Real f)
+   {
+      m_feastol = f;
    }
 
    bool getLpInfo() const
@@ -1540,6 +1551,7 @@ SCIP_RETCODE SCIPlpiAddCols(
    {
       LPColSet cols(ncols);
       DSVector colVector(ncols);
+      int nrows = spx->nRows();
       int last;
       int i;
       int j;
@@ -1552,7 +1564,10 @@ SCIP_RETCODE SCIPlpiAddCols(
          {
             last = (i == ncols-1 ? nnonz : beg[i+1]);
             for( j = beg[i]; j < last; ++j )
-               colVector.add(ind[j], val[j]);
+            {
+               if( ind[j] < nrows )
+                  colVector.add(ind[j], val[j]);
+            }
          }
          cols.add(obj[i], lb[i], colVector, ub[i]);
       }
@@ -2633,7 +2648,7 @@ SCIP_RETCODE lpiStrongbranch(
    lpi->spx->setType( lpi->spx->rep() == SPxSolver::ROW ? SPxSolver::ENTER : SPxSolver::LEAVE);
 
    /* down branch */
-   newub = EPSCEIL(psol-1.0, 1e-06);
+   newub = EPSCEIL(psol-1.0, lpi->spx->getFeastol());
    if( newub >= oldlb - 0.5 )
    {
       SCIPdebugMessage("strong branching down on x%d (%g) with %d iterations\n", col, psol, itlim);
@@ -2707,7 +2722,7 @@ SCIP_RETCODE lpiStrongbranch(
    /* up branch */
    if( !error )
    {
-      newlb = EPSFLOOR(psol+1.0, 1e-06);
+      newlb = EPSFLOOR(psol+1.0, lpi->spx->getFeastol());
       if( newlb <= oldub + 0.5 )
       {
          SCIPdebugMessage("strong branching  up  on x%d (%g) with %d iterations\n", col, psol, itlim);
@@ -4275,6 +4290,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    {
    case SCIP_LPPAR_FEASTOL:
       lpi->spx->setDelta(dval);
+      lpi->spx->setFeastol(dval);
       break;
    case SCIP_LPPAR_LOBJLIM:
       lpi->spx->setObjLoLimit(dval);
