@@ -575,6 +575,10 @@ SCIP_RETCODE initMatrix(
    matrix->maxactivityposinf = NULL;
    matrix->nnonzs = 0;
 
+   /* return if no variables or constraints are present */
+   if( SCIPgetNVars(scip) == 0 || SCIPgetNConss(scip) == 0 )
+      return SCIP_OKAY;
+
    /* loop over all constraint handlers and collect
       the number of enforced constraints */
    nconshdlrs = SCIPgetNConshdlrs(scip);
@@ -928,7 +932,7 @@ void freeMatrix(
       (*matrix)->nnonzs = 0;
    }
 
-   SCIPfreeBufferArray(scip, &((*matrix)->vars));
+   SCIPfreeBufferArrayNull(scip, &((*matrix)->vars));
 
    /* free matrix */
    SCIPfreeBuffer(scip, matrix);
