@@ -98,6 +98,7 @@ fixed bugs:
 - fixed bug in cons.c, where after a restart the arrays for all initial constraints were corrected in the initsol
   process instead of the initpre process, this was to late because you might change the status in presolving which lead
   to an assert()
+- fixed issue if a primal solution leads to a cutoff of the current focus node
 
 performance improvements:
 - fixed performance issue in debug mode, where SCIPvarGetLPSol_rec() calculated a value to often, which in the end lead
