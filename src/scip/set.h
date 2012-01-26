@@ -889,6 +889,13 @@ SCIP_Real SCIPsetCutoffbounddelta(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** returns minimal decrease factor that causes the recomputation of a value
+ *  (e.g., pseudo objective) instead of an update */
+extern
+SCIP_Real SCIPsetRecompfac(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** checks, if values are in range of epsilon */
 extern
 SCIP_Bool SCIPsetIsEQ(
@@ -1320,6 +1327,7 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetPseudocosteps(set)          ( (set)->num_pseudocosteps )
 #define SCIPsetPseudocostdelta(set)        ( (set)->num_pseudocostdelta )
 #define SCIPsetCutoffbounddelta(set)       ( MIN(100.0 * SCIPsetFeastol(set), 0.0001) )
+#define SCIPsetRecompfac(set)              ( (set)->num_recompfac )
 #define SCIPsetIsEQ(set, val1, val2)       ( EPSEQ(val1, val2, (set)->num_epsilon) )
 #define SCIPsetIsLT(set, val1, val2)       ( EPSLT(val1, val2, (set)->num_epsilon) )
 #define SCIPsetIsLE(set, val1, val2)       ( EPSLE(val1, val2, (set)->num_epsilon) )
