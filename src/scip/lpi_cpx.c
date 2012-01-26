@@ -133,6 +133,7 @@ struct SCIP_LPi
    SCIP_Bool             instabilityignored; /**< was the instability of the last LP ignored? */
    SCIP_Bool             fromscratch;        /**< shall solves be performed with CPX_PARAM_ADVIND turned off? */
    SCIP_Bool             clearstate;         /**< shall next solve be performed with CPX_PARAM_ADVIND turned off? */
+   SCIP_Real             feastol;            /**< feasibility tolerance for integrality */
 #if (CPX_VERSION <= 1100)
    SCIP_Bool             rngfound;           /**< was ranged row found; scaling is disabled, because there is a bug 
                                               *   in the scaling algorithm for ranged rows in CPLEX up to version 11.0 */
@@ -1014,6 +1015,7 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->instabilityignored = FALSE;
    (*lpi)->fromscratch = FALSE;
    (*lpi)->clearstate = FALSE;
+   (*lpi)->feastol = 1e-06;
 #if (CPX_VERSION <= 1100)
    (*lpi)->rngfound = FALSE;
 #endif
@@ -2337,7 +2339,7 @@ SCIP_RETCODE lpiStrongbranchIntegral(
    
    SCIPdebugMessage(" -> strong branching on integral variable %d\n", col);
 
-   assert( EPSISINT(psol, 1e-06) );
+   assert( EPSISINT(psol, lpi->feastol) );
 
    objsen = CPXgetobjsen(lpi->cpxenv, lpi->cpxlp);
 
@@ -2357,7 +2359,7 @@ SCIP_RETCODE lpiStrongbranchIntegral(
    setIntParam(lpi, CPX_PARAM_ITLIM, itlim);
       
    /* down branch */
-   newub = EPSCEIL(psol-1.0, 1e-06);
+   newub = EPSCEIL(psol-1.0, lpi->feastol);
    if( newub >= oldlb - 0.5 )
    {
       CHECK_ZERO( CPXchgbds(lpi->cpxenv, lpi->cpxlp, 1, &col, &ubound, &newub) );
@@ -2384,7 +2386,7 @@ SCIP_RETCODE lpiStrongbranchIntegral(
       *down = objsen == CPX_MIN ? getDblParam(lpi, CPX_PARAM_OBJULIM) : getDblParam(lpi, CPX_PARAM_OBJLLIM);
 
    /* up branch */
-   newlb = EPSFLOOR(psol+1.0, 1e-06);
+   newlb = EPSFLOOR(psol+1.0, lpi->feastol);
    if( newlb <= oldub + 0.5 )
    {
       CHECK_ZERO( CPXchgbds(lpi->cpxenv, lpi->cpxlp, 1, &col, &lbound, &newlb) );
@@ -2459,7 +2461,7 @@ SCIP_RETCODE SCIPlpiStrongbranchFrac(
 
    SCIPdebugMessage("calling CPLEX strongbranching on fractional variable %d (%d iterations)\n", col, itlim);
 
-   assert( ! EPSISINT(psol, 1e-06) );
+   assert( !EPSISINT(psol, lpi->feastol) );
 
    /* results of CPLEX are valid in any case */
    *downvalid = TRUE;
@@ -2534,7 +2536,7 @@ SCIP_RETCODE SCIPlpiStrongbranchesFrac(
       *downvalid = TRUE;
       *upvalid = TRUE;
       
-      assert( ! EPSISINT(psols[j], 1e-06) );
+      assert( !EPSISINT(psols[j], lpi->feastol) );
    }
 
    retval = CPXstrongbranch(lpi->cpxenv, lpi->cpxlp, cols, ncols, down, up, itlim);
@@ -2581,7 +2583,7 @@ SCIP_RETCODE SCIPlpiStrongbranchInt(
 
    SCIPdebugMessage("calling CPLEX strongbranching on variable %d with integral value (%d iterations)\n", col, itlim);
 
-   assert( EPSISINT(psol, 1e-06) );
+   assert( EPSISINT(psol, lpi->feastol) );
 
    if( iter != NULL )
       *iter = 0;
@@ -2626,7 +2628,7 @@ SCIP_RETCODE SCIPlpiStrongbranchesInt(
    /* initialize */
    for( j = 0; j < ncols; ++j )
    {
-      assert( EPSISINT(psols[j], 1e-06) );
+      assert( EPSISINT(psols[j], lpi->feastol) );
       SCIP_CALL( lpiStrongbranchIntegral(lpi, cols[j], psols[j], itlim, &(down[j]), &(up[j]), &(downvalid[j]), &(upvalid[j]), iter) );
    }
 
@@ -3825,6 +3827,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    {
    case SCIP_LPPAR_FEASTOL:
       setDblParam(lpi, CPX_PARAM_EPRHS, dval);
+      lpi->feastol = dval;
       break;
    case SCIP_LPPAR_DUALFEASTOL:
       setDblParam(lpi, CPX_PARAM_EPOPT, dval);
