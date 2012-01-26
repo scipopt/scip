@@ -1353,7 +1353,7 @@ SCIP_RETCODE SCIPeventProcess(
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
       {
          assert(SCIPvarGetProbindex(var) >= 0);
-         SCIP_CALL( SCIPlpUpdateVarLbGloabl(lp, set, var, event->data.eventbdchg.oldbound,
+         SCIP_CALL( SCIPlpUpdateVarLbGlobal(lp, set, var, event->data.eventbdchg.oldbound,
                event->data.eventbdchg.newbound) );
       }
 
@@ -1369,7 +1369,7 @@ SCIP_RETCODE SCIPeventProcess(
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
       {
          assert(SCIPvarGetProbindex(var) >= 0);
-         SCIP_CALL( SCIPlpUpdateVarUbGloabl(lp, set, var, event->data.eventbdchg.oldbound,
+         SCIP_CALL( SCIPlpUpdateVarUbGlobal(lp, set, var, event->data.eventbdchg.oldbound,
                event->data.eventbdchg.newbound) );
       }
 

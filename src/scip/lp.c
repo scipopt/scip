@@ -13686,7 +13686,7 @@ SCIP_RETCODE SCIPlpUpdateVarObj(
 }
 
 /** updates current root pseudo objective value for a global change in a variable's lower bound */
-SCIP_RETCODE SCIPlpUpdateVarLbGloabl(
+SCIP_RETCODE SCIPlpUpdateVarLbGlobal(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< problem variable that changed */
@@ -13758,7 +13758,7 @@ SCIP_RETCODE SCIPlpUpdateVarLb(
 }
 
 /** updates current root pseudo objective value for a global change in a variable's upper bound */
-SCIP_RETCODE SCIPlpUpdateVarUbGloabl(
+SCIP_RETCODE SCIPlpUpdateVarUbGlobal(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< problem variable that changed */
