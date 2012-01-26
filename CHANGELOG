@@ -34,6 +34,8 @@ interface
   returns for a constraint the involved variables and the number of variables
 - new methods SCIPgetConsVars() and SCIPgetConsNVars() which return for a given constraint the involved variables and 
   the number of variables if the corresponding constraint supports this (optional) callbacks
+- new method SCIPisUpdateUnreliable() to check whether an iteratively updated value should be recomputed from scratch
+  (e.g., for activities; uses new parameter misc/num_recompfac)
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
@@ -46,8 +48,8 @@ performance improvements:
   from scratch again
 - automatically turn off separation in sepa_oddcycle if it was too unsuccessful within the last calls
 - use faster Dijkstra variants in sepa_oddcycle
-- improved pseduo objective propagator
- 
+- improved pseudo objective propagator
+
 plugins:
 - added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.
   for integer variable 0 <= x <= 10 the binary variables y0, y1, y2, and y3 are created, such that
@@ -56,6 +58,7 @@ plugins:
 fixed bugs:
 - fixed minor bugs with respect to counting generated and lifted cuts in sepa_oddcycle
 - fixed bug in heur_zirounding with computation of up/downslacks
+- fixed bug in cons_linear w.r.t recalculation of unreliable activities
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines
@@ -71,6 +74,8 @@ parameters:
 - new parameters constraints/indicator/{sepacouplingcuts,sepacouplinglocal} to enable separation of (local) cuts
 - new parameters constraints/indicator/{maxsepacuts,maxsepacutsroot} to restrict the number of separated cuts
 - new parameter separating/oddcycle/maxunsucessfull to automatically turn off separation
+- new parameter misc/num_recompfac which denotes the factor, by which the absolute of an iteratively updated value has
+  to be decreased in order to recompute the value from scratch
 
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to
