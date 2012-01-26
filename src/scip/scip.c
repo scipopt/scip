@@ -9089,12 +9089,12 @@ SCIP_Real SCIPgetVarRedcost(
    case SCIP_VARSTATUS_AGGREGATED:
    case SCIP_VARSTATUS_MULTAGGR:
    case SCIP_VARSTATUS_NEGATED:
-      return 0;
+      return 0.0;
 
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return SCIP_INVALID; /*lint !e527*/
+      return SCIP_INVALID;
    }
 }
 
@@ -9129,12 +9129,12 @@ SCIP_Real SCIPgetVarFarkasCoef(
    case SCIP_VARSTATUS_AGGREGATED:
    case SCIP_VARSTATUS_MULTAGGR:
    case SCIP_VARSTATUS_NEGATED:
-      return 0;
+      return 0.0;
 
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return SCIP_INVALID; /*lint !e527*/
+      return SCIP_INVALID;
    }
 }
 
