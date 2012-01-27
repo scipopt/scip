@@ -30,12 +30,13 @@ interface
 - new method SCIPhashtableClear() which removes all elements of a hash table
 - new callback method in constraint handler SCIP_DECL_CONSGETVARSDATA which is optional and returns for a constraint
   the involved variables
-- new callback methods in constraint handler SCIP_DECL_CONSGETVAR and SCIP_DECL_CONSGETVAR which are optional and 
+- new callback methods in constraint handler SCIP_DECL_CONSGETVAR and SCIP_DECL_CONSGETVAR which are optional and
   returns for a constraint the involved variables and the number of variables
-- new methods SCIPgetConsVars() and SCIPgetConsNVars() which return for a given constraint the involved variables and 
+- new methods SCIPgetConsVars() and SCIPgetConsNVars() which return for a given constraint the involved variables and
   the number of variables if the corresponding constraint supports this (optional) callbacks
 - new method SCIPisUpdateUnreliable() to check whether an iteratively updated value should be recomputed from scratch
   (e.g., for activities; uses new parameter misc/num_recompfac)
+- new method SCIPgetActiveVars() in scip.{h,c}, which returns for a given array of variables the active counterparts
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with

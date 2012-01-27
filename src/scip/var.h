@@ -417,6 +417,20 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** return for given variables all their active counterparts; all active variables will be pairwise different */
+extern
+SCIP_RETCODE SCIPvarsGetActiveVars(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR**            vars,               /**< variable array with given variables and as output all active
+					      *   variables, if enough slots exist
+					      */
+   int*                  nvars,              /**< number of given variables, and as output number of active variables,
+					      *   if enough slots exist
+					      */
+   int                   varssize,           /**< available slots in vars array */
+   int*                  requiredsize        /**< pointer to store the required array size for the active variables */
+   );
+
 /** performs second step of SCIPaggregateVars():
  *  the variable to be aggregated is chosen among active problem variables x' and y', preferring a less strict variable
  *  type as aggregation variable (i.e. continuous variables are preferred over implicit integers, implicit integers

@@ -10139,6 +10139,195 @@ SCIP_DECL_HASHKEYVAL(SCIPvarGetHashkeyVal)
    return (unsigned int) SCIPvarGetIndex((SCIP_VAR*) key);
 }
 
+/** return for given variables all their active counterparts; all active variables will be pairwise different */
+SCIP_RETCODE SCIPvarsGetActiveVars(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR**            vars,               /**< variable array with given variables and as output all active
+					      *   variables, if enough slots exist
+					      */
+   int*                  nvars,              /**< number of given variables, and as output number of active variables,
+					      *   if enough slots exist
+					      */
+   int                   varssize,           /**< available slots in vars array */
+   int*                  requiredsize        /**< pointer to store the required array size for the active variables */
+   )
+{
+   SCIP_VAR** activevars;
+   int nactivevars;
+   int activevarssize;
+
+   SCIP_VAR* var;
+   int v;
+
+   SCIP_VAR** tmpvars;
+   SCIP_VAR** multvars;
+   int tmpvarssize;
+   int ntmpvars;
+   int noldtmpvars;
+   int nmultvars;
+
+   assert(set != NULL);
+   assert(nvars != NULL);
+   assert(vars != NULL || *nvars == 0);
+   assert(varssize >= *nvars);
+   assert(requiredsize != NULL);
+
+   *requiredsize = 0;
+
+   if( *nvars == 0 )
+      return SCIP_OKAY;
+
+   nactivevars = 0;
+   activevarssize = *nvars;
+   ntmpvars = *nvars;
+   tmpvarssize = *nvars;
+
+   /* temporary memory */
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &activevars, activevarssize) );
+   SCIP_CALL( SCIPsetDuplicateBufferArray(set, &tmpvars, vars, ntmpvars) );
+
+   noldtmpvars = ntmpvars;
+
+   /* sort all variables to combine equal variables easily */
+   SCIPsortPtr((void**)tmpvars, SCIPvarComp, ntmpvars);
+   for( v = ntmpvars - 1; v > 0; --v )
+   {
+      /* combine same variables */
+      if( SCIPvarCompare(tmpvars[v], tmpvars[v - 1]) == 0 )
+      {
+         --ntmpvars;
+         tmpvars[v] = tmpvars[ntmpvars];
+      }
+   }
+   /* sort all variables again to combine equal variables later on */
+   if( noldtmpvars > ntmpvars )
+      SCIPsortPtr((void**)tmpvars, SCIPvarComp, ntmpvars);
+
+   /* collect for each variable the representation in active variables */
+   while( ntmpvars >= 1 )
+   {
+      --ntmpvars;
+      var = tmpvars[ntmpvars];
+      assert( var != NULL );
+
+      switch( SCIPvarGetStatus(var) )
+      {
+      case SCIP_VARSTATUS_ORIGINAL:
+	 if( var->data.original.transvar == NULL )
+	 {
+	    SCIPerrorMessage("original variable has no transformed variable attached\n");
+	    SCIPABORT();
+	    return SCIP_INVALIDDATA;
+	 }
+	 tmpvars[ntmpvars] = var->data.original.transvar;
+	 ++ntmpvars;
+	 break;
+
+      case SCIP_VARSTATUS_AGGREGATED:
+	 tmpvars[ntmpvars] = var->data.aggregate.var;
+	 ++ntmpvars;
+	 break;
+
+      case SCIP_VARSTATUS_NEGATED:
+	 tmpvars[ntmpvars] = var->negatedvar;
+	 ++ntmpvars;
+	 break;
+
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_COLUMN:
+	 /* check for space in temporary memory */
+         if( nactivevars >= activevarssize )
+         {
+            activevarssize *= 2;
+            SCIP_CALL( SCIPsetReallocBufferArray(set, &activevars, activevarssize) );
+            assert(nactivevars < activevarssize);
+         }
+         activevars[nactivevars] = var;
+         nactivevars++;
+         break;
+
+      case SCIP_VARSTATUS_MULTAGGR:
+         /* x = a_1*y_1 + ... + a_n*y_n + c */
+         nmultvars = var->data.multaggr.nvars;
+         multvars = var->data.multaggr.vars;
+
+	 /* check for space in temporary memory */
+         if( nmultvars + ntmpvars > tmpvarssize )
+         {
+            while( nmultvars + ntmpvars > tmpvarssize )
+               tmpvarssize *= 2;
+            SCIP_CALL( SCIPsetReallocBufferArray(set, &tmpvars, tmpvarssize) );
+            assert(nmultvars + ntmpvars <= tmpvarssize);
+         }
+
+	 /* copy all multi-aggregation variables into our working array */
+	 BMScopyMemoryArray(&tmpvars[ntmpvars], multvars, nmultvars);
+
+	 /* get active, fixed or multi-aggregated corresponding variables for all new ones */
+	 SCIPvarsGetProbvar(&tmpvars[ntmpvars], nmultvars);
+
+	 ntmpvars += nmultvars;
+	 noldtmpvars = ntmpvars;
+
+	 /* sort all variables to combine equal variables easily */
+	 SCIPsortPtr((void**)tmpvars, SCIPvarComp, ntmpvars);
+	 for( v = ntmpvars - 1; v > 0; --v )
+	 {
+	    /* combine same variables */
+	    if( SCIPvarCompare(tmpvars[v], tmpvars[v - 1]) == 0 )
+	    {
+	       --ntmpvars;
+	       tmpvars[v] = tmpvars[ntmpvars];
+	    }
+	 }
+	 /* sort all variables again to combine equal variables later on */
+	 if( noldtmpvars > ntmpvars )
+	    SCIPsortPtr((void**)tmpvars, SCIPvarComp, ntmpvars);
+
+         break;
+
+      case SCIP_VARSTATUS_FIXED:
+	 /* no need for memorizing fixed variables */
+         break;
+
+      default:
+	 SCIPerrorMessage("unknown variable status\n");
+         SCIPABORT();
+	 return SCIP_INVALIDDATA;
+      }
+   }
+
+   /* sort variable array by variable index */
+   SCIPsortPtr((void**)activevars, SCIPvarComp, nactivevars);
+
+   /* eliminate duplicates and count required size */
+   v = nactivevars - 1;
+   while( v > 0 )
+   {
+      /* combine both variable since they are the same */
+      if( SCIPvarCompare(activevars[v - 1], activevars[v]) == 0 )
+      {
+	 --nactivevars;
+	 activevars[v] = activevars[nactivevars];
+      }
+      --v;
+   }
+   *requiredsize = nactivevars;
+
+   if( varssize >= *requiredsize )
+   {
+      assert(vars != NULL);
+
+      *nvars = *requiredsize;
+      BMScopyMemoryArray(vars, activevars, nactivevars);
+   }
+
+   SCIPsetFreeBufferArray(set, &tmpvars);
+   SCIPsetFreeBufferArray(set, &activevars);
+
+   return SCIP_OKAY;
+}
+
 /** gets corresponding active, fixed, or multi-aggregated problem variables of given variables,
  *  @note the content of the given array will/might change
  */
