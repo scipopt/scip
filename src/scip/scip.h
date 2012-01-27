@@ -2759,6 +2759,22 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
    SCIP_Bool             mergemultiples      /**< should multiple occurrences of a var be replaced by a single coeff? */
    );
 
+/** return for given variables all their active counterparts; all active variables will be pairwise different
+ *  @note It does not hold that the first output variable is the active variable for the first input variable.
+ */
+extern
+SCIP_RETCODE SCIPgetActiveVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< variable array with given variables and as output all active
+					      *   variables, if enough slots exist
+					      */
+   int*                  nvars,              /**< number of given variables, and as output number of active variables,
+					      *   if enough slots exist
+					      */
+   int                   varssize,           /**< available slots in vars array */
+   int*                  requiredsize        /**< pointer to store the required array size for the active variables */
+   );
+
 /** returns the reduced costs of the variable in the current node's LP relaxation;
  *  the current node has to have a feasible LP.
  *
