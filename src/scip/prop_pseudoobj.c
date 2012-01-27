@@ -52,15 +52,15 @@
                                          *   bound reduction before aborted */
 #define DEFAULT_MAXVARSFRAC         0.1 /**< maximal fraction of none binary variables with non-zero objective
                                          *   without a bound reduction before aborted */
-#define DEFAULT_PROPFULLINROOT     TRUE /**< do we want to propagate all none binary variables if we are propagating the root node */
+#define DEFAULT_PROPFULLINROOT     TRUE /**< do we want to propagate all non-binary variables if we are propagating the root node? */
 #define DEFAULT_PROPCUTOFFBOUND    TRUE /**< propagate new cutoff bound directly globally */
 #define DEFAULT_FORCE             FALSE /**< should the propagator be forced even active pricer are present? Note that
                                          *   can be done if it is known that the pseudo objective activity is given by
                                          *   the zero bound for all variables which are currently not present in the
                                          *   problem */
-#define DEFAULT_MAXNEWVARS         1000 /**< number of variable added after the propgatore is reinitialized? */
+#define DEFAULT_MAXNEWVARS         1000 /**< number of variable added after the propagator is reinitialized? */
 #define DEFAULT_PROPUSEIMPLICS     TRUE /**< use implications to strengthen the propagation of binary variable (increasing the objective change)? */
-#define DEFAULT_RESPROPUSEIMPLICS  TRUE /**< use implications to strengthen the reolve propagation of binary variable (increasing the objective change)? */
+#define DEFAULT_RESPROPUSEIMPLICS  TRUE /**< use implications to strengthen the resolve propagation of binary variable (increasing the objective change)? */
 #define DEFAULT_MAXIMPLVARS       50000 /**< maximum number of binary variables the implications are used if turned on (-1: unlimited)? */
 
 
@@ -109,15 +109,15 @@ struct SCIP_PropData
    int                   maxactfirstnonfixed;/**< index of first globally non-fixed binary variable in maxctvars array */
    int                   firstnonfixed;      /**< index of first locally non-fixed binary variable in minactvars array */
    int                   nnewvars;           /**< counter for counting number of new variables added */
-   int                   maxnewvars;         /**< number of variable added after the propgatore is reinitialized? */
+   int                   maxnewvars;         /**< number of variable added after the propagator is reinitialized? */
    int                   maximplvars;        /**< maximum number of binary variables the implications are used if turned on (-1: unlimited)? */
    SCIP_Bool             glbpropagated;      /**< are global domains propagated */
-   SCIP_Bool             propfullinroot;     /**< do we want to propagate all none binary variables if we are propagating the root node */
+   SCIP_Bool             propfullinroot;     /**< do we want to propagate all non-binary variables if we are propagating the root node */
    SCIP_Bool             propcutoffbound;    /**< propagate new cutoff bound directly globally */
    SCIP_Bool             force;              /**< should the propagator be forced even if active pricer are present? */
    SCIP_Bool             catchvaradded;      /**< do we catch the variable added event? */
    SCIP_Bool             propuseimplics;     /**< use implications to strengthen the propagation of binary variable (increasing the objective change)? */
-   SCIP_Bool             respropuseimplics;  /**< use implications to strengthen the reolve propagation of binary variable (increasing the objective change)? */
+   SCIP_Bool             respropuseimplics;  /**< use implications to strengthen the resolve propagation of binary variable (increasing the objective change)? */
 };
 
 /*
@@ -125,7 +125,7 @@ struct SCIP_PropData
  */
 
 #ifndef NDEBUG
-/** check that the implications are applyied for a globally fixed variable */
+/** check that the implications are applied for a globally fixed variable */
 static
 void checkImplicsApplied(
    SCIP*                 scip,               /**< SCIP data structure */

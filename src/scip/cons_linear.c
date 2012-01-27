@@ -1354,7 +1354,7 @@ void consdataUpdateActivities(
    /* update the activity, if the current value is valid and there was a change in the finite part */
    if( validact && (delta != 0.0) )
    {
-      /* if the absolute value of the activity is increased, this is regarded to be reliable,
+      /* if the absolute value of the activity is increased, this is regarded as reliable,
        * otherwise, we check whether we can still trust the updated value
        */
       newactivity = (*activity) + delta;

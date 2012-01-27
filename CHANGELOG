@@ -28,9 +28,7 @@ interface
 - new method SCIPgetGlobalPseudoObjval() which returns the global pseudo objective value which is all variables
   set to their best (w.r.t. the objective function) global bound
 - new method SCIPhashtableClear() which removes all elements of a hash table
-- new callback method in constraint handler SCIP_DECL_CONSGETVARSDATA which is optional and returns for a constraint
-  the involved variables
-- new callback methods in constraint handler SCIP_DECL_CONSGETVAR and SCIP_DECL_CONSGETVAR which are optional and
+- new callback methods in constraint handler SCIP_DECL_CONSGETVARS and SCIP_DECL_CONSGETNVARS which are optional and
   returns for a constraint the involved variables and the number of variables
 - new methods SCIPgetConsVars() and SCIPgetConsNVars() which return for a given constraint the involved variables and
   the number of variables if the corresponding constraint supports this (optional) callbacks

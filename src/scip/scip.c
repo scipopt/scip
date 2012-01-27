@@ -23472,11 +23472,11 @@ SCIP_Bool SCIPisSumRelGE(
    return SCIPsetIsSumRelGE(scip->set, val1, val2);
 }
 
-/** Checks, if an iterativly updated value is reliable or should be recomputed from scratch.
+/** Checks, if an iteratively updated value is reliable or should be recomputed from scratch.
  *  This is useful, if the value, e.g., the activity of a linear constraint or the pseudo objective value, gets a high
  *  absolute value during the optimization process which is later reduced significantly. In this case, the last digits
- *  were cancelled out when increasing the value and are random after decreasing it.
- *  We dot not consider the cancellations which can occur during increasing the absolute value because they just cannot
+ *  were canceled out when increasing the value and are random after decreasing it.
+ *  We do not consider the cancellations which can occur during increasing the absolute value because they just cannot
  *  be expressed using fixed precision floating point arithmetic, anymore.
  *  In order to get more reliable values, the idea is to always store the last reliable value, where increasing the
  *  absolute of the value is viewed as preserving reliability. Then, after each update, the new absolute value can be

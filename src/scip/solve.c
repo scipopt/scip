@@ -252,8 +252,8 @@ SCIP_RETCODE SCIPprimalHeuristics(
          SCIPheurGetName(set->heurs[h]), SCIPheurGetPriority(set->heurs[h]));
       SCIP_CALL( SCIPheurExec(set->heurs[h], set, primal, depth, lpstateforkdepth, heurtiming, &ndelayedheurs, &result) );
 
-      /* if the new solution cuts off the current node due to a new primal solution (via the citoff bound) interrapt
-       * calling the remaing heuristics
+      /* if the new solution cuts off the current node due to a new primal solution (via the cutoff bound) interrupt
+       * calling the remaining heuristics
        */
       if( result == SCIP_FOUNDSOL && lowerbound > primal->cutoffbound )
          break;
