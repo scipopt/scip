@@ -3897,6 +3897,256 @@ int SCIPstairmapGetLatestFeasibleStart(
 }
 
 /*
+ * Adjacency list
+ */
+
+/** creates adjacency list */
+SCIP_RETCODE SCIPadjlistCreate(
+   SCIP_ADJLIST**        adjlist,            /**< pointer to store the created adjacency list */
+   int                   nnodes              /**< number of nodes */
+   )
+{
+   assert(adjlist != NULL);
+   assert(nnodes > 0);
+
+   SCIP_ALLOC( BMSallocMemory(adjlist) );
+   SCIP_ALLOC( BMSallocMemoryArray(&(*adjlist)->adjnodes, nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&(*adjlist)->adjnodessize, nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&(*adjlist)->nadjnodes, nnodes) );
+   BMSclearMemoryArray((*adjlist)->adjnodes, nnodes);
+   BMSclearMemoryArray((*adjlist)->adjnodessize, nnodes);
+   BMSclearMemoryArray((*adjlist)->nadjnodes, nnodes);
+
+   /* store number of nodes */
+   (*adjlist)->nnodes = nnodes;
+
+   return SCIP_OKAY;
+}
+
+/** sets the sizes of the adjacency lists for the nodes and allocates memory for the lists */
+SCIP_RETCODE SCIPadjlistSetSizes(
+   SCIP_ADJLIST*         adjlist,            /**< adjacency list */
+   int*                  sizes               /**< sizes of the adjacency lists */
+   )
+{
+   int i;
+
+   assert(adjlist != NULL);
+   assert(adjlist->nnodes > 0);
+
+   for( i = 0; i < adjlist->nnodes; ++i )
+   {
+      SCIP_ALLOC( BMSallocMemoryArray(&adjlist->adjnodes[i], sizes[i]) );
+      adjlist->adjnodessize[i] = sizes[i];
+      adjlist->nadjnodes[i] = 0;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** frees given adjacency list */
+void SCIPadjlistFree(
+   SCIP_ADJLIST**        adjlist             /**< pointer to the adjacency list */
+   )
+{
+   int i;
+
+   assert(adjlist != NULL);
+   assert(*adjlist != NULL);
+
+   for( i = 0; i < (*adjlist)->nnodes; ++i )
+   {
+      assert(((*adjlist)->adjnodessize == 0) == ((*adjlist)->adjnodes == NULL));
+      if( (*adjlist)->adjnodessize[i] > 0 )
+      {
+         BMSfreeMemoryArray(&(*adjlist)->adjnodes[i]);
+      }
+   }
+
+   /* free adjacency list data structure */
+   BMSfreeMemoryArray(&(*adjlist)->adjnodessize);
+   BMSfreeMemoryArray(&(*adjlist)->nadjnodes);
+   BMSfreeMemoryArray(&(*adjlist)->adjnodes);
+   BMSfreeMemory(adjlist);
+}
+
+#define STARTADJNODESSIZE 5
+
+/* ensures that adjnodes array is big enough */
+static
+SCIP_RETCODE ensureAdjnodesSize(
+   SCIP_ADJLIST*         adjlist,            /**< pointer to the adjacency list */
+   int                   idx,                /**< index for which the size is ensured */
+   int                   newsize             /**< needed size */
+   )
+{
+   assert(adjlist != NULL);
+   assert(idx >= 0);
+   assert(idx < adjlist->nnodes);
+   assert(newsize > 0);
+
+   /* check whether array is big enough, and realloc, if needed */
+   if( newsize > adjlist->adjnodessize[idx] )
+   {
+      if( adjlist->adjnodessize[idx] == 0 )
+      {
+         adjlist->adjnodessize[idx] = STARTADJNODESSIZE;
+         SCIP_ALLOC( BMSallocMemoryArray(&adjlist->adjnodes[idx], adjlist->adjnodessize[idx]) );
+      }
+      else
+      {
+         adjlist->adjnodessize[idx] = 2 * adjlist->adjnodessize[idx];
+         SCIP_ALLOC( BMSreallocMemoryArray(&adjlist->adjnodes[idx], adjlist->adjnodessize[idx]) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** add (directed) edge to the adjacency list */
+SCIP_RETCODE SCIPadjlistAddEdge(
+   SCIP_ADJLIST*         adjlist,            /**< adjacency list */
+   int                   startnode,          /**< start node of the edge */
+   int                   endnode             /**< start node of the edge */
+   )
+{
+   assert(adjlist != NULL);
+   assert(startnode >= 0);
+   assert(endnode >= 0);
+   assert(startnode < adjlist->nnodes);
+   assert(endnode < adjlist->nnodes);
+
+   SCIP_CALL( ensureAdjnodesSize(adjlist, startnode, adjlist->nadjnodes[startnode] + 1) );
+
+   /* add edge */
+   adjlist->adjnodes[startnode][adjlist->nadjnodes[startnode]] = endnode;
+   adjlist->nadjnodes[startnode]++;
+
+   return SCIP_OKAY;
+}
+
+/** add (directed) edge to the adjacency list, if it not contained, yet */
+SCIP_RETCODE SCIPadjlistAddEdgeSave(
+   SCIP_ADJLIST*         adjlist,            /**< adjacency list */
+   int                   startnode,          /**< start node of the edge */
+   int                   endnode             /**< start node of the edge */
+   )
+{
+   int i;
+
+   assert(adjlist != NULL);
+   assert(startnode >= 0);
+   assert(endnode >= 0);
+   assert(startnode < adjlist->nnodes);
+   assert(endnode < adjlist->nnodes);
+
+   for( i = 0; i < adjlist->nadjnodes[startnode]; ++i )
+      if( adjlist->adjnodes[startnode][i] == endnode )
+         return SCIP_OKAY;
+
+   SCIP_CALL( ensureAdjnodesSize(adjlist, startnode, adjlist->nadjnodes[startnode] + 1) );
+
+   /* add edge */
+   adjlist->adjnodes[startnode][adjlist->nadjnodes[startnode]] = endnode;
+   adjlist->nadjnodes[startnode]++;
+
+   return SCIP_OKAY;
+}
+
+/** performs depth-first-search from the given start node */
+static
+void depthFirstSearch(
+   SCIP_ADJLIST*         adjlist,            /**< adjacency list */
+   int                   startnode,          /**< node to start the depth-first-search */
+   SCIP_Bool*            visited,            /**< array to store for each node, whether it was already visited */
+   int*                  dfsnodes,           /**< array of nodes that can be reached starting at startnode, in dfs order */
+   int*                  ndfsnodes           /**< pointer to store number of nodes that can be reached starting at startnode */
+   )
+{
+   int v;
+   int adjnode;
+
+   assert(adjlist != NULL);
+   assert(startnode >= 0);
+   assert(startnode < adjlist->nnodes);
+   assert(visited[startnode] == FALSE);
+
+   /* mark startnode as visited */
+   visited[startnode] = TRUE;
+
+   /* iterate over all nodes adjacent to current node */
+   for( v = 0; v < adjlist->nadjnodes[startnode]; ++v )
+   {
+      adjnode = adjlist->adjnodes[startnode][v];
+
+      /* check if the adjacent node was already visited */
+      if( !visited[adjnode] )
+      {
+         /* recursively call depth-first-search */
+         depthFirstSearch(adjlist, adjnode, visited, dfsnodes, ndfsnodes);
+      }
+   }
+
+   /* store node in the sorted nodes array */
+   dfsnodes[(*ndfsnodes)] = startnode;
+   (*ndfsnodes)++;
+}
+
+/** compute components on the adjacency list */
+SCIP_RETCODE SCIPadjlistComputeComponents(
+   SCIP_ADJLIST*         adjlist,            /**< adjacency list */
+   int*                  components,         /**< array with as many slots as there are nodes in the adjlist
+                                              *   to store for each node the component to which it belongs
+                                              *   (components are numbered 1 to ncomponents) */
+   int*                  ncomponents         /**< pointer to store the number of components */
+   )
+{
+   SCIP_Bool* visited;
+   int* dfsnodes;
+   int ndfsnodes;
+   int v;
+   int i;
+
+   assert(adjlist != NULL);
+   assert(components != NULL);
+   assert(ncomponents != NULL);
+   assert(adjlist->nnodes > 0);
+
+   SCIP_ALLOC( BMSallocMemoryArray(&visited, adjlist->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&dfsnodes, adjlist->nnodes) );
+   BMSclearMemoryArray(visited, adjlist->nnodes);
+   ndfsnodes = 0;
+
+   *ncomponents = 0;
+#ifndef NDEBUG
+   BMSclearMemoryArray(components, adjlist->nnodes);
+#endif
+
+   for( v = 0; v < adjlist->nnodes; ++v )
+   {
+      if( visited[v] )
+         continue;
+
+      depthFirstSearch(adjlist, v, visited, dfsnodes, &ndfsnodes);
+
+      (*ncomponents)++;
+
+      for( i = 0; i < ndfsnodes; ++i )
+      {
+         components[dfsnodes[i]] = *ncomponents;
+      }
+   }
+
+#ifndef NDEBUG
+   for( v = 0; v < adjlist->nnodes; ++v )
+      assert(components[v] != 0);
+#endif
+
+   return SCIP_OKAY;
+}
+
+
+/*
  * Numerical methods
  */
 

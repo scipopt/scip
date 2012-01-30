@@ -3408,6 +3408,54 @@ int SCIPstairmapGetLatestFeasibleStart(
 
 
 /*
+ * Adjacency list
+ */
+
+/** creates adjacency list */
+SCIP_RETCODE SCIPadjlistCreate(
+   SCIP_ADJLIST**        adjlist,            /**< pointer to store the created adjacency list */
+   int                   nnodes              /**< number of nodes */
+   );
+
+/** sets the sizes of the adjacency lists for the nodes and allocates memory for the lists */
+SCIP_RETCODE SCIPadjlistSetSizes(
+   SCIP_ADJLIST*         adjlist,            /**< adjacency list */
+   int*                  sizes               /**< sizes of the adjacency lists */
+   );
+
+/** frees given adjacency list */
+extern
+void SCIPadjlistFree(
+   SCIP_ADJLIST**        adjlist             /**< pointer to the adjacency list */
+   );
+
+/** add (directed) edge to the adjacency list */
+extern
+SCIP_RETCODE SCIPadjlistAddEdge(
+   SCIP_ADJLIST*         adjlist,            /**< adjacency list */
+   int                   startnode,          /**< start node of the edge */
+   int                   endnode             /**< start node of the edge */
+   );
+
+/** add (directed) edge to the adjacency list, if it not contained, yet */
+extern
+SCIP_RETCODE SCIPadjlistAddEdgeSave(
+   SCIP_ADJLIST*         adjlist,            /**< adjacency list */
+   int                   startnode,          /**< start node of the edge */
+   int                   endnode             /**< start node of the edge */
+   );
+
+/** compute components on the adjacency list */
+extern
+SCIP_RETCODE SCIPadjlistComputeComponents(
+   SCIP_ADJLIST*         adjlist,            /**< adjacency list */
+   int*                  components,         /**< array with as many slots as there are nodes in the adjlist
+                                              *   to store for each node the component to which it belongs
+                                              *   (components are numbered 1 to ncomponents) */
+   int*                  ncomponents         /**< pointer to store the number of components */
+   );
+
+/*
  * Numerical methods
  */
 
