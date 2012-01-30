@@ -2297,6 +2297,8 @@ SCIP_DECL_CONSRESPROP(consRespropBounddisjunction)
 
          /* the reason literal must have been violated
           * we do not check for multi-aggregated variables, since SCIPvarGetXbAtIndex is not implemented for them */
+         /* Use a weaker comparison to SCIPvarGetXbAtIndex here (i.e., SCIPisXT instead of SCIPisFeasXT),
+          * because SCIPvarGetXbAtIndex might differ from the local bound at time bdchgidx by epsilon. */
          assert(SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_MULTAGGR
             || (boundtypes[v] == SCIP_BOUNDTYPE_LOWER
                && SCIPisLT(scip, SCIPvarGetUbAtIndex(vars[v], bdchgidx, TRUE), bounds[v]))
